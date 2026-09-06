@@ -36,6 +36,7 @@
 <script lang="ts">
 	import FormulaireAnnonce from '$lib/components/FormulaireAnnonce.svelte';
 	import ListeAnnonces from '$lib/components/ListeAnnonces.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import { TITRE_ARCHIVES } from '$lib/archives';
 	import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
@@ -197,21 +198,28 @@
 	</select>
 </div>
 
-{#if chargement}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
-{:else if courantes.length === 0 && archivees.length === 0}
-	{#if erreur}
-		<div class="empty-state">
-			<h3>Impossible d'afficher les annonces</h3>
-			<p>{erreur}</p>
-		</div>
-	{:else}
-		<div class="empty-state">
-			<h3>Aucune annonce</h3>
-			<p>Déposez la première annonce en cliquant sur « Déposer une annonce ».</p>
-		</div>
-	{/if}
-{:else}
+<!--  🔴 Les trois états — chargement, erreur, vide — étaient écrits ICI, à la
+      main, alors que `EtatListe` les porte (#796). Ils reproduisaient le
+      composant à l'identique : même `Chargement…`, même `empty-state` avec titre
+      et message, même priorité de l'erreur sur le vide.
+
+      ⚠️ L'état ERREUR est celui qu'on oublie en recopiant, parce qu'on ne le voit
+      jamais en développement. Ici il était présent — mais son titre et sa mise en
+      forme ne suivaient plus le composant, et un ajustement de l'un aurait laissé
+      l'autre en arrière. C'est la duplication de balisage, pas de logique : celle
+      qui ne casse rien et qui dérive.
+
+      La condition de vide couvre les DEUX listes (courantes + Archives) : une
+      annonce archivée n'est pas rien, et annoncer « Aucune annonce » alors que
+      les Archives en portent trois serait faux (#519). -->
+<EtatListe
+	{chargement}
+	{erreur}
+	vide={courantes.length === 0 && archivees.length === 0}
+	titreErreur="Impossible d'afficher les annonces"
+	titreVide="Aucune annonce"
+	messageVide="Déposez la première annonce en cliquant sur « Déposer une annonce »."
+>
 	{#if courantes.length === 0}
 		<div class="empty-state">
 			<h3>Aucune annonce en cours</h3>
@@ -291,7 +299,7 @@
 			</ListeAnnonces>
 		</SectionRepliee>
 	{/if}
-{/if}
+</EtatListe>
 
 <!--  🔴 LE FORMULAIRE DE CORRECTION N'EST PLUS ICI (#787, 06/09/2026).
       Il était monté en bas, après les deux listes : « c'est tout en bas, et on

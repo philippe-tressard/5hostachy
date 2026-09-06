@@ -13,13 +13,11 @@
 	} from '$lib/api';
 	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
 	import PanneauOptionsPublication from '$lib/components/PanneauOptionsPublication.svelte';
-	import {
-		motifWhatsappInterdit,
-		optionsActives,
-		libelleOptionsActives,
-	} from '$lib/options-publication';
+	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import { toast } from '$lib/components/Toast.svelte';
 	import CarteActualite from '$lib/components/CarteActualite.svelte';
+	import ActionsActualite from '$lib/components/ActionsActualite.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	import FormulaireActualite from '$lib/components/FormulaireActualite.svelte';
 	import HistoriqueActualites from '$lib/components/HistoriqueActualites.svelte';
 	import RubriqueHistorique from '$lib/components/RubriqueHistorique.svelte';
@@ -35,6 +33,8 @@
 	let pubList: Publication[] = [];
 	$: compactPubs = pubList.length > 7;
 	let loading = true;
+	/** Message d'une panne de chargement, ou vide (#796). */
+	let erreur = '';
 
 	let showForm = false;
 	let pubFilesMap: Record<number, any[]> = {};
@@ -80,6 +80,9 @@
 				.updateMe({ last_seen_actualites: now })
 				.then((u: any) => setUser(u))
 				.catch(() => {});
+		} catch (e) {
+			//  🔴 Aucun `catch` jusqu'au 06/09 : une panne affichait « Aucune actualité » — défaut #519 (#796).
+			erreur = e instanceof ApiError ? e.message : 'Erreur de chargement';
 		} finally {
 			loading = false;
 		}
@@ -330,14 +333,15 @@
 	{/key}
 {/if}
 
-{#if loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
-{:else if pubList.length === 0}
-	<div class="empty-state">
-		<h3>Aucune actualité</h3>
-		<p>Les annonces du conseil syndical apparaîtront ici.</p>
-	</div>
-{:else}
+<!--  Les trois états par `EtatListe` (#796) — dont l'ERREUR, absente jusque-là. -->
+<EtatListe
+	chargement={loading}
+	{erreur}
+	vide={pubList.length === 0}
+	titreErreur="Impossible d'afficher les actualités"
+	titreVide="Aucune actualité"
+	messageVide="Les annonces du conseil syndical apparaîtront ici."
+>
 	{#each pubList as pub (pub.id)}
 		{@const expanded = expandedPubs.has(pub.id)}
 		<CarteActualite
@@ -348,60 +352,20 @@
 			formulaireOuvert={showEvolForm === pub.id || optionsPub?.id === pub.id}
 			on:toggle={() => togglePub(pub.id)}
 		>
-			<!--  L'ORDRE DES ICÔNES est celui de la carte de ticket, désigné comme
-			      référence le 18/08/2026 : 🔄 commenter · ✏️ modifier · 🗑️ supprimer.
-			      Il était inversé ici, et deux cartes du même site ne se lisaient pas
-			      pareil.
-
-			      ⚠️ TROIS GESTES ONT ÉTÉ RETIRÉS le 18/08/2026, sur arbitrage :
-			        • ✉️ renvoyer l'e-mail au syndic/CS ;
-			        • 💬 renvoyer l'annonce sur le groupe WhatsApp ;
-			        • 📦 archiver.
-			      Les deux premiers rejouaient un envoi ; l'archivage devient sans objet,
-			      la publication n'ayant plus d'état « Résolu » à atteindre (le workflow
-			      a disparu des actualités). L'archivage automatique, lui, reste : une
-			      publication bascule dans l'Historique au bout de son délai. -->
+			<!--  Les icônes vivent dans `ActionsActualite` depuis le 06/09/2026 (#796) :
+			      quarante lignes qui ne parlaient que d'elles. Leur ORDRE, les trois
+			      gestes retirés le 18/08 et la raison du bouton d'options y sont écrits. -->
 			<svelte:fragment slot="actions">
-				{#if $isCS}
-					<button
-						class="btn-icon"
-						aria-pressed={showEvolForm === pub.id}
-						aria-label="Commenter"
-						title="Commenter"
-						on:click|stopPropagation={() => ouvrirEvolution(pub)}>&#x1F504;</button
-					>
-					<button
-						class="btn-icon-edit"
-						aria-pressed={editingPub?.id === pub.id}
-						aria-label="Modifier"
-						title="Modifier"
-						on:click|stopPropagation={() => startEdit(pub)}>✏️</button
-					>
-					<!--  Le bouton n'existe QUE si la publication porte au moins une
-					      option : sur une actualité ordinaire il n'y a rien à faire
-					      évoluer, et un bouton inerte se lit comme une panne.
-					      Il montre les glyphes des options ACTIVES, dans l'ordre de la
-					      table — c'est ce qui le rend lisible sans l'ouvrir. -->
-					{#if optionsActives(pub).length > 0}
-						{@const actives = optionsActives(pub)}
-						<button
-							class="btn-icon btn-icon-options"
-							aria-pressed={optionsPub?.id === pub.id}
-							aria-label={libelleOptionsActives(pub)}
-							title="{libelleOptionsActives(pub)} — cliquer pour les modifier"
-							on:click|stopPropagation={() => ouvrirOptions(pub)}
-							>{#each actives as o (o.cle)}<span class="opt-glyphe">{o.glyphe}</span>{/each}</button
-						>
-					{/if}
-				{/if}
-				{#if $isAdmin}
-					<button
-						class="btn-icon-danger"
-						aria-label="Supprimer"
-						title="Supprimer définitivement"
-						on:click|stopPropagation={() => deletePub(pub)}>🗑️</button
-					>
-				{/if}
+				<ActionsActualite
+					{pub}
+					commentaireOuvertId={showEvolForm}
+					editionOuverteId={editingPub?.id ?? null}
+					optionsOuvertesId={optionsPub?.id ?? null}
+					onCommenter={ouvrirEvolution}
+					onModifier={startEdit}
+					onOptions={ouvrirOptions}
+					onSupprimer={deletePub}
+				/>
 			</svelte:fragment>
 
 			<svelte:fragment slot="formulaire">
@@ -526,7 +490,7 @@
 			</svelte:fragment>
 		</CarteActualite>
 	{/each}
-{/if}
+</EtatListe>
 
 {#if !loading}
 	<HistoriqueActualites />
@@ -549,21 +513,6 @@
 	    une cible carrée : on la laisse s'étendre horizontalement sans jamais
 	    descendre sous la cible tactile de 44 px (socle 11 §10), sinon un bouton
 	    à un seul glyphe serait plus petit que ses voisins. */
-	.btn-icon-options {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.1rem;
-		width: auto;
-		min-width: 44px;
-		min-height: 44px;
-		padding: 0 0.35rem;
-	}
-	/*  Les glyphes se serrent quand ils sont quatre : à taille pleine, le bouton
-	    dépasserait la rangée d'actions sur téléphone. */
-	.btn-icon-options .opt-glyphe {
-		font-size: 0.8em;
-		line-height: 1;
-	}
 
 	/*  Les couleurs de badge vivent dans `styles/composants.css`. Cette page les
 	    réécrivait en `:global(…)` — donc pour tout le site une fois sa feuille

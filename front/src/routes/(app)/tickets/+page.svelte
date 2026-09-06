@@ -1,6 +1,7 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { onMount } from 'svelte';
 	import { revelerCible } from '$lib/deepLink';
 	import { isAdmin } from '$lib/stores/auth';
@@ -20,6 +21,8 @@
 
 	let ticketList: Ticket[] = [];
 	let loading = true;
+	/** Message d'une panne de chargement, ou vide (#796). */
+	let erreur = '';
 	let filterStatut = '';
 	let filterCat = '';
 
@@ -75,6 +78,11 @@
 					revelerCible(`ticket-${target.id}`);
 				}
 			}
+		} catch (e) {
+			//  🔴 AUCUN `catch` ici jusqu'au 06/09/2026 : une panne de chargement
+			//  affichait « Aucune demande » — annoncer une absence qu'on n'a pas constatée,
+			//  c'est le défaut #519, corrigé sur les annonces et jamais ici (#796).
+			erreur = e instanceof ApiError ? e.message : 'Erreur de chargement';
 		} finally {
 			loading = false;
 		}
@@ -360,14 +368,16 @@
 	/>
 </div>
 
-{#if loading}
-	<p class="etat-chargement">Chargement…</p>
-{:else if filtered.length === 0}
-	<div class="empty-state">
-		<h3>Aucune demande</h3>
-		<p>Signalez un problème ou posez une question au conseil syndical.</p>
-	</div>
-{:else}
+<!--  Les trois états par `EtatListe` (#796) — dont l'ERREUR, qui n'existait pas :
+      une panne affichait « Aucune demande ». -->
+<EtatListe
+	chargement={loading}
+	{erreur}
+	vide={filtered.length === 0}
+	titreErreur="Impossible d'afficher les demandes"
+	titreVide="Aucune demande"
+	messageVide="Signalez un problème ou posez une question au conseil syndical."
+>
 	<ListeTickets
 		tickets={filtered}
 		expandedIds={expandedTickets}
@@ -390,7 +400,7 @@
 		on:modifie={ticketModifie}
 		on:annuler={fermerFormulaires}
 	/>
-{/if}
+</EtatListe>
 
 <!--  Section ARCHIVES — les tickets clos depuis plus du délai de grâce.
       ⚠️ Elle s'appelait « Historique », et ce mot est réservé au FIL d'évolutions
@@ -445,9 +455,9 @@
 {/if}
 
 <style>
-	.etat-chargement {
-		color: var(--color-text-muted);
-	}
+	/*  `.etat-chargement` a disparu le 06/09/2026 (#796) : `EtatListe` porte le
+	    message de chargement, et sa mise en forme avec. svelte-check a signalé le
+	    sélecteur orphelin à la compilation suivante. */
 
 	/* Filtres (style identique à calendrier) */
 	/*  `.filters` vient d'`app.css` — sa marge basse et son `align-items` y sont
