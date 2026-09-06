@@ -35,6 +35,8 @@
 
 	let form = { titre: '', description: '' };
 	let perimetreCible: string[] = perimetreDefautListe();
+	//  Section 5 (#782). Vide = tous les résidents, ici comme côté serveur.
+	let publicCible: string[] = [];
 	let submitting = false;
 
 	/**  Ce formulaire ne sert que le DÉPÔT. L'état est écrit en constante plutôt
@@ -49,9 +51,14 @@
 		}
 		submitting = true;
 		try {
-			const idee = await ideesApi.create({ ...form, perimetre_cible: perimetreCible });
+			const idee = await ideesApi.create({
+				...form,
+				perimetre_cible: perimetreCible,
+				public_cible: publicCible,
+			});
 			form = { titre: '', description: '' };
 			perimetreCible = perimetreDefautListe();
+			publicCible = [];
 			toast('success', 'Idée soumise !');
 			dispatch('cree', idee);
 		} catch (e) {
@@ -84,6 +91,8 @@
 			idPrefixe="idee"
 			avecPerimetre={sectionPresente(IDEE, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
+			avecDestinataires={sectionPresente(IDEE, etat, 'destinataires')}
+			bind:destinataires={publicCible}
 			avecDescription={sectionPresente(IDEE, etat, 'description')}
 			descriptionRequise
 			bind:description={form.description}

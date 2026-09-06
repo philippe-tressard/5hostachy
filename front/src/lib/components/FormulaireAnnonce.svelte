@@ -88,6 +88,11 @@
 	//  la liste. Lié tel quel, une sélection abandonnée resterait visible sur la
 	//  carte alors que rien n'a été enregistré.
 	let perimetreCible: string[] = [...(annonce?.perimetre_cible ?? perimetreDefautListe())];
+	//  Section 5 (#782). Vide = tous les résidents, des DEUX côtés : c'est ce
+	//  que `concerneTousLesResidents` lit ici et `public_cible_visible` côté
+	//  serveur. Ne pas initialiser à une liste de codes « par défaut » —
+	//  ce serait choisir un ciblage à la place de l'auteur.
+	let publicCible: string[] = [...(annonce?.public_cible ?? [])];
 	let description = annonce?.description ?? '';
 	let contactVisible = annonce?.contact_visible ?? true;
 
@@ -127,6 +132,7 @@
 				negotiable: typeAnnonce === 'vente' ? negotiable : false,
 				contact_visible: contactVisible,
 				perimetre_cible: perimetreCible,
+				public_cible: publicCible,
 				//  L'état ne part QU'EN correction : à la création, la section est
 				//  absente et le serveur pose le défaut. L'envoyer quand même ferait
 				//  écrire un `statut_change_le` pour une transition qui n'a pas eu lieu.
@@ -235,6 +241,7 @@
 			avecPerimetre={sectionPresente(ANNONCE, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecDestinataires={sectionPresente(ANNONCE, etat, 'destinataires')}
+			bind:destinataires={publicCible}
 			avecDescription={sectionPresente(ANNONCE, etat, 'description')}
 			descriptionRequise
 			bind:description

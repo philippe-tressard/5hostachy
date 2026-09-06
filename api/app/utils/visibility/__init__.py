@@ -28,10 +28,17 @@ Règles métier appliquées :
 #  🔴 La surface publique NE BOUGE PAS. Seize modules et huit tests écrivent
 #  `from app.utils.visibility import …` ; un découpage qui casse ses importateurs
 #  n'est pas un découpage, c'est un déménagement à leurs frais.
-from .socle import CODES_PUBLIC_CIBLE, perimetre_visible, public_cible_visible
+from .socle import (
+    CODES_PUBLIC_CIBLE,
+    cible_visible,
+    perimetre_visible,
+    public_cible_visible,
+)
 from .objets import (
+    annonce_visible,
     can_see_ag,
     evenement_visible,
+    idee_visible,
     publication_visible,
     resultats_sondage_visibles,
     sondage_accessible,
@@ -46,8 +53,14 @@ from .documents import document_visible
 #  constante et non une fonction — et la suite de tests ne démarrait plus.
 __all__ = [
     "perimetre_visible",
+    #  La règle des deux axes (périmètre puis public cible), composée par la
+    #  publication, le sondage, la petite annonce et l'idée. Ce n'est pas une
+    #  primitive de plus : c'est leur écriture UNIQUE, depuis le 06/09 (#782).
+    "cible_visible",
     "CODES_PUBLIC_CIBLE",
     "public_cible_visible",
+    "annonce_visible",
+    "idee_visible",
     "publication_visible",
     "sondage_clos",
     "resultats_sondage_visibles",

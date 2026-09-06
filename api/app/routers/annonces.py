@@ -24,6 +24,7 @@ from app.routers.reponses_communaute import (
     reponses_de,
 )
 from app.utils.communaute import exiger_acces
+from app.utils.visibility import annonce_visible
 
 router = APIRouter(prefix="/annonces", tags=["annonces"])
 
@@ -88,6 +89,10 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
         #  annonces déposées AVANT la migration 0151 — elles valaient « résidence » de
         #  fait, elles le valent explicitement.
         "perimetre_cible": json.loads(annonce.perimetre_cible or '["résidence"]'),
+        #  Idem pour le public cible : liste de codes, jamais du JSON brut.
+        #  `None` sort en liste VIDE, que `$lib/destinataires.ts` lit comme
+        #  « tous les résidents » — le même sens des deux côtés.
+        "public_cible": json.loads(annonce.public_cible or "[]"),
         "auteur_prenom": auteur.prenom if auteur else "",
         "auteur_nom": auteur.nom if auteur else "",
         "auteur_email": auteur.email if annonce.contact_visible and auteur else None,
@@ -113,6 +118,10 @@ class AnnonceCreate(BaseModel):
     #  `PublicationCreate` : la conversion se fait ici, à la frontière, et une
     #  seule fois.
     perimetre_cible: List[str] = ["résidence"]
+    #  Section 5 du cadre #430 (#782). Liste VIDE = tout le monde : c'est ce que
+    #  `public_cible_visible` fait d'une valeur absente, et l'inverse rendrait
+    #  l'annonce invisible de tous, sans message ni ligne de journal.
+    public_cible: List[str] = []
     type_annonce: TypeAnnonce = TypeAnnonce.vente
     categorie: CategorieAnnonce = CategorieAnnonce.divers
     prix: Optional[float] = None
@@ -123,6 +132,7 @@ class AnnonceCreate(BaseModel):
 class AnnonceUpdate(BaseModel):
     titre: Optional[str] = None
     perimetre_cible: Optional[List[str]] = None
+    public_cible: Optional[List[str]] = None
     description: Optional[str] = None
     type_annonce: Optional[TypeAnnonce] = None
     categorie: Optional[CategorieAnnonce] = None
@@ -156,6 +166,11 @@ def list_annonces(
         PetiteAnnonce.cree_le.desc()  # type: ignore[arg-type]
     )
     annonces = session.exec(stmt).all()
+    #  🔒 Le ciblage filtre ICI, dans la réponse — jamais dans le front. Une carte
+    #  masquée par le navigateur reste dans la charge utile : ce serait une fuite,
+    #  pas un filtre. C'est le MÊME appel que les publications et les sondages
+    #  (`cible_visible`), et il n'y a pas de seconde règle à maintenir.
+    annonces = [a for a in annonces if annonce_visible(a, user)]
     if type_annonce:
         annonces = [a for a in annonces if a.type_annonce == type_annonce]
     if categorie:
@@ -179,6 +194,15 @@ def create_annonce(
         negotiable=data.negotiable,
         contact_visible=data.contact_visible,
         perimetre_cible=json.dumps(data.perimetre_cible, ensure_ascii=False),
+        #  Liste vide → `None` en base, PAS `"[]"`. Les deux se lisent « tout le
+        #  monde » aujourd'hui, mais `None` est ce que portent les annonces
+        #  déposées avant la migration 0176 : deux écritures pour un même sens
+        #  finissent par se traiter différemment quelque part.
+        public_cible=(
+            json.dumps(data.public_cible, ensure_ascii=False)
+            if data.public_cible
+            else None
+        ),
         auteur_id=user.id,
     )
     session.add(annonce)
@@ -209,8 +233,15 @@ def update_annonce(
     #  la carte. Deux chemins vers le même fait, une seule règle.
     if "statut" in maj and maj["statut"] != annonce.statut:
         annonce.statut_change_le = datetime.utcnow()
-    if "perimetre_cible" in maj:
-        maj["perimetre_cible"] = json.dumps(maj["perimetre_cible"], ensure_ascii=False)
+    #  Les DEUX axes du ciblage subissent la même conversion : les traiter
+    #  séparément a produit exactement ce genre d'oubli ailleurs.
+    for axe in ("perimetre_cible", "public_cible"):
+        if axe in maj:
+            maj[axe] = (
+                json.dumps(maj[axe], ensure_ascii=False) if maj[axe] else None
+            )
+    #  ⚠️ `perimetre_cible` vidé retombe donc sur `None`, que `_enrich` relit
+    #  comme `["résidence"]` : le défaut du champ, et non une annonce sans lieu.
     for field, value in maj.items():
         setattr(annonce, field, value)
     annonce.mis_a_jour_le = datetime.utcnow()
@@ -288,6 +319,9 @@ enregistrer_routes_reponses(
     libelle="Annonce",
     rubrique_label="votre annonce",
     prefixe_lien="annonce",
+    #  🔒 La règle d'accès de la rubrique, passée à la fabrique : les trois
+    #  routes de réponses la posent, une seule écriture la porte.
+    visible_de=annonce_visible,
 )
 @router.post("/{annonce_id}/photo")
 def add_photo(

@@ -36,6 +36,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, isNouveau } from '$lib/date';
 	import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
+	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 	import { STATUTS_IDEE, STATUT_IDEE_LABELS } from '$lib/idees';
 
 	/** Les idées à rendre, déjà filtrées et triées par l'appelant. */
@@ -81,6 +82,12 @@
 					<span class="badge {statutClass(idee.statut)}"
 						>{STATUT_IDEE_LABELS[idee.statut] ?? idee.statut}</span
 					>
+					<!--  Le PUBLIC visé, à côté du lieu (#782). Affiché seulement quand il
+					      restreint : « Tous les résidents » sur chaque carte serait du bruit.
+					      Même libellé que les sondages et les annonces. -->
+					{#if !concerneTousLesResidents(idee.public_cible)}<span class="badge badge-orange"
+							>{destinatairesLabel(idee.public_cible)}</span
+						>{/if}
 					{#if !estPerimetreParDefaut(idee.perimetre_cible)}<span class="badge badge-gray"
 							>&#x1F539; {perimetreLabel(idee.perimetre_cible)}</span
 						>{/if}

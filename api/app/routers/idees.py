@@ -18,6 +18,7 @@ from app.models.core import (
 )
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.communaute import exiger_acces
+from app.utils.visibility import idee_visible
 from app.routers.reponses_communaute import (
     enregistrer_routes_reponses,
     reponses_de,
@@ -47,6 +48,11 @@ class IdeeCreate(BaseModel):
     #  que `PerimetrePicker` produit et que `perimetreLabel` sait lire, des deux
     #  côtés. Vide vaut « toute la copropriété », comme partout ailleurs.
     perimetre_cible: Optional[list[str]] = None
+    #  Section 5 du cadre #430 (#782) — le PUBLIC visé, à côté du lieu.
+    #  Vide vaut « tous les résidents » : c'est ce que
+    #  `public_cible_visible` fait d'une valeur absente, et l'inverse
+    #  rendrait l'idée invisible de tous sans rien dire.
+    public_cible: Optional[list[str]] = None
 
 
 class IdeeRead(BaseModel):
@@ -102,6 +108,9 @@ def _enrich(idees: list, user_id: int, session: Session) -> list[dict]:
             #  Exposé en LISTE pour que le front n'ait rien à désérialiser — même
             #  contrat que les événements et les annonces.
             "perimetre_cible": _perimetre_liste(idee.perimetre_cible),
+            #  Même contrat pour le public cible : une LISTE de codes, que
+            #  `$lib/destinataires.ts` lit. Vide = tous les résidents.
+            "public_cible": json.loads(idee.public_cible or "[]"),
             "cree_le": idee.cree_le, "nb_votes": nb, "mon_vote": mon_vote,
             #  Calculé côté SERVEUR et transporté (#515). L'écran ne doit pas
             #  refaire la règle : la liste et les Archives trancheraient alors
@@ -120,6 +129,10 @@ def list_idees(
 ):
     exiger_acces(user)
     idees = session.exec(select(Idee).order_by(Idee.cree_le.desc())).all()
+    #  🔒 Le ciblage filtre ICI, dans la réponse — jamais dans le front : une
+    #  carte masquée par le navigateur reste dans la charge utile. Même
+    #  appel que l'annonce, le sondage et la publication (`cible_visible`).
+    idees = [i for i in idees if idee_visible(i, user)]
     return _enrich(idees, user.id, session)
 
 
@@ -137,6 +150,14 @@ def create_idee(
         #  Liste vide == aucune restriction : on retombe sur le défaut, comme le
         #  serveur le fait déjà pour les publications et les sondages.
         perimetre_cible=json.dumps(body.perimetre_cible or ["résidence"], ensure_ascii=False),
+        #  Liste vide → `None`, PAS `"[]"` : c'est ce que portent les idées
+        #  déposées avant la migration 0176, et deux écritures pour un même
+        #  sens finissent par se traiter différemment quelque part.
+        public_cible=(
+            json.dumps(body.public_cible, ensure_ascii=False)
+            if body.public_cible
+            else None
+        ),
     )
     session.add(idee)
     session.commit()
@@ -154,7 +175,11 @@ def voter(
     if user.has_role(RoleUtilisateur.externe) and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         raise HTTPException(403, "Les utilisateurs externes ne peuvent pas voter")
     idee = session.get(Idee, idee_id)
-    if not idee:
+    #  🔒 Voir ET voter suivent la même règle : sans ce contrôle, un résident hors
+    #  du public visé pesait sur une idée qui ne lui était pas adressée, en
+    #  appelant l'endpoint directement — la liste ne la lui montrait déjà plus.
+    #  404 et non 403 : « interdit » confirmerait l'existence de l'idée.
+    if not idee or not idee_visible(idee, user):
         raise HTTPException(404, "Idée introuvable")
 
     existant = session.exec(
@@ -261,4 +286,7 @@ enregistrer_routes_reponses(
     libelle="Idée",
     rubrique_label="votre idée",
     prefixe_lien="idee",
+    #  🔒 La règle d'accès de la rubrique, passée à la fabrique : les trois
+    #  routes de réponses la posent, une seule écriture la porte.
+    visible_de=idee_visible,
 )
