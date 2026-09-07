@@ -75,6 +75,7 @@
 		<button
 			type="button"
 			class="btn-icon btn-icon-edit"
+			aria-label="Modifier"
 			title="Modifier"
 			on:click={() => (edition = true)}><Icon name="pencil" size={13} /></button
 		>

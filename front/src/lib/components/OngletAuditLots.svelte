@@ -3,6 +3,7 @@
 	import { admin as adminApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
+	import BauxSansLocataire from '$lib/components/BauxSansLocataire.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -163,6 +164,7 @@
 							<td style="text-align:right">
 								<button
 									class="btn-icon-danger"
+									aria-label="Supprimer cette association"
 									title="Supprimer cette association"
 									on:click={() => supprimer(ul)}>&#x1F5D1;️</button
 								>
@@ -174,3 +176,13 @@
 		</div>
 	{/each}
 {/if}
+
+<!--  🔴 Le relevé des baux non rattachés vient APRÈS les associations user↔lot
+      (#808) : les deux disent « qui est relié à quoi », et cet onglet est
+      l'endroit où l'on vient poser cette question. En faire un onglet séparé
+      aurait dispersé la même intention sur deux écrans.
+
+      ⚠️ Ce sont bien DEUX notions : `UserLot` relie un compte à un LOT, le bail
+      relie un compte à un CONTRAT. Un locataire peut avoir l'un sans l'autre —
+      c'est justement ce que ce relevé donne à voir. -->
+<BauxSansLocataire />

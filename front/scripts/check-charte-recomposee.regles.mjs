@@ -89,10 +89,16 @@ export const TOLERANCES = {
 	//  ── Boutons ──────────────────────────────────────────────────────────────
 	'routes/(app)/admin/+page.svelte::btn-sm':
 		'boutons plus denses dans les tableaux de configuration',
-	'routes/(app)/espace-cs/+page.svelte::btn-icon':
+	//  ⚠️ La clé a suivi le BALISAGE le 07/09/2026 : la barre d'actions d'un membre
+	//  est devenue `ActionsMembre.svelte` (le trio « enregistrer · modifier ·
+	//  supprimer » était écrit deux fois dans la page, et le crayon du bandeau une
+	//  troisième). L'écart, lui, n'a pas bougé — c'est le même écart, au nouvel
+	//  endroit. Le laisser sur l'ancien chemin l'aurait fait disparaître du relevé
+	//  sans que rien ne soit corrigé, comme pour `FormulaireFaq` ci-dessus.
+	'lib/components/ActionsMembre.svelte::btn-icon':
 		'boutons-icônes CERCLÉS et carrés (2 rem) formant une barre d’actions, là où la ' +
 		'charte habille une icône nue',
-	'routes/(app)/espace-cs/+page.svelte::btn-icon-edit':
+	'lib/components/ActionsMembre.svelte::btn-icon-edit':
 		'le crayon est en couleur primaire — il est l’action principale de la rangée',
 	'lib/components/ChampSaisiPour.svelte::tab-btn':
 		'onglets ENCADRÉS et non soulignés : boutons de bascule dans un champ, pas la ' +

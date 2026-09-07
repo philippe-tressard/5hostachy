@@ -39,6 +39,23 @@ Couvrir les écrans applicatifs demande trois décisions, aucune prise :
 3. l'**API lancée** sur `localhost:8000` — `vite dev` ne fait qu'y proxifier les
    appels, il ne la démarre pas.
 
+### Un exemple concret de ce que ça coûte (07/09/2026)
+
+L'infobulle des boutons icône a été signalée à l'écran : elle s'affichait **sous**
+l'icône, là où le pointeur la masquait. Le correctif l'a ancrée au-dessus — puis
+l'arbitrage suivant, **de nouveau à l'écran**, l'a supprimée au profit de la bulle
+native du navigateur. Un test avait été écrit pour vérifier la position rendue,
+puis **retiré** : les 86 boutons `btn-icon` sont tous derrière la connexion. Le
+seul bouton icône d'un écran public (`ChampMotDePasse`, l'œil du champ) porte une
+autre classe.
+
+🔴 Ce qu'un test sans navigateur atteint : `npm run lint:infobulles` tient le nom
+accessible et l'absence de résidu `data-info`. **Ce qu'il n'atteint pas** : à quoi
+la bulle ressemble, et si elle se lit. Cette question-là a été tranchée deux fois
+en une journée par un coup d'œil humain, et c'est exactement le genre de
+vérification que ces tests existent pour automatiser — sans pouvoir encore
+l'atteindre.
+
 ## ⚠️ Ces tests ne sont pas encore dans la CI
 
 Les navigateurs pèsent une centaine de mégaoctets à installer sur un exécuteur.

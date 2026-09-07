@@ -1319,3 +1319,23 @@ jobs:
       - name: Toute méthode du client est appelée, ou déclarée avec son motif
         working-directory: front
         run: npm run lint:client-appele
+
+      # 🔴 L'infobulle d'un bouton icône est celle du NAVIGATEUR (`title`), son
+      # NOM vient de `aria-label` (07/09/2026, arbitré à l'écran).
+      #
+      # Le projet avait sa propre bulle en CSS, lue depuis `data-info` : elle
+      # s'ouvrait sous le bouton, là où arrive la flèche du pointeur. Elle a été
+      # SUPPRIMÉE — « la bulle sombre est inutile, la claire est plus
+      # pertinente ». Un `data-info` résiduel est donc un libellé que plus rien
+      # n'affiche. Le contrôle a été inversé le jour même : il interdisait
+      # `title`, il interdit maintenant `data-info`.
+      #
+      # ⚠️ La seconde règle, elle, ne dépendait d'aucun choix de bulle et
+      # SURVIT : le relevé a montré que 31 boutons n'avaient QUE `title`, donc
+      # aucun nom accessible, alors que la règle l'exige depuis toujours.
+      # `lint:a11y` ne pouvait pas le voir — il lit `svelte-check`, qui ne
+      # signale pas un bouton dont le contenu est un emoji. Et l'infobulle
+      # native n'apparaît ni au clavier ni au tactile.
+      - name: Infobulles et noms accessibles des boutons icône
+        working-directory: front
+        run: npm run lint:infobulles

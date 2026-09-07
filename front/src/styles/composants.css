@@ -214,44 +214,29 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	}
 }
 
-/* Tooltip CSS immédiat sur boutons icône portant un attribut title */
-.btn-icon[title],
-.btn-icon-edit[title],
-.btn-icon-danger[title],
-.btn-icon-warn[title],
-.btn-icon-success[title] {
-	position: relative;
-}
+/* ── L'infobulle d'un bouton icône : c'est celle du NAVIGATEUR ──────────────
+   🔴 Le projet en avait une, en CSS, lue depuis `title` puis `data-info`. Elle a
+   été SUPPRIMÉE le 07/09/2026, sur arbitrage à l'écran : *« la bulle sombre est
+   inutile, la claire est plus pertinente »* — la claire étant la bulle native du
+   navigateur, que `title` déclenche.
 
-.btn-icon[title]::after,
-.btn-icon-edit[title]::after,
-.btn-icon-danger[title]::after,
-.btn-icon-warn[title]::after,
-.btn-icon-success[title]::after {
-	content: attr(title);
-	position: absolute;
-	top: calc(100% + 5px);
-	left: 50%;
-	transform: translateX(-50%);
-	background: #1a1a2e;
-	color: #f2efe9;
-	font-size: 0.7rem;
-	font-family: var(--font-ui, system-ui, sans-serif);
-	white-space: nowrap;
-	padding: 0.2rem 0.5rem;
-	border-radius: 4px;
-	pointer-events: none;
-	opacity: 0;
-	transition: opacity 0.12s ease;
-	z-index: 200;
-}
-.btn-icon[title]:hover::after,
-.btn-icon-edit[title]:hover::after,
-.btn-icon-danger[title]:hover::after,
-.btn-icon-warn[title]:hover::after,
-.btn-icon-success[title]:hover::after {
-	opacity: 1;
-}
+   Ce qui la condamnait, signalé le même jour : elle s'affichait SOUS l'icône,
+   c'est-à-dire exactement là où arrive la flèche du pointeur, qui la masquait.
+   On ne pouvait donc jamais la lire.
+
+   ⚠️ La corriger était possible — l'ancrer au-dessus tenait en une ligne. C'est
+   la comparaison des deux à l'écran qui a tranché autrement, et c'est un
+   meilleur argument : la native se place seule, ne déborde jamais de la fenêtre,
+   et reste lisible quand la souris ne bouge plus. Trois choses qu'une bulle
+   maison ne fait bien qu'au prix de JavaScript.
+
+   ⚠️ Ce que la native ne fait PAS, et qu'il faut savoir : elle n'apparaît ni au
+   CLAVIER ni au TACTILE. C'est pourquoi `aria-label` est obligatoire sur tout
+   bouton icône — il porte le nom, la bulle ne porte que le confort.
+   🔒 `npm run lint:infobulles` le vérifie ; 31 boutons ne l'avaient pas.
+
+   Il n'y a donc PLUS de règle d'infobulle ici. Ne pas en réécrire une sans
+   rouvrir l'arbitrage : ce vide est une décision. */
 
 /* ── Badges ── */
 .badge {

@@ -10,7 +10,7 @@
 		type EtatDepliable,
 	} from '$lib/listeDepliable';
 	import EnteteSyndic from '$lib/components/EnteteSyndic.svelte';
-	import Icon from '$lib/components/Icon.svelte';
+	import ActionsMembre, { type Geste } from '$lib/components/ActionsMembre.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
@@ -578,6 +578,40 @@
 		}
 	}
 
+	/*
+	 *  Les trois gestes que la liste du syndic a de plus que celle du CS :
+	 *  l'ordre d'affichage compte (c'est lui que voit un arrivant), et l'un des
+	 *  membres est l'interlocuteur principal.
+	 *
+	 *  Ils sont passés en DONNÉES à `ActionsMembre` : le style de ces boutons vit
+	 *  dans le composant, une seule fois, et non des deux côtés d'un slot.
+	 */
+	function gestesOrdreSyndic(i: number, estPrincipal: boolean) {
+		const gestes: Geste[] = [];
+		if (i > 0)
+			gestes.push({
+				variante: 'deplacer',
+				libelle: 'Monter',
+				glyphe: '↑',
+				onClic: () => moveMembreSyndic(i, -1),
+			});
+		gestes.push({
+			variante: 'deplacer',
+			libelle: 'Descendre',
+			glyphe: '↓',
+			desactive: i === membresSyndic.length - 1,
+			onClic: () => moveMembreSyndic(i, 1),
+		});
+		if (!estPrincipal)
+			gestes.push({
+				variante: 'designer',
+				libelle: 'Définir interlocuteur principal',
+				glyphe: '★',
+				onClic: () => setPrincipal(i),
+			});
+		return gestes;
+	}
+
 	async function saveSyndic() {
 		for (const m of membresSyndic) {
 			if (!m.telephones.some((t) => t.trim())) {
@@ -901,12 +935,7 @@
 					{#if whatsappUrl}<span style="margin-left:.5rem"
 							>· <a href={whatsappUrl} target="_blank" rel="noopener">WhatsApp</a></span
 						>{/if}
-					<button
-						type="button"
-						class="btn-icon btn-icon-edit"
-						title="Modifier"
-						on:click={() => (csHeaderEditing = true)}><Icon name="pencil" size={13} /></button
-					>
+					<ActionsMembre barre={false} onModifier={() => (csHeaderEditing = true)} />
 				</div>
 			{/if}
 
@@ -933,34 +962,15 @@
 							{#if m.est_president}<span class="badge-president">👑 Président</span>{/if}
 							<span class="membre-card-title">{m.genre} {nomAffiche(m) || '…'}</span>
 						</div>
-						<div class="membre-card-actions" role="presentation" on:click|stopPropagation>
-							{#if cs.edite === i}
-								<button
-									type="button"
-									class="btn-icon btn-icon-save"
-									title="Enregistrer ce membre"
-									disabled={savingCSIdx === i}
-									on:click={() => saveMembreCS(i)}
-								>
-									{#if savingCSIdx === i}…{:else}&#x1F4BE;{/if}
-								</button>
-							{:else}
-								<button
-									type="button"
-									class="btn-icon btn-icon-edit"
-									title="Modifier"
-									on:click={() => {
-										cs = editer(i);
-									}}><Icon name="pencil" size={13} /></button
-								>
-							{/if}
-							<button
-								type="button"
-								class="btn-icon btn-icon-remove"
-								title="Supprimer"
-								on:click={() => removeMembreCS(i)}><Icon name="trash-2" size={14} /></button
-							>
-						</div>
+						<ActionsMembre
+							enEdition={cs.edite === i}
+							enregistrement={savingCSIdx === i}
+							onEnregistrer={() => saveMembreCS(i)}
+							onModifier={() => {
+								cs = editer(i);
+							}}
+							onSupprimer={() => removeMembreCS(i)}
+						/>
 					</div>
 
 					{#if cs.ouvert === i}
@@ -1138,57 +1148,16 @@
 							{#if m.est_principal}<span class="badge-principal">Interlocuteur principal</span>{/if}
 							<span class="membre-card-title">{m.genre} {nomAffiche(m) || '…'}</span>
 						</div>
-						<div class="membre-card-actions" role="presentation" on:click|stopPropagation>
-							{#if i > 0}
-								<button
-									type="button"
-									class="btn-icon btn-icon-move"
-									title="Monter"
-									on:click={() => moveMembreSyndic(i, -1)}>↑</button
-								>
-							{/if}
-							<button
-								type="button"
-								class="btn-icon btn-icon-move"
-								title="Descendre"
-								disabled={i === membresSyndic.length - 1}
-								on:click={() => moveMembreSyndic(i, 1)}>↓</button
-							>
-							{#if !m.est_principal}
-								<button
-									type="button"
-									class="btn-icon btn-icon-star"
-									title="Définir interlocuteur principal"
-									on:click={() => setPrincipal(i)}>★</button
-								>
-							{/if}
-							{#if syndic.edite === i}
-								<button
-									type="button"
-									class="btn-icon btn-icon-save"
-									title="Enregistrer ce membre"
-									disabled={savingSyndicIdx === i}
-									on:click={() => saveMembreSyndic(i)}
-								>
-									{#if savingSyndicIdx === i}…{:else}&#x1F4BE;{/if}
-								</button>
-							{:else}
-								<button
-									type="button"
-									class="btn-icon btn-icon-edit"
-									title="Modifier"
-									on:click={() => {
-										syndic = editer(i);
-									}}><Icon name="pencil" size={13} /></button
-								>
-							{/if}
-							<button
-								type="button"
-								class="btn-icon btn-icon-remove"
-								title="Supprimer"
-								on:click={() => removeMembreSyndic(i)}><Icon name="trash-2" size={14} /></button
-							>
-						</div>
+						<ActionsMembre
+							gestes={gestesOrdreSyndic(i, m.est_principal)}
+							enEdition={syndic.edite === i}
+							enregistrement={savingSyndicIdx === i}
+							onEnregistrer={() => saveMembreSyndic(i)}
+							onModifier={() => {
+								syndic = editer(i);
+							}}
+							onSupprimer={() => removeMembreSyndic(i)}
+						/>
 					</div>
 
 					{#if syndic.ouvert === i}
@@ -1430,55 +1399,11 @@
 		font-size: 0.875rem;
 		font-weight: 600;
 	}
-	.membre-card-actions {
-		display: flex;
-		gap: 0.3rem;
-		align-items: center;
-	}
 
-	/* Boutons icône */
-	/*  Ces boutons-icones sont CERCLES et carres (2rem) : ils forment une barre
-	    d'actions, la ou la charte habille une icone nue. Bordure, fond, taille et
-	    remplissage sont donc propres a cet ecran ; le reste vient d'elle (#607). */
-	.btn-icon {
-		width: 2rem;
-		height: 2rem;
-		border: 1px solid var(--color-border);
-		background: var(--color-bg);
-		font-size: 1rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition:
-			background 0.15s,
-			border-color 0.15s;
-		padding: 0;
-	}
-	.btn-icon:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-	.btn-icon-save:hover:not(:disabled) {
-		background: #dbeafe;
-		border-color: #3b82f6;
-	}
-	.btn-icon-remove {
-		border-color: var(--color-danger);
-		color: var(--color-danger);
-	}
-	.btn-icon-remove:hover {
-		background: var(--color-danger);
-		color: #fff;
-	}
-	.btn-icon-star {
-		border-color: var(--color-accent, #c9983a);
-		color: var(--color-accent, #c9983a);
-		font-size: 0.875rem;
-	}
-	.btn-icon-star:hover {
-		background: var(--color-accent, #c9983a);
-		color: #fff;
-	}
+	/*  🔴 Les huit règles de boutons-icônes sont parties le 07/09/2026 avec le
+	    balisage qu'elles habillaient : `ActionsMembre.svelte` porte la barre
+	    d'actions d'un membre — CS, syndic, et le crayon seul du bandeau. Elles
+	    étaient écrites ici parce que le balisage l'était ; il ne l'est plus. */
 
 	/* Badge principal */
 	.badge-principal {
@@ -1609,27 +1534,6 @@
 		color: #7c2d12;
 		background: #fffbeb;
 		border-color: #fcd34d;
-	}
-	.btn-icon-edit {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
-	}
-	.btn-icon-edit:hover {
-		background: var(--color-primary);
-		color: #fff;
-	}
-	.btn-icon-move {
-		border-color: var(--color-border);
-		color: var(--color-text-muted);
-		font-size: 0.85rem;
-	}
-	.btn-icon-move:hover:not(:disabled) {
-		background: var(--color-bg-secondary, #f8f9fa);
-		color: var(--color-text);
-	}
-	.btn-icon-move:disabled {
-		opacity: 0.25;
-		cursor: not-allowed;
 	}
 
 	/*  🔴 Les vingt-huit règles de l'onglet « Tickets résidence » sont parties

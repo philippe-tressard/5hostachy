@@ -54,6 +54,7 @@
 			>
 			<button
 				class="btn-icon-danger"
+				aria-label="Supprimer"
 				title="Supprimer"
 				style="margin-left:auto"
 				on:click|stopPropagation={() => onSupprimer(contratId, doc.id)}>🗑️</button
