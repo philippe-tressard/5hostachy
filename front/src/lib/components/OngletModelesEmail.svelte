@@ -37,6 +37,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort as fmt } from '$lib/date';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let emailTemplates: any[] = [];
 	let emailsLoading = true;
@@ -95,18 +96,32 @@
 	let emailHistory: any[] = [];
 	let emailHistoryLoading = true;
 
+	/*  🔴 Ce chargement n'avait AUCUN `catch` (#816). Une erreur remontait sans
+	    être vue, les deux listes restaient vides, et l'écran annonçait « Aucun
+	    modèle trouvé » — sur la page qui sert à vérifier que les courriels du
+	    site sont bien configurés. Le pire endroit pour affirmer une absence
+	    qu'on n'a pas constatée. */
+	let erreurModeles = '';
+	let erreurHistorique = '';
+
 	async function loadEmails() {
 		emailsLoading = true;
 		emailHistoryLoading = true;
-		try {
-			[emailTemplates, emailHistory] = await Promise.all([
-				adminApi.emailTemplates(),
-				adminApi.emailsHistorique(),
-			]);
-		} finally {
-			emailsLoading = false;
-			emailHistoryLoading = false;
-		}
+		erreurModeles = '';
+		erreurHistorique = '';
+		//  ⚠️ `allSettled` et non `all` : avec `all`, l'échec de l'UNE annule
+		//  l'autre, et une panne de l'historique effacerait les modèles. Les deux
+		//  listes sont indépendantes, leurs échecs doivent l'être aussi.
+		const [modeles, historique] = await Promise.allSettled([
+			adminApi.emailTemplates(),
+			adminApi.emailsHistorique(),
+		]);
+		if (modeles.status === 'fulfilled') emailTemplates = modeles.value;
+		else erreurModeles = modeles.reason?.message ?? 'Chargement impossible';
+		if (historique.status === 'fulfilled') emailHistory = historique.value;
+		else erreurHistorique = historique.reason?.message ?? 'Chargement impossible';
+		emailsLoading = false;
+		emailHistoryLoading = false;
 	}
 
 	function openEmailEdit(tpl: any) {
@@ -172,10 +187,14 @@
 <p class="muted" style="margin-bottom:1rem">
 	Modeles utilises pour les notifications automatiques.
 </p>
-{#if emailsLoading}
-	<p class="muted">Chargement...</p>
-{:else if emailTemplates.length === 0}
-	<div class="empty-state"><h3>Aucun modele trouve</h3></div>
+{#if emailsLoading || erreurModeles || emailTemplates.length === 0}
+	<EtatListe
+		chargement={emailsLoading}
+		erreur={erreurModeles}
+		vide={emailTemplates.length === 0}
+		titreErreur="Impossible d’afficher les modèles d’e-mail"
+		titreVide="Aucun modèle trouvé"
+	/>
 {:else}
 	<div class="card" style="overflow:hidden">
 		<div class="action-row" style="margin-bottom:.75rem">
@@ -312,13 +331,15 @@
 <p class="muted" style="font-size:.85rem;margin-bottom:.75rem">
 	10 derniers emails envoyés (ou tentatives). Purgé automatiquement après 90 jours.
 </p>
-{#if emailHistoryLoading}
-	<p class="muted">Chargement...</p>
-{:else if emailHistory.length === 0}
-	<div class="empty-state">
-		<h3>Aucun email envoyé</h3>
-		<p>L'historique est vide.</p>
-	</div>
+{#if emailHistoryLoading || erreurHistorique || emailHistory.length === 0}
+	<EtatListe
+		chargement={emailHistoryLoading}
+		erreur={erreurHistorique}
+		vide={emailHistory.length === 0}
+		titreErreur="Impossible d’afficher l’historique d’envoi"
+		titreVide="Aucun e-mail envoyé"
+		messageVide="L'historique est vide."
+	/>
 {:else}
 	<div class="card" style="overflow:auto;max-height:420px">
 		<table class="table" style="font-size:.82rem">

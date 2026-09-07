@@ -10,6 +10,7 @@
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { toast } from '$lib/components/Toast.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -22,9 +23,20 @@
 		ouvert = ouvert === code ? null : code;
 	}
 
+	/*  🔴 `rechargerPerimetres` avalait son échec : l'arborescence restait vide et
+	    l'écran annonçait « Aucun périmètre », en invitant à en créer un. Sur une
+	    copropriété qui en a douze, c'est une invitation à recréer ce qui existe
+	    déjà — le pire que puisse faire un écran d'administration (#816). */
+	let erreur = '';
+
 	onMount(async () => {
-		await rechargerPerimetres();
-		chargement = false;
+		try {
+			await rechargerPerimetres();
+		} catch (e) {
+			erreur = e instanceof ApiError ? e.message : 'Chargement impossible';
+		} finally {
+			chargement = false;
+		}
 	});
 
 	// ── Édition ───────────────────────────────────────────────────────────────
@@ -206,13 +218,15 @@
 	</FormulaireCreation>
 {/if}
 
-{#if chargement}
-	<p>Chargement…</p>
-{:else if noeuds.length === 0}
-	<p class="empty-state">
-		Aucun périmètre. Créez-en un : tant que l’arborescence est vide, un contenu sans périmètre reste
-		visible de tous.
-	</p>
+{#if chargement || erreur || noeuds.length === 0}
+	<EtatListe
+		{chargement}
+		{erreur}
+		vide={noeuds.length === 0}
+		titreErreur="Impossible d’afficher l’arborescence"
+		titreVide="Aucun périmètre"
+		messageVide="Créez-en un : tant que l’arborescence est vide, un contenu sans périmètre reste visible de tous."
+	/>
 {:else}
 	<div class="ref-list">
 		{#each noeuds as n (n.code)}
