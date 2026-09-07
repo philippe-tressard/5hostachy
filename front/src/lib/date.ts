@@ -1,0 +1,172 @@
+/**
+ * Détermine si un item est "Nouveau" (créé il y a moins de 48h et jamais mis à jour)
+ * @param cree_le - date de création (ISO string)
+ * @param mis_a_jour_le - date de mise à jour (ISO string ou null)
+ * @returns true si l'item est considéré comme nouveau
+ */
+/**
+ * Un item est "Nouveau" si :
+ * - il a été créé il y a moins de 48h
+ * - il n'a pas été mis à jour (mis_a_jour_le absent ou identique à cree_le)
+ */
+/**
+ * « Nouveau » se juge sur la CRÉATION, et sur rien d'autre.
+ *
+ * 🔴 La règle exigeait auparavant que l'élément n'ait **jamais été modifié** :
+ * `notUpdated && récent`. Corriger une faute de frappe deux heures après avoir
+ * publié faisait donc disparaître la pastille — l'élément cessait d'être nouveau
+ * parce qu'on l'avait relu.
+ *
+ * Signalé le 01/09/2026 : *« l'édition ne change pas la date de modification
+ * (correction d'erreurs) »*. Une correction ne dit rien au lecteur ; elle ne
+ * doit donc rien changer à ce qu'il voit.
+ *
+ * ⚠️ Le second paramètre a été **retiré**, pas ignoré : une quinzaine d'écrans
+ * le passaient, et une signature qui accepte un argument sans s'en servir est un
+ * mensonge poli — le prochain lecteur croirait que la date de modification
+ * compte encore.
+ */
+export function isNouveau(cree_le: string): boolean {
+	if (!cree_le) return false;
+	const QUARANTE_HUIT_HEURES = 48 * 60 * 60 * 1000;
+	return Date.now() - new Date(cree_le).getTime() < QUARANTE_HUIT_HEURES;
+}
+/**
+ * Utilitaires de formatage de dates — Europe/Paris
+ *
+ * Toutes les fonctions forcent le fuseau Europe/Paris pour garantir
+ * un affichage cohérent que le code tourne côté serveur (SSR, Docker UTC)
+ * ou côté client (navigateur).
+ */
+
+const TZ = 'Europe/Paris';
+const LOCALE = 'fr-FR';
+
+/** "2 avr. 2026" */
+export function fmtDate(d: string | null | undefined): string {
+	if (!d) return '—';
+	return new Date(d).toLocaleDateString(LOCALE, {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		timeZone: TZ,
+	});
+}
+
+/** "2 avril 2026" */
+export function fmtDateLong(d: string | null | undefined): string {
+	if (!d) return '—';
+	return new Date(d).toLocaleDateString(LOCALE, {
+		day: 'numeric',
+		month: 'long',
+		year: 'numeric',
+		timeZone: TZ,
+	});
+}
+
+/** "02 avr. 2026" */
+export function fmtDate2d(d: string | null | undefined): string {
+	if (!d) return '—';
+	return new Date(d).toLocaleDateString(LOCALE, {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+		timeZone: TZ,
+	});
+}
+
+/** "10/04/2026" */
+export function fmtDateShort(d: string | null | undefined): string {
+	if (!d) return '—';
+	return new Date(d).toLocaleDateString(LOCALE, { dateStyle: 'short', timeZone: TZ });
+}
+
+/** "2 avr. 2026, 14:30" */
+export function fmtDatetime(d: string | null | undefined): string {
+	if (!d) return '—';
+	return new Date(d).toLocaleString(LOCALE, {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: TZ,
+	});
+}
+
+/** "02 avr. 2026, 14:30" */
+export function fmtDatetime2d(d: string | null | undefined): string {
+	if (!d) return '—';
+	return new Date(d).toLocaleString(LOCALE, {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: TZ,
+	});
+}
+
+/** "10/04/2026 14:30" */
+export function fmtDatetimeShort(d: string | null | undefined): string {
+	if (!d) return '—';
+	return new Date(d).toLocaleString(LOCALE, {
+		dateStyle: 'short',
+		timeStyle: 'short',
+		timeZone: TZ,
+	});
+}
+
+/** "14:30" */
+export function fmtTime(d: string | null | undefined): string {
+	if (!d) return '—';
+	return new Date(d).toLocaleTimeString(LOCALE, {
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: TZ,
+	});
+}
+
+/** "avril 2026" */
+export function fmtMonthYear(d: string | Date | null | undefined): string {
+	if (!d) return '—';
+	const dt = typeof d === 'string' ? new Date(d) : d;
+	return dt.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric', timeZone: TZ });
+}
+
+/** "2 avril" (jour + mois long, sans année) */
+export function fmtDayMonth(d: string | null | undefined): string {
+	if (!d) return '—';
+	return new Date(d).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', timeZone: TZ });
+}
+
+/**
+ * Nombre de jours **entiers** écoulés depuis une date, 0 si elle est inconnue,
+ * illisible ou dans le futur.
+ *
+ * Employé partout où un délai se compte en jours : ancienneté d'un ticket,
+ * éligibilité d'une relance syndic, tri d'un kanban. Rendre 0 plutôt que `NaN`
+ * sur une entrée douteuse est délibéré — un `NaN` se propage silencieusement
+ * dans une comparaison et fait disparaître des lignes d'une liste.
+ */
+export function daysSince(d: string | null | undefined): number {
+	if (!d) return 0;
+	const ts = new Date(d).getTime();
+	if (Number.isNaN(ts)) return 0;
+	return Math.max(0, Math.floor((Date.now() - ts) / 86400000));
+}
+
+/**
+ * La salutation qui convient à l'heure qu'il est.
+ *
+ * ⚠️ À employer via `relire(donnees, salutation)` : dans un `$:` qui ne cite
+ * aucune variable réactive, elle serait figée au montage et dirait « Bonjour »
+ * à 20 h (`$lib/utils.relire`, #549).
+ */
+export function salutation(): string {
+	const h = new Date().getHours();
+	if (h < 6) return 'Bonne nuit';
+	if (h < 12) return 'Bonjour';
+	if (h < 18) return 'Bon après-midi';
+	return 'Bonsoir';
+}

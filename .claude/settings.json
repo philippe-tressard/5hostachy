@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/env-report.sh; cat .claude/5hostachy-preflight.md",
+            "shell": "bash",
+            "timeout": 10,
+            "statusMessage": "Environnement + consignes 5Hostachy…"
+          }
+        ]
+      }
+    ]
+  }
+}

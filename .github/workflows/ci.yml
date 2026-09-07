@@ -1,0 +1,1371 @@
+name: CI
+
+#  ⚠️ `push` ne porte QUE `main`, et c'est délibéré (19/08/2026).
+#
+#  Avant : `push: [main, dev]` + `pull_request: [main, dev]`. Un commit poussé sur
+#  `dev` puis mis en PR vers `main` déclenchait DEUX exécutions complètes du même
+#  workflow sur le MÊME sha — soit huit jobs pour quatre checks utiles. Les runners
+#  saturaient, « Tests Python » (qui installe pango/cairo par apt-get) partait en
+#  file d'attente, et la PR restait BLOCKED en attendant un exemplaire redondant
+#  d'un job déjà passé au vert quelques minutes plus tôt.
+#
+#  La protection de branche exige les checks de l'événement `pull_request` : c'est
+#  donc celui-là qu'il faut garder. Le run `push` sur `dev` ne servait à rien que
+#  personne d'autre ne fasse déjà — `scripts/poste/rejouer-ci.sh` rejoue les mêmes
+#  commandes AVANT le push (point 16 du pré-check, obligatoire).
+#
+#  Le point 0c du pré-check continue de fonctionner : `gh run list --branch dev`
+#  remonte aussi les exécutions `pull_request`, dont la branche de tête est `dev`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+#  Un réalignement de `dev` (force-push après un squash) laissait tourner le run de
+#  l'ancien head : GitHub finissait par l'annuler, et un check requis restait
+#  « cancelled » — donc jamais satisfait, donc PR bloquée. Trois occurrences sur les
+#  huit derniers runs du 19/08.
+#
+#  Le groupe distingue la PR de la branche : deux contextes différents ne
+#  s'annulent jamais l'un l'autre, seul un run DEVENU OBSOLÈTE est interrompu.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+#  ⚠️ Tout job porte un `timeout-minutes` (18/08/2026). Sans lui, GitHub laisse
+#  pendre jusqu'à SIX HEURES : le 18/08, « Tests Python » est resté bloqué deux
+#  fois sur l'installation des bibliothèques système PDF (apt-get), et comme ce
+#  check est requis, la PR est restée « BLOCKED » sans qu'aucun échec ne soit
+#  signalé. Un job qui PEND ne dit rien ; un job qui ÉCHOUE se relance d'un clic.
+#  C'est la règle du projet : un contrôle qui ne peut pas s'exécuter doit le DIRE
+#  (`standards/04`, INCONNU jamais OK). Les durées observées vont de 7 s à 57 s.
+
+jobs:
+  # ── Backend: lint Python avec Ruff ───────────────────────────
+  lint-backend:
+    name: Lint Python (Ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      # 🔴 PREMIÈRE MESURE DES DÉPENDANCES PYTHON (#537, 20/08/2026).
+      #
+      # La passe de sécurité du 20/08 couvrait les dix points de l'OWASP Top 10.
+      # NEUF ont été mesurés ; le dixième ne l'a pas été — `pip-audit` n'était
+      # installé nulle part. Le versant Node l'était depuis #411 : deux moitiés
+      # du même contrôle, dont une seule existait.
+      #
+      # ⚠️ Un audit qui ne peut pas s'exécuter rend INCONNU et sort en 2 — jamais
+      # OK. C'est exactement le défaut que ce ticket corrigeait.
+      - name: Installer pip-audit
+        run: pip install pip-audit
+
+      # La première exécution a trouvé une vulnérabilité RÉELLE : PYSEC-2026-3552
+      # sur `cryptography` 49.0.0 — un oracle de Bleichenbacher sur le
+      # déchiffrement PKCS#7. Elle est TOLÉRÉE, pas ignorée : `fastapi-mail`
+      # épingle `cryptography <50.0.0` et sa 1.6.5 est la dernière publiée, donc
+      # aucun correctif n'est atteignable ; et ce dépôt n'appelle aucune des trois
+      # fonctions concernées — vérifié, pas supposé.
+      #
+      # Chaque exception nomme son avis, son motif, sa condition de levée et sa
+      # date de revue. Elle EXPIRE, et une exception devenue inutile fait échouer
+      # le contrôle pour forcer son retrait. Même mécanique que `lint:audit` côté
+      # front — un contrôle sans porte de sortie finit désactivé la semaine où un
+      # avis non corrigeable bloque toutes les PR.
+      - name: Audit des dépendances Python (exceptions nominatives)
+        working-directory: api
+        run: python scripts/check_audit_python.py
+
+      - name: Conformité des licences (REUSE)
+        # 🔴 RANG 1 (`standards/14`) — et il n'était vérifié NULLE PART jusqu'au
+        # 05/09/2026 (#774). Le projet EST conforme : `reuse lint` compte 913
+        # fichiers sur 913 couverts, par le motif `**` de `REUSE.toml`. Ce qui
+        # manquait, c'est le contrôle : une conformité que rien ne mesure dérive
+        # au premier fichier ajouté hors du motif — et personne ne le saurait.
+        #
+        # ⚠️ Le format `dep5` employé jusqu'ici est DÉPRÉCIÉ par REUSE 3.2. Il a
+        # été converti en `REUSE.toml` le même jour : garder un format que
+        # l'outil ne lira plus, c'est programmer la panne du contrôle qu'on vient
+        # de poser.
+        #
+        # ⚠️ `python -m reuse` et non `reuse` : l'exécutable posé par pip n'est pas
+        # dans le PATH d'un poste Windows, et le rejeu local rendait INCONNU —
+        # c'est-à-dire ni vert ni rouge, donc un contrôle qu'on ne peut pas
+        # relire avant de pousser. Le module, lui, s'appelle partout pareil.
+        run: |
+          python -m pip install reuse
+          python -m reuse lint
+
+      - name: Run Ruff
+        # F401 (import inutilisé) sur `app/` seulement, ajouté le 08/08/2026 :
+        # ce n'est pas du style. Une factorisation se termine par la suppression
+        # de ce qu'elle a remplacé (socle 02 §5), et l'import orphelin est le
+        # résidu le plus fréquent — 26 traînaient dans `app/`, dont deux que je
+        # venais de créer en ré-exportant des périmètres que plus personne
+        # n'importait. Ruff respecte `__all__` : les ré-exports voulus des
+        # paquets découpés (`admin/`, `flux/`, `tickets/`) ne sont pas touchés.
+        #
+        # `alembic/` en est EXCLU volontairement : quatre migrations portent des
+        # imports inutiles, et une migration déjà appliquée ne se modifie jamais
+        # (CLAUDE.md). Les corriger pour satisfaire un linter réécrirait
+        # l'historique du schéma — le remède serait pire que le défaut.
+        run: |
+          ruff check api/app/ --select E9,F63,F7,F82,F401
+          ruff check api/alembic/ --select E9,F63,F7,F82
+        # On garde un garde-fou « erreurs réelles » (syntaxe, noms invalides, runtime)
+        # sans bloquer le CI sur des règles de style legacy.
+
+  # ── Backend: tests préventifs (templates email + migrations) ─
+  test-backend:
+    name: Tests Python (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'  # aligné sur l'image de prod (conteneur API)
+
+      # WeasyPrint a besoin de pango/cairo pour RENDRE un document ; sans elles,
+      # `import weasyprint` échoue et les tests de rendu s'abstiendraient — donc
+      # ne diraient rien. C'est le seul endroit où le rendu des documents
+      # imprimables est réellement exercé (cf. api/tests/test_documents_pdf.py,
+      # qui échoue exprès si ces bibliothèques manquent en intégration continue).
+      #  ⚠️ N'INSTALLE RIEN dans le cas normal, et c'est pour cela qu'on regarde
+      #  avant d'agir. Les cinq bibliothèques sont déjà présentes sur
+      #  `ubuntu-latest` — vérifié le 19/08/2026 dans les journaux du job :
+      #  « 0 upgraded, 0 newly installed, 0 to remove ». L'étape ne servait donc
+      #  qu'à exécuter `apt-get update`, qui contacte les miroirs Debian :
+      #  6 secondes d'habitude, **plus de dix minutes ce jour-là**, pendant que
+      #  pytest attendait son tour sans avoir démarré.
+      #
+      #  🔴 Ne PAS supprimer l'étape pour autant. Quatre fichiers de tests rendent
+      #  de vrais PDF (`test_documents_pdf`, `test_fiche_arrivant_batiments`,
+      #  `test_icones_svg`, `test_pieces_jointes`) : le jour où GitHub change son
+      #  image, ils échoueraient sur un défaut de bibliothèque système, avec un
+      #  message que personne ne relierait à la CI. S'appuyer sur une
+      #  préinstallation sans la vérifier est la dépendance implicite que
+      #  `standards/04` interdit — on la rend explicite, et on ne paie
+      #  l'installation que si elle manque réellement.
+      - name: Bibliothèques système pour le rendu PDF
+        run: |
+          #  Hors Debian, cette étape n'a pas d'objet : ni bibliothèque à vérifier,
+          #  ni apt pour l'installer. Elle rend donc la main SANS ÉCHOUER quand
+          #  `dpkg-query` est absent — sinon `scripts/poste/rejouer-ci.sh` la
+          #  ferait échouer sur le poste Windows, où elle ne mesure rien.
+          #  ⚠️ Ce repli ne masque rien de ce que la CI vérifie : en intégration
+          #  continue, l'environnement est Ubuntu et le contrôle s'exécute
+          #  réellement. Il dit ce qu'il fait, plutôt que de rendre un vert muet.
+          if ! command -v dpkg-query >/dev/null 2>&1; then
+            echo "· dpkg absent : étape sans objet hors Debian, rien à vérifier ici."
+            exit 0
+          fi
+          PAQUETS="libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libfribidi0 libcairo2"
+          manquants=""
+          for p in $PAQUETS; do
+            dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q "install ok installed" \
+              || manquants="$manquants $p"
+          done
+          if [ -z "$manquants" ]; then
+            echo "✓ Les 5 bibliothèques de rendu PDF sont déjà sur le runner — rien à installer."
+          else
+            echo "→ Manquant(s) :$manquants — installation depuis les miroirs."
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends $manquants
+          fi
+
+      - name: Install dependencies
+        working-directory: api
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run pytest
+        working-directory: api
+        run: pytest tests/ -q
+        env:
+          SECRET_KEY: "ci-secret-key-placeholder-0123456789abcdef"
+          DATABASE_URL: "sqlite:///:memory:"
+
+  # ── Infra: syntaxe, self-tests et modes des scripts d'exploitation ─
+  # Ajouté après l'incident du 30/07/2026. Les scripts d'infra (bascule,
+  # failover, contrôles de fiabilité) ne passaient par AUCUN test : ils ne sont
+  # ni Python ni Svelte, donc hors de portée des trois autres jobs. Or ce sont
+  # eux qui décident d'arrêter la prod. Cette nuit-là, deux défauts de ce type
+  # ont coûté 12 bascules croisées inutiles et un contrôle faussement vert —
+  # les deux sont désormais couverts par un self-test qui échoue en CI.
+  test-scripts:
+    name: Scripts d'infra (syntaxe + self-tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Fins de ligne LF et absence de BOM
+        # Contrôlé AVANT la syntaxe, parce qu'un CRLF ou un BOM produit un message
+        # cryptique qui envoie sur une fausse piste : `syntax error near unexpected
+        # token $'in\r'` pour le premier, `#!/bin/bash: command not found` pour le
+        # second (le BOM est consommé comme partie du shebang). C'est un artefact de
+        # clone Windows, pas une faute de frappe — il faut le nommer comme tel.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.sh' '.githooks/*'); do
+            head -c3 "$f" | grep -q $'\xef\xbb\xbf' && { echo "::error file=$f::BOM UTF-8 en tête — le shebang devient inexécutable"; st=1; }
+            grep -qU $'\r$' "$f" && { echo "::error file=$f::fins de ligne CRLF — attendu LF (.editorconfig)"; st=1; }
+          done
+          exit $st
+
+      - name: Le rangement des cartes du kanban ne s'écrit qu'à un endroit
+        # 🔴 Signalé à l'écran le 02/09/2026 : « je n'ai pas la même vue entre le
+        # fil et le calendrier pour le kanban ». Prestataire affichait 1 d'un côté
+        # et 5 de l'autre, Terminé 9 contre 5.
+        #
+        # Le calcul « dans quelle colonne va cette carte » était écrit DEUX fois,
+        # à l'identique, dans `calendrier/+page.svelte` et
+        # `tableau-de-bord/+page.svelte`. Le jour où `archivee` a changé de sens
+        # (#515), un seul des deux a été corrigé — et rien ne l'a dit.
+        #
+        # C'est le cadre #430 mot pour mot : *un objet a plusieurs rendus, et toute
+        # divergence entre eux se déclare*. Celle-ci ne se déclarait nulle part et
+        # n'était visible qu'en regardant les deux écrans côte à côte.
+        #
+        # La règle vit dans `$lib/kanban.colonneDeLEvenement`.
+        run: |
+          st=0
+          for f in $(git ls-files -- 'front/src/**/*.svelte' 'front/src/**/*.ts'); do
+            case "$f" in front/src/lib/kanban.ts) continue ;; esac
+            if LC_ALL=C grep -nE 'statut_kanban\s*===\s*col(\.id)?\b' "$f" >/dev/null; then
+              echo "::error file=$f::le rangement des cartes du kanban est recopié ici — employer \`colonneDeLEvenement()\` de \$lib/kanban"
+              st=1
+            fi
+          done
+          exit $st
+
+      - name: Aucune séquence regex avalée par un template literal
+        # 🔴 LA MÊME FAMILLE QUE CI-DESSUS, ET LE CONTRÔLE PRÉCÉDENT NE PEUT PAS
+        # LA VOIR (02/09/2026, quatrième occurrence).
+        #
+        #     new RegExp(`<${nom}\b([^>]*)>`)
+        #
+        # Dans un template literal, JavaScript interprète `\b` comme le caractère
+        # BACKSPACE. Le motif cherche donc `<Nom␈`, qui ne correspond à rien — et
+        # le contrôle qui l'emploie est vert parce qu'il ne mesure RIEN.
+        #
+        # ⚠️ Le fichier, lui, ne contient AUCUN octet suspect : deux caractères
+        # parfaitement lisibles, transformés à l'exécution. Ni l'étape ci-dessus
+        # (qui lit les octets), ni `no-control-regex` d'ESLint (qui ne voit que
+        # les littéraux `/…/`), ni une relecture ne pouvaient l'attraper.
+        #
+        # C'est ce qui a rendu `lint:titres` inopérant depuis son écriture : il
+        # est passé au vert sur le défaut même qu'il devait empêcher, signalé
+        # trois fois par l'utilisateur.
+        #
+        # Il faut écrire `\\b` — un antislash pour le template, un pour le regex.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.ts' '*.js' '*.mjs' '*.svelte'); do
+            # Une accolade-dollar puis, dans le MÊME backtick, une séquence
+            # d'échappement regex à un seul antislash. `bfnrtv0` et `\x` sont les
+            # échappements que JavaScript consomme dans une chaîne.
+            if LC_ALL=C grep -nE 'new RegExp\(`[^`]*[^\\]\\[bBsSwWdDnrtv0]' "$f" >/dev/null; then
+              LC_ALL=C grep -nE 'new RegExp\(`[^`]*[^\\]\\[bBsSwWdDnrtv0]' "$f" | while read -r l; do
+                echo "::error file=$f::séquence regex à UN antislash dans un template literal — le motif ne cherchera pas ce que vous croyez : $l"
+              done
+              st=1
+            fi
+          done
+          exit $st
+
+      - name: Absence de BOM dans le code et la configuration
+        # Le contrôle ci-dessus ne couvre que les scripts shell. Or le BOM est un
+        # artefact de poste Windows, pas un problème de shell : il avait déjà
+        # rendu `front/package.json` illisible par Vite (CI rouge après merge), et
+        # 27 fichiers versionnés en portaient encore un le 01/08/2026 — dont deux
+        # sources Python, douze pages Svelte et `.gitignore`. Aucun ne cassait
+        # aujourd'hui ; rien ne garantissait que le prochain ne casserait pas.
+        # Les fins de ligne, elles, ne sont PAS contrôlées ici : le dépôt est
+        # légitimement mixte CRLF/LF hors des scripts.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.py' '*.ts' '*.js' '*.mjs' '*.svelte' '*.json' '*.yml' '*.yaml' '*.css' '*.html' '.gitignore'); do
+            head -c3 "$f" | grep -q $'\xef\xbb\xbf' && { echo "::error file=$f::BOM UTF-8 en tête — écrire ce fichier sans BOM (Set-Content -Encoding utf8 en pose un)"; st=1; }
+          done
+          exit $st
+
+      - name: Aucun caractère de contrôle invisible dans le code
+        # 🔴 Un caractère de RECUL (U+0008) collé au milieu d'une expression
+        # régulière : invisible dans tout éditeur, il change le motif sans que
+        # rien ne le montre. Trouvé une première fois par ESLint
+        # (`no-control-regex`) à sa mise en service — puis DEUX fois de plus le
+        # 29/08/2026, glissés en écrivant les garde-fous eux-mêmes (#419).
+        #
+        # ESLint ne voit que les littéraux d'expression régulière ; le piège vaut
+        # pour n'importe quelle chaîne, et le motif construit par `new RegExp` en
+        # est une. Ce contrôle-ci porte donc sur TOUT le texte du fichier.
+        #
+        # ⚠️ Tabulation, saut de ligne et retour chariot sont les seuls tolérés :
+        # ce sont ceux qu'on écrit exprès.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.py' '*.ts' '*.js' '*.mjs' '*.svelte' '*.sh' '*.yml'); do
+            # `[[:cntrl:]]` et non `grep -P` : le PCRE de Git Bash refuse de
+            # tourner hors locale unibyte, et le contrôle serait alors muet sur
+            # le poste — donc INCONNU pris pour un vert. Les trois caractères
+            # volontaires (tabulation, saut de ligne, retour chariot) sont
+            # retirés avant la lecture.
+            if tr -d '\n\r\t' < "$f" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+              echo "::error file=$f::caractère de contrôle invisible (U+0008 et voisins) — il change un motif sans se voir"
+              st=1
+            fi
+          done
+          exit $st
+
+      - name: Syntaxe de tous les scripts shell
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.sh' '.githooks/*'); do
+            bash -n "$f" || { echo "::error file=$f::erreur de syntaxe"; st=1; }
+          done
+          exit $st
+
+      - name: Self-tests des fonctions de décision
+        # Ces scripts exposent leur logique en fonction PURE + --selftest
+        # (aucun effet de bord : ni SSH, ni docker, ni écriture). C'est le seul
+        # moyen de tester une décision d'infra sans les deux RPi.
+        run: |
+          bash scripts/lib/lib-role.sh              --selftest
+          bash scripts/lib/lib-parite.sh            --selftest
+          # 🔒 Vérifie la FORME du geste d'installation dans un volume du peer :
+          # aucun `sudo`, source montée en lecture seule, temporaire nettoyé.
+          # Les phases de bascule qui l'emploient ÉCRIVENT — leur seule preuve
+          # est le journal du lendemain. La forme, elle, se contrôle ici (#582).
+          bash scripts/lib/lib-volumes.sh           --selftest
+          bash scripts/exploitation/boot-role-guard.sh   --selftest
+          bash scripts/exploitation/health-watch.sh      --selftest
+          bash scripts/exploitation/auto-deploy.sh       --selftest
+          bash scripts/exploitation/check-reliability.sh --selftest
+          bash scripts/poste/export-hors-site.sh --selftest
+          bash scripts/lib/lib-rapport.sh           --selftest
+          bash scripts/lib/lib-rotation.sh          --selftest
+          bash scripts/poste/precheck-mep.sh      --selftest
+          bash scripts/exploitation/maintenance.sh       --selftest
+          bash scripts/poste/rejouer-ci.sh        --selftest
+          python scripts/poste/verifier-fins-de-ligne.py --selftest
+          python scripts/poste/verifier-variables-shell.py --selftest
+          bash scripts/poste/verifier-points-entree.sh --selftest
+          # 🔒 Le résultat NORMAL de ce diagnostic est ZÉRO orphelin : sans
+          # self-test, un script qui confondrait « aucun » et « je n'ai pas pu
+          # demander » rendrait le même message dans les deux cas (#546).
+          bash scripts/poste/diagnostic-cles-etrangeres.sh --selftest
+
+      - name: Variables non assignées sous `set -u`
+        # 🔴 DEUX fois un script d'infra est mort à l'exécution sur une variable
+        # jamais définie, et DEUX fois cette CI était verte :
+        #   • 11/08/2026 — `check-reliability.sh`, `$R` sorti des quotes ;
+        #   • 06/09/2026 — `export-hors-site.sh`, `RPI1_IP` qui n'a jamais
+        #     existé : le rattrapage de #775 n'a donc JAMAIS tourné, et c'est
+        #     en lançant le script qu'on l'a su, pas par un contrôle.
+        # `bash -n` valide la syntaxe, pas l'existence d'un nom ; et un
+        # `--selftest` placé avant le code réel rend la main sans le payer.
+        # ShellCheck ne couvre pas ce cas : SC2154 s'abstient sur les noms tout
+        # en majuscules — la convention de nommage de TOUS les scripts d'ici.
+        run: python scripts/poste/verifier-variables-shell.py
+
+      - name: Contrats d'infra (logs rotés, chemins de sortie datés)
+        # Deux régressions vécues le 31/07/2026, toutes deux invisibles pendant
+        # des semaines parce qu'un manque ressemble à du calme :
+        #   • un log ajouté hors du motif roté par maintenance.sh grossit sans
+        #     fin (hostachy-reliability.log : 1,7 Mo, jamais roté) ;
+        #   • un chemin de sortie muet dans auto-deploy.sh fait croire au
+        #     contrôle de battement que le script est mort.
+        # Ces deux contrats sont statiques : ils se vérifient ici, sans les RPi.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.sh'); do
+            for p in $(grep -oE '/var/log/[A-Za-z0-9_.*-]+' "$f" | sort -u); do
+              case "$p" in
+                /var/log/hostachy-*.log) ;;
+                *) echo "::error file=$f::$p hors du motif /var/log/hostachy-*.log — maintenance.sh ne le rotera jamais"; st=1 ;;
+              esac
+            done
+          done
+          grep -q 'for LOGFILE in /var/log/hostachy-\*\.log' scripts/exploitation/maintenance.sh \
+            || { echo "::error file=scripts/exploitation/maintenance.sh::la rotation doit itérer sur le GLOB /var/log/hostachy-*.log (une liste nominative laisse filer tout log ajouté ensuite)"; st=1; }
+          for f in $(git ls-files -- '*.sh'); do
+            while IFS= read -r hit; do
+              case "$hit" in
+                *"label=com.docker.compose.project"*) ;;
+                *) echo "::error file=$f::\`docker image prune\` sans --filter label=com.docker.compose.project — le daemon de rpi2 est partagé avec List-dons, un prune nu supprime aussi ses couches"; st=1 ;;
+              esac
+            done < <(grep -nE '^[^#]*docker image prune' "$f")
+            grep -qE '^[^#]*docker system prune' "$f" \
+              && { echo "::error file=$f::\`docker system prune\` est interdit — il détruirait volumes et réseaux de l'application co-hébergée"; st=1; }
+          done
+          awk '
+            /\$LOG_DATE/                  { last = NR }
+            /^[[:space:]]*exit [0-9]/     { if (NR - last > 4) {
+                printf "::error file=scripts/exploitation/auto-deploy.sh,line=%d::sortie sans ligne horodatée — contrat de battement rompu (C14 conclurait que le script est mort)\n", NR
+                bad = 1 } }
+            END { exit bad }
+          ' scripts/exploitation/auto-deploy.sh || st=1
+          # 🔴 Le moteur d'envoi d'e-mail vit dans lib-alert.sh, et NULLE PART
+          # ailleurs. `bascule.sh` a gardé le sien jusqu'au 30/08/2026 — trente
+          # lignes de smtplib recopiées, et pire : envoyées par `docker exec
+          # hostachy_api`, donc par un conteneur que sa propre phase 2 arrête.
+          # L'alerte de bascule échouée ne partait donc pas dans le seul cas où
+          # elle compte : quand le rollback n'a pas su relancer les conteneurs.
+          # Rien ne le disait — c'est une duplication qu'aucun contrôle ne
+          # voyait, et ce lot en est la troisième dans ce dépôt (moteur d'envoi
+          # du monitoring, v2.41.0).
+          for f in $(git ls-files -- 'scripts/*.sh'); do
+            case "$f" in scripts/lib/lib-alert.sh) continue ;; esac
+            grep -qE '^[^#]*(smtplib|MIMEText|starttls)' "$f" \
+              && { echo "::error file=$f::moteur SMTP réécrit — passer par scripts/lib/lib-alert.sh (alert_if_not_in_cooldown), seul endroit où l'envoi est défini"; st=1; }
+          done
+          # Et l'inverse, sinon le contrôle ci-dessus serait vert le jour où
+          # PERSONNE n'envoie plus rien : le module doit toujours porter le
+          # moteur qu'il centralise (cas zéro, `standards/04` §2).
+          grep -qE '^[^#]*smtplib' scripts/lib/lib-alert.sh \
+            || { echo "::error file=scripts/lib/lib-alert.sh::le moteur SMTP a disparu du module qui doit le porter — le contrôle ci-dessus ne mesure plus rien"; st=1; }
+          exit $st
+
+      - name: Modularité — un fichier de plus de 500 lignes ne doit pas grossir
+        # Rang 1 du socle. Le dépôt compte 26 fichiers déjà au-dessus du plafond :
+        # un contrôle absolu échouerait en permanence et serait désactivé dans la
+        # semaine. La règle est « l'existant se découpe AU FIL DE L'EAU » — ce qui
+        # est interdit n'est pas d'être gros, c'est de GROSSIR sans découper.
+        #
+        # Posé le 07/08/2026 sur remarque de l'utilisateur : trois lots successifs
+        # avaient fait grossir flux.py (996 → 1044), check-reliability.sh (386 →
+        # 565) et email.py (650 → 656) sans qu'aucun contrôle ne le signale. La
+        # consigne existait depuis le début ; elle ne tenait pas seule.
+        run: |
+          # Historique COMPLET de la base : un clone superficiel a fait échouer la
+          # comparaison au premier essai, et le contrôle avait conclu au vert sur
+          # un diff vide. Le script refuse désormais de conclure dans ce cas.
+          git fetch --no-tags --unshallow origin ${{ github.base_ref || 'main' }} 2>/dev/null             || git fetch --no-tags origin ${{ github.base_ref || 'main' }}
+          bash scripts/poste/scripts-ci-modularite.sh origin/${{ github.base_ref || 'main' }}
+
+      - name: Bits d'exécution versionnés
+        # Étape 0b du pré-check MEP, jusqu'ici manuelle : `core.filemode=false`
+        # sur un clone Windows avale un `chmod +x`, le fichier part en 100644 et
+        # Linux refuse de l'exécuter SANS message — un garde-fou inerte
+        # (constaté le 26/07/2026 sur .githooks/pre-commit). Les modules
+        # *sourcés* (`lib-*.sh`) restent en 644 : un bit x y serait trompeur
+        # (CLAUDE.md, point 7 du pré-check).
+        run: |
+          st=0
+          while read -r mode _ _ path; do
+            # Le motif porte sur le NOM DE BASE, pas sur le chemin : les modules
+            # ont été rangés dans scripts/lib/ (#337) et une exclusion ancrée à la
+            # racine cessait de les reconnaître — le contrôle réclamait alors un
+            # bit x sur ce qui ne doit surtout pas en porter.
+            case "${path##*/}" in
+              lib-*.sh) exp=100644 ;;
+              *)        exp=100755 ;;
+            esac
+            [ "$mode" = "$exp" ] || { echo "::error file=$path::mode $mode, attendu $exp"; st=1; }
+          done < <(git ls-files -s -- '*.sh' '.githooks/*')
+          exit $st
+
+  # ── Frontend: vérification build SvelteKit ───────────────────
+  build-frontend:
+    name: Build SvelteKit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: front
+        run: npm install
+
+      # Vulnérabilités connues des dépendances. Le 17/08/2026, `npm audit` en local
+      # en relevait QUATRE dont une haute, quand le bandeau GitHub n'en annonçait
+      # qu'une basse : Dependabot suit ses propres avis sur la branche par défaut,
+      # `npm audit` interroge le registre sur l'arbre réellement installé — et
+      # AUCUN des deux n'était un contrôle de CI (#411). Les quatre jobs requis
+      # étaient verts ; leur silence ressemblait à du calme, comme pour #409 et
+      # #410, même famille de contrôles qui existent et ne tournent pas.
+      # Le seuil est `low`, le plus strict : la seule des quatre qui atteignait les
+      # résidents était une BASSE (`cookie`, embarquée dans le serveur SSR), quand
+      # la haute était confinée à la chaîne de construction. La sévérité annoncée
+      # ne dit rien de l'atteignabilité ici. Ce qui rend ce seuil tenable est
+      # l'échappatoire nominative de `front/audit-exceptions.json` — motif,
+      # condition de levée et date de revue par avis — sans laquelle une
+      # vulnérabilité non corrigeable en amont mettrait toutes les PR au rouge et
+      # ce contrôle serait désactivé dans la semaine.
+      # Il sort en 2 (INCONNU, jamais OK) si le registre est injoignable : relancer.
+      - name: Audit des dépendances (seuil low, exceptions nominatives)
+        working-directory: front
+        run: npm run lint:audit
+
+      # Bonne formation du balisage des manuels — le document que lisent les
+      # résidents. Le 17/08/2026 (#410), les deux copies portaient un `</li>` qui ne
+      # fermait rien et un `<li>` jamais fermé, dans un `<div>` qui n'est pas une
+      # liste. Les navigateurs réparent ce balisage en silence : la page s'affiche,
+      # donc elle a l'air correcte — l'artefact est cassé et le comportement le
+      # masque. Seul un analyseur strict pouvait le dire, et le seul du dépôt
+      # (`npm run lint`) n'était dans aucun job.
+      # Ce contrôle valide sans exiger la mise en forme : les manuels sont dans
+      # `.prettierignore` (les reformater produirait un diff énorme et sans valeur,
+      # et les repasserait de CRLF en LF), mais c'était prettier qui voyait le
+      # défaut. Un ignore posé sans remplacer le contrôle qu'il éteint rend le
+      # défaut invisible à nouveau.
+      - name: Balisage des manuels bien formé
+        working-directory: front
+        run: npm run lint:manuels
+
+      # Garde-fou dates : aucun formatage sans `timeZone` épinglé. Placé AVANT le
+      # build (échoue en ~1 s, sans attendre la compilation). Pendant front du
+      # `tests/test_dates_fr.py` côté API, qui ne scanne que `api/app/` — les deux
+      # bugs de dates du 26/07/2026 étaient hors de sa portée.
+      - name: Lint dates (fuseau épinglé)
+        working-directory: front
+        run: npm run lint:dates
+
+      # Garde-fou pièces jointes : « est-ce une image ? », le nom affiché et la
+      # liste `accept` ne se réécrivent pas dans une page. Quinze copies de ces
+      # trois règles coexistaient le 03/08/2026, dont huit ignoraient .gif.
+      # Comme lint:dates, il tourne AVANT le build : il échoue en une seconde.
+      - name: Lint pièces jointes (règles non réécrites)
+        working-directory: front
+        run: npm run lint:fichiers
+
+      # Les trois canaux « groupe WhatsApp / syndic / CS » étaient écrits à la
+      # main dans SIX formulaires et avaient divergé : deux tracés SVG, trois
+      # libellés, deux icônes — et un écran où le canal WhatsApp manquait tout
+      # simplement (création d'un ticket, signalé le 08/08/2026). Un écran qui
+      # n'affiche PAS une option ressemble à un écran normal : seul un contrôle
+      # peut le voir.
+      - name: Canaux de notification centralisés
+        working-directory: front
+        run: npm run lint:notifications
+
+      # Le nom d'une tâche planifiée s'affiche dans la synthèse, dans la colonne
+      # Tâche du journal, et dans le titre de la carte qui la détaille — ces deux
+      # derniers dans des FICHIERS différents. Ils avaient divergé : la synthèse
+      # disait « Sauvegarde quotidienne » quand la carte s'appelait « Système —
+      # Sauvegardes », si bien qu'on ne pouvait pas relier une ligne au tableau
+      # censé la détailler (signalé par l'utilisateur le 11/08/2026). Regrouper
+      # ne suffit pas : rien n'empêche le prochain écran de retaper le nom.
+      - name: Libellés de tâches non dupliqués
+        working-directory: front
+        run: npm run lint:taches
+
+      # Trois routes sous admin/ compilaient, étaient protégées, avaient leurs
+      # endpoints — et aucun écran n'y menait (#307). Dont la configuration des
+      # sauvegardes : fréquence et rétention réglables par aucun chemin de
+      # l'interface. Rien ne pouvait le voir — le contrôle des endpoints
+      # orphelins vérifie l'autre bout de la chaîne, pas celui-ci.
+      - name: Écrans admin atteignables depuis l'interface
+        working-directory: front
+        run: npm run lint:routes
+
+      # L'identité des pages — identifiant, route, libellé de menu, icône,
+      # descriptif — vivait dans DEUX tables qui ne se connaissaient pas, et elles
+      # avaient déjà divergé de trois façons dont aucune n'était visible (#401) :
+      # les deux ordres par défaut différaient ; « Mon profil » et « Notifications »
+      # étaient réordonnables sans être dans le menu (geste enregistré, puis écarté
+      # en silence) ; et « Délégations » était dans le menu sans être dans l'écran,
+      # donc ni positionnable ni renommable.
+      # Le contrôle cherche les DÉCLARATIONS (`id:`, `configId:`, `'x': {`), pas les
+      # mentions : sans cette distinction il accusait un `'admin'` qui est un rôle,
+      # et l'exception qu'on lui aurait ajoutée aurait rendu aveugle le fichier même
+      # qui portait la table.
+      - name: Table des pages non recopiée
+        working-directory: front
+        run: npm run lint:pages
+
+      # La table des périmètres avait QUATRE copies autour de lib/utils.ts, dont
+      # deux qui avaient déjà divergé sans que personne le voie : l'une n'avait
+      # pas `aful` (un événement AFUL affichait la clé brute), l'autre écrivait
+      # « Bât. 1 » avec une espace INSÉCABLE — indiscernable à l'œil, décisif
+      # pour du code. C'est ainsi qu'une table recopiée dérive (#316).
+      - name: Table des périmètres non recopiée
+        working-directory: front
+        run: npm run lint:perimetres
+
+      # Et le RENDU d'un périmètre, exécuté. La règle « un espace est qualifié par
+      # son parent » est écrite deux fois — front et API — parce que les contextes
+      # de build l'imposent. Le 18/08 elle n'a été corrigée que d'un côté, et le fil
+      # d'activité a continué d'afficher « Toit · Toit » : le test ajouté ce jour-là
+      # ne pouvait vérifier le front que par présence de MOTS dans le fichier.
+      # Celui-ci transpile `lib/perimetres.ts`, l'exécute sur l'arbre du ticket
+      # signalé, et exige que le test Python attende la même chaîne — une seule
+      # attente pour les deux implémentations.
+      - name: Rendu des périmètres identique front/API
+        working-directory: front
+        run: npm run lint:libelle-perimetre
+
+      # L'en-tête de page était écrit de DOUZE façons : `.page-header` redéfini en
+      # CSS local dans six pages, surchargé en ligne dans six autres, et le style du
+      # <h1> recopié en ligne dans onze. Une page l'avait réécrit sans redéclarer
+      # `justify-content` : elle héritait du global en silence, et son titre partait
+      # à l'autre bout de l'écran (#363). La consigne existait — c'est le contrôle
+      # qui manquait.
+      - name: En-têtes de page passant par le composant
+        working-directory: front
+        run: npm run lint:entetes
+
+      # Trois paradigmes coexistaient pour créer un objet : une boîte dans la
+      # page, une modale (deux largeurs), une page dédiée. L'utilisateur l'a
+      # signalé TROIS fois avant que ce soit traité (#367) — les deux premiers
+      # lots avaient corrigé des symptômes périphériques sans jamais ouvrir le
+      # formulaire. Ce contrôle a trouvé deux écrans que l'audit manuel avait
+      # manqués.
+      - name: Formulaires de création passant par le composant
+        working-directory: front
+        run: npm run lint:formulaires
+
+      # 🔴 L'API Svelte 4 COMPILE et lève à l'exécution. `confirmation.ts`
+      # montait sa boîte avec `new Confirmation(...)` depuis sa création : la
+      # fonction n'a JAMAIS marché, et 17 gestes en dépendaient (suppressions,
+      # archivages). Ni `svelte-check`, ni ESLint, ni le build ne pouvaient le
+      # voir — tous les contrôles de ce dépôt sont statiques, et `new X()` est du
+      # JavaScript valide.
+      # En production, le message est minifié en « Cannot use 'in' operator to
+      # search for 'Symbol($state)' in undefined » : illisible. C'est
+      # l'utilisateur qui l'a signalé, sur un bouton qui « ne faisait rien ».
+      - name: Aucune API Svelte 4 (elle compile, et lève au clic)
+        working-directory: front
+        run: npm run lint:api-svelte4
+
+      # R4 du cadre d'interface (#430) : une entité, quatre rendus, et **toute
+      # divergence entre deux états se déclare avec son motif**. Le relevé des 42
+      # couples menu/entité a mesuré 13 éditions sur 23 réinventant un motif que
+      # la création portait déjà, et 5 seulement portant une raison écrite — les
+      # cinq en commentaires, donc invisibles à tout contrôle. L'une d'elles
+      # invoquait un motif (`trace`) que le cadre n'a jamais reconnu.
+      # Refuse aussi un motif `api` sans ticket : c'est un marqueur de DETTE.
+      - name: Divergences entre états déclarées et motivées
+        working-directory: front
+        run: npm run lint:etats
+
+      # Les quatre options d'une publication — épinglage, urgence, brouillon,
+      # confidentialité — étaient écrites à TROIS endroits et avaient déjà
+      # divergé : la punaise sur la carte et rien sur la case ; le CRAYON pour le
+      # brouillon, alors qu'il est l'icône « Modifier » de toutes les barres
+      # d'actions. Rien ne cassait — chaque écran était correct isolément.
+      - name: Options de publication non recopiées
+        working-directory: front
+        run: npm run lint:options-publication
+
+      # Un `input, textarea { width: 100% }` posé dans le <style> d'UNE page
+      # atteignait toutes ses cases à cocher : chacune s'étirait sur la largeur du
+      # formulaire et son libellé partait à l'autre bout. Un sélecteur, deux
+      # écrans signalés séparément par l'utilisateur (« Nouveau sondage » et
+      # « Déposer une annonce », 16/08/2026), et aucun lien apparent entre eux.
+      # Quatre composants annulaient déjà ce genre de règle case par case, avec
+      # un `style="width:auto"` recopié — le signe qu'on soignait le symptôme.
+      - name: Aucun sélecteur d'élément de formulaire nu dans un composant
+        working-directory: front
+        run: npm run lint:styles
+
+      # 🔴 SIX nomenclatures de champ coexistaient le 19/08/2026 — `.field-label`
+      # (3 définitions incompatibles), `.form-group` (3), `.champ`, `.ah-champ`,
+      # `.email-input`, et le `<label>` nu — et TROIS fichiers redéfinissaient
+      # `.field` elle-même, le nom canonique, avec d'autres valeurs.
+      #
+      # Deux d'entre elles ne renvoyaient à AUCUNE définition (`OngletWhatsApp`,
+      # `acces-securite`) : extraites d'`admin` sans ses styles, elles rendaient
+      # leurs champs nus en production — la régression des pastilles nues, sur un
+      # formulaire cette fois.
+      #
+      # Le relevé de #374 ne voyait qu'une des trois formes d'écriture ; les deux
+      # autres ont coûté un aller-retour chacune, dont un signalé EN PRODUCTION
+      # par l'utilisateur. Ce contrôle lit l'arbre des balises, où les trois se
+      # ramènent à une seule question. `--selftest` le montre les refuser (#413).
+      - name: Tout champ libellé vit dans un `.field`
+        working-directory: front
+        run: npm run lint:champs
+
+      # 🔴 Une classe employée sans définition rend un écran NU — et rien ne le
+      # signale : la page compile, les types passent, le build se tait.
+      #
+      # Svelte scope ses styles au FICHIER. Déplacer du balisage sans emporter ses
+      # règles est la régression que ce dépôt cite depuis la v2.67.11 ; elle s’est
+      # reproduite CINQ fois le 19/08/2026, dont une constatée EN PRODUCTION par
+      # l’utilisateur (la télémétrie rendue en texte brut).
+      #
+      # `svelte-check` garde l’autre sens — « sélecteur inutilisé », une règle sans
+      # balisage. Sur dix-sept règles orphelines, il en a signalé UNE. Une relation
+      # a deux sens de rupture (`standards/05` §9 bis).
+      # 🔴 Le pendant de `lint:classes-nues` : celui-ci refuse une redéfinition
+      # SCOPÉE d'une classe de la charte. Une règle scopée ne déborde pas sur les
+      # autres écrans — elle fait rendre CELUI-CI autrement, sans décision, et
+      # elle gagne (Svelte ajoute sa classe de portée au sélecteur). Le relevé
+      # de #607 en comptait 54 ; 35 sont parties, 19 sont déclarées.
+      # 🔴 L'accessibilité est une exigence PERMANENTE du projet, écrite dans
+      # CLAUDE.md, dans ux-patterns §3 et dans standards/11 — et rien ne
+      # l'appliquait : le job ne bloque que sur les ERREURS, et 45 avertissements
+      # a11y défilaient depuis des semaines sans que personne ne les lise (#561).
+      # Liste d'exceptions nommées, jamais de seuil chiffré (#419).
+      # 🔴 Le contrôle des contrôles : tout `lint:*` déclaré dans package.json
+      # doit être lancé ICI. Écrit après que l'étape de `lint:a11y` ne soit PAS
+      # partie dans son commit — `git add -A front` ne prend pas `.github/`. Le
+      # contrôle existait, il était juste, et rien ne l'exécutait : le pire des
+      # faux verts, parce qu'il ne ressemble pas à une panne (#561).
+      - name: Tout contrôle déclaré est lancé par la CI
+        working-directory: front
+        run: npm run lint:ci
+
+      - name: Aucun avertissement d'accessibilité non déclaré
+        working-directory: front
+        run: npm run lint:a11y
+
+      - name: Aucune redéfinition scopée de la charte
+        working-directory: front
+        run: npm run lint:charte
+
+      - name: Aucune classe employée sans définition
+        working-directory: front
+        run: npm run lint:classes-nues
+
+      # La même famille de défaut, par l'autre bout : la classe EST définie, mais
+      # c'est un modificateur — elle ne peint qu'un fond et une couleur, et sans
+      # sa base l'élément sort en rendu natif du navigateur. Un bouton
+      # « Enregistrer » gris carré au milieu de la charte, signalé à l'écran le
+      # 20/08/2026 ; le relevé en a trouvé TROIS autres, dans un écran d'admin
+      # que personne ne regardait.
+      #
+      # Le contrôle ne tient aucune liste : il DÉDUIT de `app.css` quelles classes
+      # `btn-*` se suffisent à elles-mêmes. Une liste divergerait au premier
+      # modificateur ajouté — et c'est le nouveau que personne n'a en tête.
+      - name: Aucun modificateur employé sans sa classe de base
+        working-directory: front
+        run: npm run lint:modificateurs
+
+      # L'AUTRE SENS de la relation : un sélecteur DÉFINI est-il EMPLOYÉ ?
+      # `lint:classes-nues` demande l'inverse. Une relation a deux sens de
+      # rupture, et un contrôle qui n'en garde qu'un laisse passer l'autre.
+      #
+      # 🔴 `svelte-check` le disait déjà — pour 33 sélecteurs dans 9 fichiers, à
+      # chaque exécution, depuis des semaines. Noyés parmi 95 avertissements que
+      # le job ne regarde pas (`--threshold error`), et à raison : les rendre
+      # bloquants d'un coup rendrait le job rouge en permanence, donc désarmé.
+      #
+      # Le relevé a donc été ramené à ZÉRO d'abord, et ce contrôle rend cette
+      # famille-là bloquante. Les autres restent des avertissements tant qu'on ne
+      # les a pas soldées — c'est la seule façon d'en faire des contrôles plutôt
+      # que du bruit (#557, et #561 pour les 45 défauts d'accessibilité).
+      - name: Aucun sélecteur CSS orphelin
+        working-directory: front
+        run: npm run lint:css-orphelin
+
+      # 🔴 Un `<label>` qui nomme un GROUPE n'associe rien — et il le fait en
+      # silence : le lecteur d'écran n'annonce pas le champ. Quinze écrans dans
+      # ce cas (#561), tous réparés avant que ce contrôle ne devienne bloquant.
+      # Deuxième famille d'avertissements `svelte-check` ramenée à zéro puis
+      # rendue bloquante, après les sélecteurs orphelins (#557) — c'est la seule
+      # façon d'en faire des contrôles plutôt que du bruit.
+      - name: Aucun libellé sans contrôle associé
+        working-directory: front
+        run: npm run lint:libelles
+
+      # Un événement Svelte non écouté n'est pas une erreur : c'est un silence.
+      # `evol_annuler` était dispatché, transféré, et traité par personne — le
+      # bouton Annuler ne faisait rien, neuf jours durant (#505). Le relevé qui a
+      # fondé ce contrôle a trouvé TROIS autres gestes morts que rien ne cherchait.
+      - name: Aucun événement dispatché sans personne pour le traiter
+        working-directory: front
+        run: npm run lint:evenements
+
+      # 🔴 `.catch(() => [])` : trois caractères qui transforment une PANNE en
+      # ABSENCE. L'écran affiche « Aucun sondage » exactement comme s'il n'y en
+      # avait pas — et le 19/08/2026 l'utilisateur a cru ses données détruites et
+      # en a demandé la restauration. Elles étaient intactes.
+      #
+      # Le contrôle est ÉTROIT à dessein : il ne vise que le repli sur une
+      # COLLECTION vide, la seule forme qui se rende comme une absence. Les
+      # cinquante `catch` silencieux légitimes du dépôt (marquage de lecture,
+      # télémétrie, révocation de jeton) ne sont pas concernés — les refuser
+      # aurait fait désarmer le contrôle dans la semaine.
+      - name: Aucun échec d'appel rendu comme une absence
+        working-directory: front
+        run: npm run lint:catch-vide
+
+      # Six écrans, TROIS mots pour la même notion — et « Historique » désignait
+      # AUSSI le fil d'un objet (cadre #430), les deux coexistant sur l'écran
+      # Tickets. Le mot a été unifié le 19/08 À LA MAIN, écrit en dur dans cinq
+      # fichiers : ils concordaient parce qu'on venait de les aligner, à un
+      # instant où tout coïncide. Rien ne le tenait (#516, point 4).
+      - name: Aucun titre de section d'archives écrit en dur
+        working-directory: front
+        run: npm run lint:archives
+
+      # 🔴 Un formulaire collecte un champ, l'écran l'affiche, et le relais le
+      # JETTE en recopiant la charge utile champ par champ. Rien ne lève : le
+      # formulaire annonce l'enregistrement, le serveur enregistre un objet
+      # valide, et seul l'écran — plus tard — trahit la perte. Constaté sur le
+      # périmètre d'une évolution de ticket, signalé à l'écran (#529).
+      - name: Aucun champ perdu entre un formulaire et son relais
+        working-directory: front
+        run: npm run lint:charge-utile
+
+      # 🔴 Les garde-fous du front exposent un `--selftest` … que rien ne lançait.
+      # Un contrôle dont la logique n'est éprouvée nulle part peut devenir muet
+      # sans que personne ne le sache : il rend « aucune faute trouvée » aussi
+      # bien quand il n'y en a pas que quand il ne sait plus en trouver. C'est la
+      # leçon de `check-reliability` (11/08/2026), appliquée ici — les self-tests
+      # des scripts d'infra, eux, tournent depuis le 30/07.
+      - name: Auto-tests des garde-fous du front
+        working-directory: front
+        run: |
+          node scripts/check-evenements.mjs --selftest
+          node scripts/check-csp-servie.mjs --selftest
+          node scripts/check-lien-evitement.mjs --selftest
+          node scripts/check-seuil-listes-courtes.mjs --selftest
+          node scripts/check-catch-vide.mjs --selftest
+          node scripts/check-archives.mjs --selftest
+          node scripts/check-charge-utile.mjs --selftest
+          node scripts/check-modificateurs.mjs --selftest
+          node scripts/lib-commentaires.mjs --selftest
+          # 🔒 Une modale qui contient une saisie ne se ferme pas au clic sur le
+          # fond. La protection reposait sur deux déclarations que l'écran devait
+          # penser à poser — trois modales d'administration portant 8, 3 et 2
+          # champs ne les avaient posées ni l'une ni l'autre (#640). Elle vit
+          # maintenant dans le composant ; ce test éprouve sa décision, et échoue
+          # si la détection qui l'alimente disparaît.
+          node scripts/check-fermeture-modale.mjs --selftest
+          # 🔴 Porte les fonctions pures de `lint:styles` ET de `lint:classes-nues`,
+          # expose un `--selftest` depuis sa création… que RIEN ne lançait (#562).
+          # Le module le plus partagé du lot était le seul non éprouvé.
+          node scripts/lib-analyse-styles.mjs --selftest
+          node scripts/check-largeur-saisie.mjs --selftest
+          node scripts/check-version-servie.mjs --selftest
+          # La passe `EvolForm` de `lint:etats` (#463) — et son relevé, qui ne
+          # peut que décroître. Ajouté ICI le jour même où le module naît :
+          # c'est l'oubli d'hier qui a laissé `lib-analyse-styles` non éprouvé.
+          node scripts/lib-etats-evolution.mjs --selftest
+          # Le tuyau partagé par `lint:css-orphelin` et `lint:libelles` : lancer
+          # svelte-check, retirer les couleurs, apparier chaque message à son
+          # emplacement. Deux de ces gestes ont déjà coûté un défaut ici.
+          node scripts/lib-svelte-check.mjs --selftest
+          # La lecture d'une source SANS supposer sa mise en forme — partagée par
+          # `lint:pages`, `lint:taches`, `lint:modales` et `lint:soumission`. Les
+          # quatre lisaient le code avec des motifs ancrés sur une disposition et
+          # tombaient au premier passage de Prettier (#419). Chaque cas y est
+          # écrit DEUX fois, resserré et reformaté : un test d'une seule forme ne
+          # dirait rien, et c'est l'angle mort d'où ils venaient.
+          node scripts/lib-lecture-source.mjs --selftest
+          # Le pré-remplissage du kanban par les prestataires (#605) : deux
+          # boucles quasi identiques dans une page de 848 lignes, qu'aucun
+          # contrôle ne touchait. Les fonctions pures vivent désormais dans
+          # `$lib/init-prestataires.ts` — que Node lit directement, donc le
+          # module éprouvé est CELUI QUE LE SITE EMBARQUE, pas une copie.
+          npm run lint:init-prestataires
+          # La mécanique des cartes dépliables (#640) : elle vivait DEUX fois
+          # dans `espace-cs` — membres du CS et du syndic —, avec deux fonctions
+          # de retrait littéralement identiques, et rien ne l'éprouvait. Le
+          # décalage d'index après un retrait est la partie qu'on recopie sans la
+          # relire : une erreur d'un cran ouvre la carte du voisin, et cela ne se
+          # voit qu'en supprimant un membre du MILIEU de la liste.
+          npm run lint:liste-depliable
+
+      # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
+      # restants sortent du balisage et s'affichent EN TEXTE à l'écran.
+      #
+      # `svelte-check` ne voit rien — un `class:x={…}` après le `>` est du texte,
+      # et du texte est valide. Build vert, types verts, tests verts, et la page
+      # montre du code. Constaté EN PRODUCTION le 18/08/2026, deux fois dans la
+      # même journée (CarteEvenement puis CarteTicket), à chaque fois après une
+      # réécriture automatisée de la balise.
+      - name: Aucune balise ouvrante fermée avant ses attributs
+        working-directory: front
+        run: npm run lint:balises
+
+      # 🔴 LA règle la plus critique du front — `{@html}` sans assainissement —
+      # n'était vérifiée par AUCUN contrôle : ni un `lint:*`, ni un test d'`api/`.
+      # Elle reposait entièrement sur la vigilance de qui écrit la ligne, et
+      # `svelte/no-at-html-tags` avait été désactivée en v2.70.0 faute de savoir
+      # distinguer les 50 usages voulus d'un usage dangereux (#429).
+      #
+      # Le contrôle lit la liste des assainisseurs DANS `src/lib/sanitize.ts` —
+      # une liste recopiée aurait divergé au premier ajout, ce qui est exactement
+      # ce qui s'était produit : `CLAUDE.md` ne nommait que `safeHtml` quand trois
+      # fonctions étaient en service. Il exige aussi que le nom vienne de
+      # l'IMPORT : une fonction locale homonyme qui ne ferait rien passerait
+      # sinon. C'est ainsi qu'a été trouvée `renderContent` (tickets/[id]), copie
+      # littérale de `safeDescription` — correcte par chance.
+      - name: Aucun {@html} sans assainissement
+        working-directory: front
+        run: npm run lint:html
+
+      # Le nom d'une section de formulaire écrit DEUX FOIS à l'écran : la section
+      # le pose en petites capitales, et le champ qu'elle contient le repose en
+      # dessous — `FichiersUpload`, `PerimetrePicker` et `DestinatairePicker`
+      # portent tous un intitulé par défaut. `SectionFormulaire` en a tiré une
+      # règle écrite dans son propre en-tête le 16/08/2026, après le doublon
+      # « PÉRIMÈTRE / Périmètre * ». Le 18/08, le doublon « PHOTOS / Photos » est
+      # apparu sur l'annonce de hall — deux jours plus tard, sur une règle écrite,
+      # connue et déjà appliquée deux fois ailleurs.
+      #
+      # Les deux fois, c'est l'UTILISATEUR qui l'a vu, à l'écran, en production.
+      # Une règle sans garde-fou tient tant que celui qui écrit s'en souvient.
+      - name: Aucun intitulé de section écrit deux fois
+        working-directory: front
+        run: npm run lint:titres
+
+      # `Modale.svelte` a été créé le 28/08/2026 pour porter le fond, le rôle,
+      # `Échap` et le verrou de défilement UNE fois. Le lot qui l'a créé a
+      # converti UN écran sur dix : les dix-neuf autres modales sont restées
+      # écrites à la main, et SEIZE d'entre elles ne se fermaient toujours qu'à
+      # la souris — le défaut même que le composant venait corriger (#561).
+      #
+      # La CI était verte : rien ne rapproche un composant neuf des copies qu'il
+      # remplace. C'est le motif « le paquet est ajouté, le monolithe reste ».
+      # Le contrôle refuse aussi les copies LOCALES de `.modal-overlay`,
+      # `.modal` et `.modal-box` : les quatre qui existaient avaient toutes
+      # divergé de la feuille commune, sans que personne l'ait décidé.
+      - name: Fond de modale passant par le composant
+        working-directory: front
+        run: npm run lint:modales
+
+      # Une section Workflow DÉCORATIVE : les pastilles s'affichaient en création
+      # d'un ticket, se cliquaient, et `statut` ne partait pas dans le POST — le
+      # ticket repartait toujours en « Ouvert » (#435). Le serveur l'acceptait
+      # pourtant depuis le 16/08 : c'est le front qui ne demandait rien. La même
+      # section fonctionnait sur les publications, si bien que deux entités
+      # divergeaient sur un champ que le cadre #430 déclare identique.
+      #
+      # Un champ qu'on voit et qui ne fait rien est la faute symétrique du 200 qui
+      # n'écrit rien : il fabrique la confiance qu'il devrait retirer.
+      - name: Aucune section Workflow décorative
+        working-directory: front
+        run: npm run lint:workflow
+
+      # 🔴 La CONSIGNE qui fabrique la duplication. La règle XSS s'appuie sur une
+      # liste de fonctions d'assainissement, écrite six fois — dont cinq copies ne
+      # nommaient qu'une fonction sur trois le 19/08/2026 (#482).
+      #
+      # Ce n'est pas resté théorique : `svelte-patterns` déclarait « légitimement
+      # local » un helper qui ÉTAIT `safeDescription`, laquelle avait été créée
+      # pour le supprimer. Une troisième copie est apparue dans le code sous le nom
+      # `renderContent`, écrite par quelqu'un qui suivait correctement la doc.
+      #
+      # Aucun contrôle ne pouvait le voir : `lint:html` regarde le code, et le code
+      # produit était CORRECT — c'est sa raison d'être qui était périmée. La CI ne
+      # lisait ni CLAUDE.md ni .claude/skills/. Celui-ci les lit, et compare à ce
+      # que `sanitize.ts` exporte réellement.
+      - name: Consignes complètes (assainisseurs réellement exportés)
+        working-directory: front
+        run: npm run lint:consignes
+
+      # Le renouvellement silencieux de session était désactivé par le PRÉFIXE
+      # `/auth/`, posé pour empêcher `/auth/refresh` de se rappeler lui-même. Il
+      # attrapait aussi `/auth/me` : pendant les sept jours où la session restait
+      # renouvelable, les requêtes de la page se renouvelaient et s'affichaient
+      # pendant que `me()` était refusé sans essai — contenu à l'écran, menu vidé
+      # de ses quatorze entrées, et un second rafraîchissement nécessaire pour
+      # voir la mire (#379, signalé le 16/08/2026). Une exception en préfixe est
+      # juste pour sa cible et fausse pour ses voisines, sans que rien ne le dise.
+      - name: Renouvellement de session par liste nominative
+        working-directory: front
+        run: npm run lint:session
+
+      # Sept formulaires de création, six libellés de soumission : « Publier »,
+      # « Envoyer la demande », « Créer le sondage », « Publier l'annonce »,
+      # « Soumettre », « Enregistrer » — plus « Soumettre la demande » sur accès
+      # & badges, que le relevé du ticket n'avait pas vu. Aucun n'était faux ;
+      # l'ensemble n'avait pas de logique (#396). Trancher n'aligne que
+      # l'existant : c'est le formulaire SUIVANT qui réinvente son libellé, comme
+      # pour les en-têtes (#363) et les formulaires eux-mêmes (#367).
+      - name: Libellé de soumission unique sur les formulaires de création
+        working-directory: front
+        run: npm run lint:soumission
+
+      # Vérificateur de types. Il existait dans package.json depuis toujours et
+      # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
+      # hook versionné en 100644. Or **Vite transpile le TypeScript sans le
+      # vérifier** : le job ci-dessous était donc vert quoi qu'il arrive côté
+      # typage. C'est ce qui a rendu la PR #267 (typescript 5 → 6, une MAJEURE)
+      # verte sans qu'aucun contrôle de types n'ait tourné — même motif que
+      # WeasyPrint dans .github/dependabot.yml : « la PR était VERTE parce
+      # qu'aucun test ne rend un PDF ».
+      # Armé le 04/08/2026 après avoir ramené la dette de 12 erreurs à 0, et
+      # après avoir vérifié qu'il sort bien en 1 sur une erreur introduite
+      # exprès — un contrôle qu'on n'a pas vu rougir n'est pas un contrôle.
+      # Les 171 avertissements restants ne le font pas échouer : seule une
+      # ERREUR bloque. Les résorber est un lot à part.
+      # 🔴 PREMIÈRE EXÉCUTION D'ESLINT EN CI (#419, point 4 — 20/08/2026).
+      #
+      # La configuration existait depuis le 17/08 (#424) mais n'était câblée nulle
+      # part : le relevé n'était pas vert, et le ticket demandait à raison de ne
+      # câbler qu'ensuite. Un linter configuré et jamais exécuté ressemble à un
+      # linter — c'est le même défaut, une couche plus haut.
+      #
+      # ⚠️ Le job est vert SANS `--max-warnings <chiffre>`. Chaque règle coupée
+      # l'est NOMMÉMENT dans `eslint.config.js`, avec son compte et son motif ; la
+      # dette est suivie en #549 (six règles) et #550 (74 morts réels). Un seuil
+      # chiffré aurait masqué tout, y compris ce qu'on ajoutera demain.
+      #
+      # Ce que la première exécution a rapporté, et que rien d'autre ne pouvait
+      # voir : un caractère de recul U+0008 au milieu d'une expression régulière
+      # de `check-workflow-envoye.mjs`, invisible dans tout éditeur, qui rendait
+      # inerte l'étape « retirer la balise avant de chercher ailleurs ».
+      - name: ESLint (jeu de règles déclaré, sans seuil chiffré)
+        working-directory: front
+        run: npm run lint:eslint
+
+      - name: Aucune largeur de saisie écrite dans un écran
+        # 🔴 Signalé à l'écran le 30/08/2026 : « sur admin / paramétrage le texte
+        # ne prend pas la bonne largeur ». La carte occupait toute la page, ses
+        # champs s'arrêtaient à 600 px, et les aides se repliaient sur quatre
+        # lignes en laissant la moitié droite vide.
+        #
+        # `--largeur-saisie` a été généralisée à 100 % le 18/08/2026 — mais SIX
+        # écrans portaient encore leur propre `max-width` en ligne (600, 600, 580,
+        # 460, 700, 580), donc six valeurs que la généralisation ne pouvait pas
+        # atteindre : aucun n'employait la classe. C'est le défaut de la prop
+        # `marge` d'`EntetePage` (#372), reproduit sur le conteneur.
+        #
+        # ⚠️ `ux-patterns` §9 le disait déjà — « ne jamais écrire une largeur dans
+        # une page » — et le défaut a quand même été trouvé par l'utilisateur, en
+        # production. Une règle sans garde-fou tient tant qu'on s'en souvient.
+        working-directory: front
+        run: npm run lint:largeur-saisie
+
+      - name: Clés de liste (plafond décroissant)
+        # 🔴 `svelte/require-each-key` compte 105 signalements : une règle ESLint
+        # qui échoue en permanence finit désarmée, et #419 interdit à raison le
+        # `--max-warnings <chiffre>` qui la masquerait avec toutes les autres.
+        # Ce plafond-ci ne concerne qu'un défaut NOMMÉ, nomme chaque occurrence
+        # quand il dépasse, et baisse à chaque lot — le motif de
+        # `lint:confirmation`, déjà en service.
+        #
+        # Sans clé, Svelte réutilise les nœuds par POSITION. Le relevé du
+        # 30/08/2026 a montré que le danger est aujourd'hui CONTENU — ce dépôt
+        # indexe son état par identité (`expandedEvId === ev.id`) — mais rien ne
+        # préviendrait le jour où un composant de liste tiendrait un état interne.
+        working-directory: front
+        run: npm run lint:each-key
+
+      - name: Tableaux dans un conteneur défilant (responsive)
+        # 🔴 Un `<table>` ne se comprime pas, et `normes.css` pose même
+        # `white-space: nowrap` sur ses cellules sous 767 px — à raison, une date
+        # coupée en deux est illisible. Sa largeur est donc incompressible.
+        #
+        # Or `socle.css` porte `body { overflow-x: hidden }`. Les deux ensemble
+        # donnent le pire résultat : le tableau dépasse l'écran ET le dépassement
+        # est masqué. Les dernières colonnes deviennent INATTEIGNABLES — pas de
+        # barre, pas de geste. Un débordement visible se contourne, celui-là non.
+        #
+        # Cinq tableaux y échappaient au 04/09/2026. Personne ne l'avait vu :
+        # sur un grand écran, tout va bien.
+        working-directory: front
+        run: npm run lint:tableaux
+
+      - name: L'éditeur riche suit l'API de la version de Tiptap installée
+        # 🔴 La montée 2 → 3 (#724, correctif de GHSA-cp6q-959q-f8rh) a cassé deux
+        # choses qui ne se voient PAS à l'exécution : `setContent(html, false)`
+        # dont le second argument est devenu un objet, et `Underline` désormais
+        # INCLUS dans StarterKit — l'importer en plus le charge deux fois, Tiptap
+        # avertit dans la console, et une console n'est lue par personne.
+        #
+        # Le contrôle LIT les extensions du paquet installé ; il ne croit pas un
+        # guide de migration. La prochaine montée en déplacera d'autres, et il le
+        # dira. Il ne remplace pas la vérification à l'écran, qui reste due.
+        working-directory: front
+        run: npm run lint:editeur
+
+      - name: Classe relayée à un composant, stylée en :global() borné
+        #  🔴 Une classe passée en prop `classe=` est appliquée par le COMPOSANT,
+        #  sur son balisage : elle y prend SON scope, pas celui de qui la passe.
+        #  Écrite à plat chez l'appelant, la règle ne correspond à rien — et les
+        #  DEUX appelants du site étaient dans ce cas au 01/09/2026, avec une mise
+        #  en page morte depuis toujours (liste de lots sans bordure, deux champs
+        #  empilés au lieu d'être côte à côte).
+        #  ⚠️ `svelte-check` ne le voit pas : il ne signale « sélecteur inutilisé »
+        #  que si le fichier n'a aucun autre usage de la classe.
+        working-directory: front
+        run: npm run lint:classe-relayee
+
+      - name: Cadre du geste (édition en fenêtre, création en boîte)
+        # 🔴 L'AUTRE MOITIÉ de `ux-patterns` §14 bis, qui n'avait aucun contrôle.
+        # `lint:formulaires` refuse une création EN modale ; rien ne refusait une
+        # édition HORS modale. C'est ce qui a laissé « Petites annonces » éditer
+        # dans la carte pendant six conversions de #640 — et le « Reste » du
+        # ticket ne le listait même pas.
+        working-directory: front
+        run: npm run lint:cadre-geste
+
+      - name: Le manuel annonce les menus du site, et le bon public
+        # 🔴 #651 tient en une phrase : « le manuel RECOPIE des tables que le code
+        # fait évoluer, et rien ne les rapproche ». La section « Les écrans » porte
+        # deux tables que le code tient déjà — les routes (`pages.ts`) et qui les
+        # voit (`Nav.svelte`). En écrire une troisième en prose aurait refait le
+        # défaut le jour même où on le corrige.
+        #
+        # ⚠️ Le contrôle lit des attributs `data-page`/`data-acces`, pas la prose :
+        # « la prose ne se lit pas comme une table » (#651), et un contrôle qui crie
+        # sur du légitime finit désarmé.
+        working-directory: front
+        run: npm run lint:manuel-menus
+
+      - name: Confirmation dans la charte (plafond décroissant)
+        # Le nombre de `confirm()` NATIFS ne peut que baisser. La boîte du
+        # navigateur bloque le fil d'exécution, ignore la charte, et donne le
+        # MÊME aspect à « archiver » et à « supprimer définitivement » — alors
+        # que l'un se défait et l'autre non.
+        #
+        # Un plafond et non une interdiction : convertir les vingt-cinq écrans
+        # d'un coup toucherait tout avant qu'on en ait regardé un, ce que R5 du
+        # cadre #430 interdit. Le plafond empêche d'en AJOUTER et baisse à chaque
+        # écran repris — il échoue aussi s'il reste au-dessus du réel.
+        working-directory: front
+        run: npm run lint:confirmation
+
+      - name: Aperçu de diffusion branché des DEUX côtés
+        # 🔴 Brancher l'aperçu demande DEUX gestes : fournir la fonction
+        # (`demanderApercu`) et s'intercaler dans la soumission
+        # (`ouvrirSiDiffusion`). Le lot du 31/08/2026 a fait le premier sur deux
+        # écrans et oublié le second : tout avait l'air branché — endpoint
+        # correct, modale prête — et l'envoi partait sans rien montrer.
+        #
+        # ⚠️ Rien ne pouvait le signaler : `svelte-check` est vert (les deux
+        # moitiés compilent séparément), les tests du serveur aussi (l'endpoint
+        # est correct). Le seul symptôme a été un mail reçu par ses
+        # destinataires — c'est-à-dire le dommage lui-même.
+        working-directory: front
+        run: npm run lint:apercu
+
+      - name: Périmètre hérité par une entrée d'historique
+        # Fonction PURE dont tout le sens tient dans trois cas qui se
+        # ressemblent, et dont un est contre-intuitif : une entrée qui ne dit
+        # RIEN du périmètre ne change rien. Il est tentant de prendre « la
+        # dernière entrée » sans regarder si elle disait quelque chose — et l'on
+        # ferait alors revenir le périmètre du ticket à chaque commentaire vide.
+        #
+        # Ce dépôt n'a pas de lanceur de tests côté front : la fonction est
+        # transpilée et EXÉCUTÉE, comme `lint:libelle-perimetre` le fait déjà.
+        working-directory: front
+        run: npm run lint:perimetre-herite
+
+      - name: Le filtre d'états couvre ce que la liste affiche
+        # Il proposait les seuls états ACTIFS, au motif que « les clos ont leur
+        # section Historique ». Faux d'une semaine : un ticket clôturé reste sept
+        # jours dans la liste principale, et « Résolu » s'y affichait sans qu'aucun
+        # bouton puisse l'isoler (signalé à l'écran le 01/09/2026).
+        #
+        # Le défaut n'était pas la liste mais sa SOURCE : elle décrivait ce qu'on
+        # croyait afficher. La fonction est transpilée et EXÉCUTÉE ici.
+        working-directory: front
+        run: npm run lint:filtre-statuts
+
+      - name: « Prénom NOM » concorde entre le front et l'API
+        # La règle « le nom passe en capitales, le prénom garde sa casse » est
+        # écrite DEUX fois — les contextes de construction sont ./api et ./front,
+        # rien de la racine n'entre dans les images. Le motif viable est copie +
+        # concordance EXÉCUTÉE : le contrôle transpile lib/noms.ts, l'exécute sur
+        # les cas LUS dans test_noms_affichage.py, et refuse la moindre dérive.
+        #
+        # `perimetreLabel` a été corrigée d'un seul côté le 18/08 et a mis neuf
+        # jours à se voir — c'est l'utilisateur qui l'a vue, pas la CI.
+        working-directory: front
+        run: npm run lint:noms
+
+      - name: Case « M'envoyer une copie » liée ET envoyée
+        # Même forme de piège que `lint:apercu`, rencontrée deux fois le même
+        # jour : un écran lie la case et ne met jamais `envoyer_auteur` dans sa
+        # charge utile. La case s'affiche, se coche, et ne fait rien — et le seul
+        # symptôme est une copie qui n'arrive pas, c'est-à-dire une absence.
+        working-directory: front
+        run: npm run lint:diffusion-auteur
+
+      - name: Formatage (prettier --check)
+        # 🔴 Le dernier point de #419, et sans lui les trois autres ne servent
+        # à rien : le dépôt vient d'être reformaté, et un format que rien ne
+        # vérifie rediverge au premier fichier écrit à la main.
+        #
+        # ⚠️ Il est placé APRÈS ESLint et non avant : quand les deux échouent,
+        # c'est la faute de logique qu'on veut lire en premier, pas la virgule
+        # mal placée. Un formatage rouge en tête de journal fait scroller.
+        #
+        # ⚠️ `endOfLine: "auto"` dans `.prettierrc` — ce dépôt est légitimement
+        # MIXTE CRLF/LF, et un `lf` forcé aurait converti 200 fichiers en un
+        # commit illisible, exactement ce que `.githooks/pre-commit` refuse.
+        working-directory: front
+        run: npx prettier --check .
+
+      - name: Vérification des types (svelte-check)
+        working-directory: front
+        run: npm run check
+
+      - name: Build
+        working-directory: front
+        run: npm run build
+        env:
+          VITE_GIT_HASH: ${{ github.sha }}
+          # Pas de VITE_BUILD_DATE ici : le `define` de vite.config.ts remplace ce
+          # symbole à la compilation et gagne toujours sur la variable
+          # d'environnement (vérifié). La valeur passée était de surcroît un
+          # `github.run_id`, pas une date.
+
+      # Garde-fou service worker : APRÈS le build, car il inspecte l'artefact livré
+      # et non la configuration — la valeur fautive venait du plugin, pas d'une ligne
+      # écrite à la main. Le 26/07/2026, `vite-plugin-pwa` a généré une URL relative
+      # (`./sw.js`) : enregistrement en 404 sur toute route imbriquée, donc plus aucun
+      # service worker en production, sans le moindre signal.
+      - name: Lint service worker (URL absolue)
+        working-directory: front
+        run: npm run lint:sw
+
+      # Garde-fou P3 : APRÈS le build, pour la même raison que celui du service
+      # worker — il inspecte l'ARTEFACT livré, pas une ligne de configuration.
+      #
+      # 🔴 P3 est le contrôle du post-check qui prouve qu'un déploiement a eu
+      # lieu : il lit la version dans le bundle que le navigateur reçoit. Son
+      # ancrage était le NOM du paquet (`"hostachy-front",VAR="x.y.z"`), choisi
+      # en 2026 au motif qu'il « survit à la minification ». Rollup élague
+      # désormais l'import JSON du layout : le nom a disparu, le bundle ne porte
+      # plus que `const fn="3.20.0",hn={version:fn}`, et P3 a rendu INCONNU à la
+      # MEP v3.20.0 — la version a dû être retrouvée à la main.
+      #
+      # Il a échoué du BON côté (jamais un faux vert). Le vrai défaut est que
+      # RIEN ne regardait si son ancrage marchait encore : le premier à
+      # l'apprendre était le post-check, en production, une fois la MEP faite.
+      # Cette étape exerce l'extracteur sur le build local et exige qu'il y
+      # retrouve la version de `package.json` — donc la prochaine évolution de la
+      # chaîne d'outils échoue ICI, avant la MEP, et non en production après.
+      - name: Version lisible dans le bundle (l'extracteur de P3 mesure encore)
+        working-directory: front
+        run: npm run lint:version-servie
+
+      # 🔒 `script-src` en mode BLOQUANT tient à SIX LIGNES de `svelte.config.js`
+      # (#770, 06/09/2026) : c'est SvelteKit qui émet `script-src 'self'
+      # 'sha256-…'`, parce que lui seul connaît le contenu de ses scripts
+      # d'hydratation. Rien n'obligeait ces lignes à rester là.
+      #
+      # Le contrôle DÉMARRE le serveur construit et lit l'en-tête d'une vraie
+      # réponse — pas la configuration. La v2.24.0 avait livré un bandeau PWA
+      # « vérifié » sur des artefacts corrects pendant que le service worker ne
+      # s'enregistrait plus : un artefact ne prouve rien sur le comportement.
+      #
+      # Il vérifie aussi le `Caddyfile`, et c'est indissociable : sans le `+`
+      # devant `Content-Security-Policy`, Caddy ÉCRASE l'en-tête de SvelteKit,
+      # les condensats sont perdus et le site devient blanc. Aucune des deux
+      # moitiés ne se voit depuis l'autre.
+      - name: CSP servie (script-src bloquant, condensats préservés)
+        working-directory: front
+        run: npm run lint:csp
+
+      # ♿ Le lien d'évitement clavier (#778, WCAG 2.4.1) tient à QUATRE pièces —
+      # le lien, l'ancre, `tabindex="-1"` sur la cible, la bascule CSS au focus —
+      # et aucune ne voit les autres. Deux de ses modes d'échec laissent le HTML
+      # parfaitement correct pendant que la fonctionnalité est morte : c'est le
+      # bandeau PWA de la v2.24.0, à nouveau.
+      - name: Lien d'évitement clavier cohérent
+        working-directory: front
+        run: npm run lint:evitement
+
+      # 🔴 La règle du seuil des listes courtes existe depuis le 29/08/2026
+      # (`ux-patterns`, #491) et n'a PAS été appliquée au filtre « type » des
+      # petites annonces — trois valeurs en <select> — pendant huit jours.
+      # Personne ne l'a vu : une règle écrite dans une skill ne se relit pas avant
+      # de toucher un écran qu'on croit sans rapport.
+      #
+      # Même motif que `EnteteCarte`, `ChoixPastilles` et `parse_json_perimetres` :
+      # le composant existait, la règle existait, et rien ne les faisait appliquer.
+      - name: Seuil des listes courtes (pastilles vs select)
+        working-directory: front
+        run: npm run lint:seuil-listes
+
+      # 🔴 Le client TypeScript est la SEULE porte d'entrée de l'API (#801).
+      # Le ticket relevait « 48 méthodes que personne n'appelle » ; le tri a montré
+      # que la moitié n'était pas morte mais CONTOURNÉE — l'écran écrivait la route
+      # à la main pendant que la méthode existait deux fichiers plus loin. Trois
+      # recopies comptaient vraiment : `accueil-arrivant` était écrit TROIS fois,
+      # corps compris, et il déclenche des e-mails.
+      #
+      # ⚠️ ZÉRO exception, et c'est le moment qui le permet : le contrôle est posé
+      # APRÈS que le compte soit tombé à zéro. Une liste de tolérances posée avant
+      # le tri aurait figé 38 cas — et une tolérance qui ne sert plus finit par en
+      # couvrir une qui compte.
+      - name: Le client TypeScript est la seule porte d'entrée de l'API
+        working-directory: front
+        run: npm run lint:client-api
+
+      # 🔴 Le pendant du contrôle ci-dessus, dans l'autre sens : une méthode du
+      # client que personne n'appelle doit se DÉCLARER (#801).
+      #
+      # Il n'interdit pas — le tri a montré que les neuf restantes ne sont pas du
+      # code mort mais des capacités inatteignables, des appelants hors écran, ou
+      # un geste retiré sur arbitrage. Interdire aurait forcé à supprimer des
+      # capacités réelles ; tolérer en silence aurait laissé revenir les 48.
+      # `@sans-appelant` exige en plus un numéro de ticket : une capacité
+      # inatteignable sans ticket est un oubli qui ressemble à une décision.
+      - name: Toute méthode du client est appelée, ou déclarée avec son motif
+        working-directory: front
+        run: npm run lint:client-appele
+
+      # 🔴 L'infobulle d'un bouton icône est celle du NAVIGATEUR (`title`), son
+      # NOM vient de `aria-label` (07/09/2026, arbitré à l'écran).
+      #
+      # Le projet avait sa propre bulle en CSS, lue depuis `data-info` : elle
+      # s'ouvrait sous le bouton, là où arrive la flèche du pointeur. Elle a été
+      # SUPPRIMÉE — « la bulle sombre est inutile, la claire est plus
+      # pertinente ». Un `data-info` résiduel est donc un libellé que plus rien
+      # n'affiche. Le contrôle a été inversé le jour même : il interdisait
+      # `title`, il interdit maintenant `data-info`.
+      #
+      # ⚠️ La seconde règle, elle, ne dépendait d'aucun choix de bulle et
+      # SURVIT : le relevé a montré que 31 boutons n'avaient QUE `title`, donc
+      # aucun nom accessible, alors que la règle l'exige depuis toujours.
+      # `lint:a11y` ne pouvait pas le voir — il lit `svelte-check`, qui ne
+      # signale pas un bouton dont le contenu est un emoji. Et l'infobulle
+      # native n'apparaît ni au clavier ni au tactile.
+      - name: Infobulles et noms accessibles des boutons icône
+        working-directory: front
+        run: npm run lint:infobulles
+
+      # 🔴 Une liste qui annonce « Aucun » doit avoir REGARDÉ.
+      #
+      # Le motif `{#if chargement}…{:else if liste.length === 0}` n'a que deux
+      # branches : quand le chargement ÉCHOUE, la liste reste à `[]` et l'écran
+      # affirme une absence qu'il n'a pas constatée. C'est #519 — deux sondages
+      # et trois annonces crus détruits, et une demande de restauration au bout.
+      #
+      # ⚠️ `EtatListe` et `lint:catch-vide` existaient DÉJÀ pour cela, tous deux
+      # verts, et le défaut était encore là onze fois : un try/catch qui se
+      # contente d'un toast laisse la liste vide tout aussi silencieusement, et
+      # le toast s'efface. Un composant que rien n'impose est un composant que
+      # les écrans suivants réécrivent à la main.
+      - name: Aucune liste n'annonce « aucun » sans avoir regardé
+        working-directory: front
+        run: npm run lint:etat-liste
+
+      # 🔴 Le pied « Annuler / Enregistrer » était écrit DIX-NEUF fois, et les
+      # copies avaient divergé sur quatre points — dont TROIS orthographes du
+      # même événement d'annulation : `annule`, `annuler`, `cancel`.
+      #
+      # ⚠️ Cette divergence-là ne lève jamais : un parent qui écoute `on:annule`
+      # sur un formulaire qui émet `annuler` ne réagit pas. Le bouton semble
+      # mort, sans erreur, sans trace.
+      #
+      # ⚠️ Mon relevé manuel n'en avait vu que neuf — je n'avais regardé que les
+      # `Formulaire*.svelte`. Le contrôle, lui, balaie `src/`.
+      - name: Pied de formulaire passant par le composant
+        working-directory: front
+        run: npm run lint:pied-formulaire

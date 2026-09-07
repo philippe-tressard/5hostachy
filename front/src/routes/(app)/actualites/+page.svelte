@@ -1,0 +1,520 @@
+<script lang="ts">
+	import { PUBLICATION } from '$lib/entites/publication';
+	import EntetePage from '$lib/components/EntetePage.svelte';
+	import { onMount } from 'svelte';
+	import { cibleDuHash, revelerCible } from '$lib/deepLink';
+	import { currentUser, isCS, isAdmin, setUser } from '$lib/stores/auth';
+	import {
+		publications as pubsApi,
+		documents as docsApi,
+		ApiError,
+		type Publication,
+		auth as authApi,
+	} from '$lib/api';
+	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
+	import PanneauOptionsPublication from '$lib/components/PanneauOptionsPublication.svelte';
+	import { motifWhatsappInterdit } from '$lib/options-publication';
+	import { toast } from '$lib/components/Toast.svelte';
+	import CarteActualite from '$lib/components/CarteActualite.svelte';
+	import ActionsActualite from '$lib/components/ActionsActualite.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
+	import FormulaireActualite from '$lib/components/FormulaireActualite.svelte';
+	import HistoriqueActualites from '$lib/components/HistoriqueActualites.svelte';
+	import RubriqueHistorique from '$lib/components/RubriqueHistorique.svelte';
+	import { fichiersDepuisUrls } from '$lib/fichiers';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
+	import EvolForm from '$lib/components/EvolForm.svelte';
+	import { safeHtml } from '$lib/sanitize';
+	import { STATUT_LABELS } from '$lib/publications';
+
+	$: _pc = getPageConfig($configStore, 'actualites', defautsDePage('actualites'));
+	$: _siteNom = $siteNomStore;
+
+	let pubList: Publication[] = [];
+	$: compactPubs = pubList.length > 7;
+	let loading = true;
+	/** Message d'une panne de chargement, ou vide (#796). */
+	let erreur = '';
+
+	let showForm = false;
+	let pubFilesMap: Record<number, any[]> = {};
+	let loadedFilesFor = new Set<number>();
+	let expandedPubs = new Set<number>();
+
+	function togglePub(id: number) {
+		if (expandedPubs.has(id)) {
+			expandedPubs.delete(id);
+			expandedPubs = new Set(expandedPubs);
+			if (showEvolForm === id) showEvolForm = null;
+		} else {
+			expandedPubs = new Set([id]);
+			showEvolForm = null;
+			loadPubFiles(id);
+		}
+	}
+
+	async function loadPubFiles(pubId: number) {
+		if (loadedFilesFor.has(pubId)) return;
+		loadedFilesFor.add(pubId);
+		try {
+			const docs = await docsApi.listByPublication(pubId);
+			pubFilesMap = { ...pubFilesMap, [pubId]: docs };
+		} catch {
+			/* silencieux */
+		}
+	}
+
+	onMount(async () => {
+		try {
+			pubList = await pubsApi.list();
+			// Lien profond `#pub-<id>` (fil d'activité, notification, e-mail)
+			const idPub = cibleDuHash('pub');
+			if (idPub !== null) {
+				expandedPubs = new Set([idPub]);
+				revelerCible(`pub-${idPub}`);
+			}
+			//  Rien n'est déplié d'office : la page s'ouvre sur une LISTE. La branche du dessus reste — un lien `#pub-<id>` doit ouvrir l'article visé.
+			// Persist last-seen timestamp server-side
+			const now = new Date().toISOString();
+			authApi
+				.updateMe({ last_seen_actualites: now })
+				.then((u: any) => setUser(u))
+				.catch(() => {});
+		} catch (e) {
+			//  🔴 Aucun `catch` jusqu'au 06/09 : une panne affichait « Aucune actualité » — défaut #519 (#796).
+			erreur = e instanceof ApiError ? e.message : 'Erreur de chargement';
+		} finally {
+			loading = false;
+		}
+	});
+
+	function publicationCreee(e: CustomEvent<Publication>) {
+		pubList = [e.detail, ...pubList];
+		showForm = false;
+	}
+
+	async function deletePub(pub: Publication) {
+		if (!confirm(`Supprimer définitivement « ${pub.titre} » ?`)) return;
+		try {
+			await pubsApi.delete(pub.id);
+			pubList = pubList.filter((p) => p.id !== pub.id);
+			toast('success', 'Publication supprimée');
+		} catch (e: any) {
+			toast('error', e instanceof ApiError ? e.message : 'Impossible de supprimer');
+		}
+	}
+
+	//  ⚠️ LE RENVOI D'UNE ANNONCE ET L'ARCHIVAGE MANUEL ONT ÉTÉ RETIRÉS DE CET
+	//  ÉCRAN le 18/08/2026, sur arbitrage. Les endpoints existent toujours
+	//  (`POST /publications/{id}/renvoyer-email` et `…/renvoyer-whatsapp`,
+	//  `PATCH {archivee:true}`) : c'est la commande qui disparaît, pas la
+	//  fonction.
+	//
+	//  Ce que cela retire concrètement : un envoi qui a échoué sans qu'on s'en
+	//  rende compte — groupe WhatsApp déconnecté, messagerie du syndic
+	//  indisponible — n'a plus de chemin de rattrapage depuis l'interface.
+	//  C'était la raison d'être du bouton WhatsApp (10/08/2026) : republier ne
+	//  déclenche rien, et ajouter un commentaire enverrait le commentaire, pas
+	//  l'annonce. À rouvrir ailleurs si le besoin se représente.
+
+	//  ── Édition ───────────────────────────────────────────────────────────────
+	//  La page ne porte plus QUE l'identité de la publication en cours de
+	//  correction : le formulaire lui-même est `FormulaireActualite`, le même
+	//  qu'à la création (#433). Les onze variables `edit*` qui vivaient ici
+	//  dupliquaient à la main un état que le composant tient déjà — et elles
+	//  avaient déjà divergé : cinq notions manquantes, une en trop.
+	let editingPub: Publication | null = null;
+
+	// ── Évolutions ──────────────────────────────────────────────────────
+	let showEvolForm: number | null = null; // pub.id ouvert
+	let evolSaving = false;
+
+	//  UN point d'entrée (#426) : le formulaire porte les DEUX gestes, et lequel a
+	//  été fait se lit dans les pastilles de la section Workflow — celle de l'état
+	//  courant est active, la laisser telle quelle ne change rien.
+	//  🔴 LE COMMENTAIRE PORTE AUSSI LE CIBLAGE (05/09/2026), demandé à l'écran :
+	//  *« les sections Options de publication, Périmètre et Destinataires doivent
+	//  être visibles même pour chaque commentaire ; tu remets le dernier état, et
+	//  le nouveau sauvegardé deviendra validé »*.
+	//
+	//  Copie de travail, comme pour le panneau d'options : on n'écrit dans la
+	//  publication qu'après la réponse du serveur. Elle vit ICI et non dans
+	//  `EvolForm`, qui reste générique — c'est l'écran qui sait ce que « options de
+	//  publication » veut dire.
+	let evolOptions = { epingle: false, urgente: false, brouillon: false, confidentiel: false };
+
+	function ouvrirEvolution(pub: Publication) {
+		showEvolForm = pub.id;
+		editingPub = null;
+		expandedPubs = new Set([pub.id]);
+		evolOptions = {
+			epingle: pub.epingle ?? false,
+			urgente: pub.urgente ?? false,
+			brouillon: pub.brouillon ?? false,
+			confidentiel: pub.confidentiel ?? false,
+		};
+	}
+	let editingEvolId: number | null = null;
+	let editingEvolPubId: number | null = null;
+	let editEvolSaving = false;
+
+	async function addEvolFromForm(pub: Publication, e: CustomEvent) {
+		const data = e.detail;
+		evolSaving = true;
+		try {
+			const evol = await pubsApi.addEvolution(pub.id, {
+				type: data.type,
+				contenu: data.contenu || undefined,
+				nouveau_statut: data.nouveau_statut,
+				partager_whatsapp: data.partager_whatsapp,
+				envoyer_syndic: data.envoyer_syndic,
+				envoyer_cs: data.envoyer_cs,
+				fichiers_urls: data.fichiers_urls,
+				email_externe: data.email_externe || undefined,
+			});
+			pubList = pubList.map((p) => {
+				if (p.id !== pub.id) return p;
+				const updated = { ...p, evolutions: [...(p.evolutions ?? []), evol] };
+				if (data.type === 'etat') updated.statut = evol.nouveau_statut as any;
+				return updated;
+			});
+			showEvolForm = null;
+			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
+		} catch (err: any) {
+			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+		} finally {
+			evolSaving = false;
+		}
+	}
+
+	async function saveEvolEdit(e: CustomEvent) {
+		if (editingEvolId === null || editingEvolPubId === null) return;
+		editEvolSaving = true;
+		try {
+			const updated = await pubsApi.updateEvolution(editingEvolPubId, editingEvolId, {
+				contenu: e.detail.contenu || undefined,
+				fichiers_urls: e.detail.fichiers_urls,
+			});
+			pubList = pubList.map((p) => {
+				if (p.id !== editingEvolPubId) return p;
+				return {
+					...p,
+					evolutions: (p.evolutions ?? []).map((ev) =>
+						ev.id === editingEvolId ? (updated as any) : ev,
+					),
+				};
+			});
+			editingEvolId = null;
+			editingEvolPubId = null;
+			toast('success', 'Commentaire mis à jour');
+		} catch {
+			toast('error', 'Erreur de mise à jour');
+		} finally {
+			editEvolSaving = false;
+		}
+	}
+
+	//  Effacer une entrée du fil — ADMIN seulement, revérifié par le serveur
+	//  (`require_admin`). Le bouton s'affichait ici sans route derrière : on
+	//  cliquait, rien ne se passait (#505). La route existe depuis #512.
+	async function supprimerEvol(pub: Publication, evolId: number) {
+		try {
+			await pubsApi.deleteEvolution(pub.id, evolId);
+			pubList = pubList.map((p) =>
+				p.id !== pub.id
+					? p
+					: { ...p, evolutions: (p.evolutions ?? []).filter((ev) => ev.id !== evolId) },
+			);
+			toast('success', 'Entrée supprimée');
+		} catch {
+			toast('error', 'Erreur de suppression');
+		}
+	}
+
+	// ── Options de publication : le raccourci vers la SECTION 2 ─────────
+	//
+	//  Ce n'est PAS un cinquième état de l'entité (cadre #430) : c'est un chemin
+	//  d'accès rapide à la section 2 de l'ÉDITION, celle qui porte épinglage,
+	//  urgence, brouillon et confidentialité. La déclaration
+	//  (`$lib/entites/publication`) est donc inchangée — rien de nouveau n'est
+	//  montré, c'est le même contenu atteint plus vite.
+	//
+	//  🔴 IL ÉCRIT PAR LE MÊME CHEMIN QUE L'ÉDITION — `pubsApi.update`, les quatre
+	//  champs. Un raccourci qui enregistrerait autrement finirait par diverger de
+	//  l'écran long : c'est exactement le motif que ce dépôt a payé plusieurs fois
+	//  (l'édition d'actualité écrite à la main perdait cinq notions, #433).
+	//
+	//  Droits : `$isCS`, les MÊMES que le crayon. L'auteur seul n'ouvre pas ce
+	//  panneau — seuls le CS et les admins publient, donc tout auteur en exercice
+	//  y a déjà droit ; ouvrir à « l'auteur » n'aurait élargi qu'aux anciens
+	//  membres du conseil (arbitrage du 29/08/2026).
+	let optionsPub: Publication | null = null;
+	let optionsSaving = false;
+	//  Copie de travail : on n'écrit dans la publication qu'après la réponse du
+	//  serveur. Modifier `pub` en place montrerait un état enregistré qui ne l'est
+	//  pas encore — et le laisserait faux si la requête échoue.
+	let optionsBrouillon = { epingle: false, urgente: false, brouillon: false, confidentiel: false };
+
+	function ouvrirOptions(pub: Publication) {
+		optionsPub = pub;
+		editingPub = null;
+		showEvolForm = null;
+		optionsBrouillon = {
+			epingle: pub.epingle ?? false,
+			urgente: pub.urgente ?? false,
+			brouillon: pub.brouillon ?? false,
+			confidentiel: pub.confidentiel ?? false,
+		};
+		expandedPubs = new Set([pub.id]);
+	}
+
+	async function enregistrerOptions(pub: Publication) {
+		optionsSaving = true;
+		try {
+			const maj = await pubsApi.update(pub.id, { ...optionsBrouillon });
+			//  Le serveur a le dernier mot : il peut refuser « confidentiel » sur un
+			//  périmètre à portée globale (`appliquer_confidentialite`). On range CE
+			//  qu'il rend, jamais ce qu'on lui a demandé.
+			pubList = pubList.map((p) => (p.id === maj.id ? maj : p));
+			optionsPub = null;
+			toast('success', 'Options mises à jour');
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : "Erreur d'enregistrement");
+		} finally {
+			optionsSaving = false;
+		}
+	}
+
+	function startEdit(pub: Publication) {
+		editingPub = pub;
+		showEvolForm = null;
+		expandedPubs = new Set([pub.id]);
+	}
+
+	//  Le formulaire annonce ce qu'il a enregistré ; la page range. Elle ne
+	//  reconstruit rien : `modifie` porte la publication telle que le serveur l'a
+	//  relue, pièces jointes et corrections comprises.
+	function publicationModifiee(e: CustomEvent<Publication>) {
+		pubList = pubList.map((p) => (p.id === e.detail.id ? e.detail : p));
+		editingPub = null;
+	}
+</script>
+
+<svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
+
+<!--  L'en-tête n'OUVRE plus que le formulaire : l'annulation vit à côté
+      d'« Enregistrer », dans le formulaire (norme du 18/08/2026, posée sur
+      Tickets puis étendue). Le bouton s'efface pendant la saisie — le laisser en
+      « ✕ Annuler » ferait deux commandes d'annulation pour un seul formulaire
+      (#367). -->
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'newspaper'}>
+	{#if $isCS && !showForm}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showForm = true)}>
+			+ Nouvelle publication
+		</button>
+	{/if}
+</EntetePage>
+<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
+
+{#if showForm && $isCS}
+	<FormulaireActualite on:cree={publicationCreee} on:annule={() => (showForm = false)} />
+{/if}
+
+<!--  Correction — LE MÊME composant qu'à la création (#433), qui porte son
+      cadre : boîte là-bas, modale ici. Il sort de la carte avec la modale, le
+      pourquoi est écrit dans le composant (#640). -->
+{#if editingPub}
+	{#key editingPub.id}
+		<FormulaireActualite
+			publication={editingPub}
+			on:modifie={publicationModifiee}
+			on:annule={() => (editingPub = null)}
+		/>
+	{/key}
+{/if}
+
+<!--  Les trois états par `EtatListe` (#796) — dont l'ERREUR, absente jusque-là. -->
+<EtatListe
+	chargement={loading}
+	{erreur}
+	vide={pubList.length === 0}
+	titreErreur="Impossible d'afficher les actualités"
+	titreVide="Aucune actualité"
+	messageVide="Les annonces du conseil syndical apparaîtront ici."
+>
+	{#each pubList as pub (pub.id)}
+		{@const expanded = expandedPubs.has(pub.id)}
+		<CarteActualite
+			{pub}
+			{expanded}
+			apercu={!compactPubs}
+			documents={pubFilesMap[pub.id] ?? []}
+			formulaireOuvert={showEvolForm === pub.id || optionsPub?.id === pub.id}
+			on:toggle={() => togglePub(pub.id)}
+		>
+			<!--  Les icônes vivent dans `ActionsActualite` depuis le 06/09/2026 (#796) :
+			      quarante lignes qui ne parlaient que d'elles. Leur ORDRE, les trois
+			      gestes retirés le 18/08 et la raison du bouton d'options y sont écrits. -->
+			<svelte:fragment slot="actions">
+				<ActionsActualite
+					{pub}
+					commentaireOuvertId={showEvolForm}
+					editionOuverteId={editingPub?.id ?? null}
+					optionsOuvertesId={optionsPub?.id ?? null}
+					onCommenter={ouvrirEvolution}
+					onModifier={startEdit}
+					onOptions={ouvrirOptions}
+					onSupprimer={deletePub}
+				/>
+			</svelte:fragment>
+
+			<svelte:fragment slot="formulaire">
+				{#if optionsPub?.id === pub.id}
+					<PanneauOptionsPublication
+						{pub}
+						bind:options={optionsBrouillon}
+						enregistrement={optionsSaving}
+						on:enregistrer={() => enregistrerOptions(pub)}
+						on:annuler={() => (optionsPub = null)}
+					/>
+				{:else if showEvolForm === pub.id}
+					<!--  ── Commenter / changer l'état ──
+					      `role="presentation"` dit que ce conteneur n'est qu'un relais :
+					      il arrête la propagation pour que saisir dans le formulaire ne
+					      referme pas la carte, il n'est pas lui-même interactif. Même
+					      geste que `CarteTicket`, qui portait déjà le rôle — ici
+					      l'avertissement d'accessibilité traînait depuis l'origine. -->
+					<div
+						class="evol-form"
+						role="presentation"
+						on:click|stopPropagation
+						on:keydown|stopPropagation
+					>
+						{#key showEvolForm}
+							<!--  ⚠️ Les pièces jointes sont DEUX sections, 7 et 8, jamais
+						      fusionnées : c'est cet écran qui portait le mode « unifié »
+						      d'`EvolForm`, et le mode a disparu avec son dernier appelant
+						      (#433). *Une variante ajoutée pour accueillir un écart
+						      existant ne factorise pas, elle entérine.* -->
+							<!--  ⚠️ AUCUNE option d'état : une actualité n'a pas de workflow
+						      (arbitré le 18/08/2026). `EvolForm` ne rend donc pas la
+						      section Workflow, et l'entrée est toujours un commentaire —
+						      c'est la liste vide qui le dit, pas une condition en dur. -->
+							<EvolForm
+								idPrefixe="pub-evol-{pub.id}"
+								auteurNom={pub.auteur_nom ?? ''}
+								titre="Commenter"
+								statutOptions={[]}
+								statutLabels={STATUT_LABELS}
+								defaultPartagerWhatsapp={pub.partager_whatsapp ?? false}
+								whatsappInterdit={motifWhatsappInterdit(pub.brouillon ?? false, 'actualité')}
+								defaultEnvoyerSyndic={pub.envoyer_syndic ?? false}
+								defaultEnvoyerCs={pub.envoyer_cs ?? false}
+								showEmail={true}
+								entite={PUBLICATION}
+								saving={evolSaving}
+								perimetreCourant={pub.perimetre_cible ?? []}
+								initialDestinataires={pub.public_cible ?? []}
+								aidePerimetre="Le périmètre en vigueur est repris tel quel : le corriger ici corrige la publication entière."
+								on:submit={(e) => addEvolFromForm(pub, e)}
+								on:cancel={() => (showEvolForm = null)}
+							>
+								<!--  Section 2 — LE MÊME composant qu'à la création, à l'édition et
+								      dans le panneau d'options : ni copie, ni variante. Il porte déjà
+								      la règle « Confidentiel exige un périmètre restreint ». -->
+								<svelte:fragment slot="specifiques" let:premiere>
+									<SectionOptionsPublication
+										{premiere}
+										perimetreCible={pub.perimetre_cible ?? []}
+										dejaEpingle={pub.epingle ?? false}
+										bind:epingle={evolOptions.epingle}
+										bind:urgente={evolOptions.urgente}
+										bind:brouillon={evolOptions.brouillon}
+										bind:confidentiel={evolOptions.confidentiel}
+									/>
+								</svelte:fragment>
+							</EvolForm>
+						{/key}
+					</div>
+				{/if}
+			</svelte:fragment>
+
+			<svelte:fragment slot="apres-corps">
+				<!--  ── L'HISTORIQUE ──  Le fil était écrit à la main ici, sur 58
+				      lignes : quatrième des six recopies relevées par #431, et déjà
+				      divergente — « Voir les N *commentaires* plus anciens » là où les
+				      tickets disent « entrées », un `<button>` habillé par six
+				      déclarations en ligne, et une branche pour un type `correction`
+				      que le serveur n'a JAMAIS écrit.
+				      La rubrique porte tout cela une fois, avec ses styles (Svelte les
+				      scope au composant qui rend le balisage — les laisser ici ne les
+				      atteindrait pas). -->
+				{#if pub.evolutions?.length}
+					<div class="pub-fil">
+						<RubriqueHistorique
+							evolutions={pub.evolutions}
+							statutLabels={STATUT_LABELS}
+							peutModifier={$isCS}
+							currentUserId={$currentUser?.id}
+							estAdmin={$isAdmin}
+							avecSuppression
+							enEdition={editingEvolId}
+							on:modifier={(e) => {
+								editingEvolId = e.detail;
+								editingEvolPubId = pub.id;
+							}}
+							on:supprimer={(e) => supprimerEvol(pub, e.detail)}
+						>
+							<svelte:fragment slot="edition" let:evol>
+								{#key editingEvolId}
+									<EvolForm
+										idPrefixe="pub-evol-edit-{evol.id}"
+										auteurNom={pub.auteur_nom ?? ''}
+										titre="Modifier le commentaire"
+										editMode={true}
+										initialContenu={evol.contenu || ''}
+										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
+										entite={PUBLICATION}
+										saving={editEvolSaving}
+										on:submit={saveEvolEdit}
+										on:cancel={() => {
+											editingEvolId = null;
+											editingEvolPubId = null;
+										}}
+									/>
+								{/key}
+							</svelte:fragment>
+						</RubriqueHistorique>
+					</div>
+				{/if}
+			</svelte:fragment>
+		</CarteActualite>
+	{/each}
+</EtatListe>
+
+{#if !loading}
+	<HistoriqueActualites />
+{/if}
+
+<style>
+	/*  Le fil et son habillage vivent dans `RubriqueHistorique.svelte`, avec le
+	    balisage qui les porte (#433). Ne reste ici que ce que CETTE page rend :
+	    la marge qui sépare le fil de ce qu'il suit — le parent seul sait ce qu'il
+	    y a au-dessus. */
+	.pub-fil {
+		margin-top: 0.9rem;
+	}
+	.evol-form {
+		padding: 0.5rem 0;
+	}
+
+	/*  ── Bouton « options » ────────────────────────────────────────────────
+	    Il porte de un à quatre glyphes, donc sa largeur varie. `btn-icon` fixe
+	    une cible carrée : on la laisse s'étendre horizontalement sans jamais
+	    descendre sous la cible tactile de 44 px (socle 11 §10), sinon un bouton
+	    à un seul glyphe serait plus petit que ses voisins. */
+
+	/*  Les couleurs de badge vivent dans `styles/composants.css`. Cette page les
+	    réécrivait en `:global(…)` — donc pour tout le site une fois sa feuille
+	    chargée. Retiré avec les sept autres (#562). */
+</style>

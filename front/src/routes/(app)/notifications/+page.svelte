@@ -1,0 +1,250 @@
+<script lang="ts">
+	//  🔴 Les deux `class:` du gabarit remplacent un ternaire INTERPOLÉ (#810).
+	//  Devant `class="… {cond ? 'a' : 'b'}"`, Svelte cesse de déclarer les
+	//  sélecteurs inutilisés pour TOUT le fichier — le contrôle devenait aveugle
+	//  sur cet écran. Deux valeurs locales et connues : la conversion ne coûte rien.
+	import EntetePage from '$lib/components/EntetePage.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { essayer } from '$lib/chargement';
+	import { onMount } from 'svelte';
+	import { notifications as notifApi } from '$lib/api';
+	import { toast } from '$lib/components/Toast.svelte';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
+	import { safeHtml, safeRichContent } from '$lib/sanitize';
+	import { fmtTime, fmtDateShort } from '$lib/date';
+
+	$: _pc = getPageConfig($configStore, 'notifications', defautsDePage('notifications'));
+	$: _siteNom = $siteNomStore;
+
+	let items: any[] = [];
+	let loading = true;
+	/*  🔴 Sans cette variable, un chargement en échec laissait `items` à `[]` et
+	    l'écran répondait « Aucune notification — Vous êtes à jour ! ». Le toast
+	    d'erreur, lui, s'efface au bout de quelques secondes ; le mensonge reste.
+	    C'est l'incident #519 reproduit sur un autre écran. */
+	let erreur = '';
+	let deleting = new Set<number>();
+
+	onMount(async () => {
+		await load();
+	});
+
+	async function load() {
+		loading = true;
+		//  `essayer` rend `[valeur, erreur]` — jamais l'un sans l'autre.
+		[items, erreur] = await essayer(notifApi.list(), []);
+		loading = false;
+	}
+
+	async function markRead(id: number) {
+		try {
+			await notifApi.markRead(id);
+			items = items.map((n) => (n.id === id ? { ...n, lue: true } : n));
+		} catch {
+			toast('error', 'Erreur');
+		}
+	}
+
+	async function markAll() {
+		try {
+			await notifApi.markAllRead();
+			items = items.map((n) => ({ ...n, lue: true }));
+			toast('success', 'Toutes les notifications marquées comme lues');
+		} catch {
+			toast('error', 'Erreur');
+		}
+	}
+
+	async function remove(id: number) {
+		if (!confirm('Supprimer cette notification ?')) return;
+		deleting = new Set([...deleting, id]);
+		try {
+			await notifApi.delete(id);
+			items = items.filter((n) => n.id !== id);
+		} catch {
+			toast('error', 'Erreur lors de la suppression');
+		} finally {
+			deleting.delete(id);
+			deleting = deleting;
+		}
+	}
+
+	$: unread = items.filter((n) => !n.lue).length;
+	$: grouped = group(items);
+
+	function group(notifs: any[]) {
+		const today: any[] = [];
+		const older: any[] = [];
+		const now = Date.now();
+		notifs.forEach((n) => {
+			const age = now - new Date(n.cree_le).getTime();
+			if (age < 86400000) today.push(n);
+			else older.push(n);
+		});
+		return { today, older };
+	}
+</script>
+
+<svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
+
+<a href="/tableau-de-bord" class="back-link">← Tableau de bord</a>
+
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'bell'}>
+	{#if unread > 0}
+		<span style="font-size:.85rem;color:var(--color-text-muted)"
+			>{unread} non lue{unread > 1 ? 's' : ''}</span
+		>
+		<button class="btn btn-outline btn-sm" on:click={markAll}>Tout marquer lu</button>
+	{/if}
+</EntetePage>
+<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
+
+{#if loading || erreur || items.length === 0}
+	<EtatListe
+		chargement={loading}
+		{erreur}
+		vide={items.length === 0}
+		titreErreur="Impossible d’afficher vos notifications"
+		titreVide="Aucune notification"
+		messageVide="Vous êtes à jour !"
+	/>
+{:else}
+	{#if grouped.today.length > 0}
+		<h2 class="section-title">Aujourd'hui</h2>
+		{#each grouped.today as n (n.id)}
+			<div
+				class="notif-row card"
+				class:notif-read={n.lue}
+				class:notif-unread={!n.lue}
+				role="article"
+			>
+				<div class="notif-body">
+					{#if !n.lue}<div class="unread-dot"></div>{/if}
+					<div class="notif-content">
+						<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+							<strong style="font-size:.95rem">{n.titre}</strong>
+							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
+						</div>
+						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">
+							{@html safeRichContent(n.corps)}
+						</p>
+						<small style="color:var(--color-text-muted);font-size:.75rem"
+							>{fmtTime(n.cree_le)}</small
+						>
+					</div>
+				</div>
+				<div class="notif-actions">
+					{#if !n.lue}
+						<button class="btn btn-outline btn-sm" on:click={() => markRead(n.id)}
+							>Marquer lu</button
+						>
+					{/if}
+					<button
+						class="btn btn-danger btn-sm"
+						disabled={deleting.has(n.id)}
+						on:click={() => remove(n.id)}>✕</button
+					>
+				</div>
+			</div>
+		{/each}
+	{/if}
+
+	{#if grouped.older.length > 0}
+		<h2 class="section-title" style="margin-top:1.25rem">Plus anciennes</h2>
+		{#each grouped.older as n (n.id)}
+			<div
+				class="notif-row card"
+				class:notif-read={n.lue}
+				class:notif-unread={!n.lue}
+				role="article"
+			>
+				<div class="notif-body">
+					{#if !n.lue}<div class="unread-dot"></div>{/if}
+					<div class="notif-content">
+						<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+							<strong style="font-size:.95rem">{n.titre}</strong>
+							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
+						</div>
+						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">
+							{@html safeRichContent(n.corps)}
+						</p>
+						<small style="color:var(--color-text-muted);font-size:.75rem"
+							>{fmtDateShort(n.cree_le)}</small
+						>
+					</div>
+				</div>
+				<div class="notif-actions">
+					{#if !n.lue}
+						<button class="btn btn-outline btn-sm" on:click={() => markRead(n.id)}
+							>Marquer lu</button
+						>
+					{/if}
+					<button
+						class="btn btn-danger btn-sm"
+						disabled={deleting.has(n.id)}
+						on:click={() => remove(n.id)}>✕</button
+					>
+				</div>
+			</div>
+		{/each}
+	{/if}
+{/if}
+
+<style>
+	/*  Seul l'espacement bas differe de la charte (#607, 28/08/2026). */
+	.section-title {
+		margin-bottom: 0.5rem;
+	}
+	.notif-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		padding: 0.85rem 1rem;
+		margin-bottom: 0.4rem;
+		gap: 0.5rem;
+	}
+	.notif-unread {
+		border-left: 3px solid var(--color-primary);
+	}
+	.notif-read {
+		opacity: 0.7;
+	}
+	.notif-body {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.6rem;
+		flex: 1;
+		min-width: 0;
+	}
+	.notif-content {
+		flex: 1;
+		min-width: 0;
+	}
+	.notif-actions {
+		display: flex;
+		gap: 0.35rem;
+		flex-shrink: 0;
+	}
+	.unread-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--color-primary);
+		margin-top: 6px;
+		flex-shrink: 0;
+	}
+
+	/*  Ce lien de retour est plus discret et plus proche du contenu que la norme :
+	    variation assumee, le reste vient de la charte (#607, 28/08/2026). */
+	.back-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 0.85rem;
+		color: var(--color-text-muted);
+		margin-bottom: 0.75rem;
+	}
+	.back-link:hover {
+		color: var(--color-primary);
+	}
+</style>

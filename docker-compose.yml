@@ -1,0 +1,116 @@
+services:
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    container_name: hostachy_caddy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+    ports:
+      - "80:80"
+    environment:
+      - TZ=Europe/Paris
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - uploads:/srv/uploads:ro
+    depends_on:
+      - front
+      - api
+    networks:
+      - hostachy
+
+  front:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        GIT_HASH: ${GIT_HASH:-dev}
+        INSTANCE_ID: ${INSTANCE_ID:-}
+    container_name: hostachy_front
+    labels:
+      - "git.hash=${GIT_HASH:-dev}"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+    environment:
+      - NODE_ENV=production
+      - PUBLIC_API_URL=http://api:8000
+      - ORIGIN=${ORIGIN:-http://localhost}
+      - TZ=Europe/Paris
+    depends_on:
+      - api
+    networks:
+      - hostachy
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: hostachy_api
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    env_file: .env
+    environment:
+      - TZ=Europe/Paris
+    volumes:
+      - app_data:/app/data
+      - uploads:/app/uploads
+      - backups:/backups
+    networks:
+      - hostachy
+
+  whatsapp-bridge:
+    build:
+      context: ./whatsapp-bridge
+      dockerfile: Dockerfile
+    container_name: hostachy_whatsapp
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+    ports:
+      - "127.0.0.1:8090:8090"
+    environment:
+      - TZ=Europe/Paris
+      #  🔴 PAS DE SECRET PAR DÉFAUT (#776, 05/09/2026). `:-changeme` laissait le
+      #  bridge démarrer SANS ERREUR quand `.env` perdait la variable — et
+      #  `SECRET_KEY`, elle, refuse de démarrer depuis toujours (`config.py`).
+      #  Le même défaut, deux traitements : `:?` aligne le second sur le premier.
+      - WA_API_KEY=${WHATSAPP_API_KEY:?WHATSAPP_API_KEY manquante dans .env}
+      - WA_PORT=8090
+      - WA_AUTH_DIR=/app/auth_state
+      - WA_LOG_LEVEL=warn
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - whatsapp_auth:/app/auth_state
+    networks:
+      - hostachy
+
+volumes:
+  caddy_data:
+  caddy_config:
+  app_data:
+  uploads:
+  backups:
+  whatsapp_auth:
+
+networks:
+  hostachy:
+    driver: bridge

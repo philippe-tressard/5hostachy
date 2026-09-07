@@ -1,0 +1,47 @@
+# Périmètre de prettier — posé le 17/08/2026 (#410).
+#
+# Sans ce fichier, `prettier --check .` signalait 785 fichiers, dont 734 dans les
+# répertoires de SORTIE : le vrai défaut (un `</li>` orphelin dans le manuel des
+# résidents) était noyé, et le même fichier était compté trois fois — une fois à sa
+# place, deux fois recopié par le build.
+
+# ── Artefacts de build : ce sont des sorties, pas des sources ──────────────────
+build/
+.svelte-kit/
+node_modules/
+package-lock.json
+
+# ── Manuels : documents denses écrits à la main ────────────────────────────────
+# `prettier --write` les réécrirait de bout en bout pour un diff énorme et sans
+# valeur, et ils sont versionnés en CRLF (un reformatage les repasserait en LF).
+# ⚠️ Leur bonne formation N'EST PAS abandonnée pour autant : `npm run lint:manuels`
+# (scripts/check-manuels.mjs) les passe au même parseur, sans exiger la mise en
+# forme, et tourne en CI. Un ignore qui éteint le seul contrôle qui voyait un
+# défaut le rend invisible — c'est exactement comme ça que le `</li>` orphelin a
+# survécu.
+static/manuel-utilisateur.html
+static/manuel-utilisateur-1-page.html
+
+# ── Catalogue d'icônes : une COPIE, pas une source ────────────────────────────
+# `src/lib/icones-svg.json` et `api/app/utils/icones-svg.json` doivent rester
+# identiques À L'OCTET — c'est `api/tests/test_icones_svg.py` qui le vérifie, et
+# c'est le seul pattern viable entre `./api` et `./front`, dont les contextes de
+# build sont disjoints (mémoire `project_partage_front_api_impossible`).
+# Le reformater ici le ferait diverger de son jumeau au premier `--write`, et la
+# CI le dirait — mais après coup, sur un diff de 800 lignes sans objet.
+# Son autorité est l'égalité octet pour octet, pas une convention de mise en forme.
+src/lib/icones-svg.json
+
+# ── Caches d'outils : présents chez le développeur, absents du runner ─────────
+# Un `pytest` lancé depuis `front/` y dépose `.pytest_cache/README.md`, que git
+# ignore (il porte son propre `.gitignore`) mais que prettier voyait : le rejeu
+# local de la CI échouait sur un fichier que la CI, elle, ne verra jamais.
+# Un contrôle qui ne rend pas le même verdict en local et en CI n'est plus une
+# répétition de la CI — c'est un second contrôle, et le plus bruyant gagne.
+.pytest_cache/
+
+# ── Sorties de Playwright : rapport HTML et traces ───────────────────────────
+# Même motif que `build/` ci-dessus — ce sont des SORTIES. Le rapport est un
+# fichier HTML généré de 500 Ko : le reformater n'apprend rien et masque le reste.
+e2e-rapport/
+test-results/

@@ -1,0 +1,478 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  Pré-check MEP 15 points — exécutable, et non plus une liste à dérouler à la main.
+#
+#  POURQUOI ce script existe. La grille des 15 points vit dans
+#  `.claude/skills/mep-precheck` depuis le 02/08/2026, et l'ordre des opérations
+#  (pré-check AVANT le push sur dev) dans la banque de mémoire du projet. Les deux
+#  étaient justes. Ils ont quand même été enfreints TROIS lots d'affilée les 07 et
+#  08/08/2026, au motif que « s'arrêter au push dev » dispenserait du pré-check —
+#  alors que `auto-deploy.sh` déploie `origin/main` toutes les 5 minutes : fusionner
+#  la PR EST la mise en production.
+#
+#  C'est la troisième récidive du même défaut de discipline (socle 01 §2). La
+#  conclusion du socle s'applique à elle-même : une consigne ne se maintient pas
+#  seule. D'où ce script, et le hook `.githooks/pre-push` qui exige sa trace.
+#
+#  RÈGLES DE CONCEPTION (socle 04) :
+#   - un contrôle qui ne peut pas s'exécuter rend INCONNU, jamais OK ;
+#   - une sortie vide n'est pas un vert ;
+#   - jamais `$(grep -c … || echo 0)` : `grep -c` écrit déjà 0 ET sort en 1, le
+#     `||` ajoute une seconde valeur et le test devient inexploitable ;
+#   - jamais `docker exec` ni `sqlite3` sur app.db pendant que l'API tourne.
+#
+#  Usage : bash scripts/poste/precheck-mep.sh   # déroule les 15 points
+#          bash scripts/poste/precheck-mep.sh --selftest # éprouve les fonctions de décision
+# =============================================================================
+set -uo pipefail
+
+SITE="${SITE:-https://5hostachy.fr}"
+RPI1="${RPI1:-ptressard@192.168.1.222}"
+RPI2="${RPI2:-ptressard@192.168.1.223}"
+MARQUEUR="${MARQUEUR:-.git/precheck-mep.ok}"
+
+#: Seuils, tous nommés — un nombre nu dans un test est un seuil qu'on ne peut pas
+#: discuter. Cf. socle 04 §18 : un seuil se règle sur le RÉGIME de ce qu'il surveille.
+CACHE_BUILD_MAX_GB=40      # régime stationnaire ≈ 29 Go (plafond 10 + 6 nuits × 3,1)
+LOG_MAX_MO=5
+BATTEMENT_DEPLOY_MIN=20    # auto-deploy écrit ~12 lignes/h sur le standby
+
+# ── Fonctions de décision PURES ──────────────────────────────────────────────
+# Extraites dans `lib-verdicts-mep.sh` le 11/08/2026 : ce fichier a dépassé 500
+# lignes en recevant 0f, et son PROPRE point 0b a refusé le push. Le self-test
+# est parti avec elles — il est leur contrat.
+# shellcheck source=../lib/lib-verdicts-mep.sh
+#  Les modules `lib-*.sh` restent à la RACINE du dépôt : ils sont partagés avec
+#  les scripts d'exploitation lancés par cron, dont les chemins absolus ne sont
+#  pas versionnés (#337). Les déplacer ici couperait la bascule et le failover.
+RACINE_DEPOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$RACINE_DEPOT" || exit 1   # les contrôles lisent api/, .git/ et front/ en relatif
+. "$RACINE_DEPOT/scripts/lib/lib-verdicts-mep.sh"
+# shellcheck source=../lib/lib-reecriture.sh
+. "$RACINE_DEPOT/scripts/lib/lib-reecriture.sh"
+
+if [ "${1:-}" = "--selftest" ]; then
+  #  Les auto-tests vivent à part depuis le 20/08/2026 (#511) : ils ne sont
+  #  chargés QUE pour `--selftest`, jamais pendant un pré-check réel.
+  . "$RACINE_DEPOT/scripts/lib/lib-verdicts-mep-selftest.sh"
+  verdicts_mep_selftest
+  exit $?
+fi
+
+# ── Exécution ────────────────────────────────────────────────────────────────
+
+NB_OK=0; NB_FAIL=0; NB_INCONNU=0; NB_ECART=0
+POINTS_INCONNUS=""   # les NUMÉROS des points non mesurés, pour les nommer à la fin
+rapporter() {              # $1 = numéro, $2 = verdict, $3 = libellé, $4 = détail
+  local icone
+  case "$2" in
+    OK)      icone="✓"; NB_OK=$((NB_OK+1)) ;;
+    ECART)   icone="~"; NB_ECART=$((NB_ECART+1)) ;;
+    INCONNU) icone="?"; NB_INCONNU=$((NB_INCONNU+1)); POINTS_INCONNUS="${POINTS_INCONNUS:+$POINTS_INCONNUS, }$1" ;;
+    *)       icone="✗"; NB_FAIL=$((NB_FAIL+1)) ;;
+  esac
+  printf "%s %-3s %-46s %-8s %s\n" "$icone" "$1" "$3" "$2" "${4:-}"
+}
+
+#  Un SSH qui échoue rend une chaîne VIDE, que les fonctions de décision
+#  traduisent en INCONNU — jamais en OK.
+sur() { timeout 25 ssh -o BatchMode=yes -o ConnectTimeout=8 "$1" "$2" 2>/dev/null; }
+
+#  🔴 Cette copie-ci avait DIVERGÉ : ni garde sur la sortie vide, ni timeout par
+#  défaut, alors que les deux autres portaient le correctif du 30/07/2026. Le
+#  point 1 pouvait donc afficher un code vide, que rien ne distingue d un OK.
+# shellcheck source=../lib/lib-sonde.sh
+. "$RACINE_DEPOT/scripts/lib/lib-sonde.sh"
+
+echo "═══ Pré-check MEP — $(date '+%Y-%m-%d %H:%M') ═══"
+echo
+
+# 0a — clone à jour
+git fetch origin --quiet 2>/dev/null
+BRANCHE=$(git rev-parse --abbrev-ref HEAD)
+RETARD=$(git rev-list --count "HEAD..origin/$BRANCHE" 2>/dev/null)
+#  « Identique » = MÊME ARBRE. Un retard sur des commits dont le contenu est déjà
+#  chez nous est le réalignement post-squash ; un retard sur du contenu absent est
+#  la dérive que ce point existe pour attraper.
+#  `origin/dev` n'apporte rien que `origin/main` n'ait déjà, ET nous descendons
+#  de `origin/main` : le retard est le réalignement post-squash, pas une dérive.
+#  La branche amont peut avoir été SUPPRIMÉE à la fusion de la PR : `origin/dev`
+#  disparaît alors, et il n'y a rien à rattraper. On distingue donc les trois
+#  états — présente, absente, indéterminable — au lieu de lire une mesure vide
+#  comme un INCONNU.
+if git rev-parse --verify --quiet "origin/$BRANCHE" >/dev/null 2>&1; then AMONT=present
+elif git rev-parse --verify --quiet origin/main >/dev/null 2>&1; then AMONT=absent
+else AMONT=inconnu; fi
+if [ "$AMONT" = "absent" ]; then
+  #  Rien à comparer à l'amont : ce qui compte est de descendre de `origin/main`.
+  git merge-base --is-ancestor origin/main HEAD 2>/dev/null && IDENT=oui || IDENT=non
+elif git diff --quiet "origin/$BRANCHE" origin/main 2>/dev/null && git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then IDENT=oui; else IDENT=non; fi
+if [ "$AMONT" = "absent" ]; then
+  DETAIL0A="origin/$BRANCHE supprimée à la fusion — HEAD descend d'origin/main"
+  [ "$IDENT" = "oui" ] || DETAIL0A="origin/$BRANCHE absente ET le clone a divergé d'origin/main"
+elif [ "${RETARD:-0}" != "0" ] && [ "$IDENT" = "oui" ]; then
+  DETAIL0A="retard=$RETARD commit(s) sans apport (réalignement post-squash)"
+else
+  DETAIL0A="retard=${RETARD:-?} commit(s)"
+fi
+#  ── Réécriture volontaire de la branche, déclarée (#616) ────────────────────
+#  Le point 0d prescrit de RETIRER un bump surnuméraire ; une fois fait,
+#  `origin/$BRANCHE` porte un commit que HEAD n'a plus, et 0a le comptait comme
+#  un retard. Corriger 0d faisait donc échouer 0a, sans que les deux puissent
+#  être verts avant le push — et la seule issue était de désarmer les 24 points.
+#
+#  Format de `.git/reecriture-dev`, même forme datée que `.git/erreur-corrigee` :
+#      commit: 601477b
+#      137cab0
+#
+#  ⚠️ Déclarer ne suffit PAS. On vérifie que les commits déclarés sont exactement
+#  ceux qui manquent, et surtout que **chaque fichier qu'ils touchent a été
+#  réécrit par HEAD** : c'est ce recouvrement, et lui seul, qui prouve qu'aucun
+#  contenu n'est perdu. Sans lui, ce serait une case à cocher pour écraser le
+#  travail d'une autre session.
+DECL0A=""; DECL0A_SHAS=""; MANQUANTS0A=""; NON_RECOUVERTS=""
+if [ -f "$RACINE_DEPOT/.git/reecriture-dev" ] && [ "$AMONT" = "present" ]; then
+  #  Le parsing vit dans `lib-reecriture.sh`, où il est éprouvé — CRLF, lignes
+  #  vides et sha tronqués s'y traitent, et aucun de ces défauts ne lève.
+  DECL0A=$(lire_declaration_reecriture "$RACINE_DEPOT/.git/reecriture-dev" | sed -n 1p)
+  DECL0A_SHAS=$(lire_declaration_reecriture "$RACINE_DEPOT/.git/reecriture-dev" | sed -n 2p)
+  MANQUANTS0A=$(git rev-list "HEAD..origin/$BRANCHE" 2>/dev/null | cut -c1-7 | tr '
+' ' ')
+  #  Un fichier touché par un commit retiré et que HEAD n'a pas réécrit depuis
+  #  la base commune : son apport serait PERDU. La mesure vit dans
+  #  `lib-reecriture.sh`, où elle est éprouvée sur un dépôt jetable.
+  if NON_RECOUVERTS=$(fichiers_non_recouverts "origin/$BRANCHE"); then :; else
+    #  Mesure impossible (pas de base commune) : on ne conclut pas.
+    DECL0A_SHAS=""; MANQUANTS0A=""
+  fi
+fi
+REECR0A=$(verdict_reecriture "${DECL0A:-}" "${HEAD_COURT0A:-$(git rev-parse --short HEAD 2>/dev/null)}"                              "${DECL0A_SHAS:-}" "${MANQUANTS0A:-}" "${NON_RECOUVERTS:-}")
+case "$REECR0A" in
+  oui) DETAIL0A="retard=$RETARD commit(s) RETIRÉ(S) volontairement et déclaré(s) — rien de perdu (fichiers tous réécrits par HEAD)" ;;
+  inconnu) DETAIL0A="$DETAIL0A — déclaration de réécriture incomplète" ;;
+  *) [ -n "$DECL0A$DECL0A_SHAS" ] && DETAIL0A="$DETAIL0A — déclaration de réécriture REFUSÉE${NON_RECOUVERTS:+ (perdrait :${NON_RECOUVERTS})}" ;;
+esac
+rapporter 0a "$(verdict_clone "${RETARD:-}" "$IDENT" "$AMONT" "$REECR0A")" "Clone à jour sur origin/$BRANCHE" "$DETAIL0A"
+
+# 0b — modularité : rejouer ici ce que la CI refusera
+#      Ajouté le 08/08/2026 : trois pushes sont partis alors que le job CI
+#      `test-scripts` les rejetait (email.py 656 → 663). Le contrôle existait,
+#      il n'était simplement pas dans le chemin qui précède le push.
+MOD=$(bash scripts/poste/scripts-ci-modularite.sh origin/main 2>&1)
+case "$?" in
+  0) V0B=OK ;;
+  1) V0B=FAIL ;;
+  *) V0B=INCONNU ;;
+esac
+rapporter 0b "$V0B" "Modularité (ce que la CI vérifiera)"           "$(echo "$MOD" | grep -oE '[a-z_/.]+\.(py|sh|ts|svelte) : [0-9]+ → [0-9]+ lignes' | head -1 || echo 'aucun fichier n a grossi')"
+
+# 0c — la CI de la BRANCHE, pas seulement celle de la PR
+#      Ajouté le 09/08/2026 : j'ai annoncé « CI verte » en ne consultant que les
+#      checks de la pull request, pendant que trois exécutions sur `dev`
+#      échouaient. Une PR verte ne dit rien des pushes qui l'ont précédée.
+#      ⚠️ Corrigé le 12/08/2026 (#318) : ce point refusait aussi le push qui
+#      CORRIGE l'échec qu'il constate — on ne peut pas prouver que la CI repasse
+#      sans pousser, et on ne pouvait pas pousser. La seule issue était
+#      `SKIP_PRECHECK=1`, donc désarmer les vingt points pour contourner celui-ci.
+#      Un échec porté par un commit dont HEAD DESCEND est dépassé par définition ;
+#      les autres bloquent toujours. `echecs_bloquants` tranche, et est testée.
+if command -v gh >/dev/null 2>&1; then
+  #  Les runs sont rendus du PLUS RÉCENT au plus ancien — cet ordre porte la
+  #  moitié de la décision, ne pas le trier.
+  RUNS=$(gh run list --branch "$BRANCHE" --limit 5 --json conclusion,headSha \
+           --jq '.[] | "\(.conclusion):\(.headSha)"' 2>/dev/null)
+  if [ -z "${RUNS:-}" ]; then
+    #  `gh` présent mais muet (hors ligne, jeton expiré), ou branche sans
+    #  historique : une liste vide se lit comme « aucun échec ». On ne déduit
+    #  pas un vert d'une sortie vide (socle 04 §1).
+    V0C=INCONNU; DETAIL0C="aucune exécution lisible — état de la CI non mesurable"
+  else
+    TRIPLETS=""; NB_ECHECS=0
+    for run in $RUNS; do
+      concl=${run%%:*}; sha=${run#*:}
+      [ "$concl" = "failure" ] && NB_ECHECS=$((NB_ECHECS + 1))
+      if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then anc="?"     # absent du clone
+      elif [ "$sha" = "$(git rev-parse HEAD)" ]; then anc="non"            # c est HEAD lui-même
+      elif git merge-base --is-ancestor "$sha" HEAD 2>/dev/null; then anc="oui"
+      else anc="non"
+      fi
+      TRIPLETS="$TRIPLETS ${concl}:${sha:0:7}:$anc"
+    done
+    RESTE=$(echecs_bloquants "$TRIPLETS")
+    NB0C=${RESTE%% *}; SHAS0C=${RESTE#"$NB0C"}
+    V0C=$(verdict_compte "$NB0C" 0)
+    if [ "$NB0C" -gt 0 ]; then
+      DETAIL0C="$NB0C échec(s) que ce lot ne corrige pas :$SHAS0C"
+    elif [ "$NB_ECHECS" -gt 0 ]; then
+      DETAIL0C="$NB_ECHECS échec(s), tous dépassés (succès postérieur ou corrigé ici)"
+    else
+      DETAIL0C="0 échec sur les 5 dernières exécutions"
+    fi
+  fi
+else
+  V0C=INCONNU; DETAIL0C="gh absent — état de la CI non mesurable"
+fi
+rapporter 0c "$V0C" "CI de la branche $BRANCHE" "$DETAIL0C"
+
+# 0d — un seul bump de version par lot, et posé en dernier
+#      Ajouté le 11/08/2026 sur remarque de l'utilisateur : la PR #297 portait
+#      DEUX `chore(version)` — v2.49.1 puis v2.50.0 — et la v2.49.1 n'a jamais
+#      été servie. J'avais bumpé en croyant le lot fini, les retours ont
+#      continué, j'ai rebumpé. L'historique annonçait donc une version qui
+#      n'a jamais existé en production.
+#
+#      Le lot = ce que la PR déposera sur `main`, donc `origin/main..HEAD`.
+#      `--grep` sur le préfixe conventionnel, ancré : un commit qui MENTIONNE un
+#      bump dans son corps ne doit pas être compté.
+NB_BUMPS=$(git log origin/main..HEAD --grep='^chore(version)' --oneline 2>/dev/null | wc -l | tr -d ' ')
+#  Le FAIT, en plus de la forme : la version qui sera SERVIE change-t-elle ?
+#  Compter les commits ne le dit pas — un bump replié dans un commit fonctionnel
+#  change bien la version et faisait pourtant conclure « identique » (#308).
+lire_version() {  # $1 = révision git
+  git show "$1:front/package.json" 2>/dev/null | grep -m1 '"version"' | cut -d'"' -f4
+}
+V_MAIN=$(lire_version origin/main); V_HEAD=$(lire_version HEAD)
+V0D=$(verdict_bumps "${NB_BUMPS:-}" "${V_MAIN:-}" "${V_HEAD:-}")
+case "$V0D" in
+  OK)    D0D="${V_MAIN:-?} → ${V_HEAD:-?}$(
+           [ "$NB_BUMPS" = "1" ] && echo " — $(git log origin/main..HEAD --grep='^chore(version)' --format='%s' 2>/dev/null | head -1)" \
+                                 || echo " (bump replié dans un commit fonctionnel, pas de commit dédié)")" ;;
+  ECART) D0D="version inchangée (${V_MAIN:-?}) : P3 ne prouvera rien" ;;
+  FAIL)  D0D="$NB_BUMPS bumps — n'en garder qu'un : reset --soft puis push --force-with-lease" ;;
+  *)     D0D="comptage impossible" ;;
+esac
+rapporter 0d "$V0D" "Un seul bump de version dans le lot" "$D0D"
+
+# 0g — le RANG du bump correspond à ce que le lot apporte (07/09/2026)
+#      Le point 0d compte les bumps ; il ne regardait pas leur RANG, et six des
+#      dix-huit derniers lots en portaient un faux, tous surévalués. Le « pourquoi »
+#      complet vit avec les deux fonctions, dans `lib-verdicts-mep.sh`.
+SUJETS=$(git log origin/main..HEAD --format='%s%n%b' 2>/dev/null | grep -v '^chore(version)')
+V0G=$(verdict_rang_version "$(rang_attendu "$SUJETS")" "${V_MAIN:-}" "${V_HEAD:-}")
+case "$V0G" in
+  OK)    D0G="${V_MAIN:-?} → ${V_HEAD:-?} — $(rang_attendu "$SUJETS"), conforme aux préfixes du lot" ;;
+  ECART) D0G="version inchangée : rien à juger (0d le dit déjà)" ;;
+  FAIL)  D0G="le lot annonce un $(rang_attendu "$SUJETS"), or ${V_MAIN:-?} → ${V_HEAD:-?} — corriger le bump, ou le préfixe s'il ment" ;;
+  *)     D0G="rang non calculable" ;;
+esac
+rapporter 0g "$V0G" "Rang du bump conforme à ce que le lot apporte" "$D0G"
+
+# 0f — titre et descriptif de PR préparés AVANT le push
+#      Ajouté le 11/08/2026, sur demande de l'utilisateur, après deux oublis dans
+#      la même journée — dont le second APRÈS s'être fait reprendre sur le
+#      premier. La consigne existe dans la skill `avant-commit` ; elle n'a pas
+#      tenu. Même remède que 0d : un contrôle, pas un rappel.
+#
+#      Format attendu de `.git/pr-brief.md` — première ligne `commit: <sha>`,
+#      puis le titre en `# …`, puis le corps :
+#          commit: 6055161
+#          # feat(admin): …
+#          ### Ce qui change
+#          …
+BRIEF=".git/pr-brief.md"
+if [ -f "$BRIEF" ]; then
+  BRIEF_SHA=$(head -1 "$BRIEF" | grep -oE '[0-9a-f]{7,40}')
+  BRIEF_CORPS=$(tail -n +3 "$BRIEF" | grep -cvE '^\s*$')
+else
+  BRIEF_SHA=""; BRIEF_CORPS=""
+fi
+HEAD_COURT=$(git rev-parse --short HEAD 2>/dev/null)
+V0F=$(verdict_brief "${BRIEF_SHA:-}" "${HEAD_COURT:-?}" "${BRIEF_CORPS:-}")
+case "$V0F" in
+  OK)      D0F="$(sed -n 2p "$BRIEF" | cut -c1-60)…" ;;
+  FAIL)    if [ -n "$BRIEF_SHA" ] && [ "$BRIEF_SHA" != "$HEAD_COURT" ]; then
+             D0F="brief écrit pour $BRIEF_SHA, or c'est $HEAD_COURT qui part"
+           else D0F="descriptif trop court ($BRIEF_CORPS ligne(s)) — un titre n'est pas un descriptif"; fi ;;
+  *)       D0F="aucun $BRIEF — rédiger titre et descriptif AVANT de pousser" ;;
+esac
+rapporter 0f "$V0F" "Titre et descriptif de PR préparés" "$D0F"
+
+# 15 — endpoints orphelins (poste de dev, avant le push)
+if [ -d api/tests ]; then
+  ORPH=$( (cd api && python -m pytest tests/test_endpoints_orphelins.py -q 2>&1 | tail -1) )
+  case "$ORPH" in
+    *"passed"*) V15=OK ;;
+    *) V15=FAIL ;;
+  esac
+else
+  V15=INCONNU; ORPH="répertoire api/tests introuvable"
+fi
+rapporter 15 "$V15" "Aucun endpoint orphelin" "$ORPH"
+
+# 16 — la CI rejouée EN LOCAL sur ce commit (#319)
+#      Le 12/08/2026, pytest, svelte-check, le build, les six lints du front et
+#      les self-tests avaient été rejoués à la main : le seul job non lancé —
+#      Ruff — est le seul qui a échoué. La consigne de tout rejouer existe
+#      (skill `avant-commit` §7) et n'a pas tenu. `rejouer-ci.sh` EXTRAIT les
+#      commandes de ci.yml et écrit sa trace ; ce point la lit.
+if [ -f .git/rejeu-ci.ok ]; then
+  read -r R_SHA _ R_OK R_FAIL R_INC < .git/rejeu-ci.ok
+  R_FAIL=${R_FAIL#FAIL=}; R_INC=${R_INC#INCONNU=}; R_OK=${R_OK#OK=}
+else
+  R_SHA=""; R_OK="?"; R_FAIL=""; R_INC=""
+fi
+V16=$(verdict_rejeu_ci "${R_SHA:-}" "$(git rev-parse HEAD 2>/dev/null)" "${R_FAIL:-}" "${R_INC:-}")
+case "$V16" in
+  OK)   D16="$R_OK étape(s) rejouée(s) sur ce commit" ;;
+  FAIL) D16="$R_FAIL étape(s) en échec — la CI échouerait" ;;
+  *)    D16="lancer \`bash scripts/poste/rejouer-ci.sh\` (trace absente ou d'un autre commit)" ;;
+esac
+rapporter 16 "$V16" "CI rejouée en local sur ce commit" "$D16"
+
+# 1 — site public
+CODE=$(http_code "$SITE/api/health")
+rapporter 1 "$(verdict_http "$CODE")" "Site public" "HTTP ${CODE:-?}"
+
+# 2 et 3 — rôle actif cohérent, pas de split-brain
+A1=$(sur "$RPI1" 'cat /opt/5hostachy/.active')
+A2=$(sur "$RPI2" 'cat /opt/5hostachy/.active')
+C1=$(sur "$RPI1" 'docker ps -q --filter name=hostachy | wc -l')
+C2=$(sur "$RPI2" 'docker ps -q --filter name=hostachy | wc -l')
+rapporter 2 "$(verdict_role "$A1" "$A2" "$C1" "$C2")" "Rôle actif cohérent et conforme au réel" \
+          "rpi1='${A1:-?}'/${C1:-?}c  rpi2='${A2:-?}'/${C2:-?}c"
+rapporter 3 "$(verdict_standby "${A1:-}" "${C1:-}" "${C2:-}")" "Pas de split-brain"           "actif déclaré=${A1:-?} — conteneurs rpi1=${C1:-?} rpi2=${C2:-?}"
+
+#  L'actif est déduit du réel, pas du flag : c'est lui qui porte les conteneurs.
+if [ "${C1:-0}" != "0" ]; then ACTIF="$RPI1"; STANDBY="$RPI2"; else ACTIF="$RPI2"; STANDBY="$RPI1"; fi
+
+# 4 — DB saine, SANS ouvrir app.db ni sudo
+WAL=$(sur "$ACTIF" 'docker run --rm -v 5hostachy_app_data:/data:ro python:3.12-slim \
+      ls /data/app.db-wal /data/app.db-shm 2>/dev/null | wc -l')
+IO=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -c "disk I/O error"; true')
+if [ -z "$WAL" ]; then V4=INCONNU
+elif [ "$WAL" -lt 2 ]; then V4=FAIL          # WAL/SHM unlinkés = signature de corruption
+else V4=$(verdict_compte "${IO:-}" 0); fi
+rapporter 4 "$V4" "Base saine (WAL présent, 0 disk I/O error)" "wal+shm=${WAL:-?}  io=${IO:-?}"
+
+# 5 — WhatsApp : le bridge tourne-t-il, ET sa dernière connexion est-elle
+#     postérieure à la dernière fermeture ?
+#
+#     Le contrôle ne lisait que la dernière ligne de journal. Or un `docker stop`
+#     propre n'écrit PAS "Connection closed", et les journaux d'un conteneur
+#     arrêté restent lisibles indéfiniment : le bridge stoppé le 14/08/2026 à
+#     18h43 était encore rapporté « connecté » cinq heures plus tard, alors
+#     qu'aucun message ne pouvait plus partir. On observait l'enregistrement, pas
+#     la chose (`standards/04-fiabilite-des-controles.md` §14).
+#
+#     La surveillance continue, elle, interroge le bridge (`GET /status`) : c'est
+#     un fait. Ici on n'a pas la clé d'API, donc on vérifie d'abord le seul fait
+#     accessible — le conteneur tourne — avant de faire dire quoi que ce soit aux
+#     journaux.
+WA_UP=$(sur "$ACTIF" 'docker inspect -f "{{.State.Running}}" hostachy_whatsapp 2>/dev/null')
+WA=$(sur "$ACTIF" 'docker logs hostachy_whatsapp --since 24h 2>&1 | grep -oE "WhatsApp connected|Connection closed" | tail -1')
+if [ -z "${WA_UP:-}" ]; then
+  V5=INCONNU; WA="conteneur introuvable ou hôte injoignable"
+elif [ "$WA_UP" != "true" ]; then
+  V5=FAIL; WA="le conteneur ne tourne pas — aucun message ne peut partir"
+else
+  case "$WA" in
+    "WhatsApp connected") V5=OK ;;
+    "") V5=INCONNU ;;
+    *) V5=FAIL ;;
+  esac
+fi
+rapporter 5 "$V5" "Bridge WhatsApp connecté" "dernier état : ${WA:-?}"
+
+# 6 — erreurs API, hors celle que CE lot corrige (#502)
+#     Le 19/08/2026 ce point a trouvé un vrai 500 sur `/auth/refresh`, puis a
+#     refusé le push du correctif une heure durant — le contrôle bloquait la
+#     réparation de ce qu'il constatait. Le lot peut désormais DÉCLARER la
+#     signature qu'il corrige, dans `.git/erreur-corrigee` :
+#         commit: 6055161
+#         auth/refresh
+#     La déclaration meurt avec son objet : si la signature ne correspond plus à
+#     rien, le point ÉCHOUE (`verdict_erreurs_api`). Le raisonnement complet, et
+#     pourquoi la fenêtre glissante depuis le dernier déploiement a été écartée,
+#     sont dans `lib-verdicts-mep.sh`.
+ERR=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -cE "ERROR|CRITICAL"; true')
+SIG6=""; SIGC6=""; ECART6=""; DET6="compte=${ERR:-?}"
+if [ -f "$RACINE_DEPOT/.git/erreur-corrigee" ]; then
+  SIGC6=$(sed -n '1s/^commit:[[:space:]]*//p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '\r')
+  SIG6=$(sed -n '2p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '\r')
+  #  Le motif est appliqué EN LOCAL sur les lignes rapatriées, jamais injecté
+  #  dans la commande SSH : l'oubli des guillemets autour d'un motif distant a
+  #  déjà coûté un correctif en trois passes (check-reliability, 11/08/2026).
+  LIG6=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -E "ERROR|CRITICAL" | head -500; true')
+  NBLIG6=$(printf '%s
+' "$LIG6" | grep -c . || true)
+  #  Moins de lignes rapatriées que comptées = troncature ou mesure partielle :
+  #  on ne filtre pas ce qu'on n'a pas lu, `verdict_erreurs_api` rendra INCONNU.
+  if [ -n "$SIG6" ] && [ "${NBLIG6:-0}" -ge "${ERR:-0}" ] 2>/dev/null; then
+    ECART6=$(printf '%s
+' "$LIG6" | grep -cE -- "$SIG6" || true)
+  fi
+  DET6="$DET6, écartées=${ECART6:-?} par « ${SIG6:-?} » (déclarée pour ${SIGC6:-?})"
+fi
+rapporter 6 "$(verdict_erreurs_api "${ERR:-}" "$ECART6" "$SIGC6" "$HEAD_COURT" "$SIG6")"           "Aucune ERROR/CRITICAL (1 h)" "$DET6"
+
+# 7 — bits d'exécution des scripts lancés par cron
+#
+#     ⚠️ Le glob était `/opt/5hostachy/*.sh` : il ne regardait que la RACINE.
+#     Déplacer les scripts dans `scripts/` l'aurait fait ne correspondre à rien —
+#     donc « 0 script sans bit d'exécution », donc **OK**. Le contrôle qui
+#     garantit que les scripts de cron sont exécutables serait passé au vert
+#     précisément parce qu'ils avaient disparu (cas zéro, socle 04 §2).
+#
+#     Il compte désormais le TOTAL en plus des fautifs : zéro script trouvé n'est
+#     pas un succès, c'est un contrôle qui n'a rien mesuré.
+LOT7=$(sur "$ACTIF" 'set -- /opt/5hostachy/*.sh /opt/5hostachy/scripts/*/*.sh;        tot=0; ko=0; for f; do [ -f "$f" ] || continue; case "${f##*/}" in lib-*) continue;; esac;        tot=$((tot+1)); [ -x "$f" ] || ko=$((ko+1)); done; echo "$tot $ko"')
+TOT7=${LOT7%% *}; SANSX=${LOT7##* }
+if [ -z "${LOT7:-}" ] || [ -z "${TOT7:-}" ]; then
+  V7=INCONNU; D7="hôte injoignable — rien n'a été mesuré"
+elif [ "${TOT7:-0}" -eq 0 ] 2>/dev/null; then
+  V7=INCONNU; D7="aucun script trouvé — le chemin de scan est faux, ce n'est pas un succès"
+else
+  V7=$(verdict_compte "${SANSX:-}" 0); D7="$TOT7 script(s) examiné(s), sans bit x=${SANSX:-?}"
+fi
+rapporter 7 "$V7" "Scripts cron exécutables" "$D7"
+
+# 8 — battement d'auto-deploy sur le STANDBY (sur l'actif, le silence est normal)
+AGE=$(sur "$STANDBY" 'd=$(grep -oE "^\[[0-9-]+ [0-9:]+" /var/log/hostachy-deploy.log 2>/dev/null | tail -1 | tr -d "["); \
+      [ -n "$d" ] && echo $(( ( $(date +%s) - $(date -d "$d" +%s) ) / 60 ))')
+rapporter 8 "$(verdict_age_min "${AGE:-}" $BATTEMENT_DEPLOY_MIN)" "Battement auto-deploy (standby)" \
+          "dernier battement il y a ${AGE:-?} min"
+
+# 9 — e-mails en échec sur 7 jours
+#     Sortait INCONNU à CHAQUE exécution : l'historique s'interroge in-process et
+#     exigeait une session admin, donc il fallait ouvrir l'écran à la main. Personne
+#     ne le faisait — et c'est le seul contrôle qui voit cette classe de défaut, qui
+#     s'est reproduite trois fois : un gabarit Jinja qui ne se rend pas part en échec
+#     SANS que rien ne remonte à l'expéditeur (l'envoi est une BackgroundTask). Le
+#     28/07/2026, six membres du CS n'ont rien reçu, visible nulle part ailleurs.
+#
+#     Mesuré depuis l'ACTIF, par le canal machine déjà utilisé par les scripts cron
+#     (`x-maintenance-key`, cf. lib-collecte.sh) : la route ne rend que des COMPTES
+#     et des codes de gabarits, jamais une adresse ni un sujet.
+#
+#     Le compte n'est lu QUE sur un HTTP 200 — sans cette condition, une réponse
+#     vide (clé absente, API muette) se lirait comme « zéro échec », c'est-à-dire un
+#     vert obtenu par l'absence de mesure. C'est la leçon de C19, le 11/08/2026.
+REP9=$(sur "$ACTIF" 'MK=$(grep -E "^MAINTENANCE_KEY=" /opt/5hostachy/.env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"' 
+");        [ -n "$MK" ] && curl -s --max-time 10 -w "|%{http_code}" -H "x-maintenance-key: $MK"          "http://localhost/api/admin/emails/echecs-recents?jours=7"')
+case "${REP9:-}" in
+  *"|200") NB9=$(echo "$REP9" | grep -oE '"total"[[:space:]]*:[[:space:]]*[0-9]+' | grep -oE '[0-9]+$')
+           CODES9=$(echo "$REP9" | grep -oE '"par_code"[[:space:]]*:[[:space:]]*\{[^}]*\}' | cut -c1-90)
+           rapporter 9 "$(verdict_compte "${NB9:-}" 0)" "E-mails sans échec (7 j)"                      "échecs=${NB9:-?}${CODES9:+ — $CODES9}" ;;
+  *)       rapporter 9 INCONNU "E-mails sans échec (7 j)"                      "canal machine muet (clé absente ou API injoignable) — vérifier Admin → Modèles e-mail" ;;
+esac
+
+# 10 — parité de code entre les 2 nœuds
+H1=$(sur "$RPI1" 'git -C /opt/5hostachy rev-parse --short HEAD')
+H2=$(sur "$RPI2" 'git -C /opt/5hostachy rev-parse --short HEAD')
+rapporter 10 "$(verdict_parite "$H1" "$H2")" "Parité de code actif ⇆ standby" \
+          "rpi1=${H1:-?} rpi2=${H2:-?} (le standby s'aligne seul sous 5 min — auto-deploy, #448)"
+
+# 11 — auto-deploy de l'actif vivant
+PROPRIO=$(sur "$ACTIF" 'stat -c %U /var/log/hostachy-deploy.log 2>/dev/null')
+if [ "$PROPRIO" = "ptressard" ]; then V11=OK; elif [ -z "$PROPRIO" ]; then V11=INCONNU; else V11=FAIL; fi
+rapporter 11 "$V11" "Auto-deploy de l'actif vivant" "log appartient à ${PROPRIO:-?}"
+
+#  ── Points 12 à 18 : l'exploitation ────────────────────────────────────────
+#  Extraits le 20/08/2026, au fil de l'eau : le point 18 (#511) faisait passer
+#  ce fichier de 490 à 503 lignes, et le garde-fou de modularité l'a refusé.
+#  La coupe suit la nature des contrôles — ceux qui interrogent les DEUX RPi
+#  et leurs artefacts d'exploitation (images, journaux, disque, points
+#  d'entrée), là où les précédents portent sur le lot et sur l'application.
+. "$RACINE_DEPOT/scripts/lib/lib-precheck-infra.sh"
+precheck_points_infra
+

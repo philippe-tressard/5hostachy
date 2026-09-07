@@ -1,0 +1,29 @@
+/* ─────────────────────────────────────────
+   5Hostachy — Styles globaux
+   Palette : Bleu Seine (#1E3A5F) · Vert Parc (#3D6B4F) · Or Croissy (#C9983A)
+   ─────────────────────────────────────────
+
+   🔴 CE FICHIER NE PORTE PLUS AUCUNE REGLE — il ne fait qu'ordonner (#453,
+   27/08/2026). Il faisait 1 223 lignes, 1 961 une fois reformate, et le
+   garde-fou de modularite (rang 1) refuse qu'il grossisse.
+
+   ⚠️ L'ORDRE DES QUATRE LIGNES CI-DESSOUS EST LA CASCADE. Il reprend
+   exactement celui dans lequel les regles se trouvaient : le bundle produit
+   est identique, donc ce decoupage ne peut pas changer un rendu. Les
+   reordonner, si — `normes.css` porte le bloc mobile qui surcharge
+   `composants.css`, et `ecrans.css` surcharge les deux.
+
+   ⚠️ `@import` doit rester en TETE d'un fichier CSS : une regle ecrite
+   au-dessus rendrait les imports suivants inertes, silencieusement.
+   ───────────────────────────────────────── */
+
+@import './styles/socle.css';
+@import './styles/composants.css';
+@import './styles/champs.css';
+@import './styles/normes.css';
+@import './styles/ecrans.css';
+/*  Les deux pages légales, ajoutées le 28/08/2026 (#583). EN DERNIER, et sans
+    surcharge : leurs sélecteurs sont tous préfixés par `.legal-page`,
+    `.legal-footer`, `.back-link` ou `.custom-content` — aucun n'existe
+    ailleurs, donc l'ordre ne peut rien changer aux quatre autres fragments. */
+@import './styles/legal.css';

@@ -1,0 +1,21 @@
+[Unit]
+Description=5Hostachy — garde-fou anti-split-brain au démarrage
+Documentation=file:/opt/5hostachy/boot-role-guard.sh
+# Le réseau doit être prêt (curl/SSH vers le peer). On s'ordonne APRÈS docker et
+# cloudflared : s'ils ont auto-démarré sur un nœud qui aurait dû rester standby,
+# le garde les arrête (fenêtre de quelques secondes seulement, vs split-brain
+# permanent jusqu'à intervention manuelle aujourd'hui).
+After=network-online.target docker.service cloudflared.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/opt/5hostachy/boot-role-guard.sh
+# Le garde est best-effort : un échec ne doit pas bloquer le boot.
+SuccessExitStatus=0 1
+StandardOutput=append:/var/log/hostachy-role-guard.log
+StandardError=append:/var/log/hostachy-role-guard.log
+
+[Install]
+WantedBy=multi-user.target

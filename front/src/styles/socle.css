@@ -1,0 +1,180 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   5Hostachy — Le SOCLE : remise a zero, variables de la charte, mise en page.
+
+   ⚠️ Fragment d'`app.css`, decoupe le 27/08/2026 (#453). Ce fichier faisait
+   1 223 lignes — 1 961 une fois reformate — et le garde-fou de modularite
+   (rang 1) refuse qu'il grossisse.
+
+   🔴 L'ORDRE EST LA CASCADE. `app.css` importe les quatre fragments dans
+   l'ordre exact ou leurs regles se trouvaient : le bundle produit est
+   identique, et ce decoupage ne peut donc pas changer un rendu. Reordonner
+   les `@import`, si.
+
+   Les couleurs, les espacements et les rayons de la charte vivent ICI et
+nulle part ailleurs. Un composant qui ecrit `#1E3A5F` au lieu de
+`var(--color-primary)` sort de la charte sans que rien ne le dise.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────
+   5Hostachy — Styles globaux v0.1
+   Palette : Bleu Seine (#1E3A5F) · Vert Parc (#3D6B4F) · Or Croissy (#C9983A)
+   ───────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html {
+	overflow-x: hidden;
+}
+
+body {
+	overflow-x: hidden;
+	max-width: 100vw;
+}
+
+:root {
+	/* Couleurs principales (charte graphique) */
+	--color-primary: #1e3a5f; /* Bleu Seine */
+	--color-primary-dark: #16304f;
+	--color-primary-light: #eef2f7;
+	--color-secondary: #3d6b4f; /* Vert Parc */
+	--color-accent: #c9983a; /* Or Croissy */
+	/* Couleurs fonctionnelles */
+	--color-success: #2e7d52;
+	--color-warning: #b07d1e;
+	--color-danger: #c0392b;
+	--color-info: #2563a6;
+	/* Texte */
+	--color-text: #1a1a2e;
+	--color-text-muted: #5a6070;
+	--color-text-inverse: #f2efe9;
+	/* Surfaces */
+	--color-border: #d0d8e4;
+	--color-bg: #f2efe9; /* Pierre de taille */
+	--color-surface: #ffffff;
+	/* Utilitaires */
+	--radius: 0.5rem;
+	--shadow-sm: 0 1px 3px rgba(30, 58, 95, 0.1);
+	--shadow: 0 4px 12px rgba(30, 58, 95, 0.12);
+	font-family:
+		'Segoe UI',
+		-apple-system,
+		BlinkMacSystemFont,
+		Roboto,
+		'Helvetica Neue',
+		Arial,
+		sans-serif;
+	font-size: 16px;
+	color: var(--color-text);
+	background: var(--color-bg);
+}
+
+h1,
+h2,
+h3 {
+	font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+}
+
+/*  ⚠️ LES CONTRÔLES DE FORMULAIRE N'HÉRITENT PAS DE LA POLICE — il faut le leur
+    dire. C'est une règle de feuille de style d'agent utilisateur, pas une
+    particularité du site : `button`, `input`, `select` et `textarea` reçoivent
+    une police propre, et `font-family` ne descend pas dedans.
+
+    Mesuré dans un navigateur le 16/08/2026, sur cette feuille-ci :
+
+    | Élément                     | Police rendue |
+    |-----------------------------|---------------|
+    | texte de la page            | Segoe UI      |
+    | `<a class="btn">`           | Segoe UI      |
+    | `<button class="btn">`      | **Arial**     |
+    | `<input>`, `<select>`       | **Arial**     |
+    | `<textarea>`                | **monospace** |
+
+    Autrement dit : toute la couche de saisie du site était dans une autre police
+    que le site, et les zones de texte long en chasse fixe. `.btn` et `.tab-btn`
+    déclaraient `font-size` et `font-weight` — donc on croyait la question réglée —
+    mais jamais `font-family`.
+
+    Le défaut s'est vu là où un `<button>` et un `<a>` portent la MÊME classe et se
+    touchent : la rangée d'onglets de l'administration, où « Fiche copropriété »
+    (un lien) ne ressemblait pas à ses voisins (des boutons). Signalé par
+    l'utilisateur, capture à l'appui — après deux corrections de ma part qui
+    n'avaient traité que les icônes et le soulignement.
+
+    ⚠️ `font-family: inherit` et NON `font: inherit` : la forme courte écrase aussi
+    `font-size`, `font-weight` et `line-height`, donc les tailles déclarées juste
+    après dans ce fichier. Vérifié : la hauteur des boîtes ne change pas. */
+button,
+input,
+select,
+textarea {
+	font-family: inherit;
+}
+
+a {
+	color: var(--color-primary);
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+/*  Un lien STYLÉ EN BOUTON ne se souligne pas au survol. `.btn` pose bien
+    `text-decoration: none`, mais `a:hover` (0,1,1) l'emporte sur `.btn` (0,1,0) :
+    les 31 `<a class="btn …">` du site se soulignaient donc tous au survol, ce
+    qu'aucun `<button class="btn">` ne fait — deux rendus pour un même objet
+    visuel, selon la balise sous-jacente. Signalé sur « + Nouveau ticket »
+    (16/08/2026) ; corrigé ici, sur la classe, et non sur l'occurrence. */
+a.btn:hover {
+	text-decoration: none;
+}
+
+/* ── Layout ── */
+.container {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 0 2rem;
+}
+
+.page {
+	padding-top: 1.5rem;
+	padding-bottom: 1.5rem;
+}
+
+/*  🔴 LE LIEN D'ÉVITEMENT (#778, 05/09/2026) — invisible tant qu'on ne l'a pas.
+
+    Il n'est PAS masqué par `display:none` ni `visibility:hidden` : les deux le
+    retireraient de l'ordre de tabulation, c'est-à-dire de la seule chose qui le
+    rend utile. Il est sorti de l'écran, et revient au focus.
+
+    ⚠️ `:focus` et non `:focus-visible` : ce lien ne s'atteint QUE par le
+    clavier, et `:focus-visible` ajouterait une heuristique de navigateur là où
+    la règle est certaine.
+
+    Il vit dans le socle parce qu'il habille le squelette, pas un écran. */
+.lien-evitement {
+	position: absolute;
+	left: -9999px;
+	top: 0;
+	z-index: 100;
+	padding: 0.6rem 1rem;
+	background: var(--color-primary);
+	color: #fff;
+	border-radius: 0 0 var(--radius) 0;
+	font-weight: 600;
+	text-decoration: none;
+}
+.lien-evitement:focus {
+	left: 0;
+}
+/*  Le `<main>` reçoit le focus par programme (`tabindex="-1"`) : sans cette
+    règle, le navigateur y dessinerait un contour permanent après le saut. */
+.app-main:focus {
+	outline: none;
+}

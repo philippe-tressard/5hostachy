@@ -1,0 +1,85 @@
+//  Le domaine **Communauté** : sondages, boîte à idées, petites annonces et
+//  signalements. Quatre clients qui servent une seule page (`/sondages`, ses
+//  trois onglets) et qui vivaient dispersés sur 130 lignes d'`index.ts`.
+//
+//  Extrait quand le contrôle de modularité a refusé qu'`index.ts` dépasse 500
+//  lignes en recevant `deleteEvolution` (#512). Le refus disait vrai : un
+//  fichier qui expose vingt-six domaines n'a pas un problème de taille, il a un
+//  problème de découpage — et `documents.ts` avait déjà montré la voie.
+import { api, postFormData } from './client';
+
+export const sondages = {
+	list: () => api.get<any[]>('/sondages'),
+	get: (id: number) => api.get<any>(`/sondages/${id}`),
+	create: (data: unknown) => api.post<any>('/sondages', data),
+	modifier: (id: number, data: unknown) => api.patch<any>(`/sondages/${id}`, data),
+	supprimer: (id: number) => api.delete(`/sondages/${id}`),
+	cloturer: (id: number) => api.patch<any>(`/sondages/${id}/cloturer`, {}),
+	voter: (id: number, option_id: number, commentaire?: string, reponse_libre?: string) =>
+		api.post(`/sondages/${id}/voter`, {
+			option_id,
+			commentaire: commentaire || null,
+			reponse_libre: reponse_libre || null,
+		}),
+	commenter: (id: number, contenu: string) =>
+		api.post<any>(`/sondages/${id}/commenter`, { contenu }),
+	supprimerCommentaire: (sondageId: number, commentaireId: number) =>
+		api.delete(`/sondages/${sondageId}/commentaires/${commentaireId}`),
+};
+
+export const idees = {
+	list: () => api.get<any[]>('/idees'),
+	create: (data: unknown) => api.post<any>('/idees', data),
+	//  La CORRECTION d'une idée (#783). Le `PATCH` n'existait pas côté serveur :
+	//  l'idée était la seule entité de la Communauté où une faute de frappe était
+	//  définitive — ou imposait de supprimer et redéposer, ce qui perd les votes
+	//  et les réponses. Il n'accepte que le titre et la description : le ciblage
+	//  et le statut ont leurs propres règles, et un champ qu'on n'expose pas ne
+	//  se contourne pas.
+	modifier: (id: number, data: unknown) => api.patch<any>(`/idees/${id}`, data),
+	voter: (id: number) => api.post(`/idees/${id}/voter`),
+	updateStatut: (id: number, statut: string) => api.patch(`/idees/${id}/statut`, { statut }),
+	delete: (id: number) => api.delete(`/idees/${id}`),
+	//  🔴 `listReponses` A ÉTÉ RETIRÉE le 06/09/2026 (#801) — pour l'idée comme
+	//  pour l'annonce, quelques lignes plus bas. Les réponses arrivent DÉJÀ avec
+	//  l'objet (`idee.reponses`, `annonce.reponses`), et c'est ce que les écrans
+	//  lisent : `ListeIdees` et `AnnonceCard` les passent tels quels. Une seconde
+	//  voie de lecture pour la même donnée, ce sont deux états libres de diverger
+	//  — et celle-ci n'a jamais eu d'appelant.
+	//
+	//  ⚠️ Les endpoints `GET /idees/{id}/reponses` et `/annonces/{id}/reponses`
+	//  RESTENT : c'est la porte côté client qui disparaît, pas la fonction.
+	repondre: (id: number, contenu: string) => api.post<any>(`/idees/${id}/reponses`, { contenu }),
+	supprimerReponse: (id: number, repId: number) => api.delete(`/idees/${id}/reponses/${repId}`),
+};
+
+export const annonces = {
+	list: () => api.get<any[]>('/annonces'),
+	create: (data: unknown) => api.post<any>('/annonces', data),
+	//  La CORRECTION d'une annonce — `PATCH /annonces/{id}` existait depuis
+	//  toujours, avec ses sept champs, et aucun écran ne l'appelait (18/08/2026).
+	update: (id: number, data: unknown) => api.patch<any>(`/annonces/${id}`, data),
+	updateStatut: (id: number, statut: string) => api.patch(`/annonces/${id}/statut`, { statut }),
+	supprimer: (id: number) => api.delete(`/annonces/${id}`),
+	uploadPhoto: (id: number, file: File): Promise<{ url: string; photos: string[] }> =>
+		postFormData(`/annonces/${id}/photo`, { file }),
+	deletePhoto: (id: number, url: string) =>
+		api.delete(`/annonces/${id}/photo?url=${encodeURIComponent(url)}`),
+	//  `listReponses` retirée ici aussi — voir la note sur les idées ci-dessus.
+	repondre: (id: number, contenu: string) => api.post<any>(`/annonces/${id}/reponses`, { contenu }),
+	supprimerReponse: (id: number, repId: number) => api.delete(`/annonces/${id}/reponses/${repId}`),
+};
+
+export const signalements = {
+	creer: (cible_type: string, cible_id: number, motif: string) =>
+		api.post('/signalements', { cible_type, cible_id, motif }),
+	liste: (statut = 'en_attente') => api.get<any[]>(`/signalements?statut=${statut}`),
+	//  🔴 `count` A ÉTÉ RETIRÉE le 06/09/2026 (#801) : l'écran charge déjà
+	//  `liste('en_attente')` et connaît donc `signalements.length`. Demander un
+	//  compteur au serveur pendant qu'on tient la liste, c'est un aller-retour de
+	//  plus pour une valeur qu'on a — et deux nombres libres de se contredire le
+	//  temps du chargement. L'endpoint `GET /signalements/count` reste, pour un
+	//  écran qui voudrait le compte SANS la liste.
+	resoudre: (id: number, statut: 'traite' | 'rejete') =>
+		api.patch(`/signalements/${id}`, { statut }),
+};

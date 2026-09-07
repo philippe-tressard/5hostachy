@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manuel utilisateur · 5Hostachy</title>
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f0f4f8;
+      --surface:   #ffffff;
+      --border:    #e2e8f0;
+      --text:      #1e293b;
+      --muted:     #64748b;
+      --radius:    12px;
+      --shadow:    0 2px 12px rgba(0,0,0,.08);
+
+      /* section colours */
+      --c-login:   #7c3aed;
+      --c-lot:     #0284c7;
+      --c-ticket:  #ea580c;
+      --c-news:    #059669;
+      --c-cal:     #4f46e5;
+      --c-badges:  #dc2626;
+      --c-faq:     #0f766e;
+      --c-residence: #0f766e;
+      --c-annuaire:  #0369a1;
+      --c-profil:    #6d28d9;
+      --c-presta:    #b45309;
+      --c-delegation: #d97706;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    /* ═══════════════════════════════════════════
+       LAYOUT
+    ═══════════════════════════════════════════ */
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    /* ═══════════════════════════════════════════
+       SIDEBAR
+    ═══════════════════════════════════════════ */
+    .sidebar {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      background: #1e293b;
+      color: #e2e8f0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 0 0 2rem;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 1.5rem 1.25rem 1rem;
+      border-bottom: 1px solid #334155;
+    }
+
+    /*  🔴 Le LOGO du site, pas une pastille avec un emoji : le tracé vient de
+        `front/static/favicon.svg`, celui que porte l'onglet du navigateur et
+        l'icône de l'application. Un manuel qui montre un autre logo que le
+        produit oblige le lecteur à faire le rapprochement lui-même. Le fond
+        bleu et le centrage servaient l'emoji — le logo porte les siens. */
+    .sidebar-logo .logo-icon {
+      width: 36px; height: 36px;
+      display: block;
+    }
+    .sidebar-logo .logo-icon svg { width: 100%; height: 100%; display: block; }
+
+    .sidebar-logo span {
+      font-weight: 700;
+      font-size: 15px;
+      color: #f1f5f9;
+      line-height: 1.2;
+    }
+
+    .sidebar-logo small { display: block; font-size: 11px; color: #94a3b8; font-weight: 400; }
+
+    .nav-section { padding: .75rem 1.25rem .25rem; }
+    .nav-section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: .55rem 1.25rem;
+      border-radius: 8px;
+      margin: 2px 8px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 14px;
+      transition: background .15s, color .15s;
+    }
+
+    .nav-item:hover { background: #334155; color: #f1f5f9; }
+    .nav-item.active { background: #3b82f6; color: #fff; }
+
+    .nav-item .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       TOP HEADER
+    ═══════════════════════════════════════════ */
+    .topbar {
+      grid-column: 2;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .topbar-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+    .topbar-actions { display: flex; align-items: center; gap: .6rem; }
+    .topbar-pdf {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f766e;
+      background: #f0fdfa;
+      border: 1px solid #99f6e4;
+      border-radius: 999px;
+      padding: .3rem .75rem;
+      text-decoration: none;
+    }
+    .topbar-pdf:hover { border-color: #0d9488; }
+
+    .topbar-badge {
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 12px;
+      font-weight: 600;
+      padding: .25rem .7rem;
+      border-radius: 20px;
+      border: 1px solid #bfdbfe;
+    }
+
+    /* ═══════════════════════════════════════════
+       MAIN CONTENT
+    ═══════════════════════════════════════════ */
+    .main {
+      grid-column: 2;
+      padding: 2.5rem;
+      max-width: 860px;
+    }
+
+    /* ═══════════════════════════════════════════
+       HERO
+    ═══════════════════════════════════════════ */
+    .hero {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      border-radius: 18px;
+      padding: 3rem 2.5rem;
+      color: white;
+      margin-bottom: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background: rgba(255,255,255,.07);
+      border-radius: 50%;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; right: 60px;
+      width: 280px; height: 280px;
+      background: rgba(255,255,255,.04);
+      border-radius: 50%;
+    }
+
+    .hero-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #93c5fd;
+      font-weight: 600;
+      margin-bottom: .75rem;
+    }
+
+    .hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: .75rem; line-height: 1.25; }
+    .hero p  { font-size: 1.05rem; color: #bfdbfe; max-width: 520px; margin-bottom: 1.5rem; }
+
+    .hero-actions {
+      display: flex;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-link {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .7rem 1rem;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 700;
+      transition: transform .15s ease, background .15s ease;
+    }
+
+    .hero-link.primary {
+      background: #ffffff;
+      color: #1d4ed8;
+    }
+
+    .hero-link.secondary {
+      background: rgba(255,255,255,.12);
+      color: #eff6ff;
+      border: 1px solid rgba(255,255,255,.18);
+    }
+
+    .hero-link:hover { transform: translateY(-1px); }
+
+    .hero-note {
+      position: relative;
+      z-index: 1;
+      max-width: 560px;
+      font-size: .92rem;
+      color: #dbeafe;
+      margin-top: .9rem;
+    }
+
+    .hero-cards {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-card {
+      background: rgba(255,255,255,.12);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 10px;
+      padding: .6rem 1rem;
+      font-size: 13px;
+      color: #dbeafe;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quick-start {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 3rem;
+    }
+
+    .quick-start-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+      flex-wrap: wrap;
+    }
+
+    .quick-badge {
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: .78rem;
+      font-weight: 700;
+      padding: .35rem .7rem;
+      border-radius: 999px;
+    }
+
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .9rem;
+      margin: 1rem 0 1.2rem;
+    }
+
+    .quick-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
+    }
+
+    /*  🔴 `> strong` et non `strong` : la règle visait le TITRE de la carte, mais
+        elle attrapait aussi les mises en valeur À L'INTÉRIEUR du paragraphe, qui
+        passaient alors en bloc — « Un problème ? » et « Tickets » sur deux lignes,
+        avec la ponctuation restée orpheline. Constaté au rendu le 02/09/2026 :
+        le défaut ne s'est vu qu'en mettant du gras dans une phrase. */
+    .quick-card > strong {
+      display: block;
+      font-size: .98rem;
+      margin-bottom: .35rem;
+    }
+
+    .quick-card p {
+      font-size: .88rem;
+      color: var(--muted);
+      margin-bottom: .6rem;
+    }
+
+    .quick-step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #1d4ed8;
+      color: white;
+      font-size: .85rem;
+      font-weight: 700;
+      margin-bottom: .7rem;
+    }
+
+    .choice-card:hover {
+      border-color: #93c5fd;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(37, 99, 235, .08);
+    }
+
+    .persona-block {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px dashed #cbd5e1;
+    }
+
+    .persona-block h3 {
+      font-size: 1rem;
+      margin-bottom: .35rem;
+    }
+
+    .persona-block p {
+      font-size: .88rem;
+      color: var(--muted);
+      margin-bottom: .75rem;
+    }
+
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .75rem;
+    }
+
+    .persona-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .9rem;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, .05);
+    }
+
+    .persona-card strong {
+      display: block;
+      font-size: .93rem;
+      margin-bottom: .25rem;
+    }
+
+    .persona-card ul {
+      list-style: none;
+      display: grid;
+      gap: .35rem;
+      margin-top: .55rem;
+    }
+
+    .persona-card li {
+      font-size: .82rem;
+      color: var(--text);
+      padding-left: .9rem;
+      position: relative;
+    }
+
+    .persona-card li::before {
+      content: '-';
+      position: absolute;
+      left: 0;
+      color: #2563eb;
+      font-weight: 700;
+    }
+
+    /* ═══════════════════════════════════════════
+       LES ÉCRANS — une carte par menu, avec son public
+       ═══════════════════════════════════════════
+       🔴 Remplace la grille de captures d'écran (02/09/2026, signalé à l'écran :
+       « les écrans sont flous et peut-être obsolètes, les boutons sont inactifs »).
+
+       Les images n'étaient pas floues par manque de résolution — 1 480 px — mais
+       parce qu'un écran entier réduit à 300 px n'apprend rien. Et elles dataient
+       du 21 mars, avant des dizaines d'écrans refaits.
+
+       Ce qui les remplace porte l'information que le lecteur cherche vraiment :
+       à quoi sert le menu, et QUI y a accès. Les `data-page` / `data-acces` ne
+       sont pas décoratifs : `npm run lint:manuel-menus` les rapproche de
+       `pages.ts` et de `Nav.svelte`, pour qu'une troisième liste ne se mette pas
+       à diverger — c'est le sujet même de #651. */
+    .ecran-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: .75rem;
+      margin-top: .9rem;
+    }
+
+    .ecran-card {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: .85rem .9rem;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+      text-decoration: none;
+      color: inherit;
+    }
+
+    /*  Seules les cartes qui MÈNENT quelque part réagissent au survol : une carte
+        inerte qui se soulève promet un clic qui ne vient pas — c'est le défaut
+        qu'on corrige ici. */
+    a.ecran-card:hover {
+      border-color: #a5b4fc;
+      transform: translateY(-1px);
+    }
+
+    /*  🔴 L'ICÔNE EST CELLE DU MENU, pas un emoji approchant. Les tracés viennent
+        de `front/src/lib/icones-svg.json`, le catalogue que le site et les PDF du
+        serveur partagent déjà : le manuel montre donc littéralement ce que
+        l'utilisateur a sous les yeux. Un emoji « proche » oblige à traduire
+        mentalement, et c'est ce que la corrélation demandée supprime. */
+    .ecran-icone {
+      display: block;
+      width: 26px;
+      height: 26px;
+      margin-bottom: .45rem;
+      color: #4f46e5;
+    }
+    .ecran-icone svg { width: 100%; height: 100%; display: block; }
+
+    /*  « En savoir plus » : le détail ne s'ouvre que sur demande. Trois écrans
+        seulement en ont un — profil, tickets, communauté —, ceux dont l'usage ne
+        se devine pas au titre. En donner un à tous rallongerait la page qu'on
+        vient de raccourcir. */
+    .ecran-detail {
+      margin-top: .6rem;
+      border-top: 1px dashed var(--border);
+      padding-top: .5rem;
+    }
+    .ecran-detail > summary {
+      cursor: pointer;
+      font-size: .8rem;
+      font-weight: 700;
+      color: #4f46e5;
+      list-style: none;
+    }
+    .ecran-detail > summary::-webkit-details-marker { display: none; }
+    .ecran-detail > summary::before { content: '▸ '; }
+    .ecran-detail[open] > summary::before { content: '▾ '; }
+    .ecran-detail-corps { font-size: .84rem; color: var(--muted); margin-top: .5rem; }
+    .ecran-detail-corps ul { margin: .4rem 0 .4rem 1.05rem; }
+    .ecran-detail-corps li { margin-bottom: .3rem; }
+    .ecran-note {
+      margin-top: .5rem;
+      padding: .45rem .55rem;
+      background: #f8fafc;
+      border-left: 3px solid #cbd5e1;
+      border-radius: 0 6px 6px 0;
+      font-size: .8rem;
+    }
+
+    /*  Le pied du guide. Il remplace dix-huit chapitres : le détail vit dans
+        l'application, où il ne peut pas se périmer. */
+    .aide-fin {
+      background: linear-gradient(135deg, #f0fdfa, #ecfeff);
+      border: 1px solid #99f6e4;
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .aide-glyphe { font-size: 2.25rem; margin-bottom: .5rem; }
+    .aide-fin h2 { font-size: 1.3rem; margin-bottom: .5rem; }
+    .aide-fin p { color: var(--muted); font-size: .9rem; max-width: 520px; margin: 0 auto 1.25rem; }
+    .aide-liens { display: inline-flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+    .aide-lien {
+      background: #ffffff;
+      border: 1px solid #99f6e4;
+      border-radius: 8px;
+      padding: .55rem 1.05rem;
+      font-size: .86rem;
+      font-weight: 600;
+      color: #0f766e;
+      text-decoration: none;
+    }
+    .aide-lien:hover { border-color: #0d9488; }
+    .aide-lien-fort { background: #0d9488; border-color: #0d9488; color: #ffffff; }
+    /*  🔴 LES DEUX MAQUETTES DU MENU (04/09/2026), reconstruites plutôt que
+        photographiées. Une capture se périme au premier écran renommé et devient
+        illisible à l'impression ; celle-ci reprend les icônes et les libellés du
+        menu réel, reste nette en PDF, et suit le site quand il change. */
+    /*  🔴 DEUX COLONNES CÔTE À CÔTE, jamais l'une sous l'autre (04/09/2026).
+        L'`auto-fit` précédent repliait la grille dès que la place manquait — or
+        c'est justement la COMPARAISON des deux menus qui fait le propos. Empilées,
+        les maquettes redeviennent deux listes sans rapport l'une avec l'autre.
+        ⚠️ Sous 520 px on repasse à une colonne : à cette largeur, deux maquettes
+        côte à côte seraient illisibles toutes les deux. */
+    .maq-duo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+      gap: 1rem;
+      margin: .9rem 0 .6rem;
+    }
+    @media (max-width: 520px) {
+      .maq-duo { grid-template-columns: 1fr; }
+    }
+    .maq { margin: 0; }
+    .maq-legende {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: .4rem;
+    }
+    .maq-cadre {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .maq-bureau { border-top: 4px solid #1E3A5F; }
+    .maq-mobile { border-top: 4px solid #C9983A; max-width: 220px; }
+    .maq-marque {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-weight: 700;
+      font-size: .82rem;
+      color: #1e293b;
+      padding: .55rem .7rem;
+    }
+    .maq-bureau .maq-marque { border-bottom: 1px solid var(--border); }
+    .maq-barre {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .maq-barre .maq-marque { padding-right: 0; }
+    /*  Le bouton est DESSINÉ et encadré, pour ressembler à un bouton : le
+        caractère ☰ qu'il remplace se lisait comme une décoration, et il ne dit
+        rien à qui n'a jamais fait le rapprochement. */
+    .maq-burger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: .35rem .5rem;
+      padding: .25rem;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #ffffff;
+      color: #1e293b;
+    }
+    .maq-explication {
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+      margin: .5rem 0 0;
+      padding: .5rem .6rem;
+      border-left: 3px solid #C9983A;
+      background: #fdf8ef;
+      border-radius: 0 7px 7px 0;
+      font-size: .8rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .maq-explication-icone { flex-shrink: 0; color: #C9983A; margin-top: .1rem; }
+    .maq-liste { list-style: none; margin: 0; padding: .35rem; }
+    .maq-item {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .28rem .5rem;
+      border-radius: 7px;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    .maq-item svg { flex-shrink: 0; }
+    /*  L'entrée active : c'est ce qui fait comprendre en un coup d'œil que la
+        colonne EST un menu, et pas une liste de mots. */
+    .maq-actif {
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+    .maq-note {
+      font-size: .82rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .apropos { margin-bottom: 2rem; }
+    .apropos h3 { margin: 1.1rem 0 .5rem; font-size: 1rem; }
+    .profils-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: .7rem;
+    }
+    .profil-card {
+      border: 1px solid var(--border);
+      border-left: 3px solid #2563eb;
+      border-radius: 0 10px 10px 0;
+      padding: .7rem .85rem;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+    .profil-card strong { display: block; font-size: .9rem; margin-bottom: .2rem; }
+    .profil-card p { font-size: .82rem; color: var(--muted); margin: 0; }
+
+    .aide-pdf {
+      margin: 1.1rem auto 0;
+      font-size: .84rem;
+      color: var(--muted);
+    }
+    .aide-pdf a { color: #0f766e; font-weight: 600; }
+
+    .ecran-card h3 {
+      font-size: .92rem;
+      margin-bottom: .3rem;
+    }
+
+    .ecran-card p {
+      font-size: .84rem;
+      color: var(--muted);
+      margin-bottom: .5rem;
+    }
+
+    /*  Le public : une pastille, pas un bouton. Elle informe, elle n'invite pas
+        à cliquer — la distinction que la version précédente ne faisait pas. */
+    .ecran-acces {
+      display: inline-block;
+      font-size: .74rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: .2rem .5rem;
+      border: 1px solid;
+    }
+    .ecran-acces-tous      { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
+    .ecran-acces-resident  { color: #0e7490; background: #ecfeff; border-color: #a5f3fc; }
+    .ecran-acces-cs-ou-aidant { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    .ecran-acces-cs        { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    .ecran-acces-admin     { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+
+    /* ═══════════════════════════════════════════
+       SECTIONS
+    ═══════════════════════════════════════════ */
+    .chapter {
+      margin-bottom: 4rem;
+      scroll-margin-top: 2rem;
+    }
+
+    .chapter-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 1.75rem;
+    }
+
+    .chapter-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .chapter-header h2 { font-size: 1.4rem; font-weight: 700; }
+    .chapter-header p  { font-size: .9rem; color: var(--muted); margin-top: 2px; }
+
+    /* ═══════════════════════════════════════════
+       CARDS
+    ═══════════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: .75rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       STEPS
+    ═══════════════════════════════════════════ */
+    .step {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+      align-items: flex-start;
+    }
+
+    /* Le TITRE de l'étape — enfant direct — passe seul à la ligne.
+       Le `>` n'est pas un détail : sans lui, la règle atteignait AUSSI les
+       `<strong>` en plein milieu d'une phrase, et chaque mot mis en avant
+       cassait la ligne. « jusqu'à / 10 photos / (JPG…) / et jusqu'à /
+       10 documents / … » : six lignes pour une phrase. Signalé à l'écran le
+       30/08/2026, capture à l'appui.
+       Même famille que le sélecteur d'élément nu que le front interdit
+       (`ux-patterns` §9 octies) : un sélecteur qui vise un rôle précis doit
+       le dire, sinon il attrape tout ce qui lui ressemble. */
+    /* ═══════════════════════════════════════════
+       CALLOUTS
+    ═══════════════════════════════════════════ */
+    /* 🔴 UNE GRILLE, ET NON UN `flex` (30/08/2026).
+       En `display:flex`, CHAQUE enfant direct devient une colonne : l'icône,
+       puis un paragraphe par colonne. Les encadrés à un seul `<p>` s'affichaient
+       donc correctement, et les DIX qui en portent plusieurs se rendaient en
+       colonnes verticales d'un ou deux mots de large — illisibles.
+       Signalé à l'écran, capture à l'appui. Le défaut était visible depuis que
+       le deuxième paragraphe existe : la règle `.callout p + p { margin-top }`
+       juste en dessous prouve que l'empilement était l'intention, et qu'elle
+       n'a jamais été obtenue.
+       La grille place l'icône en colonne 1 et TOUT le reste en colonne 2, quel
+       que soit le nombre de blocs et leur nature (`<p>`, `<ul>`, `<div>`) —
+       c'est ce qui la rend préférable à l'enveloppement des dix encadrés dans
+       un `<div>` : elle vaut aussi pour le onzième. */
+    /* Tout ce qui n'est pas l'icône va en colonne 2, donc chaque bloc sur sa
+       propre ligne. Sans cette règle, le placement automatique renverrait le
+       deuxième paragraphe sous l'icône, en colonne 1. */
+    .callout.info    { background: #eff6ff; border-left: 4px solid #3b82f6; }
+    .callout.tip     { background: #f0fdf4; border-left: 4px solid #22c55e; }
+    .callout.warning { background: #fff7ed; border-left: 4px solid #f97316; }
+    .callout.danger  { background: #fef2f2; border-left: 4px solid #ef4444; }
+
+    /* ═══════════════════════════════════════════
+       STATUS BADGES
+    ═══════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════
+       CATEGORY CHIPS (tickets)
+    ═══════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════
+       FAQ ACCORDÉON
+    ═══════════════════════════════════════════ */
+    details.faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: .75rem;
+      overflow: hidden;
+    }
+
+    details.faq-item summary {
+      padding: 1rem 1.25rem;
+      font-weight: 600;
+      font-size: .95rem;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      user-select: none;
+    }
+
+    details.faq-item summary::after {
+      content: '›';
+      font-size: 1.4rem;
+      color: var(--muted);
+      transition: transform .2s;
+      flex-shrink: 0;
+    }
+
+    details.faq-item[open] summary::after { transform: rotate(90deg); }
+
+    details.faq-item .faq-body {
+      padding: 0 1.25rem 1rem;
+      font-size: .9rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: .9rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       TABLE
+    ═══════════════════════════════════════════ */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+      margin: 1rem 0;
+    }
+
+    th {
+      background: #f1f5f9;
+      padding: .6rem .9rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: .6rem .9rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:last-child td { border: none; }
+
+    /* ═══════════════════════════════════════════
+       DIVIDER
+    ═══════════════════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 2rem 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════ */
+    .doc-footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 2rem 2.5rem;
+      font-size: .85rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      grid-column: 2;
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE (mobile)
+    ═══════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+      }
+
+      .sidebar {
+        grid-column: 1;
+        grid-row: 1;
+        position: static;
+        height: auto;
+        display: none;
+      }
+
+      .topbar { grid-column: 1; }
+      .main   { grid-column: 1; padding: 1.5rem; }
+      .doc-footer { grid-column: 1; }
+
+      .hero h1 { font-size: 1.5rem; }
+      .hero-actions,
+      .hero-cards,
+      .quick-grid,
+      .choice-grid,
+      .scan-grid,
+      .persona-grid,
+      .ecran-grid { grid-template-columns: 1fr; display: grid; }
+      .hero-cards { display: flex; }
+      .cat-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ═══════════════════════════════════════════
+       PRINT
+    ═══════════════════════════════════════════ */
+    @media print {
+      .sidebar, .topbar { display: none; }
+      .layout { display: block; }
+      .main { padding: 0; max-width: 100%; }
+      .chapter { page-break-inside: avoid; }
+    }
+
+    .chapter[data-section="connexion"]  .card { border-top: 3px solid var(--c-login);    }
+    .chapter[data-section="lot"]        .card { border-top: 3px solid var(--c-lot);      }
+    .chapter[data-section="tickets"]    .card { border-top: 3px solid var(--c-ticket);   }
+    .chapter[data-section="news"]       .card { border-top: 3px solid var(--c-news);     }
+    .chapter[data-section="calendrier"] .card { border-top: 3px solid var(--c-cal);      }
+    .chapter[data-section="badges"]     .card { border-top: 3px solid var(--c-badges);   }
+    .chapter[data-section="faq"]        .card { border-top: 3px solid var(--c-faq);      }
+    .chapter[data-section="residence"]  .card { border-top: 3px solid var(--c-residence);}
+    .chapter[data-section="annuaire"]   .card { border-top: 3px solid var(--c-annuaire); }
+    .chapter[data-section="profil"]     .card { border-top: 3px solid var(--c-profil);   }
+    .chapter[data-section="presta"]     .card { border-top: 3px solid var(--c-presta);   }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ══════════════════════════════════
+       SIDEBAR
+  ══════════════════════════════════ -->
+  <nav class="sidebar">
+
+    <div class="sidebar-logo">
+      <div class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true"> <rect width="64" height="64" rx="14" fill="#1E3A5F"/> <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 54V18a4 4 0 0 1 4-4h20a4 4 0 0 1 4 4v36Z"/> <path d="M18 34h-6a4 4 0 0 0-4 4v16h10"/> <path d="M46 30h6a4 4 0 0 1 4 4v20H46"/> <path d="M25 22h14"/> <path d="M25 30h14"/> <path d="M25 38h14"/> <path d="M25 46h14"/> </g> <path d="M48 50c0 4.4-3.6 8-8 8h14a8 8 0 0 0-6-8Z" fill="#C9983A" opacity=".95"/> </svg></div>
+      <span>
+        5Hostachy
+        <small>Manuel utilisateur</small>
+      </span>
+    </div>
+
+    <div class="nav-section">
+      <p class="nav-section-title">Démarrer</p>
+      <a class="nav-item" href="#intro">
+        <span class="dot" style="background:#94a3b8"></span> Présentation
+      </a>
+      <a class="nav-item" href="#apropos">
+        <span class="dot" style="background:#0284c7"></span> Ce site, en bref
+      </a>
+      <a class="nav-item" href="#express">
+        <span class="dot" style="background:#2563eb"></span> Trois étapes
+      </a>
+      <a class="nav-item" href="#par-profil">
+        <span class="dot" style="background:#0891b2"></span> Je suis...
+      </a>
+      <a class="nav-item" href="#ecrans">
+        <span class="dot" style="background:#7c3aed"></span> Le menu
+      </a>
+      <a class="nav-item" href="#aide">
+        <span class="dot" style="background:#0d9488"></span> Une question ?
+      </a>
+    </div>
+
+  </nav>
+
+  <!-- ══════════════════════════════════
+       TOPBAR
+  ══════════════════════════════════ -->
+  <header class="topbar">
+    <div class="topbar-title">Guide pratique copropriétaire</div>
+    <div class="topbar-actions">
+      <!--  Le lien PDF vit ICI depuis le 04/09/2026 : il occupait une seconde
+            entrée du menu de gauche, qui en compte déjà quatorze. En haut à
+            droite, il est vu par qui ouvre le guide — c'est-à-dire exactement
+            qui pourrait vouloir l'emporter. -->
+      <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
+        &#x2B07; Version PDF
+      </a>
+      <span class="topbar-badge">Version 1.0 · Septembre 2026</span>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════ -->
+  <main class="main">
+
+    <!-- ────────────────────────────────
+         HERO
+    ──────────────────────────────── -->
+    <section class="hero" id="intro">
+      <p class="hero-kicker">Bienvenue sur votre extranet de résidence</p>
+      <h1>Le guide simple pour trouver vite ce dont vous avez besoin</h1>
+      <p>Ce guide tient en une page. Trois étapes pour démarrer, puis la carte des écrans du site. Le détail — les cas particuliers, les réponses déjà données — vit dans l'application, où il reste à jour.</p>
+      <div class="hero-actions">
+        <a class="hero-link primary" href="#express">Commencer en 3 minutes</a>
+        <a class="hero-link secondary" href="#ecrans">Voir les écrans</a>
+        <!--  Le PDF EN HAUT aussi : il n'était qu'au bas de la page, et on ne
+              le trouvait pas (signalé le 03/09/2026). Un document qu'on ne
+              trouve pas n'existe pas. -->
+        <a class="hero-link secondary" href="/api/manuel/pdf" target="_blank" rel="noopener">
+          Télécharger en PDF
+        </a>
+      </div>
+      <div class="hero-cards">
+        <div class="hero-card">Essentiel en quelques clics</div>
+        <div class="hero-card">Textes courts et étapes claires</div>
+        <div class="hero-card">Le détail reste dans l'application</div>
+      </div>
+      <p class="hero-note">Bon reflexe : commencez par <strong>Actualités</strong>, <strong>Calendrier</strong> et <strong>Tickets</strong>. Ce sont les 3 écrans les plus utiles au quotidien.</p>
+    </section>
+
+    <!--  🔴 CE QU'EST CE SITE — demandé le 03/09/2026, et il manquait vraiment :
+          le guide expliquait comment s'en servir sans jamais dire à quoi il sert
+          ni à qui il s'adresse. Un lecteur qui découvre le PDF dans sa boîte aux
+          lettres n'a pas ce contexte.
+          ⚠️ « Responsive » est écarté à la demande : le mot est technique et ne
+          dit rien à qui ne le connaît pas. On décrit ce qu'on constate — la
+          page s'adapte à l'écran. -->
+    <section class="apropos" id="apropos">
+      <h2>À quoi sert ce site&nbsp;?</h2>
+      <p>
+        5Hostachy rassemble en un seul endroit ce qui concerne la vie de la copropriété :
+        <strong>signaler un problème et suivre son traitement</strong>, <strong>savoir ce qui est prévu</strong>
+        — travaux, coupures, assemblées —, <strong>retrouver un document</strong> et
+        <strong>échanger entre voisins</strong>. Il remplace les papiers dans les boîtes,
+        les fils de courriels et les affiches qu'on rate.
+      </p>
+      <p>
+        Il est <strong>privé</strong> : l'accès est réservé aux personnes inscrites et validées
+        par le conseil syndical. Rien n'y est public, rien n'y est vendu.
+      </p>
+
+      <h3>Pour qui&nbsp;?</h3>
+      <div class="profils-grid">
+        <div class="profil-card">
+          <strong>Copropriétaire</strong>
+          <p>Vos lots, vos diagnostics, les documents de la copropriété, et tout signalement.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Locataire</strong>
+          <p>Les informations de la résidence, vos demandes, et ce qui touche votre logement.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Bailleur</strong>
+          <p>Vos baux, vos locataires, et ce qui concerne vos biens — même à distance.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Conseil syndical</strong>
+          <p>Le suivi des dossiers, les comptes, les prestataires, les annonces de hall.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Syndic</strong>
+          <p>Reçoit les demandes qui lui sont adressées et y répond, par le site ou par courriel.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Un proche qui vous aide</strong>
+          <p>Une délégation permet à quelqu'un d'agir en votre nom, si vous le souhaitez.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="quick-start" id="express">
+      <div class="quick-start-head">
+        <div>
+          <p class="hero-kicker" style="color:#2563eb; margin-bottom:.35rem">Guide express</p>
+          <h2 style="font-size:1.45rem; margin-bottom:.35rem">Commencer sans se perdre</h2>
+          <p style="color:var(--muted); max-width:620px">Si vous debutez, suivez seulement ces 3 étapes. Vous aurez déjà l'essentiel pour utiliser 5Hostachy sans stress.</p>
+        </div>
+        <span class="quick-badge">3 minutes pour démarrer</span>
+      </div>
+
+      <div class="quick-grid">
+        <div class="quick-card">
+          <span class="quick-step">1</span>
+          <strong>Connectez-vous</strong>
+          <p>Votre e-mail et votre mot de passe. Première visite : créez votre compte, un membre du conseil syndical le valide. Mot de passe oublié : le lien est sur l'écran d'accueil.</p>
+        </div>
+        <div class="quick-card">
+          <span class="quick-step">2</span>
+          <strong>Réglez vos notifications</strong>
+          <p>Dans <strong>Mon profil</strong>, cochez ligne par ligne ce que vous voulez recevoir. C'est ce qui évite d'être submergé sans rien manquer.</p>
+        </div>
+        <div class="quick-card">
+          <span class="quick-step">3</span>
+          <strong>Allez à votre besoin</strong>
+          <p>Un problème&nbsp;? <strong>Tickets</strong>. Une date&nbsp;? <strong>Calendrier</strong>. Un document&nbsp;? <strong>Résidence</strong>. Un badge&nbsp;? <strong>Accès &amp; badges</strong>.</p>
+        </div>
+      </div>
+
+      <div class="persona-block" id="par-profil">
+        <h3>Mini sommaire par profil</h3>
+        <p>Choisissez votre profil : voici les trois écrans qui vous serviront le plus.</p>
+        <div class="persona-grid">
+          <div class="persona-card">
+            <strong>Je suis copropriétaire résident</strong>
+            <ul>
+              <li><strong>Mes lots</strong> — vos biens, vos diagnostics</li>
+              <li><strong>Tickets</strong> — tout signalement</li>
+              <li><strong>Calendrier</strong> — les interventions à venir</li>
+            </ul>
+          </div>
+          <div class="persona-card">
+            <strong>Je suis locataire</strong>
+            <ul>
+              <li><strong>Mon profil</strong> — régler vos notifications</li>
+              <li><strong>Actualités</strong> — les infos officielles</li>
+              <li><strong>Tickets</strong> — vos demandes, et elles seules&nbsp;: les affaires de la copropriété sont réservées aux copropriétaires et au conseil syndical.</li>
+            </ul>
+          </div>
+          <div class="persona-card">
+            <strong>Je suis bailleur</strong>
+            <ul>
+              <li><strong>Mes lots</strong> — vos baux et vos locataires</li>
+              <li><strong>Résidence</strong> — les documents de la copropriété</li>
+              <li><strong>Actualités</strong> — ce qui touche votre bien</li>
+            </ul>
+          </div>
+          <div class="persona-card">
+            <strong>Je suis membre du conseil syndical</strong>
+            <ul>
+              <li><strong>Espace CS</strong> — comptes, reporting, affiches</li>
+              <li><strong>Tickets</strong> — répondre et faire avancer</li>
+              <li><strong>Prestataires</strong> — contrats et interventions</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter" id="ecrans">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#f5f3ff; color:#6d28d9"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:24px;height:24px"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></div>
+        <div>
+          <h2>Le menu, écran par écran</h2>
+          <p>Les entrées du menu de gauche, <strong>dans leur ordre et avec leurs icônes</strong>. Chaque bloc dit ce que l'écran contient et <strong>qui peut le voir</strong>. Trois d'entre eux se déplient.</p>
+        </div>
+      </div>
+
+      <h3>Sur téléphone comme sur ordinateur</h3>
+      <p>
+        Le même site fonctionne sur <strong>PC et Mac</strong>, sur <strong>tablette</strong>
+        et sur <strong>téléphone</strong> — Android comme iPhone. Il n'y a rien à installer et
+        rien à mettre à jour : vous ouvrez la même adresse, et l'affichage s'ajuste tout seul
+        à la taille de votre écran.
+      </p>
+      <p>
+        Sur téléphone, vous pouvez <strong>l'ajouter à votre écran d'accueil</strong> : il
+        s'ouvre alors comme une application, en plein écran, sans passer par le navigateur.
+      </p>
+
+      <p>
+        Le menu lui-même suit la même logique&nbsp;: sur un grand écran il est toujours là,
+        à gauche&nbsp;; sur téléphone, où la place manque, il est replié et s'ouvre d'une
+        pression.
+      </p>
+      <div class="maq-duo">
+        <figure class="maq">
+          <figcaption class="maq-legende">Sur ordinateur — le menu reste affiché</figcaption>
+          <div class="maq-cadre maq-bureau">
+            <div class="maq-marque"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg><span>5Hostachy</span></div>
+            <ul class="maq-liste">
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Accueil</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg><span>Résidence</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg><span>Actualités</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></svg><span>Tickets</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg><span>Calendrier</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12v.01"/></svg><span>Mes lots</span></li>
+            <li class="maq-item maq-actif"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg><span>Accès &amp; badges</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Annuaire</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v3"/></svg><span>Prestataires</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg><span>Communauté</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg><span>FAQ</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 22V2"/></svg><span>Espace CS</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="20" r="2"/></svg><span>Admin</span></li>
+            </ul>
+          </div>
+        </figure>
+        <figure class="maq">
+          <figcaption class="maq-legende">Sur téléphone — le menu s'ouvre au besoin</figcaption>
+          <div class="maq-cadre maq-mobile">
+            <div class="maq-barre">
+              <span class="maq-marque"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg><span>5Hostachy</span></span>
+              <span class="maq-burger" aria-label="Bouton du menu"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg></span>
+            </div>
+            <ul class="maq-liste maq-liste-mobile">
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Accueil</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg><span>Résidence</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg><span>Actualités</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></svg><span>Tickets</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg><span>Calendrier</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12v.01"/></svg><span>Mes lots</span></li>
+            <li class="maq-item maq-actif"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg><span>Accès &amp; badges</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Annuaire</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v3"/></svg><span>Prestataires</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg><span>Communauté</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg><span>FAQ</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 22V2"/></svg><span>Espace CS</span></li>
+            <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="20" r="2"/></svg><span>Admin</span></li>
+            </ul>
+          </div>
+          <p class="maq-explication">
+            <span class="maq-explication-icone">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+            </span>
+            <span>
+              Ces <strong>trois petits traits</strong>, en haut de l'écran, ouvrent le
+              menu&nbsp;: appuyez dessus et la liste ci-dessous apparaît. Une seconde
+              pression la referme.
+            </span>
+          </p>
+        </figure>
+      </div>
+      <p class="maq-note">
+        Les entrées <strong>Espace CS</strong> et <strong>Admin</strong> n'apparaissent
+        qu'aux personnes concernées&nbsp;: chacun voit le menu de son rôle.
+      </p>
+
+      <div class="ecran-grid">
+        <div class="ecran-card" data-page="/tableau-de-bord" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span>
+          <h3>Accueil</h3>
+          <p>La première page après la connexion&nbsp;: ce qui vous concerne aujourd'hui, rassemblé en un écran.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><ul>
+            <li><strong>Le bandeau, tout en haut</strong> — après votre prénom&nbsp;: votre <strong>lot</strong> (bâtiment, type, étage) puis vos <strong>rôles</strong>. C'est le rappel de qui vous êtes pour le site, et donc de ce que vous voyez. Votre <strong>photo</strong>, à droite, ouvre votre <strong>profil</strong>&nbsp;; sans photo, elle porte un crayon.</li>
+            <li><strong>Consignes de la copropriété</strong> — les règles à connaître (encombrants, tri, stationnement…), en haut de page parce qu'elles se lisent une fois et servent tout le temps.</li>
+            <li><strong>📌 Épinglé</strong> — ce que le conseil syndical veut garder sous les yeux&nbsp;: une actualité importante y reste tant qu'elle l'est.</li>
+            <li><strong>📋 Kanban</strong> — les dossiers en cours par étape (à faire, en cours, terminé). Une vue d'avancement, pas une liste de tâches à faire soi-même.</li>
+            <li><strong>Fil d'activité</strong> — tout ce qui a bougé récemment&nbsp;: actualités, tickets, événements, sondages, dans l'ordre du plus récent. Passé un certain temps, les entrées glissent dans les <strong>archives</strong>, dépliables en bas de page — rien ne disparaît.</li>
+          </ul>
+          <p class="ecran-note">Chaque bloc ne montre que ce que vous avez le droit de voir&nbsp;: deux personnes n'ont pas le même Accueil, et c'est voulu.</p></div>
+          </details>
+        </div>
+        <div class="ecran-card" data-page="/residence" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg></span>
+          <h3>Résidence</h3>
+          <p>Les documents communs — procès-verbaux, règlement, rapports — et les informations sur la copropriété.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/actualites" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg></span>
+          <h3>Actualités</h3>
+          <p>Les informations publiées par le conseil syndical. Vous pouvez y réagir et y répondre.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><ul>
+            <li><strong>Commenter</strong> — chaque actualité a un fil. Votre commentaire s'y ajoute, daté et signé.</li>
+            <li><strong>Corriger le ciblage en commentant</strong> (conseil syndical) — le formulaire de commentaire montre le <strong>périmètre</strong>, les <strong>destinataires</strong> et les <strong>options de publication</strong> (📌 épinglée, 🚨 urgente, 🛡️ visible du seul conseil syndical, 🔒 confidentielle) tels qu'ils sont en vigueur. Les modifier et enregistrer met à jour l'actualité entière : ce qu'on enregistre devient l'état.</li>
+          </ul>
+          <p class="ecran-note">Cocher « confidentielle » après coup ne reprend pas une lecture déjà faite, et n'annule pas un e-mail déjà parti.</p></div>
+          </details>
+        </div>
+        <div class="ecran-card" data-page="/tickets" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></svg></span>
+          <h3>Tickets</h3>
+          <p>Signaler un problème et suivre son traitement. C'est le point d'entrée de toute demande.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><ul>
+            <li><strong>Signaler</strong> — un titre, une catégorie, le lieu concerné, une description. Ajoutez des photos : elles évitent une visite pour rien.</li>
+            <li><strong>Choisir la bonne catégorie</strong> — elle décide de <em>qui traite</em> votre signalement, pas de son importance. Le formulaire affiche les catégories avec, sous chacune, ce qu'elle recouvre&nbsp;: lisez-les, elles sont faites pour ça.
+              <br />Deux repères que l'écran ne peut pas tenir en une ligne&nbsp;:
+              <ul>
+                <li><strong>Panne ou Sinistre&nbsp;?</strong> Ce n'est pas l'eau qui tranche, c'est le <strong>dégât</strong>. Une fuite qu'on répare, une ampoule grillée, un interrupteur hors service&nbsp;: c'est une <strong>panne</strong>. De l'eau chez quelqu'un, un plafond taché, un parquet gondolé&nbsp;: il y a un dégât à déclarer à l'assurance, c'est un <strong>sinistre</strong>.</li>
+              </ul>
+            </li>
+            <li><strong>C'est urgent&nbsp;?</strong> — ce n'est pas une catégorie, c'est une <strong>case</strong>. Cochez <strong>🚨 Urgent</strong> dans les options&nbsp;: le conseil syndical et le syndic sont prévenus immédiatement. Une panne peut être urgente, une nuisance aussi — vous n'avez plus à choisir entre dire <em>ce que c'est</em> et dire <em>que ça presse</em>.
+              <br /><strong>En cas de danger immédiat, composez le 15 (SAMU), 17 (Police) ou 18 (Pompiers)</strong> — 5Hostachy n'est pas un service d'urgence.</li>
+            <li><strong>Suivre</strong> — chaque ticket a un fil. Vous y voyez les réponses du conseil syndical et l'avancement (Ouvert → En cours → Résolu).</li>
+            <li><strong>Compléter votre demande</strong> — vous avez oublié une précision, une photo, ou la situation a évolué&nbsp;? <strong>N'ouvrez pas un second ticket</strong>&nbsp;: ajoutez un commentaire au premier. Deux chemins, au choix&nbsp;:
+              <ul>
+                <li>depuis la <strong>liste des tickets</strong>, l'icône <strong>🔄</strong> sur la ligne de votre ticket&nbsp;;</li>
+                <li>depuis la <strong>fiche du ticket</strong> (en cliquant sur son titre), le bouton <strong>💬 Répondre</strong> en bas du fil.</li>
+              </ul>
+              Vous pouvez y joindre des <strong>photos et des documents</strong>, comme à la création. Le conseil syndical est prévenu, et votre ajout apparaît dans le fil à sa date — l'historique reste lisible de bout en bout.</li>
+            <li><strong>Un ticket déjà résolu</strong> — le bouton devient <strong>↩️ Rouvrir la discussion</strong>. Si le problème revient, servez-vous-en plutôt que de créer une nouvelle demande&nbsp;: tout l'historique reste attaché au même dossier.</li>
+            <li><strong>Répondre par e-mail</strong> — répondez directement au message reçu, votre réponse rejoint le fil du ticket. <strong>Gardez l'objet</strong> (« Ticket #TK-… ») : c'est lui qui permet de retrouver le dossier si l'adresse de réponse ne suit pas. Un message signé d'une adresse inconnue du site n'est jamais publié — le conseil syndical en est averti.</li>
+            <li><strong>Ce que vous voyez</strong> — cela dépend de qui vous êtes. <strong>Copropriétaire</strong>&nbsp;: vos demandes, et celles qui concernent vos bâtiments. <strong>Locataire</strong>&nbsp;: vos demandes, et elles seules — vous signalez et suivez votre dossier comme tout le monde, mais les affaires de la copropriété ne s'affichent pas. Un ticket marqué <strong>🛡️ Conseil syndical</strong> reste visible de son auteur, de la personne concernée et du conseil seulement. C'est la <strong>même option</strong> que sur une actualité, sous le même glyphe — à ne pas confondre avec le <strong>🔒 Confidentiel</strong>, qui restreint la lecture au périmètre visé.</li>
+            <li><strong>Options de publication</strong>&nbsp;— <strong>🚨 Marquer urgent</strong> est ouvert à <strong>tout le monde</strong>&nbsp;: c'est vous qui savez si votre situation presse, et c'est ce qui remplace l'ancienne catégorie «&nbsp;Urgence&nbsp;», retirée parce qu'elle obligeait à choisir entre la nature du problème et son délai. Le conseil syndical et le syndic sont alors prévenus immédiatement. Le conseil syndical dispose en plus de <strong>📌 Épingler</strong> (le ticket reste en tête de la liste) et de <strong>🛡️ Visibilité au seul conseil syndical</strong>&nbsp;— deux réglages qui organisent SA liste, là où l'urgence décrit VOTRE situation. <strong>🔒 Confidentiel</strong> y figure aussi, mais <strong>cochée et verrouillée</strong>&nbsp;: contrairement à une actualité, un ticket est <em>toujours</em> visible des seuls résidents du périmètre choisi — il n'y a rien à cocher. Ces options se voient et se corrigent à la création, en modification <strong>et en commentant</strong>&nbsp;: le formulaire montre l'état du moment, et ce qu'on enregistre devient l'état.</li>
+            <li><strong>Réservé au conseil, donc pas sur WhatsApp</strong>&nbsp;— quand <strong>🛡️ Conseil syndical</strong> est coché, la case «&nbsp;Partager sur le groupe&nbsp;» est grisée&nbsp;: le groupe WhatsApp rassemble tous les résidents, on ne peut pas y publier ce qu'on vient de leur fermer. La règle vaut aussi pour une actualité.</li>
+          </ul>
+          <p class="ecran-note">Vous ne commentez que vos propres tickets : lire ceux du voisinage ne donne aucun droit d'écriture.</p></div>
+          </details>
+        </div>
+        <div class="ecran-card" data-page="/calendrier" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg></span>
+          <h3>Calendrier</h3>
+          <p>Ce qui est prévu : coupures, travaux, assemblées, visites de prestataires. Trois vues, chacune à son adresse — Liste (<code>/calendrier</code>), Kanban (<code>/calendrier/kanban</code>), Archives (<code>/calendrier/archives</code>).</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/mon-lot" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12v.01"/></svg></span>
+          <h3>Mes lots</h3>
+          <p>Vos lots, vos baux, vos diagnostics. Un bailleur y gère aussi ses locataires.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><ul>
+            <li><strong>L'inventaire d'un bail</strong> — sous chaque bail, la liste de ce qui a été remis au locataire&nbsp;: clés, badges Vigik, télécommandes. Cliquez sur <strong>« + Ajouter un objet »</strong> pour en enregistrer un, sur <strong>✏️</strong> pour corriger une ligne (type, libellé, quantité, référence, date de remise).</li>
+            <li><strong>Le retour d'un objet</strong> — l'icône <strong>↩</strong> enregistre une restitution, ou marque l'objet perdu. C'est cet inventaire qui fait foi à la sortie du locataire&nbsp;: tenez-le à jour au fil des remises, pas seulement à la signature.</li>
+            <li>Sur un bail <strong>terminé</strong>, l'inventaire se lit encore mais ne se modifie plus.</li>
+            </ul></div>
+          </details>
+        </div>
+        <div class="ecran-card" data-page="/acces-securite" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg></span>
+          <h3>Accès &amp; badges</h3>
+          <p>Demander un badge, un bip ou une télécommande, et suivre l'avancement de la demande.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><ul>
+            <li><strong>Vos badges</strong> — badges Vigik et télécommandes de parking, avec leur statut. <strong>Signaler perdu</strong> désactive un badge égaré.</li>
+            <li><strong>Déclarer un badge</strong> — si vous détenez un badge qui n'apparaît pas dans la liste, saisissez son code : il se rattache automatiquement à l'import du syndic quand il y figure.</li>
+            <li><strong>Vue d'ensemble (conseil syndical)</strong> — en bas de page, tous les badges de la copropriété avec leur porteur et leur lot. Recherche par code, par nom ou par lot ; utile au départ d'un locataire, ou quand un badge est retrouvé. Cette vue est en <strong>lecture seule</strong> : un badge s'enregistre par l'import du syndic, ou par son porteur.</li>
+            </ul></div>
+          </details>
+        </div>
+        <div class="ecran-card" data-page="/annuaire" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <h3>Annuaire</h3>
+          <p>Qui contacter, et pour quoi : conseil syndical, syndic, prestataires, urgences.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/prestataires" data-acces="cs">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v3"/></svg></span>
+          <h3>Prestataires</h3>
+          <p>Les entreprises, leurs contrats d'entretien et le suivi des interventions.</p>
+          <span class="ecran-acces ecran-acces-cs">Conseil syndical</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><ul>
+            <li><strong>Noter un prestataire</strong> — depuis un contrat, l'étoile ouvre une note de 1 à 5 avec un commentaire. La moyenne s'affiche ensuite à côté du nom de l'entreprise.</li>
+            <li><strong>Les avis, un par un</strong> — dépliez la fiche du prestataire&nbsp;: chaque avis y figure avec son auteur, sa date et son commentaire. L'icône <strong>🗑️</strong> retire un avis posé par erreur — sur un mauvais prestataire, ou en double.</li>
+            <li>Noter et retirer sont réservés au <strong>conseil syndical</strong>&nbsp;: c'est un outil de suivi interne, pas un avis public.</li>
+            </ul></div>
+          </details>
+        </div>
+        <div class="ecran-card" data-page="/sondages" data-acces="resident">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg></span>
+          <h3>Communauté</h3>
+          <p>L'espace entre résidents. Réservé aux résidents : ni le syndic ni un mandataire n'y ont accès.</p>
+          <span class="ecran-acces ecran-acces-resident">Résidents</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><ul>
+            <li><strong>📊 Sondages</strong> — donner son avis sur une décision à venir. Un sondage se ferme à sa date d'échéance. Adresse&nbsp;: <code>/sondages</code></li>
+            <li><strong>💡 Boîte à idées</strong> — proposer une amélioration, soutenir celles des autres. Adresse&nbsp;: <code>/idees</code></li>
+            <li><strong>🏷️ Petites annonces</strong> — donner, prêter, vendre entre voisins. Adresse&nbsp;: <code>/annonces</code></li>
+          </ul>
+          <p><strong>À qui ça s'adresse.</strong> En déposant une idée ou une annonce, vous pouvez choisir
+          <em>Destinataires</em>&nbsp;: par exemple les copropriétaires, ou seulement les locataires. Ceux qui
+          ne sont pas visés ne voient pas l'annonce ou l'idée du tout, et ne peuvent ni y répondre ni voter.
+          Si vous ne choisissez rien, tout le monde la voit&nbsp;— c'est le cas par défaut, et celui de toutes
+          les annonces et idées déjà déposées. Le conseil syndical, lui, voit tout&nbsp;: c'est ce qui lui
+          permet de corriger un ciblage posé par erreur.</p>
+          <p><strong>Corriger une erreur de saisie.</strong> Une idée et un sondage se modifient
+          après coup, comme une petite annonce&nbsp;: le crayon ✏️ sur la carte ouvre une fenêtre
+          de correction. Réservé à celui qui l'a déposé — le conseil syndical décide du statut
+          d'une idée, il ne réécrit pas la proposition de quelqu'un.
+          Une idée archivée et un sondage clôturé ne se corrigent plus.</p>
+          <p><strong>Ce qui ne se corrige pas, et pourquoi.</strong> Le périmètre et les
+          destinataires se choisissent au dépôt et n'apparaissent pas dans la fenêtre de
+          correction&nbsp;: les réduire ensuite retirerait l'idée ou le sondage à des voisins qui
+          l'ont déjà voté. Sur un sondage, les réponses proposées ne s'ajoutent ni ne se
+          suppriment non plus — seuls leurs libellés se corrigent, sans quoi les votes déjà
+          exprimés ne désigneraient plus la même chose.</p>
+          <p><strong>Ne pas confondre avec le périmètre.</strong> Le périmètre 🔹 dit <em>de quoi</em> il
+          s'agit (le bâtiment 3, le parking)&nbsp;; les destinataires disent <em>à qui</em> vous vous adressez.
+          Les deux se combinent. Quand un ciblage restreint quelque chose, il s'affiche sur la carte&nbsp;;
+          sinon rien ne s'affiche.</p></div>
+          </details>
+        </div>
+        <div class="ecran-card" data-page="/faq" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>
+          <h3>FAQ</h3>
+          <p>Les questions déjà posées et leurs réponses. À regarder avant d'ouvrir un ticket.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/espace-cs" data-acces="cs">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 22V2"/></svg></span>
+          <h3>Espace Conseil syndical (CS)</h3>
+          <p>Les outils du conseil : comptes et accès, reporting, affiches de hall, annuaire interne.</p>
+          <span class="ecran-acces ecran-acces-cs">Conseil syndical</span>
+        </div>
+        <div class="ecran-card" data-page="/admin" data-acces="admin">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="20" r="2"/></svg></span>
+          <h3>Admin</h3>
+          <p>Le paramétrage du site : utilisateurs, rôles, modèles d'e-mail, référentiels.</p>
+          <span class="ecran-acces ecran-acces-admin">Administrateur</span>
+        </div>
+        <div class="ecran-card" data-page="/delegations" data-acces="cs-ou-aidant">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg></span>
+          <h3>Délégations</h3>
+          <p>Autoriser un proche à consulter et agir à votre place. Ce n'est pas une procuration d'assemblée générale.</p>
+          <span class="ecran-acces ecran-acces-cs-ou-aidant">CS &amp; aidants</span>
+        </div>
+        <div class="ecran-card" data-page="profil" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <h3>Mon profil</h3>
+          <p>Vos informations, votre mot de passe, et le réglage de ce que vous recevez.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><p>Accessible par <strong>votre prénom</strong>, en bas du menu — il n'a pas d'entrée propre.</p>
+          <ul>
+            <li><strong>Vos informations</strong> — nom, téléphone, adresse e-mail, mot de passe.</li>
+            <li><strong>Vos notifications</strong> — ligne par ligne, ce que vous recevez dans l'application et par e-mail. C'est ici qu'on évite d'être submergé sans rien manquer.</li>
+            <li><strong>Vos droits (RGPD)</strong> — exporter vos données, refuser la mesure d'audience, effacer votre historique.</li>
+          </ul></div>
+          </details>
+        </div>
+      </div>
+
+      <h3>Envoyer un lien vers ce qu'on regarde</h3>
+      <p>
+        <strong>Chaque rubrique a son adresse.</strong> Les petites annonces, c'est
+        <code>/annonces</code>&nbsp;; la boîte à idées, <code>/idees</code>&nbsp;; le Kanban du
+        calendrier, <code>/calendrier/kanban</code>. L'adresse affichée en haut du navigateur
+        suit l'onglet ouvert&nbsp;: elle se copie et s'envoie telle quelle, et le bouton
+        <strong>Précédent</strong> revient à l'onglet précédent.
+      </p>
+      <p>
+        <strong>Chaque publication a la sienne.</strong> L'icône 🔗, à côté du crayon, copie
+        le lien de l'élément — une annonce, une actualité, un ticket, une question de la
+        FAQ, un document. Collez-le dans un message&nbsp;: votre voisin arrivera
+        directement dessus, déplié.
+      </p>
+      <p class="ecran-note">
+        Le lien ne donne aucun droit&nbsp;: la personne qui l'ouvre doit être connectée, et
+        elle voit ce qu'elle a le droit de voir, ni plus ni moins. Envoyer le lien d'un
+        ticket confidentiel ne le rend pas lisible.
+      </p>
+
+    </section>
+
+    <!-- ════════════════════════════════
+         UNE QUESTION ? — le manuel s'arrête ici, exprès
+    ════════════════════════════════ -->
+    <div class="divider"></div>
+
+    <div class="aide-fin" id="aide">
+      <div class="aide-glyphe" aria-hidden="true">&#x2753;</div>
+      <h2>Une question&nbsp;?</h2>
+      <p>Ce guide s'arrête volontairement là. Le reste — le détail de chaque écran, les cas particuliers, les réponses déjà données — vit <strong>dans l'application</strong>, où il est toujours à jour.</p>
+      <div class="aide-liens">
+        <a class="aide-lien aide-lien-fort" href="/faq">Consulter la FAQ</a>
+        <a class="aide-lien" href="/tickets">Ouvrir un ticket</a>
+        <a class="aide-lien" href="/annuaire">Contacter le conseil syndical</a>
+      </div>
+      <!--  Le PDF est composé À PARTIR de cette page — il n'en est pas une
+            seconde rédaction. Voir `api/app/utils/manuel_pdf.py`. -->
+      <p class="aide-pdf">
+        Besoin de l'emporter ou de l'afficher&nbsp;?
+        <a href="/api/manuel/pdf" target="_blank" rel="noopener">Télécharger ce guide en PDF</a>
+        — même contenu, avec une page de garde et un sommaire.
+      </p>
+    </div>
+
+    <!-- ════════════════════════════════
+         UN LOGICIEL LIBRE — en dernier, comme la mention légale d'un imprimé.
+         Déplacé ici le 05/09/2026, à la demande : cette page se lit par sa fin
+         quand on cherche « qui a fait ça, et sous quelles conditions ».
+         ⚠️ Dans le PDF, la section « À propos de ce document » porte DÉJÀ la
+         licence : le corps imprimé ne la répète pas — `manuel_pdf.py` retire
+         cette section-ci, et les mentions restent le seul endroit qui la dit.
+    ════════════════════════════════ -->
+    <div class="divider"></div>
+
+    <section class="apropos" id="logiciel-libre">
+      <h2>Un code source accessible</h2>
+      <p>
+        5Hostachy est distribué sous la <strong>Licence 5Hostachy</strong> : son code source est
+        consultable, et <strong>librement réutilisable par une autre copropriété</strong>, une
+        association ou un particulier. Tout usage commercial requiert en revanche un accord
+        préalable de l’auteur.
+      </p>
+      <p>
+        Cette instance est <strong>auto-hébergée</strong> — les données restent sur une machine de
+        la copropriété, elles ne sont ni vendues ni confiées à un prestataire.
+      </p>
+      <p>
+        Les <a href="/mentions-legales">mentions légales</a> et la
+        <a href="/politique-confidentialite">politique de confidentialité</a> détaillent
+        l'éditeur, l'hébergement, et ce que deviennent vos données.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- ══════════════════════════════════
+       FOOTER
+  ══════════════════════════════════ -->
+  <footer class="doc-footer">
+    <span>© 2026 5Hostachy — Manuel utilisateur v1.0</span>
+    <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
+  </footer>
+
+</div>
+
+<!-- Navigation active highlighting -->
+<script>
+  const navItems = document.querySelectorAll('.nav-item');
+  const sections = document.querySelectorAll('.chapter, .hero, .quick-start, .persona-block');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navItems.forEach(item => {
+          item.classList.toggle('active', item.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

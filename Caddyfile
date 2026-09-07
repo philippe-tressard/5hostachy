@@ -1,0 +1,272 @@
+:80 {
+    # TLS géré par Cloudflare Tunnel (pas de TLS local nécessaire)
+    encode zstd gzip
+
+    # Headers de sécurité
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-XSS-Protection "0"
+        -Server
+
+        #  ── Content-Security-Policy : le SOUS-ENSEMBLE SÛR, et rien de plus ──
+        #
+        #  Le site n'en avait aucune. C'est le seul en-tête que l'audit de
+        #  sécurité réclame et qui manquait ici (20/08/2026).
+        #
+        #  🔴 Ces quatre directives sont posées parce qu'elles ne peuvent RIEN
+        #  casser : elles ne touchent ni aux scripts, ni aux styles, ni aux
+        #  images. Elles ferment pourtant quatre voies réelles :
+        #
+        #    frame-ancestors 'none'   personne ne peut enchâsser le site pour
+        #                             détourner un clic (doublon volontaire de
+        #                             X-Frame-Options, qui ne couvre pas tous
+        #                             les navigateurs de la même façon) ;
+        #    object-src 'none'        aucun greffon (Flash, applet) ne démarre ;
+        #    base-uri 'self'          une balise <base> injectée ne peut plus
+        #                             réécrire la cible de TOUTES les URL
+        #                             relatives de la page ;
+        #    form-action 'self'       un formulaire injecté ne peut plus poster
+        #                             les identifiants ailleurs.
+        #
+        #  ⚠️ `script-src` et `style-src` NE SONT PAS ici, et c'est délibéré.
+        #  Ce sont eux qui apportent l'essentiel de la protection, et eux qui
+        #  cassent une application SvelteKit si on les pose sans mesurer : styles
+        #  en ligne, hydratation, polices. Une CSP fausse rend le site blanc —
+        #  un remède plus grave que le mal, posé sans pouvoir l'observer.
+        #  Leur mise en place demande un déploiement suivi en `Report-Only`
+        #  d'abord. Suivi en issue.
+        #  ── `connect-src 'self'` REJOINT le mode bloquant (01/09/2026, #536) ──
+        #
+        #  🔴 C'est la directive la plus utile de la politique, et la seule que le
+        #  relevé permettait de poser sans parier : sur 104 rapports et six
+        #  violations distinctes, **aucune ne concerne `connect-src`**. L'API, la
+        #  télémétrie et le service worker sont tous sur la même origine.
+        #
+        #  Ce qu'elle ferme : même si un XSS s'exécutait — ce contre quoi
+        #  `script-src` protégerait, et qu'on ne peut pas poser ici, voir plus bas
+        #  — il ne pourrait **rien exfiltrer** vers un domaine tiers. `fetch`,
+        #  `XMLHttpRequest`, WebSocket, `EventSource` et `sendBeacon` sont tous
+        #  couverts. C'est la seconde moitié du travail : empêcher l'exécution, et
+        #  à défaut empêcher la sortie.
+        #
+        #  ⚠️ Elle coupe de fait l'émission du beacon Cloudflare Web Analytics
+        #  (`static.cloudflareinsights.com`), relevé le même jour et suivi en
+        #  #701. C'est assumé et annoncé, pas un effet de bord découvert après :
+        #  le site mesure déjà son audience in-process (`Admin → Télémétrie`).
+        #
+        #  ⚠️ `default-src` reste ABSENT du mode bloquant, et le motif a changé
+        #  le 06/09/2026 : il ne couvre plus un trou, il en créerait un. Posé
+        #  ici, il hériterait à `script-src` la valeur de Caddy, qui ignore les
+        #  condensats de SvelteKit — et l'en-tête le plus strict gagnant, il
+        #  bloquerait l'hydratation. Chaque directive bloquante est nommée une
+        #  par une, et les scripts sont nommés ailleurs.
+        #  ── CE QUE LE RELEVÉ AUTORISE À BLOQUER (#770, 05/09/2026) ──
+        #
+        #  `font-src` et `style-src` sont passés en mode BLOQUANT parce que le
+        #  compteur persistant (`ConfigSite.csp_violations`, servi par
+        #  `GET /admin/csp`) ne leur attribue AUCUNE violation sur 404 rapports.
+        #
+        #  ⚠️ `img-src` reste dehors : ses trois violations viennent d'une
+        #  extension de navigateur (1Password injecte `https://images/icons/…`),
+        #  donc d'aucune ressource du site. Le bloquer ne protégerait rien et
+        #  casserait l'affichage de l'extension chez le visiteur — ce n'est pas
+        #  à nous d'en décider.
+        #
+        #  ✅ `script-src` EST DÉSORMAIS BLOQUANT — mais il n'est pas écrit ici,
+        #  et c'est le cœur de #770 (06/09/2026). SvelteKit sert un script inline
+        #  par page (hydratation) : il totalisait 370 des 404 violations. Seul le
+        #  framework connaît le contenu de ses scripts, donc seul lui peut en
+        #  calculer le condensat — `kit.csp` (mode `hash`) dans
+        #  `front/svelte.config.js` émet `script-src 'self' 'sha256-…'`.
+        #
+        #  🔴 D'où le `+` : dans un bloc `header`, écrire le nom nu REMPLACE.
+        #  Sans lui, Caddy écraserait le condensat de SvelteKit et le site
+        #  deviendrait blanc — la panne exacte que #770 voulait éviter. Avec `+`,
+        #  les deux en-têtes coexistent : un navigateur les applique TOUS, chacun
+        #  sur ce qu'il nomme. Ici ils sont disjoints — Caddy ne dit rien des
+        #  scripts, SvelteKit ne dit rien du reste.
+        +Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; connect-src 'self'; font-src 'self' data:; style-src 'self' 'unsafe-inline'"
+
+        #  ── L'étape suivante, en MODE OBSERVATION (#536, 28/08/2026) ──
+        #
+        #  `Report-Only` ne bloque RIEN. Le navigateur applique la politique
+        #  ci-dessous en pensée, et poste un rapport à chaque violation. C'est le
+        #  seul moyen de savoir ce que `script-src` casserait avant de le poser :
+        #  le site n'est accessible que derrière une connexion, et une CSP fausse
+        #  ne se voit qu'à l'exécution, dans la console de quelqu'un d'autre.
+        #
+        #  ⚠️ Les rapports vont à `/api/csp-report`, un point de collecte PUBLIC
+        #  — le navigateur poste sans cookie. Il est borné : limite de débit,
+        #  plafond de clés, aucune écriture en base, rien qui soit renvoyé. Le
+        #  relevé se lit sur `GET /api/admin/csp-violations` (admin).
+        #
+        #  La politique visée, et pourquoi chaque morceau :
+        #
+        #    script-src 'self'          la vraie protection contre le XSS. On
+        #                               s'attend à des violations : SvelteKit
+        #                               insère un script d'hydratation EN LIGNE.
+        #                               C'est précisément ce qu'on veut compter
+        #                               avant de choisir entre nonce et sha256.
+        #    style-src … 'unsafe-inline'  le dépôt porte plus de 700 attributs
+        #                               `style=` ; les retirer est un autre
+        #                               chantier (#607). Sans cette tolérance la
+        #                               mesure serait noyée par du bruit connu.
+        #    img-src … data: blob:      QR codes et aperçus sont produits en
+        #                               `data:`/`blob:` côté navigateur.
+        #    connect-src 'self'         l'API est servie sur la même origine.
+        #                               ✅ PASSÉE EN BLOQUANT le 01/09/2026 : le
+        #                               relevé n'a montré aucune violation. Elle
+        #                               reste écrite ici pour que la politique
+        #                               observée demeure complète — sans quoi le
+        #                               relevé cesserait de mesurer ce qu'elle
+        #                               couvre, et l'on ne verrait pas arriver un
+        #                               appel sortant nouveau.
+        #
+        #  🔴 Ne PAS passer en mode bloquant tant que le relevé n'est pas à zéro,
+        #  ni sans avoir regardé le site après. Un remède posé sans pouvoir
+        #  l'observer serait pire que le mal — c'est ce que dit #536, et c'est ce
+        #  que ce mode-ci évite.
+        #  ⚠️ `default-src` et `script-src` ONT QUITTÉ cette politique le
+        #  06/09/2026, et pas par relâchement : `script-src` est désormais
+        #  BLOQUANT (via SvelteKit), et `default-src` le couvrait par héritage.
+        #  Les garder ici ferait recompter chaque page comme une violation —
+        #  370 par semaine sur un mécanisme désormais autorisé. Un compteur qui
+        #  mesure ce qui est déjà réglé noie ce qui ne l'est pas.
+        #
+        #  Ce qui reste en observation est exactement le PAS SUIVANT : `style-src`
+        #  SANS `'unsafe-inline'`, et `img-src`. Ce dernier n'est pas passé en
+        #  bloquant parce que ses trois violations viennent d'une extension de
+        #  navigateur (1Password) et d'aucune ressource du site.
+        +Content-Security-Policy-Report-Only "style-src 'self'; img-src 'self' data: blob:; report-uri /api/csp-report"
+    }
+
+    # API — proxy vers FastAPI
+    handle /api/* {
+        uri strip_prefix /api
+        # ⚠️ SANS CETTE LIGNE, TOUT ENDPOINT SERVANT UN FICHIER DEVIENT PUBLIC.
+        # Cloudflare met en cache d'après l'EXTENSION de l'URL. Les endpoints de
+        # téléchargement en portent une (`…/photo/x.png`, `…/fichier/y.pdf`) :
+        # le premier accès autorisé peuple l'edge, qui sert ensuite le fichier à
+        # tout le monde sans revenir à l'origine. Constaté deux fois le
+        # 03/08/2026 — sur /uploads/* le matin, puis ici l'après-midi, parce que
+        # la directive n'avait été posée que sur le premier bloc.
+        # Appliqué à TOUT /api/* et pas aux seules routes de fichiers : une
+        # réponse d'API dépend d'une session par nature, et la prochaine route
+        # qui servira un fichier n'aura pas à y penser.
+        header Cache-Control "private, no-store"
+        reverse_proxy api:8000
+    }
+
+    # Annonces de hall — jamais servies en direct (accès via /api/annonces-hall/{id}/pdf,
+    # réservé au CS et à l'admin). Doit précéder le handle /uploads/* ci-dessous.
+    handle /uploads/annonces-hall/* {
+        respond 404
+    }
+
+    # Fichiers privés — bibliothèque documentaire (PV d'AG, règlement, plan
+    # pluriannuel) et rapports de diagnostic. Ils se téléchargent par un endpoint
+    # authentifié qui applique `document_visible` ; les servir ici contournerait ce
+    # contrôle pour qui connaît l'URL. Ils vivaient à la racine du volume jusqu'au
+    # 03/08/2026 — 48 fichiers exposés.
+    # ⚠️ Comme le bloc ci-dessus, DOIT précéder le handle /uploads/* : Caddy applique
+    # le premier `handle` qui correspond. Placé après, il ne servirait à rien.
+    # Verrouillé par api/tests/test_uploads_prives.py.
+    handle /uploads/prive/* {
+        respond 404
+    }
+
+    # Images d'actualité — publiques à dessein. Le bridge WhatsApp reçoit une URL
+    # ABSOLUE (app/utils/whatsapp.py, `_resolve_image_url`) et va chercher l'image
+    # lui-même, en anonyme : exiger une session ici casserait le partage sur le
+    # groupe. C'est le seul dossier dans ce cas, et c'est aussi le moins sensible —
+    # son contenu est précisément destiné à être diffusé.
+    # DOIT précéder le handle /uploads/* ci-dessous.
+    handle /uploads/publications/* {
+        root * /srv
+        file_server
+    }
+
+    # Tout le reste des fichiers uploadés — photos de profil, photos de ticket,
+    # pièces jointes : réservé aux sessions authentifiées. Caddy interroge l'API
+    # avant de servir (204 = autorisé, 401 = refusé).
+    handle /uploads/* {
+        # `forward_auth` transmet les en-têtes de la requête d'origine — donc le
+        # cookie de session — et ne sert le fichier que sur une réponse 2xx.
+        # Pas de `copy_headers` ici : cette sous-directive recopie des en-têtes de
+        # la RÉPONSE d'authentification vers la requête, ce qui n'a rien à voir.
+        forward_auth api:8000 {
+            uri /auth/verifier-acces
+        }
+        # ⚠️ SANS CETTE LIGNE, LE CONTRÔLE CI-DESSUS NE SERT À RIEN.
+        # Cloudflare met en cache les extensions statiques (.pdf, .jpg…) par
+        # défaut. Le premier accès AUTORISÉ peuple donc l'edge, qui sert ensuite
+        # le fichier à tout le monde sans jamais revenir à l'origine — 4 heures
+        # durant. Constaté le 03/08/2026 sur une pièce jointe de ticket :
+        # origine 401, edge 200 avec `CF-Cache-Status: HIT`.
+        # `private` interdit le stockage aux caches partagés, `no-store` aux
+        # caches privés : une réponse qui dépend d'un cookie de session ne doit
+        # être conservée nulle part.
+        header Cache-Control "private, no-store"
+        root * /srv
+        file_server
+    }
+
+    # Service worker et manifeste — JAMAIS mis en cache par un intermédiaire.
+    #
+    # Cloudflare met en cache d'après l'EXTENSION : `/sw.js` était servi depuis
+    # l'edge pendant les 4 heures du `max-age` d'adapter-node. Un service worker
+    # corrigé n'atteignait donc AUCUN navigateur avant l'expiration — constaté le
+    # 14/08/2026 : le fichier était juste dans le conteneur (rebuild de 14:44) et
+    # l'edge servait encore celui de 10:04, avec le repli de navigation fautif.
+    #
+    # `>` REMPLACE l'en-tête ; sans lui, `header` AJOUTE et la valeur d'amont
+    # subsiste. Constaté au post-check du 14/08/2026, la première écriture de ce
+    # bloc ayant produit « max-age=14400, must-revalidate » : le `no-cache` avait
+    # disparu dans la fusion, et l'edge gardait son droit de cacher quatre heures.
+    # Le contrôle regardait le bon fait — l'en-tête RÉELLEMENT servi, cache edge
+    # contourné — et c'est ce qui l'a trouvé.
+    # C'est le pire fichier à mettre en cache longuement : il décide de ce que
+    # tous les autres deviennent. `no-cache` n'interdit pas de le stocker, il
+    # impose de le revalider — ce que le navigateur fait déjà de lui-même, et que
+    # l'edge ne faisait pas.
+    handle /sw.js {
+        header >Cache-Control "no-cache, must-revalidate"
+        reverse_proxy front:3000
+    }
+    handle /manifest.webmanifest {
+        header >Cache-Control "no-cache, must-revalidate"
+        reverse_proxy front:3000
+    }
+
+    # 🔴 LE MANUEL, pour la même raison — signalé à l'écran le 04/09/2026 :
+    # « je ne vois pas le menu générer un PDF » alors que la production servait
+    # bien la bonne version. Le navigateur montrait la 3.87, l'origine la 3.88.
+    #
+    # Ce fichier ne portait AUCUN `Cache-Control` : le navigateur applique alors
+    # sa propre heuristique, calculée sur `Last-Modified`. Un document qui change
+    # à chaque lot et qu'on sert sans directive sera lu périmé — et personne ne
+    # le sait, puisque la page s'affiche parfaitement.
+    #
+    # ⚠️ C'est la troisième fois que ce défaut se manifeste sous une autre forme
+    # (bandeau PWA v2.24.0, `sw.js` le 14/08). Le remède est le même : `no-cache`
+    # n'interdit pas de stocker, il impose de revalider.
+    handle /manuel-utilisateur.html {
+        header >Cache-Control "no-cache, must-revalidate"
+        reverse_proxy front:3000
+    }
+
+    # Frontend SvelteKit (SSR)
+    handle {
+        reverse_proxy front:3000
+    }
+
+    # Logs
+    log {
+        output stdout
+        format console
+    }
+}

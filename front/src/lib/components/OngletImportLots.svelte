@@ -1,0 +1,496 @@
+<script lang="ts">
+	import { nomAffiche } from '$lib/noms';
+	import { onMount } from 'svelte';
+	import { lots as lotsApi, admin as adminApi } from '$lib/api';
+	import { toast } from '$lib/components/Toast.svelte';
+	import { siteNomStore } from '$lib/stores/pageConfig';
+	import BarreImport from '$lib/components/BarreImport.svelte';
+	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+
+	$: _siteNom = $siteNomStore;
+	// ── Données ─────────────────────────────────────────────────────────────
+	let imports: any[] = [];
+	let stats: any = null;
+	let utilisateurs: any[] = [];
+	let lots: any[] = [];
+	let loading = true;
+	let filtre = '';
+	let tri = 'copro'; // copro | batiment | numero
+
+	// ── Upload ───────────────────────────────────────────────────────────────
+	//  Le FORMULAIRE de téléversement vit dans `BarreImport`, comme sur l'écran
+	//  d'import d'accès : il ne reste ici que le compte rendu, qui est propre aux
+	//  lots (erreurs de ligne, imports écartés, parkings sans lot).
+	let uploading = false;
+
+	async function uploadExcel(fichier: File, remplacer: boolean) {
+		uploading = true;
+		try {
+			const result = await lotsApi.uploadImport(fichier, remplacer);
+			toast(
+				'success',
+				`Import : ${result.importes} ajoutés, ${result.doublons} doublons, ${result.ignores} ignorés${result.auto_resolus ? ` — ${result.auto_resolus} copropriétaire(s) résolu(s) automatiquement` : ''}`,
+			);
+			if (result.erreurs?.length) toast('error', result.erreurs.slice(0, 3).join('\n'));
+			if (result.auto_skipped_locataire)
+				toast(
+					'info',
+					`${result.auto_skipped_locataire} import(s) avec locataire à traiter manuellement`,
+				);
+			if (result.auto_skipped_no_lot)
+				toast('info', `${result.auto_skipped_no_lot} parking(s) sans lot — à associer via ✏️`);
+			await reload();
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur import');
+		} finally {
+			uploading = false;
+		}
+	}
+
+	// ── Auto-match ───────────────────────────────────────────────────────────
+	let autoMatching = false;
+
+	async function autoMatch() {
+		autoMatching = true;
+		try {
+			const r = await lotsApi.autoMatchImports();
+			toast('success', `${r.matches} liaison(s) automatique(s) trouvée(s)`);
+			await reload();
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur');
+		} finally {
+			autoMatching = false;
+		}
+	}
+
+	// ── Auto-résoudre copropriétaires ────────────────────────────────────────
+	let autoResolving = false;
+
+	async function autoResoudre() {
+		autoResolving = true;
+		try {
+			const r = await lotsApi.autoResoudreImports();
+			toast('success', `${r.resolus} copropriétaire(s) résolu(s) automatiquement`);
+			if (r.skipped_locataire)
+				toast('info', `${r.skipped_locataire} import(s) avec locataire laissé(s) en staging`);
+			if (r.skipped_no_lot)
+				toast('info', `${r.skipped_no_lot} parking(s) sans lot lié — à traiter manuellement`);
+			await reload();
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur');
+		} finally {
+			autoResolving = false;
+		}
+	}
+
+	// ── Édition inline ───────────────────────────────────────────────────────
+	let editId: number | null = null;
+	let editLot = '';
+	let editOccupants: { user_id: string; type_lien: string }[] = [];
+	let editNotes = '';
+	let saving = false;
+
+	const TYPES_LIEN = [
+		{ value: 'propriétaire', label: 'Copropriétaire résident' },
+		{ value: 'bailleur', label: 'Copropriétaire bailleur' },
+		{ value: 'locataire', label: 'Locataire' },
+		{ value: 'mandataire', label: 'Mandataire (gestion)' },
+	];
+	const TYPE_LIEN_BADGE: Record<string, string> = {
+		propriétaire: '#16a34a',
+		bailleur: '#2563eb',
+		locataire: '#d97706',
+		mandataire: '#7c3aed',
+	};
+	const TYPE_LIEN_LABEL: Record<string, string> = {
+		propriétaire: 'Propriétaire',
+		bailleur: 'Bailleur',
+		locataire: 'Locataire',
+		mandataire: 'Mandataire',
+	};
+
+	function openEdit(imp: any) {
+		editId = imp.id;
+		editLot = String(imp.lot_id ?? '');
+		editNotes = imp.notes_admin ?? '';
+		if (imp.utilisateurs?.length) {
+			editOccupants = imp.utilisateurs.map((u: any) => ({
+				user_id: String(u.user_id ?? ''),
+				type_lien: u.type_lien ?? 'propriétaire',
+			}));
+		} else {
+			editOccupants = [{ user_id: '', type_lien: 'propriétaire' }];
+		}
+	}
+
+	function ajouterOccupant() {
+		editOccupants = [...editOccupants, { user_id: '', type_lien: 'locataire' }];
+	}
+
+	function supprimerOccupant(i: number) {
+		editOccupants = editOccupants.filter((_, idx) => idx !== i);
+	}
+
+	function cancelEdit() {
+		editId = null;
+	}
+
+	async function saveEdit() {
+		if (editId === null) return;
+		saving = true;
+		try {
+			const utilisateurs = editOccupants
+				.filter((o) => o.user_id)
+				.map((o) => ({ user_id: Number(o.user_id), type_lien: o.type_lien }));
+			await lotsApi.patchImport(editId, {
+				lot_id: editLot ? Number(editLot) : null,
+				utilisateurs,
+				notes_admin: editNotes || null,
+			});
+			toast('success', 'Liaisons mises à jour');
+			editId = null;
+			await reload();
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur');
+		} finally {
+			saving = false;
+		}
+	}
+
+	// ── Résolution / Ignorer ─────────────────────────────────────────────────
+	async function resoudre(id: number) {
+		if (!confirm('Créer/confirmer le lot et créer le lien copropriétaire ?')) return;
+		try {
+			await lotsApi.resoudreImport(id);
+			toast('success', 'Lot confirmé et lien copropriétaire créé');
+			await reload();
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur résolution');
+		}
+	}
+
+	async function ignorer(id: number) {
+		if (!confirm('Ignorer cet import ?')) return;
+		try {
+			await lotsApi.ignorerimport(id);
+			toast('info', 'Import ignoré');
+			await reload();
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur');
+		}
+	}
+
+	// ── Chargement ───────────────────────────────────────────────────────────
+	async function reload() {
+		[imports, stats] = await Promise.all([
+			lotsApi.listImports(filtre || undefined, tri),
+			lotsApi.statsImports(),
+		]);
+	}
+
+	onMount(async () => {
+		loading = true;
+		try {
+			//  ⚠️ `/copropriete/batiments` était appelé ici et son résultat JETÉ :
+			//  `batiments` n'était lu nulle part. Une requête à chaque ouverture de
+			//  l'onglet, pour rien — invisible, puisqu'elle réussissait.
+			[utilisateurs, lots] = await Promise.all([adminApi.utilisateurs(), lotsApi.tous()]);
+			await reload();
+		} catch {
+			toast('error', 'Erreur de chargement');
+		} finally {
+			loading = false;
+		}
+	});
+
+	// ── Helpers ──────────────────────────────────────────────────────────────
+	const statutBadge: Record<string, string> = {
+		en_attente: 'badge-orange',
+		utilisateur_lie: 'badge-purple',
+		lot_lie: 'badge-blue',
+		resolu: 'badge-green',
+		ignore: 'badge-gray',
+	};
+	const statutLabel: Record<string, string> = {
+		en_attente: 'En attente',
+		utilisateur_lie: 'Occupant lié',
+		lot_lie: 'Lot lié',
+		resolu: 'Résolu',
+		ignore: 'Ignoré',
+	};
+</script>
+
+<svelte:head><title>Import Lots — {_siteNom}</title></svelte:head>
+
+<BarreImport
+	tuiles={stats
+		? [
+				{ valeur: stats.total, libelle: 'Total' },
+				{ valeur: stats.en_attente, libelle: 'En attente', couleur: '#d97706' },
+				{ valeur: stats.utilisateur_lie ?? 0, libelle: 'Occupant lié', couleur: '#7c3aed' },
+				{ valeur: stats.lot_lie, libelle: 'Lot lié', couleur: '#2563eb' },
+				{ valeur: stats.resolu, libelle: 'Résolus', couleur: '#16a34a' },
+				{ valeur: stats.ignore, libelle: 'Ignorés', couleur: '#6b7280' },
+				{ valeur: stats.avec_user, libelle: 'Copro lié' },
+			]
+		: []}
+	colonnesAttendues="ID_BATIMENT | N° LOT | TYPE | ÉTAGE | N° PORTE | N° COPROPRIÉTAIRE | NOM COPROPRIÉTAIRE"
+	libelleRemplacer="Remplacer les imports non résolus"
+	enCours={uploading}
+	statuts={['', 'en_attente', 'utilisateur_lie', 'lot_lie', 'resolu', 'ignore']}
+	libellesStatuts={statutLabel}
+	bind:filtre
+	on:importer={(e) => uploadExcel(e.detail.fichier, e.detail.remplacer)}
+	on:filtrer={reload}
+>
+	<svelte:fragment slot="actions">
+		<button class="btn btn-outline btn-sm" on:click={autoMatch} disabled={autoMatching}>
+			{autoMatching ? 'Recherche…' : '\u{1F517} Auto-match'}
+		</button>
+		<button class="btn btn-outline btn-sm" on:click={autoResoudre} disabled={autoResolving}>
+			{autoResolving ? 'Résolution…' : '✅ Auto-résoudre copropriétaires'}
+		</button>
+	</svelte:fragment>
+</BarreImport>
+
+<!-- ── Table ─────────────────────────────────────────────────────────────── -->
+{#if loading}
+	<p class="muted">Chargement…</p>
+{:else if imports.length === 0}
+	<div class="empty-state card">
+		<h3>Aucun import</h3>
+		<p>Importez un fichier .xlsx pour démarrer.</p>
+	</div>
+{:else}
+	<div class="card" style="overflow:auto">
+		<table class="table imp-table-dense">
+			<thead>
+				<tr>
+					<th>Nom copropriétaire</th><th>N° Copro</th>
+					<th>Bât.</th><th>N° Lot</th><th>Type</th><th>Étage</th>
+					<th>Lot lié</th><th>Occupants liés</th>
+					<th>Statut</th><th>Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each imports as imp (imp.id)}
+					<tr
+						class:imp-row-resolu={imp.statut === 'resolu'}
+						class:imp-row-ignore={imp.statut === 'ignore'}
+					>
+						<td style="font-weight:600">{imp.nom_coproprietaire ?? '—'}</td>
+						<td style="font-size:.8rem;color:var(--color-text-muted)"
+							>{imp.no_coproprietaire ?? '—'}</td
+						>
+						<td style="font-size:.8rem;font-weight:600">{imp.batiment_nom ?? imp.batiment_id}</td>
+						<td style="font-weight:500">{imp.numero}</td>
+						<td><span class="badge badge-type">{imp.type_raw}</span></td>
+						<td style="font-size:.8rem;color:var(--color-text-muted)">{imp.etage_raw ?? '—'}</td>
+						<td style="font-size:.8rem;color:var(--color-text-muted)">{imp.lot_label ?? '—'}</td>
+						<td style="font-size:.8rem">
+							{#if imp.utilisateurs?.length}
+								<div class="occupants-list">
+									{#each imp.utilisateurs as occ (occ.user_id ?? occ.type_lien)}
+										<div class="occupant-tag">
+											<span
+												class="occ-role"
+												style="color:{TYPE_LIEN_BADGE[occ.type_lien] ?? '#6b7280'}"
+												>{TYPE_LIEN_LABEL[occ.type_lien] ?? occ.type_lien}</span
+											>
+											{#if occ.utilisateur}
+												<span style="color:#16a34a">{nomAffiche(occ.utilisateur)}</span>
+											{:else}
+												<span style="color:#d97706">Non lié</span>
+											{/if}
+										</div>
+									{/each}
+								</div>
+							{:else if imp.nom_coproprietaire}
+								<span style="color:#d97706">Non lié</span>
+							{:else}—{/if}
+						</td>
+						<td
+							><span class="badge {statutBadge[imp.statut] ?? 'badge-gray'}"
+								>{statutLabel[imp.statut] ?? imp.statut}</span
+							></td
+						>
+						<td>
+							{#if imp.statut !== 'resolu' && imp.statut !== 'ignore'}
+								<div class="action-row">
+									<button
+										class="btn-icon-edit"
+										aria-label="Modifier"
+										title="Modifier"
+										on:click={() => openEdit(imp)}>✏️</button
+									>
+									{#if imp.utilisateurs?.length > 0}
+										<button class="btn btn-sm btn-primary" on:click={() => resoudre(imp.id)}
+											>✓ Valider</button
+										>
+									{/if}
+									<button
+										class="btn-icon-warn"
+										aria-label="Ignorer cet import"
+										title="Ignorer"
+										on:click={() => ignorer(imp.id)}>⊘</button
+									>
+								</div>
+							{:else if imp.statut === 'resolu'}
+								<div class="action-row">
+									<span class="badge badge-green" style="font-size:.75rem">✓ Lot #{imp.lot_id}</span
+									>
+									<button
+										class="btn-icon-edit"
+										aria-label="Lier un occupant"
+										title="Lier un occupant"
+										on:click={() => openEdit(imp)}>✏️</button
+									>
+								</div>
+							{/if}
+						</td>
+					</tr>
+
+					<!-- Formulaire d'édition inline -->
+					{#if editId === imp.id}
+						<tr class="imp-edit-row">
+							<td colspan="10">
+								<div class="imp-edit-form card" style="margin:.5rem 0">
+									<h3 style="font-size:.9rem;font-weight:700;margin-bottom:.75rem">
+										Lier : <em
+											>{imp.nom_coproprietaire ?? '—'} — Bât. {imp.batiment_nom ?? imp.batiment_id} n°{imp.numero}
+											({imp.type_raw})</em
+										>
+									</h3>
+									<!-- Lot en base -->
+									<div class="field" style="margin-bottom:.75rem">
+										<label for="imp-lot-{imp.id}">Lot en base</label>
+										<select id="imp-lot-{imp.id}" bind:value={editLot}>
+											<option value="">— Non lié —</option>
+											{#each lots as l (l.id)}
+												<option value={String(l.id)}
+													>{l.batiment_nom ?? `Bât.${l.batiment_id}`} — {l.numero} ({l.type})</option
+												>
+											{/each}
+										</select>
+									</div>
+									<!-- Occupants -->
+									<div class="occupants-editor">
+										<div class="occupants-header">
+											<span style="font-size:.85rem;font-weight:600">Occupants du lot</span>
+											<button
+												type="button"
+												class="btn btn-sm btn-outline"
+												on:click={ajouterOccupant}>+ Ajouter</button
+											>
+										</div>
+										{#each editOccupants as occ, i (occ)}
+											<div class="occupant-row">
+												<select bind:value={occ.type_lien} class="select-role">
+													{#each TYPES_LIEN as tl (tl.value)}
+														<option value={tl.value}>{tl.label}</option>
+													{/each}
+												</select>
+												<select bind:value={occ.user_id} class="select-user">
+													<option value="">— Non lié —</option>
+													{#each utilisateurs as u (u.id)}
+														<option value={String(u.id)}>{nomAffiche(u)} ({u.email})</option>
+													{/each}
+												</select>
+												<button
+													type="button"
+													class="btn-icon-danger"
+													aria-label="Retirer cet occupant"
+													title="Retirer"
+													on:click={() => supprimerOccupant(i)}>&#x1F5D1;️</button
+												>
+											</div>
+										{/each}
+									</div>
+									<!-- Notes -->
+									<div class="field" style="margin-top:.75rem">
+										<label for="imp-notes-{imp.id}">Notes admin</label>
+										<input
+											id="imp-notes-{imp.id}"
+											type="text"
+											bind:value={editNotes}
+											placeholder="Note interne…"
+										/>
+									</div>
+									<PiedFormulaire
+										enCours={saving}
+										soumission={false}
+										on:annule={cancelEdit}
+										on:enregistre={saveEdit}
+									/>
+								</div>
+							</td>
+						</tr>
+					{/if}
+				{/each}
+			</tbody>
+		</table>
+	</div>
+{/if}
+
+<style>
+	.badge-type {
+		background: #f0f4ff;
+		color: #1e40af;
+		font-size: 0.75rem;
+		padding: 0.1rem 0.4rem;
+		border-radius: 4px;
+		font-weight: 600;
+	}
+
+	.occupants-editor {
+		border: 1px solid var(--color-border, #e5e7eb);
+		border-radius: 6px;
+		padding: 0.5rem 0.75rem;
+		margin-bottom: 0.25rem;
+	}
+	.occupants-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+	}
+	.occupant-row {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		margin-bottom: 0.4rem;
+	}
+	.select-role {
+		min-width: 180px;
+		flex-shrink: 0;
+	}
+	.select-user {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.occupants-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+	.occupant-tag {
+		display: flex;
+		gap: 0.35rem;
+		align-items: baseline;
+		font-size: 0.8rem;
+	}
+	.occ-role {
+		font-weight: 600;
+		font-size: 0.72rem;
+	}
+
+	@media (max-width: 600px) {
+		.occupant-row {
+			flex-wrap: wrap;
+		}
+		.select-role {
+			min-width: 140px;
+		}
+	}
+</style>

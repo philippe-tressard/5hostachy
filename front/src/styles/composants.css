@@ -1,0 +1,1355 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   5Hostachy — Les COMPOSANTS communs : carte, boutons, formulaires, badges, tableau,
+alertes, etat vide, filtres, cases a cocher, modales.
+
+   ⚠️ Fragment d'`app.css`, decoupe le 27/08/2026 (#453). Ce fichier faisait
+   1 223 lignes — 1 961 une fois reformate — et le garde-fou de modularite
+   (rang 1) refuse qu'il grossisse.
+
+   🔴 L'ORDRE EST LA CASCADE. `app.css` importe les quatre fragments dans
+   l'ordre exact ou leurs regles se trouvaient : le bundle produit est
+   identique, et ce decoupage ne peut donc pas changer un rendu. Reordonner
+   les `@import`, si.
+
+   ⚠️ Ce fichier vient APRES le socle et AVANT les normes : l'ordre est la
+cascade. Le deplacer changerait le rendu sans changer une regle.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Card ── */
+.card {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	padding: 1.25rem;
+	box-shadow: var(--shadow-sm);
+}
+
+/* ── Buttons ── */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.5rem 1rem;
+	border-radius: var(--radius);
+	border: none;
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition:
+		opacity 0.15s,
+		background 0.15s;
+	text-decoration: none;
+}
+
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn-primary {
+	background: var(--color-primary);
+	color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+	background: var(--color-primary-dark);
+}
+
+.btn-danger {
+	background: var(--color-danger);
+	color: #fff;
+}
+.btn-outline {
+	background: transparent;
+	border: 1px solid var(--color-border);
+	color: var(--color-text);
+}
+.btn-outline:hover:not(:disabled) {
+	background: var(--color-bg);
+}
+
+.btn-sm {
+	padding: 0.25rem 0.6rem;
+	font-size: 0.875rem;
+}
+
+/*  ── Le champ de saisie COMPACT — une ligne de liste, pas un formulaire ─────
+    Un motif de refus, un filtre au-dessus d'un tableau : une saisie qui vit
+    DANS une rangée, à côté de boutons `.btn-sm`, et non dans un `.field`.
+
+    🔴 Montée ici le 07/09/2026 : elle vivait dans `/admin`, et le geste
+    « accepter · refuser avec motif » en est parti pour devenir
+    `AccepterRefuser.svelte`. La page l'emploie encore trois fois. La recopier
+    dans le composant aurait donné deux sources pour une même règle, qui
+    divergent au premier ajustement — c'est le remède déjà appliqué à
+    `.header-summary`. */
+.input-sm {
+	padding: 0.3rem 0.5rem;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	font-size: 0.85rem;
+	min-width: 160px;
+}
+
+/*  Le cran en dessous de `.btn-sm` — un bouton d'appoint DANS un champ ou une
+    ligne de liste (« ✕ Changer », « ✕ Dissocier »).
+
+    Définie localement dans `mon-lot` jusqu'au 01/09/2026, et devenue nue le jour
+    où le formulaire de bail est parti dans son composant : le style était resté
+    dans la page, le balisage l'avait quittée. C'est la régression des pastilles
+    (v2.67.11), et le remède est celui de `.form-grid` — la notion est partagée,
+    elle vit ici. */
+.btn-xs {
+	padding: 0.15rem 0.4rem;
+	font-size: 0.75rem;
+}
+
+/* Boutons icône (modifier · supprimer · action) */
+.btn-icon,
+.btn-icon-edit,
+.btn-icon-danger {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 0.9rem;
+	padding: 0.25rem;
+	border-radius: var(--radius);
+	color: var(--color-text-muted);
+	line-height: 1;
+}
+.btn-icon:hover,
+.btn-icon-edit:hover {
+	background: var(--color-bg-hover, #f3f4f6);
+	color: var(--color-text);
+}
+.btn-icon-danger:hover {
+	color: var(--color-danger);
+	background: #fee2e2;
+}
+
+/* ── L'icône ACTIVE : le mode en cours ───────────────────────────────────
+   Signalé le 18/08/2026 : un titre de formulaire au-dessus du contenu faisait
+   « un pseudo état qui éloigne du titre ». Le mode se lit désormais LÀ OÙ ON
+   A CLIQUÉ — l'icône s'inverse et grossit légèrement.
+
+   `aria-pressed` et non une classe : l'état est annoncé par les lecteurs
+   d'écran en même temps qu'il se voit, et aucun écran n'a de classe de plus à
+   penser. Un bouton bascule DOIT le porter de toute façon.
+
+   ⚠️ Le fond est plein : un simple changement de teinte ne se distingue pas
+   du survol, et l'on ne saurait plus si l'icône est active ou seulement
+   pointée. */
+.btn-icon[aria-pressed='true'],
+.btn-icon-edit[aria-pressed='true'] {
+	background: var(--color-primary);
+	color: #fff;
+	transform: scale(1.15);
+}
+.btn-icon[aria-pressed='true']:hover,
+.btn-icon-edit[aria-pressed='true']:hover {
+	background: var(--color-primary-dark, var(--color-primary));
+	color: #fff;
+}
+
+/* ── Chevron d'ouverture ─────────────────────────────────────────────────
+   « cette ligne se déplie » est UN geste d'interface ; il était pourtant
+   redéclaré dans 8 fichiers, qui avaient divergé sur la durée de transition,
+   la graisse et la couleur (#317). Base commune ici, dans la variante
+   majoritaire (5 des 8).
+
+   Les composants qui s'en écartent VRAIMENT gardent leur seule différence en
+   local : Svelte scope ses styles avec une classe supplémentaire, donc une
+   règle locale l'emporte toujours sur celle-ci — c'est prévisible, et c'est
+   ce qui rend ce découpage sûr. */
+.chevron {
+	font-size: 1.1rem;
+	color: var(--color-text-muted);
+	transition: transform 0.15s;
+	display: inline-block;
+	line-height: 1;
+}
+.chevron.open {
+	transform: rotate(90deg);
+}
+.btn-icon-warn {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 0.9rem;
+	padding: 0.25rem;
+	border-radius: var(--radius);
+	color: #d97706;
+	line-height: 1;
+}
+.btn-icon-warn:hover {
+	background: #fef3c7;
+}
+.btn-icon-success {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 0.9rem;
+	padding: 0.25rem;
+	border-radius: var(--radius);
+	color: var(--color-success);
+	line-height: 1;
+}
+.btn-icon-success:hover {
+	background: #e6f4ee;
+}
+
+/* ── Indicateur d'attente ────────────────────────────────────────────────
+   « une action est en cours » est UN geste d'interface. Il n'existait qu'en un
+   exemplaire (`ImageUpload`) ; le deuxième usage — le bouton du changement de
+   mot de passe — le fait passer le seuil de mutualisation (`standards/02` §1),
+   d'où cette base commune plutôt qu'une seconde copie.
+
+   Elle est neutre exprès : dimensionnée en `em` et teintée par `currentColor`,
+   donc lisible dans un bouton comme sur un aplat sombre. Un composant qui s'en
+   écarte VRAIMENT ne garde en local que sa différence — même mécanique que
+   `.chevron` ci-dessus, et c'est ce qui rend le découpage sûr. */
+.spinner {
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	border: 2px solid currentColor;
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: spin 0.7s linear infinite;
+	flex-shrink: 0;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Une rotation perpétuelle est exactement ce que ce réglage vise ; on la
+   ralentit au lieu de la couper — l'attente doit rester signalée. */
+@media (prefers-reduced-motion: reduce) {
+	.spinner {
+		animation-duration: 2.5s;
+	}
+}
+
+/* ── L'infobulle d'un bouton icône : c'est celle du NAVIGATEUR ──────────────
+   🔴 Le projet en avait une, en CSS, lue depuis `title` puis `data-info`. Elle a
+   été SUPPRIMÉE le 07/09/2026, sur arbitrage à l'écran : *« la bulle sombre est
+   inutile, la claire est plus pertinente »* — la claire étant la bulle native du
+   navigateur, que `title` déclenche.
+
+   Ce qui la condamnait, signalé le même jour : elle s'affichait SOUS l'icône,
+   c'est-à-dire exactement là où arrive la flèche du pointeur, qui la masquait.
+   On ne pouvait donc jamais la lire.
+
+   ⚠️ La corriger était possible — l'ancrer au-dessus tenait en une ligne. C'est
+   la comparaison des deux à l'écran qui a tranché autrement, et c'est un
+   meilleur argument : la native se place seule, ne déborde jamais de la fenêtre,
+   et reste lisible quand la souris ne bouge plus. Trois choses qu'une bulle
+   maison ne fait bien qu'au prix de JavaScript.
+
+   ⚠️ Ce que la native ne fait PAS, et qu'il faut savoir : elle n'apparaît ni au
+   CLAVIER ni au TACTILE. C'est pourquoi `aria-label` est obligatoire sur tout
+   bouton icône — il porte le nom, la bulle ne porte que le confort.
+   🔒 `npm run lint:infobulles` le vérifie ; 31 boutons ne l'avaient pas.
+
+   Il n'y a donc PLUS de règle d'infobulle ici. Ne pas en réécrire une sans
+   rouvrir l'arbitrage : ce vide est une décision. */
+
+/* ── Badges ── */
+.badge {
+	display: inline-block;
+	padding: 0.15rem 0.5rem;
+	border-radius: 9999px;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.badge-blue {
+	background: var(--color-primary-light);
+	color: var(--color-primary);
+}
+.badge-green {
+	background: #e6f4ee;
+	color: #2e7d52;
+}
+.badge-orange {
+	background: #fdf3e0;
+	color: #b07d1e;
+}
+.badge-red {
+	background: #fdedec;
+	color: #c0392b;
+}
+.badge-gray {
+	background: #eaedf1;
+	color: var(--color-text-muted);
+}
+/*  Le jeu comptait six couleurs et le code en demandait une SEPTIÈME : douze
+    emplois de `.badge-yellow` — statut de bail « en cours de sortie », message
+    non lu — pour une classe définie nulle part. Le badge se rendait donc en gris
+    de base, et l’état « en cours » était indistinguable de « inactif ».
+    Valeurs prises dans la même échelle que `.badge-orange` (#495). */
+.badge-yellow {
+	background: #fef9e7;
+	color: #a16207;
+}
+
+/* ── Intitulé d'une section dans une page ──
+   Écrit NEUF fois localement, avec neuf valeurs, et employé dans CINQ fichiers
+   de plus qui n'en portaient aucune : ceux-là rendaient donc leurs intitulés en
+   texte courant, sans repère de structure (#495).
+
+   Les valeurs sont celles de la forme majoritaire — petites capitales, gris de
+   structure — qui est aussi celle de `SectionFormulaire` : un intitulé de
+   section se lit comme un repère, il ne concurrence pas ce qu’il nomme.
+
+   ⚠️ Les neuf définitions locales ne sont PAS retirées ici : elles gagnent (un
+   style scopé est plus spécifique), donc rien ne change là où le style existait
+   déjà, et ce lot ne fait que combler les cinq trous. Les unifier est un
+   arbitrage — trois d’entre elles portent une AUTRE notion, un vrai titre en
+   1rem, qui mérite son propre nom. Suivi en #495. */
+/* ── L’en-tête d’une section : son titre à gauche, ses actions à droite ──
+   🔴 Écrite TROIS fois, à l’identique, dans `SectionDocuments`, `acces-securite`
+   et `residence` — l’ordre des propriétés variait, le résultat non. Un quatrième
+   écran l’a employée le 06/09/2026 (#805) et l’aurait rendue NUE : c’est
+   `lint:classes-nues` qui l’a dit, et c’est le moment où une copie devient une
+   règle.
+
+   ⚠️ Elle vient juste au-dessus de `.section-title`, qui était déjà globale :
+   les deux vont ensemble, et les séparer aurait laissé la moitié d’une notion
+   dans chaque camp. */
+.section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 0.75rem;
+}
+
+.section-title {
+	font-size: 0.8rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--color-text-muted);
+	margin-bottom: 0.75rem;
+}
+
+/* ── Écrans d’authentification ──
+   Connexion, inscription et mot de passe oublié les définissaient chacun de son
+   côté ; `verifier-email` les employait sans aucune définition, et s’affichait
+   donc sans carte, sans centrage et sans logo (#495). */
+.auth-page {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--color-bg);
+	padding: 1rem;
+}
+.auth-card {
+	width: 100%;
+	max-width: 400px;
+	padding: 2rem;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+}
+.auth-header {
+	text-align: center;
+	margin-bottom: 1.5rem;
+}
+.auth-logo {
+	font-size: 2.5rem;
+	display: block;
+	margin-bottom: 0.5rem;
+}
+
+/* ── Six notions partagées, définies dans UN fichier et employées dans PLUSIEURS ──
+
+   Chacune était écrite chez un appelant, et un autre s’en servait sans l’avoir :
+   Svelte scope au fichier, donc ces éléments-là se rendaient nus. Elles montent
+   ici plutôt que d’être recopiées — recopier aurait fabriqué la divergence que
+   ce dépôt passe sa journée à supprimer (#495).
+
+   ⚠️ Les définitions locales existantes ne sont PAS retirées : un style scopé est
+   plus spécifique, il continue de gagner. Ce lot ne fait que combler les trous,
+   sans rien changer là où l’écran était déjà juste. Les unifier viendra après,
+   écran par écran, parce que les valeurs divergent (une boîte de dialogue fait
+   420 px ici et 560 px là — c’est une décision, pas une correction). */
+
+/*  Une rangée de pastilles de périmètre. Employée par `PerimetrePicker`, l’espace
+    CS, la résidence et l’annonce de hall — celle-ci ne l’avait pas. */
+.perimetre-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+
+/*  Boîte de dialogue. `espace-cs` l’employait sans aucune définition : sa modale
+    s’affichait sans fond ni cadre, à même la page assombrie. */
+.modal-box {
+	background: var(--color-surface);
+	border-radius: var(--radius);
+	padding: 1.25rem;
+	max-width: 560px;
+	width: 92%;
+	max-height: 88vh;
+	overflow-y: auto;
+}
+/*  🔴 `.modal-actions` RETIRÉE le 30/08/2026, signalée à l'écran : *« annuler est
+    à gauche du bouton d'enregistrer, pas complètement à droite »*.
+
+    Elle alignait en `space-between` — Annuler rejeté au bord gauche de la boîte,
+    Enregistrer au bord droit — au motif d'« une boîte à DEUX gestes opposés
+    (annuler ↔ supprimer) ». Ses TROIS emplois étaient des couples
+    Annuler / Enregistrer : le cas qu'elle décrivait n'existait nulle part.
+
+    Une classe posée pour un cas qui ne se présente pas finit par servir au cas
+    d'à côté, et c'est ce qui est arrivé aux trois. Elles emploient désormais
+    `.form-actions` — Annuler juste à gauche de l'action primaire, les deux
+    groupés à droite, comme sur tous les formulaires du site (`ux-patterns` §9
+    quinquies). La classe part avec elles : la garder inviterait la quatrième. */
+
+/*  Un événement urgent, marqué par un filet rouge à gauche. Défini par
+    `CarteEvenement`, employé aussi par la page du calendrier. */
+.event-urgent {
+	border-left: 3px solid var(--color-danger);
+}
+
+/* ── Le tableau kanban ────────────────────────────────────────────────────────
+
+   Deux écrans en rendent un — le calendrier (6 colonnes) et les prestations
+   (4 colonnes). Seul `.kanban` vivait ici ; les ONZE autres classes étaient
+   écrites DEUX FOIS, une copie dans chaque page.
+
+   🔴 Sept des dix avaient DIVERGÉ (#453, 28/08/2026), toutes par des micro-écarts
+   qu'aucune décision n'explique : 230 px contre 220, .78rem contre .75, `flex-end`
+   contre `center`, `.2rem` contre `.3rem`. Deux kanbans du même site ne se
+   rendaient donc pas pareil, et personne ne pouvait le voir — les deux écrans ne
+   se regardent jamais côte à côte.
+
+   ⚠️ `.devis-card-prest` et `.kanban-card-prest` étaient la MÊME règle sous deux
+   noms. Un second nom pour une notion existante est une divergence en attente :
+   il n'y a plus qu'un nom.
+
+   Arbitrage, quand les deux valeurs différaient — dans l'ordre : la contrainte la
+   plus forte gagne (le calendrier a plus de colonnes), le superset gagne quand
+   l'écart est un ajout, et la plus lisible gagne sur le titre, qui est l'élément
+   principal de la carte.
+
+   Ce qui reste LOCAL, à raison : la barre d'outils et l'exercice du calendrier,
+   ses cartes dépliables et son glisser-déposer ; les boutons d'étape et la méta
+   d'un devis. Ce sont des gestes propres à chaque écran, pas la grille commune. */
+.kanban {
+	display: flex;
+	gap: 0.6rem;
+	align-items: flex-start;
+	margin-bottom: 1.5rem;
+	overflow-x: auto;
+	padding-bottom: 0.5rem;
+}
+.kanban-col {
+	min-width: 220px;
+	flex: 1;
+	border-radius: var(--radius);
+	background: var(--color-bg);
+	border: 1px solid var(--color-border);
+	overflow: hidden;
+}
+/*  Une colonne pleine largeur sous 900 px : empilées, elles se lisent ; côte à
+    côte, elles imposent un défilement horizontal sur un téléphone. */
+@media (max-width: 900px) {
+	.kanban {
+		flex-direction: column;
+	}
+	.kanban-col {
+		min-width: 100%;
+	}
+}
+.kanban-col-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.6rem 0.9rem;
+	border-top: 3px solid;
+	font-weight: 600;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.kanban-count {
+	background: var(--color-border);
+	border-radius: 999px;
+	padding: 0.1rem 0.45rem;
+	font-size: 0.72rem;
+	font-weight: 700;
+}
+.kanban-count-total {
+	font-size: 0.8rem;
+	color: var(--color-text-muted);
+}
+.kanban-empty {
+	padding: 1rem;
+	font-size: 0.85rem;
+	color: var(--color-text-muted);
+	text-align: center;
+}
+/*  `opacity` dans la transition sert le glisser-déposer du calendrier ; elle est
+    sans effet là où rien ne se glisse — d'où le superset plutôt qu'une variante. */
+.kanban-card {
+	margin: 0.3rem;
+	padding: 0.4rem 0.55rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	cursor: pointer;
+	transition:
+		box-shadow 0.15s,
+		opacity 0.15s;
+}
+.kanban-card:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+/*  `min-height` réserve la place de la rangée de tags : sans elle, deux cartes
+    voisines dont l'une n'a aucun tag ne s'alignent pas. */
+.kanban-card-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-bottom: 0.15rem;
+	min-height: 0.1rem;
+}
+.kb-tag {
+	font-size: 0.65rem;
+	font-weight: 600;
+	padding: 0.1rem 0.4rem;
+	border-radius: 3px;
+	color: #fff;
+	line-height: 1.4;
+}
+.kanban-card-prest {
+	font-size: 0.68rem;
+	color: var(--color-text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.kanban-card-titre {
+	font-size: 0.78rem;
+	line-height: 1.3;
+}
+.kanban-card-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-end;
+	margin-top: 0.25rem;
+	gap: 0.3rem;
+}
+.kanban-card-actions {
+	display: flex;
+	gap: 0.3rem;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+/*  Le geste discret « signaler » au fil d’une carte. Défini par les sondages,
+    employé aussi par la carte d’annonce. */
+.signaler-inline {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 0.78rem;
+	color: var(--color-text-muted);
+	opacity: 0.7;
+	padding: 0 0 0 0.5rem;
+}
+.signaler-inline:hover {
+	opacity: 1;
+	color: var(--color-danger);
+}
+.badge-purple {
+	background: #f3e8ff;
+	color: #6b21a8;
+}
+/* Pastille de type du fil d'activité. Ici et pas dans un composant : elle est
+   portée à la fois par les cartes du fil (FluxCard) et par le bandeau des
+   urgences du tableau de bord — deux composants, donc deux portées Svelte
+   distinctes, pour une seule et même pastille. */
+.flux-type-chip {
+	font-size: 0.65rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 0.12rem 0.5rem;
+	border-radius: 1rem;
+}
+
+/* ── Table ── */
+.table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.875rem;
+}
+.table th {
+	padding: 0.5rem 0.75rem;
+	text-align: left;
+	background: var(--color-bg);
+	border-bottom: 1px solid var(--color-border);
+	font-weight: 600;
+	color: var(--color-text-muted);
+	text-transform: uppercase;
+	font-size: 0.75rem;
+}
+.table td {
+	padding: 0.75rem;
+	border-bottom: 1px solid var(--color-border);
+}
+.table tbody tr:hover {
+	background: var(--color-bg);
+}
+
+/* ── Alerts ── */
+.alert {
+	padding: 0.75rem 1rem;
+	border-radius: var(--radius);
+	margin-bottom: 1rem;
+	font-size: 0.875rem;
+}
+.alert-error {
+	background: #fdedec;
+	color: #c0392b;
+	border: 1px solid #e8a99d;
+}
+.alert-success {
+	background: #e6f4ee;
+	color: #2e7d52;
+	border: 1px solid #9dcfb3;
+}
+.alert-warning {
+	background: #fdf3e0;
+	color: #b07d1e;
+	border: 1px solid #e8c87a;
+}
+.alert-info {
+	background: var(--color-primary-light);
+	color: var(--color-primary-dark);
+	border: 1px solid #9bb3cc;
+}
+
+/* ── Empty state ── */
+.empty-state {
+	text-align: center;
+	padding: 3rem 1rem;
+	color: var(--color-text-muted);
+}
+.empty-state h3 {
+	font-size: 1rem;
+	margin-bottom: 0.5rem;
+	color: var(--color-text);
+}
+
+/* ── Barre de filtres ──
+   Remontée ici le 18/08/2026 en découpant l'onglet Annonces : le composant
+   extrait perdait les styles de sa page — un style laissé chez le parent
+   n'atteint pas le balisage d'un enfant (v2.67.11). Le recopier dans le
+   composant aurait fait une CINQUIÈME définition de `.filters`.
+
+   ✅ Les trois variantes locales (tickets, calendrier, prestataires) ont
+   convergé ici le 19/08/2026, avec les deux styles en ligne — #446. Ce qui
+   divergeait est désormais soit la norme, soit une variante NOMMÉE. */
+/*  La MARGE BASSE fait partie de la barre, et c'est le relevé qui l'a tranché :
+    quatre usages sur six la posaient — deux par une règle locale (tickets,
+    calendrier), deux par un style EN LIGNE (`OngletAnnonces`, `sondages`), et
+    prestataires par une valeur voisine. Aucun n'en voulait zéro. Une barre de
+    filtres est toujours suivie de la liste qu'elle filtre : laisser l'appelant
+    poser l'écart, c'est le lui faire réinventer six fois (#446).
+
+    `align-items: center` vient de tickets, seule page à l'avoir. Il n'y change
+    rien tant que les contrôles ont la même hauteur — et il est juste dès qu'un
+    seul est plus haut, ce qui arrive au premier bouton icône ajouté. */
+.filters {
+	display: flex;
+	gap: 0.4rem;
+	flex-wrap: wrap;
+	align-items: center;
+	margin-bottom: 1.25rem;
+}
+
+/* ── Case à cocher ──
+   Une case et son libellé sur une ligne, cliquables ensemble.
+
+   Définie CINQ fois localement jusqu'au 19/08/2026 — annonce, annonce de hall,
+   événement, prestation, sondage — et `.case input[type="checkbox"]` cinq fois
+   au caractère près. Même défaut que `.filters` avant #446, invisible pour la
+   même raison : les copies étaient d'accord entre elles (#397).
+
+   `font-size: .875rem` était présent dans TROIS des cinq. C'est la taille de
+   `.field label` : un libellé de case est un libellé de champ, il n'y a pas de
+   raison qu'il soit plus grand. Les deux qui ne le posaient pas héritaient donc
+   de leur contexte, sans que personne l'ait décidé.
+
+   Les variantes restent NOMMÉES et locales : `.case + .case` (espacement d'une
+   pile de cases, événement), `.case-secondaire` (case d'option sous un champ,
+   sondage). Ce qui diffère se lit dans le balisage. */
+.case {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+}
+.case input[type='checkbox'] {
+	width: auto;
+	margin: 0;
+	flex-shrink: 0;
+}
+
+/*  Variante NOMMÉE — une seule ligne qui défile, au lieu de passer à la ligne.
+    Prestataires la porte sur ses deux barres : elles ont assez de filtres pour
+    occuper trois lignes sur un téléphone, et pousser la liste hors de l'écran.
+
+    ⚠️ Ce n'est PAS le comportement par défaut, et c'est délibéré : un défilement
+    horizontal masque des filtres sans le dire, là où `flex-wrap: wrap` les montre
+    tous. La variante s'écrit donc là où on l'a voulue, elle ne s'hérite pas. */
+.filters--defilante {
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	padding-bottom: 0.25rem;
+	scrollbar-width: thin;
+}
+.filters--defilante > * {
+	flex-shrink: 0;
+}
+/*  ── Rangée à HAUTEURS ÉGALES ──
+    Arbitré à l'écran le 30/08/2026 : *« mets la hauteur des vignettes à la même
+    hauteur même si le sous-texte n'est que sur une seule ligne »*.
+
+    Une rangée de pastilles à sous-texte mélange des descriptions d'une et de deux
+    lignes : « Bruit, odeur, parking… » contre « Équipement défectueux, ascenseur,
+    chauffage… ». Avec l'`align-items: center` du défaut, les pastilles courtes
+    flottent au milieu de la rangée et l'œil ne trouve plus de ligne de base — ce
+    ne sont plus des voisines, ce sont des blocs posés au hasard.
+
+    ⚠️ Variante NOMMÉE, comme `--defilante` : elle ne s'hérite pas. Une rangée de
+    pastilles SANS sous-texte a déjà des hauteurs égales — l'étirement n'y
+    changerait rien, mais l'écrire partout ferait croire qu'il y sert. */
+.filters--egalisee {
+	align-items: stretch;
+}
+/*  ── Rangée en GRILLE — pour un choix qu'on doit embrasser d'un coup d'œil ──
+    Arbitré à l'écran le 07/09/2026 : *« la lisibilité globale des vignettes en
+    une seule fois est importante pour sélectionner la bonne catégorie — tri,
+    vignette moins large, maxi deux lignes »*.
+
+    🔴 Pourquoi le `flex-wrap` ne suffisait pas. Chaque pastille y prend la
+    largeur de SON texte, bornée par `max-width` : les huit catégories de ticket
+    donnaient donc des vignettes de largeurs inégales, et le nombre par ligne
+    dépendait de la longueur des phrases — « Bug » à côté de « Dégât des eaux,
+    incendie, vandalisme ». Deux lignes n'étaient pas garanties, seulement
+    probables.
+
+    En grille, `auto-fit` + `minmax` garantit des colonnes ÉGALES qui remplissent
+    la largeur : autant de colonnes que la place le permet, jamais moins de
+    `8.5rem`. Huit entrées tiennent en deux lignes de quatre sur un formulaire
+    ordinaire, en deux lignes de trois sur une tablette, et en deux colonnes sur
+    téléphone.
+
+    ⚠️ Elle REMPLACE `--defilante`, elle ne s'y ajoute pas : une grille qui
+    déborde horizontalement n'aurait aucun sens. `ChoixPastilles` refuse la
+    combinaison.
+
+    ⚠️ `align-items: stretch` est repris ici : une grille dont les cellules ne
+    s'étirent pas laisse des vignettes plus courtes que leurs voisines, ce que
+    `--egalisee` corrige déjà pour le mode flex. */
+.filters--grille {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+	align-items: stretch;
+}
+/*  La borne de largeur d'une pastille n'a plus de sens dans une grille : c'est
+    la colonne qui la fixe, et la laisser produirait des vignettes plus étroites
+    que leur cellule, donc un vide à droite de chacune. */
+.filters--grille > * {
+	/*  La borne de largeur d'une pastille n'a plus de sens dans une grille : c'est
+	    la colonne qui la fixe, et la laisser produirait des vignettes plus étroites
+	    que leur cellule, donc un vide à droite de chacune. */
+	max-width: none;
+	width: 100%;
+	/*  La cellule est remplie en hauteur comme en largeur. Les hauteurs sont
+	    alors égales AU SEIN D'UNE LIGNE — pas entre lignes, et c'est voulu : une
+	    seconde ligne de vignettes courtes n'a pas à porter le vide de la
+	    première.
+
+	    ⚠️ J'avais d'abord lu ces deux hauteurs comme un défaut, en comparant des
+	    vignettes de LIGNES DIFFÉRENTES. Mesuré au navigateur, ligne par ligne
+	    (900 px : 5 + 3 vignettes, 76 px partout · 700 px : 6 + 2, 70 puis 47 px).
+	    Une mesure globale sur une grille ne dit rien — c'est la ligne qui est
+	    l'unité. */
+	height: 100%;
+	align-self: stretch;
+}
+.filter-select {
+	padding: 0.35rem 0.5rem;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	font-size: 0.85rem;
+	background: var(--color-bg);
+}
+
+/* ── Modals (global) ── */
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: rgba(0, 0, 0, 0.45);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 200;
+	padding: 1rem;
+	animation: fadeIn 0.15s ease;
+}
+.modal {
+	background: var(--color-surface);
+	border-radius: var(--radius);
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+	max-width: 600px;
+	width: 100%;
+	max-height: 90vh;
+	overflow-y: auto;
+	animation: slideUp 0.2s ease;
+}
+.modal-sm {
+	max-width: 420px;
+}
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.25rem;
+	border-bottom: 1px solid var(--color-border);
+}
+/*  ── Le titre d'une modale ──
+    UNE règle, parce qu'il y en avait TROIS le 29/08/2026, pour le même objet :
+
+      .modal-header h2                     1.10rem   (ici, la seule partagée)
+      .modal-header h3                     1.05rem   recopiée dans 3 fichiers
+      <h2 style="font-size:1rem;…">        1.00rem   en ligne, 8 fois, 2 marges
+
+    Aucune n'était une décision : les deux dernières sont des copies qui ont
+    dérivé. Le niveau retenu est `h2` — `h1` est le titre de PAGE (`EntetePage`),
+    et c'est le seul des trois que cette feuille stylait déjà.
+
+    La graisse est `600`, celle des quatorze titres les plus nombreux (`h3`) —
+    les onze autres héritaient du `700` par défaut du navigateur, jamais choisi.
+
+    Rendu par `Modale.svelte` et par lui seul : un écran qui réécrit son titre
+    en rouvre une quatrième. */
+.modal-titre {
+	font-size: 1.1rem;
+	font-weight: 600;
+	margin: 0;
+}
+/*  Le padding appartient à la BOÎTE dans `.modal-box`, à l'en-tête et au corps
+    dans `.modal`. L'en-tête s'adapte ici, en une règle, plutôt que dans les
+    dix écrans qui emploient la première — sans quoi sa bordure serait rentrée
+    de 1,25 rem et son padding compté deux fois. */
+.modal-box > .modal-header {
+	padding: 0 0 0.75rem;
+}
+.modal-close {
+	background: none;
+	border: none;
+	font-size: 1.5rem;
+	cursor: pointer;
+	color: var(--color-text-muted);
+	padding: 0.25rem;
+	line-height: 1;
+}
+.modal-close:hover {
+	color: var(--color-text);
+}
+/*  Le corps empile ses champs en COLONNE, et cela vit ici depuis le 29/08/2026.
+    C'était écrit quinze fois : `style="display:flex;flex-direction:column;
+    gap:.75rem"` en ligne (delegations 1×, residence 7×), une règle locale dans
+    `mon-lot` avec `gap: .85rem` — la neuvième divergence du même objet —, et
+    `prestataires` sans rien, donc en simple bloc.
+
+    L'écart de 0,1 rem n'a jamais été décidé : c'est une copie qui a dérivé. La
+    valeur retenue est celle des huit, `.75rem`. */
+.modal-body {
+	padding: 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+.modal-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	padding: 1rem 1.25rem;
+	border-top: 1px solid var(--color-border);
+}
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+@keyframes slideUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* ── Ligne de document ────────────────────────────────────────────────────────
+   🔴 Remontée ici le 29/08/2026 (#491). Elle vivait dans le `<style>` de
+   `SectionDocuments.svelte`, donc SCOPÉE à lui — alors que `residence` rend ses
+   règles de copropriété et ses rapports de diagnostic avec le même vocabulaire,
+   dans SON balisage. Ces trois blocs sortaient donc NUS : les boutons d'action
+   passaient sous le texte au lieu de s'aligner à droite.
+
+   ⚠️ Personne ne l'a vu pendant des semaines, et pour une raison qui vaut plus
+   que le défaut : `lint:classes-nues` lisait les COMMENTAIRES comme des
+   définitions. Le commentaire de `residence` qui explique que ces classes sont
+   parties les faisait passer pour présentes — le contrôle était aveuglé par la
+   documentation de son propre sujet. Corrigé le même jour.
+
+   C'est la règle que le contrôle énonce lui-même : une notion PARTAGÉE par
+   plusieurs écrans se remonte dans `src/styles/`, elle ne se recopie pas. */
+.doc-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+.doc-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.7rem 1rem;
+	gap: 0.75rem;
+}
+.doc-info {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex: 1;
+	min-width: 0;
+	flex-wrap: wrap;
+}
+.doc-titre {
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+.doc-date {
+	font-size: 0.78rem;
+	color: var(--color-text-muted);
+	margin-left: auto;
+	white-space: nowrap;
+}
+.doc-actions {
+	display: flex;
+	gap: 0.35rem;
+	flex-shrink: 0;
+}
+
+/*  Sous 480 px, la ligne passe en colonne : à trois éléments (icône, titre,
+    actions) elle déborde sinon, et les boutons sortent de l'écran. */
+@media (max-width: 480px) {
+	.doc-row {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.5rem;
+	}
+	.doc-actions {
+		justify-content: flex-end;
+	}
+}
+
+/*  En-tête d'une section administrable : le résumé en lecture, et la rangée de
+    commandes en saisie.
+
+    🔴 Remontées ici le 29/08/2026. Elles vivaient dans `espace-cs`, seul écran à
+    les employer — jusqu'à ce que l'en-tête du syndic parte en composant
+    (`EnteteSyndic.svelte`, #535) et les rende NUES là-bas : Svelte scope au
+    fichier, et le style ne suit pas le balisage tout seul. C'est la régression
+    des pastilles nues (#557), et `lint:classes-nues` l'a refusée avant l'écran.
+
+    Deux fichiers les emploient : les recopier aurait donné deux sources pour la
+    même règle, qui divergent au premier ajustement. */
+.header-summary {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	font-size: 0.875rem;
+	color: var(--color-text-muted);
+	margin-bottom: 1rem;
+	padding: 0.4rem 0;
+}
+.header-edit-actions {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	padding-top: 0.25rem;
+}
+
+/*  ── La FRISE du fil d'actualité ────────────────────────────────────────────
+    Le trait vertical, les pastilles qui s'y accrochent et les libellés de jour.
+
+    🔴 REMONTÉ ICI LE 31/08/2026, et la duplication était DÉCLARÉE : le
+    commentaire d'`ArchivesDuFil` disait en toutes lettres « `.flux-timeline` et
+    `.flux-day-label` sont **recopiées** depuis la page ». Deux copies qui
+    devaient rester d'accord, sans rien pour le vérifier — et une troisième
+    portion, les pastilles, vivait dans `FluxCard`, qui n'est pas la frise mais
+    ce qu'on y accroche.
+
+    ⚠️ Svelte scope ses styles au FICHIER : c'est ce qui obligeait à recopier.
+    Le remède n'est donc pas « faire attention », c'est de sortir la règle des
+    fichiers qui la partagent. Trois écrans la rendent aujourd'hui (tableau de
+    bord, archives du fil, cartes) ; le quatrième l'aura sans rien copier. */
+.flux-timeline {
+	position: relative;
+	padding-left: 1.5rem;
+}
+.flux-timeline::before {
+	content: '';
+	position: absolute;
+	left: 0.45rem;
+	top: 1.5rem;
+	bottom: 0.5rem;
+	width: 2px;
+	background: var(--color-border);
+	border-radius: 1px;
+}
+.flux-day-label {
+	position: relative;
+	font-size: 0.72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--color-text-muted);
+	padding: 0.9rem 0 0.35rem;
+	margin-left: -0.15rem;
+}
+@media (max-width: 767px) {
+	.flux-timeline {
+		padding-left: 1.25rem;
+	}
+	.flux-timeline::before {
+		left: 0.35rem;
+	}
+}
+
+/*  Les PASTILLES accrochées à la frise. Elles vivaient dans `FluxCard`, qui est
+    ce qu'on accroche — pas la frise elle-même. Elles rejoignent le trait auquel
+    elles se rattachent : les deux n'ont de sens qu'ensemble, et la carte n'a pas
+    à savoir comment la chronologie se dessine. */
+.flux-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	margin-top: 0.85rem;
+	position: absolute;
+	left: -1.35rem;
+	border: 2px solid var(--color-surface);
+	box-shadow: 0 0 0 2px var(--color-border);
+	z-index: 1;
+}
+.flux-new-dot {
+	position: absolute;
+	left: -1.7rem;
+	top: 0.55rem;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: rgba(239, 68, 68, 0.15);
+	animation: new-dot-pulse 2s ease-in-out infinite;
+	z-index: 0;
+}
+@keyframes new-dot-pulse {
+	0%,
+	100% {
+		transform: scale(1);
+		opacity: 0.6;
+	}
+	50% {
+		transform: scale(1.6);
+		opacity: 0;
+	}
+}
+
+/*  ── L'AIDE SOUS UN BLOC ────────────────────────────────────────────────────
+    La phrase qui explique ce qu'on attend, sous un sélecteur ou un groupe —
+    « À renseigner seulement pour préciser le périmètre… ».
+
+    🔴 TROISIÈME écriture de la même notion, et c'est `EvolForm` qui le disait :
+    « .ah-aide (FormulaireAnnonceHall) et .perimetre-aide (PerimetrePicker)
+    disent la même chose aux mêmes valeurs. Suivi à part : les fusionner demande
+    de reprendre les trois appelants, pas d'en ajouter une quatrième en douce
+    ici. » C'est fait — les trois appelants sont repris.
+
+    ⚠️ `.ah-aide` portait `margin-top: .35rem` là où les deux autres portaient
+    `.6rem`. L'écart n'a jamais été décidé : c'est une copie qui a dérivé, comme
+    les 0,1 rem de `.modal-body`. La valeur retenue est celle des deux.
+
+    ⚠️ À DISTINGUER de `.field-hint`, qui vit sous UN champ et à l'intérieur de
+    son `.field` : plus petite, plus serrée, et rattachée au champ qu'elle
+    commente. Deux notions voisines, deux classes — les fondre ferait perdre le
+    rattachement. */
+.aide-bloc {
+	font-size: 0.8rem;
+	color: var(--color-text-muted);
+	line-height: 1.5;
+	margin: 0.6rem 0 0;
+}
+
+/* ── Le KANBAN CONDENSÉ du tableau de bord ─────────────────────────────────────
+   Le même objet que `.kanban` ci-dessus, dans son rendu d'aperçu : cinq colonnes
+   resserrées au large, une colonne à la fois quand l'écran est étroit.
+
+   🔴 Ces trente-deux règles vivaient dans `tableau-de-bord/+page.svelte`, donc
+   SCOPÉES. Elles en sortent le 01/09/2026 pour deux raisons qui se rejoignent :
+
+   1. le contrôle de modularité refusait d'agrandir cette page, et il désignait —
+      comme onze fois ce jour-là — un placement : un kanban est un composant du
+      site, pas une mise en forme d'écran ;
+   2. surtout, **plus aucune règle scopée ne concurrence celles-ci**. Deux
+      bascules d'affichage par CSS avaient échoué le même soir, la première parce
+      qu'une règle globale ne surcharge pas une règle scopée. En sortant TOUT le
+      bloc, la question de la spécificité disparaît au lieu d'être arbitrée.
+
+   ⚠️ La bascule large/étroit, elle, n'est plus en CSS du tout : c'est un `{#if}`
+   sur `SEUIL_KANBAN_ETROIT` (`$lib/kanban.ts`). Ne pas réintroduire ici de classe
+   d'interrupteur — c'est la forme qui a échoué deux fois. */
+.kb-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.6rem;
+}
+.kb-voir-lien {
+	font-size: 0.78rem;
+	color: var(--color-primary);
+	font-weight: 500;
+	text-decoration: none;
+	white-space: nowrap;
+}
+.kb-voir-lien:hover {
+	text-decoration: underline;
+}
+.kb-vide {
+	font-size: 0.85rem;
+	color: var(--color-text-muted);
+	text-align: center;
+	padding: 1rem 0;
+	margin: 0;
+}
+.kb-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr));
+	gap: 0.45rem;
+	margin-bottom: 1.25rem;
+}
+.kb-col {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	overflow: hidden;
+	transition: opacity 0.15s;
+}
+.kb-col-vide {
+	opacity: 0.4;
+}
+.kb-col-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.35rem 0.6rem;
+	background: var(--color-bg);
+	border-top: 3px solid transparent;
+	border-bottom: 1px solid var(--color-border);
+}
+.kb-col-label {
+	font-size: 0.68rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+.kb-col-count {
+	font-size: 0.62rem;
+	font-weight: 700;
+	padding: 0.1rem 0.4rem;
+	border-radius: 1rem;
+}
+.kb-vide-col {
+	font-size: 0.78rem;
+	color: var(--color-text-muted);
+	text-align: center;
+	padding: 0.65rem 0.5rem;
+	margin: 0;
+}
+.kb-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.4rem;
+	padding: 0.45rem 0.6rem;
+	border-top: 1px solid var(--color-border);
+	cursor: pointer;
+	transition: background 0.12s;
+}
+.kb-item:first-of-type {
+	border-top: none;
+}
+.kb-item:hover {
+	background: var(--color-bg);
+}
+.kb-item:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: -2px;
+}
+.kb-item-icon {
+	flex-shrink: 0;
+	font-size: 0.85rem;
+	line-height: 1.3;
+}
+.kb-item-text {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+.kb-item-titre {
+	font-size: 0.8rem;
+	color: var(--color-text);
+	line-height: 1.3;
+}
+.kb-item-perim {
+	font-size: 0.68rem;
+	color: var(--color-text-muted);
+}
+.kb-mobile-nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius) var(--radius) 0 0;
+	border-bottom: none;
+}
+.kb-mobile-nav-center {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.08rem;
+	flex: 1;
+}
+.kb-mobile-col-label {
+	font-size: 0.82rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.kb-mobile-pos {
+	font-size: 0.66rem;
+	color: var(--color-text-muted);
+}
+.kb-nav-btn {
+	background: none;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	width: 2rem;
+	height: 2rem;
+	flex-shrink: 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--color-text);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition:
+		background 0.12s,
+		border-color 0.12s;
+	line-height: 1;
+}
+.kb-nav-btn:hover:not(:disabled) {
+	background: var(--color-bg);
+	border-color: var(--color-primary);
+}
+.kb-nav-btn:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+.kb-mobile-items {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 0 0 var(--radius) var(--radius);
+	overflow: hidden;
+}
+.kb-mobile-plus {
+	font-size: 0.74rem;
+	color: var(--color-text-muted);
+	text-align: center;
+	padding: 0.4rem 0.75rem;
+	margin: 0;
+	border-top: 1px solid var(--color-border);
+}
+.kb-mobile-plus-lien {
+	color: var(--color-primary);
+	text-decoration: none;
+	font-weight: 500;
+}
+.kb-mobile-plus-lien:hover {
+	text-decoration: underline;
+}
+.kb-mobile-lien {
+	display: block;
+	text-align: center;
+	padding: 0.55rem 1rem;
+	margin-top: 0.45rem;
+	font-size: 0.8rem;
+	color: var(--color-primary);
+	font-weight: 500;
+	text-decoration: none;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	transition: background 0.12s;
+}
+.kb-mobile-lien:hover {
+	background: var(--color-primary-light);
+}
+
+/*  Case + libellé. Remontée le 02/09/2026 — cf. `OptionsPublication.svelte`. */
+.checkbox-field {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+/*  Icône de menu. Remontée le 03/09 : un style ne franchit pas un composant. */
+.nav-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.25rem;
+	flex-shrink: 0;
+	font-size: 1.1rem;
+}
