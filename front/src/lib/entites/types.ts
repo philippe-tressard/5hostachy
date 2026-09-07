@@ -115,6 +115,24 @@ export interface Divergence {
 	ticket?: string;
 }
 
+/**
+ *  Les explications de divergence PARTAGÉES par plusieurs entités.
+ *
+ *  🔴 Une explication recopiée est une explication qui divergera. Celle-ci
+ *  l'était **quatre fois**, au caractère près — événement, publication, ticket,
+ *  sondage (#824). Ce n'est pas une particularité de ces quatre-là : c'est une
+ *  règle du cadre, et elle doit s'écrire là où le cadre se déclare.
+ *
+ *  ⚠️ Une explication propre à UNE entité reste chez elle. Ce qui monte ici,
+ *  c'est ce que plusieurs entités disent parce que la règle est la même — pas
+ *  ce qui se trouve formulé pareil par hasard. Le test de l'appartenance : si
+ *  l'on corrigeait la phrase, faudrait-il la corriger partout ? Ici oui.
+ */
+export const DIFFUSION_NE_SE_LIT_PAS: Divergence = {
+	motif: 'geste',
+	explication: "On n'affiche pas un envoi : la diffusion a eu lieu, elle ne se lit pas.",
+};
+
 export interface SectionDeclaree {
 	id: IdSection;
 	/** Ce que la section porte à l'écran. Vide seulement si `sansObjet`. */

@@ -67,6 +67,7 @@ import {
 	EVOLFORM_TOLEREES,
 } from './lib-etats-evolution.mjs';
 import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
+import { extraire, preludePartage } from './lib-lecture-source.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const DOSSIER_ENTITES = join(RACINE, 'lib', 'entites');
@@ -97,101 +98,15 @@ function casZero(message) {
 	process.exit(1);
 }
 
-//  ── Lecture d'un littéral TypeScript ────────────────────────────────────────
-//
-//  Node ne sait pas importer un `.ts`. Plutôt que de relire la déclaration à
-//  coups d'expressions régulières — ce qui reviendrait à en tenir une seconde
-//  lecture, libre de diverger —, on EXTRAIT le littéral et on l'évalue tel quel.
-//  Le scanner saute chaînes et commentaires : une accolade dans un texte
-//  d'explication ne doit pas fermer l'objet.
-function litteralApres(source, index) {
-	//  Le littéral commence à la PREMIÈRE des deux ouvertures possibles : chercher
-	//  `{` puis se rabattre sur `[` ferait ouvrir un tableau sur l'accolade d'une
-	//  déclaration suivante, à des centaines de lignes de là.
-	const candidats = [source.indexOf('{', index), source.indexOf('[', index)].filter((n) => n >= 0);
-	if (candidats.length === 0) return null;
-	let i = Math.min(...candidats);
-	const ouvrants = { '{': '}', '[': ']' };
-	const pile = [ouvrants[source[i]]];
-	const debut = i;
-	i += 1;
-	while (i < source.length && pile.length) {
-		const c = source[i];
-		if (c === '/' && source[i + 1] === '/') {
-			i = source.indexOf('\n', i);
-			if (i < 0) return null;
-			continue;
-		}
-		if (c === '/' && source[i + 1] === '*') {
-			i = source.indexOf('*/', i);
-			if (i < 0) return null;
-			i += 2;
-			continue;
-		}
-		if (c === "'" || c === '"' || c === '`') {
-			i += 1;
-			while (i < source.length && source[i] !== c) {
-				if (source[i] === '\\') i += 1;
-				i += 1;
-			}
-			i += 1;
-			continue;
-		}
-		if (c === '{' || c === '[') pile.push(ouvrants[c]);
-		else if (c === '}' || c === ']') {
-			if (c !== pile[pile.length - 1]) return null;
-			pile.pop();
-		}
-		i += 1;
-	}
-	return pile.length ? null : source.slice(debut, i);
-}
-
-/** Constantes de chaîne du fichier — `const DETTE_API = '#431';` et consorts. */
-function prelude(source) {
-	const lignes = [];
-	const re = /^const\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*('[^']*'|"[^"]*")\s*;/gm;
-	let m;
-	while ((m = re.exec(source))) lignes.push(`const ${m[1]} = ${m[2]};`);
-	return lignes.join('\n');
-}
-
-function evaluer(source, nom, litteral, chemin) {
-	try {
-		return new Function(`${prelude(source)}\nreturn (${litteral});`)();
-	} catch (e) {
-		echec(`${chemin} — impossible de lire le littéral \`${nom}\` : ${e.message}`);
-		return null;
-	}
-}
-
-function extraire(source, nom, chemin) {
-	const ancre = source.search(new RegExp(`export\\s+const\\s+${nom}\\b`));
-	if (ancre < 0) {
-		echec(`${chemin} — \`${nom}\` est introuvable.`);
-		return null;
-	}
-	//  ⚠️ On part de l'`=`, pas de l'ancre : une annotation de type porte des
-	//  crochets (`readonly IdSection[]`), et démarrer avant elle faisait lire un
-	//  tableau VIDE — un cas zéro qui se serait présenté comme « 0 section lue ».
-	const affectation = source.slice(ancre).search(/=(?![=>])/);
-	if (affectation < 0) {
-		echec(`${chemin} — \`${nom}\` n'est pas une affectation.`);
-		return null;
-	}
-	const litteral = litteralApres(source, ancre + affectation);
-	if (!litteral) {
-		echec(`${chemin} — le littéral de \`${nom}\` n'est pas équilibré.`);
-		return null;
-	}
-	return evaluer(source, nom, litteral, chemin);
-}
-
 //  ── Cas zéro : de quoi ce contrôle a besoin pour contrôler quoi que ce soit ──
 if (!existsSync(TYPES)) {
 	casZero(`${TYPES} est introuvable — le cadre n'a plus de types, contrôle inopérant.`);
 }
 const srcTypes = readFileSync(TYPES, 'utf8');
+//  Les divergences PARTAGÉES que `types.ts` déclare, injectées dans le contexte
+//  d'évaluation de chaque entité. Une entité ne peut citer que ce que le cadre
+//  déclare — et le lecteur, lui, n'exécute jamais le fichier qu'il lit.
+const PARTAGE = preludePartage(srcTypes);
 for (const fonction of ['sectionPresente', 'sectionsDe']) {
 	if (!new RegExp(`export function ${fonction}\\b`).test(srcTypes)) {
 		casZero(
@@ -201,8 +116,8 @@ for (const fonction of ['sectionPresente', 'sectionsDe']) {
 	}
 }
 
-const ORDRE = extraire(srcTypes, 'SECTIONS_ORDRE', relative(RACINE, TYPES));
-const LIBELLES = extraire(srcTypes, 'SECTIONS_LIBELLE', relative(RACINE, TYPES));
+const ORDRE = extraire(srcTypes, 'SECTIONS_ORDRE', relative(RACINE, TYPES), { echec });
+const LIBELLES = extraire(srcTypes, 'SECTIONS_LIBELLE', relative(RACINE, TYPES), { echec });
 if (!Array.isArray(ORDRE) || ORDRE.length !== 9) {
 	casZero(`SECTIONS_ORDRE devrait porter les NEUF sections (${ORDRE?.length ?? 0} lue(s)).`);
 }
@@ -229,7 +144,7 @@ for (const nomFichier of fichiersEntites) {
 		continue;
 	}
 	const nom = m[1];
-	const decl = extraire(source, nom, court);
+	const decl = extraire(source, nom, court, { partage: PARTAGE, echec });
 	if (!decl) continue;
 	entites.push({ nom, decl, court });
 

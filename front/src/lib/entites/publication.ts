@@ -61,6 +61,7 @@
  */
 
 import type { EntiteDeclaree } from './types';
+import { DIFFUSION_NE_SE_LIT_PAS } from './types';
 
 /**
  * ⚠️ **Plus aucun motif `api` ici** depuis le 18/08/2026 : les documents ont
@@ -193,10 +194,7 @@ export const PUBLICATION: EntiteDeclaree = {
 			id: 'diffusion',
 			objet: 'CanauxNotification — WhatsApp, syndic, conseil syndical — et affiche de hall',
 			absente: {
-				affichage: {
-					motif: 'geste',
-					explication: "On n'affiche pas un envoi : la diffusion a eu lieu, elle ne se lit pas.",
-				},
+				affichage: DIFFUSION_NE_SE_LIT_PAS,
 			},
 		},
 	],
