@@ -737,6 +737,58 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .filters--egalisee {
 	align-items: stretch;
 }
+/*  ── Rangée en GRILLE — pour un choix qu'on doit embrasser d'un coup d'œil ──
+    Arbitré à l'écran le 07/09/2026 : *« la lisibilité globale des vignettes en
+    une seule fois est importante pour sélectionner la bonne catégorie — tri,
+    vignette moins large, maxi deux lignes »*.
+
+    🔴 Pourquoi le `flex-wrap` ne suffisait pas. Chaque pastille y prend la
+    largeur de SON texte, bornée par `max-width` : les huit catégories de ticket
+    donnaient donc des vignettes de largeurs inégales, et le nombre par ligne
+    dépendait de la longueur des phrases — « Bug » à côté de « Dégât des eaux,
+    incendie, vandalisme ». Deux lignes n'étaient pas garanties, seulement
+    probables.
+
+    En grille, `auto-fit` + `minmax` garantit des colonnes ÉGALES qui remplissent
+    la largeur : autant de colonnes que la place le permet, jamais moins de
+    `8.5rem`. Huit entrées tiennent en deux lignes de quatre sur un formulaire
+    ordinaire, en deux lignes de trois sur une tablette, et en deux colonnes sur
+    téléphone.
+
+    ⚠️ Elle REMPLACE `--defilante`, elle ne s'y ajoute pas : une grille qui
+    déborde horizontalement n'aurait aucun sens. `ChoixPastilles` refuse la
+    combinaison.
+
+    ⚠️ `align-items: stretch` est repris ici : une grille dont les cellules ne
+    s'étirent pas laisse des vignettes plus courtes que leurs voisines, ce que
+    `--egalisee` corrige déjà pour le mode flex. */
+.filters--grille {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+	align-items: stretch;
+}
+/*  La borne de largeur d'une pastille n'a plus de sens dans une grille : c'est
+    la colonne qui la fixe, et la laisser produirait des vignettes plus étroites
+    que leur cellule, donc un vide à droite de chacune. */
+.filters--grille > * {
+	/*  La borne de largeur d'une pastille n'a plus de sens dans une grille : c'est
+	    la colonne qui la fixe, et la laisser produirait des vignettes plus étroites
+	    que leur cellule, donc un vide à droite de chacune. */
+	max-width: none;
+	width: 100%;
+	/*  La cellule est remplie en hauteur comme en largeur. Les hauteurs sont
+	    alors égales AU SEIN D'UNE LIGNE — pas entre lignes, et c'est voulu : une
+	    seconde ligne de vignettes courtes n'a pas à porter le vide de la
+	    première.
+
+	    ⚠️ J'avais d'abord lu ces deux hauteurs comme un défaut, en comparant des
+	    vignettes de LIGNES DIFFÉRENTES. Mesuré au navigateur, ligne par ligne
+	    (900 px : 5 + 3 vignettes, 76 px partout · 700 px : 6 + 2, 70 puis 47 px).
+	    Une mesure globale sur une grille ne dit rien — c'est la ligne qui est
+	    l'unité. */
+	height: 100%;
+	align-self: stretch;
+}
 .filter-select {
 	padding: 0.35rem 0.5rem;
 	border: 1px solid var(--color-border);

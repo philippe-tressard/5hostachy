@@ -77,6 +77,58 @@
 	/** Afficher le libellé au-dessus de la rangée — le cas du formulaire. */
 	export let libelleVisible = false;
 
+	/**
+	 *  La rangée DÉFILE-t-elle horizontalement, ou se replie-t-elle sur plusieurs
+	 *  lignes ?
+	 *
+	 *  🔴 Le défilement était posé en dur, pour toutes les instances. Signalé à
+	 *  l'écran le 07/09/2026 sur les huit catégories de ticket : trois d'entre
+	 *  elles — « Étude & travaux », « Question », « Bug » — étaient **hors du
+	 *  cadre**, et rien ne le disait sinon une barre de défilement grise.
+	 *
+	 *  `composants.css` l'écrivait pourtant au-dessus de la règle : *« un
+	 *  défilement horizontal masque des filtres sans le dire, là où `flex-wrap:
+	 *  wrap` les montre tous »*. La variante était nommée pour ne pas s'hériter —
+	 *  et elle s'héritait quand même, par ce composant.
+	 *
+	 *  ⚠️ Vrai par DÉFAUT : les filtres d'une barre existante continuent de
+	 *  défiler, et ce lot ne change que ce qu'on lui demande de changer. Un choix
+	 *  de formulaire, lui, doit montrer TOUTES ses valeurs — on ne choisit pas
+	 *  dans une liste dont on ignore la fin.
+	 */
+	export let defilante = true;
+
+	/**
+	 *  Rendre la rangée en GRILLE — colonnes égales, remplissage complet.
+	 *
+	 *  Pour un choix qu'on doit **embrasser d'un coup d'œil** : les huit
+	 *  catégories de ticket. En `flex-wrap`, chaque vignette prend la largeur de
+	 *  son texte, et le nombre par ligne dépend de la longueur des phrases — deux
+	 *  lignes n'étaient pas garanties, seulement probables.
+	 *
+	 *  ⚠️ Exclusif de `defilante` : une grille qui déborde horizontalement n'a
+	 *  aucun sens. La combinaison est refusée plus bas, à la compilation du
+	 *  composant plutôt qu'à l'œil.
+	 *
+	 *  ⚠️ **Deux lignes sur ordinateur et tablette, TROIS sur téléphone** —
+	 *  mesuré au navigateur, pas supposé : 900 px → 5 + 3 vignettes ; 700 px →
+	 *  6 + 2 ; 380 px → 3 + 3 + 2. À 380 px, tenir huit vignettes en deux lignes
+	 *  demanderait quatre colonnes de 85 px, où le sous-texte cesse d'être
+	 *  lisible. Trois lignes lisibles valent mieux que deux illisibles, et le
+	 *  socle (11 §10) va dans le même sens.
+	 */
+	export let grille = false;
+
+	//  🔴 Une erreur PARLANTE, et non un rendu silencieusement faux. Les deux
+	//  modes se contredisent ; laisser passer donnerait une grille sans
+	//  `flex-wrap` dont on ne verrait le défaut qu'à l'écran, sur un écran donné.
+	$: if (grille && defilante) {
+		throw new Error(
+			'ChoixPastilles : `grille` et `defilante` s’excluent — une grille qui ' +
+				'déborde horizontalement n’a pas de sens. Passer `defilante={false}`.',
+		);
+	}
+
 	/** Ajoute le ` *` de la charte au libellé visible. */
 	export let requis = false;
 
@@ -108,8 +160,10 @@
 		<span class="libelle-groupe" id={idTitre}>{libelle}{requis ? ' *' : ''}</span>
 	{/if}
 	<div
-		class="filters filters--defilante"
-		class:filters--egalisee={avecDetail}
+		class="filters"
+		class:filters--defilante={defilante}
+		class:filters--grille={grille}
+		class:filters--egalisee={avecDetail && !grille}
 		role={radio ? 'radiogroup' : 'group'}
 		aria-label={libelleVisible ? undefined : libelle}
 		aria-labelledby={libelleVisible ? idTitre : undefined}

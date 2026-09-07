@@ -127,6 +127,19 @@ export interface CategorieTicket {
 	description: string;
 }
 
+/**
+ *  Les huit catégories, **dans l'ordre de fréquence attendue** en copropriété.
+ *
+ *  🔴 L'ordre est une décision, pas le résidu de celui où on les a écrites : sur
+ *  deux lignes de quatre, la première porte le quotidien — panne, nuisance,
+ *  propreté, espaces verts — et la seconde les cas particuliers : le sinistre,
+ *  le dossier suivi par le conseil, la question, le défaut du logiciel.
+ *
+ *  ⚠️ L'alphabétique a été écarté (07/09/2026, l'alternative proposée) : il
+ *  mettrait « Bug » en tête et « Sinistre » en avant-dernier. Un ordre qui ne
+ *  dit rien du métier oblige à lire les huit entrées à chaque fois ; celui-ci
+ *  fait que la plupart des gens s'arrêtent aux deux premières.
+ */
 export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 	{
 		value: 'panne',
@@ -134,17 +147,30 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		emoji: '\u{1F6E0}️',
 		description: 'Équipement défectueux, ascenseur, chauffage…',
 	},
+	/*  🔴 NUISANCE ET PROPRETÉ SE TOUCHENT, et leurs descriptions l'entretenaient
+	    — « odeur » d'un côté, « poubelles » de l'autre (signalé le 07/09/2026 :
+	    *« Nuisance et Propreté, c'est pas un peu équivalent ? »*).
+
+	    Ce qui les sépare n'est pas le SUJET mais le GESTE : une nuisance appelle
+	    quelqu'un à qui parler — rappel du règlement, courrier, médiation, aucun
+	    prestataire ; la propreté appelle une prestation à faire faire.
+
+	    ⚠️ Le recouvrement reste réel, et il est assumé : un encombrant abandonné
+	    dans le hall est les deux à la fois — il faut l'enlever, ET quelqu'un l'a
+	    laissé là. Les descriptions disent donc le CRITÈRE et non plus seulement
+	    des exemples ; c'est tout ce qu'on peut faire, aucun découpage ne rendra
+	    ce cas non ambigu. */
 	{
 		value: 'nuisance',
 		label: 'Nuisance',
 		emoji: '\u{1F4E2}',
-		description: 'Bruit, odeur, parking…',
+		description: 'Bruit, odeurs, stationnement gênant — un comportement',
 	},
 	{
 		value: 'proprete',
 		label: 'Propreté',
 		emoji: '\u{1F9F9}',
-		description: 'Parties communes, poubelles, encombrants abandonnés…',
+		description: 'Parties communes, encombrants — un entretien à faire',
 	},
 	{
 		value: 'espaces_verts',
