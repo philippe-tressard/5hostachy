@@ -129,6 +129,84 @@ def audit_user_lots(
     return result
 
 
+# ── Baux dont le locataire n'a pas été rattaché ──────────────────────────────
+
+@router.get("/audit/baux-sans-locataire")
+def audit_baux_sans_locataire(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Les baux en cours dont aucun COMPTE n'est rattaché au locataire.
+
+    ## 🔴 Pourquoi ce relevé existe (#808, 07/09/2026)
+
+    Le rattachement d'un compte locataire à son bail est automatique, et il se
+    fait sur l'**e-mail exact** (`_auto_match_baux_locataire`) : le bail doit
+    porter la même adresse que celle de l'inscription. Il échoue donc dès que le
+    bailleur a saisi une autre adresse, ou aucune — et surtout **quand le bail
+    est créé après l'inscription**, puisque le rapprochement n'a lieu qu'à la
+    validation du compte.
+
+    ⚠️ Et il échoue **en silence** : la fonction rend `0`, personne n'est
+    prévenu. Côté locataire, cela se voit ainsi — son compte est actif, mais il
+    ne voit ni son lot, ni ses badges, ni sa fiche de location.
+
+    Arbitrage du 06/09/2026 : *garder et observer*. Ce relevé est le moyen
+    d'observer ; il n'y a **pas** de geste de rattachement, délibérément.
+    L'endpoint qui le ferait existe (`POST /admin/baux/{id}/lier-locataire/{u}`)
+    et attend de savoir si le cas se présente.
+
+    ## Deux catégories, et les confondre ferait crier sur le cas normal
+
+    - **`compte_probable`** — un compte existe au nom du locataire : le
+      rattachement MANQUE, il est rattrapable.
+    - **`sans_compte`** — personne ne s'est inscrit sous ce nom. C'est le cas
+      **normal** d'un locataire qui n'utilise pas le site, et il ne doit pas se
+      lire comme un défaut.
+    """
+    from app.models.core import LocationBail, StatutBail
+
+    baux = session.exec(
+        select(LocationBail).where(
+            LocationBail.locataire_id.is_(None),  # type: ignore[union-attr]
+            LocationBail.statut != StatutBail.termine,
+        )
+    ).all()
+
+    #  Les comptes candidats : on cherche par NOM, pas par e-mail — c'est
+    #  justement l'e-mail qui a échoué, le redemander ne trouverait rien.
+    result = []
+    for bail in baux:
+        lot = session.get(Lot, bail.lot_id)
+        bat = session.get(Batiment, lot.batiment_id) if lot and lot.batiment_id else None
+        candidats = []
+        if bail.locataire_nom:
+            cible = bail.locataire_nom.strip().lower()
+            for u in session.exec(select(Utilisateur).where(Utilisateur.actif == True)).all():  # noqa: E712
+                if u.nom and u.nom.strip().lower() == cible:
+                    candidats.append(
+                        {"id": u.id, "nom": nom_affiche(u.prenom, u.nom), "email": u.email}
+                    )
+        result.append({
+            "bail_id": bail.id,
+            "lot": f"{lot.type.value if lot and hasattr(lot.type, 'value') else ''} {lot.numero}".strip()
+            if lot else "?",
+            "batiment": f"Bât. {bat.numero}" if bat else "—",
+            "locataire_nom": nom_affiche(bail.locataire_prenom, bail.locataire_nom)
+            if (bail.locataire_nom or bail.locataire_prenom) else "—",
+            "locataire_email": bail.locataire_email,
+            "date_entree": bail.date_entree,
+            #  🔴 La catégorie est calculée ICI, une fois : la laisser à l'écran
+            #  en ferait une seconde règle, et deux vues du même relevé pourraient
+            #  ranger le même bail dans deux cases.
+            "categorie": "compte_probable" if candidats else "sans_compte",
+            "candidats": candidats,
+        })
+    #  Les rattachements manquants d'abord : c'est ce sur quoi on peut agir.
+    result.sort(key=lambda r: (r["categorie"] != "compte_probable", r["locataire_nom"]))
+    return result
+
+
 @router.delete("/user-lots/{user_lot_id}")
 def supprimer_user_lot(
     user_lot_id: int,

@@ -90,13 +90,31 @@ export const admin = {
 	// Baux locatifs
 	baux: () => api.get<any[]>('/admin/baux'),
 	//  @sans-appelant Le rattachement d'un compte locataire à son bail se fait
-	//  aujourd'hui par `auto-match` à la validation du compte. Quand celui-ci
-	//  échoue — nom mal orthographié, bail créé après l'inscription — il n'existe
-	//  aucun geste manuel : l'endpoint est là, le bouton non. (#808)
+	//  par `auto-match` à la validation du compte, sur l'e-mail EXACT du bail.
+	//  Quand il échoue — autre adresse, ou bail créé après l'inscription — il
+	//  n'existe aucun geste manuel : l'endpoint est là, le bouton non. (#808)
+	//
+	//  🔴 Décision du 06/09/2026 : *garder et observer*. Le relevé qui permet
+	//  d'observer est livré (`bauxSansLocataire`, plus bas) ; le bouton ne l'est
+	//  PAS, délibérément — il aurait coûté trois lignes, et le livrer aurait
+	//  contourné la décision au motif que c'eût été plus pratique. Il vient si
+	//  le relevé montre des cas.
 	lierLocataire: (bail_id: number, user_id: number) =>
 		api.post(`/admin/baux/${bail_id}/lier-locataire/${user_id}`, {}),
 	// Audit associations user-lot
 	auditUserLots: () => api.get<any[]>('/admin/audit/user-lots'),
+	/**
+	 *  Les baux en cours dont AUCUN compte locataire n'est rattaché (#808).
+	 *
+	 *  Le rattachement est automatique, sur l'e-mail exact du bail — il échoue en
+	 *  silence quand le locataire s'inscrit avec une autre adresse, ou quand le
+	 *  bail est créé après son inscription. Ce relevé est le moyen de le voir.
+	 *
+	 *  ⚠️ La CATÉGORIE (`compte_probable` / `sans_compte`) vient du serveur, pas
+	 *  de l'écran : la recalculer côté client en ferait une seconde règle, et deux
+	 *  vues du même relevé pourraient ranger le même bail dans deux cases.
+	 */
+	bauxSansLocataire: () => api.get<any[]>('/admin/audit/baux-sans-locataire'),
 	supprimerUserLot: (id: number) => api.delete(`/admin/user-lots/${id}`),
 	// Télémétrie
 	//  🔴 `scope` a été AJOUTÉ ici plutôt que dans l'écran (#801) : `OngletTelemetrie`
