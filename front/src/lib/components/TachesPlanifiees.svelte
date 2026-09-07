@@ -21,6 +21,8 @@
 	//  fichier (#488) ; la bonne réponse n'était pas de raboter mais de remonter.
 	import { LIBELLE_STATUT, AIDE_STATUT, CLASSE_STATUT } from '$lib/taches';
 	import ConfigSauvegarde from '$lib/components/ConfigSauvegarde.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { colonnesVisibles } from '$lib/taches-colonnes';
 
 	//  Le bouton dit ce qu'il FAIT, pas le nom de la tâche — voir LIBELLE_ACTION.
 	//  Défaut : « Lancer <nom de la tâche> », qui reste juste là où le bouton
@@ -30,6 +32,11 @@
 
 	let sante: { taches: any[]; anomalies_recentes: any[] } | null = null;
 	let santeLoading = true;
+	/*  🔴 `catch { sante = null }` faisait dire « Aucune donnée — aucune exécution
+	    n'a encore été enregistrée » sur un chargement en ÉCHEC (#816). Sur l'écran
+	    qui surveille les tâches planifiées, c'est le pire message possible : il
+	    annonce que rien ne tourne, alors qu'on n'a pas pu regarder. */
+	let erreur = '';
 	let enCours: string | null = null;
 
 	//  Le tableau des exécutions filtrait sur RIEN : il affichait toutes les
@@ -60,10 +67,12 @@
 
 	async function charger() {
 		santeLoading = true;
+		erreur = '';
 		try {
 			sante = await adminApi.santeMaintenance();
-		} catch {
+		} catch (e: any) {
 			sante = null;
+			erreur = e?.message ?? 'Chargement impossible';
 		} finally {
 			santeLoading = false;
 		}
@@ -107,16 +116,32 @@
 	let historiques: Record<string, any[]> = {};
 	let enChargement: Record<string, boolean> = {};
 
+	/**  L'échec de chargement, PAR tâche — une table comme `enChargement`.
+	 *
+	 *   ⚠️ Par tâche et non globale : deux historiques peuvent être ouverts, et
+	 *   l'échec de l'un ne doit rien dire de l'autre. */
+	let erreursTache: Record<string, string> = {};
+
 	async function chargerHistorique(tache: string, force = false) {
 		if (historiques[tache] && !force) return;
 		enChargement = { ...enChargement, [tache]: true };
+		erreursTache = { ...erreursTache, [tache]: '' };
 		try {
 			const lignes = await adminApi.historiqueTache(tache, PROFONDEUR);
 			//  Les tables propres à une tâche ne savent pas se limiter côté serveur :
 			//  on tronque ici, à la même profondeur que les autres.
 			historiques = { ...historiques, [tache]: (lignes ?? []).slice(0, PROFONDEUR) };
-		} catch {
+		} catch (e: any) {
+			//  🔴 `catch { historiques[tache] = [] }` était le motif de #519 écrit une
+			//  SECONDE fois dans ce fichier : un échec devenait « aucune exécution
+			//  enregistrée pour cette tâche », sur l'écran qui sert justement à
+			//  vérifier qu'elle s'exécute. `lint:etat-liste` ne l'avait pas vu — il
+			//  ne cherche que `.empty-state`, et ce vide-ci tenait en une ligne.
 			historiques = { ...historiques, [tache]: [] };
+			erreursTache = {
+				...erreursTache,
+				[tache]: e?.message ?? 'Historique illisible',
+			};
 		} finally {
 			enChargement = { ...enChargement, [tache]: false };
 		}
@@ -128,49 +153,6 @@
 		ouverte = ouverte === tache ? null : tache;
 		if (ouverte) chargerHistorique(ouverte);
 	}
-
-	//  Taille DB et Détail ne sont renseignés que par la maintenance applicative.
-	//  Ils ne sont PAS structurellement vides : ils l'étaient parce qu'aucun
-	//  rapport de maintenance n'arrivait. La colonne apparaît donc dès qu'une
-	//  ligne la renseigne, et disparaît sinon — plutôt que d'être supprimée, ce
-	//  qui aurait effacé une donnée à cause d'un défaut de remontée.
-	//  Étendu le 11/08/2026 au NŒUD et à la DURÉE : `historique_sauvegarde` et
-	//  `historique_telemetrie` n'ont ni l'une ni l'autre de ces colonnes, et le
-	//  tableau affichait donc quatre tirets alignés — l'utilisateur les a lus
-	//  comme un historique « incomplet », ce qui est exactement ce qu'une colonne
-	//  vide raconte. Une colonne qu'aucune ligne ne renseigne ne s'affiche pas.
-	const aValeur = (lignes: any[], champ: string) =>
-		lignes.some((l) => l?.[champ] !== null && l?.[champ] !== undefined && l?.[champ] !== '');
-
-	function fmtOctets(n: number | null | undefined): string {
-		if (n === null || n === undefined) return '—';
-		const mo = n / (1024 * 1024);
-		return mo >= 1024 ? `${(mo / 1024).toFixed(2)} Go` : `${mo.toFixed(1)} Mo`;
-	}
-
-	//  Colonnes propres à la sauvegarde et à l'agrégation. Elles vivaient dans les
-	//  deux cartes supprimées avec #299, et la ligne dépliée ne savait pas les
-	//  rendre : la taille des archives, le déclencheur, le volume agrégé et les
-	//  lignes purgées avaient donc disparu de l'écran. Signalé par l'utilisateur
-	//  le 11/08/2026 — la compensation portait sur la PROFONDEUR de l'historique
-	//  et j'avais manqué sa LARGEUR.
-	//
-	//  Chacune suit la même règle que Taille DB et Détail : présente dès qu'une
-	//  ligne la renseigne, absente sinon. Une tâche ne montre donc que les
-	//  colonnes que sa table sait remplir.
-	const CHAMPS_PURGE = ['events_purges', 'daily_purges', 'monthly_purges'];
-
-	//  0 est une valeur, pas une absence : `aValeur` ne retient que null, undefined
-	//  et la chaîne vide. Une purge qui n'a rien eu à purger doit s'afficher « 0 ».
-	const aPurges = (lignes: any[]) => CHAMPS_PURGE.some((c) => aValeur(lignes, c));
-
-	const totalPurges = (l: any): number =>
-		CHAMPS_PURGE.reduce((somme, c) => somme + (Number(l?.[c]) || 0), 0);
-
-	//  « 1 jour · 0 mois » — le pluriel suit le nombre de JOURS, comme dans la
-	//  carte d'origine ; les mois gardent leur forme courte.
-	const fmtAgrege = (l: any): string =>
-		`${l.jours_agreges} jour${l.jours_agreges > 1 ? 's' : ''} · ${l.mois_agreges} mois`;
 
 	//  Seules ces trois tâches savent se lancer à la main : les autres n'ont pas
 	//  d'équivalent in-process. Ne montrer le bouton que là où il agit.
@@ -224,13 +206,15 @@
 		Selon la tâche, c'est normal (elle ne tourne que sur l'actif) ou c'est le signe que l'autre nœud ne
 		rend pas compte.
 	</p>
-	{#if santeLoading}
-		<p class="muted">Chargement...</p>
-	{:else if !sante || sante.taches.length === 0}
-		<div class="empty-state">
-			<h3>Aucune donnée</h3>
-			<p>Aucune exécution n'a encore été enregistrée.</p>
-		</div>
+	{#if santeLoading || erreur || !sante || sante.taches.length === 0}
+		<EtatListe
+			chargement={santeLoading}
+			{erreur}
+			vide={!sante || sante.taches.length === 0}
+			titreErreur="Impossible d’afficher l’état des tâches"
+			titreVide="Aucune donnée"
+			messageVide="Aucune exécution n'a encore été enregistrée."
+		/>
 	{:else}
 		<div class="card" style="overflow:auto;margin-top:1rem">
 			<table class="table" style="font-size:.82rem">
@@ -357,82 +341,60 @@
 									{#if AIDE_TACHE[t.tache]}
 										<p class="aide-tache">{AIDE_TACHE[t.tache]}</p>
 									{/if}
-									{#if enChargement[t.tache]}
-										<p class="muted" style="margin:.5rem 0">Chargement...</p>
-									{:else if lignes.length === 0}
-										<p class="muted" style="margin:.5rem 0">
-											Aucune exécution enregistrée pour cette tâche.
-										</p>
+									{#if enChargement[t.tache] || erreursTache[t.tache] || lignes.length === 0}
+										<!--  `compact` : ce vide vit DANS une ligne de tableau dépliée, un
+										      bloc `.empty-state` y prendrait toute la place. L'échec y
+										      reste visuellement distinct du vide — c'est toute la raison
+										      d'être du composant. -->
+										<EtatListe
+											compact
+											chargement={enChargement[t.tache]}
+											erreur={erreursTache[t.tache] ?? ''}
+											vide={lignes.length === 0}
+											messageVide="Aucune exécution enregistrée pour cette tâche."
+										/>
 									{:else}
 										<div class="table-wrap">
 											<table class="table" style="font-size:.78rem;margin:.25rem 0">
 												<thead>
 													<tr>
-														<th>Date</th>
-														{#if aValeur(lignes, 'noeud')}<th>Nœud</th>{/if}
-														{#if aValeur(lignes, 'declenchee_par')}<th>Déclenchement</th>{/if}
-														<th>Statut</th>
-														{#if aValeur(lignes, 'jours_agreges')}<th>Événements agrégés</th>{/if}
-														{#if aPurges(lignes)}<th>Purges</th>{/if}
-														{#if aValeur(lignes, 'duree_secondes')}<th>Durée</th>{/if}
-														{#if aValeur(lignes, 'taille_octets')}<th>Taille</th>{/if}
-														{#if aValeur(lignes, 'taille_db_octets')}<th>Taille DB</th>{/if}
-														{#if aValeur(lignes, 'details')}<th>Détail</th>{/if}
+														{#each colonnesVisibles(lignes) as c (c.titre)}
+															<th>{c.titre}</th>
+														{/each}
 													</tr>
 												</thead>
 												<tbody>
 													{#each lignes as l (l)}
 														<tr>
-															<td>{fmtDatetime(l.cree_le)}</td>
-															{#if aValeur(lignes, 'noeud')}
-																<td>{l.noeud ? l.noeud.toUpperCase() : '—'}</td>
-															{/if}
-															{#if aValeur(lignes, 'declenchee_par')}
-																<td style="color:var(--color-text-muted)"
-																	>{l.declenchee_par ?? '—'}</td
-																>
-															{/if}
-															<td>
-																<span
-																	class="badge {l.statut === 'erreur' || l.statut === 'echouee'
-																		? 'badge-red'
-																		: 'badge-green'}"
-																>
-																	{l.statut ?? '—'}
-																</span>
-																<!--  Le motif de l'échec était porté par la carte supprimée avec
-															      #299 : sans lui, un statut « erreur » ne dit pas pourquoi. -->
-																{#if l.erreur}<span
-																		title={l.erreur}
-																		style="margin-left:.4rem;cursor:help">⚠️</span
-																	>{/if}
-															</td>
-															{#if aValeur(lignes, 'jours_agreges')}
-																<td style="color:var(--color-text-muted)">{fmtAgrege(l)}</td>
-															{/if}
-															{#if aPurges(lignes)}
-																<td style="color:var(--color-text-muted)"
-																	>{totalPurges(l)} lignes</td
-																>
-															{/if}
-															{#if aValeur(lignes, 'duree_secondes')}
-																<td>{l.duree_secondes != null ? `${l.duree_secondes} s` : '—'}</td>
-															{/if}
-															{#if aValeur(lignes, 'taille_octets')}
-																<td>{fmtOctets(l.taille_octets)}</td>
-															{/if}
-															{#if aValeur(lignes, 'taille_db_octets')}
-																<td>{fmtOctets(l.taille_db_octets)}</td>
-															{/if}
-															{#if aValeur(lignes, 'details')}
-																<td style="font-size:.72rem;color:var(--color-text-muted)">
-																	{l.details
-																		? Object.entries(l.details)
-																				.map(([k, v]) => `${k}: ${v}`)
-																				.join(' · ')
-																		: '—'}
-																</td>
-															{/if}
+															{#each colonnesVisibles(lignes) as c (c.titre)}
+																<!--  La condition porte sur le RENDU, pas sur le titre : une colonne
+														      sans `valeur` est, par définition, celle dont la cellule est
+														      écrite à la main. Tester le libellé aurait marché aussi, mais
+														      il aurait suffi de renommer « Statut » pour casser le tableau
+														      sans que rien ne lève — et TypeScript l'a refusé, à raison. -->
+																{#if !c.valeur}
+																	<td>
+																		<span
+																			class="badge"
+																			class:badge-red={l.statut === 'erreur' ||
+																				l.statut === 'echouee'}
+																			class:badge-green={l.statut !== 'erreur' &&
+																				l.statut !== 'echouee'}
+																		>
+																			{l.statut ?? '—'}
+																		</span>
+																		<!--  Le motif de l'échec était porté par la carte supprimée
+																		      avec #299 : sans lui, un statut « erreur » ne dit pas
+																		      pourquoi. -->
+																		{#if l.erreur}<span
+																				title={l.erreur}
+																				style="margin-left:.4rem;cursor:help">⚠️</span
+																			>{/if}
+																	</td>
+																{:else}
+																	<td style={c.style ?? ''}>{c.valeur(l)}</td>
+																{/if}
+															{/each}
 														</tr>
 													{/each}
 												</tbody>

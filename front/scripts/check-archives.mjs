@@ -46,6 +46,18 @@ const SRC = join(RACINE, 'src');
  * ressemble à une décision. Le contrôle échoue si l'une d'elles cesse de servir.
  */
 const TITRES_LEGITIMES = {
+	//  🔴 FAUX POSITIF, et il en dit long sur la limite du motif : « Historique
+	//  illisible » n'est pas un titre de section, c'est un MESSAGE D'ERREUR —
+	//  celui de l'historique d'une tâche planifiée qu'on n'a pas pu charger
+	//  (#816). Le contrôle cherche le mot « historique » ; il ne peut pas savoir
+	//  qu'ici il qualifie un échec et non une rubrique.
+	//
+	//  ⚠️ Le déclarer plutôt que reformuler le message : « Historique illisible »
+	//  est exactement ce qu'il faut dire à quelqu'un dont le chargement a échoué,
+	//  et tordre un message d'erreur pour contenter un contrôle, c'est laisser le
+	//  contrôle décider de ce que l'utilisateur lit.
+	'Historique illisible':
+		"message d'ERREUR d'un chargement, pas un titre de section (TachesPlanifiees)",
 	//  🔴 Un TROISIÈME sens d'« Historique », que le relevé de #516 n'avait pas
 	//  vu : ni les objets rangés d'un écran, ni le fil d'un objet, mais le
 	//  JOURNAL de ce qui a été envoyé. Deux écrans d'administration l'emploient,

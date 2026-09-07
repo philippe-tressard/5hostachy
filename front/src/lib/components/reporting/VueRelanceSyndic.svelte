@@ -15,6 +15,7 @@
 	import { apiMessage } from '$lib/utils';
 	//  `fmtDatetime` vient de $lib/date — jamais un format réimplémenté ici.
 	import { daysSince, fmtDatetime } from '$lib/date';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	import {
 		STATUT_TICKET_BADGE as TK_STATUT_BADGE,
 		STATUT_TICKET_LABELS as TK_STATUT_LABELS,
@@ -36,9 +37,15 @@
 	$: chargement = relanceLoading;
 	$: estVide = relanceList.length === 0;
 
+	/*  🔴 Sans état d'échec, la vue répondait « ✅ Aucun ticket syndic en cours » —
+	    avec une COCHE VERTE. Un échec de chargement se lisait donc comme une bonne
+	    nouvelle, sur l'écran même qui sert à relancer le syndic (#816). */
+	let erreur = '';
+
 	async function loadRelanceSyndic(force = false) {
 		if (relanceLoaded && !force) return;
 		relanceLoading = true;
+		erreur = '';
 		try {
 			const resp = await ticketsApi.relanceSyndicList();
 			relanceDelaiJours = resp.delai_jours;
@@ -50,6 +57,7 @@
 			relanceLoaded = true;
 		} catch (e: any) {
 			toast('error', apiMessage(e, 'Erreur chargement relances syndic'));
+			erreur = e?.message ?? 'Chargement impossible';
 		} finally {
 			relanceLoading = false;
 		}
@@ -140,13 +148,15 @@
 	</section>
 {/if}
 
-{#if relanceLoading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
-{:else if relanceList.length === 0}
-	<div class="empty-state">
-		<h3>✅ Aucun ticket syndic en cours</h3>
-		<p>Aucun ticket adressé au syndic n'est actuellement ouvert ou en cours.</p>
-	</div>
+{#if relanceLoading || erreur || relanceList.length === 0}
+	<EtatListe
+		chargement={relanceLoading}
+		{erreur}
+		vide={relanceList.length === 0}
+		titreErreur="Impossible d’afficher les tickets syndic"
+		titreVide="✅ Aucun ticket syndic en cours"
+		messageVide="Aucun ticket adressé au syndic n'est actuellement ouvert ou en cours."
+	/>
 {:else}
 	{@const eligibles = relanceList.filter((t) => daysSince(t.mis_a_jour_le) >= relanceDelaiJours)}
 	<section class="report-card" style="margin-bottom:1.5rem">

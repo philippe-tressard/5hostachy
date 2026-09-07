@@ -76,16 +76,19 @@ const RACINE = 'src';
  *  repris est un écran converti, et sa ligne disparaît d'ici.
  */
 export const DETTES = {
+	//  🔴 FAUX POSITIF ASSUMÉ, et déclaré comme tel (07/09/2026) :
+	//  `ApercuDiffusion` reçoit ses canaux en PROP (`apercu?.canaux ?? []`) — ce
+	//  n'est pas lui qui charge. « Aucun canal coché » y est un état légitime du
+	//  formulaire, pas une absence non constatée : le ticket partira sans
+	//  notification, et c'est exactement ce que la phrase dit.
+	//
+	//  ⚠️ Il reste dans cette table plutôt que dans une liste d'exclusions à part :
+	//  une entrée qui cesse de servir fait échouer le contrôle, donc si ce
+	//  composant se met un jour à charger lui-même, la ligne disparaîtra du
+	//  relevé et forcera à trancher de nouveau.
 	'lib/components/ApercuDiffusion.svelte':
-		'canaux de diffusion — `chargement` sans branche d’échec',
-	'lib/components/HistoriqueAnnoncesHall.svelte': '`ahLoading` sans branche d’échec',
-	'lib/components/OngletModelesEmail.svelte':
-		'DEUX listes — modèles et historique d’envoi, toutes deux sans branche d’échec',
-	'lib/components/OngletPerimetres.svelte': '`chargement` sans branche d’échec',
+		'FAUX POSITIF — les canaux viennent d’une prop, ce composant ne charge rien',
 	'lib/components/OngletTelemetrie.svelte': '`telemetryLoading` puis `!telemetryData`',
-	'lib/components/TachesPlanifiees.svelte':
-		'`santeLoading` puis `!sante` — l’échec se lit « aucune tâche »',
-	'lib/components/reporting/VueRelanceSyndic.svelte': '`relanceLoading` sans branche d’échec',
 	'routes/(app)/admin/+page.svelte':
 		'TROIS listes — comptes en attente, commandes d’accès, demandes de profil',
 	'routes/(app)/mon-lot/+page.svelte': '`loading` puis `lots.length === 0`',

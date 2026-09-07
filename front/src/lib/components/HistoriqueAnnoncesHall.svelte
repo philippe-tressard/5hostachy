@@ -29,9 +29,15 @@
 	import { fmtDateShort as fmtDate, fmtDatetimeShort as fmtDatetime } from '$lib/date';
 	import { safeHtml } from '$lib/sanitize';
 	import { isAdmin } from '$lib/stores/auth';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let ahList: AnnonceHall[] = [];
 	let ahLoading = false;
+	/*  🔴 Sans cette variable, un chargement en échec laissait `ahList` à `[]` et
+	    l'écran répondait « Aucune annonce ». Le toast d'erreur, lui, s'efface au
+	    bout de quelques secondes ; l'affirmation, non. C'est l'incident #519
+	    reproduit ici (#816). */
+	let erreur = '';
 	let ahLoaded = false;
 	let ahArchivees = false;
 	let ahExpandedId: number | null = null;
@@ -46,11 +52,15 @@
 	async function loadAnnoncesHall(force = false) {
 		if (ahLoaded && !force) return;
 		ahLoading = true;
+		erreur = '';
 		try {
 			ahList = await annoncesHallApi.list(ahArchivees);
 			ahLoaded = true;
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur de chargement des annonces');
+			erreur = e instanceof ApiError ? e.message : 'Erreur de chargement des annonces';
+			//  Le toast PRÉVIENT, l'état d'erreur RESTE. L'un ne remplace pas
+			//  l'autre : le toast disparaît, l'écran doit continuer de le dire.
+			toast('error', erreur);
 		} finally {
 			ahLoading = false;
 		}
@@ -112,17 +122,17 @@
 	>
 </div>
 
-{#if ahLoading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
-{:else if ahList.length === 0}
-	<div class="empty-state">
-		<h3>{ahArchivees ? 'Aucune annonce archivée' : 'Aucune annonce'}</h3>
-		<p>
-			{ahArchivees
-				? "Les annonces archivées depuis l'historique apparaîtront ici."
-				: "Créez la première annonce depuis l'onglet « Nouvelle annonce »."}
-		</p>
-	</div>
+{#if ahLoading || erreur || ahList.length === 0}
+	<EtatListe
+		chargement={ahLoading}
+		{erreur}
+		vide={ahList.length === 0}
+		titreErreur="Impossible d’afficher les annonces de hall"
+		titreVide={ahArchivees ? 'Aucune annonce archivée' : 'Aucune annonce'}
+		messageVide={ahArchivees
+			? "Les annonces archivées depuis l'historique apparaîtront ici."
+			: "Créez la première annonce depuis l'onglet « Nouvelle annonce »."}
+	/>
 {:else}
 	{#each ahList as annonce (annonce.id)}
 		<!--  🔴 `EnteteCarte` + `Vignette`, la NORME des cartes du site depuis le
