@@ -18,7 +18,7 @@ import json
 
 from app.models.core import Ticket
 from app.schemas import TicketUpdate
-from app.utils.photos import photos_internes
+from app.utils.photos import photos_internes, photos_json
 
 
 def _liste_json(brut: str | None) -> list:
@@ -86,7 +86,7 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket) -> list[str]:
         retenus = photos_internes(body.fichiers_urls)
         if retenus != _liste_json(ticket.fichiers_urls):
             changes.append("Pièces jointes modifiées")
-        ticket.fichiers_urls = json.dumps(retenus, ensure_ascii=False)
+        ticket.fichiers_urls = photos_json(retenus)
     #  Les PHOTOS se corrigent comme les documents depuis le 18/08/2026 : la
     #  dette `api` que la déclaration citait (#431) est soldée. Deux sections
     #  distinctes à l'écran, deux colonnes distinctes ici — elles ne fusionnent
@@ -95,7 +95,7 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket) -> list[str]:
         retenues = photos_internes(body.photos_urls)
         if retenues != _liste_json(ticket.photos_urls):
             changes.append("Photos modifiées")
-        ticket.photos_urls = json.dumps(retenues, ensure_ascii=False)
+        ticket.photos_urls = photos_json(retenues)
     return changes
 
 

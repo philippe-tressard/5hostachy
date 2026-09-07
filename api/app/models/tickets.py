@@ -70,10 +70,54 @@ STATUTS_TICKET_HISTORIQUES: tuple[str, ...] = ("fermé",)
 
 
 class CategorieTicket(str, Enum):
+    """Ce que le ticket EST — jamais son degré d'urgence.
+
+    🔴 « urgence » a été retirée le 07/09/2026, et c'est une correction de
+    conception, pas un retrait de fonctionnalité. Elle mélangeait deux axes :
+    une panne peut être urgente, une nuisance aussi. Un résident dont
+    l'ascenseur est bloqué avec quelqu'un dedans devait choisir entre « Panne »
+    et « Urgence », et perdait l'autre moitié de l'information quel que soit son
+    choix.
+
+    Le remplacement existait DÉJÀ et servait déjà : `PrioriteTicket.haute`, que
+    la case « Urgent » du formulaire écrit depuis #766. Le commentaire de
+    `front/src/lib/tickets.ts` le disait en toutes lettres — « `urgente` →
+    `priorite === 'haute'`, ce que la catégorie Urgence pose déjà ». Les deux
+    axes se recoupaient, et le code le savait.
+
+    ⚠️ Les quatre catégories ajoutées le même jour ne le sont pas pour enrichir
+    la liste : chacune change ce qu'on FAIT du ticket — le destinataire, le
+    délai ou le geste attendu. Une catégorie qui ne change rien au traitement
+    est un filtre décoratif, et elle rend le choix plus difficile pour rien.
+
+    ## Ce que la consolidation a corrigé dans la première estimation
+
+    Le relevé initial proposait « Dégât des eaux ». La documentation des
+    assureurs et des syndics montre que **le dégât des eaux n'est qu'un cas** :
+    incendie, vandalisme, bris de glace et catastrophe naturelle suivent la
+    MÊME procédure — constat, photos, devis, et déclaration à l'assurance
+    multirisque sous **cinq jours ouvrés**. C'est la procédure qui fait la
+    catégorie, pas la cause. « Sinistre » les couvre toutes ; « Dégât des eaux »
+    en laissait trois sans catégorie, donc en « Panne », où rien ne dit qu'un
+    délai légal court.
+
+    « Espaces verts » vient du même recoupement : elle figure dans toutes les
+    applications de signalement (municipales comme résidentielles), et le
+    prestataire n'est ni celui du nettoyage ni celui de la technique.
+
+    Deux candidates ÉCARTÉES bien qu'omniprésentes ailleurs : « Éclairage »
+    (c'est une panne d'équipement) et « Stationnement » (déjà nommé dans la
+    description de « Nuisance »). Les ajouter aurait dispersé le choix sans rien
+    changer au traitement.
+    """
+
     panne = "panne"
     nuisance = "nuisance"
+    proprete = "proprete"            # autre prestataire : le nettoyage, pas le technique
+    espaces_verts = "espaces_verts"  # autre prestataire encore, et une saisonnalité
+    sinistre = "sinistre"            # constat + déclaration à l'assurance sous 5 jours ouvrés
+    etude_travaux = "etude_travaux"  # le dossier long que le conseil syndical suit
     question = "question"
-    urgence = "urgence"
     bug = "bug"
 
 

@@ -2,7 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import { DEFAUTS_NOTIFS } from '$lib/preferences';
-	import { libelleRole } from '$lib/roles';
+	import { libelleRole, badgeRole } from '$lib/roles';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
@@ -76,18 +76,6 @@
 	//  🔴 Libellés dans `$lib/roles` (#801) — voir l'en-tête de ce module : la
 	//  table était écrite six fois, et celle-ci écrivait « Copropriétaire
 	//  Résident » là où le tableau de bord écrivait « Copropriétaire résident ».
-
-	const roleBadge: Record<string, string> = {
-		résident: 'badge-gray',
-		locataire: 'badge-gray',
-		copropriétaire_résident: 'badge-teal',
-		copropriétaire_bailleur: 'badge-purple',
-		bailleur: 'badge-purple',
-		syndic: 'badge-orange',
-		mandataire: 'badge-yellow',
-		conseil_syndical: 'badge-blue',
-		admin: 'badge-orange',
-	};
 
 	//  ⚠️ Le vocabulaire d'une demande vit dans `$lib/demandes` : cette page ET
 	//  `HistoriqueDemandes` le lisent. Je l'avais d'abord emporté avec la table
@@ -405,7 +393,7 @@
 			<dt>Rôle(s)</dt>
 			<dd style="display:flex;gap:0.35rem;flex-wrap:wrap">
 				{#each $currentUser?.roles?.length ? $currentUser.roles : [$currentUser?.role ?? 'résident'] as r (r)}
-					<span class="badge {roleBadge[r] ?? 'badge-gray'}">{libelleRole(r)}</span>
+					<span class="badge {badgeRole(r)}">{libelleRole(r)}</span>
 				{/each}
 			</dd>
 

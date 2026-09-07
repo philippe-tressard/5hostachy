@@ -101,7 +101,22 @@ def test_l_enumeration_ne_fuit_JAMAIS_telle_quelle():
     assert rendu == "Panne", rendu
     assert "CategorieTicket" not in rendu
     #  Et sur une chaîne nue — la forme que porte un brouillon d'aperçu.
-    assert libelle_categorie("urgence") == "Urgence"
+    assert libelle_categorie("sinistre") == "Sinistre"
     #  Inconnue : la valeur brute, jamais rien.
     assert libelle_categorie("inventee") == "inventee"
     assert libelle_categorie(None) == ""
+
+
+def test_une_categorie_RETIREE_ne_disparait_pas_de_l_ecran():
+    """« urgence » a été retirée le 07/09/2026 (migration 0177).
+
+    🔴 Un ticket qui aurait échappé à la migration — restauré d'une sauvegarde
+    antérieure, par exemple — porte encore `'urgence'`. La fonction doit alors
+    rendre le mot brut, jamais une chaîne vide : la ligne du courriel doit
+    devenir LISIBLEMENT fausse, pas invisible.
+
+    C'est la même règle que pour un libellé de rôle manquant, et c'est la version
+    « affichage » du faux vert : une information absente qui se rend comme une
+    absence d'information.
+    """
+    assert libelle_categorie("urgence") == "urgence"

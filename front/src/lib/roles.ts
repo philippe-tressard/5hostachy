@@ -94,3 +94,77 @@ export function libelleStatut(statut: string | null | undefined): string {
 	if (!statut) return '';
 	return LIBELLES_STATUT[statut] ?? LIBELLES_HERITES[statut] ?? LIBELLES_ROLE[statut] ?? statut;
 }
+
+/*  ══════════════════════════════════════════════════════════════════════════
+    LA TEINTE — le second demi du vocabulaire, resté recopié (#819)
+
+    #809 a fait de ce fichier la source unique des LIBELLÉS de rôle et de
+    statut. La COULEUR, elle, est restée écrite dans les écrans : `/admin` et
+    `/profil` importaient tous deux `libelleRole`, puis recopiaient la table des
+    badges trois lignes plus bas.
+
+    🔴 Ce que la copie coûtait déjà : `/profil` ne connaissait ni
+    `propriétaire` ni `externe`. Un compte portant l'un de ces rôles s'affichait
+    en **gris** sur son propre profil et en **teal** ou **jaune** dans
+    l'administration. Rien ne le signalait — le repli `?? 'badge-gray'` rend un
+    badge parfaitement normal, et c'est ce qui rend l'oubli durable.
+
+    ⚠️ DEUX tables, et la divergence est VOULUE. Le même mot n'a pas la même
+    teinte selon qu'on le lit comme un rôle ou comme un statut :
+
+        copropriétaire_bailleur   rôle → violet    statut → bleu
+        locataire                 rôle → gris      statut → violet
+        mandataire                rôle → jaune     statut → gris
+
+    C'est la distinction que le produit fait partout (le rôle dit ce qu'un
+    compte a le droit de faire, le statut ce qu'une personne EST) et que
+    `LIBELLES_STATUT_COURT` acte déjà côté serveur. Les aligner effacerait
+    l'information au lieu de l'unifier.
+    ══════════════════════════════════════════════════════════════════════════ */
+
+/**  La teinte d'un RÔLE. Une clé par entrée de `LIBELLES_ROLE`, sans exception —
+ *   `test_roles_libelles.py` le vérifie : un rôle libellé mais sans teinte
+ *   s'afficherait en gris, ce qui se lit comme une décision. */
+export const BADGE_ROLE: Record<string, string> = {
+	résident: 'badge-gray',
+	propriétaire: 'badge-teal',
+	conseil_syndical: 'badge-blue',
+	admin: 'badge-orange',
+	externe: 'badge-yellow',
+};
+
+/**  La teinte d'un STATUT. Une clé par entrée de `LIBELLES_STATUT`. */
+export const BADGE_STATUT: Record<string, string> = {
+	copropriétaire_résident: 'badge-green',
+	copropriétaire_bailleur: 'badge-blue',
+	locataire: 'badge-purple',
+	syndic: 'badge-orange',
+	mandataire: 'badge-gray',
+	aidant: 'badge-yellow',
+	admin_technique: 'badge-orange',
+};
+
+/**  Les anciennes clés, lues COMME DES RÔLES — à part, pour la même raison que
+ *   `LIBELLES_HERITES` : elles ne doivent pas entrer dans la concordance avec
+ *   les énumérations du serveur. */
+const BADGE_HERITES: Record<string, string> = {
+	locataire: 'badge-gray',
+	copropriétaire_résident: 'badge-teal',
+	copropriétaire_bailleur: 'badge-purple',
+	bailleur: 'badge-purple',
+	syndic: 'badge-orange',
+	mandataire: 'badge-yellow',
+};
+
+/** La classe de badge d'un rôle. Repli gris : une teinte inconnue ne doit pas
+ *  faire disparaître le badge, seulement le rendre neutre. */
+export function badgeRole(role: string | null | undefined): string {
+	if (!role) return 'badge-gray';
+	return BADGE_ROLE[role] ?? BADGE_HERITES[role] ?? 'badge-gray';
+}
+
+/** La classe de badge d'un statut. */
+export function badgeStatut(statut: string | null | undefined): string {
+	if (!statut) return 'badge-gray';
+	return BADGE_STATUT[statut] ?? 'badge-gray';
+}

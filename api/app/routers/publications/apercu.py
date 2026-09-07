@@ -46,7 +46,7 @@ from app.utils.copie_auteur import adresse_copie, auteur_de
 from app.utils.apercu_diffusion import ApercuCanal, ApercuDiffusion, apercu_email, apercu_whatsapp
 from app.utils.destinataires import destinataires_syndic_cs
 from app.utils.fichiers import est_image
-from app.utils.photos import photos_internes
+from app.utils.photos import photos_internes, photos_json
 
 from .courriels import contexte_publication_syndic
 
@@ -98,7 +98,7 @@ def _publication_previsionnelle(b: BrouillonPublication, auteur: Utilisateur) ->
         auteur_id=auteur.id,
         urgente=b.urgente,
         perimetre_cible=json.dumps(b.perimetre_cible or ["résidence"], ensure_ascii=False),
-        photos_urls=json.dumps(photos_internes(b.photos_urls), ensure_ascii=False),
+        photos_urls=photos_json(b.photos_urls),
         cree_le=datetime.utcnow(),
     )
 

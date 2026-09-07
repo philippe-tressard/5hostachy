@@ -25,6 +25,7 @@ from app.models.core import Utilisateur
 #  alias qui délègue au helper partagé masque son origine (socle 02 §6).
 from app.utils.perimetres import parse_json_perimetres, parse_perimetres
 from app.utils.noms import nom_affiche
+from app.utils.categories_ticket import ticket_urgent
 
 
 @dataclass(frozen=True)
@@ -90,6 +91,25 @@ def strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
     if len(clean) > max_len:
         clean = clean[:max_len].rsplit(" ", 1)[0] + "…"
     return clean
+
+
+def badges_ticket(ticket) -> list[str]:
+    """Les badges d'un ticket dans le fil : son numéro, sa catégorie, son urgence.
+
+    🔴 Cette liste était écrite TROIS fois dans `flux/tickets.py` — ouverts,
+    résolus, épinglés — sous la forme `[f"#{tk.numero}", tk.categorie]`. Trois
+    copies d'une même règle, qui n'ont pas divergé par chance.
+
+    ⚠️ Le badge « urgent » ne pouvait PAS y être ajouté à la main sans la
+    factoriser d'abord : il aurait fallu le poser aux trois endroits, et le
+    quatrième appel — celui qu'on écrit dans six mois — l'aurait oublié. Le front
+    lit ce badge (`estUrgent`, `flux.ts`) pour teinter la carte ; il lisait
+    jusqu'ici la catégorie « urgence », qui n'existe plus (migration 0177).
+    """
+    badges = [f"#{ticket.numero}", ticket.categorie]
+    if ticket_urgent(ticket):
+        badges.append("urgent")
+    return badges
 
 
 def badges_marqueurs(obj) -> list[str]:

@@ -230,7 +230,7 @@ def test_patch_ticket_corriger_un_champ_n_ecrit_rien_dans_le_fil(cs):
             TicketUpdate(
                 titre="Ascenseur en panne",
                 description="<p>Bloqué au 3ᵉ.</p>",
-                categorie="urgence",
+                categorie="sinistre",
                 perimetre_cible=["résidence"],
                 photos_urls=[],
                 fichiers_urls=[],
@@ -246,7 +246,7 @@ def test_patch_ticket_corriger_un_champ_n_ecrit_rien_dans_le_fil(cs):
             f"{[(e.type, e.contenu) for e in evols]}"
         )
         #  Le fait, pas le symptôme : la correction a-t-elle été appliquée ?
-        assert session.get(Ticket, ticket.id).categorie == "urgence"
+        assert session.get(Ticket, ticket.id).categorie == "sinistre"
 
         purger_ligne(session, Ticket, ticket.id)
         session.commit()

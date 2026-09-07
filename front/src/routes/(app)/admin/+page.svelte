@@ -4,7 +4,7 @@
 	import { get } from 'svelte/store';
 	import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
 	import { api, admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
-	import { libelleRole } from '$lib/roles';
+	import { libelleRole, badgeRole, badgeStatut } from '$lib/roles';
 	import { toast } from '$lib/components/Toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import ChampIcone from '$lib/components/ChampIcone.svelte';
@@ -399,21 +399,6 @@
 	//  « Membre du Conseil Syndical » dans la notification que le serveur envoie.
 	//  Chacune était cohérente avec elle-même : aucun contrôle ne pouvait le voir.
 
-	const roleBadgeClass: Record<string, string> = {
-		propriétaire: 'badge-teal',
-		résident: 'badge-gray',
-		externe: 'badge-yellow',
-		conseil_syndical: 'badge-blue',
-		admin: 'badge-orange',
-		// legacy
-		locataire: 'badge-gray',
-		copropriétaire_résident: 'badge-teal',
-		copropriétaire_bailleur: 'badge-purple',
-		bailleur: 'badge-purple',
-		syndic: 'badge-orange',
-		mandataire: 'badge-yellow',
-	};
-
 	const statutLabels: Record<string, string> = {
 		copropriétaire_résident: 'Copro. résident',
 		copropriétaire_bailleur: 'Copro. bailleur',
@@ -422,16 +407,6 @@
 		mandataire: 'Mandataire',
 		aidant: 'Aidant (proche)',
 		admin_technique: 'Admin technique',
-	};
-
-	const statutBadgeClass: Record<string, string> = {
-		copropriétaire_résident: 'badge-green',
-		copropriétaire_bailleur: 'badge-blue',
-		locataire: 'badge-purple',
-		syndic: 'badge-orange',
-		mandataire: 'badge-gray',
-		aidant: 'badge-yellow',
-		admin_technique: 'badge-orange',
 	};
 
 	function userRoles(u: any): string[] {
@@ -443,7 +418,7 @@
 		const roles: string[] = u.roles?.length ? u.roles : [u.role];
 		return roles.map((r: string) => ({
 			label: libelleRole(r),
-			cls: roleBadgeClass[r] ?? 'badge-gray',
+			cls: badgeRole(r),
 		}));
 	}
 
@@ -843,15 +818,14 @@
 								{/if}
 							</td>
 							<td
-								><span
-									class="badge {statutBadgeClass[u.statut] ?? 'badge-gray'}"
-									style="font-size:.75rem">{statutLabels[u.statut] ?? u.statut}</span
+								><span class="badge {badgeStatut(u.statut)}" style="font-size:.75rem"
+									>{statutLabels[u.statut] ?? u.statut}</span
 								></td
 							>
 							<td>
 								<div style="display:flex;gap:.25rem;flex-wrap:wrap">
 									{#each u.roles?.length ? u.roles : [u.role] as r (r)}
-										<span class="badge {roleBadgeClass[r] ?? 'badge-gray'}" style="font-size:.75rem"
+										<span class="badge {badgeRole(r)}" style="font-size:.75rem"
 											>{libelleRole(r)}</span
 										>
 									{/each}
@@ -998,10 +972,7 @@
 								</td>
 								<td style="color:var(--color-text-muted);font-size:.85rem">{u.email}</td>
 								<td>
-									<span
-										class="badge {statutBadgeClass[u.statut] ?? 'badge-gray'}"
-										style="font-size:.75rem"
-									>
+									<span class="badge {badgeStatut(u.statut)}" style="font-size:.75rem">
 										{statutLabels[u.statut] ?? u.statut ?? '—'}
 									</span>
 								</td>

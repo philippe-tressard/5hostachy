@@ -34,8 +34,11 @@ from __future__ import annotations
 LIBELLES_CATEGORIE: dict[str, str] = {
     "panne": "Panne",
     "nuisance": "Nuisance",
+    "proprete": "Propreté",
+    "espaces_verts": "Espaces verts",
+    "sinistre": "Sinistre",
+    "etude_travaux": "Étude & travaux",
     "question": "Question",
-    "urgence": "Urgence",
     "bug": "Bug",
 }
 
@@ -55,3 +58,37 @@ def libelle_categorie(categorie) -> str:
         return ""
     valeur = str(getattr(categorie, "value", categorie))
     return LIBELLES_CATEGORIE.get(valeur, valeur)
+
+
+#  ══════════════════════════════════════════════════════════════════════════
+#  L'URGENCE D'UN TICKET — une seule écriture, des deux côtés (#820)
+#
+#  🔴 « Ce ticket est urgent » s'écrivait HUIT fois : cinq côté front
+#  (`CarteTicket`, `FormulaireTicket`, `VueTickets`, `FluxCard`, `flux.ts`) et
+#  trois côté API (`flux/sante.py`, `tickets/apercu.py`, `tickets/courriels.py`).
+#  Toutes testaient `categorie == "urgence"`.
+#
+#  Or `tickets/commun.py` écrivait déjà, en commentaire, la vérité contraire :
+#  *« Pas de colonne `urgente` : l'urgence d'un ticket EST sa priorité »* — la
+#  case « Urgent » du formulaire pose `priorite = haute` depuis #766. Le produit
+#  avait donc DEUX façons de dire qu'un ticket presse, et huit endroits n'en
+#  connaissaient qu'une.
+#
+#  La catégorie « urgence » a été retirée (migration 0177) : elle répondait à la
+#  question du DÉLAI dans la liste qui pose celle de la NATURE. Cette fonction
+#  est ce qui reste, et il n'y en a qu'une.
+#  ══════════════════════════════════════════════════════════════════════════
+
+
+def ticket_urgent(ticket) -> bool:
+    """Un ticket presse-t-il ? La priorité le dit, et elle seule.
+
+    ⚠️ Accepte l'énumération comme la chaîne, pour la même raison que
+    `libelle_categorie` : le ticket porte l'une ou l'autre selon qu'il vient de
+    la base ou d'un brouillon d'aperçu, et l'oubli de cette nuance a déjà fait
+    rendre `CategorieTicket.panne` dans un courriel.
+    """
+    if ticket is None:
+        return False
+    priorite = getattr(ticket, "priorite", None)
+    return str(getattr(priorite, "value", priorite)) == "haute"

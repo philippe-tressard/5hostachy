@@ -140,13 +140,35 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		emoji: '\u{1F4E2}',
 		description: 'Bruit, odeur, parking…',
 	},
-	{ value: 'question', label: 'Question', emoji: '❓', description: 'Information, procédure…' },
 	{
-		value: 'urgence',
-		label: 'Urgence',
-		emoji: '\u{1F6A8}',
-		description: 'Inondation, panne majeure, danger immédiat',
+		value: 'proprete',
+		label: 'Propreté',
+		emoji: '\u{1F9F9}',
+		description: 'Parties communes, poubelles, encombrants abandonnés…',
 	},
+	{
+		value: 'espaces_verts',
+		label: 'Espaces verts',
+		emoji: '\u{1F333}',
+		description: 'Élagage, haies, arrosage, allées…',
+	},
+	{
+		value: 'sinistre',
+		label: 'Sinistre',
+		//  ⚠️ La description porte les mots du RÉSIDENT — « dégât des eaux »,
+		//  « fuite » — là où le libellé porte celui de l'assureur. Le sinistre est
+		//  ce qui déclenche une déclaration sous cinq jours ouvrés ; c'est la
+		//  procédure qui fait la catégorie, pas la cause.
+		emoji: '\u{1F4A7}',
+		description: 'Dégât des eaux, incendie, vandalisme — déclaration à l’assurance',
+	},
+	{
+		value: 'etude_travaux',
+		label: 'Étude & travaux',
+		emoji: '\u{1F3D7}️',
+		description: 'Diagnostic, sondage, devis, chantier suivi par le conseil',
+	},
+	{ value: 'question', label: 'Question', emoji: '❓', description: 'Information, procédure…' },
 	{
 		value: 'bug',
 		label: 'Bug',
@@ -297,4 +319,27 @@ export function optionsVersTicket(options: {
 		urgente: options.urgente,
 		confidentiel: options.brouillon,
 	};
+}
+
+/*  ══════════════════════════════════════════════════════════════════════════
+    L'URGENCE D'UN TICKET — une seule écriture (#820)
+
+    🔴 « Ce ticket est urgent » s'écrivait HUIT fois : cinq ici (`CarteTicket`,
+    `FormulaireTicket`, `VueTickets`, `FluxCard`, `flux.ts`) et trois côté API.
+    Toutes testaient la catégorie `'urgence'`.
+
+    Or ce fichier écrivait DÉJÀ la vérité contraire, quelques lignes plus haut :
+    « `urgente` → `priorite === 'haute'` — ce que la catégorie Urgence pose
+    déjà ». Le produit avait deux façons de dire qu'un ticket presse, et huit
+    endroits n'en connaissaient qu'une.
+
+    La catégorie a été retirée (migration 0177) : elle répondait à la question du
+    DÉLAI dans la liste qui pose celle de la NATURE. Une panne peut être urgente,
+    une nuisance aussi — et le résident dont l'ascenseur est bloqué avec
+    quelqu'un dedans n'avait aucun moyen de dire les deux.
+    ══════════════════════════════════════════════════════════════════════════ */
+
+/** Un ticket presse-t-il ? La priorité le dit, et elle seule. */
+export function ticketUrgent(ticket: { priorite?: string | null } | null | undefined): boolean {
+	return ticket?.priorite === 'haute';
 }
