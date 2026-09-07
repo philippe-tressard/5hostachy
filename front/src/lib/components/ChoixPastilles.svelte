@@ -98,6 +98,37 @@
 	 */
 	export let defilante = true;
 
+	/**
+	 *  Rendre la rangée en GRILLE — colonnes égales, remplissage complet.
+	 *
+	 *  Pour un choix qu'on doit **embrasser d'un coup d'œil** : les huit
+	 *  catégories de ticket. En `flex-wrap`, chaque vignette prend la largeur de
+	 *  son texte, et le nombre par ligne dépend de la longueur des phrases — deux
+	 *  lignes n'étaient pas garanties, seulement probables.
+	 *
+	 *  ⚠️ Exclusif de `defilante` : une grille qui déborde horizontalement n'a
+	 *  aucun sens. La combinaison est refusée plus bas, à la compilation du
+	 *  composant plutôt qu'à l'œil.
+	 *
+	 *  ⚠️ **Deux lignes sur ordinateur et tablette, TROIS sur téléphone** —
+	 *  mesuré au navigateur, pas supposé : 900 px → 5 + 3 vignettes ; 700 px →
+	 *  6 + 2 ; 380 px → 3 + 3 + 2. À 380 px, tenir huit vignettes en deux lignes
+	 *  demanderait quatre colonnes de 85 px, où le sous-texte cesse d'être
+	 *  lisible. Trois lignes lisibles valent mieux que deux illisibles, et le
+	 *  socle (11 §10) va dans le même sens.
+	 */
+	export let grille = false;
+
+	//  🔴 Une erreur PARLANTE, et non un rendu silencieusement faux. Les deux
+	//  modes se contredisent ; laisser passer donnerait une grille sans
+	//  `flex-wrap` dont on ne verrait le défaut qu'à l'écran, sur un écran donné.
+	$: if (grille && defilante) {
+		throw new Error(
+			'ChoixPastilles : `grille` et `defilante` s’excluent — une grille qui ' +
+				'déborde horizontalement n’a pas de sens. Passer `defilante={false}`.',
+		);
+	}
+
 	/** Ajoute le ` *` de la charte au libellé visible. */
 	export let requis = false;
 
@@ -131,7 +162,8 @@
 	<div
 		class="filters"
 		class:filters--defilante={defilante}
-		class:filters--egalisee={avecDetail}
+		class:filters--grille={grille}
+		class:filters--egalisee={avecDetail && !grille}
 		role={radio ? 'radiogroup' : 'group'}
 		aria-label={libelleVisible ? undefined : libelle}
 		aria-labelledby={libelleVisible ? idTitre : undefined}

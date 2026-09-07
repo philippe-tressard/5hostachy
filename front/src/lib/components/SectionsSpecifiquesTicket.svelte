@@ -92,6 +92,7 @@
 			libelle="Catégorie"
 			avecDetail
 			defilante={false}
+			grille
 		/>
 	</SectionFormulaire>
 {/if}
