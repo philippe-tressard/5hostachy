@@ -243,6 +243,20 @@ case "$V0D" in
 esac
 rapporter 0d "$V0D" "Un seul bump de version dans le lot" "$D0D"
 
+# 0g — le RANG du bump correspond à ce que le lot apporte (07/09/2026)
+#      Le point 0d compte les bumps ; il ne regardait pas leur RANG, et six des
+#      dix-huit derniers lots en portaient un faux, tous surévalués. Le « pourquoi »
+#      complet vit avec les deux fonctions, dans `lib-verdicts-mep.sh`.
+SUJETS=$(git log origin/main..HEAD --format='%s%n%b' 2>/dev/null | grep -v '^chore(version)')
+V0G=$(verdict_rang_version "$(rang_attendu "$SUJETS")" "${V_MAIN:-}" "${V_HEAD:-}")
+case "$V0G" in
+  OK)    D0G="${V_MAIN:-?} → ${V_HEAD:-?} — $(rang_attendu "$SUJETS"), conforme aux préfixes du lot" ;;
+  ECART) D0G="version inchangée : rien à juger (0d le dit déjà)" ;;
+  FAIL)  D0G="le lot annonce un $(rang_attendu "$SUJETS"), or ${V_MAIN:-?} → ${V_HEAD:-?} — corriger le bump, ou le préfixe s'il ment" ;;
+  *)     D0G="rang non calculable" ;;
+esac
+rapporter 0g "$V0G" "Rang du bump conforme à ce que le lot apporte" "$D0G"
+
 # 0f — titre et descriptif de PR préparés AVANT le push
 #      Ajouté le 11/08/2026, sur demande de l'utilisateur, après deux oublis dans
 #      la même journée — dont le second APRÈS s'être fait reprendre sur le
