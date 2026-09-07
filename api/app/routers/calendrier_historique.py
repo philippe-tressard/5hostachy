@@ -22,7 +22,6 @@ La même que dans `tickets/` et `publications/` : **la décision d'un côté, le
 cycle de vie de l'autre**. Ce module porte ce que le fil raconte ; `calendrier.py`
 garde la création, la lecture et la modification d'un événement.
 """
-import json
 from datetime import datetime
 from typing import Optional
 
@@ -35,7 +34,7 @@ from app.database import get_session
 from app.models.core import Evenement, Utilisateur
 from app.models.evenement import EvenementEvolution
 from app.utils.evolutions import supprimer_evolution
-from app.utils.photos import parse_photos, photos_internes
+from app.utils.photos import parse_photos, photos_json
 from app.routers.calendrier_courriels import notifier_canaux
 from app.utils.noms import nom_affiche
 
@@ -166,7 +165,7 @@ def add_evolution_evenement(
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
         auteur_id=user.id,
         cree_le=datetime.utcnow(),
-        fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
+        fichiers_urls=photos_json(body.fichiers_urls),
     )
     session.add(evol)
     if body.type == "etat":
@@ -225,7 +224,7 @@ def update_evolution_evenement(
     if body.contenu is not None:
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
-        evol.fichiers_urls = json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False)
+        evol.fichiers_urls = photos_json(body.fichiers_urls)
     session.add(evol)
     session.commit()
     session.refresh(evol)

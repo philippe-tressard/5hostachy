@@ -20,7 +20,7 @@ from app.routers.calendrier_historique import (
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.liens import lien_element
 from app.utils.suppression_liee import flush_si_necessaire, supprimer_documents_de
-from app.utils.photos import parse_photos, photos_internes
+from app.utils.photos import parse_photos, photos_internes, photos_json
 from app.utils.visibility import evenement_visible
 from app.utils.noms import nom_affiche
 from app.utils.corrections import contenu_correction
@@ -409,7 +409,7 @@ def update_evenement(
         if champ in data:
             # Liste → tableau JSON, en ne conservant que nos propres URLs (cf.
             # photos_internes). Ces champs ne servent qu'à retirer des fichiers.
-            data[champ] = json.dumps(photos_internes(data[champ] or []))
+            data[champ] = photos_json(data[champ])
     old_statut = ev.statut_kanban
     #  L'état d'AVANT, relevé avant la boucle : c'est lui qui dit ce qui a
     #  réellement changé. Sans ce relevé, réenregistrer une valeur identique

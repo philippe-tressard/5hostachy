@@ -2,7 +2,6 @@
 
 Extrait de `tickets.py` le 08/08/2026. Voir `__init__.py` pour la règle de découpage.
 """
-import json
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -20,7 +19,7 @@ from app.models.core import (
 )
 from app.schemas import MessageCreate, MessageRead
 from app.utils.liens import lien_ticket
-from app.utils.photos import photos_internes
+from app.utils.photos import photos_json
 from app.utils.visibility import ticket_visible
 
 from .commun import config_site, contexte_site
@@ -115,7 +114,7 @@ def add_message(
         auteur_id=user.id,
         contenu=body.contenu,
         interne=body.interne,
-        fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
+        fichiers_urls=photos_json(body.fichiers_urls),
     )
     # Auto-log évolution "réponse"
     session.add(TicketEvolution(

@@ -60,7 +60,6 @@ def telemetry_history(
     ).all()
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────
 
-from app.models.core import ModeleEmail
 from app.utils.noeud import noeud_courant
 
 
