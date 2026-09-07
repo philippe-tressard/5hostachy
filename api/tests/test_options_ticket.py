@@ -71,15 +71,34 @@ def test_None_ne_touche_a_RIEN():
     assert (t.epingle, t.confidentiel, t.priorite) == (True, True, "haute")
 
 
-def test_un_non_CS_ne_peut_RIEN_poser():
-    """Ces options ordonnent la liste du conseil et décident qui lit : elles lui
-    appartiennent (#710). Le contrôle est dans la règle, pas chez l'appelant."""
+def test_un_non_CS_ne_peut_ni_EPINGLER_ni_RESTREINDRE():
+    """Ces deux options ordonnent la liste du conseil et décident qui lit : elles
+    lui appartiennent (#710). Le contrôle est dans la règle, pas chez l'appelant.
+
+    🔴 `urgente` EN EST SORTIE le 07/09/2026, et ce test l'a refusé avant que la
+    CI ne le fasse — c'est exactement son rôle, et il tenait.
+
+    Le retrait de la catégorie « Urgence » (migration 0177) a fait de cette option
+    le SEUL moyen de dire qu'un ticket presse. Or la catégorie était ouverte à
+    tout le monde et l'option était réservée au conseil : un résident face à une
+    inondation n'avait plus aucun moyen de le signaler. Une description de sa
+    propre situation appartient à l'auteur ; l'ordre de la liste et l'audience,
+    non.
+
+    Le détail et le cas nominal vivent dans `test_urgence_par_le_resident.py`.
+    """
     t = _Ticket()
-    changees = appliquer_options(
-        t, _Corps(epingle=True, urgente=True, confidentiel=True), est_cs=False
-    )
+    changees = appliquer_options(t, _Corps(epingle=True, confidentiel=True), est_cs=False)
     assert changees == []
-    assert (t.epingle, t.confidentiel, t.priorite) == (False, False, "normale")
+    assert (t.epingle, t.confidentiel) == (False, False)
+
+
+def test_un_non_CS_peut_dire_que_ca_PRESSE():
+    """Le pendant du précédent : ce qui a été rendu, et à qui."""
+    t = _Ticket()
+    changees = appliquer_options(t, _Corps(urgente=True), est_cs=False)
+    assert changees == ["urgente"]
+    assert t.priorite == "haute"
 
 
 def test_decocher_marche_aussi():

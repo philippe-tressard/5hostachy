@@ -77,6 +77,27 @@
 	/** Afficher le libellé au-dessus de la rangée — le cas du formulaire. */
 	export let libelleVisible = false;
 
+	/**
+	 *  La rangée DÉFILE-t-elle horizontalement, ou se replie-t-elle sur plusieurs
+	 *  lignes ?
+	 *
+	 *  🔴 Le défilement était posé en dur, pour toutes les instances. Signalé à
+	 *  l'écran le 07/09/2026 sur les huit catégories de ticket : trois d'entre
+	 *  elles — « Étude & travaux », « Question », « Bug » — étaient **hors du
+	 *  cadre**, et rien ne le disait sinon une barre de défilement grise.
+	 *
+	 *  `composants.css` l'écrivait pourtant au-dessus de la règle : *« un
+	 *  défilement horizontal masque des filtres sans le dire, là où `flex-wrap:
+	 *  wrap` les montre tous »*. La variante était nommée pour ne pas s'hériter —
+	 *  et elle s'héritait quand même, par ce composant.
+	 *
+	 *  ⚠️ Vrai par DÉFAUT : les filtres d'une barre existante continuent de
+	 *  défiler, et ce lot ne change que ce qu'on lui demande de changer. Un choix
+	 *  de formulaire, lui, doit montrer TOUTES ses valeurs — on ne choisit pas
+	 *  dans une liste dont on ignore la fin.
+	 */
+	export let defilante = true;
+
 	/** Ajoute le ` *` de la charte au libellé visible. */
 	export let requis = false;
 
@@ -108,7 +129,8 @@
 		<span class="libelle-groupe" id={idTitre}>{libelle}{requis ? ' *' : ''}</span>
 	{/if}
 	<div
-		class="filters filters--defilante"
+		class="filters"
+		class:filters--defilante={defilante}
 		class:filters--egalisee={avecDetail}
 		role={radio ? 'radiogroup' : 'group'}
 		aria-label={libelleVisible ? undefined : libelle}

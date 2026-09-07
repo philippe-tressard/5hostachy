@@ -80,6 +80,10 @@
 			      réponse a été d'ENRICHIR l'objet plutôt que de le contourner : la
 			      pastille sait désormais porter un `<input type="radio">`, masqué à
 			      l'œil mais pas à l'accessibilité. -->
+		<!--  ⚠️ `defilante={false}` : huit catégories ne tiennent pas sur une ligne,
+		      et trois d'entre elles étaient hors du cadre (07/09/2026). On ne
+		      choisit pas dans une liste dont on ignore la fin — un filtre qu'on
+		      rate se rattrape, une catégorie ratée range le ticket ailleurs. -->
 		<ChoixPastilles
 			options={OPTIONS_CATEGORIE}
 			bind:valeur={categorie}
@@ -87,6 +91,7 @@
 			radio="ticket-categorie"
 			libelle="Catégorie"
 			avecDetail
+			defilante={false}
 		/>
 	</SectionFormulaire>
 {/if}
@@ -101,12 +106,10 @@
 	/>
 
 	<!--  LE MÊME COMPOSANT QUE L'ACTUALITÉ (05/09/2026) : *« faire ces
-		      évolutions au niveau de l'objet pour ne pas dupliquer le code »*. Une
-		      seule option ici — le ticket n'a ni colonne d'épinglage ni colonne
-		      d'urgence (l'urgence est une CATÉGORIE), et déclarer une case sans
-		      donnée derrière serait une promesse vide. Sa colonne `confidentiel`
-		      se branche sur la clé d'affichage `brouillon` : même notion, deux
-		      colonnes historiques (voir `$lib/options-publication`). -->
+		      évolutions au niveau de l'objet pour ne pas dupliquer le code »*.
+		      Sa colonne `confidentiel` se branche sur la clé d'affichage
+		      `brouillon` : même notion, deux colonnes historiques (voir
+		      `$lib/options-publication`). -->
 	<SectionOptionsPublication
 		objet="ticket"
 		options={OPTIONS_TICKET}
@@ -115,6 +118,20 @@
 		bind:urgente={options.urgente}
 		bind:brouillon={options.brouillon}
 	/>
+{:else if sectionPresente(TICKET, etat, 'specifiques')}
+	<!--  🔴 LE RÉSIDENT VOIT LA SEULE CASE « URGENT », et c'est la réparation
+	      d'une régression livrée le matin même (07/09/2026).
+
+	      La catégorie « Urgence » a été retirée au profit de cette option — sauf
+	      que la catégorie était ouverte à tout le monde et que la section entière
+	      est réservée au conseil. Un résident face à une inondation n'avait donc
+	      plus AUCUN moyen de dire que ça pressait.
+
+	      ⚠️ La seule case, et pas la section entière : `epingle` ordonne la liste
+	      du conseil et `confidentiel` décide de l'audience — deux décisions qui
+	      ne sont pas celles de l'auteur (#710). Dire que sa propre situation
+	      presse, si. -->
+	<SectionOptionsPublication objet="ticket" options={['urgente']} bind:urgente={options.urgente} />
 {/if}
 
 <!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui

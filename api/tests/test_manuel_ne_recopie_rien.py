@@ -63,6 +63,37 @@ INTERDITS = {
         "les délais (archivage, relance, rétention) sont administrables : "
         "les écrire ici les fige à la valeur d'un jour donné",
     ),
+    #  🔴 REMIS le 07/09/2026, après l'avoir enfreint moi-même le jour même.
+    #
+    #  L'ancien `test_manuel_concordance.py` vérifiait « les cinq descriptions de
+    #  catégories de ticket ». Il a été supprimé le 02/09 parce que le manuel avait
+    #  cessé d'en parler — et le motif est parti avec lui.
+    #
+    #  En livrant les huit catégories, j'ai recopié la liste ENTIÈRE dans le
+    #  manuel, descriptions comprises, sans qu'aucun contrôle ne bronche. C'est
+    #  exactement le trou que la docstring de ce fichier annonçait : « rien
+    #  n'aurait empêché la première section pratique de réintroduire "15 Mo" un an
+    #  plus tard ». Il aura fallu cinq jours, pas un an.
+    #
+    #  ⚠️ Le motif vise la LISTE, pas le mot : le manuel doit pouvoir écrire
+    #  « Nuisance ou Propreté ? » pour expliquer comment choisir — c'est justement
+    #  ce que l'écran ne dit pas. Ce qu'il ne doit pas faire, c'est ÉNUMÉRER : chaque
+    #  description est déjà affichée sous sa tuile, et la copie diverge.
+    #
+    #  Le seuil est TROIS entrées de liste : deux catégories citées côte à côte
+    #  sont une comparaison, trois sont un catalogue. C'est le même arbitrage que
+    #  le seuil de deux clés du contrôle des teintes de rôle — mesuré sur ce que
+    #  le manuel écrit légitimement, pas choisi pour faire passer le contrôle.
+    "une énumération de catégories de ticket": (
+        re.compile(
+            r"(?:<li>[^<]*<strong>[^<]*"
+            r"(?:Panne|Nuisance|Propreté|Espaces verts|Sinistre|Étude|Question|Bug)"
+            r"[^<]*</strong>[^<]*(?:—|–|-|:)[^<]{10,}?</li>\s*){3,}"
+        ),
+        "la source est `CATEGORIES_TICKET` (front/src/lib/tickets.ts) ; l'écran "
+        "affiche déjà chaque description sous sa tuile, au moment où l'on choisit. "
+        "Le manuel dit COMMENT choisir, il n'énumère pas",
+    ),
 }
 
 
@@ -106,3 +137,41 @@ def test_le_controle_lit_bien_le_manuel():
     assert INTERDITS["une taille de fichier"][0].search("jusqu'à 15 Mo par fichier")
     assert INTERDITS["un nombre de pièces jointes"][0].search("5 photos maximum")
     assert not INTERDITS["un délai en jours"][0].search("3 minutes pour démarrer")
+
+
+def test_le_motif_des_CATEGORIES_refuse_bien_la_version_que_j_ai_ecrite():
+    """Cas zéro — la liste réellement écrite le 07/09/2026, puis retirée.
+
+    🔴 Sans ce cas, le motif serait invérifiable : il ne s'applique à rien dans le
+    manuel actuel, donc il resterait vert quoi qu'il contienne. C'est le défaut
+    exact des deux contrôles que ce fichier remplace — verts en ne mesurant plus
+    rien parce que leur cible avait disparu.
+
+    Les deux sens sont éprouvés, et le second est le plus important : le manuel
+    DOIT pouvoir opposer deux catégories pour expliquer comment choisir. Un motif
+    qui le refuserait ferait retirer l'explication, c'est-à-dire la seule chose
+    que le manuel apporte que l'écran n'apporte pas.
+    """
+    motif = INTERDITS["une énumération de catégories de ticket"][0]
+
+    catalogue = (
+        "<ul>\n"
+        "<li><strong>🛠️ Panne</strong> — un équipement ne marche plus : ascenseur.</li>\n"
+        "<li><strong>📢 Nuisance</strong> — bruit, odeurs, stationnement gênant.</li>\n"
+        "<li><strong>🧹 Propreté</strong> — parties communes, encombrants abandonnés.</li>\n"
+        "</ul>"
+    )
+    assert motif.search(catalogue), "le catalogue doit être refusé"
+
+    explication = (
+        "<li><strong>Nuisance ou Propreté ?</strong> Elles se touchent, et c'est "
+        "normal — choisissez selon ce qui doit se passer ensuite.</li>"
+    )
+    assert not motif.search(explication), "l'explication doit passer"
+
+    #  Deux entrées : une comparaison, pas un catalogue.
+    comparaison = (
+        "<li><strong>Nuisance</strong> — il y a quelqu'un à qui parler.</li>\n"
+        "<li><strong>Propreté</strong> — il y a une prestation à commander.</li>"
+    )
+    assert not motif.search(comparaison), "deux entrées ne font pas une liste"

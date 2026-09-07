@@ -359,9 +359,28 @@ OPTIONS_TICKET = ("epingle", "urgente", "confidentiel")
 #: Les options qui appartiennent au CONSEIL, pas à l'auteur.
 #:
 #: `confidentiel` décide qui a le droit de lire — un auteur corrige son texte, il
-#: ne décide pas de son audience (#710). Épingler et marquer urgent ordonnent la
-#: liste du conseil : même nature.
-OPTIONS_RESERVEES_AU_CS = ("epingle", "urgente", "confidentiel")
+#: ne décide pas de son audience (#710). `epingle` ordonne la liste du conseil.
+#:
+#: 🔴 `urgente` EN EST SORTIE le 07/09/2026, et c'est la réparation d'une
+#: régression que j'avais livrée le matin même.
+#:
+#: La catégorie « Urgence » a été retirée (migration 0177) au profit de cette
+#: option — sauf que la catégorie était ouverte à TOUT LE MONDE et que l'option
+#: était réservée au conseil. Un résident face à une inondation ne pouvait donc
+#: plus dire que ça pressait : ni case à l'écran, ni acceptation côté serveur.
+#: Le conseil n'était plus prévenu en urgence, l'avertissement « 15 · 17 · 18 »
+#: ne s'affichait plus, et le message WhatsApp partait en ordinaire.
+#:
+#: ⚠️ Le motif écrit ici disait « épingler et marquer urgent ordonnent la liste
+#: du conseil : même nature ». C'était vrai TANT QUE la catégorie portait le
+#: signalement en parallèle. En retirant la catégorie, j'ai fait de cette option
+#: le seul moyen de décrire sa propre situation — et une description de sa
+#: situation appartient à l'auteur, pas au conseil.
+#:
+#: Le risque d'abus est réel mais il n'est pas NOUVEAU : la catégorie
+#: « Urgence » était cochable par n'importe qui depuis toujours. On ne fait que
+#: rendre ce qui existait.
+OPTIONS_RESERVEES_AU_CS = ("epingle", "confidentiel")
 
 
 def appliquer_options(ticket: Ticket, body, *, est_cs: bool) -> list[str]:

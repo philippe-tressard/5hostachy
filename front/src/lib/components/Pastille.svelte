@@ -275,8 +275,19 @@
 
 		    ⚠️ `max-width` et non `width` : une pastille au libellé court —
 		    « Gestion / Syndic, gestion locative » — reste étroite. Une largeur
-		    fixe alignerait au prix d'un vide à droite de chacune. */
-		max-width: 13rem;
+		    fixe alignerait au prix d'un vide à droite de chacune.
+
+		    🔴 Resserrée de 13 à 11 rem le 07/09/2026, sur le même arbitrage
+		    poursuivi : *« pour le sous-texte, passe à 3 lignes si nécessaire
+		    (même hauteur) pour diminuer la largeur »*. À 13 rem, huit catégories
+		    de ticket ne tenaient pas sur deux lignes ; à 11 rem, elles y tiennent
+		    à quatre par ligne sur un écran ordinaire.
+
+		    Le sous-texte prend alors parfois une troisième ligne — c'est le prix
+		    demandé, et il ne coûte rien : `filters--egalisee` étire déjà toutes
+		    les pastilles d'une rangée à la hauteur de la plus haute, donc aucune
+		    ne se retrouve plus courte que ses voisines. */
+		max-width: 11rem;
 	}
 	.pastille-detail {
 		font-size: 0.72rem;
