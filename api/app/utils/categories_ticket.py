@@ -33,11 +33,11 @@ from __future__ import annotations
 #  concordance.
 LIBELLES_CATEGORIE: dict[str, str] = {
     "panne": "Panne",
-    "nuisance": "Nuisance",
-    "proprete": "Propreté",
+    "nuisance": "Nuisance & propreté",
     "espaces_verts": "Espaces verts",
     "sinistre": "Sinistre",
     "etude_travaux": "Étude & travaux",
+    "acces_accueil": "Accès & accueil",
     "question": "Question",
     "bug": "Bug",
 }

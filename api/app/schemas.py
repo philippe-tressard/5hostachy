@@ -27,6 +27,8 @@ class UserCreate(BaseModel):
     consentement_rgpd: bool
     consentement_communications: bool = False
     batiment_id: Optional[int] = None
+    #  Facultatif : personne n'a à donner son étage pour créer un compte.
+    etage: Optional[int] = None
     nom_proprietaire: Optional[str] = None
     nom_aide: Optional[str] = None
     prenom_aide: Optional[str] = None

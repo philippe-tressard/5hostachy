@@ -4,6 +4,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import BauxSansLocataire from '$lib/components/BauxSansLocataire.svelte';
+	import ReclassementTickets from '$lib/components/ReclassementTickets.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -186,3 +187,7 @@
       relie un compte à un CONTRAT. Un locataire peut avoir l'un sans l'autre —
       c'est justement ce que ce relevé donne à voir. -->
 <BauxSansLocataire />
+
+<!--  Le second relevé de cet onglet, et le même parti pris : il PROPOSE, il
+      n'écrit rien. Voir son en-tête pour le pourquoi. -->
+<ReclassementTickets />

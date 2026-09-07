@@ -119,6 +119,10 @@ class Utilisateur(SQLModel, table=True):
     onboarding_complete: bool = False
     onboarding_etape: int = 0  # 0-4
     photo_url: Optional[str] = None
+    #  Où la personne HABITE — facultatif, et distinct de `Lot.etage`, qui
+    #  décrit un BIEN (un bailleur a un lot au 4ᵉ et habite ailleurs).
+    #  Le pourquoi et la prudence RGPD : migration 0178.
+    etage: Optional[int] = None
     societe: Optional[str] = None
     fonction: Optional[str] = None
     consentement_rgpd: bool = False

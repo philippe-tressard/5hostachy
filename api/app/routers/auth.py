@@ -77,6 +77,7 @@ def register(
         consentement_rgpd=body.consentement_rgpd,
         consentement_communications=body.consentement_communications,
         batiment_id=body.batiment_id,
+        etage=body.etage,
         nom_proprietaire=body.nom_proprietaire or None,
         nom_aide=body.nom_aide or None,
         prenom_aide=body.prenom_aide or None,

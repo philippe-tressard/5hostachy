@@ -57,6 +57,15 @@ EXCEPTIONS = {
         "DESTINATAIRES d'une notification, pas un accès : choisit les membres du "
         "CS du bâtiment de l'arrivant. Relève de `utils/destinataires`, et son "
         "rapprochement est un sujet à part.",
+    "utils/annonce_arrivee.py":
+        "RECOPIE un attribut sur l'objet créé : l'annonce de bienvenue porte le "
+        "bâtiment de l'arrivant, qui EST son périmètre de publication. Ne lit "
+        "aucun accès — c'est `perimetre_visible` qui tranchera qui la voit.",
+    "utils/ticket_arrivant.py":
+        "RECOPIE un attribut sur l'objet créé : le ticket de suivi d'un "
+        "emménagement porte le bâtiment de l'arrivant, comme tout ticket porte le "
+        "sien. Ne lit aucun accès et n'en décide aucun — c'est `ticket_visible` "
+        "qui tranchera ensuite qui le voit, à partir de ce champ-là.",
     #  🔴 `routers/delegations.py` A ÉTÉ RETIRÉ de cette liste le 06/09/2026
     #  (#801) : son unique lecture de `batiment_id` vivait dans
     #  `GET /mes-mandants`, endpoint supprimé le même jour parce qu'il doublait

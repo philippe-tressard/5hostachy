@@ -19,6 +19,12 @@
 	let prenom_aide = '';
 	let statut = 'copropriétaire_résident';
 	let batiment_id: number | null = null;
+	/**  L'étage — FACULTATIF, et le formulaire le dit en toutes lettres.
+	 *
+	 *   ⚠️ Couplé au bâtiment, l'étage approche l'identification du logement.
+	 *   Le laisser vide doit rester sans conséquence : c'est pourquoi il n'y a
+	 *   ni `required`, ni astérisque, ni valeur par défaut. */
+	let etage: number | null = null;
 	let batiments: { id: number; numero: string }[] = [];
 	let consentement_rgpd = false;
 	let consentement_communications = false;
@@ -68,6 +74,10 @@
 				password,
 				statut,
 				batiment_id: showBatiment ? batiment_id : null,
+				//  `null` et non `undefined` quand le champ est vide : le serveur
+				//  distingue « pas renseigné » de « absent du corps », et c'est la
+				//  même convention que `batiment_id` juste au-dessus.
+				etage: showBatiment && etage !== null ? etage : null,
 				consentement_rgpd,
 				consentement_communications,
 				nom_proprietaire: isLocataire ? nom_proprietaire : null,
@@ -234,6 +244,32 @@
 								<option value={b.id}>Bâtiment {b.numero}</option>
 							{/each}
 						</select>
+					</div>
+
+					<!--  🔴 Pas d'astérisque, pas de `required` : l'absence de ` *` SUFFIT à
+					      dire qu'un champ est facultatif (`ux-patterns` §9), et écrire
+					      « (optionnel) » ajouterait un second vocabulaire pour la même
+					      information — `lint:champs` le refuse.
+
+					      ⚠️ L'indication dit à quoi il SERT. Un champ facultatif dont on
+					      ignore l'usage ne se remplit pas, et celui-ci sert une chose
+					      précise : situer la personne dans l'annonce de bienvenue. Le taire
+					      reviendrait à demander une donnée sans dire pourquoi. -->
+					<div class="field">
+						<label for="etage">Étage</label>
+						<input
+							id="etage"
+							type="number"
+							bind:value={etage}
+							min="-2"
+							max="50"
+							placeholder="Ex. 3"
+						/>
+						<p class="field-hint">
+							Facultatif. Sert à vous situer auprès de vos voisins — notamment dans l’annonce de
+							bienvenue publiée à votre arrivée. Votre e-mail et votre téléphone n’y figurent
+							jamais.
+						</p>
 					</div>
 				{/if}
 

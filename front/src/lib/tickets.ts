@@ -145,32 +145,36 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		value: 'panne',
 		label: 'Panne',
 		emoji: '\u{1F6E0}️',
-		description: 'Équipement défectueux, ascenseur, chauffage…',
+		//  🔴 « éclairage » et « fuite » sont NOMMÉS, et « à réparer » conclut.
+		//  Questionné le 07/09/2026 : *« une fuite goutte-à-goutte dans les communs,
+		//  Panne ou Sinistre ? Idem pour une ampoule grillée. »* Les deux sont des
+		//  pannes — mais la description ne le disait pas, et c'est ce qui rendait la
+		//  question nécessaire. Quelqu'un qui cherche « Électricité » ne trouvait
+		//  rien.
+		description: 'Ascenseur, chauffage, éclairage, fuite, porte — à réparer',
 	},
-	/*  🔴 NUISANCE ET PROPRETÉ SE TOUCHENT, et leurs descriptions l'entretenaient
-	    — « odeur » d'un côté, « poubelles » de l'autre (signalé le 07/09/2026 :
-	    *« Nuisance et Propreté, c'est pas un peu équivalent ? »*).
+	/*  🔴 UNE SEULE CATÉGORIE, après avoir essayé d'en faire deux (07/09/2026).
 
-	    Ce qui les sépare n'est pas le SUJET mais le GESTE : une nuisance appelle
-	    quelqu'un à qui parler — rappel du règlement, courrier, médiation, aucun
-	    prestataire ; la propreté appelle une prestation à faire faire.
+	    J'avais séparé « Nuisance » et « Propreté » sur l'argument « deux
+	    prestataires différents ». Signalé le soir même : *« très sincèrement,
+	    Propreté je la regrouperais dans Nuisance en complétant le libellé »*.
+	    C'est juste, et l'erreur était la mienne — trois signes le disaient déjà :
 
-	    ⚠️ Le recouvrement reste réel, et il est assumé : un encombrant abandonné
-	    dans le hall est les deux à la fois — il faut l'enlever, ET quelqu'un l'a
-	    laissé là. Les descriptions disent donc le CRITÈRE et non plus seulement
-	    des exemples ; c'est tout ce qu'on peut faire, aucun découpage ne rendra
-	    ce cas non ambigu. */
+	    • dans les faits le GESTE est le même : le conseil relaie au syndic ou au
+	      prestataire, il ne fait pas deux choses différentes ;
+	    • le recouvrement, je l'avais ADMIS en écrivant qu'« un encombrant
+	      abandonné dans le hall est les deux à la fois » ;
+	    • et j'avais dû EXPLIQUER LA FRONTIÈRE dans le manuel. Une frontière qu'il
+	      faut expliquer est une frontière qui n'existe pas.
+
+	    Le critère du projet — « une catégorie ne se justifie que si elle change ce
+	    qu'on FAIT du ticket » — était le bon ; c'est mon application qui était
+	    fausse, en prenant « qui exécute in fine » pour « qui traite ». */
 	{
 		value: 'nuisance',
-		label: 'Nuisance',
+		label: 'Nuisance & propreté',
 		emoji: '\u{1F4E2}',
-		description: 'Bruit, odeurs, stationnement gênant — un comportement',
-	},
-	{
-		value: 'proprete',
-		label: 'Propreté',
-		emoji: '\u{1F9F9}',
-		description: 'Parties communes, encombrants — un entretien à faire',
+		description: 'Bruit, odeurs, stationnement, parties communes, encombrants',
 	},
 	{
 		value: 'espaces_verts',
@@ -186,13 +190,29 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		//  ce qui déclenche une déclaration sous cinq jours ouvrés ; c'est la
 		//  procédure qui fait la catégorie, pas la cause.
 		emoji: '\u{1F4A7}',
-		description: 'Dégât des eaux, incendie, vandalisme — déclaration à l’assurance',
+		//  🔴 « Dégât CONSTATÉ » ouvre la description, et ce mot fait tout le
+		//  travail. La frontière avec « Panne » n'est pas l'eau, c'est le DOMMAGE :
+		//  une fuite qu'on répare est une panne ; de l'eau chez le voisin, un
+		//  plafond taché, un parquet gondolé — il y a un tiers lésé et un délai
+		//  d'assurance, c'est un sinistre.
+		description: 'Dégât constaté : eau, incendie, vandalisme — déclaration à l’assurance',
 	},
 	{
 		value: 'etude_travaux',
 		label: 'Étude & travaux',
 		emoji: '\u{1F3D7}️',
 		description: 'Diagnostic, sondage, devis, chantier suivi par le conseil',
+	},
+	{
+		value: 'acces_accueil',
+		label: 'Accès & accueil',
+		//  ⚠️ Le badge et la télécommande N'Y SONT PAS, et c'est délibéré :
+		//  `CommandeAcces` porte déjà le lot, la quantité, le motif et son propre
+		//  workflow (écran « Accès & sécurité »). Un ticket y perdrait tout. Cette
+		//  catégorie est pour ce qui n'a AUCUN circuit dédié — l'interphone, la
+		//  boîte aux lettres, et le suivi d'un emménagement.
+		emoji: '\u{1F511}',
+		description: 'Interphone, boîte aux lettres, emménagement',
 	},
 	{ value: 'question', label: 'Question', emoji: '❓', description: 'Information, procédure…' },
 	{
