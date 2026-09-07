@@ -42,6 +42,7 @@ from app.utils.perimetres import perimetre_label
 from .commun import ContexteFlux
 from .evenements import TYPE_EMOJI, perimetres_evenement
 from .schemas import FluxSante
+from app.utils.categories_ticket import ticket_urgent
 
 #: Délai par défaut, en jours, avant qu'un ticket syndic soit relançable.
 _RELANCE_SYNDIC_DEFAUT_J = 30
@@ -234,7 +235,7 @@ def calculer(ctx: ContexteFlux) -> FluxSante:
     #  de la rangée à le faire (#399).
     tous = [t for t in ctx.session.exec(select(Ticket)).all() if ticket_visible(t, ctx.user)]
     ouverts = [t for t in tous if t.statut in STATUTS_TICKET_ACTIFS]
-    urgents = [t for t in ouverts if t.categorie == "urgence"]
+    urgents = [t for t in ouverts if ticket_urgent(t)]
 
     # Temps moyen de résolution sur les 30 derniers jours
     depuis_30j = ctx.now - timedelta(days=30)

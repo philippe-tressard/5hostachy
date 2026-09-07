@@ -61,9 +61,10 @@ from app.utils.apercu_diffusion import (
     apercu_whatsapp,
 )
 from app.utils.fichiers import est_image
-from app.utils.photos import photos_internes
+from app.utils.photos import photos_internes, photos_json
 
 from .courriels import contexte_ticket_syndic, destinataires_syndic_cs
+from app.utils.categories_ticket import ticket_urgent
 
 router = APIRouter()
 
@@ -128,8 +129,8 @@ def _ticket_previsionnel(brouillon: BrouillonTicket, auteur: Utilisateur) -> Tic
         statut="ouvert",
         auteur_id=auteur.id,
         perimetre_cible=json.dumps(brouillon.perimetre_cible or ["résidence"], ensure_ascii=False),
-        photos_urls=json.dumps(photos_internes(brouillon.photos_urls), ensure_ascii=False),
-        fichiers_urls=json.dumps(photos_internes(brouillon.fichiers_urls), ensure_ascii=False),
+        photos_urls=photos_json(brouillon.photos_urls),
+        fichiers_urls=photos_json(brouillon.fichiers_urls),
         destinataire_syndic=brouillon.destinataire_syndic,
         destinataire_cs=brouillon.destinataire_cs,
     )
@@ -208,7 +209,7 @@ def apercu_diffusion(
                 user,
                 titre=f"🎫 {ticket.titre}",
                 contenu=ticket.description,
-                urgent=ticket.categorie == "urgence",
+                urgent=ticket_urgent(ticket),
                 perimetre=ticket.perimetre_cible,
                 photo=next(
                     (u for u in photos_internes(brouillon.photos_urls) if est_image(u)), None

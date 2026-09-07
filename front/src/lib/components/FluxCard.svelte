@@ -27,6 +27,7 @@
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import {
 		badgeClass,
+		estTicketUrgent,
 		isNew,
 		typeCouleur,
 		typeFond,
@@ -94,11 +95,7 @@
 	$: aVenir = item.type === 'evenement' && debut ? new Date(debut) > new Date() : false;
 </script>
 
-<div
-	class="flux-item"
-	class:flux-urgent={item.type === 'ticket_ouvert' && item.badges?.includes('urgence')}
-	class:flux-expanded={expanded}
->
+<div class="flux-item" class:flux-urgent={estTicketUrgent(item)} class:flux-expanded={expanded}>
 	<div class="flux-dot" style="background:{typeColor}"></div>
 	{#if nouveau}<div class="flux-new-dot"></div>{/if}
 	<div

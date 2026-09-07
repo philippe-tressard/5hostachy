@@ -53,7 +53,7 @@
 	import EvolForm from './EvolForm.svelte';
 	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
 	import { TICKET } from '$lib/entites/ticket';
-	import { optionsDuTicket, optionsVersTicket } from '$lib/tickets';
+	import { optionsDuTicket, optionsVersTicket, ticketUrgent } from '$lib/tickets';
 	import { fmtDate, isNouveau } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import {
@@ -127,7 +127,7 @@
 	class:carte-liste={!archive}
 	class:history-item={archive}
 	class:expanded
-	class:urgent={ticket.categorie === 'urgence'}
+	class:urgent={ticketUrgent(ticket)}
 	role="presentation"
 	on:click={() => {
 		if (!expanded) dispatch('basculer');

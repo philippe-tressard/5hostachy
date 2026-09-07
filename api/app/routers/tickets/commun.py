@@ -48,6 +48,22 @@ STATUT_LABELS = {
 }
 
 
+def pieces_du_ticket(ticket) -> list[str]:
+    """Toutes les pièces jointes PROPRES d'un ticket — photos puis documents.
+
+    🔴 Écrite trois fois : ici, et deux fois dans `crud.py` pour composer les
+    pièces d'un courriel. L'ordre compte — la galerie d'abord, les documents
+    ensuite — et trois écritures d'un ordre, c'est deux occasions de l'inverser
+    sans que rien ne le dise : un courriel dont la première pièce change de
+    nature ne lève aucune erreur.
+
+    ⚠️ « Propres » au sens de : celles du ticket lui-même, par opposition à
+    celles de ses évolutions — que `pieces_ticket_ou_repli` va chercher quand
+    l'objet n'en porte aucune.
+    """
+    return parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
+
+
 def generer_numero() -> str:
     return "TK-" + "".join(random.choices(string.digits, k=6))
 
@@ -165,7 +181,7 @@ def apercu_pieces(ticket: Ticket, session: Session) -> list[str]:
     ⚠️ La plus RÉCENTE, jamais la première : sinon un dossier qui a avancé
     montrerait indéfiniment la photo du jour de son ouverture.
     """
-    propres = parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
+    propres = pieces_du_ticket(ticket)
     if propres:
         return propres
     #  Une seule requête, triée par date décroissante, et on s'arrête à la

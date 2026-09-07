@@ -24,7 +24,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.utils.photos import parse_photos
-from app.utils.categories_ticket import libelle_categorie
+from app.utils.categories_ticket import libelle_categorie, ticket_urgent
 from app.utils.copie_auteur import copie_demandee
 from app.utils.perimetres import perimetre_label_json
 from app.utils.dates_fr import date_courte, datetime_longue_paris as fmt_paris
@@ -349,7 +349,7 @@ def _partager_sur_le_groupe(
         envoyer_whatsapp_avec_log,
         f"🎫 {ticket.titre}",
         ticket.description,
-        ticket.categorie == "urgence",
+        ticket_urgent(ticket),
         ticket.perimetre_cible,
         premiere_photo,
         wa_config,

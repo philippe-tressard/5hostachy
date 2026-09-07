@@ -163,12 +163,29 @@ export function isNew(item: { cree_le?: string; date: string }): boolean {
 // indéfiniment et le bandeau rouge mourrait d'habitude ; et le plafond de 3 des
 // urgences ferait évincer une urgence réelle par un élément épinglé.
 
+/**  Un TICKET urgent du fil — la moitié de `estUrgent` que `FluxCard` réécrivait.
+ *
+ *  🔴 Le composant testait `item.type === 'ticket_ouvert' &&
+ *  item.badges?.includes('urgence')` pour poser sa classe, pendant que
+ *  `estUrgent` — juste en dessous — écrivait la même condition. Deux écritures,
+ *  et la seconde ne couvrait que les tickets : un lecteur pouvait croire que
+ *  `estUrgent` s'en servait.
+ *
+ *  ⚠️ Le badge lu est `'urgent'` et non plus `'urgence'` : c'est l'API qui le
+ *  pose désormais depuis la PRIORITÉ (`badges_ticket`, `flux/commun.py`), la
+ *  catégorie « urgence » ayant été retirée (migration 0177). Les deux moitiés du
+ *  pont voyagent ensemble — c'est la leçon de #806 sur les liens que l'API
+ *  fabrique vers le front. */
+export function estTicketUrgent(item: FluxItem): boolean {
+	return item.type === 'ticket_ouvert' && (item.badges?.includes('urgent') ?? false);
+}
+
 /** Le registre le plus grave l'emporte : un élément urgent ET épinglé n'apparaît
  *  qu'en urgence. Il retombera dans le bandeau épinglé en cessant d'être urgent. */
 export function estUrgent(item: FluxItem): boolean {
 	return (
 		(item.type === 'evenement' && item.meta?.type === 'coupure') ||
-		(item.type === 'ticket_ouvert' && (item.badges?.includes('urgence') ?? false)) ||
+		estTicketUrgent(item) ||
 		(item.type === 'publication' && Boolean(item.meta?.urgente) && item.meta?.statut !== 'resolu')
 	);
 }

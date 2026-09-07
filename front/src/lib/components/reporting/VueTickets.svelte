@@ -8,7 +8,7 @@
 <script lang="ts">
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { daysSince } from '$lib/date';
-	import { estTicketActif, ticketScope } from '$lib/tickets';
+	import { estTicketActif, ticketScope, ticketUrgent } from '$lib/tickets';
 	import type { Ticket } from '$lib/api';
 
 	export let tickets: Ticket[] = [];
@@ -61,7 +61,7 @@
 	</div>
 	<div class="kpi-card">
 		<div class="kpi-value">
-			{reportTicketSource.filter((t) => t.categorie === 'urgence').length}
+			{reportTicketSource.filter(ticketUrgent).length}
 		</div>
 		<div class="kpi-label">Urgences</div>
 	</div>

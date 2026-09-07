@@ -332,11 +332,17 @@
 </script>
 
 <!--  L'avertissement n'est rendu qu'en création : c'est l'envoi du ticket qui
-      notifie. Requalifier un ticket existant en « Urgence » ne déclenche aucune
-      alerte — l'afficher ici promettrait une notification qui ne partira pas. -->
-{#if !modeEdition && categorie === 'urgence'}
+      notifie. Cocher « Urgent » sur un ticket existant ne déclenche aucune
+      alerte — l'afficher ici promettrait une notification qui ne partira pas.
+
+      🔴 Il suivait la catégorie « Urgence », retirée le 07/09/2026 (#820) : elle
+      répondait à la question du DÉLAI dans la liste qui pose celle de la NATURE.
+      Il suit désormais la case « Urgent » des options, qui est ce que le
+      résident coche pour dire que ça presse — et qui pose `priorite = haute`
+      depuis #766. -->
+{#if !modeEdition && options.urgente}
 	<div class="alert alert-error largeur-saisie" style="margin-bottom:1rem">
-		&#x1F6A8; <strong>Urgence</strong> — Le conseil syndical et le syndic seront notifiés
+		&#x1F6A8; <strong>Urgent</strong> — Le conseil syndical et le syndic seront notifiés
 		immédiatement. En cas de danger immédiat, composez le
 		<strong>15 (SAMU), 17 (Police) ou 18 (Pompiers)</strong>.
 	</div>

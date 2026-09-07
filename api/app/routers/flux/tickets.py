@@ -25,7 +25,7 @@ from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
 
 from app.utils.perimetres import perimetre_label
-from .commun import ContexteFlux, auteur_nom, perimetres_de, strip_html
+from .commun import ContexteFlux, auteur_nom, perimetres_de, strip_html, badges_ticket
 from .schemas import FluxItem
 from app.utils.corrections import est_correction
 
@@ -104,7 +104,7 @@ def _carte_mise_a_jour(ctx: ContexteFlux, evol, tk, *, ident, detail, icon, stat
         titre=tk.titre,
         detail=detail,
         icon=icon,
-        badges=[f"#{tk.numero}", tk.categorie],
+        badges=badges_ticket(tk),
         lien="/tickets",
         meta={
             **_meta_ticket(tk),
@@ -175,7 +175,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 #  rend `None` sur une donnée incohérente, jamais sur un zéro.
                 detail=f"Résolu{f' en {duree}' if duree is not None else ''}",
                 icon="✅",
-                badges=[f"#{tk.numero}", tk.categorie],
+                badges=badges_ticket(tk),
                 lien="/tickets",
                 meta={
                     **_meta_ticket(tk),
@@ -233,7 +233,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
             titre=tk.titre,
             detail="Nouveau ticket",
             icon="🎫",
-            badges=[f"#{tk.numero}", tk.categorie],
+            badges=badges_ticket(tk),
             lien="/tickets",
             meta={
                 **_meta_ticket(tk),

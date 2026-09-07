@@ -23,7 +23,7 @@ from app.utils.evolutions import supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_ticket
-from app.utils.photos import photos_internes
+from app.utils.photos import photos_internes, photos_json
 
 from .commun import (
     STATUT_LABELS,
@@ -85,7 +85,7 @@ def update_evolution(
     if body.contenu is not None:
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
-        evol.fichiers_urls = json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False)
+        evol.fichiers_urls = photos_json(body.fichiers_urls)
     if body.perimetre_cible is not None:
         #  🔴 CORRIGER, pas raturer. La règle et son pourquoi vivent dans
         #  `app/utils/perimetre_fil.py` — elle a son `--selftest`.
@@ -285,7 +285,7 @@ def add_evolution(
         ancien_statut=ancien_statut,
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
         auteur_id=user.id, cree_le=datetime.utcnow(),
-        fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
+        fichiers_urls=photos_json(body.fichiers_urls),
         perimetre_cible=(
             json.dumps(body.perimetre_cible, ensure_ascii=False)
             if body.perimetre_cible else None

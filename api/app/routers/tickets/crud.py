@@ -34,7 +34,7 @@ from app.utils.suppression_liee import (
     supprimer_lignes_liees,
 )
 from app.utils.liens import lien_ticket
-from app.utils.photos import parse_photos, photos_internes
+from app.utils.photos import parse_photos, photos_json
 from app.utils.courriel_entrant import nouveau_jeton
 from app.utils.visibility import ticket_visible
 
@@ -44,6 +44,7 @@ from .commun import (
     generer_numero,
     ticket_read,
     trier_par_activite,
+    pieces_du_ticket,
 )
 from .correction import _appliquer_contenu, _appliquer_relations, _envoye
 from .courriels import (
@@ -53,6 +54,7 @@ from .courriels import (
     envoyer_email_externe,
     envoyer_email_syndic_cs,
 )
+from app.utils.categories_ticket import ticket_urgent
 from app.utils.corrections import (
     PREFIXE_CORRECTION,
     PREFIXE_CORRECTION_AUTEUR,
@@ -130,7 +132,9 @@ def create_ticket(
         lot_id=body.lot_id,
         batiment_id=body.batiment_id,
         perimetre_cible=json.dumps(body.perimetre_cible) if body.perimetre_cible else '["résidence"]',
-        priorite="haute" if body.categorie == "urgence" else "normale",
+        #  Posée juste en dessous par `appliquer_options`, depuis la case
+        #  « Urgent » — plus jamais déduite de la catégorie (`CategorieTicket`).
+        priorite="normale",
         #  Le workflow est saisissable dès la création, mais en LISTE BLANCHE et
         #  réservé au CS : un résident qui déposerait un ticket déjà « résolu »
         #  le sortirait du suivi. Une valeur inconnue retombe sur « ouvert »
@@ -146,8 +150,8 @@ def create_ticket(
         # `photos_internes` écarte toute URL qui n'a pas été produite par notre
         # endpoint d'upload : sans ce filtre, un client pourrait faire pointer une
         # pièce jointe vers un site tiers, servi ensuite à chaque lecteur.
-        photos_urls=json.dumps(photos_internes(body.photos_urls), ensure_ascii=False),
-        fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
+        photos_urls=photos_json(body.photos_urls),
+        fichiers_urls=photos_json(body.fichiers_urls),
     )
     session.add(ticket)
     session.flush()
@@ -156,7 +160,8 @@ def create_ticket(
     #  ne réécrit ni l'une ni l'autre (`commun.OPTIONS_TICKET`).
     appliquer_options(ticket, body, est_cs=est_cs)
 
-    _notifier_cs_creation(session, ticket, urgence=body.categorie == "urgence")
+    #  ⚠️ APRÈS `appliquer_options` : c'est elle qui pose `priorite`.
+    _notifier_cs_creation(session, ticket, urgence=ticket_urgent(ticket))
 
     if body.categorie == "bug":
         _alerter_bug(session, ticket, user, background_tasks)
@@ -179,9 +184,7 @@ def create_ticket(
             cs=ticket.destinataire_cs,
             # Mêmes règles de résolution que partout ailleurs : URL interne →
             # chemin local, hors de /app/uploads on ignore.
-            pieces_jointes=chemins_locaux(
-                parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
-            ),
+            pieces_jointes=chemins_locaux(pieces_du_ticket(ticket)),
             auteur=bool(getattr(body, "envoyer_auteur", False)),
         )
 
@@ -467,9 +470,7 @@ def update_ticket(
             ticket, user, background_tasks, session,
             syndic=ticket.destinataire_syndic and not syndic_avant,
             cs=ticket.destinataire_cs and not cs_avant,
-            pieces_jointes=chemins_locaux(
-                parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
-            ),
+            pieces_jointes=chemins_locaux(pieces_du_ticket(ticket)),
         )
 
     return ticket_read(ticket, session)
