@@ -410,3 +410,86 @@ verdict_erreurs_api() {    # $1 = lignes ERROR/CRITICAL observées
   [ "$2" -gt "$1" ] && { echo INCONNU; return; }
   [ "$(( $1 - $2 ))" -eq 0 ] && echo OK || echo FAIL
 }
+
+rang_attendu() {           # $1 = les sujets ET corps des commits du lot
+  #  Le rang que le lot ANNONCE, lu dans ses préfixes conventionnels.
+  #
+  #  ⚠️ C'est ce que le lot dit de lui-même, et non le jugement de qui bumpe.
+  #  `feat` déclare une capacité, `!` ou `BREAKING CHANGE` une rupture, tout le
+  #  reste — `fix`, `refactor`, `docs`, `test`, `chore`, `perf` — n'en déclare
+  #  aucune et vaut donc un patch (`standards/08` §6, en toutes lettres).
+  #
+  #  Un `fix` qui cache une capacité fera échouer le point 0g : c'est alors le
+  #  PRÉFIXE qui est faux, et c'est ce défaut-là qu'il faut corriger. Mesurer le
+  #  jugement plutôt que la déclaration aurait rendu le contrôle inutile — il
+  #  aurait toujours confirmé celui qui bumpe.
+  #
+  #  Rien à lire → `inconnu`, jamais `patch` : un rang qu'on ne peut pas calculer
+  #  n'est pas un rang par défaut (`standards/04` §1).
+  #  ⚠️ L'espace avant le deux-points N'EST PAS optionnel dans le motif : ce dépôt
+  #  écrit ses sujets en typographie française — `feat(accès) : lecture seule`.
+  #  Mon premier motif exigeait `feat(…):` collé ; le cas zéro l'a pris en défaut
+  #  immédiatement, et sans lui AUCUN `feat` du dépôt n'aurait été reconnu — le
+  #  point 0g aurait répondu « patch » sur tous les lots, y compris ceux qui
+  #  apportent une capacité. Un contrôle qui ne reconnaît jamais rien ne dit rien.
+  local sujets="${1:-}"
+  [ -z "$sujets" ] && { echo inconnu; return; }
+  if printf '%s' "$sujets" | grep -qE '^[a-z]+(\([^)]*\))?! *:|^BREAKING CHANGE'; then
+    echo major
+  elif printf '%s' "$sujets" | grep -qE '^feat(\([^)]*\))? *:'; then
+    echo minor
+  else
+    echo patch
+  fi
+}
+
+verdict_rang_version() {   # $1 = rang attendu (major|minor|patch|inconnu)
+                           # $2 = version dans origin/main · $3 = version dans HEAD
+  #  Le RANG du bump doit correspondre à ce que le lot apporte.
+  #
+  #      patch  X.Y.Z+1  correction, amélioration mineure, documentation, refactor
+  #      minor  X.Y+1.0  fonctionnalité VISIBLE par les utilisateurs
+  #      major  X+1.0.0  refonte majeure ou rupture de compatibilité
+  #
+  #  🔴 Pourquoi ce contrôle (07/09/2026, question de l'utilisateur)
+  #
+  #  Le point 0d compte les bumps ; il ne regarde pas leur rang. Le relevé des
+  #  dix-huit derniers lots en a trouvé SIX au mauvais rang — 3.102.0 (`fix`),
+  #  3.106.0 (`fix`), 3.107.0 (`fix`), 3.108.0 et 3.109.0 (`refactor`), 3.112.0
+  #  (`docs`) — soit un sur trois, et TOUS dans le même sens : surévalués.
+  #
+  #  Le sens constant est ce qui rend le défaut coûteux. Un `y` qui avance pour
+  #  une correction cesse de dire quoi que ce soit : « minor » ne distingue plus
+  #  une capacité nouvelle d'un défaut réparé, et c'est précisément ce que la
+  #  numérotation existe pour dire. Personne ne l'a vu parce que personne ne
+  #  regardait — le rang était affaire de jugement, jamais de contrôle.
+  #
+  #  ⚠️ Le rang attendu se lit dans les PRÉFIXES des commits du lot, pas dans le
+  #  jugement de qui bumpe : `feat` ou `!`/`BREAKING CHANGE` déclarent une
+  #  capacité, le reste n'en déclare pas. C'est faillible — un `fix` peut cacher
+  #  une capacité — mais alors le commit est mal préfixé, et c'est ce défaut-là
+  #  qu'il faut corriger. Le contrôle mesure ce que le lot DIT de lui-même.
+  #
+  #  INCONNU plutôt qu'OK dès qu'une des trois entrées manque : un rang qu'on ne
+  #  peut pas calculer n'est pas un rang correct (`standards/04` §1).
+  local rang="${1:-}" avant="${2:-}" apres="${3:-}"
+  [ -z "$rang" ] || [ "$rang" = inconnu ] || [ -z "$avant" ] || [ -z "$apres" ] && { echo INCONNU; return; }
+  [ "$avant" = "$apres" ] && { echo ECART; return; }   # aucun bump : 0d le dit déjà
+
+  local xa ya za xb yb zb
+  IFS=. read -r xa ya za <<EOF2
+$avant
+EOF2
+  IFS=. read -r xb yb zb <<EOF2
+$apres
+EOF2
+  case "$xa$ya$za$xb$yb$zb" in *[!0-9]*|'') echo INCONNU; return ;; esac
+
+  local reel
+  if   [ "$xb" -gt "$xa" ]; then reel=major
+  elif [ "$xb" -eq "$xa" ] && [ "$yb" -gt "$ya" ]; then reel=minor
+  elif [ "$xb" -eq "$xa" ] && [ "$yb" -eq "$ya" ] && [ "$zb" -gt "$za" ]; then reel=patch
+  else echo FAIL; return ; fi   # version qui recule ou saute plusieurs rangs
+
+  [ "$reel" = "$rang" ] && echo OK || echo FAIL
+}

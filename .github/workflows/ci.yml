@@ -1339,3 +1339,19 @@ jobs:
       - name: Infobulles et noms accessibles des boutons icône
         working-directory: front
         run: npm run lint:infobulles
+
+      # 🔴 Une liste qui annonce « Aucun » doit avoir REGARDÉ.
+      #
+      # Le motif `{#if chargement}…{:else if liste.length === 0}` n'a que deux
+      # branches : quand le chargement ÉCHOUE, la liste reste à `[]` et l'écran
+      # affirme une absence qu'il n'a pas constatée. C'est #519 — deux sondages
+      # et trois annonces crus détruits, et une demande de restauration au bout.
+      #
+      # ⚠️ `EtatListe` et `lint:catch-vide` existaient DÉJÀ pour cela, tous deux
+      # verts, et le défaut était encore là onze fois : un try/catch qui se
+      # contente d'un toast laisse la liste vide tout aussi silencieusement, et
+      # le toast s'efface. Un composant que rien n'impose est un composant que
+      # les écrans suivants réécrivent à la main.
+      - name: Aucune liste n'annonce « aucun » sans avoir regardé
+        working-directory: front
+        run: npm run lint:etat-liste

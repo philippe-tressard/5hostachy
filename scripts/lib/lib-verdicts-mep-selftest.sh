@@ -56,6 +56,34 @@ verdicts_mep_selftest() {
   t "bump replié dans un commit métier"  OK      verdict_bumps 0 2.52.1 2.52.2
   #  Un bump ANNONCÉ qui ne change rien reste un écart : P3 ne prouvera rien.
   t "commit de bump sans changement"     ECART   verdict_bumps 1 2.52.1 2.52.1
+
+  #  ── 0g : le RANG du bump correspond à ce que le lot apporte ──────────────
+  #  Le relevé du 07/09/2026 a trouvé SIX rangs faux sur dix-huit lots, tous
+  #  surévalués. Ces cas rejouent les six.
+  t "feat -> minor, le cas nominal"      OK      verdict_rang_version minor 3.111.0 3.112.0
+  t "fix -> patch, le cas nominal"       OK      verdict_rang_version patch 3.111.0 3.111.1
+  t "rupture -> major"                   OK      verdict_rang_version major 3.111.0 4.0.0
+  t "docs bumpe en minor (3.112.0)"      FAIL    verdict_rang_version patch 3.111.1 3.112.0
+  t "refactor bumpe en minor (3.109.0)"  FAIL    verdict_rang_version patch 3.108.0 3.109.0
+  t "fix bumpe en minor (3.107.0)"       FAIL    verdict_rang_version patch 3.106.0 3.107.0
+  t "feat bumpe en patch : sous-evalue"  FAIL    verdict_rang_version minor 3.111.0 3.111.1
+  t "la version RECULE"                  FAIL    verdict_rang_version patch 3.112.0 3.111.0
+  t "aucun bump : 0d le dit deja"        ECART   verdict_rang_version patch 3.112.0 3.112.0
+  t "rang non calculable"                INCONNU verdict_rang_version inconnu 3.111.0 3.112.0
+  t "version illisible"                  INCONNU verdict_rang_version patch 3.111.0 "v3.112"
+
+  #  Le rang ANNONCÉ par les préfixes du lot — la moitié amont du point 0g.
+  t "feat annonce un minor"              minor   rang_attendu "feat(accès) : lecture seule"
+  t "fix annonce un patch"               patch   rang_attendu "fix(ux) : le formulaire"
+  t "refactor annonce un patch"          patch   rang_attendu "refactor(rôles) : trois façons"
+  t "docs annonce un patch"              patch   rang_attendu "docs(manuel) : compléter son ticket"
+  t "le ! annonce une rupture"           major   rang_attendu "feat(api)! : les jetons changent"
+  t "BREAKING CHANGE aussi"              major   rang_attendu "fix(api) : un correctif
+BREAKING CHANGE: les jetons changent"
+  t "un feat parmi des fix : minor"      minor   rang_attendu "fix(a) : un
+feat(b) : deux"
+  t "un feat CITÉ n'est pas un préfixe"  patch   rang_attendu "fix(a) : reprend le feat(b) livré hier"
+  t "rien à lire : jamais patch"         inconnu rang_attendu ""
   t "version amont non mesurée"          INCONNU verdict_bumps 0 ""     2.52.2
   t "version locale non mesurée"         INCONNU verdict_bumps 0 2.52.1 ""
   #  La forme prime sur le fait dans un seul sens : deux bumps restent un échec

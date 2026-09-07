@@ -144,8 +144,13 @@ export const TOLERANCES = {
 		'rangée d’actions alignée à la main (l. ~326)',
 
 	//  ── controle-saisie : la peau de `.field input` repeinte à la main ───────
-	'routes/(app)/admin/+page.svelte::controle-saisie':
-		'champ de saisie de seuil re-peint à la main (l. ~1212)',
+	//  ✅ Tolérée pour `/admin` jusqu'au 07/09/2026, et TOMBÉE — pas par un lot de
+	//  style : le champ repeint était le motif de refus d'une demande de profil, la
+	//  troisième écriture d'un geste qui en avait deux autres. Il est parti avec
+	//  elles dans `AccepterRefuser.svelte`, où il porte `.input-sm`. La dette n'a
+	//  pas été rabotée, elle a été emportée par la factorisation — comme les deux
+	//  `<textarea>` de #561, et pour la même raison : c'est un AUTRE contrôle qui
+	//  a forcé la main.
 	//  Le champ « Motif » du marquage non-relançable, parti avec la vue en
 	//  extrayant le reporting (#453) — même dette, autre fichier.
 	'lib/components/reporting/VueRelanceSyndic.svelte::controle-saisie':

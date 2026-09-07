@@ -4,6 +4,8 @@
 	//  sélecteurs inutilisés pour TOUT le fichier — le contrôle devenait aveugle
 	//  sur cet écran. Deux valeurs locales et connues : la conversion ne coûte rien.
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { essayer } from '$lib/chargement';
 	import { onMount } from 'svelte';
 	import { notifications as notifApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -16,6 +18,11 @@
 
 	let items: any[] = [];
 	let loading = true;
+	/*  🔴 Sans cette variable, un chargement en échec laissait `items` à `[]` et
+	    l'écran répondait « Aucune notification — Vous êtes à jour ! ». Le toast
+	    d'erreur, lui, s'efface au bout de quelques secondes ; le mensonge reste.
+	    C'est l'incident #519 reproduit sur un autre écran. */
+	let erreur = '';
 	let deleting = new Set<number>();
 
 	onMount(async () => {
@@ -24,13 +31,9 @@
 
 	async function load() {
 		loading = true;
-		try {
-			items = await notifApi.list();
-		} catch {
-			toast('error', 'Erreur lors du chargement');
-		} finally {
-			loading = false;
-		}
+		//  `essayer` rend `[valeur, erreur]` — jamais l'un sans l'autre.
+		[items, erreur] = await essayer(notifApi.list(), []);
+		loading = false;
 	}
 
 	async function markRead(id: number) {
@@ -96,13 +99,15 @@
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
-{#if loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
-{:else if items.length === 0}
-	<div class="empty-state">
-		<h3>Aucune notification</h3>
-		<p>Vous êtes à jour !</p>
-	</div>
+{#if loading || erreur || items.length === 0}
+	<EtatListe
+		chargement={loading}
+		{erreur}
+		vide={items.length === 0}
+		titreErreur="Impossible d’afficher vos notifications"
+		titreVide="Aucune notification"
+		messageVide="Vous êtes à jour !"
+	/>
 {:else}
 	{#if grouped.today.length > 0}
 		<h2 class="section-title">Aujourd'hui</h2>

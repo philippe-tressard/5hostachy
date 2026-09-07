@@ -25,6 +25,7 @@
 	import OngletImportAcces from '$lib/components/OngletImportAcces.svelte';
 	import { IMPORT_TELECOMMANDES, IMPORT_VIGIK } from '$lib/imports-acces';
 	import Onglet from '$lib/components/Onglet.svelte';
+	import AccepterRefuser from '$lib/components/AccepterRefuser.svelte';
 	import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 	import OngletSmtp from '$lib/components/OngletSmtp.svelte';
 	import OngletTelemetrie from '$lib/components/OngletTelemetrie.svelte';
@@ -87,8 +88,6 @@
 	//  Comptes en attente
 	let comptes: any[] = [];
 	let comptesLoading = true;
-	let refusMotif: Record<number, string> = {};
-	let refusOpen: Record<number, boolean> = {};
 
 	async function loadComptes() {
 		comptesLoading = true;
@@ -99,9 +98,9 @@
 		}
 	}
 
-	async function refuserCompte(id: number) {
+	async function refuserCompte(id: number, motif: string) {
 		try {
-			await adminApi.traiterCompte(id, { action: 'refuser', motif: refusMotif[id] });
+			await adminApi.traiterCompte(id, { action: 'refuser', motif });
 			toast('info', 'Compte refusé.');
 			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== id);
 		} catch (e: any) {
@@ -127,8 +126,6 @@
 	//  Commandes d'acces
 	let commandes: any[] = [];
 	let commandesLoading = true;
-	let cmdMotif: Record<number, string> = {};
-	let cmdRefusOpen: Record<number, boolean> = {};
 
 	async function loadCommandes() {
 		commandesLoading = true;
@@ -149,11 +146,11 @@
 		}
 	}
 
-	async function refuserCommande(id: number) {
+	async function refuserCommande(id: number, motif: string) {
 		try {
 			await adminApi.traiterCommandeAcces(id, {
 				action: 'refuser',
-				motif_refus: cmdMotif[id],
+				motif_refus: motif,
 			});
 			toast('info', 'Commande refusee.');
 			commandes = commandes.filter((c) => c.id !== id);
@@ -460,8 +457,6 @@
 	//  Demandes de modification de profil
 	let demandesProfil: any[] = [];
 	let demandesProfilLoading = true;
-	let refusDemande: Record<number, string> = {};
-	let refusDemandeOpen: Record<number, boolean> = {};
 
 	const statutLabelsAdmin: Record<string, string> = {
 		copropriétaire_résident: 'Copro. résident',
@@ -493,18 +488,16 @@
 		}
 	}
 
-	async function rejeterDemande(id: number) {
+	async function rejeterDemande(id: number, motif: string) {
 		try {
 			await adminApi.traiterDemandeProfil(id, {
 				action: 'rejeter',
-				motif_refus: refusDemande[id] || null,
+				motif_refus: motif || null,
 			});
 			toast('info', 'Demande rejetée.');
 			demandesProfil = demandesProfil.filter((d) => d.id !== id);
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');
-		} finally {
-			refusDemandeOpen[id] = false;
 		}
 	}
 
@@ -883,30 +876,11 @@
 							<td style="color:var(--color-text-muted);font-size:.8rem">{fmt(u.cree_le)}</td>
 							<td>
 								<div class="action-row">
-									<button class="btn btn-primary btn-sm" on:click={() => openCompteValidation(item)}
-										>Valider →</button
-									>
-									{#if !refusOpen[u.id]}
-										<button class="btn btn-danger btn-sm" on:click={() => (refusOpen[u.id] = true)}
-											>Refuser</button
-										>
-									{:else}
-										<div class="refus-inline">
-											<input
-												type="text"
-												placeholder="Motif (optionnel)"
-												bind:value={refusMotif[u.id]}
-												class="input-sm"
-											/>
-											<button
-												class="btn btn-outline btn-sm"
-												on:click={() => (refusOpen[u.id] = false)}>Annuler</button
-											>
-											<button class="btn btn-danger btn-sm" on:click={() => refuserCompte(u.id)}
-												>Confirmer</button
-											>
-										</div>
-									{/if}
+									<AccepterRefuser
+										libelleAccepter="Valider →"
+										onAccepter={() => openCompteValidation(item)}
+										onRefuser={(motif) => refuserCompte(u.id, motif)}
+									/>
 								</div>
 							</td>
 						</tr>
@@ -938,31 +912,10 @@
 							<td style="color:var(--color-text-muted);font-size:.8rem">{fmt(cmd.cree_le)}</td>
 							<td>
 								<div class="action-row">
-									<button class="btn btn-primary btn-sm" on:click={() => accepterCommande(cmd.id)}
-										>Accepter</button
-									>
-									{#if !cmdRefusOpen[cmd.id]}
-										<button
-											class="btn btn-danger btn-sm"
-											on:click={() => (cmdRefusOpen[cmd.id] = true)}>Refuser</button
-										>
-									{:else}
-										<div class="refus-inline">
-											<input
-												type="text"
-												placeholder="Motif du refus"
-												bind:value={cmdMotif[cmd.id]}
-												class="input-sm"
-											/>
-											<button
-												class="btn btn-outline btn-sm"
-												on:click={() => (cmdRefusOpen[cmd.id] = false)}>Annuler</button
-											>
-											<button class="btn btn-danger btn-sm" on:click={() => refuserCommande(cmd.id)}
-												>Confirmer</button
-											>
-										</div>
-									{/if}
+									<AccepterRefuser
+										onAccepter={() => accepterCommande(cmd.id)}
+										onRefuser={(motif) => refuserCommande(cmd.id, motif)}
+									/>
 								</div>
 							</td>
 						</tr>
@@ -1334,32 +1287,12 @@
 							<td style="font-size:.82rem;color:var(--color-text-muted)">{fmt(d.cree_le)}</td>
 							<td>
 								<div class="action-row">
-									<button
-										class="btn btn-sm"
-										style="background:#16a34a;color:#fff;border-color:#16a34a"
-										on:click={() => approuverDemande(d.id)}>✓ Approuver</button
-									>
-									{#if refusDemandeOpen[d.id]}
-										<div style="display:flex;gap:.35rem;align-items:center">
-											<input
-												type="text"
-												bind:value={refusDemande[d.id]}
-												placeholder="Motif refus"
-												style="font-size:.78rem;padding:.25rem .5rem;width:120px;border:1px solid var(--color-border);border-radius:4px"
-											/>
-											<button class="btn btn-sm btn-danger" on:click={() => rejeterDemande(d.id)}
-												>Confirmer</button
-											>
-											<button class="btn btn-sm" on:click={() => (refusDemandeOpen[d.id] = false)}
-												>✕</button
-											>
-										</div>
-									{:else}
-										<button
-											class="btn btn-sm btn-danger btn-outline"
-											on:click={() => (refusDemandeOpen[d.id] = true)}>✗ Rejeter</button
-										>
-									{/if}
+									<AccepterRefuser
+										libelleAccepter="✓ Approuver"
+										libelleRefuser="✗ Rejeter"
+										onAccepter={() => approuverDemande(d.id)}
+										onRefuser={(motif) => rejeterDemande(d.id, motif)}
+									/>
 								</div>
 							</td>
 						</tr>
@@ -1627,19 +1560,11 @@
 		padding: 0.3rem 0.7rem;
 		font-size: 0.8rem;
 	}
-	.refus-inline {
-		display: flex;
-		gap: 0.4rem;
-		align-items: center;
-		flex-wrap: wrap;
-	}
-	.input-sm {
-		padding: 0.3rem 0.5rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		font-size: 0.85rem;
-		min-width: 160px;
-	}
+	/*  🔴 `.refus-inline` est partie le 07/09/2026 avec le balisage qu'elle
+	    habillait : `AccepterRefuser.svelte` porte le geste « accepter · refuser
+	    avec motif », qui était écrit TROIS fois ici. `.input-sm` est montée dans
+	    la charte — la page l'emploie encore trois fois, le composant une, et
+	    deux écritures d'une même règle divergent au premier ajustement. */
 	code {
 		background: var(--color-bg);
 		padding: 0.1rem 0.35rem;
