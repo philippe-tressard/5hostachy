@@ -184,3 +184,182 @@ def test_le_garde_fou_REFUSE_bien_une_reecriture():
     assert motif.search("    badge = 'Conseil syndical'")
     assert not motif.search('    "description": "Conseil syndical, syndic et admin uniquement",')
     assert not motif.search("    À la demande du Conseil syndical, il est rappelé")
+
+
+#  ══════════════════════════════════════════════════════════════════════════
+#  LA TEINTE — le second demi du vocabulaire, resté recopié jusqu'au 07/09/2026
+#
+#  #801 a fait de `roles.ts` la source unique des LIBELLÉS. La COULEUR, elle,
+#  est restée écrite dans les écrans : `/admin` et `/profil` importaient tous
+#  deux `libelleRole`, puis recopiaient la table des badges trois lignes plus
+#  bas. Le contrôle ci-dessus ne pouvait pas le voir — il cherche des chaînes de
+#  LIBELLÉ, et `badge-teal` n'en est pas une.
+#
+#  🔴 Ce que la copie coûtait déjà : `/profil` ne connaissait ni `propriétaire`
+#  ni `externe`. Un compte portant l'un de ces rôles s'affichait en **gris** sur
+#  son propre profil et en **teal** ou **jaune** dans l'administration. Le repli
+#  `?? 'badge-gray'` rend un badge parfaitement normal : rien ne signalait
+#  l'oubli, et c'est ce qui le rendait durable.
+#  ══════════════════════════════════════════════════════════════════════════
+
+#  Les fichiers du front autorisés à écrire `badge-<teinte>` en face d'une clé
+#  de rôle ou de statut. Un seul, et c'est le sujet.
+SOURCE_BADGES = "src/lib/roles.ts"
+
+
+def test_chaque_libelle_de_role_ou_statut_a_une_TEINTE():
+    """Un rôle libellé mais sans teinte s'affiche en gris — ce qui se lit comme
+    une décision, alors que c'est un oubli.
+
+    C'est exactement ce qui était arrivé à `/profil` : deux rôles absents de sa
+    copie, rendus gris par le repli, sans que rien ne le dise.
+    """
+    ts = ROLES_TS.read_text(encoding="utf-8")
+    libelles_role = _table_ts(ts, "LIBELLES_ROLE")
+    libelles_statut = _table_ts(ts, "LIBELLES_STATUT")
+    badges_role = _table_ts(ts, "BADGE_ROLE")
+    badges_statut = _table_ts(ts, "BADGE_STATUT")
+
+    #  Cas zéro : un extracteur qui ne trouve plus rien conclurait au vert sur
+    #  zéro comparaison (`standards/04` §2).
+    assert len(libelles_role) >= 5 and len(badges_role) >= 5, "extraction des rôles cassée"
+    assert len(libelles_statut) >= 7 and len(badges_statut) >= 7, "extraction des statuts cassée"
+
+    assert set(badges_role) == set(libelles_role), (
+        "BADGE_ROLE et LIBELLES_ROLE ne couvrent pas les mêmes rôles : "
+        f"{set(libelles_role) ^ set(badges_role)}"
+    )
+    assert set(badges_statut) == set(libelles_statut), (
+        "BADGE_STATUT et LIBELLES_STATUT ne couvrent pas les mêmes statuts : "
+        f"{set(libelles_statut) ^ set(badges_statut)}"
+    )
+
+
+#  Le SEUIL qui distingue une table recopiée d'une homonymie, et le pourquoi de
+#  sa valeur — voir `_teintes_par_table`.
+SEUIL_TABLE = 2
+
+
+def _teintes_par_table(source: str, cles: set[str]) -> list[tuple[int, list[str]]]:
+    """Les tables de ce fichier qui associent PLUSIEURS clés de rôle à une teinte.
+
+    ⚠️ Le comptage se fait par TABLE et non par ligne, et c'est tout le contrôle.
+
+    🔴 Ma première version signalait chaque ligne isolément. Elle a trouvé
+    `KANBAN_COLORS` dans `reporting.ts` — où `syndic: 'badge-orange'` désigne la
+    **colonne du kanban** qui traite le sujet, pas un rôle d'utilisateur. Le mot
+    est le même, la notion non.
+
+    Une table recopiée en porte cinq à onze ; une homonymie en porte une. Deux
+    est donc le seuil qui les sépare, et il est mesuré sur le relevé réel — pas
+    choisi pour faire passer le contrôle. Une dérogation nominative pour
+    `reporting.ts` aurait, elle, laissé passer une vraie table de rôles dans ce
+    même fichier.
+    """
+    lignes = source.splitlines()
+    motif = re.compile(r"^\s*(" + "|".join(re.escape(c) for c in cles) + r")\s*:\s*'badge-")
+    tables: list[tuple[int, list[str]]] = []
+    debut, trouvees = None, []
+    for numero, ligne in enumerate(lignes, 1):
+        nue = ligne.strip()
+        if nue.startswith(("//", "*", "/*", "<!--")):
+            continue
+        if re.search(r"=\s*\{\s*$", ligne):
+            debut, trouvees = numero, []
+            continue
+        if debut is not None and re.match(r"^\s*\}", ligne):
+            if len(trouvees) >= SEUIL_TABLE:
+                tables.append((debut, trouvees))
+            debut, trouvees = None, []
+            continue
+        if debut is not None and motif.search(ligne):
+            trouvees.append(nue[:60])
+    return tables
+
+
+def test_aucune_TEINTE_de_role_n_est_REECRITE_dans_un_ecran():
+    """Le garde-fou contre la troisième table de badges.
+
+    ⚠️ La portée fait partie du contrôle, comme au-dessus : ce test ne cherche
+    pas « badge- » en général — la classe est employée partout, légitimement. Il
+    cherche une TABLE qui associe plusieurs clés de rôle ou de statut à une
+    teinte, c'est-à-dire la forme exacte d'une copie :
+
+        copropriétaire_bailleur: 'badge-purple',
+        locataire: 'badge-gray',
+
+    Une clé qui reçoit un badge dans un ternaire (`x === 'actif' ? 'badge-green'
+    : …`) n'est pas visée : c'est une condition sur une valeur, pas une table.
+    """
+    front = Path(__file__).resolve().parents[2] / "front" / "src"
+    ts = ROLES_TS.read_text(encoding="utf-8")
+    cles = set(_table_ts(ts, "LIBELLES_ROLE")) | set(_table_ts(ts, "LIBELLES_STATUT"))
+    assert len(cles) >= 12, "extraction des clés cassée — le contrôle ne mesurerait rien"
+
+    fautifs = []
+    for fichier in front.rglob("*"):
+        if fichier.suffix not in (".svelte", ".ts") or not fichier.is_file():
+            continue
+        relatif = fichier.relative_to(front.parent).as_posix()
+        if relatif == SOURCE_BADGES:
+            continue
+        for ligne, entrees in _teintes_par_table(
+            fichier.read_text(encoding="utf-8"), cles
+        ):
+            fautifs.append(f"{relatif}:{ligne} — {len(entrees)} clés : {entrees[0]}…")
+
+    assert not fautifs, (
+        "une table de teintes de rôle ou de statut est réécrite hors de "
+        "`$lib/roles.ts` :\n  "
+        + "\n  ".join(fautifs)
+        + "\n  → employer `badgeRole()` / `badgeStatut()`."
+    )
+
+
+def test_le_garde_fou_des_TEINTES_refuse_bien_une_reecriture():
+    """Cas zéro : les deux sens, et surtout l'homonymie.
+
+    Le troisième cas est celui que la première version du contrôle a signalé à
+    tort : une table du reporting dont UNE clé porte le nom d'un rôle. Sans lui,
+    le resserrement serait invérifiable — et un seuil qu'on ne peut pas éprouver
+    est un seuil qu'on rabotera au prochain faux positif.
+    """
+    cles = {"locataire", "conseil_syndical", "copropriétaire_bailleur", "syndic", "ag"}
+
+    copie = (
+        "const roleBadge: Record<string, string> = {\n"
+        "\tlocataire: 'badge-gray',\n"
+        "\tconseil_syndical: 'badge-blue',\n"
+        "\tcopropriétaire_bailleur: 'badge-purple',\n"
+        "};\n"
+    )
+    assert len(_teintes_par_table(copie, cles)) == 1
+
+    homonymie = (
+        "export const KANBAN_COLORS: Record<string, string> = {\n"
+        "\tag: 'badge-purple',\n"
+        "\tsyndic: 'badge-orange',\n"
+        "\tfournisseur: 'badge-yellow',\n"
+        "};\n"
+    )
+    #  `ag` et `syndic` sont ici des colonnes de kanban. Deux clés du jeu, mais
+    #  la notion n'est pas la même — c'est la limite assumée du contrôle, et
+    #  c'est pourquoi le cas zéro l'écrit noir sur blanc.
+    assert len(_teintes_par_table(homonymie, {"locataire", "conseil_syndical"})) == 0
+
+    ternaire = (
+        "<span\n"
+        "\tclass=\"badge {u.statut === 'locataire' ? 'badge-gray' : ''}\"\n"
+        "></span>\n"
+    )
+    assert len(_teintes_par_table(ternaire, cles)) == 0
+
+    #  Un commentaire qui cite la forme ne la pose pas — `standards/04` §39, et
+    #  deux contrôles s'y sont déjà pris eux-mêmes le 06/09/2026.
+    commentaire = (
+        "const x = {\n"
+        "\t//  locataire: 'badge-gray' vivait ici avant #819\n"
+        "\t//  conseil_syndical: 'badge-blue' aussi\n"
+        "};\n"
+    )
+    assert len(_teintes_par_table(commentaire, cles)) == 0
