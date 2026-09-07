@@ -72,6 +72,24 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	font-size: 0.875rem;
 }
 
+/*  ── Le champ de saisie COMPACT — une ligne de liste, pas un formulaire ─────
+    Un motif de refus, un filtre au-dessus d'un tableau : une saisie qui vit
+    DANS une rangée, à côté de boutons `.btn-sm`, et non dans un `.field`.
+
+    🔴 Montée ici le 07/09/2026 : elle vivait dans `/admin`, et le geste
+    « accepter · refuser avec motif » en est parti pour devenir
+    `AccepterRefuser.svelte`. La page l'emploie encore trois fois. La recopier
+    dans le composant aurait donné deux sources pour une même règle, qui
+    divergent au premier ajustement — c'est le remède déjà appliqué à
+    `.header-summary`. */
+.input-sm {
+	padding: 0.3rem 0.5rem;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	font-size: 0.85rem;
+	min-width: 160px;
+}
+
 /*  Le cran en dessous de `.btn-sm` — un bouton d'appoint DANS un champ ou une
     ligne de liste (« ✕ Changer », « ✕ Dissocier »).
 
