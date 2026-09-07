@@ -164,6 +164,7 @@
 							<td style="text-align:right">
 								<button
 									class="btn-icon-danger"
+									aria-label="Supprimer cette association"
 									title="Supprimer cette association"
 									on:click={() => supprimer(ul)}>&#x1F5D1;️</button
 								>

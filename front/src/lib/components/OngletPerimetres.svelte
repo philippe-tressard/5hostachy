@@ -261,16 +261,35 @@
 					<div class="ref-corps">
 						{#if n.description}<p class="ref-desc">{n.description}</p>{/if}
 						<div class="ref-actions">
-							<button class="btn-icon-edit" title="Modifier" on:click={() => editer(n)}>✏️</button>
+							<button
+								class="btn-icon-edit"
+								aria-label="Modifier"
+								title="Modifier"
+								on:click={() => editer(n)}>✏️</button
+							>
 							<button
 								class="btn-icon"
+								aria-label="Ajouter un sous-périmètre"
 								title="Ajouter un sous-périmètre"
 								on:click={() => creer(n.code)}>＋</button
 							>
-							<button class="btn-icon" title="Monter" on:click={() => deplacer(n, -1)}>▲</button>
-							<button class="btn-icon" title="Descendre" on:click={() => deplacer(n, 1)}>▼</button>
-							<button class="btn-icon-danger" title="Supprimer" on:click={() => supprimer(n)}
-								>🗑️</button
+							<button
+								class="btn-icon"
+								aria-label="Monter"
+								title="Monter"
+								on:click={() => deplacer(n, -1)}>▲</button
+							>
+							<button
+								class="btn-icon"
+								aria-label="Descendre"
+								title="Descendre"
+								on:click={() => deplacer(n, 1)}>▼</button
+							>
+							<button
+								class="btn-icon-danger"
+								aria-label="Supprimer"
+								title="Supprimer"
+								on:click={() => supprimer(n)}>🗑️</button
 							>
 						</div>
 					</div>

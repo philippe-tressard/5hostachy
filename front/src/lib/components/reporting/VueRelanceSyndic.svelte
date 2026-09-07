@@ -230,6 +230,9 @@
 								title={t.non_relancable
 									? 'Retirer le tag non-relançable'
 									: 'Marquer comme non-relançable'}
+								aria-label={t.non_relancable
+									? `Retirer le tag non-relançable du ticket « ${t.titre} »`
+									: `Marquer le ticket « ${t.titre} » comme non-relançable`}
 								on:click={() => {
 									if (t.non_relancable) {
 										saveNonRelancable(t, false, '');

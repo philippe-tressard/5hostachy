@@ -158,6 +158,7 @@
 				{#if estAdmin}
 					<button
 						class="btn-icon-danger"
+						aria-label="Supprimer cette idée"
 						title="Supprimer cette idée"
 						on:click={() => onSupprimer(idee.id)}>🗑️</button
 					>

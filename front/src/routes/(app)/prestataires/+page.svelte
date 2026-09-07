@@ -828,6 +828,7 @@
 							{#if $isCS}
 								<button
 									class="btn-icon-danger"
+									aria-label="Archiver"
 									title="Archiver"
 									on:click|stopPropagation={() => deleteContrat(c.id)}>🗑️</button
 								>
@@ -904,6 +905,7 @@
 											{#if $isCS}
 												<button
 													class="btn-icon-danger"
+													aria-label="Supprimer"
 													title="Supprimer"
 													style="margin-left:auto"
 													on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button
@@ -1154,11 +1156,13 @@
 							{#if $isCS}
 								<button
 									class="btn-icon-edit"
+									aria-label="Modifier"
 									title="Modifier"
 									on:click|stopPropagation={() => startEditPrest(p)}>✏️</button
 								>
 								<button
 									class="btn-icon-danger"
+									aria-label="Archiver"
 									title="Archiver"
 									on:click|stopPropagation={() => deletePrest(p.id)}>🗑️</button
 								>
@@ -1267,6 +1271,7 @@
 					{/if}
 					<button
 						class="btn-icon-edit"
+						aria-label="Modifier le fournisseur"
 						title="Modifier le fournisseur"
 						on:click={() => startEditCompteur(currentCompteur)}>✏️</button
 					>
@@ -1384,11 +1389,17 @@
 					</div>
 					{#if $isCS}
 						<div class="releve-actions">
-							<button class="btn-icon-edit" title="Modifier" on:click={() => startEditReleve(r)}
-								>✏️</button
+							<button
+								class="btn-icon-edit"
+								aria-label="Modifier"
+								title="Modifier"
+								on:click={() => startEditReleve(r)}>✏️</button
 							>
-							<button class="btn-icon-danger" title="Supprimer" on:click={() => deleteReleve(r.id)}
-								>🗑️</button
+							<button
+								class="btn-icon-danger"
+								aria-label="Supprimer"
+								title="Supprimer"
+								on:click={() => deleteReleve(r.id)}>🗑️</button
 							>
 						</div>
 					{/if}
