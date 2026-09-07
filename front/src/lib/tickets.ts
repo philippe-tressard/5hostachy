@@ -130,15 +130,25 @@ export interface CategorieTicket {
 /**
  *  Les huit catégories, **dans l'ordre de fréquence attendue** en copropriété.
  *
- *  🔴 L'ordre est une décision, pas le résidu de celui où on les a écrites : sur
- *  deux lignes de quatre, la première porte le quotidien — panne, nuisance,
- *  propreté, espaces verts — et la seconde les cas particuliers : le sinistre,
- *  le dossier suivi par le conseil, la question, le défaut du logiciel.
+ *  🔴 L'ordre est une décision, pas le résidu de celui où on les a écrites. Sur
+ *  deux lignes de quatre :
  *
- *  ⚠️ L'alphabétique a été écarté (07/09/2026, l'alternative proposée) : il
- *  mettrait « Bug » en tête et « Sinistre » en avant-dernier. Un ordre qui ne
- *  dit rien du métier oblige à lire les huit entrées à chaque fois ; celui-ci
- *  fait que la plupart des gens s'arrêtent aux deux premières.
+ *      Panne · Nuisance & propreté · Accès & accueil · Espaces verts
+ *      Sinistre · Étude & travaux · Question · Bug
+ *
+ *  ⚠️ « Accès & accueil » A ÉTÉ REMONTÉE en 3ᵉ le 07/09/2026, et c'est un
+ *  effet du lot précédent : depuis que cocher « Nouvel arrivant » ouvre un
+ *  ticket de suivi, chaque emménagement en produit un. Elle était 6ᵉ, donc en
+ *  seconde ligne — reléguée au moment même où elle devenait fréquente.
+ *
+ *  ⚠️ L'alphabétique a été écarté : il mettrait « Bug » en tête et « Sinistre »
+ *  en avant-dernier. Un ordre qui ne dit rien du métier oblige à lire les huit
+ *  entrées à chaque fois ; celui-ci fait que la plupart des gens s'arrêtent aux
+ *  trois premières.
+ *
+ *  ⚠️ « Sinistre » en seconde ligne est assumé : quelqu'un qui a un dégât des
+ *  eaux lit les huit vignettes de toute façon. Le formulaire sert à choisir
+ *  vite, pas à contempler une taxonomie.
  */
 export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 	{
@@ -177,6 +187,17 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		description: 'Bruit, odeurs, stationnement, parties communes, encombrants',
 	},
 	{
+		value: 'acces_accueil',
+		label: 'Accès & accueil',
+		//  ⚠️ Le badge et la télécommande N'Y SONT PAS, et c'est délibéré :
+		//  `CommandeAcces` porte déjà le lot, la quantité, le motif et son propre
+		//  workflow (écran « Accès & sécurité »). Un ticket y perdrait tout. Cette
+		//  catégorie est pour ce qui n'a AUCUN circuit dédié — l'interphone, la
+		//  boîte aux lettres, et le suivi d'un emménagement.
+		emoji: '\u{1F511}',
+		description: 'Interphone, boîte aux lettres, emménagement',
+	},
+	{
 		value: 'espaces_verts',
 		label: 'Espaces verts',
 		emoji: '\u{1F333}',
@@ -202,17 +223,6 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		label: 'Étude & travaux',
 		emoji: '\u{1F3D7}️',
 		description: 'Diagnostic, sondage, devis, chantier suivi par le conseil',
-	},
-	{
-		value: 'acces_accueil',
-		label: 'Accès & accueil',
-		//  ⚠️ Le badge et la télécommande N'Y SONT PAS, et c'est délibéré :
-		//  `CommandeAcces` porte déjà le lot, la quantité, le motif et son propre
-		//  workflow (écran « Accès & sécurité »). Un ticket y perdrait tout. Cette
-		//  catégorie est pour ce qui n'a AUCUN circuit dédié — l'interphone, la
-		//  boîte aux lettres, et le suivi d'un emménagement.
-		emoji: '\u{1F511}',
-		description: 'Interphone, boîte aux lettres, emménagement',
 	},
 	{ value: 'question', label: 'Question', emoji: '❓', description: 'Information, procédure…' },
 	{

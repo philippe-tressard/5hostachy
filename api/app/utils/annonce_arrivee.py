@@ -102,6 +102,11 @@ def corps_annonce(nom_complet: str, nom_batiment: str, etage: int | None, ancien
     ⚠️ Aucun pronom de genre. `Utilisateur` ne porte pas de civilité, et
     « il ou elle » alourdit une phrase de trois mots. Les tournures sont donc
     construites sans sujet animé — c'est plus court ET plus juste.
+
+    ⚠️ DEUX paragraphes, et pas trois. Le premier dit le fait, le second
+    renvoie aux consignes. Une phrase invitait à dire bonjour dans le hall ;
+    elle a été retirée le jour même à la demande. Une annonce informe — dire
+    en plus comment se comporter en fait un sermon.
     """
     ou = ", ".join(x for x in (nom_batiment, libelle_etage(etage)) if x)
     situe = f" au <strong>{escape(ou)}</strong>" if ou else " dans la résidence"
@@ -114,9 +119,10 @@ def corps_annonce(nom_complet: str, nom_batiment: str, etage: int | None, ancien
 
     return (
         f"<p><strong>{escape(nom_complet)}</strong> vient d'emménager{situe}{succede}.</p>"
-        "<p>Un mot de bienvenue dans le hall ou l'ascenseur est toujours "
-        "apprécié — c'est ce qui fait la différence entre un immeuble et un "
-        "voisinage.</p>"
+        #  🔴 PAS de phrase d'invitation au voisinage — retirée le 07/09/2026, à
+        #  la demande. Une annonce dit un fait ; ajouter comment il faudrait se
+        #  comporter en fait un sermon, et personne n'a demandé au site de dire
+        #  aux résidents comment être voisins.
         "<p>📋 Les consignes de la résidence — tri, accès, stationnement — sont "
         'réunies dans la <a href="/api/admin/fiche-arrivant" target="_blank" '
         'rel="noopener">fiche d\'accueil</a>.</p>'
