@@ -235,3 +235,78 @@ def supprimer_user_lot(
             session.add(imp)
     session.commit()
     return {"ok": True, "deleted_id": user_lot_id}
+
+
+@router.get("/audit/reclassement-tickets")
+def audit_reclassement_tickets(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Les tickets dont la catégorie pourrait être plus juste — PROPOSITION SEULE.
+
+    ## 🔴 Pourquoi ce relevé (#821, 07/09/2026)
+
+    Demandé : *« peux-tu regarder les tickets créés et leur affecter la catégorie
+    la plus adéquate ? Me faire une synthèse et me valider avant application. »*
+
+    Quatre catégories sont nées le même jour (Propreté, Espaces verts, Sinistre,
+    Étude & travaux) et une a disparu. Les tickets déjà ouverts portent donc des
+    catégories choisies dans une liste qui n'existe plus telle quelle — beaucoup
+    sont en « Panne » faute de mieux.
+
+    ⚠️ **Rien n'est écrit.** Une reclassification automatique est un pari sur du
+    texte libre : ces règles lisent un titre et une description écrits par des
+    humains, elles se trompent, et une catégorie fausse posée en silence est pire
+    qu'une catégorie approximative assumée. Le relevé propose, quelqu'un tranche.
+
+    C'est le même choix que pour les baux sans locataire ci-dessus — *garder et
+    observer* avant d'automatiser.
+
+    ## Ce que `confiance` distingue
+
+    - **haute** — un indice qui ne désigne qu'une chose (« dégât des eaux »,
+      « interphone », « élagage »).
+    - **moyenne** — un indice qui peut appartenir ailleurs : « eau » se lit dans
+      « fuite d'eau chaude », qui est une panne de chauffe-eau ; « badge » peut
+      être une commande d'accès, qui a son propre circuit.
+
+    Le tri met les hautes d'abord : ce sont celles qu'on valide d'un coup d'œil.
+    """
+    from app.models.core import Ticket
+    from app.utils.categories_ticket import libelle_categorie
+    from app.utils.reclassement_tickets import proposer
+
+    propositions = []
+    total = 0
+    for tk in session.exec(select(Ticket).order_by(Ticket.cree_le.desc())).all():
+        total += 1
+        actuelle = str(getattr(tk.categorie, "value", tk.categorie))
+        suggestion = proposer(tk.titre or "", tk.description or "", actuelle)
+        if not suggestion:
+            continue
+        categorie, confiance, indice = suggestion
+        propositions.append({
+            "ticket_id": tk.id,
+            "numero": tk.numero,
+            "titre": tk.titre,
+            "statut": str(getattr(tk.statut, "value", tk.statut)),
+            "actuelle": actuelle,
+            "actuelle_libelle": libelle_categorie(actuelle),
+            "proposee": categorie,
+            "proposee_libelle": libelle_categorie(categorie),
+            "confiance": confiance,
+            #  Le mot qui a déclenché la règle : sans lui, on valide à l'aveugle.
+            #  C'est la différence entre « fais-moi confiance » et « voilà pourquoi ».
+            "indice": indice,
+        })
+
+    propositions.sort(key=lambda p: (p["confiance"] != "haute", p["numero"]))
+    return {
+        "total_tickets": total,
+        "propositions": propositions,
+        #  Le compte par catégorie proposée : la synthèse tient en une ligne.
+        "par_categorie": {
+            c: sum(1 for p in propositions if p["proposee"] == c)
+            for c in sorted({p["proposee"] for p in propositions})
+        },
+    }

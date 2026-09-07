@@ -31,6 +31,8 @@ from app.utils.syndic import nom_du_syndic
 from html import escape
 from typing import Optional
 from app.utils.noms import nom_affiche
+from app.utils.annonce_arrivee import creer_annonce_arrivee
+from app.utils.ticket_arrivant import creer_ticket_arrivant
 
 router = APIRouter()
 
@@ -198,6 +200,42 @@ def _declencher_accueil_arrivant(
                 destinataire_id=user.id,
             )
 
+    # ── D. LE TICKET DE SUIVI ────────────────────────────────────────────────
+    #  🔴 Signalé le 07/09/2026 : *« le syndic n'a rien fait depuis deux semaines
+    #  et le locataire a créé lui-même un ticket »*.
+    #
+    #  Tout ce qui précède ENVOIE : une notification qui se lit une fois puis
+    #  quitte la pile, un e-mail qui tombe dans une boîte. Rien ne mesurait le
+    #  FAIT — la démarche réalisée — et personne ne voyait que ça traînait.
+    #  C'est `standards/04` §14 : observer la chose, pas son enregistrement.
+    #
+    #  ⚠️ Les notifications restent : elles PRÉVIENNENT, le ticket SUIT. Retirer
+    #  l'alerte immédiate au profit d'une ligne dans une liste aurait échangé un
+    #  défaut contre un autre.
+    ticket = creer_ticket_arrivant(
+        session,
+        user,
+        nom_complet=nom_complet,
+        batiment=bat,
+        ancien=ancien,
+        demarches=demarches,
+        vers_syndic=bool(syndic_principal),
+        vers_cs=bool(cs_unique),
+    )
+
+    # ── E. L'ANNONCE AUX VOISINS ─────────────────────────────────────────────
+    #  Demandé le 07/09/2026 : une actualité de bienvenue, avec le bâtiment et
+    #  l'étage — et SANS aucune donnée personnelle.
+    #
+    #  ⚠️ Ce qui n'y entre jamais est écrit noir sur blanc dans
+    #  `utils/annonce_arrivee.CHAMPS_INTERDITS`, et un test construit l'annonce
+    #  depuis un compte dont l'e-mail, le téléphone et le nom du propriétaire
+    #  sont remplis de valeurs reconnaissables. Une intention ne survit pas au
+    #  premier enrichissement du gabarit ; un contrôle, oui.
+    annonce = creer_annonce_arrivee(
+        session, user, nom_complet=nom_complet, ancien=ancien
+    )
+
     # ── Persister le choix en base ───────────────────────────────────────────
     user.demarche_arrivant = "nouvel_arrivant"
 
@@ -206,6 +244,10 @@ def _declencher_accueil_arrivant(
         "ok": True,
         "notifications_envoyees": nb_notifs,
         "email_syndic": bool(syndic_principal and syndic_principal.email),
+        #  Le numéro, pas un booléen : l'écran peut y renvoyer, et le compte rendu
+        #  d'une MEP peut le retrouver. `None` quand le ticket existait déjà.
+        "ticket_suivi": ticket.numero if ticket else None,
+        "annonce_publiee": bool(annonce),
     }
 
 @router.post("/utilisateurs/{user_id}/accueil-arrivant")

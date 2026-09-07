@@ -115,6 +115,18 @@ export const admin = {
 	 *  vues du même relevé pourraient ranger le même bail dans deux cases.
 	 */
 	bauxSansLocataire: () => api.get<any[]>('/admin/audit/baux-sans-locataire'),
+	/**
+	 *  Les tickets dont la catégorie pourrait être plus juste — PROPOSITION SEULE.
+	 *
+	 *  🔴 Rien n'est écrit par cet appel. Quatre catégories sont nées le
+	 *  07/09/2026 et une a disparu : les tickets déjà ouverts portent donc des
+	 *  catégories choisies dans une liste qui n'existe plus telle quelle.
+	 *
+	 *  ⚠️ La PROPOSITION et la CONFIANCE viennent du serveur, pas de l'écran —
+	 *  même raison que ci-dessus : les recalculer ici en ferait une seconde
+	 *  règle, et deux vues du même relevé proposeraient deux catégories.
+	 */
+	reclassementTickets: () => api.get<any>('/admin/audit/reclassement-tickets'),
 	supprimerUserLot: (id: number) => api.delete(`/admin/user-lots/${id}`),
 	// Télémétrie
 	//  🔴 `scope` a été AJOUTÉ ici plutôt que dans l'écran (#801) : `OngletTelemetrie`

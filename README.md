@@ -24,7 +24,7 @@
 ## Fonctionnalités
 
 - **Tableau de bord** — Actualités, événements, sondages
-- **Tickets / Demandes** — Signalements avec suivi par le conseil syndical. **Huit catégories**, chacune choisie parce qu'elle change *qui traite* : 🛠️ Panne · 📢 Nuisance · 🧹 Propreté · 🌳 Espaces verts · 💧 Sinistre (dégât des eaux, incendie, vandalisme — le syndic déclare à l'assurance sous cinq jours ouvrés) · 🏗️ Étude & travaux (le dossier long suivi par le conseil : diagnostic, sondage, devis, chantier) · ❓ Question · 🐛 Bug. L'**urgence n'est pas une catégorie** mais une case à cocher : une panne peut être urgente, une nuisance aussi
+- **Tickets / Demandes** — Signalements avec suivi par le conseil syndical. **Huit catégories**, chacune choisie parce qu'elle change *qui traite* : 🛠️ Panne (à réparer : ascenseur, chauffage, éclairage, fuite) · 📢 Nuisance & propreté · 🌳 Espaces verts · 💧 Sinistre (dégât des eaux, incendie, vandalisme — le syndic déclare à l'assurance sous cinq jours ouvrés) · 🏗️ Étude & travaux (le dossier long suivi par le conseil : diagnostic, sondage, devis, chantier) · 🔑 Accès & accueil (interphone, boîte aux lettres, emménagement) · ❓ Question · 🐛 Bug. L'**urgence n'est pas une catégorie** mais une case à cocher : une panne peut être urgente, une nuisance aussi
 - **Calendrier** — Événements, AG, travaux (vue liste + Kanban)
 - **Documents** — GED avec catégories et accès par profil (résidents, propriétaires, CS)
 - **Mon lot** — Informations du lot, baux, diagnostics

@@ -109,14 +109,68 @@ class CategorieTicket(str, Enum):
     (c'est une panne d'équipement) et « Stationnement » (déjà nommé dans la
     description de « Nuisance »). Les ajouter aurait dispersé le choix sans rien
     changer au traitement.
+
+    ## `acces_accueil`, la neuvième — et elle ferme deux trous d'un coup
+
+    🔴 Signalé le 07/09/2026, cas concret à l'appui : *« le syndic n'a rien fait
+    depuis deux semaines et le locataire a créé lui-même un ticket »*.
+
+    Le parcours « Nouvel arrivant » envoyait une notification au conseil et un
+    e-mail au syndic — **et rien d'autre**. La notification se lit une fois puis
+    quitte la pile, l'e-mail tombe dans une boîte, le résident n'a aucune trace,
+    et personne ne voit que ça traîne. C'est la règle du projet enfreinte à
+    l'envers : *vérifier le comportement, jamais l'artefact* — le message parti
+    est l'artefact, la démarche faite est le fait (`standards/04` §14).
+
+    Le second trou est plus discret : **corriger son nom sur l'interphone ou la
+    boîte aux lettres hors d'une arrivée** — faute d'orthographe, départ d'un
+    colocataire, changement de nom — n'avait AUCUN chemin. Le parcours arrivant
+    ne se déclenche qu'une fois, à la création du compte.
+
+    ⚠️ Elle ne couvre PAS la commande d'un badge ou d'une télécommande :
+    `CommandeAcces` porte déjà le lot, la quantité, le motif et son propre
+    workflow. Un ticket y perdrait tout. Cette catégorie est pour ce qui n'a pas
+    de circuit dédié.
+
+    ## 🔴 `proprete` a été FUSIONNÉE dans `nuisance` le soir même (migration 0179)
+
+    Je l'avais créée sur l'argument « autre prestataire : le nettoyage, pas le
+    technique ». Signalé le 07/09/2026 : *« très sincèrement, Propreté je la
+    regrouperais dans Nuisance en complétant le libellé »*. C'est juste, et
+    l'erreur était la mienne :
+
+    * dans les faits le **geste est le même** — le conseil relaie au syndic ou au
+      prestataire, il ne fait pas deux choses différentes ;
+    * le recouvrement, je l'avais **déjà admis** en écrivant qu'« un encombrant
+      abandonné dans le hall est les deux à la fois » ;
+    * et j'avais dû **expliquer la frontière dans le manuel**. Une frontière qu'il
+      faut expliquer est une frontière qui n'existe pas.
+
+    ## Où passe la limite entre `panne` et `sinistre`
+
+    Questionné le même jour sur deux cas concrets. La réponse tient en un mot, et
+    ce n'est pas « eau » :
+
+    * **une fuite au goutte-à-goutte dans les communs → `panne`.** On appelle le
+      plombier. Aucun dommage, aucun tiers lésé, aucun délai d'assurance.
+    * **une panne électrique — ampoule grillée, interrupteur HS → `panne`.**
+      C'est le cœur de la catégorie, et c'est pourquoi « Éclairage » a été écartée
+      comme catégorie séparée.
+    * **`sinistre` commence au DOMMAGE** : de l'eau chez quelqu'un, un plafond
+      taché, un parquet gondolé. C'est le dommage qui déclenche la déclaration,
+      pas la fuite.
+
+    ⚠️ Les descriptions le disent désormais en toutes lettres (« à réparer » /
+    « dégât constaté »). Elles ne le disaient pas, et c'est ce qui rendait la
+    question nécessaire.
     """
 
     panne = "panne"
-    nuisance = "nuisance"
-    proprete = "proprete"            # autre prestataire : le nettoyage, pas le technique
-    espaces_verts = "espaces_verts"  # autre prestataire encore, et une saisonnalité
+    nuisance = "nuisance"            # comportement ET propreté — voir la note ci-dessous
+    espaces_verts = "espaces_verts"  # autre prestataire, et une saisonnalité
     sinistre = "sinistre"            # constat + déclaration à l'assurance sous 5 jours ouvrés
     etude_travaux = "etude_travaux"  # le dossier long que le conseil syndical suit
+    acces_accueil = "acces_accueil"  # interphone, BAL, badge — installer quelqu'un
     question = "question"
     bug = "bug"
 
