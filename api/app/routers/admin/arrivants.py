@@ -32,9 +32,14 @@ from html import escape
 from typing import Optional
 from app.utils.noms import nom_affiche
 from app.utils.annonce_arrivee import creer_annonce_arrivee
+#  Les trois gestes de l'accueil vivent côte à côte : le ticket de suivi,
+#  l'annonce aux voisins, et le message d'arrivée avec ses consignes.
+from app.utils.courriel_arrivee import FICHE_CONSIGNES, destinataires_arrivee
+from app.utils.courriel_arrivee import envoyer as envoyer_message_arrivee
 from app.utils.ticket_arrivant import creer_ticket_arrivant
 
 router = APIRouter()
+
 
 
 class AccueilArrivantBody(BaseModel):
@@ -131,12 +136,7 @@ def _declencher_accueil_arrivant(
             f"<ul>{items}</ul>"
         )
 
-    # La fiche d'accueil n'était référencée NULLE PART dans le parcours : cette
-    # notification affirmait que « l'ensemble des consignes est disponible dans
-    # l'application » sans le moindre lien, et son champ `lien` pointait sur `/`.
-    # L'arrivant devait donc tomber par hasard sur la carte du tableau de bord.
-    # Même chemin que celle-ci (`tableau-de-bord/+page.svelte`).
-    FICHE_URL = "/api/admin/fiche-arrivant"
+    FICHE_URL = FICHE_CONSIGNES
 
     session.add(Notification(
         destinataire_id=user.id,
@@ -171,34 +171,25 @@ def _declencher_accueil_arrivant(
         ))
         nb_notifs += 1
 
-    # ── C. E-mail BAL → syndic principal (CC arrivant) ────────────────────────
-    if syndic_principal and syndic_principal.email:
-        from app.utils.email import send_email
-
-        ctx = {
-            "nom_complet": nom_complet,
-            "batiment": bat,
-            "ancien_resident": ancien,
-        }
-        # Email individuel au syndic
-        background_tasks.add_task(
-            send_email,
-            code="nouvel_arrivant_bal",
-            to=syndic_principal.email,
-            context=ctx,
-            session=session,
-            destinataire_id=syndic_principal.user_id,
-        )
-        # Copie à l'arrivant
-        if user.email:
-            background_tasks.add_task(
-                send_email,
-                code="nouvel_arrivant_bal",
-                to=user.email,
-                context=ctx,
-                session=session,
-                destinataire_id=user.id,
-            )
+    # ── C. LE MESSAGE D'ARRIVÉE → syndic, arrivant, ET conseil du bâtiment ────
+    #  Un seul modèle — `nouvel_arrivant_bal` — adapté à ses trois publics par
+    #  `role_destinataire`. Le récit complet, et pourquoi un second modèle a
+    #  failli naître, sont dans `utils/courriel_arrivee`.
+    #
+    #  ⚠️ Les membres passés ici sont ceux que la section B vient de notifier :
+    #  le courriel ne doit atteindre personne d'autre.
+    destinataires = destinataires_arrivee(
+        session, user,
+        syndic_principal=syndic_principal,
+        membres_cs_notifies={mc.user_id for mc in cs_unique},
+    )
+    #  🔴 Ce booléen décide de la DIFFUSION du ticket ci-dessous : quand les
+    #  consignes sont parties au résident ET au conseil, la diffusion ferait un
+    #  second message disant la même chose, le même jour, aux mêmes personnes.
+    consignes_transmises = envoyer_message_arrivee(
+        session, background_tasks, destinataires,
+        nom_complet=nom_complet, batiment=bat, ancien_resident=ancien,
+    )
 
     # ── D. LE TICKET DE SUIVI ────────────────────────────────────────────────
     #  🔴 Signalé le 07/09/2026 : *« le syndic n'a rien fait depuis deux semaines
@@ -219,8 +210,8 @@ def _declencher_accueil_arrivant(
         batiment=bat,
         ancien=ancien,
         demarches=demarches,
-        vers_syndic=bool(syndic_principal),
-        vers_cs=bool(cs_unique),
+        vers_syndic=bool(syndic_principal) and not consignes_transmises,
+        vers_cs=bool(cs_unique) and not consignes_transmises,
     )
 
     # ── E. L'ANNONCE AUX VOISINS ─────────────────────────────────────────────
@@ -248,6 +239,9 @@ def _declencher_accueil_arrivant(
         #  d'une MEP peut le retrouver. `None` quand le ticket existait déjà.
         "ticket_suivi": ticket.numero if ticket else None,
         "annonce_publiee": bool(annonce),
+        #  Le compte rendu dit si les consignes sont sorties de l'application —
+        #  c'est ce fait, et lui seul, qui a coupé la diffusion du ticket.
+        "consignes_transmises": consignes_transmises,
     }
 
 @router.post("/utilisateurs/{user_id}/accueil-arrivant")
