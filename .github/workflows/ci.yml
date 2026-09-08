@@ -1380,3 +1380,51 @@ jobs:
       - name: Pied de formulaire passant par le composant
         working-directory: front
         run: npm run lint:pied-formulaire
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
+  #
+  # `front/e2e/` existe depuis le 06/09 et porte seize cas — squelette, lien
+  # d'évitement, absence de défilement horizontal, erreurs de script au
+  # chargement — sur les profils bureau ET mobile. Aucun job ne les lançait.
+  #
+  # C'est la forme la plus discrète du faux vert : le dépôt CONTIENT les tests,
+  # `npm run e2e` les passe sur le poste de qui y pense, et les quatre checks
+  # requis restent verts si l'un d'eux casse. « Un contrôle qui ne peut pas
+  # s'exécuter renvoie INCONNU, jamais OK » (`standards/04` §1) — ici il ne
+  # s'exécutait pas du tout, et personne ne le savait.
+  #
+  # ⚠️ C'est la même famille que #409, #410 et #411, citées plus haut dans ce
+  # fichier : des contrôles qui existent et ne tournent pas. Le motif se répète
+  # parce qu'écrire un test et le BRANCHER sont deux gestes, et que le second
+  # ne manque à personne.
+  #
+  # ⚠️ Job à part et non une étape de `build-frontend` : il lui faut les
+  # navigateurs de Playwright (~300 Mo) et un serveur qui démarre. Les mêler
+  # ferait payer ce temps à chaque lint de style.
+  # ══════════════════════════════════════════════════════════════════════════
+  e2e-frontend:
+    name: Tests de navigateur (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: front
+        run: npm install
+
+      # Chromium seul : les deux profils (bureau et mobile) l'emploient, et
+      # installer Firefox et WebKit pour rien coûterait deux minutes par PR.
+      - name: Install Playwright browsers
+        working-directory: front
+        run: npx playwright install --with-deps chromium
+
+      - name: Tests de navigateur (bureau et mobile)
+        working-directory: front
+        run: npm run e2e
