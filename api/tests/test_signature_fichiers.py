@@ -172,9 +172,19 @@ def test_aucun_nouveau_point_de_televersement_hors_du_relevé():
     qu'un routeur qui se met à écrire un fichier téléversé soit ajouté ici — et
     donc examiné — plutôt que découvert au prochain audit.
     """
+    routeurs = list(_ROUTERS.rglob("*.py"))
+    #  🔴 CAS ZÉRO DE LA PORTÉE. `ecrivains <= set(_POINTS)` est VRAI quand
+    #  `ecrivains` est vide : un `_ROUTERS` devenu faux rendrait donc un vert
+    #  parfait, sur zéro fichier lu. C'est `standards/04` §40 appliqué au test
+    #  que j'ai écrit ce matin même — sa promesse est « aucun cinquième point de
+    #  téléversement », sa portée était « ce que le glob veut bien trouver ».
+    assert len(routeurs) > 20, (
+        f"{len(routeurs)} routeur(s) lu(s) sous {_ROUTERS} — la portée du relevé "
+        "est cassée, et son vert ne veut rien dire (INCONNU, pas OK)."
+    )
     ecrivains = {
         f.name
-        for f in _ROUTERS.rglob("*.py")
+        for f in routeurs
         if re.search(
             r"shutil\.copyfileobj\(file\.file|\(dest_dir / filename\)\.write_bytes",
             f.read_text(encoding="utf-8"),
