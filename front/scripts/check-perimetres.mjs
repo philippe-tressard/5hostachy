@@ -74,8 +74,13 @@ const EXCEPTIONS = {
 	'lib/api/documents.ts':
 		'granularité documentaire — `Document.perimetre` vaut `résidence` | `bâtiment` | ' +
 		'`lot`. Autre axe : qui a le droit de LIRE un fichier, pas où se passe une demande.',
-	'routes/(app)/residence/+page.svelte':
-		'granularité documentaire également (dépôt de plans et de règlements).',
+	//  🔴 `routes/(app)/residence/+page.svelte` RETIRÉ le 08/09/2026 (#852) : ses
+	//  trois `'résidence'` en dur ont disparu quand `documentsApi.upload` est
+	//  passé d'une liste de huit paramètres positionnels à un objet nommé — le
+	//  défaut de lecture y vit désormais, une fois.
+	//
+	//  ⚠️ C'est ce contrôle qui l'a signalé, pas la relecture : une exception qui
+	//  ne sert plus est une porte qu'on croit fermée.
 };
 
 /**

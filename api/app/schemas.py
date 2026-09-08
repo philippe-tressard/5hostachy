@@ -326,6 +326,10 @@ from app.schemas_publications import (  # noqa: E402,F401
 class DocumentRead(BaseModel):
     id: int
     titre: str
+    #  Section 6 du cadre, ajoutée le 08/09/2026 (#852). Défaut à vide plutôt
+    #  qu'`Optional` : une description absente et une description vide sont la
+    #  même chose pour le lecteur, et l'écran n'a alors rien à distinguer.
+    description: str = ""
     fichier_nom: str
     taille_octets: Optional[int] = None
     mime_type: str

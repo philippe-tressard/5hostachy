@@ -639,6 +639,17 @@ jobs:
         working-directory: front
         run: npm run lint:formulaires
 
+      # 🔴 `lint:formulaires` vérifie QUEL cadre, jamais OÙ il est rendu — et
+      # c'est la position qui a été signalée à l'écran le 08/09/2026 (#852) :
+      # « l'édition est en bas de page et non dans la section sélectionnée ».
+      #
+      # Les sept formulaires de Résidence étaient rendus APRÈS toutes les
+      # sections. Le balisage était juste, le cadre était le bon, et le contrôle
+      # existant était vert : il ne regardait pas cet axe-là.
+      - name: Formulaire rendu DANS sa section
+        working-directory: front
+        run: npm run lint:section-formulaire
+
       # 🔴 L'API Svelte 4 COMPILE et lève à l'exécution. `confirmation.ts`
       # montait sa boîte avec `new Confirmation(...)` depuis sa création : la
       # fonction n'a JAMAIS marché, et 17 gestes en dépendaient (suppressions,

@@ -74,6 +74,15 @@ class Document(SQLModel, table=True):
     lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
     publie_par_id: int = Field(foreign_key="utilisateur.id")
     publie_le: datetime = Field(default_factory=datetime.utcnow)
+    #  🔴 La DESCRIPTION, ajoutée le 08/09/2026 (#852). Demandée à l'écran :
+    #  *« ajouter aussi un champ descriptif »*.
+    #
+    #  ⚠️ Elle ne double pas le titre : le titre NOMME le document, la
+    #  description dit ce qu'il couvre, d'où il vient et ce qu'il ne dit pas.
+    #  Sur un règlement de copropriété, c'est la différence entre « Règlement
+    #  2024 » et « remplace celui de 1998 ; les annexes 3 et 4 sont chez le
+    #  syndic ».
+    description: str = ""
     # Champs spécifiques aux CR d'AG
     annee: Optional[int] = None
     date_ag: Optional[date] = Field(default=None)

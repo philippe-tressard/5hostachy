@@ -346,7 +346,20 @@ for (const nom of readdirSync(COMPOSANTS)) {
 	//  formulaire ne l'écrit plus, il le monte. Sans cette ligne, les dix-sept
 	//  formulaires convertis seraient signalés « sans bouton repérable » — le
 	//  contrôle reprocherait la factorisation qu'il a lui-même rendue possible.
-	if (/<PiedFormulaire\b/.test(readFileSync(join(COMPOSANTS, nom), 'utf-8'))) continue;
+	//  🔴 ÉLARGI le 08/09/2026 (#852) : deux formes de délégation, une seule
+	//  notion — « ce formulaire ne rédige pas son pied, il en hérite ».
+	//
+	//    • `<PiedFormulaire>` — le pied commun, monté directement (#822) ;
+	//    • `<Formulaire…>`    — un formulaire qui en ENVELOPPE un autre, et
+	//      hérite donc du sien. `FormulaireEditionDocument` est le premier.
+	//
+	//  ⚠️ La version d'avant ne connaissait que la première et signalait la
+	//  seconde « sans bouton repérable ». C'est `standards/04` §40 : la portée
+	//  d'un contrôle décrit la NOTION, jamais la forme déjà rencontrée. La
+	//  déclarer en exception aurait rangé une conformité parmi les dérogations.
+	const source = readFileSync(join(COMPOSANTS, nom), 'utf-8');
+	if (/<PiedFormulaire\b/.test(source)) continue;
+	if (/<Formulaire[A-Z]\w*\b/.test(source)) continue;
 	if (EXCEPTIONS[rel]) {
 		exceptionsUtiles.add(rel);
 		continue;
