@@ -1353,3 +1353,19 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	flex-shrink: 0;
 	font-size: 1.1rem;
 }
+
+/*  ── Le filet qui referme un raccourci de PRÉ-REMPLISSAGE ──────────────────
+    Deux formulaires proposent de partir d'une entrée existante : l'affiche de
+    hall depuis une actualité, et l'actualité depuis une affiche (#832). Le
+    filet dit la même chose des deux côtés — « ce qui suit n'est plus le
+    raccourci, c'est le formulaire ».
+
+    🔴 Il s'appelait `.ah-separateur` dans le premier, avec sa propre valeur de
+    marge. Le second l'aurait recopié sous un autre nom : deux écritures d'une
+    même notion, libres de diverger, et le raccourci n'aurait plus la même
+    respiration selon l'écran. */
+.separateur-prefill {
+	border: none;
+	border-top: 1px solid var(--color-border);
+	margin: 0.9rem 0;
+}

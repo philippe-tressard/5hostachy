@@ -177,7 +177,7 @@
 		Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste modifiable
 		ci-dessous : l'affiche est indépendante de l'actualité d'origine.
 	</p>
-	<hr class="ah-separateur" />
+	<hr class="separateur-prefill" />
 {/if}
 
 <!--  1. Titre. `SectionFormulaire` porte le filet discret qui sépare les
@@ -349,9 +349,4 @@
 	    de la ligne (défaut signalé sur le sondage ET l'annonce, 16/08/2026). */
 	/*  Le filet qui sépare le raccourci de pré-remplissage du formulaire lui-même.
 	    Il était posé en `style=` en ligne — nommé ici, il cesse d'être à réécrire. */
-	.ah-separateur {
-		border: none;
-		border-top: 1px solid var(--color-border);
-		margin: 0.9rem 0;
-	}
 </style>

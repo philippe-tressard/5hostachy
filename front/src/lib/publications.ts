@@ -40,3 +40,19 @@ export const STATUT_BADGE: Record<string, string> = {
  * laisserait passer un formulaire vide.
  */
 export const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
+
+/**
+ *  Combien d'entrées un sélecteur de PRÉ-REMPLISSAGE propose au plus.
+ *
+ *  🔴 Le geste existe dans les deux sens depuis #832 — une affiche de hall
+ *  pré-remplie depuis une actualité, une actualité pré-remplie depuis une
+ *  affiche — et le plafond était écrit dans le premier (`AH_PUBS_MAX`). Deux
+ *  écritures d'un même seuil divergent au premier ajustement, et le sélecteur
+ *  d'un côté proposerait dix entrées quand l'autre en propose vingt, sans que
+ *  personne sache lequel a raison.
+ *
+ *  ⚠️ Dix, et pas plus : c'est une liste déroulante qu'on parcourt des yeux
+ *  pour retrouver quelque chose qu'on vient d'écrire, pas un historique. Au-delà,
+ *  chercher dans le sélecteur coûte plus que ressaisir.
+ */
+export const MAX_SOURCES_PREREMPLISSAGE = 10;

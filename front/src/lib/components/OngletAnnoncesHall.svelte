@@ -35,6 +35,7 @@
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { onMount } from 'svelte';
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
+	import { MAX_SOURCES_PREREMPLISSAGE } from '$lib/publications';
 	import HistoriqueAnnoncesHall from '$lib/components/HistoriqueAnnoncesHall.svelte';
 	import { MAX_PHOTOS_AFFICHE } from '$lib/annonces';
 	import { annoncesHall as annoncesHallApi, publications as pubsApi, ApiError } from '$lib/api';
@@ -80,7 +81,6 @@
 	let ahPubs: Publication[] = [];
 	let ahPubsLoaded = false;
 	let ahSourceId: number | '' = '';
-	const AH_PUBS_MAX = 10;
 
 	type AhFormat = 'auto' | 'a4' | 'a5' | 'a6' | 'a7' | 'a8';
 	const AH_FORMATS: { val: AhFormat; label: string }[] = [
@@ -109,7 +109,7 @@
 			ahPubs = pubs
 				.filter((p) => !p.brouillon)
 				.sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())
-				.slice(0, AH_PUBS_MAX);
+				.slice(0, MAX_SOURCES_PREREMPLISSAGE);
 			ahPubsLoaded = true;
 		} catch {
 			/* non bloquant : la saisie manuelle reste possible */
