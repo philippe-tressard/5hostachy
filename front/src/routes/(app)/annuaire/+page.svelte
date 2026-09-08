@@ -11,7 +11,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateLong as formatDate } from '$lib/date';
 	import { revelerCible } from '$lib/deepLink';
-	import { telephonesDe } from '$lib/utils';
+	import { etageLabel, telephonesDe } from '$lib/utils';
 
 	$: _pc = getPageConfig($configStore, 'annuaire', defautsDePage('annuaire'));
 	$: _siteNom = $siteNomStore;
@@ -168,7 +168,7 @@
 								<div>
 									<strong>{m.genre} {nomAffiche(m)}</strong>
 									{#if m.etage != null}
-										<div class="contact-loc">Étage {m.etage}</div>
+										<div class="contact-loc">Étage {etageLabel(m.etage)}</div>
 									{/if}
 								</div>
 							</div>
@@ -205,7 +205,7 @@
 								<div class="contact-loc">
 									{#if m.batiment_nom}Bât. {m.batiment_nom}{/if}{#if m.batiment_nom && m.etage != null}
 										-
-									{/if}{#if m.etage != null}Étage {m.etage}{/if}
+									{/if}{#if m.etage != null}Étage {etageLabel(m.etage)}{/if}
 								</div>
 							{/if}
 						</div>

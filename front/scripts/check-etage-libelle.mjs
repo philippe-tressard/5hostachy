@@ -25,7 +25,26 @@ const SOURCE = 'src/lib/utils.ts';
 /**  Une comparaison d'étage à zéro suivie d'un littéral : la signature exacte
  *   des six copies. `etage === 0 ? 'RDC'` et `if (x.etage === 0) parts.push(…)`
  *   la portent toutes les deux. */
-const COPIE = /\betage\s*(===|==)\s*0\b[^\n]{0,40}['"`]/;
+const COMPARAISON = /\betage\s*(===|==)\s*0\b[^\n]{0,40}['"`]/;
+
+/*  🔴 LA SECONDE FORME, ajoutée le 08/09/2026 quelques heures après la
+ *  première — et c'est la leçon.
+ *
+ *  Le motif ci-dessus ne cherchait que la forme CORRIGÉE du défaut : une
+ *  comparaison à zéro, c'est-à-dire une écriture qui avait DÉJÀ tenté de
+ *  traiter le rez-de-chaussée. Celles qui n'avaient jamais essayé lui
+ *  échappaient toutes — il en restait **six**, dont trois dans un seul
+ *  fichier, et côté serveur un `if m.get("etage")` qui masque purement et
+ *  simplement l'étage d'un RDC.
+ *
+ *  Un contrôle qui cherche ce qu'il sait déjà chercher ne trouve que ce qu'on
+ *  a déjà vu. Celui-ci décrit la NOTION — « l'étage paraît dans du texte » —
+ *  et non une écriture fautive connue.
+ *
+ *  ⚠️ `etageLabel(` est le seul appel légitime, et il est exclu par le filtre
+ *  ci-dessous plutôt que par le motif : une exclusion dans une expression
+ *  régulière se lit mal et se contourne sans qu'on s'en aperçoive. */
+const INTERPOLATION = /[ÉéE]tage[^\n]{0,8}[{$][^\n]{0,30}\betage\b/i;
 
 function fichiers(dir, acc = []) {
 	for (const e of readdirSync(dir)) {
@@ -44,7 +63,7 @@ function fautes(source) {
 			//  Les commentaires ne posent pas de libellé — et celui qui explique ce
 			//  contrôle cite justement la forme qu'il refuse.
 			.filter(([l]) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
-			.filter(([l]) => COPIE.test(l))
+			.filter(([l]) => COMPARAISON.test(l) || (INTERPOLATION.test(l) && !/etageLabel\s*\(/.test(l)))
 			.map(([, n]) => n)
 	);
 }
