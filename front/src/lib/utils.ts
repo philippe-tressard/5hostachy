@@ -279,3 +279,31 @@ export function etageParDefaut(
 	if (lots.length !== 1 || lots[0].type !== 'appartement') return null;
 	return lots[0].etage ?? null;
 }
+
+/**
+ * « Bât. 3 — 2ème » : où se trouve un membre, en une chaîne.
+ *
+ * 🔴 Écrite **trois fois** dans `espace-cs/+page.svelte` — vue édition, vue
+ * lecture, résumé replié — et déjà divergente : deux employaient un tiret cadratin
+ * (`—`), la troisième un demi-cadratin (`–`). Personne ne peut voir cet écart, et
+ * personne ne peut le corriger : il faudrait d'abord savoir qu'il existe.
+ *
+ * 🔴 Les trois écrivaient aussi `Étage ${m.etage}` en clair, donc « Étage 0 » pour
+ * un rez-de-chaussée et « Étage -1 » pour un sous-sol. Le libellé d'étage a UNE
+ * source (`etageLabel`) depuis #835 ; ces trois-là ne la connaissaient pas, parce
+ * que le contrôle d'alors ne cherchait que les comparaisons à zéro.
+ *
+ * ⚠️ Rend une chaîne **vide** quand on ne sait rien, jamais « — » : c'est
+ * l'appelant qui décide de ce qu'il affiche à la place, et les trois sites
+ * entourent déjà la valeur d'un `{#if}`.
+ */
+export function localisationMembre(m: {
+	batiment_nom?: string | null;
+	etage?: number | null;
+}): string {
+	const parts = [];
+	if (m.batiment_nom) parts.push(`Bât. ${m.batiment_nom}`);
+	//  ⚠️ `!= null` et non un test de vérité : `0` est le rez-de-chaussée.
+	if (m.etage != null) parts.push(`Étage ${etageLabel(m.etage)}`);
+	return parts.join(' — ');
+}

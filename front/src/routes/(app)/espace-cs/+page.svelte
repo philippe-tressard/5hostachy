@@ -33,6 +33,7 @@
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
+	import { localisationMembre } from '$lib/utils';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -1004,10 +1005,7 @@
 							</div>
 							{#if m.batiment_nom || m.etage != null}
 								<div class="localisation-info">
-									&#x1F4CD; {m.batiment_nom ? `Bât. ${m.batiment_nom}` : ''}{m.batiment_nom &&
-									m.etage != null
-										? ' — '
-										: ''}{m.etage != null ? `Étage ${m.etage}` : ''}
+									&#x1F4CD; {localisationMembre(m)}
 								</div>
 							{/if}
 							<div class="user-link-indicator">
@@ -1053,10 +1051,7 @@
 							<!-- Vue lecture seule (déplié, non édité) -->
 							{#if m.batiment_nom || m.etage != null}
 								<div class="localisation-info">
-									&#x1F4CD; {m.batiment_nom ? `Bât. ${m.batiment_nom}` : ''}{m.batiment_nom &&
-									m.etage != null
-										? ' — '
-										: ''}{m.etage != null ? `Étage ${m.etage}` : ''}
+									&#x1F4CD; {localisationMembre(m)}
 								</div>
 							{/if}
 							<div class="user-link-indicator">
@@ -1069,12 +1064,7 @@
 						<!-- Vue résumé (replié) -->
 						<div class="membre-summary">
 							{#if m.batiment_nom || m.etage != null}
-								<span class="summary-loc"
-									>&#x1F4CD; {m.batiment_nom ? `Bât. ${m.batiment_nom}` : ''}{m.batiment_nom &&
-									m.etage != null
-										? ' – '
-										: ''}{m.etage != null ? `Étage ${m.etage}` : ''}</span
-								>
+								<span class="summary-loc">&#x1F4CD; {localisationMembre(m)}</span>
 							{/if}
 							{#if m.est_gestionnaire_site}
 								<span class="summary-role-badge" title="Gestionnaire du Site"

@@ -14,6 +14,7 @@ from app.utils.pdf_theme import (
     qr_data_uri as _qr_data_uri,
 )
 from app.utils.perimetres import perimetre_du_batiment, perimetre_label_un
+from app.utils.etages import etage_label
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -102,7 +103,11 @@ def _build_cs_card(m: dict) -> str:
     elif is_president:
         role_html = '<div class="contact-role">Président</div>'
 
-    etage_html = f"Étage {m['etage']}" if m.get("etage") else ""
+    #  🔴 `is not None`, jamais un test de vérité : `0` est le rez-de-chaussée,
+    #  et il était faux en Python. Un conseiller du RDC n'avait donc AUCUN
+    #  étage sur cette fiche — pas un étage faux, un étage absent.
+    etage = m.get("etage")
+    etage_html = f"Étage {etage_label(etage)}" if etage is not None else ""
 
     return (
         f'<div class="{card_class}">'
