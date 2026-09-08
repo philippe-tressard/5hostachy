@@ -1356,6 +1356,17 @@ jobs:
         working-directory: front
         run: npm run lint:etat-liste
 
+      # 🔴 Le libellé d'un étage était écrit SEPT fois, en QUATRE rendus : un
+      # lot au premier sous-sol s'affichait « -1 » sur `mon-lot`, « SS 1 » sur le
+      # profil, et « Ét. -1 » dans une troisième forme de la même page.
+      #
+      # ⚠️ La septième a été trouvée PAR CE CONTRÔLE, pas par la relecture qui
+      # l'a précédé : elle vivait dans une fonction et non dans un gabarit, et le
+      # relevé fait à la main l'avait sautée. C'est la raison d'être de l'étape.
+      - name: Libellé d'étage non réécrit dans un écran
+        working-directory: front
+        run: npm run lint:etage-libelle
+
       # 🔴 Le pied « Annuler / Enregistrer » était écrit DIX-NEUF fois, et les
       # copies avaient divergé sur quatre points — dont TROIS orthographes du
       # même événement d'annulation : `annule`, `annuler`, `cancel`.

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
-	import { lotTypeLabel } from '$lib/utils';
+	import { etageLabel, lotTypeLabel } from '$lib/utils';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
@@ -365,7 +365,11 @@
 		const bat = lot.batiment_nom ?? '—';
 		const type = lotTypeLabel(lot.type);
 		const sub = lot.type_appartement ? ` ${lot.type_appartement}` : '';
-		const etage = lot.etage !== null ? (lot.etage === 0 ? ' · RDC' : ` · Ét. ${lot.etage}`) : '';
+		//  ⚠️ SEPTIÈME écriture du libellé d'étage, et quatrième rendu (« Ét. 2 »).
+		//  Trouvée par `lint:etage-libelle`, pas par ma relecture : elle est dans
+		//  une fonction, pas dans le gabarit, et le relevé à la main l'avait sautée.
+		const etiquette = etageLabel(lot.etage);
+		const etage = etiquette ? ` · ${etiquette}` : '';
 		const surface = lot.superficie ? ` · ${lot.superficie} m²` : '';
 		return `${bat} — ${type}${sub} n°${lot.numero}${etage}${surface}`;
 	}
@@ -441,7 +445,7 @@
 								: ''}
 						</dd>{/if}
 					{#if monBailData.lot_etage !== null && monBailData.lot_etage !== undefined}<dt>Étage</dt>
-						<dd>{monBailData.lot_etage === 0 ? 'RDC' : monBailData.lot_etage}</dd>{/if}
+						<dd>{etageLabel(monBailData.lot_etage)}</dd>{/if}
 					{#if monBailData.lot_superficie}<dt>Superficie</dt>
 						<dd>{monBailData.lot_superficie} m²</dd>{/if}
 					<dt>Entrée</dt>
@@ -488,7 +492,7 @@
 							{lot.type.replace('_', ' ')}{lot.type_appartement ? ` – ${lot.type_appartement}` : ''}
 						</dd>
 						{#if lot.etage !== null}<dt>Étage</dt>
-							<dd>{lot.etage === 0 ? 'RDC' : lot.etage}</dd>{/if}
+							<dd>{etageLabel(lot.etage)}</dd>{/if}
 						{#if lot.superficie}<dt>Superficie</dt>
 							<dd>{lot.superficie} m²</dd>{/if}
 					</dl>
@@ -536,7 +540,7 @@
 								: ''}</span
 						>
 						{#if lot.etage !== null}<span style="font-size:.78rem;color:var(--color-text-muted)"
-								>Étage {lot.etage === 0 ? 'RDC' : lot.etage}</span
+								>Étage {etageLabel(lot.etage)}</span
 							>{/if}
 						{#if lot.superficie}<span style="font-size:.78rem;color:var(--color-text-muted)"
 								>{lot.superficie} m²</span
@@ -668,7 +672,7 @@
 							: ''}
 					</dd>
 					{#if selectedLot.etage !== null}<dt>Étage</dt>
-						<dd>{selectedLot.etage === 0 ? 'RDC' : selectedLot.etage}</dd>{/if}
+						<dd>{etageLabel(selectedLot.etage)}</dd>{/if}
 					{#if selectedLot.superficie}<dt>Superficie</dt>
 						<dd>{selectedLot.superficie} m²</dd>{/if}
 				</dl>
