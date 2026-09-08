@@ -98,6 +98,8 @@
 	// ── State (lots) ──────────────────────────────────────────────────────────
 	let lots: LotDetail[] = [];
 	let loading = true;
+	/**  Non vide = on n'a PAS pu regarder. Distinct de « aucun lot associé ». */
+	let erreurLots = '';
 	let selectedLotId: number | null = null;
 
 	$: selectedLot = lots.find((l) => l.id === selectedLotId) ?? null;
@@ -164,7 +166,11 @@
 			lots = await lotsApi.mesList();
 			if (lots.length > 0) selectedLotId = lots[0].id;
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Impossible de charger vos lots');
+			//  🔴 Sans cette variable, l'écran annonçait « Aucun lot associé » après
+			//  un échec de chargement (#816) — et la page explique alors, en trois
+			//  lignes, comment faire rattacher un lot qui EST peut-être déjà là.
+			erreurLots = e instanceof ApiError ? e.message : 'Impossible de charger vos lots';
+			toast('error', erreurLots);
 		} finally {
 			loading = false;
 		}
@@ -571,6 +577,13 @@
 {#if mainTab === 'lots'}
 	{#if loading}
 		<p style="color:var(--color-text-muted)">Chargement…</p>
+	{:else if erreurLots}
+		<!--  L'échec AVANT le vide : « aucun lot » est une affirmation, et on ne
+		      l'a pas constatée. -->
+		<div class="empty-state">
+			<h3>Impossible d’afficher vos lots</h3>
+			<p>{erreurLots}</p>
+		</div>
 	{:else if lots.length === 0 && !isLocataire}
 		<div class="empty-state">
 			<h3>Aucun lot associé</h3>

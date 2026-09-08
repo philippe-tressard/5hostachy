@@ -88,12 +88,8 @@ export const DETTES = {
 	//  relevé et forcera à trancher de nouveau.
 	'lib/components/ApercuDiffusion.svelte':
 		'FAUX POSITIF — les canaux viennent d’une prop, ce composant ne charge rien',
-	'lib/components/OngletTelemetrie.svelte': '`telemetryLoading` puis `!telemetryData`',
 	'routes/(app)/admin/+page.svelte':
 		'TROIS listes — comptes en attente, commandes d’accès, demandes de profil',
-	'routes/(app)/mon-lot/+page.svelte': '`loading` puis `lots.length === 0`',
-	'routes/(app)/tickets/[id]/+page.svelte':
-		'`loading` puis `!ticket` — « Ticket introuvable » dit autre chose qu’« illisible »',
 };
 
 function fichiers(dir, acc = []) {
@@ -105,14 +101,27 @@ function fichiers(dir, acc = []) {
 	return acc;
 }
 
-/*  ⚠️ PAS de `\b` en tête, et insensible à la casse : les indicateurs s'écrivent
-    `ahLoading`, `emailsLoading`, `santeLoading` autant que `loading`. Mon
-    premier motif exigeait une frontière de mot des DEUX côtés — il a laissé
-    passer six des écrans que je venais de relever à la main, et le contrôle a
-    répondu « dette périmée » sur des dettes bien vivantes. C'est le défaut de
-    #801 à l'identique : un motif trop étroit qui rend un vert. */
-const CHARGEMENT = /(loading|chargement)\b/i;
-const ECHEC = /(erreur|error)\b/i;
+/*  ⚠️ AUCUNE frontière de mot, d'aucun côté, et insensible à la casse : ces
+    indicateurs se nomment d'après CE QU'ILS CHARGENT autant que d'après leur
+    nature — `ahLoading`, `emailsLoading`, `santeLoading`, `erreurLots`,
+    `erreurBaux`, `loadError`.
+
+    🔴 Ce commentaire a été écrit DEUX fois, pour les deux moitiés du même
+    défaut, et la seconde m'a repris en flagrant délit (08/09/2026) :
+
+    1. le 07/09, `CHARGEMENT` exigeait une frontière des DEUX côtés — il a
+       laissé passer six écrans que je venais de relever à la main, et le
+       contrôle a répondu « dette périmée » sur des dettes bien vivantes ;
+    2. le 08/09, j'ai corrigé la TÊTE de `CHARGEMENT` et laissé la QUEUE des
+       deux motifs. `ECHEC` a donc refusé de reconnaître `{:else if
+       erreurLots}` — la branche d'échec que je venais d'écrire — et le
+       contrôle a accusé d'un défaut l'écran qui le corrigeait.
+
+    La leçon est celle de #801 : un motif étroit ne rend pas un rouge prudent,
+    il rend un verdict FAUX, dans le sens que le hasard décide. Ici les deux
+    sens se sont produits en vingt-quatre heures. */
+const CHARGEMENT = /(loading|chargement)/i;
+const ECHEC = /(erreur|error)/i;
 
 /**
  *  Les lignes fautives d'une source : un `.empty-state` dont la chaîne de
@@ -155,6 +164,17 @@ function selftest() {
 		['{:else}\n<div class="empty-state">Cliquez sur Aperçu</div>\n{/if}', 0],
 		//  🔴 Le contrôle ne doit pas se déclencher sur sa PROPRE prose.
 		['<!-- {#if loading} puis <div class="empty-state"> : le motif refusé -->', 0],
+		//  🔴 Les deux moitiés du défaut de motif, une fois chacune (08/09/2026).
+		//  Sans ces deux cas, la correction du 07/09 se déferait en silence :
+		//  l'indicateur porte le nom de CE QU'IL charge, pas seulement sa nature.
+		[
+			'{#if lotsLoading}\n<p>…</p>\n{:else if items.length === 0}\n<div class="empty-state">a</div>\n{/if}',
+			1,
+		],
+		[
+			'{#if loading}\n<p>…</p>\n{:else if erreurLots}\n<p>{erreurLots}</p>\n{:else if items.length === 0}\n<div class="empty-state">a</div>\n{/if}',
+			0,
+		],
 	];
 	let ko = 0;
 	for (const [src, attendu] of cas) {
