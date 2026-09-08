@@ -142,3 +142,63 @@ def purger_staging(session: Session, modele, statuts) -> int:
     #  suppressions après elles et effacer ce qu'on vient d'écrire.
     session.flush()
     return len(condamnes)
+
+
+#  ── Le vocabulaire de la colonne « TYPE » d'un classeur de lots ──────────────
+#
+#  🔴 Ces trois tables et les deux convertisseurs qui les lisent étaient écrits
+#  DEUX fois (#829) : au niveau module dans `routers/lots.py`, et **dans un corps
+#  de fonction** dans `utils/auto_match_service.py`. La seconde copie existait
+#  parce que le `_norm` du même fichier faisait autre chose que celui de
+#  `lots.py` — il avait fallu réécrire la bonne version sous le nom `_norm2`
+#  pour l'avoir sous la main.
+#
+#  Un nom qui ment produit une copie, pas une erreur. C'est pourquoi le
+#  normaliseur de comparaison de noms s'appelle désormais `_cle_de_nom`.
+#
+#  ⚠️ Ce vocabulaire vit ICI et non dans un routeur : il décrit ce qu'un
+#  CLASSEUR contient, comme `normaliser` juste au-dessus. Un routeur qui le
+#  porte le rend invisible à tout autre lecteur du même classeur — ce qui est
+#  exactement ce qui s'est produit.
+
+#: Les préfixes de la colonne TYPE qui désignent un emplacement, pas un logement.
+TYPE_PARKING = {"PS"}
+TYPE_CAVE = {"CA"}
+
+#: Les mentions d'étage du classeur, en entiers. Les sous-sols sont négatifs.
+ETAGE_PAR_MENTION: dict[str, int] = {
+    "RDC": 0,
+    "1ER": 1, "1SS": -1,
+    "2EME": 2, "2SS": -2,
+    "3EME": 3, "3SS": -3,
+    "4EME": 4, "5EME": 5,
+}
+
+#: Les valeurs de TYPE qui ne qualifient PAS un appartement — « AP » est le cas
+#: général, « DIV » et « LC » des mentions administratives sans type de logement.
+_TYPE_SANS_QUALIFICATION = ("AP", "DIV", "LC", "")
+
+
+def type_de_lot(type_raw: Optional[str]):
+    """La colonne TYPE d'un classeur → `(TypeLot, type d'appartement | None)`.
+
+    L'import est différé : `app.models.core` importe la base, et ce module est
+    chargé par des scripts en ligne de commande qui n'en ont pas besoin.
+    """
+    from app.models.core import TypeLot
+
+    t = normaliser(type_raw)
+    if t in TYPE_PARKING:
+        return TypeLot.parking, None
+    if t in TYPE_CAVE:
+        return TypeLot.cave, None
+    return TypeLot.appartement, (t if t not in _TYPE_SANS_QUALIFICATION else None)
+
+
+def etage_de_lot(etage_raw: Optional[str]) -> Optional[int]:
+    """La colonne ÉTAGE d'un classeur → un entier, ou `None` si illisible.
+
+    ⚠️ Une mention inconnue rend `None` et **n'échoue pas** : un classeur qui
+    invente une mention doit importer le lot sans étage, pas bloquer la ligne.
+    """
+    return ETAGE_PAR_MENTION.get(normaliser(etage_raw)) if etage_raw else None
