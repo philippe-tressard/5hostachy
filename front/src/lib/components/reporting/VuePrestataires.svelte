@@ -15,7 +15,7 @@
 	import { prestataires as prestApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate } from '$lib/date';
-	import { starsDisplay } from '$lib/utils';
+	import NoteEtoiles from '$lib/components/NoteEtoiles.svelte';
 	import { type ReportPrestataire } from '$lib/reporting';
 
 	export let reportPrestataires: ReportPrestataire[] = [];
@@ -102,9 +102,16 @@
 				<p><strong>Contrats actifs :</strong> {reportPrestSynth.nb_contrats}</p>
 				<p>
 					<strong>Note moyenne :</strong>
-					{reportPrestSynth.note_moyenne != null
-						? `${starsDisplay(reportPrestSynth.note_moyenne)} ${reportPrestSynth.note_moyenne}/5 (${reportPrestSynth.nb_notations} avis)`
-						: 'Aucune notation'}
+					{#if reportPrestSynth.note_moyenne != null}
+						<NoteEtoiles
+							note={reportPrestSynth.note_moyenne}
+							nbAvis={reportPrestSynth.nb_notations}
+							surCinq
+						/>
+						<span class="text-muted-sm">({reportPrestSynth.nb_notations} avis)</span>
+					{:else}
+						Aucune notation
+					{/if}
 				</p>
 				{#if reportPrestSynth.prochaines_visites && reportPrestSynth.prochaines_visites.length > 0}
 					<p><strong>Prochaines visites :</strong></p>
@@ -123,7 +130,10 @@
 						{#each reportPrestSynth.notations as n (n)}
 							<tr>
 								<td>{fmtDate(n.cree_le)}</td>
-								<td style="color:#f59e0b">{starsDisplay(n.note)} {n.note}/5</td>
+								<!--  🔴 Cette cellule colorait TOUTE note en orange — un 1/5 y
+								      paraissait comme un 3,5. La teinte est censée dire d’un coup
+								      d’œil si l’on est content de quelqu’un ; là, elle mentait. -->
+								<td><NoteEtoiles note={n.note} surCinq /></td>
 								<td>{n.commentaire ?? '—'}</td>
 								<td>{n.auteur_nom}</td>
 							</tr>

@@ -1367,6 +1367,18 @@ jobs:
         working-directory: front
         run: npm run lint:etage-libelle
 
+      # 🔴 La note d'un prestataire était rendue CINQ fois, et l'une d'elles
+      # colorait TOUTE note en orange : un 1/5 y paraissait comme un 3,5. La
+      # teinte dit d'un coup d'œil si l'on est content de quelqu'un — là, elle
+      # mentait.
+      #
+      # ⚠️ `starsDisplay` était déjà dans `$lib/utils` : la règle était
+      # factorisée, son EMPLOI non — et c'est l'emploi qui porte les seuils,
+      # donc le jugement. Même motif que #825.
+      - name: Note de prestataire rendue à un seul endroit
+        working-directory: front
+        run: npm run lint:note-etoiles
+
       # 🔴 Le pied « Annuler / Enregistrer » était écrit DIX-NEUF fois, et les
       # copies avaient divergé sur quatre points — dont TROIS orthographes du
       # même événement d'annulation : `annule`, `annuler`, `cancel`.
