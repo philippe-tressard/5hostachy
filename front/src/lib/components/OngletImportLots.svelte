@@ -222,6 +222,8 @@
 
 <svelte:head><title>Import Lots — {_siteNom}</title></svelte:head>
 
+<!--  ⚠️ Le libellé dit CE QUI EST EFFACÉ, et diverge exprès des deux autres
+      imports — motif dans `utils/import_xlsx.purger_staging` (#824). -->
 <BarreImport
 	tuiles={stats
 		? [
@@ -235,7 +237,7 @@
 			]
 		: []}
 	colonnesAttendues="ID_BATIMENT | N° LOT | TYPE | ÉTAGE | N° PORTE | N° COPROPRIÉTAIRE | NOM COPROPRIÉTAIRE"
-	libelleRemplacer="Remplacer les imports non résolus"
+	libelleRemplacer="Remplacer les imports non résolus — les lignes écartées sont conservées"
 	enCours={uploading}
 	statuts={['', 'en_attente', 'utilisateur_lie', 'lot_lie', 'resolu', 'ignore']}
 	libellesStatuts={statutLabel}

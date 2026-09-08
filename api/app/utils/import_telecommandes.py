@@ -28,6 +28,7 @@ from app.utils.import_xlsx import (  # noqa: F401  (ré-export de `normaliser`)
     importer_bytes,
     importer_fichier,
     normaliser,
+    purger_staging,
 )
 
 from app.models.core import StatutImport, TelecommandeImport
@@ -43,6 +44,12 @@ _NOMS_IGNORES = {
 }
 
 
+
+
+#:  Ce que « Remplacer » efface — et, par omission, ce qu'il PRÉSERVE (#824).
+#:  Seul le non-traité. `proprietaire_lie` est un rapprochement à demi fait sur
+#:  un objet déjà remis à quelqu'un : le refaire coûte plus qu'un réimport.
+_PURGES_PAR_REMPLACER = (StatutImport.en_attente,)
 
 
 def importer_depuis_bytes(
@@ -68,14 +75,7 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
     stats: dict = {"importes": 0, "ignores": 0, "doublons": 0, "erreurs": []}
 
     if remplacer:
-        existants = session.exec(
-            select(TelecommandeImport).where(
-                TelecommandeImport.statut == StatutImport.en_attente
-            )
-        ).all()
-        for e in existants:
-            session.delete(e)
-        session.flush()
+        purger_staging(session, TelecommandeImport, _PURGES_PAR_REMPLACER)
 
     for i, row in enumerate(data_rows, start=2):
         nom_prop_raw  = str(row[0]).strip() if row[0] else None
