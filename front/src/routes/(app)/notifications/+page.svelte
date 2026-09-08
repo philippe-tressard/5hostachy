@@ -70,18 +70,36 @@
 	}
 
 	$: unread = items.filter((n) => !n.lue).length;
-	$: grouped = group(items);
+	$: sections = grouper(items);
 
-	function group(notifs: any[]) {
-		const today: any[] = [];
-		const older: any[] = [];
-		const now = Date.now();
-		notifs.forEach((n) => {
-			const age = now - new Date(n.cree_le).getTime();
-			if (age < 86400000) today.push(n);
-			else older.push(n);
-		});
-		return { today, older };
+	/**
+	 *  Les notifications en SECTIONS — titre, contenu, format de date.
+	 *
+	 *  🔴 Ce découpage rendait `{ today, older }`, et le gabarit portait alors
+	 *  **deux blocs de trente-huit lignes recopiés au caractère près** : même
+	 *  carte, même pastille de non-lu, mêmes deux boutons. La seule différence
+	 *  était `fmtTime` d'un côté et `fmtDateShort` de l'autre.
+	 *
+	 *  Ce qui varie entre deux sections est une DONNÉE — un titre, un formateur —
+	 *  et non une raison d'écrire le rendu deux fois. La section porte donc les
+	 *  trois, le gabarit ne connaît plus qu'une carte, et une troisième section
+	 *  (« cette semaine ») coûterait désormais une ligne.
+	 *
+	 *  ⚠️ Une section vide n'est pas rendue, comme avant : les `{#if …length > 0}`
+	 *  du gabarit se ramènent au filtre ci-dessous.
+	 */
+	function grouper(notifs: any[]) {
+		const maintenant = Date.now();
+		const recentes: any[] = [];
+		const anciennes: any[] = [];
+		for (const n of notifs) {
+			const age = maintenant - new Date(n.cree_le).getTime();
+			(age < 86400000 ? recentes : anciennes).push(n);
+		}
+		return [
+			{ titre: "Aujourd'hui", notifs: recentes, format: fmtTime, espace: false },
+			{ titre: 'Plus anciennes', notifs: anciennes, format: fmtDateShort, espace: true },
+		].filter((section) => section.notifs.length > 0);
 	}
 </script>
 
@@ -109,9 +127,9 @@
 		messageVide="Vous êtes à jour !"
 	/>
 {:else}
-	{#if grouped.today.length > 0}
-		<h2 class="section-title">Aujourd'hui</h2>
-		{#each grouped.today as n (n.id)}
+	{#each sections as section (section.titre)}
+		<h2 class="section-title" class:section-espacee={section.espace}>{section.titre}</h2>
+		{#each section.notifs as n (n.id)}
 			<div
 				class="notif-row card"
 				class:notif-read={n.lue}
@@ -129,7 +147,7 @@
 							{@html safeRichContent(n.corps)}
 						</p>
 						<small style="color:var(--color-text-muted);font-size:.75rem"
-							>{fmtTime(n.cree_le)}</small
+							>{section.format(n.cree_le)}</small
 						>
 					</div>
 				</div>
@@ -147,53 +165,19 @@
 				</div>
 			</div>
 		{/each}
-	{/if}
-
-	{#if grouped.older.length > 0}
-		<h2 class="section-title" style="margin-top:1.25rem">Plus anciennes</h2>
-		{#each grouped.older as n (n.id)}
-			<div
-				class="notif-row card"
-				class:notif-read={n.lue}
-				class:notif-unread={!n.lue}
-				role="article"
-			>
-				<div class="notif-body">
-					{#if !n.lue}<div class="unread-dot"></div>{/if}
-					<div class="notif-content">
-						<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
-							<strong style="font-size:.95rem">{n.titre}</strong>
-							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
-						</div>
-						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">
-							{@html safeRichContent(n.corps)}
-						</p>
-						<small style="color:var(--color-text-muted);font-size:.75rem"
-							>{fmtDateShort(n.cree_le)}</small
-						>
-					</div>
-				</div>
-				<div class="notif-actions">
-					{#if !n.lue}
-						<button class="btn btn-outline btn-sm" on:click={() => markRead(n.id)}
-							>Marquer lu</button
-						>
-					{/if}
-					<button
-						class="btn btn-danger btn-sm"
-						disabled={deleting.has(n.id)}
-						on:click={() => remove(n.id)}>✕</button
-					>
-				</div>
-			</div>
-		{/each}
-	{/if}
+	{/each}
 {/if}
 
 <style>
-	/*  Seul l'espacement bas differe de la charte (#607, 28/08/2026). */
+	/*  Seul l'espacement bas diffère de la charte (#607, 28/08/2026). */
 	.section-title {
 		margin-bottom: 0.5rem;
+	}
+	/*  L'écart au-dessus des sections qui suivent la première — il était écrit
+	    en style INLINE sur le second titre, ce qui obligeait à recopier le bloc
+	    entier pour l'obtenir. Une classe le rend paramétrable. */
+	.section-espacee {
+		margin-top: 1.25rem;
 	}
 	.notif-row {
 		display: flex;

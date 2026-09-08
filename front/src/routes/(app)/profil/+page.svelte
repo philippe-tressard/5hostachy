@@ -2,7 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import { DEFAUTS_NOTIFS } from '$lib/preferences';
-	import { libelleRole, badgeRole } from '$lib/roles';
+	import { libelleRole, badgeRole, LIBELLES_STATUT } from '$lib/roles';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
@@ -65,13 +65,6 @@
 	$: demandePending = demandes.find((d) => d.statut_demande === 'en_attente') ?? null;
 
 	// ── Labels ─────────────────────────────────────────────────────────────────
-	const statutLabels: Record<string, string> = {
-		copropriétaire_résident: 'Copropriétaire résident',
-		copropriétaire_bailleur: 'Copropriétaire bailleur',
-		locataire: 'Locataire',
-		syndic: 'Syndic',
-		mandataire: 'Mandataire',
-	};
 
 	//  🔴 Libellés dans `$lib/roles` (#801) — voir l'en-tête de ce module : la
 	//  table était écrite six fois, et celle-ci écrivait « Copropriétaire
@@ -357,7 +350,7 @@
 
 		<dl class="info-grid">
 			<dt>Profil d'utilisateur</dt>
-			<dd>{statutLabels[$currentUser?.statut ?? ''] ?? $currentUser?.statut ?? '—'}</dd>
+			<dd>{LIBELLES_STATUT[$currentUser?.statut ?? ''] ?? $currentUser?.statut ?? '—'}</dd>
 
 			<dt>Bâtiment</dt>
 			<dd>{$currentUser?.batiment_nom ?? '—'}</dd>
@@ -418,7 +411,7 @@
 			<div class="info-banner info-yellow" style="margin-top:1rem">
 				<strong>Demande en attente</strong> :
 				{#if demandePending.statut_souhaite}
-					changement de type vers «&nbsp;{statutLabels[demandePending.statut_souhaite] ??
+					changement de type vers «&nbsp;{LIBELLES_STATUT[demandePending.statut_souhaite] ??
 						demandePending.statut_souhaite}&nbsp;»
 				{/if}
 				{#if demandePending.statut_souhaite && demandePending.batiment_nom_souhaite}&nbsp;+&nbsp;{/if}
@@ -489,7 +482,7 @@
 		{/if}
 
 		<!-- Historique des demandes -->
-		<HistoriqueDemandes {demandes} chargement={demandesLoading} {statutLabels} />
+		<HistoriqueDemandes {demandes} chargement={demandesLoading} statutLabels={LIBELLES_STATUT} />
 	</section>
 
 	{#if !arrivantChoix}
