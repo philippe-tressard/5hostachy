@@ -381,6 +381,8 @@ def relever() -> dict[str, int]:
     from app.database import SessionLocal
 
     comptes = {ACCEPTE: 0, RELANCE: 0, REFUSE: 0, IGNORE: 0}
+    #: Vrai si la relève n'a PAS pu avoir lieu — à distinguer d'une boîte vide.
+    echec = False
     session = SessionLocal()
     try:
         cfg = config_imap(session)
@@ -465,12 +467,26 @@ def relever() -> dict[str, int]:
                 pass
     except Exception as exc:
         logger.error("Relève de la boîte des réponses : %s", exc)
+        #  🔴 CE PASSAGE N'A RIEN CONSTATÉ, et il ne doit pas dire le contraire.
+        #  Sans ce drapeau, la ligne de fin annonçait « relève effectuée, aucun
+        #  message non lu » APRÈS l'échec — un commentaire affirmait même qu'elle
+        #  « prouve que la relève est vivante », alors qu'elle s'imprimait sur le
+        #  passage exact où la relève était morte. Une boîte injoignable et une
+        #  boîte vide rendaient le même journal, et une réponse de résident perdue
+        #  pendant une panne se lisait comme une absence de réponse.
+        echec = True
     finally:
         session.close()
 
     #  Un passage sans message est un fait, pas un non-événement : c'est ce qui
     #  prouve que la relève est vivante et que la boîte est simplement vide.
-    if any(comptes.values()):
+    if echec:
+        #  L'échec est déjà journalisé en ERROR ci-dessus : rien à ajouter, mais
+        #  surtout rien à AFFIRMER. Le point 6 du pré-check et l'alerte
+        #  quotidienne le voient ; ce qu'il ne faut pas, c'est le recouvrir d'une
+        #  ligne rassurante.
+        pass
+    elif any(comptes.values()):
         logger.info(
             "Réponses par courriel — écrites=%d relances=%d refusées=%d ignorées=%d",
             comptes[ACCEPTE], comptes[RELANCE], comptes[REFUSE], comptes[IGNORE],
