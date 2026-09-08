@@ -1,4 +1,4 @@
-"""Garde-fou — **les consignes SORTENT de l'application, par UN seul modèle** (#849).
+"""Garde-fou — **les consignes SORTENT de l'application, par UN seul modèle** (#848).
 
 Demandé le 08/09/2026 :
 

@@ -60,7 +60,7 @@ EXCEPTIONS = {
     "utils/courriel_arrivee.py":
         "DESTINATAIRES d'un courriel, pas un accès : même raison que "
         "`routers/admin/arrivants.py`, dont ce module a été extrait le "
-        "08/09/2026 (#849) quand le routeur a franchi les 500 lignes. "
+        "08/09/2026 (#848) quand le routeur a franchi les 500 lignes. "
         "⚠️ L'exception a voyagé AVEC le code — une exception qui reste sur le "
         "fichier d'origine se transforme en tolérance sur un fichier qui ne fait "
         "plus rien, et en refus sur celui qui fait le travail.",

@@ -1,4 +1,4 @@
-"""Le message d'arrivée d'un résident — **un modèle, trois publics** (#849).
+"""Le message d'arrivée d'un résident — **un modèle, trois publics** (#848).
 
 ## Ce que ce module porte
 

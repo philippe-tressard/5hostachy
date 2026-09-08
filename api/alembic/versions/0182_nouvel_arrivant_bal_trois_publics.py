@@ -1,4 +1,4 @@
-"""`nouvel_arrivant_bal` s'adresse à ses TROIS publics — syndic, arrivant, conseil (#849).
+"""`nouvel_arrivant_bal` s'adresse à ses TROIS publics — syndic, arrivant, conseil (#848).
 
 ## Pourquoi une migration, et pas seulement le seed
 
