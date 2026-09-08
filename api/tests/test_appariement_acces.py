@@ -24,7 +24,7 @@ import pytest
 
 from app.utils.auto_match_service import (
     _matches_user,
-    _norm,
+    _cle_de_nom,
     _split_name_candidates,
     _tokens,
     _user_keys,
@@ -48,7 +48,7 @@ from app.utils.auto_match_service import (
 ])
 def test_normalisation(brut, attendu):
     """Accents, casse, ponctuation et espaces multiples se neutralisent."""
-    assert _norm(brut) == attendu
+    assert _cle_de_nom(brut) == attendu
 
 
 # ── Découpage des cellules multi-occupants ───────────────────────────────────

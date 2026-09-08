@@ -103,10 +103,22 @@ def _create_user_vigiks(vigik, session: Session) -> None:
 
 # ── Normalisation ────────────────────────────────────────────────────────────
 
-def _norm(s: Optional[str]) -> str:
+def _cle_de_nom(s: Optional[str]) -> str:
+    """La clé de COMPARAISON d'un nom — pas la normalisation d'une cellule (#829).
+
+    🔴 Cette fonction s'appelait `_norm`, comme celle de `routers/lots.py` — qui
+    fait autre chose. Deux homonymes au comportement différent dans deux fichiers
+    voisins, et la conséquence était visible dix lignes plus bas : il avait fallu
+    réécrire la BONNE version à l'intérieur d'une fonction (`_norm2`) pour
+    l'avoir sous la main. Un nom qui ment produit une copie, pas une erreur.
+
+    Ce qu'elle fait de plus que `import_xlsx.normaliser` : elle réduit
+    apostrophes, traits d'union et ponctuation à des séparateurs neutres, pour
+    que « O'Brien », « O BRIEN » et « O-Brien » s'apparient. C'est une tolérance
+    volontaire, et elle n'a rien à faire dans la lecture d'un classeur.
+    """
     if not s:
         return ""
-    # Normalise pour comparaison robuste : accents, casse, ponctuation, espaces.
     s = s.strip().casefold()
     s = "".join(
         c for c in unicodedata.normalize("NFKD", s)
@@ -131,7 +143,7 @@ def _split_name_candidates(raw_name: Optional[str]) -> list[str]:
 
 def _tokens(s: Optional[str]) -> list[str]:
     """Retourne les tokens significatifs (>3 car) d'une chaîne normalisée."""
-    return [t for t in _norm(s).split() if len(t) > 3]
+    return [t for t in _cle_de_nom(s).split() if len(t) > 3]
 
 
 def _user_keys(nom: str, prenom: str) -> set[str]:
@@ -146,8 +158,8 @@ def _user_keys(nom: str, prenom: str) -> set[str]:
       - NOM PRENOM et PRENOM NOM
       - Variantes compactes (sans espaces) des combinaisons
     """
-    n = _norm(nom)
-    p = _norm(prenom)
+    n = _cle_de_nom(nom)
+    p = _cle_de_nom(prenom)
     keys = set()
     if n:
         keys.add(n)
@@ -234,7 +246,7 @@ def _matches_user(raw_name: str, user_keys: set[str]) -> bool:
          user_keys ne contient PAS le prénom seul → pas de faux positif.
     """
     for part in _split_name_candidates(raw_name):
-        norm = _norm(part)
+        norm = _cle_de_nom(part)
         if not norm:
             continue
         if norm in user_keys:
@@ -480,126 +492,11 @@ def _is_coproprietaire(user) -> bool:
 
 # ── Auto-résolution lots pour un utilisateur ─────────────────────────────────
 
-def _auto_resoudre_lots_pour_utilisateur(user, session: Session) -> int:
-    """Résout les LotImport où ce user est lié (copropriétaire/bailleur/mandataire).
-    Crée les UserLot correspondants. Ne pas appeler pour les locataires.
-    Ne committe pas — l'appelant doit faire session.commit()."""
-    import unicodedata as _ud
-    from datetime import datetime
-    from app.models.core import (
-        LotImport, StatutLotImport, Lot, UserLot, TypeLot, TypeLien, Utilisateur,
-    )
-
-    def _tl(s: str) -> TypeLien:
-        try:
-            return TypeLien(s)
-        except ValueError:
-            return TypeLien.propriétaire
-
-    _TYPE_PARKING = {"PS"}
-    _TYPE_CAVE = {"CA"}
-    _ETAGE_MAP = {"RDC": 0, "1ER": 1, "1SS": -1, "2EME": 2, "2SS": -2,
-                  "3EME": 3, "3SS": -3, "4EME": 4, "5EME": 5}
-
-    def _norm2(s):
-        if not s:
-            return ""
-        s = s.strip().upper()
-        s = "".join(c for c in _ud.normalize("NFD", s) if _ud.category(c) != "Mn")
-        return " ".join(s.split())
-
-    def _lot_type(type_raw):
-        t = _norm2(type_raw)
-        if t in _TYPE_PARKING:
-            return TypeLot.parking, None
-        if t in _TYPE_CAVE:
-            return TypeLot.cave, None
-        type_app = t if t not in ("AP", "DIV", "LC", "") else None
-        return TypeLot.appartement, type_app
-
-    def _etage(etage_raw):
-        return _ETAGE_MAP.get(_norm2(etage_raw)) if etage_raw else None
-
-    TYPES_COPROPRIETAIRES = {"propriétaire", "bailleur", "mandataire"}
-
-    imports = session.exec(
-        select(LotImport).where(
-            LotImport.statut.in_([StatutLotImport.utilisateur_lie, StatutLotImport.lot_lie])
-        )
-    ).all()
-
-    resolus = 0
-    for imp in imports:
-        users = json.loads(imp.utilisateurs_json or "[]")
-        # Ce user doit être dans la liste avec un rôle copropriétaire
-        user_entry = next(
-            (u for u in users if u.get("user_id") == user.id
-             and u.get("type_lien", "propriétaire") in TYPES_COPROPRIETAIRES),
-            None,
-        )
-        if not user_entry:
-            continue
-        # Si un locataire est lié à cet import, ne pas auto-résoudre (supervision manuelle)
-        # Note : avec le type_lien correct, cela ne bloque plus les bailleurs entre eux
-        # → skip uniquement si le SEUL occupant non-copropriétaire est un locataire (edge case)
-        # On ne bloque plus : la boucle UserLot ci-dessous filtre les locataires elle-même
-        # Trouver / créer le lot
-        lot = session.get(Lot, imp.lot_id) if imp.lot_id else None
-        if not lot:
-            if imp.batiment_id:
-                lot = session.exec(
-                    select(Lot).where(Lot.batiment_id == imp.batiment_id, Lot.numero == imp.numero)
-                ).first()
-            else:
-                # Parking : chercher parmi les lots sans bâtiment
-                lot = session.exec(
-                    select(Lot).where(Lot.batiment_id.is_(None), Lot.numero == imp.numero)  # type: ignore
-                ).first()
-        if not lot:
-            # Créer le lot (parking autorisé avec batiment_id=None)
-            lot_type, type_app = _lot_type(imp.type_raw)
-            lot = Lot(
-                batiment_id=imp.batiment_id,  # None pour parking
-                numero=imp.numero,
-                type=lot_type,
-                type_appartement=type_app,
-                etage=_etage(imp.etage_raw),
-            )
-            session.add(lot)
-            session.flush()
-        imp.lot_id = lot.id
-        # Créer les UserLot pour les occupants copropriétaires/bailleurs/mandataires
-        # Les locataires ne sont pas auto-résolus (workflow manuel)
-        noms_import = _split_name_candidates(imp.nom_coproprietaire or "")
-        for entry in users:
-            uid = entry.get("user_id")
-            tl_raw = entry.get("type_lien", "propriétaire")
-            if not uid:
-                continue
-            if tl_raw not in TYPES_COPROPRIETAIRES:
-                continue  # Locataires exclus de la résolution automatique
-            existing = session.exec(
-                select(UserLot).where(UserLot.user_id == uid, UserLot.lot_id == lot.id)
-            ).first()
-            # Garde-fou anti-pollution: revalider le nom utilisateur contre la ligne import.
-            # Empêche qu'une ancienne entrée erronée dans utilisateurs_json crée un UserLot.
-            linked_user = session.get(Utilisateur, uid)
-            if not linked_user:
-                continue
-            if noms_import:
-                linked_keys = _user_keys(linked_user.nom, linked_user.prenom)
-                if not any(_matches_user(nom_brut, linked_keys) for nom_brut in noms_import):
-                    if existing:
-                        session.delete(existing)
-                    continue
-            tl = _tl(tl_raw)
-            if not existing:
-                session.add(UserLot(user_id=uid, lot_id=lot.id, type_lien=tl, actif=True))
-        imp.statut = StatutLotImport.resolu
-        imp.resolu_le = datetime.utcnow()
-        session.add(imp)
-        resolus += 1
-    return resolus
+#  🔴 `_auto_resoudre_lots_pour_utilisateur` vit dans `utils/resolution_lots`
+#  depuis #829 : le même geste était écrit ICI et dans `routers/lots.py`, avec
+#  TROIS règles divergentes — dont le garde-fou anti-pollution, que seule cette
+#  copie-ci portait. Rapprocher des NOMS et résoudre un IMPORT sont deux
+#  responsabilités ; ce module ne garde que la première.
 
 
 # ── Auto-liaison annuaire CS / Syndic ──────────────────────────────────────
@@ -609,7 +506,7 @@ def _auto_link_annuaire(user, session: Session) -> dict:
     Ne committe pas — l'appelant doit faire session.commit()."""
     from app.models.core import MembreCS, MembreSyndic
 
-    user_nom_norm = _norm(user.nom)
+    user_nom_norm = _cle_de_nom(user.nom)
     if not user_nom_norm:
         return {"cs": 0, "syndic": 0}
 
@@ -617,7 +514,7 @@ def _auto_link_annuaire(user, session: Session) -> dict:
     for membre in session.exec(select(MembreCS)).all():
         if membre.user_id:
             continue
-        if membre.nom and _norm(membre.nom) == user_nom_norm:
+        if membre.nom and _cle_de_nom(membre.nom) == user_nom_norm:
             membre.user_id = user.id
             session.add(membre)
             cs_linked += 1
@@ -626,7 +523,7 @@ def _auto_link_annuaire(user, session: Session) -> dict:
     for membre in session.exec(select(MembreSyndic)).all():
         if membre.user_id:
             continue
-        if membre.nom and _norm(membre.nom) == user_nom_norm:
+        if membre.nom and _cle_de_nom(membre.nom) == user_nom_norm:
             membre.user_id = user.id
             session.add(membre)
             syndic_linked += 1
@@ -754,7 +651,9 @@ def auto_match_pour_utilisateur(user, session: Session) -> dict:
     lots         = _auto_match_lots(user, session)
     # Flush pour que les nouveaux statuts soient visibles dans _auto_resoudre
     session.flush()
-    lots_resolus = _auto_resoudre_lots_pour_utilisateur(user, session)
+    from app.utils.resolution_lots import resoudre_pour_utilisateur
+
+    lots_resolus = resoudre_pour_utilisateur(user, session)
     # Flush pour que les UserLot soient visibles dans TC/Vigik
     session.flush()
     

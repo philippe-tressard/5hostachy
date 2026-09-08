@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import unicodedata
 from datetime import datetime
 from typing import Optional
 
@@ -18,12 +17,13 @@ from app.models.core import (
     LotImport,
     StatutLotImport,
     TypeLien,
-    TypeLot,
     UserLot,
     Utilisateur,
     RoleUtilisateur,
     CommandeAcces,
 )
+from app.utils.import_xlsx import etage_de_lot, type_de_lot
+from app.utils.resolution_lots import rapprocher_imports, resoudre_imports
 
 
 # ── Helpers JSON utilisateurs ─────────────────────────────────────────────────
@@ -48,37 +48,11 @@ router = APIRouter(prefix="/lots", tags=["lots"])
 
 #  Helpers 
 
-_TYPE_PARKING = {"PS"}
-_TYPE_CAVE    = {"CA"}
-_ETAGE_MAP: dict[str, int] = {
-    "RDC": 0,
-    "1ER": 1,  "1SS": -1,
-    "2EME": 2, "2SS": -2,
-    "3EME": 3, "3SS": -3,
-    "4EME": 4, "5EME": 5,
-}
-
-
-def _norm(s: Optional[str]) -> str:
-    if not s:
-        return ""
-    s = s.strip().upper()
-    s = "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
-    return " ".join(s.split())
-
-
-def _type_from_raw(type_raw: str) -> tuple[TypeLot, Optional[str]]:
-    t = _norm(type_raw)
-    if t in _TYPE_PARKING:
-        return TypeLot.parking, None
-    if t in _TYPE_CAVE:
-        return TypeLot.cave, None
-    type_app = t if t not in ("AP", "DIV", "LC", "") else None
-    return TypeLot.appartement, type_app
-
-
-def _etage_from_raw(etage_raw: Optional[str]) -> Optional[int]:
-    return _ETAGE_MAP.get(_norm(etage_raw)) if etage_raw else None
+#  🔴 Le vocabulaire de la colonne TYPE (tables, `_norm`, `_type_from_raw`,
+#  `_etage_from_raw`) vit dans `utils/import_xlsx` depuis #829 : il décrit ce
+#  qu'un CLASSEUR contient, pas ce qu'un routeur fait. Il était écrit ici ET
+#  dans `auto_match_service`, où la copie s'était logée dans un corps de
+#  fonction pour contourner un homonyme.
 
 
 #  Schémas 
@@ -210,43 +184,14 @@ async def upload_import_lots(
     from app.utils.import_lots import importer_depuis_bytes
     contenu = await file.read()
     stats_import = importer_depuis_bytes(contenu, session=session, remplacer=remplacer)
-    # Auto-match : lie lots et utilisateurs par nom/batiment+numero
-    from app.utils.auto_match_service import _user_keys, _matches_user, _split_name_candidates
-    lots_all = session.exec(select(Lot)).all()
-    users_all = session.exec(select(Utilisateur)).all()
-    lot_index = {(l.batiment_id, l.numero): l for l in lots_all}
-    user_keys_map: dict[int, set[str]] = {}
-    for u in users_all:
-        user_keys_map[u.id] = _user_keys(u.nom, u.prenom)
-    pending = session.exec(
-        select(LotImport).where(LotImport.statut == StatutLotImport.en_attente)
-    ).all()
-    for imp in pending:
-        changed = False
-        if not imp.lot_id:
-            lot = lot_index.get((imp.batiment_id, imp.numero))
-            if lot:
-                imp.lot_id = lot.id
-                changed = True
-        existing_users = _parse_users(imp.utilisateurs_json)
-        if not existing_users and imp.nom_coproprietaire:
-            noms = _split_name_candidates(imp.nom_coproprietaire)
-            matched_users: list[dict] = []
-            seen_ids: set[int] = set()
-            for nom in noms:
-                for u in users_all:
-                    if u.id not in seen_ids and _matches_user(nom, user_keys_map[u.id]):
-                        matched_users.append({"user_id": u.id, "type_lien": "propriétaire"})
-                        seen_ids.add(u.id)
-            if matched_users:
-                imp.utilisateurs_json = __import__('json').dumps(matched_users, ensure_ascii=False)
-                changed = True
-        if changed:
-            imp.statut = StatutLotImport.lot_lie if imp.lot_id else StatutLotImport.utilisateur_lie
-            session.add(imp)
+    #  Rapprocher PUIS résoudre — deux étapes, une écriture chacune (#829).
+    #  Ce bloc était recopié dans `auto_match_imports` juste en dessous, et les
+    #  deux copies avaient déjà dérivé sur l'affectation du statut.
+    rapprocher_imports(session)
     session.flush()
     # Auto-résolution copropriétaires
-    stats_resolve = _auto_resoudre_proprietaires_batch(session)
+    stats_resolve = resoudre_imports(session)
+    session.commit()
     return {**stats_import, **{"auto_" + k: v for k, v in stats_resolve.items()}}
 
 
@@ -425,13 +370,13 @@ def resoudre_import(
             ).first()
     if not lot:
         # Créer le Lot (parking autorisé avec batiment_id=None)
-        lot_type, type_app = _type_from_raw(imp.type_raw)
+        lot_type, type_app = type_de_lot(imp.type_raw)
         lot = Lot(
             batiment_id=imp.batiment_id,  # None pour parking
             numero=imp.numero,
             type=lot_type,
             type_appartement=type_app,
-            etage=_etage_from_raw(imp.etage_raw),
+            etage=etage_de_lot(imp.etage_raw),
         )
         session.add(lot)
         session.flush()
@@ -480,85 +425,10 @@ def ignorer_import(
     return {"ok": True}
 
 
-def _auto_resoudre_proprietaires_batch(session: Session) -> dict:
-    """Résout automatiquement tous les LotImport copropriétaires matchés.
-
-    Conditions pour auto-résolution :
-    - statut in (lot_lie, utilisateur_lie)
-    - lot_id défini OU batiment_id défini (le lot sera trouvé/créé)
-    - au moins un utilisateur lié dans utilisateurs_json
-    - aucun utilisateur avec type_lien = locataire (les locataires restent en staging)
-    """
-    STATUTS_RESOLVABLES = {StatutLotImport.lot_lie, StatutLotImport.utilisateur_lie}
-    TYPES_PROPRIETAIRES = {"propriétaire", "bailleur", "mandataire"}
-
-    imports = session.exec(
-        select(LotImport).where(LotImport.statut.in_(list(STATUTS_RESOLVABLES)))
-    ).all()
-
-    resolus = 0
-    skipped_no_user = 0
-    skipped_locataire = 0
-    skipped_no_lot = 0
-    erreurs: list[str] = []
-
-    for imp in imports:
-        users = _parse_users(imp.utilisateurs_json)
-        if not users:
-            skipped_no_user += 1
-            continue
-        # Ne pas auto-résoudre si un locataire est parmi les occupants
-        if any(u.get("type_lien") == "locataire" for u in users):
-            skipped_locataire += 1
-            continue
-        # Trouver ou créer le Lot
-        lot = session.get(Lot, imp.lot_id) if imp.lot_id else None
-        if not lot:
-            if imp.batiment_id:
-                lot = session.exec(
-                    select(Lot).where(Lot.batiment_id == imp.batiment_id, Lot.numero == imp.numero)
-                ).first()
-            else:
-                # Parking : chercher parmi les lots sans bâtiment
-                lot = session.exec(
-                    select(Lot).where(Lot.batiment_id.is_(None), Lot.numero == imp.numero)  # type: ignore
-                ).first()
-        if not lot:
-            lot_type, type_app = _type_from_raw(imp.type_raw)
-            lot = Lot(
-                batiment_id=imp.batiment_id,  # None pour parking
-                numero=imp.numero,
-                type=lot_type,
-                type_appartement=type_app,
-                etage=_etage_from_raw(imp.etage_raw),
-            )
-            session.add(lot)
-            session.flush()
-        imp.lot_id = lot.id
-        # Créer les UserLot
-        for entry in users:
-            uid = entry.get("user_id")
-            tl = _type_lien_from_str(entry.get("type_lien", "propriétaire"))
-            if not uid:
-                continue
-            existing = session.exec(
-                select(UserLot).where(UserLot.user_id == uid, UserLot.lot_id == lot.id)
-            ).first()
-            if not existing:
-                session.add(UserLot(user_id=uid, lot_id=lot.id, type_lien=tl, actif=True))
-        imp.statut = StatutLotImport.resolu
-        imp.resolu_le = datetime.utcnow()
-        session.add(imp)
-        resolus += 1
-
-    session.commit()
-    return {
-        "resolus": resolus,
-        "skipped_no_user": skipped_no_user,
-        "skipped_locataire": skipped_locataire,
-        "skipped_no_lot": skipped_no_lot,
-        "erreurs": erreurs,
-    }
+#  🔴 `_auto_resoudre_proprietaires_batch` vit dans `utils/resolution_lots`
+#  depuis #829. Cette copie-ci sautait tout import dont un occupant était
+#  locataire, et posait les `UserLot` SANS revalider le nom — l'autre voie
+#  faisait l'inverse des deux. Le résultat dépendait du bouton employé.
 
 
 @router.post("/admin/imports/auto-resoudre", status_code=200)
@@ -567,7 +437,11 @@ def auto_resoudre_imports(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Résout automatiquement tous les imports copropriétaires matchés (lot + user liés)."""
-    return _auto_resoudre_proprietaires_batch(session)
+    stats = resoudre_imports(session)
+    #  Le module ne committe pas : c'est l'appelant qui décide de la portée
+    #  de sa transaction, et ici l'endpoint se termine.
+    session.commit()
+    return stats
 
 
 @router.post("/admin/imports/auto-match", status_code=200)
@@ -577,54 +451,6 @@ def auto_match_imports(
 ):
     """Tente de lier automatiquement les LotImport aux Lot et Utilisateur existants.
     Utilise l'algorithme robuste de matching (accents, tirets, noms composés, bigrammes)."""
-    from app.utils.auto_match_service import _user_keys, _matches_user, _split_name_candidates
-
-    imports = session.exec(
-        select(LotImport).where(LotImport.statut == StatutLotImport.en_attente)
-    ).all()
-
-    lots_all: list[Lot] = session.exec(select(Lot)).all()
-    users_all: list[Utilisateur] = session.exec(select(Utilisateur)).all()
-
-    # Index par (batiment_id, numero)
-    lot_index: dict[tuple, Lot] = {(l.batiment_id, l.numero): l for l in lots_all}
-    # Pré-calculer les clés de matching pour chaque user
-    user_keys_map: dict[int, set[str]] = {}
-    for u in users_all:
-        user_keys_map[u.id] = _user_keys(u.nom, u.prenom)
-
-    matches = 0
-    for imp in imports:
-        changed = False
-        # Match lot
-        if not imp.lot_id:
-            lot = lot_index.get((imp.batiment_id, imp.numero))
-            if lot:
-                imp.lot_id = lot.id
-                changed = True
-        # Match user par nom_coproprietaire (si aucun utilisateur déjà lié)
-        existing_users = _parse_users(imp.utilisateurs_json)
-        if not existing_users and imp.nom_coproprietaire:
-            noms = _split_name_candidates(imp.nom_coproprietaire)
-            matched_users: list[dict] = []
-            seen_ids: set[int] = set()
-            for nom in noms:
-                for u in users_all:
-                    if u.id not in seen_ids and _matches_user(nom, user_keys_map[u.id]):
-                        matched_users.append({"user_id": u.id, "type_lien": "propriétaire"})
-                        seen_ids.add(u.id)
-            if matched_users:
-                imp.utilisateurs_json = json.dumps(matched_users, ensure_ascii=False)
-                changed = True
-        if changed:
-            if imp.lot_id:
-                imp.statut = StatutLotImport.lot_lie
-            elif _parse_users(imp.utilisateurs_json):
-                imp.statut = StatutLotImport.utilisateur_lie
-            else:
-                imp.statut = StatutLotImport.en_attente
-            session.add(imp)
-            matches += 1
-
+    matches = rapprocher_imports(session)
     session.commit()
     return {"matches": matches}
