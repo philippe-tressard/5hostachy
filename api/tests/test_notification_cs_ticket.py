@@ -36,7 +36,7 @@ from sqlmodel import Session, select
 
 from app.database import engine
 from app.models.core import MembreCS, Notification, Utilisateur
-from app.routers.tickets.courriels import (
+from app.routers.tickets.arrivee import (
     _envoyer_email_cs_creation,
     _notifier_cs_creation,
 )

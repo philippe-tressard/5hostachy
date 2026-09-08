@@ -141,7 +141,15 @@ def update_modele_email(
     modele = session.get(ModeleEmail, modele_id)
     if not modele:
         raise HTTPException(404, "Modèle introuvable")
-    allowed = {"sujet", "corps_html", "corps_texte", "actif", "intention"}
+    #  🔴 `corps_texte` a QUITTÉ cette liste blanche le 08/09/2026, avec le champ
+    #  de l'écran. Il était stocké, affiché, modifiable — et envoyé nulle part :
+    #  aucun code ne le lisait, le gabarit produit toujours du HTML. Le laisser
+    #  ici permettrait à un appelant direct de continuer d'écrire un texte que
+    #  personne ne reçoit, et de croire l'avoir envoyé.
+    #
+    #  La colonne reste en base : quatre migrations figées l'écrivent, et la
+    #  retirer casserait `alembic upgrade` sur une base neuve.
+    allowed = {"sujet", "corps_html", "actif", "intention"}
     for key, value in payload.items():
         if key not in allowed:
             continue
