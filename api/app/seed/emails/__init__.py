@@ -123,7 +123,9 @@ EXPEDITEUR_PAR_INTENTION: dict[str, str] = {
 }
 
 
-def expediteur_du_modele(code: str, *, jeton_reponse: str | None = None) -> str:
+def expediteur_du_modele(
+    code: str, *, jeton_reponse: str | None = None, intention_servie: str | None = None
+) -> str:
     """`EXPEDITEUR_REPONSE` ou `EXPEDITEUR_MUET` pour ce modèle.
 
     ⚠️ **Un envoi qui porte une adresse de réponse de ticket est TOUJOURS
@@ -135,8 +137,31 @@ def expediteur_du_modele(code: str, *, jeton_reponse: str | None = None) -> str:
     Une intention inconnue — un modèle ajouté sans l'inscrire dans
     `INTENTIONS_PAR_MODELE` — rend `EXPEDITEUR_REPONSE` : entre laisser une
     réponse possible et l'interdire par omission, le défaut sûr est le premier.
+
+    ## 🔴 `intention_servie` : l'intention de la LIGNE, et pourquoi elle prime
+
+    Trouvé le 08/09/2026 en vérifiant la cohérence des modèles à la demande de
+    Philippe. Une même notion était lue à **deux** endroits :
+
+    ===============================  ==========================================
+    Ce qui décide                    Lu depuis
+    ===============================  ==========================================
+    le bandeau vu par le lecteur     la BASE (`template.intention`)
+    l'adresse d'expédition           le CODE (`INTENTIONS_PAR_MODELE`)
+    ===============================  ==========================================
+
+    Et **rien ne les resynchronise** : `_poser_les_absents` ne touche pas une
+    ligne existante, donc changer une intention dans le code n'atteint jamais une
+    installation en service. Pire, l'écran Admin → Emails permet de la modifier —
+    c'est une capacité voulue — et cette modification ne changeait que le
+    bandeau. Un message pouvait donc partir de `contact@` en affichant
+    « Information : rien n'est attendu de vous », ou l'inverse.
+
+    L'intention **servie** gagne : c'est celle que le lecteur voit, et c'est
+    celle qu'un administrateur a choisie s'il l'a changée. Le code reste le
+    repli — pour un modèle sans ligne, ou dont la ligne ne la porte pas.
     """
     if jeton_reponse:
         return EXPEDITEUR_REPONSE
-    intention = INTENTIONS_PAR_MODELE.get(code, "")
+    intention = (intention_servie or "").strip() or INTENTIONS_PAR_MODELE.get(code, "")
     return EXPEDITEUR_PAR_INTENTION.get(intention, EXPEDITEUR_REPONSE)

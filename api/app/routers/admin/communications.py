@@ -4,6 +4,7 @@ Extrait de `admin.py` (2057 lignes) le 06/08/2026, sans modification de logique.
 Voir `__init__.py` pour la règle de découpage.
 """
 
+import json
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin
@@ -63,12 +64,71 @@ def telemetry_history(
 from app.utils.noeud import noeud_courant
 
 
+def _variables_du_modele(modele: ModeleEmail) -> str:
+    """Les variables que ce modèle emploie RÉELLEMENT, en JSON, pour l'écran.
+
+    ## 🔴 Pourquoi ce n'est plus la colonne `variables_disponibles`
+
+    Cette colonne était une **copie**, posée à la main par la migration qui créait
+    le modèle et jamais reprise ensuite. Signalé par Philippe le 08/09/2026, en
+    capture d'écran : `nouvel_arrivant_bal` venait de gagner trois variables
+    (`role_destinataire`, `lien_consignes`, `destinataire`) et l'écran annonçait
+    toujours les trois de la migration 0066 — celles de mars.
+
+    Une liste recopiée diverge au premier enrichissement. Celle-ci avait six mois
+    de retard, et **rien ne pouvait le dire** : le modèle et sa liste vivent dans
+    la même ligne, personne ne les compare, et le contrat de variables du dépôt
+    (`tests/test_email_templates.py`) ne lit que le code — pas la base.
+
+    La conséquence n'était pas cosmétique : cet encart est ce qu'un membre du
+    conseil lit **avant de modifier un modèle**. Il y voyait trois variables sur
+    six, et aurait écrit un message amputé en croyant employer tout ce qui
+    existe.
+
+    ## Ce que ça retire
+
+    Les variables du gabarit commun (`residence`, `app`, `annee`…) : elles sont
+    injectées d'office par `email._contexte_rendu` et valent pour tous les
+    modèles. Les annoncer ici les ferait passer pour propres à celui-ci.
+
+    ⚠️ La liste est calculée sur le texte **en base**, pas sur celui du dépôt :
+    c'est ce que la personne édite qui doit être décrit. Un modèle retouché
+    depuis cet écran annonce donc ses propres variables, ce qui est exact.
+    """
+    from jinja2 import BaseLoader, meta
+    from jinja2.sandbox import SandboxedEnvironment
+
+    #: Injectées d'office par `email._contexte_rendu` — communes à tous.
+    DU_GABARIT = {"annee", "app", "residence", "reference_copro", "prefixe_copro"}
+
+    env = SandboxedEnvironment(loader=BaseLoader())
+    try:
+        arbre = env.parse(f"{modele.sujet or ''}{modele.corps_html or ''}")
+    except Exception:
+        #  Un modèle au Jinja invalide ne peut pas être analysé. Rendre la
+        #  colonne stockée plutôt que rien : elle est peut-être périmée, mais
+        #  l'écran doit continuer d'aider — et le modèle, lui, échouera à
+        #  l'envoi, ce qui est le vrai signal.
+        return modele.variables_disponibles or "[]"
+    return json.dumps(sorted(meta.find_undeclared_variables(arbre) - DU_GABARIT))
+
+
 @router.get("/modeles-email")
 def list_modeles_email(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
-    return session.exec(select(ModeleEmail).order_by(ModeleEmail.code)).all()
+    """Les modèles, avec leurs variables **calculées** et non recopiées.
+
+    La colonne `variables_disponibles` reste en base — quatre migrations figées
+    l'écrivent — mais ce qui est SERVI est calculé. Une colonne qu'on n'affiche
+    plus cesse de mentir sans qu'il faille la supprimer partout.
+    """
+    modeles = session.exec(select(ModeleEmail).order_by(ModeleEmail.code)).all()
+    return [
+        {**m.model_dump(), "variables_disponibles": _variables_du_modele(m)}
+        for m in modeles
+    ]
 
 
 @router.patch("/modeles-email/{modele_id}")

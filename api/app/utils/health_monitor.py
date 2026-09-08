@@ -328,6 +328,9 @@ def _check_reference_copro(session: Session) -> list[str]:
     ]
 
 
+from app.utils.sante_modeles_email import controler as controler_modeles_email
+
+
 def _en_problemes(issues: list[str]) -> list[dict]:
     """Découpe « titre\\ndétail\\ndétail » en {titre, details} pour le modèle.
 
@@ -411,6 +414,11 @@ def run_health_check() -> None:
         issues += _check_export_hors_site(session)
         issues += _check_disk()
         issues += _check_reference_copro(session)
+        #  Ce que l'installation SERT diffère-t-il de ce que le code dit ?
+        #  Une migration dont la clause WHERE ne correspond à rien réussit
+        #  en ayant modifié zéro ligne, sans erreur ni trace — et le code
+        #  porte alors une version que personne ne reçoit (#850).
+        issues += controler_modeles_email(session)
 
         if not issues:
             logger.info("Contrôle santé quotidien : tout est OK.")
