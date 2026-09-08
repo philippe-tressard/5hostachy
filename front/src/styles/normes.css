@@ -15,6 +15,25 @@ liste expansible, apercu a cinq lignes — et le bloc mobile global.
 qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
    ───────────────────────────────────────────────────────────────────────── */
 
+/*  ── L'ÉCHELLE DES POINTS DE RUPTURE (#839, 08/09/2026) ────────────────────
+
+    480 px   le petit téléphone
+    767 px   la frontière mobile ⇄ bureau — celle de ce fichier, du menu et de
+             la mise en page globale
+    768 px   son complément exact, en `min-width`
+    1024 px  le grand écran
+
+    🔴 Douze valeurs coexistaient pour six intentions, et rien ne les déclarait.
+    `760px` était à SEPT pixels du 767 d'ici : entre 761 et 767, le menu était
+    déjà en mobile pendant qu'une rangée du calendrier restait en bureau. Un
+    écart de sept pixels ne se voit pas — il se compte.
+
+    🔒 `npm run lint:points-rupture` refuse une largeur hors de cette échelle.
+    Les huit valeurs restantes y sont des DETTES nominatives : elles répondent
+    peut-être à des besoins réels — une grille à trois colonnes ne casse pas où
+    un tableau à sept casse — et cela se décide DEVANT L'ÉCRAN, pas dans un
+    relevé. Ce qui est empêché à partir d'aujourd'hui, c'est la treizième. */
+
 /* ── Page header ── */
 .page-header {
 	display: flex;
