@@ -56,7 +56,7 @@ caractère près à ceux d'avant le découpage, vérifié par comparaison d'inve
 """
 from fastapi import APIRouter
 
-from . import apercu, crud, evolutions, messages, relance
+from . import apercu, crud, evolutions, messages, mise_a_jour, relance
 
 #  Les sous-modules à chemins nus reçoivent le préfixe ici. Ce littéral est aussi
 #  ce que lit `test_endpoints_orphelins` pour reconstruire les chemins d'un
@@ -73,6 +73,9 @@ for _sous_router in (apercu.router, relance.router, messages.router, evolutions.
 router = APIRouter(tags=["tickets"])
 router.include_router(_a_prefixer)
 router.include_router(crud.router)
+#  La CORRECTION (`PATCH /{id}`) vit à part depuis #833 : elle pesait 238 lignes
+#  dans `crud`, et sa moitié basse était déjà dans `correction.py`.
+router.include_router(mise_a_jour.router)
 
 #  Surface publique conservée pour les importateurs externes.
 from .commun import STATUT_LABELS  # noqa: E402  (après le montage, pour la lisibilité)

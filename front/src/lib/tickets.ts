@@ -356,11 +356,18 @@ export function optionsDuTicket(ticket: Ticket | null | undefined): {
 	epingle: boolean;
 	urgente: boolean;
 	brouillon: boolean;
+	suiviKanban: boolean;
 } {
 	return {
 		epingle: ticket?.epingle ?? false,
 		urgente: ticket?.priorite === 'haute',
 		brouillon: ticket?.confidentiel ?? false,
+		//  ⚠️ `suivi_kanban` n'est PAS une option de publication : elle ne dit pas
+		//  qui voit le ticket, mais s'il paraît au tableau de suivi. Elle voyage
+		//  pourtant par ce pont, parce que c'est lui que le formulaire emprunte —
+		//  et qu'une seconde charge utile serait une seconde occasion d'oublier
+		//  un champ (#833, et le défaut du 31/08 sur cinq écrans).
+		suiviKanban: ticket?.suivi_kanban ?? false,
 	};
 }
 
@@ -369,11 +376,13 @@ export function optionsVersTicket(options: {
 	epingle: boolean;
 	urgente: boolean;
 	brouillon: boolean;
-}): { epingle: boolean; urgente: boolean; confidentiel: boolean } {
+	suiviKanban: boolean;
+}): { epingle: boolean; urgente: boolean; confidentiel: boolean; suivi_kanban: boolean } {
 	return {
 		epingle: options.epingle,
 		urgente: options.urgente,
 		confidentiel: options.brouillon,
+		suivi_kanban: options.suiviKanban,
 	};
 }
 

@@ -52,7 +52,7 @@
 	 *   Trois liaisons distinctes obligeraient chaque hôte à défaire puis refaire
 	 *   le même objet — et le premier qui en oublierait une la remettrait à son
 	 *   défaut sans que personne le voie. */
-	export let options = { epingle: false, urgente: false, brouillon: false };
+	export let options = { epingle: false, urgente: false, brouillon: false, suiviKanban: false };
 	export let modeSaisiPour: ModeSaisiPour = 'moi';
 	export let saisiPourUserId: number | null = null;
 	export let saisiPourNom = '';
@@ -163,6 +163,33 @@
 			</p>
 		{/if}
 	</div>
+
+	<!--  🔴 LE SUIVI KANBAN EST DANS LE WORKFLOW, pas dans la Diffusion (#833).
+
+	      Arbitré ainsi : les trois canaux de diffusion NOTIFIENT des gens ;
+	      celui-ci INSCRIT l'objet dans un tableau. Ce n'est pas la même nature,
+	      et l'ajouter à `CanauxNotification` l'aurait fait paraître sur les neuf
+	      écrans qui portent la Diffusion — annonce de hall, sondage, calendrier —
+	      où « inscrire au kanban » ne veut rien dire. C'est l'héritage partiel
+	      dont l'en-tête de `SectionDiffusion` met en garde (#498).
+
+	      Sa place est ici : le kanban répond à « où en est cet objet ? », qui est
+	      exactement la question de la section 3 du cadre #430.
+
+	      ⚠️ Réservé au conseil, et le serveur le refait
+	      (`OPTIONS_RESERVEES_AU_CS`) : le tableau ordonne SON travail. -->
+	{#if $isCS && categorie === 'etude_travaux'}
+		<div class="field champ-large">
+			<label class="checkbox-field">
+				<input type="checkbox" bind:checked={options.suiviKanban} />
+				<span>Suivre ce ticket au <strong>kanban</strong></span>
+			</label>
+			<p class="aide-champ">
+				Coché d’office pour « Étude &amp; travaux ». La carte se range d’après le statut ci-dessus :
+				Ouvert → CS, En cours → Syndic, Résolu → Terminé, Annulé → Annulé.
+			</p>
+		</div>
+	{/if}
 </SectionFormulaire>
 
 <style>

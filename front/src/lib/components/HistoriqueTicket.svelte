@@ -60,7 +60,12 @@
 	 *
 	 *   La fiche les calcule avec `optionsDuTicket()` : ce composant ne reçoit que
 	 *   des primitives, et refaire le pont ici en ferait une deuxième écriture. */
-	export let optionsInitiales = { epingle: false, urgente: false, brouillon: false };
+	export let optionsInitiales = {
+		epingle: false,
+		urgente: false,
+		brouillon: false,
+		suiviKanban: false,
+	};
 
 	//  Une COPIE : ce que l'utilisateur coche ne doit pas modifier le ticket avant
 	//  l'enregistrement. Remontée à chaque ouverture du formulaire, pour repartir

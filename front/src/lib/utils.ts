@@ -244,3 +244,38 @@ export function etageLabel(
 	const rang = etage === 1 ? '1er' : `${etage}ème`;
 	return suffixe ? `${rang} étage` : rang;
 }
+
+/**
+ * L'étage à PROPOSER dans un profil, d'après les lots du compte.
+ *
+ * Demandé le 08/09/2026 : *« Si mono lot, mettre l'étage de l'appartement par
+ * défaut. »* Personne ne devrait ressaisir une information que le site détient
+ * déjà — l'étage d'un lot vient du classeur de la copropriété.
+ *
+ * 🔴 **Trois conditions, et chacune retire un cas où la proposition serait
+ * fausse :**
+ *
+ * 1. **le champ est vide** — une valeur saisie ne se remplace jamais par une
+ *    déduction, même juste. C'est l'utilisateur qui a raison ;
+ * 2. **un seul lot**, sinon on ne saurait pas lequel il habite. Choisir « le
+ *    premier appartement » donnerait une réponse plausible et parfois fausse,
+ *    ce qui est le pire des deux : personne ne la remettrait en cause ;
+ * 3. **de type appartement** — un copropriétaire dont l'unique lot est un
+ *    parking ou une cave **n'habite pas son lot**. Lui proposer « SS 1 » serait
+ *    une réponse à côté de la question, et il la validerait sans y penser,
+ *    parce qu'un champ prérempli se lit comme une information vérifiée.
+ *
+ * ⚠️ `0` est un étage — le rez-de-chaussée. D'où `=== null` et non `!etage` :
+ * un test de vérité écraserait le RDC.
+ *
+ * ⚠️ Elle vit ici et non dans l'écran : c'est une règle du produit, et
+ * `api/tests/test_etage_defaut_mono_lot.py` l'exerce depuis le dehors.
+ */
+export function etageParDefaut(
+	etageSaisi: number | null | undefined,
+	lots: { type?: string | null; etage?: number | null }[],
+): number | null {
+	if (etageSaisi !== null && etageSaisi !== undefined) return etageSaisi;
+	if (lots.length !== 1 || lots[0].type !== 'appartement') return null;
+	return lots[0].etage ?? null;
+}

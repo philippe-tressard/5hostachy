@@ -52,7 +52,12 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
  * Une exception qui ne sert plus fait échouer le contrôle.
  */
 const EXCEPTIONS = {
-	'routes/(app)/calendrier/+page.svelte':
+	//  ⚠️ Le chemin a changé le 08/09/2026 (#833) : la vue kanban a quitté
+	//  `calendrier/+page.svelte` pour son propre composant. Le contrôle l'a dit
+	//  aussitôt — « exception déclarée et jamais servie » — et c'est exactement
+	//  ce qu'on lui demande : une dérogation reconduite « au cas où » masquerait
+	//  la suivante.
+	'lib/components/VueKanbanCalendrier.svelte':
 		'Les deux sélecteurs « Exercice » et « Bâtiment » de la barre du kanban : ce sont ' +
 		"des filtres de VUE, pas des champs d'un formulaire. Ils portent un libellé parce " +
 		"qu'on doit savoir ce qu'ils filtrent, et vivent sur une ligne dans `.kanban-toolbar` " +
