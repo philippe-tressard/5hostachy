@@ -207,3 +207,40 @@ export function lotTypeLabel(t: string | null | undefined): string {
 	if (t === 'cave') return 'Cave';
 	return t;
 }
+
+/**
+ * Le libellé d'un étage — « RDC », « 1er », « 2ème », « SS 1 ».
+ *
+ * 🔴 Écrit **six fois** dans trois écrans, en **trois rendus différents** (#835,
+ * 08/09/2026) :
+ *
+ * | Écran | Rendu d'un sous-sol | Rendu du 2ᵉ |
+ * |---|---|---|
+ * | `mon-lot` (4 fois) | `-1` | `2` |
+ * | `profil` | `SS 1` | `2ème étage` |
+ * | `tableau-de-bord` | `-1` | `2ème` |
+ *
+ * Le même lot s'affichait donc « -1 » sur un écran et « SS 1 » sur un autre. Ce
+ * n'est pas une variante de présentation assumée : c'est ce que trois personnes
+ * ont écrit séparément en croyant chacune être seule.
+ *
+ * ⚠️ Le **suffixe** est laissé à l'appelant (`suffixe: false` par défaut). Une
+ * ligne de définition affiche « Étage : 2ème » — répéter le mot dans la valeur
+ * donnerait « Étage : 2ème étage ». Un fil de texte, lui, en a besoin. C'est la
+ * seule divergence légitime des six, et elle devient un paramètre plutôt qu'une
+ * copie.
+ *
+ * ⚠️ `null` et `undefined` rendent une chaîne **vide**, pas « — » : l'appelant
+ * décide de ce qu'il affiche à la place, et plusieurs entourent déjà la valeur
+ * d'un `{#if}`.
+ */
+export function etageLabel(
+	etage: number | null | undefined,
+	{ suffixe = false }: { suffixe?: boolean } = {},
+): string {
+	if (etage === null || etage === undefined) return '';
+	if (etage === 0) return 'RDC';
+	if (etage < 0) return `SS ${Math.abs(etage)}`;
+	const rang = etage === 1 ? '1er' : `${etage}ème`;
+	return suffixe ? `${rang} étage` : rang;
+}

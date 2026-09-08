@@ -18,7 +18,7 @@ from app.auth.deps import get_current_user
 from app.config import get_settings
 from app.database import get_session
 from app.models.core import (Utilisateur, RefreshToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment,
-    ConfigSite, DemandeModificationProfil, StatutDemandeProfil, TelemetryEvent)
+    ConfigSite, DemandeModificationProfil, StatutDemandeProfil)
 from app.schemas import UserCreate, UserRead, LoginRequest
 from app.utils.limiter import limiter
 from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
@@ -320,6 +320,10 @@ class MeUpdate(BaseModel):
     telephone: str | None = None
     societe: str | None = None
     fonction: str | None = None
+    #  L'étage où la personne HABITE — modifiable depuis le profil depuis le
+    #  08/09/2026. Distinct de `Lot.etage`, qui décrit un BIEN : un bailleur a un
+    #  lot au 4ᵉ et habite ailleurs.
+    etage: int | None = None
     last_seen_actualites: str | None = None
     preferences_notifications: str | None = None
     restreindre_a_mes_batiments: bool | None = None
@@ -359,6 +363,22 @@ def update_me(
         user.societe = body.societe
     if body.fonction is not None:
         user.fonction = body.fonction
+    if body.etage is not None:
+        #  🔴 SANS validation du conseil syndical, et c'est délibéré (#835).
+        #
+        #  Le changement de BÂTIMENT passe par `demanderModification` parce
+        #  qu'il touche à ce qu'on est dans la copropriété. L'étage ne revendique
+        #  rien : c'est un repère de voisinage, comme le téléphone juste
+        #  au-dessus. Le mettre derrière une approbation ajouterait une friction
+        #  sans rien protéger.
+        #
+        #  ⚠️ Les bornes sont celles de l'inscription — un étage hors de
+        #  [-2, 50] n'est pas une donnée, c'est une faute de frappe. Le contrôle
+        #  est ICI et pas seulement dans l'écran : un champ borné côté client se
+        #  poste directement.
+        if not -2 <= body.etage <= 50:
+            raise HTTPException(400, "Étage attendu entre -2 et 50.")
+        user.etage = body.etage
     if body.last_seen_actualites is not None:
         user.last_seen_actualites = datetime.fromisoformat(body.last_seen_actualites.replace("Z", "+00:00"))
     if body.preferences_notifications is not None:
@@ -538,64 +558,3 @@ def resend_verification(
 
     # Toujours 204 (pas d'énumération de comptes)
     return None
-
-
-# ── RGPD — Données de télémétrie ─────────────────────────────────────────────
-
-
-@router.get("/me/telemetrie")
-@limiter.limit("5/minute")
-def export_telemetrie(
-    request: Request,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    """Exporter ses données de télémétrie (RGPD art. 15 + 20 — droit d'accès et portabilité)."""
-    events = session.exec(
-        select(TelemetryEvent)
-        .where(TelemetryEvent.user_id == user.id)
-        .order_by(TelemetryEvent.cree_le.desc())  # type: ignore
-    ).all()
-    return [
-        {
-            "page": ev.page,
-            "action": ev.action,
-            "detail": ev.detail,
-            "date": ev.cree_le.isoformat() if ev.cree_le else None,
-        }
-        for ev in events
-    ]
-
-
-@router.delete("/me/telemetrie", status_code=204)
-@limiter.limit("5/minute")
-def effacer_telemetrie(
-    request: Request,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    """Effacer ses données de télémétrie (RGPD art. 17 — droit à l'effacement)."""
-    events = session.exec(
-        select(TelemetryEvent).where(TelemetryEvent.user_id == user.id)
-    ).all()
-    for ev in events:
-        session.delete(ev)
-    session.commit()
-
-
-class OptOutTelemetrieBody(BaseModel):
-    opt_out_telemetrie: bool
-
-
-@router.patch("/me/opt-out-telemetrie", status_code=204)
-@limiter.limit("10/minute")
-def toggle_opt_out_telemetrie(
-    request: Request,
-    body: OptOutTelemetrieBody,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    """Activer/désactiver la collecte de télémétrie (RGPD art. 21 — droit d'opposition)."""
-    user.opt_out_telemetrie = body.opt_out_telemetrie
-    session.add(user)
-    session.commit()

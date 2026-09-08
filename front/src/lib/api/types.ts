@@ -40,6 +40,8 @@ export interface User {
 	demarche_arrivant?: string | null;
 	batiment_id?: number | null;
 	batiment_nom?: string | null; // "Bât. A"
+	/** L'étage où la personne HABITE — distinct de `Lot.etage`, qui décrit un bien. */
+	etage?: number | null;
 	last_seen_actualites?: string | null;
 	delegations_aidant?: { delegation_id: number; mandant_id: number; mandant_nom: string }[];
 	cree_le: string;

@@ -91,7 +91,7 @@ class UTCJSONResponse(JSONResponse):
 
 from app.database import _run_migrations, engine
 from app.routers import (
-    auth, auth_mot_de_passe, tickets, publications, documents, lots, admin,
+    auth, auth_mot_de_passe, auth_telemetrie, tickets, publications, documents, lots, admin,
     notifications, acces, calendrier, calendrier_apercu, calendrier_historique, prestataires, compteurs, sondages, idees, copropriete,
     bailleur, config, diagnostics, annonces, regles_residence, delegations,
     telemetry, flux,
@@ -281,6 +281,10 @@ app.include_router(auth.router)
 #  Même préfixe `/auth`, monté à part : FastAPI additionne les routers, les URL
 #  publiques sont donc inchangées (cf. en-tête de `routers/auth_mot_de_passe.py`).
 app.include_router(auth_mot_de_passe.router)
+#  Idem pour les trois routes RGPD sur la télémétrie, sorties d'`auth.py` le
+#  08/09/2026 : elles ne parlent pas d'authentification, seulement d'une donnée
+#  que le site collecte.
+app.include_router(auth_telemetrie.router)
 app.include_router(lots.router)
 app.include_router(tickets.router)
 app.include_router(publications.router)

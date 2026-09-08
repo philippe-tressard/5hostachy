@@ -11,12 +11,13 @@
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import { setTelemetryOptOut } from '$lib/telemetry';
 	import { fmtDateShort as fmtDate, fmtDatetimeShort as fmtDatetime } from '$lib/date';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import HistoriqueDemandes from '$lib/components/HistoriqueDemandes.svelte';
 	import { STATUT_DEMANDE_BADGE, STATUT_DEMANDE_LABEL } from '$lib/demandes';
 	import { essayer, messagePartiel } from '$lib/chargement';
+	import TelemetrieRGPD from '$lib/components/TelemetrieRGPD.svelte';
+	import { etageLabel, lotTypeLabel } from '$lib/utils';
 
 	$: _pc = getPageConfig($configStore, 'profil', defautsDePage('profil'));
 	$: _siteNom = $siteNomStore;
@@ -25,6 +26,10 @@
 	let prenom = '';
 	let nom = '';
 	let telephone = '';
+	/**  L'étage où l'on HABITE — distinct de `Lot.etage`, qui décrit un bien.
+	 *   Modifiable ici sans validation du conseil (#835) : contrairement au
+	 *   bâtiment, il ne revendique rien. */
+	let etage: number | null = null;
 	let societe = '';
 	let fonction = '';
 	let email = '';
@@ -54,13 +59,6 @@
 	let arrivantAncienResidentInconnu = false;
 	let savingArrivant = false;
 	let arrivantChoix: '' | 'nouvel_arrivant' | 'deja_resident' = '';
-
-	// ── RGPD Télémétrie ───────────────────────────────────────────────────────
-	let optOutTelemetrie = false;
-	let savingOptOut = false;
-	let deletingTelemetrie = false;
-	let exportingTelemetrie = false;
-	let confirmDeleteTelemetrie = false;
 
 	$: demandePending = demandes.find((d) => d.statut_demande === 'en_attente') ?? null;
 
@@ -95,11 +93,11 @@
 			prenom = u.prenom ?? '';
 			nom = u.nom ?? '';
 			telephone = (u as any).telephone ?? '';
+			etage = u.etage ?? null;
 			societe = u.societe ?? '';
 			fonction = (u as any).fonction ?? '';
 			email = u.email ?? '';
 			arrivantBatimentNumero = (u as any).batiment_nom?.replace(/[^0-9]/g, '') ?? '';
-			optOutTelemetrie = u.opt_out_telemetrie ?? false;
 
 			// Démarche arrivant : lire depuis la base (fallback localStorage pour migration)
 			if (u.demarche_arrivant === 'nouvel_arrivant' || u.demarche_arrivant === 'deja_resident') {
@@ -161,6 +159,7 @@
 				prenom,
 				nom,
 				telephone: telephone || null,
+				etage,
 				societe: societe || null,
 				fonction: fonction || null,
 				...(emailChanged ? { email } : {}),
@@ -318,6 +317,25 @@
 				<label for="p-tel">Téléphone</label>
 				<input id="p-tel" type="tel" bind:value={telephone} placeholder="+33 6 00 00 00 00" />
 			</div>
+			<!--  ⚠️ L'indication dit à quoi il SERT, comme à l'inscription : un champ
+			      facultatif dont on ignore l'usage ne se remplit pas. Les bornes sont
+			      les mêmes des deux côtés — et elles sont AUSSI vérifiées par l'API,
+			      un champ borné côté client se postant directement. -->
+			<div class="field">
+				<label for="p-etage">Étage</label>
+				<input
+					id="p-etage"
+					type="number"
+					bind:value={etage}
+					min="-2"
+					max="50"
+					placeholder="Ex. 3"
+				/>
+				<p class="field-hint">
+					Facultatif. L’étage où vous habitez — il sert à vous situer auprès de vos voisins.
+					Distinct de l’étage d’un lot que vous possédez sans y vivre.
+				</p>
+			</div>
 			<div class="field">
 				<label for="p-societe">Société</label>
 				<input
@@ -363,20 +381,9 @@
 							{#if lot.batiment_nom}{lot.batiment_nom} —
 							{/if}
 							N° {lot.numero}
-							· {(
-								{ appartement: 'Appartement', cave: 'Cave', parking: 'Parking' } as Record<
-									string,
-									string
-								>
-							)[lot.type] ?? lot.type}
+							· {lotTypeLabel(lot.type)}
 							{#if lot.type_appartement} ({lot.type_appartement}){/if}
-							{#if lot.etage !== null && lot.etage !== undefined}
-								· {lot.etage === 0
-									? 'RDC'
-									: lot.etage < 0
-										? 'SS ' + Math.abs(lot.etage)
-										: lot.etage + (lot.etage === 1 ? 'er' : 'ème') + ' étage'}
-							{/if}
+							{#if lot.etage != null}· {etageLabel(lot.etage, { suffixe: true })}{/if}
 							{#if lot.superficie} · {lot.superficie} m²{/if}
 						</span>
 					{/each}
@@ -570,117 +577,7 @@
 			>.
 		</p>
 
-		<!-- Télémétrie opt-out -->
-		<div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid #fde68a">
-			<label class="checkbox-field" style="margin-bottom:.4rem">
-				<input
-					type="checkbox"
-					bind:checked={optOutTelemetrie}
-					disabled={savingOptOut}
-					on:change={async () => {
-						savingOptOut = true;
-						try {
-							await authApi.toggleOptOutTelemetrie({ opt_out_telemetrie: optOutTelemetrie });
-							setTelemetryOptOut(optOutTelemetrie);
-							const updated = await authApi.me();
-							setUser(updated);
-							toast(
-								'success',
-								optOutTelemetrie
-									? 'Collecte de statistiques désactivée.'
-									: 'Collecte de statistiques réactivée.',
-							);
-						} catch {
-							optOutTelemetrie = !optOutTelemetrie;
-							toast('error', 'Erreur lors de la mise à jour.');
-						}
-						savingOptOut = false;
-					}}
-				/>
-				Refuser la collecte de statistiques de navigation
-			</label>
-			<p
-				style="font-size:.78rem;color:var(--color-text-muted);margin:0 0 .75rem;padding-left:1.55rem"
-			>
-				Ces statistiques anonymisées permettent au gestionnaire d'identifier les fonctionnalités les
-				plus utilisées, de détecter d'éventuels problèmes de navigation et d'orienter les
-				améliorations futures vers ce qui vous est réellement utile au quotidien. Elles ne
-				contiennent aucune donnée personnelle sensible et ne sont jamais partagées avec des tiers.
-				En les désactivant, vous nous privez d'informations précieuses pour vous offrir une
-				meilleure expérience.
-			</p>
-
-			<div style="display:flex;gap:.5rem;flex-wrap:wrap">
-				<button
-					type="button"
-					class="btn btn-sm"
-					style="font-size:.8rem"
-					disabled={exportingTelemetrie}
-					on:click={async () => {
-						exportingTelemetrie = true;
-						try {
-							const data = await authApi.exportTelemetrie();
-							const json = JSON.stringify(data, null, 2);
-							const blob = new Blob([json], { type: 'application/json' });
-							const url = URL.createObjectURL(blob);
-							const a = document.createElement('a');
-							a.href = url;
-							a.download = 'mes-donnees-telemetrie.json';
-							a.click();
-							URL.revokeObjectURL(url);
-							toast('success', 'Export téléchargé.');
-						} catch {
-							toast('error', "Erreur lors de l'export.");
-						}
-						exportingTelemetrie = false;
-					}}
-				>
-					📥 Exporter mes données de navigation
-				</button>
-
-				{#if !confirmDeleteTelemetrie}
-					<button
-						type="button"
-						class="btn btn-sm btn-danger"
-						style="font-size:.8rem"
-						on:click={() => (confirmDeleteTelemetrie = true)}
-					>
-						🗑️ Effacer mes données de navigation
-					</button>
-				{:else}
-					<span style="display:inline-flex;gap:.35rem;align-items:center;font-size:.8rem">
-						<strong style="color:var(--color-danger)">Confirmer ?</strong>
-						<button
-							type="button"
-							class="btn btn-sm btn-danger"
-							style="font-size:.78rem"
-							disabled={deletingTelemetrie}
-							on:click={async () => {
-								deletingTelemetrie = true;
-								try {
-									await authApi.effacerTelemetrie();
-									toast('success', 'Données de navigation effacées.');
-								} catch {
-									toast('error', 'Erreur lors de la suppression.');
-								}
-								deletingTelemetrie = false;
-								confirmDeleteTelemetrie = false;
-							}}
-						>
-							Oui, effacer
-						</button>
-						<button
-							type="button"
-							class="btn btn-sm"
-							style="font-size:.78rem"
-							on:click={() => (confirmDeleteTelemetrie = false)}
-						>
-							Annuler
-						</button>
-					</span>
-				{/if}
-			</div>
-		</div>
+		<TelemetrieRGPD />
 	</section>
 </div>
 

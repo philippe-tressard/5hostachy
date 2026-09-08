@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { relire } from '$lib/utils';
+	import { etageLabel, relire } from '$lib/utils';
 	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
@@ -112,11 +112,7 @@
 		if (appt.batiment_nom) parts.push(appt.batiment_nom);
 		else if ($currentUser?.batiment_nom) parts.push($currentUser.batiment_nom);
 		if (appt.type_appartement) parts.push(appt.type_appartement);
-		if (appt.etage != null) {
-			if (appt.etage === 0) parts.push('RDC');
-			else if (appt.etage === 1) parts.push('1er');
-			else parts.push(`${appt.etage}ème`);
-		}
+		if (appt.etage != null) parts.push(etageLabel(appt.etage));
 		return parts.join(', ');
 	})();
 

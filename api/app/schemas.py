@@ -71,6 +71,9 @@ class UserRead(BaseModel):
     demarche_arrivant: Optional[str] = None
     batiment_id: Optional[int] = None
     batiment_nom: Optional[str] = None   # ex. "Bât. A"
+    #  L'étage où la personne HABITE. Sans lui, le profil ne pourrait pas
+    #  afficher la valeur qu'il vient d'enregistrer.
+    etage: Optional[int] = None
     nom_proprietaire: Optional[str] = None
     nom_aide: Optional[str] = None
     prenom_aide: Optional[str] = None
