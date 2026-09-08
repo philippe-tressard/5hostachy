@@ -12,32 +12,6 @@ if (browser) {
 	locale.subscribe((v) => localStorage.setItem('hostachy_locale', v));
 }
 
-/** Labels traduits (extensible) */
-export const ROLE_LABELS: Record<Locale, Record<string, string>> = {
-	fr: {
-		résident: 'Résident',
-		locataire: 'Locataire',
-		copropriétaire_résident: 'Copropriétaire Résident',
-		copropriétaire_bailleur: 'Copropriétaire Bailleur',
-		bailleur: 'Copropriétaire Bailleur',
-		syndic: 'Syndic',
-		mandataire: 'Mandataire',
-		conseil_syndical: 'Conseil syndical',
-		admin: 'Admin',
-	},
-	en: {
-		résident: 'Resident',
-		locataire: 'Tenant',
-		copropriétaire_résident: 'Owner-Occupier',
-		copropriétaire_bailleur: 'Landlord',
-		bailleur: 'Landlord',
-		syndic: 'Manager',
-		mandataire: 'Proxy',
-		conseil_syndical: 'Board Member',
-		admin: 'Admin',
-	},
-};
-
 export const NAV_LABELS: Record<Locale, Record<string, string>> = {
 	fr: {
 		'/tableau-de-bord': 'Accueil',

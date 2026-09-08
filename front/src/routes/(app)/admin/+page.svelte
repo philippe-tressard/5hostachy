@@ -4,7 +4,9 @@
 	import { get } from 'svelte/store';
 	import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
 	import { api, admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
-	import { libelleRole, badgeRole, badgeStatut } from '$lib/roles';
+	import { libelleRole, badgeRole, badgeStatut, LIBELLES_STATUT_ABREGE } from '$lib/roles';
+	import { essayer } from '$lib/chargement';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import ChampIcone from '$lib/components/ChampIcone.svelte';
@@ -88,14 +90,17 @@
 	//  Comptes en attente
 	let comptes: any[] = [];
 	let comptesLoading = true;
+	/** Non vide = on n'a PAS pu regarder. Distinct de « la liste est vide ». */
+	let erreurComptes = '';
 
 	async function loadComptes() {
 		comptesLoading = true;
-		try {
-			comptes = await adminApi.comptesEnAttenteEnrichis();
-		} finally {
-			comptesLoading = false;
-		}
+		//  🔴 `essayer` rend `[valeur, erreur]` — jamais l'un sans l'autre (#816).
+		//  Ce `try/finally` n'avait AUCUN `catch` : une session expirée ou un 500
+		//  rejetait la promesse dans le vide, `comptes` restait à `[]`, et l'écran
+		//  annonçait « Aucun compte en attente ». Pas même un toast.
+		[comptes, erreurComptes] = await essayer(adminApi.comptesEnAttenteEnrichis(), []);
+		comptesLoading = false;
 	}
 
 	async function refuserCompte(id: number, motif: string) {
@@ -126,14 +131,13 @@
 	//  Commandes d'acces
 	let commandes: any[] = [];
 	let commandesLoading = true;
+	/** Non vide = on n'a PAS pu regarder. Distinct de « la liste est vide ». */
+	let erreurCommandes = '';
 
 	async function loadCommandes() {
 		commandesLoading = true;
-		try {
-			commandes = await adminApi.commandesAccesEnAttente();
-		} finally {
-			commandesLoading = false;
-		}
+		[commandes, erreurCommandes] = await essayer(adminApi.commandesAccesEnAttente(), []);
+		commandesLoading = false;
 	}
 
 	async function accepterCommande(id: number) {
@@ -399,16 +403,6 @@
 	//  « Membre du Conseil Syndical » dans la notification que le serveur envoie.
 	//  Chacune était cohérente avec elle-même : aucun contrôle ne pouvait le voir.
 
-	const statutLabels: Record<string, string> = {
-		copropriétaire_résident: 'Copro. résident',
-		copropriétaire_bailleur: 'Copro. bailleur',
-		locataire: 'Locataire',
-		syndic: 'Syndic',
-		mandataire: 'Mandataire',
-		aidant: 'Aidant (proche)',
-		admin_technique: 'Admin technique',
-	};
-
 	function userRoles(u: any): string[] {
 		return u.roles?.length ? u.roles : [u.role];
 	}
@@ -432,25 +426,15 @@
 	//  Demandes de modification de profil
 	let demandesProfil: any[] = [];
 	let demandesProfilLoading = true;
-
-	const statutLabelsAdmin: Record<string, string> = {
-		copropriétaire_résident: 'Copro. résident',
-		copropriétaire_bailleur: 'Copro. bailleur',
-		locataire: 'Locataire',
-		syndic: 'Syndic',
-		mandataire: 'Mandataire',
-		aidant: 'Aidant (proche)',
-	};
+	/** Non vide = on n'a PAS pu regarder. Distinct de « la liste est vide ». */
+	let erreurDemandesProfil = '';
 
 	async function loadDemandesProfil() {
 		demandesProfilLoading = true;
-		try {
-			demandesProfil = await adminApi.demandesProfil();
-		} catch {
-			/* ignore */
-		} finally {
-			demandesProfilLoading = false;
-		}
+		//  ⚠️ Le `catch { /* ignore */ }` d'origine est la forme la plus explicite
+		//  du défaut : l'échec était écrit, lu, et jeté.
+		[demandesProfil, erreurDemandesProfil] = await essayer(adminApi.demandesProfil(), []);
+		demandesProfilLoading = false;
 	}
 
 	async function approuverDemande(id: number) {
@@ -782,13 +766,15 @@
 </div>
 
 {#if onglet === 'comptes'}
-	{#if comptesLoading}
-		<p class="muted">Chargement...</p>
-	{:else if comptes.length === 0}
-		<div class="empty-state">
-			<h3>Aucun compte en attente</h3>
-			<p>Tous les comptes ont ete traites.</p>
-		</div>
+	{#if comptesLoading || erreurComptes || comptes.length === 0}
+		<EtatListe
+			chargement={comptesLoading}
+			erreur={erreurComptes}
+			vide={comptes.length === 0}
+			titreErreur="Impossible d’afficher les comptes en attente"
+			titreVide="Aucun compte en attente"
+			messageVide="Tous les comptes ont été traités."
+		/>
 	{:else}
 		<div class="card" style="overflow:hidden">
 			<table class="table">
@@ -819,7 +805,7 @@
 							</td>
 							<td
 								><span class="badge {badgeStatut(u.statut)}" style="font-size:.75rem"
-									>{statutLabels[u.statut] ?? u.statut}</span
+									>{LIBELLES_STATUT_ABREGE[u.statut] ?? u.statut}</span
 								></td
 							>
 							<td>
@@ -864,13 +850,15 @@
 		</div>
 	{/if}
 {:else if onglet === 'acces'}
-	{#if commandesLoading}
-		<p class="muted">Chargement...</p>
-	{:else if commandes.length === 0}
-		<div class="empty-state">
-			<h3>Aucune commande en attente</h3>
-			<p>Toutes les demandes d'acces ont ete traitees.</p>
-		</div>
+	{#if commandesLoading || erreurCommandes || commandes.length === 0}
+		<EtatListe
+			chargement={commandesLoading}
+			erreur={erreurCommandes}
+			vide={commandes.length === 0}
+			titreErreur="Impossible d’afficher les commandes d’accès"
+			titreVide="Aucune commande en attente"
+			messageVide="Toutes les demandes d’accès ont été traitées."
+		/>
 	{:else}
 		<div class="card" style="overflow:hidden">
 			<table class="table">
@@ -912,7 +900,7 @@
 			/>
 			<select class="input-sm role-select" bind:value={userStatutFilter} style="min-width:160px">
 				<option value="">— Tous les types —</option>
-				{#each Object.entries(statutLabels) as [val, label] (val)}
+				{#each Object.entries(LIBELLES_STATUT_ABREGE) as [val, label] (val)}
 					<option value={val}>{label}</option>
 				{/each}
 			</select>
@@ -973,7 +961,7 @@
 								<td style="color:var(--color-text-muted);font-size:.85rem">{u.email}</td>
 								<td>
 									<span class="badge {badgeStatut(u.statut)}" style="font-size:.75rem">
-										{statutLabels[u.statut] ?? u.statut ?? '—'}
+										{LIBELLES_STATUT_ABREGE[u.statut] ?? u.statut ?? '—'}
 									</span>
 								</td>
 								<td>
@@ -1143,7 +1131,7 @@
 		<FormulaireCreation titre="Modifier l'utilisateur" cle={editUser}>
 			<FormulaireUtilisateur
 				bind:editForm
-				{statutLabels}
+				statutLabels={LIBELLES_STATUT_ABREGE}
 				{batimentsList}
 				onAnnuler={() => (editUser = null)}
 				onEnregistrer={saveEdit}
@@ -1205,13 +1193,15 @@
 		</Modale>
 	{/if}
 {:else if onglet === 'demandes_profil'}
-	{#if demandesProfilLoading}
-		<p class="muted">Chargement...</p>
-	{:else if demandesProfil.length === 0}
-		<div class="empty-state">
-			<h3>Aucune demande en attente</h3>
-			<p>Toutes les demandes de modification de profil ont été traitées.</p>
-		</div>
+	{#if demandesProfilLoading || erreurDemandesProfil || demandesProfil.length === 0}
+		<EtatListe
+			chargement={demandesProfilLoading}
+			erreur={erreurDemandesProfil}
+			vide={demandesProfil.length === 0}
+			titreErreur="Impossible d’afficher les demandes de profil"
+			titreVide="Aucune demande en attente"
+			messageVide="Toutes les demandes de modification de profil ont été traitées."
+		/>
 	{:else}
 		<div class="card" style="overflow:hidden">
 			<table class="table">
@@ -1233,7 +1223,7 @@
 							</td>
 							<td
 								><span style="font-size:.82rem"
-									>{statutLabelsAdmin[d.statut_actuel] ?? d.statut_actuel ?? '—'}</span
+									>{LIBELLES_STATUT_ABREGE[d.statut_actuel] ?? d.statut_actuel ?? '—'}</span
 								></td
 							>
 							<td><span style="font-size:.82rem">{d.batiment_actuel ?? '—'}</span></td>
@@ -1241,7 +1231,7 @@
 								{#if d.statut_souhaite}
 									<div style="font-size:.82rem">
 										Type : <strong
-											>{statutLabelsAdmin[d.statut_souhaite] ?? d.statut_souhaite}</strong
+											>{LIBELLES_STATUT_ABREGE[d.statut_souhaite] ?? d.statut_souhaite}</strong
 										>
 									</div>
 								{/if}
@@ -1460,7 +1450,9 @@
 		on:fermer={() => (cvModal = null)}
 	>
 		<p style="font-size:.85rem;color:var(--color-text-muted);margin-bottom:1rem">
-			{cvModal.user.statut ? (statutLabels[cvModal.user.statut] ?? cvModal.user.statut) : ''}
+			{cvModal.user.statut
+				? (LIBELLES_STATUT_ABREGE[cvModal.user.statut] ?? cvModal.user.statut)
+				: ''}
 			{cvModal.lotsPrevus > 0 ? ` — ${cvModal.lotsPrevus} lot(s) détecté(s) dans l'import` : ''}
 		</p>
 		<label

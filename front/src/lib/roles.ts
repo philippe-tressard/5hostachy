@@ -70,6 +70,36 @@ export const LIBELLES_STATUT: Record<string, string> = {
 };
 
 /**
+ *  Les statuts, ABRÉGÉS — pour un tableau dense (#828).
+ *
+ *  🔴 Écrite DEUX fois dans `admin/+page.svelte`, à trente lignes d'écart et
+ *  dans le même fichier (`statutLabels` et `statutLabelsAdmin`). Les deux
+ *  copies différaient d'une clé : `admin_technique` manquait à la seconde, si
+ *  bien qu'une demande de profil émanant d'un compte technique affichait
+ *  `admin_technique` — la valeur brute de l'énumération. Un libellé manquant
+ *  ne lève pas, il s'imprime.
+ *
+ *  ⚠️ Ce n'est PAS le `LIBELLES_STATUT_COURT` du serveur, qui existe pour une
+ *  raison opposée : masquer si la personne habite son lot ou le loue
+ *  (`utils/roles_libelles.py` — « Copropriétaire » tout court). L'administration
+ *  a précisément besoin de cette distinction ; elle abrège pour la place, pas
+ *  pour taire. Trois notions, trois tables, et c'est voulu.
+ *
+ *  🔒 `test_roles_libelles.py` exige une clé par entrée de `LIBELLES_STATUT`,
+ *  sans exception — le contrat que `BADGE_ROLE` et `BADGE_STATUT` ont déjà, et
+ *  qui aurait attrapé le trou d'`admin_technique`.
+ */
+export const LIBELLES_STATUT_ABREGE: Record<string, string> = {
+	copropriétaire_résident: 'Copro. résident',
+	copropriétaire_bailleur: 'Copro. bailleur',
+	locataire: 'Locataire',
+	syndic: 'Syndic',
+	mandataire: 'Mandataire',
+	aidant: 'Aidant (proche)',
+	admin_technique: 'Compte technique',
+};
+
+/**
  *  Anciennes clés encore présentes en base ou dans des réponses d'API.
  *
  *  ⚠️ Elles sont **à part**, et pas mêlées aux deux tables ci-dessus : celles-ci

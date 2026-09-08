@@ -88,8 +88,6 @@ export const DETTES = {
 	//  relevé et forcera à trancher de nouveau.
 	'lib/components/ApercuDiffusion.svelte':
 		'FAUX POSITIF — les canaux viennent d’une prop, ce composant ne charge rien',
-	'routes/(app)/admin/+page.svelte':
-		'TROIS listes — comptes en attente, commandes d’accès, demandes de profil',
 };
 
 function fichiers(dir, acc = []) {
