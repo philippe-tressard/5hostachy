@@ -50,7 +50,20 @@ def test_separateur_insecable():
 
 def test_aucun_montant_formate_a_la_main_dans_app():
     fautifs = []
-    for chemin in sorted(_APP_DIR.rglob("*.py")):
+    fichiers = sorted(_APP_DIR.rglob("*.py"))
+    #  🔴 CAS ZÉRO DE LA PORTÉE (`standards/04` §2 et §40). Sans cette ligne, un
+    #  `_APP_DIR` devenu faux — répertoire déplacé, arborescence réorganisée —
+    #  produirait « 0 montant fautif sur 0 fichier lu », c'est-à-dire un vert
+    #  parfait sur une vérification qui n'a pas eu lieu.
+    #
+    #  ⚠️ Le seuil est LARGE à dessein : il ne mesure pas la qualité du relevé,
+    #  il refuse le cas où il n'y a rien du tout. Un seuil serré demanderait
+    #  d'être ajusté à chaque fichier ajouté, et serait donc rabotté.
+    assert len(fichiers) > 50, (
+        f"{len(fichiers)} fichier(s) Python lu(s) sous {_APP_DIR} — la portée du "
+        "relevé est cassée, et son vert ne veut rien dire (INCONNU, pas OK)."
+    )
+    for chemin in fichiers:
         for n, ligne in enumerate(chemin.read_text(encoding="utf-8").splitlines(), 1):
             if _MONTANT_A_LA_MAIN.search(ligne):
                 fautifs.append(f"{chemin.relative_to(_APP_DIR).as_posix()}:{n}: {ligne.strip()[:90]}")
