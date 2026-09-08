@@ -185,3 +185,25 @@ export function telephonesDe(champ: string | null | undefined): string[] {
 	}
 	return [...vus];
 }
+
+/**
+ * Libellé français du type d'un lot — « Appartement », « Parking », « Cave ».
+ *
+ * 🔴 Écrit dans `mon-lot/+page.svelte`, où un commentaire signalait déjà le
+ * piège : *« `lotLabel` s'appuie sur `lotTypeLabel`, qui sert encore à
+ * l'affichage des accès plus bas. L'emporter dans le composant en aurait fait
+ * une deuxième écriture. »* L'extraction de `ModaleAccesBail` (#779) est
+ * exactement le geste que ce commentaire redoutait — d'où le passage ici,
+ * plutôt qu'une copie de plus.
+ *
+ * ⚠️ Une valeur inconnue est rendue TELLE QUELLE, pas remplacée par « — » : un
+ * type ajouté côté API doit s'afficher, fût-ce sans majuscule, plutôt que
+ * disparaître derrière un tiret que personne ne saura interpréter.
+ */
+export function lotTypeLabel(t: string | null | undefined): string {
+	if (!t) return '—';
+	if (t === 'appartement') return 'Appartement';
+	if (t === 'parking') return 'Parking';
+	if (t === 'cave') return 'Cave';
+	return t;
+}
