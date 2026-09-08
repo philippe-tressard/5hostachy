@@ -20,7 +20,8 @@ from app.models.core import (
 )
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate
 from app.models.annonce_hall import AnnonceHall
-from app.utils.photos import photos_json, premiere_photo
+from app.utils.photos import parse_photos, photos_json, premiere_photo
+from app.utils.perimetres import parse_json_perimetres
 from app.utils.suppression_liee import flush_si_necessaire, supprimer_documents_de
 from app.utils.visibility import publication_visible
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
@@ -112,6 +113,40 @@ def list_publications(
             continue
         result.append(_pub_to_read(pub, session))
     return result
+
+
+@router.get("/depuis-annonce-hall/{annonce_id}",
+            summary="Pré-remplissage d'une actualité depuis une annonce de hall (CS/Admin)")
+def prefill_depuis_annonce_hall(
+    annonce_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Les champs d'une annonce de hall, prêts à alimenter le formulaire d'actualité.
+
+    Le miroir exact de `annonces_hall.prefill_depuis_publication` : le CS
+    compose souvent l'affiche du hall d'abord, puis veut la même information en
+    ligne. Le geste existait dans un seul sens.
+
+    Aucune écriture : le CS ajuste ensuite librement avant de publier.
+
+    ⚠️ **Aucun lien n'est conservé vers l'annonce d'origine**, contrairement au
+    sens inverse qui garde `publication_id`. Là-bas le lien SERT — c'est lui qui
+    donne son URL au message WhatsApp de l'affiche. Ici rien ne le lirait, et une
+    colonne que personne n'interroge devient une seconde vérité sur « d'où vient
+    ce texte », libre de contredire la première.
+    """
+    annonce = session.get(AnnonceHall, annonce_id)
+    if not annonce:
+        raise HTTPException(404, "Annonce de hall introuvable")
+    return {
+        "titre": annonce.titre,
+        "contenu": annonce.message,
+        "perimetre_cible": parse_json_perimetres(annonce.perimetre_cible),
+        #  Les images de l'affiche sont déjà des URLs de notre volume : elles se
+        #  reprennent telles quelles, sans re-téléverser.
+        "photos_urls": parse_photos(annonce.images_json),
+    }
 
 
 @router.post("", response_model=PublicationRead, status_code=201)

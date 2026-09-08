@@ -2,6 +2,7 @@ import { api, BASE } from './client';
 import type {
 	AnnonceHall,
 	AnnonceHallInput,
+	ActualitePrefill,
 	AnnonceHallPrefill,
 	ApercuDiffusion,
 	EpinglesCompte,
@@ -152,6 +153,10 @@ export const tickets = {
 };
 
 export const publications = {
+	//  Le miroir du pré-remplissage des affiches (#832) : le CS compose souvent
+	//  l'annonce du hall d'abord, puis veut la même information en ligne.
+	depuisAnnonceHall: (annonceId: number) =>
+		api.get<ActualitePrefill>(`/publications/depuis-annonce-hall/${annonceId}`),
 	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498).
 	//
 	//  🔴 Il n'existait que pour les tickets. Le 31/08/2026, une actualité est

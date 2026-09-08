@@ -48,7 +48,7 @@
   signale. Toute retouche ici se vérifie sur un envoi réel.
 -->
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import { attacherAPublication } from '$lib/fichiers';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -57,9 +57,17 @@
 	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { publications as pubsApi, ApiError, type Publication } from '$lib/api';
+	import {
+		publications as pubsApi,
+		annoncesHall as annoncesHallApi,
+		ApiError,
+		type AnnonceHall,
+		type Publication,
+	} from '$lib/api';
+	import { essayer } from '$lib/chargement';
+	import { fmtDateShort } from '$lib/date';
 	import { perimetreDefautListe } from '$lib/utils';
-	import { richEmpty } from '$lib/publications';
+	import { MAX_SOURCES_PREREMPLISSAGE, richEmpty } from '$lib/publications';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { PUBLICATION } from '$lib/entites/publication';
@@ -85,6 +93,56 @@
 		modifie: Publication;
 		annule: void;
 	}>();
+
+	//  ── Pré-remplissage depuis une annonce de hall (#832) ───────────────────
+	//
+	//  🔴 Le MIROIR exact du mécanisme de `FormulaireAnnonceHall`, qui propose
+	//  « Pré-remplir depuis une actualité » depuis le 01/09/2026. Le CS compose
+	//  souvent l'affiche du hall d'abord ; le geste n'existait que dans un sens.
+	//
+	//  ⚠️ Comme là-bas, ce bloc reste AVANT le titre. Ce n'est pas une section du
+	//  cadre #430 — c'est un raccourci qui REMPLIT le formulaire. Le placer après
+	//  le titre reviendrait à proposer de réécrire ce qu'on vient de saisir.
+	//
+	//  ⚠️ Uniquement en CRÉATION : pré-remplir une actualité qu'on corrige
+	//  écraserait le texte publié, et l'écran de correction n'a pas à proposer un
+	//  geste qui défait ce qu'il sert à ajuster.
+	let annonces: AnnonceHall[] = [];
+	let annonceSourceId: number | '' = '';
+
+	onMount(async () => {
+		if (modeEdition) return;
+		//  ⚠️ Non bloquant : si la liste ne vient pas, la saisie libre reste
+		//  possible et le sélecteur ne s'affiche simplement pas. C'est la règle
+		//  qu'applique déjà l'autre sens.
+		const [liste] = await essayer(annoncesHallApi.list(true), [] as AnnonceHall[]);
+		annonces = liste
+			.sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())
+			.slice(0, MAX_SOURCES_PREREMPLISSAGE);
+	});
+
+	async function prefillDepuisAnnonce(annonceId: number | '') {
+		annonceSourceId = annonceId;
+		if (annonceId === '') return;
+		try {
+			const src = await pubsApi.depuisAnnonceHall(annonceId);
+			titre = src.titre;
+			contenu = src.contenu;
+			perimetreCible = src.perimetre_cible?.length
+				? [...src.perimetre_cible]
+				: perimetreDefautListe();
+			photos = [...(src.photos_urls ?? [])];
+			const nb = photos.length;
+			toast(
+				'info',
+				nb > 0
+					? `Actualité pré-remplie (${nb} image${nb > 1 ? 's' : ''}) — ajustez avant de publier`
+					: 'Actualité pré-remplie — ajustez le texte avant de publier',
+			);
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du pré-remplissage');
+		}
+	}
 
 	//  ── 1. Titre ────────────────────────────────────────────────────────────
 	let titre = publication?.titre ?? '';
@@ -296,6 +354,35 @@
 	      poserait un SECOND, et le padding serait compté deux fois. -->
 	<div>
 		<form on:submit|preventDefault={soumettre}>
+			<!--  L'EXCEPTION AU CADRE #430 : le pré-remplissage vient AVANT le
+			      titre, comme dans `FormulaireAnnonceHall` — c'est un raccourci qui
+			      REMPLIT le formulaire, pas une section de l'entité. -->
+			{#if !modeEdition && annonces.length}
+				<div class="field">
+					<label for="pub-source-hall">Pré-remplir depuis une annonce de hall</label>
+					<select
+						id="pub-source-hall"
+						value={annonceSourceId}
+						on:change={(e) =>
+							prefillDepuisAnnonce(
+								(e.currentTarget as HTMLSelectElement).value === ''
+									? ''
+									: Number((e.currentTarget as HTMLSelectElement).value),
+							)}
+					>
+						<option value="">— Saisie libre —</option>
+						{#each annonces as annonce (annonce.id)}
+							<option value={annonce.id}>{fmtDateShort(annonce.cree_le)} · {annonce.titre}</option>
+						{/each}
+					</select>
+				</div>
+				<p class="aide-bloc">
+					Reprend le titre, le message, le périmètre et les images de l'affiche. Tout reste
+					modifiable ci-dessous : l'actualité est indépendante de l'annonce d'origine.
+				</p>
+				<hr class="separateur-prefill" />
+			{/if}
+
 			<!--  1. Titre. -->
 			<SectionFormulaire premiere>
 				<div class="field champ-large">

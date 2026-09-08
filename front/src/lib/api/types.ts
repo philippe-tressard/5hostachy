@@ -333,3 +333,17 @@ export interface AnnonceHallPrefill {
 	perimetre_cible: string[];
 	images: string[];
 }
+
+/**  Le miroir : une actualité pré-remplie DEPUIS une annonce de hall (#832).
+ *
+ *   ⚠️ Les noms de champs sont ceux de la PUBLICATION (`contenu`,
+ *   `photos_urls`), pas ceux de l'affiche (`message`, `images`) : c'est le
+ *   formulaire d'actualité qui les consomme, et un renommage au point de
+ *   collage se paierait à chaque lecture.
+ */
+export interface ActualitePrefill {
+	titre: string;
+	contenu: string;
+	perimetre_cible: string[];
+	photos_urls: string[];
+}
