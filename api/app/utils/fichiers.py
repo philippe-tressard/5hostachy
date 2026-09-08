@@ -222,3 +222,60 @@ def signature_incoherente(donnees: bytes, extension: str) -> str | None:
         f"le contenu ne correspond pas à un fichier {extension} "
         "(signature du fichier incohérente avec son extension)"
     )
+
+
+def enregistrer_televersement(file, raw_name: str, user=None) -> str:
+    """Valide un fichier téléversé et l'écrit sur disque. Rend son chemin.
+
+    ## 🔴 Pourquoi ce geste est ici et non chez les appelants (#825)
+
+    `signature_incoherente` était bien factorisée, et son commentaire l'affirmait
+    en toutes lettres : *« la règle vit dans `utils/fichiers` et n'est écrite
+    qu'une fois — les quatre points de téléversement l'appellent »*.
+
+    C'était vrai de la RÈGLE, et faux de son EMPLOI. Le geste complet — lire
+    seize octets, rembobiner le flux, assainir l'extension, vérifier, journaliser
+    le refus, lever une 400, composer le nom de destination, copier — était
+    recopié **trois fois** au caractère près : `compteurs.py`, `diagnostics.py`,
+    `documents.py`.
+
+    ⚠️ C'est une duplication de SÉCURITÉ, et chaque ligne compte :
+
+    * sans `seek(0)`, le fichier écrit perd ses seize premiers octets — il est
+      corrompu, silencieusement, et personne ne s'en aperçoit avant de l'ouvrir ;
+    * sans le `raise`, la vérification ne bloque rien : elle journalise et laisse
+      passer ;
+    * sans `nom_stocke`, le nom fourni par le client atteint le disque.
+
+    Une copie qui oublie l'une des trois n'échoue pas : elle fonctionne, mal.
+    C'est exactement ce qu'une règle recopiée finit par produire.
+
+    ⚠️ `user` sert au JOURNAL, et il est optionnel : un appelant sans utilisateur
+    identifié doit pouvoir valider quand même. `getattr(user, "id", "?")` plutôt
+    que `user.id` — un refus qui plante sur le journal ne refuse plus rien.
+    """
+    import logging
+    import shutil
+
+    from fastapi import HTTPException
+
+    #  Seize octets suffisent à toutes les signatures connues. `seek(0)` remet le
+    #  flux à zéro pour la copie qui suit — sans lui, le fichier écrit perd sa
+    #  tête.
+    debut = file.file.read(16)
+    file.file.seek(0)
+    extension = extension_assainie(raw_name)
+
+    #  🔴 LE CONTENU DOIT CORRESPONDRE À CE QU'IL PRÉTEND ÊTRE (#773).
+    #  `content_type` vient du client : seule la signature du fichier tranche.
+    motif = signature_incoherente(debut, extension)
+    if motif:
+        logging.getLogger("app").warning(
+            "Téléversement refusé (utilisateur %s) : %s", getattr(user, "id", "?"), motif
+        )
+        raise HTTPException(400, f"Fichier refusé : {motif}.")
+
+    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension))
+    with open(dest, "wb") as sortie:
+        shutil.copyfileobj(file.file, sortie)
+    return dest
