@@ -2,6 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import OngletArchivesCalendrier from '$lib/components/OngletArchivesCalendrier.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
+	import VueKanbanCalendrier from '$lib/components/VueKanbanCalendrier.svelte';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
@@ -15,6 +16,8 @@
 		ApiError,
 		type Publication,
 	} from '$lib/api';
+	import { tickets as ticketsApi } from '$lib/api';
+	import { essayer } from '$lib/chargement';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
 	import RangeeCalendrier from '$lib/components/RangeeCalendrier.svelte';
@@ -30,6 +33,7 @@
 		kanbanColVisible,
 		kanbanEvMatchesYear,
 		kanbanEvVisible,
+		colonneDuTicket,
 	} from '$lib/kanban';
 	import {
 		clesDesEvenements,
@@ -513,11 +517,34 @@
 		});
 	})();
 
+	/**  Les tickets « Étude & travaux » suivis au tableau (#833).
+	 *
+	 *   🔴 Le kanban les LIT ; il n'en crée pas de copie. Le statut du ticket EST
+	 *   sa colonne — aucun second champ d'état, sinon deux notions de suivi sur le
+	 *   même objet se contrediraient au premier écart.
+	 *
+	 *   ⚠️ Non bloquant : si les tickets ne viennent pas, le tableau montre les
+	 *   événements et le dit par une erreur, plutôt que de paraître complet.
+	 */
+	let ticketsKanban: any[] = [];
+	let erreurTicketsKanban = '';
+
+	onMount(async () => {
+		if (!$isCS && !$isAdmin) return;
+		[ticketsKanban, erreurTicketsKanban] = await essayer(ticketsApi.list(), []);
+	});
+
+	$: cartesTickets = ticketsKanban
+		.filter((t) => t.suivi_kanban)
+		.map((t) => ({ ticket: t, colonne: colonneDuTicket(t.statut) }))
+		.filter((c) => c.colonne !== null);
+
 	$: kanbanCols = KANBAN_COLS.filter((col) => kanbanColVisible(col.id, _kanbanCtx)).map((col) => ({
 		...col,
 		//  Le rangement vit dans `$lib/kanban` : il était écrit ICI et au tableau de
 		//  bord, et les deux ont divergé (02/09/2026, signalé à l'écran).
 		items: kanbanEvs.filter((ev) => colonneDeLEvenement(ev) === col.id),
+		tickets: cartesTickets.filter((c) => c.colonne === col.id).map((c) => c.ticket),
 	}));
 
 	$: kanbanExerciceOptions = (() => {
@@ -776,128 +803,31 @@
 		</div>
 	{/if}
 {:else}
-	<!-- ── Kanban Trello-like ────────────────────────────────── -->
-	<div class="kanban-toolbar">
-		<label class="kanban-exercice-label">
-			Exercice :
-			<select bind:value={kanbanExercice} class="kanban-exercice-select">
-				{#each kanbanExerciceOptions as y (y)}<option value={y}>{y}</option>{/each}
-			</select>
-		</label>
-		<label class="kanban-exercice-label">
-			Bâtiment :
-			<select bind:value={kanbanBatiment} class="kanban-exercice-select">
-				{#each BATIMENT_OPTIONS as b (b.val)}<option value={b.val}>{b.label}</option>{/each}
-			</select>
-		</label>
-		<span class="kanban-count-total"
-			>{kanbanEvs.length} affaire{kanbanEvs.length > 1 ? 's' : ''}</span
-		>
-		{#if $isCS}
-			<button class="btn btn-sm kanban-init-btn" on:click={initPrestataires} disabled={initLoading}>
-				{initLoading ? '⏳ Création…' : '⚙️ Init. prestataires'}
-			</button>
-		{/if}
-	</div>
-	<div class="kanban">
-		{#each kanbanCols as col (col.id)}
-			{@const items = col.items}
-			<div
-				class="kanban-col"
-				on:dragover={onDragOver}
-				on:drop={(e) => onDrop(e, col.id)}
-				role="list"
-			>
-				<div class="kanban-col-header" style="border-top-color:{col.color}">
-					<span>{col.label}</span>
-					<span class="kanban-count">{items.length}</span>
-				</div>
-				{#if items.length === 0}
-					<p class="kanban-empty">Aucune affaire</p>
-				{:else}
-					{#each items as ev (ev.id)}
-						<div
-							class="kanban-card card"
-							class:event-urgent={ev.type === 'coupure'}
-							class:kanban-card-expanded={expandedKanbanId === ev.id}
-							draggable={$isCS && expandedKanbanId !== ev.id ? 'true' : 'false'}
-							on:dragstart={(e) => onDragStart(e, ev.id)}
-							on:click={() => (expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id)}
-							on:keydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id;
-								}
-							}}
-							role="button"
-							tabindex="0"
-						>
-							<!-- Tags périmètre + année (uniquement si année ≠ exercice sélectionné) -->
-							<div class="kanban-card-tags">
-								{#each perimetreTags(ev.perimetre) as tag (tag.code)}
-									<span class="kb-tag" style="background:{tag.color}">{tag.label}</span>
-								{/each}
-								<span
-									class="kb-tag"
-									style="background:{yearColor(new Date(ev.debut).getFullYear())}"
-									title="Événement de {new Date(ev.debut).getFullYear()}"
-									>{new Date(ev.debut).getFullYear()}</span
-								>
-							</div>
-							{#if ev.prestataire_nom}<span class="kanban-card-prest">{ev.prestataire_nom}</span
-								>{/if}
-							<strong class="kanban-card-titre">{ev.titre}</strong>
-							<div class="kanban-card-footer">
-								<span class="kanban-card-type">{typeLabel(ev.type)}</span>
-								{#if $isCS}
-									<div
-										class="kanban-card-actions"
-										role="presentation"
-										on:click|stopPropagation
-										on:keydown|stopPropagation
-									>
-										<button
-											class="btn-icon-edit"
-											aria-label="Modifier"
-											title="Modifier"
-											on:click={() => startEdit(ev)}>✏️</button
-										>
-										{#if $isAdmin}
-											<button
-												class="btn-icon-danger"
-												aria-label="Supprimer définitivement"
-												title="Supprimer définitivement"
-												on:click={() => deleteEv(ev.id)}>&#x1F5D1;️</button
-											>
-										{/if}
-									</div>
-								{/if}
-							</div>
-							{#if expandedKanbanId === ev.id}
-								<div
-									class="kanban-card-detail"
-									role="presentation"
-									on:click|stopPropagation
-									on:keydown|stopPropagation
-								>
-									<div class="kanban-card-detail-row">
-										📅 {formatDate(ev.debut)}{#if ev.fin}
-											→ {formatDate(ev.fin)}{/if}
-									</div>
-									{#if ev.lieu}<div class="kanban-card-detail-row">📍 {ev.lieu}</div>{/if}
-									{#if ev.description}
-										<div class="kanban-card-detail-desc rich-content">
-											{@html safeHtml(ev.description)}
-										</div>
-									{/if}
-								</div>
-							{/if}
-						</div>
-					{/each}
-				{/if}
-			</div>
-		{/each}
-	</div>
+	<!--  La vue Kanban vit dans son composant depuis #833 : cent cinquante-trois
+	      lignes de gabarit et soixante-treize de style, qui ne servent qu'à une
+	      des deux vues. L'interface est large — dix-huit props — et c'est le
+	      symptôme que cette page porte encore trop : voir l'en-tête du composant. -->
+	<VueKanbanCalendrier
+		{kanbanCols}
+		{kanbanEvs}
+		bind:kanbanExercice
+		{kanbanExerciceOptions}
+		bind:kanbanBatiment
+		bind:expandedKanbanId
+		{erreurTicketsKanban}
+		{onDragOver}
+		{onDrop}
+		{onDragStart}
+		{startEdit}
+		{deleteEv}
+		{perimetreTags}
+		{yearColor}
+		{typeLabel}
+		{formatDate}
+		batimentOptions={BATIMENT_OPTIONS}
+		{initPrestataires}
+		{initLoading}
+	/>
 {/if}
 
 <style>
@@ -933,46 +863,6 @@
 	    extraire qu'un aurait emporté les règles et laissé l'autre nu, ce qui est
 	    exactement la panne des pastilles de la v2.67.11. */
 
-	.kanban-toolbar {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		margin-bottom: 0.75rem;
-		flex-wrap: wrap;
-	}
-	.kanban-exercice-label {
-		font-size: 0.85rem;
-		font-weight: 600;
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-	}
-	.kanban-exercice-select {
-		padding: 0.25rem 0.5rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: var(--color-surface);
-		font-size: 0.85rem;
-	}
-	.kanban-init-btn {
-		margin-left: auto;
-		font-size: 0.8rem;
-		padding: 0.3rem 0.75rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: var(--color-surface);
-		cursor: pointer;
-		white-space: nowrap;
-	}
-	.kanban-init-btn:hover:not(:disabled) {
-		background: var(--color-primary);
-		color: #fff;
-		border-color: var(--color-primary);
-	}
-	.kanban-init-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
 	/*  Les cinq règles `.archive-year-*` sont parties avec
 	    `OngletArchivesCalendrier` : elles n'habillaient que son balisage. */
 	/*  ⚠️ `.kanban-col` était défini DEUX fois, à quinze lignes d'intervalle, avec
@@ -984,39 +874,6 @@
 	    périmètres et des années, que la minuscule harmonise. Elle n'est PAS montée
 	    dans `composants.css` parce que les tags des prestations portent un sigle —
 	    « OS joint » deviendrait « os joint » (#453, 28/08/2026). */
-	.kb-tag {
-		text-transform: lowercase;
-	}
-	.kanban-card-expanded {
-		cursor: default;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-	}
-	.kanban-card-detail {
-		border-top: 1px solid var(--color-border);
-		margin-top: 0.3rem;
-		padding-top: 0.35rem;
-	}
-	.kanban-card-detail-row {
-		font-size: 0.72rem;
-		color: var(--color-text-muted);
-		line-height: 1.5;
-	}
-	.kanban-card-detail-desc {
-		font-size: 0.72rem;
-		line-height: 1.5;
-		margin-top: 0.25rem;
-	}
-	.kanban-card:active {
-		cursor: grabbing;
-	}
-	.kanban-card[draggable='true']:hover {
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-	}
-	.kanban-card-type {
-		font-size: 0.72rem;
-		font-weight: 600;
-		color: var(--color-text-muted);
-	}
 	.recurring-section {
 		margin-top: 1.5rem;
 		padding: 0.5rem 0;

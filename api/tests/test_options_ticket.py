@@ -45,16 +45,26 @@ class _Ticket:
         self.epingle = champs.get("epingle", False)
         self.confidentiel = champs.get("confidentiel", False)
         self.priorite = champs.get("priorite", "normale")
+        self.suivi_kanban = champs.get("suivi_kanban", False)
 
 
-def test_les_trois_options_s_appliquent():
+def test_TOUTES_les_options_s_appliquent():
+    """⚠️ Le nom disait « les trois » — elles sont quatre depuis #833.
+
+    Un test dont le nom compte les cas doit être renommé quand le compte change,
+    sinon il devient un contresens qu'on lit sans le voir. C'est pourquoi
+    l'assertion, elle, ne compte pas : elle compare à `OPTIONS_TICKET`.
+    """
     t = _Ticket()
     changees = appliquer_options(
-        t, _Corps(epingle=True, urgente=True, confidentiel=True), est_cs=True
+        t,
+        _Corps(epingle=True, urgente=True, confidentiel=True, suivi_kanban=True),
+        est_cs=True,
     )
     assert t.epingle is True
     assert t.confidentiel is True
     assert t.priorite == "haute", "🚨 pilote la priorité, il n'y a pas de colonne `urgente`"
+    assert t.suivi_kanban is True
     assert set(changees) == set(OPTIONS_TICKET)
 
 
@@ -118,12 +128,15 @@ def test_la_lecture_et_l_ecriture_couvrent_les_MEMES_options():
     porte — et l'enregistrement suivant la retirerait sans que personne l'ait
     demandé.
     """
-    t = _Ticket(epingle=True, confidentiel=True, priorite="haute")
+    t = _Ticket(epingle=True, confidentiel=True, priorite="haute", suivi_kanban=True)
     assert set(options_du_ticket(t)) == set(OPTIONS_TICKET)
     assert options_du_ticket(t) == {
         "epingle": True,
         "urgente": True,
         "confidentiel": True,
+        #  Ajoutée le 08/09/2026 (#833) — et ce test l'a exigée le jour même :
+        #  la table d'écriture l'avait, celle de lecture non.
+        "suivi_kanban": True,
     }
 
 
@@ -135,7 +148,11 @@ def test_les_TROIS_chemins_appellent_la_regle_commune():
     trois (`standards/03-securite.md` §1).
     """
     racine = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "tickets"
-    for module, attendus in (("crud.py", 2), ("evolutions.py", 1)):
+    #  ⚠️ `mise_a_jour.py` est né le 08/09/2026 (#833) : la CORRECTION pesait 238
+    #  lignes dans `crud.py`, et sa moitié basse vivait déjà dans `correction.py`.
+    #  Le chemin n'a pas disparu, il a déménagé — et ce test, qui compte par
+    #  MODULE, l'a dit tout de suite. C'est ce qu'on attend de lui.
+    for module, attendus in (("crud.py", 1), ("mise_a_jour.py", 1), ("evolutions.py", 1)):
         source = (racine / module).read_text(encoding="utf-8")
         arbre = ast.parse(source)
         appels = [

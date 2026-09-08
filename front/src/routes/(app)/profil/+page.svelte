@@ -17,7 +17,7 @@
 	import { STATUT_DEMANDE_BADGE, STATUT_DEMANDE_LABEL } from '$lib/demandes';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import TelemetrieRGPD from '$lib/components/TelemetrieRGPD.svelte';
-	import { etageLabel, lotTypeLabel } from '$lib/utils';
+	import { etageLabel, etageParDefaut, lotTypeLabel } from '$lib/utils';
 
 	$: _pc = getPageConfig($configStore, 'profil', defautsDePage('profil'));
 	$: _siteNom = $siteNomStore;
@@ -143,6 +143,7 @@
 		]);
 		mesLots = lots;
 		batiments = bats;
+		etage = etageParDefaut(etage, mesLots); //  #835 — motif dans `$lib/utils`
 
 		const [dem, eDem] = await essayer<any[]>(authApi.mesDemandes(), []);
 		demandes = dem;
@@ -333,7 +334,6 @@
 				/>
 				<p class="field-hint">
 					Facultatif. L’étage où vous habitez — il sert à vous situer auprès de vos voisins.
-					Distinct de l’étage d’un lot que vous possédez sans y vivre.
 				</p>
 			</div>
 			<div class="field">

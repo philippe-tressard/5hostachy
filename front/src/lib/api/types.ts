@@ -104,6 +104,13 @@ export interface Ticket {
 	 *   `priorite`, que la catégorie « Urgence » met à `haute`. La case 🚨 de
 	 *   l'écran pilote celle-là — voir `optionsDuTicket()`. */
 	epingle?: boolean;
+	/**  Le ticket paraît-il au KANBAN ? Coché d'office pour « Étude & travaux »,
+	 *   décochable par le conseil (#833).
+	 *
+	 *   ⚠️ Elle dit SI, jamais OÙ : la colonne se déduit du `statut`. Un second
+	 *   champ d'état créerait deux notions de suivi sur le même objet.
+	 *   Correspondance : `colonneDuTicket()` dans `$lib/kanban`. */
+	suivi_kanban?: boolean;
 }
 
 /** Une réponse du syndic à une relance GROUPÉE — jamais ventilée dans les fils.

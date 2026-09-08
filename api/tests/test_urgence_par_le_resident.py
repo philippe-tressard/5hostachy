@@ -137,4 +137,9 @@ def test_la_table_des_reservees_dit_ce_que_les_tests_verifient():
         "`urgente` a été rendue à l'auteur le 07/09/2026, en réparation de la "
         "régression du retrait de la catégorie « Urgence » (migration 0177)."
     )
-    assert set(OPTIONS_RESERVEES_AU_CS) == {"epingle", "confidentiel"}
+    assert set(OPTIONS_RESERVEES_AU_CS) == {"epingle", "confidentiel", "suivi_kanban"}, (
+        "⚠️ `suivi_kanban` a rejoint la table le 08/09/2026 (#833) : le tableau "
+        "ordonne le TRAVAIL du conseil, comme l'épinglage ordonne sa liste. "
+        "Un résident décrit sa situation — c'est le sens d'`urgente` —, il "
+        "n'inscrit pas une carte au tableau de suivi de quelqu'un d'autre."
+    )

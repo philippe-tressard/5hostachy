@@ -137,6 +137,11 @@ class TicketCreate(BaseModel):
     description: str
     categorie: str = "panne"
     epingle: bool = False
+    #  🔴 `None` = « le corps n'en dit rien », et le serveur pose alors le défaut
+    #  de la CATÉGORIE (`kanban_tickets.suivi_par_defaut`). Un `bool = False`
+    #  aurait rendu un formulaire silencieux indiscernable d'un décochage
+    #  délibéré — et « Étude & travaux » n'entrerait jamais au tableau.
+    suivi_kanban: Optional[bool] = None
     #  Le workflow du ticket est saisissable DÈS la création (16/08/2026) : il
     #  ne se changeait qu'après coup, depuis la carte, alors qu'un membre du CS
     #  qui saisit un ticket déjà traité connaît son étape. Défaut inchangé —
@@ -209,6 +214,8 @@ class TicketRead(BaseModel):
     #  📌 Épinglé — RELU, contrairement à `partager_whatsapp` juste en dessous :
     #  c'est un ÉTAT du ticket, pas un acte. L'écran doit pouvoir le reprendre.
     epingle: bool = False
+    #  Même raison : un état, donc relu. La case doit refléter ce qui est.
+    suivi_kanban: bool = False
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
@@ -244,6 +251,7 @@ class TicketUpdate(BaseModel):
     destinataire_cs: Optional[bool] = None
     confidentiel: Optional[bool] = None
     epingle: Optional[bool] = None
+    suivi_kanban: Optional[bool] = None
     #  ⚠️ N'est PAS un champ du ticket : `Ticket` n'a pas cette colonne, à la
     #  différence de `Publication`. C'est un ACTE — « publie ce ticket sur le
     #  groupe, maintenant » — et il ne se relit donc pas. La case repart décochée

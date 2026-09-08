@@ -239,33 +239,6 @@ class Mandat(SQLModel, table=True):
     actif: bool = True
 
 
-class RefreshToken(SQLModel, table=True):
-    __tablename__ = "refresh_token"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="utilisateur.id")
-    token: str = Field(unique=True, index=True)
-    expires_at: datetime
-    revoked: bool = False
-
-
-class PasswordResetToken(SQLModel, table=True):
-    __tablename__ = "password_reset_token"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="utilisateur.id")
-    token: str = Field(unique=True, index=True)
-    expires_at: datetime
-    used: bool = False
-
-
-class EmailVerificationToken(SQLModel, table=True):
-    __tablename__ = "email_verification_token"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="utilisateur.id")
-    token: str = Field(unique=True, index=True)
-    expires_at: datetime
-    used: bool = False
-
-
 # ──────────────────────────────────────────────
 #  Files de validation (accès, demandes de profil)
 # ──────────────────────────────────────────────
@@ -325,6 +298,10 @@ class Ticket(SQLModel, table=True):
     #  que chacune écrit vit dans la migration 0175 — le recopier ici en ferait
     #  deux écritures libres de diverger.
     epingle: bool = False
+
+    #  Paraît-il au kanban ? Elle dit SI, jamais OÙ — le pourquoi et la
+    #  correspondance vivent dans `utils/kanban_tickets.py` (#833).
+    suivi_kanban: bool = False
 
     auteur: Optional[Utilisateur] = Relationship(back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"})
     saisi_pour: Optional[Utilisateur] = Relationship(sa_relationship_kwargs={"foreign_keys": "[Ticket.saisi_pour_user_id]"})
@@ -621,6 +598,16 @@ class HistoriqueMaintenance(SQLModel, table=True):
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     terminee_le: Optional[datetime] = None
 
+
+# ──────────────────────────────────────────────────────────────────────────
+#  Jetons d'authentification — extraits dans `models/jetons.py` (#833).
+#
+#  ⚠️ Réimportés ici pour la même raison que la télémétrie : c'est CET import
+#  qui enregistre les tables dans les métadonnées SQLModel.
+# ──────────────────────────────────────────────────────────────────────────
+from app.models.jetons import (  # noqa: E402,F401
+    EmailVerificationToken, PasswordResetToken, RefreshToken,
+)
 
 # ──────────────────────────────────────────────────────────────────────────
 #  Télémétrie — extraite dans `models/telemetrie.py` (plafond de modularité).

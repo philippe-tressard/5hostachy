@@ -44,7 +44,7 @@ from app.models.core import (
 from app.models.evenement import EvenementEvolution
 from app.routers.calendrier import EvenementUpdate, update_evenement
 from app.routers.publications.crud import update_publication
-from app.routers.tickets.crud import update_ticket
+from app.routers.tickets.mise_a_jour import update_ticket
 from app.schemas import PublicationUpdate, TicketUpdate
 
 #  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce

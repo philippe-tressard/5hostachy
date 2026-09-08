@@ -354,7 +354,8 @@ def trier_par_activite(session: Session, tickets: list[Ticket]) -> list[Ticket]:
 #:
 #: Il n'y a pas de quatrième ligne pour 🔒 « visible du seul périmètre » : un
 #: ticket l'est DÉJÀ (`ticket_visible` n'ouvre pas à la copropriété, #339).
-OPTIONS_TICKET = ("epingle", "urgente", "confidentiel")
+#: | `suivi_kanban` | `ticket.suivi_kanban` — le ticket paraît au tableau (#833) |
+OPTIONS_TICKET = ("epingle", "urgente", "confidentiel", "suivi_kanban")
 
 #: Les options qui appartiennent au CONSEIL, pas à l'auteur.
 #:
@@ -380,7 +381,11 @@ OPTIONS_TICKET = ("epingle", "urgente", "confidentiel")
 #: Le risque d'abus est réel mais il n'est pas NOUVEAU : la catégorie
 #: « Urgence » était cochable par n'importe qui depuis toujours. On ne fait que
 #: rendre ce qui existait.
-OPTIONS_RESERVEES_AU_CS = ("epingle", "confidentiel")
+#: 🔴 `suivi_kanban` y entre (08/09/2026) : le tableau ordonne le TRAVAIL du
+#: conseil, comme l'épinglage ordonne sa liste. Un résident décrit sa situation
+#: — c'est le sens d'`urgente` —, il n'inscrit pas une carte au tableau de suivi
+#: de quelqu'un d'autre.
+OPTIONS_RESERVEES_AU_CS = ("epingle", "confidentiel", "suivi_kanban")
 
 
 def appliquer_options(ticket: Ticket, body, *, est_cs: bool) -> list[str]:
@@ -426,4 +431,5 @@ def options_du_ticket(ticket: Ticket) -> dict[str, bool]:
         "epingle": bool(ticket.epingle),
         "urgente": str(ticket.priorite) == "haute",
         "confidentiel": bool(ticket.confidentiel),
+        "suivi_kanban": bool(ticket.suivi_kanban),
     }

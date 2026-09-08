@@ -162,3 +162,49 @@ export function colonneDeLEvenement(ev: any): string {
 		return 'termine';
 	return ev.statut_kanban;
 }
+
+/*  ══════════════════════════════════════════════════════════════════════════
+    LES TICKETS AU KANBAN (#833, 08/09/2026)
+
+    Les tickets « Étude & travaux » décrivent un chantier suivi par le conseil —
+    une étude d'étanchéité, un devis, des travaux. Ils vivaient dans la liste des
+    tickets pendant que le kanban ne connaissait que les ÉVÉNEMENTS : deux
+    endroits pour suivre la même chose.
+
+    🔴 **Le kanban LIT les tickets ; il n'en crée pas de copie.** Arbitrage du
+    08/09/2026, contre « un événement créé pour chaque ticket » — deux objets
+    décrivant la même affaire divergent au premier geste, et il faudrait décider
+    lequel fait foi. C'est déjà la règle des événements, écrite plus haut :
+    *« aucun second champ d'état n'a été créé »*.
+
+    Le statut du ticket EST donc sa colonne.
+
+    ⚠️ **Copie assumée du serveur** (`app/utils/kanban_tickets.py`) : les
+    contextes de build sont `./api` et `./front`, le partage d'un fichier est
+    impossible. `api/tests/test_kanban_tickets.py` échoue si les deux dérivent —
+    même dispositif que `KANBAN_LABELS`.
+    ══════════════════════════════════════════════════════════════════════════ */
+
+/** Statut d'un ticket → colonne du kanban. */
+export const COLONNE_PAR_STATUT_TICKET: Record<string, string> = {
+	ouvert: 'cs',
+	en_cours: 'syndic',
+	résolu: 'termine',
+	annulé: 'annule',
+};
+
+/**
+ * La colonne d'un ticket, ou `null` si son statut n'en désigne aucune.
+ *
+ * ⚠️ `null` plutôt qu'un repli sur `cs` : un statut inconnu doit SORTIR le
+ * ticket du tableau, pas l'y ranger arbitrairement. Une carte posée dans la
+ * mauvaise colonne se lit comme une information, et personne ne la remet en
+ * cause.
+ *
+ * ⚠️ La colonne `fournisseur` est inatteignable depuis un ticket, et c'est un
+ * constat : aucun statut de ticket ne dit « chez le prestataire ».
+ */
+export function colonneDuTicket(statut: string | null | undefined): string | null {
+	if (!statut) return null;
+	return COLONNE_PAR_STATUT_TICKET[statut] ?? null;
+}
