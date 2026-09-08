@@ -77,6 +77,21 @@ def test_le_motif_est_LISIBLE_et_pas_un_booleen():
     assert ".docx" in motif
 
 
+#: Les deux façons ADMISES de vérifier un fichier téléversé.
+#:
+#: 🔴 La seconde est née le 08/09/2026 (#825) : le geste complet — lire seize
+#: octets, rembobiner, vérifier, journaliser, refuser, nommer, copier — était
+#: recopié dans TROIS routeurs au caractère près. La règle était factorisée, son
+#: emploi non, et c'est l'emploi qui contient les pièges : sans `seek(0)` le
+#: fichier écrit perd sa tête, sans le `raise` la vérification ne bloque rien.
+#:
+#: ⚠️ Ce test a échoué au moment de la factorisation, et il avait raison de le
+#: faire : il cherchait `signature_incoherente` en direct, et ne la trouvait plus.
+#: Un contrôle qui suit le code sans qu'on le relise cesse de mesurer ce qu'il
+#: croit mesurer — celui-ci a exigé qu'on décide, et voilà la décision.
+_APPELS_ADMIS = ("signature_incoherente", "enregistrer_televersement")
+
+
 def test_les_QUATRE_points_de_televersement_appellent_la_regle():
     """🔴 La portée fait partie du contrôle.
 
@@ -86,12 +101,68 @@ def test_les_QUATRE_points_de_televersement_appellent_la_regle():
     manquants = [
         nom
         for nom in _POINTS
-        if "signature_incoherente" not in (_ROUTERS / nom).read_text(encoding="utf-8")
+        if not any(a in (_ROUTERS / nom).read_text(encoding="utf-8") for a in _APPELS_ADMIS)
     ]
     assert not manquants, (
-        "ces points de téléversement n'appellent pas `signature_incoherente` : "
-        f"{manquants}. Un fichier déguisé y passe encore."
+        "ces points de téléversement ne vérifient pas la signature du fichier : "
+        f"{manquants}. Un fichier déguisé y passe encore. "
+        "Employer `enregistrer_televersement` (valide ET écrit), ou "
+        "`signature_incoherente` si l'écriture est particulière."
     )
+
+
+def test_le_geste_factorise_REMBOBINE_le_flux():
+    """🔴 Sans `seek(0)`, le fichier écrit perd ses seize premiers octets.
+
+    Il n'est pas rejeté : il est **corrompu**, silencieusement, et personne ne
+    s'en aperçoit avant de l'ouvrir. C'est le piège que la factorisation retire
+    des trois routeurs, et il mérite son propre test — le reste du geste échoue
+    bruyamment, celui-ci non.
+    """
+    import io as _io
+    from types import SimpleNamespace
+
+    from app.utils.fichiers import enregistrer_televersement
+
+    from app.utils.fichiers import REPERTOIRE_PRIVE
+
+    #  ⚠️ Le répertoire est créé PAR LE TEST, pas par la fonction : en
+    #  production il existe (volume Docker), et le créer à chaque écriture
+    #  masquerait un montage manquant — une panne d'infrastructure deviendrait
+    #  un fichier écrit dans le vide du conteneur, perdu au redémarrage.
+    pathlib.Path(REPERTOIRE_PRIVE).mkdir(parents=True, exist_ok=True)
+
+    contenu = b"%PDF-1.4 contenu de test"
+    faux = SimpleNamespace(file=_io.BytesIO(contenu))
+    chemin = enregistrer_televersement(faux, "rapport.pdf")
+    try:
+        assert pathlib.Path(chemin).read_bytes() == contenu, (
+            "le fichier écrit ne correspond pas à ce qui a été téléversé : "
+            "le flux n'a pas été rembobiné après la lecture de la signature."
+        )
+    finally:
+        pathlib.Path(chemin).unlink(missing_ok=True)
+
+
+def test_le_geste_factorise_REFUSE_un_fichier_deguise():
+    """Le pendant : un exécutable renommé en `.pdf` doit lever une 400.
+
+    ⚠️ Vérifié sur le geste COMPLET, pas seulement sur la règle : c'est
+    l'oubli du `raise` qui transformerait le contrôle en simple journal.
+    """
+    import io as _io
+    from types import SimpleNamespace
+
+    import pytest as _pytest
+    from fastapi import HTTPException
+
+    from app.utils.fichiers import enregistrer_televersement
+
+    faux = SimpleNamespace(file=_io.BytesIO(b"MZ" + bytes([0x90, 0x00]) + b" un executable"))
+    with _pytest.raises(HTTPException) as capture:
+        enregistrer_televersement(faux, "innocent.pdf")
+    assert capture.value.status_code == 400
+    assert ".pdf" in str(capture.value.detail)
 
 
 def test_aucun_nouveau_point_de_televersement_hors_du_relevé():

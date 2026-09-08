@@ -2,7 +2,6 @@
 import json
 import logging
 import os
-import shutil
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
@@ -17,7 +16,7 @@ from app.models.core import (
     ProfilAccesDocument, Utilisateur, RoleUtilisateur
 )
 from app.schemas import DocumentRead
-from app.utils.fichiers import signature_incoherente, REPERTOIRE_PRIVE, extension_assainie, nom_stocke
+from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
 # Toute règle de visibilité — documents compris — vient du module central.
 from app.utils.visibility import document_visible
 
@@ -275,23 +274,11 @@ async def upload_document(
     # peut donc être conservée telle quelle.
     raw_name = file.filename or "document"
     #  Les 16 premiers octets suffisent à toutes les signatures connues ;
-    #  `seek(0)` remet le flux à zéro pour la copie qui suit.
-    _debut = file.file.read(16)
-    file.file.seek(0)
-    _extension = extension_assainie(raw_name)
-    #  🔴 LE CONTENU DOIT CORRESPONDRE À CE QU'IL PRÉTEND ÊTRE (#773).
-    #  `content_type` vient du client : seule la signature du fichier
-    #  tranche. La règle vit dans `utils/fichiers` et n'est écrite qu'une
-    #  fois — les quatre points de téléversement l'appellent.
-    _motif = signature_incoherente(_debut, _extension)
-    if _motif:
-        logger.warning(
-            "Téléversement refusé (utilisateur %s) : %s", getattr(user, "id", "?"), _motif
-        )
-        raise HTTPException(400, f"Fichier refusé : {_motif}.")
-    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, _extension))
-    with open(dest, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    #  🔴 Validation ET écriture en un seul geste (#825) : lire seize octets,
+    #  rembobiner, vérifier la signature, journaliser, refuser, nommer, copier.
+    #  Ces neuf lignes étaient recopiées dans trois routeurs — une copie qui
+    #  oublie le `seek(0)` écrit un fichier tronqué sans que rien ne le dise.
+    dest = enregistrer_televersement(file, raw_name, user)
 
     size = os.path.getsize(dest)
 
