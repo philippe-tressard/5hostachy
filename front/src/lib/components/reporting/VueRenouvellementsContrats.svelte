@@ -18,7 +18,7 @@
 	import { equipLabel } from '$lib/prestataires';
 	import { relire } from '$lib/utils';
 	import { fmtDate } from '$lib/date';
-	import { starsDisplay } from '$lib/utils';
+	import NoteEtoiles from '$lib/components/NoteEtoiles.svelte';
 	import {
 		MOIS_LABELS,
 		PREAVIS_MOIS,
@@ -106,16 +106,7 @@
 							<span class="text-muted-sm">{c.prestataireNom}</span>
 							<span class="text-muted-sm">· {equipLabel(c.type_equipement)}</span>
 							{#if c.numero_contrat}<span class="text-muted-sm">· N° {c.numero_contrat}</span>{/if}
-							{#if c.noteMoy != null}
-								<span
-									class="frise-stars"
-									class:frise-stars-bad={c.noteMoy < 3}
-									class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4}
-									class:frise-stars-good={c.noteMoy >= 4}
-									title="{c.noteMoy}/5 ({c.nbNotations} avis)"
-									>{starsDisplay(c.noteMoy)} {c.noteMoy}</span
-								>
-							{/if}
+							<NoteEtoiles note={c.noteMoy} nbAvis={c.nbNotations} />
 						</div>
 						<div class="frise-row-badges">
 							{#if c.urgence === 'preavis'}<span class="badge badge-orange">Préavis en cours</span>
@@ -205,13 +196,7 @@
 							>
 						</div>
 						<div class="frise-compact-meta">
-							{#if c.noteMoy != null}<span
-									class="frise-stars"
-									class:frise-stars-bad={c.noteMoy < 3}
-									class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4}
-									class:frise-stars-good={c.noteMoy >= 4}
-									>{starsDisplay(c.noteMoy)} {c.noteMoy}</span
-								>{/if}
+							<NoteEtoiles note={c.noteMoy} />
 							<span>Fin : {c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A'}</span>
 							<span>Préavis : {c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A'}</span>
 							{#if c.reconduit}<span class="badge badge-purple">♻ Reconduit</span>{/if}
@@ -239,13 +224,7 @@
 							>
 						</div>
 						<div class="frise-compact-meta">
-							{#if c.noteMoy != null}<span
-									class="frise-stars"
-									class:frise-stars-bad={c.noteMoy < 3}
-									class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4}
-									class:frise-stars-good={c.noteMoy >= 4}
-									>{starsDisplay(c.noteMoy)} {c.noteMoy}</span
-								>{/if}
+							<NoteEtoiles note={c.noteMoy} />
 							<span>Début : {c.date_debut ? fmtDate(c.date_debut) : 'N/A'}</span>
 							<span class="badge badge-gray">Durée non renseignée</span>
 						</div>
@@ -350,21 +329,6 @@
 		flex-wrap: wrap;
 	}
 
-	/* Stars rating display */
-	.frise-stars {
-		font-size: 0.78rem;
-		white-space: nowrap;
-		letter-spacing: -0.02em;
-	}
-	.frise-stars-bad {
-		color: #dc2626;
-	}
-	.frise-stars-ok {
-		color: #f59e0b;
-	}
-	.frise-stars-good {
-		color: #16a34a;
-	}
 	.frise-preavis-zone {
 		position: absolute;
 		top: 2px;
