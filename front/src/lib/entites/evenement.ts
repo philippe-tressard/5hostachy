@@ -33,6 +33,7 @@
  */
 
 import type { EntiteDeclaree } from './types';
+import { DIFFUSION_NE_SE_LIT_PAS } from './types';
 
 export const EVENEMENT: EntiteDeclaree = {
 	id: 'evenement',
@@ -144,10 +145,7 @@ export const EVENEMENT: EntiteDeclaree = {
 				'CanauxNotification — WhatsApp, syndic, conseil syndical — et l’affichage au fil ' +
 				'du tableau de bord (affichable, épinglé)',
 			absente: {
-				affichage: {
-					motif: 'geste',
-					explication: "On n'affiche pas un envoi : la diffusion a eu lieu, elle ne se lit pas.",
-				},
+				affichage: DIFFUSION_NE_SE_LIT_PAS,
 			},
 		},
 	],

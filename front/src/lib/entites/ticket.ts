@@ -22,6 +22,7 @@
  */
 
 import type { EntiteDeclaree } from './types';
+import { DIFFUSION_NE_SE_LIT_PAS } from './types';
 
 /**
  * ⚠️ **Plus aucun motif `api` ici, et c'est un événement.** Deux divergences en
@@ -162,10 +163,7 @@ export const TICKET: EntiteDeclaree = {
 			id: 'diffusion',
 			objet: 'CanauxNotification — WhatsApp, syndic, conseil syndical',
 			absente: {
-				affichage: {
-					motif: 'geste',
-					explication: "On n'affiche pas un envoi : la diffusion a eu lieu, elle ne se lit pas.",
-				},
+				affichage: DIFFUSION_NE_SE_LIT_PAS,
 			},
 		},
 	],

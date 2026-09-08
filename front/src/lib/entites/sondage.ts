@@ -27,6 +27,7 @@
  */
 
 import type { EntiteDeclaree } from './types';
+import { DIFFUSION_NE_SE_LIT_PAS } from './types';
 
 export const SONDAGE: EntiteDeclaree = {
 	id: 'sondage',
@@ -183,10 +184,7 @@ export const SONDAGE: EntiteDeclaree = {
 					explication:
 						'La diffusion a déjà eu lieu à la création. Corriger un libellé ne la ' + 'rejoue pas.',
 				},
-				affichage: {
-					motif: 'geste',
-					explication: "On n'affiche pas un envoi : la diffusion a eu lieu, elle ne se lit pas.",
-				},
+				affichage: DIFFUSION_NE_SE_LIT_PAS,
 			},
 		},
 	],
