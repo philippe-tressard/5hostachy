@@ -18,22 +18,34 @@ gros, on découpe **quand on y touche**.
 | `imports_vigik` | idem pour les badges Vigik | 276 |
 | `commun` | la normalisation des noms, employée par les DEUX imports | 50 |
 
-## ⚠️ Ce qui n'a PAS été fusionné, et pourquoi
+## 🔴 Ce qu'on a cru ne PAS pouvoir fusionner — et qui a fini par diverger
 
-Les deux modules d'import se ressemblent beaucoup. Ils ne sont pas fusionnés :
-les fichiers sources n'ont ni les mêmes colonnes ni les mêmes règles
-d'appariement — le vigik porte un code, la télécommande un numéro de série et un
-drapeau « chez le locataire ». Les fondre demanderait un paramétrage qui coûterait
-plus cher que les deux fichiers.
+Cette note affirmait, du 06/09 au 08/09/2026, que fondre les deux modules
+d'import « demanderait un paramétrage qui coûterait plus cher que les deux
+fichiers », au nom de `standards/02` §4 : *deux morceaux qui se ressemblent par
+hasard*.
 
-🔴 Ce qu'ils partagent **vraiment**, en revanche, est dans `commun` :
-`_normaliser`, qui rapproche un nom du fichier Excel d'un nom en base. Deux copies
-auraient divergé sur un accent, et le même résident aurait été reconnu d'un côté
-et pas de l'autre.
+**C'était faux, et un défaut en production l'a établi** (#847). Deux morceaux qui
+se ressemblent par hasard ne divergent pas sur la même ligne : ils n'ont pas la
+même ligne. Ceux-ci en avaient une — le report de `chez_locataire` sur l'objet
+créé — et seul le côté télécommande la portait. Un badge Vigik remis à un
+locataire arrivait donc marqué « chez le propriétaire », et se reproposait au
+transfert vers le locataire suivant.
 
-⚠️ C'est la distinction de `standards/02` §4 : *deux morceaux qui se ressemblent
-par hasard* (les deux imports) contre *une même règle écrite deux fois* (la
-normalisation). Seule la seconde se factorise.
+Le cycle des deux imports vit désormais dans `socle_imports`, avec l'objet
+`TypeImportAcces` qui porte les **six** différences réelles. Ce qui reste
+séparé est ce qui diffère vraiment :
+
+| Ce qui reste séparé | Pourquoi |
+|---|---|
+| `utils/import_telecommandes.py`, `utils/import_vigiks.py` | ni les mêmes colonnes ni les mêmes règles de lecture de l'Excel |
+| `_etape_lot_par_adresse` (vigik) | le fichier Vigik porte bâtiment + appartement ; celui des télécommandes ne les a pas |
+| `refuser-locataire` (télécommande) | asymétrie **déclarée** dans `test_symetrie_imports_acces.py` |
+
+⚠️ La leçon n'est pas « fusionner davantage ». Elle est que **le seul fichier
+qui parlait du sujet disait que le problème n'existait pas** — le même motif que
+les quatre copies des destinataires CS (`CLAUDE.md`), dont l'une affirmait être
+« le seul endroit où cette règle s'écrit ».
 
 ## Ordre de montage
 

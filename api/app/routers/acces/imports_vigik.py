@@ -1,38 +1,44 @@
 """L'import Excel des badges Vigik, et son appariement.
 
-Jumeau de `imports_telecommandes` — voir la note qui s'y trouve sur ce qui est
-partagé et ce qui ne l'est pas.
-"""
-from datetime import datetime
+Jumeau de `imports_telecommandes`. Le CYCLE des deux est écrit une seule fois
+dans `socle_imports` — voir son en-tête, et le défaut de possession qui a prouvé
+que ce n'étaient pas deux ressemblances de hasard (#847).
 
-from fastapi import (
-    APIRouter, Depends, File, HTTPException, Query, UploadFile,
-)
-from pydantic import BaseModel
-from sqlmodel import Session, select
+Ce qui reste ici et **nulle part ailleurs** : la résolution du lot par
+`batiment_raw` + `appartement_raw`. Le fichier Vigik porte ces deux colonnes, le
+fichier des télécommandes ne les a pas.
+"""
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from sqlmodel import Session
 
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
-from app.models.core import (
-    StatutAcces, StatutImport,
-    Utilisateur, Vigik, VigikImport,
-)
-from app.utils.auto_match_service import (
-    _user_keys, _matches_user, _create_user_vigiks, rattacher_lot_unique,
-)
+from app.models.core import Utilisateur, Vigik, VigikImport
+from app.utils.auto_match_service import _create_user_vigiks
 
 from .commun import (
-    _ignorer_import, _lister_imports, _remettre_en_attente_import, _stats_socle,
+    _ignorer_import,
+    _lister_imports,
+    _remettre_en_attente_import,
+    _stats_socle,
+)
+from . import socle_imports
+from .socle_imports import PatchImportBody, TypeImportAcces
+
+router = APIRouter()
+
+#: La chaîne « badge Vigik », décrite par ses seules différences.
+VIGIK = TypeImportAcces(
+    libelle="badge Vigik",
+    modele_import=VigikImport,
+    modele_objet=Vigik,
+    champ_reference="code",
+    champ_lien="vigik_id",
+    creer_liaisons=_create_user_vigiks,
 )
 
-router = APIRouter()
-
-
-
-
-router = APIRouter()
-
 # ── Import Excel vigiks ────────────────────────────────────────────────────
+
 
 @router.post("/admin/imports-vigik/upload", status_code=201)
 async def upload_import_vigik_excel(
@@ -44,8 +50,7 @@ async def upload_import_vigik_excel(
     """Upload un fichier Excel et importe les vigiks dans la table de staging."""
     from app.utils.import_vigiks import importer_depuis_bytes
     contenu = await file.read()
-    stats = importer_depuis_bytes(contenu, session=session, remplacer=remplacer)
-    return stats
+    return importer_depuis_bytes(contenu, session=session, remplacer=remplacer)
 
 
 @router.get("/admin/imports-vigik/stats")
@@ -70,137 +75,58 @@ def list_imports_vigik(
     return _lister_imports(VigikImport, statut, session)
 
 
+def _etape_lot_par_adresse(session: Session):
+    """Le lot déduit du bâtiment et de l'appartement écrits dans l'Excel.
+
+    🔴 **La seule chose que le Vigik fait et que la télécommande ne peut pas
+    faire.** C'est ce qui justifie le crochet `etape_supplementaire` du socle
+    plutôt qu'un `if type == "vigik"` en son sein : une différence réelle
+    s'exprime là où elle est vraie.
+
+    ⚠️ L'index est construit **une fois**, en dehors de la boucle, et c'est
+    pourquoi cette fonction rend une fermeture plutôt que d'être l'étape
+    elle-même : `_build_lot_index` lit TOUS les bâtiments et TOUS les lots. Le
+    rappeler par ligne d'import rendrait l'appariement quadratique — le code
+    d'origine le construisait déjà une fois, et une mise en commun n'a pas le
+    droit de coûter plus cher que ce qu'elle remplace.
+    """
+    from app.utils.import_vigiks import _build_lot_index, normaliser
+
+    index = _build_lot_index(session)
+
+    def etape(imp, _session: Session) -> bool:
+        if imp.lot_id or not imp.batiment_raw or not imp.appartement_raw:
+            return False
+        lot_id = index.get((normaliser(imp.batiment_raw), normaliser(imp.appartement_raw)))
+        if not lot_id:
+            return False
+        imp.lot_id = lot_id
+        return True
+
+    return etape
+
+
 @router.post("/admin/imports-vigik/auto-match")
 def auto_match_imports_vigik(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Tente de matcher automatiquement les imports vigik avec les utilisateurs
-    inscrits, en utilisant l'algorithme robuste (accents, tirets, noms composés,
-    bigrammes)."""
-    from app.utils.import_vigiks import _build_lot_index
-    imports = session.exec(
-        select(VigikImport).where(
-            VigikImport.statut.in_([
-                StatutImport.en_attente,
-                StatutImport.proprietaire_lie,
-            ])
-        )
-    ).all()
-    utilisateurs = session.exec(select(Utilisateur)).all()
-
-    # Pré-calculer les clés de matching pour chaque user
-    user_keys_map: dict[int, set[str]] = {}
-    for u in utilisateurs:
-        user_keys_map[u.id] = _user_keys(u.nom, u.prenom)
-
-    lot_index = _build_lot_index(session)
-
-    matched = 0
-    for imp in imports:
-        changed = False
-
-        # Match propriétaire
-        if not imp.user_proprietaire_id and imp.nom_proprietaire:
-            candidats = [
-                u for u in utilisateurs
-                if _matches_user(imp.nom_proprietaire, user_keys_map[u.id])
-            ]
-            if candidats:
-                imp.user_proprietaire_id = candidats[0].id
-                changed = True
-
-        # Match locataire
-        if imp.nom_locataire and not imp.user_locataire_id:
-            candidats = [
-                u for u in utilisateurs
-                if _matches_user(imp.nom_locataire, user_keys_map[u.id])
-            ]
-            if candidats:
-                imp.user_locataire_id = candidats[0].id
-                changed = True
-
-        # Résolution lot via batiment_raw + appartement_raw
-        if not imp.lot_id and imp.batiment_raw and imp.appartement_raw:
-            from app.utils.import_vigiks import normaliser as _norm_vigik
-            key = (_norm_vigik(imp.batiment_raw), _norm_vigik(imp.appartement_raw))
-            lot_id = lot_index.get(key)
-            if lot_id:
-                imp.lot_id = lot_id
-                changed = True
-
-        #  La règle du lot unique vit dans `rattacher_lot_unique` — elle était
-        #  écrite quatre fois, avec deux comportements différents.
-        if rattacher_lot_unique(imp, session):
-            changed = True
-
-        if changed:
-            if imp.user_proprietaire_id:
-                imp.statut = StatutImport.proprietaire_lie
-            session.add(imp)
-            matched += 1
-
-    session.commit()
-    return {"matches": matched, "total": len(imports)}
-
-
-class PatchImportVigikBody(BaseModel):
-    user_proprietaire_id: int | None = None
-    user_locataire_id: int | None = None
-    lot_id: int | None = None
-    chez_locataire: bool | None = None
-    refuse_par_locataire: bool | None = None
-    notes_admin: str | None = None
+    """Apparie les imports vigik en attente aux comptes inscrits."""
+    return socle_imports.auto_match(
+        VIGIK, session, etape_supplementaire=_etape_lot_par_adresse(session)
+    )
 
 
 @router.patch("/admin/imports-vigik/{import_id}")
 def patch_import_vigik(
     import_id: int,
-    body: PatchImportVigikBody,
+    body: PatchImportBody,
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Met à jour les liaisons d'un import vigik.
     Fonctionne même si l'import est déjà résolu (correction après coup)."""
-    imp = session.get(VigikImport, import_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
-
-    if body.user_proprietaire_id is not None:
-        imp.user_proprietaire_id = body.user_proprietaire_id or None
-    if body.user_locataire_id is not None:
-        imp.user_locataire_id = body.user_locataire_id or None
-    if body.lot_id is not None:
-        imp.lot_id = body.lot_id or None
-    if body.chez_locataire is not None:
-        imp.chez_locataire = body.chez_locataire
-    if body.refuse_par_locataire is not None:
-        imp.refuse_par_locataire = body.refuse_par_locataire
-        if body.refuse_par_locataire:
-            imp.chez_locataire = False
-    if body.notes_admin is not None:
-        imp.notes_admin = body.notes_admin
-
-    # Si déjà résolu, mettre à jour le Vigik lié directement
-    if imp.statut == StatutImport.resolu and imp.vigik_id:
-        vigik = session.get(Vigik, imp.vigik_id)
-        if vigik:
-            new_user_id = (
-                imp.user_locataire_id
-                if (imp.chez_locataire and imp.user_locataire_id)
-                else imp.user_proprietaire_id
-            )
-            if new_user_id:
-                vigik.user_id = new_user_id
-                vigik.lot_id = imp.lot_id or vigik.lot_id
-                session.add(vigik)
-    else:
-        imp.statut = StatutImport.proprietaire_lie if imp.user_proprietaire_id else StatutImport.en_attente
-
-    session.add(imp)
-    session.commit()
-    session.refresh(imp)
-    return imp
+    return socle_imports.patch(VIGIK, import_id, body, session)
 
 
 @router.post("/admin/imports-vigik/{import_id}/resoudre")
@@ -211,43 +137,7 @@ def resoudre_import_vigik(
 ):
     """Résout un import vigik : crée le Vigik réel et lie l'utilisateur.
     Les copropriétaires du même lot sont automatiquement associés via UserVigik."""
-    imp = session.get(VigikImport, import_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
-    if imp.statut == StatutImport.resolu:
-        raise HTTPException(400, "Import déjà résolu")
-    if imp.statut == StatutImport.ignore:
-        raise HTTPException(400, "Cet import est ignoré")
-    if not imp.user_proprietaire_id:
-        raise HTTPException(422, "Le propriétaire doit être lié avant de résoudre")
-    if not imp.code:
-        raise HTTPException(422, "Cet import n'a pas de code vigik")
-
-    user_id = (
-        imp.user_locataire_id
-        if (imp.chez_locataire and imp.user_locataire_id)
-        else imp.user_proprietaire_id
-    )
-
-    vigik = Vigik(
-        code=imp.code,
-        lot_id=imp.lot_id or None,
-        user_id=user_id,
-        statut=StatutAcces.actif,
-    )
-    session.add(vigik)
-    session.flush()
-
-    # Associer tous les copropriétaires du lot via UserVigik
-    _create_user_vigiks(vigik, session)
-
-    imp.statut = StatutImport.resolu
-    imp.vigik_id = vigik.id
-    imp.resolu_le = datetime.utcnow()
-    session.add(imp)
-    session.commit()
-    session.refresh(vigik)
-    return {"vigik": vigik, "import_id": imp.id}
+    return socle_imports.resoudre(VIGIK, import_id, session)
 
 
 @router.post("/admin/imports-vigik/{import_id}/remettre-en-attente")
