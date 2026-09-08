@@ -54,6 +54,9 @@ EXPECTED_VARS: dict[str, set[str]] = {
         "fichiers", "date_commentaire", "historique", "auteur",
         "commentaire_perimetre",
     },
+    #  `urgent` conditionne un liseré rouge et la mention URGENT : c'est le
+    #  ticket qui le porte, pas le destinataire.
+    "ticket_nouveau_cs": {"ticket", "auteur", "urgent"},
     "ticket_statut_change": {"destinataire", "ticket"},
     "ticket_nouveau_message": {"ticket", "auteur_action", "message"},
     "reponse_communaute": {"reponse"},

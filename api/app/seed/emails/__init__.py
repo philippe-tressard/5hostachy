@@ -60,6 +60,11 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
     "verification_email": "action_requise",
     "compte_en_attente": "action_requise",
     "ticket_bug_admin": "action_requise",
+    #  Le conseil doit TRAITER le ticket, pas répondre au courriel : il a un
+    #  compte, et le fil vit sur le site. C'est ce qui le distingue de
+    #  `ticket_syndic` (« réponse attendue »), adressé à quelqu'un qui n'en a
+    #  pas forcément — et l'intention commande l'adresse d'expédition.
+    "ticket_nouveau_cs": "action_requise",
     "vigik_commande_recue": "action_requise",
     "annonce_hall": "action_requise",
     "nouvel_arrivant_bal": "action_requise",
