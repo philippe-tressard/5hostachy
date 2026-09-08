@@ -57,6 +57,13 @@ EXCEPTIONS = {
         "DESTINATAIRES d'une notification, pas un accès : choisit les membres du "
         "CS du bâtiment de l'arrivant. Relève de `utils/destinataires`, et son "
         "rapprochement est un sujet à part.",
+    "utils/courriel_arrivee.py":
+        "DESTINATAIRES d'un courriel, pas un accès : même raison que "
+        "`routers/admin/arrivants.py`, dont ce module a été extrait le "
+        "08/09/2026 (#849) quand le routeur a franchi les 500 lignes. "
+        "⚠️ L'exception a voyagé AVEC le code — une exception qui reste sur le "
+        "fichier d'origine se transforme en tolérance sur un fichier qui ne fait "
+        "plus rien, et en refus sur celui qui fait le travail.",
     "utils/annonce_arrivee.py":
         "RECOPIE un attribut sur l'objet créé : l'annonce de bienvenue porte le "
         "bâtiment de l'arrivant, qui EST son périmètre de publication. Ne lit "

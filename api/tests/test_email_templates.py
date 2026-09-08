@@ -92,7 +92,16 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "acces_apparies_auto": {"utilisateur", "resultat"},
     # Les trois modèles destinés à des destinataires EXTERNES (syndic, tiers),
     # longtemps déclarés en migration seulement et donc sans contrat ici.
-    "nouvel_arrivant_bal": {"nom_complet", "batiment", "ancien_resident"},
+    #  Enrichi le 08/09/2026 : le MÊME modèle sert le syndic, l'arrivant et le
+    #  conseil de son bâtiment. `role_destinataire` choisit l'objet, la formule
+    #  d'appel et la demande ; `lien_consignes` arrive RELATIF, préfixé de
+    #  `{{ app.url }}` par le corps — sa source est `arrivants.FICHE_CONSIGNES`.
+    #  Un second modèle aurait été la copie de celui-ci : « standardiser et non
+    #  dupliquer » (consigne du 08/09/2026).
+    "nouvel_arrivant_bal": {
+        "nom_complet", "batiment", "ancien_resident",
+        "role_destinataire", "lien_consignes", "destinataire",
+    },
     "publication_externe": {
         "date_publication", "evolutions", "commentaire", "is_commentaire",
         "fichiers", "publication", "date_commentaire", "auteur",
