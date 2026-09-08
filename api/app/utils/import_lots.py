@@ -41,6 +41,7 @@ from app.utils.import_xlsx import (  # noqa: F401  (ré-export de `normaliser`)
     importer_bytes,
     importer_fichier,
     normaliser,
+    purger_staging,
 )
 
 from app.models.core import LotImport, StatutLotImport
@@ -80,6 +81,28 @@ def _resolve_batiment_id(bat_raw) -> Optional[int]:
 
 # -- Import en base (staging) --------------------------------------------------
 
+#:  Ce que « Remplacer » efface — et, par omission, ce qu'il PRÉSERVE (#824).
+#:
+#:  🔴 `ignore` ne figure PAS ici, et c'est le correctif : ce statut veut dire
+#:  « l'admin a choisi d'écarter cette ligne ». L'ancien prédicat (`!= resolu`)
+#:  l'emportait, si bien que réimporter le même fichier ressuscitait en silence
+#:  les lignes délibérément mises de côté. Une décision d'administration ne se
+#:  réécrit pas depuis un classeur.
+#:
+#:  ⚠️ DIVERGENCE ASSUMÉE avec les deux autres imports, qui ne purgent que
+#:  `en_attente` : les lots effacent aussi les rapprochements à demi faits
+#:  (`utilisateur_lie`, `lot_lie`). Ils portent l'arborescence de la copropriété
+#:  — un classeur corrigé doit pouvoir la reposer entièrement, sinon un bâtiment
+#:  mal saisi resterait lié à jamais. Les deux autres rapprochent des OBJETS
+#:  déjà remis à des personnes : un demi-rapprochement y vaut plus qu'un
+#:  réimport propre.
+_PURGES_PAR_REMPLACER = (
+    StatutLotImport.en_attente,
+    StatutLotImport.utilisateur_lie,
+    StatutLotImport.lot_lie,
+)
+
+
 def importer_depuis_bytes(
     contenu: bytes,
     session: Session,
@@ -112,14 +135,7 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
     stats: dict = {"importes": 0, "ignores": 0, "doublons": 0, "erreurs": []}
 
     if remplacer:
-        existants = session.exec(
-            select(LotImport).where(
-                LotImport.statut != StatutLotImport.resolu
-            )
-        ).all()
-        for e in existants:
-            session.delete(e)
-        session.flush()
+        purger_staging(session, LotImport, _PURGES_PAR_REMPLACER)
 
     # ── Passe 1 : mapping propriétaire → bâtiment (lots résidentiels) ──────
     owner_bat: dict[str, int] = {}  # no_coproprietaire → batiment_id

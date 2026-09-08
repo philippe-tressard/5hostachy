@@ -22,7 +22,7 @@ import unicodedata
 from pathlib import Path
 from typing import Callable, Optional
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.database import engine
 
@@ -102,3 +102,43 @@ def importer_fichier(chemin: str, remplacer: bool, traiter: Traitement) -> dict:
         stats = traiter(rows, session, remplacer)
         session.commit()
     return stats
+
+
+def purger_staging(session: Session, modele, statuts) -> int:
+    """Vide le staging avant un réimport « Remplacer » — et rend ce qu'on efface.
+
+    🔴 Ce geste était recopié **trois fois** (lots, télécommandes, vigiks), et les
+    trois copies ne purgeaient **pas la même chose** sans qu'un seul commentaire
+    ne dise si la divergence était voulue (#824) :
+
+    ==============  ==========================  ====================================
+    Import          Prédicat d'origine          Ce qui disparaissait
+    ==============  ==========================  ====================================
+    télécommandes   ``statut == en_attente``    le non-traité
+    vigiks          ``statut == en_attente``    le non-traité
+    **lots**        ``statut != resolu``        le non-traité **et le mis de côté**
+    ==============  ==========================  ====================================
+
+    La troisième ligne est un défaut. ``ignore`` veut dire *« l'admin a choisi
+    d'écarter cette ligne »* : réimporter le même fichier avec « Remplacer » la
+    **ressuscitait**, sans rien dire — la forme exacte du seed des périmètres qui
+    annulait les suppressions de l'administration (13/08/2026). Une décision
+    d'administration n'est pas une donnée d'import, et ne se réécrit pas depuis
+    un classeur.
+
+    ⚠️ Le paramètre nomme ce qu'on **efface**, jamais ce qu'on garde. Un statut
+    ajouté à l'énumération est alors préservé par défaut : l'oubli va vers la
+    conservation, pas vers la perte. C'est le seul sens dans lequel un oubli est
+    rattrapable.
+
+    Chaque appelant déclare ses statuts **avec son motif** — la divergence qui
+    reste après #824 est celle des lots, qui purgent aussi les rapprochements à
+    demi faits, et elle est écrite là où elle se décide.
+    """
+    condamnes = session.exec(select(modele).where(modele.statut.in_(list(statuts)))).all()
+    for ligne in condamnes:
+        session.delete(ligne)
+    #  `flush` AVANT les insertions : sans lui, SQLAlchemy peut ordonner les
+    #  suppressions après elles et effacer ce qu'on vient d'écrire.
+    session.flush()
+    return len(condamnes)

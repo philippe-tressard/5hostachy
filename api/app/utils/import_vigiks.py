@@ -30,6 +30,7 @@ from app.utils.import_xlsx import (  # noqa: F401  (ré-export de `normaliser`)
     importer_bytes,
     importer_fichier,
     normaliser,
+    purger_staging,
 )
 
 from app.models.core import Batiment, Lot, StatutImport, VigikImport
@@ -43,6 +44,12 @@ _NOMS_IGNORES = {
 }
 
 
+
+
+#:  Ce que « Remplacer » efface — et, par omission, ce qu'il PRÉSERVE (#824).
+#:  Seul le non-traité, comme pour les télécommandes : `proprietaire_lie` porte
+#:  un rapprochement à demi fait sur un code déjà confié.
+_PURGES_PAR_REMPLACER = (StatutImport.en_attente,)
 
 
 def importer_depuis_bytes(
@@ -68,14 +75,7 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
     stats: dict = {"importes": 0, "ignores": 0, "doublons": 0, "erreurs": []}
 
     if remplacer:
-        existants = session.exec(
-            select(VigikImport).where(
-                VigikImport.statut == StatutImport.en_attente
-            )
-        ).all()
-        for e in existants:
-            session.delete(e)
-        session.flush()
+        purger_staging(session, VigikImport, _PURGES_PAR_REMPLACER)
 
     # Pré-charger l'index lot (batiment_numero, lot_numero) → lot_id
     lot_index = _build_lot_index(session)
