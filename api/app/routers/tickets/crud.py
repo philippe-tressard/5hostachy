@@ -38,9 +38,9 @@ from .commun import (
     trier_par_activite,
     pieces_du_ticket,
 )
+from .arrivee import _notifier_cs_creation, adresses_deja_servies
 from .courriels import (
     _alerter_bug,
-    _notifier_cs_creation,
     _partager_sur_le_groupe,
     envoyer_email_externe,
     envoyer_email_syndic_cs,
@@ -151,9 +151,21 @@ def create_ticket(
     appliquer_options(ticket, body, est_cs=est_cs)
 
     #  ⚠️ APRÈS `appliquer_options` : c'est elle qui pose `priorite`.
+    #
+    #  🔴 `deja_servies` — consigne du 08/09/2026 : *« éviter le doublon quand la
+    #  notification comprend les destinataires qui sont inclus dans la diffusion
+    #  du ticket »*. Trois courriels peuvent partir pour ce même ticket, et un
+    #  conseiller du bâtiment visé était dans deux listes.
+    #
+    #  ⚠️ L'ORDRE compte : les adresses sont calculées AVANT la notification,
+    #  parce que c'est elle qui cède. Elle ne porte que le titre et l'auteur,
+    #  quand les deux autres portent les pièces jointes, l'adresse de réponse ou
+    #  le nom du bogue. Le destinataire reçoit donc PLUS, pas moins — c'est ce
+    #  qui rend la déduplication acceptable (`courriels.adresses_deja_servies`).
     _notifier_cs_creation(
         session, ticket, urgence=ticket_urgent(ticket),
         auteur=user, background_tasks=background_tasks,
+        deja_servies=adresses_deja_servies(session, ticket, categorie=body.categorie),
     )
 
     if body.categorie == "bug":

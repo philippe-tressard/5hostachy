@@ -44,7 +44,6 @@
 	let emailEdit: any | null = null;
 	let emailSujet = '';
 	let emailCorpsHtml = '';
-	let emailCorpsTexte = '';
 	let emailActif = true;
 	let emailIntention = '';
 	let emailApercu = false;
@@ -128,7 +127,6 @@
 		emailEdit = tpl;
 		emailSujet = tpl.sujet ?? '';
 		emailCorpsHtml = tpl.corps_html ?? '';
-		emailCorpsTexte = tpl.corps_texte ?? '';
 		emailActif = tpl.actif ?? true;
 		//  `?? ''` et non `?? undefined` : `undefined` ne correspondrait à aucune
 		//  option du sélecteur, qui s’afficherait vide au lieu d’« Aucun bandeau ».
@@ -143,7 +141,6 @@
 			const updated = await adminApi.updateEmailTemplate(emailEdit.id, {
 				sujet: emailSujet,
 				corps_html: emailCorpsHtml,
-				corps_texte: emailCorpsTexte,
 				actif: emailActif,
 				intention: emailIntention,
 			});
@@ -293,14 +290,17 @@
 						style="font-family:monospace;resize:vertical"></textarea>
 				{/if}
 			</div>
-			<div class="field">
-				<label for="email-corps-texte">Corps texte (fallback)</label>
-				<textarea
-					id="email-corps-texte"
-					rows="4"
-					bind:value={emailCorpsTexte}
-					style="font-family:monospace;resize:vertical"></textarea>
-			</div>
+			<!--  🔴 « Corps texte (fallback) » a été RETIRÉ le 08/09/2026, sur
+			      arbitrage. Il était stocké, affiché, modifiable — et envoyé
+			      NULLE PART : aucun code ne lisait `corps_texte`, le gabarit
+			      produit toujours du HTML. On y rédigeait donc un texte que
+			      personne ne recevait, et celui de `nouvel_arrivant_bal`
+			      contredisait son propre HTML sans conséquence visible.
+
+			      La colonne reste en base — quatre migrations l'écrivent — mais
+			      l'écran ne la montre plus et le PATCH ne l'envoie plus : la
+			      laisser dans la charge utile l'aurait écrasée d'une chaîne
+			      vide au premier enregistrement. -->
 			<label class="case">
 				<input type="checkbox" bind:checked={emailActif} />
 				Actif
