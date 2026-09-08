@@ -103,6 +103,54 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	font-size: 0.75rem;
 }
 
+/*  ══════════════════════════════════════════════════════════════════════════
+    LA CIBLE TACTILE DES BOUTONS ICÔNE — 44 × 44 px au doigt
+
+    🔴 Relevé le 08/09/2026 : les cent dix boutons icône du site mesuraient
+    22 × 22 px (`font-size: .9rem` + `padding: .25rem`), ou 32 × 32 pour ceux de
+    la barre d'actions. Le socle exige 44 × 44 et en donne la raison :
+
+    > « Une icône de 16 px reste cliquable à la souris et **inatteignable au
+    >   pouce**. » — `standards/11` §10
+
+    Ce ne sont pas des boutons anodins : ✏️ et 🗑️ voisinent dans la même rangée.
+    Rater le premier de trois pixels ouvre une suppression.
+
+    ⚠️ **`pointer: coarse` et non un point de rupture de largeur**, et c'est le
+    cœur du correctif. La règle du socle parle du DOIGT, pas de la taille de
+    l'écran : une tablette large se pilote au doigt, un petit portable à la
+    souris. `pointer: coarse` désigne exactement l'appareil dont l'entrée
+    principale est un doigt — la souris ne voit rien changer, et la densité des
+    rangées d'actions au bureau est préservée.
+
+    ⚠️ **Sélecteur par PRÉFIXE de classe**, et non une liste des dix variantes :
+    `btn-icon-edit`, `-danger`, `-warn`, `-success`, `-move`, `-star`,
+    `-remove`, `-options`, `-save`… Une liste se périme au onzième, et le
+    onzième serait précisément celui qu'on oublie. Deux d'entre elles sont
+    d'ailleurs déclarées LOCALEMENT dans des composants — une énumération ici ne
+    pouvait pas les atteindre.
+
+    🔴 **44 `px`, et non `2.75rem`.** Ma première rédaction employait `rem`,
+    par réflexe d'unité relative — et le navigateur a rendu **33 px** : la
+    racine vaut 12 px sur l'émulation mobile, donc 2,75 rem n'y font pas 44.
+    Une cible tactile est une taille **physique**, celle d'un pouce ; elle n'a
+    aucune raison de suivre la typographie. C'est le test de navigateur qui
+    l'a dit, pas la relecture — la règle avait l'air juste.
+
+    ⚠️ `min-width` / `min-height` plutôt que `width` / `height` : la barre
+    d'actions fixe `width: 2rem` en dur, et `min-` la remonte sans qu'on ait à
+    surcharger sa règle ni à connaître sa spécificité.
+    ══════════════════════════════════════════════════════════════════════════ */
+@media (pointer: coarse) {
+	[class*='btn-icon'] {
+		min-width: 44px;
+		min-height: 44px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+}
+
 /* Boutons icône (modifier · supprimer · action) */
 .btn-icon,
 .btn-icon-edit,

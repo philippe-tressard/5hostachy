@@ -263,8 +263,25 @@ deux RPi — pattern inauguré par `boot-role-guard.sh --selftest` (15/07/2026),
 étendu à `health-watch.sh` et `check-reliability.sh` (30/07/2026).
 Lancer en local : `bash <script>.sh --selftest`.
 
+### Navigateur — job CI `e2e-frontend` (depuis le 08/09/2026)
+`front/e2e/` porte les tests Playwright — squelette, lien d'évitement, absence de
+défilement horizontal, cibles tactiles — sur les profils **bureau ET mobile**.
+
+🔴 **Ils existaient depuis le 06/09 et ne tournaient dans aucun job** : le dépôt
+contenait les tests, `npm run e2e` les passait sur le poste de qui y pensait, et
+les checks requis restaient verts si l'un d'eux cassait. C'est la même famille que
+#409, #410 et #411 — des contrôles qui existent et ne s'exécutent pas. Écrire un
+test et le **brancher** sont deux gestes, et le second ne manque à personne.
+
+⚠️ Ces tests s'arrêtent aux écrans **publics** : tout le reste est derrière une
+connexion. Ce qui doit être vérifié sur un écran authentifié se mesure autrement —
+voir `e2e/cible-tactile.spec.ts`, qui pose son propre témoin dans la page plutôt
+que de sauter faute d'en trouver un.
+
+Lancer en local : `cd front && npm run e2e`.
+
 ### Rejouer la CI en local — `bash scripts/poste/rejouer-ci.sh` (depuis le 13/08/2026)
-Les quatre jobs ci-dessus se rejouent en **une minute** sur le poste, sans rien
+Les **cinq** jobs ci-dessus se rejouent en une à deux minutes sur le poste, sans rien
 recopier : le script **extrait** les commandes de `.github/workflows/ci.yml`. Une
 liste tenue à la main divergerait au premier job ajouté — et c'est justement le job
 ajouté, ou celui qu'on ne pense pas à lancer, qui échoue (#319 : Ruff, le 12/08).
@@ -342,7 +359,7 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 > partagé, regarder `git worktree list` puis `git -C <autre> status` : rien ne
 > signale le travail **non committé** d'une session voisine (vécu le 02/08/2026).
 
-- `main` = production **réellement protégée depuis le 09/08/2026** : les 4 jobs de
+- `main` = production **réellement protégée depuis le 09/08/2026** : les 5 jobs de
   CI sont des *checks requis*, `enforce_admins` est actif, le push direct et le
   `--force` sont refusés. Toute modification passe par une PR depuis `dev`.
   ⚠️ Cette ligne affirmait « production protégé » alors que GitHub répondait
@@ -355,7 +372,7 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
   La contrepartie demandée n'est pas une validation *avant*, c'est un **compte rendu
   après** : à chaque MEP, **la version et les fonctionnalités apportées**.
   Le pré-check ne s'allège pas pour autant : c'est lui qui remplace la relecture.
-  `gh pr create` → attendre les **4 checks requis** → `gh pr merge --squash
+  `gh pr create` → attendre les **5 checks requis** → `gh pr merge --squash
   --delete-branch` → **réaligner `dev` sur `origin/main`** (la fusion est un squash
   et supprime la branche distante).
   ⚠️ `gh pr merge --delete-branch` supprime aussi la branche **locale** et bascule
