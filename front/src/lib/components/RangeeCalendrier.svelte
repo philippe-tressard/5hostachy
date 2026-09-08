@@ -225,7 +225,12 @@
 		justify-content: center;
 		min-width: 6.5rem;
 	}
-	@media (max-width: 760px) {
+	/*  🔴 767 et non 760 (#839, 08/09/2026). Sept pixels de trop, et une
+	    contradiction : entre 761 et 767, le menu et la mise en page globale
+	    étaient DÉJÀ en mobile (`normes.css`, `+layout.svelte`) pendant que
+	    cette rangée restait en bureau. Personne ne peut voir un écart de sept
+	    pixels ; il se corrige en comptant, pas en regardant. */
+	@media (max-width: 767px) {
 		.archive-row {
 			grid-template-columns: 1fr;
 			row-gap: 0.6rem;

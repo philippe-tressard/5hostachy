@@ -1379,6 +1379,17 @@ jobs:
         working-directory: front
         run: npm run lint:note-etoiles
 
+      # 🔴 DOUZE points de rupture pour six intentions, et aucune échelle
+      # déclarée (#839). Le cas net : `760px` était à SEPT pixels du `767px`
+      # que la feuille globale emploie — entre 761 et 767, le menu était déjà
+      # en mobile pendant que la rangée du calendrier restait en bureau.
+      #
+      # ⚠️ Un écart de sept pixels ne se VOIT pas : il se compte. C'est
+      # exactement ce qu'une machine fait mieux qu'un regard.
+      - name: Points de rupture issus de l'échelle déclarée
+        working-directory: front
+        run: npm run lint:points-rupture
+
       # 🔴 Le pied « Annuler / Enregistrer » était écrit DIX-NEUF fois, et les
       # copies avaient divergé sur quatre points — dont TROIS orthographes du
       # même événement d'annulation : `annule`, `annuler`, `cancel`.
