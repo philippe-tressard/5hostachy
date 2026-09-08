@@ -315,9 +315,12 @@ async def _envoyer_modele(
 
         cfg = connexion_smtp(
             smtp_cfg,
-            expediteur=adresse_expedition(
-                smtp_cfg, expediteur_du_modele(code, jeton_reponse=jeton_reponse)
-            ),
+            #  🔴 `intention_servie` : celle de la LIGNE, pas du code — les deux
+            #  sources et leur histoire sont dans `expediteur_du_modele`.
+            expediteur=adresse_expedition(smtp_cfg, expediteur_du_modele(
+                code, jeton_reponse=jeton_reponse,
+                intention_servie=template.intention,
+            )),
         )
         fm = FastMail(cfg)
         rendered_subject, full_html = composer_email(
