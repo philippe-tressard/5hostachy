@@ -18,22 +18,36 @@
 	//  (#810) : devant `class="tl-bar {cond ? 'x' : ''}"`, Svelte cesse de
 	//  déclarer les sélecteurs inutilisés pour tout le fichier — et celui-ci
 	//  porte deux cents lignes de style de graphe.
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, ApiError } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
 	import TopPages from '$lib/components/TopPages.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { fmtDatetimeShort as fmt } from '$lib/date';
 
 	let telemetryData: any = null;
 	let telemetryLoading = true;
+	/**  🔴 Non vide = on n'a PAS pu regarder (#816).
+	 *
+	 *   Le `catch` de cette fonction faisait `telemetryData = null` : une session
+	 *   expirée, un 500 ou une coupure réseau produisaient EXACTEMENT l'écran
+	 *   d'une résidence que personne ne consulte — « Les données apparaîtront
+	 *   après les premières visites ». C'est le `.catch(() => [])` de #519 mot
+	 *   pour mot, sur le seul écran qui sert à savoir si le site est lu. */
+	let telemetryErreur = '';
 	let tlScope: 'jour' | 'mois' | 'annee' = 'jour';
 
 	export async function loadTelemetry() {
 		telemetryLoading = true;
+		telemetryErreur = '';
 		try {
 			telemetryData = await adminApi.telemetryDashboard(tlScope);
-		} catch {
+		} catch (e: any) {
+			//  La donnée précédente est écartée : l'afficher sous un onglet dont
+			//  la portée vient de changer la ferait passer pour la nouvelle.
 			telemetryData = null;
+			telemetryErreur =
+				e instanceof ApiError ? e.message : 'Statistiques indisponibles pour le moment.';
 		} finally {
 			telemetryLoading = false;
 		}
@@ -68,14 +82,15 @@
 		>
 	</div>
 
-	{#if telemetryLoading}
-		<p class="muted">Chargement des statistiques...</p>
-	{:else if !telemetryData}
-		<div class="empty-state">
-			<h3>Aucune donnée de télémétrie</h3>
-			<p>Les données apparaîtront après les premières visites.</p>
-		</div>
-	{:else}
+	<EtatListe
+		chargement={telemetryLoading}
+		erreur={telemetryErreur}
+		vide={!telemetryData}
+		messageChargement="Chargement des statistiques…"
+		titreErreur="Impossible d’afficher les statistiques"
+		titreVide="Aucune donnée de télémétrie"
+		messageVide="Les données apparaîtront après les premières visites."
+	>
 		<!-- KPI universels -->
 		<div class="tl-kpi-row">
 			<div class="tl-kpi">
@@ -272,7 +287,7 @@
 				</table>
 			</div>
 		{/if}
-	{/if}
+	</EtatListe>
 </section>
 
 <style>

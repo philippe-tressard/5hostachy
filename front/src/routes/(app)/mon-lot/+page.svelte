@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
-	import Pastille from '$lib/components/Pastille.svelte';
+	import { lotTypeLabel } from '$lib/utils';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
 	import InventaireBail from '$lib/components/InventaireBail.svelte';
+	import ModaleAccesBail from '$lib/components/ModaleAccesBail.svelte';
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, bailleur as bailApi, ApiError, type ObjetRemis } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -75,22 +76,6 @@
 		objets: ObjetRemis[];
 	}
 
-	interface Acces {
-		id: number;
-		code: string;
-		type: 'vigik' | 'telecommande';
-		lot_id: number | null;
-		lot_type: 'appartement' | 'parking' | 'cave' | string | null;
-		lot_label: string | null;
-		statut: string;
-		chez_locataire: boolean;
-		bail_id: number | null;
-		eligible_transfert: boolean;
-		recommande: boolean;
-		motif_non_eligible: string | null;
-		cree_le: string;
-	}
-
 	// ── State (locataire bail) ────────────────────────────────────────────────
 	let monBailData: any = null;
 	$: isLocataire = $currentUser?.statut === 'locataire';
@@ -98,6 +83,8 @@
 	// ── State (lots) ──────────────────────────────────────────────────────────
 	let lots: LotDetail[] = [];
 	let loading = true;
+	/**  Non vide = on n'a PAS pu regarder. Distinct de « aucun lot associé ». */
+	let erreurLots = '';
 	let selectedLotId: number | null = null;
 
 	$: selectedLot = lots.find((l) => l.id === selectedLotId) ?? null;
@@ -148,11 +135,6 @@
 
 	// Gestion des accès (Vigik / TC) par bail
 	let bailAcces: Bail | null = null;
-	let accesListe: Acces[] = [];
-	let loadingAcces = false;
-	let selectionVigik = new Set<number>();
-	let selectionTc = new Set<number>();
-	let filtreLotsAcces = new Set<number>();
 
 	// ── Derived ────────────────────────────────────────────────────────────────
 	$: bauxActifs = baux.filter((b) => b.statut === 'actif' || b.statut === 'en_cours_sortie');
@@ -164,7 +146,11 @@
 			lots = await lotsApi.mesList();
 			if (lots.length > 0) selectedLotId = lots[0].id;
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Impossible de charger vos lots');
+			//  🔴 Sans cette variable, l'écran annonçait « Aucun lot associé » après
+			//  un échec de chargement (#816) — et la page explique alors, en trois
+			//  lignes, comment faire rattacher un lot qui EST peut-être déjà là.
+			erreurLots = e instanceof ApiError ? e.message : 'Impossible de charger vos lots';
+			toast('error', erreurLots);
 		} finally {
 			loading = false;
 		}
@@ -307,21 +293,13 @@
 	// ── Recherche locataire ────────────────────────────────────────────────────
 
 	// ── Gestion accès ─────────────────────────────────────────────────────────
-	async function ouvrirAccesBail(bail: Bail) {
+
+	//  🔴 L'ouverture ne fait plus QUE désigner le bail : le chargement des
+	//  accès, la sélection et les deux gestes sont partis dans
+	//  `ModaleAccesBail` (#779). La page n'en apprend rien — elle n'en avait
+	//  besoin de rien.
+	function ouvrirAccesBail(bail: Bail) {
 		bailAcces = bail;
-		accesListe = [];
-		selectionVigik = new Set();
-		selectionTc = new Set();
-		filtreLotsAcces = new Set();
-		loadingAcces = true;
-		try {
-			accesListe = await bailApi.accesBail(bail.id);
-			preselectionRecommandee();
-		} catch {
-			toast('error', 'Impossible de charger les accès');
-		} finally {
-			loadingAcces = false;
-		}
 	}
 
 	async function affecterAuto(bail: Bail) {
@@ -354,157 +332,6 @@
 		}
 	}
 
-	function isSelectable(acces: Acces): boolean {
-		if (!bailAcces) return false;
-		if (!acces.eligible_transfert) return false;
-		if (acces.chez_locataire && acces.bail_id !== bailAcces.id) return false;
-		return true;
-	}
-
-	function clearSelection() {
-		selectionVigik = new Set();
-		selectionTc = new Set();
-	}
-
-	function preselectionRecommandee() {
-		clearSelection();
-		for (const a of accesListe) {
-			if (!isSelectable(a) || !a.recommande) continue;
-			if (a.type === 'vigik') selectionVigik.add(a.id);
-			else selectionTc.add(a.id);
-		}
-		selectionVigik = new Set(selectionVigik);
-		selectionTc = new Set(selectionTc);
-	}
-
-	function toggleFiltreLot(lotId: number) {
-		if (filtreLotsAcces.has(lotId)) filtreLotsAcces.delete(lotId);
-		else filtreLotsAcces.add(lotId);
-		filtreLotsAcces = new Set(filtreLotsAcces);
-	}
-
-	async function transfererAcces() {
-		if (!bailAcces) return;
-		const tVigik = [...selectionVigik].filter((id) => {
-			const a = accesListe.find((x) => x.type === 'vigik' && x.id === id);
-			return a && !a.chez_locataire;
-		});
-		const tTc = [...selectionTc].filter((id) => {
-			const a = accesListe.find((x) => x.type === 'telecommande' && x.id === id);
-			return a && !a.chez_locataire;
-		});
-		if (tVigik.length === 0 && tTc.length === 0) {
-			toast('error', 'Sélectionnez au moins un accès à transférer');
-			return;
-		}
-		try {
-			const updated = await bailApi.transfererAcces(bailAcces.id, {
-				vigik_ids: tVigik,
-				tc_ids: tTc,
-			});
-			accesListe = accesListe.map((a) => {
-				const u = updated.find((x: Acces) => x.id === a.id && x.type === a.type);
-				return u ?? a;
-			});
-			selectionVigik = new Set();
-			selectionTc = new Set();
-			toast('success', 'Accès transférés au locataire');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du transfert');
-		}
-	}
-
-	async function recupererSelection() {
-		if (!bailAcces) return;
-		const rVigik = [...selectionVigik].filter((id) => {
-			const a = accesListe.find((x) => x.type === 'vigik' && x.id === id);
-			return a?.chez_locataire;
-		});
-		const rTc = [...selectionTc].filter((id) => {
-			const a = accesListe.find((x) => x.type === 'telecommande' && x.id === id);
-			return a?.chez_locataire;
-		});
-		if (rVigik.length === 0 && rTc.length === 0) {
-			toast('error', 'Sélectionnez au moins un accès à récupérer');
-			return;
-		}
-		try {
-			const updated = await bailApi.recupererAcces(bailAcces.id, {
-				vigik_ids: rVigik,
-				tc_ids: rTc,
-			});
-			accesListe = accesListe.map((a) => {
-				const u = updated.find((x: Acces) => x.id === a.id && x.type === a.type);
-				return u ?? a;
-			});
-			for (const id of rVigik) selectionVigik.delete(id);
-			for (const id of rTc) selectionTc.delete(id);
-			selectionVigik = new Set(selectionVigik);
-			selectionTc = new Set(selectionTc);
-			toast('success', 'Accès récupérés');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
-	}
-
-	async function recupererAcces() {
-		if (!bailAcces) return;
-		if (!confirm('Récupérer tous les accès confiés au locataire pour ce bail ?')) return;
-		try {
-			const updated = await bailApi.recupererAcces(bailAcces.id);
-			accesListe = accesListe.map((a) => {
-				const u = updated.find((x: Acces) => x.id === a.id && x.type === a.type);
-				return u ?? a;
-			});
-			selectionVigik = new Set();
-			selectionTc = new Set();
-			toast('success', 'Accès récupérés');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
-	}
-
-	function toggleAcces(type: 'vigik' | 'telecommande', id: number) {
-		if (type === 'vigik') {
-			if (selectionVigik.has(id)) selectionVigik.delete(id);
-			else selectionVigik.add(id);
-			selectionVigik = new Set(selectionVigik);
-		} else {
-			if (selectionTc.has(id)) selectionTc.delete(id);
-			else selectionTc.add(id);
-			selectionTc = new Set(selectionTc);
-		}
-	}
-
-	$: lotsSourcesAcces = (() => {
-		const map = new Map<number, string>();
-		for (const a of accesListe) {
-			if (a.lot_id == null) continue;
-			if (!map.has(a.lot_id)) map.set(a.lot_id, a.lot_label ?? `Lot #${a.lot_id}`);
-		}
-		return [...map.entries()].map(([id, label]) => ({ id, label }));
-	})();
-	$: accesFiltres = accesListe.filter(
-		(a) => filtreLotsAcces.size === 0 || (a.lot_id != null && filtreLotsAcces.has(a.lot_id)),
-	);
-
-	$: nTransfert =
-		[...selectionVigik].filter((id) => {
-			const a = accesListe.find((x) => x.type === 'vigik' && x.id === id);
-			return a && !a.chez_locataire;
-		}).length +
-		[...selectionTc].filter((id) => {
-			const a = accesListe.find((x) => x.type === 'telecommande' && x.id === id);
-			return a && !a.chez_locataire;
-		}).length;
-	$: nRecuperation =
-		[...selectionVigik].filter(
-			(id) => accesListe.find((x) => x.type === 'vigik' && x.id === id)?.chez_locataire,
-		).length +
-		[...selectionTc].filter(
-			(id) => accesListe.find((x) => x.type === 'telecommande' && x.id === id)?.chez_locataire,
-		).length;
-
 	// ── Helpers affichage ──────────────────────────────────────────────────────
 	//  🔴 `typeLabel`, `statutObjetBadge` et `statutObjetLabel` sont partis AVEC le
 	//  balisage qui les emploie (`InventaireBail`, #806). Les laisser ici aurait
@@ -522,14 +349,6 @@
 			return nomAffiche(bail.locataire_prenom, bail.locataire_nom);
 		}
 		return 'Locataire non renseigné';
-	}
-
-	function lotTypeLabel(t: string | null | undefined): string {
-		if (!t) return '—';
-		if (t === 'appartement') return 'Appartement';
-		if (t === 'parking') return 'Parking';
-		if (t === 'cave') return 'Cave';
-		return t;
 	}
 
 	//  Les lots tels que `FormulaireBail` les attend : un libellé et un état.
@@ -571,6 +390,13 @@
 {#if mainTab === 'lots'}
 	{#if loading}
 		<p style="color:var(--color-text-muted)">Chargement…</p>
+	{:else if erreurLots}
+		<!--  L'échec AVANT le vide : « aucun lot » est une affirmation, et on ne
+		      l'a pas constatée. -->
+		<div class="empty-state">
+			<h3>Impossible d’afficher vos lots</h3>
+			<p>{erreurLots}</p>
+		</div>
 	{:else if lots.length === 0 && !isLocataire}
 		<div class="empty-state">
 			<h3>Aucun lot associé</h3>
@@ -1119,138 +945,20 @@
 	/>
 {/if}
 
+<!-- ── Modal : gestion des accès (Vigik / TC) ───────────────────────── -->
+{#if bailAcces}
+	<ModaleAccesBail
+		bailId={bailAcces.id}
+		titre={`Accès — ${nomLocataire(bailAcces)}`}
+		typeLot={bailAccesLot?.type ?? null}
+		on:fermer={() => (bailAcces = null)}
+	/>
+{/if}
+
 <!-- ── Modal : retour objet ─────────────────────────────────────────── -->
 <!--  🔴 La modale « Retour — … » A DÉMÉNAGÉ dans `InventaireBail` (#806) : elle
      porte sur un objet, pas sur un bail, et laisser son balisage ici pendant que
      le tableau qui l'ouvre est ailleurs aurait coupé un geste en deux fichiers. -->
-
-<!-- ── Modal : gestion des accès (Vigik / TC) ───────────────────────── -->
-{#if bailAcces}
-	<Modale
-		edition
-		titre={`Accès — ${nomLocataire(bailAcces)}`}
-		styleBoite="width:min(620px,95vw)"
-		on:fermer={() => (bailAcces = null)}
-	>
-		<div class="modal-body">
-			{#if loadingAcces}
-				<p style="color:var(--color-text-muted)">Chargement…</p>
-			{:else if bailAccesLot && (bailAccesLot.type === 'parking' || bailAccesLot.type === 'cave')}
-				<p
-					style="font-size:0.85rem;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:.5rem .65rem;margin-bottom:.7rem"
-				>
-					Ce bail concerne un {bailAccesLot.type}. <strong>TC uniquement</strong> : les Vigik ne sont
-					pas autorisés.
-				</p>
-			{:else if accesListe.length === 0}
-				<p style="color:var(--color-text-muted);font-size:0.9rem">
-					Aucun Vigik ni télécommande rattaché à ce lot.
-				</p>
-			{:else}
-				<p style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:0.6rem">
-					Sélection intelligente : utilisez un préréglage puis ajustez manuellement. Les règles de
-					cohérence sont appliquées automatiquement (ex. pas de Vigik pour un bail parking seul).
-				</p>
-				<div class="acces-presets">
-					<button class="btn btn-sm" on:click={preselectionRecommandee}
-						>✨ Préselection recommandée</button
-					>
-					<button class="btn btn-sm btn-outline" on:click={clearSelection}>Effacer</button>
-				</div>
-				{#if lotsSourcesAcces.length > 1}
-					<div class="acces-filters">
-						<span style="font-size:.78rem;color:var(--color-text-muted)">Filtrer lots source :</span
-						>
-						{#each lotsSourcesAcces as ls (ls.id)}
-							<Pastille active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}
-								>{ls.label}</Pastille
-							>
-						{/each}
-					</div>
-				{/if}
-				<div class="table-wrap">
-					<table class="table" style="font-size:0.85rem">
-						<thead>
-							<tr>
-								<th style="width:2rem"></th>
-								<th>Lot source</th>
-								<th>Type</th>
-								<th>Code</th>
-								<th>Statut</th>
-								<th>Localisation</th>
-								<th>Info</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each accesFiltres as acces (acces.type + acces.id)}
-								<tr>
-									<td>
-										{#if isSelectable(acces)}
-											<input
-												type="checkbox"
-												checked={acces.type === 'vigik'
-													? selectionVigik.has(acces.id)
-													: selectionTc.has(acces.id)}
-												on:change={() => toggleAcces(acces.type, acces.id)}
-											/>
-										{/if}
-									</td>
-									<td
-										>{acces.lot_label ?? '—'}
-										<span class="badge badge-gray" style="margin-left:.25rem"
-											>{lotTypeLabel(acces.lot_type)}</span
-										></td
-									>
-									<td>{acces.type === 'vigik' ? '\u{1F3F7}️ Vigik' : '\u{1F4E1} Télécommande'}</td>
-									<td style="font-family:monospace">{acces.code}</td>
-									<td>
-										<span class="badge {acces.statut === 'actif' ? 'badge-green' : 'badge-gray'}">
-											{acces.statut}
-										</span>
-									</td>
-									<td>
-										{#if acces.chez_locataire}
-											<span class="badge badge-yellow">Chez locataire</span>
-										{:else}
-											<span class="badge badge-blue">Chez bailleur</span>
-										{/if}
-									</td>
-									<td>
-										{#if acces.recommande}
-											<span class="badge badge-green">Recommandé</span>
-										{:else if acces.motif_non_eligible}
-											<span class="badge badge-gray" title={acces.motif_non_eligible}
-												>{acces.motif_non_eligible}</span
-											>
-										{/if}
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-				{#if accesListe.some((a) => a.chez_locataire)}
-					<button class="btn btn-sm" style="margin-top:0.75rem" on:click={recupererAcces}>
-						↩ Tout récupérer
-					</button>
-				{/if}
-			{/if}
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (bailAcces = null)}>Fermer</button>
-			{#if nRecuperation > 0}
-				<button class="btn btn-primary" on:click={recupererSelection}>
-					↩ Récupérer ({nRecuperation})
-				</button>
-			{/if}
-			{#if nTransfert > 0}
-				<button class="btn btn-primary" on:click={transfererAcces}>
-					Transférer ({nTransfert})
-				</button>
-			{/if}
-		</div>
-	</Modale>
-{/if}
 
 <style>
 	/* Lot tabs (multi-lot selector) */
@@ -1434,19 +1142,6 @@
 	    repeignait `.field input` et perdait le focus de la charte (#593, volet
 	    C). Ne reste ici que la répartition, propre à cette rangée. */
 
-	.acces-presets {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.45rem;
-		margin-bottom: 0.7rem;
-	}
-	.acces-filters {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.35rem;
-		margin-bottom: 0.7rem;
-	}
 	/*  🔴 `.chip-btn` retirée le 28/08/2026 (#491) : c'était la pastille de la
 	    charte, sous un AUTRE NOM — donc invisible à toute recherche sur `pill`,
 	    et libre de diverger sans que personne ne la rapproche de son modèle.

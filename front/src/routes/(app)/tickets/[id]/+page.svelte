@@ -32,6 +32,8 @@
 	let messages: TicketMessage[] = [];
 	let evolutions: TicketEvolution[] = [];
 	let loading = true;
+	/**  Non vide = on n'a PAS pu lire le ticket. Distinct de « il n'existe pas ». */
+	let erreur = '';
 	let sending = false;
 	let updatingStatus = false;
 	//  Lié à `EvolForm` : le formulaire de réponse le propose en section
@@ -114,8 +116,15 @@
 				await tick();
 				document.getElementById(`msg-${msgVise}`)?.scrollIntoView({ block: 'center' });
 			}
-		} catch {
-			toast('error', 'Ticket introuvable');
+		} catch (err) {
+			//  🔴 « Introuvable » et « illisible » ne sont PAS la même chose (#816).
+			//  Ce `catch` disait « Ticket introuvable » à un 500, à une session
+			//  expirée et à une coupure réseau — et l'écran affirmait ensuite une
+			//  absence qu'il n'avait pas constatée. Seul un 404 la constate.
+			const absent = err instanceof ApiError && err.status === 404;
+			if (absent) toast('error', 'Ticket introuvable');
+			else if (err instanceof ApiError) erreur = err.message;
+			else erreur = 'Ticket illisible pour le moment — réessayez dans un instant.';
 		} finally {
 			loading = false;
 		}
@@ -198,6 +207,13 @@
 
 {#if loading}
 	<p class="etat-chargement">Chargement…</p>
+{:else if erreur}
+	<!--  L'échec AVANT le vide : dire « introuvable » quand on n'a pas pu
+	      regarder, c'est affirmer une absence qu'on n'a pas constatée. -->
+	<div class="empty-state">
+		<h3>Impossible d’afficher ce ticket</h3>
+		<p>{erreur}</p>
+	</div>
 {:else if !ticket}
 	<div class="empty-state"><h3>Ticket introuvable</h3></div>
 {:else}
