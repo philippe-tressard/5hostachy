@@ -88,6 +88,29 @@ MODELES = [
      '<p style="margin:0"><span style="display:inline-block;background:#3D6B4F;color:#fff;padding:4px 12px;border-radius:4px;font-size:13px;font-weight:600">{{ ticket.statut }}</span></p>'
      '</td></tr></table>',
      True),
+    #  🔴 LE CS N’ÉTAIT PAS PRÉVENU PAR COURRIEL (08/09/2026, demandé à l’écran).
+    #
+    #  `_notifier_cs_creation` ne posait qu’une notification DANS l’application,
+    #  et sa docstring le disait. Un conseiller qui n’ouvre pas le site ne voyait
+    #  donc jamais passer un signalement — et c’est le seul moment où quelqu’un
+    #  attend une réaction.
+    #
+    #  ⚠️ Il vise le CS du PÉRIMÈTRE, pas tout le conseil : la notification in-app
+    #  allait à tout le monde, ce qui est tolérable dans une liste et ne l’est pas
+    #  dans une boîte aux lettres. `membres_cs_notifiables(session, batiments)` est
+    #  la fonction prévue pour ça (cf. le tableau « Destinataires CS » de CLAUDE.md).
+    ('ticket_nouveau_cs', 'Nouveau ticket — notification du conseil syndical',
+     '🎫 Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}',
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">🎫 Nouveau ticket</h2>'
+     '<p style="margin:0 0 16px">Un ticket vient d' "'" 'être déposé par <strong>{{ auteur.prenom }} {{ auteur.nom }}</strong>.</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px{% if urgent %};border-left:4px solid #c0392b{% endif %}">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %}{% if ticket.perimetre %} · 🔹 {{ ticket.perimetre }}{% endif %}{% if urgent %} · <strong style="color:#c0392b">URGENT</strong>{% endif %}</p>'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
+     '{% if ticket.description %}<div style="font-size:14px;color:#1A1A2E">{{ ticket.description | safe }}</div>{% endif %}'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le ticket</a></p>',
+     True),
     ("ticket_nouveau_message", "Nouveau message sur un ticket",
      "Nouveau message — Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💬 Nouveau message sur votre ticket</h2>'

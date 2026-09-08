@@ -37,7 +37,12 @@ from .commun import (
     libelle_evolution,
 )
 from app.utils.noms import nom_affiche
-from app.utils.destinataires import membres_cs_ou_admin
+from app.utils.destinataires import (
+    batiments_du_perimetre,
+    membres_cs_notifiables,
+    membres_cs_ou_admin,
+)
+from app.utils.perimetres import parse_json_perimetres
 from app.utils.liens import lien_ticket
 
 
@@ -362,8 +367,32 @@ def _partager_sur_le_groupe(
 #  EFFET de la création (« qui est prévenu ? »), du même registre exact que
 #  `_alerter_bug` et `_partager_sur_le_groupe` juste en dessous. `crud.py` garde
 #  la décision, ce module porte ce qui part.
-def _notifier_cs_creation(session: Session, ticket: Ticket, urgence: bool) -> None:
-    """Notification in-app à tout le CS, plus le syndic si le ticket est urgent."""
+def _notifier_cs_creation(
+    session: Session,
+    ticket: Ticket,
+    urgence: bool,
+    auteur: Optional[Utilisateur] = None,
+    background_tasks: Optional[BackgroundTasks] = None,
+) -> None:
+    """Prévient le conseil syndical d’un nouveau ticket — in-app ET par courriel.
+
+    🔴 **Le courriel manquait** (08/09/2026, vérification demandée à l’écran).
+    Cette fonction ne posait qu’une `Notification`, et sa docstring le disait en
+    toutes lettres. Un conseiller qui n’ouvre pas le site ne voyait donc jamais
+    passer un signalement — au moment précis où quelqu’un attend une réaction.
+
+    ⚠️ **Deux portées, et c’est voulu.** La notification in-app va à tout le CS ;
+    le courriel au CS du **périmètre** du ticket. Ce qui est tolérable dans une
+    liste qu’on parcourt ne l’est pas dans une boîte aux lettres — et
+    `membres_cs_notifiables(session, batiments)` est la fonction prévue pour ça
+    (tableau « Destinataires CS » de `CLAUDE.md`).
+
+    ⚠️ La préférence « e-mails de mon bâtiment / des autres » est appliquée par
+    `send_email_group` via `batiments_concernes`, destinataire par destinataire.
+    Elle n’est donc **pas** réécrite ici : c’est `utils/preferences_mail` qui
+    tranche, et une seconde lecture ferait une seconde façon d’être en désaccord
+    avec ce que le résident a demandé.
+    """
     cs_members = membres_cs_ou_admin(session)
     if urgence:
         syndics = session.exec(
@@ -381,3 +410,45 @@ def _notifier_cs_creation(session: Session, ticket: Ticket, urgence: bool) -> No
             lien=lien_ticket(ticket.id),
             urgente=urgence,
         ))
+
+    if background_tasks is None or auteur is None:
+        #  Sans tâche de fond, il n’y a pas d’envoi possible : le dire plutôt que
+        #  de laisser croire que le courriel est parti.
+        return
+    _envoyer_email_cs_creation(session, ticket, auteur, urgence, background_tasks)
+
+
+def _envoyer_email_cs_creation(
+    session: Session,
+    ticket: Ticket,
+    auteur: Utilisateur,
+    urgence: bool,
+    background_tasks: BackgroundTasks,
+) -> list[str]:
+    """Le courriel `ticket_nouveau_cs`, au CS du périmètre. Rend les adresses visées.
+
+    Rendre la liste plutôt que rien : c’est ce qui permet à un test de constater
+    QUI est visé, et non seulement qu’un envoi a été programmé.
+    """
+    from app.utils.email import send_email_group
+
+    batiments = batiments_du_perimetre(parse_json_perimetres(ticket.perimetre_cible))
+    destinataires = membres_cs_notifiables(session, batiments)
+    if not destinataires:
+        return []
+
+    background_tasks.add_task(
+        send_email_group,
+        code="ticket_nouveau_cs",
+        to_recipients=destinataires,
+        context={
+            "ticket": _contexte_ticket(ticket),
+            "auteur": {"prenom": auteur.prenom or "", "nom": auteur.nom or ""},
+            "urgent": urgence,
+        },
+        session=session,
+        #  🔴 C’est CE paramètre qui fait respecter « e-mails de mon bâtiment »
+        #  ou « des autres » — sans lui, la préférence ne s’applique pas.
+        batiments_concernes=batiments,
+    )
+    return [email for _, email in destinataires]

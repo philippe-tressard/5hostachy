@@ -161,7 +161,10 @@ def create_ticket(
     appliquer_options(ticket, body, est_cs=est_cs)
 
     #  ⚠️ APRÈS `appliquer_options` : c'est elle qui pose `priorite`.
-    _notifier_cs_creation(session, ticket, urgence=ticket_urgent(ticket))
+    _notifier_cs_creation(
+        session, ticket, urgence=ticket_urgent(ticket),
+        auteur=user, background_tasks=background_tasks,
+    )
 
     if body.categorie == "bug":
         _alerter_bug(session, ticket, user, background_tasks)
