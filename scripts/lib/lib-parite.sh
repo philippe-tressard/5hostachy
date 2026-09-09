@@ -47,14 +47,40 @@ verdict_parite_servie() {
     #  contrôle du tout.
     [ -z "$git" ] && { echo inconnu; return; }
     [ -z "$images" ] && { echo inconnu; return; }
-    #  Comparaison sur le PRÉFIXE COMMUN : `git rev-parse HEAD` rend 40
-    #  caractères, `--short` en rend 7 à 12 selon la taille du dépôt. Comparer
-    #  les chaînes entières rendrait « périmé » un nœud parfaitement à jour, et
-    #  ce faux positif ferait désarmer le contrôle en une semaine.
-    local n="${#images}"
-    [ "$n" -gt "${#git}" ] && n="${#git}"
+    case "$(memes_hachages "$git" "$images")" in
+        oui) echo "a-jour" ;;
+        non) echo "images-perimees" ;;
+        *)   echo inconnu ;;
+    esac
+}
+
+# ── Deux hachages git désignent-ils le MÊME commit ? ─────────────────────────
+# Args : hachage_a  hachage_b  → "oui" | "non" | "inconnu"
+#
+#  Comparaison sur le PRÉFIXE COMMUN : `git rev-parse HEAD` rend 40 caractères,
+#  `--short` en rend 7 à 12 **selon la taille du dépôt**. Comparer les chaînes
+#  entières rendrait « périmé » un nœud parfaitement à jour, et ce faux positif
+#  ferait désarmer le contrôle en une semaine.
+#
+#  🔴 Cette règle était écrite ICI et nulle part ailleurs, alors que deux
+#  fonctions comparent des hachages git pour la même raison (#854). Le point 10
+#  du pré-check, resté sur un `=`, était en ÉCART **permanent** : les deux nœuds
+#  rendaient `ee33a715` et `ee33a71`, le même commit abrégé sur 8 et 7. Son
+#  détail excusait l'écart d'avance (« le standby s'aligne seul sous 5 min »), si
+#  bien qu'un standby réellement en retard aurait affiché exactement la même
+#  ligne. Un contrôle qui crie toujours ne dit plus rien.
+#
+#  Moins de 7 caractères communs : on ne conclut pas. Une abréviation aussi
+#  courte n'identifie pas un commit, et deux préfixes de 4 qui coïncident ne
+#  prouveraient rien.
+memes_hachages() {
+    local a="${1:-}" b="${2:-}"
+    [ -z "$a" ] && { echo inconnu; return; }
+    [ -z "$b" ] && { echo inconnu; return; }
+    local n="${#b}"
+    [ "$n" -gt "${#a}" ] && n="${#a}"
     [ "$n" -lt 7 ] && { echo inconnu; return; }
-    if [ "${git:0:$n}" = "${images:0:$n}" ]; then echo "a-jour"; else echo "images-perimees"; fi
+    [ "${a:0:$n}" = "${b:0:$n}" ] && echo oui || echo non
 }
 
 # ── Lecture du marqueur (effet de bord : lit un fichier) ─────────────────────
