@@ -145,11 +145,52 @@
 	    structure d'`EnteteCarte` (`ux-patterns` §3), et pour la même raison —
 	    un titre qui partage sa ligne avec des badges de largeur fixe se réduit
 	    à trois points sur téléphone. */
+	/*  🔴 `flex: 1 1 0` — sans lui, l'icône se retrouvait SEULE sur sa ligne et le
+	    titre passait dessous, dès qu'un document portait une description
+	    (signalé à l'écran le 09/09/2026, sur « recueil des actes »).
+
+	    `.doc-info` est en `flex-wrap: wrap`. Avec une base `auto`, la largeur
+	    souhaitée de ce bloc est celle de sa description — bien plus que la place
+	    restante — et le navigateur le renvoie à la ligne AVANT de le rétrécir :
+	    l'enroulement passe avant la compression. Une base nulle supprime la
+	    question. `min-width: 0` seul ne suffisait pas, et c'est le piège : il
+	    autorise le rétrécissement, il n'empêche pas l'enroulement.
+
+	    ⚠️ Reproduit sur le composant réel avant correction, pas déduit. */
 	.doc-texte {
 		display: flex;
 		flex-direction: column;
 		gap: 0.15rem;
+		flex: 1 1 0;
 		min-width: 0;
+	}
+	/*  ⚠️ La charte pousse `.doc-date` à droite (`margin-left: auto`) — c'est juste
+	    là où la date est fille directe de `.doc-info` (diagnostics, résidence).
+	    Ici elle vit DANS `.doc-ligne`, qui occupe désormais toute la largeur :
+	    la date partait donc à l'autre bout de l'écran, loin du titre qu'elle
+	    date. Divergence déclarée, locale à cet écran — la règle de la charte ne
+	    bouge pas pour ses deux autres lecteurs.
+
+	    Elle rend au passage les lignes COHÉRENTES : avant, une ligne sans
+	    description gardait sa date collée au titre et une ligne avec description
+	    l'envoyait à droite. Personne n'avait choisi cet écart. */
+	.doc-ligne .doc-date {
+		margin-left: 0;
+	}
+	/*  L'icône se cale sur la ligne du TITRE, pas au milieu du bloc. La charte
+	    centre `.doc-info` verticalement — juste tant qu'une ligne fait une ligne ;
+	    avec une description, l'icône se retrouvait à hauteur du texte descriptif,
+	    donc décalée par rapport à toutes les lignes voisines.
+
+	    ⚠️ `align-self` sur l'ICÔNE, et non `align-items` sur `.doc-info` : cette
+	    seconde forme redéfinit une propriété de la charte pour ce seul écran, et
+	    `lint:charte` la refuse — à raison, elle aurait fait rendre celui-ci
+	    autrement sans que personne l'ait décidé, et pour ses deux autres lecteurs
+	    la question ne se pose pas. Le décalage de 2 px recentre optiquement
+	    l'icône sur la première ligne. */
+	.doc-info > :global(svg) {
+		align-self: flex-start;
+		margin-top: 2px;
 	}
 	.doc-ligne {
 		display: flex;
