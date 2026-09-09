@@ -401,24 +401,44 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
         logger.error("Échec envoi alerte santé : %s", exc)
 
 
+def collecter_problemes(session: Session) -> list[str]:
+    """TOUS les contrôles de santé, en une liste — et cette liste n'existe qu'ICI.
+
+    Extraite de `run_health_check` le 09/09/2026 (#852), quand un second appelant
+    est apparu : le bouton « Relancer le contrôle » de l'administration.
+
+    🔴 La recopier dans l'endpoint aurait été le défaut de la journée, une
+    troisième fois. Un contrôle ajouté à l'un des deux appelants aurait manqué à
+    l'autre — et le plus probable, vu que le job quotidien est le seul dont on
+    voit le résultat, est que le bouton se serait tu sur un problème réel, sans
+    que rien ne le dise.
+
+    ⚠️ Cette fonction ne journalise rien et n'envoie rien : elle **mesure**. Ce
+    qu'on fait du résultat — un e-mail à 06:00, un écran à la demande — est la
+    décision de l'appelant.
+    """
+    problemes: list[str] = []
+    problemes += _check_db_integrity()
+    problemes += _check_whatsapp(session)
+    problemes += _check_backups(session)
+    problemes += _check_export_hors_site(session)
+    problemes += _check_disk()
+    problemes += _check_reference_copro(session)
+    #  Ce que l'installation SERT diffère-t-il de ce que le code dit ?
+    #  Une migration dont la clause WHERE ne correspond à rien réussit
+    #  en ayant modifié zéro ligne, sans erreur ni trace — et le code
+    #  porte alors une version que personne ne reçoit (#850).
+    problemes += controler_modeles_email(session)
+    return problemes
+
+
 def run_health_check() -> None:
     """Job quotidien : vérifie WhatsApp, sauvegardes, disque — alerte si problème."""
     from app.utils.email import get_site_manager_notification_email
 
     session = SessionLocal()
     try:
-        issues: list[str] = []
-        issues += _check_db_integrity()
-        issues += _check_whatsapp(session)
-        issues += _check_backups(session)
-        issues += _check_export_hors_site(session)
-        issues += _check_disk()
-        issues += _check_reference_copro(session)
-        #  Ce que l'installation SERT diffère-t-il de ce que le code dit ?
-        #  Une migration dont la clause WHERE ne correspond à rien réussit
-        #  en ayant modifié zéro ligne, sans erreur ni trace — et le code
-        #  porte alors une version que personne ne reçoit (#850).
-        issues += controler_modeles_email(session)
+        issues = collecter_problemes(session)
 
         if not issues:
             logger.info("Contrôle santé quotidien : tout est OK.")

@@ -155,20 +155,61 @@ def test_reference_copro_renseignee_ne_declenche_rien():
         assert _check_reference_copro(session) == []
 
 
-def test_le_controle_est_branche_dans_le_job_quotidien():
+def test_TOUS_les_controles_sont_branches_dans_la_collecte():
     """Un contrôle que personne n'appelle ne contrôle rien.
 
     C'est arrivé ici : `sauvegarde_echec` et `alerte_espace_disque` ont dormi en
-    base sans que rien ne les envoie. Le test lit la source de `run_health_check`
-    plutôt que de l'exécuter — le job touche le disque, la base et SMTP.
+    base sans que rien ne les envoie. Le test lit les sources plutôt que de les
+    exécuter — ces contrôles touchent le disque, la base et SMTP.
+
+    🔴 Ce test ne nommait qu'UN contrôle (`_check_reference_copro`), celui du jour
+    où il a été écrit. Il serait donc resté vert sur le **suivant** qu'on aurait
+    oublié de brancher — or c'est toujours le suivant qui manque, jamais celui
+    qu'on vient d'écrire. La portée d'un contrôle fait partie du contrôle
+    (`standards/05` §9) : il énumère désormais les `_check_*` du module.
+
+    Un contrôle peut être appelé **indirectement** — `_check_archive_locale` l'est
+    par `_check_export_hors_site` — donc la recherche porte sur l'union des
+    sources atteignables, pas sur la seule collecte.
     """
     import inspect
 
     from app.utils import health_monitor
 
-    source = inspect.getsource(health_monitor.run_health_check)
-    assert "_check_reference_copro" in source, (
-        "`_check_reference_copro` n'est pas appelé par `run_health_check` : il ne "
-        "s'exécutera jamais et la référence pourra rester vide sans que personne "
-        "ne l'apprenne."
+    controles = [
+        nom for nom in dir(health_monitor)
+        if nom.startswith("_check_") and callable(getattr(health_monitor, nom))
+    ]
+    #  Cas zéro : si le préfixe change, l'énumération devient vide et ce test
+    #  passerait en ne vérifiant rien (`standards/04` §2).
+    assert len(controles) >= 5, (
+        f"Seulement {len(controles)} contrôle(s) trouvé(s) dans `health_monitor` : "
+        "l'énumération ne décrit plus le module, et ce test ne vérifie plus rien."
     )
+
+    atteignable = inspect.getsource(health_monitor.collecter_problemes)
+    atteignable += "".join(
+        inspect.getsource(getattr(health_monitor, nom)) for nom in controles
+    )
+    for nom in controles:
+        #  La définition elle-même ne compte pas comme un appel.
+        appels = atteignable.replace(f"def {nom}(", "")
+        assert nom in appels, (
+            f"`{nom}` n'est appelé par personne : il ne s'exécutera jamais, et le "
+            "problème qu'il cherche restera invisible. Le brancher dans "
+            "`collecter_problemes`."
+        )
+
+
+def test_le_job_quotidien_passe_par_la_collecte_COMMUNE():
+    """Le job et le bouton d'administration doivent mesurer la même chose.
+
+    Si `run_health_check` reconstituait sa propre liste, un contrôle ajouté d'un
+    côté manquerait à l'autre — et c'est le bouton qui se tairait sur un problème
+    réel, le job quotidien étant le seul dont on voit le résultat.
+    """
+    import inspect
+
+    from app.utils import health_monitor
+
+    assert "collecter_problemes" in inspect.getsource(health_monitor.run_health_check)
