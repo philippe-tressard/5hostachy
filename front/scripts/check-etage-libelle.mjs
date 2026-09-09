@@ -63,6 +63,14 @@ function fautes(source) {
 			//  Les commentaires ne posent pas de libellé — et celui qui explique ce
 			//  contrôle cite justement la forme qu'il refuse.
 			.filter(([l]) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+			//  Une ROUTE d'API n'est pas un libellé : `/lots/${id}/etage` porte le
+			//  mot dans un chemin, et la charge utile `{ etage }` juste après le
+			//  fait ressembler à une interpolation. Le contrôle décrit « l'étage
+			//  paraît dans du TEXTE » — une requête n'en est pas.
+			//  Exclu ici et non dans l'expression régulière, pour la même raison
+			//  qu'`etageLabel` : une exclusion enfouie dans un motif se lit mal et
+			//  se contourne sans qu'on s'en aperçoive.
+			.filter(([l]) => !/\bapi\.(get|post|patch|put|delete)\b/.test(l))
 			.filter(([l]) => COMPARAISON.test(l) || (INTERPOLATION.test(l) && !/etageLabel\s*\(/.test(l)))
 			.map(([, n]) => n)
 	);
@@ -78,6 +86,10 @@ function selftest() {
 		['\t\t\tconst rdc = lots.filter((l) => l.etage === 0);', 0],
 		//  🔴 Le contrôle ne doit pas se déclencher sur sa PROPRE prose.
 		["//  `etage === 0 ? 'RDC'` est la forme refusée", 0],
+		//  🔴 Une route d'API porte « etage » dans son chemin ET dans sa charge
+		//  utile : les deux dans les trente caractères, donc la forme d'une
+		//  interpolation. Ce n'est pas un libellé (09/09/2026, #835).
+		['	majEtage: (id, etage) => api.patch(`/lots/${id}/etage`, { etage }),', 0],
 	];
 	let ko = 0;
 	for (const [src, attendu] of cas) {
