@@ -54,6 +54,12 @@ export const admin = {
 	// Sauvegardes
 	backupConfig: () => api.get<any>('/admin/sauvegardes/config'),
 	updateBackupConfig: (data: unknown) => api.put<any>('/admin/sauvegardes/config', data),
+	//  Rejoue MAINTENANT les contrôles du job de 06:00, et rend leurs verdicts
+	//  (#852). Aucun e-mail n'est envoyé : quelqu'un est devant l'écran.
+	relancerControleSante: () =>
+		api.post<{ nb: number; problemes: { titre: string; details: string[] }[] }>(
+			'/admin/controle-sante',
+		),
 	// Modèles e-mail
 	emailTemplates: () => api.get<any[]>('/admin/modeles-email'),
 	//  L'historique des envois — il manquait au client, et l'écran l'appelait en
