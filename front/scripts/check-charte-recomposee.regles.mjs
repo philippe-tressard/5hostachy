@@ -34,6 +34,13 @@ export const TOLERANCES = {
 	//  C'est la SEULE des quatre propriétés qui reste locale — les trois autres
 	//  (gap, font-size, display) étaient trois valeurs différentes pour la même
 	//  case, et sont remontées dans la charte le 02/09/2026.
+	//  ── `.auth-header h1` : un en-tête réduit sur une page longue ────────────
+	//  Le formulaire d'inscription est le plus long du site : son logo est déjà
+	//  réduit pour la même raison (#607). Seule la TAILLE diverge ; la graisse,
+	//  la couleur et la marge viennent de la charte depuis le 09/09/2026, où ces
+	//  trois-là étaient recopiées à l'identique dans quatre écrans.
+	'routes/auth/inscription/+page.svelte::auth-header h1':
+		'font-size: 1.4rem — la page est longue, son en-tête prend moins de place',
 	'routes/auth/inscription/+page.svelte::checkbox-field':
 		'align-items: flex-start — le libellé des conditions tient sur plusieurs lignes',
 	//  ── `.form-grid` : la répartition en colonnes ────────────────────────────

@@ -345,14 +345,12 @@
 		font-size: 2rem;
 		margin-bottom: 0.4rem;
 	}
+	/*  🔴 SEULE la taille du titre diverge, et pour la même raison que le logo
+	    réduit juste au-dessus : la page est longue, l'en-tête prend moins de
+	    place. Le reste — graisse, couleur, marge — et `.auth-header p` viennent
+	    de la charte depuis le 09/09/2026 ; ils y étaient recopiés à l'identique. */
 	.auth-header h1 {
 		font-size: 1.4rem;
-		font-weight: 700;
-		color: var(--color-primary);
-	}
-	.auth-header p {
-		color: var(--color-text-muted);
-		font-size: 0.875rem;
 	}
 
 	.aide-grille :global(.field-row) {
@@ -390,10 +388,10 @@
 		color: var(--color-text-muted);
 	}
 
+	/*  Seule la marge basse est propre à cet écran : le pied du formulaire est
+	    suivi des liens « déjà un compte ? », qui ont besoin d'un peu d'air. Le
+	    reste vient de la charte depuis le 09/09/2026. */
 	.btn-wrapper {
-		display: flex;
-		justify-content: center;
-		margin-top: 1.25rem;
 		margin-bottom: 0.25rem;
 	}
 	.btn-wrapper .btn {

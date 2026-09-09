@@ -412,6 +412,35 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	display: block;
 	margin-bottom: 0.5rem;
 }
+/*  Le CONTENU de l'en-tête, et le pied de bouton — remontés le 09/09/2026.
+
+    #495 avait consolidé le squelette (`.auth-page`, `.auth-card`, `.auth-header`,
+    `.auth-logo`) et #607 avait retiré les copies qui lui étaient identiques au
+    caractère près. Ces trois règles-ci étaient restées : elles habillent le
+    contenu, pas la carte, et se trouvaient donc DEUX à TROIS fois — connexion,
+    inscription, mot de passe oublié, réinitialisation — sans qu'aucun contrôle
+    ne puisse le voir, `lint:charte` ne comparant que les classes de la charte.
+
+    ⚠️ Une copie sous un AUTRE NOM échappe à tout : les deux écrans de mot de
+    passe appelaient `.auth-wrapper` ce que la charte nomme `.auth-page`. */
+.auth-header h1 {
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: var(--color-primary);
+	margin-bottom: 0.3rem;
+}
+.auth-header p {
+	color: var(--color-text-muted);
+	font-size: 0.875rem;
+}
+/*  `gap` retenu de la version la plus disante (réinitialisation) : il ne se voit
+    pas avec un seul bouton, et il évite de le réintroduire au deuxième. */
+.btn-wrapper {
+	display: flex;
+	justify-content: center;
+	gap: 0.75rem;
+	margin-top: 1.25rem;
+}
 
 /* ── Six notions partagées, définies dans UN fichier et employées dans PLUSIEURS ──
 
