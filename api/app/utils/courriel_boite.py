@@ -41,7 +41,6 @@ import imaplib
 import json
 import logging
 from datetime import datetime
-from email.header import decode_header, make_header
 from email.utils import parsedate_to_datetime
 
 from sqlalchemy import func
@@ -57,6 +56,8 @@ from app.models.core import (
     Utilisateur,
 )
 from app.models.courriel import RelanceCourriel, ReponseRelance
+from app.utils.courriel_decodage import _corps_lisible, _sans_citation, _texte
+from app.utils.echecs_repetes import CompteurEchecs
 from app.utils.courriel_ingestion import (
     ACCEPTE,
     IGNORE,
@@ -68,69 +69,20 @@ from app.utils.courriel_ingestion import (
 
 logger = logging.getLogger(__name__)
 
+#: Combien de relèves ont échoué D'AFFILÉE (#858) — voir `utils/echecs_repetes`.
+_ECHECS_RELEVE = CompteurEchecs("relève de la boîte des réponses")
+
 #: Les clés lues dans `ConfigSite`. `imap_enabled` d'abord : sans elle, rien.
 _CLES = {
     "imap_enabled", "imap_server", "imap_port", "imap_username",
     "imap_password", "imap_dossier", "imap_plancher",
 }
 
-#: Un corps de réponse dépasse rarement quelques lignes utiles ; au-delà c'est la
-#: citation du message précédent. Tronqué pour ne pas recopier tout un fil dans
-#: le ticket à chaque échange.
-MAX_CORPS = 4000
-
-
 def config_imap(session: Session) -> dict:
     lignes = session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_CLES))).all()
     return {r.cle: r.valeur for r in lignes}
 
 
-def _texte(valeur) -> str:
-    """Un en-tête décodé, quel que soit son encodage MIME."""
-    if not valeur:
-        return ""
-    try:
-        return str(make_header(decode_header(valeur)))
-    except Exception:
-        return str(valeur)
-
-
-def _corps_lisible(message) -> str:
-    """Le texte de la réponse, en clair.
-
-    On préfère la partie `text/plain` : elle existe presque toujours, et elle
-    évite d'avoir à assainir du HTML écrit par un tiers avant de l'afficher. Le
-    HTML n'est PAS retenu en repli — un fil de ticket qui accepterait du balisage
-    venu d'un courriel ouvrirait une porte que `lint:html` ne surveille pas.
-    """
-    if message.is_multipart():
-        for partie in message.walk():
-            if partie.get_content_type() == "text/plain":
-                charge = partie.get_payload(decode=True) or b""
-                return charge.decode(partie.get_content_charset() or "utf-8", "replace")
-        return ""
-    if message.get_content_type() != "text/plain":
-        return ""
-    charge = message.get_payload(decode=True) or b""
-    return charge.decode(message.get_content_charset() or "utf-8", "replace")
-
-
-def _sans_citation(texte: str) -> str:
-    """La réponse, sans le message cité en dessous.
-
-    Une réponse par courriel recopie tout l'échange précédent. Le laisser
-    entrerait dans le ticket une copie du ticket, à chaque échange, et le fil
-    deviendrait illisible en trois messages.
-    """
-    lignes = []
-    for ligne in texte.splitlines():
-        nue = ligne.strip()
-        if nue.startswith(">") or nue.startswith("-- "):
-            break
-        if nue.startswith("Le ") and nue.endswith("écrit :"):
-            break
-        lignes.append(ligne)
-    return "\n".join(lignes).strip()[:MAX_CORPS]
 
 
 def _ticket_de(session: Session, verdict) -> Ticket | None:
@@ -383,6 +335,7 @@ def relever() -> dict[str, int]:
     comptes = {ACCEPTE: 0, RELANCE: 0, REFUSE: 0, IGNORE: 0}
     #: Vrai si la relève n'a PAS pu avoir lieu — à distinguer d'une boîte vide.
     echec = False
+    derniere_erreur: Exception | None = None
     session = SessionLocal()
     try:
         cfg = config_imap(session)
@@ -465,8 +418,8 @@ def relever() -> dict[str, int]:
                 boite.logout()
             except Exception:
                 pass
-    except Exception as exc:
-        logger.error("Relève de la boîte des réponses : %s", exc)
+    except Exception as exc:  # noqa: BLE001  (le tuyau, pas la décision)
+        derniere_erreur = exc
         #  🔴 CE PASSAGE N'A RIEN CONSTATÉ, et il ne doit pas dire le contraire.
         #  Sans ce drapeau, la ligne de fin annonçait « relève effectuée, aucun
         #  message non lu » APRÈS l'échec — un commentaire affirmait même qu'elle
@@ -478,14 +431,19 @@ def relever() -> dict[str, int]:
     finally:
         session.close()
 
+    #  Le succès REMET LE DÉCOMPTE À ZÉRO : sans lui, trois secousses en trois
+    #  semaines finiraient par crier.
+    if not echec:
+        _ECHECS_RELEVE.succes()
+
     #  Un passage sans message est un fait, pas un non-événement : c'est ce qui
     #  prouve que la relève est vivante et que la boîte est simplement vide.
     if echec:
-        #  L'échec est déjà journalisé en ERROR ci-dessus : rien à ajouter, mais
-        #  surtout rien à AFFIRMER. Le point 6 du pré-check et l'alerte
-        #  quotidienne le voient ; ce qu'il ne faut pas, c'est le recouvrir d'une
-        #  ligne rassurante.
-        pass
+        #  🔴 WARNING d'abord, ERROR au bout de trois échecs D'AFFILÉE — le motif
+        #  et l'incident du 09/09/2026 sont dans `utils/echecs_repetes` (#858).
+        #  Rien à AFFIRMER pour autant : aucune ligne rassurante ne recouvre
+        #  l'échec.
+        _ECHECS_RELEVE.echec(logger, "Relève de la boîte des réponses : %s", derniere_erreur)
     elif any(comptes.values()):
         logger.info(
             "Réponses par courriel — écrites=%d relances=%d refusées=%d ignorées=%d",
