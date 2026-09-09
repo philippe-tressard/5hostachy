@@ -25,12 +25,15 @@
 
 <svelte:head><title>Mot de passe oublié — {_siteNom}</title></svelte:head>
 
-<div class="auth-wrapper">
+<div class="auth-page">
 	<div class="auth-card">
-		<h1>Mot de passe oublié</h1>
+		<div class="auth-header">
+			<span class="auth-logo">&#x1F511;</span>
+			<h1>Mot de passe oublié</h1>
+		</div>
 
 		{#if done}
-			<div class="success-box">
+			<div class="alert alert-success">
 				<p>Si un compte est associé à cet e-mail, un lien de réinitialisation vous a été envoyé.</p>
 				<p>Vérifiez votre boîte de réception (et les spams).</p>
 			</div>
@@ -61,46 +64,9 @@
 </div>
 
 <style>
-	.auth-wrapper {
-		min-height: 100dvh;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--color-bg-alt, #f9fafb);
-		padding: 1.5rem;
-	}
-	/*  🔴 Cette carte ecrivait `#fff` EN DUR et un rayon `.75rem` au lieu des
-	    jetons : elle ne suivait donc NI le theme NI la charte, sur un ecran
-	    d'authentification qu'on ne regarde jamais (#607, 28/08/2026).
-	    Seule l'ombre lui est propre. */
-	.auth-card {
-		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-	}
-	h1 {
-		font-size: 1.3rem;
-		font-weight: 700;
-		margin-bottom: 0.25rem;
-	}
-	.success-box {
-		background: #f0fdf4;
-		border: 1px solid #bbf7d0;
-		border-radius: 0.5rem;
-		padding: 1rem 1.25rem;
-		font-size: 0.875rem;
-		color: #166534;
-		line-height: 1.6;
-	}
-	.success-box p + p {
-		margin-top: 0.4rem;
-	}
-
-	.btn-wrapper {
-		display: flex;
-		justify-content: center;
-		margin-top: 1.25rem;
-	}
-	.btn-wrapper :global(.btn) {
-		padding-left: 2.5rem;
-		padding-right: 2.5rem;
-	}
+	/*  🔴 Ce `<style>` portait `.auth-wrapper` — le nom local de ce que la charte
+	    appelle `.auth-page` —, une redéfinition de `.auth-card`, un `h1`, une
+	    `.success-box` et un `.btn-wrapper`. Tout venait de la charte ou aurait dû
+	    y venir : une copie sous un AUTRE NOM échappe à `lint:charte`, qui ne
+	    compare que les classes de la charte. Retiré le 09/09/2026. */
 </style>

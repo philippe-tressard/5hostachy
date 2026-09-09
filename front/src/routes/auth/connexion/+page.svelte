@@ -128,26 +128,11 @@
 </div>
 
 <style>
-	/*  `.auth-page`, `.auth-card`, `.auth-header` et `.auth-logo` : copies au
-	    caractère près de `styles/composants.css`, donc inertes. Retirées le
-	    28/08/2026. Ce qui suit habille le CONTENU de l'en-tête, pas la carte. */
-	.auth-header h1 {
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: var(--color-primary);
-		margin-bottom: 0.3rem;
-	}
-
-	.auth-header p {
-		color: var(--color-text-muted);
-		font-size: 0.875rem;
-	}
-
-	.btn-wrapper {
-		display: flex;
-		justify-content: center;
-		margin-top: 1.25rem;
-	}
+	/*  `.auth-page`, `.auth-card`, `.auth-header`, `.auth-logo` (28/08/2026) puis
+	    `.auth-header h1`, `.auth-header p` et `.btn-wrapper` (09/09/2026) : tous
+	    dans `styles/composants.css`. Les trois derniers étaient écrits ici, à
+	    l'inscription et dans les deux écrans de mot de passe — le squelette avait
+	    été consolidé, pas ce qui l'habille. */
 
 	.btn-wrapper .btn {
 		padding-left: 2.5rem;
