@@ -68,15 +68,44 @@
 		{/if}
 	</div>
 
+	<!--  🔴 LE FORMULAIRE EST DANS SA SECTION (#852, 08/09/2026).
+	      Signalé à l'écran : *« l'édition est en bas de page et non dans la
+	      section sélectionnée […] quand on édite on ne se retrouve pas en bas de
+	      page mais à l'endroit où on édite (faire de même que la référence
+	      Actualité ou ticket) »*.
+
+	      Les sept formulaires de Résidence étaient rendus à la FIN du fichier,
+	      après toutes les sections. Cliquer « + Ajouter » dans « Plans » ouvrait
+	      donc une boîte quatre cents pixels plus bas, sous les diagnostics —
+	      hors de l'écran, et sans rapport visible avec le geste qu'on venait de
+	      faire.
+
+	      ⚠️ Ce n'est pas un défaut de style, c'est un défaut de PLACE : le
+	      balisage était juste, et posé au mauvais endroit du document. Aucun
+	      contrôle ne peut voir ça — `lint:formulaires` vérifie le cadre, pas sa
+	      position dans la page. -->
+	<slot name="formulaire" />
+
 	<EtatListe compact {erreur} vide={documents.length === 0} {messageVide}>
 		<div class="doc-list">
 			{#each documents as doc (doc.id)}
 				<div class="doc-row card" id="doc-{doc.id}">
 					<div class="doc-info">
 						<Icon name="file-text" size={16} />
-						<span class="doc-titre">{doc.titre}</span>
-						<slot name="badges" {doc} />
-						{#if dateDe(doc)}<span class="doc-date">{dateDe(doc)}</span>{/if}
+						<div class="doc-texte">
+							<div class="doc-ligne">
+								<span class="doc-titre">{doc.titre}</span>
+								<slot name="badges" {doc} />
+								{#if dateDe(doc)}<span class="doc-date">{dateDe(doc)}</span>{/if}
+							</div>
+							<!--  La DESCRIPTION, ajoutée le 08/09/2026 (#852) : le titre NOMME
+							      le document, elle dit ce qu'il couvre. L'écrire et ne pas
+							      l'afficher aurait donné un champ qu'on remplit pour rien —
+							      c'est le défaut de `corps_texte` corrigé le matin même. -->
+							{#if doc.description}<p class="doc-description clamp clamp-2">
+									{doc.description}
+								</p>{/if}
+						</div>
 					</div>
 					<div class="doc-actions">
 						<BoutonLien ancre="doc-{doc.id}" quoi="le document" />
@@ -111,6 +140,33 @@
 	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
 	.section-title {
 		margin: 0;
+	}
+	/*  Le titre et ses badges sur une ligne, la description dessous : c'est la
+	    structure d'`EnteteCarte` (`ux-patterns` §3), et pour la même raison —
+	    un titre qui partage sa ligne avec des badges de largeur fixe se réduit
+	    à trois points sur téléphone. */
+	.doc-texte {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		min-width: 0;
+	}
+	.doc-ligne {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		min-width: 0;
+	}
+	/*  ⚠️ Le CLAMP n'est pas ici : `.clamp` + `.clamp-2` (`styles/normes.css`)
+	    le portent déjà, avec la propriété standard `line-clamp` que ma version
+	    locale avait oubliée — `svelte-check` l'a dit. Une troisième écriture du
+	    même découpage aurait divergé au premier navigateur qui change de règle.
+	    Ne reste ici que ce qui est propre à cette ligne. */
+	.doc-description {
+		margin: 0;
+		font-size: 0.82rem;
+		color: var(--color-text-muted);
 	}
 	/*  🔴 `.doc-*` REMONTÉES dans `styles/composants.css` le 29/08/2026 (#491).
 	    Elles étaient scopées ici, et `residence` employait le même vocabulaire

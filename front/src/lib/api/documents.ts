@@ -13,34 +13,70 @@ export const documents = {
 	},
 	listCategories: () =>
 		api.get<{ id: number; code: string; libelle: string }[]>('/documents/categories'),
-	update: (id: number, data: { titre?: string; annee?: number | null; date_ag?: string | null }) =>
-		api.patch<Document>(`/documents/${id}`, data),
-	upload: async (
-		titre: string,
-		categorieId: number,
-		file: File,
-		perimetre = 'résidence',
-		batimentId?: number,
-		annee?: number,
-		dateAg?: string,
+	/**  Corriger un document existant.
+	 *
+	 *   🔴 `description` et `perimetre_cible` ajoutés le 08/09/2026 (#852) :
+	 *   *« très peu de champs sont éditables »*. Ils ne suffisaient pas côté
+	 *   écran — `DocumentUpdate` ne les acceptait pas non plus, et les ouvrir
+	 *   d'un seul côté aurait donné des champs qui ne font rien.
+	 */
+	update: (
+		id: number,
+		data: {
+			titre?: string;
+			description?: string;
+			perimetre_cible?: string[];
+			annee?: number | null;
+			date_ag?: string | null;
+		},
+	) => api.patch<Document>(`/documents/${id}`, data),
+
+	/**  Déposer un document.
+	 *
+	 *   🔴 **Un objet nommé, plus huit paramètres positionnels** (08/09/2026).
+	 *   La signature d'avant était `(titre, categorieId, file, perimetre,
+	 *   batimentId, annee, dateAg, perimetreCible)` : trois appels s'y
+	 *   alignaient en écrivant `undefined, undefined, undefined` pour atteindre
+	 *   le dernier.
+	 *
+	 *   ⚠️ Ce n'est pas une préférence de style. C'est exactement la forme qui a
+	 *   produit le défaut de #470 — un formulaire liait son sélecteur de
+	 *   périmètre à la variable d'un AUTRE formulaire, et rien ne levait :
+	 *   les types concordaient, `svelte-check` était vert. Un argument nommé se
+	 *   trompe moins facilement de place qu'un argument compté.
+	 */
+	upload: async (options: {
+		titre: string;
+		categorieId: number;
+		file: File;
+		/** Ce que le document COUVRE — section 6 du cadre (#852). */
+		description?: string;
+		/** Le droit de lecture. Distinct du périmètre descriptif ci-dessous. */
+		perimetre?: string;
+		batimentId?: number;
+		annee?: number;
+		dateAg?: string;
 		/**  De quoi PARLE le document, en codes de périmètre (`["bat:3"]`).
 		 *
 		 *   Remplace `batimentsIdsJson`, qui parlait en identifiants de lignes
 		 *   (#470). ⚠️ Descriptif, jamais un droit : ce sont `perimetre` et
 		 *   `batimentId` qui gouvernent la lecture. */
-		perimetreCible?: string[],
-	): Promise<Document> => {
+		perimetreCible?: string[];
+	}): Promise<Document> => {
 		//  `postFormData` écarte lui-même les champs absents : plus de `if (x)`
 		//  répété pour chaque champ facultatif.
 		return postFormData<Document>('/documents', {
-			titre,
-			categorie_id: String(categorieId),
-			perimetre,
-			batiment_id: batimentId ? String(batimentId) : undefined,
-			annee: annee ? String(annee) : undefined,
-			date_ag: dateAg,
-			perimetre_cible: perimetreCible?.length ? JSON.stringify(perimetreCible) : undefined,
-			file,
+			titre: options.titre,
+			description: options.description || undefined,
+			categorie_id: String(options.categorieId),
+			perimetre: options.perimetre ?? 'résidence',
+			batiment_id: options.batimentId ? String(options.batimentId) : undefined,
+			annee: options.annee ? String(options.annee) : undefined,
+			date_ag: options.dateAg,
+			perimetre_cible: options.perimetreCible?.length
+				? JSON.stringify(options.perimetreCible)
+				: undefined,
+			file: options.file,
 		});
 	},
 	uploadForContrat: (titre: string, contratId: number, file: File): Promise<any> =>

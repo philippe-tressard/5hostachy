@@ -197,7 +197,20 @@ def download_document(
 
 
 class DocumentUpdate(BaseModel):
+    #  🔴 TROIS champs ajoutés le 08/09/2026 (#852). Signalé à l'écran :
+    #  *« très peu de champs sont éditables »* — on ne pouvait corriger qu'un
+    #  titre, une année et une date d'AG.
+    #
+    #  ⚠️ Ce n'est pas qu'un manque d'écran : `DocumentUpdate` ne les acceptait
+    #  pas non plus. Les ouvrir côté front sans les ouvrir ici aurait donné des
+    #  champs qui ne font rien — pire qu'absents, parce qu'ils promettent
+    #  quelque chose (`ux-patterns` §0 : « avant de rouvrir un champ dans
+    #  l'interface, vérifier que le serveur le CONSOMME »).
     titre: Optional[str] = None
+    description: Optional[str] = None
+    #  Le périmètre en CODES, comme partout ailleurs (#470). L'ancien
+    #  `batiment_id` reste déprécié : on ne le rouvre pas.
+    perimetre_cible: Optional[list[str]] = None
     annee: Optional[int] = None
     date_ag: Optional[str] = None  # ISO date string
 
@@ -214,6 +227,12 @@ def update_document(
         raise HTTPException(404, "Document introuvable")
     if body.titre is not None:
         doc.titre = body.titre
+    if body.description is not None:
+        doc.description = body.description
+    if body.perimetre_cible is not None:
+        #  Même sérialisation que la création : du JSON de codes, jamais une
+        #  quatrième forme (#316).
+        doc.perimetre_cible = json.dumps(body.perimetre_cible, ensure_ascii=False)
     if body.annee is not None:
         doc.annee = body.annee
     if body.date_ag is not None:
@@ -228,6 +247,9 @@ def update_document(
 @router.post("", response_model=DocumentRead, status_code=201)
 async def upload_document(
     titre: str = Form(...),
+    #  Section 6 du cadre — ce que le document couvre, d'où il vient, ce qu'il
+    #  ne dit pas (#852). Vide par défaut : elle n'est jamais requise.
+    description: str = Form(""),
     categorie_id: int | None = Form(None),
     contrat_id: int | None = Form(None),
     publication_id: int | None = Form(None),
@@ -292,6 +314,7 @@ async def upload_document(
 
     doc = Document(
         titre=titre,
+        description=description,
         fichier_nom=file.filename,
         fichier_chemin=dest,
         taille_octets=size,

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
-	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import { perimetreLabel, estPerimetreParDefaut } from '$lib/perimetres';
 	import Icon from '$lib/components/Icon.svelte';
 	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
+	import SectionDiagnostics from '$lib/components/SectionDiagnostics.svelte';
+	import FormulaireEditionDocument from '$lib/components/FormulaireEditionDocument.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, currentUser } from '$lib/stores/auth';
@@ -72,6 +73,7 @@
 	// Formulaires documents
 	let showPlanForm = false;
 	let newPlanTitre = '';
+	let newPlanDescription = '';
 	//  🔴 Le plan liait son sélecteur à `newCrAgPerimetre` — la variable du CR
 	//  d'AG (copie du 27/08, #470). Choisir un périmètre sur un plan ne faisait
 	//  donc rien pour le plan, et pré-remplissait en douce le formulaire d'AG.
@@ -82,11 +84,13 @@
 
 	let showReglementForm = false;
 	let newReglementTitre = '';
+	let newReglementDescription = '';
 	let newReglementFichiers: FileList | null = null;
 	let savingReglement = false;
 
 	let showCrAgForm = false;
 	let newCrAgTitre = '';
+	let newCrAgDescription = '';
 	let newCrAgAnnee: string | number = '';
 	let newCrAgDateAg = '';
 	//  🔴 Des CODES de périmètre, plus des identifiants de bâtiments (#470).
@@ -107,22 +111,16 @@
 	let editingDocTitre = '';
 	let editingDocAnnee: string | number = '';
 	let editingDocDate = '';
+	//  🔴 Périmètre et description : deux des trois champs que l'édition
+	//  n'exposait pas (#852). *« très peu de champs sont éditables »*.
+	let editingDocPerimetre: string[] = [];
+	let editingDocDescription = '';
 	let savingDoc = false;
 
 	// Diagnostics réglementaires
 	let diagnosticTypes: any[] = [];
-	let showDiagForm: number | null = null; // id du type en cours d'ajout
-	let newDiagTitre = '';
-	let newDiagDate = '';
-	let newDiagFichiers: FileList | null = null;
-	let savingDiag = false;
-	let editingRapportId: number | null = null;
-	let editingRapportTitre = '';
-	let editingRapportDate = '';
-	let editingRapportSynthese = '';
-	let savingRapport = false;
-	let togglingNonApplicableId: number | null = null;
-	let expandedSynths = new Set<number>();
+	//  ⚠️ L'état du dépôt et de la correction d'un rapport vit dans
+	//  `SectionDiagnostics` : il n'a d'objet que là où il est employé.
 
 	// Règles & Recommandations
 	let showRegleForm = false;
@@ -133,9 +131,6 @@
 
 	// ── Derived ────────────────────────────────────────────────────────────────
 	// Composition depuis les champs stockés sur Batiment et Copropriete
-
-	$: activeDiagTypes = diagnosticTypes.filter((t) => !t.non_applicable);
-	$: nonApplicableDiagTypes = diagnosticTypes.filter((t) => t.non_applicable);
 
 	$: sortedPlans = [...plans].sort((a, b) => {
 		if (!a.batiment_id && b.batiment_id) return -1;
@@ -333,19 +328,17 @@
 			//  Le périmètre décrit DE QUOI parle le plan ; il ne restreint pas sa
 			//  lecture — même règle que le CR d'AG ci-dessous, et même raison
 			//  (migration 0159). Les droits restent à `résidence`.
-			const doc = await documentsApi.upload(
-				newPlanTitre.trim(),
-				catIdPlan,
-				fichier,
-				'résidence',
-				undefined,
-				undefined,
-				undefined,
-				newPlanPerimetre,
-			);
+			const doc = await documentsApi.upload({
+				titre: newPlanTitre.trim(),
+				categorieId: catIdPlan,
+				file: fichier,
+				description: newPlanDescription.trim(),
+				perimetreCible: newPlanPerimetre,
+			});
 			plans = [doc, ...plans];
 			showPlanForm = false;
 			newPlanTitre = '';
+			newPlanDescription = '';
 			newPlanPerimetre = [];
 			newPlanFichiers = null;
 			toast('success', 'Plan ajouté');
@@ -373,15 +366,16 @@
 		if (!catIdReglement || !newReglementTitre.trim() || !fichier) return;
 		savingReglement = true;
 		try {
-			const doc = await documentsApi.upload(
-				newReglementTitre.trim(),
-				catIdReglement,
-				fichier,
-				'résidence',
-			);
+			const doc = await documentsApi.upload({
+				titre: newReglementTitre.trim(),
+				categorieId: catIdReglement,
+				file: fichier,
+				description: newReglementDescription.trim(),
+			});
 			reglements = [doc, ...reglements];
 			showReglementForm = false;
 			newReglementTitre = '';
+			newReglementDescription = '';
 			newReglementFichiers = null;
 			toast('success', 'Règlement ajouté');
 		} catch (e) {
@@ -413,19 +407,19 @@
 			//  dit de quoi il parle, pas qui peut le lire. Il part donc toujours en
 			//  `résidence` côté DROITS, les périmètres dans `perimetre_cible`.
 			//  Le pourquoi : migration 0159.
-			const doc = await documentsApi.upload(
-				newCrAgTitre.trim(),
-				catIdCrAg,
-				fichier,
-				'résidence',
-				undefined,
-				newCrAgAnnee ? Number(newCrAgAnnee) : undefined,
-				newCrAgDateAg || undefined,
-				newCrAgPerimetre,
-			);
+			const doc = await documentsApi.upload({
+				titre: newCrAgTitre.trim(),
+				categorieId: catIdCrAg,
+				file: fichier,
+				description: newCrAgDescription.trim(),
+				annee: newCrAgAnnee ? Number(newCrAgAnnee) : undefined,
+				dateAg: newCrAgDateAg || undefined,
+				perimetreCible: newCrAgPerimetre,
+			});
 			crAg = [doc, ...crAg];
 			showCrAgForm = false;
 			newCrAgTitre = '';
+			newCrAgDescription = '';
 			newCrAgAnnee = '';
 			newCrAgDateAg = '';
 			newCrAgPerimetre = [];
@@ -456,6 +450,11 @@
 		editingDocTitre = doc.titre ?? '';
 		editingDocAnnee = doc.annee ?? '';
 		editingDocDate = doc.date_ag ? String(doc.date_ag).substring(0, 10) : '';
+		editingDocDescription = doc.description ?? '';
+		//  ⚠️ `perimetre_cible` sort du serveur en LISTE, jamais en JSON brut
+		//  (`schemas.DocumentRead`). Le re-parser ici serait une seconde façon de
+		//  lire la même chose, et elles divergeraient au premier format ajouté.
+		editingDocPerimetre = Array.isArray(doc.perimetre_cible) ? [...doc.perimetre_cible] : [];
 	}
 
 	async function saveEditDoc() {
@@ -464,6 +463,11 @@
 		try {
 			const updated = await documentsApi.update(editingDocId, {
 				titre: editingDocTitre.trim() || undefined,
+				//  🔴 Les deux champs que la correction n'envoyait pas (#852) —
+				//  et que le serveur n'acceptait pas non plus. Les ouvrir d'un
+				//  seul côté aurait donné des champs qui ne font rien.
+				description: editingDocDescription,
+				perimetre_cible: editingDocPerimetre,
 				annee: editingDocAnnee ? Number(editingDocAnnee) : null,
 				date_ag: editingDocDate || null,
 			});
@@ -480,99 +484,6 @@
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
 			savingDoc = false;
-		}
-	}
-
-	// ── Diagnostics réglementaires ───────────────────────────────────────────────────────
-	function startAddRapport(typeId: number) {
-		showDiagForm = typeId;
-		newDiagTitre = '';
-		newDiagDate = '';
-		newDiagFichiers = null;
-	}
-
-	async function addRapport() {
-		if (!showDiagForm || !newDiagFichiers?.length) return;
-		savingDiag = true;
-		const files = Array.from(newDiagFichiers);
-		const newRapports: any[] = [];
-		try {
-			for (const file of files) {
-				const titre = newDiagTitre.trim() || file.name.replace(/\.[^.]+$/, '');
-				const rapport = await diagnosticsApi.uploadRapport(
-					showDiagForm,
-					titre,
-					newDiagDate || undefined,
-					file,
-				);
-				newRapports.push(rapport);
-			}
-			diagnosticTypes = diagnosticTypes.map((t) =>
-				t.id === showDiagForm ? { ...t, rapports: [...newRapports, ...t.rapports] } : t,
-			);
-			showDiagForm = null;
-			toast('success', files.length > 1 ? `${files.length} rapports ajoutés` : 'Rapport ajouté');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingDiag = false;
-		}
-	}
-
-	function startEditRapport(r: any) {
-		editingRapportId = r.id;
-		editingRapportTitre = r.titre;
-		editingRapportDate = r.date_rapport ? String(r.date_rapport).substring(0, 10) : '';
-		editingRapportSynthese = r.synthese ?? '';
-	}
-
-	async function saveRapport() {
-		if (!editingRapportId) return;
-		savingRapport = true;
-		try {
-			const updated = await diagnosticsApi.updateRapport(editingRapportId, {
-				titre: editingRapportTitre.trim() || undefined,
-				date_rapport: editingRapportDate || null,
-				synthese: editingRapportSynthese.trim() || null,
-			});
-			diagnosticTypes = diagnosticTypes.map((t) => ({
-				...t,
-				rapports: t.rapports.map((r: any) => (r.id === editingRapportId ? updated : r)),
-			}));
-			editingRapportId = null;
-			toast('success', 'Rapport mis à jour');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingRapport = false;
-		}
-	}
-
-	async function deleteRapport(typeId: number, rapportId: number) {
-		if (!(await confirmer(SUPPRESSION('Ce rapport')))) return;
-		try {
-			await diagnosticsApi.deleteRapport(rapportId);
-			diagnosticTypes = diagnosticTypes.map((t) =>
-				t.id === typeId ? { ...t, rapports: t.rapports.filter((r: any) => r.id !== rapportId) } : t,
-			);
-			toast('success', 'Rapport supprimé');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
-	}
-
-	async function toggleNonApplicable(typeId: number, value: boolean) {
-		togglingNonApplicableId = typeId;
-		try {
-			const updated = await diagnosticsApi.toggleNonApplicable(typeId, value);
-			diagnosticTypes = diagnosticTypes.map((t) =>
-				t.id === typeId ? { ...t, non_applicable: updated.non_applicable } : t,
-			);
-			toast('success', value ? 'Diagnostic masqué (non applicable)' : 'Diagnostic réactivé');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			togglingNonApplicableId = null;
 		}
 	}
 </script>
@@ -710,6 +621,29 @@
 			{/if}
 		</div>
 
+		{#if showRegleForm}
+			<FormulaireDocument
+				edition={editingRegleId !== null}
+				intitule={editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}
+				bind:titre={regleTitre}
+				placeholderTitre="Ex : RAL menuiseries façade bâtiment A"
+				avecFichier={false}
+				enregistrement={savingRegle}
+				complet={!!regleTitre.trim()}
+				on:annuler={() => (showRegleForm = false)}
+				on:enregistrer={saveRegle}
+			>
+				<label class="field" for="regle-contenu" slot="description">
+					Détail / valeur
+					<textarea
+						id="regle-contenu"
+						bind:value={regleContenu}
+						placeholder="Ex : Façade extérieure RAL 6021 vert clair"
+						rows="3"></textarea>
+				</label>
+			</FormulaireDocument>
+		{/if}
+
 		<EtatListe
 			compact
 			erreur={eRegles}
@@ -762,6 +696,47 @@
 		onModifier={(d) => startEditDoc(d, 'plan')}
 		onSupprimer={deletePlan}
 	>
+		<svelte:fragment slot="formulaire">
+			{#if showPlanForm}
+				<FormulaireDocument
+					intitule="Ajouter un plan"
+					bind:titre={newPlanTitre}
+					placeholderTitre="ex : Plan de masse résidence"
+					avecPerimetre
+					bind:perimetre={newPlanPerimetre}
+					bind:fichiers={newPlanFichiers}
+					enregistrement={savingPlan}
+					complet={!!newPlanTitre.trim() && !!newPlanFichiers?.length}
+					on:annuler={() => (showPlanForm = false)}
+					on:enregistrer={addPlan}
+				>
+					<label class="field" for="plan-description" slot="description">
+						Description
+						<textarea
+							id="plan-description"
+							bind:value={newPlanDescription}
+							placeholder="Ce que ce plan montre, à quelle date il a été relevé…"
+							rows="3"></textarea>
+					</label>
+				</FormulaireDocument>
+			{/if}
+			<!--  L'ÉDITION est un OBJET, monté par les trois sections sous condition
+			      de leur mode. La recopier ici l'aurait fait diverger au premier
+			      champ ajouté — trois en sont ajoutés dans ce même lot. -->
+			{#if editingDocId !== null && editingDocMode === 'plan'}
+				<FormulaireEditionDocument
+					mode="plan"
+					bind:titre={editingDocTitre}
+					bind:annee={editingDocAnnee}
+					bind:dateAg={editingDocDate}
+					bind:perimetre={editingDocPerimetre}
+					bind:description={editingDocDescription}
+					enregistrement={savingDoc}
+					on:annuler={() => (editingDocId = null)}
+					on:enregistrer={saveEditDoc}
+				/>
+			{/if}
+		</svelte:fragment>
 		<svelte:fragment slot="badges" let:doc>
 			<span class="badge badge-blue"
 				>{doc.batiment_id ? batimentLabel(doc.batiment_id) : 'Copropriété'}</span
@@ -781,7 +756,47 @@
 		onAjouter={() => (showReglementForm = true)}
 		onModifier={(d) => startEditDoc(d, 'reglement')}
 		onSupprimer={deleteReglement}
-	/>
+	>
+		<svelte:fragment slot="formulaire">
+			{#if showReglementForm}
+				<FormulaireDocument
+					intitule="Ajouter un règlement"
+					bind:titre={newReglementTitre}
+					placeholderTitre="ex : Règlement de copropriété 2024"
+					bind:fichiers={newReglementFichiers}
+					enregistrement={savingReglement}
+					complet={!!newReglementTitre.trim() && !!newReglementFichiers?.length}
+					on:annuler={() => (showReglementForm = false)}
+					on:enregistrer={addReglement}
+				>
+					<label class="field" for="reglement-description" slot="description">
+						Description
+						<textarea
+							id="reglement-description"
+							bind:value={newReglementDescription}
+							placeholder="Ce qu'il remplace, ce qu'il ne couvre pas, où sont les annexes…"
+							rows="3"></textarea>
+					</label>
+				</FormulaireDocument>
+			{/if}
+			<!--  L'ÉDITION est un OBJET, monté par les trois sections sous condition
+			      de leur mode. La recopier ici l'aurait fait diverger au premier
+			      champ ajouté — trois en sont ajoutés dans ce même lot. -->
+			{#if editingDocId !== null && editingDocMode === 'reglement'}
+				<FormulaireEditionDocument
+					mode="reglement"
+					bind:titre={editingDocTitre}
+					bind:annee={editingDocAnnee}
+					bind:dateAg={editingDocDate}
+					bind:perimetre={editingDocPerimetre}
+					bind:description={editingDocDescription}
+					enregistrement={savingDoc}
+					on:annuler={() => (editingDocId = null)}
+					on:enregistrer={saveEditDoc}
+				/>
+			{/if}
+		</svelte:fragment>
+	</SectionDocuments>
 
 	<!-- ── Section : Comptes-rendus d'AG ─────────────────────────────────── -->
 	{#if !isLocataire}
@@ -796,6 +811,67 @@
 			onModifier={(d) => startEditDoc(d, 'ag')}
 			onSupprimer={deleteCrAg}
 		>
+			<svelte:fragment slot="formulaire">
+				{#if showCrAgForm}
+					<FormulaireDocument
+						intitule="Ajouter un CR d'AG"
+						bind:titre={newCrAgTitre}
+						placeholderTitre="ex : PV AG ordinaire 2025"
+						avecPerimetre
+						bind:perimetre={newCrAgPerimetre}
+						bind:fichiers={newCrAgFichiers}
+						enregistrement={savingCrAg}
+						complet={!!newCrAgAnnee &&
+							!!newCrAgDateAg &&
+							!!newCrAgTitre.trim() &&
+							!!newCrAgFichiers?.length}
+						on:annuler={() => (showCrAgForm = false)}
+						on:enregistrer={addCrAg}
+					>
+						<div class="paire" slot="specifiques">
+							<label class="field" for="ag-annee">
+								Année *
+								<input
+									id="ag-annee"
+									type="number"
+									bind:value={newCrAgAnnee}
+									min="1900"
+									max="2100"
+									placeholder="2025"
+								/>
+							</label>
+							<label class="field" for="ag-date">
+								Date de l'AG *
+								<input id="ag-date" type="date" bind:value={newCrAgDateAg} />
+							</label>
+						</div>
+						<label class="field" for="ag-description" slot="description">
+							Description
+							<textarea
+								id="ag-description"
+								bind:value={newCrAgDescription}
+								placeholder="Les points saillants, les résolutions votées, ce qui reste en suspens…"
+								rows="3"></textarea>
+						</label>
+					</FormulaireDocument>
+				{/if}
+				<!--  L'ÉDITION est un OBJET, monté par les trois sections sous condition
+				      de leur mode. La recopier ici l'aurait fait diverger au premier
+				      champ ajouté — trois en sont ajoutés dans ce même lot. -->
+				{#if editingDocId !== null && editingDocMode === 'ag'}
+					<FormulaireEditionDocument
+						mode="ag"
+						bind:titre={editingDocTitre}
+						bind:annee={editingDocAnnee}
+						bind:dateAg={editingDocDate}
+						bind:perimetre={editingDocPerimetre}
+						bind:description={editingDocDescription}
+						enregistrement={savingDoc}
+						on:annuler={() => (editingDocId = null)}
+						on:enregistrer={saveEditDoc}
+					/>
+				{/if}
+			</svelte:fragment>
 			<svelte:fragment slot="badges" let:doc>
 				{#if doc.annee}<span class="badge badge-gray" style="font-variant-numeric:tabular-nums"
 						>{doc.annee}</span
@@ -817,327 +893,19 @@
 	{/if}
 
 	<!-- ── Section : Diagnostics et Contrôles Réglementaires ────────────── -->
+	<!--  🔴 UN COMPOSANT depuis le 08/09/2026 (#852). C'était la dernière
+	      section de cet écran à vivre à même la page — onze variables d'état,
+	      six gestes, cent quatre-vingts lignes de balisage — alors que les
+	      trois autres partagent `SectionDocuments` depuis #522. Le garde-fou
+	      de modularité l'a refusée quand les formulaires y sont rentrés. -->
 	{#if !isLocataire}
-		<section style="margin-bottom:2.5rem">
-			<div class="section-header">
-				<h2 class="section-title">&#x1F50D; Diagnostics et Contrôles Réglementaires</h2>
-			</div>
-
-			<EtatListe
-				compact
-				erreur={eDiagnostics}
-				vide={diagnosticTypes.length === 0}
-				messageVide="Aucun diagnostic réglementaire disponible."
-			>
-				<div class="diag-list">
-					{#each activeDiagTypes as dtype (dtype.id)}
-						<div class="diag-card card">
-							<div class="diag-header">
-								<div class="diag-title-row">
-									<span class="diag-nom">{dtype.nom}</span>
-									{#if dtype.frequence}
-										<span class="badge badge-blue">{dtype.frequence}</span>
-									{/if}
-									{#if $isCS && dtype.rapports.length === 0}
-										<button
-											class="btn-icon"
-											style="margin-left:auto"
-											aria-label="Non applicable à cette copropriété"
-											title="Non applicable à cette copropriété"
-											disabled={togglingNonApplicableId === dtype.id}
-											on:click={() => toggleNonApplicable(dtype.id, true)}
-											><Icon name="eye-off" size={14} /></button
-										>
-									{/if}
-								</div>
-								<p class="diag-texte">{dtype.texte_legislatif}</p>
-							</div>
-
-							{#if dtype.rapports.length > 0}
-								<div class="diag-rapports">
-									{#each dtype.rapports as rapport (rapport.id)}
-										<div class="diag-rapport-block" id="diag-{rapport.id}">
-											<div class="doc-row">
-												<div class="doc-info">
-													<Icon name="file-text" size={16} />
-													<span class="doc-titre">{rapport.titre}</span>
-													{#if rapport.date_rapport}
-														<span class="doc-date">{fmt(rapport.date_rapport)}</span>
-													{/if}
-													{#if rapport.synthese}
-														<button
-															class="synthese-toggle"
-															aria-label="Afficher la synthèse"
-															on:click={() => {
-																if (expandedSynths.has(rapport.id))
-																	expandedSynths.delete(rapport.id);
-																else expandedSynths.add(rapport.id);
-																expandedSynths = expandedSynths;
-															}}
-															>&#x1F4A1; Synthèse {expandedSynths.has(rapport.id)
-																? '▲'
-																: '▼'}</button
-														>
-													{/if}
-												</div>
-												<div class="doc-actions">
-													<BoutonLien ancre="diag-{rapport.id}" quoi="le rapport" />
-													<a
-														href={diagnosticsApi.downloadUrl(rapport.id)}
-														target="_blank"
-														class="btn btn-sm"
-														download
-													>
-														⬇ Télécharger
-													</a>
-													{#if $isCS}
-														<button
-															class="btn-icon-edit"
-															aria-label="Modifier"
-															title="Modifier"
-															on:click={() => startEditRapport(rapport)}>✏️</button
-														>
-														<button
-															class="btn-icon-danger"
-															aria-label="Supprimer"
-															title="Supprimer"
-															on:click={() => deleteRapport(dtype.id, rapport.id)}>&#x1F5D1;️</button
-														>
-													{/if}
-												</div>
-											</div>
-											{#if rapport.synthese && expandedSynths.has(rapport.id)}
-												<div class="synthese-body rich-content">
-													{@html safeHtml(rapport.synthese)}
-												</div>
-											{/if}
-										</div>
-									{/each}
-								</div>
-							{/if}
-
-							{#if $isCS}
-								<div class="diag-add">
-									<button class="btn btn-sm" on:click={() => startAddRapport(dtype.id)}
-										>+ Ajouter un rapport</button
-									>
-								</div>
-							{/if}
-						</div>
-					{/each}
-				</div>
-
-				{#if $isCS && nonApplicableDiagTypes.length > 0}
-					<details class="diag-non-applicable-section">
-						<summary>Diagnostics non applicables ({nonApplicableDiagTypes.length})</summary>
-						<div class="diag-list" style="margin-top:.75rem">
-							{#each nonApplicableDiagTypes as dtype (dtype.id)}
-								<div class="diag-card card diag-card-disabled">
-									<div class="diag-header">
-										<div class="diag-title-row">
-											<span class="diag-nom">{dtype.nom}</span>
-											{#if dtype.frequence}
-												<span class="badge badge-blue">{dtype.frequence}</span>
-											{/if}
-											<button
-												class="btn btn-sm"
-												disabled={togglingNonApplicableId === dtype.id}
-												on:click={() => toggleNonApplicable(dtype.id, false)}>↩ Réactiver</button
-											>
-										</div>
-										<p class="diag-texte">{dtype.texte_legislatif}</p>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</details>
-				{/if}
-			</EtatListe>
-		</section>
+		<SectionDiagnostics bind:types={diagnosticTypes} erreur={eDiagnostics} peutModifier={$isCS} />
 	{/if}
 {:else}
 	<div class="empty-state">
 		<h3>Résidence non configurée</h3>
 		<p>Les informations de la résidence ne sont pas encore disponibles.</p>
 	</div>
-{/if}
-
-<!-- ── Les documents ─────────────────────────────────────────
-     Six formulaires bâtis du même vocabulaire, désormais UN objet :
-     `FormulaireDocument`. Il porte l'ordre des sections du cadre, le
-     `PerimetrePicker`, et le cadre qui va avec le geste — boîte à la création
-     (#672), fenêtre à l'édition (#640). -->
-
-{#if showPlanForm}
-	<FormulaireDocument
-		intitule="Ajouter un plan"
-		bind:titre={newPlanTitre}
-		placeholderTitre="ex : Plan de masse résidence"
-		avecPerimetre
-		bind:perimetre={newPlanPerimetre}
-		bind:fichiers={newPlanFichiers}
-		enregistrement={savingPlan}
-		complet={!!newPlanTitre.trim() && !!newPlanFichiers?.length}
-		on:annuler={() => (showPlanForm = false)}
-		on:enregistrer={addPlan}
-	/>
-{/if}
-
-{#if showReglementForm}
-	<FormulaireDocument
-		intitule="Ajouter un règlement"
-		bind:titre={newReglementTitre}
-		placeholderTitre="ex : Règlement de copropriété 2024"
-		bind:fichiers={newReglementFichiers}
-		enregistrement={savingReglement}
-		complet={!!newReglementTitre.trim() && !!newReglementFichiers?.length}
-		on:annuler={() => (showReglementForm = false)}
-		on:enregistrer={addReglement}
-	/>
-{/if}
-
-{#if showCrAgForm}
-	<FormulaireDocument
-		intitule="Ajouter un CR d'AG"
-		bind:titre={newCrAgTitre}
-		placeholderTitre="ex : PV AG ordinaire 2025"
-		avecPerimetre
-		bind:perimetre={newCrAgPerimetre}
-		bind:fichiers={newCrAgFichiers}
-		enregistrement={savingCrAg}
-		complet={!!newCrAgAnnee &&
-			!!newCrAgDateAg &&
-			!!newCrAgTitre.trim() &&
-			!!newCrAgFichiers?.length}
-		on:annuler={() => (showCrAgForm = false)}
-		on:enregistrer={addCrAg}
-	>
-		<div class="paire" slot="specifiques">
-			<label class="field" for="ag-annee">
-				Année *
-				<input
-					id="ag-annee"
-					type="number"
-					bind:value={newCrAgAnnee}
-					min="1900"
-					max="2100"
-					placeholder="2025"
-				/>
-			</label>
-			<label class="field" for="ag-date">
-				Date de l'AG *
-				<input id="ag-date" type="date" bind:value={newCrAgDateAg} />
-			</label>
-		</div>
-	</FormulaireDocument>
-{/if}
-
-{#if showDiagForm !== null}
-	<FormulaireDocument
-		intitule="Ajouter un rapport"
-		bind:titre={newDiagTitre}
-		titreRequis={false}
-		placeholderTitre="Rapport DPE 2024…"
-		aideTitre="Sans titre, chaque fichier prend le sien."
-		multiple
-		libelleFichier="Fichier(s)"
-		bind:fichiers={newDiagFichiers}
-		enregistrement={savingDiag}
-		complet={!!newDiagFichiers?.length}
-		on:annuler={() => (showDiagForm = null)}
-		on:enregistrer={addRapport}
-	>
-		<label class="field" for="diag-date" slot="specifiques">
-			Date du diagnostic
-			<input id="diag-date" type="date" bind:value={newDiagDate} />
-		</label>
-	</FormulaireDocument>
-{/if}
-
-{#if editingDocId !== null}
-	<FormulaireDocument
-		edition
-		intitule="Modifier le document"
-		bind:titre={editingDocTitre}
-		avecFichier={false}
-		enregistrement={savingDoc}
-		complet={!!editingDocTitre.trim()}
-		on:annuler={() => (editingDocId = null)}
-		on:enregistrer={saveEditDoc}
-	>
-		<svelte:fragment slot="specifiques">
-			{#if editingDocMode === 'ag'}
-				<div class="paire">
-					<label class="field" for="edit-doc-annee">
-						Année
-						<input
-							id="edit-doc-annee"
-							type="number"
-							bind:value={editingDocAnnee}
-							min="1900"
-							max="2100"
-						/>
-					</label>
-					<label class="field" for="edit-doc-date">
-						Date de l'AG
-						<input id="edit-doc-date" type="date" bind:value={editingDocDate} />
-					</label>
-				</div>
-			{/if}
-		</svelte:fragment>
-	</FormulaireDocument>
-{/if}
-
-{#if editingRapportId !== null}
-	<FormulaireDocument
-		edition
-		intitule="Modifier le rapport"
-		bind:titre={editingRapportTitre}
-		avecFichier={false}
-		enregistrement={savingRapport}
-		complet={!!editingRapportTitre.trim()}
-		on:annuler={() => (editingRapportId = null)}
-		on:enregistrer={saveRapport}
-	>
-		<label class="field" for="edit-r-date" slot="specifiques">
-			Date du diagnostic
-			<input id="edit-r-date" type="date" bind:value={editingRapportDate} />
-		</label>
-		<label class="field" for="edit-r-synthese" slot="description">
-			Synthèse
-			<textarea
-				id="edit-r-synthese"
-				bind:value={editingRapportSynthese}
-				placeholder="Conclusions clés, points d'attention, recommandations…"
-				rows="4"></textarea>
-		</label>
-	</FormulaireDocument>
-{/if}
-
-<!--  La règle de résidence : le SEPTIÈME formulaire de cet écran, et le même
-      objet que les six autres. Son geste est connu de `editingRegleId` — donc
-      une fenêtre quand on corrige, une boîte quand on ajoute (#640, #672). -->
-{#if showRegleForm}
-	<FormulaireDocument
-		edition={editingRegleId !== null}
-		intitule={editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}
-		bind:titre={regleTitre}
-		placeholderTitre="Ex : RAL menuiseries façade bâtiment A"
-		avecFichier={false}
-		enregistrement={savingRegle}
-		complet={!!regleTitre.trim()}
-		on:annuler={() => (showRegleForm = false)}
-		on:enregistrer={saveRegle}
-	>
-		<label class="field" for="regle-contenu" slot="description">
-			Détail / valeur
-			<textarea
-				id="regle-contenu"
-				bind:value={regleContenu}
-				placeholder="Ex : Façade extérieure RAL 6021 vert clair"
-				rows="3"></textarea>
-		</label>
-	</FormulaireDocument>
 {/if}
 
 <style>
@@ -1258,93 +1026,4 @@
 	    à l'identique dans les trois, et divergeait du `h2` de la charte. */
 
 	/* ── Diagnostics ─────────────────────────────────────────────── */
-	.diag-list {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-	.diag-card {
-		padding: 1rem 1.25rem;
-	}
-	.diag-header {
-		margin-bottom: 0.75rem;
-	}
-	.diag-title-row {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		flex-wrap: wrap;
-		margin-bottom: 0.4rem;
-	}
-	.diag-nom {
-		font-weight: 600;
-		font-size: 0.975rem;
-	}
-	.diag-texte {
-		font-size: 0.82rem;
-		color: var(--color-text-muted);
-		line-height: 1.5;
-		margin: 0;
-	}
-	.diag-rapports {
-		border-top: 1px solid var(--color-border);
-		padding-top: 0.6rem;
-		margin-bottom: 0.6rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-	}
-	.diag-add {
-		padding-top: 0.4rem;
-	}
-	.diag-card-disabled {
-		opacity: 0.65;
-	}
-	.diag-non-applicable-section {
-		margin-top: 1rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		padding: 0.6rem 1rem;
-		background: var(--color-surface);
-	}
-	.diag-non-applicable-section > summary {
-		cursor: pointer;
-		font-size: 0.85rem;
-		color: var(--color-text-muted);
-		font-weight: 500;
-		user-select: none;
-	}
-	.diag-non-applicable-section > summary:hover {
-		color: var(--color-text);
-	}
-
-	/* ── Synthèse rapport diagnostique ────────────────────── */
-	.diag-rapport-block {
-		border-bottom: 1px solid var(--color-border);
-	}
-	.diag-rapport-block:last-child {
-		border-bottom: none;
-	}
-	.synthese-toggle {
-		background: none;
-		border: none;
-		cursor: pointer;
-		font-size: 0.78rem;
-		color: var(--color-primary);
-		padding: 0.1rem 0.3rem;
-		border-radius: var(--radius);
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-	.synthese-toggle:hover {
-		background: var(--color-bg);
-	}
-	.synthese-body {
-		padding: 0.5rem 1rem 0.75rem;
-		font-size: 0.875rem;
-		background: var(--color-bg);
-		border-left: 3px solid var(--color-primary);
-		margin: 0 0.5rem 0.35rem;
-		border-radius: 0 var(--radius) var(--radius) 0;
-	}
 </style>
