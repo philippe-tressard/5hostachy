@@ -34,6 +34,16 @@ export const TOLERANCES = {
 	//  C'est la SEULE des quatre propriétés qui reste locale — les trois autres
 	//  (gap, font-size, display) étaient trois valeurs différentes pour la même
 	//  case, et sont remontées dans la charte le 02/09/2026.
+	//  ── `.aide` : la MARGE dépend de ce que l'aide commente ──────────────────
+	//  La charte pose la marge de l'aide qui suit un GROUPE DE CASES : négative en
+	//  haut, pour se coller à lui. Ces deux écrans-là ne commentent pas un groupe
+	//  de cases, et une marge négative les ferait chevaucher ce qui précède.
+	//  La typographie, elle, vient de la charte depuis le 09/09/2026 — `.aide` y
+	//  était écrite CINQ fois, avec trois tailles que personne n'avait choisies.
+	'lib/components/ConfigSauvegarde.svelte::aide':
+		'margin: 0 0 .9rem — paragraphe de tête, pas une note collée à un groupe',
+	'lib/components/PreferencesAffichageNotifs.svelte::aide':
+		"margin: .35rem 0 0 — l'aide SUIT sa case et s'aligne sur son libellé",
 	//  ── `.auth-header h1` : un en-tête réduit sur une page longue ────────────
 	//  Le formulaire d'inscription est le plus long du site : son logo est déjà
 	//  réduit pour la même raison (#607). Seule la TAILLE diverge ; la graisse,

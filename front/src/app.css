@@ -19,6 +19,7 @@
 
 @import './styles/socle.css';
 @import './styles/composants.css';
+@import './styles/authentification.css';
 @import './styles/champs.css';
 @import './styles/normes.css';
 @import './styles/ecrans.css';

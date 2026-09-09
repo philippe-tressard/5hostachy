@@ -72,12 +72,10 @@
 		flex-shrink: 0;
 	}
 	/*  L'aide s'aligne sur le LIBELLÉ, pas sur le bord de la carte : largeur de la
-	    case (~1rem) plus l'écart (.5rem). */
+	    case (~1rem) plus l'écart (.5rem). Seuls le décalage et la marge restent
+	    ici — la typographie vient de la charte depuis le 09/09/2026. */
 	.aide {
-		font-size: 0.82rem;
-		color: var(--color-text-muted);
 		margin: 0.35rem 0 0;
 		padding-left: 1.5rem;
-		line-height: 1.45;
 	}
 </style>

@@ -141,11 +141,12 @@
 		align-items: center;
 		flex-wrap: wrap;
 	}
+	/*  Seul le placement reste ici : l'aide partage sa ligne avec le bouton et le
+	    pousse à droite. La typographie vient de la charte depuis le 09/09/2026 —
+	    elle y était recopiée avec .8rem au lieu de .78, valeur que personne
+	    n'avait choisie. */
 	.aide {
 		margin-right: auto;
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
-		line-height: 1.4;
 	}
 
 	/* Sur un téléphone, l'aide et le bouton s'empilent : le bouton prend toute

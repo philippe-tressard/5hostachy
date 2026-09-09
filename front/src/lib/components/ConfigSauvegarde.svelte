@@ -144,10 +144,9 @@
 		padding-top: 1.25rem;
 		border-top: 1px solid var(--color-border);
 	}
+	/*  Seule la marge reste ici : cette aide est un paragraphe de tête, pas une
+	    note collée à un groupe de cases. La typographie vient de la charte. */
 	.aide {
-		font-size: 0.82rem;
-		color: var(--color-text-muted);
-		line-height: 1.5;
 		margin: 0 0 0.9rem;
 	}
 	.note {

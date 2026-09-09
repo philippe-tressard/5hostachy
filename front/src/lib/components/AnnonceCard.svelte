@@ -360,13 +360,8 @@
 		margin-top: 0.4rem;
 	}
 
-	/*  Archives : la carte s'efface tant qu'on ne la vise pas — même traitement
-	    que l'historique des actualités, pour que les deux listes se lisent pareil. */
-	.attenue {
-		opacity: 0.8;
-		transition: opacity 0.15s;
-		margin-bottom: 0.3rem;
-	}
+	/*  Archives : la carte s'efface tant qu'on ne la vise pas — `.attenue` vient de
+	    la charte ; seul le retour à l'opacité pleine diffère d'un écran à l'autre. */
 	.attenue:hover {
 		opacity: 1;
 	}

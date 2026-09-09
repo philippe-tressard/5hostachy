@@ -226,12 +226,8 @@
 		background: var(--color-border);
 	}
 
-	/*  Archives : la carte s'efface tant qu'on ne la vise pas. */
-	.attenue {
-		opacity: 0.8;
-		transition: opacity 0.15s;
-		margin-bottom: 0.3rem;
-	}
+	/*  Archives : la carte s'efface tant qu'on ne la vise pas — `.attenue` vient de
+	    la charte ; ici la carte DÉPLIÉE reprend aussi son opacité pleine. */
 	.attenue:hover,
 	.attenue.expanded {
 		opacity: 1;

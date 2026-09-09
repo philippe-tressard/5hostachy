@@ -195,12 +195,4 @@
 	.month-group {
 		margin-bottom: 1.5rem;
 	}
-	.month-label {
-		font-size: 0.8rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--color-text-muted);
-		margin-bottom: 0.5rem;
-	}
 </style>
