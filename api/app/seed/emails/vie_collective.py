@@ -122,12 +122,24 @@ MODELES = [
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#F2EFE9;padding:16px">'
      '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ document.titre }}</p>'
+     #  La DESCRIPTION sous le titre, quand elle existe (09/09/2026, migration
+     #  0185). Le titre NOMME le document, elle dit ce qu'il couvre — sans elle,
+     #  le destinataire doit ouvrir le fichier pour savoir s'il le concerne.
+     '{% if document.description %}'
+     '<p style="margin:8px 0 0;font-size:14px;color:#5A6070">{{ document.description }}</p>'
+     '{% endif %}'
      '</td></tr></table>'
      # `/documents` n'a jamais existé côté front : chaque document s'affiche là
      # où il est rattaché. Le bouton menait donc à un 404 — le même que celui
      # signalé depuis un PV d'AG le 26/07/2026, resté ici parce que ce modèle
      # n'était envoyé par personne. Le lien vient de `app/utils/liens.py`.
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}{{ document.lien }}" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le document</a></p>',
+     #  🔴 Le bouton n'existe QUE s'il mène quelque part (09/09/2026). Sept des
+     #  dix catégories de documents n'ont pas de rubrique sur /residence :
+     #  `lien_document` rend alors `None`, et sans cette garde le lien devenait
+     #  « <site>/None ». Un bouton absent vaut mieux qu'un bouton qui ment.
+     '{% if document.lien %}'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}{{ document.lien }}" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le document</a></p>'
+     '{% endif %}',
      True),
     ("reponse_communaute", "Nouvelle réponse (Communauté)", "💬 Nouvelle réponse sur {{ reponse.rubrique_label }} — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💬 Nouvelle réponse</h2>'

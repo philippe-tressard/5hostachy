@@ -7,21 +7,18 @@ que le fil se contente d'annoncer. Aucune ne se vote, ne se commente ni ne chang
 d'état — elles paraissent, et c'est tout. C'est ce qui les distingue des rubriques
 vivantes (tickets, sondages) et ce qui justifie de les tenir ensemble.
 """
-from typing import Optional
 
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.models.core import (
-    ContratEntretien,
     DiagnosticRapport,
     Document,
     FaqItem,
-    RoleUtilisateur,
-    Utilisateur,
 )
-from app.utils.liens import lien_element, page_element
+from app.utils.liens import lien_element
 from app.utils.visibility import document_visible
 
+from app.utils.documents import lien_document
 from .commun import ContexteFlux, strip_html
 from .schemas import FluxItem
 
@@ -36,41 +33,6 @@ from .schemas import FluxItem
 # La page et l'onglet, eux, ne sont plus écrits ici : ils viennent de
 # `EMPLACEMENTS["doc"]` (app/utils/liens.py), seul endroit du code qui décide où vit
 # un élément donné.
-_CATEGORIES_DOCUMENT_AVEC_LIEN = {
-    "plan_residence",
-    "reglement_copropriete",
-    "pv_ag",
-}
-
-
-def _lien_document(doc: Document, user: Utilisateur, session: Session) -> Optional[str]:
-    """Lien vers l'endroit exact où ce document est affiché, ou None s'il ne l'est nulle part.
-
-    L'ancre (`#doc-<id>`, `#pub-<id>`, `#presta-<id>`) compte autant que la page :
-    /residence enchaîne plans, règlement, PV d'AG et diagnostics — y arriver sans
-    viser le document oblige à le chercher dans la bonne section.
-    """
-    if doc.publication_id:
-        # Pièce jointe d'une actualité : c'est la publication qu'on ouvre.
-        return lien_element("pub", doc.publication_id)
-
-    if doc.contrat_id:
-        # Les documents de contrat ne sont visibles que dans /prestataires, page
-        # réservée au CS et aux admins : pour les autres, pas de lien.
-        if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-            return None
-        contrat = session.get(ContratEntretien, doc.contrat_id)
-        # Les documents d'un contrat sont listés dans la fiche de son prestataire.
-        return (
-            lien_element("presta", contrat.prestataire_id)
-            if contrat
-            else page_element("presta")
-        )
-
-    code = doc.categorie.code if doc.categorie else None
-    return lien_element("doc", doc.id) if code in _CATEGORIES_DOCUMENT_AVEC_LIEN else None
-
-
 def _collecter_faq(ctx: ContexteFlux) -> list[FluxItem]:
     faqs = ctx.session.exec(
         select(FaqItem)
@@ -116,7 +78,7 @@ def _collecter_documents(ctx: ContexteFlux) -> list[FluxItem]:
             detail="Nouveau document",
             icon="📄",
             badges=[],
-            lien=_lien_document(d, ctx.user, ctx.session),
+            lien=lien_document(d, ctx.user, ctx.session),
             #  Un document EST un fichier : sa carte doit le signaler comme
             #  n'importe quelle pièce jointe (décision du 07/08/2026, « PJ =
             #  fichiers ou photo »). On transmet un DÉCOMPTE et non une URL : la
@@ -128,6 +90,14 @@ def _collecter_documents(ctx: ContexteFlux) -> list[FluxItem]:
                 "fichier_nom": d.fichier_nom,
                 "mime_type": d.mime_type,
                 "pj_compte": 1,
+                #  🔴 La DESCRIPTION, ajoutée au document le 08/09/2026 et restée
+                #  sur le seul écran Résidence — signalé à l'écran le 09/09.
+                #
+                #  Elle passe par `meta` et non par `detail` : `detail` dit ce qui
+                #  s'est PASSÉ (« Nouveau document »), la description dit ce que le
+                #  document COUVRE. La carte affiche « libellé — extrait » depuis
+                #  #531, et se tait d'elle-même si l'un répète l'autre.
+                "description": strip_html(d.description),
             },
         ))
     return cartes

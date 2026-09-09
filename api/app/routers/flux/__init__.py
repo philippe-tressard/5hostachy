@@ -59,10 +59,12 @@ Les deux chemins (`GET /flux`, `GET /flux/epingles`), le contrat de sortie et
 `main.py`, qui continue d'écrire `app.include_router(flux.router)` sans savoir
 que ce module est devenu un paquet. Le préfixe `/flux` reste porté **ici**.
 
-`_lien_document` et `_CATEGORIES_DOCUMENT_AVEC_LIEN` sont ré-exportés parce que
-`api/tests/test_liens_front.py` les importe depuis `app.routers.flux` — les
-laisser tomber aurait cassé le garde-fou qui protège contre le 404 du
-26/07/2026.
+⚠️ `_lien_document` et `_CATEGORIES_DOCUMENT_AVEC_LIEN` étaient RÉ-EXPORTÉS ici
+pour que `test_liens_front` puisse les importer. Ils ont quitté le paquet le
+09/09/2026 : la notification et le courriel de publication en avaient besoin
+aussi, et ils écrivaient leur propre version — plus pauvre. Ils vivent dans
+`app/utils/documents`, et le ré-export a disparu avec eux : un alias qui délègue
+masque l'origine sans rien apporter (`standards/02` §1, règle 6).
 """
 from datetime import datetime, timedelta
 
@@ -206,12 +208,6 @@ def masquer_item(
     return None
 
 
-#  Surface publique conservée pour les importateurs externes (cf. docstring).
-from .ressources import (  # noqa: E402  (après le montage du router, pour la lisibilité)
-    _CATEGORIES_DOCUMENT_AVEC_LIEN,
-    _lien_document,
-)
-
 __all__ = [
     "router",
     "ContexteFlux",
@@ -219,6 +215,4 @@ __all__ = [
     "FluxItem",
     "FluxResponse",
     "FluxSante",
-    "_CATEGORIES_DOCUMENT_AVEC_LIEN",
-    "_lien_document",
 ]
