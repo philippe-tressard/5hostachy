@@ -27,11 +27,6 @@
 	let prenom = '';
 	let nom = '';
 	let telephone = '';
-	//  🔴 `etage` — l'étage PERSONNEL — a quitté cet écran le 09/09/2026 : deux
-	//  champs « Étage » à trois lignes d'écart, dont le premier ne disait rien que
-	//  « Étage de chacun de mes logements » ne dise mieux. La colonne garde sa
-	//  valeur et reste saisie à l'inscription ; le PATCH ne l'envoie plus, et
-	//  `update_me` n'écrit que ce qu'il reçoit.
 	/**  L'étage de CHAQUE lot, par identifiant — `Lot.etage`, donc une donnée de
 	 *   PATRIMOINE, distincte de la précédente : un bailleur a un lot au 4ᵉ et
 	 *   habite ailleurs. Écrite par son occupant depuis le 09/09/2026 (#835) —
@@ -171,10 +166,12 @@
 				fonction: fonction || null,
 				...(emailChanged ? { email } : {}),
 			});
-			//  `Lot.etage` s'écrit dans une AUTRE table, avec une autre règle
-			//  d'accès : le composant qui le saisit l'enregistre (#835).
+			//  Les DEUX étages s'écrivent dans le composant qui les saisit : `Lot.etage`
+			//  est une autre table avec une autre règle d'accès (#835), et l'étage
+			//  personnel part par `PATCH /auth/me` — lequel prévient le gestionnaire du
+			//  site quand la saisie contredit le lot.
 			mesLots = await champsEtage.enregistrerEtagesDeLots();
-			setUser(updated);
+			setUser((await champsEtage.enregistrerEtagePersonnel()) ?? updated);
 			toast('success', 'Profil mis à jour');
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');

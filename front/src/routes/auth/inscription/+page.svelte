@@ -254,7 +254,15 @@
 					      ⚠️ L'indication dit à quoi il SERT. Un champ facultatif dont on
 					      ignore l'usage ne se remplit pas, et celui-ci sert une chose
 					      précise : situer la personne dans l'annonce de bienvenue. Le taire
-					      reviendrait à demander une donnée sans dire pourquoi. -->
+					      reviendrait à demander une donnée sans dire pourquoi.
+
+					      🔴 Elle dit AUSSI la CONVENTION de saisie, depuis le 09/09/2026 :
+					      rien n'annonçait que `0` vaut rez-de-chaussée ni que `-1` vaut
+					      sous-sol — c'est la seule chose qu'un champ « Étage » ne dit pas
+					      tout seul, et un compte de test l'a saisi sans savoir ce qu'il
+					      déclarait. Le mot « Facultatif » qui ouvrait la phrase, lui, a
+					      disparu : l'absence d'astérisque l'énonce déjà (`ux-patterns` §9).
+					      Le même texte est sous le champ du profil (`ChampsEtage`). -->
 					<div class="field">
 						<label for="etage">Étage</label>
 						<input
@@ -266,9 +274,9 @@
 							placeholder="Ex. 3"
 						/>
 						<p class="field-hint">
-							Facultatif. Sert à vous situer auprès de vos voisins — notamment dans l’annonce de
-							bienvenue publiée à votre arrivée. Votre e-mail et votre téléphone n’y figurent
-							jamais.
+							0 = rez-de-chaussée, -1 = sous-sol. Sert à vous situer auprès de vos voisins dans
+							l’annonce de bienvenue publiée à votre arrivée ; votre e-mail et votre téléphone n’y
+							figurent jamais.
 						</p>
 					</div>
 				{/if}

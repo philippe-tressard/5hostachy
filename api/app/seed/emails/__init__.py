@@ -89,6 +89,7 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
     "publication_syndic": "information",
     "publication_externe": "information",
     "acces_apparies_auto": "information",
+    "etage_divergent": "information",
 }
 
 

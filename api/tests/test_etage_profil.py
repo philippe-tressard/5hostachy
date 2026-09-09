@@ -19,12 +19,12 @@ from __future__ import annotations
 import uuid
 
 import pytest
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 from sqlmodel import Session, SQLModel
 
 from app.database import engine
 from app.models.core import Utilisateur
-from app.routers.auth import MeUpdate, update_me
+from app.routers.auth_profil import MeUpdate, update_me
 
 
 @pytest.fixture()
@@ -47,7 +47,7 @@ def test_l_etage_se_modifie_SANS_validation_du_conseil(compte):
     """🔴 Le geste demandé — et il aboutit en base, pas dans une demande."""
     session, user = compte
 
-    update_me(MeUpdate(etage=5), session=session, user=user)
+    update_me(MeUpdate(etage=5), BackgroundTasks(), session=session, user=user)
 
     session.refresh(user)
     assert user.etage == 5, "l'étage n'a pas été enregistré"
@@ -57,7 +57,7 @@ def test_l_etage_se_modifie_SANS_validation_du_conseil(compte):
 def test_les_BORNES_sont_acceptees(compte, valeur):
     """Les extrêmes légitimes passent — un contrôle qui refuse le licite se désarme."""
     session, user = compte
-    update_me(MeUpdate(etage=valeur), session=session, user=user)
+    update_me(MeUpdate(etage=valeur), BackgroundTasks(), session=session, user=user)
     session.refresh(user)
     assert user.etage == valeur
 
@@ -71,7 +71,7 @@ def test_une_valeur_HORS_BORNES_est_refusee(compte, valeur):
     """
     session, user = compte
     with pytest.raises(HTTPException) as capture:
-        update_me(MeUpdate(etage=valeur), session=session, user=user)
+        update_me(MeUpdate(etage=valeur), BackgroundTasks(), session=session, user=user)
     assert capture.value.status_code == 400
     session.refresh(user)
     assert user.etage == 2, "la valeur refusée a quand même été écrite"
@@ -85,6 +85,6 @@ def test_ne_PAS_envoyer_l_etage_ne_l_efface_pas(compte):
     l'étage sans que personne ne l'ait demandé.
     """
     session, user = compte
-    update_me(MeUpdate(telephone="+33 6 00 00 00 00"), session=session, user=user)
+    update_me(MeUpdate(telephone="+33 6 00 00 00 00"), BackgroundTasks(), session=session, user=user)
     session.refresh(user)
     assert user.etage == 2, "l'étage a été effacé par une mise à jour qui l'ignorait"

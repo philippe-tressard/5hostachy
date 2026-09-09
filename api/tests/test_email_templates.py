@@ -95,6 +95,7 @@ EXPECTED_VARS: dict[str, set[str]] = {
     # sans validation préalable. `resultat` porte aussi les accords en français,
     # calculés au point d'appel : un modèle n'a pas à porter la grammaire.
     "acces_apparies_auto": {"utilisateur", "resultat"},
+    "etage_divergent": {"utilisateur", "etage"},
     # Les trois modèles destinés à des destinataires EXTERNES (syndic, tiers),
     # longtemps déclarés en migration seulement et donc sans contrat ici.
     #  Enrichi le 08/09/2026 : le MÊME modèle sert le syndic, l'arrivant et le
