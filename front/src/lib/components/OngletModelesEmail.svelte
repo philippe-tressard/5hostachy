@@ -35,6 +35,7 @@
 	import { onMount } from 'svelte';
 	import { admin as adminApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
+	import { confirmer } from '$lib/confirmation';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort as fmt } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -154,18 +155,48 @@
 		}
 	}
 
+	//  Remettre CE modèle-là au texte du code, sans toucher aux autres (#852).
+	//  Seule la remise à zéro globale existait : réparer un modèle dont le Jinja
+	//  a été cassé d’un caractère imposait de détruire les textes choisis pour
+	//  les vingt-trois autres.
+	let emailResetOne = false;
+	async function resetCeModele() {
+		if (!emailEdit) return;
+		const ok = await confirmer({
+			message: `Remettre « ${emailEdit.code} » au texte livré avec l’application ? Les modifications faites sur CE modèle seront perdues.`,
+			libelleConfirmer: 'Remettre par défaut',
+			danger: true,
+		});
+		if (!ok) return;
+		emailResetOne = true;
+		try {
+			const updated = await adminApi.resetEmailTemplate(emailEdit.id);
+			emailTemplates = emailTemplates.map((t) => (t.id === emailEdit.id ? updated : t));
+			openEmailEdit(updated);
+			toast('success', 'Modèle remis par défaut.');
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur');
+		} finally {
+			emailResetOne = false;
+		}
+	}
+
 	//  Remettre TOUS les modèles à leur design par défaut. Venait de l’écran
 	//  « Designs des modèles d’e-mail », fusionné ici le 19/08/2026 : il montrait
 	//  la même donnée sous un autre angle, et cette action était la seule qu’il
 	//  portait seul (#307).
 	let emailResetting = false;
 	async function resetEmailTemplates() {
-		if (
-			!confirm(
+		//  Converti de `confirm()` natif le 09/09/2026, en même temps que le
+		//  bouton d’à côté : la boîte native donne le même aspect à « remettre un
+		//  modèle » et à « écraser les vingt-quatre ».
+		const ok = await confirmer({
+			message:
 				'Remettre TOUS les modèles à leur design par défaut ? Les textes personnalisés seront perdus.',
-			)
-		)
-			return;
+			libelleConfirmer: 'Tout remettre par défaut',
+			danger: true,
+		});
+		if (!ok) return;
 		emailResetting = true;
 		try {
 			const res = await adminApi.resetEmailTemplates();
@@ -315,6 +346,15 @@
 			{/if}
 		</div>
 		<div class="modal-footer">
+			<button
+				class="btn btn-outline"
+				type="button"
+				on:click={resetCeModele}
+				disabled={emailSaving || emailResetOne}
+				title="Remettre ce modèle au texte livré avec l’application"
+			>
+				{emailResetOne ? 'Remise par défaut…' : '↩️ Par défaut'}
+			</button>
 			<button class="btn btn-outline" on:click={() => (emailEdit = null)} disabled={emailSaving}
 				>Annuler</button
 			>

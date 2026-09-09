@@ -20,10 +20,11 @@ Limite assumée : ce test garde le **côté template**. Le côté point d'appel
 (inspection de `historique_email`). Les deux forment une défense en profondeur.
 """
 import pytest
-from jinja2 import BaseLoader, meta
+from jinja2 import BaseLoader
 from jinja2.sandbox import SandboxedEnvironment
 
 from app.seed import EMAIL_TEMPLATES
+from app.utils.email.variables import VARIABLES_DU_GABARIT, variables_de
 
 # Variables injectées d'office par send_email/_group (`_contexte_rendu` dans email.py)
 #
@@ -33,7 +34,11 @@ from app.seed import EMAIL_TEMPLATES
 # partir un objet sans référence — Jinja évalue un indéfini à faux en silence.
 # Elles sont désormais posées APRÈS le contexte de l'appelant, donc ni
 # omissibles ni surchargeables.
-BASE_CTX_VARS = {"annee", "app", "residence", "reference_copro", "prefixe_copro"}
+#
+# 🔴 Cette liste était la QUATRIÈME copie (#852). Elle vit désormais dans
+# `utils/email/variables.py`, avec la lecture qui s'en sert. L'alias reste : il
+# est employé plus bas, et le renommer partout n'apprendrait rien.
+BASE_CTX_VARS = set(VARIABLES_DU_GABARIT)
 
 # Contrat figé : variables de premier niveau requises par chaque template.
 # Extrait de seed.EMAIL_TEMPLATES — à mettre à jour consciemment lors de toute
@@ -158,10 +163,19 @@ _env = SandboxedEnvironment(loader=BaseLoader())
 
 
 def _required_vars(sujet: str | None, corps_html: str | None) -> set[str]:
-    """Variables de premier niveau référencées par le template (hors base_ctx)."""
-    source = f"{sujet or ''} {corps_html or ''}"
-    ast = _env.parse(source)  # lève TemplateSyntaxError si le template est cassé
-    return meta.find_undeclared_variables(ast) - BASE_CTX_VARS
+    """Variables de premier niveau référencées par le template (hors base_ctx).
+
+    Simple alias de `utils.email.variables.variables_de` : c'est la MÊME question
+    que se posent l'écran d'administration et le contrôle quotidien, et les trois
+    y répondaient chacun avec son code (#852). Celui-ci concaténait `sujet` et
+    `corps_html` avec une espace, les deux autres sans — trois copies, deux
+    comportements. `variables_de` analyse chaque champ séparément, comme
+    `email._render` les rend.
+
+    Lève `ModeleIllisible` si un modèle du dépôt ne se parse pas : c'est ce test
+    qui doit rougir, et non l'installation qui doit le découvrir à l'envoi.
+    """
+    return variables_de(sujet, corps_html)
 
 
 def test_chaque_modele_declare_son_intention():
@@ -383,7 +397,11 @@ def test_lobjet_au_syndic_porte_toujours_la_reference(code):
 
 
 def test_les_migrations_disent_la_meme_chose_que_le_seed():
-    """Toute migration exposant `REMPLACEMENTS` doit produire l'objet du seed.
+    """Toute migration à `REMPLACEMENTS` doit produire le texte du seed.
+
+    `REMPLACEMENTS` porte sur l'**objet**, `REMPLACEMENTS_CORPS` sur le **corps**
+    (0184). Un seul balayage traite les deux : les propriétés sont identiques, et
+    deux boucles jumelles auraient divergé à la première correction.
 
     C'est le défaut propre à ce projet : le seed n'insère que ce qui est absent,
     donc en service, l'objet réellement envoyé est celui qu'a écrit la migration —
@@ -410,7 +428,13 @@ def test_les_migrations_disent_la_meme_chose_que_le_seed():
     from pathlib import Path
 
     versions = Path(__file__).resolve().parents[1] / "alembic" / "versions"
-    sujets = {row[0]: row[2] for row in EMAIL_TEMPLATES}
+    #  Deux champs, un seul balayage : une migration déclare `REMPLACEMENTS` pour
+    #  l'objet, `REMPLACEMENTS_CORPS` pour le corps. Les quatre propriétés sont
+    #  les mêmes — les vérifier deux fois les ferait diverger (0184).
+    CHAMPS = {
+        "REMPLACEMENTS": ("l'objet", {row[0]: row[2] for row in EMAIL_TEMPLATES}),
+        "REMPLACEMENTS_CORPS": ("le corps", {row[0]: row[3] for row in EMAIL_TEMPLATES}),
+    }
     vues = 0
 
     for chemin in sorted(versions.glob("*.py")):
@@ -419,32 +443,33 @@ def test_les_migrations_disent_la_meme_chose_que_le_seed():
         spec = importlib.util.spec_from_file_location(f"migration_{chemin.stem}", chemin)
         migration = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(migration)
-        remplacements = getattr(migration, "REMPLACEMENTS", None)
-        if not remplacements:
-            continue
-        vues += 1
-        for code, ancien, nouveau in remplacements:
-            assert code in sujets, (
-                f"{chemin.name} met à jour « {code} », absent de EMAIL_TEMPLATES."
-            )
-            assert nouveau in sujets[code], (
-                f"{chemin.name} écrit {nouveau!r} dans l'objet de {code}, mais le "
-                f"seed porte {sujets[code]!r}. Les bases existantes et les bases "
-                "neuves n'enverraient pas le même objet."
-            )
-            assert ancien not in sujets[code], (
-                f"Le seed de {code} contient encore {ancien!r}, que {chemin.name} "
-                "remplace : une base neuve partirait avec l'ancien objet."
-            )
-            assert ancien not in nouveau, (
-                f"{chemin.name} remplace {ancien!r} par un fragment qui le contient "
-                f"({code}) : rejouer la migration l'appliquerait une fois de plus."
-            )
+        for attribut, (quoi, textes) in CHAMPS.items():
+            remplacements = getattr(migration, attribut, None)
+            if not remplacements:
+                continue
+            vues += 1
+            for code, ancien, nouveau in remplacements:
+                assert code in textes, (
+                    f"{chemin.name} met à jour « {code} », absent de EMAIL_TEMPLATES."
+                )
+                assert nouveau in textes[code], (
+                    f"{chemin.name} écrit {nouveau!r} dans {quoi} de {code}, mais le "
+                    f"seed porte {textes[code]!r}. Les bases existantes et les bases "
+                    "neuves n'enverraient pas le même message."
+                )
+                assert ancien not in textes[code], (
+                    f"Le seed de {code} contient encore {ancien!r}, que {chemin.name} "
+                    f"remplace : une base neuve partirait avec l'ancienne version de {quoi}."
+                )
+                assert ancien not in nouveau, (
+                    f"{chemin.name} remplace {ancien!r} par un fragment qui le contient "
+                    f"({code}) : rejouer la migration l'appliquerait une fois de plus."
+                )
 
     #  Cas zéro : si le balayage ne trouve plus rien, il ne vérifie plus rien —
     #  et resterait vert (`standards/04` §2).
-    assert vues >= 2, (
-        f"Seulement {vues} migration(s) à REMPLACEMENTS trouvée(s) : le balayage "
+    assert vues >= 3, (
+        f"Seulement {vues} jeu(x) de remplacements trouvé(s) : le balayage "
         "ne vérifie plus la correspondance seed ↔ migration."
     )
 

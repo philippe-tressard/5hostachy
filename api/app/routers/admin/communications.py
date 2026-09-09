@@ -95,22 +95,20 @@ def _variables_du_modele(modele: ModeleEmail) -> str:
     c'est ce que la personne édite qui doit être décrit. Un modèle retouché
     depuis cet écran annonce donc ses propres variables, ce qui est exact.
     """
-    from jinja2 import BaseLoader, meta
-    from jinja2.sandbox import SandboxedEnvironment
+    #  🔴 La lecture elle-même vit dans `utils/email/variables.py` (#852) : elle
+    #  était écrite ici, dans le contrôle quotidien et dans les tests, avec trois
+    #  fois sa propre liste de variables du gabarit — celle d'ici en était une
+    #  quatrième copie, locale à la fonction.
+    from app.utils.email.variables import ModeleIllisible, variables_de
 
-    #: Injectées d'office par `email._contexte_rendu` — communes à tous.
-    DU_GABARIT = {"annee", "app", "residence", "reference_copro", "prefixe_copro"}
-
-    env = SandboxedEnvironment(loader=BaseLoader())
     try:
-        arbre = env.parse(f"{modele.sujet or ''}{modele.corps_html or ''}")
-    except Exception:
+        return json.dumps(sorted(variables_de(modele.sujet, modele.corps_html)))
+    except ModeleIllisible:
         #  Un modèle au Jinja invalide ne peut pas être analysé. Rendre la
         #  colonne stockée plutôt que rien : elle est peut-être périmée, mais
         #  l'écran doit continuer d'aider — et le modèle, lui, échouera à
         #  l'envoi, ce qui est le vrai signal.
         return modele.variables_disponibles or "[]"
-    return json.dumps(sorted(meta.find_undeclared_variables(arbre) - DU_GABARIT))
 
 
 @router.get("/modeles-email")
@@ -150,6 +148,39 @@ def update_modele_email(
     #  La colonne reste en base : quatre migrations figées l'écrivent, et la
     #  retirer casserait `alembic upgrade` sur une base neuve.
     allowed = {"sujet", "corps_html", "actif", "intention"}
+
+    #  🔴 Un modèle illisible ne s'enregistre PAS (#852).
+    #
+    #  Ce champ est un `<textarea>` où l'on saisit du Jinja à la main : un
+    #  `{% endif %}` de trop, un `{%` non refermé, et le modèle ne se rend plus.
+    #  Rien ne le disait — ni ici, ni à l'envoi : `send_email` capture toute
+    #  exception et n'en garde trace que dans `historique_email`. Le message
+    #  cessait simplement de partir, et le contrôle quotidien lui-même lisait
+    #  l'échec comme un écart de variables.
+    #
+    #  Le refus est le bon geste plutôt qu'une alerte a posteriori : la personne
+    #  est DEVANT le texte, elle vient de l'écrire, et Jinja dit à quel caractère.
+    #  Découvrir la même erreur le lendemain matin par un e-mail d'alerte n'a
+    #  aucune commune mesure — c'est le contrôle qui remplace la prévention.
+    from app.utils.email.variables import ModeleIllisible, variables_de
+
+    #  Seuls les champs que la requête ÉCRIT sont relus. Reprendre ceux déjà en
+    #  base fermerait la seule voie de réparation : une ligne dont le corps est
+    #  cassé ne pourrait plus être touchée du tout, pas même pour la remettre
+    #  d'aplomb — l'écran servirait à réparer et refuserait d'agir.
+    try:
+        variables_de(
+            payload.get("sujet") if "sujet" in payload else None,
+            payload.get("corps_html") if "corps_html" in payload else None,
+        )
+    except ModeleIllisible as illisible:
+        raise HTTPException(
+            422,
+            f"Le champ « {illisible.champ} » contient du Jinja invalide : "
+            f"{illisible.cause}. Le modèle n'est pas enregistré — il ne pourrait "
+            "plus être envoyé, et l'échec ne se verrait que dans l'historique.",
+        )
+
     for key, value in payload.items():
         if key not in allowed:
             continue
@@ -175,29 +206,67 @@ def update_modele_email(
     return modele
 
 
+def _remettre_par_defaut(session: Session, modele: ModeleEmail, par_id: int) -> bool:
+    """Remet UN modèle au texte du seed. Rend False si le code n'y est plus.
+
+    Écrit une fois et appelée par les deux routes de réinitialisation — celle
+    d'un modèle et celle de tous. Deux boucles jumelles auraient divergé sur
+    l'intention exactement comme elles avaient divergé ailleurs : « remettre par
+    défaut » doit remettre le bandeau aussi, sans quoi un modèle réinitialisé
+    garderait une intention modifiée au-dessus d'un corps redevenu d'origine.
+    """
+    from app.seed import EMAIL_TEMPLATES, INTENTIONS_PAR_MODELE
+
+    defaut = next((t for t in EMAIL_TEMPLATES if t[0] == modele.code), None)
+    if not defaut:
+        #  Un modèle que le code ne connaît plus n'a pas de version par défaut.
+        return False
+    _code, _libelle, sujet, corps_html, _desactivable = defaut
+    modele.sujet = sujet
+    modele.corps_html = corps_html
+    modele.intention = INTENTIONS_PAR_MODELE.get(modele.code, "")
+    modele.modifie_le = datetime.utcnow()
+    modele.modifie_par_id = par_id
+    session.add(modele)
+    return True
+
+
+@router.post("/modeles-email/{modele_id}/reinitialiser")
+def reinitialiser_un_modele_email(
+    modele_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    """Remet UN modèle au texte du code, sans toucher aux vingt-trois autres.
+
+    🔴 Il n'existait que la remise à zéro **globale** (#852). Réparer un seul
+    modèle — celui dont le Jinja a été cassé d'un caractère, celui qui a manqué
+    un enrichissement — imposait donc de détruire les textes choisis pour tous
+    les autres. C'est le genre de remède qu'on n'applique pas, et le défaut reste
+    alors en place : le contrôle quotidien signale, et personne ne peut agir.
+    """
+    modele = session.get(ModeleEmail, modele_id)
+    if not modele:
+        raise HTTPException(404, "Modèle introuvable")
+    if not _remettre_par_defaut(session, modele, _.id):
+        raise HTTPException(
+            422,
+            f"Le code ne porte plus de version par défaut pour « {modele.code} » : "
+            "ce modèle n'existe qu'en base, il n'y a rien à quoi le ramener.",
+        )
+    session.commit()
+    session.refresh(modele)
+    return modele
+
+
 @router.post("/modeles-email/reinitialiser")
 def reinitialiser_modeles_email(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
     """Remet tous les modèles e-mail aux valeurs par défaut (seed)."""
-    from app.seed import EMAIL_TEMPLATES, INTENTIONS_PAR_MODELE
-    updated = 0
-    for code, libelle, sujet, corps_html, desactivable in EMAIL_TEMPLATES:
-        modele = session.exec(
-            select(ModeleEmail).where(ModeleEmail.code == code)
-        ).first()
-        if modele:
-            modele.sujet = sujet
-            modele.corps_html = corps_html
-            # « Réinitialiser » doit tout remettre par défaut : l'intention
-            # aussi, sans quoi un modèle réinitialisé garderait un bandeau
-            # modifié au-dessus d'un corps redevenu celui d'origine.
-            modele.intention = INTENTIONS_PAR_MODELE.get(code, "")
-            modele.modifie_le = datetime.utcnow()
-            modele.modifie_par_id = _.id
-            session.add(modele)
-            updated += 1
+    modeles = session.exec(select(ModeleEmail)).all()
+    updated = sum(_remettre_par_defaut(session, m, _.id) for m in modeles)
     session.commit()
     return {"message": f"{updated} modèles réinitialisés"}
 
