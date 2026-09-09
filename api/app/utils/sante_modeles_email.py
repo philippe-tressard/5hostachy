@@ -72,6 +72,24 @@ from app.utils.email.variables import (  # noqa: F401  (réexport historique)
 )
 
 
+def _extrait(modele, largeur: int = 70) -> str:
+    """Le début de ce qui est SERVI, pour trancher sans ouvrir l'écran.
+
+    Sans lui, l'alerte disait « ces variables manquent » et il fallait aller voir
+    le texte pour comprendre ce qu'on regardait. Deux allers-retours, dont un
+    derrière une session admin — c'est-à-dire une alerte qu'on ne peut pas
+    exploiter là où on la lit (#852).
+
+    ⚠️ Un modèle d'e-mail ne contient aucune donnée personnelle : ce sont des
+    emplacements, remplis à l'envoi. L'extrait peut donc partir dans l'alerte.
+    """
+    def court(valeur: str | None) -> str:
+        texte = " ".join((valeur or "").split())
+        return (texte[:largeur] + "…") if len(texte) > largeur else (texte or "(vide)")
+
+    return f"Servi — objet : « {court(modele.sujet)} » · corps : « {court(modele.corps_html)} »"
+
+
 def controler(session: Session) -> list[str]:
     """Les écarts entre les modèles servis et ceux du code, en clair."""
     from app.models.core import ModeleEmail
@@ -150,7 +168,33 @@ def controler(session: Session) -> list[str]:
             detail = []
             manquantes = sorted(du_code - servies)
             en_trop = sorted(servies - du_code)
-            if manquantes:
+            if manquantes and not servies:
+                #  🔴 AUCUNE variable du code, et aucune en trop : ce n'est pas une
+                #  dérive, c'est un modèle BOUCHON — une ligne qui occupe la place
+                #  sans porter le message (#852, 09/09/2026).
+                #
+                #  Vu en production sur `ticket_externe` et `publication_externe` :
+                #  objet « Notification ticket externe » (le LIBELLÉ du modèle),
+                #  corps « <p>Notification.</p> ». Chaque ticket transmis à
+                #  l'extérieur partait ainsi — sans numéro, sans titre, sans lien —
+                #  depuis la migration 0105, dont l'`INSERT` gardé par
+                #  `if not existing:` n'avait rien fait : le bouchon était déjà là.
+                #
+                #  L'alerte accusait une migration d'enrichissement, et envoyait
+                #  donc chercher au mauvais endroit. « Tout manque, rien en excès »
+                #  n'est pas une dérive : c'est une absence.
+                detail.append(
+                    "Le modèle servi n'emploie AUCUNE des variables du code ("
+                    + ", ".join(manquantes)
+                    + ") — c'est un modèle BOUCHON : une ligne qui occupe la place "
+                    "sans porter le message. Il part, et il ne dit rien."
+                )
+                detail.append(_extrait(modele))
+                detail.append(
+                    "À remettre par « ↩️ Par défaut » dans Admin → Emails : le "
+                    "modèle reprend le texte du code, sans toucher aux autres."
+                )
+            elif manquantes:
                 detail.append(
                     "Variables du code absentes du modèle servi : "
                     + ", ".join(manquantes)
@@ -163,11 +207,19 @@ def controler(session: Session) -> list[str]:
                     + ", ".join(en_trop)
                     + " — Jinja les rend VIDES, en silence."
                 )
+            #  ⚠️ La conduite à tenir dépend du cas, et elle était générique :
+            #  « réappliquer la migration concernée » n'a aucun sens devant un
+            #  modèle bouchon, qui porte sa propre ligne de remède ci-dessus. Une
+            #  alerte qui propose le mauvais geste vaut celle qui affirme la
+            #  mauvaise cause.
+            if servies:
+                detail.append(
+                    "À comparer dans Admin → Emails, puis réappliquer la migration "
+                    "concernée ou corriger le texte à la main."
+                )
             ecarts.append(
                 f"Modèle d'e-mail « {modele.code} » : ce qui part diffère du code.\n"
                 + "\n".join(detail)
-                + "\nÀ comparer dans Admin → Emails, puis réappliquer la migration "
-                "concernée ou corriger le texte à la main."
             )
 
         if not (modele.intention or "").strip() and INTENTIONS_PAR_MODELE.get(modele.code):

@@ -195,6 +195,54 @@ def test_chaque_champ_est_analyse_SEPAREMENT_comme_il_sera_rendu():
     assert leve.value.champ == "sujet"
 
 
+def test_il_NOMME_le_modele_BOUCHON_au_lieu_d_accuser_une_migration():
+    """🔴 Le cas réel du 09/09/2026, et le plus coûteux des trois.
+
+    `ticket_externe` et `publication_externe` portaient en production un objet
+    « Notification ticket externe » — le LIBELLÉ du modèle — et un corps
+    « <p>Notification.</p> ». Chaque ticket transmis à l'extérieur partait ainsi,
+    sans numéro, sans titre, sans lien, **depuis la migration 0105** : son
+    `INSERT` gardé par `if not existing:` n'avait rien fait, le bouchon occupant
+    déjà la ligne.
+
+    L'alerte annonçait « une migration d'enrichissement n'a probablement rien
+    touché » et envoyait chercher au mauvais endroit. « Tout manque, rien en
+    excès » n'est pas une dérive : c'est une absence.
+    """
+    ecarts = controler(
+        _Session([_Ligne("ticket_externe", "Notification ticket externe",
+                         "<p>Notification.</p>")])
+    )
+
+    assert len(ecarts) == 1, f"écart non détecté : {ecarts}"
+    assert "BOUCHON" in ecarts[0], "l'alerte ne nomme pas ce qu'elle a mesuré"
+    assert "migration" not in ecarts[0].lower(), (
+        "l'alerte accuse encore une migration : c'est ce qui a fait chercher au "
+        "mauvais endroit pendant une matinée."
+    )
+    #  L'extrait évite l'aller-retour vers un écran derrière une session admin.
+    assert "Notification ticket externe" in ecarts[0], (
+        "l'alerte ne montre pas ce qui est SERVI : il faut encore ouvrir l'écran."
+    )
+    assert "Par défaut" in ecarts[0], "l'alerte ne dit pas comment réparer"
+
+
+def test_une_dérive_PARTIELLE_accuse_toujours_la_migration():
+    """L'autre moitié : quand une partie des variables est là, c'est bien une
+    migration restée sans effet — et le message doit le dire.
+
+    Sans ce cas, on aurait remplacé une cause affirmée par une autre.
+    """
+    ancien = (
+        "{{ prefixe_copro }}Nouvel arrivant",
+        "<p>{{ nom_complet }} — {{ batiment }} — {{ ancien_resident }}</p>",
+    )
+    ecarts = controler(_Session([_Ligne("nouvel_arrivant_bal", *ancien)]))
+    assert len(ecarts) == 1
+    assert "migration" in ecarts[0].lower()
+    assert "BOUCHON" not in ecarts[0]
+
+
 def test_il_NOMME_le_jinja_invalide_au_lieu_d_inventer_une_migration():
     """L'alerte doit dire ce qui se passe : le message ne part plus du tout.
 
