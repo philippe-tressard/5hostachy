@@ -11,6 +11,12 @@
   quand ce n'est pas celui d'un de ses lots. C'est le coût du choix, dit une fois :
   l'écran gagne en clarté ce que ce cas précis perd en précision.
 
+  ⚠️ PAS d'indication sous ce bloc. Elle disait « Facultatif. L'étage du bien
+  lui-même — il apparaît sur les fiches et les affiches ». Retirée le 09/09/2026 :
+  « facultatif » se voit à l'absence d'astérisque, et où la valeur ressort ne dit
+  rien à qui la saisit. Une indication n'a de valeur que si elle apprend quelque
+  chose — sinon elle allonge l'écran et s'apprend à ne plus être lue.
+
   🔴 SEULS LES LOGEMENTS sont listés — pas les caves ni les parkings. « Étage de
   chacun de mes logements » énumérait « N° 417 Cave » et « N° 450 Parking », qui
   n'en sont pas : un titre qui ment sur son contenu se corrige par le contenu,
@@ -56,7 +62,12 @@
 		<!--  `.libelle-groupe` + `role="group"` : un `<label>` ne sait pas nommer un
 		      groupe de contrôles — posé dessus, il n'associe rien, ET IL LE FAIT EN
 		      SILENCE (`champs.css`, #561). -->
-		<span class="libelle-groupe" id="p-etages-lots">Étage de chacun de mes logements</span>
+		<!--  Le titre S'ACCORDE : un logement dans la plupart des cas, plusieurs pour
+		      un multipropriétaire. « Étage de chacun de mes logements » au-dessus
+		      d'une seule ligne annonce un choix qui n'existe pas. -->
+		<span class="libelle-groupe" id="p-etages-lots">
+			{logements.length === 1 ? 'Étage de mon logement' : 'Étages de chacun de mes logements'}
+		</span>
 		<div class="etages-lots" role="group" aria-labelledby="p-etages-lots">
 			{#each logements as lot (lot.id)}
 				<div class="etage-lot">
@@ -79,10 +90,6 @@
 				</div>
 			{/each}
 		</div>
-		<p class="field-hint">
-			Facultatif. L’étage du bien lui-même — il apparaît sur les fiches et les affiches de la
-			copropriété.
-		</p>
 	</div>
 {/if}
 
