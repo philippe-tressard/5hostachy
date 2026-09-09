@@ -274,7 +274,7 @@ class _FauxUser:
 
 
 class _FauxSession:
-    """`session.get(ContratEntretien, id)` — seul appel fait par `_lien_document`."""
+    """`session.get(ContratEntretien, id)` — seul appel fait par `lien_document`."""
 
     def __init__(self, prestataire_id: int | None = 7):
         self._prestataire_id = prestataire_id
@@ -300,7 +300,7 @@ def test_chaque_document_pointe_vers_l_endroit_ou_il_est_affiche():
     fiche prestataire, section de /residence — ou à l'absence assumée de lien quand la
     catégorie n'est affichée nulle part.
     """
-    from app.routers.flux import _lien_document
+    from app.utils.documents import lien_document as _lien_document
 
     cs, resident = _FauxUser(cs=True), _FauxUser(cs=False)
     categorie = lambda code: types.SimpleNamespace(code=code)  # noqa: E731
@@ -334,7 +334,7 @@ def test_les_categories_de_documents_du_fil_mènent_quelque_part():
     par `EMPLACEMENTS["doc"]`. Les catégories absentes de cet ensemble ne sont
     affichées nulle part et ne reçoivent AUCUN lien — c'est délibéré, pas un oubli.
     """
-    from app.routers.flux import _CATEGORIES_DOCUMENT_AVEC_LIEN
+    from app.utils.documents import CATEGORIES_AVEC_LIEN as _CATEGORIES_DOCUMENT_AVEC_LIEN
 
     assert _CATEGORIES_DOCUMENT_AVEC_LIEN, "aucune catégorie de document n'est liable"
     assert _page_existe(page_element("doc")), (

@@ -57,7 +57,7 @@ def _notifier_document_publie(
     d'adresses des copropriétaires à chacun d'eux.
     """
     from app.utils.email import send_email
-    from app.utils.liens import lien_element
+    from app.utils.documents import lien_document
 
     # Une pièce jointe d'actualité et un document de contrat ne sont pas des
     # publications documentaires : la première est annoncée par l'e-mail de sa
@@ -82,16 +82,30 @@ def _notifier_document_publie(
     # n'existe pas côté front, et c'est exactement la faute qui a produit un 404
     # en pleine page le 26/07/2026. La table `EMPLACEMENTS` sait où vit un
     # document, et `test_liens_front.py` vérifie qu'elle dit vrai.
-    lien_doc = lien_element("doc", doc.id)
-
+    #
+    #  🔴 `lien_element("doc", doc.id)` SANS CONDITION jusqu'au 09/09/2026 — et
+    #  seules TROIS des dix catégories ont une rubrique sur /residence. Les sept
+    #  autres — fiche synthétique, attestation, diagnostic, contrats, devis,
+    #  document interne — partaient donc avec un lien vers une page où elles ne
+    #  sont pas listées : la page bonne, l'élément invisible. C'est le défaut du
+    #  28/07/2026 un cran plus loin, et le fil d'actualité savait déjà l'éviter.
+    #
+    #  ⚠️ PAR DESTINATAIRE, et non une fois pour toute la liste : `lien_document`
+    #  dépend de qui regarde.
     for u in destinataires:
         if u.id == auteur.id or not document_visible(u, doc, session):
             continue
+        lien_doc = lien_document(doc, u, session)
         session.add(Notification(
             destinataire_id=u.id,
             type="document",
             titre=f"Nouveau document : {doc.titre}",
-            corps=doc.titre,
+            #  🔴 `corps=doc.titre` REPÉTAIT le titre, qui est déjà juste au-dessus :
+            #  la notification occupait deux lignes pour dire une fois la même
+            #  chose. La description, ajoutée le 08/09/2026, dit ce que le document
+            #  couvre — c'est exactement ce qu'un corps doit porter. Le titre reste
+            #  le repli quand elle est vide (09/09/2026).
+            corps=doc.description or doc.titre,
             lien=lien_doc,
         ))
         if not u.email:
@@ -101,7 +115,13 @@ def _notifier_document_publie(
             code="document_publie",
             to=u.email,
             context={
-                "document": {"titre": doc.titre, "lien": lien_doc},
+                #  `description` transmise depuis le 09/09/2026 : le modèle
+                #  l'affiche sous le titre quand elle existe (migration 0185).
+                "document": {
+                    "titre": doc.titre,
+                    "description": doc.description,
+                    "lien": lien_doc,
+                },
                 "residence": {"nom": site_nom},
                 "app": {"url": site_url},
             },
