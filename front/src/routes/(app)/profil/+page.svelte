@@ -18,6 +18,7 @@
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import TelemetrieRGPD from '$lib/components/TelemetrieRGPD.svelte';
 	import { etageLabel, etageParDefaut, lotTypeLabel } from '$lib/utils';
+	import ChampsEtage from '$lib/components/ChampsEtage.svelte';
 
 	$: _pc = getPageConfig($configStore, 'profil', defautsDePage('profil'));
 	$: _siteNom = $siteNomStore;
@@ -30,6 +31,12 @@
 	 *   Modifiable ici sans validation du conseil (#835) : contrairement au
 	 *   bâtiment, il ne revendique rien. */
 	let etage: number | null = null;
+	/**  L'étage de CHAQUE lot, par identifiant — `Lot.etage`, donc une donnée de
+	 *   PATRIMOINE, distincte de la précédente : un bailleur a un lot au 4ᵉ et
+	 *   habite ailleurs. Écrite par son occupant depuis le 09/09/2026 (#835) —
+	 *   c'est lui qui sait à quel étage il vit. */
+	let etagesLot: Record<number, number | null> = {};
+	let champsEtage: ChampsEtage;
 	let societe = '';
 	let fonction = '';
 	let email = '';
@@ -144,6 +151,7 @@
 		mesLots = lots;
 		batiments = bats;
 		etage = etageParDefaut(etage, mesLots); //  #835 — motif dans `$lib/utils`
+		etagesLot = Object.fromEntries(mesLots.map((l) => [l.id, l.etage ?? null]));
 
 		const [dem, eDem] = await essayer<any[]>(authApi.mesDemandes(), []);
 		demandes = dem;
@@ -165,6 +173,9 @@
 				fonction: fonction || null,
 				...(emailChanged ? { email } : {}),
 			});
+			//  `Lot.etage` s'écrit dans une AUTRE table, avec une autre règle
+			//  d'accès : le composant qui le saisit l'enregistre (#835).
+			mesLots = await champsEtage.enregistrerEtagesDeLots();
 			setUser(updated);
 			toast('success', 'Profil mis à jour');
 		} catch (e) {
@@ -318,24 +329,7 @@
 				<label for="p-tel">Téléphone</label>
 				<input id="p-tel" type="tel" bind:value={telephone} placeholder="+33 6 00 00 00 00" />
 			</div>
-			<!--  ⚠️ L'indication dit à quoi il SERT, comme à l'inscription : un champ
-			      facultatif dont on ignore l'usage ne se remplit pas. Les bornes sont
-			      les mêmes des deux côtés — et elles sont AUSSI vérifiées par l'API,
-			      un champ borné côté client se postant directement. -->
-			<div class="field">
-				<label for="p-etage">Étage</label>
-				<input
-					id="p-etage"
-					type="number"
-					bind:value={etage}
-					min="-2"
-					max="50"
-					placeholder="Ex. 3"
-				/>
-				<p class="field-hint">
-					Facultatif. L’étage où vous habitez — il sert à vous situer auprès de vos voisins.
-				</p>
-			</div>
+			<ChampsEtage bind:this={champsEtage} bind:etage bind:etagesLot lots={mesLots} />
 			<div class="field">
 				<label for="p-societe">Société</label>
 				<input
@@ -596,6 +590,7 @@
 		font-size: 0.78rem;
 		color: var(--color-text-muted);
 	}
+
 	.info-grid {
 		display: grid;
 		grid-template-columns: auto 1fr;

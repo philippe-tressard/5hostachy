@@ -17,6 +17,7 @@ from app.auth.jwt import (
 from app.auth.deps import get_current_user
 from app.config import get_settings
 from app.database import get_session
+from app.utils.etages import ETAGE_HORS_BORNES, etage_hors_bornes
 from app.models.core import (Utilisateur, RefreshToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment,
     ConfigSite, DemandeModificationProfil, StatutDemandeProfil)
 from app.schemas import UserCreate, UserRead, LoginRequest
@@ -372,12 +373,11 @@ def update_me(
         #  au-dessus. Le mettre derrière une approbation ajouterait une friction
         #  sans rien protéger.
         #
-        #  ⚠️ Les bornes sont celles de l'inscription — un étage hors de
-        #  [-2, 50] n'est pas une donnée, c'est une faute de frappe. Le contrôle
-        #  est ICI et pas seulement dans l'écran : un champ borné côté client se
-        #  poste directement.
-        if not -2 <= body.etage <= 50:
-            raise HTTPException(400, "Étage attendu entre -2 et 50.")
+        #  ⚠️ Bornes vérifiées ICI et pas seulement dans l'écran : un champ borné
+        #  côté client se poste directement. Elles vivent dans `utils/etages.py`
+        #  depuis qu'un SECOND écran saisit un étage (un lot, 09/09/2026).
+        if etage_hors_bornes(body.etage):
+            raise HTTPException(400, ETAGE_HORS_BORNES)
         user.etage = body.etage
     if body.last_seen_actualites is not None:
         user.last_seen_actualites = datetime.fromisoformat(body.last_seen_actualites.replace("Z", "+00:00"))

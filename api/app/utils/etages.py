@@ -6,6 +6,25 @@ fichiers de mille lignes que le plafond de modularité refuse ensuite.
 """
 from __future__ import annotations
 
+#: Les bornes d'un étage saisi. Au-delà, ce n'est pas une donnée, c'est une faute
+#: de frappe : un `4` devenu `44`, un signe en trop.
+#:
+#: 🔴 Elles étaient écrites **en clair dans `auth.py`** (#835), et le commentaire
+#: qui les accompagnait disait déjà pourquoi elles devaient être vérifiées côté
+#: serveur — *« un champ borné côté client se poste directement »*. Le jour où un
+#: second écran a permis de saisir un étage (celui d'un LOT, 09/09/2026), la
+#: règle allait être recopiée : elle vit ici, avec le libellé qu'elle borne.
+ETAGE_MIN = -2
+ETAGE_MAX = 50
+
+#: Le message rendu à qui sort des bornes — une seule formulation, pour que les
+#: deux écrans disent la même chose.
+ETAGE_HORS_BORNES = f"Étage attendu entre {ETAGE_MIN} et {ETAGE_MAX}."
+
+
+def etage_hors_bornes(etage: int) -> bool:
+    """L'étage saisi est-il hors de ce qu'un immeuble peut porter ?"""
+    return not ETAGE_MIN <= etage <= ETAGE_MAX
 
 
 def etage_label(etage) -> str:

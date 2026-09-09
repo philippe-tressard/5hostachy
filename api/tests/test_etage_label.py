@@ -130,3 +130,29 @@ def test_le_FRONT_rend_EXACTEMENT_la_meme_chose():
         assert re.search(motif, corps), (
             f"le front n'écrit plus « {attendu} » comme le serveur :\n{corps}"
         )
+
+
+def test_les_BORNES_de_l_etage_ne_derivent_pas_non_plus():
+    """Les mêmes deux nombres, des deux côtés (09/09/2026).
+
+    Elles étaient écrites en clair dans `min="-2" max="50"` sur deux écrans et
+    dans un `if` de `auth.py`. Un troisième champ s'est ajouté — l'étage d'un lot
+    — et une quatrième copie allait suivre. Elles vivent maintenant dans
+    `app/utils/etages.py` et `front/src/lib/utils.ts`, pour la même raison que le
+    libellé : les contextes de build interdisent le partage, seule la copie est
+    possible, et c'est ce test qui la rend tenable.
+    """
+    from app.utils.etages import ETAGE_MAX, ETAGE_MIN
+
+    source = _UTILS_TS.read_text(encoding="utf-8")
+    for nom, attendu in (("ETAGE_MIN", ETAGE_MIN), ("ETAGE_MAX", ETAGE_MAX)):
+        trouve = re.search(rf"export const {nom} = (-?\d+);", source)
+        assert trouve, (
+            f"`{nom}` est introuvable dans `front/src/lib/utils.ts` : la borne "
+            "serveur n'a plus de pendant, et les deux peuvent diverger sans que "
+            "rien ne le dise."
+        )
+        assert int(trouve.group(1)) == attendu, (
+            f"`{nom}` vaut {trouve.group(1)} côté front et {attendu} côté serveur : "
+            "l'écran accepterait une valeur que l'API refuse, ou l'inverse."
+        )

@@ -271,6 +271,18 @@ export function etageLabel(
  * ⚠️ Elle vit ici et non dans l'écran : c'est une règle du produit, et
  * `api/tests/test_etage_defaut_mono_lot.py` l'exerce depuis le dehors.
  */
+/**
+ * Les bornes d'un étage saisi — au-delà, c'est une faute de frappe.
+ *
+ * 🔴 Écrites en clair dans `min="-2" max="50"` sur DEUX écrans (inscription et
+ * profil), et un troisième champ allait s'ajouter le 09/09/2026 (l'étage d'un
+ * lot, #835). Elles sont recopiées côté serveur dans `api/app/utils/etages.py` —
+ * les contextes de build sont `./api` et `./front`, seule la copie est possible —
+ * et `api/tests/test_etage_label.py` échoue si les deux dérivent.
+ */
+export const ETAGE_MIN = -2;
+export const ETAGE_MAX = 50;
+
 export function etageParDefaut(
 	etageSaisi: number | null | undefined,
 	lots: { type?: string | null; etage?: number | null }[],
