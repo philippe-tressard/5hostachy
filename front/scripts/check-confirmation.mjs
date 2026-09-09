@@ -32,8 +32,11 @@ import { fileURLToPath } from 'node:url';
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
 
-/** Le compte au 30/08/2026, après conversion de `residence` et `prestataires`. */
-const PLAFOND = 30;
+/**
+ * Le compte au 09/09/2026, après conversion de l'onglet **Modèles e-mail**
+ * (`residence` et `prestataires` l'avaient été le 30/08).
+ */
+const PLAFOND = 29;
 
 /**
  * Fichiers qui PARLENT de `confirm()` sans en appeler un : le composant de

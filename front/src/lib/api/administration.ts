@@ -61,6 +61,11 @@ export const admin = {
 	//  déclarée et l'autre non : c'est ainsi qu'un client se vide de son sens.
 	emailsHistorique: () => api.get<any[]>('/admin/emails/historique'),
 	updateEmailTemplate: (id: number, data: unknown) => api.patch(`/admin/modeles-email/${id}`, data),
+	//  Un SEUL modèle remis au texte du code (#852). Il n'existait que la
+	//  remise à zéro globale : réparer un modèle cassé d'un caractère imposait
+	//  de détruire les textes choisis pour tous les autres — un remède qu'on
+	//  n'applique pas, et le défaut restait donc en place.
+	resetEmailTemplate: (id: number) => api.post<any>(`/admin/modeles-email/${id}/reinitialiser`),
 	resetEmailTemplates: () => api.post<{ message: string }>('/admin/modeles-email/reinitialiser'),
 	// Utilisateurs & rôles
 	utilisateurs: () => api.get<any[]>('/admin/utilisateurs'),
