@@ -540,7 +540,7 @@
 								: ''}</span
 						>
 						{#if lot.etage !== null}<span style="font-size:.78rem;color:var(--color-text-muted)"
-								>Étage {etageLabel(lot.etage)}</span
+								>{etageLabel(lot.etage, { suffixe: true })}</span
 							>{/if}
 						{#if lot.superficie}<span style="font-size:.78rem;color:var(--color-text-muted)"
 								>{lot.superficie} m²</span

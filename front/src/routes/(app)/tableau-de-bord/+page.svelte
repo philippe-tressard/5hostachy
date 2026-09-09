@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { etageLabel, relire } from '$lib/utils';
+	import { libelleLogement, relire } from '$lib/utils';
 	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
@@ -104,17 +104,7 @@
 		return labels.join(' · ');
 	})();
 
-	$: lotLabel = (() => {
-		if (userLots.length === 0) return '';
-		const appt = userLots.find((l: any) => l.type === 'appartement');
-		if (!appt) return '';
-		const parts: string[] = [];
-		if (appt.batiment_nom) parts.push(appt.batiment_nom);
-		else if ($currentUser?.batiment_nom) parts.push($currentUser.batiment_nom);
-		if (appt.type_appartement) parts.push(appt.type_appartement);
-		if (appt.etage != null) parts.push(etageLabel(appt.etage));
-		return parts.join(', ');
-	})();
+	$: lotLabel = libelleLogement(userLots, $currentUser as any);
 
 	// ── Expand state (unique entre prochaines échéances et fil d'activité) ─
 	let expandedItem: string | null = null;

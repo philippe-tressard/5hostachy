@@ -1,13 +1,24 @@
-"""Router auth — inscription, connexion, déconnexion, refresh, réinitialisation mot de passe."""
+"""Router auth — inscription, connexion, déconnexion, refresh.
+
+Le bloc « profil » — `GET /me`, `PATCH /me` et les demandes de modification — est
+parti dans `auth_profil.py` le 09/09/2026, au fil de l'eau : ce fichier était à
+561 lignes et le contrôle de modularité refuse qu'un fichier déjà au-dessus de
+500 grossisse (rang 1 §4). Il fallait y ajouter l'alerte de divergence d'étage.
+
+C'est la TROISIÈME extraction de ce fichier — après le mot de passe (14/08/2026)
+et la télémétrie —, et la césure est la même à chaque fois : *prouver qu'on est
+soi* reste ici, *décrire qui l'on est* s'en va. Le router garde le préfixe
+`/auth` et est monté à part dans `main.py` : FastAPI additionne les routers, les
+URL publiques sont donc rigoureusement inchangées.
+"""
 import secrets
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Cookie, Request
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 from sqlalchemy import func
-from sqlmodel import Session, select, or_
+from sqlmodel import Session, select
 
-from app.utils.batiments import libelle_batiment, libelle_batiment_ou
 from app.auth.jwt import (
     create_access_token,
     create_refresh_token,
@@ -18,13 +29,12 @@ from app.auth.jwt import (
 from app.auth.deps import get_current_user
 from app.config import get_settings
 from app.database import get_session
-from app.utils.etages import ETAGE_HORS_BORNES, etage_hors_bornes
 from app.models.core import (Utilisateur, RefreshToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment,
-    ConfigSite, DemandeModificationProfil, StatutDemandeProfil)
+    ConfigSite)
 from app.schemas import UserCreate, UserRead, LoginRequest
+from app.utils.lecture_utilisateur import construire_user_read
 from app.utils.limiter import limiter
 from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
-from app.utils.noms import nom_affiche
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -208,7 +218,7 @@ def login(request: Request, body: LoginRequest, response: Response, session: Ses
 
     response.set_cookie("access_token", access, max_age=settings.access_token_expire_minutes * 60, **COOKIE_OPTS)
     response.set_cookie("refresh_token", refresh, max_age=settings.refresh_token_expire_days * 86400, **COOKIE_OPTS)
-    return _build_user_read(user, session)
+    return construire_user_read(user, session)
 
 
 @router.post("/refresh")
@@ -260,35 +270,6 @@ def logout(response: Response, refresh_token: str | None = Cookie(default=None),
     return {"message": "Déconnecté"}
 
 
-def _build_user_read(user: Utilisateur, session: Session) -> UserRead:
-    from app.models.core import Delegation, StatutDelegation
-    batiment_nom = None
-    if user.batiment_id:
-        bat = session.get(Batiment, user.batiment_id)
-        if bat:
-            batiment_nom = libelle_batiment(bat)
-    # Charger les délégations actives où l'utilisateur est aidant
-    today = date.today()
-    deleg_rows = session.exec(
-        select(Delegation).where(
-            Delegation.aidant_id == user.id,
-            Delegation.statut == StatutDelegation.active,
-            Delegation.date_debut <= today,
-            or_(Delegation.date_fin.is_(None), Delegation.date_fin >= today),
-        )
-    ).all()
-    delegations_aidant = []
-    for d in deleg_rows:
-        mandant = session.get(Utilisateur, d.mandant_id)
-        if mandant:
-            delegations_aidant.append({
-                "delegation_id": d.id,
-                "mandant_id": mandant.id,
-                "mandant_nom": nom_affiche(mandant.prenom, mandant.nom),
-            })
-    return UserRead.from_orm_with_roles(user, batiment_nom=batiment_nom, delegations_aidant=delegations_aidant)
-
-
 @router.get("/verifier-acces", status_code=204)
 def verifier_acces(_: Utilisateur = Depends(get_current_user)) -> Response:
     """Réservé au `forward_auth` de Caddy : 204 si la session est valide, 401 sinon.
@@ -306,173 +287,6 @@ def verifier_acces(_: Utilisateur = Depends(get_current_user)) -> Response:
     """
     return Response(status_code=204)
 
-
-@router.get("/me", response_model=UserRead)
-def me(
-    user: Utilisateur = Depends(get_current_user),
-    session: Session = Depends(get_session),
-):
-    return _build_user_read(user, session)
-
-
-class MeUpdate(BaseModel):
-    prenom: str | None = None
-    nom: str | None = None
-    email: str | None = None
-    telephone: str | None = None
-    societe: str | None = None
-    fonction: str | None = None
-    #  L'étage où la personne HABITE — modifiable depuis le profil depuis le
-    #  08/09/2026. Distinct de `Lot.etage`, qui décrit un BIEN : un bailleur a un
-    #  lot au 4ᵉ et habite ailleurs.
-    etage: int | None = None
-    last_seen_actualites: str | None = None
-    preferences_notifications: str | None = None
-    restreindre_a_mes_batiments: bool | None = None
-    demarche_arrivant: str | None = None
-
-    @field_validator("nom", mode="before")
-    @classmethod
-    def uppercase_nom(cls, v: str | None) -> str | None:
-        return v.strip().upper() if v else v
-
-    @field_validator("prenom", mode="before")
-    @classmethod
-    def titlecase_prenom(cls, v: str | None) -> str | None:
-        return v.strip().title() if v else v
-
-
-@router.patch("/me", response_model=UserRead)
-def update_me(
-    body: MeUpdate,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    if body.prenom is not None:
-        user.prenom = body.prenom
-    if body.nom is not None:
-        user.nom = body.nom
-    if body.email is not None:
-        new_email = body.email.strip().lower()
-        if new_email != user.email.lower():
-            existing = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == new_email)).first()
-            if existing:
-                raise HTTPException(400, "Cette adresse e-mail est déjà utilisée")
-            user.email = new_email
-    if body.telephone is not None:
-        user.telephone = body.telephone
-    if body.societe is not None:
-        user.societe = body.societe
-    if body.fonction is not None:
-        user.fonction = body.fonction
-    if body.etage is not None:
-        #  🔴 SANS validation du conseil syndical, et c'est délibéré (#835).
-        #
-        #  Le changement de BÂTIMENT passe par `demanderModification` parce
-        #  qu'il touche à ce qu'on est dans la copropriété. L'étage ne revendique
-        #  rien : c'est un repère de voisinage, comme le téléphone juste
-        #  au-dessus. Le mettre derrière une approbation ajouterait une friction
-        #  sans rien protéger.
-        #
-        #  ⚠️ Bornes vérifiées ICI et pas seulement dans l'écran : un champ borné
-        #  côté client se poste directement. Elles vivent dans `utils/etages.py`
-        #  depuis qu'un SECOND écran saisit un étage (un lot, 09/09/2026).
-        if etage_hors_bornes(body.etage):
-            raise HTTPException(400, ETAGE_HORS_BORNES)
-        user.etage = body.etage
-    if body.last_seen_actualites is not None:
-        user.last_seen_actualites = datetime.fromisoformat(body.last_seen_actualites.replace("Z", "+00:00"))
-    if body.preferences_notifications is not None:
-        user.preferences_notifications = body.preferences_notifications
-    if body.restreindre_a_mes_batiments is not None:
-        #  L'utilisateur se restreint LUI-MÊME : aucun contrôle de droit à faire,
-        #  cette préférence ne peut que lui montrer moins.
-        user.restreindre_a_mes_batiments = body.restreindre_a_mes_batiments
-    if body.demarche_arrivant is not None:
-        if body.demarche_arrivant not in ("nouvel_arrivant", "deja_resident"):
-            raise HTTPException(400, "Valeur invalide pour demarche_arrivant")
-        user.demarche_arrivant = body.demarche_arrivant
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return _build_user_read(user, session)
-
-
-# ── Demandes de modification de profil (statut / bâtiment) ───────────────────
-
-class DemandeModifCreate(BaseModel):
-    statut_souhaite: str | None = None
-    batiment_id_souhaite: int | None = None
-    motif: str | None = None
-
-
-@router.post("/me/demande-modification", status_code=201)
-def creer_demande_modif(
-    body: DemandeModifCreate,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    """Soumet une demande de changement de type de résident et/ou de bâtiment, soumise à validation CS."""
-    if not body.statut_souhaite and not body.batiment_id_souhaite:
-        raise HTTPException(400, "Au moins un champ à modifier (statut ou bâtiment) est requis.")
-
-    # Valider le statut si fourni
-    if body.statut_souhaite:
-        try:
-            StatutUtilisateur(body.statut_souhaite)
-        except ValueError:
-            raise HTTPException(400, f"Statut invalide : {body.statut_souhaite}")
-
-    # Vérifier qu'il n'y a pas déjà une demande en attente
-    existante = session.exec(
-        select(DemandeModificationProfil).where(
-            DemandeModificationProfil.utilisateur_id == user.id,
-            DemandeModificationProfil.statut_demande == StatutDemandeProfil.en_attente,
-        )
-    ).first()
-    if existante:
-        raise HTTPException(409, "Une demande est déjà en cours. Attendez qu'elle soit traitée.")
-
-    demande = DemandeModificationProfil(
-        utilisateur_id=user.id,
-        statut_souhaite=body.statut_souhaite,
-        batiment_id_souhaite=body.batiment_id_souhaite,
-        motif=body.motif,
-    )
-    session.add(demande)
-    session.commit()
-    session.refresh(demande)
-    return demande
-
-
-@router.get("/me/demandes-modification")
-def mes_demandes_modif(
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    """Retourne les demandes de modification de profil de l'utilisateur connecté."""
-    demandes = session.exec(
-        select(DemandeModificationProfil)
-        .where(DemandeModificationProfil.utilisateur_id == user.id)
-        .order_by(DemandeModificationProfil.cree_le.desc())
-        .limit(10)
-    ).all()
-    # Enrichir avec nom bâtiment souhaité
-    result = []
-    for d in demandes:
-        item = d.model_dump()
-        if d.batiment_id_souhaite:
-            bat = session.get(Batiment, d.batiment_id_souhaite)
-            item["batiment_nom_souhaite"] = libelle_batiment_ou(bat, None)
-        else:
-            item["batiment_nom_souhaite"] = None
-        result.append(item)
-    return result
-
-
-# ──────────────────────────────────────────────
-#  Vérification email
-# ──────────────────────────────────────────────
 
 class RenvoiVerificationRequest(BaseModel):
     email: str

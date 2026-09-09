@@ -168,7 +168,7 @@
 								<div>
 									<strong>{m.genre} {nomAffiche(m)}</strong>
 									{#if m.etage != null}
-										<div class="contact-loc">Étage {etageLabel(m.etage)}</div>
+										<div class="contact-loc">{etageLabel(m.etage, { suffixe: true })}</div>
 									{/if}
 								</div>
 							</div>
@@ -205,7 +205,7 @@
 								<div class="contact-loc">
 									{#if m.batiment_nom}Bât. {m.batiment_nom}{/if}{#if m.batiment_nom && m.etage != null}
 										-
-									{/if}{#if m.etage != null}Étage {etageLabel(m.etage)}{/if}
+									{/if}{#if m.etage != null}{etageLabel(m.etage, { suffixe: true })}{/if}
 								</div>
 							{/if}
 						</div>

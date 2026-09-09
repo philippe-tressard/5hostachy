@@ -10,7 +10,12 @@ from sqlmodel import Session, select
 from app.utils.batiments import libelle_batiment_ou
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.utils.etages import ETAGE_HORS_BORNES, etage_hors_bornes
+from app.utils.etages import (
+    ETAGE_HORS_BORNES,
+    etage_hors_bornes,
+    logement_de_reference,
+    type_de_lot,
+)
 from app.models.core import (
     Lot,
     UserLot,
@@ -48,13 +53,19 @@ class LotRead(BaseModel):
     superficie: Optional[float] = None
     batiment_id: Optional[int] = None
     batiment_nom: Optional[str] = None
+    #: Ce lot est-il celui qui renseigne l'étage où l'on VIT ? La règle — un seul
+    #: logement, de type appartement, dont l'étage est connu — vit dans
+    #: `utils/etages.py` et le front lit ce booléen. Recalculée dans l'écran, elle
+    #: y aurait pris sa deuxième écriture, et la divergence que l'API signale
+    #: n'aurait plus été la même que celle que l'écran affiche.
+    est_logement_de_reference: bool = False
 
 
 def _lot_read(lot: Lot) -> LotRead:
     return LotRead(
         id=lot.id,
         numero=lot.numero,
-        type=lot.type.value if hasattr(lot.type, "value") else str(lot.type),
+        type=type_de_lot(lot),
         type_appartement=lot.type_appartement,
         etage=lot.etage,
         superficie=lot.superficie,
@@ -84,7 +95,17 @@ def mes_lots(
         lots = session.exec(select(Lot)).all()
     else:
         return []
-    return [_lot_read(l) for l in lots]
+
+    #  Le logement de référence est désigné ICI, sur la liste entière : la règle
+    #  porte sur l'ENSEMBLE des lots (« un seul logement »), donc elle ne peut pas
+    #  se calculer lot par lot dans `_lot_read`.
+    reference = logement_de_reference(lots)
+    lectures = []
+    for lot in lots:
+        lecture = _lot_read(lot)
+        lecture.est_logement_de_reference = reference is not None and lot.id == reference.id
+        lectures.append(lecture)
+    return lectures
 
 
 @router.get("/admin/tous")

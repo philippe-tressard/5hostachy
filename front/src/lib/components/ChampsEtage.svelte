@@ -1,15 +1,22 @@
 <!--
   L'étage de chacun de mes LOGEMENTS (#835).
 
-  🔴 Le champ « Étage » PERSONNEL (`Utilisateur.etage`) vivait ici, juste au-dessus
-  — il a été retiré le 09/09/2026, sur arbitrage de Philippe, à l'écran : deux
-  champs « Étage » à trois lignes d'écart, dont le premier ne disait rien que le
-  second ne dise mieux. Il reste saisi à l'inscription, et la colonne garde sa
-  valeur ; ce qui disparaît, c'est sa saisie ici.
+  🔴 DEUX étages, deux natures, et c'est pour cela qu'ils vivent dans le MÊME
+  composant : `Utilisateur.etage` est l'endroit où l'on VIT, `Lot.etage` un bien du
+  patrimoine. Un bailleur a un lot au 4ᵉ et habite ailleurs. Les séparer dans deux
+  fichiers inviterait à écrire l'un pour l'autre.
 
-  ⚠️ Un bailleur ne peut donc plus déclarer depuis son profil l'étage où il HABITE
-  quand ce n'est pas celui d'un de ses lots. C'est le coût du choix, dit une fois :
-  l'écran gagne en clarté ce que ce cas précis perd en précision.
+  ⚠️ Le champ personnel a été RETIRÉ le matin du 09/09/2026 — « deux champs Étage à
+  trois lignes d'écart » — puis REDEMANDÉ le soir même, quand un compte de test sans
+  lot s'est retrouvé sans aucun moyen de dire où il habite. Les deux arbitrages sont
+  justes : c'est la RESSEMBLANCE des deux champs qui était le défaut, pas leur
+  nombre. D'où, cette fois, deux libellés qui ne peuvent pas se confondre — « où
+  j'habite » contre « mes logements » — et un seul des deux qui parle du bien.
+
+  🔴 Quand un logement de référence existe, sa valeur est PROPOSÉE dans le champ
+  personnel : personne ne devrait ressaisir ce que le site détient déjà. La
+  désignation de ce logement vient de l'API (`est_logement_de_reference`), jamais
+  d'un calcul refait ici — voir `etageDuLot` dans `$lib/utils`.
 
   ⚠️ PAS d'indication sous ce bloc. Elle disait « Facultatif. L'étage du bien
   lui-même — il apparaît sur les fiches et les affiches ». Retirée le 09/09/2026 :
@@ -24,12 +31,39 @@
   l'administration du patrimoine, comme avant.
 -->
 <script lang="ts">
-	import { lots as lotsApi } from '$lib/api';
-	import { ETAGE_MAX, ETAGE_MIN, lotTypeLabel } from '$lib/utils';
+	import { auth as authApi, lots as lotsApi } from '$lib/api';
+	import { currentUser } from '$lib/stores/auth';
+	import { ETAGE_MAX, ETAGE_MIN, etageDuLot, etageLabel, lotTypeLabel } from '$lib/utils';
 
 	/**  L'étage de CHAQUE logement, par identifiant — donnée de patrimoine. */
 	export let etagesLot: Record<number, number | null> = {};
 	export let lots: any[] = [];
+
+	/**  L'étage où l'on VIT — `Utilisateur.etage`, saisi à l'inscription puis
+	 *   modifiable ici. Sans validation du conseil syndical, délibérément : il ne
+	 *   revendique rien, c'est un repère de voisinage comme le téléphone.
+	 *
+	 *   🔴 Lu DEPUIS LE STORE, et non reçu en propriété : l'écran du profil passe
+	 *   déjà le plafond de modularité, et il n'a rien à faire de cette valeur
+	 *   qu'il ne ferait que transporter. Le composant qui saisit une donnée est
+	 *   celui qui sait la lire comme celui qui sait l'écrire.
+	 *
+	 *   ⚠️ `?? null` et jamais `|| null` : `0` est le rez-de-chaussée, et un test
+	 *   de vérité le rendrait « non renseigné ». */
+	let etage: number | null = ($currentUser as any)?.etage ?? null;
+
+	/**  L'étage que le classeur de la copropriété connaît, ou `null`. */
+	$: etageLot = etageDuLot(lots);
+
+	/**  Proposé, jamais imposé : une valeur SAISIE ne se remplace pas par une
+	 *   déduction, même juste — c'est l'utilisateur qui a raison sur où il vit.
+	 *   ⚠️ `== null` et non un test de vérité : `0` est le rez-de-chaussée. */
+	$: if (etage == null && etageLot != null) etage = etageLot;
+
+	/**  Les deux se contredisent-ils ? L'écran le DIT, il ne tranche pas : c'est
+	 *   l'administrateur du site qui vérifie, prévenu par courriel au moment de
+	 *   l'enregistrement (`api/app/utils/alerte_etage.py`). */
+	$: divergence = etage != null && etageLot != null && etage !== etageLot;
 
 	/**  Les LOGEMENTS seuls : une cave et un parking ont un niveau, pas un étage
 	 *   d'habitation, et les lister sous « mes logements » était faux. Le filtre
@@ -55,7 +89,48 @@
 		lots = lots.map((l) => parId.get(l.id) ?? l);
 		return lots;
 	}
+
+	/**  Enregistre l'étage PERSONNEL et rend le compte à jour.
+	 *
+	 *   Ici et non dans la page, pour la même raison que les étages de lots : le
+	 *   composant qui saisit une donnée est celui qui sait comment elle
+	 *   s'enregistre. La page appelle les deux, sans connaître ni les deux tables
+	 *   ni les deux routes.
+	 *
+	 *   ⚠️ Envoyé même à `null` : effacer son étage est un geste, et `update_me`
+	 *   n'écrit que ce qu'il reçoit — un champ omis ne s'efface jamais. */
+	export async function enregistrerEtagePersonnel(): Promise<any> {
+		return authApi.updateMe({ etage });
+	}
 </script>
+
+<!--  Section 1 : l'étage où l'on VIT. Toujours rendue — c'est le seul endroit où
+      un compte SANS lot peut dire où il habite, et c'est précisément ce cas qui a
+      fait redemander ce champ. -->
+<div class="field">
+	<label for="p-etage">Étage où j'habite</label>
+	<input
+		id="p-etage"
+		type="number"
+		bind:value={etage}
+		min={ETAGE_MIN}
+		max={ETAGE_MAX}
+		placeholder="Ex. 3"
+		aria-describedby={divergence ? 'p-etage-divergence' : undefined}
+	/>
+	<!--  L'indication dit la CONVENTION de saisie, pas l'évidence : « facultatif »
+	      se voit à l'absence d'astérisque, et où la valeur ressort n'apprend rien à
+	      qui la saisit. Que `0` vaille rez-de-chaussée, en revanche, ne se devine
+	      pas — c'est la seule chose qu'un champ « Étage » ne dit pas tout seul. -->
+	<p class="field-hint">0 = rez-de-chaussée, -1 = sous-sol.</p>
+	{#if divergence}
+		<p class="etage-divergence" id="p-etage-divergence" role="status">
+			⚠️ Votre logement est enregistré au <strong>{etageLabel(etageLot, { suffixe: true })}</strong
+			>. C'est cette valeur qui s'affiche dans l'annuaire. Votre saisie est conservée et le
+			gestionnaire du site est prévenu pour vérifier.
+		</p>
+	{/if}
+</div>
 
 {#if logements.length > 0}
 	<div class="field">
@@ -94,6 +169,21 @@
 {/if}
 
 <style>
+	/*  L'avertissement de divergence : la teinte d'attention du site, jamais celle
+	    du danger — rien n'est cassé, il y a deux versions d'un fait et quelqu'un va
+	    trancher. Les valeurs sont celles du bloc « Verr. Maj. » de
+	    `ChampMotDePasse`, seul autre avertissement non bloquant du produit. */
+	.etage-divergence {
+		margin-top: 0.4rem;
+		padding: 0.45rem 0.7rem;
+		background: #fffbeb;
+		border: 1px solid #fcd34d;
+		border-radius: var(--radius);
+		color: #92400e;
+		font-size: 0.8rem;
+		line-height: 1.4;
+	}
+
 	/*  Un logement par ligne : son identité à gauche, son étage à droite. La
 	    grille tient sur un téléphone parce que la colonne du champ est FIXE et
 	    celle du libellé élastique — l'inverse aurait écrasé le libellé sur les

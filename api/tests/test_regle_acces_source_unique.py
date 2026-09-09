@@ -49,8 +49,14 @@ SOURCE_ACCES = RACINE / "utils" / "visibility" / "socle.py"
 EXCEPTIONS = {
     "utils/mes_batiments.py":
         "la source unique elle-même : c'est ici que le rattachement est lu.",
-    "routers/auth.py":
-        "AFFICHAGE seul — compose le libellé « Bât. N » du profil, ne décide rien.",
+    "utils/lecture_utilisateur.py":
+        "AFFICHAGE seul — compose le libellé « Bât. N » du profil, ne décide rien. "
+        "Extrait de `routers/auth.py` le 09/09/2026, quand le bloc profil en est "
+        "sorti : les DEUX routeurs d'authentification sérialisent un utilisateur. "
+        "⚠️ Deuxième fois en deux jours qu'une exception voyage avec son code "
+        "(cf. `utils/courriel_arrivee.py` ci-dessous) — le contrôle l'a dit tout "
+        "de suite, dans les deux sens : refus sur le fichier neuf, ET exception "
+        "devenue inutile sur l'ancien.",
     "routers/admin/profils.py":
         "ADMINISTRATION — pose le rattachement demandé, ne lit aucun accès.",
     "routers/admin/arrivants.py":

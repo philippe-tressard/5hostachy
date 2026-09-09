@@ -246,31 +246,87 @@ export function etageLabel(
 }
 
 /**
- * L'étage à PROPOSER dans un profil, d'après les lots du compte.
+ * L'étage à AFFICHER pour un membre : le LOT fait autorité, la saisie prend le relais.
  *
- * Demandé le 08/09/2026 : *« Si mono lot, mettre l'étage de l'appartement par
- * défaut. »* Personne ne devrait ressaisir une information que le site détient
- * déjà — l'étage d'un lot vient du classeur de la copropriété.
+ * Arbitré par Philippe le 09/09/2026 : *« préférer celle du Lot »*. L'étage d'un
+ * lot vient du classeur de la copropriété ; celui que le résident saisit est un
+ * repère de voisinage qu'il est le seul à pouvoir donner quand aucun lot ne le
+ * porte — un locataire, un bailleur qui habite ailleurs.
  *
- * 🔴 **Trois conditions, et chacune retire un cas où la proposition serait
- * fausse :**
+ * 🔴 **La désignation du logement de référence n'est PAS refaite ici.** Elle vit
+ * dans `api/app/utils/etages.py` et voyage dans `est_logement_de_reference`, que
+ * `GET /lots/mes-lots` pose sur le lot concerné. Une règle recalculée dans
+ * l'écran aurait pris sa deuxième écriture, et la divergence que l'API SIGNALE
+ * n'aurait plus été la même que celle que l'écran AFFICHE.
  *
- * 1. **le champ est vide** — une valeur saisie ne se remplace jamais par une
- *    déduction, même juste. C'est l'utilisateur qui a raison ;
- * 2. **un seul lot**, sinon on ne saurait pas lequel il habite. Choisir « le
- *    premier appartement » donnerait une réponse plausible et parfois fausse,
- *    ce qui est le pire des deux : personne ne la remettrait en cause ;
- * 3. **de type appartement** — un copropriétaire dont l'unique lot est un
- *    parking ou une cave **n'habite pas son lot**. Lui proposer « SS 1 » serait
- *    une réponse à côté de la question, et il la validerait sans y penser,
- *    parce qu'un champ prérempli se lit comme une information vérifiée.
+ * ⚠️ Ce fichier a porté cette règle une première fois, sous le nom
+ * `etageParDefaut` (08/09/2026) — supprimée le lendemain avec son test, puis
+ * redemandée le soir même. Son bloc de documentation avait survécu à la
+ * suppression : vingt-six lignes décrivant une fonction absente et citant un test
+ * effacé. C'est ce commentaire-ci qui les remplace.
  *
- * ⚠️ `0` est un étage — le rez-de-chaussée. D'où `=== null` et non `!etage` :
- * un test de vérité écraserait le RDC.
- *
- * ⚠️ Elle vit ici et non dans l'écran : c'est une règle du produit, et
- * `api/tests/test_etage_defaut_mono_lot.py` l'exerce depuis le dehors.
+ * ⚠️ `0` est un étage — le rez-de-chaussée. D'où `!= null` et jamais un test de
+ * vérité, qui effacerait le RDC.
  */
+export function etageDuLot(
+	lots: { est_logement_de_reference?: boolean; etage?: number | null }[],
+): number | null {
+	const reference = lots.find((l) => l.est_logement_de_reference);
+	return reference?.etage ?? null;
+}
+
+/**
+ * « Bât. 4, T4, 2ème » — où habite un membre, tel que la salutation le dit.
+ *
+ * 🔴 Elle rendait une chaîne VIDE dès que le compte n'avait aucun lot rattaché :
+ * un résident inscrit la veille lisait « Bonsoir Thomas · Copropriétaire
+ * résident » quand son voisin lisait son bâtiment, son type et son étage.
+ * Signalé par Philippe le 09/09/2026, sur un compte de test.
+ *
+ * Rien ne manquait pourtant : son bâtiment ET son étage étaient saisis à
+ * l'inscription, sur le COMPTE. Cette règle ne lisait que le PATRIMOINE, comme
+ * les autres écrans passés à `Lot.etage` — **un compte sans lot devenait
+ * invisible à lui-même**, et rien ne pouvait le signaler : une chaîne vide n'est
+ * pas une erreur, c'est une ligne un peu plus courte.
+ *
+ * ⚠️ Elle vit ICI et non dans le tableau de bord : c'est une règle du PRODUIT —
+ * comment le site nomme le logement de quelqu'un —, pas une règle d'écran, et le
+ * second écran qui en aura besoin l'aurait recopiée.
+ */
+export function libelleLogement(
+	lots: {
+		type?: string;
+		batiment_nom?: string | null;
+		type_appartement?: string | null;
+		etage?: number | null;
+	}[],
+	compte: { batiment_nom?: string | null; etage?: number | null } | null | undefined,
+): string {
+	const appt = lots.find((l) => l.type === 'appartement');
+	if (appt) {
+		const parts: string[] = [];
+		if (appt.batiment_nom) parts.push(appt.batiment_nom);
+		else if (compte?.batiment_nom) parts.push(compte.batiment_nom);
+		if (appt.type_appartement) parts.push(appt.type_appartement);
+		if (appt.etage != null) parts.push(etageLabel(appt.etage));
+		return parts.join(', ');
+	}
+	//  Le repli sur le COMPTE. Le séparateur diffère exprès de celui du cas
+	//  nominal : ce n'est pas la même phrase — elle porte un ÉTAT en son milieu, et
+	//  « Bât. 3, sans lot, RDC » se lirait comme une énumération de trois choses de
+	//  même nature.
+	const parts: string[] = [];
+	if (compte?.batiment_nom) parts.push(compte.batiment_nom);
+	parts.push('sans lot');
+	//  ⚠️ `!= null` : `0` est le rez-de-chaussée. Rien n'est écrit quand l'étage
+	//  n'a pas été saisi — une mention « étage inconnu » n'apprendrait rien à qui
+	//  la lit sur SON écran.
+	if (compte?.etage != null) parts.push(etageLabel(compte.etage));
+	//  Ni bâtiment ni étage : « sans lot » tout seul est un reproche, pas une
+	//  information. Mieux vaut ne rien dire.
+	return parts.length > 1 ? parts.join(' — ') : '';
+}
+
 /**
  * Les bornes d'un étage saisi — au-delà, c'est une faute de frappe.
  *
@@ -308,6 +364,6 @@ export function localisationMembre(m: {
 	const parts = [];
 	if (m.batiment_nom) parts.push(`Bât. ${m.batiment_nom}`);
 	//  ⚠️ `!= null` et non un test de vérité : `0` est le rez-de-chaussée.
-	if (m.etage != null) parts.push(`Étage ${etageLabel(m.etage)}`);
+	if (m.etage != null) parts.push(etageLabel(m.etage, { suffixe: true }));
 	return parts.join(' — ');
 }

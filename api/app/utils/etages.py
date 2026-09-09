@@ -74,3 +74,78 @@ def etage_label(etage) -> str:
     if niveau < 0:
         return f"SS {abs(niveau)}"
     return "1er" if niveau == 1 else f"{niveau}ème"
+
+
+def type_de_lot(lot) -> str:
+    """Le type d'un lot en clair — l'enum et la chaîne se lisent pareil.
+
+    `Lot.type` est un `TypeLot`, mais les lots arrivent aussi d'un import ou d'un
+    dictionnaire de test où le type est une chaîne. `auto_match_service` fait déjà
+    ce `hasattr(..., "value")` sur un statut : la forme est celle du projet.
+
+    ⚠️ Publique, et employée par `_lot_read` : la même ligne y était écrite en
+    clair, et c'est la deuxième écriture qui aurait figé la première.
+    """
+    brut = getattr(lot, "type", None)
+    return brut.value if hasattr(brut, "value") else str(brut or "")
+
+
+def logement_de_reference(lots) -> object | None:
+    """Le logement qui peut renseigner l'étage où l'on VIT — ou `None`.
+
+    ## Les trois conditions, et chacune retire un cas où la réponse serait fausse
+
+    1. **un seul logement**, sinon on ne saurait pas lequel il habite. Choisir
+       « le premier appartement » donnerait une réponse plausible et parfois
+       fausse, ce qui est le pire des deux : personne ne la remettrait en cause ;
+    2. **de type appartement** — un copropriétaire dont l'unique lot est un
+       parking ou une cave **n'habite pas son lot**. En déduire « SS 1 » serait
+       une réponse à côté de la question ;
+    3. **l'étage du lot est connu** — un logement sans étage saisi n'apprend
+       rien, et le comparer à la saisie du résident inventerait une divergence.
+
+    🔴 Cette règle a déjà vécu **une fois** : elle s'appelait `etageParDefaut`
+    côté front (08/09/2026), et elle a été supprimée le lendemain avec son test
+    quand le champ personnel a quitté le profil — puis redemandée le soir même.
+    Elle vit désormais côté serveur, où l'alerte de divergence en a besoin de
+    toute façon, et le front l'obtient par l'API plutôt qu'en la recalculant.
+    """
+    logements = [
+        lot
+        for lot in lots
+        if type_de_lot(lot) == "appartement" and getattr(lot, "etage", None) is not None
+    ]
+    return logements[0] if len(logements) == 1 else None
+
+
+def etage_effectif(etage_saisi: int | None, lots) -> int | None:
+    """L'étage à AFFICHER : le lot fait autorité, la saisie prend le relais.
+
+    Arbitré par Philippe le 09/09/2026 : *« préférer celle du Lot »*. L'étage
+    d'un lot vient du classeur de la copropriété ; celui que le résident saisit
+    est un repère de voisinage qu'il est le seul à pouvoir donner quand aucun lot
+    ne le porte — un locataire, ou un bailleur qui habite ailleurs.
+
+    ⚠️ La saisie n'est jamais **écrasée** en base : c'est elle qui permet de
+    constater la divergence, et sans elle l'administrateur n'aurait rien à
+    vérifier. Le lot gagne à l'affichage, pas à l'écriture.
+    """
+    logement = logement_de_reference(lots)
+    if logement is not None:
+        return logement.etage
+    return etage_saisi
+
+
+def divergence_etage(etage_saisi: int | None, lots) -> tuple[int, int] | None:
+    """`(saisi, lot)` quand les deux se contredisent — `None` sinon.
+
+    ⚠️ Une saisie **absente** n'est pas une divergence : ne rien dire n'est pas
+    dire le contraire. Même remarque pour un lot sans étage, déjà écarté par
+    `logement_de_reference`.
+    """
+    if etage_saisi is None:
+        return None
+    logement = logement_de_reference(lots)
+    if logement is None or logement.etage == etage_saisi:
+        return None
+    return (etage_saisi, logement.etage)
