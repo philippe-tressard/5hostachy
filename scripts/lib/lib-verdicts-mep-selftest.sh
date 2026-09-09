@@ -166,8 +166,13 @@ feat(b) : deux"
   #  Cas zéro : rien ne manque, mais une déclaration traîne. On ne peut pas dire
   #  qu'elle est concordante — elle ne décrit plus rien.
   t "rien ne manque, déclaration résiduelle" inconnu verdict_reecriture 601477b 601477b "137cab0" "" ""
-  t "HEAD identiques"                    OK      verdict_parite abc123 abc123
-  t "standby en retard : toléré"         ECART   verdict_parite abc123 def456
+  t "HEAD identiques"                    OK      verdict_parite abc1234 abc1234
+  t "standby en retard : toléré"         ECART   verdict_parite abc1234 def4567
+  #  🔴 #854 — le cas réel, absent jusqu'au 09/09/2026 : `rev-parse --short`
+  #  abrège selon la taille du dépôt, donc les deux nœuds rendent le MÊME commit
+  #  sur des longueurs différentes. Le point 10 était en ÉCART permanent.
+  t "même commit, abréviations inégales" OK      verdict_parite ee33a715 ee33a71
+  t "abréviation trop courte : rien de prouvé" INCONNU verdict_parite ee33a7 ee33a715
   #  🔴 #511 — le point 18 : la parité de CODE ci-dessus rend OK là où les
   #  IMAGES sont périmées. Les deux verdicts sont volontairement DISTINCTS, et
   #  ces cas-ci sont ce qui empêche de les refondre « pour simplifier ».

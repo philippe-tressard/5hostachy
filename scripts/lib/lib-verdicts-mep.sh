@@ -252,8 +252,13 @@ verdict_compte() {         # $1 = nombre observé, $2 = maximum toléré
 }
 
 verdict_parite() {         # $1/$2 = HEAD des 2 nœuds
-  [ -z "$1" ] || [ -z "$2" ] && { echo INCONNU; return; }
-  [ "$1" = "$2" ] && echo OK || echo ECART   # écart = toléré, resync à la bascule
+  #  🔴 `=` jusqu'au 09/09/2026, donc ÉCART PERMANENT (#854) : deux abréviations
+  #  du même commit ne sont pas égales. `memes_hachages` portait déjà la règle.
+  case "$(memes_hachages "$1" "$2")" in
+    oui) echo OK ;;
+    non) echo ECART ;;   # écart = toléré, resync à la bascule
+    *)   echo INCONNU ;;
+  esac
 }
 
 verdict_images_standby() { # $1 = HEAD du standby, $2 = son .images-construites

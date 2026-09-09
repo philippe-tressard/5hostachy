@@ -457,10 +457,13 @@ case "${REP9:-}" in
 esac
 
 # 10 — parité de code entre les 2 nœuds
-H1=$(sur "$RPI1" 'git -C /opt/5hostachy rev-parse --short HEAD')
-H2=$(sur "$RPI2" 'git -C /opt/5hostachy rev-parse --short HEAD')
+#  HEAD complet, pas `--short` : git abrège selon la taille du dépôt, et les
+#  deux nœuds rendaient le même commit sur 8 et 7 caractères — ÉCART permanent
+#  jusqu'au 09/09/2026 (#854, motif dans `lib-parite.memes_hachages`).
+H1=$(sur "$RPI1" 'git -C /opt/5hostachy rev-parse HEAD')
+H2=$(sur "$RPI2" 'git -C /opt/5hostachy rev-parse HEAD')
 rapporter 10 "$(verdict_parite "$H1" "$H2")" "Parité de code actif ⇆ standby" \
-          "rpi1=${H1:-?} rpi2=${H2:-?} (le standby s'aligne seul sous 5 min — auto-deploy, #448)"
+          "rpi1=${H1:0:8} rpi2=${H2:0:8} (le standby s'aligne seul sous 5 min — auto-deploy, #448)"
 
 # 11 — auto-deploy de l'actif vivant
 PROPRIO=$(sur "$ACTIF" 'stat -c %U /var/log/hostachy-deploy.log 2>/dev/null')
