@@ -248,13 +248,6 @@
 		letter-spacing: -0.02em;
 	}
 
-	.sep {
-		width: 1px;
-		height: 1.1rem;
-		background: var(--color-border);
-		margin: 0 0.2rem;
-	}
-
 	.legal-content-editable {
 		padding: 0.7rem 0.9rem;
 		font-size: 0.9rem;

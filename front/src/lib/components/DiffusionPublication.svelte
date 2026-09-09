@@ -110,12 +110,6 @@
 		font-size: 1.1em;
 		line-height: 1;
 	}
-	.aide {
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
-		margin: -0.5rem 0 1rem;
-		line-height: 1.45;
-	}
 	@media (max-width: 480px) {
 		.bloc-hall :global(.checkbox-field) {
 			min-height: 44px;

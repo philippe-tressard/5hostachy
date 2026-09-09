@@ -260,12 +260,6 @@
 		margin-top: 0.15rem;
 		font-style: italic;
 	}
-	.aide {
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
-		margin: -0.5rem 0 1rem;
-		line-height: 1.45;
-	}
 	/*  Sous 480 px, les cases passent en colonne et gagnent une cible tactile
 	    de 44 px (socle 11 §10) — même règle que `CanauxNotification`. */
 	@media (max-width: 480px) {

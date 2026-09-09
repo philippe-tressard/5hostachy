@@ -383,65 +383,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	margin-bottom: 0.75rem;
 }
 
-/* ── Écrans d’authentification ──
-   Connexion, inscription et mot de passe oublié les définissaient chacun de son
-   côté ; `verifier-email` les employait sans aucune définition, et s’affichait
-   donc sans carte, sans centrage et sans logo (#495). */
-.auth-page {
-	min-height: 100vh;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: var(--color-bg);
-	padding: 1rem;
-}
-.auth-card {
-	width: 100%;
-	max-width: 400px;
-	padding: 2rem;
-	background: var(--color-surface);
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius);
-}
-.auth-header {
-	text-align: center;
-	margin-bottom: 1.5rem;
-}
-.auth-logo {
-	font-size: 2.5rem;
-	display: block;
-	margin-bottom: 0.5rem;
-}
-/*  Le CONTENU de l'en-tête, et le pied de bouton — remontés le 09/09/2026.
-
-    #495 avait consolidé le squelette (`.auth-page`, `.auth-card`, `.auth-header`,
-    `.auth-logo`) et #607 avait retiré les copies qui lui étaient identiques au
-    caractère près. Ces trois règles-ci étaient restées : elles habillent le
-    contenu, pas la carte, et se trouvaient donc DEUX à TROIS fois — connexion,
-    inscription, mot de passe oublié, réinitialisation — sans qu'aucun contrôle
-    ne puisse le voir, `lint:charte` ne comparant que les classes de la charte.
-
-    ⚠️ Une copie sous un AUTRE NOM échappe à tout : les deux écrans de mot de
-    passe appelaient `.auth-wrapper` ce que la charte nomme `.auth-page`. */
-.auth-header h1 {
-	font-size: 1.5rem;
-	font-weight: 700;
-	color: var(--color-primary);
-	margin-bottom: 0.3rem;
-}
-.auth-header p {
-	color: var(--color-text-muted);
-	font-size: 0.875rem;
-}
-/*  `gap` retenu de la version la plus disante (réinitialisation) : il ne se voit
-    pas avec un seul bouton, et il évite de le réintroduire au deuxième. */
-.btn-wrapper {
-	display: flex;
-	justify-content: center;
-	gap: 0.75rem;
-	margin-top: 1.25rem;
-}
-
 /* ── Six notions partagées, définies dans UN fichier et employées dans PLUSIEURS ──
 
    Chacune était écrite chez un appelant, et un autre s’en servait sans l’avoir :
@@ -1445,4 +1386,62 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	border: none;
 	border-top: 1px solid var(--color-border);
 	margin: 0.9rem 0;
+}
+
+/* ── Quatre notions qui vivaient en DOUBLE ────────────────────────────────────
+   Remontées le 09/09/2026, trouvées par `lint:css-duplique`. Chacune était
+   écrite à l'identique dans deux fichiers, sous un nom qui n'appartient pas à la
+   charte — donc invisible à `lint:charte`, qui ne compare qu'aux classes de la
+   charte. C'est le cas d'`.auth-wrapper` : une copie sous un autre nom échappe à
+   tout.
+
+   ⚠️ Svelte scope ses styles : tant qu'elles vivaient dans deux composants, le
+   TROISIÈME écran qui aurait repris la classe l'aurait rendue nue. C'est la
+   régression des pastilles de la v2.67.11, en attente. */
+
+/*  L'aide sous un bloc de cases à cocher — celle qui explique ce que la case
+    ENTRAÎNE, pas ce qu'elle est. Sa marge haute est négative : elle se colle au
+    groupe qu'elle commente.
+
+    ⚠️ C'est la QUATRIÈME classe d'aide de la charte, avec `.field-hint`,
+    `.aide-case` et `.aide-bloc` — quatre marges pour une même notion. Les fondre
+    changerait l'espacement de tous les formulaires du site : ce n'est pas une
+    factorisation à faire au détour d'un lot, c'est une décision d'écran (#870). */
+.aide {
+	font-size: 0.78rem;
+	color: var(--color-text-muted);
+	margin: -0.5rem 0 1rem;
+	line-height: 1.45;
+}
+
+/*  Le libellé d'un mois, en tête d'un groupe de lignes datées. Employé par le
+    calendrier et par ses archives — deux vues de la même liste. */
+.month-label {
+	font-size: 0.8rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--color-text-muted);
+	margin-bottom: 0.5rem;
+}
+
+/*  Le séparateur vertical d'une barre d'outils d'éditeur. Les deux éditeurs
+    riches du site en ont une. */
+.sep {
+	width: 1px;
+	height: 1.1rem;
+	background: var(--color-border);
+	margin: 0 0.2rem;
+}
+
+/*  Une carte d'archive : elle s'efface tant qu'on ne la vise pas, pour que la
+    liste courante garde le premier plan.
+
+    ⚠️ Seul le RETOUR à l'opacité pleine reste local : l'annonce le fait au
+    survol, l'actualité aussi mais également une fois DÉPLIÉE. Deux gestes
+    différents sur le même objet — c'est l'écart, il reste où il se décide. */
+.attenue {
+	opacity: 0.8;
+	transition: opacity 0.15s;
+	margin-bottom: 0.3rem;
 }

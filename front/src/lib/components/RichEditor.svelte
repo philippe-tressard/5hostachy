@@ -173,13 +173,6 @@
 		color: var(--color-primary);
 	}
 
-	.sep {
-		width: 1px;
-		height: 1.1rem;
-		background: var(--color-border);
-		margin: 0 0.2rem;
-	}
-
 	.rich-content-editable {
 		padding: 0.55rem 0.75rem;
 		font-size: 0.9rem;

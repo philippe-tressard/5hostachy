@@ -843,14 +843,6 @@
 	.month-group {
 		margin-bottom: 1.5rem;
 	}
-	.month-label {
-		font-size: 0.8rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--color-text-muted);
-		margin-bottom: 0.5rem;
-	}
 	/*  ✅ Les règles `.event-*` et `.archive-*` sont parties dans
 	    `RangeeCalendrier.svelte` (#432), AVEC le balisage qui les portait — la
 	    seule façon qu'elles s'appliquent encore, Svelte scopant le style au

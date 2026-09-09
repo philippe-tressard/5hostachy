@@ -1,0 +1,73 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   LES ÉCRANS D'AUTHENTIFICATION — connexion, inscription, mot de passe, e-mail
+
+   Sorti de `composants.css` le 09/09/2026, sur refus du contrôle de modularité :
+   ce fichier a franchi ses 1 500 lignes en recevant ce que les écrans de mot de
+   passe y avaient laissé. La coupe suit une notion entière, pas l'arithmétique —
+   les cinq écrans qui l'emploient sont les seuls, et ils ne partagent rien
+   d'autre avec les cartes, les badges ou le kanban.
+
+   ⚠️ L'ORDRE D'IMPORT COMPTE : ce fichier vient juste après `composants.css`
+   dans `app.css`, donc avant `normes.css` et `ecrans.css` qui le surchargent —
+   exactement la place qu'occupaient ces règles. Un import déplacé change qui
+   gagne, sans qu'aucune règle ne soit fausse. Même précaution que `champs.css`.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Écrans d’authentification ──
+   Connexion, inscription et mot de passe oublié les définissaient chacun de son
+   côté ; `verifier-email` les employait sans aucune définition, et s’affichait
+   donc sans carte, sans centrage et sans logo (#495). */
+.auth-page {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--color-bg);
+	padding: 1rem;
+}
+.auth-card {
+	width: 100%;
+	max-width: 400px;
+	padding: 2rem;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+}
+.auth-header {
+	text-align: center;
+	margin-bottom: 1.5rem;
+}
+.auth-logo {
+	font-size: 2.5rem;
+	display: block;
+	margin-bottom: 0.5rem;
+}
+/*  Le CONTENU de l'en-tête, et le pied de bouton — remontés le 09/09/2026.
+
+    #495 avait consolidé le squelette (`.auth-page`, `.auth-card`, `.auth-header`,
+    `.auth-logo`) et #607 avait retiré les copies qui lui étaient identiques au
+    caractère près. Ces trois règles-ci étaient restées : elles habillent le
+    contenu, pas la carte, et se trouvaient donc DEUX à TROIS fois — connexion,
+    inscription, mot de passe oublié, réinitialisation — sans qu'aucun contrôle
+    ne puisse le voir, `lint:charte` ne comparant que les classes de la charte.
+
+    ⚠️ Une copie sous un AUTRE NOM échappe à tout : les deux écrans de mot de
+    passe appelaient `.auth-wrapper` ce que la charte nomme `.auth-page`. */
+.auth-header h1 {
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: var(--color-primary);
+	margin-bottom: 0.3rem;
+}
+.auth-header p {
+	color: var(--color-text-muted);
+	font-size: 0.875rem;
+}
+/*  `gap` retenu de la version la plus disante (réinitialisation) : il ne se voit
+    pas avec un seul bouton, et il évite de le réintroduire au deuxième. */
+.btn-wrapper {
+	display: flex;
+	justify-content: center;
+	gap: 0.75rem;
+	margin-top: 1.25rem;
+}

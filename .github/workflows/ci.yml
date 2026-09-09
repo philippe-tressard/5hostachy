@@ -750,6 +750,13 @@ jobs:
         working-directory: front
         run: npm run lint:charte
 
+      #  L'angle mort du précédent : il compare aux classes de la CHARTE, donc il
+      #  ne voit pas une règle dupliquée sous un nom qui n'y est pas. C'est ce
+      #  qu'était `.auth-wrapper`, resté deux consolidations durant.
+      - name: Aucune règle CSS écrite deux fois
+        working-directory: front
+        run: npm run lint:css-duplique
+
       - name: Aucune classe employée sans définition
         working-directory: front
         run: npm run lint:classes-nues
