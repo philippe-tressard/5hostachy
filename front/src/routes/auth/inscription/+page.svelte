@@ -257,8 +257,8 @@
 					      reviendrait à demander une donnée sans dire pourquoi.
 
 					      🔴 Elle dit AUSSI la CONVENTION de saisie, depuis le 09/09/2026 :
-					      rien n'annonçait que `0` vaut rez-de-chaussée ni que `-1` vaut
-					      sous-sol — c'est la seule chose qu'un champ « Étage » ne dit pas
+					      rien n'annonçait que `0` vaut rez-de-chaussée , et l'exemple en
+					      montre la forme — c'est la seule chose qu'un champ « Étage » ne dit pas
 					      tout seul, et un compte de test l'a saisi sans savoir ce qu'il
 					      déclarait. Le mot « Facultatif » qui ouvrait la phrase, lui, a
 					      disparu : l'absence d'astérisque l'énonce déjà (`ux-patterns` §9).
@@ -274,7 +274,7 @@
 							placeholder="Ex. 3"
 						/>
 						<p class="field-hint">
-							0 = rez-de-chaussée, -1 = sous-sol. Sert à vous situer auprès de vos voisins dans
+							0 = rez-de-chaussée, 2 = 2ème étage. Sert à vous situer auprès de vos voisins dans
 							l’annonce de bienvenue publiée à votre arrivée ; votre e-mail et votre téléphone n’y
 							figurent jamais.
 						</p>

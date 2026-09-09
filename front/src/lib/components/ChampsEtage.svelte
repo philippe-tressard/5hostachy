@@ -122,7 +122,15 @@
 	      se voit à l'absence d'astérisque, et où la valeur ressort n'apprend rien à
 	      qui la saisit. Que `0` vaille rez-de-chaussée, en revanche, ne se devine
 	      pas — c'est la seule chose qu'un champ « Étage » ne dit pas tout seul. -->
-	<p class="field-hint">0 = rez-de-chaussée, -1 = sous-sol.</p>
+	<!--  ⚠️ PAS de « -1 = sous-sol », bien que la borne basse l'autorise encore
+	      (arbitrage de Philippe, 09/09/2026) : aucun LOGEMENT n'est en sous-sol
+	      — il n'y a là que des caves et des parkings —, et proposer cette valeur
+	      à quelqu'un qui déclare où il HABITE est dévalorisant pour rien.
+
+	      L'exemple positif dit pourtant la même chose de la convention : ce qui
+	      manquait, c'était de montrer la FORME attendue, pas d'énumérer les cas
+	      limites. Un exemple en dit autant qu'une règle et ne heurte personne. -->
+	<p class="field-hint">0 = rez-de-chaussée, 2 = 2ème étage.</p>
 	{#if divergence}
 		<p class="etage-divergence" id="p-etage-divergence" role="status">
 			⚠️ Votre logement est enregistré au <strong>{etageLabel(etageLot, { suffixe: true })}</strong
