@@ -41,6 +41,16 @@
 	 *   `Document` chargées au dépliage, et les compter ici coûterait une requête
 	 *   par carte pour afficher un trombone. */
 	export let fichiers: string[] = [];
+	/**  L'aperçu vit dans une LIGNE de liste, pas au pied d'une carte : il n'a
+	 *   alors pas à porter le rembourrage de la carte, que la ligne pose déjà.
+	 *
+	 *   ⚠️ Une PROP, et non une copie de ce composant dans l'écran concerné. Les
+	 *   cinq lignes, le dégradé mesuré et l'assainissement sont la NOTION
+	 *   « aperçu d'une description » ; seule sa marge dépend de l'hôte. Le premier
+	 *   écran qui a eu besoin de la variante est la liste des documents de
+	 *   /residence, dont la description était coupée à DEUX lignes par une règle
+	 *   écrite sur place (09/09/2026). */
+	export let dansLigne = false;
 
 	//  Le dégradé de fin ne doit apparaître QUE si le texte est réellement coupé.
 	//  Appliqué sans condition, il efface la dernière ligne d'un aperçu court —
@@ -54,7 +64,7 @@
 	});
 </script>
 
-<div class="carte-apercu">
+<div class="carte-apercu" class:dans-ligne={dansLigne}>
 	<div class="carte-preview rich-content clamp-5" class:tronque bind:this={bloc}>
 		{@html safeDescription(contenu)}
 	</div>
@@ -69,6 +79,9 @@
 		align-items: flex-start;
 		gap: 0.85rem;
 		padding: 0 0.95rem 0.85rem;
+	}
+	.carte-apercu.dans-ligne {
+		padding: 0;
 	}
 	.carte-apercu .carte-preview {
 		flex: 1;

@@ -1457,7 +1457,30 @@ jobs:
       # installer Firefox et WebKit pour rien coûterait deux minutes par PR.
       - name: Install Playwright browsers
         working-directory: front
-        run: npx playwright install --with-deps chromium
+        run: |
+          #  🔴 Le dépôt Google Chrome de l'image GitHub sert par moments un index
+          #  CORROMPU (« Hash Sum mismatch » sur `Packages.gz`, 09/09/2026). Comme
+          #  `--with-deps` commence par un `apt-get update`, celui-ci échoue en 100
+          #  et l'installation s'arrête — les tests ne démarrent même pas, et la
+          #  PR est bloquée par un check rouge qui ne dit rien du code.
+          #
+          #  Ce dépôt ne sert à RIEN ici : Playwright installe ses dépendances
+          #  depuis les dépôts Ubuntu, et le navigateur vient de son propre CDN.
+          #  On le retire donc avant, plutôt que de réessayer en espérant.
+          #
+          #  ⚠️ Un GLOB, et non le seul `.list` : l'image déclare ce dépôt en
+          #  deb822 (`google-chrome.sources`) selon sa génération, et viser le
+          #  mauvais nom laisse l'index corrompu en place — ce qui s'est vu, le
+          #  premier correctif n'ayant rien changé.
+          #
+          #  ⚠️ `if`, et non `&& ` : sous `bash -e`, une condition fausse en tête
+          #  de ligne ferait échouer l'étape — et elle est fausse sur le poste,
+          #  où `rejouer-ci.sh` rejoue cette même commande.
+          if [ -d /etc/apt/sources.list.d ]; then
+            sudo rm -f /etc/apt/sources.list.d/google-chrome*
+            ls -1 /etc/apt/sources.list.d/ || true
+          fi
+          npx playwright install --with-deps chromium
 
       - name: Tests de navigateur (bureau et mobile)
         working-directory: front

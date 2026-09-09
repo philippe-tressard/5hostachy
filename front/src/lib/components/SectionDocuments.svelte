@@ -35,6 +35,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
+	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	/** Le titre affiché, emoji compris — la page reste maîtresse de son vocabulaire. */
@@ -99,12 +100,19 @@
 								{#if dateDe(doc)}<span class="doc-date">{dateDe(doc)}</span>{/if}
 							</div>
 							<!--  La DESCRIPTION, ajoutée le 08/09/2026 (#852) : le titre NOMME
-							      le document, elle dit ce qu'il couvre. L'écrire et ne pas
-							      l'afficher aurait donné un champ qu'on remplit pour rien —
-							      c'est le défaut de `corps_texte` corrigé le matin même. -->
-							{#if doc.description}<p class="doc-description clamp clamp-2">
-									{doc.description}
-								</p>{/if}
+							      le document, elle dit ce qu'il couvre.
+
+							      🔴 Elle était coupée à DEUX lignes par une règle écrite ici,
+							      et finissait sur « … » au milieu d'une phrase — illisible,
+							      signalé à l'écran le 09/09. L'aperçu du site fait CINQ lignes
+							      (`ux-patterns` §7) et n'estompe sa fin que si le texte déborde
+							      VRAIMENT, ce qu'aucun sélecteur CSS ne sait dire : c'est
+							      `ApercuCarte` qui le mesure après rendu, pour les actualités,
+							      les tickets, les annonces et les événements. Une sixième
+							      écriture du même aperçu aurait divergé au premier réglage. -->
+							{#if doc.description}
+								<ApercuCarte contenu={doc.description} dansLigne />
+							{/if}
 						</div>
 					</div>
 					<div class="doc-actions">
@@ -198,16 +206,6 @@
 		gap: 0.5rem;
 		flex-wrap: wrap;
 		min-width: 0;
-	}
-	/*  ⚠️ Le CLAMP n'est pas ici : `.clamp` + `.clamp-2` (`styles/normes.css`)
-	    le portent déjà, avec la propriété standard `line-clamp` que ma version
-	    locale avait oubliée — `svelte-check` l'a dit. Une troisième écriture du
-	    même découpage aurait divergé au premier navigateur qui change de règle.
-	    Ne reste ici que ce qui est propre à cette ligne. */
-	.doc-description {
-		margin: 0;
-		font-size: 0.82rem;
-		color: var(--color-text-muted);
 	}
 	/*  🔴 `.doc-*` REMONTÉES dans `styles/composants.css` le 29/08/2026 (#491).
 	    Elles étaient scopées ici, et `residence` employait le même vocabulaire
