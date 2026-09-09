@@ -275,22 +275,14 @@ export function etageLabel(
  * Les bornes d'un étage saisi — au-delà, c'est une faute de frappe.
  *
  * 🔴 Écrites en clair dans `min="-2" max="50"` sur DEUX écrans (inscription et
- * profil), et un troisième champ allait s'ajouter le 09/09/2026 (l'étage d'un
- * lot, #835). Elles sont recopiées côté serveur dans `api/app/utils/etages.py` —
- * les contextes de build sont `./api` et `./front`, seule la copie est possible —
- * et `api/tests/test_etage_label.py` échoue si les deux dérivent.
+ * profil), et un troisième champ s'y est ajouté le 09/09/2026 (l'étage d'un
+ * logement, #835). Elles sont recopiées côté serveur dans
+ * `api/app/utils/etages.py` — les contextes de build sont `./api` et `./front`,
+ * seule la copie est possible — et `api/tests/test_etage_label.py` échoue si les
+ * deux dérivent.
  */
 export const ETAGE_MIN = -2;
 export const ETAGE_MAX = 50;
-
-export function etageParDefaut(
-	etageSaisi: number | null | undefined,
-	lots: { type?: string | null; etage?: number | null }[],
-): number | null {
-	if (etageSaisi !== null && etageSaisi !== undefined) return etageSaisi;
-	if (lots.length !== 1 || lots[0].type !== 'appartement') return null;
-	return lots[0].etage ?? null;
-}
 
 /**
  * « Bât. 3 — 2ème » : où se trouve un membre, en une chaîne.

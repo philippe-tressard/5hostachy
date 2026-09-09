@@ -1,29 +1,35 @@
 <!--
-  Les DEUX étages du profil, et ce qui les distingue (#835).
+  L'étage de chacun de mes LOGEMENTS (#835).
 
-  🔴 Ils ne se ressemblent qu'en surface : `Utilisateur.etage` dit où la personne
-  VIT, `Lot.etage` décrit un BIEN. Un bailleur a un lot au 4ᵉ et habite ailleurs.
-  Les afficher côte à côte sans le dire, c'est inviter à écrire l'un à la place de
-  l'autre — l'écran doit dire lequel est lequel, et c'est la raison d'être de ce
-  composant : les deux champs se lisent ensemble ou pas du tout.
+  🔴 Le champ « Étage » PERSONNEL (`Utilisateur.etage`) vivait ici, juste au-dessus
+  — il a été retiré le 09/09/2026, sur arbitrage de Philippe, à l'écran : deux
+  champs « Étage » à trois lignes d'écart, dont le premier ne disait rien que le
+  second ne dise mieux. Il reste saisi à l'inscription, et la colonne garde sa
+  valeur ; ce qui disparaît, c'est sa saisie ici.
 
-  Extrait de `profil/+page.svelte` le 09/09/2026, la page ayant franchi son
-  plafond de modularité en les recevant. La coupe suit la notion, pas
-  l'arithmétique.
+  ⚠️ Un bailleur ne peut donc plus déclarer depuis son profil l'étage où il HABITE
+  quand ce n'est pas celui d'un de ses lots. C'est le coût du choix, dit une fois :
+  l'écran gagne en clarté ce que ce cas précis perd en précision.
 
-  ⚠️ Le bloc « par logement » n'apparaît qu'à partir de DEUX logements : avec un
-  seul, `etageParDefaut` propose déjà son étage au champ personnel, et afficher
-  deux fois le même chiffre inviterait à les désaccorder.
+  🔴 SEULS LES LOGEMENTS sont listés — pas les caves ni les parkings. « Étage de
+  chacun de mes logements » énumérait « N° 417 Cave » et « N° 450 Parking », qui
+  n'en sont pas : un titre qui ment sur son contenu se corrige par le contenu,
+  pas par le titre (arbitrage à l'écran, 09/09/2026). Leur étage se règle depuis
+  l'administration du patrimoine, comme avant.
 -->
 <script lang="ts">
 	import { lots as lotsApi } from '$lib/api';
 	import { ETAGE_MAX, ETAGE_MIN, lotTypeLabel } from '$lib/utils';
 
-	/**  L'étage où la personne HABITE. */
-	export let etage: number | null = null;
-	/**  L'étage de CHAQUE lot, par identifiant — donnée de patrimoine. */
+	/**  L'étage de CHAQUE logement, par identifiant — donnée de patrimoine. */
 	export let etagesLot: Record<number, number | null> = {};
 	export let lots: any[] = [];
+
+	/**  Les LOGEMENTS seuls : une cave et un parking ont un niveau, pas un étage
+	 *   d'habitation, et les lister sous « mes logements » était faux. Le filtre
+	 *   porte sur le type, jamais sur une liste de types à exclure — un type
+	 *   ajouté demain serait alors inclus par défaut, ce qui est le mauvais sens. */
+	$: logements = lots.filter((l) => l.type === 'appartement');
 
 	/**  Enregistre les étages de lots MODIFIÉS, et rend la liste à jour.
 	 *
@@ -35,7 +41,7 @@
 	 *   ⚠️ Seuls les lots CHANGÉS partent : réécrire les autres poserait un
 	 *   `modifie_le` sur des lignes que personne n'a touchées. */
 	export async function enregistrerEtagesDeLots(): Promise<any[]> {
-		const changes = lots.filter((l) => (l.etage ?? null) !== (etagesLot[l.id] ?? null));
+		const changes = logements.filter((l) => (l.etage ?? null) !== (etagesLot[l.id] ?? null));
 		const majs = await Promise.all(
 			changes.map((l) => lotsApi.majEtage(l.id, etagesLot[l.id] ?? null)),
 		);
@@ -45,36 +51,21 @@
 	}
 </script>
 
-<!--  ⚠️ L'indication dit à quoi il SERT, comme à l'inscription : un champ
-      facultatif dont on ignore l'usage ne se remplit pas. Les bornes sont les
-      mêmes des deux côtés — et elles sont AUSSI vérifiées par l'API, un champ
-      borné côté client se postant directement. -->
-<div class="field">
-	<label for="p-etage">Étage</label>
-	<input
-		id="p-etage"
-		type="number"
-		bind:value={etage}
-		min={ETAGE_MIN}
-		max={ETAGE_MAX}
-		placeholder="Ex. 3"
-	/>
-	<p class="field-hint">
-		Facultatif. L’étage où vous habitez — il sert à vous situer auprès de vos voisins.
-	</p>
-</div>
-{#if lots.length > 1}
+{#if logements.length > 0}
 	<div class="field">
 		<!--  `.libelle-groupe` + `role="group"` : un `<label>` ne sait pas nommer un
 		      groupe de contrôles — posé dessus, il n'associe rien, ET IL LE FAIT EN
 		      SILENCE (`champs.css`, #561). -->
 		<span class="libelle-groupe" id="p-etages-lots">Étage de chacun de mes logements</span>
 		<div class="etages-lots" role="group" aria-labelledby="p-etages-lots">
-			{#each lots as lot (lot.id)}
+			{#each logements as lot (lot.id)}
 				<div class="etage-lot">
 					<label for={`p-etage-lot-${lot.id}`}>
-						{#if lot.batiment_nom}{lot.batiment_nom} —
-						{/if}N° {lot.numero}
+						<!--  Les deux espaces autour du tiret sont INSÉCABLES : écrites en
+						      blanc elles disparaissaient au reformatage, et `&#32;` était
+						      recollée par le navigateur — le libellé rendait « Bât. 4 —N° 15 ».
+						      Une espace insécable ne se réduit ni ne se replie. -->
+						{#if lot.batiment_nom}{lot.batiment_nom}&nbsp;—&nbsp;{/if}N° {lot.numero}
 						<span class="etage-lot-type">{lotTypeLabel(lot.type)}</span>
 					</label>
 					<input

@@ -17,7 +17,7 @@
 	import { STATUT_DEMANDE_BADGE, STATUT_DEMANDE_LABEL } from '$lib/demandes';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import TelemetrieRGPD from '$lib/components/TelemetrieRGPD.svelte';
-	import { etageLabel, etageParDefaut, lotTypeLabel } from '$lib/utils';
+	import { etageLabel, lotTypeLabel } from '$lib/utils';
 	import ChampsEtage from '$lib/components/ChampsEtage.svelte';
 
 	$: _pc = getPageConfig($configStore, 'profil', defautsDePage('profil'));
@@ -27,10 +27,11 @@
 	let prenom = '';
 	let nom = '';
 	let telephone = '';
-	/**  L'étage où l'on HABITE — distinct de `Lot.etage`, qui décrit un bien.
-	 *   Modifiable ici sans validation du conseil (#835) : contrairement au
-	 *   bâtiment, il ne revendique rien. */
-	let etage: number | null = null;
+	//  🔴 `etage` — l'étage PERSONNEL — a quitté cet écran le 09/09/2026 : deux
+	//  champs « Étage » à trois lignes d'écart, dont le premier ne disait rien que
+	//  « Étage de chacun de mes logements » ne dise mieux. La colonne garde sa
+	//  valeur et reste saisie à l'inscription ; le PATCH ne l'envoie plus, et
+	//  `update_me` n'écrit que ce qu'il reçoit.
 	/**  L'étage de CHAQUE lot, par identifiant — `Lot.etage`, donc une donnée de
 	 *   PATRIMOINE, distincte de la précédente : un bailleur a un lot au 4ᵉ et
 	 *   habite ailleurs. Écrite par son occupant depuis le 09/09/2026 (#835) —
@@ -100,7 +101,6 @@
 			prenom = u.prenom ?? '';
 			nom = u.nom ?? '';
 			telephone = (u as any).telephone ?? '';
-			etage = u.etage ?? null;
 			societe = u.societe ?? '';
 			fonction = (u as any).fonction ?? '';
 			email = u.email ?? '';
@@ -150,7 +150,6 @@
 		]);
 		mesLots = lots;
 		batiments = bats;
-		etage = etageParDefaut(etage, mesLots); //  #835 — motif dans `$lib/utils`
 		etagesLot = Object.fromEntries(mesLots.map((l) => [l.id, l.etage ?? null]));
 
 		const [dem, eDem] = await essayer<any[]>(authApi.mesDemandes(), []);
@@ -168,7 +167,6 @@
 				prenom,
 				nom,
 				telephone: telephone || null,
-				etage,
 				societe: societe || null,
 				fonction: fonction || null,
 				...(emailChanged ? { email } : {}),
@@ -329,7 +327,7 @@
 				<label for="p-tel">Téléphone</label>
 				<input id="p-tel" type="tel" bind:value={telephone} placeholder="+33 6 00 00 00 00" />
 			</div>
-			<ChampsEtage bind:this={champsEtage} bind:etage bind:etagesLot lots={mesLots} />
+			<ChampsEtage bind:this={champsEtage} bind:etagesLot lots={mesLots} />
 			<div class="field">
 				<label for="p-societe">Société</label>
 				<input
