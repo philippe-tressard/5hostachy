@@ -51,6 +51,13 @@ const ECHELLE = [480, 767, 768, 1024];
  *  la mise en page bascule à une largeur qui n'est celle de personne d'autre.
  *
  *  Suivi : #839. Une entrée qui ne sert plus fait échouer ce contrôle.
+ *
+ *  🔴 Deux entrées sont parties le 09/09/2026 sans qu'aucun arbitrage soit
+ *  nécessaire : leur bloc était VIDE — `@media (max-width: 680px) { }` et
+ *  `@media (max-width: 560px) { }`. Le relevé les comptait comme des décisions de
+ *  mise en page ; ce n'étaient que des accolades. Une dette qu'on suit sans
+ *  l'ouvrir peut n'être rien du tout, et c'est le genre de ligne qui fait paraître
+ *  un chantier plus lourd qu'il n'est.
  */
 const DETTES = {
 	'lib/components/ApercuCarte.svelte': [640],
@@ -58,11 +65,9 @@ const DETTES = {
 	'lib/components/FicheResidence.svelte': [560],
 	'lib/components/FluxVignette.svelte': [640],
 	'lib/components/OngletAnnoncesHall.svelte': [900],
-	'lib/components/OngletCopropriete.svelte': [560],
 	'lib/components/OngletImportLots.svelte': [600],
 	'lib/components/SectionContratReference.svelte': [520],
 	'lib/components/reporting/VueRenouvellementsContrats.svelte': [700],
-	'routes/(app)/mon-lot/+page.svelte': [680],
 	'routes/(app)/prestataires/+page.svelte': [600],
 	'styles/composants.css': [900],
 	'styles/ecrans.css': [600, 900],
