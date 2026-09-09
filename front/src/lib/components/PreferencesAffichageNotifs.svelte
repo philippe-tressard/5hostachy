@@ -35,7 +35,7 @@
 	      la copropriété » alors qu'une actualité confidentielle restera invisible
 	      (v2.64.0). Un réglage qui annonce plus que ce qu'il fait se lit comme une
 	      panne. -->
-	<p class="aide">
+	<p class="aide sous-case">
 		Décochée, vous voyez les actualités de toute la copropriété, sauf celles marquées
 		confidentielles ; cochée, vous ne voyez que celles de votre bâtiment.
 	</p>
@@ -49,7 +49,7 @@
 		<input type="checkbox" bind:checked={valeurs[AUTRES_BATIMENTS]} />
 		<span>Des autres bâtiments</span>
 	</label>
-	<p class="aide">
+	<p class="aide sous-case">
 		Les notifications dans l'application ne sont pas concernées : elles restent actives.
 	</p>
 
@@ -74,8 +74,4 @@
 	/*  L'aide s'aligne sur le LIBELLÉ, pas sur le bord de la carte : largeur de la
 	    case (~1rem) plus l'écart (.5rem). Seuls le décalage et la marge restent
 	    ici — la typographie vient de la charte depuis le 09/09/2026. */
-	.aide {
-		margin: 0.35rem 0 0;
-		padding-left: 1.5rem;
-	}
 </style>

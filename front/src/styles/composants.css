@@ -1126,13 +1126,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     son `.field` : plus petite, plus serrée, et rattachée au champ qu'elle
     commente. Deux notions voisines, deux classes — les fondre ferait perdre le
     rattachement. */
-.aide-bloc {
-	font-size: 0.8rem;
-	color: var(--color-text-muted);
-	line-height: 1.5;
-	margin: 0.6rem 0 0;
-}
-
 /* ── Le KANBAN CONDENSÉ du tableau de bord ─────────────────────────────────────
    Le même objet que `.kanban` ci-dessus, dans son rendu d'aperçu : cinq colonnes
    resserrées au large, une colonne à la fois quand l'écran est étroit.
@@ -1407,13 +1400,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     `.aide-case` et `.aide-bloc` — quatre marges pour une même notion. Les fondre
     changerait l'espacement de tous les formulaires du site : ce n'est pas une
     factorisation à faire au détour d'un lot, c'est une décision d'écran (#870). */
-.aide {
-	font-size: 0.78rem;
-	color: var(--color-text-muted);
-	margin: -0.5rem 0 1rem;
-	line-height: 1.45;
-}
-
 /*  Le libellé d'un mois, en tête d'un groupe de lignes datées. Employé par le
     calendrier et par ses archives — deux vues de la même liste. */
 .month-label {

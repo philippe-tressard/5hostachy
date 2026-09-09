@@ -130,7 +130,7 @@
 	      L'exemple positif dit pourtant la même chose de la convention : ce qui
 	      manquait, c'était de montrer la FORME attendue, pas d'énumérer les cas
 	      limites. Un exemple en dit autant qu'une règle et ne heurte personne. -->
-	<p class="field-hint">0 = rez-de-chaussée, 2 = 2ème étage.</p>
+	<p class="aide">0 = rez-de-chaussée, 2 = 2ème étage.</p>
 	{#if divergence}
 		<p class="etage-divergence" id="p-etage-divergence" role="status">
 			⚠️ Votre logement est enregistré au <strong>{etageLabel(etageLot, { suffixe: true })}</strong

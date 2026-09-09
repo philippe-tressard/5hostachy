@@ -50,7 +50,7 @@
 		</select>
 		<span class="apercu"><Icon name={valeur || 'help-circle'} size={20} /></span>
 	</div>
-	<span class="field-hint">
+	<span class="aide">
 		Affichée dans le menu <strong>et</strong> avant le titre en haut de la page (c'est la même). Les
 		{NOMS.length} icônes proposées sont celles que le site embarque : elles fonctionnent aussi dans les
 		documents imprimés, qui partagent le même catalogue.

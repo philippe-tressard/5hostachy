@@ -198,7 +198,7 @@
 		<label class="field"
 			>Code *
 			<input bind:value={nouveau.code} placeholder={codePropose} />
-			<span class="field-hint">
+			<span class="aide">
 				Laissé vide, il vaudra <code>{codePropose || '…'}</code>. Il ne pourra plus être modifié :
 				c’est lui qui sera enregistré dans les contenus.
 			</span>

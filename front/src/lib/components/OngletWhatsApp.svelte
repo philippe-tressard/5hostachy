@@ -188,7 +188,7 @@
 					<input type="checkbox" bind:checked={waConfig.enabled} />
 					Activer l'envoi WhatsApp
 				</span>
-				<span class="field-hint"
+				<span class="aide"
 					>Si activé, les actualités avec "Partager sur le groupe" seront envoyées au groupe
 					WhatsApp.</span
 				>
@@ -196,7 +196,7 @@
 			<label class="field">
 				Nom du canal
 				<input type="text" bind:value={waConfig.group_name} placeholder="Groupe WhatsApp" />
-				<span class="field-hint">Nom affiché dans l'interface (informatif).</span>
+				<span class="aide">Nom affiché dans l'interface (informatif).</span>
 			</label>
 			<label class="field">
 				URL du bridge WhatsApp
@@ -205,7 +205,7 @@
 			<label class="field">
 				Group JID
 				<input type="text" bind:value={waConfig.group_jid} placeholder="1234567890@g.us" />
-				<span class="field-hint">Identifiant du groupe WhatsApp (format : 123...@g.us).</span>
+				<span class="aide">Identifiant du groupe WhatsApp (format : 123...@g.us).</span>
 			</label>
 			<label class="field" style="grid-column:span 2">
 				Clé API
@@ -216,7 +216,7 @@
 						? '••••••  (clé déjà configurée — laisser vide pour conserver)'
 						: 'Entrez la clé API du bridge WhatsApp'}
 				/>
-				<span class="field-hint"
+				<span class="aide"
 					>{apiKeySet
 						? 'Une clé est déjà configurée. Laissez ce champ vide pour la conserver.'
 						: "Requis pour l'authentification au bridge WhatsApp."}</span
@@ -382,7 +382,7 @@
 					rows="2"
 					placeholder="— Le Conseil Syndical"
 					style="width:100%;resize:vertical;font-size:.85rem;font-family:monospace"></textarea>
-				<span class="field-hint"
+				<span class="aide"
 					>Texte qui finalise chaque message (markdown WhatsApp autorisé : *gras*, _italique_,
 					~barré~).</span
 				>

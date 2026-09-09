@@ -34,16 +34,22 @@ export const TOLERANCES = {
 	//  C'est la SEULE des quatre propriétés qui reste locale — les trois autres
 	//  (gap, font-size, display) étaient trois valeurs différentes pour la même
 	//  case, et sont remontées dans la charte le 02/09/2026.
-	//  ── `.aide` : la MARGE dépend de ce que l'aide commente ──────────────────
-	//  La charte pose la marge de l'aide qui suit un GROUPE DE CASES : négative en
-	//  haut, pour se coller à lui. Ces deux écrans-là ne commentent pas un groupe
-	//  de cases, et une marge négative les ferait chevaucher ce qui précède.
-	//  La typographie, elle, vient de la charte depuis le 09/09/2026 — `.aide` y
-	//  était écrite CINQ fois, avec trois tailles que personne n'avait choisies.
-	'lib/components/ConfigSauvegarde.svelte::aide':
-		'margin: 0 0 .9rem — paragraphe de tête, pas une note collée à un groupe',
-	'lib/components/PreferencesAffichageNotifs.svelte::aide':
-		"margin: .35rem 0 0 — l'aide SUIT sa case et s'aligne sur son libellé",
+	//  ── `.aide` : plus AUCUNE tolérance, et c'est le but de #870 ─────────────
+	//  Il y en avait deux ici, sur `ConfigSauvegarde` et `PreferencesAffichageNotifs`,
+	//  parce que la charte imposait une marge NÉGATIVE en haut — pensée pour l'aide
+	//  qui suit un groupe de cases, fausse partout ailleurs.
+	//
+	//  🔴 Deux écrans sur quatre la refusaient : ce n'étaient pas eux les cas
+	//  particuliers, c'était la valeur de la charte qui était fausse. Une marge
+	//  négative dans une classe de TEXTE compense l'espacement de quelqu'un d'autre
+	//  — c'est un symptôme, jamais une intention.
+	//
+	//  Depuis le 10/09/2026, `.aide` est l'écriture unique des NEUF classes d'aide
+	//  du dépôt (le ticket n'en avait relevé que quatre : quatre autres vivaient en
+	//  local, invisibles d'un audit de la charte). Sa géométrie est celle de
+	//  `.field-hint`, la plus déployée des neuf — 49 occurrences sur 79 —, et c'est
+	//  aussi celle vers laquelle les deux écrans ci-dessus convergeaient d'eux-mêmes.
+	//  Le seul écart qui reste est `.aide.sous-case`, et il porte sa raison.
 	//  ── `.auth-header h1` : un en-tête réduit sur une page longue ────────────
 	//  Le formulaire d'inscription est le plus long du site : son logo est déjà
 	//  réduit pour la même raison (#607). Seule la TAILLE diverge ; la graisse,

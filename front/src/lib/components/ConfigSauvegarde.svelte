@@ -146,9 +146,6 @@
 	}
 	/*  Seule la marge reste ici : cette aide est un paragraphe de tête, pas une
 	    note collée à un groupe de cases. La typographie vient de la charte. */
-	.aide {
-		margin: 0 0 0.9rem;
-	}
 	.note {
 		margin: 0.7rem 0 0;
 	}

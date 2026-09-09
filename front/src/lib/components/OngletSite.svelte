@@ -32,7 +32,7 @@
 		<label class="field">
 			Nom de la plateforme
 			<input type="text" bind:value={siteConfig.nom} placeholder="5Hostachy" />
-			<span class="field-hint">Affiché sur la page de connexion et dans le menu.</span>
+			<span class="aide">Affiché sur la page de connexion et dans le menu.</span>
 		</label>
 		<label class="field">
 			URL publique
@@ -41,7 +41,7 @@
 		<label class="field" style="grid-column:span 2">
 			E-mail administrateur
 			<input type="email" bind:value={siteConfig.email_admin} placeholder="admin@example.com" />
-			<span class="field-hint"
+			<span class="aide"
 				>Adresse de secours utilisée si aucun utilisateur gestionnaire du site n'est sélectionné.</span
 			>
 		</label>
@@ -53,7 +53,7 @@
 					<option value={String(u.id)}>{nomAffiche(u)} — {u.email}</option>
 				{/each}
 			</select>
-			<span class="field-hint"
+			<span class="aide"
 				>Cet utilisateur est considéré comme gestionnaire du site dans l'administration et reçoit
 				les notifications e-mail « Bug » si l'option est activée.</span
 			>
@@ -65,7 +65,7 @@
 				bind:value={siteConfig.login_sous_titre}
 				placeholder="Votre espace numérique de résidence"
 			/>
-			<span class="field-hint">Affiché sous le nom du site sur la page de connexion.</span>
+			<span class="aide">Affiché sous le nom du site sur la page de connexion.</span>
 		</label>
 		<!--  🔴 UN SEUL délai, pour tout le site (#515). Il y en avait TROIS : deux
           affichés ici — dont un qui ne concernait plus qu'un statut devenu
@@ -84,7 +84,7 @@
 				max="365"
 				placeholder="30"
 			/>
-			<span class="field-hint"
+			<span class="aide"
 				>Un contenu terminé quitte les listes actives et bascule dans les <strong>Archives</strong>
 				après ce délai (défaut : 30 jours). Il s'applique à <strong>tout le site</strong> :
 				actualités, tickets résolus, petites annonces vendues ou données, idées décidées, sondages
@@ -101,7 +101,7 @@
 				max="365"
 				placeholder="30"
 			/>
-			<span class="field-hint"
+			<span class="aide"
 				>Nombre de jours sans mise à jour d'un ticket destinataire-syndic avant qu'il apparaisse
 				dans la liste de relance de l'Espace CS (défaut : 30 jours).</span
 			>
@@ -111,7 +111,7 @@
 				<input type="checkbox" bind:checked={siteConfig.notify_ticket_bug_email} />
 				Notifier si un bug (Tickets)
 			</span>
-			<span class="field-hint"
+			<span class="aide"
 				>Envoie un e-mail au gestionnaire du site sélectionné (ou à l'adresse administrateur de
 				secours) uniquement pour les tickets de catégorie « Bug ». Les tickets « Urgence » ne
 				déclenchent pas cette notification.</span
@@ -122,7 +122,7 @@
 				<input type="checkbox" bind:checked={siteConfig.notify_new_user_created_email} />
 				Notifier si un nouvel utilisateur est créé
 			</span>
-			<span class="field-hint"
+			<span class="aide"
 				>Envoie un e-mail au gestionnaire du site sélectionné (ou à l'adresse administrateur de
 				secours) lorsqu'un nouveau compte est créé et mis en attente de validation.</span
 			>

@@ -376,7 +376,7 @@
 						{/each}
 					</select>
 				</div>
-				<p class="aide-bloc">
+				<p class="aide">
 					Reprend le titre, le message, le périmètre et les images de l'affiche. Tout reste
 					modifiable ci-dessous : l'actualité est indépendante de l'annonce d'origine.
 				</p>

@@ -156,7 +156,7 @@
 			on:choisir={(e) => (statut = e.detail)}
 		/>
 		{#if !$isCS}
-			<p class="aide-champ">
+			<p class="aide">
 				{modeEdition
 					? 'Seul le conseil syndical fait avancer le suivi d’un ticket.'
 					: 'Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.'}
@@ -184,7 +184,7 @@
 				<input type="checkbox" bind:checked={options.suiviKanban} />
 				<span>Suivre ce ticket au <strong>kanban</strong></span>
 			</label>
-			<p class="aide-champ">
+			<p class="aide">
 				Coché d’office pour « Étude &amp; travaux ». La carte se range d’après le statut ci-dessus :
 				Ouvert → CS, En cours → Syndic, Résolu → Terminé, Annulé → Annulé.
 			</p>
@@ -198,10 +198,4 @@
 	    suite — c'est la régression des pastilles nues (v2.67.11), qui s'était
 	    reproduite trois fois le 19/08. Svelte scope au FICHIER : une classe
 	    employée ici doit être définie ici. */
-	.aide-champ {
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
-		line-height: 1.45;
-		margin: 0.25rem 0 0;
-	}
 </style>

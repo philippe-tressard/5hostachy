@@ -65,7 +65,7 @@
 		<div class="legal-editor-header">
 			<span class="field-label-text">{label}</span>
 			{#if hint}
-				<span class="field-hint">{hint}</span>
+				<span class="aide">{hint}</span>
 			{/if}
 		</div>
 	{/if}

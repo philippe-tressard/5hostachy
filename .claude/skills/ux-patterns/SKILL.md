@@ -821,6 +821,35 @@ formulaire, la seconde ferme une boîte de dialogue — et `lint:soumission` ne
 regarde que la première, à raison : « Confirmer » est le bon verbe pour une
 confirmation, « Enregistrer » pour une soumission.
 
+### 9 bis bis. LA phrase grise qui explique : `.aide`, et rien d'autre
+
+Un seul nom pour la notion, un seul endroit (`champs.css`), un seul modificateur :
+
+```svelte
+<p class="aide">0 = rez-de-chaussée, 2 = 2ème étage.</p>
+<p class="aide sous-case">Le message part à la prochaine sauvegarde.</p>
+```
+
+`sous-case` est le **seul** écart, et il porte sa raison : l'aide d'une case à
+cocher s'aligne sous son libellé, et cette indentation EST son contenu.
+
+🔴 **Il y en avait NEUF le 10/09/2026** — `.field-hint` (49 occurrences), `.aide`
+(10), `.aide-bloc` (8), `.aide-case` (5), plus quatre classes **locales** que
+l'audit de la charte ne pouvait pas voir : `.aide-champ` (copie littérale de
+`.field-hint`), `.aide-reponses`, `.aide-tache`, `.aide-source`. Le ticket #870
+n'en avait relevé que quatre.
+
+⚠️ **La géométrie retenue est celle de la plus déployée**, pas la moyenne des
+neuf : `margin: .25rem 0 0`, 0.78rem, interligne 1.45. L'ancienne `.aide` portait
+une marge **négative** en haut — et **deux écrans sur quatre l'écrasaient
+localement**. Ce n'étaient pas eux les cas particuliers : c'était la valeur qui
+était fausse. *Une marge négative dans une classe de texte compense l'espacement
+de quelqu'un d'autre — c'est un symptôme, jamais une intention.*
+
+⚠️ Ne pas confondre avec `.grille-champs` (inscription), qui s'appelait
+`.aide-grille` : ce n'est pas une aide, c'est un conteneur de grille. Renommée le
+même jour pour qu'un futur audit ne la compte pas dixième.
+
 ### 9 bis. Ce qui décide de la largeur d'un champ, c'est son CONTENU
 
 Les grilles (`.form-grid`) répartissent en colonnes de ~180-200 px. C'est juste

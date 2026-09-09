@@ -296,10 +296,10 @@
 						</label>
 						<AlerteEpinglage coche={form.epingle} dejaEpingle={epingleInitial} />
 						{#if !form.affichable}
-							<p class="aide-case">Un événement absent du fil ne peut pas y être épinglé.</p>
+							<p class="aide sous-case">Un événement absent du fil ne peut pas y être épinglé.</p>
 						{/if}
 						{#if form.type === 'maintenance_recurrente'}
-							<p class="aide-case">
+							<p class="aide sous-case">
 								Les maintenances récurrentes restent hors du fil d'activité : elles se suivent dans
 								le Kanban.
 							</p>

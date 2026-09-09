@@ -105,7 +105,7 @@
 	<label class="field" for="{uid}-titre">
 		{libelleTitre}{titreRequis ? ' *' : ''}
 		<input id="{uid}-titre" type="text" bind:value={titre} placeholder={placeholderTitre} />
-		{#if aideTitre}<span class="field-hint">{aideTitre}</span>{/if}
+		{#if aideTitre}<span class="aide">{aideTitre}</span>{/if}
 	</label>
 
 	<slot name="specifiques" />
@@ -132,9 +132,9 @@
 				on:change={(e) => (fichiers = (e.target as HTMLInputElement).files)}
 			/>
 			{#if choisis.length === 1}
-				<span class="field-hint">{choisis[0].name}</span>
+				<span class="aide">{choisis[0].name}</span>
 			{:else if choisis.length > 1}
-				<span class="field-hint">{choisis.length} fichiers sélectionnés</span>
+				<span class="aide">{choisis.length} fichiers sélectionnés</span>
 			{/if}
 		</label>
 	{/if}

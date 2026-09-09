@@ -295,7 +295,7 @@
 				<select id="email-intention" bind:value={emailIntention}>
 					{#each INTENTIONS as i (i.valeur)}<option value={i.valeur}>{i.label}</option>{/each}
 				</select>
-				<span class="field-hint"
+				<span class="aide"
 					>Affichée en bandeau au-dessus du corps, pour que le lecteur sache d'emblée s'il doit
 					agir. « Aucun bandeau » n'affiche rien.</span
 				>
