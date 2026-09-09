@@ -13,6 +13,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from app.utils.batiments import libelle_batiment_ou
 from app.auth.deps import get_current_user, require_proprietaire
 from app.database import get_session
 from app.models.core import (
@@ -24,6 +25,28 @@ from pydantic import BaseModel
 from .commun import get_bail_or_404
 
 router = APIRouter()
+
+
+def _lot_info(lot_map: dict, session: Session, lot_id: Optional[int]) -> tuple[Optional[str], Optional[str]]:
+    """Le type d'un lot et son libellé « Bât. A — Lot 12 ».
+
+    🔴 Cette fonction était écrite DEUX FOIS, à l'identique, dans ce fichier —
+    une fermeture par endpoint (09/09/2026). Deux copies dans le même fichier ne
+    se voient pas : elles sont à cinquante lignes l'une de l'autre, chacune sous
+    son endpoint, et la relecture d'un endpoint ne montre jamais l'autre.
+
+    Elles portaient à elles seules deux des onze écritures de « Bât. {numero} »
+    que `utils/batiments` rassemble.
+
+    ⚠️ Le repli « Sans bâtiment » reste ICI : c'est le seul des onze appelants à
+    l'employer, et `libelle_batiment` ne l'impose à personne.
+    """
+    lot = lot_map.get(lot_id) if lot_id else None
+    if not lot:
+        return None, None
+    lot_type = lot.type.value if hasattr(lot.type, "value") else str(lot.type)
+    bat = session.get(Batiment, lot.batiment_id) if lot.batiment_id else None
+    return lot_type, f"{libelle_batiment_ou(bat, 'Sans bâtiment')} — Lot {lot.numero}"
 
 
 # ── Accès (Vigik / Télécommandes) liés à un bail ────────────────────────────
@@ -63,23 +86,14 @@ def mes_acces(
     result = []
     lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
 
-    def _lot_info(lot_id: Optional[int]) -> tuple[Optional[str], Optional[str]]:
-        lot = lot_map.get(lot_id) if lot_id else None
-        if not lot:
-            return None, None
-        lot_type = lot.type.value if hasattr(lot.type, "value") else str(lot.type)
-        bat = session.get(Batiment, lot.batiment_id) if lot.batiment_id else None
-        bat_label = f"Bât. {bat.numero}" if bat else "Sans bâtiment"
-        return lot_type, f"{bat_label} — Lot {lot.numero}"
-
     for v in vigiks:
-        lot_type, lot_label = _lot_info(v.lot_id)
+        lot_type, lot_label = _lot_info(lot_map, session, v.lot_id)
         result.append(AccesOut(id=v.id, code=v.code, type="vigik", lot_id=v.lot_id,
                                 lot_type=lot_type, lot_label=lot_label,
                                 statut=v.statut, chez_locataire=v.chez_locataire,
                                 bail_id=v.bail_id, cree_le=v.cree_le))
     for tc in tcs:
-        lot_type, lot_label = _lot_info(tc.lot_id)
+        lot_type, lot_label = _lot_info(lot_map, session, tc.lot_id)
         result.append(AccesOut(id=tc.id, code=tc.code, type="telecommande", lot_id=tc.lot_id,
                                 lot_type=lot_type, lot_label=lot_label,
                                 statut=tc.statut, chez_locataire=tc.chez_locataire,
@@ -101,15 +115,6 @@ def acces_du_bail(
     tcs = session.exec(select(Telecommande).where(Telecommande.user_id == user.id)).all()
     lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
 
-    def _lot_info(lot_id: Optional[int]) -> tuple[Optional[str], Optional[str]]:
-        lot = lot_map.get(lot_id) if lot_id else None
-        if not lot:
-            return None, None
-        lot_type = lot.type.value if hasattr(lot.type, "value") else str(lot.type)
-        bat = session.get(Batiment, lot.batiment_id) if lot.batiment_id else None
-        bat_label = f"Bât. {bat.numero}" if bat else "Sans bâtiment"
-        return lot_type, f"{bat_label} — Lot {lot.numero}"
-
     def _eligibility(acces_type: str, lot_type: Optional[str], statut: StatutAcces, chez_locataire: bool, current_bail_id: Optional[int]) -> tuple[bool, Optional[str]]:
         if statut != StatutAcces.actif:
             return False, "Accès inactif"
@@ -126,7 +131,7 @@ def acces_du_bail(
     # Bail parking/cave : pas de Vigik affiché (TC uniquement)
     if bail_lot_type == "appartement":
         for v in vigiks:
-            lot_type, lot_label = _lot_info(v.lot_id)
+            lot_type, lot_label = _lot_info(lot_map, session, v.lot_id)
             eligible, reason = _eligibility("vigik", lot_type, v.statut, v.chez_locataire, v.bail_id)
             recommended = bool(eligible and not v.chez_locataire and (v.lot_id is None or v.lot_id == bail.lot_id))
             result.append(AccesOut(id=v.id, code=v.code, type="vigik", lot_id=v.lot_id,
@@ -138,7 +143,7 @@ def acces_du_bail(
                                     motif_non_eligible=reason,
                                     cree_le=v.cree_le))
     for tc in tcs:
-        lot_type, lot_label = _lot_info(tc.lot_id)
+        lot_type, lot_label = _lot_info(lot_map, session, tc.lot_id)
         eligible, reason = _eligibility("telecommande", lot_type, tc.statut, tc.chez_locataire, tc.bail_id)
         recommended = bool(eligible and not tc.chez_locataire and (tc.lot_id is None or tc.lot_id == bail.lot_id))
         result.append(AccesOut(id=tc.id, code=tc.code, type="telecommande", lot_id=tc.lot_id,

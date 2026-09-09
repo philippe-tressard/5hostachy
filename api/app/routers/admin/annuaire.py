@@ -21,6 +21,7 @@ from app.models.core import (
 #  Importé sous un autre nom : plusieurs de ces fonctions affectent une variable
 #  LOCALE `site_manager_user_id`, et l'import serait alors masqué. C'est la raison
 #  d'être de l'ancien alias `_get_site_manager_user_id`, supprimé au découpage.
+from app.utils.annuaire import membres_du_conseil, membres_du_syndic
 from app.utils.destinataires import site_manager_user_id as _site_manager_user_id
 from app.utils.syndic import nom_du_syndic, source_du_nom
 from typing import Optional
@@ -38,74 +39,14 @@ def annuaire(
     """Équipe accessible à tous les résidents : membres CS + syndic depuis les tables dédiées."""
     # ── CS ──
     ag = session.exec(select(AgCsInfo)).first()
-    membres_cs_raw = session.exec(select(MembreCS)).all()
-
-    def _genre_order(g: str) -> int:
-        return 0 if g in ("Mme", "Mlle") else 1
-
-    membres_cs_sorted = sorted(
-        membres_cs_raw,
-        key=lambda m: (m.batiment_id or 9999, _genre_order(m.genre), m.nom.lower()),
-    )
-
-    batiments_cache: dict[int, str] = {}
-    def _bat_nom(bid: Optional[int]) -> Optional[str]:
-        if bid is None:
-            return None
-        if bid not in batiments_cache:
-            bat = session.get(Batiment, bid)
-            batiments_cache[bid] = bat.numero if bat else str(bid)
-        return batiments_cache[bid]
-
-    user_photo_cache: dict[int, Optional[str]] = {}
-    def _user_photo(uid: Optional[int]) -> Optional[str]:
-        if uid is None:
-            return None
-        if uid not in user_photo_cache:
-            u = session.get(Utilisateur, uid)
-            user_photo_cache[uid] = u.photo_url if u else None
-        return user_photo_cache[uid]
-
-    site_manager_user_id = _site_manager_user_id(session)
-
-    cs_out = [
-        {
-            "id": m.id,
-            "genre": m.genre,
-            "prenom": m.prenom,
-            "nom": m.nom,
-            "batiment_nom": _bat_nom(m.batiment_id),
-            "etage": m.etage,
-            "est_gestionnaire_site": bool(
-                m.est_gestionnaire_site or (site_manager_user_id is not None and m.user_id == site_manager_user_id)
-            ),
-            "est_president": m.est_president,
-            "photo_url": _user_photo(m.user_id),
-        }
-        for m in membres_cs_sorted
-    ]
+    #  La composition vient de `utils/annuaire` : elle était écrite ici ET dans
+    #  la fiche d'accueil, à trente et une lignes identiques — et les deux avaient
+    #  déjà divergé (#852). Le module dit sur quoi.
+    cs_out = membres_du_conseil(session)
 
     # ── Syndic ──
     syndic_info = session.exec(select(SyndicInfo)).first()
-    membres_syndic_raw = session.exec(select(MembreSyndic)).all()
-    membres_syndic_sorted = sorted(
-        membres_syndic_raw,
-        key=lambda m: m.ordre,
-    )
-    syndic_membres_out = [
-        {
-            "id": m.id,
-            "genre": m.genre,
-            "prenom": m.prenom,
-            "nom": m.nom,
-            "fonction": m.fonction,
-            "email": m.email,
-            "telephone": m.telephone,
-            "est_principal": m.est_principal,
-            "photo_url": _user_photo(m.user_id),
-        }
-        for m in membres_syndic_sorted
-    ]
+    syndic_membres_out = membres_du_syndic(session)
 
     return {
         "cs": {

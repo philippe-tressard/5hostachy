@@ -16,6 +16,7 @@ from typing import Optional
 from fastapi import BackgroundTasks
 from sqlmodel import Session
 
+from app.utils.batiments import libelle_batiment_ou
 from app.models.core import (
     Batiment,
     ConfigSite,
@@ -60,8 +61,7 @@ def auteur_meta(auteur: Optional[Utilisateur], session: Session) -> dict:
     batiment = None
     if auteur.batiment_id is not None:
         bat = session.get(Batiment, auteur.batiment_id)
-        if bat:
-            batiment = f"Bât. {bat.numero}"
+        batiment = libelle_batiment_ou(bat, None)
     return {
         "auteur_nom": nom_affiche(auteur.prenom, auteur.nom),
         "auteur_batiment": batiment,

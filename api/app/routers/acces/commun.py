@@ -10,14 +10,20 @@ C'est Ruff qui l'a dit, en refusant quatre noms indéfinis.
 la normalisation des noms ». C'était faux, et le compilateur l'a établi avant
 qu'on le croie. Un découpage ne crée pas les dépendances : il les RÉVÈLE.
 
-`_normaliser` est ici parce que les DEUX chaînes d'import — vigiks et
-télécommandes — l'emploient pour rapprocher un nom du fichier Excel d'un nom en
-base. Deux copies de cette normalisation auraient divergé sur un accent, et le
-rapprochement aurait alors réussi d'un côté et échoué de l'autre, sur la même
-personne.
-"""
-import unicodedata
+🔴 **`_normaliser` a vécu ici sans que PERSONNE ne l'appelle** — retirée le
+09/09/2026. L'en-tête affirmait qu'elle « est ici parce que les DEUX chaînes
+d'import l'emploient » ; les deux importaient en réalité la `normaliser` de
+`utils/import_xlsx`, dont ce corps était la copie exacte. Et cette fonction-là
+porte, depuis le 08/08/2026, la mention « Écrite trois fois à l'identique » : la
+consolidation d'alors en avait donc laissé une **quatrième**, ici, protégée par
+un commentaire qui expliquait pourquoi il ne fallait pas la dupliquer.
 
+⚠️ C'est la forme la plus tenace de la duplication : le seul fichier qui parle du
+sujet affirme que le problème n'existe pas. Un nom d'import qui aurait dérivé
+d'un accent aurait rapproché les personnes d'un côté et pas de l'autre — sauf
+qu'ici la copie ne servait à rien du tout, ce qui est pire : elle donnait à lire
+une règle qui ne s'appliquait nulle part.
+"""
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
@@ -25,18 +31,6 @@ from app.models.core import (
     StatutImport,
     Utilisateur, Batiment, Lot,
 )
-
-
-def _normaliser(s: str) -> str:
-    """Normalise un nom : majuscules, sans accents, espaces normalisés."""
-    if not s:
-        return ""
-    s = s.strip().upper()
-    s = "".join(
-        c for c in unicodedata.normalize("NFD", s)
-        if unicodedata.category(c) != "Mn"
-    )
-    return " ".join(s.split())
 
 
 def _stats_socle(modele, session: Session) -> tuple[list, dict]:

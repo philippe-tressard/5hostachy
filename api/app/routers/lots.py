@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from app.utils.batiments import libelle_batiment_ou
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.utils.etages import ETAGE_HORS_BORNES, etage_hors_bornes
@@ -58,7 +59,7 @@ def _lot_read(lot: Lot) -> LotRead:
         etage=lot.etage,
         superficie=lot.superficie,
         batiment_id=lot.batiment_id,
-        batiment_nom=f"Bât. {lot.batiment.numero}" if lot.batiment else None,
+        batiment_nom=libelle_batiment_ou(lot.batiment, None),
     )
 
 
