@@ -1151,7 +1151,4 @@
 	    et libre de diverger sans que personne ne la rapproche de son modèle.
 	    Elle avait déjà divergé : `.78rem`, `.2rem .55rem`, et un état actif en
 	    teinte pâle là où la charte remplit la pastille. */
-
-	@media (max-width: 680px) {
-	}
 </style>

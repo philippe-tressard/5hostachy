@@ -246,8 +246,6 @@
 	/*  ⚠️ Sur téléphone, deux colonnes serrent les valeurs longues (un nom de
 	    compagnie, un numéro de police) au point de les couper mot à mot. La
 	    liste passe alors en une colonne — `standards/11` §10. */
-	@media (max-width: 560px) {
-	}
 	/*  `.form-section` et `.section-title` vivaient ici : ils REDÉFINISSAIENT la
 	    carte et le titre de sous-section que `card` / `config-section-title` et
 	    `SectionFormulaire` portent déjà (anatomie v2.94.0). Deux définitions d'un
