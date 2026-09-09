@@ -11,7 +11,6 @@ from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     AgCsInfo,
-    Batiment,
     ConfigSite,
     LocationBail,
     MembreCS,
@@ -25,6 +24,7 @@ from app.models.core import (
 #  Importé sous un autre nom : plusieurs de ces fonctions affectent une variable
 #  LOCALE `site_manager_user_id`, et l'import serait alors masqué. C'est la raison
 #  d'être de l'ancien alias `_get_site_manager_user_id`, supprimé au découpage.
+from app.utils.annuaire import membres_du_conseil, membres_du_syndic
 from app.utils.destinataires import site_manager_user_id as _site_manager_user_id
 from app.utils.destinataires import syndic_principal as _syndic_principal
 from app.utils.syndic import nom_du_syndic
@@ -337,73 +337,14 @@ def get_fiche_arrivant(
     from fastapi.responses import HTMLResponse
     from app.utils.fiche_arrivant import generer_fiche_arrivant
 
-    # Récupérer les données annuaire (même logique que GET /admin/annuaire)
+    #  🔴 « même logique que GET /admin/annuaire » : c'était vrai, et c'était le
+    #  problème (#852). Trente et une lignes identiques, et deux divergences déjà
+    #  installées — dont `est_gestionnaire_site`, qui ne disait pas la même chose
+    #  ici et là pour l'identifiant 0. La composition vit dans `utils/annuaire`.
     ag = session.exec(select(AgCsInfo)).first()
-    membres_cs_raw = session.exec(select(MembreCS)).all()
-
-    def _genre_order(g: str) -> int:
-        return 0 if g in ("Mme", "Mlle") else 1
-
-    membres_cs_sorted = sorted(
-        membres_cs_raw,
-        key=lambda m: (m.batiment_id or 9999, _genre_order(m.genre), m.nom.lower()),
-    )
-
-    batiments_cache: dict[int, str] = {}
-    def _bat_nom(bid: Optional[int]) -> Optional[str]:
-        if bid is None:
-            return None
-        if bid not in batiments_cache:
-            bat = session.get(Batiment, bid)
-            batiments_cache[bid] = bat.numero if bat else str(bid)
-        return batiments_cache[bid]
-
-    user_photo_cache: dict[int, Optional[str]] = {}
-    def _user_photo(uid: Optional[int]) -> Optional[str]:
-        if uid is None:
-            return None
-        if uid not in user_photo_cache:
-            u = session.get(Utilisateur, uid)
-            user_photo_cache[uid] = u.photo_url if u else None
-        return user_photo_cache[uid]
-
-    site_manager_user_id = _site_manager_user_id(session)
-
-    cs_membres = [
-        {
-            "genre": m.genre,
-            "prenom": m.prenom,
-            "nom": m.nom,
-            #  L'identifiant en plus du nom : le document nomme le bâtiment
-            #  d'après l'arbre des périmètres, qui s'interroge par `batiment_id`.
-            #  `batiment_nom` reste son dernier repli, quand l'arbre est vide.
-            "batiment_id": m.batiment_id,
-            "batiment_nom": _bat_nom(m.batiment_id),
-            "etage": m.etage,
-            "est_gestionnaire_site": bool(
-                m.est_gestionnaire_site or (site_manager_user_id and m.user_id == site_manager_user_id)
-            ),
-            "est_president": m.est_president,
-            "photo_url": _user_photo(m.user_id),
-        }
-        for m in membres_cs_sorted
-    ]
-
+    cs_membres = membres_du_conseil(session)
     syndic_info = session.exec(select(SyndicInfo)).first()
-    membres_syndic_raw = session.exec(select(MembreSyndic)).all()
-    syndic_membres = [
-        {
-            "genre": m.genre,
-            "prenom": m.prenom,
-            "nom": m.nom,
-            "fonction": m.fonction,
-            "email": m.email,
-            "telephone": m.telephone,
-            "est_principal": m.est_principal,
-            "photo_url": _user_photo(m.user_id),
-        }
-        for m in sorted(membres_syndic_raw, key=lambda m: m.ordre)
-    ]
+    syndic_membres = membres_du_syndic(session)
 
     whatsapp_url = (
         session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()

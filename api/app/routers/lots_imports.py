@@ -30,6 +30,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from app.utils.batiments import libelle_batiment
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
@@ -97,7 +98,7 @@ def _imp_row(imp: LotImport, session: Session) -> dict:
 
     # Libellé bâtiment
     if bat:
-        bat_nom = f"Bât. {bat.numero}"
+        bat_nom = libelle_batiment(bat)
     elif imp.batiment_id:
         bat_nom = str(imp.batiment_id)
     else:
@@ -127,7 +128,7 @@ def _imp_row(imp: LotImport, session: Session) -> dict:
         "statut": imp.statut.value if hasattr(imp.statut, "value") else imp.statut,
         "lot_id": imp.lot_id,
         "lot_label": (
-            f"Bât. {lot.batiment.numero} — {lot.numero} ({lot.type.value})"
+            f"{libelle_batiment(lot.batiment)} — {lot.numero} ({lot.type.value})"
             if lot and lot.batiment else (f"#{imp.lot_id}" if imp.lot_id else None)
         ),
         "utilisateurs": utilisateurs_out,

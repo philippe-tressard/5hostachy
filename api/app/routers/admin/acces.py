@@ -8,6 +8,7 @@ import json
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
+from app.utils.batiments import libelle_batiment_ou
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
@@ -123,7 +124,7 @@ def audit_user_lots(
             "lot_id": ul.lot_id,
             "lot_numero": lot.numero if lot else "?",
             "lot_type": lot.type.value if lot and hasattr(lot.type, "value") else str(lot.type) if lot else "?",
-            "batiment": f"Bât. {bat.numero}" if bat else "—",
+            "batiment": libelle_batiment_ou(bat, "—"),
             "type_lien": ul.type_lien.value if hasattr(ul.type_lien, "value") else str(ul.type_lien),
         })
     return result
@@ -191,7 +192,7 @@ def audit_baux_sans_locataire(
             "bail_id": bail.id,
             "lot": f"{lot.type.value if lot and hasattr(lot.type, 'value') else ''} {lot.numero}".strip()
             if lot else "?",
-            "batiment": f"Bât. {bat.numero}" if bat else "—",
+            "batiment": libelle_batiment_ou(bat, "—"),
             "locataire_nom": nom_affiche(bail.locataire_prenom, bail.locataire_nom)
             if (bail.locataire_nom or bail.locataire_prenom) else "—",
             "locataire_email": bail.locataire_email,

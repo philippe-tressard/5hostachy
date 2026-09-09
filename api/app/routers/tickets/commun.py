@@ -20,6 +20,7 @@ import string
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.utils.batiments import libelle_batiment_ou
 from app.models.core import (
     Batiment,
     ConfigSite,
@@ -245,7 +246,7 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         priorite=ticket.priorite,
         auteur_id=ticket.auteur_id,
         auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else None,
-        auteur_batiment_nom=f"Bât. {batiment.numero}" if batiment else None,
+        auteur_batiment_nom=libelle_batiment_ou(batiment, None),
         lot_id=ticket.lot_id,
         batiment_id=ticket.batiment_id,
         perimetre_cible=ticket.perimetre_cible,

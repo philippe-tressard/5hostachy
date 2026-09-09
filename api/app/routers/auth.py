@@ -7,6 +7,7 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy import func
 from sqlmodel import Session, select, or_
 
+from app.utils.batiments import libelle_batiment, libelle_batiment_ou
 from app.auth.jwt import (
     create_access_token,
     create_refresh_token,
@@ -265,7 +266,7 @@ def _build_user_read(user: Utilisateur, session: Session) -> UserRead:
     if user.batiment_id:
         bat = session.get(Batiment, user.batiment_id)
         if bat:
-            batiment_nom = f"Bât. {bat.numero}"
+            batiment_nom = libelle_batiment(bat)
     # Charger les délégations actives où l'utilisateur est aidant
     today = date.today()
     deleg_rows = session.exec(
@@ -462,7 +463,7 @@ def mes_demandes_modif(
         item = d.model_dump()
         if d.batiment_id_souhaite:
             bat = session.get(Batiment, d.batiment_id_souhaite)
-            item["batiment_nom_souhaite"] = f"Bât. {bat.numero}" if bat else None
+            item["batiment_nom_souhaite"] = libelle_batiment_ou(bat, None)
         else:
             item["batiment_nom_souhaite"] = None
         result.append(item)

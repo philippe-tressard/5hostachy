@@ -7,6 +7,7 @@ Voir `__init__.py` pour la règle de découpage.
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
+from app.utils.batiments import libelle_batiment_ou
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
@@ -44,9 +45,12 @@ def list_demandes_profil(
         item["utilisateur_nom"] = nom_affiche(utilisateur.prenom, utilisateur.nom) if utilisateur else "?"
         item["utilisateur_email"] = utilisateur.email if utilisateur else None
         item["statut_actuel"] = utilisateur.statut.value if utilisateur else None
-        item["batiment_actuel"] = (f"Bât. {session.get(Batiment, utilisateur.batiment_id).numero}"
-            if utilisateur and utilisateur.batiment_id else None)
-        item["batiment_nom_souhaite"] = f"Bât. {bat.numero}" if bat else None
+        item["batiment_actuel"] = libelle_batiment_ou(
+            session.get(Batiment, utilisateur.batiment_id)
+            if utilisateur and utilisateur.batiment_id else None,
+            None,
+        )
+        item["batiment_nom_souhaite"] = libelle_batiment_ou(bat, None)
         result.append(item)
     return result
 
