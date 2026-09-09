@@ -23,14 +23,19 @@ C'est le raisonnement de `health_monitor._check_reference_copro` : la règle est
 vérifiable sur les modèles, elle reste fausse sur l'installation, et le seul
 endroit d'où l'écart se voit est un contrôle qui regarde **la base réelle**.
 
-## Deux axes, et pourquoi pas le texte
+## Trois axes, et pourquoi pas le texte
 
 Comparer le **texte** alerterait à chaque reformulation faite depuis
 Admin → Emails — un droit que le conseil a, et que les migrations protègent
 exprès. L'alerte deviendrait du bruit, puis serait ignorée : un contrôle qu'on
 ignore est un contrôle absent (`standards/04`).
 
-Sont donc comparés les deux axes qui ne changent **pas** quand on reformule :
+Sont donc regardés les trois axes qui ne changent **pas** quand on reformule :
+
+0. **le modèle se rend-il ?** Un Jinja invalide en base n'est pas un écart :
+   c'est un message qui ne part plus, et dont l'échec ne se voit que dans
+   `historique_email`. Ce cas passait ici pour « toutes les variables du code
+   sont absentes », avec une cause affirmée qui n'était pas la bonne (#852).
 
 1. **les variables**. Un écart signifie l'une de deux choses, toutes deux graves :
 
@@ -56,30 +61,15 @@ from __future__ import annotations
 
 from sqlmodel import Session, select
 
-#: Injectées d'office par `email._contexte_rendu` — communes à tous les modèles,
-#: donc hors du contrat de chacun.
-VARIABLES_DU_GABARIT = {"annee", "app", "residence", "reference_copro", "prefixe_copro"}
-
-
-def variables_de(sujet: str | None, corps: str | None) -> set[str]:
-    """Les variables de premier niveau d'un modèle, gabarit exclu.
-
-    Même lecture que `tests/test_email_templates.py`, appliquée au texte **réel**
-    d'une installation plutôt qu'à celui du dépôt. C'est toute la différence : le
-    test garde le code, ce contrôle garde ce qui est servi.
-    """
-    from jinja2 import BaseLoader, meta
-    from jinja2.sandbox import SandboxedEnvironment
-
-    env = SandboxedEnvironment(loader=BaseLoader())
-    try:
-        arbre = env.parse(f"{sujet or ''}{corps or ''}")
-    except Exception:
-        #  Un Jinja invalide échouera à l'envoi, et c'est là que le signal doit
-        #  être. Rendre un ensemble vide ferait crier CE contrôle sur un défaut
-        #  qui n'est pas le sien.
-        return set()
-    return meta.find_undeclared_variables(arbre) - VARIABLES_DU_GABARIT
+#  🔴 `variables_de` VIVAIT ICI, en deuxième exemplaire (#852). L'écran des
+#  modèles et le contrat de variables du dépôt posaient la même question avec
+#  leur propre code, et la liste du gabarit était écrite deux fois. Elle vit
+#  désormais dans `utils/email/variables.py`, avec les raisons du regroupement.
+from app.utils.email.variables import (  # noqa: F401  (réexport historique)
+    VARIABLES_DU_GABARIT,
+    ModeleIllisible,
+    variables_de,
+)
 
 
 def controler(session: Session) -> list[str]:
@@ -111,8 +101,50 @@ def controler(session: Session) -> list[str]:
             continue
 
         sujet_code, corps_code = attendus[modele.code]
-        du_code = variables_de(sujet_code, corps_code)
-        servies = variables_de(modele.sujet, modele.corps_html)
+
+        #  🔴 D'ABORD : ce modèle peut-il seulement être RENDU ? (#852)
+        #
+        #  Un Jinja invalide en base n'est pas un écart de variables, c'est un
+        #  envoi qui échoue. Et il échoue en silence : `send_email` capture toute
+        #  exception et n'en garde trace que dans `historique_email`, derrière une
+        #  session admin — personne ne le voit passer.
+        #
+        #  Ce cas ARRIVAIT ici sans être nommé : la lecture rendait un ensemble
+        #  vide, et le contrôle annonçait alors « toutes les variables du code
+        #  sont absentes », en affirmant une cause — « une migration n'a rien
+        #  touché » — qui n'était pas la bonne. Chercher une migration fantôme
+        #  pendant qu'un modèle ne part plus, c'est le symptôme attendu à la place
+        #  du fait (`standards/04`). Le texte se saisit à la main dans un simple
+        #  `<textarea>` : un `{% endif %}` de trop suffit.
+        try:
+            servies = variables_de(modele.sujet, modele.corps_html)
+        except ModeleIllisible as illisible:
+            ecarts.append(
+                f"Modèle d'e-mail « {modele.code} » : Jinja INVALIDE en base — "
+                "ce message ne part plus du tout.\n"
+                f"Champ « {illisible.champ} » : {illisible.cause}\n"
+                "L'échec est silencieux : il n'apparaît que dans "
+                "Admin → Emails → Historique, en « erreur ».\n"
+                "À corriger dans Admin → Emails, ou à remettre par défaut avec "
+                "« Réinitialiser les modèles »."
+            )
+            continue
+
+        #  Le modèle du dépôt, lui, est verrouillé par `test_email_templates.py` :
+        #  s'il ne se parse pas, la CI est rouge et rien n'a pu être déployé. Le
+        #  laisser lever ici serait donc juste — mais `run_health_check` capture
+        #  tout, et le contrôle entier disparaîtrait pour un modèle. On le dit.
+        try:
+            du_code = variables_de(sujet_code, corps_code)
+        except ModeleIllisible as illisible:
+            ecarts.append(
+                f"Modèle d'e-mail « {modele.code} » : le modèle du CODE ne se "
+                "parse pas.\n"
+                f"Champ « {illisible.champ} » : {illisible.cause}\n"
+                "Aucune comparaison n'est possible — corriger `seed/emails/` et "
+                "vérifier pourquoi la CI l'a laissé passer."
+            )
+            continue
 
         if du_code != servies:
             detail = []
@@ -149,4 +181,4 @@ def controler(session: Session) -> list[str]:
     return ecarts
 
 
-__all__ = ["VARIABLES_DU_GABARIT", "controler", "variables_de"]
+__all__ = ["ModeleIllisible", "VARIABLES_DU_GABARIT", "controler", "variables_de"]

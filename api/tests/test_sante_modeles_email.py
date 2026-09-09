@@ -25,6 +25,7 @@ un contrôle absent.**
 """
 from __future__ import annotations
 
+from app.utils.email.variables import ModeleIllisible
 from app.utils.sante_modeles_email import controler, variables_de
 
 
@@ -154,6 +155,61 @@ def test_variables_de_ecarte_le_gabarit_commun():
     assert variables_de("{{ residence.nom }}", "{{ app.url }}{{ mien }}") == {"mien"}
 
 
-def test_variables_de_ne_crie_pas_sur_un_JINJA_invalide():
-    """Il échouera à l'envoi — c'est là que le signal doit être, pas ici."""
-    assert variables_de("{% if %}", "") == set()
+def test_variables_de_LEVE_sur_un_JINJA_invalide():
+    """🔴 Ce test disait exactement le contraire, et il avait tort (#852).
+
+    Il verrouillait : *« il échouera à l'envoi — c'est là que le signal doit
+    être, pas ici »*, et exigeait un ensemble **vide**. Deux erreurs dans une
+    phrase :
+
+    1. l'envoi n'émet aucun signal. `send_email` capture toute exception et
+       n'enregistre l'échec que dans `historique_email`, derrière une session
+       admin. Le message cesse de partir, personne ne l'apprend ;
+    2. l'ensemble vide n'est pas neutre **ici** : le contrôle le lit comme
+       « ce modèle n'emploie aucune variable », donc comme « toutes celles du
+       code lui manquent », et affirme alors une cause — une migration restée
+       sans effet — qui n'est pas la bonne.
+
+    C'est ce qui est arrivé le 09/09/2026 : deux modèles signalés comme ayant
+    perdu leurs huit variables, quand la question à poser était « ce modèle
+    peut-il seulement être rendu ? ».
+    """
+    import pytest
+
+    with pytest.raises(ModeleIllisible) as leve:
+        variables_de("{% if %}", "")
+    assert leve.value.champ == "sujet"
+
+
+def test_chaque_champ_est_analyse_SEPAREMENT_comme_il_sera_rendu():
+    """`_render` est appelé deux fois : l'objet et le corps sont indépendants.
+
+    Les concaténer créait un couplage qui n'existe pas à l'envoi — un `{% if %}`
+    ouvert dans l'objet pouvait être refermé par un `{% endif %}` du corps, et
+    l'analyse réussissait sur un modèle qui échoue à partir.
+    """
+    import pytest
+
+    with pytest.raises(ModeleIllisible) as leve:
+        variables_de("{% if x %}Objet", "Corps{% endif %}")
+    assert leve.value.champ == "sujet"
+
+
+def test_il_NOMME_le_jinja_invalide_au_lieu_d_inventer_une_migration():
+    """L'alerte doit dire ce qui se passe : le message ne part plus du tout.
+
+    Le corps est celui du dépôt, amputé de son dernier `{% endif %}` — la faute
+    qu'un `<textarea>` rend possible d'un caractère.
+    """
+    sujet, corps = _du_depot("calendrier_evenement_suivi")
+    casse = corps.replace("{% endif %}", "", 1)
+    ecarts = controler(_Session([_Ligne("calendrier_evenement_suivi", sujet, casse)]))
+
+    assert len(ecarts) == 1, f"écart non détecté : {ecarts}"
+    assert "INVALIDE" in ecarts[0], "l'alerte ne dit pas que le modèle est cassé"
+    assert "corps_html" in ecarts[0], "l'alerte ne dit pas QUEL champ est cassé"
+    assert "Historique" in ecarts[0], "l'alerte ne dit pas où se voit l'échec"
+    assert "migration" not in ecarts[0].lower(), (
+        "l'alerte affirme encore une cause qui n'est pas la bonne : c'est ce qui "
+        "a envoyé chercher une migration fantôme le 09/09/2026."
+    )
