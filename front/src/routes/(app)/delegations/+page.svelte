@@ -224,7 +224,7 @@
 			<input id="d-fin" type="date" bind:value={formDateFin} />
 			<!--  Pas de « (optionnel) » : le requis se marque par `*` et rien d'autre
 			      (cadre R3). Ce qu'il fallait dire, c'est ce qui se passe sans date. -->
-			<span class="field-hint">Sans date, la délégation reste valable sans limite.</span>
+			<span class="aide">Sans date, la délégation reste valable sans limite.</span>
 		</div>
 		<p class="avertissement">
 			&#x26A0;&#xFE0F; L'aidant devra accepter la délégation. L'accès aidant ne constitue pas une

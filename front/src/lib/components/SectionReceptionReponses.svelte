@@ -129,7 +129,7 @@
 
 <SectionFormulaire icone="message-square-text" titre="Réception des réponses aux tickets">
 	<div class="largeur-saisie">
-		<p class="field-hint" style="margin-bottom:.75rem">
+		<p class="aide" style="margin-bottom:.75rem">
 			Quand le syndic répond à un e-mail de ticket, sa réponse arrive dans la boîte d'envoi et
 			personne ne la voit. Activée, cette relève la dépose dans le fil du ticket concerné, toutes
 			les 10 minutes.
@@ -141,7 +141,7 @@
 				<input type="checkbox" bind:checked={imapConfig.enabled} />
 				Relever les réponses
 			</span>
-			<span class="field-hint">
+			<span class="aide">
 				Tant que cette case est décochée, rien n'est relevé — vous pouvez régler et tester sans
 				conséquence.
 			</span>
@@ -157,7 +157,7 @@
 		<label class="field">
 			Nom d'utilisateur
 			<input type="text" bind:value={imapConfig.username} placeholder="noreply@exemple.fr" />
-			<span class="field-hint">Le même compte que l'envoi, chez le même hébergeur.</span>
+			<span class="aide">Le même compte que l'envoi, chez le même hébergeur.</span>
 		</label>
 		<label class="field">
 			Mot de passe
@@ -193,7 +193,7 @@
 		<label class="field champ-court">
 			Ne rien relever avant le
 			<input type="date" bind:value={imapConfig.plancher} />
-			<span class="field-hint"> Évite de rejouer d'anciens messages à la première relève. </span>
+			<span class="aide"> Évite de rejouer d'anciens messages à la première relève. </span>
 		</label>
 	</div>
 	<div class="largeur-saisie form-actions">
@@ -211,7 +211,7 @@
 		{#if imapResultat}
 			<p class="imap-resultat">{imapResultat}</p>
 		{/if}
-		<p class="field-hint" style="margin-top:.3rem">
+		<p class="aide" style="margin-top:.3rem">
 			Se connecte avec ce qui est <strong>enregistré</strong>, compte les messages non lus, et ne
 			traite rien. Enregistrez d'abord.
 		</p>

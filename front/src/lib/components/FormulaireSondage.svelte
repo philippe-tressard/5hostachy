@@ -290,7 +290,7 @@
 					      pas À QUI — or c'est toute la question : des résultats visibles
 					      pendant le vote influencent les votes suivants (#397). L'audience
 					      est celle du sondage : son périmètre et ses destinataires. -->
-						<p class="aide-case">
+						<p class="aide sous-case">
 							Ils seront lus par les destinataires du sondage. Sinon, ils n'apparaissent qu'une fois
 							le sondage clôturé.
 						</p>

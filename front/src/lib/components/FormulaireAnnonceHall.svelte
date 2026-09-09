@@ -173,7 +173,7 @@
 			{/each}
 		</select>
 	</div>
-	<p class="aide-bloc">
+	<p class="aide">
 		Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste modifiable
 		ci-dessous : l'affiche est indépendante de l'actualité d'origine.
 	</p>
@@ -213,7 +213,7 @@
 			>
 		{/each}
 	</div>
-	<p class="aide-bloc">
+	<p class="aide">
 		{#if format === 'auto'}
 			Le plus petit format qui accueille le texte est retenu, pour occuper le moins de place
 			possible dans l'afficheur du hall. Sous l'A4, des pointillés de découpe sont tracés sur
@@ -238,7 +238,7 @@
 	      que ce champ bouge, sans que rien ne le signale. Elle ne dit donc plus que ce
 	      dont elle répond : à quoi sert le périmètre. L'envoi se lit là où il se
 	      décide — dans la section Diffusion, qui porte sa propre aide. -->
-	<p class="aide-bloc">Imprimé sur l'affiche : il dit où elle doit être posée.</p>
+	<p class="aide">Imprimé sur l'affiche : il dit où elle doit être posée.</p>
 </SectionFormulaire>
 
 <!--  6. Description — ici, le message affiché. -->
@@ -261,7 +261,7 @@
 		upload={onUpload}
 		on:change={onPhotosChange}
 	/>
-	<p class="aide-bloc">
+	<p class="aide">
 		Facultatives, {maxPhotos} au maximum, placées en pied d'affiche : le texte de l'annonce reste l'élément
 		central. Une affiche avec photo ne descend jamais sous l'{formatMinPhotos}.
 	</p>
@@ -300,7 +300,7 @@
 	envoiEnCours={saving}
 	on:envoyer={() => onCreer()}
 />
-<p class="aide-bloc">
+<p class="aide">
 	Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique.
 	Le conseil syndical reçoit le PDF en pièce jointe, pour impression — et seuls les conseillers du
 	périmètre visé sont prévenus.

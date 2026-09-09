@@ -332,7 +332,7 @@
 {/if}
 
 {#if descriptionActive}
-	<p class="aide-bloc">{descriptionActive}</p>
+	<p class="aide">{descriptionActive}</p>
 {/if}
 
 <style>

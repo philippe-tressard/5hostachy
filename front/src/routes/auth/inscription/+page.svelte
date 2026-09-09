@@ -189,20 +189,18 @@
 							required
 							placeholder="Nom du propriétaire bailleur"
 						/>
-						<p class="field-hint">
-							Permet au conseil syndical de rattacher votre compte au bon lot.
-						</p>
+						<p class="aide">Permet au conseil syndical de rattacher votre compte au bon lot.</p>
 					</div>
 				{/if}
 
 				{#if isAidantOrMandataire}
-					<!--  ⚠️ `.aide-grille` enveloppe, et la grille est `:global()` IMBRIQUÉ.
+					<!--  ⚠️ `.grille-champs` enveloppe, et la grille est `:global()` IMBRIQUÉ.
 					      La classe passée en prop `classe=` est appliquée par `LibelleGroupe`
 					      sur SON balisage : elle y prend le scope de `LibelleGroupe`, jamais
 					      celui d'ici. `.field-row` écrit à plat ne l'atteignait pas — les deux
 					      champs s'empilaient au lieu de se ranger côte à côte, et ce depuis
 					      toujours (trouvé le 01/09/2026 en extrayant `FormulaireBail`). -->
-					<div class="aide-grille">
+					<div class="grille-champs">
 						<LibelleGroupe
 							titre="Copropriétaire aidé *"
 							id="coproprietaire-aide"
@@ -230,7 +228,7 @@
 							</div>
 						</LibelleGroupe>
 					</div>
-					<p class="field-hint">
+					<p class="aide">
 						Permet au conseil syndical de rattacher votre compte au bon copropriétaire.
 					</p>
 				{/if}
@@ -273,7 +271,7 @@
 							max="50"
 							placeholder="Ex. 3"
 						/>
-						<p class="field-hint">
+						<p class="aide">
 							0 = rez-de-chaussée, 2 = 2ème étage. Sert à vous situer auprès de vos voisins dans
 							l’annonce de bienvenue publiée à votre arrivée ; votre e-mail et votre téléphone n’y
 							figurent jamais.
@@ -361,7 +359,7 @@
 		font-size: 1.4rem;
 	}
 
-	.aide-grille :global(.field-row) {
+	.grille-champs :global(.field-row) {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 0.75rem;

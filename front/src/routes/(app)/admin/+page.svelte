@@ -1315,7 +1315,7 @@
 								<label class="field">
 									Label menu
 									<input type="text" bind:value={pg.navLabel} />
-									<span class="field-hint">Texte affiché dans la barre de navigation.</span>
+									<span class="aide">Texte affiché dans la barre de navigation.</span>
 								</label>
 							</div>
 							<div class="pages-form-section">
@@ -1323,14 +1323,14 @@
 								<label class="field">
 									Titre de la page
 									<input type="text" bind:value={pg.titre} />
-									<span class="field-hint"
+									<span class="aide"
 										>Titre de Page avec reprise de l'icône (de navigation du menu associé).</span
 									>
 								</label>
 								<label class="field">
 									Description
 									<RichEditor bind:value={pg.descriptif} minHeight="80px" />
-									<span class="field-hint"
+									<span class="aide"
 										>Sous-titre affiché sous le titre de page. Mise en forme riche supportée (gras,
 										italique, listes, liens).</span
 									>
@@ -1353,7 +1353,7 @@
 											</div>
 										{/each}
 									</div>
-									<span class="field-hint"
+									<span class="aide"
 										>Labels et descriptifs de chaque onglet. Le descriptif apparaît sous les onglets
 										quand l'onglet est actif.</span
 									>

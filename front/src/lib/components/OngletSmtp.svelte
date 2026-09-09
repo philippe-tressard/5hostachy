@@ -165,7 +165,7 @@
 					<input type="checkbox" bind:checked={smtpConfig.enabled} />
 					Activer l'envoi d'e-mails
 				</span>
-				<span class="field-hint"
+				<span class="aide"
 					>Si activé, les notifications (réinitialisation de mot de passe, etc.) seront envoyées par
 					e-mail.</span
 				>
@@ -181,7 +181,7 @@
 			<label class="field">
 				Adresse expéditeur — messages SANS réponse attendue
 				<input type="email" bind:value={smtpConfig.from} placeholder="noreply@example.com" />
-				<span class="field-hint"
+				<span class="aide"
 					>Employée pour ce qui informe seulement : compte activé, changement d'état, nouveau
 					document. C'est la seule adresse qui peut s'appeler « noreply ».</span
 				>
@@ -193,7 +193,7 @@
 					bind:value={smtpConfig.from_reponse}
 					placeholder="contact@example.com"
 				/>
-				<span class="field-hint"
+				<span class="aide"
 					>Employée dès qu'on attend quelque chose du destinataire : ticket au syndic, relance,
 					demande d'accès, annonce de hall. Une adresse qui s'annonce « ne répondez pas » décourage
 					la réponse qu'on sollicite. <strong>Vide</strong> : tout part de l'adresse ci-dessus, comme
@@ -207,9 +207,7 @@
 			<label class="field">
 				Nom d'utilisateur SMTP
 				<input type="text" bind:value={smtpConfig.username} placeholder="user@example.com" />
-				<span class="field-hint"
-					>Laisser vide si le serveur ne requiert pas d'authentification.</span
-				>
+				<span class="aide">Laisser vide si le serveur ne requiert pas d'authentification.</span>
 			</label>
 			<label class="field">
 				Mot de passe SMTP
@@ -237,7 +235,7 @@
 						</button>
 					{/if}
 				</div>
-				<span class="field-hint"
+				<span class="aide"
 					>{smtpPasswordSet
 						? smtpEditingPassword
 							? 'Saisissez le nouveau mot de passe puis cliquez sur Enregistrer.'
@@ -264,7 +262,7 @@
 						SSL/TLS (port 465)
 					</span>
 				</span>
-				<span class="field-hint"
+				<span class="aide"
 					>STARTTLS et SSL/TLS sont mutuellement exclusifs. Décocher les deux pour connexion non
 					chiffrée.</span
 				>
@@ -316,7 +314,7 @@
 					rows="2"
 					placeholder="— Envoyé depuis 5hostachy.fr"
 					style="width:100%;resize:vertical;font-size:.85rem;font-family:monospace"></textarea>
-				<span class="field-hint"
+				<span class="aide"
 					>Texte ajouté automatiquement en bas de chaque e-mail envoyé par la plateforme.</span
 				>
 			</label>
@@ -327,7 +325,7 @@
 		<div class="largeur-saisie">
 			<label class="field champ-moyen">
 				<input type="text" bind:value={referenceCopro} placeholder="00213" />
-				<span class="field-hint"
+				<span class="aide"
 					>Référence de la copropriété auprès du syndic. Utilisée en préfixe dans les sujets
 					d'e-mails envoyés au syndic.</span
 				>

@@ -51,7 +51,7 @@
 <label class="field"
 	>Libellé court
 	<input bind:value={form.libelle_court} placeholder={libelleParDefaut} />
-	<span class="field-hint">Employé sur les pastilles étroites du calendrier.</span>
+	<span class="aide">Employé sur les pastilles étroites du calendrier.</span>
 </label>
 <div class="field">
 	Icône
@@ -76,15 +76,13 @@
 			</button>
 		{/each}
 	</div>
-	<span class="field-hint"> Affichée sur la pastille du sélecteur, devant le libellé. </span>
+	<span class="aide"> Affichée sur la pastille du sélecteur, devant le libellé. </span>
 </div>
 
 <label class="field"
 	>Description
 	<textarea bind:value={form.description} rows="4"></textarea>
-	<span class="field-hint">
-		Affichée sous le sélecteur, au moment où l’on choisit ce périmètre.
-	</span>
+	<span class="aide"> Affichée sous le sélecteur, au moment où l’on choisit ce périmètre. </span>
 </label>
 <label class="field"
 	>Ordre
@@ -94,7 +92,7 @@
 <label class="field-check">
 	<input type="checkbox" bind:checked={form.selectionnable} />
 	Proposé à la saisie
-	<span class="field-hint">
+	<span class="aide">
 		Décochez pour un regroupement, ou pour retirer un périmètre des formulaires sans toucher aux
 		contenus qui le citent déjà.
 	</span>
@@ -103,7 +101,7 @@
 <label class="field-check">
 	<input type="checkbox" bind:checked={form.privatif} />
 	Espace privatif
-	<span class="field-hint">
+	<span class="aide">
 		Un logement, une cave, une place attribuée. La pastille s'en distingue à la saisie.
 	</span>
 </label>
@@ -117,13 +115,13 @@
 	<input type="checkbox" bind:checked={form.portee_globale} />
 	Concerne tous les résidents
 	{#if concerneTousHerite && !form.portee_globale}
-		<span class="field-hint herite">
+		<span class="aide herite">
 			ℹ️ Ce périmètre concerne <strong>déjà</strong> tous les résidents, par héritage de son parent —
 			la case ci-dessus est décochée, et c’est normal. La cocher n’ajouterait rien ; la laisser décochée
 			ne retire rien. Pour changer cela, il faut décocher la case du périmètre parent.
 		</span>
 	{/if}
-	<span class="field-hint">
+	<span class="aide">
 		⚠️ Un contenu ciblé sur ce périmètre — ou sur l’un de ses sous-périmètres — sera visible de <strong
 			>tous les résidents</strong
 		>

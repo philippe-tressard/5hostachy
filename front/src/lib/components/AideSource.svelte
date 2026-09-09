@@ -32,7 +32,7 @@
 	export let repli = '';
 </script>
 
-<span class="aide-source">
+<span class="aide">
 	{#if active}
 		&#x1F517; Vient du <strong>{origine}</strong>{#if ou}
 			— se change dans {ou}{/if}.
@@ -42,13 +42,4 @@
 </span>
 
 <style>
-	/*  Discrète : elle informe, elle n'alerte pas. Un champ désactivé se voit
-	    déjà ; ce texte dit seulement POURQUOI. */
-	.aide-source {
-		display: block;
-		margin-top: 0.3rem;
-		font-size: 0.75rem;
-		line-height: 1.45;
-		color: var(--color-text-muted);
-	}
 </style>

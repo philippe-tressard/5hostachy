@@ -438,7 +438,7 @@
 							required
 						/>
 					{/each}
-					<p class="aide-reponses">
+					<p class="aide">
 						Seul le <strong>texte</strong> se corrige. Ajouter ou retirer une réponse invaliderait les
 						votes déjà exprimés : il faudrait alors créer un nouveau sondage.
 					</p>
@@ -449,7 +449,7 @@
 				Date de clôture
 				<input type="datetime-local" bind:value={editForm.cloture_le} />
 			</label>
-			<p class="aide-reponses">
+			<p class="aide">
 				Elle peut être <strong>reculée</strong>, jamais avancée une fois qu'un vote a été exprimé —
 				raccourcir priverait de leur voix ceux qui n'ont pas encore voté.
 			</p>
@@ -485,11 +485,6 @@
 	.reponse-saisie {
 		width: 100%;
 		margin-bottom: 0.35rem;
-	}
-	.aide-reponses {
-		margin: 0.1rem 0 1rem;
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
 	}
 	/*  `.back-link` est parti dans `FilAriane` (#365). Il disait « Communauté »
 	    ici et « Retour aux tickets » sur la fiche de ticket : deux pages du même

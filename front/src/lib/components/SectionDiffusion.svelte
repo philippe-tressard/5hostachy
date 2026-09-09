@@ -188,10 +188,10 @@
 			      version l'affichait toujours — signalé à l'écran le même jour, et le
 			      motif était déjà là, chez le voisin. -->
 			{#if whatsapp && aideWhatsapp}
-				<p class="aide-case">{aideWhatsapp}</p>
+				<p class="aide sous-case">{aideWhatsapp}</p>
 			{/if}
 			{#if whatsapp && fichiers.length > 0}
-				<p class="aide-case">
+				<p class="aide sous-case">
 					⚠️ Les fichiers ne sont pas envoyés via WhatsApp, uniquement le texte.
 				</p>
 			{/if}

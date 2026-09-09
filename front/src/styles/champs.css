@@ -121,11 +121,6 @@
     SANS le style — c'est ce qui a produit des pastilles nues en production le
     16/08 et fait créer `Pastille.svelte`. Elle vivait dans FormulaireEvenement ;
     FormulaireSondage en avait besoin (#397). */
-.aide-case {
-	margin: 0.2rem 0 0 1.6rem;
-	font-size: 0.8rem;
-	color: var(--color-text-muted);
-}
 /*  Aide sous un champ — la phrase qui dit ce qu’on attend, ou ce que la
     valeur entraîne.
 
@@ -138,12 +133,23 @@
 
     Les valeurs retenues sont celles des DEUX définitions qui étaient d’accord
     (patrimoine et inscription) ; `admin` disait `.75rem`, seule. */
-.field-hint {
+.aide {
 	display: block;
 	font-size: 0.78rem;
 	color: var(--color-text-muted);
-	margin-top: 0.25rem;
 	line-height: 1.45;
+	margin: 0.25rem 0 0;
+}
+
+/*  Le SEUL écart de position qui ait une raison : l'aide d'une case à cocher
+    s'aligne sous son libellé, et cette indentation EST son contenu — sans elle,
+    la phrase se lit comme un paragraphe indépendant de la case.
+
+    ⚠️ Modificateur, donc il n'ajoute QUE son écart : la typographie et la marge
+    haute viennent de `.aide`. Une variante qui redéclarerait la taille rouvrirait
+    la divergence que #870 vient de fermer. */
+.aide.sous-case {
+	margin-left: 1.6rem;
 }
 /*  Un champ qui occupe la LIGNE ENTIÈRE d'une grille de formulaire.
     Les grilles répartissent en colonnes de ~180 px, ce qui convient aux champs

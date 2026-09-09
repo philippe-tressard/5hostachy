@@ -339,7 +339,7 @@
 							<tr class="detail">
 								<td colspan="4">
 									{#if AIDE_TACHE[t.tache]}
-										<p class="aide-tache">{AIDE_TACHE[t.tache]}</p>
+										<p class="aide">{AIDE_TACHE[t.tache]}</p>
 									{/if}
 									{#if enChargement[t.tache] || erreursTache[t.tache] || lignes.length === 0}
 										<!--  `compact` : ce vide vit DANS une ligne de tableau dépliée, un
@@ -480,14 +480,6 @@
 		font-size: 0.9rem;
 		color: var(--color-primary);
 		margin-right: 0.4rem;
-	}
-	/*  Aide propre à une tâche, en tête de son détail — recueillie des deux cartes
-	    supprimées avec #299. */
-	.aide-tache {
-		margin: 0.5rem 0 0.25rem;
-		padding-left: 0.75rem;
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
 	}
 	/*  Action primaire à droite. `margin-right:auto` sur la note plutôt que
 	    `space-between` : sans note, le bouton doit rester à droite quand même. */
