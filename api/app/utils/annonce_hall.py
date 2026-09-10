@@ -3,8 +3,9 @@
 Le rendu réutilise le thème imprimable commun (`pdf_theme`) : même palette,
 même logo et même moteur PDF que la fiche arrivant.
 
-Format : A5 pour un message court, A4 au-delà (cf. `choisir_format`). Le CS peut
-forcer l'un ou l'autre depuis l'interface.
+Format : le PLUS PETIT feuillet qui accueille le texte (cf. `choisir_format`),
+parce qu'une affiche prend de la place sur le tableau d'affichage du hall. Le CS
+peut forcer un format depuis l'interface.
 """
 from __future__ import annotations
 
@@ -27,9 +28,19 @@ from app.utils.pdf_theme import (
     qr_data_uri,
 )
 
-# Au-delà de ce nombre de caractères (texte brut), l'annonce passe en A4.
 # Formats retenus, du plus grand au plus petit.
-FORMATS = ("a4", "a5", "a6", "a7", "a8")
+#
+# 🔴 **L'A8 a été RETIRÉ le 10/09/2026, et c'est une mesure, pas un avis.** Le
+# gabarit 52 × 74 mm porte un en-tête, un pied et un QR : il ne reste que 13 mm
+# de corps. Mesuré au navigateur sur le vrai gabarit, une annonce de **59
+# caractères** — un titre de trois mots et rien d'autre — donne déjà une page de
+# 77 mm, soit 3 mm de plus que la feuille. L'A8 débordait donc TOUJOURS, en
+# silence : WeasyPrint pousse le débordement sur une deuxième page, et une
+# affiche de hall sur deux feuillets n'est pas une affiche.
+#
+# Il était atteignable dès 70 caractères. Personne ne l'avait vu parce que le
+# seuil paraissait prudent — c'est le format lui-même qui ne tenait pas.
+FORMATS = ("a4", "a5", "a6", "a7")
 
 # Photos facultatives, placées en pied de contenu. Volontairement limité : au-delà,
 # l'affiche déborderait du feuillet et le format ne serait plus tenu.
@@ -40,11 +51,38 @@ FORMAT_MIN_AVEC_PHOTOS = "a5"
 
 # Poids maximal du contenu (titre + message, en caractères) tenant dans chaque
 # format. Au-delà du dernier seuil, on reste en A4.
+#
+# 🔴 **Recalibrés le 10/09/2026 sur une MESURE, plus sur une intuition.**
+# Signalé à l'écran : « le mode auto n'est pas optimum — le but est que l'affiche
+# prenne moins de place sur le tableau d'affichage », avec un PDF où 45 % de la
+# feuille A4 était blanche.
+#
+# Les anciens seuils (70 / 140 / 300 / 600) envoyaient en A4 dès 601 caractères,
+# alors qu'un A4 en tient plus de 1 500. Une annonce de 629 caractères occupait
+# ainsi une feuille entière pour un tiers de texte — quatre fois la place
+# nécessaire sur le tableau.
+#
+# Comment ces chiffres ont été obtenus : le vrai gabarit, monté dans le
+# navigateur pour les cinq formats et huit longueurs (59 → 1 860 caractères), et
+# le **taux de remplissage** du corps mesuré à chaque fois. Les seuils sont le
+# poids auquel chaque format atteint **92 %** de son corps — la marge couvre ce
+# que le modèle ne sait pas : les retours à la ligne, un titre long, une liste à
+# puces.
+#
+#     format   remplissage mesuré             seuil retenu
+#     a7       0,48 à 125 · 0,91 à 260        250
+#     a6       0,84 à 464 · 0,98 à 650        570
+#     a5       0,67 à 650 · 0,86 à 935      1 000
+#     a4       0,61 à 935 · 0,80 à 1 345    1 550
+#
+# ⚠️ Au-delà de 1 550 caractères on reste en A4 **et le texte déborde** sur une
+# seconde page : c'était déjà vrai avant, et ça n'est toujours pas traité — le
+# gabarit n'a pas de format plus grand. À voir si le cas se présente.
 SEUILS_FORMAT: tuple[tuple[str, int], ...] = (
-    ("a8", 70),
-    ("a7", 140),
-    ("a6", 300),
-    ("a5", 600),
+    ("a7", 250),
+    ("a6", 570),
+    ("a5", 1000),
+    ("a4", 1550),
 )
 
 # Gabarit par format : dimensions de page et échelle typographique.
@@ -109,25 +147,10 @@ _GABARITS: dict[str, dict[str, str]] = {
         "qr": "0mm",            # pied simplifié : plus de QR
         "pied": "5pt",
     },
-    "a8": {
-        "page_size": "A8",
-        "largeur": "52mm",
-        "hauteur": "74mm",
-        "padding": "3.5mm 4mm",
-        "logo": "13",
-        "surtitre": "4pt",
-        "residence": "5.5pt",
-        "titre": "8.5pt",
-        "meta": "4.5pt",
-        "corps": "6pt",
-        "galerie_max": "0mm",
-        "qr": "0mm",
-        "pied": "4.5pt",
-    },
 }
 
 # Formats trop petits pour porter le QR code du pied de page.
-_SANS_QR = ("a7", "a8")
+_SANS_QR = ("a7",)
 
 # Balises et attributs retirés avant rendu — défense en profondeur côté serveur,
 # en complément du `safeHtml()` appliqué à l'affichage côté front.
@@ -167,7 +190,7 @@ def choisir_format(
     titre: str = "",
     avec_photos: bool = False,
 ) -> str:
-    """Retourne le format effectif (`a4` … `a8`).
+    """Retourne le format effectif (`a4` … `a7`).
 
     En mode `auto`, on retient **le plus petit format** qui accueille le
     contenu : une annonce courte occupe ainsi moins de place dans l'afficheur
@@ -286,13 +309,21 @@ body {{
 }}
 .chip-perimetre {{
   font-size: {g['meta']}; font-weight: 700; color: var(--navy);
-  background: #F0EDE6; border-left: 1.2mm solid var(--gold);
-  /*  ⚠️ Le rayon n'arrondit QUE le côté opposé à la bordure (18/08/2026, signalé à
-      l'écran : « un double trait ou boîte »). Avec `border-radius` sur les quatre
-      coins et une bordure sur un SEUL côté, WeasyPrint trace les arrondis du côté
-      bordé comme deux segments détachés du trait droit — d'où l'impression de deux
-      barres. Côté gauche droit, le filet redevient continu. */
-  padding: 1.6mm 3.5mm; border-radius: 0 1mm 1mm 0;
+  /*  🔴 LE FILET EST PEINT, IL N'EST PLUS UNE BORDURE (10/09/2026).
+
+      Signalé à l'écran pour la SECONDE fois : « le titre a une double barre
+      orange à gauche ». Le correctif du 18/08 avait supprimé le rayon du côté
+      bordé, en pensant que c'était lui qui détachait les arrondis du trait. Il
+      ne l'était pas — WeasyPrint dessine le coin d'une bordure d'un seul côté
+      comme un segment à part, rayon ou pas, et cela se voit d'autant plus que
+      le filet est épais.
+
+      Un dégradé n'a pas de coin : il n'y a plus qu'une seule surface peinte, et
+      rien à raccorder. Le défaut disparaît par CONSTRUCTION plutôt que par
+      réglage — c'est la seule façon de ne pas le voir revenir une troisième
+      fois. */
+  background: linear-gradient(to right, var(--gold) 0 1.2mm, #F0EDE6 1.2mm 100%);
+  padding: 1.6mm 3.5mm; padding-left: 4.7mm; border-radius: 0 1mm 1mm 0;
   text-transform: uppercase; letter-spacing: .6px;
 }}
 .date-affichage {{ font-size: {g['meta']}; color: var(--muted); white-space: nowrap; }}

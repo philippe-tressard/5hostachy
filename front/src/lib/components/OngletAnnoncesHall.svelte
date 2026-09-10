@@ -82,15 +82,19 @@
 	let ahPubsLoaded = false;
 	let ahSourceId: number | '' = '';
 
-	type AhFormat = 'auto' | 'a4' | 'a5' | 'a6' | 'a7' | 'a8';
+	type AhFormat = 'auto' | 'a4' | 'a5' | 'a6' | 'a7';
 	const AH_FORMATS: { val: AhFormat; label: string }[] = [
 		{ val: 'auto', label: 'Auto' },
 		{ val: 'a4', label: 'A4' },
 		{ val: 'a5', label: 'A5' },
 		{ val: 'a6', label: 'A6' },
 		{ val: 'a7', label: 'A7' },
-		{ val: 'a8', label: 'A8' },
 	];
+
+	//  ⚠️ L'A8 a été RETIRÉ le 10/09/2026 : mesuré au navigateur, son gabarit
+	//  (52 × 74 mm, en-tête et pied compris) déborde dès 59 caractères. Il ne
+	//  s'agissait pas d'un seuil trop généreux mais d'un format qui ne tenait
+	//  jamais — et le débordement partait en silence sur une seconde feuille.
 
 	// Miroir front des seuils serveur (app/utils/annonce_hall.py) — indicatif seulement,
 	// le format retenu est toujours celui calculé par l'API.

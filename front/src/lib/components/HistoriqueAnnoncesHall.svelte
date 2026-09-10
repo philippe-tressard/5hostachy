@@ -22,13 +22,13 @@
 	import { annoncesHall as annoncesHallApi, ApiError } from '$lib/api';
 	import type { AnnonceHall } from '$lib/api';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
-	import Pastille from '$lib/components/Pastille.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDateShort as fmtDate, fmtDatetimeShort as fmtDatetime } from '$lib/date';
 	import { safeHtml } from '$lib/sanitize';
 	import { isAdmin } from '$lib/stores/auth';
+	import { confirmer } from '$lib/confirmation';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let ahList: AnnonceHall[] = [];
@@ -39,7 +39,6 @@
 	    reproduit ici (#816). */
 	let erreur = '';
 	let ahLoaded = false;
-	let ahArchivees = false;
 	let ahExpandedId: number | null = null;
 
 	onMount(() => loadAnnoncesHall());
@@ -54,7 +53,28 @@
 		ahLoading = true;
 		erreur = '';
 		try {
-			ahList = await annoncesHallApi.list(ahArchivees);
+			//  🔴 UNE SEULE liste — actives ET archivées (10/09/2026).
+			//
+			//  Signalé à l'écran : « il y a l'archive, et dans les archives il y a
+			//  encore des archives ; supprime cet archive de bas niveau ». L'onglet
+			//  s'appelle déjà « 📁 Archives » ; y remettre un filtre
+			//  Annonces / Archives faisait DEUX niveaux du même mot, et obligeait à
+			//  chercher dans lequel des deux se trouvait l'affiche qu'on venait de
+			//  tirer.
+			//
+			//  Les archivées restent distinguées par leur badge « Archivée », qui
+			//  existait déjà : la distinction n'est pas perdue, elle cesse d'être
+			//  une NAVIGATION pour redevenir une information.
+			//
+			//  ⚠️ Deux appels et non un paramètre « toutes » : le serveur range par
+			//  archivage, et la vue les recolle dans l'ordre qu'elle veut — actives
+			//  d'abord. Ajouter un troisième régime à l'API pour un besoin d'écran
+			//  aurait fait porter au serveur une question de présentation.
+			const [actives, archivees] = await Promise.all([
+				annoncesHallApi.list(false),
+				annoncesHallApi.list(true),
+			]);
+			ahList = [...actives, ...archivees];
 			ahLoaded = true;
 		} catch (e) {
 			erreur = e instanceof ApiError ? e.message : 'Erreur de chargement des annonces';
@@ -87,7 +107,23 @@
 	}
 
 	async function ahSupprimer(annonce: AnnonceHall) {
-		if (!confirm(`Supprimer définitivement « ${annonce.titre} » ? Le PDF sera effacé.`)) return;
+		//  ⚠️ Le message dit ce qui part VRAIMENT — le PDF et les illustrations
+		//  sont effacés du disque par le serveur, pas seulement la ligne. Et il
+		//  rappelle l'envoi : une annonce déjà partie par courriel reste dans les
+		//  boîtes des destinataires, que la supprimer ici ne rattrape pas.
+		const envoyee = annonce.destinataires.length > 0;
+		const avertissement = envoyee
+			? ' Elle a déjà été envoyée par courriel : les destinataires la gardent.'
+			: '';
+		if (
+			!(await confirmer({
+				titre: `Supprimer « ${annonce.titre} » ?`,
+				message: `Le PDF et les illustrations seront effacés.${avertissement}`,
+				libelleConfirmer: 'Supprimer',
+				danger: true,
+			}))
+		)
+			return;
 		try {
 			await annoncesHallApi.delete(annonce.id);
 			toast('success', 'Annonce supprimée');
@@ -105,33 +141,14 @@
 	}
 </script>
 
-<div class="perimetre-pills" style="margin-bottom:.85rem">
-	<Pastille
-		active={!ahArchivees}
-		on:click={() => {
-			ahArchivees = false;
-			loadAnnoncesHall(true);
-		}}>Annonces</Pastille
-	>
-	<Pastille
-		active={ahArchivees}
-		on:click={() => {
-			ahArchivees = true;
-			loadAnnoncesHall(true);
-		}}>Archives</Pastille
-	>
-</div>
-
 {#if ahLoading || erreur || ahList.length === 0}
 	<EtatListe
 		chargement={ahLoading}
 		{erreur}
 		vide={ahList.length === 0}
 		titreErreur="Impossible d’afficher les annonces de hall"
-		titreVide={ahArchivees ? 'Aucune annonce archivée' : 'Aucune annonce'}
-		messageVide={ahArchivees
-			? "Les annonces archivées depuis l'historique apparaîtront ici."
-			: "Créez la première annonce depuis l'onglet « Nouvelle annonce »."}
+		titreVide="Aucune annonce"
+		messageVide="Créez la première annonce depuis l'onglet « Nouvelle annonce »."
 	/>
 {:else}
 	{#each ahList as annonce (annonce.id)}
@@ -243,7 +260,25 @@
 								{annonce.archivee ? '↩️' : '\u{1F4E6}'}
 							</button>
 						{/if}
-						{#if $isAdmin && annonce.archivee}
+						<!--  🔴 SUPPRIMER SANS AVOIR À ARCHIVER D'ABORD (10/09/2026).
+
+						      Demandé à l'écran : « il faut pouvoir la supprimer sans
+						      l'archiver — si on recommence parce qu'elle n'est pas
+						      terrible ». Le geste exigeait l'archivage préalable, hérité
+						      de la règle du site : archiver ≠ supprimer, et la corbeille
+						      ne vit que dans la vue Archives.
+
+						      ⚠️ Cette règle protège un CONTENU que les résidents lisent
+						      et commentent. Une affiche de hall est une PRODUCTION : un
+						      PDF qu'on tire, qu'on regarde, et qu'on refait s'il est
+						      raté. L'archiver pour pouvoir l'effacer ne protège rien —
+						      ça ajoute un geste et laisse un brouillon dans l'historique.
+
+						      ⚠️ Le DROIT ne bouge pas : `require_admin` côté serveur,
+						      comme avant. Ce qui est levé, c'est la condition d'état,
+						      pas l'autorisation — ouvrir la suppression au CS serait une
+						      autre décision, et elle n'a pas été demandée. -->
+						{#if $isAdmin}
 							<button
 								class="btn-icon-danger"
 								title="Supprimer définitivement"
