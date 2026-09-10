@@ -1546,6 +1546,40 @@ sa réponse dans le produit. C'est la **sixième** fois — voir la mémoire
 `project_le_composant_existait_deja`. Le réflexe reste le même : chercher la
 **notion** (« corriger un objet d'une liste »), jamais le nom de l'écran.
 
+🔴 **Et ce n'était toujours pas fini : le formulaire DÉFILAIT.** Troisième
+signalement du même symptôme — *« le contrat édité remonte en haut »* — alors que
+la carte, elle, ne bougeait plus d'une ligne. Ce n'était pas un déplacement dans
+la liste : `FormulaireCreation` appelait `ramener()` **à chaque montage**, sans
+condition. Un formulaire ouvert dans la carte d'un objet, en bas de la fenêtre,
+dépassait la bande visible de quelques pixels et se faisait ramener en haut de
+l'écran — en emportant sa carte.
+
+**La règle, désormais : `cle` ne distingue plus seulement deux objets, elle
+DEMANDE le défilement.** Sans `cle`, le composant ne défile jamais.
+
+| Le formulaire s'ouvre… | `cle` | Défile ? |
+|---|---|---|
+| dans la carte de l'objet corrigé | non | **non** — ce qu'on regarde est déjà là |
+| en tête de page, geste juste au-dessus | non | **non** |
+| ailleurs que là où l'on a cliqué (liste longue, tableau) | **oui** | oui |
+
+⚠️ **L'intention était écrite dans le fichier même**, à dix lignes de l'appel
+fautif : *« un formulaire qui s'ouvre sous les yeux n'a pas à faire sauter la
+page »*. Le code ne testait que la **position**, jamais la raison d'être là — et
+la position seule ne distingue pas « ouvert loin du geste » de « ouvert un peu
+bas ». C'est le motif que ce dépôt connaît le mieux : *la règle est écrite, et
+elle n'est pas appliquée*.
+
+🔒 `lint:geste-edition` **règle D** : aucun appel à `ramener()` hors de la garde
+`cle !== undefined`. Vérifié sur la version fautive — elle la refuse.
+
+📐 **Ce qui a permis de trancher, après trois corrections à l'aveugle** : le vrai
+composant monté dans une **route jetable**, avec soixante cartes et un
+`Element.prototype.scrollIntoView` instrumenté. Le raisonnement disait « rien ne
+peut bouger » ; le relevé a montré l'appel, à la ligne près. Même leçon que
+`project_flex_enroulement_avant_compression` — une reproduction approximative ne
+reproduit rien.
+
 ## 15. DROITS — qui peut éditer, qui peut commenter (18/08/2026)
 
 | Geste | Qui |
