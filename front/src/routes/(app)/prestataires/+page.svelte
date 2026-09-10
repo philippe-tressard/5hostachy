@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
+	import { perimetreDefautListe } from '$lib/perimetres';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
@@ -134,7 +135,9 @@
 
 	let contratForm = {
 		copropriete_id: 1,
-		batiment_id: '',
+		//  Le PÉRIMÈTRE remplace `batiment_id`, qui n'était rempli par aucun
+		//  champ (10/09/2026). Le serveur en dérive le bâtiment.
+		perimetre_cible: perimetreDefautListe(),
 		prestataire_id: '',
 		type_equipement: 'autre',
 		libelle: '',
@@ -554,7 +557,7 @@
 	function resetContratForm() {
 		contratForm = {
 			copropriete_id: 1,
-			batiment_id: '',
+			perimetre_cible: perimetreDefautListe(),
 			prestataire_id: '',
 			type_equipement: 'autre',
 			libelle: '',
@@ -591,7 +594,7 @@
 	function startEditContrat(c: any) {
 		contratForm = {
 			copropriete_id: c.copropriete_id,
-			batiment_id: c.batiment_id ?? '',
+			perimetre_cible: c.perimetre_cible?.length ? c.perimetre_cible : perimetreDefautListe(),
 			prestataire_id: String(c.prestataire_id ?? ''),
 			type_equipement: typeEquipementDuContrat(c, prestataires),
 			libelle: c.libelle,
@@ -624,7 +627,6 @@
 		const payload = {
 			...contratForm,
 			type_equipement: resolvedType,
-			batiment_id: contratForm.batiment_id ? Number(contratForm.batiment_id) : null,
 			prestataire_id: Number(contratForm.prestataire_id),
 			duree_initiale_valeur: contratForm.duree_initiale_valeur
 				? Number(contratForm.duree_initiale_valeur)

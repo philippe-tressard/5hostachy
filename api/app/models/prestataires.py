@@ -99,7 +99,25 @@ class ContratEntretien(SQLModel, table=True):
     __tablename__ = "contrat_entretien"
     id: Optional[int] = Field(default=None, primary_key=True)
     copropriete_id: int = Field(foreign_key="copropriete.id")
+    #: 🔴 DÉRIVÉ de `perimetre_cible`, jamais saisi (10/09/2026). Le serveur le
+    #: recalcule à chaque écriture : un seul bâtiment ciblé → son identifiant,
+    #: sinon `NULL`.
+    #:
+    #: Il reste parce que d'autres lectures s'y appuient, et parce qu'un
+    #: `DROP COLUMN` sur une colonne portant une clé étrangère est exactement le
+    #: genre de migration qui bloque le conteneur au démarrage (`set -e` dans
+    #: `start.sh`, arrivé deux fois). Ce n'est PAS une seconde source de vérité :
+    #: il n'a plus qu'un seul point d'écriture.
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
+    #: Le périmètre que ce contrat couvre — même vocabulaire que `Ticket` et
+    #: `Publication` : `["résidence"]`, `["bat:3"]`, `["parking"]`…
+    #:
+    #: Ajouté le 10/09/2026 : un contrat ne pouvait dire QUE son bâtiment, et le
+    #: carnet d'entretien ne savait donc pas filtrer sur « Parking » ou
+    #: « Caves », qui n'en sont pas. C'est l'arborescence administrée qui décrit
+    #: le patrimoine, pas la table des bâtiments — et elle s'enrichit sans
+    #: migration, ce qu'une colonne ne sait pas faire.
+    perimetre_cible: Optional[str] = Field(default='["résidence"]')
     prestataire_id: int = Field(foreign_key="prestataire.id")
 
     type_equipement: TypeEquipement = TypeEquipement.autre

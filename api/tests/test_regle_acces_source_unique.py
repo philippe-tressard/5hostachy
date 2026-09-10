@@ -49,14 +49,6 @@ SOURCE_ACCES = RACINE / "utils" / "visibility" / "socle.py"
 EXCEPTIONS = {
     "utils/mes_batiments.py":
         "la source unique elle-même : c'est ici que le rattachement est lu.",
-    "utils/carnet_entretien.py":
-        "FILTRE d'affichage, pas une décision d'accès — le `batiment_id` y vient "
-        "de la pastille que l'utilisateur vient de cliquer, pas de son "
-        "rattachement. Le droit est tenu en amont par `require_proprietaire` "
-        "(carnet d'entretien, 10/09/2026) : un copropriétaire du bâtiment 3 a "
-        "accès au carnet du bâtiment 1, parce que le carnet est un document de "
-        "la copropriété ENTIÈRE — décret n° 2001-477. Restreindre par bâtiment "
-        "serait ici une régression juridique, pas un durcissement.",
     "utils/lecture_utilisateur.py":
         "AFFICHAGE seul — compose le libellé « Bât. N » du profil, ne décide rien. "
         "Extrait de `routers/auth.py` le 09/09/2026, quand le bloc profil en est "

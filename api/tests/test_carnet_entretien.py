@@ -4,6 +4,11 @@ Le carnet est une **vue** : l'essentiel de son code lit trois tables et les
 concatène. Une seule ligne y décide quelque chose — *cette visite est-elle en
 retard ?* —, et c'est elle qui est éprouvée ici, sans base ni session.
 
+La règle de FILTRE, elle, a quitté ce module le 10/09/2026 : elle s'appelle
+`couvre()` et vit dans l'arbre des périmètres, avec ses neuf cas —
+`test_perimetre_couvre.py`. Un filtre par périmètre n'est pas une affaire de
+carnet d'entretien : c'est la même question sur toutes les pages qui filtrent.
+
 Le reste est vérifié par ce qui l'entoure : `test_liens_front.py` refuse un lien
 vers une route que `pages.ts` ne déclare pas (le préfixe `contrat` a été ajouté
 avec ce lot), et `test_types_equipement.py` tient déjà la correspondance entre
@@ -15,7 +20,7 @@ from datetime import date
 
 import pytest
 
-from app.utils.carnet_entretien import CATEGORIES_BATI, _concerne, alerte_visite
+from app.utils.carnet_entretien import CATEGORIES_BATI, alerte_visite
 
 AUJOURDHUI = date(2026, 9, 10)
 
@@ -65,32 +70,6 @@ def test_les_categories_retenues_parlent_du_BATI():
     #  passerait ce test-ci sans rien filtrer.
     assert CategorieTicket.question not in CATEGORIES_BATI
     assert CategorieTicket.bug not in CATEGORIES_BATI
-
-
-def test_sans_filtre_il_n_y_a_RIEN_a_filtrer():
-    from app.models.prestataires import ContratEntretien
-
-    assert _concerne(ContratEntretien.batiment_id, None) is None
-
-
-def test_un_batiment_inclut_ce_qui_couvre_TOUTE_la_residence():
-    """🔴 Le défaut signalé à l'écran le 10/09/2026 : choisir un bâtiment vidait
-    le carnet.
-
-    `batiment_id == 3` seul exclut tout ce qui porte `NULL` — un contrat de
-    nettoyage, d'espaces verts ou d'assurance, un événement de périmètre
-    « résidence », un ticket sans bâtiment. C'est-à-dire l'essentiel.
-
-    Et c'était faux sur le fond : l'entretien de la résidence entretient AUSSI
-    ce bâtiment. Le test lit le SQL produit — un `OR … IS NULL`, jamais une
-    égalité seule.
-    """
-    from app.models.prestataires import ContratEntretien
-
-    sql = str(_concerne(ContratEntretien.batiment_id, 3))
-    assert "IS NULL" in sql, f"les portées « résidence entière » sont exclues : {sql}"
-    assert " OR " in sql, f"la condition doit être une UNION : {sql}"
-    assert "batiment_id" in sql
 
 
 @pytest.mark.parametrize("prefixe", ["contrat", "ev"])

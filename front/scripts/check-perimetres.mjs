@@ -44,7 +44,18 @@ import { join, relative, sep } from 'node:path';
 import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const SOURCE = join(RACINE, 'lib', 'perimetres.ts');
+//  ⚠️ `$lib/perimetres` est un PAQUET depuis le 10/09/2026 (le fichier unique
+//  avait franchi les 500 lignes). Le chemin ci-dessous pointe le module qui
+//  porte réellement ce que ce contrôle mesure — l'`index.ts` ne fait que
+//  réexporter, et transpiler une réexportation ne donne rien à lire.
+//  🔴 LES DEUX modules du paquet, pas un fichier : `$lib/perimetres` est un
+//  paquet depuis le 10/09/2026, et les quatre exports que ce contrôle exige
+//  y sont répartis — `perimetreLabel` dans les libellés, les trois autres
+//  dans l'arbre. N'en lire qu'un déclencherait le cas zéro à chaque fois.
+const SOURCES = [
+	join(RACINE, 'lib', 'perimetres', 'arbre.ts'),
+	join(RACINE, 'lib', 'perimetres', 'libelles.ts'),
+];
 const STORE = join(RACINE, 'lib', 'stores', 'perimetres.ts');
 
 /** Motifs interdits, avec ce qu'il faut écrire à la place. */
@@ -68,7 +79,10 @@ const MOTIFS = [
  * contrôle échoue si l'une devient inutile (voir plus bas).
  */
 const EXCEPTIONS = {
-	'lib/perimetres.ts':
+	//  Le paquet depuis le 10/09/2026 : la convention `bat:` vit dans `arbre.ts`,
+	//  qui EST la source unique — l'exception voyage avec le code, comme celles
+	//  de `test_regle_acces_source_unique` deux fois cette semaine.
+	'lib/perimetres/arbre.ts':
 		"la source elle-même : elle porte le repli d'affichage `bat:N` pour les " +
 		'contenus qui citent un nœud supprimé depuis, et documente ce qui a été retiré.',
 	'lib/api/documents.ts':
@@ -107,7 +121,7 @@ function fichiers(dir) {
 //  Sans la source ni le store, le motif a changé et ce contrôle ne mesure plus
 //  rien : il passerait au vert pour la pire des raisons.
 for (const [chemin, quoi] of [
-	[SOURCE, 'la source du rendu'],
+	...SOURCES.map((chemin) => [chemin, 'la source du rendu']),
 	[STORE, 'le store'],
 ]) {
 	if (!existsSync(chemin)) {
@@ -115,7 +129,7 @@ for (const [chemin, quoi] of [
 		process.exit(1);
 	}
 }
-const source = readFileSync(SOURCE, 'utf8');
+const source = SOURCES.map((chemin) => readFileSync(chemin, 'utf8')).join('\n');
 const store = readFileSync(STORE, 'utf8');
 const attendus = [
 	'perimetreLabel',
@@ -126,7 +140,7 @@ const attendus = [
 const manquants = attendus.filter((f) => !source.includes(`export function ${f}`));
 if (manquants.length > 0) {
 	console.error(
-		`✗ Cas zéro : lib/perimetres.ts n'exporte plus ${manquants.join(', ')}. ` +
+		`✗ Cas zéro : le paquet lib/perimetres n'exporte plus ${manquants.join(', ')}. ` +
 			'Le rendu a changé de forme — mettre ce contrôle à jour, sinon il laisse ' +
 			'passer toutes les écritures en dur.',
 	);

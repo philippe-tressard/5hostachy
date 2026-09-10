@@ -39,7 +39,7 @@ Le lot suivant, s'il est demandé.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Optional
 
@@ -50,6 +50,7 @@ from app.models.evenement import Evenement
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.models.tickets import CategorieTicket, StatutTicket
 from app.utils.liens import lien_element, lien_ticket
+from app.utils.perimetres import couvre, parse_json_perimetres
 
 #: Les catégories de ticket qui parlent du **bâti**. Les autres — une question,
 #: un signalement de bug, une nuisance de voisinage, une demande d'accès — sont
@@ -82,7 +83,10 @@ class EntreeCarnet:
     origine: str  # contrat | intervention | incident
     detail: str = ""
     equipement: Optional[str] = None
-    batiment_id: Optional[int] = None
+    #: Les codes de périmètre de la ligne — l'écran les rend par `perimetreLabel`,
+    #: comme partout ailleurs. Remplace `batiment_id` (10/09/2026) : un contrat
+    #: sur « Parking » n'a pas de bâtiment, et n'en est pas moins situé.
+    perimetre: list[str] = field(default_factory=list)
     lien: str = ""
     alerte: Optional[str] = None
 
@@ -95,7 +99,7 @@ class EntreeCarnet:
             "origine": self.origine,
             "detail": self.detail,
             "equipement": self.equipement,
-            "batiment_id": self.batiment_id,
+            "perimetre": self.perimetre,
             "lien": self.lien,
             "alerte": self.alerte,
         }
@@ -115,29 +119,20 @@ def _jour(valeur) -> Optional[date]:
     return None
 
 
-def _concerne(colonne, batiment_id: Optional[int]):
-    """La condition « ce fait concerne le bâtiment demandé » — ou rien à filtrer.
+def _codes_de(valeur: Optional[str]) -> list[str]:
+    """Le périmètre d'une ligne, quelle que soit la forme de sa colonne.
 
-    🔴 **`== batiment_id` seul était FAUX**, et c'est le défaut signalé à l'écran
-    le 10/09/2026 : cliquer sur un bâtiment vidait le carnet.
-
-    Un contrat de nettoyage, d'espaces verts ou d'assurance porte
-    `batiment_id = NULL` — il couvre la **résidence entière**. Un événement de
-    calendrier vaut `perimetre = "résidence"` par défaut, un ticket aussi. Les
-    exclure d'un bâtiment revenait à n'y garder que ce qui lui est nommément
-    propre, c'est-à-dire presque rien.
-
-    Et c'est faux sur le fond : *l'entretien de la résidence concerne aussi ce
-    bâtiment*. La chaufferie collective et les espaces verts entretiennent le
-    bâtiment 3 autant que son ascenseur.
-
-    ⚠️ Chaque entrée dit ensuite sa **portée** à l'écran (« Toute la résidence »
-    quand elle n'a pas de bâtiment) : sans cela, un contrat de portée générale
-    lu sous un filtre « Bât. 3 » passerait pour propre à ce bâtiment.
+    `Ticket` et `ContratEntretien` portent un tableau JSON, `Evenement` une
+    chaîne simple (`"résidence"`, `"bat:3"`). Une seule lecture pour les trois :
+    trois lectures auraient divergé sur le JSON illisible, et c'est toujours la
+    troisième qui oublie le `try`.
     """
-    if batiment_id is None:
-        return None
-    return (colonne == batiment_id) | (colonne.is_(None))
+    if not valeur:
+        return []
+    texte = valeur.strip()
+    if texte.startswith("["):
+        return parse_json_perimetres(texte)
+    return [texte]
 
 
 def alerte_visite(echeance: Optional[date], aujourdhui: date) -> Optional[str]:
@@ -167,22 +162,22 @@ def _type_equipement(contrat: ContratEntretien) -> Optional[str]:
     return brut.value if hasattr(brut, "value") else (str(brut) if brut else None)
 
 
-def _entrees_contrats(session: Session, batiment_id: Optional[int]) -> list[EntreeCarnet]:
+def _entrees_contrats(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
     """Un contrat en cours est un fait du carnet : il dit ce qui est SUIVI.
 
     Et sa `prochaine_visite` dépassée est le seul endroit du produit où une
     échéance d'entretien manquée devient visible.
     """
     requete = select(ContratEntretien).where(ContratEntretien.actif == True)  # noqa: E712
-    portee = _concerne(ContratEntretien.batiment_id, batiment_id)
-    if portee is not None:
-        requete = requete.where(portee)
 
     aujourdhui = date.today()
     entrees: list[EntreeCarnet] = []
     for contrat in session.exec(requete).all():
         debut = _jour(contrat.date_debut)
         if debut is None:
+            continue
+        codes = _codes_de(contrat.perimetre_cible)
+        if not couvre(codes, perimetre):
             continue
         prestataire = session.get(Prestataire, contrat.prestataire_id)
         detail = prestataire.nom if prestataire and prestataire.nom else "prestataire inconnu"
@@ -197,24 +192,24 @@ def _entrees_contrats(session: Session, batiment_id: Optional[int]) -> list[Entr
             origine="contrat",
             detail=detail,
             equipement=_type_equipement(contrat),
-            batiment_id=contrat.batiment_id,
+            perimetre=codes,
             lien=lien_element("contrat", contrat.id),
             alerte=alerte,
         ))
     return entrees
 
 
-def _entrees_interventions(session: Session, batiment_id: Optional[int]) -> list[EntreeCarnet]:
+def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
     """Ce qui a été FAIT — un événement arrivé au bout de son kanban."""
     requete = select(Evenement).where(Evenement.statut_kanban == KANBAN_TERMINE)
-    portee = _concerne(Evenement.batiment_id, batiment_id)
-    if portee is not None:
-        requete = requete.where(portee)
 
     entrees: list[EntreeCarnet] = []
     for evenement in session.exec(requete).all():
         quand = _jour(evenement.debut)
         if quand is None:
+            continue
+        codes = _codes_de(evenement.perimetre)
+        if not couvre(codes, perimetre):
             continue
         detail = ""
         if evenement.prestataire_id:
@@ -239,25 +234,24 @@ def _entrees_interventions(session: Session, batiment_id: Optional[int]) -> list
             origine="intervention",
             detail=detail,
             equipement=equipement,
-            batiment_id=evenement.batiment_id,
+            perimetre=codes,
             lien=lien_element("ev", evenement.id),
         ))
     return entrees
 
 
-def _entrees_incidents(session: Session, batiment_id: Optional[int]) -> list[EntreeCarnet]:
+def _entrees_incidents(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
     """Un incident résolu sur le bâti — ce que le carnet appelle un sinistre."""
     requete = select(Ticket).where(
         Ticket.statut == StatutTicket.résolu,
         Ticket.ferme_le.isnot(None),
     )
-    portee = _concerne(Ticket.batiment_id, batiment_id)
-    if portee is not None:
-        requete = requete.where(portee)
 
     entrees: list[EntreeCarnet] = []
     for ticket in session.exec(requete).all():
         if ticket.categorie not in CATEGORIES_BATI:
+            continue
+        if not couvre(_codes_de(ticket.perimetre_cible), perimetre):
             continue
         quand = _jour(ticket.ferme_le)
         if quand is None:
@@ -268,13 +262,13 @@ def _entrees_incidents(session: Session, batiment_id: Optional[int]) -> list[Ent
             libelle=ticket.titre,
             origine="incident",
             detail=f"ticket {ticket.numero} · {categorie}",
-            batiment_id=ticket.batiment_id,
+            perimetre=_codes_de(ticket.perimetre_cible),
             lien=lien_ticket(ticket.id),
         ))
     return entrees
 
 
-def construire_carnet(session: Session, *, batiment_id: Optional[int] = None) -> list[dict]:
+def construire_carnet(session: Session, *, perimetre: Optional[str] = None) -> list[dict]:
     """Le carnet complet, du fait le plus récent au plus ancien.
 
     ⚠️ Le tri est **décroissant sur la date du fait**, pas sur la date de saisie :
@@ -283,9 +277,9 @@ def construire_carnet(session: Session, *, batiment_id: Optional[int] = None) ->
     du premier* —, appliquée à l'envers : ici on date de ce qui s'est passé.
     """
     entrees = (
-        _entrees_contrats(session, batiment_id)
-        + _entrees_interventions(session, batiment_id)
-        + _entrees_incidents(session, batiment_id)
+        _entrees_contrats(session, perimetre)
+        + _entrees_interventions(session, perimetre)
+        + _entrees_incidents(session, perimetre)
     )
     entrees.sort(key=lambda e: e.date_fait, reverse=True)
     return [entree.en_dict() for entree in entrees]

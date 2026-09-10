@@ -2,7 +2,12 @@
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { relire } from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
-	import { SEPARATEUR_ELEMENT, perimetreParDefaut, type Perimetre } from '$lib/perimetres';
+	import {
+		SEPARATEUR_ELEMENT,
+		perimetreParDefaut,
+		perimetresNiveau1,
+		type Perimetre,
+	} from '$lib/perimetres';
 
 	/** Valeurs sélectionnées — tableau de codes. Ex : ['résidence'] ou ['bat:1','parking'] */
 	export let value: string[] = [];
@@ -37,19 +42,10 @@
 	//  formulaire s'ouvrirait alors sans sélection par défaut (#549).
 	$: defaut = relire($perimetresStore, perimetreParDefaut);
 
-	//  Un nœud de premier niveau est soit une racine sélectionnable, soit l'enfant
-	//  d'un REGROUPEMENT racine (« Bâtiments » n'est pas une cible : on choisit un
-	//  bâtiment). Cela remonte les bâtiments dans la première rangée, là où
-	//  l'utilisateur les cherche, sans inventer de niveau dans les données.
-	function estGroupeRacine(n: Perimetre | undefined): boolean {
-		return !!n && n.parent === null && !n.selectionnable;
-	}
-	$: niveau1 = actifs.filter(
-		(n) =>
-			n.selectionnable &&
-			n.code !== defaut &&
-			(n.parent === null || estGroupeRacine(parCode.get(n.parent!))),
-	);
+	//  La règle du premier niveau vit dans `$lib/perimetres` depuis le
+	//  10/09/2026 : le filtre du carnet d'entretien a besoin de la même rangée,
+	//  et deux calculs auraient divergé au premier périmètre créé en admin.
+	$: niveau1 = perimetresNiveau1($perimetresStore, defaut);
 
 	const codesNiveau1 = (liste: Perimetre[]) => new Set(liste.map((n) => n.code));
 

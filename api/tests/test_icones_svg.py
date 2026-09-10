@@ -146,7 +146,7 @@ def test_toutes_les_icones_proposees_existent_dans_le_catalogue():
     document imprimé, sur rien du tout.
     """
     catalogue = json.loads(_exige(CATALOGUE_FRONT))
-    source = _exige(RACINE / "front" / "src" / "lib" / "perimetres.ts")
+    source = _exige(RACINE / "front" / "src" / "lib" / "perimetres" / "libelles.ts")
     bloc = source.split("ICONES_PERIMETRE", 1)[1].split("];", 1)[0]
     proposees = re.findall(r"nom:\s*'([a-z0-9-]+)'", bloc)
 

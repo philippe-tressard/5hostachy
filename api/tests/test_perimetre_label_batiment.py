@@ -298,7 +298,7 @@ def test_le_front_porte_la_meme_regle():
     """
     from pathlib import Path
 
-    jumeau = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "perimetres.ts"
+    jumeau = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "perimetres" / "libelles.ts"
     assert jumeau.exists(), (
         f"{jumeau} est introuvable : ce contrôle ne peut plus rien établir. "
         "Ne pas lire son silence comme un succès."
