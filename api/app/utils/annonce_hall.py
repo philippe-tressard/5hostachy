@@ -321,8 +321,23 @@ body {{
       Un dégradé n'a pas de coin : il n'y a plus qu'une seule surface peinte, et
       rien à raccorder. Le défaut disparaît par CONSTRUCTION plutôt que par
       réglage — c'est la seule façon de ne pas le voir revenir une troisième
-      fois. */
-  background: linear-gradient(to right, var(--gold) 0 1.2mm, #F0EDE6 1.2mm 100%);
+      fois.
+
+      🔴 **DEUX arrêts de DEUX jetons, et pas un de plus** (11/09/2026). La
+      première écriture employait la syntaxe CSS Images 4 — `couleur 0 1.2mm`,
+      deux positions sur un même arrêt. WeasyPrint 69 ne la connaît pas :
+      `css/tokens.py::parse_color_stop` n'accepte QUE `couleur` ou
+      `couleur position`, et lève `InvalidValues` au-delà. La déclaration
+      entière était alors jetée — le filet ET le fond beige disparaissaient du
+      PDF, alors que l'aperçu HTML, lui, les montrait (signalé à l'écran :
+      « la barre disparaît dans la génération du PDF »).
+
+      ⚠️ La leçon dépasse ce filet : **l'aperçu et le PDF ne sont pas rendus par
+      le même moteur.** Ce qui passe dans un navigateur ne prouve rien de
+      WeasyPrint, et une propriété refusée y est ignorée EN SILENCE. La forme
+      ci-dessous est celle qu'emploie déjà `.barre-accent`, dont le tricolore
+      sort correctement en PDF — la preuve était dans le même fichier. */
+  background: linear-gradient(to right, var(--gold) 1.2mm, #F0EDE6 1.2mm);
   padding: 1.6mm 3.5mm; padding-left: 4.7mm; border-radius: 0 1mm 1mm 0;
   text-transform: uppercase; letter-spacing: .6px;
 }}
