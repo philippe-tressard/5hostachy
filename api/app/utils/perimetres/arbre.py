@@ -205,6 +205,47 @@ def a_portee_globale(codes: list[str]) -> bool:
     )
 
 
+def couvre(codes_portee: list[str], demande: Optional[str]) -> bool:
+    """Ces périmètres englobent-ils celui qu'on demande ?
+
+    C'est la question d'un **filtre** : *cette ligne entre-t-elle dans ce que
+    l'utilisateur a choisi de regarder ?* Trois façons d'y entrer :
+
+    1. **le même code** — un contrat sur « Parking » sous un filtre « Parking » ;
+    2. **un ancêtre du demandé** — « Bât. 3 » couvre « Bât. 3 › Toit », parce que
+       le toit du bâtiment 3 fait partie du bâtiment 3 ;
+    3. **une portée globale** — un contrat de nettoyage qui couvre toute la
+       résidence entretient AUSSI le parking.
+
+    🔴 **La réciproque est fausse, et doit le rester** : « Bât. 3 » n'entre pas
+    dans un filtre « Parking ». Une portée large englobe une portée étroite,
+    jamais l'inverse. Confondre les deux sens ferait tout apparaître partout, ce
+    qui est la façon la plus discrète de rendre un filtre inutile.
+
+    ⚠️ Une liste de codes **vide** couvre tout : ne rien déclarer, c'est ne rien
+    restreindre. C'est ce que valait implicitement `batiment_id IS NULL` avant que
+    les contrats aient un périmètre (10/09/2026).
+
+    ⚠️ `demande=None` — aucun filtre — couvre tout aussi, et cette symétrie est
+    volontaire : l'appelant n'a pas à traiter le cas « pas de filtre » à part.
+    """
+    if demande is None:
+        return True
+    if not codes_portee:
+        return True
+    noeuds = arbre()
+    if not noeuds:
+        #  Arbre vide : on ne peut RIEN décider. Ne rien filtrer plutôt que tout
+        #  masquer — un carnet vide se lirait comme une absence de données
+        #  (`standards/04` : une mesure impossible ne rend pas un verdict).
+        return True
+    lignee = {n.code.lower() for n in _chaine(demande, noeuds)}
+    for code in codes_portee:
+        if code.strip().lower() in lignee:
+            return True
+    return a_portee_globale(codes_portee)
+
+
 def batiments_cibles(codes: list[str]) -> set[int]:
     """Les identifiants de bâtiments réellement visés par ces périmètres.
 

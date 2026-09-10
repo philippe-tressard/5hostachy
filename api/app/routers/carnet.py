@@ -21,12 +21,11 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.auth.deps import require_proprietaire
 from app.database import get_session
-from app.models.core import Batiment, Utilisateur
-from app.utils.batiments import libelle_batiment
+from app.models.core import Utilisateur
 from app.utils.carnet_entretien import construire_carnet
 
 router = APIRouter(prefix="/carnet-entretien", tags=["carnet d'entretien"])
@@ -34,27 +33,24 @@ router = APIRouter(prefix="/carnet-entretien", tags=["carnet d'entretien"])
 
 @router.get("")
 def lire_carnet(
-    batiment_id: Optional[int] = Query(default=None),
+    perimetre: Optional[str] = Query(default=None),
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_proprietaire),
 ):
-    """Le carnet, éventuellement restreint à un bâtiment.
+    """Le carnet, éventuellement restreint à un PÉRIMÈTRE.
 
-    Rend aussi la table des bâtiments : l'écran a besoin de leurs noms pour
-    étiqueter chaque entrée, et les demander un par un ferait une requête par
-    ligne. Le libellé vient de `libelle_batiment`, jamais d'un `f"Bât. {id}"` —
-    deux formes de ce libellé ont déjà divergé dans ce dépôt.
+    ⚠️ `perimetre` est un **code de l'arborescence** (`"bat:3"`, `"parking"`),
+    pas un identifiant de bâtiment. C'est ce qui permet de filtrer sur des
+    espaces qui n'ont pas de bâtiment — et de suivre un périmètre créé demain en
+    administration, sans migration ni déploiement.
+
+    Le filtre lui-même n'est pas écrit ici : `couvre()` (arbre des périmètres)
+    répond à « cette ligne entre-t-elle dans ce que l'utilisateur regarde ? », et
+    c'est la même question sur toutes les pages qui filtrent.
     """
-    batiments = {
-        batiment.id: libelle_batiment(batiment)
-        for batiment in session.exec(select(Batiment)).all()
-    }
-    entrees = construire_carnet(session, batiment_id=batiment_id)
+    entrees = construire_carnet(session, perimetre=perimetre)
     return {
         "entrees": entrees,
-        "batiments": [
-            {"id": identifiant, "nom": nom} for identifiant, nom in sorted(batiments.items())
-        ],
         #  Le compte est rendu par le SERVEUR plutôt que déduit de la longueur du
         #  tableau : l'écran affiche « n interventions » à côté d'un filtre, et
         #  recompter côté client donnerait un chiffre juste tant que la pagination

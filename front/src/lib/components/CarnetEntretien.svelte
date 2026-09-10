@@ -22,22 +22,22 @@
 	import { onMount } from 'svelte';
 	import { carnet as carnetApi, type Carnet, type EntreeCarnet } from '$lib/api';
 	import { EQUIPEMENTS } from '$lib/prestataires';
+	import { perimetreLabel } from '$lib/perimetres';
+	import FiltrePerimetre from './FiltrePerimetre.svelte';
 	import { fmtDate } from '$lib/date';
 	import { essayer } from '$lib/chargement';
 	import EtatListe from './EtatListe.svelte';
-	import Pastille from './Pastille.svelte';
 
 	let donnees: Carnet | null = null;
 	let erreur = '';
 	let chargement = true;
-	let batimentChoisi: number | null = null;
+	/**  Un CODE de périmètre (`'bat:3'`, `'parking'`), jamais un identifiant de
+	 *   bâtiment : c'est ce qui permet de filtrer sur un espace qui n'en a pas. */
+	let perimetreChoisi: string | null = null;
 
 	async function charger() {
 		chargement = true;
-		[donnees, erreur] = await essayer<Carnet | null>(
-			carnetApi.lire(batimentChoisi ?? undefined),
-			null,
-		);
+		[donnees, erreur] = await essayer<Carnet | null>(carnetApi.lire(perimetreChoisi), null);
 		chargement = false;
 	}
 
@@ -54,13 +54,16 @@
 
 	/**  La PORTÉE d'une entrée, toujours dite.
 	 *
-	 *   🔴 « Toute la résidence » et non une chaîne vide : depuis que le filtre
-	 *   inclut ce qui couvre la résidence entière (sans quoi choisir un bâtiment
-	 *   vidait le carnet), un contrat d'espaces verts apparaît sous « Bât. 3 ».
-	 *   Sans sa portée écrite, il s'y lirait comme propre à ce bâtiment. */
-	function portee(id: number | null): string {
-		if (id == null) return 'Toute la résidence';
-		return donnees?.batiments.find((b) => b.id === id)?.nom ?? '';
+	 *   🔴 Elle est écrite même sous un filtre — surtout sous un filtre : un
+	 *   contrat qui couvre toute la résidence apparaît sous « Bât. 3 », parce
+	 *   qu'il l'entretient aussi. Sans sa portée, il s'y lirait comme propre à ce
+	 *   bâtiment, et le filtre mentirait plus discrètement que celui qu'il
+	 *   remplace.
+	 *
+	 *   `perimetreLabel` est la source unique du libellé — celle qui qualifie un
+	 *   espace par son parent et trie par l'arbre, jamais par l'ordre des clics. */
+	function portee(codes: string[]): string {
+		return perimetreLabel(codes ?? []);
 	}
 
 	/**  Les entrées rangées par équipement, chaque groupe gardant l'ordre du
@@ -95,26 +98,10 @@
 		saisi à la main.
 	</p>
 
-	{#if donnees && donnees.batiments.length > 1}
-		<!--  Un filtre de quatre entrées ou moins se rend en pastilles, jamais en
-		      `<select>` (seuil de 6, `ux-patterns`). -->
-		<div class="filtres" role="group" aria-label="Filtrer par bâtiment">
-			<Pastille
-				active={batimentChoisi === null}
-				on:click={() => ((batimentChoisi = null), charger())}
-			>
-				Toute la résidence
-			</Pastille>
-			{#each donnees.batiments as batiment (batiment.id)}
-				<Pastille
-					active={batimentChoisi === batiment.id}
-					on:click={() => ((batimentChoisi = batiment.id), charger())}
-				>
-					{batiment.nom}
-				</Pastille>
-			{/each}
-		</div>
-	{/if}
+	<!--  Le filtre est le composant STANDARD : il prend ses pastilles dans
+	      l'arborescence administrée, donc un périmètre créé demain y apparaît
+	      sans qu'on touche à cet écran. -->
+	<FiltrePerimetre bind:choisi={perimetreChoisi} on:changer={charger} />
 
 	{#if enRetard > 0}
 		<!--  L'alerte est en TÊTE parce que c'est ce que le carnet apprend et que
@@ -146,7 +133,7 @@
 									<a href={entree.lien}>{entree.libelle}</a>
 									<span class="detail">
 										{entree.detail}{#if entree.detail}&nbsp;·
-										{/if}{portee(entree.batiment_id)}
+										{/if}{portee(entree.perimetre)}
 									</span>
 									{#if entree.alerte}
 										<span class="alerte">⚠️ {entree.alerte}</span>
@@ -167,11 +154,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-	}
-	.filtres {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
 	}
 	.retard {
 		margin: 0;

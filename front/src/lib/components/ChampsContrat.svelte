@@ -43,6 +43,7 @@
 </script>
 
 <script lang="ts">
+	import PerimetrePicker from './PerimetrePicker.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 
 	/** Le formulaire lié — l'écran porte l'état et l'enregistre. */
@@ -78,6 +79,24 @@
 		</select>
 	</label>
 	<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
+	<!--  🔴 Le PÉRIMÈTRE couvert, ajouté le 10/09/2026 — et il n'existait AUCUN
+	      champ pour situer un contrat avant lui. `batiment_id` figurait dans la
+	      charge utile, mais rien ne le remplissait : tous les contrats portaient
+	      `NULL`, et le carnet d'entretien ne pouvait donc filtrer sur rien.
+
+	      C'est l'arborescence administrée qui situe, pas la table des bâtiments :
+	      un contrat de porte de parking ou d'entretien des caves n'a pas de
+	      bâtiment, et n'en couvre pas moins un espace précis. -->
+	<div class="field champ-large">
+		<span class="libelle-groupe" id="contrat-perimetre">Périmètre couvert</span>
+		<div role="group" aria-labelledby="contrat-perimetre">
+			<PerimetrePicker bind:value={contratForm.perimetre_cible} titre="" />
+		</div>
+		<p class="aide">
+			Ce que ce contrat entretient. Il apparaîtra dans le carnet d’entretien de ce périmètre — et
+			dans celui de chacun des espaces qu’il contient.
+		</p>
+	</div>
 	<label class="field"
 		>Début *<input type="date" bind:value={contratForm.date_debut} required /></label
 	>

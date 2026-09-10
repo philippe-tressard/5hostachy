@@ -33,12 +33,16 @@
  *
  * Usage : npm run lint:perimetre-herite
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SOURCE = join(RACINE, 'src', 'lib', 'perimetres.ts');
+//  ⚠️ `$lib/perimetres` est un PAQUET depuis le 10/09/2026 (le fichier unique
+//  avait franchi les 500 lignes). Le chemin ci-dessous pointe le module qui
+//  porte réellement ce que ce contrôle mesure — l'`index.ts` ne fait que
+//  réexporter, et transpiler une réexportation ne donne rien à lire.
+const SOURCE = join(RACINE, 'src', 'lib', 'perimetres', 'arbre.ts');
 
 function echouer(message) {
 	console.error(`\n✗ ${message}\n`);
@@ -50,10 +54,19 @@ if (!existsSync(SOURCE)) echouer(`Cas zéro : ${SOURCE} est introuvable — cont
 const esbuild = await import('esbuild');
 let module;
 try {
-	const { code } = await esbuild.transform(readFileSync(SOURCE, 'utf8'), {
-		loader: 'ts',
+	//  🔴 `build({ bundle: true })` et non `transform` : `$lib/perimetres` est un
+	//  PAQUET depuis le 10/09/2026, et une transpilation isolée laisse les
+	//  `import './arbre'` non résolus — le data-URI ne sait pas d'où il vient.
+	//  Le bundle suit les imports et rend un module autonome, donc CELUI QUE LE
+	//  SITE EXÉCUTE plutôt qu'un fragment.
+	const { outputFiles } = await esbuild.build({
+		entryPoints: [SOURCE],
+		bundle: true,
+		write: false,
 		format: 'esm',
+		platform: 'neutral',
 	});
+	const code = outputFiles[0].text;
 	//  Import par data: URL — aucun fichier temporaire, et la source du dépôt
 	//  n'est jamais réécrite.
 	module = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);

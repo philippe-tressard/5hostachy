@@ -39,14 +39,16 @@ export interface EntreeCarnet {
 	origine: 'contrat' | 'intervention' | 'incident';
 	detail: string;
 	equipement: string | null;
-	batiment_id: number | null;
+	/**  Les codes de périmètre de la ligne — rendus par `perimetreLabel`, comme
+	 *   partout ailleurs. Remplace `batiment_id` : un contrat sur « Parking » n'a
+	 *   pas de bâtiment, et n'en est pas moins situé. */
+	perimetre: string[];
 	lien: string;
 	alerte: string | null;
 }
 
 export interface Carnet {
 	entrees: EntreeCarnet[];
-	batiments: { id: number; nom: string }[];
 	total: number;
 }
 
@@ -54,8 +56,13 @@ export interface Carnet {
  *   (décret n° 2001-477, arbitré le 10/09/2026). Le droit est tenu par
  *   `require_proprietaire` côté serveur ; l'écran ne fait que s'y conformer. */
 export const carnet = {
-	lire: (batiment_id?: number) =>
-		api.get<Carnet>(`/carnet-entretien${batiment_id ? `?batiment_id=${batiment_id}` : ''}`),
+	/**  `perimetre` est un CODE de l'arborescence (`'bat:3'`, `'parking'`), pas un
+	 *   identifiant de bâtiment : c'est ce qui rend le filtre dynamique — un
+	 *   périmètre créé en administration devient filtrable sans rien déployer. */
+	lire: (perimetre?: string | null) =>
+		api.get<Carnet>(
+			`/carnet-entretien${perimetre ? `?perimetre=${encodeURIComponent(perimetre)}` : ''}`,
+		),
 };
 
 export const copropriete = {

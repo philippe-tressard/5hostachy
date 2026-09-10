@@ -13,7 +13,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 import json
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, field_validator
 from sqlmodel import Session, select
 
 #  ⚠️ `get_current_user` n'est plus importé : il ne servait qu'à `list_devis`,
@@ -22,6 +22,7 @@ from sqlmodel import Session, select
 #  rôle CS ou admin — la page qu'ils servent leur est réservée (#603).
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
+from app.utils.perimetres.arbre import batiments_cibles, parse_json_perimetres
 from app.models.core import ContratEntretien, NotationPrestataire, Prestataire, TypeEquipement, TypePrestataire, Utilisateur
 
 from app.utils.echeance_contrat import poser_echeance
@@ -159,7 +160,10 @@ def archive_prestataire(
 
 class ContratCreate(BaseModel):
     copropriete_id: int
-    batiment_id: Optional[int] = None
+    #: Le PÉRIMÈTRE couvert — `["résidence"]`, `["bat:3"]`, `["parking"]`…
+    #: C'est la seule chose que l'écran saisit depuis le 10/09/2026 ;
+    #: `batiment_id` en est déduit par `_deriver_batiment` et n'est plus reçu.
+    perimetre_cible: Optional[list[str]] = None
     prestataire_id: int
     type_equipement: TypeEquipement = TypeEquipement.autre
     libelle: str
@@ -177,8 +181,24 @@ class ContratCreate(BaseModel):
 class ContratRead(BaseModel):
     id: int
     copropriete_id: int
+    #: Rendu tel quel — l'écran l'affiche par `perimetreLabel`, comme partout
+    #: ailleurs. La chaîne JSON est parsée par le `field_validator` ci-dessous.
+    perimetre_cible: Optional[list[str]] = None
+    #: DÉRIVÉ, conservé pour les lectures qui s'y appuient encore.
     batiment_id: Optional[int] = None
     prestataire_id: int
+
+    #  La colonne est du TEXTE, l'API rend une liste.
+    #
+    #  🔴 Elle DÉLÈGUE à `parse_json_perimetres` au lieu de refaire un
+    #  `json.loads` avec son `try` : `schemas.py` en porte déjà deux, qui
+    #  divergent **exprès** sur le cas illisible — un ticket retombe sur
+    #  « résidence », un document ne rend plus de badge. Un contrat suit la règle
+    #  canonique, celle de l'arbre : ce serait la QUATRIÈME écriture, et la
+    #  première à oublier pourquoi les trois autres diffèrent.
+    _perimetre = field_validator("perimetre_cible", mode="before")(
+        classmethod(lambda cls, v: v if isinstance(v, list) else parse_json_perimetres(v))
+    )
     type_equipement: str
     libelle: str
     numero_contrat: Optional[str] = None
@@ -215,13 +235,35 @@ def list_contrats(
     return [poser_echeance(ContratRead.model_validate(c), c) for c in contrats]
 
 
+def _appliquer_perimetre(contrat: ContratEntretien, codes: Optional[list[str]]) -> None:
+    """Pose le périmètre d'un contrat, et en DÉRIVE son bâtiment.
+
+    🔴 Un seul point d'écriture pour `batiment_id`, et c'est ce qui empêche les
+    deux colonnes de devenir deux vérités concurrentes. Le périmètre est la
+    saisie ; le bâtiment est ce qu'on en déduit.
+
+    ⚠️ **Un seul** bâtiment ciblé donne un identifiant ; zéro ou plusieurs
+    donnent `NULL`. Un contrat qui couvre deux bâtiments n'en désigne aucun —
+    choisir « le premier » produirait une réponse plausible et fausse, celle
+    dont ce dépôt se méfie le plus.
+    """
+    if codes is None:
+        return
+    contrat.perimetre_cible = json.dumps(codes or ["résidence"], ensure_ascii=False)
+    vises = batiments_cibles(codes or [])
+    contrat.batiment_id = next(iter(vises)) if len(vises) == 1 else None
+
+
 @router.post("/contrats", response_model=ContratRead, status_code=201)
 def create_contrat(
     body: ContratCreate,
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    c = ContratEntretien(**body.model_dump())
+    donnees = body.model_dump()
+    codes = donnees.pop("perimetre_cible", None)
+    c = ContratEntretien(**donnees)
+    _appliquer_perimetre(c, codes if codes is not None else ["résidence"])
     session.add(c)
     session.commit()
     session.refresh(c)
@@ -238,8 +280,11 @@ def update_contrat(
     c = session.get(ContratEntretien, c_id)
     if not c:
         raise HTTPException(404, "Contrat introuvable")
-    for k, v in body.model_dump(exclude_unset=True).items():
+    modifications = body.model_dump(exclude_unset=True)
+    codes = modifications.pop("perimetre_cible", None)
+    for k, v in modifications.items():
         setattr(c, k, v)
+    _appliquer_perimetre(c, codes)
     session.add(c)
     session.commit()
     session.refresh(c)
