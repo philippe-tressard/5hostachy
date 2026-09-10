@@ -36,7 +36,7 @@ const SOURCE = join(RACINE, 'src');
  * Le compte au 09/09/2026, après conversion de l'onglet **Modèles e-mail**
  * (`residence` et `prestataires` l'avaient été le 30/08).
  */
-const PLAFOND = 29;
+const PLAFOND = 28;
 
 /**
  * Fichiers qui PARLENT de `confirm()` sans en appeler un : le composant de

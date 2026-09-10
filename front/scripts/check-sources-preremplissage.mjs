@@ -84,7 +84,7 @@ const verifier = (nom, condition, detail) => {
 
 //  ── 1. L'épinglée ancienne est proposée, et les récentes aussi ──────────────
 {
-	//  Douze actualités récentes, plus une épinglée vieille de six mois.
+	//  Douze publications récentes, plus une épinglée vieille de six mois.
 	const recentes = Array.from({ length: 12 }, (_, i) => pub(i + 1, i));
 	const ancienneEpinglee = pub(99, 180, { epingle: true });
 	const retenues = sourcesPreremplissage([...recentes, ancienneEpinglee]);
@@ -101,14 +101,10 @@ const verifier = (nom, condition, detail) => {
 		`obtenu ${ids[0]} — une entrée qu'on ne trouve pas vaut une entrée absente`,
 	);
 	verifier(
-		'le plafond tient',
-		retenues.length === MAX_SOURCES_PREREMPLISSAGE,
-		`${retenues.length} entrée(s) au lieu de ${MAX_SOURCES_PREREMPLISSAGE}`,
-	);
-	verifier(
-		'les récentes complètent la liste',
-		ids.filter((id) => id !== 99).length === MAX_SOURCES_PREREMPLISSAGE - 1,
-		`obtenu ${JSON.stringify(ids)}`,
+		'AUCUNE publication du fil n’est écartée',
+		retenues.length === 13,
+		`${retenues.length} entrée(s) sur 13 — le plafond de dix a été retiré le ` +
+			'10/09/2026 : « n’importe quelle publication du fil, non archivée »',
 	);
 }
 
@@ -139,18 +135,20 @@ const verifier = (nom, condition, detail) => {
 
 //  ── 4. Cas zéro : le contrôle sait-il REFUSER ? ─────────────────────────────
 {
-	//  Une implémentation qui trierait par date seule doit échouer au test 1.
-	const parDateSeule = (pubs) =>
+	//  L'implémentation d'AVANT — tri par date seule, coupé à dix — doit échouer
+	//  au premier test. Sans cela, ce contrôle passerait sur les deux et ne
+	//  mesurerait rien.
+	const ancienne = (pubs) =>
 		[...pubs]
 			.filter((p) => !p.brouillon)
 			.sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())
 			.slice(0, MAX_SOURCES_PREREMPLISSAGE);
 	const recentes = Array.from({ length: 12 }, (_, i) => pub(i + 1, i));
-	const ids = parDateSeule([...recentes, pub(99, 180, { epingle: true })]).map((p) => p.id);
-	if (ids.includes(99)) {
+	const ids = ancienne([...recentes, pub(99, 180, { epingle: true })]).map((p) => p.id);
+	if (ids.includes(99) || ids.length === 13) {
 		echouer(
 			'Cas zéro : le jeu d’essai ne distingue plus les deux implémentations — ' +
-				'l’ancienne (tri par date) le passerait aussi, donc ce contrôle ne mesure rien.',
+				'l’ancienne le passerait aussi, donc ce contrôle ne mesure rien.',
 		);
 	}
 }
@@ -166,6 +164,6 @@ if (echecs.length > 0) {
 }
 
 console.log(
-	`✓ Pré-remplissage : une actualité épinglée est proposée quel que soit son âge, ` +
-		`les brouillons restent exclus, plafond ${MAX_SOURCES_PREREMPLISSAGE} — 4 vérification(s).`,
+	`✓ Pré-remplissage : tout le fil non archivé est proposé, les épinglées en tête, ` +
+		`les brouillons exclus — 5 vérification(s).`,
 );

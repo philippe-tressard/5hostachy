@@ -671,6 +671,15 @@ jobs:
         working-directory: front
         run: npm run lint:sources-preremplissage
 
+      # Les seuils de format d'une affiche de hall sont écrits DEUX fois — l'API
+      # les applique, l'écran les prévoit pendant la saisie. Les contextes de
+      # build interdisent de partager le fichier : le seul motif viable est la
+      # copie PLUS un contrôle qui compare. Recalibrés le 10/09/2026 sur une
+      # mesure du taux de remplissage, ils viennent de bouger.
+      - name: Seuils de format d'affiche identiques API ⇆ écran
+        working-directory: front
+        run: npm run lint:seuils-affiche
+
       # 🔴 `lint:formulaires` vérifie QUEL cadre, jamais OÙ il est rendu — et
       # c'est la position qui a été signalée à l'écran le 08/09/2026 (#852) :
       # « l'édition est en bas de page et non dans la section sélectionnée ».

@@ -41,7 +41,7 @@
 	import { fmtDateShort } from '$lib/date';
 	import type { Publication } from '$lib/api';
 
-	type AhFormat = 'auto' | 'a4' | 'a5' | 'a6' | 'a7' | 'a8';
+	type AhFormat = 'auto' | 'a4' | 'a5' | 'a6' | 'a7';
 
 	//  Liés en deux sens : la page porte leur cycle de vie.
 	export let titre = '';
@@ -61,13 +61,18 @@
 	//  sous les pastilles — la page, elle, garde la VALIDITÉ, qui commande son
 	//  bouton. Le format retenu reste celui que l'API calcule ; ceci n'est qu'une
 	//  prévision, et c'est écrit dans l'aide.
+	//  🔴 MIROIR des seuils serveur (`app/utils/annonce_hall.py`), recalibrés le
+	//  10/09/2026 sur une mesure du taux de remplissage — pas sur une intuition.
+	//  Les deux contextes de build interdisent de partager le fichier
+	//  (`project_partage_front_api_impossible`) : le seul motif viable est la
+	//  copie PLUS un contrôle qui compare les deux.
+	//  🔒 `npm run lint:seuils-affiche` échoue si elles divergent.
 	const SEUILS: [string, number][] = [
-		['A8', 70],
-		['A7', 140],
-		['A6', 300],
-		['A5', 600],
+		['A7', 250],
+		['A6', 570],
+		['A5', 1000],
 	];
-	const ORDRE = ['A4', 'A5', 'A6', 'A7', 'A8'];
+	const ORDRE = ['A4', 'A5', 'A6', 'A7'];
 	const formatMinPhotos = 'A5';
 
 	$: longueur = message.replace(/<[^>]*>/g, '').length + titre.trim().length;
