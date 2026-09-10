@@ -3,6 +3,7 @@
 	import { etageLabel, lotTypeLabel } from '$lib/utils';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
 	import InventaireBail from '$lib/components/InventaireBail.svelte';
 	import ModaleAccesBail from '$lib/components/ModaleAccesBail.svelte';
@@ -622,8 +623,10 @@
 							>🔑 Accès</button
 						>
 						<button
-							class="btn btn-sm btn-outline"
-							on:click={() => ouvrirEditionLocataire(premierBail)}>✏️ Modifier</button
+							class="btn-icon-edit"
+							aria-label="Modifier le locataire"
+							title="Modifier"
+							on:click={() => ouvrirEditionLocataire(premierBail)}>&#x270F;&#xFE0F;</button
 						>
 					</div>
 				</div>
@@ -776,8 +779,11 @@
 						<!-- Actions globales locataire -->
 						{#if premierBail.statut !== 'termine'}
 							<div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
-								<button class="btn btn-sm" on:click={() => ouvrirEditionLocataire(premierBail)}
-									>✏️ Modifier</button
+								<button
+									class="btn-icon-edit"
+									aria-label="Modifier"
+									title="Modifier"
+									on:click={() => ouvrirEditionLocataire(premierBail)}>&#x270F;&#xFE0F;</button
 								>
 								<button class="btn btn-sm" on:click={() => ouvrirAccesBail(premierBail)}
 									>&#x1F511; Accès</button
@@ -930,23 +936,19 @@
 {/if}
 
 <!-- ── Correction d'un bail : LE MÊME formulaire, en modale ─────────── -->
-<!--  🔴 Il était écrit une SECONDE fois ici (01/09/2026, #672) : mêmes champs,
-      même recherche de locataire, six variables d'état en double et trois
-      fonctions recopiées. Deux écritures du même formulaire, et rien pour dire
-      qu'elles avaient divergé — c'est le défaut qui a fait qu'un sélecteur de
-      périmètre de plan écrivait dans la variable du CR d'AG (#453).
-
-      `avecLots` et `avecDateEntree` portent les DEUX seules différences : un
-      bail existant ne change ni de lot ni de date d'entrée. -->
+<!--  Enveloppé pour sa `cle` : ce formulaire est rendu 240 lignes sous celui
+      de création, donc en bas de page. Le motif est dans `FormulaireCreation`. -->
 {#if bailEdite}
-	<FormulaireBail
-		edition
-		intitule="Modifier les informations"
-		bind:bail={editLocataire}
-		bind:locataireId={editLocataireId}
-		on:annuler={() => (bailEdite = null)}
-		on:enregistrer={sauvegarderLocataire}
-	/>
+	<FormulaireCreation titre="Modifier les informations" cle={bailEdite.id}>
+		<FormulaireBail
+			edition
+			intitule=""
+			bind:bail={editLocataire}
+			bind:locataireId={editLocataireId}
+			on:annuler={() => (bailEdite = null)}
+			on:enregistrer={sauvegarderLocataire}
+		/>
+	</FormulaireCreation>
 {/if}
 
 <!-- ── Modal : gestion des accès (Vigik / TC) ───────────────────────── -->

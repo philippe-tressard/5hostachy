@@ -484,7 +484,12 @@
 		<div class="section-header">
 			<h2 class="section-title">&#x1F3E2; Résidence : {copropriete.nom}</h2>
 			{#if $isCS && !editing}
-				<button class="btn btn-sm" on:click={startEdit}>✏️ Modifier</button>
+				<button
+					class="btn-icon-edit"
+					aria-label="Modifier la fiche de la résidence"
+					title="Modifier"
+					on:click={startEdit}>&#x270F;&#xFE0F;</button
+				>
 			{/if}
 		</div>
 

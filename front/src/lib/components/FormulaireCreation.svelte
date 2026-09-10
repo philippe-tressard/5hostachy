@@ -88,7 +88,17 @@
 	 *   change, le formulaire se ramène à nouveau.
 	 *
 	 *   Ne pas le passer est légitime pour un formulaire qui ne s'ouvre que
-	 *   depuis l'en-tête de page — il n'y a alors rien à distinguer. */
+	 *   depuis l'en-tête de page — il n'y a alors rien à distinguer.
+	 *
+	 *   🔴 **Elle est OBLIGATOIRE dès que le formulaire est rendu loin du geste
+	 *   qui l'ouvre** (10/09/2026). Signalé à l'écran sur les contrats : « le
+	 *   formulaire d'édition apparaît en bas de page, donc invisible sur une
+	 *   longue liste ». Le formulaire y était rendu 674 lignes sous celui de
+	 *   création — « la même boîte » au sens du composant, pas de l'endroit.
+	 *
+	 *   L'audit qui a suivi a trouvé le même défaut sur l'édition d'un bail
+	 *   (`mon-lot`, 240 lignes d'écart), que personne n'avait signalé.
+	 *   `lint:geste-edition` refuse désormais un second rendu éloigné sans `cle`. */
 	export let cle: unknown = undefined;
 
 	let cadre: HTMLElement;

@@ -1,4 +1,18 @@
 <!--
+  🔴 Ce formulaire était écrit une SECONDE fois dans `mon-lot` (01/09/2026,
+  #672) : mêmes champs, même recherche de locataire, six variables d'état en
+  double et trois fonctions recopiées. Deux écritures du même formulaire, et rien
+  pour dire qu'elles avaient divergé — c'est le défaut qui a fait qu'un sélecteur
+  de périmètre de plan écrivait dans la variable du CR d'AG (#453).
+
+  `avecLots` et `avecDateEntree` portent les DEUX seules différences : un bail
+  existant ne change ni de lot ni de date d'entrée. C'est ce qui justifie que la
+  création et la correction restent DEUX rendus — mais le second doit alors se
+  ramener à l'écran par la `cle` de `FormulaireCreation`, sans quoi il s'ouvre en
+  bas de page (signalé à l'écran le 10/09/2026 sur les contrats, trouvé ici par
+  l'audit qui a suivi).
+-->
+<!--
   L'OBJET « formulaire de bail » — les lots, le locataire, les dates, les notes.
 
   ## Pourquoi il existe (01/09/2026, #672)

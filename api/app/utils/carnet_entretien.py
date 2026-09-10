@@ -157,9 +157,29 @@ def alerte_visite(echeance: Optional[date], aujourdhui: date) -> Optional[str]:
     return f"visite attendue depuis {retard} jour{'s' if retard > 1 else ''}"
 
 
-def _type_equipement(contrat: ContratEntretien) -> Optional[str]:
+def type_equipement_resolu(contrat, specialite_prestataire: Optional[str]) -> Optional[str]:
+    """La catégorie d'un contrat — celle qu'il porte, ou celle de son prestataire.
+
+    🔴 **Le carnet lisait le champ BRUT et l'écran Contrats la valeur DÉDUITE.**
+    Un contrat de VMC enregistré en « autre », confié à un prestataire de
+    spécialité `vmc`, apparaissait donc « VMC » dans l'onglet Contrats et
+    « Autre » dans le carnet. Signalé à l'écran le 10/09/2026.
+
+    La règle vit côté front depuis longtemps (`$lib/reporting`,
+    `typeEquipementDuContrat`) et servait quatre écrans. Le carnet est le premier
+    lecteur SERVEUR de cette notion : la copie est obligatoire — les contextes de
+    build sont `./api` et `./front` —, et `test_type_equipement_resolu.py` refuse
+    qu'elles divergent, comme pour le libellé d'étage et celui des périmètres.
+
+    ⚠️ « autre » n'est pas une catégorie, c'est une ABSENCE de catégorie : c'est
+    pour cela qu'elle laisse la spécialité du prestataire prendre le relais. Une
+    catégorie réelle, elle, n'est jamais remplacée.
+    """
     brut = getattr(contrat, "type_equipement", None)
-    return brut.value if hasattr(brut, "value") else (str(brut) if brut else None)
+    propre = brut.value if hasattr(brut, "value") else (str(brut) if brut else None)
+    if propre and propre != "autre":
+        return propre
+    return specialite_prestataire or propre or "autre"
 
 
 def _entrees_contrats(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
@@ -191,7 +211,9 @@ def _entrees_contrats(session: Session, perimetre: Optional[str]) -> list[Entree
             libelle=contrat.libelle,
             origine="contrat",
             detail=detail,
-            equipement=_type_equipement(contrat),
+            equipement=type_equipement_resolu(
+                contrat, prestataire.specialite if prestataire else None
+            ),
             perimetre=codes,
             lien=lien_element("contrat", contrat.id),
             alerte=alerte,
@@ -226,7 +248,10 @@ def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[E
         if evenement.contrat_id:
             contrat = session.get(ContratEntretien, evenement.contrat_id)
             if contrat is not None:
-                equipement = _type_equipement(contrat)
+                presta = session.get(Prestataire, contrat.prestataire_id)
+                equipement = type_equipement_resolu(
+                    contrat, presta.specialite if presta else None
+                )
 
         entrees.append(EntreeCarnet(
             date_fait=quand,
