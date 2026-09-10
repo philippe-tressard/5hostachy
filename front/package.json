@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "1.13.1",
+	"version": "1.14.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -22,6 +22,7 @@
 		"lint:api-svelte4": "node scripts/check-api-svelte4.mjs",
 		"lint:formulaires": "node scripts/check-formulaire-creation.mjs",
 		"lint:geste-edition": "node scripts/check-geste-edition.mjs",
+		"lint:sources-preremplissage": "node scripts/check-sources-preremplissage.mjs",
 		"lint:section-formulaire": "node scripts/check-formulaire-dans-section.mjs",
 		"lint:styles": "node scripts/check-styles-nus.mjs",
 		"lint:champs": "node scripts/check-champs.mjs",

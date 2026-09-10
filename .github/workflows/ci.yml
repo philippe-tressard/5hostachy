@@ -659,6 +659,18 @@ jobs:
         working-directory: front
         run: npm run lint:geste-edition
 
+      # Une actualité ÉPINGLÉE est toujours proposée au pré-remplissage d'une
+      # affiche de hall (demandé à l'écran le 10/09/2026). Le sélecteur triait
+      # par date et coupait aux dix dernières : l'épinglée — donc celle qu'on
+      # veut garder sous les yeux, donc souvent la plus ancienne des importantes
+      # — devenait la seule qu'on ne pouvait PAS reprendre.
+      #
+      # Le contrôle EXÉCUTE la fonction (esbuild), il ne relit pas son texte :
+      # une règle se vérifie sur son comportement.
+      - name: Le pré-remplissage propose les actualités épinglées
+        working-directory: front
+        run: npm run lint:sources-preremplissage
+
       # 🔴 `lint:formulaires` vérifie QUEL cadre, jamais OÙ il est rendu — et
       # c'est la position qui a été signalée à l'écran le 08/09/2026 (#852) :
       # « l'édition est en bas de page et non dans la section sélectionnée ».
