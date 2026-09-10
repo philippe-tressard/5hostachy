@@ -3,6 +3,7 @@
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import CarteContrat from '$lib/components/CarteContrat.svelte';
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
@@ -25,7 +26,6 @@
 		EQUIPEMENTS as equipements,
 		TYPES_PRESTATAIRE as typesPrestataire,
 		equipLabel,
-		frequenceLabel,
 	} from '$lib/prestataires';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { minuitDuJour, typeEquipementDuContrat } from '$lib/reporting';
@@ -110,7 +110,6 @@
 	// Expand contrat rows inline
 	let expandedContrats = new Set<number>();
 	// Expand notes dans un contrat
-	let expandedNotes = new Set<number>();
 
 	// ── Prestataire form ──────────────────────────────────────────
 	let showPrestForm = false;
@@ -404,9 +403,7 @@
 			expandedPrests.clear();
 			expandedPrests.add(id);
 			expandedContrats.clear();
-			expandedNotes.clear();
 			expandedContrats = expandedContrats;
-			expandedNotes = expandedNotes;
 		}
 		expandedPrests = expandedPrests;
 	}
@@ -416,8 +413,6 @@
 		else {
 			expandedContrats.clear();
 			expandedContrats.add(id);
-			expandedNotes.clear();
-			expandedNotes = expandedNotes;
 		}
 		expandedContrats = expandedContrats;
 	}
@@ -805,179 +800,31 @@
 				<span class="type-section-label">{specGroup.label}</span>
 			</div>
 			{#each parEcheance(contrats.filter((c) => typeEquipementDuContrat(c, prestataires) === specGroup.val)) as c (c.id)}
+				{@const contrat = c}
 				{@const prest = prestataires.find((p) => p.id === c.prestataire_id)}
 				{@const contratExpanded = expandedContrats.has(c.id)}
 				{@const enRetard = contratEnRetard(c)}
-				<!--  L'ancre `contrat-{id}` : le carnet d'entretien y renvoie (#870 → carnet,
-				     10/09/2026), et `test_liens_front` refuse un lien vers une ancre qu'aucun
-				     onglet ne rend — il a attrapé celui-ci avant la production. -->
-				<div
-					class="carte-liste"
-					class:expanded={contratExpanded}
-					class:urgent={enRetard}
-					id="contrat-{c.id}"
-				>
-					<div
-						class="contrat-row"
-						role="button"
-						tabindex="0"
-						on:click|stopPropagation={() => toggleContrat(c.id)}
-						on:keydown|stopPropagation={(e) => e.key === 'Enter' && toggleContrat(c.id)}
-					>
-						<div class="contrat-body-inner">
-							<strong class="contrat-titre">{c.libelle}</strong>
-							{#if prest}
-								<span class="contrat-meta">— {prest.nom}</span>
-							{:else}
-								<!--  Un contrat sans intervenant avait sa propre section, qui le
-								      rendait une SECONDE fois : le groupement par équipement
-								      retombe déjà sur `type_equipement` quand le prestataire
-								      manque. Le fait se dit ici, sur la ligne (#603). -->
-								<span class="badge badge-gray" style="font-size:.72rem">sans intervenant</span>
-							{/if}
-							{#if c.numero_contrat}<span class="contrat-meta">🔖 {c.numero_contrat}</span>{/if}
-						</div>
-						<div class="contrat-infos">
-							{#if c.prochaine_visite}
-								<div class="contrat-echeance" class:contrat-echeance--retard={enRetard}>
-									{enRetard ? '⚠️' : '🗓'}
-									{fmtDateShort(c.prochaine_visite)}
-								</div>
-							{:else}
-								<div>📅 {fmtDateShort(c.date_debut)}</div>
-							{/if}
-							{#if c.frequence_type}
-								<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(c)}</span>
-							{/if}
-						</div>
-						<div class="contrat-meta-right">
-							<span class="badge" style="font-size:.8rem"
-								>📄 {contratDocsMap[c.id]?.length ?? 0}</span
-							>
-							<!--  ✏️ puis 🗑️, sur la ligne du titre (`ux-patterns` §3). -->
-							{#if $isCS}
-								<button
-									class="btn-icon-edit"
-									aria-label="Modifier ce contrat"
-									title="Modifier"
-									on:click|stopPropagation={() => startEditContrat(c)}>&#x270F;&#xFE0F;</button
-								>
-								<button
-									class="btn-icon-danger"
-									aria-label="Archiver"
-									title="Archiver"
-									on:click|stopPropagation={() => deleteContrat(c.id)}>🗑️</button
-								>
-							{/if}
-							<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
-						</div>
-					</div>
-					{#if contratExpanded}
-						<div class="contrat-detail-body">
-							<div class="contrat-section">
-								<div class="contrat-section-title">Infos contrat</div>
-								<div class="detail-grid">
-									<div>
-										<span class="detail-label">Date de début</span>📅 {fmtDateShort(c.date_debut)}
-									</div>
-									{#if c.duree_initiale_valeur}<div>
-											<span class="detail-label">Durée</span>{c.duree_initiale_valeur}
-											{c.duree_initiale_unite}
-										</div>{/if}
-									{#if c.frequence_type}
-										<div><span class="detail-label">Fréquence</span>{frequenceLabel(c)}</div>
-									{/if}
-									{#if c.prochaine_visite}<div>
-											<span class="detail-label">Prochaine visite</span><span
-												style="color:var(--color-primary);font-weight:600"
-												>🗓 {fmtDateShort(c.prochaine_visite)}</span
-											>
-										</div>{/if}
-								</div>
-							</div>
-							{#if c.notes}
-								<div class="contrat-section">
-									<div
-										class="contrat-section-title clickable"
-										role="button"
-										tabindex="0"
-										on:click|stopPropagation={() => {
-											expandedNotes.has(c.id)
-												? expandedNotes.delete(c.id)
-												: expandedNotes.add(c.id);
-											expandedNotes = expandedNotes;
-										}}
-										on:keydown|stopPropagation={(e) =>
-											(e.key === 'Enter' || e.key === ' ') &&
-											(expandedNotes.has(c.id)
-												? expandedNotes.delete(c.id)
-												: expandedNotes.add(c.id),
-											(expandedNotes = expandedNotes))}
-									>
-										Synthèse du ou des contrats {expandedNotes.has(c.id) ? '▲' : '▼'}
-									</div>
-									{#if expandedNotes.has(c.id)}
-										<div class="rich-content" style="font-size:.875rem">
-											{@html safeHtml(c.notes)}
-										</div>
-									{/if}
-								</div>
-							{/if}
-							<div class="contrat-section">
-								<div class="contrat-section-title">
-									📄 Documents ({contratDocsMap[c.id]?.length ?? 0})
-								</div>
-								{#if contratDocsMap[c.id]?.length > 0}
-									{#each contratDocsMap[c.id] as doc (doc.id)}
-										<div
-											style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap"
-										>
-											<a href={docsApi.downloadUrl(doc.id)} target="_blank"
-												>📎 {doc.titre || doc.fichier_nom}</a
-											>
-											<span style="font-size:.75rem;color:var(--color-text-muted)"
-												>{fmtDateShort(doc.publie_le)}</span
-											>
-											{#if $isCS}
-												<button
-													class="btn-icon-danger"
-													aria-label="Supprimer"
-													title="Supprimer"
-													style="margin-left:auto"
-													on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button
-												>
-											{/if}
-										</div>
-									{/each}
-								{:else}
-									<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">
-										Aucun document.
-									</p>
-								{/if}
-							</div>
-							{#if $isCS}
-								<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
-									<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
-										      seul onglet Visites : retirer cet onglet sans porter le geste
-										      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
-										      saisir, alors que la fiche et le reporting continuaient d'en
-										      afficher la moyenne. Un affichage sans son geste de saisie ne
-										      se voit pas — rien ne lève, la note reste simplement à jamais
-										      celle d'hier (#603).
-										      Sans intervenant, il n'y a personne à noter : le bouton
-										      n'apparaît pas plutôt que d'ouvrir une modale sans cible. -->
-									{#if c.prestataire_id}
-										<button
-											class="btn btn-sm btn-outline contrat-noter"
-											on:click|stopPropagation={() => openNotationForm(c.prestataire_id, c.id)}
-											>⭐ Noter</button
-										>
-									{/if}
-								</div>
-							{/if}
-						</div>
-					{/if}
-				</div>
+				<CarteContrat
+					{contrat}
+					{prest}
+					expanded={contratExpanded}
+					{enRetard}
+					documents={contratDocsMap[contrat.id] ?? []}
+					peutModifier={$isCS}
+					{editContratId}
+					bind:contratForm
+					{prestataires}
+					{equipements}
+					{submitting}
+					onBasculer={toggleContrat}
+					onModifier={startEditContrat}
+					onArchiver={deleteContrat}
+					onSupprimerDoc={deleteDoc}
+					onAjouteDoc={rechargerDocs}
+					onAnnuler={closeContratForm}
+					onEnregistrer={saveContrat}
+					onNoter={openNotationForm}
+				/>
 			{/each}
 		{/each}
 	{/if}
@@ -1604,111 +1451,15 @@
 	/*  Contrat expansible — `.carte-liste` depuis le 28/08/2026 (#598). Il en
 	    recomposait la définition avec un espacement, une ombre et un `position`
 	    différents, et l'accent de retard redisait `.carte-liste.urgent`, à un
-	    `!important` près que l'ordre de la charte rend inutile. */
-	.contrat-echeance {
-		font-size: 0.82rem;
-		font-weight: 600;
-		color: var(--color-primary);
-	}
-	.contrat-echeance--retard {
-		color: var(--color-danger);
-	}
-	.contrat-noter {
-		color: #f59e0b;
-	}
 
-	.contrat-detail-body {
-		padding: 0.75rem 1rem 1rem;
-		border-top: 1px solid var(--color-border);
-		background: var(--color-bg-secondary, #f8f9fa);
-	}
 	.contrats-summary,
-	.contrat-section {
-		margin-bottom: 1rem;
-	}
-	.contrat-section:last-child {
-		margin-bottom: 0;
-	}
-	.contrat-section-title {
-		font-size: 0.75rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--color-text-muted);
-		margin-bottom: 0.4rem;
-		padding-bottom: 0.25rem;
-		border-bottom: 1px solid var(--color-border);
-	}
-	.contrat-section-title.clickable {
-		cursor: pointer;
-		user-select: none;
-	}
-	.contrat-section-title.clickable:hover {
-		color: var(--color-primary);
-	}
 
-	.contrat-row {
-		display: flex;
-		gap: 0.75rem;
-		align-items: flex-start;
-		padding: 0.55rem 0.75rem;
-		cursor: pointer;
-		transition: background 0.12s;
-	}
-	.contrat-row:hover {
-		background: var(--color-bg-secondary, #f8f9fa);
-	}
-	.contrat-body-inner {
-		flex: 1;
-		min-width: 0;
-	}
-	.contrat-titre {
-		font-size: 0.9rem;
-	}
-	.contrat-meta {
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
-		margin-left: 0.5rem;
-	}
-	.contrat-infos {
-		text-align: right;
-		font-size: 0.82rem;
-		min-width: 100px;
-		flex-shrink: 0;
-	}
-	.contrat-meta-right {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.3rem;
-		flex-shrink: 0;
-	}
 
 	/*  Seuls la répartition et l'espacement : la peau des contrôles est partie
 	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
 	.form-grid {
 		grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
 		gap: 0.65rem;
-	}
-
-	.rich-content {
-		font-size: 0.85rem;
-		line-height: 1.6;
-		color: var(--color-text);
-		margin-bottom: 0.5rem;
-	}
-	.rich-content :global(p) {
-		margin: 0 0 0.5em;
-	}
-	.rich-content :global(ul),
-	.rich-content :global(ol) {
-		padding-left: 1.4em;
-		margin: 0 0 0.5em;
-	}
-	.rich-content :global(strong) {
-		font-weight: 600;
-	}
-	.rich-content :global(em) {
-		font-style: italic;
 	}
 
 	/* Relevés compteurs */
@@ -1769,9 +1520,6 @@
 	@media (max-width: 600px) {
 		.prest-header {
 			gap: 0.5rem;
-		}
-		.contrat-infos {
-			min-width: 80px;
 		}
 	}
 </style>
