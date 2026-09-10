@@ -1500,7 +1500,7 @@ mais à l'écran du **formulaire**, pas à sa place dans la liste.
 | Geste | Où la boîte s'ouvre |
 |---|---|
 | **Créer** | en tête de liste — elle ne corrige rien, elle n'a pas de place à occuper |
-| **Corriger** | **à la place de la carte**, qui cède son emplacement le temps de l'édition |
+| **Corriger** | **dans la carte**, à la place de son CORPS — l'en-tête reste, avec son titre et ses actions |
 
 ⚠️ **§14 bis n'est pas remis en cause** : c'est toujours LA MÊME BOÎTE — même
 composant, même format. Ce qui change est sa **position**, qui suit désormais
@@ -1525,6 +1525,26 @@ et le second venait d'être déplacé dans un second fichier. La **règle C** co
 désormais le cas sans dépendre du découpage : *un identifiant d'édition
 (`editXxxId`) ne peut pas à la fois ouvrir un formulaire dans l'écran et être
 confié à un composant enfant* — les deux rendus s'affichent alors ensemble.
+
+🔴 **QUATRIÈME position, et la bonne** — désignée par Philippe le 10/09/2026 :
+*« l'affaire modifiée passe en premier ! prends exemple sur tickets »*. Remplacer
+la carte **entière** effaçait la ligne du contrat, et `FormulaireCreation`
+ramenait sa boîte en haut de la fenêtre dès qu'elle n'y tenait pas : l'objet
+corrigé quittait sa place dans la liste.
+
+Le motif des tickets ne déplace **rien** : la carte reste, son **en-tête** reste —
+titre, tags, date, actions — et seul le **corps** cède la place au formulaire, en
+`encadre={false}` pour ne pas poser une carte dans une carte. Le mode se lit sur
+le crayon (§13 bis), et **aucune `cle` n'est nécessaire** : rien n'a bougé, il n'y
+a rien à ramener à l'écran.
+
+⚠️ **Ce composant existait DEUX fois** — `AnnonceCard` et `CarteActualite`
+portent tous deux une prop `formulaireOuvert` et un `<slot name="formulaire" />`
+qui font exactement cela, depuis des semaines. Trois positions fausses ont été
+essayées sans que je les ouvre : la question « où mettre la boîte ? » avait déjà
+sa réponse dans le produit. C'est la **sixième** fois — voir la mémoire
+`project_le_composant_existait_deja`. Le réflexe reste le même : chercher la
+**notion** (« corriger un objet d'une liste »), jamais le nom de l'écran.
 
 ## 15. DROITS — qui peut éditer, qui peut commenter (18/08/2026)
 
