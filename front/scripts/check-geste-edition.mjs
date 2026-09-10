@@ -20,7 +20,7 @@
  * affirmation dispense tout le monde de vérifier. Une consigne écrite dans un
  * commentaire ne se maintient pas : il faut un contrôle qui échoue.
  *
- * ## Les trois règles
+ * ## Les quatre règles
  *
  * **A. Le crayon SEUL.** Un bouton qui ouvre une édition porte `btn-icon-edit`
  * ou `btn-icon`, l'icône, et son sens dans `title` + `aria-label`. Le MOT
@@ -45,6 +45,20 @@
  * le second venait d'être déplacé dans un second fichier. Un contrôle dont la
  * portée est le fichier perd sa prise le jour où l'on découpe — la portée du
  * contrôle fait partie du contrôle (`standards/05` §9).
+ *
+ * **D. Le formulaire ne défile QUE s'il s'ouvre ailleurs que sous les yeux.**
+ * `FormulaireCreation` ne peut appeler `ramener()` que depuis la ligne réactive
+ * gardée par `cle !== undefined`. Signalé à l'écran le 10/09/2026, trois fois de
+ * suite : *« le contrat édité remonte en haut »*. Le montage appelait
+ * `ramener(cle)` sans condition — donc `ramener(undefined)` pour tous les
+ * formulaires qui s'ouvrent DANS la carte de l'objet corrigé, lesquels se
+ * faisaient ramener en haut de l'écran dès qu'ils dépassaient la bande visible
+ * de quelques pixels, en emportant leur carte.
+ *
+ * 🔴 **L'intention était écrite dans le fichier même**, à dix lignes de là : *« un
+ * formulaire qui s'ouvre sous les yeux n'a pas à faire sauter la page »*. Le code
+ * ne testait que la POSITION, jamais la raison d'être là — et la position seule
+ * ne distingue pas « ouvert loin du geste » de « ouvert un peu bas ».
  *
  * ⚠️ La règle B admet des séparations JUSTIFIÉES : deux rendus dont les
  * propriétés diffèrent réellement (un bail à la création porte des lots, pas à
@@ -192,6 +206,40 @@ for (const f of tous) {
 	}
 }
 
+//  ── D. Le formulaire ne défile que s'il porte une `cle` ─────────────────────
+{
+	const f = join(SRC, 'lib', 'components', 'FormulaireCreation.svelte');
+	const src = readFileSync(f, 'utf8');
+	//  Cas zéro : si ce composant cesse de défiler du tout, la règle n'a plus
+	//  d'objet — et un contrôle sans objet doit le DIRE, pas rendre vert.
+	if (!src.includes('scrollIntoView')) {
+		console.error(
+			'✗ Cas zéro : FormulaireCreation ne défile plus du tout — la règle D ne mesure rien.',
+		);
+		process.exit(1);
+	}
+	src.split('\n').forEach((ligne, i) => {
+		//  ⚠️ Les COMMENTAIRES parlent de `ramener()` — c'est même là que
+		//  l'intention est écrite. Les compter serait le faux positif de l'audit du
+		//  10/09 (23 sur 23), qui attrapait des `role="button"` cités dans du texte.
+		if (/^\s*(?:\/\/|\*|\/\*)/.test(ligne)) return;
+		if (!/(?:^|[^a-zA-Z])ramener\(/.test(ligne)) return;
+		//  Les deux seules écritures légitimes : la déclaration de la fonction, et
+		//  l'appel réactif gardé par la présence d'une `cle`.
+		if (/function ramener/.test(ligne)) return;
+		if (/cle !== undefined\).*ramener\(/.test(ligne)) return;
+		fautes.push({
+			regle: 'D',
+			fichier: 'lib/components/FormulaireCreation.svelte',
+			ligne: i + 1,
+			quoi: 'appel à `ramener()` hors de la garde `cle !== undefined`',
+			remede:
+				'un formulaire qui s’ouvre SOUS LES YEUX ne défile pas ; seule une `cle` ' +
+				'demande à être ramené à l’écran',
+		});
+	});
+}
+
 //  ── Cas zéro : le contrôle regarde-t-il quelque chose ? ─────────────────────
 if (tous.length < 50) {
 	console.error(`✗ Cas zéro : ${tous.length} composant(s) analysé(s) — le relevé est cassé.`);
@@ -214,7 +262,7 @@ if (fautes.length > 0) {
 		console.error(`      → ${d.remede}\n`);
 	}
 	console.error(
-		'  Ces trois règles ont été signalées à l’écran le 10/09/2026, et la première\n' +
+		'  Ces quatre règles ont été signalées à l’écran le 10/09/2026, et la première\n' +
 			'  était déjà écrite dans un commentaire qui se croyait le dernier concerné.\n',
 	);
 	process.exit(1);
@@ -222,5 +270,5 @@ if (fautes.length > 0) {
 
 console.log(
 	`✓ Geste d’édition : ${tous.length} composant(s) vérifié(s) — crayon seul partout, ` +
-		`aucun formulaire rendu loin de son jumeau, aucun identifiant d’édition à deux rendus, ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s).`,
+		`aucun formulaire rendu loin de son jumeau, aucun identifiant d’édition à deux rendus, défilement gardé par une clé, ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s).`,
 );

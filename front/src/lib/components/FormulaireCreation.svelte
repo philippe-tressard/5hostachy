@@ -88,7 +88,9 @@
 	 *   change, le formulaire se ramène à nouveau.
 	 *
 	 *   Ne pas le passer est légitime pour un formulaire qui ne s'ouvre que
-	 *   depuis l'en-tête de page — il n'y a alors rien à distinguer.
+	 *   depuis l'en-tête de page, ou DANS la carte de l'objet qu'on corrige — il
+	 *   n'y a alors rien à distinguer, et rien à ramener : ce qu'on regarde est
+	 *   déjà là. **Sans `cle`, ce composant ne défile jamais** (10/09/2026).
 	 *
 	 *   🔴 **Elle est OBLIGATOIRE dès que le formulaire est rendu loin du geste
 	 *   qui l'ouvre** (10/09/2026). Signalé à l'écran sur les contrats : « le
@@ -120,8 +122,27 @@
 	}
 
 	onMount(() => {
+		//  🔴 On ne défile PAS au montage, et c'est tout le sujet du 10/09/2026 :
+		//  « le contrat édité remonte en haut ».
+		//
+		//  Ce bloc appelait `ramener(cle)` — donc `ramener(undefined)` pour les
+		//  formulaires qui n'en passent pas, c'est-à-dire tous ceux qui s'ouvrent
+		//  SOUS LES YEUX de celui qui a cliqué. Un formulaire ouvert dans la carte
+		//  d'un objet, en bas de la fenêtre, dépassait la bande visible de quelques
+		//  pixels et se faisait ramener en haut de l'écran, emportant sa carte.
+		//
+		//  ⚠️ L'intention était DÉJÀ écrite, quelques lignes plus haut : « un
+		//  formulaire qui s'ouvre sous les yeux n'a pas à faire sauter la page ».
+		//  Le code ne testait que la position, jamais la RAISON d'être là — et la
+		//  position seule ne distingue pas « ouvert loin du geste » de « ouvert un
+		//  peu bas ».
+		//
+		//  Poser `monte` suffit : la réactivité ci-dessus rappelle `ramener` dans
+		//  la foulée pour les seuls formulaires qui portent une `cle`, c'est-à-dire
+		//  ceux qui s'ouvrent AILLEURS que là où l'on a cliqué. `cle` n'est donc
+		//  plus seulement ce qui distingue deux objets : c'est ce qui DEMANDE le
+		//  défilement.
 		monte = true;
-		ramener(cle);
 	});
 </script>
 
