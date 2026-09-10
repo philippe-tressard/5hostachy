@@ -1,7 +1,7 @@
 <script lang="ts">
+	import ChampsNouveauPerimetre from '$lib/components/ChampsNouveauPerimetre.svelte';
 	import ChampsPerimetre from '$lib/components/ChampsPerimetre.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import Modale from '$lib/components/Modale.svelte';
 	import { onMount } from 'svelte';
 	import { perimetres as perimetresApi, ApiError } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
@@ -21,6 +21,18 @@
 	//  Une seule fiche ouverte à la fois — le pattern des listes du produit.
 	function basculer(code: string) {
 		ouvert = ouvert === code ? null : code;
+	}
+
+	/**  Le nœud est-il déplié ? Il l'est aussi quand on le corrige ou qu'on crée
+	 *   un sous-périmètre sous lui : la boîte vit DANS son corps, et replier
+	 *   emporterait ce qu'on est en train de saisir. */
+	function estDeplie(
+		code: string,
+		ouvertCode: string | null,
+		e: Perimetre | null,
+		c: { parent: string | null } | null,
+	) {
+		return ouvertCode === code || e?.code === code || c?.parent === code;
 	}
 
 	/*  🔴 `rechargerPerimetres` avalait son échec : l'arborescence restait vide et
@@ -54,6 +66,9 @@
 	};
 
 	function editer(n: Perimetre) {
+		//  🔴 Un seul geste à la fois : ouvrir la correction referme une création
+		//  en cours, sinon les deux boîtes se disputeraient le corps du nœud.
+		creation = null;
 		edite = n;
 		form = {
 			libelle: n.libelle,
@@ -98,6 +113,7 @@
 	let nouveau = { code: '', libelle: '', description: '' };
 
 	function creer(parent: string | null) {
+		edite = null;
 		creation = { parent };
 		nouveau = { code: '', libelle: '', description: '' };
 	}
@@ -174,40 +190,17 @@
 </div>
 
 <!--
-	Création d'un périmètre — LA BOÎTE DANS LA PAGE, et non une modale (#672).
+	La création d'un périmètre de PREMIER NIVEAU s'ouvre ici, au ras de la liste :
+	le geste part de la barre juste au-dessus (`ux-patterns` §14 ter — créer
+	s'ouvre en tête, corriger s'ouvre à la place de l'objet).
 
-	🔴 C'en était une, et le contrôle ne pouvait pas le voir : il cherchait un
-	`<form>`, et ce formulaire n'en a jamais porté — seulement des `.field`.
-	C'est le paradigme que #367 a supprimé après trois signalements.
-
-	Elle est placée SOUS la barre d'action, et non en bas du composant : le geste
-	part d'ici. `FormulaireCreation` s'amène de lui-même à l'écran quand il
-	s'ouvre hors du champ de vision, ce qui couvre le « + sous-périmètre » d'un
-	nœud profond.
-
-	⚠️ L'édition, elle, RESTE une modale et le déclare. Un geste, un format.
+	🔴 C'était une modale avant #672, et le contrôle ne pouvait pas le voir : il
+	cherchait un `<form>`, et ce formulaire n'en a jamais porté — seulement des
+	`.field`.
 -->
-{#if creation}
-	<FormulaireCreation
-		titre={creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}
-	>
-		<label class="field"
-			>Libellé *
-			<input bind:value={nouveau.libelle} required />
-		</label>
-		<label class="field"
-			>Code *
-			<input bind:value={nouveau.code} placeholder={codePropose} />
-			<span class="aide">
-				Laissé vide, il vaudra <code>{codePropose || '…'}</code>. Il ne pourra plus être modifié :
-				c’est lui qui sera enregistré dans les contenus.
-			</span>
-		</label>
-		<label class="field"
-			>Description
-			<textarea bind:value={nouveau.description} rows="3"></textarea>
-		</label>
-
+{#if creation && creation.parent === null}
+	<FormulaireCreation titre="Nouveau périmètre de premier niveau">
+		<ChampsNouveauPerimetre bind:nouveau {codePropose} />
 		<PiedFormulaire
 			enCours={enregistrement}
 			desactive={!nouveau.libelle.trim() || !(nouveau.code || codePropose)}
@@ -230,7 +223,7 @@
 {:else}
 	<div class="ref-list">
 		{#each noeuds as n (n.code)}
-			{@const deplie = ouvert === n.code}
+			{@const deplie = estDeplie(n.code, ouvert, edite, creation)}
 			<div class="ref-item" class:expanded={deplie} class:inactif={!n.actif}>
 				<div
 					class="ref-tete"
@@ -270,74 +263,109 @@
 				</div>
 
 				{#if deplie}
-					<div class="ref-corps">
-						{#if n.description}<p class="ref-desc">{n.description}</p>{/if}
-						<div class="ref-actions">
-							<button
-								class="btn-icon-edit"
-								aria-label="Modifier"
-								title="Modifier"
-								on:click={() => editer(n)}>✏️</button
-							>
-							<button
-								class="btn-icon"
-								aria-label="Ajouter un sous-périmètre"
-								title="Ajouter un sous-périmètre"
-								on:click={() => creer(n.code)}>＋</button
-							>
-							<button
-								class="btn-icon"
-								aria-label="Monter"
-								title="Monter"
-								on:click={() => deplacer(n, -1)}>▲</button
-							>
-							<button
-								class="btn-icon"
-								aria-label="Descendre"
-								title="Descendre"
-								on:click={() => deplacer(n, 1)}>▼</button
-							>
-							<button
-								class="btn-icon-danger"
-								aria-label="Supprimer"
-								title="Supprimer"
-								on:click={() => supprimer(n)}>🗑️</button
-							>
-						</div>
+					<!--  Le corps ne referme pas le nœud : sans `stopPropagation`, un clic
+					      dans la boîte remonterait à la ligne de titre et replierait ce qu'on
+					      est en train de saisir (`ux-patterns` §3). -->
+					<div
+						class="ref-corps"
+						role="presentation"
+						on:click|stopPropagation
+						on:keydown|stopPropagation
+					>
+						{#if edite?.code === n.code}
+							<!--  🔴 LA CORRECTION S'OUVRE ICI, dans le nœud (10/09/2026).
+							      Signalé à l'écran : « le crayon provoque l'affichage d'une fenêtre
+							      indépendante (hors UX) ».
+
+							      C'était une `Modale`, et ce fichier le DÉCLARAIT : « l'édition,
+							      elle, RESTE une modale et le déclare. Un geste, un format. » La
+							      phrase était juste — un geste, un format — mais elle appliquait
+							      le mauvais format : #367 a retiré la modale du produit après
+							      trois signalements, et la création juste au-dessus l'avait
+							      abandonnée dès #672. Une exception ÉCRITE reste une exception :
+							      la déclarer ne l'a jamais justifiée.
+
+							      `encadre={false}` : le nœud EST le cadre, et sa ligne de titre en
+							      est l'en-tête (#425). Pas de `cle` : la boîte s'ouvre sous le
+							      crayon qu'on vient de cliquer, il n'y a rien à ramener à l'écran. -->
+							<FormulaireCreation titre="Modifier {n.libelle}" encadre={false}>
+								<ChampsPerimetre
+									bind:form
+									code={n.code}
+									libelleParDefaut={n.libelle}
+									concerneTousHerite={n.concerne_tous}
+								/>
+								<PiedFormulaire
+									enCours={enregistrement}
+									desactive={!form.libelle.trim()}
+									soumission={false}
+									on:annule={() => (edite = null)}
+									on:enregistre={enregistrer}
+								/>
+							</FormulaireCreation>
+						{:else if creation?.parent === n.code}
+							<!--  Le « ＋ » crée SOUS ce nœud : sa boîte s'ouvre donc dans ce nœud
+							      (signalé à l'écran le même jour : « le + s'affiche en haut de
+							      liste, au lieu de rester sur la position courante »).
+
+							      ⚠️ Ce n'est pas une entorse à « créer s'ouvre en tête de liste » :
+							      la règle place la boîte LÀ OÙ EST LE GESTE. Le bouton de la barre
+							      ouvre en tête parce qu'il y est ; le « ＋ » d'un nœud ouvre dans
+							      ce nœud pour la même raison. -->
+							<FormulaireCreation titre="Sous-périmètre de {n.libelle}" encadre={false}>
+								<ChampsNouveauPerimetre bind:nouveau {codePropose} />
+								<PiedFormulaire
+									enCours={enregistrement}
+									desactive={!nouveau.libelle.trim() || !(nouveau.code || codePropose)}
+									soumission={false}
+									on:annule={() => (creation = null)}
+									on:enregistre={enregistrerNouveau}
+								/>
+							</FormulaireCreation>
+						{:else}
+							{#if n.description}<p class="ref-desc">{n.description}</p>{/if}
+							<div class="ref-actions">
+								<!--  Le mode se lit sur l'icône qui a ouvert la boîte
+								      (`ux-patterns` §13 bis) : elle est déjà là, déjà regardée. -->
+								<button
+									class="btn-icon-edit"
+									aria-label="Modifier"
+									title="Modifier"
+									aria-pressed={edite?.code === n.code}
+									on:click={() => editer(n)}>&#x270F;&#xFE0F;</button
+								>
+								<button
+									class="btn-icon"
+									aria-label="Ajouter un sous-périmètre"
+									title="Ajouter un sous-périmètre"
+									aria-pressed={creation?.parent === n.code}
+									on:click={() => creer(n.code)}>＋</button
+								>
+								<button
+									class="btn-icon"
+									aria-label="Monter"
+									title="Monter"
+									on:click={() => deplacer(n, -1)}>▲</button
+								>
+								<button
+									class="btn-icon"
+									aria-label="Descendre"
+									title="Descendre"
+									on:click={() => deplacer(n, 1)}>▼</button
+								>
+								<button
+									class="btn-icon-danger"
+									aria-label="Supprimer"
+									title="Supprimer"
+									on:click={() => supprimer(n)}>🗑️</button
+								>
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</div>
 		{/each}
 	</div>
-{/if}
-
-<!-- ── Modification ────────────────────────────────────────────────────────── -->
-{#if edite}
-	<!--  Pas de fermeture au clic sur le fond : on saisit ici un libellé et une
-	      description, et un clic à côté effaçait tout sans prévenir. `Échap` et
-	      « Annuler » suffisent, et sont des gestes voulus. -->
-	<Modale
-		edition
-		titre={edite.libelle}
-		classeBoite="modal-box"
-		fermetureAuFond={false}
-		on:fermer={() => (edite = null)}
-	>
-		<ChampsPerimetre
-			bind:form
-			code={edite.code}
-			libelleParDefaut={edite.libelle}
-			concerneTousHerite={edite.concerne_tous}
-		/>
-
-		<PiedFormulaire
-			enCours={enregistrement}
-			desactive={!form.libelle.trim()}
-			soumission={false}
-			on:annule={() => (edite = null)}
-			on:enregistre={enregistrer}
-		/>
-	</Modale>
 {/if}
 
 <style>

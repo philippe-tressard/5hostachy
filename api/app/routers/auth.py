@@ -87,7 +87,6 @@ def register(
         role=RoleUtilisateur.résident,
         actif=False,  # en attente de validation
         consentement_rgpd=body.consentement_rgpd,
-        consentement_communications=body.consentement_communications,
         batiment_id=body.batiment_id,
         etage=body.etage,
         nom_proprietaire=body.nom_proprietaire or None,

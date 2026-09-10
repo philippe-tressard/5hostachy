@@ -32,8 +32,15 @@
 	 * leurs libellés. Il ne porte **pas son cadre** — c'est le geste qui le choisit,
 	 * et c'est la règle `ux-patterns` §14 bis :
 	 *
-	 * - **créer** → `<FormulaireCreation>`, la boîte dans la page ;
-	 * - **éditer** → `<Modale edition>`, qui isole le geste sans décaler la liste.
+	 * - **créer** → `<FormulaireCreation>`, la boîte dans la page, en tête de liste ;
+	 * - **corriger** → `<FormulaireCreation encadre={false}>` DANS la carte de
+	 *   l'objet, à la place de son corps — le motif des tickets (`ux-patterns` §14 ter).
+	 *
+	 * 🔴 La seconde ligne disait `<Modale edition>` jusqu'au 10/09/2026, et c'était
+	 * une consigne PÉRIMÉE : l'écran des contrats ne l'employait déjà plus. Un
+	 * commentaire qui enseigne un motif supprimé le fait réapparaître — c'est déjà
+	 * arrivé à `renderDesc` dans `svelte-patterns`. `lint:geste-edition` règle E
+	 * refuse désormais l'un comme l'autre.
 	 *
 	 * Mettre le cadre ici obligerait le composant à connaître le geste pour
 	 * choisir son enveloppe — alors que c'est l'écran qui sait lequel il déclenche.

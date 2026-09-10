@@ -1580,6 +1580,35 @@ peut bouger » ; le relevé a montré l'appel, à la ligne près. Même leçon q
 `project_flex_enroulement_avant_compression` — une reproduction approximative ne
 reproduit rien.
 
+### La règle en une phrase — et l'audit qui la fait tenir (10/09/2026, #889)
+
+> **La boîte s'ouvre là où est le geste.**
+
+| Geste | Où la boîte s'ouvre |
+|---|---|
+| **Créer** depuis un bouton de page | en tête de liste — le geste est là |
+| **Créer sous un objet** (« ＋ sous-périmètre ») | **dans cet objet** — le geste y est aussi |
+| **Corriger** un objet | **dans sa carte, à la place de son corps** ; l'en-tête reste |
+| **Commenter** / faire évoluer | idem (`EvolForm`, déjà conforme) |
+
+⚠️ Le « ＋ » d'un nœud n'est **pas** une entorse à « créer s'ouvre en tête » :
+c'est la même règle. Le bouton de la barre ouvre en tête parce qu'il y est.
+
+🔒 **`lint:geste-edition` règle E** : `<Modale edition>` est refusée. Le produit
+distinguait déjà, par cette propriété, la fenêtre de **correction** de celle de
+**confirmation** ou d'**aperçu** — le contrôle s'appuie sur la distinction qui
+existe plutôt que d'en inventer une, et les confirmations restent légitimes.
+
+Les **sept** écrans qui en portent encore une sont déclarés dans le contrôle avec
+leur motif et le ticket #889 : la dette est nommée, elle ne peut plus grandir, et
+une déclaration qui ne sert plus fait échouer.
+
+⚠️ **Cinq d'entre eux ne sont pas des corrections mais des GESTES** (valider un
+compte, terminer un bail, noter un prestataire) ou un **sous-écran** entier. La
+règle parle de *corriger* : l'étendre à un geste court est une décision
+d'interface qui se prend devant l'écran. Ne pas la trancher dans un fichier —
+c'est ce qui a coûté trois MEP le même jour.
+
 ## 15. DROITS — qui peut éditer, qui peut commenter (18/08/2026)
 
 | Geste | Qui |

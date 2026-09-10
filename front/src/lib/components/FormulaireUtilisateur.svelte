@@ -18,8 +18,14 @@
 	 *
 	 * ## Ce qu'il porte, et ce qu'il laisse à l'appelant
 	 *
-	 * Le formulaire seul. Son cadre est choisi par le geste : ici `<Modale
-	 * edition>`, puisque l'on corrige un objet existant (`ux-patterns` §14 bis).
+	 * Le formulaire seul. Son cadre est choisi par le geste : pour une correction,
+	 * `<FormulaireCreation encadre={false}>` DANS la carte de l'objet, à la place de
+	 * son corps (`ux-patterns` §14 ter).
+	 *
+	 * 🔴 Cette ligne annonçait `<Modale edition>` jusqu'au 10/09/2026 — et l'écran
+	 * qui monte ce composant ne l'employait déjà plus : il passe par
+	 * `FormulaireCreation`. La consigne décrivait donc un cadre que personne
+	 * n'utilisait, sur un ton qui invitait le prochain appelant à le rétablir.
 	 */
 	export let editForm: any;
 	/** Les statuts proposables, tels que l'écran les connaît — jamais réécrits ici. */

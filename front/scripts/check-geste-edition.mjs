@@ -20,7 +20,7 @@
  * affirmation dispense tout le monde de vérifier. Une consigne écrite dans un
  * commentaire ne se maintient pas : il faut un contrôle qui échoue.
  *
- * ## Les quatre règles
+ * ## Les cinq règles
  *
  * **A. Le crayon SEUL.** Un bouton qui ouvre une édition porte `btn-icon-edit`
  * ou `btn-icon`, l'icône, et son sens dans `title` + `aria-label`. Le MOT
@@ -60,6 +60,28 @@
  * ne testait que la POSITION, jamais la raison d'être là — et la position seule
  * ne distingue pas « ouvert loin du geste » de « ouvert un peu bas ».
  *
+ * **E. La correction d'un objet ne s'ouvre pas dans une FENÊTRE.** `<Modale
+ * edition>` est refusée : une boîte flottante sort l'objet de sa liste, et c'est
+ * le paradigme que #367 a retiré du produit après trois signalements. La
+ * correction s'ouvre DANS la carte de l'objet, à la place de son corps — le
+ * motif des tickets (`ux-patterns` §14 ter).
+ *
+ * Signalé à l'écran le 10/09/2026 sur l'administration des périmètres — *« le
+ * crayon provoque l'affichage d'une fenêtre indépendante (hors UX) »* — puis
+ * généralisé sur demande : *« ce problème apparaît parfois en édition, en
+ * commentaire ou en + ; faire un audit général »*.
+ *
+ * ⚠️ **Une `Modale` SANS `edition` n'est pas visée** : confirmer une suppression,
+ * montrer un aperçu avant envoi, poser une question fermée — ce ne sont pas des
+ * corrections, et la fenêtre y est le bon format. Le produit distingue déjà les
+ * deux par cette propriété ; le contrôle s'appuie sur la distinction qui existe
+ * plutôt que d'en inventer une.
+ *
+ * 🔴 Les huit occurrences relevées par l'audit sont déclarées dans `MODALES` avec
+ * leur motif et leur ticket. Elles ne sont pas tolérées « en attendant » : elles
+ * sont NOMMÉES, elles ne peuvent plus se multiplier, et une déclaration qui ne
+ * sert plus fait échouer le contrôle.
+ *
  * ⚠️ La règle B admet des séparations JUSTIFIÉES : deux rendus dont les
  * propriétés diffèrent réellement (un bail à la création porte des lots, pas à
  * la correction) restent séparés — mais le second doit alors se ramener à
@@ -67,7 +89,7 @@
  * cette clé, pas la fusion.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, sep as SEP } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
@@ -85,6 +107,31 @@ const EXCEPTIONS = {
 		"le mot n'apparaît que dans le COMMENTAIRE qui raconte sa suppression — " +
 		"et c'est ce commentaire qui affirmait être « le dernier », alors qu'il " +
 		'en restait cinq. Le garder est utile : il porte la décision.',
+};
+
+/**
+ * Les `<Modale edition>` relevées par l'audit du 10/09/2026 (issue #889).
+ *
+ * Chacune est une correction qui s'ouvre dans une fenêtre au lieu de s'ouvrir à
+ * la place de l'objet. Elles se convertissent **un écran à la fois**, chacun
+ * constaté à l'écran avant le suivant (R5 du cadre) — c'est ce qui a manqué aux
+ * trois tentatives de la journée sur les contrats.
+ */
+const MODALES = {
+	'lib/components/InventaireBail.svelte':
+		'saisie du RETOUR d’un objet remis — une ligne de tableau, donc une correction en place. #889',
+	'lib/components/ModaleAccesBail.svelte':
+		'ce n’est PAS la correction d’un objet de liste mais un sous-écran entier (accès Vigik et télécommandes d’un bail, plusieurs listes et plusieurs gestes). À trancher devant l’écran. #889',
+	'lib/components/OngletModelesEmail.svelte':
+		'correction d’un modèle de la liste — le cas le plus net. #889',
+	'routes/(app)/admin/+page.svelte':
+		'deux fenêtres : accueil du nouvel arrivant, et validation d’un compte. Ce sont des GESTES sur un objet de liste, pas des corrections — l’arbitrage reste à rendre. #889',
+	'routes/(app)/espace-cs/+page.svelte':
+		'validation d’un compte — même question que ci-dessus. #889',
+	'routes/(app)/mon-lot/+page.svelte':
+		'terminer un bail : un geste à deux champs sur un objet de liste. #889',
+	'routes/(app)/prestataires/+page.svelte':
+		'noter un prestataire depuis la carte d’un contrat — le geste vise le PRESTATAIRE, pas le contrat affiché : la fenêtre y est peut-être juste. #889',
 };
 
 function fichiers(dir, acc = []) {
@@ -240,6 +287,57 @@ for (const f of tous) {
 	});
 }
 
+//  ── E. La correction ne s'ouvre pas dans une fenêtre ────────────────────────
+const modalesVues = new Set();
+
+for (const f of tous) {
+	const rel = relative(SRC, f).split(SEP).join('/');
+	const src = readFileSync(f, 'utf8');
+	//  Balayage littéral, sans expression rationnelle : la précédente portait
+	//  un vrai caractère BACKSPACE à la place de la limite de mot, avalé à
+	//  l'écriture — et ne correspondait à rien, en silence. Une chaîne cherchée
+	//  par `indexOf` n'a pas d'échappement à perdre.
+	let i = src.indexOf('<Modale');
+	while (i !== -1) {
+		//  ⚠️ Un COMMENTAIRE qui parle de `<Modale edition>` n'en est pas un —
+		//  c'est même là que se raconte sa suppression. Les compter serait le faux
+		//  positif de l'audit du 10/09 (23 sur 23), qui attrapait des `role="button"`
+		//  cités dans du texte.
+		const debutLigne = src.lastIndexOf('\n', i) + 1;
+		const avant = src.slice(debutLigne, i);
+		const estCommentaire = /^\s*(?:\*|\/\/|<!--)/.test(avant) || avant.endsWith('`');
+		const fin = src.indexOf('>', i);
+		const balise = fin === -1 ? src.slice(i) : src.slice(i, fin + 1);
+		//  `edition` en tant que PROPRIÉTÉ, pas au milieu d'un autre mot.
+		const estEdition = new RegExp('\\sedition(?:\\s|=|>|$)').test(balise);
+		if (estEdition && !estCommentaire) {
+			const ligne = src.slice(0, i).split('\n').length;
+			if (rel in MODALES) {
+				modalesVues.add(rel);
+			} else {
+				fautes.push({
+					regle: 'E',
+					fichier: rel,
+					ligne,
+					quoi: '<Modale edition> — la correction s’ouvre dans une fenêtre',
+					remede:
+						'la boîte s’ouvre DANS la carte de l’objet, à la place de son corps ' +
+						'(`FormulaireCreation encadre={false}`) — le motif des tickets',
+				});
+			}
+		}
+		i = src.indexOf('<Modale', i + 7);
+	}
+}
+
+const modalesInutiles = Object.keys(MODALES).filter((f) => !modalesVues.has(f));
+if (modalesInutiles.length > 0) {
+	console.error('✗ Déclaration(s) de MODALES devenue(s) inutile(s), à retirer :');
+	for (const f of modalesInutiles) console.error(`    ${f}`);
+	console.error('  L’écran a été converti : la dette part avec lui.');
+	process.exit(1);
+}
+
 //  ── Cas zéro : le contrôle regarde-t-il quelque chose ? ─────────────────────
 if (tous.length < 50) {
 	console.error(`✗ Cas zéro : ${tous.length} composant(s) analysé(s) — le relevé est cassé.`);
@@ -262,7 +360,7 @@ if (fautes.length > 0) {
 		console.error(`      → ${d.remede}\n`);
 	}
 	console.error(
-		'  Ces quatre règles ont été signalées à l’écran le 10/09/2026, et la première\n' +
+		'  Ces cinq règles ont été signalées à l’écran le 10/09/2026, et la première\n' +
 			'  était déjà écrite dans un commentaire qui se croyait le dernier concerné.\n',
 	);
 	process.exit(1);
@@ -270,5 +368,5 @@ if (fautes.length > 0) {
 
 console.log(
 	`✓ Geste d’édition : ${tous.length} composant(s) vérifié(s) — crayon seul partout, ` +
-		`aucun formulaire rendu loin de son jumeau, aucun identifiant d’édition à deux rendus, défilement gardé par une clé, ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s).`,
+		`aucun formulaire rendu loin de son jumeau, aucun identifiant d’édition à deux rendus, défilement gardé par une clé, ${Object.keys(MODALES).length} fenêtre(s) d’édition déclarée(s), ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s).`,
 );
