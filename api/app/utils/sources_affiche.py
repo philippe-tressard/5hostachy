@@ -48,6 +48,7 @@ from sqlmodel import Session, select
 from app.models.core import Publication, Ticket
 from app.models.evenement import Evenement
 from app.utils.perimetres import parse_json_perimetres
+from app.utils.perimetres.arbre import parse_perimetres
 
 #: Les trois familles reprenables, et leur libellé à l'écran.
 FAMILLES: dict[str, str] = {
@@ -183,11 +184,23 @@ def prefill_source(session: Session, type_source: str, id_source: int) -> Option
         }
 
     ev = session.get(Evenement, id_source)
-    #  Un événement porte `perimetre` (une chaîne) et non `perimetre_cible` :
-    #  `parse_json_perimetres` accepte les deux formes.
+    #  🔴 DEUX PARSEURS, ET ILS NE SONT PAS INTERCHANGEABLES (11/09/2026).
+    #
+    #  Un événement porte `perimetre`, une chaîne en TEXTE (« parking,cave ») ;
+    #  publications et tickets portent `perimetre_cible`, du JSON (`["bat:1"]`).
+    #  La première écriture de cette fonction appelait `parse_json_perimetres`
+    #  sur les deux, avec un commentaire affirmant qu'il « accepte les deux
+    #  formes ». C'était faux : `json.loads("bat:1")` lève, le parseur retombe
+    #  sur le périmètre par DÉFAUT, et l'affiche héritait de « résidence » au
+    #  lieu du bâtiment visé — signalé à l'écran, « le périmètre n'est pas pris
+    #  en compte ».
+    #
+    #  ⚠️ Le repli silencieux est ce qui l'a rendu invisible : le parseur ne lève
+    #  pas, il rend une valeur PLAUSIBLE. Un défaut qui ressemble à une réponse
+    #  ne se voit qu'à l'usage.
     return {
         "titre": ev.titre,
         "message": ev.description or "",
-        "perimetre_cible": parse_json_perimetres(ev.perimetre),
+        "perimetre_cible": parse_perimetres(ev.perimetre),
         "images": [],
     }
