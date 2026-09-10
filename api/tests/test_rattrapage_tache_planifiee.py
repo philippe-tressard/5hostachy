@@ -37,7 +37,11 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.utils.telemetry_aggregation import rattrapage_necessaire
+from app.utils.rattrapage import (
+    rattrapage_necessaire,
+    rattraper_si_manquee,
+    taches_rattrapables,
+)
 
 MAINTENANT = datetime(2026, 9, 10, 8, 0)
 
@@ -87,3 +91,88 @@ def test_la_periode_est_un_PARAMETRE():
     « 24 » en dur."""
     assert rattrapage_necessaire(MAINTENANT - timedelta(hours=8), MAINTENANT, periode_h=6) is True
     assert rattrapage_necessaire(MAINTENANT - timedelta(hours=8), MAINTENANT, periode_h=12) is False
+
+
+# ── La TABLE des tâches couvertes ───────────────────────────────────────────
+
+
+def test_la_sauvegarde_est_couverte_elle_aussi():
+    """🔴 Le premier correctif ne couvrait que la télémétrie — et son commentaire
+    dans `main.py` disait déjà, en toutes lettres, que le sujet « ne concerne pas
+    que la télémétrie ».
+
+    C'est le motif que ce dépôt connaît le mieux : le seul fichier qui parle du
+    sujet affirme qu'il est traité ailleurs aussi. Ce test le refuse.
+    """
+    libelles = {t.libelle for t in taches_rattrapables()}
+    assert "Agrégation télémétrie" in libelles
+    assert "Sauvegarde quotidienne" in libelles
+
+
+def test_chaque_tache_a_un_identifiant_de_job_UNIQUE():
+    """Deux jobs de même `id` : APScheduler garde le dernier, et le premier
+    rattrapage disparaît sans un mot."""
+    ids = [t.job_id for t in taches_rattrapables()]
+    assert len(ids) == len(set(ids))
+
+
+# ── Le rattrapage lui-même, sans base ni planificateur ──────────────────────
+
+
+def test_rien_a_rattraper_ne_relance_PAS():
+    appels = []
+    resultat = rattraper_si_manquee(
+        "Tâche d'essai",
+        lambda: MAINTENANT - timedelta(hours=2),
+        lambda: appels.append("relance"),
+    )
+    assert appels == []
+    assert resultat is None
+
+
+def test_un_passage_manque_RELANCE():
+    appels = []
+    rattraper_si_manquee(
+        "Tâche d'essai",
+        lambda: datetime.utcnow() - timedelta(hours=30),
+        lambda: appels.append("relance"),
+    )
+    assert appels == ["relance"]
+
+
+def test_une_lecture_qui_LEVE_ne_tue_pas_le_demarrage():
+    """🔴 Ces appels sont des jobs APScheduler : une exception y tuerait le job
+    sans tuer le démarrage, et le rattrapage s'arrêterait EN SILENCE — le défaut
+    même qu'il corrige. Cas zéro appliqué au correctif."""
+    def lecture_cassee():
+        raise RuntimeError("base indisponible")
+
+    appels = []
+    assert rattraper_si_manquee("Tâche d'essai", lecture_cassee, lambda: appels.append("x")) is None
+    assert appels == []
+
+
+def test_une_relance_qui_LEVE_est_journalisee_et_avalee():
+    def relance_cassee():
+        raise RuntimeError("disque plein")
+
+    assert (
+        rattraper_si_manquee(
+            "Tâche d'essai", lambda: datetime.utcnow() - timedelta(hours=30), relance_cassee
+        )
+        is None
+    )
+
+
+def test_la_regle_n_est_ECRITE_QU_UNE_FOIS():
+    """Une seconde copie de `rattrapage_necessaire` divergerait au premier
+    ajustement du bord des 24 h — et c'est le bord qui décide chaque matin."""
+    import pathlib
+
+    racine = pathlib.Path(__file__).resolve().parents[1] / "app"
+    porteurs = [
+        f.relative_to(racine).as_posix()
+        for f in racine.rglob("*.py")
+        if "def rattrapage_necessaire" in f.read_text(encoding="utf-8")
+    ]
+    assert porteurs == ["utils/rattrapage.py"], porteurs

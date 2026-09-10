@@ -149,6 +149,24 @@ def _rotate_backups(session: Session):
     session.commit()
 
 
+def derniere_sauvegarde_reussie(session):
+    """L'horodatage de la dernière sauvegarde qui a ABOUTI, ou `None`.
+
+    Le fait qu'interroge le rattrapage (`utils/rattrapage.py`, #876). On lit
+    `terminee_le` et non `cree_le` : une sauvegarde qui commence ne prouve rien,
+    c'est celle qui finit qui compte — et une ligne restée `en_cours` est
+    justement ce que le nettoyage des orphelines requalifie en échec au
+    démarrage suivant.
+    """
+    ligne = session.exec(
+        select(HistoriqueSauvegarde)
+        .where(HistoriqueSauvegarde.statut == StatutSauvegarde.reussie)
+        .order_by(HistoriqueSauvegarde.terminee_le.desc())
+        .limit(1)
+    ).first()
+    return ligne.terminee_le if ligne else None
+
+
 def setup_scheduler():
     """Configure APScheduler selon ConfigSauvegarde (ou paramètres .env par défaut)."""
     from apscheduler.schedulers.background import BackgroundScheduler

@@ -294,48 +294,14 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
     return rapport
 
 
-def rattrapage_necessaire(
-    derniere_reussite: Optional[datetime],
-    maintenant: datetime,
-    periode_h: int = 24,
-) -> bool:
-    """L'agrégation a-t-elle MANQUÉ un passage ?
-
-    ## L'incident (10/09/2026, #876)
-
-    Le déploiement de 01:58 a redémarré la pile ; le planificateur est reparti à
-    **02:00:13**, soit treize secondes après le créneau du job. APScheduler tient
-    ses jobs en mémoire : au redémarrage, il ne sait pas qu'un passage a été
-    manqué, et calcule le suivant à partir de l'instant d'ajout. L'agrégation du
-    10 septembre n'a pas eu lieu, et la suivante était prévue le 11.
-
-    🔴 **Ce n'était pas un hasard.** `auto-deploy.sh` tourne toutes les cinq
-    minutes, et `bascule.sh` redémarre la pile **à 02:00 précises** en cron root
-    — la même minute que ce job. La collision est structurelle ; cette nuit-là,
-    c'est la mise en production qui a gagné la course.
-
-    ## Pourquoi cette fonction plutôt que `misfire_grace_time`
-
-    La grâce d'APScheduler couvre un retard **du processus vivant**, pas un
-    arrêt : sans jobstore persistant, il n'y a rien à rattraper au démarrage.
-    C'est donc le FAIT qu'on interroge — *quand la dernière agrégation a-t-elle
-    réussi ?* — et non l'horaire. La même réponse couvre alors toutes les causes
-    d'arrêt : mise en production, bascule, coupure de courant, panne.
-
-    ⚠️ **Aucune trace du tout ⇒ on rattrape.** Base neuve ou tâche jamais passée,
-    les deux méritent une première exécution — et elle est inoffensive.
-
-    ⚠️ La comparaison porte sur la dernière **réussite**, pas sur la dernière
-    tentative : une ligne en `erreur` prouve que la tâche a tourné, pas qu'elle a
-    agrégé quoi que ce soit.
-    """
-    if derniere_reussite is None:
-        return True
-    return (maintenant - derniere_reussite) > timedelta(hours=periode_h)
-
-
 def derniere_agregation_reussie(session) -> Optional[datetime]:
-    """L'horodatage de la dernière agrégation qui a abouti, ou `None`."""
+    """L'horodatage de la dernière agrégation qui a abouti, ou `None`.
+
+    Le fait qu'interroge le rattrapage — la RÈGLE, elle, vit dans
+    `utils/rattrapage.py` et sert aussi la sauvegarde (#876). Elle était écrite
+    ici, et le commentaire de `main.py` annonçait déjà qu'elle « ne concerne pas
+    que la télémétrie » : elle n'a servi qu'à elle pendant une journée.
+    """
     ligne = session.exec(
         select(HistoriqueTelemetrie)
         .where(HistoriqueTelemetrie.statut == "succes")
@@ -343,28 +309,6 @@ def derniere_agregation_reussie(session) -> Optional[datetime]:
         .limit(1)
     ).first()
     return ligne.cree_le if ligne else None
-
-
-def rattraper_si_manquee() -> Optional[dict]:
-    """Lance l'agrégation si son dernier passage réussi remonte à plus de 24 h.
-
-    Appelée **au démarrage**, une fois. Rend `None` quand il n'y a rien à
-    rattraper — et c'est le cas nominal, qu'on journalise quand même : un chemin
-    muet est un chemin qu'on croit vivant (le contrat de battement, `standards/07`).
-    """
-    with Session(engine) as session:
-        derniere = derniere_agregation_reussie(session)
-    if not rattrapage_necessaire(derniere, datetime.utcnow()):
-        logger.info(
-            "Agrégation télémétrie : rien à rattraper (dernière réussite %s).",
-            derniere.isoformat() if derniere else "aucune",
-        )
-        return None
-    logger.warning(
-        "Agrégation télémétrie : passage MANQUÉ (dernière réussite %s) — rattrapage.",
-        derniere.isoformat() if derniere else "aucune",
-    )
-    return run_telemetry_aggregation_cron()
 
 
 def run_telemetry_aggregation_cron() -> dict:
