@@ -52,8 +52,14 @@
 		return EQUIPEMENTS.find((e) => e.val === valeur)?.label ?? valeur;
 	}
 
-	function nomBatiment(id: number | null): string {
-		if (id == null) return '';
+	/**  La PORTÉE d'une entrée, toujours dite.
+	 *
+	 *   🔴 « Toute la résidence » et non une chaîne vide : depuis que le filtre
+	 *   inclut ce qui couvre la résidence entière (sans quoi choisir un bâtiment
+	 *   vidait le carnet), un contrat d'espaces verts apparaît sous « Bât. 3 ».
+	 *   Sans sa portée écrite, il s'y lirait comme propre à ce bâtiment. */
+	function portee(id: number | null): string {
+		if (id == null) return 'Toute la résidence';
 		return donnees?.batiments.find((b) => b.id === id)?.nom ?? '';
 	}
 
@@ -138,12 +144,10 @@
 								<span class="quand">{fmtDate(entree.date)}</span>
 								<span class="quoi">
 									<a href={entree.lien}>{entree.libelle}</a>
-									{#if entree.detail || entree.batiment_id != null}
-										<span class="detail">
-											{entree.detail}{#if entree.detail && entree.batiment_id != null}&nbsp;·
-											{/if}{nomBatiment(entree.batiment_id)}
-										</span>
-									{/if}
+									<span class="detail">
+										{entree.detail}{#if entree.detail}&nbsp;·
+										{/if}{portee(entree.batiment_id)}
+									</span>
 									{#if entree.alerte}
 										<span class="alerte">⚠️ {entree.alerte}</span>
 									{/if}
