@@ -377,6 +377,17 @@ son en-tête avait sa propre façon de mal se replier.
 Il était inversé sur les actualités, et deux cartes du même site ne se lisaient pas
 pareil.
 
+🔴 **Et elles sont TOUTES dans l'en-tête — le 10/09/2026 l'a rappelé.** Sur la
+carte d'un contrat, la corbeille était sur la ligne du titre et le crayon dans le
+corps **déplié** : il fallait ouvrir un contrat pour découvrir qu'on pouvait le
+modifier, alors que la suppression, elle, se voyait tout de suite. *Deux actions
+du même objet, deux endroits, deux moments — et la plus destructive était la plus
+accessible.*
+
+⚠️ Corriger la FORME d'une action (bouton texte → icône) sans corriger sa PLACE
+ne règle rien : c'est l'erreur commise le matin même, et signalée dans la foulée.
+Les deux se vérifient ensemble.
+
 🔴 **Le 🔗 est en PREMIER, et sa position est un raisonnement, pas un goût**
 (05/09/2026). C'est la seule action que **tout le monde** a : posée entre ✏️ et 🗑️,
 elle sauterait d'un cran selon les droits du lecteur, et deux personnes ne

@@ -854,7 +854,14 @@
 							<span class="badge" style="font-size:.8rem"
 								>📄 {contratDocsMap[c.id]?.length ?? 0}</span
 							>
+							<!--  ✏️ puis 🗑️, sur la ligne du titre (`ux-patterns` §3). -->
 							{#if $isCS}
+								<button
+									class="btn-icon-edit"
+									aria-label="Modifier ce contrat"
+									title="Modifier"
+									on:click|stopPropagation={() => startEditContrat(c)}>&#x270F;&#xFE0F;</button
+								>
 								<button
 									class="btn-icon-danger"
 									aria-label="Archiver"
@@ -950,12 +957,6 @@
 							</div>
 							{#if $isCS}
 								<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
-									<button
-										class="btn-icon-edit"
-										aria-label="Modifier ce contrat"
-										title="Modifier"
-										on:click|stopPropagation={() => startEditContrat(c)}>&#x270F;&#xFE0F;</button
-									>
 									<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
 										      seul onglet Visites : retirer cet onglet sans porter le geste
 										      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
