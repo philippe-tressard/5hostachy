@@ -105,7 +105,12 @@ def test_les_DEUX_SENS_reprennent_la_meme_information(scene):
     `contenu`/`photos_urls` pour l'actualité). Renommer au point de collage se
     paierait à chaque lecture. C'est le CONTENU qui doit concorder.
     """
-    from app.routers.annonces_hall import prefill_depuis_publication
+    #  ⚠️ Le sens « actualité → affiche » est passé par un endpoint GÉNÉRIQUE le
+    #  10/09/2026 : le fil agrège trois familles, et l'affiche peut désormais
+    #  reprendre un ticket ou un événement autant qu'une actualité. La symétrie
+    #  qu'on vérifie ici reste celle des actualités — les deux seules qui se
+    #  reprennent l'une l'autre.
+    from app.utils.sources_affiche import prefill_source
 
     session, annonce, code = scene
     pub = Publication(
@@ -120,7 +125,10 @@ def test_les_DEUX_SENS_reprennent_la_meme_information(scene):
     session.refresh(pub)
     try:
         vers_actualite = prefill_depuis_annonce_hall(annonce.id, session=session, _=None)
-        vers_affiche = prefill_depuis_publication(pub.id, session=session, _=None)
+        vers_affiche = prefill_source(session, "publication", pub.id)
+        assert vers_affiche is not None, (
+            "la publication d'essai n'est pas reprenable — brouillon, archivée ou confidentielle ?"
+        )
 
         assert vers_actualite["titre"] == vers_affiche["titre"]
         assert vers_actualite["contenu"] == vers_affiche["message"]

@@ -58,39 +58,8 @@ export const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '')
 export const MAX_SOURCES_PREREMPLISSAGE = 10;
 
 //  ⚠️ **Il ne gouverne plus qu'UN sens du geste depuis le 10/09/2026** : le
-//  choix d'une affiche pour pré-remplir une actualité. L'autre sens — choisir
-//  une actualité pour composer une affiche — n'a plus de plafond : « permet la
-//  génération d'une affiche à partir de n'importe quelle publication du fil,
-//  non archivée », demandé à l'écran. Voir `sourcesPreremplissage` ci-dessous.
-
-/**
- *  Les publications proposées au PRÉ-REMPLISSAGE d'une affiche de hall, dans
- *  l'ordre où le sélecteur doit les montrer.
- *
- *  🔴 **TOUT le fil d'actualité non archivé, quel que soit le type de
- *  publication** (demandé à l'écran le 10/09/2026). Il n'y a plus de plafond :
- *  la liste était coupée aux dix plus récentes, et c'est ce plafond — pas un
- *  filtre — qui rendait la plupart des publications impossibles à reprendre au
- *  hall.
- *
- *  ⚠️ Le périmètre de la liste est celui du FIL : `publications.list()` sans
- *  argument ne rend que les publications non archivées, tous types confondus.
- *  On ne refiltre donc rien ici — refaire côté écran un tri que le serveur
- *  applique déjà, c'est se donner deux réponses à la même question.
- *
- *  🔴 **Une publication ÉPINGLÉE vient en tête** (même jour). Le tri se faisait
- *  par date, et une actualité épinglée — donc celle qu'on veut précisément
- *  garder sous les yeux — se retrouvait noyée. Épingler dit « ceci reste
- *  d'actualité » : c'est exactement ce qu'on veut afficher dans le hall.
- *
- *  ⚠️ Les BROUILLONS restent exclus — proposer de recopier un texte non publié
- *  ferait paraître au hall ce que personne n'a encore validé. C'est la seule
- *  exclusion, et elle ne dépend pas de l'âge.
- */
-export function sourcesPreremplissage<
-	T extends { brouillon?: boolean; epingle?: boolean; cree_le: string },
->(publications: T[]): T[] {
-	const parDateDesc = (a: T, b: T) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime();
-	const publiees = publications.filter((p) => !p.brouillon).sort(parDateDesc);
-	return [...publiees.filter((p) => p.epingle), ...publiees.filter((p) => !p.epingle)];
-}
+//  choix d'une affiche pour pré-remplir une actualité. L'autre sens — choisir un
+//  élément du fil pour composer une affiche — n'a plus de plafond ET n'est plus
+//  décidé ici : la liste, son tri et ses exclusions viennent du serveur
+//  (`GET /annonces-hall/sources`, `api/app/utils/sources_affiche.py`). Le fil
+//  agrège trois familles, et seul le serveur sait lesquelles sont reprenables.

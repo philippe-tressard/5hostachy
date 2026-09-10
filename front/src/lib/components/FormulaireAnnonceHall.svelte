@@ -39,7 +39,7 @@
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import { fmtDateShort } from '$lib/date';
-	import type { Publication } from '$lib/api';
+	import type { SourceAffiche } from '$lib/api';
 
 	type AhFormat = 'auto' | 'a4' | 'a5' | 'a6' | 'a7';
 
@@ -50,9 +50,11 @@
 	export let format: AhFormat = 'auto';
 	export let photos: string[] = [];
 
-	/** Actualités proposées au pré-remplissage. Vide : le bloc ne s'affiche pas. */
-	export let pubs: Publication[] = [];
-	export let sourceId: number | '' = '';
+	/**  Éléments du fil proposés au pré-remplissage — actualités, tickets ET
+	 *   événements (10/09/2026). Vide : le bloc ne s'affiche pas. */
+	export let pubs: SourceAffiche[] = [];
+	/** La CLÉ de la source (`ticket:12`), pas son id : trois familles, trois numérotations. */
+	export let sourceId = '';
 	export let formats: { val: AhFormat; label: string }[] = [];
 	export let maxPhotos = 2;
 
@@ -151,7 +153,7 @@
 	export let apercuLoading = false;
 
 	/** La page garde les appels d'API : le composant ne fait que les déclencher. */
-	export let onPrefill: (pubId: number | '') => void;
+	export let onPrefill: (cle: string) => void;
 	export let onApercu: () => void;
 	export let onCreer: () => void;
 	export let onUpload: (f: File) => Promise<string>;
@@ -161,32 +163,31 @@
 <!--  L'EXCEPTION : le pré-remplissage vient avant le titre. Voir l'en-tête. -->
 {#if pubs.length}
 	<div class="field">
-		<label for="ah-source">Pré-remplir depuis une actualité</label>
+		<label for="ah-source">Pré-remplir depuis le fil d'actualité</label>
 		<select
 			id="ah-source"
 			value={sourceId}
-			on:change={(e) =>
-				onPrefill(
-					(e.currentTarget as HTMLSelectElement).value === ''
-						? ''
-						: Number((e.currentTarget as HTMLSelectElement).value),
-				)}
+			on:change={(e) => onPrefill((e.currentTarget as HTMLSelectElement).value)}
 		>
 			<option value="">— Saisie libre —</option>
 			<!--  📌 sur les épinglées : sans lui, une actualité vieille de trois mois
 			      apparaîtrait au milieu des récentes sans qu'on comprenne pourquoi —
 			      elle est là PARCE QU'elle est épinglée, et ça se dit (10/09/2026). -->
-			{#each pubs as pub (pub.id)}
-				<option value={pub.id}
-					>{pub.epingle ? '📌 ' : ''}{fmtDateShort(pub.cree_le)} · {pub.titre}</option
+			<!--  La FAMILLE est dite, parce que trois s'y mêlent désormais : un
+			      titre seul ne dit pas si l'on reprend une actualité, un ticket ou
+			      un événement — et on ne rédige pas une affiche pareil selon le cas. -->
+			{#each pubs as source (source.cle)}
+				<option value={source.cle}
+					>{source.epingle ? '📌 ' : ''}{source.famille} · {fmtDateShort(source.date)} · {source.titre}</option
 				>
 			{/each}
 		</select>
 	</div>
 	<p class="aide">
-		Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste modifiable
-		ci-dessous : l'affiche est indépendante de l'actualité d'origine. Les actualités
-		<strong>épinglées</strong> (📌) sont proposées quel que soit leur âge.
+		Reprend le titre, le contenu et le périmètre de l'élément — et ses images s'il s'agit d'une
+		actualité. Tout reste modifiable ci-dessous : l'affiche est indépendante de son origine. Toutes
+		les <strong>actualités, tickets et événements</strong> encore au fil sont proposés, les
+		<strong>épinglés</strong> (📌) en tête ; les archivés et les contenus confidentiels ne le sont pas.
 	</p>
 	<hr class="separateur-prefill" />
 {/if}

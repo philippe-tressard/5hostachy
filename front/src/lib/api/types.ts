@@ -197,6 +197,20 @@ export interface PublicationEvolution {
 	fichiers_urls?: string[];
 }
 
+/**  Un élément du fil qu'une affiche de hall peut reprendre.
+ *
+ *   `cle` — et non `id` — parce que trois familles peuvent porter le même
+ *   numéro : c'est le couple type + id qui désigne. */
+export interface SourceAffiche {
+	cle: string;
+	type: string;
+	famille: string;
+	id: number;
+	titre: string;
+	date: string;
+	epingle: boolean;
+}
+
 export interface Publication {
 	id: number;
 	titre: string;
