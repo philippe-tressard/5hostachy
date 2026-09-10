@@ -168,14 +168,20 @@
 				)}
 		>
 			<option value="">— Saisie libre —</option>
+			<!--  📌 sur les épinglées : sans lui, une actualité vieille de trois mois
+			      apparaîtrait au milieu des récentes sans qu'on comprenne pourquoi —
+			      elle est là PARCE QU'elle est épinglée, et ça se dit (10/09/2026). -->
 			{#each pubs as pub (pub.id)}
-				<option value={pub.id}>{fmtDateShort(pub.cree_le)} · {pub.titre}</option>
+				<option value={pub.id}
+					>{pub.epingle ? '📌 ' : ''}{fmtDateShort(pub.cree_le)} · {pub.titre}</option
+				>
 			{/each}
 		</select>
 	</div>
 	<p class="aide">
 		Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste modifiable
-		ci-dessous : l'affiche est indépendante de l'actualité d'origine.
+		ci-dessous : l'affiche est indépendante de l'actualité d'origine. Les actualités
+		<strong>épinglées</strong> (📌) sont proposées quel que soit leur âge.
 	</p>
 	<hr class="separateur-prefill" />
 {/if}

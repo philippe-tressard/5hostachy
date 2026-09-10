@@ -35,7 +35,7 @@
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { onMount } from 'svelte';
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
-	import { MAX_SOURCES_PREREMPLISSAGE } from '$lib/publications';
+	import { sourcesPreremplissage } from '$lib/publications';
 	import HistoriqueAnnoncesHall from '$lib/components/HistoriqueAnnoncesHall.svelte';
 	import { MAX_PHOTOS_AFFICHE } from '$lib/annonces';
 	import { annoncesHall as annoncesHallApi, publications as pubsApi, ApiError } from '$lib/api';
@@ -105,11 +105,10 @@
 	async function loadAhPublications() {
 		if (ahPubsLoaded) return;
 		try {
-			const pubs = await pubsApi.list();
-			ahPubs = pubs
-				.filter((p) => !p.brouillon)
-				.sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())
-				.slice(0, MAX_SOURCES_PREREMPLISSAGE);
+			//  Le choix des candidates — filtre, ordre et plafond — vit dans
+			//  `$lib/publications`, parce qu'il porte une RÈGLE (une actualité
+			//  épinglée est toujours proposée) et non un simple tri.
+			ahPubs = sourcesPreremplissage(await pubsApi.list());
 			ahPubsLoaded = true;
 		} catch {
 			/* non bloquant : la saisie manuelle reste possible */
