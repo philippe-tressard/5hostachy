@@ -173,3 +173,30 @@ def test_la_FENETRE_ne_diverge_pas_de_celle_du_fil():
     assert int(trouve.group(1)) == FENETRE_JOURS, (
         f"le fil retient {trouve.group(1)} jours, les sources d'affiche {FENETRE_JOURS}"
     )
+
+
+# ── Le PÉRIMÈTRE, famille par famille ───────────────────────────────────────
+
+
+def test_le_perimetre_est_repris_dans_les_TROIS_familles(session):
+    """🔴 Deux parseurs, et ils ne sont pas interchangeables.
+
+    Un événement porte `perimetre` en TEXTE (« parking,cave ») ; publications et
+    tickets portent `perimetre_cible` en JSON. Appeler le parseur JSON sur du
+    texte ne lève pas — il retombe sur le périmètre par DÉFAUT. L'affiche
+    héritait alors de « résidence » au lieu du bâtiment visé, et rien ne le
+    disait : un défaut qui rend une valeur plausible ne se voit qu'à l'usage
+    (signalé à l'écran le 11/09/2026).
+    """
+    import json
+
+    pub = _pub(session, "Actualité", perimetre_cible=json.dumps(["bat:1"]))
+    tk = _ticket(session, "Ticket", perimetre_cible=json.dumps(["bat:3"]))
+    ev = _evenement(session, "Événement", perimetre="parking,cave")
+
+    assert prefill_source(session, "publication", pub.id)["perimetre_cible"] == ["bat:1"]
+    assert prefill_source(session, "ticket", tk.id)["perimetre_cible"] == ["bat:3"]
+    assert prefill_source(session, "evenement", ev.id)["perimetre_cible"] == ["parking", "cave"], (
+        "l'événement retombe sur le périmètre par défaut — c'est le parseur JSON "
+        "appliqué à une chaîne texte"
+    )
