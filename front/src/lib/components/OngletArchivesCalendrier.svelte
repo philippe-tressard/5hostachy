@@ -109,9 +109,14 @@
 									</svelte:fragment>
 								</RangeeCalendrier>
 							{:else}
-								<!-- Événement archivé -->
+								<!--  Événement archivé.
+								      L'ancre `ev_archive-{id}` est posée ICI : le carnet d'entretien
+								      y renvoie, et un événement archivé ne figure plus dans la vue
+								      liste — le lien ouvrait la bonne page et ne révélait rien
+								      (signalé à l'écran le 10/09/2026). -->
 								<RangeeCalendrier
 									archive
+									ancreId="ev_archive-{item.id}"
 									bordure="#10b981"
 									urgent={item.type === 'coupure'}
 									typeTexte={typeLabel(item.type)}

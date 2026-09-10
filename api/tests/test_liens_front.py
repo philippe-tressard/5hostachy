@@ -139,6 +139,23 @@ def test_des_liens_de_modeles_sont_analyses():
     )
 
 
+def _pose_ancre(contenu: str, prefixe: str) -> bool:
+    """La page pose-t-elle cette ancre — directement, ou par une propriété ?
+
+    🔴 Deux formes, et la seconde manquait (10/09/2026). Une ligne de liste qui
+    reçoit son ancre en PROPRIÉTÉ (`ancreId="ev_archive-{id}"` sur
+    `RangeeCalendrier`) la pose bel et bien dans le DOM — le composant rend
+    `id={ancreId}`. Ne chercher que le littéral `id="…"` faisait déclarer
+    orpheline une ancre parfaitement rendue, et poussait à envelopper la ligne
+    dans un `<div>` inutile pour satisfaire le contrôle.
+
+    ⚠️ C'est le contrôle qui s'adapte au balisage, jamais l'inverse : un contrôle
+    qu'on contourne par une enveloppe décorative mesure la forme du contournement,
+    plus la chose.
+    """
+    return f'id="{prefixe}-' in contenu or f'ancreId="{prefixe}-' in contenu
+
+
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
 def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
     """`#doc-42` n'a de sens que si la page pose `id="doc-{…}"` sur ses éléments.
@@ -157,7 +174,7 @@ def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
         page = _page_du_lien(lien)
         if page is None:
             continue  # déjà couvert par le test précédent
-        if f'id="{prefixe}-' not in contenu_deplie(page):
+        if not _pose_ancre(contenu_deplie(page), prefixe):
             orphelines.append(
                 f"  {lien}  ← {', '.join(sorted(set(fichiers)))}\n"
                 f"      {page.relative_to(_RACINE)} ne pose aucun id=\"{prefixe}-…\""
@@ -232,11 +249,12 @@ def test_l_ancre_est_rendue_par_l_onglet_que_le_lien_selectionne():
         contenu = contenu_deplie(fichier)
         segments = _segments_par_onglet(contenu)
         ancre = f'id="{prefixe}-'
+        ancre_prop = f'ancreId="{prefixe}-'
 
         if onglet is None:
             # Page sans onglets : l'ancre doit exister, et la page ne doit pas être
             # devenue une page à onglets sans que la table le sache.
-            if segments and ancre in contenu:
+            if segments and (ancre in contenu or ancre_prop in contenu):
                 ecarts.append(
                     f"  {prefixe} → {route} : la page a désormais des onglets "
                     f"({', '.join(sorted(segments))}) mais aucun n'est déclaré pour "
@@ -250,8 +268,11 @@ def test_l_ancre_est_rendue_par_l_onglet_que_le_lien_selectionne():
                 f"{fichier.relative_to(_RACINE)} ne connaît pas l'onglet '{onglet}' "
                 f"(onglets trouvés : {', '.join(sorted(segments)) or 'aucun'})"
             )
-        elif ancre not in segments[onglet]:
-            rendu_par = [o for o, seg in segments.items() if ancre in seg]
+        elif ancre not in segments[onglet] and ancre_prop not in segments[onglet]:
+            #  Les DEUX formes, ici aussi : `_pose_ancre` documente pourquoi.
+            rendu_par = [
+                o for o, seg in segments.items() if ancre in seg or ancre_prop in seg
+            ]
             ecarts.append(
                 f"  {prefixe} → {lien_element(prefixe, 1)} : l'onglet '{onglet}' ne "
                 f"rend aucun {ancre}…\" — "
