@@ -737,14 +737,32 @@
 	<!-- ONGLET 3 : CONTRATS                                          -->
 	<!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'contrats'}
-	<!-- Créer → la boîte ; éditer → la modale plus bas. Le formulaire est le même
-	     objet dans les deux cas (`ux-patterns` §14 bis, #640). -->
-	{#if contratFormOuvert && !editContratId}
-		<FormulaireCreation titre="Nouveau contrat">
+	<!--  🔴 UN SEUL rendu pour les deux gestes, et au MÊME ENDROIT (10/09/2026).
+	      Le commentaire d'avant citait `ux-patterns` §14 bis — « créer et corriger
+	      emploient la même boîte » — et le respectait à la lettre : c'était bien
+	      le même composant. Mais la correction était rendue **700 lignes plus
+	      bas**, donc en bas de page.
+
+	      Signalé à l'écran : sur une longue liste de contrats, « Modifier »
+	      ouvrait un formulaire que l'utilisateur ne voyait pas. `cle` le ramenait
+	      certes à l'écran — mais tout en bas, loin du contrat qu'il éditait.
+
+	      ⚠️ La même boîte, ce n'est pas seulement le même COMPOSANT : c'est le
+	      même endroit. Deux rendus d'un même formulaire divergent d'ailleurs au
+	      premier champ ajouté — celui du haut n'avait ni documents ni `contratId`. -->
+	{#if contratFormOuvert || editContratId}
+		<FormulaireCreation
+			titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}
+			cle={editContratId}
+		>
 			<FormulaireContrat
 				bind:contratForm
 				{prestataires}
 				{equipements}
+				contratId={editContratId}
+				documents={editContratId ? contratDocsMap[editContratId] : []}
+				onSupprimer={deleteDoc}
+				onAjoute={rechargerDocs}
 				{submitting}
 				onAnnuler={closeContratForm}
 				onEnregistrer={saveContrat}
@@ -933,8 +951,10 @@
 							{#if $isCS}
 								<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
 									<button
-										class="btn btn-sm btn-outline"
-										on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button
+										class="btn-icon-edit"
+										aria-label="Modifier ce contrat"
+										title="Modifier"
+										on:click|stopPropagation={() => startEditContrat(c)}>&#x270F;&#xFE0F;</button
 									>
 									<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
 										      seul onglet Visites : retirer cet onglet sans porter le geste
@@ -1407,28 +1427,6 @@
 			{/each}
 		{/each}
 	{/if}
-{/if}
-
-<!--  La CORRECTION d'un contrat — la même boîte que la création (§14 bis,
-	06/09/2026). ⚠️ `cle` n'est pas décoratif : sans elle, « Modifier » sur un
-	SECOND contrat ne remonterait pas le formulaire — muet, comme le 29/08 ici. -->
-{#if editContratId}
-	<FormulaireCreation titre="Modifier le contrat" cle={editContratId}>
-		<div>
-			<FormulaireContrat
-				bind:contratForm
-				{prestataires}
-				{equipements}
-				contratId={editContratId}
-				documents={contratDocsMap[editContratId]}
-				onSupprimer={deleteDoc}
-				onAjoute={rechargerDocs}
-				{submitting}
-				onAnnuler={closeContratForm}
-				onEnregistrer={saveContrat}
-			/>
-		</div>
-	</FormulaireCreation>
 {/if}
 
 <!-- Modal notation prestataire (global, hors onglets) -->

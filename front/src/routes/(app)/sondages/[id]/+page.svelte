@@ -239,7 +239,12 @@
 			{#if peutGerer}
 				<div class="owner-actions">
 					{#if !sondage.cloture}
-						<button class="btn btn-outline btn-sm" on:click={openEdit}>✏️ Modifier</button>
+						<button
+							class="btn-icon-edit"
+							aria-label="Modifier ce sondage"
+							title="Modifier"
+							on:click={openEdit}>&#x270F;&#xFE0F;</button
+						>
 						<button
 							class="btn btn-outline btn-sm"
 							style="color:#d97706;border-color:#d97706"

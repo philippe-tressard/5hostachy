@@ -639,6 +639,26 @@ jobs:
         working-directory: front
         run: npm run lint:formulaires
 
+      # 🔴 Deux axes que NI `lint:formulaires` NI « rendu DANS sa section » ne
+      # regardent, signalés à l'écran le 10/09/2026 sur les contrats :
+      #
+      #   A. le geste d'édition écrit le MOT « Modifier » à côté du crayon, là où
+      #      le reste du site rend l'icône seule — 28 usages contre 6 ;
+      #   B. le même formulaire est rendu DEUX FOIS dans un écran, à 674 lignes
+      #      d'écart : « la même boîte » au sens du composant, pas de l'endroit.
+      #
+      # Le contrôle voisin était vert sur les contrats : le formulaire ÉTAIT dans
+      # sa section — la seconde, 700 lignes plus bas. Un axe non mesuré ne se
+      # signale pas, il se découvre à l'écran.
+      #
+      # ⚠️ La règle A était DÉJÀ écrite, dans un commentaire de
+      # `RubriqueHistorique` qui se disait « le dernier à écrire le mot ». Il en
+      # restait cinq. C'est pour cela que ceci est un contrôle et non une
+      # consigne.
+      - name: Geste d'édition rendu partout de la même façon
+        working-directory: front
+        run: npm run lint:geste-edition
+
       # 🔴 `lint:formulaires` vérifie QUEL cadre, jamais OÙ il est rendu — et
       # c'est la position qui a été signalée à l'écran le 08/09/2026 (#852) :
       # « l'édition est en bas de page et non dans la section sélectionnée ».
