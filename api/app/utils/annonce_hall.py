@@ -309,6 +309,37 @@ body {{
 }}
 .chip-perimetre {{
   font-size: {g['meta']}; font-weight: 700; color: var(--navy);
+  /*  🔴 `inline-block` N'EST PAS COSMÉTIQUE : C'EST LUI QUI SUPPRIME LA SECONDE
+      BARRE (11/09/2026).
+
+      Signalé à l'écran pour la TROISIÈME fois : « le PDF comprend deux barres
+      orange à gauche du périmètre, alors que l'aperçu n'en contient qu'une ».
+      Les deux correctifs précédents cherchaient le défaut dans le *dessin* du
+      filet (le rayon, puis la bordure). Il n'y était pas : le filet est peint
+      une fois — c'est le FOND ENTIER qui l'est deux fois.
+
+      `.meta` est un conteneur flex et ce bandeau est un `<span>`, donc une
+      boîte **inline**. WeasyPrint 69 emballe un enfant inline de conteneur flex
+      dans un bloc anonyme qui **hérite du style de l'élément, fond compris** :
+      il peint le dégradé une première fois sur l'emballage (étiré à la largeur
+      de la ligne flex), une seconde fois sur la boîte inline (ajustée au
+      texte). Deux surfaces peintes, donc deux filets dorés, décalés de la
+      différence des deux origines. Mesuré dans le flux de contenu du PDF :
+      deux `re … f` de motif là où le navigateur n'en produit qu'un.
+
+      Un élément déjà de niveau bloc n'a pas d'emballage à recevoir. Le défaut
+      disparaît donc par CONSTRUCTION, comme la fois précédente, et non par
+      réglage. Effet de bord voulu : le bandeau cesse d'être étiré dans le PDF
+      et épouse son texte, exactement comme dans l'aperçu.
+
+      ⚠️ Même forme pour `.date-affichage`, autre `<span>` de ce conteneur
+      flex : elle est peinte deux fois elle aussi, mais elle n'a ni fond ni
+      bordure — rien ne se voit. Y poser un fond un jour ferait revenir le
+      défaut sous un autre nom.
+
+      🔒 `api/tests/test_annonce_hall_double_fond.py` rend l'affiche et refuse
+      qu'un aplat de dégradé en recouvre un autre. */
+  display: inline-block;
   /*  🔴 LE FILET EST PEINT, IL N'EST PLUS UNE BORDURE (10/09/2026).
 
       Signalé à l'écran pour la SECONDE fois : « le titre a une double barre
