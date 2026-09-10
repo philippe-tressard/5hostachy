@@ -788,7 +788,15 @@
 				{@const prest = prestataires.find((p) => p.id === c.prestataire_id)}
 				{@const contratExpanded = expandedContrats.has(c.id)}
 				{@const enRetard = contratEnRetard(c)}
-				<div class="carte-liste" class:expanded={contratExpanded} class:urgent={enRetard}>
+				<!--  L'ancre `contrat-{id}` : le carnet d'entretien y renvoie (#870 → carnet,
+				     10/09/2026), et `test_liens_front` refuse un lien vers une ancre qu'aucun
+				     onglet ne rend — il a attrapé celui-ci avant la production. -->
+				<div
+					class="carte-liste"
+					class:expanded={contratExpanded}
+					class:urgent={enRetard}
+					id="contrat-{c.id}"
+				>
 					<div
 						class="contrat-row"
 						role="button"

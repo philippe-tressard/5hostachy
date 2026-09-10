@@ -15,7 +15,6 @@
 		uploads as uploadsApi,
 		documents as documentsApi,
 		diagnostics as diagnosticsApi,
-		reglesResidence as reglesApi,
 		ApiError,
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -23,11 +22,19 @@
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
+	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
+	import SectionRegles from '$lib/components/SectionRegles.svelte';
+	import CarnetEntretien from '$lib/components/CarnetEntretien.svelte';
 	import FicheResidence from '$lib/components/FicheResidence.svelte';
 	import SectionDocuments from '$lib/components/SectionDocuments.svelte';
-	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
+
+	/**  L'onglet vient du CHEMIN, résolu par `+page.ts` — jamais d'un `let`
+	 *   qu'on affecte : une page qui écrit son propre onglet ne peut plus être
+	 *   atteinte par son adresse (`ux-patterns` §4). */
+	export let data: { onglet: string };
+	$: onglet = data.onglet;
 
 	$: _pc = getPageConfig($configStore, 'residence', defautsDePage('residence'));
 	$: _siteNom = $siteNomStore;
@@ -38,7 +45,6 @@
 	let plans: any[] = [];
 	let reglements: any[] = [];
 	let crAg: any[] = [];
-	let regles: any[] = [];
 	let loading = true;
 	//  🔴 Une erreur PAR liste, et non une pour la page (#522). Ces cinq
 	//  rubriques se chargent indépendamment : dire « rien n'a marché » quand
@@ -46,7 +52,6 @@
 	let ePlans = '',
 		eReglements = '',
 		eCrAg = '',
-		eRegles = '',
 		eDiagnostics = '';
 	//  Les bâtiments ne s'AFFICHENT pas : ils garnissent des menus déroulants et
 	//  la correspondance « Bât. n ». Leur absence ne vide pas l'écran, elle le
@@ -123,11 +128,6 @@
 	//  `SectionDiagnostics` : il n'a d'objet que là où il est employé.
 
 	// Règles & Recommandations
-	let showRegleForm = false;
-	let editingRegleId: number | null = null;
-	let regleTitre = '';
-	let regleContenu = '';
-	let savingRegle = false;
 
 	// ── Derived ────────────────────────────────────────────────────────────────
 	// Composition depuis les champs stockés sur Batiment et Copropriete
@@ -198,8 +198,6 @@
 			diagnosticTypes = diag;
 			eDiagnostics = ediag;
 
-			[regles, eRegles] = await essayer<any[]>(reglesApi.list(), []);
-
 			// Lien profond depuis le fil d'activité ou une notification :
 			// `#doc-<id>` (plan, règlement, PV d'AG) ou `#diag-<id>` (rapport de
 			// diagnostic). La page est longue et découpée en sections — y arriver
@@ -244,61 +242,6 @@
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
 			saving = false;
-		}
-	}
-
-	// ── Règles & Recommandations ───────────────────────────────────────────────
-	function openRegleForm(regle?: any) {
-		if (regle) {
-			editingRegleId = regle.id;
-			regleTitre = regle.titre;
-			regleContenu = regle.contenu;
-		} else {
-			editingRegleId = null;
-			regleTitre = '';
-			regleContenu = '';
-		}
-		showRegleForm = true;
-	}
-
-	async function saveRegle() {
-		if (!regleTitre.trim()) return;
-		savingRegle = true;
-		try {
-			if (editingRegleId) {
-				const updated = await reglesApi.update(editingRegleId, {
-					titre: regleTitre.trim(),
-					contenu: regleContenu.trim(),
-				});
-				regles = regles.map((r) => (r.id === editingRegleId ? { ...r, ...updated } : r));
-				toast('success', 'Règle mise à jour');
-			} else {
-				const created = await reglesApi.create({
-					titre: regleTitre.trim(),
-					contenu: regleContenu.trim(),
-				});
-				regles = [...regles, created];
-				toast('success', 'Règle ajoutée');
-			}
-			showRegleForm = false;
-			regleTitre = '';
-			regleContenu = '';
-			editingRegleId = null;
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingRegle = false;
-		}
-	}
-
-	async function deleteRegle(id: number) {
-		if (!(await confirmer(SUPPRESSION('Cette règle')))) return;
-		try {
-			await reglesApi.remove(id);
-			regles = regles.filter((r) => r.id !== id);
-			toast('success', 'Règle supprimée');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		}
 	}
 
@@ -492,6 +435,12 @@
 
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'building-2'} />
 
+<!--  Cette page n'avait pas d'onglets avant le carnet d'entretien (10/09/2026).
+      La rangée passe par `BarreOnglets`, qui lit la liste, l'ordre, les libellés
+      et les routes dans `$lib/pages` — un `<div class="tabs">` local rouvrirait
+      les cinq divergences que ce composant a fermées. -->
+<BarreOnglets pageId="residence" actif={onglet} />
+
 <!--  ⚠️ En HAUT, avant tout le reste : les bâtiments et les catégories de
       document garnissent les menus déroulants et la correspondance « Bât. n ».
       Leur absence ne vide pas l'écran, elle le rend faux — et un avertissement
@@ -502,9 +451,13 @@
 />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
-{#if loading}
+<!--  Le carnet est une VUE de la résidence, pas un écran à part : il partage
+      l'en-tête, la barre d'onglets et l'adresse de cette page. -->
+{#if onglet === 'carnet'}
+	<CarnetEntretien />
+{:else if onglet === 'fiche' && loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
-{:else if copropriete}
+{:else if onglet === 'fiche' && copropriete}
 	<!-- ── Photo Bannière ─────────────────────────────────────────────────── -->
 	<figure class="photo-figure">
 		<div class="photo-banner">
@@ -612,76 +565,7 @@
 		{/if}
 	</section>
 
-	<!-- ── Section : Règles & Recommandations ──────────────────────────── -->
-	<section style="margin-bottom:2.5rem">
-		<div class="section-header">
-			<h2 class="section-title">&#x1F4CB; Règles & Recommandations</h2>
-			{#if $isCS}
-				<button class="btn btn-sm" on:click={() => openRegleForm()}>+ Ajouter</button>
-			{/if}
-		</div>
-
-		{#if showRegleForm}
-			<FormulaireDocument
-				edition={editingRegleId !== null}
-				intitule={editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}
-				bind:titre={regleTitre}
-				placeholderTitre="Ex : RAL menuiseries façade bâtiment A"
-				avecFichier={false}
-				enregistrement={savingRegle}
-				complet={!!regleTitre.trim()}
-				on:annuler={() => (showRegleForm = false)}
-				on:enregistrer={saveRegle}
-			>
-				<label class="field" for="regle-contenu" slot="description">
-					Détail / valeur
-					<textarea
-						id="regle-contenu"
-						bind:value={regleContenu}
-						placeholder="Ex : Façade extérieure RAL 6021 vert clair"
-						rows="3"></textarea>
-				</label>
-			</FormulaireDocument>
-		{/if}
-
-		<EtatListe
-			compact
-			erreur={eRegles}
-			vide={regles.length === 0}
-			messageVide="Aucune règle ajoutée."
-		>
-			<div class="doc-list">
-				{#each regles as regle (regle.id)}
-					<div class="doc-row card">
-						<div class="doc-info" style="flex-direction:column;align-items:flex-start;gap:.25rem">
-							<span class="doc-titre">{regle.titre}</span>
-							{#if regle.contenu}
-								<span style="font-size:.85rem;color:var(--color-text-muted);white-space:pre-wrap"
-									>{regle.contenu}</span
-								>
-							{/if}
-						</div>
-						{#if $isCS}
-							<div class="doc-actions">
-								<button
-									class="btn-icon-edit"
-									aria-label="Modifier"
-									title="Modifier"
-									on:click={() => openRegleForm(regle)}>✏️</button
-								>
-								<button
-									class="btn-icon-danger"
-									aria-label="Supprimer"
-									title="Supprimer"
-									on:click={() => deleteRegle(regle.id)}>&#x1F5D1;️</button
-								>
-							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
-		</EtatListe>
-	</section>
+	<SectionRegles />
 
 	<!-- ── Section : Plans ───────────────────────────────────────────────── -->
 	<SectionDocuments
