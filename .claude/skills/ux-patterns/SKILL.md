@@ -1512,6 +1512,20 @@ pas qu'il fallait deviner : c'est qu'une position de formulaire se juge **sur un
 liste longue**, jamais sur un écran de trois éléments où tout est visible à la
 fois.
 
+🔴 **DÉPLACER un rendu, c'est aussi RETIRER l'ancien** — et ce second geste s'est
+oublié le jour même. La correction a déménagé dans la carte le matin ; le bloc de
+tête de liste, lui, est resté ouvert sur `contratFormOuvert || editContratId`.
+Résultat signalé à l'écran l'après-midi : *« plusieurs contrats sont ouverts en
+édition simultanément »* — deux boîtes « Modifier le contrat » à la fois, et la
+`cle` de celle du haut qui ramenait la page en haut.
+
+⚠️ **`lint:geste-edition` ne pouvait pas le voir, et c'est l'extraction qui l'a
+aveuglé** : sa règle B compte les rendus d'un formulaire **fichier par fichier**,
+et le second venait d'être déplacé dans un second fichier. La **règle C** couvre
+désormais le cas sans dépendre du découpage : *un identifiant d'édition
+(`editXxxId`) ne peut pas à la fois ouvrir un formulaire dans l'écran et être
+confié à un composant enfant* — les deux rendus s'affichent alors ensemble.
+
 ## 15. DROITS — qui peut éditer, qui peut commenter (18/08/2026)
 
 | Geste | Qui |

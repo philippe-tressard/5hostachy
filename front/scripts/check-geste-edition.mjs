@@ -20,7 +20,7 @@
  * affirmation dispense tout le monde de vérifier. Une consigne écrite dans un
  * commentaire ne se maintient pas : il faut un contrôle qui échoue.
  *
- * ## Les deux règles
+ * ## Les trois règles
  *
  * **A. Le crayon SEUL.** Un bouton qui ouvre une édition porte `btn-icon-edit`
  * ou `btn-icon`, l'icône, et son sens dans `title` + `aria-label`. Le MOT
@@ -31,6 +31,20 @@
  * boîte » : c'est la même boîte à deux endroits, dont un que l'utilisateur ne
  * voit pas. `ux-patterns` §14 bis dit *créer et corriger emploient la même
  * boîte* — et la lettre en était respectée sur les contrats, l'esprit non.
+ *
+ * **C. Un identifiant d'édition ne gouverne qu'UN rendu.** La variable qui dit
+ * *quel objet est en cours de correction* ne peut pas à la fois ouvrir un
+ * formulaire dans l'écran ET être déléguée à un composant enfant : les deux
+ * rendus s'affichent alors ENSEMBLE. Signalé à l'écran le 10/09/2026 —
+ * *« plusieurs contrats sont ouverts en édition simultanément »* — quelques
+ * heures après que la correction d'un contrat eut déménagé dans sa carte. Le
+ * bloc de tête était resté ouvert sur `contratFormOuvert || editContratId`.
+ *
+ * 🔴 **La règle B ne pouvait pas le voir, et c'est l'extraction qui l'a
+ * aveuglée** : elle compte les rendus d'un formulaire FICHIER PAR FICHIER, et
+ * le second venait d'être déplacé dans un second fichier. Un contrôle dont la
+ * portée est le fichier perd sa prise le jour où l'on découpe — la portée du
+ * contrôle fait partie du contrôle (`standards/05` §9).
  *
  * ⚠️ La règle B admet des séparations JUSTIFIÉES : deux rendus dont les
  * propriétés diffèrent réellement (un bail à la création porte des lots, pas à
@@ -128,6 +142,56 @@ for (const f of tous) {
 	}
 }
 
+//  ── C. Un identifiant d'édition ne gouverne qu'un rendu ─────────────────────
+const IDENT_EDITION = /\bedit[A-Z][A-Za-z]*Id\b/;
+
+for (const f of tous) {
+	const rel = relative(SRC, f).replace(/\\/g, '/');
+	const lignes = readFileSync(f, 'utf8').split('\n');
+
+	for (let i = 0; i < lignes.length; i++) {
+		const ouverture = lignes[i].match(/\{#if\s[^}]*/);
+		if (!ouverture) continue;
+		const nom = ouverture[0].match(IDENT_EDITION)?.[0];
+		if (!nom) continue;
+
+		//  Le bloc gouverné par ce `{#if}`, jusqu'à son `{/if}`.
+		let prof = 0;
+		let fin = lignes.length - 1;
+		for (let j = i; j < lignes.length; j++) {
+			prof += (lignes[j].match(/\{#if\b/g) || []).length;
+			prof -= (lignes[j].match(/\{\/if\}/g) || []).length;
+			if (prof <= 0) {
+				fin = j;
+				break;
+			}
+		}
+		const bloc = lignes.slice(i, fin + 1).join('\n');
+		if (!/<Formulaire[A-Z]/.test(bloc)) continue;
+
+		//  Le même identifiant confié à un composant, HORS de ce bloc : l'enfant
+		//  rendra sa propre boîte, et les deux seront à l'écran ensemble.
+		const confie = `{${nom}}`;
+		const nomme = `${nom}={`;
+		const ailleurs = lignes.findIndex(
+			(l, n) => (n < i || n > fin) && (l.trim().startsWith(confie) || l.trim().startsWith(nomme)),
+		);
+		if (ailleurs === -1) continue;
+
+		fautes.push({
+			regle: 'C',
+			fichier: rel,
+			ligne: i + 1,
+			quoi:
+				`\`${nom}\` ouvre un formulaire ici ET est confié à un composant ` +
+				`(ligne ${ailleurs + 1}) — deux boîtes d'édition à l'écran en même temps`,
+			remede:
+				"ne garder qu'un rendu : l'écran ouvre la CRÉATION, le composant qui porte " +
+				"l'objet ouvre sa CORRECTION",
+		});
+	}
+}
+
 //  ── Cas zéro : le contrôle regarde-t-il quelque chose ? ─────────────────────
 if (tous.length < 50) {
 	console.error(`✗ Cas zéro : ${tous.length} composant(s) analysé(s) — le relevé est cassé.`);
@@ -150,7 +214,7 @@ if (fautes.length > 0) {
 		console.error(`      → ${d.remede}\n`);
 	}
 	console.error(
-		'  Ces deux règles ont été signalées à l’écran le 10/09/2026, et la première\n' +
+		'  Ces trois règles ont été signalées à l’écran le 10/09/2026, et la première\n' +
 			'  était déjà écrite dans un commentaire qui se croyait le dernier concerné.\n',
 	);
 	process.exit(1);
@@ -158,5 +222,5 @@ if (fautes.length > 0) {
 
 console.log(
 	`✓ Geste d’édition : ${tous.length} composant(s) vérifié(s) — crayon seul partout, ` +
-		`aucun formulaire rendu loin de son jumeau, ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s).`,
+		`aucun formulaire rendu loin de son jumeau, aucun identifiant d’édition à deux rendus, ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s).`,
 );

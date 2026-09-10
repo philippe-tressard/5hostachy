@@ -732,30 +732,33 @@
 	<!-- ONGLET 3 : CONTRATS                                          -->
 	<!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'contrats'}
-	<!--  🔴 UN SEUL rendu pour les deux gestes, et au MÊME ENDROIT (10/09/2026).
-	      Le commentaire d'avant citait `ux-patterns` §14 bis — « créer et corriger
-	      emploient la même boîte » — et le respectait à la lettre : c'était bien
-	      le même composant. Mais la correction était rendue **700 lignes plus
-	      bas**, donc en bas de page.
+	<!--  🔴 CE BLOC NE SERT QU'À LA CRÉATION (corrigé le 10/09/2026).
 
-	      Signalé à l'écran : sur une longue liste de contrats, « Modifier »
-	      ouvrait un formulaire que l'utilisateur ne voyait pas. `cle` le ramenait
-	      certes à l'écran — mais tout en bas, loin du contrat qu'il éditait.
+	      Il gouvernait les deux gestes (`contratFormOuvert || editContratId`) tant
+	      que la correction se rendait ici. Elle a déménagé DANS la carte le matin
+	      même — et ce bloc-ci est resté ouvert sur la même condition : deux boîtes
+	      « Modifier le contrat » apparaissaient à l'écran en même temps, celle-ci
+	      en tête de liste et celle de la carte plus bas, et sa `cle` ramenait la
+	      page en haut.
 
-	      ⚠️ La même boîte, ce n'est pas seulement le même COMPOSANT : c'est le
-	      même endroit. Deux rendus d'un même formulaire divergent d'ailleurs au
-	      premier champ ajouté — celui du haut n'avait ni documents ni `contratId`. -->
-	{#if contratFormOuvert || editContratId}
-		<FormulaireCreation
-			titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}
-			cle={editContratId}
-		>
+	      ⚠️ C'est la régression de #356 dans sa forme la plus banale : on DÉPLACE
+	      un rendu et on oublie de retirer l'ancien. `lint:geste-edition` ne
+	      pouvait pas la voir — sa règle B compte les rendus d'un formulaire
+	      FICHIER PAR FICHIER, et l'extraction venait justement d'en mettre un dans
+	      un second fichier. Un contrôle dont la portée est le fichier devient
+	      aveugle le jour où l'on découpe.
+
+	      La création reste ici, en tête de liste : elle ne corrige aucun objet,
+	      elle n'a donc pas de place à prendre — et pas de `cle` non plus, le geste
+	      qui l'ouvre étant juste au-dessus. -->
+	{#if contratFormOuvert}
+		<FormulaireCreation titre="Nouveau contrat">
 			<FormulaireContrat
 				bind:contratForm
 				{prestataires}
 				{equipements}
-				contratId={editContratId}
-				documents={editContratId ? contratDocsMap[editContratId] : []}
+				contratId={null}
+				documents={[]}
 				onSupprimer={deleteDoc}
 				onAjoute={rechargerDocs}
 				{submitting}
