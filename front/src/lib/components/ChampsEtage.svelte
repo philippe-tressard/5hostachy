@@ -104,25 +104,40 @@
 	}
 </script>
 
-<!--  Section 1 : l'étage où l'on VIT. Toujours rendue — c'est le seul endroit où
-      un compte SANS lot peut dire où il habite, et c'est précisément ce cas qui a
-      fait redemander ce champ. -->
-<div class="field">
-	<label for="p-etage">Étage où j'habite</label>
-	<input
-		id="p-etage"
-		type="number"
-		bind:value={etage}
-		min={ETAGE_MIN}
-		max={ETAGE_MAX}
-		placeholder="Ex. 3"
-		aria-describedby={divergence ? 'p-etage-divergence' : undefined}
-	/>
-	<!--  L'indication dit la CONVENTION de saisie, pas l'évidence : « facultatif »
+<!--  🔴 L'étage où l'on VIT — rendu SEULEMENT quand aucun logement ne le dit
+      déjà (10/09/2026, régression signalée à l'écran : « l'étage est en double,
+      on avait dit de conserver uniquement ceux des lots »).
+
+      La règle existait, écrite le 08/09 : *« afficher deux fois le même chiffre
+      inviterait à les désaccorder »*. En remettant ce champ le 09/09 pour le cas
+      d'un compte SANS lot, je ne l'ai pas rappliquée — le bloc « mes logements »
+      apparaît depuis le 09/09 dès UN logement, et les deux champs se sont
+      retrouvés côte à côte avec la même valeur.
+
+      ⚠️ Ce n'est pas un troisième revirement : les deux demandes tiennent
+      ensemble. *Un seul champ à l'écran*, et c'est le logement qui parle quand il
+      existe — le champ personnel n'est là que pour ceux qu'aucun lot ne situe.
+
+      ⚠️ Le bailleur qui habite ailleurs qu'à son lot ne peut donc plus le
+      déclarer ici. C'est le coût, assumé une seconde fois : l'écran gagne en
+      clarté ce que ce cas précis perd en précision. -->
+{#if logements.length === 0}
+	<div class="field">
+		<label for="p-etage">Étage où j'habite</label>
+		<input
+			id="p-etage"
+			type="number"
+			bind:value={etage}
+			min={ETAGE_MIN}
+			max={ETAGE_MAX}
+			placeholder="Ex. 3"
+			aria-describedby={divergence ? 'p-etage-divergence' : undefined}
+		/>
+		<!--  L'indication dit la CONVENTION de saisie, pas l'évidence : « facultatif »
 	      se voit à l'absence d'astérisque, et où la valeur ressort n'apprend rien à
 	      qui la saisit. Que `0` vaille rez-de-chaussée, en revanche, ne se devine
 	      pas — c'est la seule chose qu'un champ « Étage » ne dit pas tout seul. -->
-	<!--  ⚠️ PAS de « -1 = sous-sol », bien que la borne basse l'autorise encore
+		<!--  ⚠️ PAS de « -1 = sous-sol », bien que la borne basse l'autorise encore
 	      (arbitrage de Philippe, 09/09/2026) : aucun LOGEMENT n'est en sous-sol
 	      — il n'y a là que des caves et des parkings —, et proposer cette valeur
 	      à quelqu'un qui déclare où il HABITE est dévalorisant pour rien.
@@ -130,15 +145,17 @@
 	      L'exemple positif dit pourtant la même chose de la convention : ce qui
 	      manquait, c'était de montrer la FORME attendue, pas d'énumérer les cas
 	      limites. Un exemple en dit autant qu'une règle et ne heurte personne. -->
-	<p class="aide">0 = rez-de-chaussée, 2 = 2ème étage.</p>
-	{#if divergence}
-		<p class="etage-divergence" id="p-etage-divergence" role="status">
-			⚠️ Votre logement est enregistré au <strong>{etageLabel(etageLot, { suffixe: true })}</strong
-			>. C'est cette valeur qui s'affiche dans l'annuaire. Votre saisie est conservée et le
-			gestionnaire du site est prévenu pour vérifier.
-		</p>
-	{/if}
-</div>
+		<p class="aide">0 = rez-de-chaussée, 2 = 2ème étage.</p>
+		{#if divergence}
+			<p class="etage-divergence" id="p-etage-divergence" role="status">
+				⚠️ Votre logement est enregistré au <strong
+					>{etageLabel(etageLot, { suffixe: true })}</strong
+				>. C'est cette valeur qui s'affiche dans l'annuaire. Votre saisie est conservée et le
+				gestionnaire du site est prévenu pour vérifier.
+			</p>
+		{/if}
+	</div>
+{/if}
 
 {#if logements.length > 0}
 	<div class="field">

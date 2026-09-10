@@ -37,6 +37,11 @@ from __future__ import annotations
 EMPLACEMENTS: dict[str, str] = {
     "pub": "/actualites",
     "ev": "/calendrier",
+    #  Un événement ARCHIVÉ ne figure plus dans la vue liste : son lien doit
+    #  mener aux archives, sinon il ouvre la bonne page et ne révèle rien
+    #  (signalé à l'écran le 10/09/2026 depuis le carnet d'entretien, dont les
+    #  entrées sont par nature d'anciens faits).
+    "ev_archive": "/calendrier/archives",
     "presta": "/prestataires",
     "annonce": "/annonces",
     "idee": "/idees",

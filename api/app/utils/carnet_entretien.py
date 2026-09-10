@@ -260,7 +260,14 @@ def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[E
             detail=detail,
             equipement=equipement,
             perimetre=codes,
-            lien=lien_element("ev", evenement.id),
+            #  🔴 Le carnet ne parle QUE de faits passés : la plupart de ses
+            #  événements sont archivés, et c'est le cas nominal ici, pas le cas
+            #  limite. Choisir la destination d'après l'état de l'objet est la
+            #  seule façon de ne pas envoyer le lecteur sur une liste où il ne
+            #  figure plus.
+            lien=lien_element(
+                "ev_archive" if evenement.archivee else "ev", evenement.id
+            ),
         ))
     return entrees
 

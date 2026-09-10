@@ -76,9 +76,19 @@
 	export let avecActions = false;
 
 	$: perimetreVisible = !!perimetre && !estPerimetreParDefaut(perimetre);
+
+	/**  L'ancre de la ligne — `ev-42`, `pub-7`… Sans elle, un lien profond ouvre
+	 *   la bonne page et ne révèle rien (10/09/2026, signalé sur le carnet
+	 *   d'entretien : ses liens vers des événements ARCHIVÉS menaient à la vue
+	 *   liste, où un archivé ne figure plus).
+	 *
+	 *   ⚠️ Vide par défaut : une ancre est une promesse de destination, et une
+	 *   ligne qui n'en est la cible d'aucun lien ne doit pas en poser. */
+	export let ancreId = '';
 </script>
 
 <div
+	id={ancreId || undefined}
 	class="event-row card"
 	class:archive-row={archive}
 	class:archive-attenuee={archive}

@@ -1485,6 +1485,33 @@ un écart de fond — le périmètre y est une **chaîne** dans un `<select>` l�
 `PerimetrePicker` travaille sur un tableau. C'est un changement de contrat, pas un
 remplacement de composant.
 
+### 🔴 14 ter. LA CORRECTION S'OUVRE À LA PLACE DE L'OBJET (10/09/2026)
+
+Arbitré à l'écran, en une question : *« la position de la fenêtre d'édition
+est-elle standard ? avant à la fin, maintenant au début — le standard n'est-il
+pas sur la position courante ? »*
+
+Sur les contrats, la boîte d'édition s'ouvrait d'abord **en bas de page**, puis
+**en haut** après une première correction. Les deux sont au mauvais endroit : sur
+une liste de vingt éléments, l'un comme l'autre déplacent l'utilisateur loin de
+ce qu'il édite. La `cle` de `FormulaireCreation` le ramenait bien à l'écran —
+mais à l'écran du **formulaire**, pas à sa place dans la liste.
+
+| Geste | Où la boîte s'ouvre |
+|---|---|
+| **Créer** | en tête de liste — elle ne corrige rien, elle n'a pas de place à occuper |
+| **Corriger** | **à la place de la carte**, qui cède son emplacement le temps de l'édition |
+
+⚠️ **§14 bis n'est pas remis en cause** : c'est toujours LA MÊME BOÎTE — même
+composant, même format. Ce qui change est sa **position**, qui suit désormais
+l'objet corrigé. « La même boîte » ne voulait jamais dire « le même endroit du
+DOM », et c'est ce raccourci qui a produit les deux erreurs.
+
+🔴 **Trois positions essayées en une journée, dont deux fausses.** La leçon n'est
+pas qu'il fallait deviner : c'est qu'une position de formulaire se juge **sur une
+liste longue**, jamais sur un écran de trois éléments où tout est visible à la
+fois.
+
 ## 15. DROITS — qui peut éditer, qui peut commenter (18/08/2026)
 
 | Geste | Qui |
