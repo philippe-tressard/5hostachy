@@ -197,6 +197,48 @@
 								&#x1F4C4; PDF{#if annonce.taille_octets}
 									<span class="ah-poids">{ahPoids(annonce.taille_octets)}</span>{/if}
 							</a>
+							<!--  🔴 LES ACTIONS SONT DANS L'EN-TÊTE, à droite du titre — jamais
+							      en pied de carte (`ux-patterns` §3). Signalé à l'écran le
+							      10/09/2026 : « les icônes de suppression et d'archivage sont
+							      mises en bas de l'annonce archivée, alors que le standard les
+							      préconise à droite du titre ».
+
+							      Elles vivaient dans le corps DÉPLIÉ : il fallait ouvrir une
+							      affiche pour découvrir qu'on pouvait l'archiver ou l'effacer,
+							      alors que le PDF, lui, se téléchargeait depuis l'en-tête.
+							      Trois gestes du même objet, deux endroits, deux moments.
+
+							      Ordre : PDF · renvoyer · ranger · effacer — le lien d'abord,
+							      le destructif en dernier. -->
+							<button
+								class="btn-icon"
+								title="Renvoyer au CS du périmètre"
+								aria-label="Renvoyer cette annonce au CS"
+								on:click|stopPropagation={() => ahRenvoyer(annonce)}>&#x2709;</button
+							>
+							<!--  Le geste n'est offert que s'il a un effet (#515, 02/09/2026) :
+							      une affiche archivée par le TEMPS ne se restaure pas, et un
+							      bouton qui ne ferait rien ne s'affiche pas. -->
+							{#if !annonce.archivee || annonce.archivee_manuellement}
+								<button
+									class="btn-icon-warn"
+									title={annonce.archivee ? 'Restaurer' : 'Archiver'}
+									aria-label={annonce.archivee
+										? 'Restaurer cette annonce'
+										: 'Archiver cette annonce'}
+									on:click|stopPropagation={() => ahArchiver(annonce)}
+								>
+									{annonce.archivee ? '↩️' : '\u{1F4E6}'}
+								</button>
+							{/if}
+							{#if $isAdmin}
+								<button
+									class="btn-icon-danger"
+									title="Supprimer définitivement"
+									aria-label="Supprimer définitivement cette annonce"
+									on:click|stopPropagation={() => ahSupprimer(annonce)}>&#x1F5D1;&#xFE0F;</button
+								>
+							{/if}
 							<button
 								class="btn btn-sm btn-outline"
 								aria-label={ahExpandedId === annonce.id ? 'Replier' : 'Déplier'}
@@ -240,53 +282,6 @@
 							{annonce.destinataires.join(', ')}
 						</p>
 					{/if}
-					<div class="ah-card-actions" style="margin-top:.75rem">
-						<button class="btn btn-sm btn-outline" on:click={() => ahRenvoyer(annonce)}>
-							&#x2709; Renvoyer au CS
-						</button>
-						<!--  🔴 LE GESTE N'EST OFFERT QUE S'IL A UN EFFET (#515, 02/09/2026).
-						      Une affiche archivée par le TEMPS — 30 jours après l'envoi,
-						      règle du site — ne se restaure pas : retirer le drapeau
-						      manuel ne la ramènerait pas dans la liste active, et le
-						      bouton promettrait un geste sans conséquence. On ne montre
-						      pas une commande qui ne fera rien, on la retire. -->
-						{#if !annonce.archivee || annonce.archivee_manuellement}
-							<button
-								class="btn-icon-warn"
-								title={annonce.archivee ? 'Restaurer' : 'Archiver'}
-								aria-label={annonce.archivee ? 'Restaurer cette annonce' : 'Archiver cette annonce'}
-								on:click={() => ahArchiver(annonce)}
-							>
-								{annonce.archivee ? '↩️' : '\u{1F4E6}'}
-							</button>
-						{/if}
-						<!--  🔴 SUPPRIMER SANS AVOIR À ARCHIVER D'ABORD (10/09/2026).
-
-						      Demandé à l'écran : « il faut pouvoir la supprimer sans
-						      l'archiver — si on recommence parce qu'elle n'est pas
-						      terrible ». Le geste exigeait l'archivage préalable, hérité
-						      de la règle du site : archiver ≠ supprimer, et la corbeille
-						      ne vit que dans la vue Archives.
-
-						      ⚠️ Cette règle protège un CONTENU que les résidents lisent
-						      et commentent. Une affiche de hall est une PRODUCTION : un
-						      PDF qu'on tire, qu'on regarde, et qu'on refait s'il est
-						      raté. L'archiver pour pouvoir l'effacer ne protège rien —
-						      ça ajoute un geste et laisse un brouillon dans l'historique.
-
-						      ⚠️ Le DROIT ne bouge pas : `require_admin` côté serveur,
-						      comme avant. Ce qui est levé, c'est la condition d'état,
-						      pas l'autorisation — ouvrir la suppression au CS serait une
-						      autre décision, et elle n'a pas été demandée. -->
-						{#if $isAdmin}
-							<button
-								class="btn-icon-danger"
-								title="Supprimer définitivement"
-								aria-label="Supprimer définitivement cette annonce"
-								on:click={() => ahSupprimer(annonce)}>&#x1F5D1;&#xFE0F;</button
-							>
-						{/if}
-					</div>
 				</div>
 			{/if}
 		</div>
@@ -297,15 +292,6 @@
 	/*  Les règles suivent le balisage qui les emploie : un style laissé chez
 	    l'hôte n'atteint pas un enfant (Svelte scope au composant, v2.67.11). */
 
-	/*  Les règles suivent le balisage qui les emploie : Svelte scope au composant
-	    qui rend l'élément, et les laisser chez l'hôte livrerait cette liste NUE.
-	    C'est la panne des pastilles de la v2.67.11, refaite deux fois depuis. */
-	.ah-card-actions {
-		display: flex;
-		gap: 0.4rem;
-		align-items: center;
-		flex-wrap: wrap;
-	}
 	.ah-card-apercu {
 		font-size: 0.82rem;
 		color: var(--color-text-muted);

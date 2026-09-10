@@ -35,11 +35,10 @@
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { onMount } from 'svelte';
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
-	import { sourcesPreremplissage } from '$lib/publications';
 	import HistoriqueAnnoncesHall from '$lib/components/HistoriqueAnnoncesHall.svelte';
 	import { MAX_PHOTOS_AFFICHE } from '$lib/annonces';
-	import { annoncesHall as annoncesHallApi, publications as pubsApi, ApiError } from '$lib/api';
-	import type { Publication } from '$lib/api';
+	import { annoncesHall as annoncesHallApi, ApiError } from '$lib/api';
+	import type { SourceAffiche } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { stripHtml, perimetreDefautListe } from '$lib/utils';
 	import { fichiersApi } from '$lib/api';
@@ -78,9 +77,9 @@
 	let ahApercuLoading = false;
 
 	// Pré-remplissage depuis une actualité
-	let ahPubs: Publication[] = [];
+	let ahPubs: SourceAffiche[] = [];
 	let ahPubsLoaded = false;
-	let ahSourceId: number | '' = '';
+	let ahSourceId = '';
 
 	type AhFormat = 'auto' | 'a4' | 'a5' | 'a6' | 'a7';
 	const AH_FORMATS: { val: AhFormat; label: string }[] = [
@@ -105,26 +104,33 @@
 	$: ahFormulaireValide =
 		ahTitre.trim().length > 0 && stripHtml(ahMessage).length + ahTitre.trim().length > 0;
 
-	/** Les 10 actualités publiées les plus récentes, pour le pré-remplissage. */
+	/**  Ce que le fil propose de reprendre — actualités, tickets ET événements.
+	 *
+	 *   🔴 La liste vient du SERVEUR (10/09/2026). Elle était composée ici, à
+	 *   partir des seules `publications` : le sélecteur ne montrait donc jamais
+	 *   un ticket ni un événement, alors que le fil les affiche tous les trois.
+	 *
+	 *   ⚠️ Le tri (épinglés d'abord) et surtout les EXCLUSIONS — brouillon,
+	 *   archivé, confidentiel — vivent avec la liste, côté serveur : un écran
+	 *   qui montrerait un élément confidentiel inviterait à le reprendre, et le
+	 *   pré-remplissage passerait quand même par l'API. */
 	async function loadAhPublications() {
 		if (ahPubsLoaded) return;
 		try {
-			//  Le choix des candidates — filtre, ordre et plafond — vit dans
-			//  `$lib/publications`, parce qu'il porte une RÈGLE (une actualité
-			//  épinglée est toujours proposée) et non un simple tri.
-			ahPubs = sourcesPreremplissage(await pubsApi.list());
+			ahPubs = await annoncesHallApi.sources();
 			ahPubsLoaded = true;
 		} catch {
 			/* non bloquant : la saisie manuelle reste possible */
 		}
 	}
 
-	async function ahPrefillDepuisPublication(pubId: number | '') {
-		ahSourceId = pubId;
-		if (pubId === '') return;
+	async function ahPrefillDepuisPublication(cle: string) {
+		ahSourceId = cle;
+		if (cle === '') return;
+		const [type, id] = cle.split(':');
 		try {
 			// Le serveur résout aussi les photos jointes à l'actualité (documents image).
-			const src = await annoncesHallApi.depuisPublication(pubId);
+			const src = await annoncesHallApi.depuisElement(type, Number(id));
 			ahTitre = src.titre;
 			ahMessage = src.message;
 			ahPerimetre = src.perimetre_cible?.length ? [...src.perimetre_cible] : perimetreDefautListe();

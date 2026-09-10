@@ -659,17 +659,6 @@ jobs:
         working-directory: front
         run: npm run lint:geste-edition
 
-      # Une actualité ÉPINGLÉE est toujours proposée au pré-remplissage d'une
-      # affiche de hall (demandé à l'écran le 10/09/2026). Le sélecteur triait
-      # par date et coupait aux dix dernières : l'épinglée — donc celle qu'on
-      # veut garder sous les yeux, donc souvent la plus ancienne des importantes
-      # — devenait la seule qu'on ne pouvait PAS reprendre.
-      #
-      # Le contrôle EXÉCUTE la fonction (esbuild), il ne relit pas son texte :
-      # une règle se vérifie sur son comportement.
-      - name: Le pré-remplissage propose les actualités épinglées
-        working-directory: front
-        run: npm run lint:sources-preremplissage
 
       # Les seuils de format d'une affiche de hall sont écrits DEUX fois — l'API
       # les applique, l'écran les prévoit pendant la saisie. Les contextes de

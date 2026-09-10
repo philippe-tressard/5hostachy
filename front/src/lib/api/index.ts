@@ -12,6 +12,7 @@ import type {
 	PublicationEvolution,
 	RelanceSyndicResponse,
 	ReponseRelance,
+	SourceAffiche,
 	Ticket,
 	TicketEvolution,
 	TicketMessage,
@@ -349,8 +350,13 @@ export const annoncesHall = {
 	}) => api.post<ApercuDiffusion>('/annonces-hall/apercu-diffusion', brouillon),
 	list: (archivees = false) => api.get<AnnonceHall[]>(`/annonces-hall?archivees=${archivees}`),
 	create: (data: AnnonceHallInput) => api.post<AnnonceHall>('/annonces-hall', data),
-	depuisPublication: (pubId: number) =>
-		api.get<AnnonceHallPrefill>(`/annonces-hall/depuis-publication/${pubId}`),
+	/**  Ce que le fil propose de reprendre au hall — actualités, tickets ET
+	 *   événements (10/09/2026). Le sélecteur ne montrait que des actualités. */
+	sources: () => api.get<SourceAffiche[]>('/annonces-hall/sources'),
+	/**  Pré-remplissage depuis n'importe laquelle des trois familles. Un élément
+	 *   confidentiel, archivé ou brouillon rend 404 — la règle est au serveur. */
+	depuisElement: (type: string, id: number) =>
+		api.get<AnnonceHallPrefill>(`/annonces-hall/depuis/${type}/${id}`),
 	previsualiser: (data: AnnonceHallInput) =>
 		api.post<{
 			format_effectif: string;
