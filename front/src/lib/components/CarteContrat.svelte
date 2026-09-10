@@ -8,13 +8,30 @@
   c'est cette carte qui s'en détache le plus proprement — un objet, ses gestes,
   aucun état partagé avec le reste de la page.
 
-  🔴 **La correction s'ouvre À LA PLACE de la carte** (`ux-patterns` §14 ter).
-  Arbitré à l'écran après deux essais manqués : la boîte s'ouvrait d'abord en bas
-  de page, puis en haut. Les deux déplacent l'utilisateur loin de ce qu'il édite ;
-  seule la position de l'objet ne le déplace pas du tout.
+  🔴 **La correction s'ouvre DANS LA CARTE, à la place de son corps** — le motif
+  des tickets, des annonces et des actualités (`AnnonceCard`, `CarteActualite`),
+  désigné à l'écran : *« l'affaire modifiée passe en premier ! prends exemple sur
+  tickets »*.
+
+  Quatre positions auront été essayées en une journée, et les trois premières
+  déplaçaient quelque chose : la boîte en bas de page, puis en haut, puis à la
+  place de la carte ENTIÈRE — cette dernière effaçait la ligne du contrat, et
+  `FormulaireCreation` ramenait sa boîte en HAUT de la fenêtre dès qu'elle n'y
+  tenait pas. L'objet corrigé quittait donc sa place dans la liste.
+
+  Le motif des tickets ne déplace rien : **l'en-tête reste**, avec son titre et
+  ses actions, et seul le CORPS de la carte cède la place au formulaire. Le mode
+  se lit sur le crayon (`aria-pressed`, `ux-patterns` §13 bis), et aucune `cle`
+  n'est nécessaire — rien n'a bougé, il n'y a rien à ramener à l'écran.
 
   ⚠️ §14 bis n'est pas remis en cause : c'est toujours LA MÊME BOÎTE — même
-  composant, même format. Ce qui change est sa position.
+  composant, même format. Ce qui changeait était sa position ; elle est désormais
+  celle de l'objet, sans que l'objet s'efface.
+
+  🔴 **Le composant existait en DEUX exemplaires** — `AnnonceCard` et
+  `CarteActualite` portent tous deux un `formulaireOuvert` qui fait exactement
+  cela. Je ne suis pas allé les lire : j'ai inventé une troisième façon, et c'est
+  Philippe qui a nommé la première. Chercher la NOTION, pas le nom demandé.
 -->
 <script lang="ts">
 	import { documents as documentsApi } from '$lib/api';
@@ -55,178 +72,206 @@
 	let notesOuvertes = false;
 
 	export let onNoter: (prestataireId: number, contratId: number) => void = () => {};
+
+	/**  Cette carte est-elle celle qu'on corrige ? Son corps cède alors la place au
+	 *   formulaire, et le crayon s'inverse. */
+	$: enEdition = editContratId === contrat.id;
 </script>
 
-{#if editContratId === contrat.id}
-	<FormulaireCreation titre="Modifier le contrat" cle={editContratId}>
-		<FormulaireContrat
-			bind:contratForm
-			{prestataires}
-			{equipements}
-			contratId={contrat.id}
-			{documents}
-			onSupprimer={onSupprimerDoc}
-			onAjoute={onAjouteDoc}
-			{submitting}
-			{onAnnuler}
-			{onEnregistrer}
-		/>
-	</FormulaireCreation>
-{:else}
-	<!--  L'ancre `contrat-{id}` : le carnet d'entretien y renvoie (#870 → carnet,
+<!--  L'ancre `contrat-{id}` : le carnet d'entretien y renvoie (#870 → carnet,
      10/09/2026), et `test_liens_front` refuse un lien vers une ancre qu'aucun
      onglet ne rend — il a attrapé celui-ci avant la production. -->
-	<div class="carte-liste" class:expanded class:urgent={enRetard} id="contrat-{contrat.id}">
-		<div
-			class="contrat-row"
-			role="button"
-			tabindex="0"
-			on:click|stopPropagation={() => onBasculer(contrat.id)}
-			on:keydown|stopPropagation={(e) => e.key === 'Enter' && onBasculer(contrat.id)}
-		>
-			<div class="contrat-body-inner">
-				<strong class="contrat-titre">{contrat.libelle}</strong>
-				{#if prest}
-					<span class="contrat-meta">— {prest.nom}</span>
-				{:else}
-					<!--  Un contrat sans intervenant avait sa propre section, qui le
-				      rendait une SECONDE fois : le groupement par équipement
-				      retombe déjà sur `type_equipement` quand le prestataire
-				      manque. Le fait se dit ici, sur la ligne (#603). -->
-					<span class="badge badge-gray" style="font-size:.72rem">sans intervenant</span>
-				{/if}
-				{#if contrat.numero_contrat}<span class="contrat-meta">🔖 {contrat.numero_contrat}</span
-					>{/if}
-			</div>
-			<div class="contrat-infos">
-				{#if contrat.prochaine_visite}
-					<div class="contrat-echeance" class:contrat-echeance--retard={enRetard}>
-						{enRetard ? '⚠️' : '🗓'}
-						{fmtDateShort(contrat.prochaine_visite)}
-					</div>
-				{:else}
-					<div>📅 {fmtDateShort(contrat.date_debut)}</div>
-				{/if}
-				{#if contrat.frequence_type}
-					<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(contrat)}</span>
-				{/if}
-			</div>
-			<div class="contrat-meta-right">
-				<span class="badge" style="font-size:.8rem">📄 {documents?.length ?? 0}</span>
-				<!--  ✏️ puis 🗑️, sur la ligne du titre (`ux-patterns` §3). -->
-				{#if peutModifier}
-					<button
-						class="btn-icon-edit"
-						aria-label="Modifier ce contrat"
-						title="Modifier"
-						on:click|stopPropagation={() => onModifier(contrat)}>&#x270F;&#xFE0F;</button
-					>
-					<button
-						class="btn-icon-danger"
-						aria-label="Archiver"
-						title="Archiver"
-						on:click|stopPropagation={() => onArchiver(contrat.id)}>🗑️</button
-					>
-				{/if}
-				<span class="toggle-arrow">{expanded ? '▲' : '▼'}</span>
-			</div>
+<div
+	class="carte-liste"
+	class:expanded={expanded || enEdition}
+	class:urgent={enRetard}
+	id="contrat-{contrat.id}"
+>
+	<!--  Pendant la correction, la ligne de titre ne replie plus : le corps montre
+	      le formulaire quoi qu'il arrive, et basculer un état invisible ferait
+	      croire à un geste mort. On sort de l'édition par le crayon ou par
+	      « Annuler ». -->
+	<div
+		class="contrat-row"
+		role="button"
+		tabindex="0"
+		on:click|stopPropagation={() => !enEdition && onBasculer(contrat.id)}
+		on:keydown|stopPropagation={(e) => e.key === 'Enter' && !enEdition && onBasculer(contrat.id)}
+	>
+		<div class="contrat-body-inner">
+			<strong class="contrat-titre">{contrat.libelle}</strong>
+			{#if prest}
+				<span class="contrat-meta">— {prest.nom}</span>
+			{:else}
+				<!--  Un contrat sans intervenant avait sa propre section, qui le
+			      rendait une SECONDE fois : le groupement par équipement
+			      retombe déjà sur `type_equipement` quand le prestataire
+			      manque. Le fait se dit ici, sur la ligne (#603). -->
+				<span class="badge badge-gray" style="font-size:.72rem">sans intervenant</span>
+			{/if}
+			{#if contrat.numero_contrat}<span class="contrat-meta">🔖 {contrat.numero_contrat}</span>{/if}
 		</div>
-		{#if expanded}
-			<div class="contrat-detail-body">
-				<div class="contrat-section">
-					<div class="contrat-section-title">Infos contrat</div>
-					<div class="detail-grid">
-						<div>
-							<span class="detail-label">Date de début</span>📅 {fmtDateShort(contrat.date_debut)}
-						</div>
-						{#if contrat.duree_initiale_valeur}<div>
-								<span class="detail-label">Durée</span>{contrat.duree_initiale_valeur}
-								{contrat.duree_initiale_unite}
-							</div>{/if}
-						{#if contrat.frequence_type}
-							<div><span class="detail-label">Fréquence</span>{frequenceLabel(contrat)}</div>
-						{/if}
-						{#if contrat.prochaine_visite}<div>
-								<span class="detail-label">Prochaine visite</span><span
-									style="color:var(--color-primary);font-weight:600"
-									>🗓 {fmtDateShort(contrat.prochaine_visite)}</span
-								>
-							</div>{/if}
-					</div>
+		<div class="contrat-infos">
+			{#if contrat.prochaine_visite}
+				<div class="contrat-echeance" class:contrat-echeance--retard={enRetard}>
+					{enRetard ? '⚠️' : '🗓'}
+					{fmtDateShort(contrat.prochaine_visite)}
 				</div>
-				{#if contrat.notes}
-					<div class="contrat-section">
-						<div
-							class="contrat-section-title clickable"
-							role="button"
-							tabindex="0"
-							on:click|stopPropagation={() => (notesOuvertes = !notesOuvertes)}
-							on:keydown|stopPropagation={(e) =>
-								(e.key === 'Enter' || e.key === ' ') && (notesOuvertes = !notesOuvertes)}
-						>
-							Synthèse du ou des contrats {notesOuvertes ? '▲' : '▼'}
-						</div>
-						{#if notesOuvertes}
-							<div class="rich-content" style="font-size:.875rem">
-								{@html safeHtml(contrat.notes)}
-							</div>
-						{/if}
+			{:else}
+				<div>📅 {fmtDateShort(contrat.date_debut)}</div>
+			{/if}
+			{#if contrat.frequence_type}
+				<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(contrat)}</span>
+			{/if}
+		</div>
+		<div class="contrat-meta-right">
+			<span class="badge" style="font-size:.8rem">📄 {documents?.length ?? 0}</span>
+			<!--  ✏️ puis 🗑️, sur la ligne du titre (`ux-patterns` §3). -->
+			{#if peutModifier}
+				<!--  Le mode se lit sur l'icône qui a ouvert le formulaire, jamais sur un
+				      titre au-dessus (`ux-patterns` §13 bis) : elle est déjà là, déjà
+				      regardée, et son inversion se lit sans être lue. -->
+				<button
+					class="btn-icon-edit"
+					aria-label="Modifier ce contrat"
+					title="Modifier"
+					aria-pressed={enEdition}
+					on:click|stopPropagation={() => (enEdition ? onAnnuler() : onModifier(contrat))}
+					>&#x270F;&#xFE0F;</button
+				>
+				<button
+					class="btn-icon-danger"
+					aria-label="Archiver"
+					title="Archiver"
+					on:click|stopPropagation={() => onArchiver(contrat.id)}>🗑️</button
+				>
+			{/if}
+			<span class="toggle-arrow">{expanded || enEdition ? '▲' : '▼'}</span>
+		</div>
+	</div>
+	{#if enEdition}
+		<!--  Le corps ne referme pas la carte : sans `stopPropagation`, un clic dans
+		      le formulaire remonterait à la ligne de titre et replierait ce qu'on est
+		      en train de corriger (`ux-patterns` §3). -->
+		<div
+			class="contrat-detail-body"
+			role="presentation"
+			on:click|stopPropagation
+			on:keydown|stopPropagation
+		>
+			<!--  `encadre={false}` : la carte EST le cadre, et sa ligne de titre en est
+			      l'en-tête. Une carte dans une carte, c'est deux bordures pour un seul
+			      objet (#425). -->
+			<FormulaireCreation titre="Modifier le contrat" encadre={false}>
+				<FormulaireContrat
+					bind:contratForm
+					{prestataires}
+					{equipements}
+					contratId={contrat.id}
+					{documents}
+					onSupprimer={onSupprimerDoc}
+					onAjoute={onAjouteDoc}
+					{submitting}
+					{onAnnuler}
+					{onEnregistrer}
+				/>
+			</FormulaireCreation>
+		</div>
+	{:else if expanded}
+		<div class="contrat-detail-body">
+			<div class="contrat-section">
+				<div class="contrat-section-title">Infos contrat</div>
+				<div class="detail-grid">
+					<div>
+						<span class="detail-label">Date de début</span>📅 {fmtDateShort(contrat.date_debut)}
 					</div>
-				{/if}
-				<div class="contrat-section">
-					<div class="contrat-section-title">
-						📄 Documents ({documents?.length ?? 0})
-					</div>
-					{#if documents?.length > 0}
-						{#each documents as doc (doc.id)}
-							<div
-								style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap"
+					{#if contrat.duree_initiale_valeur}<div>
+							<span class="detail-label">Durée</span>{contrat.duree_initiale_valeur}
+							{contrat.duree_initiale_unite}
+						</div>{/if}
+					{#if contrat.frequence_type}
+						<div><span class="detail-label">Fréquence</span>{frequenceLabel(contrat)}</div>
+					{/if}
+					{#if contrat.prochaine_visite}<div>
+							<span class="detail-label">Prochaine visite</span><span
+								style="color:var(--color-primary);font-weight:600"
+								>🗓 {fmtDateShort(contrat.prochaine_visite)}</span
 							>
-								<a href={documentsApi.downloadUrl(doc.id)} target="_blank"
-									>📎 {doc.titre || doc.fichier_nom}</a
-								>
-								<span style="font-size:.75rem;color:var(--color-text-muted)"
-									>{fmtDateShort(doc.publie_le)}</span
-								>
-								{#if peutModifier}
-									<button
-										class="btn-icon-danger"
-										aria-label="Supprimer"
-										title="Supprimer"
-										style="margin-left:auto"
-										on:click|stopPropagation={() => onSupprimerDoc(contrat.id, doc.id)}>🗑️</button
-									>
-								{/if}
-							</div>
-						{/each}
-					{:else}
-						<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
+						</div>{/if}
+				</div>
+			</div>
+			{#if contrat.notes}
+				<div class="contrat-section">
+					<div
+						class="contrat-section-title clickable"
+						role="button"
+						tabindex="0"
+						on:click|stopPropagation={() => (notesOuvertes = !notesOuvertes)}
+						on:keydown|stopPropagation={(e) =>
+							(e.key === 'Enter' || e.key === ' ') && (notesOuvertes = !notesOuvertes)}
+					>
+						Synthèse du ou des contrats {notesOuvertes ? '▲' : '▼'}
+					</div>
+					{#if notesOuvertes}
+						<div class="rich-content" style="font-size:.875rem">
+							{@html safeHtml(contrat.notes)}
+						</div>
 					{/if}
 				</div>
-				{#if peutModifier}
-					<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
-						<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
-						      seul onglet Visites : retirer cet onglet sans porter le geste
-						      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
-						      saisir, alors que la fiche et le reporting continuaient d'en
-						      afficher la moyenne. Un affichage sans son geste de saisie ne
-						      se voit pas — rien ne lève, la note reste simplement à jamais
-						      celle d'hier (#603).
-						      Sans intervenant, il n'y a personne à noter : le bouton
-						      n'apparaît pas plutôt que d'ouvrir une modale sans cible. -->
-						{#if contrat.prestataire_id}
-							<button
-								class="btn btn-sm btn-outline contrat-noter"
-								on:click|stopPropagation={() => onNoter(contrat.prestataire_id, contrat.id)}
-								>⭐ Noter</button
+			{/if}
+			<div class="contrat-section">
+				<div class="contrat-section-title">
+					📄 Documents ({documents?.length ?? 0})
+				</div>
+				{#if documents?.length > 0}
+					{#each documents as doc (doc.id)}
+						<div
+							style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap"
+						>
+							<a href={documentsApi.downloadUrl(doc.id)} target="_blank"
+								>📎 {doc.titre || doc.fichier_nom}</a
 							>
-						{/if}
-					</div>
+							<span style="font-size:.75rem;color:var(--color-text-muted)"
+								>{fmtDateShort(doc.publie_le)}</span
+							>
+							{#if peutModifier}
+								<button
+									class="btn-icon-danger"
+									aria-label="Supprimer"
+									title="Supprimer"
+									style="margin-left:auto"
+									on:click|stopPropagation={() => onSupprimerDoc(contrat.id, doc.id)}>🗑️</button
+								>
+							{/if}
+						</div>
+					{/each}
+				{:else}
+					<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
 				{/if}
 			</div>
-		{/if}
-	</div>
-{/if}
+			{#if peutModifier}
+				<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
+					<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
+					      seul onglet Visites : retirer cet onglet sans porter le geste
+					      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
+					      saisir, alors que la fiche et le reporting continuaient d'en
+					      afficher la moyenne. Un affichage sans son geste de saisie ne
+					      se voit pas — rien ne lève, la note reste simplement à jamais
+					      celle d'hier (#603).
+					      Sans intervenant, il n'y a personne à noter : le bouton
+					      n'apparaît pas plutôt que d'ouvrir une modale sans cible. -->
+					{#if contrat.prestataire_id}
+						<button
+							class="btn btn-sm btn-outline contrat-noter"
+							on:click|stopPropagation={() => onNoter(contrat.prestataire_id, contrat.id)}
+							>⭐ Noter</button
+						>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	{/if}
+</div>
 
 <style>
 	/*  Ces règles ont SUIVI le balisage (10/09/2026). Svelte scope les styles au
