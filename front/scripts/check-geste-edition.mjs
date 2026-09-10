@@ -122,8 +122,6 @@ const MODALES = {
 		'saisie du RETOUR d’un objet remis — une ligne de tableau, donc une correction en place. #889',
 	'lib/components/ModaleAccesBail.svelte':
 		'ce n’est PAS la correction d’un objet de liste mais un sous-écran entier (accès Vigik et télécommandes d’un bail, plusieurs listes et plusieurs gestes). À trancher devant l’écran. #889',
-	'lib/components/OngletModelesEmail.svelte':
-		'correction d’un modèle de la liste — le cas le plus net. #889',
 	'routes/(app)/admin/+page.svelte':
 		'deux fenêtres : accueil du nouvel arrivant, et validation d’un compte. Ce sont des GESTES sur un objet de liste, pas des corrections — l’arbitrage reste à rendre. #889',
 	'routes/(app)/espace-cs/+page.svelte':

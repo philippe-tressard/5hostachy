@@ -31,7 +31,8 @@
   `{{ ["civilite" }}`. Recopier le geste aurait recopié le défaut.
 -->
 <script lang="ts">
-	import Modale from '$lib/components/Modale.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { onMount } from 'svelte';
 	import { admin as adminApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -259,110 +260,132 @@
 							{:else}<span class="badge badge-gray">Non</span>{/if}
 						</td>
 						<td>
+							<!--  Le mode se lit sur l'icône qui a ouvert la boîte
+							      (`ux-patterns` §13 bis), et le second clic la referme. -->
 							<button
 								class="btn-icon-edit"
 								aria-label="Modifier ce modèle"
 								title="Modifier"
-								on:click={() => openEmailEdit(tpl)}>✏️</button
+								aria-pressed={emailEdit?.code === tpl.code}
+								on:click={() =>
+									emailEdit?.code === tpl.code ? (emailEdit = null) : openEmailEdit(tpl)}
+								>&#x270F;&#xFE0F;</button
 							>
 						</td>
 					</tr>
+					{#if emailEdit?.code === tpl.code}
+						<!--  🔴 LA CORRECTION S'OUVRE SOUS LA LIGNE DU MODÈLE (10/09/2026, #889).
+
+						      C'était une `<Modale edition>` : une fenêtre qui sortait le modèle
+						      de son tableau. `ux-patterns` §14 ter — la boîte s'ouvre là où est
+						      le geste, et le geste est le crayon de cette ligne.
+
+						      ⚠️ Dans un TABLEAU, « à la place du corps » se rend par une rangée
+						      qui couvre toutes les colonnes : la ligne du modèle reste lisible
+						      au-dessus, comme l'en-tête d'une carte reste au-dessus de son
+						      formulaire. Un `<div>` glissé entre deux `<tr>` serait sorti du
+						      tableau par le navigateur — le balisage d'un tableau n'admet que
+						      des rangées. -->
+						<tr class="ligne-edition">
+							<td colspan="6">
+								<FormulaireCreation titre="Modifier le modèle {tpl.code}" encadre={false}>
+									<div style="display:flex;flex-direction:column;gap:.6rem">
+										<div class="field">
+											<label for="email-sujet">Sujet</label>
+											<input
+												id="email-sujet"
+												type="text"
+												bind:value={emailSujet}
+												style="font-family:monospace"
+											/>
+										</div>
+										<div class="field">
+											<label for="email-intention"
+												>Intention — ce que le message attend du destinataire</label
+											>
+											<select id="email-intention" bind:value={emailIntention}>
+												{#each INTENTIONS as i (i.valeur)}<option value={i.valeur}>{i.label}</option
+													>{/each}
+											</select>
+											<span class="aide"
+												>Affichée en bandeau au-dessus du corps, pour que le lecteur sache d'emblée
+												s'il doit agir. « Aucun bandeau » n'affiche rien.</span
+											>
+										</div>
+										<div class="field">
+											<div style="display:flex;align-items:center;justify-content:space-between">
+												<label for="email-corps-html">Corps HTML</label>
+												<button
+													class="btn btn-outline btn-sm"
+													type="button"
+													on:click={() => (emailApercu = !emailApercu)}
+												>
+													{emailApercu ? '✏️ Code' : '👁️ Aperçu'}
+												</button>
+											</div>
+											{#if emailApercu}
+												<div class="apercu-email">{@html safeHtml(emailCorpsHtml)}</div>
+											{:else}
+												<textarea
+													id="email-corps-html"
+													rows="10"
+													bind:value={emailCorpsHtml}
+													style="font-family:monospace;resize:vertical"></textarea>
+											{/if}
+										</div>
+										<!--  🔴 « Corps texte (fallback) » a été RETIRÉ le 08/09/2026, sur
+				      arbitrage. Il était stocké, affiché, modifiable — et envoyé
+				      NULLE PART : aucun code ne lisait `corps_texte`, le gabarit
+				      produit toujours du HTML. On y rédigeait donc un texte que
+				      personne ne recevait, et celui de `nouvel_arrivant_bal`
+				      contredisait son propre HTML sans conséquence visible.
+
+				      La colonne reste en base — quatre migrations l'écrivent — mais
+				      l'écran ne la montre plus et le PATCH ne l'envoie plus : la
+				      laisser dans la charge utile l'aurait écrasée d'une chaîne
+				      vide au premier enregistrement. -->
+										<label class="case">
+											<input type="checkbox" bind:checked={emailActif} />
+											Actif
+										</label>
+										{#if tpl.variables_disponibles}
+											<p class="variables-modele">
+												<strong>Variables disponibles :</strong>
+												{#each variablesDeModele(tpl.variables_disponibles) as v (v)}
+													<code>{`{{ ${v} }}`}</code>
+												{/each}
+											</p>
+										{/if}
+									</div>
+									<!--  « Par défaut » n'est PAS une soumission : c'est un geste à
+									      part, qui remet le modèle au texte livré. Il ne rejoint donc
+									      pas la paire Annuler / Enregistrer, que `PiedFormulaire`
+									      porte seule (`lint:pied-formulaire`). -->
+									<div class="remise-defaut">
+										<button
+											class="btn btn-outline btn-sm"
+											type="button"
+											on:click={resetCeModele}
+											disabled={emailSaving || emailResetOne}
+											title="Remettre ce modèle au texte livré avec l’application"
+										>
+											{emailResetOne ? 'Remise par défaut…' : '↩️ Par défaut'}
+										</button>
+									</div>
+									<PiedFormulaire
+										enCours={emailSaving}
+										soumission={false}
+										on:annule={() => (emailEdit = null)}
+										on:enregistre={saveEmailEdit}
+									/>
+								</FormulaireCreation>
+							</td>
+						</tr>
+					{/if}
 				{/each}
 			</tbody>
 		</table>
 	</div>
-{/if}
-
-<!-- Modal édition modèle e-mail -->
-{#if emailEdit}
-	<Modale
-		edition
-		titre={`Modifier le modèle ${emailEdit.code}`}
-		classeBoite="modal-box card"
-		styleBoite="max-width:680px"
-		on:fermer={() => (emailEdit = null)}
-	>
-		<svelte:fragment slot="titre"
-			>Modifier le modèle — <code style="font-size:.85rem">{emailEdit.code}</code></svelte:fragment
-		>
-		<div style="display:flex;flex-direction:column;gap:.6rem">
-			<div class="field">
-				<label for="email-sujet">Sujet</label>
-				<input id="email-sujet" type="text" bind:value={emailSujet} style="font-family:monospace" />
-			</div>
-			<div class="field">
-				<label for="email-intention">Intention — ce que le message attend du destinataire</label>
-				<select id="email-intention" bind:value={emailIntention}>
-					{#each INTENTIONS as i (i.valeur)}<option value={i.valeur}>{i.label}</option>{/each}
-				</select>
-				<span class="aide"
-					>Affichée en bandeau au-dessus du corps, pour que le lecteur sache d'emblée s'il doit
-					agir. « Aucun bandeau » n'affiche rien.</span
-				>
-			</div>
-			<div class="field">
-				<div style="display:flex;align-items:center;justify-content:space-between">
-					<label for="email-corps-html">Corps HTML</label>
-					<button
-						class="btn btn-outline btn-sm"
-						type="button"
-						on:click={() => (emailApercu = !emailApercu)}
-					>
-						{emailApercu ? '✏️ Code' : '👁️ Aperçu'}
-					</button>
-				</div>
-				{#if emailApercu}
-					<div class="apercu-email">{@html safeHtml(emailCorpsHtml)}</div>
-				{:else}
-					<textarea
-						id="email-corps-html"
-						rows="10"
-						bind:value={emailCorpsHtml}
-						style="font-family:monospace;resize:vertical"></textarea>
-				{/if}
-			</div>
-			<!--  🔴 « Corps texte (fallback) » a été RETIRÉ le 08/09/2026, sur
-			      arbitrage. Il était stocké, affiché, modifiable — et envoyé
-			      NULLE PART : aucun code ne lisait `corps_texte`, le gabarit
-			      produit toujours du HTML. On y rédigeait donc un texte que
-			      personne ne recevait, et celui de `nouvel_arrivant_bal`
-			      contredisait son propre HTML sans conséquence visible.
-
-			      La colonne reste en base — quatre migrations l'écrivent — mais
-			      l'écran ne la montre plus et le PATCH ne l'envoie plus : la
-			      laisser dans la charge utile l'aurait écrasée d'une chaîne
-			      vide au premier enregistrement. -->
-			<label class="case">
-				<input type="checkbox" bind:checked={emailActif} />
-				Actif
-			</label>
-			{#if emailEdit.variables_disponibles}
-				<p class="variables-modele">
-					<strong>Variables disponibles :</strong>
-					{#each variablesDeModele(emailEdit.variables_disponibles) as v (v)}
-						<code>{`{{ ${v} }}`}</code>
-					{/each}
-				</p>
-			{/if}
-		</div>
-		<div class="modal-footer">
-			<button
-				class="btn btn-outline"
-				type="button"
-				on:click={resetCeModele}
-				disabled={emailSaving || emailResetOne}
-				title="Remettre ce modèle au texte livré avec l’application"
-			>
-				{emailResetOne ? 'Remise par défaut…' : '↩️ Par défaut'}
-			</button>
-			<button class="btn btn-outline" on:click={() => (emailEdit = null)} disabled={emailSaving}
-				>Annuler</button
-			>
-			<button class="btn btn-primary" on:click={saveEmailEdit} disabled={emailSaving}>
-				{emailSaving ? 'Enregistrement…' : 'Enregistrer'}
-			</button>
-		</div>
-	</Modale>
 {/if}
 
 <!-- Historique des emails envoyés -->
@@ -415,6 +438,18 @@
 {/if}
 
 <style>
+	/*  La rangée qui porte le formulaire — elle appartient au tableau, et se
+	    distingue de la ligne du modèle sans devenir une carte. */
+	.ligne-edition > td {
+		background: var(--color-primary-light);
+		padding: 0.75rem;
+	}
+	.remise-defaut {
+		display: flex;
+		justify-content: flex-start;
+		margin-top: 0.25rem;
+	}
+
 	/*  Même cause que la télémétrie : ces règles étaient restées dans la page à
 	    l'extraction. Le style part AVEC le balisage — `lint:classes-nues`. */
 	.apercu-email {
