@@ -102,6 +102,30 @@ export const PAGES: PageDef[] = [
 		navLabel: 'Résidence',
 		icone: 'building-2',
 		descriptif: 'Informations, plans et documents de la copropriété.',
+		//  🔴 Cette page n'avait AUCUN onglet jusqu'au 10/09/2026. En créer la
+		//  transforme : la fiche devient « Fiche », et c'est elle qui s'ouvre par
+		//  défaut — l'onglet initial porte le nom de l'écran (`ux-patterns` §4 ter).
+		//
+		//  Le carnet est rangé ICI et non sous Prestataires, bien que la moitié de
+		//  ses données en vienne : une entrée de menu doit contenir ce qu'elle
+		//  nomme, et personne ne cherche l'histoire de son immeuble sous
+		//  « Prestataires ». Adresse IMBRIQUÉE, parce que le carnet est une VUE de
+		//  la résidence et non un contenu autonome (`ux-patterns` §4).
+		onglets: [
+			{
+				id: 'fiche',
+				route: '/residence',
+				label: '\u{1F3E2} Fiche',
+				descriptif: 'Informations, plans et documents de la copropriété.',
+			},
+			{
+				id: 'carnet',
+				route: '/residence/carnet',
+				label: '\u{1F4D2} Carnet d’entretien',
+				descriptif:
+					'Ce qui a été entretenu, réparé et contrôlé dans la résidence — et ce qui ne l’a pas été.',
+			},
+		],
 	},
 	{
 		id: 'mon-lot',

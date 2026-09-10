@@ -27,6 +27,37 @@ export type ContratCandidat = {
 	actif: boolean;
 };
 
+/**  Une entrée du carnet d'entretien — un fait daté qui concerne le bâti.
+ *
+ *   `equipement` porte la VALEUR de `TypeEquipement` (`'ascenseur'`), pas son
+ *   libellé : celui-ci vient d'`EQUIPEMENTS` (`$lib/prestataires`), qui est déjà
+ *   la table unique et que `test_types_equipement.py` compare au serveur.
+ */
+export interface EntreeCarnet {
+	date: string;
+	libelle: string;
+	origine: 'contrat' | 'intervention' | 'incident';
+	detail: string;
+	equipement: string | null;
+	batiment_id: number | null;
+	lien: string;
+	alerte: string | null;
+}
+
+export interface Carnet {
+	entrees: EntreeCarnet[];
+	batiments: { id: number; nom: string }[];
+	total: number;
+}
+
+/**  Le carnet d'entretien — réservé aux copropriétaires, au CS et à l'admin
+ *   (décret n° 2001-477, arbitré le 10/09/2026). Le droit est tenu par
+ *   `require_proprietaire` côté serveur ; l'écran ne fait que s'y conformer. */
+export const carnet = {
+	lire: (batiment_id?: number) =>
+		api.get<Carnet>(`/carnet-entretien${batiment_id ? `?batiment_id=${batiment_id}` : ''}`),
+};
+
 export const copropriete = {
 	get: () => api.get<any>('/copropriete'),
 	update: (data: unknown) => api.patch<any>('/copropriete', data),

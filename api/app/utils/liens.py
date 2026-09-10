@@ -41,6 +41,10 @@ EMPLACEMENTS: dict[str, str] = {
     "annonce": "/annonces",
     "idee": "/idees",
     "faq": "/faq",
+    #  Un contrat d'entretien : sa fiche vit dans l'onglet Contrats des
+    #  prestataires. Ajouté le 10/09/2026 avec le carnet d'entretien, qui y
+    #  renvoie — fabriquer l'URL à la main aurait échappé à `test_liens_front`.
+    "contrat": "/prestataires/contrats",
     "diag": "/residence",
     "doc": "/residence",
 }
