@@ -8,7 +8,7 @@ import os as _os
 import re as _re
 import traceback as _traceback
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -156,8 +156,36 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(_wa_check, "cron", hour="18-21", minute="*/15", id="whatsapp_scheduled")
 
     # Agrégation télémétrie : chaque nuit à 2h
-    from app.utils.telemetry_aggregation import run_telemetry_aggregation_cron
+    from app.utils.telemetry_aggregation import (
+        rattraper_si_manquee,
+        run_telemetry_aggregation_cron,
+    )
     scheduler.add_job(run_telemetry_aggregation_cron, "cron", hour=2, minute=0, id="telemetry_aggregation")
+
+    #  🔴 LE RATTRAPAGE, et il ne concerne pas que la télémétrie (#876).
+    #
+    #  Un `cron` d'APScheduler tient ses jobs en MÉMOIRE : un créneau franchi
+    #  pendant un arrêt n'est pas rejoué, et le prochain se calcule à partir de
+    #  l'instant d'ajout. Le 10/09/2026, un déploiement a redémarré la pile et le
+    #  planificateur est reparti à 02:00:13 — treize secondes après le créneau.
+    #  L'agrégation du jour n'a pas eu lieu.
+    #
+    #  Ce n'était pas un hasard : `auto-deploy.sh` tourne toutes les 5 minutes, et
+    #  `bascule.sh` redémarre la pile à 02:00 PRÉCISES en cron root. La collision
+    #  est structurelle.
+    #
+    #  Le rattrapage interroge le FAIT — quand la dernière agrégation a-t-elle
+    #  réussi ? — et non l'horaire : la même réponse couvre la mise en production,
+    #  la bascule, la coupure de courant et la panne.
+    #
+    #  ⚠️ Différé d'une minute : le démarrage doit rendre la main à Caddy avant
+    #  qu'une agrégation ne mobilise la base, et le healthcheck n'attend pas.
+    scheduler.add_job(
+        rattraper_si_manquee,
+        "date",
+        run_date=datetime.now() + timedelta(minutes=1),
+        id="telemetry_rattrapage",
+    )
 
     # Contrôle santé quotidien : WhatsApp, sauvegardes, disque (06h00)
     from app.utils.health_monitor import run_health_check
