@@ -25,7 +25,6 @@ class UserCreate(BaseModel):
     password: str
     statut: StatutUtilisateur = StatutUtilisateur.copropriétaire_résident
     consentement_rgpd: bool
-    consentement_communications: bool = False
     batiment_id: Optional[int] = None
     #  Facultatif : personne n'a à donner son étage pour créer un compte.
     etage: Optional[int] = None

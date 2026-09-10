@@ -126,7 +126,6 @@ class Utilisateur(SQLModel, table=True):
     societe: Optional[str] = None
     fonction: Optional[str] = None
     consentement_rgpd: bool = False
-    consentement_communications: bool = False
     opt_out_telemetrie: bool = Field(default=False)
     communaute_interdit: bool = Field(default=False)  # ban permanent (2e infraction)
     communaute_ban_count: int = Field(default=0)  # 0=jamais banni, 1=1er ban, 2+=permanent

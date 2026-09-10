@@ -54,12 +54,14 @@ MODELE = APP / "models" / "core.py"
 #: des dérogations : chacune est une donnée qu'on demande à quelqu'un sans s'en
 #: servir. Le second test échoue si l'une d'elles se met à être lue — une dette
 #: qui ne sert plus fait croire que la règle est plus poreuse qu'elle ne l'est.
-DETTES = {
-    "consentement_communications":
-        "#873 — recueilli à l'inscription, lu par personne, non retirable "
-        "(RGPD art. 7.3). Deux options en attente d'arbitrage : initialiser les "
-        "préférences de notification, ou retirer la case.",
-}
+#:
+#: 🔴 **Ce dictionnaire est VIDE depuis le 10/09/2026, et c'est le but.** Il en a
+#: porté exactement une, `consentement_communications`, le temps que l'arbitrage
+#: soit rendu (#873) : la case a été retirée de l'inscription, la colonne
+#: supprimée par la migration 0187, et son refus enfin honoré pour les comptes
+#: existants. Une dette déclarée est une dette datée — celle-ci a vécu douze
+#: heures.
+DETTES: dict[str, str] = {}
 
 #: Colonnes dont l'absence de lecture est NORMALE et le restera.
 #:
@@ -182,7 +184,11 @@ def test_le_controle_regarde_bien_quelque_chose():
     """
     colonnes = _colonnes_utilisateur()
     assert len(colonnes) > 20, f"seulement {len(colonnes)} colonne(s) trouvée(s) — extraction cassée"
-    assert "consentement_communications" in colonnes
+    #  Deux colonnes témoins, choisies parce qu'elles ne disparaîtront pas : le
+    #  cas zéro doit échouer si l'extraction casse, et il ne peut pas s'appuyer
+    #  sur une colonne qu'un lot supprimera — c'est ce qui vient d'arriver à
+    #  `consentement_communications`, qui servait ici de témoin (10/09/2026).
+    assert "email" in colonnes
     assert "etage" in colonnes
 
 

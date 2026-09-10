@@ -81,11 +81,19 @@ const EXCEPTIONS = {
  * d'échappatoire non plus. Une occasion légitime se déclare ici.
  */
 const OPTIONNEL_LEGITIME = {
-	'routes/auth/inscription/+page.svelte':
-		"🔴 CONSENTEMENT RGPD. « J'accepte de recevoir les notifications … (optionnel) » — " +
-		"la mention distingue le consentement FACULTATIF de l'acceptation obligatoire des " +
-		'CGU juste au-dessus. Sa valeur est juridique, pas ergonomique : un consentement ' +
-		'doit être libre et éclairé (`standards/14`). Elle ne se retire pas.',
+	//  🔴 L'inscription portait ici la SEULE mention « (optionnel) » du produit,
+	//  déclarée légitime au nom du consentement RGPD : « J'accepte de recevoir les
+	//  notifications … (optionnel) ». La déclaration disait même « elle ne se
+	//  retire pas ».
+	//
+	//  Elle est partie le 10/09/2026 avec la case elle-même (#873) : ce
+	//  consentement était écrit en base et lu par personne, donc la mention
+	//  protégeait la liberté d'un choix qui n'avait aucun effet. Le consentement
+	//  vit désormais dans Profil → Notifications, où il s'exerce vraiment.
+	//
+	//  ⚠️ C'est ce contrôle qui l'a rappelé, en refusant le lot : une exception
+	//  qui ne sert plus fait échouer. Sans lui, la déclaration serait restée à
+	//  justifier une mention absente — et aurait légitimé la prochaine.
 	//  ⚠️ La déclaration a SUIVI le balisage le 01/09/2026, DEUX fois dans le même
 	//  lot : de `mon-lot` vers `FormulaireBail` quand le formulaire de bail est
 	//  parti dans son composant (#672), puis vers `RechercheLocataire` quand la

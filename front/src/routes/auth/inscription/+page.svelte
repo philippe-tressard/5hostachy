@@ -27,7 +27,6 @@
 	let etage: number | null = null;
 	let batiments: { id: number; numero: string }[] = [];
 	let consentement_rgpd = false;
-	let consentement_communications = false;
 	let error = '';
 	let success = false;
 	let loading = false;
@@ -79,7 +78,6 @@
 				//  même convention que `batiment_id` juste au-dessus.
 				etage: showBatiment && etage !== null ? etage : null,
 				consentement_rgpd,
-				consentement_communications,
 				nom_proprietaire: isLocataire ? nom_proprietaire : null,
 				nom_aide: isAidantOrMandataire ? nom_aide : null,
 				prenom_aide: isAidantOrMandataire ? prenom_aide : null,
@@ -311,10 +309,19 @@
 						>*
 					</label>
 
-					<label class="checkbox-field">
-						<input type="checkbox" bind:checked={consentement_communications} />
-						J'accepte de recevoir les notifications de l'application par e-mail (optionnel).
-					</label>
+					<!--  🔴 La case « J'accepte de recevoir les notifications par e-mail »
+					      a été RETIRÉE le 10/09/2026 (#873, arbitrage de Philippe).
+
+					      Elle était écrite en base et lue nulle part : quelqu'un qui la
+					      laissait décochée recevait quand même tous les e-mails de son
+					      bâtiment. On lui demandait son accord, il le refusait, et rien
+					      ne changeait — et il ne pouvait pas non plus le retirer, ce qui
+					      est un défaut de conformité (RGPD art. 7.3).
+
+					      Le consentement se donne et se retire désormais au SEUL endroit
+					      où il s'exerce : Profil → Notifications. Une seule notion, un
+					      seul geste. Ne pas remettre de case ici sans brancher ce
+					      qu'elle promet. -->
 				</div>
 
 				<div class="btn-wrapper">
