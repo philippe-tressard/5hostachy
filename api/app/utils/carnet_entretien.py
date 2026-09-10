@@ -115,6 +115,31 @@ def _jour(valeur) -> Optional[date]:
     return None
 
 
+def _concerne(colonne, batiment_id: Optional[int]):
+    """La condition « ce fait concerne le bâtiment demandé » — ou rien à filtrer.
+
+    🔴 **`== batiment_id` seul était FAUX**, et c'est le défaut signalé à l'écran
+    le 10/09/2026 : cliquer sur un bâtiment vidait le carnet.
+
+    Un contrat de nettoyage, d'espaces verts ou d'assurance porte
+    `batiment_id = NULL` — il couvre la **résidence entière**. Un événement de
+    calendrier vaut `perimetre = "résidence"` par défaut, un ticket aussi. Les
+    exclure d'un bâtiment revenait à n'y garder que ce qui lui est nommément
+    propre, c'est-à-dire presque rien.
+
+    Et c'est faux sur le fond : *l'entretien de la résidence concerne aussi ce
+    bâtiment*. La chaufferie collective et les espaces verts entretiennent le
+    bâtiment 3 autant que son ascenseur.
+
+    ⚠️ Chaque entrée dit ensuite sa **portée** à l'écran (« Toute la résidence »
+    quand elle n'a pas de bâtiment) : sans cela, un contrat de portée générale
+    lu sous un filtre « Bât. 3 » passerait pour propre à ce bâtiment.
+    """
+    if batiment_id is None:
+        return None
+    return (colonne == batiment_id) | (colonne.is_(None))
+
+
 def alerte_visite(echeance: Optional[date], aujourdhui: date) -> Optional[str]:
     """« visite attendue depuis N jours », ou rien.
 
@@ -149,8 +174,9 @@ def _entrees_contrats(session: Session, batiment_id: Optional[int]) -> list[Entr
     échéance d'entretien manquée devient visible.
     """
     requete = select(ContratEntretien).where(ContratEntretien.actif == True)  # noqa: E712
-    if batiment_id is not None:
-        requete = requete.where(ContratEntretien.batiment_id == batiment_id)
+    portee = _concerne(ContratEntretien.batiment_id, batiment_id)
+    if portee is not None:
+        requete = requete.where(portee)
 
     aujourdhui = date.today()
     entrees: list[EntreeCarnet] = []
@@ -181,8 +207,9 @@ def _entrees_contrats(session: Session, batiment_id: Optional[int]) -> list[Entr
 def _entrees_interventions(session: Session, batiment_id: Optional[int]) -> list[EntreeCarnet]:
     """Ce qui a été FAIT — un événement arrivé au bout de son kanban."""
     requete = select(Evenement).where(Evenement.statut_kanban == KANBAN_TERMINE)
-    if batiment_id is not None:
-        requete = requete.where(Evenement.batiment_id == batiment_id)
+    portee = _concerne(Evenement.batiment_id, batiment_id)
+    if portee is not None:
+        requete = requete.where(portee)
 
     entrees: list[EntreeCarnet] = []
     for evenement in session.exec(requete).all():
@@ -224,8 +251,9 @@ def _entrees_incidents(session: Session, batiment_id: Optional[int]) -> list[Ent
         Ticket.statut == StatutTicket.résolu,
         Ticket.ferme_le.isnot(None),
     )
-    if batiment_id is not None:
-        requete = requete.where(Ticket.batiment_id == batiment_id)
+    portee = _concerne(Ticket.batiment_id, batiment_id)
+    if portee is not None:
+        requete = requete.where(portee)
 
     entrees: list[EntreeCarnet] = []
     for ticket in session.exec(requete).all():
