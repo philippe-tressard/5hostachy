@@ -67,19 +67,22 @@
 </script>
 
 <div class="ajout-doc">
-	<input
-		type="text"
-		placeholder="Titre"
-		aria-label="Titre du document"
-		bind:value={titre}
-		class="ajout-doc-titre"
-	/>
+	<!--  🔴 Le champ de libellé n'est PLUS écrit ici (11/09/2026) : il est porté
+	      par `FichiersUpload`, le composant unique de dépôt. Cet écran en avait sa
+	      propre version — un `<input>` nu, hors de tout `.field` — quand les
+	      tickets n'en avaient aucune. Deux gestes pour une même chose, dont un
+	      seul existait.
+
+	      La règle du repli (« le libellé, sinon le nom du fichier ») a suivi le
+	      champ : elle est remontée d'un cran, elle n'a pas été recopiée. -->
 	<FichiersUpload
 		{id}
 		mode="documents"
 		differe
 		max={1}
 		label="Choisir un document"
+		avecLibelle
+		bind:libelleFichier={titre}
 		bind:fichiers
 		disabled={envoi}
 	/>
@@ -94,19 +97,15 @@
 	/*  Le style vit AVEC le balisage : les deux copies portaient leurs règles en
 	    ligne (`style="display:flex;gap:.4rem;…"`), donc rien n'empêchait l'une de
 	    changer sans l'autre. C'est la leçon de `Pastille.svelte`. */
+	/*  ⚠️ `flex-start` et non `center` (11/09/2026) : le libellé a rejoint
+	    `FichiersUpload`, qui l'empile AU-DESSUS de son bouton. Un alignement
+	    centré ferait flotter le bouton « + Document » au milieu de cette colonne,
+	    au lieu de rester sur la ligne du bouton de choix. */
 	.ajout-doc {
 		display: flex;
 		gap: 0.4rem;
 		flex-wrap: wrap;
-		align-items: center;
+		align-items: flex-start;
 		margin-top: 0.5rem;
-	}
-	/*  `flex-wrap` + `min-width` : sur téléphone les trois éléments passent à la
-	    ligne au lieu de déborder — le titre garde une largeur utilisable
-	    (`standards/11` §10). */
-	.ajout-doc-titre {
-		font-size: 0.82rem;
-		flex: 1;
-		min-width: 110px;
 	}
 </style>

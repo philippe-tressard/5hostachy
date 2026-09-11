@@ -54,6 +54,22 @@ const MOTIFS = [
 		regex: /accept\s*=\s*["'][^"']*application\/pdf[^"']*["']/,
 		message: 'liste accept en dur — utiliser ACCEPT_DOCUMENTS / ACCEPT_FICHIERS',
 	},
+	{
+		//  🔴 Le champ qui NOMME un document déposé, signalé à l'écran le
+		//  11/09/2026 : les contrats en portaient un, écrit à la main juste avant
+		//  leur bouton d'ajout ; les tickets n'en avaient aucun. Deux gestes pour
+		//  une même chose, dont un seul existait.
+		//
+		//  Il vit désormais dans `FichiersUpload` (`avecLibelle`), comme le reste
+		//  du dépôt de fichier. Ce motif attrape la tentation de le réécrire à
+		//  côté : un champ de titre collé au composant de dépôt.
+		//
+		//  ⚠️ Il vise le LIBELLÉ du fichier, pas tout champ nommé « titre » : la
+		//  condition est la proximité d'un `aria-label`/`placeholder` de titre de
+		//  document. Un titre d'actualité ou de ticket n'est pas concerné.
+		regex: /(?:placeholder|aria-label)\s*=\s*["'][^"']*[Tt]itre du document[^"']*["']/,
+		message: 'champ de libellé de document réécrit — employer `avecLibelle` sur FichiersUpload',
+	},
 ];
 
 const estCommentaire = (l) => {
