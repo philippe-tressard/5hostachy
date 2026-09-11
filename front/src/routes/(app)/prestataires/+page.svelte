@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { nomAffiche } from '$lib/noms';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import CarteContrat from '$lib/components/CarteContrat.svelte';
+	import ChampsPrestataire from '$lib/components/ChampsPrestataire.svelte';
+	import CartePrestataire from '$lib/components/CartePrestataire.svelte';
 	import OngletConsommations from '$lib/components/OngletConsommations.svelte';
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
 	import Modale from '$lib/components/Modale.svelte';
@@ -25,17 +26,13 @@
 	import {
 		EQUIPEMENTS as equipements,
 		TYPES_PRESTATAIRE as typesPrestataire,
-		equipLabel,
 	} from '$lib/prestataires';
-	import { fmtDateShort } from '$lib/date';
 	import { minuitDuJour, typeEquipementDuContrat } from '$lib/reporting';
 	import { relire, telephonesDe } from '$lib/utils';
 	import { trackTabView } from '$lib/telemetry';
 	import { goto } from '$app/navigation';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
-	import BoutonLien from '$lib/components/BoutonLien.svelte';
-	import NotationsPrestataire from '$lib/components/NotationsPrestataire.svelte';
 	import { routeOnglet } from '$lib/routes-onglets';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
@@ -325,9 +322,12 @@
 		}
 		if (prestContacts.length === 0)
 			prestContacts = [{ telephone: '', prenom: '', nom: '', fonction: '', email: '' }];
+		//  🔴 On n'ouvre PAS le formulaire de tête, et on ne fait PAS défiler : la
+		//  correction s'ouvre dans la carte du prestataire, là où est le crayon
+		//  (`CartePrestataire`). Ce `scrollTo` était la cause exacte du symptôme
+		//  signalé le 11/09/2026 — la page remontait, et l'objet corrigé quittait
+		//  sa place sous les yeux.
 		editPrestId = p.id;
-		showPrestForm = true;
-		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
 	async function savePrest() {
@@ -541,6 +541,9 @@
 				libelle="Nouveau prestataire"
 				on:basculer={() => {
 					showPrestForm = !showPrestForm;
+					//  Ouvrir la création referme une correction en cours : deux boîtes
+					//  ouvertes en même temps, c'est le défaut des contrats du 10/09.
+					if (showPrestForm) editPrestId = null;
 					if (!showPrestForm) resetPrestForm();
 				}}
 			/>
@@ -700,101 +703,15 @@
 		libelle="Filtrer par équipement"
 	/>
 
+	<!--  🔴 La CRÉATION seulement. Corriger un prestataire ouvre le formulaire DANS
+	      sa carte, à la place de son corps — le motif des tickets, appliqué aux
+	      contrats le 10/09/2026 et signalé ici le 11/09 : le crayon est dans la
+	      carte, la boîte s'ouvrait en tête de liste.
+	      Aucune `cle` : rien n'a bougé, il n'y a rien à ramener à l'écran. -->
 	{#if $isCS && showPrestForm}
-		<FormulaireCreation
-			cle={editPrestId}
-			titre={editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}
-		>
+		<FormulaireCreation titre="Nouveau prestataire">
 			<form on:submit|preventDefault={savePrest}>
-				<div>
-					<div class="form-grid">
-						<label class="field">Nom *<input bind:value={prestForm.nom} required /></label>
-						<!--  🔴 Six entrées portant chacune une description : c'est le cas
-						      qui a fait donner un sous-texte à `Pastille` (#491, seuil arbitré
-						      à 6). Le FILTRE de cette même liste la montre depuis le 29/08 —
-						      le formulaire, lui, gardait un `<select>` où la description ne
-						      s'affichait nulle part. Deux rendus du même objet, et c'est
-						      celui qui sert à CHOISIR qui perdait ce qui aide à choisir.
-						      `champ-large` : dix pastilles à sous-texte dans une colonne de
-						      grille s'empileraient une par ligne (`ux-patterns` §9 bis). -->
-						<ChoixPastilles
-							options={typesPrestataire}
-							bind:valeur={prestForm.type_prestataire}
-							tous={false}
-							libelle="Type"
-							libelleVisible
-							requis
-							avecDetail
-						/>
-						<label class="field"
-							>Spécialité *
-							<select bind:value={prestForm.specialite} required>
-								<option value="">— Sélectionner —</option>
-								{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-							</select>
-						</label>
-						<label class="field">Email<input type="email" bind:value={prestForm.email} /></label>
-					</div>
-					<div style="margin-top:.75rem">
-						<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">
-							Contact{prestContacts.length > 1 ? 's' : ''}
-						</div>
-						{#each prestContacts as _contact, i (_contact)}
-							<div
-								style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)"
-							>
-								<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.35rem">
-									<input
-										style="flex:2;min-width:140px"
-										bind:value={prestContacts[i].telephone}
-										placeholder="Téléphone *"
-									/>
-									<input
-										style="flex:1;min-width:100px"
-										bind:value={prestContacts[i].prenom}
-										placeholder="Prénom"
-									/>
-									<input
-										style="flex:1;min-width:100px"
-										bind:value={prestContacts[i].nom}
-										placeholder="Nom"
-									/>
-								</div>
-								<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
-									<input
-										style="flex:1;min-width:120px"
-										bind:value={prestContacts[i].fonction}
-										placeholder="Fonction"
-									/>
-									<input
-										style="flex:1;min-width:140px"
-										type="email"
-										bind:value={prestContacts[i].email}
-										placeholder="Email"
-									/>
-									{#if prestContacts.length > 1}
-										<button
-											type="button"
-											class="btn btn-sm btn-outline"
-											style="color:#dc2626;border-color:#dc2626;flex-shrink:0"
-											on:click={() => (prestContacts = prestContacts.filter((_, j) => j !== i))}
-											>−</button
-										>
-									{/if}
-								</div>
-							</div>
-						{/each}
-						<button
-							type="button"
-							class="btn btn-sm btn-outline"
-							on:click={() =>
-								(prestContacts = [
-									...prestContacts,
-									{ telephone: '', prenom: '', nom: '', fonction: '', email: '' },
-								])}>+ Nouveau contact</button
-						>
-					</div>
-				</div>
+				<ChampsPrestataire bind:prestForm bind:prestContacts {typesPrestataire} {equipements} />
 				<PiedFormulaire
 					enCours={submitting}
 					on:annule={() => {
@@ -822,105 +739,32 @@
 				{@const expanded = expandedPrests.has(p.id)}
 				{@const cs = contratsForPrest(p.id)}
 				{@const nextVisit = nextVisitForPrest(p.id)}
-				<div class="carte-liste" class:expanded id="presta-{p.id}">
-					<div
-						class="prest-header"
-						role="button"
-						tabindex="0"
-						on:click={() => togglePrest(p.id)}
-						on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && togglePrest(p.id)}
-					>
-						<div class="prest-main">
-							<strong class="prest-nom">{p.nom}</strong>
-							<span class="badge badge-type" style="margin-left:.5rem"
-								>{typeLabel(p.type_prestataire)}</span
-							>
-							<span class="badge badge-blue" style="margin-left:.25rem"
-								>{equipLabel(p.specialite)}</span
-							>
-							<NotationsPrestataire
-								resume
-								notations={notations.filter((n) => n.prestataire_id === p.id)}
-							/>
-						</div>
-						{#if !compactPrests || expanded}
-							<div class="prest-contacts">
-								{#if p.contacts && p.contacts.length > 0}
-									{#each p.contacts as c (c.id ?? c)}
-										<span class="prest-contact">
-											📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
-													c,
-												)}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
-										</span>
-									{/each}
-								{:else if p.telephone}
-									{#each telephonesDe(p.telephone) as tel (tel)}
-										<span class="prest-contact">📞 {tel.trim()}</span>
-									{/each}
-								{/if}
-								{#if p.email}<span class="prest-contact">✉️ {p.email}</span>{/if}
-							</div>
-						{/if}
-						<div class="prest-meta">
-							{#if !compactPrests || expanded}
-								<span class="badge badge-gray">{cs.length} contrat{cs.length !== 1 ? 's' : ''}</span
-								>
-								{#if nextVisit}<span
-										class="badge"
-										style="font-size:.75rem;color:var(--color-primary)"
-										>🗓 {fmtDateShort(nextVisit)}</span
-									>{/if}
-							{/if}
-							<BoutonLien ancre="presta-{p.id}" quoi="la fiche prestataire" />
-							{#if $isCS}
-								<button
-									class="btn-icon-edit"
-									aria-label="Modifier"
-									title="Modifier"
-									on:click|stopPropagation={() => startEditPrest(p)}>✏️</button
-								>
-								<button
-									class="btn-icon-danger"
-									aria-label="Archiver"
-									title="Archiver"
-									on:click|stopPropagation={() => deletePrest(p.id)}>🗑️</button
-								>
-							{/if}
-							<span class="toggle-arrow">{expanded ? '▲' : '▼'}</span>
-						</div>
-					</div>
-					{#if expanded}
-						<div class="prest-body">
-							<div class="detail-grid">
-								{#if p.telephone}
-									<div>
-										<span class="detail-label">Téléphone</span>
-										{#each telephonesDe(p.telephone) as tel (tel)}
-											<span style="display:block">📞 {tel.trim()}</span>
-										{/each}
-									</div>
-								{/if}
-								{#if p.email}<div><span class="detail-label">Email</span>✉️ {p.email}</div>{/if}
-								<div><span class="detail-label">Contrats</span>{cs.length}</div>
-								{#if nextVisit}<div>
-										<span class="detail-label">Prochaine visite</span><span
-											style="color:var(--color-primary);font-weight:600"
-											>🗓 {fmtDateShort(nextVisit)}</span
-										>
-									</div>{/if}
-							</div>
-							<!--  Les avis, enfin visibles un par un (#807). L'écran n'en montrait
-							      que la MOYENNE, dans un badge : impossible de savoir qui avait
-							      noté quoi, et donc impossible de retirer une note posée par
-							      erreur — alors que l'endpoint de suppression existait. -->
-							<NotationsPrestataire
-								notations={notations.filter((n) => n.prestataire_id === p.id)}
-								peutSupprimer={$isCS}
-								on:supprimee={(e) => (notations = notations.filter((n) => n.id !== e.detail))}
-							/>
-						</div>
-					{/if}
-				</div>
+				<CartePrestataire
+					{p}
+					{cs}
+					{nextVisit}
+					notations={notations.filter((n) => n.prestataire_id === p.id)}
+					{expanded}
+					{compactPrests}
+					peutModifier={$isCS}
+					{telephonesDe}
+					{typeLabel}
+					{editPrestId}
+					bind:prestForm
+					bind:prestContacts
+					{typesPrestataire}
+					{equipements}
+					{submitting}
+					onBasculer={togglePrest}
+					onModifier={startEditPrest}
+					onArchiver={deletePrest}
+					onAnnuler={() => {
+						showPrestForm = false;
+						resetPrestForm();
+					}}
+					onEnregistrer={savePrest}
+					on:supprimee={(e) => (notations = notations.filter((n) => n.id !== e.detail))}
+				/>
 			{/each}
 		{/each}
 	{/if}
@@ -1023,49 +867,6 @@
 	    boutons, posée sous eux donc hors de la carte (#598). */
 	/*  `.carte-liste` depuis le 28/08/2026 (#598) : la carte combinait `.card`
 	    et en ANNULAIT le remplissage — ce que la norme donne sans annuler. */
-	.prest-header {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.85rem 1rem;
-		cursor: pointer;
-		flex-wrap: wrap;
-	}
-	.prest-main {
-		display: flex;
-		align-items: center;
-		min-width: 160px;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-	}
-	.prest-nom {
-		font-size: 0.95rem;
-	}
-	.badge-type {
-		background: var(--color-bg-secondary, #f0f0f0);
-		color: var(--color-text);
-		font-size: 0.75rem;
-	}
-	.prest-contacts {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem 0.75rem;
-		flex: 1;
-	}
-	.prest-contact {
-		font-size: 0.82rem;
-		color: var(--color-text-muted);
-	}
-	.prest-meta {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		margin-left: auto;
-	}
-	.prest-body {
-		padding: 0.25rem 1rem 1rem 1rem;
-		border-top: 1px solid var(--color-border);
-	}
 
 	/* ── Visites ── */
 
@@ -1094,23 +895,17 @@
 		border-color: var(--color-primary);
 	}
 
-	/*  Contrat expansible — `.carte-liste` depuis le 28/08/2026 (#598). Il en
-	    recomposait la définition avec un espacement, une ombre et un `position`
-	    différents, et l'accent de retard redisait `.carte-liste.urgent`, à un
+	/*  🔴 Ce commentaire n'était PAS FERMÉ, et il ne l'était déjà pas dans `main`
+	    (trouvé le 11/09/2026 en extrayant la carte). Il commençait à « Contrat
+	    expansible », s'interrompait en milieu de phrase, et c'est la marque de
+	    fermeture du commentaire SUIVANT — celui de `.form-grid`, sept lignes plus
+	    bas — qui le refermait. Tout ce qui était entre les deux était donc du CSS
+	    mangé par un commentaire : un sélecteur `.contrats-summary,` en attente d'un
+	    second nom qui n'est jamais venu.
 
-	.contrats-summary,
-
-
-	/*  Seuls la répartition et l'espacement : la peau des contrôles est partie
-	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
-	.form-grid {
-		grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-		gap: 0.65rem;
-	}
-
-	@media (max-width: 600px) {
-		.prest-header {
-			gap: 0.5rem;
-		}
-	}
+	    Retirer `.form-grid` (parti avec son balisage) a rendu le défaut visible en
+	    cassant la compilation. Aucun contrôle ne l'avait vu : `lint:css-orphelin`
+	    lit les sélecteurs QUI COMPILENT, et celui-ci n'en était pas un — il était
+	    du texte. Les débris sont supprimés ici ; `.contrats-summary` garde sa
+	    définition complète plus haut. */
 </style>
