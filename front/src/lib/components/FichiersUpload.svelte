@@ -108,6 +108,26 @@
 	    Ne le surcharger que pour une vraie spécificité d'écran. */
 	export let titre: string | null = null;
 
+	/**  Proposer un LIBELLÉ pour le fichier déposé, au-dessus du bouton.
+	 *
+	 *  🔴 11/09/2026, signalé à l'écran : le dépôt d'un document différait entre
+	 *  les contrats et les tickets. Les contrats portaient un champ « Titre »
+	 *  écrit à la main dans `AjoutDocumentContrat`, les tickets n'en avaient
+	 *  aucun — deux gestes pour une même chose, et un fichier de ticket ne
+	 *  pouvait porter que le nom que son auteur avait donné sur son disque.
+	 *
+	 *  Le champ vit donc ICI, dans le composant unique de dépôt : l'ajouter aux
+	 *  tickets seulement aurait fait une troisième forme. Toute page qui
+	 *  l'active l'obtient au même endroit, avec le même intitulé.
+	 *
+	 *  ⚠️ Optionnel au sens propre : vide, c'est le nom du fichier qui sert. La
+	 *  règle est celle qu'`AjoutDocumentContrat` appliquait déjà
+	 *  (`titre.trim() || fichier.name`) — elle n'est pas inventée ici, elle est
+	 *  remontée d'un cran. */
+	export let avecLibelle = false;
+	/**  Le libellé saisi — à lier avec `bind:` par qui envoie le fichier. */
+	export let libelleFichier = '';
+
 	//  `mode` sert au rendu (vignettes ou liste). Quand il n'est pas donné, le
 	//  libellé se déduit d'`accept` plutôt que du défaut : plusieurs champs de
 	//  PHOTOS ne précisaient pas `mode`, et auraient annoncé « Documents » au-dessus
@@ -189,6 +209,34 @@
 	$: nombre = differe ? fichiers.length : urls.length;
 	$: complet = nombre >= max;
 
+	/**  Le fichier sous le nom que l'auteur lui a donné, extension préservée.
+	 *
+	 *  🔴 Pourquoi renommer plutôt que stocker un libellé à part (11/09/2026) :
+	 *  un document de TICKET n'est pas une entité `Document`, c'est une URL dans
+	 *  une liste. Il n'existe aucun champ où ranger un libellé — en ajouter un
+	 *  demanderait une migration et une structure `{url, libelle}` partout où ces
+	 *  listes sont lues.
+	 *
+	 *  Le nom du fichier, lui, est déjà ce que TOUS les rendus affichent. Le
+	 *  libellé le devient donc, et il est persisté sans que rien d'autre bouge.
+	 *
+	 *  ⚠️ Sans effet en mode différé : là (contrats, actualités), le libellé
+	 *  devient le `titre` d'un vrai `Document`, et c'est l'appelant qui l'envoie.
+	 *  Renommer en plus donnerait deux noms pour un fichier.
+	 *
+	 *  ⚠️ L'assainissement reste côté serveur (`utils/fichiers`, préfixe UUID et
+	 *  caractères filtrés) : le refaire ici serait une seconde règle de nommage,
+	 *  et c'est la sienne qui fait foi. */
+	function renommer(file: File): File {
+		const voulu = libelleFichier.trim();
+		if (!avecLibelle || !voulu) return file;
+		const point = file.name.lastIndexOf('.');
+		const extension = point > 0 ? file.name.slice(point) : '';
+		//  Si l'auteur a écrit l'extension lui-même, ne pas la doubler.
+		const nom = voulu.toLowerCase().endsWith(extension.toLowerCase()) ? voulu : voulu + extension;
+		return new File([file], nom, { type: file.type, lastModified: file.lastModified });
+	}
+
 	async function ajouter(e: Event) {
 		const input = e.target as HTMLInputElement;
 		const choisis = Array.from(input.files ?? []);
@@ -206,8 +254,12 @@
 			// fichier, et un RPi qui reçoit cinq images de 4 Mo en même temps sature
 			// sa mémoire.
 			for (const file of retenus) {
-				urls = [...urls, upload ? await upload(file) : (await fichiersApi.upload(file)).url];
+				const envoye = renommer(file);
+				urls = [...urls, upload ? await upload(envoye) : (await fichiersApi.upload(envoye)).url];
 			}
+			//  Le libellé a servi : le vider évite qu'il s'applique en silence au
+			//  fichier suivant, qui n'a aucune raison de porter le même nom.
+			libelleFichier = '';
 			dispatch('change', urls);
 		} catch (err) {
 			toast('error', err instanceof Error ? err.message : "Erreur lors de l'envoi du document");
@@ -273,6 +325,27 @@
 		</div>
 	{/if}
 
+	{#if !readonly && avecLibelle}
+		<!--  AVANT le bouton, comme demandé : on nomme ce qu'on s'apprête à
+		      déposer, on ne revient pas le nommer après. Dans un `.field`, comme
+		      tout champ libellé du site (`lint:champs`). -->
+		<!--  ⚠️ Pas de « (optionnel) » dans l'intitulé, bien qu'il ait été demandé
+		      ainsi : la règle du produit est que l'absence d'astérisque SUFFIT à
+		      dire qu'un champ est facultatif (`ux-patterns` §9, `lint:champs`).
+		      Neuf libellés portaient les deux vocabulaires le 30/08/2026, et ils
+		      avaient divergé. Le placeholder dit la même chose en plus utile : il
+		      annonce ce qui se passe si l'on ne remplit rien. -->
+		<label class="field champ-moyen fichiers-libelle">
+			Libellé du document
+			<input
+				type="text"
+				bind:value={libelleFichier}
+				disabled={envoi || disabled}
+				placeholder="Sinon, le nom du fichier"
+			/>
+		</label>
+	{/if}
+
 	{#if !readonly}
 		<label
 			class="btn btn-sm btn-outline fichiers-ajout"
@@ -298,6 +371,12 @@
 <style>
 	/*  Mêmes valeurs que `.field label` : l'œil doit lire la même chose qu'un
 	    intitulé de champ ordinaire. */
+	/*  Le champ de libellé prend la largeur disponible et passe à la ligne avant
+	    le bouton sur téléphone : `.champ-moyen` porte la largeur normée, le
+	    `margin-bottom` la respiration qui le sépare du bouton. */
+	.fichiers-libelle {
+		margin-bottom: 0.5rem;
+	}
 	.fichiers-titre {
 		display: block;
 		font-size: 0.875rem;

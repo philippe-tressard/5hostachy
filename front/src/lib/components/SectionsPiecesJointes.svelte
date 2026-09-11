@@ -35,6 +35,10 @@
 	/** Téléversement différé — les fichiers attendent que l'objet existe. */
 	export let documentsDifferes = false;
 	export let documentsFichiers: File[] = [];
+	/**  Le libellé que l'auteur donne au document — vide, c'est le nom du fichier
+	 *   qui sert. L'appelant le lit au moment d'envoyer (même règle de repli que
+	 *   les contrats : `libelle.trim() || fichier.name`). */
+	export let documentsLibelle = '';
 	/**  Le suffixe d'identifiant des documents. ⚠️ Il diffère entre les deux
 	 *   appelants (`-documents` et `-docs`) : le figer casserait le `for` d'un
 	 *   libellé existant, ce que `lint:labels` refuse à juste titre. */
@@ -62,10 +66,16 @@
 			{#if documentsControle === 'slot'}
 				<slot name="documents" />
 			{:else}
+				<!--  `avecLibelle` : le champ que les CONTRATS portaient seuls jusqu'au
+				      11/09/2026, remonté dans `FichiersUpload` et rendu à tous ses
+				      appelants. Un document de ticket ne portait que le nom que son
+				      auteur lui avait donné sur son disque. -->
 				<FichiersUpload
 					id="{idPrefixe}-{idDocuments}"
 					mode="documents"
 					titre=""
+					avecLibelle
+					bind:libelleFichier={documentsLibelle}
 					differe={documentsDifferes}
 					bind:urls={documents}
 					bind:fichiers={documentsFichiers}
