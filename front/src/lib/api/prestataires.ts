@@ -20,6 +20,13 @@ export const prestataires = {
 	update: (id: number, data: unknown) => api.patch<any>(`/prestataires/${id}`, data),
 	delete: (id: number) => api.delete(`/prestataires/${id}`),
 	contrats: () => api.get<any[]>('/prestataires/contrats'),
+	/**  Propose la synthèse d'un contrat — et n'enregistre RIEN.
+	 *
+	 *   🔴 Appelée UNIQUEMENT par l'icône ✨ d'une carte de contrat, cliquée par
+	 *   un membre du conseil syndical. Aucune tâche, aucun automatisme : chaque
+	 *   synthèse est facturée, et chacune doit être voulue. */
+	synthetiserContrat: (id: number) =>
+		api.post<{ synthese: string }>(`/prestataires/contrats/${id}/synthese`, {}),
 	createContrat: (data: unknown) => api.post<any>('/prestataires/contrats', data),
 	updateContrat: (id: number, data: unknown) =>
 		api.patch<any>(`/prestataires/contrats/${id}`, data),

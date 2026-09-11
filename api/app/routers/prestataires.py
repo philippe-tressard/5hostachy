@@ -221,6 +221,14 @@ class ContratRead(BaseModel):
     reconduit: bool = False
     #: Terme passé sans reconduction — un mandat de syndic qui a CESSÉ.
     echu: bool = False
+    #: 🔴 Le geste ✨ est-il proposable sur ce contrat ?
+    #:
+    #: C'est le SERVEUR qui répond, pas l'écran. La disponibilité dépend de la
+    #: configuration de l'assistant — fournisseur actif, clé posée — et un membre
+    #: du conseil syndical n'a aucun accès à cette configuration : lui faire lire
+    #: `GET /config/admin` pour afficher une icône serait ouvrir l'administration
+    #: pour un détail d'affichage (`standards/03` §1).
+    synthese_disponible: bool = False
 
     class Config:
         from_attributes = True
@@ -232,7 +240,57 @@ def list_contrats(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     contrats = session.exec(select(ContratEntretien).where(ContratEntretien.actif == True)).all()
-    return [poser_echeance(ContratRead.model_validate(c), c) for c in contrats]
+    #  ⚠️ La configuration de l'assistant se lit UNE fois, pas par contrat : elle
+    #  est la même pour tous, et la relire à chaque ligne ferait autant d'allers
+    #  en base que de contrats pour une réponse identique.
+    from app.utils.llm import config_llm
+    from app.utils.synthese_contrat import documents_du_contrat
+
+    cfg = config_llm(session)
+    assistant_pret = cfg.actif and bool(cfg.cle)
+
+    lus = []
+    for c in contrats:
+        lu = poser_echeance(ContratRead.model_validate(c), c)
+        lu.synthese_disponible = assistant_pret and (
+            not cfg.envoi_document or bool(documents_du_contrat(session, c))
+        )
+        lus.append(lu)
+    return lus
+
+
+@router.post("/contrats/{c_id}/synthese",
+             summary="Proposer la synthèse d'un contrat (CS/Admin)")
+async def proposer_synthese(
+    c_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Rend une synthèse PROPOSÉE. N'enregistre rien.
+
+    🔴 Le geste est manuel et il le reste : rien n'appelle ce point d'entrée
+    sinon l'icône ✨ d'une carte de contrat, cliquée par un membre du conseil
+    syndical. Aucune tâche planifiée, aucun appel à la création d'un contrat —
+    chaque synthèse est facturée, et chacune doit être voulue.
+
+    ⚠️ Le texte rendu remplit le champ « Synthèse » du formulaire d'édition, que
+    le CS relit et enregistre lui-même. Écrire directement en base ferait du
+    modèle l'auteur d'un document réglementaire (décret n° 2001-477).
+    """
+    from app.utils.synthese_contrat import ErreurLLM, synthese_disponible, synthetiser
+
+    contrat = session.get(ContratEntretien, c_id)
+    if not contrat:
+        raise HTTPException(404, "Contrat introuvable")
+    if not synthese_disponible(session, contrat):
+        raise HTTPException(
+            400,
+            "L'assistant n'est pas configuré, ou ce contrat n'a pas de document joint.",
+        )
+    try:
+        return {"synthese": await synthetiser(session, contrat)}
+    except ErreurLLM as exc:
+        raise HTTPException(400, str(exc))
 
 
 def _appliquer_perimetre(contrat: ContratEntretien, codes: Optional[list[str]]) -> None:

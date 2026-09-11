@@ -155,9 +155,14 @@ export const TOLERANCES = {
 	//  extrayant le reporting (#453) — même dette, autre fichier.
 	'lib/components/reporting/VueRelanceSyndic.svelte::controle-saisie':
 		'champ de motif re-peint à la main (l. ~150)',
-	'routes/(app)/prestataires/+page.svelte::controle-saisie':
-		'un `<select>` et un `<input>` re-peints à la main (l. ~1815 et ~1840) — même écran de ' +
-		'2 182 lignes que ci-dessus',
+	//  ✅ Tolérance TOMBÉE le 11/09/2026 — troisième fois qu'une dette de peinture
+	//  part sans qu'un lot de style s'en occupe. Le `<select>` et l'`<input>` de
+	//  l'onglet Consommations ont suivi le balisage dans `OngletConsommations`,
+	//  extrait pour la modularité, et ils y portent `.input-sm` : la classe
+	//  existait déjà depuis le 07/09 pour exactement ce cas — une saisie dans une
+	//  rangée, à côté de boutons `.btn-sm`, et non dans un `.field`.
+	//  Reconduire la tolérance dans le fichier neuf aurait fait voyager la dette
+	//  au lieu de la solder.
 	//  ✅ Tolérance TOMBÉE le 28/08/2026 (#561). Les deux `<textarea>` sont dans un
 	//  `.field` et ne repeignent plus rien — non par un lot de style, mais parce
 	//  qu'associer leur libellé les a fait entrer dans le champ de `lint:champs`,
