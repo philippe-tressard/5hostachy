@@ -331,6 +331,29 @@ ne fusionnent jamais, même voisines, même courtes (R2 et §0). L'ordre des neu
 sections vaut pour cet objet comme pour les autres — un dépôt de fichier correct
 dans une section mal placée reste un écran faux.
 
+## 0 ter. Ce qui appartient à la LISTE reste au-dessus du formulaire (12/09/2026)
+
+Signalé à l'écran sur les tickets : ouvrir « + Nouveau ticket » repoussait
+l'**avertissement légal** et les **filtres** sous un formulaire d'une pleine
+hauteur d'écran. L'avertissement sur les tickets d'urgence devenait donc
+invisible au moment précis où l'on en crée un.
+
+**L'ordre, sous le titre de page :**
+
+1. ce qui **qualifie la liste** — un avertissement, un bandeau d'état ;
+2. les **filtres** ;
+3. le **formulaire de création**, quand il est ouvert ;
+4. la **liste**.
+
+⚠️ Ce n'est pas une préférence, c'est la règle la plus déployée : le
+**calendrier** le fait déjà ainsi. Les tickets étaient l'écart, et l'écart n'était
+visible que le formulaire ouvert — donc jamais pendant une relecture d'écran.
+
+🔴 Ne pas confondre avec R1, qui place l'action PRIMAIRE en tête de page : c'est
+le **bouton** qui reste en haut, pas la boîte qu'il ouvre. Le bouton s'efface
+pendant la saisie (#367), le formulaire prend sa place dans le flux — après ce
+qui qualifie la liste.
+
 ## 1. Icônes de contexte
 
 | Icône | Signification | Usage |

@@ -285,7 +285,11 @@ if (fichiersAvecModale < 2) {
 //
 //  La vérification qui autorise la baisse : le contrôle voit toujours les 21
 //  autres, et `lint:formulaires` ne porte plus AUCUNE exception.
-const PLANCHER_MODALES = 21;
+//  ⬇️ 21 → 20 le 12/09/2026 : la fenêtre de validation d'un compte est partie
+//  dans `ValidationCompte`, où elle s'ouvre DANS la ligne de l'objet (#889).
+//  Le plancher SUIT le relevé — le laisser au-dessus rendrait le cas zéro
+//  permanent, et un contrôle qui échoue toujours finit par être désarmé.
+const PLANCHER_MODALES = 20;
 if (titresRendus < PLANCHER_MODALES) {
 	console.error(
 		`✗ Cas zéro : ${titresRendus} modale(s) recensée(s), ${PLANCHER_MODALES} attendues au minimum. ` +
