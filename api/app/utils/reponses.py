@@ -26,6 +26,7 @@ from app.models.core import (
 )
 from app.utils.noms import nom_affiche
 from app.utils.roles_libelles import libelle_role, libelle_statut_court
+from app.utils.liens import base_site
 
 # Code du template email (voir seed.EMAIL_TEMPLATES + _EMAIL_PREF_MAP).
 REPONSE_EMAIL_CODE = "reponse_communaute"
@@ -95,8 +96,16 @@ def tri_reponses(reponses: list[dict]) -> list[dict]:
 #  (`utils/preferences_mail.py`).
 
 def _site_url(session: Session) -> str:
+    """L'adresse du site, normalisée par `base_site` et par rien d'autre.
+
+    ⚠️ Cette fonction écrivait son propre `rstrip("/")` — la 23ᵉ copie de la même
+    règle. Elle échappait au contrôle parce qu'elle lit la ligne par
+    `session.get(ConfigSite, …)` et non par `cfg.get("site_url")` : la forme
+    différait, la notion était la même. C'est pourquoi le contrôle vise DEUX
+    formes de lecture (`test_base_site.py`).
+    """
     row = session.get(ConfigSite, "site_url")
-    return (row.valeur if row else "https://localhost").rstrip("/")
+    return base_site(row.valeur if row else None)
 
 
 def notifier_nouvelle_reponse(

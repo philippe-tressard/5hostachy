@@ -28,6 +28,49 @@ réelle, un onglet réellement déclaré, et un onglet qui rend bien cette ancre
 """
 from __future__ import annotations
 
+#: L'adresse publique du site, telle qu'on peut la CONCATÉNER.
+#:
+#: 🔴 Signalé à l'écran le 11/09/2026 : un e-mail de ticket portait
+#: `https://5hostachy.fr//tickets/34` — double barre, **404**. La valeur en base
+#: se terminait par « / », et les modèles écrivent tous `{{ app.url }}/tickets/…`.
+#:
+#: Le défaut n'était PAS dans le modèle d'e-mail. `site_url` est lu à une
+#: vingtaine d'endroits dans l'API ; onze n'enlevaient pas la barre finale, et les
+#: autres le faisaient chacun dans leur coin, par `rstrip("/")` recopié. C'est la
+#: forme canonique de la duplication : une notion écrite N fois, corrigée une
+#: seule, et le défaut réapparaît par le chemin qu'on n'a pas relu.
+#:
+#: ⚠️ Normaliser à l'ENREGISTREMENT ne suffit pas et ne suffira jamais : les bases
+#: déjà en service portent la valeur sale (celle-ci l'avait depuis toujours), un
+#: import ou une restauration peut la ramener, et rien n'oblige un administrateur
+#: à passer par l'écran. On normalise donc **aux deux bouts** — ici à la lecture,
+#: et dans `PUT /config` à l'écriture.
+DEFAUT_SITE = "https://localhost"
+
+
+def base_site(valeur: str | None) -> str:
+    """L'adresse du site sans barre finale, prête à recevoir un chemin.
+
+    >>> base_site("https://5hostachy.fr/")
+    'https://5hostachy.fr'
+    >>> base_site("https://5hostachy.fr")
+    'https://5hostachy.fr'
+    >>> base_site("  https://5hostachy.fr///  ")
+    'https://5hostachy.fr'
+    >>> base_site(None)
+    'https://localhost'
+    >>> base_site("   ")
+    'https://localhost'
+
+    ⚠️ Une valeur vide rend le DÉFAUT, jamais une chaîne vide : un lien
+    `"/tickets/34"` sans domaine part quand même dans l'e-mail, et il n'y ouvre
+    rien. Mieux vaut une adresse manifestement fausse qu'un lien muet — la
+    première se voit, la seconde se clique.
+    """
+    propre = (valeur or "").strip().rstrip("/")
+    return propre or DEFAUT_SITE
+
+
 # préfixe d'ancre → route du front qui rend réellement `id="<prefixe>-…"`.
 #
 # La route est celle de l'ONGLET, pas seulement de la page : `/calendrier` est la vue

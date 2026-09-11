@@ -19,6 +19,7 @@ from app.schemas import EvolutionCreate, EvolutionRead, PublicationEvolutionUpda
 from app.utils.evolutions import supprimer_evolution
 from app.utils.photos import photos_json
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
+from app.utils.liens import base_site
 
 from .commun import STATUTS_PUBLICATION, appliquer_confidentialite, evolution_read
 from .courriels import (
@@ -166,7 +167,7 @@ def add_evolution(
             #  n'est donc pas diffusé — il reste construit pour le cas normal.
             wa_contenu = body.contenu
             if evols_precedents:
-                site_url = (wa_config.get('site_url') or '').rstrip('/')
+                site_url = base_site(wa_config.get('site_url'))
                 nb = len(evols_precedents)
                 wa_contenu += (
                     f"\n\n📜 Cet échange comporte {nb} commentaire(s) précédent(s).\n"

@@ -26,6 +26,7 @@ from app.database import get_session
 from app.models.core import ConfigSite, PasswordResetToken, RefreshToken, Utilisateur
 from app.utils.limiter import limiter
 from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
+from app.utils.liens import base_site
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -69,7 +70,7 @@ def request_password_reset(
         select(ConfigSite).where(ConfigSite.cle.in_(("site_url", "site_nom")))
     ).all()
     cfg = {row.cle: row.valeur for row in cfg_rows}
-    site_url = (cfg.get("site_url") or "https://localhost").rstrip("/")
+    site_url = base_site(cfg.get("site_url"))
     site_nom = cfg.get("site_nom") or "5Hostachy"
 
     user = session.exec(select(Utilisateur).where(Utilisateur.email == body.email.strip().lower())).first()

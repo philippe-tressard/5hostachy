@@ -351,6 +351,11 @@ jobs:
         run: |
           bash scripts/lib/lib-role.sh              --selftest
           bash scripts/lib/lib-parite.sh            --selftest
+          # 🔒 Le verdict du point 19 : barre finale, 404, page derrière une
+          # session, site injoignable, et le cas zéro. Il DÉCIDE d'une MEP sur
+          # des liens de courriel — la décision se vérifie ici, la mesure se
+          # fait devant la production (11/09/2026, 404 constaté à l'écran).
+          bash scripts/lib/lib-precheck-liens.sh    --selftest
           # 🔒 Vérifie la FORME du geste d'installation dans un volume du peer :
           # aucun `sudo`, source montée en lecture seule, temporaire nettoyé.
           # Les phases de bascule qui l'emploient ÉCRIVENT — leur seule preuve

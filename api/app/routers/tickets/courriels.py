@@ -35,6 +35,7 @@ from .commun import (
     libelle_evolution,
 )
 from app.utils.noms import nom_affiche
+from app.utils.liens import base_site
 
 
 def _contexte_ticket(ticket) -> dict:
@@ -268,7 +269,7 @@ def envoyer_email_externe(
         "date_ticket": fmt_paris(ticket.cree_le),
         "date_commentaire": fmt_paris(datetime.utcnow()),
         **contexte_site(cfg),
-        "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
+        "app": {"url": base_site(cfg.get("site_url"))},
         "is_commentaire": is_commentaire,
         "commentaire": nouveau_message or "",
         "messages": msgs_ctx,
@@ -319,7 +320,7 @@ def _alerter_bug(
             },
             "auteur": {"prenom": user.prenom, "nom": user.nom, "email": user.email},
             "residence": {"nom": site_cfg.get("site_nom") or cfg.get("site_nom") or "5Hostachy"},
-            "app": {"url": site_cfg.get("site_url") or cfg.get("site_url") or "https://localhost"},
+            "app": {"url": base_site(site_cfg.get("site_url") or cfg.get("site_url"))},
         },
     )
 

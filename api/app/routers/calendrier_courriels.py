@@ -22,7 +22,7 @@ from sqlmodel import Session
 from app.models.core import Evenement, Utilisateur
 from app.utils.dates_fr import datetime_longue
 from app.utils.fichiers import chemins_locaux
-from app.utils.liens import lien_element
+from app.utils.liens import base_site, lien_element
 from app.utils.photos import parse_photos, premiere_photo
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
@@ -49,7 +49,7 @@ def _lien_public(ev: Evenement, cfg_map: dict) -> str:
     sans origine mènerait nulle part depuis WhatsApp — mieux vaut pas de lien du
     tout, et `_build_message` sait déjà n'en poser aucun.
     """
-    base = (cfg_map.get("site_url") or "").strip().rstrip("/")
+    base = base_site(cfg_map.get("site_url"))
     return f"{base}{lien_element('ev', ev.id)}" if base else ""
 
 
@@ -137,7 +137,7 @@ def contexte_evenement_canaux(
         },
         "auteur": {"prenom": user.prenom, "nom": user.nom},
         "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
-        "app": {"url": cfg_map.get("site_url", "https://localhost")},
+        "app": {"url": base_site(cfg_map.get("site_url"))},
         "reference_copro": cfg_map.get("reference_copro", ""),
         # Calculé sur la liste réellement attachée, jamais sur l'intention :
         # ce que l'e-mail annonce doit être ce qu'il transporte.

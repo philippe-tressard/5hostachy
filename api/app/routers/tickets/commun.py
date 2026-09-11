@@ -87,7 +87,7 @@ def contexte_site(cfg: dict) -> dict:
     """Le bloc `residence` / `app` que tous les modèles d'e-mail attendent."""
     return {
         "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
-        "app": {"url": cfg.get("site_url", "https://localhost")},
+        "app": {"url": base_site(cfg.get("site_url"))},
     }
 
 
@@ -112,6 +112,7 @@ from app.utils.destinataires import (  # noqa: F401  (ré-export volontaire)
     syndic_principal,
 )
 from app.utils.noms import nom_affiche
+from app.utils.liens import base_site
 
 
 # ── Libellés d'évolution ─────────────────────────────────────────────────────

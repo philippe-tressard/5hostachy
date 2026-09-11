@@ -22,7 +22,7 @@ from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolut
 from app.utils.evolutions import supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
-from app.utils.liens import lien_ticket
+from app.utils.liens import base_site, lien_ticket
 from app.utils.photos import photos_internes, photos_json
 
 from .commun import (
@@ -387,7 +387,7 @@ def add_evolution(
                     _message_pour_le_groupe(
                         ticket, body,
                         nb_precedents=sum(1 for ev in evols_hist if ev.contenu),
-                        site_url=wa_config.get("site_url") or "",
+                        site_url=base_site(wa_config.get("site_url")),
                     ),
                     False, ticket.perimetre_cible, None, wa_config,
                 )

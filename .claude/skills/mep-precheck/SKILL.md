@@ -207,10 +207,22 @@ sont des points *pré*-push. Lire les points **1 à 18**, qui sont le post-check
 | 13 | Canal d'alerte non muet | OK · FAIL |
 | 14 | Hygiène disque sur les **2** nœuds | OK · FAIL |
 | 17 | **Points d'entrée conformes au dépôt** (crons, unité systemd) | OK · FAIL · INCONNU |
+| 19 | **Liens des courriels servis par la production** | OK · ÉCART · FAIL · INCONNU |
 
 ### Lire le verdict
 
 - **FAIL** → MEP non autorisée. Diagnostiquer, corriger, **relancer le script**.
+- **19** → il compose les liens des modèles d'e-mail avec le `site_url` que la
+  PRODUCTION sert, et refuse un 404. Ajouté le 11/09/2026 après un lien
+  `https://5hostachy.fr//tickets/34` reçu par le syndic : aucun test de CI ne
+  pouvait le voir, la valeur fautive étant **en base**. La CI vérifie le code,
+  ce point vérifie la donnée — deux sondes indépendantes (`standards/04` §10).
+
+  Une barre finale sur `site_url` rend **ÉCART** et non FAIL : le produit la
+  neutralise à la lecture (`utils/liens.base_site`), donc bloquer une MEP dessus
+  serait un faux rouge. Elle reste à nettoyer en administration — c'est la
+  donnée sale dont onze lecteurs ont hérité.
+
 - **ÉCART** (points 10 et 0d) → toléré, mais à lire. Point 10 : le standby se
   aligne seul sous 5 minutes (`auto-deploy.sh`, #448 — depuis le 19/08/2026 ;
   avant, la bascule de 02:00 n'alignait que le nœud ENTRANT, donc le standby
