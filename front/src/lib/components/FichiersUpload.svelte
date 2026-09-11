@@ -342,16 +342,23 @@
 			{#if avecLibelle}
 				<!--  ⚠️ Pas d'intitulé au-dessus : le placeholder dit à lui seul ce que
 				      le champ attend et ce qui se passe s'il reste vide. Un intitulé
-				      « Libellé du document » par-dessus « Le nom de fichier » disait deux
+				      « Libellé du document » par-dessus son propre placeholder disait deux
 				      fois la même chose ; `aria-label` porte le nom accessible sans
-				      occuper de ligne. -->
+				      occuper de ligne.
+
+				      ⚠️ Le placeholder DIT ce qu'il fait — « se substituera au nom du
+				      fichier » — parce que c'est la seule chose qu'on ne devine pas :
+				      « Le nom de fichier » laissait croire qu'il fallait le recopier
+				      (12/09/2026). Le « (optionnel) » y est admis : la règle qui
+				      l'interdit vise les INTITULÉS, où l'absence d'astérisque suffit
+				      (`ux-patterns` §9) — ici il n'y a pas d'intitulé du tout. -->
 				<input
 					type="text"
 					class="fichiers-libelle"
 					aria-label="Libellé du document"
 					bind:value={libelleFichier}
 					disabled={envoi || disabled}
-					placeholder="Le nom de fichier"
+					placeholder="Nom du document qui se substituera au nom du fichier (optionnel)"
 				/>
 			{/if}
 		</div>

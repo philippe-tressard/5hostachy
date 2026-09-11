@@ -282,7 +282,7 @@ l'écran qui le montre* — c'est R3 appliqué à la pièce jointe.
 | # | Élément | Détail |
 |---|---|---|
 | 1 | **les pastilles des fichiers déjà joints** | en RANGÉE horizontale, elles passent à la ligne quand elles ne tiennent plus |
-| 2 | **le bouton et le champ de libellé**, SUR LA MÊME LIGNE | le bouton d'abord — on choisit le fichier avant de le nommer ; le champ prend la moitié de la place restante |
+| 2 | **le bouton et le champ de libellé**, SUR LA MÊME LIGNE | le bouton d'abord — on choisit le fichier avant de le nommer ; le champ prend la moitié de la place restante, et son placeholder DIT ce qu'il fait : « Nom du document qui se substituera au nom du fichier (optionnel) » |
 | 3 | **le compteur** `n/max · types acceptés` | sous la rangée : il commente ce qui a été déposé, il ne fait pas partie du geste |
 
 ⚠️ **Le bouton et le champ sont ALIGNÉS**, pas empilés : empilés, ils faisaient
