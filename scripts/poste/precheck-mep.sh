@@ -476,6 +476,14 @@ rapporter 11 "$V11" "Auto-deploy de l'actif vivant" "log appartient à ${PROPRIO
 #  La coupe suit la nature des contrôles — ceux qui interrogent les DEUX RPi
 #  et leurs artefacts d'exploitation (images, journaux, disque, points
 #  d'entrée), là où les précédents portent sur le lot et sur l'application.
+#  ── Point 19 : les liens que les COURRIELS envoient ────────────────────────
+#  Il vit à part parce qu'il mesure autre chose que les précédents : non pas
+#  l'état des machines, mais ce qu'un destinataire d'e-mail obtiendra en
+#  cliquant. Ajouté le 11/09/2026 après un 404 constaté par l'utilisateur —
+#  aucun test de CI ne pouvait le voir, la valeur fautive étant en BASE.
+. "$RACINE_DEPOT/scripts/lib/lib-precheck-liens.sh"
+precheck_point_liens
+
 . "$RACINE_DEPOT/scripts/lib/lib-precheck-infra.sh"
 precheck_points_infra
 
