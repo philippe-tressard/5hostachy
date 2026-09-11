@@ -65,8 +65,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate } from '$lib/date';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
-	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
-	import Modale from '$lib/components/Modale.svelte';
+	import ChampsObjetRemis from '$lib/components/ChampsObjetRemis.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	/** Le bail dont on tient l'inventaire. */
@@ -233,57 +232,31 @@
 		{/if}
 	</div>
 
-	<!--  La boîte de saisie, une seule pour les deux gestes — et posée AVANT le
-	      tableau : le formulaire d'une ligne qu'on corrige doit rester visible
-	      quand le tableau est long (#787, « c'est tout en bas, et on ne voit
-	      pas »). -->
-	{#if saisie}
-		{#key saisie.id}
-			<CadreFormulaire
-				encadre={false}
-				titre={saisie.id === null ? 'Nouvel objet remis' : 'Corriger l’objet'}
-				cle={saisie.id}
-				on:fermer={() => (saisie = null)}
-			>
-				<form class="largeur-saisie" on:submit|preventDefault={enregistrer}>
-					<ChoixPastilles
-						options={TYPES}
-						bind:valeur={fType}
-						tous={false}
-						libelle="Type d’objet"
-						libelleVisible
-						requis
-					/>
+	<!--  🔴 CETTE BOÎTE N'AJOUTE PLUS QUE — elle ne corrige plus (11/09/2026).
 
-					<div class="form-grid">
-						<label class="field champ-large">
-							Libellé *
-							<input type="text" bind:value={fLibelle} required maxlength="120" />
-						</label>
-						<label class="field">
-							Quantité
-							<input type="number" bind:value={fQuantite} min="1" max="99" />
-						</label>
-						<label class="field">
-							Référence
-							<input type="text" bind:value={fReference} maxlength="60" />
-						</label>
-						<label class="field">
-							Remis le
-							<input type="date" bind:value={fRemisLe} />
-						</label>
-						<label class="field champ-large">
-							Notes
-							<textarea bind:value={fNotes} rows="2" maxlength="500"></textarea>
-						</label>
-					</div>
+	      Le commentaire d'avant expliquait qu'elle était posée AVANT le tableau
+	      « pour que le formulaire d'une ligne qu'on corrige reste visible quand le
+	      tableau est long » (#787). C'était traiter le symptôme : la boîte restait
+	      loin de la ligne, et il fallait une `cle` pour ramener l'écran à elle.
 
-					<!--  ⚠️ « Annuler » y portait `class="btn"` seul, sans `btn-outline` :
-					      la seule des dix-neuf copies dans ce cas. Le composant l'aligne. -->
-					<PiedFormulaire enCours={enregistrement} on:annule={() => (saisie = null)} />
-				</form>
-			</CadreFormulaire>
-		{/key}
+	      La correction s'ouvre désormais DANS la rangée de l'objet (`ux-patterns`
+	      §14 ter, #889). Il n'y a plus rien à ramener : la boîte est là où l'on a
+	      cliqué. L'ajout, lui, reste ici — son geste « + » est juste au-dessus. -->
+	{#if saisie && saisie.id === null}
+		<CadreFormulaire encadre={false} titre="Nouvel objet remis" on:fermer={() => (saisie = null)}>
+			<form class="largeur-saisie" on:submit|preventDefault={enregistrer}>
+				<ChampsObjetRemis
+					types={TYPES}
+					bind:fType
+					bind:fLibelle
+					bind:fQuantite
+					bind:fReference
+					bind:fRemisLe
+					bind:fNotes
+				/>
+				<PiedFormulaire enCours={enregistrement} on:annule={() => (saisie = null)} />
+			</form>
+		</CadreFormulaire>
 	{/if}
 
 	{#if objets.length === 0}
@@ -361,6 +334,71 @@
 								</td>
 							{/if}
 						</tr>
+						{#if saisie?.id === objet.id}
+							<!--  🔴 LA CORRECTION S'OUVRE SOUS LA LIGNE DE L'OBJET (#889).
+							      Dans un TABLEAU, « à la place du corps » se rend par une rangée
+							      qui couvre toutes les colonnes : la ligne reste lisible au-dessus,
+							      comme l'en-tête d'une carte au-dessus de son formulaire. Un
+							      `<div>` entre deux `<tr>` serait sorti du tableau par le
+							      navigateur. -->
+							<tr class="ligne-saisie">
+								<td colspan={modifiable ? 8 : 7}>
+									<CadreFormulaire
+										encadre={false}
+										titre="Corriger l’objet"
+										on:fermer={() => (saisie = null)}
+									>
+										<form on:submit|preventDefault={enregistrer}>
+											<ChampsObjetRemis
+												types={TYPES}
+												bind:fType
+												bind:fLibelle
+												bind:fQuantite
+												bind:fReference
+												bind:fRemisLe
+												bind:fNotes
+											/>
+											<PiedFormulaire enCours={enregistrement} on:annule={() => (saisie = null)} />
+										</form>
+									</CadreFormulaire>
+								</td>
+							</tr>
+						{:else if objetRetour?.id === objet.id}
+							<!--  Le RETOUR aussi : c'était une `<Modale edition>`, une fenêtre qui
+							      sortait l'objet de son tableau. Deux champs sur une ligne du
+							      tableau se saisissent là où est la ligne. -->
+							<tr class="ligne-saisie">
+								<td colspan={modifiable ? 8 : 7}>
+									<CadreFormulaire
+										encadre={false}
+										titre={`Retour — ${objet.libelle}`}
+										on:fermer={() => (objetRetour = null)}
+									>
+										<div class="form-grid">
+											<label class="field" for="ro-date-{objet.id}">
+												Date de retour
+												<input id="ro-date-{objet.id}" type="date" bind:value={retourDate} />
+											</label>
+											<label class="field inv-case">
+												<input type="checkbox" bind:checked={retourPerdu} />
+												Marquer comme perdu
+											</label>
+										</div>
+										<!--  Pas de `libelle` : le verbe de soumission est GÉNÉRIQUE
+											      partout (#396, `lint:pied-formulaire`). L'ancienne modale
+											      disait « Perdu » ou « Retour confirmé » — une nuance que la
+											      case cochée porte déjà, et qui faisait de ce bouton le
+											      septième libellé différent du site. -->
+										<PiedFormulaire
+											enCours={enregistrement}
+											soumission={false}
+											on:annule={() => (objetRetour = null)}
+											on:enregistre={confirmerRetour}
+										/>
+									</CadreFormulaire>
+								</td>
+							</tr>
+						{/if}
 					{/each}
 				</tbody>
 			</table>
@@ -368,33 +406,14 @@
 	{/if}
 </div>
 
-{#if objetRetour}
-	<Modale
-		edition
-		titre={`Retour — ${objetRetour.libelle}`}
-		styleBoite="width:min(380px,95vw)"
-		on:fermer={() => (objetRetour = null)}
-	>
-		<div class="modal-body">
-			<div class="field">
-				<label for="ro-date">Date de retour</label>
-				<input id="ro-date" type="date" bind:value={retourDate} />
-			</div>
-			<label class="inv-case">
-				<input type="checkbox" bind:checked={retourPerdu} />
-				Marquer comme perdu
-			</label>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (objetRetour = null)}>Annuler</button>
-			<button class="btn {retourPerdu ? 'btn-danger' : 'btn-primary'}" on:click={confirmerRetour}>
-				{retourPerdu ? 'Perdu' : 'Retour confirmé'}
-			</button>
-		</div>
-	</Modale>
-{/if}
-
 <style>
+	/*  La rangée qui porte une saisie — elle appartient au tableau et se distingue
+	    de la ligne de l'objet sans devenir une carte. */
+	.ligne-saisie > td {
+		background: var(--color-primary-light);
+		padding: 0.75rem;
+	}
+
 	.inv-entete {
 		display: flex;
 		align-items: center;

@@ -308,39 +308,34 @@ body {{
   gap: 4mm; margin-bottom: 5mm;
 }}
 .chip-perimetre {{
+  /*  🔴 LE FILET EST UNE BOÎTE, PLUS UN EFFET DE PEINTURE (11/09/2026).
+
+      TROISIÈME signalement du même défaut : « deux barres sur le périmètre, on
+      dirait deux boîtes ». Les deux tentatives précédentes réglaient un
+      mécanisme que je ne peux pas observer depuis ce poste — WeasyPrint ne s'y
+      installe pas, et j'ai corrigé deux fois à l'aveugle :
+
+        18/08  bordure d'un seul côté + rayon  → deux segments, rayon retiré
+        10/09  dégradé à deux positions        → déclaration jetée, rien peint
+        11/09  dégradé à deux arrêts           → deux barres, encore
+
+      On arrête de régler. Le filet devient un ÉLÉMENT : deux rectangles pleins
+      côte à côte, chacun d'une couleur unie. Pas de bordure, pas de dégradé, pas
+      de coin à raccorder — le mécanisme le plus élémentaire qu'un moteur
+      d'impression puisse rendre, et le seul dont le résultat ne dépende d'aucune
+      finesse de spécification.
+
+      ⚠️ `display: flex` est déjà employé par l'en-tête, la méta et le pied de
+      cette même affiche, et ils sortent correctement en PDF : la disposition
+      n'est pas ce qui manque à WeasyPrint. C'est la seule chose que j'aie pu
+      VÉRIFIER — sur la capture de l'affiche. */
+  display: flex; align-items: stretch;
   font-size: {g['meta']}; font-weight: 700; color: var(--navy);
-  /*  🔴 LE FILET EST PEINT, IL N'EST PLUS UNE BORDURE (10/09/2026).
-
-      Signalé à l'écran pour la SECONDE fois : « le titre a une double barre
-      orange à gauche ». Le correctif du 18/08 avait supprimé le rayon du côté
-      bordé, en pensant que c'était lui qui détachait les arrondis du trait. Il
-      ne l'était pas — WeasyPrint dessine le coin d'une bordure d'un seul côté
-      comme un segment à part, rayon ou pas, et cela se voit d'autant plus que
-      le filet est épais.
-
-      Un dégradé n'a pas de coin : il n'y a plus qu'une seule surface peinte, et
-      rien à raccorder. Le défaut disparaît par CONSTRUCTION plutôt que par
-      réglage — c'est la seule façon de ne pas le voir revenir une troisième
-      fois.
-
-      🔴 **DEUX arrêts de DEUX jetons, et pas un de plus** (11/09/2026). La
-      première écriture employait la syntaxe CSS Images 4 — `couleur 0 1.2mm`,
-      deux positions sur un même arrêt. WeasyPrint 69 ne la connaît pas :
-      `css/tokens.py::parse_color_stop` n'accepte QUE `couleur` ou
-      `couleur position`, et lève `InvalidValues` au-delà. La déclaration
-      entière était alors jetée — le filet ET le fond beige disparaissaient du
-      PDF, alors que l'aperçu HTML, lui, les montrait (signalé à l'écran :
-      « la barre disparaît dans la génération du PDF »).
-
-      ⚠️ La leçon dépasse ce filet : **l'aperçu et le PDF ne sont pas rendus par
-      le même moteur.** Ce qui passe dans un navigateur ne prouve rien de
-      WeasyPrint, et une propriété refusée y est ignorée EN SILENCE. La forme
-      ci-dessous est celle qu'emploie déjà `.barre-accent`, dont le tricolore
-      sort correctement en PDF — la preuve était dans le même fichier. */
-  background: linear-gradient(to right, var(--gold) 1.2mm, #F0EDE6 1.2mm);
-  padding: 1.6mm 3.5mm; padding-left: 4.7mm; border-radius: 0 1mm 1mm 0;
+  background: #F0EDE6; border-radius: 0 1mm 1mm 0;
   text-transform: uppercase; letter-spacing: .6px;
 }}
+.chip-filet {{ flex: 0 0 1.2mm; width: 1.2mm; background: var(--gold); }}
+.chip-texte {{ padding: 1.6mm 3.5mm; }}
 .date-affichage {{ font-size: {g['meta']}; color: var(--muted); white-space: nowrap; }}
 {meta_allegee}
 .titre {{
@@ -440,7 +435,8 @@ def construire_html(
 
   <div class="corps">
     <div class="meta">
-      <span class="chip-perimetre">{escape(perimetre_label)}</span>
+      <span class="chip-perimetre"
+        ><span class="chip-filet"></span><span class="chip-texte">{escape(perimetre_label)}</span></span>
       <span class="date-affichage">Affiché le {date_longue(d)}</span>
     </div>
     <h1 class="titre">{escape(titre)}</h1>

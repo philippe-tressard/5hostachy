@@ -120,10 +120,22 @@ def test_chaque_tache_a_un_identifiant_de_job_UNIQUE():
 
 
 def test_rien_a_rattraper_ne_relance_PAS():
+    """⚠️ La référence est `utcnow()`, PAS la constante `MAINTENANT`.
+
+    Écrit le 10/09/2026, ce test comparait `MAINTENANT - 2 h` — une date figée —
+    à l'horloge réelle que `rattraper_si_manquee` interroge. Il est passé ce
+    jour-là et a échoué le LENDEMAIN : vingt-six heures s'étaient écoulées, le
+    passage paraissait manqué, et la relance partait.
+
+    Un test qui mêle une horloge figée et l'horloge réelle est daté à sa
+    naissance : il ne mesure plus la règle, il mesure le temps qui passe.
+    `MAINTENANT` reste pour les tests de `rattrapage_necessaire`, à qui l'on
+    passe les DEUX instants — là, rien ne dérive.
+    """
     appels = []
     resultat = rattraper_si_manquee(
         "Tâche d'essai",
-        lambda: MAINTENANT - timedelta(hours=2),
+        lambda: datetime.utcnow() - timedelta(hours=2),
         lambda: appels.append("relance"),
     )
     assert appels == []
