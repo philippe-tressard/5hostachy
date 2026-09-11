@@ -252,7 +252,11 @@ async def demander(
         #  Le paramètre refusé, lui, se DIT : c'est un champ structuré, il ne
         #  porte aucun contenu, et sans lui l'écran affiche « répondu 400 » —
         #  un message sur lequel personne ne peut agir (constaté le 11/09/2026).
-        param, _code = f.lire_erreur(_charge(reponse))
+        charge = _charge(reponse)
+        explication = f.diagnostiquer(charge)
+        if explication:
+            raise ErreurLLM(explication)
+        param, _code = f.lire_erreur(charge)
         precision = f" — réglage refusé : « {param} »" if param else ""
         raise ErreurLLM(f"Le fournisseur a répondu {reponse.status_code}{precision}.")
 
@@ -342,7 +346,13 @@ async def tester(session: Session) -> dict[str, Any]:
         session,
         consigne="Tu réponds en un seul mot, sans ponctuation.",
         message="Réponds exactement : opérationnel",
-        max_jetons=16,
+        #  🔴 Plus de plafond serré ici (11/09/2026). Il valait 16 jetons — assez
+        #  pour un mot, trop peu pour un modèle qui RAISONNE avant de répondre :
+        #  il épuisait le plafond sans rien écrire, et le test déclarait en panne
+        #  une configuration parfaitement bonne. Un test qui n'éprouve pas la
+        #  configuration réelle n'éprouve rien (`standards/04` — vérifier le fait).
+        #  Le coût ne change pas : un plafond n'est pas facturé, seuls les jetons
+        #  produits le sont, et la réponse attendue fait un mot.
         #  Le test ne demande pas l'activation : il sert à décider de l'activer.
         exiger_actif=False,
     )

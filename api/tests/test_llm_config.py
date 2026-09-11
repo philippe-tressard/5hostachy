@@ -390,3 +390,70 @@ def test_anthropic_ne_nomme_aucun_parametre_donc_n_adapte_rien():
     assert param == ""
     assert FOURNISSEURS["anthropic"].adapter({"max_tokens": 10}, param, code) is None
 
+
+# ── 6. Un refus SANS paramètre nommé, qu'on sait quand même expliquer ───────
+#
+#  🔴 11/09/2026, troisième 400 d'affilée sur le même essai. Les deux premiers
+#  se sont corrigés seuls (max_tokens renommé, temperature retirée) ; celui-ci
+#  portait `param: null` et `code: null` :
+#
+#     « Could not finish the message because max_tokens or model output limit
+#       was reached. Please try again with higher max_tokens. »
+#
+#  Un modèle qui RAISONNE avant de répondre consomme le plafond sans écrire un
+#  mot. L'écran affichait « Le fournisseur a répondu 400 » : rien sur quoi agir,
+#  alors que la configuration était bonne et qu'un seul champ était en cause.
+
+
+_PLAFOND_ATTEINT = {
+    "error": {
+        "message": (
+            "Could not finish the message because max_tokens or model output "
+            "limit was reached. Please try again with higher max_tokens."
+        ),
+        "param": None,
+        "code": None,
+    }
+}
+
+
+def test_un_plafond_epuise_dit_QUEL_CHAMP_augmenter():
+    explication = FOURNISSEURS["openai"].diagnostiquer(_PLAFOND_ATTEINT)
+    assert explication is not None
+    assert "Longueur maximale de la réponse" in explication
+
+
+def test_le_message_du_fournisseur_n_est_PAS_recopie_dans_l_explication():
+    """⚠️ Il est lu pour être CLASSÉ. Ce qui sort est notre phrase : la sienne
+    peut citer la requête, donc le contrat qu'on vient d'envoyer."""
+    explication = FOURNISSEURS["openai"].diagnostiquer(_PLAFOND_ATTEINT)
+    assert "Could not finish" not in explication
+    assert "model output limit" not in explication
+
+
+@pytest.mark.parametrize(
+    "charge",
+    [
+        {},
+        {"error": {}},
+        {"error": {"message": "Something else entirely"}},
+    ],
+)
+def test_on_n_explique_PAS_ce_qu_on_ne_reconnait_pas(charge):
+    """Sinon le diagnostic deviendrait un message passe-partout, qui enverrait
+    régler le mauvais champ."""
+    assert FOURNISSEURS["openai"].diagnostiquer(charge) is None
+
+
+def test_le_test_de_connexion_emploie_le_plafond_CONFIGURE():
+    """🔴 Il imposait 16 jetons : assez pour un mot, trop peu pour un modèle qui
+    raisonne. Il déclarait alors en panne une configuration bonne — un test qui
+    n'éprouve pas la configuration réelle n'éprouve rien."""
+    import inspect
+
+    from app.utils import llm
+
+    source = inspect.getsource(llm.tester)
+    assert "max_jetons=16" not in source
+    assert "max_jetons=" not in source
+
