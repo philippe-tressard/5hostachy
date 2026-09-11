@@ -73,6 +73,20 @@
 
 	export let onNoter: (prestataireId: number, contratId: number) => void = () => {};
 
+	/**  🔴 Le geste ✨ — MANUEL, et il le reste (11/09/2026, demandé à l'écran :
+	 *   « comment on lance l'IA ? cela doit être manuel par une icône »).
+	 *
+	 *   Rien ne le déclenche seul : ni la création d'un contrat, ni le dépôt d'un
+	 *   document, ni une tâche planifiée. Chaque synthèse est facturée, et chacune
+	 *   doit être voulue.
+	 *
+	 *   ⚠️ `contrat.synthese_disponible` vient du SERVEUR : l'écran ne sait pas si
+	 *   l'assistant est configuré, et n'a pas à le savoir — cette configuration ne
+	 *   regarde pas la session d'un membre du conseil syndical. */
+	export let onSynthetiser: (c: any) => void = () => {};
+	/** Le contrat dont la synthèse est en cours de rédaction, s'il y en a un. */
+	export let syntheseEnCoursId: number | null = null;
+
 	/**  Cette carte est-elle celle qu'on corrige ? Son corps cède alors la place au
 	 *   formulaire, et le crayon s'inverse. */
 	$: enEdition = editContratId === contrat.id;
@@ -126,8 +140,22 @@
 		</div>
 		<div class="contrat-meta-right">
 			<span class="badge" style="font-size:.8rem">📄 {documents?.length ?? 0}</span>
-			<!--  ✏️ puis 🗑️, sur la ligne du titre (`ux-patterns` §3). -->
+			<!--  ✨ puis ✏️ puis 🗑️, sur la ligne du titre (`ux-patterns` §3) : du
+			      moins destructeur au plus. Proposer un texte l'est moins qu'ouvrir la
+			      correction, qui l'est moins qu'archiver. -->
 			{#if peutModifier}
+				{#if contrat.synthese_disponible}
+					<button
+						class="btn-icon"
+						aria-label="Proposer une synthèse de ce contrat"
+						title={syntheseEnCoursId === contrat.id
+							? 'Rédaction en cours…'
+							: 'Proposer une synthèse'}
+						disabled={syntheseEnCoursId !== null}
+						on:click|stopPropagation={() => onSynthetiser(contrat)}
+						>{syntheseEnCoursId === contrat.id ? '⏳' : '✨'}</button
+					>
+				{/if}
 				<!--  Le mode se lit sur l'icône qui a ouvert le formulaire, jamais sur un
 				      titre au-dessus (`ux-patterns` §13 bis) : elle est déjà là, déjà
 				      regardée, et son inversion se lit sans être lue. -->

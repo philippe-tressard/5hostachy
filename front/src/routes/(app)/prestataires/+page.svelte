@@ -4,12 +4,12 @@
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import CarteContrat from '$lib/components/CarteContrat.svelte';
+	import OngletConsommations from '$lib/components/OngletConsommations.svelte';
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
@@ -27,7 +27,7 @@
 		TYPES_PRESTATAIRE as typesPrestataire,
 		equipLabel,
 	} from '$lib/prestataires';
-	import { fmtDateShort, fmtDayMonth } from '$lib/date';
+	import { fmtDateShort } from '$lib/date';
 	import { minuitDuJour, typeEquipementDuContrat } from '$lib/reporting';
 	import { relire, telephonesDe } from '$lib/utils';
 	import { trackTabView } from '$lib/telemetry';
@@ -196,198 +196,10 @@
 		});
 	}
 
-	// ── Consommations ─────────────────────────────────────────────
-	let compteurConfigs: any[] = [];
-	let typeCompteur = '';
-	let releves: any[] = [];
-	let releveLoading = false;
-	let showReleveForm = false;
-	let editReleveId: number | null = null;
-	let releveForm = { date_releve: new Date().toISOString().slice(0, 10), index: '', note: '' };
-	let relevePhotoFichiers: File[] = [];
-	//  ⚠️ `relevePhotoKey` a disparu (#370) : la clé de remontage n'existait que
-	//  pour vider un `<input type="file">` nu, qu'aucune affectation ne remet à
-	//  zéro. `FichiersUpload` se vide en vidant sa liste.
-	$: relevePhotoFile = relevePhotoFichiers[0] ?? null;
-	let releveSaving = false;
-
-	let editCompteurId: number | null = null;
-	let editCompteurPrestId = '';
-	let showAddCompteur = false;
-	let newCompteurLabel = '';
-	let addCompteurSaving = false;
-
-	$: currentCompteur = compteurConfigs.find((c) => c.type_compteur === typeCompteur) ?? null;
-
-	$: relevesByYear = (() => {
-		const map = new Map<number, any[]>();
-		for (const r of releves) {
-			const yr = new Date(r.date_releve).getFullYear();
-			if (!map.has(yr)) map.set(yr, []);
-			map.get(yr)!.push(r);
-		}
-		return [...map.entries()].sort((a, b) => b[0] - a[0]);
-	})();
-
-	//  🔴 CAS ZÉRO : sans compteur, `compteurConfigs.length === 0` restait vraie
-	//  après l'appel et l'onglet rappelait l'API sans fin (#549). Le drapeau dit
-	//  « DEMANDÉ », pas « reçu » : posé avant, jamais relevé.
-	let compteursDemandes = false;
-
-	async function loadCompteurConfigs() {
-		compteursDemandes = true;
-		try {
-			compteurConfigs = await prestApi.compteurConfigs();
-			if (compteurConfigs.length > 0 && !typeCompteur)
-				typeCompteur = compteurConfigs[0].type_compteur;
-		} catch {
-			toast('error', 'Erreur chargement compteurs');
-		}
-	}
-
-	async function loadReleves() {
-		if (!typeCompteur) return;
-		releveLoading = true;
-		try {
-			releves = await prestApi.releves(typeCompteur);
-		} catch {
-			toast('error', 'Erreur chargement relevés');
-		} finally {
-			releveLoading = false;
-		}
-	}
-
-	$: if (onglet === 'consommations' && !compteursDemandes) loadCompteurConfigs();
-	$: if (typeCompteur) loadReleves();
-
-	function resetReleveForm() {
-		releveForm = { date_releve: new Date().toISOString().slice(0, 10), index: '', note: '' };
-		relevePhotoFichiers = [];
-		editReleveId = null;
-		showReleveForm = false;
-	}
-
-	function startEditReleve(r: any) {
-		releveForm = {
-			date_releve: r.date_releve,
-			index: r.index != null ? String(r.index) : '',
-			note: r.note ?? '',
-		};
-		relevePhotoFichiers = [];
-		editReleveId = r.id;
-		showReleveForm = true;
-	}
-
-	async function saveReleve() {
-		if (!releveForm.date_releve) return;
-		releveSaving = true;
-		try {
-			const payload = {
-				type_compteur: typeCompteur,
-				date_releve: releveForm.date_releve,
-				index: releveForm.index !== '' ? Number(releveForm.index) : null,
-				note: releveForm.note.trim() || null,
-				prestataire_id: currentCompteur?.prestataire_id ?? null,
-			};
-			let saved: any;
-			if (editReleveId) {
-				saved = await prestApi.updateReleve(editReleveId, payload);
-				releves = releves.map((r) => (r.id === editReleveId ? saved : r));
-			} else {
-				saved = await prestApi.createReleve(payload);
-				releves = [saved, ...releves];
-			}
-			if (relevePhotoFile) {
-				try {
-					const updated = await prestApi.uploadRelevePhoto(saved.id, relevePhotoFile);
-					releves = releves.map((r) => (r.id === saved.id ? updated : r));
-				} catch {
-					toast('error', 'Photo non enregistrée');
-				}
-			}
-			toast('success', editReleveId ? 'Relevé modifié' : 'Relevé ajouté');
-			resetReleveForm();
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			releveSaving = false;
-		}
-	}
-
-	async function deleteReleve(id: number) {
-		if (!(await confirmer(SUPPRESSION('Ce relevé')))) return;
-		try {
-			await prestApi.deleteReleve(id);
-			releves = releves.filter((r) => r.id !== id);
-			toast('success', 'Relevé supprimé');
-		} catch {
-			toast('error', 'Erreur');
-		}
-	}
-
-	function startEditCompteur(cfg: any) {
-		editCompteurId = cfg.id;
-		editCompteurPrestId = cfg.prestataire_id ? String(cfg.prestataire_id) : '';
-	}
-
-	async function saveCompteurPrestataire(cfg: any) {
-		try {
-			const updated = await prestApi.updateCompteurConfig(cfg.id, {
-				prestataire_id: editCompteurPrestId ? Number(editCompteurPrestId) : null,
-			});
-			compteurConfigs = compteurConfigs.map((c) => (c.id === cfg.id ? updated : c));
-			editCompteurId = null;
-			toast('success', 'Fournisseur mis à jour');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
-	}
-
-	async function addCompteurConfig() {
-		if (!newCompteurLabel.trim()) return;
-		addCompteurSaving = true;
-		const slug = newCompteurLabel
-			.trim()
-			.toLowerCase()
-			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '')
-			.replace(/[^a-z0-9]+/g, '_')
-			.replace(/^_|_$/g, '');
-		try {
-			const created = await prestApi.createCompteurConfig({
-				type_compteur: slug,
-				label: newCompteurLabel.trim(),
-				ordre: compteurConfigs.length,
-			});
-			compteurConfigs = [...compteurConfigs, created];
-			newCompteurLabel = '';
-			showAddCompteur = false;
-			typeCompteur = created.type_compteur;
-			toast('success', 'Catégorie ajoutée');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			addCompteurSaving = false;
-		}
-	}
-
-	async function deleteCompteurConfig(cfg: any) {
-		if (!(await confirmer(SUPPRESSION(`La catégorie « ${cfg.label} »`)))) return;
-		try {
-			await prestApi.deleteCompteurConfig(cfg.id);
-			compteurConfigs = compteurConfigs.filter((c) => c.id !== cfg.id);
-			if (typeCompteur === cfg.type_compteur)
-				typeCompteur = compteurConfigs[0]?.type_compteur ?? '';
-			toast('success', 'Catégorie supprimée');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
-	}
-
-	function fmtReleve(r: any) {
-		return fmtDayMonth(r.date_releve);
-	}
-
+	//  ⚠️ Ces deux-là servent l'onglet PRESTATAIRES, pas les consommations : elles
+	//  vivaient dans le bloc « Consommations » par accident de rangement, et
+	//  l'extraction les a fait remonter. Une fonction se range avec ce qu'elle
+	//  sert, pas avec ce qui l'entoure.
 	function contratsForPrest(prestId: number): any[] {
 		return contrats.filter((c) => c.prestataire_id === prestId);
 	}
@@ -395,6 +207,11 @@
 	function typeLabel(v: string) {
 		return typesPrestataire.find((t) => t.val === v)?.label ?? v;
 	}
+
+	//  L'onglet Consommations possède son formulaire ; la page n'en garde que
+	//  l'ouverture et le libellé, pour le bouton de l'en-tête (R1).
+	let showReleveForm = false;
+	let libelleReleve = 'Nouveau relevé';
 
 	// ── Toggle expand ──────────────────────────────────────────────
 	function togglePrest(id: number) {
@@ -586,6 +403,33 @@
 		resetContratForm();
 	}
 
+	/**  🔴 Le geste ✨ ouvre la CORRECTION, il n'en invente pas une seconde.
+	 *
+	 *   La proposition remplit le champ « Synthèse » du formulaire d'édition —
+	 *   celui du crayon, le même composant, le même bouton Enregistrer. Écrire un
+	 *   cadre à part aurait donné deux formulaires pour un seul objet, et deux
+	 *   endroits où la règle d'enregistrement aurait divergé.
+	 *
+	 *   ⚠️ RIEN n'est enregistré : « Annuler » referme, et le contrat garde sa
+	 *   synthèse d'origine. C'est la décision 03 du 11/09/2026 — le risque devient
+	 *   nul, et améliorer une synthèse bâclée reste possible. */
+	let syntheseEnCoursId: number | null = null;
+
+	async function synthetiserContrat(c: any) {
+		syntheseEnCoursId = c.id;
+		try {
+			const { synthese } = await prestApi.synthetiserContrat(c.id);
+			startEditContrat({ ...c, notes: synthese });
+			toast('info', 'Synthèse proposée — relisez-la avant d’enregistrer');
+		} catch (e) {
+			//  ⚠️ Le message vient du serveur : il dit POURQUOI (clé refusée, délai
+			//  dépassé, quota). Un « Erreur » générique laisserait chercher.
+			toast('error', e instanceof ApiError ? e.message : 'La rédaction n’a pas abouti');
+		} finally {
+			syntheseEnCoursId = null;
+		}
+	}
+
 	function startEditContrat(c: any) {
 		contratForm = {
 			copropriete_id: c.copropriete_id,
@@ -712,11 +556,8 @@
 		{:else if onglet === 'consommations'}
 			<BoutonNouveau
 				ouvert={showReleveForm}
-				libelle={currentCompteur ? `Nouveau relevé — ${currentCompteur.label}` : 'Nouveau relevé'}
-				on:basculer={() => {
-					showReleveForm = !showReleveForm;
-					if (!showReleveForm) resetReleveForm();
-				}}
+				libelle={libelleReleve}
+				on:basculer={() => (showReleveForm = !showReleveForm)}
 			/>
 		{/if}
 	{/if}
@@ -821,6 +662,8 @@
 					{submitting}
 					onBasculer={toggleContrat}
 					onModifier={startEditContrat}
+					onSynthetiser={synthetiserContrat}
+					{syntheseEnCoursId}
 					onArchiver={deleteContrat}
 					onSupprimerDoc={deleteDoc}
 					onAjouteDoc={rechargerDocs}
@@ -1086,198 +929,7 @@
 	<!-- ONGLET 5 : CONSOMMATIONS (inchangé)                          -->
 	<!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'consommations'}
-	<div style="margin-bottom:1.25rem">
-		<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-			{#each compteurConfigs as cfg (cfg.type_compteur)}
-				<button
-					class="btn btn-sm"
-					class:btn-primary={typeCompteur === cfg.type_compteur}
-					on:click={() => {
-						typeCompteur = cfg.type_compteur;
-					}}
-				>
-					{cfg.label}
-				</button>
-			{/each}
-			{#if $isCS}
-				<button
-					class="btn btn-sm btn-outline"
-					on:click={() => {
-						showAddCompteur = !showAddCompteur;
-						newCompteurLabel = '';
-					}}
-					title="Ajouter une catégorie">+ Catégorie</button
-				>
-			{/if}
-		</div>
-
-		{#if currentCompteur && $isCS}
-			<div class="compteur-config-row" style="margin-top:.6rem">
-				{#if editCompteurId === currentCompteur.id}
-					<span style="font-size:.82rem;color:var(--color-text-muted)">Fournisseur :</span>
-					<select
-						bind:value={editCompteurPrestId}
-						style="font-size:.82rem;padding:.2rem .4rem;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg)"
-					>
-						<option value="">— Aucun —</option>
-						{#each prestataires as p (p.id)}<option value={String(p.id)}>{p.nom}</option>{/each}
-					</select>
-					<button class="btn btn-sm btn-outline" on:click={() => (editCompteurId = null)}
-						>Annuler</button
-					>
-					<button
-						class="btn btn-sm btn-primary"
-						on:click={() => saveCompteurPrestataire(currentCompteur)}>Enregistrer</button
-					>
-					{#if compteurConfigs.length > 1}
-						<button
-							class="btn btn-sm btn-outline"
-							style="color:var(--color-danger);border-color:var(--color-danger);margin-left:auto"
-							on:click={() => deleteCompteurConfig(currentCompteur)}>🗑️</button
-						>
-					{/if}
-				{:else}
-					{@const prest = currentCompteur.prestataire_id
-						? prestataires.find((p) => p.id === currentCompteur.prestataire_id)
-						: null}
-					{#if prest}
-						<span class="badge badge-blue" style="font-size:.78rem">🔧 {prest.nom}</span>
-					{:else}
-						<span style="font-size:.78rem;color:var(--color-text-muted)">Aucun fournisseur</span>
-					{/if}
-					<button
-						class="btn-icon-edit"
-						aria-label="Modifier le fournisseur"
-						title="Modifier le fournisseur"
-						on:click={() => startEditCompteur(currentCompteur)}>✏️</button
-					>
-				{/if}
-			</div>
-		{/if}
-
-		{#if showAddCompteur && $isCS}
-			<div style="display:flex;gap:.5rem;align-items:center;margin-top:.5rem;flex-wrap:wrap">
-				<input
-					type="text"
-					bind:value={newCompteurLabel}
-					placeholder="Ex. EDF Parking privé"
-					style="flex:1;min-width:180px;font-size:.875rem;padding:.35rem .55rem;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg)"
-				/>
-				<button
-					class="btn btn-sm btn-primary"
-					disabled={addCompteurSaving || !newCompteurLabel.trim()}
-					on:click={addCompteurConfig}>{addCompteurSaving ? '…' : 'Ajouter'}</button
-				>
-				<button class="btn btn-sm btn-outline" on:click={() => (showAddCompteur = false)}
-					>Annuler</button
-				>
-			</div>
-		{/if}
-	</div>
-
-	{#if showReleveForm && $isCS}
-		<FormulaireCreation
-			cle={editReleveId}
-			titre={editReleveId
-				? 'Modifier le relevé'
-				: currentCompteur
-					? `Nouveau relevé — ${currentCompteur.label}`
-					: 'Nouveau relevé'}
-		>
-			<form on:submit|preventDefault={saveReleve}>
-				<div>
-					<div class="form-grid">
-						<label class="field"
-							>Date du relevé *<input
-								type="date"
-								bind:value={releveForm.date_releve}
-								required
-							/></label
-						>
-						<label class="field"
-							>Index (m³)<input
-								type="number"
-								min="0"
-								bind:value={releveForm.index}
-								placeholder="Ex. 47047"
-							/></label
-						>
-					</div>
-					<div class="field" style="margin-top:.6rem">
-						<label for="releve-note">Note</label>
-						<input
-							id="releve-note"
-							type="text"
-							bind:value={releveForm.note}
-							placeholder="Ex. Changement compteur"
-							style="width:100%"
-						/>
-					</div>
-					<div class="field" style="margin-top:.6rem">
-						<span class="libelle-groupe">Photo du relevé</span>
-						<!--  Différé : la photo part par `prestApi.uploadRelevePhoto`,
-							      une fois le relevé créé. -->
-						<FichiersUpload
-							id="releve-photo"
-							mode="photos"
-							differe
-							max={1}
-							label="Choisir une photo"
-							bind:fichiers={relevePhotoFichiers}
-						/>
-					</div>
-				</div>
-				<PiedFormulaire enCours={releveSaving} on:annule={resetReleveForm} />
-			</form>
-		</FormulaireCreation>
-	{/if}
-
-	{#if releveLoading}
-		<p style="color:var(--color-text-muted)">Chargement…</p>
-	{:else if releves.length === 0}
-		<div class="empty-state card">
-			<h3>Aucun relevé</h3>
-			<p>Ajoutez le premier relevé via le bouton ci-dessus.</p>
-		</div>
-	{:else}
-		{#each relevesByYear as [year, yearReleves] (year)}
-			<h2 class="releve-year">{year}</h2>
-			{#each yearReleves as r (r.id)}
-				<div class="releve-row">
-					<div class="releve-main">
-						<span class="releve-date">Relevé {fmtReleve(r)}</span>
-						{#if r.note}<span class="releve-note">{r.note}</span>{/if}
-						{#if r.index != null}
-							<span class="releve-index"
-								>Index : <strong>{r.index.toLocaleString('fr-FR')}</strong></span
-							>
-						{/if}
-						{#if r.photo_url}
-							<a href={r.photo_url} target="_blank" rel="noopener">
-								<img src={r.photo_url} alt="Relevé de compteur" class="releve-photo-thumb" />
-							</a>
-						{/if}
-					</div>
-					{#if $isCS}
-						<div class="releve-actions">
-							<button
-								class="btn-icon-edit"
-								aria-label="Modifier"
-								title="Modifier"
-								on:click={() => startEditReleve(r)}>✏️</button
-							>
-							<button
-								class="btn-icon-danger"
-								aria-label="Supprimer"
-								title="Supprimer"
-								on:click={() => deleteReleve(r.id)}>🗑️</button
-							>
-						</div>
-					{/if}
-				</div>
-			{/each}
-		{/each}
-	{/if}
+	<OngletConsommations bind:showReleveForm bind:libelleBouton={libelleReleve} {prestataires} />
 {/if}
 
 <!-- Modal notation prestataire (global, hors onglets) -->
@@ -1340,15 +992,6 @@
 
 <style>
 	/* ── Sous-vue toggle ── */
-
-	/* ── Compteur config row ── */
-	.compteur-config-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		font-size: 0.82rem;
-	}
 
 	/*  Défilement horizontal : variante NOMMÉE `.filters--defilante` (app.css,
 	    #446), lisible dans le balisage. Marge basse .75rem → 1.25rem, la norme. */
@@ -1463,61 +1106,6 @@
 	.form-grid {
 		grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
 		gap: 0.65rem;
-	}
-
-	/* Relevés compteurs */
-	.releve-year {
-		font-size: 1.1rem;
-		font-weight: 700;
-		margin: 1.25rem 0 0.6rem;
-		padding-bottom: 0.3rem;
-		border-bottom: 2px solid var(--color-border);
-	}
-	.releve-row {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 0.75rem;
-		padding: 0.6rem 0.9rem;
-		border-left: 3px solid var(--color-border);
-		border-radius: var(--radius);
-		background: var(--color-surface);
-		margin-bottom: 0.3rem;
-		transition: border-color 0.12s;
-	}
-	.releve-row:hover {
-		border-left-color: var(--color-primary);
-	}
-	.releve-main {
-		display: flex;
-		flex-direction: column;
-		gap: 0.2rem;
-	}
-	.releve-date {
-		font-size: 0.9rem;
-		font-weight: 600;
-	}
-	.releve-note {
-		font-size: 0.82rem;
-		color: var(--color-text-muted);
-		font-style: italic;
-	}
-	.releve-index {
-		font-size: 0.875rem;
-	}
-	.releve-actions {
-		display: flex;
-		gap: 0.25rem;
-		flex-shrink: 0;
-	}
-	.releve-photo-thumb {
-		width: 56px;
-		height: 56px;
-		object-fit: cover;
-		border-radius: var(--radius);
-		border: 1px solid var(--color-border);
-		margin-top: 0.2rem;
-		display: block;
 	}
 
 	@media (max-width: 600px) {
