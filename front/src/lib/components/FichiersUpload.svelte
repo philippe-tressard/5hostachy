@@ -57,6 +57,7 @@
 <script lang="ts">
 	import { createEventDispatcher, onDestroy } from 'svelte';
 	import Vignette from './Vignette.svelte';
+	import PastilleFichier from './PastilleFichier.svelte';
 	import { fichiersApi } from '$lib/api';
 	import { toast } from './Toast.svelte';
 	import {
@@ -308,42 +309,9 @@
 	{#if pastilles.length}
 		<div class="fichiers-liste">
 			{#each pastilles as p (p.cle)}
-				<span class="fichier-chip">
-					<span aria-hidden="true">&#x1F4C4;</span>
-					<span class="fichier-nom">{p.nom}</span>
-					{#if !readonly}
-						<button
-							type="button"
-							class="fichier-retirer"
-							title="Retirer ce document"
-							aria-label="Retirer {p.nom}"
-							on:click={() => retirer(p)}>×</button
-						>
-					{/if}
-				</span>
+				<PastilleFichier nom={p.nom} {readonly} on:click={() => retirer(p)} />
 			{/each}
 		</div>
-	{/if}
-
-	{#if !readonly && avecLibelle}
-		<!--  AVANT le bouton, comme demandé : on nomme ce qu'on s'apprête à
-		      déposer, on ne revient pas le nommer après. Dans un `.field`, comme
-		      tout champ libellé du site (`lint:champs`). -->
-		<!--  ⚠️ Pas de « (optionnel) » dans l'intitulé, bien qu'il ait été demandé
-		      ainsi : la règle du produit est que l'absence d'astérisque SUFFIT à
-		      dire qu'un champ est facultatif (`ux-patterns` §9, `lint:champs`).
-		      Neuf libellés portaient les deux vocabulaires le 30/08/2026, et ils
-		      avaient divergé. Le placeholder dit la même chose en plus utile : il
-		      annonce ce qui se passe si l'on ne remplit rien. -->
-		<label class="field champ-moyen fichiers-libelle">
-			Libellé du document
-			<input
-				type="text"
-				bind:value={libelleFichier}
-				disabled={envoi || disabled}
-				placeholder="Sinon, le nom du fichier"
-			/>
-		</label>
 	{/if}
 
 	{#if !readonly}
@@ -366,6 +334,26 @@
 				· {_types}{/if}
 		</span>
 	{/if}
+
+	{#if !readonly && avecLibelle}
+		<!--  🔴 APRÈS le bouton (11/09/2026, second passage à l'écran) : on choisit
+		      d'abord le fichier, on le nomme ensuite si l'on veut. L'ordre inverse
+		      faisait remplir un champ avant de savoir ce qu'il nommerait.
+
+		      ⚠️ Plus d'intitulé au-dessus : le placeholder dit à lui seul ce que
+		      le champ attend et ce qu'il se passe si on le laisse vide. Un
+		      intitulé « Libellé du document » par-dessus « Le nom de fichier »
+		      disait deux fois la même chose, et c'est `aria-label` qui porte
+		      désormais le nom accessible — sans occuper de ligne. -->
+		<input
+			type="text"
+			class="fichiers-libelle"
+			aria-label="Libellé du document"
+			bind:value={libelleFichier}
+			disabled={envoi || disabled}
+			placeholder="Le nom de fichier"
+		/>
+	{/if}
 </div>
 
 <style>
@@ -374,8 +362,19 @@
 	/*  Le champ de libellé prend la largeur disponible et passe à la ligne avant
 	    le bouton sur téléphone : `.champ-moyen` porte la largeur normée, le
 	    `margin-bottom` la respiration qui le sépare du bouton. */
+	/*  🔴 « Plus large — 50 % de Description » (11/09/2026). La description occupe
+	    toute la largeur de saisie : la moitié se dit donc en pourcentage du même
+	    conteneur, et suit l'échelle du produit sans chiffre inventé ici.
+
+	    ⚠️ `min-width` + `max-width` : sur téléphone, 50 % devient trop étroit pour
+	    lire ce qu'on tape, et le champ reprend la pleine largeur
+	    (`standards/11` §10). */
 	.fichiers-libelle {
-		margin-bottom: 0.5rem;
+		display: block;
+		width: 50%;
+		min-width: 220px;
+		max-width: 100%;
+		margin-top: 0.5rem;
 	}
 	.fichiers-titre {
 		display: block;
@@ -395,32 +394,8 @@
 		gap: 0.35rem;
 		flex-wrap: wrap;
 	}
-	.fichier-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		max-width: 100%;
-		padding: 0.2rem 0.45rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: var(--color-bg-alt, #f5f5f5);
-		font-size: 0.8rem;
-	}
-	.fichier-nom {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		max-width: 200px;
-	}
-	.fichier-retirer {
-		border: none;
-		background: none;
-		color: var(--color-danger);
-		cursor: pointer;
-		font-size: 1rem;
-		line-height: 1;
-		padding: 0;
-	}
+	/*  Le type en tête, gris et compact : il se lit d'un coup d'œil sans voler la
+	    place au nom, qui reste ce qu'on cherche ensuite. */
 	.photo-retirer {
 		position: absolute;
 		top: 2px;
@@ -456,8 +431,5 @@
 		color: var(--color-text-muted);
 	}
 	@media (max-width: 480px) {
-		.fichier-nom {
-			max-width: 58vw;
-		}
 	}
 </style>
