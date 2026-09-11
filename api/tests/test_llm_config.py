@@ -316,3 +316,77 @@ def test_une_vraie_liste_est_rendue_listable(monkeypatch, session_llm):
     assert r["listable"] is True
     assert r["modeles"] == [{"id": "gpt-4o", "libelle": "gpt-4o"}]
 
+
+# ── 5. Un paramètre refusé se corrige, il ne fait pas échouer le geste ──────
+#
+#  🔴 11/09/2026, premier essai d'un modèle récent : « Unsupported parameter:
+#  'max_tokens' is not supported with this model. Use 'max_completion_tokens'
+#  instead. » L'écran affichait « Le fournisseur a répondu 400 » — un message
+#  sur lequel personne ne peut agir.
+#
+#  La correction ÉCOUTE le service : il nomme lui-même le réglage fautif. Tenir
+#  la liste des modèles qui veulent l'un ou l'autre nom aurait été un catalogue
+#  de plus, périmé au prochain modèle — celui qu'on venait de supprimer.
+
+
+_REFUS_MAX_TOKENS = {
+    "error": {
+        "message": "Unsupported parameter: 'max_tokens' …",
+        "param": "max_tokens",
+        "code": "unsupported_parameter",
+    }
+}
+
+
+def test_un_plafond_de_jetons_renomme_garde_sa_VALEUR():
+    """Retirer le paramètre sans reporter la valeur ferait sauter le plafond de
+    coût — le garde-fou disparaîtrait au moment même où il sert."""
+    f = FOURNISSEURS["openai"]
+    param, code = f.lire_erreur(_REFUS_MAX_TOKENS)
+    suite = f.adapter({"model": "gpt-5.6-terra", "max_tokens": 3000}, param, code)
+    assert suite == {"model": "gpt-5.6-terra", "max_completion_tokens": 3000}
+
+
+def test_un_parametre_sans_equivalent_est_RETIRE():
+    """Une température refusée : le modèle prend la sienne. Une synthèse moins
+    pilotée vaut mieux que pas de synthèse."""
+    f = FOURNISSEURS["openai"]
+    suite = f.adapter(
+        {"model": "m", "temperature": 0.2}, "temperature", "unsupported_value"
+    )
+    assert suite == {"model": "m"}
+
+
+def test_le_message_d_erreur_n_est_JAMAIS_recopie():
+    """⚠️ Il peut citer la requête, donc le contrat qu'on vient d'envoyer. Seuls
+    `param` et `code` — structurés, courts, sans contenu — sont lus."""
+    param, code = FOURNISSEURS["openai"].lire_erreur(_REFUS_MAX_TOKENS)
+    assert param == "max_tokens"
+    assert code == "unsupported_parameter"
+
+
+@pytest.mark.parametrize(
+    "corps, param, code",
+    [
+        #  Un code qu'on ne sait pas traiter : on ne touche à rien.
+        ({"max_tokens": 10}, "max_tokens", "rate_limit_exceeded"),
+        #  Un paramètre absent du corps : rien à corriger, et surtout pas à
+        #  inventer — l'appel échouerait deux fois au lieu d'une.
+        ({"model": "m"}, "top_p", "unsupported_parameter"),
+        #  Anthropic ne rend pas de `param` : son format d'erreur diffère, et
+        #  `max_tokens` y est OBLIGATOIRE. Ne rien adapter est la bonne réponse.
+        ({"max_tokens": 10}, "", "unsupported_parameter"),
+    ],
+)
+def test_on_n_adapte_PAS_ce_qu_on_ne_comprend_pas(corps, param, code):
+    assert FOURNISSEURS["openai"].adapter(corps, param, code) is None
+
+
+def test_anthropic_ne_nomme_aucun_parametre_donc_n_adapte_rien():
+    """Son erreur est `{"type":"error","error":{"type":…,"message":…}}` — pas de
+    `param`. Le repli par défaut est donc déjà le bon, sans rien redéfinir."""
+    charge = {"type": "error", "error": {"type": "invalid_request_error", "message": "…"}}
+    param, code = FOURNISSEURS["anthropic"].lire_erreur(charge)
+    assert param == ""
+    assert FOURNISSEURS["anthropic"].adapter({"max_tokens": 10}, param, code) is None
+

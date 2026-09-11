@@ -7,24 +7,21 @@ contrat d'entretien, #899). Le fournisseur, la clé et le modèle se règlent de
 l'administration — pas dans un fichier d'environnement, parce que c'est un
 réglage de PRODUIT que le gestionnaire du site change, comme le SMTP.
 
-## 🔴 Un socle, deux adaptations — et pas trois copies
+## Où sont les fournisseurs
 
-Les trois fournisseurs standards parlent presque la même langue :
+Dans `llm_fournisseurs.py`, depuis le 11/09/2026 : **ici on lit une
+configuration et on passe un appel**, là-bas on décrit des services. Ce module
+reste la porte d'entrée — les appelants importent d'ici, `__all__` le déclare, et
+le découpage ne change aucun contrat.
 
-| | URL | En-tête d'authentification | Corps | Réponse |
-|---|---|---|---|---|
-| OpenAI | `{base}/chat/completions` | `Authorization: Bearer` | `{model, messages, max_tokens}` | `choices[0].message.content` |
-| Azure OpenAI | `{base}/openai/deployments/{modele}/chat/completions?api-version=…` | `api-key` | **le même** | **la même** |
-| Anthropic | `{base}/v1/messages` | `x-api-key` + `anthropic-version` | `{model, max_tokens, system, messages}` | `content[0].text` |
+## 🔴 Un appel qui ÉCOUTE le service
 
-Azure **est** OpenAI derrière une autre porte : il n'en redéfinit que l'URL et
-l'en-tête, et hérite du reste. Écrire trois fournisseurs côte à côte aurait donné
-trois fois le même corps de requête — et trois occasions de les désaccorder au
-premier ajustement.
-
-⚠️ C'est l'héritage qui porte la ressemblance, pas un `if fournisseur == …`
-répété à chaque étape. Ajouter un quatrième fournisseur, c'est écrire une classe,
-pas modifier cinq fonctions.
+Un modèle récent a refusé `max_tokens` en réclamant `max_completion_tokens`
+(constaté le 11/09/2026 au premier essai de `gpt-5.6-terra`). Deux voies :
+tenir la liste des modèles qui veulent l'un ou l'autre nom — un catalogue, qui se
+périme, et qu'on venait justement de supprimer du champ « Modèle » — ou lire le
+paramètre que le service NOMME dans son refus, et reprendre l'appel corrigé.
+C'est la seconde : voir `Fournisseur.adapter`, et `MAX_ADAPTATIONS` qui la borne.
 
 ## Ce que ce module NE fait pas
 
@@ -42,6 +39,43 @@ from typing import Any, Optional
 from sqlmodel import Session, select
 
 from app.models.core import ConfigSite
+from app.utils.llm_fournisseurs import (
+    FOURNISSEUR_DEFAUT,
+    FOURNISSEURS,
+    ErreurLLM,
+    Fournisseur,
+    FournisseurAnthropic,
+    FournisseurAzure,
+)
+
+#: 🔴 Ce module reste **la porte d'entrée unique**, même depuis que les
+#: fournisseurs vivent à côté (11/09/2026). Les appelants — routers, synthèse de
+#: contrat, tests — importent d'ici et n'ont pas à savoir qu'il y a deux
+#: fichiers : le découpage est une affaire de lisibilité, pas un changement de
+#: contrat. C'est ce que déclare ce `__all__`, et c'est pourquoi les noms
+#: réexportés y figurent.
+__all__ = [
+    "CLE_ACTIF",
+    "CLE_API",
+    "CLE_BASE_URL",
+    "CLE_DELAI",
+    "CLE_ENVOI_DOCUMENT",
+    "CLE_FOURNISSEUR",
+    "CLE_MAX_JETONS",
+    "CLE_MODELE",
+    "CLE_VERSION_API",
+    "FOURNISSEUR_DEFAUT",
+    "FOURNISSEURS",
+    "ConfigLLM",
+    "ErreurLLM",
+    "Fournisseur",
+    "FournisseurAnthropic",
+    "FournisseurAzure",
+    "config_llm",
+    "demander",
+    "modeles_disponibles",
+    "tester",
+]
 
 logger = logging.getLogger("hostachy.llm")
 
@@ -52,198 +86,22 @@ DELAI_DEFAUT_S = 45
 #: Plafond de jetons rendus — c'est un garde-fou de COÛT autant que de longueur.
 MAX_JETONS_DEFAUT = 1500
 
-
-class ErreurLLM(RuntimeError):
-    """Le modèle n'a pas répondu, ou a répondu ce qu'on ne sait pas lire.
-
-    Porte un message destiné à l'écran : il est montré à l'administrateur, donc
-    il dit ce qui s'est passé, pas une trace technique.
-    """
+#: Combien de fois au plus on corrige la requête après un refus de paramètre.
+#: Deux suffisent aux cas connus (le plafond de jetons, la température) ; le
+#: plafond existe pour qu'un service qui refuserait tout ne soit pas appelé en
+#: boucle — il est facturé à l'appel.
+MAX_ADAPTATIONS = 2
 
 
-@dataclass(frozen=True)
-class Fournisseur:
-    """Un service de modèle de langage, et la façon de lui parler."""
+def _charge(reponse: Any) -> dict[str, Any]:
+    """Le JSON d'une réponse, ou un objet vide — un corps illisible n'est pas
+    une panne de plus à distinguer ici."""
+    try:
+        charge = reponse.json()
+    except ValueError:
+        return {}
+    return charge if isinstance(charge, dict) else {}
 
-    code: str
-    libelle: str
-    base_url: str
-    modele_defaut: str
-    #: Vrai quand le service réclame autre chose que l'URL et la clé — Azure
-    #: exige un point d'accès propre au client, il n'a pas d'URL publique.
-    base_url_obligatoire: bool = False
-
-    def url(self, modele: str, base: str, version_api: str) -> str:
-        return f"{base.rstrip('/')}/chat/completions"
-
-    def entetes(self, cle: str) -> dict[str, str]:
-        return {"Authorization": f"Bearer {cle}", "Content-Type": "application/json"}
-
-    def corps(self, modele: str, consigne: str, message: str, max_jetons: int) -> dict[str, Any]:
-        """Le corps de la requête — commun à OpenAI et à Azure."""
-        return {
-            "model": modele,
-            "max_tokens": max_jetons,
-            #  Température basse et non nulle : une synthèse de contrat doit être
-            #  fidèle, pas créative. Zéro rendrait le modèle rigide sur les
-            #  formulations sans le rendre plus exact.
-            "temperature": 0.2,
-            "messages": [
-                {"role": "system", "content": consigne},
-                {"role": "user", "content": message},
-            ],
-        }
-
-    def lire(self, reponse: dict[str, Any]) -> str:
-        try:
-            return reponse["choices"][0]["message"]["content"].strip()
-        except (KeyError, IndexError, TypeError, AttributeError) as exc:
-            raise ErreurLLM("Réponse du modèle illisible — format inattendu.") from exc
-
-    def url_modeles(self, base: str, version_api: str) -> str | None:
-        """L'adresse qui LISTE les modèles — ou `None` si le service n'en a pas.
-
-        🔴 On demande au fournisseur ce que la clé peut atteindre, plutôt que de
-        tenir un catalogue à jour dans le produit (11/09/2026, « on peut choisir
-        un modèle plus intelligent ? »). Un catalogue recopié se périme sans
-        prévenir, et il ment deux fois : il propose des modèles que la clé ne
-        peut pas appeler, et il cache ceux qui sont sortis depuis.
-
-        ⚠️ `None` n'est pas une erreur : Azure n'expose pas ses déploiements par
-        l'API d'inférence. L'écran garde alors la saisie libre — il ne prétend
-        pas connaître une liste qu'il n'a pas.
-        """
-        return f"{base.rstrip('/')}/models"
-
-    def lire_modeles(self, reponse: dict[str, Any]) -> list[dict[str, str]]:
-        """Les modèles de CONVERSATION, du plus récent au plus ancien.
-
-        Le tri est un fait (`created`, rendu par le service), pas une
-        appréciation : il n'y a pas de « meilleur » modèle à désigner depuis ici.
-
-        ⚠️ Le filtre est nécessaire : la liste d'OpenAI mêle transcription,
-        synthèse vocale, images et plongements, qui ne répondent pas à
-        `/chat/completions`. Il vit ICI, dans le seul module qui parle à ce
-        service — pas dans l'écran, qui n'a pas à connaître les familles de
-        modèles d'un fournisseur.
-        """
-        familles = ("gpt-", "chatgpt-", "o1", "o3", "o4")
-        exclus = (
-            "-audio", "-realtime", "-transcribe", "-tts", "-search",
-            "-instruct", "-image", "-moderation", "-embedding",
-        )
-        vus = []
-        for m in reponse.get("data") or []:
-            ident = str(m.get("id") or "")
-            if not ident.startswith(familles) or any(x in ident for x in exclus):
-                continue
-            vus.append({"id": ident, "libelle": ident, "_rang": m.get("created") or 0})
-        vus.sort(key=lambda m: m["_rang"], reverse=True)
-        return [{"id": m["id"], "libelle": m["libelle"]} for m in vus]
-
-
-@dataclass(frozen=True)
-class FournisseurAzure(Fournisseur):
-    """Azure OpenAI — le même service, derrière une autre porte.
-
-    Il n'a pas d'URL publique : chaque client a son point d'accès, et le nom du
-    « déploiement » y remplace celui du modèle. Tout le reste est hérité.
-    """
-
-    base_url_obligatoire: bool = True
-
-    def url(self, modele: str, base: str, version_api: str) -> str:
-        return (
-            f"{base.rstrip('/')}/openai/deployments/{modele}"
-            f"/chat/completions?api-version={version_api}"
-        )
-
-    def entetes(self, cle: str) -> dict[str, str]:
-        return {"api-key": cle, "Content-Type": "application/json"}
-
-    def url_modeles(self, base: str, version_api: str) -> str | None:
-        """Aucune : sur Azure, ce qu'on choisit est un DÉPLOIEMENT, que seule
-        l'API de gestion connaît — une autre porte, un autre jeton, un autre
-        droit. Le champ reste libre, et l'écran le dit."""
-        return None
-
-
-@dataclass(frozen=True)
-class FournisseurAnthropic(Fournisseur):
-    """Claude — le seul des trois dont le corps et la réponse diffèrent.
-
-    La consigne y est un champ à part (`system`) plutôt qu'un message de rôle
-    `system` : c'est la seule divergence de forme qui justifie de redéfinir
-    `corps()` au lieu d'en hériter.
-    """
-
-    def url(self, modele: str, base: str, version_api: str) -> str:
-        return f"{base.rstrip('/')}/v1/messages"
-
-    def entetes(self, cle: str) -> dict[str, str]:
-        return {
-            "x-api-key": cle,
-            "anthropic-version": "2023-06-01",
-            "Content-Type": "application/json",
-        }
-
-    def corps(self, modele: str, consigne: str, message: str, max_jetons: int) -> dict[str, Any]:
-        return {
-            "model": modele,
-            "max_tokens": max_jetons,
-            "temperature": 0.2,
-            "system": consigne,
-            "messages": [{"role": "user", "content": message}],
-        }
-
-    def url_modeles(self, base: str, version_api: str) -> str | None:
-        return f"{base.rstrip('/')}/v1/models"
-
-    def lire_modeles(self, reponse: dict[str, Any]) -> list[dict[str, str]]:
-        """Anthropic ne rend que des modèles de conversation : aucun filtre.
-
-        Il rend en revanche un `display_name` — « Claude Sonnet 4.5 » plutôt que
-        `claude-sonnet-4-5-20250929` —, et c'est cela qu'un gestionnaire lit. La
-        liste arrive déjà du plus récent au plus ancien.
-        """
-        return [
-            {"id": str(m["id"]), "libelle": str(m.get("display_name") or m["id"])}
-            for m in (reponse.get("data") or [])
-            if m.get("id")
-        ]
-
-    def lire(self, reponse: dict[str, Any]) -> str:
-        try:
-            return reponse["content"][0]["text"].strip()
-        except (KeyError, IndexError, TypeError, AttributeError) as exc:
-            raise ErreurLLM("Réponse du modèle illisible — format inattendu.") from exc
-
-
-#: Les fournisseurs proposés à l'écran. Trois suffisent : ce sont les standards
-#: du marché, et tout service compatible OpenAI (un proxy, un modèle hébergé)
-#: s'atteint déjà par « OpenAI » en changeant l'URL de base.
-FOURNISSEURS: dict[str, Fournisseur] = {
-    "openai": Fournisseur(
-        code="openai",
-        libelle="OpenAI",
-        base_url="https://api.openai.com/v1",
-        modele_defaut="gpt-4o-mini",
-    ),
-    "anthropic": FournisseurAnthropic(
-        code="anthropic",
-        libelle="Claude (Anthropic)",
-        base_url="https://api.anthropic.com",
-        modele_defaut="claude-haiku-4-5-20251001",
-    ),
-    "azure_openai": FournisseurAzure(
-        code="azure_openai",
-        libelle="Azure OpenAI",
-        base_url="",
-        modele_defaut="",
-    ),
-}
-
-FOURNISSEUR_DEFAUT = "openai"
 
 #: Les clés de `ConfigSite` qui décrivent l'accès au modèle.
 #:
@@ -356,12 +214,25 @@ async def demander(
 
     debut = time.monotonic()
     try:
+        corps = f.corps(cfg.modele, consigne, message, max_jetons or cfg.max_jetons)
         async with httpx.AsyncClient(timeout=cfg.delai_s) as client:
-            reponse = await client.post(
-                f.url(cfg.modele, cfg.base_url, cfg.version_api),
-                headers=f.entetes(cfg.cle),
-                json=f.corps(cfg.modele, consigne, message, max_jetons or cfg.max_jetons),
-            )
+            #  Le plafond de reprises est BORNÉ : chaque tour retire ou renomme
+            #  un paramètre, il y en a peu, et une boucle sans fin sur un service
+            #  facturé à l'appel serait pire que l'échec qu'elle évite.
+            for _ in range(MAX_ADAPTATIONS + 1):
+                reponse = await client.post(
+                    f.url(cfg.modele, cfg.base_url, cfg.version_api),
+                    headers=f.entetes(cfg.cle),
+                    json=corps,
+                )
+                if reponse.status_code != 400:
+                    break
+                param, code = f.lire_erreur(_charge(reponse))
+                suite = f.adapter(corps, param, code)
+                if suite is None:
+                    break
+                logger.info("LLM %s : paramètre « %s » refusé (%s) — réessai", f.code, param, code)
+                corps = suite
     except httpx.TimeoutException as exc:
         raise ErreurLLM(f"Pas de réponse après {cfg.delai_s} s.") from exc
     except httpx.HTTPError as exc:
@@ -378,7 +249,12 @@ async def demander(
         #  ⚠️ On journalise le corps, on ne le RECOPIE PAS à l'écran : il peut
         #  contenir la requête, donc le contrat qu'on vient d'envoyer.
         logger.warning("LLM %s → %s : %s", f.code, reponse.status_code, reponse.text[:400])
-        raise ErreurLLM(f"Le fournisseur a répondu {reponse.status_code}.")
+        #  Le paramètre refusé, lui, se DIT : c'est un champ structuré, il ne
+        #  porte aucun contenu, et sans lui l'écran affiche « répondu 400 » —
+        #  un message sur lequel personne ne peut agir (constaté le 11/09/2026).
+        param, _code = f.lire_erreur(_charge(reponse))
+        precision = f" — réglage refusé : « {param} »" if param else ""
+        raise ErreurLLM(f"Le fournisseur a répondu {reponse.status_code}{precision}.")
 
     texte = f.lire(reponse.json())
     if not texte:

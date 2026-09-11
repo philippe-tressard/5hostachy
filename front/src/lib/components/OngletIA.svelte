@@ -280,8 +280,9 @@
 				Longueur maximale de la réponse
 				<input type="number" bind:value={cfg.max_jetons} min="200" max="8000" step="100" />
 				<span class="aide">
-					En jetons. C’est un plafond de <strong>coût</strong> autant que de longueur : une synthèse de
-					contrat tient largement dans 1 500.
+					En jetons. C’est un plafond de <strong>coût</strong> autant que de longueur. Comptez 1 500 pour
+					un modèle économique, 3 000 pour un modèle plus capable — ils développent davantage, et une
+					synthèse coupée au milieu d’une section ressemble à un défaut du modèle alors que c’est ce plafond.
 				</span>
 			</label>
 			<label class="field">
@@ -297,9 +298,11 @@
 			Envoyer le document du contrat au service
 			<span class="aide">
 				Sans lui, quatre sections de la synthèse sur sept restent vides : montants, prestations
-				incluses et exclues ne vivent que dans le PDF. Seul le document <strong
-					>du contrat lui-même</strong
-				> est transmis, jamais un autre fichier joint, et son texte est extrait côté serveur.
+				incluses et exclues ne vivent que dans le PDF. Sont transmis <strong
+					>tous les documents du contrat</strong
+				> — l’initial, ses avenants, ses conditions générales : n’en lire qu’un rendrait les montants
+				faux dès le premier avenant. Rien d’autre ne part : ni pièce jointe d’un ticket, ni document d’un
+				autre contrat. Le texte est extrait côté serveur, le fichier lui-même ne quitte jamais le site.
 			</span>
 		</label>
 	</SectionFormulaire>

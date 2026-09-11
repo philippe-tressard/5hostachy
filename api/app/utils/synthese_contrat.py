@@ -82,8 +82,17 @@ GABARIT = """1. Identification du fournisseur
 6. Conditions financières
 7. Points d'attention pour la copropriété"""
 
-CONSIGNE = f"""Tu rédiges la synthèse d'un contrat d'entretien pour le conseil syndical d'une
-copropriété. Elle sera lue par des bénévoles, pas par des juristes.
+CONSIGNE = f"""Tu rédiges la synthèse d'un contrat de COPROPRIÉTÉ — entretien, maintenance,
+assurance, prestation de services — pour le conseil syndical. Elle sera lue par
+des bénévoles, pas par des juristes.
+
+🔴 Tu ne tires tes FAITS que des documents de CE contrat, joints ci-dessous, et
+des champs de sa fiche. Rien d'autre : ni ta connaissance générale du
+fournisseur, ni ce que contiennent habituellement les contrats de ce type, ni les
+exemples de rédaction qui te sont donnés — ceux-là ne montrent que le TON et la
+STRUCTURE attendus. Reprendre un montant, une durée ou une clause lus ailleurs
+que dans ce contrat serait la pire erreur possible : la synthèse alimente le
+carnet d'entretien, qui est un document réglementaire.
 
 Respecte EXACTEMENT ces sept sections, numérotées, dans cet ordre :
 
@@ -92,7 +101,8 @@ Respecte EXACTEMENT ces sept sections, numérotées, dans cet ordre :
 Règles :
 - une section sans information disponible est écrite avec la mention
   « non précisé dans les éléments fournis » — n'invente jamais un montant, une
-  date, un numéro RCS ni une clause ;
+  date, un numéro RCS ni une clause, et ne comble jamais un manque par ce qui
+  est « habituel » ;
 - des puces courtes, pas de paragraphes ;
 - reprends les termes du contrat, sans les reformuler en langage commercial ;
 - la section 7 est une LECTURE : ce que la copropriété doit surveiller
@@ -220,8 +230,10 @@ def construire_message(session: Session, contrat: ContratEntretien, *, avec_docu
     modeles = exemples(session, contrat)
     if modeles:
         blocs.append(
-            "Voici des synthèses déjà rédigées par ce conseil syndical. Reprends leur "
-            "ton, leur longueur et leur façon de formuler :\n\n"
+            "Voici des synthèses déjà rédigées par ce conseil syndical, pour d'AUTRES "
+            "contrats. Reprends leur ton, leur longueur et leur façon de formuler — "
+            "n'en reprends AUCUN fait : ni montant, ni durée, ni clause, ni "
+            "fournisseur :\n\n"
             + "\n\n---\n\n".join(modeles)
         )
 

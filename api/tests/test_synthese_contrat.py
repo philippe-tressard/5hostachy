@@ -276,3 +276,38 @@ def test_la_consigne_impose_le_HTML_que_le_champ_de_notes_accepte(session):
     for balise in ("<h3>", "<ul><li>", "<p>"):
         assert balise in CONSIGNE
     assert "Markdown" in CONSIGNE
+
+
+#  ── La source des faits est CE contrat, et rien d'autre ───────────────────
+#
+#  🔴 Demandé le 11/09/2026 après le premier essai. Le risque n'est pas
+#  théorique : trois synthèses d'AUTRES contrats voyagent dans le même message
+#  comme exemples de format, et un modèle qui les lit peut en reprendre un
+#  montant ou une durée. Rien, à la relecture, ne distinguerait alors un chiffre
+#  emprunté d'un chiffre lu — et la synthèse alimente le carnet d'entretien,
+#  qui est réglementaire (décret n° 2001-477).
+
+
+def test_la_consigne_interdit_toute_source_autre_que_le_contrat():
+    for exigence in ("CE contrat", "connaissance générale", "habituel"):
+        assert exigence in CONSIGNE
+
+
+def test_les_exemples_s_annoncent_comme_UN_FORMAT_pas_comme_des_faits(session):
+    """Le bloc d'exemples doit se désigner lui-même comme un modèle de rédaction
+    portant sur d'AUTRES contrats — sinon il se lit comme de la matière."""
+    autre = _contrat(session, libelle="Ascenseur Bât. 2", notes="1. Fournisseur : ACME")
+    assert autre.notes
+    c = _contrat(session)
+    _config(session)
+    message = construire_message(session, c, avec_document=False)
+    assert "AUTRES" in message
+    assert "n'en reprends AUCUN fait" in message
+
+
+def test_la_synthese_est_annoncee_comme_une_synthese_de_COPROPRIETE():
+    """Le domaine cadre la lecture : un contrat de copropriété ne se résume pas
+    comme un contrat commercial — ce qui compte est ce que la copropriété devra
+    surveiller."""
+    assert "COPROPRIÉTÉ" in CONSIGNE
+
