@@ -63,6 +63,8 @@ export const TOLERANCES = {
 	//  `composants.css` le prévoit en toutes lettres : « les écrans qui
 	//  répartissent autrement ne gardent QUE ce qui diffère — une colonne, un
 	//  espacement — jamais la règle entière ». C'est exactement ce qu'ils font.
+	'lib/components/ChampsPrestataire.svelte::form-grid':
+		'colonnes de 180 px et gap resserré, même raison',
 	'lib/components/FormulaireEvenement.svelte::form-grid':
 		'colonnes de 200 px : ce formulaire a des champs courts (date, heure, fréquence)',
 	'lib/components/OngletCopropriete.svelte::form-grid':
@@ -71,8 +73,6 @@ export const TOLERANCES = {
 		'deux colonnes fixes : cet écran de configuration apparie des libellés et des valeurs',
 	'routes/(app)/espace-cs/+page.svelte::form-grid':
 		'colonnes de 150 px et gap resserré — la fiche d’un membre du CS tient des champs très courts',
-	'routes/(app)/prestataires/+page.svelte::form-grid':
-		'colonnes de 180 px et gap resserré, même raison',
 	//  ⚠️ Celui-ci n'est PAS une répartition : c'est une pile. Le nom ment sur ce
 	//  que fait la règle, et c'est la vraie dette de la liste.
 	//  ⚠️ La clé a suivi le BALISAGE le 31/08/2026 : le formulaire de la FAQ est
