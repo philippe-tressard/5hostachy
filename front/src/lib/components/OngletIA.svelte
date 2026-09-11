@@ -63,6 +63,29 @@
 		message: '',
 	};
 
+	//  🔴 La liste des modèles vient du FOURNISSEUR, pas d'un catalogue écrit ici
+	//  (11/09/2026 — « on peut choisir un modèle plus intelligent ? »). Le champ
+	//  était libre avec trois exemples en dur et le commentaire « le catalogue
+	//  bouge vite » : c'était l'aveu du défaut. Un repère recopié propose ce que
+	//  la clé ne peut pas appeler et cache ce qui est sorti depuis.
+	//
+	//  ⚠️ `catalogue.listable === false` n'est PAS une panne — Azure n'expose pas
+	//  ses déploiements, et une clé peut très bien synthétiser sans avoir le droit
+	//  de s'inventorier. On retombe alors sur la saisie libre, en disant pourquoi.
+	let catalogue: {
+		etat: 'aucun' | 'encours' | 'pret' | 'indisponible';
+		motif: string;
+		modeles: { id: string; libelle: string }[];
+	} = { etat: 'aucun', motif: '', modeles: [] };
+
+	//  Le modèle enregistré reste proposé même s'il n'est plus au catalogue :
+	//  sinon la liste le remplacerait en silence par son premier élément, et un
+	//  simple Enregistrer changerait le modèle sans que personne l'ait demandé.
+	$: choixModeles =
+		catalogue.etat === 'pret' && cfg.modele && !catalogue.modeles.some((m) => m.id === cfg.modele)
+			? [{ id: cfg.modele, libelle: `${cfg.modele} (enregistré)` }, ...catalogue.modeles]
+			: catalogue.modeles;
+
 	$: azure = cfg.fournisseur === 'azure_openai';
 
 	$: if (valeurs && Object.keys(valeurs).length) hydrater(valeurs);
@@ -108,10 +131,29 @@
 			}
 			test = { etat: 'aucun', message: '' };
 			toast('success', 'Configuration enregistrée');
+			//  Le fournisseur ou la clé viennent peut-être de changer : le
+			//  catalogue précédent ne décrit plus ce qu'on peut appeler.
+			catalogue = { etat: 'aucun', motif: '', modeles: [] };
 		} catch (e: any) {
 			toast('error', e?.message ?? 'Erreur à l’enregistrement');
 		} finally {
 			enregistrement = false;
+		}
+	}
+
+	async function chargerModeles() {
+		catalogue = { etat: 'encours', motif: '', modeles: [] };
+		try {
+			const r = await configApi.llmModeles();
+			catalogue = r.listable
+				? { etat: 'pret', motif: '', modeles: r.modeles }
+				: { etat: 'indisponible', motif: r.motif, modeles: [] };
+		} catch (e: any) {
+			catalogue = {
+				etat: 'indisponible',
+				motif: e?.message ?? 'Liste indisponible',
+				modeles: [],
+			};
 		}
 	}
 
@@ -163,12 +205,50 @@
 		<div class="form-grid">
 			<label class="field">
 				Modèle
-				<input type="text" bind:value={cfg.modele} placeholder={MODELES_REPERE[cfg.fournisseur]} />
+				{#if catalogue.etat === 'pret'}
+					<select bind:value={cfg.modele}>
+						<option value="">Modèle par défaut du fournisseur</option>
+						{#each choixModeles as m (m.id)}
+							<option value={m.id}>{m.libelle}</option>
+						{/each}
+					</select>
+				{:else}
+					<input
+						type="text"
+						bind:value={cfg.modele}
+						placeholder={MODELES_REPERE[cfg.fournisseur]}
+					/>
+				{/if}
+				<div class="ligne-modele">
+					{#if !azure}
+						<button
+							class="btn btn-outline btn-sm"
+							type="button"
+							disabled={catalogue.etat === 'encours' || !clePosee}
+							on:click={chargerModeles}
+						>
+							{catalogue.etat === 'encours' ? 'Lecture…' : 'Voir les modèles disponibles'}
+						</button>
+					{/if}
+				</div>
 				<span class="aide">
-					L’<strong>identifiant d’API</strong>, pas le nom commercial : <code>gpt-4o-mini</code>,
-					<code>gpt-4.1</code>, <code>claude-haiku-4-5-20251001</code>. Laissé vide, le modèle par
-					défaut du fournisseur est employé. Sur Azure, indiquez le nom de votre
-					<strong>déploiement</strong>.
+					{#if catalogue.etat === 'pret'}
+						{choixModeles.length} modèle{choixModeles.length > 1 ? 's' : ''} accessible{choixModeles.length >
+						1
+							? 's'
+							: ''} avec cette clé, du plus récent au plus ancien. Un modèle plus capable rend une synthèse
+						plus fidèle, et coûte plus cher par contrat.
+					{:else if catalogue.etat === 'indisponible'}
+						{catalogue.motif} Saisissez l’<strong>identifiant d’API</strong> à la main — pas le nom commercial.
+					{:else if !clePosee}
+						Enregistrez d’abord une clé : la liste des modèles se lit avec elle.
+					{:else}
+						L’<strong>identifiant d’API</strong>, pas le nom commercial. Laissé vide, le modèle par
+						défaut du fournisseur est employé.
+						{azure
+							? 'Sur Azure, indiquez le nom de votre déploiement.'
+							: 'Le bouton ci-dessus demande au fournisseur ce que votre clé peut appeler.'}
+					{/if}
 				</span>
 			</label>
 			<label class="field">
@@ -258,6 +338,14 @@
 </div>
 
 <style>
+	/*  La rangée qui porte le bouton de lecture du catalogue, sous le champ.
+	    Un `<div>` plutôt qu'un frère du `<label>` : le bouton appartient au champ
+	    Modèle, et l'en sortir le ferait dériver au premier changement de grille. */
+	.ligne-modele {
+		display: flex;
+		margin-top: 0.35rem;
+	}
+
 	.titre-onglet {
 		display: flex;
 		align-items: center;

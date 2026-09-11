@@ -27,6 +27,27 @@ from app.utils.llm import (
 )
 
 
+@pytest.fixture()
+def session_llm():
+    """Une base en mémoire portant une configuration LLM exploitable."""
+    from sqlmodel import Session, SQLModel, create_engine
+
+    from app.models.core import ConfigSite
+
+    moteur = create_engine("sqlite://")
+    SQLModel.metadata.create_all(moteur)
+    with Session(moteur) as s:
+        for cle, valeur in {
+            "llm_actif": "1",
+            "llm_fournisseur": "openai",
+            "llm_api_key": "sk-x",
+            "llm_modele": "gpt-4o-mini",
+        }.items():
+            s.add(ConfigSite(cle=cle, valeur=valeur))
+        s.commit()
+        yield s
+
+
 # ── 1. Le secret ────────────────────────────────────────────────────────────
 
 
@@ -157,3 +178,141 @@ def test_le_TEST_de_connexion_n_exige_pas_l_activation():
     cfg.verifier(exiger_actif=False)          # le test passe
     with pytest.raises(ErreurLLM):
         cfg.verifier()                        # l'usage, non
+
+
+# ── 4. Le catalogue de modèles — demandé au fournisseur, jamais recopié ─────
+#
+#  🔴 11/09/2026, « on peut choisir un modèle plus intelligent ? ». Le champ
+#  était libre, adossé à trois exemples écrits en dur et au commentaire « le
+#  catalogue bouge vite » — l'aveu du défaut. Ces tests verrouillent que la
+#  liste vient du SERVICE, et que son absence reste une absence, jamais une
+#  erreur ni une liste vide présentée comme un choix.
+
+
+def test_openai_ecarte_ce_qui_ne_repond_pas_a_une_conversation():
+    """La liste d'OpenAI mêle transcription, images et plongements : les
+    proposer ferait choisir un modèle qui répond 404 à la première synthèse."""
+    lus = FOURNISSEURS["openai"].lire_modeles(
+        {
+            "data": [
+                {"id": "gpt-4o", "created": 20},
+                {"id": "whisper-1", "created": 30},
+                {"id": "text-embedding-3-large", "created": 31},
+                {"id": "dall-e-3", "created": 32},
+                {"id": "gpt-4o-audio-preview", "created": 33},
+                {"id": "gpt-4o-mini", "created": 10},
+            ]
+        }
+    )
+    assert [m["id"] for m in lus] == ["gpt-4o", "gpt-4o-mini"]
+
+
+def test_les_modeles_arrivent_du_plus_recent_au_plus_ancien():
+    """Un tri par date est un FAIT. Désigner un « meilleur » modèle depuis le
+    produit serait une appréciation, qui se périmerait."""
+    lus = FOURNISSEURS["openai"].lire_modeles(
+        {"data": [{"id": "gpt-4.1", "created": 5}, {"id": "gpt-5", "created": 99}]}
+    )
+    assert [m["id"] for m in lus] == ["gpt-5", "gpt-4.1"]
+
+
+def test_anthropic_rend_le_nom_commercial_que_le_gestionnaire_lit():
+    lus = FOURNISSEURS["anthropic"].lire_modeles(
+        {"data": [{"id": "claude-sonnet-4-5-20250929", "display_name": "Claude Sonnet 4.5"}]}
+    )
+    assert lus == [{"id": "claude-sonnet-4-5-20250929", "libelle": "Claude Sonnet 4.5"}]
+
+
+def test_azure_n_a_PAS_de_liste_et_le_dit():
+    """⚠️ `None` n'est pas une panne : sur Azure on choisit un DÉPLOIEMENT, que
+    seule l'API de gestion connaît. L'écran garde la saisie libre."""
+    assert FOURNISSEURS["azure_openai"].url_modeles("https://x.openai.azure.com", "2024-06-01") is None
+    assert FOURNISSEURS["openai"].url_modeles("https://api.openai.com/v1", "") is not None
+
+
+def test_l_adresse_de_liste_suit_celle_du_fournisseur():
+    """Un point d'accès compatible OpenAI relayé par une autre adresse doit voir
+    sa liste demandée à CETTE adresse, pas à api.openai.com."""
+    assert (
+        FOURNISSEURS["openai"].url_modeles("https://relais.exemple.fr/v1/", "")
+        == "https://relais.exemple.fr/v1/models"
+    )
+    assert (
+        FOURNISSEURS["anthropic"].url_modeles("https://api.anthropic.com", "")
+        == "https://api.anthropic.com/v1/models"
+    )
+
+
+#  ── Le cas zéro : une liste vide N'EST PAS une liste ───────────────────────
+
+
+class _ReponseFactice:
+    def __init__(self, code, charge=None):
+        self.status_code = code
+        self._charge = charge or {}
+
+    def json(self):
+        return self._charge
+
+
+def _brancher_httpx(monkeypatch, reponse):
+    """Remplace le client HTTP par un faux qui rend `reponse`."""
+    import httpx
+
+    class _Client:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, *a, **k):
+            if isinstance(reponse, Exception):
+                raise reponse
+            return reponse
+
+    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+
+
+@pytest.mark.parametrize(
+    "reponse, extrait",
+    [
+        (_ReponseFactice(200, {"data": []}), "Aucun modèle"),
+        (_ReponseFactice(200, {"data": [{"id": "whisper-1", "created": 1}]}), "Aucun modèle"),
+        (_ReponseFactice(401), "permission"),
+        (_ReponseFactice(500), "500"),
+    ],
+)
+def test_une_liste_indisponible_reste_une_ABSENCE_jamais_un_choix_vide(
+    monkeypatch, reponse, extrait, session_llm
+):
+    """🔴 `standards/04` §2 — le cas zéro. Rendre `listable: true` avec zéro
+    modèle ferait choisir dans un menu sans entrée ; rendre une erreur ferait
+    croire l'assistant en panne alors qu'il synthétise très bien. Une clé
+    restreinte à `/chat/completions` est le cas le plus fréquent."""
+    import asyncio
+
+    from app.utils.llm import modeles_disponibles
+
+    _brancher_httpx(monkeypatch, reponse)
+    r = asyncio.run(modeles_disponibles(session_llm))
+    assert r["listable"] is False
+    assert r["modeles"] == []
+    assert extrait in r["motif"]
+
+
+def test_une_vraie_liste_est_rendue_listable(monkeypatch, session_llm):
+    import asyncio
+
+    from app.utils.llm import modeles_disponibles
+
+    _brancher_httpx(
+        monkeypatch, _ReponseFactice(200, {"data": [{"id": "gpt-4o", "created": 9}]})
+    )
+    r = asyncio.run(modeles_disponibles(session_llm))
+    assert r["listable"] is True
+    assert r["modeles"] == [{"id": "gpt-4o", "libelle": "gpt-4o"}]
+

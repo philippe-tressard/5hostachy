@@ -322,6 +322,28 @@ async def llm_test(
         raise HTTPException(400, str(exc))
 
 
+@router.get("/llm-modeles")
+async def llm_modeles(
+    user: Utilisateur = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    """Les modèles que la clé enregistrée peut réellement appeler.
+
+    ⚠️ Ce point d'accès n'expose rien de la clé : il l'emploie côté serveur et
+    ne rend que des identifiants publics de modèles. Il reste réservé à
+    l'administrateur, comme tout l'onglet Assistant IA.
+
+    Une liste indisponible n'est pas une erreur — voir `modeles_disponibles`.
+    Seule une configuration inexploitable (aucune clé) lève.
+    """
+    from app.utils.llm import ErreurLLM, modeles_disponibles
+
+    try:
+        return await modeles_disponibles(session)
+    except ErreurLLM as exc:
+        raise HTTPException(400, str(exc))
+
+
 @router.post("/smtp-test")
 async def smtp_test(
     payload: SmtpTestPayload,
