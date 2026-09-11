@@ -40,6 +40,14 @@ from app.utils.corrections import contenu_correction
 
 router = APIRouter(prefix="/publications", tags=["publications"])
 
+
+#: Les champs de `PublicationUpdate` qui ne sont PAS des colonnes du modèle.
+#:
+#: Ce sont des intentions d'envoi : elles valent pour la requête qui les porte et
+#: ne se stockent pas. Les affecter au modèle lève (`ValueError: "Publication"
+#: object has no field …`), et c'est ce qui s'est produit.
+INTENTIONS_HORS_MODELE = ("envoyer_auteur",)
+
 #  Ce qu'une correction RACONTE dans l'Historique, et sous quel nom à l'écran.
 #  Les libellés sont ceux des neuf sections du cadre (`SECTIONS_LIBELLE` côté
 #  front) : lire « Périmètre » dans le fil et « Périmètre » dans le formulaire
@@ -213,6 +221,21 @@ def update_publication(
     if not pub:
         raise HTTPException(404, "Publication introuvable")
     data = body.model_dump(exclude_unset=True)
+    #  🔴 Les INTENTIONS d'envoi sortent du lot AVANT la boucle d'affectation
+    #  (12/09/2026 — 500 en production sur `PATCH /publications/25`).
+    #
+    #  `envoyer_auteur` n'est pas une colonne de `Publication` : c'est une
+    #  intention, vraie pour CET enregistrement, et le schéma le disait déjà en
+    #  commentaire. La boucle `setattr` ci-dessous, elle, ne le savait pas — elle
+    #  suppose que tout champ du corps est une colonne. Pydantic refusait, et
+    #  l'écran rendait 500 sur une correction d'actualité parfaitement ordinaire.
+    #
+    #  ⚠️ La liste est EXPLICITE et non « tout ce qui n'est pas une colonne » :
+    #  un filtre silencieux avalerait aussi une faute de frappe dans un nom de
+    #  champ, et la correction partirait sans effet ni message.
+    #  `api/tests/test_intentions_envoi.py` vérifie qu'elle reste complète.
+    for intention in INTENTIONS_HORS_MODELE:
+        data.pop(intention, None)
     if data.get('archivee') is True and pub.statut != "resolu":
         raise HTTPException(422, "Seules les publications résolues peuvent être archivées")
     for champ in ('perimetre_cible', 'public_cible'):
