@@ -56,6 +56,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 9 | **L'archivage se calcule, il ne se choisit pas** : 30 j après un état terminal, sur `statut_change_le`, jamais de bouton 📦 | §16 |
 | 10 | **Deux droits** : éditer = auteur · saisi_pour · admin ; commenter = les mêmes **+ CS** | §15 |
 | 11 | **L'écran dit ce que le serveur fait**, ni plus ni moins | §15 |
+| 12 | **L'objet DOCUMENTS a UNE forme** — pastilles « TYPE: nom », bouton puis champ de libellé, sans exception | §0 bis |
 
 ### ⚠️ Les trois pièges que ces onze arbitrages ont révélés
 
@@ -266,6 +267,66 @@ l'écran**.
 > ⚠️ Cette skill fait plus de 500 lignes. Le cadre y est **résumé, pas recopié** —
 > le détail vit dans l'artefact et la mémoire. Prochaine évolution notable : la
 > découper (§9 « Champs de formulaire » fait à lui seul 230 lignes).
+
+## 0 bis. L'objet DOCUMENTS — un seul geste, sans exception (11/09/2026)
+
+🔴 **Arbitré à l'écran, et posé comme standard sans exception.** Le dépôt d'un
+fichier avait trois formes selon l'écran : les tickets employaient
+`FichiersUpload` (pastilles horizontales, croix rouge), les actualités une liste
+verticale avec un 🗑️ par ligne, les contrats une rangée composée sur place avec
+leur propre champ « Titre ». *Le même objet ne peut pas avoir trois formes selon
+l'écran qui le montre* — c'est R3 appliqué à la pièce jointe.
+
+### La forme, dans cet ordre exact
+
+| # | Élément | Détail |
+|---|---|---|
+| 1 | **les pastilles des fichiers déjà joints** | en RANGÉE horizontale, elles passent à la ligne quand elles ne tiennent plus |
+| 2 | **le bouton** « 📎 Ajouter un document » | on choisit le fichier AVANT de le nommer |
+| 3 | **le compteur** `n/max · types acceptés` | il dit la limite, et il se met à jour |
+| 4 | **le champ de libellé**, facultatif | largeur **50 %**, placeholder « Le nom de fichier » |
+
+⚠️ **Le bouton précède le champ**, et ce n'est pas un détail de goût : l'ordre
+inverse faisait remplir un libellé avant de savoir ce qu'il nommerait.
+
+⚠️ **Le champ de libellé n'a pas d'intitulé au-dessus.** Le placeholder dit à lui
+seul ce que le champ attend et ce qu'il advient s'il reste vide ; un intitulé
+« Libellé du document » par-dessus disait deux fois la même chose. Le nom
+accessible est porté par `aria-label` — il ne coûte pas une ligne à l'écran.
+
+### La pastille : « TYPE: nom »
+
+`PastilleFichier.svelte`, et lui seul. Le **type** en tête, en majuscules et en
+gris (`PDF`, `EXCEL`, `WORD`) ; le **nom sans son extension** ensuite — elle est
+déjà dite par le type, et « PDF: contrat.pdf » allonge la pastille sans rien
+apprendre ; une **croix rouge** pour retirer.
+
+Le type se calcule dans `$lib/fichiers` (`typeFichier`, `nomSansExtension`),
+jamais dans un écran : quatre rendus l'affichent, et un format recopié aurait
+divergé au premier ajustement. Les familles bureautiques y sont ramenées au nom
+que tout le monde emploie (`XLSX` et `XLS` → `EXCEL`), sinon deux tableurs
+identiques portent deux étiquettes.
+
+### Ce qui n'est PAS une exception
+
+- Un écran qui manipule des **entités `Document`** (actualités) plutôt que des
+  URLs (tickets) emploie la même pastille : c'est `PastilleFichier` qui accepte
+  un `libelle` distinct du nom de fichier. La différence de modèle ne justifie
+  pas une différence de rendu.
+- Un écran dont le document devient un **vrai `Document` titré** (contrats)
+  n'affiche pas un champ de titre à part : c'est le même champ de libellé, et
+  c'est l'appelant qui décide ce qu'il en fait.
+
+🔒 **Garde-fou : `npm run lint:fichiers`** refuse un champ de libellé de document
+réécrit à côté du composant. Il ne voit pas tout — la disposition, elle, se
+vérifie à l'écran.
+
+### ⚠️ Où l'objet Documents se place
+
+En **section 8**, et la section 8 ne bouge pas : `Photos` (7) et `Documents` (8)
+ne fusionnent jamais, même voisines, même courtes (R2 et §0). L'ordre des neuf
+sections vaut pour cet objet comme pour les autres — un dépôt de fichier correct
+dans une section mal placée reste un écran faux.
 
 ## 1. Icônes de contexte
 

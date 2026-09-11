@@ -92,6 +92,48 @@ export function nomFichier(url: string): string {
 	return base.replace(PREFIXE_UUID, '') || base;
 }
 
+/**
+ * Le TYPE d'un fichier, en trois lettres, tel qu'on l'affiche sur sa vignette.
+ *
+ * 🔴 Demandé le 11/09/2026 : « mettre une vignette nommée de la façon suivante
+ * type de fichier: NOM (ex : PDF: MON NOM) ». Le type EST l'information la plus
+ * utile d'une liste de pièces jointes — on cherche « le PDF », pas « le
+ * cinquième ».
+ *
+ * ⚠️ Il vient de l'EXTENSION et non du type MIME : les listes de pièces jointes
+ * ne portent que des URLs, le MIME n'y est plus. C'est aussi ce que l'œil lit.
+ */
+export function typeFichier(nomOuUrl: string): string {
+	const nom = nomFichier(nomOuUrl);
+	const point = nom.lastIndexOf('.');
+	if (point <= 0) return 'FICHIER';
+	const ext = nom.slice(point + 1).toUpperCase();
+	//  Les familles bureautiques portent plusieurs extensions pour un même
+	//  format : les ramener au nom que tout le monde emploie évite « XLSX » à
+	//  côté de « XLS » pour deux tableurs.
+	const FAMILLES: Record<string, string> = {
+		JPEG: 'JPG',
+		XLSX: 'EXCEL',
+		XLS: 'EXCEL',
+		DOCX: 'WORD',
+		DOC: 'WORD',
+		PPTX: 'POWERPOINT',
+		PPT: 'POWERPOINT',
+		TXT: 'TEXTE',
+	};
+	return FAMILLES[ext] ?? ext;
+}
+
+/**
+ * Le nom SANS son extension — elle est déjà dite par le type, et la répéter
+ * allonge la vignette pour rien (« PDF: contrat.pdf »).
+ */
+export function nomSansExtension(nomOuUrl: string): string {
+	const nom = nomFichier(nomOuUrl);
+	const point = nom.lastIndexOf('.');
+	return point > 0 ? nom.slice(0, point) : nom;
+}
+
 /** Pièce jointe telle que la manipulent les formulaires (EvolForm, uploads). */
 export interface PieceJointe {
 	url: string;

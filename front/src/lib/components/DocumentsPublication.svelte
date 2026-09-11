@@ -19,7 +19,8 @@
 
 	import { documents as docsApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { ACCEPT_DOCUMENTS, attacherAPublication, nomFichier } from '$lib/fichiers';
+	import { ACCEPT_DOCUMENTS, attacherAPublication } from '$lib/fichiers';
+	import PastilleFichier from './PastilleFichier.svelte';
 
 	/** L'identifiant de la publication — elle existe forcément ici. */
 	export let publicationId: number;
@@ -59,48 +60,39 @@
 	}
 </script>
 
+<!--  🔴 La forme des TICKETS, adoptée le 11/09/2026 sur désignation : pastilles
+      horizontales, croix rouge, « TYPE: nom ». Cet écran rendait une liste
+      verticale avec un 🗑️ par ligne — le même objet ne peut pas avoir deux
+      formes selon l'écran qui le montre (R3 du cadre).
+
+      La pastille vient de `PastilleFichier`, partagée avec `FichiersUpload` :
+      recopier son balisage ici aurait fait deux rendus à tenir accordés, ce qui
+      est exactement le défaut qu'on vient de corriger. -->
 {#if docs.length}
-	<ul class="docs-liste">
+	<div class="docs-liste">
 		{#each docs as doc (doc.id)}
-			<li>
-				<span class="docs-nom">📎 {doc.titre || nomFichier(doc.fichier_nom ?? '')}</span>
-				<button
-					type="button"
-					class="btn-icon-danger"
-					aria-label="Retirer ce document"
-					title="Retirer ce document"
-					on:click={() => retirer(doc.id)}>🗑️</button
-				>
-			</li>
+			<PastilleFichier
+				nom={doc.fichier_nom ?? ''}
+				libelle={doc.titre ?? null}
+				on:click={() => retirer(doc.id)}
+			/>
 		{/each}
-	</ul>
+	</div>
 {/if}
 <label class="btn btn-outline btn-sm docs-ajout">
-	{enCours ? 'Téléversement…' : '+ Ajouter un document'}
+	{enCours ? '⏳ Téléversement…' : '\u{1F4CE} Ajouter un document'}
 	<input type="file" multiple accept={ACCEPT_DOCUMENTS} disabled={enCours} on:change={ajouter} />
 </label>
 
 <style>
+	/*  ⚠️ En RANGÉE, plus en colonne : les pastilles s'alignent et passent à la
+	    ligne quand elles ne tiennent plus — la forme des tickets. */
 	.docs-liste {
-		list-style: none;
 		margin: 0 0 0.6rem;
 		padding: 0;
 		display: flex;
-		flex-direction: column;
+		flex-wrap: wrap;
 		gap: 0.3rem;
-	}
-	.docs-liste li {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.85rem;
-	}
-	.docs-nom {
-		flex: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 	.docs-ajout {
 		display: inline-flex;
