@@ -100,6 +100,47 @@ class Fournisseur:
         except (KeyError, IndexError, TypeError, AttributeError) as exc:
             raise ErreurLLM("Réponse du modèle illisible — format inattendu.") from exc
 
+    def url_modeles(self, base: str, version_api: str) -> str | None:
+        """L'adresse qui LISTE les modèles — ou `None` si le service n'en a pas.
+
+        🔴 On demande au fournisseur ce que la clé peut atteindre, plutôt que de
+        tenir un catalogue à jour dans le produit (11/09/2026, « on peut choisir
+        un modèle plus intelligent ? »). Un catalogue recopié se périme sans
+        prévenir, et il ment deux fois : il propose des modèles que la clé ne
+        peut pas appeler, et il cache ceux qui sont sortis depuis.
+
+        ⚠️ `None` n'est pas une erreur : Azure n'expose pas ses déploiements par
+        l'API d'inférence. L'écran garde alors la saisie libre — il ne prétend
+        pas connaître une liste qu'il n'a pas.
+        """
+        return f"{base.rstrip('/')}/models"
+
+    def lire_modeles(self, reponse: dict[str, Any]) -> list[dict[str, str]]:
+        """Les modèles de CONVERSATION, du plus récent au plus ancien.
+
+        Le tri est un fait (`created`, rendu par le service), pas une
+        appréciation : il n'y a pas de « meilleur » modèle à désigner depuis ici.
+
+        ⚠️ Le filtre est nécessaire : la liste d'OpenAI mêle transcription,
+        synthèse vocale, images et plongements, qui ne répondent pas à
+        `/chat/completions`. Il vit ICI, dans le seul module qui parle à ce
+        service — pas dans l'écran, qui n'a pas à connaître les familles de
+        modèles d'un fournisseur.
+        """
+        familles = ("gpt-", "chatgpt-", "o1", "o3", "o4")
+        exclus = (
+            "-audio", "-realtime", "-transcribe", "-tts", "-search",
+            "-instruct", "-image", "-moderation", "-embedding",
+        )
+        vus = []
+        for m in reponse.get("data") or []:
+            ident = str(m.get("id") or "")
+            if not ident.startswith(familles) or any(x in ident for x in exclus):
+                continue
+            vus.append({"id": ident, "libelle": ident, "_rang": m.get("created") or 0})
+        vus.sort(key=lambda m: m["_rang"], reverse=True)
+        return [{"id": m["id"], "libelle": m["libelle"]} for m in vus]
+
 
 @dataclass(frozen=True)
 class FournisseurAzure(Fournisseur):
@@ -119,6 +160,12 @@ class FournisseurAzure(Fournisseur):
 
     def entetes(self, cle: str) -> dict[str, str]:
         return {"api-key": cle, "Content-Type": "application/json"}
+
+    def url_modeles(self, base: str, version_api: str) -> str | None:
+        """Aucune : sur Azure, ce qu'on choisit est un DÉPLOIEMENT, que seule
+        l'API de gestion connaît — une autre porte, un autre jeton, un autre
+        droit. Le champ reste libre, et l'écran le dit."""
+        return None
 
 
 @dataclass(frozen=True)
@@ -148,6 +195,22 @@ class FournisseurAnthropic(Fournisseur):
             "system": consigne,
             "messages": [{"role": "user", "content": message}],
         }
+
+    def url_modeles(self, base: str, version_api: str) -> str | None:
+        return f"{base.rstrip('/')}/v1/models"
+
+    def lire_modeles(self, reponse: dict[str, Any]) -> list[dict[str, str]]:
+        """Anthropic ne rend que des modèles de conversation : aucun filtre.
+
+        Il rend en revanche un `display_name` — « Claude Sonnet 4.5 » plutôt que
+        `claude-sonnet-4-5-20250929` —, et c'est cela qu'un gestionnaire lit. La
+        liste arrive déjà du plus récent au plus ancien.
+        """
+        return [
+            {"id": str(m["id"]), "libelle": str(m.get("display_name") or m["id"])}
+            for m in (reponse.get("data") or [])
+            if m.get("id")
+        ]
 
     def lire(self, reponse: dict[str, Any]) -> str:
         try:
@@ -322,6 +385,71 @@ async def demander(
         raise ErreurLLM("Le modèle a répondu sans contenu.")
     logger.info("LLM %s/%s : %d caractères en %.1f s", f.code, cfg.modele, len(texte), duree)
     return texte
+
+
+async def modeles_disponibles(session: Session) -> dict[str, Any]:
+    """Ce que la clé enregistrée peut RÉELLEMENT appeler, demandé au fournisseur.
+
+    🔴 Le fait, pas le catalogue. Le champ « Modèle » était libre et adossé à
+    trois exemples écrits en dur, avec le commentaire « le catalogue bouge
+    vite » — ce qui est l'aveu même du défaut : un repère recopié propose des
+    modèles que la clé ne peut pas appeler et cache ceux qui sont sortis depuis.
+    Le gestionnaire découvrait l'écart au test de connexion, une saisie plus
+    tard.
+
+    Rend toujours une réponse LISIBLE, jamais une exception :
+
+    | `listable` | Ce que l'écran en fait |
+    |---|---|
+    | `True` | une liste déroulante, avec le modèle en place toujours proposé |
+    | `False` | la saisie libre, et le `motif` dit pourquoi |
+
+    ⚠️ `False` couvre trois cas qu'il ne faut PAS confondre avec une panne :
+    Azure (pas d'inventaire par cette porte), une clé restreinte en lecture, et
+    un service injoignable. Aucun n'empêche de configurer l'assistant à la main —
+    c'est pourquoi l'absence de liste n'est pas une erreur.
+    """
+    import httpx
+
+    cfg = config_llm(session)
+    cfg.verifier(exiger_actif=False)
+    url = cfg.fournisseur.url_modeles(cfg.base_url, cfg.version_api)
+    if url is None:
+        return {
+            "listable": False,
+            "motif": f"{cfg.fournisseur.libelle} n'expose pas la liste de ses déploiements.",
+            "modeles": [],
+        }
+    try:
+        async with httpx.AsyncClient(timeout=cfg.delai_s) as client:
+            reponse = await client.get(url, headers=cfg.fournisseur.entetes(cfg.cle))
+    except httpx.HTTPError:
+        return {"listable": False, "motif": "Le service n'a pas pu être joint.", "modeles": []}
+    if reponse.status_code in (401, 403):
+        #  Le cas le plus fréquent : une clé créée en écriture seule, ou
+        #  restreinte à `/chat/completions`. Elle SYNTHÉTISE très bien et ne
+        #  peut pas s'inventorier — le dire évite de la croire invalide.
+        return {
+            "listable": False,
+            "motif": "Cette clé n'a pas le droit de lister les modèles (permission « models »).",
+            "modeles": [],
+        }
+    if reponse.status_code >= 400:
+        logger.warning("Liste des modèles %s → %s", cfg.fournisseur.code, reponse.status_code)
+        return {
+            "listable": False,
+            "motif": f"Le fournisseur a répondu {reponse.status_code}.",
+            "modeles": [],
+        }
+    try:
+        modeles = cfg.fournisseur.lire_modeles(reponse.json())
+    except (ValueError, KeyError, TypeError):
+        return {"listable": False, "motif": "Liste illisible — format inattendu.", "modeles": []}
+    #  Une liste VIDE n'est pas une liste : la rendre ferait choisir dans un
+    #  menu sans entrée (`standards/04` §2 — le cas zéro).
+    if not modeles:
+        return {"listable": False, "motif": "Aucun modèle de conversation proposé.", "modeles": []}
+    return {"listable": True, "motif": "", "modeles": modeles}
 
 
 async def tester(session: Session) -> dict[str, Any]:

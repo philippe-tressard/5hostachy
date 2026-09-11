@@ -307,6 +307,17 @@ export const config = {
 			reponse: string;
 			duree_ms: number;
 		}>('/config/llm-test', {}),
+	/**  Les modèles que la clé enregistrée peut RÉELLEMENT appeler, demandés au
+	 *   fournisseur. `listable: false` n'est pas une erreur : Azure n'expose pas
+	 *   ses déploiements, et une clé peut synthétiser sans avoir le droit de
+	 *   s'inventorier. L'écran retombe alors sur la saisie libre, en disant
+	 *   pourquoi (`motif`). */
+	llmModeles: () =>
+		api.get<{
+			listable: boolean;
+			motif: string;
+			modeles: { id: string; libelle: string }[];
+		}>('/config/llm-modeles'),
 
 	whatsappStatut: () => api.get<any>('/config/whatsapp-status'),
 	whatsappJournaux: () => api.get<any>('/config/whatsapp-logs'),
