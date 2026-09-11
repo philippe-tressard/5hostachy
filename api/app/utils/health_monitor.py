@@ -329,6 +329,7 @@ def _check_reference_copro(session: Session) -> list[str]:
 
 
 from app.utils.sante_modeles_email import controler as controler_modeles_email
+from app.utils.liens import base_site
 
 
 def _en_problemes(issues: list[str]) -> list[dict]:
@@ -381,7 +382,7 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
         ).all()
     }
     site_nom = cfg.get("site_nom") or "5Hostachy"
-    site_url = (cfg.get("site_url") or "https://5hostachy.fr").rstrip("/")
+    site_url = (base_site(cfg.get("site_url"))).rstrip("/")
 
     contexte = {
         "problemes": _en_problemes(issues),

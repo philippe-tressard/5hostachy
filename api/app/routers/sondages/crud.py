@@ -26,6 +26,7 @@ from .commun import (
     SondageCreate, SondageRead, SondageUpdate,
 )
 from app.utils.communaute import exiger_acces
+from app.utils.liens import base_site
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
 
@@ -230,7 +231,7 @@ def create_sondage(
                 },
                 "auteur": {"prenom": user.prenom, "nom": user.nom},
                 "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
-                "app": {"url": cfg_map.get("site_url", "https://localhost")},
+                "app": {"url": base_site(cfg_map.get("site_url"))},
                 "reference_copro": cfg_map.get("reference_copro", ""),
                 # Un sondage n'a pas de pièce jointe, mais le modèle
                 # `publication_syndic` teste `fichiers` : Jinja évalue un

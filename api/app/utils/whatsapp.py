@@ -9,6 +9,7 @@ from typing import Any, Callable
 import httpx
 
 from app.utils.fichiers import chemins_locaux
+from app.utils.liens import base_site
 
 logger = logging.getLogger(__name__)
 
@@ -345,7 +346,7 @@ def construire_message(
     """
     footer = config.get('whatsapp_footer', '').strip()
     if message_sans_contenu(public_cible, confidentiel):
-        site_url = (config.get('site_url') or '').strip()
+        site_url = base_site(config.get('site_url'))
         #  🔴 Le titre PART, confidentiel compris (#623) ; le repli ne sert
         #  plus qu'aux actualités sans titre.
         titre_affiche = titre or TITRE_CONFIDENTIEL
@@ -400,7 +401,7 @@ def envoyer_whatsapp(
             # La photo existe mais n'a pas pu être jointe. Le message part quand
             # même — un envoi perdu est bien pire qu'un envoi sans image — et il
             # dit où la voir plutôt que de laisser croire qu'il n'y en a pas.
-            lien = (config.get('site_url') or '').strip().rstrip('/')
+            lien = base_site(config.get('site_url')).rstrip('/')
             if lien:
                 payload["text"] += (
                     "\n\n📷 Photos à voir sur le site : "

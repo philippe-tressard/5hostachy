@@ -18,6 +18,7 @@ from sqlmodel import Session
 
 from app.database import get_session
 from app.utils.manuel_pdf import ManuelIndisponible, generer_manuel_pdf
+from app.utils.liens import base_site
 
 router = APIRouter(prefix="/manuel", tags=["manuel"])
 
@@ -29,7 +30,7 @@ def manuel_pdf(session: Session = Depends(get_session)):
 
     cfg = config_site(session)
     site_nom = cfg.get("site_nom") or "5Hostachy"
-    site_url = (cfg.get("site_url") or "https://5hostachy.fr").rstrip("/")
+    site_url = base_site(cfg.get("site_url"))
 
     try:
         pdf = generer_manuel_pdf(site_nom, site_url)

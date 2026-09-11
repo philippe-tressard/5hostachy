@@ -28,6 +28,7 @@ from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateu
 from app.utils.fichiers import nom_lisible
 #  La configuration du canal SMTP est un sujet distinct de la composition
 #  d'un message : elle vit dans `app/utils/smtp.py` depuis le 08/08/2026.
+from app.utils.liens import base_site
 from app.seed.emails import expediteur_du_modele
 from app.utils.smtp import (  # noqa: F401  (ré-export : config.py l'importe d'ici)
     _get_smtp_config,
@@ -146,7 +147,7 @@ def _contexte_rendu(session: Session, context: dict) -> tuple[dict, str, str, st
         ).all()
     }
     site_nom = lignes.get("site_nom") or "Ma Résidence"
-    site_url = lignes.get("site_url") or "https://localhost"
+    site_url = base_site(lignes.get("site_url"))
     reference = (lignes.get("reference_copro") or "").strip()
 
     ctx = {

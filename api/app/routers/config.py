@@ -13,6 +13,7 @@ from app.auth.deps import require_admin
 from app.database import get_session
 from app.models.core import ConfigSite, Utilisateur
 from app.seed import DEFAULT_LEGAL
+from app.utils.liens import base_site
 
 router = APIRouter(prefix="/config", tags=["config"])
 
@@ -80,6 +81,20 @@ def _valeur_pour_admin(cle: str, valeur: str) -> str:
     return valeur
 
 
+#: Les clés dont la VALEUR se normalise à l'enregistrement.
+#:
+#: 🔴 11/09/2026 : `site_url` valait `https://5hostachy.fr/`, et tout modèle
+#: d'e-mail écrit `{{ app.url }}/tickets/…`. Le lien partait en
+#: `https://5hostachy.fr//tickets/34` — **404**, sur un courriel adressé au syndic.
+#:
+#: ⚠️ Ceci ne remplace PAS la normalisation à la lecture (`utils/liens.base_site`)
+#: et ne la remplacera jamais : les bases déjà en service portent la valeur sale,
+#: une restauration peut la ramener, et rien n'oblige à passer par cet écran. On
+#: normalise aux DEUX bouts — ici pour que la donnée soit propre, là-bas pour que
+#: le lien le soit même quand elle ne l'est pas.
+_NORMALISEURS = {'site_url': lambda v: base_site(str(v))}
+
+
 @router.get("", response_model=Dict[str, str])
 def get_config(session: Session = Depends(get_session)):
     """Clés de configuration de l'interface exposables **sans authentification**.
@@ -125,6 +140,8 @@ def save_config(
 ):
     """Sauvegarde ou met à jour des clés de configuration (admin uniquement)."""
     for cle, valeur in data.items():
+        if cle in _NORMALISEURS:
+            valeur = _NORMALISEURS[cle](valeur)
         existing = session.get(ConfigSite, cle)
         if existing:
             existing.valeur = str(valeur)
