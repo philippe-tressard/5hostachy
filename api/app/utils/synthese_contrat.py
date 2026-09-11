@@ -46,8 +46,11 @@ DIT, plutôt que de rendre des sections vides sans explication.
 """
 from __future__ import annotations
 
+import base64
 import html
 import logging
+import os
+from dataclasses import dataclass
 from datetime import datetime
 
 from sqlmodel import Session, select
@@ -55,8 +58,9 @@ from sqlmodel import Session, select
 from app.models.documents import Document
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.utils.dates_fr import datetime_longue_paris
-from app.utils.llm import ConfigLLM, ErreurLLM, config_llm, demander
+from app.utils.llm import ConfigLLM, ErreurLLM, PieceJointe, config_llm, demander
 from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
+from app.utils.synthese_format import CONSIGNE, CONSIGNE_CITATIONS, GABARIT
 
 logger = logging.getLogger("hostachy.synthese")
 
@@ -65,56 +69,18 @@ logger = logging.getLogger("hostachy.synthese")
 #: de le laisser conclure sur un texte tronqué sans le savoir.
 MAX_CARACTERES_DOCUMENT = 60_000
 
+#: Au-delà, on ne joint pas le fichier : une requête trop lourde est refusée par
+#: le service, et l'encodage en base64 l'alourdit encore d'un tiers. Un contrat
+#: numérisé de quelques pages pèse deux à cinq cents kilo-octets ; ce qui dépasse
+#: ce plafond n'est pas un contrat, c'est un rapport ou un plan.
+MAX_OCTETS_DOCUMENT_JOINT = 4 * 1024 * 1024
+
+#: Et au total, pour la requête entière.
+MAX_OCTETS_JOINTS = 8 * 1024 * 1024
+
 #: Combien de synthèses déjà écrites servent d'exemples. Trois suffisent à faire
 #: passer un format ; au-delà on paie des jetons pour répéter la même leçon.
 MAX_EXEMPLES = 3
-
-#: 🔴 LE FORMAT, tel que le conseil syndical l'a arrêté (11/09/2026).
-#:
-#: Il est imposé au modèle, il ne se négocie pas : c'est le format du carnet
-#: d'entretien de CETTE copropriété, pas celui qu'un modèle trouverait joli. Les
-#: exemples ci-dessous apprennent le ton ; ce gabarit impose la structure.
-GABARIT = """1. Identification du fournisseur
-2. Dates clés / Validité (début, durée initiale, reconduction, résiliation)
-3. Objet du contrat
-4. Prestations incluses
-5. Prestations non incluses
-6. Conditions financières
-7. Points d'attention pour la copropriété"""
-
-CONSIGNE = f"""Tu rédiges la synthèse d'un contrat de COPROPRIÉTÉ — entretien, maintenance,
-assurance, prestation de services — pour le conseil syndical. Elle sera lue par
-des bénévoles, pas par des juristes.
-
-🔴 Tu ne tires tes FAITS que des documents de CE contrat, joints ci-dessous, et
-des champs de sa fiche. Rien d'autre : ni ta connaissance générale du
-fournisseur, ni ce que contiennent habituellement les contrats de ce type, ni les
-exemples de rédaction qui te sont donnés — ceux-là ne montrent que le TON et la
-STRUCTURE attendus. Reprendre un montant, une durée ou une clause lus ailleurs
-que dans ce contrat serait la pire erreur possible : la synthèse alimente le
-carnet d'entretien, qui est un document réglementaire.
-
-Respecte EXACTEMENT ces sept sections, numérotées, dans cet ordre :
-
-{GABARIT}
-
-Règles :
-- une section sans information disponible est écrite avec la mention
-  « non précisé dans les éléments fournis » — n'invente jamais un montant, une
-  date, un numéro RCS ni une clause, et ne comble jamais un manque par ce qui
-  est « habituel » ;
-- des puces courtes, pas de paragraphes ;
-- reprends les termes du contrat, sans les reformuler en langage commercial ;
-- la section 7 est une LECTURE : ce que la copropriété doit surveiller
-  (reconduction tacite, préavis, exclusions coûteuses, options facturées) ;
-- pas de formule d'introduction ni de conclusion, la synthèse commence par le
-  titre de la première section.
-
-Rends du HTML SIMPLE, et rien d'autre : un `<h3>` par section (« 1. Identification
-du fournisseur »), un `<ul><li>` par liste de puces, un `<p>` pour une phrase
-isolée. Pas de `<html>`, pas de `<body>`, pas de bloc de code, pas de Markdown —
-le texte est déposé tel quel dans un champ de notes enrichi."""
-
 
 def documents_du_contrat(session: Session, contrat: ContratEntretien) -> list[Document]:
     """TOUS les documents du contrat, du plus ancien au plus récent.
@@ -223,8 +189,72 @@ def ce_que_la_base_sait(session: Session, contrat: ContratEntretien) -> str:
     return "\n".join(f"- {k} : {v}" for k, v in lignes if v)
 
 
-def construire_message(session: Session, contrat: ContratEntretien, *, avec_document: bool) -> str:
-    """Le message posé au modèle : les exemples, les champs, puis le contrat."""
+@dataclass(frozen=True)
+class Matiere:
+    """Ce qu'on envoie au modèle, et l'inventaire de ce qui a servi.
+
+    🔴 L'inventaire n'est pas décoratif : l'encart de provenance doit nommer ce
+    qui a été LU, et surtout ce qui ne l'a pas été. Le 11/09/2026, les deux PDF
+    d'un contrat de porte de parking étaient des numérisations sans couche de
+    texte : la synthèse rendait « non précisé » sur quatre sections et rien ne
+    disait pourquoi — cela ressemblait à un mauvais modèle.
+    """
+
+    message: str
+    #: Les fichiers joints tels quels, faute de texte extractible.
+    fichiers: tuple[PieceJointe, ...]
+    #: Titres des documents dont le texte a été extrait.
+    lus_en_texte: tuple[str, ...]
+    #: Titres des documents joints en fichier.
+    joints: tuple[str, ...]
+    #: Titres des documents qu'on n'a su ni lire ni joindre, avec le motif.
+    ecartes: tuple[tuple[str, str], ...]
+
+
+def piece_jointe(doc: Document) -> PieceJointe | None:
+    """Le document tel quel, prêt à être lu par le modèle — ou `None`.
+
+    ⚠️ On ne joint QUE ce qu'on n'a pas su lire : un PDF dont le texte s'extrait
+    coûte bien moins cher en texte qu'en fichier, pour le même contenu.
+    """
+    chemin = doc.fichier_chemin
+    if not chemin or not os.path.exists(chemin):
+        return None
+    if os.path.getsize(chemin) > MAX_OCTETS_DOCUMENT_JOINT:
+        return None
+    try:
+        with open(chemin, "rb") as fichier:
+            octets = fichier.read()
+    except OSError as exc:  # noqa: BLE001 - un fichier illisible n'est pas une panne
+        logger.warning("Lecture du fichier %s impossible : %s", doc.id, exc)
+        return None
+    return PieceJointe(
+        nom=doc.fichier_nom or f"document-{doc.id}.pdf",
+        mime=doc.mime_type or "application/pdf",
+        donnees_b64=base64.b64encode(octets).decode("ascii"),
+    )
+
+
+def construire_matiere(
+    session: Session, contrat: ContratEntretien, *, avec_document: bool
+) -> Matiere:
+    """Le message posé au modèle, et l'inventaire de ce qui a servi.
+
+    🔴 Trois sorts possibles pour un document, dans cet ordre de préférence
+    (11/09/2026) :
+
+    | Sort | Quand | Pourquoi |
+    |---|---|---|
+    | **texte extrait** | `pypdf` en tire quelque chose | bien moins cher, et exact |
+    | **fichier joint** | aucun texte — une numérisation | le modèle le lit lui-même |
+    | **écarté** | absent, trop lourd | on le DIT plutôt que de le taire |
+
+    La deuxième ligne est née d'un vrai contrat : les deux PDF de la porte de
+    parking étaient des numérisations signées, `pypdf` en tirait zéro caractère,
+    et quatre sections sur sept sortaient vides. La majorité des contrats de
+    copropriété sont signés, donc numérisés : sans cette voie, la fonctionnalité
+    ne servait que les documents nés numériques.
+    """
     blocs = []
 
     modeles = exemples(session, contrat)
@@ -233,53 +263,91 @@ def construire_message(session: Session, contrat: ContratEntretien, *, avec_docu
             "Voici des synthèses déjà rédigées par ce conseil syndical, pour d'AUTRES "
             "contrats. Reprends leur ton, leur longueur et leur façon de formuler — "
             "n'en reprends AUCUN fait : ni montant, ni durée, ni clause, ni "
-            "fournisseur :\n\n"
-            + "\n\n---\n\n".join(modeles)
+            "fournisseur :\n\n" + "\n\n---\n\n".join(modeles)
         )
 
     blocs.append("Ce que la fiche du contrat indique :\n" + ce_que_la_base_sait(session, contrat))
 
-    if avec_document:
-        #  Chaque document est ANNONCÉ par son titre et sa date : sans eux, le
-        #  modèle lit une seule masse de texte et ne peut pas savoir qu'un avenant
-        #  remplace une clause du contrat initial.
-        lus, budget = [], MAX_CARACTERES_DOCUMENT
-        for doc in documents_du_contrat(session, contrat):
-            if budget <= 0:
-                break
-            texte_doc = texte_du_document(doc)
-            if not texte_doc:
-                continue
-            extrait = texte_doc[:budget]
-            budget -= len(extrait)
-            quand = doc.publie_le.date().isoformat() if doc.publie_le else "date inconnue"
-            tronque = " — TRONQUÉ" if len(extrait) < len(texte_doc) else ""
-            lus.append(f"--- Document « {doc.titre} » (déposé le {quand}){tronque} ---\n{extrait}")
-        texte = "\n\n".join(lus)
-        if texte:
-            blocs.append(
-                "Documents du contrat, du plus ancien au plus récent. Un document "
-                "postérieur peut MODIFIER une clause d'un précédent — un avenant "
-                "l'emporte sur le contrat initial :\n\n" + texte
-            )
-        else:
-            #  ⚠️ On le DIT au modèle plutôt que de le laisser deviner : sans
-            #  cette phrase, il comble les sections manquantes par des formules
-            #  plausibles, ce qui est le pire résultat possible ici.
-            blocs.append(
-                "Aucun texte de contrat n'a pu être lu. Les sections 4 à 7 doivent porter "
-                "« non précisé dans les éléments fournis »."
-            )
-    else:
+    if not avec_document:
         blocs.append(
             "L'envoi du document est désactivé. Les sections 4 à 7 doivent porter "
             "« non précisé dans les éléments fournis »."
         )
+        return Matiere("\n\n".join(blocs), (), (), (), ())
 
-    return "\n\n".join(blocs)
+    #  Chaque document est ANNONCÉ par son titre et sa date : sans eux, le
+    #  modèle lit une seule masse de texte et ne peut pas savoir qu'un avenant
+    #  remplace une clause du contrat initial.
+    lus, fichiers = [], []
+    en_texte, en_fichier, ecartes = [], [], []
+    budget = MAX_CARACTERES_DOCUMENT
+    budget_octets = MAX_OCTETS_JOINTS
+    for doc in documents_du_contrat(session, contrat):
+        quand = doc.publie_le.date().isoformat() if doc.publie_le else "date inconnue"
+        texte_doc = texte_du_document(doc)
+        if texte_doc and budget > 0:
+            extrait = texte_doc[:budget]
+            budget -= len(extrait)
+            tronque = " — TRONQUÉ" if len(extrait) < len(texte_doc) else ""
+            lus.append(
+                f"--- Document « {doc.titre} » (déposé le {quand}){tronque} ---\n{extrait}"
+            )
+            en_texte.append(doc.titre)
+            continue
+        #  Pas de texte : le fichier part tel quel. C'est le cas NORMAL d'un
+        #  contrat signé, donc numérisé.
+        piece = piece_jointe(doc)
+        if piece is None:
+            ecartes.append((doc.titre, "illisible ou trop volumineux"))
+            continue
+        if len(piece.donnees_b64) > budget_octets:
+            ecartes.append((doc.titre, "au-delà du volume que le service accepte"))
+            continue
+        budget_octets -= len(piece.donnees_b64)
+        fichiers.append(piece)
+        en_fichier.append(doc.titre)
+
+    texte = "\n\n".join(lus)
+    if texte:
+        blocs.append(
+            "Documents du contrat, du plus ancien au plus récent. Un document "
+            "postérieur peut MODIFIER une clause d'un précédent — un avenant "
+            "l'emporte sur le contrat initial :\n\n" + texte
+        )
+    if fichiers:
+        blocs.append(
+            "Les documents joints à ce message sont ceux de ce contrat, du plus ancien "
+            "au plus récent : lis-les toi-même, leur texte n'a pas pu être extrait (ce "
+            "sont des documents signés, donc numérisés). Un document postérieur MODIFIE "
+            "une clause d'un précédent."
+        )
+    if not texte and not fichiers:
+        #  ⚠️ On le DIT au modèle plutôt que de le laisser deviner : sans cette
+        #  phrase, il comble les sections manquantes par des formules plausibles,
+        #  ce qui est le pire résultat possible ici.
+        blocs.append(
+            "Aucun texte de contrat n'a pu être lu. Les sections 4 à 7 doivent porter "
+            "« non précisé dans les éléments fournis »."
+        )
+
+    return Matiere(
+        message="\n\n".join(blocs),
+        fichiers=tuple(fichiers),
+        lus_en_texte=tuple(en_texte),
+        joints=tuple(en_fichier),
+        ecartes=tuple(ecartes),
+    )
 
 
-def entete_provenance(cfg: ConfigLLM, documents: list[Document], *, quand: datetime) -> str:
+def construire_message(session: Session, contrat: ContratEntretien, *, avec_document: bool) -> str:
+    """Le message seul — l'inventaire et les pièces jointes vivent dans
+    `construire_matiere`, dont ceci n'est que la face texte."""
+    return construire_matiere(session, contrat, avec_document=avec_document).message
+
+
+def entete_provenance(
+    cfg: ConfigLLM, matiere: Matiere, *, quand: datetime, documents_joints: int
+) -> str:
     """L'encart qui dit d'où vient le texte : quel modèle, quand, sur quoi.
 
     🔴 Demandé le 11/09/2026, et ce n'est pas une politesse. La synthèse atterrit
@@ -293,34 +361,61 @@ def entete_provenance(cfg: ConfigLLM, documents: list[Document], *, quand: datet
     même chose), *de quand date-t-elle ?*, et *qu'a-t-elle lu ?* — c'est la
     dernière qui permet de voir qu'un document manquait.
 
-    ⚠️ Il est ÉCHAPPÉ puis rendu en HTML : un nom de fichier peut porter un `&`
+    🔴 Et surtout : ce qu'elle n'a PAS lu. Le même jour, sur le premier vrai
+    contrat, les deux PDF étaient des numérisations sans texte ; la synthèse
+    rendait « non précisé » sur quatre sections et rien ne disait pourquoi. Un
+    document écarté se DIT, sinon la synthèse se lit comme une lecture complète.
+
+    ⚠️ Tout est ÉCHAPPÉ puis rendu en HTML : un nom de fichier peut porter un `&`
     ou un chevron, et il voyage jusqu'à un `{@html}` (assaini, mais on ne fait
     pas reposer la correction du rendu sur l'assainisseur).
     """
     e = html.escape
-    sur = (
-        " à partir de " + " ; ".join(e(d.titre) for d in documents)
-        if documents
-        else " à partir des seules données de la fiche du contrat"
-    )
-    return (
+    phrases = []
+    lus = list(matiere.lus_en_texte)
+    #  Un fichier que le service a refusé n'a pas été lu, quoi qu'on ait envoyé :
+    #  c'est le nombre REÇU qui fait foi, pas celui qu'on espérait joindre.
+    if documents_joints:
+        lus += list(matiere.joints)
+        ecartes = list(matiere.ecartes)
+    else:
+        ecartes = list(matiere.ecartes) + [
+            (titre, "non transmis au service") for titre in matiere.joints
+        ]
+
+    if lus:
+        phrases.append(" à partir de " + " ; ".join(e(t) for t in lus))
+    else:
+        phrases.append(" à partir des seules données de la fiche du contrat")
+
+    entete = (
         "<blockquote><p><em>Synthèse proposée par "
         f"{e(cfg.fournisseur.libelle)} · {e(cfg.modele)} le "
-        f"{e(datetime_longue_paris(quand))}{sur}. "
-        "À relire et à corriger avant de l'enregistrer.</em></p></blockquote>"
+        f"{e(datetime_longue_paris(quand))}{''.join(phrases)}. "
+        "À relire et à corriger avant de l'enregistrer.</em></p>"
     )
+    if ecartes:
+        details = " ; ".join(f"{e(titre)} ({e(motif)})" for titre, motif in ecartes)
+        entete += (
+            "<p><em>⚠️ Document non lu, la synthèse est donc partielle : "
+            f"{details}.</em></p>"
+        )
+    return entete + "</blockquote>"
 
 
 async def synthetiser(session: Session, contrat: ContratEntretien) -> str:
     """Propose la synthèse d'un contrat, précédée de sa provenance. N'enregistre RIEN."""
     cfg = config_llm(session)
-    documents = documents_du_contrat(session, contrat) if cfg.envoi_document else []
-    message = construire_message(session, contrat, avec_document=cfg.envoi_document)
-    texte = await demander(session, consigne=CONSIGNE, message=message)
+    matiere = construire_matiere(session, contrat, avec_document=cfg.envoi_document)
+    reponse = await demander(
+        session, consigne=CONSIGNE, message=matiere.message, fichiers=matiere.fichiers
+    )
     #  L'horodatage est pris APRÈS la réponse : c'est la date de la synthèse
     #  rendue, pas celle de la demande — une requête peut durer une minute.
-    entete = entete_provenance(cfg, documents, quand=datetime.utcnow())
-    return entete + "\n" + texte.strip()
+    entete = entete_provenance(
+        cfg, matiere, quand=datetime.utcnow(), documents_joints=reponse.documents_joints
+    )
+    return entete + "\n" + reponse.texte.strip()
 
 
 def synthese_disponible(session: Session, contrat: ContratEntretien) -> bool:
@@ -346,8 +441,11 @@ def synthese_disponible(session: Session, contrat: ContratEntretien) -> bool:
 
 __all__ = [
     "CONSIGNE",
+    "CONSIGNE_CITATIONS",
     "GABARIT",
     "ErreurLLM",
+    "Matiere",
+    "construire_matiere",
     "construire_message",
     "entete_provenance",
     "documents_du_contrat",

@@ -278,16 +278,17 @@
 		<div class="form-grid">
 			<label class="field">
 				Longueur maximale de la réponse
-				<input type="number" bind:value={cfg.max_jetons} min="200" max="8000" step="100" />
+				<input type="number" bind:value={cfg.max_jetons} min="200" max="32000" step="500" />
 				<span class="aide">
-					En jetons. C’est un plafond de <strong>coût</strong> autant que de longueur. Comptez 1 500 pour
-					un modèle économique, 3 000 pour un modèle plus capable — ils développent davantage, et une
-					synthèse coupée au milieu d’une section ressemble à un défaut du modèle alors que c’est ce plafond.
+					En jetons, et c’est un plafond de <strong>coût</strong> autant que de longueur : seuls les
+					jetons réellement produits sont facturés. Comptez <strong>10 000</strong> pour un modèle récent
+					— il raisonne avant d’écrire, et ce raisonnement compte dans le plafond. Une synthèse coupée
+					au milieu d’une section ressemble à un défaut du modèle alors que c’est ce champ.
 				</span>
 			</label>
 			<label class="field">
 				Délai d’attente
-				<input type="number" bind:value={cfg.delai_s} min="10" max="180" step="5" />
+				<input type="number" bind:value={cfg.delai_s} min="10" max="300" step="5" />
 				<span class="aide">
 					En secondes. Au-delà, on renonce et l’écran le dit — le champ reste saisissable à la main.
 				</span>

@@ -46,6 +46,7 @@ from app.utils.llm_fournisseurs import (
     Fournisseur,
     FournisseurAnthropic,
     FournisseurAzure,
+    PieceJointe,
 )
 
 #: 🔴 Ce module reste **la porte d'entrée unique**, même depuis que les
@@ -71,6 +72,8 @@ __all__ = [
     "Fournisseur",
     "FournisseurAnthropic",
     "FournisseurAzure",
+    "PieceJointe",
+    "Reponse",
     "config_llm",
     "demander",
     "modeles_disponibles",
@@ -85,6 +88,24 @@ DELAI_DEFAUT_S = 45
 
 #: Plafond de jetons rendus — c'est un garde-fou de COÛT autant que de longueur.
 MAX_JETONS_DEFAUT = 1500
+
+@dataclass(frozen=True)
+class Reponse:
+    """Ce que le modèle a rendu, ET ce qu'il a réellement reçu.
+
+    🔴 Le second point n'est pas un détail de journal : quand le service refuse
+    les pièces jointes, l'appel aboutit quand même — sur la seule fiche. Sans
+    `documents_joints`, l'écran présenterait cette synthèse appauvrie comme si
+    elle avait lu les contrats. Une réponse qui ne dit pas ce qu'elle a lu est
+    invérifiable (11/09/2026).
+    """
+
+    texte: str
+    documents_joints: int
+
+    def __str__(self) -> str:  # pragma: no cover - confort d'écriture
+        return self.texte
+
 
 #: Combien de fois au plus on corrige la requête après un refus de paramètre.
 #: Deux suffisent aux cas connus (le plafond de jetons, la température) ; le
@@ -198,9 +219,10 @@ async def demander(
     consigne: str,
     message: str,
     max_jetons: Optional[int] = None,
+    fichiers: tuple[PieceJointe, ...] = (),
     exiger_actif: bool = True,
-) -> str:
-    """Pose une question au modèle configuré et rend sa réponse en texte.
+) -> Reponse:
+    """Pose une question au modèle configuré et rend sa réponse.
 
     Lève `ErreurLLM` — jamais autre chose : l'appelant est un écran, il doit
     pouvoir dire « ça n'a pas marché » sans distinguer un délai dépassé d'un
@@ -214,12 +236,19 @@ async def demander(
 
     debut = time.monotonic()
     try:
-        corps = f.corps(cfg.modele, consigne, message, max_jetons or cfg.max_jetons)
+        #  C'est ici, et nulle part ailleurs, que le format de message du
+        #  fournisseur rencontre les fichiers du métier.
+        joints = tuple(f.bloc_document(j.nom, j.mime, j.donnees_b64) for j in fichiers)
+        corps = f.corps(cfg.modele, consigne, message, max_jetons or cfg.max_jetons, joints)
+        #  Vrai tant qu'on n'a pas dû renoncer aux pièces jointes.
+        avec_documents = bool(joints)
         async with httpx.AsyncClient(timeout=cfg.delai_s) as client:
             #  Le plafond de reprises est BORNÉ : chaque tour retire ou renomme
             #  un paramètre, il y en a peu, et une boucle sans fin sur un service
             #  facturé à l'appel serait pire que l'échec qu'elle évite.
-            for _ in range(MAX_ADAPTATIONS + 1):
+            #  +2 : un tour pour l'appel initial, un pour le repli sans pièces
+            #  jointes qui ne doit pas consommer le budget des adaptations.
+            for _ in range(MAX_ADAPTATIONS + 2):
                 reponse = await client.post(
                     f.url(cfg.modele, cfg.base_url, cfg.version_api),
                     headers=f.entetes(cfg.cle),
@@ -229,10 +258,32 @@ async def demander(
                     break
                 param, code = f.lire_erreur(_charge(reponse))
                 suite = f.adapter(corps, param, code)
-                if suite is None:
-                    break
-                logger.info("LLM %s : paramètre « %s » refusé (%s) — réessai", f.code, param, code)
-                corps = suite
+                if suite is not None:
+                    logger.info(
+                        "LLM %s : paramètre « %s » refusé (%s) — réessai", f.code, param, code
+                    )
+                    corps = suite
+                    continue
+                if avec_documents:
+                    #  🔴 Dernier recours : le service n'a pas voulu des fichiers
+                    #  joints. On repose la MÊME question sans eux plutôt que de
+                    #  rendre un échec — une synthèse fondée sur la seule fiche
+                    #  vaut mieux que pas de synthèse, et elle le DIT (l'appelant
+                    #  lit `documents_refuses` pour l'écrire dans l'encart).
+                    #
+                    #  ⚠️ Ce repli est distinct de `adapter()` : celui-là corrige
+                    #  un RÉGLAGE, celui-ci renonce à du CONTENU. Les confondre
+                    #  ferait disparaître des documents sans que personne le sache.
+                    logger.info("LLM %s : documents joints refusés — reprise sans eux", f.code)
+                    avec_documents = False
+                    #  ⚠️ On ne reconstruit QUE les messages : les adaptations de
+                    #  paramètres déjà obtenues (un plafond renommé, une
+                    #  température retirée) doivent survivre, sinon on les repaie
+                    #  en tours de boucle et on épuise le budget avant d'aboutir.
+                    sans = f.corps(cfg.modele, consigne, message, max_jetons or cfg.max_jetons, ())
+                    corps = {**corps, "messages": sans["messages"]}
+                    continue
+                break
     except httpx.TimeoutException as exc:
         raise ErreurLLM(f"Pas de réponse après {cfg.delai_s} s.") from exc
     except httpx.HTTPError as exc:
@@ -263,8 +314,15 @@ async def demander(
     texte = f.lire(reponse.json())
     if not texte:
         raise ErreurLLM("Le modèle a répondu sans contenu.")
-    logger.info("LLM %s/%s : %d caractères en %.1f s", f.code, cfg.modele, len(texte), duree)
-    return texte
+    logger.info(
+        "LLM %s/%s : %d caractères en %.1f s (%d document(s) joint(s))",
+        f.code,
+        cfg.modele,
+        len(texte),
+        duree,
+        len(fichiers) if avec_documents else 0,
+    )
+    return Reponse(texte=texte, documents_joints=len(fichiers) if avec_documents else 0)
 
 
 async def modeles_disponibles(session: Session) -> dict[str, Any]:
@@ -342,7 +400,7 @@ async def tester(session: Session) -> dict[str, Any]:
     """
     cfg = config_llm(session)
     debut = time.monotonic()
-    texte = await demander(
+    reponse = await demander(
         session,
         consigne="Tu réponds en un seul mot, sans ponctuation.",
         message="Réponds exactement : opérationnel",
@@ -360,6 +418,6 @@ async def tester(session: Session) -> dict[str, Any]:
         "ok": True,
         "fournisseur": cfg.fournisseur.libelle,
         "modele": cfg.modele,
-        "reponse": texte[:80],
+        "reponse": reponse.texte[:80],
         "duree_ms": int((time.monotonic() - debut) * 1000),
     }
