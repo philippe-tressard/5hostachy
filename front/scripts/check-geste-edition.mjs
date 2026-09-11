@@ -118,8 +118,6 @@ const EXCEPTIONS = {
  * trois tentatives de la journée sur les contrats.
  */
 const MODALES = {
-	'lib/components/InventaireBail.svelte':
-		'saisie du RETOUR d’un objet remis — une ligne de tableau, donc une correction en place. #889',
 	'lib/components/ModaleAccesBail.svelte':
 		'ce n’est PAS la correction d’un objet de liste mais un sous-écran entier (accès Vigik et télécommandes d’un bail, plusieurs listes et plusieurs gestes). À trancher devant l’écran. #889',
 	'routes/(app)/admin/+page.svelte':
