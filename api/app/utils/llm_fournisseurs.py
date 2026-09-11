@@ -95,6 +95,38 @@ class Fournisseur:
         err = (charge or {}).get("error") or {}
         return str(err.get("param") or ""), str(err.get("code") or "")
 
+    #: Ce qu'on RECONNAÎT dans un refus qui ne nomme aucun paramètre, et le
+    #: message de produit qui lui correspond. On lit le texte du fournisseur pour
+    #: le CLASSER, jamais pour le recopier : le message rendu ci-dessous est le
+    #: nôtre, et il dit quoi faire.
+    DIAGNOSTICS: ClassVar[tuple[tuple[tuple[str, ...], str], ...]] = (
+        (
+            ("max_tokens", "output limit"),
+            "Le plafond de jetons est trop bas pour ce modèle — augmentez "
+            "« Longueur maximale de la réponse ».",
+        ),
+    )
+
+    def diagnostiquer(self, charge: dict[str, Any]) -> str | None:
+        """Un refus SANS `param` que l'on sait quand même expliquer, ou `None`.
+
+        🔴 11/09/2026 : *« Could not finish the message because max_tokens or
+        model output limit was reached »*, avec `param: null` et `code: null`.
+        Les modèles qui raisonnent avant de répondre consomment le plafond sans
+        écrire un mot — et l'écran affichait « répondu 400 », donc rien.
+
+        ⚠️ Le texte du fournisseur est lu pour être CLASSÉ, jamais transmis : il
+        peut citer la requête, donc le contrat. Ce qui sort d'ici est notre
+        propre phrase, et elle dit quel réglage changer.
+        """
+        message = str(((charge or {}).get("error") or {}).get("message") or "").lower()
+        if not message:
+            return None
+        for motifs, explication in self.DIAGNOSTICS:
+            if any(m in message for m in motifs):
+                return explication
+        return None
+
     def adapter(self, corps: dict[str, Any], param: str, code: str) -> dict[str, Any] | None:
         """Le même appel, corrigé du paramètre que le service vient de refuser.
 
