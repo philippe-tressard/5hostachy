@@ -184,25 +184,6 @@
 					<a href="/prestataires/contrats">Prestataires → Contrats</a>, avec son prestataire, son
 					échéance et son attestation.
 				</svelte:fragment>
-				<svelte:fragment slot="complement">
-					<!--  🔴 Elle vivait dans admin → SMTP (11/09/2026, signalé à l'écran) :
-					      « ne serait-il pas logique de la positionner dans Fiche copropriété,
-					      section Syndic ? ». Si. Elle décrit le dossier de la copropriété
-					      CHEZ le syndic — elle se lit avec le cabinet et le mandat, pas avec
-					      un serveur d'envoi.
-
-					      ⚠️ La valeur reste dans `ConfigSite` : c'est là que vit toute la
-					      configuration du site, et la déplacer en base n'aurait rien changé à
-					      l'endroit où on la LIT. On déplace l'écran, pas le schéma. -->
-					<label class="field champ-moyen">
-						Référence chez le syndic
-						<input type="text" bind:value={referenceCopro} placeholder="00213" />
-						<span class="aide">
-							Le numéro de dossier de la copropriété chez son syndic. Il préfixe les sujets des
-							courriels qui lui sont envoyés.
-						</span>
-					</label>
-				</svelte:fragment>
 			</SectionContratReference>
 
 			<!--  ⚠️ L'INTERLOCUTEUR ne vient PAS du prestataire, mais de l'annuaire
@@ -242,6 +223,25 @@
 					['Courriel direct', fiche.syndic_interlocuteur_email],
 				]}
 			>
+				<svelte:fragment slot="complement">
+					<!--  🔴 Elle vivait dans admin → SMTP (11/09/2026, signalé à l'écran) :
+					      « ne serait-il pas logique de la positionner dans Fiche copropriété,
+					      section Syndic ? ». Si. Elle décrit le dossier de la copropriété
+					      CHEZ le syndic — elle se lit avec le cabinet et le mandat, pas avec
+					      un serveur d'envoi.
+
+					      ⚠️ La valeur reste dans `ConfigSite` : c'est là que vit toute la
+					      configuration du site, et la déplacer en base n'aurait rien changé à
+					      l'endroit où on la LIT. On déplace l'écran, pas le schéma. -->
+					<label class="field champ-moyen">
+						Référence syndic de la copropriété
+						<input type="text" bind:value={referenceCopro} placeholder="00213" />
+						<span class="aide">
+							Le numéro de dossier de la copropriété chez son syndic. Il préfixe les sujets des
+							courriels qui lui sont envoyés.
+						</span>
+					</label>
+				</svelte:fragment>
 				<svelte:fragment slot="renvoi">
 					Le cabinet et son mandat se modifient dans
 					<a href="/prestataires/contrats">Prestataires → Contrats</a>. Ses

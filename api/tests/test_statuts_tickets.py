@@ -137,7 +137,6 @@ _EXCEPTIONS_FRONT = {
     #  dans un composant qui sert quatre types d'objets.
     #  ⚠️ Il donne `badge-orange` à `ouvert` là où les écrans de tickets donnent
     #  `badge-blue` — écart connu, hors périmètre de #415.
-    "lib/components/FluxCard.svelte": "badge générique multi-objets",
 }
 
 _MOTIF_STATUT = re.compile(r"['\"](ouvert|en_cours|résolu|annulé|fermé)['\"]")

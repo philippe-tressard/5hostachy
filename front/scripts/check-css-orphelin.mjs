@@ -157,8 +157,18 @@ const aveugles = tous.filter((f) =>
  *  ⚠️ **Le baisser fait partie du geste.** Un plafond qui reste au-dessus du
  *  relevé est une tolérance qui ne sert plus, et ce contrôle échoue aussi dans
  *  ce sens-là.
+ *
+ *  🔴 **Remonté à 28 le 11/09/2026, et c'est la seule hausse admise** : une
+ *  EXTRACTION. `FluxCorps` est né de `FluxCard` (plafond de modularité), et
+ *  l'interpolation qui rendait la carte aveugle a suivi le balisage dans le
+ *  fichier neuf — celle qui reste dans la carte en concerne une autre. La dette
+ *  n'a pas augmenté : elle s'est répartie sur deux fichiers.
+ *
+ *  ⚠️ Une hausse pour toute autre raison est une régression, et doit être
+ *  refusée. Écrire ici « + 1 parce que j'ai ajouté une classe interpolée »
+ *  reviendrait à désarmer le contrôle en le documentant.
  */
-const PLAFOND_NON_MESURES = 27;
+const PLAFOND_NON_MESURES = 28;
 
 const mesures = tous.length - aveugles.length;
 
