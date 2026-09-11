@@ -72,13 +72,25 @@ def _pieces_jointes(evol, tk) -> dict:
     }
 
 
-def _meta_ticket(tk) -> dict:
-    """Le socle de `meta` commun aux quatre cartes de ticket."""
+def _meta_ticket(ctx: ContexteFlux, tk) -> dict:
+    """Le socle de `meta` commun aux quatre cartes de ticket.
+
+    🔴 `auteur` ajouté le 11/09/2026, signalé à l'écran : le fil ne disait pas
+    QUI avait déposé le ticket, alors que sa propre carte le porte depuis le
+    18/08 — « état, puis 🔹 périmètre, puis les marqueurs, puis l'auteur », un
+    ordre lui-même repris de l'actualité. Le fil était le seul écran à ne pas
+    suivre la règle, et il est celui qu'on regarde en premier.
+
+    ⚠️ Il vit ICI, dans le socle des QUATRE cartes : l'écrire dans chacune aurait
+    donné quatre occasions de l'oublier — c'est d'ailleurs ce qui vient d'arriver
+    aux pièces jointes (#531).
+    """
     return {
         "ticket_id": tk.id,
         "numero": tk.numero,
         "perimetre": perimetre_label(perimetres_de(tk)),
         "description": strip_html(tk.description, 300),
+        "auteur": auteur_nom(ctx.session, tk.auteur_id),
     }
 
 
@@ -107,7 +119,7 @@ def _carte_mise_a_jour(ctx: ContexteFlux, evol, tk, *, ident, detail, icon, stat
         badges=badges_ticket(tk),
         lien="/tickets",
         meta={
-            **_meta_ticket(tk),
+            **_meta_ticket(ctx, tk),
             "statut": statut,
             **_pieces_jointes(evol, tk),
             #  ⚠️ 400 et non 300 (#531). La carte PLIÉE affiche désormais cet
@@ -178,7 +190,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 badges=badges_ticket(tk),
                 lien="/tickets",
                 meta={
-                    **_meta_ticket(tk),
+                    **_meta_ticket(ctx, tk),
                     "statut": "résolu",
                     #  Le nom dit désormais ce que la valeur EST : plus des heures
                     #  décimales, mais `00j23h54'`. Aucun écran ne la lisait — le
@@ -236,7 +248,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
             badges=badges_ticket(tk),
             lien="/tickets",
             meta={
-                **_meta_ticket(tk),
+                **_meta_ticket(ctx, tk),
                 "statut": tk.statut,
                 "photos_urls": parse_photos(tk.photos_urls),
                 "fichiers_urls": parse_photos(tk.fichiers_urls),

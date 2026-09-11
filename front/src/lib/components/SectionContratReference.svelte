@@ -117,7 +117,9 @@
 	<!--  Un complément propre à la section — un champ que l'appelant veut voir
 	      AVEC ces lignes, et pas ailleurs. Le renvoi reste en dernier : il dit où
 	      aller modifier, c'est une sortie, pas un contenu. -->
-	<slot name="complement" />
+	<div class="ref-complement">
+		<slot name="complement" />
+	</div>
 
 	<p class="ref-renvoi">
 		<slot name="renvoi" />
@@ -156,6 +158,17 @@
 	}
 
 	.ref-vide,
+	/*  🔴 La respiration du complément vit ICI, pas chez l'appelant (11/09/2026,
+	    signalé à l'écran : « attention à bien respecter les espacements de
+	    ligne »). Le champ s'affichait collé à la dernière ligne de définition,
+	    sans rien pour l'en séparer.
+
+	    ⚠️ Et c'est une marge VIDE quand le slot l'est : `:empty` évite d'ajouter
+	    un blanc dans les sections qui n'ont pas de complément — sinon corriger
+	    l'espacement d'une section en créerait un ailleurs. */
+	.ref-complement:not(:empty) {
+		margin-top: 0.9rem;
+	}
 	.ref-renvoi {
 		font-size: 0.82rem;
 		color: var(--color-text-muted);

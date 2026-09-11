@@ -147,6 +147,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 "type": ev.type,
                 "lieu": ev.lieu,
                 "perimetre": perimetre_label(perims),
+                "auteur": auteur_nom(ctx.session, ev.auteur_id),
                 "prestataire": prest_name,
                 "debut": ev.debut.isoformat() if ev.debut else None,
                 "fin": ev.fin.isoformat() if ev.fin else None,

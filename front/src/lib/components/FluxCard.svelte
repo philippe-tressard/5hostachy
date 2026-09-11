@@ -21,10 +21,9 @@
 
 	import { isAdmin } from '$lib/stores/auth';
 	import type { FluxItem } from '$lib/api';
-	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort } from '$lib/date';
 	import FluxVignette from '$lib/components/FluxVignette.svelte';
-	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+	import FluxCorps from '$lib/components/FluxCorps.svelte';
 	import {
 		badgeClass,
 		estTicketUrgent,
@@ -33,7 +32,6 @@
 		typeFond,
 		typeLibelle,
 		typeLink,
-		typeVoirLabel,
 	} from '$lib/flux';
 
 	export let item: FluxItem;
@@ -159,7 +157,7 @@
 				/>
 			{/if}
 		</div>
-		{#if item.badges.length > 0 || perimetreAffiche || aVenir}
+		{#if item.badges.length > 0 || perimetreAffiche || aVenir || item.meta?.auteur}
 			<div class="flux-badges">
 				<!-- La ligne est datée de l'annonce : sans ce repère, un événement
 				     à venir se lirait comme s'il avait déjà eu lieu. -->
@@ -180,90 +178,27 @@
 				{#each item.badges as b (b)}
 					<span class="badge {badgeClass(item.type, b)}">{b}</span>
 				{/each}
+				<!--  🔴 L'auteur EN DERNIER de cette rangée (11/09/2026, signalé à
+				      l'écran). L'ordre est celui qu'a arrêté `CarteTicket` le 18/08 en
+				      le reprenant de l'actualité : « état, puis 🔹 périmètre, puis les
+				      marqueurs, puis l'auteur ». Le fil était le seul écran à ne pas
+				      le suivre — et c'est celui qu'on regarde en premier.
+
+				      ⚠️ Ici plutôt que dans la rangée du HAUT : celle-là porte la
+				      classification (type, « nouveau ») et partage déjà sa ligne avec
+				      la date. Une personne n'est pas une classification, et cette
+				      rangée-ci est `flex-wrap` — responsive sans rien ajouter.
+
+				      Et ce n'est PAS un badge : un nom n'est pas une étiquette de
+				      catégorie. `CarteTicket` le rend en texte discret (`.tk-auteur`),
+				      on fait de même — deux rendus d'une notion se répondent. -->
+				{#if item.meta?.auteur}
+					<span class="flux-auteur">✍️ {item.meta.auteur}</span>
+				{/if}
 			</div>
 		{/if}
 		{#if expanded}
-			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-			<div class="flux-body" on:click|stopPropagation>
-				{#if item.meta?.lieu}<p class="flux-meta-line">📍 {item.meta.lieu}</p>{/if}
-				<!--  ⚠️ Le périmètre n'est PAS répété ici : il est déjà en badge dans
-				      l'en-tête de la carte, visible replié comme déplié. Il s'affichait
-				      deux fois sur toute carte dépliée — le même défaut que celui corrigé
-				      sur les tickets le même jour, dans l'autre sens. -->
-				{#if item.meta?.prestataire}<p class="flux-meta-line">🔧 {item.meta.prestataire}</p>{/if}
-				<!-- `fin` est facultatif : l'exiger masquait la date de tenue de
-				     tout événement sans heure de fin — désormais l'information
-				     essentielle, puisque la ligne du fil est datée de l'annonce. -->
-				{#if debut}
-					<p class="flux-meta-line">
-						🕐 {fmtDatetimeShort(String(debut))}{#if item.meta?.fin}
-							→ {fmtDatetimeShort(String(item.meta.fin))}{/if}
-					</p>
-				{/if}
-				{#if item.meta?.auteur}<p class="flux-meta-line">✍️ {item.meta.auteur}</p>{/if}
-				{#if item.meta?.statut}
-					<p class="flux-meta-line">
-						État :
-						<span
-							class="badge {item.meta.statut === 'résolu' || item.meta.statut === 'réalisé'
-								? 'badge-green'
-								: item.meta.statut === 'en_cours' || item.meta.statut === 'ouvert'
-									? 'badge-orange'
-									: 'badge-gray'}">{item.meta.statut}</span
-						>
-					</p>
-				{/if}
-				<!--  🔴 LA DERNIÈRE MISE À JOUR D'ABORD, le texte d'origine ensuite
-				      (#531, demandé à l'écran le 20/08/2026 sur la carte dépliée).
-
-				      Une carte du fil répond à « quoi de neuf ». Ce qui est neuf, c'est
-				      le commentaire du jour ; la description d'origine est le CONTEXTE
-				      qui permet de le comprendre. L'ordre inverse obligeait à lire un
-				      texte parfois vieux de plusieurs semaines avant d'atteindre la
-				      seule ligne qu'on venait chercher.
-
-				      ⚠️ La condition ne teste PAS le type : `evol_contenu` n'est posé
-				      que par une carte de mise à jour, et le vérifier deux fois ferait
-				      de cette liste de types une seconde déclaration à tenir. Elle a
-				      immédiatement divergé la première fois : le calendrier a eu son
-				      Historique le 18/08/2026, le fil a su le fournir, et RIEN ne
-				      s'affichait. La donnée décide, pas une énumération de types. -->
-				{#if item.meta?.evol_contenu}
-					<div class="flux-reaction">
-						<span class="flux-reaction-icon">💬</span>
-						<div class="flux-reaction-body">
-							{#if item.meta?.evol_auteur}<span class="flux-reaction-auteur"
-									>{item.meta.evol_auteur}</span
-								>{/if}
-							<p class="flux-reaction-text">{item.meta.evol_contenu}</p>
-						</div>
-					</div>
-				{/if}
-				<!--  Le texte d'origine, en dessous : il rappelle DE QUOI il s'agit. -->
-				{#if item.meta?.full_html}
-					<div class="flux-full-content rich-content">
-						{@html safeHtml(String(item.meta.full_html))}
-					</div>
-				{:else if item.meta?.description}
-					<p class="flux-full-content">{item.meta.description}</p>
-				{:else if item.detail}
-					<p class="flux-full-content">{item.detail}</p>
-				{/if}
-				{#if photos.length || fichiers.length}
-					<!-- Les pièces jointes de devis sont des PDF : elles étaient
-					     rendues en <img>, donc en image cassée. Le composant
-					     distingue image et document, une fois pour toutes. -->
-					<!-- Format « grand » : la carte est dépliée, l'utilisateur a
-					     demandé à voir. Une vignette de 72 px lui imposerait un
-					     clic de plus pour ce qu'il vient d'ouvrir. -->
-					<div class="flux-photos">
-						<PiecesJointes urls={[...photos, ...fichiers]} format="grand" />
-					</div>
-				{/if}
-				{#if lien}
-					<a href={lien} class="flux-link">{typeVoirLabel(item)}</a>
-				{/if}
-			</div>
+			<FluxCorps {item} {lien} />
 		{/if}
 	</div>
 </div>
@@ -386,6 +321,13 @@
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
+	/*  Le nom en texte discret, jamais en badge : même taille et même teinte que
+	    `.tk-auteur` sur la carte du ticket, à dessein. */
+	.flux-auteur {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+		align-self: center;
+	}
 	.flux-badges {
 		display: flex;
 		gap: 0.3rem;
@@ -425,29 +367,6 @@
 	}
 
 	/* ═══ CORPS DÉPLIÉ ══════════════════════════════════════════════════ */
-	.flux-body {
-		border-top: 1px solid var(--color-border);
-		padding: 0.75rem 0.5rem 0.75rem 1.7rem;
-		margin-top: 0.5rem;
-	}
-	.flux-meta-line {
-		font-size: 0.82rem;
-		color: var(--color-text-muted);
-		margin: 0.15rem 0;
-	}
-	.flux-full-content {
-		font-size: 0.85rem;
-		line-height: 1.55;
-		margin: 0.5rem 0;
-	}
-	.flux-link {
-		font-size: 0.78rem;
-		color: var(--color-primary);
-		font-weight: 500;
-		text-decoration: none;
-		display: inline-block;
-		margin-top: 0.5rem;
-	}
 	.flux-link:hover {
 		text-decoration: underline;
 	}
@@ -458,43 +377,8 @@
 	   retirée : le format des photos appartient désormais à `PiecesJointes`, qui
 	   les rend en grand une fois la carte dépliée. Deux endroits pour décider de
 	   la même taille, c'est un endroit de trop — et celui-ci était devenu mort. */
-	.flux-photos {
-		margin: 0.5rem 0;
-	}
 
 	/* ═══ RÉACTION INLINE (ticket_mis_a_jour) ═══════════════════════════ */
-	.flux-reaction {
-		display: flex;
-		gap: 0.5rem;
-		align-items: flex-start;
-		margin: 0.6rem 0 0.3rem;
-		padding: 0.5rem 0.75rem;
-		border-radius: 6px;
-		background: #eef2f7;
-		border-left: 3px solid var(--color-primary);
-		font-size: 0.82rem;
-	}
-	.flux-reaction-icon {
-		flex-shrink: 0;
-		font-size: 0.85rem;
-		margin-top: 0.1rem;
-	}
-	.flux-reaction-body {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		min-width: 0;
-	}
-	.flux-reaction-auteur {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--color-primary);
-	}
-	.flux-reaction-text {
-		margin: 0;
-		color: var(--color-text);
-		line-height: 1.45;
-	}
 
 	@media (max-width: 767px) {
 		.flux-dot {

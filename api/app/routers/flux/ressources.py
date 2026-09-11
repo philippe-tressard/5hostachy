@@ -19,7 +19,7 @@ from app.utils.liens import lien_element
 from app.utils.visibility import document_visible
 
 from app.utils.documents import lien_document
-from .commun import ContexteFlux, strip_html
+from .commun import ContexteFlux, auteur_nom, strip_html
 from .schemas import FluxItem
 
 # Où un document est-il RÉELLEMENT consultable ? Il n'existe pas de page « tous les
@@ -87,6 +87,7 @@ def _collecter_documents(ctx: ContexteFlux) -> list[FluxItem]:
             #  ferait doublon avec le lien que la carte porte déjà.
             meta={
                 "document_id": d.id,
+                "auteur": auteur_nom(ctx.session, d.publie_par_id),
                 "fichier_nom": d.fichier_nom,
                 "mime_type": d.mime_type,
                 "pj_compte": 1,
