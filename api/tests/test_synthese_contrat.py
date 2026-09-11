@@ -37,12 +37,32 @@ from app.utils.synthese_contrat import (
     MIME_ACCEPTE,
     NON_PRECISE,
     SQUELETTE,
+    SUFFIXE_CITATION,
     SyntheseIndisponible,
     consignes,
     construire_requete,
     extraire_objet,
     rendre_html,
 )
+
+#: Les sept titres donnés par le conseil syndical le 11/09/2026, avec une
+#: synthèse déjà rédigée à la main et la consigne « respecte uniquement les
+#: titres ». Recopiés ici EXPRÈS : c'est la seule façon qu'un contrôle ait de
+#: dire qu'ils ont changé. Ailleurs, une liste recopiée est un défaut ; dans un
+#: test, c'est l'attendu — et la divergence est précisément ce qu'on cherche.
+TITRES_ATTENDUS = [
+    "Identification du fournisseur",
+    "Dates clés / Validité",
+    "Objet du contrat",
+    "Prestations incluses",
+    "Prestations non incluses",
+    "Conditions financières",
+    "Points d'attention pour la copropriété",
+]
+
+
+def _une(forme: str):
+    return next(r for r in SQUELETTE if r.forme == forme)
 
 
 # ── Le squelette ─────────────────────────────────────────────────────────────
@@ -55,6 +75,16 @@ def test_le_squelette_a_des_cles_uniques_et_non_vides():
     assert all(r.titre.strip() and r.consigne.strip() for r in SQUELETTE)
 
 
+def test_les_sept_titres_sont_ceux_du_conseil_syndical():
+    """🔴 Ils ne se réécrivent pas « pour faire mieux ».
+
+    Ce sont les intitulés sous lesquels la copropriété lit ses contrats depuis
+    avant ce produit. Les changer est une décision qui se prend avec elle — pas
+    un raffinement qu'on s'autorise en passant.
+    """
+    assert [r.titre for r in SQUELETTE] == TITRES_ATTENDUS
+
+
 def test_la_consigne_est_DERIVEE_du_squelette():
     """Elle doit nommer chaque clé — sinon le modèle ne peut pas la rendre.
 
@@ -65,6 +95,16 @@ def test_la_consigne_est_DERIVEE_du_squelette():
     for r in SQUELETTE:
         assert f'"{r.cle}"' in texte, f"La rubrique « {r.cle} » n'est pas demandée au modèle."
     assert NON_PRECISE in texte, "La consigne de non-invention a disparu."
+    for r in SQUELETTE:
+        assert f'"{r.cle}{SUFFIXE_CITATION}"' in texte, (
+            f"L'extrait qui fonde « {r.cle} » n'est pas demandé."
+        )
+    for r in SQUELETTE:
+        if r.forme == "champs":
+            for libelle in r.champs:
+                assert f'"{libelle}"' in texte, (
+                    f"Le libellé « {libelle} » n'est pas demandé au modèle."
+                )
 
 
 # ── La charge utile ──────────────────────────────────────────────────────────
@@ -117,30 +157,44 @@ def test_une_reponse_sans_objet_leve_un_message_lisible(brut):
 
 def test_le_rendu_suit_l_ordre_du_squelette_et_le_complete():
     """Toutes les rubriques sont rendues, y compris celles que le modèle a omises."""
-    html = rendre_html({SQUELETTE[0].cle: "Entretien des ascenseurs."})
-    #  `escape` sur le titre AUSSI : « Durée, prise d'effet » sort en `d&#x27;effet`,
-    #  et chercher la forme brute ferait échouer le contrôle sur un rendu correct.
-    positions = [html.find(f"<h3>{escape(r.titre)}</h3>") for r in SQUELETTE]
+    html = rendre_html({SQUELETTE[2].cle: ["Entretien des ascenseurs."]})
+    #  `escape` sur le titre AUSSI : « Dates clés / Validité » n'a rien à échapper
+    #  mais « Points d'attention » sort en `d&#x27;attention` — chercher la forme
+    #  brute ferait échouer le contrôle sur un rendu correct.
+    #
+    #  🔴 Le NUMÉRO vient de la position, pas du libellé : c'est ce que vérifie
+    #  `enumerate` ici. Un numéro écrit dans le titre survivrait à un
+    #  réordonnancement, et deux sections finiraient par porter le même.
+    positions = [
+        html.find(f"<h3>{rang}. {escape(r.titre)}</h3>")
+        for rang, r in enumerate(SQUELETTE, start=1)
+    ]
     assert all(p != -1 for p in positions), "Une rubrique du squelette manque au rendu."
     assert positions == sorted(positions), "L'ordre rendu n'est pas celui du squelette."
 
 
 def test_une_rubrique_absente_se_dit_au_lieu_de_s_inventer():
+    """Une réponse vide rend le squelette ENTIER, chaque case dite non précisée.
+
+    Le compte attendu se dérive du squelette : une ligne par section de texte ou
+    de liste, une par libellé attendu dans les sections à champs.
+    """
     html = rendre_html({})
-    assert html.count(NON_PRECISE) == len(SQUELETTE)
+    attendu = sum(len(r.champs) if r.forme == "champs" else 1 for r in SQUELETTE)
+    assert html.count(NON_PRECISE) == attendu
 
 
 def test_une_rubrique_inventee_par_le_modele_est_ignoree():
-    html = rendre_html({"rubrique_qui_n_existe_pas": "<b>coucou</b>"})
+    html = rendre_html({"rubrique_qui_n_existe_pas": ["<b>coucou</b>"]})
     assert "coucou" not in html, (
         "Le squelette est tenu par CONSTRUCTION : une clé inconnue n'est pas rendue."
     )
 
 
 def test_une_liste_accepte_aussi_un_texte_a_puces():
-    """Le modèle se trompe régulièrement de forme ; perdre les dix autres
-    rubriques pour cela serait disproportionné."""
-    rubrique = next(r for r in SQUELETTE if r.liste)
+    """Le modèle se trompe régulièrement de forme ; perdre les six autres
+    sections pour cela serait disproportionné."""
+    rubrique = _une("liste")
     html = rendre_html({rubrique.cle: "- Visite annuelle\n- Pièces d'usure"})
     assert "<li>Visite annuelle</li>" in html
     assert "<li>Pièces d&#x27;usure</li>" in html or "<li>Pièces d'usure</li>" in html
@@ -151,9 +205,14 @@ def test_une_liste_accepte_aussi_un_texte_a_puces():
 def test_aucun_balisage_du_modele_n_atteint_le_rendu():
     """Ce qui vient du service est du TEXTE, et il le reste jusqu'au bout."""
     poison = '<script>alert(1)</script><img src=x onerror=alert(1)>'
-    liste = next(r for r in SQUELETTE if r.liste)
-    texte = next(r for r in SQUELETTE if not r.liste)
-    html = rendre_html({texte.cle: poison, liste.cle: [poison]})
+    liste, champs = _une("liste"), _une("champs")
+    html = rendre_html(
+        {
+            liste.cle: [poison],
+            champs.cle: {champs.champs[0]: poison},
+            f"{liste.cle}{SUFFIXE_CITATION}": poison,
+        }
+    )
 
     assert "<script" not in html and "<img" not in html, (
         "Une balise du modèle a traversé le rendu."
@@ -171,16 +230,103 @@ def test_aucun_balisage_du_modele_n_atteint_le_rendu():
     )
 
 
-def test_le_rendu_n_emploie_que_des_balises_admises_par_sanitize():
-    """Une balise hors liste blanche serait retirée à l'affichage, en silence.
+def _balises_admises() -> set[str]:
+    """La liste blanche de DOMPurify, LUE dans `front/src/lib/sanitize.ts`.
 
-    La liste est celle de `front/src/lib/sanitize.ts` — restreinte ici aux seules
-    balises que ce rendu produit : le contrôle dirait autre chose s'il recopiait
-    la liste entière.
+    🔴 Recopiée, elle divergerait au premier ajout — et ce dépôt connaît le prix
+    de cette recopie : c'est exactement pour cela que `lint:html` lit la liste
+    des assainisseurs dans `sanitize.ts` plutôt que de la retaper. Le contrôle
+    est donc adossé à la vérité, pas à son écho.
     """
-    html = rendre_html({r.cle: (["a", "b"] if r.liste else "x") for r in SQUELETTE})
-    balises = set(re.findall(r"</?([a-z0-9]+)", html))
-    assert balises <= {"h3", "p", "ul", "li", "em"}, f"Balises hors charte : {balises}"
+    from pathlib import Path
+
+    fichier = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "sanitize.ts"
+    if not fichier.exists():
+        pytest.skip("`sanitize.ts` introuvable — contrôle non mesuré, pas réussi.")
+    source = fichier.read_text(encoding="utf-8")
+    bloc = source[source.index("const ALLOWED_TAGS = [") :]
+    bloc = bloc[: bloc.index("]")]
+    admises = set(re.findall(r"'([a-z0-9]+)'", bloc))
+    assert admises, "Cas zéro : ALLOWED_TAGS a changé de forme — contrôle inopérant."
+    return admises
+
+
+def test_le_rendu_n_emploie_que_des_balises_admises_par_sanitize():
+    """Une balise hors liste blanche serait retirée à l'affichage, EN SILENCE.
+
+    ⚠️ C'est la famille de défauts la plus coûteuse ici : le rendu paraît correct
+    au serveur, le test passe, et la page affiche autre chose. Le contrôle compare
+    donc ce que `rendre_html` produit à ce que le navigateur laissera passer.
+    """
+    html = rendre_html(
+        {
+            r.cle: (
+                {c: "x" for c in r.champs}
+                if r.forme == "champs"
+                else (["a", "b"] if r.forme == "liste" else "x")
+            )
+            for r in SQUELETTE
+        }
+        | {f"{r.cle}{SUFFIXE_CITATION}": "extrait" for r in SQUELETTE}
+    )
+    employees = set(re.findall(r"</?([a-z0-9]+)", html))
+    hors_charte = employees - _balises_admises()
+    assert not hors_charte, (
+        f"Balises que `sanitize.ts` retirerait à l'affichage : {sorted(hors_charte)}"
+    )
+
+
+# ── La forme « champs » : les libellés aussi sont tenus ──────────────────────
+
+def test_les_libelles_d_une_section_a_champs_sont_ceux_du_squelette():
+    """Un libellé omis ressort « non précisé », un libellé inventé est ignoré.
+
+    Même garantie que pour les sections, un cran plus bas : c'est ce qui fait que
+    « SIRET » figure toujours sur la fiche, même quand le contrat n'en porte pas.
+    """
+    r = _une("champs")
+    html = rendre_html({r.cle: {r.champs[0]: "une valeur", "Libellé inventé": "à jeter"}})
+
+    for libelle in r.champs:
+        assert f"<strong>{escape(libelle)}</strong>" in html, f"« {libelle} » manque."
+    assert "Libellé inventé" not in html and "à jeter" not in html
+    assert html.count(NON_PRECISE) >= len(r.champs) - 1
+
+
+def test_une_section_a_champs_rendue_en_texte_par_le_modele_ne_casse_rien():
+    """Le modèle se trompe de forme ; la section ressort vide, pas en erreur."""
+    r = _une("champs")
+    html = rendre_html({r.cle: "SARL ROSARIO, 78360 Montesson"})
+    assert f"<h3>1. {escape(SQUELETTE[0].titre)}</h3>" in html
+    assert html.count(NON_PRECISE) >= len(r.champs)
+
+
+# ── La citation : ce qui permet de vérifier sans rouvrir le PDF ──────────────
+
+def test_la_citation_est_rendue_en_exergue_avec_ses_guillemets():
+    r = SQUELETTE[0]
+    html = rendre_html({f"{r.cle}{SUFFIXE_CITATION}": "SARL ROSARIO… Siret 480 297 621 00017"})
+    assert "<blockquote>" in html
+    assert "SARL ROSARIO… Siret 480 297 621 00017" in html
+    assert "«" in html and "»" in html
+
+
+@pytest.mark.parametrize("brut", ["", "   ", NON_PRECISE, '"«  »"', None, 42])
+def test_une_citation_vide_ne_rend_pas_de_bloc(brut):
+    """Une section que rien ne fonde n'a pas d'exergue — pas un exergue vide."""
+    r = SQUELETTE[0]
+    assert "<blockquote>" not in rendre_html({f"{r.cle}{SUFFIXE_CITATION}": brut})
+
+
+def test_les_guillemets_ne_sont_pas_doubles():
+    """Ils sont posés par le rendu ; ceux que le modèle ajoute sont retirés.
+
+    Sans cela, la moitié des sections en porterait deux paires et l'autre aucune —
+    selon l'humeur du modèle, ce qui n'est pas une mise en forme.
+    """
+    r = SQUELETTE[0]
+    html = rendre_html({f"{r.cle}{SUFFIXE_CITATION}": '« un extrait »'})
+    assert html.count("«") == 1 and html.count("»") == 1
 
 
 def test_la_generation_n_ecrit_rien_en_base():
@@ -192,15 +338,21 @@ def test_la_generation_n_ecrit_rien_en_base():
     """
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "app" / "utils" / "synthese_contrat.py").read_text(
-        encoding="utf-8"
-    )
-    for ecriture in ("session.add(", "session.commit(", "session.delete("):
-        assert ecriture not in source, (
-            f"`{ecriture}` dans synthese_contrat.py : la génération PROPOSE, elle "
-            "n'enregistre pas. Écrire dans `notes` écraserait sans filet une "
-            "synthèse rédigée à la main."
-        )
+    #  ⚠️ Les DEUX modules, depuis la coupe du 11/09/2026 : n'en lire qu'un
+    #  laisserait l'écriture s'installer dans l'autre — c'est exactement la
+    #  famille « le contrôle existe et ne mesure plus ce qu'il croit ».
+    utils = Path(__file__).resolve().parents[1] / "app" / "utils"
+    modules = ["synthese_contrat.py", "synthese_contrat_squelette.py"]
+    for nom in modules:
+        fichier = utils / nom
+        assert fichier.exists(), f"Cas zéro : {nom} a disparu — contrôle inopérant."
+        source = fichier.read_text(encoding="utf-8")
+        for ecriture in ("session.add(", "session.commit(", "session.delete("):
+            assert ecriture not in source, (
+                f"`{ecriture}` dans {nom} : la génération PROPOSE, elle n'enregistre "
+                "pas. Écrire dans `notes` écraserait sans filet une synthèse "
+                "rédigée à la main."
+            )
 
 
 def test_la_cle_d_api_n_est_lue_qu_a_l_appel():
