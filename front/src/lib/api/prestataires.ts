@@ -56,4 +56,21 @@ export const prestataires = {
 	deleteNotation: (id: number) => api.delete(`/prestataires/notations/${id}`),
 	// Synthèse
 	synthese: (prestataireId: number) => api.get<any>(`/prestataires/synthese/${prestataireId}`),
+
+	//  ── Synthèse ASSISTÉE d'un contrat ────────────────────────────────────
+	//
+	//  ⚠️ Deux notions voisines et distinctes, que le préfixe commun invite à
+	//  confondre : `synthese` ci-dessus est la fiche de reporting d'un
+	//  PRESTATAIRE, calculée par le serveur à partir de la base. Les deux
+	//  ci-dessous lisent le PDF d'un CONTRAT auprès d'un service externe.
+	//
+	//  🔴 `genererSyntheseContrat` n'ENREGISTRE RIEN : elle rend une proposition
+	//  que l'écran place dans le formulaire, à relire avant d'enregistrer.
+	syntheseContratDisponible: () =>
+		api.get<{ active: boolean }>('/prestataires/contrats/synthese-disponible'),
+	genererSyntheseContrat: (contratId: number) =>
+		api.post<{ synthese: string; documents: string[] }>(
+			`/prestataires/contrats/${contratId}/synthese`,
+			{},
+		),
 };

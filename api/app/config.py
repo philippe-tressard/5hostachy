@@ -66,6 +66,29 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
 
+    #  Synthèse de contrat assistée — `app/utils/synthese_contrat.py`
+    #
+    #  🔴 **Vide par défaut, et c'est la fonctionnalité entière qui en dépend.**
+    #  Sans clé, `synthese_active()` répond « non », l'API ne rend pas le bouton
+    #  et rien ne sort de la résidence. Une copropriété qui n'a pas souscrit n'a
+    #  donc aucun appel externe à désactiver : il n'y en a pas.
+    #
+    #  ⚠️ La clé se pose dans le `.env` du serveur, **jamais** dans le dépôt ni
+    #  dans `.env.example` — même règle que `SECRET_KEY` et `MAIL_PASSWORD`.
+    #  `test_config_secrets_masques.py` vérifie qu'elle ne ressort pas par
+    #  `/config`.
+    openai_api_key: str = ""
+    #  ⚠️ **À vérifier avant la première MEP.** L'identifiant exact des modèles
+    #  évolue plus vite que ce dépôt, et un identifiant inconnu produit un 404
+    #  dont le message est repris tel quel par l'écran (voir `_appeler`). Les
+    #  identifiants réellement ouverts à la clé se listent par :
+    #      curl https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"
+    openai_modele: str = "gpt-5.6-terra"
+    openai_base_url: str = "https://api.openai.com/v1"
+    #  Un contrat de trente pages demande une à plusieurs minutes. Le défaut de
+    #  httpx est de 5 s : sans ce réglage, l'appel expirerait toujours.
+    openai_timeout_s: int = 180
+
     class Config:
         env_file = ".env"
         case_sensitive = False

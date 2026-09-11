@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
-	import { perimetreDefautListe } from '$lib/perimetres';
+	import {
+		contratFormDepuis,
+		contratFormVide,
+		parEcheance,
+		payloadContrat,
+		type ContratForm,
+	} from '$lib/contrats';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import CarteContrat from '$lib/components/CarteContrat.svelte';
@@ -132,23 +138,16 @@
 	let contratFormOuvert = false;
 	let editContratId: number | null = null;
 
-	let contratForm = {
-		copropriete_id: 1,
-		//  Le PÉRIMÈTRE remplace `batiment_id`, qui n'était rempli par aucun
-		//  champ (10/09/2026). Le serveur en dérive le bâtiment.
-		perimetre_cible: perimetreDefautListe(),
-		prestataire_id: '',
-		type_equipement: 'autre',
-		libelle: '',
-		numero_contrat: '',
-		date_debut: new Date().toISOString().slice(0, 10),
-		duree_initiale_valeur: '',
-		duree_initiale_unite: 'mois',
-		frequence_type: '',
-		frequence_valeur: '',
-		prochaine_visite: '',
-		notes: '',
-	};
+	//  ── Synthèse assistée d'un contrat ────────────────────────────────────
+	//  `syntheseActive` reste FAUX tant que le serveur n'a pas dit qu'il sait le
+	//  faire : sans clé d'API, l'étincelle ne s'affiche sur aucune carte plutôt
+	//  que de répondre 501 à qui la presse (`ux-patterns` §15).
+	let syntheseActive = false;
+	//  Quel contrat est en cours de génération — l'appel dure une à plusieurs
+	//  minutes sur un contrat long, et un bouton muet se presse deux fois.
+	let synthetisantId: number | null = null;
+
+	let contratForm: ContratForm = contratFormVide();
 
 	// ── Documents ─────────────────────────────────────────────────
 	let contratDocsMap: Record<number, any[]> = {};
@@ -182,19 +181,6 @@
 	$: echeancesEnRetard = contrats.filter(contratEnRetard);
 	$: echeancesAVenir = contrats.filter((c) => c.prochaine_visite && !contratEnRetard(c));
 	$: contratsSansEcheance = contrats.filter((c) => !c.prochaine_visite);
-
-	/**  Les contrats d'un groupe, la prochaine échéance d'abord.
-	 *
-	 *   ⚠️ Sans échéance = en FIN de liste, jamais en tête : `null` se compare mal
-	 *   et un tri naïf les aurait remontés devant les retards. */
-	function parEcheance(liste: any[]): any[] {
-		return [...liste].sort((a, b) => {
-			if (!a.prochaine_visite && !b.prochaine_visite) return 0;
-			if (!a.prochaine_visite) return 1;
-			if (!b.prochaine_visite) return -1;
-			return a.prochaine_visite < b.prochaine_visite ? -1 : 1;
-		});
-	}
 
 	// ── Consommations ─────────────────────────────────────────────
 	let compteurConfigs: any[] = [];
@@ -451,6 +437,16 @@
 			contratDocsMap = map;
 		}
 
+		//  ⚠️ Hors du `Promise.all` ci-dessus et sans `toast` en cas d'échec : une
+		//  capacité optionnelle indisponible n'est pas une erreur de chargement.
+		//  Elle laisse simplement `syntheseActive` à faux, donc l'écran sans
+		//  étincelle — ce qui est exactement l'état à afficher.
+		try {
+			syntheseActive = (await prestApi.syntheseContratDisponible()).active;
+		} catch {
+			syntheseActive = false;
+		}
+
 		// Liens profonds : `?onglet=` pour la vue, `#presta-<id>` pour l'élément.
 		// Cette page a QUATRE onglets et s'ouvre sur « Contrats » : une fiche
 		// prestataire visée sans onglet restait invisible, l'ancre ne désignant aucun
@@ -550,21 +546,7 @@
 	}
 
 	function resetContratForm() {
-		contratForm = {
-			copropriete_id: 1,
-			perimetre_cible: perimetreDefautListe(),
-			prestataire_id: '',
-			type_equipement: 'autre',
-			libelle: '',
-			numero_contrat: '',
-			date_debut: new Date().toISOString().slice(0, 10),
-			duree_initiale_valeur: '',
-			duree_initiale_unite: 'mois',
-			frequence_type: '',
-			frequence_valeur: '',
-			prochaine_visite: '',
-			notes: '',
-		};
+		contratForm = contratFormVide();
 		editContratId = null;
 	}
 
@@ -587,23 +569,48 @@
 	}
 
 	function startEditContrat(c: any) {
-		contratForm = {
-			copropriete_id: c.copropriete_id,
-			perimetre_cible: c.perimetre_cible?.length ? c.perimetre_cible : perimetreDefautListe(),
-			prestataire_id: String(c.prestataire_id ?? ''),
-			type_equipement: typeEquipementDuContrat(c, prestataires),
-			libelle: c.libelle,
-			numero_contrat: c.numero_contrat ?? '',
-			date_debut: c.date_debut,
-			duree_initiale_valeur: c.duree_initiale_valeur ?? '',
-			duree_initiale_unite: c.duree_initiale_unite ?? 'mois',
-			frequence_type: c.frequence_type ?? '',
-			frequence_valeur: c.frequence_valeur ?? '',
-			prochaine_visite: c.prochaine_visite ?? '',
-			notes: c.notes ?? '',
-		};
+		contratForm = contratFormDepuis(c, prestataires);
 		editContratId = c.id;
 		contratFormOuvert = false;
+	}
+
+	/**
+	 *  Proposer une synthèse pour ce contrat, à partir de ses PDF.
+	 *
+	 *  🔴 **Rien n'est enregistré ici.** La proposition est déposée dans le
+	 *  formulaire de correction du contrat — celui qui s'ouvre DANS sa carte
+	 *  (`ux-patterns` §14 ter) — et c'est le conseil syndical qui relit puis
+	 *  enregistre. Écrire directement dans `notes` écraserait sans filet une
+	 *  synthèse rédigée à la main, que rien ne permettrait de récupérer : ce
+	 *  champ n'a pas d'archivage.
+	 *
+	 *  ⚠️ `startEditContrat` RECONSTRUIT `contratForm` à partir du contrat : la
+	 *  proposition se pose donc APRÈS, sinon elle est écrasée par les notes
+	 *  actuelles à la ligne suivante.
+	 */
+	async function synthetiserContrat(c: any) {
+		synthetisantId = c.id;
+		try {
+			const res = await prestApi.genererSyntheseContrat(c.id);
+			startEditContrat(c);
+			contratForm.notes = res.synthese;
+			contratForm = contratForm;
+			//  Le message NOMME les documents lus : la synthèse porte sur les PDF
+			//  réellement transmis, pas forcément sur tout ce que la fiche affiche.
+			//  Le taire ferait croire qu'un avenant a été lu alors qu'il ne l'a pas été.
+			toast(
+				'success',
+				`Synthèse proposée d'après ${res.documents.join(', ')} — à relire, puis enregistrer.`,
+			);
+		} catch (e: any) {
+			//  Le message du serveur part TEL QUEL : `SyntheseIndisponible` ne porte
+			//  que des phrases écrites pour être lues, qui nomment le geste suivant
+			//  (« ajouter le contrat signé », « vérifier la clé »). Les remplacer par
+			//  « Erreur » annulerait tout le travail de cette exception.
+			toast('error', e instanceof ApiError ? e.message : 'Synthèse indisponible');
+		} finally {
+			synthetisantId = null;
+		}
 	}
 
 	async function saveContrat() {
@@ -612,27 +619,7 @@
 			return;
 		}
 		submitting = true;
-		//  La règle vit dans `reporting.ts` — elle était écrite ici, dans le
-		//  groupement des cartes et dans le chargement du formulaire, avec trois
-		//  résultats différents sur le même contrat (29/08/2026).
-		const resolvedType = typeEquipementDuContrat(
-			{ ...contratForm, prestataire_id: Number(contratForm.prestataire_id) },
-			prestataires,
-		);
-		const payload = {
-			...contratForm,
-			type_equipement: resolvedType,
-			prestataire_id: Number(contratForm.prestataire_id),
-			duree_initiale_valeur: contratForm.duree_initiale_valeur
-				? Number(contratForm.duree_initiale_valeur)
-				: null,
-			duree_initiale_unite: contratForm.duree_initiale_valeur
-				? contratForm.duree_initiale_unite
-				: null,
-			frequence_type: contratForm.frequence_type || null,
-			frequence_valeur: contratForm.frequence_valeur ? Number(contratForm.frequence_valeur) : null,
-			prochaine_visite: contratForm.prochaine_visite || null,
-		};
+		const payload = payloadContrat(contratForm, prestataires);
 		//  🔴 Lu AVANT la fermeture, qui remet `editContratId` à `null`. Le message
 		//  le lisait après : une modification annonçait donc « Contrat créé ».
 		const etaitUneModification = editContratId !== null;
@@ -827,6 +814,9 @@
 					onAnnuler={closeContratForm}
 					onEnregistrer={saveContrat}
 					onNoter={openNotationForm}
+					{syntheseActive}
+					{synthetisantId}
+					onSynthetiser={synthetiserContrat}
 				/>
 			{/each}
 		{/each}

@@ -73,9 +73,37 @@
 
 	export let onNoter: (prestataireId: number, contratId: number) => void = () => {};
 
+	/**  La génération de synthèse est-elle installée sur CE serveur ?
+	 *
+	 *   🔴 Faux par défaut, et l'écran ne propose alors rien. Sans clé d'API, le
+	 *   serveur répond 501 : afficher quand même le bouton reviendrait à proposer
+	 *   un geste qui échoue — `ux-patterns` §15, *l'écran dit ce que le serveur
+	 *   fait, ni plus ni moins*. */
+	export let syntheseActive = false;
+
+	/**  Demander une proposition de synthèse pour ce contrat. */
+	export let onSynthetiser: (c: any) => void = () => {};
+
+	/**  Génération en cours pour CE contrat — l'appel dure une à plusieurs minutes
+	 *   sur un contrat long, et un bouton qui ne dit rien pendant ce temps se
+	 *   presse deux fois. */
+	export let synthetisantId: number | null = null;
+
 	/**  Cette carte est-elle celle qu'on corrige ? Son corps cède alors la place au
 	 *   formulaire, et le crayon s'inverse. */
 	$: enEdition = editContratId === contrat.id;
+
+	/**  Y a-t-il de quoi lire ?
+	 *
+	 *   La synthèse se tire du PDF du contrat : sans PDF rattaché, il n'y a rien à
+	 *   résumer. Les documents sont chargés pour TOUS les contrats au montage de
+	 *   l'écran (`+page.svelte`), donc la réponse est fiable dès le premier rendu —
+	 *   ce ne serait pas le cas d'un chargement différé au dépliage, et le bouton
+	 *   apparaîtrait après coup. */
+	$: aUnPdf = (documents ?? []).some(
+		(d) => (d?.mime_type ?? '').toLowerCase() === 'application/pdf',
+	);
+	$: enCoursDeSynthese = synthetisantId === contrat.id;
 </script>
 
 <!--  L'ancre `contrat-{id}` : le carnet d'entretien y renvoie (#870 → carnet,
@@ -126,7 +154,20 @@
 		</div>
 		<div class="contrat-meta-right">
 			<span class="badge" style="font-size:.8rem">📄 {documents?.length ?? 0}</span>
-			<!--  ✏️ puis 🗑️, sur la ligne du titre (`ux-patterns` §3). -->
+			<!--  ✨ puis ✏️ puis 🗑️, sur la ligne du titre (`ux-patterns` §3).
+			      L'étincelle précède le crayon parce qu'elle l'OUVRE : elle ne
+			      remplace pas la correction, elle la remplit. -->
+			{#if peutModifier && syntheseActive && aUnPdf}
+				<button
+					class="btn-icon-edit"
+					aria-label="Proposer une synthèse à partir du contrat"
+					title="Proposer une synthèse à partir du contrat"
+					aria-busy={enCoursDeSynthese}
+					disabled={enCoursDeSynthese}
+					on:click|stopPropagation={() => onSynthetiser(contrat)}
+					>{#if enCoursDeSynthese}&#x231B;{:else}&#x2728;{/if}</button
+				>
+			{/if}
 			{#if peutModifier}
 				<!--  Le mode se lit sur l'icône qui a ouvert le formulaire, jamais sur un
 				      titre au-dessus (`ux-patterns` §13 bis) : elle est déjà là, déjà

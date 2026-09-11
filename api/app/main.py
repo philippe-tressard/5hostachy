@@ -97,6 +97,7 @@ from app.routers import (
     telemetry, flux,
 )
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
+from app.routers import contrats_synthese
 from app.routers import manuel
 from app.routers import csp
 from app.seed import seed
@@ -318,6 +319,9 @@ app.include_router(prestataires.router)
 #  Même préfixe : les relevés de compteurs sont sortis de `prestataires.py`
 #  (modularité, 29/08/2026), pas de l'API — les chemins n'ont pas bougé.
 app.include_router(compteurs.router)
+#  Même préfixe encore : la synthèse assistée d'un contrat est sortie du même
+#  fichier, pour la même raison (modularité, rang 1) et sur la même couture.
+app.include_router(contrats_synthese.router)
 app.include_router(sondages.router)
 app.include_router(idees.router)
 app.include_router(annonces.router)
