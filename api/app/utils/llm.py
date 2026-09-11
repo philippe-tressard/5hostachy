@@ -214,13 +214,21 @@ class ConfigLLM:
     delai_s: int
     envoi_document: bool
 
-    def verifier(self) -> None:
+    def verifier(self, *, exiger_actif: bool = True) -> None:
         """Lève `ErreurLLM` si l'appel ne peut pas aboutir — avant de le tenter.
 
         ⚠️ On échoue AVANT la requête réseau plutôt qu'après : un 401 met
         plusieurs secondes et rend un message du fournisseur, pas du produit.
+
+        🔴 `exiger_actif=False` pour le TEST DE CONNEXION (11/09/2026, constaté à
+        l'écran : « j'ai voulu tester » → *« l'assistant est désactivé »*).
+
+        L'ordre naturel est : je saisis, je teste, **puis** j'active — on vérifie
+        une configuration pour DÉCIDER de l'activer. Exiger l'activation avant de
+        pouvoir tester obligeait à ouvrir le service au produit sans savoir s'il
+        répond, c'est-à-dire à prendre le risque qu'on cherchait à écarter.
         """
-        if not self.actif:
+        if exiger_actif and not self.actif:
             raise ErreurLLM("L'assistant est désactivé dans l'administration.")
         if not self.cle:
             raise ErreurLLM("Aucune clé d'API n'est enregistrée.")
@@ -269,6 +277,7 @@ async def demander(
     consigne: str,
     message: str,
     max_jetons: Optional[int] = None,
+    exiger_actif: bool = True,
 ) -> str:
     """Pose une question au modèle configuré et rend sa réponse en texte.
 
@@ -279,7 +288,7 @@ async def demander(
     import httpx
 
     cfg = config_llm(session)
-    cfg.verifier()
+    cfg.verifier(exiger_actif=exiger_actif)
     f = cfg.fournisseur
 
     debut = time.monotonic()
@@ -330,6 +339,8 @@ async def tester(session: Session) -> dict[str, Any]:
         consigne="Tu réponds en un seul mot, sans ponctuation.",
         message="Réponds exactement : opérationnel",
         max_jetons=16,
+        #  Le test ne demande pas l'activation : il sert à décider de l'activer.
+        exiger_actif=False,
     )
     return {
         "ok": True,

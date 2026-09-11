@@ -165,8 +165,10 @@
 				Modèle
 				<input type="text" bind:value={cfg.modele} placeholder={MODELES_REPERE[cfg.fournisseur]} />
 				<span class="aide">
-					Laissé vide, le modèle par défaut du fournisseur est employé. Sur Azure, indiquez le nom
-					de votre <strong>déploiement</strong>.
+					L’<strong>identifiant d’API</strong>, pas le nom commercial : <code>gpt-4o-mini</code>,
+					<code>gpt-4.1</code>, <code>claude-haiku-4-5-20251001</code>. Laissé vide, le modèle par
+					défaut du fournisseur est employé. Sur Azure, indiquez le nom de votre
+					<strong>déploiement</strong>.
 				</span>
 			</label>
 			<label class="field">
@@ -226,6 +228,10 @@
 		<p class="aide" style="margin-bottom:.6rem">
 			Trois champs remplis ne prouvent rien : une clé se révoque, un modèle se renomme. Ce test pose
 			une vraie question au service et attend sa réponse.
+			<br />
+			⚠️ Il porte sur la configuration <strong>enregistrée</strong> : cliquez d’abord sur « Enregistrer
+			» si vous venez de modifier un champ. L’assistant n’a pas besoin d’être activé — on teste justement
+			pour décider de l’activer.
 		</p>
 		<div class="ligne-test">
 			<button
