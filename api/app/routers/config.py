@@ -67,7 +67,7 @@ def _est_public(cle: str) -> bool:
 #:
 #: ⚠️ Le marqueur conserve ce dont l'écran a besoin — savoir si la valeur EXISTE —
 #: sans transmettre laquelle. C'est pourquoi il n'est pas une chaîne vide.
-_SECRETS = {'smtp_password', 'imap_password', 'whatsapp_api_key'}
+_SECRETS = {'smtp_password', 'imap_password', 'whatsapp_api_key', 'llm_api_key'}
 
 #: Ce que l'API renvoie à la place. L'écran teste sa présence, jamais sa valeur.
 MARQUEUR_SECRET = '••••••••'
@@ -297,6 +297,29 @@ def whatsapp_qr(
 
 class SmtpTestPayload(BaseModel):
     email: EmailStr
+
+
+@router.post("/llm-test")
+async def llm_test(
+    user: Utilisateur = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    """Interroge vraiment le modèle configuré et rend ce qu'il a répondu.
+
+    🔴 Le FAIT, pas le réglage. Un écran qui annonce « configuré » parce que
+    trois champs sont remplis ne prouve rien : une clé se révoque, un modèle se
+    renomme, un point d'accès se ferme. Ce test envoie une question et attend une
+    réponse (`standards/04` — vérifier le comportement, jamais l'artefact).
+
+    ⚠️ Le message d'erreur vient de `ErreurLLM`, jamais du fournisseur : sa
+    réponse peut contenir la requête, donc ce qu'on vient de lui envoyer.
+    """
+    from app.utils.llm import ErreurLLM, tester
+
+    try:
+        return await tester(session)
+    except ErreurLLM as exc:
+        raise HTTPException(400, str(exc))
 
 
 @router.post("/smtp-test")

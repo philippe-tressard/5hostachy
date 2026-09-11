@@ -297,6 +297,16 @@ export const config = {
 	admin: (): Promise<Record<string, string>> => api.get<Record<string, string>>('/config/admin'),
 	testerSmtp: (email: string) => api.post<any>('/config/smtp-test', { email }),
 	testerImap: () => api.post<any>('/config/imap-test', {}),
+	/**  Interroge VRAIMENT le modèle configuré (`utils/llm.tester`). Trois champs
+	 *   remplis ne prouvent rien : une clé se révoque, un modèle se renomme. */
+	llmTest: () =>
+		api.post<{
+			ok: boolean;
+			fournisseur: string;
+			modele: string;
+			reponse: string;
+			duree_ms: number;
+		}>('/config/llm-test', {}),
 
 	whatsappStatut: () => api.get<any>('/config/whatsapp-status'),
 	whatsappJournaux: () => api.get<any>('/config/whatsapp-logs'),
