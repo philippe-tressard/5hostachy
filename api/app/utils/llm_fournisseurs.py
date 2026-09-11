@@ -41,6 +41,21 @@ class ErreurLLM(RuntimeError):
 
 
 @dataclass(frozen=True)
+class PieceJointe:
+    """Un fichier à faire lire au modèle, décrit sans forme de transport.
+
+    Le métier (la synthèse d'un contrat) dit QUOI joindre ; c'est le fournisseur
+    qui sait sous quelle forme — `bloc_document()`. Sans cette séparation, la
+    synthèse connaîtrait le format de message d'OpenAI, et un quatrième
+    fournisseur obligerait à rouvrir un fichier qui parle de contrats.
+    """
+
+    nom: str
+    mime: str
+    donnees_b64: str
+
+
+@dataclass(frozen=True)
 class Fournisseur:
     """Un service de modèle de langage, et la façon de lui parler."""
 
@@ -58,8 +73,42 @@ class Fournisseur:
     def entetes(self, cle: str) -> dict[str, str]:
         return {"Authorization": f"Bearer {cle}", "Content-Type": "application/json"}
 
-    def corps(self, modele: str, consigne: str, message: str, max_jetons: int) -> dict[str, Any]:
-        """Le corps de la requête — commun à OpenAI et à Azure."""
+    def bloc_document(self, nom: str, mime: str, donnees_b64: str) -> dict[str, Any]:
+        """Un fichier JOINT au message, pour que le modèle le lise lui-même.
+
+        🔴 Pourquoi ce n'est pas un luxe (11/09/2026, premier vrai contrat) :
+        les deux PDF d'un contrat de porte de parking étaient des **scans sans
+        couche de texte**. `pypdf` en tirait zéro caractère, quatre sections sur
+        sept sortaient « non précisé », et rien ne ressemblait autant à un
+        mauvais modèle. La plupart des contrats de copropriété sont signés, donc
+        scannés : sans cette voie, la fonctionnalité ne sert que la minorité des
+        documents nés numériques.
+
+        ⚠️ Le fichier ne part QUE si son texte n'a pas pu être extrait —
+        l'envoyer sinon coûterait beaucoup plus cher pour le même contenu.
+        """
+        return {
+            "type": "file",
+            "file": {"filename": nom, "file_data": f"data:{mime};base64,{donnees_b64}"},
+        }
+
+    def corps(
+        self,
+        modele: str,
+        consigne: str,
+        message: str,
+        max_jetons: int,
+        documents: tuple[dict[str, Any], ...] = (),
+    ) -> dict[str, Any]:
+        """Le corps de la requête — commun à OpenAI et à Azure.
+
+        Sans document joint, le message reste une CHAÎNE : c'est la forme que
+        tous les services acceptent, y compris les plus anciens. Le tableau de
+        blocs n'apparaît que lorsqu'il porte quelque chose.
+        """
+        contenu: Any = message
+        if documents:
+            contenu = [*documents, {"type": "text", "text": message}]
         return {
             "model": modele,
             "max_tokens": max_jetons,
@@ -69,7 +118,7 @@ class Fournisseur:
             "temperature": 0.2,
             "messages": [
                 {"role": "system", "content": consigne},
-                {"role": "user", "content": message},
+                {"role": "user", "content": contenu},
             ],
         }
 
@@ -244,13 +293,31 @@ class FournisseurAnthropic(Fournisseur):
             "Content-Type": "application/json",
         }
 
-    def corps(self, modele: str, consigne: str, message: str, max_jetons: int) -> dict[str, Any]:
+    def bloc_document(self, nom: str, mime: str, donnees_b64: str) -> dict[str, Any]:
+        """Même intention qu'OpenAI, autre forme — d'où la redéfinition."""
+        return {
+            "type": "document",
+            "source": {"type": "base64", "media_type": mime, "data": donnees_b64},
+            "title": nom,
+        }
+
+    def corps(
+        self,
+        modele: str,
+        consigne: str,
+        message: str,
+        max_jetons: int,
+        documents: tuple[dict[str, Any], ...] = (),
+    ) -> dict[str, Any]:
+        contenu: Any = message
+        if documents:
+            contenu = [*documents, {"type": "text", "text": message}]
         return {
             "model": modele,
             "max_tokens": max_jetons,
             "temperature": 0.2,
             "system": consigne,
-            "messages": [{"role": "user", "content": message}],
+            "messages": [{"role": "user", "content": contenu}],
         }
 
     def url_modeles(self, base: str, version_api: str) -> str | None:

@@ -27,6 +27,7 @@ from app.utils.llm import config_llm
 from app.utils.synthese_contrat import (
     GABARIT,
     CONSIGNE,
+    construire_matiere,
     construire_message,
     documents_du_contrat,
     entete_provenance,
@@ -74,9 +75,9 @@ def _contrat(session, libelle="Ascenseur Bât. 1", **kw):
 
 def _document(session, contrat, **kw):
     kw.setdefault("titre", "Contrat")
+    kw.setdefault("fichier_chemin", "/introuvable/c.pdf")
     d = Document(
         fichier_nom="c.pdf",
-        fichier_chemin="/introuvable/c.pdf",
         mime_type="application/pdf",
         contrat_id=contrat.id,
         publie_par_id=1,
@@ -236,13 +237,19 @@ def test_les_champs_connus_de_la_base_partent_toujours(session):
 #  plus tard — qui l'a écrite, quand, et sur quoi.
 
 
+def _matiere(lus=(), joints=(), ecartes=()):
+    from app.utils.synthese_contrat import Matiere
+
+    return Matiere("msg", (), tuple(lus), tuple(joints), tuple(ecartes))
+
+
 def test_l_encart_nomme_le_modele_la_date_et_les_fichiers(session):
-    c = _contrat(session)
-    d1 = _document(session, c, titre="Conditions Particulières AXA.pdf")
-    d2 = _document(session, c, titre="Conditions Générales AXA.pdf")
     _config(session)
     encart = entete_provenance(
-        config_llm(session), [d1, d2], quand=datetime(2026, 9, 11, 12, 32)
+        config_llm(session),
+        _matiere(lus=("Conditions Particulières AXA.pdf", "Conditions Générales AXA.pdf")),
+        quand=datetime(2026, 9, 11, 12, 32),
+        documents_joints=0,
     )
     assert "OpenAI" in encart
     assert "11 septembre 2026 à 14:32" in encart  # UTC → Paris
@@ -252,21 +259,72 @@ def test_l_encart_nomme_le_modele_la_date_et_les_fichiers(session):
 def test_l_encart_dit_quand_aucun_document_n_a_ete_lu(session):
     """Sans document, la synthèse ne vaut que ce que la fiche sait — et le dire
     est ce qui empêche de la lire comme une lecture du contrat."""
-    _contrat(session)
     _config(session)
-    encart = entete_provenance(config_llm(session), [], quand=datetime(2026, 9, 11, 12, 0))
+    encart = entete_provenance(
+        config_llm(session), _matiere(), quand=datetime(2026, 9, 11, 12, 0), documents_joints=0
+    )
     assert "seules données de la fiche" in encart
 
 
 def test_un_titre_de_fichier_est_echappe(session):
     """Un nom de fichier voyage jusqu'à un `{@html}` : il est échappé ICI, sans
     faire reposer la correction du rendu sur l'assainisseur du front."""
-    c = _contrat(session)
-    d = _document(session, c, titre="Avenant <n°2> & suite.pdf")
     _config(session)
-    encart = entete_provenance(config_llm(session), [d], quand=datetime(2026, 9, 11, 12, 0))
+    encart = entete_provenance(
+        config_llm(session),
+        _matiere(lus=("Avenant <n°2> & suite.pdf",)),
+        quand=datetime(2026, 9, 11, 12, 0),
+        documents_joints=0,
+    )
     assert "<n°2>" not in encart
     assert "&lt;n°2&gt; &amp; suite.pdf" in encart
+
+
+#  ── Ce qui n'a PAS été lu se dit ───────────────────────────────────────────
+#
+#  🔴 11/09/2026, premier vrai contrat : les deux PDF de la porte de parking
+#  étaient des numérisations sans couche de texte. Quatre sections sur sept
+#  sortaient « non précisé » et rien n'expliquait pourquoi — cela ressemblait à
+#  un mauvais modèle, alors que le modèle n'avait tout simplement rien reçu.
+
+
+def test_un_document_ecarte_est_ANNONCE_avec_son_motif(session):
+    _config(session)
+    encart = entete_provenance(
+        config_llm(session),
+        _matiere(lus=("Contrat.pdf",), ecartes=(("Plan.pdf", "illisible ou trop volumineux"),)),
+        quand=datetime(2026, 9, 11, 12, 0),
+        documents_joints=0,
+    )
+    assert "synthèse est donc partielle" in encart
+    assert "Plan.pdf (illisible ou trop volumineux)" in encart
+
+
+def test_un_fichier_joint_REFUSE_par_le_service_compte_comme_non_lu(session):
+    """🔴 C'est le nombre REÇU qui fait foi, pas celui qu'on espérait joindre.
+    Sans cela, l'encart nommerait comme lu un document que le service a refusé —
+    et la synthèse, appauvrie, se présenterait comme complète."""
+    _config(session)
+    encart = entete_provenance(
+        config_llm(session),
+        _matiere(joints=("Contrat scanné.pdf",)),
+        quand=datetime(2026, 9, 11, 12, 0),
+        documents_joints=0,
+    )
+    assert "seules données de la fiche" in encart
+    assert "Contrat scanné.pdf (non transmis au service)" in encart
+
+
+def test_un_fichier_joint_ACCEPTE_figure_parmi_les_sources(session):
+    _config(session)
+    encart = entete_provenance(
+        config_llm(session),
+        _matiere(joints=("Contrat scanné.pdf",)),
+        quand=datetime(2026, 9, 11, 12, 0),
+        documents_joints=1,
+    )
+    assert "à partir de Contrat scanné.pdf" in encart
+    assert "partielle" not in encart
 
 
 def test_la_consigne_impose_le_HTML_que_le_champ_de_notes_accepte(session):
@@ -310,4 +368,121 @@ def test_la_synthese_est_annoncee_comme_une_synthese_de_COPROPRIETE():
     comme un contrat commercial — ce qui compte est ce que la copropriété devra
     surveiller."""
     assert "COPROPRIÉTÉ" in CONSIGNE
+
+
+#  ── Un PDF sans couche de texte part TEL QUEL ─────────────────────────────
+#
+#  🔴 C'est le cas NORMAL, pas l'exception : un contrat signé est numérisé. Les
+#  deux PDF du contrat de porte de parking rendaient zéro caractère à `pypdf`
+#  (mesuré en production le 11/09/2026, 2 pages et 1 page, 212 et 417 Ko).
+
+
+def _pdf_sans_texte(tmp_path, nom="scan.pdf"):
+    """Un PDF valide dont aucune page ne porte de texte — comme une numérisation."""
+    from pypdf import PdfWriter
+
+    chemin = tmp_path / nom
+    ecrivain = PdfWriter()
+    ecrivain.add_blank_page(width=595, height=842)
+    with open(chemin, "wb") as f:
+        ecrivain.write(f)
+    return str(chemin)
+
+
+def test_un_pdf_sans_texte_est_JOINT_au_lieu_d_etre_abandonne(session, tmp_path):
+    c = _contrat(session)
+    _document(session, c, titre="Contrat signé", fichier_chemin=_pdf_sans_texte(tmp_path))
+    _config(session)
+    m = construire_matiere(session, c, avec_document=True)
+    assert len(m.fichiers) == 1
+    assert m.joints == ("Contrat signé",)
+    assert m.lus_en_texte == ()
+    #  Et le message DIT au modèle de les lire lui-même, sinon il ne sait pas
+    #  qu'il a reçu autre chose que du texte.
+    assert "lis-les toi-même" in m.message
+    #  ⚠️ Surtout, il ne porte PLUS la phrase qui ordonne de rendre les sections
+    #  vides : elle ferait rendre « non précisé » alors que le contrat est joint.
+    assert "Aucun texte de contrat n'a pu être lu" not in m.message
+
+
+def test_un_pdf_LISIBLE_part_en_texte_et_pas_en_fichier(session, tmp_path):
+    """Joindre un fichier dont le texte s'extrait coûterait bien plus cher pour
+    exactement le même contenu."""
+    c = _contrat(session)
+    d = _document(session, c, titre="Contrat natif")
+    _config(session)
+    #  `texte_du_document` rend du texte : on simule un PDF avec couche texte.
+    import app.utils.synthese_contrat as mod
+
+    origine = mod.texte_du_document
+    mod.texte_du_document = lambda doc: "ARTICLE 1 — Objet du contrat"
+    try:
+        m = construire_matiere(session, c, avec_document=True)
+    finally:
+        mod.texte_du_document = origine
+    assert d.titre
+    assert m.fichiers == ()
+    assert m.lus_en_texte == ("Contrat natif",)
+
+
+def test_un_fichier_ABSENT_est_ecarte_avec_son_motif(session):
+    """Le chemin des fixtures est introuvable : ni texte, ni fichier joignable."""
+    c = _contrat(session)
+    _document(session, c, titre="Fantôme")
+    _config(session)
+    m = construire_matiere(session, c, avec_document=True)
+    assert m.fichiers == ()
+    assert m.ecartes == (("Fantôme", "illisible ou trop volumineux"),)
+
+
+def test_un_fichier_TROP_LOURD_n_est_pas_joint(session, tmp_path, monkeypatch):
+    """Une requête trop lourde est refusée par le service — et le base64
+    l'alourdit encore d'un tiers. Mieux vaut l'écarter en le disant."""
+    import app.utils.synthese_contrat as mod
+
+    monkeypatch.setattr(mod, "MAX_OCTETS_DOCUMENT_JOINT", 10)
+    c = _contrat(session)
+    _document(session, c, titre="Plan", fichier_chemin=_pdf_sans_texte(tmp_path))
+    _config(session)
+    m = construire_matiere(session, c, avec_document=True)
+    assert m.fichiers == ()
+    assert m.ecartes == (("Plan", "illisible ou trop volumineux"),)
+
+
+#  ── La citation, ce qui rend la synthèse VÉRIFIABLE ───────────────────────
+#
+#  🔴 11/09/2026, proposé par Philippe après le premier essai. Un montant sans
+#  la phrase qui le porte oblige à rouvrir le PDF pour le contrôler — c'est-à-
+#  dire à refaire le travail. Avec la citation, une erreur du modèle saute aux
+#  yeux : la citation ne dit pas ce que la puce affirme.
+
+
+def test_la_consigne_exige_une_CITATION_sous_chaque_fait_chiffre():
+    for exigence in ("phrase EXACTE", "guillemets", "montant", "préavis"):
+        assert exigence in CONSIGNE
+
+
+def test_ne_pas_pouvoir_citer_vaut_ne_pas_avoir_LU():
+    """La citation ne remplace pas l'interdiction d'inventer : elle la rend
+    constatable. Un fait qu'on ne peut pas citer n'a pas été lu."""
+    assert "Si tu ne peux pas citer" in CONSIGNE
+
+
+def test_le_gabarit_reste_GENERIQUE_a_tout_contrat_de_copropriete():
+    """⚠️ Un schéma détaillé par type de contrat (porte de parking, contrôle
+    d'accès) aurait été exact une fois et faux au contrat suivant : une assurance
+    n'a ni visites annuelles ni pièces détachées. Ce qui est imposé vaut pour
+    TOUT contrat ; le détail vient du document."""
+    for specifique in ("parking", "ascenseur", "contrôle d'accès", "porte"):
+        assert specifique not in GABARIT.lower()
+    #  Ce qui, en revanche, vaut partout et doit être demandé :
+    for universel in ("SIRET", "préavis", "indexation", "option"):
+        assert universel.lower() in GABARIT.lower()
+
+
+def test_l_unite_d_un_montant_ne_se_perd_pas():
+    """« 390 € HT/an » n'est pas « environ 390 € » : l'unité EST l'information,
+    et une option chiffrée n'est pas une prestation incluse."""
+    assert "HT ou TTC" in CONSIGNE
+    assert "en supplément" in CONSIGNE
 
