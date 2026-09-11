@@ -70,9 +70,9 @@
 	//  copie PLUS un contrôle qui compare les deux.
 	//  🔒 `npm run lint:seuils-affiche` échoue si elles divergent.
 	const SEUILS: [string, number][] = [
-		['A7', 250],
-		['A6', 570],
-		['A5', 1000],
+		['A7', 420],
+		['A6', 750],
+		['A5', 1220],
 	];
 	const ORDRE = ['A4', 'A5', 'A6', 'A7'];
 	const formatMinPhotos = 'A5';

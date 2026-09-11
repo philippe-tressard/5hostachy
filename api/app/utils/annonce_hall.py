@@ -52,46 +52,67 @@ FORMAT_MIN_AVEC_PHOTOS = "a5"
 # Poids maximal du contenu (titre + message, en caractères) tenant dans chaque
 # format. Au-delà du dernier seuil, on reste en A4.
 #
-# 🔴 **Recalibrés le 10/09/2026 sur une MESURE, plus sur une intuition.**
-# Signalé à l'écran : « le mode auto n'est pas optimum — le but est que l'affiche
-# prenne moins de place sur le tableau d'affichage », avec un PDF où 45 % de la
-# feuille A4 était blanche.
+# 🔴 **Recalibrés une SECONDE fois le 11/09/2026**, après le resserrement du
+# chrome (voir `_GABARITS`). Demandé à l'écran : « l'affiche la plus petite
+# possible, éviter l'espace vide — par contre il faut qu'elle reste visible ».
 #
-# Les anciens seuils (70 / 140 / 300 / 600) envoyaient en A4 dès 601 caractères,
-# alors qu'un A4 en tient plus de 1 500. Une annonce de 629 caractères occupait
-# ainsi une feuille entière pour un tiers de texte — quatre fois la place
-# nécessaire sur le tableau.
+# ⚠️ Le critère de mesure a changé, et c'est le vrai progrès. On relevait le
+# **taux de remplissage** et l'on gardait 92 % ; on relève désormais le point où
+# la page **DÉBORDE** — sa hauteur rendue dépasse celle du feuillet. Le
+# remplissage est une appréciation ; le débordement est un fait, et c'est lui qui
+# ruine une affiche en la poussant sur une seconde feuille.
 #
-# Comment ces chiffres ont été obtenus : le vrai gabarit, monté dans le
-# navigateur pour les cinq formats et huit longueurs (59 → 1 860 caractères), et
-# le **taux de remplissage** du corps mesuré à chaque fois. Les seuils sont le
-# poids auquel chaque format atteint **92 %** de son corps — la marge couvre ce
-# que le modèle ne sait pas : les retours à la ligne, un titre long, une liste à
-# puces.
+#     format   dernier poids SANS débordement   seuil retenu (−10 %)
+#     a7                470                            420
+#     a6                835                            750
+#     a5              1 360                          1 220
+#     a4              1 885                          1 700
 #
-#     format   remplissage mesuré             seuil retenu
-#     a7       0,48 à 125 · 0,91 à 260        250
-#     a6       0,84 à 464 · 0,98 à 650        570
-#     a5       0,67 à 650 · 0,86 à 935      1 000
-#     a4       0,61 à 935 · 0,80 à 1 345    1 550
+# La marge de 10 % couvre ce que la mesure ne voit pas : elle vient du navigateur,
+# et c'est WeasyPrint qui rendra le PDF. Les deux moteurs coupent les lignes un
+# peu différemment.
 #
-# ⚠️ Au-delà de 1 550 caractères on reste en A4 **et le texte déborde** sur une
-# seconde page : c'était déjà vrai avant, et ça n'est toujours pas traité — le
-# gabarit n'a pas de format plus grand. À voir si le cas se présente.
+# Gain par rapport aux seuils du 10/09 : +88 % de texte sur A7, +46 % sur A6,
+# +36 % sur A5. L'annonce de référence (629 caractères) passe d'A5 à **A6** —
+# surface divisée par deux sur le tableau d'affichage.
+#
+# ⚠️ Au-delà de 1 700 caractères on reste en A4 **et le texte déborde** : le
+# gabarit n'a pas de format plus grand. Inchangé, et toujours pas traité.
 SEUILS_FORMAT: tuple[tuple[str, int], ...] = (
-    ("a7", 250),
-    ("a6", 570),
-    ("a5", 1000),
-    ("a4", 1550),
+    ("a7", 420),
+    ("a6", 750),
+    ("a5", 1220),
+    ("a4", 1700),
 )
 
 # Gabarit par format : dimensions de page et échelle typographique.
+#
+# 🔴 **LE CHROME A ÉTÉ RESSERRÉ LE 11/09/2026, PAS LE TEXTE.** Demandé à l'écran :
+# « obtenir l'affiche la plus petite possible, éviter l'espace vide — par contre il
+# faut que l'affiche reste visible ».
+#
+# Mesuré au navigateur sur le vrai gabarit, la part de la feuille consommée AVANT
+# le premier mot — en-tête, filet d'accent, pied, marges du corps, ligne de méta :
+#
+#     a7   66,1 mm sur 105   63 %
+#     a6   80,6 mm sur 148   54 %
+#     a5   95,3 mm sur 210   45 %
+#     a4  113,4 mm sur 297   38 %
+#
+# Sur un A6, **plus de la moitié du feuillet servait à l'habillage**. C'est lui
+# qu'on réduit : marges, hauteur d'en-tête et de pied, logo, QR, interlignes de
+# séparation. Le corps du message et le titre gardent EXACTEMENT leur taille —
+# une affiche de hall se lit debout devant le tableau, et rétrécir le texte pour
+# gagner du papier serait gagner sur le mauvais poste.
+#
+# ⚠️ Ce n'est pas cosmétique : chaque millimètre rendu au texte permet à une
+# annonce de tenir dans le format INFÉRIEUR, ce qui divise sa surface par deux.
 _GABARITS: dict[str, dict[str, str]] = {
     "a4": {
         "page_size": "A4",
         "largeur": "210mm",
         "hauteur": "297mm",
-        "padding": "14mm 16mm",
+        "padding": "10mm 16mm",
         "logo": "44",
         "surtitre": "10pt",
         "residence": "13pt",
@@ -106,37 +127,37 @@ _GABARITS: dict[str, dict[str, str]] = {
         "page_size": "A5",
         "largeur": "148mm",
         "hauteur": "210mm",
-        "padding": "10mm 12mm",
-        "logo": "32",
+        "padding": "7mm 12mm",
+        "logo": "26",
         "surtitre": "8pt",
         "residence": "10.5pt",
         "titre": "21pt",
         "meta": "8.5pt",
         "corps": "10.5pt",
         "galerie_max": "30mm",
-        "qr": "19mm",
+        "qr": "15mm",
         "pied": "7.5pt",
     },
     "a6": {
         "page_size": "A6",
         "largeur": "105mm",
         "hauteur": "148mm",
-        "padding": "7mm 8mm",
-        "logo": "24",
+        "padding": "5mm 8mm",
+        "logo": "20",
         "surtitre": "6.5pt",
         "residence": "8.5pt",
         "titre": "15pt",
         "meta": "7pt",
         "corps": "8.5pt",
         "galerie_max": "0mm",   # pas de photo en dessous de l'A5
-        "qr": "13mm",
+        "qr": "11mm",
         "pied": "6pt",
     },
     "a7": {
         "page_size": "A7",
         "largeur": "74mm",
         "hauteur": "105mm",
-        "padding": "5mm 5.5mm",
+        "padding": "3.5mm 5.5mm",
         "logo": "17",
         "surtitre": "5pt",
         "residence": "6.5pt",
@@ -283,8 +304,8 @@ body {{
 /* ── En-tête ── */
 .entete {{
   background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
-  padding: {g['padding']}; padding-top: 8mm; padding-bottom: 7mm;
-  display: flex; align-items: center; gap: 5mm;
+  padding: {g['padding']}; padding-top: 5mm; padding-bottom: 4mm;
+  display: flex; align-items: center; gap: 4mm;
 }}
 .entete svg {{ flex-shrink: 0; }}
 .entete-texte {{ flex: 1; }}
@@ -305,7 +326,7 @@ body {{
 .corps {{ flex: 1; padding: {g['padding']}; display: flex; flex-direction: column; }}
 .meta {{
   display: flex; align-items: center; justify-content: space-between;
-  gap: 4mm; margin-bottom: 5mm;
+  gap: 4mm; margin-bottom: 3mm;
 }}
 .chip-perimetre {{
   /*  🔴 LE FILET EST UNE BOÎTE, PLUS UN EFFET DE PEINTURE (11/09/2026).
@@ -335,14 +356,14 @@ body {{
   text-transform: uppercase; letter-spacing: .6px;
 }}
 .chip-filet {{ flex: 0 0 1.2mm; width: 1.2mm; background: var(--gold); }}
-.chip-texte {{ padding: 1.6mm 3.5mm; }}
+.chip-texte {{ padding: 1.1mm 3mm; }}
 .date-affichage {{ font-size: {g['meta']}; color: var(--muted); white-space: nowrap; }}
 {meta_allegee}
 .titre {{
   font-family: {FONT_SERIF}; font-size: {g['titre']}; font-weight: 700;
-  color: var(--navy); line-height: 1.15; margin-bottom: 4mm;
+  color: var(--navy); line-height: 1.15; margin-bottom: 3mm;
 }}
-.filet {{ height: .4mm; background: var(--border); margin-bottom: 5mm; }}
+.filet {{ height: .4mm; background: var(--border); margin-bottom: 3mm; }}
 .message {{ font-size: {g['corps']}; color: var(--ink); }}
 .message p {{ margin-bottom: 2.5mm; }}
 .message ul, .message ol {{ margin: 0 0 2.5mm 6mm; }}
@@ -365,8 +386,8 @@ body {{
 /* ── Pied de page ── */
 .pied {{
   background: var(--footer-bg); border-top: .3mm solid var(--border);
-  padding: {g['padding']}; padding-top: 5mm; padding-bottom: 5mm;
-  display: flex; align-items: center; gap: 5mm;
+  padding: {g['padding']}; padding-top: 3.5mm; padding-bottom: 3.5mm;
+  display: flex; align-items: center; gap: 4mm;
 }}
 .pied-texte {{ flex: 1; font-size: {g['pied']}; color: var(--muted); line-height: 1.45; }}
 .pied-signature {{ font-weight: 700; color: var(--navy); }}
