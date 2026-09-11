@@ -282,9 +282,12 @@ l'écran qui le montre* — c'est R3 appliqué à la pièce jointe.
 | # | Élément | Détail |
 |---|---|---|
 | 1 | **les pastilles des fichiers déjà joints** | en RANGÉE horizontale, elles passent à la ligne quand elles ne tiennent plus |
-| 2 | **le bouton** « 📎 Ajouter un document » | on choisit le fichier AVANT de le nommer |
-| 3 | **le compteur** `n/max · types acceptés` | il dit la limite, et il se met à jour |
-| 4 | **le champ de libellé**, facultatif | largeur **50 %**, placeholder « Le nom de fichier » |
+| 2 | **le bouton et le champ de libellé**, SUR LA MÊME LIGNE | le bouton d'abord — on choisit le fichier avant de le nommer ; le champ prend la moitié de la place restante |
+| 3 | **le compteur** `n/max · types acceptés` | sous la rangée : il commente ce qui a été déposé, il ne fait pas partie du geste |
+
+⚠️ **Le bouton et le champ sont ALIGNÉS**, pas empilés : empilés, ils faisaient
+trois lignes pour un seul geste, et le champ posé sous le compteur semblait
+appartenir à autre chose.
 
 ⚠️ **Le bouton précède le champ**, et ce n'est pas un détail de goût : l'ordre
 inverse faisait remplir un libellé avant de savoir ce qu'il nommerait.

@@ -315,44 +315,50 @@
 	{/if}
 
 	{#if !readonly}
-		<label
-			class="btn btn-sm btn-outline fichiers-ajout"
-			class:disabled={complet || envoi || disabled}
-		>
-			{envoi ? '⏳ Envoi…' : `\u{1F4CE} ${libelle}`}
-			<input
-				{id}
-				type="file"
-				multiple
-				accept={accepte}
-				disabled={complet || envoi || disabled}
-				on:change={ajouter}
-			/>
-		</label>
+		<!--  🔴 Le bouton et le champ de libellé sur UNE MÊME LIGNE, alignés
+		      (12/09/2026, troisième passage à l'écran). Empilés, ils faisaient trois
+		      lignes pour un seul geste — et le champ, posé sous le compteur,
+		      semblait appartenir à autre chose.
+
+		      L'ordre reste celui du standard (`ux-patterns` §0 bis) : le bouton
+		      d'abord, on choisit le fichier avant de le nommer. Le compteur passe
+		      SOUS la rangée : il commente ce qui vient d'être déposé, il ne fait
+		      pas partie du geste. -->
+		<div class="fichiers-geste">
+			<label
+				class="btn btn-sm btn-outline fichiers-ajout"
+				class:disabled={complet || envoi || disabled}
+			>
+				{envoi ? '⏳ Envoi…' : `\u{1F4CE} ${libelle}`}
+				<input
+					{id}
+					type="file"
+					multiple
+					accept={accepte}
+					disabled={complet || envoi || disabled}
+					on:change={ajouter}
+				/>
+			</label>
+			{#if avecLibelle}
+				<!--  ⚠️ Pas d'intitulé au-dessus : le placeholder dit à lui seul ce que
+				      le champ attend et ce qui se passe s'il reste vide. Un intitulé
+				      « Libellé du document » par-dessus « Le nom de fichier » disait deux
+				      fois la même chose ; `aria-label` porte le nom accessible sans
+				      occuper de ligne. -->
+				<input
+					type="text"
+					class="fichiers-libelle"
+					aria-label="Libellé du document"
+					bind:value={libelleFichier}
+					disabled={envoi || disabled}
+					placeholder="Le nom de fichier"
+				/>
+			{/if}
+		</div>
 		<span class="fichiers-compte">
 			{nombre}/{max}{#if _types}
 				· {_types}{/if}
 		</span>
-	{/if}
-
-	{#if !readonly && avecLibelle}
-		<!--  🔴 APRÈS le bouton (11/09/2026, second passage à l'écran) : on choisit
-		      d'abord le fichier, on le nomme ensuite si l'on veut. L'ordre inverse
-		      faisait remplir un champ avant de savoir ce qu'il nommerait.
-
-		      ⚠️ Plus d'intitulé au-dessus : le placeholder dit à lui seul ce que
-		      le champ attend et ce qu'il se passe si on le laisse vide. Un
-		      intitulé « Libellé du document » par-dessus « Le nom de fichier »
-		      disait deux fois la même chose, et c'est `aria-label` qui porte
-		      désormais le nom accessible — sans occuper de ligne. -->
-		<input
-			type="text"
-			class="fichiers-libelle"
-			aria-label="Libellé du document"
-			bind:value={libelleFichier}
-			disabled={envoi || disabled}
-			placeholder="Le nom de fichier"
-		/>
 	{/if}
 </div>
 
@@ -369,12 +375,23 @@
 	    ⚠️ `min-width` + `max-width` : sur téléphone, 50 % devient trop étroit pour
 	    lire ce qu'on tape, et le champ reprend la pleine largeur
 	    (`standards/11` §10). */
+	/*  La rangée du geste : le bouton, puis le champ qui prend la place restante.
+	    `align-items: center` les pose sur la même ligne ; `flex-wrap` fait passer
+	    le champ dessous quand la place manque, au lieu de l'écraser
+	    (`standards/11` §10 — l'enroulement avant la compression). */
+	.fichiers-geste {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	/*  🔴 « 50 % de Description » : sur une rangée, cela se dit en `flex-basis` —
+	    le champ prend la moitié de la largeur disponible et se rétracte jusqu'à
+	    `min-width` avant de passer à la ligne. Un pourcentage du PARENT aurait
+	    ignoré la place que le bouton occupe. */
 	.fichiers-libelle {
-		display: block;
-		width: 50%;
-		min-width: 220px;
-		max-width: 100%;
-		margin-top: 0.5rem;
+		flex: 1 1 50%;
+		min-width: 200px;
 	}
 	.fichiers-titre {
 		display: block;
