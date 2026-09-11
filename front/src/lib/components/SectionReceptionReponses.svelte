@@ -18,6 +18,7 @@
   quoi faire »*.
 -->
 <script lang="ts">
+	import ChampSecret from '$lib/components/ChampSecret.svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import { config as configApi } from '$lib/api';
@@ -55,7 +56,6 @@
 	};
 	let imapSaving = false;
 	let imapPasswordSet = false;
-	let imapEditingPassword = true;
 	let imapTesting = false;
 	let imapResultat = '';
 
@@ -121,7 +121,6 @@
 		imapConfig.dossier = lues['imap_dossier'] || 'INBOX';
 		imapConfig.plancher = lues['imap_plancher'] || '2026-09-02';
 		imapPasswordSet = !!lues['imap_password'];
-		imapEditingPassword = !imapPasswordSet;
 	}
 
 	onMount(relire);
@@ -159,33 +158,16 @@
 			<input type="text" bind:value={imapConfig.username} placeholder="noreply@exemple.fr" />
 			<span class="aide">Le même compte que l'envoi, chez le même hébergeur.</span>
 		</label>
-		<label class="field">
-			Mot de passe
-			<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-				<input
-					type="password"
-					bind:value={imapConfig.password}
-					autocomplete="new-password"
-					disabled={imapPasswordSet && !imapEditingPassword}
-					placeholder={imapPasswordSet && !imapEditingPassword
-						? 'Mot de passe masqué'
-						: 'Mot de passe de la boîte'}
-					style="flex:1;min-width:220px"
-				/>
-				{#if imapPasswordSet && !imapEditingPassword}
-					<button
-						class="btn btn-outline btn-sm"
-						type="button"
-						on:click={() => {
-							imapEditingPassword = true;
-							imapConfig.password = '';
-						}}
-					>
-						Changer
-					</button>
-				{/if}
-			</div>
-		</label>
+		<!--  Le motif du secret déjà posé vit dans `ChampSecret` (11/09/2026) : il
+		      était écrit ICI et dans `OngletSmtp`, à l'identique, et la clé d'API de
+		      l'assistant en aurait fait une troisième copie. -->
+		<ChampSecret
+			libelle="Mot de passe"
+			bind:valeur={imapConfig.password}
+			pose={imapPasswordSet}
+			placeholder="Mot de passe de la boîte"
+			aide="Requis pour relever les réponses."
+		/>
 		<label class="field champ-court">
 			Dossier
 			<input type="text" bind:value={imapConfig.dossier} placeholder="INBOX" />

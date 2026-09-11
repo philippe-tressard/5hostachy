@@ -22,11 +22,10 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionReceptionReponses from '$lib/components/SectionReceptionReponses.svelte';
+	import ChampSecret from '$lib/components/ChampSecret.svelte';
 
 	/** Signature ajoutée en bas de chaque e-mail — appartient à `siteConfig`. */
 	export let emailFooter = '';
-	/** Référence de la copropriété auprès du syndic — appartient à `siteConfig`. */
-	export let referenceCopro = '';
 	/** Valeurs lues au chargement par la page (`adminCfg`). */
 	export let valeurs: Record<string, string> = {};
 
@@ -44,7 +43,6 @@
 	};
 	let smtpSaving = false;
 	let smtpPasswordSet = false;
-	let smtpEditingPassword = true;
 	let smtpTestEmail = '';
 	let smtpTesting = false;
 
@@ -82,7 +80,6 @@
 		smtpConfig.starttls = lues['smtp_starttls'] !== '0';
 		smtpConfig.ssl_tls = lues['smtp_ssl_tls'] === '1';
 		smtpPasswordSet = !!lues['smtp_password'];
-		smtpEditingPassword = !smtpPasswordSet;
 	}
 
 	/** Relit ce que le serveur a RETENU, et remet le formulaire dessus.
@@ -123,7 +120,6 @@
 				smtp_starttls: smtpConfig.starttls ? '1' : '0',
 				smtp_ssl_tls: smtpConfig.ssl_tls ? '1' : '0',
 				email_footer: emailFooter,
-				reference_copro: referenceCopro,
 			};
 			if (smtpConfig.password) payload['smtp_password'] = smtpConfig.password;
 			await configApi.save(payload);
@@ -209,40 +205,17 @@
 				<input type="text" bind:value={smtpConfig.username} placeholder="user@example.com" />
 				<span class="aide">Laisser vide si le serveur ne requiert pas d'authentification.</span>
 			</label>
-			<label class="field">
-				Mot de passe SMTP
-				<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-					<input
-						type="password"
-						bind:value={smtpConfig.password}
-						autocomplete="new-password"
-						disabled={smtpPasswordSet && !smtpEditingPassword}
-						placeholder={smtpPasswordSet && !smtpEditingPassword
-							? 'Mot de passe masqué'
-							: 'Nouveau mot de passe SMTP'}
-						style="flex:1;min-width:220px"
-					/>
-					{#if smtpPasswordSet && !smtpEditingPassword}
-						<button
-							class="btn btn-outline btn-sm"
-							type="button"
-							on:click={() => {
-								smtpEditingPassword = true;
-								smtpConfig.password = '';
-							}}
-						>
-							Changer
-						</button>
-					{/if}
-				</div>
-				<span class="aide"
-					>{smtpPasswordSet
-						? smtpEditingPassword
-							? 'Saisissez le nouveau mot de passe puis cliquez sur Enregistrer.'
-							: 'Mot de passe déjà enregistré. Cliquez sur « Changer » pour le remplacer.'
-						: 'Requis si le serveur exige une authentification.'}</span
-				>
-			</label>
+			<!--  Le motif du secret déjà posé vit dans `ChampSecret` (11/09/2026) : il
+			      était écrit ICI et dans `SectionReceptionReponses`, à l'identique — et
+			      seule cette copie-ci portait l'aide « déjà enregistré », l'autre non.
+			      Deux écritures d'un même motif, et elles avaient déjà divergé. -->
+			<ChampSecret
+				libelle="Mot de passe SMTP"
+				bind:valeur={smtpConfig.password}
+				pose={smtpPasswordSet}
+				placeholder="Nouveau mot de passe SMTP"
+				aide="Requis si le serveur exige une authentification."
+			/>
 			<label class="field" style="grid-column:span 2">
 				<span style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
 					<span style="display:flex;align-items:center;gap:.4rem">
@@ -321,17 +294,14 @@
 		</div>
 	</SectionFormulaire>
 
-	<SectionFormulaire icone="building-2" titre="Référence copropriété (syndic)">
-		<div class="largeur-saisie">
-			<label class="field champ-moyen">
-				<input type="text" bind:value={referenceCopro} placeholder="00213" />
-				<span class="aide"
-					>Référence de la copropriété auprès du syndic. Utilisée en préfixe dans les sujets
-					d'e-mails envoyés au syndic.</span
-				>
-			</label>
-		</div>
-	</SectionFormulaire>
+	<!--  🔴 « Référence copropriété » a REJOINT la fiche copropriété, section
+	      Syndic (11/09/2026, signalé à l'écran). Elle décrit le dossier de la
+	      copropriété chez son syndic — sa place est auprès du cabinet, du mandat
+	      et de l'interlocuteur, pas dans un écran de serveur d'envoi.
+
+	      L'en-tête de ce fichier justifiait sa présence ici par « elle ne concerne
+	      que les e-mails ». C'était vrai de son USAGE et faux de sa NATURE : une
+	      donnée se range là où elle se lit, pas là où elle sert. -->
 
 	<div class="largeur-saisie form-actions">
 		<button class="btn btn-primary" on:click={saveSmtpConfig} disabled={smtpSaving}>

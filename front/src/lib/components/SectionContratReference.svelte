@@ -114,6 +114,11 @@
 		<p class="ref-vide">Aucun contrat désigné.</p>
 	{/if}
 
+	<!--  Un complément propre à la section — un champ que l'appelant veut voir
+	      AVEC ces lignes, et pas ailleurs. Le renvoi reste en dernier : il dit où
+	      aller modifier, c'est une sortie, pas un contenu. -->
+	<slot name="complement" />
+
 	<p class="ref-renvoi">
 		<slot name="renvoi" />
 	</p>

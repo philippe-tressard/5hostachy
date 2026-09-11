@@ -1,6 +1,9 @@
 <script lang="ts">
+	/**  La référence de la copropriété chez son syndic — clé `ConfigSite`,
+	 *   remontée par la page comme le reste de la configuration. */
+	export let referenceCopro = '';
 	import { onMount } from 'svelte';
-	import { copropriete as coproprieteApi } from '$lib/api';
+	import { config as configApi, copropriete as coproprieteApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
@@ -82,6 +85,12 @@
 			//  l'ancien affichage montrerait l'assureur précédent sous le nouveau
 			//  choix, jusqu'au prochain rechargement de page.
 			fiche = await coproprieteApi.update(payload);
+			//  ⚠️ DEUX destinations pour un seul bouton : la fiche est une entité, la
+			//  référence chez le syndic une clé de configuration. L'écran ne le montre
+			//  pas — ce serait exposer notre découpage —, mais il enregistre les deux
+			//  ou aucune : un « Enregistré » qui n'aurait sauvé que la moitié serait
+			//  pire qu'une erreur.
+			await configApi.save({ reference_copro: referenceCopro });
 			toast('success', 'Fiche enregistrée');
 		} catch {
 			toast('error', 'Erreur lors de la sauvegarde');
@@ -174,6 +183,25 @@
 					L'assurance est un <strong>contrat</strong> : elle se modifie dans
 					<a href="/prestataires/contrats">Prestataires → Contrats</a>, avec son prestataire, son
 					échéance et son attestation.
+				</svelte:fragment>
+				<svelte:fragment slot="complement">
+					<!--  🔴 Elle vivait dans admin → SMTP (11/09/2026, signalé à l'écran) :
+					      « ne serait-il pas logique de la positionner dans Fiche copropriété,
+					      section Syndic ? ». Si. Elle décrit le dossier de la copropriété
+					      CHEZ le syndic — elle se lit avec le cabinet et le mandat, pas avec
+					      un serveur d'envoi.
+
+					      ⚠️ La valeur reste dans `ConfigSite` : c'est là que vit toute la
+					      configuration du site, et la déplacer en base n'aurait rien changé à
+					      l'endroit où on la LIT. On déplace l'écran, pas le schéma. -->
+					<label class="field champ-moyen">
+						Référence chez le syndic
+						<input type="text" bind:value={referenceCopro} placeholder="00213" />
+						<span class="aide">
+							Le numéro de dossier de la copropriété chez son syndic. Il préfixe les sujets des
+							courriels qui lui sont envoyés.
+						</span>
+					</label>
 				</svelte:fragment>
 			</SectionContratReference>
 
