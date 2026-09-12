@@ -43,7 +43,28 @@ const RACINE = 'src';
  *  ⚠️ Trois valeurs, pas douze. Une échelle qui reprend tout ce qui existe ne
  *  déclare rien : elle constate.
  */
-const ECHELLE = [480, 767, 768, 1024];
+/**
+ *  🔴 `900` A REJOINT L'ÉCHELLE le 12/09/2026, et c'est un CONSTAT, pas un
+ *  assouplissement : la valeur était employée **quatre fois, pour une seule et
+ *  même intention** — un contenu à plusieurs colonnes n'a plus la place d'en
+ *  tenir autant.
+ *
+ *      ecrans.css     .imp-edit-grid    3+ colonnes → 2
+ *      ecrans.css     .report-grid-2    2 → 1
+ *      composants.css .kanban           colonnes → empilé
+ *      OngletAnnoncesHall .ah-layout    2 → 1
+ *
+ *  ⚠️ Ce n'est pas la frontière mobile (767) : à 800 px on est sur un écran de
+ *  bureau, avec un menu de bureau, et une grille à trois colonnes y est déjà
+ *  trop serrée. Quatre fichiers l'avaient trouvée séparément — une valeur que
+ *  personne n'a copiée et que tout le monde retrouve est une frontière réelle.
+ *
+ *  ⚠️ Et c'est la limite de ce raisonnement : il ne vaut QUE parce que les
+ *  quatre usages disent la même chose. `640` est employé trois fois lui aussi,
+ *  mais pour des ajustements sans rapport entre eux (un padding, une taille de
+ *  vignette, une marge) — il reste une dette, suivie en #839.
+ */
+const ECHELLE = [480, 767, 768, 900, 1024];
 
 /**
  *  Les largeurs encore employées hors de l'échelle, par fichier — avec ce qu'on
@@ -69,12 +90,10 @@ const DETTES = {
 	//  carte qui l'emploie n'a plus de point de rupture à déclarer.
 	'lib/components/FicheResidence.svelte': [560],
 	'lib/components/FluxVignette.svelte': [640],
-	'lib/components/OngletAnnoncesHall.svelte': [900],
 	'lib/components/OngletImportLots.svelte': [600],
 	'lib/components/SectionContratReference.svelte': [520],
 	'lib/components/reporting/VueRenouvellementsContrats.svelte': [700],
-	'styles/composants.css': [900],
-	'styles/ecrans.css': [600, 900],
+	'styles/ecrans.css': [600],
 	'styles/normes.css': [640],
 };
 
@@ -104,8 +123,14 @@ function selftest() {
 		['@media (max-width: 767px) { .a { color: red } }', []],
 		['@media (min-width: 768px) { .a { color: red } }', []],
 		['@media (max-width: 760px) { .a { color: red } }', [760]],
-		//  Deux largeurs dans un même fichier : les deux comptent.
-		['@media (max-width: 600px){}\n@media (max-width: 900px){}', [600, 900]],
+		//  Deux largeurs dans un même fichier : les deux comptent — et seule
+		//  celle qui est HORS échelle est relevée. `900` y est entré le 12/09.
+		['@media (max-width: 600px){}\n@media (max-width: 900px){}', [600]],
+		//  🔴 Ce cas a ÉCHOUÉ au moment d'ajouter 900 à l'échelle, et c'était le
+		//  bon comportement : l'auto-test a refusé que le contrôle change d'avis
+		//  sans qu'on le dise. Un garde-fou qui suit silencieusement sa propre
+		//  configuration ne garde plus rien.
+		['@media (max-width: 900px){}', []],
 		//  Une largeur hors d'une requête média ne dit rien de la mise en page.
 		['.carte { max-width: 640px; }', []],
 	];
