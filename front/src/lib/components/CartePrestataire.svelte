@@ -25,6 +25,7 @@
 	import { equipLabel } from '$lib/prestataires';
 	import { nomAffiche } from '$lib/noms';
 	import BoutonLien from './BoutonLien.svelte';
+	import EnteteCarte from './EnteteCarte.svelte';
 	import NotationsPrestataire from './NotationsPrestataire.svelte';
 	import FormulaireCreation from './FormulaireCreation.svelte';
 	import ChampsPrestataire from './ChampsPrestataire.svelte';
@@ -59,48 +60,52 @@
 	$: enEdition = editPrestId === p.id;
 </script>
 
-<div class="carte-liste" class:expanded={expanded || enEdition} id="presta-{p.id}">
-	<div
-		class="prest-header"
-		role="button"
-		tabindex="0"
-		on:click={() => onBasculer(p.id)}
-		on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && onBasculer(p.id)}
+<!--  🔴 L'en-tête passe par `EnteteCarte` (12/09/2026) — comme les ONZE autres
+      cartes du site. Il était écrit à la main ici, et il en portait les deux
+      défauts que ce composant existe pour supprimer :
+
+        • le NOM partageait sa ligne avec les badges de type, de spécialité et la
+          note. Sur un téléphone, les badges ayant une largeur fixe et la ligne
+          étant en `flex`, c'est le nom qui se réduisait à trois points — on
+          lisait une liste de prestataires sans savoir lesquels.
+        • le geste était SYMÉTRIQUE : le conteneur portait `role="button"`, donc
+          la carte dépliée se refermait au moindre clic dans son corps, et la
+          sélection de texte était interceptée. La norme du 18/08 est
+          asymétrique — repliée, toute la carte ouvre ; dépliée, seul le titre
+          referme.
+
+      Le chevron suit : `›` qui pivote, comme partout, et non `▲/▼` — deux formes
+      pour un même signal, c'est ce que `ux-patterns` §0 appelle une décision
+      qu'on reprend à chaque écran. -->
+<div
+	class="carte-liste"
+	class:expanded={expanded || enEdition}
+	id="presta-{p.id}"
+	role="presentation"
+	on:click={() => {
+		if (!expanded && !enEdition) onBasculer(p.id);
+	}}
+>
+	<EnteteCarte
+		titre={p.nom}
+		date={nextVisit && (!compactPrests || expanded) ? fmtDateShort(nextVisit) : ''}
+		basculable
+		on:toggle={() => onBasculer(p.id)}
 	>
-		<div class="prest-main">
-			<strong class="prest-nom">{p.nom}</strong>
-			<span class="badge badge-type" style="margin-left:.5rem">{typeLabel(p.type_prestataire)}</span
-			>
-			<span class="badge badge-blue" style="margin-left:.25rem">{equipLabel(p.specialite)}</span>
+		<svelte:fragment slot="tags">
+			<span class="badge badge-type">{typeLabel(p.type_prestataire)}</span>
+			<span class="badge badge-blue">{equipLabel(p.specialite)}</span>
 			<NotationsPrestataire resume {notations} />
-		</div>
-		{#if !compactPrests || expanded}
-			<div class="prest-contacts">
-				{#if p.contacts && p.contacts.length > 0}
-					{#each p.contacts as c (c.id ?? c)}
-						<span class="prest-contact">
-							📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
-									c,
-								)}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
-						</span>
-					{/each}
-				{:else if p.telephone}
-					{#each telephonesDe(p.telephone) as tel (tel)}
-						<span class="prest-contact">📞 {tel.trim()}</span>
-					{/each}
-				{/if}
-				{#if p.email}<span class="prest-contact">✉️ {p.email}</span>{/if}
-			</div>
-		{/if}
-		<div class="prest-meta">
 			{#if !compactPrests || expanded}
 				<span class="badge badge-gray">{cs.length} contrat{cs.length !== 1 ? 's' : ''}</span>
-				{#if nextVisit}<span class="badge" style="font-size:.75rem;color:var(--color-primary)"
-						>🗓 {fmtDateShort(nextVisit)}</span
-					>{/if}
 			{/if}
+		</svelte:fragment>
+
+		<svelte:fragment slot="actions">
 			<BoutonLien ancre="presta-{p.id}" quoi="la fiche prestataire" />
 			{#if peutModifier}
+				<!--  `aria-pressed` : le mode se lit sur l'icône qui l'a ouvert
+				      (`ux-patterns` §13 bis), jamais sur un titre au-dessus. -->
 				<button
 					class="btn-icon-edit"
 					aria-label={enEdition ? 'Annuler la correction' : 'Modifier'}
@@ -115,9 +120,33 @@
 					on:click|stopPropagation={() => onArchiver(p.id)}>🗑️</button
 				>
 			{/if}
-			<span class="toggle-arrow">{expanded || enEdition ? '▲' : '▼'}</span>
+		</svelte:fragment>
+
+		<svelte:fragment slot="chevron"
+			><span class="chevron" class:open={expanded || enEdition}>›</span></svelte:fragment
+		>
+	</EnteteCarte>
+
+	<!--  Les contacts sont l'APERÇU de la carte : ils viennent sous l'en-tête, à
+	      la place que le modèle leur donne, et non serrés dans sa ligne de titre. -->
+	{#if !compactPrests || expanded}
+		<div class="prest-contacts">
+			{#if p.contacts && p.contacts.length > 0}
+				{#each p.contacts as c (c.id ?? c)}
+					<span class="prest-contact">
+						📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
+								c,
+							)}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
+					</span>
+				{/each}
+			{:else if p.telephone}
+				{#each telephonesDe(p.telephone) as tel (tel)}
+					<span class="prest-contact">📞 {tel.trim()}</span>
+				{/each}
+			{/if}
+			{#if p.email}<span class="prest-contact">✉️ {p.email}</span>{/if}
 		</div>
-	</div>
+	{/if}
 	{#if enEdition}
 		<!--  Le corps ne referme pas la carte : sans `stopPropagation`, un clic
 		      dans le formulaire remonterait à la ligne de titre et replierait ce
@@ -168,53 +197,33 @@
 </div>
 
 <style>
-	.prest-header {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.85rem 1rem;
-		cursor: pointer;
-		flex-wrap: wrap;
-	}
-	.prest-main {
-		display: flex;
-		align-items: center;
-		min-width: 160px;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-	}
-	.prest-nom {
-		font-size: 0.95rem;
-	}
+	/*  🔴 Cinq règles ont disparu avec l'en-tête écrit à la main (12/09/2026) :
+	    `.prest-header`, `.prest-main`, `.prest-nom`, `.prest-meta` et leur point
+	    de rupture à 600 px. Elles décrivaient une disposition que `EnteteCarte`
+	    porte désormais — et le point de rupture avec, ce qui est précisément R1 :
+	    la responsivité appartient au squelette, pas à chaque carte.
+
+	    ⚠️ Le style part AVEC le balisage. Laissé derrière, il ne lève rien à
+	    l'exécution : `lint:css-orphelin` et `svelte-check` sont les seuls à le
+	    voir, et c'est le défaut qui a été repris quatre fois cette semaine. */
 	.badge-type {
 		background: var(--color-bg-secondary, #f0f0f0);
 		color: var(--color-text);
 		font-size: 0.75rem;
 	}
+	/*  L'aperçu de la carte : les contacts, sous l'en-tête. */
 	.prest-contacts {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.4rem 0.75rem;
-		flex: 1;
+		padding: 0 0.9rem 0.6rem;
 	}
 	.prest-contact {
 		font-size: 0.82rem;
 		color: var(--color-text-muted);
 	}
-	.prest-meta {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		margin-left: auto;
-	}
 	.prest-body {
 		padding: 0.25rem 1rem 1rem 1rem;
 		border-top: 1px solid var(--color-border);
-	}
-
-	@media (max-width: 600px) {
-		.prest-header {
-			gap: 0.5rem;
-		}
 	}
 </style>

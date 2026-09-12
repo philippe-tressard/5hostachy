@@ -459,6 +459,21 @@ son style et son repli. C'est **R1** au sens propre — la responsivité apparti
 au squelette, une seule fois pour toutes les pages ; chaque carte qui recomposait
 son en-tête avait sa propre façon de mal se replier.
 
+🔒 **Garde-fou depuis le 12/09/2026 : `npm run lint:entete-carte`.** Tout
+fichier qui rend `.carte-liste` doit importer `EnteteCarte`. La liste
+d'exceptions est **vide**, et c'est le bon moment pour l'ouvrir : le dépôt est
+conforme. Une exception ajoutée devra dire pourquoi, et une qui ne sert plus
+fait échouer le contrôle.
+
+⚠️ **La règle était écrite ici depuis le 18/08 et DEUX cartes ne la suivaient
+pas** — `CarteContrat` et `CartePrestataire` — pendant un mois, avec l'ancien
+`role="button"` sur le conteneur et le chevron `▲/▼` que tout le reste du site
+avait abandonné. Personne ne l'a vu, et la raison compte : **rien ne relit une
+carte qu'on ne touche pas, et les deux étaient cohérentes ENTRE ELLES.** C'est
+la forme la plus durable d'un écart — il faut une machine pour la voir. Même
+famille que `lint:seuil-listes` (§0) : une règle écrite dans une skill ne se
+relit pas avant de toucher un écran qu'on croit sans rapport.
+
 **L'ORDRE DES ICÔNES est celui de la carte de ticket**, désignée comme référence :
 **🔗 copier le lien · 🔄 commenter · ✏️ modifier · 🗑️ supprimer**, puis le chevron.
 Il était inversé sur les actualités, et deux cartes du même site ne se lisaient pas

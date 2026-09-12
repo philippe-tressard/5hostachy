@@ -62,7 +62,11 @@ const ECHELLE = [480, 767, 768, 1024];
 const DETTES = {
 	'lib/components/ApercuCarte.svelte': [640],
 	'lib/components/ApercuDiffusion.svelte': [700],
-	'lib/components/CartePrestataire.svelte': [600],
+	//  `CartePrestataire` est sortie de cette liste le 12/09/2026, et sans
+	//  qu'on ait touché à sa largeur : son `@media (max-width: 600px)` ne
+	//  servait qu'à resserrer un en-tête écrit à la main, remplacé par
+	//  `EnteteCarte`. La responsivité appartient au squelette (R1) — une
+	//  carte qui l'emploie n'a plus de point de rupture à déclarer.
 	'lib/components/FicheResidence.svelte': [560],
 	'lib/components/FluxVignette.svelte': [640],
 	'lib/components/OngletAnnoncesHall.svelte': [900],
