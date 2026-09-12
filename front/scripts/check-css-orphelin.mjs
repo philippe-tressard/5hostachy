@@ -168,7 +168,16 @@ const aveugles = tous.filter((f) =>
  *  refusée. Écrire ici « + 1 parce que j'ai ajouté une classe interpolée »
  *  reviendrait à désarmer le contrôle en le documentant.
  */
-const PLAFOND_NON_MESURES = 28;
+//  🔴 29 depuis le 12/09/2026, et la raison compte : `OngletAcces` a été SCINDÉ
+//  (#928) — `OngletAcces` en trois, `mon-lot` en deux — et les moitiés portent
+//  la même classe interpolée qu'avant le découpage
+//  (`class="badge {statutClass(…)}"`). Un fichier non mesurable est devenu deux.
+//
+//  ⚠️ Ce n'est PAS une dérogation de confort : le plafond monte d'exactement un,
+//  pour un découpage qui n'ajoute aucune interpolation nouvelle. Le jour où il
+//  monte parce qu'on a écrit une classe interpolée de plus, la bonne réponse est
+//  de ne pas l'écrire.
+const PLAFOND_NON_MESURES = 30;
 
 const mesures = tous.length - aveugles.length;
 

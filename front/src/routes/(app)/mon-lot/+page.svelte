@@ -2,11 +2,9 @@
 	import { nomAffiche } from '$lib/noms';
 	import { etageLabel, lotTypeLabel } from '$lib/utils';
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import GesteEnPlace from '$lib/components/GesteEnPlace.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
-	import InventaireBail from '$lib/components/InventaireBail.svelte';
 	import ModaleAccesBail from '$lib/components/ModaleAccesBail.svelte';
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, bailleur as bailApi, ApiError, type ObjetRemis } from '$lib/api';
@@ -15,12 +13,14 @@
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
-	import Onglet from '$lib/components/Onglet.svelte';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
+	import OngletAcces from '$lib/components/OngletAcces.svelte';
+	import OngletGestionLocative from '$lib/components/OngletGestionLocative.svelte';
+	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
+	import { messageErreur, tenter } from '$lib/erreurs';
 	import { routeOnglet, routeSousOnglet } from '$lib/routes-onglets';
-	import { TITRE_ARCHIVES } from '$lib/archives';
 
 	$: _pc = getPageConfig($configStore, 'mon-lot', defautsDePage('mon-lot'));
 	$: _siteNom = $siteNomStore;
@@ -32,7 +32,6 @@
 	$: isResident = $currentUser?.statut === 'copropriétaire_résident';
 
 	const ROUTE_BAUX_ACTIFS = routeSousOnglet('mon-lot', 'location', 'actif');
-	const ROUTE_BAUX_ARCHIVES = routeSousOnglet('mon-lot', 'location', 'archives');
 
 	// ── Onglet principal ───────────────────────────────────────────────────────
 	//  L'onglet ET son sous-onglet viennent du CHEMIN — `/mon-lot/location/archives`
@@ -40,6 +39,16 @@
 	//  cet écran ne fait que les lire.
 	export let data: { onglet: string; sous: string | null };
 	$: mainTab = data.onglet;
+
+	//  Les deux gestes d'accès (#928), refermés au changement d'onglet : un
+	//  formulaire laissé derrière un onglet qu'on ne regarde plus est un
+	//  formulaire qu'on croit avoir annulé.
+	let accesDemande = false;
+	let accesDeclare = false;
+	$: if (mainTab) {
+		accesDemande = false;
+		accesDeclare = false;
+	}
 	$: bailTab = data.sous ?? 'actif';
 	$: peutGererLocation = isBailleur || $isAdmin || $isCS || (isResident && bauxTermines.length > 0);
 	$: if (browser && !bauxLoading && mainTab === 'location' && !peutGererLocation) {
@@ -144,6 +153,10 @@
 
 	// ── Init ───────────────────────────────────────────────────────────────────
 	onMount(async () => {
+		//  ⚠️ PAS `tenter` ici : ce `catch` fait plus que dire l'échec, il le
+		//  MÉMORISE (`erreurLots`) pour que l'écran distingue « aucun lot » de
+		//  « je n'ai pas pu regarder » (#816). `tenter` toaste et rend un booléen —
+		//  il ne remplacerait pas cette nuance, il l'effacerait.
 		try {
 			lots = await lotsApi.mesList();
 			if (lots.length > 0) selectedLotId = lots[0].id;
@@ -151,7 +164,7 @@
 			//  🔴 Sans cette variable, l'écran annonçait « Aucun lot associé » après
 			//  un échec de chargement (#816) — et la page explique alors, en trois
 			//  lignes, comment faire rattacher un lot qui EST peut-être déjà là.
-			erreurLots = e instanceof ApiError ? e.message : 'Impossible de charger vos lots';
+			erreurLots = messageErreur(e, 'Impossible de charger vos lots');
 			toast('error', erreurLots);
 		} finally {
 			loading = false;
@@ -228,28 +241,24 @@
 
 	async function confirmerTerminer() {
 		if (!bailATerminer) return;
-		try {
-			const updated = await bailApi.terminerBail(bailATerminer.id, {
+		const cible = bailATerminer;
+		await tenter(async () => {
+			const updated = await bailApi.terminerBail(cible.id, {
 				date_sortie_reelle: dateSortie || null,
 			});
 			baux = baux.map((b) => (b.id === updated.id ? updated : b));
 			bailATerminer = null;
-			toast('success', 'Bail terminé');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		}, 'Bail terminé');
 	}
 
 	async function confirmerSupprimer() {
 		if (!bailASupprimer) return;
-		try {
-			await bailApi.supprimerBail(bailASupprimer.id);
-			baux = baux.filter((b) => b.id !== bailASupprimer!.id);
+		const cible = bailASupprimer;
+		await tenter(async () => {
+			await bailApi.supprimerBail(cible.id);
+			baux = baux.filter((b) => b.id !== cible.id);
 			bailASupprimer = null;
-			toast('success', 'Bail supprimé');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		}, 'Bail supprimé');
 	}
 
 	function ouvrirEditionLocataire(bail: Bail) {
@@ -270,18 +279,16 @@
 
 	async function sauvegarderLocataire() {
 		if (!bailEdite) return;
-		try {
-			const updated = await bailApi.updateBail(bailEdite.id, {
+		const cible = bailEdite;
+		await tenter(async () => {
+			const updated = await bailApi.updateBail(cible.id, {
 				...editLocataire,
 				date_sortie_prevue: editLocataire.date_sortie_prevue || null,
 				locataire_id: editLocataireId ?? null,
 			});
 			baux = baux.map((b) => (b.id === updated.id ? { ...updated, objets: b.objets } : b));
 			bailEdite = null;
-			toast('success', 'Informations mises à jour');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		}, 'Informations mises à jour');
 	}
 
 	//  `confirmerRetour` et `supprimerObjet` sont partis dans `InventaireBail`
@@ -379,17 +386,49 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'door-closed'}>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'key-round'}>
 	{#if mainTab === 'location'}
-		<button class="btn btn-primary page-header-btn" on:click={() => (showNewBail = true)}
-			>+ Nouveau bail</button
-		>
+		<BoutonNouveau
+			ouvert={showNewBail}
+			libelle="Nouveau bail"
+			on:basculer={() => (showNewBail = true)}
+		/>
+	{/if}
+	<!--  🔴 DEUX gestes en tête (#928) : ils étaient deux sections tout en bas de
+	      l'ancien écran. ⚠️ Ils disent deux choses — « Nouvel accès » demande au
+	      syndic ce qu'on n'a pas, « Déclarer » signale ce qu'on détient déjà. -->
+	{#if mainTab === 'badges' || mainTab === 'telecommandes'}
+		<BoutonNouveau
+			ouvert={accesDemande}
+			libelle="Nouvel accès"
+			on:basculer={() => {
+				accesDemande = true;
+				accesDeclare = false;
+			}}
+		/>
+		<BoutonNouveau
+			ouvert={accesDeclare}
+			libelle="Déclarer un accès"
+			on:basculer={() => {
+				accesDeclare = true;
+				accesDemande = false;
+			}}
+		/>
 	{/if}
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
-{#if peutGererLocation}
-	<BarreOnglets pageId="mon-lot" actif={mainTab} />
+<!--  🔴 Barre TOUJOURS rendue (#928) : trois onglets pour tout le monde depuis
+      que la page porte les accès. ⚠️ `masques` plutôt qu'une condition autour
+      d'elle — le « si concerné » porte sur UN onglet, pas sur la rangée. -->
+<BarreOnglets pageId="mon-lot" actif={mainTab} masques={peutGererLocation ? [] : ['location']} />
+
+<!-- ── Onglets : Mes badges (Vigik) · Télécommandes de parking ───────── -->
+<!--  🔴 Le contenu vit dans `OngletAcces` (#928) : `routeInterne` sert tous les
+      onglets d'une page par UN écran, donc `/mon-lot/badges` arrive ici. Motif
+      des dix-sept `Onglet*.svelte` de l'administration. -->
+{#if mainTab === 'badges' || mainTab === 'telecommandes'}
+	<OngletAcces section={mainTab} bind:showForm={accesDemande} bind:showDeclareForm={accesDeclare} />
 {/if}
 
 <!-- ── Onglet : Mes lots ────────────────────────────────────────────── -->
@@ -687,227 +726,36 @@
 
 <!-- ── Onglet : Gestion locative ────────────────────────────────────── -->
 {#if mainTab === 'location'}
-	<div style="max-width:900px">
-		<!--  🔴 LA BOÎTE DANS LA PAGE, et non une modale (#367 / #672).
-
-		      « Nouveau bail » était la dernière modale de création du site. Elle y
-		      avait échappé parce que `lint:formulaires` ne cherchait qu'un `<form>`,
-		      et ce formulaire n'en porte aucun — seulement des `.field`.
-
-		      ⚠️ Le corps vit dans `FormulaireBail.svelte` : cette page pesait 2 229
-		      lignes, et le contrôle de modularité refusait d'y ajouter la moindre
-		      ligne. Comme les huit refus précédents, il désignait un PLACEMENT — la
-		      saisie d'un bail n'a rien à faire dans l'écran qui liste les lots, les
-		      baux, les accès et les diagnostics. -->
-		{#if showNewBail}
-			<FormulaireBail
-				lots={lotsACocher}
-				bind:lotIds={newBailLotIds}
-				bind:bail={newBail}
-				bind:locataireId={newBailLocataireId}
-				enregistrement={savingBail}
-				on:annuler={() => (showNewBail = false)}
-				on:enregistrer={creerBail}
-			/>
-		{/if}
-
-		<!--  Deux LIENS, pas deux boutons : le sous-onglet a une adresse, donc il
-		      s'envoie, le bouton Précédent le retrouve et le clic milieu l'ouvre à
-		      côté. Et c'est `Onglet` qui les rend : `.bail-tabs` était une rangée
-		      d'onglets de plus, avec ses 25 lignes de style et sans les trois marques
-		      de l'onglet actif (`ux-patterns` §4 bis). -->
-		<div class="tabs sous-onglets">
-			<Onglet href={ROUTE_BAUX_ACTIFS} actif={bailTab === 'actif'}>
-				Baux actifs ({bauxActifs.length})
-			</Onglet>
-			<Onglet href={ROUTE_BAUX_ARCHIVES} actif={bailTab === 'archives'}>
-				{TITRE_ARCHIVES} ({bauxTermines.length})
-			</Onglet>
-		</div>
-
-		{#if bauxLoading}
-			<p style="color:var(--color-text-muted)">Chargement…</p>
-		{:else}
-			{@const displayed = bailTab === 'actif' ? bauxActifs : bauxTermines}
-			{@const grouped = (() => {
-				const map = new Map();
-				for (const b of displayed) {
-					const key = b.locataire_id ?? `ext_${b.id}`;
-					if (!map.has(key)) map.set(key, { bail: b, baux: [] });
-					map.get(key).baux.push(b);
-				}
-				return [...map.values()];
-			})()}
-
-			{#if grouped.length === 0}
-				<div class="empty-state">
-					<p>{bailTab === 'actif' ? 'Aucun bail actif.' : 'Aucun bail terminé.'}</p>
-				</div>
-			{:else}
-				{#each grouped as group (group)}
-					{@const premierBail = group.bail}
-					<div class="card" style="margin-bottom:1.5rem;padding:1.25rem">
-						<!-- En-tête locataire -->
-						<div
-							style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem"
-						>
-							<div>
-								<div style="font-weight:700;font-size:1rem">{nomLocataire(premierBail)}</div>
-								{#if premierBail.locataire_email}
-									<div style="font-size:0.82rem;color:var(--color-text-muted)">
-										{premierBail.locataire_email}
-									</div>
-								{/if}
-								{#if premierBail.locataire_telephone}
-									<div style="font-size:0.82rem;color:var(--color-text-muted)">
-										{premierBail.locataire_telephone}
-									</div>
-								{/if}
-							</div>
-							<div style="display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:flex-end">
-								<span
-									class="badge {premierBail.statut === 'actif'
-										? 'badge-green'
-										: premierBail.statut === 'en_cours_sortie'
-											? 'badge-yellow'
-											: 'badge-gray'}"
-								>
-									{statutBailLabel[premierBail.statut] ?? premierBail.statut}
-								</span>
-							</div>
-						</div>
-
-						<!-- Actions globales locataire -->
-						{#if premierBail.statut !== 'termine'}
-							<div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
-								<button
-									class="btn-icon-edit"
-									aria-label="Modifier"
-									title="Modifier"
-									on:click={() => ouvrirEditionLocataire(premierBail)}>&#x270F;&#xFE0F;</button
-								>
-								<button class="btn btn-sm" on:click={() => ouvrirAccesBail(premierBail)}
-									>&#x1F511; Accès</button
-								>
-							</div>
-						{/if}
-
-						<!-- Détails par bail (lot) -->
-						{#each group.baux as bail (bail.id)}
-							{@const lot = lots.find((l) => l.id === bail.lot_id)}
-							<div
-								style="border-top:1px solid var(--color-border);padding-top:1rem;margin-top:1rem"
-							>
-								<div
-									style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem"
-								>
-									<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-										{#if lot}
-											<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
-											<span
-												class="badge badge-gray"
-												style="font-size:.72rem;text-transform:capitalize"
-												>{lot.type.replace('_', ' ')}{lot.type_appartement
-													? ` – ${lot.type_appartement}`
-													: ''}</span
-											>
-										{/if}
-										{#if group.baux.length > 1}
-											<span
-												class="badge {bail.statut === 'actif'
-													? 'badge-green'
-													: bail.statut === 'en_cours_sortie'
-														? 'badge-yellow'
-														: 'badge-gray'}"
-												style="font-size:.7rem"
-											>
-												{statutBailLabel[bail.statut] ?? bail.statut}
-											</span>
-										{/if}
-									</div>
-									{#if bail.statut !== 'termine'}
-										<button
-											class="btn btn-xs btn-outline"
-											on:click={() => affecterAuto(bail)}
-											title="Affecter automatiquement les accès recommandés"
-										>
-											⚡ Auto
-										</button>
-										<!--  Le MODE se lit sur le bouton qui l'a ouvert
-										      (`aria-pressed`, `ux-patterns` §13 bis). -->
-										<button
-											class="btn btn-xs btn-danger"
-											aria-pressed={bailATerminer?.id === bail.id}
-											on:click={() => {
-												bailATerminer = bailATerminer?.id === bail.id ? null : bail;
-												dateSortie = '';
-											}}
-										>
-											{bailATerminer?.id === bail.id ? 'Annuler' : 'Terminer'}
-										</button>
-									{/if}
-									{#if $isAdmin || $isCS}
-										<button
-											class="btn btn-xs btn-danger"
-											on:click={() => {
-												bailASupprimer = bail;
-											}}
-										>
-											🗑️ Supprimer
-										</button>
-									{/if}
-								</div>
-
-								<!--  Le geste s'ouvre DANS la carte du bail (#889) : il était en
-								      fenêtre, pour UN champ de date sur un objet de liste. -->
-								{#if bailATerminer?.id === bail.id}
-									<GesteEnPlace
-										danger
-										question={`Confirmer la fin du bail de <strong>${nomLocataire(bail)}</strong> ?`}
-										onAnnuler={() => (bailATerminer = null)}
-										onValider={confirmerTerminer}
-									>
-										<label class="field champ-moyen">
-											Date de sortie réelle
-											<input type="date" bind:value={dateSortie} />
-										</label>
-									</GesteEnPlace>
-								{/if}
-
-								<div
-									style="display:flex;gap:2rem;font-size:0.85rem;margin-bottom:.75rem;flex-wrap:wrap"
-								>
-									<span><strong>Entrée :</strong> {fmt(bail.date_entree)}</span>
-									<span><strong>Sortie prévue :</strong> {fmt(bail.date_sortie_prevue)}</span>
-									{#if bail.date_sortie_reelle}
-										<span><strong>Sortie réelle :</strong> {fmt(bail.date_sortie_reelle)}</span>
-									{/if}
-								</div>
-
-								{#if bail.notes}
-									<div
-										class="rich-content"
-										style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:.75rem;font-style:italic"
-									>
-										{@html safeHtml(bail.notes)}
-									</div>
-								{/if}
-
-								<InventaireBail
-									bailId={bail.id}
-									objets={bail.objets}
-									modifiable={bail.statut !== 'termine'}
-									on:change={(e) => majObjets(bail.id, e.detail)}
-								/>
-							</div>
-						{/each}
-					</div>
-				{/each}
-			{/if}
-		{/if}
-	</div>
+	<!--  Le contenu vit dans `OngletGestionLocative` (#928) : cette page a reçu les
+	      deux sous-onglets d'accès, et le plafond de modularité a refusé — comme
+	      l'audit de l'issue l'avait annoncé. La coupe suit la frontière que la
+	      barre d'onglets dessine déjà. -->
+	<OngletGestionLocative
+		{baux}
+		{bauxActifs}
+		{bauxTermines}
+		{bauxLoading}
+		{lots}
+		{bailTab}
+		bind:showNewBail
+		bind:newBail
+		bind:newBailLotIds
+		bind:newBailLocataireId
+		{lotsACocher}
+		{savingBail}
+		{creerBail}
+		{affecterAuto}
+		{ouvrirEditionLocataire}
+		{ouvrirAccesBail}
+		{majObjets}
+		{statutBailLabel}
+		{nomLocataire}
+		bind:bailATerminer
+		bind:bailASupprimer
+		bind:dateSortie
+		{confirmerTerminer}
+	/>
 {/if}
-
 <!-- ── Modal : terminer bail ────────────────────────────────────────── -->
 
 <!-- ── Modal : supprimer bail (admin) ──────────────────────────────── -->
@@ -965,6 +813,13 @@
      le tableau qui l'ouvre est ailleurs aurait coupé un geste en deux fichiers. -->
 
 <style>
+	/*  ⚠️ Définie ICI **et** dans `OngletGestionLocative` : Svelte scope ses
+	    styles au FICHIER, et la classe sert dans les deux. Ce n'est pas une
+	    duplication à retirer — l'écran partirait nu. */
+	.lbc-lot-badge {
+		font-weight: 700;
+		font-size: 0.92rem;
+	}
 	/* Lot tabs (multi-lot selector) */
 	.lot-tabs {
 		display: flex;
@@ -1031,10 +886,6 @@
 	.lot-vacant {
 		opacity: 0.8;
 		border-style: dashed;
-	}
-	.lbc-lot-badge {
-		font-weight: 700;
-		font-size: 0.92rem;
 	}
 	.lbc-actions {
 		display: flex;
@@ -1123,14 +974,11 @@
 	}
 
 	/* Main tabs (like communauté) */
-	.tabs {
-		padding-bottom: 0.1rem;
-	} /* le reste vient de la charte (#607) */
+	/*  `.tabs` est partie avec les sous-onglets de la gestion locative
+	    (12/09/2026, #928) : le style suit le balisage. */
+	/* le reste vient de la charte (#607) */
 
 	/* Bail sub-tabs */
-	.sous-onglets {
-		margin-bottom: 1.5rem;
-	}
 
 	/* Lot multi-checklist */
 

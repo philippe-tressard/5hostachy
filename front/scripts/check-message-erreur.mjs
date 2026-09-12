@@ -41,7 +41,11 @@ import { join, sep } from 'node:path';
 const RACINE = 'src';
 
 /**  Le plafond, à baisser à chaque conversion. Il ne remonte jamais. */
-const PLAFOND = 123;
+//  123 → 119 le 12/09/2026 : quatre copies converties en migrant `mon-lot`
+//  vers `tenter` (#928). Le contrôle a EXIGÉ cette baisse — il échoue aussi
+//  quand le compte descend sous le plafond, et c'est ce qui l'empêche de
+//  devenir un plafond qu'on oublie.
+const PLAFOND = 119;
 
 /**  Le ternaire recopié : `<e> instanceof ApiError ? <e>.message : …`.
  *   La rétro-référence `\1` exige la MÊME variable des deux côtés — sans elle,

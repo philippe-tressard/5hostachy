@@ -85,11 +85,16 @@
 		<div class="faq-a rich-content" role="presentation" on:click|stopPropagation>
 			{@html safeHtml(item.reponse)}
 			{#if avecCta}
+				<!--  🔴 L'ancre `#nouvelle-demande` a disparu avec la refonte (#928) : la
+				      section « Faire une demande » est devenue un BOUTON en tête de page.
+				      Un lien vers une ancre qui n'existe plus ne lève rien — il dépose
+				      simplement le lecteur en haut de l'écran, sans qu'il sache
+				      pourquoi. -->
 				<div class="faq-cta-row">
-					<a class="btn btn-primary btn-sm" href="/acces-securite#nouvelle-demande"
+					<a class="btn btn-primary btn-sm" href="/mon-lot/badges"
 						>Faire une nouvelle demande d'accès</a
 					>
-					<a class="btn btn-outline btn-sm" href="/acces-securite">Voir Accès &amp; badges</a>
+					<a class="btn btn-outline btn-sm" href="/mon-lot/badges">Voir mes accès</a>
 				</div>
 			{/if}
 		</div>
