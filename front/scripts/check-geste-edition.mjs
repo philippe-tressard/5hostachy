@@ -121,9 +121,7 @@ const MODALES = {
 	'lib/components/ModaleAccesBail.svelte':
 		'ce n’est PAS la correction d’un objet de liste mais un sous-écran entier (accès Vigik et télécommandes d’un bail, plusieurs listes et plusieurs gestes). À trancher devant l’écran. #889',
 	'routes/(app)/admin/+page.svelte':
-		'deux fenêtres : accueil du nouvel arrivant, et validation d’un compte. Ce sont des GESTES sur un objet de liste, pas des corrections — l’arbitrage reste à rendre. #889',
-	'routes/(app)/espace-cs/+page.svelte':
-		'validation d’un compte — même question que ci-dessus. #889',
+		'accueil du nouvel arrivant — un geste sur un utilisateur EXISTANT, déclenché depuis l’annuaire et non depuis une liste de comptes en attente. La validation, elle, est convertie (12/09/2026). #889',
 	'routes/(app)/mon-lot/+page.svelte':
 		'terminer un bail : un geste à deux champs sur un objet de liste. #889',
 	'routes/(app)/prestataires/+page.svelte':

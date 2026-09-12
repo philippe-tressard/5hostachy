@@ -121,9 +121,10 @@ const TOLEREES = {
 	//  Le libellé d’une entrée de navigation : sa mise en forme vient du `<a>`
 	//  parent. Le crochet est inoffensif, mais il attend sa règle ou son retrait.
 	'lib/components/Nav.svelte': ['nav-label'],
-	//  🔴 La carte « nouvel arrivant » COCHÉE ne se distingue pas de la décochée :
-	//  le `class:` est posé, la règle n’existe pas.
-	'routes/(app)/admin/+page.svelte': ['nouvel-arrivant-checked'],
+	//  ✅ Tolérance TOMBÉE le 12/09/2026, et pas par un lot de style : la case
+	//  « nouvel arrivant » est partie dans `ValidationCompte`, extrait des DEUX
+	//  écrans qui en portaient une copie. Elle y porte enfin la règle qui lui
+	//  manquait — c'est la factorisation qui a payé la dette, pas une retouche.
 	//  Les libellés de mois de la frise, rendus en texte courant.
 	//  Suivi la frise dans `VueRenouvellements` en extrayant le reporting (#453),
 	//  puis dans `VueRenouvellementsContrats` en découpant celui-ci (27/08/2026).

@@ -336,10 +336,6 @@
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
-{#if showForm}
-	<FormulaireTicket on:cree={ticketCree} on:annule={() => (showForm = false)} />
-{/if}
-
 <AvertissementUrgence />
 
 <!--  🔴 DEUX rangées écrites à la main, soit la deuxième et la troisième
@@ -367,6 +363,12 @@
 		libelle="Filtrer les tickets par catégorie"
 	/>
 </div>
+
+<!--  Le formulaire s'ouvre APRÈS l'avertissement et les filtres : `ux-patterns`
+      §0 ter, signalé ici le 12/09/2026. -->
+{#if showForm}
+	<FormulaireTicket on:cree={ticketCree} on:annule={() => (showForm = false)} />
+{/if}
 
 <!--  Les trois états par `EtatListe` (#796) — dont l'ERREUR, qui n'existait pas :
       une panne affichait « Aucune demande ». -->

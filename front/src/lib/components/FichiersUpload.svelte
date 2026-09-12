@@ -386,19 +386,31 @@
 	    `align-items: center` les pose sur la même ligne ; `flex-wrap` fait passer
 	    le champ dessous quand la place manque, au lieu de l'écraser
 	    (`standards/11` §10 — l'enroulement avant la compression). */
+	/*  🔴 `width: 100%` n'est PAS une redite (12/09/2026, mesuré dans le CSS après
+	    un second signalement « le champ doit faire 50 % de la largeur de la boîte
+	    de Description »).
+
+	    Le conteneur `.fichiers-upload` est une COLONNE avec `align-items:
+	    flex-start` : sans largeur explicite, cette rangée se rétrécit à son
+	    contenu, et les « 50 % » du champ portaient alors sur le bouton plus
+	    lui-même — quelques centaines de pixels au lieu de la moitié du bloc.
+	    Le pourcentage était juste ; c'est ce à quoi il se rapportait qui ne
+	    l'était pas. */
 	.fichiers-geste {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
+		width: 100%;
 	}
-	/*  🔴 « 50 % de Description » : sur une rangée, cela se dit en `flex-basis` —
-	    le champ prend la moitié de la largeur disponible et se rétracte jusqu'à
-	    `min-width` avant de passer à la ligne. Un pourcentage du PARENT aurait
-	    ignoré la place que le bouton occupe. */
+	/*  `0 0 50%` et non `1 1 50%` : exactement la moitié de la boîte, comme la
+	    Description au-dessus. Avec `1 1`, le champ absorbait en plus tout l'espace
+	    que le bouton laissait — il n'aurait jamais fait 50 % de quoi que ce soit.
+	    `flex-wrap` l'envoie sous le bouton quand la moitié ne tient plus. */
 	.fichiers-libelle {
-		flex: 1 1 50%;
+		flex: 0 0 50%;
 		min-width: 200px;
+		max-width: 100%;
 	}
 	.fichiers-titre {
 		display: block;

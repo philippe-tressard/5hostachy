@@ -25,6 +25,8 @@
 	import { IMPORT_TELECOMMANDES, IMPORT_VIGIK } from '$lib/imports-acces';
 	import Onglet from '$lib/components/Onglet.svelte';
 	import AccepterRefuser from '$lib/components/AccepterRefuser.svelte';
+	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
+	import { validerCompte, messageErreur } from '$lib/comptes';
 	import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 	import OngletSmtp from '$lib/components/OngletSmtp.svelte';
 	import OngletIA from '$lib/components/OngletIA.svelte';
@@ -206,45 +208,25 @@
 		cvAncienResident = '';
 	}
 
+	//  🔴 Le compte rendu de la validation vit dans `$lib/comptes` depuis le
+	//  12/09/2026 : l'espace CS en portait une version plus PAUVRE, qui taisait
+	//  les lots résolus et l'avertissement sur un copropriétaire aidé introuvable.
+	//  `standards/02` §4 bis — entre deux implémentations, la plus disante.
 	async function confirmerCompteValidation() {
 		if (!cvModal) return;
 		const u = cvModal.user;
 		cvSubmitting = true;
 		try {
-			const res = await adminApi.traiterCompte(u.id, { action: 'valider' });
-			const lots = res?.auto_match?.lots_resolus ?? 0;
-			const lotsMatches = res?.auto_match?.lots ?? 0;
-			const aideMatch = res?.auto_match?.aide_match;
-			if (aideMatch?.aide_trouve) {
-				const parts = [`Compte activé — aidé(e) : ${aideMatch.aide_nom}`];
-				if (aideMatch.lots > 0) parts.push(`${aideMatch.lots} lot(s)`);
-				if (aideMatch.tc > 0) parts.push(`${aideMatch.tc} TC`);
-				if (aideMatch.vigik > 0) parts.push(`${aideMatch.vigik} vigik`);
-				if (aideMatch.delegation) parts.push('délégation créée');
-				toast('success', parts.join(' — '));
-			} else if (aideMatch && !aideMatch.aide_trouve) {
-				toast(
-					'warning',
-					`Compte activé — ⚠️ Copropriétaire aidé(e) « ${nomAffiche(u.prenom_aide, u.nom_aide)} » non trouvé(e). Affectation manuelle requise.`,
-				);
-			} else if (lots > 0)
-				toast('success', `Compte activé — ${lots} lot(s) résolu(s) automatiquement.`);
-			else if (lotsMatches > 0)
-				toast('success', `Compte activé — ${lotsMatches} lot(s) trouvé(s) dans l'import.`);
-			else if (u.statut?.startsWith('copropriétaire'))
-				toast('warning', "Compte activé — ⚠️ Aucun lot trouvé dans l'import.");
-			else toast('success', 'Compte activé.');
+			const annonces = await validerCompte(u, {
+				nouvelArrivant: cvNewArrivant,
+				batiment: cvBatiment,
+				ancienResident: cvAncienResident,
+			});
 			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== u.id);
-			if (cvNewArrivant) {
-				await adminApi.accueilArrivant(u.id, {
-					batiment: cvBatiment || null,
-					ancien_resident: cvAncienResident || null,
-				});
-				toast('success', "Actions d'accueil envoyées (bienvenue, consignes, demandes syndic/CS).");
-			}
+			for (const a of annonces) toast(a.ton, a.texte);
 			cvModal = null;
 		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			cvSubmitting = false;
 		}
@@ -728,6 +710,32 @@
 								</div>
 							</td>
 						</tr>
+						<!--  🔴 Le formulaire s'ouvre SOUS la ligne du compte, pas dans une
+						      fenêtre (#889, arbitrage du 11/09/2026). Dans un tableau, « à la
+						      place du corps de la carte » se dit en une ligne de plus qui
+						      s'étend sur toutes les colonnes : l'objet ne bouge pas, et le
+						      formulaire reste attaché à lui.
+
+						      C'est le MÊME composant que l'espace CS — les deux écrans en
+						      portaient chacun une copie, qui avait déjà dérivé. -->
+						{#if cvModal?.user?.id === u.id}
+							<tr class="ligne-formulaire">
+								<td colspan="7">
+									<ValidationCompte
+										utilisateur={u}
+										precision={(cvModal?.lotsPrevus ?? 0) > 0
+											? `${cvModal?.lotsPrevus} lot(s) détecté(s) dans l'import`
+											: ''}
+										enCours={cvSubmitting}
+										bind:nouvelArrivant={cvNewArrivant}
+										bind:batiment={cvBatiment}
+										bind:ancienResident={cvAncienResident}
+										onAnnuler={() => (cvModal = null)}
+										onValider={confirmerCompteValidation}
+									/>
+								</td>
+							</tr>
+						{/if}
 					{/each}
 				</tbody>
 			</table>
@@ -1209,58 +1217,18 @@
 {:else if onglet === 'import_vigik'}
 	<OngletImportAcces modele={IMPORT_VIGIK} />
 {/if}
-{#if cvModal}
-	<Modale
-		edition
-		titre={`Valider le compte de ${nomAffiche(cvModal.user)}`}
-		classeBoite="modal-box card"
-		styleBoite="max-width:480px"
-		on:fermer={() => (cvModal = null)}
-	>
-		<p style="font-size:.85rem;color:var(--color-text-muted);margin-bottom:1rem">
-			{cvModal.user.statut
-				? (LIBELLES_STATUT_ABREGE[cvModal.user.statut] ?? cvModal.user.statut)
-				: ''}
-			{cvModal.lotsPrevus > 0 ? ` — ${cvModal.lotsPrevus} lot(s) détecté(s) dans l'import` : ''}
-		</p>
-		<label
-			style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;border:1.5px solid var(--color-border);border-radius:var(--radius);padding:.75rem;margin-bottom:.75rem"
-			class:nouvel-arrivant-checked={cvNewArrivant}
-		>
-			<input type="checkbox" bind:checked={cvNewArrivant} style="margin-top:.2rem;flex-shrink:0" />
-			<div>
-				<strong style="font-size:.9rem">&#x1F3E0; Nouvel Arrivant</strong>
-				<p style="font-size:.78rem;color:var(--color-text-muted);margin:.25rem 0 0">
-					À cocher uniquement pour un <strong>nouveau résident</strong> qui emménage dans la
-					copropriété. Déclenche automatiquement : message de bienvenue, envoi des consignes de
-					copropriété, demande d'étiquette de boîte aux lettres auprès du syndic, et demande d'ajout
-					sur l'interphone auprès du Conseil Syndical.
-					<em>Ne pas cocher pour un résident existant qui crée simplement son compte.</em>
-				</p>
-			</div>
-		</label>
-		{#if cvNewArrivant}
-			<div class="form-grid" style="margin-bottom:.75rem">
-				<label class="field"
-					>Bâtiment / logement
-					<input bind:value={cvBatiment} placeholder="Ex: Bât. A, Apt. 12…" />
-				</label>
-				<label class="field"
-					>Ancien résident
-					<input bind:value={cvAncienResident} placeholder="Nom de l'ancien occupant…" />
-				</label>
-			</div>
-		{/if}
-		<div class="modal-footer">
-			<button class="btn btn-outline" on:click={() => (cvModal = null)}>Annuler</button>
-			<button class="btn btn-primary" disabled={cvSubmitting} on:click={confirmerCompteValidation}>
-				{cvSubmitting ? 'En cours…' : 'Valider le compte'}
-			</button>
-		</div>
-	</Modale>
-{/if}
 
 <style>
+	/*  La ligne qui accueille le formulaire de validation, sous celle du compte.
+	    Elle n'a ni bordure haute ni fond propre : les deux lignes doivent se lire
+	    comme un seul objet, sinon le formulaire semble concerner le compte
+	    suivant. */
+	.ligne-formulaire > td {
+		border-top: none;
+		background: var(--color-bg-alt, #fafafa);
+		padding: 1rem;
+	}
+
 	/* `.sticky-head`, `.config-section`, `.config-section-title` et `.muted` sont
    passées dans `app.css` le 11/08/2026 : scopées ici, elles ne suivaient pas les
    composants extraits de cette page. (`.backup-header` y était aussi, et en est

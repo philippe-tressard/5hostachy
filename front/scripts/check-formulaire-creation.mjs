@@ -330,7 +330,9 @@ for (const f of tous) {
 //  « rien trouvé » de « rien lu » (`standards/04` §27). C'est exactement ainsi que
 //  son motif précédent est resté vert en étant mort. Le témoin est un plancher
 //  d'éléments LUS : sous ce seuil, le repérage des `<Modale>` ne mord plus.
-const PLANCHER_MODALES = 10;
+//  ⬇️ 10 → 9 le 12/09/2026 : les deux fenêtres de validation de compte sont parties dans `ValidationCompte` (12/09/2026, #889). Le plancher SUIT le relevé, il ne
+//  le précède pas — le laisser au-dessus rendrait le cas zéro permanent.
+const PLANCHER_MODALES = 9;
 if (modalesLues < PLANCHER_MODALES) {
 	console.error(
 		`✗ Cas zéro : ${modalesLues} <Modale> recensée(s) dans routes/ et lib/components/, ${PLANCHER_MODALES} ` +

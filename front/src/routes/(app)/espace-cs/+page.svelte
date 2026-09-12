@@ -12,7 +12,8 @@
 	import EnteteSyndic from '$lib/components/EnteteSyndic.svelte';
 	import ActionsMembre, { type Geste } from '$lib/components/ActionsMembre.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import Modale from '$lib/components/Modale.svelte';
+	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
+	import { validerCompte, messageErreur } from '$lib/comptes';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import OngletAnnoncesHall from '$lib/components/OngletAnnoncesHall.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
@@ -664,24 +665,26 @@
 		cvAncienResident = '';
 	}
 
+	//  🔴 Le geste vit dans `$lib/comptes` (12/09/2026). Cet écran en portait sa
+	//  propre version, plus PAUVRE que celle de l'administration : le même
+	//  endpoint rend `auto_match`, et le conseil syndical ne voyait ni les lots
+	//  résolus, ni l'avertissement quand un copropriétaire aidé reste introuvable.
+	//  `standards/02` §4 bis — entre deux implémentations, retenir LA PLUS DISANTE.
 	async function confirmerCSValidation() {
 		if (!cvModal) return;
 		const u = cvModal;
 		cvSubmitting = true;
 		try {
-			await adminApi.traiterCompte(u.id, { action: 'valider' });
+			const annonces = await validerCompte(u, {
+				nouvelArrivant: cvNewArrivant,
+				batiment: cvBatiment,
+				ancienResident: cvAncienResident,
+			});
 			comptesEnAttente = comptesEnAttente.filter((x) => x.id !== u.id);
-			toast('success', 'Compte approuvé.');
-			if (cvNewArrivant) {
-				await adminApi.accueilArrivant(u.id, {
-					batiment: cvBatiment || null,
-					ancien_resident: cvAncienResident || null,
-				});
-				toast('success', "Actions d'accueil envoyées.");
-			}
+			for (const a of annonces) toast(a.ton, a.texte);
 			cvModal = null;
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			cvSubmitting = false;
 		}
@@ -710,54 +713,6 @@
 		}
 	}
 </script>
-
-{#if cvModal}
-	<Modale
-		edition
-		titre={`Valider le compte de ${nomAffiche(cvModal)}`}
-		classeBoite="modal-box card"
-		styleBoite="max-width:460px"
-		on:fermer={() => (cvModal = null)}
-	>
-		<label
-			style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;border:1.5px solid var(--color-border);border-radius:var(--radius);padding:.75rem;margin-bottom:.75rem"
-		>
-			<input type="checkbox" bind:checked={cvNewArrivant} style="margin-top:.2rem;flex-shrink:0" />
-			<div>
-				<strong style="font-size:.9rem">&#x1F3E0; Nouvel Arrivant</strong>
-				<p style="font-size:.78rem;color:var(--color-text-muted);margin:.25rem 0 0">
-					À cocher uniquement pour un <strong>nouveau résident</strong> qui emménage dans la
-					copropriété. Déclenche automatiquement : message de bienvenue, consignes de copropriété,
-					demande d'étiquette boîte aux lettres auprès du syndic, et demande d'ajout sur
-					l'interphone.
-					<em>Ne pas cocher pour un résident existant qui crée simplement son compte.</em>
-				</p>
-			</div>
-		</label>
-		{#if cvNewArrivant}
-			<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem">
-				<label class="field"
-					>Bâtiment / logement<input
-						bind:value={cvBatiment}
-						placeholder="Ex: Bât. A, Apt. 12…"
-					/></label
-				>
-				<label class="field"
-					>Ancien résident<input
-						bind:value={cvAncienResident}
-						placeholder="Nom de l'ancien occupant…"
-					/></label
-				>
-			</div>
-		{/if}
-		<div class="form-actions">
-			<button class="btn btn-outline" on:click={() => (cvModal = null)}>Annuler</button>
-			<button class="btn btn-success" disabled={cvSubmitting} on:click={confirmerCSValidation}>
-				{cvSubmitting ? 'En cours…' : '✓ Valider le compte'}
-			</button>
-		</div>
-	</Modale>
-{/if}
 
 <svelte:head><title>{_pc.titre} · {_siteNom}</title></svelte:head>
 
@@ -801,7 +756,7 @@
 				<p class="text-muted-sm">Aucun compte en attente.</p>
 			{:else}
 				{#each comptesEnAttente as user (user.id)}
-					<div class="pending-row card">
+					<div class="pending-row card" class:pending-row--edition={cvModal?.id === user.id}>
 						<div class="pending-info">
 							<strong>{nomAffiche(user)}</strong>
 							<span class="text-muted-sm">
@@ -816,16 +771,38 @@
 							{/if}
 							<span class="text-muted-sm">{fmtDateShort(user.cree_le)}</span>
 						</div>
-						<div class="pending-actions">
-							<button class="btn btn-sm btn-success" on:click={() => openCSValidation(user)}
-								>✓ Approuver</button
-							>
-							<button
-								class="btn btn-sm btn-danger"
-								on:click={() => traiterCompte(user.id, 'rejeter')}>✗ Rejeter</button
-							>
-						</div>
+						{#if cvModal?.id !== user.id}
+							<div class="pending-actions">
+								<button
+									class="btn btn-sm btn-success"
+									aria-pressed="false"
+									on:click={() => openCSValidation(user)}>✓ Approuver</button
+								>
+								<button
+									class="btn btn-sm btn-danger"
+									on:click={() => traiterCompte(user.id, 'rejeter')}>✗ Rejeter</button
+								>
+							</div>
+						{/if}
 					</div>
+					<!--  🔴 Le formulaire s'ouvre SOUS la ligne du compte, pas dans une
+					      fenêtre (#889, arbitrage du 11/09/2026 : « les gestes courts dans
+					      la carte »). Il est identique à celui de l'administration —
+					      littéralement le même composant, et non plus une copie qui
+					      dérive. -->
+					{#if cvModal?.id === user.id}
+						<div class="pending-form card">
+							<ValidationCompte
+								utilisateur={user}
+								enCours={cvSubmitting}
+								bind:nouvelArrivant={cvNewArrivant}
+								bind:batiment={cvBatiment}
+								bind:ancienResident={cvAncienResident}
+								onAnnuler={() => (cvModal = null)}
+								onValider={confirmerCSValidation}
+							/>
+						</div>
+					{/if}
 				{/each}
 			{/if}
 		</section>
@@ -1301,6 +1278,20 @@
 	/* KPI */
 
 	/* Validations */
+	/*  La ligne d'un compte en cours de validation : son formulaire s'ouvre juste
+	    dessous, les deux ne doivent donc pas se lire comme deux objets. Le bas de
+	    la ligne perd son arrondi, le haut du formulaire aussi — ils se rejoignent. */
+	.pending-row--edition {
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
+		margin-bottom: 0;
+	}
+	.pending-form {
+		border-top: none;
+		border-top-left-radius: 0;
+		border-top-right-radius: 0;
+		margin-bottom: 0.6rem;
+	}
 	.pending-row {
 		display: flex;
 		justify-content: space-between;
