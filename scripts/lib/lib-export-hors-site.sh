@@ -114,6 +114,36 @@ archives_a_supprimer() { # $1=keep, liste sur stdin → noms à supprimer
   for ((i = 0; i < total - keep; i++)); do echo "${noms[$i]}"; done
 }
 
+# ── Que faut-il rattraper sur l'autre nœud ? ─────────────────────────────────
+# 🔴 LE RATTRAPAGE SE BORNE À LA RÉTENTION (12/09/2026, signalé à l'écran).
+#
+# La passe de rattrapage tirait TOUT ce que l'autre nœud portait et qui manquait
+# localement — six archives de ~100 Mo le 12/09 — puis la rotation en supprimait
+# les plus anciennes. Autrement dit : télécharger une demi-heure pour effacer.
+# Pire, tant que `EXPORT_KEEP` valait 14, rien n'était effacé et la destination
+# gonflait indéfiniment.
+#
+# La règle est simple et se lit d'une phrase : **on ne tire que ce qu'on
+# garderait**. On prend l'union (local + distant), on n'en retient que les `keep`
+# plus récentes — le nom porte l'horodatage, donc l'ordre alphabétique EST
+# l'ordre chronologique, même convention que `archives_a_supprimer` — et on ne
+# demande que celles-là qui manquent ici.
+#
+# ⚠️ `keep <= 0` ne tire RIEN : même garde que la rotation. Une valeur aberrante
+# ne doit ni effacer ni téléverser.
+archives_a_rattraper() { # $1=keep $2=noms_locaux $3=noms_distants → noms à tirer
+  local keep="${1:-0}" locaux="${2:-}" distants="${3:-}" retenues n
+  [ "$keep" -gt 0 ] 2>/dev/null || return 0
+  retenues=$(printf '%s\n%s\n' "$locaux" "$distants" | grep -v '^[[:space:]]*$' | sort -u | tail -n "$keep")
+  while IFS= read -r n; do
+    [ -n "$n" ] || continue
+    #  Déjà ici : rien à tirer. La comparaison porte sur la ligne ENTIÈRE —
+    #  une sous-chaîne confondrait deux archives du même jour.
+    case $'\n'"$locaux"$'\n' in *$'\n'"$n"$'\n'*) continue ;; esac
+    echo "$n"
+  done <<< "$retenues"
+}
+
 # ── Quels jours manquent dans la copie hors site ? ───────────────────────────
 # 🔴 #775 (05/09/2026) : la bascule de 02:00 change le nœud actif chaque nuit,
 # donc la série d'archives est RÉPARTIE sur les deux volumes — relevé ce jour-là,
