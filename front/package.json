@@ -76,6 +76,7 @@
 		"lint:etat-liste": "node scripts/check-etat-liste.mjs",
 		"lint:etage-libelle": "node scripts/check-etage-libelle.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",
+		"lint:entete-carte": "node scripts/check-entete-carte.mjs",
 		"lint:points-rupture": "node scripts/check-points-rupture.mjs",
 		"lint:pied-formulaire": "node scripts/check-pied-formulaire.mjs",
 		"e2e": "playwright test",

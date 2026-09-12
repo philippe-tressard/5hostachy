@@ -654,11 +654,15 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
     ⚠️ Vérifié avant de les poser ici : aucune autre définition de ces trois noms
     n'existait dans le dépôt. Une remontée qui écrase une règle locale change
     l'apparence d'un écran qu'on ne regardait pas. */
-.toggle-arrow {
-	font-size: 0.75rem;
-	color: var(--color-primary);
-	margin-left: 0.25rem;
-}
+/*  `.toggle-arrow` (le chevron ▲/▼) a été RETIRÉ le 12/09/2026 : ses deux
+    derniers porteurs — `CarteContrat` et `CartePrestataire` — sont passés au
+    chevron `›` qui pivote, comme les onze autres écrans.
+
+    ⚠️ La règle globale est partie AVEC eux, et c'est le geste qui compte :
+    laissée en place, elle serait restée un second signal disponible, et c'est
+    précisément ce qui a permis à ces deux cartes de garder l'ancien pendant
+    un mois sans que rien ne le signale. Un signal d'interface se décide une
+    fois — et les formes écartées ne restent pas à portée de main. */
 .detail-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));

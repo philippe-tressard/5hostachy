@@ -1443,6 +1443,19 @@ jobs:
         working-directory: front
         run: npm run lint:points-rupture
 
+      # 🔴 `EnteteCarte` porte le titre sur sa PROPRE ligne, le geste asymétrique
+      # et l'ordre tags / date / actions / chevron. Onze cartes l'employaient ;
+      # `CarteContrat` et `CartePrestataire`, non — et elles portaient exactement
+      # les défauts qu'il supprime, dont l'ancien `role="button"` sur le conteneur,
+      # remplacé partout ailleurs le 18/08.
+      #
+      # ⚠️ Personne ne l'a vu pendant un mois : rien ne relit une carte qu'on ne
+      # touche pas, et les deux étaient cohérentes ENTRE ELLES. C'est la forme la
+      # plus durable d'un écart — il faut une machine pour la voir.
+      - name: En-tête de carte rendu par le composant partagé
+        working-directory: front
+        run: npm run lint:entete-carte
+
       # 🔴 Le pied « Annuler / Enregistrer » était écrit DIX-NEUF fois, et les
       # copies avaient divergé sur quatre points — dont TROIS orthographes du
       # même événement d'annulation : `annule`, `annuler`, `cancel`.

@@ -39,6 +39,8 @@
 	import { safeHtml } from '$lib/sanitize';
 	import FormulaireCreation from './FormulaireCreation.svelte';
 	import ListeDocuments from './ListeDocuments.svelte';
+	import BoutonLien from './BoutonLien.svelte';
+	import EnteteCarte from './EnteteCarte.svelte';
 	import FormulaireContrat from './FormulaireContrat.svelte';
 	import GesteEnPlace from './GesteEnPlace.svelte';
 	import NoteEtoiles from './NoteEtoiles.svelte';
@@ -110,51 +112,71 @@
 	class:expanded={expanded || enEdition}
 	class:urgent={enRetard}
 	id="contrat-{contrat.id}"
+	role="presentation"
+	on:click={() => {
+		if (!expanded && !enEdition) onBasculer(contrat.id);
+	}}
 >
-	<!--  Pendant la correction, la ligne de titre ne replie plus : le corps montre
+	<!--  🔴 L'en-tête passe par `EnteteCarte` (12/09/2026) — comme les ONZE autres
+	      cartes du site. Écrit à la main ici, il en portait les deux défauts que
+	      ce composant existe pour supprimer :
+
+	        • le TITRE partageait sa ligne avec le prestataire, le n° de contrat,
+	          l'échéance, la fréquence et quatre icônes. Sur un téléphone, la ligne
+	          étant en `flex`, les éléments de largeur fixe gagnent et le titre se
+	          réduit à trois points — on lit une liste de contrats sans savoir
+	          lesquels.
+	        • le geste était SYMÉTRIQUE (`role="button"` sur la rangée). La norme
+	          du 18/08 est asymétrique : repliée, toute la carte ouvre ; dépliée,
+	          seul le titre referme, pour qu'on puisse lire et copier son corps.
+
+	      ⚠️ Le `!enEdition` est CONSERVÉ, et c'est une règle propre à cet écran :
+	      pendant la correction, la ligne de titre ne replie pas — le corps montre
 	      le formulaire quoi qu'il arrive, et basculer un état invisible ferait
 	      croire à un geste mort. On sort de l'édition par le crayon ou par
 	      « Annuler ». -->
-	<div
-		class="contrat-row"
-		role="button"
-		tabindex="0"
-		on:click|stopPropagation={() => !enEdition && onBasculer(contrat.id)}
-		on:keydown|stopPropagation={(e) => e.key === 'Enter' && !enEdition && onBasculer(contrat.id)}
+	<EnteteCarte
+		titre={contrat.libelle}
+		date={contrat.prochaine_visite ? '' : fmtDateShort(contrat.date_debut)}
+		basculable
+		on:toggle={() => !enEdition && onBasculer(contrat.id)}
 	>
-		<div class="contrat-body-inner">
-			<strong class="contrat-titre">{contrat.libelle}</strong>
+		<svelte:fragment slot="tags">
 			{#if prest}
-				<span class="contrat-meta">— {prest.nom}</span>
+				<span class="contrat-meta">{prest.nom}</span>
 			{:else}
-				<!--  Un contrat sans intervenant avait sa propre section, qui le
-			      rendait une SECONDE fois : le groupement par équipement
-			      retombe déjà sur `type_equipement` quand le prestataire
-			      manque. Le fait se dit ici, sur la ligne (#603). -->
-				<span class="badge badge-gray" style="font-size:.72rem">sans intervenant</span>
+				<!--  Un contrat sans intervenant avait sa propre section, qui le rendait
+				      une SECONDE fois : le groupement par équipement retombe déjà sur
+				      `type_equipement` quand le prestataire manque. Le fait se dit ici,
+				      sur la ligne (#603). -->
+				<span class="badge badge-gray">sans intervenant</span>
 			{/if}
 			{#if contrat.numero_contrat}<span class="contrat-meta">🔖 {contrat.numero_contrat}</span>{/if}
-		</div>
-		<div class="contrat-infos">
+			<!--  L'échéance reste un TAG et non la `date` de l'en-tête : elle porte
+			      son état de retard, donc sa couleur, et `date` ne rend qu'un texte. -->
 			{#if contrat.prochaine_visite}
-				<div class="contrat-echeance" class:contrat-echeance--retard={enRetard}>
+				<span class="contrat-echeance" class:contrat-echeance--retard={enRetard}>
 					{enRetard ? '⚠️' : '🗓'}
 					{fmtDateShort(contrat.prochaine_visite)}
-				</div>
-			{:else}
-				<div>📅 {fmtDateShort(contrat.date_debut)}</div>
+				</span>
 			{/if}
 			{#if contrat.frequence_type}
-				<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(contrat)}</span>
+				<span class="badge badge-blue">{frequenceLabel(contrat)}</span>
 			{/if}
-		</div>
-		<div class="contrat-meta-right">
-			<span class="badge" style="font-size:.8rem">📄 {documents?.length ?? 0}</span>
-			<!--  ✨ puis ✏️ puis 🗑️, sur la ligne du titre (`ux-patterns` §3) : du
-			      moins destructeur au plus. Proposer un texte l'est moins qu'ouvrir la
-			      correction, qui l'est moins qu'archiver. -->
+			<span class="badge">📄 {documents?.length ?? 0}</span>
+		</svelte:fragment>
+
+		<svelte:fragment slot="actions">
+			<!--  🔗 d'abord : c'est le seul geste que TOUT le monde a, et l'ordre
+			      🔗 ✏️ 🗑️ est celui de toutes les cartes (`ux-patterns` §3).
+			      Il manquait ici alors que l'ancre existait déjà et que le carnet
+			      d'entretien y renvoie — le lien était donc utilisable par tous SAUF
+			      depuis l'écran qui le porte. -->
+			<BoutonLien ancre="contrat-{contrat.id}" quoi="le contrat" />
 			{#if peutModifier}
 				{#if contrat.synthese_disponible}
+					<!--  ✨ avant ✏️ : du moins destructeur au plus. Proposer un texte
+					      l'est moins qu'ouvrir la correction, qui l'est moins qu'archiver. -->
 					<button
 						class="btn-icon"
 						aria-label="Proposer une synthèse de ce contrat"
@@ -184,9 +206,12 @@
 					on:click|stopPropagation={() => onArchiver(contrat.id)}>🗑️</button
 				>
 			{/if}
-			<span class="toggle-arrow">{expanded || enEdition ? '▲' : '▼'}</span>
-		</div>
-	</div>
+		</svelte:fragment>
+
+		<svelte:fragment slot="chevron"
+			><span class="chevron" class:open={expanded || enEdition}>›</span></svelte:fragment
+		>
+	</EnteteCarte>
 	{#if enEdition}
 		<!--  Le corps ne referme pas la carte : sans `stopPropagation`, un clic dans
 		      le formulaire remonterait à la ligne de titre et replierait ce qu'on est
@@ -376,40 +401,19 @@
 	.contrat-section-title.clickable:hover {
 		color: var(--color-primary);
 	}
-	.contrat-row {
-		display: flex;
-		gap: 0.75rem;
-		align-items: flex-start;
-		padding: 0.55rem 0.75rem;
-		cursor: pointer;
-		transition: background 0.12s;
-	}
-	.contrat-row:hover {
-		background: var(--color-bg-secondary, #f8f9fa);
-	}
-	.contrat-body-inner {
-		flex: 1;
-		min-width: 0;
-	}
-	.contrat-titre {
-		font-size: 0.9rem;
-	}
+	/*  🔴 Six règles sont parties avec la rangée écrite à la main (12/09/2026) :
+	    `.contrat-row` et son survol, `.contrat-body-inner`, `.contrat-titre`,
+	    `.contrat-infos` et `.contrat-meta-right`. `EnteteCarte` porte désormais
+	    la disposition — et son survol colore le TITRE, non le fond du bloc, ce
+	    qui est l'arbitrage n° 2 de `ux-patterns` §0 : cette carte teintait encore
+	    tout son fond.
+
+	    ⚠️ `.contrat-infos` était déclarée DEUX fois dans ce même fichier, la
+	    seconde ayant perdu le `@media` qui la justifiait — un vestige que rien ne
+	    signalait, puisqu'une redéclaration est valide en CSS. */
 	.contrat-meta {
 		font-size: 0.78rem;
 		color: var(--color-text-muted);
-		margin-left: 0.5rem;
-	}
-	.contrat-infos {
-		text-align: right;
-		font-size: 0.82rem;
-		min-width: 100px;
-		flex-shrink: 0;
-	}
-	.contrat-meta-right {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.3rem;
-		flex-shrink: 0;
 	}
 	.rich-content {
 		font-size: 0.85rem;
@@ -430,8 +434,5 @@
 	}
 	.rich-content :global(em) {
 		font-style: italic;
-	}
-	.contrat-infos {
-		min-width: 80px;
 	}
 </style>
