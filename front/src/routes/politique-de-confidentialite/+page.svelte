@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { config as configApi } from '$lib/api';
 	import { loadSiteConfig, getSiteNom, siteNomStore, configStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	const _siteNom = getSiteNom();
@@ -10,13 +11,9 @@
 	onMount(async () => {
 		loadSiteConfig();
 		try {
-			const r = await fetch('/api/config/legal');
-			if (r.ok) {
-				const d = await r.json();
-				customHtml = d['politique_confidentialite'] ?? '';
-			}
+			customHtml = (await configApi.legal())['politique_confidentialite'] ?? '';
 		} catch {
-			/* silencieux */
+			//  Silencieux : la page a son texte par défaut (cf. mentions légales).
 		}
 	});
 </script>

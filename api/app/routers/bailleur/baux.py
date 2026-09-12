@@ -20,7 +20,7 @@ from app.models.core import (
 )
 from pydantic import BaseModel
 
-from .commun import BailCreate, BailCreateMulti, BailOut, BailTerminer, BailUpdate, get_bail_or_404
+from .commun import BailCreateMulti, BailOut, BailTerminer, BailUpdate, get_bail_or_404
 
 router = APIRouter()
 
@@ -75,47 +75,15 @@ def supprimer_bail(
     session.commit()
 
 
-@router.post("/lots/{lot_id}/bail", response_model=BailOut, status_code=201)
-def creer_bail(
-    lot_id: int,
-    data: BailCreate,
-    user: Utilisateur = Depends(require_proprietaire),
-    session: Session = Depends(get_session),
-):
-    lot = session.get(Lot, lot_id)
-    if not lot:
-        raise HTTPException(status_code=404, detail="Lot introuvable")
-
-    # Vérifier qu'il n'y a pas déjà un bail actif
-    bail_actif = session.exec(
-        select(LocationBail).where(
-            LocationBail.lot_id == lot_id,
-            LocationBail.statut.in_([StatutBail.actif, StatutBail.en_cours_sortie]),
-        )
-    ).first()
-    if bail_actif:
-        raise HTTPException(status_code=409, detail="Ce lot a déjà un bail en cours")
-
-    now = datetime.utcnow()
-    bail = LocationBail(
-        lot_id=lot_id,
-        bailleur_id=user.id,
-        locataire_id=data.locataire_id,
-        locataire_nom=data.locataire_nom,
-        locataire_prenom=data.locataire_prenom,
-        locataire_email=data.locataire_email,
-        locataire_telephone=data.locataire_telephone,
-        date_entree=data.date_entree,
-        date_sortie_prevue=data.date_sortie_prevue,
-        notes=data.notes,
-        statut=StatutBail.actif,
-        cree_le=now,
-        mis_a_jour_le=now,
-    )
-    session.add(bail)
-    session.commit()
-    session.refresh(bail)
-    return bail
+#  🔴 `POST /bailleur/lots/{lot_id}/bail` A ÉTÉ RETIRÉ le 12/09/2026 (#932).
+#
+#  C'était `creer_bail_multi` **recopié pour un seul lot** : même garde « ce lot
+#  a déjà un bail en cours », même construction du `LocationBail`, à la boucle
+#  près. Deux copies d'un même invariant divergent, et celle-ci n'avait aucun
+#  appelant — masquée dans le relevé par l'homonyme `creerBailMulti`.
+#
+#  Créer un bail sur UN lot, c'est `POST /bailleur/baux/creer-multi` avec un seul
+#  `lot_ids`. Une seule garde, une seule construction.
 
 
 @router.post("/baux/creer-multi", response_model=List[BailOut], status_code=201)

@@ -175,22 +175,10 @@ def list_evenements(
     return [_ev_to_read(e, session) for e in evenements]
 
 
-@router.get("/{ev_id}", response_model=EvenementRead)
-def get_evenement(
-    ev_id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    ev = session.get(Evenement, ev_id)
-    if not ev:
-        raise HTTPException(404, "Événement introuvable")
-    # Contrôle complet périmètre + rôle AG (cf. list_evenements) : empêche l'accès
-    # direct à /calendrier/{id} d'un événement ciblant un autre bâtiment. CS/admin :
-    # accès total (gestion des maintenances récurrentes incluse).
-    if not user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical) \
-            and not evenement_visible(ev, user):
-        raise HTTPException(403, "Accès refusé")
-    return _ev_to_read(ev, session)
+#  🔴 `GET /calendrier/{ev_id}` A ÉTÉ RETIRÉ le 12/09/2026 (#932), avec sa
+#  méthode du client. Il n'existe pas d'écran `/calendrier/[id]` : la page tient
+#  ses événements par `GET /calendrier`, et le contrôle de périmètre que cette
+#  route portait est celui de `list_evenements`, écrit une fois.
 
 
 @router.post("", response_model=EvenementRead, status_code=201)

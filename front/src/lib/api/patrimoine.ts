@@ -81,7 +81,10 @@ export const copropriete = {
 
 export const lots = {
 	mesList: () => api.get<any[]>('/lots/mes-lots'),
-	get: (id: number) => api.get<any>(`/lots/${id}`),
+	//  🔴 `get` A ÉTÉ RETIRÉE (12/09/2026, #932), avec son endpoint : les écrans
+	//  tiennent leurs lots par `mesList()` / `tous()` et travaillent dessus.
+	//  Relire un lot seul donnait un second exemplaire du même objet, libre de
+	//  diverger de la liste affichée — exactement le motif de `getBail` (#801).
 	//  L'étage d'UN de mes lots, depuis le profil (#835). Le seul champ du
 	//  patrimoine qu'un occupant écrit lui-même : arbitré le 09/09/2026, c'est
 	//  lui qui sait à quel étage il vit.
@@ -132,8 +135,15 @@ export interface ObjetRemis {
 
 export const bailleur = {
 	mesBaux: () => api.get<any[]>('/bailleur/mes-baux'),
-	creerBail: (lot_id: number, data: unknown) =>
-		api.post<any>(`/bailleur/lots/${lot_id}/bail`, data),
+	//  🔴 `creerBail` A ÉTÉ RETIRÉE (12/09/2026, #932), avec son endpoint.
+	//
+	//  `POST /bailleur/lots/{lot_id}/bail` était `creer-multi` **recopié pour un
+	//  seul lot** : même garde « ce lot a déjà un bail en cours », même
+	//  construction du `LocationBail`, à la boucle près. Deux copies d'un même
+	//  invariant divergent — et celle-ci n'avait aucun appelant, masquée dans le
+	//  relevé par l'homonyme `creerBailMulti`.
+	//
+	//  Créer un bail sur un lot, c'est `creerBailMulti({ lot_ids: [id], … })`.
 	creerBailMulti: (data: unknown) => api.post<any[]>('/bailleur/baux/creer-multi', data),
 	//  🔴 `getBail` A ÉTÉ RETIRÉE (#801) : l'écran `mon-lot` tient déjà ses baux
 	//  par `mesBaux()` / `tousBaux()` / `monBail()`, et travaille dessus. Relire

@@ -468,18 +468,16 @@
 		} catch {
 			toast('error', 'Impossible de charger le paramétrage complet (droits admin requis).');
 		}
-		// Les clés légales sont exclues de /api/config (perf) — fetch dédié
+		// Les clés légales sont exclues de /api/config (perf) — route dédiée
 		let sMentions = '';
 		let sPolitique = '';
 		try {
-			const r = await fetch('/api/config/legal');
-			if (r.ok) {
-				const legal = await r.json();
-				sMentions = legal['mentions_legales'] ?? '';
-				sPolitique = legal['politique_confidentialite'] ?? '';
-			}
+			const legal = await configApi.legal();
+			sMentions = legal['mentions_legales'] ?? '';
+			sPolitique = legal['politique_confidentialite'] ?? '';
 		} catch {
-			/**/
+			//  Silencieux : les deux champs restent vides et l'écran d'administration
+			//  affiche le formulaire, qui reste saisissable.
 		}
 		siteConfig = lireConfigSite(cfg, {
 			mentions_legales: sMentions,

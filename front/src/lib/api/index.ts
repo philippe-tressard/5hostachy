@@ -184,14 +184,20 @@ export const publications = {
 		api.get<Publication[]>(`/publications${archived ? '?archived=true' : ''}`),
 	create: (data: unknown) => api.post<Publication>('/publications', data),
 	update: (id: number, data: unknown) => api.patch<Publication>(`/publications/${id}`, data),
-	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }),
+	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }), //  @sans-appelant-declare archivage manuel retiré le 18/08/2026, cf. ci-dessous
 	delete: (id: number) => api.delete(`/publications/${id}`),
-	renvoyerEmail: (id: number) => api.post(`/publications/${id}/renvoyer-email`, {}),
+	renvoyerEmail: (id: number) => api.post(`/publications/${id}/renvoyer-email`, {}), //  @sans-appelant-declare idem
 	//  @sans-appelant-declare Le bouton de renvoi a été RETIRÉ des actualités le
 	//  18/08/2026, sur arbitrage, avec sa conséquence écrite sur place : « un
 	//  envoi qui a échoué sans qu'on s'en rende compte n'a plus de chemin de
 	//  rattrapage depuis l'interface […] à rouvrir ailleurs si le besoin se
 	//  représente ». Le chemin est donc gardé exprès, pas oublié.
+	//
+	//  ⚠️ L'arbitrage portait sur TROIS gestes — archivage manuel, renvoi e-mail,
+	//  renvoi WhatsApp — et un seul était déclaré : le relevé ne voyait pas les
+	//  deux autres, `.archive` et `.renvoyerEmail` étant homonymes d'appels
+	//  vivants ailleurs (#932). Les deux marqueurs de fin de ligne ci-dessus les
+	//  rattachent à cette explication-ci, écrite une fois.
 	renvoyerWhatsapp: (id: number) => api.post(`/publications/${id}/renvoyer-whatsapp`, {}),
 	addEvolution: (
 		pubId: number,
@@ -251,7 +257,8 @@ export const calendrier = {
 		envoyer_auteur?: boolean;
 	}) => api.post<ApercuDiffusion>('/calendrier/apercu-diffusion', brouillon),
 	list: () => api.get<any[]>('/calendrier'),
-	get: (id: number) => api.get<any>(`/calendrier/${id}`),
+	//  🔴 `get` A ÉTÉ RETIRÉE (12/09/2026, #932), avec son endpoint : il n'y a pas
+	//  d'écran `/calendrier/[id]`, et la page tient ses événements par `list()`.
 	create: (data: unknown) => api.post<any>('/calendrier', data),
 	//  🔴 UNE requête, UNE transaction (#605, point 3). Le pré-remplissage du
 	//  kanban écrivait en boucle : `for (const ev of aCreer) await create(ev)`.

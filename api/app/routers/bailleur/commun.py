@@ -74,16 +74,11 @@ class BailOut(BaseModel):
         from_attributes = True
 
 
-class BailCreate(BaseModel):
-    lot_id: int
-    locataire_id: Optional[int] = None
-    locataire_nom: Optional[str] = None
-    locataire_prenom: Optional[str] = None
-    locataire_email: Optional[str] = None
-    locataire_telephone: Optional[str] = None
-    date_entree: date
-    date_sortie_prevue: Optional[date] = None
-    notes: Optional[str] = None
+#  🔴 `BailCreate` A ÉTÉ RETIRÉ le 12/09/2026 (#932), avec l'endpoint qu'il
+#  servait : il ne différait de `BailCreateMulti` que par `lot_id: int` au lieu
+#  de `lot_ids: List[int]`. Neuf champs recopiés pour une différence de pluriel —
+#  et le schéma est ce qui fige un contrat : deux copies divergent au premier
+#  champ ajouté d'un seul côté.
 
 
 class BailCreateMulti(BaseModel):

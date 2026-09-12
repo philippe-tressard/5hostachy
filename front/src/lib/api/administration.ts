@@ -21,6 +21,11 @@ export const delegations = {
 	list: () => api.get<any[]>('/delegations'),
 	create: (data: { mandant_id: number; aidant_id: number; motif?: string; date_fin?: string }) =>
 		api.post<any>('/delegations', data),
+	//  @sans-appelant Corriger le motif ou la date de fin d'une délégation
+	//  existante n'a pas de geste : l'écran sait créer, accepter et révoquer, pas
+	//  modifier. Révoquer puis recréer n'est PAS équivalent — la nouvelle
+	//  délégation doit être ré-acceptée par l'aidant, et l'historique porte deux
+	//  entrées pour une faute de frappe. (#934)
 	update: (id: number, data: { motif?: string; date_fin?: string }) =>
 		api.patch<any>(`/delegations/${id}`, data),
 	accepter: (id: number) => api.post<any>(`/delegations/${id}/accepter`),
@@ -99,6 +104,14 @@ export const admin = {
 	traiterDemandeProfil: (id: number, data: { action: string; motif_refus?: string | null }) =>
 		api.post(`/admin/demandes-profil/${id}/traiter`, data),
 	// Baux locatifs
+	//  @sans-appelant La vue « tous les baux de la copropriété » n'a pas d'écran :
+	//  `RechercheLocataire` l'appelait, et ne l'appelle plus. Elle est le pendant
+	//  en LECTURE de `lierLocataire` ci-dessous et attend le même arbitrage — si
+	//  le geste manuel est livré, c'est elle qui l'alimente ; s'il est abandonné,
+	//  elle part avec lui. (#808)
+	//
+	//  ⚠️ Elle n'était pas signalée avant le 12/09/2026 : le relevé cherchait
+	//  `.baux` sans l'objet, et `adminApi.bauxSansLocataire` le contenait (#932).
 	baux: () => api.get<any[]>('/admin/baux'),
 	//  @sans-appelant Le rattachement d'un compte locataire à son bail se fait
 	//  par `auto-match` à la validation du compte, sur l'e-mail EXACT du bail.
@@ -285,7 +298,21 @@ const ROUTES_LANCEMENT: Record<string, string> = {
 };
 
 export const config = {
+	//  ⚠️ Appelée par `loadSiteConfig()` (`stores/pageConfig`), qui écrivait
+	//  `fetch('/api/config')` en dur jusqu'au 12/09/2026 — un contournement du
+	//  client que `lint:client-api` ne voyait pas (il ne lit pas les stores) et
+	//  que `lint:client-appele` ne voyait pas non plus (`config.get` passait pour
+	//  appelée grâce aux neuf autres `.get` du client). Deux angles morts, et
+	//  la méthode entre les deux (#932).
 	get: (): Promise<Record<string, string>> => api.get<Record<string, string>>('/config'),
+	/**  Les deux textes légaux — mentions légales et politique de confidentialité.
+	 *
+	 *   🔴 Ils sont EXCLUS de `/config` à dessein (ce sont deux longs HTML, servis
+	 *   à chaque chargement de page sinon), d'où une route à part. Elle était
+	 *   écrite **trois fois en dur** — `mentions-legales`, `politique-de-confidentialite`
+	 *   et l'administration — chacune avec son `try`/`catch` muet, parce que le
+	 *   client n'offrait rien (12/09/2026, #932). */
+	legal: (): Promise<Record<string, string>> => api.get<Record<string, string>>('/config/legal'),
 	save: (data: Record<string, string>): Promise<void> => api.put('/config', data),
 
 	//  ── Réglages d'administration et bancs d'essai (#801) ──────────────────────
