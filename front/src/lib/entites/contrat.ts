@@ -95,23 +95,19 @@ export const CONTRAT: EntiteDeclaree = {
 		{
 			id: 'documents',
 			objet: 'FichiersUpload — le contrat signé, ses avenants, ses conditions générales',
-			absente: {
-				creation: {
-					motif: 'api',
-					//  ⚠️ #909 est FERMÉE : son objet — ordre des sections, séparateurs,
-					//  intitulés, rendu du dépôt — est livré et servi. La dette, elle,
-					//  survit, et elle a repris son ticket propre : un motif `api` qui
-					//  cite un ticket clos est un pointeur mort, et le cadre existe
-					//  pour les empêcher.
-					ticket: '#921',
-					explication:
-						"Un document se rattache à un `contrat_id` qui n'existe pas encore à la " +
-						'création : `docsApi.uploadForContrat` exige un contrat enregistré. ' +
-						"L'écran les propose donc à la correction seulement. Dette suivie en " +
-						'#921 — la lever demande un endpoint qui accepte les fichiers AVEC le ' +
-						'contrat, comme les actualités le font depuis #531.',
-				},
-			},
+			//  🔴 La dette `motif: 'api'` (#921) a été LEVÉE le 12/09/2026, et elle
+			//  n'était pas ce qu'elle disait. Le motif écrit était : « un document se
+			//  rattache à un `contrat_id` qui n'existe pas encore à la création ».
+			//  C'était vrai, et la conclusion — « l'écran ne peut pas la rendre » —
+			//  ne l'était pas : les ACTUALITÉS déposent leurs documents à la création
+			//  depuis #531, en gardant les fichiers de côté et en les attachant une
+			//  fois l'objet enregistré.
+			//
+			//  ⚠️ Aucun endpoint ne manquait. Le geste existait, sur un autre écran,
+			//  et personne n'est allé voir : une dette déclarée avec son motif a
+			//  l'apparence d'une décision, et c'est ce qui l'a fait survivre. Le
+			//  motif `api` demande un ticket ; il devrait demander qu'on ait
+			//  d'abord cherché ailleurs.
 		},
 		{
 			id: 'diffusion',

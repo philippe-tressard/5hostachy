@@ -1456,6 +1456,18 @@ jobs:
         working-directory: front
         run: npm run lint:entete-carte
 
+      # 🔴 `e instanceof ApiError ? e.message : 'Erreur'` est écrit 123 fois.
+      # Ce n'est pas une redite cosmétique : c'est la MÊME information perdue
+      # 82 fois — `messageErreur` sait dire « votre session a expiré, rechargez
+      # la page », le ternaire répond « Erreur ».
+      #
+      # ⚠️ Un PLAFOND, pas une interdiction : convertir 43 fichiers d'un coup,
+      # sans regarder un seul écran, est le genre de lot que ce dépôt évite. Le
+      # plafond empêche la 124ᵉ, et il DESCEND à chaque conversion.
+      - name: Message d'erreur issu du helper partagé
+        working-directory: front
+        run: npm run lint:message-erreur
+
       # 🔴 Le pied « Annuler / Enregistrer » était écrit DIX-NEUF fois, et les
       # copies avaient divergé sur quatre points — dont TROIS orthographes du
       # même événement d'annulation : `annule`, `annuler`, `cancel`.

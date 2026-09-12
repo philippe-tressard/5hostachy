@@ -15,6 +15,8 @@
  */
 
 /** Formats d'image acceptés par `_save_image` (ALLOWED_MIME côté API). */
+import type { CibleDocument } from '$lib/api/documents';
+
 export const ACCEPT_PHOTOS = 'image/jpeg,image/png,image/webp,image/gif';
 
 /** Documents acceptés par `POST /uploads/fichier` (ALLOWED_DOC_MIME côté API). */
@@ -235,14 +237,64 @@ export interface DocumentAttache {
 	fichier_nom?: string;
 }
 
-export async function attacherAPublication(
-	publicationId: number,
+/**
+ *  Attacher des fichiers à l'entité qui les porte, **une fois qu'elle existe**.
+ *
+ *  🔴 Elle s'appelait `attacherAPublication` et ne savait faire que cela
+ *  (12/09/2026). Or le geste ne doit RIEN à la publication : c'est
+ *  « enregistrer l'objet, puis lui attacher ce qui attendait ». Le contrat en
+ *  avait besoin à l'identique, et le réécrire aurait donné la deuxième copie —
+ *  celle qui diverge sur la gestion d'erreur ou sur l'ordre.
+ *
+ *  ⚠️ `cible` est le type de `$lib/api` : ajouter un rattachement côté API le
+ *  rend disponible ici sans toucher à cette fonction.
+ */
+export async function attacherA(
+	cible: CibleDocument,
+	id: number,
 	fichiers: Iterable<File>,
 ): Promise<DocumentAttache[]> {
 	const { documents } = await import('$lib/api');
 	const crees: DocumentAttache[] = [];
 	for (const f of fichiers) {
-		crees.push(await documents.uploadForPublication(f.name, publicationId, f));
+		crees.push(await documents.uploadPour(cible, id, f.name, f));
 	}
 	return crees;
+}
+
+/**
+ * Attacher des fichiers à un objet **qui vient d'être créé**, sans jamais faire
+ * échouer cette création.
+ *
+ * ## Pourquoi (12/09/2026)
+ *
+ * Deux écrans écrivaient ce geste — les actualités (#531) et les contrats
+ * (#921) — et **ils divergeaient déjà sur ce qui compte** :
+ *
+ * | | en cas d'échec |
+ * |---|---|
+ * | actualités | un `catch` vide, commenté « la publication existe » — **silence** |
+ * | contrats | un message : « créé, mais un document n'a pas pu être joint » |
+ *
+ * 🔴 Le silence est le mauvais choix, et il ne se voit pas : l'objet apparaît
+ * dans la liste, l'utilisateur croit son document joint, et rien ne l'a détrompé.
+ * C'est la version **la plus disante** qui est retenue ici, pour les deux.
+ *
+ * ⚠️ L'échec n'est JAMAIS propagé : l'objet est bel et bien enregistré, et lever
+ * ferait afficher « erreur » sur une création réussie. On dit ce qui manque, et
+ * on s'arrête là.
+ */
+export async function attacherApres(
+	cible: CibleDocument,
+	id: number,
+	fichiers: File[],
+	objet: string,
+): Promise<void> {
+	if (!fichiers.length || !id) return;
+	try {
+		await attacherA(cible, id, fichiers);
+	} catch {
+		const { toast } = await import('$lib/components/Toast.svelte');
+		toast('error', `${objet} — mais un document n’a pas pu être joint.`);
+	}
 }
