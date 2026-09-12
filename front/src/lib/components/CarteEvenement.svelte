@@ -27,6 +27,8 @@
 	import { createEventDispatcher } from 'svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
+	import BoutonOptions from './BoutonOptions.svelte';
+	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import { routeOnglet } from '$lib/routes-onglets';
 	import ApercuCarte from './ApercuCarte.svelte';
 	import FicheLecture from './FicheLecture.svelte';
@@ -48,6 +50,22 @@
 	 *   du formulaire (18/08/2026). Le formulaire du calendrier vit dans la
 	 *   page, pas dans la carte — la carte ne peut donc pas le deviner. */
 	export let editionOuverte = false;
+	/**  Le panneau d'options rapides est-il ouvert sur CET événement ? Même raison
+	 *   que `editionOuverte` : il vit dans la page, la carte ne peut pas le
+	 *   deviner. */
+	export let optionsOuvertes = false;
+	/** Le panneau attend-il le serveur ? */
+	export let optionsEnCours = false;
+	//  Le brouillon du panneau : l'événement affiché n'est touché qu'après la
+	//  réponse du serveur — sinon l'écran montre un état qui n'est pas enregistré.
+	let optionsRapides = { epingle: false, urgente: false, brouillon: false, confidentiel: false };
+	$: if (optionsOuvertes)
+		optionsRapides = {
+			epingle: ev.epingle ?? false,
+			urgente: false,
+			brouillon: false,
+			confidentiel: false,
+		};
 	/** Libellés — la page les calcule déjà pour ses autres vues. */
 	export let typeLabel: (t: string) => string;
 	export let formatDate: (d: string) => string;
@@ -56,6 +74,8 @@
 		basculer: void;
 		suivre: void;
 		modifier: void;
+		options_ouvrir: void;
+		options_enregistrer: { epingle: boolean };
 		archiver: void;
 		evolue: void;
 		fermer: void;
@@ -140,6 +160,14 @@
 						title="Modifier"
 						on:click={() => dispatch('modifier')}>✏️</button
 					>
+					<!--  Les options actives, et le chemin court pour les changer : le
+					      crayon ouvre huit sections, dépingler n'en touche qu'une
+					      (12/09/2026). Même bouton qu'aux actualités et aux tickets. -->
+					<BoutonOptions
+						objet={{ epingle: ev.epingle ?? false }}
+						ouvert={optionsOuvertes}
+						onOuvrir={() => dispatch('options_ouvrir')}
+					/>
 					{#if ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule'}
 						<button
 							class="btn-icon"
@@ -169,6 +197,30 @@
 			      l'événement (`EvenementRead.evolutions`), aucune requête de plus. -->
 		{@const apercu = apercuAvecRepli(ev.photos_urls, ev.fichiers_urls, ev.evolutions)}
 		<ApercuCarte contenu={ev.description ?? ''} photos={apercu.photos} fichiers={apercu.fichiers} />
+	{/if}
+	{#if optionsOuvertes}
+		<!--  ⚠️ Le panneau s'affiche même carte REPLIÉE : on l'a ouvert depuis la
+		      rangée d'actions, et forcer le dépliement ferait défiler l'écran pour
+		      un geste d'une case. -->
+		<div
+			class="ev-expanded-body"
+			role="presentation"
+			on:click|stopPropagation
+			on:keydown|stopPropagation
+		>
+			<PanneauOptionsPublication
+				objet="événement"
+				optionsRendues={['epingle']}
+				dejaEpingle={ev.epingle ?? false}
+				epingleInterdit={ev.affichable
+					? ''
+					: 'Un événement absent du fil d’activité ne peut pas y être épinglé.'}
+				enregistrement={optionsEnCours}
+				bind:options={optionsRapides}
+				on:enregistrer={() => dispatch('options_enregistrer', { epingle: optionsRapides.epingle })}
+				on:annuler={() => dispatch('fermer')}
+			/>
+		</div>
 	{/if}
 	{#if expanded}
 		<div

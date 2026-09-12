@@ -325,6 +325,38 @@ export type ModeSaisiPour = 'moi' | 'resident' | 'exterieur';
  * `confidentiel` ne s'applique pas ici. Les deux sens du pont vivent donc côte
  * à côte, pour qu'aucun ne puisse être corrigé sans l'autre.
  */
+/**
+ * **Tout ce que la page fait quand une liste de tickets bouge** — un seul objet.
+ *
+ * 🔴 `ListeTickets` relayait TREIZE événements, et `tickets/+page.svelte` les
+ * câblait **deux fois** : une fois pour les tickets actifs, une fois pour les
+ * archives. Le fichier le disait lui-même — *« c'est le prix de ce relais ; il se
+ * paie à chaque nouvel événement »* — et il s'est payé le 12/09/2026, quand le
+ * panneau d'options rapides en a demandé deux de plus.
+ *
+ * Les événements Svelte ne se transmettent pas en bloc (`{...props}` ne porte que
+ * des props) : tant qu'ils sont des `on:`, chaque liste doit les réécrire. En
+ * objet, les deux listes passent le même `{gestes}`, et ne peuvent plus diverger.
+ *
+ * ⚠️ C'est la forme qu'`ActionsActualite` employait déjà (`onCommenter`,
+ * `onModifier`, `onOptions`) : l'alignement sur le voisin, pas une exception.
+ */
+export interface GestesTicket {
+	basculer: (t: Ticket) => void;
+	evoluerOuvrir: (t: Ticket) => void;
+	modifier: (t: Ticket) => void;
+	optionsOuvrir: (t: Ticket) => void;
+	optionsEnregistrer: (t: Ticket, data: unknown) => void;
+	supprimer: (t: Ticket) => void;
+	evoluer: (t: Ticket, data: unknown) => void;
+	evolModifier: (evolId: number) => void;
+	evolCorriger: (t: Ticket, data: unknown) => void;
+	evolSupprimer: (e: { ticket: Ticket; evolId: number }) => void;
+	evolAnnuler: () => void;
+	modifie: (maj: Ticket) => void;
+	annuler: () => void;
+}
+
 export const OPTIONS_TICKET: CleOptionPublication[] = [
 	'epingle',
 	'urgente',

@@ -20,7 +20,7 @@
 	import { essayer } from '$lib/chargement';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
-	import RangeeCalendrier from '$lib/components/RangeeCalendrier.svelte';
+	import SectionMaintenancesRecurrentes from '$lib/components/SectionMaintenancesRecurrentes.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -46,6 +46,7 @@
 	import { perimetreTags } from '$lib/perimetres-pastilles';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { SUPPRESSION, confirmer, confirmerPuis } from '$lib/confirmation';
+	import { optionsRapides } from '$lib/options-rapides';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', defautsDePage('calendrier'));
 	$: _siteNom = $siteNomStore;
@@ -379,6 +380,24 @@
 			submitting = false;
 		}
 	}
+
+	//  ── Options rapides (12/09/2026) ────────────────────────────────────────
+	//  Le crayon ouvre tout le formulaire ; épingler n'est qu'une case. L'état et
+	//  le geste viennent de `$lib/options-rapides`, partagés avec Tickets.
+	const optionsEv = optionsRapides<{ id: number }>();
+	const { ouvertId: optionsEvOuvertId, enCours: optionsEvEnCours } = optionsEv;
+
+	function ouvrirOptionsEv(ev: any) {
+		evolOuverte = null;
+		showForm = false;
+		optionsEv.ouvrir(ev);
+	}
+
+	const enregistrerOptionsEv = (id: number, data: { epingle: boolean }) =>
+		optionsEv.enregistrer(
+			() => calApi.update(id, data),
+			(maj: any) => (evenements = evenements.map((e) => (e.id === id ? { ...e, ...maj } : e))),
+		);
 
 	async function archiveEv(id: number) {
 		await confirmerPuis('Archiver cet événement ?', 'Événement archivé', async () => {
@@ -741,62 +760,35 @@
 					peutAgir={$isCS}
 					suiviOuvert={evolOuverte === ev.id}
 					editionOuverte={showForm && editId === ev.id}
+					optionsOuvertes={$optionsEvOuvertId === ev.id}
+					optionsEnCours={$optionsEvEnCours}
 					{typeLabel}
 					{formatDate}
 					on:basculer={() => (expandedEvId = expanded ? null : ev.id)}
 					on:suivre={() => ouvrirSuivi(ev)}
 					on:modifier={() => startEdit(ev)}
+					on:options_ouvrir={() => ouvrirOptionsEv(ev)}
+					on:options_enregistrer={(e) => enregistrerOptionsEv(ev.id, e.detail)}
 					on:archiver={() => archiveEv(ev.id)}
 					on:evolue={recharger}
-					on:fermer={() => (evolOuverte = null)}
+					on:fermer={() => {
+						evolOuverte = null;
+						optionsEv.fermer();
+					}}
 				/>
 			{/each}
 		</div>
 	{/each}
 	{#if recurringMaintenances.length > 0}
-		<div class="recurring-section">
-			<button
-				class="recurring-toggle"
-				on:click={() => (showPeriodicSection = !showPeriodicSection)}
-			>
-				🔄 Maintenances récurrentes
-				<span style="font-size:.8rem;font-weight:400;color:var(--color-text-muted)"
-					>({recurringMaintenances.length})</span
-				>
-				<span class="chevron" class:open={showPeriodicSection} style="margin-left:auto">›</span>
-			</button>
-			{#if showPeriodicSection}
-				{#each recurringMaintenances as ev (ev.id)}
-					{@const col = ev.statut_kanban
-						? KANBAN_COLS.find((c) => c.id === ev.statut_kanban)
-						: undefined}
-					<RangeeCalendrier
-						typeTexte={typeLabel(ev.type)}
-						titre={ev.titre}
-						metas={[
-							...(ev.prestataire_nom ? [`\u{1F3AF} ${ev.prestataire_nom}`] : []),
-							...(ev.lieu ? [`\u{1F4CD} ${ev.lieu}`] : []),
-						]}
-						dates={[
-							{ texte: formatDate(ev.debut) },
-							...(ev.fin ? [{ texte: `→ ${formatDate(ev.fin)}`, attenue: true }] : []),
-						]}
-						perimetre={ev.perimetre}
-						badgeKanban={col ? { texte: col.label, couleur: col.color } : null}
-						avecActions={$isCS}
-					>
-						<svelte:fragment slot="actions">
-							<button
-								class="btn-icon-edit"
-								aria-label="Modifier"
-								title="Modifier"
-								on:click={() => startEdit(ev)}>✏️</button
-							>
-						</svelte:fragment>
-					</RangeeCalendrier>
-				{/each}
-			{/if}
-		</div>
+		<SectionMaintenancesRecurrentes
+			maintenances={recurringMaintenances}
+			ouvert={showPeriodicSection}
+			peutAgir={$isCS}
+			{typeLabel}
+			{formatDate}
+			on:basculer={() => (showPeriodicSection = !showPeriodicSection)}
+			on:modifier={(e) => startEdit(e.detail)}
+		/>
 	{/if}
 {:else}
 	<!--  La vue Kanban vit dans son composant depuis #833 : cent cinquante-trois
@@ -862,28 +854,11 @@
 	    périmètres et des années, que la minuscule harmonise. Elle n'est PAS montée
 	    dans `composants.css` parce que les tags des prestations portent un sigle —
 	    « OS joint » deviendrait « os joint » (#453, 28/08/2026). */
-	.recurring-section {
-		margin-top: 1.5rem;
-		padding: 0.5rem 0;
-	}
-	.recurring-toggle {
-		background: #f0f9ff;
-		border: 1px solid #bae6fd;
-		border-radius: var(--radius);
-		cursor: pointer;
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: #0369a1;
-		padding: 0.5rem 0.9rem;
-		width: 100%;
-		text-align: left;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-	.recurring-toggle:hover {
-		background: #e0f2fe;
-	}
+	/*  ⚠️ `.recurring-section` et `.recurring-toggle` sont parties AVEC leur
+	    balisage, dans `SectionMaintenancesRecurrentes` (12/09/2026) : Svelte
+	    scope les styles au fichier, et les laisser ici aurait livré le repli NU.
+	    C'est la panne des pastilles de la v2.67.11, et svelte-check l'a dite à la
+	    compilation suivante — la bonne façon d'échouer. */
 	/*  ⚠️ `.maintenance-archive-section` et `.maintenance-archive-toggle` vivaient
 	    ici sans être posées sur aucun élément — signalées elles aussi par
 	    `svelte-check`. Supprimées avec #432. */

@@ -7,6 +7,9 @@
 	import { revelerCible } from '$lib/deepLink';
 	import { isAdmin } from '$lib/stores/auth';
 	import { tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
+	import { optionsRapides } from '$lib/options-rapides';
+	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
+	import type { GestesTicket } from '$lib/tickets';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -184,9 +187,61 @@
 
 	function openEditForm(t: Ticket) {
 		showEvolForm = null;
+		options.fermer();
 		editingTicket = t.id;
 		expandedTickets = new Set([t.id]);
 	}
+
+	//  ── Options rapides (12/09/2026) ────────────────────────────────────────
+	//  Le crayon ouvre les huit sections ; dépingler n'en touche qu'une. L'état et
+	//  le geste viennent de `$lib/options-rapides` — trois pages les répétaient.
+	const options = optionsRapides<Ticket>();
+	const { ouvertId: optionsTicketId, enCours: optionsTicketEnCours } = options;
+
+	function openOptions(t: Ticket) {
+		showEvolForm = null;
+		editingTicket = null;
+		options.ouvrir(t);
+		expandedTickets = new Set([t.id]);
+	}
+
+	const enregistrerOptionsTicket = (t: Ticket, data: unknown) =>
+		options.enregistrer(
+			() => ticketsApi.update(t.id, data as any),
+			(maj) => (ticketList = ticketList.map((x) => (x.id === maj.id ? { ...x, ...maj } : x))),
+		);
+
+	//  🔴 ÉCRIT UNE FOIS, passé aux DEUX listes — les tickets actifs et les
+	//  archives. Les treize gestes et les huit états y étaient recopiés, et
+	//  l'ajout du panneau d'options en aurait fait vingt-six lignes de plus, sur
+	//  deux écritures libres de diverger (`ListeTickets` le prévenait lui-même).
+	$: etatListe = {
+		expandedIds: expandedTickets,
+		evolsMap,
+		ticketEnEdition: editingTicket,
+		ticketEnOptions: $optionsTicketId,
+		optionsRapidesEnCours: $optionsTicketEnCours,
+		ticketEnEvolution: showEvolForm,
+		evolutionEnCours: evolSaving,
+		evolEnEdition,
+		evolCorrectionEnCours,
+		peutAdministrer: $isAdmin,
+	};
+	const gestes: GestesTicket = {
+		basculer: toggleTicket,
+		evoluerOuvrir: openEvolForm,
+		modifier: openEditForm,
+		optionsOuvrir: openOptions,
+		optionsEnregistrer: enregistrerOptionsTicket,
+		supprimer: deleteTicket,
+		evoluer: addEvolution,
+		evolModifier: (id) => (evolEnEdition = id),
+		evolCorriger: corrigerEvolution,
+		evolSupprimer: supprimerEvolution,
+		evolAnnuler: () => (evolEnEdition = null),
+		modifie: ticketModifie,
+		annuler: fermerFormulaires,
+	};
 
 	//  🔴 Ce type était RÉÉCRIT ici, et il lui manquait `perimetre_cible` — alors
 	//  que son commentaire affirmait « même contrat que la fiche détail ». Deux
@@ -210,8 +265,7 @@
 	//  explicite, et le fil se recharge aussitôt — l'effet est immédiatement
 	//  visible. Une modale de plus sur un geste déjà restreint et déjà rare
 	//  ajouterait un clic sans ajouter de sécurité.
-	async function supprimerEvolution(e: CustomEvent<{ ticket: Ticket; evolId: number }>) {
-		const { ticket: t, evolId } = e.detail;
+	async function supprimerEvolution({ ticket: t, evolId }: { ticket: Ticket; evolId: number }) {
 		try {
 			await ticketsApi.deleteEvolution(t.id, evolId);
 			await loadEvolutions(t.id);
@@ -221,21 +275,20 @@
 		}
 	}
 
-	async function corrigerEvolution(e: CustomEvent<{ ticket: Ticket; data: any }>) {
+	async function corrigerEvolution(t: Ticket, data: any) {
 		if (evolEnEdition === null) return;
-		const t = e.detail.ticket;
 		evolCorrectionEnCours = true;
 		try {
 			//  🔴 Ni `type` ni `nouveau_statut` : une CORRECTION n'est pas une
 			//  transition. Les envoyer ferait apparaître dans le fil une étape que le
 			//  ticket n'a jamais franchie (`test_correction_pas_transition.py`).
 			await ticketsApi.updateEvolution(t.id, evolEnEdition, {
-				contenu: e.detail.data.contenu ?? '',
-				fichiers_urls: e.detail.data.fichiers_urls,
+				contenu: data.contenu ?? '',
+				fichiers_urls: data.fichiers_urls,
 				//  🔴 La correction du périmètre part AUSSI (01/09/2026) : le
 				//  sélecteur s'affiche désormais en correction, et un champ affiché
 				//  qui ne part pas est le défaut de la veille, rejoué.
-				perimetre_cible: e.detail.data.perimetre_cible,
+				perimetre_cible: data.perimetre_cible,
 			});
 			await loadEvolutions(t.id);
 			evolEnEdition = null;
@@ -247,9 +300,8 @@
 		}
 	}
 
-	async function addEvolution(e: CustomEvent<{ ticket: Ticket; data: unknown }>) {
-		const t = e.detail.ticket;
-		const data = e.detail.data as ChargeUtileEvolution;
+	async function addEvolution(t: Ticket, brut: unknown) {
+		const data = brut as ChargeUtileEvolution;
 		evolSaving = true;
 		try {
 			await ticketsApi.addEvolution(t.id, {
@@ -296,26 +348,17 @@
 		}
 	}
 
-	async function deleteTicket(e: CustomEvent<Ticket>) {
-		const t = e.detail;
-		if (
-			!confirm(`Supprimer définitivement le ticket #${t.numero} ? Cette action est irréversible.`)
-		)
-			return;
-		try {
+	async function deleteTicket(t: Ticket) {
+		await confirmerPuis(SUPPRESSION(`Le ticket #${t.numero}`), 'Ticket supprimé', async () => {
 			await ticketsApi.delete(t.id);
 			ticketList = ticketList.filter((x) => x.id !== t.id);
-			toast('success', 'Ticket supprimé');
-		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		}
+		});
 	}
 
 	//  Le PATCH inscrit une CORRECTION dans le fil (« Correction : État … ») :
 	//  sans ce rechargement, la carte affiche le ticket corrigé au-dessus d'un
 	//  historique qui n'en dit rien.
-	async function ticketModifie(e: CustomEvent<Ticket>) {
-		const maj = e.detail;
+	async function ticketModifie(maj: Ticket) {
 		ticketList = ticketList.map((x) => (x.id === maj.id ? { ...x, ...maj } : x));
 		await loadEvolutions(maj.id);
 		editingTicket = null;
@@ -383,28 +426,7 @@
 	titreVide="Aucune demande"
 	messageVide="Signalez un problème ou posez une question au conseil syndical."
 >
-	<ListeTickets
-		tickets={filtered}
-		expandedIds={expandedTickets}
-		{evolsMap}
-		ticketEnEdition={editingTicket}
-		ticketEnEvolution={showEvolForm}
-		evolutionEnCours={evolSaving}
-		{evolEnEdition}
-		{evolCorrectionEnCours}
-		peutAdministrer={$isAdmin}
-		on:basculer={(e) => toggleTicket(e.detail)}
-		on:evoluer_ouvrir={(e) => openEvolForm(e.detail)}
-		on:modifier={(e) => openEditForm(e.detail)}
-		on:supprimer={deleteTicket}
-		on:evoluer={addEvolution}
-		on:evol_modifier={(e) => (evolEnEdition = e.detail)}
-		on:evol_annuler={() => (evolEnEdition = null)}
-		on:evol_corriger={corrigerEvolution}
-		on:evol_supprimer={supprimerEvolution}
-		on:modifie={ticketModifie}
-		on:annuler={fermerFormulaires}
-	/>
+	<ListeTickets tickets={filtered} {...etatListe} {gestes} />
 </EtatListe>
 
 <!--  Section ARCHIVES — les tickets clos depuis plus du délai de grâce.
@@ -432,29 +454,7 @@
 			bind:ouvert={historyExpanded}
 			let:objet={ticketArchive}
 		>
-			<ListeTickets
-				tickets={[ticketArchive]}
-				archive
-				expandedIds={expandedTickets}
-				{evolsMap}
-				ticketEnEdition={editingTicket}
-				ticketEnEvolution={showEvolForm}
-				evolutionEnCours={evolSaving}
-				{evolEnEdition}
-				{evolCorrectionEnCours}
-				peutAdministrer={$isAdmin}
-				on:basculer={(e) => toggleTicket(e.detail)}
-				on:evoluer_ouvrir={(e) => openEvolForm(e.detail)}
-				on:modifier={(e) => openEditForm(e.detail)}
-				on:supprimer={deleteTicket}
-				on:evoluer={addEvolution}
-				on:evol_modifier={(e) => (evolEnEdition = e.detail)}
-				on:evol_annuler={() => (evolEnEdition = null)}
-				on:evol_corriger={corrigerEvolution}
-				on:evol_supprimer={supprimerEvolution}
-				on:modifie={ticketModifie}
-				on:annuler={fermerFormulaires}
-			/>
+			<ListeTickets tickets={[ticketArchive]} archive {...etatListe} {gestes} />
 		</ArchivesParAnnee>
 	</div>
 {/if}

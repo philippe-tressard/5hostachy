@@ -19,10 +19,27 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
-	import type { Publication } from '$lib/api';
+	import type { CleOptionPublication } from '$lib/options-publication';
 
-	/** La publication concernée — pour son périmètre et son épinglage actuel. */
-	export let pub: Publication;
+	/**  Le nom de l'objet décrit — il entre dans les libellés qui le nomment
+	 *   (« Visibilité du **ticket** au seul conseil syndical »). */
+	export let objet = 'publication';
+	/**  Les options RENDUES : un événement n'a que l'épinglage, un ticket en a
+	 *   quatre dont une verrouillée. C'est l'appelant qui sait. */
+	export let optionsRendues: CleOptionPublication[] = [
+		'epingle',
+		'urgente',
+		'brouillon',
+		'confidentiel',
+	];
+	/** Le périmètre visé, qui décide si « Confidentiel » a un sens. */
+	export let perimetreCible: string[] = [];
+	/** L'objet était-il DÉJÀ épinglé ? (évite un double comptage) */
+	export let dejaEpingle = false;
+	/** 🔒 Motif pour lequel l'objet est TOUJOURS restreint — relayé tel quel. */
+	export let confidentielAcquis = '';
+	/** 🔒 Motif pour lequel l'épinglage est impossible — relayé tel quel. */
+	export let epingleInterdit = '';
 	/** La copie de travail, tenue par la page : on n'écrit qu'après le serveur. */
 	export let options: {
 		epingle: boolean;
@@ -45,8 +62,12 @@
 <div class="options-form" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 	<h4 class="options-titre">Options de publication</h4>
 	<OptionsPublication
-		perimetreCible={pub.perimetre_cible ?? []}
-		dejaEpingle={pub.epingle ?? false}
+		{objet}
+		options={optionsRendues}
+		{perimetreCible}
+		{dejaEpingle}
+		{confidentielAcquis}
+		{epingleInterdit}
 		bind:epingle={options.epingle}
 		bind:urgente={options.urgente}
 		bind:brouillon={options.brouillon}

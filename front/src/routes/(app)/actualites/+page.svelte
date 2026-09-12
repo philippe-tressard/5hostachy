@@ -373,7 +373,8 @@
 			<svelte:fragment slot="formulaire">
 				{#if optionsPub?.id === pub.id}
 					<PanneauOptionsPublication
-						{pub}
+						perimetreCible={pub.perimetre_cible ?? []}
+						dejaEpingle={pub.epingle ?? false}
 						bind:options={optionsBrouillon}
 						enregistrement={optionsSaving}
 						on:enregistrer={() => enregistrerOptions(pub)}
