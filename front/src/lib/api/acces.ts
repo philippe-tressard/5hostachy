@@ -35,7 +35,6 @@ export interface AccesAdmin {
 export const acces = {
 	mesVigiks: () => api.get<any[]>('/acces/mes-vigiks'),
 	mesTelecommandes: () => api.get<any[]>('/acces/mes-telecommandes'),
-	mesCommandes: () => api.get<any[]>('/acces/mes-commandes'),
 	creerCommande: (data: unknown) => api.post<any>('/acces/commandes', data),
 	signalerVigiKPerdu: (id: number) => api.patch(`/acces/vigiks/${id}/perdu`, {}),
 	signalerTcPerdu: (id: number) => api.patch(`/acces/telecommandes/${id}/perdu`, {}),

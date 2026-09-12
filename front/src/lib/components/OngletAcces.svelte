@@ -36,7 +36,9 @@
 	import { nomAffiche } from '$lib/noms';
 	import FormulairesAcces from '$lib/components/FormulairesAcces.svelte';
 	import { onMount } from 'svelte';
-	import { acces as accesApi, lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
+	import { acces as accesApi, lots as lotsApi, bailleur as bailApi } from '$lib/api';
+	import { tenter, messageErreur } from '$lib/erreurs';
+	import { confirmer, confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { isCS, currentUser } from '$lib/stores/auth';
 	import MesAcces from '$lib/components/MesAcces.svelte';
@@ -44,7 +46,6 @@
 
 	let vigiks: any[] = [];
 	let telecommandes: any[] = [];
-	let commandes: any[] = [];
 	let mesLots: any[] = [];
 	let accesRecus: any[] = [];
 	let mesBaux: any[] = [];
@@ -61,20 +62,22 @@
 		try {
 			const isLocataire = $currentUser?.statut === 'locataire';
 			const isBailleur = $currentUser?.statut === 'copropriétaire_bailleur';
+			//  ⚠️ `mesCommandes()` n'est plus appelée (12/09/2026) : la section
+			//  Archives a quitté ces onglets, et charger une liste que rien
+			//  n'affiche serait un aller-retour pour personne.
 			const tasks: Promise<any>[] = [
 				accesApi.mesVigiks(),
 				accesApi.mesTelecommandes(),
-				accesApi.mesCommandes(),
 				lotsApi.mesList(),
 			];
 			if (isLocataire) tasks.push(bailApi.mesAccesRecus());
 			if (isBailleur) tasks.push(bailApi.mesBaux());
 			const results = await Promise.all(tasks);
-			[vigiks, telecommandes, commandes, mesLots] = results;
-			if (isLocataire) accesRecus = results[4] ?? [];
-			if (isBailleur) mesBaux = results[4] ?? [];
-		} catch {
-			toast('error', 'Erreur de chargement');
+			[vigiks, telecommandes, mesLots] = results;
+			if (isLocataire) accesRecus = results[3] ?? [];
+			if (isBailleur) mesBaux = results[3] ?? [];
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur de chargement'));
 		} finally {
 			loading = false;
 		}
@@ -86,27 +89,21 @@
 			return;
 		}
 		submitting = true;
-		try {
+		await tenter(async () => {
 			await accesApi.creerCommande({
 				lot_id: Number(formLotId),
 				type: formType,
 				quantite: formQuantite,
 				motif: formMotif || undefined,
 			});
-			commandes = await accesApi.mesCommandes();
 			showForm = false;
 			formMotif = '';
-			toast('success', 'Demande envoyée au conseil syndical');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			submitting = false;
-		}
+		}, 'Demande envoyée au conseil syndical');
+		submitting = false;
 	}
 
 	async function signalerPerdu(id: number, typeAcces: 'vigik' | 'tc') {
-		if (!confirm('Signaler cet accès comme perdu ?')) return;
-		try {
+		await confirmerPuis('Signaler cet accès comme perdu ?', 'Signalement enregistré', async () => {
 			if (typeAcces === 'vigik') {
 				await accesApi.signalerVigiKPerdu(id);
 				vigiks = vigiks.map((v) => (v.id === id ? { ...v, statut: 'perdu' } : v));
@@ -114,27 +111,27 @@
 				await accesApi.signalerTcPerdu(id);
 				telecommandes = telecommandes.map((t) => (t.id === id ? { ...t, statut: 'perdu' } : t));
 			}
-			toast('success', 'Signalement enregistré');
-		} catch {
-			toast('error', 'Erreur');
-		}
+		});
 	}
 
 	async function supprimer(id: number, typeAcces: 'vigik' | 'tc') {
-		if (!confirm('Supprimer cet accès de votre compte ?')) return;
-		try {
-			if (typeAcces === 'vigik') {
-				await accesApi.supprimerVigik(id);
-				vigiks = vigiks.filter((v) => v.id !== id);
-				toast('success', 'Badge supprimé');
-			} else {
-				await accesApi.supprimerTc(id);
-				telecommandes = telecommandes.filter((t) => t.id !== id);
-				toast('success', 'Télécommande supprimée');
-			}
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		//  ⚠️ Retirer un accès de SON compte n'est pas le détruire : le badge existe
+		//  toujours. Le rouge de `SUPPRESSION` reste juste — pour le porteur, le
+		//  geste ne se défait pas tout seul.
+		const quoi = typeAcces === 'vigik' ? 'Ce badge' : 'Cette télécommande';
+		if (!(await confirmer(SUPPRESSION(`${quoi} sera retiré de votre compte.`)))) return;
+		await tenter(
+			async () => {
+				if (typeAcces === 'vigik') {
+					await accesApi.supprimerVigik(id);
+					vigiks = vigiks.filter((v) => v.id !== id);
+				} else {
+					await accesApi.supprimerTc(id);
+					telecommandes = telecommandes.filter((t) => t.id !== id);
+				}
+			},
+			typeAcces === 'vigik' ? 'Badge supprimé' : 'Télécommande supprimée',
+		);
 	}
 
 	// Déclaration d'accès existant
@@ -148,7 +145,9 @@
 			return;
 		}
 		declaring = true;
-		try {
+		//  ⚠️ Le message de succès dépend de la RÉPONSE (« import mis à jour ») :
+		//  il n'est connu qu'après l'appel, d'où le `toast` à l'intérieur.
+		await tenter(async () => {
 			const r = await accesApi.declarerBadge({ type: declareType, code: declareCode.trim() });
 			if (declareType === 'vigik') {
 				vigiks = await accesApi.mesVigiks();
@@ -159,23 +158,13 @@
 			toast('success', `Accès enregistré${msg}`);
 			declareCode = '';
 			showDeclareForm = false;
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			declaring = false;
-		}
+		});
+		declaring = false;
 	}
 
 	function statutClass(s: string) {
 		return (
 			{ actif: 'badge-green', suspendu: 'badge-orange', perdu: 'badge-red' }[s] ?? 'badge-gray'
-		);
-	}
-
-	function commandeStatutClass(s: string) {
-		return (
-			{ en_attente: 'badge-orange', acceptee: 'badge-green', refusee: 'badge-red' }[s] ??
-			'badge-gray'
 		);
 	}
 
@@ -208,20 +197,21 @@
 	})();
 
 	async function recupererTousLocataireAcces(bailIds: number[]) {
-		if (!confirm('Récupérer tous les accès confiés à ce locataire ?')) return;
-		try {
-			const updates = await Promise.all(bailIds.map((id) => bailApi.recupererAcces(id)));
-			const ids = new Set(updates.flat().map((u: any) => `${u.type}:${u.id}`));
-			vigiks = vigiks.map((v) =>
-				ids.has(`vigik:${v.id}`) ? { ...v, chez_locataire: false, bail_id: null } : v,
-			);
-			telecommandes = telecommandes.map((t) =>
-				ids.has(`telecommande:${t.id}`) ? { ...t, chez_locataire: false, bail_id: null } : t,
-			);
-			toast('success', 'Accès récupérés');
-		} catch {
-			toast('error', 'Erreur lors de la récupération');
-		}
+		await confirmerPuis(
+			'Récupérer tous les accès confiés à ce locataire ?',
+			'Accès récupérés',
+			async () => {
+				const updates = await Promise.all(bailIds.map((id) => bailApi.recupererAcces(id)));
+				const ids = new Set(updates.flat().map((u: any) => `${u.type}:${u.id}`));
+				vigiks = vigiks.map((v) =>
+					ids.has(`vigik:${v.id}`) ? { ...v, chez_locataire: false, bail_id: null } : v,
+				);
+				telecommandes = telecommandes.map((t) =>
+					ids.has(`telecommande:${t.id}`) ? { ...t, chez_locataire: false, bail_id: null } : t,
+				);
+			},
+			'Erreur lors de la récupération',
+		);
 	}
 
 	/**  Quelle liste d'accès cette instance montre. `tout` conserve l'ancienne
@@ -371,7 +361,7 @@
 	      ⚠️ Réservée à `$isCS`, comme l'endpoint (`require_cs_or_admin`) : l'écran
 	      dit ce que le serveur fait, ni plus ni moins (`ux-patterns` §15). -->
 
-	<AccesConnexes {commandes} {accesRecus} {statutClass} {commandeStatutClass} />
+	<AccesConnexes {accesRecus} {statutClass} />
 {/if}
 
 <style>

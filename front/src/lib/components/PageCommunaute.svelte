@@ -26,13 +26,14 @@
 		idees as ideesApi,
 		annonces as annoncesApi,
 		signalements as signalementsApi,
-		ApiError,
 	} from '$lib/api';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import { messageErreur } from '$lib/erreurs';
+	import { messageErreur, tenter } from '$lib/erreurs';
+	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
+	import { signaler as signalerContenu } from '$lib/signalements';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ListeSondages from '$lib/components/ListeSondages.svelte';
 	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
@@ -95,30 +96,30 @@
 
 	async function arreterSondage(s: any, e: Event) {
 		e.preventDefault();
-		if (!confirm(`Stopper le sondage "${s.question}" maintenant ?`)) return;
-		try {
-			await sondagesApi.cloturer(s.id);
-			//  `cloture` AUSSI : c'est lui que l'affichage lit désormais. Ne poser que
-			//  `cloture_forcee` laisserait la carte inchangée jusqu'au rechargement.
-			sondages = sondages.map((x) =>
-				x.id === s.id ? { ...x, cloture_forcee: true, cloture: true } : x,
-			);
-			toast('success', 'Sondage stoppé');
-		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		}
+		await confirmerPuis(
+			`Stopper le sondage « ${s.question} » maintenant ?`,
+			'Sondage stoppé',
+			async () => {
+				await sondagesApi.cloturer(s.id);
+				//  `cloture` AUSSI : c'est lui que l'affichage lit désormais. Ne poser que
+				//  `cloture_forcee` laisserait la carte inchangée jusqu'au rechargement.
+				sondages = sondages.map((x) =>
+					x.id === s.id ? { ...x, cloture_forcee: true, cloture: true } : x,
+				);
+			},
+		);
 	}
 
 	async function supprimerSondage(s: any, e: Event) {
 		e.preventDefault();
-		if (!confirm(`Supprimer définitivement le sondage "${s.question}" ?`)) return;
-		try {
-			await sondagesApi.supprimer(s.id);
-			sondages = sondages.filter((x) => x.id !== s.id);
-			toast('success', 'Sondage supprimé');
-		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		}
+		await confirmerPuis(
+			SUPPRESSION(`Le sondage « ${s.question} »`),
+			'Sondage supprimé',
+			async () => {
+				await sondagesApi.supprimer(s.id);
+				sondages = sondages.filter((x) => x.id !== s.id);
+			},
+		);
 	}
 
 	// Idées
@@ -149,56 +150,47 @@
 	}
 
 	async function voter(id: number) {
-		try {
+		//  ⚠️ Le message de succès vient du SERVEUR (« vote retiré », « vote
+		//  enregistré ») : il n'est connu qu'après l'appel, d'où le `toast` à
+		//  l'intérieur plutôt qu'en second argument de `tenter`.
+		await tenter(async () => {
 			const res: any = await ideesApi.voter(id);
 			idees = await ideesApi.list();
 			toast('success', res.message ?? 'Vote enregistré');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		});
 	}
 
 	async function changeStatut(id: number, statut: string) {
-		try {
+		await tenter(async () => {
 			await ideesApi.updateStatut(id, statut);
 			idees = idees.map((i) => (i.id === id ? { ...i, statut } : i));
-			toast('success', 'Statut mis à jour');
-		} catch {
-			toast('error', 'Erreur');
-		}
+		}, 'Statut mis à jour');
 	}
 
 	async function deleteIdee(id: number) {
-		if (!confirm('Supprimer cette idée définitivement ?')) return;
-		try {
+		await confirmerPuis(SUPPRESSION('Cette idée'), 'Idée supprimée', async () => {
 			await ideesApi.delete(id);
 			idees = idees.filter((i) => i.id !== id);
-			toast('success', 'Idée supprimée');
-		} catch {
-			toast('error', 'Erreur lors de la suppression');
-		}
+		});
 	}
 
 	// ── Réponses (idées + annonces) — composant partagé Reponses.svelte ──────────
 	async function repondreIdee(id: number, contenu: string) {
-		try {
+		const publiee = await tenter(async () => {
 			await ideesApi.repondre(id, contenu);
 			idees = await ideesApi.list();
-			toast('success', 'Réponse publiée');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-			throw e;
-		}
+		}, 'Réponse publiée');
+		//  🔴 L'échec doit REMONTER : `Reponses` ne vide son champ que si la
+		//  promesse aboutit. L'avaler effacerait une réponse non publiée.
+		if (!publiee) throw new Error('Réponse non publiée');
 	}
 
 	async function supprimerReponseIdee(ideeId: number, repId: number) {
-		try {
+		//  ⚠️ La confirmation est demandée par `Reponses`, qui porte le bouton.
+		await tenter(async () => {
 			await ideesApi.supprimerReponse(ideeId, repId);
 			idees = await ideesApi.list();
-			toast('success', 'Réponse supprimée');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		}, 'Réponse supprimée');
 	}
 
 	// ── Signalements / modération ────────────────────────────────────────────────
@@ -215,30 +207,22 @@
 		}
 	}
 
-	async function signaler(cibleType: string, cibleId: number) {
-		const motif = prompt('Pourquoi signalez-vous ce contenu au conseil syndical ?');
-		if (motif === null) return;
-		if (!motif.trim()) {
-			toast('error', 'Le motif est obligatoire');
-			return;
-		}
-		try {
-			await signalementsApi.creer(cibleType, cibleId, motif.trim());
-			toast('success', 'Signalement transmis au conseil syndical');
+	//  Le geste lui-même vit dans `$lib/signalements` : il était écrit à
+	//  l'identique ici et dans `sondages/[id]`. Ne reste que ce qui est PROPRE à
+	//  cet écran — recharger la liste de modération quand on est au CS.
+	const signaler = (cibleType: string, cibleId: number) =>
+		signalerContenu(cibleType, cibleId, () => {
 			if ($isCS) chargerSignalements();
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
-	}
+		});
 
 	async function resoudreSignalement(id: number, statut: 'traite' | 'rejete') {
-		try {
-			await signalementsApi.resoudre(id, statut);
-			signalements = signalements.filter((s) => s.id !== id);
-			toast('success', statut === 'traite' ? 'Signalement traité' : 'Signalement ignoré');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		await tenter(
+			async () => {
+				await signalementsApi.resoudre(id, statut);
+				signalements = signalements.filter((s) => s.id !== id);
+			},
+			statut === 'traite' ? 'Signalement traité' : 'Signalement ignoré',
+		);
 	}
 
 	//  🔴 Le MOTIF vient de l'API (`communaute_motif_refus`), il ne se recalcule

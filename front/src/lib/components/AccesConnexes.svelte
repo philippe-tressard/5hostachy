@@ -29,52 +29,28 @@
   demanderait de filtrer, donc de décider qu'une demande à deux lignes se lit en
   deux endroits.
 
-  ⚠️ Ils s'affichent donc ENTIERS sous chaque sous-onglet. C'est délibéré : ce
-  que l'onglet découpe, ce sont mes listes, pas mon historique.
+  🔴 La section **Archives** (les demandes passées) a été RETIRÉE le 12/09/2026,
+  sur demande de l'utilisateur : elle s'affichait sous « Mes badges » ET sous
+  « Télécommandes », c'est-à-dire deux fois pour un seul contenu, et elle
+  répétait sous chaque onglet une liste que l'onglet ne découpe pas.
+
+  ⚠️ Conséquence assumée : un résident ne voit plus le suivi de ses demandes
+  passées depuis cet écran. Le conseil syndical le voit, lui, dans ses
+  validations — c'est là que la demande est traitée. `GET /acces/mes-commandes`
+  reste servi, il n'a simplement plus d'appelant ici.
+
+  ⚠️ Le seul « Archives » qui subsiste dans « Mes lots & accès » est celui de la
+  **gestion locative**, qui est un sous-onglet à part entière et non un bloc
+  répété.
 -->
 <script lang="ts">
-	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import { currentUser } from '$lib/stores/auth';
-	import { fmtDateShort } from '$lib/date';
 
-	/** Les demandes d'accès passées, tous types confondus. */
-	export let commandes: any[] = [];
 	/** Les accès confiés par le bailleur — locataires seulement. */
 	export let accesRecus: any[] = [];
-	/** La classe de badge d'un statut — l'hôte la porte, elle sert aux deux. */
+	/** La classe de badge d'un statut, portée par l'hôte. */
 	export let statutClass: (s: string) => string;
-	/** Idem pour le statut d'une commande. */
-	export let commandeStatutClass: (s: string) => string;
 </script>
-
-<!--  Archives — les demandes passées. « Historique » nomme le fil d'un objet
-      (cadre #430) ; ici ce sont des objets rangés (#516).
-
-      C'était le seul écran dont la section n'était NI repliable NI groupée :
-      un `<h2>` et une liste à plat. Il adopte le rendu commun. -->
-<section class="section card" style="margin-top:1rem">
-	<ArchivesParAnnee
-		items={commandes}
-		dateDe={(c) => c.cree_le}
-		compte={commandes.length}
-		charge
-		messageVide="Aucune demande passée."
-		let:objet={cmd}
-	>
-		<div class="commande-row">
-			<div>
-				<strong>{cmd.type === 'vigik' ? 'Badge Vigik' : 'Télécommande'}</strong>
-				<span style="color:var(--color-text-muted);font-size:.8rem;margin-left:.5rem">
-					× {cmd.quantite} — {fmtDateShort(cmd.cree_le)}
-				</span>
-				{#if cmd.motif}<p style="font-size:.85rem;color:var(--color-text-muted);margin:.2rem 0 0">
-						{cmd.motif}
-					</p>{/if}
-			</div>
-			<span class="badge {commandeStatutClass(cmd.statut)}">{cmd.statut.replace('_', ' ')}</span>
-		</div>
-	</ArchivesParAnnee>
-</section>
 
 <!-- Accès reçus du bailleur (locataires uniquement) -->
 {#if $currentUser?.statut === 'locataire'}
@@ -127,13 +103,6 @@
 	}
 	.table td {
 		padding: 0.5rem;
-	}
-	.commande-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		padding: 0.65rem 0;
-		border-bottom: 1px solid var(--color-border);
 	}
 	.section {
 		padding: 1.25rem;

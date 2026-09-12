@@ -45,7 +45,11 @@ const RACINE = 'src';
 //  vers `tenter` (#928). Le contrôle a EXIGÉ cette baisse — il échoue aussi
 //  quand le compte descend sous le plafond, et c'est ce qui l'empêche de
 //  devenir un plafond qu'on oublie.
-const PLAFOND = 113;
+//  113 → 76 le 12/09/2026 : `residence`, `sondages/[id]`, `PageCommunaute`,
+//  `profil`, `OngletPerimetres` et `OngletAcces`. Les copies qui portaient un
+//  repli CONTEXTUEL n'en perdent aucun : `tenter` a reçu un troisième
+//  paramètre plutôt que de les niveler sur la phrase générique.
+const PLAFOND = 76;
 
 /**  Le ternaire recopié : `<e> instanceof ApiError ? <e>.message : …`.
  *   La rétro-référence `\1` exige la MÊME variable des deux côtés — sans elle,

@@ -1,7 +1,6 @@
-import { mount, unmount } from 'svelte';
-
 import Confirmation from '$lib/components/Confirmation.svelte';
 import { tenter } from '$lib/erreurs';
+import { modaleImperative } from '$lib/modale-imperative';
 
 /**
  * Demande confirmation, dans la charte du site. Rend `true` si l'on confirme.
@@ -29,13 +28,9 @@ import { tenter } from '$lib/erreurs';
  * L'appel garde la forme d'origine : une ligne, une condition, un `return`.
  * Seul l'`await` s'ajoute.
  *
- * ⚠️ **Le composant est monté puis DÉMONTÉ à chaque appel**, et la promesse est
- * résolue une seule fois. Un composant laissé en place accumulerait un nœud par
- * geste, et un second `await` sur la même instance ne rendrait jamais la main.
- *
- * ⚠️ **Côté serveur, il n'y a pas de fenêtre.** Le rendu SSR ne demande rien à
- * personne : la fonction rend `false` — refuser est le comportement sûr, et un
- * `true` par défaut exécuterait le geste sans que quiconque l'ait vu.
+ * ⚠️ Le montage, le démontage et la résolution unique — ainsi que le refus par
+ * défaut côté serveur, où il n'y a pas de fenêtre — sont dans
+ * `$lib/modale-imperative`, partagés avec `demander()`.
  */
 export function confirmer(
 	options:
@@ -49,56 +44,21 @@ export function confirmer(
 		  },
 ): Promise<boolean> {
 	if (typeof options === 'string') options = { message: options };
-	if (typeof document === 'undefined') return Promise.resolve(false);
-	const opts = options;
-
-	return new Promise((resoudre) => {
-		const hote = document.createElement('div');
-		document.body.appendChild(hote);
-		let rendu = false;
-		//  🔴 `mount()`, PAS `new Confirmation(...)` — corrigé le 30/08/2026.
-		//
-		//  Ce fichier montait le composant avec l'API Svelte 4. Le projet est en
-		//  **Svelte 5**, où elle lève :
-		//
-		//      component_api_invalid_new — Attempted to instantiate
-		//      Confirmation.svelte with `new Confirmation`, which is no longer
-		//      valid in Svelte 5.
-		//
-		//  Conséquence : `confirmer()` n'a JAMAIS fonctionné. Les 17 gestes qui en
-		//  dépendent — suppressions, archivages — levaient au lieu de demander, et
-		//  l'action n'avait pas lieu.
-		//
-		//  ⚠️ Ce qui l'a rendu invisible : en production, le message est minifié
-		//  en « Cannot use 'in' operator to search for 'Symbol($state)' in
-		//  undefined » — illisible, et sans rapport apparent avec une boîte de
-		//  dialogue. C'est l'utilisateur qui l'a signalé, sur un bouton qui « ne
-		//  faisait rien ». Aucun contrôle du dépôt ne pouvait le voir : ils sont
-		//  tous statiques, et cette ligne compile parfaitement.
-		//
-		//  🔒 `lint:api-svelte4` refuse désormais cette forme dans tout le front.
-		const composant = mount(Confirmation, {
-			target: hote,
-			props: {
-				titre: opts.titre ?? 'Confirmer',
-				message: opts.message,
-				libelleConfirmer: opts.libelleConfirmer ?? 'Confirmer',
-				libelleAnnuler: opts.libelleAnnuler ?? 'Annuler',
-				danger: opts.danger ?? false,
-				onReponse: (ok: boolean) => {
-					//  Une seule résolution : `Modale` émet `fermer` sur Échap ET sur
-					//  le fond, et le bouton répond lui aussi. Sans ce verrou, le
-					//  démontage serait tenté deux fois.
-					if (rendu) return;
-					rendu = true;
-					//  `unmount()` remplace `$destroy()`, retiré en Svelte 5.
-					unmount(composant);
-					hote.remove();
-					resoudre(ok);
-				},
-			},
-		});
-	});
+	//  Le montage, le démontage et la résolution unique vivent dans
+	//  `modaleImperative` : `demander()` s'en sert aussi, et les recopier aurait
+	//  recopié avec eux les quatre pièges que ce fichier a déjà payés une fois.
+	//  ⚠️ Le refus par défaut est `false` — sans fenêtre, on n'exécute rien.
+	return modaleImperative<boolean>(
+		Confirmation,
+		{
+			titre: options.titre ?? 'Confirmer',
+			message: options.message,
+			libelleConfirmer: options.libelleConfirmer ?? 'Confirmer',
+			libelleAnnuler: options.libelleAnnuler ?? 'Annuler',
+			danger: options.danger ?? false,
+		},
+		false,
+	);
 }
 
 /**
@@ -167,10 +127,13 @@ export async function confirmerPuis(
 	//  rendait alors les écrans PLUS longs qu'avant. La convention JS — le rappel
 	//  ferme l'appel — garde la forme compacte que le motif d'origine avait.
 	action: () => Promise<unknown>,
+	//  Le repli passe APRÈS le rappel, pour la même raison : le placer avant
+	//  aurait éclaté les huit appels qui n'en ont pas besoin.
+	repli?: string,
 ): Promise<boolean> {
 	if (!(await confirmer(question))) return false;
 	//  Le `try`/`toast`/`catch` vit dans `tenter` : l'écrire ici aussi donnerait
 	//  deux gestions d'erreur pour une intention, et c'est précisément ce que ce
 	//  lot retire.
-	return tenter(action, succes);
+	return tenter(action, succes, repli);
 }

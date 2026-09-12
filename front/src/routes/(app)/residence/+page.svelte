@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { confirmer, SUPPRESSION } from '$lib/confirmation';
+	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
+	import { tenter, messageErreur } from '$lib/erreurs';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import { perimetreLabel, estPerimetreParDefaut } from '$lib/perimetres';
 	import Icon from '$lib/components/Icon.svelte';
@@ -15,7 +16,6 @@
 		uploads as uploadsApi,
 		documents as documentsApi,
 		diagnostics as diagnosticsApi,
-		ApiError,
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
@@ -206,8 +206,8 @@
 			if (idDoc !== null) revelerCible(`doc-${idDoc}`);
 			const idDiag = cibleDuHash('diag');
 			if (idDiag !== null) revelerCible(`diag-${idDiag}`);
-		} catch {
-			toast('error', 'Erreur de chargement');
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur de chargement'));
 		} finally {
 			loading = false;
 		}
@@ -227,7 +227,7 @@
 
 	async function saveEdit() {
 		saving = true;
-		try {
+		await tenter(async () => {
 			copropriete = await coproprieteApi.update({
 				nom: editNom || undefined,
 				adresse: editAdresse || undefined,
@@ -237,12 +237,8 @@
 				numero_immatriculation: editImmatriculation || undefined,
 			});
 			editing = false;
-			toast('success', 'Résidence mise à jour');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			saving = false;
-		}
+		}, 'Résidence mise à jour');
+		saving = false;
 	}
 
 	// ── Photo ──────────────────────────────────────────────────────────────────
@@ -250,30 +246,33 @@
 		const file = (e.target as HTMLInputElement).files?.[0];
 		if (!file) return;
 		uploadingPhoto = true;
-		try {
-			const { url } = await uploadsApi.residence(file);
-			if (copropriete) copropriete = { ...copropriete, photo_url: url };
-			toast('success', 'Photo mise à jour');
-		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur upload');
-		} finally {
-			uploadingPhoto = false;
-			(e.target as HTMLInputElement).value = '';
-		}
+		await tenter(
+			async () => {
+				const { url } = await uploadsApi.residence(file);
+				if (copropriete) copropriete = { ...copropriete, photo_url: url };
+			},
+			'Photo mise à jour',
+			'Erreur upload',
+		);
+		uploadingPhoto = false;
+		(e.target as HTMLInputElement).value = '';
 	}
 
 	// ── Plans ──────────────────────────────────────────────────────────────────
 	async function addPlan() {
 		const fichier = newPlanFichiers?.[0];
 		if (!catIdPlan || !newPlanTitre.trim() || !fichier) return;
+		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure
+		//  le fait que la garde ci-dessus a écarté `null`.
+		const categorieId = catIdPlan;
 		savingPlan = true;
-		try {
+		await tenter(async () => {
 			//  Le périmètre décrit DE QUOI parle le plan ; il ne restreint pas sa
 			//  lecture — même règle que le CR d'AG ci-dessous, et même raison
 			//  (migration 0159). Les droits restent à `résidence`.
 			const doc = await documentsApi.upload({
 				titre: newPlanTitre.trim(),
-				categorieId: catIdPlan,
+				categorieId,
 				file: fichier,
 				description: newPlanDescription.trim(),
 				perimetreCible: newPlanPerimetre,
@@ -284,34 +283,39 @@
 			newPlanDescription = '';
 			newPlanPerimetre = [];
 			newPlanFichiers = null;
-			toast('success', 'Plan ajouté');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingPlan = false;
-		}
+		}, 'Plan ajouté');
+		savingPlan = false;
+	}
+
+	/**  Supprimer un document de l'une des trois sections.
+	 *
+	 *   🔴 Les trois suppressions — plan, règlement, CR d'AG — étaient écrites au
+	 *   caractère près, à quarante lignes d'intervalle, et avaient déjà divergé
+	 *   sur ce qu'elles annonçaient (« Plan supprimé » contre « Supprimé »). Seul
+	 *   change ce qu'on retire de quelle liste : c'est le paramètre. */
+	async function supprimerDocument(id: number, quoi: string, retirer: (id: number) => void) {
+		await confirmerPuis(SUPPRESSION(quoi), 'Document supprimé', async () => {
+			await documentsApi.delete(id);
+			retirer(id);
+		});
 	}
 
 	async function deletePlan(id: number) {
-		if (!(await confirmer(SUPPRESSION('Ce plan')))) return;
-		try {
-			await documentsApi.delete(id);
-			plans = plans.filter((d) => d.id !== id);
-			toast('success', 'Plan supprimé');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		await supprimerDocument(id, 'Ce plan', (i) => (plans = plans.filter((d) => d.id !== i)));
 	}
 
 	// ── Règlement ──────────────────────────────────────────────────────────────
 	async function addReglement() {
 		const fichier = newReglementFichiers?.[0];
 		if (!catIdReglement || !newReglementTitre.trim() || !fichier) return;
+		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure
+		//  le fait que la garde ci-dessus a écarté `null`.
+		const categorieId = catIdReglement;
 		savingReglement = true;
-		try {
+		await tenter(async () => {
 			const doc = await documentsApi.upload({
 				titre: newReglementTitre.trim(),
-				categorieId: catIdReglement,
+				categorieId,
 				file: fichier,
 				description: newReglementDescription.trim(),
 			});
@@ -320,23 +324,16 @@
 			newReglementTitre = '';
 			newReglementDescription = '';
 			newReglementFichiers = null;
-			toast('success', 'Règlement ajouté');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingReglement = false;
-		}
+		}, 'Règlement ajouté');
+		savingReglement = false;
 	}
 
 	async function deleteReglement(id: number) {
-		if (!(await confirmer(SUPPRESSION('Ce document')))) return;
-		try {
-			await documentsApi.delete(id);
-			reglements = reglements.filter((d) => d.id !== id);
-			toast('success', 'Supprimé');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		await supprimerDocument(
+			id,
+			'Ce règlement',
+			(i) => (reglements = reglements.filter((d) => d.id !== i)),
+		);
 	}
 
 	// ── CR d'AG ────────────────────────────────────────────────────────────────
@@ -344,15 +341,18 @@
 		const fichier = newCrAgFichiers?.[0];
 		if (!catIdCrAg || !newCrAgTitre.trim() || !fichier) return;
 		if (!newCrAgAnnee || !newCrAgDateAg) return;
+		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure
+		//  le fait que la garde ci-dessus a écarté `null`.
+		const categorieId = catIdCrAg;
 		savingCrAg = true;
-		try {
+		await tenter(async () => {
 			//  🔴 UN PV D'AG N'EST JAMAIS RESTREINT PAR SON PÉRIMÈTRE : le ciblage
 			//  dit de quoi il parle, pas qui peut le lire. Il part donc toujours en
 			//  `résidence` côté DROITS, les périmètres dans `perimetre_cible`.
 			//  Le pourquoi : migration 0159.
 			const doc = await documentsApi.upload({
 				titre: newCrAgTitre.trim(),
-				categorieId: catIdCrAg,
+				categorieId,
 				file: fichier,
 				description: newCrAgDescription.trim(),
 				annee: newCrAgAnnee ? Number(newCrAgAnnee) : undefined,
@@ -367,23 +367,16 @@
 			newCrAgDateAg = '';
 			newCrAgPerimetre = [];
 			newCrAgFichiers = null;
-			toast('success', "CR d'AG ajouté");
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingCrAg = false;
-		}
+		}, "CR d'AG ajouté");
+		savingCrAg = false;
 	}
 
 	async function deleteCrAg(id: number) {
-		if (!(await confirmer(SUPPRESSION('Ce document')))) return;
-		try {
-			await documentsApi.delete(id);
-			crAg = crAg.filter((d) => d.id !== id);
-			toast('success', 'Supprimé');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		await supprimerDocument(
+			id,
+			"Ce compte-rendu d'AG",
+			(i) => (crAg = crAg.filter((d) => d.id !== i)),
+		);
 	}
 
 	// ── Édition document ───────────────────────────────────────────────────────────────────
@@ -402,9 +395,12 @@
 
 	async function saveEditDoc() {
 		if (!editingDocId) return;
+		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure
+		//  le fait que la garde ci-dessus a écarté `null`.
+		const docId = editingDocId;
 		savingDoc = true;
-		try {
-			const updated = await documentsApi.update(editingDocId, {
+		await tenter(async () => {
+			const updated = await documentsApi.update(docId, {
 				titre: editingDocTitre.trim() || undefined,
 				//  🔴 Les deux champs que la correction n'envoyait pas (#852) —
 				//  et que le serveur n'acceptait pas non plus. Les ouvrir d'un
@@ -422,12 +418,8 @@
 				crAg = crAg.map((d) => (d.id === editingDocId ? updated : d));
 			}
 			editingDocId = null;
-			toast('success', 'Document mis à jour');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingDoc = false;
-		}
+		}, 'Document mis à jour');
+		savingDoc = false;
 	}
 </script>
 

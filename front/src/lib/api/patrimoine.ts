@@ -86,8 +86,6 @@ export const lots = {
 	//  patrimoine qu'un occupant écrit lui-même : arbitré le 09/09/2026, c'est
 	//  lui qui sait à quel étage il vit.
 	majEtage: (id: number, etage: number | null) => api.patch<any>(`/lots/${id}/etage`, { etage }),
-	mesCommandes: () => api.get<any[]>('/lots/commandes-acces/mes-commandes'),
-	creerCommande: (data: unknown) => api.post<any>('/lots/commandes-acces', data),
 	// Admin — tous les lots
 	tous: () => api.get<any[]>('/lots/admin/tous'),
 	// Admin — import staging

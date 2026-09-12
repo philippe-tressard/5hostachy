@@ -21,7 +21,6 @@ from app.models.core import (
     UserLot,
     Utilisateur,
     RoleUtilisateur,
-    CommandeAcces,
 )
 
 
@@ -199,46 +198,25 @@ def maj_etage_de_mon_lot(
     return _lot_read(lot)
 
 
-@router.get("/commandes-acces/mes-commandes")
-def mes_commandes(
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    stmt = select(CommandeAcces).where(CommandeAcces.user_id == user.id)
-    return session.exec(stmt.order_by(CommandeAcces.cree_le.desc())).all()
-
-
-class CommandeAccesCreate(BaseModel):
-    lot_id: int
-    type_acces: str
-    quantite: int = 1
-    motif: str | None = None
-
-
-@router.post("/commandes-acces", status_code=201)
-def creer_commande_acces(
-    body: CommandeAccesCreate,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    if not user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        user_lot_ids = [ul.lot_id for ul in user.user_lots if ul.actif]
-        if body.lot_id not in user_lot_ids:
-            raise HTTPException(403, "Vous n'êtes pas associé à ce lot.")
-    if body.quantite < 1 or body.quantite > 10:
-        raise HTTPException(400, "Quantité invalide (1-10).")
-    cmd = CommandeAcces(
-        user_id=user.id,
-        lot_id=body.lot_id,
-        type=body.type_acces,
-        quantite=body.quantite,
-        motif=body.motif,
-    )
-    session.add(cmd)
-    session.commit()
-    session.refresh(cmd)
-    return cmd
-
+#  🔴 « COMMANDER UN ACCÈS » N'EXISTE QU'UNE FOIS — ici, il n'existe plus
+#  (12/09/2026).
+#
+#  Ce fichier portait `GET /lots/commandes-acces/mes-commandes` et
+#  `POST /lots/commandes-acces`, qui créaient le MÊME `CommandeAcces` que
+#  `routers/acces/resident.py`. Deux chemins pour un geste, et — c'est le point —
+#  **deux règles d'autorisation différentes** :
+#
+#    * `acces/resident.py` exige un lien `UserLot` avec le lot, et prévient le
+#      conseil syndical par courriel ;
+#    * la copie d'ici laissait passer admin et conseil syndical sans lien,
+#      bornait la quantité à 10, et **ne prévenait personne**.
+#
+#  Aucun écran n'appelait la copie : ses deux méthodes du client étaient
+#  masquées dans `lint:client-appele` par leurs homonymes de `acces` (le
+#  contrôle cherche `.<nom>` sans savoir de quel objet il s'agit — c'est la
+#  limite relevée le 12/09/2026). Une surface d'écriture sans appelant et avec
+#  sa propre règle d'accès est exactement ce que `standards/03` §1 refuse :
+#  l'autorisation se décide à UN endroit.
 
 #  L'atelier d'import vit dans `lots_imports.py` depuis le 09/09/2026 (#835) :
 #  ce fichier avait franchi les 500 lignes, et la règle de modularité est « au
