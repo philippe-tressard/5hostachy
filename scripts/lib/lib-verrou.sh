@@ -110,8 +110,24 @@ verrou_recent() {  # $1 = mtime · $2 = maintenant · $3 = seuil (s) → oui/non
 #  (`auto-deploy`, `health-watch`) ne l'appellent jamais : ils ne prennent que
 #  `verrou_recent` et le seuil.
 verrou_verdicts() {
-  local maintenant pair n t
+  local maintenant pair n t j
   maintenant=$(date +%s)
+  #  ── C26 — le verrou a-t-il été posé AVANT la première action ? ────────────
+  #  🔴 #915 se terminait sur « les tests le vérifient PAR LA FORME DU SCRIPT,
+  #  PAS PAR SON EXÉCUTION ». Celui-ci lit le journal de la dernière bascule
+  #  réellement exécutée. La décision est pure : `verdict_ordre_bascule`.
+  for pair in "$SELF:${S_bascule_journal:-}" "$PEER:${P_bascule_journal:-}"; do
+    n=${pair%%:*}; j=${pair#*:}
+    if [ -z "$j" ]; then
+      warn "Ordre du verrou sur $n : INCONNU — journal de bascule illisible ou absent"
+      continue
+    fi
+    case "$(printf '%s' "$j" | base64 -d 2>/dev/null | verdict_ordre_bascule)" in
+      OK)     ok "Dernière bascule sur $n : verrou posé AVANT la première action" ;;
+      TARDIF) fail "Dernière bascule sur $n : verrou posé APRÈS une action — auto-deploy a pu passer entre les deux (#915)" ;;
+      *)      warn "Ordre du verrou sur $n : INCONNU — aucune pose relevée dans le journal de la dernière bascule" ;;
+    esac
+  done
   #  Le NETTOYAGE journalisé — la seule trace qui subsiste, health-watch effaçant
   #  le verrou lui-même.
   for pair in "$SELF:${S_orphelin_dernier:-inconnu}" "$PEER:${P_orphelin_dernier:-inconnu}"; do

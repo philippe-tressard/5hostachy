@@ -277,6 +277,31 @@ rien » :
 Les deux sont couverts par `--selftest`, y compris le cas « standby avec une
 réponse parasite » : ce n'est pas le site, donc rien à constater.
 
+### C26 — le verrou a-t-il été posé AVANT la première action ? (12/09/2026, #915)
+
+#915 se terminait sur une phrase gênante : *« le verrou est la coordination ;
+elle tient tant que la bascule le pose avant sa première action — ce que les
+tests vérifient **par la forme du script, pas par son exécution** »*.
+
+🔴 Et la forme était fausse : `bascule.sh` arrêtait les conteneurs du peer
+**puis** posait le verrou dix lignes plus bas. Corrigé le 12/09.
+
+C26 lit le journal de la **dernière bascule réellement exécutée** et vérifie
+l'ordre sur les faits — c'est la différence entre *« le script est écrit ainsi »*
+et *« il s'est comporté ainsi »* : un chemin conditionnel ou une modification
+future peuvent séparer les deux.
+
+| Ce que C26 rend | Conduite |
+|---|---|
+| `verrou posé AVANT la première action` | — |
+| **`posé APRÈS une action`** (FAIL) | une modification a déplacé `verrou_poser` : le remettre avant le bloc « Peer sans conteneurs actifs », et relire `test_verrou_bascule.py` qui aurait dû le refuser |
+| `INCONNU` | journal absent, tronqué par la rotation, ou bascule sans pose relevée |
+
+⚠️ Deux formulations coexistent dans l'historique — « posé sur le peer » (avant
+#916) et « posé sur les DEUX nœuds » (après). Le contrôle accepte les deux :
+n'en reconnaître qu'une le rendrait INCONNU sur tout l'historique, et on
+prendrait l'habitude de l'ignorer.
+
 ### C12 — une bascule a-t-elle été TUÉE ? L'ACTE, pas l'objet (12/09/2026, #915)
 
 Ce contrôle lisait l'**âge du verrou** `.bascule-lock`. Il ne pouvait donc

@@ -65,5 +65,41 @@ verrou_selftest() {
     vo "journal vide"                   INCONNU "" 1000000 86400
     vo "horodatage du futur"            INCONNU 1000600 1000000 86400
 
+
+    echo "-- verdict_ordre_bascule (C26) --"
+    vo2() { # description attendu journal
+      local desc="$1" exp="$2" journal="$3"
+      local got; got=$(printf '%s' "$journal" | verdict_ordre_bascule)
+      if [ "$got" = "$exp" ]; then echo "PASS  $desc  → $got"
+      else echo "FAIL  $desc  attendu=$exp obtenu=$got"; st_fail=1; fi
+    }
+    #  L'ordre CORRECT : la pose précède l'arrêt des conteneurs du peer.
+    vo2 "pose puis action" OK \
+      '===== Bascule rpi1 → rpi2 =====
+[0/7] Pre-flight...
+  → Lock bascule posé sur les DEUX nœuds
+  ⚠ Peer a 4 conteneur(s) actif(s) — arrêt avant bascule.
+[1/7] Sync uploads...'
+    #  🔴 L'ORDRE FAUTIF, celui d'avant le 12/09/2026 : les conteneurs du peer
+    #  étaient arrêtés AVANT la pose, et `auto-deploy` pouvait passer entre les
+    #  deux. Ce cas est la raison d'être du contrôle.
+    vo2 "action puis pose : TARDIF" TARDIF \
+      '===== Bascule rpi1 → rpi2 =====
+  ⚠ Peer a 4 conteneur(s) actif(s) — arrêt avant bascule.
+  → Lock bascule posé sur le peer.
+[1/7] Sync uploads...'
+    #  L'ancienne formulation (avant #916) doit rester reconnue : sinon le
+    #  contrôle rendrait INCONNU sur tout l'historique, et on l'ignorerait.
+    vo2 "formulation d'avant #916" OK \
+      '  → Lock bascule posé sur le peer.
+[1/7] Sync uploads...'
+    #  Une bascule arrêtée avant toute action : rien à reprocher.
+    vo2 "pose seule, pas d'action" OK '  → Lock bascule posé sur le peer.'
+    #  🔴 LE CAS ZÉRO : journal tronqué par la rotation, ou bascule qui n'a pas
+    #  posé. On ne sait pas — et c'est le cas le PLUS probable en production.
+    vo2 "aucune pose relevée" INCONNU '[0/7] Pre-flight...
+[1/7] Sync uploads...'
+    vo2 "journal vide" INCONNU ''
+
   return ${st_fail:-0}
 }

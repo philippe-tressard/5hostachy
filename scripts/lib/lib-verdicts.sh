@@ -102,6 +102,46 @@ bascule_en_cours() {  # $1,$2 = mtimes des verrous · $3 = maintenant · $4 = se
   echo "non"
 }
 
+# ── C26. Le verrou a-t-il été posé AVANT la première action ? (PURE) ─────────
+#
+# 🔴 #915 se terminait sur : « le verrou est la coordination ; elle tient tant
+# que la bascule le pose AVANT sa première action — ce que les tests vérifient
+# PAR LA FORME DU SCRIPT, PAS PAR SON EXÉCUTION ».
+#
+# Ce contrôle lit le journal de la DERNIÈRE bascule réellement exécutée et
+# vérifie cet ordre sur les faits. C'est la différence entre « le script est
+# écrit ainsi » et « il s'est comporté ainsi » : un chemin conditionnel, un
+# `set -e` mal placé ou une modification future peuvent séparer les deux.
+#
+# ⚠️ La première ACTION est l'arrêt des conteneurs du peer — la seule chose que
+# la bascule fasse avant la phase 1. Ce qui la précède ne fait que lire.
+#
+# ⚠️ Deux formulations coexistent dans l'historique : « posé sur le peer »
+# (avant #916) et « posé sur les DEUX nœuds » (après). Le motif accepte les
+# deux — sinon le contrôle rendrait INCONNU sur toutes les bascules passées et
+# on prendrait l'habitude de l'ignorer.
+verdict_ordre_bascule() {  # entrée : le journal de la dernière bascule, sur stdin
+                           # → OK | TARDIF | INCONNU
+  local ligne n=0 n_pose=0 n_action=0
+  #  ⚠️ `|| [ -n "$ligne" ]` : sans lui, une dernière ligne SANS saut final est
+  #  perdue — et c'est exactement la forme qu'un `tail` ou un journal tronqué
+  #  produit. Trouvé par l'auto-test, qui rendait INCONNU sur un journal d'une
+  #  seule ligne : le cas le plus court était le seul mal lu.
+  while IFS= read -r ligne || [ -n "$ligne" ]; do
+    n=$((n + 1))
+    case "$ligne" in
+      *"Lock bascule posé"*) [ "$n_pose" -eq 0 ] && n_pose=$n ;;
+      *"conteneur(s) actif(s)"*|*"[1/7]"*) [ "$n_action" -eq 0 ] && n_action=$n ;;
+    esac
+  done
+  #  Journal vide, tronqué, ou bascule sans pose : on ne SAIT pas. Jamais OK —
+  #  c'est le cas zéro, et il est le plus probable ici (rotation du journal).
+  [ "$n_pose" -eq 0 ] && { echo INCONNU; return; }
+  #  Aucune action relevée : la bascule s'est arrêtée avant, rien à reprocher.
+  [ "$n_action" -eq 0 ] && { echo OK; return; }
+  [ "$n_pose" -lt "$n_action" ] && echo OK || echo TARDIF
+}
+
 # ── C12. Une bascule a-t-elle été TUÉE ? (PURE — testable) ───────────────────
 #
 # 🔴 C12 mesurait l'ÂGE du verrou, et il ne pouvait donc jamais alerter : à
