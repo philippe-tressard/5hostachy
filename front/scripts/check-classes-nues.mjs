@@ -132,9 +132,13 @@ const TOLEREES = {
 	//  ce contrôle a échoué au découpage parce qu'elle était restée sur l'ancien,
 	//  et c'est la bonne façon d'échouer — l'entrée devenue inutile fait échouer.
 	'lib/components/reporting/VueRenouvellementsContrats.svelte': ['frise-month-label'],
-	//  🔴 La notation par étoiles : `class:active` sur chaque étoile, et aucune
-	//  règle — l’étoile choisie ne se distingue pas de celle qu’on n’a pas prise.
-	'routes/(app)/prestataires/+page.svelte': ['star-btn'],
+	//  ✅ Tolérance TOMBÉE le 12/09/2026, et par la factorisation, pas par un lot
+	//  de style : la SAISIE d'une note a rejoint `NoteEtoiles` — le composant qui
+	//  rendait déjà sa LECTURE. Saisir et lire une note sont deux rendus du même
+	//  objet (R3), et l'étoile choisie y porte enfin la teinte qu'on relira
+	//  ensuite. La page écrivait ses couleurs EN LIGNE, donc une sixième écriture
+	//  de la note — celle-là même que `NoteEtoiles` avait supprimée pour les cinq
+	//  autres.
 	//  ⚠️ `ListeSondages` → `sondage-body` A DISPARU le 06/09/2026 : la carte est
 	//  passée à `EnteteCarte` (#794) et n'a plus de conteneur de corps. Le
 	//  contrôle l'a signalée comme tolérance morte le jour même — c'est la

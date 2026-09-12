@@ -75,6 +75,20 @@
 	export let libelleEnCours = 'Enregistrement…';
 	export let libelleAnnuler = 'Annuler';
 
+	/**  Le geste est-il DESTRUCTIF ? Le bouton de soumission passe alors en rouge.
+	 *
+	 *  🔴 Ajouté le 12/09/2026 plutôt que contourné. Les gestes qui s'ouvrent dans
+	 *  la carte de leur objet (#889) portaient des `btn-danger` écrits à la main —
+	 *  « Terminer le bail », « Supprimer ». Sans cette prop, chaque appelant aurait
+	 *  refait son pied pour changer une couleur, et `lint:pied-formulaire` a montré
+	 *  où cela mène : neuf pieds, deux orthographes du même événement, trois
+	 *  « Annuler » sans `type="button"`.
+	 *
+	 *  ⚠️ Elle porte sur le SENS du geste, pas sur l'écran : c'est la seule
+	 *  variante admise ici. Une prop par nuance d'apparence rouvrirait la porte
+	 *  que ce composant a fermée. */
+	export let danger = false;
+
 	const dispatch = createEventDispatcher<{ annule: void; enregistre: void }>();
 </script>
 
@@ -91,7 +105,9 @@
 	{#if soumission}
 		<button
 			type="submit"
-			class="btn btn-primary"
+			class="btn"
+			class:btn-primary={!danger}
+			class:btn-danger={danger}
 			class:btn-sm={petit}
 			disabled={enCours || desactive}
 		>
@@ -100,7 +116,9 @@
 	{:else}
 		<button
 			type="button"
-			class="btn btn-primary"
+			class="btn"
+			class:btn-primary={!danger}
+			class:btn-danger={danger}
 			class:btn-sm={petit}
 			disabled={enCours || desactive}
 			on:click={() => dispatch('enregistre')}

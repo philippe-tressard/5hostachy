@@ -41,13 +41,50 @@
 	 *   retirerait une information à l'un ou du bruit à l'autre. */
 	export let surCinq = false;
 
+	/**  Mode SAISIE : cinq étoiles cliquables au lieu d'un texte.
+	 *
+	 *  🔴 Ajouté le 12/09/2026 plutôt que d'écrire un second composant. La saisie
+	 *  vivait dans `prestataires/+page.svelte`, en cinq `<button>` portant leurs
+	 *  couleurs EN LIGNE (`#f59e0b`, `#d1d5db`) — c'est-à-dire une sixième
+	 *  écriture de la note, celle-là même que ce composant a supprimée pour
+	 *  l'affichage. Saisir et lire une note sont deux rendus du MÊME objet
+	 *  (`ux-patterns` R3) : ils appartiennent au même fichier.
+	 *
+	 *  ⚠️ En saisie, `note` est LIÉE (`bind:note`) : c'est ce que l'utilisateur
+	 *  choisit, pas ce qu'on lui montre. Et la teinte ne s'applique pas — elle
+	 *  juge un prestataire, elle ne commente pas un clic en cours. */
+	export let saisie = false;
+	/** Ce que le survol laisse prévoir, sans encore rien choisir. */
+	let survol = 0;
+
 	//  🔴 LES SEUILS, à UN endroit. Ils décident d'une teinte que le lecteur
 	//  interprète comme un jugement : les recopier, c'est accepter que le même
 	//  prestataire paraisse « correct » sur un écran et « mécontent » sur l'autre.
 	$: teinte = note == null ? '' : note < 3 ? 'bad' : note < 4 ? 'ok' : 'good';
 </script>
 
-{#if note != null}
+{#if saisie}
+	<!--  Les cinq étoiles : littérales et distinctes, chacune sa propre clé. -->
+	<div class="note-saisie" role="group" aria-label="Note sur 5">
+		{#each [1, 2, 3, 4, 5] as valeur (valeur)}
+			<button
+				type="button"
+				class="note-etoile"
+				class:note-etoile-pleine={(survol || note || 0) >= valeur}
+				aria-label="{valeur} sur 5"
+				aria-pressed={(note ?? 0) >= valeur}
+				on:click={() => (note = valeur)}
+				on:mouseenter={() => (survol = valeur)}
+				on:mouseleave={() => (survol = 0)}
+			>
+				{(survol || note || 0) >= valeur ? '★' : '☆'}
+			</button>
+		{/each}
+	</div>
+	{#if note}
+		<p class="note-choisie">{note}/5</p>
+	{/if}
+{:else if note != null}
 	<!--  ⚠️ `class:` et non `class="note-etoiles {teinte}"` (#810) : devant un
 	      ternaire INTERPOLÉ, Svelte cesse de déclarer les sélecteurs inutilisés
 	      pour TOUT le fichier, et `lint:css-orphelin` y devient aveugle sans le
@@ -67,6 +104,34 @@
 {/if}
 
 <style>
+	/*  La saisie : des étoiles assez grandes pour être visées au doigt — 44 px de
+	    cible tactile, la norme du produit (`standards/11` §10). */
+	.note-saisie {
+		display: inline-flex;
+		gap: 0.25rem;
+	}
+	.note-etoile {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: 2rem;
+		line-height: 1;
+		min-width: 44px;
+		min-height: 44px;
+		color: var(--color-border);
+		transition: color 0.15s;
+	}
+	/*  ⚠️ La MÊME teinte que `note-ok` : les couleurs de la note vivent dans ce
+	    fichier, et une étoile choisie ne peut pas être d'un autre orange que
+	    celui qu'on relira ensuite. */
+	.note-etoile-pleine {
+		color: #f59e0b;
+	}
+	.note-choisie {
+		margin: 0.25rem 0 0;
+		font-size: 0.9rem;
+		color: var(--color-text-muted);
+	}
 	/*  Taille et césure reprises de `.frise-stars`, d'où ce composant est né. */
 	.note-etoiles {
 		font-size: 0.78rem;

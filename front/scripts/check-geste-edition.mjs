@@ -122,10 +122,6 @@ const MODALES = {
 		'ce n’est PAS la correction d’un objet de liste mais un sous-écran entier (accès Vigik et télécommandes d’un bail, plusieurs listes et plusieurs gestes). À trancher devant l’écran. #889',
 	'routes/(app)/admin/+page.svelte':
 		'accueil du nouvel arrivant — un geste sur un utilisateur EXISTANT, déclenché depuis l’annuaire et non depuis une liste de comptes en attente. La validation, elle, est convertie (12/09/2026). #889',
-	'routes/(app)/mon-lot/+page.svelte':
-		'terminer un bail : un geste à deux champs sur un objet de liste. #889',
-	'routes/(app)/prestataires/+page.svelte':
-		'noter un prestataire depuis la carte d’un contrat — le geste vise le PRESTATAIRE, pas le contrat affiché : la fenêtre y est peut-être juste. #889',
 };
 
 function fichiers(dir, acc = []) {
