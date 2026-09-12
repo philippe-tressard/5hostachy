@@ -151,7 +151,7 @@
 	//  `uploadInputKey` ont disparu avec le bloc dupliqué (#370). Ils étaient
 	//  UNIQUES pour toute la page alors que le bloc était affiché à deux endroits :
 	//  choisir un fichier dans le formulaire d'édition le faisait apparaître dans
-	//  la carte dépliée. Chaque `AjoutDocumentContrat` porte désormais le sien.
+	//  la carte dépliée. Chaque `DocumentsContrat` porte désormais le sien.
 
 	let filtreEquipement = '';
 	let filtreType = '';
@@ -494,7 +494,7 @@
 		}
 	}
 
-	//  L'ENVOI vit dans `AjoutDocumentContrat` ; il ne reste ici que le rechargement
+	//  L'ENVOI vit dans `DocumentsContrat` ; il ne reste ici que le rechargement
 	//  de la liste, qui appartient à la page puisque c'est elle qui l'affiche.
 	async function rechargerDocs(contratId: number) {
 		contratDocsMap = { ...contratDocsMap, [contratId]: await docsApi.list(undefined, contratId) };

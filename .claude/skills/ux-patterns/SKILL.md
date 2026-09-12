@@ -1334,9 +1334,24 @@ conteneur, le titre (icône + libellé + taille), le retour et la zone d'actions
 
 ```svelte
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'newspaper'}>
-  {#if $isCS}<button class="btn btn-primary page-header-btn">+ Nouvelle publication</button>{/if}
+  {#if $isCS}
+    <BoutonNouveau ouvert={showForm} libelle="Nouvelle publication" on:basculer={() => (showForm = true)} />
+  {/if}
 </EntetePage>
 ```
+
+🔴 **Le bouton d'ouverture passe par `BoutonNouveau`** — il ne s'écrit plus à la
+main (12/09/2026). Il porte le « + », le libellé, et surtout **l'effacement
+pendant la saisie** : l'annulation vit à côté d'« Enregistrer », jamais en double
+dans l'en-tête (#367, norme du 18/08/2026).
+
+⚠️ **Ce composant a porté la règle INVERSE pendant quatre semaines.** Créé le
+16/08 avec la bascule « + … » ⇆ « ✕ Annuler », il n'a pas suivi la révision du
+18/08 — que Tickets et Actualités ont appliquée, chacun en la recopiant chez lui.
+Trois écritures, dont une périmée, et son en-tête affirmait porter la bonne.
+Prestataires, son unique appelant, affichait donc « ✕ Annuler » **même en
+édition** — on n'annule pas une création qui n'a pas lieu — jusqu'au signalement
+de l'utilisateur. *Une consigne fausse fait lire l'écart comme une décision.*
 
 | Prop | Rôle |
 |---|---|

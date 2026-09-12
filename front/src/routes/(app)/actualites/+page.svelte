@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { PUBLICATION } from '$lib/entites/publication';
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import { onMount } from 'svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { currentUser, isCS, isAdmin, setUser } from '$lib/stores/auth';
@@ -302,16 +303,17 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<!--  L'en-tête n'OUVRE plus que le formulaire : l'annulation vit à côté
-      d'« Enregistrer », dans le formulaire (norme du 18/08/2026, posée sur
-      Tickets puis étendue). Le bouton s'efface pendant la saisie — le laisser en
-      « ✕ Annuler » ferait deux commandes d'annulation pour un seul formulaire
-      (#367). -->
+<!--  La règle — l'en-tête n'OUVRE que le formulaire, le bouton s'efface pendant
+      la saisie (18/08/2026, #367) — est PORTÉE par `BoutonNouveau` depuis le
+      12/09. Elle était recopiée ici et dans Tickets, et le composant portait
+      encore la version du 16/08 qu'elle remplace. -->
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'newspaper'}>
-	{#if $isCS && !showForm}
-		<button class="btn btn-primary page-header-btn" on:click={() => (showForm = true)}>
-			+ Nouvelle publication
-		</button>
+	{#if $isCS}
+		<BoutonNouveau
+			ouvert={showForm}
+			libelle="Nouvelle publication"
+			on:basculer={() => (showForm = true)}
+		/>
 	{/if}
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>

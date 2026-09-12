@@ -113,7 +113,7 @@
 	 *
 	 *  🔴 11/09/2026, signalé à l'écran : le dépôt d'un document différait entre
 	 *  les contrats et les tickets. Les contrats portaient un champ « Titre »
-	 *  écrit à la main dans `AjoutDocumentContrat`, les tickets n'en avaient
+	 *  écrit à la main par les CONTRATS, les tickets n'en avaient
 	 *  aucun — deux gestes pour une même chose, et un fichier de ticket ne
 	 *  pouvait porter que le nom que son auteur avait donné sur son disque.
 	 *
@@ -122,12 +122,24 @@
 	 *  l'active l'obtient au même endroit, avec le même intitulé.
 	 *
 	 *  ⚠️ Optionnel au sens propre : vide, c'est le nom du fichier qui sert. La
-	 *  règle est celle qu'`AjoutDocumentContrat` appliquait déjà
+	 *  règle est celle que les contrats appliquaient déjà
 	 *  (`titre.trim() || fichier.name`) — elle n'est pas inventée ici, elle est
 	 *  remontée d'un cran. */
 	export let avecLibelle = false;
 	/**  Le libellé saisi — à lier avec `bind:` par qui envoie le fichier. */
 	export let libelleFichier = '';
+
+	/**  Le nom à AFFICHER pour une URL donnée — `{ url: 'contrat-2024.pdf' }`.
+	 *
+	 *  🔴 Ajouté le 12/09/2026 pour que les CONTRATS emploient ce composant au
+	 *  lieu de leur liste maison. Leurs documents sont des entités `Document`
+	 *  servies par `/documents/<id>/télécharger` : l'URL ne porte ni le nom du
+	 *  fichier ni son extension, donc `nomFichier(u)` rendait « télécharger » et
+	 *  `typeFichier` ne pouvait deviner aucun type.
+	 *
+	 *  ⚠️ Une table de noms, pas un modèle : ce composant continue d'ignorer ce
+	 *  qu'est un `Document`. L'appelant traduit, et lui seul. */
+	export let noms: Record<string, string> = {};
 
 	//  `mode` sert au rendu (vignettes ou liste). Quand il n'est pas donné, le
 	//  libellé se déduit d'`accept` plutôt que du défaut : plusieurs champs de
@@ -197,10 +209,16 @@
 				fichier: f,
 			}))
 		: (({ photos, documents }) => [
-				...photos.map((u): Piece => ({ cle: u, nom: nomFichier(u), apercu: u, fichier: null })),
+				...photos.map((u): Piece => ({
+					cle: u,
+					nom: noms[u] ?? nomFichier(u),
+					apercu: u,
+					fichier: null,
+				})),
 				...documents.map((u): Piece => ({
 					cle: u,
-					nom: nomFichier(u),
+					//  `noms` prime : une URL de téléchargement ne nomme pas son fichier.
+					nom: noms[u] ?? nomFichier(u),
 					apercu: null,
 					fichier: null,
 				})),
