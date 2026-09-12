@@ -74,6 +74,18 @@ echo "lock=$([ -f $R/.bascule-lock ] && stat -c %Y $R/.bascule-lock || echo 0)"
 # ⚠️ On rapporte un FAIT BRUT (un horodatage, un compte) : la fraicheur est
 # decidee par verdict_verrou_orphelin(), pure et eprouvee. Et aucune apostrophe
 # ici — ces lignes sont DANS la chaine simple-quotee.
+# Le journal de la DERNIERE bascule executee sur ce noeud, depuis son marqueur
+# de debut. C26 y verifie que le verrou a ete pose AVANT la premiere action —
+# la verification PAR L EXECUTION que #915 reclamait, la forme du script etant
+# deja verifiee par `test_verrou_bascule.py`.
+# ⚠️ Encode en base64 : ces lignes contiennent des accents, des fleches et des
+# retours a la ligne, et elles voyagent dans un `parse` qui decoupe sur `=`.
+BL=/var/log/hostachy-bascule.log
+if [ -f "$BL" ]; then
+  echo "bascule_journal=$(awk "/===== Bascule [a-z0-9]+ /{n=NR} END{print n}" "$BL" | { read d; [ -n "$d" ] && [ "$d" -gt 0 ] && tail -n "+$d" "$BL" | head -60 | base64 -w0; })"
+else
+  echo "bascule_journal="
+fi
 HWL=/var/log/hostachy-health-watch.log
 if [ -f "$HWL" ]; then
   echo "orphelins=$(grep -c -E "bascule-lock orphelin" "$HWL" 2>/dev/null || echo 0)"
