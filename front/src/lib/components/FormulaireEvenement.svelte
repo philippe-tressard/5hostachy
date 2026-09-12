@@ -17,7 +17,6 @@
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
-	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { EVENEMENT } from '$lib/entites/evenement';
@@ -226,8 +225,62 @@
 	      rangée dans la DIFFUSION, qui dit qui le voit et non où il en est.
 	      Aucun second champ d'état n'a été créé : deux notions de suivi sur le
 	      même objet se contredisent au premier écart. -->
-			{#if sectionPresente(EVENEMENT, etat, 'workflow')}
-				<SectionFormulaire titre="Workflow" idTitre="ev-kanban-titre">
+			<!--  3 à 10 : ordre, intitulés et séparations hérités du composant partagé.
+	      Leur PRÉSENCE, elle, se lit dans la déclaration — plus aucune n'est
+	      posée en dur (R4).
+
+	      🔴 Le WORKFLOW et l'ÉPINGLAGE l'ont rejoint le 12/09/2026, signalés à
+	      l'écran. Le premier tenait son rang à la main, au-dessus de cet appel ;
+	      le second était une case écrite ICI, dans la Diffusion, avec son propre
+	      glyphe — alors que `$lib/options-publication` porte la notion et que
+	      tous les autres écrans la rendent dans « Options de publication ».
+	      Deux écarts, une seule cause : un ordre écrit dans une documentation ne
+	      se tient pas seul. -->
+			<ChampsCommuns
+				avecOptions={sectionPresente(EVENEMENT, etat, 'diffusion')}
+				objet="événement"
+				optionsRendues={['epingle']}
+				dejaEpingle={epingleInitial}
+				bind:epingle={form.epingle}
+				epingleInterdit={form.affichable
+					? ''
+					: 'Un événement absent du fil d’activité ne peut pas y être épinglé.'}
+				avecWorkflow={sectionPresente(EVENEMENT, etat, 'workflow')}
+				demanderApercu={brouillonApercu}
+				bind:refDiffusion
+				envoiEnCours={submitting}
+				on:envoyer={confirmerEnvoi}
+				idPrefixe="ev"
+				avecPerimetre={sectionPresente(EVENEMENT, etat, 'perimetre')}
+				bind:perimetre={formPerimetreCible}
+				avecDescription={sectionPresente(EVENEMENT, etat, 'description')}
+				bind:description={form.description}
+				descriptionPlaceholder="Description de l'événement…"
+				avecPhotos={sectionPresente(EVENEMENT, etat, 'photos')}
+				bind:photos={photosUrls}
+				avecDocuments={sectionPresente(EVENEMENT, etat, 'documents')}
+				bind:documents={fichiersUrls}
+				avecDiffusion={sectionPresente(EVENEMENT, etat, 'diffusion')}
+				bind:whatsapp={form.partager_whatsapp}
+				bind:syndic={form.envoyer_syndic}
+				bind:cs={form.envoyer_cs}
+				bind:auteur={envoyerAuteur}
+				auteurNom={form?.auteur_nom ?? ''}
+			>
+				<svelte:fragment slot="workflow">
+					<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). Norme posée sur
+			      Tickets, constatée, puis étendue ici (R5).
+			      ⚠️ « Pas de suivi Kanban » est une pastille comme les autres, et elle
+			      est active par défaut : l'absence de suivi est un choix qui se voit,
+			      pas une option vide en tête d'une liste déroulante. La section n'est
+			      donc PAS requise — un événement peut légitimement n'avoir aucun
+			      suivi, à la différence de l'état d'un ticket.
+
+			      ⚠️ Le mot « Kanban » est dans le libellé depuis le 19/08/2026,
+			      demandé à l'écran. Sans lui, « Pas de suivi » se lisait comme « ce
+			      dossier n'est pas suivi » — alors que les six autres pastilles
+			      nomment des COLONNES du Kanban, et que l'événement reste évidemment
+			      suivi par son fil d'historique. -->
 					<div class="field champ-large">
 						<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). Norme posée sur
 			      Tickets, constatée, puis étendue ici (R5).
@@ -252,34 +305,7 @@
 							on:choisir={(e) => (form.statut_kanban = e.detail)}
 						/>
 					</div>
-				</SectionFormulaire>
-			{/if}
-
-			<!--  4 à 9 : ordre, intitulés et séparations hérités du composant partagé.
-	      Leur PRÉSENCE, elle, se lit dans la déclaration — plus aucune n'est
-	      posée en dur (R4). -->
-			<ChampsCommuns
-				demanderApercu={brouillonApercu}
-				bind:refDiffusion
-				envoiEnCours={submitting}
-				on:envoyer={confirmerEnvoi}
-				idPrefixe="ev"
-				avecPerimetre={sectionPresente(EVENEMENT, etat, 'perimetre')}
-				bind:perimetre={formPerimetreCible}
-				avecDescription={sectionPresente(EVENEMENT, etat, 'description')}
-				bind:description={form.description}
-				descriptionPlaceholder="Description de l'événement…"
-				avecPhotos={sectionPresente(EVENEMENT, etat, 'photos')}
-				bind:photos={photosUrls}
-				avecDocuments={sectionPresente(EVENEMENT, etat, 'documents')}
-				bind:documents={fichiersUrls}
-				avecDiffusion={sectionPresente(EVENEMENT, etat, 'diffusion')}
-				bind:whatsapp={form.partager_whatsapp}
-				bind:syndic={form.envoyer_syndic}
-				bind:cs={form.envoyer_cs}
-				bind:auteur={envoyerAuteur}
-				auteurNom={form?.auteur_nom ?? ''}
-			>
+				</svelte:fragment>
 				<svelte:fragment slot="diffusion">
 					<div class="field champ-large">
 						<label class="case">
@@ -290,14 +316,6 @@
 							/>
 							<span>Afficher dans le fil d'activité du tableau de bord</span>
 						</label>
-						<label class="case" class:desactive={!form.affichable}>
-							<input type="checkbox" bind:checked={form.epingle} disabled={!form.affichable} />
-							<span>📌 Épingler dans le fil d'activité</span>
-						</label>
-						<AlerteEpinglage coche={form.epingle} dejaEpingle={epingleInitial} />
-						{#if !form.affichable}
-							<p class="aide sous-case">Un événement absent du fil ne peut pas y être épinglé.</p>
-						{/if}
 						{#if form.type === 'maintenance_recurrente'}
 							<p class="aide sous-case">
 								Les maintenances récurrentes restent hors du fil d'activité : elles se suivent dans
@@ -332,13 +350,6 @@
 	    annuler le `width:100%` des champs de saisie. Nommés ici, ils cessent
 	    d'être à réécrire — c'est la même famille de défaut que le sélecteur nu
 	    qui a étiré les cases de l'écran Communauté (16/08/2026). */
-	.case + .case {
-		margin-top: 0.4rem;
-	}
-	.desactive {
-		opacity: 0.55;
-		cursor: not-allowed;
-	}
 	/*  `.aide-case` est passée dans app.css le 17/08/2026 : FormulaireSondage en
 	    avait besoin, et Svelte scope les styles — la reprendre ici en aurait fait
 	    une seconde définition libre de diverger. */

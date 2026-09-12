@@ -1001,17 +1001,42 @@ donc à `PerimetrePicker` et au sélecteur de destinataires, partout.
 
 ### 9 sexies. L'ORDRE des champs est imposé — il ne se discute pas par écran
 
-| # | Section |
-|---|---|
-| 1 | **Titre** |
-| 2 | **Champs spécifiques** à la page |
-| 3 | **Workflow** — si l'objet en a un |
-| 4 | **Périmètre** |
-| 5 | **Destinataires** |
-| 6 | **Description** |
-| 7 | **Photos** |
-| 8 | **Documents** |
-| 9 | **Diffusion** |
+| # | Section | Qui l'écrit |
+|---|---|---|
+| 1 | **Titre** | l'écran |
+| 2 | **Champs spécifiques** à la page | l'écran |
+| 3 | **Options de publication** — si l'objet en a | `ChampsCommuns` |
+| 4 | **Workflow** — si l'objet en a un | `ChampsCommuns` (contenu par `slot`) |
+| 5 | **Périmètre** | `ChampsCommuns` |
+| 6 | **Destinataires** | `ChampsCommuns` |
+| 7 | **Description** | `ChampsCommuns` |
+| 8 | **Photos** | `ChampsCommuns` |
+| 9 | **Documents** | `ChampsCommuns` |
+| 10 | **Diffusion** | `ChampsCommuns` |
+
+🔴 **Révisé le 12/09/2026, et surtout CONTRÔLÉ depuis.** « Options de
+publication » n'avait aucun rang : chaque écran la posait où il voulait, et
+l'utilisateur a vu la divergence — entre Actualité et Tickets d'une part, et
+dans le calendrier d'autre part, où « Épingler dans le fil » vivait carrément
+dans la **Diffusion**, avec son propre glyphe, alors que
+`$lib/options-publication` porte la notion.
+
+⚠️ **Les deux écarts avaient la même cause** : cette table existait et rien ne
+la faisait respecter. Elle est désormais tenue par deux mécanismes, pas par la
+bonne volonté :
+
+* `ChampsCommuns` rend les sections **3 à 10** — l'écran ne décide plus de leur
+  rang, seulement de leur PRÉSENCE (`avecOptions`, `avecWorkflow`…) ;
+* 🔒 `npm run lint:ordre-sections` refuse une section de rang inférieur écrite
+  après une supérieure, dans **tout** `.svelte` du dépôt. Vérifié échouant sur
+  le défaut, et son lecteur de balise l'est aussi : un `=>` dans les props
+  coupait la lecture, et le contrôle passait au vert sur ce qu'il devait refuser.
+
+⚠️ Un épinglage ne se met JAMAIS dans la Diffusion, même quand il en dépend. Le
+calendrier avait un motif réel — un événement absent du fil ne peut pas y être
+épinglé — mais **une dépendance n'est pas un rang** : elle se dit
+(`epingleInterdit`, qui désactive la case *et écrit pourquoi*), elle ne déplace
+pas la section.
 
 **Workflow et Diffusion sont deux notions distinctes**, et les confondre est
 l'erreur qui a fait poser la question :

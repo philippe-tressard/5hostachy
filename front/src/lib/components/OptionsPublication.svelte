@@ -73,6 +73,20 @@
 	 *   c'est un ÉTAT de l'objet, et il vaut la peine d'être lu. */
 	export let confidentielAcquis = '';
 
+	/**  🔒 Le motif pour lequel l'épinglage est IMPOSSIBLE sur cet objet, ou vide.
+	 *
+	 *   Jumeau exact de `confidentielAcquis`, et pour la même raison : un
+	 *   événement absent du fil d'activité ne peut pas y être épinglé. Le
+	 *   calendrier écrivait sa propre case d'épinglage — glyphe compris — dans la
+	 *   section Diffusion, et cette dépendance était la seule raison invoquée
+	 *   (12/09/2026). Elle n'en est plus une : la case vit où vivent les options,
+	 *   et elle dit pourquoi elle est inerte.
+	 *
+	 *   ⚠️ Une case inerte SANS explication laisse croire à un bug
+	 *   (`standards/11`, accessibilité). C'est le motif qui fait la différence
+	 *   entre une contrainte et une panne. */
+	export let epingleInterdit = '';
+
 	/**  Le nom de l'objet décrit — « publication », « ticket ». Il entre dans les
 	 *   libellés qui le nomment (« Visibilité du **ticket** au seul conseil
 	 *   syndical ») : la même case sert deux entités, et « ce truc-là » ne se dit
@@ -109,6 +123,9 @@
 	//  Le périmètre peut changer APRÈS que la case a été cochée : on ne laisse pas
 	//  une valeur devenue impossible partir dans la requête.
 	$: if (rienARestreindre && confidentiel) confidentiel = false;
+	//  Même règle pour l'épinglage : décocher « Afficher dans le fil » après avoir
+	//  épinglé laisserait partir un épinglage sur un objet absent du fil.
+	$: if (epingleInterdit && epingle) epingle = false;
 </script>
 
 <div class="cases">
@@ -118,8 +135,12 @@
 	      besoin d'une variable nommée, et une boucle générique obligerait à un
 	      objet intermédiaire que l'hôte devrait ensuite redéfaire. -->
 	{#if rendue('epingle')}
-		<label class="checkbox-field" title={optEpingle?.aide}>
-			<input type="checkbox" bind:checked={epingle} />
+		<label
+			class="checkbox-field"
+			class:desactivee={epingleInterdit}
+			title={epingleInterdit || optEpingle?.aide}
+		>
+			<input type="checkbox" bind:checked={epingle} disabled={!!epingleInterdit} />
 			{optEpingle?.glyphe}
 			{optEpingle && actionOption(optEpingle, objet)}
 		</label>

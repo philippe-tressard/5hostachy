@@ -45,6 +45,8 @@
 	export let dejaEpingle = false;
 	/** 🔒 Motif pour lequel l'objet est TOUJOURS restreint — relayé tel quel. */
 	export let confidentielAcquis = '';
+	/** 🔒 Motif pour lequel l'épinglage est impossible — relayé tel quel. */
+	export let epingleInterdit = '';
 </script>
 
 <SectionFormulaire titre="Options de publication" {premiere} idTitre="{objet}-options-titre">
@@ -54,6 +56,7 @@
 		{perimetreCible}
 		{dejaEpingle}
 		{confidentielAcquis}
+		{epingleInterdit}
 		bind:epingle
 		bind:urgente
 		bind:brouillon

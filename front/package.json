@@ -81,6 +81,7 @@
 		"lint:points-rupture": "node scripts/check-points-rupture.mjs",
 		"lint:pied-formulaire": "node scripts/check-pied-formulaire.mjs",
 		"lint:teinte": "node --experimental-strip-types scripts/check-teinte-perimetre.mjs",
+		"lint:ordre-sections": "node scripts/check-ordre-sections.mjs --selftest",
 		"e2e": "playwright test",
 		"e2e:ui": "playwright test --ui"
 	},
