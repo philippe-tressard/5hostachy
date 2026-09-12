@@ -110,11 +110,15 @@
 	</p>
 
 	<div class="actions-diagnostic">
-		<button type="button" class="btn btn-outline" disabled={enCours} on:click={analyser}>
+		<!--  🔴 `btn-primary`, comme « Enregistrer » et « Relancer le contrôle »
+		      (12/09/2026, signalé à l'écran) : c'est le geste principal de sa
+		      section, au même titre qu'eux. En `btn-outline` il se lisait comme un
+		      geste secondaire, alors que rien d'autre ne se fait dans ce bloc. -->
+		<button type="button" class="btn btn-primary" disabled={enCours} on:click={analyser}>
 			{enCours ? 'Analyse…' : 'Analyser'}
 		</button>
 		{#if releve && !releve.inconnu && (releve.orphelins ?? 0) > 0}
-			<button type="button" class="btn btn-primary" disabled={enCours} on:click={purger}>
+			<button type="button" class="btn btn-danger" disabled={enCours} on:click={purger}>
 				Supprimer les lignes orphelines
 			</button>
 		{/if}

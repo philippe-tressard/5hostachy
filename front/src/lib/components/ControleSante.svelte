@@ -15,6 +15,7 @@
   s'adresse au gestionnaire du site ; quelqu'un est déjà devant l'écran.
 -->
 <script lang="ts">
+	import SectionFormulaire from './SectionFormulaire.svelte';
 	import { admin as adminApi } from '$lib/api';
 	import { ApiError } from '$lib/api';
 	import { fmtDatetime } from '$lib/date';
@@ -52,10 +53,18 @@
 	}
 </script>
 
-<div class="card">
+<!--  🔴 Le titre passe par `SectionFormulaire` (12/09/2026, signalé à l'écran) :
+      les trois blocs de cet onglet titraient de trois façons — un `<h3>` nu ici,
+      un `<h3 class="config-section-title">` dans `ConfigSauvegarde`, et le
+      composant partagé dans `IntegriteReferentielle`. Trois blocs voisins, trois
+      typographies, aucun filet entre eux.
+
+      C'est la règle la plus déployée qui l'emporte : `SectionFormulaire` porte
+      l'intitulé, le filet et l'espacement pour tout le site. -->
+<section class="card config-section">
 	<div class="entete">
 		<div>
-			<h3>Contrôle de santé</h3>
+			<SectionFormulaire titre="Contrôle de santé" icone="activity" />
 			<p class="muted">
 				Les mêmes vérifications que le contrôle automatique de 6&nbsp;h&nbsp;00 — base, WhatsApp,
 				sauvegardes, copie hors site, disque, référence de copropriété et modèles d’e-mail. Aucun
@@ -90,7 +99,7 @@
 			{/each}
 		</ul>
 	{/if}
-</div>
+</section>
 
 <style>
 	.entete {
@@ -100,11 +109,8 @@
 		justify-content: space-between;
 		gap: 1rem;
 	}
-	.entete h3 {
-		margin: 0 0 0.35rem;
-		font-size: 1rem;
-		font-weight: 700;
-	}
+	/*  Le `<h3>` local a cédé la place à `SectionFormulaire`, et sa règle de
+	    typographie avec lui : elle redisait ce que la charte dit déjà. */
 	.entete p {
 		margin: 0;
 		max-width: 60ch;
