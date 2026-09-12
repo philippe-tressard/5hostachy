@@ -715,7 +715,13 @@
 	{#if $isCS && showPrestForm}
 		<FormulaireCreation titre="Nouveau prestataire">
 			<form on:submit|preventDefault={savePrest}>
-				<ChampsPrestataire bind:prestForm bind:prestContacts {typesPrestataire} {equipements} />
+				<ChampsPrestataire
+					bind:prestForm
+					bind:prestContacts
+					{typesPrestataire}
+					{equipements}
+					etat="creation"
+				/>
 				<PiedFormulaire
 					enCours={submitting}
 					on:annule={() => {

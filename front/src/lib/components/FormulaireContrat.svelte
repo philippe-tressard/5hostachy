@@ -47,6 +47,7 @@
 	 */
 	import ChampsContrat from './ChampsContrat.svelte';
 	import DocumentsContrat from './DocumentsContrat.svelte';
+	import SectionFormulaire from './SectionFormulaire.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	/** L'état du formulaire, lié dans les deux sens par l'appelant. */
@@ -94,9 +95,22 @@
 	   la sémantique correcte sont ici la même chose.
 -->
 <form on:submit|preventDefault={onEnregistrer}>
-	<ChampsContrat bind:contratForm {prestataires} {equipements} />
+	<ChampsContrat
+		bind:contratForm
+		{prestataires}
+		{equipements}
+		etat={contratId === null ? 'creation' : 'edition'}
+	/>
+	<!--  ══ 8. DOCUMENTS ══ La section vient APRÈS la description, jamais avant :
+	      l'ordre des neuf sections ne se discute pas (R2), et Photos (7) et
+	      Documents (8) ne fusionnent jamais.
+
+	      ⚠️ Absente à la CRÉATION, et c'est une dette déclarée (#909, motif `api`
+	      dans `entites/contrat`) : un document se rattache à un `contrat_id` qui
+	      n'existe pas encore. L'écran ne peut pas la rendre, la déclaration le
+	      DIT — elle ne se constate pas. -->
 	{#if contratId !== null}
-		<div class="bloc-documents">
+		<SectionFormulaire titre="Documents" pour="contrat-{contratId}-doc">
 			<DocumentsContrat
 				{contratId}
 				{documents}
@@ -104,7 +118,7 @@
 				{onAjoute}
 				idChamp="contrat-{contratId}-doc"
 			/>
-		</div>
+		</SectionFormulaire>
 	{/if}
 
 	<!--
@@ -116,7 +130,4 @@
 </form>
 
 <style>
-	.bloc-documents {
-		margin-top: 0.8rem;
-	}
 </style>
