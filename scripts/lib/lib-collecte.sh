@@ -63,6 +63,27 @@ echo "disk=$(df / | awk "NR==2{print \$5}" | tr -d %)"
 echo "ntp=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)"
 echo "epoch=$(date +%s)"
 echo "lock=$([ -f $R/.bascule-lock ] && stat -c %Y $R/.bascule-lock || echo 0)"
+# Quand health-watch a-t-il NETTOYÉ un verrou orphelin pour la derniere fois,
+# et combien de fois en tout ? C12 ne peut pas le lire sur le fichier :
+# health-watch l EFFACE au-dela de VERROU_STALE_S, et C12 ne passe que toutes
+# les 15 min — le verrou a donc toujours disparu avant d etre signalable
+# (12/09/2026, #915). On observe donc l ACTE, qui laisse une trace datee, et non
+# l objet, qui n en laisse aucune. Meme motif que le point 13 du pre-check, qui
+# se verifie par « Alerte envoyee » et non par « Email KO ».
+#
+# ⚠️ On rapporte un FAIT BRUT (un horodatage, un compte) : la fraicheur est
+# decidee par verdict_verrou_orphelin(), pure et eprouvee. Et aucune apostrophe
+# ici — ces lignes sont DANS la chaine simple-quotee.
+HWL=/var/log/hostachy-health-watch.log
+if [ -f "$HWL" ]; then
+  echo "orphelins=$(grep -c -E "bascule-lock orphelin" "$HWL" 2>/dev/null || echo 0)"
+  _od=$(grep -E "bascule-lock orphelin" "$HWL" 2>/dev/null | tail -1 | cut -c2-20)
+  echo "orphelin_dernier=$([ -n "$_od" ] && date -d "$_od" +%s 2>/dev/null || echo 0)"
+else
+  # Journal absent : le contrôle ne peut pas mesurer. INCONNU, jamais OK.
+  echo "orphelins=inconnu"
+  echo "orphelin_dernier=inconnu"
+fi
 # Un build auto-deploy est-il EN COURS sur ce nœud ? Le verrou est le fait
 # lui-même — `auto-deploy.sh` le tient du début du build jusqu a la fin, et C1
 # s en sert pour ne pas crier au loup pendant les trois minutes où Caddy rend

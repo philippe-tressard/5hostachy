@@ -150,3 +150,96 @@ def test_bascule_PASSE_bien_par_le_module():
     src = BASCULE.read_text(encoding="utf-8")
     assert "lib-verrou.sh" in src
     assert "verrou_poser" in src and "verrou_liberer" in src
+
+
+# ── La PÉREMPTION du verrou : une seule définition (12/09/2026, #915) ─────────
+#
+# Le correctif du split-brain ferme la fenêtre de course. Il ne dit rien du cas
+# où la bascule est TUÉE entre la pose et la libération — coupure, `kill -9`,
+# gel (les trois sont documentés sur rpi2). Le verrou survit alors, et
+# `auto-deploy` l'attendait INDÉFINIMENT : plus aucun déploiement, en silence.
+#
+# Trois lecteurs portaient leur propre notion de « orphelin », un quatrième n'en
+# avait aucune, et deux des seuils se contredisaient au point de rendre C12
+# structurellement muet. Ces tests ancrent l'unicité.
+MODULE_VERROU = RACINE / "lib" / "lib-verrou.sh"
+
+#  Les seuils que le dépôt ne doit plus écrire qu'une fois. Le motif attrape une
+#  affectation, jamais une mention en commentaire — un commentaire qui RACONTE la
+#  divergence supprimée est utile, et c'est le faux positif que l'audit du 12/09
+#  avait déjà rencontré ailleurs.
+SEUIL_RECOPIE = re.compile(r"^\s*(LOCK_MAX_AGE_S|LOCK_STALE_MIN)\s*=\s*[0-9]", re.M)
+
+
+def test_le_seuil_de_peremption_n_est_ecrit_qu_une_fois():
+    """🔴 `health-watch` effaçait le verrou à 900 s et C12 n'alertait qu'à 20 min :
+    la fenêtre d'alerte était VIDE, le fichier disparaissant toujours cinq minutes
+    avant de devenir signalable. Deux copies d'une même notion qui divergent sur
+    le cas limite — le motif que ce dépôt connaît déjà.
+
+    Une seule affectation est admise : `VERROU_STALE_S` dans le module."""
+    recopies = []
+    for f in sorted(RACINE.rglob("*.sh")):
+        for m in SEUIL_RECOPIE.finditer(f.read_text(encoding="utf-8")):
+            recopies.append(f"{f.name} : {m.group(0).strip()}")
+    assert not recopies, (
+        "Seuil de péremption recopié — il vit dans lib-verrou.sh (VERROU_STALE_S) "
+        "et se DÉRIVE ailleurs :" + nl + "  " + (nl + "  ").join(recopies)
+    )
+
+
+def test_les_trois_lecteurs_du_verrou_CONSOMMENT_la_decision_partagee():
+    """Le module peut définir la péremption sans que personne l'appelle — et
+    c'était l'état d'avant, où chacun la réécrivait chez lui.
+
+    ⚠️ `auto-deploy` est le cas qui compte : il ne testait que la PRÉSENCE du
+    fichier, donc il n'avait aucune limite du tout."""
+    for nom in ("auto-deploy.sh", "health-watch.sh"):
+        src = (RACINE / "exploitation" / nom).read_text(encoding="utf-8")
+        assert "lib-verrou.sh" in src, f"{nom} ne source pas le module du verrou"
+        assert "verrou_recent" in src, f"{nom} ne consomme pas la décision partagée"
+    #  C12 est porté par le MODULE depuis le 12/09 — on suit donc la chaîne
+    #  entière, et non un nom dans un fichier : `check-reliability` appelle
+    #  `verrou_verdicts`, qui consomme `verdict_verrou_orphelin`. Chercher le
+    #  verdict dans l'orchestrateur casserait au premier découpage, sans qu'aucun
+    #  comportement ait changé.
+    orch = (RACINE / "exploitation" / "check-reliability.sh").read_text(encoding="utf-8")
+    assert "VERROU_STALE_S" in orch, "check-reliability ne dérive pas le seuil partagé"
+    assert "verrou_verdicts" in orch, "C12 n'est pas appelé"
+    module = MODULE_VERROU.read_text(encoding="utf-8")
+    assert "verrou_verdicts()" in module, "le contrôle C12 ne vit pas avec son objet"
+    assert "verdict_verrou_orphelin" in module, "C12 n'observe pas la trace du nettoyage"
+
+
+def test_C12_observe_l_ACTE_de_nettoyage_et_non_l_objet_efface():
+    """🔴 Le retournement qui rend le contrôle capable de parler.
+
+    `health-watch` SUPPRIME le verrou orphelin ; C12 ne peut donc pas le mesurer
+    sur le fichier — il n'existe plus quand il regarde. Il lit la trace datée que
+    le nettoyage laisse dans le journal, comme le point 13 du pré-check se vérifie
+    par « Alerte envoyée » et non par « Email KO ».
+
+    Le fait collecté doit donc venir du JOURNAL de health-watch."""
+    collecte = (RACINE / "lib" / "lib-collecte.sh").read_text(encoding="utf-8")
+    assert "hostachy-health-watch.log" in collecte, (
+        "la collecte ne lit pas le journal de health-watch : sans sa trace, C12 "
+        "mesure un fichier que health-watch vient d'effacer, et rend OK"
+    )
+    assert "orphelin_dernier=" in collecte
+    #  Le cas zéro : journal absent → INCONNU, jamais 0 (`standards/04` §2).
+    assert "orphelin_dernier=inconnu" in collecte, (
+        "journal absent doit rendre INCONNU, pas un compte nul lu comme un vert"
+    )
+
+
+def test_la_peremption_S_ABSTIENT_quand_elle_ne_peut_pas_MESURER():
+    """⚠️ La prudence va ici dans l'autre sens que pour `bascule_en_cours` : on
+    déciderait de DÉMARRER des conteneurs. Un horodatage illisible doit donc
+    rendre « récent » — conclure « périmé » sur une mesure absente rouvrirait le
+    split-brain du 12/09 par la porte du contrôle."""
+    src = MODULE_VERROU.read_text(encoding="utf-8")
+    corps = src[src.index("verrou_recent()") :]
+    #  Les trois abstentions : non numérique, nul, âge négatif.
+    for garde in ("*[!0-9]*)", '-le 0 ]', '-lt 0 ]'):
+        assert garde in corps, f"garde manquante dans verrou_recent : {garde}"
+    assert "echo non" in corps, "verrou_recent ne conclut jamais à la péremption"
