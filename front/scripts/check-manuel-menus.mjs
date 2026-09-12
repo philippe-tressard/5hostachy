@@ -74,7 +74,13 @@ const PUBLIC_ATTENDU = {
 const PUBLIC_PAR_DEFAUT = 'tous';
 
 const manuel = readFileSync(MANUEL, 'utf8');
-const pages = readFileSync(PAGES, 'utf8');
+//  🔴 DEUX fichiers depuis le 12/09/2026 (#928) : les pages réservées à un rôle
+//  vivent dans `pages-roles.ts`. Sans cette seconde lecture, le contrôle a
+//  aussitôt déclaré que le manuel citait des routes « qui n'existent pas » —
+//  elles existaient, il ne les voyait plus. La portée du contrôle fait partie du
+//  contrôle.
+const pages =
+	readFileSync(PAGES, 'utf8') + readFileSync(PAGES.replace('pages.ts', 'pages-roles.ts'), 'utf8');
 const nav = readFileSync(NAV, 'utf8');
 
 const erreurs = [];

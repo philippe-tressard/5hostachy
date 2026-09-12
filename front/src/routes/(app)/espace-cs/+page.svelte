@@ -14,20 +14,14 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
 	import { validerCompte } from '$lib/comptes';
-	import { messageErreur } from '$lib/erreurs';
+	import { messageErreur, tenter } from '$lib/erreurs';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import OngletAnnoncesHall from '$lib/components/OngletAnnoncesHall.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import { onMount } from 'svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import {
-		admin as adminApi,
-		annuaireAdmin,
-		auth as authApi,
-		lots as lotsApi,
-		ApiError,
-	} from '$lib/api';
+	import { admin as adminApi, annuaireAdmin, auth as authApi, lots as lotsApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -35,6 +29,7 @@
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
+	import BadgesCopropriete from '$lib/components/BadgesCopropriete.svelte';
 	import { localisationMembre } from '$lib/utils';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
@@ -470,7 +465,7 @@
 			toast('success', 'Conseil Syndical enregistré');
 			csHeaderEditing = false;
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			savingCS = false;
 		}
@@ -488,7 +483,7 @@
 			cs = REPLIE;
 			toast('success', `${nomAffiche(membresCS[i])} enregistré`);
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			savingCSIdx = null;
 		}
@@ -628,7 +623,7 @@
 			toast('success', 'Syndic enregistré');
 			syndicHeaderEditing = false;
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			savingSyndic = false;
 		}
@@ -645,7 +640,7 @@
 			syndic = REPLIE;
 			toast('success', `${nomAffiche(membresSyndic[i])} enregistré`);
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			savingSyndicIdx = null;
 		}
@@ -692,26 +687,26 @@
 	}
 
 	async function traiterCompte(id: number, decision: 'approuver' | 'rejeter') {
-		try {
-			await adminApi.traiterCompte(id, {
-				action: decision === 'approuver' ? 'valider' : 'refuser',
-			});
-			comptesEnAttente = comptesEnAttente.filter((u) => u.id !== id);
-			toast('success', decision === 'approuver' ? 'Compte approuvé' : 'Compte rejeté');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		await tenter(
+			async () => {
+				await adminApi.traiterCompte(id, {
+					action: decision === 'approuver' ? 'valider' : 'refuser',
+				});
+				comptesEnAttente = comptesEnAttente.filter((u) => u.id !== id);
+			},
+			decision === 'approuver' ? 'Compte approuvé' : 'Compte rejeté',
+		);
 	}
 	async function traiterCommande(id: number, decision: 'approuver' | 'rejeter') {
-		try {
-			await adminApi.traiterCommandeAcces(id, {
-				action: decision === 'approuver' ? 'accepter' : 'refuser',
-			});
-			commandesEnAttente = commandesEnAttente.filter((c) => c.id !== id);
-			toast('success', decision === 'approuver' ? 'Commande approuvée' : 'Commande rejetée');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		await tenter(
+			async () => {
+				await adminApi.traiterCommandeAcces(id, {
+					action: decision === 'approuver' ? 'accepter' : 'refuser',
+				});
+				commandesEnAttente = commandesEnAttente.filter((c) => c.id !== id);
+			},
+			decision === 'approuver' ? 'Commande approuvée' : 'Commande rejetée',
+		);
 	}
 </script>
 
@@ -841,6 +836,9 @@
 			{/if}
 		</section>
 	{/if}
+{:else if onglet === 'badges'}
+	<!--  Le parc de badges a quitté « Mes lots & accès » (12/09/2026) : motif dans `pages.ts`. -->
+	<BadgesCopropriete />
 {:else if onglet === 'reporting'}
 	<OngletReporting
 		titreOnglet={_pc.onglets?.reporting?.label ?? 'Reporting'}

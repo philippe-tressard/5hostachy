@@ -57,8 +57,23 @@ _MOTIF_HREF_PAGE = re.compile(r"href: '([^']+)'")
 
 
 def _pages_ts() -> str:
-    fichier = _FRONT_SRC / "lib" / "pages.ts"
-    return fichier.read_text(encoding="utf-8-sig") if fichier.is_file() else ""
+    """La table des pages, en UN texte — elle vit en DEUX fichiers.
+
+    🔴 `pages-roles.ts` est né le 12/09/2026 (#928) : `pages.ts` avait franchi
+    son plafond de modularité, et les pages réservées à un rôle en sont parties.
+
+    ⚠️ Ce test a été le QUATRIÈME contrôle rendu aveugle par cette extraction —
+    après `lint:pages`, `lint:manuel-menus` et le parcours de `check-pages`. Il a
+    aussitôt déclaré qu'un lien émis par l'API menait à une 404, alors que la
+    page existait : il ne la voyait plus. **Découper un fichier, c'est rendre
+    aveugle tout ce qui le lisait**, et rien ne le signale avant l'échec.
+    """
+    textes = [
+        (_FRONT_SRC / "lib" / nom).read_text(encoding="utf-8-sig")
+        for nom in ("pages.ts", "pages-roles.ts")
+        if (_FRONT_SRC / "lib" / nom).is_file()
+    ]
+    return chr(10).join(textes)
 
 
 def _routes_onglets_du_front() -> dict[str, str]:
