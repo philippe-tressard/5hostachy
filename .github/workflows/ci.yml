@@ -1482,6 +1482,17 @@ jobs:
         working-directory: front
         run: npm run lint:pied-formulaire
 
+      # 🔴 La pastille d'un espace prend la couleur de son BÂTIMENT (12/09/2026).
+      #
+      # Sur le kanban, « Bât. 1 » était bleu clair et « Ascenseur », qui est DANS
+      # le bâtiment 1, sortait rose : la teinte venait d'un condensat du code
+      # entier. Signalé à l'écran — aucun contrôle ne pouvait le voir, et moi non
+      # plus : les écrans sont derrière une connexion. La règle est donc une
+      # fonction PURE, éprouvée sans navigateur.
+      - name: Teinte d'une pastille de périmètre (héritée du 1er niveau)
+        working-directory: front
+        run: npm run lint:teinte
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #
