@@ -6,7 +6,8 @@
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
-	import { auth as authApi, lots as lotsApi, uploads as uploadsApi, ApiError } from '$lib/api';
+	import { auth as authApi, lots as lotsApi, uploads as uploadsApi } from '$lib/api';
+	import { tenter } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -156,7 +157,7 @@
 	// ── Actions ───────────────────────────────────────────────────────────────
 	async function saveProfile() {
 		saving = true;
-		try {
+		await tenter(async () => {
 			const emailChanged = email && email !== $currentUser?.email;
 			const updated = await authApi.updateMe({
 				prenom,
@@ -172,42 +173,39 @@
 			//  site quand la saisie contredit le lot.
 			mesLots = await champsEtage.enregistrerEtagesDeLots();
 			setUser((await champsEtage.enregistrerEtagePersonnel()) ?? updated);
-			toast('success', 'Profil mis à jour');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			saving = false;
-		}
+		}, 'Profil mis à jour');
+		saving = false;
 	}
 
 	async function handleAvatarChange(e: CustomEvent<File>) {
 		uploadingAvatar = true;
-		try {
-			const { url } = await uploadsApi.avatar(e.detail);
-			const updated = { ...$currentUser!, photo_url: url };
-			setUser(updated as any);
-			toast('success', 'Photo de profil mise à jour');
-		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur upload');
-		} finally {
-			uploadingAvatar = false;
-		}
+		await tenter(
+			async () => {
+				const { url } = await uploadsApi.avatar(e.detail);
+				const updated = { ...$currentUser!, photo_url: url };
+				setUser(updated as any);
+			},
+			'Photo de profil mise à jour',
+			'Erreur upload',
+		);
+		uploadingAvatar = false;
 	}
 
 	async function saveNotifs(valeurs: Record<string, boolean>, restreindre: boolean) {
 		const prefs = JSON.stringify(valeurs);
-		try {
-			const updated = await authApi.updateMe({
-				preferences_notifications: prefs,
-				restreindre_a_mes_batiments: restreindre,
-			});
-			setUser(updated);
-			valeursNotifs = valeurs;
-			restreindreAMesBatiments = restreindre;
-			toast('success', 'Préférences enregistrées');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : "Erreur lors de l'enregistrement");
-		}
+		await tenter(
+			async () => {
+				const updated = await authApi.updateMe({
+					preferences_notifications: prefs,
+					restreindre_a_mes_batiments: restreindre,
+				});
+				setUser(updated);
+				valeursNotifs = valeurs;
+				restreindreAMesBatiments = restreindre;
+			},
+			'Préférences enregistrées',
+			"Erreur lors de l'enregistrement",
+		);
 	}
 
 	async function soumettreDemandeModif() {
@@ -216,7 +214,7 @@
 			return;
 		}
 		savingDemande = true;
-		try {
+		await tenter(async () => {
 			const d = await authApi.demanderModification({
 				statut_souhaite: demandeStatut || null,
 				batiment_id_souhaite: demandeBatimentId || null,
@@ -227,12 +225,8 @@
 			demandeStatut = '';
 			demandeBatimentId = null;
 			demandeMotif = '';
-			toast('success', 'Demande envoyée au conseil syndical');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingDemande = false;
-		}
+		}, 'Demande envoyée au conseil syndical');
+		savingDemande = false;
 	}
 
 	async function declarerNouvelArrivant() {
@@ -241,7 +235,7 @@
 			return;
 		}
 		savingArrivant = true;
-		try {
+		await tenter(async () => {
 			const batimentFinal = arrivantBatimentNumero
 				? `Bât. ${arrivantBatimentNumero}`
 				: ($currentUser?.batiment_nom || '').trim() || null;
@@ -258,23 +252,16 @@
 				.me()
 				.then((u) => setUser(u))
 				.catch(() => {});
-			toast('success', 'Déclaration Nouvel Arrivant envoyée');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingArrivant = false;
-		}
+		}, 'Déclaration Nouvel Arrivant envoyée');
+		savingArrivant = false;
 	}
 
 	async function declarerDejaResident() {
-		try {
+		await tenter(async () => {
 			const updated = await authApi.updateMe({ demarche_arrivant: 'deja_resident' });
 			setUser(updated);
 			arrivantChoix = 'deja_resident';
-			toast('success', 'Choix enregistré : déjà résident (aucune démarche nouvel arrivant).');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		}, 'Choix enregistré : déjà résident (aucune démarche nouvel arrivant).');
 	}
 </script>
 

@@ -72,15 +72,28 @@ export function messageErreur(e: unknown, repli?: string): string {
  * `notationSaving`, `envoi`), et ce n'est pas un défaut : ils n'en ont pas le
  * même nombre.
  *
+ * @param repli  Ce qu'on dit quand l'erreur n'est PAS une réponse du serveur —
+ *               réseau coupé, serveur injoignable. Quarante-quatre des copies
+ *               manuelles en portaient un, contextuel (« Chargement impossible »,
+ *               « Erreur upload ») : le paramètre existe pour qu'aucune ne se
+ *               perde à la conversion. Sans lui, factoriser aurait DÉGRADÉ le
+ *               message dans ces quarante-quatre cas — une factorisation qui
+ *               appauvrit le rendu n'est pas une factorisation, c'est un
+ *               nivellement.
+ *
  * @returns `true` si le geste a abouti.
  */
-export async function tenter(action: () => Promise<unknown>, succes?: string): Promise<boolean> {
+export async function tenter(
+	action: () => Promise<unknown>,
+	succes?: string,
+	repli?: string,
+): Promise<boolean> {
 	try {
 		await action();
 		if (succes) toast('success', succes);
 		return true;
 	} catch (e) {
-		toast('error', messageErreur(e));
+		toast('error', messageErreur(e, repli));
 		return false;
 	}
 }

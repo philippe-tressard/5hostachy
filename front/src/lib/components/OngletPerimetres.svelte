@@ -3,12 +3,13 @@
 	import ChampsPerimetre from '$lib/components/ChampsPerimetre.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import { onMount } from 'svelte';
-	import { perimetres as perimetresApi, ApiError } from '$lib/api';
+	import { perimetres as perimetresApi } from '$lib/api';
+	import { tenter, messageErreur } from '$lib/erreurs';
+	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import Icon from '$lib/components/Icon.svelte';
 	import { perimetresStore, rechargerPerimetres } from '$lib/stores/perimetres';
 	import { type Perimetre } from '$lib/perimetres';
 	import { siteNomStore } from '$lib/stores/pageConfig';
-	import { toast } from '$lib/components/Toast.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
@@ -45,7 +46,7 @@
 		try {
 			await rechargerPerimetres();
 		} catch (e) {
-			erreur = e instanceof ApiError ? e.message : 'Chargement impossible';
+			erreur = messageErreur(e, 'Chargement impossible');
 		} finally {
 			chargement = false;
 		}
@@ -85,27 +86,30 @@
 
 	async function enregistrer() {
 		if (!edite) return;
+		//  La cible est capturée AVANT le rappel : TypeScript ne conserve pas dans
+		//  une closure le fait que `edite` n'est pas nul.
+		const cible = edite;
 		enregistrement = true;
-		try {
-			await perimetresApi.update(edite.id, {
-				libelle: form.libelle,
-				libelle_court: form.libelle_court || null,
-				description: form.description,
-				icone: form.icone || null,
-				portee_globale: form.portee_globale,
-				selectionnable: form.selectionnable,
-				privatif: form.privatif,
-				ordre: Number(form.ordre) || 0,
-				actif: form.actif,
-			} as any);
-			await rechargerPerimetres();
-			toast('success', 'Périmètre enregistré');
-			edite = null;
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur à l’enregistrement');
-		} finally {
-			enregistrement = false;
-		}
+		await tenter(
+			async () => {
+				await perimetresApi.update(cible.id, {
+					libelle: form.libelle,
+					libelle_court: form.libelle_court || null,
+					description: form.description,
+					icone: form.icone || null,
+					portee_globale: form.portee_globale,
+					selectionnable: form.selectionnable,
+					privatif: form.privatif,
+					ordre: Number(form.ordre) || 0,
+					actif: form.actif,
+				} as any);
+				await rechargerPerimetres();
+				edite = null;
+			},
+			'Périmètre enregistré',
+			'Erreur à l’enregistrement',
+		);
+		enregistrement = false;
 	}
 
 	// ── Création ──────────────────────────────────────────────────────────────
@@ -135,43 +139,47 @@
 
 	async function enregistrerNouveau() {
 		enregistrement = true;
-		try {
-			await perimetresApi.create({
-				code: (nouveau.code || codePropose).trim(),
-				libelle: nouveau.libelle.trim(),
-				description: nouveau.description,
-				parent: creation?.parent ?? null,
-			} as any);
-			await rechargerPerimetres();
-			toast('success', 'Périmètre créé');
-			creation = null;
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur à la création');
-		} finally {
-			enregistrement = false;
-		}
+		await tenter(
+			async () => {
+				await perimetresApi.create({
+					code: (nouveau.code || codePropose).trim(),
+					libelle: nouveau.libelle.trim(),
+					description: nouveau.description,
+					parent: creation?.parent ?? null,
+				} as any);
+				await rechargerPerimetres();
+				creation = null;
+			},
+			'Périmètre créé',
+			'Erreur à la création',
+		);
+		enregistrement = false;
 	}
 
 	async function supprimer(n: Perimetre) {
-		if (!confirm(`Supprimer définitivement « ${n.libelle} » ?`)) return;
-		try {
-			await perimetresApi.remove(n.id);
-			await rechargerPerimetres();
-			toast('success', 'Périmètre supprimé');
-		} catch (e) {
-			//  Le serveur refuse la suppression d'un nœud cité par un contenu et dit
-			//  quoi faire à la place : on relaie son message tel quel.
-			toast('error', e instanceof ApiError ? e.message : 'Suppression impossible');
-		}
+		//  ⚠️ Le serveur refuse la suppression d'un nœud cité par un contenu et dit
+		//  quoi faire à la place : `messageErreur` relaie son message tel quel, le
+		//  repli ne sert que s'il n'a pas répondu du tout.
+		await confirmerPuis(
+			SUPPRESSION(`Le périmètre « ${n.libelle} »`),
+			'Périmètre supprimé',
+			async () => {
+				await perimetresApi.remove(n.id);
+				await rechargerPerimetres();
+			},
+			'Suppression impossible',
+		);
 	}
 
 	async function deplacer(n: Perimetre, delta: number) {
-		try {
-			await perimetresApi.update(n.id, { ordre: (n.ordre ?? 0) + delta } as any);
-			await rechargerPerimetres();
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Déplacement impossible');
-		}
+		await tenter(
+			async () => {
+				await perimetresApi.update(n.id, { ordre: (n.ordre ?? 0) + delta } as any);
+				await rechargerPerimetres();
+			},
+			undefined,
+			'Déplacement impossible',
+		);
 	}
 
 	$: noeuds = $perimetresStore;
