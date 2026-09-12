@@ -1493,6 +1493,16 @@ jobs:
         working-directory: front
         run: npm run lint:teinte
 
+      # 🔴 L'ORDRE DES SECTIONS N'ÉTAIT TENU QUE PAR UNE DOCUMENTATION (12/09/2026).
+      #
+      # `ux-patterns` §9 sexies l'arbitre depuis longtemps, et `ChampsCommuns`
+      # l'imposait — pour les sections 5 à 10 seulement. Les deux précédentes,
+      # Options de publication et Workflow, étaient posées à la main par chaque
+      # écran : elles ont divergé, et c'est l'utilisateur qui l'a vu.
+      - name: Ordre des sections d'un formulaire
+        working-directory: front
+        run: npm run lint:ordre-sections
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #

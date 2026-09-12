@@ -1,5 +1,5 @@
 <!--
-  ChampsCommuns.svelte — les sections 4 à 9 de TOUT formulaire de création,
+  ChampsCommuns.svelte — les sections 3 à 10 de TOUT formulaire de création,
   écrites une fois, dans l'ordre, avec leurs intitulés.
 
   ## Pourquoi ce composant (16/08/2026)
@@ -29,9 +29,36 @@
 
   ## Ce que ce composant décide, et ce qu'il ne décide pas
 
-  Il décide **l'ordre, les intitulés et les séparations** des sections 4 à 9. Il
-  ne décide RIEN du contenu métier : les sections 1 à 3 (Titre, champs
-  spécifiques, Workflow) restent dans l'écran, qui seul sait ce qu'elles portent.
+  Il décide **l'ordre, les intitulés et les séparations** des sections 3 à 10. Il
+  ne décide RIEN du contenu métier : les sections 1 et 2 (Titre, champs
+  spécifiques) restent dans l'écran, qui seul sait ce qu'elles portent.
+
+  ## 🔴 Les sections 3 et 4 l'ont rejoint le 12/09/2026, et voici pourquoi
+
+  Signalé à l'écran : *« la section Options de publication n'est pas ordonnée de
+  la même façon entre Actualité et Tickets »*, et *« dans le calendrier,
+  “Épingler dans le fil” est dans Diffusion alors qu'ailleurs c'est dans Options
+  de publication »*.
+
+  Les deux écarts ont la même cause : **l'ordre était écrit dans une
+  documentation et respecté à la main.** Chaque écran posait sa section Options
+  et sa section Workflow où il voulait, et rien ne pouvait le contredire — c'est
+  très exactement le défaut que ce composant existait pour supprimer sur les
+  sections 4 à 9, laissé en place sur les deux précédentes.
+
+  L'ordre arbitré (`ux-patterns` §9 sexies) :
+
+  | # | Section | Écrite par |
+  |---|---|---|
+  | 1 | Titre | l'écran |
+  | 2 | Champs spécifiques | l'écran |
+  | 3 | **Options de publication** | **ici** |
+  | 4 | **Workflow** | **ici** (contenu par `slot`) |
+  | 5 à 10 | Périmètre · Destinataires · Description · Photos · Documents · Diffusion | ici |
+
+  ⚠️ Le Workflow reste un `slot` : son CONTENU est propre à l'objet (les six
+  colonnes du Kanban, les états d'un ticket). Ce composant en impose le rang, le
+  titre et le filet — pas ce qu'il y a dedans.
 
   Une section n'apparaît que si l'écran la déclare (`avecPerimetre`, `avecPhotos`…).
   Un sondage n'a pas de pièces jointes, une annonce n'a pas de diffusion : le
@@ -55,6 +82,8 @@
 	import PerimetrePicker from './PerimetrePicker.svelte';
 	import DestinatairePicker from './DestinatairePicker.svelte';
 	import SectionDiffusion from './SectionDiffusion.svelte';
+	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
+	import type { CleOptionPublication } from '$lib/options-publication';
 	import { estPerimetreParDefaut, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
 	import { concerneTousLesResidents } from '$lib/destinataires';
 
@@ -62,7 +91,39 @@
 	    et deux `<label for="…">` pointant le même id ne désignent plus rien. */
 	export let idPrefixe: string;
 
-	//  ── 4. Périmètre ──────────────────────────────────────────────────────────
+	//  ── 3. Options de publication ─────────────────────────────────────────────
+	//  🔴 Le rang de cette section ne se négocie plus par écran (12/09/2026) :
+	//  elle était posée par l'actualité, par le ticket et par l'événement, chacun
+	//  à sa place. Le CONTENU, lui, reste déclaré — un ticket n'en rend pas les
+	//  mêmes qu'une actualité.
+	export let avecOptions = false;
+	/** Les options rendues, dans l'ordre de la table `$lib/options-publication`. */
+	export let optionsRendues: CleOptionPublication[] = [
+		'epingle',
+		'urgente',
+		'brouillon',
+		'confidentiel',
+	];
+	/** Le nom de l'objet décrit — il entre dans les libellés qui le nomment. */
+	export let objet = 'publication';
+	export let epingle = false;
+	export let urgente = false;
+	export let brouillon = false;
+	export let confidentiel = false;
+	/** L'objet édité était-il DÉJÀ épinglé ? (évite un double comptage) */
+	export let dejaEpingle = false;
+	/** 🔒 Motif pour lequel l'objet est TOUJOURS restreint — relayé tel quel. */
+	export let confidentielAcquis = '';
+	/** 🔒 Motif pour lequel l'épinglage est impossible — relayé tel quel. */
+	export let epingleInterdit = '';
+
+	//  ── 4. Workflow ───────────────────────────────────────────────────────────
+	//  ⚠️ Le CONTENU vient du `slot` : ce composant impose le rang, le titre et le
+	//  filet, pas les états. `idTitre` est relayé pour que le groupe de pastilles
+	//  s'y rattache (`aria-labelledby`).
+	export let avecWorkflow = false;
+
+	//  ── 5. Périmètre ──────────────────────────────────────────────────────────
 	export let avecPerimetre = false;
 	export let perimetre: string[] = [];
 	/**  `single` : un seul code retenu. Le rendu est le MÊME (des pastilles) —
@@ -79,7 +140,7 @@
 	 *   on voit d'où l'on part, ce qu'aucun calcul local ne peut deviner. */
 	export let perimetreBadge: string | null = null;
 
-	//  ── 5. Destinataires ──────────────────────────────────────────────────────
+	//  ── 6. Destinataires ──────────────────────────────────────────────────────
 	export let avecDestinataires = false;
 	/**  Ce bloc ouvre-t-il le formulaire ? Une section n'affiche son filet que si
 	 *   quelque chose la précède — sinon il double celui du cadre, et c'est le
@@ -87,7 +148,7 @@
 	export let premiere = false;
 	export let destinataires: string[] = ['résidents'];
 
-	//  ── 6. Description ────────────────────────────────────────────────────────
+	//  ── 7. Description ────────────────────────────────────────────────────────
 	export let avecDescription = false;
 	export let description = '';
 	/**  L'intitulé de la section — « Description » par défaut.
@@ -111,11 +172,11 @@
 	     tickets). Ne la surcharger que pour une vraie contrainte de place. */
 	export let descriptionHauteur = '120px';
 
-	//  ── 7. Photos ─────────────────────────────────────────────────────────────
+	//  ── 8. Photos ─────────────────────────────────────────────────────────────
 	export let avecPhotos = false;
 	export let photos: string[] = [];
 
-	//  ── 8. Documents ──────────────────────────────────────────────────────────
+	//  ── 9. Documents ──────────────────────────────────────────────────────────
 	export let avecDocuments = false;
 	export let documents: string[] = [];
 	/**  Mode différé : les documents d'une actualité deviennent des entités
@@ -133,7 +194,7 @@
 	     les canaux elles-mêmes. */
 	export let documentsControle: 'interne' | 'slot' = 'interne';
 
-	//  ── 9. Diffusion ──────────────────────────────────────────────────────────
+	//  ── 10. Diffusion ─────────────────────────────────────────────────────────
 	export let avecDiffusion = false;
 	/**  Les trois canaux (WhatsApp, syndic, CS). Un écran peut avoir une section
 	     Diffusion SANS canaux — les actualités les rendent elles-mêmes, à travers
@@ -170,14 +231,48 @@
 		? perimetreLabelUn(perimetreParDefaut() ?? '')
 		: '';
 	$: badgeDestinataires = concerneTousLesResidents(destinataires) ? 'Tous les résidents' : '';
+
+	//  Le filet du haut n'appartient pas au Périmètre : il appartient à la
+	//  PREMIÈRE section rendue, quelle qu'elle soit. Sans ce calcul, ouvrir un
+	//  formulaire par les options doublait le trait du cadre — le « double trait »
+	//  signalé à l'écran le 05/09/2026, une section plus haut.
+	$: premiereWorkflow = premiere && !avecOptions;
+	$: premierePerimetre = premiere && !avecOptions && !avecWorkflow;
 </script>
+
+{#if avecOptions}
+	<!--  3. Les options qui DÉCRIVENT l'objet — épinglage, urgence, brouillon,
+	      confidentialité. Toujours ici, jamais dans la Diffusion : elles se
+	      corrigent, elles ne s'envoient pas. -->
+	<SectionOptionsPublication
+		{objet}
+		{premiere}
+		options={optionsRendues}
+		perimetreCible={perimetre}
+		{dejaEpingle}
+		{confidentielAcquis}
+		{epingleInterdit}
+		bind:epingle
+		bind:urgente
+		bind:brouillon
+		bind:confidentiel
+	/>
+{/if}
+
+{#if avecWorkflow}
+	<!--  4. Workflow — OÙ EN EST l'objet. À distinguer de la Diffusion, qui dit
+	      qui le voit et où (section 10). Le contenu vient de l'écran. -->
+	<SectionFormulaire titre="Workflow" premiere={premiereWorkflow} idTitre="{idPrefixe}-workflow">
+		<slot name="workflow" />
+	</SectionFormulaire>
+{/if}
 
 {#if avecPerimetre}
 	<!--  Le sélecteur se tait (`titre=""`) : la section le nomme. Les pastilles ne
 	      sont pas un contrôle labelable — `for` n'y associerait rien —, d'où le
 	      couple `id` sur le titre / `aria-labelledby` sur le groupe. -->
 	<SectionFormulaire
-		{premiere}
+		premiere={premierePerimetre}
 		titre="Périmètre"
 		requis={perimetreRequis}
 		badge={perimetreBadge ?? badgePerimetre}

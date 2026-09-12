@@ -54,7 +54,6 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import DocumentsPublication from '$lib/components/DocumentsPublication.svelte';
-	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import {
@@ -395,27 +394,23 @@
 				</div>
 			</SectionFormulaire>
 
-			<!--  2. Champs spécifiques — ce qui DÉCRIT la publication. Ces quatre
-		      options vivaient dans la Diffusion : les y laisser les aurait fait
-		      disparaître de l'édition, et publier un brouillon serait devenu
-		      impossible (le crayon ✏️ est le seul chemin qui le permette). Aucune
-		      n'est un acte — voir `$lib/entites/publication`. -->
-			{#if sectionPresente(PUBLICATION, etat, 'specifiques')}
-				<SectionOptionsPublication
-					{perimetreCible}
-					dejaEpingle={epingleInitial}
-					bind:epingle
-					bind:urgente
-					bind:brouillon
-					bind:confidentiel
-				/>
-			{/if}
-
-			<!--  4 à 9 : l'ordre, les intitulés et les séparations viennent du
+			<!--  3 à 10 : l'ordre, les intitulés et les séparations viennent du
 		      composant partagé — voir `ChampsCommuns.svelte`. Aucune de ces
 		      sections n'est gouvernée par `modeEdition` : elles le sont par la
-		      DÉCLARATION, qui porte chaque divergence avec son motif. -->
+		      DÉCLARATION, qui porte chaque divergence avec son motif.
+
+		      ⚠️ Les OPTIONS y sont entrées le 12/09/2026. Elles étaient posées ici,
+		      en section 2 — ce qui était juste pour une actualité, dont elles SONT
+		      les champs spécifiques, et faux dès qu'un autre écran en a de vrais :
+		      le rang de la section devenait alors une affaire d'écran. Il ne l'est
+		      plus. -->
 			<ChampsCommuns
+				avecOptions={sectionPresente(PUBLICATION, etat, 'specifiques')}
+				dejaEpingle={epingleInitial}
+				bind:epingle
+				bind:urgente
+				bind:brouillon
+				bind:confidentiel
 				demanderApercu={brouillonApercu}
 				bind:refDiffusion
 				envoiEnCours={saving}
