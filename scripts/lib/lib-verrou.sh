@@ -48,3 +48,88 @@ verrou_poser() {
   trap verrou_liberer EXIT
   log "  → Lock bascule posé sur les DEUX nœuds (libération garantie à la sortie)."
 }
+
+#  ── La PÉREMPTION du verrou — une seule définition, trois lecteurs ──────────
+#
+#  🔴 Elle était écrite TROIS fois, avec trois seuils, et le quatrième lecteur
+#  n'en avait aucune (12/09/2026, #915) :
+#
+#  | Lecteur | Notion d'orphelin | Seuil | Ce qu'il en fait |
+#  |---|---|---|---|
+#  | `health-watch.sh` | oui | `LOCK_MAX_AGE_S=900` (15 min) | **supprime** le verrou |
+#  | `check-reliability.sh` C12 | oui | `LOCK_STALE_MIN=20` (20 min) | WARN au digest |
+#  | `bascule_en_cours` (`lib-verdicts`) | oui | son paramètre `stale_min` | tait trois contrôles |
+#  | `auto-deploy.sh` | **AUCUNE** | — | **attend indéfiniment** |
+#
+#  Deux défauts, et le second annule le garde-fou sur lequel #915 se reposait :
+#
+#  1. **`auto-deploy` ne connaissait pas la péremption.** Un verrou orphelin le
+#     figeait sans limite : plus aucun déploiement, en silence. Il ne se
+#     débloquait que parce qu'un AUTRE script — `health-watch` — supprimait le
+#     fichier. Un couplage entre deux crons que rien ne disait et que rien ne
+#     testait.
+#  2. **health-watch supprimait à 15 min, C12 n'alertait qu'à 20.** La fenêtre
+#     d'alerte était donc VIDE : le verrou disparaissait toujours avant d'être
+#     signalable. Le contrôle était structurellement muet — et #915 le déclarait
+#     « acceptable » en s'y fiant (sous le numéro C25, qui ne traite pas ce
+#     sujet). C'est le cas zéro de `standards/04` §2 : un contrôle qui ne peut
+#     pas mesurer ne rend pas OK, il ne rend rien.
+#
+#  Le seuil est ici, en SECONDES, parce que c'est la granularité du fichier
+#  (`stat -c %Y`) et celle du plus fin des lecteurs. Une bascule dure ~40 s, une
+#  MAJ 2 à 5 min : 15 minutes, c'est déjà trois fois le pire cas.
+VERROU_STALE_S=${VERROU_STALE_S:-900}
+
+#  Le verrou est-il RÉCENT, donc une opération réellement en cours ? (PURE)
+#
+#  ⚠️ Un horodatage absent ou illisible rend **"oui"**, et le sens de cette
+#  prudence est l'inverse de celui de `bascule_en_cours` : là-bas on ne tait un
+#  contrôle que sur une preuve, donc l'inconnu parle ; ici on déciderait de
+#  DÉMARRER des conteneurs, donc l'inconnu s'abstient. Le fichier existe — c'est
+#  un fait —, seul son âge manque : conclure « périmé » sur une absence de
+#  mesure, ce serait rouvrir le split-brain du 12/09 par la porte du contrôle.
+verrou_recent() {  # $1 = mtime · $2 = maintenant · $3 = seuil (s) → oui/non
+  local mtime="${1:-}" maintenant="${2:-0}" seuil="${3:-$VERROU_STALE_S}" age
+  case "$mtime" in ''|*[!0-9]*) echo oui; return ;; esac
+  [ "$mtime" -le 0 ] && { echo oui; return; }
+  age=$(( maintenant - mtime ))
+  #  Horloge en arrière (NTP qui recale, C11) : l'âge négatif n'est pas une
+  #  preuve de péremption. On s'abstient, comme ci-dessus.
+  [ "$age" -lt 0 ] && { echo oui; return; }
+  [ "$age" -lt "$seuil" ] && echo oui || echo non
+}
+
+#  ── C12 — une bascule a-t-elle été TUÉE ? ───────────────────────────────────
+#
+#  Reçu de `check-reliability.sh` le 12/09/2026 : ce contrôle porte sur le verrou,
+#  donc il vit avec lui. Deux raisons de changer, deux fichiers.
+#
+#  ⚠️ Cette fonction n'est PAS autonome — comme `conformite_verdicts`, elle
+#  emploie `ok`, `warn`, `$SELF`, `$PEER` et `verdict_verrou_orphelin`, tous
+#  définis par son appelant. Les deux autres consommateurs du module
+#  (`auto-deploy`, `health-watch`) ne l'appellent jamais : ils ne prennent que
+#  `verrou_recent` et le seuil.
+verrou_verdicts() {
+  local maintenant pair n t
+  maintenant=$(date +%s)
+  #  Le NETTOYAGE journalisé — la seule trace qui subsiste, health-watch effaçant
+  #  le verrou lui-même.
+  for pair in "$SELF:${S_orphelin_dernier:-inconnu}" "$PEER:${P_orphelin_dernier:-inconnu}"; do
+    n=${pair%%:*}; t=${pair#*:}
+    case "$(verdict_verrou_orphelin "$t" "$maintenant" 86400)" in
+      OK)       ok "Aucune bascule tuée sur $n depuis 24 h (trace de nettoyage absente)" ;;
+      RECENT:*) warn "Bascule/MAJ TUÉE sur $n il y a $(( (maintenant - t) / 60 )) min — verrou orphelin nettoyé par health-watch (coupure, kill -9 ou gel ?)" ;;
+      *)        warn "Bascule tuée sur $n : INCONNU — journal health-watch illisible, le contrôle ne peut pas mesurer" ;;
+    esac
+  done
+  #  Et le verrou PRÉSENT ne dit qu'une chose : une opération est en cours. Son
+  #  âge n'est plus signalé ici — c'est health-watch qui le nettoie, et la boucle
+  #  ci-dessus qui le rapporte. Deux contrôles sur le même fait, avec deux
+  #  seuils, c'est la divergence que ce lot supprime.
+  for pair in "$SELF:${S_lock:-0}" "$PEER:${P_lock:-0}"; do
+    n=${pair%%:*}; t=${pair#*:}
+    case "$t" in ''|*[!0-9]*) continue ;; esac
+    [ "$t" -eq 0 ] && continue
+    ok ".bascule-lock présent sur $n ($(( (maintenant - t) / 60 )) min — opération en cours)"
+  done
+}

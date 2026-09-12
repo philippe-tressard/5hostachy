@@ -277,6 +277,34 @@ rien » :
 Les deux sont couverts par `--selftest`, y compris le cas « standby avec une
 réponse parasite » : ce n'est pas le site, donc rien à constater.
 
+### C12 — une bascule a-t-elle été TUÉE ? L'ACTE, pas l'objet (12/09/2026, #915)
+
+Ce contrôle lisait l'**âge du verrou** `.bascule-lock`. Il ne pouvait donc
+**jamais** alerter : `health-watch` **efface** le verrou orphelin au-delà de
+`VERROU_STALE_S` (15 min), et C12 ne passe que toutes les 15 min — son propre
+seuil étant en plus de 20 min, le fichier avait toujours disparu **cinq minutes
+avant** de devenir signalable. Fenêtre d'alerte vide, et un OK rendu sans avoir
+rien pu regarder : le **cas zéro** de `standards/04` §2.
+
+🔴 Il observe désormais la **trace datée du nettoyage** dans
+`/var/log/hostachy-health-watch.log`, qui subsiste — et non le fichier, qui
+disparaît. Même retournement que le point 13 du pré-check, qui se vérifie par
+« Alerte envoyée » plutôt que par « Email KO ».
+
+| Ce que C12 rend | Ce que ça veut dire | Conduite |
+|---|---|---|
+| `Aucune bascule tuée … depuis 24 h` | rien à signaler, **mesuré** | — |
+| `Bascule/MAJ TUÉE sur <nœud> il y a N min` | une bascule ou une MAJ est morte entre la pose et la libération du verrou — coupure, `kill -9`, **gel** (récurrent sur rpi2) | lire le journal de bascule autour de l'heure ; vérifier `.active` sur les **deux** nœuds et l'absence de split-brain |
+| `INCONNU — journal illisible` | le contrôle **n'a pas pu** mesurer | vérifier la présence et les droits de `/var/log/hostachy-health-watch.log` |
+
+⚠️ **Le seuil de péremption est écrit UNE fois** : `VERROU_STALE_S` dans
+`scripts/lib/lib-verrou.sh`, avec la décision pure `verrou_recent()`. Il était
+recopié trois fois (`LOCK_MAX_AGE_S` à 900 s, `LOCK_STALE_MIN` à 20 min, et le
+paramètre de `bascule_en_cours`) — et `auto-deploy.sh` n'en avait **aucune**, si
+bien qu'un verrou orphelin le figeait **indéfiniment**, sans plus aucun
+déploiement et en silence. `api/tests/test_verrou_bascule.py` refuse une
+quatrième copie.
+
 ### C1 — « site public KO » demande DEUX sondes, pas une (01/09/2026)
 
 Une alerte critique est partie à 01:21 pour un `HTTP 503` qui a duré moins de

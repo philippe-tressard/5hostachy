@@ -464,6 +464,11 @@ verdicts_selftest() {
   vt "polices Google, déclarées"           OK          '<link href="https://fonts.googleapis.com/css2?family=X">' "$_HOTES"
 
 
+  #  Les épreuves du VERROU vivent dans `lib-verrou-selftest.sh` : ce
+  #  fichier a dépassé son plafond en les recevant (12/09/2026). La coupe suit
+  #  la nature de l'objet — même geste que `sudo_selftest`, appelé ici aussi.
+  verrou_selftest || st_fail=1
+
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st_fail
 }

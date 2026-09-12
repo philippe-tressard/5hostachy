@@ -102,6 +102,38 @@ bascule_en_cours() {  # $1,$2 = mtimes des verrous · $3 = maintenant · $4 = se
   echo "non"
 }
 
+# ── C12. Une bascule a-t-elle été TUÉE ? (PURE — testable) ───────────────────
+#
+# 🔴 C12 mesurait l'ÂGE du verrou, et il ne pouvait donc jamais alerter : à
+# 15 min `health-watch` l'EFFACE, et C12 ne passe que toutes les 15 min — le
+# fichier avait toujours disparu avant d'être signalable. La fenêtre d'alerte
+# était vide, et #915 déclarait pourtant ce garde-fou « acceptable » en s'y
+# fiant. C'est le **cas zéro** de `standards/04` §2 : un contrôle qui ne peut pas
+# mesurer ne rend pas OK.
+#
+# On observe donc l'ACTE de nettoyage, qui laisse une trace datée dans le journal
+# de `health-watch`, et non l'objet, qui n'en laisse aucune. Même retournement
+# que le point 13 du pré-check, qui se vérifie par « Alerte envoyée » plutôt que
+# par « Email KO » (`project_canal_alerte_verifiable`).
+#
+# ⚠️ Un nettoyage n'est pas une panne en cours : c'est la trace d'une bascule ou
+# d'une MAJ tuée (coupure, `kill -9`, gel — les trois sont documentés sur rpi2).
+# Il vaut WARN, pas FAIL, et seulement s'il est RÉCENT : un nettoyage d'il y a
+# trois semaines ne doit pas crier tous les quarts d'heure.
+verdict_verrou_orphelin() {  # $1 = epoch du dernier nettoyage · $2 = maintenant
+                             # $3 = fenêtre (s) → OK | RECENT:<min> | INCONNU
+  local dernier="${1:-}" maintenant="${2:-0}" fenetre="${3:-86400}" age
+  #  Journal illisible ou absent : on ne SAIT pas. Jamais OK — c'est précisément
+  #  l'erreur que ce contrôle vient de commettre pendant des semaines.
+  case "$dernier" in ''|*[!0-9]*) echo INCONNU; return ;; esac
+  #  Aucun nettoyage jamais journalisé : c'est un vrai vert, et il est mesuré.
+  [ "$dernier" -le 0 ] && { echo OK; return; }
+  age=$(( maintenant - dernier ))
+  #  Horodatage dans le futur (horloge recalée, C11) : on ne conclut pas.
+  [ "$age" -lt 0 ] && { echo INCONNU; return; }
+  [ "$age" -lt "$fenetre" ] && echo "RECENT:$(( age / 60 ))" || echo OK
+}
+
 # ── Empreinte des scripts planifiés dans un crontab (PURE — testable) ────────
 # Rend la liste TRIÉE et dédoublonnée des scripts `/opt/5hostachy/*.sh` invoqués,
 # séparés par des virgules — ou une chaîne vide si le crontab est illisible.
