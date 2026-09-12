@@ -116,6 +116,22 @@ const EXCEPTIONS = {
 	//  échéance fait croire que la règle a des trous qu'elle n'a pas — et ce
 	//  contrôle échoue si l'une d'elles cesse de servir, précisément pour que
 	//  personne n'ait à y penser.
+	//
+	//  ── 12/09/2026 — la première depuis, et elle a son ticket (#931) ────────
+	//  🔴 `Saisie.svelte` n'est NI une création NI une édition : c'est une
+	//  question posée avant un geste, la jumelle de `Confirmation.svelte` — qui
+	//  passe ce contrôle pour la seule raison qu'elle n'a pas de champ.
+	//
+	//  Elle remplace les deux `prompt()` NATIFS du signalement, et le dépôt n'a
+	//  pas de troisième forme arbitrée pour « demander un motif attaché à un
+	//  geste » : la création s'écrit dans la page (#367), la correction dans la
+	//  carte (10/09/2026). Ni l'une ni l'autre ne décrit ce cas.
+	//
+	//  ⚠️ L'exception tombe dès que #931 tranche — dans un sens (la forme entre
+	//  dans `ux-patterns` et ce contrôle apprend à la reconnaître) comme dans
+	//  l'autre (le motif se tape dans la rangée, et ce fichier disparaît).
+	'lib/components/Saisie.svelte':
+		'question posée avant un geste, comme Confirmation — ni création ni édition (#931)',
 };
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne doit pas l'enfreindre. */

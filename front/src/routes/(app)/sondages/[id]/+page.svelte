@@ -2,7 +2,10 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { sondages as sondagesApi, signalements as signalementsApi, ApiError } from '$lib/api';
+	import { sondages as sondagesApi } from '$lib/api';
+	import { confirmer, confirmerPuis, SUPPRESSION } from '$lib/confirmation';
+	import { tenter, messageErreur } from '$lib/erreurs';
+	import { signaler } from '$lib/signalements';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -58,8 +61,8 @@
 		}
 		try {
 			sondage = await sondagesApi.get(sondageId);
-		} catch {
-			toast('error', 'Erreur de chargement');
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur de chargement'));
 		} finally {
 			loading = false;
 		}
@@ -89,62 +92,45 @@
 			toast('error', 'Vous devez accepter la charte de respect');
 			return;
 		}
+		//  Capturée AVANT le rappel : TypeScript ne conserve pas dans une closure le
+		//  fait que la garde ci-dessus a écarté `null`.
+		const option = selectedOption;
 		voting = true;
-		try {
+		await tenter(async () => {
 			await sondagesApi.voter(
 				sondageId,
-				selectedOption,
+				option,
 				commentaireVote.trim() || undefined,
 				reponseLibre.trim() || undefined,
 			);
 			sondage = await sondagesApi.get(sondageId);
 			commentaireVote = '';
 			reponseLibre = '';
-			toast('success', 'Vote enregistré');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			voting = false;
-		}
+		}, 'Vote enregistré');
+		voting = false;
 	}
 
 	async function supprimerCommentaire(commentaireId: number) {
-		try {
+		//  ⚠️ La confirmation est demandée par `Reponses`, qui porte le bouton :
+		//  la redemander ici ferait deux fenêtres pour un geste.
+		await tenter(async () => {
 			await sondagesApi.supprimerCommentaire(sondageId, commentaireId);
 			sondage = {
 				...sondage,
 				commentaires: sondage.commentaires.filter((c: any) => c.id !== commentaireId),
 			};
-			toast('info', 'Commentaire supprimé');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		}, 'Commentaire supprimé');
 	}
 
 	async function repondreSondage(contenu: string) {
-		try {
+		const publie = await tenter(async () => {
 			await sondagesApi.commenter(sondageId, contenu);
 			sondage = await sondagesApi.get(sondageId);
-			toast('success', 'Commentaire publié');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-			throw e;
-		}
-	}
-
-	async function signalerDetail(cibleType: string, cibleId: number) {
-		const motif = prompt('Pourquoi signalez-vous ce contenu au conseil syndical ?');
-		if (motif === null) return;
-		if (!motif.trim()) {
-			toast('error', 'Le motif est obligatoire');
-			return;
-		}
-		try {
-			await signalementsApi.creer(cibleType, cibleId, motif.trim());
-			toast('success', 'Signalement transmis au conseil syndical');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		}, 'Commentaire publié');
+		//  🔴 L'échec doit REMONTER : `Reponses` ne vide son champ que si la
+		//  promesse aboutit. Avaler l'erreur ici effacerait un commentaire que
+		//  personne n'a publié.
+		if (!publie) throw new Error('Commentaire non publié');
 	}
 
 	function openEdit() {
@@ -160,7 +146,7 @@
 
 	async function saveEdit() {
 		saving = true;
-		try {
+		await tenter(async () => {
 			await sondagesApi.modifier(sondageId, {
 				question: editForm.question,
 				description: editForm.description || null,
@@ -170,37 +156,29 @@
 			});
 			sondage = await sondagesApi.get(sondageId);
 			showEditModal = false;
-			toast('success', 'Sondage mis à jour');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			saving = false;
-		}
+		}, 'Sondage mis à jour');
+		saving = false;
 	}
 
 	async function stopperSondage() {
-		if (!confirm('Stopper ce sondage maintenant ? Les résultats seront visibles immédiatement.'))
-			return;
-		try {
-			await sondagesApi.cloturer(sondageId);
-			sondage = { ...sondage, cloture: true, cloture_forcee: true };
-			toast('success', 'Sondage clôturé');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		await confirmerPuis(
+			'Stopper ce sondage maintenant ? Les résultats seront visibles immédiatement.',
+			'Sondage clôturé',
+			async () => {
+				await sondagesApi.cloturer(sondageId);
+				sondage = { ...sondage, cloture: true, cloture_forcee: true };
+			},
+		);
 	}
 
 	async function supprimerSondage() {
-		if (!confirm('Supprimer définitivement ce sondage ?')) return;
+		if (!(await confirmer(SUPPRESSION('Ce sondage')))) return;
 		deleting = true;
-		try {
-			await sondagesApi.supprimer(sondageId);
-			toast('success', 'Sondage supprimé');
+		//  🔴 La navigation n'a lieu QUE si la suppression a abouti — quitter
+		//  l'écran sur un échec laisserait croire le sondage supprimé.
+		if (await tenter(() => sondagesApi.supprimer(sondageId), 'Sondage supprimé'))
 			location.href = '/sondages';
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-			deleting = false;
-		}
+		else deleting = false;
 	}
 
 	$: peutVoter = sondage && !sondage.cloture && sondage.mon_vote === null;
@@ -400,7 +378,7 @@
 				expanded={true}
 				onSubmit={repondreSondage}
 				onDelete={supprimerCommentaire}
-				onReport={(rid) => signalerDetail('commentaire', rid)}
+				onReport={(rid) => signaler('commentaire', rid)}
 			/>
 		</div>
 	</div>

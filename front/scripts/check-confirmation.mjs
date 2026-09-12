@@ -33,16 +33,27 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
 
 /**
- * Le compte au 09/09/2026, après conversion de l'onglet **Modèles e-mail**
- * (`residence` et `prestataires` l'avaient été le 30/08).
+ * Le compte au 12/09/2026 : 28 → 19, en convertissant `sondages/[id]`,
+ * `PageCommunaute`, `OngletPerimetres` et `OngletAcces` — les mêmes écrans que le lot sur
+ * `messageErreur`, et c'est délibéré : les deux dettes vivent dans les mêmes
+ * gestes, et les traiter séparément aurait fait rouvrir deux fois les mêmes
+ * fichiers.
  */
-const PLAFOND = 28;
+const PLAFOND = 19;
 
 /**
  * Fichiers qui PARLENT de `confirm()` sans en appeler un : le composant de
  * remplacement et son appel impératif, qui le citent dans leur documentation.
  */
-const HORS_RELEVE = ['lib/components/Confirmation.svelte', 'lib/confirmation.ts'];
+const HORS_RELEVE = [
+	'lib/components/Confirmation.svelte',
+	'lib/confirmation.ts',
+	//  Même raison : la modale de SAISIE et son appel impératif citent `prompt()`
+	//  — le défaut qu'ils retirent — dans leur documentation.
+	'lib/components/Saisie.svelte',
+	'lib/saisie.ts',
+	'lib/modale-imperative.ts',
+];
 
 function fichiers(dir) {
 	const sortie = [];
@@ -84,7 +95,25 @@ if (tous.length < 50) {
  */
 const APPELS_SANS_AWAIT = /(?<!await\s{1,4})\bconfirmer\s*\(/;
 
+/**
+ * 🔴 `prompt()` et `alert()` : **interdiction sèche**, pas un plafond.
+ *
+ * Le plafond était la bonne forme pour `confirm()` — quarante appels, vingt-cinq
+ * écrans : une interdiction aurait été désarmée dans la semaine. Ici le compte
+ * est **zéro** depuis le 12/09/2026, et c'est exactement le moment de fermer :
+ * un plafond à zéro et une interdiction disent la même chose, mais seule la
+ * seconde le dit à qui lit le code.
+ *
+ * Le remplacement est `demander()` (`$lib/saisie`) pour une saisie, et un
+ * `toast()` pour un message — `alert()` n'a jamais eu d'usage légitime ici.
+ */
+const BOITES_NATIVES = [
+	['prompt', 'demander() — `$lib/saisie`'],
+	['alert', "toast('info' | 'error', …) — `$lib/components/Toast.svelte`"],
+];
+
 const releve = [];
+const natives = [];
 const sansAwait = [];
 for (const chemin of tous) {
 	const rel = relative(SOURCE, chemin).split(sep).join('/');
@@ -108,11 +137,26 @@ for (const chemin of tous) {
 	lignes.forEach((ligne, i) => {
 		//  `confirmer(` est le remplacement : il ne doit pas compter.
 		if (/\bconfirm\s*\(/.test(ligne)) releve.push(`${rel}:${i + 1}`);
+		for (const [nom, remplacement] of BOITES_NATIVES) {
+			if (new RegExp(String.raw`(?<![.\w])${nom}\s*\(`).test(ligne))
+				natives.push(`${rel}:${i + 1} — \`${nom}()\` → ${remplacement}`);
+		}
 		//  `confirmer(` sans `await` — le geste part sans confirmation.
 		if (/\bconfirmer\s*\(/.test(ligne) && APPELS_SANS_AWAIT.test(ligne)) {
 			sansAwait.push(`${rel}:${i + 1} — ${ligne.trim().slice(0, 70)}`);
 		}
 	});
+}
+
+if (natives.length) {
+	console.error(
+		`\n✗ ${natives.length} boîte(s) NATIVE(s) du navigateur :\n\n` +
+			natives.map((l) => `   ${l}`).join('\n') +
+			'\n\n  🔴 Elles bloquent le navigateur entier, ignorent la charte, et sur' +
+			"\n  mobile s'affichent en haut de l'écran, loin du pouce. Le site a son" +
+			'\n  équivalent pour chacune, et le compte était à ZÉRO le 12/09/2026.\n',
+	);
+	process.exit(1);
 }
 
 if (sansAwait.length) {

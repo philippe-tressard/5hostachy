@@ -42,6 +42,14 @@ export const EXCEPTIONS = {
 	//  (contrôle C), et c'est délibérément la même main.
 	'lib/components/Confirmation.svelte':
 		'boîte de confirmation : le verbe nomme le geste (« Supprimer »), il ne peut pas être générique',
+	//  🔴 Même famille que `Confirmation`, et même raison (12/09/2026) : une
+	//  SAISIE impérative n'est pas une soumission de formulaire. Son verbe nomme
+	//  ce que le texte va faire — « Signaler » —, et « Enregistrer » y serait
+	//  faux : rien n'est enregistré, un signalement part au conseil syndical.
+	//  ⚠️ Comme pour `Confirmation`, l'exception porte sur le VERBE seul : « Annuler »
+	//  vient bien avant l'action, la même main que partout ailleurs.
+	'lib/components/Saisie.svelte':
+		'saisie impérative : le verbe nomme le geste (« Signaler »), il ne peut pas être générique',
 	//  ── Hors périmètre par la RÈGLE elle-même (§9 quinquies bis) ────────────
 	//  Ce ne sont pas des créations d'objet, et leur verbe métier est le bon.
 	'lib/components/FormulaireCreation.svelte':
