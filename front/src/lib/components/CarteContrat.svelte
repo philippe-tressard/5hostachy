@@ -40,6 +40,8 @@
 	import { safeHtml } from '$lib/sanitize';
 	import FormulaireCreation from './FormulaireCreation.svelte';
 	import FormulaireContrat from './FormulaireContrat.svelte';
+	import GesteEnPlace from './GesteEnPlace.svelte';
+	import NoteEtoiles from './NoteEtoiles.svelte';
 
 	export let contrat: any;
 	export let prest: any = null;
@@ -72,6 +74,14 @@
 	let notesOuvertes = false;
 
 	export let onNoter: (prestataireId: number, contratId: number) => void = () => {};
+	/**  La notation ouverte sur CE contrat — l'état vit dans la page, qui porte
+	 *   l'appel réseau ; la carte ne fait que le rendre au bon endroit. */
+	export let noteEnCours = false;
+	export let noteValeur: number | null = null;
+	export let noteCommentaire = '';
+	export let noteSaving = false;
+	export let onAnnulerNote: () => void = () => {};
+	export let onEnregistrerNote: () => void = () => {};
 
 	/**  🔴 Le geste ✨ — MANUEL, et il le reste (11/09/2026, demandé à l'écran :
 	 *   « comment on lance l'IA ? cela doit être manuel par une icône »).
@@ -291,9 +301,30 @@
 					{#if contrat.prestataire_id}
 						<button
 							class="btn btn-sm btn-outline contrat-noter"
-							on:click|stopPropagation={() => onNoter(contrat.prestataire_id, contrat.id)}
+							aria-pressed={noteEnCours}
+							on:click|stopPropagation={() =>
+								noteEnCours ? onAnnulerNote() : onNoter(contrat.prestataire_id, contrat.id)}
 							>⭐ Noter</button
 						>
+					{/if}
+					<!--  🔴 Le geste s'ouvre DANS la carte (#889) : il était en fenêtre, pour
+					      cinq étoiles et un commentaire. Les étoiles viennent de
+					      `NoteEtoiles` en mode saisie — saisir et lire une note sont deux
+					      rendus du même objet (R3), pas deux composants. -->
+					{#if noteEnCours}
+						<div role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+							<GesteEnPlace
+								enCours={noteSaving}
+								onAnnuler={onAnnulerNote}
+								onValider={onEnregistrerNote}
+							>
+								<NoteEtoiles saisie bind:note={noteValeur} />
+								<label class="field">
+									Commentaire
+									<textarea bind:value={noteCommentaire} rows="3"></textarea>
+								</label>
+							</GesteEnPlace>
+						</div>
 					{/if}
 				</div>
 			{/if}

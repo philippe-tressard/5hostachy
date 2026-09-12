@@ -7,7 +7,6 @@
 	import CartePrestataire from '$lib/components/CartePrestataire.svelte';
 	import OngletConsommations from '$lib/components/OngletConsommations.svelte';
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
-	import Modale from '$lib/components/Modale.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -49,19 +48,18 @@
 	//  se saisit depuis la fiche du prestataire, et son seul rattachement restant
 	//  est le CONTRAT. Le rattachement à un devis part avec l'objet qui le portait.
 	let showNotationForm: { prestataireId: number; contratId?: number } | null = null;
-	let notationNote = 0;
+	let notationNote: number | null = null;
 	let notationCommentaire = '';
 	let notationSaving = false;
-	let notationHover = 0;
 
 	function openNotationForm(prestataireId: number, contratId?: number) {
 		showNotationForm = { prestataireId, contratId };
-		notationNote = 0;
+		notationNote = null;
 		notationCommentaire = '';
 	}
 
 	async function saveNotation() {
-		if (!showNotationForm || notationNote < 1 || notationNote > 5) {
+		if (!showNotationForm || !notationNote || notationNote < 1 || notationNote > 5) {
 			toast('error', 'Sélectionnez une note entre 1 et 5');
 			return;
 		}
@@ -673,6 +671,12 @@
 					onAnnuler={closeContratForm}
 					onEnregistrer={saveContrat}
 					onNoter={openNotationForm}
+					noteEnCours={showNotationForm?.contratId === c.id}
+					bind:noteValeur={notationNote}
+					bind:noteCommentaire={notationCommentaire}
+					noteSaving={notationSaving}
+					onAnnulerNote={() => (showNotationForm = null)}
+					onEnregistrerNote={saveNotation}
 				/>
 			{/each}
 		{/each}
@@ -774,64 +778,6 @@
 	<!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'consommations'}
 	<OngletConsommations bind:showReleveForm bind:libelleBouton={libelleReleve} {prestataires} />
-{/if}
-
-<!-- Modal notation prestataire (global, hors onglets) -->
-{#if showNotationForm}
-	<Modale
-		edition
-		titre="⭐ Noter le prestataire"
-		styleBoite="max-width:420px"
-		on:fermer={() => {
-			showNotationForm = null;
-		}}
-	>
-		<div class="modal-body">
-			<div style="text-align:center;margin-bottom:1rem">
-				<div style="display:inline-flex;gap:.25rem;font-size:2rem;cursor:pointer">
-					<!--  Les cinq étoiles : littérales et distinctes, chacune sa propre clé. -->
-					{#each [1, 2, 3, 4, 5] as s (s)}
-						<button
-							type="button"
-							class="star-btn"
-							class:active={notationNote >= s}
-							style="background:none;border:none;cursor:pointer;font-size:2rem;color:{notationNote >=
-							s
-								? '#f59e0b'
-								: '#d1d5db'};transition:color .15s"
-							on:click={() => (notationNote = s)}
-							on:mouseenter={() => (notationHover = s)}
-							on:mouseleave={() => (notationHover = 0)}
-						>
-							{(notationHover || notationNote) >= s ? '★' : '☆'}
-						</button>
-					{/each}
-				</div>
-				{#if notationNote > 0}<p
-						style="margin:.25rem 0 0;font-size:.9rem;color:var(--color-text-muted)"
-					>
-						{notationNote}/5
-					</p>{/if}
-			</div>
-			<label class="field">
-				Commentaire
-				<textarea bind:value={notationCommentaire} rows="3" style="resize:vertical"></textarea>
-			</label>
-		</div>
-		<div class="modal-footer">
-			<button
-				class="btn btn-outline"
-				on:click={() => {
-					showNotationForm = null;
-				}}>Annuler</button
-			>
-			<button
-				class="btn btn-primary"
-				disabled={notationNote === 0 || notationSaving}
-				on:click={saveNotation}>{notationSaving ? '…' : 'Enregistrer'}</button
-			>
-		</div>
-	</Modale>
 {/if}
 
 <style>

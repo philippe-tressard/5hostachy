@@ -2,6 +2,7 @@
 	import { nomAffiche } from '$lib/noms';
 	import { etageLabel, lotTypeLabel } from '$lib/utils';
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import GesteEnPlace from '$lib/components/GesteEnPlace.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
@@ -832,14 +833,17 @@
 										>
 											⚡ Auto
 										</button>
+										<!--  Le MODE se lit sur le bouton qui l'a ouvert
+										      (`aria-pressed`, `ux-patterns` §13 bis). -->
 										<button
 											class="btn btn-xs btn-danger"
+											aria-pressed={bailATerminer?.id === bail.id}
 											on:click={() => {
-												bailATerminer = bail;
+												bailATerminer = bailATerminer?.id === bail.id ? null : bail;
 												dateSortie = '';
 											}}
 										>
-											Terminer
+											{bailATerminer?.id === bail.id ? 'Annuler' : 'Terminer'}
 										</button>
 									{/if}
 									{#if $isAdmin || $isCS}
@@ -853,6 +857,22 @@
 										</button>
 									{/if}
 								</div>
+
+								<!--  Le geste s'ouvre DANS la carte du bail (#889) : il était en
+								      fenêtre, pour UN champ de date sur un objet de liste. -->
+								{#if bailATerminer?.id === bail.id}
+									<GesteEnPlace
+										danger
+										question={`Confirmer la fin du bail de <strong>${nomLocataire(bail)}</strong> ?`}
+										onAnnuler={() => (bailATerminer = null)}
+										onValider={confirmerTerminer}
+									>
+										<label class="field champ-moyen">
+											Date de sortie réelle
+											<input type="date" bind:value={dateSortie} />
+										</label>
+									</GesteEnPlace>
+								{/if}
 
 								<div
 									style="display:flex;gap:2rem;font-size:0.85rem;margin-bottom:.75rem;flex-wrap:wrap"
@@ -889,28 +909,6 @@
 {/if}
 
 <!-- ── Modal : terminer bail ────────────────────────────────────────── -->
-{#if bailATerminer}
-	<Modale
-		edition
-		titre="Terminer le bail"
-		styleBoite="width:min(400px,95vw)"
-		on:fermer={() => (bailATerminer = null)}
-	>
-		<div class="modal-body">
-			<p style="margin-bottom:0.75rem">
-				Confirmer la fin du bail de <strong>{nomLocataire(bailATerminer)}</strong> ?
-			</p>
-			<div class="field">
-				<label for="tb-sortie">Date de sortie réelle</label>
-				<input id="tb-sortie" type="date" bind:value={dateSortie} />
-			</div>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (bailATerminer = null)}>Annuler</button>
-			<button class="btn btn-danger" on:click={confirmerTerminer}>Terminer</button>
-		</div>
-	</Modale>
-{/if}
 
 <!-- ── Modal : supprimer bail (admin) ──────────────────────────────── -->
 {#if bailASupprimer}

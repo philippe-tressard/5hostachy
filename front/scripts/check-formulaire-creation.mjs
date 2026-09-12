@@ -332,7 +332,9 @@ for (const f of tous) {
 //  d'éléments LUS : sous ce seuil, le repérage des `<Modale>` ne mord plus.
 //  ⬇️ 10 → 9 le 12/09/2026 : les deux fenêtres de validation de compte sont parties dans `ValidationCompte` (12/09/2026, #889). Le plancher SUIT le relevé, il ne
 //  le précède pas — le laisser au-dessus rendrait le cas zéro permanent.
-const PLANCHER_MODALES = 9;
+//  ⬇️ « terminer un bail » s'ouvre dans la carte (12/09/2026, #889). Le plancher SUIT le relevé.
+//  ⬇️ « noter un prestataire » s'ouvre dans la carte (12/09/2026, #889).
+const PLANCHER_MODALES = 7;
 if (modalesLues < PLANCHER_MODALES) {
 	console.error(
 		`✗ Cas zéro : ${modalesLues} <Modale> recensée(s) dans routes/ et lib/components/, ${PLANCHER_MODALES} ` +

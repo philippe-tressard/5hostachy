@@ -289,7 +289,9 @@ if (fichiersAvecModale < 2) {
 //  dans `ValidationCompte`, où elle s'ouvre DANS la ligne de l'objet (#889).
 //  Le plancher SUIT le relevé — le laisser au-dessus rendrait le cas zéro
 //  permanent, et un contrôle qui échoue toujours finit par être désarmé.
-const PLANCHER_MODALES = 20;
+//  ⬇️ idem — la fenêtre de fin de bail est partie. Le plancher SUIT le relevé.
+//  ⬇️ « noter un prestataire » s'ouvre dans la carte (12/09/2026, #889).
+const PLANCHER_MODALES = 18;
 if (titresRendus < PLANCHER_MODALES) {
 	console.error(
 		`✗ Cas zéro : ${titresRendus} modale(s) recensée(s), ${PLANCHER_MODALES} attendues au minimum. ` +

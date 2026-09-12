@@ -791,7 +791,7 @@
 					      littéralement le même composant, et non plus une copie qui
 					      dérive. -->
 					{#if cvModal?.id === user.id}
-						<div class="pending-form card">
+						<div class="pending-form">
 							<ValidationCompte
 								utilisateur={user}
 								enCours={cvSubmitting}
@@ -1279,17 +1279,13 @@
 
 	/* Validations */
 	/*  La ligne d'un compte en cours de validation : son formulaire s'ouvre juste
-	    dessous, les deux ne doivent donc pas se lire comme deux objets. Le bas de
-	    la ligne perd son arrondi, le haut du formulaire aussi — ils se rejoignent. */
+	    dessous, les deux ne doivent pas se lire comme deux objets. */
 	.pending-row--edition {
 		border-bottom-left-radius: 0;
 		border-bottom-right-radius: 0;
 		margin-bottom: 0;
 	}
 	.pending-form {
-		border-top: none;
-		border-top-left-radius: 0;
-		border-top-right-radius: 0;
 		margin-bottom: 0.6rem;
 	}
 	.pending-row {
