@@ -111,13 +111,18 @@
 	      DIT — elle ne se constate pas. -->
 	{#if contratId !== null}
 		<SectionFormulaire titre="Documents" pour="contrat-{contratId}-doc">
-			<DocumentsContrat
-				{contratId}
-				{documents}
-				{onSupprimer}
-				{onAjoute}
-				idChamp="contrat-{contratId}-doc"
-			/>
+			<!--  `.field champ-large` : l'enveloppe que `SectionsPiecesJointes` pose
+			      pour les tickets. Sans elle, le champ de nommage ne prenait pas la
+			      largeur de la boîte — l'écart de largeur signalé le 12/09. -->
+			<div class="field champ-large">
+				<DocumentsContrat
+					{contratId}
+					{documents}
+					{onSupprimer}
+					{onAjoute}
+					idChamp="contrat-{contratId}-doc"
+				/>
+			</div>
 		</SectionFormulaire>
 	{/if}
 

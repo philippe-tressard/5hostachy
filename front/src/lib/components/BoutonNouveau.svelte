@@ -1,24 +1,39 @@
 <!--
-  Le bouton d'en-tête qui ouvre un formulaire de création, et qui bascule en
-  « ✕ Annuler » tant qu'il est ouvert.
+  Le bouton d'en-tête qui ouvre un formulaire de création — et qui S'EFFACE tant
+  qu'il est ouvert.
 
-  POURQUOI CE COMPOSANT (16/08/2026). Ce geste est la règle 1 du paradigme unique
-  (#367) : la commande d'annulation vit dans l'en-tête, où le bouton d'ouverture
-  se retourne — jamais un second bouton dans la boîte. Il était réécrit à la main
-  sur chaque écran, et l'écran Prestataires montrait ce que ça produit : sur ses
-  QUATRE onglets, deux basculaient correctement et deux affichaient encore
-  « + Nouvelle prestation » / « + Nouveau contrat » avec le formulaire déjà
-  ouvert, sans aucun moyen de renoncer depuis l'en-tête. Même fichier, même
-  intention, deux comportements — signalé par l'utilisateur.
+  ## 🔴 Il a porté la règle INVERSE pendant quatre semaines (corrigé le 12/09/2026)
 
-  Écrire la bascule ici la rend non-oubliable : un écran qui utilise ce composant
-  ne PEUT plus afficher « + … » sur un formulaire ouvert.
+  Ce composant est né le 16/08/2026 avec la bascule « + … » ⇆ « ✕ Annuler », et
+  son en-tête affirmait porter *« la règle 1 du paradigme unique (#367) »*.
 
-  Le libellé reçu est celui de l'ouverture (« Nouvelle prestation ») : le « + » et
-  le « ✕ Annuler » sont posés par le composant, pour que le préfixe et la formule
-  d'annulation soient identiques partout. C'est le même raisonnement que pour le
-  chevron ou l'indicateur d'attente d'app.css — un signal d'interface se décide
-  une fois.
+  **Cette règle a été révisée le 18/08**, sur Tickets, en ces termes :
+
+  > L'en-tête n'OUVRE plus que le formulaire : l'annulation vit à côté
+  > d'« Enregistrer », dans le formulaire. Le bouton s'efface pendant la saisie —
+  > le laisser en « ✕ Annuler » ferait **deux commandes d'annulation pour un seul
+  > formulaire**.
+
+  Tickets et Actualités l'ont adoptée. Ce composant, non — et Prestataires, son
+  unique appelant, est resté seul sur l'ancienne norme pendant que son en-tête
+  continuait d'affirmer porter la bonne. **Une consigne fausse est pire
+  qu'absente** : elle a fait lire l'écart comme une décision.
+
+  Signalé à l'écran le 12/09/2026 : *« quand on est en édition, il y a un bouton
+  annuler qui apparaît en haut à droite — c'est hors standard UX »*. Et en
+  édition, c'était pire encore : on n'annule pas une création qui n'a pas lieu.
+
+  ## Pourquoi le composant SUBSISTE malgré tout
+
+  Il reste la bonne réponse à ce qu'il a été créé pour corriger : sur les quatre
+  onglets de Prestataires, deux affichaient « + Nouveau contrat » **avec le
+  formulaire déjà ouvert**. Le geste s'écrivait à la main sur chaque écran, et
+  c'est ce qui produisait la divergence.
+
+  Tickets et Actualités écrivaient le leur à la main — deuxième et troisième
+  écriture du même bouton, avec le même commentaire recopié. Ils passent par ici
+  depuis le 12/09 : le comportement n'y change pas d'un pixel, c'est l'écriture
+  qui cesse d'être triple.
 
   `page-header-btn` et `btn btn-primary` viennent d'app.css : aucune règle locale
   ici, donc rien à faire suivre si le balisage bouge.
@@ -26,7 +41,9 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
-	/** Le formulaire est-il ouvert ? C'est ce qui décide du libellé. */
+	/**  Le formulaire est-il ouvert ? Le bouton s'efface alors — il ne bascule
+	 *   PAS en « ✕ Annuler » : le pied du formulaire porte déjà cette commande,
+	 *   et deux annulations pour une saisie, c'est le défaut de #367. */
 	export let ouvert = false;
 
 	/** Libellé d'ouverture, SANS le « + » — ex. « Nouvelle prestation ». */
@@ -35,6 +52,8 @@
 	const dispatch = createEventDispatcher<{ basculer: void }>();
 </script>
 
-<button class="btn btn-primary page-header-btn" on:click={() => dispatch('basculer')}>
-	{ouvert ? '✕ Annuler' : `+ ${libelle}`}
-</button>
+{#if !ouvert}
+	<button class="btn btn-primary page-header-btn" on:click={() => dispatch('basculer')}>
+		+ {libelle}
+	</button>
+{/if}

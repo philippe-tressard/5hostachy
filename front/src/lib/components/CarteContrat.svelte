@@ -34,11 +34,11 @@
   Philippe qui a nommé la première. Chercher la NOTION, pas le nom demandé.
 -->
 <script lang="ts">
-	import { documents as documentsApi } from '$lib/api';
 	import { frequenceLabel } from '$lib/prestataires';
 	import { fmtDateShort } from '$lib/date';
 	import { safeHtml } from '$lib/sanitize';
 	import FormulaireCreation from './FormulaireCreation.svelte';
+	import ListeDocuments from './ListeDocuments.svelte';
 	import FormulaireContrat from './FormulaireContrat.svelte';
 	import GesteEnPlace from './GesteEnPlace.svelte';
 	import NoteEtoiles from './NoteEtoiles.svelte';
@@ -218,13 +218,19 @@
 	{:else if expanded}
 		<div class="contrat-detail-body">
 			<div class="contrat-section">
-				<div class="contrat-section-title">Infos contrat</div>
+				<!--  🔴 « Le contrat », comme en édition — et non « Infos contrat ».
+					      Signalé le 12/09/2026 : *« la zone en lecture n'a pas les mêmes
+					      noms que l'édition »*. C'est R3 du cadre, appliqué entre DEUX
+					      RENDUS du même objet : un champ garde son libellé qu'on le lise
+					      ou qu'on le corrige. L'intitulé vient de la déclaration
+					      (`entites/contrat`, `titreEcran`), pas d'un choix local. -->
+				<div class="contrat-section-title">Le contrat</div>
 				<div class="detail-grid">
 					<div>
-						<span class="detail-label">Date de début</span>📅 {fmtDateShort(contrat.date_debut)}
+						<span class="detail-label">Début</span>📅 {fmtDateShort(contrat.date_debut)}
 					</div>
 					{#if contrat.duree_initiale_valeur}<div>
-							<span class="detail-label">Durée</span>{contrat.duree_initiale_valeur}
+							<span class="detail-label">Durée initiale</span>{contrat.duree_initiale_valeur}
 							{contrat.duree_initiale_unite}
 						</div>{/if}
 					{#if contrat.frequence_type}
@@ -240,6 +246,12 @@
 			</div>
 			{#if contrat.notes}
 				<div class="contrat-section">
+					<!--  « Description », comme en édition — c'est le MÊME champ
+				      (`contrat.notes`), et il portait deux noms selon qu'on le lisait ou
+				      qu'on le corrigeait (signalé le 12/09/2026). Que la synthèse IA
+				      atterrisse ici est vrai, mais c'est ce que le champ CONTIENT
+				      souvent, pas ce qu'il EST : le nommer par son contenu le rendait
+				      introuvable depuis l'écran de saisie. -->
 					<div
 						class="contrat-section-title clickable"
 						role="button"
@@ -248,7 +260,7 @@
 						on:keydown|stopPropagation={(e) =>
 							(e.key === 'Enter' || e.key === ' ') && (notesOuvertes = !notesOuvertes)}
 					>
-						Synthèse du ou des contrats {notesOuvertes ? '▲' : '▼'}
+						Description {notesOuvertes ? '▲' : '▼'}
 					</div>
 					{#if notesOuvertes}
 						<div class="rich-content" style="font-size:.875rem">
@@ -257,35 +269,22 @@
 					{/if}
 				</div>
 			{/if}
+			<!--  🔴 Les documents sont rendus par `ListeDocuments` — le rendu des
+			      tickets, pastilles « PDF: nom », et rien d'autre (12/09/2026).
+
+			      Cette liste était écrite ICI **et** dans `DocumentsContrat`, avec
+			      les mêmes styles en ligne au caractère près : une duplication
+			      invisible à tout contrôle inter-fichiers, puisque chacune vivait
+			      chez elle. Elles auraient divergé à la première retouche — c'est
+			      exactement ce qui est arrivé au titre, présent deux fois à
+			      l'écran en édition. -->
 			<div class="contrat-section">
-				<div class="contrat-section-title">
-					📄 Documents ({documents?.length ?? 0})
-				</div>
-				{#if documents?.length > 0}
-					{#each documents as doc (doc.id)}
-						<div
-							style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap"
-						>
-							<a href={documentsApi.downloadUrl(doc.id)} target="_blank"
-								>📎 {doc.titre || doc.fichier_nom}</a
-							>
-							<span style="font-size:.75rem;color:var(--color-text-muted)"
-								>{fmtDateShort(doc.publie_le)}</span
-							>
-							{#if peutModifier}
-								<button
-									class="btn-icon-danger"
-									aria-label="Supprimer"
-									title="Supprimer"
-									style="margin-left:auto"
-									on:click|stopPropagation={() => onSupprimerDoc(contrat.id, doc.id)}>🗑️</button
-								>
-							{/if}
-						</div>
-					{/each}
-				{:else}
-					<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
-				{/if}
+				<div class="contrat-section-title">Documents ({documents?.length ?? 0})</div>
+				<ListeDocuments
+					{documents}
+					peutSupprimer={peutModifier}
+					onSupprimer={(docId) => onSupprimerDoc(contrat.id, docId)}
+				/>
 			</div>
 			{#if peutModifier}
 				<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">

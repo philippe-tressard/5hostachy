@@ -42,10 +42,13 @@
       (§0, arbitré le 18/08/2026). Il partageait la grille avec le type et la
       spécialité — quatre champs d'un bloc, sans rien pour dire lequel nomme
       l'entreprise et lesquels la décrivent. -->
-<SectionFormulaire titre="Nom" requis pour={idNom}>
-	<label class="field champ-large" for={idNom}>
+<!--  ══ 1. NOM ══ La section n'a pas de titre : le champ porte le sien, comme
+      sur les dix autres écrans (12/09/2026). Voir `ChampsContrat`. -->
+<SectionFormulaire premiere>
+	<div class="field champ-large">
+		<label for={idNom}>Nom *</label>
 		<input id={idNom} bind:value={prestForm.nom} required />
-	</label>
+	</div>
 </SectionFormulaire>
 
 <!--  ══ 2. CHAMPS SPÉCIFIQUES ══ Ce qui décrit l'entreprise. -->

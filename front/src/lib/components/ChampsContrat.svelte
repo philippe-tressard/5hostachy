@@ -69,11 +69,18 @@
 <!--  ══ 1. TITRE ══ Le titre SEUL (§0, arbitré le 18/08/2026 : ce qui qualifie
       l'objet est en section 2). Le champ s'appelait « Libellé » — signalé à
       l'écran le 12/09 : c'est « Titre » sur les huit autres entités, et un même
-      objet porte le même libellé partout (R3). -->
-<SectionFormulaire titre="Titre" requis pour="{idNotes}-titre">
-	<label class="field champ-large" for="{idNotes}-titre">
+      objet porte le même libellé partout (R3).
+
+      🔴 La section n'a PAS de titre, et le champ porte le sien (12/09/2026,
+      second signalement). `titre="Titre" requis` rendait « TITRE* » en petites
+      capitales — une troisième forme pour le même champ, et l'astérisque collé.
+      Mesuré : DIX écrans sur onze emploient `<SectionFormulaire premiere>` avec
+      un `.field champ-large` qui porte `Titre *`. L'exception, c'était moi. -->
+<SectionFormulaire premiere>
+	<div class="field champ-large">
+		<label for="{idNotes}-titre">Titre *</label>
 		<input id="{idNotes}-titre" bind:value={contratForm.libelle} required />
-	</label>
+	</div>
 </SectionFormulaire>
 
 <!--  ══ 2. CHAMPS SPÉCIFIQUES ══ Tout ce qui QUALIFIE le contrat : avec qui, sur
