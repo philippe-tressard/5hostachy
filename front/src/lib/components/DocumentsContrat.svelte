@@ -44,8 +44,20 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import { documents as docsApi } from '$lib/api';
 
-	/** Le contrat dont on montre les pièces. */
-	export let contratId: number;
+	/**  Le contrat dont on montre les pièces — `null` PENDANT SA CRÉATION.
+	 *
+	 *  🔴 La section était absente à la création (dette `motif: api`, #921), au
+	 *  motif qu'un document se rattache à un `contrat_id` qui n'existe pas encore.
+	 *  C'était vrai, et la conclusion était fausse : les ACTUALITÉS déposent leurs
+	 *  documents à la création depuis #531, en gardant les fichiers de côté et en
+	 *  les attachant une fois l'objet enregistré. Aucun endpoint ne manquait — le
+	 *  geste existait, sur un autre écran.
+	 *
+	 *  ⚠️ C'est aussi ce qui protège l'invariant du serveur : *une ligne `document`
+	 *  porte toujours un rattachement*. Créer le contrat à blanc pour obtenir un
+	 *  identifiant l'aurait violé le temps d'un formulaire abandonné — donc pour
+	 *  toujours. */
+	export let contratId: number | null;
 	/** Les documents déjà attachés. */
 	export let documents: any[] = [];
 	/** Qui sait supprimer — l'écran, qui tient la table. */
@@ -54,6 +66,16 @@
 	export let onAjoute: (contratId: number) => void;
 	/** Identifiant du champ de téléversement — unique par emplacement. */
 	export let idChamp: string;
+
+	/**  Les fichiers EN ATTENTE, quand le contrat n'existe pas encore. L'écran les
+	 *   attache après création, par `attacherA('contrat', …)` — la même fonction
+	 *   que les actualités, et non une seconde boucle d'envoi. */
+	export let fichiersEnAttente: File[] = [];
+
+	//  Deux régimes, un seul rendu. `FichiersUpload` porte déjà la bascule
+	//  (`differe`) : la choisir ici plutôt que dupliquer le composant, c'est ce
+	//  qui garantit que la création et la correction se ressemblent.
+	$: differe = contratId === null;
 
 	/**  Le nom de fichier saisi au dépôt. `FichiersUpload` s'en sert pour RENOMMER
 	 *   le fichier avant l'envoi — c'est ainsi que les tickets le font, et le
@@ -75,8 +97,8 @@
 	 *  l'API, qui seule connaît l'identifiant du document, sa date et son titre
 	 *  définitif. Rendre l'URL sert à `FichiersUpload`, qui attend une chaîne. */
 	async function envoyer(file: File): Promise<string> {
-		const doc = await docsApi.uploadForContrat(file.name, contratId, file);
-		onAjoute(contratId);
+		const doc = await docsApi.uploadPour('contrat', contratId!, file.name, file);
+		onAjoute(contratId!);
 		return docsApi.downloadUrl(doc.id);
 	}
 
@@ -84,19 +106,25 @@
 	 *   rend la nouvelle liste, et `FichiersUpload` s'y aligne. */
 	async function retirer(url: string): Promise<string[]> {
 		const doc = (documents ?? []).find((d) => docsApi.downloadUrl(d.id) === url);
-		if (doc) onSupprimer(contratId, doc.id);
+		if (doc) onSupprimer(contratId!, doc.id);
 		return urls.filter((u) => u !== url);
 	}
 </script>
 
+<!--  Un seul appel, deux régimes : à la création les fichiers attendent dans
+      `fichiersEnAttente` ; à la correction ils partent dès qu'ils sont choisis.
+      Le rendu — pastilles, bouton, champ de nom — est le même des deux côtés,
+      parce que c'est le même composant. -->
 <FichiersUpload
 	id={idChamp}
 	mode="documents"
 	titre=""
 	avecLibelle
 	bind:libelleFichier
+	{differe}
+	bind:fichiers={fichiersEnAttente}
 	{urls}
 	{noms}
-	upload={envoyer}
-	remove={retirer}
+	upload={differe ? null : envoyer}
+	remove={differe ? null : retirer}
 />

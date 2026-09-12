@@ -45,7 +45,7 @@
 	import { estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment } from '$lib/utils';
 	import { perimetreTags } from '$lib/perimetres-pastilles';
 	import { perimetresStore } from '$lib/stores/perimetres';
-	import { confirmer, SUPPRESSION } from '$lib/confirmation';
+	import { SUPPRESSION, confirmer, confirmerPuis } from '$lib/confirmation';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', defautsDePage('calendrier'));
 	$: _siteNom = $siteNomStore;
@@ -381,25 +381,21 @@
 	}
 
 	async function archiveEv(id: number) {
-		if (!(await confirmer('Archiver cet événement ?'))) return;
-		try {
+		await confirmerPuis('Archiver cet événement ?', 'Événement archivé', async () => {
 			await calApi.archive(id);
 			evenements = evenements.map((e) => (e.id === id ? evenementArchive(e) : e));
-			toast('success', 'Événement archivé');
-		} catch {
-			toast('error', 'Erreur');
-		}
+		});
 	}
 
 	async function deleteEv(id: number) {
-		if (!(await confirmer(SUPPRESSION('Cet événement')))) return;
-		try {
-			await calApi.delete(id);
-			evenements = evenements.filter((e) => e.id !== id);
-			toast('success', 'Événement supprimé définitivement');
-		} catch {
-			toast('error', 'Erreur');
-		}
+		await confirmerPuis(
+			SUPPRESSION('Cet événement'),
+			'Événement supprimé définitivement',
+			async () => {
+				await calApi.delete(id);
+				evenements = evenements.filter((e) => e.id !== id);
+			},
+		);
 	}
 
 	async function loadArchivedPubs() {
@@ -413,14 +409,14 @@
 	}
 
 	async function deleteArchivedPub(pub: Publication) {
-		if (!(await confirmer(SUPPRESSION(`« ${pub.titre} »`)))) return;
-		try {
-			await pubsApi.delete(pub.id);
-			archivedPubs = archivedPubs.filter((p) => p.id !== pub.id);
-			toast('success', 'Publication supprimée définitivement');
-		} catch {
-			toast('error', 'Erreur');
-		}
+		await confirmerPuis(
+			SUPPRESSION(`« ${pub.titre} »`),
+			'Publication supprimée définitivement',
+			async () => {
+				await pubsApi.delete(pub.id);
+				archivedPubs = archivedPubs.filter((p) => p.id !== pub.id);
+			},
+		);
 	}
 
 	$: if (onglet === 'archives') loadArchivedPubs();

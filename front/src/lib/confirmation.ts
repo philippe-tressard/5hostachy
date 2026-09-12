@@ -1,6 +1,7 @@
 import { mount, unmount } from 'svelte';
 
 import Confirmation from '$lib/components/Confirmation.svelte';
+import { tenter } from '$lib/erreurs';
 
 /**
  * Demande confirmation, dans la charte du site. Rend `true` si l'on confirme.
@@ -122,4 +123,54 @@ Cette action est irréversible.`,
 		libelleConfirmer: 'Supprimer',
 		danger: true,
 	};
+}
+
+/**
+ * **Confirmer, agir, et le dire** — le geste destructif complet, en un appel.
+ *
+ * ```ts
+ * await confirmerPuis('Archiver ce contrat ?', 'Archivé', async () => {
+ * 	await prestApi.deleteContrat(id);
+ * 	contrats = contrats.filter((c) => c.id !== id);
+ * });
+ * ```
+ *
+ * ## Pourquoi (12/09/2026)
+ *
+ * Le motif était écrit **sept fois**, au caractère près, dans trois écrans :
+ * `prestataires` (×3), `calendrier` (×3) et `OngletConsommations` (×1) —
+ * confirmer, `try`, appeler, mettre à jour l'état, `toast('success', …)`,
+ * `catch`, `toast('error', 'Erreur')`. Dix lignes pour une intention.
+ *
+ * 🔴 Et elles avaient **déjà divergé** sur le point qui compte : six écrivaient
+ * `toast('error', 'Erreur')`, la septième rendait le message du serveur. Six
+ * gestes sur sept disaient donc « Erreur » là où l'API expliquait *pourquoi* —
+ * un quota dépassé, un document encore référencé, une session expirée.
+ *
+ * Le `catch` passe désormais par `messageErreur`, qui sait distinguer un 401
+ * (« votre session a expiré, rechargez la page ») d'un serveur injoignable. Les
+ * sept gestes y gagnent, sans qu'aucun appelant ait à le demander.
+ *
+ * ⚠️ La mise à jour de l'état va DANS `action`, et c'est voulu : elle n'a de
+ * sens que si l'appel a réussi, et chaque écran range la sienne à sa façon —
+ * filtrer une liste, remplacer un élément, recharger une table. Un paramètre de
+ * plus aurait obligé les sept à se ressembler là où ils n'ont aucune raison de
+ * le faire.
+ *
+ * @returns `true` si le geste a eu lieu, `false` s'il a été refusé ou a échoué.
+ */
+export async function confirmerPuis(
+	question: Parameters<typeof confirmer>[0],
+	succes: string,
+	//  🔴 Le rappel en DERNIER, et ce n'est pas cosmétique : placé au milieu, il
+	//  force le formateur à éclater l'appel sur neuf lignes, et la factorisation
+	//  rendait alors les écrans PLUS longs qu'avant. La convention JS — le rappel
+	//  ferme l'appel — garde la forme compacte que le motif d'origine avait.
+	action: () => Promise<unknown>,
+): Promise<boolean> {
+	if (!(await confirmer(question))) return false;
+	//  Le `try`/`toast`/`catch` vit dans `tenter` : l'écrire ici aussi donnerait
+	//  deux gestions d'erreur pour une intention, et c'est précisément ce que ce
+	//  lot retire.
+	return tenter(action, succes);
 }

@@ -13,7 +13,8 @@
 	import ActionsMembre, { type Geste } from '$lib/components/ActionsMembre.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
-	import { validerCompte, messageErreur } from '$lib/comptes';
+	import { validerCompte } from '$lib/comptes';
+	import { messageErreur } from '$lib/erreurs';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import OngletAnnoncesHall from '$lib/components/OngletAnnoncesHall.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';

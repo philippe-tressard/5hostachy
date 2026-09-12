@@ -26,7 +26,8 @@
 	import Onglet from '$lib/components/Onglet.svelte';
 	import AccepterRefuser from '$lib/components/AccepterRefuser.svelte';
 	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
-	import { validerCompte, messageErreur } from '$lib/comptes';
+	import { validerCompte } from '$lib/comptes';
+	import { messageErreur } from '$lib/erreurs';
 	import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 	import OngletSmtp from '$lib/components/OngletSmtp.svelte';
 	import OngletIA from '$lib/components/OngletIA.svelte';

@@ -49,7 +49,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { attacherAPublication } from '$lib/fichiers';
+	import { attacherApres } from '$lib/fichiers';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
@@ -318,12 +318,10 @@
 				annonce_hall: annonceHall,
 				confidentiel,
 			});
-			//  Un échec ici ne doit pas perdre la publication déjà créée.
-			try {
-				await attacherAPublication(pub.id, pendingFiles);
-			} catch {
-				/* la publication existe : le document se rattrape depuis l'écran */
-			}
+			//  🔴 Le silence d'avant (« la publication existe, le document se rattrape »)
+			//  laissait croire le document joint. `attacherApres` le DIT — c'est la
+			//  version la plus disante des deux écrans qui l'écrivaient (12/09/2026).
+			await attacherApres('publication', pub.id, pendingFiles, 'Publication créée');
 			if (publierApresDocuments) {
 				pub = await pubsApi.update(pub.id, { brouillon: false });
 			}

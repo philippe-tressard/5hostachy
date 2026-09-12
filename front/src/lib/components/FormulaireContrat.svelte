@@ -58,15 +58,26 @@
 	/**
 	 * L'identifiant du contrat édité, ou `null` en création.
 	 *
-	 * 🔴 C'est **lui seul** qui décide de la rubrique Documents, et non un
-	 * booléen de plus : un document se rattache à un contrat, donc il n'y a rien
-	 * à rattacher tant que le contrat n'existe pas. Un drapeau séparé pourrait
-	 * dire « avec documents » sans identifiant, et `DocumentsContrat` recevrait
-	 * alors `contratId={0}` — c'est ce que l'ancien code écrivait
-	 * (`contratId={editContratId ?? 0}`), un repli qui ne pouvait désigner
-	 * aucun contrat.
+	 * 🔴 Il décide du RÉGIME de la rubrique Documents, non de sa présence
+	 * (corrigé le 12/09/2026) : `null` fait attendre les fichiers, un identifiant
+	 * les envoie aussitôt. La section, elle, est rendue dans les deux cas.
+	 *
+	 * ⚠️ Jamais un booléen de plus : un drapeau séparé pourrait dire « avec
+	 * documents » sans identifiant, et `DocumentsContrat` recevrait alors
+	 * `contratId={0}` — c'est ce que l'ancien code écrivait
+	 * (`contratId={editContratId ?? 0}`), un repli qui ne désignait aucun
+	 * contrat. `null` le dit, `0` le cachait.
 	 */
 	export let contratId: number | null = null;
+
+	/**  Les fichiers choisis AVANT que le contrat existe. L'écran les lit après
+	 *   l'enregistrement et les attache par `attacherA('contrat', …)` — la même
+	 *   fonction que les actualités.
+	 *
+	 *   ⚠️ Ils restent ici et non dans l'écran : c'est le formulaire qui les
+	 *   collecte, et un état partagé par une prop liée se lit dans les deux sens
+	 *   sans qu'un des deux côtés invente sa copie. */
+	export let fichiersEnAttente: File[] = [];
 	export let documents: any[] = [];
 	export let onSupprimer: (contratId: number, docId: number) => void = () => {};
 	export let onAjoute: (contratId: number) => void = () => {};
@@ -105,26 +116,28 @@
 	      l'ordre des neuf sections ne se discute pas (R2), et Photos (7) et
 	      Documents (8) ne fusionnent jamais.
 
-	      ⚠️ Absente à la CRÉATION, et c'est une dette déclarée (#909, motif `api`
-	      dans `entites/contrat`) : un document se rattache à un `contrat_id` qui
-	      n'existe pas encore. L'écran ne peut pas la rendre, la déclaration le
-	      DIT — elle ne se constate pas. -->
-	{#if contratId !== null}
-		<SectionFormulaire titre="Documents" pour="contrat-{contratId}-doc">
-			<!--  `.field champ-large` : l'enveloppe que `SectionsPiecesJointes` pose
-			      pour les tickets. Sans elle, le champ de nommage ne prenait pas la
-			      largeur de la boîte — l'écart de largeur signalé le 12/09. -->
-			<div class="field champ-large">
-				<DocumentsContrat
-					{contratId}
-					{documents}
-					{onSupprimer}
-					{onAjoute}
-					idChamp="contrat-{contratId}-doc"
-				/>
-			</div>
-		</SectionFormulaire>
-	{/if}
+	      🔴 Elle est désormais rendue AUSSI à la création (12/09/2026, #921). Elle
+	      en était absente au motif qu'un document se rattache à un `contrat_id`
+	      qui n'existe pas encore — vrai, mais la conclusion ne l'était pas : les
+	      ACTUALITÉS le font depuis #531 en gardant les fichiers de côté et en les
+	      attachant une fois l'objet enregistré. Aucun endpoint ne manquait, le
+	      geste existait sur un autre écran. La dette déclarée était une dette
+	      d'inattention. -->
+	<SectionFormulaire titre="Documents" pour="contrat-{contratId ?? 'nouveau'}-doc">
+		<!--  `.field champ-large` : l'enveloppe que `SectionsPiecesJointes` pose
+		      pour les tickets. Sans elle, le champ de nommage ne prend pas la
+		      largeur de la boîte. -->
+		<div class="field champ-large">
+			<DocumentsContrat
+				{contratId}
+				{documents}
+				{onSupprimer}
+				{onAjoute}
+				bind:fichiersEnAttente
+				idChamp="contrat-{contratId ?? 'nouveau'}-doc"
+			/>
+		</div>
+	</SectionFormulaire>
 
 	<!--
 		`.form-actions` porte `justify-content: flex-end` (app.css) : le bouton

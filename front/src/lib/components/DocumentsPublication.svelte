@@ -8,7 +8,7 @@
 
   ⚠️ Il ne sert QU'EN CORRECTION. À la création, la publication n'a pas encore
   d'identifiant : les fichiers sont retenus par `ChampsCommuns` et téléversés
-  après coup (`attacherAPublication`). Les deux régimes ne se ressemblent qu'en
+  après coup (`attacherA`). Les deux régimes ne se ressemblent qu'en
   apparence — l'un manipule des `Document` avec un `id`, l'autre des `File`.
 
   🔴 Le style voyage AVEC le balisage qui l'emploie : un style laissé chez le
@@ -19,7 +19,7 @@
 
 	import { documents as docsApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { ACCEPT_DOCUMENTS, attacherAPublication } from '$lib/fichiers';
+	import { ACCEPT_DOCUMENTS, attacherA } from '$lib/fichiers';
 	import PastilleFichier from './PastilleFichier.svelte';
 
 	/** L'identifiant de la publication — elle existe forcément ici. */
@@ -41,7 +41,7 @@
 		if (!input.files?.length) return;
 		enCours = true;
 		try {
-			docs = [...docs, ...(await attacherAPublication(publicationId, Array.from(input.files)))];
+			docs = [...docs, ...(await attacherA('publication', publicationId, Array.from(input.files)))];
 		} catch (err) {
 			toast('error', err instanceof ApiError ? err.message : 'Téléversement impossible');
 		} finally {

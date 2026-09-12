@@ -21,7 +21,7 @@
  * 🔴 `standards/02` §4 bis : quand deux implémentations coexistent, on retient
  * **la plus disante**. C'est elle qui est ici, et les deux écrans l'obtiennent.
  */
-import { admin as adminApi, ApiError } from '$lib/api';
+import { admin as adminApi } from '$lib/api';
 import { nomAffiche } from '$lib/noms';
 
 /** Un message à afficher, et le ton sur lequel le dire. */
@@ -109,7 +109,19 @@ export async function validerCompte(
 	return annonces;
 }
 
-/** Le message d'une erreur d'API, ou un repli — les deux écrans l'écrivaient. */
-export function messageErreur(e: unknown): string {
-	return e instanceof ApiError ? e.message : ((e as any)?.message ?? 'Erreur');
-}
+//  🔴 `messageErreur` a été RETIRÉE d'ici le 12/09/2026 : elle existait AUSSI
+//  dans `$lib/erreurs`, sous le même nom, et les deux ne disaient pas la même
+//  chose.
+//
+//      ici        e.message ?? 'Erreur'
+//      erreurs.ts 401 → « votre session a expiré, rechargez la page »
+//                 403 → le message du serveur, ou « vous n'avez pas accès »
+//                 réseau → « impossible de joindre le serveur »
+//
+//  ⚠️ L'ironie est instructive : ce fichier est né en retenant **la version la
+//  plus disante** de la validation d'un compte, et il portait la version la
+//  moins disante du message d'erreur. Deux écrans — `admin` et `espace-cs` —
+//  l'importaient d'ici : un 401 leur affichait le message brut du serveur au
+//  lieu de dire quoi faire, alors que #519 avait tranché le contraire.
+//
+//  Elle vit désormais dans `$lib/erreurs`, et là seulement.

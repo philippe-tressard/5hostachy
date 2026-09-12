@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { perimetreDefautListe } from '$lib/perimetres';
-	import { confirmer, SUPPRESSION } from '$lib/confirmation';
+	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import CarteContrat from '$lib/components/CarteContrat.svelte';
 	import ChampsPrestataire from '$lib/components/ChampsPrestataire.svelte';
 	import CartePrestataire from '$lib/components/CartePrestataire.svelte';
 	import OngletConsommations from '$lib/components/OngletConsommations.svelte';
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
+	import { attacherApres } from '$lib/fichiers';
+	import { messageErreur, tenter } from '$lib/erreurs';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import { onMount } from 'svelte';
-	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
+	import { prestataires as prestApi, documents as docsApi } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -63,22 +65,22 @@
 			toast('error', 'Sélectionnez une note entre 1 et 5');
 			return;
 		}
+		//  Capturés AVANT le rappel : à l'intérieur, rien ne garantit qu'ils n'ont
+		//  pas changé.
+		const cible = showNotationForm;
+		const note = notationNote;
 		notationSaving = true;
-		try {
+		await tenter(async () => {
 			const n = await prestApi.createNotation({
-				prestataire_id: showNotationForm.prestataireId,
-				note: notationNote,
+				prestataire_id: cible.prestataireId,
+				note,
 				commentaire: notationCommentaire.trim() || undefined,
-				contrat_id: showNotationForm.contratId,
+				contrat_id: cible.contratId,
 			});
 			notations = [n, ...notations];
 			showNotationForm = null;
-			toast('success', 'Notation enregistrée');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			notationSaving = false;
-		}
+		}, 'Notation enregistrée');
+		notationSaving = false;
 	}
 
 	//  🔴 `avgNote` et `starsDisplay` sont parties dans `$lib/notations` (#807) :
@@ -125,6 +127,10 @@
 	//  booléen déguisé en identifiant, et c'est ce déguisement qui a rendu
 	//  invisible un `{#if}` toujours faux — voir `FormulaireContrat`.
 	let contratFormOuvert = false;
+
+	/**  Documents choisis avant que le contrat existe (#921) — vidés à chaque
+	 *   fermeture, sinon ils s'attacheraient au contrat SUIVANT. */
+	let contratFichiersEnAttente: File[] = [];
 	let editContratId: number | null = null;
 
 	let contratForm = {
@@ -238,17 +244,15 @@
 	}
 
 	onMount(async () => {
-		try {
+		//  Sans message de succès : un chargement réussi n'annonce rien.
+		await tenter(async () => {
 			[prestataires, contrats, notations] = await Promise.all([
 				prestApi.list(),
 				prestApi.contrats(),
 				prestApi.notations(),
 			]);
-		} catch {
-			toast('error', 'Erreur de chargement');
-		} finally {
-			loading = false;
-		}
+		});
+		loading = false;
 
 		if (contrats.length > 0) {
 			const results = await Promise.allSettled(
@@ -336,32 +340,27 @@
 		const contacts = prestContacts.filter((c) => c.telephone.trim());
 		const telephone = contacts.map((c) => c.telephone.trim()).join(',') || null;
 		submitting = true;
-		try {
-			if (editPrestId) {
-				await prestApi.update(editPrestId, { ...prestForm, telephone, contacts });
-			} else {
-				await prestApi.create({ ...prestForm, telephone, contacts });
-			}
-			prestataires = await prestApi.list();
-			showPrestForm = false;
-			resetPrestForm();
-			toast('success', editPrestId ? 'Prestataire modifié' : 'Prestataire ajouté');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			submitting = false;
-		}
+		await tenter(
+			async () => {
+				if (editPrestId) {
+					await prestApi.update(editPrestId, { ...prestForm, telephone, contacts });
+				} else {
+					await prestApi.create({ ...prestForm, telephone, contacts });
+				}
+				prestataires = await prestApi.list();
+				showPrestForm = false;
+				resetPrestForm();
+			},
+			editPrestId ? 'Prestataire modifié' : 'Prestataire ajouté',
+		);
+		submitting = false;
 	}
 
 	async function deletePrest(id: number) {
-		if (!(await confirmer('Archiver ce prestataire ?'))) return;
-		try {
+		await confirmerPuis('Archiver ce prestataire ?', 'Archivé', async () => {
 			await prestApi.delete(id);
 			prestataires = prestataires.filter((p) => p.id !== id);
-			toast('success', 'Archivé');
-		} catch {
-			toast('error', 'Erreur');
-		}
+		});
 	}
 
 	function resetContratForm() {
@@ -398,6 +397,7 @@
 	function closeContratForm() {
 		contratFormOuvert = false;
 		editContratId = null;
+		contratFichiersEnAttente = []; //  sinon ils iraient au contrat suivant
 		resetContratForm();
 	}
 
@@ -422,7 +422,7 @@
 		} catch (e) {
 			//  ⚠️ Le message vient du serveur : il dit POURQUOI (clé refusée, délai
 			//  dépassé, quota). Un « Erreur » générique laisserait chercher.
-			toast('error', e instanceof ApiError ? e.message : 'La rédaction n’a pas abouti');
+			toast('error', messageErreur(e, 'La rédaction n’a pas abouti'));
 		} finally {
 			syntheseEnCoursId = null;
 		}
@@ -478,20 +478,20 @@
 		//  🔴 Lu AVANT la fermeture, qui remet `editContratId` à `null`. Le message
 		//  le lisait après : une modification annonçait donc « Contrat créé ».
 		const etaitUneModification = editContratId !== null;
-		try {
-			if (editContratId) {
-				await prestApi.updateContrat(editContratId, payload);
-			} else {
-				await prestApi.createContrat(payload);
-			}
-			contrats = await prestApi.contrats();
-			closeContratForm();
-			toast('success', etaitUneModification ? 'Contrat modifié' : 'Contrat créé');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			submitting = false;
-		}
+		await tenter(
+			async () => {
+				if (editContratId) {
+					await prestApi.updateContrat(editContratId, payload);
+				} else {
+					const cree = await prestApi.createContrat(payload);
+					await attacherApres('contrat', cree?.id, contratFichiersEnAttente, 'Contrat créé');
+				}
+				contrats = await prestApi.contrats();
+				closeContratForm();
+			},
+			etaitUneModification ? 'Contrat modifié' : 'Contrat créé',
+		);
+		submitting = false;
 	}
 
 	//  L'ENVOI vit dans `DocumentsContrat` ; il ne reste ici que le rechargement
@@ -501,25 +501,18 @@
 	}
 
 	async function deleteDoc(contratId: number, docId: number) {
-		if (!(await confirmer(SUPPRESSION('Ce document')))) return;
-		try {
+		await confirmerPuis(SUPPRESSION('Ce document'), 'Document supprimé', async () => {
 			await docsApi.delete(docId);
-			contratDocsMap = { ...contratDocsMap, [contratId]: await docsApi.list(undefined, contratId) };
-			toast('success', 'Document supprimé');
-		} catch {
-			toast('error', 'Erreur');
-		}
+			//  Le rechargement est écrit UNE fois, juste en dessous.
+			await rechargerDocs(contratId);
+		});
 	}
 
 	async function deleteContrat(id: number) {
-		if (!(await confirmer('Archiver ce contrat ?'))) return;
-		try {
+		await confirmerPuis('Archiver ce contrat ?', 'Archivé', async () => {
 			await prestApi.deleteContrat(id);
 			contrats = contrats.filter((c) => c.id !== id);
-			toast('success', 'Archivé');
-		} catch {
-			toast('error', 'Erreur');
-		}
+		});
 	}
 </script>
 
@@ -601,6 +594,7 @@
 				{equipements}
 				contratId={null}
 				documents={[]}
+				bind:fichiersEnAttente={contratFichiersEnAttente}
 				onSupprimer={deleteDoc}
 				onAjoute={rechargerDocs}
 				{submitting}

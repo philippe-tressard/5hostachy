@@ -19,7 +19,7 @@
 	import { prestataires as prestApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { confirmer, SUPPRESSION } from '$lib/confirmation';
+	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
 	import { fmtDayMonth } from '$lib/date';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -168,14 +168,10 @@
 	}
 
 	async function deleteReleve(id: number) {
-		if (!(await confirmer(SUPPRESSION('Ce relevé')))) return;
-		try {
+		await confirmerPuis(SUPPRESSION('Ce relevé'), 'Relevé supprimé', async () => {
 			await prestApi.deleteReleve(id);
 			releves = releves.filter((r) => r.id !== id);
-			toast('success', 'Relevé supprimé');
-		} catch {
-			toast('error', 'Erreur');
-		}
+		});
 	}
 
 	function startEditCompteur(cfg: any) {
@@ -225,16 +221,16 @@
 	}
 
 	async function deleteCompteurConfig(cfg: any) {
-		if (!(await confirmer(SUPPRESSION(`La catégorie « ${cfg.label} »`)))) return;
-		try {
-			await prestApi.deleteCompteurConfig(cfg.id);
-			compteurConfigs = compteurConfigs.filter((c) => c.id !== cfg.id);
-			if (typeCompteur === cfg.type_compteur)
-				typeCompteur = compteurConfigs[0]?.type_compteur ?? '';
-			toast('success', 'Catégorie supprimée');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		await confirmerPuis(
+			SUPPRESSION(`La catégorie « ${cfg.label} »`),
+			'Catégorie supprimée',
+			async () => {
+				await prestApi.deleteCompteurConfig(cfg.id);
+				compteurConfigs = compteurConfigs.filter((c) => c.id !== cfg.id);
+				if (typeCompteur === cfg.type_compteur)
+					typeCompteur = compteurConfigs[0]?.type_compteur ?? '';
+			},
+		);
 	}
 
 	function fmtReleve(r: any) {
