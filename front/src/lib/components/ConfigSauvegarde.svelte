@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SectionFormulaire from './SectionFormulaire.svelte';
 	/**
 	 * Réglage de la sauvegarde quotidienne — heure et rétention.
 	 *
@@ -33,7 +34,6 @@
 	 */
 	import { onMount } from 'svelte';
 	import { admin, ApiError } from '$lib/api';
-	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 
 	//  Les NOMS DU MODÈLE, pas des noms inventés : c'est ce qui manquait.
@@ -68,15 +68,16 @@
 	}
 </script>
 
-<section class="config-sauvegarde">
+<section class="card config-section">
 	<!--  L'en-tête est celui du bloc voisin, à l'identique : `config-section-title`
 	      et un tracé du catalogue. Il portait un émoji 💾 et une classe `.titre`
 	      locale, à trois centimètres d'un « Santé des tâches planifiées » rendu
 	      par le motif partagé — deux blocs du même onglet, deux façons de titrer.
 	      Un émoji dépend en plus de la police du système. -->
-	<h3 class="config-section-title">
-		<Icon name="sliders-horizontal" size={17} />Réglage de la sauvegarde quotidienne
-	</h3>
+	<!--  🔴 Titre par `SectionFormulaire` (12/09/2026) : ce `<h3>` local était la
+	      deuxième des trois façons de titrer un bloc de cet onglet. Le composant
+	      partagé porte l'intitulé, le filet et l'espacement — et l'icône. -->
+	<SectionFormulaire titre="Réglage de la sauvegarde quotidienne" icone="sliders-horizontal" />
 	<p class="aide">
 		La sauvegarde s’exécute <strong>tous les jours</strong>. Son historique et son déclenchement
 		manuel sont dans le tableau ci-dessus, avec les autres tâches.
@@ -139,11 +140,11 @@
 </section>
 
 <style>
-	.config-sauvegarde {
-		margin-top: 1.5rem;
-		padding-top: 1.25rem;
-		border-top: 1px solid var(--color-border);
-	}
+	/*  `.config-sauvegarde` est partie avec son balisage (12/09/2026) : elle
+	    dessinait à la main le filet et l'espacement qu'une SECTION porte — c'est
+	    `card config-section` qui les donne maintenant, comme aux deux blocs
+	    voisins. Une règle de séparation écrite par chaque bloc, c'est trois
+	    séparations qui finissent par ne plus se ressembler. */
 	/*  Seule la marge reste ici : cette aide est un paragraphe de tête, pas une
 	    note collée à un groupe de cases. La typographie vient de la charte. */
 	.note {
