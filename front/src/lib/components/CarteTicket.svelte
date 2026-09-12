@@ -42,7 +42,8 @@
 	import ApercuTicket from './ApercuTicket.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
 	import { motifWhatsappInterdit, optionsActives } from '$lib/options-publication';
-	import BoutonLien from './BoutonLien.svelte';
+	import ActionsTicket from './ActionsTicket.svelte';
+	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import { estPerimetreParDefaut, perimetreLabel } from '$lib/utils';
@@ -53,7 +54,13 @@
 	import EvolForm from './EvolForm.svelte';
 	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
 	import { TICKET } from '$lib/entites/ticket';
-	import { optionsDuTicket, optionsVersTicket, ticketUrgent } from '$lib/tickets';
+	import {
+		OPTIONS_TICKET,
+		TICKET_CONFIDENTIEL_ACQUIS,
+		optionsDuTicket,
+		optionsVersTicket,
+		ticketUrgent,
+	} from '$lib/tickets';
 	import { fmtDate, isNouveau } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import {
@@ -76,7 +83,13 @@
 	     ⚠️ UN seul mode d'évolution (#426) : le geste ne se déclare plus au clic,
 	     il se lit dans les pastilles de la section Workflow, celle de l'état
 	     courant étant active. */
-	export let mode: 'lecture' | 'edition' | 'evolution' = 'lecture';
+	/**  `options` : le panneau qui change les SEULES options, sans ouvrir les huit
+	 *   sections du formulaire (12/09/2026, demandé à l'écran). Un quatrième mode
+	 *   et non un état à part : deux formulaires ouverts en même temps sur la même
+	 *   carte n'auraient aucun sens, et `mode` porte déjà cette exclusion. */
+	export let mode: 'lecture' | 'edition' | 'evolution' | 'options' = 'lecture';
+	/** Le panneau d'options rapides attend-il le serveur ? */
+	export let optionsRapidesEnCours = false;
 
 	//  🔴 LES OPTIONS DE PUBLICATION du ticket, reprises À CHAQUE OUVERTURE du
 	//  formulaire de commentaire (05/09/2026) : ce qui s'affiche est l'état réel,
@@ -84,6 +97,16 @@
 	//  modifie pas le ticket avant l'envoi.
 	let optionsEvol = optionsDuTicket(ticket);
 	$: if (mode === 'evolution') optionsEvol = optionsDuTicket(ticket);
+	//  Le brouillon du panneau rapide : on ne touche PAS au ticket affiché tant
+	//  que le serveur n'a pas répondu — sinon l'écran montre un état enregistré
+	//  qui ne l'est pas, et le laisse faux si la requête échoue.
+	//  ⚠️ `confidentiel: true` n'est pas un choix : sur un ticket l'option est
+	//  ACQUISE — sa lecture est déjà bornée au périmètre — et le panneau la montre
+	//  cochée et verrouillée (`TICKET_CONFIDENTIEL_ACQUIS`). La clé doit être là
+	//  pour que la case s'affiche ; elle ne repart pas au serveur.
+	const optionsRapidesInitiales = () => ({ ...optionsDuTicket(ticket), confidentiel: true });
+	let optionsRapides = optionsRapidesInitiales();
+	$: if (mode === 'options') optionsRapides = optionsRapidesInitiales();
 	/** Enregistrement d'une évolution en cours — porté par la page (appel d'API). */
 	export let evolutionEnCours = false;
 	/**  L'entrée du fil en cours de CORRECTION, `null` si aucune. Portée par la
@@ -113,6 +136,8 @@
 		evol_corriger: unknown;
 		evol_annuler: void;
 		evoluer_ouvrir: void;
+		options_ouvrir: void;
+		options_enregistrer: unknown;
 		modifier: void;
 		supprimer: void;
 		annuler: void;
@@ -222,46 +247,17 @@
 			{#if ticket.auteur_nom}<span class="tk-auteur">{ticket.auteur_nom}</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
-			<!--  UN point d'entrée (#426) : le formulaire porte les deux gestes.
-			      L'ordre des icônes — 🔄 puis ✏️ puis 🗑️ — est celui de toutes les
-			      cartes du site, arbitré le 18/08/2026 sur celle-ci. -->
-			<!--  `aria-pressed` : le MODE se lit sur l'icône qui l'a ouvert, pas sur un
-			      titre au-dessus du formulaire (18/08/2026). Elle s'inverse et grossit —
-			      style dans `app.css`, une seule fois pour tout le site. -->
-			<!--  Un ticket a sa PAGE : c'est elle qu'on envoie, pas l'ancre d'une carte
-			      dans une liste que le destinataire n'a peut-être pas le droit de voir
-			      en entier. Même adresse que `lien_ticket()` côté API. -->
-			<BoutonLien chemin="/tickets/{ticket.id}" quoi="le ticket" />
-			{#if peutSuivreCeTicket}
-				<button
-					class="btn-icon"
-					aria-pressed={mode === 'evolution'}
-					aria-label="Commenter ou changer l’état"
-					title="Commenter ou changer l’état"
-					on:click|stopPropagation={() => dispatch('evoluer_ouvrir')}>&#x1F504;</button
-				>
-			{/if}
-			{#if peutEditerCeTicket}
-				<button
-					class="btn-icon"
-					aria-pressed={mode === 'edition'}
-					aria-label="Modifier"
-					title="Modifier le ticket"
-					on:click|stopPropagation={() => dispatch('modifier')}>✏️</button
-				>
-			{/if}
-			<!--  ⚠️ La corbeille NE SUIT PAS le droit d'édition : supprimer
-			      définitivement est irréversible, et cela reste à l'administrateur.
-			      Elle s'était retrouvée dans le bloc du crayon en une passe de
-			      réécriture — trois lignes plus bas, et le geste changeait de main. -->
-			{#if peutAdministrer}
-				<button
-					class="btn-icon-danger"
-					aria-label="Supprimer"
-					title="Supprimer définitivement"
-					on:click|stopPropagation={() => dispatch('supprimer')}>&#x1F5D1;️</button
-				>
-			{/if}
+			<ActionsTicket
+				{ticket}
+				{mode}
+				peutSuivre={peutSuivreCeTicket}
+				peutEditer={peutEditerCeTicket}
+				{peutAdministrer}
+				on:evoluer_ouvrir
+				on:modifier
+				on:options_ouvrir
+				on:supprimer
+			/>
 		</svelte:fragment>
 		<svelte:fragment slot="chevron"
 			><span class="chevron" class:open={expanded}>›</span></svelte:fragment
@@ -282,7 +278,30 @@
 			on:click|stopPropagation
 			on:keydown|stopPropagation
 		>
-			{#if mode === 'edition'}
+			{#if mode === 'options'}
+				<div class="tk-formulaire">
+					<PanneauOptionsPublication
+						objet="ticket"
+						optionsRendues={OPTIONS_TICKET}
+						confidentielAcquis={TICKET_CONFIDENTIEL_ACQUIS}
+						perimetreCible={ticket.perimetre_cible ?? []}
+						dejaEpingle={ticket.epingle ?? false}
+						enregistrement={optionsRapidesEnCours}
+						bind:options={optionsRapides}
+						on:enregistrer={() =>
+							dispatch(
+								'options_enregistrer',
+								optionsVersTicket({
+									epingle: optionsRapides.epingle,
+									urgente: optionsRapides.urgente,
+									brouillon: optionsRapides.brouillon,
+									suiviKanban: optionsRapides.suiviKanban,
+								}),
+							)}
+						on:annuler={() => dispatch('annuler')}
+					/>
+				</div>
+			{:else if mode === 'edition'}
 				<div class="tk-formulaire">
 					<FormulaireTicket {ticket} on:modifie on:annule={() => dispatch('annuler')} />
 				</div>

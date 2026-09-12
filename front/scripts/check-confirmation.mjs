@@ -33,13 +33,13 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
 
 /**
- * Le compte au 12/09/2026 : 28 → 19, en convertissant `sondages/[id]`,
+ * Le compte au 12/09/2026 : 28 → 18, en convertissant `sondages/[id]`, `tickets`,
  * `PageCommunaute`, `OngletPerimetres` et `OngletAcces` — les mêmes écrans que le lot sur
  * `messageErreur`, et c'est délibéré : les deux dettes vivent dans les mêmes
  * gestes, et les traiter séparément aurait fait rouvrir deux fois les mêmes
  * fichiers.
  */
-const PLAFOND = 19;
+const PLAFOND = 18;
 
 /**
  * Fichiers qui PARLENT de `confirm()` sans en appeler un : le composant de

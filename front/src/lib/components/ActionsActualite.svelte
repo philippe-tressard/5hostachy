@@ -37,7 +37,7 @@
 -->
 <script lang="ts">
 	import { isCS, isAdmin } from '$lib/stores/auth';
-	import { optionsActives, libelleOptionsActives } from '$lib/options-publication';
+	import BoutonOptions from './BoutonOptions.svelte';
 
 	export let pub: any;
 	/** La publication dont le formulaire de commentaire est ouvert, ou `null`. */
@@ -68,17 +68,14 @@
 		title="Modifier"
 		on:click|stopPropagation={() => onModifier(pub)}>✏️</button
 	>
-	{#if optionsActives(pub).length > 0}
-		{@const actives = optionsActives(pub)}
-		<button
-			class="btn-icon btn-icon-options"
-			aria-pressed={optionsOuvertesId === pub.id}
-			aria-label={libelleOptionsActives(pub)}
-			title="{libelleOptionsActives(pub)} — cliquer pour les modifier"
-			on:click|stopPropagation={() => onOptions(pub)}
-			>{#each actives as o (o.cle)}<span class="opt-glyphe">{o.glyphe}</span>{/each}</button
-		>
-	{/if}
+	<!--  Le bouton vit dans `BoutonOptions` depuis le 12/09/2026 : tickets et
+	      événements portent les mêmes options, et le recopier chez eux aurait
+	      recopié aussi ses règles d'accessibilité et sa cible tactile. -->
+	<BoutonOptions
+		objet={pub}
+		ouvert={optionsOuvertesId === pub.id}
+		onOuvrir={() => onOptions(pub)}
+	/>
 {/if}
 {#if $isAdmin}
 	<button
@@ -90,26 +87,4 @@
 {/if}
 
 <style>
-	/*  🔴 Ces règles VOYAGENT avec le balisage qu'elles habillent (#796).
-	    Laissées dans la page, elles y devenaient orphelines — svelte-check l'a
-	    dit à la compilation suivante, et c'est la bonne façon d'échouer.
-
-	    ⚠️ `min-width`/`min-height` à 44 px : c'est la cible tactile minimale,
-	    et un bouton qui porte plusieurs glyphes doit s'élargir sans jamais
-	    passer sous ce seuil. */
-	.btn-icon-options {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.1rem;
-		width: auto;
-		min-width: 44px;
-		min-height: 44px;
-		padding: 0 0.35rem;
-	}
-	/*  Les glyphes se serrent quand ils sont quatre : à taille pleine, le bouton
-	    dépasserait la rangée d'actions sur téléphone. */
-	.btn-icon-options .opt-glyphe {
-		font-size: 0.8em;
-		line-height: 1;
-	}
 </style>

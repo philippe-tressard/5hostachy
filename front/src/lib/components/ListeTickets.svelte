@@ -14,11 +14,32 @@
   délai de grâce : la page reste propriétaire de l'état (*quel ticket est déplié,
   lequel est en correction*) et des appels. Il n'apporte qu'une chose — que les
   deux listes se câblent forcément pareil.
+
+  ## 🔴 Les gestes passent par UN objet, plus par treize `on:` (12/09/2026)
+
+  Ce fichier prévenait lui-même : *« c'est le prix de ce relais ; il se paie à
+  chaque nouvel événement »*. Il s'est payé — l'ajout du panneau d'options
+  rapides demandait **deux événements de plus, relayés à trois niveaux et câblés
+  DEUX fois** dans la page, une fois par liste. Vingt-six lignes pour deux gestes.
+
+  Les événements Svelte ne se transmettent pas en bloc (`{...props}` ne porte que
+  des props) : tant qu'ils sont des `on:`, chaque liste doit les réécrire. Ils
+  sont donc regroupés dans **une prop `gestes`**, que les deux listes passent à
+  l'identique — et qu'un oubli rend visible tout de suite, puisque le type la
+  décrit.
+
+  ⚠️ C'est la forme qu'`ActionsActualite` employait déjà (`onCommenter`,
+  `onModifier`, `onOptions`) : ce n'est pas une exception, c'est l'alignement sur
+  le voisin.
 -->
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import CarteTicket from './CarteTicket.svelte';
 	import type { Ticket, TicketEvolution } from '$lib/api';
+	import type { GestesTicket } from '$lib/tickets';
+
+	/**  Tout ce que la page fait quand la liste bouge — le type vit dans
+	 *   `$lib/tickets`, avec le reste du vocabulaire du ticket. */
+	export let gestes: GestesTicket;
 
 	export let tickets: Ticket[] = [];
 	/** Allure d'archive — les tickets clos depuis plus du délai de grâce. */
@@ -29,24 +50,15 @@
 	export let ticketEnEdition: number | null = null;
 	/** Le ticket ouvert en nouvelle entrée d'Historique, s'il y en a un. */
 	export let ticketEnEvolution: number | null = null;
+	/** Celui dont le panneau d'options rapides est ouvert, ou `null`. */
+	export let ticketEnOptions: number | null = null;
+	/** Le panneau d'options attend-il le serveur ? */
+	export let optionsRapidesEnCours = false;
 	export let evolutionEnCours = false;
 	/** L'entrée du fil en cours de correction, et son enregistrement. */
 	export let evolEnEdition: number | null = null;
 	export let evolCorrectionEnCours = false;
 	export let peutAdministrer = false;
-
-	const dispatch = createEventDispatcher<{
-		basculer: Ticket;
-		evoluer_ouvrir: Ticket;
-		modifier: Ticket;
-		supprimer: Ticket;
-		evoluer: { ticket: Ticket; data: unknown };
-		//  La correction d'une ENTRÉE du fil — à ne pas confondre avec `modifier`,
-		//  qui vise le ticket. Deux gestes, deux noms.
-		evol_modifier: number;
-		evol_corriger: { ticket: Ticket; data: unknown };
-		evol_supprimer: { ticket: Ticket; evolId: number };
-	}>();
 </script>
 
 {#each tickets as t (t.id)}
@@ -65,23 +77,28 @@
 		{archive}
 		{evolutionEnCours}
 		{peutAdministrer}
+		{optionsRapidesEnCours}
 		mode={ticketEnEdition === t.id
 			? 'edition'
 			: ticketEnEvolution === t.id
 				? 'evolution'
-				: 'lecture'}
-		on:basculer={() => dispatch('basculer', t)}
-		on:evoluer_ouvrir={() => dispatch('evoluer_ouvrir', t)}
-		on:modifier={() => dispatch('modifier', t)}
-		on:supprimer={() => dispatch('supprimer', t)}
+				: ticketEnOptions === t.id
+					? 'options'
+					: 'lecture'}
+		on:basculer={() => gestes.basculer(t)}
+		on:evoluer_ouvrir={() => gestes.evoluerOuvrir(t)}
+		on:modifier={() => gestes.modifier(t)}
+		on:options_ouvrir={() => gestes.optionsOuvrir(t)}
+		on:options_enregistrer={(e) => gestes.optionsEnregistrer(t, e.detail)}
+		on:supprimer={() => gestes.supprimer(t)}
 		{evolEnEdition}
 		{evolCorrectionEnCours}
-		on:evoluer={(e) => dispatch('evoluer', { ticket: t, data: e.detail })}
-		on:evol_modifier={(e) => dispatch('evol_modifier', e.detail)}
-		on:evol_corriger={(e) => dispatch('evol_corriger', { ticket: t, data: e.detail })}
-		on:evol_supprimer={(e) => dispatch('evol_supprimer', e.detail)}
-		on:evol_annuler
-		on:modifie
-		on:annuler
+		on:evoluer={(e) => gestes.evoluer(t, e.detail)}
+		on:evol_modifier={(e) => gestes.evolModifier(e.detail)}
+		on:evol_corriger={(e) => gestes.evolCorriger(t, e.detail)}
+		on:evol_supprimer={(e) => gestes.evolSupprimer(e.detail)}
+		on:evol_annuler={() => gestes.evolAnnuler()}
+		on:modifie={(e) => gestes.modifie(e.detail)}
+		on:annuler={() => gestes.annuler()}
 	/>
 {/each}
