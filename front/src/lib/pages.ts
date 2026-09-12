@@ -139,9 +139,13 @@ export const PAGES: PageDef[] = [
 		navLabel: 'Mes lots & accès',
 		//  `key-round` : c'est l'accès qu'on vient chercher le plus souvent.
 		icone: 'key-round',
-		//  ⚠️ Le lien « Quel prix ? » vient de l'ancienne page Accès — à ne pas perdre.
+		//  ⚠️ Le lien « Quel prix ? » vient de l'ancienne page Accès — il n'est PAS
+		//  perdu : il a rejoint les deux onglets d'accès (12/09/2026), à côté du
+		//  bouton qui déclenche la demande. Le laisser aussi ici l'aurait affiché
+		//  trois fois sur le même écran, dont deux sur des onglets — « Mes lots »,
+		//  « Gestion locative » — où il ne répond à aucune question.
 		descriptif:
-			'Vos lots (appartement, cave & parkings), vos badges Vigik et télécommandes de parking, et la gestion locative pour les copropriétaires mandataires. <a href="/faq#badge-prix" style="font-size:.85rem">Quel prix pour un badge ?</a>',
+			'Vos lots (appartement, cave & parkings), vos badges Vigik et télécommandes de parking, et la gestion locative pour les copropriétaires mandataires.',
 		onglets: [
 			{
 				id: 'lots',
@@ -153,14 +157,25 @@ export const PAGES: PageDef[] = [
 				id: 'badges',
 				route: '/mon-lot/badges',
 				label: '\u{1F3F7}\uFE0F Mes badges d’accès (Vigik)',
-				descriptif: 'Vos badges Vigik : ceux que vous détenez, vos demandes et vos déclarations.',
+				//  🔴 Le descriptif NOMME le geste et où le trouver (12/09/2026) :
+				//  « vos demandes » et « vos déclarations » ne désignaient rien de
+				//  visible, alors que les deux boutons qui les produisent sont en haut
+				//  à droite — et qu'ils ne disent pas la même chose (demander ce qu'on
+				//  n'a pas / signaler ce qu'on détient déjà).
+				//  ⚠️ Le lien vise `#badge-prix`, **jamais** `#faq-<id>` : l'identifiant
+				//  d'une question varie d'une instance à l'autre, le raccourci non — il
+				//  vise la question par son libellé (`faq/+page.svelte`).
+				descriptif:
+					'Vos badges Vigik : ceux que vous détenez (tableau ci-dessous), vos demandes (bouton « + Nouvel accès », en haut à droite, pour obtenir un badge supplémentaire) et vos déclarations (bouton « + Déclarer un accès », pour signaler un badge que vous détenez déjà). <a href="/faq#badge-prix" style="font-size:.85rem">Quel prix pour un badge ou une télécommande ?</a>',
 			},
 			{
 				id: 'telecommandes',
 				route: '/mon-lot/telecommandes',
 				label: '\u{1F4E1} Télécommandes de parking',
+				//  Même rédaction que « Mes badges » ci-dessus, et pour la même raison :
+				//  les deux onglets partagent les deux mêmes boutons.
 				descriptif:
-					'Vos télécommandes de parking : celles que vous détenez, vos demandes et vos déclarations.',
+					'Vos télécommandes de parking : celles que vous détenez (tableau ci-dessous), vos demandes (bouton « + Nouvel accès », en haut à droite, pour obtenir une télécommande supplémentaire) et vos déclarations (bouton « + Déclarer un accès », pour signaler une télécommande que vous détenez déjà). <a href="/faq#badge-prix" style="font-size:.85rem">Quel prix pour un badge ou une télécommande ?</a>',
 			},
 			{
 				id: 'location',
