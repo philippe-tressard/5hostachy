@@ -243,3 +243,45 @@ def test_la_peremption_S_ABSTIENT_quand_elle_ne_peut_pas_MESURER():
     for garde in ("*[!0-9]*)", '-le 0 ]', '-lt 0 ]'):
         assert garde in corps, f"garde manquante dans verrou_recent : {garde}"
     assert "echo non" in corps, "verrou_recent ne conclut jamais à la péremption"
+
+
+def test_le_verrou_est_pose_AVANT_la_premiere_action():
+    """🔴 La coordination ne vaut que si le verrou est posé avant que le script
+    touche à quoi que ce soit (#915, corrigé le 12/09/2026).
+
+    Il l'était APRÈS l'arrêt des conteneurs du peer : entre les deux, le cron
+    `auto-deploy` du peer pouvait passer, lire un rôle encore à son nom, et
+    relancer les conteneurs qu'on venait d'arrêter. Le split-brain du 12/09 par
+    une autre porte que celle qui a été constatée.
+
+    ⚠️ Le test porte sur `run`, l'enveloppe par laquelle `bascule.sh` EXÉCUTE.
+    Ce qui la précède peut lire — joignabilité, espace disque — mais pas agir.
+    La frontière n'est pas le nombre de lignes, c'est le moment où le script
+    cesse d'observer.
+
+    ⚠️ Les définitions de fonctions sont ignorées : `rollback()` contient des
+    actions et n'est appelée qu'après la pose, par un `trap`."""
+    src = BASCULE.read_text(encoding="utf-8")
+    #  On ne regarde que le corps PRINCIPAL : tout ce qui est indenté appartient
+    #  à une fonction ou à un bloc conditionnel intérieur.
+    lignes = src.splitlines()
+    i_pose = next(
+        (n for n, l in enumerate(lignes) if l.strip() == "verrou_poser"), None
+    )
+    assert i_pose is not None, "`verrou_poser` introuvable dans bascule.sh"
+
+    avant = []
+    for n, l in enumerate(lignes[:i_pose]):
+        nu = l.strip()
+        if nu.startswith("#") or not nu:
+            continue
+        #  `run "` en début d'instruction : l'exécution réelle.
+        if re.match(r"^run\s+[\"']", nu):
+            avant.append(f"ligne {n + 1} : {nu[:70]}")
+
+    assert not avant, (
+        "Action(s) exécutée(s) AVANT la pose du verrou — `auto-deploy` peut "
+        "passer entre les deux et défaire ce qui vient d'être fait :"
+        + (chr(10) + "  ")
+        + (chr(10) + "  ").join(avant)
+    )
