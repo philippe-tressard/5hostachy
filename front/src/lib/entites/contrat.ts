@@ -98,12 +98,17 @@ export const CONTRAT: EntiteDeclaree = {
 			absente: {
 				creation: {
 					motif: 'api',
-					ticket: '#909',
+					//  ⚠️ #909 est FERMÉE : son objet — ordre des sections, séparateurs,
+					//  intitulés, rendu du dépôt — est livré et servi. La dette, elle,
+					//  survit, et elle a repris son ticket propre : un motif `api` qui
+					//  cite un ticket clos est un pointeur mort, et le cadre existe
+					//  pour les empêcher.
+					ticket: '#921',
 					explication:
 						"Un document se rattache à un `contrat_id` qui n'existe pas encore à la " +
 						'création : `docsApi.uploadForContrat` exige un contrat enregistré. ' +
 						"L'écran les propose donc à la correction seulement. Dette suivie en " +
-						'#909 — la lever demande un endpoint qui accepte les fichiers AVEC le ' +
+						'#921 — la lever demande un endpoint qui accepte les fichiers AVEC le ' +
 						'contrat, comme les actualités le font depuis #531.',
 				},
 			},
