@@ -97,14 +97,15 @@ def envoyer_email_syndic_cs(
         pieces_jointes=pieces_jointes, commentaire=commentaire, evolutions=evolutions,
     )
 
-    #  🔴 LA COPIE VA À L'AUTEUR DU TICKET, pas à qui écrit.
+    #  🔴 LA COPIE VA AU PROPRIÉTAIRE DU TICKET, pas à qui écrit — et le
+    #  propriétaire est le « Saisi pour » quand il existe (12/09/2026).
     #
     #  La règle, ses trois états successifs du 31/08/2026 et la déduplication
     #  vivent dans `app/utils/copie_auteur.py` — elle sert aussi les publications
     #  et le calendrier, où elle avait trois comportements différents.
     auteur_bcc = copie_demandee(
         session,
-        getattr(ticket, "auteur_id", None),
+        ticket,
         (e for _, e in destinataires),
         demandee=auteur,
     )

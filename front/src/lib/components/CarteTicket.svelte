@@ -290,7 +290,7 @@
 				<div class="tk-formulaire">
 					<EvolForm
 						idPrefixe="tk-evol-{ticket.id}"
-						auteurNom={ticket.auteur_nom ?? ''}
+						auteurNom={ticket.proprietaire_nom ?? ticket.auteur_nom ?? ''}
 						titre="Commenter ou changer l’état"
 						demanderApercu={(saisie) =>
 							ticketsApi.apercuDiffusion({
@@ -359,7 +359,7 @@
 								{#key evolEnEdition}
 									<EvolForm
 										idPrefixe="tk-evol-edit-{evol.id}"
-										auteurNom={ticket.auteur_nom ?? ''}
+										auteurNom={ticket.proprietaire_nom ?? ticket.auteur_nom ?? ''}
 										titre="Modifier le commentaire"
 										editMode={true}
 										initialContenu={evol.contenu || ''}

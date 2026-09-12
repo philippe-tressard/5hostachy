@@ -43,7 +43,7 @@ from sqlmodel import Session
 from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import Evenement, Utilisateur
-from app.utils.copie_auteur import adresse_copie, auteur_de
+from app.utils.copie_auteur import adresse_copie, objet_de
 from app.utils.apercu_diffusion import ApercuCanal, ApercuDiffusion, apercu_email, apercu_whatsapp
 from app.utils.destinataires import destinataires_syndic_cs
 
@@ -167,7 +167,7 @@ def apercu_diffusion(
                 #  La copie va à l'auteur de l'ÉVÉNEMENT — voir
                 #  `app/utils/copie_auteur.py`.
                 copie_auteur=(
-                    adresse_copie(session, auteur_de(session, Evenement, brouillon.evenement_id), user)
+                    adresse_copie(session, objet_de(session, Evenement, brouillon.evenement_id), user)
                     if brouillon.envoyer_auteur
                     else None
                 ),

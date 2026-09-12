@@ -42,7 +42,7 @@ from sqlmodel import Session
 from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import Publication, Utilisateur
-from app.utils.copie_auteur import adresse_copie, auteur_de
+from app.utils.copie_auteur import adresse_copie, objet_de
 from app.utils.apercu_diffusion import ApercuCanal, ApercuDiffusion, apercu_email, apercu_whatsapp
 from app.utils.destinataires import destinataires_syndic_cs
 from app.utils.fichiers import est_image
@@ -147,7 +147,7 @@ def apercu_diffusion(
                 #  `app/utils/copie_auteur.py`. L'aperçu doit l'annoncer :
                 #  taire un destinataire ferait mentir l'aperçu par omission.
                 copie_auteur=(
-                    adresse_copie(session, auteur_de(session, Publication, brouillon.publication_id), user)
+                    adresse_copie(session, objet_de(session, Publication, brouillon.publication_id), user)
                     if brouillon.envoyer_auteur
                     else None
                 ),

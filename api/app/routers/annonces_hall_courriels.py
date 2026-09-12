@@ -135,7 +135,7 @@ def _envoyer_email_annonce(
     #  d'office — le formulaire annonçait ses destinataires et en servait un de
     #  plus. Règle commune : `app/utils/copie_auteur.py` (01/09/2026).
     auteur_bcc = copie_demandee(
-        session, annonce.auteur_id, emails, demandee=auteur,
+        session, annonce, emails, demandee=auteur,
     )
     background_tasks.add_task(
         send_email_group,

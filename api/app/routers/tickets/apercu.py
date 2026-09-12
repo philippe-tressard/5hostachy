@@ -53,7 +53,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import Ticket, TicketEvolution, Utilisateur
-from app.utils.copie_auteur import adresse_copie, auteur_de
+from app.utils.copie_auteur import adresse_copie, objet_de
 from app.utils.apercu_diffusion import (
     ApercuCanal,
     ApercuDiffusion,
@@ -194,7 +194,7 @@ def apercu_diffusion(
                 #  🔴 L'auteur du TICKET, pas le rédacteur : sur un commentaire du
                 #  CS, ce sont deux personnes différentes (31/08/2026).
                 copie_auteur=(
-                    adresse_copie(session, auteur_de(session, Ticket, brouillon.ticket_id), user)
+                    adresse_copie(session, objet_de(session, Ticket, brouillon.ticket_id), user)
                     if brouillon.envoyer_auteur
                     else None
                 ),

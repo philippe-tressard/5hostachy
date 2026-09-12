@@ -25,6 +25,7 @@ from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
 
 from app.utils.perimetres import perimetre_label
+from app.utils.copie_auteur import proprietaire
 from .commun import ContexteFlux, auteur_nom, perimetres_de, strip_html, badges_ticket
 from .schemas import FluxItem
 from app.utils.corrections import est_correction
@@ -90,7 +91,13 @@ def _meta_ticket(ctx: ContexteFlux, tk) -> dict:
         "numero": tk.numero,
         "perimetre": perimetre_label(perimetres_de(tk)),
         "description": strip_html(tk.description, 300),
-        "auteur": auteur_nom(ctx.session, tk.auteur_id),
+        #  🔴 Le PROPRIÉTAIRE, pas celui qui a tapé (12/09/2026) : quand le
+        #  conseil syndical enregistre le signalement d'un résident ou d'un
+        #  intervenant, c'est ce dernier que le fil doit nommer. La règle vit dans
+        #  `copie_auteur.proprietaire` — celle-là même qui décide à qui part la
+        #  copie, pour que le nom lu et le destinataire servi soient la même
+        #  personne.
+        "auteur": proprietaire(ctx.session, tk)[0],
     }
 
 
