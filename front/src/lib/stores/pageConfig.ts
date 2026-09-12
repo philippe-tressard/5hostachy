@@ -1,6 +1,8 @@
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 
+import { config as configApi } from '$lib/api';
+
 export interface PageConfig {
 	titre: string;
 	descriptif: string;
@@ -124,11 +126,18 @@ export async function loadSiteConfig(): Promise<void> {
 	}
 	_configLoaded = true;
 	try {
-		const r = await fetch('/api/config');
-		if (r.ok) {
-			const data = await r.json();
-			configStore.set(data);
-		}
+		//  🔴 `fetch('/api/config')` en dur jusqu'au 12/09/2026 (#932).
+		//
+		//  Le chemin était écrit ici et dans `$lib/api/administration` — deux
+		//  écritures d'une même route, dont l'une échappait aux deux contrôles :
+		//  `lint:client-api` ne lit pas les stores, et `lint:client-appele`
+		//  croyait `config.get` appelée parce que neuf objets du client portent
+		//  un `.get`. La méthode était morte et la route dupliquée, en silence.
+		//
+		//  ⚠️ Passer par le client n'ajoute pas de renouvellement de session
+		//  parasite : `GET /config` répond 200 à un anonyme, donc le 401 qui
+		//  déclenche `tryRefresh` ne se présente pas ici.
+		configStore.set(await configApi.get());
 	} catch {
 		_configLoaded = false; // autoriser retry si erreur réseau
 	}

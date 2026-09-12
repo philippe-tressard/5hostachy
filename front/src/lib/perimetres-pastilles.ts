@@ -18,6 +18,7 @@ import {
 	perimetreLabel,
 	perimetreLabelUn,
 } from '$lib/utils';
+import { codeDeTeinte, teinteDuCode } from '$lib/perimetres/teinte';
 
 /** Une pastille : son code (la clé), son libellé court et sa couleur. */
 export interface PastillePerimetre {
@@ -26,23 +27,11 @@ export interface PastillePerimetre {
 	color: string;
 }
 
-//  Couleur DÉRIVÉE du code : la table de sept clés en dur laissait en gris tout
-//  périmètre créé depuis l'administration, et tout bâtiment au-delà du quatrième.
-const PALETTE_PERIMETRE = [
-	'#ef4444',
-	'#3b82f6',
-	'#22c55e',
-	'#f59e0b',
-	'#f97316',
-	'#8b5cf6',
-	'#ec4899',
-	'#0ea5e9',
-	'#14b8a6',
-];
+//  🔴 La teinte vit dans `$lib/perimetres/teinte` — palette, choix de l'ancêtre
+//  de premier niveau, et leur self-test. Ce fichier-ci rend des pastilles ; il
+//  ne décide pas des couleurs.
 export function couleurPerimetre(code: string): string {
-	let s = 0;
-	for (let i = 0; i < code.length; i++) s = (s * 31 + code.charCodeAt(i)) >>> 0;
-	return PALETTE_PERIMETRE[s % PALETTE_PERIMETRE.length];
+	return teinteDuCode(codeDeTeinte(code, noeudPerimetre));
 }
 
 //  Le CODE est rendu avec la pastille : c'est lui la clé, pas le libellé.

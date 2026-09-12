@@ -37,11 +37,26 @@
  *  n'a rien à tolérer. Le jour où une exception paraît nécessaire, la vraie
  *  question sera : quelle méthode du client manque, ou est trop pauvre ?
  *
- *  ⚠️ Ce que ce contrôle ne voit PAS : un `fetch()` direct. Il y en a un, dans
- *  `client.ts` lui-même (`tryRefresh`), et il est légitime — le client ne peut
- *  pas s'appeler lui-même pour renouveler la session sans récursion sur le 401.
- *  C'est aussi pourquoi `auth.refresh` figure au relevé des méthodes sans
- *  appelant : elle en a un, mais il ne passe pas par `api.*`.
+ *  ## 🔴 Il ne voyait PAS les `fetch()` directs, et il le disait — de travers
+ *
+ *  Cet en-tête affirmait, jusqu'au 12/09/2026 : *« un `fetch()` direct… il y en
+ *  a **un**, dans `client.ts` »*. Il y en avait **six**, et quatre étaient des
+ *  contournements :
+ *
+ *  | où | ce que c'était |
+ *  |---|---|
+ *  | `stores/pageConfig.ts` | `fetch('/api/config')` — la route écrite deux fois, et `config.get` morte de ce fait |
+ *  | `mentions-legales`, `politique-de-confidentialite`, `admin` | `fetch('/api/config/legal')` **trois fois**, chacun avec son `try`/`catch` muet, parce que le client n'offrait pas la méthode |
+ *
+ *  ⚠️ **Un angle mort déclaré dans un commentaire n'est pas surveillé.** Celui-ci
+ *  l'était depuis l'origine, avec un compte — et le compte était faux dès qu'un
+ *  écran a écrit son propre `fetch`. C'est la même famille que le contrôle qui
+ *  se croyait « le seul endroit où cette règle s'écrit » : la seule prose qui
+ *  parlait du sujet disait que le problème n'existait pas.
+ *
+ *  Le compte est à **deux** depuis le 12/09/2026, tous deux nommés dans
+ *  `FETCH_LEGITIMES` ci-dessous — et le contrôle échoue si l'un d'eux cesse de
+ *  servir, donc la liste ne peut pas pourrir.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -60,6 +75,25 @@ const CLIENT = 'src/lib/api';
 //  supprime la duplication entre l'import Vigik et l'import télécommandes. Sans
 //  cette garde, le contrôle refusait le code le mieux factorisé de l'écran.
 const APPEL = /(?<![.\w])api\.(get|post|patch|put|delete)\s*(?:<[^>]*>)?\s*\(/g;
+
+//  Un `fetch(` vers l'API : chaîne commençant par `/api/`, ou un identifiant
+//  qui la porte (`ENDPOINT`, `apiBase`). On ne cherche pas « tout `fetch` » :
+//  une page a le droit d'appeler un service tiers.
+const FETCH_API =
+	/(?<![.\w])fetch\s*\(\s*[`'"]\s*\/api\/|(?<![.\w])fetch\s*\(\s*(?:ENDPOINT|`\$\{apiBase\})/g;
+
+/**
+ * Les deux `fetch()` directs qui ne PEUVENT pas passer par le client, avec leur
+ * raison. Le contrôle échoue si l'une de ces entrées cesse de servir.
+ */
+const FETCH_LEGITIMES = {
+	'src/lib/telemetry.ts':
+		'repli de `navigator.sendBeacon` — un envoi `keepalive` au déchargement de ' +
+		'la page, que le client (avec son renouvellement de session sur 401) ne peut pas porter',
+	'src/routes/+layout.server.ts':
+		'rendu SSR : le `fetch` de SvelteKit, sur une base ABSOLUE — le client ' +
+		"vise `/api`, relatif, qui n'existe pas côté serveur",
+};
 
 function fichiers(dir, acc = []) {
 	for (const e of readdirSync(dir)) {
@@ -133,12 +167,39 @@ function selftest() {
 selftest();
 
 const ecarts = [];
+const fetchsVus = new Set();
 for (const p of fichiers(RACINE)) {
 	const chemin = p.split('\\').join('/');
 	if (chemin.startsWith(CLIENT + '/') || chemin === CLIENT) continue;
-	for (const t of analyser(readFileSync(p, 'utf8'))) {
+	const source = readFileSync(p, 'utf8');
+	for (const t of analyser(source)) {
 		ecarts.push(`${chemin}:${t.ligne} — api.${t.verbe}(…)`);
 	}
+	//  Les `fetch()` vers l'API, hors commentaires — même neutralisation que
+	//  ci-dessus : cet en-tête en cite plusieurs.
+	source.split('\n').forEach((ligne, i) => {
+		const nue = ligne.trim();
+		if (nue.startsWith('//') || nue.startsWith('*') || nue.startsWith('/*')) return;
+		FETCH_API.lastIndex = 0;
+		if (!FETCH_API.test(ligne)) return;
+		if (chemin in FETCH_LEGITIMES) {
+			fetchsVus.add(chemin);
+			return;
+		}
+		ecarts.push(`${chemin}:${i + 1} — fetch('/api/…') écrit à la main`);
+	});
+}
+
+//  Une entrée qui ne sert plus laisserait repasser un contournement dans ce
+//  fichier-là sans que personne l'ait décidé (`standards/04` §40).
+const inutiles = Object.keys(FETCH_LEGITIMES).filter((f) => !fetchsVus.has(f));
+if (inutiles.length) {
+	console.error(
+		`\n✗ ${inutiles.length} entrée(s) de FETCH_LEGITIMES ne servent plus :\n\n` +
+			inutiles.map((f) => `   ${f}`).join('\n') +
+			"\n\n  Le fichier n'appelle plus `fetch` vers l'API : retirer l'entrée.\n",
+	);
+	process.exit(1);
 }
 
 if (ecarts.length) {

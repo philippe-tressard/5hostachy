@@ -139,7 +139,6 @@
 | # | Méthode | Chemin | Description | Auth |
 |---|---------|--------|-------------|------|
 | 1 | GET | `/bailleur/mes-baux` | Baux du bailleur connecté | Bailleur/CS/Admin |
-| 2 | POST | `/bailleur/lots/{lot_id}/bail` | Créer un bail sur un lot | Bailleur/CS/Admin |
 | 3 | POST | `/bailleur/baux/creer-multi` | Créer bail sur plusieurs lots | Bailleur/CS/Admin |
 | 4 | GET | `/bailleur/baux/{bail_id}` | Détail d'un bail | Bailleur/CS/Admin |
 | 5 | PATCH | `/bailleur/baux/{bail_id}` | Modifier un bail | Bailleur/CS/Admin |
@@ -153,7 +152,6 @@
 | # | Méthode | Chemin | Description | Auth |
 |---|---------|--------|-------------|------|
 | 1 | GET | `/calendrier` | Liste événements (AG filtrée par rôle) | Authentifié |
-| 2 | GET | `/calendrier/{ev_id}` | Détail événement | Authentifié |
 | 3 | POST | `/calendrier` | Créer un événement (notifie si coupure/travaux) | CS/Admin |
 | 4 | PATCH | `/calendrier/{ev_id}` | Modifier un événement | CS/Admin |
 | 5 | DELETE | `/calendrier/{ev_id}` | Supprimer un événement | Admin |
@@ -243,7 +241,6 @@
 |---|---------|--------|-------------|------|
 | 1 | GET | `/lots/mes-lots` | Lots de l'utilisateur (admin/CS = tous) | Authentifié |
 | 2 | GET | `/lots/admin/tous` | Tous les lots | CS/Admin |
-| 3 | GET | `/lots/{lot_id}` | Détail lot (contrôle accès) | Authentifié |
 | 4 | GET | `/lots/commandes-acces/mes-commandes` | Commandes accès de l'utilisateur | Authentifié |
 | 5 | POST | `/lots/commandes-acces` | Créer commande d'accès | Authentifié |
 | 6 | POST | `/lots/admin/imports/upload` | Upload Excel lots (staging + auto-match) | CS/Admin |

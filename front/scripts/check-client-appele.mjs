@@ -30,9 +30,9 @@
  *
  *  ## Ce que « appelée » veut dire
  *
- *  `.<nom>` apparaît dans un `.svelte` ou un `.ts` **hors de `lib/api/`**.
- *  L'heuristique est volontairement permissive — elle ignore l'objet porteur,
- *  donc elle ne peut pas produire de faux positif par alias d'import.
+ *  `<alias>.<nom>` apparaît dans un `.svelte` ou un `.ts` **hors de `lib/api/`**,
+ *  où `<alias>` est le nom local sous lequel CE fichier a importé l'objet
+ *  (`import { acces as accesApi } from '$lib/api'`).
  *
  *  ⚠️ **Elle exige `.<nom>` et NON `.<nom>(`**, et c'est ce que le relevé
  *  d'origine avait manqué : seize méthodes passées **par référence**
@@ -40,9 +40,33 @@
  *  mortes. Un tiers du relevé était faux, alors qu'il se déclarait « incapable
  *  de produire un faux positif » (`standards/04` §36).
  *
- *  ⚠️ Elle produit en revanche des faux **négatifs** : deux objets portant une
- *  méthode de même nom se couvrent l'un l'autre. C'est le sens du contrôle —
- *  mieux vaut rater une orpheline que crier sur une méthode employée.
+ *  ## 🔴 Il cherchait `.<nom>` SANS L'OBJET, jusqu'au 12/09/2026 (#932)
+ *
+ *  L'heuristique d'origine se voulait « volontairement permissive » : elle
+ *  répondait à « un `<nom>` est appelé quelque part », jamais à « CE `<nom>`-ci
+ *  est appelé ». Les deux questions coïncident tant que le nom est unique.
+ *
+ *  Elles ne l'étaient pas : **23 noms** sont portés par deux objets du client ou
+ *  plus — `list` par 14, `create` par 12, `update` par 11, `get` par 9. Toute
+ *  méthode morte homonyme d'une méthode vivante était donc déclarée appelée, et
+ *  le faux vert **grandissait tout seul** à chaque homonyme ajouté.
+ *
+ *  Ce qu'il masquait, constaté : `lots.mesCommandes` et `lots.creerCommande`
+ *  pointaient vers deux endpoints qui créaient le même objet que le chemin
+ *  officiel **avec une règle d'autorisation différente**. Ce n'est pas ce
+ *  contrôle qui les a trouvés — c'est la disparition fortuite du dernier
+ *  appelant de leurs homonymes. Généralisé en `standards/04` §44.
+ *
+ *  ⚠️ **Ne PAS échouer sur l'ambiguïté** : avec `list`, `create` et `get` dans la
+ *  liste, une alarme sur les homonymes crierait sur une centaine de cibles
+ *  légitimes, et un contrôle qui crie sur du légitime finit désarmé (leçon de
+ *  C16). C'est la résolution qu'il fallait écrire, pas l'alarme.
+ *
+ *  ⚠️ Ce que la résolution ne suit pas : une indirection (`const c = accesApi`),
+ *  un import de namespace, un accès calculé (`client[nom]`). Aucun n'existe
+ *  aujourd'hui, et le **plancher d'appels résolus** ci-dessous est ce qui le
+ *  constate : si la forme des imports change, le compte s'effondre et le
+ *  contrôle le dit — au lieu de déclarer tout le client mort.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -128,6 +152,42 @@ function methodes(source, fichier) {
 	return trouvees;
 }
 
+/**  Les objets du client importés par CE fichier, sous leur nom LOCAL.
+ *
+ *   `import { acces as accesApi, ApiError } from '$lib/api'` rend
+ *   `accesApi → acces`. Un `import type` est ignoré : il n'appelle rien.
+ *
+ *   ⚠️ `objets` borne la lecture aux objets réellement exportés par `lib/api/` :
+ *   sans lui, `ApiError` ou un type importé au passage deviendraient des alias,
+ *   et n'importe quel `ApiError.<mot>` compterait comme un appel. */
+export function aliasDuFichier(source, objets) {
+	const map = new Map();
+	const re = /import\s+(type\s+)?\{([^}]*)\}\s*from\s*'\$lib\/api[^']*'/g;
+	let m;
+	while ((m = re.exec(source))) {
+		if (m[1]) continue;
+		for (const brut of m[2].split(',')) {
+			const part = brut.trim().replace(/^type\s+/, '');
+			if (!part) continue;
+			const [nom, alias] = part.split(/\s+as\s+/).map((s) => s.trim());
+			if (objets.has(nom)) map.set(alias || nom, nom);
+		}
+	}
+	return map;
+}
+
+/**  Les `<objet>.<methode>` appelés dans cette source, alias résolus. */
+export function appelsResolus(source, objets) {
+	const trouves = new Set();
+	for (const [alias, objet] of aliasDuFichier(source, objets)) {
+		//  `(?<![\w$])` : `monAccesApi.foo` ne doit pas compter pour `accesApi`.
+		const re = new RegExp(String.raw`(?<![\w$])${alias}\s*\.\s*(\w+)`, 'g');
+		let m;
+		while ((m = re.exec(source))) trouves.add(`${objet}.${m[1]}`);
+	}
+	return trouves;
+}
+
 //  ── Cas zéro ────────────────────────────────────────────────────────────────
 function selftest() {
 	const src = [
@@ -175,11 +235,46 @@ function selftest() {
 		console.error('  ✗ le contrôle du numéro de ticket ne mesure rien');
 		ko++;
 	}
+	//  🔴 LE CAS QUI A MOTIVÉ #932 : deux objets portant le même nom de méthode.
+	//  Sur la version d'avant, `truc.commun` passait pour appelée parce que
+	//  `machin.commun` l'était — vérifié échouant.
+	const objets = new Set(['truc', 'machin']);
+	const consommateur = [
+		"import { truc as trucApi, machin, ApiError } from '$lib/api';",
+		'await machin.commun();',
+		'const f = machin.parReference;',
+		'await monTrucApi.commun();',
+	].join('\n');
+	const resolus = appelsResolus(consommateur, objets);
+	const attendu = [
+		['machin.commun', true],
+		['machin.parReference', true],
+		['truc.commun', false],
+		['truc.parReference', false],
+	];
+	for (const [cle, doitEtre] of attendu) {
+		if (resolus.has(cle) !== doitEtre) {
+			console.error(
+				`  ✗ résolution d’alias : ${cle} ${resolus.has(cle) ? 'compté' : 'manquant'}` +
+					` alors qu’on attend ${doitEtre ? 'compté' : 'non compté'}`,
+			);
+			ko++;
+		}
+	}
+	//  Un `import type` n'appelle rien, et `ApiError` n'est pas un objet du client.
+	if (aliasDuFichier("import type { Ticket } from '$lib/api';", new Set(['Ticket'])).size) {
+		console.error('  ✗ un `import type` a été lu comme un appelant');
+		ko++;
+	}
+	if (aliasDuFichier(consommateur, objets).has('ApiError')) {
+		console.error('  ✗ `ApiError` a été pris pour un objet du client');
+		ko++;
+	}
 	if (ko) {
 		console.error(`\n✗ Auto-test : ${ko} cas en échec.`);
 		process.exit(1);
 	}
-	console.log('✓ Auto-test : déclarations lues et rattachées correctement.');
+	console.log('✓ Auto-test : déclarations rattachées, alias d’import résolus.');
 }
 
 selftest();
@@ -189,17 +284,38 @@ for (const f of readdirSync(API).filter((f) => f.endsWith('.ts') && !HORS_PERIME
 	toutes.push(...methodes(readFileSync(join(API, f), 'utf8'), f));
 }
 
-const texte = fichiers(RACINE)
-	.filter((p) => !p.split('\\').join('/').includes('src/lib/api/'))
-	.map((p) => readFileSync(p, 'utf8'))
-	.join('\n');
+const objets = new Set(toutes.map((m) => m.objet));
+const appelees = new Set();
+for (const p of fichiers(RACINE).filter((p) => !p.split('\\').join('/').includes('src/lib/api/'))) {
+	for (const cle of appelsResolus(readFileSync(p, 'utf8'), objets)) appelees.add(cle);
+}
+
+//  🔴 PLANCHER — le cas zéro de la résolution (`standards/04` §2).
+//
+//  Si la forme des imports change (namespace, ré-export, alias calculé), la
+//  résolution ne trouve plus rien et le contrôle déclarerait TOUT le client
+//  mort : deux cent quatre-vingts « méthodes sans appelant », un mur que
+//  personne ne lit, et la tentation de désarmer. Sous ce plancher, il dit qu'il
+//  ne mesure plus — il ne conclut pas.
+//
+//  ⬆️ Il SUIT le relevé, il ne le précède pas : 269 appels résolus au
+//  12/09/2026, plancher à 240.
+const PLANCHER_APPELS = 240;
+if (appelees.size < PLANCHER_APPELS) {
+	console.error(
+		`\n✗ INCONNU : ${appelees.size} appel(s) résolu(s), au moins ${PLANCHER_APPELS} attendus.\n\n` +
+			"  La résolution d'alias ne reconnaît plus la forme des imports du front.\n" +
+			'  Le contrôle ne peut PAS conclure : tout le client paraîtrait mort.\n',
+	);
+	process.exit(1);
+}
 
 const nonDeclarees = [];
 const sansTicket = [];
 const declareesInutilement = [];
 
 for (const m of toutes) {
-	const appelee = texte.includes(`.${m.nom}`);
+	const appelee = appelees.has(`${m.objet}.${m.nom}`);
 	const motif = MOTIFS.find((mo) => m.declaration.includes(mo));
 	if (!appelee && !motif) nonDeclarees.push(m);
 	//  ⚠️ `@sans-appelant` seul (pas les variantes) exige un ticket : les deux

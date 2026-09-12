@@ -127,19 +127,15 @@ def _lot_rattache(user: Utilisateur, lot_id: int) -> bool:
     return lot_id in [ul.lot_id for ul in user.user_lots if ul.actif]
 
 
-@router.get("/{lot_id}")
-def get_lot(
-    lot_id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    lot = session.get(Lot, lot_id)
-    if not lot:
-        raise HTTPException(404, "Lot introuvable")
-    if not user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        if not _lot_rattache(user, lot_id):
-            raise HTTPException(403, "Accès refusé")
-    return _lot_read(lot)
+#  🔴 `GET /lots/{lot_id}` A ÉTÉ RETIRÉ le 12/09/2026 (#932), avec sa méthode
+#  du client. Aucun écran ne le lisait : les écrans tiennent leurs lots par
+#  `/lots/mes-lots` et `/lots/admin/tous`, et travaillent dessus. Relire un lot
+#  seul rendait un second exemplaire du même objet, libre de diverger de la
+#  liste affichée — le motif de `getBail` (#801).
+#
+#  ⚠️ Il n'était pas signalé orphelin parce que sa méthode du client, `lots.get`,
+#  passait pour appelée : le relevé cherchait `.get` sans savoir de quel objet
+#  il s'agissait, et neuf objets du client en portent un.
 
 
 class EtageLotUpdate(BaseModel):

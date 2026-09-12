@@ -466,7 +466,7 @@ Les deux axes restent distincts.
 
 ### LocationBail  *(contrat locatif — gestion locative bailleur)*
 
-> Lie un copropriétaire bailleur, un locataire (compte enregistré ou coordonnées libres) et un ou plusieurs lots. Le bailleur peut créer un bail sur un lot unique (`POST /bailleur/lots/{lot_id}/bail`) ou sur plusieurs lots simultanément (`POST /bailleur/baux/creer-multi`). À la terminaison du bail, les accès (vigiks/TC) sont automatiquement marqués rendus.
+> Lie un copropriétaire bailleur, un locataire (compte enregistré ou coordonnées libres) et un ou plusieurs lots. Le bailleur crée un bail sur un ou plusieurs lots par `POST /bailleur/baux/creer-multi` — **une seule route**, y compris pour un lot unique : la variante `POST /bailleur/lots/{lot_id}/bail` en était une copie et a été retirée le 12/09/2026 (#932). À la terminaison du bail, les accès (vigiks/TC) sont automatiquement marqués rendus.
 
 | Champ | Type | Description |
 |-------|------|-------------|

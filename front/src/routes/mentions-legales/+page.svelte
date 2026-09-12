@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { config as configApi } from '$lib/api';
 	import { loadSiteConfig, getSiteNom, siteNomStore, configStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	const _siteNom = getSiteNom();
@@ -10,13 +11,11 @@
 	onMount(async () => {
 		loadSiteConfig();
 		try {
-			const r = await fetch('/api/config/legal');
-			if (r.ok) {
-				const d = await r.json();
-				customHtml = d['mentions_legales'] ?? '';
-			}
+			customHtml = (await configApi.legal())['mentions_legales'] ?? '';
 		} catch {
-			/* silencieux */
+			//  Silencieux, et c'est voulu : la page a son texte par défaut, et
+			//  afficher une erreur sur des mentions légales serait pire que le
+			//  texte générique.
 		}
 	});
 </script>

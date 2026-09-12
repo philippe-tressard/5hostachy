@@ -83,6 +83,16 @@ test.describe('Squelette et accessibilité au clavier', () => {
 			//  🔴 Ce qui reste couvert est ce qui compte : une exception JavaScript
 			//  ou un `console.error` écrit par l'application.
 			if (/Failed to load resource/i.test(m.text())) return;
+			//  ⚠️ Même raison, autre messager : depuis le 12/09/2026, la
+			//  configuration publique passe par le client d'API (#932), qui
+			//  journalise lui-même les 5xx (`[API 500] GET /config — …`). Sans
+			//  backend, ce 500 est une condition d'ENVIRONNEMENT, pas une erreur
+			//  de script — c'est exactement ce que la ligne au-dessus écarte,
+			//  écrit par l'application au lieu du navigateur.
+			//
+			//  🔴 Le filtre reste étroit : `[API 5xx]` seulement. Un 4xx n'est PAS
+			//  écarté — il signalerait un appel que la page n'aurait pas dû faire.
+			if (/^\[API 5\d\d\]/.test(m.text())) return;
 			erreurs.push(m.text());
 		});
 		await page.goto('/auth/connexion');
