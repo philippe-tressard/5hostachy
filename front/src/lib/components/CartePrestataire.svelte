@@ -128,7 +128,13 @@
 			      un seul objet (#425). -->
 			<FormulaireCreation titre="Modifier le prestataire" encadre={false}>
 				<form on:submit|preventDefault={onEnregistrer}>
-					<ChampsPrestataire bind:prestForm bind:prestContacts {typesPrestataire} {equipements} />
+					<ChampsPrestataire
+						bind:prestForm
+						bind:prestContacts
+						{typesPrestataire}
+						{equipements}
+						etat="edition"
+					/>
 					<PiedFormulaire enCours={submitting} on:annule={onAnnuler} />
 				</form>
 			</FormulaireCreation>

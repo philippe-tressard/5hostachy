@@ -10,19 +10,49 @@
   décisions de l'appelant, qui seul sait s'il crée ou s'il corrige. Les y mettre
   ferait de ce composant un écran, et il n'en est pas un.
 -->
+<script context="module" lang="ts">
+	//  Partagé par toutes les instances : c'est ce qui rend les identifiants
+	//  uniques d'un rendu à l'autre.
+	let compteur = 0;
+</script>
+
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import SectionFormulaire from './SectionFormulaire.svelte';
+	import { PRESTATAIRE } from '$lib/entites/prestataire';
+	import { sectionPresente, type Etat } from '$lib/entites/types';
 
 	export let prestForm: any;
 	export let prestContacts: any[] = [];
 	export let typesPrestataire: readonly { val: string; label: string; desc?: string }[] = [];
 	export let equipements: readonly { val: string; label: string }[] = [];
+
+	//  Un identifiant par instance : les deux rendus — création en tête de page et
+	//  correction dans la carte — coexistent, et deux `id` identiques feraient
+	//  pointer les deux libellés sur le premier champ.
+	const idNom = `prest-nom-${++compteur}`;
+
+	/**  Création ou correction. Les deux rendent les mêmes sections ici — et c'est
+	 *   la DÉCLARATION qui le dit, pas une absence de condition : un prestataire
+	 *   n'a ni workflow ni diffusion, donc rien qui varie d'un état à l'autre. */
+	export let etat: Etat = 'creation';
 </script>
 
-<div>
-	<div class="form-grid">
-		<label class="field">Nom *<input bind:value={prestForm.nom} required /></label>
-		<!--  🔴 Six entrées portant chacune une description : c'est le cas
+<!--  ══ 1. TITRE ══ Le nom SEUL : ce qui qualifie l'objet est en section 2
+      (§0, arbitré le 18/08/2026). Il partageait la grille avec le type et la
+      spécialité — quatre champs d'un bloc, sans rien pour dire lequel nomme
+      l'entreprise et lesquels la décrivent. -->
+<SectionFormulaire titre="Nom" requis pour={idNom}>
+	<label class="field champ-large" for={idNom}>
+		<input id={idNom} bind:value={prestForm.nom} required />
+	</label>
+</SectionFormulaire>
+
+<!--  ══ 2. CHAMPS SPÉCIFIQUES ══ Ce qui décrit l'entreprise. -->
+{#if sectionPresente(PRESTATAIRE, etat, 'specifiques')}
+	<SectionFormulaire titre="L'entreprise">
+		<div class="form-grid">
+			<!--  🔴 Six entrées portant chacune une description : c'est le cas
 					      qui a fait donner un sous-texte à `Pastille` (#491, seuil arbitré
 					      à 6). Le FILTRE de cette même liste la montre depuis le 29/08 —
 					      le formulaire, lui, gardait un `<select>` où la description ne
@@ -30,28 +60,36 @@
 					      celui qui sert à CHOISIR qui perdait ce qui aide à choisir.
 					      `champ-large` : dix pastilles à sous-texte dans une colonne de
 					      grille s'empileraient une par ligne (`ux-patterns` §9 bis). -->
-		<ChoixPastilles
-			options={typesPrestataire}
-			bind:valeur={prestForm.type_prestataire}
-			tous={false}
-			libelle="Type"
-			libelleVisible
-			requis
-			avecDetail
-		/>
-		<label class="field"
-			>Spécialité *
-			<select bind:value={prestForm.specialite} required>
-				<option value="">— Sélectionner —</option>
-				{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-			</select>
-		</label>
-		<label class="field">Email<input type="email" bind:value={prestForm.email} /></label>
-	</div>
-	<div style="margin-top:.75rem">
-		<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">
-			Contact{prestContacts.length > 1 ? 's' : ''}
+			<ChoixPastilles
+				options={typesPrestataire}
+				bind:valeur={prestForm.type_prestataire}
+				tous={false}
+				libelle="Type"
+				libelleVisible
+				requis
+				avecDetail
+			/>
+			<label class="field"
+				>Spécialité *
+				<select bind:value={prestForm.specialite} required>
+					<option value="">— Sélectionner —</option>
+					{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
+				</select>
+			</label>
+			<label class="field">Email<input type="email" bind:value={prestForm.email} /></label>
 		</div>
+	</SectionFormulaire>
+{/if}
+
+<!--  Les CONTACTS : une section à part, parce que c'est une liste répétable et
+      non un champ de plus. Elle n'est pas au cadre des neuf — un prestataire est
+      un carnet d'adresses, et ses personnes SONT son contenu.
+
+      ⚠️ Son intitulé passait par un `<div>` habillé en ligne
+      (`font-size:.85rem;font-weight:600`) : la troisième écriture d'un titre de
+      section, celle que `SectionFormulaire` existe pour supprimer. -->
+<SectionFormulaire titre={prestContacts.length > 1 ? 'Contacts' : 'Contact'}>
+	<div>
 		{#each prestContacts as _contact, i (_contact)}
 			<div
 				style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)"
@@ -106,7 +144,7 @@
 				])}>+ Nouveau contact</button
 		>
 	</div>
-</div>
+</SectionFormulaire>
 
 <style>
 	/*  Une grille plus SERRÉE que la norme — 180 px de colonne minimale au lieu de
