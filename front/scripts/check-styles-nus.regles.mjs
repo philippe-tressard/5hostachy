@@ -137,8 +137,9 @@ export const TOLERANCES = {
 	//  Il y en avait deux ; celle de la relance syndic est passée à `.form-actions`
 	//  en extrayant le reporting (#453), où le contrôle a cessé de la tolérer.
 	'routes/(app)/espace-cs/+page.svelte::form-actions': 'une rangée alignée à la main (l. ~1170)',
-	'routes/(app)/mon-lot/+page.svelte::form-actions':
-		'rangée d’actions alignée à la main, avec `flex-wrap` (l. ~889)',
+	//  `mon-lot::form-actions` est partie le 12/09/2026 (#928) : la rangée a
+	//  quitté l'écran avec l'onglet Gestion locative, et le composant qui la
+	//  reçoit n'aligne plus rien à la main.
 	'routes/(app)/residence/+page.svelte::form-actions': 'pied de modale aligné à la main (l. ~584)',
 	'routes/(app)/sondages/[id]/+page.svelte::form-actions':
 		'rangée d’actions alignée à la main (l. ~326)',

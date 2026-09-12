@@ -79,9 +79,21 @@ def test_le_contenu_du_manuel_se_retrouve_dans_le_PDF(document, manuel):
         )
 
 
-def test_les_QUINZE_ecrans_sont_dans_le_PDF(document):
-    """La grille est l'essentiel du manuel : en perdre une carte le mutilerait."""
-    assert document.count('class="ecran-card"') == 15
+def test_les_QUATORZE_ecrans_sont_dans_le_PDF(document):
+    """La grille est l'essentiel du manuel : en perdre une carte le mutilerait.
+
+    🔴 Quinze jusqu'au 12/09/2026, quatorze depuis : « Accès & badges » a
+    fusionné avec « Mes lots » sous le nom **« Mes lots & accès »** (#928), et
+    son contenu est devenu deux sous-onglets. La carte n'a pas disparu — elle a
+    été absorbée, avec ses quatre puces.
+
+    ⚠️ Le nombre est FIGÉ, et c'est délibéré : ce test protège contre la perte
+    accidentelle d'une carte, pas contre une réorganisation voulue. Un test qui
+    compterait les écrans de `pages.ts` passerait au vert le jour où l'on
+    supprime une page ET sa carte — c'est-à-dire précisément le jour où il
+    devrait crier. La comparaison avec `pages.ts`, elle, est faite par
+    `npm run lint:manuel-menus`."""
+    assert document.count('class="ecran-card"') == 14
 
 
 # ── 🔴 Les blocs dépliables : du contenu invisible serait du contenu perdu ────
@@ -168,7 +180,7 @@ def test_le_sommaire_suit_les_titres_du_document(manuel, document):
         f"seulement {len(releve)} entrées : le sommaire s'arrête au niveau 2 et "
         "ne permet plus de trouver un écran"
     )
-    #  Les quinze écrans sont des `<h3>` : sans eux, on ne peut pas chercher
+    #  Les quatorze écrans sont des `<h3>` : sans eux, on ne peut pas chercher
     #  « Accès & badges », c'est-à-dire ce pour quoi on ouvre un sommaire.
     assert sum(1 for niveau, _, _ in releve if niveau == 3) >= 16
 

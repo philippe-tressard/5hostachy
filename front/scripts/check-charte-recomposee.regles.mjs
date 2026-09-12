@@ -104,9 +104,9 @@ export const TOLERANCES = {
 	//  l'a rabotée : la rangée d'onglets est devenue UN composant (`BarreOnglets`),
 	//  qui porte le défilement horizontal pour toutes les pages. L'écart n'avait plus
 	//  d'objet — c'est la bonne façon de retirer une dérogation.
-	'routes/(app)/acces-securite/+page.svelte::table th':
+	'lib/components/AccesConnexes.svelte::table th':
 		'tableaux DENSES (imports d’accès, listes de badges) : en-tête resserré',
-	'routes/(app)/acces-securite/+page.svelte::table td':
+	'lib/components/AccesConnexes.svelte::table td':
 		'même raison — la cellule suit l’en-tête, sinon la colonne se décale',
 
 	//  ── Boutons ──────────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ export const TOLERANCES = {
 		'chevron plus petit et en couleur primaire : il annonce une action, pas un dépliage neutre',
 	'lib/components/CarteFaq.svelte::chevron':
 		'`color: inherit` — le chevron suit la couleur de la question, qui change au survol',
-	'routes/(app)/acces-securite/+page.svelte::table':
+	'lib/components/AccesConnexes.svelte::table':
 		'tableau plus lisible : ses cellules portent des codes et des dates',
 	'routes/(app)/notifications/+page.svelte::section-title':
 		'espacement resserré — les sections de cette page sont courtes et nombreuses',

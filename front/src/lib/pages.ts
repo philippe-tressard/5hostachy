@@ -130,18 +130,36 @@ export const PAGES: PageDef[] = [
 	{
 		id: 'mon-lot',
 		href: '/mon-lot',
-		nom: 'Mes lots',
-		titre: 'Mes lots',
-		navLabel: 'Mes lots',
-		icone: 'door-closed',
+		//  🔴 « Mes lots & accès » (12/09/2026, #928) : la page réunit ce qui était
+		//  deux entrées de menu, et le nom dit les DEUX.
+		//  ⚠️ Les trois champs changent ENSEMBLE — recherche, en-tête, menu.
+		nom: 'Mes lots & accès',
+		titre: 'Mes lots & accès',
+		navLabel: 'Mes lots & accès',
+		//  `key-round` : c'est l'accès qu'on vient chercher le plus souvent.
+		icone: 'key-round',
+		//  ⚠️ Le lien « Quel prix ? » vient de l'ancienne page Accès — à ne pas perdre.
 		descriptif:
-			'Informations sur votre bien : situation de vos lots (appartement, cave & parkings) dans la résidence et gestion locative pour les copropriétaires mandataires.',
+			'Vos lots (appartement, cave & parkings), vos badges Vigik et télécommandes de parking, et la gestion locative pour les copropriétaires mandataires. <a href="/faq#badge-prix" style="font-size:.85rem">Quel prix pour un badge ?</a>',
 		onglets: [
 			{
 				id: 'lots',
 				route: '/mon-lot',
 				label: '\u{1F3E0} Mes lots',
 				descriptif: 'Situation de vos lots dans la résidence : appartements, caves et parkings.',
+			},
+			{
+				id: 'badges',
+				route: '/mon-lot/badges',
+				label: '\u{1F3F7}\uFE0F Mes badges d’accès (Vigik)',
+				descriptif: 'Vos badges Vigik : ceux que vous détenez, vos demandes et vos déclarations.',
+			},
+			{
+				id: 'telecommandes',
+				route: '/mon-lot/telecommandes',
+				label: '\u{1F4E1} Télécommandes de parking',
+				descriptif:
+					'Vos télécommandes de parking : celles que vous détenez, vos demandes et vos déclarations.',
 			},
 			{
 				id: 'location',
@@ -155,16 +173,11 @@ export const PAGES: PageDef[] = [
 			},
 		],
 	},
-	{
-		id: 'acces-badges',
-		href: '/acces-securite',
-		nom: 'Accès & badges',
-		titre: 'Accès & badges',
-		navLabel: 'Accès & badges',
-		icone: 'key-round',
-		descriptif:
-			'Gestion de vos télécommandes parkings & Vigiks. <a href="/faq#badge-prix" style="font-size:.85rem">Quel prix pour un badge ?</a>',
-	},
+	//  🔴 `acces-badges` a quitté cette table (12/09/2026, #928) : ses deux listes
+	//  sont des sous-onglets de « Mes lots & accès ».
+	//  ⚠️ L'ADRESSE `/acces-securite` répond toujours et redirige — treize liens
+	//  internes la citent, et des courriels déjà partis la portent. Le détail est
+	//  dans `routes/(app)/acces-securite/+page.svelte`.
 	{
 		id: 'annuaire',
 		href: '/annuaire',
