@@ -31,6 +31,7 @@
  */
 
 import { TITRE_ARCHIVES } from '$lib/archives';
+import { PAGES_ROLES } from './pages-roles';
 import type { PageConfig } from '$lib/stores/pageConfig';
 
 export interface OngletDef {
@@ -173,11 +174,9 @@ export const PAGES: PageDef[] = [
 			},
 		],
 	},
-	//  🔴 `acces-badges` a quitté cette table (12/09/2026, #928) : ses deux listes
-	//  sont des sous-onglets de « Mes lots & accès ».
-	//  ⚠️ L'ADRESSE `/acces-securite` répond toujours et redirige — treize liens
-	//  internes la citent, et des courriels déjà partis la portent. Le détail est
-	//  dans `routes/(app)/acces-securite/+page.svelte`.
+	//  🔴 `acces-badges` a quitté cette table (12/09/2026, #928) — ses listes sont
+	//  des sous-onglets de « Mes lots & accès ». L'adresse `/acces-securite`
+	//  redirige : voir `routes/(app)/acces-securite/+page.svelte`.
 	{
 		id: 'annuaire',
 		href: '/annuaire',
@@ -309,64 +308,9 @@ export const PAGES: PageDef[] = [
 		descriptif:
 			'Réponses aux questions fréquentes sur la vie en résidence, les services et la réglementation de la copropriété.',
 	},
-	{
-		id: 'espace-cs',
-		href: '/espace-cs',
-		nom: 'Espace CS',
-		titre: 'Espace Conseil Syndical (CS)',
-		navLabel: 'Espace CS',
-		icone: 'shield-half',
-		descriptif:
-			'Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, reporting, relance syndic et demandes d\'accès — réservé au Conseil Syndical. Les tickets de la résidence se traitent depuis la page <a href="/tickets">Tickets</a>.',
-		onglets: [
-			{
-				id: 'validations',
-				route: '/espace-cs',
-				label: '✅ Comptes & accès',
-				descriptif: "Comptes en attente, demandes d'accès et validations à traiter.",
-			},
-			{
-				id: 'reporting',
-				route: '/espace-cs/reporting',
-				label: '\u{1F4CA} Reporting',
-				descriptif:
-					'Synthèses et indicateurs : kanban, tableau des tickets, prestataires, renouvellements de contrats et relance syndic.',
-			},
-			{
-				id: 'annonces-hall',
-				route: '/espace-cs/annonces-hall',
-				label: '\u{1F4C4} Annonces Hall',
-				descriptif:
-					"Créez une annonce à afficher dans le hall des bâtiments : PDF à la charte de la résidence, envoyé par mail aux membres du CS concernés, puis conservé dans l'historique.",
-			},
-			{
-				id: 'annuaire',
-				route: '/espace-cs/annuaire',
-				label: '\u{1F4D2} Annuaire CS & Syndic',
-				descriptif: 'Coordonnées des membres du CS et du syndic.',
-			},
-		],
-	},
-	{
-		id: 'delegations',
-		href: '/delegations',
-		nom: 'Délégations',
-		titre: 'Délégations aidant',
-		navLabel: 'Délégations',
-		icone: 'heart-handshake',
-		descriptif:
-			"Gestion des accès délégués pour les proches aidants : un proche peut consulter et agir à votre place, sans que cela constitue une procuration d'assemblée générale.",
-	},
-	{
-		id: 'admin',
-		href: '/admin',
-		nom: 'Paramétrage',
-		titre: 'Paramétrage',
-		navLabel: 'Admin',
-		icone: 'sliders-horizontal',
-		descriptif:
-			'Administration de la plateforme : comptes, utilisateurs, rôles, modèles e-mail, paramétrage et référentiels — réservés aux admins.',
-	},
+	//  Les pages réservées à un RÔLE vivent dans `pages-roles.ts` (#928) : ce
+	//  fichier a franchi son plafond, et la coupe suit ce que les pages SONT.
+	...PAGES_ROLES,
 	{
 		id: 'profil',
 		href: null,

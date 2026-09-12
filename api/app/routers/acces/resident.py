@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_cs_or_admin
+from app.utils.batiments import libelle_lot
 from app.database import get_session
 from app.models.core import (
     CommandeAcces, Notification, StatutAcces, StatutImport,
@@ -347,7 +348,12 @@ def _acces_admin_out(objets, session: Session) -> list[AccesAdminOut]:
                 #  de cette règle.
                 porteur_nom=nom_affiche(porteur.prenom, porteur.nom) if porteur else "—",
                 porteur_id=o.user_id,
-                lot_libelle=f"{lot.type} {lot.numero}" if lot else None,
+                #  🔴 `f"{lot.type}"` rendait « TypeLot.appartement 314 » — la
+                #  représentation Python de l'enum, jusque sur l'écran du CS
+                #  (12/09/2026, signalé à l'écran). Le libellé est écrit UNE
+                #  fois, dans `utils/batiments`, et trois autres endroits le
+                #  composaient déjà correctement à la main.
+                lot_libelle=libelle_lot(lot),
                 cree_le=o.cree_le,
             )
         )

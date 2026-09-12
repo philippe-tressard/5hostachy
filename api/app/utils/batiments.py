@@ -68,3 +68,35 @@ def libelle_batiment_ou(batiment, defaut: Optional[str]) -> Optional[str]:
 
 
 __all__ = ["libelle_batiment", "libelle_batiment_ou"]
+
+def libelle_lot(lot) -> Optional[str]:
+    """« Appartement 314 » — le lot, tel qu'un humain le lit.
+
+    ## Pourquoi cette fonction (12/09/2026)
+
+    La même notion était écrite **quatre fois**, et celle qui n'avait pas de
+    garde était la fautive :
+
+        acces/resident.py   f"{lot.type} {lot.numero}"          ← « TypeLot.appartement 314 »
+        admin/acces.py ×2   lot.type.value if hasattr(…) else …
+        bailleur/acces.py   idem
+
+    🔴 `f"{enum}"` rend `TypeLot.appartement`, pas `appartement` : la
+    représentation Python de l'énumération a fui jusqu'à l'écran du conseil
+    syndical, dans la colonne « Lot » de tous les badges de la copropriété.
+    Signalé à l'écran, capture à l'appui.
+
+    ⚠️ Les trois autres écritures étaient correctes — elles portaient toutes le
+    `hasattr(lot.type, "value")` défensif que la quatrième avait oublié. C'est
+    la forme la plus discrète de la duplication : trois copies justes rendent la
+    quatrième invisible, puisque *« ça marche ailleurs »*.
+
+    ⚠️ La majuscule initiale est posée ICI : l'enum stocke `appartement` en
+    minuscules, et trois écrans l'affichaient tel quel.
+    """
+    if not lot:
+        return None
+    #  `.value` quand c'est un enum, la chaîne sinon — une base migrée peut
+    #  rendre l'un ou l'autre selon le chemin de lecture.
+    type_lot = lot.type.value if hasattr(lot.type, "value") else str(lot.type or "")
+    return f"{type_lot.capitalize()} {lot.numero}".strip()

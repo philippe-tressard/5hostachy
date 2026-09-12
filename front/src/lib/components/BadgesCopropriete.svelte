@@ -78,6 +78,40 @@
 		...telecommandes.map((t) => ({ ...t, type: 'telecommande' as const })),
 	];
 
+	/**  La colonne de tri, et son sens.
+	 *
+	 *  🔴 « Porteur » par défaut, demandé à l'écran le 12/09/2026 : la question
+	 *  qu'on pose à cette table est « qui détient quoi », et surtout « que détient
+	 *  CETTE personne » — au départ d'un locataire, ou quand un badge est
+	 *  retrouvé. Triée par code, elle dispersait les trois badges d'un même
+	 *  porteur sur trois écrans.
+	 *
+	 *  ⚠️ Un tri, pas un regroupement : les lignes restent des lignes. Grouper
+	 *  demanderait de décider ce qu'on affiche pour un porteur sans badge, et la
+	 *  table ne répond pas à cette question-là. */
+	let triCol: 'porteur' | 'type' | 'code' | 'lot' | 'statut' = 'porteur';
+	let triAsc = true;
+
+	function trierPar(col: typeof triCol) {
+		//  Recliquer la même colonne inverse le sens — le geste que tout tableau
+		//  du web a, et qu'il serait surprenant de ne pas trouver.
+		if (triCol === col) triAsc = !triAsc;
+		else {
+			triCol = col;
+			triAsc = true;
+		}
+	}
+
+	/**  La valeur comparée pour une ligne. `localeCompare` avec `sensitivity`
+	 *   pour que « Ébert » se range après « Dupont » et non en fin de liste. */
+	function cle(a: any): string {
+		if (triCol === 'porteur') return a.porteur_nom ?? '';
+		if (triCol === 'type') return a.type ?? '';
+		if (triCol === 'lot') return a.lot_libelle ?? '';
+		if (triCol === 'statut') return a.statut ?? '';
+		return a.code ?? '';
+	}
+
 	$: q = recherche.trim().toLowerCase();
 	$: filtrees = toutes
 		.filter((a) => !filtreType || a.type === filtreType)
@@ -87,6 +121,11 @@
 				a.code.toLowerCase().includes(q) ||
 				a.porteur_nom.toLowerCase().includes(q) ||
 				(a.lot_libelle ?? '').toLowerCase().includes(q),
+		)
+		//  ⚠️ Trié APRÈS les filtres : trier d'abord ferait le même travail sur des
+		//  lignes qu'on s'apprête à écarter.
+		.sort(
+			(x, y) => (triAsc ? 1 : -1) * cle(x).localeCompare(cle(y), 'fr', { sensitivity: 'base' }),
 		);
 
 	const badgeStatut: Record<string, string> = {
@@ -138,12 +177,20 @@
 			<div class="table-wrap">
 				<table class="table" style="font-size:0.85rem">
 					<thead>
+						<!--  🔴 De vrais `<button>` dans les `<th>` : un `<th>` cliquable sans
+						      bouton n'est ni atteignable au clavier ni annoncé comme
+						      actionnable (`CLAUDE.md`, règle 3). `aria-sort` dit au lecteur
+						      d'écran ce que la flèche montre à l'œil. -->
 						<tr>
-							<th>Type</th>
-							<th>Code</th>
-							<th>Porteur</th>
-							<th>Lot</th>
-							<th>Statut</th>
+							{#each [['type', 'Type'], ['code', 'Code'], ['porteur', 'Porteur'], ['lot', 'Lot'], ['statut', 'Statut']] as [col, libelle] (col)}
+								<th aria-sort={triCol === col ? (triAsc ? 'ascending' : 'descending') : 'none'}>
+									<button type="button" class="th-tri" on:click={() => trierPar(col as any)}>
+										{libelle}<span class="th-fleche" aria-hidden="true"
+											>{triCol === col ? (triAsc ? '▲' : '▼') : ''}</span
+										>
+									</button>
+								</th>
+							{/each}
 						</tr>
 					</thead>
 					<tbody>
@@ -175,6 +222,25 @@
 </section>
 
 <style>
+	/*  L'en-tête cliquable ressemble à un en-tête, pas à un bouton : c'est la
+	    flèche qui dit qu'il trie, et le survol qui dit qu'il se clique. */
+	.th-tri {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		background: none;
+		border: 0;
+		padding: 0;
+		font: inherit;
+		color: inherit;
+		cursor: pointer;
+	}
+	.th-tri:hover {
+		color: var(--color-primary);
+	}
+	.th-fleche {
+		font-size: 0.7em;
+	}
 	/*  `.section` n'est PAS globale - elle vit dans `acces-securite`, scopee a ce
 	    fichier-la. L'employer ici aurait rendu la carte sans son cadre : c'est la
 	    regression des pastilles nues (`standards/02` §4 ter), et `lint:classes-nues`

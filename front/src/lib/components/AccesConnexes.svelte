@@ -12,7 +12,11 @@
   * `OngletAcces` — **mes** accès : les deux listes, et les deux gestes qui les
     alimentent (demander, déclarer) ;
   * ce fichier-ci — **ce qui les entoure** : l'historique, ce qui vient d'un
-    tiers, et les badges de la copropriété.
+    tiers.
+
+  🔴 Les badges de la COPROPRIÉTÉ ont quitté ce composant le 12/09/2026 :
+  ils sont un outil de rôle, pas une pièce de l'écran du résident. Ils vivent
+  dans l'espace CS, sous leur propre onglet.
 
   ⚠️ La « vue par locataire » d'un bailleur est restée dans `OngletAcces`, et ce
   n'est pas un oubli : elle MODIFIE les deux listes (récupérer les accès confiés
@@ -30,8 +34,7 @@
 -->
 <script lang="ts">
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
-	import BadgesCopropriete from '$lib/components/BadgesCopropriete.svelte';
-	import { currentUser, isCS } from '$lib/stores/auth';
+	import { currentUser } from '$lib/stores/auth';
 	import { fmtDateShort } from '$lib/date';
 
 	/** Les demandes d'accès passées, tous types confondus. */
@@ -104,10 +107,6 @@
 			</table>
 		{/if}
 	</section>
-{/if}
-
-{#if $isCS}
-	<BadgesCopropriete />
 {/if}
 
 <style>

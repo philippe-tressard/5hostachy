@@ -69,7 +69,17 @@ import { valeursDeclarees } from './lib-lecture-source.mjs';
 import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const SOURCE = join(RACINE, 'lib', 'pages.ts');
+/**  🔴 DEUX fichiers depuis le 12/09/2026 (#928) : `pages.ts` a franchi son
+ *   plafond de modularité, et les pages réservées à un RÔLE sont parties dans
+ *   `pages-roles.ts`. La table reste UNE — `PAGES` les concatène.
+ *
+ *   ⚠️ Le contrôle ne lisait qu'un fichier, et l'extraction l'a rendu AVEUGLE
+ *   sur trois pages : il les a aussitôt déclarées « absentes de la table ». Le
+ *   refus était juste, et il dit la règle — **la portée du contrôle fait partie
+ *   du contrôle** : un découpage qui ne l'élargit pas le transforme en garde-fou
+ *   qui garde la moitié de ce qu'on croit. */
+const SOURCES = [join(RACINE, 'lib', 'pages.ts'), join(RACINE, 'lib', 'pages-roles.ts')];
+const SOURCE = SOURCES[0];
 
 /** Un fichier qui cite au moins ce nombre d'identifiants distincts est un inventaire. */
 const SEUIL = 3;
@@ -177,7 +187,7 @@ if (!existsSync(SOURCE)) {
 	console.error(`✗ Cas zéro : ${SOURCE} est introuvable — contrôle inopérant.`);
 	process.exit(1);
 }
-const source = readFileSync(SOURCE, 'utf8');
+const source = SOURCES.map((f) => readFileSync(f, 'utf8')).join('\n');
 for (const attendu of [
 	'export const PAGES',
 	'export const HREFS_DEFAUT',
@@ -218,7 +228,11 @@ const exceptionsUtiles = new Set();
 let appelsVus = 0;
 
 for (const chemin of tous) {
-	if (chemin === SOURCE) continue;
+	//  ⚠️ TOUS les fichiers de la source, pas seulement le premier : depuis que la
+	//  table vit en deux morceaux (#928), le second était compté comme une
+	//  RECOPIE — le contrôle lui reprochait de porter les identifiants qu'il est
+	//  chargé de porter.
+	if (SOURCES.includes(chemin)) continue;
 	const rel = relative(RACINE, chemin).split(sep).join('/');
 	const texte = sansCommentaires(readFileSync(chemin, 'utf8'));
 
