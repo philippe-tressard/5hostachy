@@ -72,6 +72,11 @@ export interface Ticket {
 	saisi_pour_nom?: string | null;
 	saisi_pour_email?: string | null;
 	saisi_pour_affichage?: string | null;
+	/**  À QUI le ticket appartient : le « Saisi pour » s'il existe, l'auteur
+	 *   sinon. C'est ce nom que le fil affiche et que la case « Envoyer une
+	 *   copie à … » annonce — le même, parce que c'est la même personne qui
+	 *   recevra le courriel (12/09/2026). */
+	proprietaire_nom?: string | null;
 	non_relancable?: boolean;
 	non_relancable_motif?: string | null;
 	relance_count?: number;

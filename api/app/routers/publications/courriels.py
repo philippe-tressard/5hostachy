@@ -154,7 +154,7 @@ def _envoyer_email_syndic_publication(
     #  La règle et sa déduplication : `app/utils/copie_auteur.py`.
     auteur_bcc = copie_demandee(
         session,
-        getattr(pub, "auteur_id", None),
+        pub,
         (email for _, email in destinataires),
         demandee=auteur,
     )

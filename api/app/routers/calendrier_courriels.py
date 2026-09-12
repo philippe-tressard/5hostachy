@@ -236,7 +236,7 @@ def notifier_canaux(
                 #  `app/utils/copie_auteur.py` (31/08/2026).
                 bcc=copie_demandee(
                     session,
-                    getattr(ev, "auteur_id", None),
+                    ev,
                     (e for _, e in destinataires),
                     demandee=auteur,
                 ),

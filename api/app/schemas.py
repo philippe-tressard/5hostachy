@@ -204,6 +204,15 @@ class TicketRead(BaseModel):
     saisi_pour_nom: Optional[str] = None
     saisi_pour_email: Optional[str] = None
     saisi_pour_affichage: Optional[str] = None
+    #  🔴 À QUI le ticket appartient : le « Saisi pour » s'il existe, l'auteur
+    #  sinon (12/09/2026). C'est ce nom que le fil affiche et que la case
+    #  « Envoyer une copie à … » annonce — le même, parce que c'est la même
+    #  personne qui recevra le courriel.
+    #
+    #  ⚠️ Distinct de `saisi_pour_affichage`, qui reste VIDE quand personne
+    #  n'est nommé : l'écran n'affiche « Saisi pour X » que lorsqu'il y a un X,
+    #  alors que le propriétaire existe toujours.
+    proprietaire_nom: Optional[str] = None
     non_relancable: bool = False
     non_relancable_motif: Optional[str] = None
     relance_count: int = 0

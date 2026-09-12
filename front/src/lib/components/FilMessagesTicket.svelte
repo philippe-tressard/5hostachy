@@ -90,7 +90,7 @@
 				<EvolForm
 					entrees={evolutions}
 					idPrefixe="tk-msg"
-					auteurNom={ticket.auteur_nom ?? ''}
+					auteurNom={ticket.proprietaire_nom ?? ticket.auteur_nom ?? ''}
 					titre="Répondre"
 					entite={TICKET}
 					avecPiecesJointes={!newInterne}
