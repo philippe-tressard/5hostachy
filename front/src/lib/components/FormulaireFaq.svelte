@@ -32,6 +32,17 @@
 	 *   (`editingItem`), le formulaire non — il reçoit les mêmes champs dans les
 	 *   deux cas. C'est le seul discriminant du cadre. */
 	export let modeEdition = false;
+
+	/**  Ce qui RAMÈNE le formulaire à l'écran quand il est rendu loin du geste
+	 *   qui l'ouvre — un pied de gabarit, sous une longue liste. Relayé jusqu'à
+	 *   `FormulaireCreation`, qui ne défile que si le cadre est hors de la bande
+	 *   visible : un formulaire ouvert sous les yeux ne fait pas sauter la page.
+	 *
+	 *   ⚠️ Cette prop existait dans `FormulaireCreation` et `CadreFormulaire`, et
+	 *   AUCUN des onze formulaires qui les enveloppent ne la relayait : une prop
+	 *   non relayée prend sa valeur par défaut, et le comportement manque en
+	 *   silence. `check-geste-edition` règle F le refuse désormais (13/09/2026). */
+	export let cle: unknown = undefined;
 	/** Les champs, liés dans les deux sens : la page porte leur cycle de vie. */
 	export let categorie = '';
 	export let nouvelleCategorie = '';
@@ -66,7 +77,12 @@
 	`lint:formulaires` l'exige, et c'est lui qui distingue « créer » de
 	« corriger », ce que rien dans le balisage ne permettrait de deviner.
 -->
-<CadreFormulaire edition={modeEdition} titre={titreCadre} on:fermer={() => dispatch('annule')}>
+<CadreFormulaire
+	edition={modeEdition}
+	titre={titreCadre}
+	{cle}
+	on:fermer={() => dispatch('annule')}
+>
 	<div class="form-grid" class:modal-body={modeEdition}>
 		<label class="field"
 			>Catégorie *

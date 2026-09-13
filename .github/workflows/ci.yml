@@ -321,16 +321,31 @@ jobs:
         #
         # ⚠️ Tabulation, saut de ligne et retour chariot sont les seuls tolérés :
         # ce sont ceux qu'on écrit exprès.
+        #
+        # 🔴 TROISIÈME occurrence le 13/09/2026 (#950), toujours un U+0008 à la
+        # place d'un `\b`, et cette fois DANS la règle que je venais d'ajouter à
+        # `check-geste-edition` : l'expression restait valide, ne correspondait
+        # plus à rien, et la règle a rendu un vert sur les quatre écrans qu'elle
+        # venait elle-même de désigner comme fautifs. Ce contrôle-ci l'aurait
+        # attrapée — je n'avais lancé que le lint concerné, pas la CI.
+        #
+        # 🔴 EN REVANCHE IL NE VOYAIT PAS LE NUL, et `check-css-duplique.mjs` en
+        # portait trois depuis des mois : `grep` traite un flux contenant U+0000
+        # comme binaire et se tait. Un contrôle qui ignore une partie de ce qu'il
+        # annonce couvrir ment par omission (`standards/05` §9 : la portée du
+        # contrôle fait partie du contrôle). On COMPTE donc les caractères
+        # restants au lieu de demander à `grep` s'il en voit.
         run: |
           st=0
           for f in $(git ls-files -- '*.py' '*.ts' '*.js' '*.mjs' '*.svelte' '*.sh' '*.yml'); do
-            # `[[:cntrl:]]` et non `grep -P` : le PCRE de Git Bash refuse de
-            # tourner hors locale unibyte, et le contrôle serait alors muet sur
-            # le poste — donc INCONNU pris pour un vert. Les trois caractères
-            # volontaires (tabulation, saut de ligne, retour chariot) sont
-            # retirés avant la lecture.
-            if tr -d '\n\r\t' < "$f" | LC_ALL=C grep -q '[[:cntrl:]]'; then
-              echo "::error file=$f::caractère de contrôle invisible (U+0008 et voisins) — il change un motif sans se voir"
+            # ⚠️ `tr -dc` et non `grep` : les trois caractères volontaires
+            # (tabulation, saut de ligne, retour chariot) sont retirés, puis on
+            # NE GARDE que les caractères de contrôle et on les compte. `grep`
+            # rendait un faux vert sur un fichier contenant un NUL, qu'il classe
+            # binaire ; `wc` ne juge pas son entrée.
+            n=$(LC_ALL=C tr -d '\n\r\t' < "$f" | LC_ALL=C tr -dc '[:cntrl:]' | wc -c)
+            if [ "$n" -gt 0 ]; then
+              echo "::error file=$f::$n caractère(s) de contrôle invisible(s) (U+0008, U+0000 et voisins) — ils changent un motif sans se voir"
               st=1
             fi
           done

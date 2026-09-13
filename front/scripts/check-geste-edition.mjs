@@ -320,6 +320,92 @@ for (const f of tous) {
 	}
 }
 
+//  ── F. Le formulaire s'ouvre LOIN du geste qui le déclenche ────────────────
+//
+//  🔴 Signalé à l'écran le 13/09/2026 :
+//
+//  > « quand je clique sur le crayon du kanban, j'avais l'impression que rien ne
+//  >   se passe : l'écran d'édition apparaît hors écran. »
+//
+//  ⚠️ LA RÈGLE B NE POUVAIT PAS LE VOIR, et c'est la leçon de ce défaut. Elle
+//  mesure l'écart entre DEUX rendus du même formulaire ; le calendrier n'en rend
+//  qu'un, tout en bas de la page, sous un kanban de plusieurs écrans de haut. Un
+//  seul rendu, donc aucune paire, donc rien à mesurer — et un formulaire qui
+//  s'ouvrait à deux mille pixels du crayon cliqué.
+//
+//  La bonne distance n'est pas « d'un rendu à l'autre », c'est « du GESTE au
+//  rendu ». On la mesure entre l'endroit où le drapeau d'ouverture passe à
+//  `true` et l'endroit où le formulaire est rendu sous ce drapeau.
+//
+//  ⚠️ Mesure STATIQUE, donc approchée : les lignes d'un fichier ne sont pas des
+//  pixels à l'écran. Elle attrape ce qu'elle vise — un formulaire relégué en pied
+//  de gabarit — et laisse passer un écran court dont tout tient dans la fenêtre.
+//  C'est le bon sens de l'erreur : `FormulaireCreation` ne défile de toute façon
+//  QUE si le cadre est hors de la bande visible, donc une `cle` posée en trop ne
+//  fait jamais sauter une page.
+const OUVERTURE = /^[ \t]*(?:if\s*\(.*\)\s*)?([A-Za-z_$][\w$]*)\s*=\s*true\s*;/gm;
+
+for (const f of tous) {
+	const rel = relative(SRC, f).split(SEP).join('/');
+	const src = readFileSync(f, 'utf8');
+	const lignes = src.split('\n');
+
+	//  Où chaque drapeau passe-t-il à `true` ?
+	const poses = new Map();
+	for (const m of src.matchAll(OUVERTURE)) {
+		const ligne = src.slice(0, m.index).split('\n').length;
+		if (!poses.has(m[1])) poses.set(m[1], []);
+		poses.get(m[1]).push(ligne);
+	}
+	if (poses.size === 0) continue;
+
+	//  Où un formulaire est-il rendu, et sous quel `{#if}` ?
+	for (const m of src.matchAll(/<(Formulaire[A-Z][A-Za-z]*)\b/g)) {
+		const ligneRendu = src.slice(0, m.index).split('\n').length;
+		//  Le `{#if}` le plus proche AU-DESSUS du rendu — le gabarit n'en imbrique
+		//  pas d'autre entre le drapeau et le formulaire dans les cas visés.
+		let garde = null;
+		for (let i = ligneRendu - 1; i >= Math.max(0, ligneRendu - 6); i--) {
+			const g = /\{#if\s+([A-Za-z_$][\w$]*)\b/.exec(lignes[i] ?? '');
+			if (g) {
+				garde = g[1];
+				break;
+			}
+		}
+		if (!garde || !poses.has(garde)) continue;
+
+		const ecart = Math.max(...poses.get(garde).map((l) => Math.abs(ligneRendu - l)));
+		if (ecart <= ECART_MAX) continue;
+
+		//  La `cle` se cherche dans la balise du rendu, pas dans le fichier : une
+		//  `cle` posée sur un AUTRE formulaire du même écran ne protège pas celui-ci.
+		const finBalise = src.indexOf('/>', m.index);
+		const balise = src.slice(m.index, finBalise === -1 ? m.index + 400 : finBalise);
+		//  `cle="…"` autant que `cle={…}` : une clé constante suffit, puisque
+		//  `FormulaireCreation` défile au MONTAGE dès qu'une clé est définie.
+		//  🔴 `indexOf` et non une limite de mot : la ligne précédente portait un
+		//  vrai caractère RETOUR ARRIÈRE (0x08) à la place de `\b`, avalé à
+		//  l'écriture — elle ne correspondait donc à rien, en silence, et la règle
+		//  laissait passer les quatre écrans qu'elle venait de trouver. C'est le
+		//  MÊME accident que la règle E, raconté vingt lignes plus haut, et la
+		//  même conclusion : une chaîne cherchée littéralement ne perd rien.
+		//
+		//  `cle="…"` autant que `cle={…}` : une clé constante suffit, puisque
+		//  `FormulaireCreation` défile au MONTAGE dès qu'une clé est définie.
+		if (balise.includes('cle={') || balise.includes('cle="')) continue;
+
+		fautes.push({
+			regle: 'F',
+			fichier: rel,
+			ligne: ligneRendu,
+			quoi: `<${m[1]}> rendu à ${ecart} lignes du geste qui l’ouvre (\`${garde} = true\`)`,
+			remede:
+				'`cle={…}` sur le rendu — `FormulaireCreation` ramène alors le formulaire ' +
+				'à l’écran, et seulement s’il en est sorti',
+		});
+	}
+}
+
 const modalesInutiles = Object.keys(MODALES).filter((f) => !modalesVues.has(f));
 if (modalesInutiles.length > 0) {
 	console.error('✗ Déclaration(s) de MODALES devenue(s) inutile(s), à retirer :');
@@ -350,7 +436,7 @@ if (fautes.length > 0) {
 		console.error(`      → ${d.remede}\n`);
 	}
 	console.error(
-		'  Ces cinq règles ont été signalées à l’écran le 10/09/2026, et la première\n' +
+		'  Ces règles ont été signalées à l’écran les 10 et 13/09/2026, et la première\n' +
 			'  était déjà écrite dans un commentaire qui se croyait le dernier concerné.\n',
 	);
 	process.exit(1);
@@ -358,5 +444,5 @@ if (fautes.length > 0) {
 
 console.log(
 	`✓ Geste d’édition : ${tous.length} composant(s) vérifié(s) — crayon seul partout, ` +
-		`aucun formulaire rendu loin de son jumeau, aucun identifiant d’édition à deux rendus, défilement gardé par une clé, ${Object.keys(MODALES).length} fenêtre(s) d’édition déclarée(s), ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s).`,
+		`aucun formulaire rendu loin de son jumeau NI du geste qui l’ouvre, aucun identifiant d’édition à deux rendus, défilement gardé par une clé, ${Object.keys(MODALES).length} fenêtre(s) d’édition déclarée(s), ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s).`,
 );

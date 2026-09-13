@@ -29,6 +29,25 @@
 
 	/** L'objet de saisie, lié en deux sens : la page porte son cycle de vie. */
 	export let form: any;
+
+	/**  🔴 CE QUI RAMÈNE LE FORMULAIRE À L'ÉCRAN — signalé le 13/09/2026 :
+	 *
+	 *   > « quand je clique sur le crayon du kanban, j'avais l'impression que
+	 *   >   rien ne se passe : l'écran d'édition apparaît hors écran. »
+	 *
+	 *   Le calendrier rend son formulaire **après** le kanban, tout en bas de la
+	 *   page. Éditer depuis une carte de la dernière colonne ouvrait donc un
+	 *   formulaire à plusieurs écrans de distance, sans rien bouger : le geste
+	 *   paraissait sans effet.
+	 *
+	 *   ⚠️ Le mécanisme existait déjà — `FormulaireCreation.cle`, relayé par
+	 *   `CadreFormulaire` —, et ce formulaire-ci était le seul de la chaîne à ne
+	 *   pas le transmettre. Une prop non relayée ne se voit pas : elle prend la
+	 *   valeur par défaut, et le comportement manque en silence.
+	 *
+	 *   ⚠️ `FormulaireCreation` ne défile QUE si le cadre est hors de la bande
+	 *   visible : un formulaire ouvert sous les yeux ne fait pas sauter la page. */
+	export let cle: unknown = undefined;
 	export let photosUrls: string[] = [];
 	export let fichiersUrls: string[] = [];
 	export let types: { val: string; label: string }[] = [];
@@ -141,7 +160,12 @@
 	`lint:formulaires` l'exige, et c'est lui qui distingue « créer » de
 	« corriger », ce que rien dans le balisage ne permettrait de deviner.
 -->
-<CadreFormulaire edition={modeEdition} titre={titreCadre} on:fermer={() => dispatch('annule')}>
+<CadreFormulaire
+	edition={modeEdition}
+	titre={titreCadre}
+	{cle}
+	on:fermer={() => dispatch('annule')}
+>
 	<!--  ⚠️ Plus de `class:modal-body` ici : `CadreFormulaire` enveloppe lui-même
 	      le contenu sur la classe par défaut (02/09/2026). Le laisser en
 	      poserait un SECOND, et le padding serait compté deux fois. -->

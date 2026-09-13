@@ -560,6 +560,7 @@
 {#if showForm}
 	<FormulaireFaq
 		modeEdition={editingItem !== null}
+		cle={editingItem?.id ?? 'creation'}
 		bind:categorie={formCategorie}
 		bind:nouvelleCategorie={formNewCategorie}
 		bind:estNouvelleCategorie={formIsNewCategorie}
