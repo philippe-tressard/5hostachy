@@ -19,6 +19,7 @@
   écran seul serait contourné par un second écran ou un appel direct.
 -->
 <script lang="ts">
+	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 
@@ -59,11 +60,21 @@
 			Espace client (site web)
 			<input type="url" bind:value={siteWeb} placeholder="https://..." />
 		</label>
-		<div class="header-edit-actions" style="grid-column:1/-1">
-			<button class="btn btn-primary btn-sm" on:click={onEnregistrer} disabled={enregistrement}
-				>{enregistrement ? '…' : '\u{1F4BE} Enregistrer'}</button
-			>
-			<button class="btn btn-sm btn-outline" on:click={() => (edition = false)}>Annuler</button>
+		<!--  🔴 `PiedFormulaire` (12/09/2026) : cette rangée était une copie du pied
+		      commun sous une autre classe, et elle avait divergé comme les neuf
+		      d'origine — « Enregistrer » AVANT « Annuler », un emoji 💾 dans le
+		      libellé, « … » au lieu de « Enregistrement… », et aucun `type` sur les
+		      boutons. Elle échappait au contrôle parce qu'il n'ouvrait que les
+		      rangées `.form-actions` ; il cherche désormais la paire quelle que
+		      soit la classe. -->
+		<div style="grid-column:1/-1">
+			<PiedFormulaire
+				enCours={enregistrement}
+				soumission={false}
+				petit
+				on:enregistre={onEnregistrer}
+				on:annule={() => (edition = false)}
+			/>
 		</div>
 	</div>
 {:else}

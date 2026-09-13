@@ -379,6 +379,38 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	margin-top: 0.75rem;
 }
 
+/*  🔴 LE PIED DE FORMULAIRE AU DOIGT ET SUR PETIT ÉCRAN (12/09/2026).
+ *
+ *  Ces deux règles vivaient dans `PanneauOptionsPublication`, et **là
+ *  seulement** : la rangée d'actions de ce panneau était donc la seule des
+ *  vingt-cinq à passer correctement sur téléphone. La règle la plus utile était
+ *  la moins déployée — c'est l'inverse de ce qu'on veut, et la consigne est
+ *  claire : *la règle la plus déployée est enrichie pour s'appliquer à toutes
+ *  ses occurrences*.
+ *
+ *  ⚠️ Deux media queries, parce que ce sont deux questions distinctes :
+ *  `pointer: coarse` parle du DOIGT (une tablette large se pilote au doigt, un
+ *  petit portable à la souris — même raisonnement que pour `btn-icon`), et
+ *  `480px` parle de la PLACE. Les fusionner priverait l'une des deux de son cas.
+ *
+ *  ⚠️ 44 `px`, jamais `2.75rem` : la racine vaut 12 px en émulation mobile, et
+ *  2,75 rem y rendent 33. Une cible tactile est une taille physique. */
+@media (pointer: coarse) {
+	.form-actions .btn {
+		min-height: 44px;
+	}
+}
+@media (max-width: 480px) {
+	/*  Sur un petit téléphone, les deux boutons prennent toute la largeur plutôt
+	    que de se serrer l'un contre l'autre. */
+	.form-actions {
+		flex-direction: column;
+	}
+	.form-actions .btn {
+		width: 100%;
+	}
+}
+
 /* ── Affichage texte enrichi (TipTap HTML) ── */
 .rich-content p {
 	margin: 0 0 0.4rem;

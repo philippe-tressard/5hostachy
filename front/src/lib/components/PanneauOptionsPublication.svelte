@@ -19,6 +19,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
+	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import type { CleOptionPublication } from '$lib/options-publication';
 
 	/**  Le nom de l'objet décrit — il entre dans les libellés qui le nomment
@@ -73,21 +74,22 @@
 		bind:brouillon={options.brouillon}
 		bind:confidentiel={options.confidentiel}
 	/>
-	<!--  L'annulation vit à côté d'« Enregistrer » — norme du
-	      18/08/2026, la même que sur Tickets et sur l'édition. -->
-	<div class="options-actions">
-		<button
-			class="btn btn-primary btn-sm"
-			disabled={enregistrement}
-			on:click={() => dispatch('enregistrer')}
-			>{enregistrement ? 'Enregistrement…' : 'Enregistrer'}</button
-		>
-		<button
-			class="btn btn-outline btn-sm"
-			disabled={enregistrement}
-			on:click={() => dispatch('annuler')}>Annuler</button
-		>
-	</div>
+	<!--  🔴 `PiedFormulaire`, et non deux boutons écrits ici (12/09/2026, signalé
+	      à l'écran). Cette rangée était une **dixième copie** du pied que #822 a
+	      supprimé neuf fois — et elle avait déjà divergé sur les deux points qui
+	      se voient : « Enregistrer » AVANT « Annuler », et un alignement à GAUCHE
+	      faute de porter `.form-actions`.
+
+	      ⚠️ C'est précisément parce qu'elle portait sa propre classe
+	      (`.options-actions`) qu'aucun contrôle ne l'a vue. `lint:pied-formulaire`
+	      cherche désormais la paire quelle que soit la classe de la rangée. -->
+	<PiedFormulaire
+		enCours={enregistrement}
+		soumission={false}
+		petit
+		on:enregistre={() => dispatch('enregistrer')}
+		on:annule={() => dispatch('annuler')}
+	/>
 </div>
 
 <style>
@@ -99,20 +101,8 @@
 		font-size: 0.9rem;
 		font-weight: 600;
 	}
-	.options-actions {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-	/*  Sur téléphone, les deux boutons prennent toute la largeur plutôt que de
-	    se serrer — même règle que les autres formulaires du site. */
-	@media (max-width: 480px) {
-		.options-actions {
-			flex-direction: column;
-		}
-		.options-actions :global(.btn) {
-			width: 100%;
-			min-height: 44px;
-		}
-	}
+	/*  ⚠️ `.options-actions` et sa règle mobile sont MONTÉES dans `.form-actions`
+	    (`styles/normes.css`, 12/09/2026) : elles ne servaient qu'ici, ce qui
+	    faisait de ce panneau la seule rangée d'actions correcte au doigt. La
+	    règle la plus utile était la moins déployée. */
 </style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { nomAffiche } from '$lib/noms';
 	import {
 		REPLIE,
@@ -893,14 +894,16 @@
 							bind:value={whatsappUrl}
 						/>
 					</label>
-					<div class="header-edit-actions">
-						<button class="btn btn-primary btn-sm" on:click={saveCS} disabled={savingCS}
-							>{savingCS ? '…' : '\u{1F4BE} Enregistrer'}</button
-						>
-						<button class="btn btn-sm btn-outline" on:click={() => (csHeaderEditing = false)}
-							>Annuler</button
-						>
-					</div>
+					<!--  🔴 `PiedFormulaire` (12/09/2026) — cf. `EnteteSyndic` : cette rangée
+					      était une copie du pied commun sous une autre classe, divergente
+					      sur l'ordre des boutons et sur les libellés. -->
+					<PiedFormulaire
+						enCours={savingCS}
+						soumission={false}
+						petit
+						on:enregistre={saveCS}
+						on:annule={() => (csHeaderEditing = false)}
+					/>
 				</div>
 			{:else}
 				<div class="header-summary">
@@ -1007,21 +1010,17 @@
 									<span>Président du Conseil Syndical</span>
 								</label>
 							</div>
-							<div class="header-edit-actions" style="margin-top:.75rem">
-								<button
-									class="btn btn-primary btn-sm"
-									on:click={() => saveMembreCS(i)}
-									disabled={savingCSIdx === i}
-								>
-									{savingCSIdx === i ? '…' : '💾 Enregistrer'}
-								</button>
-								<button
-									class="btn btn-sm btn-outline"
-									on:click={() => {
+							<div style="margin-top:.75rem">
+								<PiedFormulaire
+									enCours={savingCSIdx === i}
+									soumission={false}
+									petit
+									on:enregistre={() => saveMembreCS(i)}
+									on:annule={() => {
 										cs = terminerEdition(cs);
 										cs = { ouvert: null, edite: cs.edite };
-									}}>Annuler</button
-								>
+									}}
+								/>
 							</div>
 						{:else}
 							<!-- Vue lecture seule (déplié, non édité) -->

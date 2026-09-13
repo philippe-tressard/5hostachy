@@ -33,6 +33,21 @@
  *  Il cherche la **paire** : « Annuler » ET un libellé d'enregistrement dans la
  *  même rangée. C'est cette forme-là qui a été écrite neuf fois.
  *
+ *  ## 🔴 La classe ne fait pas le pied (12/09/2026)
+ *
+ *  Le contrôle n'ouvrait que les rangées `class="form-actions"`. Une **dixième**
+ *  copie du pied vivait dans `PanneauOptionsPublication` sous sa propre classe,
+ *  `.options-actions` — et elle avait divergé sur les deux points qui se voient :
+ *  « Enregistrer » avant « Annuler », et un alignement à gauche, la classe
+ *  commune portant seule le `justify-content: flex-end`. C'est l'utilisateur qui
+ *  l'a vue, pas ce fichier.
+ *
+ *  ⚠️ **Un contrôle ancré sur le NOM d'une classe se contourne en renommant la
+ *  classe** — sans intention, simplement en écrivant un composant neuf. Il
+ *  cherche donc la paire dans *toute* rangée d'actions : `form-actions`, ou une
+ *  classe dont le nom finit par `-actions`. C'est `standards/04` §40 — la portée
+ *  doit décrire la NOTION, pas la forme déjà rencontrée.
+ *
  *  Test : node front/scripts/check-pied-formulaire.mjs --selftest
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -74,7 +89,9 @@ export function pieds(source) {
 	//  quinze lignes suivantes, ce qui couvre largement le motif à deux boutons.
 	const lignes = src.split('\n');
 	for (let i = 0; i < lignes.length; i++) {
-		if (!/class="form-actions"/.test(lignes[i])) continue;
+		//  `form-actions`, ou toute classe d'actions écrite pour l'occasion
+		//  (`options-actions`, `carte-actions`…). Le nom ne fait pas le pied.
+		if (!/class="[^"]*\b[\w-]*actions\b[^"]*"/.test(lignes[i])) continue;
 		const fenetre = lignes.slice(i, i + 15).join('\n');
 		const fin = fenetre.indexOf('</div>');
 		const rangee = fin === -1 ? fenetre : fenetre.slice(0, fin);
@@ -99,6 +116,14 @@ function selftest() {
 		['<PiedFormulaire enCours={saving} on:annule />', 0],
 		//  🔴 Le contrôle ne doit pas se déclencher sur sa PROPRE prose.
 		['<!--  `<div class="form-actions">` avec Annuler et Enregistrer : refusé -->', 0],
+		//  🔴 LA DIXIÈME COPIE, sous sa propre classe : elle passait avant le
+		//  12/09/2026, et c'est l'utilisateur qui l'a vue.
+		[
+			'<div class="options-actions">\n<button class="btn btn-primary btn-sm">Enregistrer</button>\n<button class="btn btn-outline btn-sm">Annuler</button>\n</div>',
+			1,
+		],
+		//  Une rangée dont le nom ne parle pas d'actions n'est pas examinée.
+		['<div class="cases">\n<button>Annuler</button>\n<button>Enregistrer</button>\n</div>', 0],
 	];
 	let ko = 0;
 	for (const [src, attendu] of cas) {
