@@ -219,6 +219,11 @@ def _racines() -> list[dict]:
                 "copropriété. Il n'appartient pas à la copropriété, mais celle-ci "
                 "participe à son assemblée générale. Concerne tous les résidents.",
             "portee_globale": True,
+            #  🔴 Elle concerne tous les résidents (qui VOIT) mais n'appartient pas
+            #  à la copropriété (ce qui la COUVRE) : deux questions, deux drapeaux.
+            #  Ce que la copropriété entretient « en entier » n'entretient pas le
+            #  parking de l'AFUL (#943).
+            "hors_copropriete": True,
             "selectionnable": True,
             "ordre": 40,
         },

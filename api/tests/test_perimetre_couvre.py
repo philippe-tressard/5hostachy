@@ -34,7 +34,7 @@ from app.utils.perimetres.arbre import Noeud, couvre
 module_arbre = importlib.import_module('app.utils.perimetres.arbre')
 
 
-def _noeud(code, parent=None, globale=False, batiment=None) -> Noeud:
+def _noeud(code, parent=None, globale=False, batiment=None, hors=False) -> Noeud:
     return Noeud(
         code=code,
         libelle=code,
@@ -45,6 +45,7 @@ def _noeud(code, parent=None, globale=False, batiment=None) -> Noeud:
         batiment_id=batiment,
         portee_globale=globale,
         selectionnable=True,
+        hors_copropriete=hors,
         actif=True,
         ordre=0,
     )
@@ -60,6 +61,11 @@ ARBRE = {
     "bat:3:toit": _noeud("bat:3:toit", parent="bat:3", batiment=None),
     "parking": _noeud("parking"),
     "caves": _noeud("caves"),
+    #  🔴 L'AFUL (#943) : elle CONCERNE tous les résidents — ils traversent son
+    #  parking — mais elle n'APPARTIENT pas à la copropriété. Les deux drapeaux
+    #  coexistent donc sur le même nœud, et c'est le point du cas ci-dessous.
+    "aful": _noeud("aful", globale=True, hors=True),
+    "aful:portail": _noeud("aful:portail", parent="aful"),
 }
 
 
@@ -116,6 +122,48 @@ def test_un_code_INCONNU_ne_fait_pas_lever():
     """Un contenu qui cite un périmètre supprimé ne compte pas — il ne fait pas
     échouer la requête pour autant."""
     assert couvre(["periletre-supprime"], "parking") is False
+
+
+# ── Ce qui n'appartient pas à la copropriété (#943, 13/09/2026) ──────────────
+#
+# Signalé à l'écran : *« il y a une exception pour la sélection de l'AFUL : elle
+# n'est pas incluse dans "toute copropriété" »*. Le filtre AFUL du carnet
+# d'entretien remontait toutes les lignes « Copropriété entière », donc presque
+# tout.
+
+
+def test_la_portee_globale_ne_couvre_PAS_ce_qui_est_hors_copropriete():
+    """🔴 Le cœur du correctif."""
+    assert couvre(["résidence"], "aful") is False
+
+
+def test_un_sous_espace_de_l_AFUL_en_herite():
+    """Le drapeau se lit sur toute la LIGNÉE : un portail de l'AFUL n'a pas à
+    redire qu'il n'appartient pas à la copropriété."""
+    assert couvre(["résidence"], "aful:portail") is False
+
+
+def test_ce_qui_est_MARQUE_aful_entre_toujours_dans_le_filtre_aful():
+    """⚠️ Le contre-exemple, et il est indispensable : sans lui, la correction
+    pourrait VIDER le filtre au lieu de le corriger — et un filtre vide se lit
+    comme une absence de données, pas comme un défaut."""
+    assert couvre(["aful"], "aful") is True
+    assert couvre(["aful"], "aful:portail") is True
+    assert couvre(["aful:portail"], "aful:portail") is True
+
+
+def test_la_regle_ne_deborde_PAS_sur_les_autres_filtres():
+    """La portée globale continue de couvrir tout le reste : c'est elle qui fait
+    qu'un contrat de nettoyage de la résidence apparaît sous « Parking »."""
+    assert couvre(["résidence"], "parking") is True
+    assert couvre(["résidence"], "bat:3") is True
+    assert couvre(["résidence"], "caves") is True
+
+
+def test_un_contenu_AFUL_n_envahit_pas_les_autres_perimetres():
+    """Le sens fermé reste fermé : l'AFUL n'est pas une portée large."""
+    assert couvre(["aful"], "parking") is False
+    assert couvre(["aful"], "bat:3") is False
 
 
 def test_l_arbre_VIDE_ne_filtre_rien(monkeypatch):

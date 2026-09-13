@@ -25,6 +25,7 @@
 		portee_globale: boolean;
 		selectionnable: boolean;
 		privatif: boolean;
+		hors_copropriete: boolean;
 		ordre: number;
 		actif: boolean;
 	};
@@ -103,6 +104,20 @@
 	Espace privatif
 	<span class="aide">
 		Un logement, une cave, une place attribuée. La pastille s'en distingue à la saisie.
+	</span>
+</label>
+
+<!--  🔴 Deux questions distinctes, et l'AFUL répond différemment à chacune :
+      « concerne tous les résidents » (qui VOIT) et « appartient à la
+      copropriété » (ce qui la COUVRE). L'aide le dit, parce que cocher la
+      mauvaise case ici fait disparaître des lignes d'un filtre. -->
+<label class="field-check">
+	<input type="checkbox" bind:checked={form.hors_copropriete} />
+	N'appartient pas à la copropriété
+	<span class="aide">
+		Un espace géré par un tiers — l'AFUL, une voie communale. Ce qui couvre « toute la copropriété »
+		ne le couvre alors pas&nbsp;: un contrat d'entretien de la résidence n'apparaîtra pas dans son
+		filtre. Sans effet sur qui le voit.
 	</span>
 </label>
 

@@ -51,6 +51,13 @@ export interface Perimetre {
 	 *   ⚠️ **Purement visuel pour l'instant.** La pastille se distingue, rien
 	 *   d'autre ne change — ni qui voit, ni qui est notifié. */
 	privatif: boolean;
+	/**  Ce nœud appartient-il à un TIERS — l'AFUL, une voie communale ? Ce qui
+	 *   couvre « toute la copropriété » ne le couvre alors pas (#943).
+	 *
+	 *   ⚠️ À ne pas confondre avec `portee_globale`, qui dit « concerne tous les
+	 *   résidents » : l'AFUL porte les DEUX. Qui voit, et ce qui couvre, sont
+	 *   deux questions. */
+	hors_copropriete: boolean;
 	utilise: boolean;
 }
 

@@ -73,6 +73,9 @@ class PerimetreRead(BaseModel):
     #: plutôt que deux listes.
     selectionnable: bool
     privatif: bool
+    #: Ce nœud appartient à un tiers (AFUL, voie communale) : ce qui couvre
+    #: « toute la copropriété » ne le couvre pas (#943).
+    hors_copropriete: bool
     #: Vrai si un contenu cite ce code : l'écran propose alors de désactiver plutôt
     #: que de supprimer, et dit pourquoi.
     utilise: bool
@@ -89,6 +92,7 @@ class PerimetreCreate(BaseModel):
     portee_globale: bool = False
     selectionnable: bool = True
     privatif: bool = False
+    hors_copropriete: bool = False
     ordre: int = 0
 
 
@@ -103,6 +107,7 @@ class PerimetreUpdate(BaseModel):
     portee_globale: Optional[bool] = None
     selectionnable: Optional[bool] = None
     privatif: Optional[bool] = None
+    hors_copropriete: Optional[bool] = None
     ordre: Optional[int] = None
     actif: Optional[bool] = None
 
@@ -218,6 +223,7 @@ def _en_lecture(noeuds: list[Perimetre], cites: set[str]) -> list[PerimetreRead]
                 concerne_tous=_concerne_tous(noeud, par_id),
                 selectionnable=noeud.selectionnable,
                 privatif=noeud.privatif,
+                hors_copropriete=noeud.hors_copropriete,
                 utilise=noeud.code.lower() in cites,
             ))
             descendre(noeud.id)
@@ -235,6 +241,7 @@ def _en_lecture(noeuds: list[Perimetre], cites: set[str]) -> list[PerimetreRead]
                 actif=noeud.actif, portee_globale=noeud.portee_globale,
                 concerne_tous=noeud.portee_globale, selectionnable=noeud.selectionnable,
                 privatif=noeud.privatif,
+                hors_copropriete=noeud.hors_copropriete,
                 utilise=noeud.code.lower() in cites,
             ))
     return sortie
@@ -321,6 +328,7 @@ def creer_perimetre(
         portee_globale=body.portee_globale,
         selectionnable=body.selectionnable,
         privatif=body.privatif,
+        hors_copropriete=body.hors_copropriete,
         ordre=body.ordre,
         modifie_par_id=admin.id,
         modifie_le=datetime.utcnow(),
