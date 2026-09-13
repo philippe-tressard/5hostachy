@@ -80,6 +80,9 @@ class Noeud(NamedTuple):
     batiment_id: Optional[int]
     portee_globale: bool
     selectionnable: bool
+    #: Ce nœud n'appartient pas à la copropriété (AFUL, voie communale…) : ce qui
+    #: couvre « toute la copropriété » ne le couvre donc pas. Voir `couvre`.
+    hors_copropriete: bool
     actif: bool
     ordre: int
 
@@ -132,6 +135,7 @@ def arbre() -> dict[str, Noeud]:
                     batiment_id=ligne.batiment_id,
                     portee_globale=bool(ligne.portee_globale),
                     selectionnable=bool(ligne.selectionnable),
+                    hors_copropriete=bool(getattr(ligne, "hors_copropriete", False)),
                     actif=bool(ligne.actif),
                     ordre=ligne.ordre or 0,
                 )
@@ -205,6 +209,15 @@ def a_portee_globale(codes: list[str]) -> bool:
     )
 
 
+def _hors_copropriete(chaine: list["Noeud"]) -> bool:
+    """Ce périmètre — ou l'un de ses ancêtres — appartient-il à un tiers ?
+
+    Le drapeau se lit sur toute la LIGNÉE : un sous-espace de l'AFUL n'a pas à
+    redire qu'il n'appartient pas à la copropriété.
+    """
+    return any(n.hors_copropriete for n in chaine)
+
+
 def couvre(codes_portee: list[str], demande: Optional[str]) -> bool:
     """Ces périmètres englobent-ils celui qu'on demande ?
 
@@ -239,10 +252,44 @@ def couvre(codes_portee: list[str], demande: Optional[str]) -> bool:
         #  masquer — un carnet vide se lirait comme une absence de données
         #  (`standards/04` : une mesure impossible ne rend pas un verdict).
         return True
-    lignee = {n.code.lower() for n in _chaine(demande, noeuds)}
+    chaine = _chaine(demande, noeuds)
+    lignee = {n.code.lower() for n in chaine}
     for code in codes_portee:
         if code.strip().lower() in lignee:
             return True
+    #  🔴 CE QUI N'APPARTIENT PAS À LA COPROPRIÉTÉ N'EST PAS COUVERT PAR ELLE
+    #  (13/09/2026, #943) — signalé à l'écran :
+    #
+    #  > « Il y a une exception pour la sélection de l'AFUL : elle n'est pas
+    #  >   incluse dans "toute copropriété". »
+    #
+    #  Un contrat de nettoyage qui couvre toute la résidence entretient AUSSI le
+    #  parking de la résidence — c'est le troisième chemin ci-dessous, et il est
+    #  juste. Il ne l'est plus dès que le périmètre demandé appartient à un tiers :
+    #  l'AFUL est une association distincte, ce que la copropriété entretient « en
+    #  entier » ne l'entretient pas. Le filtre « AFUL » du carnet remontait
+    #  pourtant toutes les lignes « Copropriété entière ».
+    #
+    #  ⚠️ Le drapeau est cherché sur TOUTE la lignée du demandé : un sous-espace
+    #  de l'AFUL en hérite, sans avoir à le redire. Et il est ADMINISTRÉ — aucun
+    #  code ici ne connaît « aful » par son nom, une autre copropriété n'en a pas.
+    #
+    #  ⚠️ Ne touche QUE ce chemin-là : un contenu explicitement marqué AFUL entre
+    #  toujours dans le filtre AFUL (deuxième chemin, ci-dessus). Sans cette
+    #  borne, la correction viderait le filtre au lieu de le corriger.
+    #  ⚠️ La règle vaut dans les DEUX SENS, et c'est plus simple à énoncer ainsi :
+    #  la portée globale ne franchit pas la frontière de propriété. Ce que la
+    #  copropriété couvre « en entier » ne couvre pas l'AFUL ; et un contenu
+    #  marqué AFUL — qui concerne pourtant tous les résidents — n'apparaît pas
+    #  pour autant sous le filtre « Parking » de la copropriété.
+    #
+    #  Un seul sens aurait été un demi-correctif : `portee_globale` répond à
+    #  « qui VOIT », et s'en servir pour « ce qui COUVRE » faisait entrer l'AFUL
+    #  partout, exactement comme la résidence entrait dans l'AFUL.
+    if _hors_copropriete(chaine) != any(
+        _hors_copropriete(_chaine(code, noeuds)) for code in codes_portee
+    ):
+        return False
     return a_portee_globale(codes_portee)
 
 

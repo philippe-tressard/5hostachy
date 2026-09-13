@@ -80,6 +80,29 @@ class Perimetre(SQLModel, table=True):
     #: Administré depuis Admin → Patrimoine, comme `selectionnable`.
     privatif: bool = Field(default=False)
 
+    #: Ce nœud appartient-il à **quelqu'un d'autre** que la copropriété ?
+    #:
+    #: L'AFUL — association foncière urbaine libre — en est le cas type : le
+    #: parking qu'elle gère est traversé par les résidents et la copropriété
+    #: participe à son assemblée, mais il **n'est pas à elle**. Une voie communale,
+    #: un terrain mitoyen conventionné relèvent de la même catégorie.
+    #:
+    #: 🔴 Conséquence, et c'est le défaut qui l'a fait naître (13/09/2026, #943) :
+    #: ce qui couvre « toute la copropriété » ne couvre PAS ce nœud. Un contrat de
+    #: nettoyage de la résidence entretient le parking de la résidence ; il
+    #: n'entretient pas celui de l'AFUL. Le filtre « AFUL » du carnet d'entretien
+    #: remontait pourtant toutes les lignes « Copropriété entière » — il ne
+    #: filtrait donc presque rien.
+    #:
+    #: ⚠️ **Distinct de `portee_globale`, et les deux coexistent sur l'AFUL** :
+    #: « concerne tous les résidents » (qui VOIT) et « appartient à la
+    #: copropriété » (ce qui le COUVRE) sont deux questions. L'AFUL répond oui à
+    #: la première et non à la seconde.
+    #:
+    #: ⚠️ Administré depuis Admin → Patrimoine : une autre copropriété n'a pas
+    #: d'AFUL, et le code ne doit connaître aucun nœud par son nom.
+    hors_copropriete: bool = Field(default=False)
+
     ordre: int = Field(default=0)
     actif: bool = Field(default=True)
 

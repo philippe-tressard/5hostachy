@@ -62,6 +62,7 @@
 		portee_globale: false,
 		selectionnable: true,
 		privatif: false,
+		hors_copropriete: false,
 		ordre: 0,
 		actif: true,
 	};
@@ -79,6 +80,7 @@
 			portee_globale: n.portee_globale,
 			selectionnable: n.selectionnable,
 			privatif: n.privatif,
+			hors_copropriete: n.hors_copropriete,
 			ordre: n.ordre,
 			actif: n.actif,
 		};
@@ -100,6 +102,7 @@
 					portee_globale: form.portee_globale,
 					selectionnable: form.selectionnable,
 					privatif: form.privatif,
+					hors_copropriete: form.hors_copropriete,
 					ordre: Number(form.ordre) || 0,
 					actif: form.actif,
 				} as any);
