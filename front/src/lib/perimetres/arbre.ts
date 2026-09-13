@@ -1,4 +1,5 @@
 import { perimetreLabel, perimetreLabelUn } from './libelles';
+import { premierNiveauDe } from './teinte';
 
 /**
  * Périmètres — le rendu, sans table.
@@ -83,8 +84,12 @@ export function tousLesPerimetres(): Perimetre[] {
 }
 
 /**
- * Les codes des nœuds de **premier niveau** (profondeur 1), dans l'ordre de
- * l'arbre — les bâtiments et les espaces de tête.
+ * Les codes des nœuds de **premier niveau**, dans l'ordre de l'arbre — les
+ * bâtiments et les espaces de tête.
+ *
+ * ⚠️ Le niveau se CALCULE depuis la chaîne des `parent` (`premierNiveauDe`), il
+ * ne se lit pas dans le champ `profondeur` : s'y fier a laissé passer, le
+ * 13/09/2026, deux branches distinctes rendues de la même couleur en production.
  *
  * 🔴 Ils portent la COULEUR de tout ce qui vit sous eux (`$lib/perimetres/teinte`),
  * et c'est leur RANG qui la décide : neuf teintes attribuées dans l'ordre
@@ -95,9 +100,8 @@ export function tousLesPerimetres(): Perimetre[] {
  * autrement donneraient deux couleurs au même périmètre.
  */
 export function codesPremierNiveau(): string[] {
-	return tousLesPerimetres()
-		.filter((n) => n.profondeur === 1)
-		.map((n) => n.code);
+	const codes = tousLesPerimetres().map((n) => n.code);
+	return premierNiveauDe(codes, noeudPerimetre);
 }
 
 export function noeudPerimetre(code: string): Perimetre | undefined {

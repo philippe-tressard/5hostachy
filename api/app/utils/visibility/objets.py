@@ -165,6 +165,16 @@ def evenement_visible(ev: Evenement, user: Utilisateur) -> bool:
     if ev.type == TypeEvenement.maintenance_recurrente:
         return False
 
+    #  🛡️ Réservé au conseil syndical (#939, 13/09/2026) : le CS et l'admin sont
+    #  déjà sortis plus haut, donc quiconque arrive ici ne doit pas le voir.
+    #
+    #  🔴 Placé AVANT la règle d'AG et celle de périmètre, et c'est voulu : un
+    #  événement réservé l'est pour tout le monde, quels que soient son type et
+    #  son périmètre. Le mettre après aurait fait dépendre la réserve d'une autre
+    #  règle — et un jour, l'une des deux aurait bougé sans l'autre.
+    if ev.reserve_cs:
+        return False
+
     if ev.type == TypeEvenement.ag:
         if not user.has_role(RoleUtilisateur.propriétaire):
             return False

@@ -83,12 +83,25 @@
 	let expandedEvId: number | null = null;
 	let expandedKanbanId: number | null = null;
 
-	let form = {
+	/**  Le formulaire vierge — écrit UNE fois (13/09/2026).
+	 *
+	 *   🔴 Ces dix-sept champs étaient déclarés DEUX fois, ici et dans
+	 *   `resetForm` : deux listes à tenir d'accord sans rien pour le vérifier, et
+	 *   l'ajout de `reserve_cs` (#939) demandait de penser aux deux. C'est la
+	 *   duplication que le plafond de modularité a fait remonter.
+	 *
+	 *   ⚠️ Une FONCTION, pas une constante : un objet partagé serait muté par le
+	 *   premier `bind:`, et le « vierge » cesserait de l'être.
+	 *
+	 *   ⚠️ Tous les champs y figurent, y compris les booléens : un champ absent
+	 *   n'existe pas dans le type inféré de `form`, et tous ses usages passent en
+	 *   erreur TypeScript. */
+	const formulaireVierge = (debut = '') => ({
 		titre: '',
 		description: '',
 		type: 'autre',
 		lieu: '',
-		debut: '',
+		debut,
 		debut_heure: '',
 		fin: '',
 		statut_kanban: '',
@@ -96,14 +109,13 @@
 		frequence_type: '',
 		frequence_valeur: '',
 		affichable: true,
-		// Absent de cette déclaration, `epingle` n'existait pas dans le type
-		// inféré de `form` : les sept endroits qui l'utilisent étaient en erreur
-		// TypeScript depuis l'ajout de l'épinglage des événements.
 		epingle: false,
+		reserve_cs: false,
 		partager_whatsapp: false,
 		envoyer_syndic: false,
 		envoyer_cs: false,
-	};
+	});
+	let form = formulaireVierge();
 	let formPerimetreCible: string[] = perimetreDefautListe();
 	let submitting = false;
 
@@ -272,24 +284,7 @@
 	let fichiersUrls: string[] = [];
 
 	function resetForm() {
-		form = {
-			titre: '',
-			description: '',
-			type: 'autre',
-			lieu: '',
-			debut: _now.toISOString().slice(0, 10),
-			debut_heure: '',
-			fin: '',
-			statut_kanban: '',
-			prestataire_id: '',
-			frequence_type: '',
-			frequence_valeur: '',
-			affichable: true,
-			epingle: false,
-			partager_whatsapp: false,
-			envoyer_syndic: false,
-			envoyer_cs: false,
-		};
+		form = formulaireVierge(_now.toISOString().slice(0, 10));
 		formPerimetreCible = perimetreDefautListe();
 		epingleInitial = false;
 		editId = null;
@@ -312,6 +307,7 @@
 			frequence_valeur: ev.frequence_valeur ? String(ev.frequence_valeur) : '',
 			affichable: ev.affichable ?? true,
 			epingle: ev.epingle ?? false,
+			reserve_cs: ev.reserve_cs ?? false,
 			partager_whatsapp: ev.partager_whatsapp ?? false,
 			envoyer_syndic: ev.envoyer_syndic ?? false,
 			envoyer_cs: ev.envoyer_cs ?? false,
@@ -358,6 +354,10 @@
 			frequence_valeur: fv ? Number(fv) : null,
 			affichable: form.affichable,
 			epingle: form.affichable && form.epingle,
+			reserve_cs: form.reserve_cs,
+			//  ⚠️ La case WhatsApp part telle quelle : c'est le SERVEUR qui refuse le
+			//  groupe sur un événement réservé (`notifier_canaux`), et lui seul —
+			//  filtrer ici en plus ferait deux écritures d'une même règle.
 			partager_whatsapp: form.partager_whatsapp,
 			envoyer_syndic: form.envoyer_syndic,
 			envoyer_cs: form.envoyer_cs,
@@ -393,7 +393,7 @@
 		optionsEv.ouvrir(ev);
 	}
 
-	const enregistrerOptionsEv = (id: number, data: { epingle: boolean }) =>
+	const enregistrerOptionsEv = (id: number, data: { epingle: boolean; reserve_cs: boolean }) =>
 		optionsEv.enregistrer(
 			() => calApi.update(id, data),
 			(maj: any) => (evenements = evenements.map((e) => (e.id === id ? { ...e, ...maj } : e))),

@@ -101,6 +101,17 @@ class Evenement(SQLModel, table=True):
     # Pièces jointes non-images, même convention que Ticket.fichiers_urls.
     fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
     epingle: bool = False  # même notion que Publication.epingle
+    #  🛡️ Réservé au conseil syndical (#939, 13/09/2026) — la même notion que
+    #  `Publication.brouillon` et `Ticket.confidentiel`, sous le nom qui la dit.
+    #
+    #  ⚠️ Les trois se rendent par la MÊME case côté écran (clé `brouillon` de
+    #  `$lib/options-publication`) : une notion, une case, un libellé. Les deux
+    #  autres noms sont historiques et documentés comme une dette ; en créer un
+    #  troisième du même genre l'aurait aggravée.
+    #
+    #  🔴 La règle de LECTURE vit dans `evenement_visible`, et nulle part
+    #  ailleurs : l'écran ne fait que refléter ce que le serveur décide.
+    reserve_cs: bool = False
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False

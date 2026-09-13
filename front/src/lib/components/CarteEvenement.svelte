@@ -63,7 +63,9 @@
 		optionsRapides = {
 			epingle: ev.epingle ?? false,
 			urgente: false,
-			brouillon: false,
+			//  🛡️ La colonne s'appelle `reserve_cs` côté serveur et se rend par la
+			//  case `brouillon` — une notion, une case, trois colonnes historiques.
+			brouillon: ev.reserve_cs ?? false,
 			confidentiel: false,
 		};
 	/** Libellés — la page les calcule déjà pour ses autres vues. */
@@ -75,7 +77,7 @@
 		suivre: void;
 		modifier: void;
 		options_ouvrir: void;
-		options_enregistrer: { epingle: boolean };
+		options_enregistrer: { epingle: boolean; reserve_cs: boolean };
 		archiver: void;
 		evolue: void;
 		fermer: void;
@@ -164,7 +166,7 @@
 					      crayon ouvre huit sections, dépingler n'en touche qu'une
 					      (12/09/2026). Même bouton qu'aux actualités et aux tickets. -->
 					<BoutonOptions
-						objet={{ epingle: ev.epingle ?? false }}
+						objet={{ epingle: ev.epingle ?? false, brouillon: ev.reserve_cs ?? false }}
 						ouvert={optionsOuvertes}
 						onOuvrir={() => dispatch('options_ouvrir')}
 					/>
@@ -210,14 +212,18 @@
 		>
 			<PanneauOptionsPublication
 				objet="événement"
-				optionsRendues={['epingle']}
+				optionsRendues={['epingle', 'brouillon']}
 				dejaEpingle={ev.epingle ?? false}
 				epingleInterdit={ev.affichable
 					? ''
 					: 'Un événement absent du fil d’activité ne peut pas y être épinglé.'}
 				enregistrement={optionsEnCours}
 				bind:options={optionsRapides}
-				on:enregistrer={() => dispatch('options_enregistrer', { epingle: optionsRapides.epingle })}
+				on:enregistrer={() =>
+					dispatch('options_enregistrer', {
+						epingle: optionsRapides.epingle,
+						reserve_cs: optionsRapides.brouillon,
+					})}
 				on:annuler={() => dispatch('fermer')}
 			/>
 		</div>

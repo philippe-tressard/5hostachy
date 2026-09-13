@@ -47,6 +47,9 @@ class EvenementCreate(BaseModel):
     frequence_valeur: Optional[int] = None
     affichable: bool = True
     epingle: bool = False
+    #  🛡️ Réservé au conseil syndical (#939) — la règle de LECTURE vit dans
+    #  `evenement_visible`, jamais ici : ce schéma ne fait que transporter.
+    reserve_cs: bool = False
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
@@ -96,6 +99,7 @@ class EvenementRead(BaseModel):
     #: hall : elle dit si « désarchiver » aurait un effet.
     archivee_manuellement: bool = False
     epingle: bool = False
+    reserve_cs: bool = False
     # Stocké en colonne comme un tableau JSON (convention Ticket.photos_urls) ;
     # exposé en liste pour que le front n'ait rien à désérialiser.
     photos_urls: list[str] = []
@@ -125,6 +129,7 @@ class EvenementUpdate(BaseModel):
     frequence_valeur: Optional[int] = None
     affichable: Optional[bool] = None
     epingle: Optional[bool] = None
+    reserve_cs: Optional[bool] = None
     # Sert uniquement à RETIRER des photos : l'ajout passe par l'endpoint
     # d'upload, seul capable de valider et de redimensionner le fichier.
     photos_urls: Optional[list[str]] = None
