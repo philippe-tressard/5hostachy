@@ -68,7 +68,13 @@
 				{/each}
 			</select>
 		{:else if mode === 'exterieur'}
-			<div class="saisi-pour-exterieur">
+			<!--  🔴 `.form-grid-2` — la classe EXISTAIT (13/09/2026, #938). Ces deux
+			      champs courts s'empilaient sur deux lignes pleine largeur, alors que
+			      la charte porte déjà « deux champs qui vont par paire » depuis le
+			      01/09/2026, avec son repassage à UNE colonne sur téléphone. Écrire
+			      ici un `flex-direction: column` de plus, c'était la septième fois
+			      qu'un composant existant n'était pas employé. -->
+			<div class="form-grid form-grid-2 saisi-pour-exterieur">
 				<input
 					type="text"
 					bind:value={nom}
@@ -104,11 +110,12 @@
 	    portaient dans le formulaire est devenu une classe en sortant : une règle
 	    nommée se relit, se surcharge et se contrôle — un `style=` ne fait rien de
 	    tout cela (`lint:styles`). */
+	/*  ⚠️ Ne reste que l'ÉCART : la disposition vient de `.form-grid-2`
+	    (`styles/champs.css`), y compris son passage à une colonne sur téléphone.
+	    Redéfinir `display` ou `gap` ici les ferait diverger au premier ajustement
+	    de la charte — c'est ce que `lint:charte` refuse. */
 	.saisi-pour-exterieur {
 		margin-top: 0.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
 	}
 	/*  Ces onglets-ci sont ENCADRES et non soulignes : ce sont des boutons de
 	    bascule dans un champ, pas la barre d'onglets d'une page. Bordure, rayon,
