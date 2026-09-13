@@ -21,13 +21,21 @@ export const delegations = {
 	list: () => api.get<any[]>('/delegations'),
 	create: (data: { mandant_id: number; aidant_id: number; motif?: string; date_fin?: string }) =>
 		api.post<any>('/delegations', data),
-	//  @sans-appelant Corriger le motif ou la date de fin d'une délégation
-	//  existante n'a pas de geste : l'écran sait créer, accepter et révoquer, pas
-	//  modifier. Révoquer puis recréer n'est PAS équivalent — la nouvelle
-	//  délégation doit être ré-acceptée par l'aidant, et l'historique porte deux
-	//  entrées pour une faute de frappe. (#934)
-	update: (id: number, data: { motif?: string; date_fin?: string }) =>
-		api.patch<any>(`/delegations/${id}`, data),
+	//  🔴 `update` A ÉTÉ RETIRÉE le 13/09/2026, avec son endpoint
+	//  `PATCH /delegations/{id}` (#934). La question posée était « corriger le
+	//  motif ou la date de fin d'une délégation existante est-il un besoin
+	//  réel ? » ; la réponse a été **non**.
+	//
+	//  L'argument qui plaidait pour la garder — révoquer puis recréer impose une
+	//  ré-acceptation par l'aidant — reste vrai, mais il décrit un inconfort dans
+	//  un cas qui ne se produit pas. Un endpoint d'écriture que rien n'appelle
+	//  est une surface, pas une capacité ; et celui-ci passait par
+	//  `require_cs_or_admin`, c'est-à-dire qu'un membre du CS pouvait réécrire le
+	//  motif d'une délégation entre deux tiers.
+	//
+	//  L'historique git le rend en une commande le jour où le besoin se
+	//  manifeste — et ce jour-là il faudra aussi décider QUI a le droit de
+	//  corriger, ce que la version retirée ne tranchait pas.
 	accepter: (id: number) => api.post<any>(`/delegations/${id}/accepter`),
 	revoquer: (id: number) => api.post<any>(`/delegations/${id}/revoquer`),
 	//  🔴 `mesMandants` A ÉTÉ RETIRÉE (#801) : le front lit

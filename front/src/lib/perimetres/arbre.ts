@@ -1,5 +1,5 @@
 import { perimetreLabel, perimetreLabelUn } from './libelles';
-import { premierNiveauDe } from './teinte';
+import { estRegroupement } from './teinte';
 
 /**
  * Périmètres — le rendu, sans table.
@@ -94,21 +94,23 @@ export function tousLesPerimetres(): Perimetre[] {
  * Les codes des nœuds de **premier niveau**, dans l'ordre de l'arbre — les
  * bâtiments et les espaces de tête.
  *
- * ⚠️ Le niveau se CALCULE depuis la chaîne des `parent` (`premierNiveauDe`), il
- * ne se lit pas dans le champ `profondeur` : s'y fier a laissé passer, le
- * 13/09/2026, deux branches distinctes rendues de la même couleur en production.
+ * 🔴 **Une seule définition, celle de `perimetresNiveau1`** — la rangée que le
+ * sélecteur affiche. Cette fonction en a porté une SECONDE, fondée sur la
+ * profondeur, jusqu'au 13/09/2026 : elle plaçait `Bâtiments` (un regroupement)
+ * au même rang que `Locaux techniques` (un espace de tête), si bien que la
+ * rangée comptait des dizaines d'entrées pour une palette de neuf. « Local eau »
+ * reprenait alors la couleur du bâtiment 1, signalé à l'écran.
  *
  * 🔴 Ils portent la COULEUR de tout ce qui vit sous eux (`$lib/perimetres/teinte`),
- * et c'est leur RANG qui la décide : neuf teintes attribuées dans l'ordre
- * donnent neuf couleurs distinctes, là où un condensat en fait collisionner deux
+ * et c'est leur RANG qui la décide : des teintes attribuées dans l'ordre donnent
+ * autant de couleurs distinctes, là où un condensat en fait collisionner deux
  * dès le quatrième nœud.
  *
  * ⚠️ L'ordre vient de l'API (`ordre`, administré) : deux écrans qui trieraient
  * autrement donneraient deux couleurs au même périmètre.
  */
 export function codesPremierNiveau(): string[] {
-	const codes = tousLesPerimetres().map((n) => n.code);
-	return premierNiveauDe(codes, noeudPerimetre);
+	return perimetresNiveau1(tousLesPerimetres()).map((n) => n.code);
 }
 
 export function noeudPerimetre(code: string): Perimetre | undefined {
@@ -233,14 +235,16 @@ export function batimentsCibles(items: string[] | string | null | undefined): nu
  */
 export function perimetresNiveau1(liste: Perimetre[], exclure?: string | null): Perimetre[] {
 	const actifs = liste.filter((n) => n.actif);
-	const parCode = new Map(actifs.map((n) => [n.code, n]));
-	const estGroupeRacine = (n: Perimetre | undefined): boolean =>
-		!!n && n.parent === null && !n.selectionnable;
+	const parCode = new Map(actifs.map((n) => [cle(n.code), n]));
+	//  🔴 Le prédicat vit dans `$lib/perimetres/teinte` — il y était écrit une
+	//  SECONDE fois, et les deux ont divergé (13/09/2026). Ce qui fait une
+	//  pastille de tête à la saisie doit être exactement ce qui donne sa couleur
+	//  à la lecture, sinon l'écran montre deux découpages du même arbre.
 	return actifs.filter(
 		(n) =>
 			n.selectionnable &&
 			n.code !== exclure &&
-			(n.parent === null || estGroupeRacine(parCode.get(n.parent!))),
+			(n.parent === null || estRegroupement(parCode.get(cle(n.parent!)))),
 	);
 }
 
