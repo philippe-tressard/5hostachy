@@ -35,7 +35,7 @@
 	import HistoriqueEvenement from './HistoriqueEvenement.svelte';
 	import { EVENEMENT } from '$lib/entites/evenement';
 	import { apercuAvecRepli } from '$lib/fichiers';
-	import { estPerimetreParDefaut, perimetreLabel } from '$lib/utils';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 
 	export let ev: any;
 	export let expanded = false;
@@ -116,9 +116,7 @@
 			{#if ev.statut_kanban}<span class="badge badge-blue"
 					>{colonnes.find((c) => c.id === ev.statut_kanban)?.label ?? ev.statut_kanban}</span
 				>{/if}
-			{#if !estPerimetreParDefaut(ev.perimetre)}<span class="badge badge-gray"
-					>&#x1F539; {perimetreLabel(ev.perimetre)}</span
-				>{/if}
+			<BadgePerimetre perimetre={ev.perimetre} />
 			{#if ev.prestataire_nom}<span class="event-meta">&#x1F3AF; {ev.prestataire_nom}</span>{/if}
 			{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
 			{#if ev.fin}<span class="event-meta">→ {formatDate(ev.fin)}</span>{/if}

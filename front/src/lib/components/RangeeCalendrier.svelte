@@ -38,7 +38,7 @@
 -->
 <script lang="ts">
 	import { safeHtml } from '$lib/sanitize';
-	import { estPerimetreParDefaut, perimetreLabel } from '$lib/utils';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 
 	/** Variante **archive** : disposition en grille et badge de nature. */
 	export let archive = false;
@@ -74,8 +74,6 @@
 	 *   ne rend rien, et la zone vide décalerait la rangée d'un `gap`. Le droit
 	 *   d'agir se lit donc au même endroit que le bouton qu'il gouverne. */
 	export let avecActions = false;
-
-	$: perimetreVisible = !!perimetre && !estPerimetreParDefaut(perimetre);
 
 	/**  L'ancre de la ligne — `ev-42`, `pub-7`… Sans elle, un lien profond ouvre
 	 *   la bonne page et ne révèle rien (10/09/2026, signalé sur le carnet
@@ -116,11 +114,7 @@
 		{#each dates as ligne (ligne)}
 			<div class:date-attenuee={ligne.attenue}>{ligne.texte}</div>
 		{/each}
-		{#if perimetreVisible}
-			<span class="badge badge-blue rangee-perimetre"
-				>&#x1F539; {perimetreLabel(perimetre ?? [])}</span
-			>
-		{/if}
+		<BadgePerimetre {perimetre} ton="blue" />
 		{#if badgeKanban}
 			<span class="badge rangee-badge rangee-kanban" style="background:{badgeKanban.couleur}"
 				>{badgeKanban.texte}</span
@@ -205,7 +199,12 @@
 	.rangee-kanban {
 		font-size: 0.73rem;
 	}
-	.rangee-perimetre,
+	/*  ⚠️ `:global()` BORNÉ par `.event-date`, et pas un global nu : la classe est
+	    relayée à `BadgePerimetre`, dont le balisage porte la marque de portée de
+	    SON composant, pas de celui-ci. C'est le motif que `lint:classe-relayee`
+	    reconnaît, et le bornage est ce qui empêche la règle de fuir sur tout le
+	    site (cf. `project_css_route_fuite_globale`). */
+	.event-date :global(.badge-perimetre),
 	.rangee-kanban {
 		margin-top: 0.3rem;
 	}

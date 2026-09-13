@@ -42,7 +42,8 @@
 	import WorkflowPastilles from './WorkflowPastilles.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate2d as fmtDate, isNouveau } from '$lib/date';
-	import { fmtMontant, perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
+	import { fmtMontant } from '$lib/utils';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 	import {
 		MAX_PHOTOS_ANNONCE,
@@ -138,9 +139,7 @@
 			{#if !concerneTousLesResidents(annonce.public_cible)}<span class="badge badge-orange"
 					>{destinatairesLabel(annonce.public_cible)}</span
 				>{/if}
-			{#if !estPerimetreParDefaut(annonce.perimetre_cible)}<span class="badge badge-gray"
-					>&#x1F539; {perimetreLabel(annonce.perimetre_cible)}</span
-				>{/if}
+			<BadgePerimetre perimetre={annonce.perimetre_cible} />
 			{#if annonce.prix !== null && annonce.prix !== undefined}
 				<span class="annonce-prix"
 					>{fmtMontant(annonce.prix)}{#if annonce.negotiable}&nbsp;<span

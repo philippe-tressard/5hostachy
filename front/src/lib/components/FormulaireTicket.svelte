@@ -64,6 +64,17 @@
 	 *   comme il le fait pour `EvolForm`. */
 	export let ticket: Ticket | null = null;
 
+	/**  Ce qui RAMÈNE le formulaire à l'écran quand il est rendu loin du geste
+	 *   qui l'ouvre — un pied de gabarit, sous une longue liste. Relayé jusqu'à
+	 *   `FormulaireCreation`, qui ne défile que si le cadre est hors de la bande
+	 *   visible : un formulaire ouvert sous les yeux ne fait pas sauter la page.
+	 *
+	 *   ⚠️ Cette prop existait dans `FormulaireCreation` et `CadreFormulaire`, et
+	 *   AUCUN des onze formulaires qui les enveloppent ne la relayait : une prop
+	 *   non relayée prend sa valeur par défaut, et le comportement manque en
+	 *   silence. `check-geste-edition` règle F le refuse désormais (13/09/2026). */
+	export let cle: unknown = undefined;
+
 	const modeEdition = ticket !== null;
 
 	/**  L'état du cadre #430 que ce formulaire rend. C'est LUI qui décide des
@@ -353,7 +364,7 @@
 	<div class="alert alert-error largeur-saisie">{error}</div>
 {/if}
 
-<FormulaireCreation titre={titreBoite} encadre={!modeEdition}>
+<FormulaireCreation titre={titreBoite} encadre={!modeEdition} {cle}>
 	<form on:submit|preventDefault={soumettre}>
 		<!--  1. Titre — et lui seul. La catégorie était rendue ICI, et AVANT le
 		      titre : le premier champ de la première section n'était pas le titre.

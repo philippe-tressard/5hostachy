@@ -35,7 +35,7 @@
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, isNouveau } from '$lib/date';
-	import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 	import { STATUTS_IDEE, STATUT_IDEE_LABELS } from '$lib/idees';
 
@@ -101,9 +101,7 @@
 					{#if !concerneTousLesResidents(idee.public_cible)}<span class="badge badge-orange"
 							>{destinatairesLabel(idee.public_cible)}</span
 						>{/if}
-					{#if !estPerimetreParDefaut(idee.perimetre_cible)}<span class="badge badge-gray"
-							>&#x1F539; {perimetreLabel(idee.perimetre_cible)}</span
-						>{/if}
+					<BadgePerimetre perimetre={idee.perimetre_cible} />
 				</svelte:fragment>
 				<!--  Dans l'en-tête, PAS dans `.idee-actions` : cette rangée-là n'existe
 				      que pour le conseil syndical, et copier un lien n'est pas un droit. -->

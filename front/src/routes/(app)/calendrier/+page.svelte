@@ -43,7 +43,6 @@
 		sourcesDesEvenements,
 	} from '$lib/init-prestataires';
 	import { estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment } from '$lib/utils';
-	import { perimetreTags } from '$lib/perimetres-pastilles';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { SUPPRESSION, confirmer, confirmerPuis } from '$lib/confirmation';
 	import { optionsRapides } from '$lib/options-rapides';
@@ -719,6 +718,7 @@
 		{prestataires}
 		{submitting}
 		modeEdition={editId !== null}
+		cle={editId ?? 'creation'}
 		{epingleInitial}
 		kanbanCols={KANBAN_COLS}
 		onSubmit={save}
@@ -808,7 +808,6 @@
 		{onDragStart}
 		{startEdit}
 		{deleteEv}
-		{perimetreTags}
 		{yearColor}
 		{typeLabel}
 		{formatDate}

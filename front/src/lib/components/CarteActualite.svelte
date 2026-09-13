@@ -24,7 +24,7 @@
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { documents as docsApi, type Publication } from '$lib/api';
 	import { safeHtml } from '$lib/sanitize';
-	import { perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { STATUT_LABELS, STATUT_BADGE } from '$lib/publications';
 	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
 	//  écrits ici ET dans les cases du formulaire, et avaient divergé.
@@ -110,9 +110,7 @@
 					class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}"
 					>{STATUT_LABELS[pub.statut] ?? pub.statut}</span
 				>{/if}
-			{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray"
-					>&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span
-				>{/if}
+			<BadgePerimetre perimetre={pub.perimetre_cible} />
 			{#if pub.confidentiel}
 				{@const o = optionPublication('confidentiel')}
 				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>

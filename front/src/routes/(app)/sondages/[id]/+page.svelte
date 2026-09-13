@@ -386,7 +386,7 @@
 
 <!-- Modal édition sondage -->
 {#if showEditModal}
-	<FormulaireCreation titre="Modifier le sondage">
+	<FormulaireCreation titre="Modifier le sondage" cle="edition">
 		<form on:submit|preventDefault={saveEdit}>
 			<label class="field">
 				Question *

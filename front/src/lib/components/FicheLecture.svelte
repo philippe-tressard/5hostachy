@@ -43,7 +43,8 @@
 	import { sectionsDe } from '$lib/entites/types';
 	import PiecesJointes from './PiecesJointes.svelte';
 	import { safeDescription } from '$lib/sanitize';
-	import { perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
+	import { perimetreLabel, estPerimetreParDefaut, relire } from '$lib/utils';
+	import { perimetresStore } from '$lib/stores/perimetres';
 
 	/** La déclaration de l'entité affichée — `TICKET`, puis `ACTUALITE`… */
 	export let entite: EntiteDeclaree;
@@ -61,7 +62,13 @@
 	export let formatPieces: 'vignette' | 'grand' = 'grand';
 
 	$: sections = sectionsDe(entite, 'affichage');
-	$: perimetreVisible = !!perimetre?.length && !estPerimetreParDefaut(perimetre);
+	//  🔴 `$perimetresStore` n'est pas lu : il dit à Svelte que ce calcul dépend
+	//  de l'arbre, que `estPerimetreParDefaut` et `perimetreLabel` lisent dans un
+	//  état de MODULE. Sans lui, une fiche ouverte avant l'arrivée de l'arbre
+	//  affiche le code brut, et rien ne revient le corriger (#947).
+	$: textePerimetre = relire($perimetresStore, () =>
+		perimetre?.length && !estPerimetreParDefaut(perimetre) ? perimetreLabel(perimetre) : '',
+	);
 </script>
 
 {#each sections as s (s.id)}
@@ -72,8 +79,8 @@
 	{:else if s.id === 'workflow'}
 		<slot name="workflow" />
 	{:else if s.id === 'perimetre'}
-		{#if perimetreVisible}
-			<p class="fiche-perimetre">&#x1F539; {perimetreLabel(perimetre ?? [])}</p>
+		{#if textePerimetre}
+			<p class="fiche-perimetre">&#x1F539; {textePerimetre}</p>
 		{/if}
 	{:else if s.id === 'destinataires'}
 		<slot name="destinataires" />
