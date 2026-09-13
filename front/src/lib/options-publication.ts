@@ -78,7 +78,18 @@ export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 		//  `confidentiel` — voir la prop `objet` d'`OptionsPublication`.
 		cle: 'brouillon',
 		glyphe: '\u{1F6E1}️',
-		action: 'Visibilité du {objet} au seul conseil syndical',
+		//  🔴 PLUS DE `{objet}` DANS CE LIBELLÉ (13/09/2026, vu à l'écran).
+		//
+		//  Il disait « Visibilité du {objet} au seul conseil syndical », et rendait
+		//  donc « Visibilité **du publication** » — le gabarit supposait un nom
+		//  masculin, et le premier objet féminin l'a démenti. Un ticket, une
+		//  publication, un événement : trois genres, et `du` / `de la` / `de l'`
+		//  ne se devinent pas d'un nom.
+		//
+		//  ⚠️ La réponse n'est pas une table de genres : c'est de **supprimer le
+		//  besoin**. On est dans le formulaire de l'objet — le nommer n'apprend
+		//  rien, et la phrase sans lui est plus courte et juste pour tous.
+		action: 'Visibilité réservée au conseil syndical',
 		etat: 'Conseil syndical',
 		aide: 'Seul le conseil syndical le voit ; aucun envoi n’est déclenché.',
 	},
@@ -94,10 +105,10 @@ export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 /**
  * Le libellé d'action d'une option, pour l'objet qu'elle décrit.
  *
- * Certaines actions nomment l'objet — « Visibilité du **ticket** au seul conseil
- * syndical » — parce que la même case sert deux entités et que « ce truc-là » ne
- * se dit pas. Le gabarit vit dans la table ; le mot vient de l'appelant, seul à
- * savoir ce qu'il rend.
+ * ⚠️ **Plus aucun gabarit ne porte `{objet}` depuis le 13/09/2026** : le seul qui
+ * le faisait rendait « Visibilité du publication ». La fonction reste le point
+ * de passage — un libellé qui aurait besoin du nom de l'objet devra le déclarer
+ * ici, et devra alors traiter le GENRE, ce que ce gabarit-là ne faisait pas.
  */
 export function actionOption(option: OptionPublication, objet: string): string {
 	return option.action.replace('{objet}', objet);
