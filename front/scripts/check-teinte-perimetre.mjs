@@ -19,7 +19,12 @@
  *
  *  Lancer : npm run lint:teinte
  */
-import { codeDeTeinte, teinteDuCode } from '../src/lib/perimetres/teinte.ts';
+import {
+	PALETTE_PERIMETRE,
+	codeDeTeinte,
+	rangPremierNiveau,
+	teinteDuCode,
+} from '../src/lib/perimetres/teinte.ts';
 
 //  Une arborescence de copropriété réduite à ce qui compte : une racine, deux
 //  bâtiments, et des espaces sous chacun — dont un à trois niveaux.
@@ -84,6 +89,44 @@ verifier('code inconnu → lui-même', codeDeTeinte('jamais-vu', lire), 'jamais-
 //  Un cycle en base ne doit pas suspendre la remontée : elle s'arrête sur le
 //  premier nœud déjà vu, et rend celui-là. Ce qui compte est qu'elle RENDE.
 verifier('cycle borné', codeDeTeinte('boucleA', lire), 'boucleA');
+//  🔴 LE SECOND CAS SIGNALÉ (13/09/2026) : « local eau » sortait de la même
+//  couleur que « bâtiment 1 ». Un condensat réparti sur neuf teintes collisionne
+//  dès le quatrième nœud ; le RANG, lui, garantit N couleurs pour les N premiers.
+const PREMIER_NIVEAU = [
+	'bat:1',
+	'bat:2',
+	'local-eau',
+	'parking',
+	'caves',
+	'verts',
+	'halls',
+	'toits',
+	'locaux',
+];
+const couleurs = PREMIER_NIVEAU.map((c) => teinteDuCode(c, rangPremierNiveau(c, PREMIER_NIVEAU)));
+if (new Set(couleurs).size !== PREMIER_NIVEAU.length) {
+	console.error(
+		`  ✗ ${PREMIER_NIVEAU.length} espaces de premier niveau, seulement ${new Set(couleurs).size} couleurs distinctes`,
+	);
+	echecs++;
+}
+cas++;
+//  ⚠️ Au-delà de la palette, la collision est inévitable — et c'est honnête :
+//  neuf couleurs ne peuvent pas en distinguer dix. Le contrôle le CONSTATE plutôt
+//  que de laisser croire à une garantie qui n'existe pas.
+verifier(
+	'le dixième reprend la première couleur',
+	teinteDuCode('x', PALETTE_PERIMETRE.length),
+	teinteDuCode('x', 0),
+);
+//  Rang inconnu (arbre non chargé) : on retombe sur le condensat, jamais sur du gris.
+verifier('rang -1 → condensat', teinteDuCode('bat:1', -1), teinteDuCode('bat:1'));
+verifier(
+	'un code hors premier niveau a le rang -1',
+	rangPremierNiveau('ascenseur1', PREMIER_NIVEAU),
+	-1,
+);
+
 //  La couleur est STABLE : deux appels rendent la même, et c'en est bien une.
 verifier('teinte stable', teinteDuCode('bat:1'), teinteDuCode('bat:1'));
 if (!/^#[0-9a-f]{6}$/.test(teinteDuCode('bat:1'))) {

@@ -18,7 +18,8 @@ import {
 	perimetreLabel,
 	perimetreLabelUn,
 } from '$lib/utils';
-import { codeDeTeinte, teinteDuCode } from '$lib/perimetres/teinte';
+import { codeDeTeinte, rangPremierNiveau, teinteDuCode } from '$lib/perimetres/teinte';
+import { codesPremierNiveau } from '$lib/perimetres';
 
 /** Une pastille : son code (la clé), son libellé court et sa couleur. */
 export interface PastillePerimetre {
@@ -31,7 +32,11 @@ export interface PastillePerimetre {
 //  de premier niveau, et leur self-test. Ce fichier-ci rend des pastilles ; il
 //  ne décide pas des couleurs.
 export function couleurPerimetre(code: string): string {
-	return teinteDuCode(codeDeTeinte(code, noeudPerimetre));
+	const base = codeDeTeinte(code, noeudPerimetre);
+	//  Le rang parmi les nœuds de premier niveau — lu dans l'arbre, jamais
+	//  recalculé : c'est lui qui garantit des couleurs DISTINCTES, là où un
+	//  condensat sur neuf teintes collisionne dès le quatrième nœud.
+	return teinteDuCode(base, rangPremierNiveau(base, codesPremierNiveau()));
 }
 
 //  Le CODE est rendu avec la pastille : c'est lui la clé, pas le libellé.
