@@ -239,9 +239,10 @@
 			<ChampsCommuns
 				avecOptions={sectionPresente(EVENEMENT, etat, 'diffusion')}
 				objet="événement"
-				optionsRendues={['epingle']}
+				optionsRendues={['epingle', 'brouillon']}
 				dejaEpingle={epingleInitial}
 				bind:epingle={form.epingle}
+				bind:brouillon={form.reserve_cs}
 				epingleInterdit={form.affichable
 					? ''
 					: 'Un événement absent du fil d’activité ne peut pas y être épinglé.'}

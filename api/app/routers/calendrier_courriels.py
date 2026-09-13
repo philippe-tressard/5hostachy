@@ -182,6 +182,24 @@ def notifier_canaux(
     Historique. Les trois drapeaux sont **une intention explicite** : rien ne part
     si l'appelant ne le demande pas.
     """
+    #  🔴 UN ÉVÉNEMENT RÉSERVÉ AU CONSEIL SYNDICAL NE PART PAS SUR WHATSAPP
+    #  (#939, 13/09/2026).
+    #
+    #  Le groupe rassemble **tous les résidents** : y partager ce qu'on vient de
+    #  réserver au conseil annulerait la réserve au moment même où on la pose.
+    #  C'est la règle que `publications/crud.py` applique depuis toujours
+    #  (`pub.partager_whatsapp and not pub.brouillon`), et le front la dit à
+    #  l'écran (`motifWhatsappInterdit`).
+    #
+    #  ⚠️ Elle est posée ICI, au point de passage unique des envois d'un
+    #  événement, et non chez les deux appelants : une garde chez l'appelant se
+    #  serait recopiée au troisième, et le troisième l'aurait oubliée.
+    #
+    #  ⚠️ Le syndic et le conseil syndical, eux, RESTENT joignables : la réserve
+    #  borne ce que les résidents voient, pas la correspondance interne.
+    if ev.reserve_cs:
+        whatsapp = False
+
     if not (whatsapp or syndic or cs):
         return
 
