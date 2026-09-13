@@ -113,21 +113,45 @@ verifier(
 	teinteDuCode('x', 0),
 );
 
-//  ── Le repli : « toute la copropriété », jamais une couleur au hasard ───────
-verifier('rang inconnu → couleur de la copropriété', teinteDuCode('bat:1', -1), TEINTE_COPROPRIETE);
+//  ── Le repli : le CODE DE TÊTE, jamais un écran monochrome ──────────────────
+//
+//  🔴 La version du 13/09 rendait le gris de la copropriété dès que le rang était
+//  inconnu. En production, l'arbre ne répondait pas sur cet écran : le rang était
+//  inconnu POUR TOUT LE MONDE, et la page a perdu toutes ses couleurs d'un coup.
+//  Signalé aussitôt — « les pastilles n'ont plus de couleur par bâtiment ».
+//
+//  Le repli porte donc sur le **code de tête**, que le code lui-même donne
+//  (`bât. 1/ascenseur` → `bât. 1`) : l'héritage tient même sans arbre.
+verifier(
+	'rang inconnu → une couleur, pas le gris',
+	teinteDuCode('bat:1', -1) !== TEINTE_COPROPRIETE,
+	true,
+);
+verifier(
+	"sans arbre, l'ascenseur garde la couleur de son bâtiment",
+	teinteDuCode('bât. 1/ascenseur', -1),
+	teinteDuCode('bât. 1', -1),
+);
+verifier(
+	'sans arbre, deux branches restent distinctes',
+	teinteDuCode('bât. 1/ascenseur', -1) !== teinteDuCode('locaux-techniques/local-eau', -1),
+	true,
+);
 verifier('code hors du premier niveau → rang -1', rangPremierNiveau('ascenseur1', PREMIER), -1);
 //  🔴 CAS ZÉRO : arbre non chargé. On rend le code lui-même, donc le repli — et
 //  jamais une pastille sans couleur, qui se lirait « aucun périmètre ».
 verifier(
-	'arbre vide → le code lui-même',
+	'arbre vide → le code de tête',
+	codeDeTeinte('bât. 1/ascenseur', () => undefined),
+	'bât. 1',
+);
+verifier(
+	'arbre vide, code plat → lui-même',
 	codeDeTeinte('bat:1', () => undefined),
 	'bat:1',
 );
-verifier(
-	'arbre vide → couleur de la copropriété',
-	teinteDuCode('bat:1', rangPremierNiveau('bat:1', [])),
-	TEINTE_COPROPRIETE,
-);
+//  Le gris ne reste que pour ce qui n'a AUCUN code de tête.
+verifier('code vide → couleur de la copropriété', teinteDuCode('', -1), TEINTE_COPROPRIETE);
 //  ⚠️ Le gris du repli n'est PAS dans la palette : un espace de tête ne peut pas
 //  le porter, donc « non rattaché » ne peut pas se lire « rattaché à celui-là ».
 if (PALETTE_PERIMETRE.includes(TEINTE_COPROPRIETE)) {

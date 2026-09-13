@@ -64,6 +64,22 @@ export const TEINTE_COPROPRIETE = '#6b7280';
 const cle = (code: string) => (code ?? '').trim().toLowerCase();
 
 /**
+ * Le premier segment d'un code — « bât. 1/ascenseur » → « bât. 1 ».
+ *
+ * 🔴 LE CODE PORTE LUI-MÊME LA HIÉRARCHIE, et c'est ce qui sauve l'affichage
+ * quand l'arbre ne répond pas (13/09/2026). Les codes administrés s'écrivent en
+ * chemin — `locaux-techniques/local-eau`, `cheminements/portillon` — parce que
+ * l'écran de création compose `parent + "/" + slug`.
+ *
+ * ⚠️ C'est un REPLI, pas la règle : l'arbre reste la source, parce qu'un code
+ * peut être plat (`aful`, `parking`) tout en ayant un parent. Mais quand il ne
+ * répond pas — cache pas encore rempli, nœud supprimé cité par un contenu
+ * ancien — le premier segment est infiniment mieux que rien : deux branches
+ * distinctes gardent deux couleurs distinctes.
+ */
+const premierSegment = (code: string) => (code ?? '').split('/')[0] || code;
+
+/**
  * Le NIVEAU d'un nœud : 0 pour une racine, 1 pour ses enfants, etc.
  *
  * 🔴 Calculé depuis la chaîne des `parent`, et **non lu dans un champ
@@ -112,7 +128,15 @@ export function codeDeTeinte(
 	lire: (code: string) => NoeudTeinte | undefined,
 ): string {
 	let n = lire(code);
-	if (!n) return code;
+	//  🔴 L'arbre ne connaît pas ce code — cache pas encore rempli, ou périmètre
+	//  supprimé cité par un contenu ancien. Le code porte alors sa propre
+	//  hiérarchie : « bât. 1/ascenseur » donne « bât. 1 », et deux branches
+	//  distinctes gardent deux couleurs distinctes.
+	//
+	//  ⚠️ Rendre le code ENTIER ici était le défaut du 13/09 : toutes les
+	//  pastilles retombaient alors sur le même repli, et l'écran perdait ses
+	//  couleurs par bâtiment.
+	if (!n) return premierSegment(code);
 	const vus = new Set<string>();
 	while (niveau(n.code, lire) > 1 && n.parent && !vus.has(cle(n.code))) {
 		vus.add(cle(n.code));
@@ -167,14 +191,28 @@ export function rangPremierNiveau(code: string, premierNiveau: readonly string[]
  * palette, la collision est inévitable : neuf couleurs ne peuvent pas en
  * distinguer dix.
  *
- * ⚠️ **Rang inconnu → la couleur de la copropriété**, et non une couleur tirée
- * du nom. C'est l'arbitrage du 13/09/2026 : ce qu'on ne sait pas rattacher à un
- * espace de tête n'a aucune raison de porter la couleur de l'un d'eux. Le gris
- * neutre dit « toute la copropriété », et c'est vrai.
+ * ⚠️ **Rang inconnu → un condensat du code de tête**, pas le gris de la
+ * copropriété. La version du 13/09 rendait le gris dans ce cas, et l'écran a
+ * perdu TOUTES ses couleurs par bâtiment d'un coup : quand l'arbre ne répond
+ * pas, le rang est inconnu pour tout le monde, et un repli unique repeint la
+ * page entière.
+ *
+ * Le condensat porte alors sur le **code de tête** — « bât. 1 » et non « bât.
+ * 1/ascenseur » —, si bien que l'héritage tient même sans arbre. Il peut faire
+ * collisionner deux têtes (une chance sur neuf), et c'est le prix d'un affichage
+ * dégradé : bien moins cher qu'un écran monochrome.
+ *
+ * ⚠️ Le gris de la copropriété reste pour ce qui n'a **aucun** code de tête —
+ * une chaîne vide. Il ne peut pas se confondre avec un bâtiment : il n'est pas
+ * dans la palette.
  *
  * @param rang  L'index du code parmi les nœuds de premier niveau, ou `-1`.
  */
-export function teinteDuCode(_base: string, rang = -1): string {
-	if (rang < 0) return TEINTE_COPROPRIETE;
-	return PALETTE_PERIMETRE[rang % PALETTE_PERIMETRE.length];
+export function teinteDuCode(base: string, rang = -1): string {
+	if (rang >= 0) return PALETTE_PERIMETRE[rang % PALETTE_PERIMETRE.length];
+	const tete = premierSegment(base);
+	if (!tete) return TEINTE_COPROPRIETE;
+	let s = 0;
+	for (let i = 0; i < tete.length; i++) s = (s * 31 + tete.charCodeAt(i)) >>> 0;
+	return PALETTE_PERIMETRE[s % PALETTE_PERIMETRE.length];
 }
