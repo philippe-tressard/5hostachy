@@ -159,9 +159,17 @@
 	/*  PAS `.form-actions` : cette classe dit « ce formulaire se soumet », et
 	    `lint:soumission` exige alors le verbe commun. Or il n'y a pas de
 	    formulaire ici — deux gestes d'exploitation, dont un destructeur qui doit
-	    dire ce qu'il détruit. */
+	    dire ce qu'il détruit.
+
+	    🔴 Mais l'ALIGNEMENT, lui, est celui de toutes les rangées d'actions du
+	    site : à DROITE (13/09/2026, signalé à l'écran). Il manquait ici, et le
+	    bouton « Analyser » sortait à gauche — seul de son espèce entre deux blocs
+	    voisins qui, eux, portent leur action à droite (`ControleSante`,
+	    `TachesPlanifiees`). Ce qui distingue cette rangée d'un pied de
+	    formulaire, c'est le VERBE de ses boutons, pas leur place. */
 	.actions-diagnostic {
 		display: flex;
+		justify-content: flex-end;
 		gap: 0.5rem;
 		flex-wrap: wrap;
 	}

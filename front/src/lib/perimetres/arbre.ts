@@ -82,6 +82,24 @@ export function tousLesPerimetres(): Perimetre[] {
 	return ordreCodes.map((c) => carte[cle(c)]).filter(Boolean);
 }
 
+/**
+ * Les codes des nœuds de **premier niveau** (profondeur 1), dans l'ordre de
+ * l'arbre — les bâtiments et les espaces de tête.
+ *
+ * 🔴 Ils portent la COULEUR de tout ce qui vit sous eux (`$lib/perimetres/teinte`),
+ * et c'est leur RANG qui la décide : neuf teintes attribuées dans l'ordre
+ * donnent neuf couleurs distinctes, là où un condensat en fait collisionner deux
+ * dès le quatrième nœud.
+ *
+ * ⚠️ L'ordre vient de l'API (`ordre`, administré) : deux écrans qui trieraient
+ * autrement donneraient deux couleurs au même périmètre.
+ */
+export function codesPremierNiveau(): string[] {
+	return tousLesPerimetres()
+		.filter((n) => n.profondeur === 1)
+		.map((n) => n.code);
+}
+
 export function noeudPerimetre(code: string): Perimetre | undefined {
 	return carte[cle(code)];
 }

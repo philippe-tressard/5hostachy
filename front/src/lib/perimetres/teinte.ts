@@ -75,9 +75,42 @@ export function codeDeTeinte(
 	return n.code;
 }
 
-/** La couleur d'un code, une fois la teinte choisie. */
-export function teinteDuCode(base: string): string {
+/**
+ * La couleur d'un code, une fois la teinte choisie.
+ *
+ * 🔴 **Par RANG, pas par condensat** (13/09/2026, signalé à l'écran : *« la
+ * pastille “local eau” a la même couleur que “bâtiment 1” : est-ce normal ? »*).
+ *
+ * Un condensat réparti sur neuf couleurs **collisionne dès le quatrième nœud**
+ * (paradoxe des anniversaires : ~50 % de chances à partir de quatre). Deux
+ * espaces de premier niveau tombaient donc régulièrement sur la même teinte, et
+ * la pastille disait « même bâtiment » de deux lieux sans rapport — l'inverse
+ * exact de ce qu'elle existe pour dire.
+ *
+ * Le rang du nœud dans l'arbre garantit **N couleurs distinctes pour les N
+ * premiers** : la collision ne revient qu'au dixième espace de premier niveau,
+ * et elle est alors inévitable — il n'y a que neuf couleurs.
+ *
+ * ⚠️ Repli sur le condensat quand le rang est inconnu (arbre non chargé) : une
+ * couleur stable vaut mieux qu'une pastille grise, et elle se corrigera au
+ * chargement.
+ *
+ * @param rang  L'index du code parmi les nœuds de premier niveau, ou `-1`.
+ */
+export function teinteDuCode(base: string, rang = -1): string {
+	if (rang >= 0) return PALETTE_PERIMETRE[rang % PALETTE_PERIMETRE.length];
 	let s = 0;
 	for (let i = 0; i < base.length; i++) s = (s * 31 + base.charCodeAt(i)) >>> 0;
 	return PALETTE_PERIMETRE[s % PALETTE_PERIMETRE.length];
+}
+
+/**
+ * Le RANG d'un code parmi les nœuds de premier niveau, ou `-1` s'il n'en est pas.
+ *
+ * ⚠️ L'ordre vient de l'arbre tel que l'API le rend (`ordre`, `profondeur`) :
+ * c'est une donnée administrée, pas un tri local. Deux écrans qui trieraient
+ * autrement donneraient deux couleurs au même périmètre.
+ */
+export function rangPremierNiveau(code: string, premierNiveau: readonly string[]): number {
+	return premierNiveau.findIndex((c) => c === code);
 }
