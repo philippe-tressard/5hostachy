@@ -2,7 +2,7 @@
 	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import { tenter, messageErreur } from '$lib/erreurs';
 	import AideSource from '$lib/components/AideSource.svelte';
-	import { perimetreLabel, estPerimetreParDefaut } from '$lib/perimetres';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
 	import SectionDiagnostics from '$lib/components/SectionDiagnostics.svelte';
@@ -764,11 +764,9 @@
 			      L'ancien rendu ne savait dire que « Bât. N » ou « Copropriété » ;
 			      celui-ci nomme le parking, les caves, l'AFUL et les espaces —
 			      et suit l'arbre quand un nœud est renommé. -->
-				{#if doc.perimetre_cible && !estPerimetreParDefaut(doc.perimetre_cible)}
-					<span class="badge badge-purple">&#x1F539; {perimetreLabel(doc.perimetre_cible)}</span>
-				{:else}
+				<BadgePerimetre perimetre={doc.perimetre_cible} ton="purple">
 					<span class="badge badge-green">Copropriété</span>
-				{/if}
+				</BadgePerimetre>
 			</svelte:fragment>
 		</SectionDocuments>
 	{/if}

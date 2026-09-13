@@ -29,6 +29,9 @@
 	//  ne rien assainir, et le contrôle ne peut pas le savoir. Il exige donc que
 	//  le nom vienne de l'IMPORT — c'est ce qui a démasqué `renderContent` (#429).
 	import { safeHtml } from '$lib/sanitize';
+	import { perimetreTags } from '$lib/perimetres-pastilles';
+	import { perimetresStore } from '$lib/stores/perimetres';
+	import { relire } from '$lib/utils';
 
 	/** Les colonnes déjà rangées — `items` (événements) et `tickets` (#833). */
 	export let kanbanCols: any[] = [];
@@ -54,13 +57,17 @@
 	export let onDragStart: (e: DragEvent, id: number) => void;
 	export let startEdit: (ev: any) => void;
 	export let deleteEv: (id: number) => void;
-	//  ⚠️ Signature volontairement LARGE : le type de retour vit dans la page
-	//  (`PastillePerimetre`), et le redéclarer ici en ferait une seconde écriture
-	//  libre de diverger. Ce composant n'en lit que trois champs.
-	export let perimetreTags: (p: any) => any[];
 	export let yearColor: (annee: number) => string;
 	export let typeLabel: (t: string) => string;
 	export let formatDate: (d: string) => string;
+
+	//  🔴 Les pastilles se rendent ICI, elles ne sont plus reçues en prop (#947).
+	//  Une fonction passée en prop garde la même identité : le `{#each}` ne
+	//  rejouait donc jamais, et les pastilles rendues avant l'arrivée de l'arbre
+	//  gardaient le code brut pour toujours. `relire` rend une nouvelle fermeture
+	//  à chaque changement du magasin, ce qui force le rendu — et au passage le
+	//  composant n'a plus besoin qu'on lui apporte son propre rendu.
+	$: pastilles = relire($perimetresStore, () => perimetreTags);
 </script>
 
 <!-- ── Kanban Trello-like ────────────────────────────────── -->
@@ -115,7 +122,7 @@
 					>
 						<!-- Tags périmètre + année (uniquement si année ≠ exercice sélectionné) -->
 						<div class="kanban-card-tags">
-							{#each perimetreTags(ev.perimetre) as tag (tag.code)}
+							{#each pastilles(ev.perimetre) as tag (tag.code)}
 								<span class="kb-tag" style="background:{tag.color}">{tag.label}</span>
 							{/each}
 							<span

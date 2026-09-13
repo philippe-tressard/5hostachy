@@ -46,7 +46,7 @@
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
-	import { estPerimetreParDefaut, perimetreLabel } from '$lib/utils';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { peutCommenter as peutCommenterCe, peutEditer } from '$lib/droits';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
@@ -199,9 +199,7 @@
 			<span class="badge {STATUT_TICKET_BADGE[ticket.statut] ?? 'badge-gray'}">
 				{STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut}
 			</span>
-			{#if !estPerimetreParDefaut(ticket.perimetre_cible)}<span class="badge badge-gray"
-					>&#x1F539; {perimetreLabel(ticket.perimetre_cible)}</span
-				>{/if}
+			<BadgePerimetre perimetre={ticket.perimetre_cible} />
 			{#if ticket.priorite === 'haute'}<span class="badge badge-orange">⚡ Urgente</span>{/if}
 			<!--  🛡️ Le contrepoids de l'ouverture en lecture (#710) doit SE VOIR :
 			      sans ce badge, le conseil syndical ne peut pas relire ce qu'il a

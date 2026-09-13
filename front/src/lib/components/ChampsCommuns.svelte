@@ -85,6 +85,8 @@
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
 	import type { CleOptionPublication } from '$lib/options-publication';
 	import { estPerimetreParDefaut, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
+	import { perimetresStore } from '$lib/stores/perimetres';
+	import { relire } from '$lib/utils';
 	import { concerneTousLesResidents } from '$lib/destinataires';
 
 	/** Préfixe des `id` des champs — deux formulaires peuvent coexister à l'écran,
@@ -227,9 +229,12 @@
 	//  nom deux fois (signalé à l'écran le 16/08/2026, dès la mise en production).
 	//  Rien n'est recalculé : `estPerimetreParDefaut` et `concerneTousLesResidents`
 	//  sont les fonctions qu'utilisent déjà les sélecteurs eux-mêmes.
-	$: badgePerimetre = estPerimetreParDefaut(perimetre)
-		? perimetreLabelUn(perimetreParDefaut() ?? '')
-		: '';
+	//  ⚠️ `$perimetresStore` n'est pas lu : il dit à Svelte que ce calcul dépend de
+	//  l'arbre, que les trois fonctions lisent dans un état de MODULE. Sans lui, le
+	//  badge annonçait le code brut sur un formulaire ouvert avant l'arbre (#947).
+	$: badgePerimetre = relire($perimetresStore, () =>
+		estPerimetreParDefaut(perimetre) ? perimetreLabelUn(perimetreParDefaut() ?? '') : '',
+	);
 	$: badgeDestinataires = concerneTousLesResidents(destinataires) ? 'Tous les résidents' : '';
 
 	//  Le filet du haut n'appartient pas au Périmètre : il appartient à la

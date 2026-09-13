@@ -26,7 +26,7 @@
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import { safeHtml } from '$lib/sanitize';
-	import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 	import { currentUser, isAdmin } from '$lib/stores/auth';
 
@@ -72,9 +72,7 @@
 				<!--  Ciblage affiché comme PARTOUT ailleurs : 🔹 pour le périmètre
 				      logique (jamais 📍, réservé au lieu physique), et rien du tout
 				      quand le ciblage est le défaut — le redire n'apprend rien. -->
-				{#if !estPerimetreParDefaut(s.perimetre_cible)}
-					<span class="badge badge-blue">&#x1F539; {perimetreLabel(s.perimetre_cible)}</span>
-				{/if}
+				<BadgePerimetre perimetre={s.perimetre_cible} ton="blue" />
 				{#if !concerneTousLesResidents(s.public_cible)}
 					<span class="badge badge-orange">{destinatairesLabel(s.public_cible)}</span>
 				{/if}

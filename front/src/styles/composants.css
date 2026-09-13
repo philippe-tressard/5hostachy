@@ -333,6 +333,17 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	background: #eaedf1;
 	color: var(--color-text-muted);
 }
+/*  La PRISE par laquelle un écran positionne le badge de périmètre — marge,
+    alignement. Elle ne porte aucune couleur : celle-ci vient de `.badge-blue`,
+    `.badge-gray` ou `.badge-purple`, posées à côté par `BadgePerimetre`.
+
+    ⚠️ Elle est vide EXPRÈS, et ce n'est pas une classe morte : le badge est
+    rendu par un composant, donc hors d'atteinte du `<style>` scopé de l'écran
+    qui le place. Un `:global()` a besoin d'une accroche stable, et une classe
+    interpolée rendrait `lint:css-orphelin` aveugle sur tout le fichier (#947). */
+.badge-perimetre {
+	/*  Rien ici : la mise en page appartient à l'écran qui pose le badge. */
+}
 /*  Le jeu comptait six couleurs et le code en demandait une SEPTIÈME : douze
     emplois de `.badge-yellow` — statut de bail « en cours de sortie », message
     non lu — pour une classe définie nulle part. Le badge se rendait donc en gris

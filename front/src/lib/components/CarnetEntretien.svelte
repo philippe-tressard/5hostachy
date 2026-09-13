@@ -23,6 +23,8 @@
 	import { carnet as carnetApi, type Carnet, type EntreeCarnet } from '$lib/api';
 	import { EQUIPEMENTS } from '$lib/prestataires';
 	import { perimetreLabel } from '$lib/perimetres';
+	import { perimetresStore } from '$lib/stores/perimetres';
+	import { relire } from '$lib/utils';
 	import FiltrePerimetre from './FiltrePerimetre.svelte';
 	import { fmtDate } from '$lib/date';
 	import { essayer } from '$lib/chargement';
@@ -62,9 +64,10 @@
 	 *
 	 *   `perimetreLabel` est la source unique du libellé — celle qui qualifie un
 	 *   espace par son parent et trie par l'arbre, jamais par l'ordre des clics. */
-	function portee(codes: string[]): string {
-		return perimetreLabel(codes ?? []);
-	}
+	//  ⚠️ Une FONCTION appelée dans le gabarit ne crée aucune dépendance : Svelte
+	//  ne la rappelle que si l'expression qui l'entoure change. `relire` la relie à
+	//  l'arbre, qui arrive après le premier rendu (#947).
+	$: portee = relire($perimetresStore, () => (codes: string[]) => perimetreLabel(codes ?? []));
 
 	/**  Les entrées rangées par équipement, chaque groupe gardant l'ordre du
 	 *   serveur — du fait le plus récent au plus ancien.

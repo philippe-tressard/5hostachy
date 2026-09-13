@@ -45,7 +45,12 @@
 	//  même piège que #549 sur le sélecteur.
 	$: defaut = relire($perimetresStore, perimetreParDefaut);
 	$: niveau1 = perimetresNiveau1($perimetresStore, defaut);
-	$: libelleRacine = libelleTout || (defaut ? perimetreLabelUn(defaut) : 'Tout');
+	//  ⚠️ Le magasin est cité ici AUSSI : `perimetreLabelUn` lit le même état de
+	//  module que `perimetreParDefaut` juste au-dessus. La ligne précédente
+	//  portait déjà `relire`, celle-ci l'avait oublié — et rendait le code brut
+	//  quand l'arbre arrivait après le premier rendu (#947).
+	$: libelleRacine =
+		libelleTout || relire($perimetresStore, () => (defaut ? perimetreLabelUn(defaut) : 'Tout'));
 
 	function choisir(code: string | null) {
 		if (choisi === code) return;

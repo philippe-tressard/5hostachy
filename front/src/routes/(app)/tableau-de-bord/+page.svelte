@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { libelleLogement, relire } from '$lib/utils';
+	import ItemKanban from '$lib/components/ItemKanban.svelte';
 	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
@@ -17,7 +18,6 @@
 	} from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
-	import { perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';
@@ -234,11 +234,9 @@
 		autre: '\u{1F4CC}',
 	};
 
-	//  Réimplémentait PERIMETRE_LABELS, et avait divergé deux fois sans que
-	//  personne le voie : `aful` manquant, et une espace INSÉCABLE dans « Bât. 1 »
-	//  (#316, détail dans scripts/check-perimetres.mjs). « résidence » reste masqué
-	//  — c'est le cas par défaut, l'afficher n'apprend rien.
-	const dashKanbanPerimLabel = (p: string): string => perimetreLabel(p ?? '');
+	//  🔴 Le rendu du périmètre a suivi le balisage dans `ItemKanban` : il n'était
+	//  employé que là. Le garder ici aurait laissé une fonction sans appelant dans
+	//  un fichier de mille lignes — exactement ce qui se recopie (13/09/2026).
 
 	$: _dashKanbanCtx = {
 		isCS: $isCS,
@@ -542,24 +540,7 @@
 									<p class="kb-vide-col">—</p>
 								{:else}
 									{#each col.items as item (item.id)}
-										<div
-											class="kb-item"
-											role="button"
-											tabindex="0"
-											on:click={() => goto(`/calendrier#ev-${item.id}`)}
-											on:keydown={(e) =>
-												(e.key === 'Enter' || e.key === ' ') && goto(`/calendrier#ev-${item.id}`)}
-										>
-											<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
-											<div class="kb-item-text">
-												<span class="kb-item-titre clamp-2">{item.titre}</span>
-												{#if !estPerimetreParDefaut(item.perimetre)}
-													<span class="kb-item-perim"
-														>&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span
-													>
-												{/if}
-											</div>
-										</div>
+										<ItemKanban {item} icones={EV_ICONS} />
 									{/each}
 								{/if}
 							</div>
@@ -592,24 +573,7 @@
 						{#if mobileKanbanCurrent}
 							<div class="kb-mobile-items">
 								{#each mobileKanbanCurrent.items as item (item.id)}
-									<div
-										class="kb-item"
-										role="button"
-										tabindex="0"
-										on:click={() => goto(`/calendrier#ev-${item.id}`)}
-										on:keydown={(e) =>
-											(e.key === 'Enter' || e.key === ' ') && goto(`/calendrier#ev-${item.id}`)}
-									>
-										<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
-										<div class="kb-item-text">
-											<span class="kb-item-titre clamp-2">{item.titre}</span>
-											{#if !estPerimetreParDefaut(item.perimetre)}
-												<span class="kb-item-perim"
-													>&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span
-												>
-											{/if}
-										</div>
-									</div>
+									<ItemKanban {item} icones={EV_ICONS} />
 								{/each}
 								{#if mobileKanbanCurrent.total > 5}
 									<p class="kb-mobile-plus">
