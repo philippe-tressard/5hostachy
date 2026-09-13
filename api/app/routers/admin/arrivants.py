@@ -12,11 +12,9 @@ from app.database import get_session
 from app.models.core import (
     AgCsInfo,
     ConfigSite,
-    LocationBail,
     MembreCS,
     MembreSyndic,
     Notification,
-    StatutBail,
     StatutUtilisateur,
     SyndicInfo,
     Utilisateur,
@@ -275,54 +273,25 @@ def accueil_arrivant_me(
     return _declencher_accueil_arrivant(user, body, background_tasks, session, allow_repeat=False)
 # ── Gestion manuelle des baux locatifs ────────────────────────────────────────
 
-@router.post("/baux/{bail_id}/lier-locataire/{user_id}", response_model=dict)
-def lier_locataire_bail(
-    bail_id: int,
-    user_id: int,
-    session: Session = Depends(get_session),
-    admin: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Admin : lier manuellement un locataire inscrit à un bail actif."""
-    bail = session.get(LocationBail, bail_id)
-    if not bail:
-        raise HTTPException(404, "Bail introuvable")
-    if bail.statut == StatutBail.termine:
-        raise HTTPException(400, "Impossible de lier un locataire à un bail terminé")
-    locataire = session.get(Utilisateur, user_id)
-    if not locataire:
-        raise HTTPException(404, "Utilisateur introuvable")
-    bail.locataire_id = user_id
-    session.add(bail)
-    session.commit()
-    return {"bail_id": bail.id, "locataire_id": user_id, "ok": True}
-
-
-@router.get("/baux", response_model=list)
-def list_baux(
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Admin : liste de tous les baux actifs (pour validation manuelle)."""
-    baux = session.exec(
-        select(LocationBail).where(LocationBail.statut != StatutBail.termine)
-    ).all()
-    result = []
-    for b in baux:
-        locataire = session.get(Utilisateur, b.locataire_id) if b.locataire_id else None
-        bailleur = session.get(Utilisateur, b.bailleur_id)
-        result.append({
-            "id": b.id,
-            "lot_id": b.lot_id,
-            "statut": b.statut,
-            "locataire_email": b.locataire_email,
-            "locataire_id": b.locataire_id,
-            "locataire_nom": nom_affiche(locataire.prenom, locataire.nom) if locataire else None,
-            "bailleur_id": b.bailleur_id,
-            "bailleur_nom": nom_affiche(bailleur.prenom, bailleur.nom) if bailleur else "?",
-            "date_entree": b.date_entree,
-            "liaison_manquante": bool(b.locataire_email and not b.locataire_id),
-        })
-    return result
+#  🔴 DEUX ENDPOINTS RETIRÉS LE 13/09/2026, SUR OBSERVATION (#808).
+#
+#  `POST /admin/baux/{id}/lier-locataire/{user}` — rattacher à la main un compte
+#  locataire à son bail — et `GET /admin/baux` — la liste qui devait l'alimenter.
+#
+#  L'arbitrage du 06/09 était *« garder et observer »* : on ne savait pas si
+#  l'auto-match échouait en pratique. Le relevé qui permet d'observer est livré
+#  depuis le 07/09 (`GET /admin/audit/baux-sans-locataire`, onglet **Audit lots**),
+#  et il a répondu : **tous les baux en cours ont leur locataire rattaché.**
+#
+#  Le cas ne s'est jamais présenté. Un endpoint d'écriture que rien n'appelle est
+#  une surface exposée sans usage ; le garder « au cas où » revient à maintenir
+#  une capacité que personne n'éprouve. L'historique git le rend en une commande
+#  le jour où le besoin apparaît — et ce jour-là, le relevé dira AUSSI pourquoi
+#  l'auto-match a échoué, ce qui est la vraie question (un écart d'orthographe,
+#  un lot mal importé et une ambiguïté réelle n'appellent pas le même remède).
+#
+#  ⚠️ Le RELEVÉ reste, lui : c'est lui qui surveille, et c'est ce qui permet de
+#  rouvrir la question sur un fait plutôt que sur une intuition.
 
 
 # ── Fiche arrivant (génération dynamique) ────────────────────────────────────

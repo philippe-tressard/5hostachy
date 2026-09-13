@@ -16,7 +16,8 @@
 
   🔴 **Ce relevé répond à cette question, et rien de plus.** Il n'y a
   volontairement **aucun bouton de rattachement**, alors que l'endpoint existe
-  (`POST /admin/baux/{id}/lier-locataire/{user}`) et qu'il aurait coûté trois
+  (`POST /admin/baux/{id}/lier-locataire/{user}`, retiré le 13/09/2026 après
+  observation) et qu'il aurait coûté trois
   lignes. Livrer le geste ici aurait contourné la décision au motif que c'eût été
   plus pratique — or la décision portait exactement là-dessus. Si le relevé
   montre des cas, le bouton est à un lot de distance.

@@ -103,28 +103,13 @@ export const admin = {
 	//  contrat réel, il ne le réécrit pas (#801).
 	traiterDemandeProfil: (id: number, data: { action: string; motif_refus?: string | null }) =>
 		api.post(`/admin/demandes-profil/${id}/traiter`, data),
-	// Baux locatifs
-	//  @sans-appelant La vue « tous les baux de la copropriété » n'a pas d'écran :
-	//  `RechercheLocataire` l'appelait, et ne l'appelle plus. Elle est le pendant
-	//  en LECTURE de `lierLocataire` ci-dessous et attend le même arbitrage — si
-	//  le geste manuel est livré, c'est elle qui l'alimente ; s'il est abandonné,
-	//  elle part avec lui. (#808)
+	//  🔴 `baux` ET `lierLocataire` ONT ÉTÉ RETIRÉES le 13/09/2026 (#808), avec
+	//  leurs endpoints. L'arbitrage du 06/09 était « garder et observer » ; le
+	//  relevé livré le 07/09 a observé, et a répondu : **tous les baux en cours
+	//  ont leur locataire rattaché**. Le cas ne s'est jamais présenté.
 	//
-	//  ⚠️ Elle n'était pas signalée avant le 12/09/2026 : le relevé cherchait
-	//  `.baux` sans l'objet, et `adminApi.bauxSansLocataire` le contenait (#932).
-	baux: () => api.get<any[]>('/admin/baux'),
-	//  @sans-appelant Le rattachement d'un compte locataire à son bail se fait
-	//  par `auto-match` à la validation du compte, sur l'e-mail EXACT du bail.
-	//  Quand il échoue — autre adresse, ou bail créé après l'inscription — il
-	//  n'existe aucun geste manuel : l'endpoint est là, le bouton non. (#808)
-	//
-	//  🔴 Décision du 06/09/2026 : *garder et observer*. Le relevé qui permet
-	//  d'observer est livré (`bauxSansLocataire`, plus bas) ; le bouton ne l'est
-	//  PAS, délibérément — il aurait coûté trois lignes, et le livrer aurait
-	//  contourné la décision au motif que c'eût été plus pratique. Il vient si
-	//  le relevé montre des cas.
-	lierLocataire: (bail_id: number, user_id: number) =>
-		api.post(`/admin/baux/${bail_id}/lier-locataire/${user_id}`, {}),
+	//  ⚠️ Le relevé reste (`bauxSansLocataire`, plus bas) : c'est lui qui
+	//  surveille, et c'est ce qui permettra de rouvrir sur un fait.
 	// Audit associations user-lot
 	auditUserLots: () => api.get<any[]>('/admin/audit/user-lots'),
 	/**

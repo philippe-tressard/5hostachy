@@ -153,9 +153,15 @@ def audit_baux_sans_locataire(
     ne voit ni son lot, ni ses badges, ni sa fiche de location.
 
     Arbitrage du 06/09/2026 : *garder et observer*. Ce relevé est le moyen
-    d'observer ; il n'y a **pas** de geste de rattachement, délibérément.
-    L'endpoint qui le ferait existe (`POST /admin/baux/{id}/lier-locataire/{u}`)
-    et attend de savoir si le cas se présente.
+    d'observer, et il a répondu le **13/09/2026** : *« tous les baux ont leur
+    locataire rattaché »*. Le geste de rattachement manuel et la liste qui devait
+    l'alimenter ont donc été **retirés** — une capacité que personne n'éprouve
+    n'est pas une capacité, c'est une surface.
+
+    ⚠️ Ce relevé, lui, RESTE : c'est ce qui permettra de rouvrir la question sur
+    un fait plutôt que sur une intuition. Et le jour venu, il dira aussi
+    **pourquoi** l'auto-match a échoué — un écart d'orthographe, un lot mal
+    importé et une vraie ambiguïté n'appellent pas le même remède.
 
     ## Deux catégories, et les confondre ferait crier sur le cas normal
 
