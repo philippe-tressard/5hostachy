@@ -10,11 +10,36 @@
  * >   a qu'un, sinon celle de toute la copropriété. »
  *
  * Une pastille dit d'un coup d'œil **où ça se passe**. Tout ce qui vit sous
- * « Bât. 1 » porte la couleur du bâtiment 1 ; tout ce qui vit sous « Local
- * technique » porte la sienne, et les deux sont **différentes**. Ce qu'on ne
- * sait pas rattacher à un seul espace de tête porte la couleur de la
- * copropriété — jamais une couleur au hasard, qui laisserait croire à un
- * rattachement.
+ * « Bât. 1 » porte la couleur du bâtiment 1 ; tout ce qui vit sous « Locaux
+ * techniques » porte la sienne, et les deux sont **différentes**.
+ *
+ * ## 🔴 « Premier niveau » n'est PAS une profondeur — troisième correction
+ *
+ * Signalé à l'écran le 13/09/2026, après deux corrections qui n'avaient pas
+ * tenu :
+ *
+ * > « Pourquoi la même couleur en périmètre niveau 1 : orange pour Bâtiment 1
+ * >   **et** Locaux techniques › Local eau ? »
+ *
+ * Les deux versions précédentes comptaient les `parent` : niveau 0 la racine,
+ * 1 ses enfants, etc. **L'arbre réel n'a pas cette forme.** `Bâtiments` est un
+ * nœud d'ORGANISATION — on ne le cible pas, on choisit un bâtiment — tandis que
+ * `Locaux techniques` est lui-même un espace de tête, que l'on cible. Compter
+ * les parents mettait donc `bat:1` et `locaux-techniques/local-eau` au **même**
+ * rang, et `locaux-techniques` au rang au-dessus : la rangée des « têtes »
+ * comptait des dizaines d'entrées au lieu de dix, et le modulo de la palette
+ * rendait les collisions certaines. Le local eau tombait sur la couleur du
+ * bâtiment 1.
+ *
+ * 🔴 **La bonne définition existait déjà dans le dépôt** — `perimetresNiveau1`,
+ * extraite de `PerimetrePicker` le 10/09 : *une racine sélectionnable, ou
+ * l'enfant d'un regroupement racine*. C'est exactement la rangée que le
+ * sélecteur affiche (Copropriété entière · Bât. 1-4 · Parking · AFUL · Espaces
+ * verts · Cheminements · Locaux techniques). En écrire une seconde ici était la
+ * duplication, et les deux ont divergé sur le seul cas qui comptait.
+ *
+ * Le prédicat vit donc **ici**, dans le module pur, et `arbre.ts` l'importe :
+ * une seule notion de « tête », éprouvable sans navigateur.
  *
  * ## Pourquoi un module à part, sans aucun import `$lib`
  *
@@ -28,14 +53,29 @@
  * résout pas sous `node --experimental-strip-types`.
  */
 
-/** Ce que la teinte a besoin de savoir d'un nœud — rien de plus. */
+/**
+ * Ce que la teinte a besoin de savoir d'un nœud — rien de plus.
+ *
+ * ⚠️ `selectionnable` en fait partie depuis le 13/09/2026 : c'est lui, et non la
+ * profondeur, qui distingue un regroupement d'un espace de tête.
+ */
 export interface NoeudTeinte {
 	code: string;
 	parent: string | null;
+	selectionnable: boolean;
 }
 
-//  Couleur DÉRIVÉE du code : la table de sept clés en dur laissait en gris tout
-//  périmètre créé depuis l'administration, et tout bâtiment au-delà du quatrième.
+/**
+ * Couleur DÉRIVÉE du code : la table de sept clés en dur laissait en gris tout
+ * périmètre créé depuis l'administration, et tout bâtiment au-delà du quatrième.
+ *
+ * ⚠️ **Elle doit rester plus longue que la rangée des têtes.** Le seed en pose
+ * dix (Copropriété entière, quatre bâtiments, Parking, AFUL, Espaces verts,
+ * Cheminements, Locaux techniques) ; à neuf couleurs, la dixième reprenait la
+ * première — et c'est ainsi que « Local eau » a porté la couleur du bâtiment 1.
+ * Les quatre dernières sont la marge dont dispose l'administration avant que le
+ * modulo ne recommence à confondre deux espaces.
+ */
 export const PALETTE_PERIMETRE = [
 	'#ef4444',
 	'#3b82f6',
@@ -46,6 +86,10 @@ export const PALETTE_PERIMETRE = [
 	'#ec4899',
 	'#0ea5e9',
 	'#14b8a6',
+	'#84cc16',
+	'#e11d48',
+	'#6366f1',
+	'#a16207',
 ];
 
 /**
@@ -80,48 +124,37 @@ const cle = (code: string) => (code ?? '').trim().toLowerCase();
 const premierSegment = (code: string) => (code ?? '').split('/')[0] || code;
 
 /**
- * Le NIVEAU d'un nœud : 0 pour une racine, 1 pour ses enfants, etc.
+ * Un nœud d'**organisation** : une racine qu'on ne cible pas (« Bâtiments »,
+ * « Cave »).
  *
- * 🔴 Calculé depuis la chaîne des `parent`, et **non lu dans un champ
- * `profondeur`** (13/09/2026). La première version s'y fiait, et le défaut est
- * resté visible en production : « Bât. 1 › ascenseur » et « Local technique ›
- * eau » sortaient de la même couleur alors que les deux branches sont
- * distinctes.
+ * 🔴 C'est LA notion qui définit le premier niveau, et elle ne se déduit pas
+ * d'une profondeur. `Bâtiments` est une racine comme `Locaux techniques`, mais
+ * l'une se choisit et l'autre pas : le sélecteur remonte donc les bâtiments dans
+ * la première rangée et laisse les locaux techniques dans la leur. Deux formes
+ * d'arbre, un seul niveau visible.
  *
- * ⚠️ La leçon est celle du dépôt — *vérifier le fait, pas le symptôme attendu*.
- * Le niveau est une propriété de l'ARBRE : il se déduit de ce qu'on a sous la
- * main, au lieu de dépendre d'un champ que la réponse peut ne pas porter et dont
- * l'absence **ne lève rien** — `undefined > 1` vaut `false`, donc la remontée
- * s'arrêtait aussitôt et tous les nœuds retombaient sur le condensat, avec une
- * chance sur neuf de collision à chaque paire.
- *
- * Borné par `vus` : un cycle en base ne doit pas figer l'écran.
+ * ⚠️ Même définition que `perimetresNiveau1` (`$lib/perimetres/arbre`), qui
+ * l'importe d'ici : ce qui fait une pastille de tête à la SAISIE est exactement
+ * ce qui donne sa couleur à la LECTURE. Les deux ont divergé tant qu'elles
+ * étaient écrites deux fois, et l'écran l'a montré.
  */
-function niveau(code: string, lire: (code: string) => NoeudTeinte | undefined): number {
-	let n = lire(code);
-	let d = 0;
-	const vus = new Set<string>();
-	while (n?.parent && !vus.has(cle(n.code))) {
-		vus.add(cle(n.code));
-		const parent = lire(n.parent);
-		if (!parent) break;
-		n = parent;
-		d++;
-	}
-	return d;
+export function estRegroupement(n: NoeudTeinte | undefined): boolean {
+	return !!n && n.parent === null && !n.selectionnable;
 }
 
 /**
- * Le code qui DONNE la couleur : l'ancêtre de **premier niveau** — le bâtiment,
- * ou l'espace de tête — dont le nœud dépend.
+ * Le code qui DONNE la couleur : l'espace de **tête** dont le nœud dépend — le
+ * bâtiment, le parking, les locaux techniques.
  *
- * ⚠️ On s'arrête au niveau **1**, pas 0 : la racine est « toute la résidence »,
- * et remonter jusqu'à elle donnerait une seule couleur à tout l'arbre — l'autre
- * façon de ne rien dire.
+ * On remonte tant que le parent existe **et n'est pas un regroupement** : le
+ * regroupement n'est pas une destination, il ne peut donc pas porter de couleur
+ * (tous les bâtiments auraient la même).
  *
- * ⚠️ Repli sur le code lui-même quand l'arbre n'est pas chargé : la pastille
- * garde une couleur stable et se corrigera au chargement, même choix que
- * `perimetreDuBatiment`.
+ * ⚠️ Repli sur le premier segment du code quand l'arbre n'est pas chargé : la
+ * pastille garde une couleur stable et se corrigera au chargement, même choix
+ * que `perimetreDuBatiment`.
+ *
+ * ⚠️ Borné par `vus` : un cycle écrit en base ne doit pas figer l'écran.
  */
 export function codeDeTeinte(
 	code: string,
@@ -138,33 +171,34 @@ export function codeDeTeinte(
 	//  couleurs par bâtiment.
 	if (!n) return premierSegment(code);
 	const vus = new Set<string>();
-	while (niveau(n.code, lire) > 1 && n.parent && !vus.has(cle(n.code))) {
+	while (n.parent && !vus.has(cle(n.code))) {
 		vus.add(cle(n.code));
 		const parent = lire(n.parent);
-		if (!parent) break;
+		if (!parent || estRegroupement(parent)) break;
 		n = parent;
 	}
 	return n.code;
 }
 
 /**
- * Les codes de **premier niveau** d'un arbre, dans son ordre.
+ * Les codes de **premier niveau** d'une liste de nœuds, dans son ordre — la
+ * rangée de têtes.
  *
- * 🔴 Calculés depuis les `parent`, pour la même raison que `niveau` : ne dépendre
- * d'aucun champ que la réponse pourrait ne pas porter.
+ * 🔴 Un nœud de tête est une **racine sélectionnable**, ou l'**enfant d'un
+ * regroupement racine**. Ce n'est pas une profondeur : voir `estRegroupement`.
  *
- * ⚠️ Repli sur le niveau 0 quand AUCUN nœud n'est au niveau 1 : un arbre à
- * plusieurs racines côte à côte est légitime, et rendre une liste vide ferait
- * retomber tout le monde sur le repli — c'est-à-dire sur une seule couleur pour
- * tout l'écran.
+ * ⚠️ Un regroupement n'en fait jamais partie, même si rien ne vit dessous : il
+ * n'est pas une cible, donc pas un endroit, donc pas une couleur.
  */
 export function premierNiveauDe(
 	codes: readonly string[],
 	lire: (code: string) => NoeudTeinte | undefined,
 ): string[] {
-	const parNiveau = (n: number) => codes.filter((c) => niveau(c, lire) === n);
-	const un = parNiveau(1);
-	return un.length ? un : parNiveau(0);
+	return codes.filter((c) => {
+		const n = lire(c);
+		if (!n || !n.selectionnable) return false;
+		return n.parent === null || estRegroupement(lire(n.parent));
+	});
 }
 
 /**
@@ -181,15 +215,17 @@ export function rangPremierNiveau(code: string, premierNiveau: readonly string[]
 /**
  * La couleur d'un code, une fois la teinte choisie.
  *
- * 🔴 **Par RANG, pas par condensat.** Un condensat réparti sur neuf couleurs
- * collisionne dès le quatrième nœud (paradoxe des anniversaires : ~50 % à partir
- * de quatre). Deux espaces de premier niveau tombaient donc régulièrement sur la
- * même teinte, et la pastille disait « même endroit » de deux lieux sans rapport
- * — l'inverse exact de ce qu'elle existe pour dire.
+ * 🔴 **Par RANG, pas par condensat.** Un condensat réparti sur treize couleurs
+ * collisionne dès le cinquième nœud (paradoxe des anniversaires). Deux espaces
+ * de premier niveau tombaient donc régulièrement sur la même teinte, et la
+ * pastille disait « même endroit » de deux lieux sans rapport — l'inverse exact
+ * de ce qu'elle existe pour dire.
  *
  * Le rang garantit **N couleurs distinctes pour les N premiers**. Au-delà de la
- * palette, la collision est inévitable : neuf couleurs ne peuvent pas en
- * distinguer dix.
+ * palette, la collision est inévitable : treize couleurs ne peuvent pas en
+ * distinguer quatorze. C'est pourquoi la palette doit rester plus longue que la
+ * rangée des têtes — à neuf pour dix têtes, « Local eau » reprenait la couleur
+ * du bâtiment 1 (13/09/2026).
  *
  * ⚠️ **Rang inconnu → un condensat du code de tête**, pas le gris de la
  * copropriété. La version du 13/09 rendait le gris dans ce cas, et l'écran a
@@ -198,9 +234,7 @@ export function rangPremierNiveau(code: string, premierNiveau: readonly string[]
  * page entière.
  *
  * Le condensat porte alors sur le **code de tête** — « bât. 1 » et non « bât.
- * 1/ascenseur » —, si bien que l'héritage tient même sans arbre. Il peut faire
- * collisionner deux têtes (une chance sur neuf), et c'est le prix d'un affichage
- * dégradé : bien moins cher qu'un écran monochrome.
+ * 1/ascenseur » —, si bien que l'héritage tient même sans arbre.
  *
  * ⚠️ Le gris de la copropriété reste pour ce qui n'a **aucun** code de tête —
  * une chaîne vide. Il ne peut pas se confondre avec un bâtiment : il n'est pas
