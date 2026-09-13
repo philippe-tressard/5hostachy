@@ -37,11 +37,6 @@ class DelegationRead(BaseModel):
     revoque_le: Optional[str]
 
 
-class DelegationUpdate(BaseModel):
-    motif: Optional[str] = None
-    date_fin: Optional[str] = None
-
-
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 def _user_display(u: Utilisateur) -> str:
@@ -134,25 +129,27 @@ def create_delegation(
     return _to_read(delegation, session)
 
 
-@router.patch("/{delegation_id}")
-def update_delegation(
-    delegation_id: int,
-    body: DelegationUpdate,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Modifier une délégation (motif, date de fin)."""
-    d = session.get(Delegation, delegation_id)
-    if not d:
-        raise HTTPException(404, "Délégation introuvable")
-    if body.motif is not None:
-        d.motif = body.motif
-    if body.date_fin is not None:
-        d.date_fin = date.fromisoformat(body.date_fin) if body.date_fin else None
-    session.add(d)
-    session.commit()
-    session.refresh(d)
-    return _to_read(d, session)
+#  🔴 `PATCH /delegations/{id}` A ÉTÉ RETIRÉ LE 13/09/2026, SUR ARBITRAGE (#934).
+#
+#  Il modifiait le `motif` et la `date_fin` d'une délégation existante, et
+#  **aucun écran ne l'appelait** depuis l'origine. La question posée était :
+#  *« corriger le motif ou la date de fin d'une délégation existante est-il un
+#  besoin réel ? »* — la réponse a été **non**.
+#
+#  L'argument qui plaidait pour le garder reste vrai : révoquer puis recréer
+#  impose à l'aidant de ré-accepter, et laisse deux entrées dans l'historique
+#  pour une faute de frappe. Mais il décrit un inconfort dans un cas qui ne se
+#  produit pas, et un endpoint d'écriture que personne n'éprouve est une surface,
+#  pas une capacité.
+#
+#  🔒 Sa dépendance était `require_cs_or_admin` : un membre du conseil syndical
+#  pouvait donc réécrire le motif d'une délégation liant deux tiers, sans que
+#  ni le mandant ni l'aidant en soient informés. Le jour où le besoin se
+#  manifestera, c'est CETTE question — qui a le droit de corriger — qu'il faudra
+#  trancher d'abord ; la version retirée ne le faisait pas.
+#
+#  Le schéma `DelegationUpdate` part avec lui : un schéma d'entrée sans route
+#  ne se maintient pas, il se recopie.
 
 
 # ── Acceptation par l'aidant ────────────────────────────────────────────────
