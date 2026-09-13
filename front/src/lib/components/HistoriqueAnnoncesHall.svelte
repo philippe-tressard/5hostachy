@@ -19,7 +19,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { annoncesHall as annoncesHallApi, ApiError } from '$lib/api';
+	import { annoncesHall as annoncesHallApi } from '$lib/api';
+	import { messageErreur, tenter } from '$lib/erreurs';
 	import type { AnnonceHall } from '$lib/api';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
@@ -77,7 +78,7 @@
 			ahList = [...actives, ...archivees];
 			ahLoaded = true;
 		} catch (e) {
-			erreur = e instanceof ApiError ? e.message : 'Erreur de chargement des annonces';
+			erreur = messageErreur(e, 'Erreur de chargement des annonces');
 			//  Le toast PRÉVIENT, l'état d'erreur RESTE. L'un ne remplace pas
 			//  l'autre : le toast disparaît, l'écran doit continuer de le dire.
 			toast('error', erreur);
@@ -87,23 +88,25 @@
 	}
 
 	async function ahArchiver(annonce: AnnonceHall) {
-		try {
-			await annoncesHallApi.archiver(annonce.id, !annonce.archivee);
-			toast('success', annonce.archivee ? 'Annonce restaurée' : 'Annonce archivée');
-			await loadAnnoncesHall(true);
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : "Erreur lors de l'archivage");
-		}
+		await tenter(
+			async () => {
+				await annoncesHallApi.archiver(annonce.id, !annonce.archivee);
+				await loadAnnoncesHall(true);
+			},
+			annonce.archivee ? 'Annonce restaurée' : 'Annonce archivée',
+			"Erreur lors de l'archivage",
+		);
 	}
 
 	async function ahRenvoyer(annonce: AnnonceHall) {
-		try {
-			await annoncesHallApi.renvoyerEmail(annonce.id);
-			toast('success', 'Annonce renvoyée au CS du périmètre');
-			await loadAnnoncesHall(true);
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du renvoi');
-		}
+		await tenter(
+			async () => {
+				await annoncesHallApi.renvoyerEmail(annonce.id);
+				await loadAnnoncesHall(true);
+			},
+			'Annonce renvoyée au CS du périmètre',
+			'Erreur lors du renvoi',
+		);
 	}
 
 	async function ahSupprimer(annonce: AnnonceHall) {
@@ -124,13 +127,14 @@
 			}))
 		)
 			return;
-		try {
-			await annoncesHallApi.delete(annonce.id);
-			toast('success', 'Annonce supprimée');
-			await loadAnnoncesHall(true);
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors de la suppression');
-		}
+		await tenter(
+			async () => {
+				await annoncesHallApi.delete(annonce.id);
+				await loadAnnoncesHall(true);
+			},
+			'Annonce supprimée',
+			'Erreur lors de la suppression',
+		);
 	}
 
 	function ahPoids(octets: number | null): string {

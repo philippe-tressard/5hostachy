@@ -36,9 +36,9 @@
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
-	import { ApiError, diagnostics as diagnosticsApi } from '$lib/api';
-	import { toast } from '$lib/components/Toast.svelte';
-	import { confirmer, SUPPRESSION } from '$lib/confirmation';
+	import { diagnostics as diagnosticsApi } from '$lib/api';
+	import { tenter } from '$lib/erreurs';
+	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import { safeHtml } from '$lib/sanitize';
 	//  ⚠️ `fmtDateShort`, comme la page — jamais un format réécrit ici
 	//  (`CLAUDE.md`, règle des dates : `lint:dates` échoue dessus).
@@ -79,32 +79,34 @@
 
 	async function addRapport() {
 		if (!showDiagForm || !newDiagFichiers?.length) return;
+		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure le
+		//  fait que la garde ci-dessus a écarté `null`.
+		const typeId = showDiagForm;
 		savingDiag = true;
 		const files = Array.from(newDiagFichiers);
 		const newRapports: any[] = [];
-		try {
-			for (const file of files) {
-				//  Sans titre saisi, chaque fichier prend le sien — c'est ce que dit
-				//  l'aide du champ, et c'est ici que ça se décide.
-				const titre = newDiagTitre.trim() || file.name.replace(/\.[^.]+$/, '');
-				const rapport = await diagnosticsApi.uploadRapport(
-					showDiagForm,
-					titre,
-					newDiagDate || undefined,
-					file,
+		await tenter(
+			async () => {
+				for (const file of files) {
+					//  Sans titre saisi, chaque fichier prend le sien — c'est ce que dit
+					//  l'aide du champ, et c'est ici que ça se décide.
+					const titre = newDiagTitre.trim() || file.name.replace(/\.[^.]+$/, '');
+					const rapport = await diagnosticsApi.uploadRapport(
+						typeId,
+						titre,
+						newDiagDate || undefined,
+						file,
+					);
+					newRapports.push(rapport);
+				}
+				types = types.map((t) =>
+					t.id === typeId ? { ...t, rapports: [...newRapports, ...t.rapports] } : t,
 				);
-				newRapports.push(rapport);
-			}
-			types = types.map((t) =>
-				t.id === showDiagForm ? { ...t, rapports: [...newRapports, ...t.rapports] } : t,
-			);
-			showDiagForm = null;
-			toast('success', files.length > 1 ? `${files.length} rapports ajoutés` : 'Rapport ajouté');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingDiag = false;
-		}
+				showDiagForm = null;
+			},
+			files.length > 1 ? `${files.length} rapports ajoutés` : 'Rapport ajouté',
+		);
+		savingDiag = false;
 	}
 
 	function startEditRapport(r: any) {
@@ -117,51 +119,45 @@
 	async function saveRapport() {
 		if (!editingRapportId) return;
 		savingRapport = true;
-		try {
-			const updated = await diagnosticsApi.updateRapport(editingRapportId, {
+		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure le
+		//  fait que la garde ci-dessus a écarté `null`.
+		const rapportId = editingRapportId;
+		await tenter(async () => {
+			const updated = await diagnosticsApi.updateRapport(rapportId, {
 				titre: editingRapportTitre.trim() || undefined,
 				date_rapport: editingRapportDate || null,
 				synthese: editingRapportSynthese.trim() || null,
 			});
 			types = types.map((t) => ({
 				...t,
-				rapports: t.rapports.map((r: any) => (r.id === editingRapportId ? updated : r)),
+				rapports: t.rapports.map((r: any) => (r.id === rapportId ? updated : r)),
 			}));
 			editingRapportId = null;
-			toast('success', 'Rapport mis à jour');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingRapport = false;
-		}
+		}, 'Rapport mis à jour');
+		savingRapport = false;
 	}
 
 	async function deleteRapport(typeId: number, rapportId: number) {
-		if (!(await confirmer(SUPPRESSION('Ce rapport')))) return;
-		try {
+		await confirmerPuis(SUPPRESSION('Ce rapport'), 'Rapport supprimé', async () => {
 			await diagnosticsApi.deleteRapport(rapportId);
 			types = types.map((t) =>
 				t.id === typeId ? { ...t, rapports: t.rapports.filter((r: any) => r.id !== rapportId) } : t,
 			);
-			toast('success', 'Rapport supprimé');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+		});
 	}
 
 	async function toggleNonApplicable(typeId: number, value: boolean) {
 		togglingNonApplicableId = typeId;
-		try {
-			const updated = await diagnosticsApi.toggleNonApplicable(typeId, value);
-			types = types.map((t) =>
-				t.id === typeId ? { ...t, non_applicable: updated.non_applicable } : t,
-			);
-			toast('success', value ? 'Diagnostic masqué (non applicable)' : 'Diagnostic réactivé');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			togglingNonApplicableId = null;
-		}
+		await tenter(
+			async () => {
+				const updated = await diagnosticsApi.toggleNonApplicable(typeId, value);
+				types = types.map((t) =>
+					t.id === typeId ? { ...t, non_applicable: updated.non_applicable } : t,
+				);
+			},
+			value ? 'Diagnostic masqué (non applicable)' : 'Diagnostic réactivé',
+		);
+		togglingNonApplicableId = null;
 	}
 
 	function basculerSynthese(id: number) {
