@@ -38,9 +38,14 @@
 	import { onMount } from 'svelte';
 	import { acces as accesApi, lots as lotsApi, bailleur as bailApi } from '$lib/api';
 	import { tenter, messageErreur } from '$lib/erreurs';
-	import { confirmer, confirmerPuis, SUPPRESSION } from '$lib/confirmation';
+	//  ⚠️ `confirmer` et `SUPPRESSION` sont partis avec la poubelle (15/09/2026) :
+	//  il ne reste ici aucun geste irréversible à faire confirmer en rouge.
+	import { confirmerPuis } from '$lib/confirmation';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { isCS, currentUser } from '$lib/stores/auth';
+	//  `isCS` n'est plus lu : il ne servait qu'à ouvrir la suppression au conseil
+	//  syndical sur CET écran — un geste qui vit désormais chez l'administrateur,
+	//  sur l'écran du parc.
+	import { currentUser } from '$lib/stores/auth';
 	import MesAcces from '$lib/components/MesAcces.svelte';
 	import AccesConnexes from '$lib/components/AccesConnexes.svelte';
 
@@ -114,25 +119,18 @@
 		});
 	}
 
-	async function supprimer(id: number, typeAcces: 'vigik' | 'tc') {
-		//  ⚠️ Retirer un accès de SON compte n'est pas le détruire : le badge existe
-		//  toujours. Le rouge de `SUPPRESSION` reste juste — pour le porteur, le
-		//  geste ne se défait pas tout seul.
-		const quoi = typeAcces === 'vigik' ? 'Ce badge' : 'Cette télécommande';
-		if (!(await confirmer(SUPPRESSION(`${quoi} sera retiré de votre compte.`)))) return;
-		await tenter(
-			async () => {
-				if (typeAcces === 'vigik') {
-					await accesApi.supprimerVigik(id);
-					vigiks = vigiks.filter((v) => v.id !== id);
-				} else {
-					await accesApi.supprimerTc(id);
-					telecommandes = telecommandes.filter((t) => t.id !== id);
-				}
-			},
-			typeAcces === 'vigik' ? 'Badge supprimé' : 'Télécommande supprimée',
-		);
-	}
+	//  🔴 `supprimer()` A ÉTÉ RETIRÉ LE 15/09/2026, avec ses deux routes —
+	//  demandé à l'écran : *« enlève la poubelle. Un résident ne peut pas
+	//  supprimer un accès, il peut juste signaler qu'il a perdu »*.
+	//
+	//  Le commentaire qui l'accompagnait disait déjà la moitié du problème —
+	//  « retirer un accès de SON compte n'est pas le détruire : le badge existe
+	//  toujours » — et le geste le détruisait quand même. Le parc perdait alors la
+	//  trace d'un objet qui circule, et l'import le reproposait à la résolution
+	//  suivante.
+	//
+	//  Ce qui reste au porteur : **signaler une perte**. Ce qui reste à
+	//  l'administrateur : la suppression définitive, sur l'écran du parc.
 
 	// Déclaration d'accès existant
 	let declareType = 'telecommande';
@@ -242,12 +240,9 @@
 		<MesAcces
 			titre="Badges d'accès (Vigik)"
 			messageVide="Aucun badge enregistré."
-			nomObjet="ce badge Vigik"
 			items={vigiks}
-			peutSupprimer={$isCS}
 			classeStatut={statutClass}
 			onSignalerPerdu={(id) => signalerPerdu(id, 'vigik')}
-			onSupprimer={(id) => supprimer(id, 'vigik')}
 		/>
 	{/if}
 
@@ -255,12 +250,9 @@
 		<MesAcces
 			titre="Télécommandes de parking"
 			messageVide="Aucune télécommande enregistrée."
-			nomObjet="cette télécommande"
 			items={telecommandes}
-			peutSupprimer={$isCS}
 			classeStatut={statutClass}
 			onSignalerPerdu={(id) => signalerPerdu(id, 'tc')}
-			onSupprimer={(id) => supprimer(id, 'tc')}
 		/>
 	{/if}
 

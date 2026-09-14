@@ -16,10 +16,31 @@
 
   ## Ce qui reste chez le parent, et pourquoi
 
-  Les deux gestes — signaler perdu, supprimer — parlent à l'API et rechargent la
-  liste. Ils restent callbacks : un seul endroit parle au serveur, et le
-  composant ne connaît ni les routes ni le type d'objet qu'il rend. C'est le même
-  contrat que `ListeAnnonces` et `ListeIdees`.
+  Le geste — signaler perdu — parle à l'API et recharge la liste. Il reste un
+  callback : un seul endroit parle au serveur, et le composant ne connaît ni les
+  routes ni le type d'objet qu'il rend. C'est le même contrat que
+  `ListeAnnonces` et `ListeIdees`.
+
+  ## 🔴 La poubelle est partie le 15/09/2026, et c'est de fond
+
+  > « sur la page Mes lots & accès : enlève la poubelle. Un résident ne peut pas
+  >   supprimer un accès, il peut juste signaler qu'il a perdu. »
+
+  Le geste détruisait la ligne. Or **le badge existe toujours** — il est dans une
+  poche, un tiroir, ou perdu : le parc cessait de pouvoir dire qu'il circule.
+  C'est la règle déjà déployée partout (`ux-patterns` §8) : archiver sur la vue
+  principale, supprimer réservé à l'admin — qui le fait, lui, sur l'écran du parc.
+
+  ⚠️ Les **routes** ont été retirées avec le bouton (`routers/acces/resident`) :
+  masquer un geste sans le fermer le laisse accessible à qui appelle l'API.
+
+  ## La colonne « Accès », demandée le même jour
+
+  > « ajouter la colonne Accès, de celle du CS / Badges & télécommandes »
+
+  Le même `BadgePerimetre` que l'écran du conseil syndical, sur la même donnée :
+  un porteur voit désormais ce que son badge ouvre. Une seconde mise en forme du
+  même objet aurait été la divergence de demain.
 
   ## La condition d'affichage vient du parent, elle aussi
 
@@ -30,23 +51,22 @@
   parle pas du tableau mais de la place qu'il occupe dans l'écran.
 -->
 <script lang="ts">
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
+
 	/** « Badges d'accès (Vigik) » ou « Télécommandes de parking ». */
 	export let titre: string;
 	/** Ce qu'on affiche quand la personne n'en a aucun. */
 	export let messageVide: string;
-	export let items: { id: number; code: string; statut: string }[] = [];
-	/** Vrai pour le conseil syndical : lui seul peut supprimer un badge. */
-	export let peutSupprimer = false;
+	export let items: {
+		id: number;
+		code: string;
+		statut: string;
+		perimetre_cible?: string[];
+	}[] = [];
 	/** Comment un statut se traduit en classe de badge — fourni par l'écran. */
 	export let classeStatut: (s: string) => string;
 
 	export let onSignalerPerdu: (id: number) => void;
-	export let onSupprimer: (id: number) => void;
-
-	/**  Ce que l'`aria-label` du bouton de suppression doit nommer : « ce badge
-	 *   Vigik », « cette télécommande ». Un libellé générique dirait « supprimer »
-	 *   sans dire quoi, et c'est tout ce qu'un lecteur d'écran entendrait. */
-	export let nomObjet: string;
 </script>
 
 <section class="card mes-acces-carte">
@@ -56,33 +76,38 @@
 	{#if items.length === 0}
 		<p class="mes-acces-vide">{messageVide}</p>
 	{:else}
-		<table class="table" style="table-layout:fixed;width:100%">
-			<colgroup><col style="width:35%" /><col style="width:9rem" /><col /></colgroup>
-			<thead><tr><th>Code</th><th>Statut</th><th>Actions</th></tr></thead>
-			<tbody>
-				{#each items as item (item.id)}
-					<tr>
-						<td class="mes-acces-code">{item.code}</td>
-						<td><span class="badge {classeStatut(item.statut)}">{item.statut}</span></td>
-						<td class="mes-acces-actions">
-							{#if item.statut === 'actif'}
-								<button class="btn btn-sm btn-outline" on:click={() => onSignalerPerdu(item.id)}>
-									Signaler perdu
-								</button>
-							{/if}
-							{#if peutSupprimer}
-								<button
-									class="btn-icon-danger"
-									aria-label="Supprimer {nomObjet}"
-									title="Supprimer"
-									on:click={() => onSupprimer(item.id)}>&#x1F5D1;&#xFE0F;</button
-								>
-							{/if}
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<div class="table-wrap">
+			<table class="table" style="table-layout:fixed;width:100%">
+				<colgroup
+					><col style="width:28%" /><col style="width:8rem" /><col /><col
+						style="width:9rem"
+					/></colgroup
+				>
+				<thead><tr><th>Code</th><th>Statut</th><th>Accès</th><th>Actions</th></tr></thead>
+				<tbody>
+					{#each items as item (item.id)}
+						<tr>
+							<td class="mes-acces-code">{item.code}</td>
+							<td><span class="badge {classeStatut(item.statut)}">{item.statut}</span></td>
+							<!--  🔹 Le MÊME composant que l'écran du conseil syndical : ce que
+							      le badge ouvre se lit d'une seule façon sur tout le site. -->
+							<td>
+								<BadgePerimetre perimetre={item.perimetre_cible ?? []}>
+									<span class="mes-acces-vide">—</span>
+								</BadgePerimetre>
+							</td>
+							<td class="mes-acces-actions">
+								{#if item.statut === 'actif'}
+									<button class="btn btn-sm btn-outline" on:click={() => onSignalerPerdu(item.id)}>
+										Signaler perdu
+									</button>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 </section>
 

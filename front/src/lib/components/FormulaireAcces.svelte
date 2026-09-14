@@ -29,6 +29,7 @@
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import type { ChoixAcces } from '$lib/api/acces';
 
 	const dispatch = createEventDispatcher<{ annule: void; enregistre: void }>();
 
@@ -39,6 +40,13 @@
 	export let types: readonly { val: string; label: string }[] = [];
 	/** Les porteurs proposés : les comptes de la copropriété. */
 	export let porteurs: { id: number; nom: string }[] = [];
+
+	/**  🔒 Ce que chaque type d'accès a le droit d'ouvrir, servi par le serveur.
+	 *
+	 *   ⚠️ Indexé par la clé du TYPE, et relu à chaque changement de type : la
+	 *   rangée de pastilles suit alors la pastille de type, dans le même écran.
+	 *   Un badge qui change de nature ne garde pas les portes de l'autre. */
+	export let choixAcces: Record<string, ChoixAcces> = {};
 
 	/**  L'objet en cours de saisie, lié en deux sens : l'écran porte son cycle.
 	 *
@@ -74,6 +82,16 @@
 	];
 
 	$: incomplet = !saisie.code.trim() || !saisie.porteur_id;
+	//  ⚠️ `?? null` et non `?? []` : `null` dit « on ne restreint pas » — le temps
+	//  que la liste arrive du serveur, le sélecteur reste celui de partout
+	//  ailleurs. Une liste vide dirait « rien n'est possible », et l'écran
+	//  paraîtrait cassé pendant le chargement.
+	$: choixDuType = choixAcces[saisie.type];
+	$: accesAutorises = choixDuType?.codes ?? null;
+	//  L'aide se règle sur ce que le SERVEUR dit du type, jamais sur son nom :
+	//  dire « il est déduit du lot » d'une télécommande décrirait un autre écran
+	//  que celui qu'on a sous les yeux.
+	$: accesSuitLeLot = choixDuType?.suit_le_lot ?? true;
 </script>
 
 <!--  🔴 LE CADRE EST POSÉ ICI, parce que ce composant CONNAÎT le geste
@@ -122,11 +140,22 @@
 
 	<!--  🔹 L'accès EST un périmètre, et se saisit donc comme tous les autres. -->
 	<SectionFormulaire titre="Accès" idTitre="acces-perimetre-titre">
-		<PerimetrePicker bind:value={saisie.perimetre_cible} titre="" requis={false} />
+		<PerimetrePicker
+			bind:value={saisie.perimetre_cible}
+			titre=""
+			requis={false}
+			codesAutorises={accesAutorises}
+		/>
+		<!--  🔒 Les choix sont RESTREINTS par type (15/09/2026) : un badge ne
+		      commande pas un local à poubelles. La liste vient du serveur, qui
+		      l'oppose aussi à la requête — l'écran propose, il ne protège pas. -->
 		<p class="aide">
-			Ce que le badge ouvre. Laissé vide à la création, il est déduit&nbsp;: le bâtiment du lot, ou
-			celui du porteur si tous ses lots sont dans le même. Pour un accès à l'ensemble, choisir
-			«&nbsp;Copropriété entière&nbsp;».
+			{#if accesSuitLeLot}
+				Ce que le badge ouvre. Laissé vide à la création, il est déduit&nbsp;: le bâtiment du lot,
+				ou celui du porteur si tous ses lots sont dans le même.
+			{:else}
+				Ce que la télécommande ouvre. Laissé vide, elle reçoit les portails d'accès de la résidence.
+			{/if}
 		</p>
 	</SectionFormulaire>
 

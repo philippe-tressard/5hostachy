@@ -314,10 +314,24 @@ def test_supprimer_une_publication_avec_son_historique_et_ses_documents(contexte
     assert session.exec(select(Document).where(Document.publication_id == pub.id)).all() == []
 
 
+#  🔴 LES DEUX SUPPRESSIONS D'ACCÈS ONT CHANGÉ DE PORTE le 15/09/2026.
+#
+#  Elles passaient par `routers/acces/resident` — un porteur retirait son propre
+#  badge. Ces deux routes ont été **retirées** sur demande : *« un résident ne
+#  peut pas supprimer un accès, il peut juste signaler qu'il a perdu »*. Le geste
+#  n'a pas disparu : il vit chez l'administrateur, sur l'écran du parc.
+#
+#  ⚠️ Le test SUIT le geste, il ne disparaît pas avec la route. La question
+#  qu'il pose — *`user_vigik.vigik_id` est NOT NULL et sans `Relationship` :
+#  la suppression tient-elle sous `foreign_keys=ON` ?* — ne dépend pas de qui
+#  appuie sur le bouton. La supprimer aurait rendu au relevé de l'étape 3 deux
+#  lignes non couvertes, sans que rien ne le dise.
+
+
 def test_supprimer_une_telecommande_attribuee(contexte):
     """`user_telecommande.telecommande_id` est NOT NULL et sans `Relationship`."""
     from app.models.core import Telecommande, UserTelecommande
-    from app.routers.acces.resident import supprimer_telecommande
+    from app.routers.acces.parc import supprimer_acces_admin
 
     session, admin = contexte
     tc = Telecommande(code="TC-546", user_id=admin.id)
@@ -327,14 +341,14 @@ def test_supprimer_une_telecommande_attribuee(contexte):
     session.add(UserTelecommande(user_id=admin.id, telecommande_id=tc.id))
     session.commit()
 
-    supprimer_telecommande(tc.id, session, admin)
+    supprimer_acces_admin("telecommande", tc.id, session, admin)
     assert session.get(Telecommande, tc.id) is None
 
 
 def test_supprimer_un_vigik_attribue(contexte):
     """`user_vigik.vigik_id` est NOT NULL et sans `Relationship`."""
     from app.models.core import UserVigik, Vigik
-    from app.routers.acces.resident import supprimer_vigik
+    from app.routers.acces.parc import supprimer_acces_admin
 
     session, admin = contexte
     v = Vigik(code="VG-546", user_id=admin.id)
@@ -344,7 +358,7 @@ def test_supprimer_un_vigik_attribue(contexte):
     session.add(UserVigik(user_id=admin.id, vigik_id=v.id))
     session.commit()
 
-    supprimer_vigik(v.id, session, admin)
+    supprimer_acces_admin("vigik", v.id, session, admin)
     assert session.get(Vigik, v.id) is None
 
 

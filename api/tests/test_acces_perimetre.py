@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import pytest
 from sqlalchemy import text
-from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy.exc import OperationalError
+from sqlmodel import Session, SQLModel, create_engine, select
 
 #  ⚠️ L'import des modèles n'est pas décoratif : `SQLModel.metadata` ne connaît
 #  que les tables des modules CHARGÉS. Sans lui, `create_all` ne crée rien et le
@@ -48,6 +49,36 @@ CAS = [
     #  Un parking (sans bâtiment) ne doit pas faire échouer la déduction.
     [2, None],
 ]
+
+
+@pytest.fixture(autouse=True)
+def sans_arbre():
+    """🔴 Ces cas portent sur le REPLI, donc sur un arbre vide — et ça se pose.
+
+    Depuis le 15/09/2026, `code_batiment` lit l'arbre avant de fabriquer `bat:3`
+    (pour que la déduction et la liste d'accès autorisés parlent des mêmes
+    codes). L'arbre est un **état de module**, partagé par toute la suite : un
+    fichier exécuté avant celui-ci pouvait le laisser chargé, et ces tests-là
+    échouaient alors sans rien avoir à se reprocher — c'est arrivé à l'écriture
+    de `test_acces_choix.py`.
+
+    Le vider ici rend la condition visible au lieu de la supposer.
+    """
+    from app.database import SessionLocal
+    from app.models.perimetre import Perimetre
+    from app.utils.perimetres import invalider_cache
+
+    invalider_cache()
+    try:
+        with SessionLocal() as s:
+            for ligne in sorted(s.exec(select(Perimetre)).all(), key=lambda n: -n.id):
+                s.delete(ligne)
+            s.commit()
+    except OperationalError:
+        pass  # la table n'existe pas encore : l'arbre est vide, c'est l'état voulu
+    invalider_cache()
+    yield
+    invalider_cache()
 
 
 @pytest.mark.parametrize(
