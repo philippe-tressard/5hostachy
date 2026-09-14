@@ -27,6 +27,7 @@ from sqlmodel import Session, select
 #  colonnes. `normaliser` est ré-exporté : `acces.py` et `auto_match_service.py`
 #  l'importent depuis ce module.
 from app.utils.import_xlsx import (  # noqa: F401  (ré-export de `normaliser`)
+    NOMS_NON_RESIDENTS,
     importer_bytes,
     importer_fichier,
     normaliser,
@@ -37,11 +38,10 @@ from app.models.core import Batiment, Lot, StatutImport, VigikImport
 
 
 # ── Noms à ignorer automatiquement ────────────────────────────────────────
-_NOMS_IGNORES = {
-    "PARKINGS PUBLIQUES",
-    "0. ACCES MAIRIE",
-    "ATPE",
-}
+#  Le classeur des vigiks n'ajoute rien au noyau commun : il s'y réduit.
+#  L'écrire ainsi plutôt que de recopier les trois noms fait que le jour où un
+#  quatrième non-résident apparaît, il apparaît ICI AUSSI, sans qu'on y pense.
+_NOMS_IGNORES = NOMS_NON_RESIDENTS
 
 
 

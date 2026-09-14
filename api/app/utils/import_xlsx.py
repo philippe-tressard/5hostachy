@@ -26,6 +26,27 @@ from sqlmodel import Session, select
 
 from app.database import engine
 
+#: Les porteurs d'accès qui ne sont PAS des résidents — parkings publics, accès
+#: de la mairie, prestataire d'entretien. Une ligne à leur nom n'a personne à
+#: rapprocher : l'import la met de côté au lieu de la laisser en attente
+#: éternelle dans l'écran d'administration.
+#:
+#: 🔴 Ces trois noms étaient écrits DEUX fois (14/09/2026, #779) — une fois dans
+#: chaque importeur — et le classeur des télécommandes en ajoute deux qui lui
+#: sont propres. C'est un NOYAU commun enrichi localement, la forme même que la
+#: recopie détruit : ajouter un quatrième non-résident demandait deux gestes, et
+#: le second s'oublie.
+#:
+#: ⚠️ Ces valeurs sont des noms propres de CETTE copropriété, et elles n'ont
+#: rien à faire dans le code — même famille que « 5Hostachy » (v1.36.7) et que
+#: « 4 SAISONS » (#953). Les réunir ici est le PRÉALABLE à les administrer : on
+#: ne déplace pas vers un écran ce qui est écrit à deux endroits.
+NOMS_NON_RESIDENTS = frozenset({
+    "PARKINGS PUBLIQUES",
+    "0. ACCES MAIRIE",
+    "ATPE",
+})
+
 #: Signature du traitement propre à chaque import : (lignes, session, remplacer) → stats.
 Traitement = Callable[[list, Session, bool], dict]
 
