@@ -40,6 +40,7 @@ from .commun import (
     ticket_read,
 )
 from app.utils.noms import nom_affiche
+from app.utils.liens import nom_site
 
 router = APIRouter()
 
@@ -256,7 +257,7 @@ def envoyer_relance_syndic(
         #  une variable absente rend une chaîne vide sans rien signaler.
         "civilite": "Monsieur" if principal.genre == GenreCivilite.mr else "Madame",
         "nom_gestionnaire": nom_affiche(principal.prenom, principal.nom),
-        "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
+        "residence": {"nom": nom_site(cfg.get("site_nom"))},
         "anciennete": anciennete,
         "tickets": [_contexte_ticket(session, t) for t in tickets_relance],
     }

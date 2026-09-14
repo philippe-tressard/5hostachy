@@ -35,7 +35,7 @@ from .commun import (
     libelle_evolution,
 )
 from app.utils.noms import nom_affiche
-from app.utils.liens import base_site
+from app.utils.liens import base_site, nom_site
 
 
 def _contexte_ticket(ticket) -> dict:
@@ -320,7 +320,7 @@ def _alerter_bug(
                 "categorie": ticket.categorie,
             },
             "auteur": {"prenom": user.prenom, "nom": user.nom, "email": user.email},
-            "residence": {"nom": site_cfg.get("site_nom") or cfg.get("site_nom") or "5Hostachy"},
+            "residence": {"nom": nom_site(site_cfg.get("site_nom"), cfg.get("site_nom"))},
             "app": {"url": base_site(site_cfg.get("site_url") or cfg.get("site_url"))},
         },
     )

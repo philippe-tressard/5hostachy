@@ -47,6 +47,19 @@ from __future__ import annotations
 #: et dans `PUT /config` à l'écriture.
 DEFAUT_SITE = "https://localhost"
 
+#: Le nom du site quand la base n'en porte pas — **neutre, et c'est délibéré**.
+#:
+#: 🔴 « 5Hostachy » était écrit en dur DIX-SEPT fois dans `app/`, plus une
+#: dix-huitième sous une autre valeur (« Ma Résidence », dans le moteur d'envoi).
+#: C'est le nom propre de CETTE copropriété : le produit doit en servir une
+#: autre, qui n'a « ni AFUL, ni quatre bâtiments » — et qui aurait vu le nom de
+#: celle-ci en pied de ses courriels le jour où sa configuration serait vide.
+#:
+#: ⚠️ Ce n'est PAS la règle la plus déployée qui l'emporte ici, et c'est
+#: l'exception que la règle prévoit : la plus déployée prime *si elle est en
+#: phase avec les préconisations*. Un nom propre en dur ne l'est pas.
+NOM_SITE_PAR_DEFAUT = "Ma Résidence"
+
 
 def base_site(valeur: str | None) -> str:
     """L'adresse du site sans barre finale, prête à recevoir un chemin.
@@ -69,6 +82,50 @@ def base_site(valeur: str | None) -> str:
     """
     propre = (valeur or "").strip().rstrip("/")
     return propre or DEFAUT_SITE
+
+
+def nom_site(*valeurs: str | None) -> str:
+    """Le nom du site : la première valeur renseignée, sinon un repli neutre.
+
+    >>> nom_site("Les Quatre Saisons")
+    'Les Quatre Saisons'
+    >>> nom_site(None, "  Résidence du Parc  ")
+    'Résidence du Parc'
+    >>> nom_site(None)
+    'Ma Résidence'
+    >>> nom_site("")
+    'Ma Résidence'
+    >>> nom_site("   ")
+    'Ma Résidence'
+
+    🔴 **Dix-huit écritures, TROIS comportements** jusqu'au 14/09/2026 :
+
+    ===================================  ==============================================
+    Forme                                Ce qu'elle fait d'une valeur VIDE en base
+    ===================================  ==============================================
+    ``cfg.get("site_nom") or "…"``       repli (10 fois)
+    ``cfg.get("site_nom", "…")``         **rend la chaîne vide** (7 fois)
+    ``… or "Ma Résidence"``              repli, sous un AUTRE nom (1 fois)
+    ===================================  ==============================================
+
+    La deuxième ligne est un défaut : ``.get(cle, defaut)`` ne se replie que si la
+    clé est **absente**. Une `site_nom` présente et vide — ce qu'un champ de
+    configuration effacé produit — passait telle quelle, et le courriel annonçait
+    une résidence sans nom. Sept chemins sur dix-huit, tous du côté dangereux.
+
+    ⚠️ **Variadique**, parce que deux appelants lisent une configuration
+    spécifique AVANT la générale (``site_cfg`` puis ``cfg``). Les aplatir en un
+    seul argument aurait obligé chacun à réécrire la cascade — c'est-à-dire à
+    recréer la duplication qu'on retire.
+
+    ⚠️ Le ``strip()`` fait partie de la règle, comme dans `base_site` : une valeur
+    saisie avec une espace de fin n'est pas une valeur différente.
+    """
+    for valeur in valeurs:
+        propre = (valeur or "").strip()
+        if propre:
+            return propre
+    return NOM_SITE_PAR_DEFAUT
 
 
 # préfixe d'ancre → route du front qui rend réellement `id="<prefixe>-…"`.

@@ -35,7 +35,7 @@ from app.schemas import UserCreate, UserRead, LoginRequest
 from app.utils.lecture_utilisateur import construire_user_read
 from app.utils.limiter import limiter
 from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
-from app.utils.liens import base_site
+from app.utils.liens import base_site, nom_site
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -130,7 +130,7 @@ def register(
     ).all()
     cfg = {row.cle: row.valeur for row in cfg_rows}
     site_url = base_site(cfg.get("site_url"))
-    site_nom = cfg.get("site_nom") or "5Hostachy"
+    site_nom = nom_site(cfg.get("site_nom"))
 
     from app.utils.email import send_email as _send_email
     background_tasks.add_task(
@@ -164,7 +164,7 @@ def register(
                         "email": user.email,
                     },
                     "residence": {
-                        "nom": site_cfg.get("site_nom") or cfg.get("site_nom") or "5Hostachy",
+                        "nom": nom_site(site_cfg.get("site_nom"), cfg.get("site_nom")),
                     },
                     "app": {
                         "url": base_site(site_cfg.get("site_url") or cfg.get("site_url")),
@@ -354,7 +354,7 @@ def resend_verification(
         ).all()
         cfg = {row.cle: row.valeur for row in cfg_rows}
         site_url = base_site(cfg.get("site_url"))
-        site_nom = cfg.get("site_nom") or "5Hostachy"
+        site_nom = nom_site(cfg.get("site_nom"))
 
         from app.utils.email import send_email as _send_email
         background_tasks.add_task(

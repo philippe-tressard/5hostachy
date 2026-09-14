@@ -56,7 +56,7 @@ UPLOADS_ROOT = os.path.realpath("/app/uploads")
 
 #  Les schémas vivent dans `annonces_hall_schemas` (02/09/2026, plafond de
 #  modularité) : ce qui DÉCLARE part, ce qui DÉCIDE reste.
-from app.utils.liens import base_site
+from app.utils.liens import base_site, nom_site
 from app.routers.annonces_hall_schemas import (  # noqa: E402
     AnnonceHallArchive,
     AnnonceHallBase,
@@ -99,7 +99,7 @@ def _html_params(body: AnnonceHallBase, session: Session, *, format_effectif: st
         "message_html": body.message,
         "perimetre_label": perimetre_label_liste(body.perimetre_cible),
         "format_effectif": format_effectif,
-        "site_nom": cfg.get("site_nom") or "5Hostachy",
+        "site_nom": nom_site(cfg.get("site_nom")),
         "site_url": base_site(cfg.get("site_url")),
         "images": body.images,
         "date_affichage": date_affichage,

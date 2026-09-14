@@ -24,7 +24,7 @@ from sqlmodel import Session, select
 
 from app.models.core import Lot, UserLot, Utilisateur
 from app.utils.etages import divergence_etage, etage_label
-from app.utils.liens import base_site
+from app.utils.liens import base_site, nom_site
 
 
 def lots_de(session: Session, user: Utilisateur) -> list[Lot]:
@@ -84,7 +84,7 @@ def alerter_divergence_etage(
                 "saisi": etage_label(saisi),
                 "lot": etage_label(lot),
             },
-            "residence": {"nom": cfg.get("site_nom") or "5Hostachy"},
+            "residence": {"nom": nom_site(cfg.get("site_nom"))},
             "app": {"url": base_site(cfg.get("site_url"))},
         },
     )

@@ -19,7 +19,7 @@ from app.utils.fichiers import chemins_locaux
 from app.utils.perimetres import batiments_cibles, parse_json_perimetres
 from app.utils.photos import parse_photos
 from app.utils.noms import nom_affiche
-from app.utils.liens import base_site
+from app.utils.liens import base_site, nom_site
 
 
 def _batiments_de(pub) -> set[int]:
@@ -104,7 +104,7 @@ def contexte_publication_syndic(
     ctx = {
         "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
         "auteur": {"prenom": user.prenom, "nom": user.nom},
-        "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
+        "residence": {"nom": nom_site(cfg.get("site_nom"))},
         "app": {"url": base_site(cfg.get("site_url"))},
         "is_commentaire": is_commentaire,
         "commentaire": commentaire or "",
@@ -214,7 +214,7 @@ def _envoyer_email_externe_publication(
         "auteur": {"prenom": user.prenom, "nom": user.nom},
         "date_publication": _fmt_paris(pub.cree_le),
         "date_commentaire": _fmt_paris(datetime.utcnow()),
-        "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
+        "residence": {"nom": nom_site(cfg.get("site_nom"))},
         "app": {"url": base_site(cfg.get("site_url"))},
         "is_commentaire": is_commentaire,
         "commentaire": commentaire or "",

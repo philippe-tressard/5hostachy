@@ -20,6 +20,7 @@ from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
 # Toute règle de visibilité — documents compris — vient du module central.
 from app.utils.visibility import document_visible
 from app.utils.liens import base_site
+from app.utils.liens import nom_site
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ def _notifier_document_publie(
             select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
         ).all()
     }
-    site_nom = cfg.get("site_nom") or "5Hostachy"
+    site_nom = nom_site(cfg.get("site_nom"))
     site_url = base_site(cfg.get("site_url"))
 
     destinataires = session.exec(
