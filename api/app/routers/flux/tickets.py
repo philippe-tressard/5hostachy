@@ -24,7 +24,6 @@ from app.utils.fichiers import est_image
 from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
 
-from app.utils.perimetres import perimetre_label
 from app.utils.copie_auteur import proprietaire
 from .commun import ContexteFlux, auteur_nom, perimetres_de, strip_html, badges_ticket
 from .schemas import FluxItem
@@ -89,7 +88,7 @@ def _meta_ticket(ctx: ContexteFlux, tk) -> dict:
     return {
         "ticket_id": tk.id,
         "numero": tk.numero,
-        "perimetre": perimetre_label(perimetres_de(tk)),
+        "perimetre_codes": perimetres_de(tk),
         "description": strip_html(tk.description, 300),
         #  🔴 Le PROPRIÉTAIRE, pas celui qui a tapé (12/09/2026) : quand le
         #  conseil syndical enregistre le signalement d'un résident ou d'un

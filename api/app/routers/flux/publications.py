@@ -24,7 +24,6 @@ from app.routers.publications import (
 )
 from app.utils.archivage import seuil_archivage_jours
 
-from app.utils.perimetres import perimetre_label
 from app.utils.photos import parse_photos
 from .commun import ContexteFlux, auteur_nom, badges_marqueurs, perimetres_de, strip_html
 from .schemas import FluxItem
@@ -76,7 +75,16 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
         #  (front) coupe proprement en fin de 3ᵉ ligne. 300 laissait la 3ᵉ ligne
         #  incomplète.
         contenu_extrait = strip_html(p.contenu, 500) if getattr(p, "contenu", None) else ""
-        detail_parts = [x for x in [auteur, contenu_extrait] if x]
+        #  🔴 L'auteur N'EST PLUS préfixé à l'extrait (14/09/2026, signalé à
+        #  l'écran) : « l'auteur est mis en début de texte, c'est inutile car il
+        #  est normalisé en dernière ligne ». Il l'était en effet deux fois —
+        #  ici, et dans `meta["auteur"]`, que `FluxCard` rend en fin de rangée
+        #  depuis le 11/09. Une notion affichée deux fois sur la même carte se
+        #  lit comme deux informations.
+        #
+        #  ⚠️ C'était le seul type de carte à le faire : le ticket met une NATURE
+        #  en tête (« Nouveau ticket »), pas une personne. Le fil s'aligne donc
+        #  sur lui, comme demandé.
 
         cartes.append(FluxItem(
             id=f"pub_{p.id}",
@@ -90,7 +98,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
             date=p.publiee_le or p.cree_le,
             cree_le=p.cree_le,
             titre=p.titre,
-            detail=" — ".join(detail_parts) if detail_parts else None,
+            detail=contenu_extrait or None,
             icon="📰",
             badges=badges,
             lien=lien_element("pub", p.id),
@@ -102,7 +110,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 "auteur": auteur,
                 "photos_urls": parse_photos(getattr(p, "photos_urls", None)),
                 "statut": p.statut,
-                "perimetre": perimetre_label(perimetres_de(p)),
+                "perimetre_codes": perimetres_de(p),
             },
         ))
     return cartes

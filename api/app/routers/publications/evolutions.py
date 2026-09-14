@@ -10,13 +10,13 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import peut_editer, require_admin, require_cs_or_admin
+from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     Publication, PublicationEvolution, Utilisateur,
 )
 from app.schemas import EvolutionCreate, EvolutionRead, PublicationEvolutionUpdate
-from app.utils.evolutions import supprimer_evolution
+from app.utils.evolutions import evolution_modifiable, supprimer_evolution
 from app.utils.photos import photos_json
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 from app.utils.liens import base_site
@@ -37,14 +37,10 @@ def update_evolution(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    evol = session.get(PublicationEvolution, evol_id)
-    if not evol or evol.publication_id != pub_id:
-        raise HTTPException(404, "Évolution introuvable")
-    if evol.type not in ("commentaire", "etat"):
-        raise HTTPException(422, "Ce type d'évolution ne peut pas être modifié")
-    #  L'auteur ou un admin — `peut_editer`, du module central.
-    if not peut_editer(evol, user):
-        raise HTTPException(403, "Accès refusé")
+    evol = evolution_modifiable(
+        session, PublicationEvolution, evol_id,
+        champ_parent="publication_id", parent_id=pub_id, user=user,
+    )
     if body.contenu is not None:
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:

@@ -41,17 +41,77 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
-#: Les types d'entrée qu'un administrateur peut retirer.
+from app.auth.deps import peut_editer
+
+#: Les types d'entrée qu'un humain ÉCRIT — par opposition à celles que le serveur
+#: trace lui-même (« Correction : … »).
 #:
-#: ⚠️ Le front en tient le pendant dans `RubriqueHistorique.svelte`
-#: (`TYPES_EFFACABLES`) : les contextes de build sont `./api` et `./front`, rien
-#: de la racine n'entre dans les images — seule la copie est possible. Le test
-#: `test_evolutions_suppression.py` échoue si les deux listes divergent.
-TYPES_EFFACABLES: tuple[str, ...] = ("commentaire", "etat")
+#: 🔴 C'est LE fait dont dépendent les trois gestes du fil, et il était écrit
+#: QUATRE fois (14/09/2026, #779) : ici, dans les deux `PATCH` et dans la
+#: création d'une entrée de ticket. Créer, corriger et effacer posent la même
+#: question — *cette entrée porte-t-elle le texte de quelqu'un ?* — et une entrée
+#: tracée automatiquement répond non aux trois.
+#:
+#: ⚠️ Le jour où les trois divergeraient — un type créable mais non corrigeable,
+#: par exemple — la seconde liste s'écrirait ICI, avec son motif, et non dans une
+#: route.
+TYPES_SAISIS: tuple[str, ...] = ("commentaire", "etat")
+
+#: Le nom sous lequel la suppression connaît cette liste, et sous lequel le FRONT
+#: la tient (`RubriqueHistorique.svelte`).
+#:
+#: ⚠️ Conservé tel quel : les contextes de build sont `./api` et `./front`, rien
+#: de la racine n'entre dans les images — seule la copie est possible, et
+#: `test_evolutions_suppression.py` échoue si les deux divergent. Renommer des deux
+#: côtés est un lot à part ; le faire en passant casserait le seul lien qui les
+#: tient.
+TYPES_EFFACABLES: tuple[str, ...] = TYPES_SAISIS
 
 #: Un seul message pour les trois fils. Deux formulations différentes pour le
 #: même refus laisseraient croire à deux règles différentes.
 REFUS_TYPE = "Cette entrée ne peut pas être supprimée : une réponse appartient à son auteur."
+
+
+def evolution_modifiable(
+    session: Session,
+    modele: type,
+    evol_id: int,
+    *,
+    champ_parent: str,
+    parent_id: int,
+    user,
+) -> Any:
+    """L'entrée, si elle peut être CORRIGÉE par qui la demande — sinon l'erreur.
+
+    🔴 Cette garde était écrite DEUX fois (14/09/2026, #779), dans les deux
+    routes `PATCH …/evolutions/{id}` — publications et tickets —, y compris le
+    tuple `("commentaire", "etat")` **recopié à la main à deux pas du module qui
+    le porte déjà**. Trois copies d'une même liste, dont deux qui s'ignoraient.
+
+    ⚠️ **Pourquoi le même tuple que la suppression**, alors que ce sont deux
+    gestes : les deux répondent à la même question de fait — *cette entrée
+    porte-t-elle un texte écrit par quelqu'un ?* Une entrée « Correction : … »
+    tracée automatiquement ne décrit le geste de personne : on ne la corrige pas
+    plus qu'on ne l'efface.
+
+    Le jour où les deux divergeraient — un type modifiable mais non effaçable —
+    c'est ICI que la seconde liste s'écrirait, avec son motif, et non dans une
+    route.
+
+    ⚠️ Les trois refus dans cet ordre, et il compte : l'appartenance d'abord
+    (404 — ne pas révéler l'existence), le type ensuite (422 — la demande est
+    recevable mais l'objet s'y refuse), le droit en dernier (403). L'inverse
+    dirait « accès refusé » sur une entrée qui n'existe pas.
+    """
+    evol: Any = session.get(modele, evol_id)
+    if not evol or getattr(evol, champ_parent, None) != parent_id:
+        raise HTTPException(404, "Évolution introuvable")
+    if getattr(evol, "type", None) not in TYPES_SAISIS:
+        raise HTTPException(422, "Ce type d'évolution ne peut pas être modifié")
+    #  L'auteur ou un admin — `peut_editer`, du module central d'autorisation.
+    if not peut_editer(evol, user):
+        raise HTTPException(403, "Accès refusé")
+    return evol
 
 
 def supprimer_evolution(
