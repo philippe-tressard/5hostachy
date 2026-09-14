@@ -229,7 +229,7 @@ def creer_commande(
             destinataire_id=membre.id,
             type="vigik",
             titre=f"Nouvelle demande de {body.type}",
-            corps=f"{user.prenom} {user.nom} — lot {lot_numero}",
+            corps=f"{nom_affiche(user.prenom, user.nom)} — lot {lot_numero}",
             lien="/espace-cs",
         ))
 

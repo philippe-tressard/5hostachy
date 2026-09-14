@@ -80,6 +80,21 @@
 		    d'`EnteteCarte`. C'était l'écart de `/prestataires`, seule page à trois
 		    onglets longs ; il n'a plus de raison d'être propre à un écran. */
 		overflow-x: auto;
+		/*  🔴 `overflow-y: hidden` N'EST PAS DÉCORATIF (14/09/2026, signalé à
+		    l'écran : « une espèce de double flèche en fin de ligne de menus »).
+		
+		    En CSS, dès qu'un axe cesse d'être `visible`, l'autre bascule de
+		    `visible` à `auto` — c'est la spécification, pas un défaut de
+		    navigateur. Poser `overflow-x: auto` rendait donc l'axe VERTICAL
+		    défilable lui aussi, et il suffisait que la rangée dépasse d'un pixel
+		    — un liseré d'onglet actif, une icône un peu haute — pour qu'une
+		    barre de défilement verticale apparaisse au bout. Ses deux petites
+		    flèches ressemblaient à une commande ; elles ne commandaient rien.
+		
+		    ⚠️ Les onglets ne défilent QUE latéralement : une rangée d'onglets
+		    n'a pas de hauteur à parcourir. Masquer l'axe vertical ne cache donc
+		    rien — il n'y a rien dessous. */
+		overflow-y: hidden;
 		scrollbar-width: thin;
 	}
 

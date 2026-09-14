@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import require_admin
 from app.database import get_session
+from app.utils.noms import nom_affiche
 from app.models.core import (
     TelemetryEvent,
     TelemetryDaily,
@@ -16,7 +17,13 @@ from app.models.core import (
     Utilisateur,
 )
 from app.utils.limiter import limiter
-from app.utils.telemetrie_calculs import uniques_par_page, vues_non_attribuees
+from app.utils.noms import nom_affiche
+from app.utils.telemetrie_calculs import (
+    _palmares,
+    _cumul_par_page,
+    uniques_par_page,
+    vues_non_attribuees,
+)
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -71,6 +78,48 @@ def collect(
 
 
 # ── Dashboard admin ───────────────────────────────────────────────────────────
+
+def _fiches_utilisateurs(session: Session, lignes) -> dict[int, dict]:
+    """Qui sont ces gens — nom, dernière visite, statut, bâtiment.
+
+    🔴 Ce relevé était écrit TROIS fois dans ce fichier (14/09/2026, #779) :
+    deux fois en entier (jour, mois) et une fois en abrégé (le palmarès). Les
+    quatorze lignes de la version longue étaient identiques au caractère près.
+
+    🔴 Et les trois composaient le nom À LA MAIN — `f"{prenom} {nom}"` — alors
+    que la règle d'affichage est arbitrée depuis le 31/08/2026 et vit dans
+    `utils/noms.nom_affiche` : le prénom garde sa casse, le nom passe en
+    capitales. L'écran de télémétrie affichait donc « Jean-Sébastien CourT » là
+    où tout le reste du site écrit « Jean-Sébastien COURT ».
+
+    C'est exactement ce que le module `noms` décrit : trente et une écritures
+    « chacune correcte, et toutes ensemble la seule chose qu'on ne peut pas
+    corriger — une règle d'affichage qui n'existe nulle part ».
+
+    ⚠️ Rend UN dictionnaire par personne, et non quatre dictionnaires
+    parallèles : les quatre se remplissaient de la même boucle et se lisaient au
+    même endroit, si bien qu'en oublier un se voyait à l'écran et nulle part
+    ailleurs.
+    """
+    ids = [ligne[0] for ligne in lignes if ligne[0]]
+    if not ids:
+        return {}
+    rangs = session.exec(
+        select(
+            Utilisateur.id, Utilisateur.prenom, Utilisateur.nom,
+            Utilisateur.derniere_connexion, Utilisateur.statut, Utilisateur.batiment_id,
+        ).where(Utilisateur.id.in_(ids))
+    ).all()
+    return {
+        u[0]: {
+            "nom": nom_affiche(u[1], u[2]),
+            "derniere_connexion": u[3].isoformat() if u[3] else None,
+            "statut": u[4],
+            "batiment_id": u[5],
+        }
+        for u in rangs
+    }
+
 
 @router.get("/dashboard")
 def dashboard(
@@ -162,20 +211,7 @@ def dashboard(
             .limit(30)
         ).all()
 
-        user_ids = [r[0] for r in user_rows if r[0]]
-        users_map: dict[int, str] = {}
-        users_last_seen: dict[int, str | None] = {}
-        users_statut: dict[int, str] = {}
-        users_batiment: dict[int, int | None] = {}
-        if user_ids:
-            users = session.exec(
-                select(Utilisateur.id, Utilisateur.prenom, Utilisateur.nom, Utilisateur.derniere_connexion, Utilisateur.statut, Utilisateur.batiment_id)
-                .where(Utilisateur.id.in_(user_ids))
-            ).all()
-            users_map = {u[0]: f"{u[1]} {u[2]}" for u in users}
-            users_last_seen = {u[0]: u[3].isoformat() if u[3] else None for u in users}
-            users_statut = {u[0]: u[4] for u in users}
-            users_batiment = {u[0]: u[5] for u in users}
+        fiches = _fiches_utilisateurs(session, user_rows)
 
         return {
             "scope": "jour",
@@ -189,10 +225,7 @@ def dashboard(
             "chart": chart,
             "chart_label": "Vues par heure",
             "top_pages": [{"page": r[0], "total": r[1], "uniques": r[2]} for r in today_stats],
-            "top_users": [
-                {"nom": users_map.get(r[0], "Inconnu"), "total": r[1], "pages": r[2], "derniere_connexion": users_last_seen.get(r[0]), "statut": users_statut.get(r[0]), "batiment_id": users_batiment.get(r[0])}
-                for r in user_rows
-            ],
+            "top_users": _palmares(user_rows, fiches),
         }
 
     elif scope == "mois":
@@ -256,13 +289,7 @@ def dashboard(
             .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
         ).one()
 
-        top_pages: dict[str, dict] = {}
-        for r in daily_rows:
-            if r.page not in top_pages:
-                top_pages[r.page] = {"page": r.page, "total": 0, "uniques": 0}
-            top_pages[r.page]["total"] += r.total
-        for page in top_pages:
-            top_pages[page]["uniques"] = uniques_map.get(page, 0)
+        top_pages = _cumul_par_page(daily_rows, uniques=uniques_map)
 
         # KPI agrégés
         total_vues = sum(d["total"] for d in daily_chart.values())
@@ -306,20 +333,7 @@ def dashboard(
             .limit(30)
         ).all()
 
-        user_ids = [r[0] for r in user_rows if r[0]]
-        users_map = {}
-        users_last_seen: dict[int, str | None] = {}
-        users_statut: dict[int, str] = {}
-        users_batiment: dict[int, int | None] = {}
-        if user_ids:
-            users = session.exec(
-                select(Utilisateur.id, Utilisateur.prenom, Utilisateur.nom, Utilisateur.derniere_connexion, Utilisateur.statut, Utilisateur.batiment_id)
-                .where(Utilisateur.id.in_(user_ids))
-            ).all()
-            users_map = {u[0]: f"{u[1]} {u[2]}" for u in users}
-            users_last_seen = {u[0]: u[3].isoformat() if u[3] else None for u in users}
-            users_statut = {u[0]: u[4] for u in users}
-            users_batiment = {u[0]: u[5] for u in users}
+        fiches = _fiches_utilisateurs(session, user_rows)
 
         return {
             "scope": "mois",
@@ -336,10 +350,7 @@ def dashboard(
             "chart": sorted(daily_chart.values(), key=lambda x: x["label"]),
             "chart_label": "Vues par jour (30j)",
             "top_pages": sorted(top_pages.values(), key=lambda x: -x["total"]),
-            "top_users": [
-                {"nom": users_map.get(r[0], "Inconnu"), "total": r[1], "pages": r[2], "derniere_connexion": users_last_seen.get(r[0]), "statut": users_statut.get(r[0]), "batiment_id": users_batiment.get(r[0])}
-                for r in user_rows
-            ],
+            "top_users": _palmares(user_rows, fiches),
         }
 
     else:
@@ -379,13 +390,9 @@ def dashboard(
                 monthly_chart[r.mois] = {"label": r.mois, "total": 0, "uniques": monthly_uniques_map.get(r.mois, 0)}
             monthly_chart[r.mois]["total"] += r.total
 
-        # Top pages (all time)
-        top_pages_all: dict[str, dict] = {}
-        for r in monthly_rows:
-            if r.page not in top_pages_all:
-                top_pages_all[r.page] = {"page": r.page, "total": 0, "uniques": 0}
-            top_pages_all[r.page]["total"] += r.total
-            top_pages_all[r.page]["uniques"] += r.utilisateurs_uniques
+        #  Sans `uniques` : le cumul mois par mois — voir `_cumul_par_page`,
+        #  qui nomme la divergence au lieu de la laisser se reproduire.
+        top_pages_all = _cumul_par_page(monthly_rows)
 
         total_vues = sum(d["total"] for d in monthly_chart.values())
         nb_mois_actifs = len(monthly_chart) or 1
@@ -460,22 +467,11 @@ def users_active(
         .limit(30)
     ).all()
 
-    # Enrichir avec les noms
-    user_ids = [r[0] for r in rows if r[0]]
-    users_map: dict[int, str] = {}
-    if user_ids:
-        users = session.exec(
-            select(Utilisateur.id, Utilisateur.prenom, Utilisateur.nom)
-            .where(Utilisateur.id.in_(user_ids))
-        ).all()
-        users_map = {u[0]: f"{u[1]} {u[2]}" for u in users}
-
+    #  Le même relevé que les deux autres, en abrégé : il ne lisait que le nom.
+    #  Prendre la version complète coûte quatre colonnes de plus sur trente
+    #  lignes au maximum, et supprime la troisième écriture de la règle de nom.
+    fiches = _fiches_utilisateurs(session, rows)
     return [
-        {
-            "user_id": r[0],
-            "nom": users_map.get(r[0], "Inconnu"),
-            "total": r[1],
-            "pages": r[2],
-        }
-        for r in rows
+        {"user_id": r[0], **ligne}
+        for r, ligne in zip(rows, _palmares(rows, fiches))
     ]
