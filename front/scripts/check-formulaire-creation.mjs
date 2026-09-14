@@ -117,21 +117,25 @@ const EXCEPTIONS = {
 	//  contrôle échoue si l'une d'elles cesse de servir, précisément pour que
 	//  personne n'ait à y penser.
 	//
-	//  ── 12/09/2026 — la première depuis, et elle a son ticket (#931) ────────
+	//  ── 12/09/2026, TRANCHÉE le 14/09 — ce n'est plus une attente (#931) ────
 	//  🔴 `Saisie.svelte` n'est NI une création NI une édition : c'est une
 	//  question posée avant un geste, la jumelle de `Confirmation.svelte` — qui
 	//  passe ce contrôle pour la seule raison qu'elle n'a pas de champ.
 	//
-	//  Elle remplace les deux `prompt()` NATIFS du signalement, et le dépôt n'a
-	//  pas de troisième forme arbitrée pour « demander un motif attaché à un
-	//  geste » : la création s'écrit dans la page (#367), la correction dans la
-	//  carte (10/09/2026). Ni l'une ni l'autre ne décrit ce cas.
+	//  Le ticket cherchait une TROISIÈME forme à arbitrer. Il n'y en a pas :
+	//  `ux-patterns` §14 bis énonce depuis le 06/09 que la fenêtre reste légitime
+	//  pour « ce qui n'est pas un formulaire d'entité », et sa liste nomme
+	//  désormais la saisie qui accompagne un geste. Les deux règles qui
+	//  interdisent la fenêtre parlent l'une et l'autre d'un OBJET — créé (#367)
+	//  ou corrigé (§14 ter) ; aucune ne recouvre ce cas.
 	//
-	//  ⚠️ L'exception tombe dès que #931 tranche — dans un sens (la forme entre
-	//  dans `ux-patterns` et ce contrôle apprend à la reconnaître) comme dans
-	//  l'autre (le motif se tape dans la rangée, et ce fichier disparaît).
+	//  ⚠️ L'entrée RESTE, et ce n'est pas un oubli : ce contrôle lit une FORME
+	//  (un champ dans une modale), pas une intention. Il ne peut pas distinguer
+	//  « question posée avant un geste » d'un « formulaire d'entité », et lui
+	//  apprendre à le faire reviendrait à lui confier l'arbitrage. La déclaration
+	//  est donc l'endroit juste — elle nomme la décision au lieu de la cacher.
 	'lib/components/Saisie.svelte':
-		'question posée avant un geste, comme Confirmation — ni création ni édition (#931)',
+		'saisie qui accompagne un geste, comme Confirmation — forme déclarée par ux-patterns §14 bis (#931, tranché le 14/09/2026)',
 };
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne doit pas l'enfreindre. */
