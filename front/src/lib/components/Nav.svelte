@@ -1,21 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import {
-		currentUser,
-		isCS,
-		isAdmin,
-		hasResidentRole,
-		isAdminOnly,
-		actingAs,
-		isActingAsAidant,
-	} from '$lib/stores/auth';
+	import { currentUser, isCS, isAdmin, hasResidentRole, isAdminOnly } from '$lib/stores/auth';
 	import { locale, NAV_LABELS } from '$lib/stores/locale';
 	import { auth as authApi } from '$lib/api';
 	import { setUser } from '$lib/stores/auth';
 	import { configStore, siteNomStore, getPageConfig } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
 	import LiensGuide from '$lib/components/LiensGuide.svelte';
+	import BandeauDelegation from '$lib/components/BandeauDelegation.svelte';
 	import { HREFS_DEFAUT, ID_VERS_HREF, HREF_VERS_PAGE } from '$lib/pages';
 
 	// Les valeurs par défaut, l'ordre et la correspondance identifiant → route
@@ -130,35 +123,7 @@
 	</div>
 
 	<div class="nav-footer">
-		{#if ($currentUser?.delegations_aidant?.length ?? 0) > 0}
-			<div class="aidant-switcher">
-				<span class="aidant-switcher-label">Agir pour :</span>
-				<select
-					class="aidant-select"
-					value={$actingAs?.mandant_id ?? 0}
-					on:change={(e) => {
-						const val = Number((e.target as HTMLSelectElement).value);
-						if (val === 0) {
-							actingAs.set(null);
-						} else {
-							const d = $currentUser?.delegations_aidant?.find((x) => x.mandant_id === val);
-							if (d) actingAs.set({ mandant_id: d.mandant_id, mandant_nom: d.mandant_nom });
-						}
-					}}
-				>
-					<option value={0}>Moi-même</option>
-					{#each $currentUser?.delegations_aidant ?? [] as d (d.mandant_id)}
-						<option value={d.mandant_id}>{d.mandant_nom}</option>
-					{/each}
-				</select>
-			</div>
-		{/if}
-		{#if $isActingAsAidant}
-			<div class="aidant-banner">
-				<Icon name="heart-handshake" size={14} />
-				<span>Vous agissez pour <strong>{$actingAs?.mandant_nom}</strong></span>
-			</div>
-		{/if}
+		<BandeauDelegation />
 		<a href="/profil" class="nav-item" class:active={isActive('/profil')}>
 			<span class="nav-icon"><Icon name="user" size={18} /></span>
 			<span class="nav-label">{$currentUser?.prenom ?? t['/profil']}</span>
@@ -214,35 +179,7 @@
 			{/each}
 		</div>
 		<div class="overlay-footer">
-			{#if ($currentUser?.delegations_aidant?.length ?? 0) > 0}
-				<div class="aidant-switcher" style="padding:.5rem .75rem">
-					<span class="aidant-switcher-label">Agir pour :</span>
-					<select
-						class="aidant-select"
-						value={$actingAs?.mandant_id ?? 0}
-						on:change={(e) => {
-							const val = Number((e.target as HTMLSelectElement).value);
-							if (val === 0) {
-								actingAs.set(null);
-							} else {
-								const d = $currentUser?.delegations_aidant?.find((x) => x.mandant_id === val);
-								if (d) actingAs.set({ mandant_id: d.mandant_id, mandant_nom: d.mandant_nom });
-							}
-						}}
-					>
-						<option value={0}>Moi-même</option>
-						{#each $currentUser?.delegations_aidant ?? [] as d (d.mandant_id)}
-							<option value={d.mandant_id}>{d.mandant_nom}</option>
-						{/each}
-					</select>
-				</div>
-			{/if}
-			{#if $isActingAsAidant}
-				<div class="aidant-banner" style="margin:.25rem .75rem">
-					<Icon name="heart-handshake" size={14} />
-					<span>Vous agissez pour <strong>{$actingAs?.mandant_nom}</strong></span>
-				</div>
-			{/if}
+			<BandeauDelegation compact />
 			<a href="/profil" class="overlay-item" class:active={isActive('/profil')}>
 				<span class="nav-icon"><Icon name="user" size={20} /></span>
 				<span>{$currentUser?.prenom ?? t['/profil']}</span>
@@ -490,42 +427,10 @@
 		}
 	}
 
-	/* ── Aidant switcher ───────────────────────────────────────── */
-	.aidant-switcher {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		padding: 0.4rem 0.75rem;
-		margin-bottom: 0.25rem;
-	}
-	.aidant-switcher-label {
-		font-size: 0.7rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		color: var(--color-text-muted);
-		font-weight: 600;
-	}
-	.aidant-select {
-		padding: 0.3rem 0.5rem;
-		border: 1px solid var(--color-border);
-		border-radius: 6px;
-		font-size: 0.8rem;
-		background: var(--color-surface);
-		width: 100%;
-		cursor: pointer;
-	}
-	.aidant-banner {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		padding: 0.3rem 0.75rem;
-		margin: 0 0.5rem 0.25rem;
-		background: #fef3c7;
-		color: #92400e;
-		border-radius: var(--radius);
-		font-size: 0.78rem;
-		line-height: 1.3;
-	}
+	/*  Les règles `.aidant-*` sont parties avec leur balisage dans
+	    `BandeauDelegation` (14/09/2026, #779) : Svelte scope le style au
+	    composant qui REND le balisage, les laisser ici les aurait rendues
+	    inertes — c'est la panne des pastilles nues de la v2.67.11. */
 	/*  Les deux règles ci-dessous ne sont PAS des redéfinitions : elles rendent
 	    applicables au composant enfant celles que la page porte déjà. Bornées à
 	    l'enveloppe, elles ne fuient nulle part. */
