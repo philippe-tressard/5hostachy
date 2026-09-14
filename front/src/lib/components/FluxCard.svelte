@@ -24,6 +24,10 @@
 	import { fmtDatetimeShort } from '$lib/date';
 	import FluxVignette from '$lib/components/FluxVignette.svelte';
 	import FluxCorps from '$lib/components/FluxCorps.svelte';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
+	import { estPerimetreParDefaut } from '$lib/perimetres';
+	import { perimetresStore } from '$lib/stores/perimetres';
+	import { relire } from '$lib/utils';
 	import {
 		badgeClass,
 		estTicketUrgent,
@@ -78,17 +82,27 @@
 	$: photos = (item.meta?.photos_urls as string[] | undefined) ?? [];
 	$: fichiers = (item.meta?.fichiers_urls as string[] | undefined) ?? [];
 
-	$: perimetre = item.meta?.perimetre as string | undefined;
-	//  « Copropriété entière » n'apprend rien : c'est le cas par défaut.
+	//  🔴 Le serveur envoie désormais des CODES, plus un libellé (14/09/2026).
 	//
-	//  ⚠️ COMPARAISON DE LIBELLÉ EN DUR, et c'est une fragilité connue : `meta.perimetre`
-	//  arrive du serveur déjà mis en forme, si bien qu'`estPerimetreParDefaut()` — qui
-	//  travaille sur des CODES — ne s'applique pas ici. Renommer le nœud racine depuis
-	//  l'administration ferait donc réapparaître « 🔹 Toute la copropriété » sur chaque
-	//  ligne du fil. C'est la même famille de défaut que les tables de périmètres
-	//  recopiées (#316) ; le remède est côté API — ne pas envoyer le périmètre quand il
-	//  vaut le défaut —, pas ici.
-	$: perimetreAffiche = perimetre && perimetre !== 'Copropriété entière' ? perimetre : null;
+	//  La ligne d'avant comparait `meta.perimetre` à la chaîne « Copropriété
+	//  entière » — et le fichier le disait lui-même : *« comparaison de libellé en
+	//  dur, et c'est une fragilité connue »*. Renommer le nœud racine depuis
+	//  l'administration aurait fait réapparaître le badge sur CHAQUE ligne du fil.
+	//
+	//  Le remède annoncé était « côté API, ne pas envoyer le périmètre quand il
+	//  vaut le défaut ». C'était encore mettre la règle au mauvais endroit : le
+	//  serveur aurait décidé d'un rendu. Il envoie les codes, et la règle reste
+	//  là où elle est déjà écrite — `estPerimetreParDefaut`, puis
+	//  `BadgePerimetre`, qui ne rend rien quand il n'y a rien à dire.
+	//
+	//  ⚠️ `relire($perimetresStore, …)` : ces deux fonctions lisent l'arbre dans un
+	//  état de MODULE, que Svelte ne surveille pas (#947). Sans cette dépendance,
+	//  une carte rendue avant l'arrivée de l'arbre garderait son verdict.
+	$: perimetreCodes = (item.meta?.perimetre_codes as string[] | undefined) ?? [];
+	$: aPerimetre = relire(
+		$perimetresStore,
+		() => perimetreCodes.length > 0 && !estPerimetreParDefaut(perimetreCodes),
+	);
 	$: debut = item.meta?.debut as string | undefined;
 	$: aVenir = item.type === 'evenement' && debut ? new Date(debut) > new Date() : false;
 </script>
@@ -157,7 +171,7 @@
 				/>
 			{/if}
 		</div>
-		{#if item.badges.length > 0 || perimetreAffiche || aVenir || item.meta?.auteur}
+		{#if item.badges.length > 0 || aPerimetre || aVenir || item.meta?.auteur}
 			<div class="flux-badges">
 				<!-- La ligne est datée de l'annonce : sans ce repère, un événement
 				     à venir se lirait comme s'il avait déjà eu lieu. -->
@@ -166,15 +180,14 @@
 						>🗓️ prévu le {fmtDatetimeShort(String(debut))}</span
 					>
 				{/if}
-				<!--  🔴 `badge-gray`, comme sur les CARTES (18/08/2026). Le fil le rendait
-				      en `badge-blue` : le même périmètre changeait donc de couleur selon
-				      qu'on le lisait dans le fil ou dans la liste d'où il vient. Un objet
-				      se rend toujours pareil (R3) — et le bleu, ici, servait à le
-				      distinguer des badges d'état voisins, ce que le 🔹 fait déjà.
-				      Le `font-size` en ligne part avec : il est dans `.flux-badges`. -->
-				{#if perimetreAffiche}
-					<span class="badge badge-gray">🔹 {perimetreAffiche}</span>
-				{/if}
+				<!--  🔴 `BadgePerimetre` — le composant qui rend ce badge partout ailleurs
+				      (annonce, actualité, ticket, sondage, document…). Le fil le composait
+				      à la main : même glyphe, même classe, mais sa propre décision de
+				      l'afficher ou non. Un objet se rend toujours pareil (R3), et la
+				      décision est justement ce qui divergeait.
+				      Il ne rend RIEN quand le périmètre vaut le défaut — d'où l'absence
+				      de `{#if}` ici. -->
+				<BadgePerimetre perimetre={perimetreCodes} />
 				{#each item.badges as b (b)}
 					<span class="badge {badgeClass(item.type, b)}">{b}</span>
 				{/each}

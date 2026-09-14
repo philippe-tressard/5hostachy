@@ -22,7 +22,6 @@ from app.utils.perimetres import (
     a_portee_globale,
     batiments_cibles,
     parse_perimetres,
-    perimetre_label,
 )
 from .commun import ContexteFlux, auteur_nom, badges_marqueurs, strip_html
 from .schemas import FluxItem
@@ -146,7 +145,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 "ev_id": ev.id,
                 "type": ev.type,
                 "lieu": ev.lieu,
-                "perimetre": perimetre_label(perims),
+                "perimetre_codes": perims,
                 "auteur": auteur_nom(ctx.session, ev.auteur_id),
                 "prestataire": prest_name,
                 "debut": ev.debut.isoformat() if ev.debut else None,
@@ -218,7 +217,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 "ev_id": ev.id,
                 "type": ev.type,
                 "lieu": ev.lieu,
-                "perimetre": perimetre_label(perimetres_evenement(ev)),
+                "perimetre_codes": perimetres_evenement(ev),
                 "prestataire": prest.nom if prest else None,
                 "debut": ev.debut.isoformat() if ev.debut else None,
                 "fin": ev.fin.isoformat() if ev.fin else None,

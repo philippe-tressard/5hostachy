@@ -38,7 +38,6 @@ from app.utils.visibility import (
     ticket_visible,
 )
 
-from app.utils.perimetres import perimetre_label
 from .commun import ContexteFlux
 from .evenements import TYPE_EMOJI, perimetres_evenement
 from .schemas import FluxSante
@@ -80,7 +79,7 @@ def _prochains(ctx: ContexteFlux) -> list[dict]:
             "ev_type": ev.type,
             "description": ev.description,
             "lieu": ev.lieu,
-            "perimetre": perimetre_label(perimetres_evenement(ev)),
+            "perimetre_codes": perimetres_evenement(ev),
             "prestataire": prest_nom,
             "fin": ev.fin.isoformat() if ev.fin else None,
             "statut_kanban": ev.statut_kanban,
