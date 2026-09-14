@@ -427,7 +427,7 @@
 		font-style: italic;
 	}
 
-	@media (max-width: 700px) {
+	@media (max-width: 767px) {
 		.frise-row-header {
 			flex-direction: column;
 		}

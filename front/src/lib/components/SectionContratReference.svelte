@@ -147,7 +147,7 @@
 	/*  Sous 520 px, deux colonnes écrasent la valeur contre le libellé : on
 	    empile. C'est la même bascule que les autres listes de définitions du
 	    site — la responsivité appartient au composant qui porte le balisage. */
-	@media (max-width: 520px) {
+	@media (max-width: 767px) {
 		.ref-lecture {
 			grid-template-columns: 1fr;
 			gap: 0 0;

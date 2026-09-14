@@ -274,7 +274,7 @@
 		margin-top: 0.8rem;
 	}
 
-	@media (max-width: 700px) {
+	@media (max-width: 767px) {
 		.apercu-corps-cadre {
 			height: 300px;
 		}

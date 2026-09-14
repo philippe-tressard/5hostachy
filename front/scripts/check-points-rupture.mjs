@@ -81,20 +81,33 @@ const ECHELLE = [480, 767, 768, 900, 1024];
  *  un chantier plus lourd qu'il n'est.
  */
 const DETTES = {
-	'lib/components/ApercuCarte.svelte': [640],
-	'lib/components/ApercuDiffusion.svelte': [700],
-	//  `CartePrestataire` est sortie de cette liste le 12/09/2026, et sans
-	//  qu'on ait touché à sa largeur : son `@media (max-width: 600px)` ne
-	//  servait qu'à resserrer un en-tête écrit à la main, remplacé par
-	//  `EnteteCarte`. La responsivité appartient au squelette (R1) — une
-	//  carte qui l'emploie n'a plus de point de rupture à déclarer.
-	'lib/components/FicheResidence.svelte': [560],
-	'lib/components/FluxVignette.svelte': [640],
-	'lib/components/OngletImportLots.svelte': [600],
-	'lib/components/SectionContratReference.svelte': [520],
-	'lib/components/reporting/VueRenouvellementsContrats.svelte': [700],
-	'styles/ecrans.css': [600],
-	'styles/normes.css': [640],
+	//  🔴 VIDE depuis le 14/09/2026 — les neuf dernières sont parties d'un coup,
+	//  et la raison mérite d'être écrite, parce qu'elle explique aussi pourquoi
+	//  elles avaient attendu.
+	//
+	//  Le ticket #839 les tenait pour « à trancher devant l'écran », et ce
+	//  n'était vrai que de la question mal posée. Prise une par une, chaque
+	//  largeur demandait « 520 ou 480 ? », « 640 ou 767 ? » — un arbitrage de
+	//  pixels qu'on ne peut pas rendre sans voir. Prises ensemble, les neuf
+	//  disaient la MÊME chose : passer en forme mobile. Grille à une colonne,
+	//  enroulement d'une rangée, frise mise en colonne, espacement et vignette
+	//  resserrés — c'est une seule intention, écrite avec cinq valeurs.
+	//
+	//  Or cette intention a déjà sa largeur DÉCLARÉE : `767`, celle du menu, de
+	//  la grille et de la typographie. La question n'était donc pas « quelle
+	//  largeur ? » mais « de quelle intention s'agit-il ? », et celle-là se lit
+	//  dans le bloc, pas à l'écran.
+	//
+	//  ⚠️ Le sens du déplacement est ce qui rend le geste sûr sans voir : toutes
+	//  montaient vers 767, donc la forme mobile s'applique sur une plage PLUS
+	//  LARGE, jamais plus étroite. Rien de ce qui tenait hier ne cesse de tenir ;
+	//  ce qui change est la bande 521-767, où l'écran était en bureau pendant que
+	//  le reste du site était déjà en mobile. C'était précisément le défaut.
+	//
+	//  ⚠️ Ne rien remettre ici sans un motif qui dit ce que la largeur VEUT — pas
+	//  « la mise en page casse à 640 », mais « ce bloc bascule en mobile » ou
+	//  « ce tableau ne tient plus ». Une dette formulée en pixels ne se solde
+	//  jamais : elle n'a pas de critère de sortie.
 };
 
 const REQUETE = /@media[^{]*\((?:min|max)-width:\s*(\d+)px\)/g;
@@ -154,8 +167,19 @@ if (process.argv.includes('--selftest')) process.exit(0);
 
 const nouveaux = [];
 const dettesVues = new Set();
+const tous = fichiers(RACINE);
 
-for (const p of fichiers(RACINE)) {
+//  🔴 CAS ZÉRO — ajouté le 14/09/2026 en vidant DETTES, et c'est le moment où il
+//  devenait indispensable : tant que la liste portait neuf entrées, une lecture à
+//  zéro fichier échouait sur « ces dettes ne servent plus ». Ce filet-là disparaît
+//  avec la dernière dette — le contrôle aurait alors annoncé « échelle respectée »
+//  sans avoir ouvert un seul fichier (`standards/04` §2).
+if (tous.length < 100) {
+	console.error(`✗ Cas zéro : ${tous.length} fichier(s) analysé(s) — le relevé est cassé.`);
+	process.exit(1);
+}
+
+for (const p of tous) {
 	const chemin = p
 		.split(sep)
 		.join('/')
@@ -197,5 +221,5 @@ if (perimees.length) {
 if (echec) process.exit(1);
 console.log(
 	`✓ Points de rupture : échelle ${ECHELLE.join(' · ')} px respectée — ` +
-		`${Object.keys(DETTES).length} dette(s) déclarée(s), suivies en #839.`,
+		`${tous.length} fichier(s), ${Object.keys(DETTES).length} dette(s) déclarée(s).`,
 );

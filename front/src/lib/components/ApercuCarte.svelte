@@ -113,7 +113,7 @@
 		background: linear-gradient(to bottom, transparent, var(--color-surface));
 	}
 
-	@media (max-width: 640px) {
+	@media (max-width: 767px) {
 		.carte-apercu {
 			padding: 0 0.75rem 0.7rem;
 			gap: 0.6rem;

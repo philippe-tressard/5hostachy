@@ -111,7 +111,7 @@
 		line-height: 1;
 		opacity: 0.75;
 	}
-	@media (max-width: 640px) {
+	@media (max-width: 767px) {
 		.flux-vignette {
 			width: 48px;
 			height: 48px;
