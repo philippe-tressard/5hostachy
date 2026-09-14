@@ -48,12 +48,11 @@ from sqlmodel import Session, select
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    Notification, StatutAcces, Telecommande, Ticket, TicketEvolution,
-    Utilisateur, UserLot, Vigik,
+    StatutAcces, Telecommande, Ticket, Utilisateur, Vigik,
 )
 from app.models.copropriete import Lot
 from app.utils.acces_detachement import detacher_acces
-from app.utils.acces_perimetre import acces_deduit
+from app.utils.acces_gestes import _acces_json, _prevenir_porteur, _tracer_sur_ticket
 from app.utils.batiments import libelle_lot
 from app.utils.dates_fr import date_courte
 from app.utils.noms import nom_affiche
@@ -126,94 +125,6 @@ def _acces_admin_out(objets, session: Session) -> list[AccesAdminOut]:
     #  badge ? », un numéro gravé sur un objet physique.
     return sorted(sortie, key=lambda a: a.code)
 
-
-#  ── Ce que le badge ouvre, et ce qui en découle ────────────────────────────
-
-def _acces_json(session: Session, donne: Optional[list[str]],
-                lot_id: Optional[int], porteur_id: int) -> Optional[str]:
-    """Le périmètre à enregistrer : celui qu'on a saisi, sinon celui qu'on déduit.
-
-    ⚠️ **Une liste VIDE est une décision**, pas une absence : elle dit « on ne
-    sait pas », et on n'essaie alors pas de deviner à la place de qui l'a
-    effacée. Seul `None` — le champ non transmis — déclenche la déduction.
-
-    La règle de déduction vit dans `utils/acces_perimetre` : le bâtiment du lot,
-    ou celui des lots du porteur s'ils sont tous dans le même. La migration 0190
-    en porte l'équivalent SQL, et `test_acces_perimetre.py` vérifie que les deux
-    disent la même chose.
-    """
-    if donne is not None:
-        return json.dumps(donne, ensure_ascii=False) if donne else None
-
-    batiments: list = []
-    if lot_id:
-        lot = session.get(Lot, lot_id)
-        if lot:
-            batiments.append(lot.batiment_id)
-    if not batiments:
-        batiments = [
-            lot.batiment_id
-            for lot in session.exec(
-                select(Lot).join(UserLot, UserLot.lot_id == Lot.id)
-                .where(UserLot.user_id == porteur_id, UserLot.actif == True)  # noqa: E712
-            ).all()
-        ]
-    deduit = acces_deduit(batiments)
-    return json.dumps(deduit, ensure_ascii=False) if deduit else None
-
-
-def _tracer_sur_ticket(session: Session, ticket, auteur: Utilisateur,
-                       type_acces: TypeAcces, objet, verbe: str) -> None:
-    """Le geste s'inscrit dans le fil du ticket dont le numéro a été saisi.
-
-    ⚠️ Par une **entrée d'historique**, comme n'importe quel commentaire — pas
-    par une écriture directe dans le ticket. Le fil est la mémoire de l'objet, et
-    une ligne qui n'y passerait pas serait invisible de l'écran qui le lit.
-
-    ⚠️ Le type est `commentaire` : ce geste ne fait pas avancer le ticket, il
-    raconte ce qui a été fait. Choisir `etat` inscrirait une transition qui n'a
-    pas eu lieu.
-    """
-    if ticket is None:
-        return
-    perimetre = parse_json_perimetres(objet.perimetre_cible)
-    portee = perimetre_label(perimetre) if perimetre else "non précisé"
-    session.add(TicketEvolution(
-        ticket_id=ticket.id,
-        type="commentaire",
-        contenu=(
-            f"{type_acces.libelle} {objet.code} {verbe} — accès : {portee}."
-        ),
-        auteur_id=auteur.id,
-    ))
-    session.commit()
-
-
-def _prevenir_porteur(session: Session, porteur: Utilisateur,
-                      type_acces: TypeAcces, objet) -> None:
-    """Le porteur apprend qu'un accès est enregistré à son nom.
-
-    ⚠️ **Une notification dans l'application, pas un courriel** — et c'est une
-    limite que je nomme plutôt que de la masquer. Le ticket demande « un mail
-    notifie le demandeur s'il a un mail » ; l'envoi passe par un MODÈLE stocké en
-    base, et en créer un demande une migration qui le pose (sans quoi il part
-    vide : c'est l'incident du modèle BOUCHON, 09/09/2026). Ce lot livre donc la
-    notification, et le courriel suit avec son modèle.
-
-    ⚠️ Rien n'est envoyé si le porteur n'a pas d'adresse — la demande le dit
-    (« s'il a un mail »), et une notification sans destinataire n'est pas une
-    notification.
-    """
-    perimetre = parse_json_perimetres(objet.perimetre_cible)
-    portee = perimetre_label(perimetre) if perimetre else "non précisé"
-    session.add(Notification(
-        destinataire_id=porteur.id,
-        type=type_acces.cle,
-        titre=f"{type_acces.libelle} enregistré à votre nom",
-        corps=f"{objet.code} — accès : {portee}.",
-        lien="/mon-lot",
-    ))
-    session.commit()
 
 class AccesAdminBody(BaseModel):
     """Ce que le conseil syndical saisit — à la création comme à la correction.
