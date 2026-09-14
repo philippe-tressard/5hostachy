@@ -39,14 +39,26 @@ export interface AccesAdmin {
 	cree_le: string;
 }
 
+/**  Ce qu'un type d'accès a le droit d'ouvrir, et comment son défaut se décide.
+ *
+ *   ⚠️ `suitLeLot` n'est pas cosmétique : sans lui, l'écran devrait écrire
+ *   `type === 'vigik'` pour choisir son libellé d'aide — reconnaître un type par
+ *   son nom, exactement ce que le descripteur `TypeAcces` a supprimé côté
+ *   serveur. Un objet dit ce qu'il est ; on ne le devine pas à sa clé. */
+export interface ChoixAcces {
+	codes: string[];
+	suit_le_lot: boolean;
+}
+
 export const acces = {
 	mesVigiks: () => api.get<any[]>('/acces/mes-vigiks'),
 	mesTelecommandes: () => api.get<any[]>('/acces/mes-telecommandes'),
 	creerCommande: (data: unknown) => api.post<any>('/acces/commandes', data),
 	signalerVigiKPerdu: (id: number) => api.patch(`/acces/vigiks/${id}/perdu`, {}),
 	signalerTcPerdu: (id: number) => api.patch(`/acces/telecommandes/${id}/perdu`, {}),
-	supprimerVigik: (id: number) => api.delete(`/acces/vigiks/${id}`),
-	supprimerTc: (id: number) => api.delete(`/acces/telecommandes/${id}`),
+	//  🔴 `supprimerVigik` et `supprimerTc` sont partis le 15/09/2026, avec
+	//  leurs routes : un résident ne supprime pas un accès, il signale une perte.
+	//  La suppression définitive reste à l'administrateur (`supprimerAcces`).
 	declarerBadge: (data: { type: string; code: string }) =>
 		api.post<any>('/acces/declarer-badge', data),
 	//  ── CS/Admin — LE PARC : qui a quoi, et que peut-on en faire ──────────────
@@ -68,6 +80,17 @@ export const acces = {
 	//  bâti dessus aurait affiché « badge 4521 → utilisateur 37 ». Une route sans
 	//  appelant n'est jamais mise à l'épreuve de la question à laquelle elle est
 	//  censée répondre.
+	//  🔹 Ce que chaque type d'accès a le DROIT d'ouvrir, par clé de type.
+	//
+	//  ⚠️ L'écran s'en sert pour PROPOSER ; ce qui contraint est la validation
+	//  côté serveur, sur les deux gestes d'écriture. Une restriction qui ne
+	//  vivrait que dans le formulaire n'en serait pas une — la route accepterait
+	//  toujours n'importe quel code.
+	//
+	//  ⚠️ Des codes, pas des libellés : l'écran les met en forme depuis l'arbre
+	//  qu'il a déjà chargé, comme `BadgePerimetre` et `PerimetrePicker` partout
+	//  ailleurs. Deux mises en forme du même objet, c'est la divergence de demain.
+	choixAcces: () => api.get<Record<string, ChoixAcces>>('/acces/admin/choix-acces'),
 	listVigiks: () => api.get<AccesAdmin[]>('/acces/admin/vigiks'),
 	listTelecommandes: () => api.get<AccesAdmin[]>('/acces/admin/telecommandes'),
 	//  Le TYPE est un paramètre de chemin, pas deux méthodes : `vigik` et

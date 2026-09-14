@@ -24,7 +24,7 @@ from app.models.core import (
     Utilisateur, UserLot, Lot,
 )
 from app.schemas import CommandeAccesCreate, CommandeAccesRead
-from app.utils.acces_detachement import detacher_acces
+from app.routers.acces.vues import AccesOut
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 from app.utils.destinataires import membres_cs_notifiables
 from app.utils.noms import nom_affiche
@@ -60,12 +60,20 @@ def _acces_du_porteur(session: Session, type_acces: TypeAcces, objet_id: int,
     return objet
 
 
-def _mes_acces(session: Session, type_acces: TypeAcces, user: Utilisateur) -> list:
+def _mes_acces(session: Session, type_acces: TypeAcces,
+               user: Utilisateur) -> list[AccesOut]:
     """Les accès d'un porteur : les siens, plus ceux qui lui sont attribués.
 
     ⚠️ Le dédoublonnage n'est pas décoratif : un copropriétaire peut être à la
     fois porteur direct et attributaire du même objet, et la liste l'affichait
     alors deux fois.
+
+    🔴 **Une VUE, plus l'objet brut** (15/09/2026, demandé à l'écran : *« ajouter
+    la colonne Accès »*). La liste rendait `session.exec(select(Vigik))` tel
+    quel, donc `perimetre_cible` sous sa forme de stockage — la chaîne
+    `'["bat:2"]'` là où l'écran attend une liste de codes. Parser côté écran
+    aurait fait une seconde lecture du même champ ; `AccesOut` la fait une fois,
+    et la vue du conseil syndical en dérive.
     """
     modele = type_acces.modele
     champ = getattr(type_acces.modele_attribution, type_acces.colonne_attribution)
@@ -80,7 +88,7 @@ def _mes_acces(session: Session, type_acces: TypeAcces, user: Utilisateur) -> li
         if objet.id not in vus:
             vus.add(objet.id)
             sortie.append(objet)
-    return sortie
+    return AccesOut.depuis(session, type_acces, sortie)
 
 
 def _signaler_perdu(session: Session, type_acces: TypeAcces, objet_id: int,
@@ -92,20 +100,26 @@ def _signaler_perdu(session: Session, type_acces: TypeAcces, objet_id: int,
     return {"statut": objet.statut}
 
 
-def _supprimer_acces(session: Session, type_acces: TypeAcces, objet_id: int,
-                     user: Utilisateur) -> None:
-    """L'attribution part, la ligne d'import se délie, l'objet disparaît.
-
-    Le pourquoi du détachement est dans `utils/acces_detachement.py`.
-    """
-    _acces_du_porteur(session, type_acces, objet_id, user)
-    detacher_acces(
-        session, objet_id,
-        type_acces.modele_attribution, type_acces.colonne_attribution,
-        type_acces.modele_import, type_acces.colonne_import,
-    )
-    session.delete(session.get(type_acces.modele, objet_id))
-    session.commit()
+#  🔴 `_supprimer_acces` A ÉTÉ RETIRÉ LE 15/09/2026, avec ses deux routes —
+#  demandé à l'écran :
+#
+#      « sur la page Mes lots & accès : enlève la poubelle. Un résident ne peut
+#        pas supprimer un accès, il peut juste signaler qu'il a perdu. »
+#
+#  Et c'est une correction de FOND, pas de présentation. Le geste détruisait la
+#  ligne : l'attribution partait, l'import se déliait, l'objet disparaissait.
+#  Or **le badge, lui, existe toujours** — il est dans une poche, dans un tiroir,
+#  ou perdu. Le parc cessait de pouvoir dire qu'il circule, et l'import le
+#  reproposait à la résolution suivante comme s'il n'avait jamais été remis.
+#
+#  C'est la règle déjà déployée partout : archiver sur la vue principale,
+#  supprimer réservé à l'admin (`ux-patterns` §8). Elle vaut ici aussi — et la
+#  suppression définitive existe, chez l'administrateur, sur l'écran du parc.
+#
+#  ⚠️ Retirer le bouton **sans retirer la route** aurait laissé le geste
+#  accessible à qui appelle l'API directement : un écran n'est pas un contrôle
+#  d'accès. Le détachement, lui, reste employé par le parc — il vit dans
+#  `utils/acces_detachement`, et c'est pour cela qu'il n'était pas écrit ici.
 
 
 def _declarer_acces(session: Session, type_acces: TypeAcces, code: str,
@@ -276,24 +290,6 @@ def signaler_tc_perdu(
     user: Utilisateur = Depends(get_current_user),
 ):
     return _signaler_perdu(session, TELECOMMANDE, tc_id, user)
-
-
-@router.delete("/vigiks/{vigik_id}", status_code=204)
-def supprimer_vigik(
-    vigik_id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    _supprimer_acces(session, VIGIK, vigik_id, user)
-
-
-@router.delete("/telecommandes/{tc_id}", status_code=204)
-def supprimer_telecommande(
-    tc_id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    _supprimer_acces(session, TELECOMMANDE, tc_id, user)
 
 
 class DeclarerBadgeBody(BaseModel):

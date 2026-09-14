@@ -27,6 +27,28 @@
 	/** Ajoute l'astérisque des champs requis. */
 	export let requis = true;
 
+	/**  🔒 **La liste FERMÉE des codes proposables**, ou `null` pour tout l'arbre.
+	 *
+	 *   Demandé le 15/09/2026 pour les badges : *« est-ce possible de restreindre
+	 *   que le périmètre soit parmi… »*. Un accès n'est pas un périmètre libre —
+	 *   un badge ne commande pas « Bât. 2 › Local poubelles », qui n'a pas de
+	 *   serrure.
+	 *
+	 *   ⚠️ C'est une prop de CE composant, et non un second sélecteur : la notion
+	 *   « choisir un périmètre » s'écrit une fois (`standards/11` §1). L'appelant
+	 *   restreint ; il n'invente ni pastille, ni mise en forme, ni second niveau.
+	 *
+	 *   ⚠️ **L'écran propose, il ne protège pas.** La même liste est opposée à la
+	 *   requête côté serveur (`utils/acces_choix`) : une restriction qui ne
+	 *   vivrait qu'ici laisserait passer le premier appel direct.
+	 *
+	 *   ⚠️ Une liste **vide** vaut « aucune restriction », pas « rien n'est
+	 *   possible » : c'est le cas zéro d'une copropriété dont l'arbre n'est pas
+	 *   configuré, et le serveur en dit autant. Bloquer là transformerait une
+	 *   donnée absente en écran mort.
+	 */
+	export let codesAutorises: string[] | null = null;
+
 	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
@@ -46,6 +68,29 @@
 	//  10/09/2026 : le filtre du carnet d'entretien a besoin de la même rangée,
 	//  et deux calculs auraient divergé au premier périmètre créé en admin.
 	$: niveau1 = perimetresNiveau1($perimetresStore, defaut);
+
+	//  🔒 La restriction s'applique APRÈS la règle de premier niveau, jamais à sa
+	//  place : `perimetresNiveau1` dit ce qu'est une tête de rangée (la règle du
+	//  carnet d'entretien, partagée), la liste dit lesquelles sont proposables.
+	//  Les fondre ferait de `codesAutorises` une seconde définition du premier
+	//  niveau — libre de diverger de celle du carnet.
+	$: restreint = codesAutorises !== null && codesAutorises.length > 0;
+	$: permis = new Set(codesAutorises ?? []);
+	//  Un nœud restreint peut être de SECOND niveau — un portail sous « Parking »,
+	//  un portillon sous « Extérieurs ». La rangée unique les remonte donc au même
+	//  rang : hiérarchiser deux choix ferait d'un clic un parcours.
+	//
+	//  ⚠️ **Ce qui est DÉJÀ retenu figure dans la rangée même s'il n'est plus
+	//  autorisé** — un badge enregistré avant la restriction, ou après un
+	//  remaniement de l'arborescence. Le masquer le rendrait invisible ET
+	//  indéracinable : la valeur partirait quand même à l'enregistrement, et le
+	//  serveur la refuserait sans que rien à l'écran ne dise laquelle. La montrer
+	//  la rend retirable, ce qui est le seul geste utile.
+	$: choixRestreints = restreint
+		? actifs
+				.filter((n) => permis.has(n.code) || selection.has(n.code))
+				.sort((a, b) => a.ordre - b.ordre || a.code.localeCompare(b.code))
+		: [];
 
 	const codesNiveau1 = (liste: Perimetre[]) => new Set(liste.map((n) => n.code));
 
@@ -207,7 +252,11 @@
 			s.add(code);
 		}
 
-		value = s.size > 0 ? [...s] : defaut ? [defaut] : [];
+		//  🔴 Sous restriction, vider veut dire VIDE : retomber sur « Copropriété
+		//  entière » poserait un périmètre que la liste n'autorise peut-être pas —
+		//  une télécommande ne l'ouvre pas — et l'enregistrement se ferait refuser
+		//  pour une valeur que personne n'a choisie.
+		value = s.size > 0 ? [...s] : restreint ? [] : defaut ? [defaut] : [];
 		dispatch('change', value);
 	}
 </script>
@@ -238,13 +287,33 @@
 			>{/if}
 	</div>
 {/if}
-<div class="perimetre-pills">
-	{#if defaut}
-		<Pastille active={estDefaut} icone={noeudDefaut?.icone ?? ''} on:click={choisirDefaut}>
-			{noeudDefaut?.libelle ?? defaut}
-		</Pastille>
-	{/if}
-	<!--  🔴 La pastille se CONTRACTE quand sa rangée se referme (18/08/2026).
+{#if restreint}
+	<!--  🔴 UNE SEULE RANGÉE, sans second niveau ni chevron : la liste est déjà
+	      courte et déjà choisie. Rouvrir l'arborescence ici proposerait de
+	      « préciser dans » un nœud dont aucun enfant n'est autorisé — on
+	      montrerait une porte fermée.
+
+	      Mêmes pastilles, même composant, même `basculer()` : seules les têtes
+	      changent. C'est ce qui garde une notion et un rendu (`standards/11` §1),
+	      là où un second sélecteur aurait divergé au premier ajustement. -->
+	<div class="perimetre-pills">
+		{#each choixRestreints as n (n.code)}
+			<Pastille
+				active={selection.has(n.code)}
+				icone={n.icone ?? ''}
+				privatif={n.privatif}
+				on:click={() => basculer(n.code)}>{n.libelle}</Pastille
+			>
+		{/each}
+	</div>
+{:else}
+	<div class="perimetre-pills">
+		{#if defaut}
+			<Pastille active={estDefaut} icone={noeudDefaut?.icone ?? ''} on:click={choisirDefaut}>
+				{noeudDefaut?.libelle ?? defaut}
+			</Pastille>
+		{/if}
+		<!--  🔴 La pastille se CONTRACTE quand sa rangée se referme (18/08/2026).
 	      Choisir un autre bâtiment fait disparaître la rangée de précision du
 	      précédent — et avec elle, à l'écran, les espaces qu'on venait d'y
 	      cocher. Ils restaient pourtant sélectionnés : la valeur était juste et
@@ -258,9 +327,9 @@
 
 	      `libelle_court` pour les enfants : la pastille est en `nowrap`, et trois
 	      libellés longs la feraient déborder de la largeur du téléphone. -->
-	{#each niveau1 as n (n.code)}
-		{@const choisis = enfantsChoisis(n.code)}
-		<!--  🔴 LE RÉSUMÉ EST PERMANENT (18/08/2026, signalé à l'écran). Il
+		{#each niveau1 as n (n.code)}
+			{@const choisis = enfantsChoisis(n.code)}
+			<!--  🔴 LE RÉSUMÉ EST PERMANENT (18/08/2026, signalé à l'écran). Il
 		      n'apparaissait qu'une fois la rangée refermée : en précisant « Toit »
 		      dans le bâtiment 3, on ne voyait donc RIEN changer sur le bâtiment 3
 		      lui-même — « le dernier enfant sélectionné, on ne sait pas s'il a été
@@ -275,8 +344,8 @@
 		      résumé et dans la rangée. Ce n'est pas une redite mais un RETOUR — la
 		      rangée dit ce qu'on PEUT choisir, le résumé ce qui EST retenu. C'est
 		      justement leur écart qui manquait. -->
-		{@const contracte = choisis.length > 0}
-		<!--  🔴 LA MÈRE RESTE PLEINE dès qu'un de ses espaces est retenu, rangée
+			{@const contracte = choisis.length > 0}
+			<!--  🔴 LA MÈRE RESTE PLEINE dès qu'un de ses espaces est retenu, rangée
 		      ouverte ou non (18/08/2026, ARBITRAGE CORRIGÉ PAR L'ÉCRAN).
 
 		      J'avais conditionné cela à `contracte`, en craignant qu'une mère pleine
@@ -295,20 +364,21 @@
 		      ⚠️ La VALEUR ne change pas : `basculer()` retire toujours le bâtiment
 		      quand on précise un espace (`s.delete(racine)`). C'est bien l'ascenseur
 		      qui est ciblé, pas le bâtiment entier — seule la lecture est corrigée. -->
-		<Pastille
-			active={!estDefaut && (selection.has(n.code) || choisis.length > 0)}
-			icone={n.icone ?? ''}
-			chevron={aDesEnfants.has(n.code) && !contracte}
-			privatif={n.privatif && !contracte}
-			on:click={() => basculer(n.code)}
-			>{n.libelle}{#if contracte}<span class="perimetre-resume">
-					› {choisis.map((e) => e.libelle_court || e.libelle).join(SEPARATEUR_ELEMENT)}</span
-				>{/if}</Pastille
-		>
-	{/each}
-</div>
+			<Pastille
+				active={!estDefaut && (selection.has(n.code) || choisis.length > 0)}
+				icone={n.icone ?? ''}
+				chevron={aDesEnfants.has(n.code) && !contracte}
+				privatif={n.privatif && !contracte}
+				on:click={() => basculer(n.code)}
+				>{n.libelle}{#if contracte}<span class="perimetre-resume">
+						› {choisis.map((e) => e.libelle_court || e.libelle).join(SEPARATEUR_ELEMENT)}</span
+					>{/if}</Pastille
+			>
+		{/each}
+	</div>
+{/if}
 
-{#if niveau2.length > 0}
+{#if niveau2.length > 0 && !restreint}
 	<div class="perimetre-niveau2">
 		<p class="perimetre-precision">
 			Préciser dans {parCode.get(parentOuvert ?? '')?.libelle ?? ''}

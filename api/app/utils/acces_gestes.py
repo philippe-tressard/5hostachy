@@ -19,6 +19,7 @@ from sqlmodel import Session, select
 
 from app.models.copropriete import Lot
 from app.models.core import Notification, TicketEvolution, UserLot, Utilisateur
+from app.utils.acces_choix import acces_par_defaut
 from app.utils.acces_perimetre import acces_deduit
 from app.utils.perimetres import parse_json_perimetres, perimetre_label
 from app.utils.types_acces import TypeAcces
@@ -26,7 +27,7 @@ from app.utils.types_acces import TypeAcces
 
 #  ── Ce que le badge ouvre, et ce qui en découle ────────────────────────────
 
-def _acces_json(session: Session, donne: Optional[list[str]],
+def _acces_json(session: Session, type_acces: TypeAcces, donne: Optional[list[str]],
                 lot_id: Optional[int], porteur_id: int) -> Optional[str]:
     """Le périmètre à enregistrer : celui qu'on a saisi, sinon celui qu'on déduit.
 
@@ -34,13 +35,22 @@ def _acces_json(session: Session, donne: Optional[list[str]],
     sait pas », et on n'essaie alors pas de deviner à la place de qui l'a
     effacée. Seul `None` — le champ non transmis — déclenche la déduction.
 
+    🔴 **La déduction dépend du TYPE** (14/09/2026, signalé à l'écran) : un vigik
+    ouvre le bâtiment où l'on habite, une télécommande ouvre des portails —
+    toujours les mêmes. C'est le descripteur qui le dit (`acces_suit_le_lot`), et
+    `utils/acces_choix` qui sait où sont ces portails.
+
     La règle de déduction vit dans `utils/acces_perimetre` : le bâtiment du lot,
     ou celui des lots du porteur s'ils sont tous dans le même. La migration 0190
-    en porte l'équivalent SQL, et `test_acces_perimetre.py` vérifie que les deux
-    disent la même chose.
+    en porte l'équivalent SQL, la 0191 la corrige pour les télécommandes, et
+    `test_acces_perimetre.py` vérifie que les deux disent la même chose.
     """
     if donne is not None:
         return json.dumps(donne, ensure_ascii=False) if donne else None
+
+    if not type_acces.acces_suit_le_lot:
+        fixe = acces_par_defaut(session, type_acces)
+        return json.dumps(fixe, ensure_ascii=False) if fixe else None
 
     batiments: list = []
     if lot_id:

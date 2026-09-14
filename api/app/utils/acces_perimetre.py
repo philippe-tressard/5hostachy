@@ -29,6 +29,8 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
+from app.utils.perimetres import perimetre_du_batiment
+
 #: Le préfixe d'un code de périmètre de bâtiment — la convention du seed.
 #:
 #: ⚠️ Il est écrit ici parce qu'on CONSTRUIT un code, pas parce qu'on en
@@ -39,8 +41,21 @@ PREFIXE_BATIMENT = "bat:"
 
 
 def code_batiment(batiment_id: int) -> str:
-    """Le code de périmètre d'un bâtiment : `bat:3`."""
-    return f"{PREFIXE_BATIMENT}{batiment_id}"
+    """Le code de périmètre d'un bâtiment — celui de l'ARBRE, sinon la convention.
+
+    🔴 L'arbre d'abord (14/09/2026). La première version fabriquait toujours
+    `bat:3`, et cela tenait tant que personne ne comparait ce code à l'arbre. Ce
+    n'est plus vrai : depuis que la liste des accès autorisés est calculée sur
+    les nœuds réels (`utils/acces_choix`), un code fabriqué qui ne serait pas
+    celui du nœud se ferait refuser par la validation — la déduction et la
+    restriction se contrediraient sur le même badge.
+
+    ⚠️ Le repli sur la convention du seed reste, et il sert : sur un arbre vide —
+    un test unitaire, une base neuve — il n'y a rien à lire, et rendre `None`
+    ferait échouer une déduction qui est par ailleurs juste.
+    """
+    noeud = perimetre_du_batiment(batiment_id)
+    return noeud.code if noeud else f"{PREFIXE_BATIMENT}{batiment_id}"
 
 
 def acces_deduit(batiments: Iterable[Optional[int]]) -> Optional[list[str]]:

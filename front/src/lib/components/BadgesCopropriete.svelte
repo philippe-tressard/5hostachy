@@ -36,7 +36,13 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { acces as accesApi, admin as adminApi, ApiError, type AccesAdmin } from '$lib/api';
+	import {
+		acces as accesApi,
+		admin as adminApi,
+		ApiError,
+		type AccesAdmin,
+		type ChoixAcces,
+	} from '$lib/api';
 	import { isAdmin } from '$lib/stores/auth';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireAcces from '$lib/components/FormulaireAcces.svelte';
@@ -72,6 +78,18 @@
 	//  sur demande explicite — le conseil syndical remet des badges en main
 	//  propre, et rien ne le lui permettait.
 	let porteurs: { id: number; nom: string }[] = [];
+	/**  🔒 Ce que chaque type d'accès a le droit d'ouvrir, par clé de type.
+	 *
+	 *   Demandé le 15/09/2026 : un vigik ouvre la copropriété, un bâtiment ou un
+	 *   portillon ; une télécommande, les portails. La liste vient du SERVEUR,
+	 *   qui la calcule sur l'arborescence administrée — l'écrire ici en ferait
+	 *   une seconde liste, et c'est celle de l'écran qu'on aurait oublié de
+	 *   mettre à jour.
+	 *
+	 *   ⚠️ Elle ne protège rien : la même liste est opposée à la requête sur les
+	 *   deux gestes d'écriture. Ici elle PROPOSE, et c'est tout ce qu'un écran
+	 *   sait faire. */
+	let choixAcces: Record<string, ChoixAcces> = {};
 	let formOuvert = false;
 	let editId: string | null = null;
 	let enregistrement = false;
@@ -177,6 +195,7 @@
 				id: u.id,
 				nom: nomAffiche(u),
 			}));
+			choixAcces = await accesApi.choixAcces();
 		} catch (e) {
 			erreur = e instanceof ApiError ? e.message : 'Chargement impossible';
 		} finally {
@@ -303,6 +322,7 @@
 		<FormulaireAcces
 			types={TYPES}
 			{porteurs}
+			{choixAcces}
 			bind:saisie
 			{enregistrement}
 			cle="creation"
@@ -341,6 +361,7 @@
 					<FormulaireAcces
 						types={TYPES}
 						{porteurs}
+						{choixAcces}
 						bind:saisie
 						modeEdition
 						{enregistrement}

@@ -50,19 +50,19 @@ from app.database import get_session
 from app.models.core import (
     StatutAcces, Telecommande, Ticket, Utilisateur, Vigik,
 )
-from app.models.copropriete import Lot
+from app.routers.acces.vues import AccesOut
+from app.utils.acces_choix import codes_autorises, valider_acces
 from app.utils.acces_detachement import detacher_acces
 from app.utils.acces_gestes import _acces_json, _prevenir_porteur, _tracer_sur_ticket
-from app.utils.batiments import libelle_lot
 from app.utils.dates_fr import date_courte
 from app.utils.noms import nom_affiche
 from app.utils.perimetres import parse_json_perimetres, perimetre_label
-from app.utils.types_acces import TYPES_ACCES, TypeAcces
+from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 
 router = APIRouter()
 
 
-class AccesAdminOut(BaseModel):
+class AccesAdminOut(AccesOut):
     """Un badge tel que le conseil syndical a besoin de le VOIR.
 
     🔴 Les deux listes rendaient l'objet BRUT (`select(Vigik)`), donc `user_id`
@@ -73,52 +73,40 @@ class AccesAdminOut(BaseModel):
     C'est pourquoi enrichir la lecture faisait partie du lot qui l'expose : une
     route sans appelant n'est jamais mise à l'épreuve de la question à laquelle
     elle est censée répondre (#805).
+
+    ## Ce qu'elle AJOUTE, et rien d'autre (15/09/2026)
+
+    Elle **dérive** de la vue du porteur (`routers/acces/vues`) depuis que
+    celui-ci a besoin de voir ce que son badge ouvre : les champs communs sont
+    déclarés une fois, et seuls les trois qui répondent à « qui détient quoi ? »
+    sont ici. Deux modèles jumeaux auraient divergé au premier ajout — c'est
+    exactement ce qui était arrivé au `lot_id`.
     """
-    id: int
-    code: str
-    statut: StatutAcces
-    chez_locataire: bool
     porteur_nom: str
     porteur_id: int
     lot_libelle: Optional[str] = None
-    lot_id: Optional[int] = None
-    #: 🔹 Ce que le badge OUVRE — des CODES de périmètre, pas un libellé.
-    #:
-    #: ⚠️ L'écran les met en forme lui-même (`BadgePerimetre`), comme partout
-    #: ailleurs : envoyer un libellé obligerait le serveur à décider d'un rendu,
-    #: et c'est le défaut que le fil d'activité portait jusqu'au 14/09/2026 — il
-    #: comparait « Copropriété entière » à une chaîne écrite en dur.
-    perimetre_cible: list[str] = []
-    cree_le: datetime
 
 
-def _acces_admin_out(objets, session: Session) -> list[AccesAdminOut]:
+def _acces_admin_out(objets, session: Session,
+                     type_acces: TypeAcces) -> list[AccesAdminOut]:
     """Sérialise une liste de Vigik OU de Telecommande — les deux ont les mêmes
-    champs utiles, et deux fonctions jumelles auraient divergé au premier ajout."""
+    champs utiles, et deux fonctions jumelles auraient divergé au premier ajout.
+
+    ⚠️ Le TYPE est requis depuis le 15/09/2026 : la colonne « Lot » dépend de
+    la NATURE de l'accès (`libelle_lots`), et la déduire de la classe de l'objet
+    ferait une seconde table de correspondance à côté de `TYPES_ACCES`.
+    """
     sortie = []
     for o in objets:
         porteur = session.get(Utilisateur, o.user_id)
-        lot = session.get(Lot, o.lot_id) if o.lot_id else None
         sortie.append(
             AccesAdminOut(
-                id=o.id,
-                code=o.code,
-                statut=o.statut,
-                chez_locataire=o.chez_locataire,
+                **AccesOut.champs_communs(session, type_acces, o),
                 #  Le nom passe par `nom_affiche` : « Prénom NOM », comme partout
                 #  ailleurs. Un `f"{prenom} {nom}"` local serait la 35e écriture
                 #  de cette règle.
                 porteur_nom=nom_affiche(porteur.prenom, porteur.nom) if porteur else "—",
                 porteur_id=o.user_id,
-                #  🔴 `f"{lot.type}"` rendait « TypeLot.appartement 314 » — la
-                #  représentation Python de l'enum, jusque sur l'écran du CS
-                #  (12/09/2026, signalé à l'écran). Le libellé est écrit UNE
-                #  fois, dans `utils/batiments`, et trois autres endroits le
-                #  composaient déjà correctement à la main.
-                lot_libelle=libelle_lot(lot),
-                lot_id=o.lot_id,
-                perimetre_cible=parse_json_perimetres(o.perimetre_cible),
-                cree_le=o.cree_le,
             )
         )
     #  Par code : c'est ce qu'on a sous les yeux quand on cherche « à qui est ce
@@ -221,13 +209,16 @@ def creer_acces_admin(
         raise HTTPException(400, f"{type_acces.libelle} déjà enregistré pour cette personne")
 
     ticket = _ticket_par_numero(session, body.ticket_numero)
+    valider_acces(session, type_acces, body.perimetre_cible)
 
     objet = type_acces.modele(
         code=code,
         user_id=porteur.id,
         lot_id=body.lot_id,
         statut=body.statut or StatutAcces.actif,
-        perimetre_cible=_acces_json(session, body.perimetre_cible, body.lot_id, porteur.id),
+        perimetre_cible=_acces_json(
+            session, type_acces, body.perimetre_cible, body.lot_id, porteur.id,
+        ),
     )
     session.add(objet)
     session.commit()
@@ -235,7 +226,7 @@ def creer_acces_admin(
 
     _tracer_sur_ticket(session, ticket, user, type_acces, objet, "enregistré")
     _prevenir_porteur(session, porteur, type_acces, objet)
-    return _acces_admin_out([objet], session)[0]
+    return _acces_admin_out([objet], session, type_acces)[0]
 
 
 @router.patch("/admin/{type_cle}/{objet_id}", response_model=AccesAdminOut)
@@ -258,6 +249,10 @@ def modifier_acces_admin(
         raise HTTPException(422, "Type invalide : " + " ou ".join(TYPES_ACCES))
     objet = _acces_admin(session, type_acces, objet_id)
     ticket = _ticket_par_numero(session, body.ticket_numero)
+    #  🔒 La MÊME validation qu'à la création, et c'est tout l'intérêt de la
+    #  sortir du formulaire : une restriction qui ne vivrait que dans l'écran
+    #  laisserait la correction ouverte à ce que la création refuse.
+    valider_acces(session, type_acces, body.perimetre_cible)
 
     if body.code is not None:
         code = body.code.strip()
@@ -282,7 +277,7 @@ def modifier_acces_admin(
     session.commit()
     session.refresh(objet)
     _tracer_sur_ticket(session, ticket, user, type_acces, objet, "corrigé")
-    return _acces_admin_out([objet], session)[0]
+    return _acces_admin_out([objet], session, type_acces)[0]
 
 
 @router.delete("/admin/{type_cle}/{objet_id}", status_code=204)
@@ -322,7 +317,7 @@ def list_vigiks(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Tous les badges Vigik de la copropriété, avec leur porteur."""
-    return _acces_admin_out(session.exec(select(Vigik)).all(), session)
+    return _acces_admin_out(session.exec(select(Vigik)).all(), session, VIGIK)
 
 
 @router.get("/admin/telecommandes", response_model=list[AccesAdminOut])
@@ -331,7 +326,9 @@ def list_telecommandes(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Toutes les télécommandes de parking, avec leur porteur."""
-    return _acces_admin_out(session.exec(select(Telecommande)).all(), session)
+    return _acces_admin_out(
+        session.exec(select(Telecommande)).all(), session, TELECOMMANDE,
+    )
 
 
 #  🔴 TROIS ROUTES D'ÉCRITURE SUPPRIMÉES ICI le 06/09/2026 (#805), sur arbitrage :
@@ -361,6 +358,44 @@ def list_telecommandes(
 #  question qu'aucun autre écran ne sait poser — « quels badges circulent, et
 #  chez qui ? ». C'est le seul trou réel qu'avait ce domaine.
 
+class ChoixAccesOut(BaseModel):
+    """Ce qu'un type d'accès peut ouvrir, et comment son défaut se décide."""
+
+    codes: list[str]
+    #: 🔴 Dit à l'écran quelle aide afficher — « il est déduit du lot » ou « elle
+    #: reçoit les portails ». Sans cela, le formulaire devrait écrire
+    #: `type === 'vigik'`, c'est-à-dire reconnaître un type par son nom : la
+    #: faute même que `TypeAcces` a supprimée côté serveur, réintroduite à
+    #: l'écran.
+    suit_le_lot: bool
+
+
+@router.get("/admin/choix-acces", response_model=dict[str, ChoixAccesOut])
+def choix_acces(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Ce que chaque type d'accès a le droit d'ouvrir — par clé de type.
+
+    ⚠️ Des **codes**, pas des libellés : l'écran les met en forme lui-même à
+    partir de l'arbre qu'il a déjà chargé, comme `BadgePerimetre` et
+    `PerimetrePicker` le font partout ailleurs. Renvoyer des libellés obligerait
+    le serveur à décider d'un rendu, et ferait de cette route un second endroit
+    où le nom d'un périmètre s'écrit.
+
+    ⚠️ Cette route **informe** l'écran ; elle ne le contraint pas. Ce qui
+    contraint, c'est `valider_acces` sur les deux gestes d'écriture — un écran
+    est une commodité, jamais un contrôle d'accès.
+    """
+    return {
+        cle: ChoixAccesOut(
+            codes=codes_autorises(session, type_acces),
+            suit_le_lot=type_acces.acces_suit_le_lot,
+        )
+        for cle, type_acces in TYPES_ACCES.items()
+    }
+
+
 #: Les colonnes de l'export, dans l'ordre — un seul fichier pour les deux types
 #: (arbitré le 14/09/2026). Un fichier se trie et se filtre dans un tableur ;
 #: deux obligent à les rapprocher à la main.
@@ -386,7 +421,7 @@ def exporter_parc(
     lignes = []
     for type_acces in TYPES_ACCES.values():
         objets = session.exec(select(type_acces.modele)).all()
-        for fiche, objet in zip(_acces_admin_out(objets, session), objets):
+        for fiche, objet in zip(_acces_admin_out(objets, session, type_acces), objets):
             perimetre = parse_json_perimetres(objet.perimetre_cible)
             lignes.append([
                 type_acces.libelle,
