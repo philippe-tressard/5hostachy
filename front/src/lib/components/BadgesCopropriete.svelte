@@ -36,7 +36,14 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { acces as accesApi, ApiError, type AccesAdmin } from '$lib/api';
+	import { acces as accesApi, admin as adminApi, ApiError, type AccesAdmin } from '$lib/api';
+	import { isAdmin } from '$lib/stores/auth';
+	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
+	import FormulaireAcces from '$lib/components/FormulaireAcces.svelte';
+	import TableParcAcces from '$lib/components/TableParcAcces.svelte';
+	import { confirmerPuis } from '$lib/confirmation';
+	import { tenter } from '$lib/erreurs';
+	import { nomAffiche } from '$lib/noms';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 
@@ -57,12 +64,119 @@
 	let filtreType = '';
 	let recherche = '';
 
+	//  ── Les gestes, ouverts le 14/09/2026 (#953) ────────────────────────────
+	//
+	//  🔴 Cet écran était en LECTURE SEULE depuis le 06/09 (#805), et c'était une
+	//  décision : trois routes d'écriture avaient été supprimées ce jour-là parce
+	//  qu'enregistrer un badge était déjà couvert deux fois. Le choix est renversé
+	//  sur demande explicite — le conseil syndical remet des badges en main
+	//  propre, et rien ne le lui permettait.
+	let porteurs: { id: number; nom: string }[] = [];
+	let formOuvert = false;
+	let editId: string | null = null;
+	let enregistrement = false;
+
+	const SAISIE_VIERGE = () => ({
+		type: 'vigik',
+		code: '',
+		porteur_id: null as number | null,
+		perimetre_cible: [] as string[],
+		statut: 'actif',
+		ticket_numero: '',
+	});
+	let saisie = SAISIE_VIERGE();
+
+	function ouvrirCreation() {
+		saisie = SAISIE_VIERGE();
+		editId = null;
+		formOuvert = true;
+	}
+
+	function ouvrirEdition(a: AccesAdmin & { type: string }) {
+		saisie = {
+			type: a.type,
+			code: a.code,
+			porteur_id: a.porteur_id,
+			perimetre_cible: [...(a.perimetre_cible ?? [])],
+			statut: String(a.statut),
+			ticket_numero: '',
+		};
+		editId = `${a.type}-${a.id}`;
+		formOuvert = false;
+	}
+
+	function fermer() {
+		formOuvert = false;
+		editId = null;
+	}
+
+	async function recharger() {
+		[vigiks, telecommandes] = await Promise.all([
+			accesApi.listVigiks(),
+			accesApi.listTelecommandes(),
+		]);
+	}
+
+	async function enregistrer() {
+		enregistrement = true;
+		//  ⚠️ `tenter` porte le message d'erreur : un `try/catch` local serait la
+		//  soixante-huitième écriture de ce ternaire (`lint:message-erreur`).
+		await tenter(async () => {
+			const corps = {
+				code: saisie.code.trim(),
+				porteur_id: saisie.porteur_id,
+				perimetre_cible: saisie.perimetre_cible,
+				statut: saisie.statut,
+				ticket_numero: saisie.ticket_numero.trim() || null,
+			};
+			if (editId) {
+				const [type, id] = editId.split('-');
+				await accesApi.modifierAcces(type, Number(id), corps);
+			} else {
+				await accesApi.creerAcces(saisie.type, corps);
+			}
+			await recharger();
+			fermer();
+		});
+		enregistrement = false;
+	}
+
+	//  🔒 Réservé à l'admin côté SERVEUR : le bouton ne s'affiche que pour lui,
+	//  et l'écran dit alors la même chose que le serveur — ni plus, ni moins.
+	async function supprimer(a: AccesAdmin & { type: string }) {
+		//  ⚠️ `confirmerPuis` et non `confirmer` + `tenter` : le couple
+		//  « demander, faire, annoncer » est écrit UNE fois dans le dépôt, et le
+		//  recomposer ici en serait la copie suivante.
+		await confirmerPuis(
+			{
+				message:
+					`Supprimer définitivement ${labelType[a.type]} ${a.code} ? ` +
+					'Pour un badge perdu ou rendu, préférer le statut : il garde la ' +
+					'trace que ce badge a existé, et donc qu’il circule.',
+				libelleConfirmer: 'Supprimer',
+				danger: true,
+			},
+			'Accès supprimé',
+			async () => {
+				await accesApi.supprimerAcces(a.type, a.id);
+				await recharger();
+			},
+		);
+	}
+
 	onMount(async () => {
 		try {
 			[vigiks, telecommandes] = await Promise.all([
 				accesApi.listVigiks(),
 				accesApi.listTelecommandes(),
 			]);
+			//  Les porteurs proposés à la saisie. Chargés ici plutôt qu'à
+			//  l'ouverture du formulaire : une liste qui se remplit après le
+			//  premier rendu ferait clignoter le sélecteur.
+			porteurs = (await adminApi.utilisateurs()).map((u: any) => ({
+				id: u.id,
+				nom: nomAffiche(u),
+			}));
 		} catch (e) {
 			erreur = e instanceof ApiError ? e.message : 'Chargement impossible';
 		} finally {
@@ -89,7 +203,7 @@
 	 *  ⚠️ Un tri, pas un regroupement : les lignes restent des lignes. Grouper
 	 *  demanderait de décider ce qu'on affiche pour un porteur sans badge, et la
 	 *  table ne répond pas à cette question-là. */
-	let triCol: 'porteur' | 'type' | 'code' | 'lot' | 'statut' = 'porteur';
+	let triCol: 'porteur' | 'type' | 'code' | 'lot' | 'acces' | 'statut' = 'porteur';
 	let triAsc = true;
 
 	function trierPar(col: typeof triCol) {
@@ -108,6 +222,10 @@
 		if (triCol === 'porteur') return a.porteur_nom ?? '';
 		if (triCol === 'type') return a.type ?? '';
 		if (triCol === 'lot') return a.lot_libelle ?? '';
+		//  ⚠️ Trié sur les CODES, pas sur le libellé : le libellé dépend de
+		//  l'arbre, qui peut n'être pas encore chargé — l'ordre changerait alors
+		//  sous les yeux. Les codes, eux, arrivent avec la ligne.
+		if (triCol === 'acces') return (a.perimetre_cible ?? []).join(' ');
 		if (triCol === 'statut') return a.statut ?? '';
 		return a.code ?? '';
 	}
@@ -163,6 +281,36 @@
 		/>
 	</div>
 
+	<!--  ⚠️ L'ordre suit `ux-patterns` §0 ter : ce qui QUALIFIE la liste et ses
+	      commandes restent au-dessus du formulaire, qui reste au-dessus de la
+	      table. Ouvrir « Enregistrer » ne doit pas repousser la recherche hors
+	      de l'écran.
+
+	      🔗 L'export est un LIEN, pas un bouton : la réponse est un fichier, et
+	      le navigateur sait le recevoir. Le faire passer par le client d'API
+	      obligerait à fabriquer un `blob:` puis un lien de téléchargement — trois
+	      gestes pour ce qu'une ancre fait seule, cookies de session compris. -->
+	<div class="bc-actions">
+		<BoutonNouveau
+			ouvert={formOuvert}
+			libelle="Enregistrer un accès"
+			on:basculer={ouvrirCreation}
+		/>
+		<a class="btn btn-outline" href={accesApi.urlExportParc()} download>⬇️ Exporter (CSV)</a>
+	</div>
+
+	{#if formOuvert}
+		<FormulaireAcces
+			types={TYPES}
+			{porteurs}
+			bind:saisie
+			{enregistrement}
+			cle="creation"
+			on:annule={fermer}
+			on:enregistre={enregistrer}
+		/>
+	{/if}
+
 	<EtatListe
 		{chargement}
 		{erreur}
@@ -174,45 +322,34 @@
 		{#if filtrees.length === 0}
 			<p class="bc-aide">Aucun badge ne correspond à cette recherche.</p>
 		{:else}
-			<div class="table-wrap">
-				<table class="table" style="font-size:0.85rem">
-					<thead>
-						<!--  🔴 De vrais `<button>` dans les `<th>` : un `<th>` cliquable sans
-						      bouton n'est ni atteignable au clavier ni annoncé comme
-						      actionnable (`CLAUDE.md`, règle 3). `aria-sort` dit au lecteur
-						      d'écran ce que la flèche montre à l'œil. -->
-						<tr>
-							{#each [['type', 'Type'], ['code', 'Code'], ['porteur', 'Porteur'], ['lot', 'Lot'], ['statut', 'Statut']] as [col, libelle] (col)}
-								<th aria-sort={triCol === col ? (triAsc ? 'ascending' : 'descending') : 'none'}>
-									<button type="button" class="th-tri" on:click={() => trierPar(col as any)}>
-										{libelle}<span class="th-fleche" aria-hidden="true"
-											>{triCol === col ? (triAsc ? '▲' : '▼') : ''}</span
-										>
-									</button>
-								</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody>
-						{#each filtrees as a (a.type + a.id)}
-							<tr>
-								<td>{labelType[a.type]}</td>
-								<td class="bc-code">{a.code}</td>
-								<td>
-									{a.porteur_nom}
-									{#if a.chez_locataire}
-										<span class="badge badge-blue bc-chez">Chez le locataire</span>
-									{/if}
-								</td>
-								<td>{a.lot_libelle ?? '—'}</td>
-								<td>
-									<span class="badge {badgeStatut[a.statut] ?? 'badge-gray'}">{a.statut}</span>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<TableParcAcces
+				lignes={filtrees}
+				{labelType}
+				{badgeStatut}
+				{triCol}
+				{triAsc}
+				{editId}
+				estAdmin={$isAdmin}
+				on:trier={(e) => trierPar(e.detail as typeof triCol)}
+				on:editer={(e) => ouvrirEdition(e.detail)}
+				on:supprimer={(e) => supprimer(e.detail)}
+			>
+				<svelte:fragment slot="edition">
+					<!--  `encadre={false}` : le formulaire s'ouvre DANS une ligne de
+					      tableau, et une bordure de plus y serait « la carte dans la
+					      carte » (#425). Pas de `cle` non plus : rien n'a bougé. -->
+					<FormulaireAcces
+						types={TYPES}
+						{porteurs}
+						bind:saisie
+						modeEdition
+						{enregistrement}
+						encadre={false}
+						on:annule={fermer}
+						on:enregistre={enregistrer}
+					/>
+				</svelte:fragment>
+			</TableParcAcces>
 			<p class="bc-compte">
 				{filtrees.length} badge{filtrees.length !== 1 ? 's' : ''}
 				{#if filtrees.length !== toutes.length}sur {toutes.length}{/if}
@@ -222,25 +359,21 @@
 </section>
 
 <style>
+	/*  Les deux commandes de tête, sur une ligne — et qui s'enroule sous 767 px
+	    plutôt que de déborder : c'est la largeur à laquelle tout le site bascule
+	    en mobile (#839). */
+	.bc-actions {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		align-items: center;
+		margin-bottom: 0.75rem;
+	}
+	/*  La ligne d'édition n'est pas une ligne de données : elle reprend le fond
+	    de la page pour se distinguer de ce qu'elle interrompt. */
+
 	/*  L'en-tête cliquable ressemble à un en-tête, pas à un bouton : c'est la
 	    flèche qui dit qu'il trie, et le survol qui dit qu'il se clique. */
-	.th-tri {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		background: none;
-		border: 0;
-		padding: 0;
-		font: inherit;
-		color: inherit;
-		cursor: pointer;
-	}
-	.th-tri:hover {
-		color: var(--color-primary);
-	}
-	.th-fleche {
-		font-size: 0.7em;
-	}
 	/*  `.section` n'est PAS globale - elle vit dans `acces-securite`, scopee a ce
 	    fichier-la. L'employer ici aurait rendu la carte sans son cadre : c'est la
 	    regression des pastilles nues (`standards/02` §4 ter), et `lint:classes-nues`
@@ -253,13 +386,6 @@
 		font-size: 0.85rem;
 		color: var(--color-text-muted);
 		margin: 0 0 0.75rem;
-	}
-	.bc-code {
-		font-family: monospace;
-	}
-	.bc-chez {
-		font-size: 0.7rem;
-		margin-left: 0.35rem;
 	}
 	.bc-compte {
 		font-size: 0.8rem;

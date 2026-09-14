@@ -57,10 +57,15 @@ supprimées sur arbitrage le même jour (#805).
 """
 from fastapi import APIRouter
 
-from . import imports_telecommandes, imports_vigik, resident
+from . import imports_telecommandes, imports_vigik, parc, resident
 
 router = APIRouter(prefix="/acces", tags=["acces"])
 
 router.include_router(resident.router)
+#  ⚠️ `parc` AVANT les imports : ses chemins `/admin/vigiks` et
+#  `/admin/{type}` sont plus spécifiques que les `/admin/imports-vigik/{id}`
+#  des deux autres modules, et FastAPI retient la PREMIÈRE route qui
+#  correspond. C'est la même raison qui place `resident` en tête.
+router.include_router(parc.router)
 router.include_router(imports_vigik.router)
 router.include_router(imports_telecommandes.router)

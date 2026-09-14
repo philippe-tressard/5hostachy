@@ -10,7 +10,6 @@ commentaire qui les remplace dit pourquoi — enregistrer un badge est déjà
 couvert deux fois, et une troisième voie jamais exercée dérive.
 """
 from datetime import datetime
-from typing import Optional
 
 from fastapi import (
     APIRouter, BackgroundTasks, Depends, HTTPException,
@@ -18,13 +17,11 @@ from fastapi import (
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_cs_or_admin
-from app.utils.batiments import libelle_lot
+from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import (
     CommandeAcces, Notification, StatutAcces, StatutImport,
-    Telecommande, Utilisateur, UserLot, Vigik,
-    Lot,
+    Utilisateur, UserLot, Lot,
 )
 from app.schemas import CommandeAccesCreate, CommandeAccesRead
 from app.utils.acces_detachement import detacher_acces
@@ -322,103 +319,3 @@ def declarer_badge(
     if type_acces is None:
         raise HTTPException(422, "Type invalide : " + " ou ".join(TYPES_ACCES))
     return _declarer_acces(session, type_acces, code, user)
-
-
-class AccesAdminOut(BaseModel):
-    """Un badge tel que le conseil syndical a besoin de le VOIR.
-
-    🔴 Les deux listes rendaient l'objet BRUT (`select(Vigik)`), donc `user_id`
-    et `lot_id` — deux nombres. Un écran bâti dessus aurait affiché « badge 4521
-    → utilisateur 37 », c'est-à-dire rien : la question qu'on pose à cette liste
-    est *« qui a ce badge ? »*, et elle n'y répondait pas.
-
-    C'est pourquoi enrichir la lecture faisait partie du lot qui l'expose : une
-    route sans appelant n'est jamais mise à l'épreuve de la question à laquelle
-    elle est censée répondre (#805).
-    """
-    id: int
-    code: str
-    statut: StatutAcces
-    chez_locataire: bool
-    porteur_nom: str
-    porteur_id: int
-    lot_libelle: Optional[str] = None
-    cree_le: datetime
-
-
-def _acces_admin_out(objets, session: Session) -> list[AccesAdminOut]:
-    """Sérialise une liste de Vigik OU de Telecommande — les deux ont les mêmes
-    champs utiles, et deux fonctions jumelles auraient divergé au premier ajout."""
-    sortie = []
-    for o in objets:
-        porteur = session.get(Utilisateur, o.user_id)
-        lot = session.get(Lot, o.lot_id) if o.lot_id else None
-        sortie.append(
-            AccesAdminOut(
-                id=o.id,
-                code=o.code,
-                statut=o.statut,
-                chez_locataire=o.chez_locataire,
-                #  Le nom passe par `nom_affiche` : « Prénom NOM », comme partout
-                #  ailleurs. Un `f"{prenom} {nom}"` local serait la 35e écriture
-                #  de cette règle.
-                porteur_nom=nom_affiche(porteur.prenom, porteur.nom) if porteur else "—",
-                porteur_id=o.user_id,
-                #  🔴 `f"{lot.type}"` rendait « TypeLot.appartement 314 » — la
-                #  représentation Python de l'enum, jusque sur l'écran du CS
-                #  (12/09/2026, signalé à l'écran). Le libellé est écrit UNE
-                #  fois, dans `utils/batiments`, et trois autres endroits le
-                #  composaient déjà correctement à la main.
-                lot_libelle=libelle_lot(lot),
-                cree_le=o.cree_le,
-            )
-        )
-    #  Par code : c'est ce qu'on a sous les yeux quand on cherche « à qui est ce
-    #  badge ? », un numéro gravé sur un objet physique.
-    return sorted(sortie, key=lambda a: a.code)
-
-
-@router.get("/admin/vigiks", response_model=list[AccesAdminOut])
-def list_vigiks(
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Tous les badges Vigik de la copropriété, avec leur porteur."""
-    return _acces_admin_out(session.exec(select(Vigik)).all(), session)
-
-
-@router.get("/admin/telecommandes", response_model=list[AccesAdminOut])
-def list_telecommandes(
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Toutes les télécommandes de parking, avec leur porteur."""
-    return _acces_admin_out(session.exec(select(Telecommande)).all(), session)
-
-
-#  🔴 TROIS ROUTES D'ÉCRITURE SUPPRIMÉES ICI le 06/09/2026 (#805), sur arbitrage :
-#
-#      PATCH  /acces/admin/vigiks/{id}      (changer le statut)
-#      POST   /acces/admin/vigiks           (créer un badge)
-#      POST   /acces/admin/telecommandes    (créer une télécommande)
-#
-#  Aucune n'avait d'appelant, et surtout : le besoin qu'elles servaient est déjà
-#  couvert DEUX fois.
-#
-#  | Enregistrer des badges | par où |
-#  |---|---|
-#  | en masse | l'import Excel + `resoudre_import_*` |
-#  | à l'unité | `POST /acces/declarer-badge`, par le résident lui-même |
-#
-#  Une troisième voie de création, jamais exercée, est du code qui dérive sans
-#  qu'on le voie : `changer-role` était dans cet état et avait accumulé un
-#  passe-droit que les gestes vivants n'ont pas (#801, même journée).
-#
-#  ⚠️ Elles n'étaient PAS défectueuses — vérifié : `create_vigik` appelait bien
-#  `_create_user_vigiks`, comme la résolution d'import. C'est leur redondance qui
-#  les condamne, pas un défaut. Les retirer sur un défaut supposé aurait été un
-#  mauvais motif pour une bonne décision.
-#
-#  Ce qui RESTE, et pourquoi : les deux LECTURES ci-dessus répondent à une
-#  question qu'aucun autre écran ne sait poser — « quels badges circulent, et
-#  chez qui ? ». C'est le seul trou réel qu'avait ce domaine.
