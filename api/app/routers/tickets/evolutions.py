@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, peut_commenter, peut_editer, require_admin, require_cs_or_admin
+from app.auth.deps import get_current_user, peut_commenter, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
@@ -19,7 +19,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate
-from app.utils.evolutions import supprimer_evolution
+from app.utils.evolutions import TYPES_SAISIS, evolution_modifiable, supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import base_site, lien_ticket
@@ -74,14 +74,10 @@ def update_evolution(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    evol = session.get(TicketEvolution, evol_id)
-    if not evol or evol.ticket_id != ticket_id:
-        raise HTTPException(404, "Évolution introuvable")
-    if evol.type not in ("commentaire", "etat"):
-        raise HTTPException(422, "Ce type d'évolution ne peut pas être modifié")
-    #  L'auteur ou un admin — `peut_editer`, du module central.
-    if not peut_editer(evol, user):
-        raise HTTPException(403, "Accès refusé")
+    evol = evolution_modifiable(
+        session, TicketEvolution, evol_id,
+        champ_parent="ticket_id", parent_id=ticket_id, user=user,
+    )
     if body.contenu is not None:
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
@@ -273,7 +269,9 @@ def add_evolution(
     #  Avant, l'AUTEUR de la demande ne pouvait pas commenter sa propre demande.
     if not peut_commenter(ticket, user):
         raise HTTPException(403, "Accès refusé")
-    if body.type not in ("commentaire", "etat"):
+    #  La liste vit dans `utils/evolutions` : créer, corriger et effacer
+    #  posent la même question, et elle était écrite quatre fois (#779).
+    if body.type not in TYPES_SAISIS:
         raise HTTPException(422, "Type invalide (commentaire ou etat)")
     if body.type == "etat" and not body.nouveau_statut:
         raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
