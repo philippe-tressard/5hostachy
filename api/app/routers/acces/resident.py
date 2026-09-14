@@ -23,20 +23,141 @@ from app.utils.batiments import libelle_lot
 from app.database import get_session
 from app.models.core import (
     CommandeAcces, Notification, StatutAcces, StatutImport,
-    Telecommande, TelecommandeImport, Utilisateur, UserLot, Vigik, VigikImport,
-    UserVigik, UserTelecommande,
+    Telecommande, Utilisateur, UserLot, Vigik,
     Lot,
 )
 from app.schemas import CommandeAccesCreate, CommandeAccesRead
 from app.utils.acces_detachement import detacher_acces
+from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 from app.utils.destinataires import membres_cs_notifiables
 from app.utils.noms import nom_affiche
 
 router = APIRouter()
 
 
+#  ── L'ACCÈS, écrit une fois ────────────────────────────────────────────────
+#
+#  🔴 Quatre paires de fonctions jumelles vivaient ici — lister, signaler perdu,
+#  supprimer, déclarer — identiques à trois mots près. `utils/types_acces.py`
+#  porte ces trois mots ; ce qui suit porte les gestes.
+#
+#  ⚠️ Les ROUTES restent distinctes (`/vigiks/…` et `/telecommandes/…`) : ce sont
+#  les adresses que le front appelle déjà, et les fondre serait une rupture pour
+#  un gain nul. Ce sont les CORPS qui étaient recopiés, pas les URL.
 
-router = APIRouter()
+
+def _acces_du_porteur(session: Session, type_acces: TypeAcces, objet_id: int,
+                      user: Utilisateur):
+    """L'objet, s'il appartient bien à qui le demande — sinon 404.
+
+    🔒 Ce contrôle de propriété était écrit QUATRE fois, à l'identique. Une règle
+    d'autorisation recopiée est une règle qu'on durcira à trois endroits sur
+    quatre : elle vit ici, et les gestes l'appellent.
+
+    ⚠️ **404 et non 403**, comme les quatre copies le faisaient : répondre
+    « interdit » confirmerait l'existence d'un badge qui ne vous appartient pas.
+    """
+    objet = session.get(type_acces.modele, objet_id)
+    if not objet or objet.user_id != user.id:
+        raise HTTPException(404, f"{type_acces.libelle} introuvable")
+    return objet
+
+
+def _mes_acces(session: Session, type_acces: TypeAcces, user: Utilisateur) -> list:
+    """Les accès d'un porteur : les siens, plus ceux qui lui sont attribués.
+
+    ⚠️ Le dédoublonnage n'est pas décoratif : un copropriétaire peut être à la
+    fois porteur direct et attributaire du même objet, et la liste l'affichait
+    alors deux fois.
+    """
+    modele = type_acces.modele
+    champ = getattr(type_acces.modele_attribution, type_acces.colonne_attribution)
+    directs = session.exec(select(modele).where(modele.user_id == user.id)).all()
+    attribues = session.exec(
+        select(modele)
+        .join(type_acces.modele_attribution, modele.id == champ)
+        .where(type_acces.modele_attribution.user_id == user.id)
+    ).all()
+    vus, sortie = set(), []
+    for objet in [*directs, *attribues]:
+        if objet.id not in vus:
+            vus.add(objet.id)
+            sortie.append(objet)
+    return sortie
+
+
+def _signaler_perdu(session: Session, type_acces: TypeAcces, objet_id: int,
+                    user: Utilisateur) -> dict:
+    objet = _acces_du_porteur(session, type_acces, objet_id, user)
+    objet.statut = StatutAcces.perdu
+    session.add(objet)
+    session.commit()
+    return {"statut": objet.statut}
+
+
+def _supprimer_acces(session: Session, type_acces: TypeAcces, objet_id: int,
+                     user: Utilisateur) -> None:
+    """L'attribution part, la ligne d'import se délie, l'objet disparaît.
+
+    Le pourquoi du détachement est dans `utils/acces_detachement.py`.
+    """
+    _acces_du_porteur(session, type_acces, objet_id, user)
+    detacher_acces(
+        session, objet_id,
+        type_acces.modele_attribution, type_acces.colonne_attribution,
+        type_acces.modele_import, type_acces.colonne_import,
+    )
+    session.delete(session.get(type_acces.modele, objet_id))
+    session.commit()
+
+
+def _declarer_acces(session: Session, type_acces: TypeAcces, code: str,
+                    user: Utilisateur) -> dict:
+    """Un porteur déclare un accès qu'il détient déjà.
+
+    Si le code correspond à une ligne d'import non résolue, celle-ci est marquée
+    résolue et **son lot est repris sur l'objet créé**.
+
+    🔴 C'est la correction que la factorisation apporte (14/09/2026) : la branche
+    vigik reprenait le `lot_id` de l'import, la branche télécommande ne le
+    faisait pas. Une télécommande déclarée par son porteur restait donc sans lot
+    dans la vue du conseil syndical, alors que l'import le connaissait. Les deux
+    branches se ressemblaient assez pour qu'on ne relise jamais les deux.
+    """
+    objet = session.exec(
+        select(type_acces.modele).where(
+            type_acces.modele.code == code,
+            type_acces.modele.user_id == user.id,
+        )
+    ).first()
+    if objet:
+        raise HTTPException(400, f"{type_acces.libelle} déjà enregistré sur votre compte")
+
+    objet = type_acces.modele(code=code, user_id=user.id, statut=StatutAcces.actif)
+    session.add(objet)
+    session.flush()
+
+    ligne = session.exec(
+        select(type_acces.modele_import).where(
+            type_acces.champ_code_import == code,
+            type_acces.modele_import.statut != StatutImport.resolu,
+        )
+    ).first()
+    if ligne:
+        ligne.statut = StatutImport.resolu
+        setattr(ligne, type_acces.colonne_import, objet.id)
+        ligne.resolu_le = datetime.utcnow()
+        if not ligne.user_proprietaire_id:
+            ligne.user_proprietaire_id = user.id
+        if ligne.lot_id:
+            objet.lot_id = ligne.lot_id
+        session.add(ligne)
+
+    session.commit()
+    session.refresh(objet)
+    return {"type": type_acces.cle, "id": objet.id, "code": code,
+            "import_resolu": ligne is not None}
+
 
 # ── Vue résident ────────────────────────────────────────────────────────────
 
@@ -45,22 +166,7 @@ def mes_vigiks(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    # Vigiks possédés directement + associés via UserVigik (copropriétaire)
-    directs = session.exec(
-        select(Vigik).where(Vigik.user_id == user.id)
-    ).all()
-    via_assoc = session.exec(
-        select(Vigik).join(UserVigik, Vigik.id == UserVigik.vigik_id).where(
-            UserVigik.user_id == user.id
-        )
-    ).all()
-    seen = set()
-    result = []
-    for v in [*directs, *via_assoc]:
-        if v.id not in seen:
-            seen.add(v.id)
-            result.append(v)
-    return result
+    return _mes_acces(session, VIGIK, user)
 
 
 @router.get("/mes-telecommandes")
@@ -68,22 +174,7 @@ def mes_telecommandes(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    # TC possédées directement + associées via UserTelecommande (copropriétaire)
-    directs = session.exec(
-        select(Telecommande).where(Telecommande.user_id == user.id)
-    ).all()
-    via_assoc = session.exec(
-        select(Telecommande).join(
-            UserTelecommande, Telecommande.id == UserTelecommande.telecommande_id
-        ).where(UserTelecommande.user_id == user.id)
-    ).all()
-    seen = set()
-    result = []
-    for t in [*directs, *via_assoc]:
-        if t.id not in seen:
-            seen.add(t.id)
-            result.append(t)
-    return result
+    return _mes_acces(session, TELECOMMANDE, user)
 
 
 @router.get("/mes-commandes", response_model=list[CommandeAccesRead])
@@ -177,13 +268,7 @@ def signaler_vigik_perdu(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    vigik = session.get(Vigik, vigik_id)
-    if not vigik or vigik.user_id != user.id:
-        raise HTTPException(404, "Vigik introuvable")
-    vigik.statut = StatutAcces.perdu
-    session.add(vigik)
-    session.commit()
-    return {"statut": vigik.statut}
+    return _signaler_perdu(session, VIGIK, vigik_id, user)
 
 
 @router.patch("/telecommandes/{tc_id}/perdu")
@@ -193,13 +278,7 @@ def signaler_tc_perdu(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    tc = session.get(Telecommande, tc_id)
-    if not tc or tc.user_id != user.id:
-        raise HTTPException(404, "Télécommande introuvable")
-    tc.statut = StatutAcces.perdu
-    session.add(tc)
-    session.commit()
-    return {"statut": tc.statut}
+    return _signaler_perdu(session, TELECOMMANDE, tc_id, user)
 
 
 @router.delete("/vigiks/{vigik_id}", status_code=204)
@@ -208,14 +287,7 @@ def supprimer_vigik(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    vigik = session.get(Vigik, vigik_id)
-    if not vigik or vigik.user_id != user.id:
-        raise HTTPException(404, "Badge introuvable")
-    #  L'attribution part, la ligne d'import se délie — pourquoi, et pourquoi
-    #  c'est le même geste que la télécommande : `utils/acces_detachement.py`.
-    detacher_acces(session, vigik_id, UserVigik, "vigik_id", VigikImport, "vigik_id")
-    session.delete(vigik)
-    session.commit()
+    _supprimer_acces(session, VIGIK, vigik_id, user)
 
 
 @router.delete("/telecommandes/{tc_id}", status_code=204)
@@ -224,15 +296,7 @@ def supprimer_telecommande(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    tc = session.get(Telecommande, tc_id)
-    if not tc or tc.user_id != user.id:
-        raise HTTPException(404, "Télécommande introuvable")
-    #  Même geste que le vigik, et désormais le même code (#546).
-    detacher_acces(
-        session, tc_id, UserTelecommande, "telecommande_id", TelecommandeImport, "telecommande_id"
-    )
-    session.delete(tc)
-    session.commit()
+    _supprimer_acces(session, TELECOMMANDE, tc_id, user)
 
 
 class DeclarerBadgeBody(BaseModel):
@@ -247,66 +311,18 @@ def declarer_badge(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Un résident déclare un badge / TC qu'il possède déjà.
-    Si le code correspond à un import non résolu, celui-ci est marqué résolu."""
+
+    ⚠️ Le type est cherché dans `TYPES_ACCES`, jamais comparé à des chaînes
+    écrites ici : une seconde liste des types connus diverge au troisième accès.
+    """
     code = body.code.strip()
     if not code:
         raise HTTPException(422, "Code vide")
+    type_acces = TYPES_ACCES.get(body.type)
+    if type_acces is None:
+        raise HTTPException(422, "Type invalide : " + " ou ".join(TYPES_ACCES))
+    return _declarer_acces(session, type_acces, code, user)
 
-    if body.type == "vigik":
-        # Vérifier doublon
-        existing = session.exec(select(Vigik).where(Vigik.code == code, Vigik.user_id == user.id)).first()
-        if existing:
-            raise HTTPException(400, "Ce badge est déjà enregistré sur votre compte")
-        acces_obj = Vigik(code=code, user_id=user.id, statut=StatutAcces.actif)
-        session.add(acces_obj)
-        session.flush()
-        # Tenter de résoudre un import correspondant
-        imp_vigik = session.exec(
-            select(VigikImport).where(
-                VigikImport.code == code,
-                VigikImport.statut != StatutImport.resolu,
-            )
-        ).first()
-        if imp_vigik:
-            imp_vigik.statut = StatutImport.resolu
-            imp_vigik.vigik_id = acces_obj.id
-            imp_vigik.resolu_le = datetime.utcnow()
-            if not imp_vigik.user_proprietaire_id:
-                imp_vigik.user_proprietaire_id = user.id
-            if imp_vigik.lot_id:
-                acces_obj.lot_id = imp_vigik.lot_id
-            session.add(imp_vigik)
-        session.commit()
-        session.refresh(acces_obj)
-        return {"type": "vigik", "id": acces_obj.id, "code": code, "import_resolu": imp_vigik is not None}
-
-    elif body.type == "telecommande":
-        existing = session.exec(select(Telecommande).where(Telecommande.code == code, Telecommande.user_id == user.id)).first()
-        if existing:
-            raise HTTPException(400, "Cette télécommande est déjà enregistrée sur votre compte")
-        tc = Telecommande(code=code, user_id=user.id, statut=StatutAcces.actif)
-        session.add(tc)
-        session.flush()
-        # Tenter de résoudre un import correspondant
-        imp = session.exec(
-            select(TelecommandeImport).where(
-                TelecommandeImport.reference == code,
-                TelecommandeImport.statut != StatutImport.resolu,
-            )
-        ).first()
-        if imp:
-            imp.statut = StatutImport.resolu
-            imp.telecommande_id = tc.id
-            imp.resolu_le = datetime.utcnow()
-            if not imp.user_proprietaire_id:
-                imp.user_proprietaire_id = user.id
-            session.add(imp)
-        session.commit()
-        session.refresh(tc)
-        return {"type": "telecommande", "id": tc.id, "code": code, "import_resolu": imp is not None}
-
-    else:
-        raise HTTPException(422, "Type invalide : vigik ou telecommande")
 
 class AccesAdminOut(BaseModel):
     """Un badge tel que le conseil syndical a besoin de le VOIR.
