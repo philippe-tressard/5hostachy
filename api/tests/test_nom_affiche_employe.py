@@ -1,0 +1,168 @@
+"""Le nom d'une personne passe par `nom_affiche` — la règle est-elle EMPLOYÉE ?
+
+## 🔴 Le trou que ce fichier bouche (14/09/2026, #779)
+
+La règle « Prénom NOM », arbitrée à l'écran le 31/08/2026, avait déjà :
+
+* son implémentation unique (`app/utils/noms.nom_affiche`) ;
+* son pendant côté front (`front/src/lib/noms.ts`) ;
+* et un contrôle — `npm run lint:noms` — qui vérifie que **les deux
+  implémentations donnent le même résultat**.
+
+Il manquait exactement ce qui compte : **que quelqu'un s'en serve**. Rien ne
+regardait les points d'APPEL. L'écran de télémétrie composait donc le nom à la
+main, `f"{prenom} {nom}"`, en **trois** endroits — et affichait « Jean-Sébastien
+CourT » là où tout le reste du site écrit « Jean-Sébastien COURT ». Une
+notification d'accès faisait de même.
+
+⚠️ C'est le motif que ce dépôt connaît le mieux, sous une forme nouvelle : le
+contrôle existait, il mesurait la bonne chose, mais pas au bon endroit. Vérifier
+que deux implémentations concordent ne dit rien de ce qui les contourne — c'est
+« la portée du contrôle fait partie du contrôle » (`standards/05` §9).
+"""
+import re
+from pathlib import Path
+
+APP = Path(__file__).resolve().parents[1] / "app"
+
+#: Le motif d'une composition MANUELLE : un prénom et un nom interpolés à la
+#: suite dans la même f-string.
+#:
+#: ⚠️ On ne cherche pas `nom` seul : il apparaît partout, et un contrôle qui crie
+#: sur du code juste se fait désarmer (leçon du 14/09, même journée).
+#:
+#: ⚠️ Le préfixe est FACULTATIF : `{prenom} {nom}` s'écrit aussi sans objet
+#: porteur, et la première version du motif l'exigeait — elle laissait donc
+#: passer la forme la plus courte. Son cas zéro l'a dit tout de suite.
+_COMPOSITION = re.compile(r'\{[\w.]*prenom[^}]*\}\s*\{[\w.]*nom\b[^}]*\}')
+
+#: Les endroits où composer le nom à la main est JUSTE, avec leur raison.
+#:
+#: ⚠️ Une exception qui ne sert plus fait échouer ce test : une tolérance qui
+#: survit à son objet finit par en couvrir une qui compte.
+EXCEPTIONS = {
+    "routers/bailleur/baux.py":
+        "ce n'est PAS un affichage : la chaîne est aussitôt passée en minuscules "
+        "et découpée en mots pour RAPPROCHER un bailleur d'un bail. `nom_affiche` "
+        "mettrait le nom en capitales, que le `.lower()` défferait — un détour "
+        "pour le même résultat, et un lecteur croirait à un rendu.",
+}
+
+
+def _sources() -> list[Path]:
+    return [p for p in APP.rglob("*.py") if "__pycache__" not in p.parts]
+
+
+def test_cas_zero_le_releve_lit_quelque_chose():
+    """Un relevé vide annoncerait « aucune composition manuelle » sans rien lire."""
+    assert len(_sources()) > 100, "le relevé est cassé"
+
+
+def test_le_motif_reconnait_ce_quil_doit_reconnaitre():
+    """🔴 Cas zéro du MOTIF : sans lui, le test passe en ne trouvant jamais rien.
+
+    Les quatre premières formes sont celles réellement rencontrées dans ce dépôt
+    le 14/09/2026 ; les deux dernières ne doivent PAS être prises.
+    """
+    assert _COMPOSITION.search('f"{user.prenom} {user.nom}"')
+    assert _COMPOSITION.search('f"{u[1]} {u[2]}"') is None  # trop générique : hors portée
+    assert _COMPOSITION.search('f"{prenom} {nom}"')
+    assert _COMPOSITION.search('f"{user.prenom} {user.nom} — lot {n}"')
+    assert _COMPOSITION.search('{"nom": u.nom, "prenom": u.prenom}') is None
+    assert _COMPOSITION.search('f"{destinataire.prenom}"') is None
+
+
+def test_aucune_composition_manuelle_du_nom():
+    fautifs = []
+    for p in _sources():
+        rel = p.relative_to(APP).as_posix()
+        if rel == "utils/noms.py":
+            continue  # c'est le module qui PORTE la règle
+        for numero, ligne in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            nue = ligne.strip()
+            #  Les commentaires et docstrings racontent l'incident : les compter
+            #  interdirait de l'expliquer.
+            if nue.startswith("#") or nue.startswith("*") or "`" in ligne:
+                continue
+            if _COMPOSITION.search(ligne) and rel not in EXCEPTIONS:
+                fautifs.append(f"{rel}:{numero}")
+    assert not fautifs, (
+        "Le nom est composé à la main :\n  " + "\n  ".join(fautifs)
+        + "\n→ `nom_affiche(prenom, nom)` (`app.utils.noms`) — la casse du nom est "
+        "une règle arbitrée, pas un détail de mise en forme."
+    )
+
+
+def test_chaque_exception_sert_encore():
+    inutiles = []
+    for rel, raison in EXCEPTIONS.items():
+        chemin = APP / rel
+        if not chemin.is_file():
+            inutiles.append(f"{rel} (fichier absent)")
+            continue
+        if not _COMPOSITION.search(chemin.read_text(encoding="utf-8")):
+            inutiles.append(f"{rel} (ne compose plus de nom) — {raison}")
+    assert not inutiles, f"Exceptions devenues inutiles : {inutiles}"
+
+#: Les fichiers qui LISENT le prénom et le nom d'un utilisateur sans les
+#: afficher — avec leur raison.
+EXCEPTIONS_LECTURE = {
+    "routers/bailleur/baux.py": "rapprochement, pas affichage (voir ci-dessus)",
+    "routers/acces/commun.py":
+        "rend le prénom et le nom SÉPARÉMENT au client, qui compose lui-même — "
+        "le front a sa propre `nomAffiche`, éprouvée identique par `lint:noms`.",
+}
+
+
+def test_lire_un_prenom_et_un_nom_oblige_a_employer_la_regle():
+    """🔴 LE CONTRÔLE QUI AURAIT ATTRAPÉ LE DÉFAUT DU 14/09.
+
+    Le test précédent cherche un prénom et un nom interpolés à la suite. La
+    télémétrie, elle, écrivait les COLONNES d'un tuple — sans nommer les
+    champs. Aucun motif textuel ne peut distinguer cela d'une interpolation
+    quelconque, et vouloir l'essayer donnerait des faux positifs partout.
+
+    On regarde donc l'autre bout : un module qui va CHERCHER
+    `Utilisateur.prenom` en base a l'intention d'en faire quelque chose. S'il
+    ne cite jamais `nom_affiche`, soit il compose le nom lui-même, soit il le
+    transmet — et il doit alors le dire.
+
+    ⚠️ Vérifié en réintroduisant le défaut : sans cette fonction, le fichier
+    passait au VERT sur la version fautive. Un contrôle qui n'attrape pas
+    l'incident qui l'a fait naître est un contrôle à compléter, pas à garder.
+    """
+    fautifs = []
+    for chemin in _sources():
+        rel = chemin.relative_to(APP).as_posix()
+        if rel == "utils/noms.py" or rel in EXCEPTIONS_LECTURE:
+            continue
+        source = chemin.read_text(encoding="utf-8")
+        if "Utilisateur.prenom" not in source:
+            continue
+        #  🔴 L'IMPORT, pas le mot : la première version cherchait
+        #  « nom_affiche » n'importe où dans le fichier, et le trouvait dans le
+        #  COMMENTAIRE qui explique la règle. Éprouvée en réintroduisant le
+        #  défaut, elle restait verte. Troisième fois que ce dépôt l'apprend
+        #  (`lint:html` comptait les mentions dans les commentaires).
+        if "from app.utils.noms import" not in source or "nom_affiche" not in "".join(
+            l for l in source.splitlines() if l.startswith("from app.utils.noms import")
+        ):
+            fautifs.append(rel)
+    assert not fautifs, (
+        "Ces modules lisent le prénom et le nom sans employer la règle "
+        "d'affichage :\n  " + "\n  ".join(fautifs)
+        + "\n→ `nom_affiche(prenom, nom)`, ou une entrée dans EXCEPTIONS_LECTURE "
+        "qui dit pourquoi ils n'affichent pas."
+    )
+
+
+def test_chaque_exception_de_lecture_sert_encore():
+    inutiles = []
+    for rel, raison in EXCEPTIONS_LECTURE.items():
+        chemin = APP / rel
+        if not chemin.is_file():
+            inutiles.append(f"{rel} (fichier absent)")
+            continue
+        if "prenom" not in chemin.read_text(encoding="utf-8"):
+            inutiles.append(f"{rel} (ne lit plus de prénom) — {raison}")
+    assert not inutiles, f"Exceptions de lecture devenues inutiles : {inutiles}"

@@ -61,3 +61,55 @@ def vues_non_attribuees(total_vues: int, vues_attribuees: int) -> int:
     écart négatif afficherait un nombre absurde plutôt qu'un manque d'information.
     """
     return max(0, total_vues - vues_attribuees)
+
+def _cumul_par_page(lignes, uniques=None) -> dict[str, dict]:
+    """Les vues cumulées par page — écrit UNE fois (14/09/2026, #779).
+
+    🔴 Les deux relevés le faisaient chacun de leur côté, et ils ne comptaient
+    PAS la même chose sous le même nom :
+
+    * le relevé à 30 jours lisait `uniques` dans un décompte DISTINCT calculé à
+      part (`uniques_map`) ;
+    * le relevé à 10 ans ADDITIONNAIT `utilisateurs_uniques` mois par mois.
+
+    La seconde sur-compte : quelqu'un qui visite en janvier et en février y
+    figure deux fois. Ce n'est pas le même indicateur, et rien ne le disait —
+    deux colonnes « uniques » côte à côte dans l'écran, dont une seule mérite
+    son nom.
+
+    ⚠️ La divergence est CONSERVÉE, pas corrigée : la trancher change des
+    chiffres affichés, et cela se décide devant l'écran. Elle est désormais
+    NOMMÉE par le paramètre — `uniques` fourni = décompte distinct, absent =
+    cumul. C'est la seule façon de ne pas la refaire par inadvertance.
+    """
+    cumul: dict[str, dict] = {}
+    for ligne in lignes:
+        page = cumul.setdefault(ligne.page, {"page": ligne.page, "total": 0, "uniques": 0})
+        page["total"] += ligne.total
+        if uniques is None:
+            page["uniques"] += ligne.utilisateurs_uniques
+    if uniques is not None:
+        for page, valeurs in cumul.items():
+            valeurs["uniques"] = uniques.get(page, 0)
+    return cumul
+
+
+#: Ce qu'on ne sait pas dire d'une personne absente du relevé — une seule
+#: formulation, parce que deux écrans qui disent « Inconnu » et « ? » laissent
+#: croire à deux situations différentes.
+_FICHE_INCONNUE = {
+    "nom": "Inconnu", "derniere_connexion": None, "statut": None, "batiment_id": None,
+}
+
+
+def _palmares(lignes, fiches: dict[int, dict]) -> list[dict]:
+    """La ligne d'un utilisateur dans un palmarès — écrite une fois.
+
+    Elle l'était deux fois, dans le même fichier, à cent cinquante lignes
+    d'écart : le jour et le mois. Six clés recopiées, dont quatre lues dans
+    quatre dictionnaires distincts.
+    """
+    return [
+        {**_FICHE_INCONNUE, **fiches.get(ligne[0], {}), "total": ligne[1], "pages": ligne[2]}
+        for ligne in lignes
+    ]
