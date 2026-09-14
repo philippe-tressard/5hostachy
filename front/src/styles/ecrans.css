@@ -136,7 +136,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 		grid-template-columns: 1fr 1fr;
 	}
 }
-@media (max-width: 600px) {
+@media (max-width: 767px) {
 	.imp-edit-grid {
 		grid-template-columns: 1fr;
 	}

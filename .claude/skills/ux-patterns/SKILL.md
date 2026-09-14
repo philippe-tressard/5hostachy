@@ -1572,7 +1572,35 @@ passer au vert en mesurant moins. Il vérifie désormais l'inverse — que la bo
 est rendue, et qu'aucune `Modale` ne revient par la porte de derrière.
 
 ⚠️ Les modales restent légitimes pour ce qui n'est pas un formulaire d'entité :
-confirmation, téléversement ponctuel, visionneuse, écrans d'administration.
+confirmation, **saisie qui accompagne un geste**, téléversement ponctuel,
+visionneuse, écrans d'administration.
+
+### La saisie qui accompagne un geste — `Saisie.svelte` (tranché le 14/09/2026, #931)
+
+Signaler un contenu au conseil syndical demande un **motif**. Ce motif ne crée
+aucun objet qu'on retrouvera dans une liste, et n'en corrige aucun : il
+**accompagne un geste**, exactement comme une confirmation — dont il n'est que la
+version qui pose une question ouverte au lieu d'une question fermée.
+
+🔴 **Il n'y a donc pas de troisième forme à inventer**, et c'est ce que le ticket
+cherchait. `Confirmation.svelte` est déployé seize fois, c'est une fenêtre, et il
+répond déjà à *« que fait-on d'une question posée avant un geste ? »*. Les deux
+règles qui interdisent la fenêtre — la création s'écrit dans la page (#367), la
+correction dans la carte (§14 ter) — parlent l'une et l'autre d'un **objet** :
+aucune ne recouvre ce cas. La règle la plus déployée l'emporte, et il n'y avait
+qu'à la nommer.
+
+⚠️ **Ce qui ferait basculer de l'autre côté** : si le motif devenait un champ de
+l'objet signalé — modifiable, relisible, porté par une fiche — il cesserait
+d'accompagner le geste pour devenir une **entité**, et la règle de la carte
+reprendrait la main. Ce n'est pas le cas : le motif part au conseil syndical et
+ne revient pas à l'écran.
+
+⚠️ **Ouvrir le motif DANS la rangée a été écarté pour une raison mesurée**, pas
+par goût : `signaler()` cesserait d'être un appel impératif et demanderait un
+état d'ouverture **par ligne**, dans `Reponses` et dans chaque liste qui
+l'emploie — c'est exactement l'échafaudage que `confirmer()` a retiré à seize
+appels. On ne réintroduit pas pour un geste ce qu'on a supprimé pour seize.
 
 ### 🔴 OÙ SE POSE LE CADRE : **là où le geste est connu** (30/08/2026, calendrier)
 

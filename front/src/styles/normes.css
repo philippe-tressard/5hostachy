@@ -209,12 +209,6 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	border-left-color: var(--color-danger);
 }
 
-@media (max-width: 640px) {
-	.carte-liste {
-		margin-bottom: 0.6rem;
-	}
-}
-
 /* ── Norme UX : troncature à N lignes ──
    `.clamp-5` : l'aperçu d'un bloc expansible replié.
    `.clamp-2` : un TITRE de carte, qui doit rester sur deux lignes au plus.
@@ -264,6 +258,14 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 @media (max-width: 767px) {
 	:root {
 		font-size: 12px;
+	}
+
+	/*  L'espacement des cartes bascule ICI depuis le 14/09/2026 (#839) : il
+	    était à 640 px, une largeur qui n'était celle de personne d'autre. Entre
+	    641 et 767 px, la liste gardait donc son espacement de bureau pendant que
+	    le menu, la grille et la typographie étaient déjà en mobile. */
+	.carte-liste {
+		margin-bottom: 0.6rem;
 	}
 
 	.container {

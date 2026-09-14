@@ -200,7 +200,7 @@
 		padding-top: 0.9rem;
 		border-top: 1px solid var(--color-border);
 	}
-	@media (max-width: 560px) {
+	@media (max-width: 767px) {
 		.contrats-grid {
 			grid-template-columns: 1fr;
 		}
