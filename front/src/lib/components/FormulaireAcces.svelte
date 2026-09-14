@@ -1,0 +1,157 @@
+<!--
+  **Enregistrer ou corriger un accès** — un badge Vigik, une télécommande.
+
+  ## Pourquoi ce composant (14/09/2026, #953)
+
+  L'écran du parc était en lecture seule depuis le 06/09 (#805). Les gestes ont
+  été demandés en priorité haute — *« l'export, la suppression, l'ajout ou la
+  modification d'un vigik / télécommande n'est pas (encore) possible »* — et le
+  formulaire vit ici plutôt que dans la table : une table qui porte son
+  formulaire dépasse le plafond de modularité au premier champ ajouté, et un
+  formulaire est un objet à part entière (`Formulaire*.svelte`, quinze fois dans
+  ce dépôt).
+
+  ## Ce qu'il ne décide pas
+
+  Il ne choisit ni son cadre ni sa place : l'écran appelant le fait, parce que
+  c'est lui qui sait si l'on crée (en tête de liste) ou si l'on corrige (à la
+  place de la ligne). C'est la règle de `ux-patterns` §14 ter, et la distinction
+  que `CadreFormulaire` porte pour les six formulaires qui la connaissent.
+
+  ⚠️ Il ne compose pas non plus le libellé d'un périmètre : `PerimetrePicker` à
+  la saisie, `BadgePerimetre` à la lecture. Un troisième rendu du même objet
+  serait la divergence de demain.
+-->
+<script lang="ts">
+	import { createEventDispatcher } from 'svelte';
+	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
+	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+
+	const dispatch = createEventDispatcher<{ annule: void; enregistre: void }>();
+
+	/** Les deux types d'accès — la liste vient de l'écran, qui la tient du serveur. */
+	//  ⚠️ `readonly` : la liste vient d'un `as const` de l'écran appelant, et
+	//  exiger un tableau mutable l'obligerait à en faire une copie — pour une
+	//  liste que ce composant ne modifie jamais.
+	export let types: readonly { val: string; label: string }[] = [];
+	/** Les porteurs proposés : les comptes de la copropriété. */
+	export let porteurs: { id: number; nom: string }[] = [];
+
+	/**  L'objet en cours de saisie, lié en deux sens : l'écran porte son cycle.
+	 *
+	 *   ⚠️ `perimetre_cible` vide veut dire **« on ne sait pas »**, pas « toute la
+	 *   copropriété ». Le serveur le distingue : champ absent ⇒ il déduit le
+	 *   bâtiment ; liste vide ⇒ il respecte le vide. Une valeur généreuse par
+	 *   défaut sur un droit d'accès se lirait comme une décision. */
+	export let saisie: {
+		type: string;
+		code: string;
+		porteur_id: number | null;
+		perimetre_cible: string[];
+		statut: string;
+		ticket_numero: string;
+	};
+
+	/** `true` quand on corrige : le TYPE ne se change plus, il identifie l'objet. */
+	export let modeEdition = false;
+	export let enregistrement = false;
+	/**  Ce qui identifie l'objet corrigé — relayé à `FormulaireCreation`, qui
+	 *   ramène le formulaire à l'écran s'il en est sorti. Inutile en édition
+	 *   dans la ligne : rien n'a bougé. */
+	export let cle: unknown = undefined;
+	/** `false` quand le formulaire s'ouvre DANS une ligne : pas de cadre imbriqué. */
+	export let encadre = true;
+
+	//  Les états d'un accès, et leur libellé. Trois valeurs : sous le seuil des
+	//  listes courtes, donc des pastilles (`ux-patterns` §0).
+	const STATUTS = [
+		{ val: 'actif', label: '✅ Actif' },
+		{ val: 'suspendu', label: '⏸️ Suspendu' },
+		{ val: 'perdu', label: '🔎 Perdu' },
+	];
+
+	$: incomplet = !saisie.code.trim() || !saisie.porteur_id;
+</script>
+
+<!--  🔴 LE CADRE EST POSÉ ICI, parce que ce composant CONNAÎT le geste
+      (`modeEdition`). C'est la règle de `ux-patterns` §14, et ce que
+      `lint:formulaires` vérifie — un écran qui poserait le cadre devrait
+      monter deux fois le même formulaire avec les mêmes props, et les deux
+      copies divergeraient au premier champ ajouté. -->
+<CadreFormulaire
+	edition={modeEdition}
+	titre={modeEdition ? "Corriger l'accès" : 'Enregistrer un accès'}
+	{encadre}
+	{cle}
+	on:fermer={() => dispatch('annule')}
+>
+	<!--  ⚠️ L'ordre suit `ux-patterns` §9 sexies : ce qui IDENTIFIE l'objet d'abord
+	      (type, code, porteur), le périmètre ensuite, le reste après. Le ticket lié
+	      vient en dernier parce qu'il ne décrit pas le badge — il dit pourquoi on
+	      l'enregistre. -->
+	{#if !modeEdition}
+		<SectionFormulaire titre="Type" premiere>
+			<!--  ⚠️ `tous={false}` : `ChoixPastilles` propose « Tous » par défaut, ce
+			      qui a du sens pour un FILTRE et aucun pour une saisie — un accès est
+			      d'un type ou de l'autre. La prop existe justement pour cela. -->
+			<ChoixPastilles options={types} bind:valeur={saisie.type} tous={false} />
+		</SectionFormulaire>
+	{/if}
+
+	<label class="field champ-large">
+		Code *
+		<input type="text" bind:value={saisie.code} placeholder="4521, 417D5927…" />
+		<span class="aide">La référence gravée sur l'objet, telle qu'elle s'y lit.</span>
+	</label>
+
+	<label class="field champ-large">
+		Porteur *
+		<select bind:value={saisie.porteur_id}>
+			<option value={null}>— choisir —</option>
+			{#each porteurs as p (p.id)}
+				<option value={p.id}>{p.nom}</option>
+			{/each}
+		</select>
+		<span class="aide">
+			Le copropriétaire à qui l'accès est remis. Il en est prévenu dans l'application.
+		</span>
+	</label>
+
+	<!--  🔹 L'accès EST un périmètre, et se saisit donc comme tous les autres. -->
+	<SectionFormulaire titre="Accès" idTitre="acces-perimetre-titre">
+		<PerimetrePicker bind:value={saisie.perimetre_cible} titre="" requis={false} />
+		<p class="aide">
+			Ce que le badge ouvre. Laissé vide à la création, il est déduit&nbsp;: le bâtiment du lot, ou
+			celui du porteur si tous ses lots sont dans le même. Pour un accès à l'ensemble, choisir
+			«&nbsp;Copropriété entière&nbsp;».
+		</p>
+	</SectionFormulaire>
+
+	<SectionFormulaire titre="État">
+		<ChoixPastilles options={STATUTS} bind:valeur={saisie.statut} tous={false} />
+		<p class="aide">
+			Un badge perdu ou suspendu reste dans le parc&nbsp;: c'est ce qui permet de savoir qu'il
+			circule. Seul un administrateur peut retirer une ligne saisie par erreur.
+		</p>
+	</SectionFormulaire>
+
+	<label class="field champ-large">
+		Ticket lié
+		<input type="text" bind:value={saisie.ticket_numero} placeholder="TK-241422" />
+		<span class="aide">
+			Facultatif. Le geste s'inscrit alors dans le fil de ce ticket. Un numéro inconnu refuse
+			l'enregistrement plutôt que de perdre le lien en silence.
+		</span>
+	</label>
+
+	<PiedFormulaire
+		enCours={enregistrement}
+		desactive={incomplet}
+		soumission={false}
+		on:annule={() => dispatch('annule')}
+		on:enregistre={() => dispatch('enregistre')}
+	/>
+</CadreFormulaire>

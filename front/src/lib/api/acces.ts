@@ -9,7 +9,7 @@
 //
 //  ⚠️ La surface publique NE BOUGE PAS : `index.ts` réexporte tout, et les
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
-import { api } from './client';
+import { api, BASE } from './client';
 import { uploadExcel } from './documents';
 
 /**
@@ -29,6 +29,13 @@ export interface AccesAdmin {
 	porteur_nom: string;
 	porteur_id: number;
 	lot_libelle: string | null;
+	lot_id: number | null;
+	/**  🔹 Ce que le badge OUVRE — des CODES, jamais un libellé.
+	 *
+	 *   ⚠️ L'écran les met en forme (`BadgePerimetre`), comme partout ailleurs :
+	 *   un libellé venu du serveur obligerait celui-ci à décider d'un rendu, et
+	 *   c'est le défaut que le fil d'activité portait jusqu'au 14/09/2026. */
+	perimetre_cible: string[];
 	cree_le: string;
 }
 
@@ -42,25 +49,44 @@ export const acces = {
 	supprimerTc: (id: number) => api.delete(`/acces/telecommandes/${id}`),
 	declarerBadge: (data: { type: string; code: string }) =>
 		api.post<any>('/acces/declarer-badge', data),
-	//  ── CS/Admin — QUELS badges circulent, et chez qui ────────────────────────
+	//  ── CS/Admin — LE PARC : qui a quoi, et que peut-on en faire ──────────────
 	//
-	//  🔴 Ces deux routes ont porté la déclaration « sans appelant » de #805, avec
-	//  trois autres qui CRÉAIENT et MODIFIAIENT des badges. Arbitrage du
-	//  06/09/2026 : **lecture seule**. Les trois routes d'écriture ont été
-	//  supprimées, client et endpoints.
+	//  🔴 Cet écran a été **en lecture seule du 06/09 au 14/09/2026**, et ce
+	//  n'était pas un oubli : trois routes d'écriture avaient été supprimées ce
+	//  jour-là (#805) au motif qu'enregistrer un badge était déjà couvert deux
+	//  fois — l'import Excel en masse, et `declarerBadge` par le résident.
 	//
-	//  Pourquoi celles-ci restent : elles répondent à une question qu'aucun autre
-	//  écran ne sait poser — « qui a le badge 4521 ? ». Pourquoi les autres sont
-	//  parties : enregistrer un badge est déjà couvert deux fois, par l'import
-	//  Excel (en masse) et par `declarerBadge` (le résident, à l'unité). Une
-	//  troisième voie jamais exercée est du code qui dérive sans qu'on le voie.
+	//  Le choix est **renversé sur demande explicite** (#953) : le conseil
+	//  syndical remet des badges en main propre, et rien ne le lui permettait.
 	//
-	//  ⚠️ La réponse a été ENRICHIE en même temps qu'exposée : elle rendait
-	//  l'objet brut, donc `user_id` — un écran bâti dessus aurait affiché
-	//  « badge 4521 → utilisateur 37 ». Une route sans appelant n'est jamais mise
-	//  à l'épreuve de la question à laquelle elle est censée répondre.
+	//  ⚠️ Ce qui aurait été fautif n'était pas d'ouvrir l'écriture, c'était de la
+	//  RECOPIER. Côté serveur, les gestes passent par le descripteur
+	//  `utils/types_acces` — celui dont l'absence avait laissé diverger le report
+	//  du `lot_id` entre vigik et télécommande (corrigé en v1.36.8).
+	//
+	//  ⚠️ La réponse rendait l'objet BRUT avant #805, donc `user_id` : un écran
+	//  bâti dessus aurait affiché « badge 4521 → utilisateur 37 ». Une route sans
+	//  appelant n'est jamais mise à l'épreuve de la question à laquelle elle est
+	//  censée répondre.
 	listVigiks: () => api.get<AccesAdmin[]>('/acces/admin/vigiks'),
 	listTelecommandes: () => api.get<AccesAdmin[]>('/acces/admin/telecommandes'),
+	//  Le TYPE est un paramètre de chemin, pas deux méthodes : `vigik` et
+	//  `telecommande` répondent à la même question, et deux méthodes jumelles
+	//  auraient divergé au premier champ ajouté — c'est ce qui est arrivé à
+	//  `declarerBadge`.
+	creerAcces: (type: string, data: unknown) => api.post<AccesAdmin>(`/acces/admin/${type}`, data),
+	modifierAcces: (type: string, id: number, data: unknown) =>
+		api.patch<AccesAdmin>(`/acces/admin/${type}/${id}`, data),
+	//  🔒 Réservé à l'ADMIN côté serveur : le conseil syndical passe un badge en
+	//  « perdu » par `modifierAcces`. Un badge perdu a existé, et le parc doit
+	//  pouvoir le dire (`ux-patterns` §8).
+	supprimerAcces: (type: string, id: number) => api.delete(`/acces/admin/${type}/${id}`),
+	//: L'adresse de l'export — le navigateur la suit, on ne la lit pas ici.
+	//
+	//  ⚠️ Pas de `api.get` : la réponse est un FICHIER, et la passer par le client
+	//  obligerait à fabriquer un `blob:` puis un lien de téléchargement. Le
+	//  navigateur sait le faire ; les cookies de session partent avec.
+	urlExportParc: () => `${BASE}/acces/admin/export.csv`,
 	// CS/Admin — import vigik
 	uploadImportVigik: (file: File, remplacer = false) =>
 		uploadExcel('/acces/admin/imports-vigik/upload', file, remplacer),
