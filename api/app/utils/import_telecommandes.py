@@ -25,6 +25,7 @@ from sqlmodel import Session, select
 #  colonnes. `normaliser` est ré-exporté : `acces.py` et `auto_match_service.py`
 #  l'importent depuis ce module.
 from app.utils.import_xlsx import (  # noqa: F401  (ré-export de `normaliser`)
+    NOMS_NON_RESIDENTS,
     importer_bytes,
     importer_fichier,
     normaliser,
@@ -35,10 +36,12 @@ from app.models.core import StatutImport, TelecommandeImport
 
 
 # ── Noms à ignorer automatiquement (accès non-résidents) ──────────────────
-_NOMS_IGNORES = {
-    "PARKINGS PUBLIQUES",
-    "0. ACCES MAIRIE",
-    "ATPE",
+#  🔴 Le noyau commun, ENRICHI de ce qui est propre à ce classeur-ci : deux
+#  références de commande datées, qui ne désignent personne. Elles ne valent que
+#  pour le fichier des télécommandes — les remonter dans le socle ferait ignorer
+#  une ligne du classeur vigik au nom identique, ce qui n'arrivera pas, mais on
+#  ne partage pas une exception « au cas où ».
+_NOMS_IGNORES = NOMS_NON_RESIDENTS | {
     "CDE 22/06/2023",
     "- CDE 02/07/2024",
 }
