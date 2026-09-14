@@ -18,6 +18,7 @@ from typing import Optional
 
 from sqlmodel import Session, select
 from app.utils.liens import base_site
+from app.utils.liens import nom_site
 
 
 # ── Types copropriétaires (pour propagation conjoint) ────────────────────────
@@ -778,7 +779,7 @@ def notifier_gestionnaire_appariement(user, resultat: dict, background_tasks, se
                 "pluriel_tc": "s" if tc > 1 else "",
                 "pluriel_vigik": "s" if vigik > 1 else "",
             },
-            "residence": {"nom": cfg.get("site_nom") or "5Hostachy"},
+            "residence": {"nom": nom_site(cfg.get("site_nom"))},
             "app": {"url": base_site(cfg.get("site_url"))},
         },
     )

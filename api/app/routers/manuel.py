@@ -18,7 +18,7 @@ from sqlmodel import Session
 
 from app.database import get_session
 from app.utils.manuel_pdf import ManuelIndisponible, generer_manuel_pdf
-from app.utils.liens import base_site
+from app.utils.liens import base_site, nom_site
 
 router = APIRouter(prefix="/manuel", tags=["manuel"])
 
@@ -29,7 +29,7 @@ def manuel_pdf(session: Session = Depends(get_session)):
     from app.routers.tickets.commun import config_site
 
     cfg = config_site(session)
-    site_nom = cfg.get("site_nom") or "5Hostachy"
+    site_nom = nom_site(cfg.get("site_nom"))
     site_url = base_site(cfg.get("site_url"))
 
     try:

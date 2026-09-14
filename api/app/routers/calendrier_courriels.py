@@ -22,7 +22,7 @@ from sqlmodel import Session
 from app.models.core import Evenement, Utilisateur
 from app.utils.dates_fr import datetime_longue
 from app.utils.fichiers import chemins_locaux
-from app.utils.liens import base_site, lien_element
+from app.utils.liens import base_site, lien_element, nom_site
 from app.utils.photos import parse_photos, premiere_photo
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
@@ -136,7 +136,7 @@ def contexte_evenement_canaux(
             "type": ev.type.value if ev.type else "",
         },
         "auteur": {"prenom": user.prenom, "nom": user.nom},
-        "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+        "residence": {"nom": nom_site(cfg_map.get("site_nom"))},
         "app": {"url": base_site(cfg_map.get("site_url"))},
         "reference_copro": cfg_map.get("reference_copro", ""),
         # Calculé sur la liste réellement attachée, jamais sur l'intention :

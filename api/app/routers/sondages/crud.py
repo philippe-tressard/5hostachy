@@ -26,7 +26,7 @@ from .commun import (
     SondageCreate, SondageRead, SondageUpdate,
 )
 from app.utils.communaute import exiger_acces
-from app.utils.liens import base_site
+from app.utils.liens import base_site, nom_site
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
 
@@ -230,7 +230,7 @@ def create_sondage(
                     "contenu": s.description or "",
                 },
                 "auteur": {"prenom": user.prenom, "nom": user.nom},
-                "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+                "residence": {"nom": nom_site(cfg_map.get("site_nom"))},
                 "app": {"url": base_site(cfg_map.get("site_url"))},
                 "reference_copro": cfg_map.get("reference_copro", ""),
                 # Un sondage n'a pas de pièce jointe, mais le modèle
