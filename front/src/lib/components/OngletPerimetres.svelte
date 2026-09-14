@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ChampsNouveauPerimetre from '$lib/components/ChampsNouveauPerimetre.svelte';
+	import BoiteNouveauPerimetre from '$lib/components/BoiteNouveauPerimetre.svelte';
 	import ChampsPerimetre from '$lib/components/ChampsPerimetre.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import { onMount } from 'svelte';
@@ -210,16 +210,14 @@
 	`.field`.
 -->
 {#if creation && creation.parent === null}
-	<FormulaireCreation titre="Nouveau périmètre de premier niveau">
-		<ChampsNouveauPerimetre bind:nouveau {codePropose} />
-		<PiedFormulaire
-			enCours={enregistrement}
-			desactive={!nouveau.libelle.trim() || !(nouveau.code || codePropose)}
-			soumission={false}
-			on:annule={() => (creation = null)}
-			on:enregistre={enregistrerNouveau}
-		/>
-	</FormulaireCreation>
+	<BoiteNouveauPerimetre
+		titre="Nouveau périmètre de premier niveau"
+		bind:nouveau
+		{codePropose}
+		{enregistrement}
+		on:annule={() => (creation = null)}
+		on:enregistre={enregistrerNouveau}
+	/>
 {/if}
 
 {#if chargement || erreur || noeuds.length === 0}
@@ -323,16 +321,15 @@
 							      la règle place la boîte LÀ OÙ EST LE GESTE. Le bouton de la barre
 							      ouvre en tête parce qu'il y est ; le « ＋ » d'un nœud ouvre dans
 							      ce nœud pour la même raison. -->
-							<FormulaireCreation titre="Sous-périmètre de {n.libelle}" encadre={false}>
-								<ChampsNouveauPerimetre bind:nouveau {codePropose} />
-								<PiedFormulaire
-									enCours={enregistrement}
-									desactive={!nouveau.libelle.trim() || !(nouveau.code || codePropose)}
-									soumission={false}
-									on:annule={() => (creation = null)}
-									on:enregistre={enregistrerNouveau}
-								/>
-							</FormulaireCreation>
+							<BoiteNouveauPerimetre
+								titre="Sous-périmètre de {n.libelle}"
+								encadre={false}
+								bind:nouveau
+								{codePropose}
+								{enregistrement}
+								on:annule={() => (creation = null)}
+								on:enregistre={enregistrerNouveau}
+							/>
 						{:else}
 							{#if n.description}<p class="ref-desc">{n.description}</p>{/if}
 							<div class="ref-actions">

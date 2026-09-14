@@ -3,6 +3,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import MedaillonRole from '$lib/components/MedaillonRole.svelte';
 	import QRCode from '$lib/components/QRCode.svelte';
 	import { onMount } from 'svelte';
 	import { annuaire as annuaireApi } from '$lib/api';
@@ -147,22 +148,18 @@
 						{#each groupe.membres as m (m.id)}
 							<div class="contact-card card">
 								{#if m.est_gestionnaire_site}
-									<span
-										class="site-manager-icon"
-										title="Gestionnaire {_siteNom}"
-										aria-label="Gestionnaire de {_siteNom}"
-									>
-										<Icon name="building-2" size={12} />
-									</span>
+									<MedaillonRole
+										role="gestionnaire-site"
+										titre="Gestionnaire {_siteNom}"
+										icone="building-2"
+									/>
 								{/if}
 								{#if m.est_president}
-									<span
-										class="president-icon"
-										title="Président du Conseil Syndical"
-										aria-label="Président du Conseil Syndical"
-									>
-										<Icon name="shield" size={12} />
-									</span>
+									<MedaillonRole
+										role="president-cs"
+										titre="Président du Conseil Syndical"
+										icone="shield"
+									/>
 								{/if}
 								<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
 								<div>
@@ -181,22 +178,18 @@
 				{#each data.cs.membres as m (m.id)}
 					<div class="contact-card card">
 						{#if m.est_gestionnaire_site}
-							<span
-								class="site-manager-icon"
-								title="Gestionnaire {_siteNom}"
-								aria-label="Gestionnaire de {_siteNom}"
-							>
-								<Icon name="building-2" size={12} />
-							</span>
+							<MedaillonRole
+								role="gestionnaire-site"
+								titre="Gestionnaire {_siteNom}"
+								icone="building-2"
+							/>
 						{/if}
 						{#if m.est_president}
-							<span
-								class="president-icon"
-								title="Président du Conseil Syndical"
-								aria-label="Président du Conseil Syndical"
-							>
-								<Icon name="shield" size={12} />
-							</span>
+							<MedaillonRole
+								role="president-cs"
+								titre="Président du Conseil Syndical"
+								icone="shield"
+							/>
 						{/if}
 						<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
 						<div>
@@ -245,7 +238,9 @@
 				{#each data.syndic.membres as m (m.id)}
 					<div class="contact-card card" class:card-principal={m.est_principal}>
 						{#if m.est_principal}
-							<span class="star-principal-badge" title="Gestionnaire principal"> ★ </span>
+							<MedaillonRole role="gestionnaire-principal" titre="Gestionnaire principal">
+								★
+							</MedaillonRole>
 						{/if}
 						<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
 						<div>
@@ -333,43 +328,10 @@
 		border-left: 3px solid var(--color-accent, #c9983a);
 		--avatar-bg: var(--color-accent, #c9983a);
 	}
-	.site-manager-icon,
-	.president-icon {
-		position: absolute;
-		top: -10px;
-		right: 10px;
-		width: 1.5rem;
-		height: 1.5rem;
-		border-radius: 999px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		color: #fff;
-		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-		z-index: 1;
-	}
-	.site-manager-icon {
-		background: #0f766e;
-	}
-	.president-icon {
-		background: #1e40af;
-	}
-	.star-principal-badge {
-		position: absolute;
-		top: -10px;
-		right: 10px;
-		width: 1.5rem;
-		height: 1.5rem;
-		border-radius: 999px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		color: #fff;
-		background: var(--color-accent, #c9983a);
-		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-		font-size: 0.9rem;
-		z-index: 1;
-	}
+	/*  Les trois médaillons de rôle sont partis dans `MedaillonRole`
+	    (14/09/2026, #779) : leur géométrie était écrite DEUX fois ici, à onze
+	    propriétés près identiques, et seule la couleur de fond changeait. Elles
+	    suivent leur balisage — Svelte scope le style au composant qui rend. */
 
 	.contact-societe {
 		font-size: 0.8rem;
