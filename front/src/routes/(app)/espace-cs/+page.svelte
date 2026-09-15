@@ -1,6 +1,6 @@
 <script lang="ts">
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
-	import { nomAffiche } from '$lib/noms';
+	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import {
 		REPLIE,
 		ajouter,
@@ -336,7 +336,8 @@
 			membresCS.sort((a, b) => {
 				const bat = (a.batiment_nom ?? 'zzz').localeCompare(b.batiment_nom ?? 'zzz', 'fr');
 				if (bat !== 0) return bat;
-				return (a.nom ?? '').localeCompare(b.nom ?? '', 'fr');
+				//  Puis la règle commune — nom, puis prénom (`$lib/noms`).
+				return comparerParNom(a, b);
 			});
 			membresCS = [...membresCS];
 			cs = REPLIE;

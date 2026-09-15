@@ -57,6 +57,7 @@
 	import { TICKET } from '$lib/entites/ticket';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import { comparerParNom } from '$lib/noms';
 
 	/**  Le ticket à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut) =
 	 *   création. Le mode ne change pas pendant la vie du composant : l'appelant le
@@ -190,9 +191,7 @@
 		if ($isCS && sectionPresente(TICKET, etat, 'specifiques')) {
 			try {
 				const all = await adminApi.utilisateurs();
-				usersActifs = all
-					.filter((u: any) => u.actif)
-					.sort((a: any, b: any) => `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`));
+				usersActifs = all.filter((u: any) => u.actif).sort(comparerParNom);
 			} catch {
 				/* ignore */
 			}
