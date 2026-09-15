@@ -109,3 +109,97 @@ export function frequenceLabel(c: {
 	if (c.frequence_type === 'ans') return `↺ tous les ${n} an${n > 1 ? 's' : ''}`;
 	return '';
 }
+
+/**
+ * **La forme du formulaire d'un contrat** — vierge, ou repris d'un existant.
+ *
+ * ## 🔴 Pourquoi ici (15/09/2026)
+ *
+ * Les **treize mêmes clés** étaient énumérées **trois fois** dans
+ * `prestataires/+page.svelte` : la déclaration, `resetContratForm()` et
+ * `startEditContrat()`. Ce n'est pas trois fois la même ligne, c'est trois fois
+ * la même **structure** — et ajouter un champ demandait de le poser aux trois
+ * endroits.
+ *
+ * ⚠️ Un champ posé sur deux des trois donne un formulaire qui enregistre à la
+ * création et oublie à l'édition — ou l'inverse, selon l'endroit manqué. Et
+ * **en silence** : une clé absente d'un objet JavaScript ne lève rien.
+ *
+ * C'est le même défaut que le calendrier portait le matin même, avec deux
+ * écritures au lieu de trois (`$lib/evenement-formulaire`).
+ */
+export interface FormulaireContratData {
+	copropriete_id: number;
+	/**  Le PÉRIMÈTRE remplace `batiment_id`, qui n'était rempli par aucun champ
+	 *   (10/09/2026). Le serveur en dérive le bâtiment. */
+	perimetre_cible: string[];
+	prestataire_id: string;
+	type_equipement: string;
+	libelle: string;
+	numero_contrat: string;
+	date_debut: string;
+	duree_initiale_valeur: string | number;
+	duree_initiale_unite: string;
+	frequence_type: string;
+	frequence_valeur: string | number;
+	prochaine_visite: string;
+	notes: string;
+}
+
+/**
+ * Un formulaire de contrat VIERGE.
+ *
+ * :param perimetreDefaut: la liste par défaut, passée par l'appelant — elle vient
+ *   de l'arborescence administrée (`$lib/perimetres`), que ce module n'a pas à
+ *   connaître.
+ */
+export function contratVierge(perimetreDefaut: string[]): FormulaireContratData {
+	return {
+		copropriete_id: 1,
+		perimetre_cible: perimetreDefaut,
+		prestataire_id: '',
+		type_equipement: 'autre',
+		libelle: '',
+		numero_contrat: '',
+		//  La date du jour : un contrat se saisit le jour où on le reçoit, et
+		//  corriger une date pré-remplie coûte moins que la saisir.
+		date_debut: new Date().toISOString().slice(0, 10),
+		duree_initiale_valeur: '',
+		duree_initiale_unite: 'mois',
+		frequence_type: '',
+		frequence_valeur: '',
+		prochaine_visite: '',
+		notes: '',
+	};
+}
+
+/**
+ * Le formulaire d'un contrat EXISTANT, pour le corriger.
+ *
+ * :param typeEquipement: résolu par l'appelant, qui seul a la liste des
+ *   prestataires sous la main — le type se déduit du prestataire quand le
+ *   contrat ne le porte pas.
+ */
+export function contratDepuis(
+	c: Record<string, any>,
+	perimetreDefaut: string[],
+	typeEquipement: string,
+): FormulaireContratData {
+	return {
+		copropriete_id: c.copropriete_id,
+		//  ⚠️ Une liste VIDE retombe sur le défaut : un contrat sans périmètre
+		//  enregistré ne doit pas ouvrir le formulaire sur une rangée muette.
+		perimetre_cible: c.perimetre_cible?.length ? c.perimetre_cible : perimetreDefaut,
+		prestataire_id: String(c.prestataire_id ?? ''),
+		type_equipement: typeEquipement,
+		libelle: c.libelle,
+		numero_contrat: c.numero_contrat ?? '',
+		date_debut: c.date_debut,
+		duree_initiale_valeur: c.duree_initiale_valeur ?? '',
+		duree_initiale_unite: c.duree_initiale_unite ?? 'mois',
+		frequence_type: c.frequence_type ?? '',
+		frequence_valeur: c.frequence_valeur ?? '',
+		prochaine_visite: c.prochaine_visite ?? '',
+		notes: c.notes ?? '',
+	};
+}

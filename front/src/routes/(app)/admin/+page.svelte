@@ -26,7 +26,7 @@
 	import Onglet from '$lib/components/Onglet.svelte';
 	import AccepterRefuser from '$lib/components/AccepterRefuser.svelte';
 	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
-	import { validerCompte } from '$lib/comptes';
+	import { formulaireCompte, validerCompte } from '$lib/comptes';
 	import { messageErreur } from '$lib/erreurs';
 	import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 	import OngletSmtp from '$lib/components/OngletSmtp.svelte';
@@ -181,16 +181,7 @@
 	let userCompteFilter = '';
 	let roleEnCours: { user: any; role: string; action: 'ajouter' | 'retirer' } | null = null;
 	let editUser: any | null = null;
-	let editForm = {
-		nom: '',
-		prenom: '',
-		email: '',
-		telephone: '',
-		societe: '',
-		statut: '',
-		batiment_id: null as number | null,
-		actif: true,
-	};
+	let editForm = formulaireCompte();
 	let deleteConfirm: any | null = null;
 	let batimentsList: { id: number; numero: string }[] = [];
 
@@ -301,16 +292,7 @@
 	}
 
 	function openEdit(u: any) {
-		editForm = {
-			nom: u.nom,
-			prenom: u.prenom,
-			email: u.email,
-			telephone: u.telephone ?? '',
-			societe: u.societe ?? '',
-			statut: u.statut,
-			batiment_id: u.batiment_id ?? null,
-			actif: u.actif,
-		};
+		editForm = formulaireCompte(u);
 		editUser = u;
 	}
 
