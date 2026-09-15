@@ -76,6 +76,18 @@
 	//  niveau — libre de diverger de celle du carnet.
 	$: restreint = codesAutorises !== null && codesAutorises.length > 0;
 	$: permis = new Set(codesAutorises ?? []);
+	//  🔢 **Le RANG servi, et non un ordre recalculé ici.** `codes_autorises`
+	//  compose déjà la liste dans l'ordre attendu — ce qui englobe, puis les
+	//  bâtiments, puis les accès fixes — et son commentaire dit en toutes lettres
+	//  « l'ordre est celui de l'écran ». L'écran le jetait pourtant pour retrier
+	//  par `n.ordre`, qui est un rang **relatif à la fratrie** : « Bâtiment 1 »
+	//  (1ᵉʳ des bâtiments) et « Portillons » (1ᵉʳ sous « Extérieurs ») valaient
+	//  tous deux 1, et la rangée sortait entrelacée — Bât. 1, Portillons,
+	//  Copropriété entière, Bât. 2… (signalé le 15/09/2026).
+	//
+	//  ⚠️ Deux tris pour une même rangée, c'est la même notion écrite deux fois :
+	//  le second aurait divergé au premier accès ajouté en configuration.
+	$: rang = new Map((codesAutorises ?? []).map((code, i) => [code, i]));
 	//  Un nœud restreint peut être de SECOND niveau — un portail sous « Parking »,
 	//  un portillon sous « Extérieurs ». La rangée unique les remonte donc au même
 	//  rang : hiérarchiser deux choix ferait d'un clic un parcours.
@@ -86,10 +98,19 @@
 	//  indéracinable : la valeur partirait quand même à l'enregistrement, et le
 	//  serveur la refuserait sans que rien à l'écran ne dise laquelle. La montrer
 	//  la rend retirable, ce qui est le seul geste utile.
+	//
+	//  …et il n'a PAS de rang servi : il passe donc en fin de rangée, où il se
+	//  lit comme ce qu'il est — une valeur héritée, hors de la liste courante.
 	$: choixRestreints = restreint
 		? actifs
 				.filter((n) => permis.has(n.code) || selection.has(n.code))
-				.sort((a, b) => a.ordre - b.ordre || a.code.localeCompare(b.code))
+				.sort(
+					(a, b) =>
+						(rang.get(a.code) ?? Number.MAX_SAFE_INTEGER) -
+							(rang.get(b.code) ?? Number.MAX_SAFE_INTEGER) ||
+						a.ordre - b.ordre ||
+						a.code.localeCompare(b.code),
+				)
 		: [];
 
 	const codesNiveau1 = (liste: Perimetre[]) => new Set(liste.map((n) => n.code));
