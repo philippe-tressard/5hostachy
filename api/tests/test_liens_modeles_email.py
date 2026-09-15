@@ -43,6 +43,20 @@ APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 HREF = re.compile(r'href="([^"]*)"')
 
+#: 🔴 **Depuis la factorisation du 15/09/2026 (#959), les liens ne sont plus
+#: tous écrits dans le HTML** : `fragments.bouton(href, libellé)` compose l'ancre,
+#: et le modèle lui passe l'adresse. Un contrôle qui ne lirait que `href="…"`
+#: verrait donc de moins en moins de choses, jusqu'à ne plus rien mesurer.
+#:
+#: ⚠️ C'est le cas zéro (`test_il_y_a_bien_des_liens_a_verifier`) qui l'a
+#: attrapé, et c'est exactement ce pour quoi il existe : la factorisation n'a
+#: pas cassé un test, elle a déplacé ce qu'il fallait lire.
+APPEL_BOUTON = re.compile(r'\bbouton\(\s*["\']([^"\']+)["\']')
+
+#: Le `href` de `fragments.bouton()` lui-même : un TROU de f-string, pas un lien.
+#: L'appelant le remplit, et c'est lui qu'on vérifie.
+PARAMETRE = "{href}"
+
 #: Le préfixe qui rend une URL absolue dans un modèle.
 BASE = "{{ app.url }}"
 
@@ -70,10 +84,25 @@ CHEMINS_TOLERES = {
 
 
 def _liens_des_modeles() -> list[tuple[str, str]]:
-    """Tous les `href` des modèles, avec le fichier qui les porte."""
+    """Toutes les adresses des modèles, avec le fichier qui les porte.
+
+    **Deux sources**, depuis que la mise en forme est factorisée :
+
+    1. les `href="…"` encore écrits dans le HTML d'un modèle ;
+    2. l'adresse passée à `fragments.bouton(…)`, qui compose l'ancre.
+
+    Le paramètre `{href}` de `bouton()` lui-même est exclu : c'est un trou de
+    f-string, et le lien réel est celui que l'appelant y met.
+    """
     trouves = []
     for f in sorted(SEED.glob("*.py")):
-        for lien in HREF.findall(f.read_text(encoding="utf-8")):
+        src = f.read_text(encoding="utf-8")
+        for lien in HREF.findall(src):
+            lien = lien.strip()
+            if lien == PARAMETRE:
+                continue
+            trouves.append((f.name, lien))
+        for lien in APPEL_BOUTON.findall(src):
             trouves.append((f.name, lien.strip()))
     return trouves
 

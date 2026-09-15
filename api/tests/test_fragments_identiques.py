@@ -1,0 +1,84 @@
+"""Le texte des modèles d'e-mail ne bouge pas par accident (#959, 15/09/2026).
+
+## Pourquoi une empreinte
+
+`seed/emails/fragments.py` compose désormais la mise en forme des courriels :
+les encarts, le cadre de commentaire, les boutons, les titres. C'est ce qui a
+supprimé les **17 lignes de HTML** que `tickets.py` et `vie_collective.py`
+portaient à l'identique.
+
+🔴 **Mais la factorisation a déplacé le risque.** Avant, changer un encart
+demandait de retoucher chaque modèle, un par un — pénible, donc visible. Après,
+une ligne modifiée dans `fragments.py` change **tous** les modèles d'un coup.
+
+Et ces modèles vivent **EN BASE**. Le seed ne repose que ce qui manque : un
+texte modifié ici n'arrive jamais en production, sauf migration. Le code
+afficherait alors une version, la production en enverrait une autre — c'est
+exactement le modèle BOUCHON, qui a envoyé « Notification. » pendant des mois
+(mémoire `project_modele_email_bouchon`).
+
+## Ce que ce test demande
+
+Qu'un changement de rendu soit **délibéré**. Si l'empreinte bouge :
+
+1. c'est un accident → corriger `fragments.py` ;
+2. c'est voulu → écrire la migration qui réécrit les modèles concernés en base
+   (cf. 0192 et 0185), **puis** mettre à jour l'empreinte ci-dessous.
+
+⚠️ Il ne remplace pas `test_email_templates.test_les_migrations_disent_la_meme_chose_que_le_seed`,
+qui vérifie qu'une migration et le seed concordent. Celui-ci répond à l'autre
+question : *« quelqu'un a-t-il changé le rendu sans s'en apercevoir ? »*
+"""
+from __future__ import annotations
+
+import hashlib
+
+from app.seed import EMAIL_TEMPLATES
+
+#: L'empreinte des 27 modèles — code, objet et corps, dans l'ordre des codes.
+#:
+#: Posée le 15/09/2026, juste après la factorisation, sur un rendu vérifié
+#: identique au caractère près à celui d'avant.
+EMPREINTE = "ffea6d388480b608b048dac82b6d41dbb6e4ae8bacdb018f861a6f90f6ba346b"
+NOMBRE_ATTENDU = 27
+
+
+def _empreinte() -> str:
+    #  \x1f (séparateur d'unités) : un caractère qui ne peut pas apparaître dans
+    #  un gabarit, donc deux découpages différents ne peuvent pas produire la
+    #  même chaîne — un `+` naïf le pourrait.
+    tout = "\n".join(
+        f"{code}\x1f{sujet}\x1f{corps}"
+        for code, _libelle, sujet, corps, _desactivable in sorted(EMAIL_TEMPLATES)
+    )
+    return hashlib.sha256(tout.encode("utf-8")).hexdigest()
+
+
+def test_le_nombre_de_modeles_est_celui_attendu():
+    """🔴 Le cas zéro : une empreinte calculée sur une liste vide serait stable.
+
+    Sans ce contrôle, un `EMAIL_TEMPLATES` qui ne se remplirait plus rendrait une
+    empreinte constante — et le test d'à côté passerait au vert en ne mesurant
+    rien (`standards/04` §2).
+    """
+    assert len(EMAIL_TEMPLATES) == NOMBRE_ATTENDU, (
+        f"{len(EMAIL_TEMPLATES)} modèles au lieu de {NOMBRE_ATTENDU}. Si c'est "
+        "voulu (ajout ou retrait d'un modèle), mets à jour NOMBRE_ATTENDU et "
+        "EMPREINTE — et vérifie qu'un modèle AJOUTÉ est bien posé par le seed, "
+        "tandis qu'un modèle MODIFIÉ exige une migration."
+    )
+
+
+def test_le_rendu_des_modeles_na_pas_change():
+    """L'empreinte des 27 modèles, composée par `fragments.py`."""
+    assert _empreinte() == EMPREINTE, (
+        "Le texte d'au moins un modèle d'e-mail a changé.\n\n"
+        "⚠️ Ces modèles vivent EN BASE, et le seed ne repose que ce qui manque : "
+        "ce changement n'arrivera JAMAIS en production sans migration. Le code "
+        "montrerait une version, la production en enverrait une autre.\n\n"
+        "  • accident (une retouche de `fragments.py`) → corriger ;\n"
+        "  • voulu → écrire la migration qui réécrit les modèles concernés "
+        "(cf. 0192, 0185), puis mettre à jour EMPREINTE ici.\n\n"
+        "Pour voir CE qui a changé : comparer les corps avant/après, le message "
+        "d'un hash ne peut pas le dire."
+    )
