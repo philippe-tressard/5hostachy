@@ -20,9 +20,10 @@
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { EVENEMENT } from '$lib/entites/evenement';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 
-	import { calendrier as calApi } from '$lib/api';
+	import { admin as adminApi, calendrier as calApi } from '$lib/api';
+	import { chargerResidents, modeDepuis, type ModeSaisiPour } from '$lib/saisi-pour';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	const dispatch = createEventDispatcher<{ annule: void }>();
@@ -70,6 +71,32 @@
 	 *   sur AUCUNE section (recouvrement de 100 %, mesuré par #432). La prop existe
 	 *   pour que ce fait soit **déclaré et vérifié**, et non simplement vrai. */
 	export let modeEdition = false;
+
+	//  ── 2. Saisi pour (15/09/2026) ──────────────────────────────────────────
+	//
+	//  ⚠️ Les trois VALEURS vivent dans `form` : la page compose sa charge utile
+	//  par `{ ...form }`, donc tout ce qui y est part, et tout ce qui n'y est pas
+	//  ne part pas. Seul le MODE est local — il ne se transmet pas, il se déduit
+	//  (`modeDepuis`), et le serveur n'en a que faire.
+	let modeSaisiPour: ModeSaisiPour = modeDepuis(form);
+	let residentsSaisiPour: { id: number; prenom: string; nom: string; email: string }[] = [];
+
+	//  ⚠️ Recalculé quand le formulaire CHANGE d'événement — `cle` vaut l'identifiant
+	//  en édition, « creation » sinon. Sans cela, corriger un événement saisi pour
+	//  quelqu'un après en avoir ouvert un autre rouvrirait le mode du précédent.
+	//
+	//  🔴 Et **pas** `$: modeSaisiPour = modeDepuis(form)` : `form` change à chaque
+	//  frappe, ce qui écraserait le mode que l'utilisateur vient de choisir. C'est
+	//  le changement d'objet qui déclenche, pas celui de son contenu.
+	let cleVue: unknown = cle;
+	$: if (cle !== cleVue) {
+		cleVue = cle;
+		modeSaisiPour = modeDepuis(form);
+	}
+
+	onMount(async () => {
+		residentsSaisiPour = await chargerResidents(adminApi.utilisateurs);
+	});
 
 	/**  🔴 La présence d'une section ne se décide plus ici : elle se lit dans la
 	 *   déclaration `EVENEMENT`, via `sectionPresente(EVENEMENT, etat, …)`. Les six
@@ -261,6 +288,12 @@
 	      Deux écarts, une seule cause : un ordre écrit dans une documentation ne
 	      se tient pas seul. -->
 			<ChampsCommuns
+				avecSaisiPour
+				{residentsSaisiPour}
+				bind:modeSaisiPour
+				bind:saisiPourUserId={form.saisi_pour_user_id}
+				bind:saisiPourNom={form.saisi_pour_nom}
+				bind:saisiPourEmail={form.saisi_pour_email}
 				avecOptions={sectionPresente(EVENEMENT, etat, 'diffusion')}
 				objet="événement"
 				optionsRendues={['epingle', 'brouillon']}

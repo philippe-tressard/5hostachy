@@ -19,6 +19,7 @@ import json
 from app.models.core import Ticket
 from app.schemas import TicketUpdate
 from app.utils.photos import photos_internes, photos_json
+from app.utils.saisi_pour import corriger as corriger_saisi_pour
 
 
 def _liste_json(brut: str | None) -> list:
@@ -124,21 +125,14 @@ def _appliquer_relations(body: TicketUpdate, ticket: Ticket) -> list[str]:
         ticket.destinataire_syndic = body.destinataire_syndic
     if body.destinataire_cs is not None:
         ticket.destinataire_cs = body.destinataire_cs
-    #  Présence et non non-nullité : c'est ce qui permet d'EFFACER (voir
-    #  `_envoye`). Les trois champs voyagent ensemble — revenir à « En mon nom »
-    #  doit les vider tous les trois, sinon un nom d'ancien destinataire
-    #  survivrait à un résident inscrit désigné depuis.
-    if any(_envoye(body, c) for c in ('saisi_pour_user_id', 'saisi_pour_nom', 'saisi_pour_email')):
-        #  🔴 La PRÉSENCE décide d'ÉCRIRE, la COMPARAISON décide d'ANNONCER
-        #  (18/08/2026). Les deux étaient confondues : le formulaire envoyant
-        #  toujours les trois champs — c'est ce qui permet de revenir à « En mon
-        #  nom » —, « Saisi pour modifié » apparaissait à chaque enregistrement,
-        #  même quand personne n'y avait touché.
-        avant = (ticket.saisi_pour_user_id, ticket.saisi_pour_nom, ticket.saisi_pour_email)
-        apres = (body.saisi_pour_user_id, body.saisi_pour_nom, body.saisi_pour_email)
-        ticket.saisi_pour_user_id, ticket.saisi_pour_nom, ticket.saisi_pour_email = apres
-        if avant != apres:
-            changes.append("Saisi pour modifié")
+    #  La règle — présence pour écrire, comparaison pour annoncer — vit dans
+    #  `utils/saisi_pour` depuis qu'elle sert AUSSI aux actualités et aux
+    #  événements (15/09/2026). La garder ici en aurait fait la première de
+    #  trois copies, et c'est la plus subtile des trois à maintenir.
+    #
+    #  ⚠️ `_envoye` reste chez l'appelant : lire `model_fields_set` dépend du
+    #  schéma, pas de la notion.
+    changes.extend(corriger_saisi_pour(ticket, body, _envoye))
     if body.non_relancable is not None:
         ticket.non_relancable = body.non_relancable
     if body.non_relancable_motif is not None:

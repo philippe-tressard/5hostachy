@@ -46,18 +46,14 @@
 	import SectionsSpecifiquesTicket from '$lib/components/SectionsSpecifiquesTicket.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import {
-		CATEGORIES_TICKET,
-		optionsDuTicket,
-		optionsVersTicket,
-		type ModeSaisiPour,
-	} from '$lib/tickets';
+	import { CATEGORIES_TICKET, optionsDuTicket, optionsVersTicket } from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { comparerParNom } from '$lib/noms';
+	import { lotSaisiPour, modeDepuis, type ModeSaisiPour } from '$lib/saisi-pour';
 
 	/**  Le ticket à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut) =
 	 *   création. Le mode ne change pas pendant la vie du composant : l'appelant le
@@ -176,11 +172,7 @@
 	//  le serveur sait EFFACER les `saisi_pour_*` (il lit la PRÉSENCE du champ, pas
 	//  sa non-nullité). L'ouvrir sans pré-remplir aurait proposé « En mon nom » sur un
 	//  ticket saisi pour quelqu'un — et l'aurait effacé au premier enregistrement.
-	let modeSaisiPour: ModeSaisiPour = ticket?.saisi_pour_user_id
-		? 'resident'
-		: ticket?.saisi_pour_nom
-			? 'exterieur'
-			: 'moi';
+	let modeSaisiPour: ModeSaisiPour = modeDepuis(ticket);
 	let saisiPourUserId: number | null = ticket?.saisi_pour_user_id ?? null;
 	let saisiPourNom = ticket?.saisi_pour_nom ?? '';
 	let saisiPourEmail = ticket?.saisi_pour_email ?? '';
@@ -287,10 +279,7 @@
 								destinataire_syndic: destinataireSyndic,
 								destinataire_cs: destinataireCs,
 								partager_whatsapp: partagerWhatsapp,
-								saisi_pour_user_id: modeSaisiPour === 'resident' ? saisiPourUserId : null,
-								saisi_pour_nom: modeSaisiPour === 'exterieur' ? saisiPourNom.trim() || null : null,
-								saisi_pour_email:
-									modeSaisiPour === 'exterieur' ? saisiPourEmail.trim() || null : null,
+								...lotSaisiPour(modeSaisiPour, saisiPourUserId, saisiPourNom, saisiPourEmail),
 							}
 						: {}),
 				});

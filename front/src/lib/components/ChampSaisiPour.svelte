@@ -21,7 +21,7 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
-	import type { ModeSaisiPour } from '$lib/tickets';
+	import type { ModeSaisiPour } from '$lib/saisi-pour';
 
 	/** Lié par l'appelant : lui seul sait ce que ces valeurs deviennent. */
 	export let mode: ModeSaisiPour = 'moi';

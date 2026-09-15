@@ -14,6 +14,11 @@ from app.schemas_communs import (  # noqa: F401
     liste_depuis_json as liste_depuis_json,
 )
 
+#  Les trois champs « Saisi pour » sont HÉRITÉS, plus recopiés : la notion, ses
+#  deux règles subtiles et son mixin vivent dans `utils/saisi_pour` depuis
+#  qu'elle s'applique aussi aux actualités et aux événements (15/09/2026).
+from app.utils.saisi_pour import SaisiPourEntree, SaisiPourSortie
+
 
 class UserCreate(BaseModel):
     nom: str
@@ -131,7 +136,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
-class TicketCreate(BaseModel):
+class TicketCreate(SaisiPourEntree):
     titre: str
     description: str
     categorie: str = "panne"
@@ -163,9 +168,6 @@ class TicketCreate(BaseModel):
     #  Comme `destinataire_*`, c'est une intention d'envoi et non un état du
     #  ticket : rien n'est stocké sur le modèle.
     partager_whatsapp: bool = False
-    saisi_pour_user_id: Optional[int] = None
-    saisi_pour_nom: Optional[str] = None
-    saisi_pour_email: Optional[str] = None
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
     # Pièces jointes déjà téléversées via POST /uploads/fichier — photos et
     # documents. Les fournir DÈS la création, et non après, est ce qui permet à
@@ -176,7 +178,7 @@ class TicketCreate(BaseModel):
     fichiers_urls: List[str] = []
 
 
-class TicketRead(BaseModel):
+class TicketRead(SaisiPourSortie):
     id: int
     numero: str
     titre: str
@@ -200,10 +202,6 @@ class TicketRead(BaseModel):
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     envoyer_auteur: bool = False
-    saisi_pour_user_id: Optional[int] = None
-    saisi_pour_nom: Optional[str] = None
-    saisi_pour_email: Optional[str] = None
-    saisi_pour_affichage: Optional[str] = None
     #  🔴 À QUI le ticket appartient : le « Saisi pour » s'il existe, l'auteur
     #  sinon (12/09/2026). C'est ce nom que le fil affiche et que la case
     #  « Envoyer une copie à … » annonce — le même, parce que c'est la même
@@ -241,7 +239,7 @@ class TicketRead(BaseModel):
         from_attributes = True
 
 
-class TicketUpdate(BaseModel):
+class TicketUpdate(SaisiPourEntree):
     #  ⚠️ `Optional[str]` jusqu'au 17/08/2026, et c'était la **seule** barrière :
     #  `Ticket` est un modèle `table=True`, donc SQLModel ne valide rien à
     #  l'affectation. `PATCH /tickets/{id}` écrivait en base la chaîne qu'on lui
@@ -268,9 +266,6 @@ class TicketUpdate(BaseModel):
     #  la réouverture de la Diffusion — le test `test_correction_pas_transition`
     #  a refusé l'affectation d'un attribut qui n'existe pas.
     partager_whatsapp: Optional[bool] = None
-    saisi_pour_user_id: Optional[int] = None
-    saisi_pour_nom: Optional[str] = None
-    saisi_pour_email: Optional[str] = None
     non_relancable: Optional[bool] = None
     non_relancable_motif: Optional[str] = None
     # Sert à retirer ou réordonner des pièces jointes déjà téléversées : l'ajout

@@ -294,7 +294,11 @@ export function ticketScope(t: {
  * Il appartient de toute façon au vocabulaire du ticket, pas à l'écran qui le
  * saisit — comme les statuts et les catégories juste au-dessus.
  */
-export type ModeSaisiPour = 'moi' | 'resident' | 'exterieur';
+//  🔴 La notion a QUITTÉ ce fichier le 15/09/2026 : elle sert désormais aux
+//  actualités et aux événements autant qu'aux tickets, et la laisser ici
+//  aurait fait de « tickets » le domicile d'une règle partagée.
+//  Réexporté pour que rien n'ait à changer chez les appelants.
+export type { ModeSaisiPour } from '$lib/saisi-pour';
 
 // ── Options de publication ───────────────────────────────────────────────────
 

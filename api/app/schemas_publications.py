@@ -18,8 +18,9 @@ from typing import List, Optional
 from pydantic import BaseModel, field_validator
 
 from app.schemas_communs import ListeJson
+from app.utils.saisi_pour import SaisiPourEntree, SaisiPourSortie
 
-class PublicationCreate(BaseModel):
+class PublicationCreate(SaisiPourEntree):
     titre: str
     contenu: str
     perimetre: str = "résidence"
@@ -51,7 +52,7 @@ class PublicationCreate(BaseModel):
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
-class PublicationUpdate(BaseModel):
+class PublicationUpdate(SaisiPourEntree):
     titre: Optional[str] = None
     contenu: Optional[str] = None
     epingle: Optional[bool] = None
@@ -123,7 +124,7 @@ class EvolutionCreate(BaseModel):
     confidentiel: Optional[bool] = None
 
 
-class PublicationRead(BaseModel):
+class PublicationRead(SaisiPourSortie):
     id: int
     titre: str
     contenu: str

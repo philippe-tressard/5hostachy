@@ -48,6 +48,12 @@ const RACINE = 'src';
  *   respecter. Les deux doivent rester d'accord, et c'est ce contrôle qui
  *   tranche — une documentation ne fait échouer personne. */
 export const RANGS = {
+	//  🔴 Section à part entière depuis le 15/09/2026, sur arbitrage :
+	//  « j'ai sorti la section Saisi pour de Champs spécifiques ». Elle vivait
+	//  DANS les champs spécifiques du ticket — donc invisible aux autres
+	//  écrans, et l'étendre aux actualités et aux événements l'aurait recopiée
+	//  deux fois de plus.
+	'Saisi pour': 2,
 	'Options de publication': 3,
 	Workflow: 4,
 	Périmètre: 5,
@@ -64,6 +70,7 @@ export const RANGS = {
 /**  Les props de `ChampsCommuns` et le rang qu'elles activent. L'ordre du
  *   tableau est celui du composant : il REND toujours dans cet ordre-là. */
 const PROPS_CHAMPS_COMMUNS = [
+	['avecSaisiPour', 2],
 	['avecOptions', 3],
 	['avecWorkflow', 4],
 	['avecPerimetre', 5],

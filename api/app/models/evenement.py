@@ -44,6 +44,7 @@ from enum import Enum
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+from app.utils.saisi_pour import SaisiPourMixin
 
 
 class TypeEvenement(str, Enum):
@@ -64,7 +65,7 @@ class StatutKanban(str, Enum):
     annule = "annule"
 
 
-class Evenement(SQLModel, table=True):
+class Evenement(SaisiPourMixin, table=True):
     __tablename__ = "evenement"
     id: Optional[int] = Field(default=None, primary_key=True)
     titre: str

@@ -53,6 +53,8 @@
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
+	import { chargerResidents, lotSaisiPour, modeDepuis, type ModeSaisiPour } from '$lib/saisi-pour';
+	import { admin as adminApi } from '$lib/api';
 	import DocumentsPublication from '$lib/components/DocumentsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -63,10 +65,10 @@
 		type AnnonceHall,
 		type Publication,
 	} from '$lib/api';
-	import { essayer } from '$lib/chargement';
+	import { annoncesProposables, messagePrefill } from '$lib/actualite-prefill';
 	import { fmtDateShort } from '$lib/date';
 	import { perimetreDefautListe } from '$lib/utils';
-	import { MAX_SOURCES_PREREMPLISSAGE, richEmpty } from '$lib/publications';
+	import { richEmpty } from '$lib/publications';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { PUBLICATION } from '$lib/entites/publication';
@@ -79,6 +81,13 @@
 	 *   exactement comme il le fait pour `EvolForm`. Même contrat que
 	 *   `FormulaireTicket` (#425). */
 	export let publication: Publication | null = null;
+
+	//  ── 2. Saisi pour — le CS publie parfois POUR quelqu'un (`$lib/saisi-pour`).
+	let modeSaisiPour: ModeSaisiPour = modeDepuis(publication);
+	let saisiPourUserId: number | null = publication?.saisi_pour_user_id ?? null;
+	let saisiPourNom = publication?.saisi_pour_nom ?? '';
+	let saisiPourEmail = publication?.saisi_pour_email ?? '';
+	let residentsSaisiPour: { id: number; prenom: string; nom: string; email: string }[] = [];
 
 	const modeEdition = publication !== null;
 
@@ -94,30 +103,15 @@
 	}>();
 
 	//  ── Pré-remplissage depuis une annonce de hall (#832) ───────────────────
-	//
-	//  🔴 Le MIROIR exact du mécanisme de `FormulaireAnnonceHall`, qui propose
-	//  « Pré-remplir depuis une actualité » depuis le 01/09/2026. Le CS compose
-	//  souvent l'affiche du hall d'abord ; le geste n'existait que dans un sens.
-	//
-	//  ⚠️ Comme là-bas, ce bloc reste AVANT le titre. Ce n'est pas une section du
-	//  cadre #430 — c'est un raccourci qui REMPLIT le formulaire. Le placer après
-	//  le titre reviendrait à proposer de réécrire ce qu'on vient de saisir.
-	//
-	//  ⚠️ Uniquement en CRÉATION : pré-remplir une actualité qu'on corrige
-	//  écraserait le texte publié, et l'écran de correction n'a pas à proposer un
-	//  geste qui défait ce qu'il sert à ajuster.
+	//  Le pourquoi vit dans `$lib/actualite-prefill`. ⚠️ Ce bloc reste AVANT le
+	//  titre : un raccourci qui REMPLIT, pas une section du cadre #430.
 	let annonces: AnnonceHall[] = [];
 	let annonceSourceId: number | '' = '';
 
 	onMount(async () => {
-		if (modeEdition) return;
-		//  ⚠️ Non bloquant : si la liste ne vient pas, la saisie libre reste
-		//  possible et le sélecteur ne s'affiche simplement pas. C'est la règle
-		//  qu'applique déjà l'autre sens.
-		const [liste] = await essayer(annoncesHallApi.list(true), [] as AnnonceHall[]);
-		annonces = liste
-			.sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())
-			.slice(0, MAX_SOURCES_PREREMPLISSAGE);
+		residentsSaisiPour = await chargerResidents(adminApi.utilisateurs);
+		if (modeEdition) return; //  en CRÉATION seulement (cf. le module)
+		annonces = await annoncesProposables(() => annoncesHallApi.list(true));
 	});
 
 	async function prefillDepuisAnnonce(annonceId: number | '') {
@@ -131,13 +125,7 @@
 				? [...src.perimetre_cible]
 				: perimetreDefautListe();
 			photos = [...(src.photos_urls ?? [])];
-			const nb = photos.length;
-			toast(
-				'info',
-				nb > 0
-					? `Actualité pré-remplie (${nb} image${nb > 1 ? 's' : ''}) — ajustez avant de publier`
-					: 'Actualité pré-remplie — ajustez le texte avant de publier',
-			);
+			toast('info', messagePrefill(photos.length));
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du pré-remplissage');
 		}
@@ -293,6 +281,7 @@
 					photos_urls: photos,
 					...canaux,
 					annonce_hall: annonceHall,
+					...lotSaisiPour(modeSaisiPour, saisiPourUserId, saisiPourNom, saisiPourEmail),
 				});
 				toast('success', 'Publication mise à jour');
 				dispatch('modifie', maj);
@@ -316,6 +305,7 @@
 				...canaux,
 				annonce_hall: annonceHall,
 				confidentiel,
+				...lotSaisiPour(modeSaisiPour, saisiPourUserId, saisiPourNom, saisiPourEmail),
 			});
 			//  🔴 Le silence d'avant (« la publication existe, le document se rattrape »)
 			//  laissait croire le document joint. `attacherApres` le DIT — c'est la
@@ -405,6 +395,12 @@
 		      le rang de la section devenait alors une affaire d'écran. Il ne l'est
 		      plus. -->
 			<ChampsCommuns
+				avecSaisiPour
+				{residentsSaisiPour}
+				bind:modeSaisiPour
+				bind:saisiPourUserId
+				bind:saisiPourNom
+				bind:saisiPourEmail
 				avecOptions={sectionPresente(PUBLICATION, etat, 'specifiques')}
 				dejaEpingle={epingleInitial}
 				bind:epingle

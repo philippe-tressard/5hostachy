@@ -83,6 +83,8 @@
 	import DestinatairePicker from './DestinatairePicker.svelte';
 	import SectionDiffusion from './SectionDiffusion.svelte';
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
+	import ChampSaisiPour from '$lib/components/ChampSaisiPour.svelte';
+	import type { ModeSaisiPour } from '$lib/saisi-pour';
 	import type { CleOptionPublication } from '$lib/options-publication';
 	import { estPerimetreParDefaut, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
 	import { perimetresStore } from '$lib/stores/perimetres';
@@ -92,6 +94,36 @@
 	/** Préfixe des `id` des champs — deux formulaires peuvent coexister à l'écran,
 	    et deux `<label for="…">` pointant le même id ne désignent plus rien. */
 	export let idPrefixe: string;
+
+	//  ── 2. Saisi pour ─────────────────────────────────────────────────────────
+	//
+	//  🔴 Section à part entière depuis le 15/09/2026, sur arbitrage :
+	//
+	//  > « j'ai sorti la section Saisi pour de Champs spécifiques (enregistre le
+	//  >   nouveau standard des sections) »
+	//
+	//  Elle vivait DANS les champs spécifiques du ticket, ce qui la rendait
+	//  invisible aux autres écrans : l'étendre aux actualités et aux événements
+	//  l'aurait recopiée deux fois de plus. Elle est ici, donc son rang ne se
+	//  négocie plus par écran — comme les options, pour la même raison, depuis le
+	//  12/09.
+	//
+	//  ⚠️ `FormulaireTicket` continue de la poser lui-même, et c'est DÉCLARÉ :
+	//  ses options dépendent du rôle et sont rendues avant `ChampsCommuns`, si
+	//  bien que passer par ici les intercalerait dans le mauvais ordre.
+	//  `lint:ordre-sections` vérifie que sa rangée reste juste.
+	export let avecSaisiPour = false;
+	/** Les résidents proposables — chargés par l'appelant, qui connaît ses droits. */
+	export let residentsSaisiPour: {
+		id: number;
+		prenom: string;
+		nom: string;
+		email: string;
+	}[] = [];
+	export let modeSaisiPour: ModeSaisiPour = 'moi';
+	export let saisiPourUserId: number | null = null;
+	export let saisiPourNom = '';
+	export let saisiPourEmail = '';
 
 	//  ── 3. Options de publication ─────────────────────────────────────────────
 	//  🔴 Le rang de cette section ne se négocie plus par écran (12/09/2026) :
@@ -241,9 +273,25 @@
 	//  PREMIÈRE section rendue, quelle qu'elle soit. Sans ce calcul, ouvrir un
 	//  formulaire par les options doublait le trait du cadre — le « double trait »
 	//  signalé à l'écran le 05/09/2026, une section plus haut.
-	$: premiereWorkflow = premiere && !avecOptions;
-	$: premierePerimetre = premiere && !avecOptions && !avecWorkflow;
+	//  ⚠️ « Saisi pour » entre dans ce calcul comme les autres : le filet du haut
+	//  appartient à la première section RENDUE, et elle passe avant les options.
+	//  L'oublier redonnerait le « double trait » du 05/09.
+	$: premiereWorkflow = premiere && !avecSaisiPour && !avecOptions;
+	$: premierePerimetre = premiere && !avecSaisiPour && !avecOptions && !avecWorkflow;
 </script>
+
+{#if avecSaisiPour}
+	<!--  2. Au nom de QUI l'entrée est ouverte. Le composant est celui des
+	      tickets (`ChampSaisiPour`) : il portait déjà la saisie, il ne lui
+	      manquait qu'un appelant de plus. -->
+	<ChampSaisiPour
+		bind:mode={modeSaisiPour}
+		bind:userId={saisiPourUserId}
+		bind:nom={saisiPourNom}
+		bind:email={saisiPourEmail}
+		residents={residentsSaisiPour}
+	/>
+{/if}
 
 {#if avecOptions}
 	<!--  3. Les options qui DÉCRIVENT l'objet — épinglage, urgence, brouillon,

@@ -71,6 +71,12 @@ CHAMPS_CORRIGEABLES = {
     'public_cible': 'Destinataires',
     'contenu': 'Description',
     'photos_urls': 'Photos',
+    #  « Saisi pour » — les trois champs portent UN libellé, pas trois :
+    #  ils changent ensemble (`utils/saisi_pour`), et trois lignes
+    #  d'historique pour un seul geste se lisent comme trois gestes.
+    'saisi_pour_user_id': 'Saisi pour',
+    'saisi_pour_nom': 'Saisi pour',
+    'saisi_pour_email': 'Saisi pour',
 }
 
 
@@ -284,11 +290,16 @@ def update_publication(
     if nouveau_statut and nouveau_statut != ancien_statut:
         pub.statut_change_le = datetime.utcnow()
 
-    corrections = [
+    #  ⚠️ Dédoublonné : plusieurs champs peuvent porter le MÊME libellé
+    #  quand ils forment une seule notion — les trois `saisi_pour_*`
+    #  changent ensemble. `dict.fromkeys` plutôt qu'un `set` : l'ordre est
+    #  celui de la table, et un `set` le rendrait différent à chaque
+    #  démarrage.
+    corrections = list(dict.fromkeys(
         libelle
         for champ, libelle in CHAMPS_CORRIGEABLES.items()
         if champ in data and data[champ] != avant.get(champ)
-    ]
+    ))
     if nouveau_statut and nouveau_statut != ancien_statut:
         corrections.insert(
             0,

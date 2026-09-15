@@ -24,12 +24,17 @@ from app.utils.photos import parse_photos, photos_internes, photos_json
 from app.utils.visibility import evenement_visible
 from app.utils.noms import nom_affiche
 from app.utils.corrections import contenu_correction
+from app.utils.saisi_pour import (
+    SaisiPourEntree,
+    SaisiPourSortie,
+    affichage as affichage_saisi_pour,
+)
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
 
 
-class EvenementCreate(BaseModel):
+class EvenementCreate(SaisiPourEntree):
     titre: str
     description: Optional[str] = None
     type: TypeEvenement = TypeEvenement.autre
@@ -64,7 +69,7 @@ class EvenementCreate(BaseModel):
     fichiers_urls: list[str] = []
 
 
-class EvenementRead(BaseModel):
+class EvenementRead(SaisiPourSortie):
     id: int
     titre: str
     description: Optional[str] = None
@@ -113,7 +118,7 @@ class EvenementRead(BaseModel):
         from_attributes = True
 
 
-class EvenementUpdate(BaseModel):
+class EvenementUpdate(SaisiPourEntree):
     titre: Optional[str] = None
     description: Optional[str] = None
     type: Optional[TypeEvenement] = None
@@ -157,6 +162,10 @@ def _ev_to_read(ev: Evenement, session: Session) -> EvenementRead:
     data.evolutions = _evolutions_de(ev.id, session)
     auteur = session.get(Utilisateur, ev.auteur_id)
     data.auteur_nom = nom_affiche(auteur.prenom, auteur.nom) if auteur else "?"
+    #  « Saisi pour X », et seulement s'il y a un X : la règle des trois cas
+    #  (résident inscrit / personne extérieure / personne) vit dans
+    #  `utils/saisi_pour`, avec celle des tickets et des actualités.
+    data.saisi_pour_affichage = affichage_saisi_pour(session, ev)
     if ev.prestataire_id:
         prest = session.get(Prestataire, ev.prestataire_id)
         data.prestataire_nom = prest.nom if prest else None
@@ -432,11 +441,20 @@ def update_evenement(
             auteur_id=user.id,
             cree_le=datetime.utcnow(),
         ))
-    corrections = [
+    #  ⚠️ **Dédoublonné**, et ce n'est pas une précaution de style : plusieurs
+    #  champs peuvent porter le MÊME libellé quand ils forment une seule notion —
+    #  les trois `saisi_pour_*` changent ensemble (`utils/saisi_pour`). Sans
+    #  `dict.fromkeys`, un changement de « Saisi pour » écrirait trois lignes
+    #  identiques dans l'historique, qui se liraient comme trois gestes.
+    #
+    #  `dict.fromkeys` plutôt qu'un `set` : l'ordre des libellés est celui de
+    #  `CHAMPS_CORRIGEABLES`, et un `set` le rendrait différent à chaque
+    #  démarrage.
+    corrections = list(dict.fromkeys(
         libelle
         for champ, libelle in CHAMPS_CORRIGEABLES.items()
         if champ in data and data[champ] != avant.get(champ)
-    ]
+    ))
     if corrections:
         session.add(EvenementEvolution(
             evenement_id=ev.id,
