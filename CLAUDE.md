@@ -213,7 +213,7 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - [ ] Schémas Create/Read/Update dans `schemas.py`
 - [ ] Migration créée avec bon numéro séquentiel
 - [ ] Router créé + enregistré dans `main.py`
-- [ ] Client TypeScript ajouté dans `front/src/lib/api.ts`
+- [ ] Client TypeScript ajouté dans le paquet `front/src/lib/api/` — dans le module de son domaine (`acces`, `patrimoine`, `communaute`…), jamais dans un `api.ts` ressuscité à la racine
 
 ### Documentation utilisateur — **deux** documents de même rang
 - [ ] `docs/manuel-utilisateur.html` — **comment on s'en sert** : mis à jour dans le

@@ -1541,6 +1541,21 @@ jobs:
         working-directory: front
         run: npm run lint:tables-statuts
 
+      # 🔴 LE LOCK MENTAIT SUR DEUX DÉPENDANCES DEPUIS QUINZE VERSIONS (15/09/2026).
+      #
+      # `prosemirror-transform` y suivait le numéro de version de l'APPLICATION —
+      # 1.16.2, 1.17.0, … 1.28.0 — parce que le bump se faisait par remplacement
+      # de chaîne et que cette dépendance portait par hasard le même numéro.
+      # Aucune de ces versions n'a jamais été publiée.
+      #
+      # La production n'a jamais été cassée : `npm ci` suit `resolved` et son
+      # empreinte, qui désignaient les vraies archives. Mais `npm audit` lit
+      # `version` : il évaluait les avis contre une version inexistante et rendait
+      # « 0 vulnérabilité » SANS avoir examiné ces paquets.
+      - name: Le lock ne ment pas sur ses versions
+        working-directory: front
+        run: npm run lint:lock
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #
