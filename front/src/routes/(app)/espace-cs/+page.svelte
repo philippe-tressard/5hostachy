@@ -32,6 +32,7 @@
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import BadgesCopropriete from '$lib/components/BadgesCopropriete.svelte';
 	import { localisationMembre } from '$lib/utils';
+	import { agitPourAutrui } from '$lib/roles';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -761,7 +762,7 @@
 									? ` — ${batimentsMap[user.batiment_id] ?? `Bât. #${user.batiment_id}`}`
 									: ''}
 							</span>
-							{#if (user.statut === 'aidant' || user.statut === 'mandataire') && user.nom_aide}
+							{#if agitPourAutrui(user) && user.nom_aide}
 								<span class="text-muted-sm"
 									>👤 Aidé : {nomAffiche(user.prenom_aide, user.nom_aide)}</span
 								>

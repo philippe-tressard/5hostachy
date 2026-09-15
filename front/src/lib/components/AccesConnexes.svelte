@@ -44,7 +44,7 @@
   répété.
 -->
 <script lang="ts">
-	import { currentUser } from '$lib/stores/auth';
+	import { isLocataire } from '$lib/stores/auth';
 
 	/** Les accès confiés par le bailleur — locataires seulement. */
 	export let accesRecus: any[] = [];
@@ -53,7 +53,7 @@
 </script>
 
 <!-- Accès reçus du bailleur (locataires uniquement) -->
-{#if $currentUser?.statut === 'locataire'}
+{#if $isLocataire}
 	<section class="section card" style="margin-top:1rem;border-left:3px solid var(--color-primary)">
 		<div class="section-header">
 			<h2 class="section-title">&#x1F3E0; Accès confiés par votre bailleur</h2>

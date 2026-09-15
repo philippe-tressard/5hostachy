@@ -144,3 +144,54 @@ def test_un_type_inconnu_est_refuse():
     #  donc un troisième type y apparaîtra sans qu'on touche à ce test.
     for cle in TYPES_ACCES:
         assert cle in erreur.value.detail
+
+def test_chaque_ligne_porte_SON_PROPRE_perimetre(parc_dessai):
+    """🔴 Le défaut du 15/09/2026 : l'export portait le périmètre d'un AUTRE badge.
+
+    `_acces_admin_out` **trie par code** ; la liste lue en base ne l'est pas. La
+    boucle les appariait par `zip`, si bien que chaque ligne recevait le
+    périmètre de son voisin de rang. Constaté en comparant l'export à l'écran :
+    le même code y affichait deux bâtiments différents.
+
+    ⚠️ **Un accès dit quelle porte s'ouvre.** Ce n'est pas une gêne de lecture :
+    l'export désignait la mauvaise serrure, et rien dans le fichier ne permettait
+    de s'en apercevoir.
+
+    ## Pourquoi les tests voisins ne pouvaient pas le voir
+
+    Ils créent UN vigik et UNE télécommande. Avec un seul élément par type, tout
+    appariement est correct — y compris un appariement faux. Il faut au moins
+    deux éléments, et surtout un ordre d'insertion qui DIFFÈRE de l'ordre de
+    tri : sans cela le `zip` fautif aurait encore donné le bon résultat.
+
+    C'est la leçon de ce fichier : **un jeu d'essai à un seul élément ne prouve
+    rien sur le rang.**
+    """
+    porteur = parc_dessai.exec(select(Utilisateur)).first()
+    #  Codes à REBOURS de l'ordre alphabétique : le tri rend Z09 → A01, l'ordre
+    #  d'insertion est A01 → Z09. Un `zip` des deux séquences inverse donc les
+    #  périmètres, et ce test le voit.
+    pose = {"Z09": '["zone-z"]', "M05": '["zone-m"]', "A01": '["zone-a"]'}
+    for code, perimetre in pose.items():
+        parc_dessai.add(Vigik(code=code, user_id=porteur.id, perimetre_cible=perimetre))
+    parc_dessai.commit()
+
+    lignes = parc._csv_du_parc(parc_dessai, VIGIK).splitlines()[1:]
+    vus = {}
+    for ligne in lignes:
+        cellules = ligne.split(";")
+        vus[cellules[0].lstrip("\ufeff")] = cellules[3]
+
+    for code, brut in pose.items():
+        attendu = brut.strip('[]"')
+        assert code in vus, f"{code} absent de l'export"
+        assert attendu in vus[code], (
+            f"La ligne « {code} » porte « {vus[code]} » au lieu de « {attendu} ».\n"
+            "Les deux séquences ne sont pas appariées : l'export attribue à ce "
+            "badge le périmètre d'un autre, c'est-à-dire une autre serrure."
+        )
+
+    #  …et l'ordre du fichier est bien celui du tri par code : c'est ce qui rend
+    #  un export relisible d'un mois sur l'autre.
+    codes = [c for c in vus if c in pose]
+    assert codes == sorted(codes), f"ordre inattendu : {codes}"

@@ -2,12 +2,12 @@
 	import { onMount } from 'svelte';
 	import { libelleLogement, relire } from '$lib/utils';
 	import ItemKanban from '$lib/components/ItemKanban.svelte';
-	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
 	import { goto } from '$app/navigation';
-	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
+	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
+	import { currentUser, isAdmin, isCS, isLocataire } from '$lib/stores/auth';
 	import { flux, lots, calendrier as calApi, type FluxItem, type FluxResponse } from '$lib/api';
 	import {
 		colonneDeLEvenement,
@@ -71,7 +71,6 @@
 	$: canSeeAG = ($currentUser?.roles ?? []).some((r: string) =>
 		['propriétaire', 'conseil_syndical', 'admin'].includes(r),
 	);
-	$: isLocataire = $currentUser?.statut === 'locataire';
 
 	//  Ce filtre réimplémentait la règle du serveur : un motif `bat:(\d+)` analysé à
 	//  la main et la liste des périmètres transverses écrite en dur — troisième
@@ -386,7 +385,7 @@
 		target="_blank"
 		class="consignes-card section-reveal"
 		class:section-visible={ready}
-		class:consignes-prominent={isLocataire}
+		class:consignes-prominent={$isLocataire}
 		style="--delay:.05s"
 	>
 		<div class="consignes-icon">📋</div>
@@ -514,7 +513,7 @@
 	{/if}
 
 	<!-- ═══ KANBAN (masqué pour les locataires) ═════════════════════════════ -->
-	{#if !isLocataire}
+	{#if !$isLocataire}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.2s">
 			<div class="kb-header">
 				<h2 class="section-title" style="margin:0">&#x1F4CB; Kanban</h2>

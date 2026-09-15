@@ -9,7 +9,14 @@
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, bailleur as bailApi, ApiError, type ObjetRemis } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
+	import {
+		isAdmin,
+		isBailleur,
+		isCS,
+		isCoproprietaire,
+		isLocataire,
+		isResident,
+	} from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
@@ -28,8 +35,6 @@
 	//  redirection ce qui s'ATTEINT. Depuis que la gestion locative a une adresse,
 	//  la seconde ne va plus de soi — un lien reçu par un locataire ouvrirait
 	//  l'onglet que la barre lui cache.
-	$: isBailleur = $currentUser?.statut === 'copropriétaire_bailleur';
-	$: isResident = $currentUser?.statut === 'copropriétaire_résident';
 
 	const ROUTE_BAUX_ACTIFS = routeSousOnglet('mon-lot', 'location', 'actif');
 
@@ -50,7 +55,8 @@
 		accesDeclare = false;
 	}
 	$: bailTab = data.sous ?? 'actif';
-	$: peutGererLocation = isBailleur || $isAdmin || $isCS || (isResident && bauxTermines.length > 0);
+	$: peutGererLocation =
+		$isBailleur || $isAdmin || $isCS || ($isResident && bauxTermines.length > 0);
 	$: if (browser && !bauxLoading && mainTab === 'location' && !peutGererLocation) {
 		goto(routeOnglet('mon-lot', 'lots'), { replaceState: true });
 	}
@@ -89,7 +95,6 @@
 
 	// ── State (locataire bail) ────────────────────────────────────────────────
 	let monBailData: any = null;
-	$: isLocataire = $currentUser?.statut === 'locataire';
 
 	// ── State (lots) ──────────────────────────────────────────────────────────
 	let lots: LotDetail[] = [];
@@ -169,14 +174,14 @@
 		} finally {
 			loading = false;
 		}
-		if ($currentUser?.statut === 'locataire') {
+		if ($isLocataire) {
 			try {
 				monBailData = await bailApi.monBail();
 			} catch {
 				/* pas de bail */
 			}
 		}
-		if ($currentUser?.statut === 'copropriétaire_bailleur' || isResident) {
+		if ($isCoproprietaire) {
 			try {
 				baux = await bailApi.mesBaux();
 			} catch (e: any) {
@@ -328,7 +333,7 @@
 			await bailApi.transfererAcces(bail.id, { vigik_ids: vigikIds, tc_ids: tcIds });
 			const n = vigikIds.length + tcIds.length;
 			toast('success', `${n} accès affecté${n > 1 ? 's' : ''} automatiquement`);
-			if ($currentUser?.statut === 'copropriétaire_bailleur' || isResident) {
+			if ($isCoproprietaire) {
 				baux = await bailApi.mesBaux();
 			} else if ($isAdmin || $isCS) {
 				baux = await bailApi.tousBaux();
@@ -442,11 +447,11 @@
 			<h3>Impossible d’afficher vos lots</h3>
 			<p>{erreurLots}</p>
 		</div>
-	{:else if lots.length === 0 && !isLocataire}
+	{:else if lots.length === 0 && !$isLocataire}
 		<div class="empty-state">
 			<h3>Aucun lot associé</h3>
 			<p>Votre compte n'est pas encore lié à un lot.</p>
-			{#if $currentUser?.statut === 'locataire'}
+			{#if $isLocataire}
 				<p style="font-size:.85rem;color:var(--color-text-muted);margin-top:.5rem">
 					Votre propriétaire doit vous rattacher depuis la section <strong>Gestion locative</strong> de
 					son espace.
@@ -461,7 +466,7 @@
 				</p>
 			{/if}
 		</div>
-	{:else if isLocataire}
+	{:else if $isLocataire}
 		<!-- ── Vue locataire : lot loué via bail ── -->
 		{#if monBailData}
 			<div class="lots-section-label">🏠 Lot loué</div>
@@ -540,7 +545,7 @@
 				</div>
 			{/each}
 		{/if}
-	{:else if isBailleur}
+	{:else if $isBailleur}
 		<!-- ── Vue bailleur : lots possédés + locataires ── -->
 		{@const lotsAvecBail = lots.map((l) => ({
 			...l,

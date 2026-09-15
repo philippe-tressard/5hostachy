@@ -27,7 +27,7 @@
 		annonces as annoncesApi,
 		signalements as signalementsApi,
 	} from '$lib/api';
-	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
+	import { currentUser, isAdmin, isCS, isGestionnaire } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -232,10 +232,7 @@
 	//  (29/08/2026). L'API décide et FORMULE ; l'écran choisit le GESTE.
 
 	// Garde réactive : redirige dès que le user est connu (garde contre la race condition async layout)
-	$: if (
-		$currentUser &&
-		($currentUser.statut === 'syndic' || $currentUser.statut === 'mandataire')
-	) {
+	$: if ($currentUser && $isGestionnaire) {
 		toast(
 			'error',
 			$currentUser.communaute_motif_refus ??

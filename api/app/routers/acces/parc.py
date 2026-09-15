@@ -56,7 +56,7 @@ from app.utils.acces_detachement import detacher_acces
 from app.utils.acces_gestes import _acces_json, _prevenir_porteur, _tracer_sur_ticket
 from app.utils.dates_fr import date_courte
 from app.utils.noms import nom_affiche
-from app.utils.perimetres import parse_json_perimetres, perimetre_label
+from app.utils.perimetres import perimetre_label
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 
 router = APIRouter()
@@ -429,13 +429,13 @@ def _csv_du_parc(session: Session, type_acces: TypeAcces) -> str:
     """
     objets = session.exec(select(type_acces.modele)).all()
     lignes = []
-    for fiche, objet in zip(_acces_admin_out(objets, session, type_acces), objets):
-        perimetre = parse_json_perimetres(objet.perimetre_cible)
+    #  🔴 La fiche seule : un `zip` décalé donnait le périmètre d'un AUTRE badge (15/09).
+    for fiche in _acces_admin_out(objets, session, type_acces):
         lignes.append([
             fiche.code,
             fiche.porteur_nom,
             fiche.lot_libelle or "",
-            perimetre_label(perimetre) if perimetre else "",
+            perimetre_label(fiche.perimetre_cible) if fiche.perimetre_cible else "",
             fiche.statut.value if hasattr(fiche.statut, "value") else str(fiche.statut),
             date_courte(fiche.cree_le),
         ])

@@ -7,7 +7,8 @@
   longtemps, réservées au CS, et **aucun écran ne les appelait**. Le ticket posait
   la question franchement : les livrer, ou les retirer ?
 
-  Arbitrage : **lecture seule**. Trois autres routes, qui créaient et modifiaient
+  Arbitrage du 06/09 : **lecture seule** — RENVERSÉ le 14/09 (cf. plus bas).
+  Trois autres routes, qui créaient et modifiaient
   des badges, ont été supprimées le même jour — enregistrer un badge est déjà
   couvert deux fois (l'import Excel en masse, `declarer-badge` par le résident à
   l'unité), et une troisième voie jamais exercée est du code qui dérive.
@@ -27,12 +28,31 @@
   C'est la leçon générale de #801 : une route sans appelant n'est jamais mise à
   l'épreuve de la question à laquelle elle est censée répondre.
 
-  ## Ce que cet écran ne fait PAS, et c'est délibéré
+  ## 🔴 Ce paragraphe disait l'INVERSE de ce que l'écran fait (corrigé le 15/09/2026)
 
-  Aucun geste. Pas de création, pas de changement de statut, pas de suppression.
-  Un résident gère **ses** badges depuis cette même page (déclarer, signaler
-  perdu, supprimer) ; le CS y ajoute la vue d'ensemble, et rien de plus. Ouvrir
-  l'écriture ici rouvrirait la troisième voie qu'on vient de fermer.
+  Il annonçait : « Aucun geste. Pas de création, pas de changement de statut, pas
+  de suppression. […] Ouvrir l'écriture ici rouvrirait la troisième voie qu'on
+  vient de fermer. » C'était vrai le 06/09, et **faux depuis le 14** — le
+  renversement a ajouté les routes, les boutons, les droits et le manuel, et
+  laissé les deux textes qui décrivaient la décision d'avant. Le paragraphe
+  d'aide de l'écran disait de même « Cette vue est en lecture seule », à trois
+  centimètres du bouton « Enregistrer un accès ».
+
+  ⚠️ C'est le motif que le dépôt connaît par cœur : **le seul endroit qui parlait
+  du sujet affirmait que le problème n'existait pas.** Un commentaire périmé ne
+  se contente pas d'être inutile — il est cru.
+
+  ## Ce que cet écran fait aujourd'hui
+
+  Le conseil syndical **enregistre** un accès pour un copropriétaire, le
+  **corrige** et l'**exporte** (un fichier par type). Un résident déclare les
+  siens depuis son espace, et l'import Excel les enregistre en masse : les trois
+  voies coexistent parce qu'elles répondent à trois situations, et elles passent
+  toutes par le même descripteur (`utils/types_acces`) — c'est ce qui les empêche
+  de diverger, pas leur nombre.
+
+  🔒 La suppression définitive reste à l'**administrateur** : un badge perdu ou
+  rendu passe en statut, parce qu'il a existé et qu'il circule.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -277,10 +297,22 @@
 	<div class="section-header">
 		<h2 class="section-title">Tous les badges de la copropriété</h2>
 	</div>
+	<!--  🔴 Ce paragraphe annonçait « Cette vue est en LECTURE SEULE » alors que
+	      l'écran porte, depuis la v1.37.0, un bouton « Enregistrer un accès », un
+	      crayon et une corbeille sur chaque ligne. Signalé le 15/09/2026, sur une
+	      capture d'écran où les deux se voyaient à trois centimètres l'un de
+	      l'autre.
+
+	      ⚠️ C'est le motif que le dépôt connaît : le seul endroit qui parlait du
+	      sujet disait que le problème n'existait pas. Le renversement de #805 a
+	      ouvert l'écriture, ajouté les routes, les boutons, les droits et le
+	      manuel — et laissé la phrase qui décrivait la décision d'avant. -->
 	<p class="bc-aide">
-		Qui détient quoi, badges Vigik et télécommandes confondus. Cette vue est en
-		<strong>lecture seule</strong> : un badge s'enregistre par l'import Excel, ou par le résident lui-même
-		depuis cette page.
+		Qui détient quoi, badges Vigik et télécommandes confondus. Le conseil syndical peut
+		<strong>enregistrer</strong> un accès pour un copropriétaire, le <strong>corriger</strong> et l'<strong
+			>exporter</strong
+		> ; un résident déclare les siens depuis son espace, et l'import Excel les enregistre en masse. Seul
+		un administrateur retire définitivement une ligne.
 	</p>
 
 	<ChoixPastilles
