@@ -1,6 +1,13 @@
 import { writable, derived } from 'svelte/store';
 import type { User } from '$lib/api';
 import { setActingAs } from '$lib/api';
+import {
+	estBailleur,
+	estCoproprietaire,
+	estGestionnaire,
+	estLocataire,
+	estResident,
+} from '$lib/roles';
 
 export const currentUser = writable<User | null>(null);
 
@@ -60,6 +67,39 @@ export const isAdminOnly = derived(currentUser, ($u) => {
 	const hasAdm = roles.includes('admin');
 	return hasAdm && !hasRes && !hasCS;
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Ce que l'utilisateur COURANT est — des dérivées, pas des recopies
+// ─────────────────────────────────────────────────────────────────────────────
+//
+//  🔴 Les écrans réinventaient ces dérivées, une par une :
+//
+//      $: isLocataire = $currentUser?.statut === 'locataire';
+//
+//  …écrit tel quel dans SIX fichiers (`OngletAcces`, `AccesConnexes`,
+//  `calendrier`, `mon-lot`, `residence`, `tableau-de-bord`), alors que
+//  `isCS`, `isAdmin` et `isProprio` vivaient ICI depuis toujours. La règle la
+//  plus déployée existait ; ces écrans ne la suivaient pas.
+//
+//  ⚠️ Et `mon-lot` définissait sa propre `isLocataire` tout en recomposant le
+//  test deux lignes plus loin : une duplication n'a pas besoin de traverser le
+//  dépôt pour diverger.
+//
+//  🔒 La QUESTION est posée par `$lib/roles` (`estLocataire`…), pour qu'elle
+//  serve aussi à une personne qui n'est pas l'utilisateur courant — un membre
+//  de l'annuaire du conseil syndical. Ici on ne fait que l'appliquer au
+//  courant. Deux endroits, deux rôles, une seule écriture de la règle.
+//
+//  ⚠️ Ces dérivées disent ce qu'on AFFICHE, jamais ce qu'on autorise : les
+//  droits sont tranchés par le serveur (`auth/deps`).
+
+export const isLocataire = derived(currentUser, estLocataire);
+export const isBailleur = derived(currentUser, estBailleur);
+export const isResident = derived(currentUser, estResident);
+/** Copropriétaire, qu'il habite son lot ou le loue. */
+export const isCoproprietaire = derived(currentUser, estCoproprietaire);
+/** Syndic ou mandataire — il gère, il n'habite pas. */
+export const isGestionnaire = derived(currentUser, estGestionnaire);
 
 /**
  * L'état d'authentification est-il RÉSOLU ?

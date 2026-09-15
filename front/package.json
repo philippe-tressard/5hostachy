@@ -17,6 +17,7 @@
 		"lint:taches": "node scripts/check-libelles-taches.mjs",
 		"lint:routes": "node scripts/check-routes-atteignables.mjs",
 		"lint:perimetres": "node scripts/check-perimetres.mjs",
+		"lint:statuts": "node scripts/check-statuts.mjs",
 		"lint:libelle-perimetre": "node scripts/check-libelle-perimetre.mjs",
 		"lint:entetes": "node scripts/check-entete-page.mjs",
 		"lint:api-svelte4": "node scripts/check-api-svelte4.mjs",

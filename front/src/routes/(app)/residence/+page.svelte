@@ -9,8 +9,7 @@
 	import FormulaireEditionDocument from '$lib/components/FormulaireEditionDocument.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
-	import { isCS, currentUser } from '$lib/stores/auth';
-	$: isLocataire = $currentUser?.statut === 'locataire';
+	import { isCS, isLocataire } from '$lib/stores/auth';
 	import {
 		copropriete as coproprieteApi,
 		uploads as uploadsApi,
@@ -680,7 +679,7 @@
 	</SectionDocuments>
 
 	<!-- ── Section : Comptes-rendus d'AG ─────────────────────────────────── -->
-	{#if !isLocataire}
+	{#if !$isLocataire}
 		<SectionDocuments
 			titre="&#x1F4CB; Comptes-rendus d'AG"
 			documents={sortedCrAg}
@@ -777,7 +776,7 @@
 	      six gestes, cent quatre-vingts lignes de balisage — alors que les
 	      trois autres partagent `SectionDocuments` depuis #522. Le garde-fou
 	      de modularité l'a refusée quand les formulaires y sont rentrés. -->
-	{#if !isLocataire}
+	{#if !$isLocataire}
 		<SectionDiagnostics bind:types={diagnosticTypes} erreur={eDiagnostics} peutModifier={$isCS} />
 	{/if}
 {:else}

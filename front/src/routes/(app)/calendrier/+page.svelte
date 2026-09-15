@@ -18,7 +18,7 @@
 	} from '$lib/api';
 	import { tickets as ticketsApi } from '$lib/api';
 	import { essayer } from '$lib/chargement';
-	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
+	import { currentUser, isAdmin, isCS, isLocataire } from '$lib/stores/auth';
 	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
 	import SectionMaintenancesRecurrentes from '$lib/components/SectionMaintenancesRecurrentes.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -57,12 +57,11 @@
 	 *   changer d'onglet est une navigation, pas une affectation. */
 	export let data: { onglet: string };
 	$: onglet = data.onglet;
-	$: isLocataire = $currentUser?.statut === 'locataire';
 	//  Masquer un onglet ne suffit pas : un locataire qui ouvre `/calendrier/kanban`
 	//  — par un favori, un lien reçu — doit être ramené sur la liste. Le masquage
 	//  répond à ce qui s'affiche, la redirection à ce qui s'atteint.
 	const ONGLETS_FERMES_AUX_LOCATAIRES = ['kanban', 'archives'];
-	$: if (browser && isLocataire && ONGLETS_FERMES_AUX_LOCATAIRES.includes(onglet)) {
+	$: if (browser && $isLocataire && ONGLETS_FERMES_AUX_LOCATAIRES.includes(onglet)) {
 		goto(routeOnglet('calendrier', 'liste'), { replaceState: true });
 	}
 	$: trackTabView(onglet);
@@ -685,7 +684,7 @@
 <BarreOnglets
 	pageId="calendrier"
 	actif={onglet}
-	masques={isLocataire ? ONGLETS_FERMES_AUX_LOCATAIRES : []}
+	masques={$isLocataire ? ONGLETS_FERMES_AUX_LOCATAIRES : []}
 />
 
 <!-- Filtres -->

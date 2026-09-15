@@ -6,7 +6,7 @@
 	import { confirmer, confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import { tenter, messageErreur } from '$lib/erreurs';
 	import { signaler } from '$lib/signalements';
-	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
+	import { currentUser, isAdmin, isCS, isGestionnaire } from '$lib/stores/auth';
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -47,12 +47,12 @@
 	$: peutGerer = estAuteur || $isAdmin;
 
 	onMount(async () => {
-		if ($currentUser?.statut === 'syndic' || $currentUser?.statut === 'mandataire') {
-			//  Le motif vient de l'API : cet écran ne réécrit pas la règle
-			//  d'accès à la Communauté (29/08/2026).
+		if ($isGestionnaire) {
+			//  Le motif vient de l'API, le « qui » de `$isGestionnaire` : cet écran
+			//  ne réécrit plus la règle d'accès — ce qu'il affirmait à tort (15/09).
 			toast(
 				'error',
-				$currentUser.communaute_motif_refus ??
+				$currentUser?.communaute_motif_refus ??
 					"La rubrique Communauté n'est pas accessible à votre profil.",
 			);
 			goto('/tableau-de-bord', { replaceState: true });

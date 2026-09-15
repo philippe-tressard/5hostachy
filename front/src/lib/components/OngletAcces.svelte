@@ -45,7 +45,7 @@
 	//  `isCS` n'est plus lu : il ne servait qu'à ouvrir la suppression au conseil
 	//  syndical sur CET écran — un geste qui vit désormais chez l'administrateur,
 	//  sur l'écran du parc.
-	import { currentUser } from '$lib/stores/auth';
+	import { isBailleur, isLocataire } from '$lib/stores/auth';
 	import MesAcces from '$lib/components/MesAcces.svelte';
 	import AccesConnexes from '$lib/components/AccesConnexes.svelte';
 
@@ -65,8 +65,6 @@
 
 	onMount(async () => {
 		try {
-			const isLocataire = $currentUser?.statut === 'locataire';
-			const isBailleur = $currentUser?.statut === 'copropriétaire_bailleur';
 			//  ⚠️ `mesCommandes()` n'est plus appelée (12/09/2026) : la section
 			//  Archives a quitté ces onglets, et charger une liste que rien
 			//  n'affiche serait un aller-retour pour personne.
@@ -75,12 +73,12 @@
 				accesApi.mesTelecommandes(),
 				lotsApi.mesList(),
 			];
-			if (isLocataire) tasks.push(bailApi.mesAccesRecus());
-			if (isBailleur) tasks.push(bailApi.mesBaux());
+			if ($isLocataire) tasks.push(bailApi.mesAccesRecus());
+			if ($isBailleur) tasks.push(bailApi.mesBaux());
 			const results = await Promise.all(tasks);
 			[vigiks, telecommandes, mesLots] = results;
-			if (isLocataire) accesRecus = results[3] ?? [];
-			if (isBailleur) mesBaux = results[3] ?? [];
+			if ($isLocataire) accesRecus = results[3] ?? [];
+			if ($isBailleur) mesBaux = results[3] ?? [];
 		} catch (e) {
 			toast('error', messageErreur(e, 'Erreur de chargement'));
 		} finally {
@@ -236,7 +234,7 @@
 	      badge ne voit pas la section vide, un copropriétaire si — il peut en
 	      déclarer un. Elle parle de la place de la section dans l'écran, pas du
 	      tableau. -->
-	{#if section !== 'telecommandes' && (vigiks.length > 0 || $currentUser?.statut !== 'locataire')}
+	{#if section !== 'telecommandes' && (vigiks.length > 0 || !$isLocataire)}
 		<MesAcces
 			titre="Badges d'accès (Vigik)"
 			messageVide="Aucun badge enregistré."
@@ -246,7 +244,7 @@
 		/>
 	{/if}
 
-	{#if section !== 'badges' && (telecommandes.length > 0 || $currentUser?.statut !== 'locataire')}
+	{#if section !== 'badges' && (telecommandes.length > 0 || !$isLocataire)}
 		<MesAcces
 			titre="Télécommandes de parking"
 			messageVide="Aucune télécommande enregistrée."
@@ -277,7 +275,7 @@
 	/>
 
 	<!-- Vue par locataire (bailleurs uniquement) -->
-	{#if $currentUser?.statut === 'copropriétaire_bailleur' && mesBaux.length > 0}
+	{#if $isBailleur && mesBaux.length > 0}
 		<section
 			class="section card"
 			style="margin-top:1rem;border-left:3px solid var(--color-accent,#C9983A)"

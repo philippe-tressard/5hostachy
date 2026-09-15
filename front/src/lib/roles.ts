@@ -198,3 +198,99 @@ export function badgeStatut(statut: string | null | undefined): string {
 	if (!statut) return 'badge-gray';
 	return BADGE_STATUT[statut] ?? 'badge-gray';
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Ce qu'une personne EST — les prédicats, et non le littéral (15/09/2026)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+//  🔴 Le même test était réécrit d'un écran à l'autre :
+//
+//  | Notion | Écrite dans |
+//  |---|---|
+//  | « est locataire » | `OngletAcces`, `AccesConnexes`, `calendrier`, `mon-lot`, `residence`, `tableau-de-bord` — **six** fichiers |
+//  | « est bailleur » | `OngletAcces`, `mon-lot` |
+//  | « est syndic **ou** mandataire » | `PageCommunaute`, `sondages/[id]` |
+//  | « est bailleur **ou** résident » | `mon-lot`, **deux fois dans le même fichier** |
+//
+//  ⚠️ Et `mon-lot` définissait `isLocataire` en ligne 92 tout en recomposant
+//  `$currentUser?.statut === 'locataire'` aux lignes 172 et 449 : la dérivée
+//  existait, dans le fichier même, et n'était pas employée.
+//
+//  ⚠️ Plus grave, le commentaire de `sondages/[id]` affirmait *« cet écran ne
+//  réécrit pas la règle d'accès à la Communauté »* — juste au-dessus de la ligne
+//  qui la réécrit. Le seul endroit qui parlait du sujet disait que le problème
+//  n'existait pas.
+//
+//  🔒 **Pourquoi des prédicats et pas des constantes.** `STATUT.LOCATAIRE`
+//  supprimerait le littéral sans nommer la QUESTION posée, et les deux notions
+//  composées (« gestionnaire », « copropriétaire ») resteraient écrites à
+//  chaque appel — c'est-à-dire là où elles peuvent diverger. Ce sont elles qui
+//  coûtent, pas la chaîne.
+//
+//  ⚠️ Ces prédicats décrivent ce qu'on AFFICHE, jamais ce qu'on autorise. Les
+//  droits sont tranchés par le serveur (`auth/deps`), et un écran qui montrerait
+//  un bouton de trop ne donne aucun accès. Les employer pour « protéger »
+//  quelque chose serait la faute que `standards/03` §1 nomme.
+
+/**  Le statut d'une personne, quelle que soit la forme sous laquelle il arrive. */
+type PorteurDeStatut = { statut?: string | null } | null | undefined;
+
+const statutDe = (p: PorteurDeStatut): string => p?.statut ?? '';
+
+/**  Locataire — il occupe sans posséder. */
+export const estLocataire = (p: PorteurDeStatut): boolean => statutDe(p) === 'locataire';
+
+/**  Copropriétaire qui LOUE son lot. */
+export const estBailleur = (p: PorteurDeStatut): boolean =>
+	statutDe(p) === 'copropriétaire_bailleur';
+
+/**  Copropriétaire qui HABITE son lot. */
+export const estResident = (p: PorteurDeStatut): boolean =>
+	statutDe(p) === 'copropriétaire_résident';
+
+/**  Copropriétaire, qu'il habite son lot ou le loue.
+ *
+ *  La notion que `mon-lot` composait deux fois : « qui possède un lot et peut
+ *  donc en consulter les baux ». Qu'il y habite ne change rien à cette
+ *  question-là. */
+export const estCoproprietaire = (p: PorteurDeStatut): boolean => estBailleur(p) || estResident(p);
+
+/**  Le GESTIONNAIRE — syndic ou mandataire.
+ *
+ *  Ce n'est pas un résident de la copropriété : il gère pour le compte du
+ *  syndicat. C'est ce qui lui ferme la Communauté, dont l'API porte la règle et
+ *  le motif de refus. */
+export const estGestionnaire = (p: PorteurDeStatut): boolean =>
+	statutDe(p) === 'syndic' || statutDe(p) === 'mandataire';
+
+/**  Celui qui agit POUR quelqu'un d'autre — aidant (proche) ou mandataire.
+ *
+ *  C'est ce qui donne un sens au champ `nom_aide` : la personne représentée.
+ *  Un aidant n'est pas un gestionnaire, et l'annuaire du conseil syndical a
+ *  besoin d'afficher « Aidé : … » pour les deux.
+ *
+ *  ⚠️ **`mandataire` appartient aux DEUX notions**, et ce n'est pas une erreur :
+ *  il gère pour le compte du syndicat (`estGestionnaire`, ce qui lui ferme la
+ *  Communauté) *et* il représente une personne nommée (`agitPourAutrui`, ce qui
+ *  fait afficher qui). Deux questions différentes sur le même statut — les
+ *  fondre en une donnerait une réponse fausse à l'une des deux.
+ *
+ *  🔴 Trouvée par `lint:statuts` lui-même, dans `espace-cs` : mon relevé à la
+ *  main l'avait manquée. Un contrôle voit ce qu'une lecture ne voit pas. */
+export const agitPourAutrui = (p: PorteurDeStatut): boolean =>
+	statutDe(p) === 'aidant' || statutDe(p) === 'mandataire';
+
+/**  Les clés sur lesquelles ces prédicats se prononcent.
+ *
+ *  🔒 Lue par `npm run lint:statuts`, qui vérifie qu'aucune n'est inconnue de
+ *  `LIBELLES_STATUT`. Un prédicat bâti sur une chaîne fautive — un accent
+ *  oublié dans « copropriétaire_résident » — serait **toujours faux**, et rien
+ *  ne le signalerait : l'écran afficherait simplement moins de choses. */
+export const STATUTS_TESTES = [
+	'locataire',
+	'copropriétaire_bailleur',
+	'copropriétaire_résident',
+	'syndic',
+	'mandataire',
+	'aidant',
+] as const;

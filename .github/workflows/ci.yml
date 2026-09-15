@@ -35,7 +35,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 #  ⚠️ Tout job porte un `timeout-minutes` (18/08/2026). Sans lui, GitHub laisse
 #  pendre jusqu'à SIX HEURES : le 18/08, « Tests Python » est resté bloqué deux
@@ -57,7 +57,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install Ruff
         run: pip install ruff
@@ -140,7 +140,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.12'  # aligné sur l'image de prod (conteneur API)
+          python-version: "3.12" # aligné sur l'image de prod (conteneur API)
 
       # WeasyPrint a besoin de pango/cairo pour RENDRE un document ; sans elles,
       # `import weasyprint` échoue et les tests de rendu s'abstiendraient — donc
@@ -515,7 +515,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install dependencies
         working-directory: front
@@ -627,6 +627,18 @@ jobs:
         working-directory: front
         run: npm run lint:perimetres
 
+      # Et le STATUT d'une personne : « est locataire » était recomposé dans SIX
+      # écrans, « syndic ou mandataire » dans deux, et « bailleur ou résident »
+      # deux fois dans le même fichier — qui définissait par ailleurs la dérivée
+      # sans l'employer. Les prédicats vivent dans `$lib/roles` (#959).
+      #
+      # ⚠️ Le contrôle vise le statut d'une PERSONNE, reconnu à son porteur.
+      # `bail.statut === 'actif'` est un autre axe : crier dessus le ferait
+      # désarmer, comme `check-stack` sur les en-têtes.
+      - name: Statut d'une personne non recomposé dans un écran
+        working-directory: front
+        run: npm run lint:statuts
+
       # Et le RENDU d'un périmètre, exécuté. La règle « un espace est qualifié par
       # son parent » est écrite deux fois — front et API — parce que les contextes
       # de build l'imposent. Le 18/08 elle n'a été corrigée que d'un côté, et le fil
@@ -678,7 +690,6 @@ jobs:
       - name: Geste d'édition rendu partout de la même façon
         working-directory: front
         run: npm run lint:geste-edition
-
 
       # Les seuils de format d'une affiche de hall sont écrits DEUX fois — l'API
       # les applique, l'écran les prévoit pendant la saisie. Les contextes de
@@ -1550,7 +1561,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install dependencies
         working-directory: front
