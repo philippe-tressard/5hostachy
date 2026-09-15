@@ -25,6 +25,7 @@ from sqlmodel import Session, select
 from app.models.core import Lot, UserLot, Utilisateur
 from app.utils.etages import divergence_etage, etage_label
 from app.utils.liens import base_site, nom_site
+from app.utils.noms import contexte_personne
 
 
 def lots_de(session: Session, user: Utilisateur) -> list[Lot]:
@@ -72,11 +73,7 @@ def alerter_divergence_etage(
         code="etage_divergent",
         to=destinataire,
         context={
-            "utilisateur": {
-                "nom": user.nom,
-                "prenom": user.prenom,
-                "email": user.email,
-            },
+            "utilisateur": contexte_personne(user, email=user.email),
             "etage": {
                 #  Les libellés sont calculés ICI : un modèle Jinja n'a pas à
                 #  porter « RDC » ni « SS 1 », et le faire en gabarit rouvrirait

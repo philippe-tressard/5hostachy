@@ -19,11 +19,14 @@ Limite assumée : ce test garde le **côté template**. Le côté point d'appel
 (une clé oubliée dans le `context`) reste couvert *a posteriori* par le point 9
 (inspection de `historique_email`). Les deux forment une défense en profondeur.
 """
+import re
+
 import pytest
 from jinja2 import BaseLoader
 from jinja2.sandbox import SandboxedEnvironment
 
 from app.seed import EMAIL_TEMPLATES
+from tests.contrats_email import EXPECTED_VARS, SUJETS_QUI_NOMMENT_L_OBJET
 from app.utils.email.variables import VARIABLES_DU_GABARIT, variables_de
 
 # Variables injectées d'office par send_email/_group (`_contexte_rendu` dans email.py)
@@ -40,83 +43,6 @@ from app.utils.email.variables import VARIABLES_DU_GABARIT, variables_de
 # est employé plus bas, et le renommer partout n'apprendrait rien.
 BASE_CTX_VARS = set(VARIABLES_DU_GABARIT)
 
-# Contrat figé : variables de premier niveau requises par chaque template.
-# Extrait de seed.EMAIL_TEMPLATES — à mettre à jour consciemment lors de toute
-# modification d'un template (en alignant le point d'appel send_email).
-EXPECTED_VARS: dict[str, set[str]] = {
-    "reinitialisation_mdp": {"destinataire", "lien"},
-    "compte_en_attente": {"utilisateur"},
-    "compte_active": {"destinataire"},
-    "compte_refuse": {"destinataire"},
-    "ticket_bug_admin": {"auteur", "ticket"},
-    #  `commentaire_perimetre` ajouté le 31/08/2026 : le courriel du syndic ne
-    #  disait PAS le périmètre — *« cette information est capitale pour le syndic
-    #  ou le CS pour identifier le périmètre du problème »*. Le ticket porte le
-    #  sien dans `ticket.perimetre`, chaque entrée de l'historique dans
-    #  `m.perimetre`, et celle en cours ici.
-    "ticket_syndic": {
-        "messages", "date_creation", "commentaire", "is_commentaire", "ticket",
-        "fichiers", "date_commentaire", "historique", "auteur",
-        "commentaire_perimetre",
-    },
-    #  `urgent` conditionne un liseré rouge et la mention URGENT : c'est le
-    #  ticket qui le porte, pas le destinataire.
-    "ticket_nouveau_cs": {"ticket", "auteur", "urgent"},
-    "ticket_statut_change": {"destinataire", "ticket"},
-    "ticket_nouveau_message": {"ticket", "auteur_action", "message"},
-    "reponse_communaute": {"reponse"},
-    "idee_statut": {"idee"},
-    "relance_syndic": {
-        "tickets", "interlocuteurs", "anciennete",
-    },
-    "vigik_commande_recue": {"lot", "demandeur", "type"},
-    "vigik_accepte": {"destinataire", "type"},
-    "vigik_refuse": {"type", "destinataire", "motif"},
-    "calendrier_evenement_cree": {"evenement"},
-    #  Le suivi porte EN PLUS `suivi` : l'état atteint et le commentaire. Sans
-    #  cette ligne, un template pourrait citer une variable que l'appel ne
-    #  fournit pas — c'est la panne `'evenement' is undefined` du 28/07/2026.
-    #  `fichiers` s'y ajoute le 18/08/2026 : le modele annonce desormais les pieces
-    #  jointes de l'entree, comme le font ceux des tickets. Le garde-fou a REFUSE
-    #  le template avant cette ligne — c'est son travail, et c'est ce qui garantit
-    #  qu'aucune variable citee n'est absente du contexte de l'appel.
-    "calendrier_evenement_suivi": {"evenement", "suivi", "fichiers"},
-    "document_publie": {"document"},
-    "publication_syndic": {
-        "date_publication", "evolutions", "commentaire", "is_commentaire",
-        "fichiers", "publication", "date_commentaire", "auteur",
-    },
-    # Remplace `sauvegarde_echec` et `alerte_espace_disque` : le contrôle
-    # quotidien découvre les problèmes ensemble et n'envoie qu'un message.
-    "alerte_systeme": {"problemes", "nb_problemes", "date_controle"},
-    "verification_email": {"expire_heures", "lien", "prenom"},
-    "annonce_hall": {"annonce", "auteur"},
-    # Prévient le gestionnaire du site quand l'appariement a créé des accès
-    # sans validation préalable. `resultat` porte aussi les accords en français,
-    # calculés au point d'appel : un modèle n'a pas à porter la grammaire.
-    "acces_apparies_auto": {"utilisateur", "resultat"},
-    "etage_divergent": {"utilisateur", "etage"},
-    # Les trois modèles destinés à des destinataires EXTERNES (syndic, tiers),
-    # longtemps déclarés en migration seulement et donc sans contrat ici.
-    #  Enrichi le 08/09/2026 : le MÊME modèle sert le syndic, l'arrivant et le
-    #  conseil de son bâtiment. `role_destinataire` choisit l'objet, la formule
-    #  d'appel et la demande ; `lien_consignes` arrive RELATIF, préfixé de
-    #  `{{ app.url }}` par le corps — sa source est `arrivants.FICHE_CONSIGNES`.
-    #  Un second modèle aurait été la copie de celui-ci : « standardiser et non
-    #  dupliquer » (consigne du 08/09/2026).
-    "nouvel_arrivant_bal": {
-        "nom_complet", "batiment", "ancien_resident",
-        "role_destinataire", "lien_consignes", "destinataire",
-    },
-    "publication_externe": {
-        "date_publication", "evolutions", "commentaire", "is_commentaire",
-        "fichiers", "publication", "date_commentaire", "auteur",
-    },
-    "ticket_externe": {
-        "messages", "date_creation", "commentaire", "is_commentaire", "ticket",
-        "fichiers", "date_commentaire", "auteur",
-    },
-}
 
 # Modèles dont un exemplaire au moins part vers le syndic.
 #
@@ -136,29 +62,6 @@ MODELES_VERS_LE_SYNDIC = frozenset({
     "nouvel_arrivant_bal", "ticket_externe", "publication_externe",
 })
 
-# Modèles dont l'objet doit NOMMER ce dont il parle, et l'expression qui le fait.
-#
-# « Ticket #TK-427648 — 5Hostachy » n'apprenait rien : deux tickets de la même
-# copropriété avaient des objets interchangeables, et il fallait ouvrir pour
-# savoir de quoi il s'agissait (11/08/2026). Le titre a été ajouté aux cinq
-# modèles qui en manquaient ; les cinq autres l'avaient déjà.
-#
-# Ce contrat est ici parce que rien d'autre ne le porte : les modèles vivent en
-# base, `EXPECTED_VARS` ne regarde que le premier niveau (`ticket` suffit à le
-# satisfaire, que le titre soit dans l'objet ou seulement dans le corps), et une
-# migration qui réécrit un objet le ferait disparaître sans un test rouge.
-SUJETS_QUI_NOMMENT_L_OBJET: dict[str, str] = {
-    "ticket_syndic": "{{ ticket.titre }}",
-    "ticket_statut_change": "{{ ticket.titre }}",
-    "ticket_nouveau_message": "{{ ticket.titre }}",
-    "ticket_bug_admin": "{{ ticket.titre }}",
-    "ticket_externe": "{{ ticket.titre }}",
-    "publication_syndic": "{{ publication.titre }}",
-    "publication_externe": "{{ publication.titre }}",
-    "calendrier_evenement_cree": "{{ evenement.titre }}",
-    "idee_statut": "{{ idee.titre }}",
-    "annonce_hall": "{{ annonce.titre }}",
-}
 
 _env = SandboxedEnvironment(loader=BaseLoader())
 
@@ -497,4 +400,48 @@ def test_aucun_objet_ne_recompose_la_reference_a_la_main():
         + "\nLa forme est écrite une seule fois, dans `email._prefixe_copro` — "
         "et un modèle se réécrit depuis Admin → Emails, donc une règle qui y "
         "serait recopiée pourrait être retirée par un formulaire."
+    )
+
+def test_aucun_gabarit_ne_recompose_un_nom_de_personne():
+    """La regle « Prenom NOM » se rend AVANT l'envoi, jamais dans le gabarit (#959).
+
+    🔴 Un gabarit ne peut pas appeler `nom_affiche` : il vit en base et il est
+    rendu par Jinja. `{{ auteur.prenom }} {{ auteur.nom }}` etait donc une regle
+    d'affichage ecrite **hors de portee de la regle** — et elle l'a ete dix-sept
+    fois, sur la surface la plus visible du produit : ce qu'un resident recoit
+    dans sa boite. Le nom partait tel qu'il avait ete tape a l'inscription, soit
+    exactement le defaut arbitre a l'ecran le 31/08/2026.
+
+    La composition se fait maintenant dans `utils/noms.contexte_personne`, qui
+    pose une cle `affiche` deja rendue.
+
+    ⚠️ **Ce controle ne peut pas vivre dans `test_nom_affiche_employe.py`** : ce
+    dernier lit le code Python et verifie que tout module touchant a
+    `Utilisateur.prenom` importe `nom_affiche`. Les courriels lui echappaient par
+    construction — ils ne composaient pas le nom, ils le **transmettaient**, et un
+    controle statique du Python ne voit pas un gabarit.
+
+    ⚠️ Il porte sur les modeles **du depot**, pas sur ceux de la base : un
+    administrateur reste libre de sa redaction depuis Admin → Emails, et
+    `contexte_personne` continue d'exposer `prenom` et `nom` pour que son gabarit
+    ne casse pas — retirer une cle ferait echouer l'envoi sans erreur visible.
+
+    ⚠️ Et il ne vise QUE la composition des deux. `{{ destinataire.prenom }}` seul
+    — « Bonjour Jean, » — reste juste : on ne l'identifie pas, on lui parle.
+    """
+    compose = re.compile(r"\{\{ *([a-z_]+)\.prenom *\}\} *\{\{ *\1\.nom *\}\}")
+    fautifs = []
+    for code, _libelle, sujet, corps, _desactivable in EMAIL_TEMPLATES:
+        for champ, texte in (("objet", sujet), ("corps", corps)):
+            for m in compose.finditer(texte or ""):
+                fautifs.append(f"{code} ({champ}) : {m.group(0)}")
+
+    assert not fautifs, (
+        "Ces gabarits composent un nom eux-memes :\n  "
+        + "\n  ".join(fautifs)
+        + "\n\nEmploie la cle deja rendue — {{ auteur.affiche }} — et pose le "
+        "contexte avec `utils.noms.contexte_personne(...)`. Un gabarit ne peut "
+        "pas appeler `nom_affiche` : il est rendu par Jinja depuis la base.\n"
+        "⚠️ Et si tu corriges un modele DEJA pose, il faut une migration qui le "
+        "reecrive (cf. 0192) : le seed ne repose pas ce qui existe."
     )

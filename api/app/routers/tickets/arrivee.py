@@ -34,6 +34,7 @@ from app.utils.destinataires import (
 )
 from app.utils.liens import lien_ticket
 from app.utils.perimetres import parse_json_perimetres
+from app.utils.noms import contexte_personne
 
 from .commun import destinataires_syndic_cs
 #  Le CONTEXTE du message reste dans `courriels` : composer et décider-qui sont
@@ -173,7 +174,7 @@ def _envoyer_email_cs_creation(
         to_recipients=destinataires,
         context={
             "ticket": _contexte_ticket(ticket),
-            "auteur": {"prenom": auteur.prenom or "", "nom": auteur.nom or ""},
+            "auteur": contexte_personne(auteur),
             "urgent": urgence,
         },
         session=session,

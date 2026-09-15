@@ -140,6 +140,31 @@ def test_un_vigik_ouvre_la_copropriete_un_batiment_ou_un_portillon(arbre_dessai)
     ] + PORTILLONS
 
 
+def test_lordre_servi_est_celui_de_la_rangee(arbre_dessai):
+    """🔢 **L'ordre de cette liste est un CONTRAT, pas une commodité.**
+
+    Ce qui englobe, puis les bâtiments, puis les accès fixes — et l'écran affiche
+    la rangée dans cet ordre-là, sans le recalculer.
+
+    🔴 Le 15/09/2026, le sélecteur le jetait et retriait par le rang `ordre` de
+    chaque nœud. Or ce rang est **relatif à la fratrie** : « Bâtiment 1 » (1ᵉʳ des
+    bâtiments) et « Portillons » (1ᵉʳ sous « Extérieurs ») valaient tous deux 1,
+    et la rangée sortait entrelacée — Bât. 1, Portillons, Copropriété entière,
+    Bât. 2, Bât. 3, Bât. 4.
+
+    ⚠️ Le test voisin compare déjà la liste avec `==`, donc il couvre l'ordre
+    **par accident**. Celui-ci le couvre **exprès** : il dit pourquoi l'ordre
+    compte, pour que personne ne réordonne `codes_autorises` en croyant la
+    séquence indifférente — l'écran, lui, n'a plus de quoi rattraper.
+    """
+    session, _ = arbre_dessai
+    codes = codes_autorises(session, VIGIK)
+
+    assert codes[0] == "copro:tout", "ce qui englobe ouvre la rangée"
+    assert codes[1:3] == ["copro:b1", "copro:b2"], "puis les bâtiments, dans l'ordre de l'arbre"
+    assert codes[3:] == PORTILLONS, "et les accès fixes ferment la rangée"
+
+
 def test_le_groupe_nest_pas_un_batiment(arbre_dessai):
     """« Bâtiments » regroupe, il ne s'ouvre pas — il ne porte pas de `batiment_id`."""
     session, _ = arbre_dessai

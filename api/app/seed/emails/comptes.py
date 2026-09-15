@@ -25,7 +25,7 @@ MODELES = [
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Nouvelle demande de compte</h2>'
      '<p style="margin:0 0 12px">Un nouveau résident souhaite rejoindre la résidence\u202f:</p>'
      '<table role="presentation" style="margin:0 0 20px;border-left:4px solid #C9983A;padding-left:16px"><tr><td>'
-     '<p style="margin:0 0 4px;font-weight:600;font-size:16px">{{ utilisateur.prenom }} {{ utilisateur.nom }}</p>'
+     '<p style="margin:0 0 4px;font-weight:600;font-size:16px">{{ utilisateur.affiche }}</p>'
      '<p style="margin:0;color:#5A6070">{{ utilisateur.email }}</p>'
      '</td></tr></table>'
      # `/admin/utilisateurs` n'existe pas : la page `/admin` s'ouvre d'elle-même

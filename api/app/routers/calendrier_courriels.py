@@ -25,6 +25,7 @@ from app.utils.fichiers import chemins_locaux
 from app.utils.liens import base_site, lien_element, nom_site
 from app.utils.photos import parse_photos, premiere_photo
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
+from app.utils.noms import contexte_personne
 
 
 def _json(urls: list[str] | str | None) -> str:
@@ -135,7 +136,7 @@ def contexte_evenement_canaux(
             "description": ev.description or "",
             "type": ev.type.value if ev.type else "",
         },
-        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "auteur": contexte_personne(user),
         "residence": {"nom": nom_site(cfg_map.get("site_nom"))},
         "app": {"url": base_site(cfg_map.get("site_url"))},
         "reference_copro": cfg_map.get("reference_copro", ""),

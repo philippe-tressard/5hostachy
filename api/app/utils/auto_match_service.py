@@ -19,6 +19,7 @@ from typing import Optional
 from sqlmodel import Session, select
 from app.utils.liens import base_site
 from app.utils.liens import nom_site
+from app.utils.noms import contexte_personne
 
 
 # ── Types copropriétaires (pour propagation conjoint) ────────────────────────
@@ -762,12 +763,7 @@ def notifier_gestionnaire_appariement(user, resultat: dict, background_tasks, se
         code="acces_apparies_auto",
         to=destinataire,
         context={
-            "utilisateur": {
-                "nom": user.nom,
-                "prenom": user.prenom,
-                "email": user.email,
-                "statut": statut,
-            },
+            "utilisateur": contexte_personne(user, email=user.email, statut=statut),
             "resultat": {
                 "telecommandes": tc,
                 "vigiks": vigik,

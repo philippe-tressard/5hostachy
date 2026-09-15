@@ -18,7 +18,7 @@ from app.utils.dates_fr import datetime_longue_paris as _fmt_paris
 from app.utils.fichiers import chemins_locaux
 from app.utils.perimetres import batiments_cibles, parse_json_perimetres
 from app.utils.photos import parse_photos
-from app.utils.noms import nom_affiche
+from app.utils.noms import contexte_personne, nom_affiche
 from app.utils.liens import base_site, nom_site
 
 
@@ -103,7 +103,7 @@ def contexte_publication_syndic(
 
     ctx = {
         "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
-        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "auteur": contexte_personne(user),
         "residence": {"nom": nom_site(cfg.get("site_nom"))},
         "app": {"url": base_site(cfg.get("site_url"))},
         "is_commentaire": is_commentaire,
@@ -211,7 +211,7 @@ def _envoyer_email_externe_publication(
 
     ctx = {
         "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
-        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "auteur": contexte_personne(user),
         "date_publication": _fmt_paris(pub.cree_le),
         "date_commentaire": _fmt_paris(datetime.utcnow()),
         "residence": {"nom": nom_site(cfg.get("site_nom"))},

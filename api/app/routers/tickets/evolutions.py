@@ -24,6 +24,7 @@ from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import base_site, lien_ticket
 from app.utils.photos import photos_internes, photos_json
+from app.utils.noms import contexte_personne
 
 from .commun import (
     STATUT_LABELS,
@@ -201,7 +202,7 @@ def _notifier_auteur(
                         "ancien_statut": STATUT_LABELS.get(ancien_statut or "", "Aucun"),
                     },
                     "destinataire": {"prenom": auteur.prenom, "nom": auteur.nom},
-                    "auteur_action": {"prenom": user.prenom, "nom": user.nom},
+                    "auteur_action": contexte_personne(user),
                     **contexte_site(cfg),
                 },
                 destinataire_id=ticket.auteur_id,
@@ -212,7 +213,7 @@ def _notifier_auteur(
                 context={
                     "ticket": base_ticket,
                     "message": {"contenu": body.contenu[:300]},
-                    "auteur_action": {"prenom": user.prenom, "nom": user.nom},
+                    "auteur_action": contexte_personne(user),
                     **contexte_site(cfg),
                 },
                 destinataire_id=ticket.auteur_id,

@@ -27,6 +27,7 @@ from .commun import (
 )
 from app.utils.communaute import exiger_acces
 from app.utils.liens import base_site, nom_site
+from app.utils.noms import contexte_personne
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
 
@@ -229,7 +230,7 @@ def create_sondage(
                     "titre": s.question,
                     "contenu": s.description or "",
                 },
-                "auteur": {"prenom": user.prenom, "nom": user.nom},
+                "auteur": contexte_personne(user),
                 "residence": {"nom": nom_site(cfg_map.get("site_nom"))},
                 "app": {"url": base_site(cfg_map.get("site_url"))},
                 "reference_copro": cfg_map.get("reference_copro", ""),
