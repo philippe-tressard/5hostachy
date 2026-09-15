@@ -6,6 +6,7 @@
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import BarreImport from '$lib/components/BarreImport.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import { parAttribut } from '$lib/table-statuts';
 
 	$: _siteNom = $siteNomStore;
 	// ── Données ─────────────────────────────────────────────────────────────
@@ -96,18 +97,14 @@
 		{ value: 'locataire', label: 'Locataire' },
 		{ value: 'mandataire', label: 'Mandataire (gestion)' },
 	];
-	const TYPE_LIEN_BADGE: Record<string, string> = {
-		propriétaire: '#16a34a',
-		bailleur: '#2563eb',
-		locataire: '#d97706',
-		mandataire: '#7c3aed',
-	};
-	const TYPE_LIEN_LABEL: Record<string, string> = {
-		propriétaire: 'Propriétaire',
-		bailleur: 'Bailleur',
-		locataire: 'Locataire',
-		mandataire: 'Mandataire',
-	};
+	//  ⚠️ La teinte est ici un CODE COULEUR, pas une classe de badge : ces liens
+	//  se rendent en pastille pleine, et la charte ne porte pas ces quatre-là.
+	const { libelle: TYPE_LIEN_LABEL, couleur: TYPE_LIEN_BADGE } = parAttribut({
+		propriétaire: { libelle: 'Propriétaire', couleur: '#16a34a' },
+		bailleur: { libelle: 'Bailleur', couleur: '#2563eb' },
+		locataire: { libelle: 'Locataire', couleur: '#d97706' },
+		mandataire: { libelle: 'Mandataire', couleur: '#7c3aed' },
+	});
 
 	function openEdit(imp: any) {
 		editId = imp.id;
@@ -204,20 +201,13 @@
 	});
 
 	// ── Helpers ──────────────────────────────────────────────────────────────
-	const statutBadge: Record<string, string> = {
-		en_attente: 'badge-orange',
-		utilisateur_lie: 'badge-purple',
-		lot_lie: 'badge-blue',
-		resolu: 'badge-green',
-		ignore: 'badge-gray',
-	};
-	const statutLabel: Record<string, string> = {
-		en_attente: 'En attente',
-		utilisateur_lie: 'Occupant lié',
-		lot_lie: 'Lot lié',
-		resolu: 'Résolu',
-		ignore: 'Ignoré',
-	};
+	const { libelle: statutLabel, badge: statutBadge } = parAttribut({
+		en_attente: { libelle: 'En attente', badge: 'badge-orange' },
+		utilisateur_lie: { libelle: 'Occupant lié', badge: 'badge-purple' },
+		lot_lie: { libelle: 'Lot lié', badge: 'badge-blue' },
+		resolu: { libelle: 'Résolu', badge: 'badge-green' },
+		ignore: { libelle: 'Ignoré', badge: 'badge-gray' },
+	});
 </script>
 
 <svelte:head><title>Import Lots — {_siteNom}</title></svelte:head>

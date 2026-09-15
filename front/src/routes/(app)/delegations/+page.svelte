@@ -12,6 +12,7 @@
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import { essayer } from '$lib/chargement';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import { parAttribut } from '$lib/table-statuts';
 
 	// Cette page importait déjà getPageConfig sans s'en servir : son titre était en
 	// dur, elle était donc la seule entrée du menu qu'on ne pouvait ni renommer ni
@@ -49,24 +50,25 @@
 		}
 	});
 
+	//  🔴 `expiree` portait `badge-grey` — à l'anglaise. La charte écrit
+	//  `badge-gray`, et cette classe-là n'existait donc nulle part : l'écran la
+	//  redéfinissait en bas de fichier, en couleurs EN DUR, hors du thème. Le
+	//  commentaire qui l'accompagnait disait « la charte ne la porte pas » —
+	//  c'était vrai de `grey`, et faux de la classe qu'il fallait. Une faute
+	//  d'orthographe avait fait conclure à l'absence du composant partagé.
+	const { libelle, badge } = parAttribut({
+		en_attente: { libelle: 'En attente', badge: 'badge-orange' },
+		active: { libelle: 'Active', badge: 'badge-green' },
+		revoquee: { libelle: 'Révoquée', badge: 'badge-red' },
+		expiree: { libelle: 'Expirée', badge: 'badge-gray' },
+	});
+
 	function statutLabel(s: string): string {
-		const map: Record<string, string> = {
-			en_attente: 'En attente',
-			active: 'Active',
-			revoquee: 'Révoquée',
-			expiree: 'Expirée',
-		};
-		return map[s] ?? s;
+		return libelle[s] ?? s;
 	}
 
 	function statutBadge(s: string): string {
-		const map: Record<string, string> = {
-			en_attente: 'badge-orange',
-			active: 'badge-green',
-			revoquee: 'badge-red',
-			expiree: 'badge-grey',
-		};
-		return map[s] ?? '';
+		return badge[s] ?? '';
 	}
 
 	async function creer() {
@@ -318,13 +320,6 @@
 		flex-shrink: 0;
 		align-items: flex-start;
 		padding-top: 0.25rem;
-	}
-
-	/*  🔴 `.badge-orange`, `.badge-green` et `.badge-red` retirees le 28/08/2026
-	    (#607) : la charte les porte. `.badge-grey` reste — elle n'y est pas. */
-	.badge-grey {
-		background: #f3f4f6;
-		color: #6b7280;
 	}
 
 	/*  La charte porte `.btn-danger` ; cet ecran ecrivait `#dc2626`

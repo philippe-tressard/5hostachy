@@ -49,25 +49,55 @@
  * membre du conseil syndical : deux tables, jamais une.
  */
 
-/**  Les rôles — `RoleUtilisateur` côté serveur. */
-export const LIBELLES_ROLE: Record<string, string> = {
-	résident: 'Résident',
-	propriétaire: 'Propriétaire',
-	conseil_syndical: 'Conseil syndical',
-	admin: 'Admin',
-	externe: 'Externe',
-};
+import { parAttribut } from '$lib/table-statuts';
 
-/**  Les statuts — `StatutUtilisateur` côté serveur. */
-export const LIBELLES_STATUT: Record<string, string> = {
-	copropriétaire_résident: 'Copropriétaire résident',
-	copropriétaire_bailleur: 'Copropriétaire bailleur',
-	locataire: 'Locataire',
-	syndic: 'Syndic',
-	mandataire: 'Mandataire',
-	aidant: 'Aidant (proche)',
-	admin_technique: 'Compte technique',
-};
+/**  Les rôles — `RoleUtilisateur` côté serveur.
+
+     Le libellé et la teinte se déclarent ENSEMBLE : ils étaient deux tables aux
+     cinq mêmes clés, à cent lignes d'écart, et le commentaire de la seconde
+     devait rappeler « une clé par entrée de `LIBELLES_ROLE`, sans exception ».
+     Un contrat qu'un commentaire doit énoncer est un contrat que la structure
+     ne porte pas.  */
+const ROLE = parAttribut({
+	résident: { libelle: 'Résident', badge: 'badge-gray' },
+	propriétaire: { libelle: 'Propriétaire', badge: 'badge-teal' },
+	conseil_syndical: { libelle: 'Conseil syndical', badge: 'badge-blue' },
+	admin: { libelle: 'Admin', badge: 'badge-orange' },
+	externe: { libelle: 'Externe', badge: 'badge-yellow' },
+});
+
+export const LIBELLES_ROLE: Record<string, string> = ROLE.libelle;
+
+/**  Les statuts — `StatutUtilisateur` côté serveur.
+
+     Trois attributs, une déclaration : le libellé, sa forme abrégée pour un
+     tableau dense, et la teinte. Ils vivaient dans trois tables de sept clés,
+     et c'est la copie de la table ABRÉGÉE qui avait perdu `admin_technique`
+     (cf. plus bas) — un état sur sept, dans la seule des trois qu'on relit le
+     moins.  */
+const STATUT = parAttribut({
+	copropriétaire_résident: {
+		libelle: 'Copropriétaire résident',
+		abrege: 'Copro. résident',
+		badge: 'badge-green',
+	},
+	copropriétaire_bailleur: {
+		libelle: 'Copropriétaire bailleur',
+		abrege: 'Copro. bailleur',
+		badge: 'badge-blue',
+	},
+	locataire: { libelle: 'Locataire', abrege: 'Locataire', badge: 'badge-purple' },
+	syndic: { libelle: 'Syndic', abrege: 'Syndic', badge: 'badge-orange' },
+	mandataire: { libelle: 'Mandataire', abrege: 'Mandataire', badge: 'badge-gray' },
+	aidant: { libelle: 'Aidant (proche)', abrege: 'Aidant (proche)', badge: 'badge-yellow' },
+	admin_technique: {
+		libelle: 'Compte technique',
+		abrege: 'Compte technique',
+		badge: 'badge-orange',
+	},
+});
+
+export const LIBELLES_STATUT: Record<string, string> = STATUT.libelle;
 
 /**
  *  Les statuts, ABRÉGÉS — pour un tableau dense (#828).
@@ -89,15 +119,7 @@ export const LIBELLES_STATUT: Record<string, string> = {
  *  sans exception — le contrat que `BADGE_ROLE` et `BADGE_STATUT` ont déjà, et
  *  qui aurait attrapé le trou d'`admin_technique`.
  */
-export const LIBELLES_STATUT_ABREGE: Record<string, string> = {
-	copropriétaire_résident: 'Copro. résident',
-	copropriétaire_bailleur: 'Copro. bailleur',
-	locataire: 'Locataire',
-	syndic: 'Syndic',
-	mandataire: 'Mandataire',
-	aidant: 'Aidant (proche)',
-	admin_technique: 'Compte technique',
-};
+export const LIBELLES_STATUT_ABREGE: Record<string, string> = STATUT.abrege;
 
 /**
  *  Anciennes clés encore présentes en base ou dans des réponses d'API.
@@ -152,27 +174,13 @@ export function libelleStatut(statut: string | null | undefined): string {
     l'information au lieu de l'unifier.
     ══════════════════════════════════════════════════════════════════════════ */
 
-/**  La teinte d'un RÔLE. Une clé par entrée de `LIBELLES_ROLE`, sans exception —
- *   `test_roles_libelles.py` le vérifie : un rôle libellé mais sans teinte
- *   s'afficherait en gris, ce qui se lit comme une décision. */
-export const BADGE_ROLE: Record<string, string> = {
-	résident: 'badge-gray',
-	propriétaire: 'badge-teal',
-	conseil_syndical: 'badge-blue',
-	admin: 'badge-orange',
-	externe: 'badge-yellow',
-};
+/**  La teinte d'un RÔLE — désormais INSÉPARABLE de son libellé : elle est
+ *   déclarée dans la même entrée, donc « une clé par entrée » n'est plus une
+ *   règle à vérifier, c'est la forme de la table. */
+export const BADGE_ROLE: Record<string, string> = ROLE.badge;
 
-/**  La teinte d'un STATUT. Une clé par entrée de `LIBELLES_STATUT`. */
-export const BADGE_STATUT: Record<string, string> = {
-	copropriétaire_résident: 'badge-green',
-	copropriétaire_bailleur: 'badge-blue',
-	locataire: 'badge-purple',
-	syndic: 'badge-orange',
-	mandataire: 'badge-gray',
-	aidant: 'badge-yellow',
-	admin_technique: 'badge-orange',
-};
+/**  La teinte d'un STATUT, même principe. */
+export const BADGE_STATUT: Record<string, string> = STATUT.badge;
 
 /**  Les anciennes clés, lues COMME DES RÔLES — à part, pour la même raison que
  *   `LIBELLES_HERITES` : elles ne doivent pas entrer dans la concordance avec

@@ -1,3 +1,5 @@
+import { parAttribut } from '$lib/table-statuts';
+
 //  Nom de chaque tâche planifiée — SOURCE UNIQUE.
 //
 //  Pourquoi un module et pas une constante dans l'écran : le nom d'une tâche
@@ -54,34 +56,52 @@ export const LIBELLE_ACTION: Record<string, string> = {
     ces tables ne disent rien de PROPRE à cet écran. Ce sont des données sur les
     statuts, et les libellés de TÂCHES vivaient déjà ici pour exactement cette
     raison — les redéfinir dans un écran est ce qui les fait diverger.  */
-export const LIBELLE_STATUT: Record<string, string> = {
-	ok: 'À jour',
-	en_cours: 'En cours',
-	rapport_perdu: 'Rapport non reçu',
-	manquante: 'Exécution manquante',
-	erreur: 'En échec',
-	aucune_execution: 'Aucun rapport reçu',
-};
-export const AIDE_STATUT: Record<string, string> = {
-	ok: 'Un rapport est arrivé dans le délai attendu.',
-	manquante: 'Aucun rapport depuis plus longtemps que la périodicité de la tâche.',
-	erreur: 'Le dernier rapport signale un échec.',
-	aucune_execution:
-		"Aucun rapport en base pour cette tâche. Cela ne prouve pas qu'elle n'a pas " +
-		'tourné : un rapport peut avoir échoué à remonter, ou avoir été purgé. ' +
-		'Vérifier le journal du nœud avant de conclure.',
-	en_cours: 'La tâche a signalé son démarrage et n’a pas encore rendu son compte rendu.',
-	rapport_perdu:
-		'La tâche a DÉMARRÉ — elle a écrit son battement de début — mais son ' +
-		"compte rendu n'est jamais arrivé. Le ménage a donc bien eu lieu ; c'est " +
-		'la chaîne de remontée qui est rompue. Chercher du côté du réseau, de la ' +
-		'clé de maintenance ou du format de la charge utile, pas du côté de la tâche.',
-};
-export const CLASSE_STATUT: Record<string, string> = {
-	ok: 'badge-green',
-	en_cours: 'badge-green',
-	rapport_perdu: 'badge-orange',
-	erreur: 'badge-red',
-	manquante: 'badge-red',
-	aucune_execution: 'badge-red',
-};
+/*  Les six états d'une tâche, chacun déclaré UNE fois avec ses trois attributs.
+
+    ⚠️ Ils étaient six clés répétées dans trois tables parallèles — et l'ordre
+    différait de l'une à l'autre, ce qui rendait la comparaison à l'œil presque
+    impossible. L'aide contextuelle est le cas qui le montre : elle est ce qu'on
+    lit quand le libellé ne suffit pas, donc l'attribut qu'on oublie.          */
+const { libelle, aide, classe } = parAttribut({
+	ok: {
+		libelle: 'À jour',
+		aide: 'Un rapport est arrivé dans le délai attendu.',
+		classe: 'badge-green',
+	},
+	en_cours: {
+		libelle: 'En cours',
+		aide: 'La tâche a signalé son démarrage et n’a pas encore rendu son compte rendu.',
+		classe: 'badge-green',
+	},
+	rapport_perdu: {
+		libelle: 'Rapport non reçu',
+		aide:
+			'La tâche a DÉMARRÉ — elle a écrit son battement de début — mais son ' +
+			"compte rendu n'est jamais arrivé. Le ménage a donc bien eu lieu ; c'est " +
+			'la chaîne de remontée qui est rompue. Chercher du côté du réseau, de la ' +
+			'clé de maintenance ou du format de la charge utile, pas du côté de la tâche.',
+		classe: 'badge-orange',
+	},
+	manquante: {
+		libelle: 'Exécution manquante',
+		aide: 'Aucun rapport depuis plus longtemps que la périodicité de la tâche.',
+		classe: 'badge-red',
+	},
+	erreur: {
+		libelle: 'En échec',
+		aide: 'Le dernier rapport signale un échec.',
+		classe: 'badge-red',
+	},
+	aucune_execution: {
+		libelle: 'Aucun rapport reçu',
+		aide:
+			"Aucun rapport en base pour cette tâche. Cela ne prouve pas qu'elle n'a pas " +
+			'tourné : un rapport peut avoir échoué à remonter, ou avoir été purgé. ' +
+			'Vérifier le journal du nœud avant de conclure.',
+		classe: 'badge-red',
+	},
+});
+
+export const LIBELLE_STATUT: Record<string, string> = libelle;
+export const AIDE_STATUT: Record<string, string> = aide;
+export const CLASSE_STATUT: Record<string, string> = classe;

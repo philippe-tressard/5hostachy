@@ -46,23 +46,51 @@ def _types_emis() -> set[str]:
     return types
 
 
-def _table(nom: str) -> set[str]:
-    """Les clés d'une des trois tables d'apparence de `flux.ts`."""
+#: Une rubrique et ses attributs : `annonce: { libelle: '…', couleur: '…', … }`.
+_ENTREE = re.compile(r"^	([a-z_]+):\s*\{(.+?)\},?\s*(?://.*)?$", re.M)
+_ATTRIBUT = re.compile(r"([a-z]+):\s*'([^']+)'")
+
+#: Les attributs qu'une rubrique DOIT porter. Écrits ici parce que le test doit
+#: pouvoir dire lequel manque ; côté TypeScript, c'est le compilateur qui le
+#: refuse (`$lib/table-statuts`), donc ce contrôle-ci ne peut plus échouer sur
+#: une entrée incomplète — il reste pour le jour où quelqu'un défera la table.
+_ATTENDUS = ("libelle", "couleur", "fond")
+
+
+def _apparences() -> dict[str, dict[str, str]]:
+    """L'apparence de chaque rubrique, lue dans la table UNIQUE de `flux.ts`.
+
+    🔴 Les trois tables parallèles ont fondu en une le 15/09/2026 : un libellé,
+    une teinte et un fond par rubrique, déclarés ensemble. L'extracteur lit donc
+    une structure et non trois — et la question « les trois tables couvrent-elles
+    les mêmes types ? », que ce fichier posait, n'a plus de sens : elles n'en
+    font qu'une. Ce qui reste à vérifier est le lien avec le BACKEND, qui lui
+    n'a pas changé.
+    """
     source = _FLUX_TS.read_text(encoding="utf-8")
-    debut = source.index(f"export const {nom}")
-    corps = source[debut : source.index("};", debut)]
-    #  ⚠️ Plusieurs clés peuvent tenir sur UNE ligne (`TYPE_LABELS` en met trois).
-    #  Un motif ancré en début de ligne n'en voyait qu'une sur trois et déclarait
-    #  absentes des entrées présentes — faux échec du détecteur, trouvé à sa
-    #  première exécution. Une clé suit donc un début de ligne, une accolade ou
-    #  une virgule ; les `:` des valeurs (`var(--…)`) ne sont jamais dans ce cas.
-    return set(re.findall(r"(?:^|[,{])\s*([a-z_]+):", corps, re.M))
+    debut = source.index("} = parAttribut({")
+    corps = source[debut : source.index("});", debut)]
+    apparences = {
+        m.group(1): dict(_ATTRIBUT.findall(m.group(2))) for m in _ENTREE.finditer(corps)
+    }
+    #  Cas zéro : un motif cassé rendrait une table vide, et toutes les
+    #  inclusions ci-dessous seraient vraies à vide (`standards/04` §2).
+    assert len(apparences) >= 12, (
+        f"Seulement {len(apparences)} rubrique(s) lue(s) dans flux.ts — le "
+        "détecteur est cassé, ne pas lire ce test comme vert."
+    )
+    return apparences
+
+
+def _table(nom: str) -> set[str]:
+    """Les clés portant l'attribut `nom` — l'ancienne question, même réponse."""
+    return {t for t, a in _apparences().items() if nom in a}
 
 
 def test_chaque_type_emis_a_une_couleur_un_fond_et_un_libelle():
     emis = _types_emis()
     manques = {}
-    for nom in ("TYPE_LABELS", "TYPE_COLORS", "TYPE_BG"):
+    for nom in _ATTENDUS:
         absents = emis - _table(nom)
         if absents:
             manques[nom] = sorted(absents)
@@ -83,7 +111,7 @@ def test_aucune_apparence_orpheline():
     `test_endpoints_orphelins` (`standards/02` §5).
     """
     emis = _types_emis()
-    for nom in ("TYPE_LABELS", "TYPE_COLORS", "TYPE_BG"):
+    for nom in _ATTENDUS:
         orphelines = _table(nom) - emis
         assert not orphelines, (
             f"{nom} déclare l'apparence de {sorted(orphelines)}, que le backend "
@@ -103,10 +131,8 @@ def _contraste(avant_plan: str, arriere_plan: str) -> float:
 
 
 def _valeurs(nom: str) -> dict[str, str]:
-    source = _FLUX_TS.read_text(encoding="utf-8")
-    debut = source.index(f"export const {nom}")
-    corps = source[debut : source.index("};", debut)]
-    return dict(re.findall(r"(?:^|[,{])\s*([a-z_]+):\s*'([^']+)'", corps, re.M))
+    """La valeur d'un attribut pour chaque rubrique."""
+    return {t: a[nom] for t, a in _apparences().items() if nom in a}
 
 
 def test_chaque_pastille_est_lisible():
@@ -116,8 +142,8 @@ def test_chaque_pastille_est_lisible():
     2,41. Un contrôle sur la seule PRÉSENCE des entrées aurait laissé passer une
     pastille jaune pâle sur blanc cassé, tout aussi illisible que le gris.
     """
-    couleurs, fonds = _valeurs("TYPE_COLORS"), _valeurs("TYPE_BG")
-    assert len(couleurs) >= 12, f"TYPE_COLORS n'a que {len(couleurs)} entrées — détecteur cassé"
+    couleurs, fonds = _valeurs("couleur"), _valeurs("fond")
+    assert len(couleurs) >= 12, f"Seulement {len(couleurs)} teinte(s) lue(s) — détecteur cassé"
 
     trop_pales = []
     for type_, couleur in couleurs.items():

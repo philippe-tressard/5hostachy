@@ -58,10 +58,10 @@ def test_chaque_libelle_de_role_ou_statut_a_une_TEINTE():
     copie, rendus gris par le repli, sans que rien ne le dise.
     """
     ts = ROLES_TS.read_text(encoding="utf-8")
-    libelles_role = table_ts(ts, "LIBELLES_ROLE")
-    libelles_statut = table_ts(ts, "LIBELLES_STATUT")
-    badges_role = table_ts(ts, "BADGE_ROLE")
-    badges_statut = table_ts(ts, "BADGE_STATUT")
+    libelles_role = table_ts(ts, "ROLE", "libelle")
+    libelles_statut = table_ts(ts, "STATUT", "libelle")
+    badges_role = table_ts(ts, "ROLE", "badge")
+    badges_statut = table_ts(ts, "STATUT", "badge")
 
     #  Cas zéro : un extracteur qui ne trouve plus rien conclurait au vert sur
     #  zéro comparaison (`standards/04` §2).
@@ -92,7 +92,7 @@ def test_aucune_TEINTE_de_role_n_est_REECRITE_dans_un_ecran():
     : …`) n'est pas visée : c'est une condition sur une valeur, pas une table.
     """
     ts = ROLES_TS.read_text(encoding="utf-8")
-    cles = set(table_ts(ts, "LIBELLES_ROLE")) | set(table_ts(ts, "LIBELLES_STATUT"))
+    cles = set(table_ts(ts, "ROLE", "libelle")) | set(table_ts(ts, "STATUT", "libelle"))
     assert len(cles) >= 12, "extraction des clés cassée — le contrôle ne mesurerait rien"
 
     fautifs = []
@@ -208,8 +208,8 @@ def test_la_table_ABREGEE_couvre_tout_ce_que_la_table_complete_couvre():
     `LIBELLES_STATUT`, sans exception.
     """
     ts = ROLES_TS.read_text(encoding="utf-8")
-    complets = table_ts(ts, "LIBELLES_STATUT")
-    abreges = table_ts(ts, "LIBELLES_STATUT_ABREGE")
+    complets = table_ts(ts, "STATUT", "libelle")
+    abreges = table_ts(ts, "STATUT", "abrege")
 
     #  Cas zéro : un extracteur cassé conclurait au vert sur zéro comparaison.
     assert len(complets) >= 7 and len(abreges) >= 7, "extraction cassée"
@@ -224,7 +224,7 @@ def test_la_table_ABREGEE_couvre_tout_ce_que_la_table_complete_couvre():
 def test_aucun_LIBELLE_de_statut_n_est_REECRIT_dans_un_ecran():
     """Le garde-fou contre la quatrième table de libellés de statut."""
     ts = ROLES_TS.read_text(encoding="utf-8")
-    cles = set(table_ts(ts, "LIBELLES_STATUT")) - _CLES_PARTAGEES_AVEC_TYPE_LIEN
+    cles = set(table_ts(ts, "STATUT", "libelle")) - _CLES_PARTAGEES_AVEC_TYPE_LIEN
     assert len(cles) >= 5, "extraction des clés cassée — le contrôle ne mesurerait rien"
 
     fautifs = []

@@ -67,6 +67,7 @@
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import ChampsObjetRemis from '$lib/components/ChampsObjetRemis.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import { parAttribut } from '$lib/table-statuts';
 
 	/** Le bail dont on tient l'inventaire. */
 	export let bailId: number;
@@ -88,19 +89,12 @@
 
 	const typeLabel: Record<string, string> = Object.fromEntries(TYPES.map((t) => [t.val, t.label]));
 
-	const statutObjetBadge: Record<string, string> = {
-		en_possession: 'badge-green',
-		rendu: 'badge-blue',
-		perdu: 'badge-red',
-		non_remis: 'badge-gray',
-	};
-
-	const statutObjetLabel: Record<string, string> = {
-		en_possession: 'En possession',
-		rendu: 'Rendu',
-		perdu: 'Perdu',
-		non_remis: 'Non remis',
-	};
+	const { libelle: statutObjetLabel, badge: statutObjetBadge } = parAttribut({
+		en_possession: { libelle: 'En possession', badge: 'badge-green' },
+		rendu: { libelle: 'Rendu', badge: 'badge-blue' },
+		perdu: { libelle: 'Perdu', badge: 'badge-red' },
+		non_remis: { libelle: 'Non remis', badge: 'badge-gray' },
+	});
 
 	//  ── La saisie ────────────────────────────────────────────────────────────
 	//  `null` = fermée · `{id: null}` = création · `{id: n}` = correction. Un seul

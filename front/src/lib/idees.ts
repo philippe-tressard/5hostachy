@@ -1,3 +1,5 @@
+import { parAttributDepuisListe } from '$lib/table-statuts';
+
 //  Les états d'une IDÉE — écrits une fois, comme ceux d'un ticket ou d'une
 //  publication (`$lib/tickets`, `$lib/publications`).
 //
@@ -9,10 +11,10 @@
 
 /** Les états proposables, dans l'ordre du cycle de vie. */
 export const STATUTS_IDEE = [
-	{ value: 'ouverte', label: '\u{1F4A1} Ouverte' },
-	{ value: 'retenue', label: '✅ Retenue' },
-	{ value: 'realisee', label: '\u{1F389} Réalisée' },
-	{ value: 'rejetee', label: '❌ Rejetée' },
+	{ value: 'ouverte', label: '\u{1F4A1} Ouverte', badge: 'badge-blue' },
+	{ value: 'retenue', label: '✅ Retenue', badge: 'badge-green' },
+	{ value: 'realisee', label: '\u{1F389} Réalisée', badge: 'badge-purple' },
+	{ value: 'rejetee', label: '❌ Rejetée', badge: 'badge-gray' },
 ];
 
 /** La rangée de filtres — les mêmes états, précédés de « Toutes ». Dérivée,
@@ -31,14 +33,15 @@ export const STATUTS_IDEE = [
     La carte affichait le code brut (`realisee`, sans accent ni majuscule) là où
     les pastilles de la même carte montraient « 🎉 Réalisée » : deux écritures du
     même état à quelques centimètres l'une de l'autre (18/08/2026). */
-export const STATUT_IDEE_LABELS: Record<string, string> = Object.fromEntries(
-	STATUTS_IDEE.map((s) => [s.value, s.label]),
-);
+//  🔴 `IDEE_BADGE` était, elle, écrite À LA MAIN sur ces quatre mêmes états —
+//  dans le fichier même dont l'en-tête dit que « trois listes d'accord entre
+//  elles ne prouvent rien ». La moitié de la règle appliquée ne protège de
+//  rien : la table dérivée aurait suivi un cinquième état, la table écrite non,
+//  et la pastille serait restée sans couleur — le repli `?? ''` d'un badge ne
+//  lève pas, il s'affiche.
+const { label, badge } = parAttributDepuisListe(STATUTS_IDEE, 'value');
+
+export const STATUT_IDEE_LABELS: Record<string, string> = label;
 
 /** La classe de badge d'un état. */
-export const IDEE_BADGE: Record<string, string> = {
-	ouverte: 'badge-blue',
-	retenue: 'badge-green',
-	realisee: 'badge-purple',
-	rejetee: 'badge-gray',
-};
+export const IDEE_BADGE: Record<string, string> = badge;
