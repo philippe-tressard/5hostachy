@@ -23,6 +23,8 @@
  * fonctions, au lieu d'être devinée en comparant deux listes.
  */
 
+import { parAttribut } from '$lib/table-statuts';
+
 /** Ce qui identifie et joint un locataire — commun aux deux gestes. */
 export interface ChampsLocataire {
 	locataire_nom: string;
@@ -62,4 +64,48 @@ export function champsLocataire(bail?: SourceBail): ChampsLocataire {
 /** Un bail NEUF, vierge. */
 export function bailVierge(): ChampsBailNeuf {
 	return { ...champsLocataire(), date_entree: '' };
+}
+
+/*  ══════════════════════════════════════════════════════════════════════════
+    L'ÉTAT d'un bail — trois états, trois attributs, une seule déclaration
+
+    🔴 Il était écrit en TROIS FORMES DIFFÉRENTES (15/09/2026) :
+
+      * la **teinte**, en ternaire imbriqué, deux fois dans `OngletGestionLocative` ;
+      * le **libellé**, dans une table déclarée au milieu d'un écran (`mon-lot`),
+        puis passée en prop au composant qui l'affiche ;
+      * la **question** « ce bail court-il encore ? », écrite `statut === 'actif'
+        || statut === 'en_cours_sortie'` à **trois** endroits.
+
+    Trois attributs de la même notion, trois endroits, et aucun qui se voie
+    depuis les autres. Ajouter un quatrième état — une reconduction, une
+    résiliation contestée — demandait de le poser partout, et l'oublier dans le
+    ternaire donnait un badge gris : lisible, donc invisible.
+
+    La contrepartie serveur est `StatutBail` (`api/app/models/core.py`).
+    ══════════════════════════════════════════════════════════════════════════ */
+
+const ETAT = parAttribut({
+	actif: { libelle: 'Actif', badge: 'badge-green' },
+	en_cours_sortie: { libelle: 'En cours de sortie', badge: 'badge-yellow' },
+	termine: { libelle: 'Terminé', badge: 'badge-gray' },
+});
+
+/** « en_cours_sortie » → « En cours de sortie ». Valeur brute à défaut : un
+ *  libellé manquant doit se voir, pas s'effacer. */
+export const LIBELLE_STATUT_BAIL: Record<string, string> = ETAT.libelle;
+
+/** La teinte du même état. */
+export const BADGE_STATUT_BAIL: Record<string, string> = ETAT.badge;
+
+/**
+ * Ce bail court-il encore ? — la seule écriture de cette question.
+ *
+ * ⚠️ `en_cours_sortie` compte comme **en cours**, et ce n'est pas une
+ * approximation : le préavis n'a pas encore pris fin, le locataire est là, ses
+ * accès fonctionnent. Le jour où un écran voudra les distinguer, il le dira en
+ * appelant l'état par son nom — pas en réécrivant la condition.
+ */
+export function bailEnCours(bail: { statut?: string | null } | null | undefined): boolean {
+	return bail?.statut === 'actif' || bail?.statut === 'en_cours_sortie';
 }

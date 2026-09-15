@@ -47,6 +47,7 @@
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { SUPPRESSION, confirmer, confirmerPuis } from '$lib/confirmation';
 	import { optionsRapides } from '$lib/options-rapides';
+	import { TYPE_EVENEMENT_OPTIONS, typeEvenementLabel } from '$lib/evenements';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', defautsDePage('calendrier'));
 	$: _siteNom = $siteNomStore;
@@ -114,18 +115,12 @@
 	// Épingler suppose d'être dans le fil : les deux ne peuvent pas diverger.
 	$: if (!form.affichable) form.epingle = false;
 
-	const types = [
-		{ val: 'travaux', label: '\u{1F528} Travaux' },
-		{ val: 'coupure', label: '⚡ Coupure' },
-		{ val: 'ag', label: '\u{1F3DB}️ AG' },
-		{ val: 'maintenance', label: '\u{1F527} Maintenance' },
-		{ val: 'maintenance_recurrente', label: '\u{1F504} Maintenance récurrente' },
-		{ val: 'autre', label: '\u{1F4CC} Autre' },
-	];
-
-	function typeLabel(t: string) {
-		return types.find((x) => x.val === t)?.label ?? t;
-	}
+	//  🔴 Les six types étaient énumérés ICI avec leur pictogramme, et une
+	//  SECONDE fois au tableau de bord sous forme d'icônes seules. Ils vivent
+	//  désormais dans `$lib/evenements`, comme les catégories de ticket depuis
+	//  le 17/08 : une déclaration, deux lectures.
+	const types = TYPE_EVENEMENT_OPTIONS;
+	const typeLabel = typeEvenementLabel;
 
 	onMount(async () => {
 		try {

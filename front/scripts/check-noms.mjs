@@ -27,6 +27,7 @@
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { chargerModule } from './lib/charger-module.mjs';
 import { dirname, resolve, relative, join, sep } from 'node:path';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
@@ -87,19 +88,7 @@ if (CAS.length < PLANCHER) {
 }
 
 //  ── Le front, EXÉCUTÉ ───────────────────────────────────────────────────────
-const esbuild = await import('esbuild');
-let module;
-try {
-	const { code } = await esbuild.transform(readFileSync(SOURCE, 'utf8'), {
-		loader: 'ts',
-		format: 'esm',
-	});
-	//  Import par data: URL — aucun fichier temporaire, et la source du dépôt
-	//  n'est jamais réécrite.
-	module = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
-} catch (e) {
-	echouer(`Cas zéro : lib/noms.ts ne se transpile pas (${e.message}).`);
-}
+const module = await chargerModule(SOURCE, echouer);
 
 const { nomAffiche } = module;
 if (typeof nomAffiche !== 'function') {

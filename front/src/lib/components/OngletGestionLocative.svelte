@@ -33,6 +33,7 @@
 	const ROUTE_BAUX_ACTIFS = routeSousOnglet('mon-lot', 'location', 'actif');
 	const ROUTE_BAUX_ARCHIVES = routeSousOnglet('mon-lot', 'location', 'archives');
 	import { routeSousOnglet } from '$lib/routes-onglets';
+	import BadgeStatutBail from '$lib/components/BadgeStatutBail.svelte';
 
 	/** Les baux, tels que l'écran les tient. */
 	export let baux: any[] = [];
@@ -58,7 +59,6 @@
 	export let ouvrirEditionLocataire: (bail: any) => void;
 	export let ouvrirAccesBail: (bail: any) => void;
 	export let majObjets: (bailId: number, objets: any[]) => void;
-	export let statutBailLabel: Record<string, string>;
 	export let nomLocataire: (bail: any) => string;
 
 	/**  Les trois gestes de confirmation restent pilotés par l'ÉCRAN : leurs
@@ -148,15 +148,7 @@
 							{/if}
 						</div>
 						<div class="form-actions">
-							<span
-								class="badge {premierBail.statut === 'actif'
-									? 'badge-green'
-									: premierBail.statut === 'en_cours_sortie'
-										? 'badge-yellow'
-										: 'badge-gray'}"
-							>
-								{statutBailLabel[premierBail.statut] ?? premierBail.statut}
-							</span>
+							<BadgeStatutBail statut={premierBail.statut} />
 						</div>
 					</div>
 
@@ -194,16 +186,7 @@
 										>
 									{/if}
 									{#if group.baux.length > 1}
-										<span
-											class="badge {bail.statut === 'actif'
-												? 'badge-green'
-												: bail.statut === 'en_cours_sortie'
-													? 'badge-yellow'
-													: 'badge-gray'}"
-											style="font-size:.7rem"
-										>
-											{statutBailLabel[bail.statut] ?? bail.statut}
-										</span>
+										<BadgeStatutBail statut={bail.statut} compact />
 									{/if}
 								</div>
 								{#if bail.statut !== 'termine'}

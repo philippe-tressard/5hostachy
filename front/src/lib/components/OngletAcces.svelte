@@ -48,6 +48,7 @@
 	import { isBailleur, isLocataire } from '$lib/stores/auth';
 	import MesAcces from '$lib/components/MesAcces.svelte';
 	import AccesConnexes from '$lib/components/AccesConnexes.svelte';
+	import { bailEnCours } from '$lib/bail';
 
 	let vigiks: any[] = [];
 	let telecommandes: any[] = [];
@@ -167,9 +168,7 @@
 	// ── Bailleur : vue par locataire ─────────────────────────────────────────
 	// Regroupement des vigiks/TCs confiés (chez_locataire) par locataire (email/nom)
 	$: locatairesAcces = (() => {
-		const bauxActifs = (mesBaux as any[]).filter(
-			(b) => b.statut === 'actif' || b.statut === 'en_cours_sortie',
-		);
+		const bauxActifs = (mesBaux as any[]).filter(bailEnCours);
 		const all = [
 			...vigiks.filter((v) => v.chez_locataire).map((v) => ({ ...v, typeAcces: 'vigik' as const })),
 			...telecommandes
@@ -283,7 +282,7 @@
 			<div class="section-header">
 				<h2 class="section-title">👥 Vue par locataire</h2>
 			</div>
-			{#if mesBaux.filter((b) => b.statut === 'actif' || b.statut === 'en_cours_sortie').length === 0}
+			{#if mesBaux.filter(bailEnCours).length === 0}
 				<p style="font-size:.85rem;color:var(--color-text-muted)">Aucun bail actif.</p>
 			{:else}
 				<p style="font-size:.85rem;color:var(--color-text-muted);margin-bottom:.9rem">

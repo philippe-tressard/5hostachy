@@ -17,6 +17,7 @@
 
 import type { CleOptionPublication } from '$lib/options-publication';
 import type { Ticket } from '$lib/api';
+import { parAttribut } from '$lib/table-statuts';
 
 export interface StatutTicket {
 	/** Valeur envoyée à l'API — jamais traduite, jamais réécrite. */
@@ -440,7 +441,45 @@ export function optionsVersTicket(options: {
     quelqu'un dedans n'avait aucun moyen de dire les deux.
     ══════════════════════════════════════════════════════════════════════════ */
 
-/** Un ticket presse-t-il ? La priorité le dit, et elle seule. */
+/*  ── La PRIORITÉ, et ses deux longueurs ─────────────────────────────────────
+    🔴 Son vocabulaire vivait dans un ÉCRAN (`tickets/[id]`), en table locale —
+    du spécifique, alors que tous les autres états du produit vivent ici. Et la
+    carte du ticket en donnait un SECOND rendu, écrit à la main : « ⚡ Urgente »
+    là où la fiche dit « Priorité haute ». Deux rendus du même état, aucun qui
+    se voie depuis l'autre.
+
+    Ils ne sont PAS fondus en un seul : une carte est dense et ne montre que ce
+    qui presse, une fiche décrit. C'est la même distinction que `LIBELLES_STATUT`
+    / `LIBELLES_STATUT_ABREGE` dans `$lib/roles` — et elle se DÉCLARE ici, au
+    lieu de se découvrir en comparant deux écrans.
+
+    ⚠️ `normale` ne s'affiche NULLE PART : les deux écrans la taisent, chacun à
+    sa façon (`!== 'normale'` sur la fiche, `=== 'haute'` sur la carte). Son
+    libellé existe quand même, pour que la table couvre l'énumération du
+    serveur — `PrioriteTicket` (`api/app/models/tickets.py`).                  */
+const PRIORITE = parAttribut({
+	basse: { libelle: 'Priorité basse', bref: '', badge: 'badge-gray' },
+	normale: { libelle: 'Priorité normale', bref: '', badge: 'badge-gray' },
+	haute: { libelle: 'Priorité haute', bref: '⚡ Urgente', badge: 'badge-orange' },
+});
+
+/** « Priorité haute » — la forme longue, pour une fiche. */
+export const LIBELLE_PRIORITE: Record<string, string> = PRIORITE.libelle;
+
+/** « ⚡ Urgente » — la forme brève, pour une carte. **Vide** quand il n'y a rien
+ *  à signaler : c'est ce qui permet à la carte de ne rien afficher sans reposer
+ *  la question de son côté. */
+export const PRIORITE_BREVE: Record<string, string> = PRIORITE.bref;
+
+/** La teinte de la priorité. */
+export const BADGE_PRIORITE: Record<string, string> = PRIORITE.badge;
+
+/** Un ticket presse-t-il ? La priorité le dit, et elle seule.
+ *
+ *  ⚠️ `CarteTicket` écrivait `ticket.priorite === 'haute'` en toutes lettres —
+ *  dans le composant le plus vu du produit, et sous une fonction qui se déclare
+ *  le seul endroit où la question se pose. Une règle qui s'annonce unique et
+ *  qu'un appelant contourne n'est pas unique : elle est ignorée. */
 export function ticketUrgent(ticket: { priorite?: string | null } | null | undefined): boolean {
 	return ticket?.priorite === 'haute';
 }

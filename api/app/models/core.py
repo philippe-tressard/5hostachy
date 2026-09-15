@@ -18,6 +18,20 @@ from app.models.copropriete import (
     Lot as Lot,
     TypeLot as TypeLot,
 )
+
+#  Réexportation : les rôles, les statuts et la hiérarchie qui les départage
+#  vivent dans `roles.py` depuis le 15/09/2026 (modularité, rang 1). Ce
+#  fichier était à 924 lignes et ne pouvait plus grossir pour recevoir la
+#  règle — qui, elle, était écrite deux fois trente lignes plus bas. Ils
+#  restent importables ici : aucun des appelants ne change, et SQLModel
+#  continue de connaître les énumérations.
+from app.models.roles import (
+    PRIORITE_ROLE as PRIORITE_ROLE,
+    RoleUtilisateur as RoleUtilisateur,
+    StatutUtilisateur as StatutUtilisateur,
+    rang_role as rang_role,
+    role_principal,
+)
 from app.models.acces import (
     StatutAcces as StatutAcces,
     StatutImport as StatutImport,
@@ -36,30 +50,12 @@ from app.models.evolution import EvolutionMixin
 #  Enums
 # ──────────────────────────────────────────────
 
-class StatutUtilisateur(str, Enum):
-    copropriétaire_résident = "copropriétaire_résident"
-    copropriétaire_bailleur = "copropriétaire_bailleur"
-    locataire = "locataire"
-    syndic = "syndic"
-    mandataire = "mandataire"
-    aidant = "aidant"   # proche aidant (famille) — accès délégué, pas de vote AG
-    admin_technique = "admin_technique"  # compte technique sans lot ni statut résidentiel
-
 
 class StatutDelegation(str, Enum):
     en_attente = "en_attente"       # créée par le CS, en attente d'acceptation
     active = "active"               # acceptée par l'aidant
     revoquee = "revoquee"           # révoquée par le mandant ou le CS
     expiree = "expiree"             # date de fin dépassée
-
-
-class RoleUtilisateur(str, Enum):
-    propriétaire = "propriétaire"
-    résident = "résident"
-    externe = "externe"
-    conseil_syndical = "conseil_syndical"
-    admin = "admin"
-
 
 
 
@@ -98,8 +94,6 @@ class FaqItem(SQLModel, table=True):
     actif: bool = True
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
-
-
 
 
 
@@ -179,6 +173,8 @@ class Utilisateur(SQLModel, table=True):
                 return True
         return False
 
+
+
     def ajouter_role(self, role: "RoleUtilisateur") -> None:
         """Ajoute un rôle sans doublon. Met aussi à jour `role` (rôle principal)."""
         rv = role.value if hasattr(role, "value") else str(role)
@@ -186,20 +182,7 @@ class Utilisateur(SQLModel, table=True):
         if rv not in current:
             current.append(rv)
         self.roles_json = ",".join(current)
-        # Le rôle principal est le "plus élevé" : admin > conseil_syndical > propriétaire > résident/externe
-        _priority = {RoleUtilisateur.admin: 4, RoleUtilisateur.conseil_syndical: 3, RoleUtilisateur.propriétaire: 2, RoleUtilisateur.résident: 1, RoleUtilisateur.externe: 1}
-
-        def _rank(r_str: str) -> int:
-            try:
-                return _priority.get(RoleUtilisateur(r_str), 0)
-            except ValueError:
-                return 0
-
-        top = max(current, key=_rank, default=rv)
-        try:
-            self.role = RoleUtilisateur(top)
-        except ValueError:
-            pass
+        self.role = role_principal(current, defaut=rv) or self.role
 
     def retirer_role(self, role: "RoleUtilisateur") -> None:
         """Retire un rôle. Garde au minimum 'résident'."""
@@ -208,19 +191,10 @@ class Utilisateur(SQLModel, table=True):
         if not current:
             current = [RoleUtilisateur.résident.value]
         self.roles_json = ",".join(current)
-        _priority = {RoleUtilisateur.admin: 4, RoleUtilisateur.conseil_syndical: 3, RoleUtilisateur.propriétaire: 2, RoleUtilisateur.résident: 1, RoleUtilisateur.externe: 1}
-
-        def _rank(r_str: str) -> int:
-            try:
-                return _priority.get(RoleUtilisateur(r_str), 0)
-            except ValueError:
-                return 0
-
-        top = max(current, key=_rank, default=RoleUtilisateur.résident.value)
-        try:
-            self.role = RoleUtilisateur(top)
-        except ValueError:
-            pass
+        self.role = (
+            role_principal(current, defaut=RoleUtilisateur.résident.value)
+            or self.role
+        )
     tickets: List["Ticket"] = Relationship(back_populates="auteur", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"})
     publications: List["Publication"] = Relationship(back_populates="auteur")
 
@@ -410,8 +384,6 @@ from app.models.documents import (
     Document as Document,
     ProfilAccesDocument as ProfilAccesDocument,
 )
-
-
 
 
 # ──────────────────────────────────────────────

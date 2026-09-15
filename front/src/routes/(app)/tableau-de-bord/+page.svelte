@@ -23,6 +23,7 @@
 	import FluxCard from '$lib/components/FluxCard.svelte';
 	import RaccourcisRapides from '$lib/components/RaccourcisRapides.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
+	import { TYPE_EVENEMENT_EMOJI } from '$lib/evenements';
 	// Toutes les règles du fil (apparence, liens, appartenance aux trois
 	// registres) vivent dans ce module — cf. `$lib/flux.ts`.
 	import {
@@ -224,14 +225,10 @@
 		{ id: 'termine', label: 'Terminé', color: '#22c55e' },
 	];
 
-	const EV_ICONS: Record<string, string> = {
-		travaux: '\u{1F528}',
-		coupure: '⚡',
-		ag: '\u{1F3DB}️',
-		maintenance: '\u{1F527}',
-		maintenance_recurrente: '\u{1F504}',
-		autre: '\u{1F4CC}',
-	};
+	//  🔴 Seconde écriture des six types, sous une autre forme : le calendrier
+	//  les portait avec leur libellé, celui-ci avec leurs seules icônes. Un
+	//  septième type aurait eu son option et pas son pictogramme.
+	const EV_ICONS = TYPE_EVENEMENT_EMOJI;
 
 	//  🔴 Le rendu du périmètre a suivi le balisage dans `ItemKanban` : il n'était
 	//  employé que là. Le garder ici aurait laissé une fonction sans appelant dans

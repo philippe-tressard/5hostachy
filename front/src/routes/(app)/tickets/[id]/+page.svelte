@@ -19,6 +19,8 @@
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import { optionsDuTicket } from '$lib/tickets';
 	import {
+		BADGE_PRIORITE,
+		LIBELLE_PRIORITE,
 		STATUTS_TICKET,
 		STATUT_TICKET_BADGE,
 		STATUT_TICKET_LABELS as STATUT_LABELS,
@@ -55,12 +57,6 @@
 	//  proposaient `annulé`) et le formulaire d'évolution (qui proposait `fermé`
 	//  à la place). Arbitré le 17/08/2026 (#415) : les boutons restent, le
 	//  formulaire d'évolution ne sert plus qu'au commentaire.
-
-	const PRIORITE: Record<string, { label: string; cls: string }> = {
-		basse: { label: 'Priorité basse', cls: 'badge-gray' },
-		normale: { label: 'Priorité normale', cls: 'badge-gray' },
-		haute: { label: 'Priorité haute', cls: 'badge-orange' },
-	};
 
 	//  Les messages du fil sont d'anciens textes bruts pour certains : un contenu
 	//  qui ne commence pas par une balise est enveloppé avant assainissement — c'est
@@ -260,8 +256,8 @@
 				<div class="ticket-meta">
 					<span class="badge {statutBadge}">{statutLabel}</span>
 					{#if ticket.priorite && ticket.priorite !== 'normale'}
-						<span class="badge {PRIORITE[ticket.priorite]?.cls ?? 'badge-gray'}"
-							>{PRIORITE[ticket.priorite]?.label}</span
+						<span class="badge {BADGE_PRIORITE[ticket.priorite] ?? 'badge-gray'}"
+							>{LIBELLE_PRIORITE[ticket.priorite] ?? ticket.priorite}</span
 						>
 					{/if}
 				</div>

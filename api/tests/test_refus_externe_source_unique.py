@@ -50,7 +50,13 @@ EXCEPTIONS = {
     #  L'énumération des rôles et leur ordre de priorité : elle NOMME `externe`
     #  sans rien en déduire. La confondre avec la règle d'accès reviendrait à
     #  interdire au modèle de connaître ses propres valeurs.
-    "models/core.py": "la définition du rôle et sa priorité, pas une décision",
+    #
+    #  ⚠️ Le fichier a CHANGÉ le 15/09/2026 : `core.py` a rendu les rôles à
+    #  `models/roles.py` (modularité), et l'exception a suivi — parce que ce test
+    #  a refusé, en annonçant « exception devenue inutile ». C'est ce qu'on lui
+    #  demande : une tolérance nominative doit mourir avec son objet, sans quoi
+    #  elle finit par couvrir un fichier qu'elle n'a jamais examiné.
+    "models/roles.py": "la définition du rôle et sa priorité, pas une décision",
     #  L'inscription POSE le rôle externe ; elle n'oppose aucun refus.
     "routers/auth.py": "attribution du rôle à l'inscription, pas un contrôle",
 }
