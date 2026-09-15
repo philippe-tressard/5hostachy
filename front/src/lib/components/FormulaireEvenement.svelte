@@ -23,7 +23,13 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 
 	import { admin as adminApi, calendrier as calApi } from '$lib/api';
-	import { chargerResidents, modeDepuis, type ModeSaisiPour } from '$lib/saisi-pour';
+	import {
+		chargerResidents,
+		lotDepuisSaisie,
+		nomCopie,
+		saisieDepuis,
+		type ResidentProposable,
+	} from '$lib/saisi-pour';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	const dispatch = createEventDispatcher<{ annule: void }>();
@@ -78,21 +84,23 @@
 	//  par `{ ...form }`, donc tout ce qui y est part, et tout ce qui n'y est pas
 	//  ne part pas. Seul le MODE est local — il ne se transmet pas, il se déduit
 	//  (`modeDepuis`), et le serveur n'en a que faire.
-	let modeSaisiPour: ModeSaisiPour = modeDepuis(form);
-	let residentsSaisiPour: { id: number; prenom: string; nom: string; email: string }[] = [];
+	let saisiPour = saisieDepuis(form);
+	let residentsSaisiPour: ResidentProposable[] = [];
 
-	//  ⚠️ Recalculé quand le formulaire CHANGE d'événement — `cle` vaut l'identifiant
-	//  en édition, « creation » sinon. Sans cela, corriger un événement saisi pour
-	//  quelqu'un après en avoir ouvert un autre rouvrirait le mode du précédent.
-	//
-	//  🔴 Et **pas** `$: modeSaisiPour = modeDepuis(form)` : `form` change à chaque
-	//  frappe, ce qui écraserait le mode que l'utilisateur vient de choisir. C'est
-	//  le changement d'objet qui déclenche, pas celui de son contenu.
+	//  ⚠️ Recalculé quand le formulaire CHANGE d'événement (`cle`), et **pas** à
+	//  chaque frappe : `$: saisiPour = saisieDepuis(form)` écraserait le choix que
+	//  l'utilisateur vient de faire. C'est le changement d'objet qui déclenche.
 	let cleVue: unknown = cle;
 	$: if (cle !== cleVue) {
 		cleVue = cle;
-		modeSaisiPour = modeDepuis(form);
+		saisiPour = saisieDepuis(form);
 	}
+
+	//  🔴 L'état rejoint `form`, que la page envoie par `{ ...form }` : sans ce
+	//  report, la saisie resterait locale et ne partirait JAMAIS — en silence.
+	//  `Object.assign` MUTE l'objet lié plutôt que de le réassigner : réassigner
+	//  relancerait ce bloc à l'infini.
+	$: Object.assign(form, lotDepuisSaisie(saisiPour));
 
 	onMount(async () => {
 		residentsSaisiPour = await chargerResidents(adminApi.utilisateurs);
@@ -290,10 +298,7 @@
 			<ChampsCommuns
 				avecSaisiPour
 				{residentsSaisiPour}
-				bind:modeSaisiPour
-				bind:saisiPourUserId={form.saisi_pour_user_id}
-				bind:saisiPourNom={form.saisi_pour_nom}
-				bind:saisiPourEmail={form.saisi_pour_email}
+				bind:saisiPour
 				avecOptions={sectionPresente(EVENEMENT, etat, 'diffusion')}
 				objet="événement"
 				optionsRendues={['epingle', 'brouillon']}
@@ -323,7 +328,7 @@
 				bind:syndic={form.envoyer_syndic}
 				bind:cs={form.envoyer_cs}
 				bind:auteur={envoyerAuteur}
-				auteurNom={form?.auteur_nom ?? ''}
+				auteurNom={nomCopie(form)}
 			>
 				<svelte:fragment slot="workflow">
 					<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). Norme posée sur

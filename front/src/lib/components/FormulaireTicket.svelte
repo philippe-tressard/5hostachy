@@ -53,7 +53,7 @@
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { comparerParNom } from '$lib/noms';
-	import { lotSaisiPour, modeDepuis, type ModeSaisiPour } from '$lib/saisi-pour';
+	import { lotSaisiPour, modeDepuis, nomCopie, type ModeSaisiPour } from '$lib/saisi-pour';
 
 	/**  Le ticket à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut) =
 	 *   création. Le mode ne change pas pendant la vie du composant : l'appelant le
@@ -419,7 +419,7 @@
 			bind:syndic={destinataireSyndic}
 			bind:cs={destinataireCs}
 			bind:auteur={envoyerAuteur}
-			auteurNom={ticket?.auteur_nom ?? ''}
+			auteurNom={nomCopie(ticket)}
 			aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
 			whatsappInterdit={motifWhatsappInterdit(confidentiel, 'ticket')}
 		/>

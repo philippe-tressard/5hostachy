@@ -53,7 +53,13 @@
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
-	import { chargerResidents, lotSaisiPour, modeDepuis, type ModeSaisiPour } from '$lib/saisi-pour';
+	import {
+		chargerResidents,
+		lotDepuisSaisie,
+		nomCopie,
+		saisieDepuis,
+		type ResidentProposable,
+	} from '$lib/saisi-pour';
 	import { admin as adminApi } from '$lib/api';
 	import DocumentsPublication from '$lib/components/DocumentsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
@@ -83,11 +89,8 @@
 	export let publication: Publication | null = null;
 
 	//  ── 2. Saisi pour — le CS publie parfois POUR quelqu'un (`$lib/saisi-pour`).
-	let modeSaisiPour: ModeSaisiPour = modeDepuis(publication);
-	let saisiPourUserId: number | null = publication?.saisi_pour_user_id ?? null;
-	let saisiPourNom = publication?.saisi_pour_nom ?? '';
-	let saisiPourEmail = publication?.saisi_pour_email ?? '';
-	let residentsSaisiPour: { id: number; prenom: string; nom: string; email: string }[] = [];
+	let saisiPour = saisieDepuis(publication);
+	let residentsSaisiPour: ResidentProposable[] = [];
 
 	const modeEdition = publication !== null;
 
@@ -281,7 +284,7 @@
 					photos_urls: photos,
 					...canaux,
 					annonce_hall: annonceHall,
-					...lotSaisiPour(modeSaisiPour, saisiPourUserId, saisiPourNom, saisiPourEmail),
+					...lotDepuisSaisie(saisiPour),
 				});
 				toast('success', 'Publication mise à jour');
 				dispatch('modifie', maj);
@@ -305,7 +308,7 @@
 				...canaux,
 				annonce_hall: annonceHall,
 				confidentiel,
-				...lotSaisiPour(modeSaisiPour, saisiPourUserId, saisiPourNom, saisiPourEmail),
+				...lotDepuisSaisie(saisiPour),
 			});
 			//  🔴 Le silence d'avant (« la publication existe, le document se rattrape »)
 			//  laissait croire le document joint. `attacherApres` le DIT — c'est la
@@ -397,10 +400,7 @@
 			<ChampsCommuns
 				avecSaisiPour
 				{residentsSaisiPour}
-				bind:modeSaisiPour
-				bind:saisiPourUserId
-				bind:saisiPourNom
-				bind:saisiPourEmail
+				bind:saisiPour
 				avecOptions={sectionPresente(PUBLICATION, etat, 'specifiques')}
 				dejaEpingle={epingleInitial}
 				bind:epingle
@@ -431,7 +431,7 @@
 				bind:syndic={envoyerSyndic}
 				bind:cs={envoyerCs}
 				bind:auteur={envoyerAuteur}
-				auteurNom={publication?.auteur_nom ?? ''}
+				auteurNom={nomCopie(publication)}
 				whatsappInterdit={motifWhatsappInterdit(brouillon, 'actualité')}
 				aideWhatsapp={confidentiel
 					? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
