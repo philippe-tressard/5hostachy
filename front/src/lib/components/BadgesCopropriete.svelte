@@ -315,7 +315,17 @@
 			libelle="Enregistrer un accès"
 			on:basculer={ouvrirCreation}
 		/>
-		<a class="btn btn-outline" href={accesApi.urlExportParc()} download>⬇️ Exporter (CSV)</a>
+		<!--  🔴 UN export PAR TYPE depuis le 15/09/2026, sur demande. La liste
+		      est engendrée par `TYPES` — la même qui nourrit les pastilles de
+		      filtre et le formulaire : un troisième type d'accès apporterait son
+		      bouton sans qu'on touche à ce balisage. Deux ancres écrites à la
+		      main auraient divergé, et c'est exactement ce que `TYPES` évite
+		      déjà trois lignes plus haut. -->
+		{#each TYPES as t (t.val)}
+			<a class="btn btn-outline" href={accesApi.urlExportParc(t.val)} download>
+				⬇️ Exporter {t.label}
+			</a>
+		{/each}
 	</div>
 
 	{#if formOuvert}

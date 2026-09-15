@@ -104,12 +104,18 @@ export const acces = {
 	//  « perdu » par `modifierAcces`. Un badge perdu a existé, et le parc doit
 	//  pouvoir le dire (`ux-patterns` §8).
 	supprimerAcces: (type: string, id: number) => api.delete(`/acces/admin/${type}/${id}`),
-	//: L'adresse de l'export — le navigateur la suit, on ne la lit pas ici.
+	//: L'adresse de l'export d'UN type — le navigateur la suit, on ne la lit pas ici.
 	//
 	//  ⚠️ Pas de `api.get` : la réponse est un FICHIER, et la passer par le client
 	//  obligerait à fabriquer un `blob:` puis un lien de téléchargement. Le
 	//  navigateur sait le faire ; les cookies de session partent avec.
-	urlExportParc: () => `${BASE}/acces/admin/export.csv`,
+	//
+	//  🔴 **Un export PAR TYPE depuis le 15/09/2026.** Le fichier unique de la
+	//  veille obligeait à filtrer sur une colonne « Type » avant tout usage : un
+	//  vigik et une télécommande n'ont ni les mêmes accès possibles, ni le même
+	//  rapport au lot. La fonction reste **une seule**, paramétrée — deux
+	//  fonctions jumelles auraient divergé au premier ajustement d'URL.
+	urlExportParc: (type: string) => `${BASE}/acces/admin/${type}/export.csv`,
 	// CS/Admin — import vigik
 	uploadImportVigik: (file: File, remplacer = false) =>
 		uploadExcel('/acces/admin/imports-vigik/upload', file, remplacer),
