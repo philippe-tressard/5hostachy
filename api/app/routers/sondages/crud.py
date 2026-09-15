@@ -28,6 +28,7 @@ from .commun import (
 from app.utils.communaute import exiger_acces
 from app.utils.liens import base_site, nom_site
 from app.utils.noms import contexte_personne
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
 
@@ -78,9 +79,7 @@ def get_sondage(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    s = session.get(Sondage, sondage_id)
-    if not s:
-        raise HTTPException(404, "Sondage introuvable")
+    s = ou_404(session, Sondage, sondage_id, "Sondage")
     if not sondage_accessible(s, user):
         raise HTTPException(403, "Vous n'êtes pas autorisé à accéder à ce sondage")
 
@@ -269,9 +268,7 @@ def modifier_sondage(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Modifier un sondage (auteur ou admin)."""
-    s = session.get(Sondage, sondage_id)
-    if not s:
-        raise HTTPException(404, "Sondage introuvable")
+    s = ou_404(session, Sondage, sondage_id, "Sondage")
     #  L'auteur ou un admin — `peut_editer`, du module central.
     if not peut_editer(s, user):
         raise HTTPException(403, "Seul l'auteur ou un admin peut modifier ce sondage")
@@ -345,9 +342,7 @@ def supprimer_sondage(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Supprimer un sondage et toutes ses données (auteur ou admin)."""
-    s = session.get(Sondage, sondage_id)
-    if not s:
-        raise HTTPException(404, "Sondage introuvable")
+    s = ou_404(session, Sondage, sondage_id, "Sondage")
     #  L'auteur ou un admin — `peut_editer`, du module central.
     if not peut_editer(s, user):
         raise HTTPException(403, "Seul l'auteur ou un admin peut supprimer ce sondage")
@@ -369,9 +364,7 @@ def cloturer_sondage(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Stopper un sondage immédiatement (auteur ou admin)."""
-    s = session.get(Sondage, sondage_id)
-    if not s:
-        raise HTTPException(404, "Sondage introuvable")
+    s = ou_404(session, Sondage, sondage_id, "Sondage")
     #  L'auteur ou un admin — `peut_editer`, du module central.
     if not peut_editer(s, user):
         raise HTTPException(403, "Seul l'auteur ou un admin peut clôturer ce sondage")

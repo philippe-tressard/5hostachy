@@ -37,6 +37,7 @@ from .courriels import (
     _envoyer_email_externe_publication, _envoyer_email_syndic_publication,
 )
 from app.utils.corrections import contenu_correction
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/publications", tags=["publications"])
 
@@ -150,9 +151,7 @@ def prefill_depuis_annonce_hall(
     colonne que personne n'interroge devient une seconde vérité sur « d'où vient
     ce texte », libre de contredire la première.
     """
-    annonce = session.get(AnnonceHall, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce de hall introuvable")
+    annonce = ou_404(session, AnnonceHall, annonce_id, "Annonce de hall")
     return {
         "titre": annonce.titre,
         "contenu": annonce.message,
@@ -223,9 +222,7 @@ def update_publication(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    pub = session.get(Publication, pub_id)
-    if not pub:
-        raise HTTPException(404, "Publication introuvable")
+    pub = ou_404(session, Publication, pub_id, "Publication")
     data = body.model_dump(exclude_unset=True)
     #  🔴 Les INTENTIONS d'envoi sortent du lot AVANT la boucle d'affectation
     #  (12/09/2026 — 500 en production sur `PATCH /publications/25`).
@@ -399,9 +396,7 @@ def renvoyer_email_publication(
     user: Utilisateur = Depends(require_admin),
 ):
     """Renvoie l'email de la publication au syndic et/ou CS (admin uniquement)."""
-    pub = session.get(Publication, pub_id)
-    if not pub:
-        raise HTTPException(404, "Publication introuvable")
+    pub = ou_404(session, Publication, pub_id, "Publication")
     if pub.brouillon:
         raise HTTPException(422, "Impossible de renvoyer un brouillon")
     if pub.envoyer_syndic or pub.envoyer_cs:
@@ -433,9 +428,7 @@ def renvoyer_whatsapp_publication(
     aurait envoyé le commentaire, pas l'annonce. Le seul recours aurait été de
     supprimer la publication et de la recréer.
     """
-    pub = session.get(Publication, pub_id)
-    if not pub:
-        raise HTTPException(404, "Publication introuvable")
+    pub = ou_404(session, Publication, pub_id, "Publication")
     if pub.brouillon:
         raise HTTPException(422, "Impossible de renvoyer un brouillon")
     wa_config = config_whatsapp(session)
@@ -453,9 +446,7 @@ def delete_publication(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
-    pub = session.get(Publication, pub_id)
-    if not pub:
-        raise HTTPException(404, "Publication introuvable")
+    pub = ou_404(session, Publication, pub_id, "Publication")
     # Supprimer les évolutions liées avant la publication (pas de CASCADE en SQLite)
     for evol in list(pub.evolutions):
         session.delete(evol)

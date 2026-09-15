@@ -36,7 +36,7 @@ partis en production.
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -46,6 +46,7 @@ from app.models.core import Evenement, Utilisateur
 from app.utils.copie_auteur import adresse_copie, objet_de
 from app.utils.apercu_diffusion import ApercuCanal, ApercuDiffusion, apercu_email, apercu_whatsapp
 from app.utils.destinataires import destinataires_syndic_cs
+from app.utils.recuperer import ou_404
 
 from .calendrier_courriels import contexte_evenement_canaux
 
@@ -136,9 +137,7 @@ def apercu_diffusion(
     son motif plutôt que de montrer un message qui ne partira pas.
     """
     if brouillon.evenement_id is not None:
-        ev = session.get(Evenement, brouillon.evenement_id)
-        if not ev:
-            raise HTTPException(404, "Événement introuvable")
+        ev = ou_404(session, Evenement, brouillon.evenement_id, "Événement")
     else:
         ev = _evenement_previsionnel(brouillon, user)
 

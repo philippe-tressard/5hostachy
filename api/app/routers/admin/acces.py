@@ -5,7 +5,7 @@ Voir `__init__.py` pour la règle de découpage.
 """
 import json
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 from sqlmodel import Session, select
 from app.utils.batiments import libelle_batiment_ou, libelle_lot
@@ -23,6 +23,7 @@ from app.models.core import (
 from datetime import datetime
 from typing import Any
 from app.utils.noms import nom_affiche
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -54,9 +55,7 @@ def traiter_commande(
     session: Session = Depends(get_session),
     admin: Utilisateur = Depends(require_cs_or_admin),
 ):
-    cmd = session.get(CommandeAcces, cmd_id)
-    if not cmd:
-        raise HTTPException(404, "Commande introuvable")
+    cmd = ou_404(session, CommandeAcces, cmd_id, "Commande")
 
     cmd.statut = StatutCommande.acceptee if body.action == "accepter" else StatutCommande.refusee
     cmd.traite_par_id = admin.id
@@ -223,9 +222,7 @@ def supprimer_user_lot(
     """Supprime une association user-lot incorrecte.
     Nettoie aussi utilisateurs_json dans les LotImport correspondants pour
     éviter que l'auto-match recrée le lien au prochain passage."""
-    ul = session.get(UserLot, user_lot_id)
-    if not ul:
-        raise HTTPException(404, "Association user-lot introuvable")
+    ul = ou_404(session, UserLot, user_lot_id, "Association user-lot")
     uid_supprime = ul.user_id
     lot_id_supprime = ul.lot_id
     session.delete(ul)

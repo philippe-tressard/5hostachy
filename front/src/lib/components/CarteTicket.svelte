@@ -63,6 +63,7 @@
 	} from '$lib/tickets';
 	import { fmtDate, isNouveau } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
+	import { nomCopie } from '$lib/saisi-pour';
 	import {
 		STATUT_TICKET_BADGE,
 		STATUT_TICKET_LABELS,
@@ -307,7 +308,7 @@
 				<div class="tk-formulaire">
 					<EvolForm
 						idPrefixe="tk-evol-{ticket.id}"
-						auteurNom={ticket.proprietaire_nom ?? ticket.auteur_nom ?? ''}
+						auteurNom={nomCopie(ticket)}
 						titre="Commenter ou changer l’état"
 						demanderApercu={(saisie) =>
 							ticketsApi.apercuDiffusion({
@@ -376,7 +377,7 @@
 								{#key evolEnEdition}
 									<EvolForm
 										idPrefixe="tk-evol-edit-{evol.id}"
-										auteurNom={ticket.proprietaire_nom ?? ticket.auteur_nom ?? ''}
+										auteurNom={nomCopie(ticket)}
 										titre="Modifier le commentaire"
 										editMode={true}
 										initialContenu={evol.contenu || ''}

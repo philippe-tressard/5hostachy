@@ -45,6 +45,7 @@ from app.utils.roles_libelles import libelle_role
 from datetime import datetime
 from typing import Optional
 from app.utils.communaute import notification_de_ban
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -123,9 +124,7 @@ def ajouter_role(
     admin: Utilisateur = Depends(require_admin),
 ):
     """Ajouter un rôle à un utilisateur sans retirer les existants."""
-    user = session.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
+    user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     if not user.actif:
         raise HTTPException(400, "Impossible de modifier un compte inactif.")
     try:
@@ -158,9 +157,7 @@ def retirer_role(
     """Retirer un rôle d'un utilisateur (le rôle 'résident' ne peut pas être retiré)."""
     if admin.id == user_id and body.role == RoleUtilisateur.admin.value:
         raise HTTPException(400, "Vous ne pouvez pas vous retirer le rôle admin.")
-    user = session.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
+    user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     if body.role == RoleUtilisateur.résident.value:
         raise HTTPException(400, "Le rôle 'Résident' est le rôle de base, il ne peut pas être retiré.")
     try:
@@ -205,9 +202,7 @@ def modifier_utilisateur(
     admin: Utilisateur = Depends(require_admin),
 ):
     """Modifier les informations d'un utilisateur (admin)."""
-    user = session.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
+    user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     if body.email and body.email != user.email.lower():
         existing = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
         if existing:
@@ -236,9 +231,7 @@ def supprimer_utilisateur(
     Nettoie toutes les interactions liées : lots, tokens, accès, notifications, votes, baux, etc."""
     if admin.id == user_id:
         raise HTTPException(400, "Vous ne pouvez pas supprimer votre propre compte.")
-    user = session.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
+    user = ou_404(session, Utilisateur, user_id, "Utilisateur")
 
     # 0. Télémétrie (RGPD art. 17 — droit à l'effacement)
     for ev in session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user_id)).all():
@@ -404,9 +397,7 @@ def ban_communaute(
 
     1er ban → probatoire 1 mois. 2e ban → définitif.
     """
-    user = session.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
+    user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     if body.interdit and user.has_role(RoleUtilisateur.admin):
         raise HTTPException(400, "Un administrateur ne peut pas être exclu de la communauté")
 

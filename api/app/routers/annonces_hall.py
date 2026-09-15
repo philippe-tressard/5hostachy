@@ -57,6 +57,7 @@ UPLOADS_ROOT = os.path.realpath("/app/uploads")
 #  Les schémas vivent dans `annonces_hall_schemas` (02/09/2026, plafond de
 #  modularité) : ce qui DÉCLARE part, ce qui DÉCIDE reste.
 from app.utils.liens import base_site, nom_site
+from app.utils.recuperer import ou_404
 from app.routers.annonces_hall_schemas import (  # noqa: E402
     AnnonceHallArchive,
     AnnonceHallBase,
@@ -418,9 +419,7 @@ def download_pdf(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    annonce = session.get(AnnonceHall, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
+    annonce = ou_404(session, AnnonceHall, annonce_id, "Annonce")
     if not annonce.pdf_chemin or not os.path.isfile(annonce.pdf_chemin):
         raise HTTPException(404, "PDF introuvable sur le serveur")
     return FileResponse(
@@ -438,9 +437,7 @@ def renvoyer_email(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    annonce = session.get(AnnonceHall, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
+    annonce = ou_404(session, AnnonceHall, annonce_id, "Annonce")
     #  Le renvoi manuel vise le CS du périmètre, comme avant : c'est un geste de
     #  rattrapage sur un envoi qui a déjà eu lieu, pas une nouvelle diffusion.
     emails = _envoyer_email_annonce(annonce, user, background_tasks, session)
@@ -462,9 +459,7 @@ def archiver_annonce(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    annonce = session.get(AnnonceHall, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
+    annonce = ou_404(session, AnnonceHall, annonce_id, "Annonce")
     annonce.archivee = body.archivee
     session.add(annonce)
     session.commit()
@@ -480,9 +475,7 @@ def delete_annonce_hall(
     _: Utilisateur = Depends(require_admin),
 ):
     """Suppression définitive : la ligne, le PDF et l'illustration partent."""
-    annonce = session.get(AnnonceHall, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
+    annonce = ou_404(session, AnnonceHall, annonce_id, "Annonce")
     _supprimer_fichier(annonce.pdf_chemin)
     for url in json.loads(annonce.images_json or "[]"):
         if url:

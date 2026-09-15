@@ -84,7 +84,8 @@
 	import SectionDiffusion from './SectionDiffusion.svelte';
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
 	import ChampSaisiPour from '$lib/components/ChampSaisiPour.svelte';
-	import type { ModeSaisiPour } from '$lib/saisi-pour';
+	import { nomCopie, saisieDepuis } from '$lib/saisi-pour';
+	import type { SaisieSaisiPour } from '$lib/saisi-pour';
 	import type { CleOptionPublication } from '$lib/options-publication';
 	import { estPerimetreParDefaut, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
 	import { perimetresStore } from '$lib/stores/perimetres';
@@ -120,10 +121,7 @@
 		nom: string;
 		email: string;
 	}[] = [];
-	export let modeSaisiPour: ModeSaisiPour = 'moi';
-	export let saisiPourUserId: number | null = null;
-	export let saisiPourNom = '';
-	export let saisiPourEmail = '';
+	export let saisiPour: SaisieSaisiPour = saisieDepuis(null);
 
 	//  ── 3. Options de publication ─────────────────────────────────────────────
 	//  🔴 Le rang de cette section ne se négocie plus par écran (12/09/2026) :
@@ -243,6 +241,20 @@
 	 *   à … ». Relais pur : ce composant ne sait pas non plus qui a écrit
 	 *   l'objet — seul l'écran tient l'objet. */
 	export let auteurNom = '';
+	//  🔴 Le nom annoncé par « Envoyer une copie à … » doit dire ce qui PARTIRA,
+	//  pas ce qui était enregistré. Ce composant a tout sous la main : il rend la
+	//  section « Saisi pour » ET la case de diffusion. Le faire composer par les
+	//  trois formulaires l'aurait écrit trois fois — et deux d'entre eux sont au
+	//  plafond de modularité.
+	//
+	//  ⚠️ Signalé à l'écran le 15/09/2026 : « quand on change Saisi pour avec une
+	//  personne ayant un email, ça change envoyer une copie à X ». C'est le
+	//  comportement VOULU (arbitré le 12/09) — mais les formulaires annonçaient
+	//  l'auteur, là où `CarteTicket` annonçait le propriétaire. La même case
+	//  disait deux noms selon l'écran.
+	$: nomDeLaCopie = avecSaisiPour
+		? nomCopie({ proprietaire_nom: auteurNom }, { ...saisiPour, residents: residentsSaisiPour })
+		: auteurNom;
 	export let aideWhatsapp = '';
 	/** Motif interdisant le groupe WhatsApp — relayé jusqu'à `CanauxNotification`. */
 	export let whatsappInterdit = '';
@@ -285,10 +297,10 @@
 	      tickets (`ChampSaisiPour`) : il portait déjà la saisie, il ne lui
 	      manquait qu'un appelant de plus. -->
 	<ChampSaisiPour
-		bind:mode={modeSaisiPour}
-		bind:userId={saisiPourUserId}
-		bind:nom={saisiPourNom}
-		bind:email={saisiPourEmail}
+		bind:mode={saisiPour.mode}
+		bind:userId={saisiPour.userId}
+		bind:nom={saisiPour.nom}
+		bind:email={saisiPour.email}
 		residents={residentsSaisiPour}
 	/>
 {/if}
@@ -408,7 +420,7 @@
 		bind:syndic
 		bind:cs
 		bind:auteur
-		{auteurNom}
+		auteurNom={nomDeLaCopie}
 		{aideWhatsapp}
 		{whatsappInterdit}
 		bind:this={refDiffusion}

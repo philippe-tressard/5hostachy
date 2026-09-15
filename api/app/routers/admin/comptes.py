@@ -24,6 +24,7 @@ from app.schemas import UserRead
 from app.utils.comptes import comptes_en_attente as lister_comptes_en_attente, marquer_decide
 from typing import Any
 from app.utils.noms import nom_affiche
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -84,9 +85,7 @@ def traiter_compte(
     session: Session = Depends(get_session),
     admin: Utilisateur = Depends(require_cs_or_admin),
 ):
-    user = session.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
+    user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     if body.action == "valider":
         user.actif = True
         notif_titre = "Votre compte a été activé"
@@ -206,9 +205,7 @@ def relancer_auto_match(
 ):
     """Rejoue le match automatique (lots, vigik, TC) pour un utilisateur déjà validé.
     Utile quand un import a été résolu après la validation du compte."""
-    user = session.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
+    user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     from app.utils.auto_match_service import auto_match_pour_utilisateur
     result = auto_match_pour_utilisateur(user, session)
     session.commit()

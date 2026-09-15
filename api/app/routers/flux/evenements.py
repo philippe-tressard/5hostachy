@@ -26,6 +26,7 @@ from app.utils.perimetres import (
 from .commun import ContexteFlux, auteur_nom, badges_marqueurs, strip_html
 from .schemas import FluxItem
 from app.utils.corrections import est_correction
+from app.utils.copie_auteur import proprietaire
 
 #: Icône par type d'événement. Définie **ici** et importée par `sante.py`, qui
 #: la réutilise pour l'agenda « Prochaines échéances » : le même événement doit
@@ -146,7 +147,8 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 "type": ev.type,
                 "lieu": ev.lieu,
                 "perimetre_codes": perims,
-                "auteur": auteur_nom(ctx.session, ev.auteur_id),
+                #  Le PROPRIÉTAIRE, pas l'auteur : le « Saisi pour » s'il existe (12/09).
+                "auteur": proprietaire(ctx.session, ev)[0],
                 "prestataire": prest_name,
                 "debut": ev.debut.isoformat() if ev.debut else None,
                 "fin": ev.fin.isoformat() if ev.fin else None,

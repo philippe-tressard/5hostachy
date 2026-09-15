@@ -58,6 +58,7 @@ from app.utils.dates_fr import date_courte
 from app.utils.noms import nom_affiche
 from app.utils.perimetres import perimetre_label
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -212,9 +213,7 @@ def creer_acces_admin(
         raise HTTPException(422, "Code vide")
     if not body.porteur_id:
         raise HTTPException(422, "Porteur requis")
-    porteur = session.get(Utilisateur, body.porteur_id)
-    if not porteur:
-        raise HTTPException(404, "Porteur introuvable")
+    porteur = ou_404(session, Utilisateur, body.porteur_id, "Porteur")
 
     doublon = session.exec(
         select(type_acces.modele).where(

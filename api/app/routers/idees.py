@@ -29,6 +29,7 @@ from app.routers.reponses_communaute import (
     reponses_de,
 )
 from app.utils.liens import lien_element
+from app.utils.recuperer import ou_404
 from app.utils.reponses import (
     notifier_votants_idee,
 )
@@ -284,9 +285,7 @@ def update_statut(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    idee = session.get(Idee, idee_id)
-    if not idee:
-        raise HTTPException(404, "Idée introuvable")
+    idee = ou_404(session, Idee, idee_id, "Idée")
     ancien = idee.statut
     idee.statut = body.statut
     if body.statut != ancien:
@@ -325,9 +324,7 @@ def delete_idee(
     admin: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Supprimer une idée (admin / CS uniquement)."""
-    idee = session.get(Idee, idee_id)
-    if not idee:
-        raise HTTPException(404, "Idée introuvable")
+    idee = ou_404(session, Idee, idee_id, "Idée")
     # Supprimer les votes + réponses associés
     votes = session.exec(select(VoteIdee).where(VoteIdee.idee_id == idee_id)).all()
     for v in votes:

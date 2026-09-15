@@ -141,3 +141,99 @@ export async function chargerResidents(
 		return [];
 	}
 }
+
+/** Ce qu'un objet déjà enregistré sait de son propriétaire. */
+export interface PorteProprietaire {
+	proprietaire_nom?: string | null;
+	auteur_nom?: string | null;
+}
+
+/**
+ * **À QUI part la copie** — le nom écrit dans « Envoyer une copie à … ».
+ *
+ * ## 🔴 Pourquoi cette fonction (15/09/2026)
+ *
+ * Signalé à l'écran :
+ *
+ * > « Quand on change "Saisi pour" avec une personne ayant un email, ça change
+ * >   envoyer une copie à X »
+ *
+ * C'est le comportement **voulu** — arbitré le 12/09 : *« pour un ticket dont
+ * le "Saisi pour" possède un résident inscrit ou une personne extérieure, ce
+ * dernier se substitue à l'auteur »*. La copie va au PROPRIÉTAIRE, pas à celui
+ * qui tape.
+ *
+ * ⚠️ Mais les écrans ne le disaient pas tous. `CarteTicket` et
+ * `FilMessagesTicket` composaient `proprietaire_nom ?? auteur_nom` — deux fois
+ * la même expression —, tandis que **les formulaires passaient `auteur_nom`
+ * seul**. La même case annonçait donc deux noms différents selon l'écran, et
+ * celui du formulaire était le mauvais.
+ *
+ * 🔴 Et en CRÉATION, aucun des deux ne convenait : rien n'est encore
+ * enregistré, mais le rédacteur vient de désigner quelqu'un. La case doit dire
+ * **ce qui partira**, pas ce qui était là — sinon elle promet un destinataire
+ * et en sert un autre. C'est exactement ce que l'arbitrage du 31/08 reprochait
+ * à « Envoyer une copie à l'auteur » : un libellé qui ne dit pas à qui l'on
+ * écrit.
+ *
+ * @param objet L'objet enregistré, s'il existe.
+ * @param saisie Le « Saisi pour » en cours de saisie, s'il y en a un. Il
+ *   l'emporte : c'est lui qui sera enregistré au prochain clic.
+ * @returns Le nom, ou `''` — jamais `undefined`. `CanauxNotification` retombe
+ *   alors sur « l'auteur », jamais sur rien.
+ */
+export function nomCopie(
+	objet: PorteProprietaire | null | undefined,
+	saisie?: {
+		mode: ModeSaisiPour;
+		userId: number | null;
+		nom: string;
+		residents: ResidentProposable[];
+	},
+): string {
+	if (saisie?.mode === 'exterieur' && saisie.nom.trim()) return saisie.nom.trim();
+	if (saisie?.mode === 'resident' && saisie.userId != null) {
+		const p = saisie.residents.find((r) => r.id === saisie.userId);
+		//  ⚠️ Sans le résident sous la main (liste pas encore chargée), on retombe
+		//  sur l'enregistré plutôt que d'afficher un nom vide : une case muette
+		//  redeviendrait « Envoyer une copie à l'auteur », c'est-à-dire l'ambiguïté
+		//  que le libellé nommé existe pour lever.
+		if (p) return [p.prenom, (p.nom ?? '').toUpperCase()].filter(Boolean).join(' ');
+	}
+	return objet?.proprietaire_nom ?? objet?.auteur_nom ?? '';
+}
+
+/**
+ * **L'état de saisie**, comme un objet — et non quatre variables parallèles.
+ *
+ * 🔴 Les quatre se déclaraient, se liaient et se passaient séparément dans
+ * chaque formulaire : quatre `let`, quatre `bind:`, quatre arguments. Trois
+ * écrans × huit lignes, pour UNE notion. Et deux de ces trois fichiers étaient
+ * au plafond de modularité, si bien que la notion ne pouvait plus s'étendre.
+ *
+ * ⚠️ Les quatre champs changent **ensemble** — c'est déjà vrai côté serveur, où
+ * ils voyagent groupés. Un objet le dit ; quatre variables laissent croire
+ * qu'on peut en toucher une seule.
+ */
+export interface SaisieSaisiPour {
+	mode: ModeSaisiPour;
+	userId: number | null;
+	nom: string;
+	email: string;
+}
+
+/** L'état de saisie d'un objet existant — ou vierge. */
+export function saisieDepuis(objet: PorteSaisiPour | null | undefined): SaisieSaisiPour {
+	const c = champsSaisiPour(objet);
+	return {
+		mode: modeDepuis(objet),
+		userId: c.saisi_pour_user_id,
+		nom: c.saisi_pour_nom,
+		email: c.saisi_pour_email,
+	};
+}
+
+/** Ce qui part vers l'API, depuis l'état de saisie. */
+export function lotDepuisSaisie(s: SaisieSaisiPour): Required<PorteSaisiPour> {
+	return lotSaisiPour(s.mode, s.userId, s.nom, s.email);
+}

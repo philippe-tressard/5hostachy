@@ -13,6 +13,7 @@ from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import DiagnosticRapport, DiagnosticType, Utilisateur
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
+from app.utils.recuperer import ou_404
 
 logger = logging.getLogger(__name__)
 
@@ -99,9 +100,7 @@ def toggle_non_applicable(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    diag_type = session.get(DiagnosticType, type_id)
-    if not diag_type:
-        raise HTTPException(404, "Type de diagnostic introuvable")
+    diag_type = ou_404(session, DiagnosticType, type_id, "Type de diagnostic")
     diag_type.non_applicable = body.non_applicable
     session.add(diag_type)
     session.commit()
@@ -132,9 +131,7 @@ async def upload_rapport(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    diag_type = session.get(DiagnosticType, type_id)
-    if not diag_type:
-        raise HTTPException(404, "Type de diagnostic introuvable")
+    diag_type = ou_404(session, DiagnosticType, type_id, "Type de diagnostic")
 
     # REPERTOIRE_PRIVE et non la racine du volume : un rapport de diagnostic
     # (DPE, amiante, plomb) se télécharge par un endpoint authentifié ; posé à la
@@ -181,9 +178,7 @@ def update_rapport(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    rapport = session.get(DiagnosticRapport, rapport_id)
-    if not rapport:
-        raise HTTPException(404, "Rapport introuvable")
+    rapport = ou_404(session, DiagnosticRapport, rapport_id, "Rapport")
     if body.titre is not None:
         rapport.titre = body.titre
     if body.date_rapport is not None:
@@ -207,9 +202,7 @@ def delete_rapport(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    rapport = session.get(DiagnosticRapport, rapport_id)
-    if not rapport:
-        raise HTTPException(404, "Rapport introuvable")
+    rapport = ou_404(session, DiagnosticRapport, rapport_id, "Rapport")
     # Supprime le fichier physique
     if os.path.exists(rapport.fichier_chemin):
         os.remove(rapport.fichier_chemin)
@@ -223,9 +216,7 @@ def download_rapport(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(get_current_user),
 ):
-    rapport = session.get(DiagnosticRapport, rapport_id)
-    if not rapport:
-        raise HTTPException(404, "Rapport introuvable")
+    rapport = ou_404(session, DiagnosticRapport, rapport_id, "Rapport")
     if not os.path.exists(rapport.fichier_chemin):
         raise HTTPException(404, "Fichier introuvable sur le serveur")
     return FileResponse(rapport.fichier_chemin, filename=rapport.fichier_nom, media_type=rapport.mime_type)

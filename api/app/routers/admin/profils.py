@@ -20,6 +20,7 @@ from app.models.core import (
 )
 from datetime import datetime
 from app.utils.noms import nom_affiche
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -67,15 +68,11 @@ def traiter_demande_profil(
     session: Session = Depends(get_session),
     cs: Utilisateur = Depends(require_cs_or_admin),
 ):
-    demande = session.get(DemandeModificationProfil, demande_id)
-    if not demande:
-        raise HTTPException(404, "Demande introuvable")
+    demande = ou_404(session, DemandeModificationProfil, demande_id, "Demande")
     if demande.statut_demande != StatutDemandeProfil.en_attente:
         raise HTTPException(400, "Cette demande a déjà été traitée.")
 
-    utilisateur = session.get(Utilisateur, demande.utilisateur_id)
-    if not utilisateur:
-        raise HTTPException(404, "Utilisateur introuvable")
+    utilisateur = ou_404(session, Utilisateur, demande.utilisateur_id, "Utilisateur")
 
     if body.action == "approuver":
         if demande.statut_souhaite:

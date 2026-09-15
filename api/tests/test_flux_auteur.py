@@ -83,19 +83,75 @@ def test_chaque_collecteur_qui_a_un_auteur_le_MET_dans_son_meta():
     assert not muets, "Cartes du fil sans auteur :\n  " + "\n  ".join(muets)
 
 
-def test_l_auteur_passe_par_la_fonction_PARTAGEE():
-    """`auteur_nom` (flux/commun.py) est la seule façon de nommer quelqu'un :
-    elle gère l'identifiant absent et le compte supprimé. Un
-    `session.get(Utilisateur, …).prenom` recopié lèverait sur un compte effacé —
-    et le fil est la page d'accueil."""
+#: Les DEUX façons admises de nommer quelqu'un dans le fil, et ce qui les
+#: distingue.
+#:
+#: 🔴 Ce test n'en acceptait qu'une — `auteur_nom` — et a refusé le 15/09/2026 un
+#: correctif JUSTE : le fil affichait « Philippe TRESSARD » sur un événement dont
+#: le « Saisi pour » désignait quelqu'un d'autre (signalé à l'écran). La règle
+#: arbitrée le 12/09 veut le PROPRIÉTAIRE, et `flux/tickets.py` l'appliquait
+#: déjà — il ne passait ce test que parce qu'il contient `auteur_nom(` ailleurs.
+#:
+#: ⚠️ La règle n'a pas changé, c'est sa FORMULATION qui était trop étroite : ce
+#: qu'on exige est qu'une fonction PARTAGÉE tolère l'identifiant absent et le
+#: compte supprimé — pas qu'elle porte un nom précis. Un contrôle qui cherche une
+#: chaîne finit par refuser ce qu'il devrait encourager.
+FONCTIONS_ADMISES = {
+    "auteur_nom(": "flux/commun.py — le nom de l'auteur, pour un objet sans « Saisi pour »",
+    "proprietaire(": "utils/copie_auteur.py — le PROPRIÉTAIRE : le « Saisi pour » s'il existe",
+}
+
+
+def test_l_auteur_passe_par_une_fonction_PARTAGEE():
+    """Nommer quelqu'un passe par une fonction qui sait qu'il peut manquer.
+
+    Un `session.get(Utilisateur, …).prenom` recopié lèverait sur un compte
+    effacé — et le fil est la page d'accueil.
+    """
     fautifs = []
     for nom in PORTEURS:
         src = (FLUX / nom).read_text(encoding="utf-8")
-        if '"auteur"' in src and "auteur_nom(" not in src:
+        if '"auteur"' in src and not any(f in src for f in FONCTIONS_ADMISES):
             fautifs.append(nom)
     assert not fautifs, (
-        "Auteur nommé sans `auteur_nom` :\n  " + "\n  ".join(fautifs)
+        "Auteur nommé sans fonction partagée :\n  "
+        + "\n  ".join(fautifs)
+        + "\n\nAdmises :\n  "
+        + "\n  ".join(f"{f:16s} {quoi}" for f, quoi in FONCTIONS_ADMISES.items())
     )
+
+
+def test_les_deux_fonctions_TOLERENT_vraiment_l_absence():
+    """🔴 Et on ne le croit pas sur parole : on les EXÉCUTE.
+
+    C'est la propriété que le test ci-dessus suppose, et qu'une recherche de
+    texte ne prouve pas. Sans elle, admettre une seconde fonction reviendrait à
+    élargir le contrôle sur la foi de son nom — soit précisément ce qu'on lui
+    reproche (`standards/04` : vérifier le comportement, jamais l'artefact).
+    """
+    from sqlmodel import Session, SQLModel
+
+    from app.database import engine
+    from app.routers.flux.commun import auteur_nom
+    from app.utils.copie_auteur import proprietaire
+
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        #  Un identifiant qui ne désigne personne — un compte supprimé depuis.
+        assert auteur_nom(session, 999_999) is None or isinstance(auteur_nom(session, 999_999), str)
+        assert auteur_nom(session, None) is None or isinstance(auteur_nom(session, None), str)
+
+        class _Orphelin:
+            auteur_id = 999_999
+            saisi_pour_user_id = None
+            saisi_pour_nom = None
+            saisi_pour_email = None
+
+        nom, email = proprietaire(session, _Orphelin())
+        assert nom is None and email is None, (
+            "proprietaire() doit rendre (None, None) sur un auteur disparu, "
+            "pas lever : le fil est la page d'accueil."
+        )
 
 
 def test_les_collecteurs_sans_auteur_n_en_ont_VRAIMENT_pas():

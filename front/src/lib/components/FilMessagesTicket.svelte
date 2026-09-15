@@ -26,6 +26,7 @@
 	import { TICKET } from '$lib/entites/ticket';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import type { Ticket, TicketMessage, TicketEvolution } from '$lib/api';
+	import { nomCopie } from '$lib/saisi-pour';
 
 	/** Le ticket, pour son auteur et sa confidentialité. */
 	export let ticket: Ticket;
@@ -90,7 +91,7 @@
 				<EvolForm
 					entrees={evolutions}
 					idPrefixe="tk-msg"
-					auteurNom={ticket.proprietaire_nom ?? ticket.auteur_nom ?? ''}
+					auteurNom={nomCopie(ticket)}
 					titre="Répondre"
 					entite={TICKET}
 					avecPiecesJointes={!newInterne}

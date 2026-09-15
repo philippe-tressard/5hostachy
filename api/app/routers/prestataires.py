@@ -27,6 +27,7 @@ from app.models.core import ContratEntretien, NotationPrestataire, Prestataire, 
 
 from app.utils.echeance_contrat import poser_echeance
 from app.utils.noms import nom_affiche
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 
@@ -128,9 +129,7 @@ def update_prestataire(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    p = session.get(Prestataire, p_id)
-    if not p:
-        raise HTTPException(404, "Prestataire introuvable")
+    p = ou_404(session, Prestataire, p_id, "Prestataire")
     data = body.model_dump(exclude_unset=True, exclude={'contacts'})
     if 'contacts' in body.model_fields_set:
         data['contacts_json'] = json.dumps([c.model_dump() for c in (body.contacts or [])], ensure_ascii=False)
@@ -148,9 +147,7 @@ def archive_prestataire(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    p = session.get(Prestataire, p_id)
-    if not p:
-        raise HTTPException(404, "Prestataire introuvable")
+    p = ou_404(session, Prestataire, p_id, "Prestataire")
     p.actif = False
     session.add(p)
     session.commit()
@@ -279,9 +276,7 @@ async def proposer_synthese(
     """
     from app.utils.synthese_contrat import ErreurLLM, synthese_disponible, synthetiser
 
-    contrat = session.get(ContratEntretien, c_id)
-    if not contrat:
-        raise HTTPException(404, "Contrat introuvable")
+    contrat = ou_404(session, ContratEntretien, c_id, "Contrat")
     if not synthese_disponible(session, contrat):
         raise HTTPException(
             400,
@@ -335,9 +330,7 @@ def update_contrat(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    c = session.get(ContratEntretien, c_id)
-    if not c:
-        raise HTTPException(404, "Contrat introuvable")
+    c = ou_404(session, ContratEntretien, c_id, "Contrat")
     modifications = body.model_dump(exclude_unset=True)
     codes = modifications.pop("perimetre_cible", None)
     for k, v in modifications.items():
@@ -355,9 +348,7 @@ def archive_contrat(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    c = session.get(ContratEntretien, c_id)
-    if not c:
-        raise HTTPException(404, "Contrat introuvable")
+    c = ou_404(session, ContratEntretien, c_id, "Contrat")
     c.actif = False
     session.add(c)
     session.commit()
@@ -423,9 +414,7 @@ def create_notation(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    p = session.get(Prestataire, body.prestataire_id)
-    if not p:
-        raise HTTPException(404, "Prestataire introuvable")
+    p = ou_404(session, Prestataire, body.prestataire_id, "Prestataire")
     n = NotationPrestataire(
         prestataire_id=body.prestataire_id,
         note=body.note,
@@ -447,9 +436,7 @@ def delete_notation(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    n = session.get(NotationPrestataire, n_id)
-    if not n:
-        raise HTTPException(404, "Notation introuvable")
+    n = ou_404(session, NotationPrestataire, n_id, "Notation")
     session.delete(n)
     session.commit()
 
@@ -461,9 +448,7 @@ def get_prestataire_synthese(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Synthèse complète d'un prestataire pour le reporting CS."""
-    p = session.get(Prestataire, p_id)
-    if not p:
-        raise HTTPException(404, "Prestataire introuvable")
+    p = ou_404(session, Prestataire, p_id, "Prestataire")
 
     contrats = session.exec(
         select(ContratEntretien).where(ContratEntretien.prestataire_id == p_id, ContratEntretien.actif == True)

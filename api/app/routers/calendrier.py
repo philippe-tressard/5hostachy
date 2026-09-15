@@ -24,6 +24,7 @@ from app.utils.photos import parse_photos, photos_internes, photos_json
 from app.utils.visibility import evenement_visible
 from app.utils.noms import nom_affiche
 from app.utils.corrections import contenu_correction
+from app.utils.recuperer import ou_404
 from app.utils.saisi_pour import (
     SaisiPourEntree,
     SaisiPourSortie,
@@ -401,9 +402,7 @@ def update_evenement(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    ev = session.get(Evenement, ev_id)
-    if not ev:
-        raise HTTPException(404, "Événement introuvable")
+    ev = ou_404(session, Evenement, ev_id, "Événement")
     data = body.model_dump(exclude_unset=True)
     if data.get('archivee') is True and ev.statut_kanban != "termine":
         raise HTTPException(422, "Seuls les événements terminés peuvent être archivés")
@@ -475,9 +474,7 @@ def delete_evenement(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
-    ev = session.get(Evenement, ev_id)
-    if not ev:
-        raise HTTPException(404, "Événement introuvable")
+    ev = ou_404(session, Evenement, ev_id, "Événement")
     #  🔴 L'ÉVÉNEMENT PARTAIT SEUL (#546, 30/08/2026). Deux tables le
     #  référencent, aucune n'était nettoyée : `evenement_evolution` (**NOT
     #  NULL** — tout l'historique) et `document`. Sans les clés — le régime

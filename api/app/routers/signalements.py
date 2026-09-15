@@ -28,6 +28,7 @@ from app.utils.communaute import exiger_acces
 from app.utils.noms import nom_affiche
 from app.utils.destinataires import membres_cs_ou_admin
 from app.utils.liens import lien_element, lien_sondage
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/signalements", tags=["signalements"])
 
@@ -197,9 +198,7 @@ def resoudre_signalement(
 ):
     if body.statut not in ("traite", "rejete"):
         raise HTTPException(422, "Statut invalide")
-    sig = session.get(Signalement, sig_id)
-    if not sig:
-        raise HTTPException(404, "Signalement introuvable")
+    sig = ou_404(session, Signalement, sig_id, "Signalement")
     sig.statut = body.statut
     sig.traite_par_id = user.id
     sig.traite_le = datetime.utcnow()

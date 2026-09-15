@@ -42,6 +42,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.utils.perimetres import invalider_cache, parse_json_perimetres, parse_perimetres
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/perimetres", tags=["perimetres"])
 
@@ -261,9 +262,7 @@ def _un(session: Session, noeud: Perimetre) -> PerimetreRead:
 
 
 def _noeud(session: Session, perimetre_id: int) -> Perimetre:
-    noeud = session.get(Perimetre, perimetre_id)
-    if not noeud:
-        raise HTTPException(404, "Périmètre introuvable")
+    noeud = ou_404(session, Perimetre, perimetre_id, "Périmètre")
     return noeud
 
 

@@ -44,6 +44,7 @@ from app.models.core import (
 )
 from app.utils.import_xlsx import etage_de_lot, type_de_lot
 from app.utils.resolution_lots import rapprocher_imports, resoudre_imports
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -193,9 +194,7 @@ def patch_import(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    imp = session.get(LotImport, imp_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
+    imp = ou_404(session, LotImport, imp_id, "Import")
     if body.lot_id is not None:
         imp.lot_id = body.lot_id or None
     # Capturer les anciens user_ids AVANT mise à jour (pour diff UserLot si résolu)
@@ -246,9 +245,7 @@ def resoudre_import(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    imp = session.get(LotImport, imp_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
+    imp = ou_404(session, LotImport, imp_id, "Import")
     if imp.statut == StatutLotImport.resolu:
         raise HTTPException(400, "Déjà résolu")
 
@@ -313,9 +310,7 @@ def ignorer_import(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    imp = session.get(LotImport, imp_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
+    imp = ou_404(session, LotImport, imp_id, "Import")
     imp.statut = StatutLotImport.ignore
     session.add(imp)
     session.commit()
