@@ -20,6 +20,7 @@ from app.models.core import (
 from app.utils.reponses import auteur_meta, notifier_nouvelle_reponse
 from app.utils.visibility import sondage_accessible, sondage_clos
 from app.utils.communaute import exiger_acces
+from app.utils.recuperer import ou_404
 
 
 router = APIRouter()
@@ -41,9 +42,7 @@ def voter(
 ):
     exiger_acces(user)
     exiger_non_externe(user, "voter")
-    s = session.get(Sondage, sondage_id)
-    if not s:
-        raise HTTPException(404, "Sondage introuvable")
+    s = ou_404(session, Sondage, sondage_id, "Sondage")
     if not sondage_accessible(s, user):
         raise HTTPException(403, "Vous n'êtes pas autorisé à participer à ce sondage")
     if sondage_clos(s, datetime.utcnow()):
@@ -99,9 +98,7 @@ def commenter(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    s = session.get(Sondage, sondage_id)
-    if not s:
-        raise HTTPException(404, "Sondage introuvable")
+    s = ou_404(session, Sondage, sondage_id, "Sondage")
     if not sondage_accessible(s, user):
         raise HTTPException(403, "Accès refusé")
     if not body.contenu.strip():

@@ -20,6 +20,7 @@ from app.utils.evolutions import evolution_modifiable, supprimer_evolution
 from app.utils.photos import photos_json
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 from app.utils.liens import base_site
+from app.utils.recuperer import ou_404
 
 from .commun import STATUTS_PUBLICATION, appliquer_confidentialite, evolution_read
 from .courriels import (
@@ -84,9 +85,7 @@ def add_evolution(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    pub = session.get(Publication, pub_id)
-    if not pub:
-        raise HTTPException(404, "Publication introuvable")
+    pub = ou_404(session, Publication, pub_id, "Publication")
     if body.type == "etat" and not body.nouveau_statut:
         raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
     if body.type == "etat" and body.nouveau_statut not in STATUTS_PUBLICATION:

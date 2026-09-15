@@ -39,6 +39,7 @@ from app.models.core import (
 from app.schemas import TicketRead, TicketUpdate
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_ticket
+from app.utils.recuperer import ou_404
 
 from .commun import (
     appliquer_options,
@@ -92,9 +93,7 @@ def update_ticket(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    ticket = session.get(Ticket, ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Ticket introuvable")
+    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
 
     #  🔴 DEUX droits, pas un — arbitré le 18/08/2026 : le conseil syndical
     #  commente et fait avancer le suivi, mais **ne réécrit pas** la demande d'un

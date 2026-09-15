@@ -10,6 +10,7 @@ from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Delegation, RoleUtilisateur, StatutDelegation, Utilisateur
 from app.utils.noms import nom_affiche
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/delegations", tags=["délégations aidant"])
 
@@ -93,12 +94,8 @@ def create_delegation(
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Créer une délégation (CS/Admin uniquement)."""
-    mandant = session.get(Utilisateur, body.mandant_id)
-    if not mandant:
-        raise HTTPException(404, "Mandant introuvable")
-    aidant = session.get(Utilisateur, body.aidant_id)
-    if not aidant:
-        raise HTTPException(404, "Aidant introuvable")
+    mandant = ou_404(session, Utilisateur, body.mandant_id, "Mandant")
+    aidant = ou_404(session, Utilisateur, body.aidant_id, "Aidant")
     if body.mandant_id == body.aidant_id:
         raise HTTPException(400, "Le mandant et l'aidant doivent être différents")
 
@@ -161,9 +158,7 @@ def accepter_delegation(
     user: Utilisateur = Depends(get_current_user),
 ):
     """L'aidant accepte la délégation."""
-    d = session.get(Delegation, delegation_id)
-    if not d:
-        raise HTTPException(404, "Délégation introuvable")
+    d = ou_404(session, Delegation, delegation_id, "Délégation")
     if d.aidant_id != user.id:
         raise HTTPException(403, "Seul l'aidant désigné peut accepter")
     if d.statut != StatutDelegation.en_attente:
@@ -184,9 +179,7 @@ def revoquer_delegation(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Révoquer une délégation (par le mandant, l'aidant, ou un CS/Admin)."""
-    d = session.get(Delegation, delegation_id)
-    if not d:
-        raise HTTPException(404, "Délégation introuvable")
+    d = ou_404(session, Delegation, delegation_id, "Délégation")
 
     is_cs_admin = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
     is_party = user.id in (d.mandant_id, d.aidant_id)

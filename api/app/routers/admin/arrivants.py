@@ -35,6 +35,7 @@ from app.utils.annonce_arrivee import creer_annonce_arrivee
 from app.utils.courriel_arrivee import FICHE_CONSIGNES, destinataires_arrivee
 from app.utils.courriel_arrivee import envoyer as envoyer_message_arrivee
 from app.utils.ticket_arrivant import creer_ticket_arrivant
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -251,9 +252,7 @@ def accueil_arrivant(
     admin: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Déclenche les actions d'accueil pour un nouvel arrivant résidentiel (CS/Admin)."""
-    user = session.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
+    user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     return _declencher_accueil_arrivant(user, body, background_tasks, session, allow_repeat=True)
 
 

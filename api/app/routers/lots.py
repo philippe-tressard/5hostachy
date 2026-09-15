@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.utils.batiments import libelle_batiment_ou
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
+from app.utils.recuperer import ou_404
 from app.utils.etages import (
     ETAGE_HORS_BORNES,
     etage_hors_bornes,
@@ -176,9 +177,7 @@ def maj_etage_de_mon_lot(
     posée : c'est l'occupant qui sait à quel étage il vit, et le faire passer par
     un ticket pour corriger un chiffre était la friction de trop.
     """
-    lot = session.get(Lot, lot_id)
-    if not lot:
-        raise HTTPException(404, "Lot introuvable")
+    lot = ou_404(session, Lot, lot_id, "Lot")
     if not _lot_rattache(user, lot_id):
         raise HTTPException(403, "Accès refusé")
     if body.etage is not None and etage_hors_bornes(body.etage):

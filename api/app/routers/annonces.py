@@ -26,6 +26,7 @@ from app.routers.reponses_communaute import (
 from app.utils.communaute import exiger_acces
 from app.utils.perimetres import parse_json_perimetres
 from app.utils.visibility import annonce_visible
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/annonces", tags=["annonces"])
 
@@ -224,9 +225,7 @@ def update_annonce(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    annonce = session.get(PetiteAnnonce, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
+    annonce = ou_404(session, PetiteAnnonce, annonce_id, "Annonce")
     if not _can_manage(annonce, user):
         raise HTTPException(403, "Non autorisé")
     maj = data.model_dump(exclude_none=True)
@@ -264,9 +263,7 @@ def update_statut(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    annonce = session.get(PetiteAnnonce, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
+    annonce = ou_404(session, PetiteAnnonce, annonce_id, "Annonce")
     if not _can_manage(annonce, user):
         raise HTTPException(403, "Non autorisé")
     #  🔴 `statut_change_le` ne bouge QUE sur un vrai changement. Le poser à
@@ -287,9 +284,7 @@ def delete_annonce(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    annonce = session.get(PetiteAnnonce, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
+    annonce = ou_404(session, PetiteAnnonce, annonce_id, "Annonce")
     if not _can_manage(annonce, user):
         raise HTTPException(403, "Non autorisé")
     # Réponses associées supprimées en cascade
@@ -336,9 +331,7 @@ def add_photo(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    annonce = session.get(PetiteAnnonce, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
+    annonce = ou_404(session, PetiteAnnonce, annonce_id, "Annonce")
     #  L'auteur SEUL — pas de modération sur ses propres photos, c'est voulu.
     if not est_auteur(annonce, user):
         raise HTTPException(403, "Seul l'auteur peut ajouter des photos")
@@ -361,9 +354,7 @@ def remove_photo(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    annonce = session.get(PetiteAnnonce, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
+    annonce = ou_404(session, PetiteAnnonce, annonce_id, "Annonce")
     #  L'auteur SEUL — même régime que l'ajout ci-dessus.
     if not est_auteur(annonce, user):
         raise HTTPException(403, "Seul l'auteur peut supprimer ses photos")

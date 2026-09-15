@@ -35,7 +35,7 @@ que d'inventer une valeur.
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -47,6 +47,7 @@ from app.utils.apercu_diffusion import ApercuCanal, ApercuDiffusion, apercu_emai
 from app.utils.destinataires import destinataires_syndic_cs
 from app.utils.fichiers import est_image
 from app.utils.photos import photos_internes, photos_json
+from app.utils.recuperer import ou_404
 
 from .courriels import contexte_publication_syndic
 
@@ -117,9 +118,7 @@ def apercu_diffusion(
     l'endpoint entier priverait d'aperçu ceux qui n'ont coché que l'e-mail.
     """
     if brouillon.publication_id is not None:
-        pub = session.get(Publication, brouillon.publication_id)
-        if not pub:
-            raise HTTPException(404, "Publication introuvable")
+        pub = ou_404(session, Publication, brouillon.publication_id, "Publication")
     else:
         pub = _publication_previsionnelle(brouillon, user)
 

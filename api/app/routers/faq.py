@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import FaqItem, Utilisateur
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/faq", tags=["faq"])
 
@@ -152,9 +153,7 @@ def update_faq(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    item = session.get(FaqItem, item_id)
-    if not item:
-        raise HTTPException(404, "Entrée FAQ introuvable")
+    item = ou_404(session, FaqItem, item_id, "Entrée FAQ")
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(item, k, v)
@@ -171,8 +170,6 @@ def delete_faq(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    item = session.get(FaqItem, item_id)
-    if not item:
-        raise HTTPException(404, "Entrée FAQ introuvable")
+    item = ou_404(session, FaqItem, item_id, "Entrée FAQ")
     session.delete(item)
     session.commit()

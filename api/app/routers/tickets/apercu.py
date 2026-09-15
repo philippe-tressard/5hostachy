@@ -65,6 +65,7 @@ from app.utils.photos import photos_internes, photos_json
 
 from .courriels import contexte_ticket_syndic, destinataires_syndic_cs
 from app.utils.categories_ticket import ticket_urgent
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -155,9 +156,7 @@ def apercu_diffusion(
     #  fil sont déjà attribués, donc rien n'est prévisionnel de ce côté-là.
     evolutions = None
     if brouillon.ticket_id is not None:
-        ticket = session.get(Ticket, brouillon.ticket_id)
-        if not ticket:
-            raise HTTPException(404, "Ticket introuvable")
+        ticket = ou_404(session, Ticket, brouillon.ticket_id, "Ticket")
         #  ⚠️ Le droit de commenter, pas seulement de lire : l'aperçu montre le
         #  contenu du ticket et son historique. Le refuser ici évite d'en faire
         #  une voie de lecture détournée.

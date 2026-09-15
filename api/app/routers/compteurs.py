@@ -24,6 +24,7 @@ from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import CompteurConfig, ReleveCompteur, Utilisateur
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement, nom_lisible
+from app.utils.recuperer import ou_404
 
 #  Même préfixe que `prestataires.py` : les deux routeurs servent le même écran.
 logger = logging.getLogger(__name__)
@@ -95,9 +96,7 @@ def update_releve(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    r = session.get(ReleveCompteur, r_id)
-    if not r:
-        raise HTTPException(404, "Relevé introuvable")
+    r = ou_404(session, ReleveCompteur, r_id, "Relevé")
     for k, v in body.model_dump(exclude_unset=True).items():
         setattr(r, k, v)
     session.add(r)
@@ -112,9 +111,7 @@ def delete_releve(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    r = session.get(ReleveCompteur, r_id)
-    if not r:
-        raise HTTPException(404, "Relevé introuvable")
+    r = ou_404(session, ReleveCompteur, r_id, "Relevé")
     session.delete(r)
     session.commit()
 
@@ -128,9 +125,7 @@ async def upload_releve_photo(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    r = session.get(ReleveCompteur, r_id)
-    if not r:
-        raise HTTPException(404, "Relevé introuvable")
+    r = ou_404(session, ReleveCompteur, r_id, "Relevé")
     os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
     raw_name = file.filename or "photo"
     #  Les 16 premiers octets suffisent à toutes les signatures connues ;
@@ -209,9 +204,7 @@ def update_compteur_config(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    cfg = session.get(CompteurConfig, cfg_id)
-    if not cfg:
-        raise HTTPException(404, "Compteur introuvable")
+    cfg = ou_404(session, CompteurConfig, cfg_id, "Compteur")
     for k, v in body.model_dump(exclude_unset=True).items():
         setattr(cfg, k, v)
     session.add(cfg)
@@ -226,9 +219,7 @@ def delete_compteur_config(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    cfg = session.get(CompteurConfig, cfg_id)
-    if not cfg:
-        raise HTTPException(404, "Compteur introuvable")
+    cfg = ou_404(session, CompteurConfig, cfg_id, "Compteur")
     cfg.actif = False
     session.add(cfg)
     session.commit()

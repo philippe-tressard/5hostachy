@@ -21,6 +21,7 @@ from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
 from app.utils.visibility import document_visible
 from app.utils.liens import base_site
 from app.utils.liens import nom_site
+from app.utils.recuperer import ou_404
 
 logger = logging.getLogger(__name__)
 
@@ -208,9 +209,7 @@ def download_document(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    doc = session.get(Document, doc_id)
-    if not doc:
-        raise HTTPException(404, "Document introuvable")
+    doc = ou_404(session, Document, doc_id, "Document")
     if not document_visible(user, doc, session):
         raise HTTPException(403, "Accès refusé")
     if not os.path.exists(doc.fichier_chemin):
@@ -244,9 +243,7 @@ def update_document(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    doc = session.get(Document, doc_id)
-    if not doc:
-        raise HTTPException(404, "Document introuvable")
+    doc = ou_404(session, Document, doc_id, "Document")
     if body.titre is not None:
         doc.titre = body.titre
     if body.description is not None:
@@ -373,9 +370,7 @@ def delete_document(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    doc = session.get(Document, doc_id)
-    if not doc:
-        raise HTTPException(404, "Document introuvable")
+    doc = ou_404(session, Document, doc_id, "Document")
     #  🔴 UN CONTRAT PEUT CITER CE DOCUMENT, et rien ne le déliait (#546).
     #  `contrat_entretien.document_id` référence le document : sous les clés, la
     #  suppression échoue ; sans elles — le régime actuel — le contrat garde une

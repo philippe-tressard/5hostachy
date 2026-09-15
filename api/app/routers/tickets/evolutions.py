@@ -25,6 +25,7 @@ from app.utils.fichiers import chemins_locaux
 from app.utils.liens import base_site, lien_ticket
 from app.utils.photos import photos_internes, photos_json
 from app.utils.noms import contexte_personne
+from app.utils.recuperer import ou_404
 
 from .commun import (
     STATUT_LABELS,
@@ -51,9 +52,7 @@ def get_evolutions(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    ticket = session.get(Ticket, ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Ticket introuvable")
+    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
     #  🔴 `peut_commenter` ÉLARGIT au « saisi pour » — et c'est une correction :
     #  un résident pour qui le CS a déposé un ticket ne pouvait pas lire
     #  l'historique de sa propre demande. C'est la raison d'être du champ.
@@ -262,9 +261,7 @@ def add_evolution(
     #  deux lignes plus bas, et refuser ici serait refuser à l'auteur.
     user: Utilisateur = Depends(get_current_user),
 ):
-    ticket = session.get(Ticket, ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Ticket introuvable")
+    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
     #  🔴 Commenter et faire avancer le suivi : l'auteur, le « saisi pour »,
     #  l'admin — et le conseil syndical, qui suit les dossiers (18/08/2026).
     #  Avant, l'AUTEUR de la demande ne pouvait pas commenter sa propre demande.

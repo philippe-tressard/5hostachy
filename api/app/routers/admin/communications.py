@@ -62,6 +62,7 @@ def telemetry_history(
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────
 
 from app.utils.noeud import noeud_courant
+from app.utils.recuperer import ou_404
 
 
 def _variables_du_modele(modele: ModeleEmail) -> str:
@@ -136,9 +137,7 @@ def update_modele_email(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
-    modele = session.get(ModeleEmail, modele_id)
-    if not modele:
-        raise HTTPException(404, "Modèle introuvable")
+    modele = ou_404(session, ModeleEmail, modele_id, "Modèle")
     #  🔴 `corps_texte` a QUITTÉ cette liste blanche le 08/09/2026, avec le champ
     #  de l'écran. Il était stocké, affiché, modifiable — et envoyé nulle part :
     #  aucun code ne le lisait, le gabarit produit toujours du HTML. Le laisser
@@ -245,9 +244,7 @@ def reinitialiser_un_modele_email(
     les autres. C'est le genre de remède qu'on n'applique pas, et le défaut reste
     alors en place : le contrôle quotidien signale, et personne ne peut agir.
     """
-    modele = session.get(ModeleEmail, modele_id)
-    if not modele:
-        raise HTTPException(404, "Modèle introuvable")
+    modele = ou_404(session, ModeleEmail, modele_id, "Modèle")
     if not _remettre_par_defaut(session, modele, _.id):
         raise HTTPException(
             422,

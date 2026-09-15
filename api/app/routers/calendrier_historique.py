@@ -37,6 +37,7 @@ from app.utils.evolutions import supprimer_evolution
 from app.utils.photos import parse_photos, photos_json
 from app.routers.calendrier_courriels import notifier_canaux
 from app.utils.noms import nom_affiche
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
@@ -158,9 +159,7 @@ def add_evolution_evenement(
     ou une **transition** du Kanban (qui déplace aussi l'événement, sinon le fil
     raconterait un mouvement qui n'a pas eu lieu).
     """
-    ev = session.get(Evenement, ev_id)
-    if not ev:
-        raise HTTPException(404, "Événement introuvable")
+    ev = ou_404(session, Evenement, ev_id, "Événement")
     if body.type not in ("commentaire", "etat"):
         raise HTTPException(422, "Type d'évolution inconnu")
     if body.type == "etat":

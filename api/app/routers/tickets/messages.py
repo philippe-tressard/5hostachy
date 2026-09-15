@@ -26,6 +26,7 @@ from .commun import config_site, contexte_site
 from .courriels import envoyer_email_externe
 from app.utils.destinataires import membres_cs_ou_admin
 from app.utils.noms import contexte_personne
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -36,9 +37,7 @@ def get_messages(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    ticket = session.get(Ticket, ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Ticket introuvable")
+    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
     if not ticket_visible(ticket, user):
         raise HTTPException(403, "Accès refusé")
     stmt = select(MessageTicket).where(MessageTicket.ticket_id == ticket_id)
@@ -103,9 +102,7 @@ def add_message(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    ticket = session.get(Ticket, ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Ticket introuvable")
+    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
     est_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
     if body.interne and not est_cs:
         raise HTTPException(403, "Messages internes réservés au CS")

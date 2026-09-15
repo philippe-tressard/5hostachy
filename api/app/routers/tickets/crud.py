@@ -46,6 +46,7 @@ from .courriels import (
     envoyer_email_syndic_cs,
 )
 from app.utils.categories_ticket import ticket_urgent
+from app.utils.recuperer import ou_404
 
 #  Seul sous-router à porter le préfixe : ses deux routes de collection ont un
 #  chemin VIDE (`GET /tickets`, `POST /tickets`), et FastAPI refuse un chemin
@@ -214,9 +215,7 @@ def get_ticket(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    ticket = session.get(Ticket, ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Ticket introuvable")
+    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
     if not ticket_visible(ticket, user):
         raise HTTPException(403, "Accès refusé")
     return ticket_read(ticket, session)
@@ -228,9 +227,7 @@ def delete_ticket(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
-    ticket = session.get(Ticket, ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Ticket introuvable")
+    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
     #  Tout ce qui n'existe que par ce ticket part avec lui. Les DOCUMENTS
     #  manquaient (#546) : un document joint n'a plus d'objet sans son porteur.
     #  Le `flush()` ordonne les DELETE — pourquoi : `utils/suppression_liee.py`.

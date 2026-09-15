@@ -2,13 +2,14 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import RegleResidence, Utilisateur
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/regles-residence", tags=["règles résidence"])
 
@@ -71,9 +72,7 @@ def update_regle(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    regle = session.get(RegleResidence, regle_id)
-    if not regle:
-        raise HTTPException(404, "Règle introuvable")
+    regle = ou_404(session, RegleResidence, regle_id, "Règle")
     for k, v in body.model_dump(exclude_none=True).items():
         setattr(regle, k, v)
     regle.modifie_le = datetime.utcnow()
@@ -89,8 +88,6 @@ def delete_regle(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    regle = session.get(RegleResidence, regle_id)
-    if not regle:
-        raise HTTPException(404, "Règle introuvable")
+    regle = ou_404(session, RegleResidence, regle_id, "Règle")
     session.delete(regle)
     session.commit()
