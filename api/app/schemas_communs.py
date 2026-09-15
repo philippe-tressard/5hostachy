@@ -10,9 +10,10 @@ qui l'importe lui-même — un cycle rendrait l'ordre de chargement décisif pou
 démarrage de l'application.
 """
 import json
-from typing import Annotated, List
+from datetime import datetime
+from typing import Annotated, List, Optional
 
-from pydantic import BeforeValidator
+from pydantic import BaseModel, BeforeValidator
 
 
 
@@ -51,3 +52,51 @@ def liste_depuis_json(v):
 #: type nommé « URLs » pour des périmètres, soit on en écrivait un second,
 #: identique. Renommé pour ce qu'il est — une liste sérialisée en JSON.
 ListeJson = Annotated[List[str], BeforeValidator(liste_depuis_json)]
+
+class EvolutionLue(BaseModel):
+    """**Une entrée de fil, telle qu'un écran la reçoit** — les neuf champs
+    communs aux trois historiques (ticket, actualité, événement).
+
+    ## 🔴 Pourquoi ici (15/09/2026)
+
+    Les trois schémas les déclaraient à l'identique… à un détail près, et ce
+    détail est un défaut :
+
+    | schéma | `fichiers_urls` |
+    |---|---|
+    | `TicketEvolutionRead` | `ListeJson` |
+    | `PublicationEvolutionRead` | `ListeJson` |
+    | `EvolutionEvenementRead` | `list[str]` — et un `parse_photos` **à la main** |
+
+    La colonne stocke un tableau JSON. `ListeJson` le désérialise ; `list[str]`
+    ne le fait pas, et le calendrier compensait en convertissant avant de
+    valider. Les deux marchent — tant que personne n'ajoute un second chemin de
+    lecture sans se rappeler de la conversion. Alors Pydantic reçoit une chaîne
+    là où il attend une liste, et rejette l'entrée entière.
+
+    ⚠️ C'est le motif que le dépôt connaît : deux copies qui divergent sur le
+    cas limite, et celle qui compense est la plus fragile — elle marche par
+    l'attention de qui la lit, pas par construction.
+
+    ## Ce qu'il ne porte pas
+
+    La clé du porteur (`ticket_id`, `publication_id`, `evenement_id`) et les
+    champs propres à une entité (`perimetre_cible`, sur les tickets seuls).
+    C'est exactement ce qui les distingue.
+    """
+
+    id: int
+    #: `commentaire` ou `etat` — jamais un troisième. Une correction est un
+    #: commentaire préfixé (`utils/corrections`).
+    type: str
+    contenu: Optional[str] = None
+    ancien_statut: Optional[str] = None
+    nouveau_statut: Optional[str] = None
+    auteur_id: int
+    #: Composé par le serveur : l'écran ne rapproche pas un identifiant d'un nom.
+    auteur_nom: Optional[str] = None
+    cree_le: datetime
+    fichiers_urls: ListeJson = []
+
+    class Config:
+        from_attributes = True

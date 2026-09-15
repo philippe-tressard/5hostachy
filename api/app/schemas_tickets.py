@@ -13,13 +13,12 @@ une ligne à changer.
 ⚠️ N'importe que `schemas_communs` et `models.core` — jamais `schemas`, qui
 l'importe. Un cycle ferait dépendre le démarrage de l'ordre des imports.
 """
-from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel
 
 from app.models.core import StatutTicket
-from app.schemas_communs import ListeJson
+from app.schemas_communs import EvolutionLue, ListeJson
 
 
 
@@ -78,17 +77,10 @@ class TicketEvolutionUpdate(BaseModel):
     perimetre_cible: Optional[List[str]] = None
 
 
-class TicketEvolutionRead(BaseModel):
-    id: int
+class TicketEvolutionRead(EvolutionLue):
+    #  Les neuf champs communs viennent d'`EvolutionLue` — seule la clé du
+    #  porteur distingue les trois historiques.
     ticket_id: int
-    type: str
-    contenu: Optional[str] = None
-    ancien_statut: Optional[str] = None
-    nouveau_statut: Optional[str] = None
-    auteur_id: int
-    auteur_nom: Optional[str] = None
-    cree_le: datetime
-    fichiers_urls: ListeJson = []
     #  `None` quand l'entrée ne parle pas du périmètre — à distinguer d'une liste
     #  vide, qui voudrait dire « plus aucun périmètre ».
     perimetre_cible: Optional[ListeJson] = None

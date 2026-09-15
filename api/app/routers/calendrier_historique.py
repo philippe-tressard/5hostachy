@@ -34,25 +34,19 @@ from app.database import get_session
 from app.models.core import Evenement, Utilisateur
 from app.models.evenement import EvenementEvolution
 from app.utils.evolutions import supprimer_evolution
-from app.utils.photos import parse_photos, photos_json
+from app.utils.photos import photos_json
 from app.routers.calendrier_courriels import notifier_canaux
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
+from app.schemas_communs import EvolutionLue
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
 
-class EvolutionEvenementRead(BaseModel):
-    id: int
+class EvolutionEvenementRead(EvolutionLue):
+    #  Les neuf champs communs viennent d'`EvolutionLue` — seule la clé du
+    #  porteur distingue les trois historiques.
     evenement_id: int
-    type: str
-    contenu: Optional[str] = None
-    ancien_statut: Optional[str] = None
-    nouveau_statut: Optional[str] = None
-    auteur_id: int
-    auteur_nom: Optional[str] = None
-    cree_le: datetime
-    fichiers_urls: list[str] = []
 
     class Config:
         from_attributes = True
@@ -136,8 +130,11 @@ def _evolutions_de(ev_id: int, session: Session) -> list[EvolutionEvenementRead]
     ).all()
     sortie = []
     for e in lignes:
+        #  ⚠️ Plus de `parse_photos` ici : `EvolutionLue.fichiers_urls`
+        #  est un `ListeJson`, qui désérialise le tableau à la validation.
+        #  Cette conversion compensait une divergence — ce schéma était le
+        #  seul des trois à déclarer `list[str]` (15/09/2026).
         brut = e.model_dump()
-        brut["fichiers_urls"] = parse_photos(e.fichiers_urls)
         lue = EvolutionEvenementRead.model_validate(brut)
         auteur = session.get(Utilisateur, e.auteur_id)
         lue.auteur_nom = nom_affiche(auteur.prenom, auteur.nom) if auteur else "?"
