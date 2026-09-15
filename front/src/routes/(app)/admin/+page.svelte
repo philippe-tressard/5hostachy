@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { nomAffiche } from '$lib/noms';
+	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import OngletMaintenance from '$lib/components/OngletMaintenance.svelte';
@@ -373,11 +373,7 @@
 				(u.prenom + ' ' + u.nom).toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
 			);
 		})
-		.sort((a, b) => {
-			const nomCmp = (a.nom ?? '').localeCompare(b.nom ?? '', 'fr', { sensitivity: 'base' });
-			if (nomCmp !== 0) return nomCmp;
-			return (a.prenom ?? '').localeCompare(b.prenom ?? '', 'fr', { sensitivity: 'base' });
-		});
+		.sort(comparerParNom);
 
 	//  🔴 La table des libellés vit dans `$lib/roles` depuis le 06/09/2026 (#801).
 	//  Elle était écrite SIX fois — trois ici côté front, trois côté serveur — et

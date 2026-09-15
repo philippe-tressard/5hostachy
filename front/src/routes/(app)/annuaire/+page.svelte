@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { nomAffiche } from '$lib/noms';
+	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
@@ -99,7 +99,8 @@
 				membres: [...membres].sort((a, b) => {
 					const gd = genreOrder(a.genre) - genreOrder(b.genre);
 					if (gd !== 0) return gd;
-					return (a.nom ?? '').localeCompare(b.nom ?? '', 'fr');
+					//  Puis la règle commune — nom, puis prénom (`$lib/noms`).
+					return comparerParNom(a, b);
 				}),
 			}));
 	})();

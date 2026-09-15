@@ -25,13 +25,27 @@
  *
  * Usage : npm run lint:noms
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, relative, join, sep } from 'node:path';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const SOURCE = resolve(ICI, '..', 'src', 'lib', 'noms.ts');
 const TEST_PYTHON = resolve(ICI, '..', '..', 'api', 'tests', 'test_noms_affichage.py');
+
+const RACINE_SRC = resolve(ICI, '..', 'src');
+const SAUT = String.fromCharCode(10);
+
+/** Tous les .svelte et .ts de `src/`, pour le contrôle du CLASSEMENT ci-dessous. */
+function fichiersSources(dossier) {
+	const out = [];
+	for (const entree of readdirSync(dossier)) {
+		const chemin = join(dossier, entree);
+		if (statSync(chemin).isDirectory()) out.push(...fichiersSources(chemin));
+		else if (/\.(svelte|ts)$/.test(entree)) out.push(chemin);
+	}
+	return out;
+}
 
 function echouer(message) {
 	console.error(`\n✗ ${message}\n`);
@@ -122,8 +136,47 @@ for (const [quoi, obtenu] of [
 	if (obtenu !== '') echecs.push(`   ${quoi} rend ${JSON.stringify(obtenu)} au lieu de ""`);
 }
 
+//  ── Et le CLASSEMENT, qui est l'autre moitié de la notion ──────────────────
+//
+//  🔴 Signalé à l'écran le 15/09/2026 : « le classement des badges &
+//  télécommandes par Nom doit se faire sur le nom et pas le prénom ». La table
+//  triait sur `porteur_nom`, qui vaut « Alain GARCIA » — donc sur le prénom. Et
+//  `FormulaireTicket` comparait littéralement le prénom suivi du nom.
+//
+//  ⚠️ La règle juste existait déjà, écrite TROIS fois (annuaire, administration,
+//  espace CS). Elle vit maintenant dans `comparerParNom`, et ce contrôle exige
+//  qu'aucun écran ne la recompose : une quatrième copie reviendrait au premier
+//  tableau ajouté.
+//
+//  La cible est reconnue à sa FORME — une comparaison de `.nom` par
+//  `localeCompare` —, pas au mot « nom » : `batiment_nom`, `prestataire_nom` et
+//  les autres libellés sont des chaînes, pas des personnes, et crier dessus
+//  désarmerait le contrôle (la leçon de C16 et de `check-stack`).
+const COMPARAISON_NOM =
+	/\.nom\s*\?\?\s*''\)\s*\.localeCompare|\$\{[a-z.]*prenom\}[^`]*\$\{[a-z.]*nom\}`\s*\.localeCompare/;
+const recomposent = [];
+for (const chemin of fichiersSources(RACINE_SRC)) {
+	const rel = relative(RACINE_SRC, chemin).split(sep).join('/');
+	if (rel === 'lib/noms.ts') continue; // la source a le droit : c'est elle la règle
+	const source = readFileSync(chemin, 'utf8');
+	for (const ligne of source.split(SAUT)) {
+		if (COMPARAISON_NOM.test(ligne)) recomposent.push(`   ${rel} : ${ligne.trim().slice(0, 100)}`);
+	}
+}
+if (recomposent.length) {
+	echecs.push(
+		['Ces écrans recomposent le CLASSEMENT des personnes :', ...recomposent].join(SAUT) +
+			SAUT +
+			'   Emploie `comparerParNom` de $lib/noms — nom de famille, puis prénom.',
+	);
+}
+
 if (echecs.length) {
-	console.error('\n✗ Le front et l’API n’affichent PAS le même nom :\n');
+	//  ⚠️ DEUX familles d'échec passent par ici — l'AFFICHAGE d'un nom et son
+	//  CLASSEMENT. L'en-tête ne doit pas n'en nommer qu'une : il enverrait
+	//  chercher au mauvais endroit, ce qui est le défaut d'un contrôle qui dit
+	//  autre chose que ce qu'il a mesuré.
+	console.error('\n✗ La règle du NOM d’une personne n’est pas tenue :\n');
 	console.error(echecs.join('\n'));
 	console.error(
 		'\n  Les deux implémentations sont tenues par une seule attente, écrite dans' +

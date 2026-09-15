@@ -39,7 +39,7 @@
 	//  liste que ce composant ne modifie jamais.
 	export let types: readonly { val: string; label: string }[] = [];
 	/** Les porteurs proposés : les comptes de la copropriété. */
-	export let porteurs: { id: number; nom: string }[] = [];
+	export let porteurs: { id: number; affiche: string }[] = [];
 
 	/**  🔒 Ce que chaque type d'accès a le droit d'ouvrir, servi par le serveur.
 	 *
@@ -130,7 +130,7 @@
 		<select bind:value={saisie.porteur_id}>
 			<option value={null}>— choisir —</option>
 			{#each porteurs as p (p.id)}
-				<option value={p.id}>{p.nom}</option>
+				<option value={p.id}>{p.affiche}</option>
 			{/each}
 		</select>
 		<span class="aide">

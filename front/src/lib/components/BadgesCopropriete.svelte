@@ -69,7 +69,7 @@
 	import TableParcAcces from '$lib/components/TableParcAcces.svelte';
 	import { confirmerPuis } from '$lib/confirmation';
 	import { tenter } from '$lib/erreurs';
-	import { nomAffiche } from '$lib/noms';
+	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 
@@ -97,7 +97,11 @@
 	//  qu'enregistrer un badge était déjà couvert deux fois. Le choix est renversé
 	//  sur demande explicite — le conseil syndical remet des badges en main
 	//  propre, et rien ne le lui permettait.
-	let porteurs: { id: number; nom: string }[] = [];
+	//  La PERSONNE, pas seulement son rendu : `affiche` sert au sélecteur,
+	//  `prenom` et `nom` au classement — qui se fait sur le nom de famille
+	//  (`comparerParNom`, `$lib/noms`). Les confondre revenait à classer
+	//  « Alain GARCIA » à la lettre A.
+	let porteurs: { id: number; affiche: string; prenom: string; nom: string }[] = [];
 	/**  🔒 Ce que chaque type d'accès a le droit d'ouvrir, par clé de type.
 	 *
 	 *   Demandé le 15/09/2026 : un vigik ouvre la copropriété, un bâtiment ou un
@@ -213,7 +217,9 @@
 			//  premier rendu ferait clignoter le sélecteur.
 			porteurs = (await adminApi.utilisateurs()).map((u: any) => ({
 				id: u.id,
-				nom: nomAffiche(u),
+				affiche: nomAffiche(u),
+				prenom: u.prenom ?? '',
+				nom: u.nom ?? '',
 			}));
 			choixAcces = await accesApi.choixAcces();
 		} catch (e) {
@@ -255,10 +261,13 @@
 		}
 	}
 
+	//  Le porteur d'une ligne, retrouvé par son identifiant : la ligne ne porte
+	//  que « Prénom NOM » composé, et le classement a besoin des deux morceaux.
+	$: parId = new Map(porteurs.map((p) => [p.id, p]));
+
 	/**  La valeur comparée pour une ligne. `localeCompare` avec `sensitivity`
 	 *   pour que « Ébert » se range après « Dupont » et non en fin de liste. */
 	function cle(a: any): string {
-		if (triCol === 'porteur') return a.porteur_nom ?? '';
 		if (triCol === 'type') return a.type ?? '';
 		if (triCol === 'lot') return a.lot_libelle ?? '';
 		//  ⚠️ Trié sur les CODES, pas sur le libellé : le libellé dépend de
@@ -281,9 +290,20 @@
 		)
 		//  ⚠️ Trié APRÈS les filtres : trier d'abord ferait le même travail sur des
 		//  lignes qu'on s'apprête à écarter.
-		.sort(
-			(x, y) => (triAsc ? 1 : -1) * cle(x).localeCompare(cle(y), 'fr', { sensitivity: 'base' }),
-		);
+		//  🔴 La colonne « Porteur » classe sur le NOM DE FAMILLE, pas sur la
+		//  chaîne affichée : `porteur_nom` vaut « Alain GARCIA », et trier dessus
+		//  rangeait Alain à la lettre A (signalé à l'écran le 15/09/2026).
+		//
+		//  La règle est celle de `$lib/noms.comparerParNom` — la plus déployée du
+		//  produit (annuaire, administration, espace CS) —, pas une comparaison
+		//  écrite ici.
+		.sort((x, y) => {
+			const ordre = triAsc ? 1 : -1;
+			if (triCol === 'porteur') {
+				return ordre * comparerParNom(parId.get(x.porteur_id), parId.get(y.porteur_id));
+			}
+			return ordre * cle(x).localeCompare(cle(y), 'fr', { sensitivity: 'base' });
+		});
 
 	const badgeStatut: Record<string, string> = {
 		actif: 'badge-green',
