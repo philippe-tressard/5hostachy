@@ -4,19 +4,94 @@ C'est le seul circuit qui sort de la copropriété : `ticket_syndic`, `ticket_ex
 
 Le gabarit commun (`email._wrap_email`) enveloppe ces contenus : pas de
 `<html>` ni de `<body>` ici, seulement le corps riche.
+
+⚠️ La mise en forme vient de `fragments.py` — encarts, cadre de commentaire,
+boutons, titres. Ce fichier partageait une vingtaine de lignes de HTML avec
+`vie_collective.py`, au pixel près (#959). Ne pas réécrire un `<table>` ici :
+ajouter un paramètre là-bas.
 """
+from app.seed.emails.fragments import (
+    BLEU,
+    BORD,
+    CREME,
+    GRIS,
+    GRIS_CLAIR,
+    HISTORIQUE_DISCRET,
+    HISTORIQUE_SOBRE,
+    HISTORIQUE_TITRE,
+    MARGE_BOUTON_SELON_COMMENTAIRE,
+    MARGE_SELON_COMMENTAIRE,
+    PIED_OUVRE,
+    SEPARATEUR,
+    SIGNATURE_CS,
+    TEXTE,
+    bouton,
+    cadre_commentaire,
+    contenu_riche,
+    encart,
+    entree_historique,
+    titre,
+)
+
+#: Le rouge des alertes — il ne sert QUE au signalement de bug, et c'est pour
+#: cela qu'il n'est pas dans la palette de `fragments` : celle-ci porte la charte
+#: du site, pas la couleur d'un cas particulier.
+ROUGE = "#c0392b"
+
+#: Le lien vers un ticket, employé par cinq modèles.
+def _bouton_ticket(libelle: str = "Consulter le ticket", **kw) -> str:
+    return bouton("{{ app.url }}/tickets/{{ ticket.id }}", libelle, **kw)
+
+
+#: La ligne de méta d'un ticket — numéro, catégorie, et ce que l'appelant ajoute.
+def _meta_ticket(suffixe: str = "") -> str:
+    return (
+        f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Ticket #{{{{ ticket.numero }}}}'
+        "{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %}"
+        f"{suffixe}</p>"
+    )
+
+
+#: Le titre d'un ticket dans son encart.
+_TITRE_TICKET = (
+    f'<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:{BLEU}">{{{{ ticket.titre }}}}</p>'
+)
+
+#: Le fil des messages d'un ticket, sous garde.
+#:
+#: ⚠️ Le périmètre est passé ICI et pas dans `vie_collective` : un
+#: `TicketEvolution` porte `perimetre_cible`, un `PublicationEvolution` n'en a
+#: aucun. Différence de modèle, pas divergence de copies (#959).
+_FIL_MESSAGES = (
+    "{% if is_commentaire and messages %}"
+    "{% for m in messages %}"
+    + entree_historique("m", perimetre="m.perimetre")
+    + "{% endfor %}"
+    "{% endif %}"
+)
+
+#: Le fil des messages SANS périmètre — `ticket_externe` ne le montre pas à un
+#: tiers : le découpage interne de la copropriété ne le regarde pas.
+_FIL_MESSAGES_EXTERNE = (
+    "{% if is_commentaire and messages %}"
+    "{% for m in messages %}"
+    + entree_historique("m")
+    + "{% endfor %}"
+    "{% endif %}"
+)
 
 MODELES = [
     ("ticket_bug_admin", "Ticket bug — notification admin site",
      "Bug signalé via Tickets — {{ ticket.titre }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">⚠ Bug signalé</h2>'
-     '<p style="margin:0 0 12px">Un ticket de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.affiche }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FDF0F0;padding:16px;border-left:4px solid #c0392b">'
-     '<p style="margin:0 0 4px;font-weight:700;font-size:16px;color:#1A1A2E">{{ ticket.titre }}</p>'
-     '<p style="margin:0;font-size:14px;color:#5A6070">{{ ticket.description }}</p>'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#c0392b;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Traiter le bug</a></p>',
+     titre("⚠ Bug signalé", couleur=ROUGE)
+     + '<p style="margin:0 0 12px">Un ticket de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.affiche }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
+     + encart(
+         f'<p style="margin:0 0 4px;font-weight:700;font-size:16px;color:{TEXTE}">{{{{ ticket.titre }}}}</p>'
+         f'<p style="margin:0;font-size:14px;color:{GRIS}">{{{{ ticket.description }}}}</p>',
+         fond="#FDF0F0",
+         filet=ROUGE,
+     )
+     + _bouton_ticket("Traiter le bug", fond=ROUGE),
      True),
     ("ticket_syndic", "Ticket transmis au syndic",
      #  `{{ prefixe_copro }}` ouvre les DEUX branches — il ne manquait qu'à celle
@@ -28,65 +103,54 @@ MODELES = [
      #  informations, celle que le destinataire ne connaît pas encore est le
      #  titre. La résidence est ce qu'on accepte de perdre.
      '{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire — Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% else %}{{ prefixe_copro }}Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% endif %}',
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}💬 Nouveau commentaire{% else %}📋 Ticket transmis par le conseil syndical{% endif %}'
-     '</h2>'
-     '<p style="margin:0 0 16px">'
-     '{% if is_commentaire %}'
-     'Un nouveau commentaire a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
-     '{% else %}'
-     'Un ticket a été transmis à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
-     '{% endif %}'
-     '</p>'
-     '{% if is_commentaire %}'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.affiche }} — {{ date_commentaire }}{% if commentaire_perimetre %} — 🔹 {{ commentaire_perimetre }}{% endif %}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
-     '{% if fichiers %}<p style="margin:8px 0 0;font-size:13px;color:#5A6070">📎 Pièces jointes disponibles ci-dessous.</p>{% endif %}'
-     '</td></tr></table>'
-     '<h3 style="margin:0 0 12px;font-size:13px;font-weight:600;color:#8A8FA0;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
-     '{% endif %}'
-     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %}{% if ticket.perimetre %} · 🔹 {{ ticket.perimetre }}{% endif %}{% if is_commentaire %} — Soumis le {{ date_creation }}{% endif %}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
-     '{% if ticket.description %}<div style="font-size:14px;color:#1A1A2E">{{ ticket.description | safe }}</div>{% endif %}'
-     '{% if not is_commentaire %}<p style="margin:8px 0 0;font-size:14px;color:#5A6070">Soumis par {{ auteur.affiche }}</p>{% endif %}'
-     '</td></tr></table>'
-     '{% if is_commentaire and messages %}'
-     '{% for m in messages %}'
-     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FFFFFF;padding:12px 16px">'
-     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ m.auteur_nom }} — {{ m.date }}{% if m.perimetre %} — 🔹 {{ m.perimetre }}{% endif %}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ m.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '{% endif %}'
-     '{% if not is_commentaire and historique and historique|length > 1 %}'
-     '<h3 style="margin:0 0 8px;font-size:15px;color:#1E3A5F">Historique</h3>'
-     '<table role="presentation" style="border-collapse:collapse;width:100%;font-size:.88rem;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden">'
-     '{% for h in historique %}'
-     '<tr style="background:{% if loop.index is odd %}#F2EFE9{% else %}#FFFFFF{% endif %}">'
-     '<td style="padding:.35rem .75rem;border-bottom:1px solid #D0D8E4;white-space:nowrap;color:#5A6070;font-size:.82rem">{{ h.date }}</td>'
-     '<td style="padding:.35rem .75rem;border-bottom:1px solid #D0D8E4;color:#1A1A2E">{{ h.label }}</td>'
-     '</tr>{% endfor %}'
-     '</table>'
-     '{% endif %}'
-     '<p style="text-align:center;margin:{% if is_commentaire %}16{% else %}0{% endif %}px 0 0">'
-     '<a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le ticket</a></p>',
+     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}📋 Ticket transmis par le conseil syndical{% endif %}')
+     + '<p style="margin:0 0 16px">'
+       '{% if is_commentaire %}'
+       'Un nouveau commentaire a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
+       '{% else %}'
+       'Un ticket a été transmis à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
+       '{% endif %}'
+       '</p>'
+     + "{% if is_commentaire %}"
+     + cadre_commentaire(perimetre="commentaire_perimetre")
+     + HISTORIQUE_DISCRET
+     + "{% endif %}"
+     + encart(
+         _meta_ticket("{% if ticket.perimetre %} · 🔹 {{ ticket.perimetre }}{% endif %}"
+                      "{% if is_commentaire %} — Soumis le {{ date_creation }}{% endif %}")
+         + _TITRE_TICKET
+         + "{% if ticket.description %}" + contenu_riche("ticket.description") + "{% endif %}"
+         + f'{{% if not is_commentaire %}}<p style="margin:8px 0 0;font-size:14px;color:{GRIS}">Soumis par {{{{ auteur.affiche }}}}</p>{{% endif %}}',
+         marge=MARGE_SELON_COMMENTAIRE,
+     )
+     + _FIL_MESSAGES
+     #  🔴 Le tableau du fil d'activité, réservé à la CRÉATION : sur un
+     #  commentaire, l'historique est déjà rendu par les messages ci-dessus.
+     #  Sa forme (deux colonnes zébrées) n'est employée QUE là, d'où un encart
+     #  écrit ici plutôt qu'un fragment partagé — le factoriser pour un seul
+     #  appelant nommerait une notion qui n'existe pas.
+     + "{% if not is_commentaire and historique and historique|length > 1 %}"
+     + HISTORIQUE_TITRE
+     + f'<table role="presentation" style="border-collapse:collapse;width:100%;font-size:.88rem;margin:0 0 20px;border:1px solid {BORD};border-radius:8px;overflow:hidden">'
+     + "{% for h in historique %}"
+       f'<tr style="background:{{% if loop.index is odd %}}{CREME}{{% else %}}#FFFFFF{{% endif %}}">'
+       f'<td style="padding:.35rem .75rem;border-bottom:1px solid {BORD};white-space:nowrap;color:{GRIS};font-size:.82rem">{{{{ h.date }}}}</td>'
+       f'<td style="padding:.35rem .75rem;border-bottom:1px solid {BORD};color:{TEXTE}">{{{{ h.label }}}}</td>'
+       "</tr>{% endfor %}"
+       "</table>"
+       "{% endif %}"
+     + _bouton_ticket(marge=MARGE_BOUTON_SELON_COMMENTAIRE),
      True),
     ("ticket_statut_change", "Statut ticket modifié",
      "Ticket #{{ ticket.numero }} mis à jour — {{ ticket.titre }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Mise à jour de votre ticket</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 16px">Le statut de votre ticket a été mis à jour\u202f:</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
-     '<p style="margin:0"><span style="display:inline-block;background:#3D6B4F;color:#fff;padding:4px 12px;border-radius:4px;font-size:13px;font-weight:600">{{ ticket.statut }}</span></p>'
-     '</td></tr></table>',
+     titre("Mise à jour de votre ticket")
+     + '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     + '<p style="margin:0 0 16px">Le statut de votre ticket a été mis à jour :</p>'
+     + encart(
+         f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Ticket #{{{{ ticket.numero }}}}</p>'
+         + _TITRE_TICKET
+         + '<p style="margin:0"><span style="display:inline-block;background:#3D6B4F;color:#fff;padding:4px 12px;border-radius:4px;font-size:13px;font-weight:600">{{ ticket.statut }}</span></p>'
+     ),
      True),
     #  🔴 LE CS N’ÉTAIT PAS PRÉVENU PAR COURRIEL (08/09/2026, demandé à l’écran).
     #
@@ -101,79 +165,82 @@ MODELES = [
     #  la fonction prévue pour ça (cf. le tableau « Destinataires CS » de CLAUDE.md).
     ('ticket_nouveau_cs', 'Nouveau ticket — notification du conseil syndical',
      '🎫 Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}',
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">🎫 Nouveau ticket</h2>'
-     '<p style="margin:0 0 16px">Un ticket vient d' "'" 'être déposé par <strong>{{ auteur.affiche }}</strong>.</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px{% if urgent %};border-left:4px solid #c0392b{% endif %}">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %}{% if ticket.perimetre %} · 🔹 {{ ticket.perimetre }}{% endif %}{% if urgent %} · <strong style="color:#c0392b">URGENT</strong>{% endif %}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
-     '{% if ticket.description %}<div style="font-size:14px;color:#1A1A2E">{{ ticket.description | safe }}</div>{% endif %}'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le ticket</a></p>',
+     titre("🎫 Nouveau ticket")
+     + '<p style="margin:0 0 16px">Un ticket vient d' "'" 'être déposé par <strong>{{ auteur.affiche }}</strong>.</p>'
+     + encart(
+         _meta_ticket("{% if ticket.perimetre %} · 🔹 {{ ticket.perimetre }}{% endif %}"
+                      "{% if urgent %} · <strong style=\"color:#c0392b\">URGENT</strong>{% endif %}")
+         + _TITRE_TICKET
+         + "{% if ticket.description %}" + contenu_riche("ticket.description") + "{% endif %}",
+         #  Le liseré rouge dépend d'une CONDITION, pas d'une couleur : il ne peut
+         #  donc pas passer par `filet`, qui attend une valeur.
+         style_cellule="{% if urgent %};border-left:4px solid #c0392b{% endif %}",
+     )
+     + _bouton_ticket(),
      True),
     ("ticket_nouveau_message", "Nouveau message sur un ticket",
      "Nouveau message — Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💬 Nouveau message sur votre ticket</h2>'
-     '<p style="margin:0 0 16px">Un nouveau message a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur_action.affiche }}\u202f:</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0;font-size:14px;color:#1A1A2E">{{ message.contenu }}</p>'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le ticket</a></p>',
+     titre("💬 Nouveau message sur votre ticket")
+     + '<p style="margin:0 0 16px">Un nouveau message a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur_action.affiche }} :</p>'
+     + encart(f'<p style="margin:0;font-size:14px;color:{TEXTE}">{{{{ message.contenu }}}}</p>')
+     + _bouton_ticket("Voir le ticket"),
      True),
     ("relance_syndic", "Relance tickets syndic non résolus",
      "{{ prefixe_copro }}Relance ticket(s) sans avancée depuis {{ anciennete }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '🔔 Relance ticket(s) sans avancée depuis {{ anciennete }}</h2>'
-     '<p style="margin:0 0 20px">{{ interlocuteurs }},</p>'
+     titre("🔔 Relance ticket(s) sans avancée depuis {{ anciennete }}")
+     + '<p style="margin:0 0 20px">{{ interlocuteurs }},</p>'
      # Préambule partenarial (choisi le 01/08/2026) : poser l’ancienneté réelle
      # et le mécontentement qu’elle nourrit, sans mettre le gestionnaire en
      # accusation — la relance reste un outil de travail, pas un grief.
-     '<p style="margin:0 0 16px">Le Conseil Syndical de la copropriété <strong>{{ residence.nom }}</strong> '
-     'se permet de revenir vers vous concernant les tickets ci-dessous, transmis au syndic '
-     'et toujours <strong>sans avancée après {{ anciennete }}</strong>.</p>'
-     '<p style="margin:0 0 16px">Nous mesurons la charge qui pèse sur la gestion d’un '
-     'portefeuille de copropriétés. C’est précisément pour vous éviter des '
-     'sollicitations répétées que nous regroupons ici l’ensemble des dossiers '
-     'en attente. Leur ancienneté commence toutefois à nourrir un mécontentement '
-     'que nous préférerions désamorcer ensemble.</p>'
-     '<p style="margin:0 0 20px">Un simple point d’étape, même succinct, sur chacun '
-     'd’eux nous permettrait de rassurer les résidents.</p>'
-     '{% for item in tickets %}'
-     '<table role="presentation" style="width:100%;margin:0 0 24px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden">'
-     '<tr><td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:15px;color:#1E3A5F">'
-     '{{ item.numero }} — {{ item.titre }}'
-     '{% if item.relance_count > 0 %}'
-     ' <span style="background:#DC2626;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">'
-     'Relance n°{{ item.relance_count }}</span>'
-     '{% else %}'
-     ' <span style="background:#F59E0B;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">'
-     '1ère relance</span>'
-     '{% endif %}'
-     '</p>'
-     '<p style="margin:0 0 6px;font-size:12px;color:#4B5563">'
-     'Catégorie\u202f: {{ item.categorie | capitalize }} · Priorité\u202f: {{ item.priorite | capitalize }}'
-     '{% if item.perimetre %} · Périmètre\u202f: {{ item.perimetre }}{% endif %}'
-     '</p>'
-     '<p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#374151">Description\u202f:</p>'
-     '<div style="font-size:13px;color:#1A1A2E;white-space:pre-line">{{ item.description }}</div>'
-     '<p style="margin:12px 0 6px;font-size:13px;font-weight:600;color:#374151">Historique\u202f:</p>'
-     '<ul style="margin:0;padding-left:1.2em;font-size:12px;color:#374151">'
-     '{% for h in item.historique %}'
-     '<li style="margin-bottom:3px">{{ h.date }} — {{ h.label }}</li>'
-     '{% endfor %}'
-     '</ul>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '<p style="margin:24px 0 0">Nous vous remercions de bien vouloir nous tenir informés '
-     'des actions engagées sur ces dossiers.</p>'
+     + '<p style="margin:0 0 16px">Le Conseil Syndical de la copropriété <strong>{{ residence.nom }}</strong> '
+       'se permet de revenir vers vous concernant les tickets ci-dessous, transmis au syndic '
+       'et toujours <strong>sans avancée après {{ anciennete }}</strong>.</p>'
+       '<p style="margin:0 0 16px">Nous mesurons la charge qui pèse sur la gestion d’un '
+       'portefeuille de copropriétés. C’est précisément pour vous éviter des '
+       'sollicitations répétées que nous regroupons ici l’ensemble des dossiers '
+       'en attente. Leur ancienneté commence toutefois à nourrir un mécontentement '
+       'que nous préférerions désamorcer ensemble.</p>'
+       '<p style="margin:0 0 20px">Un simple point d’étape, même succinct, sur chacun '
+       'd’eux nous permettrait de rassurer les résidents.</p>'
+     + "{% for item in tickets %}"
+     #  ⚠️ Cet encart ouvre sur `<tr><td …>` en DEUX balises séparées, là où
+     #  `encart()` les colle. La différence est invisible au rendu mais pas au
+     #  texte, et ces modèles vivent en base : on le laisse tel quel plutôt que
+     #  d'exiger une migration pour un espace.
+     + f'<table role="presentation" style="width:100%;margin:0 0 24px;border:1px solid {BORD};border-radius:8px;overflow:hidden">'
+       f'<tr><td style="background:{CREME};padding:16px">'
+       f'<p style="margin:0 0 8px;font-weight:700;font-size:15px;color:{BLEU}">'
+       '{{ item.numero }} — {{ item.titre }}'
+       '{% if item.relance_count > 0 %}'
+       ' <span style="background:#DC2626;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">'
+       'Relance n°{{ item.relance_count }}</span>'
+       '{% else %}'
+       ' <span style="background:#F59E0B;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">'
+       '1ère relance</span>'
+       '{% endif %}'
+       '</p>'
+       '<p style="margin:0 0 6px;font-size:12px;color:#4B5563">'
+       'Catégorie : {{ item.categorie | capitalize }} · Priorité : {{ item.priorite | capitalize }}'
+       '{% if item.perimetre %} · Périmètre : {{ item.perimetre }}{% endif %}'
+       '</p>'
+       '<p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#374151">Description :</p>'
+       '<div style="font-size:13px;color:#1A1A2E;white-space:pre-line">{{ item.description }}</div>'
+       '<p style="margin:12px 0 6px;font-size:13px;font-weight:600;color:#374151">Historique :</p>'
+       '<ul style="margin:0;padding-left:1.2em;font-size:12px;color:#374151">'
+       '{% for h in item.historique %}'
+       '<li style="margin-bottom:3px">{{ h.date }} — {{ h.label }}</li>'
+       '{% endfor %}'
+       '</ul>'
+       '</td></tr></table>'
+       '{% endfor %}'
+       '<p style="margin:24px 0 0">Nous vous remercions de bien vouloir nous tenir informés '
+       'des actions engagées sur ces dossiers.</p>'
      # Signature sans le nom de la résidence : « Le Conseil Syndical de
      # {{ residence.nom }} » rendait « … de Les Hostachy ». L'article du nom
      # propre ne se contracte pas, et le destinataire sait déjà de quelle
      # copropriété il s'agit — le préambule le dit, l'objet aussi.
-     '<p style="margin:8px 0 0">Cordialement,<br>'
-     '<strong>Le Conseil Syndical</strong></p>',
+     + '<p style="margin:8px 0 0">Cordialement,<br>'
+       '<strong>Le Conseil Syndical</strong></p>',
      False),
     ("ticket_externe", "Notification ticket (email externe)",
      #  Ce canal vise « le syndic ou un tiers » (cf. l'en-tête de ce module) :
@@ -182,36 +249,24 @@ MODELES = [
      #  indispensable pour le syndic, et c'est la seule façon de tenir « sans
      #  exception » sur un destinataire que le code ne peut pas identifier.
      '{% if is_commentaire %}{{ prefixe_copro }}Relance Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% else %}{{ prefixe_copro }}Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% endif %}',
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}💬 Nouveau commentaire{% else %}🔧 Ticket{% endif %} : {{ ticket.titre }}</h2>'
-     '{% if is_commentaire %}'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.affiche }} — {{ date_commentaire }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
-     '{% if fichiers %}'
-     '<p style="margin:8px 0 0;font-size:13px;color:#5A6070">📎 Voir les pièces jointes ci-dessous.</p>'
-     '{% endif %}'
-     '</td></tr></table>'
-     '<h3 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#5A6070;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
-     '{% endif %}'
-     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %} — {{ date_creation }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ ticket.description | safe }}</div>'
-     '</td></tr></table>'
-     '{% if is_commentaire and messages %}'
-     '{% for m in messages %}'
-     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FFFFFF;padding:12px 16px">'
-     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ m.auteur_nom }} — {{ m.date }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ m.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '{% endif %}'
-     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:20px 0 16px">'
-     '<p style="margin:0;font-size:13px;color:#5A6070;text-align:center">'
-     'Ce message vous a été transmis par le Conseil Syndical de la copropriété <strong>{{ residence.nom }}</strong>.</p>',
+     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}🔧 Ticket{% endif %} : {{ ticket.titre }}')
+     + "{% if is_commentaire %}"
+     + cadre_commentaire(voir_pj=True)
+     + HISTORIQUE_SOBRE
+     + "{% endif %}"
+     + encart(
+         _meta_ticket(" — {{ date_creation }}")
+         + _TITRE_TICKET
+         + contenu_riche("ticket.description"),
+         marge=MARGE_SELON_COMMENTAIRE,
+     )
+     + _FIL_MESSAGES_EXTERNE
+     + SEPARATEUR
+     + PIED_OUVRE
+     + SIGNATURE_CS,
      False),
 ]
+
+#  `GRIS_CLAIR` est importé pour `entree_historique`, qui s'en sert : le laisser
+#  hors de la liste d'import ferait croire qu'il n'est plus employé ici.
+_ = GRIS_CLAIR

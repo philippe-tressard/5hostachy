@@ -62,6 +62,26 @@ from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 router = APIRouter()
 
 
+def type_acces_demande(type_cle: str) -> TypeAcces:
+    """Le descripteur du type nommé dans l'URL, ou **422** — une seule écriture.
+
+    ⚠️ Ces trois lignes étaient recopiées dans chaque route paramétrée par
+    `{type_cle}` (création, correction, suppression), et l'export allait en faire
+    une quatrième. Une garde d'entrée recopiée est une garde qui se corrige à
+    moitié : le jour où l'on y ajoute quelque chose — une trace, un autre code —
+    on l'ajoute là où on regarde.
+
+    Employée en `Depends`, elle rend le type **résolu** : la route reçoit un
+    `TypeAcces`, pas une chaîne à valider. C'est la même forme que les
+    dépendances d'autorisation de `auth/deps` — le contrôle est dans la
+    signature, donc il ne peut pas être oublié dans le corps.
+    """
+    type_acces = TYPES_ACCES.get(type_cle)
+    if type_acces is None:
+        raise HTTPException(422, "Type invalide : " + " ou ".join(TYPES_ACCES))
+    return type_acces
+
+
 class AccesAdminOut(AccesOut):
     """Un badge tel que le conseil syndical a besoin de le VOIR.
 
@@ -171,8 +191,8 @@ def _ticket_par_numero(session: Session, numero: Optional[str]):
 
 @router.post("/admin/{type_cle}", response_model=AccesAdminOut, status_code=201)
 def creer_acces_admin(
-    type_cle: str,
     body: AccesAdminBody,
+    type_acces: TypeAcces = Depends(type_acces_demande),
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -187,9 +207,6 @@ def creer_acces_admin(
     celui des lots du porteur s'il n'y en a qu'un. La règle vit dans
     `utils/acces_perimetre`, et la migration 0190 en porte l'équivalent SQL.
     """
-    type_acces = TYPES_ACCES.get(type_cle)
-    if type_acces is None:
-        raise HTTPException(422, "Type invalide : " + " ou ".join(TYPES_ACCES))
     code = (body.code or "").strip()
     if not code:
         raise HTTPException(422, "Code vide")
@@ -231,9 +248,9 @@ def creer_acces_admin(
 
 @router.patch("/admin/{type_cle}/{objet_id}", response_model=AccesAdminOut)
 def modifier_acces_admin(
-    type_cle: str,
     objet_id: int,
     body: AccesAdminBody,
+    type_acces: TypeAcces = Depends(type_acces_demande),
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -244,9 +261,6 @@ def modifier_acces_admin(
     simplement changé. Si cela pose question un jour, le remède sera de tracer le
     changement de code, pas de retirer le geste.
     """
-    type_acces = TYPES_ACCES.get(type_cle)
-    if type_acces is None:
-        raise HTTPException(422, "Type invalide : " + " ou ".join(TYPES_ACCES))
     objet = _acces_admin(session, type_acces, objet_id)
     ticket = _ticket_par_numero(session, body.ticket_numero)
     #  🔒 La MÊME validation qu'à la création, et c'est tout l'intérêt de la
@@ -282,8 +296,8 @@ def modifier_acces_admin(
 
 @router.delete("/admin/{type_cle}/{objet_id}", status_code=204)
 def supprimer_acces_admin(
-    type_cle: str,
     objet_id: int,
+    type_acces: TypeAcces = Depends(type_acces_demande),
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_admin),
 ):
@@ -298,9 +312,6 @@ def supprimer_acces_admin(
     C'est la règle déjà déployée partout — archiver sur la vue principale,
     supprimer réservé à l'admin (`ux-patterns` §8).
     """
-    type_acces = TYPES_ACCES.get(type_cle)
-    if type_acces is None:
-        raise HTTPException(422, "Type invalide : " + " ou ".join(TYPES_ACCES))
     _acces_admin(session, type_acces, objet_id)
     detacher_acces(
         session, objet_id,
@@ -396,18 +407,16 @@ def choix_acces(
     }
 
 
-#: Les colonnes de l'export, dans l'ordre — un seul fichier pour les deux types
-#: (arbitré le 14/09/2026). Un fichier se trie et se filtre dans un tableur ;
-#: deux obligent à les rapprocher à la main.
-COLONNES_EXPORT = ["Type", "Code", "Porteur", "Lot", "Accès", "Statut", "Créé le"]
+#: Les colonnes d'un export, dans l'ordre.
+#:
+#: ⚠️ Pas de colonne « Type » : chaque fichier ne porte qu'une nature d'accès,
+#: et son nom la dit. Une colonne dont toutes les lignes ont la même valeur
+#: n'apprend rien et se trie pour rien.
+COLONNES_EXPORT = ["Code", "Porteur", "Lot", "Accès", "Statut", "Créé le"]
 
 
-@router.get("/admin/export.csv")
-def exporter_parc(
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Le parc entier, en CSV — une ligne par accès.
+def _csv_du_parc(session: Session, type_acces: TypeAcces) -> str:
+    """Le CSV d'UN type — la seule écriture du format, quel que soit le type.
 
     ⚠️ **Séparateur `;` et BOM UTF-8**, et ce n'est pas un détail de confort :
     Excel en configuration française lit la virgule comme un séparateur décimal
@@ -418,20 +427,18 @@ def exporter_parc(
     ⚠️ Les dates passent par `date_courte` : c'est la règle du dépôt, et un
     `strftime` local ici serait la trente-deuxième écriture d'un format.
     """
+    objets = session.exec(select(type_acces.modele)).all()
     lignes = []
-    for type_acces in TYPES_ACCES.values():
-        objets = session.exec(select(type_acces.modele)).all()
-        for fiche, objet in zip(_acces_admin_out(objets, session, type_acces), objets):
-            perimetre = parse_json_perimetres(objet.perimetre_cible)
-            lignes.append([
-                type_acces.libelle,
-                fiche.code,
-                fiche.porteur_nom,
-                fiche.lot_libelle or "",
-                perimetre_label(perimetre) if perimetre else "",
-                fiche.statut.value if hasattr(fiche.statut, "value") else str(fiche.statut),
-                date_courte(fiche.cree_le),
-            ])
+    for fiche, objet in zip(_acces_admin_out(objets, session, type_acces), objets):
+        perimetre = parse_json_perimetres(objet.perimetre_cible)
+        lignes.append([
+            fiche.code,
+            fiche.porteur_nom,
+            fiche.lot_libelle or "",
+            perimetre_label(perimetre) if perimetre else "",
+            fiche.statut.value if hasattr(fiche.statut, "value") else str(fiche.statut),
+            date_courte(fiche.cree_le),
+        ])
 
     tampon = io.StringIO()
     graveur = csv.writer(tampon, delimiter=";", lineterminator="\r\n")
@@ -442,12 +449,44 @@ def exporter_parc(
     #  ailleurs — le dépôt refuse les BOM dans ses SOURCES, ce qui est une autre
     #  question : là il est une donnée du fichier produit, pas un artefact
     #  d'éditeur.
-    contenu = "\ufeff" + tampon.getvalue()
+    return "\ufeff" + tampon.getvalue()
+
+
+@router.get("/admin/{type_cle}/export.csv")
+def exporter_parc(
+    type_acces: TypeAcces = Depends(type_acces_demande),
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Le parc d'UN type, en CSV — une ligne par accès.
+
+    ## Deux fichiers, et non plus un (15/09/2026)
+
+    Le 14/09, un fichier unique avait été arbitré : *« un fichier se trie et se
+    filtre dans un tableur ; deux obligent à les rapprocher à la main »*.
+    L'usage a tranché l'inverse :
+
+    > « ne fais pas qu'un seul export en format CSV, mais 2 : l'un pour les vigik
+    >   et l'autre pour les télécommandes »
+
+    Et c'est cohérent avec ce que le reste du produit dit de ces deux objets :
+    ils n'ont ni les mêmes accès possibles (`codes_autorises`), ni le même
+    rapport au lot (`acces_suit_le_lot`), ni les mêmes colonnes utiles. Les
+    empiler dans un tableur obligeait à filtrer sur « Type » avant tout usage.
+
+    🔒 **Une seule écriture du format.** La route est paramétrée par le
+    descripteur, comme les trois autres de ce fichier : ajouter un troisième
+    type d'accès — une clé, un bip — donnera son export sans qu'on touche ici.
+    Deux fonctions `exporter_vigiks` / `exporter_telecommandes` auraient divergé
+    à la première colonne ajoutée.
+    """
     horodatage = datetime.utcnow().strftime("%Y-%m-%d")
+    #  Le nom du fichier porte le type : c'est ce qui remplace la colonne
+    #  « Type », et c'est ce que l'utilisateur lit dans son dossier de
+    #  téléchargements six mois plus tard.
+    nom = f"{type_acces.cle}-{horodatage}.csv"
     return StreamingResponse(
-        iter([contenu]),
+        iter([_csv_du_parc(session, type_acces)]),
         media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": f'attachment; filename="parc-acces-{horodatage}.csv"',
-        },
+        headers={"Content-Disposition": f'attachment; filename="{nom}"'},
     )

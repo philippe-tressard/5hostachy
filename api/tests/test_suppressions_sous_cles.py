@@ -332,6 +332,7 @@ def test_supprimer_une_telecommande_attribuee(contexte):
     """`user_telecommande.telecommande_id` est NOT NULL et sans `Relationship`."""
     from app.models.core import Telecommande, UserTelecommande
     from app.routers.acces.parc import supprimer_acces_admin
+    from app.utils.types_acces import TELECOMMANDE, VIGIK
 
     session, admin = contexte
     tc = Telecommande(code="TC-546", user_id=admin.id)
@@ -341,7 +342,9 @@ def test_supprimer_une_telecommande_attribuee(contexte):
     session.add(UserTelecommande(user_id=admin.id, telecommande_id=tc.id))
     session.commit()
 
-    supprimer_acces_admin("telecommande", tc.id, session, admin)
+    supprimer_acces_admin(
+        objet_id=tc.id, type_acces=TELECOMMANDE, session=session, user=admin,
+    )
     assert session.get(Telecommande, tc.id) is None
 
 
@@ -349,6 +352,7 @@ def test_supprimer_un_vigik_attribue(contexte):
     """`user_vigik.vigik_id` est NOT NULL et sans `Relationship`."""
     from app.models.core import UserVigik, Vigik
     from app.routers.acces.parc import supprimer_acces_admin
+    from app.utils.types_acces import TELECOMMANDE, VIGIK
 
     session, admin = contexte
     v = Vigik(code="VG-546", user_id=admin.id)
@@ -358,7 +362,9 @@ def test_supprimer_un_vigik_attribue(contexte):
     session.add(UserVigik(user_id=admin.id, vigik_id=v.id))
     session.commit()
 
-    supprimer_acces_admin("vigik", v.id, session, admin)
+    supprimer_acces_admin(
+        objet_id=v.id, type_acces=VIGIK, session=session, user=admin,
+    )
     assert session.get(Vigik, v.id) is None
 
 

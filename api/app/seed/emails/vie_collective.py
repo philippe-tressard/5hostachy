@@ -4,131 +4,156 @@ Publications, calendrier, documents, boîte à idées, annonces de hall. Tous an
 
 Le gabarit commun (`email._wrap_email`) enveloppe ces contenus : pas de
 `<html>` ni de `<body>` ici, seulement le corps riche.
+
+⚠️ La mise en forme vient de `fragments.py` — encarts, cadre de commentaire,
+boutons, titres. Ce fichier partageait une vingtaine de lignes de HTML avec
+`tickets.py`, au pixel près (#959). Ne pas réécrire un `<table>` ici : ajouter
+un paramètre là-bas.
 """
+from app.seed.emails.fragments import (
+    BLEU,
+    CREME,
+    GRIS,
+    HISTORIQUE_DISCRET,
+    HISTORIQUE_SOBRE,
+    MARGE_BOUTON_SELON_COMMENTAIRE,
+    MARGE_SELON_COMMENTAIRE,
+    OR,
+    PIED_OUVRE,
+    SEPARATEUR,
+    SIGNATURE_CS,
+    TEXTE,
+    bouton,
+    cadre_commentaire,
+    contenu_riche,
+    encart,
+    entree_historique,
+    titre,
+)
+
+#: Le lien vers le calendrier, employé par la création ET le suivi.
+_BOUTON_CALENDRIER = bouton("{{ app.url }}/calendrier", "Voir le calendrier")
+
+#: L'encart qui présente un événement — la date en or, le titre en bleu. Les
+#: deux modèles du calendrier le portaient à l'identique.
+_ENCART_EVENEMENT = encart(
+    f'<p style="margin:0 0 4px;font-size:13px;color:{OR};font-weight:600">{{{{ evenement.date }}}}</p>'
+    f'<p style="margin:0;font-weight:700;font-size:16px;color:{BLEU}">{{{{ evenement.titre }}}}</p>'
+)
+
+#: Le corps d'une publication dans son encart — commun aux deux modèles qui la
+#: transmettent, à la ligne « Publication initiale » près (conditionnelle pour
+#: le syndic, toujours présente pour un destinataire externe).
+def _encart_publication(*, initiale_conditionnelle: bool) -> str:
+    initiale = (
+        f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Publication initiale — {{{{ date_publication }}}}</p>'
+    )
+    if initiale_conditionnelle:
+        return encart(
+            "{% if is_commentaire %}" + initiale + "{% endif %}"
+            + '<p style="margin:0 0 {% if is_commentaire %}8{% else %}12{% endif %}px;'
+              f'font-weight:700;font-size:16px;color:{BLEU}">{{{{ publication.titre }}}}</p>'
+            + contenu_riche("publication.contenu"),
+            marge=MARGE_SELON_COMMENTAIRE,
+        )
+    return encart(
+        initiale
+        + f'<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:{BLEU}">{{{{ publication.titre }}}}</p>'
+        + contenu_riche("publication.contenu"),
+        marge=MARGE_SELON_COMMENTAIRE,
+    )
+
+
+#: Le fil des évolutions d'une publication, sous garde.
+_FIL_EVOLUTIONS = (
+    "{% if is_commentaire and evolutions %}"
+    "{% for e in evolutions %}"
+    + entree_historique("e")
+    + "{% endfor %}"
+    "{% endif %}"
+)
 
 MODELES = [
     ("publication_syndic", "Publication transmise au syndic",
      #  Mêmes deux règles que `ticket_syndic`, où elles sont expliquées. Ici la
      #  branche « commentaire » nommait déjà la publication ; c'est celle de la
      #  création qui annonçait « Nouvelle publication » sans dire laquelle.
-     '{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire sur « {{ publication.titre }} »{% else %}{{ prefixe_copro }}Nouvelle publication — {{ publication.titre }}{% endif %} — {{ residence.nom }}',
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}💬 Nouveau commentaire{% else %}📢 Publication du conseil syndical{% endif %}'
-     '</h2>'
-     '<p style="margin:0 0 16px">'
-     '{% if is_commentaire %}'
-     'Un nouveau commentaire a été ajouté sur la publication <strong>{{ publication.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
-     '{% else %}'
-     'Une publication a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
-     '{% endif %}'
-     '</p>'
-     '{% if is_commentaire %}'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.affiche }} — {{ date_commentaire }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
-     '{% if fichiers %}<p style="margin:8px 0 0;font-size:13px;color:#5A6070">📎 Pièces jointes disponibles ci-dessous.</p>{% endif %}'
-     '</td></tr></table>'
-     '<h3 style="margin:0 0 12px;font-size:13px;font-weight:600;color:#8A8FA0;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
-     '{% endif %}'
-     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '{% if is_commentaire %}<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Publication initiale — {{ date_publication }}</p>{% endif %}'
-     '<p style="margin:0 0 {% if is_commentaire %}8{% else %}12{% endif %}px;font-weight:700;font-size:16px;color:#1E3A5F">{{ publication.titre }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ publication.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% if is_commentaire and evolutions %}'
-     '{% for e in evolutions %}'
-     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FFFFFF;padding:12px 16px">'
-     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ e.auteur_nom }} — {{ e.date }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ e.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '{% endif %}'
-     '<p style="text-align:center;margin:{% if is_commentaire %}16{% else %}0{% endif %}px 0 0">'
-     '<a href="{{ app.url }}/actualites#pub-{{ publication.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la publication</a></p>',
+     '{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire sur «\xa0{{ publication.titre }}\xa0»{% else %}{{ prefixe_copro }}Nouvelle publication — {{ publication.titre }}{% endif %} — {{ residence.nom }}',
+     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}📢 Publication du conseil syndical{% endif %}')
+     + '<p style="margin:0 0 16px">'
+       '{% if is_commentaire %}'
+       'Un nouveau commentaire a été ajouté sur la publication <strong>{{ publication.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
+       '{% else %}'
+       'Une publication a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
+       '{% endif %}'
+       '</p>'
+     #  ⚠️ Pas de périmètre ici : `PublicationEvolution` n'en porte AUCUN, là où
+     #  `TicketEvolution` a `perimetre_cible`. Ce n'est pas une divergence entre
+     #  deux copies — c'est une différence de modèle, et le paramètre absent la
+     #  déclare (#959).
+     + "{% if is_commentaire %}"
+     + cadre_commentaire()
+     + HISTORIQUE_DISCRET
+     + "{% endif %}"
+     + _encart_publication(initiale_conditionnelle=True)
+     + _FIL_EVOLUTIONS
+     + bouton("{{ app.url }}/actualites#pub-{{ publication.id }}", "Voir la publication",
+              marge=MARGE_BOUTON_SELON_COMMENTAIRE),
      True),
     ("publication_externe", "Notification publication (email externe)",
      #  Même raison que `ticket_externe` : l'adresse est saisie à la main et peut
      #  être celle du syndic.
      '{% if is_commentaire %}{{ prefixe_copro }}Relance {{ publication.titre }}{% else %}{{ prefixe_copro }}{{ publication.titre }} — {{ residence.nom }}{% endif %}',
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}💬 Nouveau commentaire{% else %}📢 Publication{% endif %} : {{ publication.titre }}</h2>'
-     '{% if is_commentaire %}'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.affiche }} — {{ date_commentaire }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
-     '{% if fichiers %}'
-     '<p style="margin:8px 0 0;font-size:13px;color:#5A6070">📎 Voir les pièces jointes ci-dessous.</p>'
-     '{% endif %}'
-     '</td></tr></table>'
-     '<h3 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#5A6070;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
-     '{% endif %}'
-     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Publication initiale — {{ date_publication }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ publication.titre }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ publication.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% if is_commentaire and evolutions %}'
-     '{% for e in evolutions %}'
-     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FFFFFF;padding:12px 16px">'
-     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ e.auteur_nom }} — {{ e.date }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ e.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '{% endif %}'
-     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:20px 0 16px">'
-     '<p style="margin:0;font-size:13px;color:#5A6070;text-align:center">'
-     'Ce message vous a été transmis par le Conseil Syndical de la copropriété <strong>{{ residence.nom }}</strong>.</p>',
+     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}📢 Publication{% endif %} : {{ publication.titre }}')
+     + "{% if is_commentaire %}"
+     + cadre_commentaire(voir_pj=True)
+     #  ⚠️ Le titre « Historique » de ce modèle n'est PAS celui du précédent :
+     #  14px/gris contre 13px/gris clair. Les deux existaient déjà, dans les deux
+     #  fichiers ; les fondre changerait le texte de modèles en base, donc
+     #  exigerait une migration. Nommés distinctement, au moins le choix est vu.
+     + HISTORIQUE_SOBRE
+     + "{% endif %}"
+     + _encart_publication(initiale_conditionnelle=False)
+     + _FIL_EVOLUTIONS
+     + SEPARATEUR
+     + PIED_OUVRE
+     + SIGNATURE_CS,
      False),
     ("calendrier_evenement_cree", "Événement calendrier créé", "Nouvel événement : {{ evenement.titre }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">📅 Nouvel événement</h2>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#C9983A;font-weight:600">{{ evenement.date }}</p>'
-     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ evenement.titre }}</p>'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/calendrier" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le calendrier</a></p>',
+     titre("📅 Nouvel événement")
+     + _ENCART_EVENEMENT
+     + _BOUTON_CALENDRIER,
      True),
     #  ⚠️ Modèle du SUIVI, distinct de la création (18/08/2026). Réutiliser
     #  « Nouvel événement » pour un commentaire aurait annoncé une création à
     #  chaque entrée d'Historique — le message aurait été faux, pas seulement
     #  maladroit.
     ("calendrier_evenement_suivi", "Événement calendrier — suivi", "Suivi : {{ evenement.titre }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">🔄 Suivi d’un événement</h2>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#C9983A;font-weight:600">{{ evenement.date }}</p>'
-     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ evenement.titre }}</p>'
-     '</td></tr></table>'
-     '{% if suivi.etat %}<p style="margin:0 0 12px"><strong>État :</strong> {{ suivi.etat }}</p>{% endif %}'
-     '{% if suivi.commentaire %}<div style="margin:0 0 20px">{{ suivi.commentaire|safe }}</div>{% endif %}'
+     titre("🔄 Suivi d’un événement")
+     + _ENCART_EVENEMENT
+     + '{% if suivi.etat %}<p style="margin:0 0 12px"><strong>État :</strong> {{ suivi.etat }}</p>{% endif %}'
+       '{% if suivi.commentaire %}<div style="margin:0 0 20px">{{ suivi.commentaire|safe }}</div>{% endif %}'
      #  Le pied qui annonce les pieces : meme forme que `ticket_nouveau_message`
      #  et `ticket_externe`. Il manquait ici, et les pieces elles-memes n'etaient
      #  pas attachees (elles l'etaient depuis l'evenement, jamais depuis l'entree)
      #  -- signale a l'ecran le 18/08/2026.
      #  ⚠️ `fichiers` est calcule sur la liste REELLEMENT attachee, jamais sur
      #  l'intention : ce que le courriel annonce doit etre ce qu'il transporte.
-     '{% if fichiers %}<p style="margin:0 0 16px;font-size:13px;color:#5A6070">📎 Pièces jointes ci-dessous.</p>{% endif %}'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/calendrier" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le calendrier</a></p>',
+     + f'{{% if fichiers %}}<p style="margin:0 0 16px;font-size:13px;color:{GRIS}">📎 Pièces jointes ci-dessous.</p>{{% endif %}}'
+     + _BOUTON_CALENDRIER,
      True),
     ("document_publie", "Document publié", "Nouveau document disponible — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">📄 Nouveau document</h2>'
-     '<p style="margin:0 0 16px">Un nouveau document a été publié sur l’espace de votre résidence\u202f:</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ document.titre }}</p>'
-     #  La DESCRIPTION sous le titre, quand elle existe (09/09/2026, migration
-     #  0185). Le titre NOMME le document, elle dit ce qu'il couvre — sans elle,
-     #  le destinataire doit ouvrir le fichier pour savoir s'il le concerne.
-     '{% if document.description %}'
-     '<p style="margin:8px 0 0;font-size:14px;color:#5A6070">{{ document.description }}</p>'
-     '{% endif %}'
-     '</td></tr></table>'
+     titre("📄 Nouveau document")
+     + '<p style="margin:0 0 16px">Un nouveau document a été publié sur l’espace de votre résidence :</p>'
+     + encart(
+         f'<p style="margin:0;font-weight:700;font-size:16px;color:{BLEU}">{{{{ document.titre }}}}</p>'
+         #  La DESCRIPTION sous le titre, quand elle existe (09/09/2026, migration
+         #  0185). Le titre NOMME le document, elle dit ce qu'il couvre — sans elle,
+         #  le destinataire doit ouvrir le fichier pour savoir s'il le concerne.
+         "{% if document.description %}"
+         f'<p style="margin:8px 0 0;font-size:14px;color:{GRIS}">{{{{ document.description }}}}</p>'
+         "{% endif %}"
+     )
      # `/documents` n'a jamais existé côté front : chaque document s'affiche là
      # où il est rattaché. Le bouton menait donc à un 404 — le même que celui
      # signalé depuis un PV d'AG le 26/07/2026, resté ici parce que ce modèle
@@ -137,45 +162,42 @@ MODELES = [
      #  dix catégories de documents n'ont pas de rubrique sur /residence :
      #  `lien_document` rend alors `None`, et sans cette garde le lien devenait
      #  « <site>/None ». Un bouton absent vaut mieux qu'un bouton qui ment.
-     '{% if document.lien %}'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}{{ document.lien }}" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le document</a></p>'
-     '{% endif %}',
+     + "{% if document.lien %}"
+     + bouton("{{ app.url }}{{ document.lien }}", "Consulter le document", fond="#3D6B4F")
+     + "{% endif %}",
      True),
     ("reponse_communaute", "Nouvelle réponse (Communauté)", "💬 Nouvelle réponse sur {{ reponse.rubrique_label }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💬 Nouvelle réponse</h2>'
-     '<p style="margin:0 0 16px">{{ reponse.auteur }} a répondu à {{ reponse.rubrique_label }} <strong>« {{ reponse.sujet }} »</strong> :</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0;font-size:14px;color:#1A1A2E">{{ reponse.extrait }}</p>'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ reponse.lien }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir et répondre</a></p>',
+     titre("💬 Nouvelle réponse")
+     + '<p style="margin:0 0 16px">{{ reponse.auteur }} a répondu à {{ reponse.rubrique_label }} <strong>« {{ reponse.sujet }} »</strong> :</p>'
+     + encart(f'<p style="margin:0;font-size:14px;color:{TEXTE}">{{{{ reponse.extrait }}}}</p>')
+     + bouton("{{ reponse.lien }}", "Voir et répondre"),
      True),
     ("idee_statut", "Idée soutenue — changement de statut", "💡 L'idée « {{ idee.titre }} » est {{ idee.statut_label }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💡 Une idée que vous avez soutenue avance</h2>'
-     '<p style="margin:0 0 16px">Bonne nouvelle : l\'idée <strong>« {{ idee.titre }} »</strong>, que vous avez soutenue, est désormais <strong>{{ idee.statut_label }}</strong>.</p>'
-     '<p style="text-align:center;margin:0"><a href="{{ idee.lien }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la boîte à idées</a></p>',
+     titre("💡 Une idée que vous avez soutenue avance")
+     + '<p style="margin:0 0 16px">Bonne nouvelle : l\'idée <strong>« {{ idee.titre }} »</strong>, que vous avez soutenue, est désormais <strong>{{ idee.statut_label }}</strong>.</p>'
+     + bouton("{{ idee.lien }}", "Voir la boîte à idées"),
      True),
     ("annonce_hall", "Annonce hall (PDF à afficher)",
      "📄 Annonce à afficher — {{ annonce.titre }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">📄 Annonce à afficher dans le hall</h2>'
-     '<p style="margin:0 0 16px">{{ auteur.affiche }} a préparé une annonce pour <strong>{{ annonce.perimetre }}</strong>. '
-     'Le PDF est en pièce jointe, prêt à imprimer au format <strong>{{ annonce.format }}</strong> et à afficher.</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px;border-left:4px solid #C9983A">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">{{ annonce.perimetre }} · Format {{ annonce.format }} · {{ annonce.date }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:17px;color:#1E3A5F">{{ annonce.titre }}</p>'
-     '{% if annonce.apercu %}<p style="margin:0;font-size:14px;color:#5A6070">{{ annonce.apercu }}</p>{% endif %}'
-     '</td></tr></table>'
-     '<p style="margin:0 0 20px;font-size:13px;color:#5A6070">📎 Pièce jointe : <strong>{{ annonce.fichier }}</strong> '
-     '— imprimer en couleur, sans mise à l’échelle (100 %).</p>'
+     titre("📄 Annonce à afficher dans le hall")
+     + '<p style="margin:0 0 16px">{{ auteur.affiche }} a préparé une annonce pour <strong>{{ annonce.perimetre }}</strong>. '
+       'Le PDF est en pièce jointe, prêt à imprimer au format <strong>{{ annonce.format }}</strong> et à afficher.</p>'
+     + encart(
+         f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">{{{{ annonce.perimetre }}}} · Format {{{{ annonce.format }}}} · {{{{ annonce.date }}}}</p>'
+         f'<p style="margin:0 0 8px;font-weight:700;font-size:17px;color:{BLEU}">{{{{ annonce.titre }}}}</p>'
+         f'{{% if annonce.apercu %}}<p style="margin:0;font-size:14px;color:{GRIS}">{{{{ annonce.apercu }}}}</p>{{% endif %}}',
+         fond=CREME,
+         filet=OR,
+     )
+     + f'<p style="margin:0 0 20px;font-size:13px;color:{GRIS}">📎 Pièce jointe : <strong>{{{{ annonce.fichier }}}}</strong> '
+       '— imprimer en couleur, sans mise à l’échelle (100 %).</p>'
      #  🔴 Le bouton pointe l'ACTUALITÉ d'origine, et n'apparaît que s'il y en
      #  a une (`annonce.lien`, cf. `annonces_hall_courriels.lien_affiche`).
      #  Il visait `/espace-cs`, que le front réserve au conseil syndical : depuis
      #  que le syndic reçoit ce courriel (#480), il y était renvoyé au tableau de
      #  bord. C'était le seul modèle du site à viser une route à accès restreint.
-     '{% if annonce.lien %}<p style="text-align:center;margin:0">'
-     '<a href="{{ app.url }}{{ annonce.lien }}" '
-     'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
-     'Voir l’actualité d’origine</a></p>{% endif %}',
+     + "{% if annonce.lien %}"
+     + bouton("{{ app.url }}{{ annonce.lien }}", "Voir l’actualité d’origine")
+     + "{% endif %}",
      True),
 ]
