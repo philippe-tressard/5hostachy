@@ -1529,6 +1529,18 @@ jobs:
         working-directory: front
         run: npm run lint:ordre-sections
 
+      # 🔴 DIX FICHIERS ÉNUMÉRAIENT LE MÊME ENSEMBLE D'ÉTATS DEUX OU TROIS FOIS
+      # (15/09/2026, #779) — un libellé ici, une pastille là, un abrégé plus bas.
+      #
+      # Aucune ne divergeait encore : c'est exactement l'état des quatre copies
+      # des statuts de ticket avant #415, « chacune cohérente avec elle-même ».
+      # Une clé oubliée dans l'une rend `undefined`, donc un badge sans couleur —
+      # rien ne lève, rien ne se voit. Les tables ont fondu (`$lib/table-statuts`),
+      # et ce contrôle interdit d'en rouvrir une paire.
+      - name: Une table d'états n'est pas énumérée deux fois
+        working-directory: front
+        run: npm run lint:tables-statuts
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #

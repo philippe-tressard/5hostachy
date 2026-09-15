@@ -1,3 +1,4 @@
+import { parAttribut } from '$lib/table-statuts';
 /**
  * Le vocabulaire d'une **demande de modification de profil** — écrit une fois.
  *
@@ -21,15 +22,13 @@
  */
 
 /** La classe de badge de chaque état d'une demande. */
-export const STATUT_DEMANDE_BADGE: Record<string, string> = {
-	en_attente: 'badge-yellow',
-	approuvee: 'badge-green',
-	rejetee: 'badge-red',
-};
+const { libelle, badge } = parAttribut({
+	en_attente: { libelle: 'En attente', badge: 'badge-yellow' },
+	approuvee: { libelle: 'Approuvée', badge: 'badge-green' },
+	rejetee: { libelle: 'Rejetée', badge: 'badge-red' },
+});
+
+export const STATUT_DEMANDE_BADGE: Record<string, string> = badge;
 
 /** Ce que le résident lit. */
-export const STATUT_DEMANDE_LABEL: Record<string, string> = {
-	en_attente: 'En attente',
-	approuvee: 'Approuvée',
-	rejetee: 'Rejetée',
-};
+export const STATUT_DEMANDE_LABEL: Record<string, string> = libelle;

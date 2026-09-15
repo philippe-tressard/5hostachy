@@ -13,6 +13,7 @@
  */
 import type { FluxItem } from '$lib/api';
 import { estTicketClos } from '$lib/tickets';
+import { parAttribut } from '$lib/table-statuts';
 
 // ── Apparence par type d'élément ──────────────────────────────────────────
 //
@@ -36,56 +37,40 @@ import { estTicketClos } from '$lib/tickets';
 // 17°. L'émeraude 163° a été libérée avec la rubrique « devis » ; elle était à
 // 12° de la sarcelle de `prestataire`, un rapprochement voulu tant que les deux
 // rubriques partageaient la page /prestataires.
-export const TYPE_LABELS: Record<string, string> = {
-	ticket_resolu: 'Ticket résolu',
-	ticket_ouvert: 'Ticket',
-	ticket_mis_a_jour: 'Ticket mis à jour',
-	publication: 'Actualité',
-	evenement: 'Événement',
-	sondage_clos: 'Sondage clos',
-	sondage_ouvert: 'Sondage',
-	annonce: 'Petite annonce',
-	idee: 'Boîte à idées',
-	prestataire: 'Prestataire',
-	document: 'Document',
-	diagnostic: 'Diagnostic',
-	faq: 'Question fréquente',
-	annuaire: 'Annuaire',
-};
+/*  ── Les quatorze rubriques du fil, chacune écrite UNE fois ──────────────────
+    Le libellé, la teinte et le fond vivaient dans trois tables parallèles de
+    quatorze clés. Ajouter une rubrique demandait trois gestes, et l'oubli du
+    troisième rendait une carte au fond blanc — lisible, donc invisible.
 
-export const TYPE_COLORS: Record<string, string> = {
-	ticket_resolu: '#B91C1C', //   0° rouge
-	ticket_ouvert: '#B91C1C',
-	ticket_mis_a_jour: '#B91C1C',
-	annonce: '#C2410C', //  17° orange
-	evenement: '#A16207', //  35° ambre
-	diagnostic: '#4D7C0F', //  86° olive
-	annuaire: '#15803D', // 142° vert
-	prestataire: '#0F766E', // 175° sarcelle
-	idee: '#0E7490', // 193° cyan
-	publication: 'var(--color-primary)', // 214° bleu Seine, couleur de la charte
-	document: '#4338CA', // 245° indigo
-	sondage_clos: '#6D28D9', // 263° violet
-	sondage_ouvert: '#6D28D9',
-	faq: '#A21CAF', // 295° fuchsia
-};
+    🔴 L'ordre ci-dessous est celui de la ROUE CHROMATIQUE (0° → 295°), pas
+    celui du produit : deux rubriques voisines dans le fil ne doivent pas se
+    ressembler. Les degrés restent notés parce que c'est la seule chose qui
+    permet d'insérer une quinzième teinte sans refaire le tour.                */
+const {
+	libelle: L,
+	couleur: C,
+	fond: F,
+} = parAttribut({
+	ticket_resolu: { libelle: 'Ticket résolu', couleur: '#B91C1C', fond: '#FEF2F2' }, //   0° rouge
+	ticket_ouvert: { libelle: 'Ticket', couleur: '#B91C1C', fond: '#FEF2F2' },
+	ticket_mis_a_jour: { libelle: 'Ticket mis à jour', couleur: '#B91C1C', fond: '#FEF2F2' },
+	annonce: { libelle: 'Petite annonce', couleur: '#C2410C', fond: '#FFF7ED' }, //  17° orange
+	evenement: { libelle: 'Événement', couleur: '#A16207', fond: '#FFFBEB' }, //  35° ambre
+	diagnostic: { libelle: 'Diagnostic', couleur: '#4D7C0F', fond: '#F7FEE7' }, //  86° olive
+	annuaire: { libelle: 'Annuaire', couleur: '#15803D', fond: '#F0FDF4' }, // 142° vert
+	prestataire: { libelle: 'Prestataire', couleur: '#0F766E', fond: '#F0FDFA' }, // 175° sarcelle
+	idee: { libelle: 'Boîte à idées', couleur: '#0E7490', fond: '#ECFEFF' }, // 193° cyan
+	//  214° bleu Seine, la couleur de la charte
+	publication: { libelle: 'Actualité', couleur: 'var(--color-primary)', fond: '#EEF2F7' },
+	document: { libelle: 'Document', couleur: '#4338CA', fond: '#EEF2FF' }, // 245° indigo
+	sondage_clos: { libelle: 'Sondage clos', couleur: '#6D28D9', fond: '#F5F3FF' }, // 263° violet
+	sondage_ouvert: { libelle: 'Sondage', couleur: '#6D28D9', fond: '#F5F3FF' },
+	faq: { libelle: 'Question fréquente', couleur: '#A21CAF', fond: '#FDF4FF' }, // 295° fuchsia
+});
 
-export const TYPE_BG: Record<string, string> = {
-	ticket_resolu: '#FEF2F2',
-	ticket_ouvert: '#FEF2F2',
-	ticket_mis_a_jour: '#FEF2F2',
-	annonce: '#FFF7ED',
-	evenement: '#FFFBEB',
-	diagnostic: '#F7FEE7',
-	annuaire: '#F0FDF4',
-	prestataire: '#F0FDFA',
-	idee: '#ECFEFF',
-	publication: '#EEF2F7',
-	document: '#EEF2FF',
-	sondage_clos: '#F5F3FF',
-	sondage_ouvert: '#F5F3FF',
-	faq: '#FDF4FF',
-};
+export const TYPE_LABELS: Record<string, string> = L;
+export const TYPE_COLORS: Record<string, string> = C;
+export const TYPE_BG: Record<string, string> = F;
 
 //  Les défauts restent des VALEURS DE REPLI, pas une apparence acceptable : un
 //  type inconnu doit se voir comme tel plutôt que passer pour une rubrique

@@ -47,7 +47,11 @@ from app.utils.roles_libelles import (
     libelle_statut_court,
 )
 
-ROLES_TS = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "roles.ts"
+#  🔴 La lecture du TypeScript vit dans le module PARTAGÉ, et n'est plus
+#  recopiée ici : elle l'était — `_table_ts` et `roles_libelles_lecture.table_ts`
+#  étaient la même fonction —, dans le fichier même dont l'en-tête du module
+#  partagé dit qu'il est né parce que « la lecture était elle-même dupliquée ».
+from tests.roles_libelles_lecture import ROLES_TS, table_ts
 
 #  Les chaînes qui ne doivent apparaître QUE dans le module source. Écrites ici
 #  une fois, et employées par le garde-fou comme par son cas zéro.
@@ -66,16 +70,6 @@ def _motif_valeur(chaine: str) -> re.Pattern:
     qui contient les mêmes mots.
     """
     return re.compile("[\"']" + re.escape(chaine) + "[\"']")
-
-
-def _table_ts(source: str, nom: str) -> dict[str, str]:
-    """Extrait `export const <nom>: Record<string, string> = { … };` du fichier TS."""
-    debut = source.index(f"export const {nom}")
-    corps = source[source.index("{", debut) + 1 : source.index("};", debut)]
-    return {
-        m.group(1): m.group(2)
-        for m in re.finditer(r"^\t(\S+?):\s*'([^']*)',", corps, re.MULTILINE)
-    }
 
 
 def test_les_deux_tables_couvrent_TOUTE_l_enumeration():
@@ -118,8 +112,8 @@ def test_le_front_ecrit_EXACTEMENT_les_memes_chaines():
     assert ROLES_TS.exists(), f"jumeau front introuvable : {ROLES_TS}"
     source = ROLES_TS.read_text(encoding="utf-8")
 
-    ts_roles = _table_ts(source, "LIBELLES_ROLE")
-    ts_statuts = _table_ts(source, "LIBELLES_STATUT")
+    ts_roles = table_ts(source, "ROLE", "libelle")
+    ts_statuts = table_ts(source, "STATUT", "libelle")
 
     #  🔴 Cas zéro : sans ce garde, un extracteur cassé rendrait deux dictionnaires
     #  vides et le test passerait au vert en ne comparant rien.

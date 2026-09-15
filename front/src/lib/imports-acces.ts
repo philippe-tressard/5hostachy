@@ -31,6 +31,7 @@
  * d'exception existe, l'exception se reproduit.*
  */
 import { acces as accesApi } from '$lib/api';
+import { parAttribut } from '$lib/table-statuts';
 
 /** Une colonne du tableau, propre à un type d'import. */
 export interface ColonneImport {
@@ -141,16 +142,12 @@ export const IMPORT_VIGIK: ModeleImportAcces = {
 };
 
 /** Les cinq statuts, communs aux deux types. */
-export const STATUT_BADGE: Record<string, string> = {
-	en_attente: 'badge-orange',
-	proprietaire_lie: 'badge-blue',
-	resolu: 'badge-green',
-	ignore: 'badge-gray',
-};
+const { libelle, badge } = parAttribut({
+	en_attente: { libelle: 'En attente', badge: 'badge-orange' },
+	proprietaire_lie: { libelle: 'Proprio lié', badge: 'badge-blue' },
+	resolu: { libelle: 'Résolu', badge: 'badge-green' },
+	ignore: { libelle: 'Ignoré', badge: 'badge-gray' },
+});
 
-export const STATUT_LABEL: Record<string, string> = {
-	en_attente: 'En attente',
-	proprietaire_lie: 'Proprio lié',
-	resolu: 'Résolu',
-	ignore: 'Ignoré',
-};
+export const STATUT_BADGE: Record<string, string> = badge;
+export const STATUT_LABEL: Record<string, string> = libelle;

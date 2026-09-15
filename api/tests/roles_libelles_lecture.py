@@ -43,14 +43,35 @@ VALEUR_TEINTE = r"'badge-"
 VALEUR_CHAINE = r"['\"]"
 
 
-def table_ts(source: str, nom: str) -> dict[str, str]:
-    """Extrait `export const <nom>: Record<string, string> = { … };` du fichier TS."""
-    debut = source.index(f"export const {nom}")
-    corps = source[source.index("{", debut) + 1 : source.index("};", debut)]
-    return {
-        m.group(1): m.group(2)
-        for m in re.finditer(r"^\t(\S+?):\s*'([^']*)',", corps, re.MULTILINE)
-    }
+#: Une entrée de table d'états : `résident: { libelle: '…', badge: '…' },` — sur
+#: une ligne ou sur quatre, selon ce que Prettier fait de la largeur.
+_ENTREE = re.compile(r"^\t(\S+?): \{(.*?)\},$", re.S | re.M)
+_ATTRIBUT = re.compile(r"(\w+):\s*'([^']*)'")
+
+
+def table_ts(source: str, ancre: str, attribut: str) -> dict[str, str]:
+    """Un attribut de la table `const <ancre> = parAttribut({ … })` du fichier TS.
+
+    🔴 Le front déclarait ces valeurs en tables PARALLÈLES — les libellés, les
+    abrégés, les teintes — aux mêmes clés, et le commentaire de chacune devait
+    rappeler qu'elle doit couvrir les autres. Elles ont fondu en une le
+    15/09/2026 (`$lib/table-statuts`) : une entrée par état, tous ses attributs
+    ensemble, et le compilateur TypeScript refuse l'entrée incomplète.
+
+    ⚠️ Les trois contrôles qui comparaient ces tables entre elles vérifient
+    donc désormais une propriété que la STRUCTURE porte. Ils ne sont pas
+    devenus inutiles : ils échoueraient le jour où quelqu'un défait la fonte —
+    et c'est exactement ce qu'ils ont fait pendant celle-ci, en annonçant une
+    extraction incomplète plutôt qu'un vert sur zéro comparaison.
+    """
+    debut = source.index(f"const {ancre} = parAttribut({{")
+    corps = source[debut : source.index("});", debut)]
+    table = {}
+    for m in _ENTREE.finditer(corps):
+        attributs = dict(_ATTRIBUT.findall(m.group(2)))
+        if attribut in attributs:
+            table[m.group(1)] = attributs[attribut]
+    return table
 
 
 def tables_par_cle(source: str, cles: set[str], valeur: str) -> list[tuple[int, list[str]]]:

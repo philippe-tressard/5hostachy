@@ -1,3 +1,5 @@
+import { parAttribut } from '$lib/table-statuts';
+
 //  Présentation des publications : ce qui ne dépend ni du DOM ni d'un store, et
 //  qui n'avait donc rien à faire dans `actualites/+page.svelte`.
 //
@@ -9,19 +11,15 @@
 
 //: Statuts d'une PUBLICATION — à ne pas confondre avec ceux d'un ticket
 //: (`ouvert`/`résolu`/`annulé`), qui sont une autre notion et vivent ailleurs.
-export const STATUT_LABELS: Record<string, string> = {
-	publie: 'Publié',
-	en_cours: 'En cours',
-	resolu: 'Résolu',
-	annule: 'Annulé',
-};
+const { libelle, badge } = parAttribut({
+	publie: { libelle: 'Publié', badge: 'badge-blue' },
+	en_cours: { libelle: 'En cours', badge: 'badge-orange' },
+	resolu: { libelle: 'Résolu', badge: 'badge-green' },
+	annule: { libelle: 'Annulé', badge: 'badge-gray' },
+});
 
-export const STATUT_BADGE: Record<string, string> = {
-	publie: 'badge-blue',
-	en_cours: 'badge-orange',
-	resolu: 'badge-green',
-	annule: 'badge-gray',
-};
+export const STATUT_LABELS: Record<string, string> = libelle;
+export const STATUT_BADGE: Record<string, string> = badge;
 
 /**
  * ⚠️ **Plus aucun écran ne propose ces états** depuis le 18/08/2026 : une actualité
