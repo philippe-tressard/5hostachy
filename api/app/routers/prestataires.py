@@ -259,39 +259,6 @@ def list_contrats(
     return lus
 
 
-@router.post("/contrats/{c_id}/synthese",
-             summary="Proposer la synthèse d'un contrat (CS/Admin)")
-async def proposer_synthese(
-    c_id: int,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Rend une synthèse PROPOSÉE. N'enregistre rien.
-
-    🔴 Le geste est manuel et il le reste : rien n'appelle ce point d'entrée
-    sinon l'icône ✨ d'une carte de contrat, cliquée par un membre du conseil
-    syndical. Aucune tâche planifiée, aucun appel à la création d'un contrat —
-    chaque synthèse est facturée, et chacune doit être voulue.
-
-    ⚠️ Le texte rendu remplit le champ « Synthèse » du formulaire d'édition, que
-    le CS relit et enregistre lui-même. Écrire directement en base ferait du
-    modèle l'auteur d'un document réglementaire (décret n° 2001-477).
-    """
-    from app.utils.synthese_contrat import ErreurLLM, synthese_disponible, synthetiser
-
-    contrat = session.get(ContratEntretien, c_id)
-    if not contrat:
-        raise HTTPException(404, "Contrat introuvable")
-    if not synthese_disponible(session, contrat):
-        raise HTTPException(
-            400,
-            "L'assistant n'est pas configuré, ou ce contrat n'a pas de document joint.",
-        )
-    try:
-        return {"synthese": await synthetiser(session, contrat)}
-    except ErreurLLM as exc:
-        raise HTTPException(400, str(exc))
-
 
 def _appliquer_perimetre(contrat: ContratEntretien, codes: Optional[list[str]]) -> None:
     """Pose le périmètre d'un contrat, et en DÉRIVE son bâtiment.
