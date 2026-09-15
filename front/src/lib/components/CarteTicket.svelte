@@ -65,6 +65,8 @@
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { nomCopie } from '$lib/saisi-pour';
 	import {
+		BADGE_PRIORITE,
+		PRIORITE_BREVE,
 		STATUT_TICKET_BADGE,
 		STATUT_TICKET_LABELS,
 		STATUT_TICKET_OPTIONS,
@@ -201,7 +203,11 @@
 				{STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut}
 			</span>
 			<BadgePerimetre perimetre={ticket.perimetre_cible} />
-			{#if ticket.priorite === 'haute'}<span class="badge badge-orange">⚡ Urgente</span>{/if}
+			{#if ticketUrgent(ticket)}
+				<span class="badge {BADGE_PRIORITE[ticket.priorite] ?? 'badge-gray'}"
+					>{PRIORITE_BREVE[ticket.priorite]}</span
+				>
+			{/if}
 			<!--  🛡️ Le contrepoids de l'ouverture en lecture (#710) doit SE VOIR :
 			      sans ce badge, le conseil syndical ne peut pas relire ce qu'il a
 			      fermé, et « confidentiel » redeviendrait une case qu'on coche sans

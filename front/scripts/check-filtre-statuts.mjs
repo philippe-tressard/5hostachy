@@ -31,9 +31,10 @@
  *
  * Usage : npm run lint:filtre-statuts
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { chargerModule } from './lib/charger-module.mjs';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src', 'lib', 'tickets.ts');
@@ -45,17 +46,7 @@ function echouer(message) {
 
 if (!existsSync(SOURCE)) echouer(`Cas zéro : ${SOURCE} est introuvable — contrôle inopérant.`);
 
-const esbuild = await import('esbuild');
-let module;
-try {
-	const { code } = await esbuild.transform(readFileSync(SOURCE, 'utf8'), {
-		loader: 'ts',
-		format: 'esm',
-	});
-	module = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
-} catch (e) {
-	echouer(`Cas zéro : lib/tickets.ts ne se transpile pas (${e.message}).`);
-}
+const module = await chargerModule(SOURCE, echouer);
 
 const { statutsPresents, STATUTS_TICKET } = module;
 if (typeof statutsPresents !== 'function') {

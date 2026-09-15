@@ -79,16 +79,23 @@ export function parAttribut<Etat extends string, Attribut extends string>(
  *
  * @param cle Le champ qui porte l'identifiant de l'état (`value` partout).
  */
-export function parAttributDepuisListe<T extends Record<string, string>, C extends keyof T>(
+export function parAttributDepuisListe<T extends object, C extends keyof T & string>(
 	etats: readonly T[],
 	cle: C,
-): Record<Exclude<keyof T, C>, Record<string, string>> {
-	const colonnes = {} as Record<string, Record<string, string>>;
+): Record<Exclude<keyof T, C> & string, Record<string, string>> {
+	//  ⚠️ `T extends object` et non `Record<string, string>` : une liste déclarée
+	//  par une INTERFACE (`TypeEvenement`) n'a pas de signature d'index, et se
+	//  voyait refusée là où le même objet écrit en littéral passait. Contraindre
+	//  la forme aurait poussé à retirer l'interface — donc à perdre le typage
+	//  pour satisfaire l'outil qui devait le servir.
+	const colonnes: Record<string, Record<string, string>> = {};
 	for (const etat of etats) {
-		for (const [nom, valeur] of Object.entries(etat)) {
+		const brut = etat as Record<string, unknown>;
+		const identifiant = String(brut[cle]);
+		for (const [nom, valeur] of Object.entries(brut)) {
 			if (nom === cle) continue;
-			(colonnes[nom] ??= {})[etat[cle]] = valeur;
+			(colonnes[nom] ??= {})[identifiant] = String(valeur);
 		}
 	}
-	return colonnes as Record<Exclude<keyof T, C>, Record<string, string>>;
+	return colonnes as Record<Exclude<keyof T, C> & string, Record<string, string>>;
 }

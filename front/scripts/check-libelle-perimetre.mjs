@@ -29,6 +29,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { chargerModule } from './lib/charger-module.mjs';
 import { dirname, resolve } from 'node:path';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
@@ -58,28 +59,7 @@ for (const [chemin, quoi] of [
 }
 
 //  ── Le front, EXÉCUTÉ ───────────────────────────────────────────────────────
-const esbuild = await import('esbuild');
-let module;
-try {
-	//  🔴 `build({ bundle: true })` et non `transform` : `$lib/perimetres` est un
-	//  PAQUET depuis le 10/09/2026, et une transpilation isolée laisse les
-	//  `import './arbre'` non résolus — le data-URI ne sait pas d'où il vient.
-	//  Le bundle suit les imports et rend un module autonome, donc CELUI QUE LE
-	//  SITE EXÉCUTE plutôt qu'un fragment.
-	const { outputFiles } = await esbuild.build({
-		entryPoints: [SOURCE],
-		bundle: true,
-		write: false,
-		format: 'esm',
-		platform: 'neutral',
-	});
-	const code = outputFiles[0].text;
-	//  Import par data: URL — aucun fichier temporaire à nettoyer, et la source
-	//  du dépôt n'est jamais réécrite.
-	module = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
-} catch (e) {
-	echouer(`Cas zéro : lib/perimetres.ts ne se transpile pas (${e.message}).`);
-}
+const module = await chargerModule(SOURCE, echouer);
 
 const { definirPerimetres, perimetreLabel, perimetreLabelUn } = module;
 if (typeof definirPerimetres !== 'function' || typeof perimetreLabel !== 'function') {

@@ -28,7 +28,8 @@
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { routeOnglet, routeSousOnglet } from '$lib/routes-onglets';
-	import { bailVierge, champsLocataire } from '$lib/bail';
+	import { bailEnCours, bailVierge, champsLocataire } from '$lib/bail';
+	import BadgeStatutBail from '$lib/components/BadgeStatutBail.svelte';
 
 	$: _pc = getPageConfig($configStore, 'mon-lot', defautsDePage('mon-lot'));
 	$: _siteNom = $siteNomStore;
@@ -139,7 +140,7 @@
 	let bailAcces: Bail | null = null;
 
 	// ── Derived ────────────────────────────────────────────────────────────────
-	$: bauxActifs = baux.filter((b) => b.statut === 'actif' || b.statut === 'en_cours_sortie');
+	$: bauxActifs = baux.filter(bailEnCours);
 	$: bauxTermines = baux.filter((b) => b.statut === 'termine');
 
 	// ── Init ───────────────────────────────────────────────────────────────────
@@ -323,11 +324,10 @@
 	//  produit un tableau nu chez le voisin — le défaut de `standards/02` §4 ter,
 	//  celui qui ne casse rien et qui se voit en production.
 
-	const statutBailLabel: Record<string, string> = {
-		actif: 'Actif',
-		en_cours_sortie: 'En cours de sortie',
-		termine: 'Terminé',
-	};
+	//  🔴 La table des libellés vivait ICI, puis descendait en prop chez
+	//  `OngletGestionLocative`, qui recomposait la TEINTE du même état en
+	//  ternaire. Le libellé et la couleur d'un état sont deux attributs d'une
+	//  même chose : ils se déclarent ensemble, dans `$lib/bail`.
 
 	function nomLocataire(bail: Bail): string {
 		if (bail.locataire_prenom || bail.locataire_nom) {
@@ -593,11 +593,7 @@
 					<div class="loc-header">
 						<div class="loc-name">
 							👤 <strong>{nomLocataire(premierBail)}</strong>
-							<span
-								class="badge {premierBail.statut === 'actif' ? 'badge-green' : 'badge-yellow'}"
-								style="font-size:.7rem"
-								>{statutBailLabel[premierBail.statut] ?? premierBail.statut}</span
-							>
+							<BadgeStatutBail statut={premierBail.statut} compact />
 						</div>
 						<div class="loc-contact">
 							{#if premierBail.locataire_email}<a
@@ -724,7 +720,6 @@
 		{ouvrirEditionLocataire}
 		{ouvrirAccesBail}
 		{majObjets}
-		{statutBailLabel}
 		{nomLocataire}
 		bind:bailATerminer
 		bind:bailASupprimer
