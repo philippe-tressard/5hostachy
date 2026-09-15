@@ -111,6 +111,19 @@ CHAMPS_CORRIGEABLES = {
     "photos_urls": "Photos",
     "fichiers_urls": "Documents",
     "prestataire_id": "Prestataire",
+    #  « Saisi pour » — les trois champs portent UN libellé, pas trois : ils
+    #  changent ensemble (`utils/saisi_pour`), et trois lignes d'historique pour
+    #  un seul geste se lisent comme trois gestes.
+    #
+    #  ⚠️ C'est aussi ce qui évite le défaut corrigé côté tickets le 18/08/2026 :
+    #  le formulaire envoie TOUJOURS les trois champs — c'est ce qui permet de
+    #  revenir à « En mon nom » — et la présence seule aurait annoncé « Saisi
+    #  pour modifié » à chaque enregistrement. Ici c'est la COMPARAISON qui
+    #  tranche (`data[champ] != avant[champ]`), donc le défaut ne peut pas
+    #  s'y produire.
+    "saisi_pour_user_id": "Saisi pour",
+    "saisi_pour_nom": "Saisi pour",
+    "saisi_pour_email": "Saisi pour",
 }
 
 

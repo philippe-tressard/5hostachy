@@ -28,6 +28,7 @@ from app.models.acces import (
     Vigik as Vigik,
     VigikImport as VigikImport,
 )
+from app.utils.saisi_pour import SaisiPourMixin
 
 
 # ──────────────────────────────────────────────
@@ -266,7 +267,7 @@ from app.models.validations import (  # noqa: E402,F401
 #  Tickets
 # ──────────────────────────────────────────────
 
-class Ticket(SQLModel, table=True):
+class Ticket(SaisiPourMixin, table=True):
     __tablename__ = "ticket"
     id: Optional[int] = Field(default=None, primary_key=True)
     numero: str = Field(unique=True, index=True)
@@ -285,9 +286,8 @@ class Ticket(SQLModel, table=True):
     fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
+    #  🔴 FK redéclarée : le mixin ne la porte pas (cf. `utils/saisi_pour`).
     saisi_pour_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    saisi_pour_nom: Optional[str] = None
-    saisi_pour_email: Optional[str] = None
     non_relancable: bool = False
     non_relancable_motif: Optional[str] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
@@ -358,7 +358,7 @@ class TicketEvolution(SQLModel, table=True):
 #  Publications / Actualités
 # ──────────────────────────────────────────────
 
-class Publication(SQLModel, table=True):
+class Publication(SaisiPourMixin, table=True):
     __tablename__ = "publication"
     id: Optional[int] = Field(default=None, primary_key=True)
     titre: str

@@ -48,7 +48,31 @@ export interface User {
 	derniere_connexion?: string | null;
 }
 
-export interface Ticket {
+/**
+ * **« Saisi pour »**, tel qu'un écran le REÇOIT — les trois champs, plus le nom
+ * déjà composé par le serveur.
+ *
+ * ⚠️ `saisi_pour_affichage` n'est pas une redite : il vaut `null` quand personne
+ * n'est nommé, là où le propriétaire retombe sur l'auteur. C'est lui qui décide
+ * si l'écran affiche « Saisi pour X », et le recomposer côté client demanderait
+ * de relire la règle des trois cas dans chaque écran.
+ *
+ * 🔴 Hérité plutôt que recopié (15/09/2026) : la notion sert aux tickets, aux
+ * actualités et aux événements. Trois interfaces portant les mêmes quatre
+ * lignes auraient divergé au premier ajout — c'est ce qui vient d'arriver au
+ * périmètre d'un badge, calculé à deux endroits.
+ *
+ * Pendants : `PorteSaisiPour` (`$lib/saisi-pour`, ce qu'on ENVOIE) et
+ * `SaisiPourSortie` (`api/app/utils/saisi_pour.py`).
+ */
+export interface PorteSaisiPourLu {
+	saisi_pour_user_id?: number | null;
+	saisi_pour_nom?: string | null;
+	saisi_pour_email?: string | null;
+	saisi_pour_affichage?: string | null;
+}
+
+export interface Ticket extends PorteSaisiPourLu {
 	id: number;
 	numero: string;
 	titre: string;
@@ -67,11 +91,6 @@ export interface Ticket {
 	fichiers_urls?: string[];
 	destinataire_syndic?: boolean;
 	destinataire_cs?: boolean;
-	/** « Saisi pour » — le CS peut ouvrir un ticket au nom d'un tiers (section 2). */
-	saisi_pour_user_id?: number | null;
-	saisi_pour_nom?: string | null;
-	saisi_pour_email?: string | null;
-	saisi_pour_affichage?: string | null;
 	/**  À QUI le ticket appartient : le « Saisi pour » s'il existe, l'auteur
 	 *   sinon. C'est ce nom que le fil affiche et que la case « Envoyer une
 	 *   copie à … » annonce — le même, parce que c'est la même personne qui
@@ -216,7 +235,7 @@ export interface SourceAffiche {
 	epingle: boolean;
 }
 
-export interface Publication {
+export interface Publication extends PorteSaisiPourLu {
 	id: number;
 	titre: string;
 	contenu: string;

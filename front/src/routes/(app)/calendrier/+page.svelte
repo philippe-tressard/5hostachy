@@ -2,6 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import OngletArchivesCalendrier from '$lib/components/OngletArchivesCalendrier.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
+	import { evenementDepuis, evenementVierge } from '$lib/evenement-formulaire';
 	import VueKanbanCalendrier from '$lib/components/VueKanbanCalendrier.svelte';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
@@ -94,26 +95,7 @@
 	 *   ⚠️ Tous les champs y figurent, y compris les booléens : un champ absent
 	 *   n'existe pas dans le type inféré de `form`, et tous ses usages passent en
 	 *   erreur TypeScript. */
-	const formulaireVierge = (debut = '') => ({
-		titre: '',
-		description: '',
-		type: 'autre',
-		lieu: '',
-		debut,
-		debut_heure: '',
-		fin: '',
-		statut_kanban: '',
-		prestataire_id: '',
-		frequence_type: '',
-		frequence_valeur: '',
-		affichable: true,
-		epingle: false,
-		reserve_cs: false,
-		partager_whatsapp: false,
-		envoyer_syndic: false,
-		envoyer_cs: false,
-	});
-	let form = formulaireVierge();
+	let form = evenementVierge();
 	let formPerimetreCible: string[] = perimetreDefautListe();
 	let submitting = false;
 
@@ -282,7 +264,7 @@
 	let fichiersUrls: string[] = [];
 
 	function resetForm() {
-		form = formulaireVierge(_now.toISOString().slice(0, 10));
+		form = evenementVierge(_now.toISOString().slice(0, 10));
 		formPerimetreCible = perimetreDefautListe();
 		epingleInitial = false;
 		editId = null;
@@ -291,25 +273,7 @@
 	}
 
 	function startEdit(ev: any) {
-		form = {
-			titre: ev.titre,
-			description: ev.description ?? '',
-			type: ev.type,
-			lieu: ev.lieu ?? '',
-			debut: ev.debut?.slice(0, 10) ?? '',
-			debut_heure: ev.debut?.slice(11, 16) ?? '',
-			fin: ev.fin?.slice(0, 16) ?? '',
-			statut_kanban: ev.statut_kanban ?? '',
-			prestataire_id: ev.prestataire_id ? String(ev.prestataire_id) : '',
-			frequence_type: ev.frequence_type ?? '',
-			frequence_valeur: ev.frequence_valeur ? String(ev.frequence_valeur) : '',
-			affichable: ev.affichable ?? true,
-			epingle: ev.epingle ?? false,
-			reserve_cs: ev.reserve_cs ?? false,
-			partager_whatsapp: ev.partager_whatsapp ?? false,
-			envoyer_syndic: ev.envoyer_syndic ?? false,
-			envoyer_cs: ev.envoyer_cs ?? false,
-		};
+		form = evenementDepuis(ev);
 		// Mémorisé pour que l'avertissement de plafond ne recompte pas l'événement
 		// en cours d'édition comme un épinglage supplémentaire.
 		epingleInitial = form.epingle;
