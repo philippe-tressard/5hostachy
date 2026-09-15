@@ -34,7 +34,7 @@ from .commun import (
     destinataires_syndic_cs,
     libelle_evolution,
 )
-from app.utils.noms import nom_affiche
+from app.utils.noms import contexte_personne, nom_affiche
 from app.utils.liens import base_site, nom_site
 
 
@@ -191,7 +191,7 @@ def contexte_ticket_syndic(
 
     ctx = {
         "ticket": _contexte_ticket(ticket),
-        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "auteur": contexte_personne(user),
         **contexte_site(cfg),
         "is_commentaire": bool(commentaire and commentaire.strip()),
         "commentaire": commentaire or "",
@@ -266,7 +266,7 @@ def envoyer_email_externe(
 
     ctx = {
         "ticket": _contexte_ticket(ticket),
-        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "auteur": contexte_personne(user),
         "date_ticket": fmt_paris(ticket.cree_le),
         "date_commentaire": fmt_paris(datetime.utcnow()),
         **contexte_site(cfg),
@@ -319,7 +319,7 @@ def _alerter_bug(
                 "description": ticket.description,
                 "categorie": ticket.categorie,
             },
-            "auteur": {"prenom": user.prenom, "nom": user.nom, "email": user.email},
+            "auteur": contexte_personne(user, email=user.email),
             "residence": {"nom": nom_site(site_cfg.get("site_nom"), cfg.get("site_nom"))},
             "app": {"url": base_site(site_cfg.get("site_url") or cfg.get("site_url"))},
         },

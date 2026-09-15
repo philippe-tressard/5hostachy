@@ -27,7 +27,7 @@ from app.schemas import CommandeAccesCreate, CommandeAccesRead
 from app.routers.acces.vues import AccesOut
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 from app.utils.destinataires import membres_cs_notifiables
-from app.utils.noms import nom_affiche
+from app.utils.noms import contexte_personne, nom_affiche
 
 router = APIRouter()
 
@@ -259,7 +259,7 @@ def creer_commande(
             context={
                 "type": body.type,
                 "lot": {"numero": lot_numero},
-                "demandeur": {"prenom": user.prenom, "nom": user.nom},
+                "demandeur": contexte_personne(user),
             },
         )
 

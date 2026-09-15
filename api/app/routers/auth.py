@@ -37,6 +37,7 @@ from app.utils.limiter import limiter
 from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
 from app.utils.liens import base_site, nom_site
 
+from app.utils.noms import contexte_personne
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
 
@@ -158,11 +159,7 @@ def register(
                 code="compte_en_attente",
                 to=target_email,
                 context={
-                    "utilisateur": {
-                        "prenom": user.prenom,
-                        "nom": user.nom,
-                        "email": user.email,
-                    },
+                    "utilisateur": contexte_personne(user, email=user.email),
                     "residence": {
                         "nom": nom_site(site_cfg.get("site_nom"), cfg.get("site_nom")),
                     },

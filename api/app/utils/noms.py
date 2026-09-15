@@ -43,3 +43,56 @@ def nom_affiche(prenom: Optional[str], nom: Optional[str]) -> str:
     prenom = (prenom or "").strip()
     nom = (nom or "").strip().upper()
     return " ".join(p for p in (prenom, nom) if p)
+
+
+def contexte_personne(personne, **extras) -> dict:
+    """Ce qu'un COURRIEL sait d'une personne — avec le nom **déjà rendu**.
+
+    ## Pourquoi cette fonction existe (#959, 15/09/2026)
+
+    La règle « Prénom NOM » s'appliquait partout **sauf** là où le nom sort de
+    l'application et arrive chez quelqu'un : dix-sept points d'envoi passaient
+    le nom brut…
+
+        "auteur": {"prenom": user.prenom, "nom": user.nom}
+
+    …et le gabarit Jinja le composait lui-même :
+
+        {{ auteur.prenom }} {{ auteur.nom }}
+
+    Le destinataire lisait donc le nom **tel qu'il a été tapé à l'inscription** —
+    « Jean-Sébastien CourT », le défaut arbitré le 31/08/2026, sur la surface la
+    plus visible du produit.
+
+    🔴 **Composer dans le gabarit, c'est composer dix-sept fois.** Un gabarit ne
+    peut pas appeler `nom_affiche` : il est stocké en base et rendu par Jinja. La
+    seule place où la règle peut s'appliquer est donc **ici**, avant l'envoi.
+
+    ## `affiche` s'ajoute, `prenom` et `nom` ne disparaissent pas
+
+    ⚠️ Les modèles sont **administrables** : ils vivent en base, et un gabarit
+    personnalisé peut employer `{{ auteur.nom }}`. Retirer la clé le ferait
+    échouer à l'envoi — sans erreur visible, exactement le défaut du modèle
+    BOUCHON (mémoire `project_modele_email_bouchon`). On ajoute donc une clé,
+    on n'en retire aucune.
+
+    Ce sont les gabarits **du dépôt** qui emploient `affiche`, et
+    `test_email_templates.py` refuse qu'un seul d'entre eux recompose un nom.
+
+    ## Ne pas confondre avec s'ADRESSER à quelqu'un
+
+    `{{ destinataire.prenom }}` — « Bonjour Jean, » — n'est pas concerné : on ne
+    l'identifie pas, on lui parle. C'est la distinction que l'en-tête de ce
+    module pose entre `nom_affiche` et `_nom_presentable`, et la respecter est ce
+    qui évite des courriels qui hurlent « Bonjour DUPONT ».
+
+    :param extras: les clés propres à ce courriel — `email`, `statut`… Elles
+        passent telles quelles : la fonction dit comment un nom s'affiche, pas ce
+        qu'un message a le droit de savoir.
+    """
+    return {
+        "prenom": personne.prenom or "",
+        "nom": personne.nom or "",
+        "affiche": nom_affiche(personne.prenom, personne.nom),
+        **extras,
+    }

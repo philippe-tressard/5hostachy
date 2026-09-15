@@ -38,6 +38,7 @@ from app.utils.destinataires import (
 from app.utils.email import send_email_group
 from app.utils.liens import lien_element
 from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
+from app.utils.noms import contexte_personne
 from app.utils.whatsapp import (
     config_whatsapp,
     envoyer_whatsapp_avec_log,
@@ -89,7 +90,7 @@ def contexte_annonce_hall(annonce: AnnonceHall, user: Utilisateur) -> dict:
             #  Le bouton du gabarit est conditionné à cette clé — voir `lien_affiche`.
             "lien": lien_affiche(annonce),
         },
-        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "auteur": contexte_personne(user),
     }
 
 

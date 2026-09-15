@@ -10,7 +10,7 @@ MODELES = [
     ("ticket_bug_admin", "Ticket bug — notification admin site",
      "Bug signalé via Tickets — {{ ticket.titre }} — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">⚠ Bug signalé</h2>'
-     '<p style="margin:0 0 12px">Un ticket de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.prenom }} {{ auteur.nom }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
+     '<p style="margin:0 0 12px">Un ticket de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.affiche }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#FDF0F0;padding:16px;border-left:4px solid #c0392b">'
      '<p style="margin:0 0 4px;font-weight:700;font-size:16px;color:#1A1A2E">{{ ticket.titre }}</p>'
@@ -33,7 +33,7 @@ MODELES = [
      '</h2>'
      '<p style="margin:0 0 16px">'
      '{% if is_commentaire %}'
-     'Un nouveau commentaire a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur.prenom }} {{ auteur.nom }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
+     'Un nouveau commentaire a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
      '{% else %}'
      'Un ticket a été transmis à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
      '{% endif %}'
@@ -41,7 +41,7 @@ MODELES = [
      '{% if is_commentaire %}'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}{% if commentaire_perimetre %} — 🔹 {{ commentaire_perimetre }}{% endif %}</p>'
+     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.affiche }} — {{ date_commentaire }}{% if commentaire_perimetre %} — 🔹 {{ commentaire_perimetre }}{% endif %}</p>'
      '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
      '{% if fichiers %}<p style="margin:8px 0 0;font-size:13px;color:#5A6070">📎 Pièces jointes disponibles ci-dessous.</p>{% endif %}'
      '</td></tr></table>'
@@ -52,7 +52,7 @@ MODELES = [
      '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %}{% if ticket.perimetre %} · 🔹 {{ ticket.perimetre }}{% endif %}{% if is_commentaire %} — Soumis le {{ date_creation }}{% endif %}</p>'
      '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
      '{% if ticket.description %}<div style="font-size:14px;color:#1A1A2E">{{ ticket.description | safe }}</div>{% endif %}'
-     '{% if not is_commentaire %}<p style="margin:8px 0 0;font-size:14px;color:#5A6070">Soumis par {{ auteur.prenom }} {{ auteur.nom }}</p>{% endif %}'
+     '{% if not is_commentaire %}<p style="margin:8px 0 0;font-size:14px;color:#5A6070">Soumis par {{ auteur.affiche }}</p>{% endif %}'
      '</td></tr></table>'
      '{% if is_commentaire and messages %}'
      '{% for m in messages %}'
@@ -102,7 +102,7 @@ MODELES = [
     ('ticket_nouveau_cs', 'Nouveau ticket — notification du conseil syndical',
      '🎫 Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}',
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">🎫 Nouveau ticket</h2>'
-     '<p style="margin:0 0 16px">Un ticket vient d' "'" 'être déposé par <strong>{{ auteur.prenom }} {{ auteur.nom }}</strong>.</p>'
+     '<p style="margin:0 0 16px">Un ticket vient d' "'" 'être déposé par <strong>{{ auteur.affiche }}</strong>.</p>'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#F2EFE9;padding:16px{% if urgent %};border-left:4px solid #c0392b{% endif %}">'
      '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %}{% if ticket.perimetre %} · 🔹 {{ ticket.perimetre }}{% endif %}{% if urgent %} · <strong style="color:#c0392b">URGENT</strong>{% endif %}</p>'
@@ -114,7 +114,7 @@ MODELES = [
     ("ticket_nouveau_message", "Nouveau message sur un ticket",
      "Nouveau message — Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💬 Nouveau message sur votre ticket</h2>'
-     '<p style="margin:0 0 16px">Un nouveau message a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur_action.prenom }} {{ auteur_action.nom }}\u202f:</p>'
+     '<p style="margin:0 0 16px">Un nouveau message a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur_action.affiche }}\u202f:</p>'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#F2EFE9;padding:16px">'
      '<p style="margin:0;font-size:14px;color:#1A1A2E">{{ message.contenu }}</p>'
@@ -187,7 +187,7 @@ MODELES = [
      '{% if is_commentaire %}'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}</p>'
+     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.affiche }} — {{ date_commentaire }}</p>'
      '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
      '{% if fichiers %}'
      '<p style="margin:8px 0 0;font-size:13px;color:#5A6070">📎 Voir les pièces jointes ci-dessous.</p>'
