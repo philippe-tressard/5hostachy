@@ -29,6 +29,7 @@ from app.models.acces import (
     VigikImport as VigikImport,
 )
 from app.utils.saisi_pour import SaisiPourMixin
+from app.models.evolution import EvolutionMixin
 
 
 # ──────────────────────────────────────────────
@@ -332,18 +333,13 @@ class MessageTicket(SQLModel, table=True):
     ticket: Optional[Ticket] = Relationship(back_populates="messages")
 
 
-class TicketEvolution(SQLModel, table=True):
+class TicketEvolution(EvolutionMixin, table=True):
     __tablename__ = "ticket_evolution"
     id: Optional[int] = Field(default=None, primary_key=True)
     ticket_id: int = Field(foreign_key="ticket.id")
     # type : commentaire | etat | reponse
-    type: str
-    contenu: Optional[str] = None
-    ancien_statut: Optional[str] = None
-    nouveau_statut: Optional[str] = None
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
+    #  Les sept champs communs — `type`, `contenu`, les deux statuts,
+    #  l'auteur, la date et les pièces jointes — viennent d'`EvolutionMixin`.
     #  Le périmètre que CETTE entrée déclare — `None` quand elle n'en parle pas,
     #  ce qui est le cas de l'immense majorité des commentaires : une évolution
     #  n'a pas de périmètre, elle en déclare un (migration 0154, #497).
@@ -393,18 +389,13 @@ class Publication(SaisiPourMixin, table=True):
     evolutions: List["PublicationEvolution"] = Relationship(back_populates="publication")
 
 
-class PublicationEvolution(SQLModel, table=True):
+class PublicationEvolution(EvolutionMixin, table=True):
     __tablename__ = "publication_evolution"
     id: Optional[int] = Field(default=None, primary_key=True)
     publication_id: int = Field(foreign_key="publication.id")
     # type : commentaire | etat — une correction est un `commentaire` préfixé « Correction : » (#433)
-    type: str
-    contenu: Optional[str] = None
-    ancien_statut: Optional[str] = None
-    nouveau_statut: Optional[str] = None
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
+    #  Les sept champs communs — `type`, `contenu`, les deux statuts,
+    #  l'auteur, la date et les pièces jointes — viennent d'`EvolutionMixin`.
 
     publication: Optional[Publication] = Relationship(back_populates="evolutions")
     auteur: Optional[Utilisateur] = Relationship()

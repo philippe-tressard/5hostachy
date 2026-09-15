@@ -17,7 +17,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, field_validator
 
-from app.schemas_communs import ListeJson
+from app.schemas_communs import EvolutionLue, ListeJson
 from app.utils.saisi_pour import SaisiPourEntree, SaisiPourSortie
 
 class PublicationCreate(SaisiPourEntree):
@@ -77,17 +77,10 @@ class PublicationUpdate(SaisiPourEntree):
     confidentiel: Optional[bool] = None
 
 
-class EvolutionRead(BaseModel):
-    id: int
+class EvolutionRead(EvolutionLue):
+    #  Les neuf champs communs viennent d'`EvolutionLue` — seule la clé du
+    #  porteur distingue les trois historiques.
     publication_id: int
-    type: str
-    contenu: Optional[str] = None
-    ancien_statut: Optional[str] = None
-    nouveau_statut: Optional[str] = None
-    auteur_id: int
-    auteur_nom: Optional[str] = None
-    cree_le: datetime
-    fichiers_urls: ListeJson = []
 
     class Config:
         from_attributes = True

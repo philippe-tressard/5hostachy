@@ -43,8 +43,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
 from app.utils.saisi_pour import SaisiPourMixin
+from app.models.evolution import EvolutionMixin
 
 
 class TypeEvenement(str, Enum):
@@ -118,7 +119,7 @@ class Evenement(SaisiPourMixin, table=True):
     envoyer_cs: bool = False
 
 
-class EvenementEvolution(SQLModel, table=True):
+class EvenementEvolution(EvolutionMixin, table=True):
     __tablename__ = "evenement_evolution"
 
     id: Optional[int] = Field(default=None, primary_key=True)
