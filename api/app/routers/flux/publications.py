@@ -25,7 +25,8 @@ from app.routers.publications import (
 from app.utils.archivage import seuil_archivage_jours
 
 from app.utils.photos import parse_photos
-from .commun import ContexteFlux, auteur_nom, badges_marqueurs, perimetres_de, strip_html
+from app.utils.copie_auteur import proprietaire
+from .commun import ContexteFlux, badges_marqueurs, perimetres_de, strip_html
 from .schemas import FluxItem
 
 #  Les libellés viennent de `publications/commun.py` (#433). Cette copie-ci en
@@ -70,7 +71,8 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
         badges = badges_marqueurs(p)
         if p.statut and p.statut != "publie":
             badges.append(STATUT_LABELS.get(p.statut, p.statut))
-        auteur = auteur_nom(ctx.session, p.auteur_id)
+        #  Le PROPRIÉTAIRE, pas l'auteur : le « Saisi pour » s'il existe (12/09).
+        auteur = proprietaire(ctx.session, p)[0]
         #  500 car. : assez pour déborder 3 lignes en pleine largeur → le clamp-3
         #  (front) coupe proprement en fin de 3ᵉ ligne. 300 laissait la 3ᵉ ligne
         #  incomplète.
