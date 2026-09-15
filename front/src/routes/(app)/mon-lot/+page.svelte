@@ -28,6 +28,7 @@
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { routeOnglet, routeSousOnglet } from '$lib/routes-onglets';
+	import { bailVierge, champsLocataire } from '$lib/bail';
 
 	$: _pc = getPageConfig($configStore, 'mon-lot', defautsDePage('mon-lot'));
 	$: _siteNom = $siteNomStore;
@@ -115,15 +116,7 @@
 	// Nouveau bail
 	let showNewBail = false;
 	let newBailLotIds = new Set<number>();
-	let newBail = {
-		locataire_nom: '',
-		locataire_prenom: '',
-		locataire_email: '',
-		locataire_telephone: '',
-		date_entree: '',
-		date_sortie_prevue: '',
-		notes: '',
-	};
+	let newBail = bailVierge();
 	let savingBail = false;
 	let newBailLocataireId: number | null = null;
 
@@ -139,14 +132,7 @@
 
 	// Edition locataire
 	let bailEdite: Bail | null = null;
-	let editLocataire = {
-		locataire_nom: '',
-		locataire_prenom: '',
-		locataire_email: '',
-		locataire_telephone: '',
-		date_sortie_prevue: '',
-		notes: '',
-	};
+	let editLocataire = champsLocataire();
 	let editLocataireId: number | null = null;
 
 	// Gestion des accès (Vigik / TC) par bail
@@ -219,15 +205,7 @@
 			baux = [...nouvellesBaux, ...baux];
 			showNewBail = false;
 			newBailLotIds = new Set();
-			newBail = {
-				locataire_nom: '',
-				locataire_prenom: '',
-				locataire_email: '',
-				locataire_telephone: '',
-				date_entree: '',
-				date_sortie_prevue: '',
-				notes: '',
-			};
+			newBail = bailVierge();
 			//  L'état de la RECHERCHE de locataire vit dans `FormulaireBail` : il
 			//  n'a d'existence que pendant la saisie. Le formulaire est démonté par
 			//  `showNewBail = false`, donc il repart vierge — rien à réinitialiser
@@ -269,14 +247,7 @@
 	function ouvrirEditionLocataire(bail: Bail) {
 		bailEdite = bail;
 		editLocataireId = bail.locataire_id ?? null;
-		editLocataire = {
-			locataire_nom: bail.locataire_nom ?? '',
-			locataire_prenom: bail.locataire_prenom ?? '',
-			locataire_email: bail.locataire_email ?? '',
-			locataire_telephone: bail.locataire_telephone ?? '',
-			date_sortie_prevue: bail.date_sortie_prevue ?? '',
-			notes: bail.notes ?? '',
-		};
+		editLocataire = champsLocataire(bail);
 		//  L'état de la recherche — compte associé, résultats, suggestions — vit
 		//  dans `FormulaireBail` : il n'existe que pendant la saisie, et le
 		//  formulaire est monté à l'ouverture, démonté à la fermeture.

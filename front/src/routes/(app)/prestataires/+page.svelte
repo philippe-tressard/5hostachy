@@ -27,6 +27,8 @@
 	import {
 		EQUIPEMENTS as equipements,
 		TYPES_PRESTATAIRE as typesPrestataire,
+		contratDepuis,
+		contratVierge,
 	} from '$lib/prestataires';
 	import { minuitDuJour, typeEquipementDuContrat } from '$lib/reporting';
 	import { relire, telephonesDe } from '$lib/utils';
@@ -133,23 +135,10 @@
 	let contratFichiersEnAttente: File[] = [];
 	let editContratId: number | null = null;
 
-	let contratForm = {
-		copropriete_id: 1,
-		//  Le PÉRIMÈTRE remplace `batiment_id`, qui n'était rempli par aucun
-		//  champ (10/09/2026). Le serveur en dérive le bâtiment.
-		perimetre_cible: perimetreDefautListe(),
-		prestataire_id: '',
-		type_equipement: 'autre',
-		libelle: '',
-		numero_contrat: '',
-		date_debut: new Date().toISOString().slice(0, 10),
-		duree_initiale_valeur: '',
-		duree_initiale_unite: 'mois',
-		frequence_type: '',
-		frequence_valeur: '',
-		prochaine_visite: '',
-		notes: '',
-	};
+	//  La forme du formulaire vit dans `$lib/prestataires` : elle était énumérée
+	//  TROIS fois ici — déclaration, remise à zéro, édition —, si bien qu'ajouter
+	//  un champ demandait de le poser aux trois endroits.
+	let contratForm = contratVierge(perimetreDefautListe());
 
 	// ── Documents ─────────────────────────────────────────────────
 	let contratDocsMap: Record<number, any[]> = {};
@@ -364,21 +353,7 @@
 	}
 
 	function resetContratForm() {
-		contratForm = {
-			copropriete_id: 1,
-			perimetre_cible: perimetreDefautListe(),
-			prestataire_id: '',
-			type_equipement: 'autre',
-			libelle: '',
-			numero_contrat: '',
-			date_debut: new Date().toISOString().slice(0, 10),
-			duree_initiale_valeur: '',
-			duree_initiale_unite: 'mois',
-			frequence_type: '',
-			frequence_valeur: '',
-			prochaine_visite: '',
-			notes: '',
-		};
+		contratForm = contratVierge(perimetreDefautListe());
 		editContratId = null;
 	}
 
@@ -429,21 +404,11 @@
 	}
 
 	function startEditContrat(c: any) {
-		contratForm = {
-			copropriete_id: c.copropriete_id,
-			perimetre_cible: c.perimetre_cible?.length ? c.perimetre_cible : perimetreDefautListe(),
-			prestataire_id: String(c.prestataire_id ?? ''),
-			type_equipement: typeEquipementDuContrat(c, prestataires),
-			libelle: c.libelle,
-			numero_contrat: c.numero_contrat ?? '',
-			date_debut: c.date_debut,
-			duree_initiale_valeur: c.duree_initiale_valeur ?? '',
-			duree_initiale_unite: c.duree_initiale_unite ?? 'mois',
-			frequence_type: c.frequence_type ?? '',
-			frequence_valeur: c.frequence_valeur ?? '',
-			prochaine_visite: c.prochaine_visite ?? '',
-			notes: c.notes ?? '',
-		};
+		contratForm = contratDepuis(
+			c,
+			perimetreDefautListe(),
+			typeEquipementDuContrat(c, prestataires),
+		);
 		editContratId = c.id;
 		contratFormOuvert = false;
 	}

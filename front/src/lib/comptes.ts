@@ -125,3 +125,47 @@ export async function validerCompte(
 //  lieu de dire quoi faire, alors que #519 avait tranché le contraire.
 //
 //  Elle vit désormais dans `$lib/erreurs`, et là seulement.
+
+/**
+ * **Le formulaire d'un compte, en administration** — vierge ou repris.
+ *
+ * ## 🔴 Pourquoi ici (15/09/2026)
+ *
+ * Les **huit mêmes clés** étaient énumérées **deux fois** dans
+ * `admin/+page.svelte` : la déclaration et `openEdit()`. Ajouter un champ
+ * demandait de le poser aux deux endroits — et un champ manqué à l'un des deux
+ * donne un formulaire qui affiche une valeur vide sur un compte qui la porte,
+ * puis l'efface à l'enregistrement. **En silence.**
+ *
+ * C'est le troisième écran de la journée à porter ce défaut, après le
+ * calendrier (2 écritures), les contrats (3) et les baux (4).
+ */
+export interface FormulaireCompte {
+	nom: string;
+	prenom: string;
+	email: string;
+	telephone: string;
+	societe: string;
+	statut: string;
+	batiment_id: number | null;
+	actif: boolean;
+}
+
+/**
+ * Le formulaire d'un compte — vide, ou rempli depuis un compte existant.
+ *
+ * ⚠️ `actif` vaut `true` par défaut : un compte qu'on crée est actif, et
+ * proposer l'inverse ferait d'un oubli de case une désactivation.
+ */
+export function formulaireCompte(u?: Record<string, any> | null): FormulaireCompte {
+	return {
+		nom: u?.nom ?? '',
+		prenom: u?.prenom ?? '',
+		email: u?.email ?? '',
+		telephone: u?.telephone ?? '',
+		societe: u?.societe ?? '',
+		statut: u?.statut ?? '',
+		batiment_id: u?.batiment_id ?? null,
+		actif: u?.actif ?? true,
+	};
+}
