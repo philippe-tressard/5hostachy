@@ -97,9 +97,30 @@ export const PUBLICATION: EntiteDeclaree = {
 		{
 			//  Les quatre options qui DÉCRIVENT la publication — voir l'en-tête de
 			//  ce fichier pour la raison qui les sort de la Diffusion.
+			//
+			//  ✅ « SAISI POUR » rejoint la section le 15/09/2026, sur demande :
+			//  *« ajouter la section Saisi pour, présente dans les formulaires de
+			//  tickets, pour actualité et calendrier »*. Même notion, même
+			//  stockage, même composant (`ChampSaisiPour`) — un membre du conseil
+			//  syndical dépose au nom d'un résident, qui peut alors corriger ce qui
+			//  parle de lui (`ux-patterns` §15).
+			//
+			//  ⚠️ **Il est en PREMIER**, avant les options : c'est l'ordre du
+			//  ticket, où « Catégorie » puis « Saisi pour » qualifient l'objet avant
+			//  ce qui décide de sa diffusion. Deux écrans qui rangent la même
+			//  section différemment se lisent comme deux produits.
 			id: 'specifiques',
-			objet: 'Épinglage · Urgence · Brouillon · Confidentiel',
-			titreEcran: 'Options de publication',
+			objet: 'Saisi pour · Épinglage · Urgence · Brouillon · Confidentiel',
+			titreEcran: ['Saisi pour', 'Options de publication'],
+			//  ⚠️ **« Saisi pour » n'est PAS rendu à l'évolution**, alors que la
+			//  section, elle, y est ouverte pour les options. C'est la limite connue
+			//  de R4 (#436) : elle déclare des SECTIONS, jamais des champs, donc
+			//  cette divergence-là ne peut vivre qu'ici, en commentaire.
+			//
+			//  La raison est celle du ticket, mot pour mot : « Saisi pour »
+			//  appartient à l'actualité, pas à l'entrée du fil. `EvolForm` ne l'a
+			//  jamais proposé et ne le propose toujours pas — arbitré le 15/09/2026,
+			//  après avoir vérifié dans le code et non dans le commentaire.
 			//  🔴 OUVERTE À L'ÉVOLUTION (05/09/2026), sur demande de l'utilisateur :
 			//  *« les sections Options de publication, Périmètre et Destinataires
 			//  doivent être visibles même pour chaque commentaire ; tu remets le

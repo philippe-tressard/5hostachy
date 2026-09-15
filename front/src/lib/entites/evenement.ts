@@ -61,15 +61,23 @@ export const EVENEMENT: EntiteDeclaree = {
 			//  qu'avec une fréquence. C'est une divergence de CHAMP à l'intérieur
 			//  d'une section, que R4 ne sait pas déclarer (#436) — elle est ici en
 			//  commentaire, donc invisible au contrôle, et c'est dit.
+			//  ✅ « SAISI POUR » rejoint la section le 15/09/2026, sur demande, et
+			//  dans le même lot que l'actualité : même notion, même stockage, même
+			//  composant (`ChampSaisiPour`).
+			//
+			//  ⚠️ Il vient APRÈS « Détails », comme « Saisi pour » vient après
+			//  « Catégorie » sur le ticket : ce qui qualifie l'objet d'abord, au
+			//  nom de qui il est déposé ensuite.
 			id: 'specifiques',
-			objet: 'Type · Date de début · Heure · Fin · Lieu · Prestataire · Fréquence',
-			titreEcran: 'Détails',
+			objet: 'Type · Date de début · Heure · Fin · Lieu · Prestataire · Fréquence · Saisi pour',
+			titreEcran: ['Détails', 'Saisi pour'],
 			absente: {
 				evolution: {
 					motif: 'hérité',
 					explication:
-						"Le type, les dates, le lieu et le prestataire appartiennent à l'événement. " +
-						'Une entrée du fil raconte ce qui lui arrive, elle ne le reprogramme pas.',
+						'Le type, les dates, le lieu, le prestataire et « Saisi pour » appartiennent ' +
+						"à l'événement. Une entrée du fil raconte ce qui lui arrive, elle ne le " +
+						'reprogramme pas et ne change pas au nom de qui il a été déposé.',
 				},
 			},
 		},

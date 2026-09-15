@@ -46,12 +46,16 @@
 	import SectionsSpecifiquesTicket from '$lib/components/SectionsSpecifiquesTicket.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
+	import { CATEGORIES_TICKET, optionsDuTicket, optionsVersTicket } from '$lib/tickets';
+	//  🔴 Les deux conversions de « Saisi pour » vivent dans `$lib/saisiPour`
+	//  depuis le 15/09/2026 : elles servent aussi les actualités et le
+	//  calendrier, et trois écritures d'une même règle divergent au premier ajout.
 	import {
-		CATEGORIES_TICKET,
-		optionsDuTicket,
-		optionsVersTicket,
+		chargeUtile as saisiPourChargeUtile,
+		modeDepuis as saisiPourModeDepuis,
+		motifIncomplet as saisiPourMotifIncomplet,
 		type ModeSaisiPour,
-	} from '$lib/tickets';
+	} from '$lib/saisiPour';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
@@ -175,11 +179,7 @@
 	//  le serveur sait EFFACER les `saisi_pour_*` (il lit la PRÉSENCE du champ, pas
 	//  sa non-nullité). L'ouvrir sans pré-remplir aurait proposé « En mon nom » sur un
 	//  ticket saisi pour quelqu'un — et l'aurait effacé au premier enregistrement.
-	let modeSaisiPour: ModeSaisiPour = ticket?.saisi_pour_user_id
-		? 'resident'
-		: ticket?.saisi_pour_nom
-			? 'exterieur'
-			: 'moi';
+	let modeSaisiPour: ModeSaisiPour = saisiPourModeDepuis(ticket);
 	let saisiPourUserId: number | null = ticket?.saisi_pour_user_id ?? null;
 	let saisiPourNom = ticket?.saisi_pour_nom ?? '';
 	let saisiPourEmail = ticket?.saisi_pour_email ?? '';
@@ -239,8 +239,11 @@
 			error = 'Titre et description sont obligatoires.';
 			return false;
 		}
-		if ($isCS && modeSaisiPour === 'exterieur' && !saisiPourNom.trim()) {
-			error = 'Veuillez saisir le nom de la personne.';
+		const manque = $isCS
+			? saisiPourMotifIncomplet(modeSaisiPour, saisiPourUserId, saisiPourNom)
+			: null;
+		if (manque) {
+			error = manque;
 			return false;
 		}
 		error = '';
@@ -288,10 +291,12 @@
 								destinataire_syndic: destinataireSyndic,
 								destinataire_cs: destinataireCs,
 								partager_whatsapp: partagerWhatsapp,
-								saisi_pour_user_id: modeSaisiPour === 'resident' ? saisiPourUserId : null,
-								saisi_pour_nom: modeSaisiPour === 'exterieur' ? saisiPourNom.trim() || null : null,
-								saisi_pour_email:
-									modeSaisiPour === 'exterieur' ? saisiPourEmail.trim() || null : null,
+								...saisiPourChargeUtile(
+									modeSaisiPour,
+									saisiPourUserId,
+									saisiPourNom,
+									saisiPourEmail,
+								),
 							}
 						: {}),
 				});
@@ -320,12 +325,13 @@
 				//  pour le CS : un résident ne doit pas ouvrir un ticket déjà « Résolu ».
 				payload.statut = statut;
 				Object.assign(payload, optionsVersTicket(options));
-				if (modeSaisiPour === 'resident' && saisiPourUserId) {
-					payload.saisi_pour_user_id = saisiPourUserId;
-				} else if (modeSaisiPour === 'exterieur') {
-					if (saisiPourNom.trim()) payload.saisi_pour_nom = saisiPourNom.trim();
-					if (saisiPourEmail.trim()) payload.saisi_pour_email = saisiPourEmail.trim();
-				}
+				//  Les TROIS champs partent, y compris à `null` : `create_ticket` les
+				//  affecte nommément, un `null` y est donc sans effet — et c'est la
+				//  même charge utile qu'en correction, où la présence fait la décision.
+				Object.assign(
+					payload,
+					saisiPourChargeUtile(modeSaisiPour, saisiPourUserId, saisiPourNom, saisiPourEmail),
+				);
 			}
 			const t = await ticketsApi.create(payload);
 			toast('success', `Ticket ${t.numero} créé avec succès`);

@@ -20,6 +20,9 @@
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { EVENEMENT } from '$lib/entites/evenement';
+	import SectionSaisiPour from '$lib/components/SectionSaisiPour.svelte';
+	import type { SaisiPourValeurs } from '$lib/saisiPour';
+	import { toast } from '$lib/components/Toast.svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	import { calendrier as calApi } from '$lib/api';
@@ -70,6 +73,14 @@
 	 *   sur AUCUNE section (recouvrement de 100 %, mesuré par #432). La prop existe
 	 *   pour que ce fait soit **déclaré et vérifié**, et non simplement vrai. */
 	export let modeEdition = false;
+
+	//  « Saisi pour » (section 2). L'état de saisie vit dans `SectionSaisiPour` ;
+	//  ce qui en SORT est recopié dans `form`, d'où la page compose sa charge
+	//  utile par `...formData`. Aucune ligne n'est donc ajoutée à l'écran, qui est
+	//  au-dessus du plafond de modularité.
+	let saisiPour: Required<SaisiPourValeurs>;
+	let motifSaisiPour: string | null = null;
+	$: if (saisiPour) Object.assign(form, saisiPour);
 
 	/**  🔴 La présence d'une section ne se décide plus ici : elle se lit dans la
 	 *   déclaration `EVENEMENT`, via `sectionPresente(EVENEMENT, etat, …)`. Les six
@@ -170,7 +181,18 @@
 	      le contenu sur la classe par défaut (02/09/2026). Le laisser en
 	      poserait un SECOND, et le padding serait compté deux fois. -->
 	<div>
-		<form on:submit|preventDefault={soumettre}>
+		<form
+			on:submit|preventDefault={() => {
+				//  ⚠️ La garde est ICI et non dans la page : elle est au-dessus du
+				//  plafond de modularité, et cette règle appartient de toute façon au
+				//  formulaire qui rend la section.
+				if (motifSaisiPour) {
+					toast('error', motifSaisiPour);
+					return;
+				}
+				soumettre();
+			}}
+		>
 			<!--  1. Titre. -->
 			<SectionFormulaire premiere>
 				<div class="field champ-large">
@@ -240,6 +262,17 @@
 					</div>
 				</SectionFormulaire>
 			{/if}
+
+			<!--  … et « Saisi pour », second champ nommé de la MÊME section 2 :
+			      la déclaration la range ainsi (`['Détails', 'Saisi pour']`), comme
+			      le ticket range « Catégorie » puis « Saisi pour ». Ce qui qualifie
+			      l'objet d'abord, au nom de qui il est déposé ensuite. -->
+			<SectionSaisiPour
+				presente={sectionPresente(EVENEMENT, etat, 'specifiques')}
+				objet={form}
+				bind:charge={saisiPour}
+				bind:motif={motifSaisiPour}
+			/>
 
 			<!--  3. Workflow — où en est cet événement.
 	      🔴 LE KANBAN *EST* LE WORKFLOW (18/08/2026) : ses colonnes répondent

@@ -76,6 +76,27 @@ class Evenement(SQLModel, table=True):
     perimetre: str = "résidence"  # résidence | bâtiment
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     auteur_id: int = Field(foreign_key="utilisateur.id")
+    #  🔴 « SAISI POUR » — au nom de qui ceci est déposé (15/09/2026).
+    #
+    #  Mêmes trois colonnes que `Ticket`, et ce n'est pas une recopie de
+    #  commodité : c'est la MÊME notion, donc le même stockage. Un utilisateur
+    #  inscrit remplit `saisi_pour_user_id` ; une personne extérieure ne laisse
+    #  qu'un nom et, s'il est connu, un courriel.
+    #
+    #  ⚠️ **Poser ces colonnes ÉTEND un droit**, en silence si on ne le dit pas :
+    #  `auth/deps.py::est_auteur` lit `saisi_pour_user_id` par `getattr`, sans
+    #  connaître le type de l'objet. La personne nommée peut donc corriger ce qui
+    #  parle d'elle — exactement ce que la règle veut (`ux-patterns` §15 : un
+    #  membre du CS qui dépose au nom d'un résident ne le dépossède pas), mais
+    #  c'est une conséquence, pas un effet de bord à découvrir.
+    #
+    #  ⚠️ **PAS de `foreign_key=`** : ces colonnes arrivent par `add_column` sur
+    #  une table existante, et SQLite refuse d'y ajouter une contrainte. La
+    #  déclarer ici ferait diverger une base neuve (`create_all`) d'une base
+    #  migrée — `test_migrations.py` refuse les deux moitiés de ce défaut.
+    saisi_pour_user_id: Optional[int] = Field(default=None)
+    saisi_pour_nom: Optional[str] = None
+    saisi_pour_email: Optional[str] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: Optional[datetime] = None
     archivee: bool = False

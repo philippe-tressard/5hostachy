@@ -48,12 +48,30 @@ class PublicationCreate(BaseModel):
     envoyer_auteur: bool = False
     annonce_hall: bool = False  # génère l'affiche de hall + envoi au CS du périmètre
     confidentiel: bool = False  # lecture réservée au périmètre visé (#347)
+    #  « SAISI POUR » — au nom de qui le conseil syndical dépose ceci.
+    #  📖 La notion, les trois champs et ce qu'ils entraînent : `utils/saisi_pour.py`.
+    #
+    #  ⚠️ Pas de garde `si CS` ici, contrairement au ticket : cet endpoint exige
+    #  déjà `require_cs_or_admin`, donc quiconque l'atteint a le droit. Recopier
+    #  la condition du ticket ferait croire qu'un résident peut arriver jusque-là.
+    saisi_pour_user_id: Optional[int] = None
+    saisi_pour_nom: Optional[str] = None
+    saisi_pour_email: Optional[str] = None
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
 class PublicationUpdate(BaseModel):
     titre: Optional[str] = None
     contenu: Optional[str] = None
+    #  « Saisi pour » se CORRIGE, et se retire. Revenir à « En mon nom » suppose
+    #  que le serveur distingue « champ absent » de « champ remis à vide » : les
+    #  deux routeurs concernés emploient `model_dump(exclude_unset=True)`, qui le
+    #  fait nativement — un `null` transmis est dans le lot, un champ tu ne l'est
+    #  pas. C'est la dette qui a tenu ce champ fermé en édition sur les tickets
+    #  jusqu'au 18/08/2026, et elle ne se rouvre pas ici.
+    saisi_pour_user_id: Optional[int] = None
+    saisi_pour_nom: Optional[str] = None
+    saisi_pour_email: Optional[str] = None
     epingle: Optional[bool] = None
     urgente: Optional[bool] = None
     photos_urls: Optional[ListeJson] = None
@@ -145,6 +163,13 @@ class PublicationRead(BaseModel):
     envoyer_cs: bool = False
     annonce_hall: bool = False
     confidentiel: bool = False
+    saisi_pour_user_id: Optional[int] = None
+    saisi_pour_nom: Optional[str] = None
+    saisi_pour_email: Optional[str] = None
+    #  Le libellé prêt à afficher — composé par `utils/saisi_pour.affichage`, et
+    #  `None` quand l'objet est déposé en son nom propre. L'écran teste sa
+    #  présence ; il ne recompose pas le nom (`lint:noms` s'en assure).
+    saisi_pour_affichage: Optional[str] = None
     evolutions: List[EvolutionRead] = []
     auteur_nom: Optional[str] = None
 

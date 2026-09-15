@@ -287,14 +287,18 @@ export function ticketScope(t: {
 }
 
 /**
- * Au nom de qui le conseil syndical ouvre un ticket.
+ * Au nom de qui le conseil syndical dépose — RÉEXPORTÉ depuis `$lib/saisiPour`.
  *
- * Le type vivait dans `FormulaireTicket.svelte`, d'où il n'était pas importable :
- * un `export type` dans le `<script>` d'instance d'un composant n'est pas exporté.
- * Il appartient de toute façon au vocabulaire du ticket, pas à l'écran qui le
- * saisit — comme les statuts et les catégories juste au-dessus.
+ * ⚠️ Le type a déménagé le 15/09/2026, et le commentaire d'origine disait
+ * pourquoi il vivait ici : *« il appartient au vocabulaire du ticket »*. Ce
+ * n'est plus vrai — les actualités et le calendrier portent la même notion. Une
+ * justification qui cesse d'être vraie ne dort pas : elle fait rester au mauvais
+ * endroit ce qu'elle décrit.
+ *
+ * Il reste importable d'ici : trois composants l'écrivent ainsi, et un
+ * déplacement qui casse ses importateurs n'est pas un déplacement.
  */
-export type ModeSaisiPour = 'moi' | 'resident' | 'exterieur';
+export type { ModeSaisiPour } from './saisiPour';
 
 // ── Options de publication ───────────────────────────────────────────────────
 

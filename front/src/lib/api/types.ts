@@ -226,6 +226,14 @@ export interface Publication {
 	urgente: boolean;
 	auteur_id: number;
 	auteur_nom?: string;
+	//  « Saisi pour » — au nom de qui le conseil syndical a déposé (15/09/2026).
+	//  📖 `$lib/saisiPour` pour les deux conversions, `utils/saisi_pour.py` côté
+	//  serveur. `saisi_pour_affichage` est composé par l'API : l'écran ne
+	//  recompose pas un nom (`lint:noms`).
+	saisi_pour_user_id?: number | null;
+	saisi_pour_nom?: string | null;
+	saisi_pour_email?: string | null;
+	saisi_pour_affichage?: string | null;
 	photos_urls?: string[];
 	cree_le: string;
 	mis_a_jour_le?: string;

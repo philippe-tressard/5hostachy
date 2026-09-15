@@ -2,6 +2,9 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import OngletArchivesCalendrier from '$lib/components/OngletArchivesCalendrier.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
+	//  🔴 Les deux formes du formulaire vivent dans `$lib/evenements` depuis le
+	//  15/09/2026 : elles y étaient écrites DEUX fois, à deux cents lignes d'écart.
+	import { formulaireDepuis, formulaireVierge } from '$lib/evenements';
 	import VueKanbanCalendrier from '$lib/components/VueKanbanCalendrier.svelte';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
@@ -82,38 +85,6 @@
 	let expandedEvId: number | null = null;
 	let expandedKanbanId: number | null = null;
 
-	/**  Le formulaire vierge — écrit UNE fois (13/09/2026).
-	 *
-	 *   🔴 Ces dix-sept champs étaient déclarés DEUX fois, ici et dans
-	 *   `resetForm` : deux listes à tenir d'accord sans rien pour le vérifier, et
-	 *   l'ajout de `reserve_cs` (#939) demandait de penser aux deux. C'est la
-	 *   duplication que le plafond de modularité a fait remonter.
-	 *
-	 *   ⚠️ Une FONCTION, pas une constante : un objet partagé serait muté par le
-	 *   premier `bind:`, et le « vierge » cesserait de l'être.
-	 *
-	 *   ⚠️ Tous les champs y figurent, y compris les booléens : un champ absent
-	 *   n'existe pas dans le type inféré de `form`, et tous ses usages passent en
-	 *   erreur TypeScript. */
-	const formulaireVierge = (debut = '') => ({
-		titre: '',
-		description: '',
-		type: 'autre',
-		lieu: '',
-		debut,
-		debut_heure: '',
-		fin: '',
-		statut_kanban: '',
-		prestataire_id: '',
-		frequence_type: '',
-		frequence_valeur: '',
-		affichable: true,
-		epingle: false,
-		reserve_cs: false,
-		partager_whatsapp: false,
-		envoyer_syndic: false,
-		envoyer_cs: false,
-	});
 	let form = formulaireVierge();
 	let formPerimetreCible: string[] = perimetreDefautListe();
 	let submitting = false;
@@ -292,25 +263,7 @@
 	}
 
 	function startEdit(ev: any) {
-		form = {
-			titre: ev.titre,
-			description: ev.description ?? '',
-			type: ev.type,
-			lieu: ev.lieu ?? '',
-			debut: ev.debut?.slice(0, 10) ?? '',
-			debut_heure: ev.debut?.slice(11, 16) ?? '',
-			fin: ev.fin?.slice(0, 16) ?? '',
-			statut_kanban: ev.statut_kanban ?? '',
-			prestataire_id: ev.prestataire_id ? String(ev.prestataire_id) : '',
-			frequence_type: ev.frequence_type ?? '',
-			frequence_valeur: ev.frequence_valeur ? String(ev.frequence_valeur) : '',
-			affichable: ev.affichable ?? true,
-			epingle: ev.epingle ?? false,
-			reserve_cs: ev.reserve_cs ?? false,
-			partager_whatsapp: ev.partager_whatsapp ?? false,
-			envoyer_syndic: ev.envoyer_syndic ?? false,
-			envoyer_cs: ev.envoyer_cs ?? false,
-		};
+		form = formulaireDepuis(ev);
 		// Mémorisé pour que l'avertissement de plafond ne recompte pas l'événement
 		// en cours d'édition comme un épinglage supplémentaire.
 		epingleInitial = form.epingle;

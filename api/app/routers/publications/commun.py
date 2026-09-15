@@ -21,6 +21,7 @@ from app.utils.archivage import (
 )
 from app.utils.perimetres import a_portee_globale, parse_json_perimetres
 from app.utils.noms import nom_affiche
+from app.utils.saisi_pour import affichage as affichage_saisi_pour
 
 #  `_generer_annonce_hall` journalise l'échec de génération sans le propager :
 #  sans ce logger, l'`except` du module d'origine levait un `NameError` et
@@ -72,6 +73,10 @@ def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
     data = PublicationRead.model_validate(pub)
     auteur_pub = session.get(Utilisateur, pub.auteur_id)
     data.auteur_nom = nom_affiche(auteur_pub.prenom, auteur_pub.nom) if auteur_pub else "?"
+    #  Le libellé « Saisi pour », composé une seule fois pour tout le produit
+    #  (`utils/saisi_pour.affichage`). `None` quand l'objet est déposé en nom
+    #  propre : l'écran teste la présence pour décider d'afficher la mention.
+    data.saisi_pour_affichage = affichage_saisi_pour(session, pub)
     data.evolutions = evol_reads
     return data
 

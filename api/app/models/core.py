@@ -352,64 +352,24 @@ class TicketEvolution(SQLModel, table=True):
 
     ticket: Optional[Ticket] = Relationship(back_populates="evolutions")
     auteur: Optional[Utilisateur] = Relationship()
-
-
 # ──────────────────────────────────────────────
 #  Publications / Actualités
 # ──────────────────────────────────────────────
-
-class Publication(SQLModel, table=True):
-    __tablename__ = "publication"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    titre: str
-    contenu: str
-    perimetre: str = "résidence"  # résidence | bâtiment
-    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    epingle: bool = False
-    urgente: bool = False
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    publiee_le: Optional[datetime] = None
-    mis_a_jour_le: Optional[datetime] = None
-    photos_urls: Optional[str] = None  # JSON array — même convention que Ticket/Evenement
-    perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave|résidents
-    public_cible: Optional[str] = Field(default='["résidents"]')     # JSON: résidents|locataires|copropriétaires
-    # statut : publie (défaut, hors workflow) | en_cours | resolu | annule
-    statut: Optional[str] = "publie"
-    statut_change_le: Optional[datetime] = None
-    brouillon: bool = False
-    archivee: bool = False
-    partager_whatsapp: bool = False
-    envoyer_syndic: bool = False
-    envoyer_cs: bool = False
-    annonce_hall: bool = False  # génère une affiche de hall à la publication
-    #  Confidentiel : le périmètre redevient RESTRICTIF pour cette publication-là.
-    #  Depuis #339, une actualité ciblée sur un bâtiment reste lisible de toute la
-    #  copropriété ; ce drapeau rend la lecture au seul périmètre visé. Il ne fait
-    #  que restreindre — il se combine en ET avec `public_cible` (cf. #347).
-    confidentiel: bool = False
-
-    auteur: Optional[Utilisateur] = Relationship(back_populates="publications")
-    evolutions: List["PublicationEvolution"] = Relationship(back_populates="publication")
-
-
-class PublicationEvolution(SQLModel, table=True):
-    __tablename__ = "publication_evolution"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    publication_id: int = Field(foreign_key="publication.id")
-    # type : commentaire | etat — une correction est un `commentaire` préfixé « Correction : » (#433)
-    type: str
-    contenu: Optional[str] = None
-    ancien_statut: Optional[str] = None
-    nouveau_statut: Optional[str] = None
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
-
-    publication: Optional[Publication] = Relationship(back_populates="evolutions")
-    auteur: Optional[Utilisateur] = Relationship()
-
-
+#
+#  🔴 Sorties dans `publication.py` le 15/09/2026, au fil de l'eau : ce fichier
+#  était à 933 lignes et le garde-fou de modularité (rang 1) a refusé d'y
+#  ajouter les trois colonnes « Saisi pour ». C'est la réponse que la règle
+#  prescrit — découper avant d'ajouter —, et #779 nommait `core.py` comme
+#  cible prioritaire.
+#
+#  ⚠️ **Le réexport n'est pas une politesse.** Un modèle défini dans un module
+#  que personne n'a chargé n'existe pas pour `SQLModel.metadata.create_all` : la
+#  table manquerait, sans le moindre message. Et une trentaine de modules
+#  écrivent `from app.models.core import Publication`.
+from app.models.publication import (  # noqa: E402,F401
+    Publication as Publication,
+    PublicationEvolution as PublicationEvolution,
+)
 #  Réexportation : la bibliothèque documentaire vit dans `documents.py` depuis le
 #  27/08/2026 (modularité, rang 1). Ces trois classes restent importables ici —
 #  une vingtaine de modules écrivent `from app.models.core import Document`, et un
