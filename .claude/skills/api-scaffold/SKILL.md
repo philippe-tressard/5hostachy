@@ -213,7 +213,7 @@ app.include_router(nouvelle_entite_router)
 | `require_proprietaire` | Fonctions propriétaires |
 | `get_acting_user` | Délégation (header `X-Acting-As`) |
 
-### 5. Client API frontend (`front/src/lib/api.ts`)
+### 5. Client API frontend (paquet `front/src/lib/api/`)
 
 Ajouter le module dans `api.ts` :
 
@@ -261,7 +261,7 @@ produit des mois en anglais sur la fiche arrivant (26/07/2026).
 - [ ] Schémas Create/Read/Update dans `schemas.py`
 - [ ] Migration créée avec le bon numéro séquentiel
 - [ ] Router créé + enregistré dans `main.py`
-- [ ] Client API ajouté dans `front/src/lib/api.ts`
+- [ ] Client API ajouté dans le paquet `front/src/lib/api/`, module du domaine concerné
 - [ ] Types TypeScript exportés
 - [ ] Imports vérifiés (pas d'import circulaire)
 - [ ] Dates affichées via `dates_fr.py` (pas de `%B`/`%A` dans `api/app/`)
