@@ -46,7 +46,7 @@
 	 *
 	 *   ⚠️ Vérifier qu'un nom donné existe dans le catalogue : `Icon` retombe
 	 *   SILENCIEUSEMENT sur `help-circle` (cf. `ux-patterns` §13). */
-	export let icone = '';
+	export let icone: string;
 </script>
 
 <!--  ⚠️ `class:` et non une classe INTERPOLÉE (`medaillon-{role}`) : une seule
@@ -61,11 +61,7 @@
 	title={titre}
 	aria-label={titre}
 >
-	{#if icone}
-		<Icon name={icone} size={12} />
-	{:else}
-		<slot />
-	{/if}
+	<Icon name={icone} size={12} />
 </span>
 
 <style>
@@ -95,8 +91,5 @@
 	}
 	.medaillon-gestionnaire-principal {
 		background: var(--color-accent, #c9983a);
-		/*  Le seul écart réel entre les trois : ce médaillon porte un GLYPHE (★)
-		    là où les deux autres portent une icône dimensionnée par `Icon`. */
-		font-size: 0.9rem;
 	}
 </style>

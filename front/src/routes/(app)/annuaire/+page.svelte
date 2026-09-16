@@ -35,7 +35,7 @@
 
 	function medaillonsSyndic(m: { est_principal?: boolean }): Medaillon[] {
 		return m.est_principal
-			? [{ role: 'gestionnaire-principal', titre: 'Gestionnaire principal', contenu: '★' }]
+			? [{ role: 'gestionnaire-principal', titre: 'Gestionnaire principal', icone: 'star' }]
 			: [];
 	}
 
