@@ -35,7 +35,16 @@
 	export let valeurs: Record<string, string> = {};
 
 	function normalizeSavedPageDef(saved: any, defaults: PageDef) {
-		const normalized = { ...saved, onglets: saved?.onglets ? { ...saved.onglets } : undefined };
+		//  🔴 `id` et `href` viennent des DÉFAUTS, jamais de l'enregistrement.
+		//  `{...saved}` rapportait l'identité stockée en base : deux configurations
+		//  portant le même id donnaient deux pages homonymes, et le
+		//  `{#each … (pg.id)}` levait `each_key_duplicate` — écran figé (16/09/2026).
+		const normalized = {
+			...saved,
+			id: defaults.id,
+			href: defaults.href,
+			onglets: saved?.onglets ? { ...saved.onglets } : undefined,
+		};
 		if (normalized.onglets) {
 			for (const [k, v] of Object.entries(normalized.onglets)) {
 				if (typeof v === 'string') {

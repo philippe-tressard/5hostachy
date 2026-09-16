@@ -80,6 +80,17 @@ const CAS = [
 	{ nom: 'ordre vide', ordre: [], attendu: 'a,b,sans-route' },
 ];
 
+//  🔴 Le cas qui a fait rechuter deux fois : le doublon n'est PAS dans l'ordre
+//  enregistré, il est dans les pages elles-mêmes. Elles sont reconstruites à
+//  partir du JSON stocké en base, dont `{...saved}` rapportait l'`id` — deux
+//  configurations homonymes suffisaient. Une fonction qui ne garantit que le
+//  traitement de son entrée ne garantit rien : c'est sa SORTIE qui est rendue.
+const PAGES_HOMONYMES = [
+	{ id: 'a', href: '/a' },
+	{ id: 'a', href: '/autre' },
+	{ id: 'b', href: '/b' },
+];
+
 const echecs = [];
 
 const { module, nettoyer } = await charger(SOURCE_PAGES, 'pages');
@@ -100,6 +111,16 @@ try {
 			);
 		} else if (ids.join(',') !== cas.attendu) {
 			echecs.push(`pages : « ${cas.nom} » rend « ${ids.join(',')} », attendu « ${cas.attendu} »`);
+		}
+	}
+
+	for (const ordre of [[], ['a'], ['a', 'b'], ['b', 'a']]) {
+		const repetees = doublons(ordonnerPages(PAGES_HOMONYMES, ordre).map((p) => p.id));
+		if (repetees.length) {
+			echecs.push(
+				`pages : deux pages HOMONYMES en entrée (ordre ${JSON.stringify(ordre)}) ressortent ` +
+					`toutes les deux (${repetees.join(', ')}) — la sortie n'est pas garantie`,
+			);
 		}
 	}
 
