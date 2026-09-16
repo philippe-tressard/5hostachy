@@ -28,9 +28,7 @@ def emails_historique(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
-    return session.exec(
-        select(HistoriqueEmail).order_by(HistoriqueEmail.cree_le.desc()).limit(10)
-    ).all()
+    return derniers_rapports(session, HistoriqueEmail)
 
 
 # ── Télémétrie — agrégation manuelle ──────────────────────────────────────────
@@ -56,13 +54,11 @@ def telemetry_history(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
-    return session.exec(
-        select(HistoriqueTelemetrie).order_by(HistoriqueTelemetrie.cree_le.desc()).limit(10)
-    ).all()
+    return derniers_rapports(session, HistoriqueTelemetrie)
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────
 
 from app.utils.noeud import noeud_courant
-from app.utils.recuperer import ou_404
+from app.utils.recuperer import derniers_rapports, ou_404
 
 
 def _variables_du_modele(modele: ModeleEmail) -> str:

@@ -36,7 +36,7 @@ from __future__ import annotations
 from typing import Optional, Type, TypeVar
 
 from fastapi import HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 T = TypeVar("T")
 
@@ -57,3 +57,26 @@ def ou_404(session: Session, modele: Type[T], identifiant, libelle: str) -> T:
     if not objet:
         raise HTTPException(404, f"{libelle} introuvable")
     return objet
+
+#: La FENÊTRE d'un historique d'exploitation : on ne lit que les derniers
+#: rapports. Au-delà, ils n'apprennent plus rien — la santé d'une tâche se lit
+#: sur ses dernières exécutions, pas sur un an d'archives.
+DERNIERS_RAPPORTS = 10
+
+
+def derniers_rapports(session: Session, modele: Type[T], combien: int = DERNIERS_RAPPORTS):
+    """Les N derniers rapports d'un historique, du plus récent au plus ancien.
+
+    🔴 Écrit **trois fois** avant le 16/09/2026 — courriels, télémétrie,
+    sauvegardes —, avec le `10` recopié à chaque fois. Trois écrans lisent la
+    même fenêtre ; le jour où l'un l'élargit, les deux autres restent en
+    arrière sans que rien ne le dise, et l'administrateur compare des
+    profondeurs différentes en croyant comparer des tables.
+
+    ⚠️ Comme `ou_404`, cette fonction **ne décide d'aucun droit** : les trois
+    routes qui l'emploient portent `require_admin`, et c'est là que la
+    décision se prend.
+    """
+    return session.exec(
+        select(modele).order_by(modele.cree_le.desc()).limit(combien)
+    ).all()

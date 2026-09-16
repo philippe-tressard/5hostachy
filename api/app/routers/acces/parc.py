@@ -321,6 +321,10 @@ def supprimer_acces_admin(
     session.commit()
 
 
+#  ⚠️ Les deux seules routes du parc qui ne sont PAS paramétrées par
+#  `{type_cle}`, et c'est délibéré : un `{type_cle}` avalerait les listes
+#  d'import des deux autres modules. Le pourquoi est dans `__init__` —
+#  « Ordre de montage », qui porte déjà cette contrainte.
 @router.get("/admin/vigiks", response_model=list[AccesAdminOut])
 def list_vigiks(
     session: Session = Depends(get_session),

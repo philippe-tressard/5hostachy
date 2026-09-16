@@ -20,12 +20,11 @@ from sqlmodel import select
 
 from app.models.core import STATUTS_TICKET_ACTIFS, Ticket, TicketEvolution
 from app.utils.dates_fr import duree_jhm
-from app.utils.fichiers import est_image
 from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
 
 from app.utils.copie_auteur import proprietaire
-from .commun import ContexteFlux, auteur_nom, perimetres_de, strip_html, badges_ticket
+from .commun import ContexteFlux, auteur_nom, badges_ticket, perimetres_de, pieces_de_evolution, strip_html
 from .schemas import FluxItem
 from app.utils.corrections import est_correction
 
@@ -50,26 +49,6 @@ _MISES_A_JOUR = (
     ("reponse", "tk_rep", "Réponse du CS", "↩️"),
     ("commentaire", "tk_com", "Mise à jour", "💬"),
 )
-
-
-def _pieces_jointes(evol, tk) -> dict:
-    """Pièces jointes à montrer sur une carte « ticket mis à jour ».
-
-    Celles de l'évolution si elle en porte, sinon celles du ticket. Réparties en
-    `photos_urls` / `fichiers_urls` parce que `FluxCard` n'en fait pas le même
-    usage : les premières alimentent la vignette, les secondes la liste dépliée.
-    Le tri se fait par `est_image`, la même règle qu'`estImage` côté front.
-    """
-    urls = parse_photos(evol.fichiers_urls)
-    if not urls:
-        return {
-            "photos_urls": parse_photos(tk.photos_urls),
-            "fichiers_urls": parse_photos(tk.fichiers_urls),
-        }
-    return {
-        "photos_urls": [u for u in urls if est_image(u)],
-        "fichiers_urls": [u for u in urls if not est_image(u)],
-    }
 
 
 def _meta_ticket(ctx: ContexteFlux, tk) -> dict:
@@ -127,7 +106,7 @@ def _carte_mise_a_jour(ctx: ContexteFlux, evol, tk, *, ident, detail, icon, stat
         meta={
             **_meta_ticket(ctx, tk),
             "statut": statut,
-            **_pieces_jointes(evol, tk),
+            **pieces_de_evolution(evol, tk),
             #  ⚠️ 400 et non 300 (#531). La carte PLIÉE affiche désormais cet
             #  extrait sous le libellé, sur trois lignes au plus (`clamp-3`).
             #  300 caractères en remplissent 2,3 : la coupure venait de la
@@ -205,7 +184,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                     "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
                     #  Même règle que les trois autres cartes de ticket : une photo
                     #  jointe au commentaire de clôture doit se voir.
-                    **_pieces_jointes(evol, tk),
+                    **pieces_de_evolution(evol, tk),
                 },
             ))
         elif nouveau in STATUTS_TICKET_ACTIFS:

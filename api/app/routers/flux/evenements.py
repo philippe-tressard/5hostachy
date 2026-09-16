@@ -13,7 +13,6 @@ from app.models.evenement import EvenementEvolution
 #  « Prestataire ». Les périmètres (#316), les canaux, les statuts de ticket
 #  (#415) et les pages (#401) ont tous divergé de cette façon.
 from app.routers.calendrier_historique import KANBAN_LABELS
-from app.utils.fichiers import est_image
 from app.utils.liens import lien_element
 from app.utils.photos import parse_photos
 from app.utils.visibility import evenement_visible
@@ -23,7 +22,7 @@ from app.utils.perimetres import (
     batiments_cibles,
     parse_perimetres,
 )
-from .commun import ContexteFlux, auteur_nom, badges_marqueurs, strip_html
+from .commun import ContexteFlux, auteur_nom, badges_marqueurs, pieces_de_evolution, strip_html
 from .schemas import FluxItem
 from app.utils.corrections import est_correction
 from app.utils.copie_auteur import proprietaire
@@ -48,28 +47,6 @@ def perimetres_evenement(ev) -> list[str]:
     affiché dès qu'un bâtiment est renseigné. Cf. `commun.perimetres_de`.
     """
     return parse_perimetres(ev.perimetre)
-
-
-def _pieces_evolution(evol, ev) -> dict:
-    """Pièces à montrer sur une carte de suivi : celles de l'entrée, sinon
-    celles de l'événement.
-
-    Même règle et même raison que `flux/tickets.py` : la carte annonce une mise
-    à jour et affiche le commentaire du jour ; lui faire porter les photos
-    d'origine montrerait une image vieille de trois semaines à côté d'un texte
-    de ce matin. Repli sur l'événement pour ne rien retirer aux cartes qui
-    fonctionnaient.
-    """
-    urls = parse_photos(evol.fichiers_urls)
-    if not urls:
-        return {
-            "photos_urls": parse_photos(ev.photos_urls),
-            "fichiers_urls": parse_photos(ev.fichiers_urls),
-        }
-    return {
-        "photos_urls": [u for u in urls if est_image(u)],
-        "fichiers_urls": [u for u in urls if not est_image(u)],
-    }
 
 
 def _evolutions(ctx: ContexteFlux):
@@ -238,7 +215,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 #  donc pas celui qui décidait.
                 "evol_contenu": strip_html(evol.contenu, 400) if evol.contenu else None,
                 "evol_auteur": auteur_nom(ctx.session, evol.auteur_id),
-                **_pieces_evolution(evol, ev),
+                **pieces_de_evolution(evol, ev),
             },
         ))
 

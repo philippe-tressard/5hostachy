@@ -54,6 +54,24 @@ les quatre copies des destinataires CS (`CLAUDE.md`), dont l'une affirmait être
 `/admin/imports-vigik/{id}` des autres modules). Les 31 chemins sont identiques
 au caractère près à ceux d'avant le découpage — trois routes d'écriture en moins,
 supprimées sur arbitrage le même jour (#805).
+
+### 🔴 Pourquoi le LISTAGE reste écrit deux fois (16/09/2026)
+
+`GET /admin/vigiks` et `GET /admin/telecommandes` sont les deux seules routes
+du parc qui ne passent pas par `{type_cle}` — un relevé mécanique les signale
+comme identiques, et elles le sont au type près.
+
+Les fondre en `GET /admin/{type_cle}` serait une régression : `imports_vigik`
+et `imports_telecommandes` exposent `GET /admin/imports-vigik` et
+`GET /admin/imports`, **deux chemins à un seul segment** sous `/admin/`.
+`parc` étant monté en premier, un `{type_cle}` les avalerait et rendrait
+**422 « Type invalide »** à la place des listes d'import — deux écrans
+d'administration cassés, sans la moindre erreur côté serveur.
+
+⚠️ Ce qui reste dupliqué est le **décorateur**, c'est-à-dire précisément ce
+qui distingue les deux routes ; leur corps passe déjà par `_acces_admin_out`.
+Une divergence légitime qui ne se déclare pas est indistinguable d'un oubli
+(`standards/02` §4).
 """
 from fastapi import APIRouter
 
