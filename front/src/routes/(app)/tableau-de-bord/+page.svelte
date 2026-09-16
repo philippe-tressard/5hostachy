@@ -27,6 +27,7 @@
 	// Toutes les règles du fil (apparence, liens, appartenance aux trois
 	// registres) vivent dans ce module — cf. `$lib/flux.ts`.
 	import {
+		cleFluxItem,
 		dateDeReference,
 		estEpingle,
 		estNonResolu,
@@ -427,7 +428,7 @@
 	{/if}
 	{#if urgentItems.length > 0}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.1s">
-			{#each urgentItems.slice(0, 3) as u (u.id)}
+			{#each urgentItems.slice(0, 3) as u (cleFluxItem(u))}
 				{@const progress = urgencyProgress(u)}
 				<fieldset
 					class="urgence-fieldset"
@@ -496,7 +497,7 @@
 			<div class="epingle-bloc">
 				<h2 class="epingle-titre">📌 Épinglé</h2>
 				<div class="flux-timeline epingle-timeline">
-					{#each pinnedItems as item (item.id)}
+					{#each pinnedItems as item (cleFluxItem(item))}
 						<FluxCard
 							{item}
 							expanded={expandedItem === item.id}
@@ -605,7 +606,7 @@
 		<div class="flux-timeline section-reveal" class:section-visible={ready} style="--delay:.3s">
 			{#each recentDayGroups as group (group.label)}
 				<div class="flux-day-label">{group.label}</div>
-				{#each group.items as item (item.id)}
+				{#each group.items as item (cleFluxItem(item))}
 					<FluxCard
 						{item}
 						expanded={expandedItem === item.id}

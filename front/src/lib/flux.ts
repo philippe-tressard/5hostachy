@@ -105,6 +105,28 @@ export function badgeClass(type: string, badge: string): string {
 // lien, plutôt qu'un `href="#"` ou une route inexistante. Un document de catégorie
 // non exposée (fiche synthétique, attestation de lot…) est dans ce cas — le fil
 // pointait auparavant vers `/documents`, qui renvoyait un 404 (26/07/2026).
+/**
+ * La clé d'un élément du fil — **jamais son `id` seul**.
+ *
+ * 🔴 Le fil AGRÈGE PLUSIEURS TABLES : `publication`, `ticket_mis_a_jour`,
+ * `annonce`, `sondage_ouvert`, `sondage_clos`, `evenement`… Chaque élément porte
+ * l'`id` de sa propre table, donc deux éléments de types différents peuvent
+ * avoir le MÊME `id` — et `sondage_ouvert` / `sondage_clos` d'un même sondage en
+ * sont un cas garanti.
+ *
+ * Rendus par `{#each … (item.id)}`, ces deux éléments donnaient deux clés
+ * égales, donc `each_key_duplicate` : erreur **fatale** de Svelte, qui tue le
+ * composant racine. L'écran cesse alors de répondre — et plus aucune navigation
+ * ne passe ensuite, sur aucune page (16/09/2026, troisième incident du jour de
+ * la même famille).
+ *
+ * ⚠️ Toute liste du fil passe par ici. Un `(item.id)` réécrit dans un écran
+ * ramènerait le défaut : `npm run lint:cles-listes` le refuse.
+ */
+export function cleFluxItem(item: FluxItem): string {
+	return `${item.type}:${item.id}`;
+}
+
 export function typeLink(item: FluxItem): string | null {
 	if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return '/sondages';
 	if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) {

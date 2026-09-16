@@ -47,6 +47,7 @@
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';
 	import { TITRE_ARCHIVES } from '$lib/archives';
+	import { cleFluxItem } from '$lib/flux';
 
 	/** Les éléments archivés, déjà groupés par jour par la page. */
 	export let groupesParJour: { label: string; items: any[] }[] = [];
@@ -70,7 +71,7 @@
 	<div class="flux-timeline older-timeline">
 		{#each groupesParJour as groupe (groupe.label)}
 			<div class="flux-day-label">{groupe.label}</div>
-			{#each groupe.items as item (item.id)}
+			{#each groupe.items as item (cleFluxItem(item))}
 				<FluxCard
 					{item}
 					expanded={itemDeplie === item.id}

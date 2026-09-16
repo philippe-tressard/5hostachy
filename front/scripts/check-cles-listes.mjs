@@ -33,7 +33,7 @@
  * n'importe quelle réécriture qui perd le dédoublonnage. Le bundle esbuild sert
  * seulement à résoudre les alias `$lib` que Node ne connaît pas.
  */
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -42,6 +42,7 @@ import { build } from 'esbuild';
 
 const SOURCE_PAGES = 'src/lib/pages.ts';
 const SOURCE_ROLES = 'src/lib/roles.ts';
+const SOURCE_FLUX = 'src/lib/flux.ts';
 
 async function charger(source, nom) {
 	const dossier = await mkdtemp(join(tmpdir(), 'cles-listes-'));
@@ -159,6 +160,97 @@ try {
 	await roles.nettoyer();
 }
 
+// ── Le fil : plusieurs tables, donc des `id` qui se répètent ────────────────
+//  `publication` #12 et `ticket_mis_a_jour` #12 coexistent, et
+//  `sondage_ouvert` / `sondage_clos` d'un même sondage portent le même id : une
+//  clé `(item.id)` s'y répète forcément.
+const CAS_FLUX = [
+	{
+		nom: 'types différents, même id',
+		items: [
+			{ type: 'publication', id: 12 },
+			{ type: 'ticket_mis_a_jour', id: 12 },
+		],
+	},
+	{
+		nom: 'même sondage, ouvert puis clos',
+		items: [
+			{ type: 'sondage_ouvert', id: 4 },
+			{ type: 'sondage_clos', id: 4 },
+		],
+	},
+	{
+		nom: 'même type, ids distincts',
+		items: [
+			{ type: 'annonce', id: 1 },
+			{ type: 'annonce', id: 2 },
+		],
+	},
+];
+
+const flux = await charger(SOURCE_FLUX, 'flux');
+try {
+	const { cleFluxItem } = flux.module;
+	if (typeof cleFluxItem !== 'function') {
+		console.error(`✗ ${SOURCE_FLUX} n'exporte plus cleFluxItem.`);
+		process.exit(1);
+	}
+	for (const cas of CAS_FLUX) {
+		const repetees = doublons(cas.items.map(cleFluxItem));
+		if (repetees.length) {
+			echecs.push(
+				`fil : « ${cas.nom} » rend ${repetees.length} clé(s) répétée(s) (${repetees.join(', ')}) ` +
+					"— un {#each … } du fil lèverait each_key_duplicate et figerait l'écran",
+			);
+		}
+	}
+} finally {
+	await flux.nettoyer();
+}
+
+// ── La porte : aucun écran ne doit reprendre `(item.id)` sur une liste du fil ─
+const FICHIERS_DU_FIL = [
+	'src/routes/(app)/tableau-de-bord/+page.svelte',
+	'src/lib/components/ArchivesDuFil.svelte',
+];
+
+/**
+ * Les listes de ces fichiers qui ne portent PAS des éléments du fil.
+ *
+ * ⚠️ Une exception non écrite n'est pas une exception, c'est un oubli qui
+ * ressemble à une décision : chacune porte donc sa raison, et le contrôle
+ * échoue si l'une d'elles cesse de servir.
+ */
+const PAS_DU_FIL = {
+	dashKanbanCols: 'colonnes constantes (DASH_KANBAN_COLS) — ids fixes et distincts',
+	'col.items': 'événements du calendrier — une seule table, donc des id uniques',
+	'mobileKanbanCurrent.items': 'idem, la même liste au format mobile',
+};
+for (const fichier of FICHIERS_DU_FIL) {
+	const src = await readFile(fichier, 'utf-8');
+	const vues = new Set();
+	for (const m of src.matchAll(/\{#each\s+([^}]*?)\s+as\s+(\w+)\s*\(\s*\2\.id\s*\)\s*\}/g)) {
+		const collection = m[1].trim();
+		if (collection in PAS_DU_FIL) {
+			vues.add(collection);
+			continue;
+		}
+		echecs.push(
+			`fil : ${fichier} rend « ${m[1].trim()} » par (${m[2]}.id) — le fil agrège ` +
+				"plusieurs tables, donc les id s'y répètent. Passer par cleFluxItem().",
+		);
+	}
+	//  Le cas zéro des exceptions : une dérogation qui ne sert plus se retire.
+	for (const [collection, raison] of Object.entries(PAS_DU_FIL)) {
+		if (!vues.has(collection) && fichier.includes('tableau-de-bord')) {
+			echecs.push(
+				`fil : l'exception « ${collection} » (${raison}) ne correspond plus à rien dans ` +
+					`${fichier} — la retirer de PAS_DU_FIL.`,
+			);
+		}
+	}
+}
+
 if (echecs.length) {
 	console.error(`\n✗ ${echecs.length} clé(s) de liste non garantie(s) :\n`);
 	for (const e of echecs) console.error(`  ${e}`);
@@ -171,5 +263,5 @@ if (echecs.length) {
 }
 
 console.log(
-	`✓ Clés de listes : ${CAS.length + CAS_ROLES.length} cas exercés (ordre des pages, badges de rôles), aucune clé répétée.`,
+	`✓ Clés de listes : ${CAS.length + CAS_ROLES.length + CAS_FLUX.length} cas exercés (ordre des pages, badges de rôles, fil), aucune clé répétée.`,
 );
