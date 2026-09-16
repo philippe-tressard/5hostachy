@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "1.40.14",
+	"version": "1.40.15",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",

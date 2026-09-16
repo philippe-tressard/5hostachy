@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { comparerParNom, nomAffiche } from '$lib/noms';
+	import { comparerParNom } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import Avatar from '$lib/components/Avatar.svelte';
-	import MedaillonRole from '$lib/components/MedaillonRole.svelte';
+	import CarteContact, { type Medaillon } from '$lib/components/CarteContact.svelte';
 	import QRCode from '$lib/components/QRCode.svelte';
 	import { onMount } from 'svelte';
 	import { annuaire as annuaireApi } from '$lib/api';
@@ -16,6 +15,29 @@
 
 	$: _pc = getPageConfig($configStore, 'annuaire', defautsDePage('annuaire'));
 	$: _siteNom = $siteNomStore;
+
+	//  Les médaillons d'un membre, décidés ICI et pas dans le balisage : ils
+	//  étaient recopiés à l'identique sur les deux rendus d'un membre du CS
+	//  (groupé par bâtiment, et sans groupe). Une règle d'affichage qui s'écrit
+	//  deux fois finit par ne plus dire la même chose des deux côtés.
+	function medaillonsCs(m: MembreCS): Medaillon[] {
+		const med: Medaillon[] = [];
+		if (m.est_gestionnaire_site)
+			med.push({
+				role: 'gestionnaire-site',
+				titre: `Gestionnaire ${_siteNom}`,
+				icone: 'building-2',
+			});
+		if (m.est_president)
+			med.push({ role: 'president-cs', titre: 'Président du Conseil Syndical', icone: 'shield' });
+		return med;
+	}
+
+	function medaillonsSyndic(m: { est_principal?: boolean }): Medaillon[] {
+		return m.est_principal
+			? [{ role: 'gestionnaire-principal', titre: 'Gestionnaire principal', contenu: '★' }]
+			: [];
+	}
 
 	interface MembreCS {
 		id: number;
@@ -147,29 +169,15 @@
 					</div>
 					<div class="contact-grid">
 						{#each groupe.membres as m (m.id)}
-							<div class="contact-card card">
-								{#if m.est_gestionnaire_site}
-									<MedaillonRole
-										role="gestionnaire-site"
-										titre="Gestionnaire {_siteNom}"
-										icone="building-2"
-									/>
+							<!--  Le bâtiment n'est PAS répété ici : il titre déjà le groupe. C'est la
+							      seule différence avec la carte sans groupe plus bas, et elle est
+							      voulue — avant l'extraction elle se perdait dans trente lignes
+							      recopiées. -->
+							<CarteContact personne={m} medaillons={medaillonsCs(m)}>
+								{#if m.etage != null}
+									<div class="contact-loc">{etageLabel(m.etage, { suffixe: true })}</div>
 								{/if}
-								{#if m.est_president}
-									<MedaillonRole
-										role="president-cs"
-										titre="Président du Conseil Syndical"
-										icone="shield"
-									/>
-								{/if}
-								<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
-								<div>
-									<strong>{m.genre} {nomAffiche(m)}</strong>
-									{#if m.etage != null}
-										<div class="contact-loc">{etageLabel(m.etage, { suffixe: true })}</div>
-									{/if}
-								</div>
-							</div>
+							</CarteContact>
 						{/each}
 					</div>
 				</div>
@@ -177,33 +185,15 @@
 		{:else}
 			<div class="contact-grid">
 				{#each data.cs.membres as m (m.id)}
-					<div class="contact-card card">
-						{#if m.est_gestionnaire_site}
-							<MedaillonRole
-								role="gestionnaire-site"
-								titre="Gestionnaire {_siteNom}"
-								icone="building-2"
-							/>
+					<CarteContact personne={m} medaillons={medaillonsCs(m)}>
+						{#if m.batiment_nom || m.etage != null}
+							<div class="contact-loc">
+								{#if m.batiment_nom}Bât. {m.batiment_nom}{/if}{#if m.batiment_nom && m.etage != null}
+									-
+								{/if}{#if m.etage != null}{etageLabel(m.etage, { suffixe: true })}{/if}
+							</div>
 						{/if}
-						{#if m.est_president}
-							<MedaillonRole
-								role="president-cs"
-								titre="Président du Conseil Syndical"
-								icone="shield"
-							/>
-						{/if}
-						<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
-						<div>
-							<strong>{m.genre} {nomAffiche(m)}</strong>
-							{#if m.batiment_nom || m.etage != null}
-								<div class="contact-loc">
-									{#if m.batiment_nom}Bât. {m.batiment_nom}{/if}{#if m.batiment_nom && m.etage != null}
-										-
-									{/if}{#if m.etage != null}{etageLabel(m.etage, { suffixe: true })}{/if}
-								</div>
-							{/if}
-						</div>
-					</div>
+					</CarteContact>
 				{/each}
 			</div>
 		{/if}
@@ -237,26 +227,17 @@
 		{:else}
 			<div class="contact-grid">
 				{#each data.syndic.membres as m (m.id)}
-					<div class="contact-card card" class:card-principal={m.est_principal}>
-						{#if m.est_principal}
-							<MedaillonRole role="gestionnaire-principal" titre="Gestionnaire principal">
-								★
-							</MedaillonRole>
+					<CarteContact personne={m} medaillons={medaillonsSyndic(m)} principal={m.est_principal}>
+						{#if m.fonction}<div class="contact-role">{m.fonction}</div>{/if}
+						{#if m.email}
+							<a href="mailto:{m.email}" class="contact-email">{m.email}</a>
 						{/if}
-						<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
-						<div>
-							<strong>{m.genre} {nomAffiche(m)}</strong>
-							{#if m.fonction}<div class="contact-role">{m.fonction}</div>{/if}
-							{#if m.email}
-								<a href="mailto:{m.email}" class="contact-email">{m.email}</a>
-							{/if}
-							{#if m.telephone}
-								{#each telephonesDe(m.telephone) as tel, ti (`${ti}|${tel}`)}
-									<a href="tel:{tel}" class="contact-email">&#x1F4DE; {tel}</a>
-								{/each}
-							{/if}
-						</div>
-					</div>
+						{#if m.telephone}
+							{#each telephonesDe(m.telephone) as tel, ti (`${ti}|${tel}`)}
+								<a href="tel:{tel}" class="contact-email">&#x1F4DE; {tel}</a>
+							{/each}
+						{/if}
+					</CarteContact>
 				{/each}
 			</div>
 		{/if}
@@ -316,19 +297,10 @@
 		grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
 		gap: 1rem;
 	}
-	.contact-card {
-		display: flex;
-		align-items: flex-start;
-		gap: 1rem;
-		padding: 1.4rem 1rem 0.9rem;
-		position: relative;
-	}
+	/*  `.contact-card` et `.card-principal` vivent dans `CarteContact.svelte`
+	    depuis le 16/09/2026 : la carte y est rendue, son style l'accompagne. */
 	/* La variable cascade jusqu'au fond de repli d'`Avatar` (initiales) : le
 	   gestionnaire principal garde sa pastille dorée sans classe dédiée. */
-	.card-principal {
-		border-left: 3px solid var(--color-accent, #c9983a);
-		--avatar-bg: var(--color-accent, #c9983a);
-	}
 	/*  Les trois médaillons de rôle sont partis dans `MedaillonRole`
 	    (14/09/2026, #779) : leur géométrie était écrite DEUX fois ici, à onze
 	    propriétés près identiques, et seule la couleur de fond changeait. Elles
