@@ -885,6 +885,8 @@ jobs:
         working-directory: front
         run: npm run lint:catch-vide
 
+      # Deux incidents le 16/09/2026, à quelques heures d'intervalle, même cause.
+      #
       # `pages_order` est une DONNÉE (base, éditable en administration), et un
       # identifiant qui s'y répétait faisait rendre la même page deux fois. Le
       # `{#each … (pg.id)}` levait alors `each_key_duplicate` — erreur FATALE de
@@ -892,12 +894,15 @@ jobs:
       # jour ne passait sur AUCUNE page. Deux fois en production, et pris pour un
       # « figeage du site » alors que le serveur répondait en moins de 200 ms.
       #
-      # Le contrôle EXÉCUTE `ordonnerPages` sur six ordres, dont trois
-      # incohérents : relire son code aurait laissé passer toute réécriture qui
-      # perd le dédoublonnage.
-      - name: Un ordre de pages incohérent ne rend jamais deux fois la même page
+      # Puis la colonne « Rôles actifs » a figé l'écran Utilisateurs pour la même
+      # raison : `bailleur` est l'alias hérité de `copropriétaire_bailleur`, donc
+      # DEUX rôles pour UN libellé, et la clé était le libellé.
+      #
+      # Le contrôle EXÉCUTE les fonctions qui alimentent ces listes : relire leur
+      # code aurait laissé passer toute réécriture qui perd le dédoublonnage.
+      - name: Aucune liste à clé ne peut rendre deux fois la même clé
         working-directory: front
-        run: npm run lint:ordre-pages
+        run: npm run lint:cles-listes
 
       # Six écrans, TROIS mots pour la même notion — et « Historique » désignait
       # AUSSI le fil d'un objet (cadre #430), les deux coexistant sur l'écran

@@ -2,7 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import { DEFAUTS_NOTIFS } from '$lib/preferences';
-	import { libelleRole, badgeRole, LIBELLES_STATUT } from '$lib/roles';
+	import { badgesDeRoles, LIBELLES_STATUT } from '$lib/roles';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
@@ -368,8 +368,8 @@
 
 			<dt>Rôle(s)</dt>
 			<dd style="display:flex;gap:0.35rem;flex-wrap:wrap">
-				{#each $currentUser?.roles?.length ? $currentUser.roles : [$currentUser?.role ?? 'résident'] as r (r)}
-					<span class="badge {badgeRole(r)}">{libelleRole(r)}</span>
+				{#each badgesDeRoles($currentUser?.roles?.length ? $currentUser.roles : [$currentUser?.role ?? 'résident']) as b (b.label)}
+					<span class="badge {b.cls}">{b.label}</span>
 				{/each}
 			</dd>
 

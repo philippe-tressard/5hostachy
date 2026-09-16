@@ -4,7 +4,8 @@
 	import { get } from 'svelte/store';
 	import OngletMaintenance from '$lib/components/OngletMaintenance.svelte';
 	import { api, admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
-	import { libelleRole, badgeRole, badgeStatut, LIBELLES_STATUT_ABREGE } from '$lib/roles';
+	import { badgeRole, badgeStatut, badgesDeRoles, libelleRole } from '$lib/roles';
+	import { LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { essayer } from '$lib/chargement';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -369,14 +370,6 @@
 	}
 
 	// Rôles actifs : affiche les rôles réels (P·R·E·CS·A) depuis u.roles
-	function displayRoles(u: any): { label: string; cls: string }[] {
-		const roles: string[] = u.roles?.length ? u.roles : [u.role];
-		return roles.map((r: string) => ({
-			label: libelleRole(r),
-			cls: badgeRole(r),
-		}));
-	}
-
 	function userBatimentLabel(u: any): string {
 		if (u.batiment_id && batimentsMap[u.batiment_id]) return batimentsMap[u.batiment_id];
 		if (u.batiment_nom) return u.batiment_nom;
@@ -849,7 +842,7 @@
 								</td>
 								<td>
 									<div style="display:flex;gap:.3rem;flex-wrap:wrap">
-										{#each displayRoles(u) as d (d.label)}
+										{#each badgesDeRoles(u.roles?.length ? u.roles : [u.role]) as d (d.label)}
 											<span class="badge {d.cls}">{d.label}</span>
 										{/each}
 									</div>
