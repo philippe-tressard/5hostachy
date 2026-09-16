@@ -33,6 +33,7 @@
 		"lint:modificateurs": "node scripts/check-modificateurs.mjs",
 		"lint:evenements": "node scripts/check-evenements.mjs",
 		"lint:catch-vide": "node scripts/check-catch-vide.mjs",
+		"lint:ordre-pages": "node scripts/check-ordre-pages.mjs",
 		"lint:archives": "node scripts/check-archives.mjs",
 		"lint:charge-utile": "node scripts/check-charge-utile.mjs",
 		"lint:balises": "node scripts/check-balises.mjs",

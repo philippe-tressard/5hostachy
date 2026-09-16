@@ -9,7 +9,14 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import LiensGuide from '$lib/components/LiensGuide.svelte';
 	import BandeauDelegation from '$lib/components/BandeauDelegation.svelte';
-	import { HREFS_DEFAUT, ID_VERS_HREF, HREF_VERS_PAGE } from '$lib/pages';
+	import {
+		HREFS_DEFAUT,
+		HREF_VERS_PAGE,
+		ID_VERS_HREF,
+		PAGES_MENU,
+		identifiantsRepetes,
+		ordonnerPages,
+	} from '$lib/pages';
 
 	// Les valeurs par défaut, l'ordre et la correspondance identifiant → route
 	// viennent tous de `$lib/pages.ts` — voir l'en-tête de ce fichier pour les trois
@@ -59,9 +66,19 @@
 				console.warn(
 					`[Nav] pages_order contient ${inconnus.length} identifiant(s) sans entrée de menu, ignoré(s) : ${inconnus.join(', ')}`,
 				);
-			const ordered = ids.map((id) => ID_VERS_HREF[id]).filter((h): h is string => !!h);
-			const remaining = HREFS_DEFAUT.filter((h) => !ordered.includes(h));
-			return [...ordered, ...remaining];
+			//  Même raison, autre incohérence : un identifiant RÉPÉTÉ affichait la page
+			//  deux fois dans le menu, et faisait bien pire dans « Descriptif pages »
+			//  (`each_key_duplicate`, erreur fatale de Svelte — cf. `ordonnerPages`).
+			const repetes = identifiantsRepetes(ids);
+			if (repetes.length)
+				console.warn(
+					`[Nav] pages_order répète ${repetes.length} identifiant(s), dédoublonné(s) : ${repetes.join(', ')}`,
+				);
+			//  🔴 L'ordre se calcule à UN seul endroit. Ces quatre lignes réimplémentaient
+			//  `ordonnerPages` — même notion, deux écritures — et elles ont divergé sur le
+			//  cas limite qui compte : celle-ci dédoublonnait par accident (`remaining`
+			//  filtre sur `ordered`), l'autre non, et c'est l'autre qui rendait l'écran.
+			return ordonnerPages(PAGES_MENU, ids).map((p) => p.href as string);
 		} catch {
 			console.warn('[Nav] pages_order illisible (JSON invalide) — ordre par défaut appliqué');
 			return HREFS_DEFAUT;

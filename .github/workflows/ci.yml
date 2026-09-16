@@ -885,6 +885,20 @@ jobs:
         working-directory: front
         run: npm run lint:catch-vide
 
+      # `pages_order` est une DONNÉE (base, éditable en administration), et un
+      # identifiant qui s'y répétait faisait rendre la même page deux fois. Le
+      # `{#each … (pg.id)}` levait alors `each_key_duplicate` — erreur FATALE de
+      # Svelte : l'onglet basculait, le contenu restait, et plus aucune mise à
+      # jour ne passait sur AUCUNE page. Deux fois en production, et pris pour un
+      # « figeage du site » alors que le serveur répondait en moins de 200 ms.
+      #
+      # Le contrôle EXÉCUTE `ordonnerPages` sur six ordres, dont trois
+      # incohérents : relire son code aurait laissé passer toute réécriture qui
+      # perd le dédoublonnage.
+      - name: Un ordre de pages incohérent ne rend jamais deux fois la même page
+        working-directory: front
+        run: npm run lint:ordre-pages
+
       # Six écrans, TROIS mots pour la même notion — et « Historique » désignait
       # AUSSI le fil d'un objet (cadre #430), les deux coexistant sur l'écran
       # Tickets. Le mot a été unifié le 19/08 À LA MAIN, écrit en dur dans cinq
