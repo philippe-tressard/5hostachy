@@ -137,11 +137,31 @@
         #  370 par semaine sur un mécanisme désormais autorisé. Un compteur qui
         #  mesure ce qui est déjà réglé noie ce qui ne l'est pas.
         #
-        #  Ce qui reste en observation est exactement le PAS SUIVANT : `style-src`
-        #  SANS `'unsafe-inline'`, et `img-src`. Ce dernier n'est pas passé en
-        #  bloquant parce que ses trois violations viennent d'une extension de
-        #  navigateur (1Password) et d'aucune ressource du site.
-        +Content-Security-Policy-Report-Only "style-src 'self'; img-src 'self' data: blob:; report-uri /api/csp-report"
+        #  ⚠️ `style-src` A QUITTÉ cette politique le 16/09/2026, pour la raison
+        #  déjà invoquée ci-dessus au sujet de `script-src` : un compteur qui
+        #  mesure ce qui ne bouge plus noie ce qui compte.
+        #
+        #  Il observait le pas suivant — `style-src` SANS `'unsafe-inline'` —
+        #  et ce pas dépendait du chantier #607 (retirer les attributs `style=`).
+        #  Ce ticket est CLOS depuis le 28/08/2026 et il en reste **603** : le
+        #  relevé ne suivait donc plus un chantier, il recomptait un état stable.
+        #
+        #  Ce qu'il coûtait : **163 rapports par page**. Le 16/09/2026, quatre
+        #  incidents de rendu (`each_key_duplicate`) se sont diagnostiqués dans la
+        #  console du navigateur — le seul endroit où ils étaient visibles, le
+        #  serveur répondant en moins de 200 ms. Il a fallu plusieurs captures
+        #  pour isoler LA ligne utile au milieu de ce bruit. Un outil de
+        #  diagnostic qu'on doit filtrer à la main est un outil qu'on n'ouvre pas.
+        #
+        #  🔴 Le rétablir le jour où #607 rouvre — c'est alors qu'il mesurera de
+        #  nouveau quelque chose. Retiré, il ne protège rien : `Report-Only` ne
+        #  bloque RIEN, et la politique bloquante garde `style-src 'self'
+        #  'unsafe-inline'`.
+        #
+        #  Ce qui reste en observation : `img-src`. Il n'est pas passé en bloquant
+        #  parce que ses trois violations viennent d'une extension de navigateur
+        #  (1Password) et d'aucune ressource du site.
+        +Content-Security-Policy-Report-Only "img-src 'self' data: blob:; report-uri /api/csp-report"
     }
 
     # API — proxy vers FastAPI
