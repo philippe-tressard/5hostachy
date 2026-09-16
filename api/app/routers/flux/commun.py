@@ -26,6 +26,8 @@ from app.models.core import Utilisateur
 from app.utils.perimetres import parse_json_perimetres, parse_perimetres
 from app.utils.noms import nom_affiche
 from app.utils.categories_ticket import ticket_urgent
+from app.utils.fichiers import est_image
+from app.utils.photos import parse_photos
 
 
 @dataclass(frozen=True)
@@ -111,6 +113,37 @@ def badges_ticket(ticket) -> list[str]:
         badges.append("urgent")
     return badges
 
+
+def pieces_de_evolution(evol, porteur) -> dict:
+    """Les pièces à montrer sur une carte de MISE À JOUR : celles de l'entrée,
+    sinon celles de l'objet porteur.
+
+    🔴 Écrite DEUX fois avant le 16/09/2026 — dans `tickets.py` et dans
+    `evenements.py` —, et la seconde le DISAIT : « même règle et même raison
+    que `flux/tickets.py` ». Une copie qui s'annonce comme telle reste une
+    copie : elle ne se corrige pas avec l'autre, elle se contente de la citer.
+
+    La règle, elle, n'a qu'une raison : la carte annonce une mise à jour et
+    affiche le commentaire du jour ; lui faire porter les photos d'origine
+    montrerait une image vieille de trois semaines à côté d'un texte de ce
+    matin. Le repli sur l'objet porteur ne retire rien aux cartes qui
+    fonctionnaient avant qu'une entrée puisse porter des pièces.
+
+    ⚠️ La répartition `photos_urls` / `fichiers_urls` n'est pas cosmétique :
+    `FluxCard` n'en fait pas le même usage — les premières alimentent la
+    vignette, les secondes la liste dépliée. Le tri passe par `est_image`, la
+    même règle qu'`estImage` côté front.
+    """
+    urls = parse_photos(evol.fichiers_urls)
+    if not urls:
+        return {
+            "photos_urls": parse_photos(porteur.photos_urls),
+            "fichiers_urls": parse_photos(porteur.fichiers_urls),
+        }
+    return {
+        "photos_urls": [u for u in urls if est_image(u)],
+        "fichiers_urls": [u for u in urls if not est_image(u)],
+    }
 
 def badges_marqueurs(obj) -> list[str]:
     """Marqueurs « Épinglé » / « Urgent », identiques quelle que soit la rubrique.
