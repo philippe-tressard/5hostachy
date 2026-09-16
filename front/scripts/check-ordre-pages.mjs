@@ -92,7 +92,7 @@ try {
 	if (repetes.sort().join(',') !== 'a,b') {
 		echecs.push(
 			`identifiantsRepetes(['b','b','a','a','c']) rend « ${repetes.join(', ')} », attendu « a, b » — ` +
-				'le signalement d\'une donnée incohérente ne fonctionne plus',
+				"le signalement d'une donnée incohérente ne fonctionne plus",
 		);
 	}
 	if (identifiantsRepetes(['a', 'b']).length !== 0) {
