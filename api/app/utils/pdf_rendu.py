@@ -98,6 +98,13 @@ DELAI_RENDU_S = 180.0
 MAX_JOURNAL = 5_000
 
 
+#: Ce que le dernier enfant a rapporté de lui-même : `{"pid", "base_chargee"}`.
+#: Renseigné à chaque rendu, y compris quand il échoue — c'est le point de
+#: mesure de `test_pdf_hors_process.py`, et il ne dépend d'aucune configuration
+#: de logging.
+dernier_temoin: dict | None = None
+
+
 class RenduPdfImpossible(RuntimeError):
     """Le PDF n'a pas pu être produit — on ne rend jamais un document partiel."""
 
@@ -124,14 +131,19 @@ def _rendre_dans_l_enfant(tube, html: str) -> None:
     racine.setLevel(logging.INFO)
     racine.addHandler(_Collecteur())
 
-    #  Cette ligne est le témoin de l'isolation : elle nomme le process qui a
-    #  vraiment rendu, et dit si la base a été chargée ici. `base chargée` doit
-    #  rester False — un True signifierait un retour au `fork` et une exposition
-    #  de `app.db` (cf. l'en-tête). C'est ce que le test lit.
+    #  🔴 Le témoin voyage DANS le message, pas par le journal.
+    #
+    #  Il a d'abord été une ligne de log, et c'était fragile : sa remontée
+    #  dépendait alors de la configuration du logging des DEUX process. Le
+    #  contrôle est passé au vert sur le poste (WeasyPrint absent, l'enfant
+    #  échouant à l'import) et au rouge en intégration continue, où le rendu
+    #  aboutit — une propriété critique ne doit pas dépendre d'un canal qui
+    #  varie selon ce qui a été importé.
+    temoin = {"pid": os.getpid(), "base_chargee": "app.database" in sys.modules}
     logger.info(
         "Rendu PDF dans le process %d (base chargée : %s)",
-        os.getpid(),
-        "app.database" in sys.modules,
+        temoin["pid"],
+        temoin["base_chargee"],
     )
 
     try:
@@ -139,9 +151,9 @@ def _rendre_dans_l_enfant(tube, html: str) -> None:
 
         pdf = HTML(string=html).write_pdf()
     except BaseException as exc:  # noqa: BLE001 — tout est remonté au parent
-        tube.send(("erreur", f"{type(exc).__name__}: {exc}", journal))
+        tube.send(("erreur", f"{type(exc).__name__}: {exc}", journal, temoin))
     else:
-        tube.send(("ok", pdf, journal))
+        tube.send(("ok", pdf, journal, temoin))
     finally:
         tube.close()
 
@@ -160,6 +172,9 @@ def rendre_pdf(html: str, *, delai_s: float = DELAI_RENDU_S) -> bytes:
 
     Lève `RenduPdfImpossible` si le rendu échoue, dépasse `delai_s`, ou si le
     process meurt en route (OOM — le risque est réel sur un RPi).
+
+    `dernier_temoin` retient ce que l'enfant a rapporté de lui-même (son pid, et
+    s'il avait la base en mémoire) : c'est ce que lisent les contrôles.
     """
     contexte = multiprocessing.get_context("spawn")
     lecture, ecriture = contexte.Pipe(duplex=False)
@@ -207,7 +222,9 @@ def rendre_pdf(html: str, *, delai_s: float = DELAI_RENDU_S) -> bytes:
             enfant.kill()
             enfant.join()
 
-    etat, charge, journal = message
+    etat, charge, journal, temoin = message
+    global dernier_temoin
+    dernier_temoin = temoin
     _rejouer(journal)
     if etat == "erreur":
         raise RenduPdfImpossible(charge)
