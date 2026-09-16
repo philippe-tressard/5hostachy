@@ -467,11 +467,22 @@ export function ordonnerPages<T extends { id: string; href: string | null }>(
 		ordonnees.push(page);
 	}
 	const placees = new Set(ordonnees);
+	//  🔴 La sortie est garantie sans id répété, quelle que soit l'ENTRÉE.
+	//
+	//  Dédoublonner le seul `idsEnregistres` ne suffisait pas : les pages reçues
+	//  sont reconstruites à partir de `page_config_<id>`, du JSON stocké en base,
+	//  et `{...saved}` en rapportait l'`id` ENREGISTRÉ. Deux configurations
+	//  portant le même id produisaient donc deux pages homonymes que cette
+	//  fonction recopiait fidèlement — et le `{#each … (pg.id)}` en mourait.
+	//
+	//  On ne garde donc pas une garantie sur ce qu'on reçoit, mais sur ce qu'on
+	//  rend : c'est la seule qui tienne quand l'entrée vient d'une donnée.
+	const rendus = new Set<string>();
 	return [
 		...ordonnees,
 		...pages.filter((p) => p.href !== null && !placees.has(p)),
 		...pages.filter((p) => p.href === null),
-	];
+	].filter((p) => (rendus.has(p.id) ? false : (rendus.add(p.id), true)));
 }
 
 /**
