@@ -442,13 +442,51 @@ export function ordonnerPages<T extends { id: string; href: string | null }>(
 	idsEnregistres: string[],
 ): T[] {
 	const parId = new Map(pages.map((p) => [p.id, p]));
-	const ordonnees = idsEnregistres
-		.map((id) => parId.get(id))
-		.filter((p): p is T => !!p && p.href !== null);
+	//  🔴 UN IDENTIFIANT RÉPÉTÉ NE DOIT JAMAIS RENDRE LA PAGE DEUX FOIS (16/09/2026).
+	//
+	//  `pages_order` est une donnée, pas du code : elle vit en base, s'édite depuis
+	//  l'écran « Descriptif pages », et rien ne garantit qu'elle est saine. Quand
+	//  elle portait deux fois le même identifiant, la liste rendue contenait deux
+	//  fois la même page — et le `{#each … (pg.id)}` qui l'affiche levait
+	//  `each_key_duplicate`, une erreur FATALE et non rattrapable de Svelte.
+	//
+	//  Ce que ça donnait à l'écran : l'onglet basculait, le contenu restait celui
+	//  d'avant, et plus AUCUNE mise à jour ne passait ensuite — sur toutes les
+	//  pages, le composant racine étant mort. Seule la fermeture de la fenêtre en
+	//  sortait. Constaté deux fois en production, et pris pour un « figeage du
+	//  site » alors que le serveur répondait en moins de 200 ms.
+	//
+	//  ⚠️ Le doublon se PROPAGEAIT : `movePage` réécrit `pages_order` à partir de
+	//  cette liste, donc le premier déplacement enregistrait le doublon en base.
+	const vus = new Set<string>();
+	const ordonnees: T[] = [];
+	for (const id of idsEnregistres) {
+		const page = parId.get(id);
+		if (!page || page.href === null || vus.has(id)) continue;
+		vus.add(id);
+		ordonnees.push(page);
+	}
 	const placees = new Set(ordonnees);
 	return [
 		...ordonnees,
 		...pages.filter((p) => p.href !== null && !placees.has(p)),
 		...pages.filter((p) => p.href === null),
 	];
+}
+
+/**
+ * Les identifiants répétés d'un ordre enregistré — pour le DIRE, pas pour le taire.
+ *
+ * Même raison que les identifiants inconnus signalés par `Nav` depuis #401 : une
+ * donnée incohérente qu'on corrige en silence est un défaut qu'on ne cherchera
+ * jamais. `ordonnerPages` la rend inoffensive ; ceci la rend visible.
+ */
+export function identifiantsRepetes(idsEnregistres: string[]): string[] {
+	const vus = new Set<string>();
+	const repetes = new Set<string>();
+	for (const id of idsEnregistres) {
+		if (vus.has(id)) repetes.add(id);
+		vus.add(id);
+	}
+	return [...repetes];
 }
