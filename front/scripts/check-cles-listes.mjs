@@ -272,17 +272,23 @@ for (const fichier of FICHIERS_DU_FIL) {
 	}
 }
 
-// ── Les listes de SAISIE LIBRE ne portent pas de clé ────────────────────────
+// ── Les listes de SAISIE LIBRE portent une clé COMPOSITE ───────────────────
 //
 //  Une valeur saisie par un résident peut être écrite deux fois : deux réponses
 //  libres « Oui », deux fois la même photo, un numéro de téléphone recopié. Les
 //  prendre pour clé, c'est parier que personne ne se répétera — et
 //  `each_key_duplicate` fige alors l'écran entier.
 //
-//  Ces listes n'ont AUCUN besoin de clé : ce sont des affichages sans état ni
-//  réordonnancement. Un `{#each}` sans clé se réconcilie par index et ne peut
-//  jamais lever. La porte ci-dessous empêche qu'on la remette « pour bien faire ».
-const LISTES_SANS_CLE = [
+//  Retirer la clé serait sûr — ces listes sont des affichages sans état — mais
+//  `check-each-key.mjs` tient un PLAFOND DÉCROISSANT du nombre de `{#each}` sans
+//  clé, et le faire remonter de 1 à 7 aurait défait son travail. Les deux règles
+//  se concilient par une clé UNIQUE PAR CONSTRUCTION : l'index d'abord, la
+//  valeur ensuite (`${i}|${url}`). L'index garantit l'unicité, la valeur garde
+//  la clé lisible dans les outils de développement.
+//
+//  ⚠️ La porte ci-dessous exige cette forme. Une clé réduite à la seule valeur
+//  saisie ramènerait l'écran figé.
+const LISTES_A_CLE_COMPOSITE = [
 	{
 		fichier: 'src/routes/(app)/sondages/[id]/+page.svelte',
 		collection: 'opt.reponses_libres',
@@ -310,7 +316,7 @@ const LISTES_SANS_CLE = [
 	},
 ];
 
-for (const { fichier, collection, raison } of LISTES_SANS_CLE) {
+for (const { fichier, collection, raison } of LISTES_A_CLE_COMPOSITE) {
 	const src = await readFile(fichier, 'utf-8');
 	const sansCle = src.includes(`{#each ${collection} as `);
 	if (!sansCle) {
@@ -327,11 +333,21 @@ for (const { fichier, collection, raison } of LISTES_SANS_CLE) {
 	//  libres de reprendre une clé — un contrôle partiel qui se dit complet.
 	const ouverture = `{#each ${collection} as `;
 	for (let i = src.indexOf(ouverture); i !== -1; i = src.indexOf(ouverture, i + 1)) {
-		const entete = src.slice(i, src.indexOf('}', i) + 1);
-		if (!/\([^)]*\)\s*\}$/.test(entete)) continue;
+		//  ⚠️ La fin du bloc n'est PAS le premier `}` : une clé composite en contient
+		//  (`${i}`). On équilibre les accolades — la première version coupait l'en-tête
+		//  au milieu de l'interpolation et refusait la forme qu'elle exigeait.
+		let profondeur = 0;
+		let j = i;
+		for (; j < src.length; j++) {
+			if (src[j] === '{') profondeur++;
+			else if (src[j] === '}' && --profondeur === 0) break;
+		}
+		const entete = src.slice(i, j + 1);
+		if (/\(`\$\{\w+\}\|\$\{[^`]+\}`\)\s*\}$/.test(entete)) continue;
 		echecs.push(
-			`saisie libre : ${fichier} rend « ${collection} » AVEC une clé — ${raison}. ` +
-				'Retirer la clé : ces listes sont des affichages sans état.',
+			`saisie libre : ${fichier} rend « ${collection} » sans clé composite — ${raison}. ` +
+				'Forme attendue : (`${index}|${valeur}`). Vu : ' +
+				entete.trim(),
 		);
 	}
 }
