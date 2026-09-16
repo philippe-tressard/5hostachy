@@ -9,6 +9,10 @@ les applications qui posent un `url_fetcher` restrictif ET passent
 reconstruisant un fetcher par défaut, donc contournant le garde-fou.
 
 Ce dépôt n'a qu'un appel, `HTML(string=html).write_pdf()`, sans aucun des trois.
+Il vit dans `utils/pdf_rendu.py` depuis le 16/09/2026 — jusque-là dans
+`utils/pdf_theme.py`, qui délègue désormais. Ce test garde donc **deux** choses
+d'un seul geste : le motif de la dérogation, et le fait que le rendu s'exécute
+hors du process de l'API.
 
 🔴 **Un motif vérifié une fois n'est vérifié qu'une fois.** Le jour où quelqu'un
 ajoutera une feuille de style externe ou des métadonnées XMP à un document
@@ -78,8 +82,10 @@ def test_cas_zero_le_balayage_trouve_bien_l_appel():
         "Dans les deux cas, il ne protège plus la dérogation."
     )
     fichiers = {f for f, _n, _m in appels}
-    assert fichiers == {"utils/pdf_theme.py"}, (
-        f"WeasyPrint est appelé hors du thème commun : {sorted(fichiers)}. Le moteur PDF "
-        "ne se redéfinit pas ailleurs (CLAUDE.md), et la dérogation ne couvre que "
-        "l'appel unique qu'elle a vérifié."
+    assert fichiers == {"utils/pdf_rendu.py"}, (
+        f"WeasyPrint est appelé hors du module de rendu : {sorted(fichiers)}. Deux "
+        "raisons, et chacune suffirait : la dérogation d'`audit-exceptions.json` ne "
+        "couvre que l'appel unique qu'elle a vérifié ; et un appel hors de "
+        "`pdf_rendu.py` s'exécuterait DANS le process de l'API, qu'un plantage du "
+        "moteur emporterait alors (cf. l'en-tête de ce module)."
     )

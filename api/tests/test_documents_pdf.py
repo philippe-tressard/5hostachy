@@ -24,26 +24,7 @@ intégration continue, où le job installe ce qu'il faut. Un contrôle qui s'abs
 partout serait un contrôle absent : cf. standards/04 §1, un contrôle qui ne peut pas
 s'exécuter rend INCONNU, jamais OK.
 """
-import os
-
-import pytest
-
-
-def _weasyprint_disponible() -> bool:
-    try:
-        import weasyprint  # noqa: F401
-    except Exception:
-        return False
-    return True
-
-
-DISPONIBLE = _weasyprint_disponible()
-EN_INTEGRATION_CONTINUE = os.getenv("CI", "").lower() in ("1", "true", "yes")
-
-besoin_weasyprint = pytest.mark.skipif(
-    not DISPONIBLE,
-    reason="WeasyPrint absent (bibliothèques système) — voir test_weasyprint_present_en_ci",
-)
+from tests.aides_pdf import besoin_weasyprint, exiger_weasyprint_en_ci
 
 
 def test_weasyprint_present_en_ci():
@@ -53,13 +34,11 @@ def test_weasyprint_present_en_ci():
     Windows, l'abstention est légitime ; en intégration continue, elle signifierait
     que le job n'installe pas les bibliothèques système et que le rendu n'est
     contrôlé NULLE PART.
+
+    La décision elle-même vit dans `tests/aides_pdf.py` depuis le 16/09/2026 : elle
+    sert aussi à `test_pdf_hors_process.py`, et deux copies auraient divergé.
     """
-    if not EN_INTEGRATION_CONTINUE:
-        pytest.skip("hors intégration continue — abstention légitime")
-    assert DISPONIBLE, (
-        "WeasyPrint indisponible en intégration continue : le rendu des documents "
-        "n'est vérifié nulle part. Installer libpango/libcairo dans le job."
-    )
+    exiger_weasyprint_en_ci()
 
 
 @besoin_weasyprint
