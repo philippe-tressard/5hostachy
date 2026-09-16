@@ -33,8 +33,7 @@
 -->
 <script context="module" lang="ts">
 	/**
-	 *  Un médaillon à poser sur la carte. `contenu` remplace l'icône quand il
-	 *  est donné.
+	 *  Un médaillon à poser sur la carte.
 	 *
 	 *  🔴 Exporté depuis le module — même raison qu'`ActionsMembre` : l'appelant
 	 *  qui construit la liste s'en sert pour se typer. Recopier la forme chez lui
@@ -44,8 +43,7 @@
 	export type Medaillon = {
 		role: 'gestionnaire-site' | 'president-cs' | 'gestionnaire-principal';
 		titre: string;
-		icone?: string;
-		contenu?: string;
+		icone: string;
 	};
 </script>
 
@@ -71,9 +69,7 @@
 
 <div class="contact-card card" class:card-principal={principal}>
 	{#each medaillons as m, i (`${i}|${m.role}`)}
-		<MedaillonRole role={m.role} titre={m.titre} icone={m.icone ?? ''}>
-			{#if m.contenu}{m.contenu}{/if}
-		</MedaillonRole>
+		<MedaillonRole role={m.role} titre={m.titre} icone={m.icone} />
 	{/each}
 	<Avatar photoUrl={personne.photo_url} prenom={personne.prenom} nom={personne.nom} />
 	<div>

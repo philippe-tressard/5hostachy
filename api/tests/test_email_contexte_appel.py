@@ -49,9 +49,12 @@ def _noms_denvoi(module: ast.AST) -> set[str]:
 
     `auth.py` importe `from app.utils.email import send_email as _send_email`
     puis appelle `add_task(_send_email, code=…)`. Le nom appelé n'étant plus
-    `send_email`, les QUATRE envois du fichier — `verification_email` (deux
-    fois), `compte_en_attente` et `reinitialisation_mdp` — sortaient du
-    garde-fou. Pire que non couverts : **invisibles**, car un appel non reconnu
+    `send_email`, les envois du fichier — `verification_email`,
+    `compte_en_attente` et `reinitialisation_mdp` — sortaient du garde-fou.
+
+    ⚠️ Ils étaient QUATRE jusqu'au 16/09/2026 : `verification_email` s'y écrivait
+    deux fois, à l'inscription et au renvoi du lien. Les deux passent désormais
+    par `emettre_verification_email`, et il n'en reste qu'un. Pire que non couverts : **invisibles**, car un appel non reconnu
     n'est pas non plus compté parmi les opaques que
     `test_aucun_envoi_hors_de_portee` fait rougir. Trouvé le 05/08/2026 en
     auditant les modèles, un an après le troisième `'X' is undefined`.
