@@ -41,6 +41,7 @@ from tests.aides_pdf import besoin_weasyprint, exiger_weasyprint_en_ci
 #: Un document minimal : ce qu'on mesure ici est l'isolation, pas la mise en page.
 HTML_MINIMAL = "<html><body><h1>Essai</h1><p>Contenu.</p></body></html>"
 
+
 def test_weasyprint_present_en_ci():
     """La portée du fichier : s'abstenir partout serait n'avoir aucun contrôle."""
     exiger_weasyprint_en_ci()
@@ -113,6 +114,7 @@ def test_le_journal_de_weasyprint_remonte_au_parent(caplog):
     On provoque donc une plainte connue : `box-shadow` n'est pas supportée, et
     WeasyPrint le dit à chaque rendu depuis toujours.
     """
+    from app.utils import pdf_rendu
     from app.utils.pdf_theme import html_to_pdf
 
     html = (
@@ -122,12 +124,22 @@ def test_le_journal_de_weasyprint_remonte_au_parent(caplog):
     with caplog.at_level(logging.WARNING, logger="weasyprint"):
         html_to_pdf(html)
 
+    #  Deux mesures, parce qu'un seul vide ne dit pas OÙ il se produit : le
+    #  journal brut dit ce que l'enfant a collecté, `caplog` ce qui a survécu au
+    #  rejeu dans ce process.
+    rapporte = [(n, m[:60]) for n, _niv, m in pdf_rendu.dernier_journal]
+    assert any("box-shadow" in m for _n, _niv, m in pdf_rendu.dernier_journal), (
+        "l'ENFANT n'a pas collecté la plainte de WeasyPrint — le transfert n'est "
+        f"pas en cause, la collecte l'est. Journal rapporté : {rapporte}"
+    )
+
     plaintes = [r.getMessage() for r in caplog.records if r.name.startswith("weasyprint")]
     assert any("box-shadow" in p for p in plaintes), (
         "la plainte de WeasyPrint n'est pas remontée du process de rendu : tout "
         "contrôle qui lit caplog est devenu aveugle — à commencer par "
         "`test_la_fiche_avec_ses_icones_se_rend_en_pdf`, qui conclut « aucune "
-        "plainte » sur un caplog vide. "
+        "plainte » sur un caplog vide. L'enfant l'avait pourtant collectée : le "
+        "rejeu est donc en cause dans CE process. "
         f"Plaintes weasyprint reçues : {plaintes}. "
         f"Tous les enregistrements : {[(r.name, r.getMessage()[:60]) for r in caplog.records]}"
     )

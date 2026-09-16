@@ -104,6 +104,11 @@ MAX_JOURNAL = 5_000
 #: de logging.
 dernier_temoin: dict | None = None
 
+#: Le journal brut rapporté par le dernier enfant, avant rejeu. Sert au
+#: diagnostic : un journal plein avec un `caplog` vide désigne le parent, un
+#: journal vide désigne l'enfant. La distinction a coûté deux passages de CI.
+dernier_journal: list[tuple[str, int, str]] = []
+
 
 class RenduPdfImpossible(RuntimeError):
     """Le PDF n'a pas pu être produit — on ne rend jamais un document partiel."""
@@ -127,9 +132,18 @@ def _rendre_dans_l_enfant(tube, html: str) -> None:
                     enregistrement.getMessage(),
                 ))
 
+    #  L'enfant ne sait pas de quoi il hérite : avec `spawn` il réimporte le
+    #  module principal de l'appelant (pytest, uvicorn…), qui a pu désactiver le
+    #  logging globalement ou relever des niveaux. On repart donc d'un état
+    #  connu, sans quoi la collecte rend un journal vide sans rien dire.
+    logging.disable(logging.NOTSET)
     racine = logging.getLogger()
     racine.setLevel(logging.INFO)
     racine.addHandler(_Collecteur())
+    for nom in ("weasyprint", "fontTools"):
+        interesse = logging.getLogger(nom)
+        interesse.setLevel(logging.NOTSET)  # hérite du racine
+        interesse.propagate = True
 
     #  🔴 Le témoin voyage DANS le message, pas par le journal.
     #
@@ -223,8 +237,9 @@ def rendre_pdf(html: str, *, delai_s: float = DELAI_RENDU_S) -> bytes:
             enfant.join()
 
     etat, charge, journal, temoin = message
-    global dernier_temoin
+    global dernier_temoin, dernier_journal
     dernier_temoin = temoin
+    dernier_journal = journal
     _rejouer(journal)
     if etat == "erreur":
         raise RenduPdfImpossible(charge)
