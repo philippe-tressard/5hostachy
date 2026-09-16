@@ -51,6 +51,69 @@ def list_batiments(session: Session = Depends(get_session)):
     return session.exec(select(Batiment).order_by(Batiment.numero)).all()
 
 
+#: La validité d'un lien de vérification d'adresse — **écrite une seule fois**.
+#:
+#: 🔴 Elle l'était QUATRE fois avant le 16/09/2026 : deux `timedelta(hours=24)`
+#: (la durée réelle du jeton) et deux `"expire_heures": 24` (celle annoncée dans
+#: le courriel), aux deux endroits qui émettent ce lien — l'inscription et le
+#: renvoi. Rien ne les liait : changer la durée réelle sans toucher aux deux
+#: littéraux aurait fait **mentir le message** au résident, et l'écart n'aurait
+#: été visible que pour celui dont le lien expire plus tôt qu'annoncé.
+VALIDITE_VERIFICATION_EMAIL = timedelta(hours=24)
+
+
+def emettre_verification_email(
+    session: Session,
+    user: Utilisateur,
+    background_tasks: BackgroundTasks,
+) -> None:
+    """Crée le jeton de vérification d'adresse et envoie le courriel.
+
+    Les deux gestes ne se séparent pas : un jeton posé sans courriel n'atteint
+    personne, un courriel sans jeton porte un lien mort. Ils étaient recopiés à
+    l'identique à l'inscription et au renvoi du lien (16/09/2026), et c'est la
+    durée — quatre littéraux indépendants — qui rendait la copie dangereuse.
+
+    ⚠️ Ce qui reste à l'appelant : invalider les jetons précédents. Le renvoi le
+    fait, l'inscription n'en a pas. Les confondre ferait de cette fonction un
+    endroit qui décide à la place de l'appelant.
+    """
+    raw_token = secrets.token_urlsafe(32)
+    session.add(
+        EmailVerificationToken(
+            user_id=user.id,
+            token=raw_token,
+            expires_at=datetime.utcnow() + VALIDITE_VERIFICATION_EMAIL,
+        )
+    )
+    session.commit()
+
+    cfg_rows = session.exec(
+        select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
+    ).all()
+    cfg = {row.cle: row.valeur for row in cfg_rows}
+    site_url = base_site(cfg.get("site_url"))
+    site_nom = nom_site(cfg.get("site_nom"))
+
+    from app.utils.email import send_email as _send_email
+
+    background_tasks.add_task(
+        _send_email,
+        code="verification_email",
+        to=user.email,
+        context={
+            "prenom": user.prenom,
+            "token": raw_token,
+            "lien": f"{site_url}/auth/verifier-email?token={raw_token}",
+            #  Annoncée au résident, DÉDUITE de la validité réelle : les deux ne
+            #  peuvent plus diverger.
+            "expire_heures": int(VALIDITE_VERIFICATION_EMAIL.total_seconds() // 3600),
+            "residence": {"nom": site_nom},
+            "app": {"url": site_url},
+        },
+    )
+
+
 @router.post("/register", response_model=UserRead, status_code=201)
 @limiter.limit("5/minute")
 def register(
@@ -113,40 +176,19 @@ def register(
     session.commit()
     session.refresh(user)
 
-    # ── Token de vérification email ──────────────────────────────
-    raw_token = secrets.token_urlsafe(32)
-    evt = EmailVerificationToken(
-        user_id=user.id,
-        token=raw_token,
-        expires_at=datetime.utcnow() + timedelta(hours=24),
-    )
-    session.add(evt)
-    session.commit()
+    # ── Vérification de l'adresse : jeton + courriel, en un seul geste ──
+    emettre_verification_email(session, user, background_tasks)
 
-    # Envoyer l'email de vérification à l'utilisateur
+    #  Les autres clés servent à la notification du gestionnaire, plus bas —
+    #  qui a besoin du même envoyeur.
+    from app.utils.email import send_email as _send_email
+
     cfg_rows = session.exec(
         select(ConfigSite).where(
             ConfigSite.cle.in_(("notify_new_user_created_email", "site_nom", "site_url", "site_manager_user_id", "site_email"))
         )
     ).all()
     cfg = {row.cle: row.valeur for row in cfg_rows}
-    site_url = base_site(cfg.get("site_url"))
-    site_nom = nom_site(cfg.get("site_nom"))
-
-    from app.utils.email import send_email as _send_email
-    background_tasks.add_task(
-        _send_email,
-        code="verification_email",
-        to=user.email,
-        context={
-            "prenom": user.prenom,
-            "token": raw_token,
-            "lien": f"{site_url}/auth/verifier-email?token={raw_token}",
-            "expire_heures": 24,
-            "residence": {"nom": site_nom},
-            "app": {"url": site_url},
-        },
-    )
 
     # Notification au gestionnaire du site
     if cfg.get("notify_new_user_created_email") == "1":
@@ -337,36 +379,7 @@ def resend_verification(
             t.used = True
             session.add(t)
 
-        raw_token = secrets.token_urlsafe(32)
-        evt = EmailVerificationToken(
-            user_id=user.id,
-            token=raw_token,
-            expires_at=datetime.utcnow() + timedelta(hours=24),
-        )
-        session.add(evt)
-        session.commit()
-
-        cfg_rows = session.exec(
-            select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
-        ).all()
-        cfg = {row.cle: row.valeur for row in cfg_rows}
-        site_url = base_site(cfg.get("site_url"))
-        site_nom = nom_site(cfg.get("site_nom"))
-
-        from app.utils.email import send_email as _send_email
-        background_tasks.add_task(
-            _send_email,
-            code="verification_email",
-            to=user.email,
-            context={
-                "prenom": user.prenom,
-                "token": raw_token,
-                "lien": f"{site_url}/auth/verifier-email?token={raw_token}",
-                "expire_heures": 24,
-                "residence": {"nom": site_nom},
-                "app": {"url": site_url},
-            },
-        )
+        emettre_verification_email(session, user, background_tasks)
 
     # Toujours 204 (pas d'énumération de comptes)
     return None
