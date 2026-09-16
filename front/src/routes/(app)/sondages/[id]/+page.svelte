@@ -358,7 +358,7 @@
 					</div>
 					{#if opt.champ_libre && opt.reponses_libres?.length > 0}
 						<div class="reponses-libres-list">
-							{#each opt.reponses_libres as rep (rep)}
+							{#each opt.reponses_libres as rep, ri (`${ri}|${rep}`)}
 								<blockquote class="reponse-libre-item">«&nbsp;{rep}&nbsp;»</blockquote>
 							{/each}
 						</div>

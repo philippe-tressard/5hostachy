@@ -140,7 +140,7 @@
 					</span>
 				{/each}
 			{:else if p.telephone}
-				{#each telephonesDe(p.telephone) as tel (tel)}
+				{#each telephonesDe(p.telephone) as tel, ti (`${ti}|${tel}`)}
 					<span class="prest-contact">📞 {tel.trim()}</span>
 				{/each}
 			{/if}
@@ -174,7 +174,7 @@
 				{#if p.telephone}
 					<div>
 						<span class="detail-label">Téléphone</span>
-						{#each telephonesDe(p.telephone) as tel (tel)}
+						{#each telephonesDe(p.telephone) as tel, ti (`${ti}|${tel}`)}
 							<span style="display:block">📞 {tel.trim()}</span>
 						{/each}
 					</div>

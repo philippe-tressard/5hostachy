@@ -251,7 +251,7 @@
 								<a href="mailto:{m.email}" class="contact-email">{m.email}</a>
 							{/if}
 							{#if m.telephone}
-								{#each telephonesDe(m.telephone) as tel (tel)}
+								{#each telephonesDe(m.telephone) as tel, ti (`${ti}|${tel}`)}
 									<a href="tel:{tel}" class="contact-email">&#x1F4DE; {tel}</a>
 								{/each}
 							{/if}
