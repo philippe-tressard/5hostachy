@@ -272,6 +272,70 @@ for (const fichier of FICHIERS_DU_FIL) {
 	}
 }
 
+// ── Les listes de SAISIE LIBRE ne portent pas de clé ────────────────────────
+//
+//  Une valeur saisie par un résident peut être écrite deux fois : deux réponses
+//  libres « Oui », deux fois la même photo, un numéro de téléphone recopié. Les
+//  prendre pour clé, c'est parier que personne ne se répétera — et
+//  `each_key_duplicate` fige alors l'écran entier.
+//
+//  Ces listes n'ont AUCUN besoin de clé : ce sont des affichages sans état ni
+//  réordonnancement. Un `{#each}` sans clé se réconcilie par index et ne peut
+//  jamais lever. La porte ci-dessous empêche qu'on la remette « pour bien faire ».
+const LISTES_SANS_CLE = [
+	{
+		fichier: 'src/routes/(app)/sondages/[id]/+page.svelte',
+		collection: 'opt.reponses_libres',
+		raison: 'deux résidents peuvent écrire la même réponse libre',
+	},
+	{
+		fichier: 'src/lib/components/PiecesJointes.svelte',
+		collection: 'photos',
+		raison: 'la même photo peut être jointe deux fois',
+	},
+	{
+		fichier: 'src/lib/components/PiecesJointes.svelte',
+		collection: 'documents',
+		raison: 'le même document peut être joint deux fois',
+	},
+	{
+		fichier: 'src/lib/components/CartePrestataire.svelte',
+		collection: 'telephonesDe(p.telephone)',
+		raison: 'un numéro peut être saisi deux fois dans le même champ',
+	},
+	{
+		fichier: 'src/routes/(app)/annuaire/+page.svelte',
+		collection: 'telephonesDe(m.telephone)',
+		raison: 'idem, côté annuaire',
+	},
+];
+
+for (const { fichier, collection, raison } of LISTES_SANS_CLE) {
+	const src = await readFile(fichier, 'utf-8');
+	const sansCle = src.includes(`{#each ${collection} as `);
+	if (!sansCle) {
+		//  Cas zéro : la liste a disparu ou changé de nom — la déclaration ne garde
+		//  plus rien, et se tairait. On le dit.
+		echecs.push(
+			`saisie libre : « ${collection} » est introuvable dans ${fichier} — ` +
+				'la déclaration ne garde plus rien, la mettre à jour ou la retirer.',
+		);
+		continue;
+	}
+	//  TOUTES les occurrences, pas la première : `photos` est rendue quatre fois
+	//  dans le même composant, et n'en contrôler qu'une laisserait les autres
+	//  libres de reprendre une clé — un contrôle partiel qui se dit complet.
+	const ouverture = `{#each ${collection} as `;
+	for (let i = src.indexOf(ouverture); i !== -1; i = src.indexOf(ouverture, i + 1)) {
+		const entete = src.slice(i, src.indexOf('}', i) + 1);
+		if (!/\([^)]*\)\s*\}$/.test(entete)) continue;
+		echecs.push(
+			`saisie libre : ${fichier} rend « ${collection} » AVEC une clé — ${raison}. ` +
+				'Retirer la clé : ces listes sont des affichages sans état.',
+		);
+	}
+}
+
 if (echecs.length) {
 	console.error(`\n✗ ${echecs.length} clé(s) de liste non garantie(s) :\n`);
 	for (const e of echecs) console.error(`  ${e}`);

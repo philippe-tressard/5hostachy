@@ -126,7 +126,7 @@
 						role="group"
 						aria-label="Galerie de {photos.length} photos"
 					>
-						{#each photos as url, i (url)}
+						{#each photos as url, i}
 							<button
 								type="button"
 								class="pj-slide"
@@ -161,7 +161,7 @@
 						<span class="pj-compteur" aria-live="polite">{courante + 1} / {photos.length}</span>
 						{#if photos.length <= 8}
 							<span class="pj-points" aria-hidden="true">
-								{#each photos as _, i (_)}
+								{#each photos as _, i}
 									<span class="pj-point" class:pj-point-actif={i === courante}></span>
 								{/each}
 							</span>
@@ -170,7 +170,7 @@
 				</div>
 			{:else if format === 'grand'}
 				<div class="pj-grandes">
-					{#each photos as url, i (url)}
+					{#each photos as url, i}
 						<button
 							type="button"
 							class="pj-grande"
@@ -183,7 +183,7 @@
 				</div>
 			{:else}
 				<div class="pj-photos">
-					{#each photos as url, i (url)}
+					{#each photos as url, i}
 						<button
 							type="button"
 							class="pj-vignette"
@@ -198,7 +198,7 @@
 		{/if}
 		{#if documents.length}
 			<div class="pj-docs">
-				{#each documents as url (url)}
+				{#each documents as url}
 					<a
 						class="pj-doc"
 						class:pj-doc-compact={compact}
