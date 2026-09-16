@@ -201,6 +201,38 @@ export function badgeRole(role: string | null | undefined): string {
 	return BADGE_ROLE[role] ?? BADGE_HERITES[role] ?? 'badge-gray';
 }
 
+/**
+ * Les badges à afficher pour une liste de rôles — **sans libellé répété**.
+ *
+ * 🔴 DEUX RÔLES PEUVENT RENDRE LE MÊME LIBELLÉ, et c'est voulu : `bailleur` est
+ * l'alias hérité de `copropriétaire_bailleur`, tous deux « Copropriétaire
+ * bailleur » (`LIBELLES_HERITES`). Un compte qui porte les deux — ce que rien
+ * n'interdit en base — produisait donc deux badges identiques.
+ *
+ * Sur `/profil` c'était disgracieux. Sur `/admin`, la colonne « Rôles actifs »
+ * les rendait par `{#each … (d.label)}` : deux clés égales, donc
+ * `each_key_duplicate`, **erreur fatale de Svelte** — l'écran Utilisateurs se
+ * figeait entièrement, et plus aucune navigation ne répondait ensuite
+ * (16/09/2026, second incident du même jour après `pages_order`).
+ *
+ * ⚠️ Le dédoublonnage porte sur le LIBELLÉ, pas sur le rôle : ce sont les
+ * libellés qui s'affichent, et deux alias du même rôle ne méritent qu'un badge.
+ * La teinte retenue est celle du premier rôle rencontré.
+ */
+export function badgesDeRoles(
+	roles: (string | null | undefined)[],
+): { label: string; cls: string }[] {
+	const vus = new Set<string>();
+	const badges: { label: string; cls: string }[] = [];
+	for (const role of roles) {
+		const label = libelleRole(role);
+		if (!label || vus.has(label)) continue;
+		vus.add(label);
+		badges.push({ label, cls: badgeRole(role) });
+	}
+	return badges;
+}
+
 /** La classe de badge d'un statut. */
 export function badgeStatut(statut: string | null | undefined): string {
 	if (!statut) return 'badge-gray';
