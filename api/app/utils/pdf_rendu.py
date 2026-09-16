@@ -173,9 +173,32 @@ def _rendre_dans_l_enfant(tube, html: str) -> None:
 
 
 def _rejouer(journal: list[tuple[str, int, str]]) -> None:
-    """Réémet dans ce process les lignes produites par l'enfant."""
+    """Réémet dans ce process les lignes produites par l'enfant.
+
+    🔴 **Un logger `disabled` avale tout, en silence — et ce process en a.**
+    `fileConfig()` vaut `disable_existing_loggers=True` par défaut : à la
+    seconde où Alembic joue une migration, **tous** les loggers déjà créés
+    passent à `disabled = True` pour le reste de la vie du process. Les lignes
+    que l'enfant a bel et bien collectées disparaîtraient alors ici sans un mot,
+    et `test_documents_pdf.py` conclurait « WeasyPrint ne s'est pas plaint » sur
+    un `caplog` vide — le faux vert exact que ce transfert existe pour empêcher.
+
+    Le dépôt avait déjà payé ce prix : `tests/test_releve_echec_nest_pas_vide.py`
+    le décrit, et deux garde-fous y rendaient un verdict dépendant de l'ordre des
+    tests. Ne pas relire ce qu'un voisin a appris, c'est refaire son défaut.
+
+    On lève donc l'extinction le temps d'émettre, puis on la restaure : l'état du
+    process n'est pas le nôtre à changer, mais une ligne produite ailleurs n'a
+    pas à mourir d'une configuration posée ici.
+    """
     for nom, niveau, message in journal:
-        logging.getLogger(nom).log(niveau, message)
+        journaliseur = logging.getLogger(nom)
+        eteint = journaliseur.disabled
+        journaliseur.disabled = False
+        try:
+            journaliseur.log(niveau, message)
+        finally:
+            journaliseur.disabled = eteint
 
 
 def rendre_pdf(html: str, *, delai_s: float = DELAI_RENDU_S) -> bytes:
