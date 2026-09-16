@@ -2,7 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import { DEFAUTS_NOTIFS } from '$lib/preferences';
-	import { badgesDeRoles, libelleRole, LIBELLES_STATUT } from '$lib/roles';
+	import { badgesDeRoles, LIBELLES_STATUT } from '$lib/roles';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
