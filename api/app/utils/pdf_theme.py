@@ -167,12 +167,21 @@ def image_data_uri(image_url: str | None) -> str | None:
 # ── Rendu PDF ────────────────────────────────────────────────────────────────
 
 def html_to_pdf(html: str) -> bytes:
-    """Rend un document HTML autonome en PDF (WeasyPrint).
+    """Rend un document HTML autonome en PDF — **le seul point d'entrée du rendu**.
 
     Le HTML doit être **autonome** : CSS inline dans une balise `<style>` et
     images en data-URI (cf. `image_data_uri` / `qr_data_uri`). Aucune requête
     réseau n'est effectuée au rendu.
-    """
-    from weasyprint import HTML  # import différé : lib lourde, chargée à l'usage
 
-    return HTML(string=html).write_pdf()
+    🔴 Le rendu s'exécute dans un **autre process** depuis le 16/09/2026, pour
+    qu'un WeasyPrint qui plante ou épuise la mémoire du RPi n'emporte plus l'API.
+    Ce que cela coûte (+1,5 à 2 s par document), ce que cela gagne (mesuré), et
+    pourquoi c'est `spawn` et jamais `fork` : `app/utils/pdf_rendu.py`.
+
+    ⚠️ Cette fonction reste le point d'entrée de TOUS les documents — n'appelle
+    jamais WeasyPrint ailleurs, et n'appelle pas non plus `rendre_pdf`
+    directement : c'est ici que le thème commun et le moteur se rejoignent.
+    """
+    from app.utils.pdf_rendu import rendre_pdf  # import différé : lib lourde
+
+    return rendre_pdf(html)

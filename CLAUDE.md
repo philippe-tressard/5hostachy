@@ -161,7 +161,17 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   **Ne jamais** redéfinir une palette, un logo ou un moteur PDF ailleurs.
 - Le HTML doit être **autonome** : CSS dans `<style>`, images en data-URI (rendu hors requête HTTP).
 - Format de page via `@page { size: A4|A5 }`. Pas d'emoji dans les affiches — logo SVG et aplats de couleur.
-- Documents existants : fiche arrivant (`fiche_arrivant.py`), annonce de hall (`annonce_hall.py`).
+- Documents existants : fiche arrivant (`fiche_arrivant.py`), annonce de hall (`annonce_hall.py`),
+  manuel utilisateur (`manuel_pdf.py`).
+- 🔴 **Le rendu s'exécute hors du process de l'API** (`app/utils/pdf_rendu.py`, 16/09/2026),
+  dans un enfant `spawn` — **jamais `fork`**, qui hériterait des descripteurs de `app.db`
+  et ramènerait la règle d'or ci-dessus. Un WeasyPrint qui plante ou épuise la mémoire
+  du RPi n'emporte donc plus l'API. Coût assumé : +1,5 à 2 s par document.
+  `api/tests/test_weasyprint_appel_unique.py` refuse tout appel au moteur ailleurs que
+  dans ce module — c'est ce qui empêche le rendu de retomber dans le process, en silence.
+  Il gardait déjà cette porte pour une **autre** raison (la dérogation de sécurité
+  GHSA-jf6q-chmf-3h3v) : ne pas en écrire un second, c'est la même porte.
+  `api/tests/test_pdf_hors_process.py` vérifie, lui, que l'enfant est bien `spawn`.
 
 ### Destinataires CS
 
