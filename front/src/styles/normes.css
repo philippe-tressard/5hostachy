@@ -434,6 +434,43 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	color: var(--color-text-muted);
 	margin: 0.4rem 0;
 }
+/*  ── Le BLOC DÉPLIABLE (#992, 17/09/2026) ──────────────────────────────────
+    Les extraits d'articles qu'une synthèse de contrat joint en fin de texte.
+    Replié par défaut : l'attribut `open` est retiré par l'assainisseur, ici on
+    ne fait que rendre le geste lisible.
+
+    ⚠️ Le chevron est celui du site — `›` qui pivote —, pas la puce par défaut
+    du navigateur : deux marques pour un même geste sur un même écran se
+    liraient comme deux gestes (`ux-patterns` : une pastille qui se déplie porte
+    un chevron). */
+.rich-content details {
+	margin: 0.4rem 0;
+}
+.rich-content summary {
+	display: flex;
+	align-items: baseline;
+	gap: 0.4rem;
+	cursor: pointer;
+	font-weight: 600;
+	list-style: none;
+}
+.rich-content summary::-webkit-details-marker {
+	display: none;
+}
+.rich-content summary::before {
+	content: '›';
+	color: var(--color-text-muted);
+	transition: transform 0.15s;
+}
+.rich-content details[open] > summary::before {
+	transform: rotate(90deg);
+}
+/*  Le texte de l'extrait garde le filet du `blockquote` : c'est une citation
+    du contrat, et elle se lit comme les autres. */
+.rich-content details > blockquote {
+	margin-top: 0.3rem;
+}
+
 .rich-content strong {
 	font-weight: 600;
 }

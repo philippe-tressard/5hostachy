@@ -41,6 +41,21 @@ const ALLOWED_TAGS = [
 	'hr',
 	'span',
 	'div',
+	//  🔴 LE BLOC DÉPLIABLE (#992, 17/09/2026) — les extraits d'articles que la
+	//  synthèse d'un contrat joint en fin de texte : onze extraits de trente
+	//  lignes, dépliés, noieraient la synthèse qu'ils éclairent.
+	//
+	//  ⚠️ `open` n'est PAS ajouté à `ALLOWED_ATTR`, et c'est ce qui rend le repli
+	//  fiable : l'attribut est retiré quoi que le modèle écrive, donc un bloc
+	//  arrive toujours fermé. Le repli n'est pas une consigne qu'on espère
+	//  respectée, c'est une propriété du rendu.
+	//
+	//  📖 Les nœuds qui les font survivre à l'éditeur : `$lib/blocDepliable`.
+	//  Ces trois listes — celle-ci, celle du schéma Tiptap et celle de la
+	//  consigne donnée au modèle — sont tenues d'accord par
+	//  `api/tests/test_consigne_balises.py`.
+	'details',
+	'summary',
 ];
 
 const ALLOWED_ATTR = ['href', 'src', 'alt', 'title', 'class', 'target', 'rel'];
