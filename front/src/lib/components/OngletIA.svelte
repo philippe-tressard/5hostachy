@@ -80,6 +80,11 @@
 	//  L'ACCORDÉON (#987) : un seul usage déplié à la fois. Déplier l'un replie
 	//  l'autre — demandé à l'écran le 17/09/2026, deux blocs ouverts faisaient une
 	//  page longue. L'état vit ici : un bloc ne connaît pas ses voisins.
+	//
+	//  🔴 `null` à l'ouverture : TOUS les usages sont repliés, y compris ceux qui
+	//  sont actifs (arbitré le 17/09/2026). Déplier le premier actif faisait de
+	//  l'écran une page longue dès l'arrivée, alors qu'on y vient le plus souvent
+	//  pour le bloc Commun — et la page ne choisit pas ce qu'on est venu lire.
 	let usageOuvert: string | null = null;
 	function basculerUsage(code: string, ouvert: boolean) {
 		if (ouvert) usageOuvert = code;
@@ -124,9 +129,6 @@
 	onMount(async () => {
 		try {
 			usages = await configApi.llmUsages();
-			//  À l'ouverture, le premier usage ACTIF est déplié : ce qu'on a activé,
-			//  on veut le voir. Les autres attendent un clic.
-			usageOuvert = usages.find((u) => valeursSaisies[u.cles.actif] === '1')?.code ?? null;
 		} catch (e: any) {
 			toast('error', e?.message ?? 'Les usages de l’assistant n’ont pas pu être lus');
 		}

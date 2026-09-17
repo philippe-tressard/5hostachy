@@ -95,21 +95,27 @@ def documents_du_contrat(session: Session, contrat: ContratEntretien) -> list[Do
     L'ordre CHRONOLOGIQUE porte le sens : ce qui vient après modifie ce qui
     précède. C'est pourquoi on ne trie ni par titre ni par taille.
 
-    ⚠️ Le document DÉSIGNÉ (`document_id`) vient en tête s'il n'est pas déjà
-    joint : c'est le contrat de référence, celui que les autres amendent.
+    🔴 **Le pointeur `document_id` n'intervient plus** (17/09/2026, #989).
+
+    Il insérait en tête « le document désigné, s'il n'est pas déjà joint » — et
+    cette condition dit tout : un document réellement rattaché au contrat figure
+    déjà dans la requête ci-dessous, donc la seule branche que le code pouvait
+    prendre était celle d'un document **qui n'est pas de ce contrat**. Un
+    contrat d'ascenseur a ainsi lu, et annoncé dans son encart de provenance,
+    « Entretien toitures Bat 2 » : le fichier d'un autre contrat, parti au
+    service d'IA, ce que l'en-tête de ce module interdit.
+
+    La règle du document désigné n'a pas disparu : elle vit dans
+    `utils/document_contrat`, où la fiche copropriété la consomme pour son lien
+    de téléchargement, avec la garde qui manquait.
     """
-    joints = list(
+    return list(
         session.exec(
             select(Document)
             .where(Document.contrat_id == contrat.id)
             .order_by(Document.publie_le)
         ).all()
     )
-    if contrat.document_id and not any(d.id == contrat.document_id for d in joints):
-        designe = session.get(Document, contrat.document_id)
-        if designe:
-            joints.insert(0, designe)
-    return joints
 
 
 def texte_du_document(doc: Document) -> str:
