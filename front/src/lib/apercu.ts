@@ -31,7 +31,8 @@
  * ```
  */
 import { writable, type Readable } from 'svelte/store';
-import { ApiError, type ApercuDiffusion } from '$lib/api';
+import { type ApercuDiffusion } from '$lib/api';
+import { messageErreur } from '$lib/erreurs';
 import { toast } from '$lib/components/Toast.svelte';
 
 export interface EtatApercu {
@@ -62,10 +63,7 @@ export function creerApercu(charger: () => Promise<ApercuDiffusion>): Apercu {
 			//  de retenir l'utilisateur devant une modale vide dont il ne saurait
 			//  pas quoi faire.
 			set({ ...VIDE });
-			toast(
-				'error',
-				e instanceof ApiError ? e.message : "Aperçu indisponible — l'envoi reste possible.",
-			);
+			toast('error', messageErreur(e, "Aperçu indisponible — l'envoi reste possible."));
 		}
 	}
 

@@ -33,7 +33,8 @@
 	 * deux tâches distinctes, deux ordonnanceurs — celle-ci tourne dans l'API.
 	 */
 	import { onMount } from 'svelte';
-	import { admin, ApiError } from '$lib/api';
+	import { admin } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 
 	//  Les NOMS DU MODÈLE, pas des noms inventés : c'est ce qui manquait.
@@ -61,7 +62,7 @@
 			});
 			toast('success', 'Réglage enregistré');
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur à l’enregistrement');
+			toast('error', messageErreur(e, 'Erreur à l’enregistrement'));
 		} finally {
 			enregistrement = false;
 		}

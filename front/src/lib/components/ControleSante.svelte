@@ -17,7 +17,7 @@
 <script lang="ts">
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import { admin as adminApi } from '$lib/api';
-	import { ApiError } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { fmtDatetime } from '$lib/date';
 	import { toast } from '$lib/components/Toast.svelte';
 
@@ -45,7 +45,7 @@
 					: 'Aucun problème détecté.',
 			);
 		} catch (e) {
-			erreur = e instanceof ApiError ? e.message : 'Erreur';
+			erreur = messageErreur(e);
 			problemes = null;
 		} finally {
 			chargement = false;

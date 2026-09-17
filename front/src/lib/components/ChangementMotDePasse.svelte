@@ -14,7 +14,8 @@
 -->
 <script lang="ts">
 	import ChampMotDePasse from './ChampMotDePasse.svelte';
-	import { auth as authApi, ApiError } from '$lib/api';
+	import { auth as authApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from './Toast.svelte';
 
 	let pwdActuel = '';
@@ -57,7 +58,7 @@
 			pwdConf = '';
 			toast('success', 'Mot de passe modifié');
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			savingPwd = false;
 		}
