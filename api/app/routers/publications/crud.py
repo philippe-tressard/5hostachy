@@ -20,6 +20,7 @@ from app.models.core import (
 )
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate
 from app.models.annonce_hall import AnnonceHall
+from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import parse_photos, photos_json, premiere_photo
 from app.utils.perimetres import parse_json_perimetres
 from app.utils.suppression_liee import flush_si_necessaire, supprimer_documents_de
@@ -239,6 +240,10 @@ def update_publication(
     #  `api/tests/test_intentions_envoi.py` vérifie qu'elle reste complète.
     for intention in INTENTIONS_HORS_MODELE:
         data.pop(intention, None)
+    #  La marque « assistant IA » ne s'écrit que dans UN sens (`utils/assiste_ia`) :
+    #  sortie de la boucle, sinon un `False` effacerait une contribution passée.
+    marquer_assiste_ia(pub, body)
+    data.pop("assiste_ia", None)
     if data.get('archivee') is True and pub.statut != "resolu":
         raise HTTPException(422, "Seules les publications résolues peuvent être archivées")
     for champ in ('perimetre_cible', 'public_cible'):

@@ -74,6 +74,8 @@ export interface PorteSaisiPourLu {
 
 export interface Ticket extends PorteSaisiPourLu {
 	id: number;
+	/** « Rédigé avec l'assistant IA » (#985). */
+	assiste_ia?: boolean;
 	numero: string;
 	titre: string;
 	description: string;
@@ -170,6 +172,7 @@ export interface TicketMessage {
 
 export interface TicketEvolution {
 	id: number;
+	assiste_ia?: boolean;
 	ticket_id: number;
 	type: 'commentaire' | 'etat' | 'reponse';
 	contenu?: string;
@@ -210,6 +213,7 @@ export interface ApercuDiffusion {
 
 export interface PublicationEvolution {
 	id: number;
+	assiste_ia?: boolean;
 	publication_id: number;
 	type: 'commentaire' | 'etat' | 'correction';
 	contenu?: string;
@@ -237,6 +241,8 @@ export interface SourceAffiche {
 
 export interface Publication extends PorteSaisiPourLu {
 	id: number;
+	/** « Rédigé avec l'assistant IA » (#985). */
+	assiste_ia?: boolean;
 	titre: string;
 	contenu: string;
 	perimetre: string;

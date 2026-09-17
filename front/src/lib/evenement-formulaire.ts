@@ -45,6 +45,8 @@ export interface FormulaireEvenementData {
 	saisi_pour_user_id: number | null;
 	saisi_pour_nom: string;
 	saisi_pour_email: string;
+	/** « Rédigé avec l'assistant IA » (#985) — posé par la section Description. */
+	assiste_ia: boolean;
 }
 
 /**
@@ -74,6 +76,7 @@ export function evenementVierge(debut = ''): FormulaireEvenementData {
 		partager_whatsapp: false,
 		envoyer_syndic: false,
 		envoyer_cs: false,
+		assiste_ia: false,
 		...champsSaisiPour(null),
 	};
 }
@@ -105,6 +108,7 @@ export function evenementDepuis(ev: Record<string, unknown>): FormulaireEvenemen
 		partager_whatsapp: (ev.partager_whatsapp as boolean | undefined) ?? false,
 		envoyer_syndic: (ev.envoyer_syndic as boolean | undefined) ?? false,
 		envoyer_cs: (ev.envoyer_cs as boolean | undefined) ?? false,
+		assiste_ia: false,
 		...champsSaisiPour(ev),
 	};
 }

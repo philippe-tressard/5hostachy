@@ -1,4 +1,5 @@
 import { parAttribut } from '$lib/table-statuts';
+import type { Publication, PublicationEvolution } from '$lib/api/types';
 
 //  Présentation des publications : ce qui ne dépend ni du DOM ni d'un store, et
 //  qui n'avait donc rien à faire dans `actualites/+page.svelte`.
@@ -61,3 +62,39 @@ export const MAX_SOURCES_PREREMPLISSAGE = 10;
 //  décidé ici : la liste, son tri et ses exclusions viennent du serveur
 //  (`GET /annonces-hall/sources`, `api/app/utils/sources_affiche.py`). Le fil
 //  agrège trois familles, et seul le serveur sait lesquelles sont reprenables.
+
+/**
+ *  Le fil d'une publication après une entrée AJOUTÉE — et l'état qu'une
+ *  transition pose sur la publication elle-même.
+ *
+ *  Sorti de la page Actualités le 17/09/2026 (modularité) : c'est une règle de
+ *  DONNÉE (que devient la liste ?), pas d'écran, et elle se lit et se teste sans
+ *  monter la page.
+ */
+export function avecEntreeAjoutee(
+	liste: Publication[],
+	pubId: number,
+	evol: PublicationEvolution,
+	transition: boolean,
+): Publication[] {
+	return liste.map((p) => {
+		if (p.id !== pubId) return p;
+		const maj: Publication = { ...p, evolutions: [...(p.evolutions ?? []), evol] };
+		if (transition) maj.statut = evol.nouveau_statut as Publication['statut'];
+		return maj;
+	});
+}
+
+/** Le fil après la CORRECTION d'une entrée : elle est remplacée, rien d'autre ne bouge. */
+export function avecEntreeCorrigee(
+	liste: Publication[],
+	pubId: number,
+	evolId: number,
+	maj: PublicationEvolution,
+): Publication[] {
+	return liste.map((p) =>
+		p.id !== pubId
+			? p
+			: { ...p, evolutions: (p.evolutions ?? []).map((ev) => (ev.id === evolId ? maj : ev)) },
+	);
+}

@@ -23,6 +23,7 @@ from app.utils.evolutions import TYPES_SAISIS, evolution_modifiable, supprimer_e
 from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import base_site, lien_ticket
+from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_internes, photos_json
 from app.utils.noms import contexte_personne
 from app.utils.recuperer import ou_404
@@ -82,6 +83,7 @@ def update_evolution(
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
         evol.fichiers_urls = photos_json(body.fichiers_urls)
+    marquer_assiste_ia(evol, body)
     if body.perimetre_cible is not None:
         #  🔴 CORRIGER, pas raturer. La règle et son pourquoi vivent dans
         #  `app/utils/perimetre_fil.py` — elle a son `--selftest`.
@@ -286,6 +288,7 @@ def add_evolution(
             json.dumps(body.perimetre_cible, ensure_ascii=False)
             if body.perimetre_cible else None
         ),
+        assiste_ia=body.assiste_ia,
     )
     session.add(evol)
 

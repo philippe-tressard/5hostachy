@@ -23,6 +23,19 @@ périme, et qu'on venait justement de supprimer du champ « Modèle » — ou li
 paramètre que le service NOMME dans son refus, et reprendre l'appel corrigé.
 C'est la seconde : voir `Fournisseur.adapter`, et `MAX_ADAPTATIONS` qui la borne.
 
+## Deux étages de configuration (17/09/2026, #984)
+
+Le **commun** — activation globale, fournisseur, clé, adresse, version d'API,
+délai — se lit une fois pour tous. Le **par usage** — activation, modèle,
+prompt, plafond — se lit pour l'usage demandé (`config_llm(session, usage)`),
+sous les clés `llm_<usage>_*`. Les usages eux-mêmes sont déclarés dans
+`llm_usages.py` : ce module n'en tient aucune liste.
+
+⚠️ Il n'y a **pas de modèle commun** : chaque usage nomme le sien, et un usage
+sans modèle ne peut pas appeler. C'est l'arbitrage de Philippe — deux usages
+n'ont pas le même modèle idéal — et c'est ce qui évite qu'un réglage fait pour
+la synthèse s'applique en silence à la réécriture d'une description.
+
 ## Ce que ce module NE fait pas
 
 Il ne sait rien des contrats, des synthèses ni d'aucun métier : il envoie une
@@ -48,6 +61,7 @@ from app.utils.llm_fournisseurs import (
     FournisseurAzure,
     PieceJointe,
 )
+from app.utils.llm_usages import USAGES, Usage
 
 #: 🔴 Ce module reste **la porte d'entrée unique**, même depuis que les
 #: fournisseurs vivent à côté (11/09/2026). Les appelants — routers, synthèse de
@@ -62,11 +76,10 @@ __all__ = [
     "CLE_DELAI",
     "CLE_ENVOI_DOCUMENT",
     "CLE_FOURNISSEUR",
-    "CLE_MAX_JETONS",
-    "CLE_MODELE",
     "CLE_VERSION_API",
     "FOURNISSEUR_DEFAUT",
     "FOURNISSEURS",
+    "USAGES",
     "ConfigLLM",
     "ErreurLLM",
     "Fournisseur",
@@ -85,9 +98,6 @@ logger = logging.getLogger("hostachy.llm")
 #: Délai au-delà duquel on renonce. Une requête d'écran ne peut pas attendre
 #: indéfiniment : le geste doit rendre la main, fût-ce sur un échec.
 DELAI_DEFAUT_S = 45
-
-#: Plafond de jetons rendus — c'est un garde-fou de COÛT autant que de longueur.
-MAX_JETONS_DEFAUT = 1500
 
 @dataclass(frozen=True)
 class Reponse:
@@ -134,29 +144,40 @@ def _charge(reponse: Any) -> dict[str, Any]:
 CLE_ACTIF = "llm_actif"
 CLE_FOURNISSEUR = "llm_fournisseur"
 CLE_API = "llm_api_key"
-CLE_MODELE = "llm_modele"
 CLE_BASE_URL = "llm_base_url"
 CLE_VERSION_API = "llm_api_version"
-CLE_MAX_JETONS = "llm_max_jetons"
 CLE_DELAI = "llm_delai_s"
 CLE_ENVOI_DOCUMENT = "llm_envoi_document"
+#  ⚠️ `llm_modele` et `llm_max_jetons` n'existent PLUS : la migration 0194 les a
+#  déplacées sous `llm_synthese_contrat_*`. Les lire ici redonnerait deux vérités.
 
 
 @dataclass
 class ConfigLLM:
-    """La configuration lue, prête à servir — ou à dire pourquoi elle ne peut pas."""
+    """La configuration lue, prête à servir — ou à dire pourquoi elle ne peut pas.
+
+    Le commun est toujours renseigné ; les quatre champs d'usage — `usage`,
+    `actif_usage`, `modele`, `prompt`, `max_jetons` — ne le sont que si
+    `config_llm` a reçu un usage. Sans usage (le catalogue des modèles, qui n'en
+    a pas besoin), `modele` est vide et `verifier()` doit être appelée avec
+    `exiger_modele=False`.
+    """
 
     actif: bool
     fournisseur: Fournisseur
     cle: str
-    modele: str
     base_url: str
     version_api: str
-    max_jetons: int
     delai_s: int
     envoi_document: bool
+    #: L'usage lu, ou `None` pour le seul commun.
+    usage: Optional[Usage] = None
+    actif_usage: bool = False
+    modele: str = ""
+    prompt: str = ""
+    max_jetons: int = 0
 
-    def verifier(self, *, exiger_actif: bool = True) -> None:
+    def verifier(self, *, exiger_actif: bool = True, exiger_modele: bool = True) -> None:
         """Lève `ErreurLLM` si l'appel ne peut pas aboutir — avant de le tenter.
 
         ⚠️ On échoue AVANT la requête réseau plutôt qu'après : un 401 met
@@ -169,60 +190,102 @@ class ConfigLLM:
         une configuration pour DÉCIDER de l'activer. Exiger l'activation avant de
         pouvoir tester obligeait à ouvrir le service au produit sans savoir s'il
         répond, c'est-à-dire à prendre le risque qu'on cherchait à écarter.
+
+        L'activation se vérifie aux DEUX étages : le commun coupe tout d'un
+        geste, l'usage se coupe seul. Le message nomme l'étage en cause.
         """
         if exiger_actif and not self.actif:
             raise ErreurLLM("L'assistant est désactivé dans l'administration.")
+        if exiger_actif and self.usage is not None and not self.actif_usage:
+            raise ErreurLLM(
+                f"L'usage « {self.usage.libelle} » est désactivé dans l'administration."
+            )
         if not self.cle:
             raise ErreurLLM("Aucune clé d'API n'est enregistrée.")
-        if not self.modele:
-            raise ErreurLLM("Aucun modèle n'est indiqué.")
+        if exiger_modele and not self.modele:
+            libelle = f" pour « {self.usage.libelle} »" if self.usage else ""
+            raise ErreurLLM(f"Aucun modèle n'est indiqué{libelle}.")
         if self.fournisseur.base_url_obligatoire and not self.base_url:
             raise ErreurLLM(
                 f"{self.fournisseur.libelle} exige l'adresse de votre point d'accès."
             )
+
+    @property
+    def pret(self) -> bool:
+        """L'usage peut-il être PROPOSÉ à l'écran ? — activé aux deux étages, une
+        clé, un modèle. C'est ce que lisent les `*_disponible()` des appelants,
+        pour ne pas réécrire la règle trois fois."""
+        try:
+            self.verifier()
+        except ErreurLLM:
+            return False
+        return True
 
 
 def _lire(session: Session) -> dict[str, str]:
     return {r.cle: r.valeur for r in session.exec(select(ConfigSite)).all()}
 
 
-def config_llm(session: Session) -> ConfigLLM:
-    """La configuration de l'assistant, telle que l'administration l'a posée."""
+def _entier(cfg: dict[str, str], cle: str, defaut: int) -> int:
+    #  Une valeur illisible retombe sur le défaut : ce réglage gouverne un
+    #  confort et un coût, il ne doit jamais empêcher l'appel de partir.
+    try:
+        return int(cfg.get(cle) or defaut)
+    except (TypeError, ValueError):
+        return defaut
+
+
+def config_llm(session: Session, usage: Optional[str] = None) -> ConfigLLM:
+    """La configuration de l'assistant, telle que l'administration l'a posée.
+
+    :param usage: le code d'un usage (`llm_usages.USAGES`) pour lire aussi son
+        modèle, son prompt et son plafond. `None` pour le seul commun.
+    """
     cfg = _lire(session)
     code = cfg.get(CLE_FOURNISSEUR) or FOURNISSEUR_DEFAUT
     fournisseur = FOURNISSEURS.get(code) or FOURNISSEURS[FOURNISSEUR_DEFAUT]
 
-    def entier(cle: str, defaut: int) -> int:
-        #  Une valeur illisible retombe sur le défaut : ce réglage gouverne un
-        #  confort et un coût, il ne doit jamais empêcher l'appel de partir.
-        try:
-            return int(cfg.get(cle) or defaut)
-        except (TypeError, ValueError):
-            return defaut
-
-    return ConfigLLM(
+    commun = ConfigLLM(
         actif=cfg.get(CLE_ACTIF) == "1",
         fournisseur=fournisseur,
         cle=cfg.get(CLE_API) or "",
-        modele=cfg.get(CLE_MODELE) or fournisseur.modele_defaut,
         base_url=cfg.get(CLE_BASE_URL) or fournisseur.base_url,
         version_api=cfg.get(CLE_VERSION_API) or "2024-06-01",
-        max_jetons=entier(CLE_MAX_JETONS, MAX_JETONS_DEFAUT),
-        delai_s=entier(CLE_DELAI, DELAI_DEFAUT_S),
+        delai_s=_entier(cfg, CLE_DELAI, DELAI_DEFAUT_S),
         envoi_document=cfg.get(CLE_ENVOI_DOCUMENT, "1") == "1",
     )
+    if usage is None:
+        return commun
+    u = USAGES[usage]
+    commun.usage = u
+    commun.actif_usage = cfg.get(u.cle("actif")) == "1"
+    #  🔴 Pas de repli sur `fournisseur.modele_defaut` : un usage sans modèle ne
+    #  part pas. Le repli faisait appeler en silence un modèle que personne
+    #  n'avait choisi pour cet usage.
+    commun.modele = (cfg.get(u.cle("modele")) or "").strip()
+    #  Le prompt, lui, se replie sur l'ORIGINE : une clé vidée par erreur ne doit
+    #  pas envoyer un modèle sans consigne — et « Rétablir » vide justement la clé.
+    commun.prompt = (cfg.get(u.cle("prompt")) or "").strip() or u.prompt_defaut
+    commun.max_jetons = _entier(cfg, u.cle("max_jetons"), u.max_jetons_defaut)
+    return commun
 
 
 async def demander(
     session: Session,
     *,
-    consigne: str,
+    usage: str,
     message: str,
+    consigne: Optional[str] = None,
     max_jetons: Optional[int] = None,
     fichiers: tuple[PieceJointe, ...] = (),
     exiger_actif: bool = True,
 ) -> Reponse:
-    """Pose une question au modèle configuré et rend sa réponse.
+    """Pose une question au modèle configuré pour cet USAGE et rend sa réponse.
+
+    :param consigne: le texte système. `None` = le prompt de l'usage, tel que
+        l'administration l'a réglé. Un appelant qui doit y AJOUTER quelque chose
+        que l'administrateur ne peut pas retirer (un format de réponse) le
+        compose à partir de `config_llm(session, usage).prompt` et le passe ici.
 
     Lève `ErreurLLM` — jamais autre chose : l'appelant est un écran, il doit
     pouvoir dire « ça n'a pas marché » sans distinguer un délai dépassé d'un
@@ -230,9 +293,11 @@ async def demander(
     """
     import httpx
 
-    cfg = config_llm(session)
+    cfg = config_llm(session, usage)
     cfg.verifier(exiger_actif=exiger_actif)
     f = cfg.fournisseur
+    if consigne is None:
+        consigne = cfg.prompt
 
     debut = time.monotonic()
     try:
@@ -349,8 +414,10 @@ async def modeles_disponibles(session: Session) -> dict[str, Any]:
     """
     import httpx
 
+    #  Le catalogue est COMMUN — il dépend de la clé, pas de l'usage : le même
+    #  inventaire sert à choisir le modèle de chaque bloc de l'écran.
     cfg = config_llm(session)
-    cfg.verifier(exiger_actif=False)
+    cfg.verifier(exiger_actif=False, exiger_modele=False)
     url = cfg.fournisseur.url_modeles(cfg.base_url, cfg.version_api)
     if url is None:
         return {
@@ -390,18 +457,24 @@ async def modeles_disponibles(session: Session) -> dict[str, Any]:
     return {"listable": True, "motif": "", "modeles": modeles}
 
 
-async def tester(session: Session) -> dict[str, Any]:
-    """Vérifie que la configuration PARLE au modèle — le fait, pas le réglage.
+async def tester(session: Session, usage: str) -> dict[str, Any]:
+    """Vérifie que la configuration de cet USAGE parle au modèle — le fait,
+    pas le réglage.
 
     🔴 Un écran qui dit « configuré » parce que trois champs sont remplis ne
     prouve rien : la clé peut être révoquée, le modèle renommé, le point d'accès
     fermé. Ce test envoie une vraie question et attend une vraie réponse
     (`standards/04` — vérifier le comportement, jamais l'artefact).
+
+    Un test PAR usage (17/09/2026) : c'est le modèle de l'usage qui est éprouvé,
+    et deux usages n'ont pas le même. Un test sur un modèle commun n'aurait
+    prouvé le bon fonctionnement d'aucun des deux.
     """
-    cfg = config_llm(session)
+    cfg = config_llm(session, usage)
     debut = time.monotonic()
     reponse = await demander(
         session,
+        usage=usage,
         consigne="Tu réponds en un seul mot, sans ponctuation.",
         message="Réponds exactement : opérationnel",
         #  🔴 Plus de plafond serré ici (11/09/2026). Il valait 16 jetons — assez
@@ -416,6 +489,7 @@ async def tester(session: Session) -> dict[str, Any]:
     )
     return {
         "ok": True,
+        "usage": usage,
         "fournisseur": cfg.fournisseur.libelle,
         "modele": cfg.modele,
         "reponse": reponse.texte[:80],

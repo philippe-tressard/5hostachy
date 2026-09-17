@@ -17,6 +17,7 @@
   passés en slots — ils sont écrits dans la page, donc leurs styles y restent.
 -->
 <script lang="ts">
+	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
@@ -116,6 +117,7 @@
 				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
 			{/if}
 			{#if pub.auteur_nom}<span class="pub-auteur">{pub.auteur_nom}</span>{/if}
+			<MarqueIA assiste={pub.assiste_ia} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<BoutonLien ancre="pub-{pub.id}" quoi="la publication" />

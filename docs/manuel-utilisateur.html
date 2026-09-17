@@ -990,7 +990,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 1.23 · Septembre 2026</span>
+      <span class="topbar-badge">Version 1.24 · Septembre 2026</span>
     </div>
   </header>
 
@@ -1278,6 +1278,7 @@
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
             <li><strong>Commenter</strong> — chaque actualité a un fil. Votre commentaire s'y ajoute, daté et signé.</li>
+            <li><strong>✨ Retravailler le texte avec l'assistant IA</strong> (conseil syndical) — sous la section <em>Description</em>, en création, en correction comme en commentaire, le bouton <em>Retravailler avec l'assistant</em> propose une nouvelle version du titre et du texte, selon les consignes réglées dans <em>Administration → Assistant IA</em>. Une <em>précision</em> facultative (« plus court », « plus formel ») oriente la réécriture. La proposition s'affiche sous le champ, avec ce qui change (<em>Titre modifié</em>, <em>Description modifiée</em>)&nbsp;: rien ne bouge tant que vous ne cliquez pas sur <strong>Appliquer</strong>, et rien n'est enregistré tant que vous n'enregistrez pas. Vous pouvez solliciter l'assistant plusieurs fois, chaque appel partant du texte courant. Si le titre manque, l'assistant en propose un&nbsp;; si la description manque, il la rédige à partir du titre. Un texte enregistré après une proposition appliquée porte un petit ✨ à côté de son auteur, qui reste l'auteur.</li>
             <li><strong>Partir d’une affiche du hall</strong> (conseil syndical) — en tête du formulaire de création, <strong>Pré-remplir depuis une annonce de hall</strong> reprend le titre, le message, le périmètre et les images d’une affiche déjà produite. Tout reste modifiable, et l’actualité est ensuite indépendante de l’affiche. Le raccourci existe <strong>dans les deux sens</strong>&nbsp;: le formulaire d’affiche propose de partir de <strong>n’importe quel élément encore au fil</strong> — actualité, ticket ou événement —, les <strong>épinglés</strong> (📌) en tête. En sont exclus les archivés, les brouillons, et tout ce qui est <strong>confidentiel</strong> ou <strong>réservé au conseil syndical</strong>&nbsp;: une affiche de hall est lue par tout le monde. L’affiche sort ensuite sur le <strong>plus petit feuillet</strong> qui accueille le texte (A7 à A4), pour prendre le moins de place possible sur le tableau d’affichage&nbsp;; le conseil syndical peut forcer un format. Une affiche ratée se <strong>supprime directement</strong>, sans avoir à l’archiver d’abord.</li>
             <li><strong>Changer une option sans rouvrir tout le formulaire</strong> — quand un élément porte au moins une option, ses glyphes s'affichent dans la rangée d'actions (📌 🚨 📝 🔒). Un clic dessus ouvre une petite boîte qui ne contient QUE ces cases : dépingler ou retirer l'urgence ne demande plus de rouvrir le périmètre, la description et les pièces jointes. Le raccourci existe sur les <strong>actualités</strong>, les <strong>tickets</strong> et les <strong>événements du calendrier</strong>. Il n'apparaît pas quand aucune option n'est active&nbsp;: pour en poser une, c'est le crayon ✏️, où la section est complète.</li>
             <li><strong>Corriger le ciblage en commentant</strong> (conseil syndical) — le formulaire de commentaire montre le <strong>périmètre</strong>, les <strong>destinataires</strong> et les <strong>options de publication</strong> (📌 épinglée, 🚨 urgente, 🛡️ visible du seul conseil syndical, 🔒 confidentielle) tels qu'ils sont en vigueur. Les modifier et enregistrer met à jour l'actualité entière : ce qu'on enregistre devient l'état.</li>
@@ -1366,10 +1367,11 @@
             <li><strong>Nommer un document déposé</strong> — partout où l'on joint un fichier (ticket, contrat, actualité), un champ <em>Libellé du document</em> précède le bouton d'ajout. Laissé vide, c'est le nom du fichier qui s'affiche.</li>
             <li><strong>✨ Proposer une synthèse de contrat</strong> — l'étincelle, dans l'en-tête d'un contrat, demande à l'assistant IA de résumer le contrat au format du carnet d'entretien&nbsp;: fournisseur, dates clés, objet, prestations incluses et exclues, conditions financières, points d'attention. <strong>Tous les documents</strong> joints au contrat sont lus — l'initial, ses avenants, les conditions générales. Le texte proposé s'ouvre <strong>dans le formulaire de correction</strong>&nbsp;: il n'est enregistré que si vous cliquez sur Enregistrer. Un encart en tête rappelle quel modèle l'a rédigé, quand, et sur quels fichiers.</li>
             <li>L'étincelle n'apparaît que si un administrateur a configuré l'assistant (<em>Administration → Assistant IA</em>) et si le contrat porte au moins un document lisible.</li>
-            <li><strong>Choisir le modèle</strong> — dans <em>Administration → Assistant IA</em>, le bouton <em>Voir les modèles disponibles</em> demande au fournisseur ce que votre clé peut appeler, du plus récent au plus ancien. Un modèle plus capable rend une synthèse plus fidèle et coûte plus cher par contrat. Si la liste n'est pas disponible — sur Azure, ou avec une clé restreinte — l'identifiant se saisit à la main, et l'écran dit pourquoi.</li>
+            <li><strong>Choisir le modèle</strong> — dans <em>Administration → Assistant IA</em>, dans le bloc de l'usage <em>Synthèse de contrat</em> (chaque usage a son modèle), le bouton <em>Voir les modèles disponibles</em> demande au fournisseur ce que votre clé peut appeler, du plus récent au plus ancien. Un modèle plus capable rend une synthèse plus fidèle et coûte plus cher par contrat. Si la liste n'est pas disponible — sur Azure, ou avec une clé restreinte — l'identifiant se saisit à la main, et l'écran dit pourquoi.</li>
             <li><strong>Un contrat numérisé est lu quand même</strong> — la plupart des contrats sont signés, donc scannés, et leur texte ne s'extrait pas. Ces documents-là sont transmis <strong>tels quels</strong> au service, qui les lit lui-même. Un document qui n'a pu être ni lu ni transmis est <strong>nommé dans l'encart</strong>, avec son motif : une synthèse partielle le dit, elle ne se fait jamais passer pour complète.</li>
             <li><strong>Chaque chiffre est cité</strong> — un montant, une durée, un préavis ou un seuil est suivi de la phrase exacte du contrat qui le porte. C'est ce qui permet de relire la synthèse sans rouvrir le PDF : si la citation ne dit pas ce que la ligne affirme, l'erreur saute aux yeux.</li>
             <li><strong>Longueur de la réponse</strong> — comptez 10 000 jetons avec un modèle récent : il raisonne avant d'écrire, et ce raisonnement compte dans le plafond. Une synthèse coupée au milieu d'une section vient de ce champ, pas du modèle.</li>
+            <li><strong>Le prompt se relit et s'adapte</strong> — la consigne donnée au modèle (les sept sections, la règle de citation, le format) est visible et modifiable dans le bloc de l'usage, dans <em>Administration → Assistant IA</em>. Vous pouvez y ajouter une consigne ou retoucher le gabarit&nbsp;; <em>Rétablir le prompt d'origine</em> revient à la version livrée.</li>
             </ul></div>
           </details>
         </div>
@@ -1425,7 +1427,7 @@
         <div class="ecran-card" data-page="/admin" data-acces="admin">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="20" r="2"/></svg></span>
           <h3>Admin</h3>
-          <p>Le paramétrage du site : utilisateurs, rôles, modèles d’e-mail, référentiels, et l’<strong>assistant IA</strong> qui proposera les synthèses de contrat.</p>
+          <p>Le paramétrage du site : utilisateurs, rôles, modèles d’e-mail, référentiels, et l’<strong>assistant IA</strong>, réglé <strong>usage par usage</strong>&nbsp;: un bloc <em>Commun</em> (fournisseur, clé, adresse du service, délai, activation globale) et un bloc pliable par usage — <em>Synthèse de contrat</em>, <em>Rédaction d'une description</em> — avec chacun son modèle, son prompt modifiable (<em>Rétablir le prompt d'origine</em> y revient), son plafond de jetons, son activation et son bouton de test.</p>
           <span class="ecran-acces ecran-acces-admin">Administrateur</span>
         </div>
         <div class="ecran-card" data-page="/delegations" data-acces="cs-ou-aidant">
@@ -1532,7 +1534,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v1.23</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v1.24</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

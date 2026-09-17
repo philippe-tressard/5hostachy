@@ -28,6 +28,7 @@
   après chaque écriture — c'est le seul contrat.
 -->
 <script lang="ts">
+	import type { ContexteAssistant } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import { TITRE_HISTORIQUE } from '$lib/archives';
@@ -42,6 +43,9 @@
 	import { TICKET } from '$lib/entites/ticket';
 
 	export let ticketId: number;
+	/**  Le contexte de l'assistant IA (#985) — composé par la fiche, seule à
+	 *   tenir le ticket entier (`contexteCommentaire`). `null` = pas d'assistant. */
+	export let assistant: ContexteAssistant | null = null;
 	/**  Le nom de l'auteur du TICKET — il nomme le destinataire de « Envoyer une
 	 *   copie à … ». Reçu de la page : ce composant ne tient que le fil. */
 	export let auteurNom = '';
@@ -136,6 +140,7 @@
 			await ticketsApi.updateEvolution(ticketId, enEdition, {
 				contenu: e.detail?.contenu ?? '',
 				fichiers_urls: e.detail?.fichiers_urls,
+				assiste_ia: e.detail?.assiste_ia,
 				//  🔴 La correction du périmètre part AUSSI (01/09/2026). Sans cette
 				//  ligne, le sélectionneur s'affiche et n'envoie rien — la case
 				//  cochée qui ne fait rien, exactement le défaut de la veille.
@@ -201,6 +206,7 @@
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
 					entite={TICKET}
+					{assistant}
 					peutPreciserPerimetre={$isCS}
 					{perimetreCourant}
 					initialPerimetre={evol.perimetre_cible ?? []}
@@ -224,6 +230,7 @@
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}
 					entite={TICKET}
+					{assistant}
 					peutPreciserPerimetre={$isCS}
 					{perimetreCourant}
 					peutDiffuser={$isCS}

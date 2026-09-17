@@ -34,6 +34,7 @@ export * from './patrimoine';
 export * from './acces';
 export * from './prestataires';
 export * from './administration';
+export * from './assistant';
 
 export const auth = {
 	me: () => api.get<User>('/auth/me'),
@@ -78,7 +79,13 @@ export const tickets = {
 	messages: (id: number) => api.get<TicketMessage[]>(`/tickets/${id}/messages`),
 	addMessage: (
 		id: number,
-		data: { contenu: string; interne?: boolean; fichiers_urls?: string[]; email_externe?: string },
+		data: {
+			contenu: string;
+			interne?: boolean;
+			fichiers_urls?: string[];
+			email_externe?: string;
+			assiste_ia?: boolean;
+		},
 	) => api.post<TicketMessage>(`/tickets/${id}/messages`, data),
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
 	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498). Il ne
@@ -128,6 +135,8 @@ export const tickets = {
 			epingle?: boolean;
 			urgente?: boolean;
 			confidentiel?: boolean;
+			/** « Rédigé avec l'assistant IA » (#985) — seulement quand c'est vrai. */
+			assiste_ia?: boolean;
 		},
 	) => api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
 	updateEvolution: (
@@ -136,7 +145,12 @@ export const tickets = {
 		//  `perimetre_cible` : la CORRECTION d'une erreur d'affectation
 		//  (01/09/2026). Le serveur ne la propage au ticket que si cette entrée
 		//  est la dernière à avoir précisé — `app/utils/perimetre_fil.py`.
-		data: { contenu?: string; fichiers_urls?: string[]; perimetre_cible?: string[] },
+		data: {
+			contenu?: string;
+			fichiers_urls?: string[];
+			perimetre_cible?: string[];
+			assiste_ia?: boolean;
+		},
 	) => api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
 	//  Réservé à l'ADMIN côté serveur (`require_admin`) : effacer une trace que
 	//  d'autres ont pu lire n'est pas corriger son propre texte.
@@ -212,12 +226,13 @@ export const publications = {
 			envoyer_cs?: boolean;
 			fichiers_urls?: string[];
 			email_externe?: string;
+			assiste_ia?: boolean;
 		},
 	) => api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
 	updateEvolution: (
 		pubId: number,
 		evolId: number,
-		data: { contenu?: string; fichiers_urls?: string[] },
+		data: { contenu?: string; fichiers_urls?: string[]; assiste_ia?: boolean },
 	) => api.patch<PublicationEvolution>(`/publications/${pubId}/evolutions/${evolId}`, data),
 	//  Même contrat que celui des tickets — même code côté serveur (#512).
 	deleteEvolution: (pubId: number, evolId: number) =>

@@ -17,6 +17,7 @@ from app.schemas_communs import (  # noqa: F401
 #  Les trois champs « Saisi pour » sont HÉRITÉS, plus recopiés : la notion, ses
 #  deux règles subtiles et son mixin vivent dans `utils/saisi_pour` depuis
 #  qu'elle s'applique aussi aux actualités et aux événements (15/09/2026).
+from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree, AssisteIASortie
 from app.utils.saisi_pour import SaisiPourEntree, SaisiPourSortie
 
 
@@ -136,7 +137,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
-class TicketCreate(SaisiPourEntree):
+class TicketCreate(SaisiPourEntree, AssisteIAEntree):
     titre: str
     description: str
     categorie: str = "panne"
@@ -178,7 +179,7 @@ class TicketCreate(SaisiPourEntree):
     fichiers_urls: List[str] = []
 
 
-class TicketRead(SaisiPourSortie):
+class TicketRead(SaisiPourSortie, AssisteIASortie):
     id: int
     numero: str
     titre: str
@@ -239,7 +240,7 @@ class TicketRead(SaisiPourSortie):
         from_attributes = True
 
 
-class TicketUpdate(SaisiPourEntree):
+class TicketUpdate(SaisiPourEntree, AssisteIACorrection):
     #  ⚠️ `Optional[str]` jusqu'au 17/08/2026, et c'était la **seule** barrière :
     #  `Ticket` est un modèle `table=True`, donc SQLModel ne valide rien à
     #  l'affectation. `PATCH /tickets/{id}` écrivait en base la chaîne qu'on lui
@@ -278,7 +279,7 @@ class TicketUpdate(SaisiPourEntree):
     photos_urls: Optional[List[str]] = None
 
 
-class MessageCreate(BaseModel):
+class MessageCreate(AssisteIAEntree):
     contenu: str
     interne: bool = False
     fichiers_urls: List[str] = []
@@ -298,7 +299,7 @@ class MessageRead(BaseModel):
         from_attributes = True
 
 
-class PublicationEvolutionUpdate(BaseModel):
+class PublicationEvolutionUpdate(AssisteIACorrection):
     contenu: Optional[str] = None
     fichiers_urls: Optional[List[str]] = None
 

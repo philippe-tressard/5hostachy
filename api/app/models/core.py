@@ -42,6 +42,7 @@ from app.models.acces import (
     Vigik as Vigik,
     VigikImport as VigikImport,
 )
+from app.utils.assiste_ia import AssisteIAMixin
 from app.utils.saisi_pour import SaisiPourMixin
 from app.models.evolution import EvolutionMixin
 
@@ -242,7 +243,7 @@ from app.models.validations import (  # noqa: E402,F401
 #  Tickets
 # ──────────────────────────────────────────────
 
-class Ticket(SaisiPourMixin, table=True):
+class Ticket(SaisiPourMixin, AssisteIAMixin, table=True):
     __tablename__ = "ticket"
     id: Optional[int] = Field(default=None, primary_key=True)
     numero: str = Field(unique=True, index=True)
@@ -328,7 +329,7 @@ class TicketEvolution(EvolutionMixin, table=True):
 #  Publications / Actualités
 # ──────────────────────────────────────────────
 
-class Publication(SaisiPourMixin, table=True):
+class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     __tablename__ = "publication"
     id: Optional[int] = Field(default=None, primary_key=True)
     titre: str

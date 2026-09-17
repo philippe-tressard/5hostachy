@@ -59,6 +59,7 @@ from app.models.documents import Document
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.utils.dates_fr import datetime_longue_paris
 from app.utils.llm import ConfigLLM, ErreurLLM, PieceJointe, config_llm, demander
+from app.utils.llm_usages import USAGE_SYNTHESE_CONTRAT
 from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
 from app.utils.synthese_format import CONSIGNE, CONSIGNE_CITATIONS, GABARIT
 
@@ -404,11 +405,20 @@ def entete_provenance(
 
 
 async def synthetiser(session: Session, contrat: ContratEntretien) -> str:
-    """Propose la synthèse d'un contrat, précédée de sa provenance. N'enregistre RIEN."""
-    cfg = config_llm(session)
+    """Propose la synthèse d'un contrat, précédée de sa provenance. N'enregistre RIEN.
+
+    🔴 La consigne n'est PLUS `synthese_format.CONSIGNE` (17/09/2026, #984) :
+    c'est le prompt de l'usage, tel que l'administration l'a réglé — `CONSIGNE`
+    n'en est que la valeur d'origine, posée en base une fois par la migration
+    0194. `demander` la lit lui-même quand on ne lui en passe pas.
+    """
+    cfg = config_llm(session, USAGE_SYNTHESE_CONTRAT)
     matiere = construire_matiere(session, contrat, avec_document=cfg.envoi_document)
     reponse = await demander(
-        session, consigne=CONSIGNE, message=matiere.message, fichiers=matiere.fichiers
+        session,
+        usage=USAGE_SYNTHESE_CONTRAT,
+        message=matiere.message,
+        fichiers=matiere.fichiers,
     )
     #  L'horodatage est pris APRÈS la réponse : c'est la date de la synthèse
     #  rendue, pas celle de la demande — une requête peut durer une minute.
@@ -431,8 +441,10 @@ def synthese_disponible(session: Session, contrat: ContratEntretien) -> bool:
     l'administration. Ce qui n'a pas de sens, c'est de proposer une synthèse
     complète sans la matière qui la remplit.
     """
-    cfg = config_llm(session)
-    if not cfg.actif or not cfg.cle:
+    cfg = config_llm(session, USAGE_SYNTHESE_CONTRAT)
+    #  `pret` vérifie les DEUX étages d'activation, la clé et le modèle de
+    #  l'usage — la même règle que `verifier()`, pas une seconde écriture.
+    if not cfg.pret:
         return False
     if not cfg.envoi_document:
         return True

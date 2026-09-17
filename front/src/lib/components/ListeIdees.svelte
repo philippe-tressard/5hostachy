@@ -29,6 +29,7 @@
   l'autre.
 -->
 <script lang="ts">
+	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
@@ -89,6 +90,7 @@
 				      idée ne se déplie pas, elle montre tout. -->
 			<EnteteCarte titre={idee.titre} date={fmtDateShort(idee.cree_le)}>
 				<svelte:fragment slot="titre-suffixe">
+					<MarqueIA assiste={idee.assiste_ia} />
 					{#if isNouveau(idee.cree_le)}<span class="badge badge-gray idee-neuf">New</span>{/if}
 				</svelte:fragment>
 				<svelte:fragment slot="tags">

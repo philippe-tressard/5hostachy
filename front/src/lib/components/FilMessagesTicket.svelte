@@ -16,6 +16,7 @@
   composants — les fusionner effacerait la distinction que l'écran fait exprès.
 -->
 <script lang="ts">
+	import { contexteCommentaire } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import { nomAffiche } from '$lib/noms';
 	import { fmtDatetime } from '$lib/date';
@@ -94,6 +95,7 @@
 					auteurNom={nomCopie(ticket)}
 					titre="Répondre"
 					entite={TICKET}
+					assistant={contexteCommentaire(ticket)}
 					avecPiecesJointes={!newInterne}
 					whatsappInterdit={motifWhatsappInterdit(ticket?.confidentiel ?? false, 'ticket')}
 					showEmail={$isCS && !newInterne}

@@ -25,6 +25,7 @@
   qu'on lui a présenté le choix « apparence seulement » ou « modèle compris ».
 -->
 <script lang="ts">
+	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -60,6 +61,8 @@
 	//  l'appelant qui remonte le composant — même contrat que `FormulaireAnnonce`.
 	let question = sondage?.question ?? '';
 	let description = sondage?.description ?? '';
+	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
+	let assisteIA = false;
 	//  `<input type="datetime-local">` veut `AAAA-MM-JJTHH:MM`, pas de l'ISO avec
 	//  fuseau : couper à seize caractères est ce que fait déjà l'événement.
 	let clotureLe = sondage?.cloture_le ? String(sondage.cloture_le).slice(0, 16) : '';
@@ -141,6 +144,7 @@
 			const maj = await sondagesApi.modifier(sondage.id, {
 				question,
 				description: description || null,
+				assiste_ia: assisteIA || undefined,
 				cloture_le: clotureLe ? new Date(clotureLe).toISOString() : null,
 				resultats_publics: resultatsPublics,
 				options: options
@@ -170,6 +174,7 @@
 			const cree = await sondagesApi.create({
 				question,
 				description: description || undefined,
+				assiste_ia: assisteIA,
 				cloture_le: clotureLe ? new Date(clotureLe).toISOString() : undefined,
 				resultats_publics: resultatsPublics,
 				options: opts,
@@ -309,6 +314,9 @@
 			bind:destinataires={publicCible}
 			avecDescription={sectionPresente(SONDAGE, etat, 'description')}
 			bind:description
+			assistant={contexteAssistant('sondage', { Périmètre: perimetreContexte(perimetreCible) })}
+			bind:titreObjet={question}
+			bind:assisteIA
 			descriptionPlaceholder="Description du sondage…"
 			avecDiffusion={sectionPresente(SONDAGE, etat, 'diffusion')}
 			bind:whatsapp={partagerWhatsapp}

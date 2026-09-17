@@ -47,7 +47,15 @@ def session():
 
 
 def _config(session, **kw):
-    valeurs = {"llm_actif": "1", "llm_api_key": "sk-x", "llm_envoi_document": "1"}
+    #  Les DEUX étages (#984) : le commun, et l'usage `synthese_contrat` avec
+    #  son activation et son modèle — un usage sans modèle ne part pas.
+    valeurs = {
+        "llm_actif": "1",
+        "llm_api_key": "sk-x",
+        "llm_envoi_document": "1",
+        "llm_synthese_contrat_actif": "1",
+        "llm_synthese_contrat_modele": "gpt-4o-mini",
+    }
     valeurs.update(kw)
     for cle, valeur in valeurs.items():
         existant = session.get(ConfigSite, cle)

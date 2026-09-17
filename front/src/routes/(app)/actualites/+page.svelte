@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { contexteCommentaire } from '$lib/assistant';
 	import { PUBLICATION } from '$lib/entites/publication';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
@@ -26,7 +27,7 @@
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { safeHtml } from '$lib/sanitize';
-	import { STATUT_LABELS } from '$lib/publications';
+	import { STATUT_LABELS, avecEntreeAjoutee, avecEntreeCorrigee } from '$lib/publications';
 
 	$: _pc = getPageConfig($configStore, 'actualites', defautsDePage('actualites'));
 	$: _siteNom = $siteNomStore;
@@ -172,13 +173,9 @@
 				envoyer_cs: data.envoyer_cs,
 				fichiers_urls: data.fichiers_urls,
 				email_externe: data.email_externe || undefined,
+				assiste_ia: data.assiste_ia,
 			});
-			pubList = pubList.map((p) => {
-				if (p.id !== pub.id) return p;
-				const updated = { ...p, evolutions: [...(p.evolutions ?? []), evol] };
-				if (data.type === 'etat') updated.statut = evol.nouveau_statut as any;
-				return updated;
-			});
+			pubList = avecEntreeAjoutee(pubList, pub.id, evol, data.type === 'etat');
 			showEvolForm = null;
 			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
 		} catch (err: any) {
@@ -195,16 +192,9 @@
 			const updated = await pubsApi.updateEvolution(editingEvolPubId, editingEvolId, {
 				contenu: e.detail.contenu || undefined,
 				fichiers_urls: e.detail.fichiers_urls,
+				assiste_ia: e.detail.assiste_ia,
 			});
-			pubList = pubList.map((p) => {
-				if (p.id !== editingEvolPubId) return p;
-				return {
-					...p,
-					evolutions: (p.evolutions ?? []).map((ev) =>
-						ev.id === editingEvolId ? (updated as any) : ev,
-					),
-				};
-			});
+			pubList = avecEntreeCorrigee(pubList, editingEvolPubId, editingEvolId, updated);
 			editingEvolId = null;
 			editingEvolPubId = null;
 			toast('success', 'Commentaire mis à jour');
@@ -415,6 +405,7 @@
 								defaultEnvoyerCs={pub.envoyer_cs ?? false}
 								showEmail={true}
 								entite={PUBLICATION}
+								assistant={contexteCommentaire(pub)}
 								saving={evolSaving}
 								perimetreCourant={pub.perimetre_cible ?? []}
 								initialDestinataires={pub.public_cible ?? []}
@@ -478,6 +469,7 @@
 										initialContenu={evol.contenu || ''}
 										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
 										entite={PUBLICATION}
+										assistant={contexteCommentaire(pub)}
 										saving={editEvolSaving}
 										on:submit={saveEvolEdit}
 										on:cancel={() => {

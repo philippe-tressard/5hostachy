@@ -26,6 +26,11 @@ from app.routers.reponses_communaute import (
 from app.utils.communaute import exiger_acces
 from app.utils.perimetres import parse_json_perimetres
 from app.utils.visibility import annonce_visible
+from app.utils.assiste_ia import (
+    AssisteIACorrection,
+    AssisteIAEntree,
+    marquer as marquer_assiste_ia,
+)
 from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/annonces", tags=["annonces"])
@@ -117,7 +122,7 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
 
 # ── Schémas ────────────────────────────────────────────────────────────────
 
-class AnnonceCreate(BaseModel):
+class AnnonceCreate(AssisteIAEntree):
     titre: str
     description: str
     #  Section 4 du cadre #430. Reçu en LISTE, stocké en JSON — même contrat que
@@ -135,7 +140,7 @@ class AnnonceCreate(BaseModel):
     contact_visible: bool = True
 
 
-class AnnonceUpdate(BaseModel):
+class AnnonceUpdate(AssisteIACorrection):
     titre: Optional[str] = None
     perimetre_cible: Optional[List[str]] = None
     public_cible: Optional[List[str]] = None
@@ -210,6 +215,7 @@ def create_annonce(
             else None
         ),
         auteur_id=user.id,
+        assiste_ia=data.assiste_ia,
     )
     session.add(annonce)
     session.commit()
@@ -229,6 +235,9 @@ def update_annonce(
     if not _can_manage(annonce, user):
         raise HTTPException(403, "Non autorisé")
     maj = data.model_dump(exclude_none=True)
+    #  La marque « assistant IA » ne s'écrit que dans UN sens (`utils/assiste_ia`).
+    marquer_assiste_ia(annonce, data)
+    maj.pop("assiste_ia", None)
     #  ⚠️ Le périmètre arrive en LISTE et la colonne est du TEXTE : sans cette
     #  conversion, SQLite stockerait la repr Python d'une liste — que `json.loads`
     #  ne relit pas, et l'annonce perdrait son périmètre à la première correction.
