@@ -16,7 +16,8 @@
   que le choix de l'onglet.
 -->
 <script lang="ts">
-	import { prestataires as prestApi, ApiError } from '$lib/api';
+	import { prestataires as prestApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { isCS } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
@@ -161,7 +162,7 @@
 			toast('success', editReleveId ? 'Relevé modifié' : 'Relevé ajouté');
 			resetReleveForm();
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			releveSaving = false;
 		}
@@ -188,7 +189,7 @@
 			editCompteurId = null;
 			toast('success', 'Fournisseur mis à jour');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -214,7 +215,7 @@
 			typeCompteur = created.type_compteur;
 			toast('success', 'Catégorie ajoutée');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			addCompteurSaving = false;
 		}

@@ -18,7 +18,8 @@
 	//  (#810) : devant `class="tl-bar {cond ? 'x' : ''}"`, Svelte cesse de
 	//  déclarer les sélecteurs inutilisés pour tout le fichier — et celui-ci
 	//  porte deux cents lignes de style de graphe.
-	import { admin as adminApi, ApiError } from '$lib/api';
+	import { admin as adminApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import Icon from '$lib/components/Icon.svelte';
 	import TopPages from '$lib/components/TopPages.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
@@ -46,8 +47,7 @@
 			//  La donnée précédente est écartée : l'afficher sous un onglet dont
 			//  la portée vient de changer la ferait passer pour la nouvelle.
 			telemetryData = null;
-			telemetryErreur =
-				e instanceof ApiError ? e.message : 'Statistiques indisponibles pour le moment.';
+			telemetryErreur = messageErreur(e, 'Statistiques indisponibles pour le moment.');
 		} finally {
 			telemetryLoading = false;
 		}

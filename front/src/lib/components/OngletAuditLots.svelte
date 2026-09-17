@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { admin as adminApi, ApiError } from '$lib/api';
+	import { admin as adminApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import BauxSansLocataire from '$lib/components/BauxSansLocataire.svelte';
@@ -18,7 +19,7 @@
 		try {
 			rows = await adminApi.auditUserLots();
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur chargement');
+			toast('error', messageErreur(e, 'Erreur chargement'));
 		} finally {
 			loading = false;
 		}
@@ -36,7 +37,7 @@
 			toast('success', 'Association supprimée');
 			rows = rows.filter((r) => r.user_lot_id !== ul.user_lot_id);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur suppression');
+			toast('error', messageErreur(e, 'Erreur suppression'));
 		}
 	}
 
@@ -69,7 +70,7 @@
 				toast('error', `${ko} suppression(s) en échec (${ok} réussie(s))`);
 			}
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur suppression en masse');
+			toast('error', messageErreur(e, 'Erreur suppression en masse'));
 		} finally {
 			deletingUserId = null;
 		}

@@ -40,7 +40,8 @@
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
-	import { annonces as annoncesApi, ApiError } from '$lib/api';
+	import { annonces as annoncesApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 
 	/** La liste, tenue par la page — elle la charge avec les deux autres rubriques. */
@@ -128,7 +129,7 @@
 			annonces = await annoncesApi.list();
 			toast('success', 'Réponse publiée');
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 			throw e;
 		}
 	}
@@ -139,7 +140,7 @@
 			annonces = await annoncesApi.list();
 			toast('success', 'Réponse supprimée');
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 

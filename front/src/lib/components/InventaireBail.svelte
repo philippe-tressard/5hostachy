@@ -61,7 +61,8 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { bailleur as bailApi, ApiError, type ObjetRemis } from '$lib/api';
+	import { bailleur as bailApi, type ObjetRemis } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate } from '$lib/date';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
@@ -163,7 +164,7 @@
 			saisie = null;
 			dispatch('change', objets);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Enregistrement impossible');
+			toast('error', messageErreur(e, 'Enregistrement impossible'));
 		} finally {
 			enregistrement = false;
 		}
@@ -192,7 +193,7 @@
 			toast('success', retourPerdu ? 'Objet marqué perdu' : 'Retour enregistré');
 			dispatch('change', objets);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -205,7 +206,7 @@
 			toast('success', 'Objet supprimé');
 			dispatch('change', objets);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 </script>
