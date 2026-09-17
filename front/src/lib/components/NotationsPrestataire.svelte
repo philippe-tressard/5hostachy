@@ -32,7 +32,8 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { prestataires as prestApi, ApiError } from '$lib/api';
+	import { prestataires as prestApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { confirmer } from '$lib/confirmation';
 	import { fmtDate } from '$lib/date';
@@ -74,7 +75,7 @@
 			toast('success', 'Avis retiré.');
 			dispatch('supprimee', n.id);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Suppression impossible');
+			toast('error', messageErreur(e, 'Suppression impossible'));
 		}
 	}
 </script>

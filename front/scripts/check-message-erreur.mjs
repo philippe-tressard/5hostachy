@@ -24,14 +24,21 @@
  *  sous le même nom et avec des comportements différents. Deux écrans
  *  importaient la moins disante.
  *
- *  ## Pourquoi un PLAFOND et non une interdiction
+ *  ## Le plafond a fait son travail : il est à ZÉRO depuis le 18/09/2026
  *
- *  Cent vingt-trois occurrences subsistent. Les convertir d'un coup toucherait
- *  43 fichiers dans un seul lot, sans qu'aucun écran ne soit regardé : c'est le
- *  genre de changement massif que ce dépôt a appris à ne pas faire.
+ *  Cent vingt-trois occurrences subsistaient au relevé. Les convertir d'un coup
+ *  aurait touché 43 fichiers dans un seul lot, sans qu'aucun écran ne soit
+ *  regardé : le genre de changement massif que ce dépôt a appris à ne pas
+ *  faire. Le plafond a donc empêché la cent vingt-quatrième, et il est DESCENDU
+ *  à chaque lot — 123, puis 67, 45, 14, et zéro.
  *
- *  Le plafond empêche la **cent vingt-quatrième**, et il DESCEND à mesure qu'on
- *  convertit — un plafond qu'on ne baisse pas est un plafond qu'on oublie.
+ *  🔴 **À zéro, ce n'est plus un suivi de dette : c'est une interdiction**, et
+ *  elle n'a rien à tolérer. Le jour où une exception paraîtra nécessaire, la
+ *  vraie question sera : que manque-t-il à `messageErreur` ? C'est ainsi que le
+ *  dernier lot s'est terminé — les trois écrans d'authentification résistaient
+ *  parce qu'un 401 y signifie « identifiants refusés » et non « session
+ *  expirée ». Le remède n'a pas été de les tolérer, mais d'apprendre la
+ *  distinction à `messageErreur` (`ApiError.chemin`).
  *
  *  Lancer : node scripts/check-message-erreur.mjs [--selftest]
  */
@@ -50,7 +57,7 @@ const RACINE = 'src';
 //  `profil`, `OngletPerimetres` et `OngletAcces`. Les copies qui portaient un
 //  repli CONTEXTUEL n'en perdent aucun : `tenter` a reçu un troisième
 //  paramètre plutôt que de les niveler sur la phrase générique.
-const PLAFOND = 14;
+const PLAFOND = 0;
 
 /**  Le ternaire recopié : `<e> instanceof ApiError ? <e>.message : …`.
  *   La rétro-référence `\1` exige la MÊME variable des deux côtés — sans elle,
@@ -152,6 +159,9 @@ if (total < PLAFOND) {
 }
 
 console.log(
-	`✓ Message d'erreur : ${total} copie(s) du ternaire, plafond ${PLAFOND} tenu ` +
-		`(${lus} fichier(s) lus) — dette suivie, elle ne grandit plus.`,
+	total === 0
+		? `✓ Message d'erreur : aucune copie du ternaire (${lus} fichier(s) lus) — ` +
+				`le message d'erreur vient de \`messageErreur\`, partout.`
+		: `✓ Message d'erreur : ${total} copie(s) du ternaire, plafond ${PLAFOND} tenu ` +
+				`(${lus} fichier(s) lus) — dette suivie, elle ne grandit plus.`,
 );

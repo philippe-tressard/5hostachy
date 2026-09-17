@@ -7,7 +7,7 @@
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
 	import ModaleAccesBail from '$lib/components/ModaleAccesBail.svelte';
 	import { onMount } from 'svelte';
-	import { lots as lotsApi, bailleur as bailApi, ApiError, type ObjetRemis } from '$lib/api';
+	import { lots as lotsApi, bailleur as bailApi, type ObjetRemis } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import {
 		isAdmin,
@@ -172,7 +172,7 @@
 			try {
 				baux = await bailApi.mesBaux();
 			} catch (e: any) {
-				toast('error', e instanceof ApiError ? e.message : 'Erreur de chargement des baux');
+				toast('error', messageErreur(e, 'Erreur de chargement des baux'));
 			} finally {
 				bauxLoading = false;
 			}
@@ -180,7 +180,7 @@
 			try {
 				baux = await bailApi.tousBaux();
 			} catch (e: any) {
-				toast('error', e instanceof ApiError ? e.message : 'Erreur de chargement des baux');
+				toast('error', messageErreur(e, 'Erreur de chargement des baux'));
 			} finally {
 				bauxLoading = false;
 			}
@@ -217,7 +217,7 @@
 				nouvellesBaux.length > 1 ? `${nouvellesBaux.length} baux créés` : 'Bail créé',
 			);
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			savingBail = false;
 		}
@@ -311,10 +311,7 @@
 				baux = await bailApi.tousBaux();
 			}
 		} catch (e: any) {
-			toast(
-				'error',
-				e instanceof ApiError ? e.message : "Erreur lors de l'affectation automatique",
-			);
+			toast('error', messageErreur(e, "Erreur lors de l'affectation automatique"));
 		}
 	}
 

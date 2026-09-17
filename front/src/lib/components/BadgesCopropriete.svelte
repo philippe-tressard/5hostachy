@@ -56,19 +56,13 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import {
-		acces as accesApi,
-		admin as adminApi,
-		ApiError,
-		type AccesAdmin,
-		type ChoixAcces,
-	} from '$lib/api';
+	import { acces as accesApi, admin as adminApi, type AccesAdmin, type ChoixAcces } from '$lib/api';
 	import { isAdmin } from '$lib/stores/auth';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireAcces from '$lib/components/FormulaireAcces.svelte';
 	import TableParcAcces from '$lib/components/TableParcAcces.svelte';
 	import { confirmerPuis } from '$lib/confirmation';
-	import { tenter } from '$lib/erreurs';
+	import { messageErreur, tenter } from '$lib/erreurs';
 	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
@@ -223,7 +217,7 @@
 			}));
 			choixAcces = await accesApi.choixAcces();
 		} catch (e) {
-			erreur = e instanceof ApiError ? e.message : 'Chargement impossible';
+			erreur = messageErreur(e, 'Chargement impossible');
 		} finally {
 			chargement = false;
 		}

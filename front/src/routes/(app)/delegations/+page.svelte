@@ -5,7 +5,8 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, isCS } from '$lib/stores/auth';
-	import { delegations as delegationsApi, admin as adminApi, ApiError } from '$lib/api';
+	import { delegations as delegationsApi, admin as adminApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateShort as fmt } from '$lib/date';
@@ -89,7 +90,7 @@
 			formDateFin = '';
 			toast('success', 'Délégation créée');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			saving = false;
 		}
@@ -101,7 +102,7 @@
 			delegations = delegations.map((d) => (d.id === id ? updated : d));
 			toast('success', 'Délégation acceptée');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -112,7 +113,7 @@
 			delegations = delegations.map((d) => (d.id === id ? updated : d));
 			toast('success', 'Délégation révoquée');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 </script>
