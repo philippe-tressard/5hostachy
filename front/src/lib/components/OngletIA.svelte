@@ -77,6 +77,14 @@
 	//  Les valeurs des usages, telles que les blocs les écrivent. Elles partent
 	//  TOUTES à l'enregistrement, avec le commun.
 	let valeursSaisies: Record<string, string> = {};
+	//  L'ACCORDÉON (#987) : un seul usage déplié à la fois. Déplier l'un replie
+	//  l'autre — demandé à l'écran le 17/09/2026, deux blocs ouverts faisaient une
+	//  page longue. L'état vit ici : un bloc ne connaît pas ses voisins.
+	let usageOuvert: string | null = null;
+	function basculerUsage(code: string, ouvert: boolean) {
+		if (ouvert) usageOuvert = code;
+		else if (usageOuvert === code) usageOuvert = null;
+	}
 
 	//  🔴 La liste des modèles vient du FOURNISSEUR, pas d'un catalogue écrit ici
 	//  (11/09/2026 — « on peut choisir un modèle plus intelligent ? »). Un repère
@@ -116,6 +124,9 @@
 	onMount(async () => {
 		try {
 			usages = await configApi.llmUsages();
+			//  À l'ouverture, le premier usage ACTIF est déplié : ce qu'on a activé,
+			//  on veut le voir. Les autres attendent un clic.
+			usageOuvert = usages.find((u) => valeursSaisies[u.cles.actif] === '1')?.code ?? null;
 		} catch (e: any) {
 			toast('error', e?.message ?? 'Les usages de l’assistant n’ont pas pu être lus');
 		}
@@ -259,6 +270,8 @@
 				{azure}
 				modeleRepere={MODELES_REPERE[cfg.fournisseur]}
 				{chargerModeles}
+				ouvert={usageOuvert === usage.code}
+				on:basculer={(e) => basculerUsage(usage.code, e.detail)}
 			/>
 			{#if usage.code === 'synthese_contrat'}
 				<!--  Le seul réglage propre à UN usage : ce que la synthèse envoie du

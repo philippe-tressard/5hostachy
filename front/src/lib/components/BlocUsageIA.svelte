@@ -22,10 +22,12 @@
     dans le champ reviendrait au même — mais la clé porterait une copie qui
     ne suivrait plus le code.
   - Pliable (`<details>`) : Philippe veut « un bloc pliable par usage, il y en a
-    deux, peut-être plus à l'avenir ». Ouvert par défaut quand l'usage est
-    actif : ce qu'on a activé, on veut le voir.
+    deux, peut-être plus à l'avenir ». Et UN SEUL déplié à la fois (#987,
+    constaté à l'écran le 17/09/2026) : c'est l'onglet qui tient l'accordéon,
+    ce bloc reçoit `ouvert` et signale `basculer`.
 -->
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import { config as configApi, type UsageIA } from '$lib/api';
@@ -47,6 +49,12 @@
 	export let modeleRepere = '';
 	/** L'onglet charge le catalogue ; le bloc ne fait que le demander. */
 	export let chargerModeles: () => void;
+	/**  Ce bloc est-il déplié ? Décidé par l'ONGLET, qui tient l'accordéon
+	 *   (#987) : un seul usage déplié à la fois, et un bloc ne connaît pas ses
+	 *   voisins. Le bloc annonce seulement qu'on l'a ouvert ou fermé (`basculer`). */
+	export let ouvert = false;
+
+	const dispatch = createEventDispatcher<{ basculer: boolean }>();
 
 	$: cles = usage.cles;
 	$: actif = valeurs[cles.actif] === '1';
@@ -90,7 +98,11 @@
 	}
 </script>
 
-<details class="bloc-usage" open={actif}>
+<details
+	class="bloc-usage"
+	open={ouvert}
+	on:toggle={(e) => dispatch('basculer', e.currentTarget.open)}
+>
 	<summary class="bloc-usage-resume">
 		<Icon name="zap" size={16} />
 		<span class="bloc-usage-titre">{usage.libelle}</span>
