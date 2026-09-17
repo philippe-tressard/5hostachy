@@ -156,25 +156,33 @@ def test_l_ordre_est_CHRONOLOGIQUE_car_un_avenant_modifie_ce_qui_précède(sessi
     assert [d.id for d in documents_du_contrat(session, c)] == [ancien.id, recent.id]
 
 
-def test_le_document_DÉSIGNÉ_vient_en_tête_s_il_n_est_pas_déjà_joint(session):
-    """C'est le contrat de référence — celui que les autres amendent."""
+def test_un_document_DÉSIGNÉ_qui_n_est_PAS_du_contrat_est_ignoré(session):
+    """🔴 Le défaut du 17/09/2026, signalé à l'écran.
+
+    Ce test remplace `…_vient_en_tête_s_il_n_est_pas_déjà_joint`, qui
+    verrouillait le défaut : il posait un document SANS `contrat_id` et exigeait
+    qu'il soit lu. Un document rattaché au contrat figure déjà dans la requête,
+    donc cette branche ne pouvait s'ouvrir que sur un document étranger — celui
+    d'un autre contrat, envoyé au service et nommé dans l'encart.
+
+    La règle et ses autres cas vivent dans `test_document_designe.py`.
+    """
     c = _contrat(session)
-    joint = _document(session, c)
-    designe = Document(
-        titre="Contrat de référence",
-        fichier_nom="ref.pdf",
-        fichier_chemin="/x/ref.pdf",
+    sien = _document(session, c, titre="Contrat de maintenance ascenseur")
+    etranger = Document(
+        titre="Entretien toitures Bat 2",
+        fichier_nom="toitures.pdf",
+        fichier_chemin="/x/toitures.pdf",
         mime_type="application/pdf",
         publie_par_id=1,
     )
-    session.add(designe)
+    session.add(etranger)
     session.commit()
-    session.refresh(designe)
-    c.document_id = designe.id
+    session.refresh(etranger)
+    c.document_id = etranger.id
     session.add(c)
     session.commit()
-    assert [d.id for d in documents_du_contrat(session, c)] == [designe.id, joint.id]
-
+    assert [d.id for d in documents_du_contrat(session, c)] == [sien.id]
 
 # ── 2. Ce qu'on envoie ──────────────────────────────────────────────────────
 

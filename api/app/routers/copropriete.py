@@ -14,6 +14,7 @@ from app.models.core import (
 )
 
 from app.utils.destinataires import syndic_principal
+from app.utils.document_contrat import id_document_designe
 from app.utils.echeance_contrat import echeance_du_contrat
 from app.utils.syndic import nom_du_syndic
 
@@ -242,7 +243,7 @@ def assurance_du_contrat(session: Session, copro: Copropriete) -> dict:
         "assurance_numero_police": contrat.numero_contrat,
         "assurance_debut": contrat.date_debut,
         **_echeance_lue("assurance", contrat),
-        "assurance_document_id": contrat.document_id,
+        "assurance_document_id": id_document_designe(session, contrat),
     }
 
 
@@ -290,7 +291,7 @@ def syndic_du_contrat(session: Session, copro: Copropriete) -> dict:
         "syndic_numero_mandat": contrat.numero_contrat,
         "syndic_debut": contrat.date_debut,
         **_echeance_lue("syndic", contrat),
-        "syndic_document_id": contrat.document_id,
+        "syndic_document_id": id_document_designe(session, contrat),
     })
     return lu
 
