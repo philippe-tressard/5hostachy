@@ -17,7 +17,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { documents as docsApi, ApiError } from '$lib/api';
+	import { documents as docsApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { ACCEPT_DOCUMENTS, attacherA } from '$lib/fichiers';
 	import PastilleFichier from './PastilleFichier.svelte';
@@ -43,7 +44,7 @@
 		try {
 			docs = [...docs, ...(await attacherA('publication', publicationId, Array.from(input.files)))];
 		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Téléversement impossible');
+			toast('error', messageErreur(err, 'Téléversement impossible'));
 		} finally {
 			enCours = false;
 			input.value = '';
@@ -55,7 +56,7 @@
 			await docsApi.delete(id);
 			docs = docs.filter((d) => d.id !== id);
 		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+			toast('error', messageErreur(err));
 		}
 	}
 </script>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { contexteCommentaire } from '$lib/assistant';
+	import { messageErreur } from '$lib/erreurs';
 	import { PUBLICATION } from '$lib/entites/publication';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
@@ -9,7 +10,6 @@
 	import {
 		publications as pubsApi,
 		documents as docsApi,
-		ApiError,
 		type Publication,
 		auth as authApi,
 	} from '$lib/api';
@@ -84,7 +84,7 @@
 				.catch(() => {});
 		} catch (e) {
 			//  🔴 Aucun `catch` jusqu'au 06/09 : une panne affichait « Aucune actualité » — défaut #519 (#796).
-			erreur = e instanceof ApiError ? e.message : 'Erreur de chargement';
+			erreur = messageErreur(e, 'Erreur de chargement');
 		} finally {
 			loading = false;
 		}
@@ -102,7 +102,7 @@
 			pubList = pubList.filter((p) => p.id !== pub.id);
 			toast('success', 'Publication supprimée');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Impossible de supprimer');
+			toast('error', messageErreur(e, 'Impossible de supprimer'));
 		}
 	}
 
@@ -179,7 +179,7 @@
 			showEvolForm = null;
 			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
 		} catch (err: any) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+			toast('error', messageErreur(err));
 		} finally {
 			evolSaving = false;
 		}
@@ -270,7 +270,7 @@
 			optionsPub = null;
 			toast('success', 'Options mises à jour');
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : "Erreur d'enregistrement");
+			toast('error', messageErreur(e, "Erreur d'enregistrement"));
 		} finally {
 			optionsSaving = false;
 		}

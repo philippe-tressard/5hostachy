@@ -39,7 +39,8 @@
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import { TITRE_HISTORIQUE } from '$lib/archives';
 	import EvolForm from './EvolForm.svelte';
-	import { calendrier as calApi, ApiError } from '$lib/api';
+	import { calendrier as calApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { currentUser, isAdmin } from '$lib/stores/auth';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { toast } from './Toast.svelte';
@@ -96,7 +97,7 @@
 			dispatch('evolue');
 			toast('success', data.type === 'etat' ? 'Suivi mis à jour' : 'Commentaire ajouté');
 		} catch (err: any) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+			toast('error', messageErreur(err));
 		} finally {
 			enCours = false;
 		}
@@ -120,7 +121,7 @@
 			dispatch('evolue');
 			toast('success', 'Entrée corrigée');
 		} catch (err: any) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+			toast('error', messageErreur(err));
 		} finally {
 			correctionEnCours = false;
 		}
@@ -135,7 +136,7 @@
 			dispatch('evolue');
 			toast('success', 'Entrée supprimée');
 		} catch (err: any) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+			toast('error', messageErreur(err));
 		}
 	}
 </script>

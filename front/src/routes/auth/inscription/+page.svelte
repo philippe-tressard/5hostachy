@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { auth as authApi, ApiError } from '$lib/api';
+	import { auth as authApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { getSiteNom } from '$lib/stores/pageConfig';
 	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
@@ -84,7 +85,7 @@
 			});
 			success = true;
 		} catch (e) {
-			error = e instanceof ApiError ? e.message : 'Erreur lors de la création du compte';
+			error = messageErreur(e, 'Erreur lors de la création du compte');
 		} finally {
 			loading = false;
 		}

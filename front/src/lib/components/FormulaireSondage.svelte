@@ -32,7 +32,8 @@
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { SONDAGE } from '$lib/entites/sondage';
-	import { sondages as sondagesApi, ApiError } from '$lib/api';
+	import { sondages as sondagesApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
@@ -154,7 +155,7 @@
 			toast('success', 'Sondage mis à jour');
 			dispatch('modifie', maj);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			submitting = false;
 		}
@@ -191,7 +192,7 @@
 			toast('success', 'Sondage créé');
 			dispatch('cree', cree);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			submitting = false;
 		}
