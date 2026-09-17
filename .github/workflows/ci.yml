@@ -985,8 +985,7 @@ jobs:
           # VIDE, donc un texte collé identique s'annonçait « modifié » et une
           # origine plus récente ne se signalait jamais. Ce qui est fragile n'est
           # pas la comparaison mais sa NORMALISATION — un copier-coller Windows ne
-          # diffère que par ses `
-`, et une normalisation trop large tairait
+          # diffère que par ses fins de ligne, et une normalisation trop large tairait
           # une vraie différence.
           npm run lint:prompt-origine
 
