@@ -27,6 +27,7 @@ from app.utils.llm import config_llm
 from app.utils.synthese_contrat import (
     GABARIT,
     CONSIGNE,
+    CONSIGNE_CITATIONS,
     construire_matiere,
     construire_message,
     documents_du_contrat,
@@ -398,6 +399,55 @@ def test_le_gabarit_reste_GENERIQUE_a_tout_contrat_de_copropriete():
     #  Ce qui, en revanche, vaut partout et doit être demandé :
     for universel in ("SIRET", "préavis", "indexation", "option"):
         assert universel.lower() in GABARIT.lower()
+
+
+#  ── Les EXTRAITS des clauses citées (17/09/2026) ──────────────────────────
+#
+#  🔴 Demandé après les premières synthèses réelles : *« quand il y a une
+#  référence à une clause ou article d'un §x, alors en fin de la synthèse tu
+#  joins les extraits (max 30 lignes par extrait) en précisant l'extrait en
+#  titre »*. La citation prouve UNE ligne, l'extrait donne la clause ENTIÈRE.
+
+
+def test_la_consigne_demande_une_HUITIÈME_section_d_extraits():
+    assert "8. Extraits des clauses citées" in CONSIGNE
+    #  Elle s'ajoute APRÈS les sept, elle n'en remplace aucune : les sept
+    #  restent imposées mot pour mot.
+    assert "Respecte EXACTEMENT ces sept sections" in CONSIGNE
+    assert "ne remplace aucune des sept autres" in CONSIGNE
+
+
+def test_l_extrait_est_BORNÉ_et_coupé_à_la_fin_d_une_phrase():
+    """Sans borne, une clause recopiée remplirait la réponse et mangerait le
+    plafond de jetons de la synthèse qu'elle éclaire."""
+    assert "TRENTE LIGNES AU PLUS" in CONSIGNE
+    assert "coupe à la fin d'une phrase" in CONSIGNE
+    #  Une coupure au milieu d'un montant dirait autre chose que le contrat.
+    assert "milieu d'un montant" in CONSIGNE
+
+
+def test_un_RÉSUMÉ_ne_tient_pas_lieu_d_extrait():
+    """Mis sous un titre de clause, il se lirait comme le texte du contrat."""
+    assert "non reproduit dans les éléments fournis" in CONSIGNE
+    assert "ne la résume pas" in CONSIGNE
+
+
+def test_sans_clause_citée_la_section_8_est_ABSENTE():
+    """Une section vide se lit comme une information manquante, alors qu'il n'y
+    avait rien à extraire."""
+    assert "la section 8 est ABSENTE" in CONSIGNE
+
+
+def test_l_extrait_ne_remplace_PAS_la_citation_sous_chaque_fait():
+    """Les deux coexistent : la citation prouve la ligne, l'extrait donne la
+    clause. Confondre les deux ferait disparaître la plus vérifiable."""
+    assert "L'extrait ne remplace pas la citation" in CONSIGNE
+    assert CONSIGNE_CITATIONS in CONSIGNE
+
+
+def test_le_titre_d_extrait_a_sa_balise():
+    """La section 8 introduit un niveau de titre que les sept n'avaient pas."""
+    assert "<h4>" in CONSIGNE
 
 
 def test_l_unite_d_un_montant_ne_se_perd_pas():
