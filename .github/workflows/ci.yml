@@ -981,6 +981,14 @@ jobs:
           # relire : une erreur d'un cran ouvre la carte du voisin, et cela ne se
           # voit qu'en supprimant un membre du MILIEU de la liste.
           npm run lint:liste-depliable
+          # « Ce prompt est-il celui d'origine ? » (#994) : l'écran comparait au
+          # VIDE, donc un texte collé identique s'annonçait « modifié » et une
+          # origine plus récente ne se signalait jamais. Ce qui est fragile n'est
+          # pas la comparaison mais sa NORMALISATION — un copier-coller Windows ne
+          # diffère que par ses `
+`, et une normalisation trop large tairait
+          # une vraie différence.
+          npm run lint:prompt-origine
 
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.

@@ -32,6 +32,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import { config as configApi, type UsageIA } from '$lib/api';
+	import { memePrompt } from '$lib/promptOrigine';
 
 	export let usage: UsageIA;
 	/** Toutes les valeurs de configuration, liées : le bloc écrit les siennes. */
@@ -61,7 +62,25 @@
 	$: actif = valeurs[cles.actif] === '1';
 	$: modele = valeurs[cles.modele] ?? '';
 	$: prompt = valeurs[cles.prompt] ?? '';
+	//  ── Le prompt : trois états, pas deux (#994, 17/09/2026) ─────────────────
+	//
+	//  🔴 L'écran comparait la clé au VIDE, et disait « Prompt modifié » dès
+	//  qu'elle portait quelque chose. Il ne regardait donc JAMAIS le texte livré :
+	//  un prompt collé à l'identique s'annonçait modifié, et surtout une origine
+	//  plus récente, arrivée avec un déploiement, ne se signalait pas.
+	//
+	//  | état | ce qui SERT | ce que l'écran en dit |
+	//  |---|---|---|
+	//  | clé vide | l'origine du code, et elle SUIT ses évolutions | « Prompt d'origine » |
+	//  | clé = origine | ce texte, FIGÉ — il ne suivra plus le code | « Copie de l'origine » |
+	//  | clé ≠ origine | ce texte | « Prompt modifié », et l'origine est proposée |
+	//
+	//  ⚠️ La deuxième ligne est celle qui n'était pas dite, et c'est la plus
+	//  trompeuse : un copier-coller donne un texte juste AUJOURD'HUI, qui
+	//  n'apprendra rien de la version suivante.
 	$: promptOrigine = !prompt.trim();
+	$: copieDeLOrigine = !promptOrigine && memePrompt(prompt, usage.prompt_defaut);
+	$: promptDivergent = !promptOrigine && !copieDeLOrigine;
 	$: maxJetons = Number(valeurs[cles.max_jetons]) || usage.max_jetons_defaut;
 
 	//  Le modèle enregistré reste proposé même s'il n'est plus au catalogue :
@@ -218,10 +237,25 @@
 				</button>
 				{#if promptOrigine}
 					<span class="badge badge-gray">Prompt d’origine</span>
+				{:else if copieDeLOrigine}
+					<span class="badge badge-gray">Copie de l’origine</span>
 				{:else}
 					<span class="badge badge-orange">Prompt modifié</span>
 				{/if}
 			</div>
+			{#if copieDeLOrigine}
+				<p class="aide">
+					Ce texte est identique au prompt d’origine, mais il en est une <strong>copie</strong>
+					: il ne suivra pas ses évolutions. « Rétablir le prompt d’origine » vide le champ, et c’est
+					alors la version livrée par l’application qui sert — celle-là se met à jour avec elle.
+				</p>
+			{:else if promptDivergent}
+				<p class="aide">
+					Ce texte <strong>diffère</strong> du prompt d’origine livré par cette version de l’application.
+					C’est normal si vous l’avez adapté ; si vous attendiez une consigne plus récente, « Rétablir
+					le prompt d’origine » la reprend.
+				</p>
+			{/if}
 			<span class="aide">
 				C’est le contexte que reçoit le modèle avant le texte à traiter : le ton, les interdits, la
 				structure attendue. Vous pouvez y ajouter des consignes ou modifier le gabarit. La matière —
