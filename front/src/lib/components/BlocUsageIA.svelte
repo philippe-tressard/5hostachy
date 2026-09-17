@@ -24,7 +24,8 @@
   - Pliable (`<details>`) : Philippe veut « un bloc pliable par usage, il y en a
     deux, peut-être plus à l'avenir ». Et UN SEUL déplié à la fois (#987,
     constaté à l'écran le 17/09/2026) : c'est l'onglet qui tient l'accordéon,
-    ce bloc reçoit `ouvert` et signale `basculer`.
+    ce bloc reçoit `ouvert` et signale `basculer`. À l'arrivée sur l'écran,
+    **tous** sont repliés — la page ne choisit pas ce qu'on vient lire.
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
