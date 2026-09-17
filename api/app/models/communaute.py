@@ -22,11 +22,13 @@ from typing import List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.utils.assiste_ia import AssisteIAMixin
+
 # ──────────────────────────────────────────────
 #  Sondages
 # ──────────────────────────────────────────────
 
-class Sondage(SQLModel, table=True):
+class Sondage(AssisteIAMixin, table=True):
     __tablename__ = "sondage"
     id: Optional[int] = Field(default=None, primary_key=True)
     question: str
@@ -119,7 +121,7 @@ class StatutAnnonce(str, Enum):
     annule = "annule"
 
 
-class PetiteAnnonce(SQLModel, table=True):
+class PetiteAnnonce(AssisteIAMixin, table=True):
     __tablename__ = "petite_annonce"
     id: Optional[int] = Field(default=None, primary_key=True)
     titre: str
@@ -182,7 +184,7 @@ class CommentaireSondage(SQLModel, table=True):
 #  Boîte à idées
 # ──────────────────────────────────────────────
 
-class Idee(SQLModel, table=True):
+class Idee(AssisteIAMixin, table=True):
     __tablename__ = "idee"
     id: Optional[int] = Field(default=None, primary_key=True)
     titre: str

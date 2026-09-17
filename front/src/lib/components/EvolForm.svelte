@@ -59,7 +59,7 @@
   les recopiait, et deux listes divergent au premier ajout.
 
   Événements :
-    submit(data)  – {type, contenu, nouveau_statut?, fichiers_urls, partager_whatsapp?, envoyer_syndic?, envoyer_cs?, email_externe?}
+    submit(data)  – une `ChargeUtileEvolution` (`$lib/evolutions`, seule écriture de ses champs)
     cancel        – fermer le formulaire sans sauvegarder
 -->
 <script lang="ts">
@@ -67,15 +67,20 @@
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
-	import { typeDeLEntree, entreeEnregistrable } from '$lib/evolutions';
+	import {
+		typeDeLEntree,
+		entreeEnregistrable,
+		etatInitialEntree,
+		type ChargeUtileEvolution,
+	} from '$lib/evolutions';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionsCiblageEvolution from '$lib/components/SectionsCiblageEvolution.svelte';
 	import { sectionPresente, type EntiteDeclaree } from '$lib/entites/types';
 	import type { ApercuDiffusion } from '$lib/api';
-	import { separerFichiers } from '$lib/fichiers';
-	import { perimetreEntree, perimetreHerite } from '$lib/perimetres';
+	import { perimetreEntree } from '$lib/perimetres';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import { avecNouvelEtat, type ContexteAssistant } from '$lib/assistant';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
 	/** Préfixe des `id` des champs. Plusieurs formulaires d'évolution coexistent à
@@ -181,26 +186,17 @@
 
 	export let saving = false;
 
+	/**  L'assistant IA du Commentaire (#985) : le contexte de l'objet PORTEUR, composé
+	 *   par l'appelant, seul à tenir l'objet (`contexteCommentaire`). `null` = aucun. */
+	export let assistant: ContexteAssistant | null = null;
+
 	// ── Events ────────────────────────────────────────────────────────────────
-	const dispatch = createEventDispatcher<{
-		submit: {
-			type: 'commentaire' | 'etat';
-			contenu: string;
-			nouveau_statut?: string;
-			fichiers_urls: string[];
-			partager_whatsapp?: boolean;
-			envoyer_syndic?: boolean;
-			envoyer_cs?: boolean;
-			envoyer_auteur?: boolean;
-			email_externe?: string;
-			interne?: boolean;
-			perimetre_cible?: string[];
-		};
-		cancel: void;
-	}>();
+	//  🔴 UNE écriture de la charge utile, `$lib/evolutions` — il y en avait deux (17/09/2026).
+	const dispatch = createEventDispatcher<{ submit: ChargeUtileEvolution; cancel: void }>();
 
 	// ── State ─────────────────────────────────────────────────────────────────
 	let contenu = initialContenu;
+	let assisteIA = false; // une proposition de l'assistant a été appliquée (#985)
 	let nouveauStatut = '';
 	let evolType: 'commentaire' | 'etat' = 'commentaire';
 	let partagerWhatsapp = defaultPartagerWhatsapp;
@@ -208,22 +204,20 @@
 	let envoyerCs = defaultEnvoyerCs;
 	let envoyerAuteur = false;
 	let emailExterne = '';
-	//  Pré-rempli avec l’hérité (31/08/2026) — voir `perimetreHerite`.
-	let perimetre: string[] =
-		editMode && initialPerimetre.length
-			? [...initialPerimetre]
-			: perimetreHerite(perimetreCourant, entrees);
-	//  Repli sur le défaut du site : une liste vide serait un effacement.
-	let destinataires: string[] = initialDestinataires.length
-		? [...initialDestinataires]
-		: ['résidents'];
-
-	//  7. Photos · 8. Documents — DEUX sections, jamais une seule (cadre #430).
-	//  Le tri vient de `$lib/fichiers` : c'est une règle de FICHIERS, pas de
-	//  formulaire — et elle y était déjà, sous le nom `separerFichiers`.
-	const heritees = separerFichiers(editMode ? initialFichiers.map((f) => f.url) : []);
-	let photos: string[] = heritees.photos;
-	let docs: string[] = heritees.documents;
+	//  L'état INITIAL d'une entrée (périmètre, destinataires, pièces) : `$lib/evolutions` (17/09/2026).
+	let {
+		perimetre,
+		destinataires,
+		photos,
+		documents: docs,
+	} = etatInitialEntree(
+		editMode,
+		initialPerimetre,
+		perimetreCourant,
+		entrees,
+		initialDestinataires,
+		initialFichiers,
+	);
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -296,6 +290,8 @@
 	//  changement d'état, l'entrée ne dirait rien. Pas de mention « (optionnel) » :
 	//  l'absence d'astérisque suffit (`ux-patterns` §9).
 	$: contenuRequis = !editMode && evolType === 'commentaire';
+	//  Le NOUVEL état complète le contexte de l'assistant — seul ce formulaire le connaît (#985).
+	$: assistantEffectif = avecNouvelEtat(assistant, evolType, nouveauStatut, statutLabels);
 	$: canSubmit = !saving && entreeEnregistrable(evolType, contenu, allFichiersUrls.length);
 
 	// Le téléversement lui-même vit dans `FichiersUpload` : trois copies de la
@@ -356,6 +352,7 @@
 			email_externe: showEmail ? emailExterne.trim() || undefined : undefined,
 			interne: avecInterne ? interne : undefined,
 			perimetre_cible: perimetreDeclare,
+			assiste_ia: assisteIA || undefined, // seulement quand c'est vrai : « je n'en dis rien » sinon
 		});
 	}
 </script>
@@ -428,6 +425,9 @@
 				? 'Précisions sur ce changement…'
 				: 'Ajoutez un commentaire de suivi…'}
 		bind:valeur={contenu}
+		assistant={assistantEffectif}
+		assistantAvecTitre={false}
+		bind:assisteIA
 	/>
 
 	<!-- ── 7-8. Photos et Documents ─────────────────────────────────────────

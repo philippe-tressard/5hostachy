@@ -97,6 +97,10 @@ class EvolutionLue(BaseModel):
     auteur_nom: Optional[str] = None
     cree_le: datetime
     fichiers_urls: ListeJson = []
+    #: « Rédigé avec l'assistant IA » (#985). Déclaré ici et non par le mixin
+    #: `AssisteIASortie` : ce module n'importe RIEN du projet, c'est sa raison
+    #: d'être (voir l'en-tête).
+    assiste_ia: bool = False
 
     class Config:
         from_attributes = True

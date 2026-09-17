@@ -15,14 +15,13 @@ l'importe. Un cycle ferait dépendre le démarrage de l'ordre des imports.
 """
 from typing import List, Optional
 
-from pydantic import BaseModel
-
 from app.models.core import StatutTicket
 from app.schemas_communs import EvolutionLue, ListeJson
+from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree
 
 
 
-class TicketEvolutionCreate(BaseModel):
+class TicketEvolutionCreate(AssisteIAEntree):
     type: str  # commentaire | etat
     contenu: Optional[str] = None
     #  Même type que `TicketUpdate.statut`, donc **même verdict** : les deux
@@ -61,7 +60,7 @@ class TicketEvolutionCreate(BaseModel):
     urgente: Optional[bool] = None
 
 
-class TicketEvolutionUpdate(BaseModel):
+class TicketEvolutionUpdate(AssisteIACorrection):
     contenu: Optional[str] = None
     fichiers_urls: Optional[List[str]] = None
     #  🔴 LE PÉRIMÈTRE SE CORRIGE (01/09/2026). Ce champ était refusé ici, au

@@ -15,12 +15,13 @@ import json
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 
 from app.schemas_communs import EvolutionLue, ListeJson
+from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree, AssisteIASortie
 from app.utils.saisi_pour import SaisiPourEntree, SaisiPourSortie
 
-class PublicationCreate(SaisiPourEntree):
+class PublicationCreate(SaisiPourEntree, AssisteIAEntree):
     titre: str
     contenu: str
     perimetre: str = "résidence"
@@ -52,7 +53,7 @@ class PublicationCreate(SaisiPourEntree):
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
-class PublicationUpdate(SaisiPourEntree):
+class PublicationUpdate(SaisiPourEntree, AssisteIACorrection):
     titre: Optional[str] = None
     contenu: Optional[str] = None
     epingle: Optional[bool] = None
@@ -86,7 +87,7 @@ class EvolutionRead(EvolutionLue):
         from_attributes = True
 
 
-class EvolutionCreate(BaseModel):
+class EvolutionCreate(AssisteIAEntree):
     type: str  # commentaire | etat | correction
     contenu: Optional[str] = None
     nouveau_statut: Optional[str] = None  # requis si type=="etat"
@@ -117,7 +118,7 @@ class EvolutionCreate(BaseModel):
     confidentiel: Optional[bool] = None
 
 
-class PublicationRead(SaisiPourSortie):
+class PublicationRead(SaisiPourSortie, AssisteIASortie):
     id: int
     titre: str
     contenu: str

@@ -28,6 +28,7 @@ from .commun import (
 from app.utils.communaute import exiger_acces
 from app.utils.liens import base_site, nom_site
 from app.utils.noms import contexte_personne
+from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
@@ -169,6 +170,7 @@ def create_sondage(
         partager_whatsapp=body.partager_whatsapp,
         envoyer_syndic=body.envoyer_syndic,
         envoyer_cs=body.envoyer_cs,
+        assiste_ia=body.assiste_ia,
     )
     session.add(s)
     session.flush()
@@ -282,6 +284,9 @@ def modifier_sondage(
     ).first() is not None
 
     donnees = body.model_dump(exclude_unset=True)
+    #  La marque « assistant IA » ne s'écrit que dans UN sens (`utils/assiste_ia`).
+    marquer_assiste_ia(s, body)
+    donnees.pop("assiste_ia", None)
 
     #  ── La clôture recule, elle n'avance jamais (#467) ──────────────────────
     #  Prolonger n'invalide rien ; raccourcir prive de leur voix ceux qui n'ont

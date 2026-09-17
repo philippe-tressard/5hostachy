@@ -33,6 +33,7 @@
   nus (la panne des pastilles, v2.67.11). Ce découpage-là attend #432.
 -->
 <script lang="ts">
+	import { contexteCommentaire } from '$lib/assistant';
 	import { EVENEMENT } from '$lib/entites/evenement';
 	import { createEventDispatcher } from 'svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
@@ -79,6 +80,7 @@
 				contenu: data.contenu || undefined,
 				nouveau_statut: data.nouveau_statut,
 				fichiers_urls: data.fichiers_urls,
+				assiste_ia: data.assiste_ia,
 				//  La DIFFUSION est un ACTE, rejouable à chaque entrée : chacune est
 				//  une nouvelle, à la différence d'une correction. Le serveur envoie
 				//  avec un modèle propre au SUIVI — réutiliser « Nouvel événement »
@@ -112,6 +114,7 @@
 			await calApi.updateEvolution(evenement.id, enEdition, {
 				contenu: data.contenu ?? '',
 				fichiers_urls: data.fichiers_urls,
+				assiste_ia: data.assiste_ia,
 			});
 			enEdition = null;
 			dispatch('evolue');
@@ -165,6 +168,7 @@
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
 					entite={EVENEMENT}
+					assistant={contexteCommentaire(evenement, libelles[evenement.statut_kanban] ?? '')}
 					saving={correctionEnCours}
 					on:submit={corriger}
 					on:cancel={() => (enEdition = null)}
@@ -184,6 +188,7 @@
 				statutLabels={libelles}
 				currentStatut={evenement.statut_kanban ?? ''}
 				entite={EVENEMENT}
+				assistant={contexteCommentaire(evenement, libelles[evenement.statut_kanban] ?? '')}
 				saving={enCours}
 				on:submit={enregistrer}
 				on:cancel={() => dispatch('fermer')}

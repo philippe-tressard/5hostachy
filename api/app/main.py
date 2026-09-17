@@ -99,6 +99,7 @@ from app.routers import (
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
 from app.routers import manuel
 from app.routers import csp
+from app.routers import assistant, config_llm
 from app.seed import seed
 from app.utils.backup import setup_scheduler
 
@@ -331,6 +332,8 @@ app.include_router(uploads.router)
 app.include_router(faq.router)
 app.include_router(bailleur.router)
 app.include_router(config.router)
+#  Même préfixe `/config` : l'assistant IA de l'administration (#984).
+app.include_router(config_llm.router)
 app.include_router(diagnostics.router)
 app.include_router(regles_residence.router)
 app.include_router(delegations.router)
@@ -341,6 +344,8 @@ app.include_router(patrimoine.router)
 #  Collecte des violations de CSP (#536) : point PUBLIC — le navigateur poste
 #  sans cookie. Borné par une limite de débit et un plafond de clés.
 app.include_router(csp.router)
+#  L'assistant IA des formulaires (#985) : retravailler une description.
+app.include_router(assistant.router)
 
 # Fichiers statiques (photos uploadées)
 #  `UPLOADS_DIR` plutôt qu'un chemin figé : le motif existe déjà dans

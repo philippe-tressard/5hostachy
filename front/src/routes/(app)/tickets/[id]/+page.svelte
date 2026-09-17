@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { contexteCommentaire } from '$lib/assistant';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { isCS, isAdmin } from '$lib/stores/auth';
@@ -143,6 +144,7 @@
 				contenu: data.contenu,
 				interne: !!data.interne,
 				fichiers_urls: data.fichiers_urls ?? [],
+				assiste_ia: data.assiste_ia,
 				email_externe: data.email_externe,
 			});
 			messages = [...messages, msg];
@@ -309,6 +311,9 @@
 		{ticketId}
 		auteurNom={ticket?.auteur_nom ?? ''}
 		statutCourant={ticket?.statut ?? ''}
+		assistant={ticket
+			? contexteCommentaire(ticket, STATUT_LABELS[ticket.statut] ?? ticket.statut)
+			: null}
 		perimetreCourant={ticket?.perimetre_cible ?? []}
 		whatsappInterdit={motifWhatsappInterdit(ticket?.confidentiel ?? false, 'ticket')}
 		optionsInitiales={optionsDuTicket(ticket)}

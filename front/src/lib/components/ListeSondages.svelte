@@ -22,6 +22,7 @@
   l'API et recharge la liste.
 -->
 <script lang="ts">
+	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { fmtDateShort, isNouveau } from '$lib/date';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
@@ -57,6 +58,7 @@
 		      et un `<button>` dans un `<a>` serait invalide. -->
 		<EnteteCarte titre={s.question} date={fmtDateShort(s.cree_le)}>
 			<svelte:fragment slot="titre-suffixe">
+				<MarqueIA assiste={s.assiste_ia} />
 				{#if isNouveau(s.cree_le)}<span class="badge badge-gray sondage-neuf">New</span>{/if}
 			</svelte:fragment>
 			<svelte:fragment slot="tags">

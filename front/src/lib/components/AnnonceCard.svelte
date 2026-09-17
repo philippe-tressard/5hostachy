@@ -32,6 +32,7 @@
   `$lib/annonces.ts` : la carte le rend, l'onglet en fait ses filtres.
 -->
 <script lang="ts">
+	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { nomAffiche } from '$lib/noms';
 	import EnteteCarte from './EnteteCarte.svelte';
 	import BoutonLien from './BoutonLien.svelte';
@@ -116,6 +117,7 @@
 		on:toggle={onToggle}
 	>
 		<svelte:fragment slot="titre-suffixe">
+			<MarqueIA assiste={annonce.assiste_ia} />
 			{#if !annonce.archivee && isNouveau(annonce.cree_le)}<span
 					class="badge badge-gray annonce-neuf">New</span
 				>{/if}

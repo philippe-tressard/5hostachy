@@ -44,6 +44,7 @@ from enum import Enum
 from typing import Optional
 
 from sqlmodel import Field
+from app.utils.assiste_ia import AssisteIAMixin
 from app.utils.saisi_pour import SaisiPourMixin
 from app.models.evolution import EvolutionMixin
 
@@ -66,7 +67,7 @@ class StatutKanban(str, Enum):
     annule = "annule"
 
 
-class Evenement(SaisiPourMixin, table=True):
+class Evenement(SaisiPourMixin, AssisteIAMixin, table=True):
     __tablename__ = "evenement"
     id: Optional[int] = Field(default=None, primary_key=True)
     titre: str

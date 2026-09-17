@@ -285,6 +285,7 @@
 			await ticketsApi.updateEvolution(t.id, evolEnEdition, {
 				contenu: data.contenu ?? '',
 				fichiers_urls: data.fichiers_urls,
+				assiste_ia: data.assiste_ia,
 				//  🔴 La correction du périmètre part AUSSI (01/09/2026) : le
 				//  sélecteur s'affiche désormais en correction, et un champ affiché
 				//  qui ne part pas est le défaut de la veille, rejoué.
@@ -309,6 +310,7 @@
 				contenu: data.contenu || undefined,
 				nouveau_statut: data.nouveau_statut,
 				fichiers_urls: data.fichiers_urls,
+				assiste_ia: data.assiste_ia,
 				email_externe: data.email_externe,
 				partager_whatsapp: data.partager_whatsapp || undefined,
 				envoyer_syndic: data.envoyer_syndic || undefined,

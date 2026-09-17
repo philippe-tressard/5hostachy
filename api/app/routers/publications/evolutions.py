@@ -17,6 +17,7 @@ from app.models.core import (
 )
 from app.schemas import EvolutionCreate, EvolutionRead, PublicationEvolutionUpdate
 from app.utils.evolutions import evolution_modifiable, supprimer_evolution
+from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_json
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 from app.utils.liens import base_site
@@ -46,6 +47,7 @@ def update_evolution(
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
         evol.fichiers_urls = photos_json(body.fichiers_urls)
+    marquer_assiste_ia(evol, body)
     session.add(evol)
     session.commit()
     session.refresh(evol)
@@ -101,6 +103,7 @@ def add_evolution(
         auteur_id=user.id,
         cree_le=datetime.utcnow(),
         fichiers_urls=photos_json(body.fichiers_urls),
+        assiste_ia=body.assiste_ia,
     )
     session.add(evol)
 

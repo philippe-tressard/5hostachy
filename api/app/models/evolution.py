@@ -54,11 +54,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+
+from app.utils.assiste_ia import AssisteIAMixin
 
 
-class EvolutionMixin(SQLModel):
-    """Les sept champs d'une entrée de fil, hérités plutôt que recopiés."""
+class EvolutionMixin(AssisteIAMixin):
+    """Les sept champs d'une entrée de fil, hérités plutôt que recopiés — plus
+    la marque `assiste_ia`, que le commentaire porte comme l'objet (#985)."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
     #: `commentaire` ou `etat` — jamais un troisième (voir l'en-tête).

@@ -290,6 +290,17 @@ const ROUTES_LANCEMENT: Record<string, string> = {
 	telemetrie: '/admin/telemetry/agreger',
 };
 
+/** Un usage de l'assistant IA, tel que `GET /config/llm-usages` le décrit. */
+export interface UsageIA {
+	code: string;
+	libelle: string;
+	description: string;
+	prompt_defaut: string;
+	max_jetons_defaut: number;
+	/** Les clés `ConfigSite` de ses réglages : `actif`, `modele`, `prompt`, `max_jetons`. */
+	cles: Record<'actif' | 'modele' | 'prompt' | 'max_jetons', string>;
+}
+
 export const config = {
 	//  ⚠️ Appelée par `loadSiteConfig()` (`stores/pageConfig`), qui écrivait
 	//  `fetch('/api/config')` en dur jusqu'au 12/09/2026 — un contournement du
@@ -319,14 +330,18 @@ export const config = {
 	testerImap: () => api.post<any>('/config/imap-test', {}),
 	/**  Interroge VRAIMENT le modèle configuré (`utils/llm.tester`). Trois champs
 	 *   remplis ne prouvent rien : une clé se révoque, un modèle se renomme. */
-	llmTest: () =>
+	llmTest: (usage: string) =>
 		api.post<{
 			ok: boolean;
+			usage: string;
 			fournisseur: string;
 			modele: string;
 			reponse: string;
 			duree_ms: number;
-		}>('/config/llm-test', {}),
+		}>(`/config/llm-test?usage=${encodeURIComponent(usage)}`, {}),
+	/**  Les USAGES de l'assistant — la SEULE liste (#984) : l'écran rend un bloc
+	 *   par entrée. Les valeurs courantes, elles, viennent de `admin()`. */
+	llmUsages: () => api.get<UsageIA[]>('/config/llm-usages'),
 	/**  Les modèles que la clé enregistrée peut RÉELLEMENT appeler, demandés au
 	 *   fournisseur. `listable: false` n'est pas une erreur : Azure n'expose pas
 	 *   ses déploiements, et une clé peut synthétiser sans avoir le droit de

@@ -119,6 +119,7 @@ def add_message(
         ticket_id=ticket_id, type="reponse",
         contenu="Message interne" if body.interne else None,
         auteur_id=user.id, cree_le=datetime.utcnow(),
+        assiste_ia=body.assiste_ia,
     ))
     ticket.mis_a_jour_le = datetime.utcnow()
     session.add(msg)

@@ -38,6 +38,8 @@
   pour l'affichage.
 -->
 <script lang="ts">
+	import MarqueIA from '$lib/components/MarqueIA.svelte';
+	import { contexteCommentaire } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import ApercuTicket from './ApercuTicket.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
@@ -250,6 +252,7 @@
 			      l'API l'accepte déjà — seul l'écran ne le propose pas. Suivi
 			      dans #653 ; ne pas remettre un badge de bâtiment en attendant. -->
 			{#if ticket.auteur_nom}<span class="tk-auteur">{ticket.auteur_nom}</span>{/if}
+			<MarqueIA assiste={ticket.assiste_ia} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<ActionsTicket
@@ -329,6 +332,10 @@
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
 						entite={TICKET}
+						assistant={contexteCommentaire(
+							ticket,
+							STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut,
+						)}
 						peutPreciserPerimetre={peutSuivreCeTicket}
 						perimetreCourant={ticket.perimetre_cible ?? []}
 						entrees={evolutions}

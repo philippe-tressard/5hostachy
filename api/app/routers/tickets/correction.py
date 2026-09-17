@@ -19,6 +19,7 @@ import json
 from app.models.core import Ticket
 from app.schemas import TicketUpdate
 from app.utils.photos import photos_internes, photos_json
+from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.saisi_pour import corriger as corriger_saisi_pour
 
 
@@ -67,6 +68,9 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket) -> list[str]:
     if body.description is not None and body.description != ticket.description:
         changes.append("Description modifiée")
         ticket.description = body.description
+    #  La marque « assistant IA » ne s'écrit que dans un sens, et ne s'annonce
+    #  pas : ce n'est pas une correction, c'est la provenance de celle-ci.
+    marquer_assiste_ia(ticket, body)
     if body.categorie is not None and body.categorie != ticket.categorie:
         changes.append(f"Catégorie : {ticket.categorie} → {body.categorie}")
         ticket.categorie = body.categorie

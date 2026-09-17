@@ -40,6 +40,7 @@
   règle.
 -->
 <script lang="ts">
+	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import PiecesJointes from './PiecesJointes.svelte';
 	import { safeDescription } from '$lib/sanitize';
@@ -58,6 +59,8 @@
 		nouveau_statut?: string;
 		auteur_id?: number;
 		auteur_nom?: string;
+		/** « Rédigé avec l'assistant IA » (#985). */
+		assiste_ia?: boolean;
 		cree_le: string;
 		fichiers_urls?: string[];
 		/** Le périmètre que cette entrée déclare, quand elle en déclare un (#497). */
@@ -219,6 +222,7 @@
 							>{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom}
 								· {evol.auteur_nom}{/if}</span
 						>
+						<MarqueIA assiste={evol.assiste_ia} />
 						<!--  🔴 LES DEUX ICÔNES DANS UN MÊME GROUPE, cadré à droite
 						      (18/08/2026, signalé à l'écran). Elles étaient enfants directs
 						      d'une ligne en `space-between` : à DEUX enfants — la méta et le

@@ -48,6 +48,7 @@
   signale. Toute retouche ici se vérifie sur un envoi réel.
 -->
 <script lang="ts">
+	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { attacherApres } from '$lib/fichiers';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
@@ -159,6 +160,17 @@
 	let perimetreCible: string[] = [...(publication?.perimetre_cible ?? perimetreDefautListe())];
 	let publicCible: string[] = [...(publication?.public_cible ?? ['résidents'])];
 	let contenu = publication?.contenu ?? '';
+	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
+	let assisteIA = false;
+	//  Ce que l'assistant IA reçoit pour COMPRENDRE le texte — à ne pas réécrire
+	//  (#985) : périmètre et options. Une actualité n'a pas de catégorie.
+	$: assistant = contexteAssistant('actualité', {
+		Périmètre: perimetreContexte(perimetreCible),
+		Urgente: urgente,
+		Épinglée: epingle,
+		Brouillon: brouillon,
+		Confidentielle: confidentiel,
+	});
 	//  Les photos sont téléversées AVANT l'enregistrement (endpoint générique),
 	//  comme pour les tickets et les événements : leurs URLs partent dans la
 	//  charge utile. C'est ce qui permet au courriel de partir AVEC elles.
@@ -275,6 +287,7 @@
 				const maj = await pubsApi.update(publication.id, {
 					titre: titre.trim(),
 					contenu,
+					assiste_ia: assisteIA || undefined,
 					epingle,
 					urgente,
 					brouillon,
@@ -299,6 +312,7 @@
 			let pub = await pubsApi.create({
 				titre: titre.trim(),
 				contenu,
+				assiste_ia: assisteIA,
 				urgente,
 				epingle,
 				perimetre_cible: perimetreCible,
@@ -419,6 +433,9 @@
 				avecDescription={sectionPresente(PUBLICATION, etat, 'description')}
 				descriptionRequise
 				bind:description={contenu}
+				{assistant}
+				bind:titreObjet={titre}
+				bind:assisteIA
 				descriptionPlaceholder="Contenu de l'actualité…"
 				avecPhotos={sectionPresente(PUBLICATION, etat, 'photos')}
 				bind:photos

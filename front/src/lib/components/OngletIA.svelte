@@ -1,6 +1,7 @@
 <!--
-  L'onglet **Assistant IA** de l'administration : quel service, quelle clé, quel
-  modèle — et un bouton qui vérifie que ça parle vraiment.
+  L'onglet **Assistant IA** de l'administration : le COMMUN — quel service,
+  quelle clé, quelle adresse, quel délai — et un BLOC PAR USAGE, pliable, avec
+  son modèle, son prompt, son plafond et son test (#984, 17/09/2026).
 
   Même geste et même forme qu'`OngletSmtp` : l'état et les appels réseau vivent
   ici, la page ne garde que le choix de l'onglet. Le champ secret passe par
@@ -15,17 +16,30 @@
 
   ## Ce que l'écran ne décide pas
 
-  Ni la liste des fournisseurs, ni les modèles par défaut, ni les limites : tout
-  cela vit dans `api/app/utils/llm.py`. Recopier la table ici la ferait diverger
-  au premier fournisseur ajouté — c'est le défaut que ce dépôt connaît le mieux.
+  Ni la liste des fournisseurs, ni les modèles par défaut, ni les limites — tout
+  cela vit dans `api/app/utils/llm.py`. Et depuis le 17/09/2026, **ni la liste
+  des usages** : elle vient de `GET /config/llm-usages` (`llm_usages.py`), et
+  l'écran rend un `BlocUsageIA` par entrée. Recopier l'une ou l'autre table ici
+  la ferait diverger au premier ajout — c'est le défaut que ce dépôt connaît le
+  mieux.
+
+  ## Un seul « Enregistrer »
+
+  Le commun et les usages s'enregistrent d'un geste : chaque bloc écrit ses clés
+  dans `valeursSaisies`, et ce bouton envoie le tout. Un bouton par bloc ferait
+  des enregistrements partiels — une clé posée sans son modèle, un modèle sans
+  son activation.
 -->
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import { config as configApi } from '$lib/api';
+	import { config as configApi, type UsageIA } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampSecret from '$lib/components/ChampSecret.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import BlocUsageIA from '$lib/components/BlocUsageIA.svelte';
+	import { oublierAssistant } from '$lib/stores/assistant';
 
 	/** Valeurs lues au chargement par la page (`adminCfg`). */
 	export let valeurs: Record<string, string> = {};
@@ -38,53 +52,45 @@
 		{ val: 'azure_openai', label: 'Azure OpenAI', desc: 'votre point d’accès Azure' },
 	];
 
-	/** Modèles proposés en repère — le champ reste libre, le catalogue bouge vite. */
+	/** Repères de modèle pour la saisie libre — le champ reste libre, le catalogue vient du fournisseur. */
 	const MODELES_REPERE: Record<string, string> = {
 		openai: 'gpt-4o-mini',
 		anthropic: 'claude-haiku-4-5-20251001',
 		azure_openai: 'nom de votre déploiement',
 	};
 
+	//  Le COMMUN.
 	let cfg = {
 		actif: false,
 		fournisseur: 'openai',
-		modele: '',
 		base_url: '',
 		api_version: '',
-		max_jetons: 1500,
 		delai_s: 45,
 		envoi_document: true,
 	};
 	let cle = '';
 	let clePosee = false;
 	let enregistrement = false;
-	let test: { etat: 'aucun' | 'encours' | 'ok' | 'ko'; message: string } = {
-		etat: 'aucun',
-		message: '',
-	};
+
+	//  Les USAGES — la liste vient de l'API, jamais d'ici.
+	let usages: UsageIA[] = [];
+	//  Les valeurs des usages, telles que les blocs les écrivent. Elles partent
+	//  TOUTES à l'enregistrement, avec le commun.
+	let valeursSaisies: Record<string, string> = {};
 
 	//  🔴 La liste des modèles vient du FOURNISSEUR, pas d'un catalogue écrit ici
-	//  (11/09/2026 — « on peut choisir un modèle plus intelligent ? »). Le champ
-	//  était libre avec trois exemples en dur et le commentaire « le catalogue
-	//  bouge vite » : c'était l'aveu du défaut. Un repère recopié propose ce que
-	//  la clé ne peut pas appeler et cache ce qui est sorti depuis.
+	//  (11/09/2026 — « on peut choisir un modèle plus intelligent ? »). Un repère
+	//  recopié propose ce que la clé ne peut pas appeler et cache ce qui est
+	//  sorti depuis. Le catalogue est COMMUN : il dépend de la clé, pas de l'usage.
 	//
 	//  ⚠️ `catalogue.listable === false` n'est PAS une panne — Azure n'expose pas
-	//  ses déploiements, et une clé peut très bien synthétiser sans avoir le droit
+	//  ses déploiements, et une clé peut très bien répondre sans avoir le droit
 	//  de s'inventorier. On retombe alors sur la saisie libre, en disant pourquoi.
 	let catalogue: {
 		etat: 'aucun' | 'encours' | 'pret' | 'indisponible';
 		motif: string;
 		modeles: { id: string; libelle: string }[];
 	} = { etat: 'aucun', motif: '', modeles: [] };
-
-	//  Le modèle enregistré reste proposé même s'il n'est plus au catalogue :
-	//  sinon la liste le remplacerait en silence par son premier élément, et un
-	//  simple Enregistrer changerait le modèle sans que personne l'ait demandé.
-	$: choixModeles =
-		catalogue.etat === 'pret' && cfg.modele && !catalogue.modeles.some((m) => m.id === cfg.modele)
-			? [{ id: cfg.modele, libelle: `${cfg.modele} (enregistré)` }, ...catalogue.modeles]
-			: catalogue.modeles;
 
 	$: azure = cfg.fournisseur === 'azure_openai';
 
@@ -97,15 +103,23 @@
 		cfg = {
 			actif: lues['llm_actif'] === '1',
 			fournisseur: lues['llm_fournisseur'] || 'openai',
-			modele: lues['llm_modele'] || '',
 			base_url: lues['llm_base_url'] || '',
 			api_version: lues['llm_api_version'] || '',
-			max_jetons: Number(lues['llm_max_jetons']) || 1500,
 			delai_s: Number(lues['llm_delai_s']) || 45,
 			envoi_document: lues['llm_envoi_document'] !== '0',
 		};
 		clePosee = !!lues['llm_api_key'];
+		//  Les blocs lisent et écrivent dans cette copie : la page garde la sienne.
+		valeursSaisies = { ...lues };
 	}
+
+	onMount(async () => {
+		try {
+			usages = await configApi.llmUsages();
+		} catch (e: any) {
+			toast('error', e?.message ?? 'Les usages de l’assistant n’ont pas pu être lus');
+		}
+	});
 
 	async function enregistrer() {
 		enregistrement = true;
@@ -113,27 +127,35 @@
 			const charge: Record<string, string> = {
 				llm_actif: cfg.actif ? '1' : '0',
 				llm_fournisseur: cfg.fournisseur,
-				llm_modele: cfg.modele.trim(),
 				llm_base_url: cfg.base_url.trim(),
 				llm_api_version: cfg.api_version.trim(),
-				llm_max_jetons: String(cfg.max_jetons),
 				llm_delai_s: String(cfg.delai_s),
 				llm_envoi_document: cfg.envoi_document ? '1' : '0',
 			};
+			//  Les clés de chaque usage, telles que son bloc les a posées. On
+			//  n'envoie que les siennes : `valeursSaisies` porte toute la
+			//  configuration du site, et la renvoyer entière réécrirait des clés
+			//  que cet écran ne montre pas.
+			for (const u of usages) {
+				for (const cleUsage of Object.values(u.cles)) {
+					if (cleUsage in valeursSaisies) charge[cleUsage] = valeursSaisies[cleUsage] ?? '';
+				}
+			}
 			//  🔴 La clé n'est envoyée QUE si l'on en a saisi une. Une chaîne vide
-			//  écraserait celle qui est enregistrée — et rien ne le dirait avant la
-			//  prochaine synthèse.
+			//  écraserait celle qui est enregistrée — et rien ne le dirait avant le
+			//  prochain appel.
 			if (cle) charge['llm_api_key'] = cle;
 			await configApi.save(charge);
 			if (cle) {
 				clePosee = true;
 				cle = '';
 			}
-			test = { etat: 'aucun', message: '' };
 			toast('success', 'Configuration enregistrée');
 			//  Le fournisseur ou la clé viennent peut-être de changer : le
 			//  catalogue précédent ne décrit plus ce qu'on peut appeler.
 			catalogue = { etat: 'aucun', motif: '', modeles: [] };
+			//  Et les formulaires relisent la disponibilité de l'assistant.
+			oublierAssistant();
 		} catch (e: any) {
 			toast('error', e?.message ?? 'Erreur à l’enregistrement');
 		} finally {
@@ -156,32 +178,18 @@
 			};
 		}
 	}
-
-	async function tester() {
-		test = { etat: 'encours', message: '' };
-		try {
-			const r = await configApi.llmTest();
-			test = {
-				etat: 'ok',
-				message: `${r.fournisseur} · ${r.modele} — réponse « ${r.reponse} » en ${r.duree_ms} ms`,
-			};
-		} catch (e: any) {
-			test = { etat: 'ko', message: e?.message ?? 'Le test a échoué' };
-		}
-	}
 </script>
 
 <div class="card">
-	<h2 class="titre-onglet">
-		<Icon name="zap" size={18} /> Assistant IA (synthèse de contrat)
-	</h2>
+	<h2 class="titre-onglet"><Icon name="zap" size={18} /> Assistant IA</h2>
 
-	<SectionFormulaire premiere titre="Service">
+	<SectionFormulaire premiere titre="Commun — le service">
 		<label class="field case">
 			<input type="checkbox" bind:checked={cfg.actif} />
 			Activer l’assistant
 			<span class="aide">
-				Désactivé, l’icône ✨ n’apparaît nulle part et aucun appel n’est facturé.
+				Désactivé, aucune icône ✨ n’apparaît et aucun appel n’est facturé, quel que soit l’usage.
+				Chaque usage a en plus sa propre activation, ci-dessous.
 			</span>
 		</label>
 
@@ -199,58 +207,10 @@
 			bind:valeur={cle}
 			pose={clePosee}
 			placeholder="sk-…"
-			aide="Elle n’est jamais renvoyée par le serveur, même à un administrateur."
+			aide="Elle n’est jamais renvoyée par le serveur, même à un administrateur. Une seule clé pour tous les usages."
 		/>
 
 		<div class="form-grid">
-			<label class="field">
-				Modèle
-				{#if catalogue.etat === 'pret'}
-					<select bind:value={cfg.modele}>
-						<option value="">Modèle par défaut du fournisseur</option>
-						{#each choixModeles as m (m.id)}
-							<option value={m.id}>{m.libelle}</option>
-						{/each}
-					</select>
-				{:else}
-					<input
-						type="text"
-						bind:value={cfg.modele}
-						placeholder={MODELES_REPERE[cfg.fournisseur]}
-					/>
-				{/if}
-				<div class="ligne-modele">
-					{#if !azure}
-						<button
-							class="btn btn-outline btn-sm"
-							type="button"
-							disabled={catalogue.etat === 'encours' || !clePosee}
-							on:click={chargerModeles}
-						>
-							{catalogue.etat === 'encours' ? 'Lecture…' : 'Voir les modèles disponibles'}
-						</button>
-					{/if}
-				</div>
-				<span class="aide">
-					{#if catalogue.etat === 'pret'}
-						{choixModeles.length} modèle{choixModeles.length > 1 ? 's' : ''} accessible{choixModeles.length >
-						1
-							? 's'
-							: ''} avec cette clé, du plus récent au plus ancien. Un modèle plus capable rend une synthèse
-						plus fidèle, et coûte plus cher par contrat.
-					{:else if catalogue.etat === 'indisponible'}
-						{catalogue.motif} Saisissez l’<strong>identifiant d’API</strong> à la main — pas le nom commercial.
-					{:else if !clePosee}
-						Enregistrez d’abord une clé : la liste des modèles se lit avec elle.
-					{:else}
-						L’<strong>identifiant d’API</strong>, pas le nom commercial. Laissé vide, le modèle par
-						défaut du fournisseur est employé.
-						{azure
-							? 'Sur Azure, indiquez le nom de votre déploiement.'
-							: 'Le bouton ci-dessus demande au fournisseur ce que votre clé peut appeler.'}
-					{/if}
-				</span>
-			</label>
 			<label class="field">
 				Adresse du service {azure ? '*' : ''}
 				<input
@@ -271,21 +231,6 @@
 					<span class="aide">La version indiquée dans votre portail Azure.</span>
 				</label>
 			{/if}
-		</div>
-	</SectionFormulaire>
-
-	<SectionFormulaire titre="Garde-fous">
-		<div class="form-grid">
-			<label class="field">
-				Longueur maximale de la réponse
-				<input type="number" bind:value={cfg.max_jetons} min="200" max="32000" step="500" />
-				<span class="aide">
-					En jetons, et c’est un plafond de <strong>coût</strong> autant que de longueur : seuls les
-					jetons réellement produits sont facturés. Comptez <strong>10 000</strong> pour un modèle récent
-					— il raisonne avant d’écrire, et ce raisonnement compte dans le plafond. Une synthèse coupée
-					au milieu d’une section ressemble à un défaut du modèle alors que c’est ce champ.
-				</span>
-			</label>
 			<label class="field">
 				Délai d’attente
 				<input type="number" bind:value={cfg.delai_s} min="10" max="300" step="5" />
@@ -294,44 +239,45 @@
 				</span>
 			</label>
 		</div>
-		<label class="field case">
-			<input type="checkbox" bind:checked={cfg.envoi_document} />
-			Envoyer le document du contrat au service
-			<span class="aide">
-				Sans lui, quatre sections de la synthèse sur sept restent vides : montants, prestations
-				incluses et exclues ne vivent que dans le PDF. Sont transmis <strong
-					>tous les documents du contrat</strong
-				> — l’initial, ses avenants, ses conditions générales : n’en lire qu’un rendrait les montants
-				faux dès le premier avenant. Rien d’autre ne part : ni pièce jointe d’un ticket, ni document d’un
-				autre contrat. Le texte est extrait côté serveur, le fichier lui-même ne quitte jamais le site.
-			</span>
-		</label>
 	</SectionFormulaire>
 
-	<SectionFormulaire titre="Vérification">
-		<p class="aide" style="margin-bottom:.6rem">
-			Trois champs remplis ne prouvent rien : une clé se révoque, un modèle se renomme. Ce test pose
-			une vraie question au service et attend sa réponse.
-			<br />
-			⚠️ Il porte sur la configuration <strong>enregistrée</strong> : cliquez d’abord sur « Enregistrer
-			» si vous venez de modifier un champ. L’assistant n’a pas besoin d’être activé — on teste justement
-			pour décider de l’activer.
+	<SectionFormulaire titre="Par usage">
+		<p class="aide" style="margin-bottom:.4rem">
+			Chaque usage règle <strong>son modèle</strong>, <strong>son prompt</strong> et
+			<strong>son plafond</strong>, et se teste séparément. Tout s’enregistre avec le bouton en bas
+			de page.
 		</p>
-		<div class="ligne-test">
-			<button
-				class="btn btn-outline"
-				type="button"
-				on:click={tester}
-				disabled={test.etat === 'encours'}
-			>
-				{test.etat === 'encours' ? 'Test en cours…' : '🔌 Tester la connexion'}
-			</button>
-			{#if test.etat === 'ok'}
-				<span class="verdict ok">✅ {test.message}</span>
-			{:else if test.etat === 'ko'}
-				<span class="verdict ko">⚠️ {test.message}</span>
+		{#if usages.length === 0}
+			<p class="aide">Lecture des usages…</p>
+		{/if}
+		{#each usages as usage (usage.code)}
+			<BlocUsageIA
+				{usage}
+				bind:valeurs={valeursSaisies}
+				{catalogue}
+				{clePosee}
+				{azure}
+				modeleRepere={MODELES_REPERE[cfg.fournisseur]}
+				{chargerModeles}
+			/>
+			{#if usage.code === 'synthese_contrat'}
+				<!--  Le seul réglage propre à UN usage : ce que la synthèse envoie du
+				      contrat. Il vit sous son bloc, pas dans le commun — un autre
+				      usage n'a pas de document à envoyer. -->
+				<label class="field case option-usage">
+					<input type="checkbox" bind:checked={cfg.envoi_document} />
+					Envoyer le document du contrat au service
+					<span class="aide">
+						Sans lui, quatre sections de la synthèse sur sept restent vides : montants, prestations
+						incluses et exclues ne vivent que dans le PDF. Sont transmis <strong
+							>tous les documents du contrat</strong
+						> — l’initial, ses avenants, ses conditions générales : n’en lire qu’un rendrait les montants
+						faux dès le premier avenant. Rien d’autre ne part : ni pièce jointe d’un ticket, ni document
+						d’un autre contrat.
+					</span>
+				</label>
 			{/if}
-		</div>
+		{/each}
 	</SectionFormulaire>
 
 	<div class="form-actions">
@@ -342,14 +288,6 @@
 </div>
 
 <style>
-	/*  La rangée qui porte le bouton de lecture du catalogue, sous le champ.
-	    Un `<div>` plutôt qu'un frère du `<label>` : le bouton appartient au champ
-	    Modèle, et l'en sortir le ferait dériver au premier changement de grille. */
-	.ligne-modele {
-		display: flex;
-		margin-top: 0.35rem;
-	}
-
 	.titre-onglet {
 		display: flex;
 		align-items: center;
@@ -358,19 +296,8 @@
 		font-weight: 700;
 		margin: 0 0 0.9rem;
 	}
-	.ligne-test {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
-	.verdict {
-		font-size: 0.88rem;
-	}
-	.verdict.ok {
-		color: var(--color-success);
-	}
-	.verdict.ko {
-		color: var(--color-danger);
+	/*  Le réglage propre à un usage se lit sous son bloc, légèrement rentré. */
+	.option-usage {
+		margin: 0.4rem 0 0.9rem 0.9rem;
 	}
 </style>

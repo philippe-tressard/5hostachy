@@ -241,10 +241,14 @@ def list_contrats(
     #  est la même pour tous, et la relire à chaque ligne ferait autant d'allers
     #  en base que de contrats pour une réponse identique.
     from app.utils.llm import config_llm
+    from app.utils.llm_usages import USAGE_SYNTHESE_CONTRAT
     from app.utils.synthese_contrat import documents_du_contrat
 
-    cfg = config_llm(session)
-    assistant_pret = cfg.actif and bool(cfg.cle)
+    cfg = config_llm(session, USAGE_SYNTHESE_CONTRAT)
+    #  La MÊME règle que `synthese_disponible` — activation aux deux étages, clé,
+    #  modèle de l'usage —, lue une fois ; seule la partie « ce contrat a-t-il
+    #  un document » se rejoue par ligne.
+    assistant_pret = cfg.pret
 
     lus = []
     for c in contrats:

@@ -91,6 +91,7 @@
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { relire } from '$lib/utils';
 	import { concerneTousLesResidents } from '$lib/destinataires';
+	import type { ContexteAssistant } from '$lib/assistant';
 
 	/** Préfixe des `id` des champs — deux formulaires peuvent coexister à l'écran,
 	    et deux `<label for="…">` pointant le même id ne désignent plus rien. */
@@ -203,6 +204,15 @@
 	     comme défaut — c'est celui des deux écrans les plus utilisés (actualités,
 	     tickets). Ne la surcharger que pour une vraie contrainte de place. */
 	export let descriptionHauteur = '120px';
+	/**  L'assistant IA de la section (#985) : l'entité et son contexte, composés
+	 *   par l'écran (`$lib/assistant`). `null` = pas d'assistant. */
+	export let assistant: ContexteAssistant | null = null;
+	/**  Le titre de l'OBJET, prêté par l'écran pour que l'assistant puisse le
+	 *   retravailler — LIÉ dans les deux sens. Ce composant ne rend pas la
+	 *   section 1, il ne fait que relayer ce lien jusqu'à la Description. */
+	export let titreObjet = '';
+	/** Vrai dès qu'une proposition a été appliquée — l'écran l'envoie en `assiste_ia`. */
+	export let assisteIA = false;
 
 	//  ── 8. Photos ─────────────────────────────────────────────────────────────
 	export let avecPhotos = false;
@@ -381,6 +391,9 @@
 		placeholder={descriptionPlaceholder}
 		hauteur={descriptionHauteur}
 		bind:valeur={description}
+		{assistant}
+		bind:titreObjet
+		bind:assisteIA
 	/>
 {/if}
 

@@ -139,6 +139,10 @@ def create_ticket(
         # pièce jointe vers un site tiers, servi ensuite à chaque lecteur.
         photos_urls=photos_json(body.photos_urls),
         fichiers_urls=photos_json(body.fichiers_urls),
+        #  « Rédigé avec l'assistant IA » — le geste est réservé au CS, mais la
+        #  marque se lit telle quelle : un résident ne peut pas l'obtenir, le
+        #  serveur refusant l'appel qui la justifie (`routers/assistant`).
+        assiste_ia=body.assiste_ia,
     )
     session.add(ticket)
     session.flush()

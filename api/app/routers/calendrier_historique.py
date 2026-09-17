@@ -26,13 +26,13 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.auth.deps import peut_editer, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Evenement, Utilisateur
 from app.models.evenement import EvenementEvolution
+from app.utils.assiste_ia import AssisteIAEntree, marquer as marquer_assiste_ia
 from app.utils.evolutions import supprimer_evolution
 from app.utils.photos import photos_json
 from app.routers.calendrier_courriels import notifier_canaux
@@ -52,7 +52,7 @@ class EvolutionEvenementRead(EvolutionLue):
         from_attributes = True
 
 
-class EvolutionEvenementCreate(BaseModel):
+class EvolutionEvenementCreate(AssisteIAEntree):
     #  `commentaire` ou `etat` — deux types, comme les tickets et les
     #  publications. Le troisième que l'on serait tenté d'ajouter (« correction »)
     #  n'existe nulle part : une correction est un `commentaire` préfixé.
@@ -175,6 +175,7 @@ def add_evolution_evenement(
         auteur_id=user.id,
         cree_le=datetime.utcnow(),
         fichiers_urls=photos_json(body.fichiers_urls),
+        assiste_ia=body.assiste_ia,
     )
     session.add(evol)
     if body.type == "etat":
@@ -234,6 +235,7 @@ def update_evolution_evenement(
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
         evol.fichiers_urls = photos_json(body.fichiers_urls)
+    marquer_assiste_ia(evol, body)
     session.add(evol)
     session.commit()
     session.refresh(evol)

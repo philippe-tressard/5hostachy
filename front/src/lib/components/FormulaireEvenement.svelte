@@ -14,6 +14,8 @@
   masqué par la modale ; le passage à la boîte dans la page l'a révélé.
 -->
 <script lang="ts">
+	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
+	import { typeEvenementLabel } from '$lib/evenements';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
@@ -149,6 +151,15 @@
 	//  « Envoyer une copie à … » — la case vit dans `CanauxNotification`, qui
 	//  porte la règle et son pourquoi. Elle s'affichait ici sans être lue (31/08).
 	let envoyerAuteur = false;
+	//  Ce que l'assistant IA reçoit pour COMPRENDRE le texte — à ne pas réécrire
+	//  (#985) : type, date, lieu, périmètre. `form.assiste_ia` part avec la
+	//  charge utile de la page, qui étale `form`.
+	$: assistant = contexteAssistant('événement', {
+		Type: typeEvenementLabel(form.type),
+		Date: form.debut,
+		Lieu: form.lieu,
+		Périmètre: perimetreContexte(formPerimetreCible),
+	});
 
 	$: aUneDiffusion = form.envoyer_syndic || form.envoyer_cs || form.partager_whatsapp;
 
@@ -318,6 +329,9 @@
 				bind:perimetre={formPerimetreCible}
 				avecDescription={sectionPresente(EVENEMENT, etat, 'description')}
 				bind:description={form.description}
+				{assistant}
+				bind:titreObjet={form.titre}
+				bind:assisteIA={form.assiste_ia}
 				descriptionPlaceholder="Description de l'événement…"
 				avecPhotos={sectionPresente(EVENEMENT, etat, 'photos')}
 				bind:photos={photosUrls}

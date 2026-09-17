@@ -9,6 +9,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree, AssisteIASortie
+
 from app.schemas import ListeJson
 
 
@@ -24,7 +26,7 @@ class OptionCreate(BaseModel):
     champ_libre: bool = False
 
 
-class SondageCreate(BaseModel):
+class SondageCreate(AssisteIAEntree):
     question: str
     description: Optional[str] = None
     cloture_le: Optional[datetime] = None
@@ -44,7 +46,7 @@ class SondageCreate(BaseModel):
     envoyer_auteur: bool = False
 
 
-class SondageRead(BaseModel):
+class SondageRead(AssisteIASortie):
     id: int
     question: str
     description: Optional[str] = None
@@ -108,7 +110,7 @@ class OptionCorrection(BaseModel):
     libelle: str
 
 
-class SondageUpdate(BaseModel):
+class SondageUpdate(AssisteIACorrection):
     """Ce qu'un sondage accepte de voir corrigé après sa création.
 
     Les champs de CIBLAGE (`perimetre_cible`, `public_cible`) n'y sont

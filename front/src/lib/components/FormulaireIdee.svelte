@@ -25,6 +25,7 @@
       (skill `ux-patterns` §9 bis).
 -->
 <script lang="ts">
+	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
@@ -59,6 +60,8 @@
 	//  Section 5 (#782). Vide = tous les résidents, ici comme côté serveur.
 	let publicCible: string[] = [...(idee?.public_cible ?? [])];
 	let submitting = false;
+	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
+	let assisteIA = false;
 
 	async function enregistrer() {
 		if (!form.titre || !form.description) {
@@ -72,13 +75,17 @@
 				//  Restreindre après coup masquerait l'idée à des gens qui l'ont déjà
 				//  votée — même décision que pour le sondage. L'envoyer quand même
 				//  serait ignoré par le serveur, et ferait croire ici que ça marche.
-				const maj = await ideesApi.modifier(idee.id, { ...form });
+				const maj = await ideesApi.modifier(idee.id, {
+					...form,
+					assiste_ia: assisteIA || undefined,
+				});
 				toast('success', 'Idée mise à jour');
 				dispatch('modifie', maj);
 				return;
 			}
 			const creee = await ideesApi.create({
 				...form,
+				assiste_ia: assisteIA,
 				perimetre_cible: perimetreCible,
 				public_cible: publicCible,
 			});
@@ -123,6 +130,9 @@
 			avecDescription={sectionPresente(IDEE, etat, 'description')}
 			descriptionRequise
 			bind:description={form.description}
+			assistant={contexteAssistant('idée', { Périmètre: perimetreContexte(perimetreCible) })}
+			bind:titreObjet={form.titre}
+			bind:assisteIA
 			descriptionPlaceholder="Décrivez votre idée…"
 		/>
 		<!--  « Annuler » est À CÔTÉ d'« Enregistrer » — norme du 18/08/2026, posée

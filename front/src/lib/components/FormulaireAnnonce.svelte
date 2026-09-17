@@ -41,12 +41,19 @@
   donnerait deux chemins concurrents vers la même liste.
 -->
 <script lang="ts">
+	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
-	import { CATEGORIES_ANNONCE, OPTIONS_STATUT_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
+	import {
+		CATEGORIES_ANNONCE,
+		OPTIONS_STATUT_ANNONCE,
+		TYPES_ANNONCE,
+		categorieAnnonceLabel,
+		typeAnnonceLabel,
+	} from '$lib/annonces';
 	import { annonces as annoncesApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe } from '$lib/utils';
@@ -95,6 +102,15 @@
 	//  ce serait choisir un ciblage à la place de l'auteur.
 	let publicCible: string[] = [...(annonce?.public_cible ?? [])];
 	let description = annonce?.description ?? '';
+	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
+	let assisteIA = false;
+	//  Ce que l'assistant IA reçoit pour COMPRENDRE le texte — à ne pas réécrire
+	//  (#985) : type, catégorie, périmètre.
+	$: assistant = contexteAssistant('petite annonce', {
+		Type: typeAnnonceLabel(typeAnnonce),
+		Catégorie: categorieAnnonceLabel(categorie),
+		Périmètre: perimetreContexte(perimetreCible),
+	});
 	let contactVisible = annonce?.contact_visible ?? true;
 
 	let submitting = false;
@@ -127,6 +143,7 @@
 			const charge = {
 				titre: titre.trim(),
 				description,
+				assiste_ia: assisteIA || undefined,
 				type_annonce: typeAnnonce,
 				categorie,
 				prix: prixEnvoye,
@@ -246,6 +263,9 @@
 			avecDescription={sectionPresente(ANNONCE, etat, 'description')}
 			descriptionRequise
 			bind:description
+			{assistant}
+			bind:titreObjet={titre}
+			bind:assisteIA
 			descriptionPlaceholder="Décrivez l'objet, son état, conditions de remise…"
 			avecPhotos={sectionPresente(ANNONCE, etat, 'photos')}
 			avecDocuments={sectionPresente(ANNONCE, etat, 'documents')}

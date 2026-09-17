@@ -20,6 +20,7 @@ import pytest
 from app.routers.config import MARQUEUR_SECRET, _SECRETS, _valeur_pour_admin
 from app.utils.llm import (
     FOURNISSEURS,
+    USAGES,
     ConfigLLM,
     ErreurLLM,
     Fournisseur,
@@ -41,7 +42,8 @@ def session_llm():
             "llm_actif": "1",
             "llm_fournisseur": "openai",
             "llm_api_key": "sk-x",
-            "llm_modele": "gpt-4o-mini",
+            "llm_synthese_contrat_actif": "1",
+            "llm_synthese_contrat_modele": "gpt-4o-mini",
         }.items():
             s.add(ConfigSite(cle=cle, valeur=valeur))
         s.commit()
@@ -126,12 +128,15 @@ def _config(**kw) -> ConfigLLM:
         actif=True,
         fournisseur=FOURNISSEURS["openai"],
         cle="sk-x",
-        modele="gpt-4o-mini",
         base_url="https://api.openai.com/v1",
         version_api="2024-06-01",
-        max_jetons=800,
         delai_s=30,
         envoi_document=True,
+        usage=USAGES["synthese_contrat"],
+        actif_usage=True,
+        modele="gpt-4o-mini",
+        prompt="CONSIGNE",
+        max_jetons=800,
     )
     base.update(kw)
     return ConfigLLM(**base)

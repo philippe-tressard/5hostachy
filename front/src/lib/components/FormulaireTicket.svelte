@@ -37,6 +37,8 @@
   carte du ticket) : le bouton est alors rendu ici, comme le fait `EvolForm`.
 -->
 <script lang="ts">
+	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
+	import { STATUT_TICKET_LABELS } from '$lib/tickets';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { tickets as ticketsApi, admin as adminApi, ApiError, type Ticket } from '$lib/api';
@@ -95,6 +97,8 @@
 
 	let titre = ticket?.titre ?? '';
 	let description = ticket?.description ?? '';
+	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
+	let assisteIA = false;
 	let categorie = ticket?.categorie ?? 'panne';
 	let statut = ticket?.statut ?? 'ouvert';
 	//  🛡️ Réservé au conseil syndical (#710) — le CS seul le pose, le serveur le
@@ -104,6 +108,13 @@
 	//  écran ⇄ objet vit dans `$lib/tickets` — `brouillon` écrit `confidentiel`,
 	//  `urgente` écrit la priorité, et rien ici ne le réécrit.
 	let options = optionsDuTicket(ticket);
+	//  Ce que l'assistant IA reçoit pour COMPRENDRE le texte — à ne pas réécrire
+	//  (#985, arbitré le 17/09/2026 : catégorie, périmètre, état).
+	$: assistant = contexteAssistant('ticket', {
+		Catégorie: OPTIONS_CATEGORIE.find((o) => o.val === categorie)?.label ?? categorie,
+		Périmètre: perimetreContexte(perimetreCible),
+		État: STATUT_TICKET_LABELS[statut] ?? statut,
+	});
 	//  `confidentiel` reste une variable à part : trois autres endroits de ce
 	//  fichier la lisent (la garde WhatsApp, notamment).
 	$: confidentiel = options.brouillon;
@@ -268,6 +279,7 @@
 				const maj = await ticketsApi.update(ticket.id, {
 					titre: titre.trim(),
 					description,
+					assiste_ia: assisteIA || undefined,
 					categorie,
 					perimetre_cible: perimetreCible,
 					photos_urls: photosUrls,
@@ -290,6 +302,7 @@
 			const payload: any = {
 				titre: titre.trim(),
 				description,
+				assiste_ia: assisteIA,
 				categorie,
 				perimetre_cible: perimetreCible,
 				destinataire_syndic: destinataireSyndic,
@@ -409,6 +422,9 @@
 			avecDescription={sectionPresente(TICKET, etat, 'description')}
 			descriptionRequise
 			bind:description
+			{assistant}
+			bind:titreObjet={titre}
+			bind:assisteIA
 			descriptionPlaceholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)"
 			avecPhotos={sectionPresente(TICKET, etat, 'photos')}
 			bind:photos={photosUrls}

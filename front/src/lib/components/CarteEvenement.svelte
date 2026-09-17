@@ -24,6 +24,7 @@
   d'`ApercuCarte`, le fil d'`HistoriqueEvenement`.
 -->
 <script lang="ts">
+	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
@@ -121,6 +122,7 @@
 			{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
 			{#if ev.fin}<span class="event-meta">→ {formatDate(ev.fin)}</span>{/if}
 			{#if ev.auteur_nom}<span class="event-meta">{ev.auteur_nom}</span>{/if}
+			<MarqueIA assiste={ev.assiste_ia} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<!--  Le chemin est EXPLICITE : cette carte se rend aussi sous `/calendrier/archives`,

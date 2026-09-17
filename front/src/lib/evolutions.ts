@@ -1,3 +1,5 @@
+import { separerFichiers } from '$lib/fichiers';
+import { perimetreHerite } from '$lib/perimetres';
 /**
  * Le vocabulaire d'un **fil d'évolution** — écrit une fois pour les trois entités
  * qui en portent un : tickets, actualités, événements de calendrier.
@@ -92,6 +94,8 @@ export function evolutionIcone(type: string | undefined | null): string {
  * un champ que le formulaire émet.
  */
 export interface ChargeUtileEvolution {
+	/** « Rédigé avec l'assistant IA » (#985) — seulement quand c'est vrai. */
+	assiste_ia?: boolean;
 	type: string;
 	contenu?: string;
 	nouveau_statut?: string;
@@ -163,4 +167,33 @@ export function entreeEnregistrable(
 	nbFichiers: number,
 ): boolean {
 	return type === 'etat' || !(contenuRicheVide(contenu) && nbFichiers === 0);
+}
+
+/**
+ *  L'état INITIAL d'une entrée de fil, tel qu'`EvolForm` l'ouvre.
+ *
+ *  Sorti du formulaire le 17/09/2026 (modularité) : trois règles de DONNÉE qui
+ *  n'ont rien d'un écran, et qui se lisent — et se testent — sans le monter :
+ *    · le périmètre est celui que l'entrée avait déclaré en correction, sinon
+ *      l'HÉRITÉ (`perimetreHerite`, 31/08/2026) ;
+ *    · les destinataires se replient sur le défaut du site : une liste vide
+ *      serait un effacement ;
+ *    · 7. Photos · 8. Documents — DEUX sections, jamais une seule (cadre #430) ;
+ *      le tri est une règle de FICHIERS (`separerFichiers`), pas de formulaire.
+ */
+export function etatInitialEntree(
+	editMode: boolean,
+	initialPerimetre: string[],
+	perimetreCourant: string[],
+	entrees: { perimetre_cible?: string[] | null }[],
+	initialDestinataires: string[],
+	initialFichiers: { url: string }[],
+): { perimetre: string[]; destinataires: string[]; photos: string[]; documents: string[] } {
+	const perimetre =
+		editMode && initialPerimetre.length
+			? [...initialPerimetre]
+			: perimetreHerite(perimetreCourant, entrees);
+	const destinataires = initialDestinataires.length ? [...initialDestinataires] : ['résidents'];
+	const tries = separerFichiers(editMode ? initialFichiers.map((f) => f.url) : []);
+	return { perimetre, destinataires, photos: tries.photos, documents: tries.documents };
 }

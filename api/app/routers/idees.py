@@ -29,6 +29,11 @@ from app.routers.reponses_communaute import (
     reponses_de,
 )
 from app.utils.liens import lien_element
+from app.utils.assiste_ia import (
+    AssisteIACorrection,
+    AssisteIAEntree,
+    marquer as marquer_assiste_ia,
+)
 from app.utils.recuperer import ou_404
 from app.utils.reponses import (
     notifier_votants_idee,
@@ -47,7 +52,7 @@ def _reponses_for(cible_id: int, session: Session) -> list[dict]:
     return reponses_de(RUBRIQUE, cible_id, session)
 
 
-class IdeeCreate(BaseModel):
+class IdeeCreate(AssisteIAEntree):
     titre: str
     description: str
     #  Le périmètre arrive en LISTE de codes et se stocke en JSON : c'est la forme
@@ -61,7 +66,7 @@ class IdeeCreate(BaseModel):
     public_cible: Optional[list[str]] = None
 
 
-class IdeeUpdate(BaseModel):
+class IdeeUpdate(AssisteIACorrection):
     """Ce qu'une idÃ©e accepte de voir corrigÃ© aprÃ¨s son dÃ©pÃ´t (#783).
 
     DemandÃ© par Philippe le 06/09/2026 : Â« il n'est pas possible de l'Ã©diter
@@ -178,6 +183,7 @@ def create_idee(
     exiger_non_externe(user, "soumettre d'idées")
     idee = Idee(
         titre=body.titre, description=body.description, auteur_id=user.id,
+        assiste_ia=body.assiste_ia,
         #  Liste vide == aucune restriction : on retombe sur le défaut, comme le
         #  serveur le fait déjà pour les publications et les sondages.
         perimetre_cible=json.dumps(body.perimetre_cible or ["résidence"], ensure_ascii=False),
@@ -262,6 +268,8 @@ def update_idee(
         raise HTTPException(400, "Cette idÃ©e est archivÃ©e et ne peut plus Ãªtre modifiÃ©e")
 
     donnees = body.model_dump(exclude_unset=True)
+    #  La marque « assistant IA » ne s'écrit que dans UN sens (`utils/assiste_ia`).
+    marquer_assiste_ia(idee, body)
     for champ in ("titre", "description"):
         if champ in donnees:
             valeur = (donnees[champ] or "").strip()
