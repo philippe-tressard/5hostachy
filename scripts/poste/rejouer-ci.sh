@@ -51,6 +51,50 @@ RACINE=$(git rev-parse --show-toplevel 2>/dev/null) || RACINE=$(pwd)
 cd "$RACINE" || exit 2
 [ -f "$CI" ] || { echo "✗ $CI introuvable — lancer depuis la racine du dépôt."; exit 2; }
 
+#  ─────────────────────────────────────────────────────────────────────────────
+#  Le fichier de CI se CHARGE-t-il ? (17/09/2026)
+#
+#  🔴 Ce script extrait les commandes de `ci.yml` ligne par ligne : un YAML
+#  cassé lui reste parfaitement lisible. Ce jour-là, un retour chariot isolé
+#  inséré au milieu d'un commentaire a rendu le fichier illisible pour GitHub,
+#  et le rejeu a conclu « 97 étapes OK » sur un workflow qui ne démarrait plus.
+#
+#  Conséquence côté GitHub : AUCUN check ne tourne. Les checks requis ne sont
+#  donc ni verts ni rouges, ils sont ABSENTS — la protection de `main` refuse la
+#  fusion, et rien n'explique pourquoi. Un rejeu vert sur un workflow mort est
+#  le pire des faux verts : il porte précisément sur l'outil qui devait juger.
+#
+#  ⚠️ Sans analyseur YAML disponible, on rend INCONNU et non OK : un contrôle
+#  qui ne peut pas s'exécuter ne conclut pas (`standards/04` §1).
+#  ─────────────────────────────────────────────────────────────────────────────
+verdict_yaml=$(python -c "
+import sys, pathlib
+try:
+    import yaml
+except ImportError:
+    print('INCONNU: analyseur YAML absent (pip install pyyaml)'); sys.exit(0)
+try:
+    yaml.safe_load(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+except Exception as erreur:
+    print('CASSE: ' + str(erreur).replace(chr(10), ' ')[:200]); sys.exit(0)
+print('OK')
+" "$CI" 2>/dev/null) || verdict_yaml="INCONNU: python indisponible"
+
+case "$verdict_yaml" in
+  OK) ;;
+  CASSE*)
+    echo "✗ $CI ne se charge PAS — GitHub ne lancera aucun check, et les checks"
+    echo "  requis seront ABSENTS plutôt que rouges (fusion refusée sans motif)."
+    echo "  ${verdict_yaml#CASSE: }"
+    echo "  Rien n'est rejoué : conclure ici porterait sur un workflow mort."
+    exit 2
+    ;;
+  *)
+    echo "? Validité de $CI : ${verdict_yaml#INCONNU: } — le rejeu continue, mais"
+    echo "  il ne prouve rien sur le chargement du workflow par GitHub."
+    ;;
+esac
+
 #  En intégration continue, `pip install` dépose ses exécutables dans un
 #  répertoire déjà présent dans le PATH. Sur un poste Windows, non : `ruff` et
 #  `pytest` sont installés et introuvables depuis Git Bash. Sans cette ligne, le

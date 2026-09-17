@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "1.43.0",
+	"version": "1.43.1",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -66,6 +66,7 @@
 		"lint:cadre-geste": "node scripts/check-cadre-geste.mjs",
 		"lint:manuel-menus": "node scripts/check-manuel-menus.mjs",
 		"lint:init-prestataires": "node --experimental-strip-types scripts/check-init-prestataires.mjs --selftest",
+		"lint:prompt-origine": "node --experimental-strip-types scripts/check-prompt-origine.mjs --selftest",
 		"lint:liste-depliable": "node --experimental-strip-types scripts/check-liste-depliable.mjs --selftest",
 		"lint:editeur": "node scripts/check-editeur-riche.mjs",
 		"lint:tableaux": "node scripts/check-tableaux-scrollables.mjs",
