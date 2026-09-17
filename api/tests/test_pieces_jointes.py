@@ -259,8 +259,7 @@ def test_la_piece_jointe_part_avec_son_nom_dorigine(tmp_path):
     fichier = tmp_path / "0d41107a6c9b4e2f8a1d3c5e7b9f0a2c_devis-ramonage.pdf"
     fichier.write_bytes(b"%PDF-1.4 test")
 
-    prets, temporaires = _preparer_pieces_jointes([str(fichier)])
-    assert temporaires == [], "aucune image : rien à nettoyer"
+    prets = _preparer_pieces_jointes([str(fichier)])
 
     msg = MessageSchema(subject="s", recipients=["a@b.fr"], body="<p>x</p>",
                         subtype="html", attachments=prets)

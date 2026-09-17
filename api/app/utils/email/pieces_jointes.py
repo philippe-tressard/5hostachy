@@ -2,68 +2,44 @@
 
 Extrait de `email.py` le 11/08/2026. Voir `gabarit.py` pour la règle de partage.
 """
-import os
 import re as _re
-import tempfile
 
 from app.utils.fichiers import nom_lisible
 
 
-def _preparer_pieces_jointes(paths: list[str]) -> tuple[list[dict], list[str]]:
-    """(pièces jointes prêtes pour le message, chemins temporaires à nettoyer).
+def _preparer_pieces_jointes(paths: list[str]) -> list[dict]:
+    """Les pièces jointes prêtes pour le message, avec leur nom d'origine.
 
-    Deux renommages techniques faisaient perdre le nom d'origine dans la
-    messagerie du destinataire :
-      - le préfixe UUID de `nom_stocke` → « 0d41107a6c…lasseurs.pdf » ;
-      - `_fix_image_orientations`, qui écrit un fichier `exif_XXXX.jpg`.
+    Le préfixe UUID de `nom_stocke` faisait perdre ce nom dans la messagerie
+    du destinataire — « 0d41107a6c…lasseurs.pdf ». Le nom affiché est donc
+    calculé sur le chemin, et transmis explicitement en `Content-Disposition`.
 
-    Le nom affiché est donc calculé sur le chemin **d'origine**, avant toute
-    correction, et transmis explicitement en `Content-Disposition`.
+    Écrit une fois : `send_email` et `send_email_group` faisaient chacun ce
+    même travail de leur côté.
 
-    Écrit une fois : `send_email` et `send_email_group` faisaient déjà le même
-    `_fix_image_orientations` suivi du même nettoyage, chacun de son côté.
+    ## 🔴 L'orientation EXIF n'est PAS corrigée ici (17/09/2026)
+
+    Elle l'était, par un `_fix_image_orientations` qui écrivait un
+    `exif_XXXX.jpg` temporaire à côté de chaque image. C'était la **seconde**
+    réponse à une question qui a déjà son propriétaire : `routers/uploads.py`
+    cuit la rotation dans le JPEG au téléversement et n'écrit aucune balise.
+    Une image de `/uploads/` n'en porte donc aucune — vérifié sur les 52 du
+    volume de production le 17/09/2026.
+
+    Ce second passage ne corrigeait plus rien, et il coûtait : `exif_transpose`
+    renvoie une **copie** même sans balise à appliquer (Pillow 12), donc le
+    test `corrected is img` était toujours faux et CHAQUE photo partait
+    réencodée en qualité 92 — une perte de qualité, un fichier temporaire et
+    un nom à recomposer, pour une correction déjà faite au téléversement.
     """
-    corriges = _fix_image_orientations(paths)
     prets: list[dict] = []
-    for origine, chemin in zip(paths, corriges):
+    for chemin in paths:
         # Le nom vient de `nom_stocke`, donc déjà réduit à [A-Za-z0-9_.-] ; on
         # neutralise malgré tout guillemets et sauts de ligne, qui casseraient
         # l'en-tête pour les fichiers plus anciens, aux noms non assainis.
-        affiche = _re.sub(r'["\r\n]', "_", nom_lisible(origine))
+        affiche = _re.sub(r'["\r\n]', "_", nom_lisible(chemin))
         prets.append({
             "file": chemin,
             "headers": {"Content-Disposition": f'attachment; filename="{affiche}"'},
         })
-    temporaires = [c for c in corriges if c not in paths]
-    return prets, temporaires
-
-
-def _fix_image_orientations(paths: list[str]) -> list[str]:
-    """Applique la rotation EXIF sur les images JPEG et retourne les chemins corrigés."""
-    try:
-        from PIL import Image, ImageOps
-    except ImportError:
-        return paths
-
-    fixed: list[str] = []
-    for path in paths:
-        ext = os.path.splitext(path)[1].lower()
-        if ext not in ('.jpg', '.jpeg', '.png', '.webp'):
-            fixed.append(path)
-            continue
-        try:
-            with Image.open(path) as img:
-                corrected = ImageOps.exif_transpose(img)
-                if corrected is img:
-                    # Pas de correction nécessaire
-                    fixed.append(path)
-                    continue
-                tmp = tempfile.NamedTemporaryFile(
-                    suffix=ext, prefix="exif_", dir=os.path.dirname(path), delete=False,
-                )
-                corrected.save(tmp.name, quality=92)
-                tmp.close()
-                fixed.append(tmp.name)
-        except Exception:
-            fixed.append(path)
-    return fixed
+    return prets

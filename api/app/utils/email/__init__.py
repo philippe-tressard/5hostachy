@@ -6,7 +6,7 @@
 |---|---|
 | `__init__` | à qui l'on écrit, quand, et avec quel contexte |
 | `gabarit` | ce que le destinataire voit : gabarit HTML, bandeaux, logo |
-| `pieces_jointes` | orientation EXIF, noms d'origine, en-têtes de disposition |
+| `pieces_jointes` | noms d'origine, en-têtes de disposition |
 
 La surface publique ne bouge pas : `send_email`, `send_email_group`,
 `INTENTIONS`, `get_site_manager_notification_email`, `_get_smtp_config` et
@@ -14,7 +14,6 @@ La surface publique ne bouge pas : `send_email`, `send_email_group`,
 modules en dépendent, plus les tests.
 """
 import logging
-import os
 from datetime import datetime
 from typing import Any
 
@@ -310,7 +309,6 @@ async def _envoyer_modele(
 
     ctx, site_nom, site_url, email_footer = _contexte_rendu(session, context)
     smtp_cfg = _get_smtp_config(session)
-    fixed_attachments: list[str] = []
     try:
         from fastapi_mail import FastMail, MessageSchema
 
@@ -342,8 +340,7 @@ async def _envoyer_modele(
         if bcc:
             msg_kwargs["bcc"] = bcc
         if attachments:
-            prets, fixed_attachments = _preparer_pieces_jointes(attachments)
-            msg_kwargs["attachments"] = prets
+            msg_kwargs["attachments"] = _preparer_pieces_jointes(attachments)
         await fm.send_message(MessageSchema(**msg_kwargs))
         _log_email(session, code, trace, "succes", sujet=rendered_subject)
     except Exception as exc:
@@ -359,14 +356,6 @@ async def _envoyer_modele(
         else:
             logger.error("Erreur envoi email [%s] -> %s : %s", code, _masquer(trace), exc)
         _log_email(session, code, trace, "erreur", erreur=str(exc)[:500])
-    finally:
-        #  Les fichiers temporaires produits par la correction EXIF.
-        for fp in fixed_attachments:
-            if not attachments or fp not in attachments:
-                try:
-                    os.unlink(fp)
-                except OSError:
-                    pass
 
 
 def _envoi_actif(session: Session) -> bool:
