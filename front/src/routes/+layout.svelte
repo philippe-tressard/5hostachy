@@ -3,6 +3,8 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import MajDisponible from '$lib/components/MajDisponible.svelte';
 	import { configStore } from '$lib/stores/pageConfig';
+	import { onMount } from 'svelte';
+	import { surveillerImagesProtegees } from '$lib/imagesProtegees';
 
 	export let data;
 
@@ -10,6 +12,16 @@
 	$: if (data?.siteConfig && Object.keys(data.siteConfig).length > 0) {
 		configStore.set(data.siteConfig);
 	}
+
+	//  🔴 UN SEUL écouteur pour toutes les images protégées (#996).
+	//
+	//  Une session expirée ne se voyait qu'à des vignettes cassées : `/uploads/*`
+	//  passe par le `forward_auth` du Caddyfile, donc le navigateur charge ces
+	//  fichiers lui-même et le renouvellement du client n'avait aucune prise sur
+	//  eux. Monté ICI et nulle part ailleurs : c'est une mutation d'état global
+	//  (`standards/11` §12), et la règle ne se recopie pas dans les composants
+	//  qui affichent des photos. `onMount` rend la fonction de retrait.
+	onMount(surveillerImagesProtegees);
 </script>
 
 <slot />
