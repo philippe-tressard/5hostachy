@@ -28,7 +28,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { admin, ApiError, type CspReleve } from '$lib/api';
+	import { admin, type CspReleve } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 
@@ -40,7 +41,7 @@
 		try {
 			releve = await admin.cspViolations();
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Relevé indisponible');
+			toast('error', messageErreur(e, 'Relevé indisponible'));
 		} finally {
 			chargement = false;
 		}

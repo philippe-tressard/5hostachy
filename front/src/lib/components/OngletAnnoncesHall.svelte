@@ -37,7 +37,8 @@
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
 	import HistoriqueAnnoncesHall from '$lib/components/HistoriqueAnnoncesHall.svelte';
 	import { MAX_PHOTOS_AFFICHE } from '$lib/annonces';
-	import { annoncesHall as annoncesHallApi, ApiError } from '$lib/api';
+	import { annoncesHall as annoncesHallApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import type { SourceAffiche } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { stripHtml, perimetreDefautListe } from '$lib/utils';
@@ -146,7 +147,7 @@
 					: 'Annonce pré-remplie — ajustez le texte avant de valider',
 			);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du pré-remplissage');
+			toast('error', messageErreur(e, 'Erreur lors du pré-remplissage'));
 		}
 	}
 
@@ -191,10 +192,7 @@
 			ahApercuHtml = r.html;
 			ahApercuFormat = r.format_label;
 		} catch (e) {
-			toast(
-				'error',
-				e instanceof ApiError ? e.message : "Erreur lors de la génération de l'aperçu",
-			);
+			toast('error', messageErreur(e, "Erreur lors de la génération de l'aperçu"));
 		} finally {
 			ahApercuLoading = false;
 		}
@@ -216,7 +214,7 @@
 			await refHistorique?.recharger();
 			ahVue = 'historique';
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : "Erreur lors de la création de l'annonce");
+			toast('error', messageErreur(e, "Erreur lors de la création de l'annonce"));
 		} finally {
 			ahSaving = false;
 		}

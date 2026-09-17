@@ -21,7 +21,8 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { reglesResidence as reglesApi, ApiError } from '$lib/api';
+	import { reglesResidence as reglesApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { isCS } from '$lib/stores/auth';
@@ -82,7 +83,7 @@
 			regleContenu = '';
 			editingRegleId = null;
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			savingRegle = false;
 		}
@@ -95,7 +96,7 @@
 			regles = regles.filter((r) => r.id !== id);
 			toast('success', 'Règle supprimée');
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 </script>

@@ -50,7 +50,7 @@ const RACINE = 'src';
 //  `profil`, `OngletPerimetres` et `OngletAcces`. Les copies qui portaient un
 //  repli CONTEXTUEL n'en perdent aucun : `tenter` a reçu un troisième
 //  paramètre plutôt que de les niveler sur la phrase générique.
-const PLAFOND = 67;
+const PLAFOND = 45;
 
 /**  Le ternaire recopié : `<e> instanceof ApiError ? <e>.message : …`.
  *   La rétro-référence `\1` exige la MÊME variable des deux côtés — sans elle,

@@ -25,7 +25,8 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { bailleur as bailApi, ApiError } from '$lib/api';
+	import { bailleur as bailApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { lotTypeLabel } from '$lib/utils';
 	import { toast } from '$lib/components/Toast.svelte';
 	import Modale from '$lib/components/Modale.svelte';
@@ -80,7 +81,7 @@
 			accesListe = await bailApi.accesBail(bailId);
 			preselectionRecommandee();
 		} catch (e: any) {
-			erreurAcces = e instanceof ApiError ? e.message : 'Impossible de charger les accès';
+			erreurAcces = messageErreur(e, 'Impossible de charger les accès');
 			toast('error', erreurAcces);
 		} finally {
 			loadingAcces = false;
@@ -142,7 +143,7 @@
 			selectionTc = new Set();
 			toast('success', 'Accès transférés au locataire');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du transfert');
+			toast('error', messageErreur(e, 'Erreur lors du transfert'));
 		}
 	}
 
@@ -174,7 +175,7 @@
 			selectionTc = new Set(selectionTc);
 			toast('success', 'Accès récupérés');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -190,7 +191,7 @@
 			selectionTc = new Set();
 			toast('success', 'Accès récupérés');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 
