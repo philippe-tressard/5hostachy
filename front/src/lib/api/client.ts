@@ -76,6 +76,35 @@ async function tryRefresh(): Promise<boolean> {
 	return _refreshing;
 }
 
+/**
+ * 🔴 **La conduite à tenir sur un 401 — renouveler, ou envoyer vers la mire.**
+ *
+ * Elle était écrite dans `request()`, donc réservée aux appels d'API. Les
+ * IMAGES protégées n'y avaient aucun accès : `/uploads/*` passe par le
+ * `forward_auth` du Caddyfile, le navigateur les charge lui-même, et un 401
+ * n'y produit qu'une icône cassée. C'est ce qu'a vu Philippe le 17/09/2026 —
+ * des photos cassées sur un serveur parfaitement sain (#996).
+ *
+ * Exportée ici pour que l'occurrence non couverte suive la MÊME règle, plutôt
+ * que d'en inventer une deuxième dans un écran :
+ * `$lib/imagesProtegees.ts` l'appelle telle quelle.
+ *
+ * @returns `true` si la session a été renouvelée — le geste peut être rejoué.
+ *          `false` après redirection vers la mire : la session est morte, et
+ *          la page demandée est conservée dans l'URL de connexion.
+ */
+export async function renouvelerSession(): Promise<boolean> {
+	if (await tryRefresh()) return true;
+	//  Renouvellement impossible : rediriger vers la mire EN CONSERVANT la page
+	//  courante. C'est le chemin réellement emprunté en production quand une
+	//  session a expiré ou n'existe pas : la garde de `(app)/+layout` n'a pas le
+	//  temps de s'exécuter, cette ligne part avant elle.
+	if (typeof window !== 'undefined') {
+		window.location.href = urlDeConnexion();
+	}
+	return false;
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
 	const headers: Record<string, string> = {};
 	if (body) headers['Content-Type'] = 'application/json';
@@ -92,17 +121,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 	// Refresh silencieux sur 401, sauf là où le 401 est une réponse définitive
 	if (res.status === 401 && !CHEMINS_SANS_RENOUVELLEMENT.includes(cheminNu(path))) {
-		const ok = await tryRefresh();
-		if (ok) {
+		if (await renouvelerSession()) {
 			res = await fetch(`${BASE}${path}`, opts);
 		} else {
-			// Refresh impossible : rediriger vers login EN CONSERVANT la page
-			// courante. C'est le chemin réellement emprunté en production quand
-			// une session a expiré ou n'existe pas : la garde de `(app)/+layout`
-			// n'a pas le temps de s'exécuter, cette ligne part avant elle.
-			if (typeof window !== 'undefined') {
-				window.location.href = urlDeConnexion();
-			}
 			throw new ApiError(401, 'Session expirée, veuillez vous reconnecter.');
 		}
 	}
