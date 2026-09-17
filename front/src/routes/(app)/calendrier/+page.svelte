@@ -14,10 +14,10 @@
 		calendrier as calApi,
 		publications as pubsApi,
 		prestataires as prestApi,
-		ApiError,
 		type Publication,
 	} from '$lib/api';
 	import { tickets as ticketsApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { essayer } from '$lib/chargement';
 	import { currentUser, isAdmin, isCS, isLocataire } from '$lib/stores/auth';
 	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
@@ -332,7 +332,7 @@
 			resetForm();
 			toast('success', editId ? 'Événement modifié' : 'Événement créé');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			submitting = false;
 		}

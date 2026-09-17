@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { auth as authApi, ApiError } from '$lib/api';
+	import { auth as authApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { getSiteNom } from '$lib/stores/pageConfig';
 
 	const _siteNom = getSiteNom();
@@ -24,7 +25,7 @@
 			status = 'success';
 		} catch (e: any) {
 			status = 'expired';
-			errorMessage = e instanceof ApiError ? e.message : 'Lien de vérification invalide ou expiré.';
+			errorMessage = messageErreur(e, 'Lien de vérification invalide ou expiré.');
 		}
 	});
 

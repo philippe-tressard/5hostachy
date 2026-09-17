@@ -6,7 +6,8 @@
 	import { onMount } from 'svelte';
 	import { revelerCible } from '$lib/deepLink';
 	import { isAdmin } from '$lib/stores/auth';
-	import { tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
+	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { optionsRapides } from '$lib/options-rapides';
 	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
 	import type { GestesTicket } from '$lib/tickets';
@@ -86,7 +87,7 @@
 			//  🔴 AUCUN `catch` ici jusqu'au 06/09/2026 : une panne de chargement
 			//  affichait « Aucune demande » — annoncer une absence qu'on n'a pas constatée,
 			//  c'est le défaut #519, corrigé sur les annonces et jamais ici (#796).
-			erreur = e instanceof ApiError ? e.message : 'Erreur de chargement';
+			erreur = messageErreur(e, 'Erreur de chargement');
 		} finally {
 			loading = false;
 		}
@@ -271,7 +272,7 @@
 			await loadEvolutions(t.id);
 			toast('success', 'Entrée supprimée');
 		} catch (e2) {
-			toast('error', e2 instanceof ApiError ? e2.message : 'Erreur');
+			toast('error', messageErreur(e2));
 		}
 	}
 
@@ -295,7 +296,7 @@
 			evolEnEdition = null;
 			toast('success', 'Entrée corrigée');
 		} catch (e2) {
-			toast('error', e2 instanceof ApiError ? e2.message : 'Erreur');
+			toast('error', messageErreur(e2));
 		} finally {
 			evolCorrectionEnCours = false;
 		}
@@ -344,7 +345,7 @@
 			showEvolForm = null;
 			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
 		} catch (e2) {
-			toast('error', e2 instanceof ApiError ? e2.message : 'Erreur');
+			toast('error', messageErreur(e2));
 		} finally {
 			evolSaving = false;
 		}

@@ -15,7 +15,8 @@
 	import CarteActualite from '$lib/components/CarteActualite.svelte';
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import { isAdmin } from '$lib/stores/auth';
-	import { publications as pubsApi, ApiError, type Publication } from '$lib/api';
+	import { publications as pubsApi, type Publication } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 
 	let archivedPubs: Publication[] = [];
@@ -46,7 +47,7 @@
 			archivedPubs = archivedPubs.filter((p) => p.id !== pub.id);
 			toast('success', 'Publication supprimée');
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Impossible de supprimer');
+			toast('error', messageErreur(e, 'Impossible de supprimer'));
 		}
 	}
 </script>

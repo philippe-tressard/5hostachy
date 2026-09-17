@@ -54,7 +54,8 @@
 		categorieAnnonceLabel,
 		typeAnnonceLabel,
 	} from '$lib/annonces';
-	import { annonces as annoncesApi, ApiError } from '$lib/api';
+	import { annonces as annoncesApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe } from '$lib/utils';
 	import type { Etat } from '$lib/entites/types';
@@ -167,7 +168,7 @@
 			toast('success', 'Annonce publiée !');
 			dispatch('cree', cree);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			submitting = false;
 		}

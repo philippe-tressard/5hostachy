@@ -37,7 +37,8 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { admin as adminApi, ApiError } from '$lib/api';
+	import { admin as adminApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let releve: any = null;
@@ -50,7 +51,7 @@
 		try {
 			releve = await adminApi.reclassementTickets();
 		} catch (e) {
-			erreur = e instanceof ApiError ? e.message : 'Chargement impossible';
+			erreur = messageErreur(e, 'Chargement impossible');
 		} finally {
 			chargement = false;
 		}

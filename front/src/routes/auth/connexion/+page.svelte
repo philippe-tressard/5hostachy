@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { auth as authApi, ApiError } from '$lib/api';
+	import { auth as authApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { setUser } from '$lib/stores/auth';
 	import { destinationApresConnexion } from '$lib/redirection';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
@@ -35,7 +36,7 @@
 			setUser(user);
 			goto(destinationApresConnexion());
 		} catch (e: any) {
-			const msg = e instanceof ApiError ? e.message : 'Erreur de connexion';
+			const msg = messageErreur(e, 'Erreur de connexion');
 			if (msg.includes('rifier votre adresse') || msg.includes('email')) {
 				emailNotVerified = true;
 			}

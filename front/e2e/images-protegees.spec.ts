@@ -21,23 +21,13 @@
  *  réponses du serveur — le 401 du fichier, le 200 du renouvellement — sont
  *  jouées par `page.route`. C'est le scénario réel, sans compte de test.
  */
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { attendreHydratation } from './aides';
 
 const IMAGE = '/uploads/tickets/photo-de-essai.jpg';
 
 /** Un GIF 1×1 valide : sans pixels réels, l'image échouerait pour une autre raison. */
 const GIF_1x1 = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
-
-/**
- * La surveillance est posée par `onMount` du layout racine, donc APRÈS
- * l'hydratation — et le formulaire de connexion, lui, est rendu côté serveur.
- * Attendre un champ visible ne suffit donc pas : l'image serait injectée dans
- * une page qui ne surveille encore rien, et le test mesurerait l'hydratation.
- * Le module déclare sa mise en place sur `<html>` ; on l'attend.
- */
-async function attendreSurveillance(page: Page): Promise<void> {
-	await page.locator('html[data-images-surveillees="oui"]').waitFor({ timeout: 10000 });
-}
 
 test.describe('Images protégées et session expirée', () => {
 	test('une image en 401 est redemandée après renouvellement de la session', async ({ page }) => {
@@ -65,7 +55,7 @@ test.describe('Images protégées et session expirée', () => {
 		});
 
 		await page.goto('/auth/connexion');
-		await attendreSurveillance(page);
+		await attendreHydratation(page);
 		await page.evaluate((src) => {
 			const img = document.createElement('img');
 			img.src = src;
@@ -103,7 +93,7 @@ test.describe('Images protégées et session expirée', () => {
 		});
 
 		await page.goto('/auth/connexion');
-		await attendreSurveillance(page);
+		await attendreHydratation(page);
 		await page.evaluate((src) => {
 			const img = document.createElement('img');
 			img.src = src;
@@ -130,7 +120,7 @@ test.describe('Images protégées et session expirée', () => {
 		});
 
 		await page.goto('/auth/connexion');
-		await attendreSurveillance(page);
+		await attendreHydratation(page);
 		await page.evaluate((src) => {
 			//  Neutralise l'ajout d'écouteurs en capture sur le document, donc celui
 			//  du layout, déjà posé : on le remplace par une page sans surveillance.

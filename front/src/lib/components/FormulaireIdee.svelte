@@ -32,7 +32,8 @@
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { IDEE } from '$lib/entites/idee';
 	import { perimetreDefautListe } from '$lib/perimetres';
-	import { idees as ideesApi, ApiError } from '$lib/api';
+	import { idees as ideesApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
@@ -95,7 +96,7 @@
 			toast('success', 'Idée soumise !');
 			dispatch('cree', creee);
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			submitting = false;
 		}

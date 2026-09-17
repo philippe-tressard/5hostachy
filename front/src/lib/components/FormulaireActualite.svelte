@@ -62,13 +62,13 @@
 		type ResidentProposable,
 	} from '$lib/saisi-pour';
 	import { admin as adminApi } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import DocumentsPublication from '$lib/components/DocumentsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import {
 		publications as pubsApi,
 		annoncesHall as annoncesHallApi,
-		ApiError,
 		type AnnonceHall,
 		type Publication,
 	} from '$lib/api';
@@ -131,7 +131,7 @@
 			photos = [...(src.photos_urls ?? [])];
 			toast('info', messagePrefill(photos.length));
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du pré-remplissage');
+			toast('error', messageErreur(e, 'Erreur lors du pré-remplissage'));
 		}
 	}
 
@@ -335,7 +335,7 @@
 			reinitialiser();
 			dispatch('cree', pub);
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			saving = false;
 		}

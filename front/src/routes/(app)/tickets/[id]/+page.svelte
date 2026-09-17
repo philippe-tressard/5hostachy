@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { contexteCommentaire } from '$lib/assistant';
+	import { messageErreur } from '$lib/erreurs';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { isCS, isAdmin } from '$lib/stores/auth';
@@ -152,7 +153,7 @@
 			repondreOuvert = false;
 			await loadEvolutions();
 		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+			toast('error', messageErreur(err));
 		} finally {
 			sending = false;
 		}
@@ -173,7 +174,7 @@
 			await loadEvolutions();
 			toast('success', 'Statut mis à jour');
 		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur de mise à jour');
+			toast('error', messageErreur(err, 'Erreur de mise à jour'));
 		} finally {
 			updatingStatus = false;
 		}
@@ -191,7 +192,7 @@
 			toast('success', 'Ticket supprimé');
 			window.location.href = '/tickets';
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 </script>

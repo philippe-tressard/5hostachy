@@ -15,7 +15,7 @@
  * besoin, et #515 va en demander sur sept pages. Une copie par écran divergerait
  * au premier message ajusté.
  */
-import { ApiError } from '$lib/api';
+import { ApiError, CHEMINS_SANS_RENOUVELLEMENT } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 
 /**
@@ -30,8 +30,25 @@ export function messageErreur(e: unknown, repli?: string): string {
 	if (e instanceof ApiError) {
 		//  401 : le cas le plus fréquent, et le seul que l'utilisateur peut régler
 		//  lui-même. Le nommer évite de chercher une panne qui n'existe pas.
-		if (e.status === 401)
+		if (e.status === 401) {
+			//  🔴 Un 401 ne veut pas dire la même chose partout (18/09/2026).
+			//
+			//  Sur `/auth/login`, il signifie « identifiants refusés » et le
+			//  serveur l'explique ; ailleurs, « cette session n'est plus valide ».
+			//  Répondre « votre session a expiré » à qui vient de se tromper de
+			//  mot de passe est faux, et c'est pour cela que trois écrans
+			//  d'authentification gardaient leur propre ternaire : le message
+			//  partagé les aurait dégradés.
+			//
+			//  La liste n'est pas réécrite ici : c'est celle qui gouverne déjà le
+			//  renouvellement (`$lib/api/client.ts`). Une seule liste, deux
+			//  usages — et `lint:session` la surveille.
+			if (e.chemin && CHEMINS_SANS_RENOUVELLEMENT.includes(e.chemin))
+				return e.message || 'Identifiants refusés.';
+			//  Le cas le plus fréquent, et le seul que l'utilisateur peut régler
+			//  lui-même. Le nommer évite de chercher une panne qui n'existe pas.
 			return 'Votre session a expiré — rechargez la page pour vous reconnecter.';
+		}
 		//  403 : le serveur a répondu et refuse. Son message est plus précis que
 		//  tout ce qu'on pourrait écrire ici (accès suspendu, profil non autorisé).
 		if (e.status === 403) return e.message || 'Vous n’avez pas accès à cette rubrique.';

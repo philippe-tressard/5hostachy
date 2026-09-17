@@ -26,6 +26,20 @@ export class ApiError extends Error {
 		message: string,
 		/** Détail technique (jamais affiché à l'utilisateur, disponible en console) */
 		public technicalDetail?: string,
+		/**
+		 * 🔴 Le chemin appelé — ce qui permet de savoir ce que veut dire un 401.
+		 *
+		 * Sur `/auth/login`, un 401 signifie « identifiants refusés » et le
+		 * serveur l'explique ; partout ailleurs il signifie « cette session n'est
+		 * plus valide ». Sans cette information, `messageErreur` répondait
+		 * « votre session a expiré » à qui venait de se tromper de mot de passe —
+		 * et c'est la raison pour laquelle trois écrans d'authentification
+		 * n'avaient pas pu passer au message partagé.
+		 *
+		 * La distinction n'est pas réécrite : c'est `CHEMINS_SANS_RENOUVELLEMENT`
+		 * qui la porte déjà, pour le renouvellement. Une seule liste, deux usages.
+		 */
+		public chemin?: string,
 	) {
 		super(message);
 	}
@@ -105,6 +119,66 @@ export async function renouvelerSession(): Promise<boolean> {
 	return false;
 }
 
+/**
+ * **Envoyer, renouveler la session sur 401, rejouer une fois.**
+ *
+ * Écrit une fois : `request()` le faisait pour les appels JSON, et
+ * `postFormData()` ne le faisait PAS — son en-tête le déclarait d'ailleurs
+ * comme un écart à corriger un jour (« une session expirée pendant un envoi
+ * échoue au lieu de se renouveler »). Un écart déclaré dans un commentaire
+ * n'est pas un écart surveillé : il a vécu du 12/09 au 18/09/2026.
+ *
+ * @param envoyer  refabrique la requête à chaque tentative — un corps déjà
+ *                 consommé ne se rejoue pas.
+ */
+async function envoyerAvecRenouvellement(
+	envoyer: () => Promise<Response>,
+	path: string,
+): Promise<Response> {
+	const res = await envoyer();
+	if (res.status !== 401 || CHEMINS_SANS_RENOUVELLEMENT.includes(cheminNu(path))) return res;
+	if (await renouvelerSession()) return envoyer();
+	throw new ApiError(401, 'Session expirée, veuillez vous reconnecter.', undefined, cheminNu(path));
+}
+
+/**
+ * **L'erreur à lever pour une réponse en échec** — masquage des 5xx compris.
+ *
+ * Écrit une fois, pour la même raison : les neuf copies de téléversement
+ * n'avaient jamais reçu ni le masquage du détail technique sur 5xx, ni la
+ * lecture du `detail` de validation. Elles l'ont en passant par ici.
+ */
+async function echecApi(
+	res: Response,
+	method: string,
+	path: string,
+	repli: string,
+): Promise<ApiError> {
+	let rawDetail = repli;
+	try {
+		const err = await res.json();
+		if (typeof err.detail === 'string') {
+			rawDetail = err.detail;
+		} else if (err.detail) {
+			rawDetail = JSON.stringify(err.detail);
+		}
+	} catch {
+		/* le corps n'est pas du JSON : on garde le libellé par défaut */
+	}
+
+	if (res.status >= 500) {
+		// Erreur serveur : ne pas exposer le détail technique à l'utilisateur
+		console.error(`[API ${res.status}] ${method} ${path} — ${rawDetail}`);
+		const userMsg =
+			res.status === 503
+				? 'Service momentanément indisponible. Veuillez réessayer dans quelques instants.'
+				: 'Une erreur est survenue. Si le problème persiste, contactez l’administrateur.';
+		return new ApiError(res.status, userMsg, rawDetail, cheminNu(path));
+	}
+
+	return new ApiError(res.status, rawDetail, undefined, cheminNu(path));
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
 	const headers: Record<string, string> = {};
 	if (body) headers['Content-Type'] = 'application/json';
@@ -117,45 +191,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 		credentials: 'include',
 	};
 
-	let res = await fetch(`${BASE}${path}`, opts);
-
-	// Refresh silencieux sur 401, sauf là où le 401 est une réponse définitive
-	if (res.status === 401 && !CHEMINS_SANS_RENOUVELLEMENT.includes(cheminNu(path))) {
-		if (await renouvelerSession()) {
-			res = await fetch(`${BASE}${path}`, opts);
-		} else {
-			throw new ApiError(401, 'Session expirée, veuillez vous reconnecter.');
-		}
-	}
-
-	if (!res.ok) {
-		let rawDetail = 'Erreur serveur';
-		try {
-			const err = await res.json();
-			if (typeof err.detail === 'string') {
-				rawDetail = err.detail;
-			} else if (Array.isArray(err.detail)) {
-				// Erreurs de validation Pydantic : [{loc, msg, type}]
-				rawDetail = err.detail.map((e: any) => e.msg ?? JSON.stringify(e)).join(', ');
-			} else if (err.detail) {
-				rawDetail = JSON.stringify(err.detail);
-			}
-		} catch {
-			/* ignore */
-		}
-
-		if (res.status >= 500) {
-			// Erreur serveur : ne pas exposer le détail technique à l'utilisateur
-			console.error(`[API ${res.status}] ${method} ${path} — ${rawDetail}`);
-			const userMsg =
-				res.status === 503
-					? 'Service momentanément indisponible. Veuillez réessayer dans quelques instants.'
-					: 'Une erreur est survenue. Si le problème persiste, contactez l’administrateur.';
-			throw new ApiError(res.status, userMsg, rawDetail);
-		}
-
-		throw new ApiError(res.status, rawDetail);
-	}
+	const res = await envoyerAvecRenouvellement(() => fetch(`${BASE}${path}`, opts), path);
+	if (!res.ok) throw await echecApi(res, method, path, 'Erreur serveur');
 
 	if (res.status === 204) return undefined as T;
 	return res.json() as Promise<T>;
@@ -194,13 +231,18 @@ export function buildQuery(params: Record<string, string | undefined | null>): s
  * upload photo », « Erreur import ». Cinq façons de dire la même chose à
  * l'utilisateur selon le bouton sur lequel il a cliqué.
  *
- * ⚠️ Ce qu'une copie coûte VRAIMENT ici : `request()` a reçu depuis le
- * renouvellement silencieux de session (#379), le masquage des détails techniques
- * sur les 5xx, et la lecture des erreurs de validation Pydantic. **Aucune des neuf
- * copies n'en a rien reçu.** Un 500 sur un téléversement expose donc encore son
- * détail technique, et une session expirée pendant un envoi échoue au lieu de se
- * renouveler. Ce lot ne corrige pas ces deux écarts — il crée l'endroit UNIQUE
- * d'où ils pourront l'être une fois pour toutes.
+ * ⚠️ Ce qu'une copie coûtait VRAIMENT ici : `request()` avait reçu le
+ * renouvellement silencieux de session (#379), le masquage des détails
+ * techniques sur les 5xx et la lecture des erreurs de validation Pydantic —
+ * **aucune des neuf copies n'en avait rien reçu**. Un 500 sur un téléversement
+ * exposait son détail technique, et une session expirée pendant un envoi
+ * échouait au lieu de se renouveler.
+ *
+ * 🔴 **Les deux écarts sont refermés depuis le 18/09/2026** : cette fonction
+ * passe par `envoyerAvecRenouvellement()` et `echecApi()`, comme `request()`.
+ * C'était l'objet de l'endroit unique — et il a fallu six jours, pendant
+ * lesquels l'écart n'était écrit que dans ce commentaire. Un écart déclaré
+ * n'est pas un écart surveillé (`standards/04` §28).
  *
  * @param champs  les champs du formulaire ; `undefined` et `null` sont écartés,
  *                pour que l'appelant n'ait pas à écrire `if (x) form.append(…)`.
@@ -215,20 +257,17 @@ export async function postFormData<T = any>(
 		if (valeur === undefined || valeur === null) continue;
 		form.append(cle, valeur);
 	}
-	const res = await fetch(`${BASE}${path}`, {
-		method: 'POST',
-		body: form,
-		credentials: 'include',
-	});
+	const res = await envoyerAvecRenouvellement(
+		() => fetch(`${BASE}${path}`, { method: 'POST', body: form, credentials: 'include' }),
+		path,
+	);
 	if (!res.ok) {
-		let detail = options.libelleErreur ?? 'Erreur lors de l’envoi du fichier';
-		try {
-			const err = await res.json();
-			detail = err.detail ?? detail;
-		} catch {
-			/* le corps n'est pas du JSON : on garde le libellé par défaut */
-		}
-		throw new ApiError(res.status, detail);
+		throw await echecApi(
+			res,
+			'POST',
+			path,
+			options.libelleErreur ?? 'Erreur lors de l’envoi du fichier',
+		);
 	}
 	return res.json() as Promise<T>;
 }

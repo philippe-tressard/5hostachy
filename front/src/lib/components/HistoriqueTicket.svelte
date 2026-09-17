@@ -34,7 +34,8 @@
 	import { TITRE_HISTORIQUE } from '$lib/archives';
 	import EvolForm from './EvolForm.svelte';
 	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
-	import { tickets as ticketsApi, ApiError, type TicketEvolution } from '$lib/api';
+	import { tickets as ticketsApi, type TicketEvolution } from '$lib/api';
+	import { messageErreur } from '$lib/erreurs';
 	import { toast } from './Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
@@ -124,7 +125,7 @@
 			dispatch('change');
 			toast('success', e.detail?.nouveau_statut ? 'Statut mis à jour' : 'Commentaire ajouté');
 		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+			toast('error', messageErreur(err));
 		} finally {
 			enregistre = false;
 		}
@@ -150,7 +151,7 @@
 			dispatch('change');
 			toast('success', 'Entrée corrigée');
 		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+			toast('error', messageErreur(err));
 		} finally {
 			corrige = false;
 		}
@@ -165,7 +166,7 @@
 			dispatch('change');
 			toast('success', 'Entrée supprimée');
 		} catch (err) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+			toast('error', messageErreur(err));
 		}
 	}
 </script>
