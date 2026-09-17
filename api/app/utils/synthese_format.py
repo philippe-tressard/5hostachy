@@ -59,7 +59,16 @@ CONSIGNE_CITATIONS = """Chaque fait chiffré ou contraignant — un montant, une
 seuil, une fréquence — est suivi de la phrase EXACTE du contrat qui le porte,
 entre guillemets français, sur sa propre ligne, sans la reformuler ni la
 corriger. Si tu ne peux pas citer, c'est que tu ne l'as pas lu : écris alors
-« non précisé dans les éléments fournis »."""
+« non précisé dans les éléments fournis ».
+
+🔴 ET TU NOMMES L'ARTICLE D'OÙ LE FAIT VIENT. Quand le contrat numérote ses
+articles, ses clauses ou ses paragraphes, la ligne de citation se termine par sa
+référence entre parenthèses, telle que le contrat l'écrit :
+
+« Le présent contrat est conclu pour une durée d'un an renouvelable. » (article 3.2)
+
+N'invente aucune référence : si la phrase citée ne figure sous aucun numéro,
+n'en mets pas. C'est le seul cas où une citation reste sans référence."""
 
 #: 🔴 Les EXTRAITS, demandés par Philippe le 17/09/2026 après les premières
 #: synthèses réelles : *« quand il y a une référence à une clause ou article d'un
@@ -81,31 +90,50 @@ corriger. Si tu ne peux pas citer, c'est que tu ne l'as pas lu : écris alors
 #: non reproduite, comme une section sans information se déclare non précisée.
 CONSIGNE_EXTRAITS = """🔴 LES EXTRAITS, en fin de synthèse.
 
-Dès qu'une puce renvoie à une clause, à un article ou à un paragraphe numéroté
-du contrat — « article 7.2 », « § 4 », « annexe B » —, ajoute après la section 7
-une huitième et dernière section :
+Si tu as nommé au moins un article dans les sections 1 à 7, ajoute après la
+section 7 une huitième et dernière section :
 
 8. Extraits des clauses citées
 
-Elle ne remplace aucune des sept autres, et rien ne s'écrit après elle. Elle
-porte un extrait par clause ainsi renvoyée, dans l'ordre où les puces les
-citent :
+Elle ne remplace aucune des sept autres, et rien ne s'écrit après elle.
 
-- chaque extrait s'ouvre par son TITRE, la clause nommée comme le contrat la
-  nomme : « Article 7.2 — Résiliation », « § 4 — Pièces exclues » ;
-- vient ensuite le texte du contrat, recopié mot pour mot, sans le reformuler,
-  le corriger ni le compléter ;
+⚠️ Elle porte les articles que TU AS NOMMÉS dans les sections 1 à 7, et EUX
+SEULS. Ce n'est pas le sommaire du contrat : un article que la synthèse ne cite
+pas n'a pas d'extrait, même s'il figure dans le document et même s'il te paraît
+important. Un extrait par article nommé, dans l'ordre où ils apparaissent dans
+la synthèse, et pas deux extraits pour un article nommé deux fois.
+
+Chaque extrait est un bloc DÉPLIABLE, replié à l'ouverture :
+
+<details><summary>Article 3.2 — Durée</summary><blockquote>le texte de
+l'article, recopié mot pour mot</blockquote></details>
+
+- le `<summary>` porte le TITRE, l'article nommé comme le contrat le nomme :
+  « Article 3.2 — Durée », « § 4 — Pièces exclues » ;
+- le `<blockquote>` porte le texte de l'article, recopié mot pour mot, sans le
+  reformuler, le corriger ni le compléter ;
+- n'écris JAMAIS l'attribut `open` : les extraits arrivent repliés, et le lecteur
+  ouvre ceux qu'il veut lire ;
 - TRENTE LIGNES AU PLUS par extrait : au-delà, coupe à la fin d'une phrase et
   termine par « […] » sur sa propre ligne — jamais au milieu d'un mot, jamais au
-  milieu d'un montant ;
-- une clause citée par deux puces ne donne qu'UN extrait ;
-- une clause que tu ne peux pas recopier n'a pas d'extrait : écris sous son titre
-  « non reproduit dans les éléments fournis », et ne la résume pas — un résumé
-  mis à la place d'un extrait se lit comme le texte du contrat.
+  milieu d'un montant.
 
-⚠️ L'extrait ne remplace pas la citation exigée sous chaque fait chiffré : la
-citation prouve la ligne, l'extrait donne la clause entière. Et si aucune puce ne
-renvoie à une clause numérotée, la section 8 est ABSENTE — ne l'écris pas vide."""
+🔴 « Non reproduit » est un aveu, pas un raccourci. Si tu as pu CITER une phrase
+d'un article dans les sections 1 à 7, alors son texte t'est accessible : tu ne
+peux pas déclarer cet article non reproduit. Recopie-le.
+
+La mention « non reproduit dans les éléments fournis » ne sert qu'au cas où
+l'article est seulement MENTIONNÉ — son numéro et son titre apparaissent, son
+texte non. Et ne le résume jamais : un résumé mis sous un titre d'article se lit
+comme le texte du contrat.
+
+⚠️ Si aucun article nommé ne peut être recopié, n'écris pas la section 8 : une
+liste de titres sans texte n'apprend rien et fait croire à une lecture qui n'a
+pas eu lieu.
+
+⚠️ L'extrait ne remplace pas la citation : la citation prouve la ligne, l'extrait
+donne l'article entier. Et si le contrat ne numérote pas ses clauses, aucun
+article n'est nommé et la section 8 est ABSENTE — ne l'écris pas vide."""
 
 CONSIGNE = f"""Tu rédiges la synthèse d'un contrat de COPROPRIÉTÉ — entretien, maintenance,
 assurance, prestation de services — pour le conseil syndical. Elle sera lue par
@@ -144,8 +172,8 @@ Règles :
 {CONSIGNE_EXTRAITS}
 
 Rends du HTML SIMPLE, et rien d'autre : un `<h3>` par section (« 1. Identification
-du fournisseur »), un `<h4>` par titre d'extrait en section 8, un `<ul><li>` par
-liste de puces, un `<p>` pour une phrase isolée, un `<blockquote>` pour une
-citation ou un extrait du contrat. Pas de `<html>`, pas de `<body>`, pas de bloc
-de code, pas de Markdown — le texte est déposé tel quel dans un champ de notes
-enrichi."""
+du fournisseur »), un `<ul><li>` par liste de puces, un `<p>` pour une phrase
+isolée, un `<blockquote>` pour une citation ou un extrait du contrat, et
+`<details><summary>` pour chaque extrait de la section 8. Pas de `<html>`, pas de
+`<body>`, pas de bloc de code, pas de Markdown — le texte est déposé tel quel
+dans un champ de notes enrichi."""

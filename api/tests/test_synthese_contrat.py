@@ -427,9 +427,34 @@ def test_l_extrait_est_BORNÉ_et_coupé_à_la_fin_d_une_phrase():
 
 
 def test_un_RÉSUMÉ_ne_tient_pas_lieu_d_extrait():
-    """Mis sous un titre de clause, il se lirait comme le texte du contrat."""
+    """Mis sous un titre d'article, il se lirait comme le texte du contrat."""
     assert "non reproduit dans les éléments fournis" in CONSIGNE
-    assert "ne la résume pas" in CONSIGNE
+    assert "ne le résume jamais" in CONSIGNE
+
+
+def test_NON_REPRODUIT_est_un_aveu_et_pas_un_raccourci():
+    """🔴 17/09/2026, constaté à l'écran : ONZE extraits, onze fois « non
+    reproduit », alors que les mêmes articles étaient cités phrase par phrase
+    dans les sections précédentes. La consigne laissait la porte de sortie sans
+    la contredire — elle la ferme par la cohérence : qui a pu citer peut
+    recopier."""
+    assert "« Non reproduit » est un aveu, pas un raccourci" in CONSIGNE
+    assert "peux pas déclarer cet article non reproduit" in CONSIGNE
+    #  Et si RIEN ne peut être recopié, pas de section : onze titres vides font
+    #  croire à une lecture qui n'a pas eu lieu.
+    assert "n'écris pas la section 8" in CONSIGNE
+
+
+def test_la_section_8_ne_porte_QUE_les_articles_que_la_synthèse_nomme():
+    """🔴 Même constat du 17/09/2026 : le modèle avait déroulé le SOMMAIRE du
+    contrat. « Je n'ai pas demandé d'avoir tous les articles mais uniquement
+    ceux référencés dans la synthèse »."""
+    assert "SEULS" in CONSIGNE
+    assert "que la synthèse ne cite" in CONSIGNE
+    assert "Ce n'est pas le sommaire du contrat" in CONSIGNE
+    #  La référence d'article devient obligatoire : sans elle, la section 8 ne
+    #  se déclenchait jamais — aucune puce ne nommait d'article (constaté aussi).
+    assert "TU NOMMES L'ARTICLE D'OÙ LE FAIT VIENT" in CONSIGNE
 
 
 def test_sans_clause_citée_la_section_8_est_ABSENTE():
@@ -445,9 +470,19 @@ def test_l_extrait_ne_remplace_PAS_la_citation_sous_chaque_fait():
     assert CONSIGNE_CITATIONS in CONSIGNE
 
 
-def test_le_titre_d_extrait_a_sa_balise():
-    """La section 8 introduit un niveau de titre que les sept n'avaient pas."""
-    assert "<h4>" in CONSIGNE
+def test_l_extrait_est_un_bloc_DÉPLIABLE_replié():
+    """Onze extraits de trente lignes, dépliés, noieraient la synthèse qu'ils
+    éclairent (demandé à l'écran le 17/09/2026).
+
+    ⚠️ Le repli ne repose pas sur cette consigne seule : `open` n'est pas dans la
+    liste blanche de `$lib/sanitize`, donc l'attribut est retiré quoi que le
+    modèle écrive. La consigne et le rendu disent la même chose, et c'est le
+    rendu qui tranche. Les balises sont tenues d'accord avec le front par
+    `test_consigne_balises.py`.
+    """
+    assert "<details><summary>" in CONSIGNE
+    assert "bloc DÉPLIABLE, replié à l'ouverture" in CONSIGNE
+    assert "n'écris JAMAIS l'attribut `open`" in CONSIGNE
 
 
 def test_l_unite_d_un_montant_ne_se_perd_pas():

@@ -8,6 +8,11 @@
 	//  par personne. Vérifié en listant les extensions du StarterKit installé,
 	//  jamais supposé d'après le guide de migration.
 	import Placeholder from '@tiptap/extension-placeholder';
+	//  🔴 Deux nœuds pour que les blocs dépliables SURVIVENT à l'éditeur (#992) :
+	//  ProseMirror ne garde que ce que son schéma connaît, et le texte proposé
+	//  par l'assistant traverse ce formulaire avant d'être enregistré. Sans eux,
+	//  un `<details>` serait aplati sans un mot. Voir `$lib/blocDepliable`.
+	import { BlocDepliable, ResumeDepliable } from '$lib/blocDepliable';
 
 	export let value: string = '';
 	export let placeholder: string = '';
@@ -36,7 +41,12 @@
 	onMount(() => {
 		editor = new Editor({
 			element: editorEl,
-			extensions: [StarterKit, Placeholder.configure({ placeholder })],
+			extensions: [
+				StarterKit,
+				Placeholder.configure({ placeholder }),
+				BlocDepliable,
+				ResumeDepliable,
+			],
 			// Tiptap remplace l'élément monté : les attributs doivent être posés sur la
 			// zone éditable qu'il génère, sinon ils désignent un nœud disparu.
 			editorProps: {

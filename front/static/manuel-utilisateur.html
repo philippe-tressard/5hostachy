@@ -990,7 +990,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 1.25 · Septembre 2026</span>
+      <span class="topbar-badge">Version 1.26 · Septembre 2026</span>
     </div>
   </header>
 
@@ -1369,7 +1369,7 @@
             <li>L'étincelle n'apparaît que si un administrateur a configuré l'assistant (<em>Administration → Assistant IA</em>) et si le contrat porte au moins un document lisible.</li>
             <li><strong>Choisir le modèle</strong> — dans <em>Administration → Assistant IA</em>, dans le bloc de l'usage <em>Synthèse de contrat</em> (chaque usage a son modèle), le bouton <em>Voir les modèles disponibles</em> demande au fournisseur ce que votre clé peut appeler, du plus récent au plus ancien. Un modèle plus capable rend une synthèse plus fidèle et coûte plus cher par contrat. Si la liste n'est pas disponible — sur Azure, ou avec une clé restreinte — l'identifiant se saisit à la main, et l'écran dit pourquoi.</li>
             <li><strong>Un contrat numérisé est lu quand même</strong> — la plupart des contrats sont signés, donc scannés, et leur texte ne s'extrait pas. Ces documents-là sont transmis <strong>tels quels</strong> au service, qui les lit lui-même. Un document qui n'a pu être ni lu ni transmis est <strong>nommé dans l'encart</strong>, avec son motif : une synthèse partielle le dit, elle ne se fait jamais passer pour complète.</li>
-            <li><strong>Les clauses citées sont jointes</strong> — quand la synthèse renvoie à un article, à une clause ou à un paragraphe numéroté, une dernière section <em>Extraits des clauses citées</em> reprend le texte du contrat, trente lignes au plus par extrait, chacun sous le titre que le contrat lui donne. On décide sans rouvrir le PDF. Sans renvoi à une clause numérotée, cette section n'apparaît pas.</li>
+            <li><strong>Les clauses citées sont jointes</strong> — quand la synthèse renvoie à un article, à une clause ou à un paragraphe numéroté, une dernière section <em>Extraits des clauses citées</em> reprend le texte du contrat. Chaque extrait est <strong>replié</strong>&nbsp;: son titre est celui que le contrat donne à l'article, et un clic l'ouvre. Trente lignes au plus par extrait. On décide sans rouvrir le PDF, et la synthèse n'est pas noyée sous les citations. Seuls les articles que la synthèse cite y figurent, jamais le sommaire du contrat&nbsp;; sans article cité, la section n'apparaît pas.</li>
             <li><strong>Chaque chiffre est cité</strong> — un montant, une durée, un préavis ou un seuil est suivi de la phrase exacte du contrat qui le porte. C'est ce qui permet de relire la synthèse sans rouvrir le PDF : si la citation ne dit pas ce que la ligne affirme, l'erreur saute aux yeux.</li>
             <li><strong>Longueur de la réponse</strong> — comptez 10 000 jetons avec un modèle récent : il raisonne avant d'écrire, et ce raisonnement compte dans le plafond. Une synthèse coupée au milieu d'une section vient de ce champ, pas du modèle.</li>
             <li><strong>Le prompt se relit et s'adapte</strong> — la consigne donnée au modèle (les sept sections, la règle de citation, le format) est visible et modifiable dans le bloc de l'usage, dans <em>Administration → Assistant IA</em>. Vous pouvez y ajouter une consigne ou retoucher le gabarit&nbsp;; <em>Rétablir le prompt d'origine</em> revient à la version livrée.</li>
@@ -1535,7 +1535,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v1.25</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v1.26</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
