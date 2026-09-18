@@ -476,8 +476,17 @@ Six essais ont été soumis avant celui-ci. Les chiffres ne sont pas décoratifs
 | blanc entre le titre et l'extrait | 13 px | 3 px |
 | hauteur d'une fiche d'annuaire | 114 px | 62 px |
 
-- l'extrait reprend la **typographie du fil** (`.flux-detail`) : **0,8 rem**, gris,
-  interligne **1,25**, marge entre paragraphes **0,12 em** ;
+- l'extrait reprend la **typographie du fil** (`.flux-detail`) : gris, interligne
+  **1,25**, marge entre paragraphes **0,12 em** — mais **0,75 rem** et non 0,8,
+  parce qu'il vit sous un titre en gras, ce que le fil n'a pas : c'est l'ÉCART
+  avec le titre qui fait ressortir le titre, et 0,8 rem n'en laissait que 2,1 px ;
+- **aucun dégradé de fin** : le texte s'arrête net, comme dans le fil. Il y en
+  avait un depuis le 15/08 pour dire « le texte continue », d'une hauteur FIXE
+  de 2,2 em. L'aperçu étant passé de 5 lignes d'interligne 1,6 à 3 lignes
+  d'interligne 1,25, il couvrait **59 %** du texte au lieu de 28 % — deux lignes
+  sur trois, signalées à l'écran comme « un flou sur la 3ᵉ ligne ».
+  ⚠️ Une valeur absolue dans un bloc dont la hauteur change reste juste jusqu'au
+  jour où la densité bouge, et personne ne relit une règle qu'on n'a pas touchée ;
 - `.entete` : `padding: .38rem .7rem .42rem`, `gap: 0` — chaque bloc décide de son
   propre espacement, un écart uniforme ne convenait à aucun des trois ;
 - les cartes se suivent à **0,45 rem** (`.carte-liste`), plus 0,75.
