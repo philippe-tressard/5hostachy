@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { libelleLogement, relire } from '$lib/utils';
-	import ItemKanban from '$lib/components/ItemKanban.svelte';
+	import KanbanTableauBord from '$lib/components/KanbanTableauBord.svelte';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
@@ -9,13 +9,6 @@
 	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
 	import { currentUser, isAdmin, isCS, isLocataire } from '$lib/stores/auth';
 	import { flux, lots, calendrier as calApi, type FluxItem, type FluxResponse } from '$lib/api';
-	import {
-		colonneDeLEvenement,
-		kanbanEvVisible,
-		kanbanColVisible,
-		kanbanEvMatchesYear,
-		SEUIL_KANBAN_ETROIT,
-	} from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
@@ -23,7 +16,6 @@
 	import FluxCard from '$lib/components/FluxCard.svelte';
 	import RaccourcisRapides from '$lib/components/RaccourcisRapides.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { TYPE_EVENEMENT_EMOJI } from '$lib/evenements';
 	// Toutes les règles du fil (apparence, liens, appartenance aux trois
 	// registres) vivent dans ce module — cf. `$lib/flux.ts`.
 	import {
@@ -46,7 +38,6 @@
 	let loading = true;
 	let ready = false;
 	let kanbanRawEvs: any[] = [];
-	let mobileKanbanIdx = 0;
 
 	onMount(async () => {
 		try {
@@ -215,66 +206,16 @@
 	let olderOpen = false;
 
 	// ── Kanban widget ──────────────────────────────────────────────────────
-	const _kanbanYear =
-		new Date().getMonth() < 1 ? new Date().getFullYear() - 1 : new Date().getFullYear();
-
-	const DASH_KANBAN_COLS = [
-		{ id: 'ag', label: 'AG', color: '#8b5cf6' },
-		{ id: 'cs', label: 'CS', color: '#3b82f6' },
-		{ id: 'syndic', label: 'Syndic', color: '#f59e0b' },
-		{ id: 'fournisseur', label: 'Prestataire', color: '#f97316' },
-		{ id: 'termine', label: 'Terminé', color: '#22c55e' },
-	];
-
-	//  🔴 Seconde écriture des six types, sous une autre forme : le calendrier
-	//  les portait avec leur libellé, celui-ci avec leurs seules icônes. Un
-	//  septième type aurait eu son option et pas son pictogramme.
-	const EV_ICONS = TYPE_EVENEMENT_EMOJI;
-
-	//  🔴 Le rendu du périmètre a suivi le balisage dans `ItemKanban` : il n'était
-	//  employé que là. Le garder ici aurait laissé une fonction sans appelant dans
-	//  un fichier de mille lignes — exactement ce qui se recopie (13/09/2026).
-
+	//  Le widget vit dans `KanbanTableauBord` depuis le 18/09/2026 (#779) : ses
+	//  colonnes, son année d'exercice et sa navigation au doigt ne parlaient que
+	//  de lui. La page garde ce qui lui appartient — le CHARGEMENT des
+	//  événements, et le contexte de droits, qu'elle calcule déjà pour le fil.
 	$: _dashKanbanCtx = {
 		isCS: $isCS,
 		isAdmin: $isAdmin,
 		canSeeAG,
 		statut: $currentUser?.statut ?? '',
 	};
-
-	$: dashKanbanEvs = kanbanRawEvs.filter((ev) => {
-		if (!ev.statut_kanban || ev.statut_kanban === 'annule') return false;
-		if (!kanbanEvVisible(ev, _dashKanbanCtx)) return false;
-		if (!kanbanEvMatchesYear(ev, _kanbanYear)) return false;
-		return true;
-	});
-
-	$: dashKanbanCols = DASH_KANBAN_COLS.filter((col) =>
-		kanbanColVisible(col.id, _dashKanbanCtx),
-	).map((col) => {
-		//  🔴 Le rangement vit dans `$lib/kanban` : il était écrit ici ET dans le
-		//  calendrier, et les deux ont divergé (signalé à l'écran, 02/09/2026).
-		let items: any[] = dashKanbanEvs.filter((ev: any) => colonneDeLEvenement(ev) === col.id);
-		if (col.id === 'termine') {
-			items = [...items].sort(
-				(a: any, b: any) =>
-					new Date(b.fin ?? b.debut).getTime() - new Date(a.fin ?? a.debut).getTime(),
-			);
-		}
-		return { ...col, total: items.length, items: items.slice(0, 5) };
-	});
-
-	$: mobileKanbanCols = dashKanbanCols.filter((col) => col.items.length > 0);
-	$: {
-		if (mobileKanbanIdx >= mobileKanbanCols.length)
-			mobileKanbanIdx = Math.max(0, mobileKanbanCols.length - 1);
-	}
-	$: mobileKanbanCurrent = mobileKanbanCols[mobileKanbanIdx] ?? null;
-
-	//  Bascule par rendu conditionnel, pas par CSS — le pourquoi est avec la
-	//  constante (`$lib/kanban.ts`) : deux bascules CSS ont échoué le même soir.
-	let largeurFenetre = 0;
-	$: vueEtroite = largeurFenetre > 0 && largeurFenetre <= SEUIL_KANBAN_ETROIT;
 
 	// ── Les trois registres du fil ─────────────────────────────────────────
 	// 1. 🔴 Urgences  — « qu'est-ce qui brûle ? »        (plafonné à 3, s'auto-périme)
@@ -316,7 +257,6 @@
 	}
 </script>
 
-<svelte:window bind:innerWidth={largeurFenetre} />
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
 {#if loading}
@@ -513,78 +453,7 @@
 	<!-- ═══ KANBAN (masqué pour les locataires) ═════════════════════════════ -->
 	{#if !$isLocataire}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.2s">
-			<div class="kb-header">
-				<h2 class="section-title" style="margin:0">&#x1F4CB; Kanban</h2>
-				<a href="/calendrier/kanban" class="kb-voir-lien">Voir le Kanban complet →</a>
-			</div>
-
-			{#if dashKanbanEvs.length === 0 && !loading}
-				<p class="kb-vide">Aucun dossier actif pour {_kanbanYear}.</p>
-			{:else}
-				{#if !vueEtroite}
-					<div class="kb-grid">
-						{#each dashKanbanCols as col (col.id)}
-							<div class="kb-col" class:kb-col-vide={col.items.length === 0}>
-								<div class="kb-col-head" style="border-top-color:{col.color}">
-									<span class="kb-col-label" style="color:{col.color}">{col.label}</span>
-									{#if col.total > 0}
-										<span class="kb-col-count" style="background:{col.color}1a;color:{col.color}">
-											{col.total > 5 ? `+${col.total - 5} / ${col.total}` : col.total}
-										</span>
-									{/if}
-								</div>
-								{#if col.items.length === 0}
-									<p class="kb-vide-col">—</p>
-								{:else}
-									{#each col.items as item (item.id)}
-										<ItemKanban {item} icones={EV_ICONS} />
-									{/each}
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
-
-				{#if vueEtroite && mobileKanbanCols.length > 0}
-					<div>
-						<div class="kb-mobile-nav">
-							<button
-								class="kb-nav-btn"
-								disabled={mobileKanbanIdx === 0}
-								on:click={() => mobileKanbanIdx--}
-								aria-label="Colonne précédente">‹</button
-							>
-							<div class="kb-mobile-nav-center">
-								<span class="kb-mobile-col-label" style="color:{mobileKanbanCurrent?.color}">
-									{mobileKanbanCurrent?.label}
-								</span>
-								<span class="kb-mobile-pos">{mobileKanbanIdx + 1} / {mobileKanbanCols.length}</span>
-							</div>
-							<button
-								class="kb-nav-btn"
-								disabled={mobileKanbanIdx >= mobileKanbanCols.length - 1}
-								on:click={() => mobileKanbanIdx++}
-								aria-label="Colonne suivante">›</button
-							>
-						</div>
-						{#if mobileKanbanCurrent}
-							<div class="kb-mobile-items">
-								{#each mobileKanbanCurrent.items as item (item.id)}
-									<ItemKanban {item} icones={EV_ICONS} />
-								{/each}
-								{#if mobileKanbanCurrent.total > 5}
-									<p class="kb-mobile-plus">
-										+{mobileKanbanCurrent.total - 5} élément{mobileKanbanCurrent.total - 5 > 1
-											? 's'
-											: ''} — <a href="/calendrier" class="kb-mobile-plus-lien">voir tout</a>
-									</p>
-								{/if}
-							</div>
-						{/if}
-						<a href="/calendrier/kanban" class="kb-mobile-lien">Voir le Kanban complet →</a>
-					</div>
-				{/if}
-			{/if}
+			<KanbanTableauBord evenements={kanbanRawEvs} ctx={_dashKanbanCtx} {loading} />
 		</div>
 	{/if}
 

@@ -44,11 +44,17 @@
 	on:click={() => goto(lien)}
 	on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && goto(lien)}
 >
-	<span class="kb-item-icon">{icones[item.type] ?? '\u{1F4CC}'}</span>
-	<div class="kb-item-text">
-		<span class="kb-item-titre clamp-2">{item.titre}</span>
+	<!--  🔴 L'icône est sur la DERNIÈRE ligne, devant le périmètre (18/09/2026,
+	      demandé à l'écran). Elle occupait une colonne à gauche, et cette marge
+	      coûtait sa largeur à TOUTES les lignes du titre — sur une colonne large
+	      de 200 px, un titre de deux mots passait à trois lignes. Descendue, elle
+	      laisse le titre prendre toute la largeur, et elle rejoint la ligne où se
+	      lit déjà le contexte du dossier. -->
+	<span class="kb-item-titre clamp-2">{item.titre}</span>
+	<span class="kb-item-bas">
+		<span class="kb-item-icon">{icones[item.type] ?? '\u{1F4CC}'}</span>
 		{#if textePerimetre}
 			<span class="kb-item-perim">&#x1F539; {textePerimetre}</span>
 		{/if}
-	</div>
+	</span>
 </div>

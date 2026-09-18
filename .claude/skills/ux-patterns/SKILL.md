@@ -1414,6 +1414,29 @@ Filtre des colonnes : `if (col.id === 'ag' || col.id === 'cs') return canSeeAG;`
 
 Items non-affichables : masqués aux non-CS/admin, sauf `maintenance_recurrente`.
 
+### 🔴 12 bis. La forme du kanban condensé (18/09/2026, validé à l'écran)
+
+Variante « K4 ». Deux décisions, et elles se tiennent :
+
+- **l'icône du type est sur la DERNIÈRE ligne de la vignette**, devant le
+  périmètre — plus de colonne d'icône à gauche. Cette marge coûtait sa largeur
+  à *toutes* les lignes du titre : sur une colonne de 200 px, un titre de deux
+  mots passait à trois lignes ;
+- **une colonne VIDE se réduit à son titre**, tourné à la verticale
+  (`writing-mode: vertical-rl`) : 30 px au lieu de 200, rendus aux colonnes qui
+  portent quelque chose. Elle reste **visible** — savoir qu'une étape est vide
+  fait partie de la lecture d'un kanban ; c'est le tiret « — » qui ne disait
+  rien en occupant la place d'une colonne pleine.
+
+La grille est donc en **flex** et non en `grid` : une grille donne la même part
+à toutes ses colonnes, et c'est exactement ce qu'on ne veut plus.
+
+⚠️ La bande verticale suit la hauteur de la plus haute colonne **par le flex**,
+jamais par `height: 100%` sur son en-tête : un pourcentage résolu contre un
+parent lui-même étiré tourne en rond, et le navigateur retombe sur la hauteur
+de la fenêtre — mesuré, 622 px de colonnes pour 250 px de contenu.
+
+
 ## 13. En-tête de page — `EntetePage.svelte`, une seule écriture
 
 **Ne jamais rendre `<div class="page-header">` à la main.** Le composant porte le
