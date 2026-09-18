@@ -1596,6 +1596,18 @@ jobs:
         working-directory: front
         run: npm run lint:texte
 
+      # 🔴 LA FICHE DU SYNDIC N'AVAIT PAS DE PIED DE FORMULAIRE (18/09/2026, #779).
+      #
+      # L'Espace CS rendait DEUX fiches modifiables — le membre du conseil
+      # syndical, celui du syndic — recopiées au caractère près. Et les copies
+      # avaient divergé sur ce qui coûte : côté syndic, on entrait en édition par
+      # le crayon et on ne pouvait en sortir que par lui, « Annuler » n'existant
+      # pas. Une différence qui ne se voit pas en relisant l'un des deux blocs :
+      # il faut les comparer, à cent cinquante lignes d'écart.
+      - name: L'identité d'un membre se saisit dans le composant partagé
+        working-directory: front
+        run: npm run lint:identite
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #

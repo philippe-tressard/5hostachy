@@ -8,11 +8,11 @@
 		basculer,
 		editer,
 		retirer,
-		terminerEdition,
 		type EtatDepliable,
 	} from '$lib/listeDepliable';
 	import EnteteSyndic from '$lib/components/EnteteSyndic.svelte';
 	import ActionsMembre, { type Geste } from '$lib/components/ActionsMembre.svelte';
+	import CarteMembre, { type MembreBase } from '$lib/components/CarteMembre.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
 	import { validerCompte } from '$lib/comptes';
@@ -57,26 +57,23 @@
 		quantite: number;
 		cree_le: string;
 	}
-	interface MembreCSForm {
-		genre: string;
-		prenom: string;
-		nom: string;
+	//  🔴 Les deux formes DÉRIVENT de `MembreBase` (civilité, prénom, NOM, inscrit
+	//  lié), qui vit dans `CarteMembre` — le composant qui les rend. Elles la
+	//  recopiaient toutes les deux : quatre champs écrits trois fois, libres de
+	//  diverger au premier ajout. Un champ ajouté à la base arrive désormais dans
+	//  les deux, et le composant sait déjà le saisir.
+	interface MembreCSForm extends MembreBase {
 		batiment_id: number | null;
 		batiment_nom: string | null;
 		etage: number | null;
-		user_id: number | null;
 		est_gestionnaire_site: boolean;
 		est_president: boolean;
 	}
-	interface MembreSyndicForm {
-		genre: string;
-		prenom: string;
-		nom: string;
+	interface MembreSyndicForm extends MembreBase {
 		fonction: string;
 		email: string;
 		telephones: string[];
 		est_principal: boolean;
-		user_id: number | null;
 	}
 	interface SimpleUser {
 		id: number;
@@ -362,6 +359,39 @@
 	}
 
 	// -- CS handlers --------------------------------------------------------
+	/**
+	 *  Envoyer, annoncer, rendre la main — le geste d'enregistrement, écrit une fois.
+	 *
+	 *  Les QUATRE enregistrements de cet écran (le conseil syndical et l'un de ses
+	 *  membres, le syndic et l'un des siens) reprenaient les mêmes neuf lignes :
+	 *  poser le drapeau, appeler, annoncer, rattraper par `messageErreur`, retirer
+	 *  le drapeau dans un `finally`. Quatre copies, et rien qui les tienne
+	 *  ensemble — celle qui aurait oublié le `finally` aurait laissé un bouton en
+	 *  « Enregistrement… » pour toujours, sur la seule branche qu'on ne teste pas.
+	 *
+	 *  @param pendant reçoit `true` puis `false` : c'est l'appelant qui sait QUEL
+	 *  drapeau il pose — un booléen pour la liste entière, un index pour un membre.
+	 *  @param apres ne s'exécute QUE si l'envoi a réussi : refermer une fiche dont
+	 *  l'enregistrement a échoué ferait disparaître la saisie qu'on vient de perdre.
+	 */
+	async function enregistrer(
+		envoi: () => Promise<unknown>,
+		message: string,
+		pendant: (encours: boolean) => void,
+		apres?: () => void,
+	): Promise<void> {
+		pendant(true);
+		try {
+			await envoi();
+			apres?.();
+			toast('success', message);
+		} catch (e: any) {
+			toast('error', messageErreur(e));
+		} finally {
+			pendant(false);
+		}
+	}
+
 	function addMembreCS() {
 		membresCS = [
 			...membresCS,
@@ -447,40 +477,40 @@
 		}
 	}
 
+	/**
+	 *  La charge utile de `putCS`, écrite UNE fois.
+	 *
+	 *  🔴 Elle l'était DEUX fois — dans `saveCS` et dans `saveMembreCS` — alors
+	 *  que le côté syndic avait déjà son `chargeUtileSyndic` avec ce commentaire.
+	 *  Le fichier portait donc la règle et son exception, à quarante lignes
+	 *  d'écart. Un champ ajouté à l'une des deux copies serait parti selon le
+	 *  bouton employé, et rien n'aurait levé : le serveur accepte les deux formes.
+	 */
+	function chargeUtileCS() {
+		return {
+			ag_annee: agAnnee,
+			ag_date: agDate || null,
+			whatsapp_url: whatsappUrl || null,
+			membres: membresCS,
+		};
+	}
+
 	async function saveCS() {
-		savingCS = true;
-		try {
-			await annuaireAdmin.putCS({
-				ag_annee: agAnnee,
-				ag_date: agDate || null,
-				whatsapp_url: whatsappUrl || null,
-				membres: membresCS,
-			});
-			toast('success', 'Conseil Syndical enregistré');
-			csHeaderEditing = false;
-		} catch (e: any) {
-			toast('error', messageErreur(e));
-		} finally {
-			savingCS = false;
-		}
+		await enregistrer(
+			() => annuaireAdmin.putCS(chargeUtileCS()),
+			'Conseil Syndical enregistré',
+			(v) => (savingCS = v),
+			() => (csHeaderEditing = false),
+		);
 	}
 
 	async function saveMembreCS(i: number) {
-		savingCSIdx = i;
-		try {
-			await annuaireAdmin.putCS({
-				ag_annee: agAnnee,
-				ag_date: agDate || null,
-				whatsapp_url: whatsappUrl || null,
-				membres: membresCS,
-			});
-			cs = REPLIE;
-			toast('success', `${nomAffiche(membresCS[i])} enregistré`);
-		} catch (e: any) {
-			toast('error', messageErreur(e));
-		} finally {
-			savingCSIdx = null;
-		}
+		await enregistrer(
+			() => annuaireAdmin.putCS(chargeUtileCS()),
+			`${nomAffiche(membresCS[i])} enregistré`,
+			(v) => (savingCSIdx = v ? i : null),
+			() => (cs = REPLIE),
+		);
 	}
 
 	// -- Syndic handlers ----------------------------------------------------
@@ -611,16 +641,12 @@
 				return;
 			}
 		}
-		savingSyndic = true;
-		try {
-			await annuaireAdmin.putSyndic(chargeUtileSyndic());
-			toast('success', 'Syndic enregistré');
-			syndicHeaderEditing = false;
-		} catch (e: any) {
-			toast('error', messageErreur(e));
-		} finally {
-			savingSyndic = false;
-		}
+		await enregistrer(
+			() => annuaireAdmin.putSyndic(chargeUtileSyndic()),
+			'Syndic enregistré',
+			(v) => (savingSyndic = v),
+			() => (syndicHeaderEditing = false),
+		);
 	}
 
 	async function saveMembreSyndic(i: number) {
@@ -628,16 +654,12 @@
 			toast('error', 'Au moins un téléphone requis');
 			return;
 		}
-		savingSyndicIdx = i;
-		try {
-			await annuaireAdmin.putSyndic(chargeUtileSyndic());
-			syndic = REPLIE;
-			toast('success', `${nomAffiche(membresSyndic[i])} enregistré`);
-		} catch (e: any) {
-			toast('error', messageErreur(e));
-		} finally {
-			savingSyndicIdx = null;
-		}
+		await enregistrer(
+			() => annuaireAdmin.putSyndic(chargeUtileSyndic()),
+			`${nomAffiche(membresSyndic[i])} enregistré`,
+			(v) => (savingSyndicIdx = v ? i : null),
+			() => (syndic = REPLIE),
+		);
 	}
 
 	// -- Validations handlers -----------------------------------------------
@@ -913,146 +935,66 @@
 			{/if}
 
 			{#each membresCS as m, i (m)}
-				<div
-					class="membre-card"
-					class:membre-president={m.est_president}
-					style="cursor:pointer"
-					role="button"
-					tabindex="0"
-					on:click={() => {
-						cs = basculer(cs, i);
-					}}
-					on:keydown={(e) => {
-						if (e.key === 'Enter' || e.key === ' ') {
-							e.preventDefault();
-							cs = basculer(cs, i);
-						}
-					}}
+				<CarteMembre
+					bind:membre={membresCS[i]}
+					ouvert={cs.ouvert === i}
+					edite={cs.edite === i}
+					enregistrement={savingCSIdx === i}
+					accent={m.est_president ? 'president' : null}
+					on:basculer={() => (cs = basculer(cs, i))}
+					on:editer={() => (cs = editer(i))}
+					on:supprimer={() => removeMembreCS(i)}
+					on:enregistrer={() => saveMembreCS(i)}
+					on:annuler={() => (cs = REPLIE)}
+					on:nom={() => onCSNomInput(i)}
+					on:delier={() => clearUserCS(i)}
 				>
-					<!-- Header fiche -->
-					<div class="membre-card-header">
-						<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-							{#if m.est_president}<span class="badge-president">👑 Président</span>{/if}
-							<span class="membre-card-title">{m.genre} {nomAffiche(m) || '…'}</span>
-						</div>
-						<ActionsMembre
-							enEdition={cs.edite === i}
-							enregistrement={savingCSIdx === i}
-							onEnregistrer={() => saveMembreCS(i)}
-							onModifier={() => {
-								cs = editer(i);
-							}}
-							onSupprimer={() => removeMembreCS(i)}
-						/>
-					</div>
+					<svelte:fragment slot="badge">
+						{#if m.est_president}<span class="badge-president">&#x1F451; Président</span>{/if}
+					</svelte:fragment>
 
-					{#if cs.ouvert === i}
-						{#if cs.edite === i}
-							<div class="form-grid">
-								<label class="field">
-									Civilité
-									<select
-										bind:value={membresCS[i].genre}
-										on:change={() => (membresCS = [...membresCS])}
-									>
-										<option value="Mme">Mme</option>
-										<option value="Mlle">Mlle</option>
-										<option value="Mr">Mr</option>
-									</select>
-								</label>
-								<label class="field">
-									Prénom
-									<input type="text" bind:value={membresCS[i].prenom} placeholder="Prénom" />
-								</label>
-								<label class="field">
-									NOM
-									<input
-										type="text"
-										bind:value={membresCS[i].nom}
-										placeholder="NOM"
-										class="input-nom"
-										on:input={() => onCSNomInput(i)}
-									/>
-								</label>
-							</div>
-							{#if m.batiment_nom || m.etage != null}
-								<div class="localisation-info">
-									&#x1F4CD; {localisationMembre(m)}
-								</div>
-							{/if}
-							<div class="user-link-indicator">
-								{#if m.user_id}
-									<span class="user-linked"
-										><span>&#x1F517; Inscrit lié</span><button
-											type="button"
-											class="btn-unlink"
-											on:click={() => clearUserCS(i)}>Délier</button
-										></span
-									>
-								{:else if membresCS[i].nom.length >= 2}
-									<span class="user-no-match">Aucun inscrit avec ce NOM</span>
-								{/if}
-							</div>
-							<div class="cs-role-flags">
-								<label class="cs-role-flag">
-									<input
-										type="checkbox"
-										checked={membresCS[i].est_president}
-										on:change={() => onPresidentChange(i)}
-									/>
-									<span>Président du Conseil Syndical</span>
-								</label>
-							</div>
-							<div style="margin-top:.75rem">
-								<PiedFormulaire
-									enCours={savingCSIdx === i}
-									soumission={false}
-									petit
-									on:enregistre={() => saveMembreCS(i)}
-									on:annule={() => {
-										cs = terminerEdition(cs);
-										cs = { ouvert: null, edite: cs.edite };
-									}}
-								/>
-							</div>
-						{:else}
-							<!-- Vue lecture seule (déplié, non édité) -->
-							{#if m.batiment_nom || m.etage != null}
-								<div class="localisation-info">
-									&#x1F4CD; {localisationMembre(m)}
-								</div>
-							{/if}
-							<div class="user-link-indicator">
-								{#if m.user_id}
-									<span class="user-linked">&#x1F517; Inscrit lié</span>
-								{/if}
-							</div>
+					<svelte:fragment slot="edition">
+						{#if m.batiment_nom || m.etage != null}
+							<div class="localisation-info">&#x1F4CD; {localisationMembre(m)}</div>
 						{/if}
-					{:else}
-						<!-- Vue résumé (replié) -->
-						<div class="membre-summary">
-							{#if m.batiment_nom || m.etage != null}
-								<span class="summary-loc">&#x1F4CD; {localisationMembre(m)}</span>
-							{/if}
-							{#if m.est_gestionnaire_site}
-								<span class="summary-role-badge" title="Gestionnaire du Site"
-									>🏢 Gestionnaire du Site</span
-								>
-							{/if}
-							{#if m.est_president}
-								<span
-									class="summary-role-badge summary-role-badge-president"
-									title="Président du Conseil Syndical">👑 Président</span
-								>
-							{/if}
-							{#if m.user_id}
-								<span class="user-linked" style="font-size:.75rem;padding:.15rem .45rem"
-									>&#x1F517; Inscrit lié</span
-								>
-							{/if}
+						<div class="cs-role-flags">
+							<label class="cs-role-flag">
+								<input
+									type="checkbox"
+									checked={membresCS[i].est_president}
+									on:change={() => onPresidentChange(i)}
+								/>
+								<span>Président du Conseil Syndical</span>
+							</label>
 						</div>
-					{/if}
-				</div>
+					</svelte:fragment>
+
+					<svelte:fragment slot="detail">
+						{#if m.batiment_nom || m.etage != null}
+							<div class="localisation-info">&#x1F4CD; {localisationMembre(m)}</div>
+						{/if}
+					</svelte:fragment>
+
+					<svelte:fragment slot="resume">
+						{#if m.batiment_nom || m.etage != null}
+							<span class="summary-loc">&#x1F4CD; {localisationMembre(m)}</span>
+						{/if}
+						{#if m.est_gestionnaire_site}
+							<span class="summary-role-badge" title="Gestionnaire du Site">
+								&#x1F3E2; Gestionnaire du Site
+							</span>
+						{/if}
+						{#if m.est_president}
+							<span
+								class="summary-role-badge summary-role-badge-president"
+								title="Président du Conseil Syndical">&#x1F451; Président</span
+							>
+						{/if}
+						{#if m.user_id}
+							<span class="summary-lien">&#x1F517; Inscrit lié</span>
+						{/if}
+					</svelte:fragment>
+				</CarteMembre>
 			{/each}
 
 			<button
@@ -1084,169 +1026,92 @@
 			/>
 
 			{#each membresSyndic as m, i (m)}
-				<div
-					class="membre-card"
-					class:membre-principal={m.est_principal}
-					style="cursor:pointer"
-					role="button"
-					tabindex="0"
-					on:click={() => {
-						syndic = basculer(syndic, i);
-					}}
-					on:keydown={(e) => {
-						if (e.key === 'Enter' || e.key === ' ') {
-							e.preventDefault();
-							syndic = basculer(syndic, i);
-						}
-					}}
+				<CarteMembre
+					bind:membre={membresSyndic[i]}
+					ouvert={syndic.ouvert === i}
+					edite={syndic.edite === i}
+					enregistrement={savingSyndicIdx === i}
+					accent={m.est_principal ? 'principal' : null}
+					gestes={gestesOrdreSyndic(i, m.est_principal)}
+					on:basculer={() => (syndic = basculer(syndic, i))}
+					on:editer={() => (syndic = editer(i))}
+					on:supprimer={() => removeMembreSyndic(i)}
+					on:enregistrer={() => saveMembreSyndic(i)}
+					on:annuler={() => (syndic = REPLIE)}
+					on:nom={() => onSyndicNomInput(i)}
+					on:delier={() => clearUserSyndic(i)}
 				>
-					<!-- Header avec badge principal + actions -->
-					<div class="membre-card-header">
-						<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-							{#if m.est_principal}<span class="badge-principal">Interlocuteur principal</span>{/if}
-							<span class="membre-card-title">{m.genre} {nomAffiche(m) || '…'}</span>
-						</div>
-						<ActionsMembre
-							gestes={gestesOrdreSyndic(i, m.est_principal)}
-							enEdition={syndic.edite === i}
-							enregistrement={savingSyndicIdx === i}
-							onEnregistrer={() => saveMembreSyndic(i)}
-							onModifier={() => {
-								syndic = editer(i);
-							}}
-							onSupprimer={() => removeMembreSyndic(i)}
-						/>
-					</div>
+					<svelte:fragment slot="badge">
+						{#if m.est_principal}<span class="badge-principal">Interlocuteur principal</span>{/if}
+					</svelte:fragment>
 
-					{#if syndic.ouvert === i}
-						{#if syndic.edite === i}
-							<div class="form-grid">
-								<label class="field">
-									Civilité
-									<select
-										bind:value={membresSyndic[i].genre}
-										on:change={() => (membresSyndic = [...membresSyndic])}
-									>
-										<option value="Mme">Mme</option>
-										<option value="Mlle">Mlle</option>
-										<option value="Mr">Mr</option>
-									</select>
-								</label>
-								<label class="field">
-									Prénom
-									<input type="text" bind:value={membresSyndic[i].prenom} placeholder="Prénom" />
-								</label>
-								<label class="field">
-									NOM
-									<input
-										type="text"
-										bind:value={membresSyndic[i].nom}
-										placeholder="NOM"
-										class="input-nom"
-										on:input={() => onSyndicNomInput(i)}
-									/>
-								</label>
-								<label class="field">
-									Fonction
-									<input
-										type="text"
-										bind:value={membresSyndic[i].fonction}
-										placeholder="ex. Directeur de gérance"
-									/>
-								</label>
-								<label class="field">
-									Email
-									<input type="email" bind:value={membresSyndic[i].email} placeholder="Email" />
-								</label>
+					<svelte:fragment slot="champs">
+						<label class="field">
+							Fonction
+							<input
+								type="text"
+								bind:value={membresSyndic[i].fonction}
+								placeholder="ex. Directeur de gérance"
+							/>
+						</label>
+						<label class="field">
+							Email
+							<input type="email" bind:value={membresSyndic[i].email} placeholder="Email" />
+						</label>
+					</svelte:fragment>
+
+					<svelte:fragment slot="edition">
+						<div class="syndic-telephones">
+							<div class="syndic-telephones-titre">
+								Téléphone{m.telephones.length > 1 ? 's' : ''}
 							</div>
-							<!-- Téléphones -->
-							<div style="margin-top:.65rem">
-								<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">
-									Téléphone{m.telephones.length > 1 ? 's' : ''}
-								</div>
-								{#each m.telephones as _tel, ti}
-									<div style="display:flex;gap:.4rem;margin-bottom:.35rem">
-										<input
-											style="flex:1"
-											bind:value={membresSyndic[i].telephones[ti]}
-											placeholder="ex. 01 23 45 67 89"
-										/>
-										{#if m.telephones.length > 1}
-											<button
-												type="button"
-												class="btn btn-sm btn-outline"
-												style="color:#dc2626;border-color:#dc2626"
-												on:click={() => {
-													membresSyndic[i].telephones = membresSyndic[i].telephones.filter(
-														(_, j) => j !== ti,
-													);
-													membresSyndic = [...membresSyndic];
-												}}
-											>
-												-
-											</button>
-										{/if}
-									</div>
-								{/each}
-								<button
-									type="button"
-									class="btn btn-sm btn-outline"
-									on:click={() => {
-										membresSyndic[i].telephones = [...membresSyndic[i].telephones, ''];
-										membresSyndic = [...membresSyndic];
-									}}
-								>
-									+ N° de téléphone
-								</button>
-							</div>
-							<!-- Liaison inscrit automatique via NOM -->
-							<div class="user-link-indicator" style="margin-top:.65rem">
-								{#if m.user_id}
-									<span class="user-linked"
-										><span>&#x1F517; Inscrit lié</span><button
+							{#each m.telephones as _tel, ti}
+								<div class="syndic-telephone">
+									<input
+										bind:value={membresSyndic[i].telephones[ti]}
+										placeholder="ex. 01 23 45 67 89"
+									/>
+									{#if m.telephones.length > 1}
+										<button
 											type="button"
-											class="btn-unlink"
-											on:click={() => clearUserSyndic(i)}>Délier</button
-										></span
-									>
-								{:else if membresSyndic[i].nom.length >= 2}
-									<span class="user-no-match">Aucun inscrit avec ce NOM</span>
-								{/if}
-							</div>
-						{:else}
-							<!-- Vue détail lecture seule (déplié, non édité) -->
-							<div class="membre-summary" style="margin-top:.5rem">
-								{#if m.fonction}<span class="summary-fonction">{m.fonction}</span>{/if}
-								{#if m.email}<span class="summary-loc">{m.email}</span>{/if}
-								{#if m.telephones[0]}<span class="summary-loc"
-										>{m.telephones.filter((t) => t.trim()).join(' · ')}</span
-									>{/if}
-								{#if m.user_id}<span
-										class="user-linked"
-										style="font-size:.75rem;padding:.15rem .45rem">&#x1F517; Inscrit lié</span
-									>{/if}
-							</div>
-						{/if}
-					{:else}
-						<!-- Vue résumé (replié) -->
-						<div class="membre-summary">
-							{#if m.fonction}
-								<span class="summary-fonction">{m.fonction}</span>
-							{/if}
-							{#if m.email}
-								<span class="summary-loc">{m.email}</span>
-							{/if}
-							{#if m.telephones[0]}
-								<span class="summary-loc">{m.telephones.filter((t) => t.trim()).join(' · ')}</span>
-							{/if}
-							{#if m.user_id}
-								<span class="user-linked" style="font-size:.75rem;padding:.15rem .45rem"
-									>&#x1F517; Inscrit lié</span
-								>
-							{/if}
+											class="btn btn-sm btn-outline btn-retirer-tel"
+											aria-label="Retirer ce numéro"
+											on:click={() => {
+												membresSyndic[i].telephones = membresSyndic[i].telephones.filter(
+													(_, j) => j !== ti,
+												);
+												membresSyndic = [...membresSyndic];
+											}}
+										>
+											-
+										</button>
+									{/if}
+								</div>
+							{/each}
+							<button
+								type="button"
+								class="btn btn-sm btn-outline"
+								on:click={() => {
+									membresSyndic[i].telephones = [...membresSyndic[i].telephones, ''];
+									membresSyndic = [...membresSyndic];
+								}}
+							>
+								+ N° de téléphone
+							</button>
 						</div>
-					{/if}
-				</div>
+					</svelte:fragment>
+
+					<svelte:fragment slot="resume">
+						{#if m.fonction}<span class="summary-fonction">{m.fonction}</span>{/if}
+						{#if m.email}<span class="summary-loc">{m.email}</span>{/if}
+						{#if m.telephones[0]}
+							<span class="summary-loc">{m.telephones.filter((t) => t.trim()).join(' · ')}</span>
+						{/if}
+						{#if m.user_id}
+							<span class="summary-lien">&#x1F517; Inscrit lié</span>
+						{/if}
+					</svelte:fragment>
+				</CarteMembre>
 			{/each}
 
 			<button
@@ -1312,6 +1177,33 @@
 		background: #b91c1c;
 	}
 
+	/*  Les téléphones d'un membre du syndic — le seul champ qui ne tient pas dans
+	    la grille d'identité, parce qu'il en faut plusieurs.
+
+	    ⚠️ Ces quatre règles remplacent quatre styles en ligne (`npm run lint:styles`
+	    les refuse désormais) : le rouge du bouton de retrait était écrit en dur
+	    (#dc2626) alors que la charte porte `--color-danger`. */
+	.syndic-telephones {
+		margin-top: 0.65rem;
+	}
+	.syndic-telephones-titre {
+		font-size: 0.85rem;
+		font-weight: 600;
+		margin-bottom: 0.35rem;
+	}
+	.syndic-telephone {
+		display: flex;
+		gap: 0.4rem;
+		margin-bottom: 0.35rem;
+	}
+	.syndic-telephone input {
+		flex: 1;
+	}
+	.btn-retirer-tel {
+		color: var(--color-danger);
+		border-color: var(--color-danger);
+	}
+
 	/* Annuaire sections */
 	.annuaire-section {
 		margin-bottom: 2.5rem;
@@ -1333,41 +1225,11 @@
 		grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
 		gap: 0.65rem;
 	}
-	/*  `resize` n'est porté par aucune classe de la charte : pas une recomposition. */
-	.input-nom {
-		text-transform: uppercase;
-	}
-
-	/* Membre card */
-	.membre-card {
-		background: var(--color-bg-secondary, #f8f9fa);
-		border: 1px solid var(--color-border);
-		border-left: 3px solid var(--color-border);
-		border-radius: var(--radius);
-		padding: 0.85rem 1rem;
-		margin-bottom: 0.6rem;
-	}
-	.membre-card.membre-principal {
-		border-left-color: var(--color-accent, #c9983a);
-	}
-	.membre-card.membre-president {
-		border-left-color: #fbbf24;
-	}
-
-	/* Membre card header */
-	.membre-card-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		margin-bottom: 0.55rem;
-	}
-	.membre-card-title {
-		font-size: 0.875rem;
-		font-weight: 600;
-	}
-
+	/*  🔴 Les douze règles de la fiche d'un membre sont parties le 18/09/2026
+	    avec le balisage qu'elles habillaient : `CarteMembre.svelte` porte la
+	    carte, son en-tête, l'identité et le lien vers un inscrit — pour le CS
+	    comme pour le syndic. Elles étaient écrites ici parce que le balisage
+	    l'était ; il ne l'est plus. */
 	/*  🔴 Les huit règles de boutons-icônes sont parties le 07/09/2026 avec le
 	    balisage qu'elles habillaient : `ActionsMembre.svelte` porte la barre
 	    d'actions d'un membre — CS, syndic, et le crayon seul du bandeau. Elles
@@ -1422,14 +1284,6 @@
 	    apparaissent d'un coup. Le garde-fou n'était donc pas vert ici : il était
 	    AVEUGLE, et un seul attribut de classe dynamique suffit à aveugler un
 	    écran entier. */
-	.user-link-indicator {
-		margin-top: 0.5rem;
-	}
-	.user-no-match {
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
-		font-style: italic;
-	}
 	.cs-role-flags {
 		display: flex;
 		flex-direction: column;
@@ -1446,39 +1300,21 @@
 	.cs-role-flag input {
 		accent-color: var(--color-primary);
 	}
-	.user-linked {
+	/* Header inline-edit */
+
+	/*  La pastille « Inscrit lié » d'un RÉSUMÉ : plus petite que celle du
+	    formulaire, qui vit dans `CarteMembre` avec son bouton « Délier ». Les deux
+	    disaient la même chose avec le même balisage et un style en ligne pour
+	    rapetisser l'une — c'est la différence qui se déclare, pas la copie. */
+	.summary-lien {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.6rem;
-		font-size: 0.8rem;
+		font-size: 0.75rem;
 		color: #16a34a;
 		background: #f0fdf4;
 		border-radius: var(--radius);
-		padding: 0.3rem 0.6rem;
+		padding: 0.15rem 0.45rem;
 		border: 1px solid #bbf7d0;
-	}
-	.btn-unlink {
-		font-size: 0.75rem;
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-text-muted);
-		text-decoration: underline;
-		padding: 0;
-	}
-	.btn-unlink:hover {
-		color: var(--color-danger);
-	}
-
-	/* Header inline-edit */
-
-	/* Mode replié */
-	.membre-summary {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.4rem;
-		margin-top: 0.25rem;
 	}
 	.summary-loc {
 		font-size: 0.8rem;

@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "1.44.14",
+	"version": "1.44.15",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -88,6 +88,7 @@
 		"lint:tables-statuts": "node scripts/check-tables-statuts.mjs",
 		"lint:lock": "node scripts/check-lock-coherent.mjs",
 		"lint:texte": "node --experimental-strip-types scripts/check-texte.mjs",
+		"lint:identite": "node scripts/check-identite-membre.mjs",
 		"e2e": "playwright test",
 		"e2e:ui": "playwright test --ui"
 	},
