@@ -60,7 +60,7 @@
 	}
 </script>
 
-<div class="legal-editor-wrap">
+<div class="editeur-cadre">
 	{#if label}
 		<div class="legal-editor-header">
 			<span class="field-label-text">{label}</span>
@@ -71,7 +71,7 @@
 	{/if}
 
 	<!-- Toolbar -->
-	<div class="legal-toolbar">
+	<div class="editeur-barre">
 		{#if !sourceMode}
 			<button
 				type="button"
@@ -186,13 +186,6 @@
 </div>
 
 <style>
-	.legal-editor-wrap {
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: var(--color-bg);
-		overflow: hidden;
-	}
-
 	.legal-editor-header {
 		padding: 0.5rem 0.75rem 0.25rem;
 		display: flex;
@@ -204,42 +197,6 @@
 		font-size: 0.875rem;
 		font-weight: 500;
 		color: var(--color-text);
-	}
-
-	.legal-toolbar {
-		display: flex;
-		align-items: center;
-		gap: 0.15rem;
-		padding: 0.3rem 0.5rem;
-		border-bottom: 1px solid var(--color-border);
-		background: var(--color-bg-subtle, #f9fafb);
-		flex-wrap: wrap;
-	}
-
-	.legal-toolbar button {
-		background: none;
-		border: 1px solid transparent;
-		border-radius: 4px;
-		cursor: pointer;
-		padding: 0.2rem 0.45rem;
-		font-size: 0.82rem;
-		color: var(--color-text);
-		line-height: 1.3;
-		transition:
-			background 0.1s,
-			border-color 0.1s;
-		min-width: 1.8rem;
-		text-align: center;
-	}
-
-	.legal-toolbar button:hover {
-		background: var(--color-border);
-	}
-
-	.legal-toolbar button.active {
-		background: var(--color-primary-light, #eff6ff);
-		border-color: var(--color-primary);
-		color: var(--color-primary);
 	}
 
 	.source-btn {
