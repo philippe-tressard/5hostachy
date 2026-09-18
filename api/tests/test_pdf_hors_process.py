@@ -111,14 +111,21 @@ def test_le_journal_de_weasyprint_remonte_au_parent(caplog):
     un `caplog` vide s'y lirait comme une absence de plainte — soit exactement
     le faux vert que ce dépôt passe son temps à débusquer.
 
-    On provoque donc une plainte connue : `box-shadow` n'est pas supportée, et
-    WeasyPrint le dit à chaque rendu depuis toujours.
+    On provoque donc une plainte. 🔴 Et le choix de la plainte compte : jusqu'au
+    18/09/2026 c'était `box-shadow`, « non supportée, WeasyPrint le dit à chaque
+    rendu depuis toujours ». La version 70 la supporte — l'avertissement a
+    disparu, et ce test est tombé le jour de la montée de version.
+
+    L'ancre est désormais une propriété qui ne PEUT PAS devenir valide, parce
+    qu'elle n'existe dans aucune spécification. Sans tiret initial, volontairement : un analyseur CSS écarte souvent une propriété préfixée EN SILENCE, et le test retomberait dans le même piège par une autre porte. C'est la leçon : un cas zéro
+    appuyé sur une LIMITE du moteur se périme quand le moteur progresse ; un cas
+    zéro appuyé sur une IMPOSSIBILITÉ, non.
     """
     from app.utils import pdf_rendu
     from app.utils.pdf_theme import html_to_pdf
 
     html = (
-        "<html><head><style>p { box-shadow: 0 0 2px #000; }</style></head>"
+        "<html><head><style>p { propriete-inexistante-hostachy: 1; }</style></head>"
         "<body><p>Contenu.</p></body></html>"
     )
     with caplog.at_level(logging.WARNING, logger="weasyprint"):
@@ -128,13 +135,13 @@ def test_le_journal_de_weasyprint_remonte_au_parent(caplog):
     #  journal brut dit ce que l'enfant a collecté, `caplog` ce qui a survécu au
     #  rejeu dans ce process.
     rapporte = [(n, m[:60]) for n, _niv, m in pdf_rendu.dernier_journal]
-    assert any("box-shadow" in m for _n, _niv, m in pdf_rendu.dernier_journal), (
+    assert any("propriete-inexistante" in m for _n, _niv, m in pdf_rendu.dernier_journal), (
         "l'ENFANT n'a pas collecté la plainte de WeasyPrint — le transfert n'est "
         f"pas en cause, la collecte l'est. Journal rapporté : {rapporte}"
     )
 
     plaintes = [r.getMessage() for r in caplog.records if r.name.startswith("weasyprint")]
-    assert any("box-shadow" in p for p in plaintes), (
+    assert any("propriete-inexistante" in p for p in plaintes), (
         "la plainte de WeasyPrint n'est pas remontée du process de rendu : tout "
         "contrôle qui lit caplog est devenu aveugle — à commencer par "
         "`test_la_fiche_avec_ses_icones_se_rend_en_pdf`, qui conclut « aucune "
