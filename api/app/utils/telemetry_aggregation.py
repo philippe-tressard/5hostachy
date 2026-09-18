@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, text
 from sqlmodel import Session, select
 
+from app.utils.declenchement import AUTOMATIQUE
 from app.database import engine
 from app.models.core import (
     TelemetryEvent, TelemetryDaily, TelemetryMonthly, HistoriqueTelemetrie,
@@ -314,7 +315,7 @@ def derniere_agregation_reussie(session) -> Optional[datetime]:
 def run_telemetry_aggregation_cron() -> dict:
     """Wrapper appelé par le scheduler cron — crée automatiquement une entrée historique."""
     with Session(engine) as session:
-        entry = HistoriqueTelemetrie(declenchee_par="cron", noeud=noeud_courant())
+        entry = HistoriqueTelemetrie(declenchee_par=AUTOMATIQUE, noeud=noeud_courant())
         session.add(entry)
         session.commit()
         session.refresh(entry)
