@@ -1,37 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { config as configApi } from '$lib/api';
-	import { loadSiteConfig, getSiteNom, siteNomStore, configStore } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
-	const _siteNom = getSiteNom();
-	$: siteNom = $siteNomStore;
-	$: siteUrl = $configStore['site_url'] ?? '/';
-	const year = new Date().getFullYear();
-	let customHtml = '';
-	onMount(async () => {
-		loadSiteConfig();
-		try {
-			customHtml = (await configApi.legal())['mentions_legales'] ?? '';
-		} catch {
-			//  Silencieux, et c'est voulu : la page a son texte par défaut, et
-			//  afficher une erreur sur des mentions légales serait pire que le
-			//  texte générique.
-		}
-	});
+	import PageLegale from '$lib/components/PageLegale.svelte';
 </script>
 
-<svelte:head><title>Mentions légales — {_siteNom}</title></svelte:head>
-
-<main class="legal-page">
-	<a href="/" class="back-link">← Retour</a>
-	<h1>Mentions légales</h1>
-
-	{#if customHtml}
-		<div class="custom-content">{@html safeHtml(customHtml)}</div>
-	{:else}
-		<p class="muted">Contenu en cours de rédaction.</p>
-	{/if}
-
+<PageLegale titre="Mentions légales" cle="mentions_legales">
 	<!--  ⚠️ « Code source accessible » et NON « logiciel libre » : depuis le
 	      07/09/2026, la licence porte une clause commerciale, ce que ni l'OSI ni
 	      la FSF n'admettent dans une licence libre. Écrire « open source » ici
@@ -58,32 +29,36 @@
 			>
 		</p>
 	</section>
-</main>
 
-<footer class="legal-footer">
-	© {year}
-	&nbsp;·&nbsp; <a href={siteUrl} target="_blank" rel="noopener noreferrer">{siteNom}</a>
-	&nbsp;·&nbsp;
-	<a href="https://github.com/philippe-tressard/5hostachy" target="_blank" rel="noopener noreferrer"
-		>GitHub</a
-	>
-</footer>
+	<svelte:fragment slot="pied">
+		&nbsp;·&nbsp;
+		<a
+			href="https://github.com/philippe-tressard/5hostachy"
+			target="_blank"
+			rel="noopener noreferrer">GitHub</a
+		>
+	</svelte:fragment>
+</PageLegale>
 
 <style>
-	/*  Ce qui est PROPRE aux mentions légales : la section « Logiciel libre »
-	    et ses intertitres. Le reste vit dans `styles/legal.css` (#583). */
-	.legal-page section {
+	/*  Ce qui est PROPRE aux mentions légales : la section « Code source
+	    accessible ». Le squelette vit dans `$lib/components/PageLegale.svelte`,
+	    le reste dans `styles/legal.css` (#583).
+
+	    🔴 Les sélecteurs ne peuvent PAS partir de `.legal-page` : cette classe
+	    appartient au composant, et Svelte ne pose sa marque de portée que sur les
+	    éléments écrits ICI. Un `.legal-page h2` ne correspondrait à rien, en
+	    silence — c'est la section qui sert d'ancre. */
+	.oss-section {
+		margin-top: 2rem;
 		margin-bottom: 1.5rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--color-border);
 	}
-	.legal-page h2 {
+	.oss-section h2 {
 		font-size: 1rem;
 		font-weight: 600;
 		margin-bottom: 0.5rem;
-	}
-	.oss-section {
-		margin-top: 2rem;
-		padding-top: 1.25rem;
-		border-top: 1px solid var(--color-border);
 	}
 	.oss-section a {
 		color: var(--color-primary);

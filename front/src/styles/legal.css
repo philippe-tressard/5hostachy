@@ -46,6 +46,10 @@
 	font-size: 0.875rem;
 	line-height: 1.7;
 	color: var(--color-text);
+	/*  Deux paragraphes se touchaient faute de marge — le socle remet les marges
+	    des éléments à zéro, et ces pages ne la reposaient nulle part. Constaté à
+	    l'écran le 18/09/2026 sur les mentions légales. */
+	margin-bottom: 0.75rem;
 }
 
 .back-link {
