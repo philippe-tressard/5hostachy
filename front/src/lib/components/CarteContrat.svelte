@@ -415,24 +415,13 @@
 		font-size: 0.78rem;
 		color: var(--color-text-muted);
 	}
+	/*  Seuls la taille et la couleur restent ici : le rendu du contenu riche
+	    (paragraphes, listes, gras, citation) vit dans `styles/composants.css`
+	    depuis le 18/09/2026, où les quatre composants qui posent la classe le
+	    reçoivent enfin. */
 	.rich-content {
 		font-size: 0.85rem;
-		line-height: 1.6;
 		color: var(--color-text);
 		margin-bottom: 0.5rem;
-	}
-	.rich-content :global(p) {
-		margin: 0 0 0.5em;
-	}
-	.rich-content :global(ul),
-	.rich-content :global(ol) {
-		padding-left: 1.4em;
-		margin: 0 0 0.5em;
-	}
-	.rich-content :global(strong) {
-		font-weight: 600;
-	}
-	.rich-content :global(em) {
-		font-style: italic;
 	}
 </style>
