@@ -1582,6 +1582,20 @@ jobs:
         working-directory: front
         run: npm run lint:lock
 
+      # 🔴 DEUX COPIES SUR CINQ AVAIENT DIVERGÉ SUR CE QU'ON NE VOIT PAS (18/09/2026).
+      #
+      # Le dépliement Unicode qui retire les accents était recopié cinq fois :
+      # deux dans l'Espace CS, une dans la FAQ, deux pour fabriquer un code.
+      # Quatre écrivaient la plage des signes combinants en échappements, la
+      # cinquième avec les caractères eux-mêmes — des accents flottants qu'aucun
+      # éditeur ne montre et qu'un changement d'encodage emporte sans un mot.
+      #
+      # Une plage vidée ne lève aucune erreur : elle ne retire plus rien, et deux
+      # textes cessent simplement de correspondre.
+      - name: Le dépliement des accents ne s'écrit qu'à un endroit
+        working-directory: front
+        run: npm run lint:texte
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #

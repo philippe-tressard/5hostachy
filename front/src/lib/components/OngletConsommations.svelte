@@ -18,6 +18,7 @@
 <script lang="ts">
 	import { prestataires as prestApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
+	import { slug } from '$lib/texte';
 	import { isCS } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
@@ -196,16 +197,10 @@
 	async function addCompteurConfig() {
 		if (!newCompteurLabel.trim()) return;
 		addCompteurSaving = true;
-		const slug = newCompteurLabel
-			.trim()
-			.toLowerCase()
-			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '')
-			.replace(/[^a-z0-9]+/g, '_')
-			.replace(/^_|_$/g, '');
+		const code = slug(newCompteurLabel, '_');
 		try {
 			const created = await prestApi.createCompteurConfig({
-				type_compteur: slug,
+				type_compteur: code,
 				label: newCompteurLabel.trim(),
 				ordre: compteurConfigs.length,
 			});
