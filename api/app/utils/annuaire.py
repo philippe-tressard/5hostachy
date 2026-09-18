@@ -81,13 +81,32 @@ class _Caches:
         return self._photos[uid]
 
 
-def membres_du_conseil(session: Session) -> list[dict]:
-    """Le conseil syndical, trié par bâtiment puis genre puis nom."""
+def membres_du_conseil(session: Session, *, pour_administration: bool = False) -> list[dict]:
+    """Le conseil syndical, trié par bâtiment puis genre puis nom.
+
+    `pour_administration` change deux choses, et rien d'autre : le tri devient
+    celui que l'administration a fixé (`ordre`), et deux champs de gestion
+    s'ajoutent — `ordre`, pour le réordonnancement, et `user_id`, pour le
+    rattachement à un compte.
+
+    🔴 Pourquoi un paramètre plutôt qu'une seconde fonction (18/09/2026, #779) :
+    `routers/admin/annuaire.py` REFAISAIT ce dictionnaire, dans le fichier même
+    qui importe cette fonction et qui explique pourquoi elle existe. Le motif
+    est celui que `check-client-api.mjs` décrit côté front — *une méthode trop
+    pauvre ne fait pas contourner un peu, elle fait recopier en entier*. Il
+    manquait deux clés et un tri ; la copie a emporté avec elle le cache des
+    bâtiments et la règle du gestionnaire de site, dont ce module dit pourtant
+    qu'elle avait DÉJÀ divergé sur l'identifiant 0.
+    """
     caches = _Caches(session)
     gestionnaire = _site_manager_user_id(session)
     membres = sorted(
         session.exec(select(MembreCS)).all(),
-        key=lambda m: (m.batiment_id or 9999, _ordre_genre(m.genre), m.nom.lower()),
+        key=(
+            (lambda m: (m.ordre or 0))
+            if pour_administration
+            else (lambda m: (m.batiment_id or 9999, _ordre_genre(m.genre), m.nom.lower()))
+        ),
     )
     return [
         {
@@ -109,13 +128,18 @@ def membres_du_conseil(session: Session) -> list[dict]:
             ),
             "est_president": m.est_president,
             "photo_url": caches.photo(m.user_id),
+            **({"ordre": m.ordre, "user_id": m.user_id} if pour_administration else {}),
         }
         for m in membres
     ]
 
 
-def membres_du_syndic(session: Session) -> list[dict]:
-    """Les interlocuteurs du syndic, dans l'ordre que l'administration a fixé."""
+def membres_du_syndic(session: Session, *, pour_administration: bool = False) -> list[dict]:
+    """Les interlocuteurs du syndic, dans l'ordre que l'administration a fixé.
+
+    `pour_administration` ajoute les deux champs de gestion — voir
+    `membres_du_conseil`, qui dit pourquoi ils ne sont pas rendus partout.
+    """
     caches = _Caches(session)
     return [
         {
@@ -128,6 +152,7 @@ def membres_du_syndic(session: Session) -> list[dict]:
             "telephone": m.telephone,
             "est_principal": m.est_principal,
             "photo_url": caches.photo(m.user_id),
+            **({"ordre": m.ordre, "user_id": m.user_id} if pour_administration else {}),
         }
         for m in sorted(session.exec(select(MembreSyndic)).all(), key=lambda m: m.ordre)
     ]
