@@ -55,9 +55,19 @@ def _fichiers_routers() -> list[pathlib.Path]:
     return fichiers
 
 # Dépendances d'autorisation — TOUTES définies dans app/auth/deps.py.
+#
+# ⚠️ `ma_notification` en fait partie depuis le 18/09/2026, et elle a un statut
+# à part : elle n'autorise pas un RÔLE, elle résout un OBJET dont elle vérifie
+# l'appartenance (« une notification n'appartient qu'à son destinataire »).
+# Elle porte donc `get_current_user` en interne — un endpoint qui la prend est
+# authentifié ET filtré. C'est ce contrôle-ci qui a exigé qu'elle vive dans
+# `deps.py` plutôt que dans son routeur : il ne reconnaît une autorisation qu'au
+# module où elle est écrite, et c'est précisément le point (audit du 26/07/2026,
+# `_require_bailleur` posé hors du module central avec 17 endpoints dessus).
 _DEPS_AUTORISATION = {
     "get_current_user", "get_acting_user", "require_role",
     "require_proprietaire", "require_cs_or_admin", "require_admin",
+    "ma_notification",
 }
 
 _VERBES = {"get", "post", "put", "patch", "delete"}

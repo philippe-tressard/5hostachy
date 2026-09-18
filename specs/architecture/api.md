@@ -61,8 +61,6 @@
 | 11 | GET | `/admin/maintenance/historique` | Historique de maintenance (50 derniers) | Admin |
 | 12 | GET | `/admin/modeles-email` | Liste modèles email | Admin |
 | 13 | PATCH | `/admin/modeles-email/{modele_id}` | Modifier un modèle email | Admin |
-| 14 | GET | `/admin/notifications` | Notifications de l'utilisateur connecté | Authentifié |
-| 15 | POST | `/admin/notifications/{notif_id}/lue` | Marquer notification comme lue | Authentifié |
 | 16 | GET | `/admin/annuaire` | Annuaire public CS + syndic | Authentifié |
 | 17 | GET | `/admin/annuaire/cs` | Composition CS (gestion) | CS/Admin |
 | 18 | PUT | `/admin/annuaire/cs` | Remplacer la composition CS | CS/Admin |

@@ -1,16 +1,16 @@
-# DÃ©ploiement automatique â€” RPi 5
+# Déploiement automatique — RPi 5
 
 Synchronisation automatique du code depuis GitHub vers le Raspberry Pi 5.
 
-**PrÃ©requis :**
-- RPi accessible sur le rÃ©seau local Ã  `<RPi-IP>`
-- Docker et Git installÃ©s
-- Le rÃ©pertoire `/opt/5hostachy` existe dÃ©jÃ  (propriÃ©taire `hostachy`)
+**Prérequis :**
+- RPi accessible sur le réseau local à `<RPi-IP>`
+- Docker et Git installés
+- Le répertoire `/opt/5hostachy` existe déjà (propriétaire `hostachy`)
 - Votre compte (`<your-user>`) dispose des droits `sudo`
 
 ---
 
-## Ã‰tape 1 â€” GÃ©nÃ©rer une clÃ© SSH deploy sur le RPi
+## Étape 1 — Générer une clé SSH deploy sur le RPi
 
 Connectez-vous au RPi en SSH depuis votre PC Windows :
 
@@ -18,23 +18,23 @@ Connectez-vous au RPi en SSH depuis votre PC Windows :
 ssh <your-user>@<RPi-IP>
 ```
 
-GÃ©nÃ©rez une paire de clÃ©s dÃ©diÃ©e (sans passphrase) :
+Générez une paire de clés dédiée (sans passphrase) :
 
 ```bash
 ssh-keygen -t ed25519 -C "hostachy-rpi5-deploy" -f ~/.ssh/hostachy_deploy -N ""
 ```
 
-Affichez et copiez la clÃ© publique :
+Affichez et copiez la clé publique :
 
 ```bash
 cat ~/.ssh/hostachy_deploy.pub
 ```
 
-La ligne commence par `ssh-ed25519 AAAA...` â€” copiez-la en entier.
+La ligne commence par `ssh-ed25519 AAAA...` — copiez-la en entier.
 
 ---
 
-## Ã‰tape 2 â€” Configurer SSH pour GitHub
+## Étape 2 — Configurer SSH pour GitHub
 
 ```bash
 cat >> ~/.ssh/config << 'EOF'
@@ -46,40 +46,40 @@ EOF
 
 ---
 
-## Ã‰tape 3 â€” Ajouter la deploy key sur GitHub
+## Étape 3 — Ajouter la deploy key sur GitHub
 
 1. Ouvrir : https://github.com/<github-user>/5hostachy/settings/keys
 2. Cliquer **Add deploy key**
 3. Titre : `RPi5 deploy`
-4. Coller la clÃ© publique copiÃ©e Ã  l'Ã©tape 1
-5. Laisser **Allow write access** dÃ©cochÃ© (lecture seule suffisante)
+4. Coller la clé publique copiée à l'étape 1
+5. Laisser **Allow write access** décoché (lecture seule suffisante)
 6. Cliquer **Add key**
 
 Tester la connexion :
 
 ```bash
 ssh -T git@github.com
-# RÃ©ponse attendue :
+# Réponse attendue :
 # Hi <github-user>/5hostachy! You've successfully authenticated, but GitHub does not provide shell access.
 ```
 
 ---
 
-## Ã‰tape 4 â€” TransfÃ©rer la propriÃ©tÃ© du rÃ©pertoire et rejoindre le groupe docker
+## Étape 4 — Transférer la propriété du répertoire et rejoindre le groupe docker
 
-Le rÃ©pertoire appartient Ã  `hostachy`. On transfÃ¨re la propriÃ©tÃ© Ã  `<your-user>` :
+Le répertoire appartient à `hostachy`. On transfère la propriété à `<your-user>` :
 
 ```bash
 sudo chown -R <your-user>:<your-user> /opt/5hostachy
 ```
 
-Ajouter `<your-user>` au groupe `docker` (Ã©vite d'utiliser `sudo` pour toutes les commandes docker) :
+Ajouter `<your-user>` au groupe `docker` (évite d'utiliser `sudo` pour toutes les commandes docker) :
 
 ```bash
 sudo usermod -aG docker <your-user>
 ```
 
-**Se dÃ©connecter/reconnecter** pour que le changement de groupe prenne effet :
+**Se déconnecter/reconnecter** pour que le changement de groupe prenne effet :
 
 ```bash
 exit
@@ -87,40 +87,40 @@ exit
 ssh <your-user>@<RPi-IP>
 ```
 
-VÃ©rifier :
+Vérifier :
 
 ```bash
 ls -la /opt/
 # /opt/5hostachy doit afficher <your-user> <your-user>
 groups
-# docker doit apparaÃ®tre dans la liste
+# docker doit apparaître dans la liste
 ```
 
 ---
 
-## Ã‰tape 5 â€” Initialiser git et synchroniser depuis GitHub
+## Étape 5 — Initialiser git et synchroniser depuis GitHub
 
 ```bash
 cd /opt/5hostachy
 
-# DÃ©finir la branche par dÃ©faut Ã  main (global)
+# Définir la branche par défaut à main (global)
 git config --global init.defaultBranch main
 
 # Initialiser git
 git init
 
-# Ajouter le remote GitHub en SSH (ou mettre Ã  jour l'URL si origin existe dÃ©jÃ )
+# Ajouter le remote GitHub en SSH (ou mettre à jour l'URL si origin existe déjà)
 git remote add origin git@github.com:<github-user>/5hostachy.git 2>/dev/null || \
   git remote set-url origin git@github.com:<github-user>/5hostachy.git
 
-# RÃ©cupÃ©rer les branches depuis GitHub
+# Récupérer les branches depuis GitHub
 git fetch origin
 
-# CrÃ©er la branche locale main en la liant Ã  origin/main et rÃ©cupÃ©rer les commits
-# (DWIM : git dÃ©duit automatiquement le tracking depuis origin/main)
+# Créer la branche locale main en la liant à origin/main et récupérer les commits
+# (DWIM : git déduit automatiquement le tracking depuis origin/main)
 git checkout main
 
-# VÃ©rifications
+# Vérifications
 git log --oneline -3
 git remote -v
 git branch -vv
@@ -128,10 +128,10 @@ git branch -vv
 
 ---
 
-## Ã‰tape 6 â€” VÃ©rifier et restaurer le fichier .env
+## Étape 6 — Vérifier et restaurer le fichier .env
 
-Le fichier `.env` est dans le `.gitignore` et ne doit pas avoir Ã©tÃ© Ã©crasÃ©.
-VÃ©rifiez qu'il est intact :
+Le fichier `.env` est dans le `.gitignore` et ne doit pas avoir été écrasé.
+Vérifiez qu'il est intact :
 
 ```bash
 cat /opt/5hostachy/.env
@@ -147,22 +147,22 @@ nano /opt/5hostachy/.env
 
 ---
 
-## Ã‰tape 7 â€” RedÃ©marrer Docker Compose
+## Étape 7 — Redémarrer Docker Compose
 
 ```bash
 cd /opt/5hostachy
 
-# ArrÃªter les conteneurs existants
+# Arrêter les conteneurs existants
 docker compose down
 
 # Relancer (rebuild complet pour prendre en compte les nouveaux fichiers)
 docker compose up --build -d
 
-# VÃ©rifier que les 3 conteneurs tournent
+# Vérifier que les 3 conteneurs tournent
 docker compose ps
 ```
 
-RÃ©sultat attendu :
+Résultat attendu :
 
 ```
 NAME                STATUS
@@ -171,17 +171,17 @@ NAME                STATUS
 5hostachy-caddy-1   Up
 ```
 
-VÃ©rifier les logs :
+Vérifier les logs :
 
 ```bash
 docker compose logs --tail=30 -f
 ```
 
-L'application doit rÃ©pondre sur http://<RPi-IP>
+L'application doit répondre sur http://<RPi-IP>
 
 ---
 
-## Ã‰tape 8 â€” CrÃ©er le script de dÃ©ploiement automatique
+## Étape 8 — Créer le script de déploiement automatique
 
 ```bash
 sudo tee /opt/hostachy-deploy.sh << 'EOF'
@@ -192,9 +192,9 @@ LOG_DATE=$(date '+%Y-%m-%d %H:%M:%S')
 
 cd "$REPO"
 
-echo "[$LOG_DATE] VÃ©rification des mises Ã  jour..."
+echo "[$LOG_DATE] Vérification des mises à jour..."
 
-# RÃ©cupÃ©rer sans fusionner
+# Récupérer sans fusionner
 git fetch origin main
 
 # Comparer HEAD local et origin/main
@@ -202,20 +202,20 @@ LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 
 if [ "$LOCAL" = "$REMOTE" ]; then
-    echo "[$LOG_DATE] Aucun changement â€” rien Ã  faire."
+    echo "[$LOG_DATE] Aucun changement — rien à faire."
     exit 0
 fi
 
-echo "[$LOG_DATE] Nouveaux commits dÃ©tectÃ©s â€” pull en cours..."
+echo "[$LOG_DATE] Nouveaux commits détectés — pull en cours..."
 git pull origin main
 
-# Rebuild uniquement si des fichiers applicatifs ont changÃ©
+# Rebuild uniquement si des fichiers applicatifs ont changé
 if git diff "$LOCAL" HEAD --quiet -- api/ front/ docker-compose.yml Caddyfile; then
     echo "[$LOG_DATE] Pas de changement dans le code applicatif."
 else
-    echo "[$LOG_DATE] Rebuild et redÃ©marrage des conteneurs..."
+    echo "[$LOG_DATE] Rebuild et redémarrage des conteneurs..."
     docker compose -f "$REPO/docker-compose.yml" up --build -d
-    echo "[$LOG_DATE] DÃ©ploiement terminÃ©."
+    echo "[$LOG_DATE] Déploiement terminé."
 fi
 EOF
 
@@ -228,16 +228,16 @@ Tester manuellement :
 /opt/hostachy-deploy.sh
 ```
 
-RÃ©sultat attendu si tout est Ã  jour :
+Résultat attendu si tout est à jour :
 
 ```
-[2026-03-01 10:00:00] VÃ©rification des mises Ã  jour...
-[2026-03-01 10:00:01] Aucun changement â€” rien Ã  faire.
+[2026-03-01 10:00:00] Vérification des mises à jour...
+[2026-03-01 10:00:01] Aucun changement — rien à faire.
 ```
 
 ---
 
-## Ã‰tape 9 â€” Planifier avec cron
+## Étape 9 — Planifier avec cron
 
 ```bash
 crontab -e
@@ -246,14 +246,14 @@ crontab -e
 Ajoutez **une seule** des lignes suivantes :
 
 ```cron
-# Synchronisation toutes les nuits Ã  3h00 (recommandÃ©)
+# Synchronisation toutes les nuits à 3h00 (recommandé)
 0 3 * * * /opt/hostachy-deploy.sh >> /var/log/hostachy-deploy.log 2>&1
 
 # OU : synchronisation toutes les 10 minutes
 */10 * * * * /opt/hostachy-deploy.sh >> /var/log/hostachy-deploy.log 2>&1
 ```
 
-VÃ©rifier :
+Vérifier :
 
 ```bash
 crontab -l
@@ -261,19 +261,19 @@ crontab -l
 
 ---
 
-## Ã‰tape 10 â€” Consulter les logs de dÃ©ploiement
+## Étape 10 — Consulter les logs de déploiement
 
 ```bash
-# DerniÃ¨res lignes
+# Dernières lignes
 tail -50 /var/log/hostachy-deploy.log
 
-# Suivi en temps rÃ©el
+# Suivi en temps réel
 tail -f /var/log/hostachy-deploy.log
 ```
 
 ---
 
-## DÃ©clenchement manuel depuis votre PC Windows
+## Déclenchement manuel depuis votre PC Windows
 
 ```powershell
 ssh <your-user>@<RPi-IP> "/opt/hostachy-deploy.sh"
@@ -285,36 +285,36 @@ ssh <your-user>@<RPi-IP> "/opt/hostachy-deploy.sh"
 
 ```
 PC (VS Code)
-    â”‚
-    â”‚  git add .
-    â”‚  git commit -m "feat: ..."
-    â”‚  git push
+    │
+    │  git add .
+    │  git commit -m "feat: ..."
+    │  git push
     â–¼
 GitHub (<github-user>/5hostachy)
-    â”‚
-    â”‚  cron (3h ou 10 min) â€” ou dÃ©clencher manuellement
+    │
+    │  cron (3h ou 10 min) — ou déclencher manuellement
     â–¼
 RPi 5 (<RPi-IP>)
-    â”‚  git fetch â†’ comparaison SHA
-    â”‚  git pull origin main
-    â”‚  docker compose up --build -d  (seulement si code modifiÃ©)
+    │  git fetch → comparaison SHA
+    │  git pull origin main
+    │  docker compose up --build -d  (seulement si code modifié)
     â–¼
-Application mise Ã  jour sur http://<RPi-IP>
+Application mise à jour sur http://<RPi-IP>
 ```
 
 ---
 
-## DÃ©pannage
+## Dépannage
 
-| ProblÃ¨me | Cause probable | Solution |
+| Problème | Cause probable | Solution |
 |----------|---------------|----------|
-| `Permission denied` sur git | RÃ©pertoire appartient Ã  `hostachy` | `sudo chown -R <your-user>:<your-user> /opt/5hostachy` |
-| `Permission denied (publickey)` | ClÃ© SSH non ajoutÃ©e sur GitHub | VÃ©rifier Ã©tape 3 |
-| `fatal: not a git repository` | `git init` non exÃ©cutÃ© | Reprendre Ã©tape 5 |
-| `git pull` Ã©choue sur conflit | Fichiers modifiÃ©s localement | `git reset --hard origin/main` |
-| Conteneurs ne dÃ©marrent pas | `.env` manquant ou incorrect | VÃ©rifier Ã©tape 6 |
-| `unable to open database file` | `DATABASE_URL` pointe vers un mauvais chemin | VÃ©rifier que `.env` contient `DATABASE_URL=sqlite:////app/data/app.db` puis `docker compose up -d --force-recreate api` |
+| `Permission denied` sur git | Répertoire appartient à `hostachy` | `sudo chown -R <your-user>:<your-user> /opt/5hostachy` |
+| `Permission denied (publickey)` | Clé SSH non ajoutée sur GitHub | Vérifier étape 3 |
+| `fatal: not a git repository` | `git init` non exécuté | Reprendre étape 5 |
+| `git pull` échoue sur conflit | Fichiers modifiés localement | `git reset --hard origin/main` |
+| Conteneurs ne démarrent pas | `.env` manquant ou incorrect | Vérifier étape 6 |
+| `unable to open database file` | `DATABASE_URL` pointe vers un mauvais chemin | Vérifier que `.env` contient `DATABASE_URL=sqlite:////app/data/app.db` puis `docker compose up -d --force-recreate api` |
 | `permission denied` sur docker.sock | `<your-user>` pas dans le groupe `docker` | `sudo usermod -aG docker <your-user>` puis reconnexion |
-| Docker non relancÃ© | Aucun changement dans `api/` / `front/` | `docker compose up --build -d` |
-| Log vide aprÃ¨s cron | Cron ne tourne pas | `systemctl status cron` et `crontab -l` |
+| Docker non relancé | Aucun changement dans `api/` / `front/` | `docker compose up --build -d` |
+| Log vide après cron | Cron ne tourne pas | `systemctl status cron` et `crontab -l` |
 | Script introuvable | Mauvais chemin | `ls -la /opt/hostachy-deploy.sh` |

@@ -7,13 +7,12 @@ Voir `__init__.py` pour la règle de découpage.
 import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from app.auth.deps import get_current_user, require_admin
+from app.auth.deps import require_admin
 from app.database import get_session
 from app.models.core import (
     HistoriqueEmail,
     HistoriqueTelemetrie,
     ModeleEmail,
-    Notification,
     Utilisateur,
 )
 from datetime import datetime
@@ -263,31 +262,21 @@ def reinitialiser_modeles_email(
     return {"message": f"{updated} modèles réinitialisés"}
 
 
-# ── Notifications utilisateur ────────────────────────────────────────────────
-
-@router.get("/notifications")
-def mes_notifications(
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    return session.exec(
-        select(Notification)
-        .where(Notification.destinataire_id == user.id)
-        .order_by(Notification.cree_le.desc())
-        .limit(50)
-    ).all()
-
-
-@router.post("/notifications/{notif_id}/lue")
-def mark_lue(
-    notif_id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    notif = session.get(Notification, notif_id)
-    if not notif or notif.destinataire_id != user.id:
-        raise HTTPException(404, "Notification introuvable")
-    notif.lue = True
-    session.add(notif)
-    session.commit()
-    return {"ok": True}
+#  🔴 LES DEUX ROUTES « NOTIFICATIONS » DE CE FICHIER SONT PARTIES (18/09/2026).
+#
+#  `GET /admin/notifications` et `POST /admin/notifications/{id}/lue`
+#  doublaient `GET /notifications` et `PATCH /notifications/{id}/lue`, au
+#  même acte près : elles lisaient et marquaient les notifications de
+#  L'UTILISATEUR CONNECTÉ (`destinataire_id == user.id`).
+#
+#  ⚠️ Elles étaient déclarées « sans consommateur front » avec pour raison
+#  « API d'administration exposée pour l'exploitation » — ce qui n'était pas
+#  vrai : un administrateur qui les appelait voyait SES propres
+#  notifications, exactement ce que `/notifications` lui donne déjà. Une
+#  exception dont la raison est fausse est pire qu'absente : elle ferme la
+#  question.
+#
+#  Et la règle d'appartenance — « une notification n'appartient qu'à son
+#  destinataire » — s'écrivait ici une TROISIÈME et une QUATRIÈME fois.
+#  `standards/03` §1 : l'autorisation est centralisée. Elle vit désormais
+#  dans `routers/notifications.py`, par `ma_notification`.

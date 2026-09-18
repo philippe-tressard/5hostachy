@@ -1,8 +1,17 @@
-"""Router notifications — liste, marquer lue, tout marquer lu."""
-from fastapi import APIRouter, Depends, HTTPException
+"""Router notifications — liste, marquer lue, tout marquer lu.
+
+🔴 **Une notification n'appartient qu'à son destinataire**, et cette phrase ne
+s'écrit qu'à UN endroit : `ma_notification`, dans `app/auth/deps.py` — le module
+d'autorisation, pas ce routeur. Elle était écrite QUATRE fois au
+18/09/2026 : deux dans ce fichier, et deux de plus dans
+`routers/admin/communications.py`, qui doublait purement et simplement ces
+routes. `standards/03` §1 — l'autorisation est centralisée, et une règle
+d'autorisation en quatre exemplaires se durcit une fois sur quatre.
+"""
+from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, ma_notification
 from app.database import get_session
 from app.models.core import Notification, Utilisateur
 from app.schemas import NotificationRead
@@ -24,13 +33,9 @@ def list_notifications(
 
 @router.patch("/{notif_id}/lue", response_model=NotificationRead)
 def marquer_lue(
-    notif_id: int,
+    notif: Notification = Depends(ma_notification),
     session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
 ):
-    notif = session.get(Notification, notif_id)
-    if not notif or notif.destinataire_id != user.id:
-        raise HTTPException(404, "Notification introuvable")
     notif.lue = True
     session.add(notif)
     session.commit()
@@ -57,12 +62,8 @@ def tout_marquer_lu(
 
 @router.delete("/{notif_id}", status_code=204)
 def supprimer_notification(
-    notif_id: int,
+    notif: Notification = Depends(ma_notification),
     session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
 ):
-    notif = session.get(Notification, notif_id)
-    if not notif or notif.destinataire_id != user.id:
-        raise HTTPException(404, "Notification introuvable")
     session.delete(notif)
     session.commit()
