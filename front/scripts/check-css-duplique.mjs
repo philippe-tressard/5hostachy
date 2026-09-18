@@ -31,6 +31,21 @@
  *  voisinages légitimes. Ce cas se traite à la main, avec le relevé qui a produit
  *  ce fichier.
  *
+ *  🔴 Cet angle mort a repris du service le 18/09/2026, et il est désormais
+ *  MESURÉ plutôt qu'affirmé. `.rich-toolbar` et `.legal-toolbar` — les barres
+ *  d'outils des deux éditeurs riches — portaient les mêmes onze déclarations
+ *  sous deux noms, dans deux fichiers. Ce contrôle ne pouvait pas les voir, et
+ *  une seconde raison s'y ajoutait : elles avaient DÉRIVÉ, `0.85rem` contre
+ *  `0.82rem` sur la taille des boutons. Une copie qui a dérivé n'est plus une
+ *  copie exacte — elle échappe même à un contrôle qui chercherait le même nom.
+ *
+ *  Un relevé mécanique du cas général — mêmes propriétés, au plus une valeur
+ *  différente, au moins cinq déclarations — rend **seize** paires sur ce dépôt,
+ *  dont la plupart sont des voisinages banals (un libellé qui ressemble à un
+ *  autre libellé). C'est la preuve chiffrée que ce contrôle a raison de ne pas
+ *  trancher : à seize alertes dont deux vraies, il serait désarmé dans la
+ *  semaine. Le relevé reste l'outil, et il se lance à la main.
+ *
  *  Usage : node scripts/check-css-duplique.mjs [--selftest]
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
