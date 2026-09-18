@@ -20,7 +20,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import AnnonceHall, ConfigSite, Document, Publication, Utilisateur
+from app.models.core import AnnonceHall, Document, Publication, Utilisateur
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.annonce_hall import (
     APERCU_MAX,
@@ -38,6 +38,7 @@ from app.routers.annonces_hall_courriels import (
     _partager_sur_le_groupe,
 )
 from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
+from app.utils.config_site import config_site
 from app.utils.photos import parse_photos
 from app.utils.noms import nom_affiche
 
@@ -66,11 +67,12 @@ from app.routers.annonces_hall_schemas import (  # noqa: E402
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _config_site(session: Session) -> dict[str, str]:
-    rows = session.exec(
-        select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
-    ).all()
-    return {r.cle: (r.valeur or "") for r in rows}
+#  🔴 `_config_site` A ÉTÉ RETIRÉ (18/09/2026) : c'était une recopie de la
+#  lecture partagée, avec un écart — elle rendait `""` là où l'originale rend
+#  `None`. Sans conséquence ici, les deux valeurs passant par `nom_site()` et
+#  `base_site()` qui traitent l'absence ; mais c'est par cet écart-là qu'une
+#  copie devient un jour un comportement différent.
+#  La lecture vit dans `app/utils/config_site.py`.
 
 
 #  ⚠️ `_batiments()` a disparu avec `perimetre_libelle` (27/08/2026) : il ne
@@ -94,7 +96,7 @@ def _valider(body: AnnonceHallBase) -> None:
 
 def _html_params(body: AnnonceHallBase, session: Session, *, format_effectif: str,
                  date_affichage: datetime) -> dict:
-    cfg = _config_site(session)
+    cfg = config_site(session)
     return {
         "titre": body.titre.strip(),
         "message_html": body.message,

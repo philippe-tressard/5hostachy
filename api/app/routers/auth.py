@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.utils.config_site import config_site
 from app.auth.jwt import (
     create_access_token,
     create_refresh_token,
@@ -29,8 +30,7 @@ from app.auth.jwt import (
 from app.auth.deps import get_current_user
 from app.config import get_settings
 from app.database import get_session
-from app.models.core import (Utilisateur, RefreshToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment,
-    ConfigSite)
+from app.models.core import (Utilisateur, RefreshToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment)
 from app.schemas import UserCreate, UserRead, LoginRequest
 from app.utils.lecture_utilisateur import construire_user_read
 from app.utils.limiter import limiter
@@ -88,10 +88,7 @@ def emettre_verification_email(
     )
     session.commit()
 
-    cfg_rows = session.exec(
-        select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
-    ).all()
-    cfg = {row.cle: row.valeur for row in cfg_rows}
+    cfg = config_site(session)
     site_url = base_site(cfg.get("site_url"))
     site_nom = nom_site(cfg.get("site_nom"))
 
@@ -183,12 +180,12 @@ def register(
     #  qui a besoin du même envoyeur.
     from app.utils.email import send_email as _send_email
 
-    cfg_rows = session.exec(
-        select(ConfigSite).where(
-            ConfigSite.cle.in_(("notify_new_user_created_email", "site_nom", "site_url", "site_manager_user_id", "site_email"))
-        )
-    ).all()
-    cfg = {row.cle: row.valeur for row in cfg_rows}
+    cfg = config_site(
+        session,
+        "notify_new_user_created_email",
+        "site_manager_user_id",
+        "site_email",
+    )
 
     # Notification au gestionnaire du site
     if cfg.get("notify_new_user_created_email") == "1":

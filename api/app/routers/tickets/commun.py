@@ -23,7 +23,6 @@ from sqlmodel import Session, select
 from app.utils.batiments import libelle_batiment_ou
 from app.models.core import (
     Batiment,
-    ConfigSite,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -70,25 +69,22 @@ def generer_numero() -> str:
 
 
 # ── Configuration du site ────────────────────────────────────────────────────
-
-def config_site(session: Session, *cles: str) -> dict:
-    """Valeurs de `ConfigSite`, avec `site_nom` et `site_url` toujours incluses.
-
-    Ces deux clés alimentent le pied de chaque e-mail : les demander partout
-    évitait déjà de les oublier, mais au prix de quatre requêtes écrites à la
-    main. Une seule écriture ici.
-    """
-    voulues = {"site_nom", "site_url"} | set(cles)
-    lignes = session.exec(select(ConfigSite).where(ConfigSite.cle.in_(voulues))).all()
-    return {r.cle: r.valeur for r in lignes}
-
-
-def contexte_site(cfg: dict) -> dict:
-    """Le bloc `residence` / `app` que tous les modèles d'e-mail attendent."""
-    return {
-        "residence": {"nom": nom_site(cfg.get("site_nom"))},
-        "app": {"url": base_site(cfg.get("site_url"))},
-    }
+#
+# 🔴 LA LECTURE A DÉMÉNAGÉ le 18/09/2026, et ces deux noms n'en sont plus que
+# des renvois. Elle vivait ici, c'est-à-dire chez un APPELANT, et dans le
+# module d'un domaine qui n'a rien à voir avec la configuration : le
+# démarrage de l'application l'importait au milieu d'une fonction pour
+# éviter le cycle, et `routers/annonces_hall.py` avait fini par recopier la
+# requête — avec un écart, `""` au lieu de `None`.
+#
+# Le corps vit dans `app/utils/config_site.py`. Les alias restent parce que
+# quatre modules de ce paquet les nomment, et que la documentation du paquet
+# les désigne : les supprimer serait un second lot, qui n'apporterait que du
+# renommage (même parti que les destinataires, ci-dessous).
+from app.utils.config_site import (  # noqa: F401  (ré-export volontaire)
+    config_site,
+    contexte_site,
+)
 
 
 # ── Destinataires ────────────────────────────────────────────────────────────
@@ -113,7 +109,6 @@ from app.utils.destinataires import (  # noqa: F401  (ré-export volontaire)
 )
 from app.utils.copie_auteur import proprietaire
 from app.utils.noms import nom_affiche
-from app.utils.liens import base_site, nom_site
 
 
 # ── Libellés d'évolution ─────────────────────────────────────────────────────

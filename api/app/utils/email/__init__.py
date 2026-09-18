@@ -21,6 +21,7 @@ from jinja2.sandbox import SandboxedEnvironment
 from jinja2 import BaseLoader
 from sqlmodel import Session, select
 
+from app.utils.config_site import config_site
 from app.config import get_settings
 from app.utils.preferences_mail import mail_autorise
 from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateur
@@ -74,12 +75,7 @@ def _masquer(adresse: str | None) -> str:
 
 def get_site_manager_notification_email(session: Session) -> tuple[str, dict[str, str]]:
     """Retourne l'email de notification du gestionnaire du site et la config lue."""
-    rows = session.exec(
-        select(ConfigSite).where(
-            ConfigSite.cle.in_(("site_email", "site_nom", "site_url", "site_manager_user_id"))
-        )
-    ).all()
-    config = {row.cle: row.valeur for row in rows}
+    config = config_site(session, "site_email", "site_manager_user_id")
 
     site_email = (config.get("site_email") or "").strip()
     site_manager_email = ""

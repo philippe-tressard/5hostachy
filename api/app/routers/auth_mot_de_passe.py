@@ -20,10 +20,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from app.utils.config_site import config_site
 from app.auth.deps import get_current_user
 from app.auth.jwt import hash_password, verify_password
 from app.database import get_session
-from app.models.core import ConfigSite, PasswordResetToken, RefreshToken, Utilisateur
+from app.models.core import PasswordResetToken, RefreshToken, Utilisateur
 from app.utils.limiter import limiter
 from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
 from app.utils.liens import base_site, nom_site
@@ -66,10 +67,7 @@ def request_password_reset(
     Génère un token de réinitialisation et envoie un e-mail si le compte existe.
     Retourne toujours 204 pour éviter l'enumération d'adresses e-mail.
     """
-    cfg_rows = session.exec(
-        select(ConfigSite).where(ConfigSite.cle.in_(("site_url", "site_nom")))
-    ).all()
-    cfg = {row.cle: row.valeur for row in cfg_rows}
+    cfg = config_site(session)
     site_url = base_site(cfg.get("site_url"))
     site_nom = nom_site(cfg.get("site_nom"))
 
