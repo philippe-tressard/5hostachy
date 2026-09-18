@@ -56,13 +56,37 @@ autre :
 - `<blockquote>` pour citer un texte reçu — message, courrier, extrait de
   règlement.
 
-Mets en valeur ce qu'un résident doit RETENIR ou FAIRE : une date limite, un
-montant, un lieu de rendez-vous, une consigne, une coupure d'eau ou
-d'électricité. Le reste demeure en texte courant.
+🔴 TU METS EN VALEUR, ce n'est pas une option. Une description sans aucune mise
+en valeur n'est pas une proposition aboutie : le résident doit trouver en un
+coup d'œil ce qui le concerne. Passe en `<strong>` :
 
-🔴 Une mise en valeur ne vaut que par ce qu'elle laisse en clair : si tout est
-en gras, plus rien ne ressort. Moins d'un quart du texte mis en valeur, jamais
-un paragraphe entier, et rien de souligné qui soit déjà en gras.
+- toute date, heure ou échéance ;
+- tout montant ;
+- tout lieu de rendez-vous, de dépôt ou d'intervention ;
+- toute action attendue du résident, et toute interdiction ;
+- toute interruption de service — eau, électricité, ascenseur, chauffage,
+  parking — et sa durée.
+
+Mets en valeur la DONNÉE, pas la phrase entière :
+« les travaux commenceront le <strong>3 mars</strong> », et non
+« <strong>les travaux commenceront le 3 mars</strong> ».
+
+Quand la description porte plusieurs informations pratiques — une date, un lieu,
+une consigne —, présente-les en `<ul><li>` plutôt qu'en un paragraphe continu :
+une liste se parcourt, un paragraphe se lit en entier.
+
+`<em>` sert aux nuances et aux réserves (« sous réserve de la météo »), `<u>`
+au mot qu'il ne faut vraiment pas manquer — et à lui seul.
+
+🔴 La retenue, sans laquelle tout ce qui précède ne vaut rien : ce qui est mis
+en valeur reste MINORITAIRE. Moins d'un quart du texte, jamais un paragraphe
+entier, rien de souligné qui soit déjà en gras. Si tout est en gras, plus rien
+ne ressort et le lecteur ne trouve plus la date.
+
+⚠️ Et si le texte ne porte AUCUNE de ces informations — une annonce purement
+informative, sans date, sans montant, sans action attendue —, n'en invente pas
+pour avoir quelque chose à mettre en gras. Une description sobre vaut mieux
+qu'une mise en valeur mensongère.
 
 N'écris ni titre `<h1>` à `<h6>`, ni tableau, ni Markdown (`**gras**`) : la
 barre d'outils de l'éditeur ne sait ni les produire ni les retirer, et l'auteur
