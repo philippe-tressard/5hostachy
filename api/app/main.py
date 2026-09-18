@@ -175,6 +175,38 @@ async def lifespan(app: FastAPI):
     from app.utils.rattrapage import planifier_rattrapages
     planifier_rattrapages(scheduler)
 
+    #  🔴 PRÉCHAUFFAGE DU MANUEL EN PDF (18/09/2026, demandé par Philippe).
+    #
+    #  Son cache vit dans le process, donc il repart vide à chaque déploiement —
+    #  et le premier lecteur d'après payait le rendu complet : **21,1 s mesurées
+    #  en production**, contre 0,15 s ensuite. Personne n'a à attendre cela pour
+    #  ouvrir un manuel.
+    #
+    #  Deux déclenchements, et le second n'est pas un luxe : la clé du cache
+    #  porte la DATE d'édition, donc le premier lecteur de chaque jour repaierait
+    #  les 21 s sans le rendez-vous de 00:05.
+    #
+    #  ⚠️ En ARRIÈRE-PLAN, jamais dans le démarrage : l'API doit répondre tout de
+    #  suite, et le rendu s'exécute de toute façon dans un autre process
+    #  (`utils/pdf_rendu`). Un échec ne remonte pas — `prechauffer` ne lève
+    #  jamais, il journalise.
+    def _prechauffer_manuel() -> None:
+        from app.utils.manuel_pdf import prechauffer
+        from app.routers.tickets.commun import config_site
+        from app.utils.liens import base_site, nom_site
+
+        with Session(engine) as _s:
+            cfg = config_site(_s)
+        prechauffer(nom_site(cfg.get("site_nom")), base_site(cfg.get("site_url")))
+
+    scheduler.add_job(
+        _prechauffer_manuel,
+        "date",
+        run_date=datetime.now() + _timedelta(seconds=20),
+        id="manuel_pdf_prechauffage",
+    )
+    scheduler.add_job(_prechauffer_manuel, "cron", hour=0, minute=5, id="manuel_pdf_quotidien")
+
     # Contrôle santé quotidien : WhatsApp, sauvegardes, disque (06h00)
     from app.utils.health_monitor import run_health_check
     scheduler.add_job(run_health_check, "cron", hour=6, minute=0, id="health_check")
