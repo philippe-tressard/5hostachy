@@ -21,7 +21,6 @@
 -->
 <script lang="ts">
 	import FluxVignette from '$lib/components/FluxVignette.svelte';
-	import { onMount } from 'svelte';
 	import { safeDescription } from '$lib/sanitize';
 
 	/**  Contenu de l'élément, brut. `safeDescription` l'assainit ET enveloppe le
@@ -52,20 +51,22 @@
 	 *   écrite sur place (09/09/2026). */
 	export let dansLigne = false;
 
-	//  Le dégradé de fin ne doit apparaître QUE si le texte est réellement coupé.
-	//  Appliqué sans condition, il efface la dernière ligne d'un aperçu court —
-	//  constaté à l'écran : un texte de deux lignes devenait illisible, et le
-	//  dégradé annonçait une suite qui n'existait pas. Aucun sélecteur CSS ne sait
-	//  dire « ce texte déborde », d'où cette mesure après rendu.
-	let bloc: HTMLElement;
-	let tronque = false;
-	onMount(() => {
-		if (bloc) tronque = bloc.scrollHeight > bloc.clientHeight + 1;
-	});
+	//  🔴 LE DÉGRADÉ DE FIN A ÉTÉ RETIRÉ (18/09/2026, signalé à l'écran : « il y a
+	//  un flou sur la 3ᵉ ligne »). Sa hauteur était FIXE — 2,2 em — et l'aperçu est
+	//  passé de 5 lignes d'interligne 1,6 à 3 lignes d'interligne 1,25 : il
+	//  couvrait 28 % du texte, il en couvrait 59 %. Deux lignes sur trois.
+	//
+	//  ⚠️ Une valeur absolue dans un bloc dont la hauteur change est une bombe à
+	//  retardement : elle reste juste jusqu'au jour où la densité bouge, et
+	//  personne ne relit une règle qui n'a pas été touchée.
+	//
+	//  Le fil d'activité, qui sert de référence à cette carte, n'en a jamais eu :
+	//  le texte s'y arrête net. La mesure après rendu (`scrollHeight`) part avec
+	//  le dégradé — elle n'existait que pour lui.
 </script>
 
 <div class="carte-apercu" class:dans-ligne={dansLigne}>
-	<div class="carte-preview rich-content clamp-3" class:tronque bind:this={bloc}>
+	<div class="carte-preview rich-content clamp-3">
 		{@html safeDescription(contenu)}
 	</div>
 	<FluxVignette {photos} {fichiers} />
@@ -100,30 +101,18 @@
 	    L'interligne descend à 1,25 et la marge entre paragraphes à 0,12 em : dans
 	    un extrait de trois lignes, c'est la marge de paragraphe qui aère le plus,
 	    et elle valait 0,4 em. Validé à l'écran après mesure. */
+	/*  0,75 rem et non 0,8 (18/09/2026, validé à l'écran) : c'est l'ÉCART avec le
+	    titre qui fait ressortir le titre, et 0,8 rem n'en laissait que 2,1 px.
+	    Le fil d'activité rend 0,8 — l'aperçu d'une carte descend d'un cran parce
+	    qu'il vit sous un titre en gras, ce que le fil n'a pas. */
 	.carte-preview {
-		font-size: 0.8rem;
+		font-size: 0.75rem;
 		line-height: 1.25;
 		color: var(--color-text-muted);
 		position: relative;
 	}
 	.carte-preview :global(p) {
 		margin: 0 0 0.12em;
-	}
-
-	/*  Le texte tronqué était coupé NET au ras du bord : rien ne disait s'il
-	    continuait ou si la carte s'arrêtait là, et deux cartes voisines formaient
-	    un pavé continu. Le dégradé le dit, sans ajouter ni bouton ni libellé.
-	    `pointer-events:none` : il couvre le texte, il ne doit pas manger le clic
-	    qui déplie la carte. */
-	.carte-preview.tronque::after {
-		content: '';
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		height: 2.2em;
-		pointer-events: none;
-		background: linear-gradient(to bottom, transparent, var(--color-surface));
 	}
 
 	@media (max-width: 767px) {
