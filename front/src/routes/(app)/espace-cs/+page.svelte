@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/stores';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import {
@@ -100,8 +101,15 @@
 	//  onglet. Une liste locale rouvrirait la divergence avec l'adresse.
 	export let data: { onglet: string };
 	$: onglet = data.onglet;
-	/** Vue de reporting demandée par l'URL — c'est `OngletReporting` qui la valide. */
-	let vueReporting: string | null = null;
+	/** Vue de reporting demandée par l'URL — c'est `OngletReporting` qui la valide.
+	 *
+	 * 🔴 DÉRIVÉE, et non posée dans `onMount` (18/09/2026). Svelte monte les
+	 * ENFANTS avant le parent : `OngletReporting` lisait donc `vueInitiale` alors
+	 * que le parent ne l'avait pas encore renseignée, et l'alerte « ticket syndic
+	 * à relancer » du tableau de bord ouvrait le suivi des dossiers au lieu de la
+	 * relance. Le lien était juste, l'ordre de montage le rendait sans effet.
+	 */
+	$: vueReporting = onglet === 'reporting' ? ($page.url.searchParams.get('vue') ?? null) : null;
 	$: trackTabView(onglet);
 
 	// -- Validations --------------------------------------------------------
@@ -262,12 +270,6 @@
 			goto('/tableau-de-bord');
 			return;
 		}
-
-		//  La vue de reporting reste un PARAMÈTRE (`?vue=`) : ce n'est pas une rangée
-		//  d'onglets mais une sélection en pastilles, et le tableau de bord s'en sert
-		//  pour ouvrir directement un suivi. L'onglet, lui, est dans le chemin.
-		const pVue = new URLSearchParams(window.location.search).get('vue');
-		if (pVue && onglet === 'reporting') vueReporting = pVue;
 
 		try {
 			//  🔴 Quatre données de RÉFÉRENCE (#522) : elles ne s'affichent nulle

@@ -195,10 +195,15 @@
 		else loadReporting(true);
 	}
 
+	//  🔴 RÉACTIF, et non lu une seule fois au montage (18/09/2026) : un parent
+	//  qui renseigne cette prop après coup — et Svelte monte les enfants EN
+	//  PREMIER — laissait la vue demandée sans effet. Ce `$:` ne se déclenche que
+	//  lorsque la prop CHANGE, donc il n'annule jamais un clic de l'utilisateur.
+	$: if (vueInitiale && (REPORT_VUES as readonly string[]).includes(vueInitiale)) {
+		reportView = vueInitiale as ReportVue;
+	}
+
 	onMount(() => {
-		if (vueInitiale && (REPORT_VUES as readonly string[]).includes(vueInitiale)) {
-			reportView = vueInitiale as ReportVue;
-		}
 		//  La page appelait `loadRelanceSyndic()` dès qu'un `?vue=` était présent,
 		//  quelle que soit la vue demandée : `?vue=kanban` chargeait donc les relances
 		//  et laissait la vue affichée VIDE. On charge ce que la vue montre — la
