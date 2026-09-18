@@ -5,7 +5,7 @@ Voir `__init__.py` pour la règle de découpage.
 """
 
 import json
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin
 from app.database import get_session
@@ -31,22 +31,22 @@ def emails_historique(
     return derniers_rapports(session, HistoriqueEmail)
 
 
-# ── Télémétrie — agrégation manuelle ──────────────────────────────────────────
-
-@router.post("/telemetry/agreger", status_code=202)
-def telemetry_agreger(
-    background_tasks: BackgroundTasks,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_admin),
-):
-    """Lance l'agrégation de la télémétrie en arrière-plan."""
-    from app.utils.telemetry_aggregation import run_telemetry_aggregation
-    entry = HistoriqueTelemetrie(declenchee_par="manuelle", noeud=noeud_courant())
-    session.add(entry)
-    session.commit()
-    session.refresh(entry)
-    background_tasks.add_task(run_telemetry_aggregation, entry.id)
-    return {"message": "Agrégation lancée en arrière-plan", "id": entry.id}
+#  🔴 `POST /telemetry/agreger` A ÉTÉ RETIRÉ D'ICI (18/09/2026).
+#
+#  Il était déclaré DEUX fois, sur le même chemin : ici, et dans
+#  `exploitation.py` (#876), qui l'avait ajouté pour que le bouton de
+#  `TachesPlanifiees` cesse de rendre 404. Les deux sous-routeurs sont
+#  montés sur le préfixe `/admin`, et `exploitation` passe EN PREMIER :
+#  Starlette retient la première route qui correspond, donc ce
+#  gestionnaire-ci n'a jamais répondu depuis.
+#
+#  ⚠️ Rien ne le signalait, et le schéma OpenAPI disait même le contraire :
+#  sa génération écrase l'entrée d'un chemin par la DERNIÈRE rencontrée,
+#  donc `/admin/telemetry/agreger` y était documenté par ce gestionnaire
+#  mort. Le schéma décrivait ce qui ne s'exécutait pas.
+#
+#  🔒 `tests/test_routes_uniques.py` refuse désormais qu'un couple
+#  (méthode, chemin) soit déclaré deux fois.
 
 
 @router.get("/telemetry/historique")
@@ -57,7 +57,6 @@ def telemetry_history(
     return derniers_rapports(session, HistoriqueTelemetrie)
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────
 
-from app.utils.noeud import noeud_courant
 from app.utils.recuperer import derniers_rapports, ou_404
 
 
