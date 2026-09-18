@@ -66,11 +66,22 @@ function fichiers(dir, acc = []) {
 	return acc;
 }
 
+/**  Un chevron rendu par la carte elle-même.
+ *
+ *   🔴 SIX cartes remplissaient un `slot="chevron"` avec la même ligne, et deux
+ *   d'entre elles y écrivaient `expanded || enEdition` là où les quatre autres
+ *   écrivaient `expanded` — deux façons de dire « cette carte est dépliée »,
+ *   pour une classe que l'appelant pose DÉJÀ sur la carte. `EnteteCarte` rend
+ *   le chevron depuis le 18/09/2026, et sa rotation se lit sur
+ *   `.carte-liste.expanded`. */
+const CHEVRON_RECOPIE = /slot=["']chevron["']|class=["']chevron["']/;
+
 /**  La décision, PURE — testable sans toucher au disque.
- *   @returns {'ok'|'sans-entete'|'hors-sujet'} */
+ *   @returns {'ok'|'sans-entete'|'chevron-recopie'|'hors-sujet'} */
 export function verdictCarte(source) {
 	if (!CARTE.test(source)) return 'hors-sujet';
-	return EMPLOI.test(source) ? 'ok' : 'sans-entete';
+	if (!EMPLOI.test(source)) return 'sans-entete';
+	return CHEVRON_RECOPIE.test(source) ? 'chevron-recopie' : 'ok';
 }
 
 if (process.argv.includes('--selftest')) {
@@ -107,6 +118,19 @@ if (process.argv.includes('--selftest')) {
 		'ok',
 		'import EnteteCarte from \'./x\';\n// class="carte-liste"',
 	);
+	//  🔴 Le second cas que ce contrôle refuse depuis le 18/09/2026.
+	t(
+		'carte qui rend son propre chevron',
+		'chevron-recopie',
+		`import EnteteCarte from './x';
+<div class="carte-liste"><span class="chevron">›</span>`,
+	);
+	t(
+		'carte qui remplit le slot chevron',
+		'chevron-recopie',
+		`import EnteteCarte from './x';
+<div class="carte-liste"><svelte:fragment slot="chevron">`,
+	);
 	//  Le cas zéro : une source vide ne rend pas « ok », elle rend « hors-sujet ».
 	t('source vide', 'hors-sujet', '');
 	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
@@ -115,6 +139,7 @@ if (process.argv.includes('--selftest')) {
 
 const tous = fichiers(RACINE);
 const fautifs = [];
+const chevrons = [];
 const exceptionsVues = new Set();
 let cartes = 0;
 
@@ -131,7 +156,7 @@ for (const f of tous) {
 		exceptionsVues.add(rel);
 		continue;
 	}
-	fautifs.push(rel);
+	(verdict === 'chevron-recopie' ? chevrons : fautifs).push(rel);
 }
 
 let echec = false;
@@ -158,6 +183,20 @@ if (fautifs.length) {
 			'  chevron. Réécrit à la main, chacun de ces trois points se reprend.\n' +
 			'  → employer `EnteteCarte`, ou inscrire le fichier dans `EXCEPTIONS` avec\n' +
 			'    son motif.\n',
+	);
+}
+
+if (chevrons.length) {
+	echec = true;
+	console.error(`\n✗ ${chevrons.length} carte(s) rendent leur propre chevron :\n`);
+	for (const f of chevrons) console.error(`  ${f}`);
+	console.error(
+		'\n  `EnteteCarte` le rend depuis le 18/09/2026, et sa rotation se lit sur\n' +
+			'  `.carte-liste.expanded` — l’état que la carte porte déjà. Le transmettre\n' +
+			'  une seconde fois, c’est écrire deux fois le même fait : c’est ainsi que\n' +
+			'  quatre cartes en sont venues à dire `expanded` et deux\n' +
+			'  `expanded || enEdition`, pour la même classe.\n' +
+			'  → retirer le chevron de la carte.\n',
 	);
 }
 

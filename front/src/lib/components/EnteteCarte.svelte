@@ -139,8 +139,18 @@
 			<slot name="actions" />
 			<!--  Le chevron n'est qu'un INDICATEUR : c'est la carte entière qui reçoit
 			      le clic. Lui donner son propre bouton ferait un élément interactif
-			      imbriqué dans un autre — invalide, et le clavier s'y perdrait. -->
-			<slot name="chevron" />
+			      imbriqué dans un autre — invalide, et le clavier s'y perdrait.
+
+			      🔴 Il est rendu ICI depuis le 18/09/2026, et non plus par un
+			      `slot="chevron"` que SIX cartes remplissaient avec la même ligne.
+			      Son état ouvert n'a pas besoin d'être transmis : il se lit sur la
+			      carte elle-même (`.carte-liste.expanded`), que l'appelant pose
+			      déjà. Deux écritures d'un même fait — « cette carte est dépliée » —
+			      avaient d'ailleurs commencé à diverger : quatre cartes disaient
+			      `expanded`, deux `expanded || enEdition`, pour la même classe. -->
+			{#if basculable}
+				<span class="chevron" aria-hidden="true">›</span>
+			{/if}
 		</div>
 	</div>
 	<!--  L'aperçu, entre le titre et les tags. Une carte qui n'en a pas — une fiche
