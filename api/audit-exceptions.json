@@ -13,12 +13,4 @@
     "",
     "Le pendant Node vit dans `front/audit-exceptions.json`, même mécanique (#411)."
   ],
-  "exceptions": {
-    "PYSEC-2026-3940": {
-      "paquet": "weasyprint",
-      "motif": "⚠️ Déclaré sous CVE-2026-55073 jusqu'au 10/09/2026 : c'est le MÊME avis (weasyprint 69.0, corrigé en 70.0, même GHSA), que la base a cessé de rapporter sous son identifiant CVE au profit du PYSEC. Le contrôle a signalé les deux faces — un avis nouveau ET une exception devenue orpheline — et il avait raison sur les deux : le motif, lui, n'a pas changé. GHSA-jf6q-chmf-3h3v — SSRF / lecture de fichier local par contournement du `url_fetcher`, mais SEULEMENT pour une application qui (1) pose un `url_fetcher` restrictif pour bacler du contenu non fiable, ET (2) passe `stylesheets=[…]` ou `xmp_metadata=[…]` à `write_pdf()` — ces deux canaux reconstruisant un fetcher par défaut. VÉRIFIÉ : ce dépôt n'a qu'UN SEUL appel, `HTML(string=html).write_pdf()` dans `app/utils/pdf_theme.py`, sans `url_fetcher`, sans `stylesheets` et sans `xmp_metadata`. Il n'y a donc aucun garde-fou à contourner, et aucun des deux canaux n'est employé. Le HTML est de surcroît AUTONOME par construction (CSS en `<style>`, images en data-URI) : le rendu ne fait aucune requête réseau. `api/tests/test_weasyprint_appel_unique.py` refuse l'apparition de l'un des trois arguments et l'appel hors du thème commun, ce qui rendrait ce motif faux.",
-      "leveeSi": "Monter à weasyprint 70.0 au prochain lot qui touche aux documents imprimables — et vérifier le rendu DANS LE CONTENEUR (fiche arrivant, annonce de hall, manuel), pas sur le poste : WeasyPrint ne s'y importe pas, ses bibliothèques natives (libgobject, pango) n'y sont pas installées et les tests de PDF y sont sautés. Monter le moteur de rendu sans regarder un seul document serait un changement à l'aveugle.",
-      "revoirLe": "2026-09-30"
-    }
-  }
-}
+  "exceptions": {}}
