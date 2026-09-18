@@ -1,60 +1,62 @@
 <script lang="ts">
 	/**
-	 * Une **carte du kanban condensé** du tableau de bord — icône, titre, périmètre.
+	 * Une **brique de kanban** — la même au tableau de bord et sur `/calendrier/kanban`.
 	 *
-	 * 🔴 Écrite DEUX fois dans `tableau-de-bord/+page.svelte` jusqu'au 13/09/2026 :
-	 * une fois pour les colonnes larges, une fois pour la vue étroite qui n'en
-	 * montre qu'une à la fois. Dix-sept lignes identiques à cinquante lignes
-	 * d'écart, dans un fichier de plus de mille — c'est-à-dire à un endroit où
-	 * personne ne les voit toutes les deux.
+	 * ## Pourquoi ce composant (13/09/2026), et ce qu'il est devenu (19/09/2026)
 	 *
-	 * Le plafond de modularité l'a désignée en refusant onze lignes de plus : comme
-	 * les refus précédents, il pointait une duplication que la longueur cachait.
+	 * Il est né d'une duplication : dix-sept lignes écrites DEUX fois dans
+	 * `tableau-de-bord/+page.svelte`, une fois pour les colonnes larges, une fois
+	 * pour la vue étroite qui n'en montre qu'une à la fois.
 	 *
-	 * ⚠️ Les classes `kb-*` sont **globales** (`styles/composants.css`), pas
-	 * scopées à la page : le balisage peut donc déménager sans emporter de style.
-	 * C'est ce qui rend cette extraction sûre, là où celle de `RangeeCalendrier`
-	 * avait dû reprendre les deux blocs ensemble.
+	 * 🔴 Mais il rendait sa PROPRE brique — titre, puis une ligne icône +
+	 * périmètre — là où `/calendrier/kanban` en rendait une autre : pastilles de
+	 * périmètre en haut, titre en gras, type en pied. **Deux dessins pour un même
+	 * objet**, sur deux écrans qui montrent les mêmes dossiers. Demandé à
+	 * l'écran : *« utilise le même UX des briques que Calendrier/kanban »*.
+	 *
+	 * Ce fichier rend donc la brique du calendrier, avec ses classes `.kanban-*`
+	 * — qui sont **globales** (`styles/composants.css`) et n'ont rien à recopier.
+	 * Le rendu suit la règle la plus déployée ; c'est le tableau de bord qui
+	 * rejoint le calendrier, et non l'inverse.
+	 *
+	 * ⚠️ Ce qui reste propre au tableau de bord : la brique y est un LIEN (elle
+	 * ouvre le dossier dans le calendrier) et ne porte ni glisser-déposer, ni
+	 * dépliage en place, ni boutons d'action. Une brique condensée est une brique
+	 * sans gestes, pas une autre brique.
 	 */
 	import { goto } from '$app/navigation';
-	import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
+	import { typeEvenementLabel } from '$lib/evenements';
+	import { perimetreTags } from '$lib/perimetres-pastilles';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { relire } from '$lib/utils';
 
 	/** L'événement rendu — on n'en lit que l'identifiant, le type, le titre, le périmètre. */
 	export let item: { id: number; type: string; titre: string; perimetre: string };
-	/** Les icônes par type, décidées par l'écran appelant — jamais recopiées ici. */
-	export let icones: Record<string, string> = {};
 
 	$: lien = `/calendrier#ev-${item.id}`;
 
 	//  ⚠️ `$perimetresStore` n'est pas lu : il dit à Svelte que ce calcul dépend de
-	//  l'arbre, que les deux fonctions lisent dans un état de MODULE. Sans lui, un
+	//  l'arbre, que `perimetreTags` lit dans un état de MODULE. Sans lui, un
 	//  tableau de bord affiché avant l'arrivée de l'arbre gardait le code brut, et
-	//  rien ne revenait le corriger (#947).
-	$: textePerimetre = relire($perimetresStore, () =>
-		item.perimetre && !estPerimetreParDefaut(item.perimetre) ? perimetreLabel(item.perimetre) : '',
-	);
+	//  rien ne revenait le corriger (#947) — le calendrier a exactement la même
+	//  ligne, pour la même raison.
+	$: pastilles = relire($perimetresStore, () => perimetreTags);
 </script>
 
 <div
-	class="kb-item"
+	class="kanban-card card"
 	role="button"
 	tabindex="0"
 	on:click={() => goto(lien)}
 	on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && goto(lien)}
 >
-	<!--  🔴 L'icône est sur la DERNIÈRE ligne, devant le périmètre (18/09/2026,
-	      demandé à l'écran). Elle occupait une colonne à gauche, et cette marge
-	      coûtait sa largeur à TOUTES les lignes du titre — sur une colonne large
-	      de 200 px, un titre de deux mots passait à trois lignes. Descendue, elle
-	      laisse le titre prendre toute la largeur, et elle rejoint la ligne où se
-	      lit déjà le contexte du dossier. -->
-	<span class="kb-item-titre clamp-2">{item.titre}</span>
-	<span class="kb-item-bas">
-		<span class="kb-item-icon">{icones[item.type] ?? '\u{1F4CC}'}</span>
-		{#if textePerimetre}
-			<span class="kb-item-perim">&#x1F539; {textePerimetre}</span>
-		{/if}
-	</span>
+	<div class="kanban-card-tags">
+		{#each pastilles(item.perimetre) as tag (tag.code)}
+			<span class="kb-tag" style="background:{tag.color}">{tag.label}</span>
+		{/each}
+	</div>
+	<strong class="kanban-card-titre">{item.titre}</strong>
+	<div class="kanban-card-footer">
+		<span class="kanban-card-type">{typeEvenementLabel(item.type)}</span>
+	</div>
 </div>

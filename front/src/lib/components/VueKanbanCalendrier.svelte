@@ -286,11 +286,9 @@
 	.kanban-card[draggable='true']:hover {
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 	}
-	.kanban-card-type {
-		font-size: 0.72rem;
-		font-weight: 600;
-		color: var(--color-text-muted);
-	}
+	/*  `.kanban-card-type` est partie dans `styles/composants.css` (19/09/2026) :
+	    le tableau de bord rend la même brique, et une règle laissée ici serait
+	    restée à la porte de son balisage. */
 	/*  La carte d'un TICKET au kanban (#833) — même gabarit que celle d'un
 	    événement, un liseré de plus pour dire que ce n'en est pas un, et pas de
 	    curseur de déplacement puisqu'elle ne se déplace pas. */
