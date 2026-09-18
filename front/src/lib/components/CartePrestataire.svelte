@@ -122,9 +122,6 @@
 			{/if}
 		</svelte:fragment>
 
-		<svelte:fragment slot="chevron"
-			><span class="chevron" class:open={expanded || enEdition}>›</span></svelte:fragment
-		>
 		<svelte:fragment slot="apercu">
 			<!--  Les contacts sont l'APERÇU de la carte : ils viennent sous l'en-tête, à
 		      la place que le modèle leur donne, et non serrés dans sa ligne de titre. -->

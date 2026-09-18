@@ -6,7 +6,11 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
 	import SectionDiagnostics from '$lib/components/SectionDiagnostics.svelte';
-	import FormulaireEditionDocument from '$lib/components/FormulaireEditionDocument.svelte';
+	import FormulaireEditionDocument, {
+		correctionVide,
+		type CorrectionDocument,
+		type ModeDocument,
+	} from '$lib/components/FormulaireEditionDocument.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, isLocataire } from '$lib/stores/auth';
@@ -110,15 +114,12 @@
 	let savingCrAg = false;
 
 	// Édition document (plans, règlements, CR d'AG)
-	let editingDocId: number | null = null;
-	let editingDocMode: 'plan' | 'reglement' | 'ag' = 'plan';
-	let editingDocTitre = '';
-	let editingDocAnnee: string | number = '';
-	let editingDocDate = '';
-	//  🔴 Périmètre et description : deux des trois champs que l'édition
-	//  n'exposait pas (#852). *« très peu de champs sont éditables »*.
-	let editingDocPerimetre: string[] = [];
-	let editingDocDescription = '';
+	//  🔴 UN OBJET, pas sept variables. Elles l'étaient — `editingDocId`,
+	//  `…Mode`, `…Titre`, `…Annee`, `…Date`, `…Perimetre`, `…Description` — et
+	//  les TROIS montages du formulaire les reliaient une à une : douze lignes
+	//  recopiées trois fois. Un champ ajouté au formulaire, c'était trois
+	//  `bind:` de plus à ne pas oublier, et rien pour le rappeler.
+	let correction: CorrectionDocument = correctionVide();
 	let savingDoc = false;
 
 	// Diagnostics réglementaires
@@ -379,44 +380,47 @@
 	}
 
 	// ── Édition document ───────────────────────────────────────────────────────────────────
-	function startEditDoc(doc: any, mode: 'plan' | 'reglement' | 'ag') {
-		editingDocId = doc.id;
-		editingDocMode = mode;
-		editingDocTitre = doc.titre ?? '';
-		editingDocAnnee = doc.annee ?? '';
-		editingDocDate = doc.date_ag ? String(doc.date_ag).substring(0, 10) : '';
-		editingDocDescription = doc.description ?? '';
-		//  ⚠️ `perimetre_cible` sort du serveur en LISTE, jamais en JSON brut
-		//  (`schemas.DocumentRead`). Le re-parser ici serait une seconde façon de
-		//  lire la même chose, et elles divergeraient au premier format ajouté.
-		editingDocPerimetre = Array.isArray(doc.perimetre_cible) ? [...doc.perimetre_cible] : [];
+	function startEditDoc(doc: any, mode: ModeDocument) {
+		correction = {
+			...correctionVide(),
+			id: doc.id,
+			mode,
+			titre: doc.titre ?? '',
+			annee: doc.annee ?? '',
+			dateAg: doc.date_ag ? String(doc.date_ag).substring(0, 10) : '',
+			description: doc.description ?? '',
+			//  ⚠️ `perimetre_cible` sort du serveur en LISTE, jamais en JSON brut
+			//  (`schemas.DocumentRead`). Le re-parser ici serait une seconde façon de
+			//  lire la même chose, et elles divergeraient au premier format ajouté.
+			perimetre: Array.isArray(doc.perimetre_cible) ? [...doc.perimetre_cible] : [],
+		};
 	}
 
 	async function saveEditDoc() {
-		if (!editingDocId) return;
+		if (!correction.id) return;
 		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure
 		//  le fait que la garde ci-dessus a écarté `null`.
-		const docId = editingDocId;
+		const docId = correction.id;
 		savingDoc = true;
 		await tenter(async () => {
 			const updated = await documentsApi.update(docId, {
-				titre: editingDocTitre.trim() || undefined,
+				titre: correction.titre.trim() || undefined,
 				//  🔴 Les deux champs que la correction n'envoyait pas (#852) —
 				//  et que le serveur n'acceptait pas non plus. Les ouvrir d'un
 				//  seul côté aurait donné des champs qui ne font rien.
-				description: editingDocDescription,
-				perimetre_cible: editingDocPerimetre,
-				annee: editingDocAnnee ? Number(editingDocAnnee) : null,
-				date_ag: editingDocDate || null,
+				description: correction.description,
+				perimetre_cible: correction.perimetre,
+				annee: correction.annee ? Number(correction.annee) : null,
+				date_ag: correction.dateAg || null,
 			});
-			if (editingDocMode === 'plan') {
-				plans = plans.map((d) => (d.id === editingDocId ? updated : d));
-			} else if (editingDocMode === 'reglement') {
-				reglements = reglements.map((d) => (d.id === editingDocId ? updated : d));
+			if (correction.mode === 'plan') {
+				plans = plans.map((d) => (d.id === docId ? updated : d));
+			} else if (correction.mode === 'reglement') {
+				reglements = reglements.map((d) => (d.id === docId ? updated : d));
 			} else {
-				crAg = crAg.map((d) => (d.id === editingDocId ? updated : d));
+				crAg = crAg.map((d) => (d.id === docId ? updated : d));
 			}
-			editingDocId = null;
+			correction = correctionVide();
 		}, 'Document mis à jour');
 		savingDoc = false;
 	}
@@ -603,16 +607,11 @@
 			<!--  L'ÉDITION est un OBJET, monté par les trois sections sous condition
 			      de leur mode. La recopier ici l'aurait fait diverger au premier
 			      champ ajouté — trois en sont ajoutés dans ce même lot. -->
-			{#if editingDocId !== null && editingDocMode === 'plan'}
+			{#if correction.id !== null && correction.mode === 'plan'}
 				<FormulaireEditionDocument
-					mode="plan"
-					bind:titre={editingDocTitre}
-					bind:annee={editingDocAnnee}
-					bind:dateAg={editingDocDate}
-					bind:perimetre={editingDocPerimetre}
-					bind:description={editingDocDescription}
+					bind:correction
 					enregistrement={savingDoc}
-					on:annuler={() => (editingDocId = null)}
+					on:annuler={() => (correction = correctionVide())}
 					on:enregistrer={saveEditDoc}
 				/>
 			{/if}
@@ -662,16 +661,11 @@
 			<!--  L'ÉDITION est un OBJET, monté par les trois sections sous condition
 			      de leur mode. La recopier ici l'aurait fait diverger au premier
 			      champ ajouté — trois en sont ajoutés dans ce même lot. -->
-			{#if editingDocId !== null && editingDocMode === 'reglement'}
+			{#if correction.id !== null && correction.mode === 'reglement'}
 				<FormulaireEditionDocument
-					mode="reglement"
-					bind:titre={editingDocTitre}
-					bind:annee={editingDocAnnee}
-					bind:dateAg={editingDocDate}
-					bind:perimetre={editingDocPerimetre}
-					bind:description={editingDocDescription}
+					bind:correction
 					enregistrement={savingDoc}
-					on:annuler={() => (editingDocId = null)}
+					on:annuler={() => (correction = correctionVide())}
 					on:enregistrer={saveEditDoc}
 				/>
 			{/if}
@@ -738,16 +732,11 @@
 				<!--  L'ÉDITION est un OBJET, monté par les trois sections sous condition
 				      de leur mode. La recopier ici l'aurait fait diverger au premier
 				      champ ajouté — trois en sont ajoutés dans ce même lot. -->
-				{#if editingDocId !== null && editingDocMode === 'ag'}
+				{#if correction.id !== null && correction.mode === 'ag'}
 					<FormulaireEditionDocument
-						mode="ag"
-						bind:titre={editingDocTitre}
-						bind:annee={editingDocAnnee}
-						bind:dateAg={editingDocDate}
-						bind:perimetre={editingDocPerimetre}
-						bind:description={editingDocDescription}
+						bind:correction
 						enregistrement={savingDoc}
-						on:annuler={() => (editingDocId = null)}
+						on:annuler={() => (correction = correctionVide())}
 						on:enregistrer={saveEditDoc}
 					/>
 				{/if}

@@ -215,7 +215,15 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	display: inline-block;
 	line-height: 1;
 }
-.chevron.open {
+/*  Deux façons de dire « c'est ouvert », et elles ne se recouvrent pas :
+
+    • `.open` — posée par l'appelant, pour les chevrons HORS carte de liste
+      (fil d'activité, onglets d'administration, sections dépliables) ;
+    • `.carte-liste.expanded` — l'état que la carte porte DÉJÀ. Le chevron d'une
+      carte n'a donc rien à recevoir : il lit l'état de son parent. C'est ce qui
+      a permis de supprimer les six `slot="chevron"` identiques (18/09/2026). */
+.chevron.open,
+.carte-liste.expanded .chevron {
 	transform: rotate(90deg);
 }
 .btn-icon-warn {

@@ -267,9 +267,6 @@
 				on:supprimer
 			/>
 		</svelte:fragment>
-		<svelte:fragment slot="chevron"
-			><span class="chevron" class:open={expanded}>›</span></svelte:fragment
-		>
 		<!--  🔴 L'aperçu passe par l'EN-TÊTE (18/09/2026) : c'est ce qui permet aux
 		      pastilles de descendre en dernière ligne, comme sur le fil d'activité.
 		      Rendu après `</EnteteCarte>`, il était le FRÈRE de l'en-tête — aucun

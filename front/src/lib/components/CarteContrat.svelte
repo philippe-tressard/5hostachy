@@ -207,10 +207,6 @@
 				>
 			{/if}
 		</svelte:fragment>
-
-		<svelte:fragment slot="chevron"
-			><span class="chevron" class:open={expanded || enEdition}>›</span></svelte:fragment
-		>
 	</EnteteCarte>
 	{#if enEdition}
 		<!--  Le corps ne referme pas la carte : sans `stopPropagation`, un clic dans
