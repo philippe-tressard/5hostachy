@@ -6,15 +6,27 @@
   Une carte de liste se lit dans cet ordre, et il ne se discute pas :
 
       ┌─────────────────────────────────────────────┐
-      │ Titre — sur 1 ou 2 lignes si nécessaire     │
-      │ tags ················ date  actions  ›      │
+      │ Titre en gras               actions  ›      │
       │ quatre lignes d'aperçu                      │
+      │ tags ······························ date    │
       └─────────────────────────────────────────────┘
 
-  • le **titre** occupe sa ou ses propres lignes, et rien ne le pousse ;
-  • en dessous, une ligne unique : **tags à gauche** (workflow, périmètre,
-    confidentiel, auteur), **date puis actions puis chevron à droite** ;
-  • puis l'aperçu, **quatre lignes**.
+  • le **titre**, en gras, tient la première ligne avec les **actions et le
+    chevron** ancrés à droite ; il occupe tout le reste, sur une ou deux lignes ;
+  • puis l'**aperçu**, quatre lignes environ ;
+  • **en dernier** : tags à gauche (workflow, périmètre, confidentiel, auteur),
+    date à droite.
+
+  🔴 Cet ordre a été **dicté à l'écran le 18/09/2026**, capture à l'appui :
+  *« Titre en gras (à gauche) et icônes à droite sur la 1ʳᵉ ligne · Description
+  (extrait sur 4 lignes environ) · Pastilles en dernière ligne comme sur le fil
+  d'actualité »*. C'est le fil d'activité qui fait référence, comme pour le
+  survol et pour le geste de dépliage.
+
+  ⚠️ L'aperçu passe donc PAR CE COMPOSANT (`slot="apercu"`), alors que chaque
+  carte le rendait après lui. Sans cela, les tags ne pouvaient pas descendre
+  en dessous : l'aperçu est un frère de l'en-tête, pas un enfant, et aucun
+  `order` CSS ne fait passer un élément sous le frère d'un autre parent.
 
   ## Pourquoi (signalé à l'écran, capture à l'appui)
 
@@ -27,6 +39,44 @@
   C'est **R1** au sens propre : la responsivité appartient au squelette, une
   seule fois pour toutes les pages. Chaque carte qui recomposait son en-tête
   avait sa propre façon de mal se replier.
+
+  ## ⚠️ La ligne de méta EST la place du résumé d'une carte repliée
+
+  Signalé à l'écran le 18/09/2026 — *« trop d'espace perdu »* — sur la fiche d'un
+  membre d'annuaire : elle posait son résumé SOUS l'en-tête, et la ligne de méta
+  ne portait plus que les deux icônes d'action. Trois lignes là où deux
+  suffisent : 114 px par fiche au lieu de 79, mesurés au navigateur.
+
+  Ce n'est pas une erreur de style, c'est une méprise sur ce composant : la ligne
+  `tags` n'est pas réservée aux badges, elle est la ligne de **méta**. Tout ce qui
+  décrit une carte repliée — lieu, état, pastilles — y va, et rien ne s'écrit en
+  dessous tant qu'elle n'est pas dépliée.
+
+  ## Les actions sont sur la ligne du TITRE (18/09/2026, demandé à l'écran)
+
+  Elles vivaient sur la ligne de méta, avec la date et le chevron. Demandé :
+  *« l'UX standard met les icônes édition/supprimer sur la 1ʳᵉ ligne »*.
+
+  ⚠️ Ce n'est PAS un retour au défaut de R1, et ça se mesure plutôt que ça ne se
+  suppose. Le défaut d'origine était un titre sur **une seule ligne**, en
+  `text-overflow: ellipsis`, partageant sa place avec les tags ET la date ET les
+  actions : les éléments de largeur fixe gagnaient et il ne restait que trois
+  points. Ici les **tags restent en dessous**, et le titre est en `clamp-2` — il
+  se replie sur deux lignes au lieu de se couper.
+
+  Relevé sur la carte la plus chargée du site (un ticket : quatre icônes, un
+  chevron, trois tags et une date), à 375 px :
+
+  | | largeur du titre | tronqué ? |
+  |---|---|---|
+  | avant | 336 px | non |
+  | après | 186 px | **non** |
+
+  Et la ligne de méta, libérée de la date des actions, affiche enfin le nom de
+  l'auteur en entier — il était coupé à « Marc FE… ».
+
+  La **date reste en bas** à droite : la remonter aussi aurait pris 70 px de plus
+  au titre pour une information qu'on lit rarement en premier.
 
   ## Le geste est ASYMÉTRIQUE (18/08/2026)
 
@@ -74,20 +124,18 @@
 	<!--  Un vrai `<button>` : il porte le clavier dans les deux sens, et c'est la
 	      SEULE cible quand la carte est dépliée. `stopPropagation` l'isole du
 	      conteneur, qui ne déplie que depuis l'état replié. -->
-	{#if basculable}
-		<button
-			type="button"
-			class="ec-titre clamp-2 ec-titre-btn"
-			on:click|stopPropagation={() => dispatch('toggle')}
-			>{titre}<slot name="titre-suffixe" /></button
-		>
-	{:else}
-		<div class="ec-titre clamp-2">{titre}<slot name="titre-suffixe" /></div>
-	{/if}
-	<div class="ec-meta">
-		<div class="ec-tags"><slot name="tags" /></div>
-		<div class="ec-droite">
-			{#if date}<span class="ec-date">{date}</span>{/if}
+	<div class="ec-ligne-titre">
+		{#if basculable}
+			<button
+				type="button"
+				class="ec-titre clamp-2 ec-titre-btn"
+				on:click|stopPropagation={() => dispatch('toggle')}
+				>{titre}<slot name="titre-suffixe" /></button
+			>
+		{:else}
+			<div class="ec-titre clamp-2">{titre}<slot name="titre-suffixe" /></div>
+		{/if}
+		<div class="ec-droite ec-droite--titre">
 			<slot name="actions" />
 			<!--  Le chevron n'est qu'un INDICATEUR : c'est la carte entière qui reçoit
 			      le clic. Lui donner son propre bouton ferait un élément interactif
@@ -95,23 +143,92 @@
 			<slot name="chevron" />
 		</div>
 	</div>
+	<!--  L'aperçu, entre le titre et les tags. Une carte qui n'en a pas — une fiche
+	      de membre, un contrat — ne rend rien ici et les deux lignes se suivent. -->
+	<slot name="apercu" />
+
+	<div class="ec-meta">
+		<div class="ec-tags"><slot name="tags" /></div>
+		<div class="ec-droite">
+			{#if date}<span class="ec-date">{date}</span>{/if}
+		</div>
+	</div>
 </div>
 
 <style>
+	/*  🔴 DENSITÉ « F1 », validée à l'écran le 18/09/2026 après six essais.
+	    Ces quatre chiffres ne sont pas décoratifs — ils ont été mesurés :
+
+	    | | avant | F1 |
+	    |---|---|---|
+	    | hauteur d'une carte de ticket | 206 px | 112 px |
+	    | blanc entre le titre et l'extrait | 13 px | 3 px |
+
+	    `gap: 0` et non `0.3rem` : l'espacement entre le titre, l'extrait et la
+	    ligne de méta est décidé PAR CHACUN (`margin-top`), pas par un écart
+	    uniforme qui ne convenait à aucun des trois. */
 	.entete {
 		display: flex;
 		flex-direction: column;
-		gap: 0.3rem;
-		padding: 0.6rem 0.9rem;
+		gap: 0;
+		padding: 0.38rem 0.7rem 0.42rem;
+		/*  Repère pour les actions, qui sortent du flux sous 480 px. */
+		position: relative;
+	}
+
+	/*  La ligne du titre : le titre prend toute la place restante, les actions et
+	    le chevron sont ancrés à droite et ne se compriment pas.
+
+	    `min-width: 0` est ce qui permet au titre de se REPLIER plutôt que de
+	    pousser la ligne : sans lui, un élément flex refuse de descendre sous la
+	    largeur de son contenu, et les actions sortiraient du cadre. */
+	.ec-ligne-titre {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+	.ec-ligne-titre .ec-titre {
+		flex: 1;
+		min-width: 0;
+	}
+	/*  Les actions s'alignent sur la PREMIÈRE ligne du titre, pas sur son milieu :
+	    un titre replié sur deux lignes ferait autrement descendre les icônes.
+
+	    🔴 ET ELLES SONT RAPETISSÉES — c'est LA cause du blanc sous le titre,
+	    signalée à l'écran : un bouton d'action fait 30 px de haut, le titre 19.
+	    La ligne prenant la hauteur du plus grand, les 11 px de différence
+	    tombaient entre le titre et l'extrait. On les cherchait dans les marges ;
+	    ils venaient des boutons.
+
+	    ⚠️ 22 px, mais SUR GRAND ÉCRAN SEULEMENT : sous 480 px, la règle
+	    d'accessibilité reprend la main plus bas dans ce fichier et les ramène à
+	    32 px — une cible tactile ne se négocie pas (`standards/11` §10, et
+	    `e2e/cible-tactile.spec.ts` le refuse). */
+	.ec-droite--titre {
+		align-items: flex-start;
+		margin-top: -0.1rem;
+	}
+	.ec-droite--titre :global(button) {
+		width: 22px;
+		height: 22px;
+		min-width: 22px;
+		min-height: 22px;
+		padding: 0;
+		font-size: 0.72rem;
+		line-height: 1;
 	}
 
 	/*  Deux lignes au maximum : un titre long est coupé, il ne déforme pas la
 	    carte et ne repousse pas ce qui suit. */
 	/*  La troncature à deux lignes vit dans `.clamp-2` (normes.css) : elle était
 	    écrite ici ET dans le kanban du tableau de bord (#561). */
+	/*  🔴 GRAS, demandé à l'écran le 18/09/2026 — « Titre en gras (à gauche) ».
+	    Il était à 500 dans ce fichier depuis le 18/08… et rendait 400, la règle
+	    `.ec-titre-btn` juste en dessous l'écrasant (voir son commentaire). Le
+	    poids voulu n'a donc jamais été servi sur une carte basculable. */
 	.ec-titre {
 		font-size: 0.9rem;
-		font-weight: 500;
+		font-weight: 600;
 		line-height: 1.35;
 	}
 
@@ -127,6 +244,7 @@
 	    perdu, la date et les actions restent ancrées à droite, et la carte garde
 	    sa hauteur. Même parti que la barre de filtres de /prestataires. */
 	.ec-meta {
+		margin-top: 0.22rem;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -136,13 +254,28 @@
 	/*  Le titre est un bouton, remis à plat : il hérite de son propre style et ne
 	    se déguise pas en contrôle de formulaire. Le survol le souligne — c'est le
 	    seul repère qui dise « ceci referme », une fois la carte ouverte. */
+	/*  🔴 `font: inherit` A ÉTÉ RETIRÉ (18/09/2026, signalé à l'écran : « le titre
+	    ne semble plus en gras »).
+
+	    La forme RACCOURCIE réinitialise TOUT ce qu'elle ne nomme pas — poids,
+	    taille, style — et elle est déclarée après `.ec-titre`, donc elle gagnait.
+	    Un titre BASCULABLE rendait 400 / 16 px hérités du corps de page, là où
+	    `.ec-titre` demande 500 / 0,9 rem. Un titre non basculable, lui, est un
+	    `<div>` : il n'a jamais traversé cette règle et rendait bien 500.
+
+	    Deux rendus d'une même notion, décidés par un raccourci CSS — et le seul
+	    qui se voyait était le mauvais, les cartes basculables étant la majorité.
+	    Mesuré au navigateur avant de le corriger : `font-weight` calculé = 400.
+
+	    Ne garder que la police : la famille est bien à hériter (un `<button>` n'en
+	    hérite pas), le poids et la taille appartiennent à `.ec-titre`. */
 	.ec-titre-btn {
 		appearance: none;
 		background: none;
 		border: 0;
 		padding: 0;
 		margin: 0;
-		font: inherit;
+		font-family: inherit;
 		color: inherit;
 		text-align: left;
 		width: 100%;
@@ -201,9 +334,32 @@
 		.entete {
 			padding: 0.55rem 0.7rem;
 		}
+		/*  🔴 SOUS 480 px, LE TITRE SE CENTRE SUR SES ACTIONS.
+		    La cible tactile impose 32 px de haut ; un titre en fait 19. Laissées
+		    alignées en haut, les icônes rouvriraient le blanc qu'on vient de
+		    fermer — 17 px mesurés, contre 3 px sur grand écran.
+
+		    ⚠️ La piste des actions SORTIES DU FLUX (position absolue) a été
+		    essayée et écartée : elle oblige le titre à leur réserver une largeur
+		    fixe, qu'il faut dimensionner pour la carte qui en porte le plus.
+		    Une fiche de membre, qui n'a que deux icônes, y perdait 12 rem de
+		    titre sur un téléphone. Centrer répartit les 13 px de part et d'autre
+		    au lieu de les mettre tous sous le titre, sans rien réserver et sans
+		    dépendre du nombre d'icônes. */
+		.ec-ligne-titre {
+			align-items: center;
+		}
+		.ec-droite--titre {
+			align-items: center;
+			margin-top: 0;
+		}
+
+		/*  `min-*` l'emporte sur les 22 px posés plus haut : la cible tactile
+		    reprend la main, et le glyphe retrouve sa taille avec elle. */
 		.ec-droite :global(button) {
 			min-height: 32px;
 			min-width: 32px;
+			font-size: 0.9rem;
 		}
 	}
 </style>

@@ -208,7 +208,7 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 ### Frontend
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)
 - [ ] Méta toujours visible en mode collapsé
-- [ ] `.clamp-5` sur les aperçus
+- [ ] `.clamp-3` sur l'aperçu d'une carte (`.clamp-5` seulement hors carte)
 - [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — jamais un helper
       local, même correct (`npm run lint:html` le refuse)
 - [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`

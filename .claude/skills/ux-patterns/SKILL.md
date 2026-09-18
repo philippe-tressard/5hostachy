@@ -443,16 +443,54 @@ de quoi elle parlait.
 
 ```
 ┌──────────────────────────────────────────────┐
-│ Titre — sur 1 ou 2 lignes si nécessaire      │
-│ tags ················· date  actions  ›      │
-│ quatre lignes d'aperçu                       │
+│ Titre en gras               actions  ›       │
+│ trois lignes d'aperçu                        │
+│ tags ································ date   │
 └──────────────────────────────────────────────┘
 ```
 
-- le **titre** occupe sa ou ses propres lignes (2 au maximum, puis coupé) ;
-- en dessous, **une seule ligne** : **tags à gauche** (workflow, périmètre,
-  confidentiel, auteur), **date puis actions puis chevron à droite** ;
-- puis l'aperçu.
+- le **titre**, en **gras** (600), tient la première ligne avec les **actions et
+  le chevron** ancrés à droite ; il occupe tout le reste (2 lignes au maximum,
+  puis coupé) ;
+- puis l'**aperçu**, **trois** lignes (`.clamp-3`) ;
+- **en dernier** : tags à gauche (workflow, périmètre, confidentiel, auteur),
+  **date à droite**.
+
+🔴 **Cet ordre a été dicté à l'écran le 18/09/2026**, capture à l'appui : *« Titre
+en gras (à gauche) et icônes à droite sur la 1ʳᵉ ligne · Description (extrait sur
+4 lignes environ) · Pastilles en dernière ligne comme sur le fil d'actualité »*.
+C'est le fil d'activité qui fait référence, comme pour le survol et le geste.
+
+⚠️ L'aperçu passe donc **par `EnteteCarte`** (`slot="apercu"`), alors que chaque
+carte le rendait après lui. Sans cela les tags ne peuvent pas descendre : l'aperçu
+est un **frère** de l'en-tête, et aucun `order` CSS ne fait passer un élément sous
+le frère d'un autre parent.
+
+### 🔴 La densité — « F1 », validée à l'écran le 18/09/2026
+
+Six essais ont été soumis avant celui-ci. Les chiffres ne sont pas décoratifs :
+
+| | avant | F1 |
+|---|---|---|
+| hauteur d'une carte de ticket | 206 px | 110 px |
+| blanc entre le titre et l'extrait | 13 px | 3 px |
+| hauteur d'une fiche d'annuaire | 114 px | 62 px |
+
+- l'extrait reprend la **typographie du fil** (`.flux-detail`) : **0,8 rem**, gris,
+  interligne **1,25**, marge entre paragraphes **0,12 em** ;
+- `.entete` : `padding: .38rem .7rem .42rem`, `gap: 0` — chaque bloc décide de son
+  propre espacement, un écart uniforme ne convenait à aucun des trois ;
+- les cartes se suivent à **0,45 rem** (`.carte-liste`), plus 0,75.
+
+🔴 **Les 13 px de blanc venaient des BOUTONS, pas des marges.** Un bouton
+d'action fait 30 px de haut, un titre 19 : la ligne prend la hauteur du plus
+grand, et la différence tombe sous le titre. On la cherchait dans les `margin`.
+Les actions sont donc réduites à **22 px** dans l'en-tête — **sur grand écran
+seulement** : sous 480 px la cible tactile reprend 32 px (`standards/11` §10), et
+c'est alors le titre qui **se centre** sur elles. La piste des actions sorties du
+flux (`position: absolute`) a été essayée et écartée : elle oblige le titre à leur
+réserver une largeur fixe, dimensionnée pour la carte qui en porte le plus — une
+fiche de membre, qui n'a que deux icônes, y perdait 12 rem de titre.
 
 **Ne JAMAIS recomposer cet en-tête dans une page** : `EnteteCarte` le porte, avec
 son style et son repli. C'est **R1** au sens propre — la responsivité appartient
@@ -733,20 +771,20 @@ Pages implémentées : `actualites`, `calendrier`
 - Urgence : bord gauche rouge uniquement (pas de badge texte)
 - Épingle : badge absolu coin haut-gauche (`.pin-badge`)
 
-## 7. Prévisualisation 5 lignes
+## 7. Prévisualisation — 3 lignes dans une CARTE, 5 ailleurs
 
-Tout bloc expansible affiche **exactement 5 lignes** en état replié.
+| Classe | Où | Depuis |
+|---|---|---|
+| `.clamp-3` | l'aperçu d'une **carte de liste** (`ApercuCarte`) | 18/09/2026 |
+| `.clamp-5` | un bloc expansible qui **n'est pas** une carte | 15/08/2026 |
+| `.clamp-2` | un **titre** de carte | 18/08/2026 |
 
-```css
-.clamp-5 {
-    display: -webkit-box;
-    -webkit-line-clamp: 5;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-```
+Les trois vivent dans `styles/normes.css`, et nulle part ailleurs.
 
-Pages implémentées : `actualites`, `tableau-de-bord`, `faq`, `calendrier`, `sondages`
+⚠️ `.clamp-3` **existait déjà**, écrit à la main dans `FluxCard` : le fil
+d'activité tronquait à trois lignes depuis toujours, et c'est lui qui a servi de
+référence quand il a fallu choisir. L'écriture locale a été retirée le 18/09 —
+une quatrième aurait suivi à la prochaine liste.
 
 ## 8. Archiver vs Supprimer
 
@@ -1890,7 +1928,7 @@ après une première proposition inexacte de ma part.
 
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)
 - [ ] Méta toujours visible en mode collapsé
-- [ ] `.clamp-5` sur les aperçus
+- [ ] `.clamp-3` sur l'aperçu d'une carte (`.clamp-5` seulement hors carte)
 - [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — `safeHtml`, `safeRichContent` ou `safeDescription`, jamais un helper local (`lint:html`)
 - [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`
 - [ ] Périmètre : pas affiché si `'résidence'`

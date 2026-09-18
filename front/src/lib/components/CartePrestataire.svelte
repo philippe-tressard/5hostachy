@@ -125,28 +125,29 @@
 		<svelte:fragment slot="chevron"
 			><span class="chevron" class:open={expanded || enEdition}>›</span></svelte:fragment
 		>
-	</EnteteCarte>
-
-	<!--  Les contacts sont l'APERÇU de la carte : ils viennent sous l'en-tête, à
-	      la place que le modèle leur donne, et non serrés dans sa ligne de titre. -->
-	{#if !compactPrests || expanded}
-		<div class="prest-contacts">
-			{#if p.contacts && p.contacts.length > 0}
-				{#each p.contacts as c (c.id ?? c)}
-					<span class="prest-contact">
-						📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
-								c,
-							)}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
-					</span>
-				{/each}
-			{:else if p.telephone}
-				{#each telephonesDe(p.telephone) as tel, ti (`${ti}|${tel}`)}
-					<span class="prest-contact">📞 {tel.trim()}</span>
-				{/each}
+		<svelte:fragment slot="apercu">
+			<!--  Les contacts sont l'APERÇU de la carte : ils viennent sous l'en-tête, à
+		      la place que le modèle leur donne, et non serrés dans sa ligne de titre. -->
+			{#if !compactPrests || expanded}
+				<div class="prest-contacts">
+					{#if p.contacts && p.contacts.length > 0}
+						{#each p.contacts as c (c.id ?? c)}
+							<span class="prest-contact">
+								📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
+										c,
+									)}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
+							</span>
+						{/each}
+					{:else if p.telephone}
+						{#each telephonesDe(p.telephone) as tel, ti (`${ti}|${tel}`)}
+							<span class="prest-contact">📞 {tel.trim()}</span>
+						{/each}
+					{/if}
+					{#if p.email}<span class="prest-contact">✉️ {p.email}</span>{/if}
+				</div>
 			{/if}
-			{#if p.email}<span class="prest-contact">✉️ {p.email}</span>{/if}
-		</div>
-	{/if}
+		</svelte:fragment>
+	</EnteteCarte>
 	{#if enEdition}
 		<!--  Le corps ne referme pas la carte : sans `stopPropagation`, un clic
 		      dans le formulaire remonterait à la ligne de titre et replierait ce
@@ -212,11 +213,13 @@
 		font-size: 0.75rem;
 	}
 	/*  L'aperçu de la carte : les contacts, sous l'en-tête. */
+	/*  Plus de retrait propre : les contacts sont rendus DANS l'en-tête
+	    (`slot="apercu"`, 18/09/2026), qui porte déjà le sien. L'y laisser
+	    décalait le bloc de deux fois la marge. */
 	.prest-contacts {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.4rem 0.75rem;
-		padding: 0 0.9rem 0.6rem;
 	}
 	.prest-contact {
 		font-size: 0.82rem;

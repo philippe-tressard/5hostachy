@@ -270,11 +270,16 @@
 		<svelte:fragment slot="chevron"
 			><span class="chevron" class:open={expanded}>›</span></svelte:fragment
 		>
+		<!--  🔴 L'aperçu passe par l'EN-TÊTE (18/09/2026) : c'est ce qui permet aux
+		      pastilles de descendre en dernière ligne, comme sur le fil d'activité.
+		      Rendu après `</EnteteCarte>`, il était le FRÈRE de l'en-tête — aucun
+		      ordre CSS ne fait passer un élément sous le frère d'un autre parent. -->
+		<svelte:fragment slot="apercu">
+			{#if !expanded}
+				<ApercuTicket {ticket} dansLigne />
+			{/if}
+		</svelte:fragment>
 	</EnteteCarte>
-
-	{#if !expanded}
-		<ApercuTicket {ticket} />
-	{/if}
 
 	{#if expanded}
 		<!--  Le corps ne replie pas la carte : on y saisit, on y clique des

@@ -184,22 +184,33 @@
 		<svelte:fragment slot="chevron"
 			><span class="chevron" class:open={expanded}>›</span></svelte:fragment
 		>
+		<!--  🔴 L'aperçu passe par l'EN-TÊTE (18/09/2026) : c'est ce qui permet aux
+		      pastilles de descendre en dernière ligne, comme sur le fil d'activité.
+		      Rendu après `</EnteteCarte>`, il était le FRÈRE de l'en-tête — aucun
+		      ordre CSS ne fait passer un élément sous le frère d'un autre parent. -->
+		<svelte:fragment slot="apercu">
+			{#if !expanded}
+				<!--  L'aperçu replié — quatre lignes de texte et la vignette, comme
+				      sur Actualités et Tickets. La carte ne montrait que son titre. -->
+				<!--  ⚠️ Photos et documents SÉPARÉS : la vignette pose `photos[0]` dans un
+				      `<img>`. Les verser ensemble faisait sortir un devis PDF en image
+				      cassée ; séparés, il devient une tuile 📎. -->
+				<!--  🔴 REPLI SUR L'HISTORIQUE (18/08/2026, constaté à l'écran). Un
+				      événement n'a le plus souvent aucune photo propre : c'est le suivi
+				      qui en apporte — « le technicien est intervenu ce matin, voici les
+				      anomalies ». La carte restait donc nue là où un ticket illustré
+				      montre sa vignette. Gratuit ici : l'API livre l'Historique AVEC
+				      l'événement (`EvenementRead.evolutions`), aucune requête de plus. -->
+				{@const apercu = apercuAvecRepli(ev.photos_urls, ev.fichiers_urls, ev.evolutions)}
+				<ApercuCarte
+					contenu={ev.description ?? ''}
+					photos={apercu.photos}
+					fichiers={apercu.fichiers}
+					dansLigne
+				/>
+			{/if}
+		</svelte:fragment>
 	</EnteteCarte>
-	{#if !expanded}
-		<!--  L'aperçu replié — quatre lignes de texte et la vignette, comme
-			      sur Actualités et Tickets. La carte ne montrait que son titre. -->
-		<!--  ⚠️ Photos et documents SÉPARÉS : la vignette pose `photos[0]` dans un
-			      `<img>`. Les verser ensemble faisait sortir un devis PDF en image
-			      cassée ; séparés, il devient une tuile 📎. -->
-		<!--  🔴 REPLI SUR L'HISTORIQUE (18/08/2026, constaté à l'écran). Un
-			      événement n'a le plus souvent aucune photo propre : c'est le suivi
-			      qui en apporte — « le technicien est intervenu ce matin, voici les
-			      anomalies ». La carte restait donc nue là où un ticket illustré
-			      montre sa vignette. Gratuit ici : l'API livre l'Historique AVEC
-			      l'événement (`EvenementRead.evolutions`), aucune requête de plus. -->
-		{@const apercu = apercuAvecRepli(ev.photos_urls, ev.fichiers_urls, ev.evolutions)}
-		<ApercuCarte contenu={ev.description ?? ''} photos={apercu.photos} fichiers={apercu.fichiers} />
-	{/if}
 	{#if optionsOuvertes}
 		<!--  ⚠️ Le panneau s'affiche même carte REPLIÉE : on l'a ouvert depuis la
 		      rangée d'actions, et forcer le dépliement ferait défiler l'écran pour

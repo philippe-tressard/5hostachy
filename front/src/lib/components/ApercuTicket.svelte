@@ -29,6 +29,10 @@
 
 	/** Le ticket, tel que l'API le renvoie (`apercu_pieces` compris). */
 	export let ticket: any;
+	/**  L'aperçu est rendu DANS l'en-tête de la carte (`slot="apercu"`), qui porte
+	 *   déjà son retrait : sans cela, le texte serait décalé de deux fois la marge.
+	 *   Relayé et non redécidé — c'est `ApercuCarte` qui sait ce que ça change. */
+	export let dansLigne = false;
 
 	//  `separerFichiers` refait le tri photos / documents : `apercu_pieces` est une
 	//  liste unique, et la vignette pose `photos[0]` dans un `<img>` — les verser
@@ -56,4 +60,9 @@
 
       ⚠️ Le tri photos / documents se fait dans le `<script>` : `{@const}` n'est
       permis qu'à l'intérieur d'un bloc, jamais à la racine d'un composant. -->
-<ApercuCarte contenu={ticket.description} photos={pieces.photos} fichiers={pieces.documents} />
+<ApercuCarte
+	contenu={ticket.description}
+	photos={pieces.photos}
+	fichiers={pieces.documents}
+	{dansLigne}
+/>

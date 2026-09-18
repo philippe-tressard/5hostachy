@@ -144,7 +144,16 @@
 		basculable
 		on:toggle={() => dispatch('basculer')}
 	>
-		<svelte:fragment slot="tags"><slot name="badge" /></svelte:fragment>
+		<!--  🔴 Le résumé occupe la LIGNE DE MÉTA de l'en-tête, il ne s'écrit pas en
+		      dessous (signalé à l'écran le 18/09/2026 : « trop d'espace perdu »).
+		      Posé sous l'en-tête, il faisait une TROISIÈME ligne — nom, ligne de
+		      méta vide avec les seules actions, puis résumé — là où la fiche
+		      précédente en tenait deux. `EnteteCarte` a cette ligne pour ça :
+		      tags à gauche, actions à droite, sur la même. -->
+		<svelte:fragment slot="tags">
+			<slot name="badge" />
+			{#if !ouvert}<slot name="resume" />{/if}
+		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<ActionsMembre
 				{gestes}
@@ -238,8 +247,6 @@
 				{/if}
 			{/if}
 		</div>
-	{:else}
-		<div class="carte-membre-corps"><div class="membre-summary"><slot name="resume" /></div></div>
 	{/if}
 </div>
 
@@ -273,11 +280,6 @@
 
 	.carte-membre-corps {
 		padding: 0 0.9rem 0.75rem;
-	}
-	/*  Le résumé d'une carte REPLIÉE se serre : il n'y a pas de formulaire en
-	    dessous pour justifier l'espace. */
-	.carte-liste:not(.expanded) .carte-membre-corps {
-		padding-bottom: 0.6rem;
 	}
 	.carte-membre-pied {
 		margin-top: 0.75rem;
@@ -315,8 +317,8 @@
 		color: var(--color-danger);
 	}
 
-	/*  La ligne de résumé, carte repliée : ce que l'appelant y met varie, la
-	    disposition non. */
+	/*  Le repli du détail sur le résumé, carte DÉPLIÉE et non éditée. Repliée, le
+	    résumé vit dans la ligne de méta de l'en-tête et n'a pas de conteneur ici. */
 	.membre-summary {
 		display: flex;
 		flex-wrap: wrap;
