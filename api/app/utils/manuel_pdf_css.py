@@ -14,7 +14,7 @@ charte, qui dériverait à la première retouche de l'écran.
 """
 from __future__ import annotations
 
-from app.utils.pdf_theme import FONT_SANS, FONT_SERIF, PALETTE_CSS
+from app.utils.pdf_theme import FONT_SANS, FONT_SERIF, PALETTE_CSS, regle_page
 
 
 def css_du_pdf(styles_manuel: str) -> str:
@@ -23,18 +23,7 @@ def css_du_pdf(styles_manuel: str) -> str:
 {PALETTE_CSS}
 {styles_manuel}
 
-@page {{
-  size: A4;
-  /*  Marges resserrées (03/09/2026) : l'objectif annoncé est de réduire le
-      nombre de pages. 12 mm reste au-delà de la zone non imprimable d'une
-      imprimante de bureau (5 mm) et laisse le pied respirer. */
-  margin: 12mm 12mm 14mm;
-  @bottom-center {{
-    content: counter(page) " / " counter(pages);
-    font-family: {FONT_SANS};
-    font-size: 8pt;
-    color: var(--light-muted);
-  }}
+{regle_page()}
 }}
 /*  La page de garde n'a ni marge ni numéro : elle est une affiche. */
 @page garde {{ margin: 0; @bottom-center {{ content: none; }} }}

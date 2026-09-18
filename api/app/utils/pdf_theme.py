@@ -40,6 +40,77 @@ FONT_SANS = (
 )
 
 
+# ── La page imprimée ─────────────────────────────────────────────────────────
+
+#: 🔴 LE FORMAT PAR DÉFAUT DE TOUT DOCUMENT IMPRIMABLE (18/09/2026).
+#:
+#: Demandé par Philippe : « sauf Annonce Hall qui utilise des formats plus
+#: petits, il faudrait fixer le format A4 par défaut ». Il l'était en fait
+#: partout — mais écrit à la main dans chaque document, donc vrai par répétition
+#: et non par règle. Un quatrième document imprimable aurait hérité du format
+#: que WeasyPrint choisit, pas de celui de la maison.
+FORMAT_PAR_DEFAUT = "A4"
+
+#: Les marges de la maison. Resserrées le 03/09/2026 pour réduire le nombre de
+#: pages du manuel : 12 mm reste au-delà de la zone non imprimable d'une
+#: imprimante de bureau (5 mm) et laisse le pied respirer.
+MARGES_PAR_DEFAUT = "12mm 12mm 14mm"
+
+
+def regle_page(
+    *,
+    taille: str = FORMAT_PAR_DEFAUT,
+    marges: str = MARGES_PAR_DEFAUT,
+    numeroter: bool = True,
+) -> str:
+    """Le bloc `@page` d'un document imprimable — **A4 par défaut**.
+
+    Les trois documents l'écrivaient chacun de leur côté : le manuel en A4 avec
+    son pied numéroté, l'annonce de hall dans le format que son débordement lui
+    impose et sans marge, la fiche d'arrivant en A4 avec des marges plus
+    serrées. Trois écritures, trois occasions de diverger sur une règle qui n'en
+    est qu'une : *sur quel papier ce document sort-il*.
+
+    ⚠️ **L'annonce de hall reste l'exception, et elle le dit** : elle choisit son
+    format sur le DÉBORDEMENT (A4 → A5 → A6), parce qu'une annonce qui tient sur
+    un demi-feuillet ne doit pas en gaspiller un entier. Elle passe donc sa
+    taille, au lieu de la subir — c'est la différence entre une exception
+    déclarée et un oubli.
+
+    :param taille: `A4`, `A5`, `A6`… tel que le CSS des médias paginés l'entend.
+    :param marges: la valeur CSS `margin` de la page. `"0"` pour une affiche.
+    :param numeroter: un pied « page / total ». Faux pour une affiche, qui n'a
+        qu'une page et dont le pied porte autre chose.
+    """
+    saut = chr(10)
+    pied = (
+        saut
+        + "  @bottom-center {"
+        + saut
+        + '    content: counter(page) " / " counter(pages);'
+        + saut
+        + f"    font-family: {FONT_SANS};"
+        + saut
+        + "    font-size: 8pt;"
+        + saut
+        + "    color: var(--light-muted);"
+        + saut
+        + "  }"
+        if numeroter
+        else ""
+    )
+    return (
+        "@page {"
+        + saut
+        + f"  size: {taille};"
+        + saut
+        + f"  margin: {marges};"
+        + pied
+        + saut
+        + "}"
+    )
+
+
 # ── Logo ─────────────────────────────────────────────────────────────────────
 
 def logo_svg(size: int = 36) -> str:

@@ -11,11 +11,10 @@ palette, logo, icônes, moteur — vit dans `pdf_theme.py`, et ne se redéfinit 
 """
 from __future__ import annotations
 
-from app.utils.pdf_theme import PALETTE_CSS
+from app.utils.pdf_theme import PALETTE_CSS, regle_page
 
 
-CSS = """\
-@page { size: A4; margin: 6mm 8mm; }
+CSS = regle_page(marges="6mm 8mm", numeroter=False) + """
 @media print {
   body { background: none !important; }
   .page { box-shadow: none !important; border: none !important; }
