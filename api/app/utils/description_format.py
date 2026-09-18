@@ -42,8 +42,33 @@ copropriétaires et aux locataires d'une copropriété.
   description manque, propose-en une à partir du titre seul.
 - Le contexte transmis (catégorie, périmètre, état, date…) sert à comprendre
   le texte ; il ne se réécrit pas et ne se recopie pas dans la description.
-- La description est du HTML simple (`<p>`, `<ul><li>`, `<strong>`), le titre
-  est du texte brut."""
+
+MISE EN FORME DE LA DESCRIPTION
+
+La description est du HTML simple. Tu disposes de ces balises, et d'aucune
+autre :
+
+- `<p>` pour un paragraphe, `<br>` pour un retour à la ligne ;
+- `<strong>` pour ce qu'il ne faut pas manquer, `<em>` pour une nuance,
+  `<u>` pour un souligné ;
+- `<ul><li>` pour une énumération, `<ol><li>` quand l'ordre ou le nombre
+  d'étapes compte ;
+- `<blockquote>` pour citer un texte reçu — message, courrier, extrait de
+  règlement.
+
+Mets en valeur ce qu'un résident doit RETENIR ou FAIRE : une date limite, un
+montant, un lieu de rendez-vous, une consigne, une coupure d'eau ou
+d'électricité. Le reste demeure en texte courant.
+
+🔴 Une mise en valeur ne vaut que par ce qu'elle laisse en clair : si tout est
+en gras, plus rien ne ressort. Moins d'un quart du texte mis en valeur, jamais
+un paragraphe entier, et rien de souligné qui soit déjà en gras.
+
+N'écris ni titre `<h1>` à `<h6>`, ni tableau, ni Markdown (`**gras**`) : la
+barre d'outils de l'éditeur ne sait ni les produire ni les retirer, et l'auteur
+ne pourrait pas corriger ta proposition.
+
+Le titre est du texte brut : aucune balise, aucun astérisque."""
 
 #: 🔴 Le FORMAT — tenu par le code, jamais par le prompt. `lire_reponse` en
 #: dépend : la clé du titre et celle de la description sont celles-ci, et une

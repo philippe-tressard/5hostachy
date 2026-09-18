@@ -33,7 +33,24 @@ from __future__ import annotations
 import pathlib
 import re
 
+from app.utils.description_format import CONSIGNE_DEFAUT
 from app.utils.synthese_format import CONSIGNE
+
+#: 🔴 Les prompts qui NOMMENT des balises — tous, pas seulement le premier.
+#:
+#: Ce contrôle ne lisait que la consigne de la synthèse, parce qu'elle était
+#: la seule à imposer une grammaire HTML quand il a été écrit. Le prompt de
+#: l'usage « description » en impose une depuis le 18/09/2026 — les mises en
+#: valeur autorisées à l'assistant — et il serait passé sous le radar : une
+#: balise qu'il demanderait et que l'assainisseur refuse arriverait aplatie à
+#: l'écran, sans un mot.
+#:
+#: ⚠️ Un contrôle dont la PORTÉE est une valeur unique se périme au deuxième
+#: cas ; une portée qui décrit la notion, non (`standards/04` §40).
+PROMPTS = {
+    "synthèse de contrat": CONSIGNE,
+    "description (assistant)": CONSIGNE_DEFAUT,
+}
 
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
@@ -50,18 +67,19 @@ _FOURNIES_PAR_STARTERKIT = {
 }
 
 
-def _balises_de_la_consigne() -> set[str]:
-    """Les balises que la consigne NOMME, entre accents graves — `<details>`.
+def _balises_de_la_consigne(texte: str | None = None) -> set[str]:
+    """Les balises qu'un prompt NOMME, entre accents graves — `<details>`.
 
-    On lit la consigne plutôt qu'une liste écrite ici : une liste recopiée
+    On lit le prompt plutôt qu'une liste écrite ici : une liste recopiée
     serait la quatrième, et la première à se périmer.
     """
+    source = chr(10).join(PROMPTS.values()) if texte is None else texte
     trouvees = set()
-    for brut in re.findall(r"`<([a-z][a-z0-9]*)>`", CONSIGNE):
+    for brut in re.findall(r"`<([a-z][a-z0-9]*)>`", source):
         trouvees.add(brut)
     #  La forme imbriquée du bloc dépliable — `<details><summary>` — n'est pas
     #  captée par le motif ci-dessus : elle est nommée telle qu'on l'écrit.
-    for brut in re.findall(r"<([a-z][a-z0-9]*)>", CONSIGNE):
+    for brut in re.findall(r"<([a-z][a-z0-9]*)>", source):
         trouvees.add(brut)
     #  `<html>` et `<body>` sont nommés pour être INTERDITS : les exiger dans la
     #  liste blanche inverserait la consigne.

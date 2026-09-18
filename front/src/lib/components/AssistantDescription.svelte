@@ -30,7 +30,7 @@
 	import { assistantStore, chargerAssistant } from '$lib/stores/assistant';
 	import { assistant as assistantApi, type PropositionDescription } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
-	import { safeHtml } from '$lib/sanitize';
+	import { safeRichContent } from '$lib/sanitize';
 	import { peutSolliciter, type ContexteAssistant } from '$lib/assistant';
 	import { toast } from '$lib/components/Toast.svelte';
 
@@ -142,8 +142,14 @@
 						<p class="assistant-titre-propose">{proposition.titre}</p>
 					{/if}
 					{#if proposition.description_modifiee}
+						<!--  `safeRichContent`, pas `safeHtml` : le prompt de l'usage vit en
+						      base et l'administrateur peut le réécrire. Le jour où il cesse
+						      de demander du HTML, une proposition en texte simple arriverait
+						      d'un seul bloc — `safeRichContent` rend ses retours à la ligne.
+						      C'est l'assainisseur du cas « riche OU texte », déjà employé
+						      partout où la forme n'est pas garantie. -->
 						<div class="rich-content assistant-texte">
-							{@html safeHtml(proposition.description)}
+							{@html safeRichContent(proposition.description)}
 						</div>
 					{/if}
 				{/if}

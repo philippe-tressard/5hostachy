@@ -178,3 +178,59 @@ a.btn:hover {
 .app-main:focus {
 	outline: none;
 }
+
+/*  🔴 LE CONTENU RICHE, rendu par `{@html safeHtml(…)}` — écrit UNE fois
+    (18/09/2026).
+
+    La classe `.rich-content` était employée par QUATRE composants et stylée
+    dans UN seul (`CarteContrat`). Les trois autres — la carte d'annonce, la
+    carte d'actualité, l'aperçu — posaient la classe et n'en recevaient rien :
+    paragraphes et listes retombaient sur les marges du navigateur, qui ne sont
+    celles d'aucun autre écran du site.
+
+    Le cas qui l'a révélé : la fenêtre de proposition de l'assistant IA. Le
+    prompt de l'usage « description » autorise désormais les mises en valeur
+    (gras, italique, souligné, listes, citation) ; encore faut-il que la
+    proposition les RENDE comme le fera l'écran une fois appliquée. Sans quoi
+    l'auteur choisit sur un aperçu qui ment.
+
+    ⚠️ Les styles d'un composant Svelte ne s'appliquent PAS au HTML injecté par
+    `{@html}` : il faut `:global`, ou une feuille globale. C'est pourquoi une
+    définition par composant ne se voyait pas manquante — celui qui l'avait
+    écrite l'avait écrite en `:global`, les autres n'avaient rien du tout.
+
+    La taille et la couleur restent à l'appelant : une proposition d'assistant
+    se lit en 0.875rem, une carte de contrat en 0.85rem. C'est l'écart, il reste
+    où il se décide. */
+.rich-content {
+	line-height: 1.6;
+}
+.rich-content :global(p) {
+	margin: 0 0 0.5em;
+}
+.rich-content :global(p:last-child) {
+	margin-bottom: 0;
+}
+.rich-content :global(ul),
+.rich-content :global(ol) {
+	padding-left: 1.4em;
+	margin: 0 0 0.5em;
+}
+.rich-content :global(li) {
+	margin-bottom: 0.15em;
+}
+.rich-content :global(strong) {
+	font-weight: 600;
+}
+.rich-content :global(em) {
+	font-style: italic;
+}
+.rich-content :global(u) {
+	text-decoration: underline;
+}
+.rich-content :global(blockquote) {
+	margin: 0 0 0.5em;
+	padding-left: 0.8em;
+	border-left: 3px solid var(--color-border);
+	color: var(--color-text-muted);
+}
