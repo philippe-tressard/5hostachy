@@ -9,10 +9,11 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from app.utils.config_site import config_site
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    CategorieDocument, ConfigSite, ContratEntretien, Document, Notification,
+    CategorieDocument, ContratEntretien, Document, Notification,
     ProfilAccesDocument, Utilisateur, RoleUtilisateur
 )
 from app.schemas import DocumentRead
@@ -68,12 +69,7 @@ def _notifier_document_publie(
     if not doc.categorie_id:
         return
 
-    cfg = {
-        row.cle: row.valeur
-        for row in session.exec(
-            select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
-        ).all()
-    }
+    cfg = config_site(session)
     site_nom = nom_site(cfg.get("site_nom"))
     site_url = base_site(cfg.get("site_url"))
 

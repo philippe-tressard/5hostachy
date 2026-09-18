@@ -192,7 +192,7 @@ async def lifespan(app: FastAPI):
     #  jamais, il journalise.
     def _prechauffer_manuel() -> None:
         from app.utils.manuel_pdf import prechauffer
-        from app.routers.tickets.commun import config_site
+        from app.utils.config_site import config_site
         from app.utils.liens import base_site, nom_site
 
         with Session(engine) as _s:

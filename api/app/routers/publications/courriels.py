@@ -10,8 +10,9 @@ from datetime import datetime
 from fastapi import BackgroundTasks
 from sqlmodel import Session, select
 
+from app.utils.config_site import config_site
 from app.models.core import (
-    ConfigSite, Document, Publication, PublicationEvolution,
+    Document, Publication, PublicationEvolution,
     Utilisateur,
 )
 from app.utils.dates_fr import datetime_longue_paris as _fmt_paris
@@ -60,10 +61,7 @@ def contexte_publication_syndic(
 
     `test_apercu_publication.py` échoue si l'un des deux chemins s'en écarte.
     """
-    cfg_rows = session.exec(
-        select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
-    ).all()
-    cfg = {r.cle: r.valeur for r in cfg_rows}
+    cfg = config_site(session)
 
     # Historique des évolutions (pour les commentaires)
     evols_ctx = []
@@ -184,10 +182,7 @@ def _envoyer_email_externe_publication(
     """Envoie un email vers une adresse externe (non-utilisateur) avec l'historique de la publication."""
     from app.utils.email import send_email
 
-    cfg_rows = session.exec(
-        select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
-    ).all()
-    cfg = {r.cle: r.valeur for r in cfg_rows}
+    cfg = config_site(session)
 
     # Historique des évolutions (du plus ancien au plus récent, sauf la dernière si commentaire)
     evols = session.exec(

@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import httpx
 from sqlmodel import Session, select
 
+from app.utils.config_site import config_site
 from app.config import get_settings
 from app.database import SessionLocal
 from app.utils.dates_fr import datetime_longue
@@ -375,12 +376,7 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
 
     from app.utils.email import send_email
 
-    cfg = {
-        r.cle: r.valeur
-        for r in session.exec(
-            select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
-        ).all()
-    }
+    cfg = config_site(session)
     site_nom = nom_site(cfg.get("site_nom"))
     site_url = (base_site(cfg.get("site_url"))).rstrip("/")
 
