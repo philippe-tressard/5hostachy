@@ -35,6 +35,10 @@ manuel vient précisément de perdre toutes ses tables recopiées (#651).
 """
 from __future__ import annotations
 
+import logging
+
+_logger = logging.getLogger("hostachy.manuel")
+
 import re
 import urllib.request
 from datetime import date
@@ -374,3 +378,33 @@ def generer_manuel_pdf(
         _CACHE.pop(next(iter(_CACHE)))
     _CACHE[cle] = pdf
     return pdf
+
+
+def prechauffer(site_nom: str, site_url: str) -> bool:
+    """Rend le manuel une fois, pour que personne n'attende le premier rendu.
+
+    ## 🔴 Pourquoi (18/09/2026, demandé par Philippe)
+
+    Le cache vit dans le PROCESS : il disparaît à chaque déploiement, ce qui
+    évite d'avoir une invalidation à écrire — donc à oublier. Le prix en était
+    payé par le premier lecteur d'après, et il est lourd : **21,1 secondes**
+    mesurées en production, contre 0,15 s ensuite. Vingt et une secondes d'écran
+    blanc, à chaque mise en production.
+
+    ⚠️ Le préchauffage ne remplace pas le cache, il le REMPLIT d'avance. Rien
+    d'autre ne change : même clé, même contenu, et un lecteur qui arriverait
+    pendant le rendu attend exactement ce qu'il attendait avant.
+
+    ⚠️ Il se relance chaque nuit, parce que la clé du cache porte la DATE
+    d'édition : sans cela, le premier lecteur du jour repaierait les 21 s.
+
+    Ne lève jamais : un manuel indisponible ou un moteur en panne ne doit pas
+    empêcher l'application de démarrer. Rend `True` si le cache est garni.
+    """
+    try:
+        generer_manuel_pdf(site_nom, site_url)
+    except Exception as exc:  # noqa: BLE001 — au démarrage, aucune panne ne doit remonter
+        _logger.warning("Préchauffage du manuel PDF impossible : %s", exc)
+        return False
+    _logger.info("Manuel PDF préchauffé (cache garni, %d entrée(s)).", len(_CACHE))
+    return True
