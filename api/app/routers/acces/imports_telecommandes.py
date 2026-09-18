@@ -15,11 +15,9 @@ from sqlmodel import Session
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    Telecommande,
     TelecommandeImport,
     Utilisateur,
 )
-from app.utils.auto_match_service import _create_user_telecommandes
 
 from .commun import (
     _ignorer_import,
@@ -27,20 +25,17 @@ from .commun import (
     _remettre_en_attente_import,
     _stats_socle,
 )
+from app.utils.types_acces import TELECOMMANDE
 from . import socle_imports
-from .socle_imports import PatchImportBody, TypeImportAcces
+from .socle_imports import PatchImportBody
 
 router = APIRouter()
 
-#: La chaîne « télécommande », décrite par ses seules différences.
-TELECOMMANDE = TypeImportAcces(
-    libelle="télécommande",
-    modele_import=TelecommandeImport,
-    modele_objet=Telecommande,
-    champ_reference="reference",
-    champ_lien="telecommande_id",
-    creer_liaisons=_create_user_telecommandes,
-)
+#: Le type d'accès, décrit UNE fois dans `utils/types_acces` — la chaîne
+#: d'import n'en est qu'un usage. Un second descripteur vivait ici
+#: (`TypeImportAcces`) et redisait cinq de ses six champs sous d'autres
+#: noms, en exportant une constante du MÊME nom : deux objets pour une
+#: notion, et le risque qu'ils divergent sans bruit (18/09/2026, #779).
 
 # ── Import Excel télécommandes ──────────────────────────────────────────────
 

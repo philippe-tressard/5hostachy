@@ -31,6 +31,7 @@ résultat**. Un jour, quelqu'un réécrira une des deux résolutions en ligne po
 """
 from __future__ import annotations
 
+import pathlib
 import uuid
 
 import pytest
@@ -103,7 +104,7 @@ def _creer_import(type_import, modele_import, proprio, locataire, session, *, ch
         chez_locataire=chez_locataire,
         statut=StatutImport.proprietaire_lie,
     )
-    setattr(imp, type_import.champ_reference, f"REF-{uuid.uuid4().hex[:6]}")
+    setattr(imp, type_import.colonne_code_import, f"REF-{uuid.uuid4().hex[:6]}")
     session.add(imp)
     session.commit()
     session.refresh(imp)
@@ -120,17 +121,17 @@ def _purger(session, type_import, modele_import, modele_objet, modele_liaison, i
     et l'echec survient en teardown, la ou il est le plus penible a lire.
     """
     imp = session.get(modele_import, import_id)
-    objet_id = getattr(imp, type_import.champ_lien) if imp else None
+    objet_id = getattr(imp, type_import.colonne_import) if imp else None
 
     if imp and objet_id:
-        setattr(imp, type_import.champ_lien, None)
+        setattr(imp, type_import.colonne_import, None)
         session.add(imp)
         session.flush()
 
     if objet_id:
         for liaison in session.exec(
             select(modele_liaison).where(
-                getattr(modele_liaison, type_import.champ_lien) == objet_id
+                getattr(modele_liaison, type_import.colonne_import) == objet_id
             )
         ).all():
             session.delete(liaison)
@@ -157,7 +158,7 @@ def test_la_POSSESSION_est_reportee_sur_l_objet(
     try:
         socle_imports.resoudre(type_import, imp.id, session)
         objet = session.get(modele_objet, getattr(session.get(modele_import, imp.id),
-                                                  type_import.champ_lien))
+                                                  type_import.colonne_import))
         assert objet is not None, "la résolution n'a créé aucun objet"
         assert objet.user_id == locataire.id, (
             "l'accès a été affecté au propriétaire alors qu'il est chez le locataire"
@@ -193,7 +194,7 @@ def test_la_CORRECTION_d_un_import_resolu_redescend_sur_l_objet(
         )
 
         recharge = session.get(modele_import, imp.id)
-        objet = session.get(modele_objet, getattr(recharge, type_import.champ_lien))
+        objet = session.get(modele_objet, getattr(recharge, type_import.colonne_import))
         assert objet.chez_locataire is True, (
             f"{type_import.libelle} : la correction n'a pas atteint l'objet."
         )
@@ -219,7 +220,7 @@ def test_chez_le_locataire_SANS_locataire_lie_n_invente_personne(
     try:
         socle_imports.resoudre(type_import, imp.id, session)
         recharge = session.get(modele_import, imp.id)
-        objet = session.get(modele_objet, getattr(recharge, type_import.champ_lien))
+        objet = session.get(modele_objet, getattr(recharge, type_import.colonne_import))
         assert objet.user_id == proprio.id
         assert objet.chez_locataire is False, (
             "l'objet se dit chez un locataire qui n'est lié à personne — "
@@ -266,8 +267,41 @@ def test_les_DEUX_chaines_sont_bien_deux(deux_comptes):
     tout ce fichier passerait en n'éprouvant qu'une seule chaîne.
     """
     assert TELECOMMANDE.modele_import is not VIGIK.modele_import
-    assert TELECOMMANDE.modele_objet is not VIGIK.modele_objet
-    assert TELECOMMANDE.champ_reference != VIGIK.champ_reference
-    assert TELECOMMANDE.champ_lien != VIGIK.champ_lien
-    assert TELECOMMANDE.creer_liaisons is not VIGIK.creer_liaisons
+    assert TELECOMMANDE.modele is not VIGIK.modele
+    assert TELECOMMANDE.colonne_code_import != VIGIK.colonne_code_import
+    assert TELECOMMANDE.colonne_import != VIGIK.colonne_import
+    assert TELECOMMANDE.modele_attribution is not VIGIK.modele_attribution
     assert len(CHAINES) == 2
+
+def test_UN_SEUL_objet_decrit_les_deux_types_d_acces():
+    """🔴 Le garde-fou du 18/09/2026 : pas de second descripteur.
+
+    `routers/acces/socle_imports.py` en portait un — `TypeImportAcces` — qui
+    redisait cinq des six champs de `TypeAcces` sous d'autres noms
+    (`modele_objet`, `champ_reference`, `champ_lien`…), et qui exportait des
+    constantes du MÊME nom, `VIGIK` et `TELECOMMANDE`, dans deux modules
+    différents. Deux objets pour une notion : la divergence n'était pas un
+    risque théorique, c'est l'histoire de ce paquet.
+
+    Le contrôle est simple et vérifiable : la déclaration de ces deux constantes
+    n'existe qu'à UN endroit dans `app/`.
+    """
+    import re
+
+    racine = pathlib.Path(__file__).resolve().parents[1] / "app"
+    declarations: dict[str, list[str]] = {"VIGIK": [], "TELECOMMANDE": []}
+    fichiers = [p for p in racine.rglob("*.py") if "__pycache__" not in str(p)]
+    assert fichiers, "aucun module lu — le contrôle ne peut pas conclure"
+
+    for chemin in fichiers:
+        source = chemin.read_text(encoding="utf-8")
+        for nom in declarations:
+            if re.search(rf"^{nom} = ", source, re.MULTILINE):
+                declarations[nom].append(str(chemin.relative_to(racine)).replace("\\", "/"))
+
+    for nom, lieux in declarations.items():
+        assert lieux == ["utils/types_acces.py"], (
+            f"`{nom}` est déclaré dans {lieux} — il doit l'être dans "
+            "`utils/types_acces.py` et nulle part ailleurs. Un second "
+            "descripteur du même type d'accès divergera du premier."
+        )

@@ -31,8 +31,14 @@ plus disante**, jamais un compromis.
 
 ## L'objet, et ce qu'il adapte
 
-`TypeImportAcces` porte les **six** choses qui distinguent réellement les deux
+`utils/types_acces.TypeAcces` porte ce qui distingue réellement les deux
 chaînes. Tout le reste est du cycle, et le cycle n'a qu'une écriture.
+
+🔴 Ce module portait son PROPRE descripteur jusqu'au 18/09/2026 —
+`TypeImportAcces`, qui redisait cinq des six champs de `TypeAcces` sous
+d'autres noms et exportait des constantes du MÊME nom dans deux modules.
+Deux objets pour une notion : `test_socle_imports_acces` refuse désormais
+qu'un second se déclare.
 
 ⚠️ Ce qui reste **hors** de ce module est ce qui diffère vraiment : la lecture du
 fichier Excel (`utils/import_telecommandes.py`, `utils/import_vigiks.py` — ni les
@@ -52,7 +58,6 @@ mêmes colonnes ni les mêmes règles) et l'étape d'appariement propre au Vigik
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable, Optional
 
@@ -62,6 +67,7 @@ from sqlmodel import Session, select
 
 from app.models.core import StatutAcces, StatutImport, Utilisateur
 from app.utils.acces_possession import chez_le_locataire, possesseur
+from app.utils.types_acces import TypeAcces
 from app.utils.auto_match_service import (
     _matches_user,
     _user_keys,
@@ -85,30 +91,8 @@ class PatchImportBody(BaseModel):
     notes_admin: str | None = None
 
 
-@dataclass(frozen=True)
-class TypeImportAcces:
-    """Ce qui distingue une chaîne d'import de l'autre — et rien de plus.
-
-    Chaque champ ajouté ici est une différence qu'on assume ; l'objet est donc
-    aussi la **liste** de ce qui n'est pas commun, lisible d'un coup d'œil.
-    """
-
-    #: Le nom lisible, pour les messages d'erreur rendus à l'écran.
-    libelle: str
-    #: La table de staging (`TelecommandeImport` / `VigikImport`).
-    modele_import: type
-    #: L'objet créé à la résolution (`Telecommande` / `Vigik`).
-    modele_objet: type
-    #: Le champ de l'import qui porte la référence physique.
-    champ_reference: str
-    #: Le champ de l'import qui pointe vers l'objet créé.
-    champ_lien: str
-    #: Crée les liaisons M2M vers les copropriétaires du lot.
-    creer_liaisons: Callable[[object, Session], None]
-
-
 def auto_match(
-    type_import: TypeImportAcces,
+    type_import: TypeAcces,
     session: Session,
     etape_supplementaire: Optional[Callable[[object, Session], bool]] = None,
 ) -> dict:
@@ -172,7 +156,7 @@ def auto_match(
     return {"matches": apparies, "total": len(imports)}
 
 
-def _charger(type_import: TypeImportAcces, import_id: int, session: Session):
+def _charger(type_import: TypeAcces, import_id: int, session: Session):
     imp = session.get(type_import.modele_import, import_id)
     if not imp:
         raise HTTPException(404, "Import introuvable")
@@ -180,7 +164,7 @@ def _charger(type_import: TypeImportAcces, import_id: int, session: Session):
 
 
 def patch(
-    type_import: TypeImportAcces,
+    type_import: TypeAcces,
     import_id: int,
     body: PatchImportBody,
     session: Session,
@@ -204,9 +188,9 @@ def patch(
     if body.notes_admin is not None:
         imp.notes_admin = body.notes_admin
 
-    objet_id = getattr(imp, type_import.champ_lien)
+    objet_id = getattr(imp, type_import.colonne_import)
     if imp.statut == StatutImport.resolu and objet_id:
-        objet = session.get(type_import.modele_objet, objet_id)
+        objet = session.get(type_import.modele, objet_id)
         if objet:
             detenteur = possesseur(imp)
             if detenteur:
@@ -230,7 +214,7 @@ def patch(
     return imp
 
 
-def resoudre(type_import: TypeImportAcces, import_id: int, session: Session) -> dict:
+def resoudre(type_import: TypeAcces, import_id: int, session: Session) -> dict:
     """Crée l'accès réel depuis un import apparié, et lie les copropriétaires."""
     imp = _charger(type_import, import_id, session)
     if imp.statut == StatutImport.resolu:
@@ -240,13 +224,13 @@ def resoudre(type_import: TypeImportAcces, import_id: int, session: Session) -> 
     if not imp.user_proprietaire_id:
         raise HTTPException(422, "Le propriétaire doit être lié avant de résoudre")
 
-    reference = getattr(imp, type_import.champ_reference)
+    reference = getattr(imp, type_import.colonne_code_import)
     if not reference:
         raise HTTPException(
-            422, f"Cet import n'a pas de référence de {type_import.libelle}"
+            422, f"Cet import n'a pas de référence ({type_import.libelle})"
         )
 
-    objet = type_import.modele_objet(
+    objet = type_import.modele(
         code=reference,
         lot_id=imp.lot_id or None,
         user_id=possesseur(imp),
@@ -256,22 +240,21 @@ def resoudre(type_import: TypeImportAcces, import_id: int, session: Session) -> 
     session.add(objet)
     session.flush()
 
-    type_import.creer_liaisons(objet, session)
+    type_import.attribuer_aux_coproprietaires(objet, session)
 
     imp.statut = StatutImport.resolu
-    setattr(imp, type_import.champ_lien, objet.id)
+    setattr(imp, type_import.colonne_import, objet.id)
     imp.resolu_le = datetime.utcnow()
     session.add(imp)
     session.commit()
     session.refresh(objet)
     #  La clé de sortie garde le nom de l'objet : le front lit `telecommande` ou
     #  `vigik`, et un renommage « uniformisant » casserait deux écrans.
-    return {type_import.modele_objet.__tablename__: objet, "import_id": imp.id}
+    return {type_import.modele.__tablename__: objet, "import_id": imp.id}
 
 
 __all__ = [
     "PatchImportBody",
-    "TypeImportAcces",
     "auto_match",
     "patch",
     "possesseur",

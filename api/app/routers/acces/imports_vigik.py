@@ -13,8 +13,7 @@ from sqlmodel import Session
 
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
-from app.models.core import Utilisateur, Vigik, VigikImport
-from app.utils.auto_match_service import _create_user_vigiks
+from app.models.core import Utilisateur, VigikImport
 
 from .commun import (
     _ignorer_import,
@@ -22,20 +21,17 @@ from .commun import (
     _remettre_en_attente_import,
     _stats_socle,
 )
+from app.utils.types_acces import VIGIK
 from . import socle_imports
-from .socle_imports import PatchImportBody, TypeImportAcces
+from .socle_imports import PatchImportBody
 
 router = APIRouter()
 
-#: La chaîne « badge Vigik », décrite par ses seules différences.
-VIGIK = TypeImportAcces(
-    libelle="badge Vigik",
-    modele_import=VigikImport,
-    modele_objet=Vigik,
-    champ_reference="code",
-    champ_lien="vigik_id",
-    creer_liaisons=_create_user_vigiks,
-)
+#: Le type d'accès, décrit UNE fois dans `utils/types_acces` — la chaîne
+#: d'import n'en est qu'un usage. Un second descripteur vivait ici
+#: (`TypeImportAcces`) et redisait cinq de ses six champs sous d'autres
+#: noms, en exportant une constante du MÊME nom : deux objets pour une
+#: notion, et le risque qu'ils divergent sans bruit (18/09/2026, #779).
 
 # ── Import Excel vigiks ────────────────────────────────────────────────────
 

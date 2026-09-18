@@ -139,6 +139,19 @@ class TypeAcces:
         )
         return True
 
+    def attribuer_aux_coproprietaires(self, acces, session: Session) -> None:
+        """Attribue cet accès à son porteur et aux copropriétaires concernés.
+
+        Le geste vit dans `utils/acces_attribution` — il lit des lots, ce que
+        ce descripteur n'a pas à savoir faire. La méthode existe pour que les
+        appelants n'aient pas à nommer les deux ensemble : le socle des imports
+        recevait autrefois cette fonction en PARAMÈTRE, à travers un second
+        descripteur qui n'existait que pour la transporter.
+        """
+        from app.utils.acces_attribution import attribuer_aux_coproprietaires
+
+        attribuer_aux_coproprietaires(acces, self, session)
+
 
 VIGIK = TypeAcces(
     cle="vigik",

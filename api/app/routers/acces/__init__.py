@@ -33,7 +33,7 @@ locataire arrivait donc marqué « chez le propriétaire », et se reproposait a
 transfert vers le locataire suivant.
 
 Le cycle des deux imports vit désormais dans `socle_imports`, avec l'objet
-`TypeImportAcces` qui porte les **six** différences réelles. Ce qui reste
+`utils/types_acces.TypeAcces`, qui porte les différences réelles. Ce qui reste
 séparé est ce qui diffère vraiment :
 
 | Ce qui reste séparé | Pourquoi |
