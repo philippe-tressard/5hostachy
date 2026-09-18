@@ -7,6 +7,7 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlmodel import Session, select
 
+from app.utils.declenchement import AUTOMATIQUE
 from app.config import get_settings
 from app.database import engine
 from app.models.core import ConfigSauvegarde, HistoriqueSauvegarde, StatutSauvegarde
@@ -56,7 +57,7 @@ def run_backup(history_id: int | None = None):
         if history_id:
             entry = session.get(HistoriqueSauvegarde, history_id)
         if not entry:
-            entry = HistoriqueSauvegarde(declenchee_par="automatique", noeud=noeud_courant())
+            entry = HistoriqueSauvegarde(declenchee_par=AUTOMATIQUE, noeud=noeud_courant())
             session.add(entry)
             session.commit()
             session.refresh(entry)

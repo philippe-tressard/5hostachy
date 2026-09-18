@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import text
 from sqlmodel import Session, select
 
+from app.utils.noeud import noeud_courant
+from app.utils.declenchement import AUTOMATIQUE
 from app.database import engine
 from app.models.core import (
     HistoriqueMaintenance,
@@ -35,7 +37,16 @@ def run_maintenance(history_id: int | None = None) -> None:
         if history_id:
             entry = session.get(HistoriqueMaintenance, history_id)
         if not entry:
-            entry = HistoriqueMaintenance(declenchee_par="manuelle")
+            #  🔴 AUTOMATIQUE, et avec le nœud (18/09/2026). Ce repli est le
+            #  chemin du PLANIFICATEUR : il n'y a pas d'entrée préexistante
+            #  parce que personne n'a cliqué. Il posait « manuelle » et aucun
+            #  nœud — une maintenance automatique s'affichait donc comme
+            #  déclenchée à la main, sur un nœud inconnu, dans la colonne que
+            #  `TachesPlanifiees` montre. C'est le défaut que l'endpoint de
+            #  lancement disait avoir corrigé en v2.32.0, resté entier ici.
+            entry = HistoriqueMaintenance(
+                declenchee_par=AUTOMATIQUE, noeud=noeud_courant()
+            )
             session.add(entry)
             session.commit()
             session.refresh(entry)

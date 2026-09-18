@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from app.utils.declenchement import normaliser
 from app.config import get_settings
 from app.database import get_session
 from app.models.core import HistoriqueEmail, HistoriqueMaintenance
@@ -122,7 +123,9 @@ def maintenance_rapport(
         tache=body.tache,
         noeud=body.noeud,
         portee=body.portee,
-        declenchee_par=body.declenchee_par,
+        #  Normalisé à la FRONTIÈRE : un script déployé continue d'envoyer
+        #  « cron », et la colonne que l'utilisateur lit garde un seul mot.
+        declenchee_par=normaliser(body.declenchee_par),
         statut=body.statut,
         tokens_supprimes=body.tokens_supprimes,
         taille_db_octets=body.taille_db_octets,
