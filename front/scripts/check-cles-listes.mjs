@@ -233,6 +233,9 @@ try {
 const FICHIERS_DU_FIL = [
 	'src/routes/(app)/tableau-de-bord/+page.svelte',
 	'src/lib/components/ArchivesDuFil.svelte',
+	//  Le widget kanban de l'accueil, extrait de la page le 18/09/2026 : ses
+	//  listes sont les mêmes, elles ont seulement changé de fichier.
+	'src/lib/components/KanbanTableauBord.svelte',
 ];
 
 /**
@@ -243,17 +246,29 @@ const FICHIERS_DU_FIL = [
  * échoue si l'une d'elles cesse de servir.
  */
 const PAS_DU_FIL = {
+	//  ⚠️ Ces trois listes ont DÉMÉNAGÉ le 18/09/2026 : le widget kanban vit dans
+	//  `KanbanTableauBord.svelte` (#779). Le contrôle l'a dit tout seul — les
+	//  exceptions « ne correspondent plus à rien » dans le fichier du fil —, ce
+	//  qui est exactement le service qu'on attend d'une exception qui expire.
 	dashKanbanCols: 'colonnes constantes (DASH_KANBAN_COLS) — ids fixes et distincts',
 	'col.items': 'événements du calendrier — une seule table, donc des id uniques',
 	'mobileKanbanCurrent.items': 'idem, la même liste au format mobile',
 };
+const MOTIF_EACH_PAR_ID = /\{#each\s+([^}]*?)\s+as\s+(\w+)\s*\(\s*\2\.id\s*\)\s*\}/g;
+
+//  🔴 Les exceptions sont relevées sur l'ENSEMBLE des fichiers du fil, pas
+//  fichier par fichier. Elles l'étaient sur le seul tableau de bord, par un test
+//  sur son NOM — et le jour où le widget kanban a déménagé dans son composant
+//  (18/09/2026, #779), les trois dérogations ont été déclarées périmées alors
+//  qu'elles servaient, à dix lignes de là. Une exception appartient à la RÈGLE,
+//  pas au fichier où elle se trouvait ce jour-là.
+const vuesDuFil = new Set();
 for (const fichier of FICHIERS_DU_FIL) {
 	const src = await readFile(fichier, 'utf-8');
-	const vues = new Set();
-	for (const m of src.matchAll(/\{#each\s+([^}]*?)\s+as\s+(\w+)\s*\(\s*\2\.id\s*\)\s*\}/g)) {
+	for (const m of src.matchAll(MOTIF_EACH_PAR_ID)) {
 		const collection = m[1].trim();
 		if (collection in PAS_DU_FIL) {
-			vues.add(collection);
+			vuesDuFil.add(collection);
 			continue;
 		}
 		echecs.push(
@@ -261,14 +276,14 @@ for (const fichier of FICHIERS_DU_FIL) {
 				"plusieurs tables, donc les id s'y répètent. Passer par cleFluxItem().",
 		);
 	}
-	//  Le cas zéro des exceptions : une dérogation qui ne sert plus se retire.
-	for (const [collection, raison] of Object.entries(PAS_DU_FIL)) {
-		if (!vues.has(collection) && fichier.includes('tableau-de-bord')) {
-			echecs.push(
-				`fil : l'exception « ${collection} » (${raison}) ne correspond plus à rien dans ` +
-					`${fichier} — la retirer de PAS_DU_FIL.`,
-			);
-		}
+}
+//  Le cas zéro des exceptions : une dérogation qui ne sert plus se retire.
+for (const [collection, raison] of Object.entries(PAS_DU_FIL)) {
+	if (!vuesDuFil.has(collection)) {
+		echecs.push(
+			`fil : l'exception « ${collection} » (${raison}) ne correspond plus à rien ` +
+				'dans les fichiers du fil — la retirer de PAS_DU_FIL.',
+		);
 	}
 }
 

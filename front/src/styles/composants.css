@@ -1178,21 +1178,51 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	padding: 1rem 0;
 	margin: 0;
 }
+/*  🔴 FLEX et non grid depuis le 18/09/2026 (validé à l'écran, variante « K4 »).
+    Une grille donne la même part à toutes ses colonnes ; or une colonne VIDE n'a
+    rien à montrer et prenait 200 px pour afficher un tiret. En flex, celles qui
+    portent quelque chose s'étalent (`flex: 1`) et les vides se réduisent à leur
+    titre (`flex: 0 0 auto`) — 30 px au lieu de 200, rendus aux autres. */
 .kb-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr));
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
 	gap: 0.45rem;
 	margin-bottom: 1.25rem;
 }
 .kb-col {
+	flex: 1 1 130px;
+	min-width: 0;
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
 	border-radius: var(--radius);
 	overflow: hidden;
 	transition: opacity 0.15s;
 }
+
+/*  Une colonne vide se réduit à son titre, TOURNÉ : `writing-mode` fait tenir
+    « Prestataire (en cours) » dans une largeur d'une ligne de texte. Elle reste
+    lisible et cliquable du regard — savoir qu'une étape est vide fait partie de
+    la lecture d'un kanban, c'est l'espace qu'elle prenait qui ne se justifiait
+    pas. */
 .kb-col-vide {
-	opacity: 0.4;
+	flex: 0 0 auto;
+	opacity: 0.55;
+	/*  La bande suit la hauteur de la plus haute colonne — par le FLEX, jamais
+	    par `height: 100%` sur son en-tête : un pourcentage résolu contre un
+	    parent lui-même étiré tourne en rond, et le navigateur retombait sur la
+	    hauteur de la fenêtre. Mesuré : 622 px de colonnes pour 250 px de
+	    contenu. */
+	display: flex;
+}
+.kb-col-vide .kb-col-head {
+	flex: 1;
+	writing-mode: vertical-rl;
+	padding: 0.5rem 0.3rem;
+	border-top: 0;
+	border-bottom: 0;
+	border-left: 3px solid;
+	border-left-color: inherit;
 }
 .kb-col-head {
 	display: flex;
@@ -1215,17 +1245,13 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	padding: 0.1rem 0.4rem;
 	border-radius: 1rem;
 }
-.kb-vide-col {
-	font-size: 0.78rem;
-	color: var(--color-text-muted);
-	text-align: center;
-	padding: 0.65rem 0.5rem;
-	margin: 0;
-}
+/*  `.kb-vide-col` — le tiret d'une colonne vide — est parti le 18/09/2026 avec
+    son balisage : une colonne vide n'a plus de corps du tout. */
+/*  🔴 `block` et non `flex` depuis le 18/09/2026 : l'icône occupait une colonne
+    à gauche, et cette marge coûtait sa largeur à TOUTES les lignes du titre.
+    Elle vit maintenant sur la dernière ligne, avec le périmètre. */
 .kb-item {
-	display: flex;
-	align-items: flex-start;
-	gap: 0.4rem;
+	display: block;
 	padding: 0.45rem 0.6rem;
 	border-top: 1px solid var(--color-border);
 	cursor: pointer;
@@ -1246,14 +1272,16 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	font-size: 0.85rem;
 	line-height: 1.3;
 }
-.kb-item-text {
-	flex: 1;
-	min-width: 0;
+/*  La dernière ligne de la vignette : l'icône du type, puis le périmètre. */
+.kb-item-bas {
 	display: flex;
-	flex-direction: column;
-	gap: 0.1rem;
+	align-items: center;
+	gap: 0.3rem;
+	margin-top: 0.1rem;
+	min-width: 0;
 }
 .kb-item-titre {
+	display: block;
 	font-size: 0.8rem;
 	color: var(--color-text);
 	line-height: 1.3;
@@ -1261,6 +1289,10 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .kb-item-perim {
 	font-size: 0.68rem;
 	color: var(--color-text-muted);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 .kb-mobile-nav {
 	display: flex;
