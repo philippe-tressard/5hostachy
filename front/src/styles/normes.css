@@ -127,8 +127,10 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
    pavé continu où l'œil ne trouvait plus la limite. Le dégradé de fin d'aperçu
    (voir ApercuCarte.svelte) dit que le texte continue, au lieu de le couper.
    ────────────────────────────────────────────────────────────────────────── */
+/*  0,45 rem et non 0,75 : les cartes sont deux fois plus basses depuis le
+    18/09/2026, et l'écart d'origine les faisait flotter (`F1`, validé à l'écran). */
 .carte-liste {
-	margin-bottom: 0.75rem;
+	margin-bottom: 0.45rem;
 	border-left: 4px solid var(--color-border);
 	border-radius: var(--radius);
 	position: relative;
@@ -210,14 +212,21 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 }
 
 /* ── Norme UX : troncature à N lignes ──
-   `.clamp-5` : l'aperçu d'un bloc expansible replié.
+   `.clamp-3` : l'aperçu d'une CARTE de liste (validé à l'écran le 18/09/2026).
+   `.clamp-5` : l'aperçu d'un bloc expansible qui n'est pas une carte.
    `.clamp-2` : un TITRE de carte, qui doit rester sur deux lignes au plus.
+
+   ⚠️ `.clamp-3` existait DÉJÀ, écrit à la main dans `FluxCard` : le fil
+   d'activité tronquait à trois lignes depuis toujours, et c'est lui qui a servi
+   de référence quand il a fallu choisir. Une quatrième écriture de la notion
+   aurait suivi la prochaine liste.
 
    ⚠️ Cette seconde taille était écrite DEUX fois, dans `EnteteCarte` et dans le
    kanban du tableau de bord (#561, 28/08/2026), et les trois écritures de la
    notion omettaient toutes `line-clamp` — la propriété STANDARD, que les
    navigateurs non-WebKit lisent. Elles tronquaient donc par chance. */
 .clamp-5,
+.clamp-3,
 .clamp-2 {
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
@@ -226,6 +235,10 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 .clamp-5 {
 	-webkit-line-clamp: 5;
 	line-clamp: 5;
+}
+.clamp-3 {
+	-webkit-line-clamp: 3;
+	line-clamp: 3;
 }
 .clamp-2 {
 	-webkit-line-clamp: 2;

@@ -186,13 +186,18 @@
 		<svelte:fragment slot="chevron"
 			><span class="chevron" class:open={expanded}>›</span></svelte:fragment
 		>
+		<!--  🔴 L'aperçu passe par l'EN-TÊTE (18/09/2026) : c'est ce qui permet aux
+		      pastilles de descendre en dernière ligne, comme sur le fil d'activité.
+		      Rendu après `</EnteteCarte>`, il était le FRÈRE de l'en-tête — aucun
+		      ordre CSS ne fait passer un élément sous le frère d'un autre parent. -->
+		<svelte:fragment slot="apercu">
+			{#if !expanded}
+				<!--  Quatre lignes d'aperçu et la vignette à DROITE — le composant partagé
+				      des actualités et des tickets. La carte n'affichait que son titre. -->
+				<ApercuCarte contenu={annonce.description} photos={annonce.photos ?? []} dansLigne />
+			{/if}
+		</svelte:fragment>
 	</EnteteCarte>
-
-	{#if !expanded}
-		<!--  Quatre lignes d'aperçu et la vignette à DROITE — le composant partagé
-		      des actualités et des tickets. La carte n'affichait que son titre. -->
-		<ApercuCarte contenu={annonce.description} photos={annonce.photos ?? []} />
-	{/if}
 
 	{#if expanded}
 		<!--  Le corps ne referme pas la carte : on referme par l'en-tête. Sans cela,

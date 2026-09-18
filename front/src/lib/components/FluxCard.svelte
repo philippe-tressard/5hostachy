@@ -327,13 +327,10 @@
 	.flux-detail-libelle {
 		font-weight: 600;
 	}
-	.clamp-3 {
-		display: -webkit-box;
-		-webkit-line-clamp: 3;
-		line-clamp: 3;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
+	/*  🔴 `.clamp-3` est parti dans `normes.css` (18/09/2026) : le fil tronquait
+	    à trois lignes depuis toujours, et c'est ce choix qui a été retenu pour
+	    TOUTES les cartes de liste. Une notion, une écriture — la classe globale
+	    s'applique ici sans rien d'autre à faire. */
 	/*  Le nom en texte discret, jamais en badge : même taille et même teinte que
 	    `.tk-auteur` sur la carte du ticket, à dessein. */
 	.flux-auteur {

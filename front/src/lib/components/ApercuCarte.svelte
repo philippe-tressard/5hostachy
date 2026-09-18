@@ -65,7 +65,7 @@
 </script>
 
 <div class="carte-apercu" class:dans-ligne={dansLigne}>
-	<div class="carte-preview rich-content clamp-5" class:tronque bind:this={bloc}>
+	<div class="carte-preview rich-content clamp-3" class:tronque bind:this={bloc}>
 		{@html safeDescription(contenu)}
 	</div>
 	<FluxVignette {photos} {fichiers} />
@@ -73,28 +73,41 @@
 
 <style>
 	/*  `min-width:0` : sans lui un enfant flex ne rétrécit pas sous la largeur de
-	    son contenu, et le `-webkit-line-clamp` de .clamp-5 n'est jamais appliqué. */
+	    son contenu, et le `-webkit-line-clamp` de .clamp-3 n'est jamais appliqué. */
 	.carte-apercu {
 		display: flex;
 		align-items: flex-start;
 		gap: 0.85rem;
 		padding: 0 0.95rem 0.85rem;
 	}
+	/*  Rendu DANS l'en-tête de la carte, qui porte déjà son retrait. Depuis le
+	    18/09/2026 c'est le cas de tous les aperçus de carte : l'extrait doit
+	    venir AVANT les pastilles, et seul l'en-tête peut les ordonner. */
 	.carte-apercu.dans-ligne {
 		padding: 0;
+		margin-top: 0.1rem;
 	}
 	.carte-apercu .carte-preview {
 		flex: 1;
 		min-width: 0;
 	}
+	/*  🔴 LA TYPOGRAPHIE VIENT DU FIL D'ACTIVITÉ (18/09/2026, demandé à l'écran :
+	    « inspire-toi du fil d'actualité pour les polices »). `.flux-detail` rend
+	    0,8 rem en gris ; l'aperçu d'une carte rendait 0,875 rem avec un interligne
+	    de 1,6, soit deux textes différents pour une même notion — le début d'un
+	    contenu qu'on n'a pas encore ouvert.
+
+	    L'interligne descend à 1,25 et la marge entre paragraphes à 0,12 em : dans
+	    un extrait de trois lignes, c'est la marge de paragraphe qui aère le plus,
+	    et elle valait 0,4 em. Validé à l'écran après mesure. */
 	.carte-preview {
-		font-size: 0.875rem;
-		line-height: 1.6;
+		font-size: 0.8rem;
+		line-height: 1.25;
 		color: var(--color-text-muted);
 		position: relative;
 	}
 	.carte-preview :global(p) {
-		margin: 0 0 0.4em;
+		margin: 0 0 0.12em;
 	}
 
 	/*  Le texte tronqué était coupé NET au ras du bord : rien ne disait s'il
