@@ -34,6 +34,8 @@ moitié — c'est précisément ce qui est arrivé au ``lot_id``.
 """
 from dataclasses import dataclass
 
+from sqlmodel import Session, select
+
 from app.models.core import (
     Telecommande,
     TelecommandeImport,
@@ -101,6 +103,41 @@ class TypeAcces:
     def champ_code_import(self):
         """La colonne de l'import, prête pour un `where`."""
         return getattr(self.modele_import, self.colonne_code_import)
+
+    def attribuer(self, session: Session, *, user_id: int, acces_id: int) -> bool:
+        """Attribue cet accès à cet utilisateur, sans doublon. Vrai si créé.
+
+        ## 🔴 Ce geste était écrit QUATRE fois (18/09/2026, #779)
+
+        `utils/auto_match_service.py` portait deux paires de jumelles —
+        `_create_user_telecommandes`/`_create_user_vigiks`, puis
+        `_assoc_tc`/`_assoc_vigik`. Les quatre disaient la même phrase : *« cet
+        accès appartient aussi à cette personne, et pas deux fois »*. Ce qui les
+        distinguait — la table d'attribution et le nom de sa colonne — est décrit
+        ici depuis le 14/09/2026, et par cet objet seul.
+
+        ⚠️ La leçon de ce module vaut pour ce geste-là aussi : les jumelles du
+        téléversement **avaient divergé** sans que personne ne le voie (le
+        `lot_id` recopié d'un côté, pas de l'autre). Une cinquième copie ne
+        ferait pas exception.
+
+        Le doublon n'est pas une erreur de l'appelant : l'appariement automatique
+        repasse par les mêmes accès depuis trois vecteurs différents (le lot, le
+        copropriétaire, la table de liaison). Répondre « déjà fait » est donc la
+        réponse normale, et c'est ce que le booléen sert à compter.
+        """
+        deja = session.exec(
+            select(self.modele_attribution).where(
+                self.modele_attribution.user_id == user_id,
+                getattr(self.modele_attribution, self.colonne_attribution) == acces_id,
+            )
+        ).first()
+        if deja:
+            return False
+        session.add(
+            self.modele_attribution(user_id=user_id, **{self.colonne_attribution: acces_id})
+        )
+        return True
 
 
 VIGIK = TypeAcces(

@@ -240,23 +240,18 @@ def test_une_societe_portant_le_nom_du_coproprietaire_est_appariee():
     assert _matches_user("SCI DUPONT ET FILS", _user_keys("Dupont", "Jean"))
 
 
-def test_l_auto_resolution_cree_le_badge_sans_revue():
-    """`_auto_match_tc` ne propose pas : il crée la Telecommande et résout.
-
-    C'est ce qui rend les appariements larges ci-dessus conséquents. Contrôle
-    statique — la logique est trop couplée à la base pour être exercée ici.
-    """
-    import pathlib
-
-    source = (
-        pathlib.Path(__file__).resolve().parents[1]
-        / "app" / "utils" / "auto_match_service.py"
-    ).read_text(encoding="utf-8")
-
-    assert "StatutImport.resolu" in source and "session.add(tc)" in source, (
-        "L'auto-résolution a changé de forme : revoir si la création sans revue "
-        "est toujours le comportement, et mettre ces tests à jour."
-    )
+#  🔴 `test_l_auto_resolution_cree_le_badge_sans_revue` est parti dans
+#  `test_acces_existants_apparies.py` le 18/09/2026, et il a changé de nature.
+#
+#  Il cherchait ici la chaîne « session.add(tc) » dans le fichier source, en se
+#  disant contraint : « la logique est trop couplée à la base pour être exercée
+#  ici ». Elle ne l'était pas — une base SQLite en mémoire suffit. Le contrôle
+#  statique a d'ailleurs cassé au premier renommage de variable, sans que rien
+#  ne soit cassé dans le produit : il lisait le TEXTE d'une fonction, pas son
+#  comportement (`standards/04` §14).
+#
+#  Le remplaçant crée une ligne d'import, lance la résolution et regarde
+#  l'accès produit — sur les DEUX types.
 
 
 def test_le_cs_voit_les_imports_auto_resolus():
