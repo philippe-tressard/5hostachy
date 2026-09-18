@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  setup-rpi5.sh â€” Installation & configuration du serveur 5Hostachy
-#  Cible : Raspberry Pi 5 â€” Raspberry Pi OS Lite 64-bit (Debian Bookworm)
+#  setup-rpi5.sh — Installation & configuration du serveur 5Hostachy
+#  Cible : Raspberry Pi 5 — Raspberry Pi OS Lite 64-bit (Debian Bookworm)
 #  Usage : sudo bash setup-rpi5.sh [--domain parc.local] [--cloudflare]
 # =============================================================================
 set -euo pipefail
 
-# â”€â”€â”€ Couleurs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ─── Couleurs ────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
 
@@ -15,7 +15,7 @@ success() { echo -e "${GREEN}[OK]${RESET}    $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
 die()     { echo -e "${RED}[ERREUR]${RESET} $*" >&2; exit 1; }
 
-# â”€â”€â”€ ParamÃ¨tres â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ─── Paramètres ──────────────────────────────────────────────────────────────
 DOMAIN="<RPi-IP>"
 ENABLE_CLOUDFLARE=false
 ENABLE_WATCHTOWER=false
@@ -34,10 +34,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ $EUID -ne 0 ]] && die "Ce script doit Ãªtre exÃ©cutÃ© en root (sudo)."
+[[ $EUID -ne 0 ]] && die "Ce script doit être exécuté en root (sudo)."
 
 echo -e "\n${BOLD}=========================================================${RESET}"
-echo -e "${BOLD}   5Hostachy â€” Setup Raspberry Pi 5${RESET}"
+echo -e "${BOLD}   5Hostachy — Setup Raspberry Pi 5${RESET}"
 echo -e "${BOLD}   Version  : ${CYAN}${VERSION}${RESET}"
 echo -e "${BOLD}   Domaine  : ${CYAN}${DOMAIN}${RESET}"
 echo -e "${BOLD}   Dossier  : ${CYAN}${INSTALL_DIR}${RESET}"
@@ -46,23 +46,23 @@ echo -e "${BOLD}=========================================================${RESET
 # =============================================================================
 # 1. MISE Ã€ JOUR SYSTÃˆME
 # =============================================================================
-info "Mise Ã  jour du systÃ¨me..."
+info "Mise à jour du système..."
 apt-get update -qq
 apt-get upgrade -y -qq
 apt-get install -y -qq \
   curl wget git ca-certificates gnupg lsb-release \
   ufw fail2ban unattended-upgrades \
   cron sqlite3 rsync
-success "SystÃ¨me mis Ã  jour."
+success "Système mis à jour."
 
-# Node.js 22 LTS (nÃ©cessaire pour scaffolder SvelteKit)
+# Node.js 22 LTS (nécessaire pour scaffolder SvelteKit)
 if ! command -v node &>/dev/null || [[ "$(node -v)" < "v22" ]]; then
   info "Installation de Node.js 22 LTS..."
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash - -qq
   apt-get install -y -qq nodejs
-  success "Node.js $(node -v) / npm $(npm -v) installÃ©s."
+  success "Node.js $(node -v) / npm $(npm -v) installés."
 else
-  success "Node.js dÃ©jÃ  installÃ© : $(node -v)"
+  success "Node.js déjà installé : $(node -v)"
 fi
 
 # =============================================================================
@@ -85,57 +85,57 @@ if ! command -v docker &>/dev/null; then
   apt-get update -qq
   apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   systemctl enable --now docker
-  success "Docker $(docker --version) installÃ©."
+  success "Docker $(docker --version) installé."
 else
-  success "Docker dÃ©jÃ  installÃ© : $(docker --version)"
+  success "Docker déjà installé : $(docker --version)"
 fi
 
-# VÃ©rification Docker Compose v2
+# Vérification Docker Compose v2
 docker compose version &>/dev/null || die "docker compose v2 introuvable."
 
 # =============================================================================
 # 3. UTILISATEUR APPLICATIF
 # =============================================================================
 if ! id "${APP_USER}" &>/dev/null; then
-  info "CrÃ©ation de l'utilisateur ${APP_USER}..."
+  info "Création de l'utilisateur ${APP_USER}..."
   useradd -r -m -s /bin/bash "${APP_USER}"
   usermod -aG docker "${APP_USER}"
-  success "Utilisateur ${APP_USER} crÃ©Ã©."
+  success "Utilisateur ${APP_USER} créé."
 else
   usermod -aG docker "${APP_USER}" 2>/dev/null || true
-  success "Utilisateur ${APP_USER} dÃ©jÃ  existant."
+  success "Utilisateur ${APP_USER} déjà existant."
 fi
 
 # =============================================================================
 # 4. ARBORESCENCE
 # =============================================================================
-info "CrÃ©ation de l'arborescence..."
+info "Création de l'arborescence..."
 mkdir -p "${INSTALL_DIR}"/{caddy,front,api,scripts}
 mkdir -p "${DATA_DIR}/db"
 chown -R "${APP_USER}:${APP_USER}" "${INSTALL_DIR}" "${DATA_DIR}"
-success "Arborescence crÃ©Ã©e."
+success "Arborescence créée."
 
 # =============================================================================
 # 5. FICHIERS DE CONFIGURATION
 # =============================================================================
 
-# â”€â”€ 5a. .env â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-info "GÃ©nÃ©ration du fichier .env..."
+# ── 5a. .env ──────────────────────────────────────────────────────────────────
+info "Génération du fichier .env..."
 SECRET_KEY=$(openssl rand -hex 32)
 cat > "${INSTALL_DIR}/.env" <<EOF
-# â”€â”€ Application â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Application ──────────────────────────────────────────────────────────────
 APP_ENV=production
 SECRET_KEY=${SECRET_KEY}
 DOMAIN=${DOMAIN}
 
-# â”€â”€ Base de donnÃ©es â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Base de données ───────────────────────────────────────────────────────────
 DATABASE_URL=sqlite:////data/db/app.db
 
-# â”€â”€ Authentification JWT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Authentification JWT ──────────────────────────────────────────────────────
 ACCESS_TOKEN_EXPIRE_MINUTES=120
 REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# â”€â”€ Email (SMTP) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Email (SMTP) ──────────────────────────────────────────────────────────────
 MAIL_SERVER=smtp.example.com
 MAIL_PORT=587
 MAIL_USERNAME=noreply@example.com
@@ -143,34 +143,34 @@ MAIL_PASSWORD=change_me
 MAIL_FROM=noreply@${DOMAIN}
 MAIL_TLS=true
 
-# â”€â”€ SvelteKit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── SvelteKit ─────────────────────────────────────────────────────────────────
 PUBLIC_API_URL=http://${DOMAIN}/api
 ORIGIN=http://${DOMAIN}
 
-# â”€â”€ RÃ©seau local â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Réseau local ──────────────────────────────────────────────────────────────
 PI_IP=<RPi-IP>
 
-# â”€â”€ Cloudflare Tunnel (optionnel) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Cloudflare Tunnel (optionnel) ─────────────────────────────────────────────
 # CLOUDFLARE_TUNNEL_TOKEN=votre_token_ici
 EOF
 chmod 600 "${INSTALL_DIR}/.env"
-success ".env gÃ©nÃ©rÃ© (SECRET_KEY alÃ©atoire incluse)."
+success ".env généré (SECRET_KEY aléatoire incluse)."
 
-# â”€â”€ 5b. Caddyfile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-info "GÃ©nÃ©ration du Caddyfile..."
+# ── 5b. Caddyfile ─────────────────────────────────────────────────────────────
+info "Génération du Caddyfile..."
 cat > "${INSTALL_DIR}/caddy/Caddyfile" <<EOF
 {
     admin off
 }
 
 :80 {
-    # HTTP pur â€” suffisant pour un usage LAN local
+    # HTTP pur — suffisant pour un usage LAN local
     # (tls internal sur une IP brute cause ERR_SSL_PROTOCOL_ERROR)
 
     # Compression (br/Brotli non disponible dans caddy:2-alpine)
     encode zstd gzip
 
-    # Headers de sÃ©curitÃ©
+    # Headers de sécurité
     header {
         X-Content-Type-Options "nosniff"
         X-Frame-Options        "SAMEORIGIN"
@@ -204,20 +204,20 @@ cat > "${INSTALL_DIR}/caddy/Caddyfile" <<EOF
     }
 }
 EOF
-success "Caddyfile gÃ©nÃ©rÃ©."
+success "Caddyfile généré."
 
-# â”€â”€ 5c. docker-compose.yml â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-info "GÃ©nÃ©ration du docker-compose.yml..."
+# ── 5c. docker-compose.yml ────────────────────────────────────────────────────
+info "Génération du docker-compose.yml..."
 cat > "${INSTALL_DIR}/docker-compose.yml" <<'EOF'
 # =============================================================================
-#  5Hostachy â€” Docker Compose
+#  5Hostachy — Docker Compose
 #  3 services : caddy / front / api
 # =============================================================================
 name: 5hostachy
 
 services:
 
-  # â”€â”€ Reverse proxy TLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ── Reverse proxy TLS ───────────────────────────────────────────────────────
   caddy:
     image: caddy:2-alpine
     container_name: caddy
@@ -235,7 +235,7 @@ services:
       - front
       - api
 
-  # â”€â”€ Front-end SvelteKit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ── Front-end SvelteKit ─────────────────────────────────────────────────────
   front:
     build:
       context: ./front
@@ -250,7 +250,7 @@ services:
     depends_on:
       - api
 
-  # â”€â”€ API FastAPI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ── API FastAPI ─────────────────────────────────────────────────────────────
   api:
     build:
       context: ./api
@@ -282,12 +282,12 @@ volumes:
       o: bind
       device: /data/5hostachy
 EOF
-success "docker-compose.yml gÃ©nÃ©rÃ©."
+success "docker-compose.yml généré."
 
-# â”€â”€ 5d. Dockerfile front (SvelteKit Node Alpine ARM64) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-info "GÃ©nÃ©ration du Dockerfile front-end..."
+# ── 5d. Dockerfile front (SvelteKit Node Alpine ARM64) ───────────────────────
+info "Génération du Dockerfile front-end..."
 cat > "${INSTALL_DIR}/front/Dockerfile" <<'EOF'
-# â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Build ────────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -295,7 +295,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# â”€â”€ Runtime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Runtime ──────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
@@ -306,9 +306,9 @@ USER app
 EXPOSE 3000
 CMD ["node", "build/index.js"]
 EOF
-success "Dockerfile front gÃ©nÃ©rÃ©."
+success "Dockerfile front généré."
 
-# â”€â”€ 5g. Scaffold projet SvelteKit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 5g. Scaffold projet SvelteKit ────────────────────────────────────────────
 info "Initialisation du projet SvelteKit dans front/..."
 
 # package.json
@@ -358,7 +358,7 @@ cat > "${INSTALL_DIR}/front/vite.config.ts" <<'EOF'
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
-// PWA : installer @vite-pwa/sveltekit et dÃ©commenter le bloc ci-dessous
+// PWA : installer @vite-pwa/sveltekit et décommenter le bloc ci-dessous
 // import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 
 export default defineConfig({
@@ -369,7 +369,7 @@ export default defineConfig({
     //   manifest: {
     //     name: '5Hostachy',
     //     short_name: 'Hostachy',
-    //     description: 'Portail de la copropriÃ©tÃ©',
+    //     description: 'Portail de la copropriété',
     //     theme_color: '#ffffff',
     //     icons: [
     //       { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
@@ -411,7 +411,7 @@ EOF
 
 # src/app.css
 cat > "${INSTALL_DIR}/front/src/app.css" <<'EOF'
-/* Variables CSS â€” charte graphique 5Hostachy */
+/* Variables CSS — charte graphique 5Hostachy */
 :root {
   --color-primary:    #2563eb;
   --color-secondary:  #64748b;
@@ -446,7 +446,7 @@ cat > "${INSTALL_DIR}/front/src/routes/+page.svelte" <<'EOF'
 <main>
   <Home size={32} />
   <h1>5Hostachy</h1>
-  <p>Portail de la copropriÃ©tÃ© â€” en cours de dÃ©veloppement.</p>
+  <p>Portail de la copropriété — en cours de développement.</p>
 </main>
 
 <style>
@@ -459,34 +459,34 @@ EOF
 mkdir -p "${INSTALL_DIR}/front/static"
 touch "${INSTALL_DIR}/front/static/.gitkeep"
 
-# GÃ©nÃ©ration du package-lock.json (requis par npm ci dans Docker)
-info "GÃ©nÃ©ration du package-lock.json (npm install)..."
+# Génération du package-lock.json (requis par npm ci dans Docker)
+info "Génération du package-lock.json (npm install)..."
 cd "${INSTALL_DIR}/front"
 sudo -u "${APP_USER}" npm install --prefer-offline 2>&1 | tail -5
 cd -
-success "Projet SvelteKit initialisÃ© avec package-lock.json."
+success "Projet SvelteKit initialisé avec package-lock.json."
 
-# â”€â”€ 5e. Dockerfile API (FastAPI Python 3.12 ARM64) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-info "GÃ©nÃ©ration du Dockerfile API..."
+# ── 5e. Dockerfile API (FastAPI Python 3.12 ARM64) ───────────────────────────
+info "Génération du Dockerfile API..."
 cat > "${INSTALL_DIR}/api/Dockerfile" <<'EOF'
 FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# DÃ©pendances systÃ¨me minimales
+# Dépendances système minimales
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl gcc libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# DÃ©pendances Python
+# Dépendances Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Code applicatif
 COPY . .
 
-# Migrations Alembic au dÃ©marrage + lancement Gunicorn
+# Migrations Alembic au démarrage + lancement Gunicorn
 RUN addgroup --system app && adduser --system --group app
 USER app
 
@@ -498,9 +498,9 @@ CMD ["sh", "-c", "alembic upgrade head && gunicorn main:app \
   --access-logfile - \
   --error-logfile -"]
 EOF
-success "Dockerfile API gÃ©nÃ©rÃ©."
+success "Dockerfile API généré."
 
-# â”€â”€ 5f. requirements.txt API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 5f. requirements.txt API ──────────────────────────────────────────────────
 cat > "${INSTALL_DIR}/api/requirements.txt" <<'EOF'
 fastapi==0.115.*
 uvicorn[standard]==0.32.*
@@ -520,7 +520,7 @@ Pillow==11.2.*
 jinja2==3.1.6
 openpyxl==3.1.*
 EOF
-success "requirements.txt API gÃ©nÃ©rÃ©."
+success "requirements.txt API généré."
 
 # =============================================================================
 # 6. SAUVEGARDE - VOLONTAIREMENT ABSENTE DE CET INSTALLEUR
@@ -559,24 +559,24 @@ success "requirements.txt API gÃ©nÃ©rÃ©."
 # `sqlite3` visant `app.db` dans un script versionne.
 
 # =============================================================================
-# 7. SCRIPT DE DÃ‰PLOIEMENT
+# 7. SCRIPT DE DÉPLOIEMENT
 # =============================================================================
 cat > "${INSTALL_DIR}/scripts/deploy.sh" <<'EOF'
 #!/usr/bin/env bash
-# Mise Ã  jour et redÃ©ploiement de l'application
+# Mise à jour et redéploiement de l'application
 set -euo pipefail
 cd "$(dirname "$0")/.."
-echo "[$(date)] DÃ©ploiement dÃ©marrÃ©..."
+echo "[$(date)] Déploiement démarré..."
 git pull --rebase
 docker compose pull
 docker compose up -d --build --remove-orphans
 # Filtré sur le projet : le daemon peut être partagé avec une autre application
 # (rpi2 co-héberge List-dons). Un prune nu supprimerait aussi ses couches.
 docker image prune -f --filter label=com.docker.compose.project=5hostachy
-echo "[$(date)] DÃ©ploiement terminÃ©."
+echo "[$(date)] Déploiement terminé."
 EOF
 chmod +x "${INSTALL_DIR}/scripts/deploy.sh"
-success "Script de dÃ©ploiement crÃ©Ã©."
+success "Script de déploiement créé."
 
 # =============================================================================
 # 8. PARE-FEU (UFW)
@@ -585,12 +585,12 @@ info "Configuration du pare-feu UFW..."
 ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
-ufw allow from 192.168.1.0/24 to any port 22 proto tcp  # SSH â€” rÃ©seau local uniquement
-ufw allow 80/tcp    # HTTP  â†’ Caddy
-ufw allow 443/tcp   # HTTPS â†’ Caddy
+ufw allow from 192.168.1.0/24 to any port 22 proto tcp  # SSH — réseau local uniquement
+ufw allow 80/tcp    # HTTP  → Caddy
+ufw allow 443/tcp   # HTTPS → Caddy
 ufw allow 443/udp   # HTTP/3 (QUIC)
 ufw --force enable
-success "Pare-feu UFW configurÃ©."
+success "Pare-feu UFW configuré."
 
 # =============================================================================
 # 9. FAIL2BAN
@@ -605,10 +605,10 @@ bantime  = 1h
 
 [caddy-auth]
 enabled  = false
-# Ã€ activer quand le filtre Caddy sera dÃ©fini
+# À activer quand le filtre Caddy sera défini
 EOF
 systemctl enable --now fail2ban
-success "fail2ban activÃ©."
+success "fail2ban activé."
 
 # =============================================================================
 # 10. CLOUDFLARE TUNNEL (optionnel)
@@ -627,28 +627,28 @@ if [[ "${ENABLE_CLOUDFLARE}" == "true" ]]; then
   echo "  cloudflared tunnel create 5hostachy"
   echo "  cloudflared tunnel route dns 5hostachy ${DOMAIN}"
   echo "  # Puis ajoutez CLOUDFLARE_TUNNEL_TOKEN dans .env"
-  success "cloudflared installÃ©."
+  success "cloudflared installé."
 fi
 
 # =============================================================================
-# 11. WATCHTOWER (optionnel â€” mises Ã  jour automatiques)
+# 11. WATCHTOWER (optionnel — mises à jour automatiques)
 # =============================================================================
 if [[ "${ENABLE_WATCHTOWER}" == "true" ]]; then
   info "Ajout de Watchtower au docker-compose..."
   cat >> "${INSTALL_DIR}/docker-compose.yml" <<'EOF'
 
-  # â”€â”€ Mises Ã  jour automatiques â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ── Mises à jour automatiques ───────────────────────────────────────────────
   watchtower:
     image: containrrr/watchtower
     container_name: watchtower
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --cleanup --schedule "0 0 4 * * *"   # tous les jours Ã  04h00
+    command: --cleanup --schedule "0 0 4 * * *"   # tous les jours à 04h00
     networks:
       - hostachy
 EOF
-  success "Watchtower ajoutÃ© (mise Ã  jour quotidienne Ã  04h00)."
+  success "Watchtower ajouté (mise à jour quotidienne à 04h00)."
 fi
 
 # =============================================================================
@@ -662,24 +662,24 @@ Unattended-Upgrade::Automatic-Reboot "false";
 Unattended-Upgrade::Mail "root";
 EOF
 systemctl enable --now unattended-upgrades
-success "Mises Ã  jour de sÃ©curitÃ© automatiques activÃ©es."
+success "Mises à jour de sécurité automatiques activées."
 
 # =============================================================================
-# RÃ‰SUMÃ‰ FINAL
+# RÉSUMÉ FINAL
 # =============================================================================
 echo ""
 echo -e "${BOLD}${GREEN}=========================================================${RESET}"
-echo -e "${BOLD}${GREEN}   Installation terminÃ©e !${RESET}"
+echo -e "${BOLD}${GREEN}   Installation terminée !${RESET}"
 echo -e "${BOLD}${GREEN}=========================================================${RESET}"
 echo ""
-echo -e "  RÃ©pertoire projet  : ${CYAN}${INSTALL_DIR}${RESET}"
-echo -e "  DonnÃ©es & backups  : ${CYAN}${DATA_DIR}${RESET}"
+echo -e "  Répertoire projet  : ${CYAN}${INSTALL_DIR}${RESET}"
+echo -e "  Données & backups  : ${CYAN}${DATA_DIR}${RESET}"
 echo -e "  Adresse IP LAN     : ${CYAN}<RPi-IP>${RESET}"
 echo -e "  Domaine            : ${CYAN}${DOMAIN}${RESET}"
 echo ""
-echo -e "${YELLOW}Prochaines Ã©tapes :${RESET}"
-echo "  1. DÃ©posez le code de l'application dans ${INSTALL_DIR}/front/ et ${INSTALL_DIR}/api/"
-echo "  2. Ã‰ditez ${INSTALL_DIR}/.env (MAIL_*, DOMAIN, etc.)"
+echo -e "${YELLOW}Prochaines étapes :${RESET}"
+echo "  1. Déposez le code de l'application dans ${INSTALL_DIR}/front/ et ${INSTALL_DIR}/api/"
+echo "  2. Éditez ${INSTALL_DIR}/.env (MAIL_*, DOMAIN, etc.)"
 if [[ "${ENABLE_CLOUDFLARE}" == "true" ]]; then
   echo "  3. Configurez le tunnel Cloudflare (voir instructions ci-dessus)"
   echo "  4. Lancez : cd ${INSTALL_DIR} && docker compose up -d"

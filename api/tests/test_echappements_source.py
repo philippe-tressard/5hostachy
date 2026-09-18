@@ -208,3 +208,101 @@ def test_les_invisibles_restent_autorises():
         assert not _visible(point), point + " devrait rester échappé"
     for point in ("00e9", "2014", "2019", "2500", "20ac"):
         assert _visible(point), point + " devrait s'écrire en clair"
+
+
+# ── VOLET 2 : le texte ABÎMÉ par un double encodage ─────────────────────────
+#
+#  Même famille, même porte : un texte qui ne se lit pas n'est pas relu.
+#
+#  🔴 Relevé le 18/09/2026 : **213 lignes** dans huit fichiers, dont trente dans
+#  `routers/idees.py` et dix-huit dans `auth/deps.py` — le module de sécurité
+#  central, celui dont les docstrings expliquent QUI a le droit de quoi. On y
+#  lisait, en toutes lettres, une phrase où chaque accent était remplacé par deux
+#  caractères sans rapport.
+#
+#  D'où ça vient : un fichier UTF-8 relu en latin-1 — ou en cp1252, qui donne une
+#  troisième forme encore —, puis réécrit en UTF-8. Aucun outil ne s'en plaint,
+#  Python compile, les tests passent, et le texte devient illisible pour la seule
+#  chose qui le vérifie : un œil.
+#
+#  ⚠️ La réparation se fait par ALLER-RETOUR (réencoder en latin-1 ou cp1252,
+#  relire en UTF-8), et il faut parfois l'appliquer deux fois : le dépôt portait
+#  des lignes encodées DEUX fois, et d'autres mêlant du sain et de l'abîmé —
+#  qu'il faut alors défaire séquence par séquence, et non ligne par ligne.
+
+#: Les têtes de séquence UTF-8 vues comme des caractères d'une table 8 bits,
+#: suivies de leurs continuations. Écrites EN CLAIR : c'est la règle de ce
+#: fichier, et elle vaut pour son propre code.
+_DOUBLE_ENCODAGE = re.compile(
+    "[ÃÂ][-¿]"  # Ã©  Â»   texte relu en latin-1
+    "|â[-]"  # â      un tiret cadratin
+    "|ð"  # ð        un emoji déplié
+    "|â[€”†]"  # â€ â” â†  texte relu en cp1252
+    "|Ã‰"  # Ã‰       idem, sur une capitale
+)
+
+#: Les fichiers qui MONTRENT le défaut, exprès. Le contrôle échoue si l'un d'eux
+#: cesse d'en porter un : une exception sans objet se retire.
+MONTRENT_LE_DEFAUT = {
+    "api/app/routers/acces/parc.py": "explique pourquoi l'export CSV porte un BOM",
+    "api/tests/test_export_parc_acces.py": "le test de ce même BOM",
+    "api/tests/test_echappements_source.py": "ce fichier-ci, qui en porte le motif",
+}
+
+
+def _releve_abime() -> dict[str, list[int]]:
+    """Chemin relatif POSIX -> numéros de lignes abîmées."""
+    par_fichier: dict[str, list[int]] = {}
+    for f in _fichiers():
+        court = f.relative_to(RACINE).as_posix()
+        if court in MONTRENT_LE_DEFAUT:
+            continue
+        lignes = [
+            n
+            for n, ligne in enumerate(
+                f.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+            )
+            if _DOUBLE_ENCODAGE.search(ligne)
+        ]
+        if lignes:
+            par_fichier[court] = lignes
+    return par_fichier
+
+
+def test_aucun_texte_abime_par_un_double_encodage():
+    fautifs = _releve_abime()
+    assert not fautifs, (
+        f"{sum(len(v) for v in fautifs.values())} ligne(s) de texte abîmé "
+        f"dans {len(fautifs)} fichier(s) :\n"
+        + "\n".join(f"  {f} : lignes {v[:8]}" for f, v in fautifs.items())
+        + "\n\nCe texte ne sera pas relu, donc pas vérifié. Réparer par "
+        "aller-retour : réencoder la ligne en latin-1 (ou cp1252 si cela "
+        "échoue), la relire en UTF-8, et recommencer tant que ça change."
+    )
+
+
+def test_le_motif_reconnait_un_texte_abime_et_epargne_le_francais():
+    """Le cas zéro : sans lui, le test ci-dessus serait vert sur n'importe quoi."""
+    #  Construits par point de code pour que la démonstration ne dépende pas de
+    #  l'encodage de CE fichier — c'est la seule chose qu'on ne peut pas écrire
+    #  en clair sans se contredire.
+    abime_latin1 = "cat" + chr(0x00C3) + chr(0x00A9) + "gorie"
+    abime_cp1252 = "consulte " + chr(0x00E2) + chr(0x20AC) + chr(0x201D) + " 403"
+    assert _DOUBLE_ENCODAGE.search(abime_latin1)
+    assert _DOUBLE_ENCODAGE.search(abime_cp1252)
+    #  Et du français SAIN ne déclenche rien — c'est la moitié qui compte.
+    assert not _DOUBLE_ENCODAGE.search("Un compte EXTERNE — il consulte (lève 403)")
+    assert not _DOUBLE_ENCODAGE.search("catégorie · priorité « haute » 🔴")
+    assert not _DOUBLE_ENCODAGE.search("")
+
+
+def test_les_demonstrations_montrent_encore_le_defaut():
+    """Une exception qui ne sert plus se retire (`standards/04`)."""
+    for court, raison in MONTRENT_LE_DEFAUT.items():
+        chemin = RACINE / court
+        assert chemin.exists(), f"{court} ({raison}) n'existe plus"
+        texte = chemin.read_text(encoding="utf-8", errors="replace")
+        assert _DOUBLE_ENCODAGE.search(texte), (
+            f"{court} ne montre plus de texte abîmé ({raison}) — "
+            "retirer son entrée de MONTRENT_LE_DEFAUT."
+        )

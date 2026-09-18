@@ -4,7 +4,13 @@ from sqlmodel import Session, select, or_
 
 from app.auth.jwt import decode_token
 from app.database import get_session
-from app.models.core import Delegation, StatutDelegation, Utilisateur, RoleUtilisateur
+from app.models.core import (
+    Delegation,
+    Notification,
+    RoleUtilisateur,
+    StatutDelegation,
+    Utilisateur,
+)
 
 
 def _get_current_user(
@@ -171,34 +177,34 @@ def peut_editer(objet, user: Utilisateur) -> bool:
 
 
 def exiger_non_externe(user: Utilisateur, geste: str) -> None:
-    """Un compte EXTERNE ne contribue pas â il consulte (lÃ¨ve 403 sinon).
+    """Un compte EXTERNE ne contribue pas — il consulte (lève 403 sinon).
 
     ## Pourquoi cette fonction existe (06/09/2026)
 
-    Cette condition Ã©tait Ã©crite **cinq fois**, mot pour mot :
+    Cette condition était écrite **cinq fois**, mot pour mot :
 
-    | Fichier | Geste refusÃ© |
+    | Fichier | Geste refusé |
     |---|---|
-    | `routers/idees.py` | soumettre une idÃ©e |
-    | `routers/idees.py` | voter pour une idÃ©e |
-    | `routers/reponses_communaute.py` | rÃ©pondre |
-    | `routers/sondages/participation.py` | voter Ã  un sondage |
+    | `routers/idees.py` | soumettre une idée |
+    | `routers/idees.py` | voter pour une idée |
+    | `routers/reponses_communaute.py` | répondre |
+    | `routers/sondages/participation.py` | voter à un sondage |
     | `routers/tickets/crud.py` | ouvrir un ticket |
 
-    ð´ **Une rÃ¨gle d'autorisation en cinq exemplaires se durcit une fois sur
-    cinq.** C'est exactement ce qui Ã©tait arrivÃ© aux destinataires d'e-mail
-    (`utils/destinataires.py`, quatre copies jusqu'au 31/08) et Ã 
-    `_require_bailleur`, doublon de `require_proprietaire` posÃ© hors du module
-    central avec dix-sept endpoints dessus â que la spec documentait comme
-    officiel. Ici, le jour oÃ¹ un sixiÃ¨me rÃ´le devra Ãªtre Ã©cartÃ©, ou oÃ¹ la
-    dÃ©rogation du conseil syndical devra tomber, il y aura **un** endroit.
+    🔴 **Une règle d'autorisation en cinq exemplaires se durcit une fois sur
+    cinq.** C'est exactement ce qui était arrivé aux destinataires d'e-mail
+    (`utils/destinataires.py`, quatre copies jusqu'au 31/08) et à
+    `_require_bailleur`, doublon de `require_proprietaire` posé hors du module
+    central avec dix-sept endpoints dessus — que la spec documentait comme
+    officiel. Ici, le jour où un sixième rôle devra être écarté, ou où la
+    dérogation du conseil syndical devra tomber, il y aura **un** endroit.
 
-    â ï¸ Le CS et l'admin gardent la main **mÃªme externes** : c'est la dÃ©rogation
-    que portaient les cinq copies, et elle n'est pas anodine â un conseiller
-    syndical qui n'habite plus la rÃ©sidence reste conseiller.
+    ⚠️ Le CS et l'admin gardent la main **même externes** : c'est la dérogation
+    que portaient les cinq copies, et elle n'est pas anodine — un conseiller
+    syndical qui n'habite plus la résidence reste conseiller.
 
-    `geste` complÃ¨te le message lu par l'utilisateur (Â« â¦ ne peuvent pas
-    <geste> Â») : c'est la seule chose qui variait entre les cinq.
+    `geste` complète le message lu par l'utilisateur (« … ne peuvent pas
+    <geste> ») : c'est la seule chose qui variait entre les cinq.
     """
     if user.has_role(RoleUtilisateur.externe) and not user.has_role(
         RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
@@ -215,3 +221,33 @@ def peut_commenter(objet, user: Utilisateur) -> bool:
     Les mêmes, **plus le conseil syndical** — c'est lui qui suit les dossiers.
     """
     return peut_editer(objet, user) or user.has_role(RoleUtilisateur.conseil_syndical)
+
+
+def ma_notification(
+    notif_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+) -> Notification:
+    """La notification demandée, **si elle est adressée à celui qui la demande**.
+
+    ## Pourquoi elle est ici (18/09/2026)
+
+    « Une notification n'appartient qu'à son destinataire » s'écrivait **quatre
+    fois** : deux fois dans `routers/notifications.py`, et deux fois de plus dans
+    `routers/admin/communications.py` — qui doublait purement et simplement ces
+    routes, sous un préfixe `/admin` qui laissait croire à autre chose.
+
+    ⚠️ Ces deux routes-là étaient déclarées « sans consommateur front » avec pour
+    raison « API d'administration exposée pour l'exploitation ». C'était faux :
+    elles rendaient les notifications de l'utilisateur CONNECTÉ, exactement ce
+    que `/notifications` donne déjà. Une exception dont la raison est fausse est
+    pire qu'absente — elle ferme la question.
+
+    ⚠️ Répond **404** et non 403 : un 403 confirmerait l'existence d'une
+    notification qu'on n'a pas le droit de voir. C'est le choix qu'avaient déjà
+    fait les quatre copies, et il se garde.
+    """
+    notif = session.get(Notification, notif_id)
+    if not notif or notif.destinataire_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Notification introuvable")
+    return notif

@@ -67,21 +67,21 @@ class IdeeCreate(AssisteIAEntree):
 
 
 class IdeeUpdate(AssisteIACorrection):
-    """Ce qu'une idÃ©e accepte de voir corrigÃ© aprÃ¨s son dÃ©pÃ´t (#783).
+    """Ce qu'une idée accepte de voir corrigé après son dépôt (#783).
 
-    DemandÃ© par Philippe le 06/09/2026 : Â« il n'est pas possible de l'Ã©diter
-    (si erreur de saisie) Â». C'est donc la CORRECTION qui est visÃ©e, pas la
-    rÃ©Ã©criture d'une idÃ©e en une autre.
+    Demandé par Philippe le 06/09/2026 : « il n'est pas possible de l'éditer
+    (si erreur de saisie) ». C'est donc la CORRECTION qui est visée, pas la
+    réécriture d'une idée en une autre.
 
-    ð´ Les champs de CIBLAGE (`perimetre_cible`, `public_cible`) n'y sont pas,
-    et c'est la mÃªme dÃ©cision que pour le sondage (`SondageUpdate`) : restreindre
-    aprÃ¨s coup masquerait l'idÃ©e Ã  des gens qui l'ont dÃ©jÃ  votÃ©e. Un champ qu'on
-    n'expose pas ne se contourne pas â tant que la question n'est pas tranchÃ©e,
+    🔴 Les champs de CIBLAGE (`perimetre_cible`, `public_cible`) n'y sont pas,
+    et c'est la même décision que pour le sondage (`SondageUpdate`) : restreindre
+    après coup masquerait l'idée à des gens qui l'ont déjà votée. Un champ qu'on
+    n'expose pas ne se contourne pas — tant que la question n'est pas tranchée,
     son absence vaut refus.
 
-    â ï¸ Le `statut` n'y est pas non plus : il a dÃ©jÃ  sa route
-    (`PATCH /idees/{id}/statut`, rÃ©servÃ©e au CS), qui horodate `statut_change_le`
-    et prÃ©vient les votants. L'exposer ici donnerait DEUX chemins vers le mÃªme
+    ⚠️ Le `statut` n'y est pas non plus : il a déjà sa route
+    (`PATCH /idees/{id}/statut`, réservée au CS), qui horodate `statut_change_le`
+    et prévient les votants. L'exposer ici donnerait DEUX chemins vers le même
     fait, dont un qui oublierait les deux effets de bord.
     """
 
@@ -243,29 +243,29 @@ def update_idee(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    """Corriger le titre ou la description d'une idÃ©e (#783).
+    """Corriger le titre ou la description d'une idée (#783).
 
-    L'idÃ©e Ã©tait la seule entitÃ© de la CommunautÃ© sans aucun moyen de se
-    corriger : une faute de frappe y Ã©tait dÃ©finitive, ou imposait de supprimer
-    et redéposer â ce qui perd les votes et les rÃ©ponses dÃ©jÃ  reÃ§us.
+    L'idée était la seule entité de la Communauté sans aucun moyen de se
+    corriger : une faute de frappe y était définitive, ou imposait de supprimer
+    et redéposer — ce qui perd les votes et les réponses déjà reçus.
     """
     exiger_acces(user)
     idee = session.get(Idee, idee_id)
-    #  404 et non 403 quand elle n'est pas visible : Â« interdit Â» confirmerait son
+    #  404 et non 403 quand elle n'est pas visible : « interdit » confirmerait son
     #  existence. L'auteur, lui, voit toujours la sienne (`cible_visible`).
     if not idee or not idee_visible(idee, user):
-        raise HTTPException(404, "IdÃ©e introuvable")
-    #  ð `peut_editer` â l'auteur ou un admin, du module central. **Pas le
-    #  conseil syndical** : il dÃ©cide du STATUT d'une idÃ©e, il ne rÃ©Ã©crit pas la
-    #  proposition de quelqu'un. C'est exactement la rÃ¨gle du sondage, et c'est la
-    #  mÃªme fonction : une rÃ¨gle d'autorisation recopiÃ©e se durcit une fois sur deux.
+        raise HTTPException(404, "Idée introuvable")
+    #  🔒 `peut_editer` — l'auteur ou un admin, du module central. **Pas le
+    #  conseil syndical** : il décide du STATUT d'une idée, il ne réécrit pas la
+    #  proposition de quelqu'un. C'est exactement la règle du sondage, et c'est la
+    #  même fonction : une règle d'autorisation recopiée se durcit une fois sur deux.
     if not peut_editer(idee, user):
-        raise HTTPException(403, "Seul l'auteur ou un admin peut modifier cette idÃ©e")
-    #  Une idÃ©e ARCHIVÃE ne se corrige plus â le pendant de Â« ce sondage est
-    #  clÃ´turÃ© et ne peut plus Ãªtre modifiÃ© Â». Elle a quittÃ© la vie active, et la
-    #  rÃ©Ã©crire changerait rÃ©troactivement ce que les votants ont soutenu.
+        raise HTTPException(403, "Seul l'auteur ou un admin peut modifier cette idée")
+    #  Une idée ARCHIVÉE ne se corrige plus — le pendant de « ce sondage est
+    #  clôturé et ne peut plus être modifié ». Elle a quitté la vie active, et la
+    #  réécrire changerait rétroactivement ce que les votants ont soutenu.
     if est_archivable("idee", idee, seuil_jours=seuil_archivage_jours(session)):
-        raise HTTPException(400, "Cette idÃ©e est archivÃ©e et ne peut plus Ãªtre modifiÃ©e")
+        raise HTTPException(400, "Cette idée est archivée et ne peut plus être modifiée")
 
     donnees = body.model_dump(exclude_unset=True)
     #  La marque « assistant IA » ne s'écrit que dans UN sens (`utils/assiste_ia`).
@@ -274,11 +274,11 @@ def update_idee(
         if champ in donnees:
             valeur = (donnees[champ] or "").strip()
             if not valeur:
-                raise HTTPException(422, f"Le champ Â« {champ} Â» ne peut pas Ãªtre vide")
+                raise HTTPException(422, f"Le champ « {champ} » ne peut pas être vide")
             setattr(idee, champ, valeur)
-    #  â ï¸ `statut_change_le` n'est PAS touchÃ© : corriger une faute de frappe ne
-    #  doit pas repousser l'archivage d'un mois. C'est la leÃ§on que `PetiteAnnonce`
-    #  porte dÃ©jÃ , et la raison d'Ãªtre de ce champ distinct de `mis_a_jour_le`.
+    #  ⚠️ `statut_change_le` n'est PAS touché : corriger une faute de frappe ne
+    #  doit pas repousser l'archivage d'un mois. C'est la leçon que `PetiteAnnonce`
+    #  porte déjà, et la raison d'être de ce champ distinct de `mis_a_jour_le`.
     session.add(idee)
     session.commit()
     session.refresh(idee)

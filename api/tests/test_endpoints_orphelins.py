@@ -38,10 +38,6 @@ SANS_CONSOMMATEUR_FRONT = {
     "/admin/db/checkpoint":
         "voie in-process obligatoire contre la corruption SQLite (CLAUDE.md, "
         "règle d'or) — appelée à la main pendant un incident, jamais par le front",
-    "/admin/notifications":
-        "API d'administration exposée pour l'exploitation, sans écran dédié",
-    "/admin/notifications/{notif_id}/lue":
-        "idem /admin/notifications",
     "/acces/admin/imports/{import_id}/refuser-locataire":
         "pendant de `resoudre` documenté dans specs/architecture/api.md, "
         "conservé pour l'exploitation manuelle des imports Vigik",
