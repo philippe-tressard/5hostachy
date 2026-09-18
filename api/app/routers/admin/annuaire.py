@@ -11,18 +11,13 @@ from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     AgCsInfo,
-    Batiment,
     ConfigSite,
     MembreCS,
     MembreSyndic,
     SyndicInfo,
     Utilisateur,
 )
-#  Importé sous un autre nom : plusieurs de ces fonctions affectent une variable
-#  LOCALE `site_manager_user_id`, et l'import serait alors masqué. C'est la raison
-#  d'être de l'ancien alias `_get_site_manager_user_id`, supprimé au découpage.
 from app.utils.annuaire import membres_du_conseil, membres_du_syndic
-from app.utils.destinataires import site_manager_user_id as _site_manager_user_id
 from app.utils.syndic import nom_du_syndic, source_du_nom
 from typing import Optional
 
@@ -102,16 +97,6 @@ def get_composition_cs(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     ag = session.exec(select(AgCsInfo)).first()
-    membres = session.exec(select(MembreCS).order_by(MembreCS.ordre)).all()
-    site_manager_user_id = _site_manager_user_id(session)
-    _bat_cache: dict[int, str] = {}
-    def _bat_nom_cs(bid: Optional[int]) -> Optional[str]:
-        if bid is None:
-            return None
-        if bid not in _bat_cache:
-            bat = session.get(Batiment, bid)
-            _bat_cache[bid] = bat.numero if bat else str(bid)
-        return _bat_cache[bid]
     return {
         "ag_annee": ag.ag_annee if ag else None,
         "ag_date": ag.ag_date.isoformat() if (ag and ag.ag_date) else None,
@@ -119,25 +104,14 @@ def get_composition_cs(
             session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
             or ConfigSite(cle="", valeur="")
         ).valeur or "",
-        "membres": [
-            {
-                "id": m.id,
-                "genre": m.genre,
-                "prenom": m.prenom,
-                "nom": m.nom,
-                "batiment_id": m.batiment_id,
-                "batiment_nom": _bat_nom_cs(m.batiment_id),
-                "etage": m.etage,
-                "est_gestionnaire_site": bool(
-                    m.est_gestionnaire_site or (site_manager_user_id is not None and m.user_id == site_manager_user_id)
-                ),
-                "est_president": m.est_president,
-                "ordre": m.ordre,
-                "user_id": m.user_id,
-            }
-            for m in membres
-        ],
+        #  La composition vient de `utils/annuaire`, comme pour l'écran des
+        #  résidents six lignes plus haut. Elle était REFAITE ici — avec son
+        #  propre cache de bâtiments et sa propre écriture de la règle du
+        #  gestionnaire de site — dans le fichier même qui importe la fonction
+        #  et qui explique pourquoi elle existe (#779, 18/09/2026).
+        "membres": membres_du_conseil(session, pour_administration=True),
     }
+
 
 @router.put("/annuaire/cs")
 def put_composition_cs(
@@ -255,28 +229,14 @@ def get_syndic_info(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     syndic = session.exec(select(SyndicInfo)).first()
-    membres = session.exec(select(MembreSyndic).order_by(MembreSyndic.ordre)).all()
     return {
         "nom_syndic": nom_du_syndic(session),
         "nom_syndic_source": source_du_nom(session),
         "adresse": syndic.adresse if syndic else "",
         "site_web": syndic.site_web if syndic else None,
-        "membres": [
-            {
-                "id": m.id,
-                "genre": m.genre,
-                "prenom": m.prenom,
-                "nom": m.nom,
-                "fonction": m.fonction,
-                "email": m.email,
-                "telephone": m.telephone,
-                "est_principal": m.est_principal,
-                "ordre": m.ordre,
-                "user_id": m.user_id,
-            }
-            for m in membres
-        ],
+        "membres": membres_du_syndic(session, pour_administration=True),
     }
+
 
 @router.put("/annuaire/syndic")
 def put_syndic_info(
