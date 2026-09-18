@@ -22,6 +22,7 @@ from app.utils.pdf_theme import (
     FONT_SANS,
     FONT_SERIF,
     PALETTE_CSS,
+    regle_page,
     html_to_pdf,
     image_data_uri,
     logo_svg,
@@ -279,7 +280,7 @@ def _css(fmt: str) -> str:
     # Très petits formats : on sacrifie la date d'affichage pour préserver le texte.
     meta_allegee = ".date-affichage { display: none; }" if fmt in _SANS_QR else ""
     return f"""\
-@page {{ size: {g['page_size']}; margin: 0; }}
+{regle_page(taille=g['page_size'], marges='0', numeroter=False)}
 {PALETTE_CSS}\
 * {{ box-sizing: border-box; margin: 0; padding: 0; }}
 body {{
