@@ -23,89 +23,12 @@ from app.utils.liens import base_site
 from app.utils.liens import nom_site
 from app.utils.noms import contexte_personne
 from app.models.core import StatutAcces, StatutImport
+from app.utils.acces_attribution import (
+    attribuer_aux_coproprietaires,
+    coproprietaires_partages,
+)
 from app.utils.acces_possession import chez_le_locataire, possesseur
 from app.utils.types_acces import TELECOMMANDE, TypeAcces, VIGIK
-
-
-# ── Types copropriétaires (pour propagation conjoint) ────────────────────────
-
-_TYPES_COPROPRIETAIRES = {"propriétaire", "bailleur", "mandataire"}
-
-
-def partial_acces(type_acces: TypeAcces):
-    """Le créateur d'attributions de CE type, tel que le socle des imports l'attend."""
-    def creer(acces, session: Session) -> None:
-        attribuer_aux_coproprietaires(acces, type_acces, session)
-
-    return creer
-
-
-def _lot_coproprio_ids(lot_id: int | None, session: Session) -> set[int]:
-    """Retourne les user_ids des copropriétaires d'un lot."""
-    if not lot_id:
-        return set()
-    from app.models.core import UserLot
-    user_lots = session.exec(
-        select(UserLot).where(UserLot.lot_id == lot_id, UserLot.actif == True)
-    ).all()
-    return {
-        ul.user_id for ul in user_lots
-        if (ul.type_lien.value if hasattr(ul.type_lien, "value") else str(ul.type_lien))
-        in _TYPES_COPROPRIETAIRES
-    }
-
-
-def _all_coproprio_ids(user_id: int, session: Session) -> set[int]:
-    """Retourne tous les user_ids qui partagent au moins un lot avec user_id."""
-    from app.models.core import UserLot
-    # Lots de cet utilisateur
-    my_lots = session.exec(
-        select(UserLot).where(UserLot.user_id == user_id, UserLot.actif == True)
-    ).all()
-    lot_ids = {
-        ul.lot_id for ul in my_lots
-        if (ul.type_lien.value if hasattr(ul.type_lien, "value") else str(ul.type_lien))
-        in _TYPES_COPROPRIETAIRES
-    }
-    if not lot_ids:
-        return set()
-    # Tous les copropriétaires sur ces lots
-    co_owners = session.exec(
-        select(UserLot).where(
-            UserLot.lot_id.in_(list(lot_ids)),  # type: ignore
-            UserLot.actif == True,
-        )
-    ).all()
-    return {
-        ul.user_id for ul in co_owners
-        if (ul.type_lien.value if hasattr(ul.type_lien, "value") else str(ul.type_lien))
-        in _TYPES_COPROPRIETAIRES
-    }
-
-
-def attribuer_aux_coproprietaires(acces, type_acces, session: Session) -> None:
-    """Attribue cet accès au porteur ET aux copropriétaires qui partagent son lot.
-
-    🔴 Écrit une fois pour les deux types (18/09/2026, #779). C'était
-    `_create_user_telecommandes` et `_create_user_vigiks`, identiques à la table
-    d'attribution près — celle-là même que `TypeAcces` décrit. Les deux gardent
-    leur nom d'appel par `functools.partial` ci-dessous, parce que le socle des
-    imports attend un `creer_liaisons` d'un seul argument.
-
-    Les trois ensembles d'utilisateurs se cumulent sans ordre : le porteur, les
-    copropriétaires du lot de l'accès, et ceux de tous les lots du porteur.
-    """
-    user_ids = {acces.user_id}
-    user_ids |= _lot_coproprio_ids(acces.lot_id, session)
-    user_ids |= _all_coproprio_ids(acces.user_id, session)
-    for uid in user_ids:
-        type_acces.attribuer(session, user_id=uid, acces_id=acces.id)
-
-
-#: Les deux formes attendues par le socle des imports (`creer_liaisons`), qui
-#: passe l'objet seul. Elles ne portent aucune logique : elles NOMMENT le type.
-_create_user_telecommandes = partial_acces(TELECOMMANDE)
-_create_user_vigiks = partial_acces(VIGIK)
 
 
 # ── Normalisation ────────────────────────────────────────────────────────────
@@ -552,7 +475,7 @@ def _propagate_acces_pour_utilisateur(user, session: Session) -> tuple[int, int]
         return 0, 0
 
     # Copropriétaires partageant au moins un lot avec cet utilisateur
-    copro_ids = _all_coproprio_ids(user.id, session)
+    copro_ids = coproprietaires_partages(user.id, session)
 
     #  🔴 UNE boucle pour les deux types (18/09/2026, #779). Les trois vecteurs
     #  étaient écrits deux fois, à la table près — quatre-vingts lignes qui
