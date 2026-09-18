@@ -10,6 +10,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { replier } from '$lib/texte';
 
 	$: _pc = getPageConfig($configStore, 'faq', defautsDePage('faq'));
 	$: _siteNom = $siteNomStore;
@@ -39,16 +40,9 @@
 
 	$: canEdit = $isCS || $isAdmin;
 
-	function normalizeText(input: string | null | undefined): string {
-		return (input ?? '')
-			.toLowerCase()
-			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '');
-	}
-
 	function normalizeCategorieLabel(cat: string | null | undefined): string {
 		const original = cat ?? 'Général';
-		const n = normalizeText(original);
+		const n = replier(original);
 		if (n.includes('coproprietaire') && n.includes('mandataire')) {
 			return '📋 Copropriétaire bailleur';
 		}
@@ -56,32 +50,32 @@
 	}
 
 	function isLocataireCategory(cat: string): boolean {
-		const n = normalizeText(cat);
+		const n = replier(cat);
 		return n.includes('locataire');
 	}
 
 	function isCoproBailleurCategory(cat: string): boolean {
-		const n = normalizeText(cat);
+		const n = replier(cat);
 		return n.includes('coproprietaire') && (n.includes('bailleur') || n.includes('mandataire'));
 	}
 
 	function isCoproResidentCategory(cat: string): boolean {
-		const n = normalizeText(cat);
+		const n = replier(cat);
 		return n.includes('coproprietaire') && n.includes('resident');
 	}
 
 	function isCoproprietaireStatus(statut: string): boolean {
-		const n = normalizeText(statut);
+		const n = replier(statut);
 		return n.includes('coproprietaire');
 	}
 
 	function isCoproBailleurStatus(statut: string): boolean {
-		const n = normalizeText(statut);
+		const n = replier(statut);
 		return isCoproprietaireStatus(statut) && (n.includes('bailleur') || n.includes('mandataire'));
 	}
 
 	function isCoproResidentStatus(statut: string): boolean {
-		const n = normalizeText(statut);
+		const n = replier(statut);
 		return isCoproprietaireStatus(statut) && n.includes('resident');
 	}
 
@@ -99,7 +93,7 @@
 
 		const out: Record<string, any[]> = {};
 		for (const [cat, catItems] of Object.entries(grouped)) {
-			if (normalizeText(statut) === 'locataire') {
+			if (replier(statut) === 'locataire') {
 				if (isCoproResidentCategory(cat) || isCoproBailleurCategory(cat)) continue;
 				out[cat] = catItems;
 				continue;

@@ -9,6 +9,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { perimetresStore, rechargerPerimetres } from '$lib/stores/perimetres';
 	import { type Perimetre } from '$lib/perimetres';
+	import { slug } from '$lib/texte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -130,14 +131,9 @@
 	//  c'est le seul moment où on peut le choisir.
 	$: codePropose = (() => {
 		if (!creation) return '';
-		const slug = nouveau.libelle
-			.toLowerCase()
-			.normalize('NFD')
-			.replace(/[̀-ͯ]/g, '')
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/^-|-$/g, '');
-		if (!slug) return '';
-		return creation.parent ? `${creation.parent}/${slug}` : slug;
+		const code = slug(nouveau.libelle);
+		if (!code) return '';
+		return creation.parent ? `${creation.parent}/${code}` : code;
 	})();
 
 	async function enregistrerNouveau() {

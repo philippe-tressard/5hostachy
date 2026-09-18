@@ -33,6 +33,7 @@
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import BadgesCopropriete from '$lib/components/BadgesCopropriete.svelte';
 	import { localisationMembre } from '$lib/utils';
+	import { replier, sansAccents } from '$lib/texte';
 	import { agitPourAutrui } from '$lib/roles';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
@@ -162,20 +163,11 @@
 	let csHeaderEditing = false;
 	let syndicHeaderEditing = false;
 
-	// -- Normalisation : minuscules sans accents (NFD) -----------------------
-	function normalizeStr(s: string): string {
-		return s
-			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '')
-			.toLowerCase()
-			.trim();
-	}
-
 	// -- Liaison inscrit via NOM ------------------------------------------
 	function findUserByNom(nom: string): SimpleUser | null {
 		if (!nom || nom.length < 2) return null;
-		const q = normalizeStr(nom);
-		return allUsers.find((u) => normalizeStr(u.nom) === q) ?? null;
+		const q = replier(nom);
+		return allUsers.find((u) => replier(u.nom) === q) ?? null;
 	}
 
 	// Cherche dans les LotImport (via lots.listImports) pour trouver bâtiment/étage
@@ -183,12 +175,9 @@
 	// Conversion etage_raw brut → entier (même logique que le backend)
 	function etageFromRaw(raw: string | null | undefined): number | null {
 		if (raw == null) return null;
-		const s = raw
-			.trim()
-			.toUpperCase()
-			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '')
-			.replace(/\s+/g, ' ');
+		//  La CASSE porte le sens ici (« 1ER », « RDC ») : `sansAccents` et non
+		//  `replier`, qui rendrait la forme comparable en minuscules.
+		const s = sansAccents(raw).trim().toUpperCase().replace(/\s+/g, ' ');
 		const map: Record<string, number> = {
 			RDC: 0,
 			'0': 0,
@@ -218,10 +207,10 @@
 		nom: string,
 	): { batiment_id: number | null; batiment_nom: string | null; etage: number | null } | null {
 		if (!nom || nom.length < 2) return null;
-		const q = normalizeStr(nom);
+		const q = replier(nom);
 		// Préférer le lot de type appartement pour la localisation (pas le parking ni la cave)
 		const hits = lotImports.filter(
-			(imp) => imp.nom_coproprietaire && normalizeStr(imp.nom_coproprietaire).includes(q),
+			(imp) => imp.nom_coproprietaire && replier(imp.nom_coproprietaire).includes(q),
 		);
 		if (!hits.length) return null;
 		// Exclure CA (cave) et PS (parking) via type_raw — fiable même si lot_id non résolu
