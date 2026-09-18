@@ -61,6 +61,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.models.core import StatutAcces, StatutImport, Utilisateur
+from app.utils.acces_possession import chez_le_locataire, possesseur
 from app.utils.auto_match_service import (
     _matches_user,
     _user_keys,
@@ -104,30 +105,6 @@ class TypeImportAcces:
     champ_lien: str
     #: Crée les liaisons M2M vers les copropriétaires du lot.
     creer_liaisons: Callable[[object, Session], None]
-
-
-def possesseur(imp) -> Optional[int]:
-    """Qui détient l'accès : le locataire s'il l'a en main, le propriétaire sinon.
-
-    🔴 La règle centrale des deux chaînes. Elle était écrite **quatre** fois — deux
-    fois par type, à la résolution et à la correction — et un seul de ces quatre
-    endroits aurait suffi à faire diverger le détenteur affiché de celui
-    enregistré.
-    """
-    if imp.chez_locataire and imp.user_locataire_id:
-        return imp.user_locataire_id
-    return imp.user_proprietaire_id
-
-
-def _chez_le_locataire(imp) -> bool:
-    """La possession physique, telle qu'elle doit être écrite sur l'objet.
-
-    ⚠️ `and bool(user_locataire_id)` n'est pas une précaution : un import coché
-    « chez le locataire » sans locataire lié produirait un objet marqué comme remis
-    à quelqu'un qui n'existe pas, et `bailleur/acces.py` refuserait ensuite de le
-    transférer sans pouvoir dire à qui il est.
-    """
-    return bool(imp.chez_locataire) and bool(imp.user_locataire_id)
 
 
 def auto_match(
@@ -238,7 +215,7 @@ def patch(
                 #  🔴 Reporté depuis le 08/09/2026 : sans cette ligne, corriger
                 #  « chez le locataire » sur l'import laissait l'objet en dire le
                 #  contraire, et c'est l'objet que lit le transfert de bail.
-                objet.chez_locataire = _chez_le_locataire(imp)
+                objet.chez_locataire = chez_le_locataire(imp)
                 session.add(objet)
     else:
         imp.statut = (
@@ -273,7 +250,7 @@ def resoudre(type_import: TypeImportAcces, import_id: int, session: Session) -> 
         code=reference,
         lot_id=imp.lot_id or None,
         user_id=possesseur(imp),
-        chez_locataire=_chez_le_locataire(imp),
+        chez_locataire=chez_le_locataire(imp),
         statut=StatutAcces.actif,
     )
     session.add(objet)
