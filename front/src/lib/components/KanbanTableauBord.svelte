@@ -20,7 +20,6 @@
 	 * contexte de droits qu'elle calcule déjà pour le fil.
 	 */
 	import ItemKanban from '$lib/components/ItemKanban.svelte';
-	import { TYPE_EVENEMENT_EMOJI } from '$lib/evenements';
 	import {
 		SEUIL_KANBAN_ETROIT,
 		colonneDeLEvenement,
@@ -39,6 +38,20 @@
 
 	let mobileKanbanIdx = 0;
 
+	/**  Les colonnes vides qu'on a dépliées d'un clic.
+	 *
+	 *   Un `Set` et non un identifiant unique : deux étapes vides peuvent être
+	 *   ouvertes en même temps, et rien ne justifie qu'ouvrir l'une referme
+	 *   l'autre — ce n'est pas un accordéon, c'est un tableau. */
+	let videsDepliees = new Set<string>();
+
+	function basculerVide(colId: string) {
+		//  Réaffectation et non mutation : Svelte ne voit pas un `Set` changer.
+		const suivant = new Set(videsDepliees);
+		if (!suivant.delete(colId)) suivant.add(colId);
+		videsDepliees = suivant;
+	}
+
 	const _kanbanYear =
 		new Date().getMonth() < 1 ? new Date().getFullYear() - 1 : new Date().getFullYear();
 
@@ -49,11 +62,6 @@
 		{ id: 'fournisseur', label: 'Prestataire', color: '#f97316' },
 		{ id: 'termine', label: 'Terminé', color: '#22c55e' },
 	];
-
-	//  🔴 Seconde écriture des six types, sous une autre forme : le calendrier
-	//  les portait avec leur libellé, celui-ci avec leurs seules icônes. Un
-	//  septième type aurait eu son option et pas son pictogramme.
-	const EV_ICONS = TYPE_EVENEMENT_EMOJI;
 
 	//  🔴 Le rendu du périmètre a suivi le balisage dans `ItemKanban` : il n'était
 	//  employé que là. Le garder ici aurait laissé une fonction sans appelant dans
@@ -105,15 +113,39 @@
 	{#if !vueEtroite}
 		<div class="kb-grid">
 			{#each dashKanbanCols as col (col.id)}
-				<div class="kb-col" class:kb-col-vide={col.items.length === 0}>
-					<div class="kb-col-head" style="border-top-color:{col.color}">
+				{@const vide = col.items.length === 0}
+				{@const repliee = vide && !videsDepliees.has(col.id)}
+				<!--  🔴 Une colonne VIDE se replie sur son titre, à la verticale, et se
+				      DÉPLIE d'un clic (19/09/2026, demandé à l'écran). Elle reste donc
+				      visible et consultable — savoir qu'une étape est vide fait partie
+				      de la lecture d'un kanban — sans prendre la largeur d'une colonne
+				      qui, elle, a quelque chose à montrer.
+
+				      ⚠️ L'en-tête est un `<button>` et non une `<div role="button">` :
+				      un titre qui bascule quelque chose EST un bouton, il porte le
+				      clavier sans qu'on ait à le lui ajouter. C'est la même décision
+				      que le titre d'`EnteteCarte`. -->
+				<div class="kb-col" class:kb-col-vide={repliee}>
+					<button
+						type="button"
+						class="kb-col-head"
+						class:kb-col-head--inerte={!vide}
+						style="border-top-color:{col.color}"
+						aria-expanded={vide ? !repliee : undefined}
+						title={vide ? (repliee ? 'Déplier cette étape' : 'Replier cette étape') : undefined}
+						on:click={() => vide && basculerVide(col.id)}
+					>
 						<span class="kb-col-label" style="color:{col.color}">{col.label}</span>
 						{#if col.total > 0}
 							<span class="kb-col-count" style="background:{col.color}1a;color:{col.color}">
 								{col.total > 5 ? `+${col.total - 5} / ${col.total}` : col.total}
 							</span>
 						{/if}
-					</div>
+					</button>
+					{#if vide && !repliee}
+						<!--  Le même mot que sur `/calendrier/kanban`, et la même classe. -->
+						<p class="kanban-empty">Aucune affaire</p>
+					{/if}
 					<!--  🔴 Une colonne VIDE n'a plus de corps (18/09/2026, demandé à
 					      l'écran) : elle se réduit à son titre, tourné à la verticale,
 					      et rend sa largeur à celles qui portent quelque chose. Elle
@@ -121,7 +153,7 @@
 					      lecture d'un kanban ; c'est le tiret qui ne disait rien en
 					      occupant la place d'une colonne pleine. -->
 					{#each col.items as item (item.id)}
-						<ItemKanban {item} icones={EV_ICONS} />
+						<ItemKanban {item} />
 					{/each}
 				</div>
 			{/each}
@@ -153,7 +185,7 @@
 			{#if mobileKanbanCurrent}
 				<div class="kb-mobile-items">
 					{#each mobileKanbanCurrent.items as item (item.id)}
-						<ItemKanban {item} icones={EV_ICONS} />
+						<ItemKanban {item} />
 					{/each}
 					{#if mobileKanbanCurrent.total > 5}
 						<p class="kb-mobile-plus">

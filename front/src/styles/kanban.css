@@ -1,0 +1,425 @@
+/* ─────────────────────────────────────────
+   5Hostachy — Le KANBAN, ses colonnes et ses briques
+   ─────────────────────────────────────────
+
+   🔴 Sorti de `composants.css` le 19/09/2026, sur refus du garde-fou de
+   modularité : le fichier passait 1 500 lignes. Comme les fois précédentes, il
+   désignait moins la taille que le rangement — ces règles forment une famille
+   entière, et DEUX écrans la partagent :
+
+     • `/calendrier/kanban` — la vue complète, avec glisser-déposer et dépliage ;
+     • le widget du tableau de bord — les mêmes briques, sans les gestes.
+
+   ⚠️ Ce fichier est importé par `app.css` À LA PLACE qu'occupaient ces règles,
+   juste après `composants.css` : l'ordre des imports EST la cascade, et le
+   bundle produit doit être identique à la ligne près.
+
+   ⚠️ Les classes sont GLOBALES, et c'est ce qui rend le partage possible : un
+   composant peut déménager sans emporter son style (leçon de `Pastille.svelte`,
+   v2.67.11).
+   ───────────────────────────────────────── */
+
+/* ── Le tableau kanban ────────────────────────────────────────────────────────
+
+   Deux écrans en rendent un — le calendrier (6 colonnes) et les prestations
+   (4 colonnes). Seul `.kanban` vivait ici ; les ONZE autres classes étaient
+   écrites DEUX FOIS, une copie dans chaque page.
+
+   🔴 Sept des dix avaient DIVERGÉ (#453, 28/08/2026), toutes par des micro-écarts
+   qu'aucune décision n'explique : 230 px contre 220, .78rem contre .75, `flex-end`
+   contre `center`, `.2rem` contre `.3rem`. Deux kanbans du même site ne se
+   rendaient donc pas pareil, et personne ne pouvait le voir — les deux écrans ne
+   se regardent jamais côte à côte.
+
+   ⚠️ `.devis-card-prest` et `.kanban-card-prest` étaient la MÊME règle sous deux
+   noms. Un second nom pour une notion existante est une divergence en attente :
+   il n'y a plus qu'un nom.
+
+   Arbitrage, quand les deux valeurs différaient — dans l'ordre : la contrainte la
+   plus forte gagne (le calendrier a plus de colonnes), le superset gagne quand
+   l'écart est un ajout, et la plus lisible gagne sur le titre, qui est l'élément
+   principal de la carte.
+
+   Ce qui reste LOCAL, à raison : la barre d'outils et l'exercice du calendrier,
+   ses cartes dépliables et son glisser-déposer ; les boutons d'étape et la méta
+   d'un devis. Ce sont des gestes propres à chaque écran, pas la grille commune. */
+.kanban {
+	display: flex;
+	gap: 0.6rem;
+	align-items: flex-start;
+	margin-bottom: 1.5rem;
+	overflow-x: auto;
+	padding-bottom: 0.5rem;
+}
+.kanban-col {
+	min-width: 220px;
+	flex: 1;
+	border-radius: var(--radius);
+	background: var(--color-bg);
+	border: 1px solid var(--color-border);
+	overflow: hidden;
+}
+@media (max-width: 900px) {
+	.kanban {
+		flex-direction: column;
+	}
+	.kanban-col {
+		min-width: 100%;
+	}
+}
+.kanban-col-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.6rem 0.9rem;
+	border-top: 3px solid;
+	font-weight: 600;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.kanban-count {
+	background: var(--color-border);
+	border-radius: 999px;
+	padding: 0.1rem 0.45rem;
+	font-size: 0.72rem;
+	font-weight: 700;
+}
+.kanban-count-total {
+	font-size: 0.8rem;
+	color: var(--color-text-muted);
+}
+.kanban-empty {
+	padding: 1rem;
+	font-size: 0.85rem;
+	color: var(--color-text-muted);
+	text-align: center;
+}
+/*  `opacity` dans la transition sert le glisser-déposer du calendrier ; elle est
+    sans effet là où rien ne se glisse — d'où le superset plutôt qu'une variante. */
+.kanban-card {
+	margin: 0.3rem;
+	padding: 0.4rem 0.55rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	cursor: pointer;
+	transition:
+		box-shadow 0.15s,
+		opacity 0.15s;
+}
+.kanban-card:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+/*  `min-height` réserve la place de la rangée de tags : sans elle, deux cartes
+    voisines dont l'une n'a aucun tag ne s'alignent pas. */
+.kanban-card-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-bottom: 0.15rem;
+	min-height: 0.1rem;
+}
+.kb-tag {
+	font-size: 0.65rem;
+	font-weight: 600;
+	padding: 0.1rem 0.4rem;
+	border-radius: 3px;
+	color: #fff;
+	line-height: 1.4;
+}
+.kanban-card-prest {
+	font-size: 0.68rem;
+	color: var(--color-text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.kanban-card-titre {
+	font-size: 0.78rem;
+	line-height: 1.3;
+}
+/*  Le type du dossier, en pied de brique. Remontée ici le 19/09/2026 : elle
+    vivait dans `VueKanbanCalendrier`, et le tableau de bord rend désormais la
+    MÊME brique — une règle scopée l'y aurait laissé nu. */
+.kanban-card-type {
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: var(--color-text-muted);
+}
+.kanban-card-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-end;
+	margin-top: 0.25rem;
+	gap: 0.3rem;
+}
+.kanban-card-actions {
+	display: flex;
+	gap: 0.3rem;
+	align-items: center;
+	flex-shrink: 0;
+}
+/* ── Le KANBAN CONDENSÉ du tableau de bord ─────────────────────────────────────
+   Le même objet que `.kanban` ci-dessus, dans son rendu d'aperçu : cinq colonnes
+   resserrées au large, une colonne à la fois quand l'écran est étroit.
+
+   🔴 Ces trente-deux règles vivaient dans `tableau-de-bord/+page.svelte`, donc
+   SCOPÉES. Elles en sortent le 01/09/2026 pour deux raisons qui se rejoignent :
+
+   1. le contrôle de modularité refusait d'agrandir cette page, et il désignait —
+      comme onze fois ce jour-là — un placement : un kanban est un composant du
+      site, pas une mise en forme d'écran ;
+   2. surtout, **plus aucune règle scopée ne concurrence celles-ci**. Deux
+      bascules d'affichage par CSS avaient échoué le même soir, la première parce
+      qu'une règle globale ne surcharge pas une règle scopée. En sortant TOUT le
+      bloc, la question de la spécificité disparaît au lieu d'être arbitrée.
+
+   ⚠️ La bascule large/étroit, elle, n'est plus en CSS du tout : c'est un `{#if}`
+   sur `SEUIL_KANBAN_ETROIT` (`$lib/kanban.ts`). Ne pas réintroduire ici de classe
+   d'interrupteur — c'est la forme qui a échoué deux fois. */
+.kb-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.6rem;
+}
+.kb-voir-lien {
+	font-size: 0.78rem;
+	color: var(--color-primary);
+	font-weight: 500;
+	text-decoration: none;
+	white-space: nowrap;
+}
+.kb-voir-lien:hover {
+	text-decoration: underline;
+}
+.kb-vide {
+	font-size: 0.85rem;
+	color: var(--color-text-muted);
+	text-align: center;
+	padding: 1rem 0;
+	margin: 0;
+}
+/*  🔴 FLEX et non grid depuis le 18/09/2026 (validé à l'écran, variante « K4 »).
+    Une grille donne la même part à toutes ses colonnes ; or une colonne VIDE n'a
+    rien à montrer et prenait 200 px pour afficher un tiret. En flex, celles qui
+    portent quelque chose s'étalent (`flex: 1`) et les vides se réduisent à leur
+    titre (`flex: 0 0 auto`) — 30 px au lieu de 200, rendus aux autres. */
+.kb-grid {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	gap: 0.45rem;
+	margin-bottom: 1.25rem;
+}
+.kb-col {
+	flex: 1 1 130px;
+	min-width: 0;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	overflow: hidden;
+	transition: opacity 0.15s;
+}
+/*  Une colonne qui PORTE des dossiers ne bascule rien : son en-tête reste un
+    bouton dans le balisage (une seule écriture), mais il ne se propose pas. */
+.kb-col-head--inerte {
+	cursor: default;
+}
+.kb-col-vide {
+	flex: 0 0 auto;
+	opacity: 0.55;
+	/*  La bande suit la hauteur de la plus haute colonne — par le FLEX, jamais
+	    par `height: 100%` sur son en-tête : un pourcentage résolu contre un
+	    parent lui-même étiré tourne en rond, et le navigateur retombait sur la
+	    hauteur de la fenêtre. Mesuré : 622 px de colonnes pour 250 px de
+	    contenu. */
+	display: flex;
+}
+.kb-col-vide .kb-col-head {
+	flex: 1;
+	writing-mode: vertical-rl;
+	padding: 0.5rem 0.3rem;
+	border-top: 0;
+	border-bottom: 0;
+	border-left: 3px solid;
+	border-left-color: inherit;
+}
+/*  🔴 C'est un `<button>` depuis le 19/09/2026 — sur une colonne VIDE, il la
+    déplie et la replie. Remis à plat : un bouton hérite d'une police, d'une
+    bordure et d'un fond que rien ici ne veut. La même remise à plat que
+    `.ec-titre-btn`, et pour la même raison.
+
+    ⚠️ `font: inherit` est ÉCARTÉ au profit de `font-family` seule : la forme
+    raccourcie réinitialise tout ce qu'elle ne nomme pas, et c'est exactement
+    ce qui a fait rendre 400 à un titre de carte qui demandait 600 (v1.45.0). */
+.kb-col-head {
+	appearance: none;
+	width: 100%;
+	margin: 0;
+	font-family: inherit;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.35rem 0.6rem;
+	background: var(--color-bg);
+	border-top: 3px solid transparent;
+	border-bottom: 1px solid var(--color-border);
+}
+.kb-col-label {
+	font-size: 0.68rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+.kb-col-count {
+	font-size: 0.62rem;
+	font-weight: 700;
+	padding: 0.1rem 0.4rem;
+	border-radius: 1rem;
+}
+/*  🔴 `block` et non `flex` depuis le 18/09/2026 : l'icône occupait une colonne
+    à gauche, et cette marge coûtait sa largeur à TOUTES les lignes du titre.
+    Elle vit maintenant sur la dernière ligne, avec le périmètre. */
+.kb-item {
+	display: block;
+	padding: 0.45rem 0.6rem;
+	border-top: 1px solid var(--color-border);
+	cursor: pointer;
+	transition: background 0.12s;
+}
+.kb-item:first-of-type {
+	border-top: none;
+}
+.kb-item:hover {
+	background: var(--color-bg);
+}
+.kb-item:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: -2px;
+}
+.kb-item-icon {
+	flex-shrink: 0;
+	font-size: 0.85rem;
+	line-height: 1.3;
+}
+/*  La dernière ligne de la vignette : l'icône du type, puis le périmètre. */
+.kb-item-bas {
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
+	margin-top: 0.1rem;
+	min-width: 0;
+}
+.kb-item-titre {
+	display: block;
+	font-size: 0.8rem;
+	color: var(--color-text);
+	line-height: 1.3;
+}
+.kb-item-perim {
+	font-size: 0.68rem;
+	color: var(--color-text-muted);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.kb-mobile-nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius) var(--radius) 0 0;
+	border-bottom: none;
+}
+.kb-mobile-nav-center {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.08rem;
+	flex: 1;
+}
+.kb-mobile-col-label {
+	font-size: 0.82rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.kb-mobile-pos {
+	font-size: 0.66rem;
+	color: var(--color-text-muted);
+}
+.kb-nav-btn {
+	background: none;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	width: 2rem;
+	height: 2rem;
+	flex-shrink: 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--color-text);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition:
+		background 0.12s,
+		border-color 0.12s;
+	line-height: 1;
+}
+.kb-nav-btn:hover:not(:disabled) {
+	background: var(--color-bg);
+	border-color: var(--color-primary);
+}
+.kb-nav-btn:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+.kb-mobile-items {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 0 0 var(--radius) var(--radius);
+	overflow: hidden;
+}
+.kb-mobile-plus {
+	font-size: 0.74rem;
+	color: var(--color-text-muted);
+	text-align: center;
+	padding: 0.4rem 0.75rem;
+	margin: 0;
+	border-top: 1px solid var(--color-border);
+}
+.kb-mobile-plus-lien {
+	color: var(--color-primary);
+	text-decoration: none;
+	font-weight: 500;
+}
+.kb-mobile-plus-lien:hover {
+	text-decoration: underline;
+}
+.kb-mobile-lien {
+	display: block;
+	text-align: center;
+	padding: 0.55rem 1rem;
+	margin-top: 0.45rem;
+	font-size: 0.8rem;
+	color: var(--color-primary);
+	font-weight: 500;
+	text-decoration: none;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	transition: background 0.12s;
+}
+.kb-mobile-lien:hover {
+	background: var(--color-primary-light);
+}

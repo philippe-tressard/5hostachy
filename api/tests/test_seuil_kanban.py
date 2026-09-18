@@ -12,7 +12,7 @@ Le site rend le kanban à **deux** endroits :
 | page **Calendrier** (complet) | colonnes empilées, pleine largeur | 900 px |
 | **tableau de bord** (condensé) | une colonne à la fois, avec navigation | **767 px** |
 
-Les deux règles vivent dans `front/src/styles/` : `.kanban` dans `composants.css`,
+Les deux règles vivent dans `front/src/styles/` : `.kanban` dans `kanban.css`,
 `.kb-desktop`/`.kb-mobile` dans `normes.css`. La seconde a quitté la page le
 01/09/2026 — ce sont des interrupteurs de responsive, pas une mise en forme
 d'écran, et le contrôle de modularité refusait d'agrandir la page pour les loger.
@@ -55,8 +55,10 @@ _FRONT = _RACINE / "front" / "src"
 #: fichier » aurait suivi n'importe quel ajout ultérieur, et le test aurait mesuré
 #: autre chose sans le dire.
 _SOURCES = [
-    (_FRONT / "styles" / "composants.css", r"\.kanban \{\s*\n\s*flex-direction: column;"),
-
+    #  ⚠️ `kanban.css` et non `composants.css` depuis le 19/09/2026 : la famille
+    #  entière a quitté le fichier de composants, que le garde-fou de modularité
+    #  refusait d'agrandir. Le sélecteur, lui, n'a pas bougé.
+    (_FRONT / "styles" / "kanban.css", r"\.kanban \{\s*\n\s*flex-direction: column;"),
 ]
 
 
