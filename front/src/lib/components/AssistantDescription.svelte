@@ -31,7 +31,7 @@
 	import { assistant as assistantApi, type PropositionDescription } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { safeRichContent } from '$lib/sanitize';
-	import { peutSolliciter, type ContexteAssistant } from '$lib/assistant';
+	import { ENTITE_COMMENTAIRE, peutSolliciter, type ContexteAssistant } from '$lib/assistant';
 	import { toast } from '$lib/components/Toast.svelte';
 
 	/** L'entité et son contexte — composés par le formulaire (`$lib/assistant`). */
@@ -47,6 +47,19 @@
 	export let assiste = false;
 
 	let precision = '';
+
+	/**
+	 *  Ce que l'auteur peut demander, dans les mots du champ.
+	 *
+	 *  Sur un COMMENTAIRE, le prompt sait produire une phrase de rappel de
+	 *  l'affaire — mais seulement si on la demande. Une capacite qu'aucune
+	 *  invite n'annonce n'est employee par personne : l'auteur ne devine pas
+	 *  ce qu'un champ libre accepte.
+	 */
+	$: invitePrecision =
+		contexte.entite === ENTITE_COMMENTAIRE
+			? 'rappeler le contexte, plus court…'
+			: 'plus court, plus formel…';
 	let enCours = false;
 	let proposition: PropositionDescription | null = null;
 
@@ -112,7 +125,7 @@
 					type="text"
 					bind:value={precision}
 					maxlength="500"
-					placeholder="plus court, plus formel…"
+					placeholder={invitePrecision}
 					disabled={enCours}
 				/>
 			</label>
