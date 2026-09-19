@@ -1,6 +1,19 @@
 // Règles de visibilité kanban — source unique de vérité
 // Utilisé par calendrier/+page.svelte et tableau-de-bord/+page.svelte
 
+/** Une colonne du Kanban : son état, ses deux libellés, sa teinte. */
+export interface KanbanCol {
+	id: string;
+	/** Le libellé complet — vue Kanban, pastilles du formulaire, Historique. */
+	label: string;
+	/** La forme brève, pour la brique d'accueil où la colonne est étroite. */
+	labelCourt: string;
+	color: string;
+	/** Déclaré sur les colonnes que la brique d'accueil n'affiche pas, avec la
+	 *  raison en commentaire. Une absence sans ce drapeau est un oubli. */
+	masqueAccueil?: boolean;
+}
+
 /**
  * Les COLONNES du Kanban — la source unique, extraite de `calendrier/+page.svelte`
  * le 18/08/2026.
@@ -16,15 +29,53 @@
  * (« État : X → Y »). Le pendant serveur est `KANBAN_LABELS` dans
  * `calendrier_historique.py` — les contextes de build sont `./api` et `./front`,
  * le partage d'un fichier est impossible, seule la copie l'est.
+ *
+ * ## Une seule table, et les divergences DÉCLARÉES (#1030, 19/09/2026)
+ *
+ * Elle était écrite **deux fois** : ici, et dans `KanbanTableauBord.svelte`
+ * (`DASH_KANBAN_COLS`) — mêmes identifiants, mêmes couleurs recopiées, mais
+ * cinq colonnes au lieu de six et des libellés plus courts.
+ *
+ * 🔴 `lint:tables-statuts` était **vert à cause de cela** : il refuse deux
+ * tables qui partagent le même ensemble de clés, et ces deux-là n'en
+ * partageaient que cinq sur six. C'est le cas limite de `standards/02` §1 bis —
+ * la copie incomplète échappe au contrôle qui cherche la copie identique.
+ *
+ * Les deux écarts étaient **légitimes** et ne se déclaraient nulle part :
+ *
+ * | Écart | Pourquoi | Champ qui le porte |
+ * |---|---|---|
+ * | libellés plus courts sur l'accueil | la brique y est étroite, « CS (en cours) » y tient mal | `labelCourt` |
+ * | « Annulé » absent de l'accueil | l'accueil montre ce qui avance ; le filtre de la brique écartait déjà `annule` | `masqueAccueil` |
+ *
+ * Une divergence légitime qui ne se déclare pas est **indistinguable d'un
+ * oubli** (`standards/02` §4) — et c'est ce qui la rend impossible à corriger :
+ * personne ne sait s'il faut aligner ou préserver.
  */
-export const KANBAN_COLS = [
-	{ id: 'ag', label: 'AG', color: '#8b5cf6' },
-	{ id: 'cs', label: 'CS (en cours)', color: '#3b82f6' },
-	{ id: 'syndic', label: 'Syndic (en cours)', color: '#f59e0b' },
-	{ id: 'fournisseur', label: 'Prestataire (en cours)', color: '#f97316' },
-	{ id: 'termine', label: 'Terminé', color: '#22c55e' },
-	{ id: 'annule', label: 'Annulé', color: '#9ca3af' },
+export const KANBAN_COLS: KanbanCol[] = [
+	{ id: 'ag', label: 'AG', labelCourt: 'AG', color: '#8b5cf6' },
+	{ id: 'cs', label: 'CS (en cours)', labelCourt: 'CS', color: '#3b82f6' },
+	{ id: 'syndic', label: 'Syndic (en cours)', labelCourt: 'Syndic', color: '#f59e0b' },
+	{
+		id: 'fournisseur',
+		label: 'Prestataire (en cours)',
+		labelCourt: 'Prestataire',
+		color: '#f97316',
+	},
+	{ id: 'termine', label: 'Terminé', labelCourt: 'Terminé', color: '#22c55e' },
+	//  `masqueAccueil` : l'accueil montre ce qui AVANCE. Un événement annulé n'a
+	//  pas d'étape suivante, et la brique le filtrait déjà — la colonne y serait
+	//  restée vide en permanence.
+	{ id: 'annule', label: 'Annulé', labelCourt: 'Annulé', color: '#9ca3af', masqueAccueil: true },
 ];
+
+/** Les colonnes de la brique d'accueil : la table unique, moins ce qui y est masqué.
+ *
+ * ⚠️ Une **dérivation**, pas une seconde table : ajouter une colonne ici la fait
+ * apparaître aux deux endroits, et c'est le but. Le seul moyen d'en exclure une
+ * est de poser `masqueAccueil`, donc d'écrire pourquoi.
+ */
+export const KANBAN_COLS_ACCUEIL: KanbanCol[] = KANBAN_COLS.filter((c) => !c.masqueAccueil);
 
 export interface KanbanCtx {
 	isCS: boolean;

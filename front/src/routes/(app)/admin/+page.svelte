@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import OngletMaintenance from '$lib/components/OngletMaintenance.svelte';
-	import { api, admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
+	import { admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
 	import { badgeRole, badgeStatut, badgesDeRoles, libelleRole } from '$lib/roles';
 	import { LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { essayer } from '$lib/chargement';
@@ -435,7 +435,7 @@
 		// bloquer le reste de la page.
 		let cfg = get(configStore) as Record<string, string>;
 		try {
-			cfg = { ...cfg, ...(await api.get<Record<string, string>>('/config/admin')) };
+			cfg = { ...cfg, ...(await configApi.admin()) };
 		} catch {
 			toast('error', 'Impossible de charger le paramétrage complet (droits admin requis).');
 		}
@@ -459,7 +459,7 @@
 		// WhatsApp : la configuration part telle quelle vers l'onglet dédié.
 		waCfgPublique = cfg;
 		try {
-			const adminCfg = await api.get<Record<string, string>>('/config/admin');
+			const adminCfg = await configApi.admin();
 			waApiKeySet = !!adminCfg['whatsapp_api_key'];
 			// SMTP config
 			smtpValeurs = adminCfg;
