@@ -208,7 +208,23 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - JWT HS256 en cookies `httponly=True`, `secure=settings.cookie_secure`, `samesite="strict"`
 - CORS : allowlist explicite, jamais `["*"]` avec `credentials=True`
 - Rate limiting slowapi sur `/auth/*`
-- Uploads : UUID-prefix + `os.path.basename()` + `re.sub(r"[^\w.\-]", "_", ...)`
+- **Téléversement : une seule porte.** Un fichier reçu s'écrit sur disque par
+  `utils/fichiers.enregistrer_fichier_recu` **et nulle part ailleurs** ; les
+  règles — liste blanche de types, plafond de taille, cohérence de la signature —
+  vivent dans `FAMILLES` (image · document · document_prive · tableur). Un
+  routeur **nomme une famille**, il ne redéfinit pas ce qu'il accepte.
+  🔒 `test_televersement_source_unique.py` refuse une écriture ailleurs (le PDF
+  d'affiche, qui est **produit** et non reçu, y est déclaré), une liste MIME ou
+  un plafond redéclaré dans un routeur, et une famille qui oublierait l'une des
+  trois règles. `test_signature_fichiers.py` vérifie que **chaque** point de
+  réception appelle la règle — les trois imports de tableur y ont été ajoutés,
+  ils n'avaient aucun contrôle.
+  Le nom stocké passe par `nom_stocke` : préfixe UUID, radical assaini, et
+  **extension dérivée du type**, jamais du nom fourni — `/uploads/*` est servi
+  en statique et Caddy pose le `Content-Type` d'après l'extension sur disque.
+- La **racine du volume** se lit dans `Settings.uploads_dir`, seule lecture de
+  la variable d'environnement. Elle était écrite six fois : un fichier posé hors
+  du volume n'est ni répliqué par `bascule.sh`, ni sauvegardé par `backup.py`.
 
 ---
 

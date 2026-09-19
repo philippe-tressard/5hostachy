@@ -100,6 +100,7 @@ from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
 from app.routers import manuel
 from app.routers import csp
 from app.routers import assistant, config_llm
+from app.config import get_settings
 from app.seed import seed
 from app.utils.backup import setup_scheduler
 
@@ -389,7 +390,7 @@ app.include_router(assistant.router)
 #  d'intégration continue — ce qui rendait l'application intestable dans son
 #  ensemble, et laissait passer toute rupture d'assemblage (cf.
 #  tests/test_demarrage.py).
-uploads_dir = Path(_os.getenv("UPLOADS_DIR", "/app/uploads"))
+uploads_dir = Path(get_settings().uploads_dir)
 uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 

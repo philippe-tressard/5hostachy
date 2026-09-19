@@ -43,19 +43,61 @@ Configuration DOMPurify (`src/lib/sanitize.ts`) :
 - ALLOWED_ATTR : `href src alt title class target rel`
 - `ALLOW_DATA_ATTR: false`
 
-### 3. Path Traversal (A01:2021)
+### 3. Téléversement : une seule porte (A01:2021)
 
-**Rechercher** les uploads qui utilisent `file.filename` directement :
-```powershell
-Get-ChildItem -Recurse -Filter "*.py" | Select-String -Pattern "os\.path\.join.*filename"
-```
+🔴 **Le geste ne se réécrit pas, il s'appelle.** Un fichier reçu s'écrit sur
+disque par `utils/fichiers.enregistrer_fichier_recu`, et nulle part ailleurs.
+Les règles vivent dans `FAMILLES` du même module — liste blanche de types,
+plafond de taille, extensions autorisées —, une entrée par famille :
+`image`, `document`, `document_prive`, `tableur`.
 
-**Fix obligatoire** :
-```python
-import os, re, uuid
-safe_name = re.sub(r"[^\w.\-]", "_", os.path.basename(file.filename))
-final_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
-```
+**Un routeur nomme une famille**, il ne redéfinit pas ce qu'il accepte.
+
+#### Ce que l'audit du 19/09/2026 a trouvé (#1026)
+
+Le téléversement avait **trois écritures**, appliquant des règles différentes :
+
+| Chemin | Types | Plafond | Signature |
+|---|---|---|---|
+| documents privés (`utils/fichiers`) | **aucun** | **aucun** | oui |
+| images (`routers/uploads`) | oui | oui | réencodage PIL |
+| documents joints (`routers/uploads`) | oui | oui | oui, **recopiée** |
+
+Et **trois imports de tableur n'avaient aucun contrôle** : ni type, ni taille.
+Ils n'étaient pas dans la portée du test de signature, dont le critère était
+« les endpoints qui **écrivent** sur le disque » — or un import analyse en
+mémoire. La portée était juste, et elle laissait dehors trois chemins par
+lesquels un fichier arbitraire entrait.
+
+⚠️ **Une duplication de règle de sécurité ne produit aucun signal** : un fichier
+accepté à tort est stocké, servi, et personne ne s'en plaint. C'est pourquoi
+cette question se mesure par des contrôles, et non en relisant les routeurs.
+
+#### Les contrôles, et ce que chacun tient
+
+| Contrôle | Ce qu'il refuse |
+|---|---|
+| `test_televersement_source_unique.py` | une écriture de fichier reçu hors du module ; une liste MIME ou un plafond redéclaré dans un routeur ; une famille qui oublie l'une des trois règles |
+| `test_signature_fichiers.py` | un point de réception qui n'appelle pas la règle — **les sept**, imports de tableur compris |
+| `test_pieces_jointes.py` | une divergence entre ce que le front propose et ce que le serveur accepte |
+
+Le PDF d'affiche de hall est la **seule** écriture déclarée hors du module :
+l'application le **produit**, il n'est pas reçu, donc il n'a ni type à vérifier
+ni signature à confronter. La distinction est écrite dans le contrôle.
+
+#### Le nom stocké
+
+`nom_stocke` : préfixe UUID, radical assaini, et **extension dérivée du type**,
+jamais du nom fourni. `/uploads/*` est servi en statique et Caddy pose le
+`Content-Type` d'après l'extension sur disque : un `.html` téléversé sous un
+type MIME autorisé s'exécuterait sur notre origine.
+
+#### La racine du volume
+
+`Settings.uploads_dir`, **seule** lecture de la variable d'environnement. Elle
+était écrite six fois. Un fichier posé hors du volume n'est ni répliqué vers le
+standby par `bascule.sh`, ni sauvegardé par `backup.py` — il est perdu à la
+première bascule, sans aucun signal.
 
 ### 4. Authentication & Session (A07:2021)
 

@@ -22,6 +22,7 @@ from .commun import (
     _stats_socle,
 )
 from app.utils.types_acces import VIGIK
+from app.utils.fichiers import verifier_fichier_recu
 from . import socle_imports
 from .socle_imports import PatchImportBody
 
@@ -46,6 +47,18 @@ async def upload_import_vigik_excel(
     """Upload un fichier Excel et importe les vigiks dans la table de staging."""
     from app.utils.import_vigiks import importer_depuis_bytes
     contenu = await file.read()
+    #  🔴 Les trois règles AVANT de lire le classeur (#1026). Cet import
+    #  n'avait AUCUN contrôle : ni type, ni taille — `await file.read()` lisait
+    #  le corps entier en mémoire, puis le passait à l'analyseur.
+    #
+    #  Le plafond de la famille « tableur » protège donc la mémoire du Raspberry
+    #  Pi autant qu'il contrôle l'entrée : un fichier d'import est une LISTE, pas
+    #  un scan, et rien ne borne le corps d'une requête en amont.
+    #
+    #  ⚠️ Rien n'est écrit sur disque ici, et c'est voulu : le classeur est
+    #  analysé puis jeté. On appelle donc `verifier_fichier_recu`, pas
+    #  `enregistrer_fichier_recu`.
+    verifier_fichier_recu(contenu, file.filename, file.content_type, "tableur")
     return importer_depuis_bytes(contenu, session=session, remplacer=remplacer)
 
 
