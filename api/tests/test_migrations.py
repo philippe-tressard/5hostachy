@@ -141,3 +141,131 @@ def test_aucune_cle_etrangere_dans_un_add_column():
         "modèle non plus : une base neuve et une base migrée doivent porter le "
         "même schéma."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  🔴 Aucune f-string dans un `execute()` de migration — sauf les 27 d'avant
+#
+#  CLAUDE.md dit « **jamais** de f-string dans `op.execute()` →
+#  `text(...).bindparams(...)` ». La règle n'avait **aucun** garde-fou, et
+#  l'écart continuait : au 19/09/2026, **40** appels `execute` portaient une
+#  f-string sur 26 migrations, dont **27 sans `bindparams`** — et trois d'entre
+#  elles (0193, 0194, 0196) datent du même mois que ce relevé (#1032).
+#
+#  ⚠️ Un `grep 'op.execute(f"'` en rend **zéro** : la f-string est presque
+#  toujours à la ligne suivante de l'appel. C'est pourquoi ce contrôle lit
+#  l'arbre syntaxique et non le texte — et c'est pourquoi personne ne l'avait vu.
+#
+#  ## Pourquoi la liste est FIGÉE et non décroissante
+#
+#  Une dette se résorbe par un plafond qui baisse (`standards/05` §2). Pas
+#  celle-ci : **une migration appliquée ne se modifie jamais**. Ces 27 lignes
+#  sont de l'HISTORIQUE, pas un retard — les corriger réécrirait le schéma déjà
+#  déployé. La liste ne bougera donc plus, sauf pour retirer une entrée dont le
+#  fichier disparaîtrait, ce que le dernier test vérifie.
+#
+#  ## La règle réelle, celle qu'on peut tenir
+#
+#  | Ce qu'on interpole | Verdict |
+#  |---|---|
+#  | une **valeur** (contenu, identifiant de ligne, date) | jamais — `bindparams` |
+#  | un **identifiant** (nom de table ou de colonne) depuis une constante du fichier | toléré : SQLite n'accepte pas de paramètre à cette place |
+#
+#  Le second cas est celui des treize f-strings qui lient déjà leurs valeurs. Il
+#  n'était écrit nulle part avant ce lot — or une dérogation non écrite n'est pas
+#  une dérogation, c'est un oubli qui ressemble à une décision.
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Les 27 appels `execute(f"…")` sans `bindparams` présents au 19/09/2026,
+#: `fichier:ligne`. Figée : voir ci-dessus.
+FSTRINGS_HISTORIQUES = {
+    "0065_whatsapp_scheduled.py:52",
+    "0074_update_berteaux_message.py:40",
+    "0074_update_berteaux_message.py:44",
+    "0074_update_berteaux_message.py:51",
+    "0074_update_berteaux_message.py:55",
+    "0102_publication_syndic_contenu_complet.py:38",
+    "0102_publication_syndic_contenu_complet.py:44",
+    "0103_publication_syndic_lien_ancre.py:38",
+    "0103_publication_syndic_lien_ancre.py:44",
+    "0105_fichiers_urls_email_externe.py:13",
+    "0109_publication_syndic_commentaire.py:138",
+    "0109_publication_syndic_commentaire.py:145",
+    "0110_ticket_syndic_commentaire.py:177",
+    "0110_ticket_syndic_commentaire.py:184",
+    "0122_execution_taches_planifiees.py:47",
+    "0124_documents_prives_hors_tronc_servi.py:87",
+    "0124_documents_prives_hors_tronc_servi.py:110",
+    "0130_intention_modele_email.py:43",
+    "0134_publication_photos_urls.py:31",
+    "0143_libelle_long_des_batiments.py:106",
+    "0152_annonce_workflow.py:95",
+    "0160_cr_ag_perimetre_cible.py:94",
+    "0190_acces_perimetre_cible.py:110",
+    "0190_acces_perimetre_cible.py:144",
+    "0193_saisi_pour_publication_evenement.py:63",
+    "0194_assistant_ia_par_usage.py:75",
+    "0196_declenchement_un_vocabulaire.py:78",
+}
+
+
+def _fstrings_sans_bindparams() -> set[str]:
+    """Les `execute(...)` de migration qui interpolent sans lier, par AST."""
+    import ast
+
+    trouves = set()
+    for fichier in sorted((_API_DIR / "alembic" / "versions").glob("*.py")):
+        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
+        for noeud in ast.walk(arbre):
+            if not isinstance(noeud, ast.Call):
+                continue
+            if not ast.unparse(noeud.func).endswith("execute"):
+                continue
+            if not any(isinstance(x, ast.JoinedStr) for x in ast.walk(noeud)):
+                continue
+            if "bindparams" in ast.unparse(noeud):
+                continue
+            trouves.add(f"{fichier.name}:{noeud.lineno}")
+    return trouves
+
+
+def test_le_controle_voit_bien_les_migrations():
+    """Cas zéro de la portée : un glob vide se lirait comme « aucun écart »."""
+    versions = list((_API_DIR / "alembic" / "versions").glob("*.py"))
+    assert len(versions) > 100, (
+        f"seulement {len(versions)} migration(s) vue(s) — le contrôle a perdu sa "
+        "portée, et rendrait un vert parfait sur un répertoire vide"
+    )
+
+
+def test_aucune_NOUVELLE_fstring_sans_bindparams():
+    """La 28e est refusee. Les 27 d'avant sont de l'historique, pas un retard."""
+    nouvelles = sorted(_fstrings_sans_bindparams() - FSTRINGS_HISTORIQUES)
+    saut = chr(10) + "  "
+    assert not nouvelles, (
+        "Ces `execute()` interpolent une f-string sans lier de parametre :"
+        + saut
+        + saut.join(nouvelles)
+        + chr(10) * 2
+        + "Une VALEUR se lie : text('... :x ...').bindparams(x=valeur)."
+        + chr(10)
+        + "Un IDENTIFIANT (nom de table ou de colonne) ne peut pas se lier en "
+        + "SQLite : le prendre dans une constante du fichier, et ecrire en "
+        + "commentaire que c'est un identifiant."
+        + chr(10)
+        + "Ne PAS ajouter la ligne a FSTRINGS_HISTORIQUES : cette liste est "
+        + "l'etat du 19/09/2026, pas une tolerance ouverte."
+    )
+
+
+def test_aucune_entree_historique_ne_survit_a_son_fichier():
+    """Une exception qui ne correspond plus a rien finit par couvrir autre chose."""
+    perimees = sorted(FSTRINGS_HISTORIQUES - _fstrings_sans_bindparams())
+    saut = chr(10) + "  "
+    assert not perimees, (
+        "Ces entrees de FSTRINGS_HISTORIQUES ne correspondent plus a rien :"
+        + saut
+        + saut.join(perimees)
+        + chr(10) * 2
+        + "La migration a ete supprimee, ou sa ligne a bouge. Les retirer."
+    )
