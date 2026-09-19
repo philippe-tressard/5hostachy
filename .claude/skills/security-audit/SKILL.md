@@ -84,6 +84,23 @@ Get-ChildItem -Recurse -Filter "*.py" | Select-String -Pattern "bcrypt|passlib|s
 ```
 **Attendu** : bcrypt uniquement (via `passlib` ou `bcrypt` direct).
 
+#### Poser un mot de passe = fermer les sessions qu'il ouvrait
+
+🔴 Deux routes posent un mot de passe — « changer le mien » et « j'ai oublié le
+mien » — et elles ont **divergé** jusqu'au 19/09/2026 : la seconde révoquait les
+sessions actives, la première ne révoquait rien. Un attaquant qui détenait une
+session la conservait sept jours après que la victime avait changé son mot de
+passe (#1027).
+
+**Le geste s'écrit une fois** : `app/utils/mots_de_passe.poser_mot_de_passe()` —
+hachage, révocation des autres sessions, et la session appelante conservée quand
+elle se présente. `api/tests/test_reinitialisation_mot_de_passe.py` refuse qu'une
+route hache un mot de passe elle-même.
+
+⚠️ **Ce que la révocation ne couvre pas** : le jeton d'accès est un JWT
+autoporteur de 120 minutes, que rien ne révoque côté serveur. La fenêtre passe de
+sept jours à deux heures, pas à zéro — #1063 porte la décision.
+
 ### 5. CORS (A05:2021)
 
 ```powershell
@@ -101,15 +118,26 @@ Get-ChildItem -Recurse -Filter "*.py" | Select-String -Pattern "CORSMiddleware|a
 Get-ChildItem -Recurse -Filter "*.py" | Select-String -Pattern "slowapi|RateLimiter|throttle|limiter"
 ```
 
-**Endpoints critiques à protéger** :
+**Les limites vivent dans `api/app/utils/limiter.py`**, une constante par
+**intention** (secret éprouvé, courriel déclenché, session, contrôle de fichier,
+lecture authentifiée, journal, lecture publique). Chaque constante dit pourquoi
+elle vaut ce qu'elle vaut — et c'est là qu'on lit la valeur, pas ici.
 
-| Endpoint | Limite |
-|----------|--------|
-| `/auth/login` | 5/minute |
-| `/auth/register` | 5/minute |
-| `/auth/refresh` | 10/minute |
-| `/auth/mot-de-passe-oublie` | 3/minute |
-| `/auth/reinitialiser-mot-de-passe` | 5/minute |
+🔴 Ce tableau les recopiait, et il a été **faux** : `/auth/change-password` et
+`/auth/verifier-email` n'avaient aucune limite alors que les deux éprouvent un
+secret, et les quatre routes de `auth_profil.py` non plus. Une liste recopiée ne
+dit rien des routes qu'elle omet — c'est précisément ce qui manquait (#1027).
+
+🔒 **Le contrôle qui remplace ce tableau** : `api/tests/test_limites_debit_auth.py`
+exige que **toute** route d'un module `auth*.py` porte un `@limiter.limit`, que sa
+valeur vienne d'une constante de `utils.limiter`, que le décorateur soit **sous**
+celui de la route (au-dessus, il n'a aucun effet, en silence) et que la fonction
+reçoive une `request` (sans elle, slowapi lève au premier visiteur, pas au
+démarrage).
+
+**Ce qu'il reste à faire à la main** : juger si le plafond d'une route est *bien
+réglé*. Le contrôle vérifie qu'il existe et qu'il est nommé, jamais qu'il est
+prudent.
 
 ### 7. Refresh Token Rotation (A07:2021)
 

@@ -21,7 +21,7 @@ en ont besoin, et un routeur qui en importe un autre n'est plus un routeur.
 """
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, field_validator
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -37,6 +37,11 @@ from app.models.core import (
 )
 from app.schemas import UserRead
 from app.utils.alerte_etage import alerter_divergence_etage
+from app.utils.limiter import (
+    LIMITE_LECTURE_AUTHENTIFIEE,
+    LIMITE_PREFERENCE,
+    limiter,
+)
 from app.utils.batiments import libelle_batiment_ou
 from app.utils.etages import ETAGE_HORS_BORNES, etage_hors_bornes
 from app.utils.lecture_utilisateur import construire_user_read
@@ -45,7 +50,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/me", response_model=UserRead)
+@limiter.limit(LIMITE_LECTURE_AUTHENTIFIEE)
 def me(
+    request: Request,
     user: Utilisateur = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -80,7 +87,9 @@ class MeUpdate(BaseModel):
 
 
 @router.patch("/me", response_model=UserRead)
+@limiter.limit(LIMITE_PREFERENCE)
 def update_me(
+    request: Request,
     body: MeUpdate,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
@@ -154,7 +163,9 @@ class DemandeModifCreate(BaseModel):
 
 
 @router.post("/me/demande-modification", status_code=201)
+@limiter.limit(LIMITE_PREFERENCE)
 def creer_demande_modif(
+    request: Request,
     body: DemandeModifCreate,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
@@ -193,7 +204,9 @@ def creer_demande_modif(
 
 
 @router.get("/me/demandes-modification")
+@limiter.limit(LIMITE_LECTURE_AUTHENTIFIEE)
 def mes_demandes_modif(
+    request: Request,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
