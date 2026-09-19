@@ -2,7 +2,7 @@
 
 ## Ce que la vérification a trouvé
 
-Le code est **correct** : `routers/uploads.py` applique `ImageOps.exif_transpose`
+Le code est **correct** : `utils/images.py` applique `ImageOps.exif_transpose`
 avant d'enregistrer, donc la rotation est cuite dans le JPEG écrit et le fichier
 servi est droit quel que soit le lecteur.
 
@@ -64,6 +64,7 @@ from fastapi import UploadFile  # noqa: E402
 from starlette.datastructures import Headers  # noqa: E402
 
 from app.routers import uploads  # noqa: E402
+from app.utils import images  # noqa: E402
 
 
 def _image_couchee() -> bytes:
@@ -158,20 +159,29 @@ def test_cas_zero_SANS_exif_transpose_dans_uploads_la_photo_reste_couchee(
     """🔴 La preuve que ces tests mesurent le MODULE DE PRODUCTION.
 
     On neutralise `exif_transpose` là où il est appelé — dans
-    `app.routers.uploads` — et la photo doit repartir couchée. Deux choses en
-    découlent : les tests ci-dessus mesurent bien quelque chose, et ils le
-    mesurent **au bon endroit**. Tant qu'ils rejouaient une copie locale du
-    pipeline, ce cas zéro passait aussi… sans rien prouver de la production.
+    `app.utils.images`, où le réencodage vit depuis le 19/09/2026 (#1057) — et la
+    photo doit repartir couchée. Deux choses en découlent : les tests ci-dessus
+    mesurent bien quelque chose, et ils le mesurent **au bon endroit**. Tant
+    qu'ils rejouaient une copie locale du pipeline, ce cas zéro passait aussi…
+    sans rien prouver de la production.
+
+    🔴 **Ce test a échoué le jour où le geste a déménagé, et c'est exactement ce
+    qu'on lui demande.** Le réencodage a quitté `routers/uploads.py` pour
+    `utils/images.py`, partagé avec la diffusion WhatsApp ; ce cas zéro visait
+    `uploads.ImageOps`, qui n'existait plus. Il a donc suivi la logique — il ne
+    s'est pas affaibli pour la laisser partir sans lui
+    (`standards/02-factorisation.md` §4 ter : extraire, c'est emporter ce que le
+    compilateur ne vérifie pas).
 
     ⚠️ Un cas zéro antérieur a corrigé une erreur de ma part : j'avais écrit que
     l'ORDRE des deux appels décidait, et il a montré que non. Un cas zéro ne sert
     pas seulement à éprouver le contrôle — il éprouve aussi ce qu'on croit savoir.
     """
-    monkeypatch.setattr(uploads.ImageOps, "exif_transpose", lambda img: img)
+    monkeypatch.setattr(images.ImageOps, "exif_transpose", lambda img: img)
     couchee = _televerser(_image_couchee(), tmp_path, monkeypatch)
     assert couchee.size == (40, 20), (
         "l'image se redresse sans `exif_transpose` : ces tests ne prouvent plus "
-        "que `routers/uploads.py` la redresse."
+        "que le réencodage partagé la redresse."
     )
 def test_le_courriel_joint_la_photo_TELLE_QUELLE(tmp_path):
     """L'orientation a UN propriétaire : le téléversement (17/09/2026).
