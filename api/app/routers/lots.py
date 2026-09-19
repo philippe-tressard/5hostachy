@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.utils.batiments import libelle_batiment_ou
-from app.auth.deps import get_current_user, require_cs_or_admin
+from app.auth.deps import est_rattache_au_lot, get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.utils.recuperer import ou_404
 from app.utils.etages import (
@@ -117,15 +117,15 @@ def tous_les_lots(
     return [_lot_read(lot) for lot in session.exec(select(Lot)).all()]
 
 
-def _lot_rattache(user: Utilisateur, lot_id: int) -> bool:
-    """Ce lot est-il rattaché à cet utilisateur par une association ACTIVE ?
-
-    La règle était écrite en clair dans `get_lot` ; le second endpoint qui en a
-    besoin — celui qui écrit l'étage d'un lot (#835) — l'aurait recopiée. Une
-    règle d'accès en deux exemplaires ne diverge pas sur le cas nominal : elle
-    diverge le jour où l'un des deux apprend quelque chose (`standards/02` §1 bis).
-    """
-    return lot_id in [ul.lot_id for ul in user.user_lots if ul.actif]
+#  🔴 `_lot_rattache` a été SUPPRIMÉE le 19/09/2026 (#1028), pas renommée : sa
+#  docstring annonçait qu'une règle d'accès en deux exemplaires diverge « le jour
+#  où l'un des deux apprend quelque chose » — et le second exemplaire existait
+#  déjà, dans `routers/acces/resident.py`, sans le test du lien actif.
+#
+#  La question vit maintenant dans `auth/deps.est_rattache_au_lot`, avec les
+#  autres règles d'autorisation, là où `test_autorisation.py` les voit. Un alias
+#  local qui aurait délégué à la fonction partagée était exclu : il aurait laissé
+#  croire à deux notions (`standards/02` §1.6).
 
 
 #  🔴 `GET /lots/{lot_id}` A ÉTÉ RETIRÉ le 12/09/2026 (#932), avec sa méthode
@@ -178,7 +178,7 @@ def maj_etage_de_mon_lot(
     un ticket pour corriger un chiffre était la friction de trop.
     """
     lot = ou_404(session, Lot, lot_id, "Lot")
-    if not _lot_rattache(user, lot_id):
+    if not est_rattache_au_lot(user, lot_id):
         raise HTTPException(403, "Accès refusé")
     if body.etage is not None and etage_hors_bornes(body.etage):
         raise HTTPException(400, ETAGE_HORS_BORNES)

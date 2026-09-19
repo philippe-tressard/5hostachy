@@ -16,12 +16,12 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.utils.declenchement import normaliser
-from app.config import get_settings
+from app.auth.cle_maintenance import exiger_cle_maintenance
 from app.database import get_session
 from app.models.core import HistoriqueEmail, HistoriqueMaintenance
 
@@ -48,23 +48,15 @@ class RapportMaintenance(BaseModel):
     details: Optional[dict] = None             # chiffres propres à la tâche
 
 
-def _exiger_cle_maintenance(cle_recue: Optional[str]) -> None:
-    """Vérifie la clé partagée des scripts d'exploitation.
-
-    Extrait de `maintenance_rapport` le 11/08/2026, quand un second endpoint a eu
-    besoin du même contrôle : recopier trois lignes d'authentification est la
-    façon la plus courante de laisser l'une des deux copies s'assouplir.
-
-    Ce canal n'est PAS une session : il n'autorise que les scripts cron des nœuds,
-    qui lisent la clé dans `/opt/5hostachy/.env`. Il ne donne accès à aucune
-    donnée de copropriétaire — uniquement aux dates d'exécution des tâches.
-    """
-    settings = get_settings()
-    if not settings.maintenance_key:
-        raise HTTPException(status_code=503, detail="Maintenance reporting non configuré (MAINTENANCE_KEY vide)")
-    if cle_recue != settings.maintenance_key:
-        raise HTTPException(status_code=403, detail="Clé maintenance invalide")
-
+#  🔴 `_exiger_cle_maintenance` a été DÉPLACÉE le 19/09/2026 (#1028) dans
+#  `app/auth/cle_maintenance.py`. C'est un moyen de s'authentifier — une clé
+#  partagée — et c'était le seul qui ne vivait pas dans `auth/`, donc le seul que
+#  `test_autorisation.py` ne pouvait pas raisonner comme une porte : il rangeait
+#  ces quatre routes parmi les « publiques assumées », ce qui est faux.
+#
+#  La conséquence était un faux vert : une route déclarée publique reste verte si
+#  l'on retire son contrôle d'authentification. Le test les classe à part
+#  désormais, et vérifie que chacune appelle bien la fonction.
 
 @router.get("/maintenance/dernier-rapport")
 def maintenance_dernier_rapport(
@@ -97,7 +89,7 @@ def maintenance_dernier_rapport(
     en cron sur les nœuds, sans utilisateur. Elle ne rend que des dates
     d'exécution — aucune donnée personnelle.
     """
-    _exiger_cle_maintenance(x_maintenance_key)
+    exiger_cle_maintenance(x_maintenance_key)
     lignes = session.exec(
         select(HistoriqueMaintenance)
         .where(HistoriqueMaintenance.tache == tache)
@@ -118,7 +110,7 @@ def maintenance_rapport(
     x_maintenance_key: Optional[str] = Header(default=None, alias="x-maintenance-key"),
     session: Session = Depends(get_session),
 ):
-    _exiger_cle_maintenance(x_maintenance_key)
+    exiger_cle_maintenance(x_maintenance_key)
     entry = HistoriqueMaintenance(
         tache=body.tache,
         noeud=body.noeud,
@@ -168,7 +160,7 @@ def emails_echecs_recents(
 
     `total = 0` est la réponse attendue ; toute autre valeur fait échouer le point 9.
     """
-    _exiger_cle_maintenance(x_maintenance_key)
+    exiger_cle_maintenance(x_maintenance_key)
     #  Borné : une valeur aberrante passée par un script ne doit pas balayer toute
     #  la table, que la purge garde à 90 jours.
     jours = max(1, min(int(jours), 90))
@@ -215,7 +207,7 @@ def maintenance_cles_etrangeres(
     réapparaître tant que les 21 endpoints DELETE non testés n'ont pas été
     éprouvés. Ce qui est critique en continu ne se vérifie pas qu'en MEP.
     """
-    _exiger_cle_maintenance(x_maintenance_key)
+    exiger_cle_maintenance(x_maintenance_key)
 
     from app.database import engine
     from app.utils.diagnostic_cles import compter_orphelins

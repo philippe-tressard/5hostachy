@@ -17,11 +17,11 @@ from fastapi import (
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user
+from app.auth.deps import est_rattache_au_lot, get_current_user
 from app.database import get_session
 from app.models.core import (
     CommandeAcces, Notification, StatutAcces, StatutImport,
-    Utilisateur, UserLot, Lot,
+    Utilisateur, Lot,
 )
 from app.schemas import CommandeAccesCreate, CommandeAccesRead
 from app.routers.acces.vues import AccesOut
@@ -207,11 +207,11 @@ def creer_commande(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    # Vérifie que l'utilisateur est bien lié au lot
-    lien = session.exec(
-        select(UserLot).where(UserLot.user_id == user.id, UserLot.lot_id == body.lot_id)
-    ).first()
-    if not lien:
+    #  🔴 Cette vérification interrogeait `UserLot` elle-même, SANS regarder
+    #  `actif` : un rattachement désactivé permettait encore de commander un
+    #  badge pour ce lot (#1028). La question s'écrit une fois, dans
+    #  `auth/deps.est_rattache_au_lot`, qui exige le lien actif.
+    if not est_rattache_au_lot(user, body.lot_id):
         raise HTTPException(403, "Vous n'êtes pas associé à ce lot")
 
     cmd = CommandeAcces(
