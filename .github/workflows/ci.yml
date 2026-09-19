@@ -123,8 +123,23 @@ jobs:
         # imports inutiles, et une migration déjà appliquée ne se modifie jamais
         # (CLAUDE.md). Les corriger pour satisfaire un linter réécrirait
         # l'historique du schéma — le remède serait pire que le défaut.
+        # S608 (SQL construit par chaînes) sur `app/` SEULEMENT, depuis le
+        # 19/09/2026 (#1032). Deux occurrences existaient, toutes deux
+        # légitimes — `diagnostic_cles.py` interpole un nom de table, ce que
+        # SQLite ne sait pas lier — et aucune n'était DÉCLARÉE : elles portent
+        # maintenant un `noqa: S608` avec leur raison.
+        #
+        # 🔴 PAS sur `alembic/`, et ce n'est pas un oubli : 23 migrations y
+        # construisent du SQL par f-string, et **une migration appliquée ne se
+        # modifie jamais**. Y ajouter 23 `noqa` serait modifier l'historique du
+        # schéma pour satisfaire un linter — le remède serait pire que le
+        # défaut, comme pour F401 juste au-dessus.
+        #
+        # Ce qui couvre les migrations, c'est `test_migrations.py` :
+        # `test_aucune_NOUVELLE_fstring_sans_bindparams` refuse la 28ᵉ, avec la
+        # liste des 27 d'avant FIGÉE — de l'historique, pas une tolérance.
         run: |
-          ruff check api/app/ --select E9,F63,F7,F82,F401
+          ruff check api/app/ --select E9,F63,F7,F82,F401,S608
           ruff check api/alembic/ --select E9,F63,F7,F82
         # On garde un garde-fou « erreurs réelles » (syntaxe, noms invalides, runtime)
         # sans bloquer le CI sur des règles de style legacy.

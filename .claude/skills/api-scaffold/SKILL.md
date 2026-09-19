@@ -109,7 +109,13 @@ def downgrade() -> None:
 
 **Règles migration :**
 - ID séquentiel 4 chiffres : `0087`, `0088`...
-- JAMAIS de f-string dans `op.execute()` → toujours `text(...).bindparams(...)`
+- Une **valeur** dans `op.execute()` se **lie** : `text('… :x …').bindparams(x=…)`.
+  Un **identifiant** (nom de table ou de colonne) ne peut pas se lier en SQLite :
+  l'interpoler depuis une constante du fichier, et le **dire en commentaire**.
+  🔒 `api/tests/test_migrations.py` refuse la 28ᵉ f-string non liée : les 27
+  existantes y sont figées, parce qu'une migration appliquée ne se modifie
+  jamais. La règle disait « JAMAIS » et était donc fausse treize fois sur
+  quarante — une consigne intenable est une consigne qu'on cesse de lire (#1032)
 - BDD = **SQLite** — pas de `ALTER TYPE`, pas de `CREATE TYPE`
 - Vérifier existence colonnes avant `add_column` : `PRAGMA table_info('table')`
 - `start.sh` a `set -e` : une migration qui crash = conteneur bloqué

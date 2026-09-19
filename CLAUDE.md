@@ -136,7 +136,16 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 ### Migrations Alembic
 - ID séquentiel 4 chiffres : `0087`, `0088`…
 - **Jamais** modifier une migration existante — créer une nouvelle
-- **Jamais** de f-string dans `op.execute()` → `text(...).bindparams(...)`
+- **Jamais** de f-string dans `op.execute()` pour une **valeur** →
+  `text(...).bindparams(...)`. Un **identifiant** (nom de table ou de colonne)
+  ne peut pas se lier en SQLite : il s'interpole depuis une constante du fichier,
+  et on l'écrit en commentaire. Cette nuance manquait, et la règle en « jamais »
+  était donc fausse treize fois sur quarante — une consigne qu'on ne peut pas
+  suivre à la lettre est une consigne qu'on cesse de lire.
+  🔒 `test_migrations.py` refuse la **28ᵉ** f-string non liée ; les 27 existantes
+  sont **figées** dans le test — une migration appliquée ne se modifie jamais,
+  donc c'est de l'historique et non un retard à résorber. Ruff `S608` couvre le
+  code vivant (`api/app/`), pas `alembic/`, pour la même raison.
 - SQLite : pas de `ALTER TYPE`, pas de `CREATE TYPE`, et **pas de `ForeignKey`
   dans un `add_column`** — SQLite refuse d'altérer les contraintes d'une table
   existante, la migration crashe *après* avoir ajouté la colonne, et `start.sh`

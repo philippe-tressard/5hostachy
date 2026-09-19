@@ -278,12 +278,12 @@ def purger_orphelins(engine, *, simuler: bool = True) -> dict:
                     if remede == "deliaison":
                         mise_a_null = ", ".join(f'"{_sur(c)}" = NULL' for c in cols)
                         conn.execute(
-                            text(f'UPDATE "{_sur(table)}" SET {mise_a_null} WHERE rowid = :r'),
+                            text(f'UPDATE "{_sur(table)}" SET {mise_a_null} WHERE rowid = :r'),  # noqa: S608 — identifiants passés par _sur(), valeurs liées
                             {"r": rowid},
                         )
                     else:
                         conn.execute(
-                            text(f'DELETE FROM "{_sur(table)}" WHERE rowid = :r'), {"r": rowid}
+                            text(f'DELETE FROM "{_sur(table)}" WHERE rowid = :r'), {"r": rowid}  # noqa: S608 — idem : _sur() lève sur tout nom hors regex
                         )
                 conn.commit()
             finally:
