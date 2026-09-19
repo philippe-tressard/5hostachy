@@ -53,45 +53,69 @@ Conventions et patterns pour créer des pages et composants SvelteKit dans le pr
 
 ```svelte
 <script lang="ts">
+	import EtatListe from '$lib/components/EtatListe.svelte';
+
 	let items: Entity[] = [];
-	let loading = true;
+	let chargement = true;
+	let erreur = '';
 
 	onMount(async () => {
 		try {
 			items = await entityApi.list();
+		} catch (e) {
+			erreur = messageErreur(e);
 		} finally {
-			loading = false;
+			chargement = false;
 		}
 	});
 </script>
 
-{#if loading}
-	<p>Chargement…</p>
-{:else if items.length === 0}
-	<p class="empty">Aucun élément pour le moment.</p>
-{:else}
+<EtatListe {chargement} {erreur} vide={items.length === 0}>
 	{#each items as item (item.id)}
 		<!-- contenu -->
 	{/each}
-{/if}
+</EtatListe>
 ```
+
+🔴 **Cet exemple portait le motif à deux branches** — `{#if loading}` puis
+`{:else if items.length === 0}` — que `npm run lint:etat-liste` refuse. Il
+laissait toujours un état de côté, et c'était l'**erreur** : un appel en échec
+s'affichait comme une liste vide, donc comme « il n'y a rien » au lieu de « je
+n'ai pas pu regarder ».
+
+C'est le **cas zéro** de `standards/04` appliqué à un écran : une absence
+d'information ne se rend pas comme une information d'absence. `EtatListe`
+(24 écrans) porte les trois états, et `messageErreur` (`$lib/erreurs.ts`, 45
+fichiers) porte le texte.
 
 ### Gestion d'erreurs API
 
-```svelte
-<script lang="ts">
-	async function save() {
-		try {
-			await entityApi.create(formData);
-			toast.success('Enregistré');
-		} catch (e) {
-			if (e instanceof ApiError) {
-				toast.error(e.message);
-			}
-		}
-	}
-</script>
-```
+Un message d'erreur ne se rédige pas dans un écran : il vient de
+**`$lib/erreurs.ts`** (`messageErreur`), employé par 45 fichiers. Deux écrans qui
+formulent le même échec autrement apprennent deux choses différentes à
+l'utilisateur pour un seul fait.
+
+🔒 `npm run lint:message-erreur` refuse la formulation locale, et
+`npm run lint:catch-vide` refuse un `catch` qui avale l'erreur sans rien dire.
+
+⚠️ **L'API de `toast` est `toast('error', message)`**, jamais `toast.error(…)` :
+cette section enseignait la seconde forme, qui n'existe nulle part
+(`Toast.svelte`). Une consigne qui décrit une API absente fait écrire du code qui
+ne compile pas — et, pire, fait douter du composant plutôt que de la consigne.
+
+### Chargement et listes vides
+
+**`EtatListe`** (24 écrans) porte les trois états d'une liste : en cours, vide,
+en erreur. Une page ne compose plus ces états elle-même.
+
+🔒 `npm run lint:etat-liste` refuse le motif à deux branches
+(`{#if chargement}…{:else if !items.length}…`) qui laissait toujours un état de
+côté — le plus souvent l'erreur, affichée comme une liste vide. Et
+`npm run lint:apercu` tient l'aperçu d'une carte.
+
+⚠️ `<p>Chargement…</p>` écrit à la main n'existe plus nulle part, et cette
+section l'enseignait encore. `$lib/chargement.ts` porte les libellés, et
+`ChargementPartiel` le cas d'un bloc qui se recharge seul.
 
 ## Pattern: Onglets (Tabs) — un onglet est une ADRESSE
 
@@ -132,124 +156,51 @@ libellés (configurables en administration) et les routes dans `$lib/pages.ts`, 
 rend chaque onglet en `<a>`. Un `<div class="tabs">` local rouvre les cinq
 divergences que ce composant vient de fermer.
 
-## Pattern: Carte expansible (Expand Card)
+## Pattern: Carte de liste — **trois composants, aucun balisage à écrire**
 
-```svelte
-<script lang="ts">
-	let expandedItems = new Set<number>();
+🔴 Cette section décrivait un motif écrit à la main — conteneur
+`role="button"`, `.ev-expand`, `expandedItems = new Set()`, `.clamp-5`. **Il n'en
+reste aucune occurrence**, et trois linters refusent de le voir revenir.
 
-	function toggleItem(id: number) {
-		if (expandedItems.has(id)) {
-			expandedItems = new Set();
-		} else {
-			expandedItems = new Set([id]); // Une seule ouverte à la fois
-		}
-	}
-</script>
+| Ce qu'il faut | Composant / module | Contrôle |
+|---|---|---|
+| l'en-tête d'une carte (titre, icônes, chevron) | `EnteteCarte` (16 écrans) | `lint:entete-carte` — **exceptions vides** |
+| l'aperçu du contenu, coupé à 3 lignes | `ApercuCarte` | `lint:apercu` |
+| l'ouverture / fermeture d'un élément de liste | `$lib/listeDepliable.ts` | `lint:liste-depliable` |
+| les pastilles d'état | `Pastille` (39 écrans) | `lint:statuts`, `lint:etats` |
+| le périmètre affiché | `BadgePerimetre` (13 écrans) | `lint:libelle-perimetre`, `lint:teinte` |
 
-{#each items as item (item.id)}
-	{@const expanded = expandedItems.has(item.id)}
-	<div class="ev-expand" class:expanded class:ev-urgent={item.urgent}
-		role="button" tabindex="0"
-		on:click={() => toggleItem(item.id)}
-		on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleItem(item.id)}>
-		<div class="ev-row">
-			<div class="ev-row-inner">
-				<div class="ev-row-main">
-					<span class="ev-type-icon">{item.emoji}</span>
-					<span class="ev-row-titre">{item.titre}</span>
-					{#if item.badge}<span class="badge badge-blue">{item.badge}</span>{/if}
-				</div>
-				{#if item.lieu || item.perimetre}
-				<div class="ev-row-meta">
-					{#if item.lieu}<span class="ev-meta-item">📍 {item.lieu}</span>{/if}
-					{#if item.perimetre && item.perimetre !== 'résidence'}
-						<span class="badge badge-blue ev-meta-badge">🔹 {perimetreLabel(item.perimetre)}</span>
-					{/if}
-				</div>
-				{/if}
-			</div>
-			<div class="ev-row-right">
-				<span class="ev-row-date">{fmtDate(item.cree_le)}</span>
-				<span class="chevron" class:open={expanded}>›</span>
-			</div>
-		</div>
-		{#if !expanded}
-			<div class="ev-preview rich-content clamp-5">{@html safeHtml(item.description)}</div>
-		{/if}
-		{#if expanded}
-			<div class="ev-body" on:click|stopPropagation>
-				<!-- Corps complet + fil d'évolutions -->
-				<div class="rich-content">{@html safeHtml(item.description)}</div>
-			</div>
-		{/if}
-	</div>
-{/each}
-```
+⚠️ **`role="presentation"`, pas `role="button"`** sur le conteneur : le geste
+d'ouverture appartient au chevron d'`EnteteCarte`, qui porte déjà son nom
+accessible et son `keydown`. Un conteneur cliquable annonçait « bouton » un bloc
+qui contient lui-même des boutons.
 
-**Règles carte expansible :**
-- Une seule carte ouverte à la fois (`expandedItems = new Set([id])`)
-- Méta (lieu, périmètre, auteur) : toujours visible, jamais uniquement dans le corps
-- `role="button"` + `tabindex="0"` + `on:keydown` obligatoires
-- `on:click|stopPropagation` sur le corps et les boutons d'action
-- Prévisualisation : `.clamp-5` (5 lignes max)
-- Urgence : `border-left-color: var(--color-danger)`
+La **densité** d'une carte (ce qui va sur quelle ligne, et ce qui est masqué en
+collapsé) est arbitrée dans `ux-patterns` §13 bis — elle a été validée à l'écran,
+elle ne se redécide pas ici.
 
-## Pattern: Pill Buttons (sélection filtre)
+## Pattern: Où s'ouvre un formulaire — **c'est arbitré, pas au choix**
 
-```svelte
-<div class="perimetre-pills">
-	{#each options as opt}
-		<button type="button" class="pill" class:pill-active={selected === opt.value}
-			on:click={() => selected = opt.value}>
-			{opt.label}
-		</button>
-	{/each}
-</div>
+🔴 Cette section enseignait un `<div class="modal-overlay">` écrit à la main,
+avec `showModal` et `.modal-actions`. **`npm run lint:modales` le refuse**, et
+`.modal-actions` n'existe pas.
 
-<style>
-	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
-	.pill { padding: .3rem .8rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); cursor: pointer; font-size: .85rem; }
-	.pill-active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
-</style>
-```
+Le **cadre du geste** est tranché (`ux-patterns` §14, validé à l'écran après
+quatre positions essayées) :
 
-## Pattern: Formulaire modal
+| Geste | Où |
+|---|---|
+| **créer** | en place, dans la page — **jamais** une modale |
+| **modifier** | dans une fenêtre `Modale` (19 écrans) |
+| **faire évoluer** | `EvolForm`, qui reçoit son `entite: EntiteDeclaree` |
 
-```svelte
-<script lang="ts">
-	let showModal = false;
-	let form = { titre: '', description: '' };
+🔒 `npm run lint:cadre-geste` et `npm run lint:geste-edition` tiennent cette
+règle ; `lint:pied-formulaire` impose `PiedFormulaire` (28 écrans) pour les
+boutons, `lint:ordre-sections` l'ordre des sections, `lint:champs` le libellé
+d'un champ, et `lint:section-formulaire` leur découpe.
 
-	async function submit() {
-		try {
-			await entityApi.create(form);
-			toast.success('Créé');
-			showModal = false;
-			items = await entityApi.list(); // rafraîchir
-		} catch (e) {
-			if (e instanceof ApiError) toast.error(e.message);
-		}
-	}
-</script>
-
-{#if showModal}
-<div class="modal-overlay" on:click={() => showModal = false}
-	on:keydown={(e) => e.key === 'Escape' && (showModal = false)}>
-	<div class="modal" on:click|stopPropagation role="dialog" aria-modal="true">
-		<h2>Nouveau</h2>
-		<form on:submit|preventDefault={submit}>
-			<label>Titre *<input bind:value={form.titre} required /></label>
-			<label>Description<textarea bind:value={form.description}></textarea></label>
-			<div class="modal-actions">
-				<button type="button" class="btn-secondary" on:click={() => showModal = false}>Annuler</button>
-				<button type="submit" class="btn-primary">Enregistrer</button>
-			</div>
-		</form>
-	</div>
-</div>
-{/if}
-```
+Un formulaire ne compose donc plus ni son enveloppe, ni son pied, ni l'ordre de
+ses sections : il déclare son contenu.
 
 ## Helpers de formatage — **à importer, jamais à réécrire**
 
@@ -308,22 +259,30 @@ propre documentation.
 	{@html safeDescription(contenu)}
 ```
 
-## CSS : Variables globales disponibles
+## CSS : où vivent les règles
 
-```css
-var(--color-primary)       /* Bleu principal */
-var(--color-primary-light) /* Bleu clair (fond) */
-var(--color-danger)        /* Rouge erreur/urgence */
-var(--color-success)       /* Vert succès */
-var(--color-warning)       /* Orange avertissement */
-var(--color-border)        /* Bordure grise */
-var(--color-text)          /* Texte principal */
-var(--color-text-muted)    /* Texte secondaire */
-var(--color-bg)            /* Fond page */
-var(--color-surface)       /* Fond carte/modal */
-var(--radius)              /* Border-radius standard */
-var(--shadow)              /* Box-shadow standard */
-```
+🔴 **`app.css` ne porte plus aucune règle** depuis le 27/08/2026 (#453) : il n'a
+gardé que ses `@import` vers `src/styles/*.css`. Les deux skills l'annonçaient
+encore comme « le fichier des règles globales », à onze endroits.
+
+| Fichier | Ce qu'il porte |
+|---|---|
+| `src/styles/socle.css` | les **variables** (couleurs, rayon, ombre) et la base |
+| `src/styles/ecrans.css` | les classes partagées entre écrans |
+| les autres `src/styles/*.css` | par domaine — voir les `@import` d'`app.css` |
+
+**La liste des variables n'est pas recopiée ici** : elle se lit dans
+`socle.css`, où chacune porte son usage en commentaire. Cette section en listait
+douze alors que le fichier en déclare **dix-huit** — une liste recopiée est
+fausse dès qu'on en ajoute une, et personne ne relit une consigne qu'on n'a pas
+touchée.
+
+🔒 `npm run lint:styles`, `lint:classes-nues`, `lint:css-duplique`,
+`lint:css-orphelin` et `lint:charte` tiennent l'usage des couleurs et des
+classes. `lint:points-rupture` impose les points de rupture de l'échelle
+déclarée, et `lint:largeur-saisie` interdit d'écrire une largeur dans un écran —
+`--largeur-saisie` est **généralisée** depuis le 18/08/2026, et la constante
+`ROUTES_LARGEUR_PLEINE` qui la limitait à une route n'existe plus.
 
 ## Sécurité XSS
 
@@ -381,6 +340,16 @@ const icon = '\u{1F6E0}'; // 🔧
 
 ## Archivage vs Suppression
 
-- **Archiver** (📦) : CS + admin → `PATCH { archivee: true }`
-- **Supprimer** (🗑️) : admin uniquement, vue Archives seulement → `DELETE`
-- Jamais de bouton Supprimer sur la vue principale
+**On archive, on ne supprime pas** : la vue principale masque ce qui est
+archivé, et `ListeEtArchives` / `ArchivesParAnnee` en donnent l'accès.
+`npm run lint:archives` tient cette règle.
+
+⚠️ **Il n'y a pas de bouton 📦 « Archiver ».** L'archivage suit l'**état** de
+l'objet — un ticket résolu, un événement passé — et le geste explicite n'existe
+que là où l'utilisateur doit trancher lui-même. Cette section enseignait le
+bouton ; `ux-patterns` §16 l'interdisait au même moment. **Une skill qui se
+contredit avec l'autre n'enseigne rien** : c'est `ux-patterns` §16 qui fait foi,
+et la divergence de `CarteEvenement` y est déclarée.
+
+La **suppression définitive** reste possible pour un administrateur, et c'est le
+seul cas : `require_admin` côté API.
