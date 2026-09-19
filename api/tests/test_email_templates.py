@@ -342,7 +342,19 @@ def test_les_migrations_disent_la_meme_chose_que_le_seed():
     vues = 0
 
     for chemin in sorted(versions.glob("*.py")):
-        if "REMPLACEMENTS" not in chemin.read_text(encoding="utf-8"):
+        source = chemin.read_text(encoding="utf-8")
+        if "REMPLACEMENTS" not in source:
+            continue
+        #  🔴 ET la migration doit toucher les MODÈLES D'E-MAIL. Le seul nom de
+        #  variable ne suffit pas : le 19/09/2026, une migration qui corrigeait des
+        #  réponses de FAQ a fait échouer ce test en déclarant, elle aussi, une liste
+        #  nommée `REMPLACEMENTS` — et le message accusait un « code de template »
+        #  absent, ce qui envoyait sur une fausse piste (#1037).
+        #
+        #  Un contrôle dont la portée se devine à un nom de variable attrape ce qui
+        #  ne le concerne pas, et un faux rouge coûte la confiance qu'un vrai rouge
+        #  exige (`standards/04`).
+        if "modele_email" not in source:
             continue
         spec = importlib.util.spec_from_file_location(f"migration_{chemin.stem}", chemin)
         migration = importlib.util.module_from_spec(spec)
