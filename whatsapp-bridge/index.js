@@ -5,6 +5,7 @@
  *   GET  /status        → connection state
  *   GET  /qr            → QR code as PNG image (for pairing)
  *   POST /send          → send a message  { number, text, imageBase64?, imageUrl? }
+ *                         corps borné à 2 × WA_PHOTO_BUDGET_KO (413 au-delà)
  *   GET  /groups        → list groups the account is in
  *   POST /restart       → reconnect
  *
@@ -31,7 +32,38 @@ const AUTH_DIR = process.env.WA_AUTH_DIR || path.join(__dirname, "auth_state");
 
 const logger = pino({ level: process.env.WA_LOG_LEVEL || "warn" });
 const app = express();
-app.use(express.json());
+
+// ── Plafond du corps JSON ──────────────────────────────────
+// Incident #1057 (19/09/2026) : `express.json()` sans option laissait le
+// plafond par défaut d’express — 100 kio — alors que l’API envoie la photo en
+// base64 dans le corps, soit 200 kio pour une image ordinaire du site. Le
+// bridge rendait 413 AVANT de lire la requête : tout partage portant une
+// photo était perdu, sur tous les objets, et rien ne l’avait jamais signalé.
+//
+// 🔴 Le budget d’une photo est déclaré UNE fois, dans `docker-compose.yml`
+// (`WA_PHOTO_BUDGET_KO`), et lu des deux côtés : ici, et par l’API qui réduit
+// la photo pour tenir dessous. Deux nombres écrits séparément divergeraient
+// au premier ajustement, et c’est l’écart entre eux qui coûte le message.
+//
+// Le double du budget : la base64 coûte 4/3 du fichier, le reste couvre le
+// texte et l’enveloppe JSON.
+const PHOTO_BUDGET_KO = parseInt(process.env.WA_PHOTO_BUDGET_KO || "400", 10);
+const BODY_LIMIT_KO = PHOTO_BUDGET_KO * 2;
+app.use(express.json({ limit: `${BODY_LIMIT_KO}kb` }));
+
+// Un corps refusé doit se lire comme tel côté API : sans ce gestionnaire,
+// express rend une page d’erreur HTML et le journal ne montre qu’une trace.
+app.use((err, req, res, next) => {
+  if (err && err.type === "entity.too.large") {
+    logger.warn({ limit: `${BODY_LIMIT_KO}kb`, length: err.length }, "Corps refusé : trop volumineux");
+    return res.status(413).json({
+      error: "payload too large",
+      limitKo: BODY_LIMIT_KO,
+      photoBudgetKo: PHOTO_BUDGET_KO,
+    });
+  }
+  return next(err);
+});
 
 let sock = null;
 let qrCode = null;       // latest QR string (null when connected)

@@ -195,38 +195,24 @@ def check_and_send():
 
 
 def _alerter(session: Session, sched: WhatsAppScheduled, statut: str, erreur: str | None) -> None:
-    """Alerte e-mail : un message planifié n'est pas arrivé, ou peut-être si.
+    """Alerte : le message PLANIFIÉ du mois n’est pas arrivé.
 
-    Le cas « incertain » demande une action que la machine ne peut pas prendre à
-    la place d'un humain : aller regarder le groupe. Rejouer d'autorité, c'est ce
-    qui a produit trois exemplaires le 14/08/2026.
+    La conduite à tenir — et surtout l’interdit de rejeu sur un envoi
+    incertain — vit dans `utils/whatsapp_alerte`, avec celle des envois
+    déclenchés par un geste. Elle n’était écrite QUE pour le message planifié
+    jusqu’au 19/09/2026 : un ticket partagé en échec ne prévenait personne
+    (#1057). Ce qui reste ici est la seule chose que ce module sache : la
+    fenêtre de rattrapage.
     """
-    from app.utils.email import get_site_manager_notification_email
-    from app.utils.health_monitor import _send_alert
+    from app.utils.whatsapp_alerte import alerter_envoi
 
-    if statut == STATUT_INCERTAIN:
-        constat = (
-            f"Message WhatsApp planifié « {sched.label} » : le bridge n'a pas acquitté "
-            "l'envoi, mais le message est peut-être arrivé dans le groupe.\n"
-            "    → Vérifier le groupe WhatsApp. S'il n'y est pas, le renvoyer depuis "
-            "Admin → WhatsApp. Aucun rejeu automatique n'aura lieu : il ferait doublon."
-        )
-    else:
-        constat = (
-            f"Message WhatsApp planifié « {sched.label} » non envoyé malgré la fenêtre "
-            f"de rattrapage (18h00 → {CATCHUP_END_HOUR:02d}h{CATCHUP_END_MINUTE:02d}).\n"
-            f"    Statut : {statut}"
-        )
-    issue = f"{constat}\n    Dernière erreur : {erreur or 'inconnue'}"
-
-    to, _ = get_site_manager_notification_email(session)
-    if not to:
-        logger.warning(
-            "Message planifié '%s' au statut « %s » — pas d'email admin configuré "
-            "pour alerter. %s", sched.label, statut, erreur or "",
-        )
-        return
-    _send_alert(to, [issue], session)
+    alerter_envoi(
+        session, sched.label, statut, erreur,
+        precision=(
+            f" Malgré la fenêtre de rattrapage (18h00 → "
+            f"{CATCHUP_END_HOUR:02d}h{CATCHUP_END_MINUTE:02d})."
+        ),
+    )
 
 
 #: Un log de message planifié plus récent que ce délai n'est pas de l'historique :

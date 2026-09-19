@@ -6,14 +6,13 @@ et servis en statique via /uploads/*.
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from PIL import Image, ImageOps
-import io
 import logging
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Copropriete, Utilisateur
 from app.utils.fichiers import signature_incoherente, nom_stocke
+from app.utils.images import reencoder_jpeg
 from sqlmodel import Session, select
 
 logger = logging.getLogger(__name__)
@@ -59,17 +58,13 @@ def _save_image(file: UploadFile, subfolder: str, max_dim: int = 1600) -> str:
     if len(data) > MAX_SIZE_MB * 1024 * 1024:
         raise HTTPException(413, f"Fichier trop volumineux (max {MAX_SIZE_MB} Mo).")
 
-    # Redimensionnement via Pillow si nécessaire
+    #  Le réencodage vit dans `app/utils/images.py` — il est partagé avec la
+    #  diffusion WhatsApp, qui doit faire tenir la même photo sous un budget
+    #  d'octets. Deux routines de redimensionnement divergeraient sur
+    #  l'orientation ou la qualité (`standards/02-factorisation.md` §2).
     try:
-        img = Image.open(io.BytesIO(data))
-        img = ImageOps.exif_transpose(img) or img  # Corriger l'orientation AVANT convert
-        img = img.convert("RGB")
-        if max(img.size) > max_dim:
-            img.thumbnail((max_dim, max_dim), Image.LANCZOS)
-        output = io.BytesIO()
-        img.save(output, format="JPEG", quality=85, optimize=True)
-        data = output.getvalue()
-    except Exception:
+        data = reencoder_jpeg(data, max_dim=max_dim)
+    except ValueError:
         raise HTTPException(400, "Impossible de lire l'image.")
 
     dest_dir = UPLOADS_ROOT / subfolder
