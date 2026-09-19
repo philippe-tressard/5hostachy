@@ -1414,6 +1414,23 @@ Filtre des colonnes : `if (col.id === 'ag' || col.id === 'cs') return canSeeAG;`
 
 Items non-affichables : masqués aux non-CS/admin, sauf `maintenance_recurrente`.
 
+🔴 **Les colonnes elles-mêmes ne s'écrivent qu'à un endroit** : `KANBAN_COLS`
+(`$lib/kanban`), et la brique d'accueil **dérive** `KANBAN_COLS_ACCUEIL`. Elle
+recopiait la table jusqu'au 19/09/2026 (#1030) — cinq colonnes au lieu de six,
+libellés plus courts, couleurs recopiées à l'identique.
+
+Les deux écarts étaient **légitimes** et ne se déclaraient nulle part. Ils sont
+maintenant **dans** la table : `labelCourt` pour l'étroitesse de la brique,
+`masqueAccueil` pour « Annulé » (l'accueil montre ce qui avance). La ligne
+« masqué dashboard » du tableau ci-dessus est ce que `masqueAccueil` **porte** —
+elle ne se code plus à côté.
+
+⚠️ `lint:tables-statuts` était **vert à cause de la divergence** : il cherche
+deux tables qui partagent le même ensemble de clés, et une copie **incomplète**
+lui échappe. C'est le contrôle du kanban (travail `test-scripts`) qui refuse
+désormais une seconde table de colonnes — la même porte que le rangement des
+cartes, pas une porte de plus.
+
 ### 🔴 12 bis. La forme du kanban condensé (18/09/2026, validé à l'écran)
 
 Variante « K4 ». Deux décisions, et elles se tiennent :

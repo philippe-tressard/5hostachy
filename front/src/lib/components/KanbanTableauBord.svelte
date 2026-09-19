@@ -21,6 +21,7 @@
 	 */
 	import ItemKanban from '$lib/components/ItemKanban.svelte';
 	import {
+		KANBAN_COLS_ACCUEIL,
 		SEUIL_KANBAN_ETROIT,
 		colonneDeLEvenement,
 		kanbanColVisible,
@@ -55,13 +56,17 @@
 	const _kanbanYear =
 		new Date().getMonth() < 1 ? new Date().getFullYear() - 1 : new Date().getFullYear();
 
-	const DASH_KANBAN_COLS = [
-		{ id: 'ag', label: 'AG', color: '#8b5cf6' },
-		{ id: 'cs', label: 'CS', color: '#3b82f6' },
-		{ id: 'syndic', label: 'Syndic', color: '#f59e0b' },
-		{ id: 'fournisseur', label: 'Prestataire', color: '#f97316' },
-		{ id: 'termine', label: 'Terminé', color: '#22c55e' },
-	];
+	//  🔴 Cette table était RECOPIÉE ici jusqu'au 19/09/2026 (#1030) — mêmes
+	//  identifiants, mêmes couleurs, mais cinq colonnes au lieu de six et des
+	//  libellés plus courts, sans que rien ne dise si c'était voulu.
+	//
+	//  Les deux écarts l'étaient, et ils se déclarent maintenant DANS la table :
+	//  `labelCourt` pour l'étroitesse de la brique, `masqueAccueil` pour « Annulé ».
+	//  On dérive, on ne recopie pas : une colonne ajoutée apparaît des deux côtés.
+	const DASH_KANBAN_COLS = KANBAN_COLS_ACCUEIL.map((col) => ({
+		...col,
+		label: col.labelCourt,
+	}));
 
 	//  🔴 Le rendu du périmètre a suivi le balisage dans `ItemKanban` : il n'était
 	//  employé que là. Le garder ici aurait laissé une fonction sans appelant dans
