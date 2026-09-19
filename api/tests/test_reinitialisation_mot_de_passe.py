@@ -24,7 +24,6 @@ les autres garde-fous d'autorisation.
 """
 from __future__ import annotations
 
-import itertools
 import uuid
 from datetime import datetime, timedelta
 
@@ -41,42 +40,23 @@ from app.models.core import (
     RoleUtilisateur,
     Utilisateur,
 )
-from app.routers.auth_mot_de_passe import PasswordResetConfirm, reset_password
+from app.routers.auth_mot_de_passe import (
+    ChangePasswordBody,
+    PasswordResetConfirm,
+    change_password,
+    reset_password,
+)
 from app.utils.mots_de_passe import verifier_robustesse
+from tests.conftest import requete_de_test
 from tests.purge_test import purger_ligne
 
-#: Chaque requête de test vient d'une adresse distincte (voir `_Requete`).
-_compteur_ip = itertools.count()
+#: Une requête réelle, fabriquée par `tests/conftest.py` : la fabrique vivait
+#: ici, et un second fichier de tests en a eu besoin le 19/09/2026 (#1027).
+_Requete = requete_de_test
+
 
 #: Un mot de passe qui satisfait les quatre critères de `verifier_robustesse`.
 VALIDE = "Nouveau-Mdp1"
-
-
-def _Requete() -> Request:
-    """Une vraie requête Starlette, minimale.
-
-    ⚠️ Un objet imitateur ne suffit pas : la limitation de débit (slowapi) est
-    posée en décorateur sur ces routes et exige une `starlette.requests.Request`
-    — elle lit l'adresse du client pour compter. Le contourner en retirant le
-    décorateur reviendrait à tester une fonction que la production n'exécute pas.
-    """
-    return Request(
-        {
-            "type": "http",
-            "method": "POST",
-            "path": "/auth/reinitialiser-mot-de-passe",
-            "headers": [],
-            "query_string": b"",
-            "scheme": "https",
-            "server": ("test", 443),
-            #  🔴 UNE ADRESSE DIFFÉRENTE À CHAQUE APPEL. La limitation est de
-            #  5/minute PAR CLIENT : sans cela, le sixième test de ce fichier
-            #  recevrait un 429 et échouerait pour une raison qui n'a rien à
-            #  voir avec ce qu'il vérifie. On ne désarme pas le décorateur — on
-            #  cesse d'être le même visiteur.
-            "client": (f"10.0.0.{next(_compteur_ip) % 250 + 1}", 51234),
-        }
-    )
 
 
 @pytest.fixture()
@@ -321,3 +301,117 @@ def test_un_mot_de_passe_FAIBLE_est_refuse_AVANT_de_consommer_le_jeton(utilisate
             )
         session.refresh(prt)
         assert not prt.used, "le jeton a été consommé par une tentative refusée"
+
+
+# ── Changer son mot de passe : la porte jumelle ──────────────────────────────
+#
+#  🔴 Ces quatre tests manquaient, et le défaut avec eux (#1027). `reset_password`
+#  révoquait les sessions actives ; `change_password` ne révoquait rien. Un
+#  attaquant qui détenait une session ouverte la conservait SEPT JOURS après que
+#  la victime avait changé son mot de passe — et la victime croyait avoir
+#  refermé la porte.
+#
+#  Les deux routes posaient un mot de passe chacune à sa façon. Elles passent
+#  désormais par `poser_mot_de_passe`, et c'est l'écriture la plus STRICTE qui a
+#  gagné, non la plus répandue : en sécurité, la minorité prudente prime
+#  (`standards/02` §4 bis).
+
+def _session_ouverte(session: Session, user_id: int, jeton: str | None = None) -> RefreshToken:
+    rt = RefreshToken(
+        user_id=user_id,
+        token=jeton or uuid.uuid4().hex,
+        expires_at=datetime.utcnow() + timedelta(days=7),
+    )
+    session.add(rt)
+    session.commit()
+    session.refresh(rt)
+    return rt
+
+
+def _corps(actuel: str = "Ancien-Mdp1", nouveau: str = VALIDE) -> ChangePasswordBody:
+    return ChangePasswordBody(mot_de_passe_actuel=actuel, nouveau_mot_de_passe=nouveau)
+
+
+def test_changer_son_mot_de_passe_REVOQUE_les_AUTRES_sessions(utilisateur):
+    """Le défaut exact du 19/09/2026."""
+    with Session(engine) as session:
+        u = session.get(Utilisateur, utilisateur.id)
+        ailleurs = _session_ouverte(session, u.id)
+
+        change_password(_Requete(), _corps(), session, u, refresh_token=None)
+
+        session.refresh(ailleurs)
+        assert ailleurs.revoked, (
+            "une session ouverte ailleurs survit au changement de mot de passe : "
+            "celui qui détenait l'ancien mot de passe garde l'accès."
+        )
+
+
+def test_la_session_COURANTE_survit_au_changement(utilisateur):
+    """La décision prise, et son revers : déconnecter l'auteur du geste serait
+    sûr mais hostile, et l'inciterait à ne plus changer son mot de passe.
+
+    La session qui présente le jeton est celle de la victime — la requête vient
+    d'elle. Les autres tombent.
+    """
+    with Session(engine) as session:
+        u = session.get(Utilisateur, utilisateur.id)
+        courante = _session_ouverte(session, u.id)
+        ailleurs = _session_ouverte(session, u.id)
+
+        change_password(_Requete(), _corps(), session, u, refresh_token=courante.token)
+
+        session.refresh(courante)
+        session.refresh(ailleurs)
+        assert not courante.revoked, "la session qui a fait le geste a été fermée"
+        assert ailleurs.revoked, "une autre session a survécu"
+
+
+def test_un_mot_de_passe_ACTUEL_faux_ne_change_ni_ne_revoque_rien(utilisateur):
+    """Le cas zéro de la route : sans cette vérification, une session volée
+    suffirait à s'approprier le compte."""
+    with Session(engine) as session:
+        u = session.get(Utilisateur, utilisateur.id)
+        ailleurs = _session_ouverte(session, u.id)
+
+        with pytest.raises(HTTPException) as levee:
+            change_password(
+                _Requete(), _corps(actuel="Pas-Le-Bon1"), session, u, refresh_token=None
+            )
+        assert levee.value.status_code == 400
+
+        session.refresh(u)
+        session.refresh(ailleurs)
+        assert verify_password("Ancien-Mdp1", u.hashed_password), "le mot de passe a changé"
+        assert not ailleurs.revoked, "des sessions ont été fermées par un refus"
+
+
+def test_les_DEUX_portes_passent_par_la_MEME_pose_de_mot_de_passe():
+    """🔴 La portée, encore : c'est de l'avoir écrite deux fois que vient le défaut.
+
+    Un contrôle qui vérifierait seulement le comportement d'aujourd'hui laisserait
+    réapparaître une troisième écriture — la prochaine route qui pose un mot de
+    passe. Celui-ci refuse qu'une route en pose un sans passer par la fonction
+    commune.
+    """
+    import ast
+    import pathlib
+
+    fichier = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "auth_mot_de_passe.py"
+    arbre = ast.parse(fichier.read_text(encoding="utf-8"))
+    corps = {
+        n.name: ast.unparse(n)
+        for n in ast.walk(arbre)
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+
+    for porte in ("change_password", "reset_password"):
+        assert porte in corps, f"`{porte}` a disparu du routeur"
+        assert "poser_mot_de_passe(" in corps[porte], (
+            f"`{porte}` pose un mot de passe sans passer par `poser_mot_de_passe` : "
+            "la révocation des sessions redevient l'affaire de chaque route."
+        )
+        assert "hash_password(" not in corps[porte], (
+            f"`{porte}` hache un mot de passe lui-même : c'est ainsi que les deux "
+            "portes avaient divergé."
+        )
