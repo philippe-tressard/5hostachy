@@ -1,106 +1,159 @@
-# Contributing to 5Hostachy
+# Contribuer à 5Hostachy
 
-Thank you for your interest in contributing! This document provides guidelines for contributing to this project.
+Merci de l'intérêt porté au projet. Ce document décrit la méthode **réellement**
+suivie — pas une méthode générique : les commandes ci-dessous sont celles que
+l'intégration continue exécute, et les contrôles qu'elles rejouent sont les mêmes.
 
-## Getting Started
+> ⚠️ **Avant tout** : lire la section [Licence](#licence). Le code est
+> *accessible*, il n'est pas libre au sens de l'OSI, et une contribution est
+> versée sous la licence du projet.
 
-### Prerequisites
+---
 
-- **Python 3.10+** — Backend API
-- **Node.js 22+** — Frontend SvelteKit
-- **Docker & Docker Compose** — Container orchestration
-- **SQLite 3** — Database
+## 1. Ce qu'il faut sur le poste
 
-### Local Development Setup
+| Outil | Version | Où elle est décidée |
+|---|---|---|
+| Python | 3.12 | `api/Dockerfile` (`python:3.12-slim`) |
+| Node.js | 22 | `front/Dockerfile` (`node:22-alpine`) |
+| Docker et Docker Compose | — | `docker-compose.yml` |
+| SQLite | 3 (fourni par l'image) | mode WAL, `api/app/database.py` |
+
+Les versions ne sont pas recopiées ailleurs : ce tableau nomme le fichier qui
+décide, pour qu'une montée de version ne laisse pas une documentation fausse
+derrière elle.
+
+## 2. Démarrer en local
 
 ```bash
-# Clone the repository
 git clone https://github.com/philippe-tressard/5hostachy.git
 cd 5hostachy
-
-# Copy environment config
-cp .env.example .env
-# Edit .env with your local settings (especially SECRET_KEY)
-
-# Start all services
+cp .env.example .env          # puis renseigner SECRET_KEY (32 caractères au moins)
 docker compose up --build -d
 ```
 
-The application will be available at `http://localhost`.
+Le site répond alors sur `http://localhost`.
 
-### Running Without Docker
+**Armer les hooks git — une fois par clone**, sinon ils sont inertes :
 
-**Backend:**
 ```bash
-cd api
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+git config core.hooksPath .githooks && git config pull.ff only
 ```
 
-**Frontend:**
+Le hook de pré-commit refuse un commit dont la branche est en retard sur son
+distant ; celui de pré-poussée refuse un envoi sans trace de pré-contrôle. Un
+hook versionné n'est **pas** un hook actif.
+
+### Sans Docker
+
 ```bash
-cd front
-npm install
-npm run dev
+cd api && python -m venv .venv && .venv/Scripts/activate  # ou source .venv/bin/activate
+pip install -r requirements.txt && uvicorn app.main:app --reload
 ```
 
-## How to Contribute
-
-### Reporting Bugs
-
-- Use **GitHub Issues** with the `bug` label.
-- Include steps to reproduce, expected behavior, and actual behavior.
-- Include browser/OS information if relevant.
-
-### Suggesting Features
-
-- Open a **GitHub Issue** with the `enhancement` label.
-- Describe the use case and expected behavior.
-
-### Submitting Code
-
-> **Branch model:** `main` is production-protected (no direct push). All contributions go through `dev` first.
-
-1. **Fork** the repository.
-2. Create a **feature branch** from `dev`: `git checkout dev && git checkout -b feat/my-feature`
-3. Make your changes with clear, atomic commits.
-4. Ensure CI passes locally (see below).
-5. Open a **Pull Request against `dev`** — PRs directly targeting `main` will be declined.
-
-**Verify CI locally before opening a PR:**
 ```bash
-# Backend
-pip install ruff
-ruff check api/app/ api/alembic/ --select E9,F63,F7,F82
-
-# Frontend
-cd front && npm install && npm run build
+cd front && npm install && npm run dev
 ```
 
-### Commit Messages
+## 3. Signaler une anomalie ou proposer une évolution
 
-Use clear, descriptive commit messages:
+Les tickets passent par **les issues GitHub**, avec le gabarit proposé à
+l'ouverture. Le format attendu est celui des tickets d'audit du dépôt :
+
+1. **Constat** — ce qui est observé, avec le fichier et la ligne, ou la sortie de
+   commande. Un constat non reproduit n'est pas établi.
+2. **Ce que le ticket demande** — le comportement attendu, pas la solution.
+3. **Verrous connus** — ce qui est irréversible, ce qui a déjà été essayé.
+
+### Les étiquettes, et ce qu'elles engagent
+
+| Étiquette | Sens |
+|---|---|
+| `priorité haute` · `priorité normale` · `priorité basse` | ordre de traitement |
+| `en cours` | posée **au moment** de commencer, jamais d'avance |
+| `livré · à vérifier` | le code est en production, une observation manque |
+| `rendez-vous` | la preuve dépend d'une date |
+| `bloqué` | une décision manque — le ticket dit laquelle, et de qui |
+
+Un ticket se ferme sur une **preuve** : la commande et sa sortie, ou le
+comportement observé en production. Jamais sur « ça devrait aller ».
+
+## 4. Proposer du code
+
+> **Modèle de branches** : `main` est la production, protégée — aucun envoi
+> direct, aucun forçage, et les contrôles d'intégration y sont exigés. Tout passe
+> par `dev`.
+
+1. **Dupliquer** le dépôt, puis créer une branche depuis `dev` :
+   `git checkout dev && git checkout -b feat/mon-sujet`
+2. Des commits atomiques, un par nature de changement.
+3. **Rejouer l'intégration continue en local** — tous les travaux, pas un seul :
+
+   ```bash
+   bash scripts/poste/rejouer-ci.sh
+   ```
+
+   Ce script **extrait** ses commandes de `.github/workflows/ci.yml` : une liste
+   tenue à la main divergerait au premier travail ajouté, et c'est justement
+   celui qu'on n'a pas pensé à lancer qui échoue.
+
+4. Ouvrir la demande de fusion **vers `dev`**. Une demande visant `main`
+   directement est refusée.
+
+### Messages de commit
+
+Préfixes : `feat` · `fix` · `docs` · `refactor` · `test` · `chore` · `perf`.
 
 ```
-feat: add document upload progress bar
-fix: correct badge count for expired access
-docs: update deployment guide for Cloudflare Tunnel
+feat: barre de progression au dépôt d'un document
+fix: décompte des badges expirés
+docs: procédure de restauration après bascule
 ```
 
-Prefixes: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`
+### Ce qu'un lot doit porter, en plus du correctif
 
-## Code Style
+- **Un garde-fou.** Un correctif sans test ni contrôle qui refuse la récidive est
+  un correctif qui revient. Écrire d'abord le cas fautif, prouver que le contrôle
+  le refuse, puis corriger.
+- **Sa consigne.** Si le lot change un motif d'interface, d'API ou d'infra, la
+  documentation qui l'enseigne bouge dans le **même** commit — sinon la consigne
+  périmée régénère le défaut au lot suivant.
+- **La documentation utilisateur**, dès qu'un écran, un libellé ou un parcours
+  change : `docs/manuel-utilisateur.html` (comment on s'en sert) et `README.md`
+  (ce que le produit est) sont de même rang. Un lot qui ne touche qu'un seul des
+  deux le **dit**.
 
-- **Python**: Follow PEP 8. Use type hints where practical.
-- **TypeScript/Svelte**: Follow existing project conventions. Use TypeScript types.
-- **SQL Migrations**: Use Alembic. Never modify existing migrations; create new ones.
+## 5. Style de code
 
-## Security
+- **Python** : PEP 8, annotations de types là où elles servent. `ruff` est exigé.
+- **TypeScript et Svelte** : types explicites, motifs existants réutilisés plutôt
+  que variantes locales. Plusieurs contrôles dédiés refusent une réécriture
+  locale de ce qui existe au centre (assainissement HTML, formats de date et de
+  montant, champs de formulaire, client d'API).
+- **Migrations** : Alembic, identifiant séquentiel à quatre chiffres. Une
+  migration déjà appliquée **ne se modifie jamais** — on en crée une nouvelle.
+- **Français exclusif** : interface, nommage des champs, messages de commit,
+  commentaires. Seuls les identifiants techniques imposés restent en anglais.
+- **Fins de ligne** : `.editorconfig` décide. Les scripts shell sont en LF sans
+  marque d'ordre d'octets, et l'intégration continue le refuse autrement.
 
-If you find a security vulnerability, **do not open a public issue**. See [SECURITY.md](SECURITY.md).
+## 6. Mise en production
 
-## License
+La demande de fusion `dev → main` est créée, contrôlée et fusionnée par le
+mainteneur, après le pré-contrôle complet (`scripts/poste/precheck-mep.sh`) et la
+montée de version dans `front/package.json`. Le déploiement suit tout seul sur le
+nœud actif ; **la fusion n'est pas le déploiement**, et un lot n'est terminé que
+lorsque la version est servie et le comportement observé.
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+## 7. Sécurité
+
+Une faille ne s'ouvre **pas** en ticket public : la conduite à tenir est dans
+[SECURITY.md](SECURITY.md).
+
+## Licence
+
+En contribuant, la contribution est versée sous la **Licence 5Hostachy** —
+consultable dans [LICENSE](LICENSE) : code source accessible, copyleft fondé sur
+les principes de l'AGPLv3, avec des clauses commerciales, **sans** compatibilité
+AGPLv3 ni reconnaissance OSI. Les obligations d'attribution et de redistribution
+sont détaillées dans [NOTICE.md](NOTICE.md).
