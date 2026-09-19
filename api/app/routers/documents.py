@@ -23,12 +23,13 @@ from app.utils.visibility import document_visible
 from app.utils.liens import base_site
 from app.utils.liens import nom_site
 from app.utils.recuperer import ou_404
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
-UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/app/uploads")
+UPLOADS_DIR = get_settings().uploads_dir
 
 
 # La règle d'accès aux documents est `document_visible` (app/utils/visibility.py),

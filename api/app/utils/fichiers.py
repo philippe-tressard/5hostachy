@@ -17,12 +17,16 @@ les deux appelants n'ont pas la même contrainte :
 import os
 import re
 import unicodedata
+import pathlib
 import uuid
+
+from app.config import get_settings
+from dataclasses import dataclass
 
 #: Racine réelle des fichiers téléversés. Résolue une fois : c'est elle qui borne
 #: `chemins_locaux`, donc elle ne doit pas dépendre d'un lien symbolique traversé
 #: au moment de l'appel.
-RACINE_UPLOADS = os.path.realpath("/app/uploads")
+RACINE_UPLOADS = os.path.realpath(get_settings().uploads_dir)
 
 #: Sous-répertoire des fichiers qui ne doivent JAMAIS être servis en statique.
 #:
@@ -42,7 +46,7 @@ RACINE_UPLOADS = os.path.realpath("/app/uploads")
 #: Le blocage est posé dans le `Caddyfile`, sur le modèle de `/uploads/annonces-hall/*`
 #: qui applique déjà cette règle. `api/tests/test_uploads_prives.py` vérifie que la
 #: directive existe **et** qu'elle précède le service statique.
-REPERTOIRE_PRIVE = os.path.join(os.getenv("UPLOADS_DIR", "/app/uploads"), "prive")
+REPERTOIRE_PRIVE = os.path.join(get_settings().uploads_dir, "prive")
 
 # Assez long pour rester lisible dans une URL, assez court pour ne pas buter sur
 # la limite de longueur de nom de fichier une fois le préfixe UUID ajouté.
@@ -222,6 +226,190 @@ def signature_incoherente(donnees: bytes, extension: str) -> str | None:
         f"le contenu ne correspond pas à un fichier {extension} "
         "(signature du fichier incohérente avec son extension)"
     )
+
+
+#  ── Les familles de téléversement : trois règles, une table ─────────────────
+#
+#  🔴 LE DÉFAUT QUE CETTE TABLE SUPPRIME (#1026, 19/09/2026). Le téléversement
+#  avait TROIS écritures sur disque, et elles n'appliquaient pas les mêmes
+#  règles :
+#
+#  | Chemin | Types | Plafond | Signature |
+#  |---|---|---|---|
+#  | documents privés (ici) | AUCUN | AUCUN | oui |
+#  | images (`routers/uploads`) | oui | oui | réencodage PIL |
+#  | documents joints (`routers/uploads`) | oui | oui | oui, **recopiée d'ici** |
+#
+#  Et trois imports Excel n'avaient **aucun** contrôle : ni type, ni taille.
+#
+#  ⚠️ Une duplication de règle de sécurité ne produit **aucun signal**. Un
+#  fichier accepté à tort ne fait pas de bruit : il est stocké, servi, et
+#  personne ne se plaint. On ne l'apprend que le jour où quelqu'un s'en sert.
+#
+#  C'est aussi ce qui rendait le défaut invisible : il n'existait **aucune
+#  table** où lire ce que chaque chemin acceptait. Les trois règles vivent
+#  maintenant côte à côte, et `test_televersement_source_unique.py` refuse
+#  qu'une famille en oublie une.
+
+
+@dataclass(frozen=True)
+class FamilleFichier:
+    """Ce qu'une famille de fichiers reçus accepte, et sous quelle taille.
+
+    Les trois champs sont **obligatoires** : une famille sans plafond est un
+    téléversement sans plafond, et c'est précisément ce qui existait pour les
+    documents privés.
+    """
+
+    #: Types MIME annoncés par le client. Ils ne prouvent rien — c'est la
+    #: signature qui tranche —, mais ils écartent d'emblée ce qui n'a rien à
+    #: faire là, et ils choisissent l'extension.
+    types: dict[str, str]
+    #: Plafond, en mégaoctets. La raison de chaque valeur est en commentaire.
+    plafond_mo: int
+    #: Les extensions que la famille peut produire, dérivées de `types`. Le nom
+    #: fourni par le client ne décide JAMAIS de l'extension écrite sur disque :
+    #: `/uploads/*` est servi en statique, et Caddy pose le `Content-Type`
+    #: d'après l'extension du fichier.
+    extensions: tuple[str, ...]
+
+
+_TYPES_IMAGE = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+}
+
+_TYPES_DOCUMENT = {
+    "application/pdf": ".pdf",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.ms-excel": ".xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    #  Texte brut accepté le 16/08/2026 : l'écran le proposait, le serveur le
+    #  refusait en 400. `.zip` n'est PAS accepté et ne doit pas l'être — une
+    #  archive transporte un contenu arbitraire que rien n'inspecte, et le
+    #  fichier est ensuite servi aux résidents. Décision explicite.
+    "text/plain": ".txt",
+}
+
+_TYPES_TABLEUR = {
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "application/vnd.ms-excel": ".xls",
+}
+
+
+def _famille(types: dict[str, str], plafond_mo: int) -> "FamilleFichier":
+    """Dérive `extensions` de `types` — deux listes recopiées divergeraient."""
+    return FamilleFichier(
+        types=types,
+        plafond_mo=plafond_mo,
+        extensions=tuple(sorted(set(types.values()))),
+    )
+
+
+FAMILLES: dict[str, FamilleFichier] = {
+    #  Une photo est réencodée en JPEG : le plafond porte sur ce qui ARRIVE.
+    "image": _famille(_TYPES_IMAGE, plafond_mo=5),
+    #  Une pièce jointe de commentaire ou d'actualité.
+    "document": _famille(_TYPES_DOCUMENT, plafond_mo=15),
+    #  🔴 Les documents de la copropriété — PV d'assemblée, plans, rapports de
+    #  diagnostic. Ils n'avaient AUCUN plafond jusqu'au 19/09/2026.
+    #
+    #  ⚠️ 30 Mo est un **changement de comportement** : un document plus gros
+    #  était accepté avant, et sera refusé. La valeur est choisie au-dessus de
+    #  ce que produit un scan de PV d'assemblée générale (10 à 20 Mo observés),
+    #  et elle borne un envoi accidentel ou malveillant — elle ne filtre pas un
+    #  usage réel. La relever est une décision d'une ligne ; ne pas en avoir du
+    #  tout n'en était pas une.
+    "document_prive": _famille(_TYPES_DOCUMENT | _TYPES_IMAGE, plafond_mo=30),
+    #  Un fichier d'import d'accès est une LISTE, pas un scan — et il est lu
+    #  intégralement en mémoire par l'analyseur. Le plafond y protège la mémoire
+    #  du Raspberry Pi autant qu'il contrôle l'entrée.
+    "tableur": _famille(_TYPES_TABLEUR, plafond_mo=5),
+}
+
+
+def verifier_fichier_recu(
+    octets: bytes,
+    nom_origine: str | None,
+    content_type: str | None,
+    famille: str,
+    user=None,
+) -> str:
+    """Applique les TROIS règles de la famille, et rend l'extension à écrire.
+
+    Lève une `HTTPException` au premier refus — 400 pour un type ou un contenu
+    incohérent, 413 pour un dépassement de taille.
+
+    ⚠️ Rend l'**extension dérivée du type**, jamais celle du nom fourni :
+    `/uploads/*` est servi en statique, et Caddy pose le `Content-Type` d'après
+    l'extension du fichier sur disque. Un `.html` téléversé sous un type MIME
+    autorisé s'exécuterait sur notre origine.
+    """
+    import logging
+
+    from fastapi import HTTPException
+
+    regles = FAMILLES.get(famille)
+    #  Une famille inconnue est une faute de programmation, pas une entrée
+    #  utilisateur : lever tôt vaut mieux que de deviner un défaut permissif.
+    if regles is None:
+        raise ValueError(f"Famille de fichier inconnue : {famille!r}")
+
+    if content_type not in regles.types:
+        attendus = ", ".join(sorted(regles.extensions))
+        raise HTTPException(
+            400, f"Format non supporté : {content_type}. Attendu : {attendus}."
+        )
+
+    plafond = regles.plafond_mo * 1024 * 1024
+    if len(octets) > plafond:
+        raise HTTPException(
+            413, f"Fichier trop volumineux (max {regles.plafond_mo} Mo)."
+        )
+
+    extension = regles.types[content_type]
+
+    #  🔴 LE CONTENU DOIT CORRESPONDRE À CE QU'IL PRÉTEND ÊTRE (#773). Le
+    #  `content_type` vient du client : seule la signature du fichier tranche.
+    motif = signature_incoherente(octets[:16], extension)
+    if motif:
+        logging.getLogger("app").warning(
+            "Téléversement refusé (utilisateur %s) : %s", getattr(user, "id", "?"), motif
+        )
+        raise HTTPException(400, f"Fichier refusé : {motif}.")
+
+    return extension
+
+
+def enregistrer_fichier_recu(
+    octets: bytes,
+    nom_origine: str | None,
+    content_type: str | None,
+    famille: str,
+    destination,
+    user=None,
+    extension_forcee: str | None = None,
+) -> str:
+    """Contrôle **puis** écrit un fichier reçu. Rend le nom stocké.
+
+    C'est le **seul** endroit du projet où des octets venus du réseau atteignent
+    le disque : `api/tests/test_televersement_source_unique.py` refuse toute
+    autre écriture, hors celles qui portent un fichier que l'application a
+    elle-même produit.
+
+    :param destination: le répertoire où écrire. Créé si besoin.
+    :param extension_forcee: pour une image réencodée, dont l'extension écrite
+        n'est plus celle du type reçu. Le contrôle, lui, porte sur le type reçu.
+    """
+    extension = verifier_fichier_recu(octets, nom_origine, content_type, famille, user)
+    dossier = pathlib.Path(destination)
+    dossier.mkdir(parents=True, exist_ok=True)
+    nom = nom_stocke(nom_origine, extension_forcee or extension)
+    (dossier / nom).write_bytes(octets)
+    return nom
 
 
 def enregistrer_televersement(file, raw_name: str, user=None) -> str:

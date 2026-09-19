@@ -53,6 +53,17 @@ class Settings(BaseSettings):
 
     # Sauvegardes
     backup_dir: str = "/backups"
+
+    #: Racine du volume des fichiers téléversés.
+    #:
+    #: 🔴 Elle était lue à SIX endroits avant le 19/09/2026 (#1026) : trois
+    #: `os.getenv("UPLOADS_DIR")` et trois chemins écrits en dur
+    #: (`RACINE_UPLOADS`, `UPLOADS_ROOT`, `PDF_DIR`). Six écritures d'un même
+    #: chemin, c'est cinq occasions d'en oublier une le jour où le volume bouge
+    #: — et un fichier écrit hors du volume n'est ni répliqué vers le standby
+    #: par `bascule.sh`, ni sauvegardé par `backup.py`. Il est perdu à la
+    #: première bascule, sans aucun signal.
+    uploads_dir: str = "/app/uploads"
     backup_frequency: Literal["daily", "weekly", "monthly"] = "daily"
     backup_hour: int = 3
     backup_day_of_week: int = 6   # 0=lun … 6=dim

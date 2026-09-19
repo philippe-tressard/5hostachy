@@ -51,8 +51,15 @@ from app.routers.annonces_hall_apercu import router as _router_apercu  # noqa: E
 
 router.include_router(_router_apercu)
 
-PDF_DIR = Path("/app/uploads/annonces-hall")
-UPLOADS_ROOT = os.path.realpath("/app/uploads")
+from app.config import get_settings
+
+#  🔴 La racine venait d'un chemin écrit en dur, ici comme à cinq autres
+#  endroits (#1026). Elle se lit dans `Settings.uploads_dir`, seule lecture de
+#  la variable d'environnement : un fichier écrit hors du volume n'est ni
+#  répliqué vers le standby par `bascule.sh`, ni sauvegardé par `backup.py` — il
+#  est perdu à la première bascule, sans aucun signal.
+PDF_DIR = Path(get_settings().uploads_dir) / "annonces-hall"
+UPLOADS_ROOT = os.path.realpath(get_settings().uploads_dir)
 
 
 #  Les schémas vivent dans `annonces_hall_schemas` (02/09/2026, plafond de
