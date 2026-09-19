@@ -19,6 +19,17 @@
  */
 import { perimetreLabel, stripHtml } from '$lib/utils';
 
+/**
+ *  La nature d'un commentaire, telle que le modele la lit.
+ *
+ *  Ecrite une fois : le prompt de l'usage « description » reserve a ce cas la
+ *  phrase de rappel (« Pour rappel : … »), et l'ecran adapte l'invite du champ
+ *  Precision pour que l'auteur sache qu'il peut la demander. Deux litteraux
+ *  « commentaire » divergeraient au premier renommage, et le rappel
+ *  disparaitrait sans que rien n'echoue.
+ */
+export const ENTITE_COMMENTAIRE = 'commentaire';
+
 /** Ce que la section Description transmet — l'entité et son contexte. */
 export interface ContexteAssistant {
 	/** La nature de l'objet, dans les mots de l'écran : « ticket », « actualité »… */
@@ -73,7 +84,7 @@ export function contexteCommentaire(
 	},
 	etat?: string | null,
 ): ContexteAssistant {
-	return contexteAssistant('commentaire', {
+	return contexteAssistant(ENTITE_COMMENTAIRE, {
 		'Titre de l’objet': porteur.titre ?? porteur.question ?? '',
 		'Description de l’objet': stripHtml(porteur.description ?? porteur.contenu ?? '').slice(0, 500),
 		'État actuel': etat ?? '',

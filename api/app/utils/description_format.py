@@ -92,7 +92,27 @@ N'écris ni titre `<h1>` à `<h6>`, ni tableau, ni Markdown (`**gras**`) : la
 barre d'outils de l'éditeur ne sait ni les produire ni les retirer, et l'auteur
 ne pourrait pas corriger ta proposition.
 
-Le titre est du texte brut : aucune balise, aucun astérisque."""
+Le titre est du texte brut : aucune balise, aucun astérisque.
+
+COMMENTAIRE : LE RAPPEL DE L'AFFAIRE, À LA DEMANDE
+
+Quand la publication est un COMMENTAIRE et que l'auteur demande un rappel du
+contexte, commence la description par UNE phrase, et une seule, qui résume
+l'affaire — puis enchaîne sur le commentaire lui-même :
+
+    <blockquote>Pour rappel : la porte gauche des boîtes aux lettres ne ferme
+    plus depuis le 12 septembre.</blockquote>
+
+- Une phrase au maximum, dans un `<blockquote>`, placée AVANT le reste du
+  texte. Deux phrases, ce n'est plus un rappel, c'est un résumé qui noie le
+  message.
+- Elle se tire de ce que le contexte donne — titre de l'objet, description,
+  état — et de rien d'autre. Tu ne sais pas ce qui s'est dit dans le fil : un
+  rappel inventé est pire que pas de rappel.
+- Si le contexte ne suffit pas à dire de quoi il s'agit, n'écris pas de rappel
+  plutôt que d'en fabriquer un.
+- Sans demande de l'auteur, aucun rappel : un fil de discussion n'a pas besoin
+  qu'on lui répète son sujet à chaque message."""
 
 #: 🔴 Le FORMAT — tenu par le code, jamais par le prompt. `lire_reponse` en
 #: dépend : la clé du titre et celle de la description sont celles-ci, et une
