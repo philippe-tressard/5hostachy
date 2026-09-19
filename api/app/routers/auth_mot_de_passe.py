@@ -16,16 +16,17 @@ inchangées. `api/tests/test_endpoints_orphelins.py` le vérifie.
 from datetime import datetime, timedelta
 import secrets
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
 from app.auth.deps import get_current_user
-from app.auth.jwt import hash_password, verify_password
+from app.auth.jwt import verify_password
 from app.database import get_session
-from app.models.core import PasswordResetToken, RefreshToken, Utilisateur
-from app.utils.limiter import limiter
+from app.models.core import PasswordResetToken, Utilisateur
+from app.utils.limiter import LIMITE_COURRIEL_DECLENCHE, LIMITE_SECRET_EPROUVE, limiter
+from app.utils.mots_de_passe import poser_mot_de_passe
 from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
 from app.utils.liens import base_site, nom_site
 
@@ -38,16 +39,24 @@ class ChangePasswordBody(BaseModel):
 
 
 @router.post("/change-password", status_code=204)
+@limiter.limit(LIMITE_SECRET_EPROUVE)
 def change_password(
+    request: Request,
     body: ChangePasswordBody,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
+    refresh_token: str | None = Cookie(default=None),
 ):
+    """Change son mot de passe, et ferme les autres sessions du compte.
+
+    🔴 Cette route n'avait **ni** limitation de débit — alors qu'elle éprouve un
+    mot de passe en `verify_password` — **ni** révocation de session : la porte
+    jumelle (`reset_password`) révoquait, celle-ci non (#1027). La session de
+    l'appelant survit ; toutes les autres tombent.
+    """
     if not verify_password(body.mot_de_passe_actuel, user.hashed_password or ""):
         raise HTTPException(400, "Mot de passe actuel incorrect.")
-    _check_password_strength(body.nouveau_mot_de_passe)
-    user.hashed_password = hash_password(body.nouveau_mot_de_passe)
-    session.add(user)
+    poser_mot_de_passe(session, user, body.nouveau_mot_de_passe, jeton_courant=refresh_token)
     session.commit()
 
 
@@ -56,7 +65,7 @@ class PasswordResetRequest(BaseModel):
 
 
 @router.post("/mot-de-passe-oublie", status_code=204)
-@limiter.limit("3/minute")
+@limiter.limit(LIMITE_COURRIEL_DECLENCHE)
 def request_password_reset(
     request: Request,
     body: PasswordResetRequest,
@@ -116,13 +125,17 @@ class PasswordResetConfirm(BaseModel):
 
 
 @router.post("/reinitialiser-mot-de-passe", status_code=204)
-@limiter.limit("5/minute")
+@limiter.limit(LIMITE_SECRET_EPROUVE)
 def reset_password(
     request: Request,
     body: PasswordResetConfirm,
     session: Session = Depends(get_session),
 ):
     """Utilise le token de réinitialisation pour définir un nouveau mot de passe."""
+    #  La robustesse est vérifiée AVANT de chercher le jeton : un refus ne doit
+    #  pas brûler le lien pour une faute de frappe. `poser_mot_de_passe` la
+    #  revérifie — deux appels sur la même règle ne coûtent rien et gardent
+    #  l'ordre intact.
     _check_password_strength(body.nouveau_mot_de_passe)
 
     prt = session.exec(
@@ -136,21 +149,11 @@ def reset_password(
     if not user or not user.actif:
         raise HTTPException(400, "Lien de réinitialisation invalide ou expiré.")
 
-    user.hashed_password = hash_password(body.nouveau_mot_de_passe)
+    #  Aucun jeton courant n'est conservé : on réinitialise parce qu'on craint
+    #  que quelqu'un d'autre soit entré, et l'appelant n'est pas authentifié.
+    poser_mot_de_passe(session, user, body.nouveau_mot_de_passe)
     prt.used = True
 
-    # Révoquer toutes les sessions actives de l'utilisateur
-    active_sessions = session.exec(
-        select(RefreshToken).where(
-            RefreshToken.user_id == user.id,
-            RefreshToken.revoked == False,  # noqa: E712
-        )
-    ).all()
-    for rt in active_sessions:
-        rt.revoked = True
-        session.add(rt)
-
-    session.add(user)
     session.add(prt)
     session.commit()
     return None

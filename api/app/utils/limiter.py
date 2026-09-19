@@ -1,5 +1,78 @@
-"""Instance partagée du rate limiter (slowapi)."""
+"""Instance partagée du rate limiter (slowapi), et les limites par **intention**.
+
+## Pourquoi des constantes, et pas des chaînes dans les décorateurs (#1027)
+
+Les onze limites du projet étaient des chaînes littérales posées route par
+route : `"5/minute"` cinq fois, `"3/minute"` deux fois… Un littéral répété ne dit
+pas *pourquoi* il vaut cinq, donc personne ne sait s'il faut le suivre en posant
+une nouvelle route — et deux routes de même nature finissent avec deux plafonds
+différents sans que ce soit une décision.
+
+`.claude/skills/security-audit` recopiait par ailleurs le tableau de ces valeurs.
+Une liste recopiée diverge à la première route ajoutée : la skill renvoie
+désormais ici.
+
+## Deux constantes peuvent partager une valeur — c'est le but
+
+`LIMITE_SECRET_EPROUVE` et `LIMITE_DONNEES_PERSONNELLES` valent toutes deux
+`5/minute` aujourd'hui. Ce n'est pas une duplication à fusionner : ce sont deux
+intentions distinctes, qui doivent pouvoir **divergrer** le jour où l'une des
+deux se révèle mal réglée. Les fusionner reviendrait à décider d'avance qu'elles
+bougeront ensemble.
+
+⚠️ Aucune valeur n'a été modifiée en introduisant ces noms : chaque route garde
+exactement le plafond qu'elle avait. Renommer et rerégler sont deux gestes.
+"""
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 limiter = Limiter(key_func=get_remote_address)
+
+#: Une requête qui soumet un **secret devinable** — mot de passe, jeton de
+#: réinitialisation, jeton de vérification d'adresse. C'est la limite qui
+#: transforme une attaque par force brute en attaque impraticable : c'est donc la
+#: seule dont l'absence est un défaut de sécurité, et non une imprudence.
+LIMITE_SECRET_EPROUVE = "5/minute"
+
+#: Une requête qui **fait partir un courriel** vers une adresse que l'appelant
+#: choisit. Sans limite, la route sert de relais d'expédition gratuit — et c'est
+#: la réputation du domaine qui paie.
+LIMITE_COURRIEL_DECLENCHE = "3/minute"
+
+#: Une requête qui manipule une **session** sans éprouver de secret : rotation de
+#: jeton, déconnexion.
+LIMITE_SESSION = "10/minute"
+
+#: Le **contrôle d'accès à un fichier**, que Caddy appelle une fois par fichier
+#: servi.
+#:
+#: 🔴 Le plafond est large **par nécessité mesurée**, pas par prudence vague :
+#: une galerie de vingt photos produit vingt appels en quelques secondes, et un
+#: plafond de session (10/minute) aurait fait disparaître les images d'une page
+#: chargée — une panne d'affichage causée par un durcissement de sécurité, et
+#: attribuée à tout sauf à lui. Il protège encore d'un balayage massif, qui se
+#: compte en milliers.
+LIMITE_CONTROLE_FICHIER = "300/minute"
+
+#: La **lecture de ses propres données** par un compte connecté : son profil, ses
+#: demandes. Appelée à chaque chargement d'écran, parfois plusieurs fois.
+LIMITE_LECTURE_AUTHENTIFIEE = "60/minute"
+
+#: L'**export** ou l'**effacement** des données personnelles d'un compte. Une
+#: intention de conformité, pas de sécurité : ces routes rendent ou détruisent
+#: des données au porteur de la session, et une rafale coûte cher au serveur.
+LIMITE_DONNEES_PERSONNELLES = "5/minute"
+
+#: Le basculement d'une **préférence** du compte.
+LIMITE_PREFERENCE = "10/minute"
+
+#: Une **collecte passive** que le navigateur émet tout seul — rapport de
+#: politique de sécurité du contenu, télémétrie d'usage. Haute par nécessité :
+#: une page peut en produire plusieurs par visite, et les perdre rendrait le
+#: journal muet sans que rien ne le signale.
+LIMITE_JOURNAL = "60/minute"
+
+#: Une **lecture publique**, sans secret ni écriture : la liste des bâtiments que
+#: le formulaire d'inscription affiche. La limite n'y protège rien d'autre que le
+#: serveur, d'où un plafond large.
+LIMITE_LECTURE_PUBLIQUE = "60/minute"

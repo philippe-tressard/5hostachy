@@ -5,6 +5,7 @@ instancie un engine depuis `database_url`. On fournit des valeurs neutres pour
 que les tests s'exécutent sans .env ni base réelle (aucun test ici ne se
 connecte à la base : ils lisent les templates et la chaîne de migrations).
 """
+import itertools
 import os
 import tempfile
 
@@ -213,3 +214,40 @@ def scripts_shell_versionnes() -> list:
     trouves += list(racine.glob("scripts/**/*.sh"))
     trouves += [p for p in racine.glob(".githooks/*") if p.is_file()]
     return sorted(set(trouves))
+
+
+# ── Une vraie requête, pour les routes limitées en débit ─────────────────────
+#
+#  Les routes d'authentification portent toutes un `@limiter.limit` (#1027), et
+#  slowapi lit l'adresse du client dans une `starlette.requests.Request`. Un
+#  objet imitateur ne suffit donc pas, et retirer le décorateur reviendrait à
+#  tester une fonction que la production n'exécute pas.
+#
+#  Cette fabrique vivait en double — `_Requete` dans les tests de mot de passe —
+#  au moment où un deuxième fichier en a eu besoin. Elle s'écrit ici une fois.
+
+_compteur_client = itertools.count()
+
+
+def requete_de_test(chemin: str = "/", methode: str = "POST"):
+    """Une requête Starlette minimale, **d'une adresse nouvelle à chaque appel**.
+
+    🔴 L'adresse change à chaque appel parce que les plafonds se comptent PAR
+    CLIENT : sans cela, le sixième test d'un fichier recevrait un 429 et
+    échouerait pour une raison étrangère à ce qu'il vérifie. On ne désarme pas le
+    décorateur — on cesse d'être le même visiteur.
+    """
+    from starlette.requests import Request
+
+    return Request(
+        {
+            "type": "http",
+            "method": methode,
+            "path": chemin,
+            "headers": [],
+            "query_string": b"",
+            "scheme": "https",
+            "server": ("test", 443),
+            "client": (f"10.0.0.{next(_compteur_client) % 250 + 1}", 51234),
+        }
+    )

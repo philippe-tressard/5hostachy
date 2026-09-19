@@ -33,7 +33,14 @@ from app.database import get_session
 from app.models.core import (Utilisateur, RefreshToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment)
 from app.schemas import UserCreate, UserRead, LoginRequest
 from app.utils.lecture_utilisateur import construire_user_read
-from app.utils.limiter import limiter
+from app.utils.limiter import (
+    LIMITE_CONTROLE_FICHIER,
+    LIMITE_COURRIEL_DECLENCHE,
+    LIMITE_LECTURE_PUBLIQUE,
+    LIMITE_SECRET_EPROUVE,
+    LIMITE_SESSION,
+    limiter,
+)
 from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
 from app.utils.liens import base_site, nom_site
 
@@ -46,7 +53,8 @@ COOKIE_OPTS = dict(httponly=True, secure=settings.cookie_secure, samesite="stric
 
 
 @router.get("/batiments")
-def list_batiments(session: Session = Depends(get_session)):
+@limiter.limit(LIMITE_LECTURE_PUBLIQUE)
+def list_batiments(request: Request, session: Session = Depends(get_session)):
     """Liste publique des bâtiments pour le formulaire d'inscription."""
     return session.exec(select(Batiment).order_by(Batiment.numero)).all()
 
@@ -112,7 +120,7 @@ def emettre_verification_email(
 
 
 @router.post("/register", response_model=UserRead, status_code=201)
-@limiter.limit("5/minute")
+@limiter.limit(LIMITE_SECRET_EPROUVE)
 def register(
     request: Request,
     body: UserCreate,
@@ -224,7 +232,7 @@ def register(
 
 
 @router.post("/login")
-@limiter.limit("5/minute")
+@limiter.limit(LIMITE_SECRET_EPROUVE)
 def login(request: Request, body: LoginRequest, response: Response, session: Session = Depends(get_session)):
     user = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
     if not user or not user.hashed_password:
@@ -258,7 +266,7 @@ def login(request: Request, body: LoginRequest, response: Response, session: Ses
 
 
 @router.post("/refresh")
-@limiter.limit("10/minute")
+@limiter.limit(LIMITE_SESSION)
 def refresh(request: Request, response: Response, refresh_token: str | None = Cookie(default=None), session: Session = Depends(get_session)):
     if not refresh_token:
         raise HTTPException(401, "Refresh token manquant.")
@@ -294,7 +302,8 @@ def refresh(request: Request, response: Response, refresh_token: str | None = Co
 
 
 @router.post("/logout")
-def logout(response: Response, refresh_token: str | None = Cookie(default=None), session: Session = Depends(get_session)):
+@limiter.limit(LIMITE_SESSION)
+def logout(request: Request, response: Response, refresh_token: str | None = Cookie(default=None), session: Session = Depends(get_session)):
     if refresh_token:
         stored = session.exec(select(RefreshToken).where(RefreshToken.token == refresh_token)).first()
         if stored:
@@ -307,7 +316,8 @@ def logout(response: Response, refresh_token: str | None = Cookie(default=None),
 
 
 @router.get("/verifier-acces", status_code=204)
-def verifier_acces(_: Utilisateur = Depends(get_current_user)) -> Response:
+@limiter.limit(LIMITE_CONTROLE_FICHIER)
+def verifier_acces(request: Request, _: Utilisateur = Depends(get_current_user)) -> Response:
     """Réservé au `forward_auth` de Caddy : 204 si la session est valide, 401 sinon.
 
     Caddy interroge cet endpoint avant de servir un fichier de `/uploads/*`, qui
@@ -329,8 +339,14 @@ class RenvoiVerificationRequest(BaseModel):
 
 
 @router.get("/verifier-email", status_code=200)
-def verify_email(token: str, session: Session = Depends(get_session)):
-    """Vérifie l'adresse email via le token reçu par mail."""
+@limiter.limit(LIMITE_SECRET_EPROUVE)
+def verify_email(request: Request, token: str, session: Session = Depends(get_session)):
+    """Vérifie l'adresse email via le token reçu par mail.
+
+    🔴 Cette route **éprouve un secret** — un jeton passé en clair dans l'URL —
+    et n'avait aucune limitation de débit jusqu'au 19/09/2026 (#1027) : les
+    jetons étaient énumérables au rythme que le réseau permettait.
+    """
     evt = session.exec(
         select(EmailVerificationToken).where(EmailVerificationToken.token == token)
     ).first()
@@ -352,7 +368,7 @@ def verify_email(token: str, session: Session = Depends(get_session)):
 
 
 @router.post("/renvoyer-verification", status_code=204)
-@limiter.limit("3/minute")
+@limiter.limit(LIMITE_COURRIEL_DECLENCHE)
 def resend_verification(
     request: Request,
     body: RenvoiVerificationRequest,

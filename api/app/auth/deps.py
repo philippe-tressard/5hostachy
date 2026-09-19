@@ -141,6 +141,34 @@ def peut_commander(user: Utilisateur) -> bool:
 #  rend vérifiables sans monter d'application.
 
 
+def est_rattache_au_lot(user: Utilisateur, lot_id: int) -> bool:
+    """Ce lot est-il rattaché à cet utilisateur par une association ACTIVE ?
+
+    🔴 La question était écrite **deux fois** avant le 19/09/2026 (#1028), et les
+    deux écritures divergeaient sur le cas qui compte : `routers/lots.py` exigeait
+    le lien actif, `routers/acces/resident.py::creer_commande` non. Un ancien
+    occupant, dont le rattachement avait été désactivé, pouvait donc encore
+    commander un badge Vigik ou une télécommande pour ce lot.
+
+    Le refus existait à dix lignes de là, dans un autre fichier. C'est la forme
+    ordinaire de ce défaut : **un accès donné à trop de monde ne fait aucun
+    bruit** — personne ne se plaint de pouvoir faire quelque chose, et on ne
+    l'apprend que le jour où quelqu'un s'en sert.
+
+    ⚠️ `actif` n'est pas un détail de mise en œuvre : c'est **la** règle. Un
+    `UserLot` désactivé est l'historique d'un rattachement, pas un rattachement.
+    `api/tests/test_appartenance_lot_source_unique.py` refuse qu'une décision
+    d'accès relise `UserLot` pour son propre compte, **et** que cette fonction-ci
+    cesse de regarder `actif` — une source unique relâchée ne protège plus rien,
+    elle garantit seulement que tout le monde se trompe au même endroit.
+
+    C'est un PRÉDICAT, comme `peut_commander` : il dit, il ne refuse pas.
+    L'appelant choisit son code d'erreur, parce que 403 et 404 ne disent pas la
+    même chose de ce que le demandeur a le droit de savoir.
+    """
+    return lot_id in [ul.lot_id for ul in user.user_lots if ul.actif]
+
+
 def est_auteur(objet, user: Utilisateur) -> bool:
     """L'objet est-il *celui de* cet utilisateur ?
 

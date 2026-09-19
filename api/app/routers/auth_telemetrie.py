@@ -20,13 +20,13 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import TelemetryEvent, Utilisateur
-from app.utils.limiter import limiter
+from app.utils.limiter import LIMITE_DONNEES_PERSONNELLES, LIMITE_PREFERENCE, limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/me/telemetrie")
-@limiter.limit("5/minute")
+@limiter.limit(LIMITE_DONNEES_PERSONNELLES)
 def export_telemetrie(
     request: Request,
     session: Session = Depends(get_session),
@@ -50,7 +50,7 @@ def export_telemetrie(
 
 
 @router.delete("/me/telemetrie", status_code=204)
-@limiter.limit("5/minute")
+@limiter.limit(LIMITE_DONNEES_PERSONNELLES)
 def effacer_telemetrie(
     request: Request,
     session: Session = Depends(get_session),
@@ -70,7 +70,7 @@ class OptOutTelemetrieBody(BaseModel):
 
 
 @router.patch("/me/opt-out-telemetrie", status_code=204)
-@limiter.limit("10/minute")
+@limiter.limit(LIMITE_PREFERENCE)
 def toggle_opt_out_telemetrie(
     request: Request,
     body: OptOutTelemetrieBody,

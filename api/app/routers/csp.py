@@ -45,7 +45,7 @@ from app.database import get_session
 
 from app.auth.deps import require_admin
 from app.models.core import Utilisateur
-from app.utils.limiter import limiter
+from app.utils.limiter import LIMITE_JOURNAL, limiter
 
 logger = logging.getLogger("hostachy.csp")
 
@@ -202,7 +202,7 @@ def retenir(cle: tuple[str, str]) -> bool:
 
 
 @router.post("/csp-report", status_code=204)
-@limiter.limit("60/minute")
+@limiter.limit(LIMITE_JOURNAL)
 async def recevoir_rapport(request: Request, session: Session = Depends(get_session)):
     """Reçoit un rapport de violation. **Ne rend rien** — 204, toujours.
 

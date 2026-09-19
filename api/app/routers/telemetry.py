@@ -16,7 +16,7 @@ from app.models.core import (
     TelemetryMonthly,
     Utilisateur,
 )
-from app.utils.limiter import limiter
+from app.utils.limiter import LIMITE_JOURNAL, limiter
 from app.utils.noms import nom_affiche
 from app.utils.telemetrie_calculs import (
     _palmares,
@@ -35,7 +35,7 @@ class TelemetryBatch(BaseModel):
 
 
 @router.post("/collect", status_code=204)
-@limiter.limit("60/minute")
+@limiter.limit(LIMITE_JOURNAL)
 def collect(
     body: TelemetryBatch,
     request: Request,

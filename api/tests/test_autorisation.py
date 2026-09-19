@@ -115,39 +115,85 @@ _PUBLICS_ASSUMES = {
     #  base, et rien qui soit renvoyé à l'appelant. Le relevé, lui, est réservé
     #  aux administrateurs — il expose des URL de pages visitées.
     ("csp.py", "recevoir_rapport"),
-    # Rapport de maintenance machine-à-machine : authentifié par secret partagé
-    # (en-tête `x-maintenance-key`), et refuse tout si la clé n'est pas configurée.
+    #  🔴 Les quatre routes de `rapports_scripts.py` ONT QUITTÉ CETTE LISTE le
+    #  19/09/2026 (#1028). Elles n'étaient pas publiques : elles sont
+    #  authentifiées par une **clé partagée**, et les ranger ici en faisait un
+    #  faux vert — une route déclarée « publique assumée » reste verte quand on
+    #  retire son contrôle d'authentification.
+    #
+    #  Elles vivent maintenant dans `_AUTHENTIFIES_PAR_CLE`, et le test qui suit
+    #  cette liste vérifie que chacune appelle bien `exiger_cle_maintenance`.
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Endpoints authentifiés par **clé partagée**, et non par session (#1028).
+#
+#  🔴 Ce n'est pas la même chose qu'un endpoint public, et les confondre coûte un
+#  contrôle : une route rangée parmi les publiques assumées reste verte si l'on
+#  retire son authentification. Ces quatre-là y étaient.
+#
+#  Le canal n'autorise que les tâches planifiées des deux nœuds, qui lisent la
+#  clé dans `/opt/5hostachy/.env`, et ne rend **aucune donnée de
+#  copropriétaire** : dates d'exécution, comptes d'échecs par gabarit, noms de
+#  tables. C'est cette portée qui rend le canal tenable — pas sa commodité.
+# ─────────────────────────────────────────────────────────────────────────────
+_AUTHENTIFIES_PAR_CLE = {
     ("rapports_scripts.py", "maintenance_rapport"),
-    # Même canal, en lecture : `check-reliability.sh` C19 y compare la date du
-    # dernier rapport en base avec ce que dit le journal du nœud. Tourne en cron,
-    # donc sans session. Ne rend que des dates d'exécution de tâches — aucune
-    # donnée de copropriétaire — et la clé qui l'ouvre autorise déjà l'ÉCRITURE
-    # de ces mêmes lignes : la lecture est strictement moins sensible.
     ("rapports_scripts.py", "maintenance_dernier_rapport"),
-    # Même canal, même clé : COMBIEN d'e-mails ont échoué ces derniers jours, et
-    # de quels modèles. Rend des comptes et des codes de gabarits — **jamais une
-    # adresse ni un sujet**, alors que l'écran d'administration en montre. C'est
-    # ce qui rend le point 9 du pré-check mesurable au lieu d'`INCONNU` à chaque
-    # exécution : un contrôle que personne ne fait ne protège rien.
     ("rapports_scripts.py", "emails_echecs_recents"),
-    # Même canal, même clé : COMBIEN de lignes de la base référencent un parent
-    # disparu, et par quelle relation. Rend des noms de tables, des noms de
-    # colonnes et des comptes — **jamais un `rowid`**, que `PRAGMA
-    # foreign_key_check` fournit pourtant et qui désignerait une ligne précise
-    # (cf. `utils/diagnostic_cles.py`).
-    #
-    # 🔴 Pourquoi une seconde porte plutôt qu'un « admin OU clé » sur la route
-    # `/admin/db/cles-etrangeres` : une dépendance optionnelle et une auth
-    # conditionnelle sont la forme exacte dans laquelle un contournement se
-    # glisse sans se voir. Deux portes explicites, chacune avec sa serrure, et
-    # UNE seule mesure derrière — c'est ce que ce fichier vérifie route par
-    # route, et il ne saurait pas lire un `if` d'authentification.
-    #
-    # Elle existe pour que la surveillance soit CONTINUE : des orphelins peuvent
-    # réapparaître tant que les endpoints DELETE non testés n'ont pas été
-    # éprouvés (#546).
     ("rapports_scripts.py", "maintenance_cles_etrangeres"),
 }
+
+#: Le nom de la porte. Il est lu, pas supposé : le module d'authentification par
+#: clé est `app/auth/cle_maintenance.py`, et la fonction s'y appelle ainsi.
+_PORTE_PAR_CLE = "exiger_cle_maintenance"
+
+
+def test_chaque_route_a_cle_partagee_exige_VRAIMENT_la_cle():
+    """🔴 Le faux vert que la catégorie précédente laissait passer.
+
+    Tant que ces routes étaient déclarées « publiques assumées », retirer leur
+    appel à la fonction d'authentification ne faisait rougir aucun contrôle :
+    elles devenaient réellement publiques, en silence, et le canal qu'elles
+    ouvrent est celui des scripts d'exploitation.
+
+    Le contrôle vérifie **trois** choses, parce que les deux premières seules se
+    contournent : que la route appelle la porte, qu'elle reçoit bien l'en-tête
+    qui porte la clé, et que la porte existe toujours là où elle est censée
+    vivre.
+    """
+    import ast
+
+    module_porte = _API_DIR / "app" / "auth" / "cle_maintenance.py"
+    assert module_porte.exists(), (
+        "app/auth/cle_maintenance.py a disparu : l'authentification par clé est "
+        "revenue dans un routeur, là où aucun contrôle ne la raisonne comme une "
+        "porte"
+    )
+    assert f"def {_PORTE_PAR_CLE}(" in module_porte.read_text(encoding="utf-8"), (
+        f"`{_PORTE_PAR_CLE}` a disparu de son module"
+    )
+
+    manquantes = []
+    for fichier, fonction in sorted(_AUTHENTIFIES_PAR_CLE):
+        chemins = list((_API_DIR / "app" / "routers").rglob(fichier))
+        assert chemins, f"{fichier} introuvable — le contrôle a perdu sa portée"
+        corps = {
+            n.name: ast.unparse(n)
+            for n in ast.walk(ast.parse(chemins[0].read_text(encoding="utf-8")))
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        assert fonction in corps, f"`{fonction}` a disparu de {fichier}"
+        if f"{_PORTE_PAR_CLE}(" not in corps[fonction]:
+            manquantes.append(f"  {fichier}::{fonction} — n'appelle pas la porte")
+        elif "x_maintenance_key" not in corps[fonction]:
+            manquantes.append(f"  {fichier}::{fonction} — ne reçoit pas l'en-tête")
+
+    assert not manquantes, (
+        "Ces routes sont ouvertes sans vérifier la clé partagée :\n"
+        + "\n".join(manquantes)
+    )
 
 
 def _noms(node) -> set[str]:
@@ -195,11 +241,17 @@ def _endpoints():
 
 
 def test_tout_endpoint_porte_une_autorisation():
-    """Aucun endpoint sans dépendance d'autorisation, hors publics assumés."""
+    """Aucun endpoint sans autorisation, hors des DEUX catégories dispensées.
+
+    Elles ne disent pas la même chose : `_PUBLICS_ASSUMES` expose à Internet,
+    `_AUTHENTIFIES_PAR_CLE` authentifie autrement. Les avoir confondues jusqu'au
+    19/09/2026 coûtait un contrôle — une route déclarée publique reste verte
+    quand on retire son authentification (#1028).
+    """
     manquants = [
         f"{fichier}:{ligne} {verbe} {chemin or '/'} -> {fn}()"
         for fichier, ligne, verbe, chemin, fn, ok in _endpoints()
-        if not ok and (fichier, fn) not in _PUBLICS_ASSUMES
+        if not ok and (fichier, fn) not in _PUBLICS_ASSUMES | _AUTHENTIFIES_PAR_CLE
     ]
     assert not manquants, (
         "Endpoint(s) sans autorisation. Ajouter une dépendance de `app/auth/deps.py` "
