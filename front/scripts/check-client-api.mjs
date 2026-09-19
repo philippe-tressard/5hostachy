@@ -74,7 +74,19 @@ const CLIENT = 'src/lib/api';
 //  …)` est justement l'inverse d'un contournement : c'est le paramétrage qui
 //  supprime la duplication entre l'import Vigik et l'import télécommandes. Sans
 //  cette garde, le contrôle refusait le code le mieux factorisé de l'écran.
-const APPEL = /(?<![.\w])api\.(get|post|patch|put|delete)\s*(?:<[^>]*>)?\s*\(/g;
+//  ⚠️ `<.*?>` et non `<[^>]*>` — le second s'arrête au PREMIER `>`, donc un
+//  générique imbriqué lui échappait : `api.get<Record<string, string>>('/x')`
+//  ne matchait pas, et deux appels de `admin/+page.svelte` passaient sous un
+//  contrôle qui annonçait « aucun appel hors du client » (#1031).
+//
+//  🔴 C'est le faux vert de `standards/04` §2 : un motif trop étroit ne rend
+//  pas un verdict prudent, il rend un verdict FAUX — et il le rend en vert.
+//  L'auto-test ne couvrait que le cas simple, donc il le confirmait.
+//
+//  Le `.*?` non gourmand s'étend par retour arrière jusqu'au `>` qui précède la
+//  parenthèse : il traverse donc les `>` internes sans avoir à équilibrer les
+//  chevrons, et reste borné à la ligne (`.` n'inclut pas le saut de ligne).
+const APPEL = /(?<![.\w])api\.(get|post|patch|put|delete)\s*(?:<.*?>)?\s*\(/g;
 
 //  Un `fetch(` vers l'API : chaîne commençant par `/api/`, ou un identifiant
 //  qui la porte (`ENDPOINT`, `apiBase`). On ne cherche pas « tout `fetch` » :
@@ -129,6 +141,16 @@ function selftest() {
 		['api.delete(url); api.patch(url, d);', 2],
 		//  L'URL dans un ternaire : la forme qui avait échappé au relevé manuel.
 		['const updated = await api.post<any>(endpoint, { role });', 1],
+		//  🔴 Le générique IMBRIQUÉ, qui passait sous le contrôle jusqu'au
+		//  19/09/2026 (#1031) : le motif s'arrêtait au premier `>`, donc ces deux
+		//  lignes-là — les vraies, telles qu'elles étaient écrites dans
+		//  `admin/+page.svelte` — ne matchaient pas, et le contrôle annonçait
+		//  « aucun appel hors du client ».
+		["cfg = { ...cfg, ...(await api.get<Record<string, string>>('/config/admin')) };", 1],
+		["const c = await api.get<Record<string, string>>('/config/admin');", 1],
+		//  Deux niveaux d'imbrication, pour que le cas ne soit pas tenu par
+		//  chance : un générique dont l'argument est lui-même paramétré.
+		['const m = await api.get<Map<string, Array<number>>>(url);', 1],
 	];
 	const doitAccepter = [
 		"//  l'écran écrivait api.get('/admin/modeles-email') en dur",
