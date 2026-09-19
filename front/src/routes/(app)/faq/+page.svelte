@@ -536,8 +536,8 @@
 <div class="still-need-help card">
 	<strong>Vous ne trouvez pas la réponse ?</strong>
 	<p>
-		Créez un ticket via la rubrique <a href="/tickets">Signalements & tickets</a> et le conseil syndical
-		vous répondra dans les meilleurs délais.
+		Créez un ticket via la rubrique <a href="/tickets">Tickets</a> et le conseil syndical vous répondra
+		dans les meilleurs délais.
 	</p>
 	<p style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--color-border)">
 		<span style="vertical-align:middle;margin-right:.3rem;display:inline-flex"
