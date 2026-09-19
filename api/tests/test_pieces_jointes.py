@@ -26,7 +26,11 @@ import re
 
 import pytest
 
-from app.routers.uploads import ALLOWED_DOC_MIME, ALLOWED_MIME, DOC_EXTENSIONS
+#  Les listes de types vivent dans `utils/fichiers.FAMILLES` depuis le
+#  19/09/2026 (#1026) — voir `test_televersement_source_unique.py`. Ce test ne
+#  change pas de nature : il confronte ce que le front PROPOSE à ce que le
+#  serveur ACCEPTE, en lisant la source à son nouvel endroit.
+from app.utils.fichiers import FAMILLES
 from tests.aides_ast import corps_de
 from app.utils.fichiers import extension_assainie, nom_stocke, radical_assaini
 from app.utils.photos import photos_internes, photos_json
@@ -103,17 +107,17 @@ def test_liste_blanche_documents_alignee():
         e for e in _constante_ts("ACCEPT_DOCUMENTS").split(",") if e.startswith(".")
     }
     assert extensions_front, "aucune extension listée côté front"
-    assert extensions_front == set(DOC_EXTENSIONS.values())
+    assert extensions_front == set(FAMILLES["document"].extensions)
 
     types_front = {
         e for e in _constante_ts("ACCEPT_DOCUMENTS").split(",") if not e.startswith(".")
     }
-    assert types_front <= ALLOWED_DOC_MIME
+    assert types_front <= set(FAMILLES["document"].types)
 
 
 def test_liste_blanche_photos_alignee():
     types_front = set(_constante_ts("ACCEPT_PHOTOS").split(","))
-    assert types_front == ALLOWED_MIME
+    assert types_front == set(FAMILLES["image"].types)
 
 
 def test_toute_image_acceptee_est_reconnue_comme_image_par_le_front():
@@ -122,7 +126,7 @@ def test_toute_image_acceptee_est_reconnue_comme_image_par_le_front():
     trouve = re.search(r"EXTENSIONS_IMAGE = /(.+?)/i", source)
     assert trouve, "EXTENSIONS_IMAGE introuvable dans fichiers.ts"
     motif = re.compile(trouve.group(1).replace("\\.", r"\."), re.IGNORECASE)
-    for mime in ALLOWED_MIME:
+    for mime in FAMILLES["image"].types:
         extension = mime.split("/")[1]
         assert motif.search(f"photo.{extension}"), mime
 

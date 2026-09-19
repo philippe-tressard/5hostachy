@@ -28,8 +28,28 @@ from app.utils.fichiers import signature_incoherente
 
 _ROUTERS = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers"
 
-#: Les quatre endpoints qui écrivent un fichier téléversé sur le disque.
-_POINTS = ("uploads.py", "compteurs.py", "diagnostics.py", "documents.py")
+#: Les endpoints qui reçoivent un fichier d'un client.
+#:
+#: 🔴 Les TROIS IMPORTS DE TABLEUR ont rejoint cette liste le 19/09/2026
+#: (#1026) : ils n'y étaient pas, et n'avaient **aucun** contrôle — ni type, ni
+#: taille, ni signature. Le test était vert, et il avait raison au sens strict :
+#: sa portée disait « les quatre endpoints qui ÉCRIVENT sur le disque », et un
+#: import n'écrit rien, il analyse en mémoire.
+#:
+#: ⚠️ C'est la leçon de `standards/05` §9 dans sa forme la plus coûteuse : **la
+#: portée d'un contrôle fait partie du contrôle**. Celle-ci était juste, et elle
+#: laissait dehors trois chemins par lesquels un fichier arbitraire entrait.
+#: « Écrire sur le disque » était le critère du jour où le test a été écrit ;
+#: « recevoir un fichier » est celui de la règle.
+_POINTS = (
+    "uploads.py",
+    "compteurs.py",
+    "diagnostics.py",
+    "documents.py",
+    "acces/imports_vigik.py",
+    "acces/imports_telecommandes.py",
+    "lots_imports.py",
+)
 
 
 def test_un_faux_pdf_est_refuse():
@@ -89,7 +109,25 @@ def test_le_motif_est_LISIBLE_et_pas_un_booleen():
 #: faire : il cherchait `signature_incoherente` en direct, et ne la trouvait plus.
 #: Un contrôle qui suit le code sans qu'on le relise cesse de mesurer ce qu'il
 #: croit mesurer — celui-ci a exigé qu'on décide, et voilà la décision.
-_APPELS_ADMIS = ("signature_incoherente", "enregistrer_televersement")
+#:
+#: 🔴 ET ELLE A ÉCHOUÉ UNE SECONDE FOIS, le 19/09/2026, pour la même raison et
+#: sur une factorisation plus large (#1026) : le geste complet — liste blanche
+#: de types, plafond de taille, signature, écriture — vit maintenant dans
+#: `verifier_fichier_recu` et `enregistrer_fichier_recu`. Deux appels de plus
+#: sont donc admis, et c'est la décision que ce test a exigée.
+#:
+#: ⚠️ Admettre un nom n'est pas affaiblir le contrôle **tant que le nom admis
+#: appelle vraiment la règle** : les deux nouveaux appellent
+#: `signature_incoherente`, et `test_televersement_source_unique.py` refuse
+#: qu'une écriture de fichier reçu existe ailleurs que dans ce module. Les deux
+#: contrôles se tiennent : celui-ci dit « chaque point appelle la règle »,
+#: l'autre dit « la règle n'a qu'un seul endroit où vivre ».
+_APPELS_ADMIS = (
+    "signature_incoherente",
+    "enregistrer_televersement",
+    "verifier_fichier_recu",
+    "enregistrer_fichier_recu",
+)
 
 
 def test_les_QUATRE_points_de_televersement_appellent_la_regle():
