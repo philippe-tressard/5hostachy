@@ -23,38 +23,32 @@
 
 ## Fonctionnalités
 
-- **Tableau de bord** — Actualités, événements, sondages
+- **Tableau de bord** — la page d'accueil&nbsp;: les **consignes** du conseil syndical, ce qui est **📌 épinglé**, le **kanban** des dossiers en cours (les colonnes du calendrier, reprises en brique), puis le **fil** de ce qui s'est passé — et ses archives
 - **Tickets / Demandes** — Signalements avec suivi par le conseil syndical. **Huit catégories**, chacune choisie parce qu'elle change *qui traite* : 🛠️ Panne (à réparer : ascenseur, chauffage, éclairage, fuite) · 📢 Nuisance & propreté · 🌳 Espaces verts · 💧 Sinistre (dégât des eaux, incendie, vandalisme — le syndic déclare à l'assurance sous cinq jours ouvrés) · 🏗️ Étude & travaux (le dossier long suivi par le conseil : diagnostic, sondage, devis, chantier — ces tickets-là entrent au **kanban** du Calendrier) · 🔑 Accès & accueil (interphone, boîte aux lettres, emménagement) · ❓ Question · 🐛 Bug. L'**urgence n'est pas une catégorie** mais une case à cocher : une panne peut être urgente, une nuisance aussi
-- **Calendrier** — Événements, AG, travaux (vue liste + Kanban). Un événement se marque **🛡️ réservé au conseil syndical** — invisible des résidents et du groupe WhatsApp, le temps de préparer une assemblée ou une visite. Le **kanban** porte aussi les tickets de catégorie **🏗️ Étude & travaux**, rangés d'après leur statut (Ouvert → CS, En cours → Syndic, Résolu → Terminé, Annulé → Annulé) : un chantier se suit au même endroit que les événements qui le jalonnent. Le conseil syndical décoche la case au besoin. Ces cartes-là ne se déplacent pas à la souris — on fait avancer le suivi depuis le ticket, là où l'historique et les notifications suivent
+- **Calendrier** — Événements, AG, travaux, en trois onglets&nbsp;: vue **liste**, **kanban** et **archives**. Un événement se marque **🛡️ réservé au conseil syndical** — invisible des résidents et du groupe WhatsApp, le temps de préparer une assemblée ou une visite. Le **kanban** porte aussi les tickets de catégorie **🏗️ Étude & travaux**, rangés d'après leur statut (Ouvert → CS, En cours → Syndic, Résolu → Terminé, Annulé → Annulé) : un chantier se suit au même endroit que les événements qui le jalonnent. Le conseil syndical décoche la case au besoin. Ces cartes-là ne se déplacent pas à la souris — on fait avancer le suivi depuis le ticket, là où l'historique et les notifications suivent
 - **Documents** — GED avec catégories et accès par profil (résidents, propriétaires, CS)
-- **Carnet d'entretien** — l'histoire du bâti, obligatoire depuis le décret n° 2001-477 : ce qui a été entretenu, réparé et contrôlé, rangé **par équipement** et signalant les visites dont l'échéance est dépassée. C'est une **vue**, pas une saisie — il se constitue à partir des contrats d'entretien, des interventions terminées du calendrier et des tickets résolus qui concernent le bâti, et aucune donnée n'y est ressaisie. Onglet de *Résidence*, réservé aux copropriétaires, au conseil syndical et à l'administration. Le filtre par **périmètre** est pris dans l'arborescence administrée : un périmètre créé dans Admin → Patrimoine y apparaît sans déploiement, et un contrat déclare désormais ce qu'il couvre — un bâtiment, le parking, les caves ou toute la résidence
+- **Carnet d'entretien** — l'histoire du bâti, obligatoire depuis le décret n° 2001-477 : ce qui a été entretenu, réparé et contrôlé, rangé **par équipement** et signalant les visites dont l'échéance est dépassée. C'est une **vue**, pas une saisie — il se constitue à partir des contrats d'entretien, des interventions terminées du calendrier et des tickets résolus qui concernent le bâti, et aucune donnée n'y est ressaisie. Onglet de *Résidence*, réservé aux copropriétaires, au conseil syndical et à l'administration. Le filtre par **périmètre** est pris dans l'arborescence administrée : un périmètre créé dans Admin → Périmètres y apparaît sans déploiement, et un contrat déclare désormais ce qu'il couvre — un bâtiment, le parking, les caves ou toute la résidence
 - **Mes lots & accès** — une seule page pour ce qu'on possède et ce qui l'ouvre, en quatre onglets : **Mes lots** (appartement, cave, parkings, diagnostics), **Mes badges d'accès (Vigik)**, **Télécommandes de parking** et — pour un copropriétaire bailleur — **Gestion locative** (baux, locataires, inventaire de remise, documents, et leurs archives). Les deux gestes d'accès sont ouverts depuis l'en-tête et ne disent pas la même chose : **« + Nouvel accès »** demande au syndic ce qu'on n'a pas, **« + Déclarer un accès »** signale un badge qu'on détient déjà et qui n'apparaît pas dans la liste — il se rattache tout seul à l'import du syndic quand il y figure. Un bailleur confie ses accès à son locataire pour la durée du bail, et les récupère à sa sortie
 - **FAQ** — Questions fréquentes filtrées par profil utilisateur
-- **Communauté** — Annuaire résidents, boîte à idées, sondages et petites annonces, avec fil de réponses entre voisins (réponses du conseil syndical mises en avant) et notifications au créateur. Un sondage se cible comme une actualité : périmètre pris dans l'arborescence, et destinataires pris dans la liste commune (résidents, copropriétaires, copropriétaires occupants, bailleurs, locataires, conseil syndical). Une **petite annonce** porte elle aussi un périmètre — la résidence entière, un bâtiment, le parking, les caves — et se **corrige** après dépôt (titre, prix, catégorie, description) sans qu'il faille la supprimer et la redéposer, ce qui effaçait les réponses des voisins
+- **Communauté** — Boîte à idées, sondages et petites annonces — **réservée aux résidents**&nbsp;: ni le syndic, ni un mandataire, ni un aidant n'y ont accès. L'**Annuaire** est une page à part, et il ne liste que le conseil syndical et le syndic. Fil de réponses entre voisins, avec fil de réponses entre voisins (réponses du conseil syndical mises en avant) et notifications au créateur. Un sondage se cible comme une actualité : périmètre pris dans l'arborescence, et destinataires pris dans la liste commune (résidents, copropriétaires, copropriétaires occupants, bailleurs, locataires, conseil syndical). Une **petite annonce** porte elle aussi un périmètre — la résidence entière, un bâtiment, le parking, les caves — et se **corrige** après dépôt (titre, prix, catégorie, description) sans qu'il faille la supprimer et la redéposer, ce qui effaçait les réponses des voisins
 - **Prestataires & Contrats** — Gestion des prestataires et contrats d'entretien, avec la **prochaine échéance de visite** de chaque contrat (en retard, à venir, sans échéance) et la **notation** de l'intervenant. Une intervention datée se suit dans le **Calendrier**, une demande au syndic par un **ticket**. Deux contrats sont **désignés** depuis la fiche de copropriété — l'**assurance** et le **mandat de syndic** — qui y affiche alors l'organisation, les dates, le numéro et le document signé. Le cabinet est un prestataire ; ses **membres** restent dans l'annuaire, d'où partent les e-mails. Une **synthèse de contrat** se propose d'un clic sur ✨ : l'assistant IA lit **tous** les documents joints — l'initial, ses avenants, les conditions générales — et rend un résumé au format du carnet d'entretien, ouvert en correction, jamais enregistré sans relecture, et précédé d'un encart qui dit quel modèle l'a rédigé, quand et sur quels fichiers ; les clauses auxquelles elle renvoie sont **jointes en extraits** en fin de synthèse. Le même assistant **retravaille une description** (tickets, actualités, calendrier, sondages, idées, annonces, commentaires) sur demande du conseil syndical : proposition sous le champ, « Appliquer » ou « Ignorer », et un ✨ discret à côté de l'auteur d'un texte assisté
-- **Annonces de hall** — Production d'une **affiche PDF** aux couleurs de la résidence pour les panneaux d'affichage, au **plus petit format qui accueille le texte** (A4 à A8, trait de découpe en dessous de l'A4). Elle se rédige directement ou se **pré-remplit depuis une actualité** (titre, contenu, périmètre, photos) — et **réciproquement** : une actualité se pré-remplit depuis une annonce de hall déjà produite, le conseil composant souvent l'affiche d'abord. Sa **diffusion** se choisit case par case comme partout ailleurs — groupe WhatsApp, syndic, conseil syndical, copie à soi —, toutes décochées d'origine : le conseil syndical du périmètre et le syndic reçoivent le PDF en pièce jointe, le groupe WhatsApp un lien vers l'actualité d'origine. Historique consultable, archivable, avec renvoi possible
+- **Annonces de hall** — Production d'une **affiche PDF** aux couleurs de la résidence pour les panneaux d'affichage, au **plus petit format qui accueille le texte** (A4 à A7, trait de découpe en dessous de l'A4). Elle se rédige directement ou se **pré-remplit depuis une actualité, un ticket ou un événement** (titre, contenu, périmètre, photos) — et **réciproquement** : une actualité se pré-remplit depuis une annonce de hall déjà produite, le conseil composant souvent l'affiche d'abord. Sa **diffusion** se choisit case par case comme partout ailleurs — groupe WhatsApp, syndic, conseil syndical, copie à soi —, toutes décochées d'origine : le conseil syndical du périmètre et le syndic reçoivent le PDF en pièce jointe, le groupe WhatsApp un lien vers l'actualité d'origine. Historique consultable, archivable, avec renvoi possible
 - **Administration** — Paramétrage site, comptes, sauvegardes, SMTP, WhatsApp, **assistant IA** (un bloc commun — fournisseur, clé, adresse, délai — et un bloc par usage — modèle, prompt modifiable, plafond, activation, test ; la clé n'est jamais renvoyée par l'API)
 - **Périmètres** — arborescence de la copropriété (bâtiments et leurs espaces, parking, AFUL, espaces verts, cheminements, locaux techniques) servant à localiser tickets, actualités, événements, **sondages** et annonces. Sa **pastille prend la couleur de son bâtiment** : « Ascenseur » du bâtiment 1 porte la teinte du bâtiment 1, partout où elle s'affiche — on lit *où ça se passe* sans lire le libellé. Sur un ticket, il n'est pas figé à l'ouverture : une entrée du fil de suivi peut le **préciser** à mesure qu'on cherche, et l'historique garde la trace du resserrement. Entièrement éditable depuis l'administration, sans déploiement. Le périmètre dit *de quoi* il s'agit, pas *qui peut lire* — sauf sur une actualité marquée **🔒 Confidentiel**, où il redevient restrictif (lecture réservée au périmètre visé, affiche de hall alors impossible)
 - **WhatsApp** — Notifications automatiques programmées vers le groupe de la résidence
 - **Maintenance** — Tâches automatiques (purge tokens, archivage, logs) + déclenchement manuel,
   et le **contrôle de santé quotidien** (base, WhatsApp, sauvegardes, copie hors site, disque,
   modèles d'e-mail) relançable à la demande depuis l'écran
-- **Liens partageables** — Chaque onglet et sous-onglet a son **adresse propre** (`/annonces`, `/idees`, `/calendrier/kanban`, `/mon-lot/location/archives`…) : l'adresse du navigateur suit ce qu'on regarde, elle se copie et s'envoie. Chaque publication porte une icône 🔗 qui copie **son** lien — annonce, actualité, événement, ticket, idée, sondage, question de FAQ, document, rapport de diagnostic. Le lien n'ouvre aucun droit : le destinataire doit être connecté et ne voit que ce qui le concerne. Les anciennes adresses (`?onglet=…`) restent servies, en redirection permanente
+- **Liens partageables** — Chaque onglet et sous-onglet a son **adresse propre** (`/annonces`, `/idees`, `/calendrier/kanban`, `/mon-lot/location/archives`…) : l'adresse du navigateur suit ce qu'on regarde, elle se copie et s'envoie. Chaque publication porte une icône 🔗 qui copie **son** lien — annonce, actualité, événement, ticket, idée, sondage, question de FAQ, document, rapport de diagnostic, contrat, prestataire. Le lien n'ouvre aucun droit : le destinataire doit être connecté et ne voit que ce qui le concerne. Les anciennes adresses (`?onglet=…`) restent servies, en redirection permanente
 
 ## Captures d'écran
 
-<details>
-<summary>Voir les captures</summary>
-
-| Tableau de bord | Créer un ticket | Calendrier |
-|:---:|:---:|:---:|
-| ![Dashboard](docs/img/capture-1-tableau-de-bord.png) | ![Ticket](docs/img/capture-2-creer-ticket.png) | ![Calendrier](docs/img/capture-4-calendrier-liste.png) |
-
-| Résidence | Accès & badges | Profil |
-|:---:|:---:|:---:|
-| ![Résidence](docs/img/capture-7-ma-residence.png) | ![Accès](docs/img/capture-8-acces-badges.png) | ![Profil](docs/img/capture-6-mon-profil.png) |
-
-</details>
+> 🖼 **Les captures d'écran ont été retirées** le 02/09/2026, du manuel d'abord et
+> d'ici ensuite (#1038) : `docs/img/` n'existait plus, et les six images de ce
+> tableau ne s'affichaient nulle part. Une capture périme au premier changement
+> d'écran, et personne ne s'en aperçoit — c'est ce que le manuel a constaté avant
+> ce fichier. Pour voir les écrans, le **manuel utilisateur** les décrit un par
+> un : [docs/manuel-utilisateur.html](docs/manuel-utilisateur.html).
 
 ## Stack technique
 
@@ -85,9 +79,9 @@
 ├── infra/             # Code déployé ailleurs (worker Cloudflare)
 ├── specs/             # Spécifications fonctionnelles
 ├── docs/              # Documentation déploiement & ops
-├── *.sh               # RELAIS temporaires vers scripts/exploitation/ : les
-│                      #   crontabs désignent encore ces chemins. À retirer une
-│                      #   fois les points d'entrée basculés (#337).
+├── boot-role-guard.sh # RELAIS PERMANENT vers scripts/exploitation/ : l'unité
+│                      #   systemd désigne CE chemin absolu, et rien dans un
+│                      #   déploiement ne la met à jour. Il reste donc.
 └── docker-compose.yml
 ```
 
@@ -164,6 +158,8 @@ Toute la configuration se fait via le fichier `.env` (voir [.env.example](.env.e
 | [docs/restauration-complete.md](docs/restauration-complete.md) | Procédure de restauration complète |
 | [docs/redondance-rpi5.md](docs/redondance-rpi5.md) | Architecture de redondance (failover) |
 | [docs/cloudflare-worker-maintenance.md](docs/cloudflare-worker-maintenance.md) | Page de maintenance Cloudflare |
+| [docs/icones-menu.md](docs/icones-menu.md) | Les icônes du menu, écran par écran |
+| [docs/manuel-utilisateur.html](docs/manuel-utilisateur.html) | **Manuel utilisateur** — ce que chaque écran contient et qui peut le voir |
 
 ## Sécurité
 
@@ -173,7 +169,7 @@ Toute la configuration se fait via le fichier `.env` (voir [.env.example](.env.e
 - **Exposition publique en liste blanche** — ce qui est lisible sans authentification est énuméré, jamais déduit par exclusion
 - Rate limiting sur les endpoints d'authentification (slowapi)
 - Validation Pydantic / SQLModel sur toutes les entrées
-- Headers de sécurité via Caddy (HSTS, X-Frame-Options, CSP)
+- En-têtes de sécurité — HSTS, `X-Frame-Options`, `X-Content-Type-Options` et `Referrer-Policy` servis par **Caddy**&nbsp;; la **politique de sécurité du contenu** (CSP) est émise par **SvelteKit** (`svelte.config.js`), qui seul connaît le condensat de ses scripts en ligne
 - Sanitisation HTML côté client (DOMPurify)
 - Protection path traversal sur les uploads
 - **Vulnérabilités des dépendances vérifiées en CI, des DEUX côtés** — `npm audit` sur tout l'arbre (`devDependencies` comprises : elles servent le site) et `pip-audit` sur `api/requirements.txt`. Même mécanique de part et d'autre : exceptions **nominatives**, chacune avec son motif d'atteignabilité, sa condition de levée et sa date de revue — et une exception devenue inutile fait **échouer** le contrôle, pour forcer son retrait (`front/audit-exceptions.json`, `api/audit-exceptions.json`)
