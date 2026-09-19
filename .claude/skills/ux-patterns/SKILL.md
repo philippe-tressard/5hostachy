@@ -22,12 +22,12 @@ Guide de référence des patterns UX établis. Tout pattern utilisé ≥ 2 fois 
 3. Si la demande contredit un pattern → **signaler le conflit** et demander confirmation
 4. Après implémentation → mettre à jour **cette skill** si le pattern a évolué
 
-**Où chercher, ici** : `front/src/app.css` porte les règles globales (`.carte-liste`,
+**Où chercher, ici** : les règles globales vivent dans `front/src/styles/*.css`, importées par `app.css` — qui n'en porte plus **aucune** depuis le 27/08/2026 (#453). `composants.css` porte les classes partagées (`.carte-liste`,
 `.page-header`, `.form-actions`, `.clamp-5`, `.chevron`, `.largeur-saisie`…) —
 c'est le premier endroit à lire, avant toute règle locale. Les composants partagés
 sont dans `front/src/lib/components/`.
 
-⚠️ **Deux fois déjà, une page a réécrit chez elle une règle qu'`app.css` portait
+⚠️ **Deux fois déjà, une page a réécrit chez elle une règle que `src/styles/` portait
 déjà** : `.form-actions` (identique, donc inerte, supprimée le 15/08) et
 `.page-header` (réécrite dans six pages et surchargée en ligne dans six autres —
 issue #363, qui a projeté le titre de *Nouveau ticket* à droite de l'écran). Le
@@ -74,7 +74,7 @@ appliquée à ses imitateurs sans être remontée au modèle.
 **3. Un garde-fou qui refuse dit souvent que le code est au MAUVAIS ENDROIT, pas
 qu'il est trop long.** Le contrôle de modularité a refusé cinq ajouts de deux
 lignes le 18/08 ; quatre fois j'ai raboté (#453), la cinquième la bonne réponse
-était de **remonter la règle dans `app.css`** — et les deux pages y ont perdu des
+était de **remonter la règle dans `src/styles/`** — et les deux pages y ont perdu des
 lignes. Trois réponses possibles, une seule mauvaise :
 
 | Réponse | Quand |
@@ -253,9 +253,11 @@ contrôle**. Premier écart que le cadre ne tient pas.
 par rien d'autre. Une condition en dur (`{!modeEdition}`) rouvre exactement la
 divergence silencieuse que le cadre supprime — et `lint:etats` la refuse.
 
-⚠️ **`EvolForm` n'est pas encore gouverné par la déclaration** : il sert quatre
-écrans, l'y brancher les changerait tous les quatre (R5). L'état `evolution` est
-donc déclaré, pas encore confronté à son rendu. Sujet de **#433**.
+✅ **`EvolForm` est gouverné par la déclaration** : il reçoit
+`entite: EntiteDeclaree` (`EvolForm.svelte:116`). Ce paragraphe disait le
+contraire — « pas encore gouverné », « sujet de #433 » — et c'est le genre de
+mention qui survit le plus longtemps : elle décrit un travail **à faire**, donc
+personne ne la relit le jour où il est fait.
 
 ### Ce que le cadre ne couvre pas
 
@@ -555,10 +557,10 @@ la rangée du conseil syndical) — elles ont été ouvertes, l'édition restant
 réservée. L'adresse ne donne aucun accès : la page vérifie les droits de qui
 l'ouvre, pas de qui l'a envoyée.
 
-### La source unique : `.carte-liste` (app.css) — depuis le 15/08/2026
+### La source unique : `.carte-liste` (`styles/composants.css`) — depuis le 15/08/2026
 
 Le conteneur, son espacement, son survol et son état d'urgence vivent **une seule
-fois**, dans `front/src/app.css`. Actualités et tickets les redéfinissaient chacun
+fois**, dans `front/src/styles/composants.css`. Actualités et tickets les redéfinissaient chacun
 de leur côté, avec les mêmes valeurs et un simple préfixe qui change — rien
 n'empêchait la troisième copie.
 
@@ -655,7 +657,7 @@ déjà la propagation, et la zone repliée n'a rien à sélectionner.
 |---|---|
 | conteneur de la carte | `role="presentation"` + `on:click={() => { if (!expanded) basculer(); }}` |
 | `EnteteCarte` | `basculable` → le titre devient un `<button>` qui bascule, avec `stopPropagation` |
-| `app.css` | `.carte-liste:not(.expanded)` porte le curseur **et** le fond au survol |
+| `styles/composants.css` | `.carte-liste:not(.expanded)` porte le curseur **et** le fond au survol |
 | corps déplié | `.carte-corps` + `role="presentation"` + `on:click\|stopPropagation` |
 
 ⚠️ Le titre est un **vrai `<button>`** : il porte le clavier dans les deux sens.
@@ -766,7 +768,7 @@ explicite du lien, pas un défaut.
 **Quand** : choix exclusif ou multiple, ≤ 8 options, libellés courts.
 **Préférer à** : `<select>`, `radio` en colonne, `checkbox` en colonne.
 
-- Classes : `.perimetre-pills` (conteneur), `.pill`, `.pill-active`
+- Classes : `.perimetre-pills` (conteneur) — ⚠️ `.pill` et `.pill-active` ont été **retirées** le 29/08/2026 (#491) : `ecrans.css` le dit à deux endroits. Le rendu passe par `Pastille.svelte` (39 écrans), et `lint:seuil-listes` décide entre pastilles et liste déroulante selon le nombre d'entrées
 - `type="button"` obligatoire (éviter soumission formulaire)
 - Sélection multiple : toggle + reset auto vers défaut si aucun actif
 
@@ -808,7 +810,7 @@ Vue archives unifiée dans `calendrier/+page.svelte` (onglet Archives).
 
 > 🔴 **La largeur de saisie appartient au SQUELETTE, pas à la page (R1) — et elle
 > change (18/08/2026).** Elle est désormais une **variable**,
-> `--largeur-saisie`, définie dans `app.css` et posée par
+> `--largeur-saisie`, définie dans `styles/normes.css` et posée par
 > `(app)/+layout.svelte` : *une largeur unique, quels que soient la page et le
 > formulaire, adaptée à l'écran du terminal avec une marge optimale* (arbitrage
 > utilisateur). Motif : le cap à 720 px était plus étroit que tout le reste de la
@@ -817,7 +819,7 @@ Vue archives unifiée dans `calendrier/+page.svelte` (onglet Archives).
 >
 > **La nouvelle valeur (`100%` du conteneur) n'est active que sur `/tickets`**,
 > le temps d'être constatée à l'écran (R5) ; partout ailleurs le défaut reste
-> 720 px. Généraliser = changer la ligne de `app.css` et **supprimer** la liste
+> 720 px. ⚠️ **FAIT le 18/08/2026** : la valeur est généralisée, et la liste `ROUTES_LARGEUR_PLEINE` qui la limitait à une route **n'existe plus**. Ce paragraphe décrivait le travail à faire ; il décrit maintenant ce qui est. Généraliser aurait été = changer la ligne de `styles/normes.css` et supprimer la liste
 > `ROUTES_LARGEUR_PLEINE` du squelette. Ne pas la laisser vivre : un mécanisme
 > d'exception qui survit invite la valeur suivante — c'est la leçon de la prop
 > `marge` d'`EntetePage` (§13). Ne **jamais** écrire une largeur dans une page.
@@ -843,7 +845,7 @@ calendrier reste à 640 px, délibérément).
 
 ### Un champ, UNE nomenclature : `.field`
 
-🔴 **`.field` (`app.css`) est la définition unique du champ** — mise en page,
+🔴 **`.field` (`styles/champs.css`) est la définition unique du champ** — mise en page,
 fond beige, contour de focus, état lecture seule. Les deux écritures conviennent,
 et elles seules :
 
@@ -966,7 +968,7 @@ plus coûteuse du défaut : on croit avoir une charte, on a des copies.
 un rôle : le champ se lit comme un creux dans la carte. Cela n’a de sens que si
 la carte est franchement blanche — les blocs d’admin étaient posés à même le fond
 de page, qui est **le même beige que les champs**, si bien qu’un champ n’avait plus
-que sa bordure pour exister. ⚠️ Ce beige n’avait jamais été décidé : `app.css`
+que sa bordure pour exister. ⚠️ Ce beige n’avait jamais été décidé : `styles/composants.css`
 portait `.field input` **deux fois**, une version blanche et une beige, et c’est
 l’ordre de la cascade qui tranchait (#413).
 
@@ -1017,7 +1019,7 @@ pour un champ **court** — date, montant, statut, fréquence — et faux pour t
 reste : un titre y est écrasé dans le tiers le plus étroit, et un sélecteur de
 périmètre y empile ses dix pastilles **une par ligne**, description comprimée.
 
-**Ces champs prennent la LIGNE ENTIÈRE — `class="champ-large"` (app.css) :**
+**Ces champs prennent la LIGNE ENTIÈRE — `class="champ-large"` (`styles/champs.css`) :**
 
 | Champ | Pourquoi |
 |---|---|
@@ -1237,7 +1239,7 @@ par case avec un `style="width:auto"` recopié : le signe qu'on soignait le
 symptôme.
 
 Qualifier le sélecteur (`.case input[type="checkbox"]`) ou porter la règle dans
-`app.css`, où elle est globale et assumée.
+`styles/composants.css`, où elle est globale et assumée.
 
 ### 9 quinquies bis. Le bouton de soumission dit **« Enregistrer »**, partout
 
@@ -1273,7 +1275,7 @@ le contrôle échoue si l'une devient inutile.
 
 ### 9 quinquies. Le bouton de soumission est **à droite**, via `.form-actions`
 
-`.form-actions` (app.css) porte `justify-content: flex-end`. Un bouton posé nu dans
+`.form-actions` (`styles/composants.css`) porte `justify-content: flex-end`. Un bouton posé nu dans
 un `<form>` se cale à **gauche** et détonne : c'était le cas des sondages (« Créer
 le sondage », « Publier l'annonce », « Soumettre » d'une idée), seuls de tout le
 site, jusqu'au 16/08/2026. Ne jamais écrire un bouton de soumission hors de
@@ -1332,7 +1334,7 @@ chacune avec sa propre expression régulière pour décider ce qui est une image
 | `$lib/components/PiecesJointes.svelte` | **affichage en lecture seule** d'une liste de pièces jointes (photos + documents) | `urls`, `size`, `compact`, `format` |
 | `$lib/components/Lightbox.svelte` | visionneuse plein écran | `photos`, `index` · événement `fermer` |
 | `$lib/components/Vignette.svelte` | vignette carrée (brique de bas niveau) | `src`, `alt`, `placeholder`, `count`, `size`, slot d'actions |
-| `$lib/components/PhotosUpload.svelte` | galerie **éditable** | `urls`, `max`, `readonly`, `upload`, `remove` |
+| `$lib/components/FichiersUpload.svelte` | galerie **éditable** — photos **et** documents ; `ImageUpload.svelte` pour une image seule. ⚠️ Cette ligne nommait `PhotosUpload.svelte`, qui n'existe pas | `urls`, `max`, `readonly`, `upload`, `remove` |
 | `$lib/components/FichiersUpload.svelte` | **saisie** de pièces jointes ; `differe` retient les `File` quand le parent n'existe pas encore | `urls`, `fichiers`, `differe`, `mode`, `max`, `titre` |
 
 Le téléversement est **délégué par callback** : chaque rubrique garde son propre
@@ -1558,7 +1560,7 @@ déjà regardée, et son inversion se lit sans être lue.
 <button class="btn-icon" aria-pressed={mode === 'edition'} …>✏️</button>
 ```
 
-Le style vit dans `app.css`, une seule fois : fond plein en couleur primaire,
+Le style vit dans `styles/composants.css`, une seule fois : fond plein en couleur primaire,
 glyphe blanc, `scale(1.15)`. ⚠️ **Un simple changement de teinte ne suffit pas** :
 il ne se distinguerait pas du survol, et l'on ne saurait plus si l'icône est
 active ou seulement pointée.
@@ -1736,11 +1738,15 @@ celui-ci connaît le geste : chaque conversion faisait donc sortir la modale de 
 champ — *convertir revenait à se désarmer*. Il lit désormais aussi
 `lib/components/`, et il reconnaît la modale montée par `<svelte:component>`.
 
-**Reste à traiter — `prestataires`**, déclaré en exception : quatre formulaires
-encore en modale dans un fichier de 2 182 lignes qui doit d'abord être découpé, et
-un écart de fond — le périmètre y est une **chaîne** dans un `<select>` là où
-`PerimetrePicker` travaille sur un tableau. C'est un changement de contrat, pas un
-remplacement de composant.
+✅ **`prestataires` est traité** : le fichier fait **822 lignes** (contre 2 182)
+et ne porte **plus aucune** `<Modale>`. Ce paragraphe l'annonçait encore comme
+« reste à traiter », avec quatre formulaires en modale — deux chiffres et un
+constat, tous périmés.
+
+⚠️ Ce qui reste, et qui n'était pas la modale : le périmètre y est une **chaîne**
+dans un `<select>` là où `PerimetrePicker` travaille sur un tableau. C'est un
+changement de contrat, pas un remplacement de composant — et c'est la seule
+partie de ce paragraphe qui était encore vraie.
 
 ### 🔴 14 ter. LA CORRECTION S'OUVRE À LA PLACE DE L'OBJET (10/09/2026)
 
