@@ -1,3 +1,14 @@
+#  🔴 Budget d’une photo jointe à un message WhatsApp, en kio — ÉCRIT UNE FOIS.
+#
+#  Deux services le lisent : l’API réduit la photo pour tenir dessous, le
+#  bridge en dérive la borne de son corps JSON (le double : la base64 coûte
+#  4/3, le reste couvre le texte). Tant que ce nombre n’existait pas, le
+#  bridge gardait le plafond par défaut d’express — 100 kio — et refusait par
+#  413 tout message portant une photo : ils étaient perdus sans un mot
+#  (#1057, 19/09/2026). Deux nombres écrits séparément divergeraient, et
+#  c’est l’écart entre eux qui coûte le message.
+x-budget-photo-whatsapp: &budget_photo_whatsapp "WA_PHOTO_BUDGET_KO=400"
+
 services:
   caddy:
     build:
@@ -67,6 +78,7 @@ services:
     env_file: .env
     environment:
       - TZ=Europe/Paris
+      - *budget_photo_whatsapp
     volumes:
       - app_data:/app/data
       - uploads:/app/uploads
@@ -97,6 +109,7 @@ services:
       - WA_PORT=8090
       - WA_AUTH_DIR=/app/auth_state
       - WA_LOG_LEVEL=warn
+      - *budget_photo_whatsapp
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - whatsapp_auth:/app/auth_state

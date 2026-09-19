@@ -62,6 +62,15 @@ class Settings(BaseSettings):
     # Laisser vide pour désactiver l'enregistrement depuis le script cron
     maintenance_key: str = ""
 
+    #  Budget d'une photo jointe à un message WhatsApp, en kio.
+    #
+    #  🔴 Déclaré dans `docker-compose.yml` (`WA_PHOTO_BUDGET_KO`) et lu des DEUX
+    #  côtés : ici, et par le bridge qui en dérive la borne de son corps JSON.
+    #  Ce défaut-ci n'est qu'un repli hors conteneur — la valeur qui fait foi est
+    #  celle de compose. Deux nombres écrits séparément divergeraient, et c'est
+    #  ce qui a coûté un message le 19/09/2026 (#1057).
+    wa_photo_budget_ko: int = 400
+
     # OAuth
     google_client_id: str = ""
     google_client_secret: str = ""

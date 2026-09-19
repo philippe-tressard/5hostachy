@@ -1,5 +1,4 @@
 """Utilitaire envoi WhatsApp via whatsapp-bridge."""
-import base64
 import html
 import json
 import logging
@@ -8,8 +7,8 @@ from typing import Any, Callable
 
 import httpx
 
-from app.utils.fichiers import chemins_locaux
 from app.utils.liens import base_site
+from app.utils.whatsapp_media import image_pour_bridge, renvoi_photos
 
 logger = logging.getLogger(__name__)
 
@@ -220,35 +219,6 @@ def _build_message(
     return f"{header}\n\n{text}{renvoi}\n\n{footer}"
 
 
-def _image_pour_bridge(image_url: str | None) -> str | None:
-    """Photo interne → octets en base64, prêts pour le bridge. None si indisponible.
-
-    ⚠️ On ne donne PLUS d'URL au bridge. Baileys allait alors chercher le fichier
-    par l'internet public, ce qui exigeait que le dossier soit servi en anonyme :
-    `/uploads/publications/` était le seul dans ce cas, et le seul pour cette
-    raison. Le 10/08/2026, l'unification des galeries a fait atterrir les photos
-    de publication dans le dossier authentifié — le bridge a reçu un 401 et
-    l'annonce entière a disparu du groupe.
-
-    L'API a le fichier sous la main : le lui faire retélécharger par le réseau
-    public était un détour, et ce détour imposait de publier des photos que rien
-    n'obligeait à rendre publiques. La résolution passe par `chemins_locaux`, qui
-    refuse ce qui n'est pas à nous et ce qui sort du bac à sable.
-    """
-    if not image_url:
-        return None
-    chemins = chemins_locaux([image_url])
-    if not chemins:
-        logger.warning("Photo WhatsApp introuvable ou hors périmètre : %s", image_url)
-        return None
-    try:
-        with open(chemins[0], "rb") as f:
-            return base64.b64encode(f.read()).decode("ascii")
-    except OSError as exc:
-        logger.warning("Photo WhatsApp illisible (%s) : %s", image_url, exc)
-        return None
-
-
 def _is_restreint(public_cible: str | list | None) -> bool:
     """Retourne True si la publication n'est pas destinée à tous les résidents."""
     if public_cible is None:
@@ -394,21 +364,34 @@ def envoyer_whatsapp(
     #  confidentielle ou à public restreint, l'image dirait au groupe entier ce
     #  que le texte s'abstient de dire.
     if not message_sans_contenu(public_cible, confidentiel):
-        image_b64 = _image_pour_bridge(image_url)
+        image_b64 = image_pour_bridge(image_url)
         if image_b64:
             payload["imageBase64"] = image_b64
         elif image_url:
             # La photo existe mais n'a pas pu être jointe. Le message part quand
             # même — un envoi perdu est bien pire qu'un envoi sans image — et il
             # dit où la voir plutôt que de laisser croire qu'il n'y en a pas.
-            lien = base_site(config.get('site_url')).rstrip('/')
-            if lien:
-                payload["text"] += (
-                    "\n\n📷 Photos à voir sur le site : "
-                    f"{lien}/actualites"
-                )
+            payload["text"] += renvoi_photos(config)
 
     try:
+        _poster_au_bridge(url, payload, headers)
+    except httpx.HTTPStatusError as exc:
+        #  🔴 413 : le bridge a refusé le CORPS, donc la photo — il ne l'a même
+        #  pas lu. Le texte seul, lui, passe. Le repli juste au-dessus ne couvrait
+        #  que la photo ILLISIBLE sur le disque : la garde était posée sur l'autre
+        #  mode de défaillance, et le message entier était perdu (#1057,
+        #  19/09/2026 — deux tickets jamais arrivés dans le groupe).
+        #
+        #  Une seule reprise, et seulement si c'est bien l'image qui pèse :
+        #  rejouer en boucle un corps refusé ne le rendrait pas plus léger.
+        if exc.response.status_code != 413 or "imageBase64" not in payload:
+            logger.warning("Échec envoi WhatsApp : %s", exc)
+            raise
+        logger.warning(
+            "Corps refusé par le bridge (413) — réémission sans la photo : %s", exc,
+        )
+        payload.pop("imageBase64")
+        payload["text"] += renvoi_photos(config)
         _poster_au_bridge(url, payload, headers)
     except EnvoiIncertain as exc:
         logger.warning("Envoi WhatsApp au résultat inconnu : %s", exc)
@@ -458,6 +441,13 @@ def envoyer_whatsapp_avec_log(
             logger.info("Message WhatsApp '%s' envoyé.", titre)
         else:
             logger.warning("Envoi WhatsApp '%s' — %s : %s", titre, log.statut, log.erreur)
+            #  🔴 Un envoi raté doit avoir un DESTINATAIRE. Il était enregistré,
+            #  lisible dans Admin → WhatsApp, et personne n’allait le lire : les
+            #  deux partages de ticket refusés le 19/09/2026 ont été découverts
+            #  par l’utilisateur dans son fil WhatsApp (#1057, `standards/04` §7).
+            from app.utils.whatsapp_alerte import alerter_envoi
+
+            alerter_envoi(session, titre, log.statut, log.erreur)
 
         session.add(log)
         session.commit()
