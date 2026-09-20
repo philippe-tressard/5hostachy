@@ -34,8 +34,9 @@ from typing import Optional
 
 from sqlmodel import Session
 
-from app.models.core import ContratEntretien, Document, RoleUtilisateur, Utilisateur
+from app.models.core import ContratEntretien, Document, Utilisateur
 from app.utils.liens import lien_element, page_element
+from app.auth.deps import est_moderateur
 
 #: Les catégories qui ont une rubrique à elles sur /residence. Un document d'une
 #: autre catégorie n'y est pas listé : lui fabriquer un lien enverrait sur une
@@ -65,7 +66,7 @@ def lien_document(doc: Document, user: Utilisateur, session: Session) -> Optiona
     if doc.contrat_id:
         # Les documents de contrat ne sont visibles que dans /prestataires, page
         # réservée au CS et aux admins : pour les autres, pas de lien.
-        if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+        if not est_moderateur(user):
             return None
         contrat = session.get(ContratEntretien, doc.contrat_id)
         # Les documents d'un contrat sont listés dans la fiche de son prestataire.

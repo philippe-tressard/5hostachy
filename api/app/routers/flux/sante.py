@@ -42,6 +42,7 @@ from .commun import ContexteFlux
 from .evenements import TYPE_EMOJI, perimetres_evenement
 from .schemas import FluxSante
 from app.utils.categories_ticket import ticket_urgent
+from app.auth.deps import est_moderateur
 
 #: Délai par défaut, en jours, avant qu'un ticket syndic soit relançable.
 _RELANCE_SYNDIC_DEFAUT_J = 30
@@ -179,7 +180,7 @@ def _validations_cs(ctx: ContexteFlux) -> int:
     existe. Ce n'est donc pas un décompte d'actions interdites, contrairement à ce
     que laissait craindre la lecture des seules conditions du tableau de bord.
     """
-    if not ctx.user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+    if not est_moderateur(ctx.user):
         return 0
     return nb_comptes_en_attente(ctx.session) + _nb_commandes_acces(ctx)
 
@@ -207,7 +208,7 @@ def _validations_admin(ctx: ContexteFlux) -> int:
 
 def _relances_syndic(ctx: ContexteFlux) -> int:
     """Tickets syndic éligibles à la relance (pas de modification depuis > délai)."""
-    if not ctx.user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+    if not est_moderateur(ctx.user):
         return 0
 
     cfg_delai = ctx.session.exec(

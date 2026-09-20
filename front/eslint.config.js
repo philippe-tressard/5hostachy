@@ -35,8 +35,28 @@ export default defineConfig(
 	// noie les vrais défauts (c'est ce qui était arrivé à prettier, #410 : 734
 	// fichiers sur 785 venaient des répertoires de build). `static/` porte les
 	// manuels et des ressources tierces, non écrites ici.
+	//
+	// 🔴 Trois répertoires manquaient, et l'un d'eux a rendu ce lint INTERMITTENT
+	// (#1064) : Playwright écrit des bundles minifiés dans `e2e-rapport/` le temps
+	// de son exécution, puis les incorpore à `index.html` et les supprime. ESLint
+	// y relevait ~2075 `no-unused-expressions` — mais seulement s'il passait
+	// pendant cette fenêtre. Un rouge une fois sur deux enseigne à relancer
+	// jusqu'au vert, et ce réflexe reste le même le jour où le rouge est vrai.
+	//
+	// 🔒 `npm run lint:eslint-ignore` exige que tout répertoire de `front/` ignoré
+	// par git le soit ici : .gitignore est la liste de ce qui est PRODUIT, donc
+	// c'est la source. Une seconde liste tenue à la main diverge au premier outil
+	// qui écrit ailleurs — c'est précisément ce qui est arrivé.
 	{
-		ignores: ['build/', '.svelte-kit/', 'node_modules/', 'static/'],
+		ignores: [
+			'build/',
+			'.svelte-kit/',
+			'node_modules/',
+			'static/',
+			'e2e-rapport/',
+			'test-results/',
+			'playwright/.cache/',
+		],
 	},
 
 	// ── Sources TypeScript et JavaScript ────────────────────────────────────────

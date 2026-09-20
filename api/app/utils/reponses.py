@@ -27,6 +27,7 @@ from app.models.core import (
 from app.utils.noms import nom_affiche
 from app.utils.roles_libelles import libelle_role, libelle_statut_court
 from app.utils.liens import base_site
+from app.auth.deps import est_moderateur
 
 # Code du template email (voir seed.EMAIL_TEMPLATES + _EMAIL_PREF_MAP).
 REPONSE_EMAIL_CODE = "reponse_communaute"
@@ -48,7 +49,7 @@ def auteur_meta(auteur: Optional[Utilisateur], session: Session) -> dict:
     if auteur is None:
         return {"auteur_nom": "Utilisateur supprimé", "auteur_batiment": None,
                 "auteur_role": None, "est_cs": False}
-    est_cs = auteur.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    est_cs = est_moderateur(auteur)
     if auteur.has_role(RoleUtilisateur.conseil_syndical):
         role = libelle_role(RoleUtilisateur.conseil_syndical)
     elif auteur.has_role(RoleUtilisateur.admin):

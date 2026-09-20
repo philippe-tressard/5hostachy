@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select, or_
 
-from app.auth.deps import get_current_user, require_cs_or_admin
+from app.auth.deps import est_moderateur, get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Delegation, RoleUtilisateur, StatutDelegation, Utilisateur
+from app.models.core import Delegation, StatutDelegation, Utilisateur
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
 
@@ -74,7 +74,7 @@ def list_delegations(
     - Aidant : ses délégations
     - Mandant : les délégations le concernant
     """
-    if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+    if est_moderateur(user):
         delegations = session.exec(
             select(Delegation).order_by(Delegation.cree_le.desc())
         ).all()
@@ -181,7 +181,7 @@ def revoquer_delegation(
     """Révoquer une délégation (par le mandant, l'aidant, ou un CS/Admin)."""
     d = ou_404(session, Delegation, delegation_id, "Délégation")
 
-    is_cs_admin = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    is_cs_admin = est_moderateur(user)
     is_party = user.id in (d.mandant_id, d.aidant_id)
     if not is_cs_admin and not is_party:
         raise HTTPException(403, "Non autorisé")

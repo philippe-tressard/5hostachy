@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "1.48.9",
+	"version": "1.48.10",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -10,6 +10,7 @@
 		"lint": "prettier --check . && eslint .",
 		"lint:format": "prettier --check .",
 		"lint:eslint": "eslint .",
+		"lint:eslint-ignore": "node scripts/check-eslint-ignore.mjs",
 		"lint:dates": "node scripts/check-dates.mjs",
 		"lint:sw": "node scripts/check-sw-url.mjs",
 		"lint:fichiers": "node scripts/check-fichiers.mjs",

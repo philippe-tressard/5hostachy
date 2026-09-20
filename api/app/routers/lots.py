@@ -8,7 +8,12 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.utils.batiments import libelle_batiment_ou
-from app.auth.deps import est_rattache_au_lot, get_current_user, require_cs_or_admin
+from app.auth.deps import (
+    est_moderateur,
+    est_rattache_au_lot,
+    get_current_user,
+    require_cs_or_admin,
+)
 from app.database import get_session
 from app.utils.recuperer import ou_404
 from app.utils.etages import (
@@ -21,7 +26,6 @@ from app.models.core import (
     Lot,
     UserLot,
     Utilisateur,
-    RoleUtilisateur,
 )
 
 
@@ -90,7 +94,7 @@ def mes_lots(
 
     if user_lot_ids:
         lots = session.exec(select(Lot).where(Lot.id.in_(user_lot_ids))).all()
-    elif user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+    elif est_moderateur(user):
         # Fallback pour comptes d'administration sans association propre.
         lots = session.exec(select(Lot)).all()
     else:

@@ -21,11 +21,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session
 
-from app.auth.deps import (
-    get_current_user,
-    peut_commenter,
-    peut_editer,
-)
+from app.auth.deps import est_moderateur, get_current_user, peut_commenter, peut_editer
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
@@ -106,7 +102,7 @@ def update_ticket(
     #
     #  Les deux règles vivent dans `auth/deps.py`, jamais ici : l'audit du
     #  26/07/2026 a trouvé trois dérives nées d'un contrôle écrit dans un routeur.
-    is_cs_admin = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    is_cs_admin = est_moderateur(user)
     if not peut_commenter(ticket, user):
         raise HTTPException(403, "Accès refusé")
     #  Le CS franchit la porte pour le statut et la priorité (plus bas), pas pour

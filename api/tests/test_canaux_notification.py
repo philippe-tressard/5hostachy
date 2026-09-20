@@ -147,7 +147,8 @@ def test_le_partage_whatsapp_d_un_ticket_est_reserve_au_cs():
     )
     #  Deux formes valables du MÊME contrôle :
     #    • `has_role(conseil_syndical, admin)` écrit sur place ;
-    #    • `peut_commander(user)`, le prédicat central d'`auth/deps.py`.
+    #    • `est_moderateur(user)`, le prédicat central d'`auth/deps.py`
+    #      (`peut_commander` jusqu'au 20/09/2026 — renommé, cf. #1028).
     #  La seconde est arrivée le 16/08/2026 : la règle « ces champs sont réservés
     #  au CS » était recopiée à côté de CHAQUE champ — cinq fois — et une règle
     #  d'autorisation recopiée ne se durcit pas, on en corrige quatre sur six.
@@ -156,14 +157,14 @@ def test_le_partage_whatsapp_d_un_ticket_est_reserve_au_cs():
     #  qui renforce la garde au lieu de l'affaiblir. Il connaît maintenant les
     #  deux formes — et reste rouge si AUCUNE n'est présente.
     for condition in conditions:
-        centralise = "peut_commander" in condition
+        centralise = "est_moderateur" in condition
         assert centralise or "has_role" in condition, (
             "Le partage sur le groupe WhatsApp n'est plus réservé au CS/admin — "
             f"condition sans contrôle de rôle : {condition}"
         )
         #  La forme écrite sur place doit nommer les deux rôles ; la forme
-        #  centralisée les porte dans `peut_commander`, dont le contenu est
-        #  vérifié par `test_peut_commander_est_reserve_au_cs` ci-dessous.
+        #  centralisée les porte dans `est_moderateur`, dont le contenu est
+        #  vérifié par `test_le_predicat_moderateur_est_reserve_au_cs` ci-dessous.
         if not centralise:
             for attendu in ("conseil_syndical", "admin"):
                 assert attendu in condition, (
@@ -213,24 +214,28 @@ def test_un_ticket_reserve_au_conseil_ne_part_JAMAIS_sur_le_groupe():
             )
 
 
-def test_peut_commander_est_reserve_au_cs():
+def test_le_predicat_moderateur_est_reserve_au_cs():
     """Le prédicat central contrôle bien les deux rôles, et rien d'autre.
 
     Sans ce test, centraliser la règle la rendrait invérifiable : le test
-    ci-dessus accepterait `peut_commander` sans jamais regarder ce qu'il fait.
+    ci-dessus accepterait `est_moderateur` sans jamais regarder ce qu'il fait.
+
+    ⚠️ Il nommait `peut_commander`, et il a donc échoué au renommage du 20/09/2026
+    (#1028) — un échec FRANC, qui est le bon comportement : un test qui suit un
+    nom doit rougir quand le nom change, pas se taire.
     """
     source = (_APP / "auth" / "deps.py").read_text(encoding="utf-8")
     arbre = ast.parse(source)
     fn = next(
         (n for n in ast.walk(arbre)
-         if isinstance(n, ast.FunctionDef) and n.name == "peut_commander"),
+         if isinstance(n, ast.FunctionDef) and n.name == "est_moderateur"),
         None,
     )
-    assert fn is not None, "`peut_commander` a disparu d'auth/deps.py"
+    assert fn is not None, "`est_moderateur` a disparu d'auth/deps.py"
     corps = ast.unparse(fn)
-    assert "has_role" in corps, "`peut_commander` ne contrôle plus aucun rôle"
+    assert "has_role" in corps, "`est_moderateur` ne contrôle plus aucun rôle"
     for attendu in ("conseil_syndical", "admin"):
-        assert attendu in corps, f"`peut_commander` ne mentionne plus `{attendu}`"
+        assert attendu in corps, f"`est_moderateur` ne mentionne plus `{attendu}`"
 
 
 def test_le_schema_de_creation_de_ticket_porte_le_canal_whatsapp():

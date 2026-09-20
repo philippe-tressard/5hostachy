@@ -17,11 +17,11 @@ import json
 from typing import Optional
 
 from app.models.core import (
-    RoleUtilisateur,
     Utilisateur,
 )
 from app.utils.mes_batiments import batiments_de_l_utilisateur
 from app.utils.perimetres import a_portee_globale, batiments_cibles
+from app.auth.deps import est_moderateur
 
 # ── Parseurs internes ─────────────────────────────────────────────────────────
 
@@ -113,7 +113,7 @@ def perimetre_visible(
     implémentation contre celle-ci sur tous les couples (périmètre × utilisateur)
     et exige des verdicts identiques.
     """
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+    if est_moderateur(user):
         return True
     if not perimetres:
         return True
@@ -275,9 +275,7 @@ def public_cible_visible(raw: Optional[str], user: Utilisateur) -> bool:
     #  aurait oublié le court-circuit aurait caché au conseil syndical ce qui lui
     #  était explicitement adressé. Trouvé par `test_destinataires_vocabulaire.py`
     #  le 16/08/2026, qui interroge la règle SEULE.
-    if "conseil_syndical" in public and user.has_role(
-        RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical
-    ):
+    if "conseil_syndical" in public and est_moderateur(user):
         return True
     # Valeur non reconnue, ou public dont l'utilisateur ne fait pas partie
     return False
@@ -337,7 +335,7 @@ def cible_visible(
     """
     if auteur_id is not None and user.id == auteur_id:
         return True
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+    if est_moderateur(user):
         return True
     perims = _codes_json_pour_acces(perimetre_cible)
     if perims is None:

@@ -13,10 +13,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
+from app.auth.deps import est_moderateur, get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    Publication, PublicationEvolution, RoleUtilisateur, Utilisateur,
+    Publication, PublicationEvolution, Utilisateur,
 )
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate
 from app.models.annonce_hall import AnnonceHall
@@ -95,7 +95,7 @@ def list_publications(
         )
     ).all()
 
-    is_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    is_cs = est_moderateur(user)
 
     seuil_jours = seuil_archivage_jours(session)
 

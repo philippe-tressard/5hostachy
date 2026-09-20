@@ -1168,6 +1168,13 @@ jobs:
       # voir : un caractère de recul U+0008 au milieu d'une expression régulière
       # de `check-workflow-envoye.mjs`, invisible dans tout éditeur, qui rendait
       # inerte l'étape « retirer la balise avant de chercher ailleurs ».
+      # Avant ESLint : son PÉRIMÈTRE doit être juste, sinon son verdict dépend de
+      # ce qui traîne sur la machine (#1064 — ~2075 erreurs sur les bundles que
+      # Playwright écrit le temps de son exécution, une fois sur deux).
+      - name: Périmètre d'ESLint (rien de produit n'est analysé)
+        working-directory: front
+        run: npm run lint:eslint-ignore
+
       - name: ESLint (jeu de règles déclaré, sans seuil chiffré)
         working-directory: front
         run: npm run lint:eslint

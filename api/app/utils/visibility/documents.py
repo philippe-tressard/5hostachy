@@ -19,13 +19,13 @@ from app.models.core import (
     Document,
     ProfilAccesDocument,
     Publication,
-    RoleUtilisateur,
     Ticket,
     Utilisateur,
 )
 from app.models.evenement import Evenement
 
 from .objets import evenement_visible, publication_visible, ticket_visible
+from app.auth.deps import est_moderateur
 
 # ── Règles document ───────────────────────────────────────────────────────────
 
@@ -46,7 +46,7 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
     de SQLModel : seuls `Publication` et `ProfilAccesDocument` sont chargés.
     """
     # Admin et CS voient tout
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+    if est_moderateur(user):
         return True
 
     # Documents liés à un contrat (sans catégorie) : CS/admin uniquement

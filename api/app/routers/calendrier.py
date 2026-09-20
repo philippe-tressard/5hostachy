@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
+from app.auth.deps import est_moderateur, get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Evenement, Notification, TypeEvenement, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien
 from app.models.evenement import EvenementEvolution
@@ -73,7 +73,7 @@ def list_evenements(
     # les masquer via evenement_visible). Non-CS/admin : filtrage périmètre + AG +
     # maintenance_recurrente interne, aligné sur flux.py — sinon un résident du bât. 2
     # voyait les événements ciblés bât. 1.
-    is_cs = user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical)
+    is_cs = est_moderateur(user)
     if not is_cs:
         evenements = [e for e in evenements if evenement_visible(e, user)]
     return [_ev_to_read(e, session) for e in evenements]

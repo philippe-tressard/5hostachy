@@ -10,11 +10,11 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
-from app.auth.deps import get_current_user, require_cs_or_admin
+from app.auth.deps import est_moderateur, get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     CategorieDocument, ContratEntretien, Document, Notification,
-    ProfilAccesDocument, Utilisateur, RoleUtilisateur
+    ProfilAccesDocument, Utilisateur
 )
 from app.schemas import DocumentRead
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
@@ -141,7 +141,7 @@ def list_categories(
     """Retourne les catégories de documents actives accessibles à l'utilisateur."""
     cats = session.exec(select(CategorieDocument).where(CategorieDocument.actif == True).order_by(CategorieDocument.libelle)).all()
     # CS et admin voient toutes les catégories
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+    if est_moderateur(user):
         return [{"id": c.id, "code": c.code, "libelle": c.libelle} for c in cats]
     # Pour les autres : ne retourner que les catégories dont le profil d'accès autorise le rôle
     user_idents = set(user.roles) | {user.statut.value}
@@ -194,7 +194,7 @@ def list_documents(
     docs = session.exec(stmt.order_by(Document.publie_le.desc())).all()
 
     # Filtrage côté serveur selon profil d'accès
-    if not user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+    if not est_moderateur(user):
         docs = [d for d in docs if document_visible(user, d, session)]
 
     return docs

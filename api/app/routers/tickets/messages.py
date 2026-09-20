@@ -7,12 +7,11 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user
+from app.auth.deps import est_moderateur, get_current_user
 from app.database import get_session
 from app.models.core import (
     MessageTicket,
     Notification,
-    RoleUtilisateur,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -42,7 +41,7 @@ def get_messages(
         raise HTTPException(403, "Accès refusé")
     stmt = select(MessageTicket).where(MessageTicket.ticket_id == ticket_id)
     # Messages internes réservés CS/admin
-    if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+    if not est_moderateur(user):
         stmt = stmt.where(MessageTicket.interne == False)  # noqa: E712
     return session.exec(stmt.order_by(MessageTicket.cree_le)).all()
 
@@ -103,7 +102,7 @@ def add_message(
     user: Utilisateur = Depends(get_current_user),
 ):
     ticket = ou_404(session, Ticket, ticket_id, "Ticket")
-    est_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    est_cs = est_moderateur(user)
     if body.interne and not est_cs:
         raise HTTPException(403, "Messages internes réservés au CS")
 
