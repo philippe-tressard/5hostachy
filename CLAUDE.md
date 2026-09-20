@@ -177,6 +177,17 @@ qui *disent* sans refuser — et qui s'appellent, jamais ne se redérivent :
 | `est_rattache_au_lot(session, user, lot_id)` | « ce lot est le mien » (lien **actif** exigé) |
 | `peut_commenter` / `peut_editer` | l'auteur, le « saisi pour », l'admin (+ le CS pour commenter) |
 
+Et les règles d'**appartenance** — « cet objet est-il le mien ? » — vivent dans
+`auth/appartenance.py`, **jamais chez un routeur** : elles ne sont pas des
+`Depends`, donc `test_autorisation.py` ne les voyait pas (#1028).
+
+⚠️ Elles ne sont **pas** fondues en une fonction, et c'est mesuré : le bail d'un
+bailleur refuse en **403** et admet le CS ; l'accès d'un porteur refuse en **404**
+et ne l'admet pas ; l'aidant d'une délégation refuse en 403 sans l'admettre non
+plus. Trois combinaisons pour trois règles — les réunir demanderait quatre
+paramètres de variation. Ce qu'elles gagnent est un **lieu** : côte à côte, on
+voit ce qui diverge et pourquoi. 🔒 `test_appartenance_source_unique.py`.
+
 🔒 Écrire `has_role(conseil_syndical, admin)` en ligne est refusé par
 `api/tests/test_moderateur_source_unique.py`. Il l'était **vingt-six fois** avant le
 20/09/2026 — dont trois dans `deps.py` lui-même —, parce que le prédicat existait
