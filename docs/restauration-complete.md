@@ -3,6 +3,14 @@
 > **Objectif** : reconstruire l'environnement 5Hostachy depuis zéro sur un nouveau Raspberry Pi 5 (ou après un crash complet de la carte SD).
 >
 > **Durée estimée** : ~15 min (hors téléchargements réseau).
+>
+> 🔴 **C'est la seule procédure d'installation.** `scripts/installation/setup-rpi5.sh`
+> l'a doublée jusqu'au 20/09/2026 et a été **supprimé** (#1029) : il datait de
+> l'époque mono-RPi, ignorait tout de la haute disponibilité, et son `.env`
+> s'arrêtait au premier `docker compose up` (`WHATSAPP_API_KEY` absente) après avoir
+> posé une base **hors du volume monté**. Une procédure d'urgence qui échoue le jour
+> où l'on en a besoin est pire que pas de procédure : celle-ci est exécutée à la
+> main, donc ce qu'elle dit se vérifie en le faisant.
 
 ---
 
@@ -101,11 +109,18 @@ nano /opt/5hostachy/.env
 | Variable | Description |
 |---|---|
 | `SECRET_KEY` | Clé JWT — **min 32 caractères aléatoires** (`openssl rand -hex 32`) |
-| `DOMAIN` | Domaine public (`5hostachy.fr`) |
+| `WHATSAPP_API_KEY` | 🔴 **Obligatoire** — `docker-compose.yml` la déclare `:?`, donc `docker compose up` **refuse de démarrer** sans elle (min 16 caractères) |
+| `INSTANCE_ID` | `rpi1` ou `rpi2` — identifie le nœud au pied de page et dans la colonne « Nœud » des tâches planifiées |
 | `ORIGIN` | URL complète (`https://5hostachy.fr`) — ou IP LAN si standby |
 | `COOKIE_SECURE` | `true` (prod HTTPS) |
 | `MAIL_*` | Configuration SMTP |
 | `MAINTENANCE_KEY` | Clé partagée script maintenance ↔ API (`openssl rand -hex 24`) |
+
+> ⚠️ **Ne renseignez que des variables présentes dans `.env.example`.** C'est le
+> gabarit de référence, et `api/tests/test_env_exemple_coherent.py` le confronte à
+> chaque PR aux réglages que le code lit réellement (`api/app/config.py`) et à ceux
+> que `docker-compose.yml` exige. Une variable inventée ici ne serait lue par
+> personne — c'est ce qui rendait l'ancien installeur inapplicable (#1029).
 
 ```bash
 chmod 600 /opt/5hostachy/.env
