@@ -10,6 +10,8 @@
 <script lang="ts">
 	import { fmtDateShort } from '$lib/date';
 
+	import { peutCommenter } from '$lib/droits';
+
 	export let reponses: any[] = [];
 	export let currentUserId: number | undefined = undefined;
 	export let isCS = false;
@@ -78,7 +80,7 @@
 								on:click={() => onReport?.(rep.id)}>🚩</button
 							>
 						{/if}
-						{#if isCS || rep.auteur_id === currentUserId}
+						{#if peutCommenter(rep, currentUserId, false, isCS)}
 							<button
 								class="btn-icon-danger reponse-suppr"
 								title="Supprimer cette réponse"

@@ -47,26 +47,40 @@ export const isAdmin = derived(currentUser, ($u) => aRole($u, 'admin'));
 
 export const isCS = derived(currentUser, ($u) => aRole($u, 'conseil_syndical', 'admin'));
 
+//  🔴 Ces trois dérivées recomposaient la cascade `roles ?? [role]` à la main,
+//  DEUX LIGNES sous `aRole` qui la porte (#1041). Le fichier qui définit la règle
+//  était donc le premier à ne pas l'employer — et `aRole` traite un cas qu'elles
+//  oubliaient : un compte qui n'a que l'ancien champ `role`, sans `roles`.
+
 // Vrai si l'utilisateur a au moins un rôle résidentiel (propriétaire, résident, ou aidant avec délégation active)
-export const hasResidentRole = derived(currentUser, ($u) => {
-	const roles: string[] = $u?.roles ?? ($u?.role ? [$u.role] : []);
-	return roles.includes('propriétaire') || roles.includes('résident') || $u?.statut === 'aidant';
-});
+export const hasResidentRole = derived(
+	currentUser,
+	($u) => aRole($u, 'propriétaire', 'résident') || $u?.statut === 'aidant',
+);
 
 // Vrai si l'utilisateur a le rôle propriétaire
-export const isProprio = derived(currentUser, ($u) => {
-	const roles: string[] = $u?.roles ?? ($u?.role ? [$u.role] : []);
-	return roles.includes('propriétaire');
-});
+export const isProprio = derived(currentUser, ($u) => aRole($u, 'propriétaire'));
+
+/**
+ * Copropriétaire, conseil syndical ou administration.
+ *
+ * 🔴 Cette question était écrite DEUX FOIS, à l'identique, dans `calendrier` et
+ * `tableau-de-bord` — la cascade des trois rôles en clair, sous le nom `canSeeAG`
+ * (#1041). Le nom dit ici la POPULATION et non l'usage : c'est elle qui voit une
+ * assemblée générale aujourd'hui, et ce sera elle qui verra autre chose demain.
+ * Un nom qui décrit un usage n'est appelé que par cet usage (`standards/02`
+ * §4 septies).
+ */
+export const isProprioOuCS = derived(currentUser, ($u) =>
+	aRole($u, 'propriétaire', 'conseil_syndical', 'admin'),
+);
 
 // Vrai si l'utilisateur n'est QUE admin (sans rôle résidentiel ni CS)
-export const isAdminOnly = derived(currentUser, ($u) => {
-	const roles: string[] = $u?.roles ?? ($u?.role ? [$u.role] : []);
-	const hasRes = roles.includes('propriétaire') || roles.includes('résident');
-	const hasCS = roles.includes('conseil_syndical');
-	const hasAdm = roles.includes('admin');
-	return hasAdm && !hasRes && !hasCS;
-});
+export const isAdminOnly = derived(
+	currentUser,
+	($u) =>
+		aRole($u, 'admin') && !aRole($u, 'propriétaire', 'résident') && !aRole($u, 'conseil_syndical'),
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Ce que l'utilisateur COURANT est — des dérivées, pas des recopies

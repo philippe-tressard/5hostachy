@@ -19,7 +19,7 @@
 	import { tickets as ticketsApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { essayer } from '$lib/chargement';
-	import { currentUser, isAdmin, isCS, isLocataire } from '$lib/stores/auth';
+	import { currentUser, isAdmin, isCS, isLocataire, isProprioOuCS } from '$lib/stores/auth';
 	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
 	import SectionMaintenancesRecurrentes from '$lib/components/SectionMaintenancesRecurrentes.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -156,7 +156,7 @@
 	//  Hors du bloc réactif : dedans, l'affectation faisait signaler une « boucle
 	//  possible », et le commentaire qui le taisait se décroche au reformatage.
 	function chargerPrestataires() {
-		if (!$isCS && !$isAdmin) return;
+		if (!$isCS) return;
 		prestApi
 			.list()
 			.then((p) => {
@@ -170,10 +170,9 @@
 		chargerPrestataires();
 	}
 
-	// AG visibles uniquement par propriétaires, CS et admin
-	$: canSeeAG = ($currentUser?.roles ?? []).some((r: string) =>
-		['propriétaire', 'conseil_syndical', 'admin'].includes(r),
-	);
+	//  « Qui voit une AG » était écrit ici ET dans le tableau de bord, la cascade
+	//  des trois rôles en clair, deux fois à l'identique (#1041).
+	$: canSeeAG = $isProprioOuCS;
 	$: visibleTypes = (canSeeAG ? types : types.filter((t) => t.val !== 'ag')).filter(
 		(t) => t.val !== 'maintenance_recurrente',
 	);
@@ -197,7 +196,7 @@
 			// Tout événement marqué affichable est visible en liste (cohérence avec "Événements récents" du tableau de bord)
 			if (e.affichable === true) return true;
 			// CS/admin : les événements kanban avec prestataire (workflow non-public) restent visibles en liste
-			if ($isCS || $isAdmin) return !!e.prestataire_id;
+			if ($isCS) return !!e.prestataire_id;
 			return false;
 		});
 		return filtreType ? evs.filter((e) => e.type === filtreType) : evs;
@@ -502,7 +501,7 @@
 	let erreurTicketsKanban = '';
 
 	onMount(async () => {
-		if (!$isCS && !$isAdmin) return;
+		if (!$isCS) return;
 		[ticketsKanban, erreurTicketsKanban] = await essayer(ticketsApi.list(), []);
 	});
 

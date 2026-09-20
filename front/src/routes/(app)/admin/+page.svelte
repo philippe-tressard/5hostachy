@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { comparerParNom, nomAffiche } from '$lib/noms';
+	import { aRole } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import OngletMaintenance from '$lib/components/OngletMaintenance.svelte';
@@ -364,10 +365,6 @@
 	//  « Copropriétaire résident » dans le troisième ; « Conseil syndical » ici,
 	//  « Membre du Conseil Syndical » dans la notification que le serveur envoie.
 	//  Chacune était cohérente avec elle-même : aucun contrôle ne pouvait le voir.
-
-	function userRoles(u: any): string[] {
-		return u.roles?.length ? u.roles : [u.role];
-	}
 
 	// Rôles actifs : affiche les rôles réels (P·R·E·CS·A) depuis u.roles
 	function userBatimentLabel(u: any): string {
@@ -794,10 +791,7 @@
 					</thead>
 					<tbody>
 						{#each filteredUsers as u (u.id)}
-							<tr
-								class:row-cs={userRoles(u).includes('conseil_syndical')}
-								class:row-inactive={!u.actif}
-							>
+							<tr class:row-cs={aRole(u, 'conseil_syndical')} class:row-inactive={!u.actif}>
 								<td style="font-weight:500">
 									{nomAffiche(u)}
 									{#if u.statut === 'locataire' && u.nom_proprietaire}
@@ -853,7 +847,7 @@
 									{:else}
 										<div class="action-row">
 											<!-- Ajouter CS si pas déjà — réservé aux propriétaires -->
-											{#if !userRoles(u).includes('conseil_syndical')}
+											{#if !aRole(u, 'conseil_syndical')}
 												{#if u.statut?.startsWith('copropriétaire')}
 													<button
 														class="btn btn-outline btn-sm"
@@ -873,7 +867,7 @@
 												</button>
 											{/if}
 											<!-- Ajouter Admin si pas déjà — réservé aux propriétaires -->
-											{#if !userRoles(u).includes('admin')}
+											{#if !aRole(u, 'admin')}
 												{#if u.statut?.startsWith('copropriétaire')}
 													<button
 														class="btn btn-outline btn-sm"
