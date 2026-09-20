@@ -58,6 +58,30 @@ export interface OngletDef {
 	    configuration éditable — l'administration n'ordonne et ne renomme que les
 	    onglets de premier niveau. */
 	sous?: SousOngletDef[];
+	/**
+	 * À qui cet onglet est RÉSERVÉ, quand sa route d'API refuse les autres.
+	 *
+	 * 🔴 Déclaré ici, avec l'onglet, et pas dans la page (#1039). L'onglet
+	 * « Carnet d'entretien » s'affichait à un locataire alors que
+	 * `api/app/routers/carnet.py` lui répond 403 : la page rendait sa rangée sans
+	 * rien masquer, et rien ne pouvait le signaler — il n'y avait aucun endroit
+	 * où la réservation était *écrite*. Elle l'est maintenant là où l'onglet est
+	 * défini, donc celui qui en ajoute un la voit.
+	 *
+	 * `BarreOnglets` s'en charge ensuite, des deux côtés : il retire l'entrée ET
+	 * ramène sur l'onglet par défaut si l'adresse est ouverte directement.
+	 *
+	 * ⚠️ Pour un masquage qui dépend des DONNÉES et non du rôle — « Gestion
+	 * locative » n'apparaît que si le lot a des baux — c'est la prop `masques`
+	 * de la page, qui seule peut le savoir.
+	 *
+	 * ⚠️ Masquer ne protège rien : le serveur tranche. Cela évite de tendre une
+	 * entrée qui mène à une erreur.
+	 *
+	 * 🔒 `npm run lint:onglets-reserves` confronte chaque valeur ici à la
+	 * dépendance d'auth du routeur qui la justifie.
+	 */
+	reserve?: 'proprioOuCS' | 'nonLocataire';
 }
 
 /** Un sous-onglet : une URL et rien d'autre. Son libellé vit dans l'écran, qui
@@ -122,6 +146,7 @@ export const PAGES: PageDef[] = [
 			{
 				id: 'carnet',
 				route: '/residence/carnet',
+				reserve: 'proprioOuCS',
 				label: '\u{1F4D2} Carnet d’entretien',
 				descriptif:
 					'Ce qui a été entretenu, réparé et contrôlé dans la résidence — et ce qui ne l’a pas été.',
@@ -250,12 +275,14 @@ export const PAGES: PageDef[] = [
 			{
 				id: 'kanban',
 				route: '/calendrier/kanban',
+				reserve: 'nonLocataire',
 				label: '\u{1F5C3}️ Kanban',
 				descriptif: 'Organisation visuelle des événements par statut.',
 			},
 			{
 				id: 'archives',
 				route: '/calendrier/archives',
+				reserve: 'nonLocataire',
 				//  Le mot ET son icône viennent de `$lib/archives` : ils étaient recopiés
 				//  ici, et #516 existe précisément pour qu'« Archives » ne s'écrive qu'une
 				//  fois — la recopie concordait, à l'instant où on l'avait posée.

@@ -33,6 +33,9 @@
 	import { configStore, getPageConfig, defautsDePage } from '$lib/stores/pageConfig';
 	import { PAGES } from '$lib/pages';
 	import { safeHtml } from '$lib/sanitize';
+	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
+	import { isProprioOuCS, isLocataire } from '$lib/stores/auth';
 
 	/** L'identifiant de configuration de la page — celui de `PAGES`. */
 	export let pageId: string;
@@ -40,18 +43,37 @@
 	export let actif: string;
 	/**  Les onglets que l'utilisateur courant ne doit pas voir. C'est la PAGE qui
 	 *   sait à quels droits ils répondent (le Kanban et les Archives du calendrier
-	 *   sont fermés aux locataires) — ce composant ne connaît que l'affichage.
-	 *   ⚠️ Masquer ne suffit pas : la page doit aussi refuser la route directe. */
+	 *   sont fermés aux locataires) — ce composant ne connaît que l'affichage. */
 	export let masques: readonly string[] = [];
 	/** Pastilles de compte, par identifiant d'onglet. */
 	export let comptes: Record<string, number> = {};
 
 	$: defauts = defautsDePage(pageId);
 	$: _pc = getPageConfig($configStore, pageId, defauts);
+	//  Deux raisons de ne pas voir un onglet, et elles ne se confondent pas :
+	//    • `reserve` — une exigence de RÔLE, déclarée avec l'onglet (`pages.ts`) ;
+	//    • `masques` — un masquage qui dépend des DONNÉES, que seule la page sait
+	//      (« Gestion locative » n'apparaît que si le lot a des baux).
+	$: visible = (o: { reserve?: string }) =>
+		!o.reserve ||
+		(o.reserve === 'proprioOuCS' && $isProprioOuCS) ||
+		(o.reserve === 'nonLocataire' && !$isLocataire);
 	$: onglets = (PAGES.find((p) => p.id === pageId)?.onglets ?? []).filter(
-		(o) => !masques.includes(o.id),
+		(o) => !masques.includes(o.id) && visible(o),
 	);
 	$: descriptif = _pc.onglets?.[actif]?.descriptif ?? defauts.onglets?.[actif]?.descriptif ?? '';
+
+	//  🔴 Masquer ne suffit pas : un onglet EST une adresse, et un favori ou un
+	//  lien reçu y mène quand même. Le masquage répond à ce qui s'AFFICHE, cette
+	//  redirection à ce qui s'ATTEINT — les deux vont ensemble, et c'est pour les
+	//  avoir séparées que `/residence/carnet` restait atteignable (#1039).
+	//
+	//  `browser` : en rendu serveur, `goto` n'a pas de sens et l'onglet actif vient
+	//  déjà du chemin. `replaceState` : l'adresse refusée ne doit pas rester dans
+	//  l'historique, sinon le bouton Précédent y ramène en boucle.
+	$: if (browser && onglets.length > 0 && !onglets.some((o) => o.id === actif)) {
+		goto(onglets[0].route, { replaceState: true });
+	}
 </script>
 
 <div class="tabs" role="tablist">
