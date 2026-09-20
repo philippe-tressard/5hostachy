@@ -348,7 +348,15 @@ Production **HA sur 2 Raspberry Pi** : rpi1 `192.168.1.222` (PhT-RB5), rpi2
 `192.168.1.223` (PhT-RB5i2). Les conteneurs ne tournent que sur le **RPi actif**
 (`cat /opt/5hostachy/.active`) ; des conteneurs sur les deux = **split-brain**, à
 traiter avant toute autre chose. Site HS : SSH sur l'actif →
-`cd /opt/5hostachy && docker compose up -d`.
+`cd /opt/5hostachy && . scripts/lib/lib-env-role.sh && env_role_appliquer .env actif && docker compose up -d`.
+
+⚠️ **Le `env_role_appliquer` n'est pas décoratif** : deux réglages du `.env`
+dépendent du rôle — `ORIGIN` (nom public pour l'actif, IP locale pour le standby)
+et `COOKIE_SECURE` (**absent** chez l'actif, donc `true` par défaut ; `false` chez
+le standby). Démarrer la stack sur un nœud dont le `.env` est resté en rôle
+standby sert le public avec une origine locale et un cookie de session sans
+drapeau `Secure`. C'est le « gap .env du 15/07/2026 ». La règle vit dans
+`scripts/lib/lib-env-role.sh` et nulle part ailleurs (#1077).
 
 > 📇 **Les points d'entrée sont versionnés depuis le 15/08/2026** :
 > `infra/points-entree/` porte les crons et l'unité systemd attendus, et le

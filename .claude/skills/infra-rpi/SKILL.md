@@ -26,7 +26,8 @@ ci-dessous est également résumée dans `CLAUDE.md` et dans
 - RPi actif : `cat /opt/5hostachy/.active` — ⚠️ ce fichier peut disparaître, le recréer si absent
 - Conteneurs uniquement sur le RPi actif — vérifier les 2 en cas de doute (`docker ps`)
 - En cas de split-brain (conteneurs sur les 2) : stopper le standby + recréer `.active`
-- En cas de site HS : SSH sur le RPi actif → `cd /opt/5hostachy && docker compose up -d`
+- En cas de site HS : SSH sur le RPi actif → `cd /opt/5hostachy && . scripts/lib/lib-env-role.sh && env_role_appliquer .env actif && docker compose up -d`
+  — le `env_role_appliquer` pose `ORIGIN` public et retire `COOKIE_SECURE` ; démarrer la stack sur un nœud resté en rôle standby sert le public avec une origine locale et un cookie sans drapeau `Secure` (« gap .env du 15/07/2026 », #1077). La règle vit dans `scripts/lib/lib-env-role.sh`, jamais recopiée.
 
 ## Protections DB (v2.18.10)
 - `stop_grace_period: 30s` sur le service API → Docker attend 30s avant SIGKILL
