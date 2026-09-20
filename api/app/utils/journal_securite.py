@@ -1,0 +1,93 @@
+"""Le journal des gestes de sécurité — **une seule porte**.
+
+## Pourquoi ce module (#1040, audit du 19/09/2026)
+
+Aucun événement de sécurité n'était journalisé : ni une connexion refusée, ni un
+mot de passe changé, ni une élévation de rôle. Un compte compromis ou une attaque
+par force brute — que le rate limit freine sans la **signaler** — ne laissaient
+donc aucune trace exploitable après coup.
+
+On pouvait constater qu'un mot de passe avait changé ; on ne pouvait pas savoir
+**qui** l'avait changé, **quand**, ni combien de tentatives avaient précédé.
+« Ce qu'on ne journalise pas n'a pas eu lieu » (`standards/07` §1).
+
+## 🔴 Ce qui n'entre PAS dans une ligne de journal
+
+**Aucune donnée personnelle**, et le précédent est dans ce dépôt : #777 a trouvé
+des adresses e-mail journalisées en clair sur échec d'envoi. Un journal de
+sécurité nomme un **identifiant** — un entier, celui de la base — jamais une
+adresse, un mot de passe ou un jeton, **même tronqué** : un condensé partiel
+d'adresse reste une donnée personnelle (`standards/14`).
+
+C'est aussi la raison pour laquelle ce module ne reçoit pas d'objet `Utilisateur`
+mais des identifiants : on ne peut pas journaliser par mégarde un champ qu'on n'a
+pas reçu.
+
+🔒 `api/tests/test_journal_securite.py` refuse un `email`, un `password` ou un
+`jeton` ici **et** chez les appelants, et exige un appel dans chacun des six
+gestes sensibles déclarés.
+
+## Le niveau dit la lecture, pas la gravité du geste
+
+`WARNING` pour ce qui mérite d'être **relu** — une connexion refusée, une
+élévation de rôle —, `INFO` pour ce qui est normal mais doit rester traçable. Un
+journal où tout est au même niveau ne se filtre pas, donc ne se lit pas.
+
+⚠️ `WARNING` **n'est pas une alerte** : rien n'est envoyé à personne. Le canal
+d'alerte est `check-reliability.sh`, et il compte les `ERROR`/`CRITICAL` de
+l'API — journaliser une connexion refusée en `ERROR` ferait sonner le téléphone
+à chaque faute de frappe sur un mot de passe.
+"""
+import logging
+from typing import Optional
+
+_logger = logging.getLogger("securite")
+
+#: Les gestes tracés, et le niveau auquel ils se lisent.
+#:
+#: La table est ici et pas chez les appelants : c'est elle qui dit ce que le
+#: projet considère comme sensible, et elle se relit d'un coup d'œil.
+_NIVEAUX: dict[str, int] = {
+    "connexion_refusee": logging.WARNING,
+    "role_ajoute": logging.WARNING,
+    "role_retire": logging.WARNING,
+    "ban_communaute": logging.WARNING,
+    "mot_de_passe_change": logging.INFO,
+    "mot_de_passe_reinitialise": logging.WARNING,
+}
+
+
+def journaliser_securite(
+    evenement: str,
+    *,
+    acteur_id: Optional[int] = None,
+    cible_id: Optional[int] = None,
+    detail: str = "",
+) -> None:
+    """Écrire une ligne de journal pour un geste de sécurité.
+
+    `evenement` — une clé de `_NIVEAUX`. Une clé inconnue est journalisée en
+    `WARNING` plutôt que refusée : un geste tracé sous un nom qu'on a oublié de
+    déclarer vaut mieux qu'une exception qui ferait échouer la requête. Le journal
+    ne doit jamais casser ce qu'il observe.
+
+    `acteur_id` — **qui agit**. `None` quand l'acteur n'est pas identifié, ce qui
+    est précisément le cas d'une connexion refusée : c'est la seule fois où ce
+    champ vaut `None`, et c'est une information en soi.
+
+    `cible_id` — **sur qui**. Identique à `acteur_id` quand on agit sur soi-même
+    (changer son propre mot de passe), et c'est voulu : la ligne reste lisible
+    sans que l'appelant ait à choisir un cas particulier.
+
+    `detail` — un complément **sans donnée personnelle** : un rôle, un motif, un
+    compteur. Jamais une adresse, jamais un extrait de message.
+    """
+    niveau = _NIVEAUX.get(evenement, logging.WARNING)
+    _logger.log(
+        niveau,
+        "securite %s acteur=%s cible=%s%s",
+        evenement,
+        acteur_id if acteur_id is not None else "-",
+        cible_id if cible_id is not None else "-",
+        f" {detail}" if detail else "",
+    )

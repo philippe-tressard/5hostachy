@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 from sqlalchemy import func, or_
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
+from app.utils.journal_securite import journaliser_securite
 from app.models.core import (
     CommandeAcces,
     DemandeModificationProfil,
@@ -132,6 +133,9 @@ def ajouter_role(
     except ValueError:
         raise HTTPException(400, f"Rôle invalide : {body.role}")
     user.ajouter_role(role)
+    #  🔴 En WARNING : c'est le geste qui donne des droits. La `Notification` part
+    #  au concerné et ne dit pas QUI a agi — le journal, lui, nomme l'admin.
+    journaliser_securite("role_ajoute", acteur_id=admin.id, cible_id=user.id, detail=role.value)
     notif = Notification(
         destinataire_id=user.id,
         type="system",
@@ -165,6 +169,7 @@ def retirer_role(
     except ValueError:
         raise HTTPException(400, f"Rôle invalide : {body.role}")
     user.retirer_role(role)
+    journaliser_securite("role_retire", acteur_id=admin.id, cible_id=user.id, detail=role.value)
     notif = Notification(
         destinataire_id=user.id,
         type="system",
@@ -413,6 +418,12 @@ def ban_communaute(
             # 1re infraction → ban 1 mois (30 jours)
             user.communaute_ban_jusqu_au = datetime.utcnow() + timedelta(days=30)
             notif_titre, notif_corps = notification_de_ban(definitif=False)
+        journaliser_securite(
+            "ban_communaute",
+            acteur_id=admin.id,
+            cible_id=user.id,
+            detail=f"infraction {user.communaute_ban_count}",
+        )
         notif = Notification(
             destinataire_id=user.id, type="system",
             titre=notif_titre, corps=notif_corps, lien="/sondages",

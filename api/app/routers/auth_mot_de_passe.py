@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
+from app.utils.journal_securite import journaliser_securite
 from app.auth.deps import get_current_user
 from app.auth.jwt import verify_password
 from app.database import get_session
@@ -55,8 +56,12 @@ def change_password(
     l'appelant survit ; toutes les autres tombent.
     """
     if not verify_password(body.mot_de_passe_actuel, user.hashed_password or ""):
+        journaliser_securite("connexion_refusee", cible_id=user.id, detail="mot de passe actuel")
         raise HTTPException(400, "Mot de passe actuel incorrect.")
     poser_mot_de_passe(session, user, body.nouveau_mot_de_passe, jeton_courant=refresh_token)
+    #  Acteur ET cible : on agit sur soi-même, et la ligne le dit sans cas
+    #  particulier chez l'appelant.
+    journaliser_securite("mot_de_passe_change", acteur_id=user.id, cible_id=user.id)
     session.commit()
 
 
@@ -152,6 +157,10 @@ def reset_password(
     #  Aucun jeton courant n'est conservé : on réinitialise parce qu'on craint
     #  que quelqu'un d'autre soit entré, et l'appelant n'est pas authentifié.
     poser_mot_de_passe(session, user, body.nouveau_mot_de_passe)
+    #  🔴 En WARNING, et pas au même niveau qu'un changement ordinaire : c'est le
+    #  chemin qu'emprunterait quelqu'un qui a pris la boîte mail. `acteur_id`
+    #  reste None — la route n'est pas authentifiée, et c'est l'information.
+    journaliser_securite("mot_de_passe_reinitialise", cible_id=user.id)
     prt.used = True
 
     session.add(prt)

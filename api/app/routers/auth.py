@@ -20,6 +20,7 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
+from app.utils.journal_securite import journaliser_securite
 from app.auth.jwt import (
     create_access_token,
     create_refresh_token,
@@ -236,9 +237,13 @@ def register(
 def login(request: Request, body: LoginRequest, response: Response, session: Session = Depends(get_session)):
     user = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
     if not user or not user.hashed_password:
+        #  🔴 L'adresse essayée ne s'écrit PAS dans le journal (#777) : la ligne dit
+        #  qu'une tentative a échoué sur un compte inconnu, et cela suffit.
+        journaliser_securite("connexion_refusee", detail="compte inconnu")
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect.")
     valid, new_hash = verify_and_rehash(body.password, user.hashed_password)
     if not valid:
+        journaliser_securite("connexion_refusee", cible_id=user.id, detail="mot de passe")
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect.")
     if not user.actif:
         raise HTTPException(status_code=403, detail="Compte en attente de validation.")
