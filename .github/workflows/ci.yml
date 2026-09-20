@@ -1197,6 +1197,12 @@ jobs:
         working-directory: front
         run: npm run lint:gardes-auth
 
+      # Un nombre qui coupe une liste ET sert de seuil est un plafond : écrit deux
+      # fois, il donne un compteur qui ment le jour où l'un des deux bouge (#1076).
+      - name: Aucun plafond de liste écrit en clair dans un écran
+        working-directory: front
+        run: npm run lint:plafond-liste
+
       - name: Aucune largeur de saisie écrite dans un écran
         # 🔴 Signalé à l'écran le 30/08/2026 : « sur admin / paramétrage le texte
         # ne prend pas la bonne largeur ». La carte occupait toute la page, ses
