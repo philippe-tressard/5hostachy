@@ -141,6 +141,14 @@ export const PUBLICATION: EntiteDeclaree = {
 				'pas un workflow mais une décision de diffusion — il vit en section 2.',
 		},
 		{
+			id: 'quand',
+			objet: 'SectionQuand — début et fin, ce qui fait paraître au calendrier',
+			//  Pas d'échéance : une actualité ne se suit pas. Renseigner un début
+			//  rend la description facultative — « Coupure d'eau jeudi 9h-12h » se
+			//  suffit —, et c'est le serveur qui tranche (`utils/quand.py`), pas
+			//  cet écran : l'astérisque ne vivait QUE dans le formulaire (#1092).
+		},
+		{
 			id: 'perimetre',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,

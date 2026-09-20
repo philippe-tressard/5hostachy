@@ -138,6 +138,11 @@ class TokenResponse(BaseModel):
 
 
 class TicketCreate(SaisiPourEntree, AssisteIAEntree):
+    #  Section « Quand » (#1092). `debut`/`fin` : quand ça se passe — le
+    #  calendrier. `echeance` : avant quand c'est attendu — le suivi.
+    debut: Optional[datetime] = None
+    fin: Optional[datetime] = None
+    echeance: Optional[date] = None
     titre: str
     description: str
     categorie: str = "panne"
@@ -241,6 +246,11 @@ class TicketRead(SaisiPourSortie, AssisteIASortie):
 
 
 class TicketUpdate(SaisiPourEntree, AssisteIACorrection):
+    #  Section « Quand » (#1092). `debut`/`fin` : quand ça se passe — le
+    #  calendrier. `echeance` : avant quand c'est attendu — le suivi.
+    debut: Optional[datetime] = None
+    fin: Optional[datetime] = None
+    echeance: Optional[date] = None
     #  ⚠️ `Optional[str]` jusqu'au 17/08/2026, et c'était la **seule** barrière :
     #  `Ticket` est un modèle `table=True`, donc SQLModel ne valide rien à
     #  l'affectation. `PATCH /tickets/{id}` écrivait en base la chaîne qu'on lui

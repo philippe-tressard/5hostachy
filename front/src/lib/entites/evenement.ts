@@ -98,6 +98,11 @@ export const EVENEMENT: EntiteDeclaree = {
 			objet: 'Kanban — AG · CS · Syndic · Prestataire · Terminé · Annulé (ou aucun suivi)',
 		},
 		{
+			id: 'quand',
+			sansObjet:
+				"ANOMALIE, pas absence : un événement porte bien un début et une fin, mais ils vivent en section 2 (« Détails ») depuis toujours. C'est précisément parce qu'aucune section ne nommait la notion qu'il a fallu un TROISIÈME objet pour dire « ça se passe le X ». Le lot qui fait disparaître cette entité (#1092) résorbe la divergence en la supprimant — on ne la corrige donc pas ici.",
+		},
+		{
 			id: 'perimetre',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,

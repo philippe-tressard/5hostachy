@@ -6,6 +6,7 @@ import json
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
+from app.utils.quand import exiger_description
 
 from app.auth.deps import (
     exiger_non_externe,
@@ -114,6 +115,8 @@ def create_ticket(
     #  geste-ci et que les vingt-cinq autres points d'usage n'ont donc jamais
     #  reconnu comme le leur (#1028).
     est_cs = est_moderateur(user)
+    #  Même règle que pour une actualité, et au même endroit (#1092).
+    exiger_description(body.description, debut=body.debut)
     ticket = Ticket(
         numero=generer_numero(),
         #  L'adresse de réponse est fixée à la CRÉATION (#703) : la poser plus
@@ -123,6 +126,9 @@ def create_ticket(
         jeton_courriel=nouveau_jeton(),
         titre=body.titre,
         description=body.description,
+        debut=body.debut,
+        fin=body.fin,
+        echeance=body.echeance,
         categorie=body.categorie,
         auteur_id=user.id,
         lot_id=body.lot_id,

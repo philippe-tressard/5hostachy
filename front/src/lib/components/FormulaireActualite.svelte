@@ -48,6 +48,7 @@
   signale. Toute retouche ici se vérifie sur un envoi réel.
 -->
 <script lang="ts">
+	import { pourChampLocal, depuisChampLocal } from '$lib/date';
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { attacherApres } from '$lib/fichiers';
@@ -66,14 +67,9 @@
 	import DocumentsPublication from '$lib/components/DocumentsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
-	import {
-		publications as pubsApi,
-		annoncesHall as annoncesHallApi,
-		type AnnonceHall,
-		type Publication,
-	} from '$lib/api';
-	import { annoncesProposables, messagePrefill } from '$lib/actualite-prefill';
-	import { fmtDateShort } from '$lib/date';
+	import { publications as pubsApi, type Publication } from '$lib/api';
+	import RepriseAnnonceHall from '$lib/components/RepriseAnnonceHall.svelte';
+	import type { PrefillActualite } from '$lib/actualite-prefill';
 	import { perimetreDefautListe } from '$lib/utils';
 	import { richEmpty } from '$lib/publications';
 	import type { Etat } from '$lib/entites/types';
@@ -106,34 +102,17 @@
 		annule: void;
 	}>();
 
-	//  ── Pré-remplissage depuis une annonce de hall (#832) ───────────────────
-	//  Le pourquoi vit dans `$lib/actualite-prefill`. ⚠️ Ce bloc reste AVANT le
-	//  titre : un raccourci qui REMPLIT, pas une section du cadre #430.
-	let annonces: AnnonceHall[] = [];
-	let annonceSourceId: number | '' = '';
+	//  ── Pré-remplissage depuis une annonce de hall (#832) ───────────────
+	//  Le raccourci vit dans `RepriseAnnonceHall` : ce n'est pas une section du
+	//  cadre #430, donc il n'a pas sa place dans un écran qui rend des sections.
+	function appliquerReprise(p: PrefillActualite) {
+		({ titre, contenu, photos } = p);
+		perimetreCible = p.perimetreCible;
+	}
 
 	onMount(async () => {
 		residentsSaisiPour = await chargerResidents(adminApi.utilisateurs);
-		if (modeEdition) return; //  en CRÉATION seulement (cf. le module)
-		annonces = await annoncesProposables(() => annoncesHallApi.list(true));
 	});
-
-	async function prefillDepuisAnnonce(annonceId: number | '') {
-		annonceSourceId = annonceId;
-		if (annonceId === '') return;
-		try {
-			const src = await pubsApi.depuisAnnonceHall(annonceId);
-			titre = src.titre;
-			contenu = src.contenu;
-			perimetreCible = src.perimetre_cible?.length
-				? [...src.perimetre_cible]
-				: perimetreDefautListe();
-			photos = [...(src.photos_urls ?? [])];
-			toast('info', messagePrefill(photos.length));
-		} catch (e) {
-			toast('error', messageErreur(e, 'Erreur lors du pré-remplissage'));
-		}
-	}
 
 	//  ── 1. Titre ────────────────────────────────────────────────────────────
 	let titre = publication?.titre ?? '';
@@ -160,6 +139,9 @@
 	let perimetreCible: string[] = [...(publication?.perimetre_cible ?? perimetreDefautListe())];
 	let publicCible: string[] = [...(publication?.public_cible ?? ['résidents'])];
 	let contenu = publication?.contenu ?? '';
+	//  Section « Quand » (#1092) : une actualité datée paraît au calendrier.
+	let debut = pourChampLocal(publication?.debut);
+	let fin = pourChampLocal(publication?.fin);
 	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
 	let assisteIA = false;
 	//  Ce que l'assistant IA reçoit pour COMPRENDRE le texte — à ne pas réécrire
@@ -293,6 +275,8 @@
 					brouillon,
 					confidentiel,
 					perimetre_cible: perimetreCible,
+					debut: depuisChampLocal(debut),
+					fin: depuisChampLocal(fin),
 					public_cible: publicCible,
 					photos_urls: photos,
 					...canaux,
@@ -316,6 +300,8 @@
 				urgente,
 				epingle,
 				perimetre_cible: perimetreCible,
+				debut: depuisChampLocal(debut),
+				fin: depuisChampLocal(fin),
 				public_cible: publicCible,
 				brouillon: publierApresDocuments ? true : brouillon,
 				photos_urls: photos,
@@ -361,31 +347,7 @@
 			<!--  L'EXCEPTION AU CADRE #430 : le pré-remplissage vient AVANT le
 			      titre, comme dans `FormulaireAnnonceHall` — c'est un raccourci qui
 			      REMPLIT le formulaire, pas une section de l'entité. -->
-			{#if !modeEdition && annonces.length}
-				<div class="field">
-					<label for="pub-source-hall">Pré-remplir depuis une annonce de hall</label>
-					<select
-						id="pub-source-hall"
-						value={annonceSourceId}
-						on:change={(e) =>
-							prefillDepuisAnnonce(
-								(e.currentTarget as HTMLSelectElement).value === ''
-									? ''
-									: Number((e.currentTarget as HTMLSelectElement).value),
-							)}
-					>
-						<option value="">— Saisie libre —</option>
-						{#each annonces as annonce (annonce.id)}
-							<option value={annonce.id}>{fmtDateShort(annonce.cree_le)} · {annonce.titre}</option>
-						{/each}
-					</select>
-				</div>
-				<p class="aide">
-					Reprend le titre, le message, le périmètre et les images de l'affiche. Tout reste
-					modifiable ci-dessous : l'actualité est indépendante de l'annonce d'origine.
-				</p>
-				<hr class="separateur-prefill" />
-			{/if}
+			<RepriseAnnonceHall {modeEdition} on:reprise={(e) => appliquerReprise(e.detail)} />
 
 			<!--  1. Titre. -->
 			<SectionFormulaire premiere>
@@ -426,12 +388,15 @@
 				envoiEnCours={saving}
 				on:envoyer={() => void enregistrer()}
 				idPrefixe="pub-{publication?.id ?? 'new'}"
+				avecQuand={sectionPresente(PUBLICATION, etat, 'quand')}
+				bind:debut
+				bind:fin
 				avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
 				bind:perimetre={perimetreCible}
 				avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')}
 				bind:destinataires={publicCible}
 				avecDescription={sectionPresente(PUBLICATION, etat, 'description')}
-				descriptionRequise
+				descriptionRequise={!debut}
 				bind:description={contenu}
 				{assistant}
 				bind:titreObjet={titre}

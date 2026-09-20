@@ -37,6 +37,7 @@
   carte du ticket) : le bouton est alors rendu ici, comme le fait `EvolForm`.
 -->
 <script lang="ts">
+	import { pourChampLocal, depuisChampLocal } from '$lib/date';
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { STATUT_TICKET_LABELS } from '$lib/tickets';
 	import { createEventDispatcher, onMount } from 'svelte';
@@ -97,6 +98,11 @@
 
 	let titre = ticket?.titre ?? '';
 	let description = ticket?.description ?? '';
+	//  Section « Quand » (#1092) : deux notions distinctes — quand ça se passe,
+	//  et avant quand c est attendu.
+	let debut = pourChampLocal(ticket?.debut);
+	let fin = pourChampLocal(ticket?.fin);
+	let echeance = ticket?.echeance ?? '';
 	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
 	let assisteIA = false;
 	let categorie = ticket?.categorie ?? 'panne';
@@ -282,6 +288,9 @@
 					assiste_ia: assisteIA || undefined,
 					categorie,
 					perimetre_cible: perimetreCible,
+					debut: depuisChampLocal(debut),
+					fin: depuisChampLocal(fin),
+					echeance: depuisChampLocal(echeance),
 					photos_urls: photosUrls,
 					fichiers_urls: fichiersUrls,
 					...($isCS
@@ -305,6 +314,9 @@
 				assiste_ia: assisteIA,
 				categorie,
 				perimetre_cible: perimetreCible,
+				debut: depuisChampLocal(debut),
+				fin: depuisChampLocal(fin),
+				echeance: depuisChampLocal(echeance),
 				destinataire_syndic: destinataireSyndic,
 				destinataire_cs: destinataireCs,
 				partager_whatsapp: partagerWhatsapp,
@@ -417,10 +429,15 @@
 			envoiEnCours={loading}
 			on:envoyer={() => void submit()}
 			idPrefixe="ticket"
+			avecQuand={sectionPresente(TICKET, etat, 'quand')}
+			quandAvecEcheance={true}
+			bind:debut
+			bind:fin
+			bind:echeance
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecDescription={sectionPresente(TICKET, etat, 'description')}
-			descriptionRequise
+			descriptionRequise={!debut}
 			bind:description
 			{assistant}
 			bind:titreObjet={titre}

@@ -77,6 +77,7 @@
 -->
 <script lang="ts">
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
+	import SectionQuand from '$lib/components/SectionQuand.svelte';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import PerimetrePicker from './PerimetrePicker.svelte';
@@ -158,6 +159,18 @@
 
 	//  ── 5. Périmètre ──────────────────────────────────────────────────────────
 	export let avecPerimetre = false;
+
+	/**  Section « Quand » (#1092) — la date qui fait paraître l'objet au
+	 *   calendrier. Elle est ce qui permet au Calendrier de cesser d'être un
+	 *   objet pour devenir une vue. */
+	export let avecQuand = false;
+	/**  L'échéance n'existe que sur un objet qu'on SUIT : elle alimente la
+	 *   relance, pas l'agenda. Ouverte par l'écran des affaires, et par lui
+	 *   seul — un champ que le serveur ne consomme pas est interdit (#430). */
+	export let quandAvecEcheance = false;
+	export let debut = '';
+	export let fin = '';
+	export let echeance = '';
 	export let perimetre: string[] = [];
 	/**  `single` : un seul code retenu. Le rendu est le MÊME (des pastilles) —
 	     seule la sélection change. Utilisé par les prestations, dont la colonne
@@ -299,7 +312,8 @@
 	//  appartient à la première section RENDUE, et elle passe avant les options.
 	//  L'oublier redonnerait le « double trait » du 05/09.
 	$: premiereWorkflow = premiere && !avecSaisiPour && !avecOptions;
-	$: premierePerimetre = premiere && !avecSaisiPour && !avecOptions && !avecWorkflow;
+	$: premiereQuand = premiereWorkflow && !avecWorkflow;
+	$: premierePerimetre = premiereQuand && !avecQuand;
 </script>
 
 {#if avecSaisiPour}
@@ -340,6 +354,19 @@
 	<SectionFormulaire titre="Workflow" premiere={premiereWorkflow} idTitre="{idPrefixe}-workflow">
 		<slot name="workflow" />
 	</SectionFormulaire>
+{/if}
+
+{#if avecQuand}
+	<!--  5. Quand — QUAND ÇA SE PASSE, et pour quand c'est attendu. Placée
+	      avant le Périmètre : on sait ce qui arrive avant de dire où. -->
+	<SectionQuand
+		{idPrefixe}
+		premiere={premiereQuand}
+		avecEcheance={quandAvecEcheance}
+		bind:debut
+		bind:fin
+		bind:echeance
+	/>
 {/if}
 
 {#if avecPerimetre}

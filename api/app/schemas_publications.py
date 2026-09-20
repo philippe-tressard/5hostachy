@@ -22,6 +22,9 @@ from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree, AssisteIA
 from app.utils.saisi_pour import SaisiPourEntree, SaisiPourSortie
 
 class PublicationCreate(SaisiPourEntree, AssisteIAEntree):
+    #  Section « Quand » (#1092) : une actualité datée paraît au calendrier.
+    debut: Optional[datetime] = None
+    fin: Optional[datetime] = None
     titre: str
     contenu: str
     perimetre: str = "résidence"
@@ -54,6 +57,9 @@ class PublicationCreate(SaisiPourEntree, AssisteIAEntree):
 
 
 class PublicationUpdate(SaisiPourEntree, AssisteIACorrection):
+    #  Section « Quand » (#1092) : une actualité datée paraît au calendrier.
+    debut: Optional[datetime] = None
+    fin: Optional[datetime] = None
     titre: Optional[str] = None
     contenu: Optional[str] = None
     epingle: Optional[bool] = None

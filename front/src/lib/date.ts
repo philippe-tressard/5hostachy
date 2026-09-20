@@ -170,3 +170,23 @@ export function salutation(): string {
 	if (h < 18) return 'Bon après-midi';
 	return 'Bonsoir';
 }
+
+/**
+ * Un instant ISO vers la valeur d un champ `datetime-local`, et retour.
+ *
+ * Ajoutés le 20/09/2026 avec la section « Quand » (#1092). Le découpage
+ * `slice(0, 16)` est trivial — et c est exactement pour ça qu il serait recopié
+ * dans chaque écran qui porte une date, puis qu une copie oublierait le cas du
+ * champ vide. Dates et montants sont les deux récidivistes de la duplication
+ * ici (socle 02 §2) : le format vit dans ce fichier, et nulle part ailleurs.
+ */
+export function pourChampLocal(iso: string | null | undefined): string {
+	if (!iso) return '';
+	return String(iso).slice(0, 16);
+}
+
+/** L inverse : la valeur du champ vers ce que l API attend, ou `null` si vide. */
+export function depuisChampLocal(valeur: string | null | undefined): string | null {
+	const v = (valeur ?? '').trim();
+	return v ? v : null;
+}

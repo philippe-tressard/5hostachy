@@ -118,11 +118,17 @@ for (const fonction of ['sectionPresente', 'sectionsDe']) {
 
 const ORDRE = extraire(srcTypes, 'SECTIONS_ORDRE', relative(RACINE, TYPES), { echec });
 const LIBELLES = extraire(srcTypes, 'SECTIONS_LIBELLE', relative(RACINE, TYPES), { echec });
-if (!Array.isArray(ORDRE) || ORDRE.length !== 9) {
-	casZero(`SECTIONS_ORDRE devrait porter les NEUF sections (${ORDRE?.length ?? 0} lue(s)).`);
+//  🔴 DIX depuis le 20/09/2026 — « quand » est entrée avec le chantier v2.0.0
+//  (#1092), parce que le Calendrier cesse d'être un objet pour devenir une vue.
+//  Le nombre reste FIGÉ, et c'est tout l'intérêt : il oblige à passer ici quand
+//  le cadre bouge, au lieu de laisser une section entrer sans que personne le
+//  décide. Le remplacer par `ORDRE.length > 0` rendrait ce cas zéro aveugle à
+//  une table tronquée, ce qu'il existe précisément pour attraper.
+if (!Array.isArray(ORDRE) || ORDRE.length !== 10) {
+	casZero(`SECTIONS_ORDRE devrait porter les DIX sections (${ORDRE?.length ?? 0} lue(s)).`);
 }
 if (!LIBELLES || ORDRE.some((id) => !LIBELLES[id])) {
-	casZero('SECTIONS_LIBELLE ne nomme pas les neuf sections.');
+	casZero('SECTIONS_LIBELLE ne nomme pas les dix sections.');
 }
 
 const fichiersEntites = existsSync(DOSSIER_ENTITES)
@@ -394,7 +400,7 @@ if (erreurs.length) {
 }
 
 console.log(
-	`✓ Cadre d'interface : ${entites.length} entité(s) déclarée(s) sur les 9 sections, ` +
+	`✓ Cadre d'interface : ${entites.length} entité(s) déclarée(s) sur les ${ORDRE.length} sections, ` +
 		`${consommateurs} écran(s) gouverné(s) par la déclaration, toutes divergences motivées.`,
 );
 //  🔴 Le vert DIT ce qu'il ne couvre pas encore. Un contrôle qui tait sa dette

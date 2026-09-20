@@ -35,7 +35,8 @@
  *                corrigée, pas pour être entérinée.
  *
  * `npm run lint:etats` refuse une divergence sans motif, un motif `api` sans
- * ticket, une section rendue hors déclaration et un ordre qui s'écarte des neuf.
+ * ticket, une section rendue hors déclaration et un ordre qui s'écarte de
+ * `SECTIONS_ORDRE` — dix depuis #1092.
  *
  * ## Ce fichier ne se recopie pas
  *
@@ -45,11 +46,19 @@
  * aux statuts de ticket (#415) et aux pages (#401).
  */
 
-/** Les neuf sections. L'identifiant est technique ; le libellé est à l'écran. */
+/**  Les DIX sections. L'identifiant est technique ; le libellé est à l'écran.
+ *
+ *   🔴 « quand » est entrée le 20/09/2026 avec le chantier v2.0.0 (#1092) :
+ *   le Calendrier cesse d'être un objet pour devenir une vue — « tout ce qui
+ *   porte une date » —, ce qui suppose qu'une actualité et une affaire
+ *   puissent en porter une. C'est la première section ajoutée au cadre depuis
+ *   sa pose, et elle l'est parce qu'un OBJET disparaît, pas parce qu'un écran
+ *   voulait un champ de plus. */
 export type IdSection =
 	| 'titre'
 	| 'specifiques'
 	| 'workflow'
+	| 'quand'
 	| 'perimetre'
 	| 'destinataires'
 	| 'description'
@@ -58,7 +67,7 @@ export type IdSection =
 	| 'diffusion';
 
 /**
- * 🔴 **L'ordre des neuf sections — il ne se discute plus, et il vaut aussi pour
+ * 🔴 **L'ordre des sections — il ne se discute plus, et il vaut aussi pour
  * l'AFFICHAGE** (mesuré : l'affichage n'empruntait le motif d'aucun formulaire,
  * 0 cas sur 42).
  *
@@ -71,6 +80,7 @@ export const SECTIONS_ORDRE: readonly IdSection[] = [
 	'titre',
 	'specifiques',
 	'workflow',
+	'quand',
 	'perimetre',
 	'destinataires',
 	'description',
@@ -91,6 +101,7 @@ export const SECTIONS_LIBELLE: Readonly<Record<IdSection, string>> = {
 	titre: 'Titre',
 	specifiques: 'Champs spécifiques',
 	workflow: 'Workflow',
+	quand: 'Quand',
 	perimetre: 'Périmètre',
 	destinataires: 'Destinataires',
 	description: 'Description',
@@ -177,7 +188,7 @@ export interface EntiteDeclaree {
 	id: string;
 	/** Nom de l'entité à l'écran. */
 	libelle: string;
-	/** Les neuf sections, dans l'ordre de `SECTIONS_ORDRE`. */
+	/** Les sections déclarées, dans l'ordre de `SECTIONS_ORDRE`. */
 	sections: readonly SectionDeclaree[];
 }
 

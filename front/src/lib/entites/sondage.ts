@@ -110,6 +110,11 @@ export const SONDAGE: EntiteDeclaree = {
 			},
 		},
 		{
+			id: 'quand',
+			sansObjet:
+				'un sondage ne paraît pas au calendrier de la résidence ; sa clôture se lit sur sa carte, avec ses options',
+		},
+		{
 			id: 'perimetre',
 			objet: 'PerimetrePicker — qui est concerné par la question',
 			requis: true,

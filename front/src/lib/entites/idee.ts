@@ -74,6 +74,11 @@ export const IDEE: EntiteDeclaree = {
 			},
 		},
 		{
+			id: 'quand',
+			sansObjet:
+				"une idée est soumise au vote, pas à un calendrier : elle n'a pas de date à laquelle elle « se passe »",
+		},
+		{
 			//  ✅ AJOUTÉ le 18/08/2026 (migration 0153), sur demande à l'écran.
 			id: 'perimetre',
 			objet: 'PerimetrePicker — ce que l’idée concerne',
