@@ -35,13 +35,12 @@ Get-ChildItem -Recurse -Filter "*.svelte" | Select-String -Pattern "@html"
 ```
 
 **Règle** : Tout `{@html}` DOIT passer par une fonction de `$lib/sanitize.ts` — elles sont **trois** (`safeHtml`, `safeRichContent`, `safeDescription`), toutes adossées à DOMPurify. Vérifié en CI par `npm run lint:html` depuis le 19/08/2026, qui exige que le nom vienne de l'**import** : une fonction locale homonyme ne prouve rien (#429).
-**Exception** : `Icon.svelte` (SVG hardcodé côté serveur).
+**Exceptions** : déclarées dans `front/scripts/check-html.mjs` (`EXCEPTIONS`), avec leur raison — et le contrôle **échoue** si l'une cesse de servir. Ne pas les recopier ici : cette ligne n'en nommait qu'une sur deux, et un audit qui la suivait signalait la seconde comme un écart qui n'en était pas un (#1051).
 **Fix** : `import { safeDescription } from '$lib/sanitize'` → `{@html safeDescription(contenu)}` — et jamais un helper local, fût-il correct : c'est ainsi que trois copies de `safeDescription` ont coexisté.
 
-Configuration DOMPurify (`src/lib/sanitize.ts`) :
-- ALLOWED_TAGS : `p br b i u s strong em ul ol li blockquote pre code h1-h6 a img hr span div`
-- ALLOWED_ATTR : `href src alt title class target rel`
-- `ALLOW_DATA_ATTR: false`
+Configuration DOMPurify — **lire `front/src/lib/sanitize.ts`**, jamais cette page :
+la liste recopiée ici avait déjà perdu `details` et `summary`, ajoutés le 17/09/2026
+avec les blocs dépliables (#992 ; `open` est volontairement hors `ALLOWED_ATTR`).
 
 ### 3. Téléversement : une seule porte (A01:2021)
 
@@ -106,7 +105,7 @@ première bascule, sans aucun signal.
 Get-ChildItem -Recurse -Filter "*.py" | Select-String -Pattern "secure=|samesite=|httponly="
 ```
 
-**Vérifier dans `auth.py`** :
+**Vérifier dans `api/app/routers/auth.py`** (`COOKIE_OPTS`) — et non dans le paquet `api/app/auth/`, qui porte les dépendances et le JWT, aucun cookie :
 - `secure=settings.cookie_secure` (True en prod, False en dev via `.env`)
 - `samesite="strict"`
 - `httponly=True`
