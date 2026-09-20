@@ -11,6 +11,7 @@ from app.database import get_session
 from app.models.core import Delegation, StatutDelegation, Utilisateur
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
+from app.auth.appartenance import exiger_aidant_de_la_delegation
 
 router = APIRouter(prefix="/delegations", tags=["délégations aidant"])
 
@@ -159,8 +160,7 @@ def accepter_delegation(
 ):
     """L'aidant accepte la délégation."""
     d = ou_404(session, Delegation, delegation_id, "Délégation")
-    if d.aidant_id != user.id:
-        raise HTTPException(403, "Seul l'aidant désigné peut accepter")
+    exiger_aidant_de_la_delegation(d, user)
     if d.statut != StatutDelegation.en_attente:
         raise HTTPException(400, f"Impossible d'accepter (statut actuel : {d.statut})")
     d.statut = StatutDelegation.active

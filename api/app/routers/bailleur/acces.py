@@ -21,8 +21,8 @@ from app.models.core import (
     StatutBail, Utilisateur, Vigik, Telecommande, StatutAcces,
 )
 from pydantic import BaseModel
+from app.auth.appartenance import exiger_bail_du_bailleur
 
-from .commun import get_bail_or_404
 
 router = APIRouter()
 
@@ -108,7 +108,7 @@ def acces_du_bail(
     session: Session = Depends(get_session),
 ):
     """Accès (Vigik+TC) du bailleur avec règles d'éligibilité de transfert."""
-    bail = get_bail_or_404(bail_id, user, session)
+    bail = exiger_bail_du_bailleur(session, bail_id, user)
     bail_lot = session.get(Lot, bail.lot_id)
     bail_lot_type = (bail_lot.type.value if (bail_lot and hasattr(bail_lot.type, "value")) else str(bail_lot.type)) if bail_lot else ""
     vigiks = session.exec(select(Vigik).where(Vigik.user_id == user.id)).all()
@@ -165,7 +165,7 @@ def transferer_acces(
     session: Session = Depends(get_session),
 ):
     """Marquer des Vigik/TC comme étant chez le locataire."""
-    bail = get_bail_or_404(bail_id, user, session)
+    bail = exiger_bail_du_bailleur(session, bail_id, user)
     if bail.statut == StatutBail.termine:
         raise HTTPException(400, "Bail terminé — impossible de transférer des accès")
     bail_lot = session.get(Lot, bail.lot_id)
@@ -223,7 +223,7 @@ def recuperer_acces(
     récupérés.  Sinon tous les accès du bail sont récupérés (comportement
     historique conservé).
     """
-    get_bail_or_404(bail_id, user, session)
+    exiger_bail_du_bailleur(session, bail_id, user)
     selective = bool(data.vigik_ids or data.tc_ids)
     updated = []
 

@@ -58,6 +58,8 @@ mêmes colonnes ni les mêmes règles) et l'étape d'appariement propre au Vigik
 """
 from __future__ import annotations
 
+from app.utils.recuperer import ou_404
+
 from datetime import datetime
 from typing import Callable, Optional
 
@@ -157,9 +159,7 @@ def auto_match(
 
 
 def _charger(type_import: TypeAcces, import_id: int, session: Session):
-    imp = session.get(type_import.modele_import, import_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
+    imp = ou_404(session, type_import.modele_import, import_id, "Import")
     return imp
 
 

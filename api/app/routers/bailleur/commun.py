@@ -10,26 +10,20 @@ du module central).
 from datetime import date, datetime
 from typing import List, Optional
 
-from fastapi import HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session
 
 from app.models.core import (
-    LocationBail, StatutBail, StatutObjet, TypeObjet,
-    Utilisateur,
+    StatutBail, StatutObjet, TypeObjet,
 )
-from app.auth.deps import est_moderateur
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def get_bail_or_404(bail_id: int, user: Utilisateur, session: Session) -> LocationBail:
-    bail = session.get(LocationBail, bail_id)
-    if not bail:
-        raise HTTPException(status_code=404, detail="Bail introuvable")
-    if bail.bailleur_id != user.id and not est_moderateur(user):
-        raise HTTPException(status_code=403, detail="Accès interdit")
-    return bail
+#  🔴 La règle « ce bail est le vôtre » vit dans `auth/appartenance` depuis
+#  #1028 : une règle d'autorisation ne s'écrit pas chez un routeur, et celle-ci
+#  était invisible à `test_autorisation` (ce n'est pas un `Depends`).
+#  Pas d'alias local qui déléguerait — il ferait croire à deux notions
+#  (`standards/02` §1.6) : les appelants importent directement la fonction.
 
 
 # ── Schemas in / out ─────────────────────────────────────────────────────────
