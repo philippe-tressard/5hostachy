@@ -38,7 +38,14 @@ _MOTIF_HREF_MODELE = re.compile(r"""href=["']\{\{ app\.url \}\}(/[^"'{]*)""")
 #: Routes que le front REFUSE à qui n'a pas le rôle, en redirigeant ailleurs.
 #: Détectées, pas recopiées — une liste tenue à la main se périmerait à la
 #: première garde ajoutée, et c'est le lien nouvellement mort qu'on cherche.
-_MOTIF_GARDE = re.compile(r"if\s*\(!\$is[A-Za-z]+\)\s*\{?\s*(?:\r?\n\s*)?goto\(")
+#:
+#: ⚠️ Le motif a dû apprendre une SECONDE forme le 20/09/2026 : une garde attend
+#: désormais que l'authentification soit résolue avant de refuser —
+#: `$: if ($authResolue && !$isCS) goto(…)` — et l'ancien motif, qui exigeait que
+#: la négation suive immédiatement la parenthèse, ne trouvait plus rien. Son cas
+#: zéro a correctement rendu INCONNU plutôt que vert : c'est ce qui a permis de
+#: le voir (#1083).
+_MOTIF_GARDE = re.compile(r"if\s*\([^)]*!\$is[A-Za-z]+\)\s*\{?\s*(?:\r?\n\s*)?goto\(")
 
 
 def _routes_gardees() -> set[str]:
