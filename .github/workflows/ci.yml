@@ -1180,6 +1180,17 @@ jobs:
         working-directory: front
         run: npm run lint:eslint
 
+      # Le front n'est jamais le gardien d'un droit, mais il doit dire la MÊME
+      # chose que le serveur : plus large, il tend un bouton qui finira en 403 ;
+      # plus étroit, il rend une capacité introuvable (#1041).
+      - name: Aucun droit recomposé dans un écran
+        working-directory: front
+        run: npm run lint:droits
+
+      - name: Onglet réservé masqué sur le prédicat de sa route d'API
+        working-directory: front
+        run: npm run lint:onglets-reserves
+
       - name: Aucune largeur de saisie écrite dans un écran
         # 🔴 Signalé à l'écran le 30/08/2026 : « sur admin / paramétrage le texte
         # ne prend pas la bonne largeur ». La carte occupait toute la page, ses
