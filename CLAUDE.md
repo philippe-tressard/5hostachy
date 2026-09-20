@@ -403,6 +403,13 @@ drapeau `Secure`. C'est le « gap .env du 15/07/2026 ». La règle vit dans
 | `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS |
 | `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C26** (plus C23 bis ; C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN`. ⚠️ Seuls **C1–C19** vivent dans ce script : C20–C25 sont dans `scripts/lib/lib-conformite.sh`, C26 dans `lib-verdicts.sh` et `lib-verrou.sh` — greper « C25 » dans le fichier nommé ne le trouve pas |
 
+**Les tâches de l'API**, elles, tournent **dans le process** et se déclarent dans
+`app/utils/taches.TACHES_PERMANENTES` — avec, pour chacune, **ce qu'on perd** si
+elle cesse de tourner. Le démarrage compare les tâches réellement enregistrées à
+cette table et journalise tout écart en `WARNING` ; `test_taches_planifiees_declarees.py`
+le vérifie aussi en CI, dans les deux sens. Aucun des deux ne suffit seul : le test
+lit le code, le contrôle au démarrage lit le scheduler (#1047).
+
 ⚠️ « Identique sur les 2 nœuds » **est un invariant, pas un constat** : il était faux
 jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` qui y échouait 144 fois
 par jour. Le vérifier fait partie du point 8 du pré-check. `auto-deploy.sh` (`*/5`) est
