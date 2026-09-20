@@ -139,6 +139,34 @@ export function kanbanEvVisible(ev: any, ctx: KanbanCtx): boolean {
  */
 export const SEUIL_KANBAN_ETROIT = 900;
 
+/**
+ * Combien de cartes une colonne montre sur l'ACCUEIL, avant le report « +N ».
+ *
+ * 🔴 Ce nombre était écrit **trois fois** dans `KanbanTableauBord` — une fois pour
+ * couper (`slice(0, 5)`), deux fois dans l'expression du compteur. Le changer
+ * demandait de corriger les trois, et en oublier une donnait un compteur qui ment
+ * (« +2 » sur une colonne qui en cache trois) sans qu'aucun test ne le voie : les
+ * deux écritures restent valides séparément (#1076).
+ *
+ * Passé de 5 à **3** le 20/09/2026, à la demande de l'utilisateur : la brique de
+ * l'accueil poussait vers le bas le fil d'activité et les alertes, et c'est la
+ * page la plus consultée.
+ *
+ * ⚠️ L'accueil SEULEMENT. `/calendrier/kanban` est l'écran dédié : il a la place,
+ * et y borner les colonnes cacherait ce qu'on vient précisément y chercher.
+ */
+export const MAX_CARTES_ACCUEIL = 3;
+
+/**
+ * Ce qu'une colonne vide affiche — **un seul endroit**.
+ *
+ * Il était écrit deux fois, dans les deux kanbans, avec un commentaire qui le
+ * disait (« le même mot que sur /calendrier/kanban, et la même classe »). Un
+ * commentaire qui décrit une copie ne l'empêche pas de diverger : il note qu'elle
+ * existe (`standards/02` §1 ter).
+ */
+export const MOT_COLONNE_VIDE = 'Aucune affaire';
+
 export function kanbanColVisible(colId: string, ctx: KanbanCtx): boolean {
 	if (colId === 'ag' || colId === 'cs') return ctx.canSeeAG;
 	return true;

@@ -27,6 +27,8 @@
 		kanbanColVisible,
 		kanbanEvMatchesYear,
 		kanbanEvVisible,
+		MAX_CARTES_ACCUEIL,
+		MOT_COLONNE_VIDE,
 		type KanbanCtx,
 	} from '$lib/kanban';
 
@@ -89,7 +91,7 @@
 					new Date(b.fin ?? b.debut).getTime() - new Date(a.fin ?? a.debut).getTime(),
 			);
 		}
-		return { ...col, total: items.length, items: items.slice(0, 5) };
+		return { ...col, total: items.length, items: items.slice(0, MAX_CARTES_ACCUEIL) };
 	});
 
 	$: mobileKanbanCols = dashKanbanCols.filter((col) => col.items.length > 0);
@@ -141,15 +143,24 @@
 						on:click={() => vide && basculerVide(col.id)}
 					>
 						<span class="kb-col-label" style="color:{col.color}">{col.label}</span>
+						<!--  🔴 Le mot est lisible DANS le pli (20/09/2026, demandé à
+						      l'écran) : une colonne repliée disait son titre, et il
+						      fallait la déplier pour apprendre qu'elle est vide — donc
+						      cliquer pour lire ce que le pli pouvait dire. Le
+						      `writing-mode` de l'en-tête l'oriente avec le titre. -->
+						{#if repliee}
+							<span class="kb-col-vide-mot">{MOT_COLONNE_VIDE}</span>
+						{/if}
 						{#if col.total > 0}
 							<span class="kb-col-count" style="background:{col.color}1a;color:{col.color}">
-								{col.total > 5 ? `+${col.total - 5} / ${col.total}` : col.total}
+								{col.total > MAX_CARTES_ACCUEIL
+									? `+${col.total - MAX_CARTES_ACCUEIL} / ${col.total}`
+									: col.total}
 							</span>
 						{/if}
 					</button>
 					{#if vide && !repliee}
-						<!--  Le même mot que sur `/calendrier/kanban`, et la même classe. -->
-						<p class="kanban-empty">Aucune affaire</p>
+						<p class="kanban-empty">{MOT_COLONNE_VIDE}</p>
 					{/if}
 					<!--  🔴 Une colonne VIDE n'a plus de corps (18/09/2026, demandé à
 					      l'écran) : elle se réduit à son titre, tourné à la verticale,

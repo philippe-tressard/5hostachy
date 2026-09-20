@@ -1460,6 +1460,20 @@ Variante « K4 ». Deux décisions, et elles se tiennent :
   fait partie de la lecture d'un kanban ; c'est le tiret « — » qui ne disait
   rien en occupant la place d'une colonne pleine.
 
+  🔴 **Le mot « Aucune affaire » se lit DANS le pli** (20/09/2026, demandé à
+  l'écran). Il n'apparaissait qu'une fois la colonne dépliée d'un clic : il
+  fallait donc agir pour apprendre qu'il n'y a rien à voir. Le `writing-mode`
+  de l'en-tête l'oriente avec le titre, et le pli dit alors ce qu'il contient.
+
+- **l'accueil borne ses colonnes à `MAX_CARTES_ACCUEIL`** (trois, `$lib/kanban`),
+  avec un report « +N / total ». Le nombre se déclare là et **nulle part
+  ailleurs** : il était écrit trois fois dans le composant, et en oublier une
+  donne un compteur qui ment sans qu'aucun test ne le voie (`lint:plafond-liste`
+  refuse qu'un nombre coupe une liste *et* serve de seuil dans un écran).
+
+  ⚠️ **L'accueil seulement.** `/calendrier/kanban` est l'écran dédié : il a la
+  place, et y borner les colonnes cacherait ce qu'on vient y chercher.
+
 La grille est donc en **flex** et non en `grid` : une grille donne la même part
 à toutes ses colonnes, et c'est exactement ce qu'on ne veut plus.
 

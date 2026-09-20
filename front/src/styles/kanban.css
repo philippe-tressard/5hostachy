@@ -237,8 +237,21 @@
 	    contenu. */
 	display: flex;
 }
+/*  Le mot d'une colonne VIDE, lisible SANS la déplier (20/09/2026, demandé à
+    l'écran). Il suit le `writing-mode` de l'en-tête, donc il se lit avec le titre
+    plutôt qu'à sa place — c'est la colonne qui dit ce qu'elle contient, au lieu
+    de demander un clic pour l'apprendre. */
+.kb-col-vide-mot {
+	font-size: 0.72rem;
+	font-weight: 400;
+	color: var(--color-text-muted);
+	white-space: nowrap;
+}
 .kb-col-vide .kb-col-head {
 	flex: 1;
+	/*  `gap` : le titre et le mot sont deux enfants du bouton, et sans lui ils se
+	    touchent une fois tournés à la verticale. */
+	gap: 0.4rem;
 	writing-mode: vertical-rl;
 	padding: 0.5rem 0.3rem;
 	border-top: 0;

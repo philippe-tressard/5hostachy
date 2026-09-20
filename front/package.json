@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "1.48.14",
+	"version": "1.49.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -14,6 +14,7 @@
 		"lint:droits": "node scripts/check-droits-recomposes.mjs",
 		"lint:onglets-reserves": "node scripts/check-onglets-reserves.mjs",
 		"lint:gardes-auth": "node scripts/check-gardes-auth.mjs",
+		"lint:plafond-liste": "node scripts/check-plafond-liste.mjs",
 		"lint:dates": "node scripts/check-dates.mjs",
 		"lint:sw": "node scripts/check-sw-url.mjs",
 		"lint:fichiers": "node scripts/check-fichiers.mjs",
