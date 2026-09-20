@@ -6,7 +6,7 @@
 	import { onMount } from 'svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { faq as faqApi } from '$lib/api';
-	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
+	import { isCS, currentUser } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -38,7 +38,7 @@
 	let dragCategory: string | null = null;
 	let reorderSaving = false;
 
-	$: canEdit = $isCS || $isAdmin;
+	$: canEdit = $isCS;
 
 	function normalizeCategorieLabel(cat: string | null | undefined): string {
 		const original = cat ?? 'Général';

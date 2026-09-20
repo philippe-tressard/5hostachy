@@ -9,14 +9,7 @@
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, bailleur as bailApi, type ObjetRemis } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import {
-		isAdmin,
-		isBailleur,
-		isCS,
-		isCoproprietaire,
-		isLocataire,
-		isResident,
-	} from '$lib/stores/auth';
+	import { isBailleur, isCS, isCoproprietaire, isLocataire, isResident } from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
@@ -57,8 +50,7 @@
 		accesDeclare = false;
 	}
 	$: bailTab = data.sous ?? 'actif';
-	$: peutGererLocation =
-		$isBailleur || $isAdmin || $isCS || ($isResident && bauxTermines.length > 0);
+	$: peutGererLocation = $isBailleur || $isCS || ($isResident && bauxTermines.length > 0);
 	$: if (browser && !bauxLoading && mainTab === 'location' && !peutGererLocation) {
 		goto(routeOnglet('mon-lot', 'lots'), { replaceState: true });
 	}
@@ -176,7 +168,7 @@
 			} finally {
 				bauxLoading = false;
 			}
-		} else if ($isAdmin || $isCS) {
+		} else if ($isCS) {
 			try {
 				baux = await bailApi.tousBaux();
 			} catch (e: any) {
@@ -307,7 +299,7 @@
 			toast('success', `${n} accès affecté${n > 1 ? 's' : ''} automatiquement`);
 			if ($isCoproprietaire) {
 				baux = await bailApi.mesBaux();
-			} else if ($isAdmin || $isCS) {
+			} else if ($isCS) {
 				baux = await bailApi.tousBaux();
 			}
 		} catch (e: any) {

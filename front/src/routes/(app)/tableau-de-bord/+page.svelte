@@ -7,7 +7,7 @@
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
 	import { goto } from '$app/navigation';
 	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
-	import { currentUser, isAdmin, isCS, isLocataire } from '$lib/stores/auth';
+	import { currentUser, isAdmin, isCS, isLocataire, isProprioOuCS } from '$lib/stores/auth';
 	import { flux, lots, calendrier as calApi, type FluxItem, type FluxResponse } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
@@ -61,9 +61,6 @@
 	});
 
 	// ── Rôles & filtrage ───────────────────────────────────────────────────
-	$: canSeeAG = ($currentUser?.roles ?? []).some((r: string) =>
-		['propriétaire', 'conseil_syndical', 'admin'].includes(r),
-	);
 
 	//  Ce filtre réimplémentait la règle du serveur : un motif `bat:(\d+)` analysé à
 	//  la main et la liste des périmètres transverses écrite en dur — troisième
@@ -127,7 +124,7 @@
 	// ── Filtrage rôle/périmètre sur items ──────────────────────────────────
 	$: filteredItems = (data?.items ?? []).filter((item) => {
 		// AG invisible pour les locataires / non-proprios
-		if (item.type === 'evenement' && item.meta?.type === 'ag' && !canSeeAG) return false;
+		if (item.type === 'evenement' && item.meta?.type === 'ag' && !$isProprioOuCS) return false;
 		// Filtrage périmètre (backend le fait déjà, mais sécurité côté client)
 		return true;
 	});
@@ -213,7 +210,7 @@
 	$: _dashKanbanCtx = {
 		isCS: $isCS,
 		isAdmin: $isAdmin,
-		canSeeAG,
+		canSeeAG: $isProprioOuCS,
 		statut: $currentUser?.statut ?? '',
 	};
 
@@ -350,7 +347,7 @@
 	<RaccourcisRapides sante={data.sante} {ready} />
 
 	<!-- ═══ ALERTES URGENTES ══════════════════════════════════════════════ -->
-	{#if ($isCS || $isAdmin) && (data.sante.tickets_relance_syndic ?? 0) > 0}
+	{#if $isCS && (data.sante.tickets_relance_syndic ?? 0) > 0}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.08s">
 			<a href="/espace-cs/reporting?vue=relance" class="relance-alerte-card">
 				<span class="relance-alerte-icon">🔔</span>

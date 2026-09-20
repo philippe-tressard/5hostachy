@@ -42,7 +42,7 @@
 	let deleting = false;
 
 	$: sondageId = Number($page.params.id);
-	$: peutModerer = $isCS || $isAdmin;
+	$: peutModerer = $isCS;
 	$: estAuteur = sondage && $currentUser?.id === sondage.auteur_id;
 	$: peutGerer = estAuteur || $isAdmin;
 

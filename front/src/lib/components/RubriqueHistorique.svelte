@@ -47,6 +47,7 @@
 	import { fmtDatetime } from '$lib/date';
 	import { perimetreLabel } from '$lib/perimetres';
 	import { evolutionIcone } from '$lib/evolutions';
+	import { peutEditer } from '$lib/droits';
 
 	/**  Une entrée du fil. Volontairement structurel et non `TicketEvolution` :
 	     les actualités ont leur propre type d'évolution, et cette rubrique doit
@@ -163,11 +164,12 @@
 
 	function peutCorriger(evol: Entree): boolean {
 		if (!peutModifier || !TYPES_CORRIGEABLES.includes(evol.type)) return false;
-		if (estAdmin) return true;
-		//  Sans `auteur_id` on ne peut pas trancher : on n'affiche pas un bouton
-		//  dont on ignore s'il aboutira. Un contrôle qui ne peut pas mesurer ne
-		//  conclut pas au vert (`standards/04` §2).
-		return evol.auteur_id !== undefined && evol.auteur_id === currentUserId;
+		//  `peutEditer` porte les trois cas — l'admin, l'auteur, et le « saisi pour ».
+		//  Cette fonction les réécrivait à la ligne près, moins le dernier : deux
+		//  écritures d'une même règle, dont une qui en savait moins (#1041).
+		//  Sans `auteur_id` elle rend `false` : on n'affiche pas un bouton dont on
+		//  ignore s'il aboutira (`standards/04` §2).
+		return peutEditer(evol, currentUserId, estAdmin);
 	}
 
 	let deplie = false;

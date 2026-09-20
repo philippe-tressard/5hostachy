@@ -26,7 +26,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import GesteEnPlace from '$lib/components/GesteEnPlace.svelte';
 	import Onglet from '$lib/components/Onglet.svelte';
-	import { isAdmin, isCS } from '$lib/stores/auth';
+	import { isCS } from '$lib/stores/auth';
 	import { TITRE_ARCHIVES } from '$lib/archives';
 
 	//  Les routes viennent de la TABLE, jamais écrites ici (`lint:pages`).
@@ -210,7 +210,7 @@
 										{bailATerminer?.id === bail.id ? 'Annuler' : 'Terminer'}
 									</button>
 								{/if}
-								{#if $isAdmin || $isCS}
+								{#if $isCS}
 									<button
 										class="btn btn-xs btn-danger"
 										on:click={() => {

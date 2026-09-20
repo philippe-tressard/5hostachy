@@ -41,6 +41,8 @@
 	import { STATUTS_IDEE, STATUT_IDEE_LABELS } from '$lib/idees';
 
 	/** Les idées à rendre, déjà filtrées et triées par l'appelant. */
+	import { peutEditer } from '$lib/droits';
+
 	export let idees: any[] = [];
 	export let currentUserId: number | undefined = undefined;
 	export let estCS = false;
@@ -113,7 +115,7 @@
 					      — elle sauterait d'un cran selon qu'on est l'auteur ou non. Même ordre
 					      que la petite annonce. -->
 					<BoutonLien ancre="idee-{idee.id}" quoi="l'idée" />
-					{#if idee.auteur_id === currentUserId}
+					{#if peutEditer(idee, currentUserId, estAdmin)}
 						<button
 							class="btn-icon"
 							title="Modifier"

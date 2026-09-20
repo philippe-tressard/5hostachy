@@ -704,8 +704,21 @@ mais pas au prix d'un refus de toute réorganisation d'URL. `reroute` ne touche 
 aucun écran.
 
 - Descriptif par onglet : rendu par `BarreOnglets`, plus par l'écran
-- Un onglet fermé à un profil se **masque** (`masques=[…]`) **et** se **redirige** :
-  masquer répond à ce qui s'affiche, rediriger à ce qui s'atteint
+- Un onglet fermé à un profil se **masque** **et** se **redirige** — masquer répond
+  à ce qui s'AFFICHE, rediriger à ce qui s'ATTEINT, et `BarreOnglets` fait les deux.
+  Deux façons de le lui dire, qui ne se confondent pas :
+  - une exigence de **rôle** → `reserve: 'proprioOuCS' | 'nonLocataire'` **sur
+    l'onglet**, dans `pages.ts`. C'est là que regarde celui qui ajoute un onglet ;
+    la page n'a alors rien à porter. 🔒 `npm run lint:onglets-reserves` confronte
+    chaque valeur à la dépendance d'auth du routeur qui la justifie ;
+  - un masquage qui dépend des **données** → la prop `masques` de la page, seule à
+    savoir (« Gestion locative » n'apparaît que si le lot a des baux).
+
+  🔴 Ce n'était **que** `masques` jusqu'au 20/09/2026, et une page pouvait donc ne
+  rien déclarer du tout : `/residence` rendait sa rangée sans masque, et l'onglet
+  « Carnet d'entretien » s'affichait au locataire dont la route répond 403 (#1039).
+  Rien ne pouvait le signaler — il n'existait aucun endroit où la réservation était
+  *écrite*.
 - **Ne jamais utiliser** le pattern `view-toggle` / `view-btn` (pattern non-standard, supprimé)
 
 ⚠️ `?onglet=` était la convention jusque-là. Les anciennes adresses partent en

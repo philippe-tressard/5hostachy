@@ -253,6 +253,12 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — jamais un helper
       local, même correct (`npm run lint:html` le refuse)
 - [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`
+- [ ] Droits : jamais recomposés dans un écran — `$isCS` (il **inclut** admin),
+      `$isProprioOuCS`, `aRole(u, …)`, `peutEditer`/`peutCommenter`. Ils l'étaient
+      **22 fois** avant #1041 (`npm run lint:droits` le refuse)
+- [ ] Onglet réservé à un rôle : `reserve:` **sur l'onglet** dans `pages.ts`, jamais
+      un masquage écrit dans la page — `BarreOnglets` masque ET refuse la route
+      directe (`npm run lint:onglets-reserves`)
 - [ ] Périmètre : pas affiché si `'résidence'`
 - [ ] Archiver (pas supprimer) sur la vue principale
 - [ ] Champs requis : label + ` *`
