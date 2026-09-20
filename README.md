@@ -75,7 +75,8 @@
 │   ├── exploitation/  # Lancés par cron/systemd sur les RPi (bascule, failover…)
 │   ├── lib/           # Modules sourcés par les précédents
 │   ├── poste/         # Développeur et CI (pré-check, rejeu CI, export hors site)
-│   └── installation/  # À lancer une fois sur un nœud neuf
+│   └── installation/  # Durcissement sudo et tunnel — l'installation elle-même
+│                      # se fait à la main (docs/restauration-complete.md)
 ├── infra/             # Code déployé ailleurs (worker Cloudflare)
 ├── specs/             # Spécifications fonctionnelles
 ├── docs/              # Documentation déploiement & ops
@@ -100,7 +101,8 @@ cd 5hostachy
 
 # Configurer l'environnement
 cp .env.example .env
-# Éditer .env : renseigner SECRET_KEY (min 32 chars), DOMAIN, ORIGIN
+# Éditer .env : SECRET_KEY (min 32 chars), WHATSAPP_API_KEY (min 16 chars) et ORIGIN.
+# WHATSAPP_API_KEY est OBLIGATOIRE — sans elle, docker compose refuse de démarrer.
 
 # Lancer
 docker compose up --build -d

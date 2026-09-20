@@ -169,9 +169,18 @@ n'était pas mesurable — ce qui est précisément ce qui a permis à la ligne 
 fausse. Sur rpi1, où le port est libre, le script n'était pas planifié du tout : la
 couverture réelle était nulle sur les deux nœuds, à l'inverse l'un de l'autre.
 
-`check-stack.sh` est **redevenu ce que son en-tête décrit** — un outil ponctuel
-(`bash check-stack.sh [--keep]`), à lancer après une modification de Caddy, pas un
-cron. Vérifié avant retrait qu'aucun script ne l'appelle et qu'aucun ne lit son log.
+`check-stack.sh` a d'abord été **rendu à ce que son en-tête décrivait** — un outil
+ponctuel, à lancer après une modification de Caddy, pas un cron. Vérifié avant
+retrait qu'aucun script ne l'appelle et qu'aucun ne lit son log.
+
+🔴 **Il est supprimé depuis le 20/09/2026 (#1029), et l'outil ponctuel ne manque
+à personne** : il montait une stack *stub*, écrivait lui-même le Caddyfile qu'il
+allait interroger, puis vérifiait que ce Caddyfile rendait bien les en-têtes qu'il
+venait d'y écrire. Un contrôle qui fabrique son propre sujet ne mesure que
+lui-même — il ne disait donc **rien** de la configuration servie, et c'est ce qui
+lui a permis d'attendre `SAMEORIGIN` pendant des mois sans que l'écart se voie.
+Ce que le dépôt sert est vérifié par **C23** (`check-reliability.sh`), sur les
+en-têtes **réellement reçus** du nœud actif, toutes les quinze minutes.
 La leçon générique est au socle : un contrôle sans destinataire est un contrôle
 absent (`standards/04-fiabilite-des-controles.md` §7), et une sortie non horodatée
 rend son propre battement invérifiable.

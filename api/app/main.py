@@ -398,7 +398,13 @@ app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 @app.get("/health", tags=["system"])
 def health():
     """Health check : vérifie aussi la disponibilité de la DB.
-    Retourne 503 si la DB est inaccessible (utilisé par check-stack.sh).
+
+    Retourne 503 si la DB est inaccessible. C'est la sonde sur laquelle quatre
+    scripts d'exploitation décident — `bascule.sh`, `boot-role-guard.sh`,
+    `health-watch.sh` et `check-reliability.sh` interrogent tous `/api/health` —
+    donc **un 200 ici autorise un basculement de production**.
+    (La docstring nommait `check-stack.sh`, supprimé le 20/09/2026 : elle
+    désignait le seul appelant qui ne décidait de rien.)
     """
     from sqlmodel import Session, text as _text
     from app.database import engine as _engine

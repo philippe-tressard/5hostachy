@@ -171,24 +171,34 @@ def test_aucun_docker_exec_sur_la_base():
     )
 
 
-def test_installeur_ne_pose_aucun_cron_de_sauvegarde():
-    """`setup-rpi5.sh` ne doit plus jamais installer de sauvegarde côté hôte.
+def test_aucun_script_ne_pose_de_cron_de_sauvegarde_cote_hote():
+    """Aucun script versionné ne doit installer de sauvegarde côté hôte.
 
-    Retiré le 04/08/2026. Le vérifier ici plutôt que de s'en remettre au commentaire
-    laissé dans le script : un commentaire n'empêche personne de le réintroduire, et
-    c'est précisément parce que personne n'avait relu ce fichier depuis mars 2026
-    que le piège y a survécu à la mise en haute disponibilité.
+    Retiré de `setup-rpi5.sh` le 04/08/2026. Le vérifier ici plutôt que de s'en
+    remettre au commentaire laissé dans le script : un commentaire n'empêche
+    personne de le réintroduire, et c'est précisément parce que personne n'avait
+    relu ce fichier depuis mars 2026 que le piège y a survécu à la mise en haute
+    disponibilité.
+
+    ⚠️ Ce test ne visait QUE `setup-rpi5.sh` jusqu'au 20/09/2026 (#1029). Le
+    script a été supprimé — et le test est mort avec lui, sur un
+    `FileNotFoundError`. Une protection attachée à un **nom de fichier** ne
+    survit pas au fichier : elle protège l'endroit où le défaut est apparu une
+    fois, pas le geste. Il porte donc maintenant sur tous les scripts du dépôt,
+    et il n'a plus rien à perdre quand l'un d'eux disparaît.
     """
-    installeur = RACINE / "scripts" / "installation" / "setup-rpi5.sh"
-    contenu = installeur.read_text(encoding="utf-8")
-    for interdit in ("scripts/backup.sh", "hostachy-backup", "5hostachy-backup"):
-        for numero, ligne in lignes_de_code(installeur):
-            assert interdit not in ligne, (
-                f"setup-rpi5.sh:{numero} réintroduit une sauvegarde côté hôte "
-                f"(« {interdit} ») : la sauvegarde est in-process depuis la v2.18 "
-                f"(api/app/utils/backup.py). Voir le commentaire de la section 6."
-            )
-    assert "SAUVEGARDE" in contenu, (
-        "le commentaire qui explique POURQUOI la sauvegarde n'est pas dans "
-        "l'installeur a disparu — sans lui, quelqu'un la remettra"
+    fautes = []
+    for script in sorted((RACINE / "scripts").rglob("*.sh")):
+        for numero, ligne in lignes_de_code(script):
+            for interdit in ("scripts/backup.sh", "hostachy-backup", "5hostachy-backup"):
+                if interdit in ligne:
+                    fautes.append(
+                        f"{script.relative_to(RACINE)}:{numero} (« {interdit} »)"
+                    )
+    assert not fautes, (
+        "sauvegarde côté hôte réintroduite dans un script versionné :\n"
+        + "\n".join(fautes)
+        + "\n\nLa sauvegarde est in-process depuis la v2.18 (api/app/utils/backup.py), "
+        "avec `PRAGMA quick_check` préalable : un `sqlite3 \".backup\"` lancé depuis "
+        "l'hôte pendant que l'API tourne casse la base."
     )
