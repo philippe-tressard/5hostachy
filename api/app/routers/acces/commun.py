@@ -31,6 +31,7 @@ from app.models.core import (
     StatutImport,
     Utilisateur, Batiment, Lot,
 )
+from app.utils.recuperer import ou_404
 
 
 def _stats_socle(modele, session: Session) -> tuple[list, dict]:
@@ -84,9 +85,7 @@ def _remettre_en_attente_import(modele, import_id: int, session: Session):
     ⚠️ Seul un import IGNORÉ peut revenir : un import RÉSOLU a créé un objet, et
     le remettre en attente le laisserait sans import pour le porter (#576).
     """
-    imp = session.get(modele, import_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
+    imp = ou_404(session, modele, import_id, "Import")
     if imp.statut != StatutImport.ignore:
         raise HTTPException(400, "Seuls les imports ignorés peuvent être remis en attente")
     imp.statut = StatutImport.en_attente
@@ -97,9 +96,7 @@ def _remettre_en_attente_import(modele, import_id: int, session: Session):
 
 def _ignorer_import(modele, import_id: int, session: Session):
     """Écarte un import du traitement — accès non résidentiel, doublon…"""
-    imp = session.get(modele, import_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
+    imp = ou_404(session, modele, import_id, "Import")
     if imp.statut == StatutImport.resolu:
         raise HTTPException(400, "Import déjà résolu — ne peut être ignoré")
     imp.statut = StatutImport.ignore

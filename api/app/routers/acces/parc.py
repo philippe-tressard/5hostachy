@@ -166,9 +166,7 @@ def _acces_admin(session: Session, type_acces: TypeAcces, objet_id: int):
     fonctions — les fondre en une avec un drapeau `est_cs` ferait de ce drapeau
     la seule chose qui sépare « mes badges » de « tous les badges ».
     """
-    objet = session.get(type_acces.modele, objet_id)
-    if not objet:
-        raise HTTPException(404, f"{type_acces.libelle} introuvable")
+    objet = ou_404(session, type_acces.modele, objet_id, type_acces.libelle)
     return objet
 
 
