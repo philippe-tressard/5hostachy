@@ -224,7 +224,12 @@ docs/manuel-utilisateur.html
 | Annuaire | `--c-annuaire` | `#0369a1` | 📇 |
 | Profil | `--c-profil` | `#6d28d9` | 👤 |
 | Prestataires | `--c-presta` | `#b45309` | 🔧 |
-| Délégation | `--c-delegation` | `#d97706` | 🤝 |
+| ~~Délégation~~ | `--c-delegation` | `#d97706` | 🤝 |
+
+⚠️ **La ligne « Délégation » est barrée** : la variable de couleur existe, mais
+aucune `data-section="delegation"` n'est rendue — le manuel en compte **onze**,
+pas douze. Une table de sections qui annonce une section absente fait chercher un
+écran qui n'existe pas (#1051).
 
 ## Checklist
 

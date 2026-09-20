@@ -77,7 +77,7 @@ sudo lsof -p $(docker inspect hostachy_api --format '{{.State.Pid}}') | grep app
 Cause racine des corruptions `telemetry_event` des 05 et 17/06/2026 **et** de l'incident du
 17/07/2026 (login 503 + 2 publications perdues) — coupable : `check-reliability.sh` C8, qui
 faisait exactement cela toutes les 15 min (contrôle supprimé, cf. commentaire dans le script).
-Cf. [[project_db_corruption_telemetry]] et le commentaire de `admin.py` → `/db/checkpoint`.
+Cf. [[project_db_corruption_telemetry]] et le commentaire de `admin/exploitation.py` → `/db/checkpoint`.
 
 ## ⚠️ Panne de CHEMIN public ≠ panne de NŒUD (incident du 30/07/2026)
 
@@ -193,7 +193,7 @@ nouveau contrôle en WARN est légitime ; le laisser sans canal ne l’est pas.
 Le 31/08, `NOPASSWD: /usr/bin/rsync` — un rsync privilégié **sans borne de
 chemin**, donc une escalade root complète — a été retiré du dépôt (#582), avec un
 commentaire disant *« c’est la fin du chantier »*. Il est resté installé sur les
-**deux** machines : `durcir-sudoers.sh` n’avait jamais été rejoué. Vingt-quatre
+**deux** machines : `scripts/installation/durcir-sudoers.sh` n’avait jamais été rejoué. Vingt-quatre
 heures, et vingt-trois contrôles au vert à chaque quart d’heure.
 
 ⚠️ **Ni C20 ni C21 ne pouvaient le voir.** C20 compare les deux nœuds **entre
@@ -401,11 +401,18 @@ Rien n'est posé automatiquement : installer reste un geste explicite, un nœud 
 fois.
 
 ## Crontabs (sudo root — identiques sur les 2 RPi)
-```
-0 2 * * *   bascule.sh        # bascule active/standby
-0 3 * * 0   maintenance.sh    # purge, VACUUM, rotation logs (dimanche)
-*/5 * * * * health-watch.sh   # failover automatique si site HS
-```
+
+🔴 **Ne pas les recopier ici.** La table qui vivait à cet endroit citait **trois
+scripts sur quatre** — `check-reliability.sh`, celui qui décide d'alerter, n'y
+figurait pas — et donnait `*/5` là où l'installé écrit `2,7,12,…` (minutes décalées
+pour ne pas empiler les deux sondes). Une table recopiée se périme, et celle-ci
+décrivait un parc qui n'existait plus (#1051).
+
+**La source est versionnée** : `infra/points-entree/cron-root.crontab` (root) et
+`cron-ptressard.crontab` (utilisateur, `auto-deploy.sh`). Le **point 17** du
+pré-check compare l'installé au dépôt avant chaque livraison.
+
+🔒 `npm run lint:consignes` refuse désormais qu'une consigne en énumère une partie.
 
 ## Le standby s'aligne tout seul (#448 — 19/08/2026)
 
@@ -440,12 +447,20 @@ plus trompeur, la parité **git** devenant verte alors que les **images** sont
 restées vieilles — distinction que le point 10 ne sait pas faire.
 
 ## Monitoring APScheduler (tourne dans le conteneur API)
-| Heure | Job | Alerte email si… |
-|-------|-----|-----------------|
-| 03:00 | backup | — |
-| 06:00 | **health_check** | WhatsApp déconnecté · backup > 25h · disque < 15% |
-| 18:00-21:45 (`*/15`) | whatsapp_scheduled | Fenêtre de rattrapage épuisée sans envoi réussi |
-| 02:00 | telemetry_aggregation | — |
+
+🔴 **La liste des jobs se lit dans `api/app/main.py`** (`scheduler.add_job`), pas
+ici. Le tableau qui occupait cette place en citait **quatre sur six** : le
+préchauffage du manuel PDF (au démarrage puis chaque nuit) et la relève des
+courriels (toutes les 10 min) n'y figuraient pas — et il donnait `backup` à 03:00
+alors que l'heure est **configurable** (`cfg.heure_execution`, repli
+`settings.backup_hour`). Trois erreurs dans quatre lignes (#1051).
+
+Ce qu'il faut savoir et qui ne se lit pas dans le code : **quel job alerte**.
+`health_check` (06:00) est le seul à envoyer un courriel de lui-même — WhatsApp
+déconnecté, sauvegarde de plus de 25 h, disque sous 15 %. `whatsapp_scheduled`
+alerte quand sa fenêtre de rattrapage s'épuise sans envoi réussi.
+
+🔒 `npm run lint:consignes` refuse qu'une consigne en énumère une partie.
 
 ## WhatsApp bridge
 - Reconnexion QR : Admin → WhatsApp → **bouton Statut** (affiche le QR si déconnecté)

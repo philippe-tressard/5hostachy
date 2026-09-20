@@ -109,7 +109,10 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
    `tabindex="0"` et `on:keydown` (Enter/Space) ; `aria-label` sur les boutons
    icône-seule ; `role="dialog"` + `aria-modal="true"` sur les modales.
 4. **Icônes de contexte** : 📍 = lieu physique, 🔹 = périmètre logique — **jamais
-   mélangés**, et le périmètre n'est pas affiché quand il vaut `'résidence'`.
+   mélangés**, et le périmètre par défaut ne s'affiche pas — la question se pose à
+   `estPerimetreParDefaut` (`$lib/perimetres`), jamais par un `=== 'résidence'` :
+   le code n'en contient plus un seul, et le nom du périmètre racine est
+   **administrable**.
 
 ---
 
@@ -259,7 +262,7 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - [ ] Onglet réservé à un rôle : `reserve:` **sur l'onglet** dans `pages.ts`, jamais
       un masquage écrit dans la page — `BarreOnglets` masque ET refuse la route
       directe (`npm run lint:onglets-reserves`)
-- [ ] Périmètre : pas affiché si `'résidence'`
+- [ ] Périmètre : masqué s'il est celui par défaut (`estPerimetreParDefaut`)
 - [ ] Archiver (pas supprimer) sur la vue principale
 - [ ] Champs requis : label + ` *`
 - [ ] Tout champ libellé dans un `.field` — jamais une nomenclature locale
@@ -374,7 +377,7 @@ drapeau `Secure`. C'est le « gap .env du 15/07/2026 ». La règle vit dans
 | `0 2 * * *` `bascule.sh` | bascule active/standby |
 | `0 3 * * 0` `maintenance.sh` | purge, VACUUM, rotation des logs |
 | `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS |
-| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C26** (plus C23 bis) (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` |
+| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C26** (plus C23 bis ; C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN`. ⚠️ Seuls **C1–C19** vivent dans ce script : C20–C25 sont dans `scripts/lib/lib-conformite.sh`, C26 dans `lib-verdicts.sh` et `lib-verrou.sh` — greper « C25 » dans le fichier nommé ne le trouve pas |
 
 ⚠️ « Identique sur les 2 nœuds » **est un invariant, pas un constat** : il était faux
 jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` qui y échouait 144 fois
