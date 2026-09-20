@@ -72,3 +72,35 @@ export function messagePrefill(nbPhotos: number): string {
 		? `Actualité pré-remplie (${nbPhotos} image${nbPhotos > 1 ? 's' : ''}) — ajustez avant de publier`
 		: 'Actualité pré-remplie — ajustez le texte avant de publier';
 }
+
+/**
+ * Reprendre une annonce de hall en actualité — l'appel, et ce qu'il rapporte.
+ *
+ * Ajoutée le 20/09/2026 (#1092). `PrefillActualite` était déclarée ici depuis
+ * l'origine et **personne ne la construisait** : l'écran composait les cinq
+ * champs à la main, y compris le repli du périmètre. Une interface que rien
+ * n'implémente ne tient rien — c'est un commentaire avec des accolades.
+ *
+ * ⚠️ Le repli sur le périmètre par défaut est ICI : une annonce de hall sans
+ * périmètre visé donnerait sinon une actualité sans ciblage, et chaque écran
+ * qui reprendrait une annonce devrait y repenser.
+ */
+export async function reprendreAnnonce(
+	charger: () => Promise<{
+		titre: string;
+		contenu: string;
+		perimetre_cible?: string[] | null;
+		photos_urls?: string[] | null;
+	}>,
+	perimetreDefaut: () => string[],
+): Promise<PrefillActualite> {
+	const src = await charger();
+	const photos = [...(src.photos_urls ?? [])];
+	return {
+		titre: src.titre,
+		contenu: src.contenu,
+		perimetreCible: src.perimetre_cible?.length ? [...src.perimetre_cible] : perimetreDefaut(),
+		photos,
+		message: messagePrefill(photos.length),
+	};
+}

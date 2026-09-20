@@ -7,6 +7,7 @@ chemin **vide** (`GET /publications`, `POST /publications`), et FastAPI refuse u
 chemin vide sur un router sans préfixe — même contrainte que `tickets/crud.py`.
 """
 import json
+from app.utils.quand import exiger_description
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -171,6 +172,9 @@ def create_publication(
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
     email_externe = body.email_externe  # adresse externe (pas dans le modèle)
+    #  « Description * » n'existait QU'À L'ÉCRAN : `contenu: str` accepte `""`.
+    #  La règle et sa condition vivent dans `utils/quand` (#1092).
+    exiger_description(body.contenu, debut=body.debut)
     data = body.model_dump(exclude={"email_externe"})
     data['perimetre_cible'] = json.dumps(data.get('perimetre_cible', ["résidence"]), ensure_ascii=False)
     data['public_cible'] = json.dumps(data.get('public_cible', ["résidents"]), ensure_ascii=False)

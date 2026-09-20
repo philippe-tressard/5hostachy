@@ -95,7 +95,7 @@ EXIGENCES = [
     ),
     (
         "l'historique des envois de courriels",
-        ("models/core.py", "class HistoriqueEmail"),
+        ("models/exploitation.py", "class HistoriqueEmail"),
         ("historique des envois", "journal des envois", "courriels envoyés"),
     ),
 ]

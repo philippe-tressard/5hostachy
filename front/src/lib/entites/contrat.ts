@@ -62,6 +62,11 @@ export const CONTRAT: EntiteDeclaree = {
 				'contrats en cours et les contrats échus.',
 		},
 		{
+			id: 'quand',
+			sansObjet:
+				"un contrat ne paraît pas au calendrier de la résidence : ce sont les interventions qu'il déclenche qui s'y inscrivent, pas lui",
+		},
+		{
 			id: 'perimetre',
 			objet: 'PerimetrePicker — ce que le contrat entretient',
 			//  ⚠️ Pas `requis` : un contrat d'assurance ou de syndic couvre la

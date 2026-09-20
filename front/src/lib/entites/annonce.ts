@@ -131,6 +131,11 @@ export const ANNONCE: EntiteDeclaree = {
 			},
 		},
 		{
+			id: 'quand',
+			sansObjet:
+				"une petite annonce n'a pas de date d'événement : elle vit jusqu'à ce que l'objet soit vendu ou donné, et c'est sa péremption qui la retire — pas un passage au calendrier",
+		},
+		{
 			//  ✅ OUVERT le 18/08/2026 (migration 0151) — voir l'en-tête de ce fichier
 			//  pour ce que l'écran avait décrété à la place du produit.
 			id: 'perimetre',

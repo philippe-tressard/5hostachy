@@ -124,6 +124,14 @@ export interface Ticket extends PorteSaisiPourLu {
 	     il ne mordrait pas sur un ticket à portée « résidence », le cas le plus
 	     fréquent. */
 	confidentiel?: boolean;
+	/**  Section « Quand » (#1092), en ISO — quand ça se passe. C'est ce qui
+	 *   fait paraître l'objet au calendrier, devenu une vue et non plus un
+	 *   objet. */
+	debut?: string | null;
+	fin?: string | null;
+	/**  Avant quand c'est attendu — la relance, jamais l'agenda. Les affaires
+	 *   seules : une actualité ne se suit pas (#1092). */
+	echeance?: string | null;
 	/**  📌 Épinglé — maintenu en tête de la liste (05/09/2026).
 	 *
 	 *   ⚠️ Il n'y a pas de champ `urgente` en face : l'urgence d'un ticket EST sa
@@ -265,6 +273,11 @@ export interface Publication extends PorteSaisiPourLu {
 	annonce_hall?: boolean;
 	/** Lecture réservée au périmètre visé — incompatible avec l'affiche de hall (#347). */
 	confidentiel?: boolean;
+	/**  Section « Quand » (#1092), en ISO — quand ça se passe. C'est ce qui
+	 *   fait paraître l'objet au calendrier, devenu une vue et non plus un
+	 *   objet. */
+	debut?: string | null;
+	fin?: string | null;
 	evolutions: PublicationEvolution[];
 }
 

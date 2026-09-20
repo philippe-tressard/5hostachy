@@ -107,6 +107,15 @@ export const TICKET: EntiteDeclaree = {
 			objet: 'Ouvert · En cours · Résolu · Annulé',
 		},
 		{
+			id: 'quand',
+			objet: 'SectionQuand — début, fin et échéance',
+			//  🔴 Deux notions distinctes, et cette entité est la seule à porter les
+			//  deux : `debut`/`fin` disent QUAND ÇA SE PASSE et alimentent le
+			//  calendrier ; `echeance` dit AVANT QUAND C EST ATTENDU et alimente la
+			//  relance. Une échéance dans l agenda y mettrait « devis attendu sous
+			//  15 jours » entre l AG et la coupure d eau (#1092).
+		},
+		{
 			//  🔴 LA DIVERGENCE A ÉTÉ RETIRÉE LE 19/08/2026, et c'est un revirement.
 			//
 			//  Elle disait : *« Le périmètre est celui du ticket ; une entrée ne le

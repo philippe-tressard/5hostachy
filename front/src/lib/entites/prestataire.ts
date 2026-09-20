@@ -49,6 +49,10 @@ export const PRESTATAIRE: EntiteDeclaree = {
 				'colonne à déplacer.',
 		},
 		{
+			id: 'quand',
+			sansObjet: "un prestataire est une fiche d'annuaire, pas un fait daté",
+		},
+		{
 			id: 'perimetre',
 			sansObjet:
 				"Une entreprise n'est attachée à aucun lieu de la copropriété : c'est son " +

@@ -85,7 +85,7 @@ lignes. Trois réponses possibles, une seule mauvaise :
 
 ### Ce qui n'a PAS bougé
 
-Le cadre lui-même — **les 9 sections, les 4 rendus, les 3 motifs de divergence** —
+Le cadre lui-même — **les 10 sections, les 4 rendus, les 3 motifs de divergence** —
 n'a pas changé d'une ligne en deux jours. Ce sont les **entités** qui ont appris,
 pas la grammaire. C'est le signe que la grammaire est la bonne.
 
@@ -109,17 +109,17 @@ vocabulaire du code (`TicketEvolution`, `EvolForm`).
 ⚠️ Le cadre parle d'évolutions ; **l'écran parle de gestes** (« Commenter »,
 « Changer l'état »).
 
-### Les neuf sections, dans cet ordre — il ne se discute pas
+### Les dix sections, dans cet ordre — il ne se discute pas
 
 1. **Titre** *(et lui seul)* · 2. **Champs spécifiques** (Catégorie, Saisi
 pour…) · 3. **Workflow** *(quand l'entité en a un — voir ci-dessous)* · 4.
-**Périmètre** · 5.
-**Destinataires** *(qui est concerné dans l'application)* · 6. **Description** ·
-7. **Photos** · 8. **Documents** · 9. **Diffusion** *(par quels canaux on prévient
+**Quand** *(début, fin, échéance — la date qui fait paraître l'objet au calendrier ; entrée le 20/09/2026 avec #1092, parce que le Calendrier cesse d'être un objet pour devenir une vue)* · 5. **Périmètre** · 6.
+**Destinataires** *(qui est concerné dans l'application)* · 7. **Description** ·
+8. **Photos** · 9. **Documents** · 10. **Diffusion** *(par quels canaux on prévient
 à l'extérieur)*.
 
-🔴 **Une section ne se fusionne JAMAIS avec une autre, dans aucun rendu.** Neuf
-déclarées, neuf rendues — même voisines, même courtes, même héritées. Fusionner
+🔴 **Une section ne se fusionne JAMAIS avec une autre, dans aucun rendu.** Dix
+déclarées, dix rendues — même voisines, même courtes, même héritées. Fusionner
 « Photos · Documents » parce qu'elles tiennent sur une ligne crée une dixième
 section que rien ne déclare.
 
@@ -153,7 +153,7 @@ CONSOMME.**
 - **R1** squelette de page immuable (titre + action primaire en haut · corps ·
   soumission en bas à droite) — **et c'est LUI qui porte la responsivité**, une
   seule fois pour toutes les pages.
-- **R2** ordre des 9 sections immuable, **et valable pour l'affichage**.
+- **R2** ordre des 10 sections immuable, **et valable pour l'affichage**.
 - **R3** un champ est un **objet** à trois rendus, qui se rend **toujours pareil**,
   avec **le même libellé partout**, le requis marqué par **`*` et rien d'autre**
   (jamais « (optionnel) »), **le fond de saisie** s'il est éditable — le mode se lit
@@ -176,7 +176,7 @@ CONSOMME.**
 
 | Quoi | Où | À faire avant d'écrire un écran |
 |---|---|---|
-| Les 9 sections, leur ordre, leurs libellés, les 4 états, les 3 motifs | `front/src/lib/entites/types.ts` | ne jamais recopier cette table |
+| Les 10 sections, leur ordre, leurs libellés, les 4 états, les 3 motifs | `front/src/lib/entites/types.ts` | ne jamais recopier cette table |
 | La déclaration d'une entité et **ses divergences motivées** | `front/src/lib/entites/<entite>.ts` | la lire ; si elle n'existe pas, l'écrire |
 | Le squelette de **lecture** (R1 pour l'affichage) | `FicheLecture.svelte` | l'affichage passe par lui, il tient l'ordre |
 | Le squelette de **saisie** | `FormulaireCreation.svelte` + `ChampsCommuns.svelte` | sections 4→9, jamais réécrites |

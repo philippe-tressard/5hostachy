@@ -265,6 +265,16 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, table=True):
     #  🔴 FK redéclarée : le mixin ne la porte pas (cf. `utils/saisi_pour`).
     saisi_pour_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     non_relancable: bool = False
+    #  -- Section « Quand » (#1092) ----------------------------------
+    #  Deux notions, jamais la même : `debut`/`fin` disent QUAND ÇA SE PASSE
+    #  et alimentent le calendrier ; `echeance` dit AVANT QUAND C'EST ATTENDU
+    #  et alimente le suivi. Les confondre afficherait « devis attendu » dans
+    #  l'agenda de la résidence, et n'alerterait jamais sur un retard.
+    #  Noms alignés sur `Evenement.debut`/`fin` : le lot qui fera disparaître
+    #  l'entité y recopiera ses lignes littéralement.
+    debut: Optional[datetime] = None
+    fin: Optional[datetime] = None
+    echeance: Optional[date] = None
     non_relancable_motif: Optional[str] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
@@ -341,6 +351,13 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     publiee_le: Optional[datetime] = None
+    #  -- Section « Quand » (#1092) ----------------------------------
+    #  Une actualité datée — « Coupure d'eau jeudi 9h-12h » — paraît au
+    #  calendrier sans qu'il faille en faire un troisième objet. Pas
+    #  d'échéance ici : une actualité ne se suit pas, et une colonne que rien
+    #  ne consomme ouvrirait un champ d'écran sans effet (cadre #430).
+    debut: Optional[datetime] = None
+    fin: Optional[datetime] = None
     mis_a_jour_le: Optional[datetime] = None
     photos_urls: Optional[str] = None  # JSON array — même convention que Ticket/Evenement
     perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave|résidents
@@ -375,21 +392,6 @@ class PublicationEvolution(EvolutionMixin, table=True):
     publication: Optional[Publication] = Relationship(back_populates="evolutions")
     auteur: Optional[Utilisateur] = Relationship()
 
-
-#  Réexportation : la bibliothèque documentaire vit dans `documents.py` depuis le
-#  27/08/2026 (modularité, rang 1). Ces trois classes restent importables ici —
-#  une vingtaine de modules écrivent `from app.models.core import Document`, et un
-#  découpage qui casse ses importateurs n'est pas un découpage.
-from app.models.documents import (
-    CategorieDocument as CategorieDocument,
-    Document as Document,
-    ProfilAccesDocument as ProfilAccesDocument,
-)
-
-
-# ──────────────────────────────────────────────
-#  Règles & Recommandations de la résidence
-# ──────────────────────────────────────────────
 
 class RegleResidence(SQLModel, table=True):
     __tablename__ = "regle_residence"
@@ -468,131 +470,6 @@ class CompteurConfig(SQLModel, table=True):
 
 # ──────────────────────────────────────────────
 #  Templates email
-# ──────────────────────────────────────────────
-
-class ModeleEmail(SQLModel, table=True):
-    __tablename__ = "modele_email"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    code: str = Field(unique=True)
-    libelle: str
-    sujet: str  # Jinja2
-    corps_html: str  # Jinja2
-    corps_texte: str = ""  # Fallback
-    variables_disponibles: str = "[]"  # JSON
-    # Ce qui est attendu du destinataire, annoncé en tête du message :
-    # information | action_requise | reponse_attendue | archive (cf.
-    # `email.INTENTIONS`). Vide = aucun bandeau, le modèle reste tel quel.
-    intention: str = ""
-    desactivable: bool = True
-    actif: bool = True
-    modifie_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    modifie_le: Optional[datetime] = None
-
-
-# ──────────────────────────────────────────────
-#  Sauvegardes
-# ──────────────────────────────────────────────
-#  Les deux tables vivent dans `models/sauvegarde.py` depuis le 14/08/2026
-#  (modularité). Ré-exportées ici : les imports existants ne bougent pas.
-from app.models.sauvegarde import (  # noqa: E402,F401
-    ConfigSauvegarde,
-    FrequenceSauvegarde,
-    HistoriqueSauvegarde,
-    StatutSauvegarde,
-)
-
-# ──────────────────────────────────────────────
-#  Historique emails
-# ──────────────────────────────────────────────
-
-class HistoriqueEmail(SQLModel, table=True):
-    __tablename__ = "historique_email"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    code: str = Field(index=True)             # code du ModeleEmail
-    destinataire: str                          # adresse email
-    sujet: str = ""
-    statut: str = "succes"                     # succes | erreur | ignore
-    erreur: Optional[str] = None
-    cree_le: datetime = Field(default_factory=datetime.utcnow, index=True)
-
-
-# ──────────────────────────────────────────────
-#  Maintenance (cron)
-# ──────────────────────────────────────────────
-
-class TachePlanifiee(str, Enum):
-    """Tâches planifiées dont on conserve l'historique d'exécution."""
-    maintenance = "maintenance"
-    backup = "backup"
-    bascule = "bascule"
-    health_watch = "health_watch"
-    reliability = "reliability"
-    auto_deploy = "auto_deploy"
-    #  Seule tâche exécutée depuis le POSTE et non par un cron des RPi
-    #  (`export-hors-site.sh`, lancé à la main). Elle est enregistrée ici comme
-    #  les autres : ce qui compte pour la surveillance n'est pas d'où part la
-    #  tâche, mais qu'on puisse constater son ABSENCE. Aucune migration n'est
-    #  requise — `historique_maintenance.tache` est une colonne texte libre.
-    export_hors_site = "export_hors_site"
-
-
-class PorteeExecution(str, Enum):
-    """Ce qu'une exécution a réellement fait.
-
-    Le nœud actif exécute la maintenance *applicative* (purges, VACUUM) ;
-    le standby n'exécute que l'*hygiène locale* (images, cache de build,
-    rotation des logs) — cf. maintenance.sh. Sans cette distinction, une
-    ligne de standby se lirait comme une maintenance applicative incomplète.
-    """
-    applicative = "applicative"
-    hygiene_locale = "hygiene_locale"
-
-
-class HistoriqueMaintenance(SQLModel, table=True):
-    """Historique d'exécution des tâches planifiées, tous nœuds confondus.
-
-    ⚠️ Le nom de table reste `historique_maintenance` pour raison historique :
-    la renommer imposerait une migration de renommage sur une base de
-    production SQLite, pour un gain purement cosmétique. Elle porte désormais
-    **toutes** les tâches de `TachePlanifiee`, pas seulement la maintenance.
-    """
-    __tablename__ = "historique_maintenance"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    tache: str = Field(default=TachePlanifiee.maintenance.value, index=True)
-    noeud: Optional[str] = Field(default=None, index=True)   # rpi1 | rpi2
-    portee: str = PorteeExecution.applicative.value
-    declenchee_par: str = "cron"               # cron | manuel
-    statut: str = "succes"                     # succes | erreur
-    tokens_supprimes: int = 0
-    taille_db_octets: Optional[int] = None     # taille DB après VACUUM
-    duree_secondes: Optional[int] = None
-    details: Optional[str] = None              # JSON : chiffres propres à la tâche
-    erreur: Optional[str] = None
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    terminee_le: Optional[datetime] = None
-
-
-# ──────────────────────────────────────────────────────────────────────────
-#  Jetons d'authentification — extraits dans `models/jetons.py` (#833).
-#
-#  ⚠️ Réimportés ici pour la même raison que la télémétrie : c'est CET import
-#  qui enregistre les tables dans les métadonnées SQLModel.
-# ──────────────────────────────────────────────────────────────────────────
-from app.models.jetons import (  # noqa: E402,F401
-    EmailVerificationToken, PasswordResetToken, RefreshToken,
-)
-
-# ──────────────────────────────────────────────────────────────────────────
-#  Télémétrie — extraite dans `models/telemetrie.py` (plafond de modularité).
-#  Réimportée ici : `from app.models.core import TelemetryEvent` reste valide,
-#  et c'est cet import qui enregistre les tables dans les métadonnées SQLModel.
-# ──────────────────────────────────────────────────────────────────────────
-from app.models.telemetrie import (  # noqa: E402,F401
-    TelemetryEvent, TelemetryDaily, TelemetryMonthly, HistoriqueTelemetrie,
-)
-
-# ──────────────────────────────────────────────
-#  Notifications
 # ──────────────────────────────────────────────
 
 class Notification(SQLModel, table=True):
@@ -894,4 +771,61 @@ class ConfigSite(SQLModel, table=True):
 from app.models.whatsapp import (  # noqa: E402,F401
     WhatsAppLog as WhatsAppLog,
     WhatsAppScheduled as WhatsAppScheduled,
+)
+
+#  Réexportation : la bibliothèque documentaire vit dans `documents.py` depuis le
+#  27/08/2026 (modularité, rang 1). Ces trois classes restent importables ici —
+#  une vingtaine de modules écrivent `from app.models.core import Document`, et un
+#  découpage qui casse ses importateurs n'est pas un découpage.
+from app.models.documents import (
+    CategorieDocument as CategorieDocument,
+    Document as Document,
+    ProfilAccesDocument as ProfilAccesDocument,
+)
+
+
+# ──────────────────────────────────────────────
+#  Règles & Recommandations de la résidence
+# ──────────────────────────────────────────────
+
+# ──────────────────────────────────────────────
+#  Sauvegardes
+# ──────────────────────────────────────────────
+#  Les deux tables vivent dans `models/sauvegarde.py` depuis le 14/08/2026
+#  (modularité). Ré-exportées ici : les imports existants ne bougent pas.
+from app.models.sauvegarde import (  # noqa: E402,F401
+    ConfigSauvegarde,
+    FrequenceSauvegarde,
+    HistoriqueSauvegarde,
+    StatutSauvegarde,
+)
+# ──────────────────────────────────────────────────────────────────────────
+#  Jetons d'authentification — extraits dans `models/jetons.py` (#833).
+#
+#  ⚠️ Réimportés ici pour la même raison que la télémétrie : c'est CET import
+#  qui enregistre les tables dans les métadonnées SQLModel.
+# ──────────────────────────────────────────────────────────────────────────
+from app.models.jetons import (  # noqa: E402,F401
+    EmailVerificationToken, PasswordResetToken, RefreshToken,
+)
+# ──────────────────────────────────────────────────────────────────────────
+#  Télémétrie — extraite dans `models/telemetrie.py` (plafond de modularité).
+#  Réimportée ici : `from app.models.core import TelemetryEvent` reste valide,
+#  et c'est cet import qui enregistre les tables dans les métadonnées SQLModel.
+# ──────────────────────────────────────────────────────────────────────────
+from app.models.telemetrie import (  # noqa: E402,F401
+    TelemetryEvent, TelemetryDaily, TelemetryMonthly, HistoriqueTelemetrie,
+)
+
+#  ── L'EXPLOITATION vit dans `models/exploitation.py` (20/09/2026, #1092) ──
+#
+#  Courriels et maintenance sortis d'ici au titre du découpage au fil de l'eau.
+#  Le ré-export garde importables les appelants qui écrivent
+#  `from app.models.core import ModeleEmail` — même motif que les documents.
+from app.models.exploitation import (  # noqa: E402
+    HistoriqueEmail as HistoriqueEmail,
+    HistoriqueMaintenance as HistoriqueMaintenance,
+    ModeleEmail as ModeleEmail,
+    PorteeExecution as PorteeExecution,
+    TachePlanifiee as TachePlanifiee,
 )
