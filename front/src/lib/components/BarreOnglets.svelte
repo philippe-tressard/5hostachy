@@ -35,7 +35,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { isProprioOuCS, isLocataire } from '$lib/stores/auth';
+	import { isProprioOuCS, isLocataire, authResolue } from '$lib/stores/auth';
 
 	/** L'identifiant de configuration de la page — celui de `PAGES`. */
 	export let pageId: string;
@@ -71,7 +71,13 @@
 	//  `browser` : en rendu serveur, `goto` n'a pas de sens et l'onglet actif vient
 	//  déjà du chemin. `replaceState` : l'adresse refusée ne doit pas rester dans
 	//  l'historique, sinon le bouton Précédent y ramène en boucle.
-	$: if (browser && onglets.length > 0 && !onglets.some((o) => o.id === actif)) {
+	//  🔴 `$authResolue` d'abord, et ce n'est pas une précaution de style : les
+	//  stores de rôle valent **faux** tant que `authApi.me()` n'a pas répondu. Sans
+	//  cette garde, un copropriétaire qui ouvre `/residence/carnet` par un favori
+	//  est renvoyé sur la fiche — l'onglet lui est refusé sur « on ne sait pas
+	//  encore ». C'est le défaut corrigé sur `/admin` le 12/08/2026, que ce
+	//  composant venait de réintroduire (#1083).
+	$: if (browser && $authResolue && onglets.length > 0 && !onglets.some((o) => o.id === actif)) {
 		goto(onglets[0].route, { replaceState: true });
 	}
 </script>

@@ -5,7 +5,6 @@
 	import { evenementDepuis, evenementVierge } from '$lib/evenement-formulaire';
 	import VueKanbanCalendrier from '$lib/components/VueKanbanCalendrier.svelte';
 	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
@@ -19,7 +18,7 @@
 	import { tickets as ticketsApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { essayer } from '$lib/chargement';
-	import { currentUser, isAdmin, isCS, isLocataire, isProprioOuCS } from '$lib/stores/auth';
+	import { currentUser, isAdmin, isCS, isProprioOuCS } from '$lib/stores/auth';
 	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
 	import SectionMaintenancesRecurrentes from '$lib/components/SectionMaintenancesRecurrentes.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -59,13 +58,10 @@
 	 *   changer d'onglet est une navigation, pas une affectation. */
 	export let data: { onglet: string };
 	$: onglet = data.onglet;
-	//  Masquer un onglet ne suffit pas : un locataire qui ouvre `/calendrier/kanban`
-	//  — par un favori, un lien reçu — doit être ramené sur la liste. Le masquage
-	//  répond à ce qui s'affiche, la redirection à ce qui s'atteint.
-	const ONGLETS_FERMES_AUX_LOCATAIRES = ['kanban', 'archives'];
-	$: if (browser && $isLocataire && ONGLETS_FERMES_AUX_LOCATAIRES.includes(onglet)) {
-		goto(routeOnglet('calendrier', 'liste'), { replaceState: true });
-	}
+	//  Le masquage ET la redirection sont portés par `BarreOnglets`, qui lit la
+	//  réservation déclarée sur l'onglet (`pages.ts`). Ce bloc faisait la seconde
+	//  à la main : il est resté en place lors du lot qui a déplacé la règle
+	//  (v1.48.12), et le message de ce lot affirmait pourtant l'avoir supprimé.
 	$: trackTabView(onglet);
 	let filtreType = '';
 
@@ -639,11 +635,10 @@
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!-- Onglets -->
-<BarreOnglets
-	pageId="calendrier"
-	actif={onglet}
-	masques={$isLocataire ? ONGLETS_FERMES_AUX_LOCATAIRES : []}
-/>
+<!--  Aucun `masques` : Kanban et Archives portent `reserve: 'nonLocataire'` dans
+      `pages.ts`, et `BarreOnglets` s'en charge. Ce double mécanisme a survécu au
+      lot qui devait le supprimer (v1.48.12). -->
+<BarreOnglets pageId="calendrier" actif={onglet} />
 
 <!-- Filtres -->
 <div class="filters">

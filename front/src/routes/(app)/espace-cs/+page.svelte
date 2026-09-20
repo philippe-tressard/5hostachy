@@ -20,8 +20,7 @@
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import OngletAnnoncesHall from '$lib/components/OngletAnnoncesHall.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
-	import { onMount } from 'svelte';
-	import { isCS } from '$lib/stores/auth';
+	import { isCS, authResolue } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { admin as adminApi, annuaireAdmin, auth as authApi, lots as lotsApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -250,13 +249,14 @@
 		if (!batiment_nom && hit.batiment_nom) batiment_nom = hit.batiment_nom.replace(/^Bât\. /i, '');
 		return { batiment_id, batiment_nom, etage };
 	}
-
-	onMount(async () => {
-		if (!$isCS) {
-			goto('/tableau-de-bord');
-			return;
-		}
-
+	//  🔴 Refuser sur un « non » AVÉRÉ, jamais sur un « pas encore » : le pourquoi est dans `check-gardes-auth.mjs`.
+	$: if ($authResolue && !$isCS) goto('/tableau-de-bord');
+	let _charge = false;
+	$: if ($authResolue && $isCS && !_charge) {
+		_charge = true;
+		charger();
+	}
+	async function charger() {
 		try {
 			//  🔴 Quatre données de RÉFÉRENCE (#522) : elles ne s'affichent nulle
 			//  part, elles garnissent `batimentsMap` et les rapprochements de lots.
@@ -298,7 +298,7 @@
 			loading = false;
 		}
 		loadAnnuaire();
-	});
+	}
 
 	async function loadAnnuaire() {
 		annuaireLoading = true;

@@ -1191,6 +1191,12 @@ jobs:
         working-directory: front
         run: npm run lint:onglets-reserves
 
+      # Un garde refuse sur un « non » avéré, jamais sur un « pas encore » : les
+      # stores de rôle valent faux tant que `authApi.me()` n'a pas répondu (#1083).
+      - name: Aucune garde ne décide avant que l'authentification soit résolue
+        working-directory: front
+        run: npm run lint:gardes-auth
+
       - name: Aucune largeur de saisie écrite dans un écran
         # 🔴 Signalé à l'écran le 30/08/2026 : « sur admin / paramétrage le texte
         # ne prend pas la bonne largeur ». La carte occupait toute la page, ses
