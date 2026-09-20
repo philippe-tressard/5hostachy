@@ -38,6 +38,7 @@ from .socle import (
     cible_visible,
     perimetre_visible,
 )
+from app.auth.deps import est_moderateur
 #  ⚠️ `public_cible_visible` n'est plus importé ici depuis le 06/09/2026 : aucune
 #  règle de ce fichier ne l'appelle en direct — elles passent toutes par
 #  `cible_visible`, qui pose les deux axes. Une factorisation se termine par la
@@ -156,7 +157,7 @@ def evenement_visible(ev: Evenement, user: Utilisateur) -> bool:
     - maintenance_recurrente invisible pour tous (usage interne uniquement).
     - Périmètre géographique (champ CSV ev.perimetre).
     """
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+    if est_moderateur(user):
         # CS/Admin voient tout sauf maintenance_recurrente (usage interne)
         if ev.type == TypeEvenement.maintenance_recurrente:
             return False
@@ -247,7 +248,7 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     dans l'autre ordre, le drapeau n'aurait mordu que sur les tickets déjà les
     plus restreints — ceux dont on n'a pas besoin de lui.
     """
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+    if est_moderateur(user):
         return True
     if ticket.auteur_id == user.id:
         return True

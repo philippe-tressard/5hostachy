@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 from app.auth.deps import (
     exiger_non_externe,
     get_current_user,
-    peut_commander,
+    est_moderateur,
     require_admin,
 )
 from app.database import get_session
@@ -101,10 +101,19 @@ def create_ticket(
 ):
     exiger_non_externe(user, "créer de tickets")
 
-    #  Tous les champs « de commandement » (destinataires, saisie pour un tiers)
-    #  sont neutralisés hors CS/admin. Le contrôle est ici, côté serveur : ce que
-    #  l'interface masque n'est qu'un confort (socle 03 §1).
-    est_cs = peut_commander(user)
+    #  Les champs « de commandement » engagent autre chose que leur auteur : à
+    #  qui la demande est adressée (syndic, conseil syndical), pour qui elle est
+    #  saisie, et où elle en est dans son workflow. Un résident ne les fixe pas —
+    #  sinon il adresse un ticket au syndic sans passer par le CS, ou dépose un
+    #  signalement déjà « Résolu », donc hors du suivi, sans que personne l'ait
+    #  regardé. Ils sont donc neutralisés hors CS/admin.
+    #
+    #  Le contrôle est ici, côté serveur : ce que l'interface masque n'est qu'un
+    #  confort (socle 03 §1). Le prédicat, lui, vit dans `auth/deps` — il
+    #  s'appelait `peut_commander` jusqu'au 20/09/2026, un nom qui décrivait CE
+    #  geste-ci et que les vingt-cinq autres points d'usage n'ont donc jamais
+    #  reconnu comme le leur (#1028).
+    est_cs = est_moderateur(user)
     ticket = Ticket(
         numero=generer_numero(),
         #  L'adresse de réponse est fixée à la CRÉATION (#703) : la poser plus

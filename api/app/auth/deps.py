@@ -83,7 +83,10 @@ def require_proprietaire(user: Utilisateur = Depends(get_current_user)) -> Utili
 
 
 def require_cs_or_admin(user: Utilisateur = Depends(get_current_user)) -> Utilisateur:
-    if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+    #  Le REFUS s'appuie sur le PRÉDICAT, il ne le redérive pas : deux écritures
+    #  de « qui modère » divergeraient sans que rien ne le dise — l'une
+    #  répondrait oui, l'autre lèverait un 403 (#1028).
+    if not est_moderateur(user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Réservé au conseil syndical et à l'admin")
     return user
 
@@ -94,27 +97,32 @@ def require_admin(user: Utilisateur = Depends(get_current_user)) -> Utilisateur:
     return user
 
 
-def peut_commander(user: Utilisateur) -> bool:
-    """Cet utilisateur peut-il fixer les champs « de commandement » ?
+def est_moderateur(user: Utilisateur) -> bool:
+    """Cet utilisateur MODÈRE-t-il — conseil syndical, ou administration ?
 
-    Les champs de commandement sont ceux qui engagent autre chose que leur
-    auteur : à qui la demande est adressée (syndic, conseil syndical), pour qui
-    elle est saisie, et où elle en est dans son workflow. Un résident ne les
-    fixe pas — sinon il peut adresser un ticket au syndic sans passer par le CS,
-    ou déposer un signalement déjà « Résolu », donc hors du suivi, sans que
-    personne l'ait regardé.
+    C'est LA définition, et la seule. Le conseil syndical et l'administration
+    voient plus, corrigent plus et font avancer ce qu'ils n'ont pas écrit : c'est
+    la même notion partout — visibilité d'un document réservé, message interne
+    d'un ticket, champs de commandement, catégories, flux de santé.
 
-    POURQUOI ICI ET PAS DANS LE ROUTEUR (16/08/2026). Cette règle était écrite
-    en ligne, une fois par champ — `destinataire_syndic if est_cs else False`,
-    répété cinq fois — et j'allais en ajouter une sixième pour le workflow.
-    Une règle d'autorisation recopiée à côté de chaque champ ne se durcit pas :
-    on en corrige quatre sur six. Elle vit donc ici, avec les autres, où
-    `test_autorisation.py` la voit (socle 03 §1, exigence 0c du pré-check).
+    POURQUOI ICI (16/08/2026, élargi le 20/09). La règle était écrite en ligne,
+    une fois par champ — `destinataire_syndic if est_cs else False`, répété cinq
+    fois. Elle a été ramenée ici, et c'était la bonne place ; mais sous le nom
+    `peut_commander`, qui décrivait **un geste** au lieu du rôle. Un nom qui parle
+    d'un usage n'est appelé que par cet usage : les vingt-cinq autres endroits ont
+    continué de redériver `has_role(conseil_syndical, admin)` en ligne, sans voir
+    qu'ils posaient la même question (#1028). Renommé, pas aliasé — un alias
+    laisserait croire à deux notions (`standards/02` §1.6).
 
-    C'est un PRÉDICAT, pas une dépendance FastAPI : il ne refuse pas la requête,
-    il dit si l'on retient la valeur demandée ou le défaut. Refuser serait faux —
-    un résident a le droit de créer un ticket, simplement pas d'en fixer
-    l'adressage ni l'étape.
+    C'est un PRÉDICAT, pas une dépendance FastAPI : il DIT, il ne refuse pas.
+    `require_cs_or_admin` est l'autre geste — il lève un 403 — et il s'appuie sur
+    celui-ci. Refuser n'est pas toujours juste : un résident a le droit de créer
+    un ticket, simplement pas d'en fixer l'adressage ni l'étape.
+
+    🔒 `api/tests/test_moderateur_source_unique.py` refuse toute redérivation en
+    ligne, lit l'arbre syntaxique (les vingt-six occurrences d'origine
+    s'écrivaient de quatre façons), et vérifie que ce prédicat existe encore —
+    un contrôle qui ne trouve plus sa source passerait au vert sans rien mesurer.
     """
     return user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
 
@@ -162,7 +170,7 @@ def est_rattache_au_lot(user: Utilisateur, lot_id: int) -> bool:
     cesse de regarder `actif` — une source unique relâchée ne protège plus rien,
     elle garantit seulement que tout le monde se trompe au même endroit.
 
-    C'est un PRÉDICAT, comme `peut_commander` : il dit, il ne refuse pas.
+    C'est un PRÉDICAT, comme `est_moderateur` : il dit, il ne refuse pas.
     L'appelant choisit son code d'erreur, parce que 403 et 404 ne disent pas la
     même chose de ce que le demandeur a le droit de savoir.
     """
@@ -234,9 +242,7 @@ def exiger_non_externe(user: Utilisateur, geste: str) -> None:
     `geste` complète le message lu par l'utilisateur (« … ne peuvent pas
     <geste> ») : c'est la seule chose qui variait entre les cinq.
     """
-    if user.has_role(RoleUtilisateur.externe) and not user.has_role(
-        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
-    ):
+    if user.has_role(RoleUtilisateur.externe) and not est_moderateur(user):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             f"Les utilisateurs externes ne peuvent pas {geste}",

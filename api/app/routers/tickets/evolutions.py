@@ -8,12 +8,17 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, peut_commenter, require_admin, require_cs_or_admin
+from app.auth.deps import (
+    est_moderateur,
+    get_current_user,
+    peut_commenter,
+    require_admin,
+    require_cs_or_admin,
+)
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
     Notification,
-    RoleUtilisateur,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -324,9 +329,7 @@ def add_evolution(
     #  ⚠️ La table des options et le contrôle de droit vivent dans
     #  `commun.appliquer_options` — le troisième chemin qui les applique, et le
     #  troisième à ne pas les réécrire.
-    if appliquer_options(ticket, body, est_cs=user.has_role(
-        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
-    )):
+    if appliquer_options(ticket, body, est_cs=est_moderateur(user)):
         ticket.mis_a_jour_le = datetime.utcnow()
         session.add(ticket)
 

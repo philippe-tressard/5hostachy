@@ -165,6 +165,22 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 | `require_proprietaire` | Fonctions propriétaires |
 | `get_acting_user` | Délégation (header `X-Acting-As`) |
 
+Ces cinq-là **refusent** (elles lèvent un 403). À côté vivent les **prédicats**,
+qui *disent* sans refuser — et qui s'appellent, jamais ne se redérivent :
+
+| Prédicat | La question |
+|---|---|
+| `est_moderateur(user)` | conseil syndical **ou** admin — « qui modère » |
+| `est_rattache_au_lot(session, user, lot_id)` | « ce lot est le mien » (lien **actif** exigé) |
+| `peut_commenter` / `peut_editer` | l'auteur, le « saisi pour », l'admin (+ le CS pour commenter) |
+
+🔒 Écrire `has_role(conseil_syndical, admin)` en ligne est refusé par
+`api/tests/test_moderateur_source_unique.py`. Il l'était **vingt-six fois** avant le
+20/09/2026 — dont trois dans `deps.py` lui-même —, parce que le prédicat existait
+sous le nom `peut_commander` : un nom qui décrivait **un geste** (fixer les champs de
+commandement d'un ticket) n'est appelé que par ce geste, et les vingt-cinq autres
+points d'usage n'ont jamais vu qu'ils posaient la même question (#1028).
+
 ### Documents imprimables (PDF)
 - Thème commun : `app/utils/pdf_theme.py` — logo, palette de la charte, data-URI (image/QR), `html_to_pdf()`.
   **Ne jamais** redéfinir une palette, un logo ou un moteur PDF ailleurs.

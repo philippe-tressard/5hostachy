@@ -18,14 +18,15 @@ fait lever le fil en production. Les deux voyagent donc ensemble, et
 """
 from sqlmodel import select
 
-from app.models.core import Prestataire, RoleUtilisateur
+from app.models.core import Prestataire
 from app.utils.liens import lien_element
 from .commun import ContexteFlux
 from .schemas import FluxItem
+from app.auth.deps import est_moderateur
 
 
 def _reserve_au_cs(ctx: ContexteFlux) -> bool:
-    return ctx.user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    return est_moderateur(ctx.user)
 
 
 def _collecter_fiches(ctx: ContexteFlux) -> list[FluxItem]:

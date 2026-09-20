@@ -16,8 +16,9 @@ from sqlmodel import Session
 
 from app.models.core import (
     LocationBail, StatutBail, StatutObjet, TypeObjet,
-    Utilisateur, RoleUtilisateur,
+    Utilisateur,
 )
+from app.auth.deps import est_moderateur
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -26,9 +27,7 @@ def get_bail_or_404(bail_id: int, user: Utilisateur, session: Session) -> Locati
     bail = session.get(LocationBail, bail_id)
     if not bail:
         raise HTTPException(status_code=404, detail="Bail introuvable")
-    if bail.bailleur_id != user.id and not user.has_role(
-        RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical
-    ):
+    if bail.bailleur_id != user.id and not est_moderateur(user):
         raise HTTPException(status_code=403, detail="Accès interdit")
     return bail
 
