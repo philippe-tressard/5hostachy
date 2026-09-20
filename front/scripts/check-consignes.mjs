@@ -57,21 +57,131 @@ const RACINE_DEPOT = new URL('../..', import.meta.url).pathname.replace(/^\/([A-
 /** Nombre minimal de fichiers de consigne attendus — cas zéro. */
 const CONSIGNES_MINIMALES = 3;
 
-// ── 1. La liste qui fait foi, lue à la source ────────────────────────────────
-const SOURCE = join(RACINE_FRONT, 'lib', 'sanitize.ts');
-let attendues;
-try {
-	const src = readFileSync(SOURCE, 'utf8');
-	attendues = [...src.matchAll(/^export function (safe\w+)\s*\(/gm)].map((m) => m[1]);
-} catch {
-	console.error('✗ INCONNU : src/lib/sanitize.ts est illisible — ce contrôle ne conclut pas.');
-	process.exit(1);
-}
-if (attendues.length === 0) {
-	console.error('✗ Cas zéro : aucune fonction `export function safe…()` dans sanitize.ts.');
-	console.error('Ne pas lire ceci comme un succès.');
-	process.exit(1);
-}
+// ── 1. Les listes qui font foi, lues à leur source ───────────────────────────
+//
+//  🔴 Une notion par entrée, et c'est délibéré : ce contrôle ne portait QUE les
+//  assainisseurs, et l'audit du 19/09/2026 a trouvé trois autres listes recopiées
+//  dans les consignes, dont trois avaient divergé (#1051, #1052) — les crons root,
+//  les tâches planifiées, les exceptions XSS. Écrire un second contrôle pour elles
+//  aurait été la duplication que ce contrôle existe pour dénoncer.
+//
+//  `declencheur` répond à « ce fichier parle-t-il de la notion ? ». Il doit être
+//  LARGE : un fichier qui en parle sans rien nommer est justement le cas à
+//  attraper. `source` lit la vérité dans le dépôt, jamais dans une autre consigne.
+/**
+ * Ce fichier ÉNUMÈRE-t-il la liste, ou se contente-t-il d'en parler ?
+ *
+ * 🔴 La nuance décide de tout, et deux faux positifs l'ont montrée en écrivant ce
+ * contrôle : « tâches planifiées » attrapait le tableau des CRONS de CLAUDE.md —
+ * autre notion, l'ordonnanceur vit dans le process de l'API, les crons sur l'hôte —
+ * et le seul mot « APScheduler » attrapait la phrase qui dit d'aller lire la skill.
+ *
+ * Le critère est donc **deux éléments ou plus** : citer un job pour l'expliquer est
+ * légitime, en aligner deux est une table, et une table se périme. Un déclencheur
+ * trop large ne rend pas un contrôle plus strict — il le rend faux, et un contrôle
+ * faux finit désarmé.
+ */
+const enumere = (texte, attendus) => attendus.filter((x) => texte.includes(x)).length >= 2;
+
+/**
+ * Les TABLES et blocs de code d'un fichier Markdown — l'unité qui se périme.
+ *
+ * 🔴 L'unité examinée n'est pas le fichier. `infra-rpi` portait une table de trois
+ * crons sur quatre, et citait le quatrième trente lignes plus haut dans une autre
+ * phrase : un contrôle qui lit tout le fichier l'y trouve et déclare la table
+ * complète. Il mesure alors la présence d'un mot, là où la question est la
+ * complétude d'une table.
+ *
+ * ⚠️ C'est aussi ce qui autorise une consigne à DIRE quelque chose d'utile sur un
+ * élément — « c'est `health_check` qui alerte » — sans être accusée de recopier la
+ * liste. Une phrase n'est pas une table, et seule la table se périme.
+ */
+const tableauxEtBlocs = (texte) =>
+	[...texte.matchAll(/```[\s\S]*?```|(?:^\|.*\|$\n?)+/gm)].map((m) => m[0]);
+
+const NOTIONS = [
+	{
+		nom: 'assainisseurs HTML',
+		source: () => {
+			const src = readFileSync(join(RACINE_FRONT, 'lib', 'sanitize.ts'), 'utf8');
+			return [...src.matchAll(/^export function (safe\w+)\s*\(/gm)].map((m) => m[1]);
+		},
+		ou: 'front/src/lib/sanitize.ts',
+		declencheur: (texte, attendus) =>
+			attendus.some((f) => texte.includes(f)) || texte.includes('{@html'),
+		pourquoi:
+			'la règle XSS repose sur cette liste ; cinq copies sur six ne nommaient ' +
+			"qu'une fonction sur trois le 19/08/2026, et la consigne a fait naître une " +
+			'quatrième copie du code (#429)',
+		//  La règle XSS est la première des « quatre règles qui ne se négocient
+		//  pas » : si plus aucune consigne ne la porte, c'est le contrôle qui a
+		//  cessé de voir. Les trois autres notions sont des TABLES, dont on veut
+		//  justement qu'il ne reste aucune copie.
+		exigeUneMention: true,
+	},
+	{
+		nom: 'exceptions à la règle XSS',
+		source: () => {
+			const src = readFileSync(join(RACINE_FRONT, '..', 'scripts', 'check-html.mjs'), 'utf8');
+			const bloc = src.match(/const EXCEPTIONS = \{[\s\S]*?\n\};/);
+			//  Avec l'extension : `Icon` seul matchait le composant `Icon`, les
+			//  `icone` et jusqu'au mot « iconographie » — un faux positif sur toute
+			//  skill qui parle d'interface.
+			return bloc ? [...bloc[0].matchAll(/'[^']*\/(\w+\.svelte)'/g)].map((m) => m[1]) : [];
+		},
+		ou: 'front/scripts/check-html.mjs (EXCEPTIONS)',
+		declencheur: (texte, attendus) =>
+			/exception/i.test(texte) && attendus.some((x) => texte.includes(x)),
+		pourquoi:
+			'une skill en déclarait UNE quand le contrôle en porte deux : un audit qui ' +
+			'la suit signale `QRCode` comme un écart qui n’en est pas un',
+	},
+	{
+		nom: 'crons root des deux nœuds',
+		source: () => {
+			const src = readFileSync(
+				join(RACINE_DEPOT, 'infra', 'points-entree', 'cron-root.crontab'),
+				'utf8',
+			);
+			//  Avec l'extension : `bascule` seul matchait « on bascule », et
+			//  `maintenance` le composant `OngletMaintenance` — deux faux positifs.
+			return [...src.matchAll(/\/([a-z-]+\.sh)/g)]
+				.map((m) => m[1])
+				.filter((v, i, t) => t.indexOf(v) === i);
+		},
+		ou: 'infra/points-entree/cron-root.crontab',
+		//  🔴 L'unité examinée est le BLOC, pas le fichier. `infra-rpi` porte une
+		//  table de trois crons sur quatre — et cite `check-reliability.sh` trente
+		//  lignes plus haut, dans une autre phrase. Un contrôle qui lit le fichier
+		//  entier le trouve donc, et déclare la table complète : il mesure la
+		//  présence d'un mot là où la question est la complétude d'une table.
+		portions: (texte) =>
+			tableauxEtBlocs(texte).filter((b) => /[\d*/,]+ +[\d*/,]+ +\* +\* +[\d*/,]/.test(b)),
+		declencheur: enumere,
+		pourquoi:
+			'une table en citait trois sur quatre — `check-reliability.sh`, qui décide ' +
+			"d'alerter, manquait ; et les deux copies ignoraient la source versionnée",
+	},
+	{
+		nom: 'tâches planifiées de l’API',
+		source: () => {
+			const src = readFileSync(join(RACINE_DEPOT, 'api', 'app', 'main.py'), 'utf8');
+			return [...src.matchAll(/id="([a-z_]+)"/g)]
+				.map((m) => m[1])
+				.filter((v, i, t) => t.indexOf(v) === i);
+		},
+		ou: 'api/app/main.py (scheduler.add_job)',
+		//  Même critère que les crons : une TABLE, pas une mention. « C'est
+		//  `health_check` qui alerte, et `whatsapp_scheduled` quand sa fenêtre
+		//  s'épuise » est une information qui ne se lit PAS dans le code ; aligner
+		//  six jobs avec leurs heures est une copie qui se périme.
+		portions: tableauxEtBlocs,
+		declencheur: enumere,
+		pourquoi:
+			'un tableau en listait quatre sur six : le préchauffage du manuel et la ' +
+			"relève des courriels n'y figuraient pas",
+	},
+];
 
 // ── 2. Les fichiers de consigne ──────────────────────────────────────────────
 function markdown(dir) {
@@ -104,32 +214,61 @@ if (candidats.length < CONSIGNES_MINIMALES) {
 
 // ── 3. Ceux qui en parlent doivent tout nommer ───────────────────────────────
 const erreurs = [];
-let concernes = 0;
+const textes = candidats.map((chemin) => ({
+	relatif: relative(RACINE_DEPOT, chemin).replace(/\\/g, '/'),
+	texte: readFileSync(chemin, 'utf8'),
+}));
 
-for (const chemin of candidats) {
-	const relatif = relative(RACINE_DEPOT, chemin).replace(/\\/g, '/');
-	const texte = readFileSync(chemin, 'utf8');
-
-	const parle = attendues.some((f) => texte.includes(f)) || texte.includes('{@html');
-	if (!parle) continue;
-	concernes++;
-
-	const absentes = attendues.filter((f) => !texte.includes(f));
-	if (absentes.length) {
-		erreurs.push(
-			`${relatif} — parle d'assainissement mais ne nomme pas : ${absentes.join(', ')}. ` +
-				`Attendu (lu dans sanitize.ts) : ${attendues.join(', ')}.`,
-		);
+for (const notion of NOTIONS) {
+	let attendus;
+	try {
+		attendus = notion.source();
+	} catch {
+		console.error(`✗ INCONNU : ${notion.ou} est illisible — ce contrôle ne conclut pas.`);
+		process.exit(1);
 	}
-}
+	//  Cas zéro : une source vide rendrait la notion toujours verte, sans rien
+	//  mesurer — le faux vert par ensemble vide (`standards/04` §1 et §27).
+	if (attendus.length === 0) {
+		console.error(`✗ Cas zéro : rien à lire dans ${notion.ou} pour « ${notion.nom} ».`);
+		console.error('Le motif de lecture est périmé — ne pas lire ceci comme un succès.');
+		process.exit(1);
+	}
 
-if (concernes === 0) {
-	console.error("✗ Cas zéro : aucun fichier de consigne ne parle d'assainissement HTML.");
-	console.error(
-		'La règle XSS est la première des « quatre règles qui ne se négocient pas » :\n' +
-			"si plus aucune consigne ne la porte, c'est le contrôle qui a cessé de voir.",
-	);
-	process.exit(1);
+	let concernes = 0;
+	for (const { relatif, texte } of textes) {
+		//  Une notion peut restreindre ce qu'on lit — une TABLE plutôt que tout le
+		//  fichier. Par défaut, le fichier entier.
+		for (const portion of notion.portions ? notion.portions(texte) : [texte]) {
+			if (!notion.declencheur(portion, attendus)) continue;
+			concernes++;
+			const absents = attendus.filter((x) => !portion.includes(x));
+			if (absents.length) {
+				erreurs.push(
+					`${relatif} — parle de « ${notion.nom} » sans nommer : ${absents.join(', ')}\n` +
+						`      attendu (lu dans ${notion.ou}) : ${attendus.join(', ')}\n` +
+						`      pourquoi : ${notion.pourquoi}\n` +
+						`      → renvoyer à la source plutôt que de la recopier`,
+				);
+			}
+		}
+	}
+
+	//  🔴 Le cas zéro ne vaut QUE pour les notions qu'une consigne doit porter.
+	//
+	//  Pour les autres — une table de crons, une liste de jobs — le but est
+	//  précisément qu'il n'en reste AUCUNE copie : exiger qu'une consigne en
+	//  énumère une reviendrait à interdire de la supprimer. Le contrôle a rougi
+	//  ainsi dès que la première table a été remplacée par un renvoi, ce qui était
+	//  le résultat attendu. Un cas zéro mal posé transforme le succès en alarme.
+	if (notion.exigeUneMention && concernes === 0) {
+		console.error(`✗ Cas zéro : aucune consigne ne parle de « ${notion.nom} ».`);
+		console.error(
+			"C'est une règle qu'une consigne DOIT porter : soit le déclencheur ne " +
+				'reconnaît plus le sujet, soit la règle a disparu des consignes.',
+		);
+		process.exit(1);
+	}
 }
 
 if (erreurs.length) {
@@ -145,6 +284,6 @@ if (erreurs.length) {
 }
 
 console.log(
-	`✓ Consignes : ${concernes} fichier(s) parlant d'assainissement sur ${candidats.length} lus — ` +
-		`tous nomment ${attendues.join(', ')}.`,
+	`✓ Consignes : ${NOTIONS.length} notion(s) confrontée(s) à leur source sur ` +
+		`${candidats.length} fichier(s) de consigne — aucune liste recopiée n'a dérivé.`,
 );
