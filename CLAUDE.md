@@ -227,6 +227,19 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - JWT HS256 en cookies `httponly=True`, `secure=settings.cookie_secure`, `samesite="strict"`
 - CORS : allowlist explicite, jamais `["*"]` avec `credentials=True`
 - Rate limiting slowapi sur `/auth/*`
+- **Journal de sécurité : une seule porte.** Un geste sensible — connexion
+  refusée, mot de passe changé ou réinitialisé, rôle ajouté ou retiré,
+  bannissement — appelle `utils/journal_securite.journaliser_securite`, et
+  **aucun** n'écrit dans un `logger` local. Rien n'était journalisé avant le
+  20/09/2026 : un compte compromis ou une élévation de rôle ne laissait aucune
+  trace exploitable (#1040).
+  🔴 **Jamais de donnée personnelle dans une ligne de journal** — un identifiant,
+  jamais une adresse, un mot de passe ou un jeton, même tronqué. Le défaut
+  inverse existe dans ce dépôt (#777, adresses journalisées en clair), et
+  `test_journal_securite.py` le refuse **chez la fonction et chez ses appelants**.
+  ⚠️ `WARNING`, jamais `ERROR` : le point 6 du pré-check et `check-reliability.sh`
+  comptent les `ERROR`/`CRITICAL`, et une faute de frappe sur un mot de passe
+  ferait alors sonner le téléphone.
 - **Téléversement : une seule porte.** Un fichier reçu s'écrit sur disque par
   `utils/fichiers.enregistrer_fichier_recu` **et nulle part ailleurs** ; les
   règles — liste blanche de types, plafond de taille, cohérence de la signature —
