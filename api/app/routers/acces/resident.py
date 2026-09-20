@@ -28,6 +28,7 @@ from app.routers.acces.vues import AccesOut
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 from app.utils.destinataires import membres_cs_notifiables
 from app.utils.noms import contexte_personne, nom_affiche
+from app.auth.appartenance import exiger_acces_du_porteur
 
 router = APIRouter()
 
@@ -43,21 +44,10 @@ router = APIRouter()
 #  un gain nul. Ce sont les CORPS qui étaient recopiés, pas les URL.
 
 
-def _acces_du_porteur(session: Session, type_acces: TypeAcces, objet_id: int,
-                      user: Utilisateur):
-    """L'objet, s'il appartient bien à qui le demande — sinon 404.
-
-    🔒 Ce contrôle de propriété était écrit QUATRE fois, à l'identique. Une règle
-    d'autorisation recopiée est une règle qu'on durcira à trois endroits sur
-    quatre : elle vit ici, et les gestes l'appellent.
-
-    ⚠️ **404 et non 403**, comme les quatre copies le faisaient : répondre
-    « interdit » confirmerait l'existence d'un badge qui ne vous appartient pas.
-    """
-    objet = session.get(type_acces.modele, objet_id)
-    if not objet or objet.user_id != user.id:
-        raise HTTPException(404, f"{type_acces.libelle} introuvable")
-    return objet
+#  La règle « ce badge est le mien » vit dans `auth/appartenance` (#1028) :
+#  404 et non 403, et le conseil syndical n'y est PAS admis — deux décisions
+#  qui se lisent maintenant à côté de celle du bail, avec laquelle elles
+#  divergent volontairement.
 
 
 def _mes_acces(session: Session, type_acces: TypeAcces,
@@ -93,7 +83,7 @@ def _mes_acces(session: Session, type_acces: TypeAcces,
 
 def _signaler_perdu(session: Session, type_acces: TypeAcces, objet_id: int,
                     user: Utilisateur) -> dict:
-    objet = _acces_du_porteur(session, type_acces, objet_id, user)
+    objet = exiger_acces_du_porteur(session, type_acces, objet_id, user)
     objet.statut = StatutAcces.perdu
     session.add(objet)
     session.commit()

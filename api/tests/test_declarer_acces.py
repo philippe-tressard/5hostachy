@@ -138,7 +138,10 @@ def test_un_acces_qui_n_est_pas_le_sien_est_introuvable(session, porteur, type_a
     """🔒 404 et non 403 : « interdit » confirmerait que le badge existe."""
     from fastapi import HTTPException
 
-    from app.routers.acces.resident import _acces_du_porteur, _declarer_acces
+    #  La règle d'appartenance a quitté le routeur pour `auth/appartenance`
+    #  (#1028) : elle ne s'écrit pas chez celui qui l'applique.
+    from app.auth.appartenance import exiger_acces_du_porteur
+    from app.routers.acces.resident import _declarer_acces
 
     resultat = _declarer_acces(session, type_acces, "D-1", porteur)
 
@@ -148,5 +151,5 @@ def test_un_acces_qui_n_est_pas_le_sien_est_introuvable(session, porteur, type_a
     session.refresh(autre)
 
     with pytest.raises(HTTPException) as erreur:
-        _acces_du_porteur(session, type_acces, resultat["id"], autre)
+        exiger_acces_du_porteur(session, type_acces, resultat["id"], autre)
     assert erreur.value.status_code == 404

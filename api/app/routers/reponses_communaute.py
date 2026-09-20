@@ -53,6 +53,7 @@ from app.utils.reponses import (
     tri_reponses,
 )
 from app.utils.liens import lien_element
+from app.auth.appartenance import exiger_cible_visible
 
 
 class ReponseCreate(BaseModel):
@@ -80,29 +81,8 @@ def reponses_de(rubrique: str, cible_id: int, session: Session) -> list[dict]:
     return tri_reponses([enrich_reponse(r, session) for r in reps])
 
 
-def _cible_visible_ou_404(
-    session: Session,
-    modele: type,
-    cible_id: int,
-    libelle: str,
-    user: Utilisateur,
-    visible_de: Callable[[Any, Utilisateur], bool],
-) -> Any:
-    """La cible existe ET l'utilisateur a le droit de la voir — sinon 404.
-
-    🔒 **404 et non 403**, délibérément : répondre « interdit » confirmerait
-    l'existence de l'objet à qui n'a pas le droit de le voir. Sur une petite
-    annonce ciblée, cela révélerait qu'un voisin vend quelque chose sans dire
-    quoi — une fuite plus discrète, mais réelle.
-
-    Les trois routes de réponses posaient la même question à moitié (« existe-t-il ? »)
-    et chacune à sa façon. Une seule écriture, appelée trois fois.
-    """
-    cible = session.get(modele, cible_id)
-    if not cible or not visible_de(cible, user):
-        raise HTTPException(404, f"{libelle} introuvable")
-    return cible
-
+#  La règle « existe-t-il ET puis-je le voir ? » vit dans `auth/appartenance`
+#  (#1028) : c'est une décision de VISIBILITÉ, donc d'autorisation.
 
 def enregistrer_routes_reponses(
     router: APIRouter,
@@ -148,7 +128,7 @@ def enregistrer_routes_reponses(
         user: Utilisateur = Depends(get_current_user),
     ):
         exiger_acces(user)
-        _cible_visible_ou_404(session, modele, cible_id, libelle, user, visible_de)
+        exiger_cible_visible(session, modele, cible_id, libelle, user, visible_de)
         return reponses_de(rubrique, cible_id, session)
 
     @router.post("/{cible_id}/reponses", status_code=201)
@@ -168,7 +148,7 @@ def enregistrer_routes_reponses(
         contenu = (body.contenu or "").strip()
         if not contenu:
             raise HTTPException(422, "La réponse ne peut pas être vide")
-        cible = _cible_visible_ou_404(
+        cible = exiger_cible_visible(
             session, modele, cible_id, libelle, user, visible_de
         )
 
@@ -206,7 +186,7 @@ def enregistrer_routes_reponses(
     ):
         """Supprimer une réponse : son auteur, ou un CS/admin."""
         exiger_acces(user)
-        _cible_visible_ou_404(session, modele, cible_id, libelle, user, visible_de)
+        exiger_cible_visible(session, modele, cible_id, libelle, user, visible_de)
         rep = session.get(ReponseCommunaute, rep_id)
         if not rep or rep.rubrique != rubrique or rep.cible_id != cible_id:
             raise HTTPException(404, "Réponse introuvable")

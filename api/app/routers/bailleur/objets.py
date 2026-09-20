@@ -26,7 +26,8 @@ from app.models.core import (
     RemiseObjet, StatutObjet, Utilisateur,
 )
 
-from .commun import ObjetCreate, ObjetOut, ObjetUpdate, RetourObjet, get_bail_or_404
+from .commun import ObjetCreate, ObjetOut, ObjetUpdate, RetourObjet
+from app.auth.appartenance import exiger_bail_du_bailleur
 
 router = APIRouter()
 
@@ -38,7 +39,7 @@ def list_objets(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    get_bail_or_404(bail_id, user, session)
+    exiger_bail_du_bailleur(session, bail_id, user)
     objets = session.exec(
         select(RemiseObjet).where(RemiseObjet.bail_id == bail_id)
     ).all()
@@ -52,7 +53,7 @@ def ajouter_objet(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    get_bail_or_404(bail_id, user, session)
+    exiger_bail_du_bailleur(session, bail_id, user)
     objet = RemiseObjet(
         bail_id=bail_id,
         type=data.type,
@@ -78,7 +79,7 @@ def update_objet(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    get_bail_or_404(bail_id, user, session)
+    exiger_bail_du_bailleur(session, bail_id, user)
     objet = session.get(RemiseObjet, obj_id)
     if not objet or objet.bail_id != bail_id:
         raise HTTPException(status_code=404, detail="Objet introuvable")
@@ -98,7 +99,7 @@ def retour_objet(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    get_bail_or_404(bail_id, user, session)
+    exiger_bail_du_bailleur(session, bail_id, user)
     objet = session.get(RemiseObjet, obj_id)
     if not objet or objet.bail_id != bail_id:
         raise HTTPException(status_code=404, detail="Objet introuvable")
@@ -117,7 +118,7 @@ def supprimer_objet(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    get_bail_or_404(bail_id, user, session)
+    exiger_bail_du_bailleur(session, bail_id, user)
     objet = session.get(RemiseObjet, obj_id)
     if not objet or objet.bail_id != bail_id:
         raise HTTPException(status_code=404, detail="Objet introuvable")

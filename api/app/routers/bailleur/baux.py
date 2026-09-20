@@ -18,9 +18,11 @@ from app.database import get_session
 from app.models.core import (
     LocationBail, RemiseObjet, Lot, StatutBail, StatutUtilisateur, Utilisateur, Vigik, Telecommande,
 )
+from app.utils.recuperer import ou_404
 from pydantic import BaseModel
 
-from .commun import BailCreateMulti, BailOut, BailTerminer, BailUpdate, get_bail_or_404
+from .commun import BailCreateMulti, BailOut, BailTerminer, BailUpdate
+from app.auth.appartenance import exiger_bail_du_bailleur
 
 router = APIRouter()
 
@@ -56,9 +58,7 @@ def supprimer_bail(
     session: Session = Depends(get_session),
 ):
     """Admin / CS : supprimer un bail et ses objets associés."""
-    bail = session.get(LocationBail, bail_id)
-    if not bail:
-        raise HTTPException(status_code=404, detail="Bail introuvable")
+    bail = ou_404(session, LocationBail, bail_id, "Bail")
     # Libérer les accès confiés au locataire
     for v in session.exec(select(Vigik).where(Vigik.bail_id == bail_id)).all():
         v.chez_locataire = False
@@ -142,7 +142,7 @@ def get_bail(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    return get_bail_or_404(bail_id, user, session)
+    return exiger_bail_du_bailleur(session, bail_id, user)
 
 
 @router.patch("/baux/{bail_id}", response_model=BailOut)
@@ -152,7 +152,7 @@ def update_bail(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    bail = get_bail_or_404(bail_id, user, session)
+    bail = exiger_bail_du_bailleur(session, bail_id, user)
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(bail, k, v)
     bail.mis_a_jour_le = datetime.utcnow()
@@ -169,7 +169,7 @@ def terminer_bail(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    bail = get_bail_or_404(bail_id, user, session)
+    bail = exiger_bail_du_bailleur(session, bail_id, user)
     # Retour automatique de tous les accès confiés au locataire
     for v in session.exec(select(Vigik).where(Vigik.bail_id == bail_id, Vigik.user_id == user.id)).all():
         v.chez_locataire = False
