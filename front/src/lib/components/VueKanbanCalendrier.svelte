@@ -28,6 +28,7 @@
 	//  refusé la version qui le recevait de la page : une prop homonyme pourrait
 	//  ne rien assainir, et le contrôle ne peut pas le savoir. Il exige donc que
 	//  le nom vienne de l'IMPORT — c'est ce qui a démasqué `renderContent` (#429).
+	import { MOT_COLONNE_VIDE } from '$lib/kanban';
 	import { safeHtml } from '$lib/sanitize';
 	import { perimetreTags } from '$lib/perimetres-pastilles';
 	import { perimetresStore } from '$lib/stores/perimetres';
@@ -101,7 +102,7 @@
 				<span class="kanban-count">{items.length + col.tickets.length}</span>
 			</div>
 			{#if items.length === 0 && col.tickets.length === 0}
-				<p class="kanban-empty">Aucune affaire</p>
+				<p class="kanban-empty">{MOT_COLONNE_VIDE}</p>
 			{:else}
 				{#each items as ev (ev.id)}
 					<div

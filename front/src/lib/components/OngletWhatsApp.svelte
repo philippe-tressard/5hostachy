@@ -1,4 +1,8 @@
 <script lang="ts">
+	//  Un seuil employé pour couper ET pour comparer se nomme : écrit deux fois,
+	//  il donne un aperçu tronqué à une longueur et une décision prise à une autre
+	//  le jour où l'un des deux bouge (#1076).
+	const MAX_APERCU_MESSAGE = 120;
 	//  Onglet « WhatsApp » de l'administration — extrait de `admin/+page.svelte`
 	//  le 14/08/2026 : la page dépassait 2 200 lignes et la règle de modularité
 	//  impose de découper le fichier quand on y touche. L'onglet est autonome
@@ -436,7 +440,9 @@
 							<p
 								style="margin:0;white-space:pre-wrap;color:var(--color-text-muted);font-size:.78rem"
 							>
-								{log.message.length > 120 ? log.message.slice(0, 120) + '…' : log.message}
+								{log.message.length > MAX_APERCU_MESSAGE
+									? log.message.slice(0, MAX_APERCU_MESSAGE) + '…'
+									: log.message}
 							</p>
 							{#if log.erreur}
 								<p style="margin:.2rem 0 0;color:#991b1b;font-size:.75rem">
