@@ -225,6 +225,16 @@ async def lifespan(app: FastAPI):
     from app.utils.courriel_boite import relever as _relever_reponses
     scheduler.add_job(_relever_reponses, "interval", minutes=10, id="courriel_reponses")
 
+    #  🔴 Ce qui tourne VRAIMENT est comparé à ce qui est déclaré (#1047). Un
+    #  `add_job` supprimé par mégarde — refactor, fusion, condition mal placée —
+    #  laissait jusqu'ici l'application démarrer normalement : la sauvegarde ne se
+    #  faisait plus, et on l'apprenait le jour d'une restauration.
+    #
+    #  L'analyse statique de la CI ne suffit pas : elle voit l'appel dans le code,
+    #  pas le fait qu'une condition l'ait sauté. Ce contrôle-ci lit le scheduler.
+    from app.utils.taches import verifier_taches_enregistrees
+    verifier_taches_enregistrees(scheduler, _logging.getLogger("taches"))
+
     yield
     # Nettoyage à l'arrêt
     scheduler.shutdown()
