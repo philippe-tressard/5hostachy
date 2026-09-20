@@ -32,7 +32,13 @@ compare.
 4. la valeur d'exemple de `DATABASE_URL` est **celle du code**, donc dans le
    volume monté ;
 5. aucun script versionné ne **regénère** un `.env` ou un `Caddyfile` — c'est le
-   geste exact qui a produit l'incident, et rien n'empêchait de le réintroduire.
+   geste exact qui a produit l'incident, et rien n'empêchait de le réintroduire ;
+6. les deux réglages qui dépendent du **rôle** du nœud (`ORIGIN`,
+   `COOKIE_SECURE`) ne s'écrivent que dans `scripts/lib/lib-env-role.sh` — ils
+   l'étaient quatre fois dans trois scripts (#1077) ;
+7. ce module porte son `--selftest`, et la CI le lance : sans lui, le point 6
+   serait creux — on peut appeler la bonne fonction et qu'elle écrive n'importe
+   quoi.
 
 ⚠️ Le point 3 porte une liste d'exceptions **déclarée** : trois champs de
 `Settings` n'ont volontairement pas leur place dans le gabarit. Le test échoue
@@ -61,18 +67,13 @@ HORS_GABARIT = {
 }
 
 
-#: Écritures dans `.env` qui ne sont PAS une regénération : la bascule ajuste
-#: deux réglages qui dépendent du nœud servant. Clé = (script, extrait de ligne).
-#: Le test échoue aussi quand l'un de ces ajustements disparaît — sinon
-#: l'exception survit à ce qu'elle protégeait.
-AJUSTEMENTS_DECLARES = {
-    (
-        "bascule.sh",
-        "COOKIE_SECURE=false",
-    ): "la bascule bascule aussi l'origine servie (http://192.168.1.22x) : un cookie "
-    "`Secure` ne repartirait pas sur cette origine en clair. ⚠️ Ce réglage reste posé "
-    "quand le trafic public repasse en HTTPS par le tunnel — traité par #1077",
-}
+#: Écritures dans `.env` qui ne sont PAS une regénération. Vide depuis le
+#: 20/09/2026 : la seule qui s'y trouvait — `bascule.sh` ajoutant
+#: `COOKIE_SECURE=false` — est passée par `lib-env-role.sh`, et le test
+#: `test_les_reglages_de_role_ne_s_ecrivent_qu_une_fois` la couvre désormais.
+#: Elle est restée déclarée le temps d'un lot, avec sa réserve écrite, plutôt
+#: que tolérée en silence : c'est la différence entre une exception et un oubli.
+AJUSTEMENTS_DECLARES: dict[tuple[str, str], str] = {}
 
 
 def _cles_du_gabarit() -> list[str]:
@@ -187,6 +188,72 @@ def test_la_base_de_l_exemple_est_celle_du_code_et_dans_le_volume():
     assert chemin.startswith("app/data/"), (
         f"la base est déclarée en `{chemin}`, hors du volume monté par "
         f"docker-compose.yml (`app_data:/app/data`) : elle serait perdue à la recréation"
+    )
+
+
+def test_les_reglages_de_role_ne_s_ecrivent_qu_une_fois():
+    """`ORIGIN` et `COOKIE_SECURE` dépendent du rôle — et d'un seul module.
+
+    Ces deux réglages étaient écrits **quatre fois** dans trois scripts
+    (#1077) : `bascule.sh` pour promouvoir le peer puis pour se rétrograder,
+    `health-watch.sh` au failover, `boot-role-guard.sh` à la promotion au
+    démarrage. Le commentaire de ce dernier disait « identique à bascule.sh
+    phase 5 et health-watch.sh failover » : la copie était **connue et
+    documentée**, jamais supprimée — un commentaire qui décrit une copie note
+    seulement qu'elle existe.
+
+    Elle avait déjà coûté : le « gap .env du 15/07 » que ce même commentaire
+    cite est le jour où une promotion hors bascule n'a pas appliqué ces `sed`,
+    servant le public avec `ORIGIN` sur une IP locale.
+
+    ⚠️ Ce qui rend la chose sérieuse, c'est l'asymétrie des deux gestes :
+    l'actif **retire** la ligne `COOKIE_SECURE` (pour que le défaut sûr de
+    `config.py` s'applique) quand le standby la **pose à false**. Un quatrième
+    appelant qui recopierait le mauvais des deux servirait le public sans
+    drapeau `Secure`, et rien ne le dirait.
+    """
+    module = "lib-env-role.sh"
+    fautes = []
+    for script in sorted((RACINE / "scripts").rglob("*.sh")):
+        if script.name == module:
+            continue
+        for numero, ligne in enumerate(
+            script.read_text(encoding="utf-8", errors="ignore").splitlines(), 1
+        ):
+            nue = ligne.strip()
+            if nue.startswith("#"):
+                continue
+            #  Une ÉCRITURE du réglage : un `sed` qui le remplace ou le
+            #  supprime, un `echo` qui l'ajoute. Le lire (`grep '^ORIGIN='`)
+            #  reste permis — un script a le droit de constater.
+            if re.search(r"(sed|echo|printf).*\b(ORIGIN|COOKIE_SECURE)=", nue):
+                fautes.append(f"{script.relative_to(RACINE)}:{numero} : {nue[:90]}")
+    assert not fautes, (
+        "`ORIGIN` ou `COOKIE_SECURE` écrit hors de scripts/lib/" + module + " :\n"
+        + "\n".join(fautes)
+        + "\n\nAppeler `env_role_appliquer \"$REPO/.env\" actif|standby [ip]`. Les deux "
+        "gestes sont asymétriques — l'actif RETIRE la ligne, le standby la pose à "
+        "false — et une copie qui prend le mauvais des deux sert le public sans "
+        "drapeau Secure."
+    )
+
+
+def test_le_module_de_role_porte_son_autotest():
+    """Le cas ZÉRO : un module sans self-test rendrait le test ci-dessus creux.
+
+    Il suffirait d'appeler `env_role_appliquer` partout et de casser la
+    transformation pour que tout reste vert : le contrôle ne regarde que les
+    points d'écriture, pas ce qu'ils écrivent. Le self-test est l'autre moitié,
+    et le job CI `test-scripts` l'exécute.
+    """
+    module = RACINE / "scripts" / "lib" / "lib-env-role.sh"
+    assert module.exists(), "scripts/lib/lib-env-role.sh a disparu"
+    contenu = module.read_text(encoding="utf-8")
+    assert "--selftest" in contenu, "le module de rôle n'expose plus `--selftest`"
+    ci = (RACINE / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "lib-env-role.sh" in ci and "--selftest" in ci, (
+        "`lib-env-role.sh --selftest` n'est pas lancé par la CI : un contrôle "
+        "écrit et jamais exécuté ne sert à rien"
     )
 
 

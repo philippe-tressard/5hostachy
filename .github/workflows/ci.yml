@@ -403,6 +403,7 @@ jobs:
         # moyen de tester une décision d'infra sans les deux RPi.
         run: |
           bash scripts/lib/lib-role.sh              --selftest
+          bash scripts/lib/lib-env-role.sh          --selftest
           bash scripts/lib/lib-parite.sh            --selftest
           # 🔒 Le verdict du point 19 : barre finale, 404, page derrière une
           # session, site injoignable, et le cas zéro. Il DÉCIDE d'une MEP sur
