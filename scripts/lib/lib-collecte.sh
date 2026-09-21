@@ -110,6 +110,10 @@ echo "deploiement=$DEP"
 BIG=""; for l in /var/log/hostachy-*.log; do [ -f "$l" ] || continue; sz=$(( $(stat -c %s "$l")/1048576 )); [ "$sz" -ge '"$LOG_WARN_MB"' ] && BIG="$BIG $(basename $l):${sz}M"; done
 echo "biglogs=$BIG"
 echo "deploylog_owner=$(stat -c %U /var/log/hostachy-deploy.log 2>/dev/null || echo missing)"
+#  Le DERNIER verdict de build d auto-deploy. Il ecrit une ligne par tick ; celle
+#  qui porte ECHEC du build dit que le code est aligne et pas les images — la
+#  parite git n est pas la parite d image (C27).
+echo "deploy_dernier=$(tail -40 /var/log/hostachy-deploy.log 2>/dev/null | grep -E "^\[" | tail -1 | tr -d "\"" | cut -c1-160)"
 echo "reliability_last=$(tail -3000 /var/log/hostachy-reliability.log 2>/dev/null | grep -oE "check-reliability \([0-9-]{10} [0-9:]{8}\)" | tail -1 | tr -d "()" | cut -d" " -f2-)"
 echo "buildcache=$(docker system df --format "{{.Type}}|{{.Size}}" 2>/dev/null | grep -i "^Build Cache" | cut -d"|" -f2 | tr -d " ")"
 # Motif SANS accent volontairement : ce bloc traverse SSH, et « Hygiène » y

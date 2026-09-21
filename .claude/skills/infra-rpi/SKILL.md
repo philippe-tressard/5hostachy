@@ -278,6 +278,48 @@ rien » :
 Les deux sont couverts par `--selftest`, y compris le cas « standby avec une
 réponse parasite » : ce n'est pas le site, donc rien à constater.
 
+### C27 — auto-deploy a-t-il RÉUSSI son build ? (21/09/2026, #1103)
+
+La bascule nocturne a mis rpi1 en standby, et son `auto-deploy` n'a pas pu lire
+`/opt/5hostachy/.env` : **root:root** là-bas, **ptressard:ptressard** sur rpi2.
+Le code s'est aligné, **les images non**.
+
+> 🔴 **La parité git n'est pas la parité d'image.** Le point **10** du pré-check
+> (« parité de code actif ⇆ standby ») restait **vert** — il dit vrai, et il
+> rassure à tort. Seul le point **18** l'a attrapé, et seulement en MEP.
+
+L'alerte qui devait le dire est morte de la **même cause** : `lib-alert.sh`
+cherche sa configuration SMTP dans ce `.env` illisible. Un canal d'alerte muet
+précisément quand il a quelque chose à dire — la famille de
+`canal_alerte_verifiable`.
+
+| Ce que C27 rend | Conduite |
+|---|---|
+| **OK** | le dernier passage a construit, ou n'avait rien à construire |
+| **FAIL** | le code est à jour, **pas les images** — comparer `ls -l /opt/5hostachy/.env` sur les deux nœuds |
+| **INCONNU** | aucune ligne horodatée lisible ; son silence ne prouve rien |
+
+⚠️ Il regarde le **comportement** (le build a-t-il abouti), pas la cause connue
+(les droits du `.env`) : un contrôle sur les droits serait vert le jour où le
+build échouera pour une autre raison — disque plein, registre injoignable,
+Dockerfile cassé. C13 fait l'inverse pour le **log**, et c'est cohérent : là-bas
+la cause est unique et connue (la rotation re-chown).
+
+🔴 **C'est la troisième divergence rpi1/rpi2** du dépôt, après les sudoers
+(09/08) et un cron en trop sur rpi2 (06/08). Le point 8 compare les crons, le 17
+les points d'entrée — **aucun ne compare les droits des fichiers dont les
+scripts dépendent**, et c'est par là que l'écart est passé.
+
+⚠️ Le correctif demande `sudo`, refusé en `-n` sur les **deux** nœuds depuis le
+durcissement : il n'est pas automatisable depuis une session.
+
+```bash
+sudo chown ptressard:ptressard /opt/5hostachy/.env && sudo chmod 600 /opt/5hostachy/.env
+```
+
+C'est un **durcissement** : le fichier passe de `660 root:root` (lisible par le
+groupe root) à `600 ptressard` — root continue de le lire, personne d'autre.
+
 ### C26 — le verrou a-t-il été posé AVANT la première action ? (12/09/2026, #915)
 
 #915 se terminait sur une phrase gênante : *« le verrou est la coordination ;

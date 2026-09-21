@@ -401,7 +401,7 @@ drapeau `Secure`. C'est le « gap .env du 15/07/2026 ». La règle vit dans
 | `0 2 * * *` `bascule.sh` | bascule active/standby |
 | `0 3 * * 0` `maintenance.sh` | purge, VACUUM, rotation des logs |
 | `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS |
-| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C26** (plus C23 bis ; C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN`. ⚠️ Seuls **C1–C19** vivent dans ce script : C20–C25 sont dans `scripts/lib/lib-conformite.sh`, C26 dans `lib-verdicts.sh` et `lib-verrou.sh` — greper « C25 » dans le fichier nommé ne le trouve pas |
+| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C27** (plus C23 bis ; C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN`. ⚠️ Seuls **C1–C19** vivent dans ce script : C20–C25 sont dans `scripts/lib/lib-conformite.sh`, C26 et **C27** dans `lib-verdicts.sh` (et `lib-verrou.sh` pour C26) — greper « C25 » dans le fichier nommé ne le trouve pas |
 
 **Les tâches de l'API**, elles, tournent **dans le process** et se déclarent dans
 `app/utils/taches.TACHES_PERMANENTES` — avec, pour chacune, **ce qu'on perd** si

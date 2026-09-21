@@ -102,6 +102,7 @@ bascule_en_cours() {  # $1,$2 = mtimes des verrous · $3 = maintenant · $4 = se
   echo "non"
 }
 
+
 # ── C26. Le verrou a-t-il été posé AVANT la première action ? (PURE) ─────────
 #
 # 🔴 #915 se terminait sur : « le verrou est la coordination ; elle tient tant
