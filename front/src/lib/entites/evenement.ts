@@ -135,12 +135,8 @@ export const EVENEMENT: EntiteDeclaree = {
 			objet: 'RichEditor — de quoi il retourne',
 		},
 		{
-			id: 'photos',
-			objet: 'FichiersUpload mode photos',
-		},
-		{
-			id: 'documents',
-			objet: 'FichiersUpload mode documents',
+			id: 'pieces_jointes',
+			objet: 'FichiersUpload mode mixte — photos et documents',
 		},
 		{
 			//  ⚠️ Le TÉLÉVERSEMENT est **immédiat** sur cet écran, et ce n'est pas un

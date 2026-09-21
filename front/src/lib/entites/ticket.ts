@@ -156,20 +156,11 @@ export const TICKET: EntiteDeclaree = {
 			requis: true,
 		},
 		{
-			//  ✅ OUVERTES à l'édition le 18/08/2026. La dette `api` qui les fermait
-			//  est soldée : `TicketUpdate` accepte `photos_urls`, et une liste vide
-			//  efface sans ambiguïté — exactement ce que la déclaration annonçait.
-			//  Un motif `api` est une DETTE, jamais un choix : il tombe quand elle est
-			//  payée, et sa disparition d'ici est la preuve qu'elle l'a été.
-			id: 'photos',
-			objet: 'FichiersUpload mode photos',
-		},
-		{
-			//  Ouverts à l'édition depuis le cadre : `fichiers_urls` EST accepté par
-			//  `TicketUpdate`, et une liste vide efface sans ambiguïté — la dette qui
-			//  ferme les photos n'a donc aucune raison de fermer les documents.
-			id: 'documents',
-			objet: 'FichiersUpload mode documents',
+			//  Les documents sont ouverts à l'édition depuis le cadre :
+			//  `fichiers_urls` EST accepté par `TicketUpdate`, et une liste vide
+			//  efface sans ambiguïté.
+			id: 'pieces_jointes',
+			objet: 'FichiersUpload mode mixte — photos et documents',
 		},
 		{
 			id: 'diffusion',

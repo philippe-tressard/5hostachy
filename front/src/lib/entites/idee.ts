@@ -142,15 +142,10 @@ export const IDEE: EntiteDeclaree = {
 			requis: true,
 		},
 		{
-			id: 'photos',
+			id: 'pieces_jointes',
 			sansObjet:
 				'Une idée se raconte, elle ne se photographie pas — elle porte sur ce qui ' +
-				"n'existe pas encore. Rien côté serveur n'en porte.",
-		},
-		{
-			id: 'documents',
-			sansObjet:
-				"Même raison que les photos : rien côté serveur n'en porte. Un devis ou un plan " +
+				"n'existe pas encore. Rien côté serveur n'en porte : un devis ou un plan " +
 				"relèvent du ticket ou de l'événement qui suivra, si l'idée est retenue.",
 		},
 		{

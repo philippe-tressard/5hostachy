@@ -195,8 +195,12 @@ export const ANNONCE: EntiteDeclaree = {
 			//
 			//  🔴 Motif `api`, donc DETTE : elle cite #441, qui porte la mise au cadre
 			//  de la rubrique Communauté. Un motif `api` n'entérine jamais un choix.
-			id: 'photos',
-			objet: 'FichiersUpload mode photos (5 maximum)',
+			//
+			//  ⚠️ La section ne porte que des PHOTOS : une petite annonce se décrit et
+			//  se photographie, elle n'a pas de pièce jointe à télécharger. C'est un
+			//  fait sur l'objet, pas une divergence entre états.
+			id: 'pieces_jointes',
+			objet: 'FichiersUpload mode photos (5 maximum) — pas de document',
 			absente: {
 				creation: {
 					motif: 'api',
@@ -219,13 +223,6 @@ export const ANNONCE: EntiteDeclaree = {
 					explication: "Les photos sont celles de l'annonce ; une réponse n'en ajoute pas.",
 				},
 			},
-		},
-		{
-			id: 'documents',
-			sansObjet:
-				"Une petite annonce se décrit et se photographie ; elle n'a pas de pièce jointe " +
-				'à télécharger. Aucun écran n’en a jamais proposé, et rien côté serveur n’en ' +
-				'porte.',
 		},
 		{
 			//  La seule chose qui PART d'une annonce est le fait de montrer, ou non, ses
