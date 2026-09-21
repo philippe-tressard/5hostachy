@@ -154,6 +154,60 @@ export const PAGES: PageDef[] = [
 		],
 	},
 	{
+		id: 'actualites',
+		href: '/actualites',
+		nom: 'Actualités',
+		titre: 'Actualités',
+		navLabel: 'Actualités',
+		icone: 'newspaper',
+		descriptif:
+			'Publications officielles du conseil syndical : informations importantes, travaux et actualités de la résidence.',
+	},
+	{
+		id: 'mes-demandes',
+		href: '/tickets',
+		nom: 'Affaires',
+		titre: 'Mes affaires',
+		navLabel: 'Affaires',
+		icone: 'message-square-text',
+		descriptif:
+			'Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos affaires.',
+	},
+	{
+		id: 'calendrier',
+		href: '/calendrier',
+		nom: 'Calendrier',
+		titre: 'Calendrier',
+		navLabel: 'Calendrier',
+		icone: 'calendar-days',
+		descriptif: 'Agenda des événements et interventions de la résidence.',
+		onglets: [
+			{
+				id: 'liste',
+				route: '/calendrier',
+				label: '\u{1F4CB} Liste',
+				descriptif: 'Les événements, du plus lointain au plus ancien.',
+			},
+			{
+				id: 'kanban',
+				route: '/calendrier/kanban',
+				reserve: 'nonLocataire',
+				label: '\u{1F5C3}️ Kanban',
+				descriptif: 'Organisation visuelle des événements par statut.',
+			},
+			{
+				id: 'archives',
+				route: '/calendrier/archives',
+				reserve: 'nonLocataire',
+				//  Le mot ET son icône viennent de `$lib/archives` : ils étaient recopiés
+				//  ici, et #516 existe précisément pour qu'« Archives » ne s'écrive qu'une
+				//  fois — la recopie concordait, à l'instant où on l'avait posée.
+				label: TITRE_ARCHIVES,
+				descriptif: 'Actualités et événements archivés.',
+			},
+		],
+	},
+	{
 		id: 'mon-lot',
 		href: '/mon-lot',
 		//  🔴 « Mes lots & accès » (12/09/2026, #928) : la page réunit ce qui était
@@ -258,60 +312,6 @@ export const PAGES: PageDef[] = [
 		],
 	},
 	{
-		id: 'calendrier',
-		href: '/calendrier',
-		nom: 'Calendrier',
-		titre: 'Calendrier',
-		navLabel: 'Calendrier',
-		icone: 'calendar-days',
-		descriptif: 'Agenda des événements et interventions de la résidence.',
-		onglets: [
-			{
-				id: 'liste',
-				route: '/calendrier',
-				label: '\u{1F4CB} Liste',
-				descriptif: 'Les événements, du plus lointain au plus ancien.',
-			},
-			{
-				id: 'kanban',
-				route: '/calendrier/kanban',
-				reserve: 'nonLocataire',
-				label: '\u{1F5C3}️ Kanban',
-				descriptif: 'Organisation visuelle des événements par statut.',
-			},
-			{
-				id: 'archives',
-				route: '/calendrier/archives',
-				reserve: 'nonLocataire',
-				//  Le mot ET son icône viennent de `$lib/archives` : ils étaient recopiés
-				//  ici, et #516 existe précisément pour qu'« Archives » ne s'écrive qu'une
-				//  fois — la recopie concordait, à l'instant où on l'avait posée.
-				label: TITRE_ARCHIVES,
-				descriptif: 'Actualités et événements archivés.',
-			},
-		],
-	},
-	{
-		id: 'actualites',
-		href: '/actualites',
-		nom: 'Actualités',
-		titre: 'Actualités',
-		navLabel: 'Actualités',
-		icone: 'newspaper',
-		descriptif:
-			'Publications officielles du conseil syndical : informations importantes, travaux et actualités de la résidence.',
-	},
-	{
-		id: 'mes-demandes',
-		href: '/tickets',
-		nom: 'Affaires',
-		titre: 'Mes affaires',
-		navLabel: 'Affaires',
-		icone: 'message-square-text',
-		descriptif:
-			'Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos affaires.',
-	},
-	{
 		id: 'communaute',
 		href: '/sondages',
 		nom: 'Communauté',
@@ -352,6 +352,8 @@ export const PAGES: PageDef[] = [
 	},
 	//  Les pages réservées à un RÔLE vivent dans `pages-roles.ts` (#928) : ce
 	//  fichier a franchi son plafond, et la coupe suit ce que les pages SONT.
+	//  Elles ferment le menu — Espace CS, Admin, Délégations — et précèdent les
+	//  pages hors menu (profil, notifications), qui n'ont pas de rang.
 	...PAGES_ROLES,
 	{
 		id: 'profil',

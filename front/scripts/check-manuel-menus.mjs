@@ -25,21 +25,26 @@
  *   1. l'ensemble des routes citées = l'ensemble des routes de \`pages.ts\` ;
  *   2. le public annoncé = ce que \`Nav.svelte\` applique.
  *
- * ## ⚠️ CE QU'IL NE PEUT PAS VÉRIFIER : L'ORDRE
+ * ## L'ORDRE : vérifié depuis le 22/09/2026, et jusqu'où
  *
- * Le manuel présente les écrans dans l'ordre du menu. Mais cet ordre ne vit pas
- * dans le code : il est dans `pages_order`, une clé de `ConfigSite` que
- * l'administration réordonne. `pages.ts` n'en porte que le défaut, et la
- * production s'en écarte — c'est ce qui a été signalé le 03/09/2026, *« les
- * écrans n'est pas celui effectif des menus »*.
+ * Ce paragraphe disait l'inverse — *« ce contrôle vérifie l'ENSEMBLE des routes
+ * et le PUBLIC de chacune, jamais leur ordre »* — au motif que l'ordre vit dans
+ * `pages_order`, une clé que l'administration réordonne.
  *
- * Ce contrôle vérifie donc l'ENSEMBLE des routes et le PUBLIC de chacune, jamais
- * leur ordre. Le relever avant de retoucher la grille :
+ * 🔴 C'était vrai de l'ordre **servi**, faux de l'ordre **par défaut**. Les
+ * maquettes annoncent en toutes lettres « le menu le plus complet, dans son
+ * ordre par défaut » : cet ordre-là, le code le porte, et il se compare. Il ne
+ * l'était pas, et les deux listes écrites à la main avaient dérivé — signalé à
+ * l'écran, capture à l'appui, huit entrées sur treize au mauvais rang.
+ *
+ * ⚠️ Ce qui reste hors de portée, et c'est #1114 : l'ordre **réellement servi**
+ * si la copropriété l'a réordonné. Aucune sonde ne le compare au défaut — et
+ * `pages_order` porte encore un identifiant qui n'existe plus (`acces-badges`,
+ * retiré du menu le 12/09/2026), que `Nav.svelte` ignore en silence.
+ *
+ * Pour le relever :
  *
  *     curl -s https://5hostachy.fr/api/config | grep -o '"pages_order":"[^"]*"'
- *
- * Une limite nommée vaut mieux qu'une limite tue : sans ce paragraphe, un vert
- * ici se lirait comme « le manuel est conforme au menu », ce qu'il ne dit pas.
  *
  * ⚠️ **La prose ne se lit pas comme une table** — #651 le dit lui-même, et un
  * contrôle qui crie sur du légitime finit désarmé. Les attributs sont la réponse :
@@ -53,6 +58,7 @@ import { readFileSync } from 'node:fs';
 const RACINE = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const MANUEL = `${RACINE}../docs/manuel-utilisateur.html`;
 const PAGES = `${RACINE}src/lib/pages.ts`;
+const ROLES = `${RACINE}src/lib/pages-roles.ts`;
 const NAV = `${RACINE}src/lib/components/Nav.svelte`;
 
 /**
@@ -149,6 +155,33 @@ for (const m of nav.matchAll(/if \(href === '([^']+)'\)/g)) {
 //  ⚠️ On ne vérifie PAS que les maquettes citent les mêmes routes que la grille :
 //  une maquette est une illustration, elle peut légitimement s'arrêter avant la
 //  fin. Ce qu'on exige, c'est qu'elles soient d'accord ENTRE ELLES.
+/**
+ *  L'ordre du menu PAR DÉFAUT, dérivé des deux tables du code.
+ *
+ *  `pages.ts` porte les écrans ouverts à tous, `pages-roles.ts` ceux réservés —
+ *  et le menu les rend dans cet ordre-là quand aucun `pages_order` n'a été
+ *  enregistré. Les maquettes du manuel annoncent ce même ordre : elles ne le
+ *  recopient donc pas, elles s'y comparent.
+ */
+function ordreParDefaut() {
+	const libelle = (bloc) => {
+		const m = bloc.match(/navLabel: '([^']+)'/);
+		return m ? m[1] : null;
+	};
+	const noms = [];
+	for (const fichier of [PAGES, ROLES]) {
+		const src = readFileSync(fichier, 'utf8');
+		const table = src.slice(src.indexOf('PageDef[] = ['));
+		for (const bloc of table.split(/^\t\{$/m).slice(1)) {
+			//  Une page sans `href` ne paraît pas au menu (profil, notifications).
+			if (/href: null/.test(bloc.split(/^\t\},$/m)[0])) continue;
+			const nom = libelle(bloc.split(/^\t\},$/m)[0]);
+			if (nom) noms.push(nom);
+		}
+	}
+	return noms;
+}
+
 const duo = manuel.match(/<div class="maq-duo">([\s\S]*?)<\/div>\s*<p class="maq-note"/);
 if (!duo) {
 	erreurs.push('les deux maquettes du menu sont introuvables (`.maq-duo`)');
@@ -167,6 +200,50 @@ if (!duo) {
 				`les deux maquettes divergent : ${bureau} entrées sur ordinateur, ` +
 					`${mobile} sur téléphone — c'est pourtant le même menu`,
 			);
+		}
+
+		//  ════════════════════════════════════════════════════════════════════
+		//  L'ORDRE DES ENTRÉES (22/09/2026, signalé à l'écran)
+		//  ════════════════════════════════════════════════════════════════════
+		//
+		//  🔴 Les maquettes portaient un ordre écrit à la main, et il ne
+		//  correspondait plus à rien : ni au menu en service, ni au défaut du
+		//  code. L'en-tête de ce contrôle DÉCLARAIT ne pas vérifier l'ordre — au
+		//  motif qu'il vit dans `pages_order`, une clé administrable. C'était
+		//  vrai pour l'ordre SERVI ; ça ne l'était pas pour l'ordre PAR DÉFAUT,
+		//  que le code porte et que les maquettes annoncent en toutes lettres.
+		//
+		//  Ce qui est comparé est donc exactement ce que le manuel promet : « le
+		//  menu le plus complet, dans son ordre PAR DÉFAUT ».
+		//
+		//  ⚠️ Ce qui reste hors de portée : l'ordre réellement servi, s'il a été
+		//  réordonné en administration (#1114). Une limite nommée vaut mieux
+		//  qu'une limite tue.
+		//  ⚠️ Les entités HTML se décodent avant de comparer : le manuel écrit
+		//  « Mes lots &amp; accès », le code « Mes lots & accès ». Sans cela, une
+		//  entrée correcte serait refusée pour une raison d'écriture.
+		const libelles = (f) =>
+			[...f.matchAll(/class="maq-item"><span>([^<]+)<\/span>/g)].map((m) =>
+				m[1]
+					.trim()
+					.replace(/&amp;/g, '&')
+					.replace(/&nbsp;/g, ' '),
+			);
+		const attendus = ordreParDefaut();
+		for (const [nom, figure] of [
+			['ordinateur', figures[0]],
+			['téléphone', figures[1]],
+		]) {
+			const lus = libelles(figure);
+			if (lus.length === 0) {
+				erreurs.push(`maquette ${nom} : aucun libellé lisible — le motif a dérivé`);
+			} else if (lus.join(' · ') !== attendus.join(' · ')) {
+				erreurs.push(
+					`maquette ${nom} — l'ordre du menu ne suit pas le code :\n` +
+						`        manuel : ${lus.join(' · ')}\n` +
+						`        code   : ${attendus.join(' · ')}`,
+				);
+			}
 		}
 
 		//  🔴 LE BOUTON DU TÉLÉPHONE DOIT ÊTRE DESSINÉ ET EXPLIQUÉ (04/09/2026).
