@@ -388,10 +388,10 @@
 	      couple `id` sur le titre / `aria-labelledby` sur le groupe. -->
 	<SectionFormulaire
 		premiere={premierePerimetre}
-		titre={SECTIONS_LIBELLE.qui_le_voit}
+		titre={SECTIONS_LIBELLE.perimetre}
 		requis={perimetreRequis}
 		badge={perimetreBadge ?? badgePerimetre}
-		pliable={plie('qui_le_voit')}
+		pliable={plie('perimetre')}
 		ouvrirSiRenseignee={!estPerimetreParDefaut(perimetre)}
 		idTitre="{idPrefixe}-perimetre-titre"
 	>

@@ -301,7 +301,9 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       « Affaire ». Il y en avait **20** avant #1107 (`npm run lint:vocabulaire-ecran`)
 - [ ] Périmètre : masqué s'il est celui par défaut (`estPerimetreParDefaut`)
 - [ ] Archiver (pas supprimer) sur la vue principale
-- [ ] Champs requis : label + ` *`
+- [ ] Champs requis : label + `*` **collé**, et l'astérisque est **rouge tant
+      que le champ est vide** (décidé le 21/09/2026 ; implémentation #1121 —
+      le code porte encore ` *` partout)
 - [ ] Tout champ libellé dans un `.field` — jamais une nomenclature locale
       (`npm run lint:champs` ; il y en avait **six** avant #413)
 

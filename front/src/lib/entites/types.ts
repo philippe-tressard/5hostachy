@@ -62,7 +62,7 @@ export type IdSection =
 	| 'suivi'
 	| 'quand'
 	| 'intervenant'
-	| 'qui_le_voit'
+	| 'perimetre'
 	| 'description'
 	| 'pieces_jointes'
 	| 'au_nom_de'
@@ -100,7 +100,7 @@ export const SECTIONS_ORDRE: readonly IdSection[] = [
 	'suivi',
 	'quand',
 	'intervenant',
-	'qui_le_voit',
+	'perimetre',
 	'description',
 	'pieces_jointes',
 	'au_nom_de',
@@ -124,13 +124,48 @@ export const SECTIONS_LIBELLE: Readonly<Record<IdSection, string>> = {
 	suivi: 'Suivi',
 	quand: 'Quand',
 	intervenant: 'Intervenant',
-	qui_le_voit: 'Qui le voit',
+	perimetre: 'Périmètre',
 	description: 'Description',
 	pieces_jointes: 'Pièces jointes',
 	au_nom_de: 'Au nom de',
 	mise_en_avant: 'Mise en avant',
 	destinataires: 'Destinataires',
 	diffusion: 'Diffusion',
+};
+
+/**
+ * **Les libellés de section ABANDONNÉS** — l'ancien nom, et celui qui l'a
+ * remplacé.
+ *
+ * 🔴 Pourquoi une table et pas une simple mémoire (#1094, 21/09/2026). Le cadre
+ * a renommé quatre sections en deux jours, et `SectionWorkflow` affichait
+ * encore « Workflow » deux lots après la bascule : son intitulé était écrit EN
+ * DUR, et `lint:etats` ne le voyait pas — il ne lit que les fichiers qui
+ * consomment une entité déclarée, et ce composant-là n'en consomme aucune.
+ *
+ * ⚠️ Un intitulé LIBRE reste libre : « Le contrat », « L'entreprise »,
+ * « Prompt » ne sont pas des sections du cadre, et les exiger dans la table
+ * ferait crier le contrôle sur du légitime. Ce qui est interdit, c'est
+ * d'afficher un nom que le cadre a explicitement abandonné.
+ *
+ * 🔴 **Deux entrées, et pas quatre.** « Périmètre » et « Options de
+ * publication » ont aussi été renommés, et ils ne sont PAS ici : ce sont des
+ * mots communs, qui servent ailleurs légitimement — « Filtrer par périmètre »,
+ * « Nouveau périmètre de premier niveau », « Périmètre d'affichage » d'une
+ * affiche de hall. Le contrôle les a tous signalés au premier passage, et il
+ * avait tort six fois sur sept.
+ *
+ * Ne restent que les mots qui n'ont **aucun autre emploi** dans le produit. Un
+ * contrôle qui crie sur du légitime finit désarmé — c'est la leçon de C16, et
+ * elle vaut ici comme ailleurs.
+ *
+ * 🔒 `npm run lint:vocabulaire-ecran` lit cette table comme il lit `motDeCode`
+ * dans les entités et `motAbandonne` dans `$lib/gestes` : trois sources, une
+ * règle — un mot qu'on a cessé de dire ne se réécrit nulle part.
+ */
+export const SECTIONS_LIBELLE_ABANDONNE: Readonly<Record<string, IdSection>> = {
+	Workflow: 'suivi',
+	'Champs spécifiques': 'nature',
 };
 
 /** Les quatre rendus d'une même entité. */

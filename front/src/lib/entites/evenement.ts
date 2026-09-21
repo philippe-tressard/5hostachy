@@ -122,7 +122,7 @@ export const EVENEMENT: EntiteDeclaree = {
 				"avec la date et le lieu : ensemble, ils DÉFINISSENT l'intervention.",
 		},
 		{
-			id: 'qui_le_voit',
+			id: 'perimetre',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
 			absente: {

@@ -78,7 +78,7 @@
 		<slot name="specifiques" />
 	{:else if s.id === 'suivi'}
 		<slot name="workflow" />
-	{:else if s.id === 'qui_le_voit'}
+	{:else if s.id === 'perimetre'}
 		{#if textePerimetre}
 			<p class="fiche-perimetre">&#x1F539; {textePerimetre}</p>
 		{/if}

@@ -90,7 +90,8 @@ INTERDITS = {
             r"(?:Panne|Nuisance|Propreté|Espaces verts|Sinistre|Étude|Question|Bug)"
             r"[^<]*</strong>[^<]*(?:—|–|-|:)[^<]{10,}?</li>\s*){3,}"
         ),
-        "la source est `CATEGORIES_TICKET` (front/src/lib/tickets.ts) ; l'écran "
+        "la source est `CATEGORIES_TICKET` (front/src/lib/tickets-categories.ts) ; "
+        "l'écran "
         "affiche déjà chaque description sous sa tuile, au moment où l'on choisit. "
         "Le manuel dit COMMENT choisir, il n'énumère pas",
     ),

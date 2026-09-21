@@ -1,0 +1,224 @@
+/**
+ * Les **catégories d'une affaire** — la table, ses dérivés, et le repère 📒.
+ *
+ * Extrait de `tickets.ts` le 21/09/2026 : le fichier passait 500 lignes en
+ * accueillant le drapeau `carnet`, et la modularité (rang 1) se règle « au fil
+ * de l'eau » — on découpe quand on y touche.
+ *
+ * ⚠️ `tickets.ts` **réexporte** tout ce module : aucun écran n'a changé
+ * d'import, et `$lib/tickets` reste la porte du domaine. Ce qui a changé est le
+ * FICHIER que les contrôles lisent — `check-choix-requis.mjs`,
+ * `test_categories_ticket_concordance.py` et `test_manuel_ne_recopie_rien.py`
+ * pointent ici.
+ */
+
+export interface CategorieTicket {
+	/** Valeur envoyée à l'API — jamais traduite. */
+	value: string;
+	/** Libellé seul. */
+	label: string;
+	/** Pastille de contexte. */
+	emoji: string;
+	/** Ce que la catégorie recouvre, pour aider à choisir à la création. */
+	description: string;
+	/**
+	 *  Cette catégorie alimente-t-elle le **carnet d'entretien** ?
+	 *
+	 *  Demandé à l'écran le 21/09/2026 : *« Identifie visuellement différemment
+	 *  les catégories qui sont prises en compte légalement dans le Carnet
+	 *  d'entretien »*. Une affaire close dans l'une d'elles y apparaît
+	 *  définitivement — ce n'est pas une nuance de rangement, c'est un document
+	 *  qu'un acquéreur peut réclamer.
+	 *
+	 *  🔴 **La liste fait autorité côté SERVEUR** (`CATEGORIES_BATI`,
+	 *  `app/utils/carnet_entretien.py`) : c'est elle qui filtre réellement. Ce
+	 *  drapeau en est la copie d'affichage — inévitable, les contextes de build
+	 *  Docker étant `./api` et `./front` — et
+	 *  `api/tests/test_categories_ticket_concordance.py` refuse qu'ils
+	 *  divergent, dans les deux sens. Sans ce test, l'écran promettrait une
+	 *  inscription au carnet que le serveur ne ferait pas.
+	 */
+	carnet?: boolean;
+}
+
+/**  La marque posée sur une catégorie du carnet, et la phrase qui l'explique.
+ *
+ *  Une marque sans légende est un symbole que personne ne décode : les deux
+ *  s'écrivent ici, ensemble, et l'écran les lit — il n'en recopie aucune. */
+export const MARQUE_CARNET = '📒';
+export const LEGENDE_CARNET =
+	'📒 Une affaire close dans cette catégorie est consignée au carnet d’entretien ' +
+	'de la copropriété, consultable par tout copropriétaire (décret n° 2001-477).';
+
+/**
+ *  Les huit catégories, **dans l'ordre de fréquence attendue** en copropriété.
+ *
+ *  🔴 L'ordre est une décision, pas le résidu de celui où on les a écrites. Sur
+ *  deux lignes de quatre :
+ *
+ *      Panne · Nuisance & propreté · Accès & accueil · Espaces verts
+ *      Sinistre · Étude & travaux · Question · Bug
+ *
+ *  ⚠️ « Accès & accueil » A ÉTÉ REMONTÉE en 3ᵉ le 07/09/2026, et c'est un
+ *  effet du lot précédent : depuis que cocher « Nouvel arrivant » ouvre un
+ *  ticket de suivi, chaque emménagement en produit un. Elle était 6ᵉ, donc en
+ *  seconde ligne — reléguée au moment même où elle devenait fréquente.
+ *
+ *  ⚠️ L'alphabétique a été écarté : il mettrait « Bug » en tête et « Sinistre »
+ *  en avant-dernier. Un ordre qui ne dit rien du métier oblige à lire les huit
+ *  entrées à chaque fois ; celui-ci fait que la plupart des gens s'arrêtent aux
+ *  trois premières.
+ *
+ *  ⚠️ « Sinistre » en seconde ligne est assumé : quelqu'un qui a un dégât des
+ *  eaux lit les huit vignettes de toute façon. Le formulaire sert à choisir
+ *  vite, pas à contempler une taxonomie.
+ */
+export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
+	{
+		value: 'panne',
+		label: 'Panne',
+		carnet: true,
+		emoji: '\u{1F6E0}️',
+		//  🔴 « éclairage » et « fuite » sont NOMMÉS, et « à réparer » conclut.
+		//  Questionné le 07/09/2026 : *« une fuite goutte-à-goutte dans les communs,
+		//  Panne ou Sinistre ? Idem pour une ampoule grillée. »* Les deux sont des
+		//  pannes — mais la description ne le disait pas, et c'est ce qui rendait la
+		//  question nécessaire. Quelqu'un qui cherche « Électricité » ne trouvait
+		//  rien.
+		description: 'Ascenseur, chauffage, éclairage, fuite, porte — à réparer',
+	},
+	/*  🔴 UNE SEULE CATÉGORIE, après avoir essayé d'en faire deux (07/09/2026).
+
+	    J'avais séparé « Nuisance » et « Propreté » sur l'argument « deux
+	    prestataires différents ». Signalé le soir même : *« très sincèrement,
+	    Propreté je la regrouperais dans Nuisance en complétant le libellé »*.
+	    C'est juste, et l'erreur était la mienne — trois signes le disaient déjà :
+
+	    • dans les faits le GESTE est le même : le conseil relaie au syndic ou au
+	      prestataire, il ne fait pas deux choses différentes ;
+	    • le recouvrement, je l'avais ADMIS en écrivant qu'« un encombrant
+	      abandonné dans le hall est les deux à la fois » ;
+	    • et j'avais dû EXPLIQUER LA FRONTIÈRE dans le manuel. Une frontière qu'il
+	      faut expliquer est une frontière qui n'existe pas.
+
+	    Le critère du projet — « une catégorie ne se justifie que si elle change ce
+	    qu'on FAIT du ticket » — était le bon ; c'est mon application qui était
+	    fausse, en prenant « qui exécute in fine » pour « qui traite ». */
+	{
+		value: 'nuisance',
+		label: 'Nuisance & propreté',
+		emoji: '\u{1F4E2}',
+		description: 'Bruit, odeurs, stationnement, parties communes, encombrants',
+	},
+	{
+		value: 'acces_accueil',
+		label: 'Accès & accueil',
+		//  ⚠️ Le badge et la télécommande N'Y SONT PAS, et c'est délibéré :
+		//  `CommandeAcces` porte déjà le lot, la quantité, le motif et son propre
+		//  workflow (écran « Accès & sécurité »). Un ticket y perdrait tout. Cette
+		//  catégorie est pour ce qui n'a AUCUN circuit dédié — l'interphone, la
+		//  boîte aux lettres, et le suivi d'un emménagement.
+		emoji: '\u{1F511}',
+		description: 'Interphone, boîte aux lettres, emménagement',
+	},
+	{
+		value: 'espaces_verts',
+		label: 'Espaces verts',
+		carnet: true,
+		emoji: '\u{1F333}',
+		description: 'Élagage, haies, arrosage, allées…',
+	},
+	{
+		value: 'sinistre',
+		label: 'Sinistre',
+		carnet: true,
+		//  ⚠️ La description porte les mots du RÉSIDENT — « dégât des eaux »,
+		//  « fuite » — là où le libellé porte celui de l'assureur. Le sinistre est
+		//  ce qui déclenche une déclaration sous cinq jours ouvrés ; c'est la
+		//  procédure qui fait la catégorie, pas la cause.
+		emoji: '\u{1F4A7}',
+		//  🔴 « Dégât CONSTATÉ » ouvre la description, et ce mot fait tout le
+		//  travail. La frontière avec « Panne » n'est pas l'eau, c'est le DOMMAGE :
+		//  une fuite qu'on répare est une panne ; de l'eau chez le voisin, un
+		//  plafond taché, un parquet gondolé — il y a un tiers lésé et un délai
+		//  d'assurance, c'est un sinistre.
+		description: 'Dégât constaté : eau, incendie, vandalisme — déclaration à l’assurance',
+	},
+	{
+		value: 'etude_travaux',
+		label: 'Étude & travaux',
+		carnet: true,
+		emoji: '\u{1F3D7}️',
+		description: 'Diagnostic, sondage, devis, chantier suivi par le conseil',
+	},
+	{ value: 'question', label: 'Question', emoji: '❓', description: 'Information, procédure…' },
+	{
+		value: 'bug',
+		label: 'Bug',
+		emoji: '\u{1F41B}',
+		//  Arbitré à l'écran le 30/08/2026. « le site ou l'application » décrivait
+		//  le support ; le résident, lui, cherche le NOM de ce qu'il utilise —
+		//  et il n'a pas à savoir si sa gêne vient du site ou de la PWA.
+		description: 'Pb technique sur 5Hostachy',
+	},
+];
+
+//: Emoji seul — la pastille de contexte d'une carte. Repli sur 📋 : une catégorie
+//: retirée du référentiel ne doit pas laisser une carte sans repère.
+export const CATEGORIE_TICKET_EMOJI: Record<string, string> = Object.fromEntries(
+	CATEGORIES_TICKET.map((c) => [c.value, c.emoji]),
+);
+
+//: « 🛠️ Panne » — la forme complète, celle des filtres, des badges et des choix.
+export const CATEGORIE_TICKET_LABELS: Record<string, string> = Object.fromEntries(
+	CATEGORIES_TICKET.map((c) => [c.value, `${c.emoji} ${c.label}`]),
+);
+
+//  Elles vivaient en QUATRE endroits le 17/08/2026 : la grille de choix de
+//  `FormulaireTicket` (valeur + libellé + description), la table `CATEGORIES` de
+//  la fiche d'un ticket, la table `CAT_ICON` de la liste, et six boutons de
+//  filtre écrits en dur dans le balisage de cette même liste. Aucune n'était
+//  dérivée d'une autre — exactement le motif qui avait fait diverger les statuts
+//  (#415), à ceci près qu'ici l'écart n'a pas encore eu le temps de se produire.
+//
+//  ⚠️ La catégorie **qualifie le titre** : elle appartient à la section 1 du
+//  cadre (#430), pas à une section « Détails ».
+
+/** Emoji d'une catégorie, jamais vide. */
+export function categorieTicketEmoji(categorie: string | undefined | null): string {
+	return CATEGORIE_TICKET_EMOJI[categorie ?? ''] ?? '\u{1F4CB}';
+}
+
+/** « 🛠️ Panne », valeur brute à défaut (jamais vide). */
+export function categorieTicketLabel(categorie: string | undefined | null): string {
+	return CATEGORIE_TICKET_LABELS[categorie ?? ''] ?? categorie ?? '';
+}
+
+/**
+ *  Les catégories telles que `ChoixPastilles` les attend — `val`/`label`/`desc`,
+ *  et le repère 📒 des catégories du carnet.
+ *
+ *  🔴 Elle vivait dans `FormulaireTicket`, qui est le seul écran à s'en servir.
+ *  Elle remonte ici le 21/09/2026 pour deux raisons : le formulaire dépassait
+ *  500 lignes, et surtout la marque du carnet se déduit de la TABLE — la poser
+ *  chez l'appelant aurait mis la règle (« quelles catégories sont marquées »)
+ *  à distance de la donnée qui la porte.
+ *
+ *  ⚠️ `CATEGORIES_TICKET` parle en `value`/`description`, `ChoixPastilles` en
+ *  `val`/`desc` : l'adaptation se fait ici, et non par une variante du
+ *  composant — une variante ajoutée pour accueillir un écart existant ne
+ *  factorise pas, elle entérine.
+ */
+export const OPTIONS_CATEGORIE: readonly {
+	val: string;
+	label: string;
+	desc: string;
+	marque?: string;
+	marqueAide?: string;
+}[] = CATEGORIES_TICKET.map((c) => ({
+	val: c.value,
+	label: `${c.emoji} ${c.label}`,
+	desc: c.description,
+	marque: c.carnet ? MARQUE_CARNET : undefined,
+	marqueAide: c.carnet ? 'consignée au carnet d’entretien' : undefined,
+}));

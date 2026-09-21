@@ -152,7 +152,7 @@ export const PUBLICATION: EntiteDeclaree = {
 				'pas. Le jour où elle demande un suivi, elle devient une affaire (#1094).',
 		},
 		{
-			id: 'qui_le_voit',
+			id: 'perimetre',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
 			//  Ouvert à l'évolution le 05/09/2026 (voir la section 2 ci-dessus) :

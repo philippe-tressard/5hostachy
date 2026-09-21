@@ -151,7 +151,7 @@ export const ANNONCE: EntiteDeclaree = {
 		{
 			//  ✅ OUVERT le 18/08/2026 (migration 0151) — voir l'en-tête de ce fichier
 			//  pour ce que l'écran avait décrété à la place du produit.
-			id: 'qui_le_voit',
+			id: 'perimetre',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
 			absente: {

@@ -394,7 +394,7 @@
 				avecQuand={sectionPresente(PUBLICATION, etat, 'quand')}
 				bind:debut
 				bind:fin
-				avecPerimetre={sectionPresente(PUBLICATION, etat, 'qui_le_voit')}
+				avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
 				bind:perimetre={perimetreCible}
 				avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')}
 				bind:destinataires={publicCible}

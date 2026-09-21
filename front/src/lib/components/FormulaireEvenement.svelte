@@ -326,7 +326,7 @@
 				envoiEnCours={submitting}
 				on:envoyer={confirmerEnvoi}
 				idPrefixe="ev"
-				avecPerimetre={sectionPresente(EVENEMENT, etat, 'qui_le_voit')}
+				avecPerimetre={sectionPresente(EVENEMENT, etat, 'perimetre')}
 				bind:perimetre={formPerimetreCible}
 				avecDescription={sectionPresente(EVENEMENT, etat, 'description')}
 				bind:description={form.description}

@@ -49,7 +49,7 @@
 	import SectionsSpecifiquesTicket from '$lib/components/SectionsSpecifiquesTicket.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { CATEGORIES_TICKET, optionsDuTicket, optionsVersTicket } from '$lib/tickets';
+	import { OPTIONS_CATEGORIE, optionsDuTicket, optionsVersTicket } from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
@@ -83,17 +83,6 @@
 	 *   refuse. Le mode ne change pas pendant la vie du composant. */
 	const etat: Etat = modeEdition ? 'edition' : 'creation';
 
-	//  `CATEGORIES_TICKET` parle en `value`/`description`, `ChoixPastilles` en
-	//  `val`/`desc` : l'adaptation se fait ICI, chez l'appelant, et non par une
-	//  variante du composant — la table est verrouillée côté API par
-	//  `test_statuts_tickets.py`, et une variante ajoutée pour accueillir un
-	//  écart existant ne factorise pas, elle entérine (R3 bis).
-	const OPTIONS_CATEGORIE = CATEGORIES_TICKET.map((c) => ({
-		val: c.value,
-		label: `${c.emoji} ${c.label}`,
-		desc: c.description,
-	}));
-
 	const dispatch = createEventDispatcher<{ cree: Ticket; modifie: Ticket; annule: void }>();
 
 	let titre = ticket?.titre ?? '';
@@ -104,7 +93,12 @@
 	let fin = pourChampLocal(ticket?.fin);
 	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
 	let assisteIA = false;
-	let categorie = ticket?.categorie ?? 'panne';
+	//  🔴 AUCUNE catégorie présélectionnée (21/09/2026, demandé à l'écran).
+	//  « Panne » l'était, et c'était un choix par défaut déguisé : une affaire
+	//  enregistrée sans y toucher arrivait classée en panne, alors que la
+	//  catégorie décide de QUI traite. Un défaut qui engage quelqu'un d'autre
+	//  n'est pas un défaut, c'est une réponse qu'on n'a pas donnée.
+	let categorie = ticket?.categorie ?? '';
 	let statut = ticket?.statut ?? 'ouvert';
 	//  🛡️ Réservé au conseil syndical (#710) — le CS seul le pose, le serveur le
 	//  revérifie, et le libellé se distingue du 🔒 d'une actualité (voir le champ).
@@ -247,6 +241,13 @@
 	function saisieValide(): boolean {
 		if (!titre.trim() || richEmpty(description)) {
 			error = 'Titre et description sont obligatoires.';
+			return false;
+		}
+		//  La catégorie est déclarée `requis` dans le cadre : rien ne serait plus
+		//  trompeur que de l'exiger à l'écran et de laisser le serveur en poser
+		//  une à notre place.
+		if (!categorie) {
+			error = 'Choisissez une catégorie : c’est elle qui décide de qui traite.';
 			return false;
 		}
 		if ($isCS && modeSaisiPour === 'exterieur' && !saisiPourNom.trim()) {
@@ -433,7 +434,7 @@
 			avecQuand={sectionPresente(TICKET, etat, 'quand')}
 			bind:debut
 			bind:fin
-			avecPerimetre={sectionPresente(TICKET, etat, 'qui_le_voit')}
+			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecDescription={sectionPresente(TICKET, etat, 'description')}
 			descriptionRequise={!debut}

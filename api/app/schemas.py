@@ -4,6 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel, field_validator
 
 from app.models.core import StatutTicket, StatutUtilisateur, RoleUtilisateur
+from app.models.tickets import CategorieTicket
 
 
 #  `liste_depuis_json` et `ListeJson` vivent dans `schemas_communs.py` depuis le
@@ -145,7 +146,21 @@ class TicketCreate(SaisiPourEntree, AssisteIAEntree):
     echeance: Optional[date] = None
     titre: str
     description: str
-    categorie: str = "panne"
+    #  🔴 AUCUN défaut, et c'est le pendant serveur de la décision d'écran du
+    #  21/09/2026 : « Panne » n'est plus présélectionnée dans le formulaire.
+    #  Laisser `= "panne"` ici aurait rendu le retrait purement décoratif — un
+    #  corps sans catégorie serait reparti en panne, silencieusement, et c'est
+    #  exactement ce qu'on vient d'interdire à l'écran.
+    #
+    #  ⚠️ Typée par l'énumération, contrairement au `statut` deux champs plus
+    #  bas — lui garde `str` parce que le routeur lui applique une liste
+    #  blanche dérivée. La catégorie n'en avait AUCUNE : `body.categorie`
+    #  allait jusqu'à `Ticket(categorie=…)`, dont la validation est désactivée
+    #  (SQLModel `table=True`). Une chaîne inventée entrait donc en base.
+    #
+    #  Aucun client existant n'est affecté : le formulaire envoyait déjà la
+    #  valeur, présélectionnée ou non — y compris un onglet PWA resté ouvert.
+    categorie: CategorieTicket
     epingle: bool = False
     #  🔴 `None` = « le corps n'en dit rien », et le serveur pose alors le défaut
     #  de la CATÉGORIE (`kanban_tickets.suivi_par_defaut`). Un `bool = False`

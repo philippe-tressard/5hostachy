@@ -258,7 +258,7 @@
 		<ChampsCommuns
 			entite={ANNONCE}
 			idPrefixe="annonce-{annonce?.id ?? 'new'}"
-			avecPerimetre={sectionPresente(ANNONCE, etat, 'qui_le_voit')}
+			avecPerimetre={sectionPresente(ANNONCE, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecDestinataires={sectionPresente(ANNONCE, etat, 'destinataires')}
 			bind:destinataires={publicCible}

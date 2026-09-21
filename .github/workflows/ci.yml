@@ -1725,6 +1725,21 @@ jobs:
         working-directory: front
         run: node scripts/check-vocabulaire-ecran.mjs --selftest
 
+      # ──────────────────────────────────────────────────────────────────────
+      # Une catégorie d'affaire ne se PRÉSÉLECTIONNE pas (21/09/2026)
+      #
+      # « Panne » était cochée à l'ouverture du formulaire : enregistrer sans y
+      # toucher classait l'affaire en panne, alors que la catégorie décide de
+      # QUI traite. La liste des catégories se lit dans `lib/tickets.ts`
+      # (`CATEGORIES_TICKET`), jamais recopiée ici.
+      - name: Aucune catégorie d'affaire présélectionnée
+        working-directory: front
+        run: npm run lint:choix-requis
+
+      - name: Le contrôle de la catégorie s'éprouve lui-même
+        working-directory: front
+        run: node scripts/check-choix-requis.mjs --selftest
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #

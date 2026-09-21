@@ -251,8 +251,7 @@
 	//  pas une précision récente.
 	//  🔴 Chaque ligne combine ce qui EXISTE (la déclaration) et ce que cet
 	//  utilisateur-ci PEUT (le droit) — jamais l'un à la place de l'autre (#463).
-	$: sectionPerimetre =
-		peutPreciserPerimetre && sectionPresente(entite, 'evolution', 'qui_le_voit');
+	$: sectionPerimetre = peutPreciserPerimetre && sectionPresente(entite, 'evolution', 'perimetre');
 	//  Ouvertes par la DÉCLARATION de l'entité — voir `SectionsCiblageEvolution`.
 	$: sectionDestinataires = sectionPresente(entite, 'evolution', 'destinataires');
 	$: sectionSpecifiques = sectionPresente(entite, 'evolution', 'nature');

@@ -64,7 +64,7 @@ export const PRESTATAIRE: EntiteDeclaree = {
 			sansObjet: 'L’entreprise EST l’intervenant ; la section se rapporterait à elle-même.',
 		},
 		{
-			id: 'qui_le_voit',
+			id: 'perimetre',
 			sansObjet:
 				"Une entreprise n'est attachée à aucun lieu de la copropriété : c'est son " +
 				"CONTRAT qui porte ce qu'elle entretient, et lui seul (déclaré dans " +

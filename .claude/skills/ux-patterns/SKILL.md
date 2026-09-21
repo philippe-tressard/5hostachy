@@ -112,7 +112,7 @@ vocabulaire du code (`TicketEvolution`, `EvolForm`).
 ### Les TREIZE sections, dans cet ordre — il ne se discute pas
 
 1. **Titre** · 2. **Nature** · 3. **Équipement** · 4. **Suivi** · 5. **Quand**
-· 6. **Intervenant** · 7. **Qui le voit** · 8. **Description** · 9. **Pièces
+· 6. **Intervenant** · 7. **Périmètre** · 8. **Description** · 9. **Pièces
 jointes** · 10. **Au nom de** · 11. **Mise en avant** · 12. **Destinataires**
 *(qui est concerné dans l'application)* · 13. **Diffusion** *(par quels canaux
 on prévient à l'extérieur)*.
@@ -124,7 +124,7 @@ changements, et un seul touche un rang existant :
 |---|---|
 | **« Champs spécifiques » est SCINDÉE** | en *Nature*, *Au nom de* et *Mise en avant*. Elle portait trois intitulés sous un seul nom, ce qui rendait **indéclarable** une divergence ne concernant qu'un des trois — le cadre ne déclare que par SECTION. C'est la limite que #436 décrivait, et `ticket.ts` la portait en commentaire, invisible à `lint:etats`. |
 | **Trois sections entrent** | *Équipement*, *Intervenant* (tous deux réservés aux catégories du bâti) et *Suivi* — qui est l'ancien *Workflow*, renommé. |
-| **« Qui le voit » remonte** | ex-*Périmètre*, désormais **avant la Description** et dépliée. C'est le seul rang qui bouge, et il a été demandé : *« il a fallu plusieurs semaines pour l'UX de Périmètre, ne le casse pas »*. |
+| **« Périmètre » remonte** | désormais **avant la Description** et dépliée. C'est le seul rang qui bouge, et il a été demandé : *« il a fallu plusieurs semaines pour l'UX de Périmètre, ne le casse pas »*.<br>⚠️ Elle s'est appelée **« Qui le voit »** le temps d'un lot, et l'arbitrage du 21/09/2026 l'a défait : *« Qui le voit est une CONSÉQUENCE, la section est Périmètre »*. Un intitulé qui décrit l'effet d'un champ plutôt que le champ lui-même vieillit mal — l'effet change, le champ reste. |
 
 ⚠️ **Destinataires passe donc après Description**, ce que la phrase « aucune
 section existante ne change de rang relatif » du ticket ne disait pas. C'est le
@@ -924,7 +924,18 @@ le trait s'arrête avant le formulaire, ce qui se voit immédiatement.
 calendrier reste à 640 px, délibérément).
 
 
-- Champ requis : label suivi de ` *` — `Titre *`, `Périmètre *`
+- Champ requis : label suivi **immédiatement** de `*` — `Titre*`, `Périmètre*`
+
+  🔴 **L'astérisque est ROUGE tant que le champ est vide**, et reprend la
+  couleur du libellé dès qu'il porte une valeur (décidé à l'écran le
+  21/09/2026). Elle cesse donc d'être une décoration : c'est l'**état** du
+  champ, lisible d'un coup d'œil sur un formulaire de treize sections.
+
+  ⚠️ **État de l'implémentation : #1121, non livrée.** À ce jour l'astérisque
+  est écrite ` *` (avec espace) à une vingtaine d'endroits et calculée dans
+  sept composants, dont aucun ne connaît la valeur du champ. Cette ligne
+  décrit donc la règle **décidée**, pas le code actuel — et c'est écrit ici
+  pour que le prochain lot ne reproduise pas l'ancienne forme de bonne foi.
 - **Pas** de mention « (optionnel) » : l'absence de `*` suffit
 - Actions : bouton secondaire / Annuler **à gauche**, action primaire **à droite**
 
@@ -2159,7 +2170,7 @@ après une première proposition inexacte de ma part.
 - [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`
 - [ ] Périmètre : pas affiché si `'résidence'`
 - [ ] Archiver (pas supprimer) sur la vue principale
-- [ ] Champs requis : label + ` *`
+- [ ] Champs requis : label + `*` **collé**, rouge tant que le champ est vide (#1121)
 - [ ] Labels en français
 - [ ] En-tête : `<EntetePage>`, jamais `<div class="page-header">` (§13)
 - [ ] Icône vérifiée dans `$lib/icones-svg.json` — un nom inconnu échoue en silence
