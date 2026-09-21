@@ -25,6 +25,7 @@
 
 # ── Contrat du module ────────────────────────────────────────────────────────
 verdicts_selftest() {
+
   st_fail=0
   check() { # description attendu args…
     local desc="$1" exp="$2"; shift 2
@@ -470,5 +471,19 @@ verdicts_selftest() {
   verrou_selftest || st_fail=1
 
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
+  # ── C27 — auto-deploy a-t-il réussi son build ? ──────────────────────
+  ba() {  # $1 = libellé, $2 = attendu, $3 = dernière ligne du deploy.log
+    local got; got=$(verdict_build_autodeploy "$3")
+    if [ "$got" = "$2" ]; then echo "PASS  $1  → $got"
+    else echo "FAIL  $1  attendu=$2 obtenu=$got"; st_fail=1; fi
+  }
+  ba "build reussi"        OK      "[2026-09-21 07:48:01] Deploye: f4398e9"
+  ba "rien a deployer"     OK      "[2026-09-21 07:53:01] Aucun changement (f4398e9)"
+  ba "build en echec"      FAIL    "[2026-09-21 07:48:01] Aligne: f4398e9c (standby - ECHEC du build, images NON reconstruites)."
+  #  L'accent ne survit pas toujours à SSH : le motif est ASCII exprès.
+  ba "accent perdu en SSH" FAIL    "[2026-09-21 07:48:01] Aligne (standby - ?CHEC du build)."
+  #  Cas zéro : sans ligne, on ne SAIT pas — et INCONNU n'est pas OK.
+  ba "ligne absente"       INCONNU ""
+
   return $st_fail
 }
