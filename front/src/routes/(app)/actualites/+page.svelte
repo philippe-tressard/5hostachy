@@ -1,4 +1,10 @@
 <script lang="ts">
+	import {
+		enregistrerOptionsActualite,
+		promouvoirActualite,
+		supprimerActualite,
+		suivrePublicationPromue,
+	} from '$lib/gestes-actualite';
 	import { nomCopie } from '$lib/saisi-pour';
 	import { contexteCommentaire } from '$lib/assistant';
 	import { messageErreur } from '$lib/erreurs';
@@ -56,6 +62,10 @@
 		}
 	}
 
+	//  Ce que l'écran fait de SA liste — les gestes, eux, vivent dans
+	//  `$lib/gestes-actualite` (modularité, rang 1).
+	const retirerPub = (id: number) => (pubList = pubList.filter((p) => p.id !== id));
+
 	async function loadPubFiles(pubId: number) {
 		if (loadedFilesFor.has(pubId)) return;
 		loadedFilesFor.add(pubId);
@@ -73,6 +83,11 @@
 			// Lien profond `#pub-<id>` (fil d'activité, notification, e-mail)
 			const idPub = cibleDuHash('pub');
 			if (idPub !== null) {
+				//  🔴 L'actualité visée a pu devenir une AFFAIRE (#1094) : un courriel
+				//  envoyé avant la promotion porte encore son adresse. On suit alors le
+				//  lien plutôt que d'ouvrir une page vide — un lien mort est ce que ce
+				//  chantier refuse, y compris pour les identifiants `TK-xxxx`.
+				if (!pubList.some((p) => p.id === idPub) && (await suivrePublicationPromue(idPub))) return;
 				expandedPubs = new Set([idPub]);
 				revelerCible(`pub-${idPub}`);
 			}
@@ -94,17 +109,6 @@
 	function publicationCreee(e: CustomEvent<Publication>) {
 		pubList = [e.detail, ...pubList];
 		showForm = false;
-	}
-
-	async function deletePub(pub: Publication) {
-		if (!confirm(`Supprimer définitivement « ${pub.titre} » ?`)) return;
-		try {
-			await pubsApi.delete(pub.id);
-			pubList = pubList.filter((p) => p.id !== pub.id);
-			toast('success', `${PUBLICATION.libelle} supprimée`);
-		} catch (e: any) {
-			toast('error', messageErreur(e, 'Impossible de supprimer'));
-		}
 	}
 
 	//  ⚠️ LE RENVOI D'UNE ANNONCE ET L'ARCHIVAGE MANUEL ONT ÉTÉ RETIRÉS DE CET
@@ -262,19 +266,11 @@
 
 	async function enregistrerOptions(pub: Publication) {
 		optionsSaving = true;
-		try {
-			const maj = await pubsApi.update(pub.id, { ...optionsBrouillon });
-			//  Le serveur a le dernier mot : il peut refuser « confidentiel » sur un
-			//  périmètre à portée globale (`appliquer_confidentialite`). On range CE
-			//  qu'il rend, jamais ce qu'on lui a demandé.
+		await enregistrerOptionsActualite(pub, optionsBrouillon, (maj) => {
 			pubList = pubList.map((p) => (p.id === maj.id ? maj : p));
 			optionsPub = null;
-			toast('success', 'Options mises à jour');
-		} catch (e) {
-			toast('error', messageErreur(e, "Erreur d'enregistrement"));
-		} finally {
-			optionsSaving = false;
-		}
+		});
+		optionsSaving = false;
 	}
 
 	function startEdit(pub: Publication) {
@@ -357,7 +353,8 @@
 					onCommenter={ouvrirEvolution}
 					onModifier={startEdit}
 					onOptions={ouvrirOptions}
-					onSupprimer={deletePub}
+					onPromouvoir={(p) => promouvoirActualite(p, retirerPub)}
+					onSupprimer={(p) => supprimerActualite(p, retirerPub)}
 				/>
 			</svelte:fragment>
 

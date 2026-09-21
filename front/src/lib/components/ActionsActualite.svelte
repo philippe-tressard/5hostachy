@@ -48,6 +48,14 @@
 	export let optionsOuvertesId: number | null = null;
 
 	export let onCommenter: (pub: any) => void;
+	/**
+	 * **Cette information demande un suivi** — promouvoir l'actualité en
+	 * affaire (#1094).
+	 *
+	 * ⚠️ Le geste est irréversible et l'actualité DISPARAÎT du fil : l'écran
+	 * qui le branche doit donc demander confirmation avant d'appeler.
+	 */
+	export let onPromouvoir: (pub: any) => void;
 	export let onModifier: (pub: any) => void;
 	export let onOptions: (pub: any) => void;
 	export let onSupprimer: (pub: any) => void;
@@ -68,6 +76,20 @@
 		title="Modifier"
 		on:click|stopPropagation={() => onModifier(pub)}>✏️</button
 	>
+	<!--  🔴 « Suivre cette affaire » (#1094) — le geste qui évite de TOUT
+	      RETAPER quand une actualité dérape. Titre, description, pièces jointes
+	      et périmètre suivent ; on ajoute un statut.
+
+	      ⚠️ Il n'apparaît pas sur une actualité déjà close : promouvoir ce qui
+	      est terminé n'ouvrirait un suivi sur rien. -->
+	{#if pub.statut !== 'resolu' && pub.statut !== 'annule'}
+		<button
+			class="btn-icon"
+			aria-label="Suivre cette affaire — en faire une affaire"
+			title="Suivre cette affaire"
+			on:click|stopPropagation={() => onPromouvoir(pub)}>&#x1F3AF;</button
+		>
+	{/if}
 	<!--  Le bouton vit dans `BoutonOptions` depuis le 12/09/2026 : tickets et
 	      événements portent les mêmes options, et le recopier chez eux aurait
 	      recopié aussi ses règles d'accessibilité et sa cible tactile. -->
