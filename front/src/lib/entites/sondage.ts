@@ -32,6 +32,8 @@ import { DIFFUSION_NE_SE_LIT_PAS } from './types';
 export const SONDAGE: EntiteDeclaree = {
 	id: 'sondage',
 	libelle: 'Sondage',
+	libelleNouveau: 'Nouveau sondage',
+	libelleModifier: 'Modifier le sondage',
 	sections: [
 		{
 			//  Le titre d'un sondage EST la question posée — d'où `titreEcran`.

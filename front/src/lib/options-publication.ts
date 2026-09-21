@@ -166,7 +166,7 @@ export function libelleOptionsActives(
  * (`api/tests/test_canaux_notification.py`) : `partager_whatsapp` est un champ
  * du corps de la requête, qui se poste sans passer par l'écran.
  */
-export function motifWhatsappInterdit(reserveAuConseil: boolean, objet = 'publication'): string {
+export function motifWhatsappInterdit(reserveAuConseil: boolean, objet = 'actualité'): string {
 	if (!reserveAuConseil) return '';
 	const option = optionPublication('brouillon');
 	return (

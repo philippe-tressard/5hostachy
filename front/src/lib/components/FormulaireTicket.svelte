@@ -237,9 +237,12 @@
 			envoyer_auteur: envoyerAuteur,
 		});
 
+	//  Le vocabulaire d'écran vient de la DÉCLARATION, jamais d'un libellé
+	//  réécrit ici : `TICKET.libelle` dit « Affaire » (#1107). L'édition garde
+	//  le numéro, qui est ce qui distingue une affaire d'une autre.
 	$: titreBoite = modeEdition
-		? `Modifier le ticket #${ticket?.numero ?? ''}`
-		: 'Signaler un problème';
+		? `${TICKET.libelleModifier} #${ticket?.numero ?? ''}`
+		: TICKET.libelleNouveau;
 
 	/** Contrôles de saisie — communs à la soumission directe et à l'aperçu. */
 	function saisieValide(): boolean {
@@ -304,7 +307,7 @@
 							}
 						: {}),
 				});
-				toast('success', 'Ticket modifié');
+				toast('success', `${TICKET.libelle} modifiée`);
 				dispatch('modifie', maj);
 				return;
 			}
@@ -341,7 +344,7 @@
 				}
 			}
 			const t = await ticketsApi.create(payload);
-			toast('success', `Ticket ${t.numero} créé avec succès`);
+			toast('success', `${TICKET.libelle} ${t.numero} créée avec succès`);
 			dispatch('cree', t);
 		} catch (e) {
 			error =

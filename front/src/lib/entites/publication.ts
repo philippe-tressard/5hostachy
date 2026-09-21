@@ -80,7 +80,10 @@ import { DIFFUSION_NE_SE_LIT_PAS } from './types';
  */
 export const PUBLICATION: EntiteDeclaree = {
 	id: 'publication',
-	libelle: 'Publication',
+	libelle: 'Actualité',
+	motDeCode: 'publication',
+	libelleNouveau: 'Nouvelle actualité',
+	libelleModifier: "Modifier l'actualité",
 	sections: [
 		{
 			id: 'titre',

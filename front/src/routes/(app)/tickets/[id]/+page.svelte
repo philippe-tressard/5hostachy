@@ -121,7 +121,7 @@
 			//  expirée et à une coupure réseau — et l'écran affirmait ensuite une
 			//  absence qu'il n'avait pas constatée. Seul un 404 la constate.
 			const absent = err instanceof ApiError && err.status === 404;
-			if (absent) toast('error', 'Ticket introuvable');
+			if (absent) toast('error', `${TICKET.libelle} introuvable`);
 			else if (err instanceof ApiError) erreur = err.message;
 			else erreur = 'Ticket illisible pour le moment — réessayez dans un instant.';
 		} finally {
@@ -190,7 +190,7 @@
 			return;
 		try {
 			await ticketsApi.delete(ticketId);
-			toast('success', 'Ticket supprimé');
+			toast('success', `${TICKET.libelle} supprimée`);
 			window.location.href = '/tickets';
 		} catch (e) {
 			toast('error', messageErreur(e));

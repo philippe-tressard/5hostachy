@@ -29,6 +29,8 @@ import type { EntiteDeclaree } from './types';
 export const IDEE: EntiteDeclaree = {
 	id: 'idee',
 	libelle: 'Idée',
+	libelleNouveau: 'Nouvelle idée',
+	libelleModifier: "Modifier l'idée",
 	sections: [
 		{
 			id: 'titre',

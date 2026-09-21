@@ -28,6 +28,8 @@ import type { EntiteDeclaree } from './types';
 export const PRESTATAIRE: EntiteDeclaree = {
 	id: 'prestataire',
 	libelle: 'Prestataire',
+	libelleNouveau: 'Nouveau prestataire',
+	libelleModifier: 'Modifier le prestataire',
 	sections: [
 		{
 			id: 'titre',

@@ -36,6 +36,8 @@ import type { EntiteDeclaree } from './types';
 export const CONTRAT: EntiteDeclaree = {
 	id: 'contrat',
 	libelle: "Contrat d'entretien",
+	libelleNouveau: 'Nouveau contrat',
+	libelleModifier: 'Modifier le contrat',
 	sections: [
 		{
 			id: 'titre',

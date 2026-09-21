@@ -66,6 +66,8 @@ import type { EntiteDeclaree } from './types';
 export const ANNONCE: EntiteDeclaree = {
 	id: 'annonce',
 	libelle: 'Petite annonce',
+	libelleNouveau: 'Déposer une annonce',
+	libelleModifier: "Modifier l'annonce",
 	sections: [
 		{
 			id: 'titre',

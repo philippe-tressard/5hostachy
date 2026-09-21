@@ -1955,6 +1955,45 @@ pas sur un fichier.
 Côté serveur, `proprietaire_nom` vit dans `SaisiPourSortie`, dont les trois
 lectures héritent, et les trois routeurs le posent par `noms_derives` :
 `api/tests/test_proprietaire_expose.py`.
+### 🔴 Un libellé NOMME l'objet, et le nom vient de sa déclaration (21/09/2026, #1107)
+
+Le modèle s'appelle `Ticket`, l'écran dit **« Affaire »** ; le modèle dit
+`Publication`, l'écran **« Actualité »**. Même distinction que `TicketEvolution`
+/ « Suite » : le modèle garde son nom, l'écran parle français.
+
+| Ce qu'on écrit | Où le mot se lit |
+|---|---|
+| le bouton de création | `ENTITE.libelleNouveau` |
+| le titre de la boîte d'édition | `ENTITE.libelleModifier` |
+| un toast, une confirmation, un titre de section | `ENTITE.libelle` |
+
+`$lib/entites/<entité>.ts` — jamais réécrit dans un écran.
+
+⚠️ **Le renommage v2.1.0 a traité les écrans, la FAQ, le README et le manuel, et
+PAS les verbes d'action.** Le mot de code avait donc fui jusqu'au bouton :
+« + Nouvelle Publication » sur la page *Actualités*, « Signaler un problème » sur
+*Affaires*, « Ticket supprimé » dans un toast. Le ticket en citait trois ; un
+relevé mécanique en a trouvé **vingt**, dans seize fichiers.
+
+🔴 Et la source du bon mot **existait**, en affirmant le mauvais :
+`EntiteDeclaree.libelle` se décrit comme « le nom de l'entité à l'écran » et
+valait `'Publication'`. C'est la 8ᵉ fois que la chose existait déjà
+(`project_le_composant_existait_deja`).
+
+🔒 `npm run lint:vocabulaire-ecran` (CI depuis le 21/09/2026). La liste des mots
+surveillés se **lit** dans `entites/` (`motDeCode`) : un troisième renommage
+n'ajoutera qu'une ligne à sa déclaration. Il ne cherche le mot que dans les
+**libellés composés pour être affichés**, et ignore ce qui est interpolé ou lu
+d'une constante — sans quoi il refuserait le correctif lui-même.
+
+⚠️ Une seule exception déclarée : « **Options de publication** », où
+« publication » est l'**acte** de publier et non l'objet — la section sert aussi
+aux affaires et aux événements.
+
+Le pendant serveur est `api/tests/test_vocabulaire_affaire.py`, qui lit les
+sources de texte **servi** (pages.ts, FAQ, courriels, README, manuel) et déclare
+ne pas lire les `.svelte`. Les deux ensemble couvrent ce qu'un résident lit.
+
 ## 16. WORKFLOW & ARCHIVAGE — ce qui a des étapes, et ce qui se range tout seul
 
 🔴 **Trois questions distinctes**, que le produit a confondues jusqu'au 18/08/2026 :

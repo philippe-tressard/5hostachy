@@ -290,6 +290,11 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       **jamais** `objet.auteur_nom` — c'est le rédacteur, et le « Saisi pour » s'y
       substitue (12/09). La case de copie, elle, dit `nomCopie` : deux questions.
       Il y en avait **13** avant #1104 (`npm run lint:nom-proprietaire` le refuse)
+- [ ] Libellé qui NOMME un objet — bouton, titre de boîte, toast, confirmation :
+      le mot vient de `$lib/entites/<entité>` (`libelle`, `libelleNouveau`,
+      `libelleModifier`), **jamais** réécrit dans un écran. « Publication » et
+      « Ticket » sont des noms de modèle ; l'écran dit « Actualité » et
+      « Affaire ». Il y en avait **20** avant #1107 (`npm run lint:vocabulaire-ecran`)
 - [ ] Périmètre : masqué s'il est celui par défaut (`estPerimetreParDefaut`)
 - [ ] Archiver (pas supprimer) sur la vue principale
 - [ ] Champs requis : label + ` *`

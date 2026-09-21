@@ -13,6 +13,7 @@
 -->
 <script lang="ts">
 	import CarteActualite from '$lib/components/CarteActualite.svelte';
+	import { PUBLICATION } from '$lib/entites/publication';
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import { isAdmin } from '$lib/stores/auth';
 	import { publications as pubsApi, type Publication } from '$lib/api';
@@ -45,7 +46,7 @@
 		try {
 			await pubsApi.delete(pub.id);
 			archivedPubs = archivedPubs.filter((p) => p.id !== pub.id);
-			toast('success', 'Publication supprimée');
+			toast('success', `${PUBLICATION.libelle} supprimée`);
 		} catch (e: any) {
 			toast('error', messageErreur(e, 'Impossible de supprimer'));
 		}
