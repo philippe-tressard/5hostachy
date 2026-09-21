@@ -196,7 +196,7 @@
 
 	onMount(async () => {
 		// Rien à charger quand la section n'est pas rendue (cf. la déclaration).
-		if ($isCS && sectionPresente(TICKET, etat, 'specifiques')) {
+		if ($isCS && sectionPresente(TICKET, etat, 'nature')) {
 			try {
 				const all = await adminApi.utilisateurs();
 				usersActifs = all.filter((u: any) => u.actif).sort(comparerParNom);
@@ -432,7 +432,7 @@
 			avecQuand={sectionPresente(TICKET, etat, 'quand')}
 			bind:debut
 			bind:fin
-			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
+			avecPerimetre={sectionPresente(TICKET, etat, 'qui_le_voit')}
 			bind:perimetre={perimetreCible}
 			avecDescription={sectionPresente(TICKET, etat, 'description')}
 			descriptionRequise={!debut}

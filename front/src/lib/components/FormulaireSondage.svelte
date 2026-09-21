@@ -217,7 +217,7 @@
 		      groupes nommés pour une seule section — la déclaration les annonce
 		      tous les deux (`titreEcran`), et `lint:etats` refuse tout intitulé
 		      inventé sur place. -->
-		{#if sectionPresente(SONDAGE, etat, 'specifiques')}
+		{#if sectionPresente(SONDAGE, etat, 'nature')}
 			<SectionFormulaire titre="Réponses possibles">
 				<div class="options">
 					{#each options as _opt, i (i)}
@@ -309,7 +309,7 @@
 		      Le sondage n'a ni photos ni documents. -->
 		<ChampsCommuns
 			idPrefixe="sondage"
-			avecPerimetre={sectionPresente(SONDAGE, etat, 'perimetre')}
+			avecPerimetre={sectionPresente(SONDAGE, etat, 'qui_le_voit')}
 			bind:perimetre={perimetreCible}
 			avecDestinataires={sectionPresente(SONDAGE, etat, 'destinataires')}
 			bind:destinataires={publicCible}

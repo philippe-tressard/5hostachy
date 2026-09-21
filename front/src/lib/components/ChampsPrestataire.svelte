@@ -52,7 +52,7 @@
 </SectionFormulaire>
 
 <!--  ══ 2. CHAMPS SPÉCIFIQUES ══ Ce qui décrit l'entreprise. -->
-{#if sectionPresente(PRESTATAIRE, etat, 'specifiques')}
+{#if sectionPresente(PRESTATAIRE, etat, 'nature')}
 	<SectionFormulaire titre="L'entreprise">
 		<div class="form-grid">
 			<!--  🔴 Six entrées portant chacune une description : c'est le cas

@@ -201,7 +201,7 @@
 		</SectionFormulaire>
 
 		<!--  2. Champs spécifiques de l'annonce. -->
-		{#if sectionPresente(ANNONCE, etat, 'specifiques')}
+		{#if sectionPresente(ANNONCE, etat, 'nature')}
 			<SectionFormulaire titre="L'objet">
 				<div class="form-grid">
 					<div class="field">
@@ -242,7 +242,7 @@
 		<!--  3. Workflow — des PASTILLES, jamais un `<select>` nu (R3 / #423).
 		      La liste vient de `$lib/annonces`, source unique : la carte la rend
 		      aussi, dans son raccourci. -->
-		{#if sectionPresente(ANNONCE, etat, 'workflow')}
+		{#if sectionPresente(ANNONCE, etat, 'suivi')}
 			<SectionFormulaire titre="Où en est cette annonce ?">
 				<WorkflowPastilles
 					options={OPTIONS_STATUT_ANNONCE}
@@ -257,7 +257,7 @@
 		      divergence avec son motif. -->
 		<ChampsCommuns
 			idPrefixe="annonce-{annonce?.id ?? 'new'}"
-			avecPerimetre={sectionPresente(ANNONCE, etat, 'perimetre')}
+			avecPerimetre={sectionPresente(ANNONCE, etat, 'qui_le_voit')}
 			bind:perimetre={perimetreCible}
 			avecDestinataires={sectionPresente(ANNONCE, etat, 'destinataires')}
 			bind:destinataires={publicCible}

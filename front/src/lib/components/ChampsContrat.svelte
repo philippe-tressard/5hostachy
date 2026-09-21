@@ -43,6 +43,7 @@
 </script>
 
 <script lang="ts">
+	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import PerimetrePicker from './PerimetrePicker.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
@@ -168,8 +169,8 @@
       🔴 Le périmètre n'existait PAS avant le 10/09/2026 : `batiment_id` figurait
       dans la charge utile sans que rien ne le remplisse, donc tous les contrats
       portaient `NULL` et le carnet d'entretien ne pouvait filtrer sur rien. -->
-{#if sectionPresente(CONTRAT, etat, 'perimetre')}
-	<SectionFormulaire titre="Périmètre" pour={idPerimetre}>
+{#if sectionPresente(CONTRAT, etat, 'qui_le_voit')}
+	<SectionFormulaire titre={SECTIONS_LIBELLE.qui_le_voit} pour={idPerimetre}>
 		<div role="group" aria-labelledby={idPerimetre}>
 			<PerimetrePicker bind:value={contratForm.perimetre_cible} titre="" />
 		</div>

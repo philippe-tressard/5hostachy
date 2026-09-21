@@ -74,11 +74,11 @@
 {#each sections as s (s.id)}
 	{#if s.id === 'titre'}
 		<slot name="titre" />
-	{:else if s.id === 'specifiques'}
+	{:else if s.id === 'nature'}
 		<slot name="specifiques" />
-	{:else if s.id === 'workflow'}
+	{:else if s.id === 'suivi'}
 		<slot name="workflow" />
-	{:else if s.id === 'perimetre'}
+	{:else if s.id === 'qui_le_voit'}
 		{#if textePerimetre}
 			<p class="fiche-perimetre">&#x1F539; {textePerimetre}</p>
 		{/if}
