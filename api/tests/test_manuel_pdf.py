@@ -134,7 +134,7 @@ def test_les_blocs_depliables_sont_OUVERTS(document, manuel):
         f"{document.count('En détail')} déplié(s) dans le document"
     )
     #  Et leur contenu doit vraiment être là.
-    assert "votre réponse rejoint le fil du ticket" in document
+    assert "votre réponse rejoint le fil de l'affaire" in document
     assert "Boîte à idées" in document
     #  Le cinquième, ajouté le 05/09/2026 : ce qu'on trouve sur l'Accueil.
     assert "Consignes de la copropriété" in document
