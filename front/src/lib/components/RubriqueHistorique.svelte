@@ -40,6 +40,7 @@
   règle.
 -->
 <script lang="ts">
+	import FiltreFil from './FiltreFil.svelte';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import PiecesJointes from './PiecesJointes.svelte';
@@ -96,6 +97,19 @@
 	export let estAdmin = false;
 	/** Entrée actuellement ouverte en correction — le parent porte l'état. */
 	export let enEdition: number | null = null;
+
+	/**
+	 * **Tout / Seulement les avancées** — le filtre du fil (#1094).
+	 *
+	 * 🔴 Il n'apparaît QUE là où il sert : un fil où tout est du même type n'a
+	 * rien à filtrer, et deux pastilles inertes coûteraient une ligne d'écran à
+	 * tous pour n'aider personne. `avecFiltre` demande le filtre ; le composant
+	 * décide ensuite s'il y a matière.
+	 *
+	 * ⚠️ Sur une actualité, le fil ne porte que des paroles — le filtre n'y a
+	 * donc pas de sens, et l'écran ne le demande pas.
+	 */
+	export let avecFiltre = false;
 
 	/**  🔴 L'écran DÉCLARE qu'il sait effacer. Défaut `false` (#505, 19/08/2026).
 	 *
@@ -178,8 +192,13 @@
 	$: triees = [...evolutions].sort(
 		(a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime(),
 	);
-	$: replie = triees.length > seuil && !deplie;
-	$: visibles = replie ? triees.slice(0, apercu) : triees;
+	//  Ce qui compte comme une avancée, et pourquoi le filtre ne s'affiche pas
+	//  toujours : `FiltreFil` le porte, avec son libellé et ses pastilles.
+	const AVANCEES = ['etat'];
+	let filtre = 'tout';
+	$: filtrees = filtre === 'avancees' ? triees.filter((e) => AVANCEES.includes(e.type)) : triees;
+	$: replie = filtrees.length > seuil && !deplie;
+	$: visibles = replie ? filtrees.slice(0, apercu) : filtrees;
 </script>
 
 {#if titre || $$slots.action}
@@ -189,8 +208,14 @@
 	</div>
 {/if}
 
-{#if triees.length === 0}
-	{#if vide}<p class="hist-vide">{vide}</p>{/if}
+{#if avecFiltre}
+	<FiltreFil bind:valeur={filtre} avancees={AVANCEES} types={triees.map((e) => e.type)} />
+{/if}
+
+{#if filtrees.length === 0}
+	{#if filtre === 'avancees'}
+		<p class="hist-vide">Aucune avancée pour l’instant — le fil n’a que des échanges.</p>
+	{:else if vide}<p class="hist-vide">{vide}</p>{/if}
 {:else}
 	<div class="evol-list">
 		{#each visibles as evol, i (evol.id)}
