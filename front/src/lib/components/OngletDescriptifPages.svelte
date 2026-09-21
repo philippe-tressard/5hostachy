@@ -30,54 +30,44 @@
 	//  employée par tous les aperçus du site.
 	import { stripHtml } from '$lib/utils';
 	import { PAGES, configDepuisPage, ordonnerPages, type PageDef } from '$lib/pages';
+	import { fusionnerSurcharge } from '$lib/pages-surcharge';
 
 	/** La configuration complète, lue une fois par la page (`adminCfg`). */
 	export let valeurs: Record<string, string> = {};
 
-	function normalizeSavedPageDef(saved: any, defaults: PageDef) {
-		//  🔴 `id` et `href` viennent des DÉFAUTS, jamais de l'enregistrement.
-		//  `{...saved}` rapportait l'identité stockée en base : deux configurations
-		//  portant le même id donnaient deux pages homonymes, et le
-		//  `{#each … (pg.id)}` levait `each_key_duplicate` — écran figé (16/09/2026).
-		const normalized = {
-			...saved,
-			id: defaults.id,
-			href: defaults.href,
-			onglets: saved?.onglets ? { ...saved.onglets } : undefined,
+	/**
+	 * La page telle qu'elle s'affiche : les DÉFAUTS d'abord, la surcharge
+	 * enregistrée par-dessus.
+	 *
+	 * 🔴 L'ordre est tout le correctif de #1105 (21/09/2026). Cette fonction
+	 * partait de `{...saved}` et n'y réimposait que `id` et `href` — or ce qui
+	 * est enregistré est `PageConfig`, et **`nom` n'en fait pas partie** :
+	 * il n'est pas administrable. Toute page déjà éditée perdait donc son nom
+	 * à l'affichage, et trois d'entre elles s'y voyaient.
+	 *
+	 * ⚠️ `id` et `href` restent forcés depuis les défauts : ils sont l'IDENTITÉ
+	 * de la page, jamais une valeur. Les reprendre de l'enregistrement donnait
+	 * deux pages homonymes et un `each_key_duplicate` — écran figé (16/09/2026).
+	 *
+	 * Le repli et les rattrapages d'onglets vivent dans `$lib/pages-surcharge`,
+	 * avec ceux du store : ils y étaient recopiés au caractère près.
+	 */
+	function pageAffichee(saved: unknown, defauts: PageDef): PageDef {
+		const config = fusionnerSurcharge(defauts.id, saved, configDepuisPage(defauts));
+		return {
+			...defauts,
+			titre: config.titre,
+			descriptif: config.descriptif,
+			navLabel: config.navLabel,
+			icone: config.icone ?? defauts.icone,
+			onglets: defauts.onglets?.map((o) => ({
+				...o,
+				label: config.onglets?.[o.id]?.label ?? o.label,
+				descriptif: config.onglets?.[o.id]?.descriptif ?? o.descriptif,
+			})),
 		};
-		if (normalized.onglets) {
-			for (const [k, v] of Object.entries(normalized.onglets)) {
-				if (typeof v === 'string') {
-					(normalized.onglets as any)[k] = {
-						label: v,
-						descriptif: defaults.onglets?.find((o) => o.id === k)?.descriptif ?? '',
-					};
-				}
-			}
-		}
-		if (defaults.id === 'prestataires') {
-			if (normalized.onglets?.consommation && !normalized.onglets?.consommations) {
-				normalized.onglets.consommations = normalized.onglets.consommation;
-				delete normalized.onglets.consommation;
-			}
-		}
-		if (defaults.id === 'espace-cs') {
-			if (normalized.onglets?.validations?.label === '✅ Validations') {
-				normalized.onglets.validations.label =
-					defaults.onglets?.find((o) => o.id === 'validations')?.label ??
-					normalized.onglets.validations.label;
-			}
-			if (
-				normalized.onglets?.validations?.descriptif ===
-				"Comptes en attente de validation et demandes d'accès à traiter."
-			) {
-				normalized.onglets.validations.descriptif =
-					defaults.onglets?.find((o) => o.id === 'validations')?.descriptif ??
-					normalized.onglets.validations.descriptif;
-			}
-		}
-		return normalized;
 	}
+
 	const pagesDefaults: PageDef[] = PAGES;
 	let pagesConfig: PageDef[] = pagesDefaults.map((pg) => ({ ...pg }));
 	// Seules les pages du menu s'ordonnent : « Mon profil » et « Notifications » sont
@@ -139,7 +129,7 @@
 			const s = cfg[`page_config_${pg.id}`];
 			if (!s) return { ...pg };
 			try {
-				return normalizeSavedPageDef(JSON.parse(s), pg);
+				return pageAffichee(JSON.parse(s), pg);
 			} catch {
 				return { ...pg };
 			}
