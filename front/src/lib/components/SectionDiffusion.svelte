@@ -27,6 +27,7 @@
   gabarit (`standards/04` §14).
 -->
 <script lang="ts">
+	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import ApercuDiffusionModale from '$lib/components/ApercuDiffusion.svelte';
@@ -131,6 +132,15 @@
 	}
 
 	$: visible = avecCanaux || avecEmailExterne || avecInterne;
+
+	/** Repliée par défaut — la valeur vient de la déclaration (#1095). */
+	export let pliable = false;
+
+	/**  🔴 Le résumé dit ce qui PART, et « rien » quand rien ne part. C'est la
+	 *   section la plus lourde de conséquences du formulaire : la replier sans
+	 *   dire son état laisserait un envoi se préparer sans qu'on le voie. */
+	$: nbCanaux = [whatsapp, syndic, cs, auteur].filter(Boolean).length;
+	$: resume = nbCanaux === 0 ? "rien ne part à l'extérieur" : `${nbCanaux} envoi(s) prévu(s)`;
 </script>
 
 {#if $apercu.ouvert}
@@ -149,7 +159,12 @@
 	     L'avertissement sur les fichiers est rendu au CONTACT de la case WhatsApp
 	     qu'il commente : sous le sélecteur de fichiers, il en était séparé par
 	     toute la rubrique (#416). -->
-	<SectionFormulaire titre="Diffusion">
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.diffusion}
+		{pliable}
+		{resume}
+		ouvrirSiRenseignee={nbCanaux > 0}
+	>
 		<!--  Les options propres à l'écran (épingler, brouillon, afficher au fil…)
 		      passent AVANT les canaux : elles décident de ce qui est PUBLIÉ, les
 		      canaux de qui en est prévenu. Ce slot existait dans la seconde

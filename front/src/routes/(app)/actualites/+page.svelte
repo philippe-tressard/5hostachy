@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SUITE } from '$lib/gestes';
 	import {
 		enregistrerOptionsActualite,
 		promouvoirActualite,
@@ -394,7 +395,7 @@
 							<EvolForm
 								idPrefixe="pub-evol-{pub.id}"
 								auteurNom={nomCopie(pub)}
-								titre="Commenter"
+								titre={SUITE.libelle}
 								statutOptions={[]}
 								statutLabels={STATUT_LABELS}
 								defaultPartagerWhatsapp={pub.partager_whatsapp ?? false}

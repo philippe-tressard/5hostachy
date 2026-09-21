@@ -24,6 +24,7 @@
   d'`ApercuCarte`, le fil d'`HistoriqueEvenement`.
 -->
 <script lang="ts">
+	import { SUITE } from '$lib/gestes';
 	import { nomProprietaire } from '$lib/saisi-pour';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -156,8 +157,8 @@
 					<button
 						class="btn-icon"
 						aria-pressed={suiviOuvert}
-						aria-label="Commenter ou changer l’état"
-						title="Commenter ou changer l’état"
+						aria-label={SUITE.libelle}
+						title={SUITE.libelle}
 						on:click={() => dispatch('suivre')}>&#x1F504;</button
 					>
 					<button

@@ -33,6 +33,7 @@
   nus (la panne des pastilles, v2.67.11). Ce découpage-là attend #432.
 -->
 <script lang="ts">
+	import { SUITE } from '$lib/gestes';
 	import { nomCopie } from '$lib/saisi-pour';
 	import { contexteCommentaire } from '$lib/assistant';
 	import { EVENEMENT } from '$lib/entites/evenement';
@@ -144,6 +145,7 @@
 
 <div class="ev-fil">
 	<RubriqueHistorique
+		avecFiltre
 		evolutions={evenement.evolutions ?? []}
 		statutLabels={libelles}
 		titre={TITRE_HISTORIQUE}
@@ -185,7 +187,7 @@
 				entrees={evenement.evolutions ?? []}
 				idPrefixe="ev-evol-{evenement.id}"
 				auteurNom={nomCopie(evenement)}
-				titre="Commenter ou changer l’état"
+				titre={SUITE.libelle}
 				statutOptions={options}
 				statutLabels={libelles}
 				currentStatut={evenement.statut_kanban ?? ''}

@@ -56,6 +56,7 @@ import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
 const ENTITES = join(SOURCE, 'lib', 'entites');
+const GESTES = join(SOURCE, 'lib', 'gestes.ts');
 
 /**
  * Les **portes** par lesquelles un texte devient visible.
@@ -69,6 +70,10 @@ const PORTES = [
 	{ nom: 'titre de boîte', re: /titreBoite\s*=\s*([^;\n]+)/g },
 	{ nom: 'bouton de création', re: /libelle="([^"]+)"/g },
 	{ nom: 'titre', re: /\btitre="([^"]+)"/g },
+	//  🔴 Un `aria-label` EST un libellé : il est lu, par un lecteur d'écran. Le
+	//  contrôle l'ignorait, et trois boutons disaient donc encore « Commenter »
+	//  à ceux qui ne voient pas l'icône (21/09/2026).
+	{ nom: 'nom accessible', re: /aria-label="([^"]+)"/g },
 	{ nom: 'nom de l’objet copié', re: /quoi="([^"]+)"/g },
 	{ nom: 'nom d’objet passé en prop', re: /\bobjet\s*=\s*'([^']+)'/g },
 	{ nom: 'notification', re: /toast\(\s*'[a-z]+'\s*,\s*['"`]([^'"`]+)/g },
@@ -382,6 +387,11 @@ const sources = readdirSync(ENTITES)
 
 const entites = vocabulaireDeclare(sources);
 
+//  Les gestes renommés, lus dans `lib/gestes.ts` — même règle, autre source.
+const motsAbandonnes = [...readFileSync(GESTES, 'utf8').matchAll(/motAbandonne:\s*'([^']+)'/g)].map(
+	(m) => m[1],
+);
+
 //  🔴 Cas zéro : un relevé vide ne se distingue pas d'une lecture ratée. Le
 //  témoin est le nombre d'entités lues — s'il tombe à zéro, c'est la forme de la
 //  déclaration qui a bougé, pas le dépôt qui s'est assaini.
@@ -405,7 +415,7 @@ if (incoherences.length) {
 	process.exit(1);
 }
 
-const motsDeCode = entites.map((e) => e.motDeCode).filter(Boolean);
+const motsDeCode = [...entites.map((e) => e.motDeCode).filter(Boolean), ...motsAbandonnes];
 const fautifs = [];
 const exceptionsVues = new Set();
 let libellesVus = 0;

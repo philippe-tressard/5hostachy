@@ -36,6 +36,7 @@
   dans l'ordre de la table — c'est ce qui le rend lisible sans l'ouvrir.
 -->
 <script lang="ts">
+	import { SUITE } from '$lib/gestes';
 	import { isCS, isAdmin } from '$lib/stores/auth';
 	import BoutonOptions from './BoutonOptions.svelte';
 
@@ -65,8 +66,8 @@
 	<button
 		class="btn-icon"
 		aria-pressed={commentaireOuvertId === pub.id}
-		aria-label="Commenter"
-		title="Commenter"
+		aria-label={SUITE.libelle}
+		title={SUITE.libelle}
 		on:click|stopPropagation={() => onCommenter(pub)}>&#x1F504;</button
 	>
 	<button

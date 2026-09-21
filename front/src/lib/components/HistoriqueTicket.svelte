@@ -28,6 +28,7 @@
   après chaque écriture — c'est le seul contrat.
 -->
 <script lang="ts">
+	import { SUITE } from '$lib/gestes';
 	import type { ContexteAssistant } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
@@ -173,6 +174,7 @@
 
 <div class="bloc-historique">
 	<RubriqueHistorique
+		avecFiltre
 		{evolutions}
 		statutLabels={STATUT_TICKET_LABELS}
 		titre={TITRE_HISTORIQUE}
@@ -191,7 +193,7 @@
 					<!--  Le bouton et l'entrée qu'il produit lisent la MÊME table : c'est ce
 					      qui les empêche de diverger, et c'est précisément par là que
 					      l'écart est arrivé (19/08/2026). -->
-					{ouvert ? '✕ Annuler' : `${evolutionIcone('commentaire')} Commenter`}
+					{ouvert ? '✕ Annuler' : `${evolutionIcone('commentaire')} ${SUITE.libelle}`}
 				</button>
 			{/if}
 		</svelte:fragment>
@@ -226,7 +228,7 @@
 					entrees={evolutions}
 					idPrefixe="tk-evol"
 					{auteurNom}
-					titre="Commenter"
+					titre={SUITE.libelle}
 					demanderApercu={apercuDuCommentaire}
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}

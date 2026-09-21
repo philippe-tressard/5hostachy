@@ -24,6 +24,8 @@
   chaque hôte à le défaire ensuite.
 -->
 <script lang="ts">
+	import { SECTIONS_LIBELLE } from '$lib/entites/types';
+	import { optionPublication } from '$lib/options-publication';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
 	import type { CleOptionPublication } from '$lib/options-publication';
@@ -47,9 +49,31 @@
 	export let confidentielAcquis = '';
 	/** 🔒 Motif pour lequel l'épinglage est impossible — relayé tel quel. */
 	export let epingleInterdit = '';
+
+	/** Repliée par défaut — la valeur vient de la déclaration (#1095). */
+	export let pliable = false;
+
+	/**  Le résumé : ce qui est COCHÉ, ou le fait que rien ne l'est.
+	 *
+	 *   ⚠️ Les libellés viennent de `optionPublication`, jamais réécrits ici :
+	 *   c'est la table qui nomme une option, et elle est déjà la source de ce
+	 *   que les cases affichent. */
+	$: actives = options.filter(
+		(c) => ({ epingle, urgente, brouillon, confidentiel })[c as 'epingle'],
+	);
+	$: resume = actives.length
+		? actives.map((c) => optionPublication(c)?.etat ?? c).join(' · ')
+		: 'ni épinglée ni urgente';
 </script>
 
-<SectionFormulaire titre="Options de publication" {premiere} idTitre="{objet}-options-titre">
+<SectionFormulaire
+	titre={SECTIONS_LIBELLE.mise_en_avant}
+	{premiere}
+	{pliable}
+	{resume}
+	ouvrirSiRenseignee={actives.length > 0}
+	idTitre="{objet}-options-titre"
+>
 	<OptionsPublication
 		{objet}
 		{options}

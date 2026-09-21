@@ -38,6 +38,7 @@
   pour l'affichage.
 -->
 <script lang="ts">
+	import { SUITE } from '$lib/gestes';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { contexteCommentaire } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
@@ -326,7 +327,7 @@
 					<EvolForm
 						idPrefixe="tk-evol-{ticket.id}"
 						auteurNom={nomCopie(ticket)}
-						titre="Commenter ou changer l’état"
+						titre={SUITE.libelle}
 						demanderApercu={(saisie) =>
 							ticketsApi.apercuDiffusion({
 								ticket_id: ticket.id,
@@ -384,6 +385,7 @@
 					      texte d'une entrée ne rejoue pas la transition qu'elle a
 					      enregistrée (`test_correction_pas_transition.py`). -->
 						<RubriqueHistorique
+							avecFiltre
 							{evolutions}
 							statutLabels={STATUT_TICKET_LABELS}
 							peutModifier={peutSuivreCeTicket}
