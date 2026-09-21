@@ -1,5 +1,5 @@
 /**
- * La PUBLICATION (une actualité), déclarée une fois — les neuf sections, ce
+ * La PUBLICATION (une actualité), déclarée une fois — les treize sections, ce
  * qu'elles portent, et **chaque divergence entre états avec son motif** (R4).
  *
  * Troisième entité mise au cadre #430, et **la plus éloignée des trois** : c'est
@@ -181,9 +181,14 @@ export const PUBLICATION: EntiteDeclaree = {
 			//  touche pas au modèle.
 			id: 'pieces_jointes',
 			objet: 'FichiersUpload mode mixte — photos (URLs) et documents (entités `Document`)',
-			exceptionPliage:
-				'Facultative mais DÉPLIÉE : joindre une photo est le premier geste sur ' +
-				'téléphone, et le replier ajouterait un clic au geste le plus fréquent.',
+			//  🔴 PLIÉE, comme toute section facultative (21/09/2026, demandé à
+			//  l'écran). Elle était l'exception inverse — « dépliée parce que joindre
+			//  une photo est le premier geste sur téléphone ». C'est l'ARBITRAGE qui a
+			//  changé, pas la règle : un formulaire de treize sections toutes ouvertes
+			//  n'est pas lisible au pouce.
+			//  ⚠️ `ouvrirSiRenseignee` la rouvre dès qu'un fichier y est joint : en
+			//  édition, un objet qui porte des pièces jointes ne les cache pas.
+			pliee: true,
 		},
 		{
 			//  L'actualité porte « Saisi pour » depuis le 15/09/2026, comme l'affaire

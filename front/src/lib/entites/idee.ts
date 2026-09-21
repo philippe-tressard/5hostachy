@@ -1,5 +1,5 @@
 /**
- * L'IDÉE, déclarée une fois — les neuf sections, ce qu'elles portent, et **chaque
+ * L'IDÉE, déclarée une fois — les treize sections, ce qu'elles portent, et **chaque
  * divergence entre états avec son motif** (R4).
  *
  * Sixième et dernière entité de **#441** (Communauté). Le ticket parlait de trois

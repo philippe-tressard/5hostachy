@@ -58,11 +58,14 @@
 	>
 {/if}
 {#if peutEditer}
+	<!--  « Modifier » tout court, comme l'actualité (21/09/2026, signalé à
+	      l'écran) : l'infobulle disait « Modifier le ticket », le mot du
+	      modèle. Nommer l'objet ici n'apprend rien — on est sur sa carte. -->
 	<button
 		class="btn-icon"
 		aria-pressed={mode === 'edition'}
 		aria-label="Modifier"
-		title="Modifier le ticket"
+		title="Modifier"
 		on:click|stopPropagation={() => dispatch('modifier')}>✏️</button
 	>
 {/if}

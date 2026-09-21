@@ -28,6 +28,10 @@ const PORTES = [
 	//  contrôle l'ignorait, et trois boutons disaient donc encore « Commenter »
 	//  à ceux qui ne voient pas l'icône (21/09/2026).
 	{ nom: 'nom accessible', re: /aria-label="([^"]+)"/g },
+	//  🔴 `title=` — l'INFOBULLE. Elle n'était pas surveillée : seule la prop
+	//  française `titre=` l'était, et « Modifier le ticket » est resté sur le
+	//  crayon de chaque carte d'affaire (21/09/2026, signalé à l'écran).
+	{ nom: 'infobulle', re: /title="([^"]+)"/g },
 	{ nom: 'nom de l’objet copié', re: /quoi="([^"]+)"/g },
 	{ nom: 'nom d’objet passé en prop', re: /\bobjet\s*=\s*'([^']+)'/g },
 	{ nom: 'notification', re: /toast\(\s*'[a-z]+'\s*,\s*['"`]([^'"`]+)/g },

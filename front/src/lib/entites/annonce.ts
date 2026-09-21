@@ -1,5 +1,5 @@
 /**
- * La PETITE ANNONCE, déclarée une fois — les neuf sections, ce qu'elles portent,
+ * La PETITE ANNONCE, déclarée une fois — les treize sections, ce qu'elles portent,
  * et **chaque divergence entre états avec son motif** (R4).
  *
  * Quatrième entité mise au cadre #430, et la première de la rubrique Communauté
@@ -203,9 +203,14 @@ export const ANNONCE: EntiteDeclaree = {
 					explication: "Les photos sont celles de l'annonce ; une réponse n'en ajoute pas.",
 				},
 			},
-			exceptionPliage:
-				'Facultative mais DÉPLIÉE : joindre une photo est le premier geste sur ' +
-				'téléphone, et le replier ajouterait un clic au geste le plus fréquent.',
+			//  🔴 PLIÉE, comme toute section facultative (21/09/2026, demandé à
+			//  l'écran). Elle était l'exception inverse — « dépliée parce que joindre
+			//  une photo est le premier geste sur téléphone ». C'est l'ARBITRAGE qui a
+			//  changé, pas la règle : un formulaire de treize sections toutes ouvertes
+			//  n'est pas lisible au pouce.
+			//  ⚠️ `ouvrirSiRenseignee` la rouvre dès qu'un fichier y est joint : en
+			//  édition, un objet qui porte des pièces jointes ne les cache pas.
+			pliee: true,
 		},
 		{
 			id: 'au_nom_de',

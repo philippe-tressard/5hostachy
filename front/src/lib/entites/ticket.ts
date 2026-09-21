@@ -1,5 +1,5 @@
 /**
- * Le TICKET, déclaré une fois — les neuf sections, ce qu'elles portent, et
+ * Le TICKET, déclaré une fois — les treize sections, ce qu'elles portent, et
  * **chaque divergence entre états avec son motif** (R4).
  *
  * Première entité mise au cadre #430, parce qu'elle en était déjà la plus proche :
@@ -161,9 +161,14 @@ export const TICKET: EntiteDeclaree = {
 			//  efface sans ambiguïté.
 			id: 'pieces_jointes',
 			objet: 'FichiersUpload mode mixte — photos et documents',
-			exceptionPliage:
-				'Facultative mais DÉPLIÉE : joindre une photo est le premier geste sur ' +
-				'téléphone, et le replier ajouterait un clic au geste le plus fréquent.',
+			//  🔴 PLIÉE, comme toute section facultative (21/09/2026, demandé à
+			//  l'écran). Elle était l'exception inverse — « dépliée parce que joindre
+			//  une photo est le premier geste sur téléphone ». C'est l'ARBITRAGE qui a
+			//  changé, pas la règle : un formulaire de treize sections toutes ouvertes
+			//  n'est pas lisible au pouce.
+			//  ⚠️ `ouvrirSiRenseignee` la rouvre dès qu'un fichier y est joint : en
+			//  édition, un objet qui porte des pièces jointes ne les cache pas.
+			pliee: true,
 		},
 		{
 			//  ✅ OUVERT à l'édition depuis le 18/08/2026. Il en était absent parce
