@@ -51,35 +51,18 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
+import {
+	incoherencesDeclaration,
+	libellesFautifs,
+	texteVisibleFautif,
+	vocabulaireDeclare,
+} from './lib-vocabulaire.mjs';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
 const ENTITES = join(SOURCE, 'lib', 'entites');
 const GESTES = join(SOURCE, 'lib', 'gestes.ts');
 const TYPES_SECTIONS = join(ENTITES, 'types.ts');
-
-/**
- * Les **portes** par lesquelles un texte devient visible.
- *
- * ⚠️ On ne cherche pas le mot dans tout le fichier : `{#each tickets as ticket}`
- * est du code, et le confondre avec un libellé ferait crier le contrôle sur du
- * légitime — un contrôle qui crie sur du légitime finit désarmé (leçon de C16).
- * Chaque motif capture ce qui sera **lu**.
- */
-const PORTES = [
-	{ nom: 'titre de boîte', re: /titreBoite\s*=\s*([^;\n]+)/g },
-	{ nom: 'bouton de création', re: /libelle="([^"]+)"/g },
-	{ nom: 'titre', re: /\btitre="([^"]+)"/g },
-	//  🔴 Un `aria-label` EST un libellé : il est lu, par un lecteur d'écran. Le
-	//  contrôle l'ignorait, et trois boutons disaient donc encore « Commenter »
-	//  à ceux qui ne voient pas l'icône (21/09/2026).
-	{ nom: 'nom accessible', re: /aria-label="([^"]+)"/g },
-	{ nom: 'nom de l’objet copié', re: /quoi="([^"]+)"/g },
-	{ nom: 'nom d’objet passé en prop', re: /\bobjet\s*=\s*'([^']+)'/g },
-	{ nom: 'notification', re: /toast\(\s*'[a-z]+'\s*,\s*['"`]([^'"`]+)/g },
-	{ nom: 'confirmation', re: /confirm\(\s*['"`]([^'"`]+)/g },
-];
 
 /**
  * Où le mot est bien le bon — chacune avec sa raison.
@@ -98,6 +81,13 @@ const EXCEPTIONS = [
 		raison:
 			"« publication » y est l'ACTE de publier, pas l'objet — la section sert aussi aux affaires et aux événements",
 	},
+	{
+		texte: 'modifiable après publication',
+		raison:
+			'même homonyme, relevé par la porte du TEXTE AFFICHÉ (#1123) : « après publication » ' +
+			"désigne le moment où l'on a publié, pas l'objet publié — le remplacer par " +
+			'« après actualité » ne voudrait rien dire',
+	},
 ];
 
 function fichiers(dir) {
@@ -108,102 +98,6 @@ function fichiers(dir) {
 		else if (/\.(svelte|ts)$/.test(nom)) sortie.push(chemin);
 	}
 	return sortie;
-}
-
-/**
- * Le vocabulaire déclaré, LU dans `entites/` — jamais recopié.
- *
- * @returns `[{ fichier, libelle, motDeCode, libelleNouveau, libelleModifier }]`
- */
-export function vocabulaireDeclare(sources) {
-	const champ = (s, nom) => {
-		const m = new RegExp(`\\b${nom}:\\s*(?:'([^']*)'|"([^"]*)")`).exec(s);
-		return m ? (m[1] ?? m[2]) : undefined;
-	};
-	return sources
-		.map(({ fichier, source }) => ({
-			fichier,
-			libelle: champ(source, 'libelle'),
-			motDeCode: champ(source, 'motDeCode'),
-			libelleNouveau: champ(source, 'libelleNouveau'),
-			libelleModifier: champ(source, 'libelleModifier'),
-		}))
-		.filter((e) => e.libelle);
-}
-
-/** La source se contredit-elle ? (points 2 et 3 de l'en-tête) */
-export function incoherencesDeclaration(entites) {
-	const fautes = [];
-	for (const e of entites) {
-		const attendu = (e.libelle ?? '').toLowerCase();
-		if (e.motDeCode && attendu.includes(e.motDeCode.toLowerCase())) {
-			fautes.push(
-				`${e.fichier} : \`libelle: '${e.libelle}'\` porte son propre mot de code « ${e.motDeCode} »`,
-			);
-		}
-		for (const clef of ['libelleNouveau', 'libelleModifier']) {
-			const v = e[clef];
-			if (v === undefined) {
-				fautes.push(`${e.fichier} : \`${clef}\` manque`);
-				continue;
-			}
-			//  🔴 L'inclusion n'est exigée que des entités RENOMMÉES, et c'est
-			//  mesuré : « Déposer une annonce » ne contient pas « Petite annonce »,
-			//  « Nouveau contrat » pas « Contrat d'entretien » — un nom formel et un
-			//  nom d'usage, et les deux sont justes. Exiger l'inclusion partout
-			//  faisait crier le contrôle sur ces deux-là, et un contrôle qui crie
-			//  sur du légitime finit désarmé (leçon de C16).
-			//
-			//  Là où le mot de code existe, en revanche, l'enjeu est précisément
-			//  que le libellé d'action NOMME la chose : « Signaler un problème » ne
-			//  nommait rien, « Nouvelle publication » nommait le modèle. C'est le
-			//  défaut #1107, et il ne se produit que sur ces entités-là.
-			if (e.motDeCode && !v.toLowerCase().includes(attendu)) {
-				fautes.push(`${e.fichier} : \`${clef}: '${v}'\` ne nomme pas « ${e.libelle} »`);
-			}
-			if (!e.motDeCode && !v.trim()) {
-				fautes.push(`${e.fichier} : \`${clef}\` est vide`);
-			}
-		}
-	}
-	return fautes;
-}
-
-/** Les libellés visibles d'un fichier qui portent l'un des mots de code. */
-export function libellesFautifs(source, motsDeCode, exceptions = []) {
-	if (!motsDeCode.length) return [];
-	const propre = sansCommentaires(source);
-	const motif = new RegExp(`\\b(${motsDeCode.join('|')})s?\\b`, 'i');
-	const fautes = [];
-	//  🔴 Ne chercher le mot que dans ce qui est du TEXTE LITTÉRAL.
-	//
-	//  Ce qu'une porte capture n'est pas toujours une chaîne : `titreBoite` prend
-	//  une expression, et un toast une interpolation. Or `${TICKET.libelle}` et
-	//  `PUBLICATION.libelleNouveau` contiennent le mot du modèle et rendent
-	//  pourtant « Affaire » et « Nouvelle actualité » — c'est précisément la
-	//  forme CORRIGÉE. Les signaler reviendrait à refuser le correctif que ce
-	//  contrôle existe pour imposer.
-	//
-	//  Deux choses partent donc : les interpolations `${…}` et les identifiants
-	//  en MAJUSCULES, qui sont les constantes d'entité. Le contenu est remplacé
-	//  par des espaces — jamais supprimé —, même parade que `lib-commentaires`.
-	const blanchir = (t) =>
-		t
-			.replace(/\$\{[^}]*\}/g, (m) => ' '.repeat(m.length))
-			.replace(/\b[A-Z][A-Z0-9_]{2,}\b(\.[A-Za-z][\w$]*)*/g, (m) => ' '.repeat(m.length));
-	propre.split('\n').forEach((ligne, i) => {
-		for (const { nom, re } of PORTES) {
-			re.lastIndex = 0;
-			let m;
-			while ((m = re.exec(ligne))) {
-				const texte = (m[1] ?? '').trim();
-				if (!motif.test(blanchir(texte))) continue;
-				if (exceptions.some((e) => texte.includes(e.texte ?? e))) continue;
-				fautes.push({ ligne: i + 1, porte: nom, texte: texte.slice(0, 80) });
-			}
-		}
-	});
-	return fautes;
 }
 
 function selftest() {
@@ -368,6 +262,64 @@ function selftest() {
 		[],
 	);
 
+	//  ════════════════════════════════════════════════════════════════════════
+	//  LA PORTE DU TEXTE AFFICHÉ (#1123)
+	//  ════════════════════════════════════════════════════════════════════════
+	//
+	//  🔴 Ces cas ne sont pas décoratifs : la première écriture de cette porte
+	//  rendait un vert PARFAIT en ne refusant rien — un `\b` mal échappé dans un
+	//  gabarit, et le motif cherchait un caractère « retour arrière ». Le
+	//  contrôle a tourné sur 44 fautes réelles en annonçant « aucune ». Un
+	//  contrôle se prouve sur le cas fautif avant de servir (socle 04 §2).
+	verifier(
+		'le mot du modèle dans un <p> est refusé',
+		texteVisibleFautif("<p>Le dépôt d'un ticket vaut traçabilité.</p>", ['ticket']).length,
+		1,
+	);
+	verifier(
+		'le pluriel aussi',
+		texteVisibleFautif('<h3>Catégories de tickets à revoir</h3>', ['ticket']).length,
+		1,
+	);
+	//  Le balisage lui-même n'est pas du texte : sans cela, chaque `<Ticket …/>`
+	//  crierait, et un contrôle qui crie sur du légitime finit désarmé.
+	verifier(
+		'un nom de composant ou une variable ne compte pas',
+		texteVisibleFautif('<CarteTicket {ticket} on:maj={majTicket} />', ['ticket']),
+		[],
+	);
+	//  ⚠️ Une balise de composant s'étend sur plusieurs lignes et porte des `>`
+	//  dans ses attributs : le motif naïf `/<[^>]*>/` s'y arrête, et la fin de la
+	//  balise repassait pour du texte affiché.
+	verifier(
+		'une balise multi-lignes à `>` dans un attribut reste du balisage',
+		texteVisibleFautif(
+			'<Bloc\n\tvisible={n > 1}\n\tidPrefixe="ticket"\n/>\n<p>rien à signaler</p>',
+			['ticket'],
+		),
+		[],
+	);
+	//  Le commentaire d'en-tête d'un composant parle du MODÈLE, et c'est sa
+	//  place : il documente le code, il ne s'affiche pas.
+	verifier(
+		'un commentaire HTML ne compte pas',
+		texteVisibleFautif('<!--\n  CarteTicket — la carte d’un ticket.\n-->\n<p>Bonjour</p>', [
+			'ticket',
+		]),
+		[],
+	);
+	verifier(
+		'le contenu d’un <script> ne compte pas',
+		texteVisibleFautif('<script>\n\tlet ticket = null;\n</script>\n<p>Bonjour</p>', ['ticket']),
+		[],
+	);
+	//  Et l'exception déclarée passe — mais seulement elle.
+	verifier(
+		'une exception déclarée laisse passer sa ligne',
+		texteVisibleFautif('<p>modifiable après publication</p>', ['publication'], EXCEPTIONS),
+		[],
+	);
+
 	const echecs = cas.filter((c) => !c.ok);
 	if (echecs.length) {
 		for (const c of echecs) {
@@ -448,7 +400,13 @@ for (const chemin of fichiers(SOURCE)) {
 	const source = readFileSync(chemin, 'utf8');
 	for (const e of EXCEPTIONS) if (source.includes(e.texte)) exceptionsVues.add(e.texte);
 
-	const fautes = libellesFautifs(source, motsDeCode, EXCEPTIONS);
+	//  DEUX portes, et il a fallu #1123 pour que la seconde existe : les
+	//  attributs (`PORTES`) et le TEXTE du balisage. Un mot de modèle dans un
+	//  `<p>` ne passait par aucun contrôle.
+	const fautes = [
+		...libellesFautifs(source, motsDeCode, EXCEPTIONS),
+		...(chemin.endsWith('.svelte') ? texteVisibleFautif(source, motsDeCode, EXCEPTIONS) : []),
+	];
 	libellesVus += fautes.length;
 	if (fautes.length) fautifs.push({ rel, fautes });
 }
