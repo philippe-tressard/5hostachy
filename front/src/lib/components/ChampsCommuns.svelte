@@ -166,13 +166,8 @@
 	 *   calendrier. Elle est ce qui permet au Calendrier de cesser d'être un
 	 *   objet pour devenir une vue. */
 	export let avecQuand = false;
-	/**  L'échéance n'existe que sur un objet qu'on SUIT : elle alimente la
-	 *   relance, pas l'agenda. Ouverte par l'écran des affaires, et par lui
-	 *   seul — un champ que le serveur ne consomme pas est interdit (#430). */
-	export let quandAvecEcheance = false;
 	export let debut = '';
 	export let fin = '';
-	export let echeance = '';
 	export let perimetre: string[] = [];
 	/**  `single` : un seul code retenu. Le rendu est le MÊME (des pastilles) —
 	     seule la sélection change. Utilisé par les prestations, dont la colonne
@@ -361,14 +356,7 @@
 {#if avecQuand}
 	<!--  5. Quand — QUAND ÇA SE PASSE, et pour quand c'est attendu. Placée
 	      avant le Périmètre : on sait ce qui arrive avant de dire où. -->
-	<SectionQuand
-		{idPrefixe}
-		premiere={premiereQuand}
-		avecEcheance={quandAvecEcheance}
-		bind:debut
-		bind:fin
-		bind:echeance
-	/>
+	<SectionQuand {idPrefixe} premiere={premiereQuand} bind:debut bind:fin />
 {/if}
 
 {#if avecPerimetre}
