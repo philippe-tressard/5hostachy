@@ -208,15 +208,11 @@ class TicketRead(SaisiPourSortie, AssisteIASortie):
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     envoyer_auteur: bool = False
-    #  🔴 À QUI le ticket appartient : le « Saisi pour » s'il existe, l'auteur
-    #  sinon (12/09/2026). C'est ce nom que le fil affiche et que la case
-    #  « Envoyer une copie à … » annonce — le même, parce que c'est la même
-    #  personne qui recevra le courriel.
-    #
-    #  ⚠️ Distinct de `saisi_pour_affichage`, qui reste VIDE quand personne
-    #  n'est nommé : l'écran n'affiche « Saisi pour X » que lorsqu'il y a un X,
-    #  alors que le propriétaire existe toujours.
-    proprietaire_nom: Optional[str] = None
+    #  `proprietaire_nom` est HÉRITÉ de `SaisiPourSortie` depuis le 21/09/2026
+    #  (#1104) : il n'était déclaré qu'ici, si bien que l'actualité et
+    #  l'événement n'avaient aucun moyen d'afficher autre chose que leur
+    #  rédacteur. Les trois schémas héritent de la même classe — c'est ce qui
+    #  rend la règle vraie partout d'une seule ligne.
     non_relancable: bool = False
     non_relancable_motif: Optional[str] = None
     relance_count: int = 0

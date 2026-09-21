@@ -286,6 +286,10 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - [ ] Onglet réservé à un rôle : `reserve:` **sur l'onglet** dans `pages.ts`, jamais
       un masquage écrit dans la page — `BarreOnglets` masque ET refuse la route
       directe (`npm run lint:onglets-reserves`)
+- [ ] Nom affiché d'un objet « Saisi pour » : `nomProprietaire` (`$lib/saisi-pour`),
+      **jamais** `objet.auteur_nom` — c'est le rédacteur, et le « Saisi pour » s'y
+      substitue (12/09). La case de copie, elle, dit `nomCopie` : deux questions.
+      Il y en avait **13** avant #1104 (`npm run lint:nom-proprietaire` le refuse)
 - [ ] Périmètre : masqué s'il est celui par défaut (`estPerimetreParDefaut`)
 - [ ] Archiver (pas supprimer) sur la vue principale
 - [ ] Champs requis : label + ` *`

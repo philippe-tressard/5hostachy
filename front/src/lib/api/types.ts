@@ -259,6 +259,13 @@ export interface Publication extends PorteSaisiPourLu {
 	urgente: boolean;
 	auteur_id: number;
 	auteur_nom?: string;
+	/**
+	 * À QUI l'actualité appartient — le « Saisi pour » s'il existe, l'auteur
+	 * sinon (#1104). C'est ce nom que la carte AFFICHE, via `nomProprietaire`.
+	 * Il n'était exposé que par le ticket, et l'actualité ne pouvait donc rien
+	 * montrer d'autre que son rédacteur.
+	 */
+	proprietaire_nom?: string | null;
 	photos_urls?: string[];
 	cree_le: string;
 	mis_a_jour_le?: string;

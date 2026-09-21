@@ -114,24 +114,37 @@ def corriger(objet, body, envoye) -> list[str]:
     return ["Saisi pour modifié"] if avant != apres else []
 
 
-def affichage(session: Session, objet) -> Optional[str]:
-    """Le nom à afficher — `None` quand personne n'est nommé.
+def noms_derives(session: Session, objet) -> tuple[Optional[str], Optional[str]]:
+    """Les **deux** noms dérivés d'un objet, en un seul calcul.
 
-    ⚠️ Ce n'est PAS le propriétaire, et la nuance porte tout l'usage : le
-    propriétaire retombe sur l'auteur, celui-ci reste **vide**. L'écran s'en sert
-    pour n'afficher « Saisi pour X » que lorsqu'il y a un X — sans quoi chaque
-    entrée porterait la mention, y compris celles que leur auteur a écrites pour
-    lui-même.
+    :returns: `(proprietaire_nom, saisi_pour_affichage)`.
+
+    ## 🔴 Pourquoi les rendre ensemble (21/09/2026, #1104)
+
+    Ils viennent de la MÊME question — « à qui cet objet appartient-il ? » — et
+    ne diffèrent que par le cas où personne n'est nommé : le propriétaire
+    retombe sur l'auteur, l'affichage reste vide.
+
+    Ils étaient pourtant composés à trois endroits et de deux façons : le ticket
+    appelait `proprietaire()` puis en dérivait l'affichage, tandis que
+    l'actualité et l'événement appelaient `affichage()`, qui refait le même
+    appel. Résultat — **seul le ticket exposait `proprietaire_nom`**, et les
+    cartes d'actualité et d'événement n'avaient aucun moyen d'afficher autre
+    chose que le rédacteur. C'est la moitié serveur de #1104.
+
+    ⚠️ La nuance entre les deux se lit ici, une fois. La répartir entre trois
+    routeurs, c'est trois occasions de l'oublier — et elle l'a été deux fois.
     """
-    #  🔴 Import DIFFÉRÉ, et c'est un cycle réel : `copie_auteur` a besoin
-    #  des modèles, et les modèles ont besoin du mixin de ce fichier. Le
-    #  poser en tête ferait échouer le DÉMARRAGE de l'API, pas un test.
+    #  🔴 Import DIFFÉRÉ, et c'est un cycle réel : `copie_auteur` a besoin des
+    #  modèles, et les modèles ont besoin du mixin de ce fichier. Le poser en
+    #  tête ferait échouer le DÉMARRAGE de l'API, pas un test.
     from app.utils.copie_auteur import proprietaire
 
-    if not (objet.saisi_pour_user_id or objet.saisi_pour_nom):
-        return None
     nom, _ = proprietaire(session, objet)
-    return nom
+    nomme = bool(
+        getattr(objet, "saisi_pour_user_id", None) or getattr(objet, "saisi_pour_nom", None)
+    )
+    return nom, (nom if nomme else None)
 
 
 class SaisiPourEntree(BaseModel):
@@ -163,3 +176,9 @@ class SaisiPourSortie(BaseModel):
     saisi_pour_nom: Optional[str] = None
     saisi_pour_email: Optional[str] = None
     saisi_pour_affichage: Optional[str] = None
+    #  🔴 À QUI l'objet appartient — le « Saisi pour » s'il existe, l'auteur
+    #  sinon. Déclaré ICI depuis le 21/09/2026 (#1104) : il ne vivait que dans
+    #  `TicketRead`, si bien que l'actualité et l'événement ne pouvaient pas
+    #  afficher autre chose que leur rédacteur. Les trois héritent déjà de cette
+    #  classe — c'est ce qui rend la règle vraie partout d'une seule ligne.
+    proprietaire_nom: Optional[str] = None

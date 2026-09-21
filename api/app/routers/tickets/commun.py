@@ -107,7 +107,7 @@ from app.utils.destinataires import (  # noqa: F401  (ré-export volontaire)
     destinataires_syndic_cs,
     syndic_principal,
 )
-from app.utils.copie_auteur import proprietaire
+from app.utils.saisi_pour import noms_derives
 from app.utils.noms import nom_affiche
 
 
@@ -225,19 +225,11 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
     #  déjà être le second.
     auteur_batiment_id = auteur.batiment_id if auteur else None
     batiment = session.get(Batiment, auteur_batiment_id) if auteur_batiment_id else None
-    #  🔴 Le PROPRIÉTAIRE du ticket : le « Saisi pour » s'il existe, l'auteur
-    #  sinon. La règle vit dans `copie_auteur.proprietaire` (12/09/2026) — elle y
-    #  était écrite en ligne ici, et il en fallait une identique dans le fil et
-    #  dans la copie. Trois copies d'une même question, c'est trois occasions de
-    #  répondre différemment.
-    proprietaire_nom, _ = proprietaire(session, ticket)
-    #  ⚠️ `saisi_pour_affichage` reste distinct, et ce n'est pas une redite : il
-    #  est VIDE quand personne n'est nommé, là où le propriétaire retombe sur
-    #  l'auteur. L'écran s'en sert pour n'afficher « Saisi pour X » que lorsqu'il
-    #  y a un X.
-    saisi_pour_affichage: str | None = None
-    if ticket.saisi_pour_user_id or ticket.saisi_pour_nom:
-        saisi_pour_affichage = proprietaire_nom
+    #  🔴 Les DEUX noms dérivés, en un seul calcul et une seule écriture de
+    #  la règle (`utils/saisi_pour.noms_derives`, #1104). Ils étaient composés
+    #  ici en ligne, et autrement dans l'actualité et l'événement — d'où un
+    #  `proprietaire_nom` que seul le ticket exposait.
+    proprietaire_nom, saisi_pour_affichage = noms_derives(session, ticket)
     return TicketRead(
         id=ticket.id,
         numero=ticket.numero,

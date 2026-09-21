@@ -24,6 +24,7 @@
   d'`ApercuCarte`, le fil d'`HistoriqueEvenement`.
 -->
 <script lang="ts">
+	import { nomProprietaire } from '$lib/saisi-pour';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
@@ -39,6 +40,10 @@
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 
 	export let ev: any;
+	//  À QUI l'événement appartient — le « Saisi pour » s'il existe, l'auteur
+	//  sinon (#1104). `Evenement` porte le mixin côté serveur, au même titre
+	//  que le ticket et l'actualité.
+	$: proprietaireNom = nomProprietaire(ev);
 	export let expanded = false;
 	/** Les colonnes du Kanban — la source unique reste `$lib/kanban`. */
 	export let colonnes: { id: string; label: string }[] = [];
@@ -121,7 +126,7 @@
 			{#if ev.prestataire_nom}<span class="event-meta">&#x1F3AF; {ev.prestataire_nom}</span>{/if}
 			{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
 			{#if ev.fin}<span class="event-meta">→ {formatDate(ev.fin)}</span>{/if}
-			{#if ev.auteur_nom}<span class="event-meta">{ev.auteur_nom}</span>{/if}
+			{#if proprietaireNom}<span class="event-meta">{proprietaireNom}</span>{/if}
 			<MarqueIA assiste={ev.assiste_ia} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
