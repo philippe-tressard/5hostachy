@@ -57,13 +57,17 @@
  *   voulait un champ de plus. */
 export type IdSection =
 	| 'titre'
-	| 'specifiques'
-	| 'workflow'
+	| 'nature'
+	| 'equipement'
+	| 'suivi'
 	| 'quand'
-	| 'perimetre'
-	| 'destinataires'
+	| 'intervenant'
+	| 'qui_le_voit'
 	| 'description'
 	| 'pieces_jointes'
+	| 'au_nom_de'
+	| 'mise_en_avant'
+	| 'destinataires'
 	| 'diffusion';
 
 /**
@@ -91,13 +95,17 @@ export type IdSection =
  */
 export const SECTIONS_ORDRE: readonly IdSection[] = [
 	'titre',
-	'specifiques',
-	'workflow',
+	'nature',
+	'equipement',
+	'suivi',
 	'quand',
-	'perimetre',
-	'destinataires',
+	'intervenant',
+	'qui_le_voit',
 	'description',
 	'pieces_jointes',
+	'au_nom_de',
+	'mise_en_avant',
+	'destinataires',
 	'diffusion',
 ];
 
@@ -111,13 +119,17 @@ export const SECTIONS_ORDRE: readonly IdSection[] = [
  */
 export const SECTIONS_LIBELLE: Readonly<Record<IdSection, string>> = {
 	titre: 'Titre',
-	specifiques: 'Champs spécifiques',
-	workflow: 'Workflow',
+	nature: 'Nature',
+	equipement: 'Équipement',
+	suivi: 'Suivi',
 	quand: 'Quand',
-	perimetre: 'Périmètre',
-	destinataires: 'Destinataires',
+	intervenant: 'Intervenant',
+	qui_le_voit: 'Qui le voit',
 	description: 'Description',
 	pieces_jointes: 'Pièces jointes',
+	au_nom_de: 'Au nom de',
+	mise_en_avant: 'Mise en avant',
+	destinataires: 'Destinataires',
 	diffusion: 'Diffusion',
 };
 
@@ -126,8 +138,17 @@ export type Etat = 'affichage' | 'creation' | 'edition' | 'evolution';
 
 export const ETATS: readonly Etat[] = ['affichage', 'creation', 'edition', 'evolution'];
 
-/** Les trois motifs de divergence, et il n'y en a pas d'autre (R4). */
-export type Motif = 'geste' | 'hérité' | 'api';
+/**
+ * Les QUATRE motifs de divergence, et il n'y en a pas d'autre (R4).
+ *
+ * 🔴 `categorie` est entré le 21/09/2026 (#1095) : une section que la CATÉGORIE
+ * de l'objet n'appelle pas — l'Équipement et l'Intervenant ne concernent que le
+ * bâti. C'est une absence légitime et conditionnelle, là où `nature` dit « cet
+ * objet ne porte jamais la notion » et `api` « on ne sait pas encore le faire ».
+ *
+ * ⚠️ `api` reste une **dette, jamais un choix**, et exige son ticket.
+ */
+export type Motif = 'geste' | 'hérité' | 'categorie' | 'api';
 
 export interface Divergence {
 	motif: Motif;
@@ -183,6 +204,43 @@ export interface SectionDeclaree {
 	 * Une absence non déclarée ici est un écart : `lint:etats` la refuse.
 	 */
 	absente?: Partial<Record<Etat, Divergence>>;
+	/**
+	 * **Repliée par défaut** — l'intitulé et un résumé d'une ligne, cliquables.
+	 *
+	 * 🔴 Ce n'est PAS une absence, et ce n'est pas une fusion : la section garde
+	 * son intitulé, son rang et sa déclaration. C'est un troisième état de
+	 * présence (#1095, 20/09/2026), qui existe parce qu'un formulaire de treize
+	 * sections déplié d'office est illisible au pouce.
+	 *
+	 * ## La règle, et elle est mécaniquement vérifiable
+	 *
+	 *     obligatoire → déplié   ·   facultatif → plié
+	 *
+	 * Elle se déduit de `requis`, donc `lint:etats` la CALCULE : un pliage
+	 * conforme n'a rien à déclarer. Un pliage qui s'en écarte exige
+	 * `exceptionPliage`, et le contrôle échoue sans lui.
+	 *
+	 * ⚠️ **Et toujours, une valeur autre que le défaut rouvre la section
+	 * d'office.** Cette partie-là n'est pas déclarative : elle vit dans le rendu
+	 * (`SectionFormulaire`), parce qu'elle dépend de ce que l'objet PORTE, pas de
+	 * ce que la table dit. Une section pliée qui cacherait une valeur saisie
+	 * serait pire que pas de pliage du tout.
+	 */
+	pliee?: boolean;
+	/**
+	 * Pourquoi ce pliage s'écarte de la règle — **obligatoire** quand il s'en
+	 * écarte, refusé quand il ne s'en écarte pas.
+	 *
+	 * Les trois du 20/09/2026 : « Au nom de » et « Destinataires » sont
+	 * obligatoires et **pliés** (le défaut est juste dans la quasi-totalité des
+	 * cas) ; « Pièces jointes » est facultatif et **déplié** (c'est le premier
+	 * geste sur téléphone).
+	 *
+	 * ⚠️ Le contrôle refuse aussi une exception qui ne sert plus : une règle
+	 * changée laisserait sinon derrière elle des justifications sans objet, et
+	 * c'est ainsi qu'une liste d'exceptions devient une liste de passe-droits.
+	 */
+	exceptionPliage?: string;
 	/**
 	 * L'entité ne porte PAS cette notion, dans aucun état — et voici pourquoi.
 	 *

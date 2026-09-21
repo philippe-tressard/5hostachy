@@ -61,41 +61,34 @@ export const TICKET: EntiteDeclaree = {
 			},
 		},
 		{
-			//  DEUX champs nommés, d'où la liste d'intitulés : « Catégorie » et
-			//  « Saisi pour ». Tous deux **requis**, tous deux rendus aux mêmes
-			//  états — la section n'a plus de champ à géométrie variable.
-			//
-			//  ✅ « Saisi pour » est OUVERT à l'édition depuis le 18/08/2026. Il en
-			//  était absent parce que `TicketUpdate` ne savait pas EFFACER les
-			//  `saisi_pour_*` — un `None` y était indistinguable d'un champ non
-			//  envoyé, et « En mon nom » aurait été un choix sans effet, en silence.
-			//  Le serveur lit désormais la PRÉSENCE du champ (`model_fields_set`)
-			//  et non sa non-nullité : effacer efface.
-			//
-			//  C'est ce qui referme, pour cette entité, la limite décrite en #436 —
-			//  R4 ne déclarant qu'une divergence de SECTION, un champ fermé au sein
-			//  d'une section ouverte n'était déclarable nulle part.
-			id: 'specifiques',
-			objet:
-				'Catégorie + Saisi pour (en mon nom / résident inscrit / personne extérieure) ' +
-				'+ Options de publication',
-			titreEcran: ['Catégorie', 'Saisi pour', 'Options de publication'],
-			//  🔴 OUVERTE À L'ÉVOLUTION (05/09/2026), constaté à l'écran :
-			//  *« Options de publications n'apparaît pas sur un commentaire sur un
-			//  ticket existant »*.
-			//
-			//  Elle était déclarée ABSENTE, motif `hérité`, et le motif restait juste
-			//  pour ce qu'il nommait : la catégorie et « Saisi pour » appartiennent au
-			//  ticket, pas à l'entrée du fil. Mais la section a reçu une troisième
-			//  chose le même jour — les OPTIONS DE PUBLICATION —, et celles-là se
-			//  corrigent en commentant, exactement comme sur une actualité : le
-			//  formulaire montre le dernier état, ce qu'on enregistre devient l'état.
-			//
-			//  Une section absente pour l'un de ses champs fermait la porte aux deux
-			//  autres. C'est la limite connue de R4, qui ne déclare que des SECTIONS
-			//  et jamais des champs (#436) : la divergence de champ vit donc ici, en
-			//  commentaire — `OptionsEvolutionTicket` ne rend QUE les options, et
-			//  `EvolForm` n'a jamais proposé ni catégorie ni « Saisi pour ».
+			id: 'nature',
+			objet: 'Catégorie de l’affaire — elle décide de QUI traite',
+			titreEcran: 'Catégorie',
+			requis: true,
+			absente: {
+				evolution: {
+					motif: 'hérité',
+					explication:
+						'La catégorie appartient à l’affaire, pas à l’entrée du fil. Une suite ' +
+						'raconte ce qui lui arrive, elle ne la reclasse pas.',
+				},
+			},
+		},
+		{
+			//  🔓 Réservée aux catégories du BÂTI : on n'attache un équipement qu'à
+			//  ce qui s'entretient. Le motif `categorie` est entré avec elle (#1095).
+			id: 'equipement',
+			objet: 'Équipement concerné — alimente le carnet d’entretien',
+			pliee: true,
+			absente: {
+				creation: {
+					motif: 'categorie',
+					explication:
+						'Un résident signale ce qu’il voit, pas ce qu’il faut entretenir. ' +
+						'L’équipement se désigne ensuite, par le conseil syndical, et seulement ' +
+						'pour les catégories qui portent sur le bâti.',
+				},
+			},
 		},
 		{
 			//  🔴 Aucune divergence, et c'est la correction due au cadre. L'édition
@@ -106,8 +99,9 @@ export const TICKET: EntiteDeclaree = {
 			//  La traçabilité, elle, ne tombe pas : c'est le `PATCH` qui a changé —
 			//  il écrit désormais une CORRECTION, pas une transition de workflow
 			//  (`api/app/routers/tickets/crud.py`).
-			id: 'workflow',
+			id: 'suivi',
 			objet: 'Ouvert · En cours · Résolu · Annulé',
+			pliee: true,
 		},
 		{
 			id: 'quand',
@@ -117,6 +111,20 @@ export const TICKET: EntiteDeclaree = {
 			//  calendrier ; `echeance` dit AVANT QUAND C EST ATTENDU et alimente la
 			//  relance. Une échéance dans l agenda y mettrait « devis attendu sous
 			//  15 jours » entre l AG et la coupure d eau (#1092).
+			pliee: true,
+		},
+		{
+			id: 'intervenant',
+			objet: 'Prestataire qui intervient',
+			pliee: true,
+			absente: {
+				creation: {
+					motif: 'categorie',
+					explication:
+						'Personne n’est encore désigné quand l’affaire s’ouvre : c’est le suivi ' +
+						'qui nomme l’intervenant, et seulement pour les catégories du bâti.',
+				},
+			},
 		},
 		{
 			//  🔴 LA DIVERGENCE A ÉTÉ RETIRÉE LE 19/08/2026, et c'est un revirement.
@@ -138,17 +146,9 @@ export const TICKET: EntiteDeclaree = {
 			//  #436) — elle est portée par `EvolForm.avecPerimetre`, dont le nom dit
 			//  qu'elle est optionnelle, et par le test `test_evolution_perimetre.py`
 			//  qui vérifie qu'une entrée muette laisse le ticket tranquille.
-			id: 'perimetre',
+			id: 'qui_le_voit',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
-		},
-		{
-			id: 'destinataires',
-			sansObjet:
-				"Un ticket n'adresse personne nommément dans l'application : il est vu par son " +
-				'auteur et par le conseil syndical, et son périmètre dit déjà de quoi il parle. ' +
-				'`destinataire_syndic` et `destinataire_cs` ne sont PAS des destinataires au sens ' +
-				'de la section 5 — ce sont deux canaux, et ils vivent en Diffusion (section 9).',
 		},
 		{
 			id: 'description',
@@ -161,6 +161,55 @@ export const TICKET: EntiteDeclaree = {
 			//  efface sans ambiguïté.
 			id: 'pieces_jointes',
 			objet: 'FichiersUpload mode mixte — photos et documents',
+			exceptionPliage:
+				'Facultative mais DÉPLIÉE : joindre une photo est le premier geste sur ' +
+				'téléphone, et le replier ajouterait un clic au geste le plus fréquent.',
+		},
+		{
+			//  ✅ OUVERT à l'édition depuis le 18/08/2026. Il en était absent parce
+			//  que `TicketUpdate` ne savait pas EFFACER les `saisi_pour_*` — un
+			//  `None` y était indistinguable d'un champ non envoyé, et « En mon
+			//  nom » aurait été un choix sans effet, en silence. Le serveur lit
+			//  désormais la PRÉSENCE du champ (`model_fields_set`).
+			id: 'au_nom_de',
+			objet: 'Saisi pour — en mon nom · un résident inscrit · une personne extérieure',
+			requis: true,
+			pliee: true,
+			exceptionPliage:
+				'Obligatoire mais PLIÉE : « en mon nom » est juste dans la quasi-totalité ' +
+				'des cas, et déplier d’office une section que personne ne change coûterait à ' +
+				'tous pour servir quelques-uns.',
+			absente: {
+				evolution: {
+					motif: 'hérité',
+					explication:
+						'Au nom de qui l’affaire a été ouverte appartient à l’affaire. Une suite ' +
+						'ne la ré-attribue pas — `EvolForm` n’a jamais proposé ce champ.',
+				},
+			},
+		},
+		{
+			//  🔴 ELLE EST OUVERTE À L'ÉVOLUTION, et c'est ce que la scission permet
+			//  enfin de DÉCLARER (#1095, constaté à l'écran le 05/09/2026 :
+			//  *« Options de publications n'apparaît pas sur un commentaire »*).
+			//
+			//  Les trois notions vivaient dans une seule section : catégorie et
+			//  « Saisi pour » sont héritées, les options se corrigent en commentant.
+			//  Une section absente pour l'une fermait la porte aux deux autres, et
+			//  la nuance ne pouvait s'écrire qu'en COMMENTAIRE — invisible à
+			//  `lint:etats`. C'est la limite que #436 décrivait, et elle se referme
+			//  ici : chacune est maintenant sa propre section, avec son propre motif.
+			id: 'mise_en_avant',
+			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel',
+			pliee: true,
+		},
+		{
+			id: 'destinataires',
+			sansObjet:
+				"Un ticket n'adresse personne nommément dans l'application : il est vu par son " +
+				'auteur et par le conseil syndical, et son périmètre dit déjà de quoi il parle. ' +
+				'`destinataire_syndic` et `destinataire_cs` ne sont PAS des destinataires au sens ' +
+				'de la section 5 — ce sont deux canaux, et ils vivent en Diffusion (section 9).',
 		},
 		{
 			id: 'diffusion',
@@ -168,6 +217,7 @@ export const TICKET: EntiteDeclaree = {
 			absente: {
 				affichage: DIFFUSION_NE_SE_LIT_PAS,
 			},
+			pliee: true,
 		},
 	],
 };

@@ -81,7 +81,7 @@ export const ANNONCE: EntiteDeclaree = {
 			},
 		},
 		{
-			id: 'specifiques',
+			id: 'nature',
 			objet: 'Type · Catégorie · Prix · Négociable',
 			titreEcran: "L'objet",
 			absente: {
@@ -92,6 +92,12 @@ export const ANNONCE: EntiteDeclaree = {
 						'de voisin ne rebaptise pas un don en vente, et ne fixe pas le prix.',
 				},
 			},
+			pliee: true,
+		},
+		{
+			id: 'equipement',
+			sansObjet:
+				'Une petite annonce ne porte sur aucun élément du bâti : elle parle d’un objet qui appartient à un résident.',
 		},
 		{
 			//  🔴 REVIREMENT ASSUMÉ — l'utilisateur a tranché le 18/08/2026 :
@@ -113,7 +119,7 @@ export const ANNONCE: EntiteDeclaree = {
 			//  du temps (un mois), pas une étape qu'on choisit. Il se calcule côté
 			//  serveur (`est_archivee`). En faire une sixième pastille aurait donné deux
 			//  notions pour la même chose — celle qu'on pose et celle qui arrive.
-			id: 'workflow',
+			id: 'suivi',
 			objet: 'En cours · Réservé · Vendu · Donné · Annulé',
 			titreEcran: 'Où en est cette annonce ?',
 			absente: {
@@ -131,6 +137,7 @@ export const ANNONCE: EntiteDeclaree = {
 						'vendue ni annulée — seul son auteur le peut.',
 				},
 			},
+			pliee: true,
 		},
 		{
 			id: 'quand',
@@ -138,46 +145,19 @@ export const ANNONCE: EntiteDeclaree = {
 				"une petite annonce n'a pas de date d'événement : elle vit jusqu'à ce que l'objet soit vendu ou donné, et c'est sa péremption qui la retire — pas un passage au calendrier",
 		},
 		{
+			id: 'intervenant',
+			sansObjet: 'Une annonce se règle entre voisins ; aucune entreprise n’intervient.',
+		},
+		{
 			//  ✅ OUVERT le 18/08/2026 (migration 0151) — voir l'en-tête de ce fichier
 			//  pour ce que l'écran avait décrété à la place du produit.
-			id: 'perimetre',
+			id: 'qui_le_voit',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
 			absente: {
 				evolution: {
 					motif: 'hérité',
 					explication: "Le périmètre est celui de l'annonce ; une réponse ne le redéfinit pas.",
-				},
-			},
-		},
-		{
-			//  🔴 REVIREMENT ASSUMÉ — l'utilisateur a tranché le 06/09/2026 : « ajoute
-			//  la section Destinataires ; en nouveau et en édition », et le ciblage
-			//  filtre la VISIBILITÉ, pas seulement les notifications.
-			//
-			//  Ce fichier disait l'inverse la veille, et le disait avec assurance :
-			//  « on n'annonce pas un lave-linge à trois voisins choisis ». Le
-			//  raisonnement n'était pas absurde — il supposait qu'une annonce
-			//  s'adresse par nature à tous, alors que vendre à son seul bâtiment, ou
-			//  réserver un don aux locataires, sont des gestes réels.
-			//
-			//  C'est la DEUXIÈME fois que l'écran réfute le papier sur cette entité
-			//  (la première : le workflow, absent puis ajouté le 18/08). La leçon
-			//  n'est pas qu'il faut moins déclarer, c'est que la déclaration rend le
-			//  désaccord visible et corrigeable en UN endroit.
-			//
-			//  ⚠️ Le périmètre (section 4) dit DE QUOI il s'agit, celle-ci À QUI on
-			//  s'adresse. Les deux axes sont indépendants et se combinent : c'est
-			//  `cible_visible` côté serveur qui les pose, la même fonction que pour
-			//  la publication et le sondage.
-			id: 'destinataires',
-			objet: 'DestinatairePicker — à qui cette annonce s’adresse',
-			absente: {
-				evolution: {
-					motif: 'hérité',
-					explication:
-						"Le public visé est celui de l'annonce. Une réponse de voisin ne l'élargit " +
-						'ni ne le restreint — sinon répondre suffirait à faire entrer des tiers.',
 				},
 			},
 		},
@@ -223,6 +203,51 @@ export const ANNONCE: EntiteDeclaree = {
 					explication: "Les photos sont celles de l'annonce ; une réponse n'en ajoute pas.",
 				},
 			},
+			exceptionPliage:
+				'Facultative mais DÉPLIÉE : joindre une photo est le premier geste sur ' +
+				'téléphone, et le replier ajouterait un clic au geste le plus fréquent.',
+		},
+		{
+			id: 'au_nom_de',
+			sansObjet:
+				'Une annonce est déposée par celui qui la publie, jamais pour un tiers — c’est son bien.',
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet:
+				'Une annonce ne s’épingle pas et ne se marque pas urgente : le fil de la Communauté est chronologique.',
+		},
+		{
+			//  🔴 REVIREMENT ASSUMÉ — l'utilisateur a tranché le 06/09/2026 : « ajoute
+			//  la section Destinataires ; en nouveau et en édition », et le ciblage
+			//  filtre la VISIBILITÉ, pas seulement les notifications.
+			//
+			//  Ce fichier disait l'inverse la veille, et le disait avec assurance :
+			//  « on n'annonce pas un lave-linge à trois voisins choisis ». Le
+			//  raisonnement n'était pas absurde — il supposait qu'une annonce
+			//  s'adresse par nature à tous, alors que vendre à son seul bâtiment, ou
+			//  réserver un don aux locataires, sont des gestes réels.
+			//
+			//  C'est la DEUXIÈME fois que l'écran réfute le papier sur cette entité
+			//  (la première : le workflow, absent puis ajouté le 18/08). La leçon
+			//  n'est pas qu'il faut moins déclarer, c'est que la déclaration rend le
+			//  désaccord visible et corrigeable en UN endroit.
+			//
+			//  ⚠️ Le périmètre (section 4) dit DE QUOI il s'agit, celle-ci À QUI on
+			//  s'adresse. Les deux axes sont indépendants et se combinent : c'est
+			//  `cible_visible` côté serveur qui les pose, la même fonction que pour
+			//  la publication et le sondage.
+			id: 'destinataires',
+			objet: 'DestinatairePicker — à qui cette annonce s’adresse',
+			absente: {
+				evolution: {
+					motif: 'hérité',
+					explication:
+						"Le public visé est celui de l'annonce. Une réponse de voisin ne l'élargit " +
+						'ni ne le restreint — sinon répondre suffirait à faire entrer des tiers.',
+				},
+			},
+			pliee: true,
 		},
 		{
 			//  La seule chose qui PART d'une annonce est le fait de montrer, ou non, ses
@@ -245,6 +270,7 @@ export const ANNONCE: EntiteDeclaree = {
 						'rouvre pas au nom de son auteur.',
 				},
 			},
+			pliee: true,
 		},
 	],
 };

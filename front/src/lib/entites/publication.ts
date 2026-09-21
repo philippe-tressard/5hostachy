@@ -98,28 +98,21 @@ export const PUBLICATION: EntiteDeclaree = {
 			},
 		},
 		{
-			//  Les quatre options qui DÉCRIVENT la publication — voir l'en-tête de
-			//  ce fichier pour la raison qui les sort de la Diffusion.
-			id: 'specifiques',
-			objet: 'Épinglage · Urgence · Brouillon · Confidentiel',
-			titreEcran: 'Options de publication',
-			//  🔴 OUVERTE À L'ÉVOLUTION (05/09/2026), sur demande de l'utilisateur :
-			//  *« les sections Options de publication, Périmètre et Destinataires
-			//  doivent être visibles même pour chaque commentaire ; tu remets le
-			//  dernier état, et le nouveau sauvegardé deviendra validé »*.
-			//
-			//  Ce paragraphe disait l'inverse — « une entrée du fil ne réépingle pas
-			//  ce à quoi elle se rattache » — et le raisonnement tenait pour une
-			//  entrée vue comme un FAIT DATÉ. Mais une actualité vit : elle
-			//  s'épingle quand elle devient urgente, se dépingle quand elle ne l'est
-			//  plus, et le moment où on la commente est justement celui où on s'en
-			//  aperçoit. Obliger à rouvrir le formulaire d'édition pour cela faisait
-			//  deux gestes d'un seul.
-			//
-			//  ⚠️ Ce que la réserve d'origine disait de vrai reste vrai : cocher
-			//  « confidentiel » après coup NE REPREND PAS une lecture déjà ouverte —
-			//  qui a lu a lu, et un e-mail parti ne se rappelle pas. La section le
-			//  dit à l'écran plutôt que de se fermer.
+			//  🔴 SANS OBJET, et c'est une question ouverte du chantier (#1091) :
+			//  « L'Actualité n'a aucune catégorie — est-ce voulu, ou un manque qu'on
+			//  n'a jamais vu parce que le filtre n'existe que sur les affaires ? »
+			//  Tant qu'elle n'est pas tranchée, rien ne se pose ici : un champ que
+			//  le serveur ne porte pas est ce que le cadre interdit.
+			id: 'nature',
+			sansObjet:
+				'`Publication` ne porte aucune catégorie. La question de lui en donner ' +
+				'une est ouverte (#1091) ; elle se tranchera avant d’ouvrir un champ.',
+		},
+		{
+			id: 'equipement',
+			sansObjet:
+				'Une actualité informe, elle n’entretient rien. L’équipement qualifie ce ' +
+				'qui se répare, et c’est l’affaire qui le porte.',
 		},
 		{
 			//  🔴 UNE ACTUALITÉ N'A PAS DE WORKFLOW — arbitré le 18/08/2026, après
@@ -137,7 +130,7 @@ export const PUBLICATION: EntiteDeclaree = {
 			//  publications en portent un : la carte l'affiche encore en badge, en
 			//  LECTURE. Rien ne permet plus d'en poser un — et l'archivage manuel,
 			//  qui exigeait « Résolu », a disparu avec lui.
-			id: 'workflow',
+			id: 'suivi',
 			sansObjet:
 				"Une actualité n'a pas d'étapes de vie : elle est publiée, puis elle " +
 				"bascule dans l'Historique au bout de son délai. Le Brouillon, lui, n'est " +
@@ -150,25 +143,22 @@ export const PUBLICATION: EntiteDeclaree = {
 			//  rend la description facultative — « Coupure d'eau jeudi 9h-12h » se
 			//  suffit —, et c'est le serveur qui tranche (`utils/quand.py`), pas
 			//  cet écran : l'astérisque ne vivait QUE dans le formulaire (#1092).
+			pliee: true,
 		},
 		{
-			id: 'perimetre',
+			id: 'intervenant',
+			sansObjet:
+				'Personne n’intervient sur une actualité : elle se lit, elle ne se traite ' +
+				'pas. Le jour où elle demande un suivi, elle devient une affaire (#1094).',
+		},
+		{
+			id: 'qui_le_voit',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
 			//  Ouvert à l'évolution le 05/09/2026 (voir la section 2 ci-dessus) :
 			//  le champ part rempli du périmètre en vigueur, et ce qu'on enregistre
 			//  devient le périmètre de la publication. C'est un geste de CORRECTION,
 			//  pas de précision — d'où une aide différente de celle du ticket.
-		},
-		{
-			id: 'destinataires',
-			objet: 'DestinatairePicker — qui est concerné dans l’application',
-			//  Ouvert à l'évolution le 05/09/2026, comme les deux sections
-			//  ci-dessus. La réserve d'origine — « une entrée qui élargirait le
-			//  public montrerait un suivi à des résidents qui n'ont jamais vu ce
-			//  qu'il suit » — vaut pour un ciblage propre à l'ENTRÉE. Ici il n'y en
-			//  a pas : on modifie celui de la publication, donc le suivi et ce qu'il
-			//  suit restent visibles des mêmes personnes, par construction.
 		},
 		{
 			id: 'description',
@@ -191,6 +181,39 @@ export const PUBLICATION: EntiteDeclaree = {
 			//  touche pas au modèle.
 			id: 'pieces_jointes',
 			objet: 'FichiersUpload mode mixte — photos (URLs) et documents (entités `Document`)',
+			exceptionPliage:
+				'Facultative mais DÉPLIÉE : joindre une photo est le premier geste sur ' +
+				'téléphone, et le replier ajouterait un clic au geste le plus fréquent.',
+		},
+		{
+			//  L'actualité porte « Saisi pour » depuis le 15/09/2026, comme l'affaire
+			//  et l'événement — c'est le mixin `SaisiPourMixin` côté serveur.
+			id: 'au_nom_de',
+			objet: 'Saisi pour — en mon nom · un résident inscrit · une personne extérieure',
+			requis: true,
+			pliee: true,
+			exceptionPliage:
+				'Obligatoire mais PLIÉE : « en mon nom » est juste dans la quasi-totalité ' + 'des cas.',
+		},
+		{
+			//  Extraite de l'ancienne section « Options de publication » (#1095). Le
+			//  pourquoi de CES quatre options-là — et pas d'autres — est en tête de
+			//  ce fichier : ce sont des qualificatifs durables, pas des actes.
+			id: 'mise_en_avant',
+			objet: 'Épinglage · Urgence · Brouillon · Confidentiel',
+			titreEcran: 'Mise en avant',
+			pliee: true,
+		},
+		{
+			id: 'destinataires',
+			objet: 'DestinatairePicker — qui est concerné dans l’application',
+			//  Ouvert à l'évolution le 05/09/2026, comme les deux sections
+			//  ci-dessus. La réserve d'origine — « une entrée qui élargirait le
+			//  public montrerait un suivi à des résidents qui n'ont jamais vu ce
+			//  qu'il suit » — vaut pour un ciblage propre à l'ENTRÉE. Ici il n'y en
+			//  a pas : on modifie celui de la publication, donc le suivi et ce qu'il
+			//  suit restent visibles des mêmes personnes, par construction.
+			pliee: true,
 		},
 		{
 			//  ✅ ROUVERTE à l'édition le 18/08/2026, comme sur les tickets — signalé
@@ -208,6 +231,7 @@ export const PUBLICATION: EntiteDeclaree = {
 			absente: {
 				affichage: DIFFUSION_NE_SE_LIT_PAS,
 			},
+			pliee: true,
 		},
 	],
 };

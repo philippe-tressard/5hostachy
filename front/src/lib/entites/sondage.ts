@@ -61,7 +61,7 @@ export const SONDAGE: EntiteDeclaree = {
 			//  prévient à l'extérieur (section 9), mais ce que les destinataires
 			//  voient pendant le vote. Des résultats visibles influencent les votes
 			//  suivants (#397) — c'est une propriété du sondage.
-			id: 'specifiques',
+			id: 'nature',
 			objet:
 				'Réponses possibles (2 minimum, champ libre facultatif) · Date de clôture · Résultats visibles avant la clôture',
 			titreEcran: ['Réponses possibles', 'Clôture'],
@@ -73,6 +73,11 @@ export const SONDAGE: EntiteDeclaree = {
 						'commentaire ne rouvre pas le vote et ne rajoute pas une option.',
 				},
 			},
+			pliee: true,
+		},
+		{
+			id: 'equipement',
+			sansObjet: 'Un sondage pose une question ; il ne porte sur aucun équipement.',
 		},
 		{
 			//  🔴 LE SONDAGE A UN WORKFLOW — Ouvert · Clôturé — et c'est le point de
@@ -99,7 +104,7 @@ export const SONDAGE: EntiteDeclaree = {
 			//  la liste recalcule donc la règle côté client, fuseau du navigateur
 			//  compris. Deux implémentations d'une même question, dont une seule fait
 			//  autorité — le défaut que `ux-patterns` §16 nomme. Suivi en **#468**.
-			id: 'workflow',
+			id: 'suivi',
 			objet: 'Ouvert · Clôturé (à la date prévue, ou par clôture anticipée)',
 			absente: {
 				creation: {
@@ -110,6 +115,7 @@ export const SONDAGE: EntiteDeclaree = {
 						'création, et elle est en section 2.',
 				},
 			},
+			pliee: true,
 		},
 		{
 			id: 'quand',
@@ -117,7 +123,11 @@ export const SONDAGE: EntiteDeclaree = {
 				'un sondage ne paraît pas au calendrier de la résidence ; sa clôture se lit sur sa carte, avec ses options',
 		},
 		{
-			id: 'perimetre',
+			id: 'intervenant',
+			sansObjet: 'Aucune entreprise n’intervient sur un sondage.',
+		},
+		{
+			id: 'qui_le_voit',
 			objet: 'PerimetrePicker — qui est concerné par la question',
 			requis: true,
 			absente: {
@@ -139,6 +149,28 @@ export const SONDAGE: EntiteDeclaree = {
 			},
 		},
 		{
+			//  Non requise, comme sur l'événement : la question se suffit souvent à
+			//  elle-même. La description sert à poser le contexte quand il en faut un.
+			id: 'description',
+			objet: 'RichEditor — le contexte de la question',
+			pliee: true,
+		},
+		{
+			id: 'pieces_jointes',
+			sansObjet:
+				'Un sondage pose une question et propose des réponses ; il ne montre rien. ' +
+				'`Sondage` ne porte ni `photos_urls` ni document, et aucun écran n’en a ' +
+				'jamais proposé.',
+		},
+		{
+			id: 'au_nom_de',
+			sansObjet: 'Un sondage est ouvert par celui qui le pose.',
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet: 'Un sondage ne s’épingle pas : sa date de clôture fait son urgence.',
+		},
+		{
 			id: 'destinataires',
 			objet: 'DestinatairePicker — quels profils peuvent voter',
 			absente: {
@@ -158,19 +190,7 @@ export const SONDAGE: EntiteDeclaree = {
 						'montrerait un débat à des résidents qui n’ont jamais vu la question.',
 				},
 			},
-		},
-		{
-			//  Non requise, comme sur l'événement : la question se suffit souvent à
-			//  elle-même. La description sert à poser le contexte quand il en faut un.
-			id: 'description',
-			objet: 'RichEditor — le contexte de la question',
-		},
-		{
-			id: 'pieces_jointes',
-			sansObjet:
-				'Un sondage pose une question et propose des réponses ; il ne montre rien. ' +
-				'`Sondage` ne porte ni `photos_urls` ni document, et aucun écran n’en a ' +
-				'jamais proposé.',
+			pliee: true,
 		},
 		{
 			id: 'diffusion',
@@ -187,6 +207,7 @@ export const SONDAGE: EntiteDeclaree = {
 				},
 				affichage: DIFFUSION_NE_SE_LIT_PAS,
 			},
+			pliee: true,
 		},
 	],
 };
