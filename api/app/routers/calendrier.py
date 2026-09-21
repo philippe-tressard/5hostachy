@@ -24,7 +24,7 @@ from app.utils.noms import nom_affiche
 from app.utils.corrections import contenu_correction
 from app.utils.recuperer import ou_404
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
-from app.utils.saisi_pour import affichage as affichage_saisi_pour
+from app.utils.saisi_pour import noms_derives
 #  Les schémas vivent à part depuis le 17/09/2026 (modularité) — ré-exportés
 #  d'ici pour les tests et `calendrier_lot`, qui les importaient de ce module.
 from app.schemas_evenement import EvenementCreate, EvenementRead, EvenementUpdate
@@ -52,10 +52,10 @@ def _ev_to_read(ev: Evenement, session: Session) -> EvenementRead:
     data.evolutions = _evolutions_de(ev.id, session)
     auteur = session.get(Utilisateur, ev.auteur_id)
     data.auteur_nom = nom_affiche(auteur.prenom, auteur.nom) if auteur else "?"
-    #  « Saisi pour X », et seulement s'il y a un X : la règle des trois cas
-    #  (résident inscrit / personne extérieure / personne) vit dans
-    #  `utils/saisi_pour`, avec celle des tickets et des actualités.
-    data.saisi_pour_affichage = affichage_saisi_pour(session, ev)
+    #  Les DEUX noms dérivés, en un seul calcul (`utils/saisi_pour`, #1104) :
+    #  « Saisi pour X » seulement s'il y a un X, et le PROPRIÉTAIRE — qui
+    #  retombe sur l'auteur — que la carte affiche.
+    data.proprietaire_nom, data.saisi_pour_affichage = noms_derives(session, ev)
     if ev.prestataire_id:
         prest = session.get(Prestataire, ev.prestataire_id)
         data.prestataire_nom = prest.nom if prest else None

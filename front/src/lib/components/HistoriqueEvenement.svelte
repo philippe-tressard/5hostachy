@@ -33,6 +33,7 @@
   nus (la panne des pastilles, v2.67.11). Ce découpage-là attend #432.
 -->
 <script lang="ts">
+	import { nomCopie } from '$lib/saisi-pour';
 	import { contexteCommentaire } from '$lib/assistant';
 	import { EVENEMENT } from '$lib/entites/evenement';
 	import { createEventDispatcher } from 'svelte';
@@ -163,7 +164,7 @@
 				<EvolForm
 					entrees={evenement.evolutions ?? []}
 					idPrefixe="ev-evol-edit-{evol.id}"
-					auteurNom={evenement.auteur_nom ?? ''}
+					auteurNom={nomCopie(evenement)}
 					titre="Modifier le commentaire"
 					editMode={true}
 					initialContenu={evol.contenu || ''}
@@ -183,7 +184,7 @@
 			<EvolForm
 				entrees={evenement.evolutions ?? []}
 				idPrefixe="ev-evol-{evenement.id}"
-				auteurNom={evenement.auteur_nom ?? ''}
+				auteurNom={nomCopie(evenement)}
 				titre="Commenter ou changer l’état"
 				statutOptions={options}
 				statutLabels={libelles}

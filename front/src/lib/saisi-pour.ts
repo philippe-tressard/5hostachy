@@ -149,6 +149,32 @@ export interface PorteProprietaire {
 }
 
 /**
+ * **À QUI cet objet appartient** — le nom que l'écran AFFICHE.
+ *
+ * ## 🔴 Pourquoi elle existe à côté de `nomCopie` (21/09/2026, #1104)
+ *
+ * Les deux rendent le même nom dans le cas courant, et ce sont deux questions :
+ * celle-ci dit *« de qui est cette affaire ? »*, `nomCopie` dit *« à qui part
+ * le courriel ? »*. `nomCopie` tient compte d'une saisie **en cours** — elle
+ * doit annoncer ce qui partira au prochain clic —, ce qu'un affichage de liste
+ * n'a pas à connaître.
+ *
+ * Leur fondre en une seule ferait porter deux questions à une fonction dont le
+ * nom n'en annonce qu'une, et il faudrait un paramètre pour les départager.
+ * Elles partagent en revanche leur **repli**, écrit ici seulement.
+ *
+ * ⚠️ C'est le défaut que ce module portait depuis sa naissance : sa propre
+ * en-tête signalait que `CarteTicket` composait `proprietaire_nom ?? auteur_nom`
+ * à la main — la remarque est restée, l'expression aussi, et les cartes ont
+ * continué d'afficher le rédacteur pendant six jours.
+ *
+ * @returns Le nom, ou `''` — jamais `undefined`, pour qu'un `{#if}` tranche.
+ */
+export function nomProprietaire(objet: PorteProprietaire | null | undefined): string {
+	return objet?.proprietaire_nom ?? objet?.auteur_nom ?? '';
+}
+
+/**
  * **À QUI part la copie** — le nom écrit dans « Envoyer une copie à … ».
  *
  * ## 🔴 Pourquoi cette fonction (15/09/2026)
@@ -168,6 +194,14 @@ export interface PorteProprietaire {
  * la même expression —, tandis que **les formulaires passaient `auteur_nom`
  * seul**. La même case annonçait donc deux noms différents selon l'écran, et
  * celui du formulaire était le mauvais.
+ *
+ * 🔴 **Et ce paragraphe, écrit à l'imparfait, décrivait un défaut encore
+ * PRÉSENT** — pendant six jours (#1104). Ce lot n'avait corrigé que la moitié
+ * qui l'intéressait, la copie ; les cartes ont continué d'afficher
+ * `auteur_nom` brut, trois lignes sous un appel à `nomCopie`. Une remarque au
+ * passé sur un défaut présent est pire qu'un silence : elle donne l'impression
+ * que quelqu'un s'en est occupé. Le nom affiché passe désormais par
+ * `nomProprietaire`, et `npm run lint:nom-proprietaire` refuse la récidive.
  *
  * 🔴 Et en CRÉATION, aucun des deux ne convenait : rien n'est encore
  * enregistré, mais le rédacteur vient de désigner quelqu'un. La case doit dire
@@ -200,7 +234,10 @@ export function nomCopie(
 		//  que le libellé nommé existe pour lever.
 		if (p) return [p.prenom, (p.nom ?? '').toUpperCase()].filter(Boolean).join(' ');
 	}
-	return objet?.proprietaire_nom ?? objet?.auteur_nom ?? '';
+	//  🔴 Le repli n'est PAS réécrit ici : `nomProprietaire` le porte, une fois.
+	//  Les deux fonctions répondent à deux questions, elles ne composent pas
+	//  deux fois le même nom.
+	return nomProprietaire(objet);
 }
 
 /**

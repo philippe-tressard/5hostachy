@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomCopie } from '$lib/saisi-pour';
 	import { contexteCommentaire } from '$lib/assistant';
 	import { messageErreur } from '$lib/erreurs';
 	import { PUBLICATION } from '$lib/entites/publication';
@@ -395,7 +396,7 @@
 						      c'est la liste vide qui le dit, pas une condition en dur. -->
 							<EvolForm
 								idPrefixe="pub-evol-{pub.id}"
-								auteurNom={pub.auteur_nom ?? ''}
+								auteurNom={nomCopie(pub)}
 								titre="Commenter"
 								statutOptions={[]}
 								statutLabels={STATUT_LABELS}
@@ -463,7 +464,7 @@
 								{#key editingEvolId}
 									<EvolForm
 										idPrefixe="pub-evol-edit-{evol.id}"
-										auteurNom={pub.auteur_nom ?? ''}
+										auteurNom={nomCopie(pub)}
 										titre="Modifier le commentaire"
 										editMode={true}
 										initialContenu={evol.contenu || ''}

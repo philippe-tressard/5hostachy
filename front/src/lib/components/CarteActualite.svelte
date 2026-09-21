@@ -17,6 +17,7 @@
   passés en slots — ils sont écrits dans la page, donc leurs styles y restent.
 -->
 <script lang="ts">
+	import { nomProprietaire } from '$lib/saisi-pour';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
@@ -33,6 +34,9 @@
 	import { fmtDate2d as fmtDate, fmtDateLong, isNouveau } from '$lib/date';
 
 	export let pub: Publication;
+	//  À QUI l'actualité appartient — le « Saisi pour » s'il existe, l'auteur
+	//  sinon (#1104). C'est le même nom sur la carte et dans le corps déplié.
+	$: proprietaireNom = nomProprietaire(pub);
 	export let expanded = false;
 	/**  `fil` : la liste principale. `historique` : les archives — atténuées, et
 	 *   sans épingle ni « New », qui n'ont plus de sens sur une publication rangée. */
@@ -116,7 +120,7 @@
 				{@const o = optionPublication('confidentiel')}
 				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
 			{/if}
-			{#if pub.auteur_nom}<span class="pub-auteur">{pub.auteur_nom}</span>{/if}
+			{#if proprietaireNom}<span class="pub-auteur">{proprietaireNom}</span>{/if}
 			<MarqueIA assiste={pub.assiste_ia} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
@@ -161,8 +165,8 @@
 				<small style="color:var(--color-text-muted);font-size:.78rem">
 					{#if pub.mis_a_jour_le}Mise à jour le {fmtDateLong(pub.mis_a_jour_le)}{:else}Publié le {fmtDateLong(
 							pub.cree_le,
-						)}{/if}{#if pub.auteur_nom}
-						· {pub.auteur_nom}{/if}
+						)}{/if}{#if proprietaireNom}
+						· {proprietaireNom}{/if}
 				</small>
 				<slot name="apres-corps" />
 			{/if}

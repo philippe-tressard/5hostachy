@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomCopie } from '$lib/saisi-pour';
 	import { contexteCommentaire } from '$lib/assistant';
 	import { messageErreur } from '$lib/erreurs';
 	import { onMount, tick } from 'svelte';
@@ -310,7 +311,7 @@
 	      sens — le crayon manquait à la liste, la corbeille manquait ici. -->
 	<HistoriqueTicket
 		{ticketId}
-		auteurNom={ticket?.auteur_nom ?? ''}
+		auteurNom={nomCopie(ticket)}
 		statutCourant={ticket?.statut ?? ''}
 		assistant={ticket
 			? contexteCommentaire(ticket, STATUT_LABELS[ticket.statut] ?? ticket.statut)

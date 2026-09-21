@@ -65,7 +65,7 @@
 	} from '$lib/tickets';
 	import { fmtDate, isNouveau } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
-	import { nomCopie } from '$lib/saisi-pour';
+	import { nomCopie, nomProprietaire } from '$lib/saisi-pour';
 	import {
 		BADGE_PRIORITE,
 		PRIORITE_BREVE,
@@ -76,6 +76,9 @@
 	} from '$lib/tickets';
 
 	export let ticket: Ticket;
+	//  À QUI l'affaire appartient — le « Saisi pour » s'il existe, l'auteur
+	//  sinon. Réactif : la carte se rafraîchit quand le ticket change.
+	$: proprietaireNom = nomProprietaire(ticket);
 	export let evolutions: TicketEvolution[] = [];
 	export let expanded = false;
 	/** Allure d'archive : le ticket est clos depuis plus du délai de grâce. */
@@ -251,7 +254,10 @@
 			      (`Lot` = bâtiment + numéro + étage). `Ticket.lot_id` existe et
 			      l'API l'accepte déjà — seul l'écran ne le propose pas. Suivi
 			      dans #653 ; ne pas remettre un badge de bâtiment en attendant. -->
-			{#if ticket.auteur_nom}<span class="tk-auteur">{ticket.auteur_nom}</span>{/if}
+			<!--  🔴 Le PROPRIÉTAIRE, pas le rédacteur (#1104) : une affaire saisie
+			      pour un tiers appartient à ce tiers (arbitrage du 12/09/2026). La
+			      même carte annonçait déjà le bon nom dans la case de copie. -->
+			{#if proprietaireNom}<span class="tk-auteur">{proprietaireNom}</span>{/if}
 			<MarqueIA assiste={ticket.assiste_ia} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
