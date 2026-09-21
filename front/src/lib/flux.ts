@@ -138,7 +138,7 @@ export function typeLink(item: FluxItem): string | null {
 
 export function typeVoirLabel(item: FluxItem): string {
 	if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type))
-		return 'Voir le ticket →';
+		return "Voir l'affaire →";
 	if (item.type === 'publication') return "Voir l'actualité →";
 	if (item.type === 'evenement') return "Voir l'événement →";
 	if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return 'Voir le sondage →';
