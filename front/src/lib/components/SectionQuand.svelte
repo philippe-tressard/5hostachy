@@ -5,20 +5,32 @@
   devenir une vue — « tout ce qui porte une date ». Pour cela, une actualité et
   une affaire doivent pouvoir dire *quand*, ce que seul `Evenement` savait faire.
 
-  ## 🔴 Deux dates, deux notions — les confondre casse les deux
+  ## 🔴 L'ÉCHÉANCE a été retirée le 21/09/2026, signalée à l'écran
 
-  | Champ | Sens | Alimente |
-  |---|---|---|
-  | `debut` / `fin` | *ça se passe le X* | le **calendrier** |
-  | `echeance` | *ça doit être fait avant le X* | le **suivi** (relance, retard) |
+  > « L'échéance pour la relance c'est non, il y a un mécanisme automatique de
+  >   relance d'une affaire non résolue chaque mois »
 
-  Une échéance affichée dans l'agenda de la résidence y mettrait « devis attendu
-  sous 15 jours » entre l'assemblée générale et la coupure d'eau ; et une date
-  d'événement prise pour une échéance n'alerterait jamais sur un retard.
+  Le champ promettait : *« Une échéance déclenche une relance si rien n'a
+  bougé »*. **C'était faux deux fois.**
 
-  `avecEcheance` est donc **faux par défaut** : une actualité ne se suit pas, et
-  lui ouvrir le champ afficherait un contrôle que le serveur ne consomme pas —
-  ce que le cadre #430 interdit en toutes lettres.
+  1. **Personne ne la lisait.** `Ticket.echeance` était écrit par
+     `routers/tickets/crud.py` et relu par aucun code — ni relance, ni alerte,
+     ni affichage. Un contrôle que le serveur ne consomme pas est exactement ce
+     que le cadre #430 interdit, et il a été posé ici même (#1092).
+  2. **Le suivi existait déjà, et sur un autre critère.** Ce qui repère une
+     affaire qui traîne est son **inactivité** — `relance_syndic_delai_jours`,
+     lu par `flux/sante.py` : affaires adressées au syndic, non closes, non
+     relançables exclues, et *sans modification depuis le délai*. Une date que
+     l'auteur aurait saisie n'y entrait pour rien.
+
+  ⚠️ Nuance à ne pas perdre : le repérage est automatique, **l'envoi ne l'est
+  pas**. C'est le conseil syndical qui déclenche la relance groupée depuis le
+  reporting. Écrire « relance automatique » ailleurs serait la deuxième
+  promesse fausse sur le même sujet.
+
+  🔴 La colonne `ticket.echeance` RESTE en base : elle est vide, personne ne la
+  lit, et une migration appliquée ne se modifie jamais. La retirer est un geste
+  à part — pas un effet de bord d'une correction d'écran.
 
   ## Ce que la date dispense d'écrire
 
@@ -33,16 +45,11 @@
 	/** Préfixe des identifiants — l'écran en ouvre parfois plusieurs à la fois. */
 	export let idPrefixe: string;
 
-	/**  L'échéance n'existe que sur un objet qu'on SUIT. Ouvrir ce champ sur une
-	 *   actualité poserait une valeur que rien ne relit. */
-	export let avecEcheance = false;
-
 	export let premiere = false;
 
 	/** `datetime-local` rend `''` quand le champ est vide, jamais `null`. */
 	export let debut = '';
 	export let fin = '';
-	export let echeance = '';
 </script>
 
 <SectionFormulaire titre="Quand" {premiere} idTitre="{idPrefixe}-quand">
@@ -55,21 +62,10 @@
 			<label for="{idPrefixe}-fin">Fin</label>
 			<input id="{idPrefixe}-fin" type="datetime-local" bind:value={fin} />
 		</div>
-		{#if avecEcheance}
-			<div class="field">
-				<label for="{idPrefixe}-echeance">Échéance</label>
-				<input id="{idPrefixe}-echeance" type="date" bind:value={echeance} />
-			</div>
-		{/if}
 	</div>
 	<p class="quand-aide">
-		{#if avecEcheance}
-			Une <strong>date de début</strong> fait paraître l'affaire au calendrier. Une
-			<strong>échéance</strong> déclenche une relance si rien n'a bougé.
-		{:else}
-			Une <strong>date de début</strong> fait paraître l'actualité au calendrier — et dispense d'écrire
-			une description.
-		{/if}
+		Une <strong>date de début</strong> fait paraître l'entrée au calendrier — et dispense d'écrire une
+		description.
 	</p>
 </SectionFormulaire>
 

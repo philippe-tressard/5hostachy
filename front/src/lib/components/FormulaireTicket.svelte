@@ -102,7 +102,6 @@
 	//  et avant quand c est attendu.
 	let debut = pourChampLocal(ticket?.debut);
 	let fin = pourChampLocal(ticket?.fin);
-	let echeance = ticket?.echeance ?? '';
 	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
 	let assisteIA = false;
 	let categorie = ticket?.categorie ?? 'panne';
@@ -293,7 +292,6 @@
 					perimetre_cible: perimetreCible,
 					debut: depuisChampLocal(debut),
 					fin: depuisChampLocal(fin),
-					echeance: depuisChampLocal(echeance),
 					photos_urls: photosUrls,
 					fichiers_urls: fichiersUrls,
 					...($isCS
@@ -319,7 +317,6 @@
 				perimetre_cible: perimetreCible,
 				debut: depuisChampLocal(debut),
 				fin: depuisChampLocal(fin),
-				echeance: depuisChampLocal(echeance),
 				destinataire_syndic: destinataireSyndic,
 				destinataire_cs: destinataireCs,
 				partager_whatsapp: partagerWhatsapp,
@@ -433,10 +430,8 @@
 			on:envoyer={() => void submit()}
 			idPrefixe="ticket"
 			avecQuand={sectionPresente(TICKET, etat, 'quand')}
-			quandAvecEcheance={true}
 			bind:debut
 			bind:fin
-			bind:echeance
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecDescription={sectionPresente(TICKET, etat, 'description')}
