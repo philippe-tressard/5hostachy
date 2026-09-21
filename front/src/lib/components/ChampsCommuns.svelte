@@ -80,12 +80,8 @@
 	import SectionQuand from '$lib/components/SectionQuand.svelte';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
-	import {
-		section,
-		SECTIONS_LIBELLE,
-		type EntiteDeclaree,
-		type IdSection,
-	} from '$lib/entites/types';
+	import { SECTIONS_LIBELLE, type EntiteDeclaree, type IdSection } from '$lib/entites/types';
+	import { pliageDe } from '$lib/pliage';
 	import PerimetrePicker from './PerimetrePicker.svelte';
 	import DestinatairePicker from './DestinatairePicker.svelte';
 	import SectionDiffusion from './SectionDiffusion.svelte';
@@ -118,13 +114,7 @@
 	 */
 	export let entite: EntiteDeclaree | null = null;
 
-	/**  Le pliage d'une section, lu dans la déclaration — `false` sans entité.
-	 *
-	 *   ⚠️ `pliable` et `ouvrirSiRenseignee` vont ENSEMBLE : la seconde est la
-	 *   moitié que la table ne peut pas porter, puisqu'elle dépend de ce que
-	 *   l'objet contient. Les séparer laisserait une section pliée cacher une
-	 *   valeur saisie. */
-	const plie = (id: IdSection) => (entite ? !!section(entite, id)?.pliee : false);
+	const plie = (id: IdSection) => pliageDe(entite, id);
 
 	//  ── 2. Saisi pour ─────────────────────────────────────────────────────────
 	//
@@ -361,6 +351,7 @@
 	<SectionOptionsPublication
 		{objet}
 		{premiere}
+		pliable={plie('mise_en_avant')}
 		options={optionsRendues}
 		perimetreCible={perimetre}
 		{dejaEpingle}
@@ -388,7 +379,7 @@
 {#if avecQuand}
 	<!--  5. Quand — QUAND ÇA SE PASSE, et pour quand c'est attendu. Placée
 	      avant le Périmètre : on sait ce qui arrive avant de dire où. -->
-	<SectionQuand {idPrefixe} premiere={premiereQuand} bind:debut bind:fin />
+	<SectionQuand {idPrefixe} premiere={premiereQuand} pliable={plie('quand')} bind:debut bind:fin />
 {/if}
 
 {#if avecPerimetre}
@@ -401,7 +392,7 @@
 		requis={perimetreRequis}
 		badge={perimetreBadge ?? badgePerimetre}
 		pliable={plie('qui_le_voit')}
-		ouvrirSiRenseignee={(perimetre?.length ?? 0) > 0}
+		ouvrirSiRenseignee={!estPerimetreParDefaut(perimetre)}
 		idTitre="{idPrefixe}-perimetre-titre"
 	>
 		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
@@ -427,7 +418,7 @@
 		requis
 		badge={badgeDestinataires}
 		pliable={plie('destinataires')}
-		ouvrirSiRenseignee={(destinataires?.length ?? 0) > 0}
+		ouvrirSiRenseignee={!concerneTousLesResidents(destinataires)}
 		idTitre="{idPrefixe}-destinataires-titre"
 	>
 		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-destinataires-titre">
@@ -481,6 +472,7 @@
       sans une ligne de plus. -->
 {#if avecDiffusion}
 	<SectionDiffusion
+		pliable={plie('diffusion')}
 		{avecCanaux}
 		bind:whatsapp
 		bind:syndic

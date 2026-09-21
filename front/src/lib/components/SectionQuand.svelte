@@ -41,6 +41,8 @@
 -->
 <script lang="ts">
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import { fmtDate } from '$lib/date';
+	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 
 	/** Préfixe des identifiants — l'écran en ouvre parfois plusieurs à la fois. */
 	export let idPrefixe: string;
@@ -50,9 +52,25 @@
 	/** `datetime-local` rend `''` quand le champ est vide, jamais `null`. */
 	export let debut = '';
 	export let fin = '';
+
+	/** Repliée par défaut — la valeur vient de la déclaration (#1095). */
+	export let pliable = false;
+
+	/**  🔴 « Sans date » est le DÉFAUT : une date saisie rouvre la section.
+	 *
+	 *   ⚠️ Comparer à vide et non à « renseigné » : c'est la nuance qui a fait
+	 *   que rien ne pliait à la première écriture (21/09/2026). */
+	$: resume = debut ? `à partir du ${fmtDate(debut)}` : 'sans date';
 </script>
 
-<SectionFormulaire titre="Quand" {premiere} idTitre="{idPrefixe}-quand">
+<SectionFormulaire
+	titre={SECTIONS_LIBELLE.quand}
+	{premiere}
+	{pliable}
+	{resume}
+	ouvrirSiRenseignee={!!debut || !!fin}
+	idTitre="{idPrefixe}-quand"
+>
 	<div class="quand-grille">
 		<div class="field">
 			<label for="{idPrefixe}-debut">Début</label>
