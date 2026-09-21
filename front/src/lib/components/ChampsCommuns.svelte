@@ -331,39 +331,6 @@
 	$: premierePerimetre = premiereQuand && !avecQuand;
 </script>
 
-{#if avecSaisiPour}
-	<!--  2. Au nom de QUI l'entrée est ouverte. Le composant est celui des
-	      tickets (`ChampSaisiPour`) : il portait déjà la saisie, il ne lui
-	      manquait qu'un appelant de plus. -->
-	<ChampSaisiPour
-		bind:mode={saisiPour.mode}
-		bind:userId={saisiPour.userId}
-		bind:nom={saisiPour.nom}
-		bind:email={saisiPour.email}
-		residents={residentsSaisiPour}
-	/>
-{/if}
-
-{#if avecOptions}
-	<!--  3. Les options qui DÉCRIVENT l'objet — épinglage, urgence, brouillon,
-	      confidentialité. Toujours ici, jamais dans la Diffusion : elles se
-	      corrigent, elles ne s'envoient pas. -->
-	<SectionOptionsPublication
-		{objet}
-		{premiere}
-		pliable={plie('mise_en_avant')}
-		options={optionsRendues}
-		perimetreCible={perimetre}
-		{dejaEpingle}
-		{confidentielAcquis}
-		{epingleInterdit}
-		bind:epingle
-		bind:urgente
-		bind:brouillon
-		bind:confidentiel
-	/>
-{/if}
-
 {#if avecWorkflow}
 	<!--  4. Workflow — OÙ EN EST l'objet. À distinguer de la Diffusion, qui dit
 	      qui le voit et où (section 10). Le contenu vient de l'écran. -->
@@ -411,22 +378,6 @@
 	</SectionFormulaire>
 {/if}
 
-{#if avecDestinataires}
-	<SectionFormulaire
-		premiere={premiere && !avecPerimetre}
-		titre={SECTIONS_LIBELLE.destinataires}
-		requis
-		badge={badgeDestinataires}
-		pliable={plie('destinataires')}
-		ouvrirSiRenseignee={!concerneTousLesResidents(destinataires)}
-		idTitre="{idPrefixe}-destinataires-titre"
-	>
-		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-destinataires-titre">
-			<DestinatairePicker bind:value={destinataires} titre="" />
-		</div>
-	</SectionFormulaire>
-{/if}
-
 {#if avecDescription}
 	<SectionDescription
 		{idPrefixe}
@@ -455,6 +406,55 @@
 >
 	<svelte:fragment slot="documents"><slot name="documents" /></svelte:fragment>
 </SectionsPiecesJointes>
+
+{#if avecSaisiPour}
+	<!--  2. Au nom de QUI l'entrée est ouverte. Le composant est celui des
+	      tickets (`ChampSaisiPour`) : il portait déjà la saisie, il ne lui
+	      manquait qu'un appelant de plus. -->
+	<ChampSaisiPour
+		bind:mode={saisiPour.mode}
+		bind:userId={saisiPour.userId}
+		bind:nom={saisiPour.nom}
+		bind:email={saisiPour.email}
+		residents={residentsSaisiPour}
+	/>
+{/if}
+
+{#if avecOptions}
+	<!--  3. Les options qui DÉCRIVENT l'objet — épinglage, urgence, brouillon,
+	      confidentialité. Toujours ici, jamais dans la Diffusion : elles se
+	      corrigent, elles ne s'envoient pas. -->
+	<SectionOptionsPublication
+		{objet}
+		{premiere}
+		pliable={plie('mise_en_avant')}
+		options={optionsRendues}
+		perimetreCible={perimetre}
+		{dejaEpingle}
+		{confidentielAcquis}
+		{epingleInterdit}
+		bind:epingle
+		bind:urgente
+		bind:brouillon
+		bind:confidentiel
+	/>
+{/if}
+
+{#if avecDestinataires}
+	<SectionFormulaire
+		premiere={premiere && !avecPerimetre}
+		titre={SECTIONS_LIBELLE.destinataires}
+		requis
+		badge={badgeDestinataires}
+		pliable={plie('destinataires')}
+		ouvrirSiRenseignee={!concerneTousLesResidents(destinataires)}
+		idTitre="{idPrefixe}-destinataires-titre"
+	>
+		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-destinataires-titre">
+			<DestinatairePicker bind:value={destinataires} titre="" />
+		</div>
+	</SectionFormulaire>
+{/if}
 
 <!--  🔴 La section 9 vient de `SectionDiffusion`, elle n'est plus réécrite ici
       (#498, 20/08/2026).

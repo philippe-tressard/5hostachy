@@ -42,44 +42,138 @@ import { join, sep } from 'node:path';
 
 const RACINE = 'src';
 
-/**  L'ordre arbitré — `ux-patterns` §9 sexies, révisé le 12/09/2026.
+/**
+ *  🔴 L'ordre ne s'écrit PLUS ici — il se lit dans `lib/entites/types.ts`.
  *
- *   🔴 Ce tableau est la SOURCE : la skill le décrit, ce fichier le fait
- *   respecter. Les deux doivent rester d'accord, et c'est ce contrôle qui
- *   tranche — une documentation ne fait échouer personne. */
-export const RANGS = {
-	//  🔴 Section à part entière depuis le 15/09/2026, sur arbitrage :
-	//  « j'ai sorti la section Saisi pour de Champs spécifiques ». Elle vivait
-	//  DANS les champs spécifiques du ticket — donc invisible aux autres
-	//  écrans, et l'étendre aux actualités et aux événements l'aurait recopiée
-	//  deux fois de plus.
-	'Saisi pour': 2,
-	'Options de publication': 3,
-	Workflow: 4,
-	Périmètre: 5,
-	Destinataires: 6,
-	Description: 7,
+ *  ## Pourquoi (#1124, 21/09/2026)
+ *
+ *  Ce fichier portait sa propre table de rangs, et son en-tête affirmait
+ *  *« ce tableau est la SOURCE »*. Il y en avait donc DEUX : celle-ci et
+ *  `SECTIONS_ORDRE`. Elles ont divergé comme le dépôt l'a déjà vu quatre fois
+ *  (périmètres #316, canaux, statuts #415, pages #401) :
+ *
+ *  | La table disait | La réalité |
+ *  |---|---|
+ *  | « Photos » et « Documents », deux rangs | fusionnés en « Pièces jointes » (#1095) |
+ *  | « Workflow », « Saisi pour » | renommés « Suivi » et « Au nom de » (21/09) |
+ *  | dix sections | **treize** |
+ *
+ *  Résultat : le contrôle était vert en faisant respecter scrupuleusement un
+ *  ordre qui n'était plus celui du cadre — et l'écran rendait « Au nom de »
+ *  (rang 10) en troisième position sans que rien ne le dise. Signalé à l'écran :
+ *  *« L'ordre des sections du tableau n'est pas respecté »*.
+ *
+ *  Une documentation ne fait échouer personne ; une seconde table non plus —
+ *  elle se contente de mentir avec assurance.
+ */
+const TYPES_SECTIONS = join(RACINE, 'lib', 'entites', 'types.ts');
+
+/** Le bloc d'une déclaration, du nom jusqu'au terminateur donné. */
+function bloc(nom, terminateur) {
+	const src = readFileSync(TYPES_SECTIONS, 'utf8');
+	const d = src.indexOf(nom);
+	if (d < 0) throw new Error(`${nom} introuvable dans ${TYPES_SECTIONS}`);
+	return src.slice(d, src.indexOf(terminateur, d));
+}
+
+/** `{ id → rang }`, lu dans `SECTIONS_ORDRE` — le rang EST la position. */
+function rangsParId() {
+	//  ⚠️ `export const` : le nom apparaît AUSSI dans les commentaires du fichier,
+	//  et partir de la première occurrence lisait des identifiants de prose — la
+	//  section « nature » s'est retrouvée au rang 15.
+	const ids = [...bloc('export const SECTIONS_ORDRE', '];').matchAll(/'([a-z_]+)'/g)].map(
+		(m) => m[1],
+	);
+	if (ids.length < 10)
+		throw new Error(`SECTIONS_ORDRE : ${ids.length} identifiant(s) lu(s) — le motif a derive.`);
+	return Object.fromEntries(ids.map((id, i) => [id, i + 1]));
+}
+
+/** `{ id → libellé }`, lu dans `SECTIONS_LIBELLE`. */
+function libellesParId() {
+	const couples = [...bloc('SECTIONS_LIBELLE', '};').matchAll(/^\t([a-z_]+): '([^']+)'/gm)];
+	if (couples.length < 10)
+		throw new Error(`SECTIONS_LIBELLE : ${couples.length} couple(s) lu(s) — le motif a derive.`);
+	return Object.fromEntries(couples.map((m) => [m[1], m[2]]));
+}
+
+/**
+ *  Les intitulés qu'un écran affiche SANS être celui de la table, et la section
+ *  qu'ils occupent — chacun avec sa raison. Une liste d'alias, jamais un
+ *  passe-droit : un intitulé absent d'ici ET de la table n'est pas classé, donc
+ *  pas contrôlé.
+ */
+const ALIAS = {
+	//  Le ticket dit « Catégorie » là où la table dit « Nature » : c'est le mot
+	//  du métier, et le renommer changerait l'écran sans rien gagner.
+	Catégorie: 'nature',
 	//  Une évolution parle de « Commentaire » là où une actualité parle de
-	//  « Description » : même rang, même notion, deux mots (cf. `ChampsCommuns`).
-	Commentaire: 7,
-	Photos: 8,
-	Documents: 9,
-	Diffusion: 10,
+	//  « Description » : même notion, même rang, deux mots.
+	Commentaire: 'description',
 };
 
-/**  Les props de `ChampsCommuns` et le rang qu'elles activent. L'ordre du
- *   tableau est celui du composant : il REND toujours dans cet ordre-là. */
-const PROPS_CHAMPS_COMMUNS = [
-	['avecSaisiPour', 2],
-	['avecOptions', 3],
-	['avecWorkflow', 4],
-	['avecPerimetre', 5],
-	['avecDestinataires', 6],
-	['avecDescription', 7],
-	['avecPhotos', 8],
-	['avecDocuments', 9],
-	['avecDiffusion', 10],
+const RANGS_PAR_ID = rangsParId();
+const LIBELLES = libellesParId();
+
+/** `{ intitulé affiché → rang }` — dérivé, jamais écrit. */
+export const RANGS = {
+	...Object.fromEntries(
+		Object.entries(LIBELLES)
+			.filter(([id]) => RANGS_PAR_ID[id])
+			.map(([id, libelle]) => [libelle, RANGS_PAR_ID[id]]),
+	),
+	...Object.fromEntries(
+		Object.entries(ALIAS).map(([libelle, id]) => {
+			if (!RANGS_PAR_ID[id])
+				throw new Error(`ALIAS « ${libelle} » vise « ${id} », absent de SECTIONS_ORDRE.`);
+			return [libelle, RANGS_PAR_ID[id]];
+		}),
+	),
+};
+
+/**
+ *  Les composants qui PORTENT une section — leur intitulé vit chez eux.
+ *
+ *  ⚠️ Un écran qui les appelle n'écrit aucun `titre=`, donc rien ne les
+ *  trahissait : c'est par là que « Au nom de » (`ChampSaisiPour`) et « Mise en
+ *  avant » (`SectionOptionsPublication`) étaient rendus en tête du formulaire
+ *  d'affaire sans qu'un contrôle le voie.
+ */
+const COMPOSANTS_SECTION = [
+	['SectionOptionsPublication', 'mise_en_avant'],
+	['ChampSaisiPour', 'au_nom_de'],
+	['SectionsPiecesJointes', 'pieces_jointes'],
+	['SectionQuand', 'quand'],
+	['SectionDescription', 'description'],
+	['SectionDiffusion', 'diffusion'],
+	['SectionWorkflow', 'suivi'],
 ];
+
+/**  Les props de `ChampsCommuns` et la SECTION que chacune active.
+ *
+ *   🔴 L'ordre de ce tableau est celui du COMPOSANT — il rend dans cet ordre-là,
+ *   quelles que soient les props écrites par l'appelant. Le rang, lui, vient de
+ *   la table : si le composant cesse de rendre dans l'ordre déclaré, les rangs
+ *   ne sont plus croissants et le contrôle le dit.
+ *
+ *   ⚠️ C'est exactement ce qui a été trouvé le 21/09/2026 : « Au nom de » (10)
+ *   et « Mise en avant » (11) étaient rendus en tête, avant « Suivi » (4). */
+const PROPS_CHAMPS_COMMUNS = [
+	['avecWorkflow', 'suivi'],
+	['avecQuand', 'quand'],
+	['avecPerimetre', 'perimetre'],
+	['avecDescription', 'description'],
+	['avecPhotos', 'pieces_jointes'],
+	['avecDocuments', 'pieces_jointes'],
+	['avecSaisiPour', 'au_nom_de'],
+	['avecOptions', 'mise_en_avant'],
+	['avecDestinataires', 'destinataires'],
+	['avecDiffusion', 'diffusion'],
+].map(([prop, id]) => {
+	if (!RANGS_PAR_ID[id])
+		throw new Error(`La prop ${prop} vise « ${id} », absent de SECTIONS_ORDRE.`);
+	return [prop, RANGS_PAR_ID[id]];
+});
 
 /**
  * Fin de la balise ouvrante commencée en `debut`.
@@ -136,15 +230,32 @@ export function sectionsDe(source) {
 	}
 	const ignoree = (i) => zonesIgnorees.some(([d, f]) => i > d && i < f);
 
-	//  La section d'options a son propre composant : son titre n'est pas écrit
-	//  dans l'écran, c'est lui qui le porte.
-	const reOptions = /<SectionOptionsPublication\b/g;
-	while ((m = reOptions.exec(source))) {
-		if (!ignoree(m.index)) {
-			trouvees.push({ position: m.index, rang: 3, quoi: 'SectionOptionsPublication' });
+	//  🔴 Ces composants PORTENT leur section : leur intitulé n'est pas écrit
+	//  dans l'écran qui les appelle, donc aucun `titre=` ne les trahit. Ils
+	//  étaient invisibles au contrôle — et « Au nom de », rendu en troisième
+	//  position au lieu de la dixième, l'est resté (#1124, 21/09/2026).
+	for (const [balise, id] of COMPOSANTS_SECTION) {
+		const re = new RegExp(`<${balise}\\b`, 'g');
+		let x;
+		while ((x = re.exec(source))) {
+			if (!ignoree(x.index)) {
+				trouvees.push({ position: x.index, rang: RANGS_PAR_ID[id], quoi: balise });
+			}
 		}
 	}
-	//  Les autres se reconnaissent à leur intitulé.
+	//  …ou LU DANS LA TABLE, ce qui est la forme correcte depuis #1095.
+	//
+	//  🔴 Le contrôle ne lisait que `titre="…"` : une section dont l'intitulé
+	//  vient de `SECTIONS_LIBELLE` lui était invisible. Plus un écran suivait la
+	//  règle, moins il était contrôlé.
+	const reTitreTable = /titre={SECTIONS_LIBELLE\.([a-z_]+)}/g;
+	while ((m = reTitreTable.exec(source))) {
+		const rangT = RANGS_PAR_ID[m[1]];
+		if (rangT && !ignoree(m.index)) {
+			trouvees.push({ position: m.index, rang: rangT, quoi: LIBELLES[m[1]] ?? m[1] });
+		}
+	}
+	//  Les autres se reconnaissent à leur intitulé, écrit en clair.
 	const reTitre = /titre="([^"]+)"/g;
 	while ((m = reTitre.exec(source))) {
 		const rang = RANGS[m[1]];
@@ -176,18 +287,21 @@ if (process.argv.includes('--selftest')) {
 	};
 	t(
 		"l'ordre arbitré passe",
-		'<SectionOptionsPublication /><SectionFormulaire titre="Workflow" /><SectionFormulaire titre="Périmètre" />',
+		'<SectionFormulaire titre="Suivi" /><SectionFormulaire titre="Périmètre" />' +
+			'<SectionOptionsPublication />',
 		0,
 	);
-	//  🔴 LE CAS SIGNALÉ : les options après le périmètre.
+	//  🔴 LE CAS DU 21/09/2026 : la « Mise en avant » (11) rendue AVANT le
+	//  « Suivi » (4) — l'ordre réel du formulaire d'affaire, que l'ancienne table
+	//  de rangs laissait passer puisqu'elle plaçait les options en 3ᵉ.
 	t(
-		'options après périmètre',
-		'<SectionFormulaire titre="Périmètre" /><SectionOptionsPublication />',
+		'la mise en avant avant le suivi',
+		'<SectionOptionsPublication /><SectionFormulaire titre="Suivi" />',
 		1,
 	);
 	t(
-		'workflow après la diffusion',
-		'<SectionFormulaire titre="Diffusion" /><SectionFormulaire titre="Workflow" />',
+		'le suivi après la diffusion',
+		'<SectionFormulaire titre="Diffusion" /><SectionFormulaire titre="Suivi" />',
 		1,
 	);
 	//  `ChampsCommuns` rend DANS SON ORDRE : ses props ne se lisent pas comme
@@ -211,7 +325,7 @@ if (process.argv.includes('--selftest')) {
 	t(
 		'un `=>` dans les props ne coupe pas la lecture',
 		'<ChampsCommuns on:envoyer={() => void f()} avecDiffusion />' +
-			'<SectionFormulaire titre="Workflow" />',
+			'<SectionFormulaire titre="Suivi" />',
 		1,
 	);
 	//  Cas zéro : une source sans aucune section ne doit pas passer pour conforme
@@ -253,8 +367,10 @@ for (const p of tous) {
 //  🔴 Cas zéro : le relevé légitime est VIDE, donc « rien trouvé » et « rien lu »
 //  se ressemblent (`standards/04` §27). Le témoin est le nombre de sections
 //  LUES : sous ce plancher, le repérage ne mord plus.
-//  ⬇️ Il SUIT le relevé : 54 sections lues au 12/09/2026.
-const PLANCHER_SECTIONS = 45;
+//  ⬇️ Il SUIT le relevé : 69 sections lues au 21/09/2026 — contre 54 la veille,
+//  parce que le contrôle voit enfin les composants qui PORTENT leur section et
+//  les intitulés lus dans `SECTIONS_LIBELLE` (#1124).
+const PLANCHER_SECTIONS = 60;
 if (sectionsLues < PLANCHER_SECTIONS) {
 	console.error(
 		`\n✗ Cas zéro : ${sectionsLues} section(s) lue(s), au moins ${PLANCHER_SECTIONS} attendues —\n` +
@@ -267,10 +383,14 @@ if (fautifs.length) {
 	console.error(`\n✗ ${fautifs.length} section(s) hors de l'ordre arbitré :\n`);
 	for (const f of fautifs) console.error(`  ${f}`);
 	console.error(
-		'\n  L’ordre (`ux-patterns` §9 sexies) :\n' +
-			'    1 Titre · 2 Champs spécifiques · 3 Options de publication · 4 Workflow\n' +
-			'    5 Périmètre · 6 Destinataires · 7 Description · 8 Photos · 9 Documents · 10 Diffusion\n' +
-			'\n  Il ne se discute pas par écran : deux formulaires qui rangent les mêmes\n' +
+		//  🔴 L'ordre s'AFFICHE depuis la table, il ne se récite plus : la version
+		//  récitée ici est restée à dix sections pendant que le cadre en comptait
+		//  treize — et c'est ce message qui faisait autorité auprès de qui le lisait.
+		'\n  L’ordre, lu dans `SECTIONS_ORDRE` :\n    ' +
+			Object.entries(RANGS_PAR_ID)
+				.map(([id, rang]) => `${rang} ${LIBELLES[id] ?? id}`)
+				.join(' · ') +
+			'\n\n  Il ne se discute pas par écran : deux formulaires qui rangent les mêmes\n' +
 			'  notions différemment se lisent comme deux produits.\n',
 	);
 	process.exit(1);
