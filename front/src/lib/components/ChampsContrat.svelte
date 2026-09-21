@@ -47,6 +47,7 @@
 	import PerimetrePicker from './PerimetrePicker.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { CONTRAT } from '$lib/entites/contrat';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
@@ -79,7 +80,7 @@
       un `.field champ-large` qui porte `Titre *`. L'exception, c'était moi. -->
 <SectionFormulaire premiere>
 	<div class="field champ-large">
-		<label for="{idNotes}-titre">Titre *</label>
+		<label for="{idNotes}-titre">Titre<EtoileRequis vide={!contratForm.libelle} /></label>
 		<input id="{idNotes}-titre" bind:value={contratForm.libelle} required />
 	</div>
 </SectionFormulaire>

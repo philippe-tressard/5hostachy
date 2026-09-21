@@ -1,4 +1,5 @@
 <script lang="ts">
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { auth as authApi } from '$lib/api';
 	import { getSiteNom } from '$lib/stores/pageConfig';
 
@@ -47,7 +48,7 @@
 			</p>
 			<form on:submit|preventDefault={submit}>
 				<div class="field">
-					<label for="reset-email">Adresse e-mail *</label>
+					<label for="reset-email">Adresse e-mail<EtoileRequis vide={!email} /></label>
 					<input id="reset-email" type="email" bind:value={email} required autocomplete="email" />
 				</div>
 				<div class="btn-wrapper">

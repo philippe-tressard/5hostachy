@@ -77,6 +77,7 @@
 	import { PUBLICATION } from '$lib/entites/publication';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	/**  La publication à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut)
 	 *   = création. Le mode ne change pas pendant la vie du composant : l'appelant
@@ -354,7 +355,9 @@
 			<!--  1. Titre. -->
 			<SectionFormulaire premiere>
 				<div class="field champ-large">
-					<label for="pub-titre-{publication?.id ?? 'new'}">Titre *</label>
+					<label for="pub-titre-{publication?.id ?? 'new'}"
+						>Titre<EtoileRequis vide={!titre} /></label
+					>
 					<input
 						id="pub-titre-{publication?.id ?? 'new'}"
 						type="text"

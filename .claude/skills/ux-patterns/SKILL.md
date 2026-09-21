@@ -924,18 +924,22 @@ le trait s'arrête avant le formulaire, ce qui se voit immédiatement.
 calendrier reste à 640 px, délibérément).
 
 
-- Champ requis : label suivi **immédiatement** de `*` — `Titre*`, `Périmètre*`
+- Champ requis : `<EtoileRequis vide={!champ} />`, jamais une astérisque tapée
 
-  🔴 **L'astérisque est ROUGE tant que le champ est vide**, et reprend la
-  couleur du libellé dès qu'il porte une valeur (décidé à l'écran le
-  21/09/2026). Elle cesse donc d'être une décoration : c'est l'**état** du
-  champ, lisible d'un coup d'œil sur un formulaire de treize sections.
+  🔴 Elle est **collée** au libellé — `TITRE*` — et **ROUGE tant que le champ
+  est vide**, la couleur du libellé sinon (livré le 22/09/2026, #1121). Elle
+  cesse d'être une décoration : c'est l'**état** du champ, lisible d'un coup
+  d'œil sur un formulaire de treize sections.
 
-  ⚠️ **État de l'implémentation : #1121, non livrée.** À ce jour l'astérisque
-  est écrite ` *` (avec espace) à une vingtaine d'endroits et calculée dans
-  sept composants, dont aucun ne connaît la valeur du champ. Cette ligne
-  décrit donc la règle **décidée**, pas le code actuel — et c'est écrit ici
-  pour que le prochain lot ne reproduise pas l'ancienne forme de bonne foi.
+  Un caractère ne sait pas si le champ est vide : c'est pour cela qu'il y a un
+  composant. Il était écrit **trente-cinq fois** — vingt-six `<label>Titre *`
+  en clair et cinq composants qui calculaient `{requis ? ' *' : ''}` —, et
+  aucun de ces points ne connaissait la valeur. 🔒 `npm run lint:champs`.
+
+  ⚠️ Les libellés de champ sont en **MAJUSCULES par le style**
+  (`.field label`, `champs.css`), comme les intitulés de section. Jamais
+  tapées : `TITRE` écrit en dur est épelé lettre à lettre par certains
+  lecteurs d'écran, et une règle qui change obligerait à rouvrir chaque écran.
 - **Pas** de mention « (optionnel) » : l'absence de `*` suffit
 - Actions : bouton secondaire / Annuler **à gauche**, action primaire **à droite**
 

@@ -216,7 +216,9 @@
 		/>
 
 		<ChampSecret
-			libelle="Clé d’API *"
+			libelle="Clé d’API"
+			requis
+			rempli={clePosee || !!cle}
 			bind:valeur={cle}
 			pose={clePosee}
 			placeholder="sk-…"

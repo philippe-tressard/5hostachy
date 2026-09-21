@@ -41,6 +41,7 @@
                     libelle="Type" requis avecDetail />
 -->
 <script context="module" lang="ts">
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	/** Compte les instances, pour donner un identifiant stable a chaque libelle. */
 	let compteur = 0;
 </script>
@@ -177,7 +178,9 @@
 
 <div class={libelleVisible ? 'field champ-large' : ''}>
 	{#if libelleVisible}
-		<span class="libelle-groupe" id={idTitre}>{libelle}{requis ? ' *' : ''}</span>
+		<span class="libelle-groupe" id={idTitre}
+			>{libelle}{#if requis}<EtoileRequis vide={!valeur} />{/if}</span
+		>
 	{/if}
 	<div
 		class="filters"

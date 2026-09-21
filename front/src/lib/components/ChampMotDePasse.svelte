@@ -16,6 +16,7 @@
   vivent dans le même fichier et voyagent ensemble.
 -->
 <script lang="ts">
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import Icon from './Icon.svelte';
 	import PasswordStrength from './PasswordStrength.svelte';
 	import { capsLockActif } from '$lib/utils';
@@ -55,7 +56,9 @@
 </script>
 
 <div class="field">
-	<label for={id}>{libelle}{requis ? ' *' : ''}</label>
+	<label for={id}
+		>{libelle}{#if requis}<EtoileRequis vide={!valeur} />{/if}</label
+	>
 	<div class="saisie">
 		<input
 			{id}

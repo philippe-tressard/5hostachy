@@ -445,6 +445,7 @@
 		premiere={premiere && !avecPerimetre}
 		titre={SECTIONS_LIBELLE.destinataires}
 		requis
+		rempli={destinataires.length > 0}
 		badge={badgeDestinataires}
 		pliable={plie('destinataires')}
 		ouvrirSiRenseignee={!concerneTousLesResidents(destinataires)}

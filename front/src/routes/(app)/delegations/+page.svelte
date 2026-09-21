@@ -13,6 +13,7 @@
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import { essayer } from '$lib/chargement';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { parAttribut } from '$lib/table-statuts';
 
 	// Cette page importait déjà getPageConfig sans s'en servir : son titre était en
@@ -196,7 +197,7 @@
 {#if showForm}
 	<FormulaireCreation titre="Nouvelle délégation aidant">
 		<div class="field">
-			<label for="d-mandant">Personne aidée (mandant) *</label>
+			<label for="d-mandant">Personne aidée (mandant)<EtoileRequis vide={!formMandantId} /></label>
 			<select id="d-mandant" bind:value={formMandantId}>
 				<option value={0} disabled>Choisir…</option>
 				{#each users.filter((u) => u.actif) as u (u.id)}
@@ -205,7 +206,7 @@
 			</select>
 		</div>
 		<div class="field">
-			<label for="d-aidant">Proche aidant *</label>
+			<label for="d-aidant">Proche aidant<EtoileRequis vide={!formAidantId} /></label>
 			<select id="d-aidant" bind:value={formAidantId}>
 				<option value={0} disabled>Choisir…</option>
 				{#each users.filter((u) => u.actif && u.id !== formMandantId) as u (u.id)}

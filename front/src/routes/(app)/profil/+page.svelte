@@ -20,6 +20,7 @@
 	import TelemetrieRGPD from '$lib/components/TelemetrieRGPD.svelte';
 	import { etageLabel, lotTypeLabel } from '$lib/utils';
 	import ChampsEtage from '$lib/components/ChampsEtage.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	$: _pc = getPageConfig($configStore, 'profil', defautsDePage('profil'));
 	$: _siteNom = $siteNomStore;
@@ -293,18 +294,18 @@
 		</div>
 
 		<form on:submit|preventDefault={saveProfile}>
-			<div class="form-row">
+			<div class="form-grid">
 				<div class="field">
-					<label for="p-prenom">Prénom *</label>
+					<label for="p-prenom">Prénom<EtoileRequis vide={!prenom} /></label>
 					<input id="p-prenom" type="text" bind:value={prenom} required />
 				</div>
 				<div class="field">
-					<label for="p-nom">Nom *</label>
+					<label for="p-nom">Nom<EtoileRequis vide={!nom} /></label>
 					<input id="p-nom" type="text" bind:value={nom} required />
 				</div>
 			</div>
 			<div class="field">
-				<label for="p-email">Adresse e-mail *</label>
+				<label for="p-email">Adresse e-mail<EtoileRequis vide={!email} /></label>
 				<input id="p-email" type="email" bind:value={email} required />
 			</div>
 			<div class="field">
@@ -559,11 +560,6 @@
 
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
-	.form-row {
-		display: flex;
-		gap: 1rem;
-		flex-wrap: wrap;
-	}
 	.form-actions {
 		flex-wrap: wrap;
 	} /* le reste vient de la charte (#607) */

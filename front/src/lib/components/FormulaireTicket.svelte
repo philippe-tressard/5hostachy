@@ -68,6 +68,7 @@
 	import { TICKET } from '$lib/entites/ticket';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { comparerParNom } from '$lib/noms';
 	import { lotDepuisSaisie, nomCopie, saisieDepuis } from '$lib/saisi-pour';
 
@@ -396,7 +397,7 @@
 		      est donc un champ spécifique (section 2). -->
 		<SectionFormulaire premiere>
 			<div class="field champ-large">
-				<label for="titre">Titre *</label>
+				<label for="titre">Titre<EtoileRequis vide={!titre} /></label>
 				<input
 					id="titre"
 					type="text"

@@ -8,6 +8,7 @@
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
 	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	onMount(() => {
 		loadSiteConfig();
@@ -96,7 +97,7 @@
 
 		<form on:submit|preventDefault={submit}>
 			<div class="field">
-				<label for="email">Email *</label>
+				<label for="email">Email<EtoileRequis vide={!email} /></label>
 				<input id="email" type="email" bind:value={email} required autocomplete="email" />
 			</div>
 
