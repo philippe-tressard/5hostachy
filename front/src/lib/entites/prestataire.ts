@@ -38,13 +38,18 @@ export const PRESTATAIRE: EntiteDeclaree = {
 			titreEcran: ['Nom'],
 		},
 		{
-			id: 'specifiques',
+			id: 'nature',
 			objet: 'Type · Spécialité · Courriel',
 			requis: true,
 			titreEcran: ["L'entreprise"],
 		},
 		{
-			id: 'workflow',
+			id: 'equipement',
+			sansObjet:
+				'Une fiche d’entreprise ne porte pas d’équipement : ce sont ses CONTRATS qui en désignent un.',
+		},
+		{
+			id: 'suivi',
 			sansObjet:
 				"Un prestataire n'a pas d'états : il est référencé, ou il ne l'est plus. " +
 				"L'archivage suffit, et il se fait d'un geste sur la carte — pas d'une " +
@@ -55,18 +60,16 @@ export const PRESTATAIRE: EntiteDeclaree = {
 			sansObjet: "un prestataire est une fiche d'annuaire, pas un fait daté",
 		},
 		{
-			id: 'perimetre',
+			id: 'intervenant',
+			sansObjet: 'L’entreprise EST l’intervenant ; la section se rapporterait à elle-même.',
+		},
+		{
+			id: 'qui_le_voit',
 			sansObjet:
 				"Une entreprise n'est attachée à aucun lieu de la copropriété : c'est son " +
 				"CONTRAT qui porte ce qu'elle entretient, et lui seul (déclaré dans " +
 				'`entites/contrat`). Donner un périmètre au prestataire ferait deux endroits ' +
 				'où le lire, donc deux occasions de les désaccorder.',
-		},
-		{
-			id: 'destinataires',
-			sansObjet:
-				"Personne n'est destinataire d'une fiche de carnet d'adresses. Qui la " +
-				'consulte relève des droits, pas de la saisie — la sécurité est centralisée.',
 		},
 		{
 			id: 'description',
@@ -82,6 +85,20 @@ export const PRESTATAIRE: EntiteDeclaree = {
 				"Un carnet d'adresses ne se photographie pas, et les documents appartiennent " +
 				'au CONTRAT — le contrat signé, ses avenants, ses conditions générales. Les ' +
 				"rattacher à l'entreprise les détacherait de ce qu'ils engagent.",
+		},
+		{
+			id: 'au_nom_de',
+			sansObjet: 'Un carnet d’adresses se tient, il ne se saisit pas pour un tiers.',
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet: 'Une fiche d’annuaire ne se met pas en avant : l’annuaire se lit par recherche.',
+		},
+		{
+			id: 'destinataires',
+			sansObjet:
+				"Personne n'est destinataire d'une fiche de carnet d'adresses. Qui la " +
+				'consulte relève des droits, pas de la saisie — la sécurité est centralisée.',
 		},
 		{
 			id: 'diffusion',

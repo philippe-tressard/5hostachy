@@ -45,7 +45,7 @@ export const CONTRAT: EntiteDeclaree = {
 			requis: true,
 		},
 		{
-			id: 'specifiques',
+			id: 'nature',
 			objet:
 				'Prestataire · Équipement · N° de contrat · Début · Durée · Fréquence · Prochaine visite',
 			requis: true,
@@ -56,7 +56,18 @@ export const CONTRAT: EntiteDeclaree = {
 			titreEcran: ['Le contrat'],
 		},
 		{
-			id: 'workflow',
+			//  🔴 L'équipement EST déclaré, mais dans la section « Nature » : le
+			//  formulaire d'un contrat le demande avec le prestataire et la fréquence,
+			//  parce qu'un contrat d'entretien se définit PAR ce qu'il entretient.
+			//  Le déclarer ici en plus donnerait deux sections pour un champ.
+			id: 'equipement',
+			sansObjet:
+				"L'équipement d'un contrat vit dans sa section « Le contrat » (`nature`) : " +
+				"il ne qualifie pas le contrat, il le DÉFINIT — un contrat d'entretien sans " +
+				"ce qu'il entretient n'existe pas.",
+		},
+		{
+			id: 'suivi',
 			sansObjet:
 				"Un contrat n'a pas d'états à parcourir : il court, ou son échéance est passée. " +
 				"C'est une DATE qui le dit, pas un statut qu'on déplace à la main — et une date " +
@@ -69,7 +80,13 @@ export const CONTRAT: EntiteDeclaree = {
 				"un contrat ne paraît pas au calendrier de la résidence : ce sont les interventions qu'il déclenche qui s'y inscrivent, pas lui",
 		},
 		{
-			id: 'perimetre',
+			id: 'intervenant',
+			sansObjet:
+				"Même raison : le prestataire est dans « Le contrat ». C'est lui qui signe, " +
+				'pas un intervenant de passage.',
+		},
+		{
+			id: 'qui_le_voit',
 			objet: 'PerimetrePicker — ce que le contrat entretient',
 			//  ⚠️ Pas `requis` : un contrat d'assurance ou de syndic couvre la
 			//  copropriété entière, et l'imposer ferait cocher « résidence » à la
@@ -77,20 +94,14 @@ export const CONTRAT: EntiteDeclaree = {
 			//  ⚠️ L'aide (« il apparaît dans le carnet d'entretien de ce périmètre »)
 			//  vit AVEC le champ : la déclaration dit ce qui est rendu, pas comment
 			//  on l'explique.
-		},
-		{
-			id: 'destinataires',
-			sansObjet:
-				"Un contrat ne s'adresse à personne : il lie la copropriété à une entreprise. " +
-				'Qui le consulte est décidé par les droits (conseil syndical et administration), ' +
-				'pas par un choix de saisie — la sécurité est centralisée, elle ne se règle pas ' +
-				'dans un formulaire.',
+			pliee: true,
 		},
 		{
 			id: 'description',
 			//  C'est ici qu'atterrit la synthèse proposée par l'assistant IA (#899),
 			//  relue et corrigée avant enregistrement.
 			objet: 'RichEditor — la synthèse du contrat',
+			pliee: true,
 		},
 		{
 			//  🔴 La dette `motif: 'api'` (#921) a été LEVÉE le 12/09/2026, et elle
@@ -111,6 +122,29 @@ export const CONTRAT: EntiteDeclaree = {
 			//  ticket ou à l'événement qui s'y rapporte, et le carnet les rassemble.
 			id: 'pieces_jointes',
 			objet: 'FichiersUpload — le contrat signé, ses avenants, ses conditions générales',
+			exceptionPliage:
+				'Facultative mais DÉPLIÉE : joindre une photo est le premier geste sur ' +
+				'téléphone, et le replier ajouterait un clic au geste le plus fréquent.',
+		},
+		{
+			id: 'au_nom_de',
+			sansObjet:
+				'Un contrat est signé par la copropriété : il ne se saisit pas au nom de ' + "quelqu'un.",
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet:
+				"Deux contrats sont DÉSIGNÉS depuis la fiche de copropriété — l'assurance et " +
+				"le mandat de syndic —, et c'est une désignation, pas une mise en avant : " +
+				"elle dit le rôle du contrat, pas son rang d'affichage.",
+		},
+		{
+			id: 'destinataires',
+			sansObjet:
+				"Un contrat ne s'adresse à personne : il lie la copropriété à une entreprise. " +
+				'Qui le consulte est décidé par les droits (conseil syndical et administration), ' +
+				'pas par un choix de saisie — la sécurité est centralisée, elle ne se règle pas ' +
+				'dans un formulaire.',
 		},
 		{
 			id: 'diffusion',

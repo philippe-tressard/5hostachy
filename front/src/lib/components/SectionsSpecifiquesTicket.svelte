@@ -18,6 +18,7 @@
   `lint:etats` la refuse.
 -->
 <script lang="ts">
+	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import ChampSaisiPour from '$lib/components/ChampSaisiPour.svelte';
 	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -68,7 +69,7 @@
 	      EFFACER les `saisi_pour_*`, et « En mon nom » serait un choix sans effet.
 	      R4 ne déclare que des sections, pas des champs : ce motif `api` (#431)
 	      vit dans la déclaration en commentaire, faute de pouvoir s'y écrire. -->
-{#if sectionPresente(TICKET, etat, 'specifiques')}
+{#if sectionPresente(TICKET, etat, 'nature')}
 	<SectionFormulaire titre="Catégorie" requis idTitre="ticket-categorie-titre">
 		<!--  🔴 `ChoixPastilles` en mode radio depuis le 30/08/2026, signalé à
 			      l'écran : *« dans tickets tu ne peux pas réduire ces pastilles à la
@@ -97,7 +98,7 @@
 	</SectionFormulaire>
 {/if}
 
-{#if $isCS && sectionPresente(TICKET, etat, 'specifiques')}
+{#if $isCS && sectionPresente(TICKET, etat, 'nature')}
 	<ChampSaisiPour
 		bind:mode={modeSaisiPour}
 		bind:userId={saisiPourUserId}
@@ -119,7 +120,7 @@
 		bind:urgente={options.urgente}
 		bind:brouillon={options.brouillon}
 	/>
-{:else if sectionPresente(TICKET, etat, 'specifiques')}
+{:else if sectionPresente(TICKET, etat, 'nature')}
 	<!--  🔴 LE RÉSIDENT VOIT LA SEULE CASE « URGENT », et c'est la réparation
 	      d'une régression livrée le matin même (07/09/2026).
 
@@ -140,7 +141,7 @@
 	      édition depuis le cadre #430 : une correction corrige l'état comme
 	      elle corrige un titre, et c'est le `PATCH` qui a changé de nature
 	      côté serveur (voir le bloc de commentaires du script). -->
-<SectionFormulaire titre="Workflow" requis idTitre="ticket-workflow-titre">
+<SectionFormulaire titre={SECTIONS_LIBELLE.suivi} requis idTitre="ticket-workflow-titre">
 	<div class="field champ-large">
 		<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). « Ouvert » est
 			      active par défaut à la création — l'état de départ se voit, il ne

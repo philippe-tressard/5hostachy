@@ -124,7 +124,7 @@
 		      les fait disparaître — jamais une condition écrite ici. -->
 		<ChampsCommuns
 			idPrefixe="idee"
-			avecPerimetre={sectionPresente(IDEE, etat, 'perimetre')}
+			avecPerimetre={sectionPresente(IDEE, etat, 'qui_le_voit')}
 			bind:perimetre={perimetreCible}
 			avecDestinataires={sectionPresente(IDEE, etat, 'destinataires')}
 			bind:destinataires={publicCible}

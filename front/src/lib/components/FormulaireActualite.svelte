@@ -379,7 +379,7 @@
 				avecSaisiPour
 				{residentsSaisiPour}
 				bind:saisiPour
-				avecOptions={sectionPresente(PUBLICATION, etat, 'specifiques')}
+				avecOptions={sectionPresente(PUBLICATION, etat, 'nature')}
 				dejaEpingle={epingleInitial}
 				bind:epingle
 				bind:urgente
@@ -393,7 +393,7 @@
 				avecQuand={sectionPresente(PUBLICATION, etat, 'quand')}
 				bind:debut
 				bind:fin
-				avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
+				avecPerimetre={sectionPresente(PUBLICATION, etat, 'qui_le_voit')}
 				bind:perimetre={perimetreCible}
 				avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')}
 				bind:destinataires={publicCible}

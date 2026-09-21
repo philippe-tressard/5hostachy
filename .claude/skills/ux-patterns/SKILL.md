@@ -109,15 +109,66 @@ vocabulaire du code (`TicketEvolution`, `EvolForm`).
 ⚠️ Le cadre parle d'évolutions ; **l'écran parle de gestes** (« Commenter »,
 « Changer l'état »).
 
-### Les neuf sections, dans cet ordre — il ne se discute pas
+### Les TREIZE sections, dans cet ordre — il ne se discute pas
 
-1. **Titre** *(et lui seul)* · 2. **Champs spécifiques** (Catégorie, Saisi
-pour…) · 3. **Workflow** *(quand l'entité en a un — voir ci-dessous)* · 4.
-**Quand** *(début, fin, échéance — la date qui fait paraître l'objet au calendrier ; entrée le 20/09/2026 avec #1092, parce que le Calendrier cesse d'être un objet pour devenir une vue)* · 5. **Périmètre** · 6.
-**Destinataires** *(qui est concerné dans l'application)* · 7. **Description** ·
-8. **Pièces jointes** *(photos et/ou documents — UNE section depuis le
-21/09/2026, #1095)* · 9. **Diffusion** *(par quels canaux on prévient à
-l'extérieur)*.
+1. **Titre** · 2. **Nature** · 3. **Équipement** · 4. **Suivi** · 5. **Quand**
+· 6. **Intervenant** · 7. **Qui le voit** · 8. **Description** · 9. **Pièces
+jointes** · 10. **Au nom de** · 11. **Mise en avant** · 12. **Destinataires**
+*(qui est concerné dans l'application)* · 13. **Diffusion** *(par quels canaux
+on prévient à l'extérieur)*.
+
+🔴 **Treize depuis le 21/09/2026 (#1095)**, neuf le matin même. Trois
+changements, et un seul touche un rang existant :
+
+| | |
+|---|---|
+| **« Champs spécifiques » est SCINDÉE** | en *Nature*, *Au nom de* et *Mise en avant*. Elle portait trois intitulés sous un seul nom, ce qui rendait **indéclarable** une divergence ne concernant qu'un des trois — le cadre ne déclare que par SECTION. C'est la limite que #436 décrivait, et `ticket.ts` la portait en commentaire, invisible à `lint:etats`. |
+| **Trois sections entrent** | *Équipement*, *Intervenant* (tous deux réservés aux catégories du bâti) et *Suivi* — qui est l'ancien *Workflow*, renommé. |
+| **« Qui le voit » remonte** | ex-*Périmètre*, désormais **avant la Description** et dépliée. C'est le seul rang qui bouge, et il a été demandé : *« il a fallu plusieurs semaines pour l'UX de Périmètre, ne le casse pas »*. |
+
+⚠️ **Destinataires passe donc après Description**, ce que la phrase « aucune
+section existante ne change de rang relatif » du ticket ne disait pas. C'est le
+tableau des treize qui fait foi : il est la spécification, la phrase en était le
+résumé.
+
+### Le PLIAGE — un troisième état de présence (#1095)
+
+| État | Rendu |
+|---|---|
+| **Présente** | dépliée |
+| **Pliée** 🆕 | intitulé + résumé d'une ligne, cliquable |
+| **Absente** | rien, avec son motif |
+
+Ce n'est **pas** une fusion : chaque section garde son intitulé, son rang et sa
+déclaration. La règle est **calculée**, donc un pliage conforme n'a rien à
+écrire :
+
+```
+obligatoire → déplié   ·   facultatif → plié
+```
+
+🔴 Un pliage qui s'en écarte exige `exceptionPliage`, et `lint:etats` refuse
+dans les **deux sens** — une exception qui ne sert plus est aussi grave qu'une
+exception qui manque. C'est ainsi qu'une liste de justifications devient une
+liste de passe-droits.
+
+Les trois arbitrées le 20/09/2026 : **Au nom de** (obligatoire mais pliée, le
+défaut étant juste presque toujours), **Pièces jointes** (facultative mais
+dépliée — premier geste sur téléphone). « Destinataires » devait être la
+troisième : le contrôle a montré qu'elle n'est pas déclarée `requis`, donc son
+pliage SUIT la règle et n'a rien à justifier.
+
+⚠️ **Et toujours : une valeur autre que le défaut rouvre la section d'office.**
+Cette partie-là n'est pas déclarative — elle dépend de ce que l'objet PORTE.
+Une section pliée qui cacherait une valeur saisie serait pire que pas de pliage
+du tout.
+
+### Le quatrième motif d'absence : `categorie` (#1095)
+
+`nature` (l'objet ne porte pas la notion) · `geste` · `hérité` · **`categorie`**
+🆕 (la catégorie de l'objet ne l'appelle pas — l'Équipement et l'Intervenant ne
+concernent que le bâti) · `api` (🔴 **dette, jamais un choix**, et doit citer un
+ticket).
 
 🔴 **Une section ne se fusionne pas TOUTE SEULE.** Autant de sections déclarées
 que de sections rendues — même voisines, même courtes, même héritées. Ce qui est

@@ -226,7 +226,7 @@
 			</SectionFormulaire>
 
 			<!--  2. Champs spécifiques de l'événement. -->
-			{#if sectionPresente(EVENEMENT, etat, 'specifiques')}
+			{#if sectionPresente(EVENEMENT, etat, 'nature')}
 				<SectionFormulaire titre="Détails">
 					<div class="form-grid">
 						<div class="field">
@@ -319,13 +319,13 @@
 				epingleInterdit={form.affichable
 					? ''
 					: 'Un événement absent du fil d’activité ne peut pas y être épinglé.'}
-				avecWorkflow={sectionPresente(EVENEMENT, etat, 'workflow')}
+				avecWorkflow={sectionPresente(EVENEMENT, etat, 'suivi')}
 				demanderApercu={brouillonApercu}
 				bind:refDiffusion
 				envoiEnCours={submitting}
 				on:envoyer={confirmerEnvoi}
 				idPrefixe="ev"
-				avecPerimetre={sectionPresente(EVENEMENT, etat, 'perimetre')}
+				avecPerimetre={sectionPresente(EVENEMENT, etat, 'qui_le_voit')}
 				bind:perimetre={formPerimetreCible}
 				avecDescription={sectionPresente(EVENEMENT, etat, 'description')}
 				bind:description={form.description}

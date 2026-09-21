@@ -44,13 +44,18 @@ export const IDEE: EntiteDeclaree = {
 			},
 		},
 		{
-			id: 'specifiques',
+			id: 'nature',
 			sansObjet:
 				"Une idée n'a rien à qualifier : ni catégorie, ni date, ni destinataire nommé. " +
 				"Elle se pose en un titre et une description, et c'est le vote des voisins qui " +
 				"la qualifie ensuite. C'est la plus dépouillée des six entités du cadre, et ce " +
 				'dépouillement est voulu — une boîte à idées qui demande de remplir un formulaire ' +
 				"ne reçoit pas d'idées.",
+		},
+		{
+			id: 'equipement',
+			sansObjet:
+				'Une idée porte sur ce qui n’existe pas encore ; il n’y a rien à rattacher au bâti.',
 		},
 		{
 			//  🔴 L'idée A un workflow — Ouverte · Retenue · Réalisée · Rejetée — et il
@@ -63,7 +68,7 @@ export const IDEE: EntiteDeclaree = {
 			//  la déclarant « Réalisée ». L'état se pose depuis la CARTE, en pastilles
 			//  (`WorkflowPastilles`, #423), et il est réservé au conseil syndical —
 			//  l'auteur propose, le CS arbitre.
-			id: 'workflow',
+			id: 'suivi',
 			objet: 'Ouverte · Retenue · Réalisée · Rejetée',
 			absente: {
 				creation: {
@@ -74,6 +79,7 @@ export const IDEE: EntiteDeclaree = {
 						"l'arbitre — pas l'auteur.",
 				},
 			},
+			pliee: true,
 		},
 		{
 			id: 'quand',
@@ -81,8 +87,12 @@ export const IDEE: EntiteDeclaree = {
 				"une idée est soumise au vote, pas à un calendrier : elle n'a pas de date à laquelle elle « se passe »",
 		},
 		{
+			id: 'intervenant',
+			sansObjet: 'Personne n’intervient sur une idée : c’est le vote des voisins qui la qualifie.',
+		},
+		{
 			//  ✅ AJOUTÉ le 18/08/2026 (migration 0153), sur demande à l'écran.
-			id: 'perimetre',
+			id: 'qui_le_voit',
 			objet: 'PerimetrePicker — ce que l’idée concerne',
 			absente: {
 				//  🔒 Le CIBLAGE NE SE CORRIGE PAS (#783). Restreindre après coup
@@ -104,6 +114,27 @@ export const IDEE: EntiteDeclaree = {
 					explication: "Le périmètre est celui de l'idée ; une réponse ne le redéfinit pas.",
 				},
 			},
+			pliee: true,
+		},
+		{
+			id: 'description',
+			objet: 'RichEditor — l’idée, en détail',
+			requis: true,
+		},
+		{
+			id: 'pieces_jointes',
+			sansObjet:
+				'Une idée se raconte, elle ne se photographie pas — elle porte sur ce qui ' +
+				"n'existe pas encore. Rien côté serveur n'en porte : un devis ou un plan " +
+				"relèvent du ticket ou de l'événement qui suivra, si l'idée est retenue.",
+		},
+		{
+			id: 'au_nom_de',
+			sansObjet: 'Une idée se dépose en son nom — c’est la sienne qu’on soumet au vote.',
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet: 'Une idée ne se met pas en avant : son rang vient des votes, pas d’un choix.',
 		},
 		{
 			//  🔴 REVIREMENT ASSUMÉ — tranché par l'utilisateur le 06/09/2026, en
@@ -135,18 +166,7 @@ export const IDEE: EntiteDeclaree = {
 					explication: "Le public visé est celui de l'idée. Une réponse ne le redéfinit pas.",
 				},
 			},
-		},
-		{
-			id: 'description',
-			objet: 'RichEditor — l’idée, en détail',
-			requis: true,
-		},
-		{
-			id: 'pieces_jointes',
-			sansObjet:
-				'Une idée se raconte, elle ne se photographie pas — elle porte sur ce qui ' +
-				"n'existe pas encore. Rien côté serveur n'en porte : un devis ou un plan " +
-				"relèvent du ticket ou de l'événement qui suivra, si l'idée est retenue.",
+			pliee: true,
 		},
 		{
 			id: 'diffusion',

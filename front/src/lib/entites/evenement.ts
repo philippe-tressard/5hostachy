@@ -63,7 +63,7 @@ export const EVENEMENT: EntiteDeclaree = {
 			//  qu'avec une fréquence. C'est une divergence de CHAMP à l'intérieur
 			//  d'une section, que R4 ne sait pas déclarer (#436) — elle est ici en
 			//  commentaire, donc invisible au contrôle, et c'est dit.
-			id: 'specifiques',
+			id: 'nature',
 			objet: 'Type · Date de début · Heure · Fin · Lieu · Prestataire · Fréquence',
 			titreEcran: 'Détails',
 			absente: {
@@ -74,6 +74,14 @@ export const EVENEMENT: EntiteDeclaree = {
 						'Une entrée du fil raconte ce qui lui arrive, elle ne le reprogramme pas.',
 				},
 			},
+			pliee: true,
+		},
+		{
+			id: 'equipement',
+			sansObjet:
+				'Un événement du calendrier se rattache à un LIEU, pas à un équipement — il ' +
+				"est dans « Détails ». L'équipement qualifie ce qu'on entretient, et c'est " +
+				"l'affaire qui le porte.",
 		},
 		{
 			//  🔴 LE KANBAN *EST* LE WORKFLOW (arbitré le 18/08/2026). Ses colonnes —
@@ -96,8 +104,9 @@ export const EVENEMENT: EntiteDeclaree = {
 			//  suivi » est une pastille comme les autres, active par défaut. Un
 			//  événement peut légitimement n'avoir aucun suivi — une AG a une date,
 			//  pas un dossier.
-			id: 'workflow',
+			id: 'suivi',
 			objet: 'Kanban — AG · CS · Syndic · Prestataire · Terminé · Annulé (ou aucun suivi)',
+			pliee: true,
 		},
 		{
 			id: 'quand',
@@ -105,7 +114,15 @@ export const EVENEMENT: EntiteDeclaree = {
 				"ANOMALIE, pas absence : un événement porte bien un début et une fin, mais ils vivent en section 2 (« Détails ») depuis toujours. C'est précisément parce qu'aucune section ne nommait la notion qu'il a fallu un TROISIÈME objet pour dire « ça se passe le X ». Le lot qui fait disparaître cette entité (#1092) résorbe la divergence en la supprimant — on ne la corrige donc pas ici.",
 		},
 		{
-			id: 'perimetre',
+			//  Le prestataire d'un événement est dans « Détails » (`nature`) : il fait
+			//  partie de ce qui définit l'intervention, au même titre que sa date.
+			id: 'intervenant',
+			sansObjet:
+				"Le prestataire d'un événement vit dans sa section « Détails » (`nature`), " +
+				"avec la date et le lieu : ensemble, ils DÉFINISSENT l'intervention.",
+		},
+		{
+			id: 'qui_le_voit',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
 			absente: {
@@ -116,15 +133,6 @@ export const EVENEMENT: EntiteDeclaree = {
 			},
 		},
 		{
-			id: 'destinataires',
-			sansObjet:
-				"Un événement n'adresse personne nommément dans l'application : il est vu par qui " +
-				'son périmètre concerne, et le Kanban filtre déjà ses colonnes selon le statut du ' +
-				'lecteur. `envoyer_syndic` et `envoyer_cs` ne sont PAS des destinataires au sens ' +
-				'de la section 5 — ce sont deux canaux, et ils vivent en Diffusion (section 9), ' +
-				'comme sur les tickets.',
-		},
-		{
 			//  ⚠️ **Non requise**, et c'est la seule des cinq entités déclarées dans ce
 			//  cas. Un ticket sans description ne dit pas quel est le problème ; un
 			//  événement dont on connaît le type, la date et le lieu se comprend sans
@@ -133,10 +141,36 @@ export const EVENEMENT: EntiteDeclaree = {
 			//  change pas.
 			id: 'description',
 			objet: 'RichEditor — de quoi il retourne',
+			pliee: true,
 		},
 		{
 			id: 'pieces_jointes',
 			objet: 'FichiersUpload mode mixte — photos et documents',
+			exceptionPliage:
+				'Facultative mais DÉPLIÉE : joindre une photo est le premier geste sur ' +
+				'téléphone, et le replier ajouterait un clic au geste le plus fréquent.',
+		},
+		{
+			id: 'au_nom_de',
+			objet: 'Saisi pour — en mon nom · un résident inscrit · une personne extérieure',
+			requis: true,
+			pliee: true,
+			exceptionPliage:
+				'Obligatoire mais PLIÉE : « en mon nom » est juste dans la quasi-totalité ' + 'des cas.',
+		},
+		{
+			id: 'mise_en_avant',
+			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel',
+			pliee: true,
+		},
+		{
+			id: 'destinataires',
+			sansObjet:
+				"Un événement n'adresse personne nommément dans l'application : il est vu par qui " +
+				'son périmètre concerne, et le Kanban filtre déjà ses colonnes selon le statut du ' +
+				'lecteur. `envoyer_syndic` et `envoyer_cs` ne sont PAS des destinataires au sens ' +
+				'de la section 5 — ce sont deux canaux, et ils vivent en Diffusion (section 9), ' +
+				'comme sur les tickets.',
 		},
 		{
 			//  ⚠️ Le TÉLÉVERSEMENT est **immédiat** sur cet écran, et ce n'est pas un
@@ -150,6 +184,7 @@ export const EVENEMENT: EntiteDeclaree = {
 			absente: {
 				affichage: DIFFUSION_NE_SE_LIT_PAS,
 			},
+			pliee: true,
 		},
 	],
 };
