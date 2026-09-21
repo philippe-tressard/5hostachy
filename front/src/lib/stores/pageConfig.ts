@@ -3,6 +3,8 @@ import { browser } from '$app/environment';
 
 import { config as configApi } from '$lib/api';
 
+import { fusionnerSurcharge } from '$lib/pages-surcharge';
+
 export interface PageConfig {
 	titre: string;
 	descriptif: string;
@@ -22,75 +24,27 @@ function decodeEscapedHtml(input: string): string {
 		.replace(/&amp;/gi, '&');
 }
 
-/**  Ôte la clé d'un onglet d'une configuration ENREGISTRÉE.
+/**
+ * La configuration effective — défauts, puis ce que l'administration a saisi.
  *
- *   Un onglet retiré du code laisse sa clé dans `page_config_<id>` chez tous ceux
- *   qui ont ouvert la page avant : sans ce retrait, « Descriptif pages »
- *   continuerait d'en proposer le libellé et le descriptif — une case à remplir
- *   qui ne commande plus rien.
+ * 🔴 La règle du repli et les rattrapages d'onglets vivent dans
+ * `$lib/pages-surcharge` depuis le 21/09/2026 (#1105) : ils étaient écrits ICI
+ * **et** dans l'écran d'administration, au caractère près, et l'une des deux
+ * copies ne repliait pas sur les défauts. C'est elle qui affichait trois pages
+ * sans nom.
  *
- *   ⚠️ Écrite une fois pour les TROIS appels ci-dessous (`consommation` renommé,
- *   `tickets` retiré le 28/08/2026, `devis` retiré avec les prestations
- *   ponctuelles). Le cast verbeux était recopié à chaque fois : au troisième, il
- *   valait mieux le nommer. Un quatrième onglet retiré n'ajoutera qu'une ligne.
+ * Ne reste ici que ce qui est propre à l'AFFICHAGE du site : le décodage des
+ * entités HTML d'un descriptif, que l'écran d'édition ne doit justement pas
+ * faire — il édite le texte source.
  */
-function oterOnglet(config: PageConfig, cle: string): void {
-	if (config.onglets?.[cle]) {
-		delete (config.onglets as Record<string, { label: string; descriptif: string }>)[cle];
-	}
-}
-
-function normalizePageConfig(id: string, parsed: PageConfig, defaults: PageConfig): PageConfig {
-	const next: PageConfig = {
-		...parsed,
-		descriptif: decodeEscapedHtml(parsed.descriptif ?? ''),
-		onglets: parsed.onglets ? { ...parsed.onglets } : undefined,
-	};
-
+function normalizePageConfig(id: string, parsed: unknown, defaults: PageConfig): PageConfig {
+	const next = fusionnerSurcharge(id, parsed, defaults);
+	next.descriptif = decodeEscapedHtml(next.descriptif ?? '');
 	if (next.onglets) {
-		for (const [k, v] of Object.entries(next.onglets)) {
-			if (typeof v === 'string') {
-				(next.onglets as any)[k] = {
-					label: v,
-					descriptif: decodeEscapedHtml((defaults.onglets as any)?.[k]?.descriptif ?? ''),
-				};
-			} else if (v && typeof v === 'object') {
-				(next.onglets as any)[k] = {
-					...v,
-					descriptif: decodeEscapedHtml((v as { descriptif?: string }).descriptif ?? ''),
-				};
-			}
+		for (const o of Object.values(next.onglets)) {
+			o.descriptif = decodeEscapedHtml(o.descriptif ?? '');
 		}
 	}
-
-	if (id === 'prestataires') {
-		if (next.onglets?.consommation && !next.onglets?.consommations) {
-			next.onglets.consommations = next.onglets.consommation;
-			oterOnglet(next, 'consommation');
-		}
-		//  L'onglet « Prestations ponctuelles » a disparu avec l'objet qu'il
-		//  rendait : le rattrapage inverse — qui le RÉINJECTAIT depuis les défauts —
-		//  aurait ressuscité sa clé à chaque ouverture de la page.
-		oterOnglet(next, 'devis');
-	}
-
-	if (id === 'espace-cs') {
-		//  L'onglet « Tickets résidence » a été retiré le 28/08/2026, redondant avec
-		//  la page /tickets — même raison que les deux retraits ci-dessus.
-		oterOnglet(next, 'tickets');
-		if (next.onglets?.validations?.label === '✅ Validations') {
-			next.onglets.validations.label =
-				defaults.onglets?.validations?.label ?? next.onglets.validations.label;
-		}
-		if (
-			next.onglets?.validations?.descriptif ===
-			"Comptes en attente de validation et demandes d'accès à traiter."
-		) {
-			next.onglets.validations.descriptif =
-				defaults.onglets?.validations?.descriptif ?? next.onglets.validations.descriptif;
-		}
-	}
-
 	return next;
 }
 
