@@ -166,17 +166,11 @@ export const SONDAGE: EntiteDeclaree = {
 			objet: 'RichEditor — le contexte de la question',
 		},
 		{
-			id: 'photos',
+			id: 'pieces_jointes',
 			sansObjet:
 				'Un sondage pose une question et propose des réponses ; il ne montre rien. ' +
-				'`Sondage` ne porte pas de `photos_urls`, et aucun écran n’en a jamais proposé.',
-		},
-		{
-			id: 'documents',
-			sansObjet:
-				"Même raison que les photos : rien côté serveur n'en porte. Un document qui " +
-				'éclaire une question relève de la publication qui l’accompagne, pas du bulletin ' +
-				'de vote.',
+				'`Sondage` ne porte ni `photos_urls` ni document, et aucun écran n’en a ' +
+				'jamais proposé.',
 		},
 		{
 			id: 'diffusion',

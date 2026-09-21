@@ -109,19 +109,36 @@ vocabulaire du code (`TicketEvolution`, `EvolForm`).
 ⚠️ Le cadre parle d'évolutions ; **l'écran parle de gestes** (« Commenter »,
 « Changer l'état »).
 
-### Les dix sections, dans cet ordre — il ne se discute pas
+### Les neuf sections, dans cet ordre — il ne se discute pas
 
 1. **Titre** *(et lui seul)* · 2. **Champs spécifiques** (Catégorie, Saisi
 pour…) · 3. **Workflow** *(quand l'entité en a un — voir ci-dessous)* · 4.
 **Quand** *(début, fin, échéance — la date qui fait paraître l'objet au calendrier ; entrée le 20/09/2026 avec #1092, parce que le Calendrier cesse d'être un objet pour devenir une vue)* · 5. **Périmètre** · 6.
 **Destinataires** *(qui est concerné dans l'application)* · 7. **Description** ·
-8. **Photos** · 9. **Documents** · 10. **Diffusion** *(par quels canaux on prévient
-à l'extérieur)*.
+8. **Pièces jointes** *(photos et/ou documents — UNE section depuis le
+21/09/2026, #1095)* · 9. **Diffusion** *(par quels canaux on prévient à
+l'extérieur)*.
 
-🔴 **Une section ne se fusionne JAMAIS avec une autre, dans aucun rendu.** Dix
-déclarées, dix rendues — même voisines, même courtes, même héritées. Fusionner
-« Photos · Documents » parce qu'elles tiennent sur une ligne crée une dixième
-section que rien ne déclare.
+🔴 **Une section ne se fusionne pas TOUTE SEULE.** Autant de sections déclarées
+que de sections rendues — même voisines, même courtes, même héritées. Ce qui est
+interdit, c'est la fusion **à l'écran** de ce que la table sépare : elle crée une
+section que rien ne déclare, donc que rien ne contrôle.
+
+⚠️ **Photos et Documents ÉTAIENT deux sections.** Cette clause disait, en rouge et
+depuis le 17/08/2026, qu'elles ne fusionneraient jamais. **L'utilisateur a
+tranché l'inverse le 20/09/2026** (#1095) : une seule section, photos et/ou
+documents — et le champ **nom affiché** vaut désormais pour une photo comme pour
+un PDF.
+
+🔴 Ce n'est pas la règle qui s'assouplit, c'est la **table** qui a changé. La
+clause a été réécrite dans le lot même qui change la décision : laissée en
+arrière, elle réclamerait la séparation qu'on vient d'abandonner, et quelqu'un la
+rétablirait de bonne foi — exactement ce qu'a fait « Claude s'arrête au push sur
+dev », restée fausse des semaines.
+
+⚠️ **Une section, deux réservoirs** : le modèle distingue `photos_urls` (des URLs)
+des `Document` (des entités avec un identifiant), et la fusion ne touche pas au
+modèle. Ce qui s'uniformise est la SECTION.
 
 ### Un champ n'est pas un geste — d'où la seule différence création/édition
 
@@ -328,10 +345,14 @@ vérifie à l'écran.
 
 ### ⚠️ Où l'objet Documents se place
 
-En **section 8**, et la section 8 ne bouge pas : `Photos` (7) et `Documents` (8)
-ne fusionnent jamais, même voisines, même courtes (R2 et §0). L'ordre des neuf
-sections vaut pour cet objet comme pour les autres — un dépôt de fichier correct
-dans une section mal placée reste un écran faux.
+En **section 8, « Pièces jointes »**, avec les photos — elles n'en font plus
+qu'une depuis le 21/09/2026 (#1095). L'ordre des neuf sections vaut pour cet
+objet comme pour les autres : un dépôt de fichier correct dans une section mal
+placée reste un écran faux.
+
+🔴 Les deux contrôles restent distincts **à l'intérieur** de la section, parce
+que le serveur distingue les deux réservoirs. Ce qui a fusionné est l'intitulé et
+le rang, pas la donnée.
 
 ## 0 ter. Ce qui appartient à la LISTE reste au-dessus du formulaire (12/09/2026)
 
@@ -1156,7 +1177,7 @@ visible de tous, en silence. **C'est la donnée qui porte la différence** :
 ### 9 septies. Les sections 4 à 9 ne se réécrivent plus : `ChampsCommuns.svelte`
 
 **L'ordre ci-dessus a un point d'héritage depuis le 16/08/2026.** Périmètre,
-Destinataires, Description, Photos, Documents et Diffusion sont rendus par UN
+Destinataires, Description, Pièces jointes et Diffusion sont rendus par UN
 composant, qui porte leur ordre, leurs intitulés et leurs séparations
 (`SectionFormulaire`). Un écran déclare ce qu'il a, jamais où le mettre :
 

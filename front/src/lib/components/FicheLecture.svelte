@@ -88,11 +88,16 @@
 		{#if description}
 			<div class="rich-content fiche-description">{@html safeDescription(description)}</div>
 		{/if}
-	{:else if s.id === 'photos'}
+	{:else if s.id === 'pieces_jointes'}
+		<!--  UNE section depuis #1095, DEUX réservoirs : le modèle distingue les
+		      photos (des URLs) des documents (des entités `Document`), et ce lot ne
+		      touche pas au modèle. Ce qui a fusionné est la section, pas la donnée.
+
+		      ⚠️ Les deux rendus se suivent dans le même bloc : les séparer par un
+		      titre rouvrirait la section que la table ne déclare plus. -->
 		{#if photos?.length}
 			<div class="fiche-pieces"><PiecesJointes urls={photos} format={formatPieces} /></div>
 		{/if}
-	{:else if s.id === 'documents'}
 		{#if documents?.length}
 			<div class="fiche-pieces"><PiecesJointes urls={documents} format={formatPieces} /></div>
 		{/if}

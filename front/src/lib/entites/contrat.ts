@@ -93,28 +93,24 @@ export const CONTRAT: EntiteDeclaree = {
 			objet: 'RichEditor — la synthèse du contrat',
 		},
 		{
-			id: 'photos',
-			sansObjet:
-				"Un contrat est un document, pas une constatation. Ce qu'on photographie — un " +
-				"désordre, une intervention — appartient au ticket ou à l'événement qui s'y " +
-				'rapporte, et le carnet les rassemble déjà.',
-		},
-		{
-			id: 'documents',
-			objet: 'FichiersUpload — le contrat signé, ses avenants, ses conditions générales',
 			//  🔴 La dette `motif: 'api'` (#921) a été LEVÉE le 12/09/2026, et elle
 			//  n'était pas ce qu'elle disait. Le motif écrit était : « un document se
 			//  rattache à un `contrat_id` qui n'existe pas encore à la création ».
-			//  C'était vrai, et la conclusion — « l'écran ne peut pas la rendre » —
-			//  ne l'était pas : les ACTUALITÉS déposent leurs documents à la création
+			//  C'était vrai, et la conclusion — « l'écran ne peut pas la rendre » — ne
+			//  l'était pas : les ACTUALITÉS déposent leurs documents à la création
 			//  depuis #531, en gardant les fichiers de côté et en les attachant une
 			//  fois l'objet enregistré.
 			//
-			//  ⚠️ Aucun endpoint ne manquait. Le geste existait, sur un autre écran,
-			//  et personne n'est allé voir : une dette déclarée avec son motif a
-			//  l'apparence d'une décision, et c'est ce qui l'a fait survivre. Le
-			//  motif `api` demande un ticket ; il devrait demander qu'on ait
-			//  d'abord cherché ailleurs.
+			//  ⚠️ Aucun endpoint ne manquait. Le geste existait, sur un autre écran, et
+			//  personne n'est allé voir : une dette déclarée avec son motif a
+			//  l'apparence d'une décision, et c'est ce qui l'a fait survivre.
+			//
+			//  ⚠️ La section ne porte que des DOCUMENTS, et c'est un fait sur l'objet,
+			//  pas une divergence : un contrat est un document, pas une constatation.
+			//  Ce qu'on photographie — un désordre, une intervention — appartient au
+			//  ticket ou à l'événement qui s'y rapporte, et le carnet les rassemble.
+			id: 'pieces_jointes',
+			objet: 'FichiersUpload — le contrat signé, ses avenants, ses conditions générales',
 		},
 		{
 			id: 'diffusion',

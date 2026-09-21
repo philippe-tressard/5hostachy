@@ -77,15 +77,11 @@ export const PRESTATAIRE: EntiteDeclaree = {
 				'commentaire) qui porte le jugement, depuis la carte de son contrat.',
 		},
 		{
-			id: 'photos',
-			sansObjet: "Un carnet d'adresses ne se photographie pas.",
-		},
-		{
-			id: 'documents',
+			id: 'pieces_jointes',
 			sansObjet:
-				'Les documents appartiennent au CONTRAT — le contrat signé, ses avenants, ses ' +
-				"conditions générales. Les rattacher à l'entreprise les détacherait de ce " +
-				"qu'ils engagent.",
+				"Un carnet d'adresses ne se photographie pas, et les documents appartiennent " +
+				'au CONTRAT — le contrat signé, ses avenants, ses conditions générales. Les ' +
+				"rattacher à l'entreprise les détacherait de ce qu'ils engagent.",
 		},
 		{
 			id: 'diffusion',

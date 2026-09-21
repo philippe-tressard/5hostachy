@@ -36,7 +36,8 @@
  *
  * `npm run lint:etats` refuse une divergence sans motif, un motif `api` sans
  * ticket, une section rendue hors déclaration et un ordre qui s'écarte de
- * `SECTIONS_ORDRE` — dix depuis #1092.
+ * `SECTIONS_ORDRE` — dix depuis #1092, **neuf** depuis #1095 : Photos et
+ * Documents n'en font plus qu'une, « Pièces jointes ».
  *
  * ## Ce fichier ne se recopie pas
  *
@@ -46,7 +47,7 @@
  * aux statuts de ticket (#415) et aux pages (#401).
  */
 
-/**  Les DIX sections. L'identifiant est technique ; le libellé est à l'écran.
+/**  Les NEUF sections. L'identifiant est technique ; le libellé est à l'écran.
  *
  *   🔴 « quand » est entrée le 20/09/2026 avec le chantier v2.0.0 (#1092) :
  *   le Calendrier cesse d'être un objet pour devenir une vue — « tout ce qui
@@ -62,8 +63,7 @@ export type IdSection =
 	| 'perimetre'
 	| 'destinataires'
 	| 'description'
-	| 'photos'
-	| 'documents'
+	| 'pieces_jointes'
 	| 'diffusion';
 
 /**
@@ -71,10 +71,23 @@ export type IdSection =
  * l'AFFICHAGE** (mesuré : l'affichage n'empruntait le motif d'aucun formulaire,
  * 0 cas sur 42).
  *
- * 🔴 Une section ne se fusionne JAMAIS avec une autre, dans aucun rendu. Neuf
- * déclarées, neuf rendues — même voisines, même courtes, même héritées de la
- * même valeur. Fusionner « Photos · Documents » parce qu'elles tiennent sur une
- * ligne, c'est créer une dixième section que rien ne déclare.
+ * 🔴 **Une section ne se fusionne pas TOUTE SEULE.** Autant de sections
+ * déclarées que de sections rendues — même voisines, même courtes, même
+ * héritées de la même valeur. Ce qui est interdit est la fusion *à l'écran* de
+ * ce que la table sépare : elle crée une section que rien ne déclare, donc que
+ * rien ne contrôle.
+ *
+ * ⚠️ **Photos et Documents ÉTAIENT deux sections, et n'en font plus qu'une**
+ * (#1095, 20/09/2026, arbitré à l'écran). Cette clause disait le contraire, en
+ * rouge, depuis le 17/08 : *« le mode "pièces jointes unifiées" d'`EvolForm`
+ * n'est pas une variante légitime : c'est une divergence à corriger »*. Elle est
+ * réécrite ICI, dans le lot qui change la décision — une consigne laissée en
+ * arrière réclamerait la séparation qu'on vient d'abandonner, et quelqu'un la
+ * rétablirait de bonne foi.
+ *
+ * 🔴 Ce n'est pas la clause qui s'assouplit, c'est la TABLE qui a changé : la
+ * fusion se déclare, donc elle se contrôle. Fusionner sans déclarer reste
+ * interdit, et c'est tout ce que la règle a jamais voulu dire.
  */
 export const SECTIONS_ORDRE: readonly IdSection[] = [
 	'titre',
@@ -84,8 +97,7 @@ export const SECTIONS_ORDRE: readonly IdSection[] = [
 	'perimetre',
 	'destinataires',
 	'description',
-	'photos',
-	'documents',
+	'pieces_jointes',
 	'diffusion',
 ];
 
@@ -105,8 +117,7 @@ export const SECTIONS_LIBELLE: Readonly<Record<IdSection, string>> = {
 	perimetre: 'Périmètre',
 	destinataires: 'Destinataires',
 	description: 'Description',
-	photos: 'Photos',
-	documents: 'Documents',
+	pieces_jointes: 'Pièces jointes',
 	diffusion: 'Diffusion',
 };
 

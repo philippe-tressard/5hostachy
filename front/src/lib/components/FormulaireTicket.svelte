@@ -446,9 +446,9 @@
 			bind:titreObjet={titre}
 			bind:assisteIA
 			descriptionPlaceholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)"
-			avecPhotos={sectionPresente(TICKET, etat, 'photos')}
+			avecPhotos={sectionPresente(TICKET, etat, 'pieces_jointes')}
 			bind:photos={photosUrls}
-			avecDocuments={sectionPresente(TICKET, etat, 'documents')}
+			avecDocuments={sectionPresente(TICKET, etat, 'pieces_jointes')}
 			bind:documents={fichiersUrls}
 			avecDiffusion={$isCS && sectionPresente(TICKET, etat, 'diffusion')}
 			bind:whatsapp={partagerWhatsapp}

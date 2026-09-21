@@ -81,8 +81,12 @@ const PROPS_SECTION = {
 	avecPerimetre: 'perimetre',
 	avecDestinataires: 'destinataires',
 	avecDescription: 'description',
-	avecPhotos: 'photos',
-	avecDocuments: 'documents',
+	//  Deux props pour UNE section depuis #1095 : l'objet garde deux réservoirs
+	//  — des URLs de photos, des entités `Document` — parce que le SERVEUR les
+	//  distingue, mais l'écran n'en rend qu'une section. Les deux doivent donc
+	//  passer par `sectionPresente('pieces_jointes')`.
+	avecPhotos: 'pieces_jointes',
+	avecDocuments: 'pieces_jointes',
 	avecDiffusion: 'diffusion',
 };
 
@@ -118,14 +122,17 @@ for (const fonction of ['sectionPresente', 'sectionsDe']) {
 
 const ORDRE = extraire(srcTypes, 'SECTIONS_ORDRE', relative(RACINE, TYPES), { echec });
 const LIBELLES = extraire(srcTypes, 'SECTIONS_LIBELLE', relative(RACINE, TYPES), { echec });
-//  🔴 DIX depuis le 20/09/2026 — « quand » est entrée avec le chantier v2.0.0
-//  (#1092), parce que le Calendrier cesse d'être un objet pour devenir une vue.
+//  🔴 NEUF depuis le 21/09/2026 — Photos et Documents n'en font plus qu'une,
+//  « Pièces jointes » (#1095, arbitré à l'écran le 20/09). Elles étaient dix
+//  depuis le 20/09, « quand » étant entrée avec le chantier v2.0.0 (#1092).
+//
 //  Le nombre reste FIGÉ, et c'est tout l'intérêt : il oblige à passer ici quand
-//  le cadre bouge, au lieu de laisser une section entrer sans que personne le
-//  décide. Le remplacer par `ORDRE.length > 0` rendrait ce cas zéro aveugle à
-//  une table tronquée, ce qu'il existe précisément pour attraper.
-if (!Array.isArray(ORDRE) || ORDRE.length !== 10) {
-	casZero(`SECTIONS_ORDRE devrait porter les DIX sections (${ORDRE?.length ?? 0} lue(s)).`);
+//  le cadre bouge, au lieu de laisser une section entrer — ou disparaître —
+//  sans que personne le décide. Le remplacer par `ORDRE.length > 0` rendrait ce
+//  cas zéro aveugle à une table tronquée, ce qu'il existe précisément pour
+//  attraper. C'est bien ce qui vient de se passer : la fusion a dû passer ici.
+if (!Array.isArray(ORDRE) || ORDRE.length !== 9) {
+	casZero(`SECTIONS_ORDRE devrait porter les NEUF sections (${ORDRE?.length ?? 0} lue(s)).`);
 }
 if (!LIBELLES || ORDRE.some((id) => !LIBELLES[id])) {
 	casZero('SECTIONS_LIBELLE ne nomme pas les dix sections.');
@@ -271,6 +278,17 @@ for (const chemin of tousSvelte) {
 
 	// 5. les six sections de `ChampsCommuns` passent par `sectionPresente`
 	for (const [prop, id] of Object.entries(estPointEntree ? {} : PROPS_SECTION)) {
+		//  🔴 Un fichier qui DÉCLARE la prop ne la pose pas : il la reçoit, et c'est
+		//  son appelant qui doit la gouverner — vérifié chez lui, comme pour le
+		//  point d'entrée ci-dessus.
+		//
+		//  ⚠️ Sans cette règle, `SectionsPiecesJointes` a été refusé le 21/09/2026
+		//  pour ses PROPRES `{#if avecPhotos}`, le jour où il a importé
+		//  `SECTIONS_LIBELLE` — donc le jour où il a CESSÉ de recopier un libellé
+		//  que la table déclare. Le contrôle punissait la centralisation qu'il
+		//  réclame. C'est la forme générale de l'exception d'`EvolForm` : elle se
+		//  lit dans le fichier, et ne nomme personne.
+		if (texte.includes('export let ' + prop)) continue;
 		const re = new RegExp(`\\b${prop}\\b(\\s*=\\s*\\{([^}]*)\\})?`, 'g');
 		let m;
 		while ((m = re.exec(texte))) {

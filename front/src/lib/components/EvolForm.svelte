@@ -255,8 +255,8 @@
 	//  Ouvertes par la DÉCLARATION de l'entité — voir `SectionsCiblageEvolution`.
 	$: sectionDestinataires = sectionPresente(entite, 'evolution', 'destinataires');
 	$: sectionSpecifiques = sectionPresente(entite, 'evolution', 'specifiques');
-	$: sectionPhotos = avecPiecesJointes && sectionPresente(entite, 'evolution', 'photos');
-	$: sectionDocuments = avecPiecesJointes && sectionPresente(entite, 'evolution', 'documents');
+	$: sectionPhotos = avecPiecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes');
+	$: sectionDocuments = avecPiecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes');
 	$: sectionDiffusion = peutDiffuser && sectionPresente(entite, 'evolution', 'diffusion');
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte

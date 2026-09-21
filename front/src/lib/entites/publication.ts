@@ -176,20 +176,21 @@ export const PUBLICATION: EntiteDeclaree = {
 			requis: true,
 		},
 		{
-			id: 'photos',
-			objet: 'FichiersUpload mode photos',
-		},
-		{
-			//  ✅ OUVERTS à l'édition le 18/08/2026. La dette `api` qui les fermait
-			//  citait #390 — « aucun endpoint n'en remplace la liste » — mais la
-			//  demande était plus simple que la refonte : la publication EXISTE au
-			//  moment où on la corrige, donc on téléverse à l'unité (`POST
-			//  /documents`) et on retire à l'unité (`DELETE /documents/{id}`). Il n'y
-			//  a jamais eu besoin de remplacer une liste.
-			//  #390 reste ouvert pour ce qu'il vise vraiment : unifier les pièces
-			//  jointes derrière `FichiersUpload`, et non ce cas-ci.
-			id: 'documents',
-			objet: 'Documents joints (entités `Document` liées à la publication)',
+			//  ✅ Les DOCUMENTS ont été ouverts à l'édition le 18/08/2026. La dette
+			//  `api` qui les fermait citait #390 — « aucun endpoint n'en remplace la
+			//  liste » — mais la demande était plus simple que la refonte : la
+			//  publication EXISTE au moment où on la corrige, donc on téléverse à
+			//  l'unité (`POST /documents`) et on retire à l'unité
+			//  (`DELETE /documents/{id}`). Il n'y a jamais eu besoin de remplacer une
+			//  liste.
+			//
+			//  🔴 #390 visait précisément ce que ce lot-ci fait : unifier les pièces
+			//  jointes derrière `FichiersUpload`. Une section, deux réservoirs —
+			//  `photos_urls` (des URLs) et les `Document` (des entités avec un
+			//  identifiant) —, parce que le SERVEUR les distingue et que ce lot ne
+			//  touche pas au modèle.
+			id: 'pieces_jointes',
+			objet: 'FichiersUpload mode mixte — photos (URLs) et documents (entités `Document`)',
 		},
 		{
 			//  ✅ ROUVERTE à l'édition le 18/08/2026, comme sur les tickets — signalé

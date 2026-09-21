@@ -404,9 +404,9 @@
 				bind:titreObjet={titre}
 				bind:assisteIA
 				descriptionPlaceholder="Contenu de l'actualité…"
-				avecPhotos={sectionPresente(PUBLICATION, etat, 'photos')}
+				avecPhotos={sectionPresente(PUBLICATION, etat, 'pieces_jointes')}
 				bind:photos
-				avecDocuments={sectionPresente(PUBLICATION, etat, 'documents')}
+				avecDocuments={sectionPresente(PUBLICATION, etat, 'pieces_jointes')}
 				documentsDifferes
 				documentsControle={modeEdition ? 'slot' : 'interne'}
 				bind:documentsFichiers={pendingFiles}
