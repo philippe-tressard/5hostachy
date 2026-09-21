@@ -48,8 +48,28 @@
 <script lang="ts">
 	import Pastille from '$lib/components/Pastille.svelte';
 
-	/** Les entrées. `desc` n'est lue que si `avecDetail` est vrai. */
-	export let options: readonly { val: string; label: string; desc?: string }[] = [];
+	/**
+	 *  Les entrées. `desc` n'est lue que si `avecDetail` est vrai.
+	 *
+	 *  `marque` pose un **repère** sur certaines entrées — un signe court, posé
+	 *  après le libellé, qui dit qu'elles ne sont pas de même nature que les
+	 *  autres. `marqueAide` est ce qu'un lecteur d'écran en annonce, et c'est
+	 *  obligatoire dès que `marque` est là : un emoji sans texte de rechange est
+	 *  lu par son nom Unicode, ou pas du tout.
+	 *
+	 *  ⚠️ Le repère ne se substitue pas à une LÉGENDE : un signe que rien
+	 *  n'explique n'apprend rien à qui le voit pour la première fois. L'appelant
+	 *  la rend sous la rangée (`.aide`), et les deux se lisent à la même source
+	 *  — pour les catégories d'affaire, `MARQUE_CARNET` et `LEGENDE_CARNET`
+	 *  (`$lib/tickets`).
+	 */
+	export let options: readonly {
+		val: string;
+		label: string;
+		desc?: string;
+		marque?: string;
+		marqueAide?: string;
+	}[] = [];
 
 	/** La valeur retenue. Chaîne vide = rien de choisi. */
 	export let valeur = '';
@@ -187,7 +207,9 @@
 					on:click={() => (valeur = o.val)}
 					on:change={() => (valeur = o.val)}
 				>
-					{o.label}<span slot="detail">{o.desc}</span>
+					{o.label}{#if o.marque}<span class="marque" role="img" aria-label={o.marqueAide}
+							>{o.marque}</span
+						>{/if}<span slot="detail">{o.desc}</span>
 				</Pastille>
 			{:else}
 				<Pastille
@@ -196,9 +218,24 @@
 					on:click={() => (valeur = o.val)}
 					on:change={() => (valeur = o.val)}
 				>
-					{o.label}
+					{o.label}{#if o.marque}<span class="marque" role="img" aria-label={o.marqueAide}
+							>{o.marque}</span
+						>{/if}
 				</Pastille>
 			{/if}
 		{/each}
 	</div>
 </div>
+
+<style>
+	/*  Le repère : discret, jamais concurrent du libellé ni de l'état « retenu »
+	    (qui est le fond plein de la pastille). Il suit le texte, collé à un
+	    demi-espace, et ne prend pas de ligne. */
+	.marque {
+		margin-left: 0.25rem;
+		font-size: 0.85em;
+		/*  L'emoji reste lisible sur une pastille pleine comme sur une pastille
+		    vide : aucune couleur posée ici, c'est celle du libellé qui sert. */
+		vertical-align: baseline;
+	}
+</style>

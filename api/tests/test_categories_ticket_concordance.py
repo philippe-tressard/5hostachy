@@ -3,7 +3,8 @@
 ## Pourquoi ce test existe (31/08/2026)
 
 Le courriel du syndic affichait `CategorieTicket.panne` : les libellés vivaient
-uniquement dans `front/src/lib/tickets.ts`, et le serveur n'avait rien à rendre.
+uniquement dans `front/src/lib/tickets-categories.ts`, et le serveur n'avait rien
+à rendre.
 
 La table a donc été recopiée dans `app/utils/categories_ticket.py`, et **la
 duplication est inévitable** : les contextes de construction Docker sont `./api`
@@ -28,9 +29,15 @@ import re
 from pathlib import Path
 
 from app.models.tickets import CategorieTicket
+from app.utils.carnet_entretien import CATEGORIES_BATI
 from app.utils.categories_ticket import LIBELLES_CATEGORIE, libelle_categorie
 
-_FRONT = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "tickets.ts"
+#  ⚠️ `tickets-categories.ts` depuis le 21/09/2026 : la table a quitté
+#  `tickets.ts`, qui dépassait 500 lignes. `$lib/tickets` la réexporte, donc
+#  aucun écran n'a bougé — mais un test qui lit un FICHIER, si.
+_FRONT = (
+    Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "tickets-categories.ts"
+)
 
 
 def _libelles_du_front() -> dict[str, str]:
@@ -120,3 +127,52 @@ def test_une_categorie_RETIREE_ne_disparait_pas_de_l_ecran():
     absence d'information.
     """
     assert libelle_categorie("urgence") == "urgence"
+
+
+def _carnet_du_front() -> set[str]:
+    """Les catégories que l'écran MARQUE comme entrant au carnet d'entretien.
+
+    Même lecture littérale que les libellés : `value: '…'` puis, dans le même
+    objet, `carnet: true`. Le cas zéro est assuré par le test ci-dessous, qui
+    exige un relevé non vide — un motif qui cesse de correspondre rendrait
+    « aucune marque » et se lirait « tout concorde ».
+    """
+    source = _FRONT.read_text(encoding="utf-8")
+    bloc = source[source.index("export const CATEGORIES_TICKET") :]
+    #  Chaque entrée commence par `value:` : on découpe dessus, et `carnet: true`
+    #  appartient alors sans ambiguïté à l'entrée qui le précède.
+    marquees = set()
+    for morceau in bloc.split("value: '")[1:]:
+        valeur = morceau[: morceau.index("'")]
+        corps = morceau.split("value: '")[0]
+        if "carnet: true" in corps:
+            marquees.add(valeur)
+    return marquees
+
+
+def test_l_ecran_marque_exactement_les_categories_du_carnet():
+    """🔴 Demandé à l'écran le 21/09/2026.
+
+    > « Identifie visuellement différemment les catégories qui sont prises en
+    >   compte légalement dans le Carnet d'entretien »
+
+    La marque est une **promesse faite au résident** : une affaire close dans
+    cette catégorie apparaîtra dans un document qu'un acquéreur peut réclamer.
+    Le filtre réel, lui, est `CATEGORIES_BATI` côté serveur.
+
+    ⚠️ Vérifié dans LES DEUX SENS, et le second est le pire :
+    - une catégorie marquée sans l'être côté serveur promet une inscription qui
+      n'aura pas lieu ;
+    - une catégorie du carnet NON marquée inscrit l'affaire sans l'avoir dit —
+      c'est-à-dire sans que son auteur ait su ce qu'il rendait consultable.
+    """
+    front = _carnet_du_front()
+    assert front, (
+        "aucune catégorie marquée `carnet: true` dans tickets.ts — le motif de "
+        "lecture ne correspond plus. Ne pas lire ceci comme un succès."
+    )
+    serveur = {c.value for c in CATEGORIES_BATI}
+    assert front == serveur, (
+        f"marquées à l'écran mais hors du carnet : {sorted(front - serveur)} ; "
+        f"au carnet mais non marquées : {sorted(serveur - front)}"
+    )

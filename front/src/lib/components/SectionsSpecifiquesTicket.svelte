@@ -26,6 +26,7 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
 	import {
+		LEGENDE_CARNET,
 		OPTIONS_TICKET,
 		TICKET_CONFIDENTIEL_ACQUIS,
 		STATUT_TICKET_OPTIONS,
@@ -38,13 +39,19 @@
 	/** L'état de rendu — c'est lui, et non l'écran, qui décide des sections. */
 	export let etat: Etat;
 	/** Les catégories, déjà mises en forme pour `ChoixPastilles` par l'appelant. */
-	export let OPTIONS_CATEGORIE: readonly { val: string; label: string; desc?: string }[] = [];
+	export let OPTIONS_CATEGORIE: readonly {
+		val: string;
+		label: string;
+		desc?: string;
+		marque?: string;
+		marqueAide?: string;
+	}[] = [];
 	/** Les résidents proposés par « Saisi pour ». */
 	export let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
 	/** Le formulaire est-il en correction ? Change le seul texte d'aide du workflow. */
 	export let modeEdition = false;
 
-	export let categorie = 'panne';
+	export let categorie = '';
 	export let statut = 'ouvert';
 	/**  🔴 LES TROIS OPTIONS DE PUBLICATION, en un objet lié (05/09/2026).
 	 *
@@ -95,6 +102,15 @@
 			defilante={false}
 			grille
 		/>
+		<!--  🔴 La LÉGENDE du repère 📒 (21/09/2026, demandé à l'écran).
+		      Un signe que rien n'explique n'apprend rien à qui le voit pour la
+		      première fois — et ce qu'il annonce n'est pas un détail de
+		      rangement : l'affaire, une fois close, entre dans un document
+		      qu'un acquéreur peut réclamer.
+		      ⚠️ La phrase se LIT dans `$lib/tickets` (`LEGENDE_CARNET`), à côté
+		      du drapeau qui pose le repère. Recopiée ici, elle survivrait au
+		      jour où la liste des catégories concernées change. -->
+		<p class="aide">{LEGENDE_CARNET}</p>
 	</SectionFormulaire>
 {/if}
 
