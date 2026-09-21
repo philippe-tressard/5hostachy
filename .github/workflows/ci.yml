@@ -1708,6 +1708,23 @@ jobs:
         working-directory: front
         run: npm run lint:pages-surcharge
 
+      # « Publication » et « Ticket » sont des noms de MODÈLE ; l'écran dit
+      # « Actualité » et « Affaire ». Le renommage v2.1.0 a traité les écrans,
+      # la FAQ, le README et le manuel — pas les VERBES D'ACTION : le mot de
+      # code avait fui jusqu'au bouton, vingt fois dans seize fichiers.
+      #
+      # La liste des mots surveillés se LIT dans `lib/entites/*.ts` (`motDeCode`),
+      # jamais recopiée ici : un troisième renommage n'ajoutera qu'une ligne à
+      # sa déclaration. Complète `test_vocabulaire_affaire.py`, qui lit les
+      # sources de texte servi et déclare ne pas lire les .svelte.
+      - name: Le mot du modèle ne sort pas dans un libellé
+        working-directory: front
+        run: npm run lint:vocabulaire-ecran
+
+      - name: Le contrôle du vocabulaire s'éprouve lui-même
+        working-directory: front
+        run: node scripts/check-vocabulaire-ecran.mjs --selftest
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #
