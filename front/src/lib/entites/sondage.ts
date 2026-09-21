@@ -127,7 +127,7 @@ export const SONDAGE: EntiteDeclaree = {
 			sansObjet: 'Aucune entreprise n’intervient sur un sondage.',
 		},
 		{
-			id: 'qui_le_voit',
+			id: 'perimetre',
 			objet: 'PerimetrePicker — qui est concerné par la question',
 			requis: true,
 			absente: {

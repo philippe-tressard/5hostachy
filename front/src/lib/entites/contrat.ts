@@ -86,7 +86,7 @@ export const CONTRAT: EntiteDeclaree = {
 				'pas un intervenant de passage.',
 		},
 		{
-			id: 'qui_le_voit',
+			id: 'perimetre',
 			objet: 'PerimetrePicker — ce que le contrat entretient',
 			//  ⚠️ Pas `requis` : un contrat d'assurance ou de syndic couvre la
 			//  copropriété entière, et l'imposer ferait cocher « résidence » à la

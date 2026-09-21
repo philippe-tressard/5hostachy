@@ -82,7 +82,7 @@ const MOTIFS_ADMIS = ['geste', 'hérité', 'categorie', 'api'];
 /**  Les six sections que `ChampsCommuns` sait rendre, et le nom de la prop qui
  *   les ouvre. Ce sont elles qui doivent passer par `sectionPresente`. */
 const PROPS_SECTION = {
-	avecPerimetre: 'qui_le_voit',
+	avecPerimetre: 'perimetre',
 	avecDestinataires: 'destinataires',
 	avecDescription: 'description',
 	//  Deux props pour UNE section depuis #1095 : l'objet garde deux réservoirs

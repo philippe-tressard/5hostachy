@@ -310,7 +310,7 @@
 		<ChampsCommuns
 			entite={SONDAGE}
 			idPrefixe="sondage"
-			avecPerimetre={sectionPresente(SONDAGE, etat, 'qui_le_voit')}
+			avecPerimetre={sectionPresente(SONDAGE, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecDestinataires={sectionPresente(SONDAGE, etat, 'destinataires')}
 			bind:destinataires={publicCible}

@@ -92,7 +92,7 @@ export const IDEE: EntiteDeclaree = {
 		},
 		{
 			//  ✅ AJOUTÉ le 18/08/2026 (migration 0153), sur demande à l'écran.
-			id: 'qui_le_voit',
+			id: 'perimetre',
 			objet: 'PerimetrePicker — ce que l’idée concerne',
 			absente: {
 				//  🔒 Le CIBLAGE NE SE CORRIGE PAS (#783). Restreindre après coup

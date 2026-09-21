@@ -125,7 +125,7 @@
 		<ChampsCommuns
 			entite={IDEE}
 			idPrefixe="idee"
-			avecPerimetre={sectionPresente(IDEE, etat, 'qui_le_voit')}
+			avecPerimetre={sectionPresente(IDEE, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecDestinataires={sectionPresente(IDEE, etat, 'destinataires')}
 			bind:destinataires={publicCible}

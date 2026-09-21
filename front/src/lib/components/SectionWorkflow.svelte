@@ -20,6 +20,11 @@
 -->
 <script lang="ts">
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	//  🔴 L'intitulé vient de la TABLE, jamais écrit ici : il disait encore
+	//  « Workflow » deux lots après que le cadre l'eut renommé « Suivi »
+	//  (#1094), parce qu'aucun contrôle ne lisait ce fichier — il ne consomme
+	//  aucune entité déclarée. `lint:vocabulaire-ecran` le voit désormais.
+	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 
 	/** Identifiant du titre — c'est lui qui labellise la rangée. */
@@ -34,7 +39,7 @@
 	export let lecture = false;
 </script>
 
-<SectionFormulaire {premiere} titre="Workflow" requis {badge} {idTitre}>
+<SectionFormulaire {premiere} titre={SECTIONS_LIBELLE.suivi} requis {badge} {idTitre}>
 	<div class="field champ-large">
 		<WorkflowPastilles {options} {valeur} {lecture} {idTitre} on:choisir />
 		<slot />

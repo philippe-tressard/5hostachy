@@ -57,6 +57,7 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
 const ENTITES = join(SOURCE, 'lib', 'entites');
 const GESTES = join(SOURCE, 'lib', 'gestes.ts');
+const TYPES_SECTIONS = join(ENTITES, 'types.ts');
 
 /**
  * Les **portes** par lesquelles un texte devient visible.
@@ -387,6 +388,22 @@ const sources = readdirSync(ENTITES)
 
 const entites = vocabulaireDeclare(sources);
 
+//  🔴 Les libellés de SECTION abandonnés — troisième source, même règle.
+//
+//  `SectionWorkflow` a affiché « Workflow » deux lots après que le cadre l'eut
+//  renommé « Suivi » : son intitulé était écrit en dur, et `lint:etats` ne le
+//  voyait pas — il ne lit que les fichiers qui consomment une entité, et ce
+//  composant-là n'en consomme aucune. Ici, il n'y a rien à consommer : le mot
+//  suffit.
+const srcSections = readFileSync(TYPES_SECTIONS, 'utf8');
+const blocAbandon = srcSections.slice(
+	srcSections.indexOf('SECTIONS_LIBELLE_ABANDONNE'),
+	srcSections.indexOf('};', srcSections.indexOf('SECTIONS_LIBELLE_ABANDONNE')),
+);
+const libellesAbandonnes = [...blocAbandon.matchAll(/^\s+'?([A-ZÀ-Ü][^':]*?)'?:\s*'/gm)].map((m) =>
+	m[1].trim(),
+);
+
 //  Les gestes renommés, lus dans `lib/gestes.ts` — même règle, autre source.
 const motsAbandonnes = [...readFileSync(GESTES, 'utf8').matchAll(/motAbandonne:\s*'([^']+)'/g)].map(
 	(m) => m[1],
@@ -415,7 +432,11 @@ if (incoherences.length) {
 	process.exit(1);
 }
 
-const motsDeCode = [...entites.map((e) => e.motDeCode).filter(Boolean), ...motsAbandonnes];
+const motsDeCode = [
+	...entites.map((e) => e.motDeCode).filter(Boolean),
+	...motsAbandonnes,
+	...libellesAbandonnes,
+];
 const fautifs = [];
 const exceptionsVues = new Set();
 let libellesVus = 0;

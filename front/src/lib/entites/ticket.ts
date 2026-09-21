@@ -100,8 +100,8 @@ export const TICKET: EntiteDeclaree = {
 			//  il écrit désormais une CORRECTION, pas une transition de workflow
 			//  (`api/app/routers/tickets/crud.py`).
 			id: 'suivi',
+			requis: true,
 			objet: 'Ouvert · En cours · Résolu · Annulé',
-			pliee: true,
 		},
 		{
 			id: 'quand',
@@ -146,7 +146,7 @@ export const TICKET: EntiteDeclaree = {
 			//  #436) — elle est portée par `EvolForm.avecPerimetre`, dont le nom dit
 			//  qu'elle est optionnelle, et par le test `test_evolution_perimetre.py`
 			//  qui vérifie qu'une entrée muette laisse le ticket tranquille.
-			id: 'qui_le_voit',
+			id: 'perimetre',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
 		},
