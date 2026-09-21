@@ -290,6 +290,10 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       **jamais** `objet.auteur_nom` — c'est le rédacteur, et le « Saisi pour » s'y
       substitue (12/09). La case de copie, elle, dit `nomCopie` : deux questions.
       Il y en avait **13** avant #1104 (`npm run lint:nom-proprietaire` le refuse)
+- [ ] Section d'un formulaire : elle est déclarée dans `$lib/entites/<entité>`
+      — **treize**, dans l'ordre de `SECTIONS_ORDRE` — et son **pliage** suit la
+      règle *obligatoire → déplié · facultatif → plié*, ou porte son
+      `exceptionPliage` (`npm run lint:etats` refuse dans les deux sens)
 - [ ] Libellé qui NOMME un objet — bouton, titre de boîte, toast, confirmation :
       le mot vient de `$lib/entites/<entité>` (`libelle`, `libelleNouveau`,
       `libelleModifier`), **jamais** réécrit dans un écran. « Publication » et
