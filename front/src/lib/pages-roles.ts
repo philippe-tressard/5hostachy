@@ -30,7 +30,7 @@ export const PAGES_ROLES: PageDef[] = [
 		navLabel: 'Espace CS',
 		icone: 'shield-half',
 		descriptif:
-			'Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, reporting, relance syndic et demandes d\'accès — réservé au Conseil Syndical. Les tickets de la résidence se traitent depuis la page <a href="/tickets">Tickets</a>.',
+			'Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, reporting, relance syndic et demandes d\'accès — réservé au Conseil Syndical. Les affaires de la résidence se traitent depuis la page <a href="/tickets">Tickets</a>.',
 		onglets: [
 			{
 				id: 'validations',

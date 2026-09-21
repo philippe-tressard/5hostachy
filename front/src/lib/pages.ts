@@ -9,7 +9,7 @@
  *
  *  1. **Les deux ordres par défaut n'étaient pas le même.** Le menu commençait par
  *     Résidence, Mes lots, Accès & badges ; l'écran d'administration par Actualités,
- *     Tickets, Mes lots. Deux listes décrivaient le même ordre sans dire la même chose.
+ *     Affaires, Mes lots. Deux listes décrivaient le même ordre sans dire la même chose.
  *  2. **`profil` et `notifications` étaient réordonnables sans être dans le menu.**
  *     L'écran proposait le geste, `Nav` écartait ces identifiants en silence : le
  *     déplacement n'avait aucun effet, et rien ne le disait.
@@ -304,12 +304,12 @@ export const PAGES: PageDef[] = [
 	{
 		id: 'mes-demandes',
 		href: '/tickets',
-		nom: 'Tickets',
-		titre: 'Mes Tickets',
-		navLabel: 'Tickets',
+		nom: 'Affaires',
+		titre: 'Mes affaires',
+		navLabel: 'Affaires',
 		icone: 'message-square-text',
 		descriptif:
-			'Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos tickets.',
+			'Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos affaires.',
 	},
 	{
 		id: 'communaute',

@@ -150,7 +150,7 @@ export function libelleOptionsActives(
 /**
  * 🔴 Le motif qui INTERDIT le groupe WhatsApp — vide quand rien ne l'interdit.
  *
- * > « si "Visibilité du ticket au seul conseil syndical" est sélectionné, la
+ * > « si "Visibilité de l'affaire au seul conseil syndical" est sélectionné, la
  * > diffusion WhatsApp est interdite » (05/09/2026)
  *
  * Le groupe rassemble **tous les résidents** : un objet qu'on vient de réserver

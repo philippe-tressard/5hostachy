@@ -352,7 +352,7 @@
 	}
 
 	async function deleteTicket(t: Ticket) {
-		await confirmerPuis(SUPPRESSION(`Le ticket #${t.numero}`), 'Ticket supprimé', async () => {
+		await confirmerPuis(SUPPRESSION(`Le ticket #${t.numero}`), 'Affaire supprimée', async () => {
 			await ticketsApi.delete(t.id);
 			ticketList = ticketList.filter((x) => x.id !== t.id);
 		});
@@ -381,7 +381,11 @@
 	      composant, seul, portait encore la version du 16/08 qu'elle remplace.
 	      Trois écritures, dont une périmée : c'est ce qui a laissé Prestataires
 	      afficher « ✕ Annuler » jusqu'à ce que l'utilisateur le signale. -->
-	<BoutonNouveau ouvert={showForm} libelle="Nouveau ticket" on:basculer={() => (showForm = true)} />
+	<BoutonNouveau
+		ouvert={showForm}
+		libelle="Nouvelle affaire"
+		on:basculer={() => (showForm = true)}
+	/>
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
@@ -402,14 +406,14 @@
 		options={optionsStatut.map((s) => ({ val: s.value, label: s.label }))}
 		bind:valeur={filterStatut}
 		tous="Tous"
-		libelle="Filtrer les tickets par état"
+		libelle="Filtrer les affaires par état"
 	/>
 	<span class="filter-sep"></span>
 	<ChoixPastilles
 		options={CATEGORIES_TICKET.map((c) => ({ val: c.value, label: `${c.emoji} ${c.label}` }))}
 		bind:valeur={filterCat}
 		tous="Toutes"
-		libelle="Filtrer les tickets par catégorie"
+		libelle="Filtrer les affaires par catégorie"
 	/>
 </div>
 
