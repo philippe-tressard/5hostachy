@@ -36,7 +36,9 @@
  *
  * `npm run lint:etats` refuse une divergence sans motif, un motif `api` sans
  * ticket, une section rendue hors déclaration et un ordre qui s'écarte de
- * `SECTIONS_ORDRE` — dix depuis #1092, **neuf** depuis #1095 : Photos et
+ * `SECTIONS_ORDRE` — **treize** depuis #1095 : « Champs spécifiques » scindée
+ * en Nature, Au nom de et Mise en avant, trois sections ajoutées (Équipement,
+ * Intervenant, Quand), et Photos et
  * Documents n'en font plus qu'une, « Pièces jointes ».
  *
  * ## Ce fichier ne se recopie pas
@@ -47,7 +49,11 @@
  * aux statuts de ticket (#415) et aux pages (#401).
  */
 
-/**  Les NEUF sections. L'identifiant est technique ; le libellé est à l'écran.
+/**  Les TREIZE sections. L'identifiant est technique ; le libellé est à l'écran.
+ *
+ *   ⚠️ Ce nombre a dit « neuf » jusqu'au 21/09/2026 alors que la liste en
+ *   portait treize — dans le fichier qui EST la source de l'ordre (#1124). Un
+ *   compte faux dans la déclaration se recopie ensuite partout où on la cite.
  *
  *   🔴 « quand » est entrée le 20/09/2026 avec le chantier v2.0.0 (#1092) :
  *   le Calendrier cesse d'être un objet pour devenir une vue — « tout ce qui

@@ -397,7 +397,7 @@ vérifie à l'écran.
 ### ⚠️ Où l'objet Documents se place
 
 En **section 8, « Pièces jointes »**, avec les photos — elles n'en font plus
-qu'une depuis le 21/09/2026 (#1095). L'ordre des neuf sections vaut pour cet
+qu'une depuis le 21/09/2026 (#1095). L'ordre des treize sections vaut pour cet
 objet comme pour les autres : un dépôt de fichier correct dans une section mal
 placée reste un écran faux.
 

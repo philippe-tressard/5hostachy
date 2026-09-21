@@ -35,6 +35,13 @@
   formulaire est précisément le défaut relevé sur la modale du calendrier (#367).
   En ÉDITION il n'y a pas d'en-tête pour la porter (le formulaire s'ouvre dans la
   carte du ticket) : le bouton est alors rendu ici, comme le fait `EvolForm`.
+  ## Plus de bloc `<style>` (21/09/2026)
+
+  Il ne portait plus **aucune règle** : quatre commentaires seulement, vestiges
+  de règles parties avec leur balisage (`.cat-*` → `ChoixPastilles`,
+  `.intitule-champ` → titre de section, `.form-actions` → `app.css`,
+  `.saisi-pour-*` → `ChampSaisiPour` #498). Un `<style>` sans règle n'est pas du
+  style, c'est un commentaire mal rangé — et il comptait dans les 500 lignes.
 -->
 <script lang="ts">
 	import { pourChampLocal, depuisChampLocal } from '$lib/date';
@@ -49,14 +56,20 @@
 	import SectionsSpecifiquesTicket from '$lib/components/SectionsSpecifiquesTicket.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { OPTIONS_CATEGORIE, optionsDuTicket, optionsVersTicket } from '$lib/tickets';
+	import {
+		OPTIONS_CATEGORIE,
+		OPTIONS_TICKET,
+		TICKET_CONFIDENTIEL_ACQUIS,
+		optionsDuTicket,
+		optionsVersTicket,
+	} from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { comparerParNom } from '$lib/noms';
-	import { lotSaisiPour, modeDepuis, nomCopie, type ModeSaisiPour } from '$lib/saisi-pour';
+	import { lotDepuisSaisie, nomCopie, saisieDepuis } from '$lib/saisi-pour';
 
 	/**  Le ticket à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut) =
 	 *   création. Le mode ne change pas pendant la vie du composant : l'appelant le
@@ -182,10 +195,12 @@
 	//  le serveur sait EFFACER les `saisi_pour_*` (il lit la PRÉSENCE du champ, pas
 	//  sa non-nullité). L'ouvrir sans pré-remplir aurait proposé « En mon nom » sur un
 	//  ticket saisi pour quelqu'un — et l'aurait effacé au premier enregistrement.
-	let modeSaisiPour: ModeSaisiPour = modeDepuis(ticket);
-	let saisiPourUserId: number | null = ticket?.saisi_pour_user_id ?? null;
-	let saisiPourNom = ticket?.saisi_pour_nom ?? '';
-	let saisiPourEmail = ticket?.saisi_pour_email ?? '';
+	//  🔴 UN objet, comme l'actualité (#1124) : « Au nom de » est désormais rendue
+	//  par `ChampsCommuns`, à son rang, et il attend une `SaisieSaisiPour`.
+	//  Quatre variables séparées obligeaient chaque appelant à les défaire puis
+	//  les refaire — et le premier qui en oublierait une la remettrait à son
+	//  défaut sans que personne le voie.
+	let saisiPour = saisieDepuis(ticket);
 	let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
 
 	onMount(async () => {
@@ -250,7 +265,7 @@
 			error = 'Choisissez une catégorie : c’est elle qui décide de qui traite.';
 			return false;
 		}
-		if ($isCS && modeSaisiPour === 'exterieur' && !saisiPourNom.trim()) {
+		if ($isCS && saisiPour.mode === 'exterieur' && !saisiPour.nom.trim()) {
 			error = 'Veuillez saisir le nom de la personne.';
 			return false;
 		}
@@ -281,7 +296,7 @@
 				//  le serveur répond 403 à quiconque d'autre le lui envoie, y compris
 				//  à l'auteur corrigeant son propre ticket — l'envoyer inconditionnellement
 				//  ferait échouer une correction de faute de frappe.
-				//  Tout ce que la déclaration rend en édition — les neuf sections. Les
+				//  Tout ce que la déclaration rend en édition — les treize sections. Les
 				//  trois `saisi_pour_*` partent TOUJOURS ensemble, y compris à `null` :
 				//  c'est leur PRÉSENCE qui dit au serveur d'écrire, et c'est ce qui
 				//  permet de revenir à « En mon nom ».
@@ -302,7 +317,7 @@
 								destinataire_syndic: destinataireSyndic,
 								destinataire_cs: destinataireCs,
 								partager_whatsapp: partagerWhatsapp,
-								...lotSaisiPour(modeSaisiPour, saisiPourUserId, saisiPourNom, saisiPourEmail),
+								...lotDepuisSaisie(saisiPour),
 							}
 						: {}),
 				});
@@ -334,12 +349,7 @@
 				//  pour le CS : un résident ne doit pas ouvrir un ticket déjà « Résolu ».
 				payload.statut = statut;
 				Object.assign(payload, optionsVersTicket(options));
-				if (modeSaisiPour === 'resident' && saisiPourUserId) {
-					payload.saisi_pour_user_id = saisiPourUserId;
-				} else if (modeSaisiPour === 'exterieur') {
-					if (saisiPourNom.trim()) payload.saisi_pour_nom = saisiPourNom.trim();
-					if (saisiPourEmail.trim()) payload.saisi_pour_email = saisiPourEmail.trim();
-				}
+				Object.assign(payload, lotDepuisSaisie(saisiPour));
 			}
 			const t = await ticketsApi.create(payload);
 			toast('success', `${TICKET.libelle} ${t.numero} créée avec succès`);
@@ -406,15 +416,10 @@
 		<SectionsSpecifiquesTicket
 			{etat}
 			{OPTIONS_CATEGORIE}
-			{usersActifs}
 			{modeEdition}
 			bind:categorie
 			bind:statut
 			bind:options
-			bind:modeSaisiPour
-			bind:saisiPourUserId
-			bind:saisiPourNom
-			bind:saisiPourEmail
 		/>
 
 		<!--  4 à 9 : ordre, intitulés et séparations hérités de `ChampsCommuns`.
@@ -431,6 +436,16 @@
 			envoiEnCours={loading}
 			on:envoyer={() => void submit()}
 			idPrefixe="ticket"
+			avecSaisiPour={$isCS && sectionPresente(TICKET, etat, 'nature')}
+			residentsSaisiPour={usersActifs}
+			bind:saisiPour
+			avecOptions={sectionPresente(TICKET, etat, 'nature')}
+			objet="ticket"
+			optionsRendues={$isCS ? OPTIONS_TICKET : ['urgente']}
+			confidentielAcquis={TICKET_CONFIDENTIEL_ACQUIS}
+			bind:epingle={options.epingle}
+			bind:urgente={options.urgente}
+			bind:brouillon={options.brouillon}
 			avecQuand={sectionPresente(TICKET, etat, 'quand')}
 			bind:debut
 			bind:fin
@@ -473,24 +488,3 @@
 <!--  L'aperçu s'ouvre PAR-DESSUS le formulaire, jamais à sa place : « Retour au
       formulaire » doit rendre la saisie intacte, et un formulaire démonté puis
       remonté la perdrait. C'est la moitié de l'arbitrage du 19/08. -->
-<style>
-	/*  `.cat-grid`, `.cat-option`, `.cat-label`, `.cat-desc` retirées le 30/08/2026 :
-	    les catégories passent par `ChoixPastilles`, qui porte son style. L'une
-	    d'elles masquait le radio en `display:none` — donc hors tabulation ET hors
-	    arbre d'accessibilité ; `Pastille` le masque par découpage, ce qui le garde
-	    focusable et lu. */
-
-	/*  `.intitule-champ` a disparu d'ici : « Saisi pour » est devenu le TITRE de
-	    sa section (`SectionFormulaire`), qui porte déjà sa typographie. Un
-	    intitulé de champ posé au-dessus d'un titre de section aurait dit deux
-	    fois la même chose. */
-
-	/* `.form-actions` n'est PAS redéfini ici : app.css le porte (l. 533). La page
-	   dédiée en gardait une copie identique, donc inerte — même défaut que celui
-	   nettoyé le 15/08 sur les autres écrans. */
-
-	/*  `.saisi-pour-*` et `.tab-btn` sont partis avec leur balisage dans
-	    `ChampSaisiPour.svelte` (#498) — les garder ici en ferait des règles
-	    orphelines, c'est-à-dire la moitié du défaut que `lint:classes-nues`
-	    surveille par l'autre bout. */
-</style>

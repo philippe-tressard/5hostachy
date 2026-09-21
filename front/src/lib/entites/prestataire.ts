@@ -1,5 +1,5 @@
 /**
- * Le PRESTATAIRE, déclaré une fois — les neuf sections, ce qu'elles portent, et
+ * Le PRESTATAIRE, déclaré une fois — les treize sections, ce qu'elles portent, et
  * chaque divergence entre états avec son motif (R4).
  *
  * Huitième entité du cadre #430, déclarée le 12/09/2026 avec le contrat, sur le

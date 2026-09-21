@@ -19,19 +19,11 @@
 -->
 <script lang="ts">
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
-	import ChampSaisiPour from '$lib/components/ChampSaisiPour.svelte';
-	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import {
-		LEGENDE_CARNET,
-		OPTIONS_TICKET,
-		TICKET_CONFIDENTIEL_ACQUIS,
-		STATUT_TICKET_OPTIONS,
-		type ModeSaisiPour,
-	} from '$lib/tickets';
+	import { LEGENDE_CARNET, STATUT_TICKET_OPTIONS } from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
@@ -46,8 +38,6 @@
 		marque?: string;
 		marqueAide?: string;
 	}[] = [];
-	/** Les résidents proposés par « Saisi pour ». */
-	export let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
 	/** Le formulaire est-il en correction ? Change le seul texte d'aide du workflow. */
 	export let modeEdition = false;
 
@@ -61,10 +51,6 @@
 	 *   le même objet — et le premier qui en oublierait une la remettrait à son
 	 *   défaut sans que personne le voie. */
 	export let options = { epingle: false, urgente: false, brouillon: false, suiviKanban: false };
-	export let modeSaisiPour: ModeSaisiPour = 'moi';
-	export let saisiPourUserId: number | null = null;
-	export let saisiPourNom = '';
-	export let saisiPourEmail = '';
 </script>
 
 <!--  2. Champs spécifiques — DEUX champs nommés, dans cet ordre : la
@@ -114,43 +100,20 @@
 	</SectionFormulaire>
 {/if}
 
-{#if $isCS && sectionPresente(TICKET, etat, 'nature')}
-	<ChampSaisiPour
-		bind:mode={modeSaisiPour}
-		bind:userId={saisiPourUserId}
-		bind:nom={saisiPourNom}
-		bind:email={saisiPourEmail}
-		residents={usersActifs}
-	/>
+<!--  🔴 « Au nom de » (10) et « Mise en avant » (11) ne sont PLUS rendues ici.
 
-	<!--  LE MÊME COMPOSANT QUE L'ACTUALITÉ (05/09/2026) : *« faire ces
-		      évolutions au niveau de l'objet pour ne pas dupliquer le code »*.
-		      Sa colonne `confidentiel` se branche sur la clé d'affichage
-		      `brouillon` : même notion, deux colonnes historiques (voir
-		      `$lib/options-publication`). -->
-	<SectionOptionsPublication
-		objet="ticket"
-		options={OPTIONS_TICKET}
-		confidentielAcquis={TICKET_CONFIDENTIEL_ACQUIS}
-		bind:epingle={options.epingle}
-		bind:urgente={options.urgente}
-		bind:brouillon={options.brouillon}
-	/>
-{:else if sectionPresente(TICKET, etat, 'nature')}
-	<!--  🔴 LE RÉSIDENT VOIT LA SEULE CASE « URGENT », et c'est la réparation
-	      d'une régression livrée le matin même (07/09/2026).
+      Elles l'étaient, et ce composant étant rendu avant `ChampsCommuns`, elles
+      sortaient en 3ᵉ et 4ᵉ position — dix et onze rangs trop tôt. Signalé à
+      l'écran le 21/09/2026 : *« L'ordre des sections du tableau n'est pas
+      respecté »* (#1124).
 
-	      La catégorie « Urgence » a été retirée au profit de cette option — sauf
-	      que la catégorie était ouverte à tout le monde et que la section entière
-	      est réservée au conseil. Un résident face à une inondation n'avait donc
-	      plus AUCUN moyen de dire que ça pressait.
+      ⚠️ Aucun contrôle ne pouvait le voir : `ChampSaisiPour` et
+      `SectionOptionsPublication` PORTENT leur intitulé, donc aucun `titre=`
+      ne les trahissait, et `check-ordre-sections` ne lisait que des `titre=`.
 
-	      ⚠️ La seule case, et pas la section entière : `epingle` ordonne la liste
-	      du conseil et `confidentiel` décide de l'audience — deux décisions qui
-	      ne sont pas celles de l'auteur (#710). Dire que sa propre situation
-	      presse, si. -->
-	<SectionOptionsPublication objet="ticket" options={['urgente']} bind:urgente={options.urgente} />
-{/if}
+      Elles viennent maintenant de `ChampsCommuns` (`avecSaisiPour`,
+      `avecOptions`), qui rend dans l'ordre de `SECTIONS_ORDRE` — la même
+      porte que pour l'actualité, l'idée et l'événement. -->
 
 <!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
 	      dit qui le voit et où (section 9). IDENTIQUE en création et en

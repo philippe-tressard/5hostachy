@@ -1,5 +1,5 @@
 /**
- * Le SONDAGE, déclaré une fois — les neuf sections, ce qu'elles portent, et
+ * Le SONDAGE, déclaré une fois — les treize sections, ce qu'elles portent, et
  * **chaque divergence entre états avec son motif** (R4).
  *
  * Cinquième entité mise au cadre #430, premier des deux lots restants de **#441**

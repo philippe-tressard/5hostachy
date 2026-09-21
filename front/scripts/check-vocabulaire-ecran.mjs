@@ -271,6 +271,13 @@ function selftest() {
 	//  gabarit, et le motif cherchait un caractère « retour arrière ». Le
 	//  contrôle a tourné sur 44 fautes réelles en annonçant « aucune ». Un
 	//  contrôle se prouve sur le cas fautif avant de servir (socle 04 §2).
+	//  L'INFOBULLE : la porte ajoutée le 21/09/2026, après « Modifier le ticket »
+	//  resté sur le crayon de chaque carte.
+	verifier(
+		'le mot du modèle dans une infobulle est refusé',
+		libellesFautifs('<button title="Modifier le ticket" />', ['ticket']).length,
+		1,
+	);
 	verifier(
 		'le mot du modèle dans un <p> est refusé',
 		texteVisibleFautif("<p>Le dépôt d'un ticket vaut traçabilité.</p>", ['ticket']).length,

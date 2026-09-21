@@ -270,7 +270,7 @@
 				documents={ev.fichiers_urls ?? []}
 			/>
 			<!--  L'HISTORIQUE — dernier écran à faire avancer un suivi en silence.
-				      Il n'est pas une des neuf sections : il vient après elles, comme le
+				      Il n'est pas une des treize sections : il vient après elles, comme le
 				      fil d'un ticket après sa fiche. -->
 			<HistoriqueEvenement
 				evenement={ev}
