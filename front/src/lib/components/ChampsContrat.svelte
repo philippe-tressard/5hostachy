@@ -86,7 +86,7 @@
 
 <!--  ══ 2. CHAMPS SPÉCIFIQUES ══ Tout ce qui QUALIFIE le contrat : avec qui, sur
       quoi, depuis quand, à quel rythme. Les dates et la fréquence étaient rendues
-      APRÈS le périmètre — elles passent avant, l'ordre des neuf sections ne se
+      APRÈS le périmètre — elles passent avant, l'ordre des treize sections ne se
       discute pas (R2). -->
 <SectionFormulaire titre="Le contrat">
 	<div class="form-grid">

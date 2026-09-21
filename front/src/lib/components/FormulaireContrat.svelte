@@ -113,7 +113,7 @@
 		etat={contratId === null ? 'creation' : 'edition'}
 	/>
 	<!--  ══ 8. DOCUMENTS ══ La section vient APRÈS la description, jamais avant :
-	      l'ordre des neuf sections ne se discute pas (R2), et Photos (7) et
+	      l'ordre des treize sections ne se discute pas (R2), et Photos (7) et
 	      Documents (8) ne fusionnent jamais.
 
 	      🔴 Elle est désormais rendue AUSSI à la création (12/09/2026, #921). Elle

@@ -4,7 +4,7 @@
 
   ## Pourquoi il naît (17/08/2026, #431)
 
-  Le cadre #430 pose neuf sections dans un ordre immuable, **et cet ordre vaut
+  Le cadre #430 pose treize sections dans un ordre immuable, **et cet ordre vaut
   aussi pour l'affichage**. Or c'est le seul des quatre rendus qui n'avait aucun
   point d'héritage : mesuré sur 42 couples menu/entité, **l'affichage n'empruntait
   le motif d'aucun formulaire — 0 cas sur 42**. Chaque écran rangeait ses notions
@@ -104,7 +104,7 @@
 	{/if}
 {/each}
 
-<!--  Ce qui n'est pas une des neuf sections : la ligne de métadonnées, les
+<!--  Ce qui n'est pas une des treize sections : la ligne de métadonnées, les
       commandes de l'écran. Toujours en dernier, jamais entre deux sections. -->
 <slot name="pied" />
 
