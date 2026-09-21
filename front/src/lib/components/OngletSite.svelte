@@ -87,7 +87,7 @@
 			<span class="aide"
 				>Un contenu terminé quitte les listes actives et bascule dans les <strong>Archives</strong>
 				après ce délai (défaut : 30 jours). Il s'applique à <strong>tout le site</strong> :
-				actualités, tickets résolus, petites annonces vendues ou données, idées décidées, sondages
+				actualités, affaires résolues, petites annonces vendues ou données, idées décidées, sondages
 				clôturés, événements passés et affiches de hall envoyées. Un contenu <strong>annulé</strong> est
 				archivé immédiatement, sans attendre — et le bouton 📦 archive à la main, quel que soit ce réglage.</span
 			>
@@ -102,19 +102,19 @@
 				placeholder="30"
 			/>
 			<span class="aide"
-				>Nombre de jours sans mise à jour d'un ticket destinataire-syndic avant qu'il apparaisse
+				>Nombre de jours sans mise à jour d'une affaire destinataire-syndic avant qu'elle apparaisse
 				dans la liste de relance de l'Espace CS (défaut : 30 jours).</span
 			>
 		</label>
 		<label class="field" style="grid-column:span 2">
 			<span class="case">
 				<input type="checkbox" bind:checked={siteConfig.notify_ticket_bug_email} />
-				Notifier si un bug (Tickets)
+				Notifier si un bug (Affaires)
 			</span>
 			<span class="aide"
 				>Envoie un e-mail au gestionnaire du site sélectionné (ou à l'adresse administrateur de
-				secours) uniquement pour les tickets de catégorie « Bug ». Les tickets « Urgence » ne
-				déclenchent pas cette notification.</span
+				secours) uniquement pour les affaires de catégorie « Bug ». Une affaire marquée 🚨 Urgent ne
+				déclenche pas cette notification — l'urgence est une case, pas une catégorie.</span
 			>
 		</label>
 		<label class="field" style="grid-column:span 2">

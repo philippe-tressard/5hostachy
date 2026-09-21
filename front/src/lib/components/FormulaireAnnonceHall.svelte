@@ -186,7 +186,7 @@
 	<p class="aide">
 		Reprend le titre, le contenu et le périmètre de l'élément — et ses images s'il s'agit d'une
 		actualité. Tout reste modifiable ci-dessous : l'affiche est indépendante de son origine. Toutes
-		les <strong>actualités, tickets et événements</strong> encore au fil sont proposés, les
+		les <strong>actualités, affaires et événements</strong> encore au fil sont proposées, les
 		<strong>épinglés</strong> (📌) en tête ; les archivés et les contenus confidentiels ne le sont pas.
 	</p>
 	<hr class="separateur-prefill" />

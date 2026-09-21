@@ -187,8 +187,9 @@
 <svelte:head><title>Périmètres · {_siteNom}</title></svelte:head>
 
 <p class="page-desc">
-	L’arborescence qui sert à localiser une demande — un ticket, une actualité, un événement. Elle est
-	propre à cette copropriété : renommez, réorganisez, ajoutez ou retirez ce qui n’existe pas ici.
+	L’arborescence qui sert à localiser une demande — une affaire, une actualité, un événement. Elle
+	est propre à cette copropriété : renommez, réorganisez, ajoutez ou retirez ce qui n’existe pas
+	ici.
 </p>
 
 <div class="barre">

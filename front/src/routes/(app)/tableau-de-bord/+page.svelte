@@ -4,6 +4,7 @@
 	import KanbanTableauBord from '$lib/components/KanbanTableauBord.svelte';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
+	import { HREF_RELANCE_SYNDIC } from '$lib/raccourcis';
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
 	import { goto } from '$app/navigation';
 	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
@@ -349,11 +350,12 @@
 	<!-- ═══ ALERTES URGENTES ══════════════════════════════════════════════ -->
 	{#if $isCS && (data.sante.tickets_relance_syndic ?? 0) > 0}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.08s">
-			<a href="/espace-cs/reporting?vue=relance" class="relance-alerte-card">
+			<a href={HREF_RELANCE_SYNDIC} class="relance-alerte-card">
 				<span class="relance-alerte-icon">🔔</span>
 				<div class="relance-alerte-text">
 					<strong
-						>{data.sante.tickets_relance_syndic} ticket{(data.sante.tickets_relance_syndic ?? 0) > 1
+						>{data.sante.tickets_relance_syndic} affaire{(data.sante.tickets_relance_syndic ?? 0) >
+						1
 							? 's'
 							: ''} syndic à relancer</strong
 					>

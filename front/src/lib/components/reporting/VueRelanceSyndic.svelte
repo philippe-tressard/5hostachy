@@ -133,7 +133,7 @@
 		<h3 class="rep-titre">&#x1F4E8; Réponses du syndic aux relances</h3>
 		<p class="rep-aide">
 			Ces réponses portent sur <strong>plusieurs dossiers à la fois</strong> : elles ne sont volontairement
-			ajoutées à aucun fil. À reporter dans les tickets concernés.
+			ajoutées à aucun fil. À reporter dans les affaires concernées.
 		</p>
 		{#each reponses as rep (rep.id)}
 			<article class="rep-carte">
@@ -166,14 +166,14 @@
 {:else}
 	{@const eligibles = relanceList.filter((t) => daysSince(t.mis_a_jour_le) >= relanceDelaiJours)}
 	<section class="report-card" style="margin-bottom:1.5rem">
-		<h3>🔔 Tickets syndic — suivi des relances</h3>
+		<h3>🔔 Affaires syndic — suivi des relances</h3>
 		<p class="report-intro">
-			{relanceList.length} ticket(s) adressé(s) au syndic en cours.
+			{relanceList.length} affaire(s) adressée(s) au syndic en cours.
 			{#if eligibles.length > 0}
 				<strong>{eligibles.length} éligible(s) à la relance</strong> (sans modification depuis plus
 				de {relanceDelaiJours} jours).
 			{:else}
-				Aucun ticket ne dépasse le délai de {relanceDelaiJours} jours pour l'instant.
+				Aucune affaire ne dépasse le délai de {relanceDelaiJours} jours pour l'instant.
 			{/if}
 		</p>
 
@@ -291,7 +291,7 @@
 			>
 				{relanceSending
 					? '…'
-					: `📧 Envoyer la relance (${relanceSelected.size} ticket${relanceSelected.size > 1 ? 's' : ''})`}
+					: `📧 Envoyer la relance (${relanceSelected.size} affaire${relanceSelected.size > 1 ? 's' : ''})`}
 			</button>
 		</div>
 	</section>

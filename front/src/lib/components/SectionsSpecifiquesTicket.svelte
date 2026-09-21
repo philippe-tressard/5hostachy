@@ -175,7 +175,7 @@
 		{#if !$isCS}
 			<p class="aide">
 				{modeEdition
-					? 'Seul le conseil syndical fait avancer le suivi d’un ticket.'
+					? `Seul le conseil syndical fait avancer le suivi d’une ${TICKET.libelle.toLowerCase()}.`
 					: 'Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.'}
 			</p>
 		{/if}
@@ -199,7 +199,7 @@
 		<div class="field champ-large">
 			<label class="checkbox-field">
 				<input type="checkbox" bind:checked={options.suiviKanban} />
-				<span>Suivre ce ticket au <strong>kanban</strong></span>
+				<span>Suivre cette affaire au <strong>kanban</strong></span>
 			</label>
 			<p class="aide">
 				Coché d’office pour « Étude &amp; travaux ». La carte se range d’après le statut ci-dessus :

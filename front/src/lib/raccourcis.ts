@@ -34,6 +34,20 @@ export interface CompteurRaccourci {
 	ton?: 'urgent' | 'orange';
 	/** Complément de libellé accordé au nombre — « 2 relances ». */
 	libelle?: (n: number) => string;
+	/**
+	 *  🔴 L'adresse de CE compteur, quand elle diffère de celle du raccourci.
+	 *
+	 *  Signalé à l'écran le 21/09/2026 : *« la relance ne pointe pas vers la
+	 *  bonne URL »*. La pastille « 1 relance » menait à `/espace-cs`, c'est-à-dire
+	 *  à l'onglet Comptes & accès — il fallait ensuite trouver Reporting, puis la
+	 *  vue Relance syndic. Un compteur qui annonce un travail doit mener AU
+	 *  travail, pas à la porte de l'immeuble.
+	 *
+	 *  ⚠️ L'adresse existe déjà : c'est celle que l'alerte du tableau de bord
+	 *  emploie. Elle est ici la MÊME constante, et `check-client-api` n'a rien à
+	 *  voir là-dedans — une route d'écran, pas d'API.
+	 */
+	href?: string;
 }
 
 export interface Raccourci {
@@ -52,17 +66,28 @@ export interface Raccourci {
 /** Tout utilisateur connecté voit ce raccourci. */
 const TOUS = (user: User | null) => user !== null;
 
+/**
+ *  L'adresse de la relance syndic — **une seule écriture**.
+ *
+ *  Elle vit ici parce que deux endroits y mènent : la pastille de la rangée de
+ *  raccourcis et l'alerte du tableau de bord. Écrite deux fois, elle aurait
+ *  divergé au premier renommage d'onglet — et c'est exactement ce que
+ *  `project_onglet_est_une_adresse` enseigne : un onglet EST une adresse, donc
+ *  une adresse d'onglet est une donnée, pas une chaîne qu'on retape.
+ */
+export const HREF_RELANCE_SYNDIC = '/espace-cs/reporting?vue=relance';
+
 export const RACCOURCIS: Raccourci[] = [
 	{
 		id: 'tickets',
-		libelle: 'Tickets',
+		libelle: 'Affaires',
 		href: '/tickets',
 		icone: 'ticket',
 		visible: TOUS,
 		//  `tickets_ouverts`, et non plus un décompte reconstruit dans la page sur
 		//  le fil déjà filtré : le nombre changeait quand l'utilisateur filtrait
 		//  son fil, seul de la rangée à bouger. Le compteur serveur applique
-		//  désormais `ticket_visible` — un résident y lit ses tickets, pas ceux
+		//  désormais `ticket_visible` — un résident y lit ses affaires, pas celles
 		//  de la résidence.
 		compteurs: (s) => [{ valeur: s.tickets_ouverts }],
 	},
@@ -105,6 +130,7 @@ export const RACCOURCIS: Raccourci[] = [
 				valeur: s.tickets_relance_syndic,
 				ton: 'orange',
 				libelle: (n) => `${n} relance${n > 1 ? 's' : ''}`,
+				href: HREF_RELANCE_SYNDIC,
 			},
 		],
 	},

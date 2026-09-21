@@ -168,10 +168,10 @@
 	</SectionFormulaire>
 
 	<label class="field champ-large">
-		Ticket lié
+		Affaire liée
 		<input type="text" bind:value={saisie.ticket_numero} placeholder="TK-241422" />
 		<span class="aide">
-			Facultatif. Le geste s'inscrit alors dans le fil de ce ticket. Un numéro inconnu refuse
+			Facultatif. Le geste s'inscrit alors dans le fil de cette affaire. Un numéro inconnu refuse
 			l'enregistrement plutôt que de perdre le lien en silence.
 		</span>
 	</label>

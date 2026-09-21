@@ -30,7 +30,7 @@ export const PAGES_ROLES: PageDef[] = [
 		navLabel: 'Espace CS',
 		icone: 'shield-half',
 		descriptif:
-			'Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, reporting, relance syndic et demandes d\'accès — réservé au Conseil Syndical. Les affaires de la résidence se traitent depuis la page <a href="/tickets">Tickets</a>.',
+			'Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, reporting, relance syndic et demandes d\'accès — réservé au Conseil Syndical. Les affaires de la résidence se traitent depuis la page <a href="/tickets">Affaires</a>.',
 		onglets: [
 			{
 				id: 'validations',
@@ -53,7 +53,7 @@ export const PAGES_ROLES: PageDef[] = [
 				route: '/espace-cs/reporting',
 				label: '\u{1F4CA} Reporting',
 				descriptif:
-					'Synthèses et indicateurs : kanban, tableau des tickets, prestataires, renouvellements de contrats et relance syndic.',
+					'Synthèses et indicateurs : kanban, tableau des affaires, prestataires, renouvellements de contrats et relance syndic.',
 			},
 			{
 				id: 'annonces-hall',

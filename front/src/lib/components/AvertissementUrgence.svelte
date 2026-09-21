@@ -1,5 +1,5 @@
 <!--
-  L'avertissement légal des tickets de type « Urgence ».
+  L'avertissement légal des affaires marquées « 🚨 Urgent ».
 
   POURQUOI CE COMPOSANT EXISTE. Extrait de `tickets/+page.svelte` le 16/08/2026,
   quand cette page a franchi les 500 lignes du rang 1 en accueillant la boîte de
@@ -22,10 +22,28 @@
 
   Le contenu engage la responsabilité du syndicat des copropriétaires : toute
   reformulation est une décision juridique, pas une retouche de style.
+
+  ## 🔴 Deux mots ont changé le 21/09/2026 (#1123), et le FOND n'a pas bougé
+
+  Signalé à l'écran : *« Dans la page affaire : remplacer Ticket par Affaire »*.
+  Le titre disait encore « Tickets de type Urgence » — deux fois périmé :
+
+  1. **« ticket »** est le nom du MODÈLE ; l'écran dit « affaire » depuis
+     v2.0.0. Aucun contrôle ne le voyait : `lint:vocabulaire-ecran` ne lisait
+     que les **attributs**, et ce texte-ci vit dans un `<span>` et un `<p>`.
+     C'est cette porte manquante qui fait l'objet de #1123.
+  2. **« de type Urgence »** décrivait une CATÉGORIE retirée le 07/09/2026
+     (migration 0177). L'urgence est une **case** — 🚨 Urgent —, précisément
+     pour qu'on n'ait plus à choisir entre dire *ce que c'est* et dire *que ça
+     presse*. Le texte renvoyait donc à un classement qui n'existe plus.
+
+  ⚠️ Ce qui engage la responsabilité — traçabilité et non alerte des secours,
+  numéros d'urgence, délai de déclaration à l'assureur, clause de
+  non-responsabilité — est inchangé **au mot près**. Seul l'objet nommé change.
 -->
 <script lang="ts">
 	//  Replié par défaut : l'avertissement doit être accessible en permanence sans
-	//  occuper l'écran de quelqu'un qui vient consulter ses tickets.
+	//  occuper l'écran de quelqu'un qui vient consulter ses affaires.
 	let disclaimerOpen = false;
 </script>
 
@@ -35,14 +53,13 @@
 		on:click={() => (disclaimerOpen = !disclaimerOpen)}
 		aria-expanded={disclaimerOpen}
 	>
-		<span class="urgence-disclaimer-title"
-			>&#x1F6A8; Tickets de type Urgence — Avertissement légal</span
-		>
+		<span class="urgence-disclaimer-title">&#x1F6A8; Affaires urgentes — Avertissement légal</span>
 		<span class="urgence-disclaimer-chevron">{disclaimerOpen ? '▲' : '▼'}</span>
 	</button>
 	{#if disclaimerOpen}
 		<p>
-			Le dépôt d'un ticket <strong>Urgence</strong> dans cette application a pour seul objet la
+			Le dépôt d'une affaire marquée <strong>🚨 Urgent</strong> dans cette application a pour seul
+			objet la
 			<strong>traçabilité de votre signalement</strong>. Il ne constitue ni un moyen d'alerte des
 			secours, ni un engagement de prise en charge dans un délai déterminé, ni une garantie de
 			résultat de la part du conseil syndical ou du syndicat des copropriétaires.
