@@ -71,16 +71,6 @@ export const PAGES_ROLES: PageDef[] = [
 		],
 	},
 	{
-		id: 'delegations',
-		href: '/delegations',
-		nom: 'Délégations',
-		titre: 'Délégations aidant',
-		navLabel: 'Délégations',
-		icone: 'heart-handshake',
-		descriptif:
-			"Gestion des accès délégués pour les proches aidants : un proche peut consulter et agir à votre place, sans que cela constitue une procuration d'assemblée générale.",
-	},
-	{
 		id: 'admin',
 		href: '/admin',
 		nom: 'Paramétrage',
@@ -89,5 +79,15 @@ export const PAGES_ROLES: PageDef[] = [
 		icone: 'sliders-horizontal',
 		descriptif:
 			'Administration de la plateforme : comptes, utilisateurs, rôles, modèles e-mail, paramétrage et référentiels — réservés aux admins.',
+	},
+	{
+		id: 'delegations',
+		href: '/delegations',
+		nom: 'Délégations',
+		titre: 'Délégations aidant',
+		navLabel: 'Délégations',
+		icone: 'heart-handshake',
+		descriptif:
+			"Gestion des accès délégués pour les proches aidants : un proche peut consulter et agir à votre place, sans que cela constitue une procuration d'assemblée générale.",
 	},
 ];
