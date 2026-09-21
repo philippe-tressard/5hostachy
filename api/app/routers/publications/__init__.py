@@ -16,6 +16,7 @@ ayant sa propre raison de changer.
 | `evolutions` | fil de suivi : changements d'état et commentaires |
 | `courriels` | composition et envoi des courriels d'une publication |
 | `commun` | sérialisation, archivage, annonce de hall |
+| `promotion` | **la conversion** d'une actualité en affaire (#1094) |
 
 ## Ce qui a été factorisé au passage
 
@@ -35,7 +36,7 @@ caractère près à ceux d'avant le découpage.
 """
 from fastapi import APIRouter
 
-from . import apercu, crud, evolutions
+from . import apercu, crud, evolutions, promotion
 
 #  Le sous-module à chemins nus reçoit le préfixe ici. Ce littéral est aussi ce
 #  que lit `test_endpoints_orphelins` pour reconstruire les chemins d'un paquet
@@ -44,8 +45,14 @@ _a_prefixer = APIRouter(prefix="/publications", tags=["publications"])
 _a_prefixer.include_router(evolutions.router)
 _a_prefixer.include_router(apercu.router)
 
+#  ⚠️ `promotion` porte DÉJÀ son préfixe (il déclare `/publications` lui-même) et
+#  se monte donc à côté, comme `crud`. Il vient AVANT lui : son `/{pub_id}` rend
+#  410 pour une publication convertie, et c'est la seule route qui le sache —
+#  celle de `crud` répondrait 404, donc « ça n'a jamais existé », ce qui est faux.
+
 router = APIRouter(tags=["publications"])
 router.include_router(_a_prefixer)
+router.include_router(promotion.router)
 router.include_router(crud.router)
 
 #  Surface publique conservée pour les importateurs externes : `flux/publications`

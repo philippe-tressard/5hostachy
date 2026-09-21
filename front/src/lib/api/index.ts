@@ -197,6 +197,22 @@ export const publications = {
 	list: (archived = false) =>
 		api.get<Publication[]>(`/publications${archived ? '?archived=true' : ''}`),
 	create: (data: unknown) => api.post<Publication>('/publications', data),
+	/**
+	 * **Cette information demande un suivi** — l'actualité devient une affaire
+	 * (#1094), sans que rien ne soit ressaisi.
+	 *
+	 * ⚠️ La publication DISPARAÎT : c'est l'arbitrage du 21/09/2026, *un seul
+	 * objet à la fois, jamais de doublon*. L'écran qui appelle ceci doit donc
+	 * retirer la carte et emmener le lecteur sur l'affaire rendue.
+	 */
+	promouvoir: (id: number) => api.post<Ticket>(`/publications/${id}/promouvoir`, {}),
+	/**
+	 * Une actualité — ou **où elle est allée** si elle a été promue.
+	 *
+	 * Rend 410 avec `promu_en_affaire` pour une publication convertie : c'est ce
+	 * qui empêche un courriel déjà envoyé de finir sur un lien mort.
+	 */
+	get: (id: number) => api.get<Publication>(`/publications/${id}`),
 	update: (id: number, data: unknown) => api.patch<Publication>(`/publications/${id}`, data),
 	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }), //  @sans-appelant-declare archivage manuel retiré le 18/08/2026, cf. ci-dessous
 	delete: (id: number) => api.delete(`/publications/${id}`),

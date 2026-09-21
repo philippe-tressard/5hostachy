@@ -247,6 +247,11 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, table=True):
     __tablename__ = "ticket"
     id: Optional[int] = Field(default=None, primary_key=True)
     numero: str = Field(unique=True, index=True)
+    #  D'où vient cette affaire, quand elle est née d'une actualité promue
+    #  (#1094). Pas de `foreign_key` : la publication référencée est SUPPRIMÉE
+    #  par la promotion même. Le pourquoi — et ce que cette trace empêche — est
+    #  dans `routers/publications/promotion.py`, qui est le seul à l'écrire.
+    promu_depuis_publication_id: Optional[int] = Field(default=None, index=True)
     titre: str
     description: str
     categorie: CategorieTicket = CategorieTicket.panne
@@ -440,32 +445,21 @@ from app.models.prestataires import (  # noqa: E402,F401
 # ──────────────────────────────────────────────
 #  Relevés compteurs
 # ──────────────────────────────────────────────
-
-class ReleveCompteur(SQLModel, table=True):
-    __tablename__ = "releve_compteur"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    type_compteur: str                          # "eau_general", …
-    date_releve: date = Field(default_factory=date.today)
-    index: Optional[int] = None                # index lu (None si non relevé / changement)
-    note: Optional[str] = None                 # ex : "Changement compteur"
-    photo_url: Optional[str] = None
-    prestataire_id: Optional[int] = Field(default=None, foreign_key="prestataire.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    cree_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-
-
+#  Compteurs — relevés et configuration
 # ──────────────────────────────────────────────
-#  Configuration des compteurs (consommations)
-# ──────────────────────────────────────────────
-
-class CompteurConfig(SQLModel, table=True):
-    __tablename__ = "compteur_config"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    type_compteur: str = Field(index=True)      # slug unique ex: "eau_general"
-    label: str                                  # ex: "💧 Compteur EAU Général"
-    prestataire_id: Optional[int] = Field(default=None, foreign_key="prestataire.id")
-    actif: bool = True
-    ordre: int = 0                              # for display order
+#  Les tables vivent dans `models/compteurs.py` depuis le 21/09/2026
+#  (modularité, rang 1) : ce fichier était à 831 lignes et le contrôle a refusé
+#  qu'il grossisse d'une colonne. Même motif qu'`evenement` (19/08) et
+#  `exploitation` (20/09) — ré-exportées, donc les imports existants ne bougent
+#  pas et les modèles restent enregistrés auprès de SQLModel.
+#
+#  Ces deux-là parce qu'elles ne portent AUCUNE `Relationship` : l'extraction
+#  ne pouvait rien casser, et c'est ce qui l'a désignée plutôt qu'une autre au
+#  milieu d'un lot qui parlait d'autre chose.
+from app.models.compteurs import (  # noqa: E402,F401
+    CompteurConfig as CompteurConfig,
+    ReleveCompteur as ReleveCompteur,
+)
 
 
 # ──────────────────────────────────────────────
