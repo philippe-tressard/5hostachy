@@ -256,6 +256,7 @@
 		      par `modeEdition` — elles le sont par la DÉCLARATION, qui porte chaque
 		      divergence avec son motif. -->
 		<ChampsCommuns
+			entite={ANNONCE}
 			idPrefixe="annonce-{annonce?.id ?? 'new'}"
 			avecPerimetre={sectionPresente(ANNONCE, etat, 'qui_le_voit')}
 			bind:perimetre={perimetreCible}

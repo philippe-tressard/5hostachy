@@ -123,6 +123,7 @@
 		      2, 7, 8 et 9 restent `sansObjet`. C'est la DÉCLARATION qui le dit et qui
 		      les fait disparaître — jamais une condition écrite ici. -->
 		<ChampsCommuns
+			entite={IDEE}
 			idPrefixe="idee"
 			avecPerimetre={sectionPresente(IDEE, etat, 'qui_le_voit')}
 			bind:perimetre={perimetreCible}

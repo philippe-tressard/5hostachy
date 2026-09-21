@@ -80,6 +80,12 @@
 	import SectionQuand from '$lib/components/SectionQuand.svelte';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
+	import {
+		section,
+		SECTIONS_LIBELLE,
+		type EntiteDeclaree,
+		type IdSection,
+	} from '$lib/entites/types';
 	import PerimetrePicker from './PerimetrePicker.svelte';
 	import DestinatairePicker from './DestinatairePicker.svelte';
 	import SectionDiffusion from './SectionDiffusion.svelte';
@@ -97,6 +103,28 @@
 	/** Préfixe des `id` des champs — deux formulaires peuvent coexister à l'écran,
 	    et deux `<label for="…">` pointant le même id ne désignent plus rien. */
 	export let idPrefixe: string;
+
+	/**
+	 * L'entité rendue — elle sert à lire le PLIAGE déclaré (#1095).
+	 *
+	 * 🔴 Une prop plutôt que treize booléens : le pliage se LIT dans la
+	 * déclaration (`section(ENTITE, id).pliee`), il ne se décide pas ici. Un
+	 * booléen par section aurait laissé chaque écran choisir, et c'est
+	 * exactement la divergence que le cadre ferme.
+	 *
+	 * ⚠️ Absente, rien n'est plié : ce composant sert aussi des écrans qui ne
+	 * sont pas encore au cadre, et leur imposer un pliage qu'aucune déclaration
+	 * ne gouverne serait pire que pas de pliage.
+	 */
+	export let entite: EntiteDeclaree | null = null;
+
+	/**  Le pliage d'une section, lu dans la déclaration — `false` sans entité.
+	 *
+	 *   ⚠️ `pliable` et `ouvrirSiRenseignee` vont ENSEMBLE : la seconde est la
+	 *   moitié que la table ne peut pas porter, puisqu'elle dépend de ce que
+	 *   l'objet contient. Les séparer laisserait une section pliée cacher une
+	 *   valeur saisie. */
+	const plie = (id: IdSection) => (entite ? !!section(entite, id)?.pliee : false);
 
 	//  ── 2. Saisi pour ─────────────────────────────────────────────────────────
 	//
@@ -348,7 +376,11 @@
 {#if avecWorkflow}
 	<!--  4. Workflow — OÙ EN EST l'objet. À distinguer de la Diffusion, qui dit
 	      qui le voit et où (section 10). Le contenu vient de l'écran. -->
-	<SectionFormulaire titre="Workflow" premiere={premiereWorkflow} idTitre="{idPrefixe}-workflow">
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.suivi}
+		premiere={premiereWorkflow}
+		idTitre="{idPrefixe}-workflow"
+	>
 		<slot name="workflow" />
 	</SectionFormulaire>
 {/if}
@@ -365,9 +397,11 @@
 	      couple `id` sur le titre / `aria-labelledby` sur le groupe. -->
 	<SectionFormulaire
 		premiere={premierePerimetre}
-		titre="Périmètre"
+		titre={SECTIONS_LIBELLE.qui_le_voit}
 		requis={perimetreRequis}
 		badge={perimetreBadge ?? badgePerimetre}
+		pliable={plie('qui_le_voit')}
+		ouvrirSiRenseignee={(perimetre?.length ?? 0) > 0}
 		idTitre="{idPrefixe}-perimetre-titre"
 	>
 		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
@@ -389,9 +423,11 @@
 {#if avecDestinataires}
 	<SectionFormulaire
 		premiere={premiere && !avecPerimetre}
-		titre="Destinataires"
+		titre={SECTIONS_LIBELLE.destinataires}
 		requis
 		badge={badgeDestinataires}
+		pliable={plie('destinataires')}
+		ouvrirSiRenseignee={(destinataires?.length ?? 0) > 0}
 		idTitre="{idPrefixe}-destinataires-titre"
 	>
 		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-destinataires-titre">
