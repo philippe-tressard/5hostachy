@@ -10,6 +10,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { TICKET } from '$lib/entites/ticket';
 	import { tickets as ticketsApi, type Ticket, type ReponseRelance } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { apiMessage } from '$lib/utils';
@@ -66,7 +67,12 @@
 	async function envoiRelance() {
 		const ids = Array.from(relanceSelected);
 		if (ids.length === 0) return;
-		if (!confirm(`Envoyer la relance pour ${ids.length} ticket(s) au syndic ?`)) return;
+		if (
+			!confirm(
+				`Envoyer la relance pour ${ids.length} ${TICKET.libelle.toLowerCase()}(s) au syndic ?`,
+			)
+		)
+			return;
 		relanceSending = true;
 		try {
 			const res = await ticketsApi.envoiRelance(ids);

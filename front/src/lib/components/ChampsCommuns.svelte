@@ -138,8 +138,10 @@
 		'brouillon',
 		'confidentiel',
 	];
-	/** Le nom de l'objet décrit — il entre dans les libellés qui le nomment. */
-	export let objet = 'publication';
+	/** Le nom de l'objet décrit — il entre dans les libellés qui le nomment.
+	 *  Le mot d'ÉCRAN, jamais celui du modèle : `PUBLICATION.libelle` dit
+	 *  « Actualité » (#1107). */
+	export let objet = 'actualité';
 	export let epingle = false;
 	export let urgente = false;
 	export let brouillon = false;

@@ -91,7 +91,7 @@
 	 *   libellés qui le nomment (« Visibilité du **ticket** au seul conseil
 	 *   syndical ») : la même case sert deux entités, et « ce truc-là » ne se dit
 	 *   pas. */
-	export let objet = 'publication';
+	export let objet = 'actualité';
 
 	/**  Les options RENDUES, dans l'ordre de la table. Toutes par défaut — un
 	 *   ticket n'en porte qu'une, faute de colonne pour l'épinglage et l'urgence,

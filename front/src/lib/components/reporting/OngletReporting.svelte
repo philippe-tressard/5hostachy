@@ -28,6 +28,7 @@
 -->
 <script lang="ts">
 	import Pastille from '$lib/components/Pastille.svelte';
+	import { TICKET } from '$lib/entites/ticket';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import {
 		prestataires as prestApi,
@@ -145,7 +146,7 @@
 		// page vide. C'est le cas qu'a rencontré l'utilisateur (04/08/2026) — la vue
 		// « Relance syndic » n'affichait qu'un état vide, sans aucun ticket.
 		if (reportView === 'relance' && !relanceChargement && relanceVide) {
-			toast('info', 'Aucun ticket syndic en cours — rien à imprimer.');
+			toast('info', `Aucune ${TICKET.libelle.toLowerCase()} syndic en cours — rien à imprimer.`);
 			return;
 		}
 		void printReporting(titles[reportView]);

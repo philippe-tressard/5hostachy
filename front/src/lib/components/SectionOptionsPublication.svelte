@@ -29,7 +29,7 @@
 	import type { CleOptionPublication } from '$lib/options-publication';
 
 	/** Le nom de l'objet décrit, pour les libellés qui le nomment. */
-	export let objet = 'publication';
+	export let objet = 'actualité';
 	/** Les options rendues, dans l'ordre de la table. */
 	export let options: CleOptionPublication[] = ['epingle', 'urgente', 'brouillon', 'confidentiel'];
 	/** Première section du formulaire : pas de filet au-dessus. */

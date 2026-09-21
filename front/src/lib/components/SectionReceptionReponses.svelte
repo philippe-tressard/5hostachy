@@ -126,7 +126,7 @@
 	onMount(relire);
 </script>
 
-<SectionFormulaire icone="message-square-text" titre="Réception des réponses aux tickets">
+<SectionFormulaire icone="message-square-text" titre="Réception des réponses aux affaires">
 	<div class="largeur-saisie">
 		<p class="aide" style="margin-bottom:.75rem">
 			Quand le syndic répond à un e-mail de ticket, sa réponse arrive dans la boîte d'envoi et

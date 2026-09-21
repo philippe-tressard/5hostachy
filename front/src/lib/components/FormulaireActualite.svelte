@@ -222,7 +222,9 @@
 			...canaux,
 		});
 
-	const titreBoite = modeEdition ? 'Modifier la publication' : 'Nouvelle publication';
+	//  Le vocabulaire d'écran vient de la DÉCLARATION, jamais d'un libellé
+	//  réécrit ici : `PUBLICATION.libelle` dit « Actualité » (#1107).
+	const titreBoite = modeEdition ? PUBLICATION.libelleModifier : PUBLICATION.libelleNouveau;
 
 	//  LE CADRE dépend du geste — `ux-patterns` §14 bis, qui porte la règle et
 	//  son pourquoi : boîte pour créer, modale pour corriger, et le cadre se pose
@@ -283,7 +285,7 @@
 					annonce_hall: annonceHall,
 					...lotDepuisSaisie(saisiPour),
 				});
-				toast('success', 'Publication mise à jour');
+				toast('success', `${PUBLICATION.libelle} mise à jour`);
 				dispatch('modifie', maj);
 				return;
 			}

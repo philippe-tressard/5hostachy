@@ -24,7 +24,7 @@
 
 	/**  Le nom de l'objet décrit — il entre dans les libellés qui le nomment
 	 *   (« Visibilité du **ticket** au seul conseil syndical »). */
-	export let objet = 'publication';
+	export let objet = 'actualité';
 	/**  Les options RENDUES : un événement n'a que l'épinglage, un ticket en a
 	 *   quatre dont une verrouillée. C'est l'appelant qui sait. */
 	export let optionsRendues: CleOptionPublication[] = [
