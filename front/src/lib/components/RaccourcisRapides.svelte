@@ -17,27 +17,47 @@
 	$: visibles = raccourcisVisibles($currentUser);
 </script>
 
+<!--  🔴 La pastille est un CONTENEUR depuis le 21/09/2026, et non plus un lien
+      unique : un compteur peut porter sa propre adresse (« 1 relance » mène à la
+      vue Relance syndic, pas à la porte de l'Espace CS), et un `<a>` ne
+      s'imbrique pas dans un `<a>`.
+
+      Le lien principal reste cliquable sur TOUTE la pastille grâce à son
+      `::after` étendu — le motif dit « lien étiré » —, et un compteur qui porte
+      une adresse passe au-dessus (`z-index`). Rien ne bouge à l'œil ; ce qui
+      change est la cible sous le doigt. -->
 <nav class="quick-nav" class:section-visible={ready} aria-label="Raccourcis">
 	{#each visibles as r (r.id)}
-		<a
-			href={r.href}
+		<div
 			class="quick-pill"
 			class:quick-pill-cs={r.variante === 'cs'}
 			class:quick-pill-admin={r.variante === 'admin'}
 		>
-			<Icon name={r.icone} size={14} />
-			{r.libelle}
+			<a href={r.href} class="quick-pill-cible">
+				<Icon name={r.icone} size={14} />
+				{r.libelle}
+			</a>
 			{#each r.compteurs(sante) as c (c)}
 				{#if c.valeur > 0}
-					<span
-						class="quick-count"
-						class:quick-count-urgent={c.ton === 'urgent'}
-						class:quick-count-orange={c.ton === 'orange'}
-						>{c.libelle ? c.libelle(c.valeur) : c.valeur}</span
-					>
+					{#if c.href}
+						<a
+							href={c.href}
+							class="quick-count quick-count-lien"
+							class:quick-count-urgent={c.ton === 'urgent'}
+							class:quick-count-orange={c.ton === 'orange'}
+							>{c.libelle ? c.libelle(c.valeur) : c.valeur}</a
+						>
+					{:else}
+						<span
+							class="quick-count"
+							class:quick-count-urgent={c.ton === 'urgent'}
+							class:quick-count-orange={c.ton === 'orange'}
+							>{c.libelle ? c.libelle(c.valeur) : c.valeur}</span
+						>
+					{/if}
 				{/if}
 			{/each}
-		</a>
+		</div>
 	{/each}
 </nav>
 
@@ -59,6 +79,7 @@
 		transform: translateY(0);
 	}
 	.quick-pill {
+		position: relative;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
@@ -80,6 +101,28 @@
 		border-color: var(--color-primary);
 		box-shadow: var(--shadow-sm);
 		background: var(--color-primary-light);
+	}
+	/*  Le lien étiré : toute la pastille reste cliquable pour la destination
+	    principale, sans imbriquer d'ancres. */
+	.quick-pill-cible {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		color: inherit;
+		text-decoration: none;
+	}
+	.quick-pill-cible::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+	}
+	/*  Un compteur qui porte son adresse passe AU-DESSUS du lien étiré — sinon
+	    il serait recouvert par lui et ne recevrait jamais le clic. */
+	.quick-count-lien {
+		position: relative;
+		z-index: 1;
+		text-decoration: none;
 	}
 	.quick-count {
 		background: var(--color-primary);
