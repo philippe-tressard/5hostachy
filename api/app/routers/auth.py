@@ -22,7 +22,7 @@ from sqlmodel import Session, select
 from app.utils.config_site import config_site
 from app.utils.journal_securite import journaliser_securite
 from app.auth.jwt import (
-    create_access_token,
+    creer_jeton_acces,
     create_refresh_token,
     decode_token,
     hash_password,
@@ -255,7 +255,7 @@ def login(request: Request, body: LoginRequest, response: Response, session: Ses
     user.derniere_connexion = datetime.utcnow()
     session.add(user)
 
-    access = create_access_token({"sub": str(user.id)})
+    access = creer_jeton_acces(user.id, user.hashed_password)
     refresh = create_refresh_token({"sub": str(user.id)})
     rt = RefreshToken(
         user_id=user.id,
@@ -300,7 +300,7 @@ def refresh(request: Request, response: Response, refresh_token: str | None = Co
     session.add(rt)
     session.commit()
 
-    access = create_access_token({"sub": str(user.id)})
+    access = creer_jeton_acces(user.id, user.hashed_password)
     response.set_cookie("access_token", access, max_age=settings.access_token_expire_minutes * 60, **COOKIE_OPTS)
     response.set_cookie("refresh_token", new_refresh, max_age=settings.refresh_token_expire_days * 86400, **COOKIE_OPTS)
     return {"message": "Token rafraîchi"}
