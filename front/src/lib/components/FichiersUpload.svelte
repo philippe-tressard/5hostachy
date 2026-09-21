@@ -64,6 +64,7 @@
 		ACCEPT_DOCUMENTS,
 		ACCEPT_FICHIERS,
 		ACCEPT_PHOTOS,
+		LIBELLE_TYPES,
 		MAX_FICHIERS,
 		nomFichier,
 		separerFichiers,
@@ -160,11 +161,15 @@
 	$: _titre =
 		titre ??
 		(_nature === 'photos' ? 'Photos' : _nature === 'documents' ? 'Documents' : 'Pièces jointes');
-	//  Les types acceptés ne sont pas récités à la main : ils DÉCOULENT de
-	//  `ACCEPT_DOCUMENTS`. Une extension ajoutée là-bas se dit ici, au lieu de
-	//  laisser un libellé mentir. En aide grise sous le bouton, et non dans
-	//  l'intitulé, qui est devenu le titre de section (`SectionFormulaire`).
-	$: _types = _nature === 'photos' ? '' : 'PDF, Word, Excel, texte';
+	//  🔴 Les types annoncés se LISENT dans `$lib/fichiers`, à côté des `ACCEPT_*`
+	//  qu'ils décrivent. Ils étaient récités ICI, sous un commentaire qui
+	//  affirmait le contraire — et le mode MIXTE annonçait donc « PDF, Word,
+	//  Excel, texte » au-dessus d'un contrôle qui accepte aussi les photos
+	//  (signalé à l'écran le 21/09/2026).
+	//
+	//  En aide grise sous le bouton, et non dans l'intitulé, qui est devenu le
+	//  titre de section (`SectionFormulaire`).
+	$: _types = LIBELLE_TYPES[_nature as keyof typeof LIBELLE_TYPES] ?? '';
 
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
@@ -381,8 +386,7 @@
 			{/if}
 		</div>
 		<span class="fichiers-compte">
-			{nombre}/{max}{#if _types}
-				· {_types}{/if}
+			{nombre}/{max}{#if _types}&nbsp;· {_types}{/if}
 		</span>
 	{/if}
 </div>

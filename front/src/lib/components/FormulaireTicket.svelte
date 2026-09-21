@@ -424,6 +424,7 @@
 		      il avait divergé — il annonçait encore Photos en motif `api`, soldé
 		      le 18/08/2026. Une copie d'une source unique est une source de plus. -->
 		<ChampsCommuns
+			entite={TICKET}
 			bind:refDiffusion
 			demanderApercu={brouillonApercu}
 			envoiEnCours={loading}

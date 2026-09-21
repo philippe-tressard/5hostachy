@@ -376,6 +376,7 @@
 		      le rang de la section devenait alors une affaire d'écran. Il ne l'est
 		      plus. -->
 			<ChampsCommuns
+				entite={PUBLICATION}
 				avecSaisiPour
 				{residentsSaisiPour}
 				bind:saisiPour

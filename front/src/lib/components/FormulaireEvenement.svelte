@@ -307,6 +307,7 @@
 	      Deux écarts, une seule cause : un ordre écrit dans une documentation ne
 	      se tient pas seul. -->
 			<ChampsCommuns
+				entite={EVENEMENT}
 				avecSaisiPour
 				{residentsSaisiPour}
 				bind:saisiPour

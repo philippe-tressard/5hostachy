@@ -80,10 +80,76 @@
 
 	/** `id` posé sur le titre, pour qu'un groupe s'y relie par `aria-labelledby`. */
 	export let idTitre = '';
+
+	/**
+	 * **Repliée par défaut** — la section se réduit à son intitulé et à un
+	 * résumé d'une ligne, cliquables (#1095).
+	 *
+	 * 🔴 La valeur vient de la DÉCLARATION (`section(ENTITE, id).pliee`), jamais
+	 * d'un choix d'écran : la règle est *obligatoire → déplié · facultatif →
+	 * plié*, et `lint:etats` la vérifie. Un écran qui plierait de son côté
+	 * rouvrirait la divergence que le cadre existe pour fermer.
+	 */
+	export let pliable = false;
+
+	/**
+	 * Ce qu'on lit quand elle est pliée — « sans date », « en mon nom », « rien
+	 * ne part à l'extérieur ».
+	 *
+	 * ⚠️ Il doit dire l'ÉTAT, jamais l'invitation : « sans date » et non
+	 * « ajouter une date ». Une section pliée se lit comme une ligne de résumé,
+	 * pas comme un bouton de plus.
+	 */
+	export let resume = '';
+
+	/**
+	 * 🔴 **Une valeur autre que le défaut ROUVRE la section d'office.**
+	 *
+	 * C'est la moitié non déclarative de la règle : elle dépend de ce que
+	 * l'objet PORTE, pas de ce que la table dit. Une section pliée qui
+	 * cacherait une valeur saisie serait pire que pas de pliage du tout — on
+	 * corrigerait un objet sans voir ce qu'il contient.
+	 *
+	 * ⚠️ Elle ne fait qu'OUVRIR : repasser à `false` ne referme pas ce que
+	 * l'utilisateur a ouvert, et ne referme pas non plus une section qu'il vient
+	 * de vider — il y travaille encore.
+	 */
+	export let ouvrirSiRenseignee = false;
+
+	let ouverteParLUtilisateur = false;
+	$: ouverte = !pliable || ouvrirSiRenseignee || ouverteParLUtilisateur;
+	const idContenu = `sect-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
 <section class="section-formulaire" class:premiere>
-	{#if titre}
+	{#if pliable && !ouverte}
+		<!--  🔴 Un vrai `<button>`, et non un `<div role="button">` : il faut le
+		      clavier, le focus et l'annonce d'état sans rien réécrire. La cible
+		      fait 44 px de haut (`standards/11` §10). -->
+		<button
+			type="button"
+			class="section-pliee"
+			aria-expanded="false"
+			aria-controls={idContenu}
+			on:click={() => (ouverteParLUtilisateur = true)}
+		>
+			<span class="section-titre section-titre-plie">
+				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}&nbsp;*{/if}
+			</span>
+			<span class="section-resume">{resume || badge}</span>
+			<svg
+				class="section-chev"
+				width="12"
+				height="8"
+				viewBox="0 0 12 8"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.6"
+				aria-hidden="true"><path d="M1 1l5 5 5-5" /></svg
+			>
+		</button>
+	{/if}
+	{#if titre && ouverte}
 		{#if pour}
 			<label class="section-titre" for={pour} id={idTitre || undefined}>
 				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}
@@ -98,7 +164,14 @@
 			</h4>
 		{/if}
 	{/if}
-	<slot />
+	<div id={idContenu} hidden={!ouverte}>
+		<!--  🔴 CACHÉ, jamais démonté. Un `{#if}` détruirait les champs, et avec
+		      eux l'état interne des composants qu'ils portent — un éditeur riche,
+		      une liste de pièces jointes en cours de téléversement. `hidden` les
+		      retire aussi de l'ordre de tabulation, ce qu'un simple `display:none`
+		      appliqué plus loin ne garantirait pas. -->
+		<slot />
+	</div>
 </section>
 
 <style>
@@ -133,6 +206,48 @@
 	/*  Un `<label>` de section désigne un contrôle : il doit se cliquer. */
 	label.section-titre {
 		cursor: pointer;
+	}
+	/*  ── La section PLIÉE (#1095) ─────────────────────────────────────────
+	    Une ligne : l'intitulé à gauche, ce qu'elle contient à droite, le chevron
+	    au bout. Elle remplace le titre ET le contenu, et se lit d'un coup d'œil.
+
+	    ⚠️ 44 px de haut : c'est une cible tactile, et c'est la seule commande de
+	    la section quand elle est pliée (`standards/11` §10). */
+	.section-pliee {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		width: 100%;
+		min-height: 44px;
+		box-sizing: border-box;
+		padding: 0.35rem 0;
+		border: none;
+		background: none;
+		font-family: inherit;
+		text-align: left;
+		cursor: pointer;
+		color: var(--color-text);
+	}
+	/*  Le titre d'une section pliée ne porte pas sa marge du bas : il n'a rien
+	    en dessous de lui. */
+	.section-titre-plie {
+		margin: 0;
+		flex-shrink: 0;
+	}
+	/*  Le résumé pousse le chevron au bout et se coupe avant lui : c'est une
+	    valeur, pas un intitulé — ni petites capitales, ni gras. */
+	.section-resume {
+		margin-left: auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+	}
+	.section-chev {
+		flex-shrink: 0;
+		color: var(--color-text-muted);
 	}
 	/*  Le badge ne suit PAS les petites capitales du titre : c'est une valeur,
 	    pas un intitulé — la lire en majuscules espacées la rendrait illisible. */

@@ -25,6 +25,30 @@ export const ACCEPT_DOCUMENTS = 'application/pdf,text/plain,.pdf,.doc,.docx,.xls
 /** Les deux à la fois, pour un sélecteur unique « pièce jointe ». */
 export const ACCEPT_FICHIERS = `${ACCEPT_PHOTOS},${ACCEPT_DOCUMENTS}`;
 
+/**
+ * Ce que l'écran ANNONCE d'acceptable, sous le bouton — « Image, PDF, Word,
+ * Excel, texte ».
+ *
+ * 🔴 Ici, et pas dans le composant. `FichiersUpload` les récitait en dur sous
+ * un commentaire qui affirmait l'inverse — *« les types acceptés ne sont pas
+ * récités à la main : ils DÉCOULENT de `ACCEPT_DOCUMENTS` »* —, et le mode
+ * MIXTE n'annonçait donc que les documents : « 0/10 · PDF, Word, Excel,
+ * texte » au-dessus d'un contrôle qui accepte les photos (signalé à l'écran le
+ * 21/09/2026).
+ *
+ * ⚠️ Une consigne qui décrit une dérivation qui n'existe pas est pire qu'une
+ * valeur en dur assumée : on la croit, et on ne va pas voir.
+ *
+ * Les trois se tiennent avec les `ACCEPT_*` juste au-dessus : ajouter une
+ * extension là-haut se dit ici, sous les yeux, dans le même fichier.
+ */
+export const LIBELLE_TYPES: Readonly<Record<'photos' | 'documents' | 'mixte', string>> = {
+	//  Vide : « Image » sous un bouton « Ajouter une photo » n'apprend rien.
+	photos: '',
+	documents: 'PDF, Word, Excel, texte',
+	mixte: 'Image, PDF, Word, Excel, texte',
+};
+
 /** Nombre maximum de pièces jointes par objet.
  *
  *  Il était écrit À LA MAIN dans chaque appel de `FichiersUpload` — 5 sur les

@@ -308,6 +308,7 @@
 		<!--  4 à 9 : ordre, intitulés et séparations hérités du composant partagé.
 		      Le sondage n'a ni photos ni documents. -->
 		<ChampsCommuns
+			entite={SONDAGE}
 			idPrefixe="sondage"
 			avecPerimetre={sectionPresente(SONDAGE, etat, 'qui_le_voit')}
 			bind:perimetre={perimetreCible}
