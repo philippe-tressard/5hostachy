@@ -62,7 +62,7 @@
 	$: moyennes = propositions.filter((p: any) => p.confiance !== 'haute');
 </script>
 
-<h3 class="section-title">Catégories de tickets à revoir</h3>
+<h3 class="section-title">Catégories d’affaires à revoir</h3>
 
 {#if chargement || erreur || propositions.length === 0}
 	<EtatListe
@@ -77,12 +77,12 @@
 	/>
 {:else}
 	<p class="muted" style="margin-bottom:1rem">
-		<strong>{propositions.length}</strong> ticket{propositions.length > 1 ? 's' : ''} sur
+		<strong>{propositions.length}</strong> affaire{propositions.length > 1 ? 's' : ''} sur
 		{releve.total_tickets} pourrai{propositions.length > 1 ? 'ent' : 't'} changer de catégorie.
 		<strong>{hautes.length}</strong> proposition{hautes.length > 1 ? 's' : ''} à confiance haute.
 		<br />
 		<em
-			>Ce relevé ne modifie rien : il propose. La correction se fait ticket par ticket, depuis sa
+			>Ce relevé ne modifie rien : il propose. La correction se fait affaire par affaire, depuis sa
 			fiche.</em
 		>
 	</p>
@@ -104,7 +104,7 @@
 				<table class="table">
 					<thead>
 						<tr>
-							<th>Ticket</th><th>Aujourd’hui</th><th>Proposé</th><th>Pourquoi</th>
+							<th>Affaire</th><th>Aujourd’hui</th><th>Proposé</th><th>Pourquoi</th>
 						</tr>
 					</thead>
 					<tbody>

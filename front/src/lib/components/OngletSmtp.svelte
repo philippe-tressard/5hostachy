@@ -190,7 +190,7 @@
 					placeholder="contact@example.com"
 				/>
 				<span class="aide"
-					>Employée dès qu'on attend quelque chose du destinataire : ticket au syndic, relance,
+					>Employée dès qu'on attend quelque chose du destinataire : affaire au syndic, relance,
 					demande d'accès, annonce de hall. Une adresse qui s'annonce « ne répondez pas » décourage
 					la réponse qu'on sollicite. <strong>Vide</strong> : tout part de l'adresse ci-dessus, comme
 					avant.</span

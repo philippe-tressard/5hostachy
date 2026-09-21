@@ -16,6 +16,7 @@
 	import HistoriqueTicket from '$lib/components/HistoriqueTicket.svelte';
 	import FilMessagesTicket from '$lib/components/FilMessagesTicket.svelte';
 	import { TICKET } from '$lib/entites/ticket';
+	import { HREF_VERS_PAGE } from '$lib/pages';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import FilAriane from '$lib/components/FilAriane.svelte';
 	import { fmtDateLong, fmtDateShort } from '$lib/date';
@@ -198,11 +199,11 @@
 	}
 </script>
 
-<svelte:head><title>Ticket #{ticketId} — {_siteNom}</title></svelte:head>
+<svelte:head><title>{TICKET.libelle} #{ticketId} — {_siteNom}</title></svelte:head>
 
 <FilAriane
-	segments={[{ libelle: 'Tickets', href: '/tickets' }]}
-	courant={ticket?.titre ?? 'Ticket'}
+	segments={[{ libelle: HREF_VERS_PAGE['/tickets']?.navLabel ?? TICKET.libelle, href: '/tickets' }]}
+	courant={ticket?.titre ?? TICKET.libelle}
 />
 
 {#if loading}
@@ -211,11 +212,11 @@
 	<!--  L'échec AVANT le vide : dire « introuvable » quand on n'a pas pu
 	      regarder, c'est affirmer une absence qu'on n'a pas constatée. -->
 	<div class="empty-state">
-		<h3>Impossible d’afficher ce ticket</h3>
+		<h3>Impossible d’afficher cette affaire</h3>
 		<p>{erreur}</p>
 	</div>
 {:else if !ticket}
-	<div class="empty-state"><h3>Ticket introuvable</h3></div>
+	<div class="empty-state"><h3>{TICKET.libelle} introuvable</h3></div>
 {:else}
 	<!--  La fiche suit l'ORDRE DES NEUF SECTIONS, comme les formulaires : c'est
 	      `FicheLecture` qui le lit dans la déclaration `TICKET`, et les slots ne

@@ -57,7 +57,7 @@
 <div class="kpi-row" style="margin-bottom:1rem">
 	<div class="kpi-card">
 		<div class="kpi-value">{reportTicketSource.length}</div>
-		<div class="kpi-label">Tickets sur la période</div>
+		<div class="kpi-label">Affaires sur la période</div>
 	</div>
 	<div class="kpi-card">
 		<div class="kpi-value">

@@ -66,7 +66,7 @@
 	{:else if canaux.length === 0}
 		<div class="empty-state">
 			<h3>Aucun canal de diffusion coché</h3>
-			<p>Le ticket sera créé sans notification.</p>
+			<p>L'affaire sera créée sans notification.</p>
 		</div>
 	{:else}
 		{#each canaux as canal (canal.canal)}

@@ -29,6 +29,7 @@
 	//  ne rien assainir, et le contrôle ne peut pas le savoir. Il exige donc que
 	//  le nom vienne de l'IMPORT — c'est ce qui a démasqué `renderContent` (#429).
 	import { MOT_COLONNE_VIDE } from '$lib/kanban';
+	import { TICKET } from '$lib/entites/ticket';
 	import { safeHtml } from '$lib/sanitize';
 	import { perimetreTags } from '$lib/perimetres-pastilles';
 	import { perimetresStore } from '$lib/stores/perimetres';
@@ -199,7 +200,7 @@
 			{#each col.tickets as ticket (ticket.id)}
 				<a class="kanban-card card kanban-card-ticket" href="/tickets/{ticket.id}">
 					<div class="kanban-card-tags">
-						<span class="kb-tag kb-tag-ticket">🎫 Ticket</span>
+						<span class="kb-tag kb-tag-ticket">🎫 {TICKET.libelle}</span>
 					</div>
 					<strong class="kanban-card-titre">{ticket.titre}</strong>
 					<div class="kanban-card-footer">
@@ -214,7 +215,7 @@
 	<!--  L'échec se DIT : un tableau amputé des tickets ressemble trait pour
 	      trait à un tableau où il n'y en a aucun. -->
 	<p class="kanban-erreur-tickets">
-		Les tickets suivis n’ont pas pu être chargés — le tableau est incomplet. {erreurTicketsKanban}
+		Les affaires suivies n’ont pas pu être chargées — le tableau est incomplet. {erreurTicketsKanban}
 	</p>
 {/if}
 

@@ -97,7 +97,7 @@
 <div class="carnet">
 	<p class="aide">
 		Ce que la copropriété a fait entretenir, réparer et contrôler. Il est constitué automatiquement
-		à partir des contrats, des interventions du calendrier et des tickets résolus — rien n'y est
+		à partir des contrats, des interventions du calendrier et des affaires résolues — rien n'y est
 		saisi à la main.
 	</p>
 

@@ -129,9 +129,9 @@
 <SectionFormulaire icone="message-square-text" titre="Réception des réponses aux affaires">
 	<div class="largeur-saisie">
 		<p class="aide" style="margin-bottom:.75rem">
-			Quand le syndic répond à un e-mail de ticket, sa réponse arrive dans la boîte d'envoi et
-			personne ne la voit. Activée, cette relève la dépose dans le fil du ticket concerné, toutes
-			les 10 minutes.
+			Quand le syndic répond à un e-mail d'affaire, sa réponse arrive dans la boîte d'envoi et
+			personne ne la voit. Activée, cette relève la dépose dans le fil de l'affaire concernée,
+			toutes les 10 minutes.
 		</p>
 	</div>
 	<div class="form-grid largeur-saisie">

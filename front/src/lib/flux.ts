@@ -51,9 +51,9 @@ const {
 	couleur: C,
 	fond: F,
 } = parAttribut({
-	ticket_resolu: { libelle: 'Ticket résolu', couleur: '#B91C1C', fond: '#FEF2F2' }, //   0° rouge
-	ticket_ouvert: { libelle: 'Ticket', couleur: '#B91C1C', fond: '#FEF2F2' },
-	ticket_mis_a_jour: { libelle: 'Ticket mis à jour', couleur: '#B91C1C', fond: '#FEF2F2' },
+	ticket_resolu: { libelle: 'Affaire résolue', couleur: '#B91C1C', fond: '#FEF2F2' }, //   0° rouge
+	ticket_ouvert: { libelle: 'Affaire', couleur: '#B91C1C', fond: '#FEF2F2' },
+	ticket_mis_a_jour: { libelle: 'Affaire mise à jour', couleur: '#B91C1C', fond: '#FEF2F2' },
 	annonce: { libelle: 'Petite annonce', couleur: '#C2410C', fond: '#FFF7ED' }, //  17° orange
 	evenement: { libelle: 'Événement', couleur: '#A16207', fond: '#FFFBEB' }, //  35° ambre
 	diagnostic: { libelle: 'Diagnostic', couleur: '#4D7C0F', fond: '#F7FEE7' }, //  86° olive

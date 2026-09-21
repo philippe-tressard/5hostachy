@@ -220,7 +220,7 @@
 				&#x1F4CC; Suivi des dossiers
 			</Pastille>
 			<Pastille active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
-				&#x1F4CA; Analyse tickets
+				&#x1F4CA; Analyse des affaires
 			</Pastille>
 			<Pastille
 				active={reportView === 'prestataires'}

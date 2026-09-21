@@ -287,7 +287,7 @@
 						incluses et exclues ne vivent que dans le PDF. Sont transmis <strong
 							>tous les documents du contrat</strong
 						> — l’initial, ses avenants, ses conditions générales : n’en lire qu’un rendrait les montants
-						faux dès le premier avenant. Rien d’autre ne part : ni pièce jointe d’un ticket, ni document
+						faux dès le premier avenant. Rien d’autre ne part : ni pièce jointe d’une affaire, ni document
 						d’un autre contrat.
 					</span>
 				</label>
