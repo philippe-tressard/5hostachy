@@ -1922,6 +1922,39 @@ verrouille.
 bouton affiché plus largement que le droit produit un 403 sur un geste que
 l'interface a elle-même proposé ; plus étroitement, il rend une capacité
 introuvable. Les deux sont arrivés le même jour dans `RubriqueHistorique`.
+
+### 🔴 Et le NOM AFFICHÉ est celui du propriétaire (21/09/2026, #1104)
+
+Le pendant du droit ci-dessus, et il a mis six jours à le rejoindre. Un objet
+« Saisi pour » appartient à celui **pour qui** il a été ouvert :
+
+| Ce qu'on demande | La fonction, dans `$lib/saisi-pour` |
+|---|---|
+| le nom que l'écran **affiche** | `nomProprietaire(objet)` |
+| le nom que la case « Envoyer une copie à … » **annonce** | `nomCopie(objet, saisie?)` |
+
+Elles rendent le même nom dans le cas courant, et ce sont **deux questions** :
+`nomCopie` tient compte d'une saisie **en cours** — elle doit annoncer ce qui
+partira au prochain clic —, ce qu'un affichage de liste n'a pas à connaître.
+Jamais `objet.auteur_nom` dans un écran : c'est le rédacteur, et l'arbitrage du
+12/09 dit que le « Saisi pour » s'y substitue.
+
+⚠️ **Le même composant employait les deux.** `CarteTicket` appelait déjà
+`nomCopie` pour la copie, et affichait `auteur_nom` brut à trois lignes de là :
+un écran, deux noms, et celui qu'on lit était le mauvais. La FAQ servie aux
+résidents promettait pourtant l'inverse.
+
+🔒 `npm run lint:nom-proprietaire` (CI depuis le 21/09/2026). Il lit la liste des
+types porteurs **dans `types.ts`** — ceux qui héritent de `PorteSaisiPourLu` —,
+jamais une liste recopiée qui divergerait au premier type ajouté. Deux listes
+déclarées, qui ne font pas la même chose : `PORTEURS_NON_TYPES` **étend** le
+contrôle aux écrans dont la prop est `any`, `EXCEPTIONS` **autorise** la seule
+phrase du site qui nomme légitimement l'auteur — et elle porte sur une **ligne**,
+pas sur un fichier.
+
+Côté serveur, `proprietaire_nom` vit dans `SaisiPourSortie`, dont les trois
+lectures héritent, et les trois routeurs le posent par `noms_derives` :
+`api/tests/test_proprietaire_expose.py`.
 ## 16. WORKFLOW & ARCHIVAGE — ce qui a des étapes, et ce qui se range tout seul
 
 🔴 **Trois questions distinctes**, que le produit a confondues jusqu'au 18/08/2026 :
