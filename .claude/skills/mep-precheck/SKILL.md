@@ -91,8 +91,11 @@ Remédiation : `git update-index --chmod=+x <fichier>`.
 
 ## Étape 0 bis — exigences sans exception (avant le pré-check)
 
-Deux exigences de même rang que la sécurité, à contrôler **avant** de dérouler le
-pré-check technique. Elles ne portent pas sur l'état des machines mais sur celui du
+**Trois** exigences de même rang que la sécurité, à contrôler **avant** de
+dérouler le pré-check technique — autant que le tableau ci-dessous en compte, et
+que `standards/09` §2 en énonce. Cette ligne disait « deux » au-dessus d'un
+tableau de trois, et le renvoi de l'en-tête de cette skill disait « trois » :
+trois comptes pour une liste (#122). Elles ne portent pas sur l'état des machines mais sur celui du
 code et de la documentation livrée : un pré-check vert sur une base qui viole ces
 règles reste un mauvais déploiement.
 
