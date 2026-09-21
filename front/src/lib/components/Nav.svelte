@@ -5,6 +5,7 @@
 	import { locale, NAV_LABELS } from '$lib/stores/locale';
 	import { auth as authApi } from '$lib/api';
 	import { setUser } from '$lib/stores/auth';
+	import { CHEMIN_CONNEXION } from '$lib/redirection';
 	import { configStore, siteNomStore, getPageConfig } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
 	import LiensGuide from '$lib/components/LiensGuide.svelte';
@@ -45,7 +46,9 @@
 
 	function logout() {
 		setUser(null);
-		goto('/auth/connexion');
+		//  Rien à conserver : on vient de se déconnecter volontairement. Mais
+		//  l'adresse vient de `lib/redirection`, comme les cinq autres portes.
+		goto(CHEMIN_CONNEXION);
 		authApi.logout().catch(() => {}); // révocation token en arrière-plan
 	}
 

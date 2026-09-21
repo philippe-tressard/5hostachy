@@ -34,12 +34,25 @@ export function cheminCourant(): string {
 	return window.location.pathname + window.location.search + window.location.hash;
 }
 
+/**
+ *  L'adresse de la mire, **écrite une seule fois** (#1083, 22/09/2026).
+ *
+ *  Elle l'était six fois, dont trois en clair — et les trois perdaient la page
+ *  demandée. Un lien reçu ramenait donc où l'on allait, ou sur le tableau de
+ *  bord, selon la porte par laquelle on était entré.
+ *
+ *  ⚠️ À n'employer que là où il n'y a **rien à conserver** : une déconnexion
+ *  volontaire, ou la racine du site qui n'est pas une destination. Partout
+ *  ailleurs, `urlDeConnexion()` — qui garde le chemin courant par défaut.
+ */
+export const CHEMIN_CONNEXION = '/auth/connexion';
+
 /** URL de l'écran de connexion qui saura revenir sur `cible`. */
 export function urlDeConnexion(cible?: string): string {
 	const destination = cible ?? cheminCourant();
 	return estCibleInterne(destination)
-		? `/auth/connexion?next=${encodeURIComponent(destination)}`
-		: '/auth/connexion';
+		? `${CHEMIN_CONNEXION}?next=${encodeURIComponent(destination)}`
+		: CHEMIN_CONNEXION;
 }
 
 /**
