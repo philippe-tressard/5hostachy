@@ -73,12 +73,16 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
 const DOSSIER_ENTITES = join(RACINE, 'lib', 'entites');
 const TYPES = join(DOSSIER_ENTITES, 'types.ts');
 
-const MOTIFS_ADMIS = ['geste', 'hérité', 'api'];
+//  🔴 `categorie` est entré le 21/09/2026 (#1095) : une section que la CATÉGORIE
+//  de l'objet n'appelle pas — l'Équipement et l'Intervenant ne concernent que le
+//  bâti. Distinct de `sansObjet` (« cet objet ne porte jamais la notion ») et
+//  d'`api` (« on ne sait pas encore le faire », donc une dette avec son ticket).
+const MOTIFS_ADMIS = ['geste', 'hérité', 'categorie', 'api'];
 
 /**  Les six sections que `ChampsCommuns` sait rendre, et le nom de la prop qui
  *   les ouvre. Ce sont elles qui doivent passer par `sectionPresente`. */
 const PROPS_SECTION = {
-	avecPerimetre: 'perimetre',
+	avecPerimetre: 'qui_le_voit',
 	avecDestinataires: 'destinataires',
 	avecDescription: 'description',
 	//  Deux props pour UNE section depuis #1095 : l'objet garde deux réservoirs
@@ -122,17 +126,22 @@ for (const fonction of ['sectionPresente', 'sectionsDe']) {
 
 const ORDRE = extraire(srcTypes, 'SECTIONS_ORDRE', relative(RACINE, TYPES), { echec });
 const LIBELLES = extraire(srcTypes, 'SECTIONS_LIBELLE', relative(RACINE, TYPES), { echec });
-//  🔴 NEUF depuis le 21/09/2026 — Photos et Documents n'en font plus qu'une,
-//  « Pièces jointes » (#1095, arbitré à l'écran le 20/09). Elles étaient dix
-//  depuis le 20/09, « quand » étant entrée avec le chantier v2.0.0 (#1092).
+//  🔴 TREIZE depuis le 21/09/2026 (#1095) : l'ancienne section « Champs
+//  spécifiques » est scindée en Nature · Au nom de · Mise en avant, et
+//  l'Équipement, l'Intervenant et le Suivi la rejoignent. Elles étaient neuf le
+//  matin même (Photos + Documents fusionnées), dix la veille (#1092).
+//
+//  ⚠️ La scission n'est pas cosmétique : une section à trois intitulés rendait
+//  INDÉCLARABLE une divergence qui n'en concernait qu'un — c'est la limite que
+//  #436 décrivait, et `ticket.ts` la portait en commentaire, invisible ici.
 //
 //  Le nombre reste FIGÉ, et c'est tout l'intérêt : il oblige à passer ici quand
 //  le cadre bouge, au lieu de laisser une section entrer — ou disparaître —
 //  sans que personne le décide. Le remplacer par `ORDRE.length > 0` rendrait ce
 //  cas zéro aveugle à une table tronquée, ce qu'il existe précisément pour
 //  attraper. C'est bien ce qui vient de se passer : la fusion a dû passer ici.
-if (!Array.isArray(ORDRE) || ORDRE.length !== 9) {
-	casZero(`SECTIONS_ORDRE devrait porter les NEUF sections (${ORDRE?.length ?? 0} lue(s)).`);
+if (!Array.isArray(ORDRE) || ORDRE.length !== 13) {
+	casZero(`SECTIONS_ORDRE devrait porter les TREIZE sections (${ORDRE?.length ?? 0} lue(s)).`);
 }
 if (!LIBELLES || ORDRE.some((id) => !LIBELLES[id])) {
 	casZero('SECTIONS_LIBELLE ne nomme pas les dix sections.');
@@ -197,7 +206,7 @@ for (const nomFichier of fichiersEntites) {
 			if (!MOTIFS_ADMIS.includes(div.motif)) {
 				echec(
 					`${ou} — motif « ${div.motif} » inconnu pour l'état « ${etat} ». ` +
-						`Trois motifs, trois seulement : ${MOTIFS_ADMIS.join(' · ')}.`,
+						`Quatre motifs, quatre seulement : ${MOTIFS_ADMIS.join(' · ')}.`,
 				);
 			}
 			if (!div.explication || !String(div.explication).trim()) {
@@ -413,6 +422,53 @@ if (erreurs.length) {
 			"  geste  — la section est un ACTE qui n'a pas lieu dans cet état\n" +
 			"  hérité — la valeur vient de l'objet porteur\n" +
 			'  api    — DETTE, jamais conception : doit citer un ticket\n',
+	);
+	process.exit(1);
+}
+
+//  ════════════════════════════════════════════════════════════════════════════
+//  LE PLIAGE — un 3e état de présence, et sa règle (#1095, 21/09/2026)
+//  ════════════════════════════════════════════════════════════════════════════
+//
+//  🔴 La règle est CALCULÉE, pas déclarée :
+//
+//      obligatoire → déplié   ·   facultatif → plié
+//
+//  Un pliage conforme n'a donc rien à écrire. Un pliage qui s'en écarte exige
+//  `exceptionPliage`, et l'on refuse dans les DEUX sens : une exception qui ne
+//  sert plus est aussi grave qu'une exception qui manque — c'est ainsi qu'une
+//  liste de justifications devient une liste de passe-droits.
+const fautesPliage = [];
+for (const { nom, decl } of entites) {
+	for (const sec of decl.sections ?? []) {
+		if (sec.sansObjet) continue;
+		const conforme = sec.requis ? !sec.pliee : !!sec.pliee;
+		const exception = String(sec.exceptionPliage ?? '').trim();
+		if (!conforme && !exception) {
+			fautesPliage.push(
+				`${nom} · ${sec.id} — ${sec.requis ? 'obligatoire mais PLIÉE' : 'facultative mais DÉPLIÉE'}, ` +
+					'sans `exceptionPliage`. La règle est : obligatoire → déplié, facultatif → plié.',
+			);
+		}
+		if (conforme && exception) {
+			fautesPliage.push(
+				`${nom} · ${sec.id} — \`exceptionPliage\` déclarée alors que le pliage SUIT la règle. ` +
+					'Une exception qui ne sert plus couvre le défaut suivant : la retirer.',
+			);
+		}
+	}
+}
+if (fautesPliage.length) {
+	console.error('\n✗ Cadre d’interface — le PLIAGE s’écarte de la règle sans le dire :\n');
+	for (const f of fautesPliage) console.error(`  • ${f}`);
+	console.error(
+		'\n  🔴 Trois exceptions étaient prévues le 20/09/2026, et elles se déclarent :' +
+			'\n    « Au nom de » et « Destinataires » — obligatoires mais PLIÉES, le défaut' +
+			'\n      étant juste dans la quasi-totalité des cas ;' +
+			'\n    « Pièces jointes » — facultative mais DÉPLIÉE, premier geste sur téléphone.' +
+			'\n\n  ⚠️ Une valeur autre que le défaut rouvre la section d’office — cette' +
+			'\n  partie-là vit dans le rendu, pas dans la table : elle dépend de ce que' +
+			'\n  l’objet PORTE, pas de ce que la déclaration dit.\n',
 	);
 	process.exit(1);
 }
