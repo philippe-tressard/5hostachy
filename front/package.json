@@ -94,6 +94,7 @@
 		"lint:lock": "node scripts/check-lock-coherent.mjs",
 		"lint:texte": "node --experimental-strip-types scripts/check-texte.mjs",
 		"lint:identite": "node scripts/check-identite-membre.mjs",
+		"lint:nom-proprietaire": "node scripts/check-nom-proprietaire.mjs",
 		"e2e": "playwright test",
 		"e2e:ui": "playwright test --ui"
 	},

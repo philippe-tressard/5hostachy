@@ -1677,6 +1677,25 @@ jobs:
         working-directory: front
         run: npm run lint:identite
 
+      # Un objet « Saisi pour » appartient à celui pour QUI il a été ouvert, pas
+      # à celui qui a tapé (arbitrage du 12/09/2026). La carte d'affaire
+      # annonçait pourtant le rédacteur, alors que le MÊME composant employait
+      # le bon nom dans sa case de copie — un écran, deux noms.
+      #
+      # Le contrôle lit les types porteurs dans `types.ts` (ceux qui héritent de
+      # `PorteSaisiPourLu`) : une liste recopiée ici aurait divergé au premier
+      # type ajouté, et c'est le type ajouté qui n'aurait eu aucun garde-fou.
+      - name: Un objet « Saisi pour » affiche son propriétaire, pas son auteur
+        working-directory: front
+        run: npm run lint:nom-proprietaire
+
+      # Les épreuves du contrôle lui-même : un motif trop étroit, une exception
+      # qui survit à son objet, un commentaire pris pour du code — trois façons
+      # d'être vert à tort, toutes déjà vues ici.
+      - name: Le contrôle du propriétaire s'éprouve lui-même
+        working-directory: front
+        run: node scripts/check-nom-proprietaire.mjs --selftest
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #
