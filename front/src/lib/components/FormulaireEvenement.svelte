@@ -333,9 +333,9 @@
 				bind:titreObjet={form.titre}
 				bind:assisteIA={form.assiste_ia}
 				descriptionPlaceholder="Description de l'événement…"
-				avecPhotos={sectionPresente(EVENEMENT, etat, 'photos')}
+				avecPhotos={sectionPresente(EVENEMENT, etat, 'pieces_jointes')}
 				bind:photos={photosUrls}
-				avecDocuments={sectionPresente(EVENEMENT, etat, 'documents')}
+				avecDocuments={sectionPresente(EVENEMENT, etat, 'pieces_jointes')}
 				bind:documents={fichiersUrls}
 				avecDiffusion={sectionPresente(EVENEMENT, etat, 'diffusion')}
 				bind:whatsapp={form.partager_whatsapp}

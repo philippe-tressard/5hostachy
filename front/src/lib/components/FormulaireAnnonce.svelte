@@ -268,8 +268,8 @@
 			bind:titreObjet={titre}
 			bind:assisteIA
 			descriptionPlaceholder="Décrivez l'objet, son état, conditions de remise…"
-			avecPhotos={sectionPresente(ANNONCE, etat, 'photos')}
-			avecDocuments={sectionPresente(ANNONCE, etat, 'documents')}
+			avecPhotos={sectionPresente(ANNONCE, etat, 'pieces_jointes')}
+			avecDocuments={sectionPresente(ANNONCE, etat, 'pieces_jointes')}
 			avecDiffusion={sectionPresente(ANNONCE, etat, 'diffusion')}
 			avecCanaux={false}
 		>
