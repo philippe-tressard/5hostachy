@@ -38,6 +38,8 @@ import { DIFFUSION_NE_SE_LIT_PAS } from './types';
 export const EVENEMENT: EntiteDeclaree = {
 	id: 'evenement',
 	libelle: 'Événement',
+	libelleNouveau: 'Nouvel événement',
+	libelleModifier: "Modifier l'événement",
 	sections: [
 		{
 			id: 'titre',

@@ -186,8 +186,47 @@ export interface SectionDeclaree {
 export interface EntiteDeclaree {
 	/** Identifiant technique — `ticket`, `actualite`… */
 	id: string;
-	/** Nom de l'entité à l'écran. */
+	/**
+	 * **Nom de l'entité à l'écran** — celui que le résident lit.
+	 *
+	 * 🔴 Il peut DIFFÉRER de `id`, et deux le font : le modèle s'appelle
+	 * `Ticket` et l'écran dit « Affaire » ; le modèle dit `Publication` et
+	 * l'écran « Actualité » (#1094, #1107). C'est la même distinction que pour
+	 * `TicketEvolution` / « Suite » : le modèle garde son nom, l'écran parle
+	 * français.
+	 *
+	 * ⚠️ Ce champ portait le mot de CODE jusqu'au 21/09/2026 — « Publication »,
+	 * « Ticket » — alors que sa propre description disait « à l'écran ». La
+	 * source du bon mot existait donc, et affirmait le mauvais.
+	 */
 	libelle: string;
+	/**
+	 * Le mot que le CODE emploie et que l'écran ne doit **jamais** montrer.
+	 *
+	 * Absent quand le code et l'écran disent la même chose (une annonce est une
+	 * annonce). Présent pour les deux entités renommées — c'est lui, et lui
+	 * seul, que `npm run lint:vocabulaire-ecran` cherche dans les libellés.
+	 *
+	 * 🔴 Déclaré ICI et nulle part ailleurs : un troisième renommage n'ajoutera
+	 * qu'une ligne, et le contrôle le suivra sans qu'on y pense. Une liste
+	 * recopiée dans le contrôle aurait divergé au premier.
+	 */
+	motDeCode?: string;
+	/** Le bouton de création — ex. « Nouvelle actualité ». */
+	libelleNouveau: string;
+	/** Le titre de la boîte d'édition — ex. « Modifier l'actualité ».
+	 *
+	 * ⚠️ Écrit en toutes lettres plutôt que composé depuis `libelle`, et c'est
+	 * une décision : « Nouvelle actualité », « Nouvel événement », « Nouveau
+	 * sondage » demandent le genre ET l'élision, que rien ne devine d'un nom.
+	 * Le 13/09/2026, un gabarit `{objet}` a rendu « Visibilité **du
+	 * publication** » pour cette raison exacte ; la réponse avait alors été de
+	 * *supprimer le besoin* — on était dans le formulaire de l'objet, où le
+	 * nommer n'apprend rien. Ici le besoin ne se supprime pas : un bouton en
+	 * tête de page ne dit QUE le nom de ce qu'il crée. Deux chaînes déclarées
+	 * coûtent moins qu'une grammaire, et le garde-fou vérifie qu'elles
+	 * contiennent bien `libelle`. */
+	libelleModifier: string;
 	/** Les sections déclarées, dans l'ordre de `SECTIONS_ORDRE`. */
 	sections: readonly SectionDeclaree[];
 }

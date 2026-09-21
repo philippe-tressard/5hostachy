@@ -37,7 +37,10 @@ import { DIFFUSION_NE_SE_LIT_PAS } from './types';
 
 export const TICKET: EntiteDeclaree = {
 	id: 'ticket',
-	libelle: 'Ticket',
+	libelle: 'Affaire',
+	motDeCode: 'ticket',
+	libelleNouveau: 'Signaler une affaire',
+	libelleModifier: "Modifier l'affaire",
 	sections: [
 		{
 			//  🔴 Le TITRE, et lui seul. La catégorie a longtemps partagé cette
