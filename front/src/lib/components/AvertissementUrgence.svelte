@@ -29,7 +29,7 @@
 	let disclaimerOpen = false;
 </script>
 
-<div class="urgence-disclaimer" role="note" aria-label="Avertissement tickets urgence">
+<div class="urgence-disclaimer" role="note" aria-label="Avertissement affaires urgentes">
 	<button
 		class="urgence-disclaimer-toggle"
 		on:click={() => (disclaimerOpen = !disclaimerOpen)}

@@ -17,6 +17,7 @@
   arbitré le 18/08/2026 sur cette carte précisément.
 -->
 <script lang="ts">
+	import { SUITE } from '$lib/gestes';
 	import { createEventDispatcher } from 'svelte';
 	import BoutonLien from './BoutonLien.svelte';
 	import BoutonOptions from './BoutonOptions.svelte';
@@ -51,8 +52,8 @@
 	<button
 		class="btn-icon"
 		aria-pressed={mode === 'evolution'}
-		aria-label="Commenter ou changer l’état"
-		title="Commenter ou changer l’état"
+		aria-label={SUITE.libelle}
+		title={SUITE.libelle}
 		on:click|stopPropagation={() => dispatch('evoluer_ouvrir')}>&#x1F504;</button
 	>
 {/if}
