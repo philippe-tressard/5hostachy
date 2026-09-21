@@ -1696,6 +1696,18 @@ jobs:
         working-directory: front
         run: node scripts/check-nom-proprietaire.mjs --selftest
 
+      # Une surcharge de page ABSENTE doit retomber sur `pages.ts`, jamais
+      # effacer. Trois entrées de « Descriptif pages » s'affichaient sans nom :
+      # l'écran partait de l'enregistrement, qui ne porte pas `nom` — ce champ
+      # n'étant pas administrable, il n'y figure jamais.
+      #
+      # Le front n'a pas de lanceur de tests : c'est le pattern de
+      # `check-liste-depliable.mjs` — fonction pure + selftest, sur le module
+      # que le site embarque, pas une copie.
+      - name: Une surcharge de page absente retombe sur la source
+        working-directory: front
+        run: npm run lint:pages-surcharge
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #
