@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { auth } from '$lib/api';
 	import { setUser } from '$lib/stores/auth';
+	import { CHEMIN_CONNEXION } from '$lib/redirection';
 
 	onMount(async () => {
 		try {
@@ -10,7 +11,7 @@
 			setUser(user);
 			goto('/tableau-de-bord');
 		} catch {
-			goto('/auth/connexion');
+			goto(CHEMIN_CONNEXION);
 		}
 	});
 </script>

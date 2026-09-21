@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional
@@ -30,13 +31,56 @@ def hash_password(plain: str) -> str:
     return pwd_context.hash(plain)
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def empreinte_secret(secret: str) -> str:
+    """Une empreinte courte et non réversible d'un condensé de mot de passe.
+
+    🔴 Elle voyage dans CHAQUE requête, à l'intérieur d'un jeton que son porteur
+    peut lire : elle ne doit donc rien livrer du condensé. D'où un HMAC avec la
+    clé du serveur plutôt qu'un simple `sha256` du condensé — sans la clé,
+    l'empreinte n'est comparable à rien.
+
+    Seize caractères hexadécimaux, soit 64 bits : de quoi rendre une collision
+    hors de portée pour ce à quoi elle sert — distinguer deux mots de passe du
+    même compte —, sans allonger inutilement le jeton.
+    """
+    return hashlib.blake2s(
+        secret.encode("utf-8"), key=settings.secret_key.encode("utf-8")[:32], digest_size=8
+    ).hexdigest()
+
+
+def create_access_token(
+    data: dict, expires_delta: Optional[timedelta] = None, empreinte: str | None = None
+) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + (
         expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
     )
     to_encode.update({"exp": expire, "type": "access"})
+    if empreinte is not None:
+        to_encode["pwd"] = empreinte
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+
+def creer_jeton_acces(user_id: int, hashed_password: str) -> str:
+    """LA porte d'émission d'un jeton d'accès (#1063, 22/09/2026).
+
+    ## Pourquoi une porte, et pas deux appels qui composent leur charge
+
+    Le jeton était fabriqué à la connexion ET au rafraîchissement, chacun
+    écrivant son propre dictionnaire. Un jeton émis sans empreinte est
+    aujourd'hui REFUSÉ : une porte oubliée ne se verrait pas à la relecture,
+    elle déconnecterait des gens. `test_jeton_revocable.py` refuse un second
+    appelant de `create_access_token`.
+
+    ## Ce que l'empreinte apporte
+
+    Le jeton d'accès est autoporteur : rien, côté serveur, ne pouvait
+    l'invalider avant ses 120 minutes — ni un changement de mot de passe, ni une
+    déconnexion. Il porte désormais l'empreinte du condensé du mot de passe, que
+    `_get_current_user` compare à celle du compte qu'il charge **déjà**. Coût :
+    nul. Effet : un mot de passe changé invalide d'un coup tous les jetons.
+    """
+    return create_access_token({"sub": str(user_id)}, empreinte=empreinte_secret(hashed_password))
 
 
 def create_refresh_token(data: dict) -> str:

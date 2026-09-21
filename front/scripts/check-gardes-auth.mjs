@@ -148,4 +148,55 @@ if (fautes.length > 0) {
 	process.exit(1);
 }
 
-console.log('✓ Toute garde qui refuse selon un rôle attend que l’authentification soit résolue.');
+// ════════════════════════════════════════════════════════════════════════════
+//  UNE SEULE PORTE VERS LA MIRE (#1083, point 2)
+// ════════════════════════════════════════════════════════════════════════════
+//
+//  🔴 La garde « non connecté » était écrite à SIX endroits, et trois écrivaient
+//  l'adresse en dur. Celles qui passent par `urlDeConnexion()` conservent la
+//  page demandée — un lien partagé ramène où l'on allait ; les trois autres la
+//  perdent. Un utilisateur non connecté atterrissait donc où il voulait ou sur
+//  le tableau de bord, **selon la porte par laquelle il était entré**.
+//
+//  ⚠️ Les écrans d'authentification eux-mêmes gardent leurs liens en clair :
+//  « Retour à la connexion » depuis l'inscription ou l'oubli de mot de passe est
+//  une navigation, pas une garde, et il n'a aucune destination à conserver.
+const MIRE = '/auth/connexion';
+const SOURCE_REDIRECTION = ['lib/redirection.ts'];
+
+/** Un chemin a-t-il le droit d'écrire l'adresse de la mire en clair ? */
+function peutEcrireLaMire(relatif) {
+	return SOURCE_REDIRECTION.includes(relatif) || relatif.startsWith('routes/auth/');
+}
+
+const enDur = [];
+for (const chemin of globSync(join(SRC, '**', '*.{svelte,ts}'))) {
+	const relatif = chemin
+		.slice(SRC.length + 1)
+		.split(sep)
+		.join('/');
+	if (peutEcrireLaMire(relatif)) continue;
+	const source = neutraliserCommentaires(readFileSync(chemin, 'utf8'));
+	source.split('\n').forEach((ligne, i) => {
+		if (ligne.includes(MIRE))
+			enDur.push({ relatif, ligne: i + 1, texte: ligne.trim().slice(0, 70) });
+	});
+}
+
+if (enDur.length > 0) {
+	console.error(`\n✗ ${enDur.length} redirection(s) vers la mire écrite(s) en dur :\n`);
+	for (const f of enDur) console.error(`  src/${f.relatif}:${f.ligne}  ${f.texte}`);
+	console.error(
+		`\n  La destination se perd : celui qui ouvre un lien reçu n'y revient pas\n` +
+			`  après s'être connecté, alors qu'il y revient par les autres portes.\n` +
+			`\n  → \`urlDeConnexion(cible?)\` pour garder la page demandée, ou\n` +
+			`    \`CHEMIN_CONNEXION\` quand il n'y a rien à garder (déconnexion,\n` +
+			`    racine du site) — les deux dans \`lib/redirection.ts\`.\n`,
+	);
+	process.exit(1);
+}
+
+console.log(
+	'✓ Toute garde qui refuse selon un rôle attend que l’authentification soit résolue,\n' +
+		`  et les ${enDur.length === 0 ? 'seules' : ''} portes vers la mire passent par \`lib/redirection.ts\`.`,
+);
