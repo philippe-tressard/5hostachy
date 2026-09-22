@@ -64,9 +64,14 @@ comme identiques, et elles le sont au type près.
 Les fondre en `GET /admin/{type_cle}` serait une régression : `imports_vigik`
 et `imports_telecommandes` exposent `GET /admin/imports-vigik` et
 `GET /admin/imports`, **deux chemins à un seul segment** sous `/admin/`.
-`parc` étant monté en premier, un `{type_cle}` les avalerait et rendrait
-**422 « Type invalide »** à la place des listes d'import — deux écrans
-d'administration cassés, sans la moindre erreur côté serveur.
+Un `{type_cle}` les avalerait et rendrait **422 « Type invalide »** à la place
+des listes d'import — deux écrans d'administration cassés, sans la moindre
+erreur côté serveur.
+
+⚠️ C'est précisément ce qui est arrivé aux **PATCH** le 22/09/2026, dans
+l'autre sens : `parc` était monté en premier, et son joker à deux segments
+avalait `PATCH /admin/imports/{id}`. L'ordre est désormais inverse, et un test
+le tient — voir le commentaire de l'inclusion, plus bas.
 
 ⚠️ Ce qui reste dupliqué est le **décorateur**, c'est-à-dire précisément ce
 qui distingue les deux routes ; leur corps passe déjà par `_acces_admin_out`.
@@ -80,10 +85,30 @@ from . import imports_telecommandes, imports_vigik, parc, resident
 router = APIRouter(prefix="/acces", tags=["acces"])
 
 router.include_router(resident.router)
-#  ⚠️ `parc` AVANT les imports : ses chemins `/admin/vigiks` et
-#  `/admin/{type}` sont plus spécifiques que les `/admin/imports-vigik/{id}`
-#  des deux autres modules, et FastAPI retient la PREMIÈRE route qui
-#  correspond. C'est la même raison qui place `resident` en tête.
-router.include_router(parc.router)
+#  🔴 LES IMPORTS AVANT `parc` — l'inverse de ce qui était écrit ici jusqu'au
+#  22/09/2026, et l'inverse tuait deux gestes en production.
+#
+#  L'ancienne note disait : *« `parc` AVANT les imports : ses chemins
+#  `/admin/vigiks` et `/admin/{type}` sont plus spécifiques »*. C'était vrai des
+#  chemins à UN segment (`/admin/imports`, `/admin/imports-vigik`), qu'un
+#  `/admin/{type_cle}` avale bel et bien. C'était **faux** de ceux à deux :
+#
+#      PATCH /admin/{type_cle}/{objet_id}   (parc)
+#      PATCH /admin/imports/{import_id}     (imports_telecommandes)
+#
+#  Même forme, même méthode. Monté en premier, `parc` prenait la requête avec
+#  `type_cle="imports"` et rendait **422 « Type invalide : vigik ou
+#  telecommande »** — l'erreur que l'utilisateur a vue à l'écran en liant un
+#  locataire. Les deux écrans d'import étaient morts à l'enregistrement.
+#
+#  ⚠️ Une note qui explique un piège au singulier laisse croire qu'il n'y en a
+#  qu'un : sa conclusion a survécu à une prémisse qui ne couvrait que la moitié
+#  des routes.
+#
+#  Dans l'autre sens, rien ne casse : `/admin/vigiks` et `/admin/telecommandes`
+#  sont littéraux et à un seul segment — aucun chemin d'import ne leur
+#  ressemble. C'est ce que `test_routes_masquees.py` vérifie, dans les deux sens
+#  et à chaque PR.
 router.include_router(imports_vigik.router)
 router.include_router(imports_telecommandes.router)
+router.include_router(parc.router)
