@@ -45,6 +45,15 @@ SOURCES = (
     "api/app/seed/faq.py",
     "README.md",
     "docs/manuel-utilisateur.html",
+    #  🔴 Les MODÈLES D'E-MAIL (#1101, 22/09/2026). Ils sont lus par les
+    #  résidents comme le reste, et ils étaient restés au mot du modèle — le
+    #  lot de renommage s'était arrêté aux écrans, à la FAQ et à la
+    #  documentation, parce que les courriels sont un circuit à part.
+    "api/app/seed/emails/tickets.py",
+    "api/app/seed/emails/__init__.py",
+    "api/app/seed/emails/fragments.py",
+    "api/app/seed/emails/vie_collective.py",
+    "api/app/seed/emails/exploitation.py",
 )
 
 #: Ce qui porte le mot sans que personne ne le lise — un identifiant, un chemin,
@@ -66,6 +75,9 @@ IDENTIFIANTS = re.compile(
     | --c-ticket               # une variable CSS du manuel
     | data-section="tickets"   # un sélecteur CSS du manuel
     | CHIPS\ \(tickets\)       # le commentaire qui nomme ce sélecteur
+    | in\ tickets             # la variable de boucle Jinja de la relance
+    | emails\.tickets         # le MODULE des modèles de courriel
+    | _TICKETS                # la constante qu'il exporte
     """,
     re.VERBOSE | re.IGNORECASE,
 )
@@ -73,12 +85,58 @@ IDENTIFIANTS = re.compile(
 MOT = re.compile(r"[Tt]ickets?\b")
 
 
+def _sans_commentaires(source: str) -> str:
+    """Le code SERVI, sans ce qui n'en sort jamais (#1101, 22/09/2026).
+
+    🔴 Les modèles d'e-mail parlent du « circuit des tickets » dans leurs
+    docstrings, nomment `_bouton_ticket`, et documentent `ticket.id`. Rien de
+    tout cela n'est lu par un résident : ce sont des commentaires de code, et
+    le mot du modèle y est à sa place — le fichier s'appelle `tickets.py`, la
+    table `ticket`, le code de modèle `ticket_syndic`.
+
+    Sans cette neutralisation, le contrôle criait sur dix-huit commentaires
+    parfaitement légitimes. Un contrôle qui crie sur du légitime finit
+    désarmé (leçon de C16, déjà écrite dans ce dépôt).
+
+    ⚠️ Les docstrings partent aussi : elles sont du commentaire pour qui lit
+    le code, jamais du texte servi. Ce qui reste est ce qu'un gabarit peut
+    rendre.
+    """
+    sortie = []
+    dans_docstring = None
+    for ligne in source.splitlines():
+        reste = ligne
+        if dans_docstring:
+            if dans_docstring in reste:
+                reste = reste.split(dans_docstring, 1)[1]
+                dans_docstring = None
+            else:
+                sortie.append("")
+                continue
+        #  Une docstring qui s'ouvre et ne se referme pas sur la même ligne.
+        for guillemets in ('"""', "'''"):
+            if reste.count(guillemets) % 2 == 1:
+                reste = reste.split(guillemets, 1)[0]
+                dans_docstring = guillemets
+                break
+        #  Un `#` hors chaîne : la heuristique suffit ici — les chaînes de ces
+        #  fichiers sont du HTML, et un `#` y est toujours précédé d'un `"` ou
+        #  d'une couleur (`#c0392b`), jamais seul en début de mot.
+        if "#" in reste:
+            avant, _, apres = reste.partition("#")
+            if avant.count('"') % 2 == 0 and avant.count("'") % 2 == 0 and not apres[:1].isalnum():
+                reste = avant
+        sortie.append(reste)
+    return chr(10).join(sortie)
+
+
 def _fautes(chemin: str) -> list[str]:
     fichier = RACINE / chemin
     if not fichier.exists():
         return [f"{chemin} : fichier introuvable — le contrôle ne mesure plus rien"]
     fautes = []
-    for n, ligne in enumerate(fichier.read_text(encoding="utf-8").splitlines(), 1):
+    lisible = _sans_commentaires(fichier.read_text(encoding="utf-8"))
+    for n, ligne in enumerate(lisible.splitlines(), 1):
         #  On retire d'abord tout ce qui est un identifiant, PUIS on cherche le
         #  mot : l'inverse ferait passer « /tickets » pour un libellé.
         reste = IDENTIFIANTS.sub("", ligne)

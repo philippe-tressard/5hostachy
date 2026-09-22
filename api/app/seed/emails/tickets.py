@@ -39,14 +39,14 @@ from app.seed.emails.fragments import (
 ROUGE = "#c0392b"
 
 #: Le lien vers un ticket, employé par cinq modèles.
-def _bouton_ticket(libelle: str = "Consulter le ticket", **kw) -> str:
+def _bouton_ticket(libelle: str = "Consulter l’affaire", **kw) -> str:
     return bouton("{{ app.url }}/tickets/{{ ticket.id }}", libelle, **kw)
 
 
 #: La ligne de méta d'un ticket — numéro, catégorie, et ce que l'appelant ajoute.
 def _meta_ticket(suffixe: str = "") -> str:
     return (
-        f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Ticket #{{{{ ticket.numero }}}}'
+        f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Affaire #{{{{ ticket.numero }}}}'
         "{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %}"
         f"{suffixe}</p>"
     )
@@ -81,10 +81,10 @@ _FIL_MESSAGES_EXTERNE = (
 )
 
 MODELES = [
-    ("ticket_bug_admin", "Ticket bug — notification admin site",
-     "Bug signalé via Tickets — {{ ticket.titre }} — {{ residence.nom }}",
+    ("ticket_bug_admin", "Affaire de type Bug — notification admin site",
+     "Bug signalé via les Affaires — {{ ticket.titre }} — {{ residence.nom }}",
      titre("⚠ Bug signalé", couleur=ROUGE)
-     + '<p style="margin:0 0 12px">Un ticket de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.affiche }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
+     + '<p style="margin:0 0 12px">Une affaire de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.affiche }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
      + encart(
          f'<p style="margin:0 0 4px;font-weight:700;font-size:16px;color:{TEXTE}">{{{{ ticket.titre }}}}</p>'
          f'<p style="margin:0;font-size:14px;color:{GRIS}">{{{{ ticket.description }}}}</p>',
@@ -93,7 +93,7 @@ MODELES = [
      )
      + _bouton_ticket("Traiter le bug", fond=ROUGE),
      True),
-    ("ticket_syndic", "Ticket transmis au syndic",
+    ("ticket_syndic", "Affaire transmise au syndic",
      #  `{{ prefixe_copro }}` ouvre les DEUX branches — il ne manquait qu'à celle
      #  du commentaire, donc un échange sur un ticket déjà transmis arrivait sans
      #  référence. La règle et sa forme unique : `seed/emails/__init__.py`.
@@ -102,13 +102,13 @@ MODELES = [
      #  n'affiche qu'une soixantaine de caractères, et sur ces quatre
      #  informations, celle que le destinataire ne connaît pas encore est le
      #  titre. La résidence est ce qu'on accepte de perdre.
-     '{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire — Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% else %}{{ prefixe_copro }}Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% endif %}',
-     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}📋 Ticket transmis par le conseil syndical{% endif %}')
+     '{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire — Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% else %}{{ prefixe_copro }}Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% endif %}',
+     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}📋 Affaire transmise par le conseil syndical{% endif %}')
      + '<p style="margin:0 0 16px">'
        '{% if is_commentaire %}'
-       'Un nouveau commentaire a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
+       'Un nouveau commentaire a été ajouté sur l’affaire <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
        '{% else %}'
-       'Un ticket a été transmis à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
+       'Une affaire a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
        '{% endif %}'
        '</p>'
      + "{% if is_commentaire %}"
@@ -141,13 +141,13 @@ MODELES = [
        "{% endif %}"
      + _bouton_ticket(marge=MARGE_BOUTON_SELON_COMMENTAIRE),
      True),
-    ("ticket_statut_change", "Statut ticket modifié",
-     "Ticket #{{ ticket.numero }} mis à jour — {{ ticket.titre }} — {{ residence.nom }}",
-     titre("Mise à jour de votre ticket")
+    ("ticket_statut_change", "Statut d’affaire modifié",
+     "Affaire #{{ ticket.numero }} mise à jour — {{ ticket.titre }} — {{ residence.nom }}",
+     titre("Mise à jour de votre affaire")
      + '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     + '<p style="margin:0 0 16px">Le statut de votre ticket a été mis à jour :</p>'
+     + '<p style="margin:0 0 16px">Le statut de votre affaire a été mis à jour :</p>'
      + encart(
-         f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Ticket #{{{{ ticket.numero }}}}</p>'
+         f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Affaire #{{{{ ticket.numero }}}}</p>'
          + _TITRE_TICKET
          + '<p style="margin:0"><span style="display:inline-block;background:#3D6B4F;color:#fff;padding:4px 12px;border-radius:4px;font-size:13px;font-weight:600">{{ ticket.statut }}</span></p>'
      ),
@@ -163,10 +163,10 @@ MODELES = [
     #  allait à tout le monde, ce qui est tolérable dans une liste et ne l’est pas
     #  dans une boîte aux lettres. `membres_cs_notifiables(session, batiments)` est
     #  la fonction prévue pour ça (cf. le tableau « Destinataires CS » de CLAUDE.md).
-    ('ticket_nouveau_cs', 'Nouveau ticket — notification du conseil syndical',
-     '🎫 Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}',
-     titre("🎫 Nouveau ticket")
-     + '<p style="margin:0 0 16px">Un ticket vient d' "'" 'être déposé par <strong>{{ auteur.affiche }}</strong>.</p>'
+    ('ticket_nouveau_cs', 'Nouvelle affaire — notification du conseil syndical',
+     '🎫 Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}',
+     titre("🎫 Nouvelle affaire")
+     + '<p style="margin:0 0 16px">Une affaire vient d' "'" 'être déposé par <strong>{{ auteur.affiche }}</strong>.</p>'
      + encart(
          _meta_ticket("{% if ticket.perimetre %} · 🔹 {{ ticket.perimetre }}{% endif %}"
                       "{% if urgent %} · <strong style=\"color:#c0392b\">URGENT</strong>{% endif %}")
@@ -178,22 +178,22 @@ MODELES = [
      )
      + _bouton_ticket(),
      True),
-    ("ticket_nouveau_message", "Nouveau message sur un ticket",
-     "Nouveau message — Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}",
-     titre("💬 Nouveau message sur votre ticket")
-     + '<p style="margin:0 0 16px">Un nouveau message a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur_action.affiche }} :</p>'
+    ("ticket_nouveau_message", "Nouveau message sur une affaire",
+     "Nouveau message — Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}",
+     titre("💬 Nouveau message sur votre affaire")
+     + '<p style="margin:0 0 16px">Un nouveau message a été ajouté sur l’affaire <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur_action.affiche }} :</p>'
      + encart(f'<p style="margin:0;font-size:14px;color:{TEXTE}">{{{{ message.contenu }}}}</p>')
-     + _bouton_ticket("Voir le ticket"),
+     + _bouton_ticket("Voir l’affaire"),
      True),
-    ("relance_syndic", "Relance tickets syndic non résolus",
-     "{{ prefixe_copro }}Relance ticket(s) sans avancée depuis {{ anciennete }}",
-     titre("🔔 Relance ticket(s) sans avancée depuis {{ anciennete }}")
+    ("relance_syndic", "Relance des affaires syndic non résolues",
+     "{{ prefixe_copro }}Relance d’affaire(s) sans avancée depuis {{ anciennete }}",
+     titre("🔔 Relance d’affaire(s) sans avancée depuis {{ anciennete }}")
      + '<p style="margin:0 0 20px">{{ interlocuteurs }},</p>'
      # Préambule partenarial (choisi le 01/08/2026) : poser l’ancienneté réelle
      # et le mécontentement qu’elle nourrit, sans mettre le gestionnaire en
      # accusation — la relance reste un outil de travail, pas un grief.
      + '<p style="margin:0 0 16px">Le Conseil Syndical de la copropriété <strong>{{ residence.nom }}</strong> '
-       'se permet de revenir vers vous concernant les tickets ci-dessous, transmis au syndic '
+       'se permet de revenir vers vous concernant les affaires ci-dessous, transmises au syndic '
        'et toujours <strong>sans avancée après {{ anciennete }}</strong>.</p>'
        '<p style="margin:0 0 16px">Nous mesurons la charge qui pèse sur la gestion d’un '
        'portefeuille de copropriétés. C’est précisément pour vous éviter des '
@@ -242,14 +242,14 @@ MODELES = [
      + '<p style="margin:8px 0 0">Cordialement,<br>'
        '<strong>Le Conseil Syndical</strong></p>',
      False),
-    ("ticket_externe", "Notification ticket (email externe)",
+    ("ticket_externe", "Notification d’affaire (email externe)",
      #  Ce canal vise « le syndic ou un tiers » (cf. l'en-tête de ce module) :
      #  l'adresse est saisie à la main et rien ne dit laquelle des deux. Il porte
      #  donc la référence lui aussi — inoffensive pour un prestataire,
      #  indispensable pour le syndic, et c'est la seule façon de tenir « sans
      #  exception » sur un destinataire que le code ne peut pas identifier.
-     '{% if is_commentaire %}{{ prefixe_copro }}Relance Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% else %}{{ prefixe_copro }}Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% endif %}',
-     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}🔧 Ticket{% endif %} : {{ ticket.titre }}')
+     '{% if is_commentaire %}{{ prefixe_copro }}Relance — Affaire #{{ ticket.numero }} — {{ ticket.titre }}{% else %}{{ prefixe_copro }}Affaire #{{ ticket.numero }} — {{ ticket.titre }}{% endif %}',
+     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}🔧 Affaire{% endif %} : {{ ticket.titre }}')
      + "{% if is_commentaire %}"
      + cadre_commentaire(voir_pj=True)
      + HISTORIQUE_SOBRE
