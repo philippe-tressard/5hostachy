@@ -23,6 +23,17 @@
 	export let valeurs: Record<string, boolean>;
 	export let restreindre = false;
 	export let onSave: (valeurs: Record<string, boolean>, restreindre: boolean) => void;
+
+	/**  Les clés JAMAIS réglées par ce compte (#1147, 22/09/2026).
+	 *
+	 *   🔴 « De mon ou mes bâtiments » est cochée PAR DÉFAUT. Sans cette
+	 *   distinction, l'écran montre une case cochée qui laisse croire que le
+	 *   résident l'a cochée — et l'on parle alors de « ce qu'il a choisi » pour
+	 *   décrire ce que personne n'a décidé.
+	 *
+	 *   Le défaut ne change pas : c'est lui qui garantit qu'un signalement
+	 *   atteint quelqu'un. L'écran le dit, voilà tout. */
+	export let heritees: Set<string> = new Set();
 </script>
 
 <section class="card" style="margin-bottom:1.5rem">
@@ -43,14 +54,26 @@
 	<h2 class="section-title" style="margin-top:1.5rem">Notifications par e-mail</h2>
 	<label class="checkbox-field">
 		<input type="checkbox" bind:checked={valeurs[MON_BATIMENT]} />
-		<span>De mon ou mes bâtiments</span>
+		<span
+			>De mon ou mes bâtiments{#if heritees.has(MON_BATIMENT)}<span class="herite"
+					>réglage par défaut</span
+				>{/if}</span
+		>
 	</label>
 	<label class="checkbox-field" style="margin-top:.5rem">
 		<input type="checkbox" bind:checked={valeurs[AUTRES_BATIMENTS]} />
-		<span>Des autres bâtiments</span>
+		<span
+			>Des autres bâtiments{#if heritees.has(AUTRES_BATIMENTS)}<span class="herite"
+					>réglage par défaut</span
+				>{/if}</span
+		>
 	</label>
 	<p class="aide sous-case">
 		Les notifications dans l'application ne sont pas concernées : elles restent actives.
+		{#if heritees.size > 0}
+			Les réglages marqués « par défaut » n'ont jamais été modifiés : enregistrez pour en faire
+			votre choix.
+		{/if}
 	</p>
 
 	<div class="form-actions">
@@ -65,6 +88,17 @@
 	/*  Seul `flex-wrap` differe de la charte (#607, 28/08/2026). */
 	.form-actions {
 		flex-wrap: wrap;
+	}
+
+	/*  Une étiquette, pas un badge d'état : elle dit d'où vient la valeur, ce qui
+	    est une information de second plan. Plus petite que le libellé, en gris de
+	    la charte, et jamais colorée — un réglage hérité n'est ni une alerte ni
+	    une réussite. */
+	.herite {
+		margin-left: 0.4rem;
+		font-size: 0.7rem;
+		color: var(--color-text-muted);
+		white-space: nowrap;
 	}
 
 	.checkbox-field input {

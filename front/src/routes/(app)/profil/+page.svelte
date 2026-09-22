@@ -1,7 +1,7 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
-	import { DEFAUTS_NOTIFS } from '$lib/preferences';
+	import { clesHeritees, DEFAUTS_NOTIFS } from '$lib/preferences';
 	import { badgesDeRoles, LIBELLES_STATUT } from '$lib/roles';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
@@ -17,7 +17,7 @@
 	import HistoriqueDemandes from '$lib/components/HistoriqueDemandes.svelte';
 	import { STATUT_DEMANDE_BADGE, STATUT_DEMANDE_LABEL } from '$lib/demandes';
 	import { essayer, messagePartiel } from '$lib/chargement';
-	import TelemetrieRGPD from '$lib/components/TelemetrieRGPD.svelte';
+	import DroitsRgpd from '$lib/components/DroitsRgpd.svelte';
 	import { etageLabel, lotTypeLabel } from '$lib/utils';
 	import ChampsEtage from '$lib/components/ChampsEtage.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
@@ -43,6 +43,9 @@
 
 	// ── Notifications ─────────────────────────────────────────────────────────
 	let valeursNotifs: Record<string, boolean> = { ...DEFAUTS_NOTIFS };
+	//  Les clés jamais réglées : l'écran dit alors « hérité », plutôt que de laisser
+	//  croire à un choix que personne n'a fait (#1147).
+	let heritees: Set<string> = new Set(Object.keys(DEFAUTS_NOTIFS));
 	let restreindreAMesBatiments = false;
 
 	// ── Lots ──────────────────────────────────────────────────────────────────
@@ -122,6 +125,7 @@
 			//  converti par la migration 0145 ; le repli sur les défauts couvre les
 			//  comptes qu'elle n'aurait pas atteints — un compte créé entre le
 			//  déploiement de l'API et celui du front, par exemple.
+			heritees = clesHeritees(u.preferences_notifications);
 			try {
 				const lues = JSON.parse(u.preferences_notifications || '{}');
 				for (const cle of Object.keys(DEFAUTS_NOTIFS)) {
@@ -202,6 +206,11 @@
 				});
 				setUser(updated);
 				valeursNotifs = valeurs;
+				//  Enregistrer, c'est choisir : plus rien n'est hérité après ce geste,
+				//  même si la valeur n'a pas bougé. Le laisser afficher « hérité »
+				//  après un enregistrement redirait le contraire de ce qui vient
+				//  d'être fait.
+				heritees = new Set();
 				restreindreAMesBatiments = restreindre;
 			},
 			'Préférences enregistrées',
@@ -539,23 +548,13 @@
 	<!-- ── Ce que j'affiche, ce que je reçois ──────────────────────────────── -->
 	<PreferencesAffichageNotifs
 		valeurs={valeursNotifs}
+		{heritees}
 		bind:restreindre={restreindreAMesBatiments}
 		onSave={saveNotifs}
 	/>
 
-	<!-- ── RGPD ─────────────────────────────────────────────────────────────── -->
-	<section class="card" style="border-color:#fde68a;background:#fffbeb">
-		<h2 style="font-size:.95rem;font-weight:600;margin-bottom:.5rem">Vos droits (RGPD)</h2>
-		<p style="font-size:.8rem;line-height:1.55;color:var(--color-text-muted)">
-			Conformément au RGPD, vous pouvez exercer vos droits d'accès, rectification, portabilité et
-			effacement en contactant le responsable de traitement à l'adresse indiquée dans la
-			<a href="/politique-de-confidentialite" style="color:var(--color-primary)"
-				>politique de confidentialité</a
-			>.
-		</p>
-
-		<TelemetrieRGPD />
-	</section>
+	<!-- ── RGPD — extrait dans `DroitsRgpd` le 22/09/2026 (modularité) ── -->
+	<DroitsRgpd />
 </div>
 
 <style>

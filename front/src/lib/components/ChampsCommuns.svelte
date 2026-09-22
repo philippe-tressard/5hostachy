@@ -267,6 +267,11 @@
 	     Diffusion SANS canaux — les actualités les rendent elles-mêmes, à travers
 	     `OptionsPublication`, qui porte en plus le confidentiel et l'affiche de hall. */
 	export let avecCanaux = true;
+
+	/**  L'affaire notifie le conseil du périmètre à sa création, quelles que soient
+	 *   les cases de Diffusion (#1147). Réservé à l'AFFAIRE : c'est
+	 *   `tickets/arrivee.py` qui porte cet envoi, et lui seul. */
+	export let avecNotificationCs = false;
 	export let whatsapp = false;
 	export let syndic = false;
 	export let cs = false;
@@ -442,6 +447,7 @@
 	<SectionDiffusion
 		pliable={plie('diffusion')}
 		{avecCanaux}
+		{avecNotificationCs}
 		bind:whatsapp
 		bind:syndic
 		bind:cs

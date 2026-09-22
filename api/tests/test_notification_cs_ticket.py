@@ -63,6 +63,9 @@ class _Ticket:
         self.categorie = "panne"
         self.perimetre_cible = json.dumps(perimetre)
         self.jeton_courriel = None
+        #  🔴 « Réservé au conseil syndical » — sur un ticket, la case est
+        #  branchée sur cette colonne. Elle ne doit RIEN changer à l'envoi.
+        self.confidentiel = False
 
 
 @pytest.fixture()
@@ -189,6 +192,46 @@ def test_la_PREFERENCE_est_laissee_a_send_email_group(conseil):
         "sans `batiments_concernes`, la préférence de chacun n'est pas "
         "appliquée : le courriel part à qui l'a refusé."
     )
+
+
+def test_le_CONFIDENTIEL_ne_change_rien_a_l_envoi(conseil):
+    """🔴 Ce test tient un TEXTE autant qu'un comportement (#1147, 22/09/2026).
+
+    Signalé à l'écran : *« la Visibilité réservée au conseil syndical sans
+    Diffusion envoie une diffusion au CS : c'est anormal ! »*
+
+    Le comportement est juste — le courriel vient de la CRÉATION du ticket, pas
+    de la case — mais l'aide de l'option annonçait *« aucun envoi n'est
+    déclenché »*, ce qui a fait conclure à une anomalie. Les textes ont été
+    réécrits ; ce test **les attache au comportement**.
+
+    ⚠️ Le jour où quelqu'un conditionnera l'envoi à `confidentiel` — ce qui est
+    une décision défendable — il échouera, et c'est exactement ce qu'on veut :
+    la correction devra passer par les textes, pas seulement par le code.
+    """
+    session, _, code, _, _, auteur = conseil
+
+    ouvert = _Ticket([code])
+    reserve = _Ticket([code])
+    reserve.confidentiel = True
+
+    vises = {}
+    for nom, ticket in (("ouvert", ouvert), ("reserve", reserve)):
+        tampon = _Tampon()
+        _envoyer_email_cs_creation(
+            session, ticket, auteur, urgence=False, background_tasks=tampon,
+        )
+        vises[nom] = sorted(
+            email for _, email in (tampon.taches[0][2]["to_recipients"] if tampon.taches else [])
+        )
+
+    assert vises["reserve"] == vises["ouvert"], (
+        "« Réservé au conseil syndical » change les destinataires du courriel de "
+        "création. C'est peut-être voulu — mais alors l'aide de l'option et la "
+        "section Diffusion doivent le dire, et elles ne le disent pas."
+        f"ouvert={vises['ouvert']}  réservé={vises['reserve']}"
+    )
+    assert vises["ouvert"], "le cas zéro : sans destinataire, le test ne compare rien"
 
 
 def test_cas_zero_sans_conseil_aucun_envoi(conseil):
