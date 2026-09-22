@@ -152,7 +152,7 @@
 	const idContenu = `sect-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
-<section class="section-formulaire" class:premiere>
+<section class="section-formulaire" class:premiere class:repliee={pliable && !ouverte}>
 	{#if pliable && !ouverte}
 		<!--  🔴 Un vrai `<button>`, et non un `<div role="button">` : il faut le
 		      clavier, le focus et l'annonce d'état sans rien réécrire. La cible
@@ -255,6 +255,25 @@
 		padding-top: 0.45rem;
 		margin-top: 0.9rem;
 	}
+	/*  🔴 Une section REPLIÉE respire deux fois moins (22/09/2026).
+
+	    Signalé à l'écran, capture à l'appui : *« l'espacement avant et après une
+	    section repliée est trop grand, divise-le par 2 »*. Une ligne de résumé
+	    n'a pas de contenu à séparer de son titre — elle EST son titre. L'air que
+	    mérite un groupe de champs la faisait flotter au milieu de rien.
+
+	    ⚠️ L'écart ne tombe QUE quand elle est fermée. Dépliée, elle redevient
+	    un groupe comme les autres et reprend l'espacement commun : sinon
+	    l'ouverture déplacerait tout ce qui suit d'un demi-centimètre, et le
+	    regard perdrait la ligne qu'il venait de cliquer.
+
+	    ⚠️ La HAUTEUR de la ligne, elle, ne bouge pas : `min-height: 44px` dans
+	    la charte. C'est ce que `e2e/cible-tactile` mesure — resserrer l'air
+	    autour est gratuit, resserrer la cible ne l'est pas. */
+	.repliee {
+		padding-top: 0.225rem;
+		margin-top: 0.45rem;
+	}
 	/*  La première section n'est séparée de rien : le titre de la boîte
 	    (`FormulaireCreation`) joue déjà ce rôle au-dessus d'elle. */
 	.premiere {
@@ -296,27 +315,18 @@
 	label.section-titre {
 		cursor: pointer;
 	}
-	/*  ── La section PLIÉE (#1095) ─────────────────────────────────────────
-	    Une ligne : l'intitulé à gauche, ce qu'elle contient à droite, le chevron
-	    au bout. Elle remplace le titre ET le contenu, et se lit d'un coup d'œil.
+	/*  ── La section PLIÉE ───────────────────────────────────────
+	    🔴 `.section-pliee` vit dans la CHARTE (`composants.css`) depuis le
+	    22/09/2026, et pas ici : elle porte une cible tactile de 44 px, qui est une
+	    règle de charte (`standards/11` §10) et non une décision de composant.
 
-	    ⚠️ 44 px de haut : c'est une cible tactile, et c'est la seule commande de
-	    la section quand elle est pliée (`standards/11` §10). */
-	.section-pliee {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		width: 100%;
-		min-height: 44px;
-		box-sizing: border-box;
-		padding: 0.35rem 0;
-		border: none;
-		background: none;
-		font-family: inherit;
-		text-align: left;
-		cursor: pointer;
-		color: var(--color-text);
-	}
+	    Svelte scope les styles au fichier : enfermée ici, elle était
+	    **invisible à tout contrôle extérieur** — un test de navigateur qui pose
+	    son propre témoin mesurait 21 px, faute de règle, et aurait conclu à un
+	    défaut inexistant. Même cas que `.sr-only` la veille.
+
+	    Ce qui RESTE ici est ce qui appartient vraiment à ce composant : la marge
+	    du titre plié, la vignette de résumé, le chevron. */
 	/*  Le titre d'une section pliée ne porte pas sa marge du bas : il n'a rien
 	    en dessous de lui. */
 	.section-titre-plie {

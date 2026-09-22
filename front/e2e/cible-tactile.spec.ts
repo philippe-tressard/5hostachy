@@ -62,3 +62,47 @@ test('à la souris, la densité des rangées d’actions est intacte', async ({ 
 		'la règle tactile déborde sur le bureau : la densité des rangées d’actions change',
 	).toBeLessThan(44);
 });
+
+/**
+ *  🔴 La ligne d'une section PLIÉE est elle aussi une cible tactile.
+ *
+ *  C'est la seule commande de la section quand elle est fermée : rater sa ligne
+ *  ne fait rien de dangereux, mais ne fait rien du tout — et l'utilisateur
+ *  conclut que la section ne s'ouvre pas.
+ *
+ *  ⚠️ Ce test est écrit le jour où l'espacement autour d'elle est RÉDUIT de
+ *  moitié (22/09/2026, signalé à l'écran : *« l'espacement avant et après une
+ *  section repliée est trop grand »*). Resserrer est juste ; resserrer jusqu'à
+ *  passer sous 44 px ne le serait pas, et rien ne l'aurait dit : la ligne
+ *  paratrait simplement plus compacte. Le prochain « un peu plus serré »
+ *  échouera ici.
+ *
+ *  Le témoin porte la structure réelle — `.section-formulaire > .section-pliee` —
+ *  parce que c'est le PARENT qui porte l'espacement, et l'enfant la hauteur.
+ *  Mesurer l'un sans l'autre ne dirait rien de ce qu'on vient de changer.
+ */
+async function mesurerSectionPliee(page: import('@playwright/test').Page) {
+	await page.goto(PAGE);
+	await page.evaluate(() => {
+		const section = document.createElement('section');
+		section.className = 'section-formulaire pliee';
+		const bouton = document.createElement('button');
+		bouton.className = 'section-pliee';
+		bouton.id = 'temoin-section-pliee';
+		bouton.textContent = 'QUAND';
+		section.appendChild(bouton);
+		document.body.appendChild(section);
+	});
+	const boite = await page.locator('#temoin-section-pliee').boundingBox();
+	expect(boite, 'la section témoin n’a pas été rendue').not.toBeNull();
+	return boite!;
+}
+
+test('une section pliée reste atteignable au doigt', async ({ page }) => {
+	const boite = await mesurerSectionPliee(page);
+	expect(
+		boite.height,
+		'la ligne d’une section pliée est passée sous la cible tactile : elle se lit, ' +
+			'mais elle ne s’ouvre plus au pouce',
+	).toBeGreaterThanOrEqual(44);
+});
