@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.10.4",
+	"version": "2.10.5",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -90,6 +90,7 @@
 		"lint:pied-formulaire": "node scripts/check-pied-formulaire.mjs",
 		"lint:teinte": "node --experimental-strip-types scripts/check-teinte-perimetre.mjs",
 		"lint:ordre-sections": "node scripts/check-ordre-sections.mjs --selftest",
+		"lint:pliage-transmis": "node scripts/check-pliage-transmis.mjs --selftest && node scripts/check-pliage-transmis.mjs",
 		"lint:tables-statuts": "node scripts/check-tables-statuts.mjs",
 		"lint:lock": "node scripts/check-lock-coherent.mjs",
 		"lint:texte": "node --experimental-strip-types scripts/check-texte.mjs",

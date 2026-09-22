@@ -39,6 +39,7 @@
   téléversement — un autre lot, et il est nommé dans #390.
 -->
 <script context="module" lang="ts">
+	import { pliageDe } from '$lib/pliage';
 	let compteur = 0;
 </script>
 
@@ -171,7 +172,11 @@
       dans la charge utile sans que rien ne le remplisse, donc tous les contrats
       portaient `NULL` et le carnet d'entretien ne pouvait filtrer sur rien. -->
 {#if sectionPresente(CONTRAT, etat, 'perimetre')}
-	<SectionFormulaire titre={SECTIONS_LIBELLE.perimetre} pour={idPerimetre}>
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.perimetre}
+		pliable={pliageDe(CONTRAT, 'perimetre')}
+		pour={idPerimetre}
+	>
 		<div role="group" aria-labelledby={idPerimetre}>
 			<PerimetrePicker bind:value={contratForm.perimetre_cible} titre="" />
 		</div>
@@ -185,7 +190,12 @@
 <!--  ══ 6. DESCRIPTION ══ C'est ici qu'atterrit la synthèse proposée par
       l'assistant IA (#899), relue et corrigée avant enregistrement. -->
 {#if sectionPresente(CONTRAT, etat, 'description')}
-	<SectionFormulaire titre={SECTIONS_LIBELLE.description} pour={idNotes}>
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.description}
+		pliable={pliageDe(CONTRAT, 'description')}
+		ouvrirSiRenseignee={!!contratForm.notes?.trim()}
+		pour={idNotes}
+	>
 		<RichEditor
 			bind:value={contratForm.notes}
 			ariaLabelledby={idNotes}
