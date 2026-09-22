@@ -118,8 +118,12 @@
 			>
 				{enCours ? '✨ L’assistant travaille…' : '✨ Retravailler avec l’assistant'}
 			</button>
+			<!--  🔴 « Précision » ne disait pas ce qu'on attend (signalé à l'écran le
+			      22/09/2026). Le champ ne complète pas le texte : il MODULE la réponse
+			      de l'assistant — « plus court », « plus formel ». Un libellé qui nomme
+			      la chose plutôt que sa place. -->
 			<label class="field champ-en-ligne assistant-precision">
-				Précision
+				Prompt pour moduler sa réponse
 				<input
 					id="{idPrefixe}-assistant-precision"
 					type="text"
@@ -189,9 +193,25 @@
 		gap: 0.6rem;
 		flex-wrap: wrap;
 	}
+	/*  ⚠️ Le libellé est plus PETIT que le titre de section (0.72rem), et c'est
+	    délibéré. `label.field` vaut 0.875rem partout : ici, il paraissait donc plus
+	    important que « PÉRIMÈTRE » ou « DESCRIPTION » juste au-dessus, alors qu'il
+	    nomme un réglage secondaire à l'intérieur d'une section. Signalé à l'écran
+	    le 22/09/2026.
+
+	    🔴 La règle générale n'est PAS touchée : un libellé de champ plus gros
+	    qu'un titre de section est un défaut de toute la charte, pas de cet écran.
+	    Le corriger vaut pour les quarante formulaires à la fois, devant l'écran —
+	    c'est une décision d'interface, pas l'effet de bord d'un lot sur l'assistant.
+
+	    La SAISIE, elle, garde sa taille : ce qu'on tape doit rester lisible. */
 	.assistant-precision {
 		flex: 1 1 14rem;
 		margin: 0;
+		font-size: 0.68rem;
+	}
+	.assistant-precision input {
+		font-size: 0.875rem;
 	}
 	/*  La proposition se lit comme un encart : fond de surface, bordure fine,
 	    jamais le fond de saisie — ce n'est pas un champ, on ne l'édite pas ici. */
