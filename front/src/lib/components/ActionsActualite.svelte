@@ -84,10 +84,14 @@
 	      ⚠️ Il n'apparaît pas sur une actualité déjà close : promouvoir ce qui
 	      est terminé n'ouvrirait un suivi sur rien. -->
 	{#if pub.statut !== 'resolu' && pub.statut !== 'annule'}
+		<!--  🔴 « cette ACTUALITÉ », pas « cette affaire » : le bouton agit SUR une
+		      actualité pour en faire une affaire. Le renommage mécanique du 21/09
+		      avait remplacé le mot des deux côtés de la phrase, qui disait alors
+		      « Suivre cette affaire — en faire une affaire ». -->
 		<button
 			class="btn-icon"
-			aria-label="Suivre cette affaire — en faire une affaire"
-			title="Suivre cette affaire"
+			aria-label="Suivre cette actualité — en faire une affaire"
+			title="Suivre cette actualité"
 			on:click|stopPropagation={() => onPromouvoir(pub)}>&#x1F3AF;</button
 		>
 	{/if}
