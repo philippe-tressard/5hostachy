@@ -51,7 +51,7 @@
  *  Test : node front/scripts/check-pied-formulaire.mjs --selftest
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = 'src';
@@ -233,6 +233,60 @@ if (fautifs.length || erreurs.length) {
 			"  l'enregistrement.\n" +
 			'  → `<PiedFormulaire enCours={…} on:annule />` — voir son en-tête pour\n' +
 			"    `soumission={false}` quand le formulaire n'a pas de `<form>`.\n",
+	);
+	process.exit(1);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  UN BOUTON `submit` SANS `<form>` EST INERTE (#1132, 22/09/2026)
+// ════════════════════════════════════════════════════════════════════════════
+//
+//  🔴 Signalé à l'écran, BLOQUANT : *« impossible de valider un nouvel
+//  utilisateur, le bouton enregistrer ne fonctionne pas »*, dans les deux
+//  interfaces. Aucune erreur, aucun toast — le clic ne faisait rien.
+//
+//  `PiedFormulaire` rend deux boutons selon `soumission` (vrai par défaut) :
+//
+//    true  → <button type="submit">   déclenché par le `on:submit` du <form>
+//    false → <button type="button">   déclenché par son propre `on:click`
+//
+//  Un appelant qui écoute `on:enregistre` **sans `<form>` autour** et laisse le
+//  défaut obtient donc un `submit` orphelin : il ne soumet rien et n'émet rien.
+//
+//  ⚠️ L'en-tête du composant documente le piège dans l'AUTRE sens — « passer
+//  `false` uniquement quand il n'y a pas de `<form>`, sinon le clavier cesse de
+//  fonctionner ». Ce sens-ci ne produit aucun signal : ni erreur de
+//  compilation, ni avertissement. Juste un bouton mort.
+const INERTES = [];
+for (const chemin of fichiers(join(RACINE))) {
+	//  🔴 SANS les commentaires, et ce n'est pas un détail : la première version
+	//  de ce contrôle lisait la source brute, et le commentaire qui EXPLIQUE le
+	//  défaut — « il compte sur le `<form>` parent » — comptait pour une balise
+	//  ouverte. Le contrôle se taisait donc précisément sur le fichier qu'il
+	//  venait d'être écrit pour surveiller.
+	const source = neutraliserCommentaires(readFileSync(chemin, 'utf8'));
+	const re = /<PiedFormulaire\b[\s\S]*?\/>/g;
+	let m;
+	while ((m = re.exec(source))) {
+		const balise = m[0];
+		//  Qui n'écoute pas le clic n'a rien à en attendre.
+		if (!/on:enregistre\b/.test(balise)) continue;
+		if (/soumission=\{false\}/.test(balise)) continue;
+		//  Un `<form>` ouvert et non refermé avant l'appel : le submit a sa cible.
+		const avant = source.slice(0, m.index);
+		const ouverts = (avant.match(/<form\b/g) || []).length;
+		const fermes = (avant.match(/<\/form>/g) || []).length;
+		if (ouverts > fermes) continue;
+		INERTES.push(`${chemin.split(sep).join('/')}:${avant.split(String.fromCharCode(10)).length}`);
+	}
+}
+if (INERTES.length > 0) {
+	console.error(`\n✗ ${INERTES.length} bouton(s) « Enregistrer » INERTE(s) :\n`);
+	for (const f of INERTES) console.error(`  ${f}`);
+	console.error(
+		'\n  `type="submit"` hors d’un `<form>` ne déclenche rien, et n’émet pas' +
+			'\n  `enregistre` : le clic ne fait RIEN, sans la moindre erreur.' +
+			'\n\n  → `soumission={false}`, ou envelopper dans un `<form on:submit|preventDefault>`.\n',
 	);
 	process.exit(1);
 }
