@@ -62,6 +62,7 @@
 	import { sectionPresente } from '$lib/entites/types';
 	import { ANNONCE } from '$lib/entites/annonce';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	/**  L'annonce à CORRIGER, avec ses valeurs déjà saisies. `null` (défaut) =
 	 *   dépôt. Le mode ne change pas pendant la vie du composant : l'appelant la
@@ -190,7 +191,8 @@
 		<!--  1. Titre. -->
 		<SectionFormulaire premiere>
 			<div class="field champ-large">
-				<label for="annonce-titre-{annonce?.id ?? 'new'}">Titre *</label>
+				<label for="annonce-titre-{annonce?.id ?? 'new'}">Titre<EtoileRequis vide={!titre} /></label
+				>
 				<input
 					id="annonce-titre-{annonce?.id ?? 'new'}"
 					bind:value={titre}

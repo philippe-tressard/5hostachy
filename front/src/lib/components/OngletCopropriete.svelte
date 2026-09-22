@@ -9,6 +9,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionContratReference from '$lib/components/SectionContratReference.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { fmtDateShort as fmtDate } from '$lib/date';
 
 	$: _siteNom = $siteNomStore;
@@ -113,7 +114,7 @@
 			<SectionFormulaire premiere icone="settings" titre="Identité">
 				<div class="form-grid largeur-saisie">
 					<label class="field">
-						<span>Nom de la résidence *</span>
+						<span>Nom de la résidence<EtoileRequis vide={!form.nom} /></span>
 						<input bind:value={form.nom} required />
 					</label>
 					<label class="field">

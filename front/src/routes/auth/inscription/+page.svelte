@@ -5,6 +5,7 @@
 	import { getSiteNom } from '$lib/stores/pageConfig';
 	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	const _siteNom = getSiteNom();
 
@@ -120,11 +121,11 @@
 			<form on:submit|preventDefault={submit}>
 				<div class="field-row">
 					<div class="field">
-						<label for="prenom">Prénom *</label>
+						<label for="prenom">Prénom<EtoileRequis vide={!prenom} /></label>
 						<input id="prenom" type="text" bind:value={prenom} required />
 					</div>
 					<div class="field">
-						<label for="nom">NOM *</label>
+						<label for="nom">NOM<EtoileRequis vide={!nom} /></label>
 						<input
 							id="nom"
 							type="text"
@@ -137,7 +138,7 @@
 				</div>
 
 				<div class="field">
-					<label for="email">Email *</label>
+					<label for="email">Email<EtoileRequis vide={!email} /></label>
 					<input id="email" type="email" bind:value={email} required autocomplete="email" />
 				</div>
 
@@ -147,7 +148,7 @@
 				</div>
 
 				<div class="field">
-					<label for="statut">Profil d'utilisateur *</label>
+					<label for="statut">Profil d'utilisateur<EtoileRequis vide={!statut} /></label>
 					<select id="statut" bind:value={statut} required>
 						{#each statuts as s (s.value)}
 							<option value={s.value}>{s.label}</option>
@@ -157,7 +158,7 @@
 
 				{#if isProfessional}
 					<div class="field">
-						<label for="societe">Société *</label>
+						<label for="societe">Société<EtoileRequis vide={!societe} /></label>
 						<input
 							id="societe"
 							type="text"
@@ -167,7 +168,7 @@
 						/>
 					</div>
 					<div class="field">
-						<label for="fonction">Fonction *</label>
+						<label for="fonction">Fonction<EtoileRequis vide={!fonction} /></label>
 						<input
 							id="fonction"
 							type="text"
@@ -180,7 +181,9 @@
 
 				{#if isLocataire}
 					<div class="field">
-						<label for="nom-proprietaire">Nom du propriétaire *</label>
+						<label for="nom-proprietaire"
+							>Nom du propriétaire<EtoileRequis vide={!nom_proprietaire} /></label
+						>
 						<input
 							id="nom-proprietaire"
 							type="text"
@@ -234,7 +237,7 @@
 
 				{#if showBatiment}
 					<div class="field">
-						<label for="batiment">Bâtiment *</label>
+						<label for="batiment">Bâtiment<EtoileRequis vide={!batiment_id} /></label>
 						<select id="batiment" bind:value={batiment_id} required>
 							<option value={null}>-- Sélectionnez votre bâtiment --</option>
 							{#each batiments as b (b.id)}

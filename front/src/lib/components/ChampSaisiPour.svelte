@@ -32,7 +32,9 @@
 	export let residents: { id: number; prenom: string; nom: string; email: string }[] = [];
 </script>
 
-<SectionFormulaire titre="Saisi pour" requis>
+<!--  `rempli` : « En mon nom » EST une réponse — la section n'attend rien
+      de plus, donc son astérisque n'est pas rouge (#1121). -->
+<SectionFormulaire titre="Saisi pour" requis rempli={mode !== null && mode !== undefined}>
 	<div class="field champ-large saisi-pour-section">
 		<div class="saisi-pour-tabs">
 			<button

@@ -67,6 +67,7 @@
 	import RechercheLocataire from '$lib/components/RechercheLocataire.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	/** Un lot proposé à la sélection. `occupe` grise la ligne et la verrouille. */
 	export let lots: { id: number; libelle: string; occupe: boolean }[] = [];
@@ -239,7 +240,7 @@
 		</div>
 		{#if avecDateEntree}
 			<div class="field">
-				<label for="{uid}-entree">Date d'entrée *</label>
+				<label for="{uid}-entree">Date d'entrée<EtoileRequis vide={!bail.date_entree} /></label>
 				<input id="{uid}-entree" type="date" bind:value={bail.date_entree} />
 			</div>
 		{/if}

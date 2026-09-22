@@ -25,6 +25,7 @@
   formulaire pour que l'assistant puisse le retravailler aussi.
 -->
 <script lang="ts">
+	import { richEmpty } from '$lib/publications';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import AssistantDescription from '$lib/components/AssistantDescription.svelte';
@@ -61,7 +62,13 @@
 	export let assisteIA = false;
 </script>
 
-<SectionFormulaire {premiere} {titre} {requis} idTitre="{idPrefixe}-{idChamp}-titre">
+<SectionFormulaire
+	{premiere}
+	{titre}
+	{requis}
+	rempli={!richEmpty(valeur)}
+	idTitre="{idPrefixe}-{idChamp}-titre"
+>
 	<div class="field champ-large">
 		<RichEditor
 			id="{idPrefixe}-{idChamp}"

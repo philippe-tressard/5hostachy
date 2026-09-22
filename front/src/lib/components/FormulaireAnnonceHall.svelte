@@ -195,7 +195,7 @@
 <!--  1. Titre. `SectionFormulaire` porte le filet discret qui sépare les
       sections — celui de Tickets, demandé à l'écran le 18/08/2026. La section
       n'ayant qu'UN champ, son titre EST le libellé du champ (R3). -->
-<SectionFormulaire premiere titre="Titre" requis pour="ah-titre">
+<SectionFormulaire premiere titre="Titre" requis rempli={!!titre?.trim()} pour="ah-titre">
 	<div class="field champ-large">
 		<input
 			id="ah-titre"
@@ -254,7 +254,7 @@
 </SectionFormulaire>
 
 <!--  6. Description — ici, le message affiché. -->
-<SectionFormulaire titre="Message" requis idTitre="ah-message-titre">
+<SectionFormulaire titre="Message" requis rempli={!!message?.trim()} idTitre="ah-message-titre">
 	<RichEditor bind:value={message} placeholder="Rédigez l'annonce telle qu'elle sera affichée…" />
 </SectionFormulaire>
 

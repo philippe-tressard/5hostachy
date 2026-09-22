@@ -27,8 +27,15 @@
   symptôme visible avant le prochain envoi d'e-mail.
 -->
 <script lang="ts">
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	/** Le libellé du champ — « Mot de passe SMTP », « Clé d'API »… */
 	export let libelle: string;
+
+	/**  Ce secret est-il OBLIGATOIRE ? L'astérisque était écrite dans le
+	 *   libellé par l'appelant — donc jamais rouge, jamais collée (#1121). */
+	export let requis = false;
+	/** Le secret est-il posé ou saisi ? */
+	export let rempli = false;
 	/** La saisie. Vide = on ne touche pas au secret enregistré. */
 	export let valeur = '';
 	/** Un secret est-il DÉJÀ enregistré côté serveur ? */
@@ -44,7 +51,7 @@
 </script>
 
 <label class="field">
-	{libelle}
+	{libelle}{#if requis}<EtoileRequis vide={!rempli} />{/if}
 	<div class="champ-secret">
 		<input
 			type="password"

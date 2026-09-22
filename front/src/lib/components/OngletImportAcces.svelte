@@ -25,6 +25,7 @@
 	import { STATUT_BADGE, STATUT_LABEL, type ModeleImportAcces } from '$lib/imports-acces';
 	import BarreImport from '$lib/components/BarreImport.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	export let modele: ModeleImportAcces;
 
@@ -339,7 +340,9 @@
 									</h3>
 									<div class="imp-edit-grid">
 										<div class="field">
-											<label for="imp-proprio">Propriétaire *</label>
+											<label for="imp-proprio"
+												>Propriétaire<EtoileRequis vide={!editProprio} /></label
+											>
 											<select id="imp-proprio" bind:value={editProprio}>
 												<option value="">— Non lié —</option>
 												{#each utilisateurs as u (u.id)}

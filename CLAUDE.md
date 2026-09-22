@@ -301,9 +301,11 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       « Affaire ». Il y en avait **20** avant #1107 (`npm run lint:vocabulaire-ecran`)
 - [ ] Périmètre : masqué s'il est celui par défaut (`estPerimetreParDefaut`)
 - [ ] Archiver (pas supprimer) sur la vue principale
-- [ ] Champs requis : label + `*` **collé**, et l'astérisque est **rouge tant
-      que le champ est vide** (décidé le 21/09/2026 ; implémentation #1121 —
-      le code porte encore ` *` partout)
+- [ ] Champs requis : `<EtoileRequis vide={!champ} />` — jamais une astérisque
+      tapée. Elle est **collée** au libellé et **rouge tant que le champ est
+      vide** : c'est son état, pas une décoration (#1121, 22/09/2026). Les
+      libellés de champ sont en MAJUSCULES par le style (`champs.css`), comme
+      les intitulés de section — jamais tapées (`npm run lint:champs`)
 - [ ] Tout champ libellé dans un `.field` — jamais une nomenclature locale
       (`npm run lint:champs` ; il y en avait **six** avant #413)
 

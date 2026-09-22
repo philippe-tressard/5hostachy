@@ -29,6 +29,7 @@
   garde les appelants à une ligne, sans état d'ouverture ni gestionnaire.
 -->
 <script lang="ts">
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import Modale from './Modale.svelte';
 
 	export let titre: string;
@@ -59,7 +60,9 @@
 <Modale {titre} on:fermer={() => onReponse(null)}>
 	<p class="saisie-message">{message}</p>
 	<div class="field">
-		<label for="saisie-texte">{libelle}{requis ? ' *' : ''}</label>
+		<label for="saisie-texte"
+			>{libelle}{#if requis}<EtoileRequis vide={!valeur} />{/if}</label
+		>
 		<!--  Ctrl/⌘+Entrée valide depuis la zone : Entrée seule y fait un retour à
 		      la ligne, et c'est la convention des zones multilignes du site. -->
 		<!-- svelte-ignore a11y-autofocus -->

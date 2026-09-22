@@ -35,10 +35,21 @@
 	gap: 0.4rem;
 	margin-bottom: 1rem;
 }
+/*  🔴 MAJUSCULES depuis le 22/09/2026, demandé à l'écran : *« Titre est en
+    minuscule »*, alors que l'intitulé de section juste au-dessus était en
+    capitales. Deux libellés voisins dans le même formulaire suivaient deux
+    règles, et rien ne le disait.
+
+    ⚠️ La casse est POSÉE PAR LE STYLE, jamais tapée : `TITRE` écrit en dur
+    serait épelé lettre à lettre par certains lecteurs d'écran, et le jour où
+    la règle change il faudrait rouvrir chaque écran. Même geste que
+    `.section-titre`, qui le fait depuis toujours. */
 .field label {
 	font-size: 0.875rem;
 	font-weight: 500;
 	color: var(--color-text);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
 }
 /*  Le libellé d'un GROUPE de contrôles — pastilles, cases à cocher, boutons
     radio, éditeur riche. Un `<label>` ne sait pas nommer un groupe : posé

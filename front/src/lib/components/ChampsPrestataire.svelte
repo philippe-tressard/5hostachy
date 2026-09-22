@@ -19,6 +19,7 @@
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { PRESTATAIRE } from '$lib/entites/prestataire';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
@@ -46,7 +47,7 @@
       sur les dix autres écrans (12/09/2026). Voir `ChampsContrat`. -->
 <SectionFormulaire premiere>
 	<div class="field champ-large">
-		<label for={idNom}>Nom *</label>
+		<label for={idNom}>Nom<EtoileRequis vide={!prestForm.nom} /></label>
 		<input id={idNom} bind:value={prestForm.nom} required />
 	</div>
 </SectionFormulaire>
@@ -73,7 +74,7 @@
 				avecDetail
 			/>
 			<label class="field"
-				>Spécialité *
+				>Spécialité<EtoileRequis vide={!prestForm.specialite} />
 				<select bind:value={prestForm.specialite} required>
 					<option value="">— Sélectionner —</option>
 					{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}

@@ -51,6 +51,7 @@
 -->
 <script lang="ts">
 	import Icon from './Icon.svelte';
+	import EtoileRequis from './EtoileRequis.svelte';
 
 	/** Intitulé de la section — ex. « Diffusion ». Vide : aucun titre, mais la
 	    séparation reste, ce qui sert aux groupes évidents (le titre d'un objet). */
@@ -67,6 +68,20 @@
 
 	/** Ajoute l'astérisque des champs requis au titre. */
 	export let requis = false;
+
+	/**
+	 *  Le champ de cette section est-il RENSEIGNÉ ? (#1121, 22/09/2026)
+	 *
+	 *  🔴 L'astérisque est rouge tant que le champ est vide : c'est l'état du
+	 *  champ, plus une décoration. La section ne peut pas le deviner — « vide »
+	 *  n'a pas le même sens pour un texte, une liste ou une date —, donc
+	 *  l'appelant le dit.
+	 *
+	 *  ⚠️ Non renseigné **par défaut**, et c'est le choix prudent : une section
+	 *  obligatoire dont personne ne dit l'état s'affiche comme un travail qui
+	 *  reste à faire, jamais comme un travail fait.
+	 */
+	export let rempli = false;
 
 	/** État résumé, à droite du titre — « Copropriété entière », « Tous les
 	    résidents ». On lit ce qui est retenu sans dépiler les pastilles
@@ -134,7 +149,9 @@
 			on:click={() => (ouverteParLUtilisateur = true)}
 		>
 			<span class="section-titre section-titre-plie">
-				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}&nbsp;*{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}<EtoileRequis
+						vide={!rempli}
+					/>{/if}
 			</span>
 			<span class="section-resume">{resume || badge}</span>
 			<svg
@@ -152,14 +169,16 @@
 	{#if titre && ouverte}
 		{#if pour}
 			<label class="section-titre" for={pour} id={idTitre || undefined}>
-				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}
-					*{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}<EtoileRequis
+						vide={!rempli}
+					/>{/if}
 				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
 			</label>
 		{:else}
 			<h4 class="section-titre" id={idTitre || undefined}>
-				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}
-					*{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}<EtoileRequis
+						vide={!rempli}
+					/>{/if}
 				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
 			</h4>
 		{/if}

@@ -37,6 +37,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	//  L'API des sondages ne rend pas de type dédié : la page recharge sa liste.
 	const dispatch = createEventDispatcher<{ cree: unknown; modifie: unknown; annule: void }>();
@@ -208,7 +209,7 @@
 		      libellé (`titreEcran: 'Question'`). -->
 		<SectionFormulaire premiere>
 			<div class="field champ-large">
-				<label for="sondage-question">Question *</label>
+				<label for="sondage-question">Question<EtoileRequis vide={!question} /></label>
 				<input id="sondage-question" bind:value={question} required />
 			</div>
 		</SectionFormulaire>

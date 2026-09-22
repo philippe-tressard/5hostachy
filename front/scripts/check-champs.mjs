@@ -41,7 +41,7 @@
  * dérogations à la pelle — donc un contrôle qu'on désarme (`standards/04`).
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -388,6 +388,44 @@ const optMortes = Object.keys(OPTIONNEL_LEGITIME).filter((f) => !optionnelsServi
 if (optMortes.length) {
 	console.error('✗ « (optionnel) » déclaré légitime et absent — retirer la ligne :\n');
 	for (const f of optMortes) console.error(`  • ${f}`);
+	process.exit(1);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  L'ASTÉRISQUE DES CHAMPS REQUIS NE S'ÉCRIT PAS À LA MAIN (#1121, 22/09/2026)
+// ════════════════════════════════════════════════════════════════════════════
+//
+//  🔴 La règle, demandée à l'écran : l'astérisque est **collée** au libellé, et
+//  **rouge tant que le champ est vide** — elle cesse d'être une décoration pour
+//  devenir l'état du champ.
+//
+//  Un caractère ne sait pas si le champ est vide. Elle était écrite trente-cinq
+//  fois — vingt-six `<label>Titre *</label>` en clair et cinq composants qui
+//  calculaient `{requis ? ' *' : ''}` —, et aucun de ces points ne connaissait
+//  la valeur. C'est `EtoileRequis` qui la reçoit, et lui seul.
+//
+//  ⚠️ Ce qui est refusé : une astérisque **précédée d'un espace** juste avant
+//  une fin de libellé. Pas toutes les astérisques — une note de bas de tableau,
+//  un motif de recherche, une multiplication en gardent le droit.
+const ETOILES = [];
+for (const chemin of composants(RACINE)) {
+	const relatif = relative(RACINE, chemin).split(sep).join('/');
+	if (relatif.endsWith('EtoileRequis.svelte')) continue;
+	const source = sansCommentaires(readFileSync(chemin, 'utf8'));
+	source.split('\n').forEach((ligne, i) => {
+		if (/ \*<\/(label|span)>/.test(ligne) || /\{requis \? ' \*' : ''\}/.test(ligne)) {
+			ETOILES.push(`src/${relatif}:${i + 1}  ${ligne.trim().slice(0, 70)}`);
+		}
+	});
+}
+if (ETOILES.length > 0) {
+	console.error(`\n✗ ${ETOILES.length} astérisque(s) de champ requis écrite(s) à la main :\n`);
+	for (const e of ETOILES) console.error(`  ${e}`);
+	console.error(
+		'\n  Elle doit être COLLÉE au libellé et ROUGE tant que le champ est vide —' +
+			"\n  ce qu'un caractère dans une chaîne ne saura jamais faire." +
+			'\n\n  → <label for="x">Titre<EtoileRequis vide={!titre} /></label>\n',
+	);
 	process.exit(1);
 }
 

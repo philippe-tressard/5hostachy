@@ -33,6 +33,7 @@
 		type ResidentProposable,
 	} from '$lib/saisi-pour';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	const dispatch = createEventDispatcher<{ annule: void }>();
 
@@ -220,7 +221,7 @@
 			<!--  1. Titre. -->
 			<SectionFormulaire premiere>
 				<div class="field champ-large">
-					<label for="ev-titre">Titre *</label>
+					<label for="ev-titre">Titre<EtoileRequis vide={!form.titre} /></label>
 					<input id="ev-titre" bind:value={form.titre} required />
 				</div>
 			</SectionFormulaire>
@@ -236,7 +237,7 @@
 							</select>
 						</div>
 						<div class="field">
-							<label for="ev-debut">Date de début *</label>
+							<label for="ev-debut">Date de début<EtoileRequis vide={!form.debut} /></label>
 							<input id="ev-debut" type="date" bind:value={form.debut} required />
 						</div>
 						<div class="field">
