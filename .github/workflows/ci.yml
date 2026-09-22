@@ -1749,6 +1749,20 @@ jobs:
         working-directory: front
         run: npm run lint:intitules-section
 
+      # ──────────────────────────────────────────────────────────────────────
+      # Une prop de section lit LA section qu'elle active (#1095, 22/09/2026)
+      #
+      # « Au nom de » (10) et « Mise en avant » (11) étaient conditionnées à
+      # « Nature » (2) — reliquat de l'ancienne section « Champs spécifiques ».
+      # Leur déclaration n'était donc lue par personne.
+      - name: Chaque prop de section lit sa propre section
+        working-directory: front
+        run: npm run lint:section-lue
+
+      - name: Le contrôle des sections lues s'éprouve lui-même
+        working-directory: front
+        run: node scripts/check-section-lue.mjs --selftest
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #

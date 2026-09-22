@@ -312,7 +312,7 @@
 				avecSaisiPour
 				{residentsSaisiPour}
 				bind:saisiPour
-				avecOptions={sectionPresente(EVENEMENT, etat, 'diffusion')}
+				avecOptions={sectionPresente(EVENEMENT, etat, 'mise_en_avant')}
 				objet="événement"
 				optionsRendues={['epingle', 'brouillon']}
 				dejaEpingle={epingleInitial}

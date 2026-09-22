@@ -383,7 +383,7 @@
 				avecSaisiPour
 				{residentsSaisiPour}
 				bind:saisiPour
-				avecOptions={sectionPresente(PUBLICATION, etat, 'nature')}
+				avecOptions={sectionPresente(PUBLICATION, etat, 'mise_en_avant')}
 				dejaEpingle={epingleInitial}
 				bind:epingle
 				bind:urgente

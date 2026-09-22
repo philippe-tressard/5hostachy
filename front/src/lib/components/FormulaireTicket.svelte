@@ -430,6 +430,10 @@
 		      ⚠️ Les motifs NE SE RECOPIENT PAS : ce commentaire les listait, et
 		      il avait divergé — il annonçait encore Photos en motif `api`, soldé
 		      le 18/08/2026. Une copie d'une source unique est une source de plus. -->
+		<!--  Chaque prop lit SA section : « Au nom de » (10) et « Mise en avant »
+		      (11) étaient conditionnées à « Nature » (2), reliquat de l'ancienne
+		      section « Champs spécifiques » qui portait les trois. Leur
+		      déclaration n'était donc pas lue (#1095). -->
 		<ChampsCommuns
 			entite={TICKET}
 			bind:refDiffusion
@@ -437,10 +441,10 @@
 			envoiEnCours={loading}
 			on:envoyer={() => void submit()}
 			idPrefixe="ticket"
-			avecSaisiPour={$isCS && sectionPresente(TICKET, etat, 'nature')}
+			avecSaisiPour={$isCS && sectionPresente(TICKET, etat, 'au_nom_de')}
 			residentsSaisiPour={usersActifs}
 			bind:saisiPour
-			avecOptions={sectionPresente(TICKET, etat, 'nature')}
+			avecOptions={sectionPresente(TICKET, etat, 'mise_en_avant')}
 			objet="ticket"
 			optionsRendues={$isCS ? OPTIONS_TICKET : ['urgente']}
 			confidentielAcquis={TICKET_CONFIDENTIEL_ACQUIS}
