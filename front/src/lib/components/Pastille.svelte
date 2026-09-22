@@ -37,6 +37,20 @@
 	/** Pastille retenue — fond plein. */
 	export let active = false;
 
+	/**  Un repère de CATÉGORIE, porté par le bord gauche (22/09/2026, #1146).
+	 *
+	 *   🔴 Il ne touche ni au libellé ni à l'état retenu : c'est tout l'intérêt
+	 *   d'un liseré sur un emoji. Il survit au fond bleu de la pastille active,
+	 *   là où l'emoji s'y noyait.
+	 *
+	 *   ⚠️ Il coexiste avec `privatif`, qui habille DÉJÀ la bordure (pointillés).
+	 *   Une catégorie du carnet dans un périmètre privatif est un cas réel : les
+	 *   deux règles portent sur des côtés différents et ne se contredisent pas. */
+	export let marquee = false;
+	/**  Ce qu'un lecteur d'écran annonce du repère — OBLIGATOIRE avec `marquee` :
+	 *   un liseré n'a aucun équivalent parlé. */
+	export let marqueAide = '';
+
 	/** Variante réduite, pour un second niveau de précision. */
 	export let petite = false;
 
@@ -109,6 +123,7 @@
 	<label
 		class="pastille"
 		class:active
+		class:marquee
 		class:petite
 		class:privatif
 		class:avec-detail={$$slots.detail}
@@ -132,6 +147,7 @@
 		type="button"
 		class="pastille"
 		class:active
+		class:marquee
 		class:petite
 		class:privatif
 		class:avec-detail={$$slots.detail}
@@ -143,6 +159,7 @@
 			{#if $$slots.detail}<span class="pastille-detail"><slot name="detail" /></span>{/if}
 		</span>
 		{#if chevron}<span class="pastille-chevron" aria-hidden="true">›</span>{/if}
+		{#if marquee && marqueAide}<span class="sr-only"> — {marqueAide}</span>{/if}
 	</button>
 {/if}
 
@@ -164,6 +181,27 @@
 	/*  PRIVATIF : un contour discontinu au repos.
 	    Pas de couleur — elle est prise par l'état retenu — ni de symbole —
 	    l'icône du nœud l'occupe déjà. */
+	/*  🔴 LE LISERÉ DU CARNET D'ENTRETIEN (#1146, 22/09/2026).
+
+	    Un bord gauche épais en Or Croissy, et les coins de ce côté redeviennent
+	    droits : un liseré de 4 px sur un rayon de 999 px se lirait comme une
+	    tache, pas comme un trait (`standards/11` : pas de coin arrondi sur une
+	    bordure d'un seul côté).
+
+	    ⚠️ Il tient sur les DEUX états — fond blanc et fond bleu — et c'est
+	    tout l'intérêt : l'emoji 📒 qu'il remplace disparaissait sur la pastille
+	    retenue, ce qui est le moment où le repère compte le plus.
+
+	    ⚠️ Il coexiste avec `privatif`, qui habille la bordure en pointillés :
+	    les deux règles portent sur des côtés différents. Une catégorie du carnet
+	    dans un périmètre privatif est un cas réel. */
+	.pastille.marquee {
+		border-left: 4px solid var(--color-accent);
+		border-top-left-radius: 0;
+		border-bottom-left-radius: 0;
+		padding-left: 0.55rem;
+	}
+
 	.pastille.privatif {
 		border-style: dashed;
 		border-width: 1.5px;

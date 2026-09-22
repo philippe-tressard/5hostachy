@@ -1106,3 +1106,26 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	transition: opacity 0.15s;
 	margin-bottom: 0.3rem;
 }
+
+/*  🔴 LE TEXTE RÉSERVÉ AUX LECTEURS D'ÉCRAN — une seule définition.
+
+    Il vivait dans `EtoileRequis`, où Svelte le scopait au fichier : le second
+    composant qui en a eu besoin (`Pastille`, pour annoncer le liseré du carnet
+    d'entretien qui remplace un emoji) aurait affiché son texte en clair, sans
+    rien casser ailleurs. Une règle d'accessibilité qui échoue en silence est
+    la pire des trois : personne ne la voit, et elle a l'air de marcher.
+
+    ⚠️ Elle ne se recopie plus dans un `<style>` de composant. Ce qui est
+    invisible à l'œil et lu par la voix est une décision de charte, pas de
+    fichier. */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
