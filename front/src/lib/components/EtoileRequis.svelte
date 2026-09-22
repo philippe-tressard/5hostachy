@@ -45,10 +45,18 @@
 	export let vide = false;
 </script>
 
-<span class="requis" class:requis--vide={vide}>
-	<span aria-hidden="true">*</span>
-	<span class="sr-only">obligatoire</span>
-</span>
+<!--  🔴 TOUT SUR UNE LIGNE, et ce n'est pas du style : un saut de ligne entre
+      deux éléments est un NŒUD DE TEXTE BLANC, que le navigateur rend comme un
+      espace. L'astérisque s'affichait donc « PÉRIMÈTRE * » alors que le code
+      l'écrivait collée — signalé à l'écran le 22/09/2026, capture à l'appui.
+
+      ⚠️ Et surtout PAS `inline-flex` pour s'en protéger : un conteneur flex
+      ignore bien les nœuds blancs, mais il met chaque enfant sur sa propre
+      ligne — le texte de rechange « obligatoire » se retrouvait alors annoncé
+      comme un bloc. Mesuré par le test de navigateur, pas deviné. -->
+<span class="requis" class:requis--vide={vide}
+	><span aria-hidden="true">*</span><span class="sr-only">obligatoire</span></span
+>
 
 <style>
 	/*  Collée au libellé : aucune marge à gauche, c'est la règle. */

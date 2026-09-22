@@ -149,9 +149,9 @@
 			on:click={() => (ouverteParLUtilisateur = true)}
 		>
 			<span class="section-titre section-titre-plie">
-				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}<EtoileRequis
-						vide={!rempli}
-					/>{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}<span class="section-titre-texte"
+					>{titre}{#if requis}<EtoileRequis vide={!rempli} />{/if}</span
+				>
 			</span>
 			<span class="section-resume">{resume || badge}</span>
 			<svg
@@ -169,16 +169,16 @@
 	{#if titre && ouverte}
 		{#if pour}
 			<label class="section-titre" for={pour} id={idTitre || undefined}>
-				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}<EtoileRequis
-						vide={!rempli}
-					/>{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}<span class="section-titre-texte"
+					>{titre}{#if requis}<EtoileRequis vide={!rempli} />{/if}</span
+				>
 				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
 			</label>
 		{:else}
 			<h4 class="section-titre" id={idTitre || undefined}>
-				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}<EtoileRequis
-						vide={!rempli}
-					/>{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}<span class="section-titre-texte"
+					>{titre}{#if requis}<EtoileRequis vide={!rempli} />{/if}</span
+				>
 				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
 			</h4>
 		{/if}
@@ -222,6 +222,20 @@
 		letter-spacing: 0.06em;
 		color: var(--color-text);
 	}
+	/*  🔴 L'astérisque appartient au TEXTE, pas à la rangée (22/09/2026).
+
+	    `.section-titre` est un conteneur flex avec `gap: .4rem` — l'écart qui
+	    sépare proprement l'icône du libellé. Un nœud de texte nu y est un enfant
+	    anonyme : l'astérisque, posée à côté de `{titre}`, recevait donc le même
+	    écart et s'affichait « PÉRIMÈTRE * ». Le code l'écrivait collée, et le
+	    composant la rendait collée : c'est la MISE EN PAGE qui les séparait.
+
+	    ⚠️ Signalé à l'écran, capture à l'appui, le lendemain de sa livraison.
+	    Aucune relecture de code ne pouvait le montrer — il fallait regarder. */
+	.section-titre-texte {
+		display: inline;
+	}
+
 	/*  Un `<label>` de section désigne un contrôle : il doit se cliquer. */
 	label.section-titre {
 		cursor: pointer;
