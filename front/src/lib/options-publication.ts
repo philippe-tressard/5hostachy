@@ -91,7 +91,17 @@ export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 		//  rien, et la phrase sans lui est plus courte et juste pour tous.
 		action: 'Visibilité réservée au conseil syndical',
 		etat: 'Conseil syndical',
-		aide: 'Seul le conseil syndical le voit ; aucun envoi n’est déclenché.',
+		//  🔴 « aucun envoi n'est déclenché » — RETIRÉ le 22/09/2026 (#1147).
+		//
+		//  C'était vrai de la case, et faux de ce que l'utilisateur vit : un ticket
+		//  notifie le conseil à sa création, quoi qu'on coche. Signalé à l'écran
+		//  comme une anomalie — *« sans Diffusion, envoie une diffusion au CS :
+		//  c'est anormal ! »* — alors que le comportement était juste. C'est le
+		//  texte qui avait produit le malentendu.
+		//
+		//  ⚠️ Le libellé ne PROMET plus rien sur les envois : il dit ce que la case
+		//  fait, et renvoie la question des courriels là où elle se règle.
+		aide: 'Seul le conseil syndical le voit. La notification du conseil à la création, elle, ne dépend pas de cette case.',
 	},
 	{
 		cle: 'confidentiel',

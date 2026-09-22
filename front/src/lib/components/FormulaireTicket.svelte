@@ -457,6 +457,7 @@
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecDescription={sectionPresente(TICKET, etat, 'description')}
+			avecNotificationCs
 			descriptionRequise
 			bind:description
 			{assistant}

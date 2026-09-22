@@ -84,6 +84,19 @@
 	/**  Motif interdisant le groupe WhatsApp — relayé tel quel, la règle vit
 	 *   dans `CanauxNotification` (voir sa documentation). */
 	export let whatsappInterdit = '';
+
+	/**  🔴 L'envoi que ce panneau NE COMMANDE PAS (#1147, 22/09/2026).
+	 *
+	 *   Une affaire notifie le conseil syndical à sa création, quelles que soient
+	 *   les cases ci-dessous. Rien ne le disait, et un envoi qu'aucune case ne
+	 *   montre est un envoi qu'on découvre dans sa boîte : signalé à l'écran
+	 *   comme une anomalie, alors que le comportement était voulu depuis le
+	 *   08/09/2026 (*« un conseiller qui n'ouvre pas le site ne voyait jamais
+	 *   passer un signalement »*).
+	 *
+	 *   ⚠️ Ce n'est pas une case : il n'y a rien à régler ici. Le destinataire,
+	 *   lui, le règle dans SON profil — c'est ce que la phrase dit. */
+	export let avecNotificationCs = false;
 	/** Rendu en version dense (fil d'évolution, devis). */
 	export let compact = false;
 
@@ -210,6 +223,13 @@
 					⚠️ Les fichiers ne sont pas envoyés via WhatsApp, uniquement le texte.
 				</p>
 			{/if}
+		{/if}
+
+		{#if avecNotificationCs}
+			<p class="aide sous-case">
+				ℹ️ Indépendamment de ces cases, le conseil syndical du périmètre est prévenu à la création —
+				chaque conseiller selon ce qu'il a réglé dans son profil.
+			</p>
 		{/if}
 
 		{#if avecEmailExterne}

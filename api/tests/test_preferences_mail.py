@@ -157,3 +157,42 @@ def test_le_site_emploie_exactement_les_memes_cles():
     #  Et les défauts, qui décident de ce que voit un compte neuf.
     assert re.search(rf"\[MON_BATIMENT\]:\s*{str(DEFAUTS[MON_BATIMENT]).lower()}", contenu)
     assert re.search(rf"\[AUTRES_BATIMENTS\]:\s*{str(DEFAUTS[AUTRES_BATIMENTS]).lower()}", contenu)
+
+
+def test_l_ecran_sait_dire_qu_un_reglage_est_HERITE():
+    """🔴 Le défaut est `True` : personne n'a « choisi » de recevoir (#1147).
+
+    Signalé à l'écran le 22/09/2026 : *« c'est le membre du CS nominativement qui
+    a choisi cette option dans son profil qui sera notifié »*. Or `mon_batiment_mail`
+    vaut `True` par défaut — un conseiller qui n'a jamais ouvert son profil reçoit
+    sans avoir rien décidé, et voit une case cochée qui lui prête ce choix.
+
+    Arbitré : le défaut reste, l'écran le DIT. `clesHeritees` est ce qui le
+    permet, et elle doit lire le JSON **brut** — `lire()` applique les défauts et
+    perd donc l'information.
+
+    ⚠️ Ce test tient l'EXISTENCE de la fonction, pas son contenu : sans elle,
+    l'écran retomberait sur les valeurs résolues et redirait « coché par vous »
+    de ce qui est hérité — en silence, comme avant.
+    """
+    source = RACINE / "front" / "src" / "lib" / "preferences.ts"
+    contenu = source.read_text(encoding="utf-8")
+
+    assert "export function clesHeritees(" in contenu, (
+        "`clesHeritees` a disparu de preferences.ts : l'écran du profil ne peut "
+        "plus distinguer un réglage hérité d'un choix, et il prêtera de nouveau "
+        "à l'utilisateur une décision qu'il n'a pas prise (#1147)."
+    )
+    #  Elle doit lire le brut, pas les valeurs déjà résolues : c'est toute la
+    #  différence entre « jamais réglé » et « réglé à vrai ».
+    assert "typeof lues[cle] !== 'boolean'" in contenu, (
+        "`clesHeritees` ne mesure plus l'ABSENCE de la clé dans le JSON brut : "
+        "une valeur résolue vaut toujours `true` ou `false`, donc rien ne "
+        "paraîtrait jamais hérité."
+    )
+
+    ecran = RACINE / "front" / "src" / "lib" / "components" / "PreferencesAffichageNotifs.svelte"
+    assert "heritees" in ecran.read_text(encoding="utf-8"), (
+        "l'écran des préférences ne reçoit plus l'héritage : la fonction existe "
+        "et personne ne l'écoute, ce qui est le cas le plus difficile à voir."
+    )
