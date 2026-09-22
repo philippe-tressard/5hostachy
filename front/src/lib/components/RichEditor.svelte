@@ -81,6 +81,7 @@
 			type="button"
 			class:active={editor?.isActive('bold')}
 			on:click={() => editor.chain().focus().toggleBold().run()}
+			aria-label="Gras"
 			title="Gras"
 		>
 			<b>B</b>
@@ -89,6 +90,7 @@
 			type="button"
 			class:active={editor?.isActive('italic')}
 			on:click={() => editor.chain().focus().toggleItalic().run()}
+			aria-label="Italique"
 			title="Italique"
 		>
 			<i>I</i>
@@ -97,6 +99,7 @@
 			type="button"
 			class:active={editor?.isActive('underline')}
 			on:click={() => editor.chain().focus().toggleUnderline().run()}
+			aria-label="Souligné"
 			title="Souligné"
 		>
 			<u>U</u>
@@ -106,6 +109,7 @@
 			type="button"
 			class:active={editor?.isActive('bulletList')}
 			on:click={() => editor.chain().focus().toggleBulletList().run()}
+			aria-label="Liste à puces"
 			title="Liste à puces"
 		>
 			≡
@@ -114,6 +118,7 @@
 			type="button"
 			class:active={editor?.isActive('orderedList')}
 			on:click={() => editor.chain().focus().toggleOrderedList().run()}
+			aria-label="Liste numérotée"
 			title="Liste numérotée"
 		>
 			1≡
@@ -123,16 +128,45 @@
 			type="button"
 			class:active={editor?.isActive('blockquote')}
 			on:click={() => editor.chain().focus().toggleBlockquote().run()}
+			aria-label="Citation"
 			title="Citation"
 		>
 			«»
 		</button>
-		<button type="button" on:click={() => editor.chain().focus().undo().run()} title="Annuler">
+		<button
+			aria-label="Annuler"
+			type="button"
+			on:click={() => editor.chain().focus().undo().run()}
+			title="Annuler"
+		>
 			↩
 		</button>
-		<button type="button" on:click={() => editor.chain().focus().redo().run()} title="Rétablir">
+		<button
+			aria-label="Rétablir"
+			type="button"
+			on:click={() => editor.chain().focus().redo().run()}
+			title="Rétablir"
+		>
 			↪
 		</button>
+		<!--  🔴 Ce qui n'appartient pas à la MISE EN FORME va à droite (22/09/2026).
+		      Demandé à l'écran : *« l'icône IA … ne peut pas être dans la boîte
+		      description sur la ligne d'icône Gras Italique (cadré à droite) ? »*
+
+		      Un SLOT, et non une prop : l'éditeur ne connaît pas l'assistant, et n'a
+		      pas à le connaître. Il offre une place ; ce qui s'y met regarde son
+		      appelant. Une prop `avecAssistant` ferait entrer une notion de plus
+		      dans un composant qui ne sait que mettre en forme du texte.
+
+		      ⚠️ Le séparateur ne s'affiche QUE si le slot est rempli
+		      (`$$slots.outils`) : un filet vertical seul en bout de barre annoncerait
+		      un groupe vide. -->
+		{#if $$slots.outils}
+			<div class="editeur-barre-fin">
+				<div class="sep"></div>
+				<slot name="outils" />
+			</div>
+		{/if}
 	</div>
 
 	<!-- Editor area -->
@@ -140,6 +174,18 @@
 </div>
 
 <style>
+	/*  Poussé à droite, et sur la même ligne que les boutons de mise en forme
+	    tant que la place le permet. `.editeur-barre` a `flex-wrap: wrap` : sur un
+	    téléphone, ce groupe passe à la ligne suivante plutôt que de comprimer les
+	    boutons — l'enroulement passe avant la compression (mémoire
+	    `flex_enroulement_avant_compression`). */
+	.editeur-barre-fin {
+		display: flex;
+		align-items: center;
+		gap: 0.15rem;
+		margin-left: auto;
+	}
+
 	.rich-content-editable {
 		padding: 0.55rem 0.75rem;
 		font-size: 0.9rem;
