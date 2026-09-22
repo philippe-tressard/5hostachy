@@ -32,6 +32,20 @@
   lit, et une migration appliquée ne se modifie jamais. La retirer est un geste
   à part — pas un effet de bord d'une correction d'écran.
 
+  ## 🔴 « Visible jusqu'au » a existé une demi-journée (22/09/2026)
+
+  Livré le matin en v2.11.0 pour la troisième famille d'actualités — « à durée de
+  vie choisie » —, retiré l'après-midi, arbitré à l'écran :
+
+  > « Visible jusqu'au ne doit pas être demandé à l'utilisateur. Cette date est
+  >   à enlever. Elle est calculée par l'appli. »
+
+  La péremption se déduit donc de `fin`, sinon `debut`, sinon jamais. Ce qui n'a
+  pas de date d'événement ne périme pas — et n'en a pas besoin : l'archivage
+  automatique à trente jours couvre ce cas depuis le 19/08/2026, pour les sept
+  objets du site. **Le champ faisait saisir ce que le produit savait déjà
+  décider**, ce qui est la définition même du champ en trop.
+
   ## Ce que la date dispense d'écrire
 
   Renseigner `debut` rend la **description facultative** : « Coupure d'eau —
@@ -53,18 +67,6 @@
 	export let debut = '';
 	export let fin = '';
 
-	/**  La fin de VALIDITÉ, qui n'est pas la fin de l'événement (#1093).
-	 *
-	 *   ⚠️ Réservée aux ACTUALITÉS, et c'est une décision : une affaire ne
-	 *   périme jamais, elle se clot. Une fuite d'eau ne cesse pas d'exister
-	 *   parce que personne n'a écrit depuis trois mois — l'équivalent y est un
-	 *   signalement au conseil, pas une disparition.
-	 *
-	 *   `type="date"` et non `datetime-local` : « visible jusqu'au 22 » désigne
-	 *   le jour entier, et la péremption tombe à son SOIR. */
-	export let avecValidite = false;
-	export let visibleJusquAu = '';
-
 	/** Repliée par défaut — la valeur vient de la déclaration (#1095). */
 	export let pliable = false;
 
@@ -72,13 +74,7 @@
 	 *
 	 *   ⚠️ Comparer à vide et non à « renseigné » : c'est la nuance qui a fait
 	 *   que rien ne pliait à la première écriture (21/09/2026). */
-	$: resume =
-		[
-			debut ? `à partir du ${fmtDate(debut)}` : '',
-			visibleJusquAu ? `visible jusqu'au ${fmtDate(visibleJusquAu)}` : '',
-		]
-			.filter(Boolean)
-			.join(' · ') || 'sans date';
+	$: resume = debut ? `à partir du ${fmtDate(debut)}` : 'sans date';
 </script>
 
 <SectionFormulaire
@@ -86,7 +82,7 @@
 	{premiere}
 	{pliable}
 	{resume}
-	ouvrirSiRenseignee={!!debut || !!fin || !!visibleJusquAu}
+	ouvrirSiRenseignee={!!debut || !!fin}
 	idTitre="{idPrefixe}-quand"
 >
 	<div class="quand-grille">
@@ -99,12 +95,6 @@
 			<input id="{idPrefixe}-fin" type="datetime-local" bind:value={fin} />
 		</div>
 	</div>
-	{#if avecValidite}
-		<div class="field">
-			<label for="{idPrefixe}-validite">Visible jusqu'au</label>
-			<input id="{idPrefixe}-validite" type="date" bind:value={visibleJusquAu} />
-		</div>
-	{/if}
 	<p class="quand-aide">
 		Une <strong>date de début</strong> fait paraître l'entrée au calendrier — et dispense d'écrire une
 		description.

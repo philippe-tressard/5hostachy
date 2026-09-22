@@ -25,10 +25,6 @@ class PublicationCreate(SaisiPourEntree, AssisteIAEntree):
     #  Section « Quand » (#1092) : une actualité datée paraît au calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
-    #  La fin de VALIDITÉ, qui n'est pas la fin de l'événement (#1093) — la
-    #  troisième famille, « à durée de vie choisie ». Les deux autres ne
-    #  saisissent rien : permanente, ou datée par `debut`/`fin`.
-    visible_jusqu_au: Optional[date] = None
     titre: str
     contenu: str
     perimetre: str = "résidence"
@@ -64,10 +60,6 @@ class PublicationUpdate(SaisiPourEntree, AssisteIACorrection):
     #  Section « Quand » (#1092) : une actualité datée paraît au calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
-    #  La fin de VALIDITÉ, qui n'est pas la fin de l'événement (#1093) — la
-    #  troisième famille, « à durée de vie choisie ». Les deux autres ne
-    #  saisissent rien : permanente, ou datée par `debut`/`fin`.
-    visible_jusqu_au: Optional[date] = None
     titre: Optional[str] = None
     contenu: Optional[str] = None
     epingle: Optional[bool] = None
@@ -154,7 +146,6 @@ class PublicationRead(SaisiPourSortie, AssisteIASortie):
     #  même trou, sur la même section, un champ plus loin.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
-    visible_jusqu_au: Optional[date] = None
     #  ⚠️ DÉRIVÉE, jamais stockée : `utils/archivage.perime_le` tranche, ici
     #  comme partout ailleurs. L'écran a besoin de la dire (« sort du fil
     #  le … ») sans refaire le calcul — c'est exactement ce que le ticket

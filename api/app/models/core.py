@@ -363,20 +363,6 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     #  ne consomme ouvrirait un champ d'écran sans effet (cadre #430).
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
-    #  🔴 La fin de VALIDITÉ, qui n'est pas la fin de l'événement (#1093).
-    #
-    #  Trois familles d'actualités, une seule saisie : permanente (rien),
-    #  datée (`debut`/`fin` suffisent), à durée de vie choisie (ce champ).
-    #  Dans deux cas sur trois, aucun champ ne s'affiche.
-    #
-    #  ⚠️ Une `date` et non un `datetime` : « visible jusqu'au 22 » désigne le
-    #  jour entier. Un `datetime` à minuit ferait disparaître l'information le
-    #  matin même du jour où elle est encore valable.
-    #
-    #  La péremption elle-même ne se stocke JAMAIS : elle se dérive à la
-    #  lecture (`utils/archivage.perime_le`), sinon un report d'événement
-    #  laisserait derrière lui une date qui dit encore jeudi.
-    visible_jusqu_au: Optional[date] = None
     mis_a_jour_le: Optional[datetime] = None
     photos_urls: Optional[str] = None  # JSON array — même convention que Ticket/Evenement
     perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave|résidents
@@ -402,6 +388,11 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     @property
     def perime_le(self):
         """La date où cette actualité cesse d'être utile — **dérivée** (#1093).
+
+        Elle ne se SAISIT pas : arbitré à l'écran le 22/09/2026, *« cette date
+        est à enlever, elle est calculée par l'appli »*. Ce qui n'a pas de date
+        d'événement ne périme pas, et n'en a pas besoin : l'archivage à trente
+        jours couvre déjà ce cas pour les sept objets du site.
 
         Elle APPELLE la règle, elle ne la redérive pas : `utils/archivage`
         tranche pour le fil, le calendrier, les archives et cet objet. C'est
