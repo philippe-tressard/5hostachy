@@ -1154,7 +1154,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	align-items: center;
 	gap: 0.6rem;
 	width: 100%;
-	min-height: 44px;
 	box-sizing: border-box;
 	padding: 0;
 	border: none;
@@ -1163,4 +1162,27 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	text-align: left;
 	cursor: pointer;
 	color: var(--color-text);
+}
+
+/*  🔴 LES 44 PX NE VALENT QU'AU DOIGT (22/09/2026, second signalement).
+
+    Demandé à l'écran : *« faire le même espacement d'une section pliée que celle
+    d'une section obligatoire »*, captures à l'appui. Diviser le padding n'y
+    avait rien fait — ce n'était pas lui : `min-height: 44px` appliqué partout
+    centrait le titre dans 44 px, et cet air-là ne se retire pas en rognant des
+    marges. La ligne pliée était donc structurellement plus haute que la ligne
+    d'une section ouverte, quoi qu'on fasse autour.
+
+    La règle de cible tactile est conditionnée à `pointer: coarse` — c'est déjà
+    le cas de `.btn-icon`, et `e2e/cible-tactile` vérifie les DEUX sens : au
+    moins 44 px au doigt, moins de 44 au bureau, faute de quoi la densité des
+    rangees se perdrait pour tout le monde.
+
+    ⚠️ Au doigt, la ligne reste donc plus haute qu'une section ouverte. C'est
+    assumé : c'est là que le geste existe, et rater sa ligne ne fait rien — pas
+    d'erreur, pas de retour, l'utilisateur conclut que la section ne s'ouvre pas. */
+@media (pointer: coarse) {
+	.section-pliee {
+		min-height: 44px;
+	}
 }

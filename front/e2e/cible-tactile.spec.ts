@@ -98,11 +98,34 @@ async function mesurerSectionPliee(page: import('@playwright/test').Page) {
 	return boite!;
 }
 
-test('une section pliée reste atteignable au doigt', async ({ page }) => {
+test('une section pliée reste atteignable au doigt', async ({ page }, info) => {
+	test.skip(info.project.name !== 'mobile', 'la règle ne vise que `pointer: coarse`');
 	const boite = await mesurerSectionPliee(page);
 	expect(
 		boite.height,
 		'la ligne d’une section pliée est passée sous la cible tactile : elle se lit, ' +
 			'mais elle ne s’ouvre plus au pouce',
 	).toBeGreaterThanOrEqual(44);
+});
+
+/**
+ *  🔴 Le pendant, et il vient d'un signalement (22/09/2026).
+ *
+ *  Les 44 px s'appliquaient à TOUS les pointeurs : la ligne pliée était donc
+ *  structurellement plus haute que la ligne d'une section ouverte, et l'écart
+ *  d'espacement se voyait — *« faire le même espacement d'une section pliée que
+ *  celle d'une section obligatoire »*. Rogner les marges n'y pouvait rien : l'air
+ *  venait du centrage dans 44 px, pas d'un padding.
+ *
+ *  ⚠️ Sans ce second cas, remettre la règle pour tout le monde repasserait au
+ *  vert et rendrait la densité au bureau à son défaut de départ.
+ */
+test('à la souris, une section pliée a la hauteur d’une ligne', async ({ page }, info) => {
+	test.skip(info.project.name !== 'bureau', 'le pendant : rien ne change au pointeur fin');
+	const boite = await mesurerSectionPliee(page);
+	expect(
+		boite.height,
+		'la règle tactile déborde sur le bureau : la ligne pliée reste plus haute ' +
+			'qu’une section ouverte, et l’espacement paraît double',
+	).toBeLessThan(44);
 });

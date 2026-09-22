@@ -92,6 +92,19 @@ class PatchImportBody(BaseModel):
     refuse_par_locataire: bool | None = None
     notes_admin: str | None = None
 
+    #  🔴 Les NOMS venus du fichier du syndic, corrigeables (#1152, 22/09/2026).
+    #
+    #  Demandé à l'écran : *« quand il y a une faute d'orthographe le
+    #  rapprochement vigik et TC est impossible »*. `auto_match` compare ces
+    #  chaînes aux comptes inscrits ; une lettre de travers, et la ligne reste
+    #  « en attente » sans que rien ne dise pourquoi.
+    #
+    #  ⚠️ On corrige le TEXTE IMPORTÉ, pas la fiche du copropriétaire — arbitré
+    #  le même jour. Une faute dans le fichier du syndic ne doit pas obliger à
+    #  retoucher un compte, qui sert à l'annuaire, aux courriels et aux affiches.
+    nom_proprietaire: str | None = None
+    nom_locataire: str | None = None
+
 
 def auto_match(
     type_import: TypeAcces,
@@ -187,6 +200,22 @@ def patch(
             imp.chez_locataire = False  # refus → retour chez le propriétaire
     if body.notes_admin is not None:
         imp.notes_admin = body.notes_admin
+
+    #  🔴 Les noms importés (#1152). `strip()` d'abord : un nom collé à un
+    #  espace insécable n'appariera pas davantage que la faute qu'on corrige.
+    if body.nom_proprietaire is not None:
+        #  ⚠️ Un nom VIDE est refusé en silence plutôt qu'accepté : la colonne
+        #  est obligatoire au modèle, et une ligne d'import sans nom n'est plus
+        #  rattachable à personne — elle disparaîtrait des recherches sans que
+        #  rien ne le dise. Le formulaire n'offre pas de vider ce champ ; ceci
+        #  garde la porte fermée côté serveur.
+        propre = body.nom_proprietaire.strip()
+        if propre:
+            imp.nom_proprietaire = propre
+    if body.nom_locataire is not None:
+        #  Celui-ci PEUT se vider : une ligne sans locataire est un cas normal
+        #  (le propriétaire occupe son lot), et `None` le dit mieux que « ».
+        imp.nom_locataire = body.nom_locataire.strip() or None
 
     objet_id = getattr(imp, type_import.colonne_import)
     if imp.statut == StatutImport.resolu and objet_id:

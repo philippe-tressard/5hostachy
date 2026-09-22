@@ -78,6 +78,18 @@
 
 	// ── Édition en ligne ───────────────────────────────────────────────────────
 	let editId: number | null = null;
+	//  🔴 Les NOMS venus du fichier du syndic (#1152, 22/09/2026).
+	//
+	//  Demandé à l'écran : *« quand il y a une faute d'orthographe le rapprochement
+	//  vigik et TC est impossible »*. C'est sur ces chaînes que l'appariement
+	//  automatique travaille — une lettre de travers, et la ligne reste « en
+	//  attente » sans que rien ne dise pourquoi.
+	//
+	//  ⚠️ On corrige le TEXTE IMPORTÉ, pas la fiche du copropriétaire : une faute
+	//  du syndic ne doit pas obliger à retoucher un compte, qui sert à l'annuaire,
+	//  aux courriels et aux affiches.
+	let editNomProprio = '';
+	let editNomLoc = '';
 	let editProprio = '';
 	let editLoc = '';
 	let editLot = '';
@@ -91,6 +103,8 @@
 
 	function ouvrirEdition(imp: any) {
 		editId = imp.id;
+		editNomProprio = imp.nom_proprietaire ?? '';
+		editNomLoc = imp.nom_locataire ?? '';
 		editProprio = String(imp.user_proprietaire_id ?? '');
 		editLoc = String(imp.user_locataire_id ?? '');
 		editLot = String(imp.lot_id ?? '');
@@ -110,6 +124,8 @@
 		enregistrement = true;
 		try {
 			await modele.api.patch(editId, {
+				nom_proprietaire: editNomProprio,
+				nom_locataire: editNomLoc,
 				user_proprietaire_id: editProprio ? Number(editProprio) : null,
 				user_locataire_id: editLoc ? Number(editLoc) : null,
 				lot_id: editLot ? Number(editLot) : null,
@@ -339,6 +355,23 @@
 										Lier : <em>{imp.nom_proprietaire}</em>
 									</h3>
 									<div class="imp-edit-grid">
+										<!--  🔴 Le NOM du fichier, corrigeable — c'est lui que l'appariement
+										      lit. Il vient AVANT le choix du compte : on corrige la faute,
+										      puis on relance l'appariement, et le compte apparaît tout
+										      seul. L'ordre inverse ferait chercher à la main ce que le
+										      produit sait retrouver (#1152). -->
+										<div class="field">
+											<label for="imp-nom-proprio"
+												>Nom du propriétaire (fichier)<EtoileRequis
+													vide={!editNomProprio.trim()}
+												/></label
+											>
+											<input id="imp-nom-proprio" type="text" bind:value={editNomProprio} />
+										</div>
+										<div class="field">
+											<label for="imp-nom-loc">Nom du locataire (fichier)</label>
+											<input id="imp-nom-loc" type="text" bind:value={editNomLoc} />
+										</div>
 										<div class="field">
 											<label for="imp-proprio"
 												>Propriétaire<EtoileRequis vide={!editProprio} /></label
@@ -363,9 +396,24 @@
 											<label for="imp-lot">Lot</label>
 											<select id="imp-lot" bind:value={editLot}>
 												<option value="">— Auto / Inconnu —</option>
+												<!--  🔴 Le PORTEUR dans le libellé (#1154, 22/09/2026).
+
+												      Signalé à l'écran : *« je ne trouve pas de lots pour
+												      CHAUDHRY »*. La liste n'est pas filtrée — elle porte tous
+												      les lots — mais elle n'affichait que des numéros. La
+												      question posée ici est *« quel lot est à cette personne ? »*,
+												      et elle répondait *« voici tous les numéros »* : sans
+												      connaître le numéro par cœur, on conclut qu'il n'y en a pas.
+
+												      ⚠️ Le nom vient de `l.proprietaire_nom` quand il existe :
+												      un lot sans propriétaire enregistré est un cas réel, et
+												      afficher « — » vaut mieux que de laisser croire à un
+												      chargement raté. -->
 												{#each lots as l (l.id)}
 													<option value={String(l.id)}
-														>Bât.{l.batiment_nom ?? l.batiment_id} — {l.numero} ({l.type})</option
+														>Bât.{l.batiment_nom ?? l.batiment_id} — {l.numero} ({l.type}){l.proprietaire_nom
+															? ` · ${l.proprietaire_nom}`
+															: ''}</option
 													>
 												{/each}
 											</select>
