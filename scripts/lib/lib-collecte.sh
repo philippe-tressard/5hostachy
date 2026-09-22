@@ -110,6 +110,12 @@ echo "deploiement=$DEP"
 BIG=""; for l in /var/log/hostachy-*.log; do [ -f "$l" ] || continue; sz=$(( $(stat -c %s "$l")/1048576 )); [ "$sz" -ge '"$LOG_WARN_MB"' ] && BIG="$BIG $(basename $l):${sz}M"; done
 echo "biglogs=$BIG"
 echo "deploylog_owner=$(stat -c %U /var/log/hostachy-deploy.log 2>/dev/null || echo missing)"
+#  🔴 Ce que lit auto-deploy : le .env, et QUI peut le lire (C28, #1138).
+#  Le 22/09/2026 il est passe root:root a la bascule — plus de build sur le
+#  standby, et plus d alerte non plus, puisqu elle y cherche le SMTP.
+#  Un seul stat, trois champs : les separer ferait trois appels qui peuvent
+#  ne pas voir le meme fichier.
+echo "envdroits=$(stat -c %U:%G:%a $R/.env 2>/dev/null || echo :: )"
 #  Le DERNIER verdict de build d auto-deploy. Il ecrit une ligne par tick ; celle
 #  qui porte ECHEC du build dit que le code est aligne et pas les images — la
 #  parite git n est pas la parite d image (C27).

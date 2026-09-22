@@ -93,4 +93,29 @@ autodeploy_verdicts() {
     esac
   done
 
+
+  # ── C28. Ce que lit auto-deploy est-il LISIBLE par lui ? ───────────────────
+  #
+  # C13 mesure la sortie (le log est-il inscriptible ?), C27 le resultat (le
+  # build aboutit-il ?). Aucun ne mesurait l ENTREE — et c est elle qui a
+  # lache : le 22/09/2026 le .env du standby est passe root:root a la bascule
+  # de 02:03. Plus aucun build possible, ET plus aucune alerte, puisqu elle
+  # cherche le SMTP dans ce meme fichier. Aveugle et muet 70 minutes (#1135).
+  #
+  # ⚠️ C27 le voyait deja, mais APRES coup et par deduction : « le code est a
+  # jour, pas les images ». Celui-ci nomme la cause, avant la consequence.
+  #
+  # La decision est pure (`verdict_env_lisible`, dans `lib-env-role.sh` avec le
+  # code qui ECRIT ce fichier) : les deux vivent ensemble, donc une regression
+  # de l un casse les cas de l autre.
+  for pair in "$SELF:${S_envdroits:-}" "$PEER:${P_envdroits:-}"; do
+    n=${pair%%:*}; d=${pair#*:}
+    [ "$n" = "$PEER" ] && [ "$PEER_OK" -ne 0 ] && continue
+    case "$(verdict_env_lisible "${d%%:*}" "$(echo "$d" | cut -d: -f2)" "${d##*:}" ptressard)" in
+      OK)        ok "/opt/5hostachy/.env lisible par le cron user sur $n" ;;
+      ILLISIBLE) fail "/opt/5hostachy/.env ILLISIBLE par ptressard sur $n ($d) : auto-deploy ne construira plus, et l alerte est muette (sudo chown ptressard:ptressard /opt/5hostachy/.env)" ;;
+      EXPOSE)    warn "/opt/5hostachy/.env lisible de TOUS sur $n ($d) : il porte le SECRET_KEY et le SMTP (sudo chmod 600 /opt/5hostachy/.env)" ;;
+      *)         warn "/opt/5hostachy/.env sur $n : droits non releves, son silence ne prouve rien" ;;
+    esac
+  done
 }
