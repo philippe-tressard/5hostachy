@@ -83,6 +83,42 @@ memes_hachages() {
     [ "${a:0:$n}" = "${b:0:$n}" ] && echo oui || echo non
 }
 
+# ── Faut-il (re)construire les images ? ──────────────────────────────────────
+#
+# 🔴 LE TROU DU 22/09/2026 (#1131). `auto-deploy.sh` décidait sur le CODE :
+# « mon HEAD vaut celui d'origin, donc rien à faire ». Après la bascule de
+# 02:00, le standby avait le bon code et des images d'une version antérieure —
+# et il l'a répété toutes les cinq minutes pendant quatre heures :
+#
+#     [06:13:01] Aucun changement (ed26d1d) — rien à déployer (aligner).
+#
+# Ce sont les IMAGES qu'un failover démarre. La question n'est donc pas « ai-je
+# le bon code ? » mais « mes images sont-elles bâties sur le code que j'ai ? ».
+# Les deux valeurs étaient déjà écrites côte à côte ; personne ne les comparait.
+#
+# ⚠️ Et SANS réintroduire le battement (`project_battement_auto_deploy`) : un
+# build qui échoue laisse le marqueur en arrière, donc on retenterait toutes
+# les cinq minutes. D'où le troisième argument — le sha pour lequel une
+# tentative a DÉJÀ échoué. On ne réessaie pas le même, on attend le suivant.
+#
+# $1 = HEAD local · $2 = marqueur des images · $3 = sha d'un échec déjà connu
+# → reconstruire | rien
+verdict_reconstruction() {
+    local git="${1:-}" images="${2:-}" echoue="${3:-}"
+    #  Sans HEAD, on ne sait rien : ne rien faire vaut mieux qu'un build à
+    #  l'aveugle, et le point 18 du pré-check le dira de toute façon.
+    [ -z "$git" ] && { echo rien; return; }
+    #  Une tentative a déjà échoué sur CE code : le refaire toutes les cinq
+    #  minutes ne le fera pas réussir, et la trace est dans le journal.
+    [ -n "$echoue" ] && [ "$(memes_hachages "$git" "$echoue")" = oui ] && { echo rien; return; }
+    case "$(verdict_parite_servie "$git" "$images")" in
+        a-jour) echo rien ;;
+        #  `inconnu` — marqueur absent — vaut reconstruire : c'est l'état d'un
+        #  nœud dont on ne peut PAS affirmer que ses images valent son code.
+        *)      echo reconstruire ;;
+    esac
+}
+
 # ── Lecture du marqueur (effet de bord : lit un fichier) ─────────────────────
 # $1 = racine du dépôt → le hash pour lequel les images ont été construites, ou ""
 hash_images_construites() {
@@ -133,6 +169,28 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     #  quatre caractères. En dessous de sept, on refuse de conclure plutôt que de
     #  déclarer une parité sur une coïncidence.
     check "marqueur trop court pour trancher"            "inconnu"         "$LONG" "a1b2"
+
+    # ── verdict_reconstruction (#1131) ───────────────────────────────────────
+    #
+    # 🔴 Le premier cas est CELUI DU 22/09/2026 : le standby avait le bon code
+    # et des images d'avant, et `auto-deploy` concluait « rien à déployer ».
+    checkr() {
+        local desc="$1" exp="$2"; shift 2
+        local got; got=$(verdict_reconstruction "$@")
+        if [ "$got" = "$exp" ]; then echo "PASS  $desc  → $got"
+        else echo "FAIL  $desc  attendu=$exp obtenu=$got"; fail=1; fi
+    }
+    echo "== self-test lib-parite.verdict_reconstruction =="
+    checkr "images d'une version antérieure (le cas du 22/09)" "reconstruire" "$LONG" "$AUTRE" ""
+    checkr "marqueur absent : on ne peut PAS affirmer la parité" "reconstruire" "$LONG" "" ""
+    checkr "images bâties sur le code courant : ne rien faire"   "rien"        "$LONG" "$LONG" ""
+    checkr "marqueur court concordant : ne rien faire"           "rien"        "$LONG" "a1b2c3d" ""
+    #  ⚠️ Le battement : une tentative a échoué sur CE code, on ne la refait pas
+    #  toutes les cinq minutes (`project_battement_auto_deploy`).
+    checkr "échec déjà connu sur ce sha : on attend le suivant"  "rien"        "$LONG" "$AUTRE" "$LONG"
+    checkr "échec connu sur un AUTRE sha : on reconstruit"       "reconstruire" "$LONG" "$AUTRE" "$AUTRE"
+    checkr "sans HEAD, aucun build à l'aveugle"                  "rien"        ""      "$AUTRE" ""
+
     [ $fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
     exit $fail
 fi
