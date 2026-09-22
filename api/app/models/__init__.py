@@ -20,4 +20,8 @@ from app.models.courriel import ReponseRelance as ReponseRelance
 from app.models.perimetre import Perimetre as Perimetre
 from app.models.whatsapp import WhatsAppLog as WhatsAppLog
 from app.models.whatsapp import WhatsAppScheduled as WhatsAppScheduled
+from app.models.gouvernance import AgCsInfo as AgCsInfo
+from app.models.gouvernance import MembreCS as MembreCS
+from app.models.gouvernance import MembreSyndic as MembreSyndic
+from app.models.gouvernance import SyndicInfo as SyndicInfo
 from app.models.evenement import EvenementEvolution as EvenementEvolution

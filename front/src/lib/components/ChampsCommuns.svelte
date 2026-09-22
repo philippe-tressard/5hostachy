@@ -82,18 +82,14 @@
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import { SECTIONS_LIBELLE, type EntiteDeclaree, type IdSection } from '$lib/entites/types';
 	import { pliageDe } from '$lib/pliage';
-	import PerimetrePicker from './PerimetrePicker.svelte';
-	import DestinatairePicker from './DestinatairePicker.svelte';
 	import SectionDiffusion from './SectionDiffusion.svelte';
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
+	import SectionPerimetre from './SectionPerimetre.svelte';
+	import SectionDestinataires from './SectionDestinataires.svelte';
 	import ChampSaisiPour from '$lib/components/ChampSaisiPour.svelte';
 	import { nomCopie, saisieDepuis } from '$lib/saisi-pour';
 	import type { SaisieSaisiPour } from '$lib/saisi-pour';
 	import type { CleOptionPublication } from '$lib/options-publication';
-	import { estPerimetreParDefaut, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
-	import { perimetresStore } from '$lib/stores/perimetres';
-	import { relire } from '$lib/utils';
-	import { concerneTousLesResidents } from '$lib/destinataires';
 	import type { ContexteAssistant } from '$lib/assistant';
 
 	/** Préfixe des `id` des champs — deux formulaires peuvent coexister à l'écran,
@@ -184,6 +180,12 @@
 	 *   calendrier. Elle est ce qui permet au Calendrier de cesser d'être un
 	 *   objet pour devenir une vue. */
 	export let avecQuand = false;
+
+	/**  La fin de validité — réservée aux ACTUALITÉS (#1093) : une affaire ne
+	 *   périme pas, elle se clot. Le formulaire d'affaire ne passe donc rien
+	 *   ici, et le champ ne s'y affiche pas. */
+	export let avecValidite = false;
+	export let visibleJusquAu = '';
 	export let debut = '';
 	export let fin = '';
 	export let perimetre: string[] = [];
@@ -304,20 +306,10 @@
 	export let refDiffusion: any = null;
 	export let envoiEnCours = false;
 
-	//  ── Les badges d'état, portés par le TITRE de section ────────────────────
-	//  Ils vivaient dans les sélecteurs, avec leur intitulé. Depuis que le titre
-	//  de section porte le libellé, il porte aussi le badge — sinon on lirait
-	//  « PÉRIMÈTRE » puis « Périmètre * [Copropriété entière] », c'est-à-dire le
-	//  nom deux fois (signalé à l'écran le 16/08/2026, dès la mise en production).
-	//  Rien n'est recalculé : `estPerimetreParDefaut` et `concerneTousLesResidents`
-	//  sont les fonctions qu'utilisent déjà les sélecteurs eux-mêmes.
-	//  ⚠️ `$perimetresStore` n'est pas lu : il dit à Svelte que ce calcul dépend de
-	//  l'arbre, que les trois fonctions lisent dans un état de MODULE. Sans lui, le
-	//  badge annonçait le code brut sur un formulaire ouvert avant l'arbre (#947).
-	$: badgePerimetre = relire($perimetresStore, () =>
-		estPerimetreParDefaut(perimetre) ? perimetreLabelUn(perimetreParDefaut() ?? '') : '',
-	);
-	$: badgeDestinataires = concerneTousLesResidents(destinataires) ? 'Tous les résidents' : '';
+	//  🔴 Les badges d'état vivaient ICI, avec les deux sections écrites en
+	//  ligne. Ils sont partis AVEC elles (`SectionPerimetre`,
+	//  `SectionDestinataires`, 22/09/2026) : un badge calculé loin de la section
+	//  qu'il décore est la première étape vers deux calculs qui divergent.
 
 	//  Le filet du haut n'appartient pas au Périmètre : il appartient à la
 	//  PREMIÈRE section rendue, quelle qu'elle soit. Sans ce calcul, ouvrir un
@@ -347,36 +339,29 @@
 {#if avecQuand}
 	<!--  5. Quand — QUAND ÇA SE PASSE, et pour quand c'est attendu. Placée
 	      avant le Périmètre : on sait ce qui arrive avant de dire où. -->
-	<SectionQuand {idPrefixe} premiere={premiereQuand} pliable={plie('quand')} bind:debut bind:fin />
+	<SectionQuand
+		{idPrefixe}
+		premiere={premiereQuand}
+		pliable={plie('quand')}
+		{avecValidite}
+		bind:debut
+		bind:fin
+		bind:visibleJusquAu
+	/>
 {/if}
 
 {#if avecPerimetre}
-	<!--  Le sélecteur se tait (`titre=""`) : la section le nomme. Les pastilles ne
-	      sont pas un contrôle labelable — `for` n'y associerait rien —, d'où le
-	      couple `id` sur le titre / `aria-labelledby` sur le groupe. -->
-	<SectionFormulaire
+	<SectionPerimetre
+		{idPrefixe}
 		premiere={premierePerimetre}
-		titre={SECTIONS_LIBELLE.perimetre}
-		requis={perimetreRequis}
-		badge={perimetreBadge ?? badgePerimetre}
 		pliable={plie('perimetre')}
-		ouvrirSiRenseignee={!estPerimetreParDefaut(perimetre)}
-		idTitre="{idPrefixe}-perimetre-titre"
+		bind:perimetre
+		mode={perimetreMode}
+		requis={perimetreRequis}
+		badgeImpose={perimetreBadge}
 	>
-		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
-			<PerimetrePicker bind:value={perimetre} mode={perimetreMode} titre="" />
-			<!--  🔴 Un SLOT et non une prop de texte : l'aide porte du balisage (un
-			      `<strong>`), et une prop obligerait à un `{@html}` — donc à un
-			      assainisseur, pour du contenu qui n'est pas de la donnée mais du
-			      gabarit. Le slot laisse le balisage chez l'appelant : rien à
-			      assainir, rien à faire confiance.
-
-			      Vide par défaut : l'aide n'existe que là où le geste n'est pas
-			      évident. Sur une évolution, « laissé vide, le périmètre du ticket ne
-			      bouge pas » ne se déduit pas du champ. -->
-			<slot name="aidePerimetre" />
-		</div>
-	</SectionFormulaire>
+		<slot name="aidePerimetre" slot="aidePerimetre" />
+	</SectionPerimetre>
 {/if}
 
 {#if avecDescription}
@@ -444,20 +429,12 @@
 {/if}
 
 {#if avecDestinataires}
-	<SectionFormulaire
+	<SectionDestinataires
+		{idPrefixe}
 		premiere={premiere && !avecPerimetre}
-		titre={SECTIONS_LIBELLE.destinataires}
-		requis
-		rempli={destinataires.length > 0}
-		badge={badgeDestinataires}
 		pliable={plie('destinataires')}
-		ouvrirSiRenseignee={!concerneTousLesResidents(destinataires)}
-		idTitre="{idPrefixe}-destinataires-titre"
-	>
-		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-destinataires-titre">
-			<DestinatairePicker bind:value={destinataires} titre="" />
-		</div>
-	</SectionFormulaire>
+		bind:destinataires
+	/>
 {/if}
 
 <!--  🔴 La section 9 vient de `SectionDiffusion`, elle n'est plus réécrite ici

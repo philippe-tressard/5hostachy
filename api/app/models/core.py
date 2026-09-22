@@ -363,6 +363,20 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     #  ne consomme ouvrirait un champ d'écran sans effet (cadre #430).
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
+    #  🔴 La fin de VALIDITÉ, qui n'est pas la fin de l'événement (#1093).
+    #
+    #  Trois familles d'actualités, une seule saisie : permanente (rien),
+    #  datée (`debut`/`fin` suffisent), à durée de vie choisie (ce champ).
+    #  Dans deux cas sur trois, aucun champ ne s'affiche.
+    #
+    #  ⚠️ Une `date` et non un `datetime` : « visible jusqu'au 22 » désigne le
+    #  jour entier. Un `datetime` à minuit ferait disparaître l'information le
+    #  matin même du jour où elle est encore valable.
+    #
+    #  La péremption elle-même ne se stocke JAMAIS : elle se dérive à la
+    #  lecture (`utils/archivage.perime_le`), sinon un report d'événement
+    #  laisserait derrière lui une date qui dit encore jeudi.
+    visible_jusqu_au: Optional[date] = None
     mis_a_jour_le: Optional[datetime] = None
     photos_urls: Optional[str] = None  # JSON array — même convention que Ticket/Evenement
     perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave|résidents
@@ -384,6 +398,22 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
 
     auteur: Optional[Utilisateur] = Relationship(back_populates="publications")
     evolutions: List["PublicationEvolution"] = Relationship(back_populates="publication")
+
+    @property
+    def perime_le(self):
+        """La date où cette actualité cesse d'être utile — **dérivée** (#1093).
+
+        Elle APPELLE la règle, elle ne la redérive pas : `utils/archivage`
+        tranche pour le fil, le calendrier, les archives et cet objet. C'est
+        la même discipline que `est_moderateur` et `estPerimetreParDefaut`.
+
+        ⚠️ Une propriété et non une colonne : rien ne se stocke, donc rien ne
+        périme en silence après un report d'événement. `PublicationRead` la lit
+        par `from_attributes`.
+        """
+        from app.utils.archivage import perime_le  # import local : évite un cycle
+
+        return perime_le(self)
 
 
 class PublicationEvolution(EvolutionMixin, table=True):
@@ -569,63 +599,19 @@ from app.models.communaute import (  # noqa: E402,F401
 )
 
 
-# ──────────────────────────────────────────────
+# ────────────────────────────────────────────
 #  Annuaire CS & Syndic
-# ──────────────────────────────────────────────
-
-class GenreCivilite(str, Enum):
-    mr   = "Mr"
-    mme  = "Mme"
-    mlle = "Mlle"
-
-
-class AgCsInfo(SQLModel, table=True):
-    """Informations AG du Conseil Syndical. Un seul enregistrement (upsert)."""
-    __tablename__ = "ag_cs_info"
-    id:       Optional[int]  = Field(default=None, primary_key=True)
-    ag_annee: Optional[int]  = None
-    ag_date:  Optional[date] = None
-
-
-class MembreCS(SQLModel, table=True):
-    """Membre du Conseil Syndical (indépendant des comptes Utilisateur)."""
-    __tablename__ = "membre_cs"
-    id:          Optional[int]          = Field(default=None, primary_key=True)
-    genre:       GenreCivilite
-    prenom:      str
-    nom:         str
-    batiment_id: Optional[int]          = Field(default=None, foreign_key="batiment.id")
-    etage:       Optional[int]          = None
-    est_gestionnaire_site: bool         = False
-    est_president: bool                 = False
-    ordre:       int                    = 0
-    user_id:     Optional[int]          = Field(default=None, foreign_key="utilisateur.id")
-    cree_le:     datetime               = Field(default_factory=datetime.utcnow)
-
-
-class SyndicInfo(SQLModel, table=True):
-    """Informations du syndic. Un seul enregistrement (upsert)."""
-    __tablename__ = "syndic_info"
-    id:         Optional[int] = Field(default=None, primary_key=True)
-    nom_syndic: str           = ""
-    adresse:    str           = ""
-    site_web:   Optional[str] = None
-
-
-class MembreSyndic(SQLModel, table=True):
-    """Membre du syndic (indépendant des comptes Utilisateur)."""
-    __tablename__ = "membre_syndic"
-    id:            Optional[int]    = Field(default=None, primary_key=True)
-    genre:         GenreCivilite
-    prenom:        str
-    nom:           str
-    fonction:      Optional[str]    = None
-    email:         Optional[str]    = None
-    telephone:     Optional[str]    = None   # CSV comma-separated, même pattern que Prestataire
-    est_principal: bool             = False
-    ordre:         int              = 0
-    user_id:       Optional[int]    = Field(default=None, foreign_key="utilisateur.id")
-    cree_le:       datetime         = Field(default_factory=datetime.utcnow)
+# ────────────────────────────────────────────
+#  Les quatre tables vivent dans `models/gouvernance.py` depuis le 22/09/2026
+#  (modularité). Ré-exportées ici : les imports existants ne bougent pas, et la
+#  table reste enregistrée auprès de SQLModel.
+from app.models.gouvernance import (  # noqa: E402
+    AgCsInfo as AgCsInfo,
+    GenreCivilite as GenreCivilite,
+    MembreCS as MembreCS,
+    MembreSyndic as MembreSyndic,
+    SyndicInfo as SyndicInfo,
+)
 
 
 # ──────────────────────────────────────────────

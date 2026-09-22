@@ -12,7 +12,7 @@ avant les imports de fin de fichier, et l'y laisser évite un cycle.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional
 
 from pydantic import field_validator
@@ -25,6 +25,10 @@ class PublicationCreate(SaisiPourEntree, AssisteIAEntree):
     #  Section « Quand » (#1092) : une actualité datée paraît au calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
+    #  La fin de VALIDITÉ, qui n'est pas la fin de l'événement (#1093) — la
+    #  troisième famille, « à durée de vie choisie ». Les deux autres ne
+    #  saisissent rien : permanente, ou datée par `debut`/`fin`.
+    visible_jusqu_au: Optional[date] = None
     titre: str
     contenu: str
     perimetre: str = "résidence"
@@ -60,6 +64,10 @@ class PublicationUpdate(SaisiPourEntree, AssisteIACorrection):
     #  Section « Quand » (#1092) : une actualité datée paraît au calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
+    #  La fin de VALIDITÉ, qui n'est pas la fin de l'événement (#1093) — la
+    #  troisième famille, « à durée de vie choisie ». Les deux autres ne
+    #  saisissent rien : permanente, ou datée par `debut`/`fin`.
+    visible_jusqu_au: Optional[date] = None
     titre: Optional[str] = None
     contenu: Optional[str] = None
     epingle: Optional[bool] = None
@@ -136,6 +144,22 @@ class PublicationRead(SaisiPourSortie, AssisteIASortie):
     photos_urls: ListeJson = []
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
+    #  🔴 La section « Quand » était saisissable et JAMAIS RENDUE (#1092).
+    #
+    #  `debut` et `fin` existaient en entrée depuis le lot du calendrier, sur
+    #  le modèle et en base — mais pas ici : l'écran les envoyait, le serveur
+    #  les stockait, et personne ne les relisait jamais. Une actualité datée
+    #  ne pouvait donc ni reparaître au calendrier, ni se ré-éditer sans
+    #  perdre ses dates. Trouvé en ajoutant `visible_jusqu_au` à côté : le
+    #  même trou, sur la même section, un champ plus loin.
+    debut: Optional[datetime] = None
+    fin: Optional[datetime] = None
+    visible_jusqu_au: Optional[date] = None
+    #  ⚠️ DÉRIVÉE, jamais stockée : `utils/archivage.perime_le` tranche, ici
+    #  comme partout ailleurs. L'écran a besoin de la dire (« sort du fil
+    #  le … ») sans refaire le calcul — c'est exactement ce que le ticket
+    #  interdit, et ce qui a déjà coûté trois divergences dans ce dépôt.
+    perime_le: Optional[date] = None
     perimetre_cible: List[str] = ["résidence"]
     public_cible: List[str] = ["résidents"]
     statut: Optional[str] = None

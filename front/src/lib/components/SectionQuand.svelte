@@ -53,6 +53,18 @@
 	export let debut = '';
 	export let fin = '';
 
+	/**  La fin de VALIDITÉ, qui n'est pas la fin de l'événement (#1093).
+	 *
+	 *   ⚠️ Réservée aux ACTUALITÉS, et c'est une décision : une affaire ne
+	 *   périme jamais, elle se clot. Une fuite d'eau ne cesse pas d'exister
+	 *   parce que personne n'a écrit depuis trois mois — l'équivalent y est un
+	 *   signalement au conseil, pas une disparition.
+	 *
+	 *   `type="date"` et non `datetime-local` : « visible jusqu'au 22 » désigne
+	 *   le jour entier, et la péremption tombe à son SOIR. */
+	export let avecValidite = false;
+	export let visibleJusquAu = '';
+
 	/** Repliée par défaut — la valeur vient de la déclaration (#1095). */
 	export let pliable = false;
 
@@ -60,7 +72,13 @@
 	 *
 	 *   ⚠️ Comparer à vide et non à « renseigné » : c'est la nuance qui a fait
 	 *   que rien ne pliait à la première écriture (21/09/2026). */
-	$: resume = debut ? `à partir du ${fmtDate(debut)}` : 'sans date';
+	$: resume =
+		[
+			debut ? `à partir du ${fmtDate(debut)}` : '',
+			visibleJusquAu ? `visible jusqu'au ${fmtDate(visibleJusquAu)}` : '',
+		]
+			.filter(Boolean)
+			.join(' · ') || 'sans date';
 </script>
 
 <SectionFormulaire
@@ -68,7 +86,7 @@
 	{premiere}
 	{pliable}
 	{resume}
-	ouvrirSiRenseignee={!!debut || !!fin}
+	ouvrirSiRenseignee={!!debut || !!fin || !!visibleJusquAu}
 	idTitre="{idPrefixe}-quand"
 >
 	<div class="quand-grille">
@@ -81,6 +99,12 @@
 			<input id="{idPrefixe}-fin" type="datetime-local" bind:value={fin} />
 		</div>
 	</div>
+	{#if avecValidite}
+		<div class="field">
+			<label for="{idPrefixe}-validite">Visible jusqu'au</label>
+			<input id="{idPrefixe}-validite" type="date" bind:value={visibleJusquAu} />
+		</div>
+	{/if}
 	<p class="quand-aide">
 		Une <strong>date de début</strong> fait paraître l'entrée au calendrier — et dispense d'écrire une
 		description.
