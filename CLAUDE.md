@@ -124,17 +124,46 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 > centralisée, liste blanche, entrées/sorties, session et transport).
 
 ### Modèle SQLModel
+- Un modèle vit dans le module de **son domaine** sous `app/models/` (`acces`,
+  `communaute`, `prestataires`, `gouvernance`…) — **jamais dans `core.py`**, qui
+  dépasse 500 lignes et que le garde-fou de modularité refuse de voir grossir.
+  Un module neuf s'**importe dans `models/__init__.py`** : c'est ce qui enregistre
+  la table auprès de SQLModel — oublié, elle manque à `create_all` sans un mot.
+- `core.py` **ré-exporte** les modèles extraits (imports `# noqa: E402` en milieu
+  de fichier). Ils laissent `from app.models.core import X` valable après chaque
+  extraction — **et ils enregistrent** : `alembic/env.py` n'importe que `core`, et
+  c'est par eux qu'Alembic voit la moitié des tables. Pas un doublon à nettoyer
+  en passant (#1157). 🔒 `test_modeles_enregistres.py` : chaque module de
+  `app/models/` doit être chargé par `import app.models.core`.
 - `__tablename__` = snake_case français
 - Champs en français snake_case : `statut_validation`, `date_debut`
 - Timestamps : suffixe `_le` → `cree_le`, `mis_a_jour_le`
 - FK : `{modele}_id = Field(default=None, foreign_key="table.id")`
-- Soft delete : `actif: bool = Field(default=True)` (pas de suppression physique sauf admin)
 - Enums : `class MonEnum(str, Enum)` → slugs français lowercase
+- **Archiver, pas une colonne `actif` par réflexe.** Les objets qui quittent les
+  listes se déclarent dans `utils/archivage.REGLES` — la règle unique, avec son
+  test de concordance. La plupart des tables n'ont ni `actif` ni `archivee`, et
+  c'est voulu : un booléen ajouté à côté ferait une seconde façon de disparaître.
+- Lire un objet ou rendre 404 : `utils/recuperer.ou_404(session, Modele, id,
+  "libellé")` — jamais `session.get` suivi d'un `raise HTTPException(404)`, que
+  #1047 résorbe.
 
-### Schémas Pydantic (3 par entité)
-- `EntiteCreate` : champs d'entrée, pas d'id ni timestamps
-- `EntiteRead` : sortie complète avec id + timestamps, `class Config: from_attributes = True`
-- `EntiteUpdate` : tous les champs `Optional` pour PATCH partiel
+> 🔴 Cette section décrivait jusqu'au 23/09/2026 un backend disparu : « modèle
+> dans `models/core.py` », « trois schémas dans `schemas.py` », « soft delete par
+> `actif` ». Suivre la consigne violait la modularité (rang 1), et ce fichier est
+> relu à chaque session (#1046).
+
+### Schémas Pydantic
+- Trois formes par entité exposée : `EntiteCreate` (entrée, sans id ni
+  horodatage), `EntiteRead` (sortie, `class Config: from_attributes = True` —
+  la forme de tout le dépôt), `EntiteUpdate` (tout `Optional`, PATCH partiel).
+- Ils vivent dans le `schemas_<domaine>.py` de l'entité (`schemas_tickets`,
+  `schemas_publications`, `schemas_evenement`…), que `schemas.py` ré-exporte.
+- Un schéma **propre à un seul routeur** — le corps d'un geste, la réponse d'un
+  écran — vit à côté de lui (dans le routeur ou son `_schemas.py`). Le mettre
+  dans un fichier partagé créerait un couplage que personne n'a demandé.
+- `schemas_communs.py` n'importe RIEN du projet : c'est ce qui évite le cycle
+  `schemas` ⇄ `schemas_tickets`. Ne pas lui en ajouter.
 
 ### Migrations Alembic
 - ID séquentiel 4 chiffres : `0087`, `0088`…
@@ -313,10 +342,18 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       (`npm run lint:champs` ; il y en avait **six** avant #413)
 
 ### Backend (nouveau endpoint)
-- [ ] Modèle dans `models/core.py`
-- [ ] Schémas Create/Read/Update dans `schemas.py`
-- [ ] Migration créée avec bon numéro séquentiel
-- [ ] Router créé + enregistré dans `main.py`
+- [ ] Modèle dans le module de **son domaine** (`app/models/<domaine>.py`), importé
+      par `models/__init__.py` — jamais dans `core.py`
+- [ ] Schémas dans `schemas_<domaine>.py` s'ils sont partagés, à côté du routeur sinon
+- [ ] Migration `NNNN_slug.py`, numéro suivant le dernier de `alembic/versions/`
+- [ ] Routeur inclus dans `main.py` ou dans le `__init__.py` de son paquet —
+      `test_routeurs_montes.py` refuse un routeur que personne ne monte : ses URL
+      rendraient 404, et rien d'autre ne le dirait
+- [ ] ⚠️ Dans un paquet, les routes à segment **fixe** s'incluent AVANT celles à
+      paramètre (`/admin/imports/{id}` avant `/admin/{type}/{id}`) : FastAPI retient
+      la première qui correspond. Deux écrans d'import sont morts ainsi (#1151) ;
+      `test_routes_masquees.py` le tient pour `acces`
+- [ ] Lecture d'un objet par `ou_404`, pas `session.get` + 404
 - [ ] Client TypeScript ajouté dans le paquet `front/src/lib/api/` — dans le module de son domaine (`acces`, `patrimoine`, `communaute`…), jamais dans un `api.ts` ressuscité à la racine
 
 ### Documentation utilisateur — **deux** documents de même rang
