@@ -259,7 +259,12 @@ def test_les_champs_declares_existent_sur_le_modele(type_objet):
     """
     regle = REGLES[type_objet]
     connus = set(MODELES[type_objet].model_fields)
-    declares = set(regle.champs_date)
+    #  ⚠️ `champs_peremption` en fait partie depuis #1093 : `visible_jusqu_au`
+    #  déclaré et absent du modèle rendrait la péremption muette — `getattr`
+    #  retomberait sur `fin`, et l'actualité sortirait du fil à la date de
+    #  l'événement au lieu de celle que l'auteur a choisie. Vrai pour les six
+    #  autres objets, faux pour celui-là, et silencieux.
+    declares = set(regle.champs_date) | set(regle.champs_peremption)
     for champ in (regle.champ_statut, regle.champ_archive_manuel,
                   regle.champ_epingle, regle.champ_brouillon):
         if champ:

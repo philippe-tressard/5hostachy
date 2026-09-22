@@ -46,7 +46,7 @@ les statuts de ticket sont les seuls accentués de tout le site (`résolu`,
 `annulé`), et le ticket #515 le signalait comme le piège principal.
 """
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
 #: Le délai unique, en jours. Arbitré à l'écran le 19/08/2026 : *« un seul
@@ -98,6 +98,17 @@ class RegleArchivage:
     #: ici plutôt que dans un ticket évite qu'il ne soit plus lisible que dans
     #: une issue fermée.
     declencheur: str = ""
+    #: 🔴 Les dates qui font PERIMER l'objet, dans l'ordre de repli (#1093).
+    #:
+    #: La peremption n'est pas l'archivage : elle ne compte aucun delai. Une
+    #: information cesse d'etre utile a une date, un point c'est tout — « coupure
+    #: d'eau jeudi » n'interesse personne vendredi, et surement pas trente jours
+    #: plus tard.
+    #:
+    #: ⚠️ Vide pour six objets sur sept, et c'est une DECISION : une affaire ne
+    #: perime jamais, elle se clot. Une fuite d'eau ne cesse pas d'exister parce
+    #: que personne n'a ecrit depuis trois mois.
+    champs_peremption: tuple[str, ...] = ()
 
 
 #  ── LES SEPT DÉCLARATIONS ───────────────────────────────────────────────────
@@ -116,7 +127,15 @@ REGLES: dict[str, RegleArchivage] = {
         champ_archive_manuel="archivee",
         champ_epingle="epingle",
         champ_brouillon="brouillon",
-        declencheur="30 jours après la publication (ou le passage en « Résolu »).",
+        declencheur=(
+            "30 jours après la publication (ou le passage en « Résolu »). "
+            "Une date de fin de validité la fait sortir dès le lendemain."
+        ),
+        #  🔴 L'ordre n'est pas commutatif : une actualité peut porter les DEUX,
+        #  et c'est alors la volonté explicite de l'auteur qui gagne sur la date
+        #  de l'événement. « Vends vélo, visible jusqu'au 30 » prime sur un
+        #  rendez-vous du 24 mentionné au passage.
+        champs_peremption=("visible_jusqu_au", "fin", "debut"),
     ),
     "ticket": RegleArchivage(
         champ_statut="statut",
@@ -206,6 +225,51 @@ def _date_de_reference(objet: Any, regle: RegleArchivage) -> Optional[datetime]:
     return None
 
 
+def perime_le(objet: Any, type_objet: str = "publication") -> Optional[date]:
+    """La date a partir de laquelle cet objet n'est plus utile — ou `None` (#1093).
+
+        perime_le =  visible_jusqu_au        si renseigne
+              sinon  fin de l'evenement      si date d'evenement
+              sinon  jamais
+
+    🔴 **Derivee a la lecture, JAMAIS recopiee a l'ecriture.** Calculer la
+    peremption a la creation laisserait un report d'evenement (jeudi -> mardi)
+    derriere lui : la date stockee dirait encore jeudi, et l'actualite sortirait
+    du fil le jour ou elle redevient utile. C'est le motif « deux copies qui
+    divergent sur le cas limite », deja paye trois fois dans ce depot.
+
+    **Pure** : elle ne lit que l'objet, pas d'horloge, pas de session — c'est
+    ce qui la rend eprouvable sans base de test.
+
+    ⚠️ Elle rend une `date` et non un `datetime`, et ce n'est pas une
+    commodite : « visible jusqu'au 22 » designe le JOUR entier. Comparer a
+    `datetime(2026, 9, 22, 0, 0)` ferait disparaitre l'information le matin meme,
+    alors que l'auteur a ecrit une fin de validite, pas une heure de disparition.
+    """
+    regle = REGLES.get(type_objet)
+    if regle is None:
+        return None
+    for champ in regle.champs_peremption:
+        valeur = getattr(objet, champ, None)
+        if isinstance(valeur, datetime):
+            return valeur.date()
+        if isinstance(valeur, date):
+            return valeur
+    return None
+
+
+def est_perime(
+    objet: Any,
+    type_objet: str = "publication",
+    maintenant: Optional[datetime] = None,
+) -> bool:
+    """Ce jour-la est-il PASSE ? Le soir du jour dit, jamais son matin."""
+    echeance = perime_le(objet, type_objet)
+    if echeance is None:
+        return False
+    maintenant = maintenant or datetime.utcnow()
+    return maintenant.date() > echeance
+
 def est_archivable(
     type_objet: str,
     objet: Any,
@@ -221,11 +285,14 @@ def est_archivable(
 
     1. **archivage manuel** — décision humaine, elle ne se discute pas ;
     2. **brouillon** — pas encore publié, rien à quitter ;
-    3. **épinglé** — « garder en vue » ; s'auto-archiver contredirait le
+    3. **périmé** — sa date de validité est passée (#1093). Elle passe **avant**
+       l'épinglage : « garder en vue » n'a plus de sens pour une information
+       qui n'est plus valable ;
+    4. **épinglé** — « garder en vue » ; s'auto-archiver contredirait le
        marqueur (décision du 01/08/2026, prise avec le bandeau « Épinglé ») ;
-    4. **état d'annulation** — immédiat, sans délai ;
-    5. **état terminal** (s'il y en a) — sinon l'objet reste actif ;
-    6. **délai écoulé** depuis la date de référence.
+    5. **état d'annulation** — immédiat, sans délai ;
+    6. **état terminal** (s'il y en a) — sinon l'objet reste actif ;
+    7. **délai écoulé** depuis la date de référence.
     """
     regle = REGLES.get(type_objet)
     if regle is None:
@@ -238,6 +305,15 @@ def est_archivable(
         return True
     if regle.champ_brouillon and getattr(objet, regle.champ_brouillon, False):
         return False
+    #  🔴 LA PEREMPTION PASSE AVANT L'EPINGLAGE (#1093), et c'est la seule
+    #  regle qui le fasse apres la decision humaine d'archiver.
+    #
+    #  « Garder en vue » n'a plus de sens pour une information qui n'est plus
+    #  valable : sans cet ordre, une coupure d'eau epinglee resterait en tete
+    #  du fil indefiniment. C'est le seul cas ou l'epinglage nuit a celui qui
+    #  l'a pose — et le seul ou la peremption le revoque.
+    if est_perime(objet, type_objet, maintenant):
+        return True
     if regle.champ_epingle and getattr(objet, regle.champ_epingle, False):
         return False
 
