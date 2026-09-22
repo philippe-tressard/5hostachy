@@ -336,6 +336,7 @@
 	      qui le voit et où (section 10). Le contenu vient de l'écran. -->
 	<SectionFormulaire
 		titre={SECTIONS_LIBELLE.suivi}
+		pliable={plie('suivi')}
 		premiere={premiereWorkflow}
 		idTitre="{idPrefixe}-workflow"
 	>
@@ -396,6 +397,7 @@
       composant ET `EvolForm`, qui les portait à l'identique (01/09/2026). -->
 <SectionsPiecesJointes
 	{idPrefixe}
+	pliable={plie('pieces_jointes')}
 	{avecPhotos}
 	bind:photos
 	{avecDocuments}
@@ -412,6 +414,7 @@
 	      tickets (`ChampSaisiPour`) : il portait déjà la saisie, il ne lui
 	      manquait qu'un appelant de plus. -->
 	<ChampSaisiPour
+		pliable={plie('au_nom_de')}
 		bind:mode={saisiPour.mode}
 		bind:userId={saisiPour.userId}
 		bind:nom={saisiPour.nom}

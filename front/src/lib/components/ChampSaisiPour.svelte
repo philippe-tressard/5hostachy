@@ -26,6 +26,27 @@
 
 	/** Lié par l'appelant : lui seul sait ce que ces valeurs deviennent. */
 	export let mode: ModeSaisiPour = 'moi';
+
+	/**
+	 *  🔴 Le PLIAGE, transmis par l'appelant (22/09/2026, signalé à l'écran).
+	 *
+	 *  Ce composant porte sa `SectionFormulaire` : le `pliee: true` de la table
+	 *  ne l'atteignait pas, et « Au nom de » restait ouverte — alors que c'est
+	 *  la seule section dont le pliage est une EXCEPTION déclarée (obligatoire
+	 *  mais pliée, « en mon nom » étant juste presque toujours).
+	 *
+	 *  ⚠️ `ouvrirSiRenseignee` se mesure contre le DÉFAUT, jamais contre le
+	 *  vide : `mode` vaut toujours quelque chose, et tester sa présence
+	 *  rouvrirait la section à chaque fois.
+	 */
+	export let pliable = false;
+
+	//: Ce que la section annonce pliée — le choix fait, en trois mots.
+	const RESUME_MODE: Record<string, string> = {
+		moi: 'En mon nom',
+		resident: 'Un résident inscrit',
+		exterieur: 'Une personne extérieure',
+	};
 	export let userId: number | null = null;
 	export let nom = '';
 	export let email = '';
@@ -43,6 +64,9 @@
 	titre={SECTIONS_LIBELLE.au_nom_de}
 	requis
 	rempli={mode !== null && mode !== undefined}
+	{pliable}
+	ouvrirSiRenseignee={mode !== 'moi'}
+	resume={RESUME_MODE[mode] ?? ''}
 >
 	<div class="field champ-large saisi-pour-section">
 		<div class="saisi-pour-tabs">

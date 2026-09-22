@@ -18,6 +18,7 @@
   `lint:etats` la refuse.
 -->
 <script lang="ts">
+	import { pliageDe } from '$lib/pliage';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
@@ -120,7 +121,12 @@
 	      édition depuis le cadre #430 : une correction corrige l'état comme
 	      elle corrige un titre, et c'est le `PATCH` qui a changé de nature
 	      côté serveur (voir le bloc de commentaires du script). -->
-<SectionFormulaire titre={SECTIONS_LIBELLE.suivi} requis idTitre="ticket-workflow-titre">
+<SectionFormulaire
+	titre={SECTIONS_LIBELLE.suivi}
+	pliable={pliageDe(TICKET, 'suivi')}
+	requis
+	idTitre="ticket-workflow-titre"
+>
 	<div class="field champ-large">
 		<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). « Ouvert » est
 			      active par défaut à la création — l'état de départ se voit, il ne

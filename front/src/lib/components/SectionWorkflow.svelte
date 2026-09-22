@@ -33,13 +33,21 @@
 	export let valeur = '';
 	/** L'état actuel, en badge à droite de l'intitulé. Vide : pas de badge. */
 	export let badge = '';
+
+	/**  Le pliage, transmis par l'appelant (#1093, 22/09/2026).
+	 *
+	 *   « Suivi » est obligatoire, donc dépliée dans toutes les entités : cette
+	 *   prop vaut `false` partout aujourd'hui. Elle existe pour que le chemin
+	 *   existe — sans elle, un `pliee: true` posé demain dans la table ne
+	 *   changerait rien à l'écran, et personne ne saurait pourquoi. */
+	export let pliable = false;
 	/** Première section rendue : elle ne porte pas de filet au-dessus. */
 	export let premiere = false;
 	/** Rangée en lecture seule — confort d'interface, jamais un droit. */
 	export let lecture = false;
 </script>
 
-<SectionFormulaire {premiere} titre={SECTIONS_LIBELLE.suivi} requis {badge} {idTitre}>
+<SectionFormulaire {premiere} titre={SECTIONS_LIBELLE.suivi} {pliable} requis {badge} {idTitre}>
 	<div class="field champ-large">
 		<WorkflowPastilles {options} {valeur} {lecture} {idTitre} on:choisir />
 		<slot />

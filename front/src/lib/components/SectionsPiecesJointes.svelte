@@ -57,6 +57,20 @@
 	/** Préfixe des identifiants — l'écran en ouvre parfois plusieurs à la fois. */
 	export let idPrefixe: string;
 
+	/**
+	 *  🔴 Le PLIAGE, transmis par l'appelant (22/09/2026, signalé deux fois à
+	 *  l'écran : *« PJ toujours déplié »*).
+	 *
+	 *  Ce composant porte sa `SectionFormulaire` : le pliage déclaré dans la
+	 *  table ne l'atteignait donc pas, et la section restait ouverte quoi que
+	 *  dise `pliee: true`. C'est l'angle mort des composants **porteurs** — le
+	 *  même qui avait rendu l'ordre des sections incontrôlable (#1124).
+	 *
+	 *  ⚠️ `ouvrirSiRenseignee` n'est pas une option : une section pliée qui
+	 *  cacherait des pièces déjà jointes serait pire que dépliée.
+	 */
+	export let pliable = false;
+
 	export let avecPhotos = false;
 	export let photos: string[] = [];
 
@@ -89,6 +103,12 @@
 	 *   d'affichage. Il ne concerne que l'ÉDITION d'une actualité. */
 	$: unSeulControle = avecPhotos && avecDocuments && documentsControle === 'interne';
 
+	//  Ce que la section annonce quand elle est pliée : un nombre, pas un mot
+	//  vide. « Aucune » se lit d'un coup d'œil et évite de déplier pour rien.
+	$: nbFichiers = photos.length + documents.length;
+	$: resumeFichiers =
+		nbFichiers === 0 ? 'Aucune' : `${nbFichiers} fichier${nbFichiers > 1 ? 's' : ''}`;
+
 	/**  La liste que l'auteur voit : photos et documents mêlés, dans l'ordre où
 	 *   il les a posés. */
 	let toutes: string[] = [];
@@ -120,6 +140,9 @@
 {#if avecPhotos || avecDocuments}
 	<SectionFormulaire
 		titre={SECTIONS_LIBELLE.pieces_jointes}
+		{pliable}
+		ouvrirSiRenseignee={photos.length > 0 || documents.length > 0}
+		resume={resumeFichiers}
 		pour="{idPrefixe}-{avecPhotos ? 'photos' : idDocuments}"
 	>
 		{#if unSeulControle}
