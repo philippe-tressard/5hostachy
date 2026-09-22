@@ -285,14 +285,9 @@ export interface Publication extends PorteSaisiPourLu {
 	 *   objet. */
 	debut?: string | null;
 	fin?: string | null;
-	/**  La fin de VALIDITÉ, qui n'est pas la fin de l'événement (#1093).
-	 *
-	 *   Une `date` nue (`AAAA-MM-JJ`), pas un horodatage : « visible jusqu'au
-	 *   22 » désigne le jour entier, et la péremption tombe à son SOIR. */
-	visible_jusqu_au?: string | null;
 	/**  ⚠️ DÉRIVÉE par le serveur, en LECTURE SEULE — ne jamais l'envoyer.
 	 *
-	 *   `perime_le = visible_jusqu_au, sinon fin, sinon debut, sinon jamais`.
+	 *   `perime_le = fin, sinon debut, sinon jamais` — elle ne se SAISIT pas.
 	 *   Elle ne se stocke nulle part : une date calculée à la création
 	 *   survivrait à un report d'événement, et l'actualité quitterait le fil
 	 *   le jour où elle redevient utile. L'écran la LIT, il ne la refait pas. */

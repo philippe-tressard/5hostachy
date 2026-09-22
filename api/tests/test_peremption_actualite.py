@@ -8,9 +8,15 @@ fil accumulait.
 
 ## 🔴 Dérivée à la lecture, JAMAIS recopiée à l'écriture
 
-    perime_le =  visible_jusqu_au        si renseigné
-          sinon  fin de l'événement      si date d'événement
+    perime_le =  fin de l'événement      si date d'événement
           sinon  jamais
+
+⚠️ Il y avait un troisième champ en tête, `visible_jusqu_au`, saisi par
+l'auteur pour une « durée de vie choisie ». Livré le matin du 22/09/2026,
+retiré l'après-midi, arbitré à l'écran : *« cette date est à enlever, elle
+est calculée par l'appli »*. Ce qui n'a pas de date d'événement ne périme
+pas — l'archivage à trente jours couvre ce cas depuis le 19/08/2026, et le
+champ faisait donc saisir ce que le produit savait déjà décider.
 
 Calculer la péremption à la création laisserait un report d'événement
 (jeudi → mardi) derrière lui : la date stockée dirait encore jeudi. C'est le
@@ -51,7 +57,6 @@ class _Pub:
         self.archivee = champs.get("archivee", False)
         self.epingle = champs.get("epingle", False)
         self.brouillon = champs.get("brouillon", False)
-        self.visible_jusqu_au = champs.get("visible_jusqu_au")
         self.debut = champs.get("debut")
         self.fin = champs.get("fin")
 
@@ -77,14 +82,27 @@ def test_une_actualite_datee_perime_a_la_fin_de_l_evenement():
     assert perime_le(pub) == date(2026, 9, 24)
 
 
-def test_une_duree_de_vie_choisie_PRIME_sur_la_date_d_evenement():
-    """« Vends vélo, visible jusqu'au 30 » : l'auteur a tranché.
+def test_la_peremption_NE_SE_SAISIT_PAS():
+    """🔴 Le garde-fou de l'arbitrage du 22/09/2026, pas de son effet.
 
-    ⚠️ L'ordre de repli n'est pas commutatif : une actualité peut porter les
-    deux, et c'est alors la volonté explicite qui gagne.
+    Le champ a existé une demi-journée. Sans ce test, il suffirait qu'on le
+    juge « pratique » un jour pour qu'il revienne — et il reviendrait avec sa
+    promesse : faire saisir une date que le produit sait déjà calculer.
+
+    Il regarde les DEUX portes : la colonne, et ce que le serveur accepte en
+    entrée. Verrouiller la première seule laisserait passer un schéma qui
+    accepte le champ et le jette en silence.
     """
-    pub = _Pub(fin=datetime(2026, 9, 24, 12), visible_jusqu_au=date(2026, 9, 30))
-    assert perime_le(pub) == date(2026, 9, 30)
+    from app.models.core import Publication
+    from app.schemas_publications import PublicationCreate, PublicationUpdate
+
+    assert "visible_jusqu_au" not in Publication.model_fields, (
+        "La colonne est revenue : la péremption se déduit, elle ne se saisit pas (#1093)."
+    )
+    for schema in (PublicationCreate, PublicationUpdate):
+        assert "visible_jusqu_au" not in schema.model_fields, (
+            f"{schema.__name__} accepte de nouveau une date de validité en entrée."
+        )
 
 
 def test_un_debut_sans_fin_perime_au_debut():
@@ -94,7 +112,7 @@ def test_un_debut_sans_fin_perime_au_debut():
 
 def test_la_derivation_ne_lit_QUE_l_objet():
     """Pure : pas de base, pas d'horloge. C'est ce qui la rend éprouvable."""
-    pub = _Pub(visible_jusqu_au=date(2026, 9, 30))
+    pub = _Pub(fin=datetime(2026, 9, 30, 12))
     assert perime_le(pub) == perime_le(pub)
 
 
@@ -106,20 +124,20 @@ def test_la_derivation_ne_lit_QUE_l_objet():
 def test_le_jour_meme_elle_est_encore_la():
     """🔴 La péremption est au SOIR du jour dit, pas à son matin.
 
-    « Visible jusqu'au 22 » doit rester visible le 22 : l'auteur a écrit une
-    date de fin de validité, pas une date de disparition.
+    Une coupure d'eau qui finit aujourd'hui à midi reste lisible ce soir : la
+    date dit la fin de l'événement, pas l'heure à laquelle on l'efface.
     """
-    pub = _Pub(visible_jusqu_au=AUJOURDHUI.date())
+    pub = _Pub(fin=AUJOURDHUI)
     assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is False
 
 
 def test_le_lendemain_elle_sort():
-    pub = _Pub(visible_jusqu_au=HIER.date())
+    pub = _Pub(fin=HIER)
     assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is True
 
 
 def test_une_date_a_venir_ne_change_rien():
-    pub = _Pub(visible_jusqu_au=DEMAIN.date())
+    pub = _Pub(fin=DEMAIN)
     assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is False
 
 
@@ -130,13 +148,13 @@ def test_la_peremption_DEPINGLE():
     valable. Sans cette règle, une coupure d'eau épinglée resterait en tête du
     fil indéfiniment, et c'est le seul cas où l'épinglage nuit.
     """
-    pub = _Pub(visible_jusqu_au=HIER.date(), epingle=True)
+    pub = _Pub(fin=HIER, epingle=True)
     assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is True
 
 
 def test_un_brouillon_perime_ne_sort_pas_puisqu_il_n_est_pas_entre():
     """Il n'a rien à quitter : il n'a jamais été publié."""
-    pub = _Pub(visible_jusqu_au=HIER.date(), brouillon=True)
+    pub = _Pub(fin=HIER, brouillon=True)
     assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is False
 
 
@@ -185,11 +203,11 @@ def test_la_derivation_traverse_le_schema_de_lecture():
     from app.schemas_publications import PublicationRead
 
     pub = Publication(
-        id=1, titre="Vends vélo", contenu="…", auteur_id=1,
-        visible_jusqu_au=date(2026, 9, 30),
+        id=1, titre="Assemblée générale", contenu="…", auteur_id=1,
+        debut=datetime(2026, 9, 30, 18), fin=datetime(2026, 9, 30, 21),
     )
     lu = PublicationRead.model_validate(pub)
-    assert lu.visible_jusqu_au == date(2026, 9, 30)
+    assert lu.fin == datetime(2026, 9, 30, 21)
     assert lu.perime_le == date(2026, 9, 30)
 
 
@@ -203,7 +221,6 @@ def test_une_actualite_datee_rend_sa_peremption_sans_rien_saisir():
         debut=datetime(2026, 9, 24, 9), fin=datetime(2026, 9, 24, 12),
     )
     lu = PublicationRead.model_validate(pub)
-    assert lu.visible_jusqu_au is None
     assert lu.perime_le == date(2026, 9, 24)
 
 

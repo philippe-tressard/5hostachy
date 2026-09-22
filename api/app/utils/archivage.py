@@ -131,11 +131,16 @@ REGLES: dict[str, RegleArchivage] = {
             "30 jours après la publication (ou le passage en « Résolu »). "
             "Une date de fin de validité la fait sortir dès le lendemain."
         ),
-        #  🔴 L'ordre n'est pas commutatif : une actualité peut porter les DEUX,
-        #  et c'est alors la volonté explicite de l'auteur qui gagne sur la date
-        #  de l'événement. « Vends vélo, visible jusqu'au 30 » prime sur un
-        #  rendez-vous du 24 mentionné au passage.
-        champs_peremption=("visible_jusqu_au", "fin", "debut"),
+        #  🔴 `fin` d'abord, `debut` en repli : un événement qui dure reste
+        #  utile jusqu'à sa fin, et un événement ponctuel n'a que son début.
+        #
+        #  ⚠️ Il y avait un troisième champ en tête, `visible_jusqu_au`, saisi par
+        #  l'auteur — retiré le 22/09/2026, le jour de sa livraison : *« cette date
+        #  est à enlever, elle est calculée par l'appli »*. Ce qui n'a pas de date
+        #  d'événement ne périme pas, et l'archivage à trente jours couvre ce cas
+        #  depuis le 19/08/2026 : le champ faisait saisir ce que le produit savait
+        #  déjà décider (migration 0205).
+        champs_peremption=("fin", "debut"),
     ),
     "ticket": RegleArchivage(
         champ_statut="statut",
@@ -228,8 +233,7 @@ def _date_de_reference(objet: Any, regle: RegleArchivage) -> Optional[datetime]:
 def perime_le(objet: Any, type_objet: str = "publication") -> Optional[date]:
     """La date a partir de laquelle cet objet n'est plus utile — ou `None` (#1093).
 
-        perime_le =  visible_jusqu_au        si renseigne
-              sinon  fin de l'evenement      si date d'evenement
+        perime_le =  fin de l'evenement      si date d'evenement
               sinon  jamais
 
     🔴 **Derivee a la lecture, JAMAIS recopiee a l'ecriture.** Calculer la

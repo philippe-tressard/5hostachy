@@ -181,11 +181,6 @@
 	 *   objet pour devenir une vue. */
 	export let avecQuand = false;
 
-	/**  La fin de validité — réservée aux ACTUALITÉS (#1093) : une affaire ne
-	 *   périme pas, elle se clot. Le formulaire d'affaire ne passe donc rien
-	 *   ici, et le champ ne s'y affiche pas. */
-	export let avecValidite = false;
-	export let visibleJusquAu = '';
 	export let debut = '';
 	export let fin = '';
 	export let perimetre: string[] = [];
@@ -339,15 +334,7 @@
 {#if avecQuand}
 	<!--  5. Quand — QUAND ÇA SE PASSE, et pour quand c'est attendu. Placée
 	      avant le Périmètre : on sait ce qui arrive avant de dire où. -->
-	<SectionQuand
-		{idPrefixe}
-		premiere={premiereQuand}
-		pliable={plie('quand')}
-		{avecValidite}
-		bind:debut
-		bind:fin
-		bind:visibleJusquAu
-	/>
+	<SectionQuand {idPrefixe} premiere={premiereQuand} pliable={plie('quand')} bind:debut bind:fin />
 {/if}
 
 {#if avecPerimetre}

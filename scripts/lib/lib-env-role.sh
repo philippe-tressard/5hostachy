@@ -98,8 +98,84 @@ env_role_appliquer() {
   [ -f "$fichier" ] || { echo "env_role_appliquer: $fichier introuvable" >&2; return 1; }
   tmp="${fichier}.tmp.$$"
   env_role_transformer "$(cat "$fichier")" "$role" "$ip" > "$tmp" || { rm -f "$tmp"; return 2; }
+  #  🔴 Le MODE *et* le PROPRIETAIRE, et le second manquait (#1138).
+  #
+  #  `>` CREE le fichier temporaire : il prend le proprietaire du processus,
+  #  et `mv` le conserve. Lance en root depuis `bascule.sh`, ce module rendait
+  #  donc le `.env` a root:root — silencieusement. Le 22/09/2026, le standby a
+  #  perdu d'un coup son build ET son canal d'alerte, qui lit le SMTP dans ce
+  #  meme fichier : aveugle et muet pendant 70 minutes (#1135).
+  #
+  #  ⚠️ `--reference` plutot qu'un nom en dur : celui-ci serait faux le jour
+  #  ou l'installation change d'utilisateur, et personne ne le relirait.
+  #
+  #  ⚠️ L'echec est TOLERE, et c'est voulu : sans privileges, `chown` refuse —
+  #  mais le fichier appartient alors deja au bon utilisateur, puisque c'est lui
+  #  qui ecrit. Faire echouer la bascule sur ce cas casserait `MaJ-Hostachy.sh`,
+  #  qui appelle ce module sans sudo. Ce qui surveille l'etat reel est C28.
   chmod --reference="$fichier" "$tmp" 2>/dev/null || chmod 600 "$tmp"
+  chown --reference="$fichier" "$tmp" 2>/dev/null || true
   mv "$tmp" "$fichier"
+}
+
+# ---------------------------------------------------------------------------
+#  C28. verdict_env_lisible <proprietaire> <groupe> <mode> <utilisateur du cron>
+#         [<groupes de cet utilisateur>]
+#
+#  « Ce que lit `auto-deploy` est-il lisible par qui le fait tourner ? »
+#
+#  🔴 Aucun des controles C1 a C27 ne posait cette question, et c'est
+#  pourtant d'elle que dependent le deploiement du standby ET le canal d'alerte
+#  — tous deux lisent le `.env`. Le 22/09/2026, les deux sont tombes ensemble, et
+#  le second a empeche de savoir que le premier etait tombe.
+#
+#  PURE : trois chaines en entree, un mot en sortie. Elle s'eprouve sans les deux
+#  RPi, et sans avoir a rendre un fichier illisible pour voir ce qui arrive.
+#
+#  Verdicts :
+#    OK         lisible par l'utilisateur du cron
+#    ILLISIBLE  ne l'est pas — c'est le cas vecu (root:root en 600)
+#    EXPOSE     lisible, mais de TOUT LE MONDE : un secret en clair. Deux
+#               verdicts distincts, parce que repondre OK cacherait un defaut de
+#               securite derriere une question de disponibilite.
+#    INCONNU    une entree manque : on n'a rien constate (`standards/04` §1)
+# ---------------------------------------------------------------------------
+verdict_env_lisible() {
+  local prop=$1 groupe=$2 mode=$3 utilisateur=$4 groupes=${5:-}
+
+  #  🔴 CAS ZERO. Ne pas pouvoir relever les droits est exactement l'etat
+  #  que ce controle doit reveler : le dire INCONNU, jamais OK.
+  [ -n "$prop" ] && [ -n "$mode" ] && [ -n "$utilisateur" ] || { echo INCONNU; return; }
+  case "$mode" in
+    [0-7][0-7][0-7]|[0-7][0-7][0-7][0-7]) : ;;
+    *) echo INCONNU; return ;;
+  esac
+
+  #  Les trois derniers chiffres, quel que soit le bit collant en tete.
+  local u g o
+  u=${mode: -3:1}; g=${mode: -2:1}; o=${mode: -1:1}
+
+  #  Lisible de tous : la disponibilite est acquise, la confidentialite non.
+  #  Ce verdict passe AVANT les autres — un `.env` world-readable est a
+  #  signaler meme quand le proprietaire est le bon.
+  case "$o" in 4|5|6|7) echo EXPOSE; return ;; esac
+
+  #  Le proprietaire lit-il ? C'est le cas nominal.
+  if [ "$prop" = "$utilisateur" ]; then
+    case "$u" in 4|5|6|7) echo OK; return ;; esac
+    echo ILLISIBLE; return
+  fi
+
+  #  Sinon, le groupe — a condition que l'utilisateur en fasse partie. Sans la
+  #  liste de ses groupes, on se contente du groupe primaire du fichier.
+  case "$g" in
+    4|5|6|7)
+      if [ "$groupe" = "$utilisateur" ] || printf ' %s ' "$groupes" | grep -q " $groupe "; then
+        echo OK; return
+      fi
+      ;;
+  esac
+  echo ILLISIBLE
 }
 
 # ---------------------------------------------------------------------------
@@ -162,6 +238,57 @@ _env_role_selftest() {
     echo "  ✓ standby sans IP refusé"
   fi
 
+  #  🔴 L'ECRITURE preserve le proprietaire et le mode (#1138).
+  #
+  #  ⚠️ Hors root, ce cas passe trivialement : on ne peut pas changer le
+  #  proprietaire d'un fichier qu'on vient de creer. Il n'est donc PAS la preuve
+  #  du correctif — C28 l'est, en mesurant l'etat reel sur le noeud. Il est le
+  #  filet qui attrape la regression le jour ou la bascule, elle, tourne en root :
+  #  retirer le `chown --reference` le ferait echouer la, et nulle part ailleurs.
+  #  Le dire ici evite qu'on le lise un jour comme une garantie qu'il ne donne pas.
+  #  ⚠️ Le fichier d'épreuve ne s'appelle PAS `.env`, et c'est volontaire :
+  #  `test_env_exemple_coherent.py` refuse toute redirection vers un `.env` dans
+  #  un script versionné — il traque les installeurs qui régénèrent la
+  #  configuration au lieu de s'en remettre au dépôt. Déclarer une exception pour
+  #  un fichier temporaire affaiblirait ce contrôle-là pour rien : la fonction
+  #  éprouvée se moque du nom qu'on lui donne.
+  local tmpdir cible avant apres
+  tmpdir=$(mktemp -d)
+  cible="$tmpdir/env-sous-epreuve"
+  printf 'ORIGIN=x
+' > "$cible"
+  chmod 640 "$cible"
+  avant=$(stat -c '%U:%G:%a' "$cible" 2>/dev/null || echo INDISPONIBLE)
+  env_role_appliquer "$cible" standby 192.168.1.223 >/dev/null
+  apres=$(stat -c '%U:%G:%a' "$cible" 2>/dev/null || echo INDISPONIBLE)
+  _cas "ecriture : proprietaire et mode inchanges" "$avant" "$apres"
+  _cas "ecriture : le contenu est bien celui du role"        "ORIGIN=http://192.168.1.223" "$(grep '^ORIGIN=' "$cible")"
+  rm -rf "$tmpdir"
+
+  # ── C28. Ce que lit auto-deploy est-il lisible par qui le fait tourner ? ──
+  #
+  #  🔴 Le 22/09/2026, le `.env` du standby est passe root:root a la bascule
+  #  de 02:03 : plus aucun build possible, ET plus aucune alerte — elle cherche
+  #  le SMTP dans ce meme fichier. Aveugle et muet pendant 70 minutes (#1135).
+  #
+  #  Aucun des C1 a C27 ne posait la question. Elle est pure : un proprietaire,
+  #  un mode, un utilisateur — donc eprouvable sans les deux RPi.
+  _cas "C28 : proprietaire = utilisateur du cron" OK        "$(verdict_env_lisible ptressard ptressard 600 ptressard)"
+  #  🔴 LE CAS VECU, celui qui a tout arrete.
+  _cas "C28 : root:root en 600, cron en ptressard" ILLISIBLE        "$(verdict_env_lisible root root 600 ptressard)"
+  #  Le groupe suffit, si le mode l'accorde.
+  _cas "C28 : root:ptressard en 640" OK        "$(verdict_env_lisible root ptressard 640 ptressard)"
+  _cas "C28 : root:ptressard en 600 — le groupe ne lit pas" ILLISIBLE        "$(verdict_env_lisible root ptressard 600 ptressard)"
+  #  ⚠️ Lisible de TOUS, c'est lisible — et c'est un secret expose. Deux
+  #  verdicts distincts : repondre OK cacherait un defaut de securite derriere
+  #  une question de disponibilite.
+  _cas "C28 : 644 — lisible, mais expose" EXPOSE        "$(verdict_env_lisible root root 644 ptressard)"
+  #  🔴 CAS ZERO. Ne pas pouvoir lire les droits est exactement l'etat que
+  #  ce controle doit reveler : INCONNU, jamais OK (`standards/04` §1).
+  _cas "C28 : proprietaire non releve" INCONNU "$(verdict_env_lisible '' '' '' ptressard)"
+  _cas "C28 : utilisateur du cron inconnu" INCONNU        "$(verdict_env_lisible root root 600 '')"
+  _cas "C28 : mode illisible" INCONNU "$(verdict_env_lisible root root '' ptressard)"
+
   if [ "$echecs" -eq 0 ]; then
     echo "✓ lib-env-role : tous les cas passent."
     return 0
@@ -170,7 +297,19 @@ _env_role_selftest() {
   return 1
 }
 
-if [ "${1:-}" = "--selftest" ]; then
+#  🔴 « SOURCE, jamais execute » n etait pas GARDE, et c est ce qui a failli
+#  passer inapercu (22/09/2026).
+#
+#  Ce bloc ne regardait que `$1`. Or un module source herite des arguments de
+#  son appelant : des que `check-reliability.sh` a source ce fichier, un
+#  `check-reliability.sh --selftest` declenchait CE self-test, puis son
+#  `exit $?` — le script sortait avec 0 sans avoir joue `verdicts_selftest` ni
+#  `points_entree_selftest`. Un faux vert dans le contrat du job CI lui-meme.
+#
+#  La garde demande donc si ce fichier est EXECUTE, pas seulement s il voit
+#  l argument. Tout module de la liste `for _mod` de `check-reliability.sh`
+#  doit la porter : `lib-modules-sources.sh --selftest` le verifie.
+if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
   _env_role_selftest
   exit $?
 fi

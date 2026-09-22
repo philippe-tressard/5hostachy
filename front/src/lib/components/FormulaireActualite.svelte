@@ -143,9 +143,6 @@
 	//  Section « Quand » (#1092) : une actualité datée paraît au calendrier.
 	let debut = pourChampLocal(publication?.debut);
 	let fin = pourChampLocal(publication?.fin);
-	//  ⚠️ Une `date` nue, pas un `datetime-local` : « visible jusqu'au 22 »
-	//  désigne le jour entier. Elle voyage telle quelle, sans conversion.
-	let visibleJusquAu = publication?.visible_jusqu_au ?? '';
 	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
 	let assisteIA = false;
 	//  Ce que l'assistant IA reçoit pour COMPRENDRE le texte — à ne pas réécrire
@@ -283,7 +280,6 @@
 					perimetre_cible: perimetreCible,
 					debut: depuisChampLocal(debut),
 					fin: depuisChampLocal(fin),
-					visible_jusqu_au: visibleJusquAu || null,
 					public_cible: publicCible,
 					photos_urls: photos,
 					...canaux,
@@ -309,7 +305,6 @@
 				perimetre_cible: perimetreCible,
 				debut: depuisChampLocal(debut),
 				fin: depuisChampLocal(fin),
-				visible_jusqu_au: visibleJusquAu || null,
 				public_cible: publicCible,
 				brouillon: publierApresDocuments ? true : brouillon,
 				photos_urls: photos,
@@ -400,8 +395,6 @@
 				on:envoyer={() => void enregistrer()}
 				idPrefixe="pub-{publication?.id ?? 'new'}"
 				avecQuand={sectionPresente(PUBLICATION, etat, 'quand')}
-				avecValidite
-				bind:visibleJusquAu
 				bind:debut
 				bind:fin
 				avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
