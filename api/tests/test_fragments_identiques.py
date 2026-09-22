@@ -39,7 +39,12 @@ from app.seed import EMAIL_TEMPLATES
 #:
 #: Posée le 15/09/2026, juste après la factorisation, sur un rendu vérifié
 #: identique au caractère près à celui d'avant.
-EMPREINTE = "ffea6d388480b608b048dac82b6d41dbb6e4ae8bacdb018f861a6f90f6ba346b"
+#:
+#: ⬇️ Mise à jour le 22/09/2026 (#1101) : les modèles disent « affaire » et non
+#: plus « ticket ». Le changement est accompagné de la migration **0203**, qui
+#: le porte aux bases existantes — sans elle, le code montrerait une version et
+#: la production en enverrait une autre, ce que ce test existe pour empêcher.
+EMPREINTE = "3054e1f3ba19263cbe2cf70eb4f1faf8f0b358e011555861a6af92011f351632"
 NOMBRE_ATTENDU = 27
 
 
