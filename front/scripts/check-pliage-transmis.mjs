@@ -76,7 +76,19 @@ export function pliageManquant(source) {
 	const manques = [];
 	for (const m of balises) {
 		if (!/[^A-Za-z]pliable[^A-Za-z]/.test(m.balise)) {
-			manques.push({ ligne: ligneDe(source, m.index) });
+			manques.push({ ligne: ligneDe(source, m.index), quoi: 'pliable' });
+		}
+		//  🔴 `requis` ÉCRIT EN DUR — le même angle mort, une section plus loin
+		//  (22/09/2026). `SectionDestinataires` posait `requis` lui-même : la
+		//  déclaration ne savait donc pas que la section était obligatoire, et
+		//  `lint:etats` — qui CALCULE le pliage à partir d'elle — ne voyait aucune
+		//  contradiction à la déclarer pliée. L'écran affichait « DESTINATAIRES* »
+		//  sur une ligne fermée, ce que la règle interdit. Signalé deux fois.
+		//
+		//  ⚠️ Un attribut NU (`requis`) est une valeur écrite ici ; `{requis}` ou
+		//  `requis={…}` vient d'ailleurs, et c'est ce qu'on veut.
+		if (/[^A-Za-z]requis(?=[\s/>])/.test(m.balise)) {
+			manques.push({ ligne: ligneDe(source, m.index), quoi: 'requis en dur' });
 		}
 	}
 	return manques;
@@ -101,6 +113,16 @@ if (process.argv.includes('--selftest')) {
 		],
 		//  Et l'autre sens : le meme `>` ne doit pas masquer un manque reel.
 		['<SectionFormulaire titre={SECTIONS_LIBELLE.destinataires} rempli={d.length > 0}>', 1],
+		//  🔴 `requis` NU : la valeur est écrite ici, la déclaration l'ignore.
+		['<SectionFormulaire titre={SECTIONS_LIBELLE.destinataires} pliable={p} requis>', 1],
+		//  Reçu d'ailleurs : c'est ce qu'on veut.
+		['<SectionFormulaire titre={SECTIONS_LIBELLE.destinataires} pliable={p} {requis}>', 0],
+		[
+			"<SectionFormulaire titre={SECTIONS_LIBELLE.destinataires} pliable={p} requis={exige('x')}>",
+			0,
+		],
+		//  ⚠️ Un attribut qui COMMENCE par « requis » n'est pas `requis`.
+		['<SectionFormulaire titre={SECTIONS_LIBELLE.quand} pliable={p} requisAide="x">', 0],
 		//  Aucun SectionFormulaire : rien à dire.
 		['<div>rien</div>', 0],
 	];
@@ -129,7 +151,12 @@ for (const chemin of svelte(RACINE)) {
 	porteurs++;
 	for (const m of pliageManquant(source)) {
 		const relatif = relative(RACINE, chemin).split(sep).join('/');
-		fautifs.push(`src/${relatif}:${m.ligne}  section du cadre rendue sans pliable`);
+		fautifs.push(
+			`src/${relatif}:${m.ligne}  ` +
+				(m.quoi === 'requis en dur'
+					? '`requis` écrit dans le composant, pas lu dans la déclaration'
+					: 'section du cadre rendue sans `pliable`'),
+		);
 	}
 }
 

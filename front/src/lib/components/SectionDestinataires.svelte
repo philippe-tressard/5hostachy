@@ -32,6 +32,18 @@
 
 	export let destinataires: string[] = ['résidents'];
 
+	/**  🔴 Il est REÇU, plus écrit en dur (22/09/2026).
+	 *
+	 *   Ce composant posait `requis` lui-même. La déclaration ne le savait donc
+	 *   pas, et `lint:etats` ne pouvait pas voir qu'une section obligatoire
+	 *   était déclarée pliée : l'écran affichait « DESTINATAIRES* » sur une
+	 *   ligne fermée, ce que la règle interdit — signalé à l'écran, deux fois.
+	 *
+	 *   ⚠️ Même angle mort que `pliable` le matin même : ce qu'un composant
+	 *   PORTEUR écrit lui-même échappe à la déclaration qui gouverne les
+	 *   autres. `lint:pliage-transmis` le refuse désormais pour les deux. */
+	export let requis = false;
+
 	/**  Le badge du TITRE de section, calculé ici et nulle part ailleurs.
 	 *
 	 *   Il n'invente rien : `concerneTousLesResidents` est la fonction qu'emploie
@@ -44,9 +56,9 @@
 	{pliable}
 	{badge}
 	titre={SECTIONS_LIBELLE.destinataires}
-	requis
+	{requis}
 	rempli={destinataires.length > 0}
-	ouvrirSiRenseignee={!concerneTousLesResidents(destinataires)}
+	valeurModifiee={!concerneTousLesResidents(destinataires)}
 	idTitre="{idPrefixe}-destinataires-titre"
 >
 	<!--  Les pastilles ne sont pas un contrôle labelable — `for` n'y associerait

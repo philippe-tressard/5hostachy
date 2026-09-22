@@ -81,7 +81,7 @@
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import { SECTIONS_LIBELLE, type EntiteDeclaree, type IdSection } from '$lib/entites/types';
-	import { pliageDe } from '$lib/pliage';
+	import { pliageDe, requisDe } from '$lib/pliage';
 	import SectionDiffusion from './SectionDiffusion.svelte';
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
 	import SectionPerimetre from './SectionPerimetre.svelte';
@@ -111,6 +111,10 @@
 	export let entite: EntiteDeclaree | null = null;
 
 	const plie = (id: IdSection) => pliageDe(entite, id);
+	//  L'astérisque vient de la DÉCLARATION, comme le pliage — et pour la même
+	//  raison : les deux doivent s'accorder, et un composant qui écrirait l'un
+	//  sans que la table sache l'autre rouvre la divergence (22/09/2026).
+	const exige = (id: IdSection) => requisDe(entite, id);
 
 	//  ── 2. Saisi pour ─────────────────────────────────────────────────────────
 	//
@@ -392,6 +396,7 @@
 	      manquait qu'un appelant de plus. -->
 	<ChampSaisiPour
 		pliable={plie('au_nom_de')}
+		requis={exige('au_nom_de')}
 		bind:mode={saisiPour.mode}
 		bind:userId={saisiPour.userId}
 		bind:nom={saisiPour.nom}
@@ -425,6 +430,7 @@
 		{idPrefixe}
 		premiere={premiere && !avecPerimetre}
 		pliable={plie('destinataires')}
+		requis={exige('destinataires')}
 		bind:destinataires
 	/>
 {/if}

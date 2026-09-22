@@ -150,6 +150,14 @@ export const IDEE: EntiteDeclaree = {
 			//  l'audience : ce serait décider à la place de l'auteur, sans que rien
 			//  ne le dise. `idee_visible` applique le ciblage tel quel.
 			id: 'destinataires',
+			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
+			//
+			//  L'astérisque était écrite en dur par `SectionDestinataires` : la
+			//  déclaration ne savait donc pas que la section était obligatoire, et
+			//  `lint:etats` — qui CALCULE le pliage à partir d'elle — ne voyait
+			//  aucune contradiction à la déclarer pliée. L'écran affichait donc
+			//  « DESTINATAIRES* » sur une ligne fermée, ce que la règle interdit.
+			requis: true,
 			objet: 'DestinatairePicker — à qui cette idée s’adresse',
 			absente: {
 				//  🔒 Même raison que le périmètre ci-dessus, et c'est la plus forte
@@ -166,7 +174,6 @@ export const IDEE: EntiteDeclaree = {
 					explication: "Le public visé est celui de l'idée. Une réponse ne le redéfinit pas.",
 				},
 			},
-			pliee: true,
 		},
 		{
 			id: 'diffusion',

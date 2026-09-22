@@ -18,7 +18,7 @@
   `lint:etats` la refuse.
 -->
 <script lang="ts">
-	import { pliageDe } from '$lib/pliage';
+	import { pliageDe, requisDe } from '$lib/pliage';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
@@ -124,7 +124,7 @@
 <SectionFormulaire
 	titre={SECTIONS_LIBELLE.suivi}
 	pliable={pliageDe(TICKET, 'suivi')}
-	requis
+	requis={requisDe(TICKET, 'suivi')}
 	idTitre="ticket-workflow-titre"
 >
 	<div class="field champ-large">

@@ -176,7 +176,7 @@
 		titre={SECTIONS_LIBELLE.diffusion}
 		{pliable}
 		{resume}
-		ouvrirSiRenseignee={nbCanaux > 0}
+		valeurModifiee={nbCanaux > 0}
 	>
 		<!--  Les options propres à l'écran (épingler, brouillon, afficher au fil…)
 		      passent AVANT les canaux : elles décident de ce qui est PUBLIÉ, les

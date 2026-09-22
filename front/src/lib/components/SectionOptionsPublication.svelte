@@ -71,7 +71,7 @@
 	{premiere}
 	{pliable}
 	{resume}
-	ouvrirSiRenseignee={actives.length > 0}
+	valeurModifiee={actives.length > 0}
 	idTitre="{objet}-options-titre"
 >
 	<OptionsPublication

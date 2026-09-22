@@ -96,6 +96,14 @@ export const PRESTATAIRE: EntiteDeclaree = {
 		},
 		{
 			id: 'destinataires',
+			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
+			//
+			//  L'astérisque était écrite en dur par `SectionDestinataires` : la
+			//  déclaration ne savait donc pas que la section était obligatoire, et
+			//  `lint:etats` — qui CALCULE le pliage à partir d'elle — ne voyait
+			//  aucune contradiction à la déclarer pliée. L'écran affichait donc
+			//  « DESTINATAIRES* » sur une ligne fermée, ce que la règle interdit.
+			requis: true,
 			sansObjet:
 				"Personne n'est destinataire d'une fiche de carnet d'adresses. Qui la " +
 				'consulte relève des droits, pas de la saisie — la sécurité est centralisée.',

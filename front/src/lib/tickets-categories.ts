@@ -45,10 +45,21 @@ export interface CategorieTicket {
  *
  *  Une marque sans légende est un symbole que personne ne décode : les deux
  *  s'écrivent ici, ensemble, et l'écran les lit — il n'en recopie aucune. */
-export const MARQUE_CARNET = '📒';
+/**  La phrase qui explique le repère — et elle doit décrire la FORME retenue.
+ *
+ *   🔴 Elle commençait par 📒, qui était le repère jusqu'au 22/09/2026.
+ *   Signalé à l'écran : *« je trouve illisible le logo carnet d'entretien : ne
+ *   peut-on pas plutôt modifier le cadre (un bord jaune par exemple) »*. Un emoji
+ *   posé après un libellé qui commence déjà par celui de sa catégorie en faisait
+ *   deux dans une pastille de vingt caractères — et il disparaît sur le fond
+ *   bleu de la pastille retenue.
+ *
+ *   ⚠️ Une légende qui décrirait encore l'emoji renverrait à un signe absent :
+ *   c'est le genre de texte qu'on ne relit jamais, parce qu'il a été juste. */
 export const LEGENDE_CARNET =
-	'📒 Une affaire close dans cette catégorie est consignée au carnet d’entretien ' +
-	'de la copropriété, consultable par tout copropriétaire (décret n° 2001-477).';
+	'Les catégories marquées d’un liseré doré alimentent le carnet d’entretien : une ' +
+	'affaire close dans l’une d’elles y est consignée, consultable par tout ' +
+	'copropriétaire (décret n° 2001-477).';
 
 /**
  *  Les huit catégories, **dans l'ordre de fréquence attendue** en copropriété.
@@ -213,12 +224,15 @@ export const OPTIONS_CATEGORIE: readonly {
 	val: string;
 	label: string;
 	desc: string;
-	marque?: string;
+	marquee?: boolean;
 	marqueAide?: string;
 }[] = CATEGORIES_TICKET.map((c) => ({
 	val: c.value,
 	label: `${c.emoji} ${c.label}`,
 	desc: c.description,
-	marque: c.carnet ? MARQUE_CARNET : undefined,
+	marquee: !!c.carnet,
+	//  ⚠️ OBLIGATOIRE dès que `marquee` est vrai : un liseré ne dit rien à un
+	//  lecteur d'écran. L'équivalent textuel compte plus qu'avec un emoji, pas
+	//  moins — un emoji, au moins, s'annonçait.
 	marqueAide: c.carnet ? 'consignée au carnet d’entretien' : undefined,
 }));

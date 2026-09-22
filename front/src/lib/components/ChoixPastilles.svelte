@@ -52,23 +52,23 @@
 	/**
 	 *  Les entrées. `desc` n'est lue que si `avecDetail` est vrai.
 	 *
-	 *  `marque` pose un **repère** sur certaines entrées — un signe court, posé
-	 *  après le libellé, qui dit qu'elles ne sont pas de même nature que les
-	 *  autres. `marqueAide` est ce qu'un lecteur d'écran en annonce, et c'est
-	 *  obligatoire dès que `marque` est là : un emoji sans texte de rechange est
-	 *  lu par son nom Unicode, ou pas du tout.
+	 *  `marquee` pose un **repère** sur certaines entrées : un liseré doré le
+	 *  long du bord gauche de la pastille, qui la distingue des autres sans rien
+	 *  ajouter à son libellé.
 	 *
-	 *  ⚠️ Le repère ne se substitue pas à une LÉGENDE : un signe que rien
-	 *  n'explique n'apprend rien à qui le voit pour la première fois. L'appelant
-	 *  la rend sous la rangée (`.aide`), et les deux se lisent à la même source
-	 *  — pour les catégories d'affaire, `MARQUE_CARNET` et `LEGENDE_CARNET`
-	 *  (`$lib/tickets`).
+	 *  🔴 C'était un EMOJI (📒) jusqu'au 22/09/2026 — illisible, signalé à
+	 *  l'écran : un libellé de catégorie commence déjà par son propre emoji, et le
+	 *  second disparaît sur le fond bleu de la pastille retenue.
+	 *
+	 *  ⚠️ `marqueAide` reste OBLIGATOIRE dès que `marquee` est vrai, et elle
+	 *  compte plus qu'avant : un emoji s'annonçait à un lecteur d'écran, un liseré
+	 *  ne dit rien du tout.
 	 */
 	export let options: readonly {
 		val: string;
 		label: string;
 		desc?: string;
-		marque?: string;
+		marquee?: boolean;
 		marqueAide?: string;
 	}[] = [];
 
@@ -206,24 +206,24 @@
 			{#if avecDetail && o.desc}
 				<Pastille
 					active={valeur === o.val}
+					marquee={!!o.marquee}
+					marqueAide={o.marqueAide}
 					radio={radio ? { nom: radio, valeur: o.val } : null}
 					on:click={() => (valeur = o.val)}
 					on:change={() => (valeur = o.val)}
 				>
-					{o.label}{#if o.marque}<span class="marque" role="img" aria-label={o.marqueAide}
-							>{o.marque}</span
-						>{/if}<span slot="detail">{o.desc}</span>
+					{o.label}<span slot="detail">{o.desc}</span>
 				</Pastille>
 			{:else}
 				<Pastille
 					active={valeur === o.val}
+					marquee={!!o.marquee}
+					marqueAide={o.marqueAide}
 					radio={radio ? { nom: radio, valeur: o.val } : null}
 					on:click={() => (valeur = o.val)}
 					on:change={() => (valeur = o.val)}
 				>
-					{o.label}{#if o.marque}<span class="marque" role="img" aria-label={o.marqueAide}
-							>{o.marque}</span
-						>{/if}
+					{o.label}
 				</Pastille>
 			{/if}
 		{/each}
@@ -231,14 +231,4 @@
 </div>
 
 <style>
-	/*  Le repère : discret, jamais concurrent du libellé ni de l'état « retenu »
-	    (qui est le fond plein de la pastille). Il suit le texte, collé à un
-	    demi-espace, et ne prend pas de ligne. */
-	.marque {
-		margin-left: 0.25rem;
-		font-size: 0.85em;
-		/*  L'emoji reste lisible sur une pastille pleine comme sur une pastille
-		    vide : aucune couleur posée ici, c'est celle du libellé qui sert. */
-		vertical-align: baseline;
-	}
 </style>

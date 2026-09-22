@@ -172,6 +172,14 @@ export const SONDAGE: EntiteDeclaree = {
 		},
 		{
 			id: 'destinataires',
+			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
+			//
+			//  L'astérisque était écrite en dur par `SectionDestinataires` : la
+			//  déclaration ne savait donc pas que la section était obligatoire, et
+			//  `lint:etats` — qui CALCULE le pliage à partir d'elle — ne voyait
+			//  aucune contradiction à la déclarer pliée. L'écran affichait donc
+			//  « DESTINATAIRES* » sur une ligne fermée, ce que la règle interdit.
+			requis: true,
 			objet: 'DestinatairePicker — quels profils peuvent voter',
 			absente: {
 				//  🔒 Même raison que le périmètre, et plus forte encore : ce champ
@@ -190,7 +198,6 @@ export const SONDAGE: EntiteDeclaree = {
 						'montrerait un débat à des résidents qui n’ont jamais vu la question.',
 				},
 			},
-			pliee: true,
 		},
 		{
 			id: 'diffusion',

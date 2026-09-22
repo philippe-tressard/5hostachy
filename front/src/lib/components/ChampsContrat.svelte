@@ -193,7 +193,7 @@
 	<SectionFormulaire
 		titre={SECTIONS_LIBELLE.description}
 		pliable={pliageDe(CONTRAT, 'description')}
-		ouvrirSiRenseignee={!!contratForm.notes?.trim()}
+		valeurModifiee={!!contratForm.notes?.trim()}
 		pour={idNotes}
 	>
 		<RichEditor

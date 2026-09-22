@@ -50,7 +50,7 @@
 	titre={SECTIONS_LIBELLE.perimetre}
 	{requis}
 	badge={badgeImpose ?? badgeCalcule}
-	ouvrirSiRenseignee={!estPerimetreParDefaut(perimetre)}
+	valeurModifiee={!estPerimetreParDefaut(perimetre)}
 	idTitre="{idPrefixe}-perimetre-titre"
 >
 	<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
