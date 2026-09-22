@@ -35,7 +35,11 @@ SOURCE = APP / "utils" / "syndic.py"
 #: ressemble à une décision.
 EXCEPTIONS = {
     "routers/admin/annuaire.py": "écrit la saisie de repli, ne la lit pas pour afficher",
-    "models/core.py": "définit la colonne",
+    #  ⚠️ Était `models/core.py` jusqu'au 22/09/2026 : l'annuaire CS & syndic a
+    #  été extrait dans son propre module (modularité, rang 1), et ce test l'a vu
+    #  le jour même — c'est précisément ce que « l'exception doit encore servir »
+    #  existe pour attraper.
+    "models/gouvernance.py": "définit la colonne",
 }
 
 
