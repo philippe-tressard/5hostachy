@@ -92,7 +92,7 @@ class UTCJSONResponse(JSONResponse):
 from app.database import _run_migrations, engine
 from app.routers import (
     auth, auth_mot_de_passe, auth_profil, auth_telemetrie, tickets, publications, documents, lots, admin,
-    notifications, acces, calendrier, calendrier_apercu, calendrier_historique, prestataires, compteurs, sondages, idees, copropriete, carnet,
+    notifications, acces, calendrier, calendrier_apercu, calendrier_historique, prestataires, compteurs, sondages, idees, copropriete, copropriete_patrimoine, carnet,
     bailleur, config, diagnostics, annonces, regles_residence, delegations,
     telemetry, flux,
 )
@@ -368,6 +368,9 @@ app.include_router(annonces.router)
 app.include_router(annonces_hall.router)
 app.include_router(manuel.router)
 app.include_router(copropriete.router)
+#  Les bâtiments et les lots — extraits le 22/09/2026 (modularité, rang 1). Même
+#  préfixe `/copropriete`, donc mêmes URL publiques (cf. son en-tête).
+app.include_router(copropriete_patrimoine.router)
 #  Le carnet d'entretien : une VUE sur les contrats, les interventions et les
 #  tickets clos. Router à part parce que `copropriete.py` était à 478 lignes.
 app.include_router(carnet.router)

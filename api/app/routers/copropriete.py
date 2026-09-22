@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin
 from app.database import get_session
 from app.models.core import (
-    Batiment, ContratEntretien, Copropriete, Lot, Prestataire,
+    ContratEntretien, Copropriete, Prestataire,
     TypeEquipement, Utilisateur,
 )
 
@@ -131,6 +131,17 @@ class LotRead(BaseModel):
     id: int
     batiment_id: Optional[int] = None  # None pour les parkings
     batiment_nom: Optional[str] = None  # enrichi à la sérialisation
+    #  🔴 QUI détient ce lot — enrichi à la sérialisation (#1154, 22/09/2026).
+    #
+    #  Signalé à l'écran : « je ne trouve pas de lots pour CHAUDHRY ». La liste
+    #  n'est pas filtrée — elle porte tous les lots — mais elle n'affichait que
+    #  « Bât.2 — 41 (appartement) ». La question qu'on lui pose est « quel lot
+    #  est à cette personne ? », et elle répondait par des numéros.
+    #
+    #  ⚠️ `None` quand aucun lien ACTIF de propriété n'existe : un lot sans
+    #  propriétaire enregistré est un cas réel, et le dire vaut mieux que de
+    #  laisser croire à un chargement raté.
+    proprietaire_nom: Optional[str] = None
     numero: str
     type: str
     type_appartement: Optional[str] = None
@@ -450,30 +461,3 @@ def contrats_candidats(
         )
         for c in contrats
     ]
-
-
-@router.get("/batiments", response_model=list[BatimentRead])
-def get_batiments(
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(get_current_user),
-):
-    return session.exec(select(Batiment)).all()
-
-
-@router.get("/lots")
-def get_lots(
-    batiment_id: Optional[int] = None,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(get_current_user),
-):
-    stmt = select(Lot)
-    if batiment_id:
-        stmt = stmt.where(Lot.batiment_id == batiment_id)
-    lots = session.exec(stmt).all()
-    result = []
-    for lot in lots:
-        bat = session.get(Batiment, lot.batiment_id) if lot.batiment_id else None
-        d = LotRead.model_validate(lot)
-        d.batiment_nom = bat.numero if bat else None
-        result.append(d)
-    return result
