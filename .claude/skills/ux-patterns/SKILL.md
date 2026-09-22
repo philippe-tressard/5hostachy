@@ -1180,6 +1180,12 @@ bonne volonté :
   après une supérieure, dans **tout** `.svelte` du dépôt. Vérifié échouant sur
   le défaut, et son lecteur de balise l'est aussi : un `=>` dans les props
   coupait la lecture, et le contrôle passait au vert sur ce qu'il devait refuser.
+* 🔒 `npm run lint:pliage-transmis` (22/09/2026) tient l'autre bout du même
+  fil : un composant qui **porte** une section du cadre — `SectionsPiecesJointes`,
+  `ChampSaisiPour`, `SectionWorkflow` — doit **transmettre** son pliage. Sans
+  prop `pliable`, la table a beau dire `pliee: true`, la section s'ouvre.
+  Signalé deux fois à l'écran avant qu'un contrôle le voie : corriger la table
+  ne suffit pas si le porteur ne la lit pas.
 
 ⚠️ Un épinglage ne se met JAMAIS dans la Diffusion, même quand il en dépend. Le
 calendrier avait un motif réel — un événement absent du fil ne peut pas y être

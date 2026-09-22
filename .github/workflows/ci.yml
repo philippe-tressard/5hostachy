@@ -1624,6 +1624,20 @@ jobs:
         working-directory: front
         run: npm run lint:ordre-sections
 
+      # 🔴 LE PLIAGE N'ATTEIGNAIT PAS LES COMPOSANTS PORTEURS (22/09/2026).
+      #
+      # La table dit `pliee: true` pour Pieces jointes, et la section restait
+      # depliee a l'ecran : `SectionsPiecesJointes`, `ChampSaisiPour` et
+      # `SectionWorkflow` PORTENT leur section au lieu de l'ecrire dans la page,
+      # et aucun ne recevait de prop `pliable` — le chemin n'existait pas.
+      #
+      # C'est l'angle mort deja paye par `lint:ordre-sections` : plus un ecran
+      # suit la regle en deleguant a un composant, moins il est controle.
+      # Signale deux fois par l'utilisateur avant qu'un controle le voie.
+      - name: Le pliage atteint les composants porteurs de section
+        working-directory: front
+        run: npm run lint:pliage-transmis
+
       # 🔴 DIX FICHIERS ÉNUMÉRAIENT LE MÊME ENSEMBLE D'ÉTATS DEUX OU TROIS FOIS
       # (15/09/2026, #779) — un libellé ici, une pastille là, un abrégé plus bas.
       #

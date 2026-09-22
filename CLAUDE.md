@@ -293,7 +293,10 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - [ ] Section d'un formulaire : elle est déclarée dans `$lib/entites/<entité>`
       — **treize**, dans l'ordre de `SECTIONS_ORDRE` — et son **pliage** suit la
       règle *obligatoire → déplié · facultatif → plié*, ou porte son
-      `exceptionPliage` (`npm run lint:etats` refuse dans les deux sens)
+      `exceptionPliage` (`npm run lint:etats` refuse dans les deux sens). Un
+      composant qui **porte** une section au lieu de l'écrire dans la page la
+      **transmet** : sans prop `pliable`, la table a beau dire `pliee`, la
+      section s'ouvre — il y en avait **trois** (`npm run lint:pliage-transmis`)
 - [ ] Libellé qui NOMME un objet — bouton, titre de boîte, toast, confirmation :
       le mot vient de `$lib/entites/<entité>` (`libelle`, `libelleNouveau`,
       `libelleModifier`), **jamais** réécrit dans un écran. « Publication » et
