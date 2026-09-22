@@ -75,6 +75,7 @@
 		{#if !sourceMode}
 			<button
 				type="button"
+				aria-label="Titre H2"
 				title="Titre H2"
 				class:active={editor?.isActive('heading', { level: 2 })}
 				on:click={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
@@ -83,6 +84,7 @@
 			</button>
 			<button
 				type="button"
+				aria-label="Titre H3"
 				title="Titre H3"
 				class:active={editor?.isActive('heading', { level: 3 })}
 				on:click={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
@@ -92,6 +94,7 @@
 			<div class="sep"></div>
 			<button
 				type="button"
+				aria-label="Gras"
 				title="Gras"
 				class:active={editor?.isActive('bold')}
 				on:click={() => editor.chain().focus().toggleBold().run()}
@@ -100,6 +103,7 @@
 			</button>
 			<button
 				type="button"
+				aria-label="Italique"
 				title="Italique"
 				class:active={editor?.isActive('italic')}
 				on:click={() => editor.chain().focus().toggleItalic().run()}
@@ -108,6 +112,7 @@
 			</button>
 			<button
 				type="button"
+				aria-label="Souligné"
 				title="Souligné"
 				class:active={editor?.isActive('underline')}
 				on:click={() => editor.chain().focus().toggleUnderline().run()}
@@ -117,6 +122,7 @@
 			<div class="sep"></div>
 			<button
 				type="button"
+				aria-label="Liste à puces"
 				title="Liste à puces"
 				class:active={editor?.isActive('bulletList')}
 				on:click={() => editor.chain().focus().toggleBulletList().run()}
@@ -125,6 +131,7 @@
 			</button>
 			<button
 				type="button"
+				aria-label="Liste numérotée"
 				title="Liste numérotée"
 				class:active={editor?.isActive('orderedList')}
 				on:click={() => editor.chain().focus().toggleOrderedList().run()}
@@ -134,6 +141,7 @@
 			<div class="sep"></div>
 			<button
 				type="button"
+				aria-label="Citation"
 				title="Citation"
 				class:active={editor?.isActive('blockquote')}
 				on:click={() => editor.chain().focus().toggleBlockquote().run()}
@@ -142,6 +150,7 @@
 			</button>
 			<button
 				type="button"
+				aria-label="Ligne de séparation"
 				title="Ligne de séparation"
 				on:click={() => editor.chain().focus().setHorizontalRule().run()}
 			>

@@ -12,7 +12,7 @@
   raison d'être de `idTitre`, et elle ne se devine pas : ne pas la « simplifier »
   en `pour=`.
 
-  ## L'assistant IA vit ICI, sous l'éditeur (#985, 17/09/2026)
+  ## L'assistant IA vit ICI — en deux endroits depuis le 22/09/2026 (#985)
 
   C'est la section qui le porte, pas l'écran : elle est rendue par
   `ChampsCommuns` (six formulaires) et par `EvolForm` (le fil), et l'y poser
@@ -23,12 +23,26 @@
   ⚠️ `titreObjet` n'est PAS `titre` : le second est l'intitulé de la section
   (« Description »), le premier est le titre de l'OBJET, prêté par le
   formulaire pour que l'assistant puisse le retravailler aussi.
+
+  ## 🔴 Le déclencheur est dans la BARRE, le panneau reste dessous
+
+  Demandé à l'écran le 22/09/2026 : *« l'icône IA … ne peut pas être dans la boîte
+  description sur la ligne d'icône Gras Italique (cadré à droite) ? »* Le panneau
+  occupait deux lignes en permanence, sur les six formulaires qui portent cette
+  section, pour un geste qu'on fait rarement.
+
+  ⚠️ Ce sont **deux endroits de l'arbre** — le slot `outils` de l'éditeur, et le
+  frre qui suit. Svelte ne sait pas rendre un composant à deux places : cette
+  section fait donc le lien, avec le minimum possible d'état remonté (`ouvert`,
+  `visible`, `enCours`). Tout ce qui **décide** reste dans `AssistantDescription`
+  — le bouton ne porte que la bascule.
 -->
 <script lang="ts">
 	import { richEmpty } from '$lib/publications';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import AssistantDescription from '$lib/components/AssistantDescription.svelte';
+	import BoutonAssistant from '$lib/components/BoutonAssistant.svelte';
 	import type { ContexteAssistant } from '$lib/assistant';
 
 	/** Préfixe des identifiants — l'écran en ouvre parfois plusieurs à la fois. */
@@ -60,6 +74,13 @@
 	export let assistantAvecTitre = true;
 	/** Vrai dès qu'une proposition a été appliquée — le formulaire l'envoie en `assiste_ia`. */
 	export let assisteIA = false;
+
+	//  L'état partagé entre le déclencheur (dans la barre) et le panneau (dessous).
+	//  Trois valeurs, et pas une de plus : `AssistantDescription` écrit les deux
+	//  dernières, cette section ne fait que les relayer au bouton.
+	let assistantOuvert = false;
+	let assistantVisible = false;
+	let assistantEnCours = false;
 </script>
 
 <SectionFormulaire
@@ -76,7 +97,22 @@
 			ariaLabelledby="{idPrefixe}-{idChamp}-titre"
 			{placeholder}
 			minHeight={hauteur}
-		/>
+		>
+			<svelte:fragment slot="outils">
+				<!--  `assistantVisible` et non `assistant` : le premier est la réponse du
+				      SERVEUR (usage disponible) croisée avec le rôle, l'autre n'est que
+				      l'intention du formulaire. Une icône qui n'ouvre rien est pire
+				      qu'une icône absente. -->
+				{#if assistant && assistantVisible}
+					<BoutonAssistant
+						ouvert={assistantOuvert}
+						enCours={assistantEnCours}
+						commande="{idPrefixe}-{idChamp}-assistant-panneau"
+						onBasculer={() => (assistantOuvert = !assistantOuvert)}
+					/>
+				{/if}
+			</svelte:fragment>
+		</RichEditor>
 		{#if assistant}
 			<AssistantDescription
 				contexte={assistant}
@@ -85,6 +121,9 @@
 				bind:titre={titreObjet}
 				bind:description={valeur}
 				bind:assiste={assisteIA}
+				bind:ouvert={assistantOuvert}
+				bind:visible={assistantVisible}
+				bind:enCours={assistantEnCours}
 			/>
 		{/if}
 	</div>

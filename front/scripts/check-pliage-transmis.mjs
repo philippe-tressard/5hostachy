@@ -38,6 +38,8 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
+import { balisesOuvrantes, ligneDe } from './lib-balises.mjs';
+
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
 function svelte(dir) {
@@ -55,37 +57,13 @@ export function pliageManquant(source) {
 	//  Seuls les composants qui rendent une section DU CADRE sont concernés :
 	//  une section « Le contrat » ou « Activation » n'est pas gouvernée par la
 	//  table, et n'a donc pas de pliage déclaré.
-	//  🔴 Un `>` ne ferme PAS la balise s'il est dans une expression :
-	//  `rempli={destinataires.length > 0}` en contient un, et un motif naif s'y
-	//  arrete — la fin de la balise lui echappe alors, `pliable` compris. Mesure
-	//  le 22/09/2026 : le controle a reclame un `pliable` deja present quatre
-	//  lignes plus bas, et je l'ai ajoute une seconde fois. C'est le meme piege
-	//  que `check-ordre-sections` a paye avant lui — d'ou l'automate.
-	const balises = [];
-	const ouvertures = /<SectionFormulaire(?=[^A-Za-z])/g;
-	let ouverture;
-	while ((ouverture = ouvertures.exec(source))) {
-		let i = ouverture.index + 1;
-		let guillemet = '';
-		let accolades = 0;
-		while (i < source.length) {
-			const c = source[i];
-			if (guillemet) {
-				if (c === guillemet) guillemet = '';
-			} else if (c === '"' || c === "'" || c === '`') {
-				guillemet = c;
-			} else if (c === '{') {
-				accolades += 1;
-			} else if (c === '}') {
-				accolades = Math.max(0, accolades - 1);
-			} else if (c === '>' && accolades === 0) {
-				break;
-			}
-			i += 1;
-		}
-		const balise = source.slice(ouverture.index, i + 1);
-		if (balise.includes('SECTIONS_LIBELLE.')) balises.push({ 0: balise, index: ouverture.index });
-	}
+	//  L'automate vit dans `lib-balises.mjs` depuis le 22/09/2026 : il etait
+	//  ecrit ici, et une troisieme fois ailleurs. Le `>` d'une expression ne ferme
+	//  pas une balise (`standards/04` §48) — et la quatrieme recopie manquerait le
+	//  cas suivant.
+	const balises = balisesOuvrantes(source, 'SectionFormulaire').filter((b) =>
+		b.balise.includes('SECTIONS_LIBELLE.'),
+	);
 	if (balises.length === 0) return [];
 	//  🔴 Ce qui compte est que la BALISE porte `pliable` — peu importe d'où la
 	//  valeur vient. Un composant qui lit la table lui-même
@@ -97,8 +75,8 @@ export function pliageManquant(source) {
 	//  qu'il faut. Un contrôle qui crie sur du légitime finit désarmé.
 	const manques = [];
 	for (const m of balises) {
-		if (!/[^A-Za-z]pliable[^A-Za-z]/.test(m[0])) {
-			manques.push({ ligne: source.slice(0, m.index).split(String.fromCharCode(10)).length });
+		if (!/[^A-Za-z]pliable[^A-Za-z]/.test(m.balise)) {
+			manques.push({ ligne: ligneDe(source, m.index) });
 		}
 	}
 	return manques;

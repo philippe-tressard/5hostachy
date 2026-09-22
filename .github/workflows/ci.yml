@@ -1639,6 +1639,21 @@ jobs:
         working-directory: front
         run: npm run lint:pliage-transmis
 
+      # 🔴 « ARIA-LABEL SUR LES BOUTONS ICONE-SEULE » ETAIT ECRIT TROIS FOIS
+      # ET APPLIQUE ZERO (22/09/2026) : CLAUDE.md, ux-patterns §3, standards/11 §2.
+      #
+      # Mesure : en retirant l'aria-label d'un bouton icone fraichement ecrit,
+      # `lint:a11y` est reste VERT. Il relaie les avertissements de svelte-check,
+      # qui n'a pas de regle « bouton sans nom accessible » — il ne la trouve donc
+      # jamais. Dix-neuf boutons etaient muets, dont les huit de la barre de
+      # l'editeur riche : un lecteur d'ecran annonce « bouton », et rien d'autre.
+      #
+      # ⚠️ `title` ne compte pas : il ne s'affiche qu'au survol, donc jamais au
+      # doigt ni au clavier.
+      - name: Un bouton icone-seule dit ce qu'il fait
+        working-directory: front
+        run: npm run lint:bouton-icone
+
       # 🔴 DIX FICHIERS ÉNUMÉRAIENT LE MÊME ENSEMBLE D'ÉTATS DEUX OU TROIS FOIS
       # (15/09/2026, #779) — un libellé ici, une pastille là, un abrégé plus bas.
       #

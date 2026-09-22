@@ -4,11 +4,22 @@
 
   ## Le geste
 
-  Un bouton ✨ sous l'éditeur, une « précision » facultative (« plus court »,
-  « plus formel »), et la PROPOSITION s'affiche sous le champ avec « Appliquer »
-  et « Ignorer » : le formulaire ne change qu'à l'application, et rien n'est
-  enregistré tant que l'auteur n'enregistre pas. Le geste se rejoue à volonté,
-  chaque appel partant du texte COURANT.
+  Une icône ✨ **dans la barre de l'éditeur, à droite** (`BoutonAssistant`) ouvre
+  ce panneau : un prompt facultatif (« plus court », « plus formel »), le bouton
+  qui sollicite, et la PROPOSITION avec « Appliquer » et « Ignorer ». Le
+  formulaire ne change qu'à l'application, et rien n'est enregistré tant que
+  l'auteur n'enregistre pas. Le geste se rejoue à volonté, chaque appel partant
+  du texte COURANT.
+
+  🔴 **Le panneau était ouvert en permanence** jusqu'au 22/09/2026 : deux lignes
+  sous l'éditeur, sur les six formulaires qui portent la section Description, pour
+  un geste qu'on fait rarement. Signalé à l'écran, capture à l'appui.
+
+  ⚠️ L'état `ouvert` vit ICI et se lie (`bind:`) à `SectionDescription`, qui
+  place le bouton dans le slot de l'éditeur. Deux emplacements dans l'arbre, un
+  seul état — c'est le minimum de plomberie possible, et c'est pourquoi le
+  bouton ne porte QUE la bascule : tout ce qui décide (peut-on solliciter ? que
+  répond le serveur ?) reste dans ce fichier.
 
   ## Ce que l'écran dit, et ce qu'il ne décide pas
 
@@ -46,6 +57,19 @@
 	/** Devient vrai quand une proposition est appliquée — lu par le formulaire. */
 	export let assiste = false;
 
+	/**  Le panneau est-il déplié ? Lié (`bind:`) à `SectionDescription`, qui pose
+	 *   le déclencheur dans la barre de l'éditeur — un autre endroit de l'arbre. */
+	export let ouvert = false;
+	/**  L'assistant a-t-il lieu d'être ? Calculé ici (rôle + réponse du serveur) et
+	 *   RENDU à l'appelant : sans lui, l'icône s'afficherait pour tout le monde et
+	 *   n'ouvrirait rien. Sortant seulement — personne ne l'écrit d'en haut. */
+	export let visible = false;
+	/** Vrai pendant l'appel : l'icône le dit aussi, l'attente ne doit pas être muette. */
+	export let enCours = false;
+
+	/** L'`id` du panneau, pour la liaison `aria-controls` du déclencheur. */
+	$: idPanneau = `${idPrefixe}-assistant-panneau`;
+
 	let precision = '';
 
 	/**
@@ -60,7 +84,6 @@
 		contexte.entite === ENTITE_COMMENTAIRE
 			? 'rappeler le contexte, plus court…'
 			: 'plus court, plus formel…';
-	let enCours = false;
 	let proposition: PropositionDescription | null = null;
 
 	//  🔴 Visible pour le CS seulement, et seulement si le serveur dit oui. Le
@@ -106,8 +129,8 @@
 	}
 </script>
 
-{#if visible}
-	<div class="assistant">
+{#if visible && ouvert}
+	<div class="assistant" id={idPanneau}>
 		<div class="assistant-commande">
 			<button
 				class="btn btn-outline btn-sm"
@@ -116,7 +139,7 @@
 				aria-busy={enCours}
 				on:click={solliciter}
 			>
-				{enCours ? '✨ L’assistant travaille…' : '✨ Retravailler avec l’assistant'}
+				{enCours ? 'L’assistant travaille…' : 'Retravailler avec l’assistant'}
 			</button>
 			<!--  🔴 « Précision » ne disait pas ce qu'on attend (signalé à l'écran le
 			      22/09/2026). Le champ ne complète pas le texte : il MODULE la réponse
