@@ -185,7 +185,7 @@
 <!--  ══ 6. DESCRIPTION ══ C'est ici qu'atterrit la synthèse proposée par
       l'assistant IA (#899), relue et corrigée avant enregistrement. -->
 {#if sectionPresente(CONTRAT, etat, 'description')}
-	<SectionFormulaire titre="Description" pour={idNotes}>
+	<SectionFormulaire titre={SECTIONS_LIBELLE.description} pour={idNotes}>
 		<RichEditor
 			bind:value={contratForm.notes}
 			ariaLabelledby={idNotes}

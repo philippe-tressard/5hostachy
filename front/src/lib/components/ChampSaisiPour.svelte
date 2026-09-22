@@ -19,6 +19,7 @@
   nues (v2.67.11), que `npm run lint:classes-nues` refuse depuis.
 -->
 <script lang="ts">
+	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import { nomAffiche } from '$lib/noms';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import type { ModeSaisiPour } from '$lib/saisi-pour';
@@ -34,7 +35,15 @@
 
 <!--  `rempli` : « En mon nom » EST une réponse — la section n'attend rien
       de plus, donc son astérisque n'est pas rouge (#1121). -->
-<SectionFormulaire titre="Saisi pour" requis rempli={mode !== null && mode !== undefined}>
+<!--  🔴 L'intitulé se LIT dans la table (#1124) : la section 10 s'appelle
+      « Au nom de » depuis le cadre à treize sections, et cet écran affichait
+      encore « Saisi pour ». Deux noms pour une section, dont un seul est
+      déclaré — signalé à l'écran le 22/09/2026. -->
+<SectionFormulaire
+	titre={SECTIONS_LIBELLE.au_nom_de}
+	requis
+	rempli={mode !== null && mode !== undefined}
+>
 	<div class="field champ-large saisi-pour-section">
 		<div class="saisi-pour-tabs">
 			<button

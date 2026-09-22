@@ -89,7 +89,13 @@
       `PiedFormulaire` émet `enregistre`, pas `soumettre` — le nom vient du
       composant, pas d'ici : l'inventer aurait donné un bouton inerte, sans
       erreur ni avertissement. -->
-<PiedFormulaire {enCours} on:annule={onAnnuler} on:enregistre={onValider} />
+<!--  🔴 `soumission={false}` — SANS quoi le bouton est INERTE (#1132).
+      `PiedFormulaire` rend un `<button type="submit">` par défaut : il ne
+      déclenche rien par lui-même, il compte sur le `on:submit` d'un
+      `<form>` parent. Il n'y en a pas ici, et le clic ne faisait donc RIEN —
+      ni erreur, ni message. Signalé à l'écran, bloquant : plus aucun compte
+      ne pouvait être validé, ni depuis l'Espace CS, ni depuis l'admin. -->
+<PiedFormulaire {enCours} soumission={false} on:annule={onAnnuler} on:enregistre={onValider} />
 
 <style>
 	.vc-precision {

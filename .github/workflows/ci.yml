@@ -1740,6 +1740,15 @@ jobs:
         working-directory: front
         run: node scripts/check-choix-requis.mjs --selftest
 
+      # ──────────────────────────────────────────────────────────────────────
+      # Un intitulé de section du cadre ne s'écrit pas en dur (22/09/2026)
+      #
+      # `ChampSaisiPour` affichait « SAISI POUR » quand la table déclare
+      # « Au nom de » : deux noms pour une section, dont un seul est déclaré.
+      - name: Intitulés de section lus dans la table
+        working-directory: front
+        run: npm run lint:intitules-section
+
   # ══════════════════════════════════════════════════════════════════════════
   # 🔴 LES TESTS DE NAVIGATEUR NE TOURNAIENT NULLE PART (#839, 08/09/2026)
   #

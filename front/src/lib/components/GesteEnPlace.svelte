@@ -50,7 +50,16 @@
 		<p class="geste-question">{@html safeRichContent(question)}</p>
 	{/if}
 	<slot />
-	<PiedFormulaire {enCours} {danger} on:annule={onAnnuler} on:enregistre={onValider} />
+	<!--  `soumission={false}` : ce geste s'ouvre dans une carte, pas dans un
+	      `<form>`. Sans cela le bouton serait un `submit` orphelin, donc
+	      inerte — c'est le défaut #1132, trouvé ici par la même sonde. -->
+	<PiedFormulaire
+		{enCours}
+		{danger}
+		soumission={false}
+		on:annule={onAnnuler}
+		on:enregistre={onValider}
+	/>
 </div>
 
 <style>
