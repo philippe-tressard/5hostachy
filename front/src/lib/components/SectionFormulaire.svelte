@@ -118,21 +118,37 @@
 	export let resume = '';
 
 	/**
-	 * 🔴 **Une valeur autre que le défaut ROUVRE la section d'office.**
+	 * 🔴 **La valeur diffère-t-elle du défaut ?** Elle gouverne TROIS choses.
 	 *
-	 * C'est la moitié non déclarative de la règle : elle dépend de ce que
-	 * l'objet PORTE, pas de ce que la table dit. Une section pliée qui
-	 * cacherait une valeur saisie serait pire que pas de pliage du tout — on
-	 * corrigerait un objet sans voir ce qu'il contient.
+	 * C'est la moitié non déclarative du cadre : elle dépend de ce que l'objet
+	 * PORTE, pas de ce que la table dit.
 	 *
-	 * ⚠️ Elle ne fait qu'OUVRIR : repasser à `false` ne referme pas ce que
-	 * l'utilisateur a ouvert, et ne referme pas non plus une section qu'il vient
-	 * de vider — il y travaille encore.
+	 * | | valeur par défaut | valeur modifiée |
+	 * |---|---|---|
+	 * | la section | peut être pliée | s'ouvre, et **ne se replie plus** |
+	 * | sa pastille | verte | bleue |
+	 *
+	 * ⚠️ Elle s'appelait `valeurModifiee` — un nom qui décrivait son
+	 * EFFET d'alors, quand elle n'en avait qu'un. Renommée le 22/09/2026 : un
+	 * nom qui dit le geste n'est appelé que par ce geste, et les deux autres
+	 * usages auraient été réécrits à côté (c'est ce qui est arrivé à
+	 * `peut_commander`, #1028, vingt-six fois).
+	 *
+	 * 🔴 **Pliée ⟺ valeur par défaut**, et c'est un invariant, pas un effet :
+	 * une section pliée qui cacherait une valeur saisie serait pire que pas de
+	 * pliage du tout — on corrigerait un objet sans voir ce qu'il contient.
+	 * C'est ce qui rend la vignette de droite TOUJOURS verte.
 	 */
-	export let ouvrirSiRenseignee = false;
+	export let valeurModifiee = false;
 
 	let ouverteParLUtilisateur = false;
-	$: ouverte = !pliable || ouvrirSiRenseignee || ouverteParLUtilisateur;
+	/**  Se replier est possible — tant que la valeur est celle du défaut.
+	 *
+	 *   ⚠️ Arbitré à l'écran le 22/09/2026 : *« pour une section pliée qui est
+	 *   dépliée, si on reclique sur le titre on la replie uniquement si on n'a
+	 *   pas changé la valeur par défaut »*. En création comme en édition. */
+	$: ouverte = !pliable || valeurModifiee || ouverteParLUtilisateur;
+	$: replialbe = pliable && ouverte && !valeurModifiee;
 	const idContenu = `sect-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
@@ -153,7 +169,7 @@
 					>{titre}{#if requis}<EtoileRequis vide={!rempli} />{/if}</span
 				>
 			</span>
-			<span class="section-resume">{resume || badge}</span>
+			<span class="badge badge-green section-resume">{resume || badge}</span>
 			<svg
 				class="section-chev"
 				width="12"
@@ -172,14 +188,49 @@
 				{#if icone}<Icon name={icone} size={15} />{/if}<span class="section-titre-texte"
 					>{titre}{#if requis}<EtoileRequis vide={!rempli} />{/if}</span
 				>
-				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
+				{#if badge}<span
+						class="badge section-badge"
+						class:badge-green={!valeurModifiee}
+						class:badge-bleu={valeurModifiee}>{badge}</span
+					>{/if}
 			</label>
 		{:else}
 			<h4 class="section-titre" id={idTitre || undefined}>
 				{#if icone}<Icon name={icone} size={15} />{/if}<span class="section-titre-texte"
 					>{titre}{#if requis}<EtoileRequis vide={!rempli} />{/if}</span
 				>
-				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
+				{#if badge}<span
+						class="badge section-badge"
+						class:badge-green={!valeurModifiee}
+						class:badge-bleu={valeurModifiee}>{badge}</span
+					>{/if}
+				<!--  🔴 Replier est un GESTE, donc un `<button>` — et il n'existe que
+				      quand il est permis. Une commande visible qui ne ferait rien dit
+				      au doigt que le geste a échoué, jamais qu'il était interdit.
+
+				      ⚠️ Il est absent d'un `<label for>` : un bouton à l'intérieur
+				      d'un label vole le clic destiné au champ. Ces sections-là se
+				      replient par leur résumé, comme avant. -->
+				{#if replialbe}
+					<button
+						type="button"
+						class="section-replier"
+						aria-expanded="true"
+						aria-controls={idContenu}
+						aria-label="Replier la section {titre}"
+						on:click={() => (ouverteParLUtilisateur = false)}
+					>
+						<svg
+							width="12"
+							height="8"
+							viewBox="0 0 12 8"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.6"
+							aria-hidden="true"><path d="M11 7L6 2 1 7" /></svg
+						>
+					</button>
+				{/if}
 			</h4>
 		{/if}
 	{/if}
@@ -194,9 +245,14 @@
 </section>
 
 <style>
+	/*  ⚠️ L'écart sous le filet vaut la MOITIÉ de celui du dessus, et c'est
+	    voulu : le trait appartient à la section qui commence, pas à celle qui
+	    finit. À 0.9rem des deux côtés, le titre flottait au milieu et l'œil ne
+	    savait plus à quel groupe il se rattachait — signalé à l'écran le
+	    22/09/2026, capture à l'appui. */
 	.section-formulaire {
 		border-top: 1px solid var(--color-border);
-		padding-top: 0.9rem;
+		padding-top: 0.45rem;
 		margin-top: 0.9rem;
 	}
 	/*  La première section n'est séparée de rien : le titre de la boîte
@@ -267,16 +323,28 @@
 		margin: 0;
 		flex-shrink: 0;
 	}
-	/*  Le résumé pousse le chevron au bout et se coupe avant lui : c'est une
-	    valeur, pas un intitulé — ni petites capitales, ni gras. */
+	/*  Le résumé pousse le chevron au bout et se coupe avant lui.
+
+	    🔴 VIGNETTE VERTE, et non plus du texte gris (22/09/2026). Une section
+	    pliée porte forcément la valeur par défaut — c'est l'invariant du cadre,
+	    puisqu'une valeur modifiée l'ouvre et l'empêche de se refermer. Le vert
+	    dit donc exactement ce qu'il y a à savoir : *rien n'a été touché ici*.
+	    Il n'y a jamais de vignette bleue à droite, pour la même raison.
+
+	    ⚠️ `max-width` plutôt qu'une largeur libre : un résumé long
+	    (« rien ne part à l'extérieur ») doit se couper avant le chevron, et un
+	    badge ne se coupe pas tout seul. */
 	.section-resume {
 		margin-left: auto;
 		min-width: 0;
+		max-width: 60%;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
+		font-size: 0.72rem;
+		text-transform: none;
+		letter-spacing: normal;
+		font-weight: 600;
 	}
 	.section-chev {
 		flex-shrink: 0;
@@ -289,5 +357,37 @@
 		text-transform: none;
 		letter-spacing: normal;
 		font-weight: 600;
+	}
+	/*  🔴 Le bleu de la valeur MODIFIÉE (22/09/2026, arbitré à l'écran).
+
+	    `--color-info` de la charte : il dit « ce n'est plus le défaut » sans
+	    juger. L'ambre aurait dit « attention », l'or est déjà pris par le
+	    repère du carnet d'entretien — deux sens sur le même écran.
+
+	    ⚠️ Il n'existe qu'à côté du TITRE, jamais à droite : une valeur
+	    modifiée ouvre la section, donc il n'y a plus de ligne pliée à décorer. */
+	.badge-bleu {
+		background: #e6f1fb;
+		color: var(--color-info);
+	}
+	/*  Le chevron de repli : même poids visuel que celui du dépliage, et une
+	    cible tactile qui tient (`standards/11` §10). */
+	.section-replier {
+		margin-left: auto;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 44px;
+		min-height: 44px;
+		margin-top: -0.5rem;
+		margin-bottom: -0.5rem;
+		padding: 0;
+		border: none;
+		background: none;
+		cursor: pointer;
+		color: var(--color-text-muted);
+	}
+	.section-replier:hover {
+		color: var(--color-text);
 	}
 </style>

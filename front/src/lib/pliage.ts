@@ -6,7 +6,7 @@
  * besoin recopierait sinon le `?.pliee` et le repli à `false` — et c'est ainsi
  * qu'une règle se met à diverger.
  *
- * ⚠️ `pliable` ne suffit jamais seul : il va avec `ouvrirSiRenseignee`, la
+ * ⚠️ `pliable` ne suffit jamais seul : il va avec `valeurModifiee`, la
  * moitié que la table ne peut pas porter puisqu'elle dépend de ce que l'objet
  * CONTIENT. Les séparer laisserait une section pliée cacher une valeur saisie.
  *
@@ -22,4 +22,20 @@ import { section, type EntiteDeclaree, type IdSection } from '$lib/entites/types
 /** La section est-elle repliée par défaut ? `false` sans déclaration. */
 export function pliageDe(entite: EntiteDeclaree | null, id: IdSection): boolean {
 	return entite ? !!section(entite, id)?.pliee : false;
+}
+
+/**
+ * La section porte-t-elle l'astérisque du requis ?
+ *
+ * 🔴 Elle se LIT ici pour la même raison que le pliage — et parce qu'elle
+ * lui est liée : *obligatoire ⇒ déplié*. Deux composants porteurs l'écrivaient
+ * en dur (`SectionDestinataires`, `ChampSaisiPour`), si bien que la déclaration
+ * ne savait pas que la section était obligatoire — et `lint:etats`, qui calcule
+ * le pliage à partir d'elle, ne pouvait pas voir la contradiction.
+ *
+ * Résultat à l'écran : « DESTINATAIRES* » sur une ligne pliée, ce que la règle
+ * interdit. Signalé deux fois (22/09/2026).
+ */
+export function requisDe(entite: EntiteDeclaree | null, id: IdSection): boolean {
+	return entite ? !!section(entite, id)?.requis : false;
 }

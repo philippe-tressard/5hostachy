@@ -88,7 +88,7 @@
 	{premiere}
 	{pliable}
 	{resume}
-	ouvrirSiRenseignee={!!debut || !!fin}
+	valeurModifiee={!!debut || !!fin}
 	idTitre="{idPrefixe}-quand"
 >
 	<div class="quand-grille">

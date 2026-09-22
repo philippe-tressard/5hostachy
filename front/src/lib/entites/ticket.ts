@@ -166,7 +166,7 @@ export const TICKET: EntiteDeclaree = {
 			//  une photo est le premier geste sur téléphone ». C'est l'ARBITRAGE qui a
 			//  changé, pas la règle : un formulaire de treize sections toutes ouvertes
 			//  n'est pas lisible au pouce.
-			//  ⚠️ `ouvrirSiRenseignee` la rouvre dès qu'un fichier y est joint : en
+			//  ⚠️ `valeurModifiee` la rouvre dès qu'un fichier y est joint : en
 			//  édition, un objet qui porte des pièces jointes ne les cache pas.
 			pliee: true,
 		},
@@ -216,6 +216,14 @@ export const TICKET: EntiteDeclaree = {
 		},
 		{
 			id: 'destinataires',
+			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
+			//
+			//  L'astérisque était écrite en dur par `SectionDestinataires` : la
+			//  déclaration ne savait donc pas que la section était obligatoire, et
+			//  `lint:etats` — qui CALCULE le pliage à partir d'elle — ne voyait
+			//  aucune contradiction à la déclarer pliée. L'écran affichait donc
+			//  « DESTINATAIRES* » sur une ligne fermée, ce que la règle interdit.
+			requis: true,
 			sansObjet:
 				"Un ticket n'adresse personne nommément dans l'application : il est vu par son " +
 				'auteur et par le conseil syndical, et son périmètre dit déjà de quoi il parle. ' +

@@ -35,11 +35,15 @@
 	 *  la seule section dont le pliage est une EXCEPTION déclarée (obligatoire
 	 *  mais pliée, « en mon nom » étant juste presque toujours).
 	 *
-	 *  ⚠️ `ouvrirSiRenseignee` se mesure contre le DÉFAUT, jamais contre le
+	 *  ⚠️ `valeurModifiee` se mesure contre le DÉFAUT, jamais contre le
 	 *  vide : `mode` vaut toujours quelque chose, et tester sa présence
 	 *  rouvrirait la section à chaque fois.
 	 */
 	export let pliable = false;
+
+	/**  Reçu, jamais écrit en dur : la déclaration gouverne le requis comme elle
+	 *   gouverne le pliage, et les deux doivent s'accorder (22/09/2026). */
+	export let requis = false;
 
 	//: Ce que la section annonce pliée — le choix fait, en trois mots.
 	const RESUME_MODE: Record<string, string> = {
@@ -62,10 +66,10 @@
       déclaré — signalé à l'écran le 22/09/2026. -->
 <SectionFormulaire
 	titre={SECTIONS_LIBELLE.au_nom_de}
-	requis
+	{requis}
 	rempli={mode !== null && mode !== undefined}
 	{pliable}
-	ouvrirSiRenseignee={mode !== 'moi'}
+	valeurModifiee={mode !== 'moi'}
 	resume={RESUME_MODE[mode] ?? ''}
 >
 	<div class="field champ-large saisi-pour-section">

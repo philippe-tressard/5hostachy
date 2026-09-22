@@ -66,7 +66,7 @@
 	 *  dise `pliee: true`. C'est l'angle mort des composants **porteurs** — le
 	 *  même qui avait rendu l'ordre des sections incontrôlable (#1124).
 	 *
-	 *  ⚠️ `ouvrirSiRenseignee` n'est pas une option : une section pliée qui
+	 *  ⚠️ `valeurModifiee` n'est pas une option : une section pliée qui
 	 *  cacherait des pièces déjà jointes serait pire que dépliée.
 	 */
 	export let pliable = false;
@@ -141,7 +141,7 @@
 	<SectionFormulaire
 		titre={SECTIONS_LIBELLE.pieces_jointes}
 		{pliable}
-		ouvrirSiRenseignee={photos.length > 0 || documents.length > 0}
+		valeurModifiee={photos.length > 0 || documents.length > 0}
 		resume={resumeFichiers}
 		pour="{idPrefixe}-{avecPhotos ? 'photos' : idDocuments}"
 	>

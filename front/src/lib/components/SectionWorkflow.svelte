@@ -41,13 +41,17 @@
 	 *   existe — sans elle, un `pliee: true` posé demain dans la table ne
 	 *   changerait rien à l'écran, et personne ne saurait pourquoi. */
 	export let pliable = false;
+
+	/**  Reçu, jamais écrit en dur : la déclaration gouverne le requis comme elle
+	 *   gouverne le pliage, et les deux doivent s'accorder (22/09/2026). */
+	export let requis = false;
 	/** Première section rendue : elle ne porte pas de filet au-dessus. */
 	export let premiere = false;
 	/** Rangée en lecture seule — confort d'interface, jamais un droit. */
 	export let lecture = false;
 </script>
 
-<SectionFormulaire {premiere} titre={SECTIONS_LIBELLE.suivi} {pliable} requis {badge} {idTitre}>
+<SectionFormulaire {premiere} titre={SECTIONS_LIBELLE.suivi} {pliable} {requis} {badge} {idTitre}>
 	<div class="field champ-large">
 		<WorkflowPastilles {options} {valeur} {lecture} {idTitre} on:choisir />
 		<slot />
