@@ -462,10 +462,14 @@ if (fautesPliage.length) {
 	console.error('\n✗ Cadre d’interface — le PLIAGE s’écarte de la règle sans le dire :\n');
 	for (const f of fautesPliage) console.error(`  • ${f}`);
 	console.error(
-		'\n  🔴 Trois exceptions étaient prévues le 20/09/2026, et elles se déclarent :' +
-			'\n    « Au nom de » et « Destinataires » — obligatoires mais PLIÉES, le défaut' +
-			'\n      étant juste dans la quasi-totalité des cas ;' +
-			'\n    « Pièces jointes » — facultative mais DÉPLIÉE, premier geste sur téléphone.' +
+		'\n  🔴 IL N’Y A PLUS AUCUNE EXCEPTION (22/09/2026).' +
+			'\n    Trois étaient prévues le 20/09 — « Au nom de », « Destinataires »,' +
+			'\n    « Pièces jointes ». Les trois sont tombées à l’usage, chacune signalée' +
+			'\n    à l’écran : une section marquée d’une astérisque qui arrive fermée' +
+			'\n    demande de l’ouvrir pour constater qu’il n’y a rien à y faire.' +
+			'\n    Demandé explicitement : « pour éviter toute exception ».' +
+			'\n    En ajouter une se déclare ICI, avec sa date et sa raison — et ce message' +
+			'\n    doit alors cesser de dire qu’il n’y en a aucune.' +
 			'\n\n  ⚠️ Une valeur autre que le défaut rouvre la section d’office — cette' +
 			'\n  partie-là vit dans le rendu, pas dans la table : elle dépend de ce que' +
 			'\n  l’objet PORTE, pas de ce que la déclaration dit.\n',
