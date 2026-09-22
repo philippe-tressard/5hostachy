@@ -107,10 +107,26 @@ verdict_reconstruction() {
     local git="${1:-}" images="${2:-}" echoue="${3:-}"
     #  Sans HEAD, on ne sait rien : ne rien faire vaut mieux qu'un build à
     #  l'aveugle, et le point 18 du pré-check le dira de toute façon.
-    [ -z "$git" ] && { echo rien; return; }
+    #  🔴 Des `if`, PAS des `[ … ] && { … }` : sous le `set -e` de
+    #  `auto-deploy.sh`, une condition fausse en dernière commande fait sortir
+    #  le script — il est mort en silence sur les DEUX nœuds le 22/09/2026,
+    #  plus aucun déploiement automatique pendant une demi-heure.
+    #
+    #  ⚠️ La leçon était déjà écrite à dix lignes d'ici, dans `auto-deploy.sh` :
+    #  « Pas de `LOCK=non; [ -f … ] && LOCK=oui` : sous `set -e`, un test faux
+    #  fait sortir ». Je l'ai refaite le jour même où je la lisais.
+    if [ -z "$git" ]; then
+        #  Sans HEAD, on ne sait rien : ne rien faire vaut mieux qu'un build à
+        #  l'aveugle, et le point 18 du pré-check le dira de toute façon.
+        echo rien
+        return
+    fi
     #  Une tentative a déjà échoué sur CE code : le refaire toutes les cinq
     #  minutes ne le fera pas réussir, et la trace est dans le journal.
-    [ -n "$echoue" ] && [ "$(memes_hachages "$git" "$echoue")" = oui ] && { echo rien; return; }
+    if [ -n "$echoue" ] && [ "$(memes_hachages "$git" "$echoue")" = oui ]; then
+        echo rien
+        return
+    fi
     case "$(verdict_parite_servie "$git" "$images")" in
         a-jour) echo rien ;;
         #  `inconnu` — marqueur absent — vaut reconstruire : c'est l'état d'un
@@ -125,6 +141,30 @@ hash_images_construites() {
     local f="${1:-}/.images-construites"
     [ -r "$f" ] || { echo ""; return; }
     tr -d ' \t\r\n' < "$f"
+}
+
+# ── Lecture du sha d'un build ÉCHOUÉ ─────────────────────────────────────────
+#
+# 🔴 Symétrique de `hash_images_construites`, et pour la même raison : un
+# `$(cat fichier-absent | tr …)` sous `set -o pipefail` prend le code d'échec de
+# `cat`, et `set -e` tue le script appelant. C'est ce qui a arrêté `auto-deploy`
+# sur les DEUX nœuds le 22/09/2026 — une demi-heure sans déploiement, sans une
+# ligne de journal, parce que le fichier d'échec n'existait pas encore.
+#
+# ⚠️ Le test `-r` d'abord : il ne lit que ce qui est lisible, et rend le vide
+# sinon. Aucun pipe, donc rien à faire échouer.
+hash_echec_build() {
+    local f="${1:-}/.images-echec"
+    [ -r "$f" ] || { echo ""; return; }
+    tr -d ' 	
+' < "$f"
+}
+
+# ── Écriture du sha d'un build échoué ────────────────────────────────────────
+# $1 = racine du dépôt, $2 = hash dont le build vient d'échouer
+marquer_echec_build() {
+    printf '%s
+' "${2:-}" > "${1:-}/.images-echec" 2>/dev/null || true
 }
 
 # ── Écriture du marqueur — appelée UNIQUEMENT après un build réussi ──────────
@@ -190,6 +230,48 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     checkr "échec déjà connu sur ce sha : on attend le suivant"  "rien"        "$LONG" "$AUTRE" "$LONG"
     checkr "échec connu sur un AUTRE sha : on reconstruit"       "reconstruire" "$LONG" "$AUTRE" "$AUTRE"
     checkr "sans HEAD, aucun build à l'aveugle"                  "rien"        ""      "$AUTRE" ""
+
+    # ── 🔴 SOUS `set -e`, et c'est le cas qui manquait (22/09/2026) ──────────
+    #
+    # Ces fonctions sont appelées par `auto-deploy.sh`, qui tourne en
+    # `set -euo pipefail`. Le self-test, lui, les appelait dans un `$( )` sans
+    # `set -e` : une sortie prématurée y était INVISIBLE.
+    #
+    # Une écriture en `[ … ] && { … }` a donc passé tous les cas ci-dessus et
+    # tué le script sur les deux nœuds en production — plus aucun déploiement
+    # automatique pendant une demi-heure, sans une ligne de journal.
+    #
+    # ⚠️ Le sous-shell relit CE fichier : il éprouve donc le code tel qu'il
+    # sera sourcé, pas une copie.
+    #  🔴 LA LECTURE d'un fichier ABSENT, sous `pipefail` (22/09/2026).
+    #
+    #  `VAR=$(cat fichier-absent | tr …)` prend le code d'échec de `cat`, et
+    #  `set -e` tue le script appelant. `auto-deploy` est mort là-dessus sur les
+    #  deux nœuds — le fichier `.images-echec` n'existait simplement pas encore.
+    #
+    #  ⚠️ Aucun des cas ci-dessus ne pouvait le voir : ils passent des CHAÎNES,
+    #  et le défaut était dans la lecture du fichier. Un contrôle ne mord que
+    #  sur ce qu'il exerce.
+    VIDE=$(mktemp -d)
+    for lecture in hash_images_construites hash_echec_build; do
+        if bash -euo pipefail -c "source '${BASH_SOURCE[0]}'; $lecture '$VIDE' >/dev/null" 2>/dev/null; then
+            echo "PASS  $lecture sur un dépôt sans marqueur ne fait pas sortir"
+        else
+            echo "FAIL  $lecture SORT sous set -e quand le fichier est absent"
+            fail=1
+        fi
+    done
+    rmdir "$VIDE" 2>/dev/null || true
+
+    echo "== self-test : survie sous set -euo pipefail =="
+    for cas in "$LONG $LONG" "$LONG $AUTRE" "$LONG ''" "'' ''"; do
+        if bash -euo pipefail -c "source '${BASH_SOURCE[0]}'; verdict_reconstruction $cas >/dev/null; echo survecu" >/dev/null 2>&1; then
+            echo "PASS  verdict_reconstruction($cas) ne fait pas sortir"
+        else
+            echo "FAIL  verdict_reconstruction($cas) SORT sous set -e — le script appelant meurt"
+            fail=1
+        fi
+    done
 
     [ $fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
     exit $fail

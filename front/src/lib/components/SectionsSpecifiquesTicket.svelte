@@ -53,15 +53,15 @@
 	export let options = { epingle: false, urgente: false, brouillon: false, suiviKanban: false };
 </script>
 
-<!--  2. Champs spécifiques — DEUX champs nommés, dans cet ordre : la
-	      catégorie, puis « Saisi pour ». Ce dernier était rendu APRÈS les pièces
-	      jointes, entre les documents et la diffusion : le seul champ du site à
-	      être hors de sa section (signalé le 16/08/2026).
-	      ⚠️ La SECTION est présente en édition — la catégorie s'y corrige comme
-	      le titre —, mais « Saisi pour » n'y est pas : `TicketUpdate` ne sait pas
-	      EFFACER les `saisi_pour_*`, et « En mon nom » serait un choix sans effet.
-	      R4 ne déclare que des sections, pas des champs : ce motif `api` (#431)
-	      vit dans la déclaration en commentaire, faute de pouvoir s'y écrire. -->
+<!--  2. NATURE — la catégorie de l'affaire, et elle seule.
+	      🔴 Ce commentaire décrivait l'ancien monde jusqu'au 22/09/2026 : « DEUX
+	      champs nommés, la catégorie puis Saisi pour », et concluait que « R4 ne
+	      déclare que des sections, pas des champs : ce motif `api` vit dans la
+	      déclaration EN COMMENTAIRE, faute de pouvoir s'y écrire ».
+	      La scission de #1095 a levé cette limite — « Au nom de » est une section
+	      (10), déclarée avec son motif d'absence, et rendue par `ChampsCommuns` à
+	      son rang. Le commentaire, lui, était resté : il disait indéclarable ce
+	      qui venait d'être déclaré, dans le fichier où l'on va vérifier. -->
 {#if sectionPresente(TICKET, etat, 'nature')}
 	<SectionFormulaire titre="Catégorie" requis idTitre="ticket-categorie-titre">
 		<!--  🔴 `ChoixPastilles` en mode radio depuis le 30/08/2026, signalé à

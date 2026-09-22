@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.10.1",
+	"version": "2.10.3",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -99,6 +99,7 @@
 		"lint:vocabulaire-ecran": "node scripts/check-vocabulaire-ecran.mjs",
 		"lint:choix-requis": "node scripts/check-choix-requis.mjs",
 		"lint:intitules-section": "node scripts/check-intitules-section.mjs",
+		"lint:section-lue": "node scripts/check-section-lue.mjs",
 		"e2e": "playwright test",
 		"e2e:ui": "playwright test --ui"
 	},
