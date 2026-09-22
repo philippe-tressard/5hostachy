@@ -457,7 +457,7 @@
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecDescription={sectionPresente(TICKET, etat, 'description')}
-			descriptionRequise={!debut}
+			descriptionRequise
 			bind:description
 			{assistant}
 			bind:titreObjet={titre}

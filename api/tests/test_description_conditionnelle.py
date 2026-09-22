@@ -154,11 +154,25 @@ def test_une_description_vide_sans_date_est_refusee():
     assert e.value.status_code == 422
 
 
-def test_une_description_vide_AVEC_date_passe():
-    """Le cœur de la règle : « Coupure d'eau — jeudi 9h-12h » se suffit."""
+def test_une_description_vide_AVEC_date_est_REFUSEE():
+    """🔴 Le renversement du 22/09/2026, arbitré à l'écran.
+
+    Une date dispensait de description pendant deux jours — « Coupure d'eau —
+    jeudi 9h-12h » se suffisait. La règle n'a plus de condition :
+
+    > « Un évènement avec une date doit aussi remplir une description
+    >   (obligatoire sans exception). »
+
+    Ce test est ce qui empêche la dispense de revenir : elle était défendable,
+    et c'est précisément pour cela qu'on la réécrirait sans y penser.
+    """
     from datetime import datetime
 
-    _regle()("", debut=datetime(2026, 9, 24, 9, 0))
+    import pytest
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException):
+        _regle()("", debut=datetime(2026, 9, 24, 9, 0))
 
 
 def test_une_description_remplie_passe_toujours():

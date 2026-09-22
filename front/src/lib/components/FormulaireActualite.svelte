@@ -402,7 +402,7 @@
 				avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')}
 				bind:destinataires={publicCible}
 				avecDescription={sectionPresente(PUBLICATION, etat, 'description')}
-				descriptionRequise={!debut}
+				descriptionRequise
 				bind:description={contenu}
 				{assistant}
 				bind:titreObjet={titre}

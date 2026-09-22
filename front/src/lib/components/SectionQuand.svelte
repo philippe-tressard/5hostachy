@@ -46,12 +46,18 @@
   objets du site. **Le champ faisait saisir ce que le produit savait déjà
   décider**, ce qui est la définition même du champ en trop.
 
-  ## Ce que la date dispense d'écrire
+  ## 🔴 La date ne dispense plus de rien (22/09/2026)
 
-  Renseigner `debut` rend la **description facultative** : « Coupure d'eau —
-  jeudi 9h-12h » se suffit. La règle est au serveur (`app/utils/quand.py`), et
-  l'écran ne fait que la refléter — c'est ce qui a manqué jusqu'ici, l'astérisque
-  de « Description * » ne vivant QUE dans le formulaire.
+  Renseigner `debut` rendait la description facultative : « Coupure d'eau —
+  jeudi 9h-12h » se suffisait. Arbitré à l'écran, dans l'autre sens :
+
+  > « Un évènement avec une date doit aussi remplir une description
+  >   (obligatoire sans exception). »
+
+  La règle vit au serveur (`app/utils/quand.py`) et l'écran ne fait que la
+  refléter — c'est ce qui manquait avant #1092, l'astérisque de « Description * »
+  ne vivant QUE dans le formulaire. Elle n'a désormais plus de condition du
+  tout, ce qui est une chose de moins à savoir pour la suivre.
 -->
 <script lang="ts">
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -96,8 +102,7 @@
 		</div>
 	</div>
 	<p class="quand-aide">
-		Une <strong>date de début</strong> fait paraître l'entrée au calendrier — et dispense d'écrire une
-		description.
+		Une <strong>date de début</strong> fait paraître l'entrée au calendrier.
 	</p>
 </SectionFormulaire>
 
