@@ -1,7 +1,7 @@
 ---
 name: api-scaffold
 description: "Scaffold a complete FastAPI endpoint for 5Hostachy: SQLModel model + Alembic migration + router CRUD + Pydantic schemas + frontend API client module. Use when: creating a new feature, adding a new entity, adding a new API resource."
-argument-hint: "Describe the entity to create (e.g. 'Fournisseur with nom, siret, email, actif')"
+argument-hint: "Describe the entity to create (e.g. 'Fournisseur with nom, siret, email')"
 ---
 
 # API Scaffold — 5Hostachy
@@ -10,236 +10,230 @@ Génère un endpoint complet (backend + frontend client) en respectant toutes le
 
 ## Procédure
 
-### 1. Modèle SQLModel (`api/app/models/core.py`)
+> 🔴 **Réécrite le 23/09/2026 (#1046).** Cette skill enseignait un backend disparu :
+> modèle dans `core.py`, trois schémas dans `schemas.py`, colonne `actif` sur toute
+> table, `session.get` + 404, `body.dict()`, client ajouté à `api.ts`. La suivre
+> violait la modularité (rang 1) — et une skill se relit exactement au moment où
+> l'on crée quelque chose, c'est-à-dire là où elle fait le plus de dégâts.
+>
+> Règle d'écriture : elle dit **où la vérité se lit**, elle ne la recopie pas. Les
+> chiffres (nombre de modules, dernier numéro de migration) se mesurent dans le
+> dépôt au moment du geste.
 
-Ajouter le modèle dans `core.py` en suivant ces conventions :
+### 1. Modèle SQLModel — `api/app/models/<domaine>.py`
+
+Le modèle va dans le module de **son domaine** (`acces`, `communaute`,
+`prestataires`, `gouvernance`, `tickets`…). Un domaine neuf reçoit son propre
+module. **Jamais `core.py`** : il dépasse 500 lignes, et le garde-fou de
+modularité refuse qu'il grossisse.
 
 ```python
 class NouvelleEntite(SQLModel, table=True):
     __tablename__ = "nouvelle_entite"
     id: Optional[int] = Field(default=None, primary_key=True)
-    # Champs métier (français, snake_case)
-    nom: str
-    # FK : {model}_id = Field(default=None, foreign_key="table.id")
-    # Timestamps
+    nom: str                                           # français, snake_case
+    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: Optional[datetime] = None
-    actif: bool = Field(default=True)
-    # Relationships
-    # items: List["AutreModele"] = Relationship(back_populates="parent")
 ```
 
+Puis **l'enregistrer** dans `app/models/__init__.py` — c'est cet import qui
+déclare la table à SQLModel. Oublié, elle manque à `create_all` sans un mot.
+
+⚠️ `core.py` **ré-exporte** les modèles extraits — et ces imports enregistrent :
+`alembic/env.py` n'importe que `core`. Pour un modèle NEUF, importer depuis son
+module de domaine, et le déclarer dans `models/__init__.py` (#1157).
+🔒 `test_modeles_enregistres.py` refuse un module que `import app.models.core`
+ne charge pas.
+
 **Règles modèle :**
-- `__tablename__` = snake_case français
-- Champs en **français snake_case** : `statut_validation`, `date_debut`, `perimetre_cible`
+- `__tablename__` = snake_case français ; champs en français snake_case
 - Timestamps : suffixe `_le` → `cree_le`, `mis_a_jour_le`
-- FK : `{modele}_id` → `field(foreign_key="table.id")`
+- FK : `{modele}_id = Field(default=None, foreign_key="table.id")`
 - Enums : `class MonEnum(str, Enum)` → slugs français lowercase
-- JSON stocké en `str` → parsé via `@field_validator` dans le schema Read
-- Soft delete : `actif: bool = True` (pas de suppression physique sauf admin)
+- JSON stocké en `str` → parsé par `@field_validator` dans le schéma Read
+- 🔴 **Pas de colonne `actif` par réflexe.** Un objet qui doit quitter les listes
+  se déclare dans `utils/archivage.REGLES` — la règle unique, testée contre les
+  modèles réels. Un booléen de plus ferait une seconde façon de disparaître.
+- Une relation (`Relationship`) empêche plus tard de DÉPLACER le modèle sans
+  cycle d'import : c'est pourquoi `Ticket` et `Publication` sont restés dans
+  `core.py`. Ne l'ajouter que si un `select` explicite ne suffit pas.
 
-### 2. Schémas Pydantic (`api/app/schemas.py`)
+### 2. Schémas Pydantic — là où ils servent
 
-Créer 3 schémas par entité :
+Trois formes par entité exposée :
 
 ```python
-class EntiteCreate(BaseModel):
-    """Champs d'entrée (pas d'id, pas de timestamps)."""
+class EntiteCreate(BaseModel):      # entrée : ni id, ni horodatage
     nom: str
-    champ_optionnel: Optional[str] = None
 
-class EntiteRead(BaseModel):
-    """Champs de sortie (inclut id + timestamps)."""
+class EntiteRead(BaseModel):        # sortie
     id: int
     nom: str
     cree_le: datetime
-    mis_a_jour_le: Optional[datetime] = None
 
-    # Parser les champs JSON stockés en str
-    @field_validator('champ_json', mode='before')
-    @classmethod
-    def parse_json_field(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except Exception:
-                return []
-        return v
-
-    class Config:
+    class Config:                   # la forme de TOUT le dépôt — pas `model_config`
         from_attributes = True
 
-class EntiteUpdate(BaseModel):
-    """Tous les champs Optional pour PATCH partiel."""
+class EntiteUpdate(BaseModel):      # PATCH partiel : tout Optional
     nom: Optional[str] = None
 ```
 
-### 3. Migration Alembic (`api/alembic/versions/`)
+**Où les mettre :**
+- partagés par plusieurs routeurs → `app/schemas_<domaine>.py`, ré-exporté par
+  `schemas.py` ;
+- propres à UN routeur (le corps d'un geste, la réponse d'un écran) → à côté de
+  lui, dans le routeur ou son `_schemas.py`.
+- ⚠️ `schemas_communs.py` n'importe RIEN du projet : c'est ce qui évite le cycle
+  `schemas` ⇄ `schemas_tickets`. Ne pas lui en ajouter.
 
-**Déterminer le prochain numéro** : lister les fichiers existants, prendre le plus élevé + 1.
+### 3. Migration Alembic — `api/alembic/versions/NNNN_slug.py`
+
+Le numéro suit le plus élevé présent dans `alembic/versions/` (le lire, ne pas le
+deviner) ; le fichier porte un **slug** qui dit ce qu'il fait.
 
 ```python
-"""Ajouter table nouvelle_entite
-
-Revision ID: 00XX
-Revises: 00XX-1
-Create Date: YYYY-MM-DD
-"""
+"""Ce que la migration fait, et pourquoi — en français."""
 import sqlalchemy as sa
 from alembic import op
 
-revision = "00XX"
-down_revision = "00XX-1"
+revision = "NNNN"
+down_revision = "NNNN-1"
 branch_labels = None
 depends_on = None
 
-def upgrade() -> None:
+TABLE = "nouvelle_entite"   # un IDENTIFIANT s'interpole depuis une constante
+
+
+def upgrade():
     op.create_table(
-        "nouvelle_entite",
+        TABLE,
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("nom", sa.String, nullable=False),
         sa.Column("cree_le", sa.DateTime, nullable=False),
         sa.Column("mis_a_jour_le", sa.DateTime, nullable=True),
-        sa.Column("actif", sa.Boolean, nullable=False, server_default="1"),
     )
 
-def downgrade() -> None:
-    op.drop_table("nouvelle_entite")
+
+def downgrade():
+    op.drop_table(TABLE)
 ```
 
 **Règles migration :**
-- ID séquentiel 4 chiffres : `0087`, `0088`...
 - Une **valeur** dans `op.execute()` se **lie** : `text('… :x …').bindparams(x=…)`.
-  Un **identifiant** (nom de table ou de colonne) ne peut pas se lier en SQLite :
-  l'interpoler depuis une constante du fichier, et le **dire en commentaire**.
-  🔒 `api/tests/test_migrations.py` refuse la 28ᵉ f-string non liée : les 27
-  existantes y sont figées, parce qu'une migration appliquée ne se modifie
-  jamais. La règle disait « JAMAIS » et était donc fausse treize fois sur
-  quarante — une consigne intenable est une consigne qu'on cesse de lire (#1032)
+  Un **identifiant** ne peut pas se lier en SQLite : l'interpoler depuis une
+  constante du fichier, et le **dire en commentaire**.
+  🔒 `api/tests/test_migrations.py` refuse une f-string de plus que celles figées
+  dans l'historique — une migration appliquée ne se modifie jamais.
+- Tester l'existence d'une colonne avant `add_column` par
+  `sa.inspect(conn).get_columns(TABLE)` — **pas** par un `PRAGMA table_info` en
+  f-string, qui compterait contre le plafond ci-dessus.
+- 🔴 **Jamais de `foreign_key` dans un `add_column`** : SQLite refuse d'altérer les
+  contraintes d'une table existante, la migration plante APRÈS avoir ajouté la
+  colonne, et `start.sh` (`set -e`) arrête le conteneur. Arrivé deux fois (0117,
+  0165) ; `test_migrations.py` le refuse. Ne pas déclarer la FK dans le modèle
+  non plus, sinon base neuve et base migrée divergent.
 - BDD = **SQLite** — pas de `ALTER TYPE`, pas de `CREATE TYPE`
-- Vérifier existence colonnes avant `add_column` : `PRAGMA table_info('table')`
-- `start.sh` a `set -e` : une migration qui crash = conteneur bloqué
+- **Jamais** modifier une migration existante : en créer une nouvelle.
 
-### 4. Router FastAPI (`api/app/routers/`)
-
-Créer `api/app/routers/nouvelle_entite.py` :
+### 4. Routeur FastAPI — `api/app/routers/`
 
 ```python
-"""Router nouvelle_entite — CRUD complet."""
+"""Ce que ce routeur sert, à qui, et pourquoi il est à part."""
 from datetime import datetime
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_cs_or_admin, require_admin
+from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.models.core import NouvelleEntite, Utilisateur
-from app.schemas import EntiteCreate, EntiteRead, EntiteUpdate
+from app.models.<domaine> import NouvelleEntite
+from app.models.core import Utilisateur
+from app.schemas_<domaine> import EntiteCreate, EntiteRead, EntiteUpdate
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/nouvelle-entite", tags=["nouvelle-entite"])
 
-@router.get("", response_model=list[EntiteRead])
-def list_entites(
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    return session.exec(
-        select(NouvelleEntite).where(NouvelleEntite.actif == True)
-        .order_by(NouvelleEntite.cree_le.desc())
-    ).all()
 
-@router.get("/{id}", response_model=EntiteRead)
-def get_entite(
-    id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    obj = session.get(NouvelleEntite, id)
-    if not obj:
-        raise HTTPException(404, "Non trouvé")
-    return obj
+@router.get("", response_model=list[EntiteRead])
+def lister(session: Session = Depends(get_session), _: Utilisateur = Depends(get_current_user)):
+    return session.exec(select(NouvelleEntite).order_by(NouvelleEntite.cree_le.desc())).all()
+
+
+@router.get("/{entite_id}", response_model=EntiteRead)
+def lire(entite_id: int, session: Session = Depends(get_session),
+         _: Utilisateur = Depends(get_current_user)):
+    return ou_404(session, NouvelleEntite, entite_id, "entité")
+
 
 @router.post("", response_model=EntiteRead, status_code=201)
-def create_entite(
-    body: EntiteCreate,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
-):
-    obj = NouvelleEntite(**body.dict())
+def creer(body: EntiteCreate, session: Session = Depends(get_session),
+          _: Utilisateur = Depends(require_cs_or_admin)):
+    obj = NouvelleEntite(**body.model_dump())
     session.add(obj)
     session.commit()
     session.refresh(obj)
     return obj
 
-@router.patch("/{id}", response_model=EntiteRead)
-def update_entite(
-    id: int,
-    body: EntiteUpdate,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
-):
-    obj = session.get(NouvelleEntite, id)
-    if not obj:
-        raise HTTPException(404, "Non trouvé")
-    for k, v in body.dict(exclude_unset=True).items():
+
+@router.patch("/{entite_id}", response_model=EntiteRead)
+def modifier(entite_id: int, body: EntiteUpdate, session: Session = Depends(get_session),
+             _: Utilisateur = Depends(require_cs_or_admin)):
+    obj = ou_404(session, NouvelleEntite, entite_id, "entité")
+    for k, v in body.model_dump(exclude_unset=True).items():
         setattr(obj, k, v)
     obj.mis_a_jour_le = datetime.utcnow()
     session.add(obj)
     session.commit()
     session.refresh(obj)
     return obj
-
-@router.delete("/{id}", status_code=204)
-def delete_entite(
-    id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_admin),
-):
-    obj = session.get(NouvelleEntite, id)
-    if not obj:
-        raise HTTPException(404, "Non trouvé")
-    session.delete(obj)
-    session.commit()
 ```
 
-**Puis enregistrer le router** dans `api/app/main.py` :
-```python
-from app.routers.nouvelle_entite import router as nouvelle_entite_router
-app.include_router(nouvelle_entite_router)
-```
+- **`ou_404(session, Modele, id, "libellé")`**, jamais `session.get` + `raise
+  HTTPException(404)` : le 404 nomme ce qui manque, et c'est écrit une fois.
+- **`model_dump()`**, pas `.dict()` (déprécié).
+- **Suppression** : physique réservée à `require_admin`. Ce que le résident voit
+  disparaître s'**archive** (`utils/archivage`), il ne se supprime pas.
+- Une règle d'appartenance (« cet objet est-il le mien ? ») va dans
+  `auth/appartenance.py`, jamais dans le routeur (#1028).
 
-**Dépendances d'auth disponibles :**
+**Monter le routeur** : `app.include_router(<module>.router)` dans `main.py`, ou
+dans le `__init__.py` de son paquet s'il en a un.
+🔒 `api/tests/test_routeurs_montes.py` refuse un routeur que personne ne monte —
+ses URL rendraient 404, et rien d'autre ne le dirait.
 
-| Dependency | Usage |
-|-----------|-------|
-| `get_current_user` | Tout utilisateur connecté |
-| `require_cs_or_admin` | Création/modification de contenu |
-| `require_admin` | Suppression définitive, config système |
-| `require_proprietaire` | Fonctions propriétaires |
-| `get_acting_user` | Délégation (header `X-Acting-As`) |
+⚠️ **Dans un paquet, l'ORDRE d'inclusion décide.** FastAPI retient la première
+route qui correspond : un `/admin/{type}/{id}` inclus avant `/admin/imports/{id}`
+l'avale. C'est ce qui a tué les deux écrans d'import le 22/09/2026 (#1151).
+Inclure le plus spécifique d'abord ; `test_routes_masquees.py` le tient pour
+`acces`.
 
-### 5. Client API frontend (paquet `front/src/lib/api/`)
+⚠️ Un fichier de routeur qui dépasse 500 lignes se découpe par NOTION, pas par
+intervalle de lignes, avec le même préfixe : les URL publiques ne bougent pas
+(`copropriete_patrimoine`, `calendrier_historique`, `auth_profil`).
 
-Ajouter le module dans `api.ts` :
+**Dépendances d'auth :** le tableau fait foi dans `CLAUDE.md` (« Dépendances
+d'auth ») — avec les **prédicats** (`est_moderateur`, `peut_editer`…), qui
+s'appellent et ne se redérivent jamais.
+
+### 5. Client API frontend — `front/src/lib/api/<domaine>.ts`
+
+Le client s'ajoute dans le **module de son domaine** du paquet
+`front/src/lib/api/` (`acces`, `patrimoine`, `communaute`…) — **jamais** dans un
+`api.ts` ressuscité à la racine, et jamais recopié dans un écran (38 routes
+l'étaient avant le 06/09).
 
 ```typescript
-// --- Nouvelle Entite ---
-export interface NouvelleEntite {
-    id: number;
-    nom: string;
-    cree_le: string;
-    mis_a_jour_le: string | null;
-}
-
 export const nouvelleEntite = {
-    list: (): Promise<NouvelleEntite[]> => api.get('/nouvelle-entite'),
-    get: (id: number): Promise<NouvelleEntite> => api.get(`/nouvelle-entite/${id}`),
-    create: (body: Partial<NouvelleEntite>): Promise<NouvelleEntite> => api.post('/nouvelle-entite', body),
-    update: (id: number, body: Partial<NouvelleEntite>): Promise<NouvelleEntite> => api.patch(`/nouvelle-entite/${id}`, body),
-    delete: (id: number): Promise<void> => api.delete(`/nouvelle-entite/${id}`),
+    list: () => api.get<NouvelleEntite[]>('/nouvelle-entite'),
+    get: (id: number) => api.get<NouvelleEntite>(`/nouvelle-entite/${id}`),
+    create: (body: Partial<NouvelleEntite>) => api.post<NouvelleEntite>('/nouvelle-entite', body),
+    update: (id: number, body: Partial<NouvelleEntite>) =>
+        api.patch<NouvelleEntite>(`/nouvelle-entite/${id}`, body),
 };
 ```
+
+Le type va dans `front/src/lib/api/types.ts`.
 
 ### 6. Dates affichées — `app/utils/dates_fr.py`, jamais un `strftime` local
 
@@ -263,11 +257,12 @@ produit des mois en anglais sur la fiche arrivant (26/07/2026).
 
 ### 7. Checklist finale
 
-- [ ] Modèle ajouté dans `models/core.py`
-- [ ] Schémas Create/Read/Update dans `schemas.py`
-- [ ] Migration créée avec le bon numéro séquentiel
-- [ ] Router créé + enregistré dans `main.py`
-- [ ] Client API ajouté dans le paquet `front/src/lib/api/`, module du domaine concerné
-- [ ] Types TypeScript exportés
-- [ ] Imports vérifiés (pas d'import circulaire)
+- [ ] Modèle dans `app/models/<domaine>.py`, importé par `models/__init__.py` — jamais `core.py`
+- [ ] Pas de colonne `actif` : l'archivage se déclare dans `utils/archivage.REGLES`
+- [ ] Schémas dans `schemas_<domaine>.py` s'ils sont partagés, à côté du routeur sinon
+- [ ] Migration `NNNN_slug.py` au bon numéro ; aucune `foreign_key` dans un `add_column`
+- [ ] Routeur monté (`main.py` ou `__init__.py` du paquet), routes fixes avant routes à paramètre
+- [ ] `ou_404` et `model_dump()` — ni `session.get` + 404, ni `.dict()`
+- [ ] Client dans le module de domaine de `front/src/lib/api/`, type dans `types.ts`
 - [ ] Dates affichées via `dates_fr.py` (pas de `%B`/`%A` dans `api/app/`)
+- [ ] `cd api && pytest tests/ -q`, puis `bash scripts/poste/rejouer-ci.sh`
