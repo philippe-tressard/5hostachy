@@ -21,9 +21,19 @@ n'alerterait jamais sur un retard.
 
 ## La règle de description, et pourquoi elle vit ICI
 
-> **La description est obligatoire, sauf si une date d'événement est renseignée.**
+> **La description est obligatoire. Sans exception.**
 
-Elle dépend d'une date : son lieu est donc le module des dates, pas un routeur.
+🔴 Elle a porté une condition pendant deux jours — *« sauf si une date
+d'événement est renseignée »* —, au motif que « Coupure d'eau — jeudi 9h-12h »
+se suffit. Retirée le 22/09/2026, arbitré à l'écran :
+
+> « Un évènement avec une date doit aussi remplir une description
+>   (obligatoire sans exception). »
+
+⚠️ Elle reste dans CE module bien qu'elle ne dépende plus d'une date, et c'est
+délibéré : c'est ici que les deux créations l'appellent déjà, et que son test
+la surveille. La déplacer pour la beauté du rangement rouvrirait la question
+de *où* elle se décide — précisément l'oubli qui l'a rendue nécessaire.
 
 Deux défauts opposés l'ont rendue nécessaire, et ce sont les deux faces du même
 oubli — personne n'avait écrit *où* la question se décide :
@@ -35,9 +45,9 @@ oubli — personne n'avait écrit *où* la question se décide :
 - côté **calendrier**, la description n'était pas exigée du tout, ce qui a fait
   déclarer une dérogation (#1089).
 
-Écrite en **condition** plutôt qu'en dérogation d'objet, la règle est vraie
-partout : « Coupure d'eau — jeudi 9h-12h » se suffit, quel que soit l'écran où on
-la saisit. C'est ce qui referme #1089 sans exception à maintenir.
+Écrite **sans condition ni dérogation d'objet**, la règle est vraie partout,
+quel que soit l'écran où l'on saisit. C'est ce qui referme #1089 — et, depuis le
+22/09/2026, sans même une condition à comprendre.
 
 🔒 `api/tests/test_description_conditionnelle.py` — unicité, appel effectif par
 les deux créations, et le **cas zéro** (une fonction qui ne lève jamais rendrait
@@ -51,8 +61,8 @@ from typing import Optional
 from fastapi import HTTPException
 
 
-def exiger_description(texte: Optional[str], *, debut: Optional[datetime]) -> None:
-    """Refuser une description vide, sauf si l'objet porte une date d'événement.
+def exiger_description(texte: Optional[str], *, debut: Optional[datetime] = None) -> None:
+    """Refuser une description vide. Sans exception.
 
     Ne rend rien : elle lève, ou elle laisse passer. C'est volontaire — un
     appelant qui reçoit un booléen finit par l'ignorer, et la règle redevient
@@ -65,11 +75,10 @@ def exiger_description(texte: Optional[str], *, debut: Optional[datetime]) -> No
     """
     if texte and texte.strip():
         return
-    if debut is not None:
-        #  « Coupure d'eau — jeudi 9h-12h » : le titre et la date disent tout.
-        return
-    raise HTTPException(
-        422,
-        "Une description est attendue — ou une date, si l'information se résume "
-        "à ce qu'il se passe et quand.",
-    )
+    #  ⚠️ `debut` est ACCEPTÉ et ignoré, volontairement. Il dispensait de
+    #  description jusqu'au 22/09/2026 ; le retirer de la signature obligerait à
+    #  toucher les deux appelants dans le même lot, pour un paramètre que le
+    #  prochain lot pourrait vouloir relire. Le garder inerte et le DIRE coûte
+    #  une ligne ; le retirer en silence ferait croire qu'il n'a jamais existé.
+    del debut
+    raise HTTPException(422, "Une description est attendue.")

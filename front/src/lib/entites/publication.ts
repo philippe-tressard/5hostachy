@@ -193,12 +193,20 @@ export const PUBLICATION: EntiteDeclaree = {
 		{
 			//  L'actualité porte « Saisi pour » depuis le 15/09/2026, comme l'affaire
 			//  et l'événement — c'est le mixin `SaisiPourMixin` côté serveur.
+			//  🔴 Obligatoire, donc DEPLIEE — et plus d'exception (22/09/2026).
+			//
+			//  Elle etait pliee, au motif que « en mon nom » est juste dans la
+			//  quasi-totalite des cas. Signale a l'ecran le jour de sa livraison :
+			//  une section marquee d'une asterisque qui arrive fermee demande de
+			//  l'ouvrir pour voir qu'il n'y a rien a y faire, ce qui est exactement
+			//  le contraire de ce que l'asterisque annonce.
+			//
+			//  ⚠️ C'etait la SEULE exception de pliage du cadre. La regle
+			//  « obligatoire -> deplie, facultatif -> plie » n'en a plus aucune, et
+			//  c'est ce que l'utilisateur a demande : « pour eviter toute exception ».
 			id: 'au_nom_de',
 			objet: 'Saisi pour — en mon nom · un résident inscrit · une personne extérieure',
 			requis: true,
-			pliee: true,
-			exceptionPliage:
-				'Obligatoire mais PLIÉE : « en mon nom » est juste dans la quasi-totalité ' + 'des cas.',
 		},
 		{
 			//  Extraite de l'ancienne section « Options de publication » (#1095). Le
