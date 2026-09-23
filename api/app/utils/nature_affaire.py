@@ -47,6 +47,18 @@ def natures(ticket: Any) -> list[str]:
     return ["calendrier"] if datee else ["activite"]
 
 
+def change_de_nature(ticket: Any, nouvelle_categorie: Any) -> bool:
+    """La nouvelle catégorie fait-elle passer l'affaire d'actualité à suivie, ou l'inverse ?
+
+    ⚠️ Écrite sur `ACTUALITE`, jamais sur les catégories réservées : Étude &
+    travaux et Entretien le sont aussi depuis le 23/09/2026, sans rien changer
+    à la nature de l'affaire.
+    """
+    if nouvelle_categorie is None:
+        return False
+    return (valeur(nouvelle_categorie) == ACTUALITE) != est_actualite(ticket)
+
+
 def categorie_reservee(categorie: Any) -> bool:
     """Un résident ne pose pas cette catégorie (création comme correction)."""
     return valeur(categorie) in CATEGORIES_RESERVEES_AU_CS
@@ -68,4 +80,4 @@ def statut_pour(categorie: Any, demande: Optional[str] = None, *, est_cs: bool =
     return StatutTicket.ouvert.value
 
 
-__all__ = ["ACTUALITE", "categorie_reservee", "est_actualite", "natures", "statut_pour"]
+__all__ = ["ACTUALITE", "categorie_reservee", "change_de_nature", "est_actualite", "natures", "statut_pour"]

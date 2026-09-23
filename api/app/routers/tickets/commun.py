@@ -16,6 +16,7 @@ Trois duplications que le fichier long avait fabriquées vivent désormais ici :
 import json
 import random
 import string
+from typing import Optional
 
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -28,6 +29,7 @@ from app.models.core import (
     TicketEvolution,
     Utilisateur,
 )
+from app.models.prestataires import Prestataire
 from app.schemas import TicketEvolutionRead, TicketRead
 from app.utils.archivage import est_archivable, perime_le, seuil_archivage_jours
 from app.utils.photos import parse_photos
@@ -43,7 +45,8 @@ from app.utils.photos import parse_photos
 #: Un couvercle vérifie que ce dictionnaire couvre l'énumération et rien de
 #: fantaisiste : `api/tests/test_statuts_tickets.py`.
 STATUT_LABELS = {
-    "ouvert": "Ouvert", "en_cours": "En cours",
+    "ouvert": "Ouvert", "en_ag": "À l’AG", "en_cours": "En cours",
+    "chez_prestataire": "Chez le prestataire",
     "résolu": "Résolu", "annulé": "Annulé",
     "fermé": "Fermé",  # historique seulement — cf. STATUTS_TICKET_HISTORIQUES
     "publie": "Publiée",  # sans cycle — une actualité (#1091)
@@ -259,7 +262,14 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         relance_count=compter_relances(session, ticket.id),
         natures=natures(ticket),
         perime_le=perime_le(ticket, "ticket"),
+        prestataire_nom=nom_prestataire(session, ticket.prestataire_id),
     ))
+
+
+def nom_prestataire(session: Session, prestataire_id: Optional[int]) -> Optional[str]:
+    """Le nom de l'intervenant, ou `None` — une ligne effacée ne casse pas la fiche."""
+    p = session.get(Prestataire, prestataire_id) if prestataire_id else None
+    return p.nom if p else None
 
 
 def compter_relances(session: Session, ticket_id: int) -> int:

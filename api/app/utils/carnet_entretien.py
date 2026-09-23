@@ -61,6 +61,7 @@ CATEGORIES_BATI = frozenset({
     CategorieTicket.espaces_verts,
     CategorieTicket.sinistre,
     CategorieTicket.etude_travaux,
+    CategorieTicket.entretien,  # les maintenances du calendrier (#1092)
 })
 
 #: Le `statut_kanban` d'un événement réellement réalisé. La colonne est une

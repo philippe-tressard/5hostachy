@@ -45,7 +45,13 @@ class StatutTicket(str, Enum):
     """
 
     ouvert = "ouvert"
+    #  🆕 Les deux colonnes du kanban qu'aucun état ne disait (#1092, lot 5,
+    #  arbitré le 23/09/2026) : un dossier soumis au vote de l'AG, un dossier
+    #  chez le prestataire. Les événements du calendrier les portaient ; en
+    #  devenant des affaires, ils ne devaient pas perdre OÙ en est le dossier.
+    en_ag = "en_ag"
     en_cours = "en_cours"
+    chez_prestataire = "chez_prestataire"
     résolu = "résolu"
     annulé = "annulé"
     #  🔴 HORS du workflow (#1091, 23/09/2026) : l'état d'une affaire de
@@ -185,6 +191,10 @@ class CategorieTicket(str, Enum):
     acces_accueil = "acces_accueil"  # interphone, BAL, badge — installer quelqu'un
     question = "question"
     bug = "bug"
+    #  🆕 Le passage d'un prestataire — visite, maintenance, récurrente ou non
+    #  (#1092, lot 5) : les maintenances du calendrier en deviennent. Bâti, donc
+    #  au carnet ; réservée au conseil, qui tient les contrats.
+    entretien = "entretien"
     #  🔴 Une INFORMATION, pas une demande (#1091, arbitré les 22 et 23/09/2026) :
     #  l'actualité a cessé d'être un objet pour devenir une catégorie d'affaire.
     #  Réservée au conseil syndical, sans cycle (`StatutTicket.publie`). Elle
@@ -194,7 +204,14 @@ class CategorieTicket(str, Enum):
 
 #: Les catégories qu'un résident ne pose pas — ni à la création, ni en changeant
 #: celle d'une affaire. La règle est lue par `nature_affaire`, jamais recopiée.
-CATEGORIES_RESERVEES_AU_CS: tuple[str, ...] = (CategorieTicket.actualite.value,)
+#: Étude & travaux et Entretien y sont entrées le 23/09/2026 (#1098, #1092) :
+#: lancer une étude, tenir un contrat, sont des décisions du conseil ; un résident
+#: signale une panne ou pose une question.
+CATEGORIES_RESERVEES_AU_CS: tuple[str, ...] = (
+    CategorieTicket.actualite.value,
+    CategorieTicket.etude_travaux.value,
+    CategorieTicket.entretien.value,
+)
 
 
 class PrioriteTicket(str, Enum):

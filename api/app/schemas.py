@@ -206,6 +206,11 @@ class TicketCreate(SaisiPourEntree, AssisteIAEntree):
     # quelle URL est jointe, il ne peut que désigner nos propres fichiers.
     photos_urls: List[str] = []
     fichiers_urls: List[str] = []
+    #  Section « Intervenant » et récurrence d'un Entretien (#1092) — conseil seul,
+    #  règles dans `utils/intervenant`.
+    prestataire_id: Optional[int] = None
+    frequence_type: Optional[str] = None
+    frequence_valeur: Optional[int] = None
 
 
 class TicketRead(SaisiPourSortie, AssisteIASortie):
@@ -263,6 +268,10 @@ class TicketRead(SaisiPourSortie, AssisteIASortie):
     #  (#1093, `utils/archivage.perime_le`). `None` pour une affaire suivie :
     #  elle ne périme pas, elle se clôt.
     perime_le: Optional[date] = None
+    prestataire_id: Optional[int] = None
+    prestataire_nom: Optional[str] = None  # dérivé, pour la fiche et la carte
+    frequence_type: Optional[str] = None
+    frequence_valeur: Optional[int] = None
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
@@ -335,6 +344,9 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection):
     #  Les photos se corrigent désormais comme les documents — même règle, même
     #  endpoint de téléversement, et une liste vide efface sans ambiguïté.
     photos_urls: Optional[List[str]] = None
+    prestataire_id: Optional[int] = None
+    frequence_type: Optional[str] = None
+    frequence_valeur: Optional[int] = None
 
 
 class MessageCreate(AssisteIAEntree):

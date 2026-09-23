@@ -13,7 +13,9 @@ Le statut du ticket **EST** sa colonne :
 Ticket     Colonne                 Ce que ça dit
 =========  ======================  =========================================
 ouvert     ``cs``                  le conseil instruit
+en_ag      ``ag``                  soumis au vote de l'AG
 en_cours   ``syndic``              c'est passé au syndic
+chez_pres… ``fournisseur``         chez le prestataire
 résolu     ``termine``             le chantier est fait
 annulé     ``annule``              abandonné
 =========  ======================  =========================================
@@ -31,10 +33,10 @@ C'est déjà la règle des événements, écrite dans `$lib/kanban.ts` :
     « Aucun second champ d'état n'a été créé — deux notions de suivi sur le
       même objet se contredisent au premier écart. »
 
-⚠️ **La colonne `fournisseur` est inatteignable depuis un ticket**, et c'est un
-constat, pas un oubli : aucun statut de ticket ne dit « chez le prestataire ».
-La déclarer ici la rendrait accessible au glisser-déposer, et un ticket y
-atterrirait dans un état qui n'existe pas côté serveur.
+✅ **Les six colonnes sont atteignables** depuis le 23/09/2026 (#1092, lot 5) :
+`fournisseur` et `ag` étaient inatteignables faute d'état, et c'était un
+constat, pas un oubli. Les états `en_ag` et `chez_prestataire` sont nés quand
+les événements du calendrier sont devenus des affaires.
 
 ## Le pendant côté front
 
@@ -50,12 +52,14 @@ from app.utils.valeurs import valeur
 
 #: La catégorie dont les tickets entrent au kanban. Une seule pour l'instant, et
 #: le nommer plutôt que le coder en dur permet d'en ajouter sans chercher.
-CATEGORIES_SUIVIES: tuple[str, ...] = ("etude_travaux",)
+CATEGORIES_SUIVIES: tuple[str, ...] = ("etude_travaux", "entretien")
 
 #: Statut du ticket → colonne du kanban. **La source unique.**
 COLONNE_PAR_STATUT: dict[str, str] = {
     "ouvert": "cs",
+    "en_ag": "ag",
     "en_cours": "syndic",
+    "chez_prestataire": "fournisseur",
     "résolu": "termine",
     "annulé": "annule",
 }
