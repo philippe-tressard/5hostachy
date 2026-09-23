@@ -38,9 +38,12 @@ class StatutAcces(str, Enum):
 class Vigik(SQLModel, table=True):
     __tablename__ = "vigik"
     id: Optional[int] = Field(default=None, primary_key=True)
-    code: str  # référence physique du badge
+    code: str = Field(unique=True, index=True)  # référence physique du badge
     lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
-    user_id: int = Field(foreign_key="utilisateur.id")
+    #: Qui l'a EN MAIN, quand on le sait — jamais qui le porte : ses porteurs
+    #: se déduisent du lot (`utils/porteurs_acces`, #1194). Facultatif : un
+    #: badge rattaché à un lot sans compte n'est dans la main de personne.
+    user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     statut: StatutAcces = StatutAcces.actif
     chez_locataire: bool = False  # True = en possession du locataire
     bail_id: Optional[int] = Field(default=None, foreign_key="location_bail.id")  # bail actif lors du transfert
@@ -62,9 +65,12 @@ class Vigik(SQLModel, table=True):
 class Telecommande(SQLModel, table=True):
     __tablename__ = "telecommande"
     id: Optional[int] = Field(default=None, primary_key=True)
-    code: str  # référence physique
+    code: str = Field(unique=True, index=True)  # référence physique
     lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
-    user_id: int = Field(foreign_key="utilisateur.id")
+    #: Qui l'a EN MAIN, quand on le sait — jamais qui le porte : ses porteurs
+    #: se déduisent du lot (`utils/porteurs_acces`, #1194). Facultatif : un
+    #: badge rattaché à un lot sans compte n'est dans la main de personne.
+    user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     statut: StatutAcces = StatutAcces.actif
     chez_locataire: bool = False  # True = la TC est en possession du locataire
     bail_id: Optional[int] = Field(default=None, foreign_key="location_bail.id")  # bail actif lors du transfert

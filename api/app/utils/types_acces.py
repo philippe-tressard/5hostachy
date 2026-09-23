@@ -34,8 +34,6 @@ moitié — c'est précisément ce qui est arrivé au ``lot_id``.
 """
 from dataclasses import dataclass
 
-from sqlmodel import Session, select
-
 from app.models.core import (
     Telecommande,
     TelecommandeImport,
@@ -56,7 +54,8 @@ class TypeAcces:
     libelle: str
     #: La table de l'objet remis au porteur.
     modele: type
-    #: La table d'attribution à plusieurs copropriétaires.
+    #: L'ANCIENNE table d'attribution — plus écrite depuis #1194, les porteurs
+    #: se déduisant du lot ; seulement vidée quand un badge est supprimé.
     modele_attribution: type
     #: La colonne de cette table qui pointe l'objet.
     colonne_attribution: str
@@ -104,54 +103,9 @@ class TypeAcces:
         """La colonne de l'import, prête pour un `where`."""
         return getattr(self.modele_import, self.colonne_code_import)
 
-    def attribuer(self, session: Session, *, user_id: int, acces_id: int) -> bool:
-        """Attribue cet accès à cet utilisateur, sans doublon. Vrai si créé.
-
-        ## 🔴 Ce geste était écrit QUATRE fois (18/09/2026, #779)
-
-        `utils/auto_match_service.py` portait deux paires de jumelles —
-        `_create_user_telecommandes`/`_create_user_vigiks`, puis
-        `_assoc_tc`/`_assoc_vigik`. Les quatre disaient la même phrase : *« cet
-        accès appartient aussi à cette personne, et pas deux fois »*. Ce qui les
-        distinguait — la table d'attribution et le nom de sa colonne — est décrit
-        ici depuis le 14/09/2026, et par cet objet seul.
-
-        ⚠️ La leçon de ce module vaut pour ce geste-là aussi : les jumelles du
-        téléversement **avaient divergé** sans que personne ne le voie (le
-        `lot_id` recopié d'un côté, pas de l'autre). Une cinquième copie ne
-        ferait pas exception.
-
-        Le doublon n'est pas une erreur de l'appelant : l'appariement automatique
-        repasse par les mêmes accès depuis trois vecteurs différents (le lot, le
-        copropriétaire, la table de liaison). Répondre « déjà fait » est donc la
-        réponse normale, et c'est ce que le booléen sert à compter.
-        """
-        deja = session.exec(
-            select(self.modele_attribution).where(
-                self.modele_attribution.user_id == user_id,
-                getattr(self.modele_attribution, self.colonne_attribution) == acces_id,
-            )
-        ).first()
-        if deja:
-            return False
-        session.add(
-            self.modele_attribution(user_id=user_id, **{self.colonne_attribution: acces_id})
-        )
-        return True
-
-    def attribuer_aux_coproprietaires(self, acces, session: Session) -> None:
-        """Attribue cet accès à son porteur et aux copropriétaires concernés.
-
-        Le geste vit dans `utils/acces_attribution` — il lit des lots, ce que
-        ce descripteur n'a pas à savoir faire. La méthode existe pour que les
-        appelants n'aient pas à nommer les deux ensemble : le socle des imports
-        recevait autrefois cette fonction en PARAMÈTRE, à travers un second
-        descripteur qui n'existait que pour la transporter.
-        """
-        from app.utils.acces_attribution import attribuer_aux_coproprietaires
-
-        attribuer_aux_coproprietaires(acces, self, session)
-
+    #  🔴 `attribuer` et `attribuer_aux_coproprietaires` ont été RETIRÉS le
+    #  23/09/2026 (#1194) : les porteurs d'un badge se déduisent de son lot
+    #  (`utils/porteurs_acces`), plus rien ne les écrit.
 
 VIGIK = TypeAcces(
     cle="vigik",

@@ -39,7 +39,7 @@ const SOURCE = join(RACINE, 'src');
  * gestes, et les traiter séparément aurait fait rouvrir deux fois les mêmes
  * fichiers.
  */
-const PLAFOND = 16;
+const PLAFOND = 14;
 
 /**
  * Fichiers qui PARLENT de `confirm()` sans en appeler un : le composant de

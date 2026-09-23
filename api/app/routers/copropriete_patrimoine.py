@@ -13,17 +13,14 @@ deux-ci ne partagent rien avec elles : elles listent des objets physiques.
 additionne les routeurs, et `main.py` inclut les deux — c'est la même forme que
 `auth_profil` ou `calendrier_historique`, sortis pour la même raison.
 """
-from typing import Optional
-
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user
 from app.database import get_session
-from app.models.core import Batiment, Lot, TypeLien, UserLot, Utilisateur
-from app.utils.noms import nom_affiche
+from app.models.core import Batiment, Utilisateur
 
-from .copropriete import BatimentRead, LotRead
+from .copropriete import BatimentRead
 
 router = APIRouter(prefix="/copropriete", tags=["copropriété"])
 
@@ -35,42 +32,9 @@ def get_batiments(
     return session.exec(select(Batiment)).all()
 
 
-@router.get("/lots")
-def get_lots(
-    batiment_id: Optional[int] = None,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(get_current_user),
-):
-    stmt = select(Lot)
-    if batiment_id:
-        stmt = stmt.where(Lot.batiment_id == batiment_id)
-    lots = session.exec(stmt).all()
-
-    #  🔴 Les propriétaires en UNE requête, pas une par lot (#1154).
-    #
-    #  La copropriété compte plusieurs centaines de lots : un `session.get` par
-    #  ligne ferait autant d'allers-retours, sur une route qu'un écran
-    #  d'administration appelle à chaque ouverture. C'est le motif N+1 que
-    #  l'audit du 19/09 relevait ailleurs (#1048).
-    liens = session.exec(
-        select(UserLot, Utilisateur)
-        .join(Utilisateur, Utilisateur.id == UserLot.user_id)
-        .where(UserLot.type_lien == TypeLien.propriétaire, UserLot.actif.is_(True))
-    ).all()
-    #  ⚠️ Un lot peut avoir PLUSIEURS propriétaires (indivision) : on garde le
-    #  premier plutôt que de les concaténer — le libellé sert à RECONNAÎTRE un
-    #  lot dans une liste déroulante, pas à dresser son état civil.
-    proprietaire_par_lot: dict[int, str] = {}
-    for lien, utilisateur in liens:
-        proprietaire_par_lot.setdefault(
-            lien.lot_id, nom_affiche(utilisateur.prenom, utilisateur.nom)
-        )
-
-    result = []
-    for lot in lots:
-        bat = session.get(Batiment, lot.batiment_id) if lot.batiment_id else None
-        d = LotRead.model_validate(lot)
-        d.batiment_nom = bat.numero if bat else None
-        d.proprietaire_nom = proprietaire_par_lot.get(lot.id)
-        result.append(d)
-    return result
+#  🔴 `GET /copropriete/lots` a été RETIRÉE le 23/09/2026 (#1194). Son seul
+#  appelant était l'écran d'import des badges, qui choisit désormais le lot
+#  d'une ligne par `GET /acces/admin/imports-lots` — réservée au conseil
+#  syndical, et qui nomme le copropriétaire tel que le FICHIER des lots l'écrit.
+#  Celle-ci était ouverte à tout résident connecté, et donnait le nom du
+#  propriétaire de chaque lot de la copropriété.

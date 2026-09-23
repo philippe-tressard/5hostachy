@@ -127,31 +127,6 @@ class BatimentRead(BaseModel):
         from_attributes = True
 
 
-class LotRead(BaseModel):
-    id: int
-    batiment_id: Optional[int] = None  # None pour les parkings
-    batiment_nom: Optional[str] = None  # enrichi à la sérialisation
-    #  🔴 QUI détient ce lot — enrichi à la sérialisation (#1154, 22/09/2026).
-    #
-    #  Signalé à l'écran : « je ne trouve pas de lots pour CHAUDHRY ». La liste
-    #  n'est pas filtrée — elle porte tous les lots — mais elle n'affichait que
-    #  « Bât.2 — 41 (appartement) ». La question qu'on lui pose est « quel lot
-    #  est à cette personne ? », et elle répondait par des numéros.
-    #
-    #  ⚠️ `None` quand aucun lien ACTIF de propriété n'existe : un lot sans
-    #  propriétaire enregistré est un cas réel, et le dire vaut mieux que de
-    #  laisser croire à un chargement raté.
-    proprietaire_nom: Optional[str] = None
-    numero: str
-    type: str
-    type_appartement: Optional[str] = None
-    etage: Optional[int] = None
-
-    class Config:
-        from_attributes = True
-
-
-
 
 #: Les deux sections de la fiche adossées à un contrat, et ce qui les distingue.
 #:

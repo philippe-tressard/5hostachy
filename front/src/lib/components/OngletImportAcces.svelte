@@ -1,29 +1,32 @@
 <!--
-  L'écran d'import d'ACCÈS — un seul, piloté par un modèle.
+  L'écran d'import d'ACCÈS — un seul, piloté par un modèle (`$lib/imports-acces`).
 
-  ## Pourquoi ce composant existe (27/08/2026, #453)
+  ## 🔴 Un badge appartient au LOT (#1194, 23/09/2026)
 
-  `OngletImportTelecommandes.svelte` (349 l.) et `OngletImportVigik.svelte`
-  (329 l.) étaient **identiques à 87 %** : 263 lignes communes sur 314. Même
-  écran, même geste, même tableau, écrits deux fois.
+  Arbitré sur maquettes : une ligne du fichier se RATTACHE à son lot, et ses
+  porteurs s'en déduisent — les copropriétaires du lot, conjoint compris. Le
+  formulaire demandait jusqu'ici un compte « Propriétaire » obligatoire, que le
+  serveur exigeait (422) : la plupart des lots n'en ont pas, et les lignes
+  restaient en attente d'une inscription. Puis « Lier » ne suffisait pas, il
+  fallait encore « ✓ Créer » — la colonne « Proprio lié » était pourtant verte.
 
-  Ce qui les distinguait tenait dans une table de données — endpoints, colonnes,
-  vocabulaire, une tuile de statistique. Elle vit dans `$lib/imports-acces.ts`,
-  avec la seule vraie divergence de comportement que la fusion a révélée
-  (`remettreEnAttente`, absent côté Vigik).
+  Il ne reste qu'un champ obligatoire, le **lot**, et un seul geste,
+  **Rattacher** — ligne par ligne, ou en masse pour toutes les lignes dont le
+  lot est reconnu. Les noms du fichier ne sont plus que des indices.
 
-  ⚠️ Ce composant ne connaît **aucun** nom de type d'import : ni « Vigik », ni
-  « télécommande », ni un seul chemin d'API. S'il en connaissait un, la troisième
-  instance rouvrirait la porte à la quatrième copie — c'est ce qui est arrivé ici.
+  ⚠️ Ce composant ne connaît **aucun** nom de type d'import (#453) : ni
+  « Vigik », ni « télécommande », ni un chemin d'API.
 -->
 <script lang="ts">
-	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
-	import { admin as adminApi, copropriete as coproprieteApi } from '$lib/api';
+	import { acces as accesApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
+	import { confirmer } from '$lib/confirmation';
+	import { messageErreur } from '$lib/erreurs';
 	import { STATUT_BADGE, STATUT_LABEL, type ModeleImportAcces } from '$lib/imports-acces';
 	import BarreImport from '$lib/components/BarreImport.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
@@ -31,82 +34,83 @@
 
 	$: _siteNom = $siteNomStore;
 
-	// ── Données ────────────────────────────────────────────────────────────────
 	let imports: any[] = [];
 	let stats: any = null;
-	let utilisateurs: any[] = [];
 	let lots: any[] = [];
-	let loading = true;
+	let chargement = true;
+	let erreur = '';
 	let filtre = '';
+	let enCours = false;
 
-	// ── Téléversement ──────────────────────────────────────────────────────────
-	//  Le FORMULAIRE vit dans `BarreImport` ; il ne reste ici que ce qui dépend du
-	//  modèle : l'appel et son compte rendu.
-	let televersement = false;
+	/** Les lots où va ce badge d'abord, les autres ensuite : un Vigik peut être
+	 *  posé sur un lot d'une autre nature, mais c'est l'exception. */
+	$: lotsTries = [
+		...lots.filter((l) => l.type === modele.natureLot),
+		...lots.filter((l) => l.type !== modele.natureLot),
+	];
 
-	async function televerser(fichier: File, remplacer: boolean) {
-		televersement = true;
+	async function geste(appel: () => Promise<any>, succes: (r: any) => string) {
+		enCours = true;
 		try {
-			const r = await modele.api.upload(fichier, remplacer);
-			toast(
-				'success',
-				`Import : ${r.importes} ajoutés, ${r.doublons} doublons, ${r.ignores} ignorés`,
-			);
+			const r = await appel();
+			toast('success', succes(r));
 			await recharger();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur import');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
-			televersement = false;
+			enCours = false;
 		}
 	}
 
-	// ── Rapprochement automatique ──────────────────────────────────────────────
-	let rapprochement = false;
+	const televerser = (fichier: File, remplacer: boolean) =>
+		geste(
+			() => modele.api.upload(fichier, remplacer),
+			(r) => `Import : ${r.importes} ajoutés, ${r.doublons} doublons, ${r.ignores} ignorés`,
+		);
 
-	async function autoMatch() {
-		rapprochement = true;
-		try {
-			const r = await modele.api.autoMatch();
-			toast('success', `${r.matches} liaison(s) automatique(s) trouvée(s)`);
-			await recharger();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		} finally {
-			rapprochement = false;
-		}
+	const rechercher = () => geste(modele.api.autoMatch, (r) => `${r.matches} ligne(s) complétée(s)`);
+
+	async function rattacherTout() {
+		const n = stats?.a_rattacher ?? 0;
+		if (
+			!(await confirmer(
+				`Rattacher ${n} ligne(s) à leur lot ? Les copropriétaires de chaque lot en deviendront porteurs.`,
+			))
+		)
+			return;
+		await geste(modele.api.rattacher, (r) => `${r.rattachees} ligne(s) rattachée(s)`);
 	}
 
-	// ── Édition en ligne ───────────────────────────────────────────────────────
+	const rattacher = (id: number) =>
+		geste(
+			() => modele.api.resoudre(id),
+			() => `Rattaché : ${modele.objet} est sur son lot`,
+		);
+
+	async function ignorer(id: number) {
+		if (!(await confirmer('Ignorer cette ligne ?'))) return;
+		await geste(
+			() => modele.api.ignorer(id),
+			() => 'Ligne ignorée',
+		);
+	}
+
+	const remettreEnAttente = (id: number) =>
+		geste(
+			() => modele.api.remettreEnAttente(id),
+			() => 'Ligne remise en attente',
+		);
+
+	// ── Préciser une ligne : le lot, et la possession ───────────────────────────
 	let editId: number | null = null;
-	//  🔴 Les NOMS venus du fichier du syndic (#1152, 22/09/2026).
-	//
-	//  Demandé à l'écran : *« quand il y a une faute d'orthographe le rapprochement
-	//  vigik et TC est impossible »*. C'est sur ces chaînes que l'appariement
-	//  automatique travaille — une lettre de travers, et la ligne reste « en
-	//  attente » sans que rien ne dise pourquoi.
-	//
-	//  ⚠️ On corrige le TEXTE IMPORTÉ, pas la fiche du copropriétaire : une faute
-	//  du syndic ne doit pas obliger à retoucher un compte, qui sert à l'annuaire,
-	//  aux courriels et aux affiches.
-	let editNomProprio = '';
-	let editNomLoc = '';
-	let editProprio = '';
-	let editLoc = '';
 	let editLot = '';
 	let editChezLoc = false;
 	let editNotes = '';
-	//  Les cases propres à un type (« Locataire a refusé ») : le modèle les
-	//  déclare, le formulaire les tient dans un seul objet plutôt qu'en variables
-	//  nommées — sans quoi ajouter un champ demanderait de toucher ce fichier.
+	//  Les cases propres à un type (« Locataire a refusé ») : le modèle les déclare.
 	let editBooleens: Record<string, boolean> = {};
-	let enregistrement = false;
 
 	function ouvrirEdition(imp: any) {
 		editId = imp.id;
-		editNomProprio = imp.nom_proprietaire ?? '';
-		editNomLoc = imp.nom_locataire ?? '';
-		editProprio = String(imp.user_proprietaire_id ?? '');
-		editLoc = String(imp.user_locataire_id ?? '');
 		editLot = String(imp.lot_id ?? '');
 		editChezLoc = imp.chez_locataire;
 		editNotes = imp.notes_admin ?? '';
@@ -115,68 +119,24 @@
 		);
 	}
 
-	function annulerEdition() {
+	async function enregistrer() {
+		if (editId === null) return;
+		const id = editId;
+		await geste(
+			//  `lot_id: null` DÉLIE : le serveur distingue un champ absent d'un
+			//  champ vidé depuis #1194.
+			() =>
+				modele.api.patch(id, {
+					lot_id: editLot ? Number(editLot) : null,
+					chez_locataire: editChezLoc,
+					notes_admin: editNotes || null,
+					...editBooleens,
+				}),
+			() => 'Ligne mise à jour',
+		);
 		editId = null;
 	}
 
-	async function enregistrer() {
-		if (editId === null) return;
-		enregistrement = true;
-		try {
-			await modele.api.patch(editId, {
-				nom_proprietaire: editNomProprio,
-				nom_locataire: editNomLoc,
-				user_proprietaire_id: editProprio ? Number(editProprio) : null,
-				user_locataire_id: editLoc ? Number(editLoc) : null,
-				lot_id: editLot ? Number(editLot) : null,
-				chez_locataire: editChezLoc,
-				notes_admin: editNotes || null,
-				...editBooleens,
-			});
-			toast('success', 'Liaisons mises à jour');
-			editId = null;
-			await recharger();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		} finally {
-			enregistrement = false;
-		}
-	}
-
-	// ── Résolution / ignorer / reprise ─────────────────────────────────────────
-	async function resoudre(id: number) {
-		if (!confirm(`Créer ${modele.objet} et marquer cet import comme résolu ?`)) return;
-		try {
-			await modele.api.resoudre(id);
-			toast('success', `Création de ${modele.objet} : liaison faite`);
-			await recharger();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur résolution');
-		}
-	}
-
-	async function ignorer(id: number) {
-		if (!confirm('Ignorer cet import ?')) return;
-		try {
-			await modele.api.ignorer(id);
-			toast('info', 'Import ignoré');
-			await recharger();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
-	async function remettreEnAttente(id: number) {
-		try {
-			await modele.api.remettreEnAttente(id);
-			toast('success', 'Import remis en attente');
-			await recharger();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
-	// ── Chargement ─────────────────────────────────────────────────────────────
 	async function recharger() {
 		[imports, stats] = await Promise.all([
 			modele.api.list(filtre || undefined),
@@ -185,21 +145,20 @@
 	}
 
 	onMount(async () => {
-		loading = true;
 		try {
-			[utilisateurs, lots] = await Promise.all([adminApi.utilisateurs(), coproprieteApi.lots()]);
-			await recharger();
-		} catch {
-			toast('error', 'Erreur de chargement');
+			[lots] = await Promise.all([accesApi.lotsImports(), recharger()]);
+		} catch (e) {
+			erreur = messageErreur(e);
 		} finally {
-			loading = false;
+			chargement = false;
 		}
 	});
 
-	/** Les colonnes propres au type, puis la colonne clé — l'ordre du tableau. */
-	$: colonnesSpecifiques = modele.colonnes;
-	/** `colspan` du formulaire d'édition : il suit le nombre réel de colonnes. */
-	$: nbColonnes = colonnesSpecifiques.length + 8;
+	/** « 2 porteurs » ou « sans compte » — ce que le rattachement donnera. */
+	const porteurs = (n: number | null) =>
+		!n ? 'sans compte' : n === 1 ? '1 porteur' : `${n} porteurs`;
+
+	$: nbColonnes = modele.colonnes.length + 5;
 </script>
 
 <svelte:head><title>{modele.titre} — {_siteNom}</title></svelte:head>
@@ -208,52 +167,49 @@
 	tuiles={stats
 		? [
 				{ valeur: stats.total, libelle: 'Total' },
-				{ valeur: stats.en_attente, libelle: 'En attente', couleur: '#d97706' },
-				{ valeur: stats.proprietaire_lie, libelle: 'Proprio lié', couleur: '#2563eb' },
-				{ valeur: stats.resolu, libelle: 'Résolus', couleur: '#16a34a' },
+				{ valeur: stats.a_rattacher, libelle: 'Lot reconnu', couleur: '#16a34a' },
+				{ valeur: stats.lot_a_preciser, libelle: 'Lot à préciser', couleur: '#d97706' },
+				{ valeur: stats.resolu, libelle: 'Rattachés', couleur: '#2563eb' },
 				{ valeur: stats.ignore, libelle: 'Ignorés', couleur: '#6b7280' },
-				{
-					valeur: stats[modele.statSupplementaire.cle],
-					libelle: modele.statSupplementaire.libelle,
-				},
 			]
 		: []}
 	colonnesAttendues={modele.colonnesAttendues}
-	enCours={televersement}
+	{enCours}
 	statuts={['', 'en_attente', 'proprietaire_lie', 'resolu', 'ignore']}
 	libellesStatuts={STATUT_LABEL}
 	bind:filtre
 	on:importer={(e) => televerser(e.detail.fichier, e.detail.remplacer)}
 	on:filtrer={recharger}
 >
-	<button
-		slot="actions"
-		class="btn btn-outline btn-sm"
-		on:click={autoMatch}
-		disabled={rapprochement}
-	>
-		{rapprochement ? 'Recherche…' : '\u{1F517} Auto-match'}
-	</button>
+	<svelte:fragment slot="actions">
+		<button class="btn btn-outline btn-sm" on:click={rechercher} disabled={enCours}>
+			{'\u{1F50E}'} Rechercher les lots
+		</button>
+		{#if stats?.a_rattacher}
+			<button class="btn btn-primary btn-sm" on:click={rattacherTout} disabled={enCours}>
+				Rattacher les {stats.a_rattacher} lignes reconnues
+			</button>
+		{/if}
+	</svelte:fragment>
 </BarreImport>
 
-<!-- ── Tableau ─────────────────────────────────────────────────────────────── -->
-{#if loading}
-	<p class="muted">Chargement…</p>
-{:else if imports.length === 0}
-	<div class="empty-state card">
-		<h3>Aucun import</h3>
-		<p>Importez un fichier .xlsx pour démarrer.</p>
-	</div>
-{:else}
+<EtatListe
+	{chargement}
+	{erreur}
+	vide={imports.length === 0}
+	titreVide="Aucun import"
+	messageVide="Importez un fichier .xlsx pour démarrer."
+>
 	<div class="card" style="overflow:auto">
 		<table class="table imp-table-dense">
 			<thead>
 				<tr>
-					{#each colonnesSpecifiques as c (c.cle)}<th>{c.entete}</th>{/each}
-					<th>Propriétaire (Excel)</th><th>Locataire (Excel)</th>
-					<th>{modele.colonneCle.entete}</th><th>Lot lié</th>
-					<th>Proprio lié</th><th>Locataire lié</th>
-					<th>Statut</th><th>Actions</th>
+					{#each modele.colonnes as c (c.cle)}<th>{c.entete}</th>{/each}
+					<th>Indices du fichier</th>
+					<th>{modele.colonneCle.entete}</th>
+					<th>Lot</th>
+					<th>Statut</th>
+					<th>Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -262,31 +218,22 @@
 						class:imp-row-resolu={imp.statut === 'resolu'}
 						class:imp-row-ignore={imp.statut === 'ignore'}
 					>
-						{#each colonnesSpecifiques as c (c.cle)}
+						{#each modele.colonnes as c (c.cle)}
 							<td style="font-size:.8rem">{imp[c.cle] ?? '—'}</td>
 						{/each}
-						<td style="font-weight:500">{imp.nom_proprietaire}</td>
-						<td style="color:var(--color-text-muted)">{imp.nom_locataire ?? '—'}</td>
 						<td>
-							{#if modele.colonneCle.code}
-								<code style="font-size:.8rem">{imp[modele.colonneCle.cle] ?? '—'}</code>
-							{:else}
-								{imp[modele.colonneCle.cle] ?? '—'}
+							<span style="font-weight:500">{imp.nom_proprietaire}</span>
+							{#if imp.nom_locataire}
+								<span class="muted" style="font-size:.8rem"> · loc. {imp.nom_locataire}</span>
 							{/if}
 						</td>
-						<td style="font-size:.8rem;color:var(--color-text-muted)">{imp.lot_label ?? '—'}</td>
-						<td style="font-size:.8rem">
-							{#if imp.proprietaire}
-								<span style="color:#16a34a">{nomAffiche(imp.proprietaire)}</span>
-							{:else}
-								<span style="color:#d97706">Non lié</span>
-							{/if}
-						</td>
-						<td style="font-size:.8rem;color:var(--color-text-muted)">
-							{#if imp.locataire}
-								{nomAffiche(imp.locataire)}
-							{:else if imp.nom_locataire}
-								<span style="color:#d97706">Non lié</span>
+						<td><code style="font-size:.8rem">{imp[modele.colonneCle.cle] ?? '—'}</code></td>
+						<td>
+							{#if imp.lot_label}
+								<span class="badge badge-green">{imp.lot_label} · {porteurs(imp.lot_porteurs)}</span
+								>
+							{:else if imp.statut !== 'ignore'}
+								<span class="badge badge-orange">à préciser</span>
 							{:else}—{/if}
 						</td>
 						<td>
@@ -298,122 +245,66 @@
 							{/each}
 						</td>
 						<td>
-							{#if imp.statut !== 'resolu' && imp.statut !== 'ignore'}
-								<div class="action-row">
-									<button
-										class="btn-icon-edit"
-										aria-label="Modifier"
-										title="Modifier"
-										on:click={() => ouvrirEdition(imp)}>✏️</button
-									>
-									{#if imp.user_proprietaire_id && imp[modele.colonneCle.cle]}
-										<button class="btn btn-sm btn-primary" on:click={() => resoudre(imp.id)}
-											>✓ Créer</button
-										>
-									{/if}
-									<button
-										class="btn-icon-warn"
-										aria-label="Ignorer cet import"
-										title="Ignorer"
-										on:click={() => ignorer(imp.id)}>⊘</button
-									>
-								</div>
-							{:else if imp.statut === 'resolu'}
-								<div class="action-row">
-									<span class="badge badge-green" style="font-size:.75rem"
-										>{modele.badgeResolu(imp)}</span
-									>
-									<button
-										class="btn-icon-edit"
-										aria-label="Corriger les liens"
-										title="Corriger les liens"
-										on:click={() => ouvrirEdition(imp)}>✏️</button
-									>
-								</div>
-							{:else if imp.statut === 'ignore'}
-								<!--  Le geste vaut pour LES DEUX types depuis #576 : la condition sur le
-								      modèle est tombée avec la divergence. Un mécanisme d'exception qui
-								      survit à son exception invite la suivante (`ux-patterns` §13). -->
-								<div class="action-row">
+							<div class="action-row">
+								{#if imp.statut === 'ignore'}
 									<button
 										class="btn-icon-success"
 										aria-label="Remettre en attente"
 										title="Remettre en attente"
 										on:click={() => remettreEnAttente(imp.id)}>↩</button
 									>
-								</div>
-							{/if}
+								{:else}
+									{#if imp.rattachable}
+										<button
+											class="btn btn-sm btn-primary"
+											disabled={enCours}
+											on:click={() => rattacher(imp.id)}>Rattacher</button
+										>
+									{:else if imp.statut !== 'resolu' && !imp.lot_id}
+										<button class="btn btn-sm btn-outline" on:click={() => ouvrirEdition(imp)}
+											>Choisir le lot</button
+										>
+									{/if}
+									<button
+										class="btn-icon-edit"
+										aria-label="Préciser la ligne"
+										title="Préciser la ligne"
+										aria-pressed={editId === imp.id}
+										on:click={() => ouvrirEdition(imp)}>✏️</button
+									>
+									{#if imp.statut !== 'resolu'}
+										<button
+											class="btn-icon-warn"
+											aria-label="Ignorer cette ligne"
+											title="Ignorer"
+											on:click={() => ignorer(imp.id)}>⊘</button
+										>
+									{/if}
+								{/if}
+							</div>
 						</td>
 					</tr>
 
-					<!-- Formulaire d'édition en ligne -->
 					{#if editId === imp.id}
 						<tr class="imp-edit-row">
 							<td colspan={nbColonnes}>
 								<div class="imp-edit-form card" style="margin:.5rem 0">
-									<h3 style="font-size:.9rem;font-weight:700;margin-bottom:.75rem">
-										Lier : <em>{imp.nom_proprietaire}</em>
-									</h3>
+									<p class="aide">
+										Indices du fichier : <strong>{imp.nom_proprietaire}</strong>{imp.nom_locataire
+											? ` · locataire ${imp.nom_locataire}`
+											: ''} · {modele.colonneCle.entete.toLowerCase()}
+										<code>{imp[modele.colonneCle.cle] ?? '—'}</code>
+									</p>
 									<div class="imp-edit-grid">
-										<!--  🔴 Le NOM du fichier, corrigeable — c'est lui que l'appariement
-										      lit. Il vient AVANT le choix du compte : on corrige la faute,
-										      puis on relance l'appariement, et le compte apparaît tout
-										      seul. L'ordre inverse ferait chercher à la main ce que le
-										      produit sait retrouver (#1152). -->
-										<div class="field">
-											<label for="imp-nom-proprio"
-												>Nom du propriétaire (fichier)<EtoileRequis
-													vide={!editNomProprio.trim()}
-												/></label
-											>
-											<input id="imp-nom-proprio" type="text" bind:value={editNomProprio} />
-										</div>
-										<div class="field">
-											<label for="imp-nom-loc">Nom du locataire (fichier)</label>
-											<input id="imp-nom-loc" type="text" bind:value={editNomLoc} />
-										</div>
-										<div class="field">
-											<label for="imp-proprio"
-												>Propriétaire<EtoileRequis vide={!editProprio} /></label
-											>
-											<select id="imp-proprio" bind:value={editProprio}>
-												<option value="">— Non lié —</option>
-												{#each utilisateurs as u (u.id)}
-													<option value={String(u.id)}>{nomAffiche(u)} ({u.email})</option>
-												{/each}
-											</select>
-										</div>
-										<div class="field">
-											<label for="imp-loc">Locataire</label>
-											<select id="imp-loc" bind:value={editLoc}>
-												<option value="">— Aucun —</option>
-												{#each utilisateurs as u (u.id)}
-													<option value={String(u.id)}>{nomAffiche(u)} ({u.email})</option>
-												{/each}
-											</select>
-										</div>
-										<div class="field">
-											<label for="imp-lot">Lot</label>
+										<div class="field" style="grid-column:1 / -1">
+											<label for="imp-lot">Lot<EtoileRequis vide={!editLot} /></label>
 											<select id="imp-lot" bind:value={editLot}>
-												<option value="">— Auto / Inconnu —</option>
-												<!--  🔴 Le PORTEUR dans le libellé (#1154, 22/09/2026).
-
-												      Signalé à l'écran : *« je ne trouve pas de lots pour
-												      CHAUDHRY »*. La liste n'est pas filtrée — elle porte tous
-												      les lots — mais elle n'affichait que des numéros. La
-												      question posée ici est *« quel lot est à cette personne ? »*,
-												      et elle répondait *« voici tous les numéros »* : sans
-												      connaître le numéro par cœur, on conclut qu'il n'y en a pas.
-
-												      ⚠️ Le nom vient de `l.proprietaire_nom` quand il existe :
-												      un lot sans propriétaire enregistré est un cas réel, et
-												      afficher « — » vaut mieux que de laisser croire à un
-												      chargement raté. -->
-												{#each lots as l (l.id)}
+												<option value="">— Aucun lot (délier) —</option>
+												<!--  Le copropriétaire est celui du FICHIER DES LOTS : c'est le
+												      seul nom qu'un lot sans compte possède (#1154, #1194). -->
+												{#each lotsTries as l (l.id)}
 													<option value={String(l.id)}
-														>Bât.{l.batiment_nom ?? l.batiment_id} — {l.numero} ({l.type}){l.proprietaire_nom
-															? ` · ${l.proprietaire_nom}`
-															: ''}</option
+														>{l.libelle}{l.coproprietaire ? ` · ${l.coproprietaire}` : ''}</option
 													>
 												{/each}
 											</select>
@@ -421,8 +312,9 @@
 										<div class="field imp-field-checkbox">
 											<label>
 												<input type="checkbox" bind:checked={editChezLoc} />
-												{modele.libelleChezLocataire}
+												Remis au locataire
 											</label>
+											<p class="aide sous-case">Sinon, il est chez les copropriétaires du lot.</p>
 										</div>
 										{#each modele.champsBooleens as c (c.cle)}
 											<div class="field imp-field-checkbox">
@@ -432,7 +324,7 @@
 												</label>
 											</div>
 										{/each}
-										<div class="field" style="grid-column:span 2">
+										<div class="field" style="grid-column:1 / -1">
 											<label for="imp-notes">Notes admin</label>
 											<input
 												id="imp-notes"
@@ -443,9 +335,9 @@
 										</div>
 									</div>
 									<PiedFormulaire
-										enCours={enregistrement}
+										{enCours}
 										soumission={false}
-										on:annule={annulerEdition}
+										on:annule={() => (editId = null)}
 										on:enregistre={enregistrer}
 									/>
 								</div>
@@ -456,4 +348,4 @@
 			</tbody>
 		</table>
 	</div>
-{/if}
+</EtatListe>

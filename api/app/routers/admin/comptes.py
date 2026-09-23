@@ -12,13 +12,10 @@ from app.database import get_session
 from app.models.core import (
     Delegation,
     Notification,
-    StatutAcces,
     StatutDelegation,
     StatutUtilisateur,
-    Telecommande,
     UserLot,
     Utilisateur,
-    Vigik,
 )
 from app.schemas import UserRead
 from app.utils.comptes import comptes_en_attente as lister_comptes_en_attente, marquer_decide
@@ -159,20 +156,16 @@ def traiter_compte(
                     if not exists:
                         session.add(UserLot(user_id=user.id, lot_id=ul.lot_id, type_lien=ul.type_lien, quote_part=ul.quote_part))
                         aide_result["lots"] += 1
-                # Copier les télécommandes
-                aide_tcs = session.exec(select(Telecommande).where(Telecommande.user_id == aide.id, Telecommande.statut == StatutAcces.actif)).all()
-                for tc in aide_tcs:
-                    exists = session.exec(select(Telecommande).where(Telecommande.user_id == user.id, Telecommande.code == tc.code)).first()
-                    if not exists:
-                        session.add(Telecommande(user_id=user.id, code=tc.code, lot_id=tc.lot_id, statut=StatutAcces.actif))
-                        aide_result["tc"] += 1
-                # Copier les vigik
-                aide_vigiks = session.exec(select(Vigik).where(Vigik.user_id == aide.id, Vigik.statut == StatutAcces.actif)).all()
-                for v in aide_vigiks:
-                    exists = session.exec(select(Vigik).where(Vigik.user_id == user.id, Vigik.code == v.code)).first()
-                    if not exists:
-                        session.add(Vigik(user_id=user.id, code=v.code, lot_id=v.lot_id, statut=StatutAcces.actif))
-                        aide_result["vigik"] += 1
+                #  🔴 Les badges ne se COPIENT plus (#1194) : chaque copie créait
+                #  un second objet pour le même badge physique, que l'unicité du
+                #  code refuse désormais. Rattaché aux lots de l'aidé, l'aidant
+                #  en porte les badges par la règle du lot — on les compte.
+                session.flush()
+                from app.utils.porteurs_acces import acces_de
+                from app.utils.types_acces import TELECOMMANDE, VIGIK
+
+                aide_result["tc"] = len(acces_de(session, TELECOMMANDE, user.id))
+                aide_result["vigik"] = len(acces_de(session, VIGIK, user.id))
                 # Créer la délégation automatiquement
                 existing_del = session.exec(
                     select(Delegation).where(

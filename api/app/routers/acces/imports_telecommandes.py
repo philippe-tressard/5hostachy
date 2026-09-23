@@ -25,6 +25,7 @@ from .commun import (
     _remettre_en_attente_import,
     _stats_socle,
 )
+from app.utils.resolution_acces import rattacher_les_reconnues
 from app.utils.types_acces import TELECOMMANDE
 from app.utils.fichiers import verifier_fichier_recu
 from . import socle_imports
@@ -73,7 +74,7 @@ def list_imports(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Liste les imports, optionnellement filtrés par statut."""
-    return _lister_imports(TelecommandeImport, statut, session)
+    return _lister_imports(TELECOMMANDE, statut, session)
 
 
 @router.post("/admin/imports/auto-match")
@@ -81,12 +82,22 @@ def auto_match_imports(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Apparie les imports en attente aux comptes inscrits.
+    """Apparie les imports en attente : leur lot, puis les comptes inscrits.
 
-    Aucune étape supplémentaire : le fichier des télécommandes ne porte ni
-    bâtiment ni appartement, le lot ne peut donc venir que de `rattacher_lot_unique`.
+    Le fichier des télécommandes ne porte ni bâtiment ni appartement : le lot se
+    retrouve par le nom du copropriétaire, dans le fichier des lots
+    (`utils/lot_des_imports`).
     """
     return socle_imports.auto_match(TELECOMMANDE, session)
+
+
+@router.post("/admin/imports/rattacher")
+def rattacher_imports(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Le rattachement en masse : chaque ligne dont le lot est connu (#1194)."""
+    return rattacher_les_reconnues(TELECOMMANDE, session)
 
 
 @router.patch("/admin/imports/{import_id}")
@@ -107,11 +118,10 @@ def resoudre_import(
     session: Session = Depends(get_session),
     admin: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Résout un import : crée la Telecommande réelle et lie l'utilisateur.
+    """Rattache la télécommande de cette ligne à son lot.
 
-    La télécommande est affectée au locataire si `chez_locataire`, sinon au
-    propriétaire. Les copropriétaires du même lot sont associés via
-    `UserTelecommande`.
+    Ses porteurs s'en déduisent : les copropriétaires du lot, conjoint compris,
+    et le locataire si elle lui a été remise (`utils/porteurs_acces`).
     """
     return socle_imports.resoudre(TELECOMMANDE, import_id, session)
 
@@ -172,6 +182,6 @@ def stats_imports(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Statistiques synthétiques sur les imports."""
-    lignes, stats = _stats_socle(TelecommandeImport, session)
+    lignes, stats = _stats_socle(TELECOMMANDE, session)
     stats["avec_reference"] = sum(1 for i in lignes if i.reference)
     return stats

@@ -9,8 +9,6 @@ porteur.
 commentaire qui les remplace dit pourquoi — enregistrer un badge est déjà
 couvert deux fois, et une troisième voie jamais exercée dérive.
 """
-from datetime import datetime
-
 from fastapi import (
     APIRouter, BackgroundTasks, Depends, HTTPException,
 )
@@ -29,6 +27,8 @@ from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 from app.utils.destinataires import membres_cs_notifiables
 from app.utils.noms import contexte_personne, nom_affiche
 from app.auth.appartenance import exiger_acces_du_porteur
+from app.utils.porteurs_acces import acces_de, lot_unique_de_nature, porteurs
+from app.utils.resolution_acces import exiger_code_libre, rattacher
 
 router = APIRouter()
 
@@ -65,19 +65,10 @@ def _mes_acces(session: Session, type_acces: TypeAcces,
     aurait fait une seconde lecture du même champ ; `AccesOut` la fait une fois,
     et la vue du conseil syndical en dérive.
     """
-    modele = type_acces.modele
-    champ = getattr(type_acces.modele_attribution, type_acces.colonne_attribution)
-    directs = session.exec(select(modele).where(modele.user_id == user.id)).all()
-    attribues = session.exec(
-        select(modele)
-        .join(type_acces.modele_attribution, modele.id == champ)
-        .where(type_acces.modele_attribution.user_id == user.id)
-    ).all()
-    vus, sortie = set(), []
-    for objet in [*directs, *attribues]:
-        if objet.id not in vus:
-            vus.add(objet.id)
-            sortie.append(objet)
+    #  🔴 Les porteurs se DÉDUISENT du lot depuis #1194 — conjoint compris. La
+    #  liste lisait `user_id` plus les tables d'attribution, que sept chemins
+    #  écrivaient et dont un seul servait le conjoint inscrit après coup.
+    sortie = acces_de(session, type_acces, user.id)
     return AccesOut.depuis(session, type_acces, sortie)
 
 
@@ -125,34 +116,31 @@ def _declarer_acces(session: Session, type_acces: TypeAcces, code: str,
     dans la vue du conseil syndical, alors que l'import le connaissait. Les deux
     branches se ressemblaient assez pour qu'on ne relise jamais les deux.
     """
-    objet = session.exec(
-        select(type_acces.modele).where(
-            type_acces.modele.code == code,
-            type_acces.modele.user_id == user.id,
-        )
-    ).first()
-    if objet:
+    existant = session.exec(select(type_acces.modele).where(type_acces.modele.code == code)).first()
+    if existant and user.id in porteurs(session, existant):
         raise HTTPException(400, f"{type_acces.libelle} déjà enregistré sur votre compte")
+    exiger_code_libre(session, type_acces, code)
 
-    objet = type_acces.modele(code=code, user_id=user.id, statut=StatutAcces.actif)
-    session.add(objet)
-    session.flush()
-
+    #  🔴 La ligne du fichier n'est plus CAPTURÉE par son seul code (#1194) : la
+    #  déclaration la résolvait au nom du déclarant, quel que soit le lot qu'elle
+    #  désigne. Elle ne se rattache que si ce lot est le sien.
     ligne = session.exec(
         select(type_acces.modele_import).where(
             type_acces.champ_code_import == code,
-            type_acces.modele_import.statut != StatutImport.resolu,
+            type_acces.modele_import.statut.in_([StatutImport.en_attente, StatutImport.proprietaire_lie]),
         )
     ).first()
-    if ligne:
-        ligne.statut = StatutImport.resolu
-        setattr(ligne, type_acces.colonne_import, objet.id)
-        ligne.resolu_le = datetime.utcnow()
-        if not ligne.user_proprietaire_id:
-            ligne.user_proprietaire_id = user.id
-        if ligne.lot_id:
-            objet.lot_id = ligne.lot_id
-        session.add(ligne)
+    if ligne and ligne.lot_id and not est_rattache_au_lot(user, ligne.lot_id):
+        raise HTTPException(400, "Ce code figure au fichier du syndic pour un autre lot : "
+                                 "le conseil syndical peut le corriger")
+    if ligne and ligne.lot_id:
+        ligne.user_proprietaire_id = ligne.user_proprietaire_id or user.id
+        objet = rattacher(type_acces, ligne, session)
+    else:
+        objet = type_acces.modele(code=code, user_id=user.id, statut=StatutAcces.actif,
+                                  lot_id=lot_unique_de_nature(session, type_acces, user.id))
+        session.add(objet)
+        ligne = None
 
     session.commit()
     session.refresh(objet)

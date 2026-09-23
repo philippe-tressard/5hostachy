@@ -73,39 +73,75 @@ def test_les_deux_types_sont_declares():
     assert set(TYPES_ACCES) == {"vigik", "telecommande"}
 
 
+def _lot_du_porteur(session, porteur, type_acces) -> int:
+    """Un lot de la nature du badge, auquel le porteur est rattaché."""
+    from app.models.copropriete import Lot
+    from app.models.core import UserLot
+
+    lot = Lot(numero="7", type=type_acces.types_lot[0])
+    session.add(lot)
+    session.flush()
+    session.add(UserLot(user_id=porteur.id, lot_id=lot.id, type_lien="propriétaire", actif=True))
+    session.commit()
+    return lot.id
+
+
 @pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
 def test_le_lot_de_l_import_est_repris_sur_l_objet(session, porteur, type_acces):
     """🔴 LE CAS QUI ÉTAIT FAUX POUR LA TÉLÉCOMMANDE."""
     from app.routers.acces.resident import _declarer_acces
 
-    session.add(_ligne_import(type_acces, "A-42", lot_id=7))
+    lot_id = _lot_du_porteur(session, porteur, type_acces)
+    session.add(_ligne_import(type_acces, "A-42", lot_id=lot_id))
     session.commit()
 
     resultat = _declarer_acces(session, type_acces, "A-42", porteur)
 
     assert resultat["import_resolu"] is True
     objet = session.get(type_acces.modele, resultat["id"])
-    assert objet.lot_id == 7, (
+    assert objet.lot_id == lot_id, (
         f"{type_acces.libelle} : le lot connu de l'import n'a pas été repris — "
         "c'est exactement la divergence de #779"
     )
     assert objet.statut == StatutAcces.actif
-
-
-@pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
-def test_la_ligne_d_import_est_resolue(session, porteur, type_acces):
-    from app.routers.acces.resident import _declarer_acces
-
-    session.add(_ligne_import(type_acces, "B-7", lot_id=None))
-    session.commit()
-
-    resultat = _declarer_acces(session, type_acces, "B-7", porteur)
-
     ligne = session.exec(select(type_acces.modele_import)).one()
     assert ligne.statut == StatutImport.resolu
     assert getattr(ligne, type_acces.colonne_import) == resultat["id"]
-    assert ligne.user_proprietaire_id == porteur.id
     assert isinstance(ligne.resolu_le, datetime)
+
+
+@pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
+def test_la_ligne_d_un_AUTRE_lot_n_est_pas_capturee(session, porteur, type_acces):
+    """🔴 #1194 : taper le code d'un voisin ne rattache plus sa ligne à soi.
+
+    La déclaration résolvait la ligne du fichier par son SEUL code, au nom du
+    déclarant, quel que soit le lot qu'elle désigne.
+    """
+    from fastapi import HTTPException
+
+    from app.models.copropriete import Lot
+    from app.routers.acces.resident import _declarer_acces
+
+    voisin = Lot(numero="8", type=type_acces.types_lot[0])
+    session.add(voisin)
+    session.commit()
+    session.add(_ligne_import(type_acces, "B-7", lot_id=voisin.id))
+    session.commit()
+
+    with pytest.raises(HTTPException) as refus:
+        _declarer_acces(session, type_acces, "B-7", porteur)
+    assert refus.value.status_code == 400
+    assert session.exec(select(type_acces.modele)).first() is None
+
+
+@pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
+def test_sans_lot_connu_le_badge_prend_le_lot_unique_du_porteur(session, porteur, type_acces):
+    from app.routers.acces.resident import _declarer_acces
+
+    lot_id = _lot_du_porteur(session, porteur, type_acces)
+    resultat = _declarer_acces(session, type_acces, "C-9", porteur)
+
+    assert session.get(type_acces.modele, resultat["id"]).lot_id == lot_id
 
 
 @pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)

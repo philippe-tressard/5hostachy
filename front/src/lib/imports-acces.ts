@@ -55,16 +55,13 @@ export interface ModeleImportAcces {
 	objet: string;
 	/** Colonnes du fichier Excel, affichées en aide au-dessus du sélecteur. */
 	colonnesAttendues: string;
-	/** Colonnes propres à ce type, insérées avant « Propriétaire (Excel) ». */
+	/** Colonnes propres à ce type, insérées avant les indices du fichier. */
 	colonnes: ColonneImport[];
-	/** La colonne qui identifie l'objet — sans elle, on ne peut pas résoudre. */
+	/** La colonne qui identifie l'objet — sans elle, on ne peut pas rattacher. */
 	colonneCle: ColonneImport;
-	/** Tuile de statistique propre à ce type, après les cinq communes. */
-	statSupplementaire: { cle: string; libelle: string };
-	/** Le badge affiché sur une ligne résolue : « ✓ Badge #12 ». */
-	badgeResolu: (imp: any) => string;
-	/** Libellé de la case « … chez le locataire ». */
-	libelleChezLocataire: string;
+	/** La nature des lots où va ce badge : l'appartement pour un Vigik, le
+	 *  parking pour une télécommande (`types_lot` côté serveur). */
+	natureLot: string;
 	/** Cases supplémentaires du formulaire d'édition. */
 	champsBooleens: ChampBooleen[];
 	/** Décorations du statut — icônes que seul un type porte. */
@@ -74,6 +71,8 @@ export interface ModeleImportAcces {
 		list: (statut?: string) => Promise<any[]>;
 		stats: () => Promise<any>;
 		autoMatch: () => Promise<any>;
+		/** Le rattachement en masse : chaque ligne dont le lot est connu (#1194). */
+		rattacher: () => Promise<any>;
 		patch: (id: number, data: unknown) => Promise<any>;
 		resoudre: (id: number) => Promise<any>;
 		ignorer: (id: number) => Promise<any>;
@@ -89,9 +88,7 @@ export const IMPORT_TELECOMMANDES: ModeleImportAcces = {
 	colonnesAttendues: 'Copropriétaire | Locataire | Télécommandes',
 	colonnes: [],
 	colonneCle: { entete: 'Référence', cle: 'reference', code: true },
-	statSupplementaire: { cle: 'avec_reference', libelle: 'Avec réf.' },
-	badgeResolu: (imp) => `✓ TC #${imp.telecommande_id}`,
-	libelleChezLocataire: 'TC chez le locataire',
+	natureLot: 'parking',
 	champsBooleens: [{ cle: 'refuse_par_locataire', libelle: 'Locataire a refusé' }],
 	decorationsStatut: (imp) => {
 		const d = [];
@@ -104,6 +101,7 @@ export const IMPORT_TELECOMMANDES: ModeleImportAcces = {
 		list: accesApi.listImportsTC,
 		stats: accesApi.statsImportsTC,
 		autoMatch: accesApi.autoMatchImportsTC,
+		rattacher: accesApi.rattacherImportsTC,
 		patch: accesApi.patchImportTC,
 		resoudre: accesApi.resoudreImportTC,
 		ignorer: accesApi.ignorerImportTC,
@@ -120,9 +118,7 @@ export const IMPORT_VIGIK: ModeleImportAcces = {
 		{ entete: 'Appt.', cle: 'appartement_raw' },
 	],
 	colonneCle: { entete: 'Code', cle: 'code', code: true },
-	statSupplementaire: { cle: 'avec_lot', libelle: 'Lot auto-lié' },
-	badgeResolu: (imp) => `✓ Badge #${imp.vigik_id}`,
-	libelleChezLocataire: 'Vigik chez le locataire',
+	natureLot: 'appartement',
 	champsBooleens: [],
 	decorationsStatut: () => [],
 	api: {
@@ -130,6 +126,7 @@ export const IMPORT_VIGIK: ModeleImportAcces = {
 		list: accesApi.listImportsVigik,
 		stats: accesApi.statsImportsVigik,
 		autoMatch: accesApi.autoMatchImportsVigik,
+		rattacher: accesApi.rattacherImportsVigik,
 		patch: accesApi.patchImportVigik,
 		resoudre: accesApi.resoudreImportVigik,
 		ignorer: accesApi.ignorerImportVigik,
@@ -144,8 +141,8 @@ export const IMPORT_VIGIK: ModeleImportAcces = {
 /** Les cinq statuts, communs aux deux types. */
 const { libelle, badge } = parAttribut({
 	en_attente: { libelle: 'En attente', badge: 'badge-orange' },
-	proprietaire_lie: { libelle: 'Proprio lié', badge: 'badge-blue' },
-	resolu: { libelle: 'Résolu', badge: 'badge-green' },
+	proprietaire_lie: { libelle: 'Compte trouvé', badge: 'badge-blue' },
+	resolu: { libelle: 'Rattaché', badge: 'badge-green' },
 	ignore: { libelle: 'Ignoré', badge: 'badge-gray' },
 });
 

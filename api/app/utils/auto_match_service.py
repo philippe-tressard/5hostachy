@@ -11,8 +11,6 @@ dont le nom correspond à ce user.
 """
 from __future__ import annotations
 
-from datetime import datetime
-
 import json
 import re
 import unicodedata
@@ -22,12 +20,7 @@ from sqlmodel import Session, select
 from app.utils.liens import base_site
 from app.utils.liens import nom_site
 from app.utils.noms import contexte_personne
-from app.models.core import StatutAcces, StatutImport
-from app.utils.acces_attribution import (
-    attribuer_aux_coproprietaires,
-    coproprietaires_partages,
-)
-from app.utils.acces_possession import chez_le_locataire, possesseur
+from app.models.core import StatutImport
 from app.utils.types_acces import TELECOMMANDE, TypeAcces, VIGIK
 
 
@@ -201,27 +194,6 @@ def _matches_user(raw_name: str, user_keys: set[str]) -> bool:
 
 # ── Auto-match TC ─────────────────────────────────────────────────────────────
 
-def _resoudre_lot_vigik(imp, session: Session) -> bool:
-    """L'étape propre au vigik : retrouver le lot par bâtiment + appartement.
-
-    C'est la seule chose que la télécommande ne sait pas faire — son fichier ne
-    porte pas ces colonnes. Elle passe donc en CROCHET, exactement comme dans
-    `routers/acces/socle_imports.auto_match`, plutôt que d'être codée dans une
-    branche `if type_acces is VIGIK`.
-    """
-    from app.utils.import_vigiks import _build_lot_index, normaliser
-
-    if imp.lot_id or not imp.batiment_raw or not imp.appartement_raw:
-        return False
-    lot_id = _build_lot_index(session).get(
-        (normaliser(imp.batiment_raw), normaliser(imp.appartement_raw))
-    )
-    if not lot_id:
-        return False
-    imp.lot_id = lot_id
-    return True
-
-
 def _auto_match_acces(user, session: Session, type_acces: TypeAcces) -> int:
     """Apparie les imports de CE type au nouvel arrivant, et résout ce qui peut l'être.
 
@@ -238,9 +210,14 @@ def _auto_match_acces(user, session: Session, type_acces: TypeAcces) -> int:
     `routers/bailleur/acces.py` le proposait au transfert vers le locataire
     suivant alors qu'il était déjà dans la poche du locataire en place.
 
-    Les deux règles employées — qui détient, et où l'objet se trouve — viennent
-    de `utils/acces_possession`, partagées avec la résolution par écran.
+    Depuis #1194, le rattachement lui-même est `utils/resolution_acces.rattacher`
+    — celui de l'écran : il exige le LOT, plus un compte. Aucune attribution
+    n'est écrite, les porteurs se déduisent du lot.
     """
+    from app.utils.lot_des_imports import trouveur_de_lot
+    from app.utils.resolution_acces import peut_se_rattacher, rattacher
+
+    etape_lot = trouveur_de_lot(type_acces, session)
     modele_import = type_acces.modele_import
     cles = _user_keys(user.nom, user.prenom)
     imports = session.exec(
@@ -264,8 +241,8 @@ def _auto_match_acces(user, session: Session, type_acces: TypeAcces) -> int:
                 setattr(imp, champ_lien, user.id)
                 change = True
 
-        if type_acces.acces_suit_le_lot and _resoudre_lot_vigik(imp, session):
-            change = True
+        if change:
+            etape_lot(imp)
 
         if not change:
             continue
@@ -275,21 +252,8 @@ def _auto_match_acces(user, session: Session, type_acces: TypeAcces) -> int:
         if imp.user_proprietaire_id:
             imp.statut = StatutImport.proprietaire_lie
 
-        reference = getattr(imp, type_acces.colonne_code_import)
-        if imp.user_proprietaire_id and reference:
-            objet = type_acces.modele(
-                code=reference,
-                lot_id=imp.lot_id or None,
-                user_id=possesseur(imp),
-                chez_locataire=chez_le_locataire(imp),
-                statut=StatutAcces.actif,
-            )
-            session.add(objet)
-            session.flush()
-            attribuer_aux_coproprietaires(objet, type_acces, session)
-            imp.statut = StatutImport.resolu
-            setattr(imp, type_acces.colonne_import, objet.id)
-            imp.resolu_le = datetime.utcnow()
+        if peut_se_rattacher(type_acces, imp):
+            rattacher(type_acces, imp, session)
         session.add(imp)
         apparies += 1
     return apparies
@@ -365,7 +329,8 @@ def _auto_match_lots(user, session: Session) -> int:
         )
     ).all()
 
-    TYPES_COPROPRIETAIRES = {"propriétaire", "bailleur", "mandataire"}
+    from app.utils.resolution_lots import TYPES_COPROPRIETAIRES
+
     type_lien = _statut_to_type_lien(user.statut)
 
     for imp in imports_resolu:
@@ -444,84 +409,6 @@ def _auto_link_annuaire(user, session: Session) -> dict:
     return {"cs": cs_linked, "syndic": syndic_linked}
 
 
-# ── Propagation TC/Vigik existants vers un utilisateur nouvellement lié ───────
-
-def _propagate_acces_pour_utilisateur(user, session: Session) -> tuple[int, int]:
-    """Propage les accès existants vers cet utilisateur — les deux types.
-
-    TROIS vecteurs de recherche, et la docstring n'en annonçait que deux
-    jusqu'au 18/09/2026 :
-    1. les accès posés sur un de ses lots (`lot_id`) ;
-    2. ceux détenus par un copropriétaire du même lot — le `lot_id` peut être
-       nul, l'import n'ayant pas été résolu ;
-    3. ceux qu'un copropriétaire ne détient que par la table d'attribution :
-       personne ne les porte en direct, et sans ce vecteur ils resteraient
-       invisibles à l'arrivant.
-
-    Ces trois vecteurs se RECOUPENT volontairement : un accès déjà rattaché
-    n'est pas recompté (`TypeAcces.attribuer` rend `False`).
-
-    Rend le couple (télécommandes, vigiks) créés — dans cet ordre historique.
-    Éprouvée par `tests/test_acces_existants_apparies.py`, qui prend chaque
-    vecteur sur les DEUX types.
-    """
-    from app.models.core import UserLot
-
-    user_lots = session.exec(
-        select(UserLot).where(UserLot.user_id == user.id, UserLot.actif == True)
-    ).all()
-    lot_ids = [ul.lot_id for ul in user_lots if ul.lot_id]
-    if not lot_ids:
-        return 0, 0
-
-    # Copropriétaires partageant au moins un lot avec cet utilisateur
-    copro_ids = coproprietaires_partages(user.id, session)
-
-    #  🔴 UNE boucle pour les deux types (18/09/2026, #779). Les trois vecteurs
-    #  étaient écrits deux fois, à la table près — quatre-vingts lignes qui
-    #  disaient la même chose et qui pouvaient diverger sans bruit, comme les
-    #  jumelles du téléversement l'avaient fait (`utils/types_acces.py`).
-    comptes: dict[str, int] = {}
-    for type_acces in (TELECOMMANDE, VIGIK):
-        modele = type_acces.modele
-        attribution = type_acces.modele_attribution
-        vus: set[int] = set()
-        crees = 0
-
-        def retenir(objet) -> None:
-            """Compte l'attribution si l'accès n'a pas déjà été vu ni attribué."""
-            nonlocal crees
-            if objet is None or objet.id in vus:
-                return
-            vus.add(objet.id)
-            if type_acces.attribuer(session, user_id=user.id, acces_id=objet.id):
-                crees += 1
-
-        # Vecteur 1 : les accès posés sur un de ses lots
-        for objet in session.exec(select(modele).where(modele.lot_id.in_(lot_ids))).all():
-            retenir(objet)
-
-        if copro_ids:
-            # Vecteur 2 : ceux d'un copropriétaire, même sans lot renseigné
-            for objet in session.exec(
-                select(modele).where(modele.user_id.in_(list(copro_ids)))
-            ).all():
-                retenir(objet)
-
-            # Vecteur 3 : ceux qu'un copropriétaire détient par la table de
-            # liaison — l'accès n'est alors porté par personne en direct.
-            for lien in session.exec(
-                select(attribution).where(attribution.user_id.in_(list(copro_ids)))
-            ).all():
-                retenir(session.get(modele, getattr(lien, type_acces.colonne_attribution)))
-
-        comptes[type_acces.cle] = crees
-
-    #  Le couple rendu garde son ordre historique : télécommandes, puis vigiks.
-    return comptes[TELECOMMANDE.cle], comptes[VIGIK.cle]
-
-
-
 # ── Point d'entrée principal ──────────────────────────────────────────────────
 
 def auto_match_pour_utilisateur(user, session: Session) -> dict:
@@ -569,12 +456,10 @@ def auto_match_pour_utilisateur(user, session: Session) -> dict:
         tc      = _auto_match_tc(user, session)
         vigik   = _auto_match_vigik(user, session)
 
-    # Cas conjoint inscrit après résolution : les imports sont déjà `resolu`,
-    # _auto_match_tc/_vigik ne trouvent rien — on propage depuis les objets existants.
-    if is_coproprietaire:
-        tc_prop, vigik_prop = _propagate_acces_pour_utilisateur(user, session)
-        tc    += tc_prop
-        vigik += vigik_prop
+    #  🔴 Le conjoint inscrit après la résolution n'a plus de chemin à lui
+    #  (#1194) : `_propagate_acces_pour_utilisateur` recopiait les badges du
+    #  ménage dans les tables d'attribution. Il les voit désormais par son lot,
+    #  dès qu'il y est rattaché — par ce service ou par l'administration.
 
     baux    = _auto_match_baux_locataire(user, session)
     annuaire = _auto_link_annuaire(user, session)

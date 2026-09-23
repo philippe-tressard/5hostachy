@@ -101,9 +101,10 @@
 | 14 | POST | `/acces/admin/telecommandes` | Créer une télécommande manuellement | CS/Admin |
 | 15 | POST | `/acces/admin/imports/upload` | Upload Excel télécommandes (staging) | CS/Admin |
 | 16 | GET | `/acces/admin/imports` | Liste imports télécommandes | CS/Admin |
-| 17 | POST | `/acces/admin/imports/auto-match` | Auto-match imports TC → utilisateurs | CS/Admin |
+| 17 | POST | `/acces/admin/imports/auto-match` | Retrouve le LOT des lignes (nom du copropriétaire dans le fichier des lots), puis les comptes | CS/Admin |
+| 17 bis | POST | `/acces/admin/imports/rattacher` | Rattachement en masse : chaque ligne dont le lot est connu (#1194) | CS/Admin |
 | 18 | PATCH | `/acces/admin/imports/{import_id}` | Modifier liaisons d'un import TC | CS/Admin |
-| 19 | POST | `/acces/admin/imports/{import_id}/resoudre` | Résoudre import → créer Telecommande | CS/Admin |
+| 19 | POST | `/acces/admin/imports/{import_id}/resoudre` | Rattache la télécommande à son LOT — plus aucun compte exigé (#1194) | CS/Admin |
 | 20 | POST | `/acces/admin/imports/{import_id}/ignorer` | Ignorer un import TC | CS/Admin |
 | 21 | POST | `/acces/admin/imports/{import_id}/remettre-en-attente` | Remettre import ignoré en attente | CS/Admin |
 | 22 | POST | `/acces/admin/imports/{import_id}/refuser-locataire` | Locataire refuse la TC | CS/Admin |
@@ -111,9 +112,12 @@
 | 24 | POST | `/acces/admin/imports-vigik/upload` | Upload Excel vigiks (staging) | CS/Admin |
 | 25 | GET | `/acces/admin/imports-vigik/stats` | Statistiques imports vigik | CS/Admin |
 | 26 | GET | `/acces/admin/imports-vigik` | Liste imports vigik | CS/Admin |
-| 27 | POST | `/acces/admin/imports-vigik/auto-match` | Auto-match imports vigik | CS/Admin |
+| 27 | POST | `/acces/admin/imports-vigik/auto-match` | Retrouve le LOT des lignes (bâtiment + appartement), puis les comptes | CS/Admin |
+| 27 bis | POST | `/acces/admin/imports-vigik/rattacher` | Rattachement en masse : chaque ligne dont le lot est connu (#1194) | CS/Admin |
+| 27 ter | GET | `/acces/admin/imports-lots` | Les lots, avec le copropriétaire que le fichier des lots leur donne — pour choisir le lot d'une ligne | CS/Admin |
 | 28 | PATCH | `/acces/admin/imports-vigik/{import_id}` | Modifier liaisons import vigik | CS/Admin |
-| 29 | POST | `/acces/admin/imports-vigik/{import_id}/resoudre` | Résoudre import → créer Vigik | CS/Admin |
+| 29 | POST | `/acces/admin/imports-vigik/{import_id}/resoudre` | Rattache le Vigik à son LOT — plus aucun compte exigé (#1194) | CS/Admin |
+
 | 30 | POST | `/acces/admin/imports-vigik/{import_id}/ignorer` | Ignorer un import vigik | CS/Admin |
 
 ---
@@ -180,7 +184,7 @@
 | 1 | GET | `/copropriete` | Fiche copropriété | Authentifié |
 | 2 | PATCH | `/copropriete` | Modifier fiche copropriété | Admin |
 | 3 | GET | `/copropriete/batiments` | Liste bâtiments | Authentifié |
-| 4 | GET | `/copropriete/lots` | Liste lots (filtrable par bâtiment) | Authentifié |
+| — | ~~GET~~ | ~~`/copropriete/lots`~~ | Retirée le 23/09/2026 (#1194) : elle donnait le propriétaire de chaque lot à tout résident. Voir `/acces/admin/imports-lots` | — |
 
 ---
 

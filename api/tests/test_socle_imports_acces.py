@@ -38,6 +38,7 @@ import pytest
 from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
+from app.models.copropriete import Lot
 from app.models.core import (
     StatutImport,
     Telecommande,
@@ -96,7 +97,13 @@ def deux_comptes():
 
 
 def _creer_import(type_import, modele_import, proprio, locataire, session, *, chez_locataire):
+    #  Le lot est ce qui rend une ligne rattachable depuis #1194 : un compte
+    #  propriétaire n'y suffit plus.
+    lot = Lot(numero=f"L-{uuid.uuid4().hex[:6]}", type=type_import.types_lot[0])
+    session.add(lot)
+    session.commit()
     imp = modele_import(
+        lot_id=lot.id,
         nom_proprietaire="PROPRIO P",
         nom_locataire="LOCATAIRE L",
         user_proprietaire_id=proprio.id,
@@ -122,6 +129,7 @@ def _purger(session, type_import, modele_import, modele_objet, modele_liaison, i
     """
     imp = session.get(modele_import, import_id)
     objet_id = getattr(imp, type_import.colonne_import) if imp else None
+    lot_id = imp.lot_id if imp else None
 
     if imp and objet_id:
         setattr(imp, type_import.colonne_import, None)
@@ -143,6 +151,9 @@ def _purger(session, type_import, modele_import, modele_objet, modele_liaison, i
 
     if imp:
         session.delete(imp)
+        session.flush()
+    if lot_id:
+        session.delete(session.get(Lot, lot_id))
     session.commit()
 
 
@@ -204,14 +215,16 @@ def test_la_CORRECTION_d_un_import_resolu_redescend_sur_l_objet(
 
 
 @pytest.mark.parametrize("type_import,modele_import,modele_objet,modele_liaison", CHAINES)
-def test_chez_le_locataire_SANS_locataire_lie_n_invente_personne(
+def test_chez_le_locataire_SANS_compte_reste_chez_le_locataire(
     type_import, modele_import, modele_objet, modele_liaison, deux_comptes
 ):
-    """Le cas tordu que la case seule ne suffit pas à décrire.
+    """🔴 Inversé le 23/09/2026 (#1194) : le fait physique prime sur le compte.
 
-    Un import coché « chez le locataire » dont le locataire n'est pas encore
-    inscrit ne doit pas produire un objet remis à quelqu'un d'introuvable : il
-    reste chez le propriétaire jusqu'à ce que le compte existe.
+    Ce test exigeait l'inverse — un badge remis à un locataire sans compte était
+    déclaré « chez le propriétaire », et nommait le propriétaire comme détenteur.
+    Le badge appartient désormais au lot : remis au locataire, il est porté par
+    le locataire DU LOT (`utils/porteurs_acces`), inscrit ou non, et il ne se
+    propose plus au transfert — ce qui est exact, il n'est plus disponible.
     """
     session, proprio, _ = deux_comptes
     imp = _creer_import(
@@ -221,12 +234,8 @@ def test_chez_le_locataire_SANS_locataire_lie_n_invente_personne(
         socle_imports.resoudre(type_import, imp.id, session)
         recharge = session.get(modele_import, imp.id)
         objet = session.get(modele_objet, getattr(recharge, type_import.colonne_import))
-        assert objet.user_id == proprio.id
-        assert objet.chez_locataire is False, (
-            "l'objet se dit chez un locataire qui n'est lié à personne — "
-            "`bailleur/acces.py` refuserait ensuite de le transférer sans "
-            "pouvoir dire à qui il est."
-        )
+        assert objet.chez_locataire is True
+        assert objet.user_id is None, "le propriétaire est nommé détenteur d'un badge qu'il n'a pas"
     finally:
         _purger(session, type_import, modele_import, modele_objet, modele_liaison, imp.id)
 
