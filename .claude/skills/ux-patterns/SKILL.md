@@ -1589,12 +1589,14 @@ cartes, pas une porte de plus.
 
 ### 🔴 12 bis. La forme du kanban condensé (18/09/2026, validé à l'écran)
 
-Variante « K4 ». Deux décisions, et elles se tiennent :
+Variante « K4 », puis la brique du calendrier. Deux décisions, et elles se
+tiennent :
 
-- **l'icône du type est sur la DERNIÈRE ligne de la vignette**, devant le
-  périmètre — plus de colonne d'icône à gauche. Cette marge coûtait sa largeur
-  à *toutes* les lignes du titre : sur une colonne de 200 px, un titre de deux
-  mots passait à trois lignes ;
+- **la brique est celle de `/calendrier/kanban`** (`ItemKanban.svelte`, depuis
+  le 19/09/2026, demandé à l'écran : *« utilise le même UX des briques »*) :
+  pastilles de périmètre en haut, titre en gras, type en pied — plus de colonne
+  d'icône à gauche. La K4 du 18/09 (icône sur la dernière ligne) est remplacée ;
+  c'est l'en-tête d'`ItemKanban` qui fait foi, pas cette ligne (#1161) ;
 - **une colonne VIDE se réduit à son titre**, tourné à la verticale
   (`writing-mode: vertical-rl`) : 30 px au lieu de 200, rendus aux colonnes qui
   portent quelque chose. Elle reste **visible** — savoir qu'une étape est vide
