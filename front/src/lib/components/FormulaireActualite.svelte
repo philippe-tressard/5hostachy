@@ -63,7 +63,7 @@
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
-	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import {
 		chargerResidents,
@@ -88,7 +88,6 @@
 	import { ticketUrgent } from '$lib/tickets';
 	import { isCS } from '$lib/stores/auth';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
-	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	/**  L'actualité à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut)
 	 *   = création. Le mode ne change pas pendant la vie du composant : l'appelant
@@ -300,18 +299,7 @@
 			<RepriseAnnonceHall {modeEdition} on:reprise={(e) => appliquerReprise(e.detail)} />
 
 			<!--  1. Titre. -->
-			<SectionFormulaire premiere>
-				<div class="field champ-large">
-					<label for="pub-titre-{affaire?.id ?? 'new'}">Titre<EtoileRequis vide={!titre} /></label>
-					<input
-						id="pub-titre-{affaire?.id ?? 'new'}"
-						type="text"
-						bind:value={titre}
-						required
-						maxlength="200"
-					/>
-				</div>
-			</SectionFormulaire>
+			<SectionTitre id="pub-titre-{affaire?.id ?? 'new'}" bind:valeur={titre} maxlength={200} />
 
 			<!--  3 à 10 : l'ordre, les intitulés et les séparations viennent du
 		      composant partagé — voir `ChampsCommuns.svelte`. Aucune de ces

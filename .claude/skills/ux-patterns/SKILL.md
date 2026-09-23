@@ -1308,6 +1308,20 @@ Les sections à **plusieurs** champs (Détails, Clôture, Diffusion) gardent leu
 titre de groupe **et** les libellés de leurs champs : ce n'est pas une redite,
 c'est une hiérarchie.
 
+🔴 **La section 1 aussi** (23/09/2026, signalé à l'écran : *« normalise les
+titres des sections »*). Sept formulaires l'ouvraient par un `<label>` de champ
+sous une `SectionFormulaire` sans titre : TITRE prenait le style d'un libellé
+(0,875 rem, graisse 500), CATÉGORIE juste dessous celui d'une section (0,72 rem,
+gras). Elle vit dans **`SectionTitre`** (« Titre », ou « Nom », « Question »),
+et `npm run lint:section-nommee` refuse une section nommée par son champ.
+
+**Hiérarchie** (arbitrée le même jour) : dans une section à plusieurs champs, le
+libellé d'un champ se lit **un cran sous** le titre de section — même corps et
+mêmes capitales, graisse moyenne, couleur atténuée (`champs.css`,
+`.section-formulaire .field > label`). Il était plus GRAND que son titre de
+section, et la hiérarchie se lisait à l'envers. Hors section (connexion,
+réglages), le libellé est le seul repère et garde sa taille.
+
 ⚠️ **Le titre de section est un vrai libellé, donc il s'associe.** `SectionFormulaire`
 rend un `<label for>` quand la section porte un contrôle **labelable** (`<select>`,
 `<input>`) — prop `pour` —, et un `<h4 id>` sinon, l'appelant reliant son groupe par

@@ -52,7 +52,7 @@
 	import { tickets as ticketsApi, admin as adminApi, ApiError, type Ticket } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import SectionsSpecifiquesTicket from '$lib/components/SectionsSpecifiquesTicket.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
@@ -69,7 +69,6 @@
 	import { TICKET } from '$lib/entites/ticket';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
-	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { comparerParNom } from '$lib/noms';
 	import { lotDepuisSaisie, nomCopie, saisieDepuis } from '$lib/saisi-pour';
 
@@ -396,19 +395,12 @@
 		      titre : le premier champ de la première section n'était pas le titre.
 		      Arbitré par l'utilisateur le 18/08/2026 — elle qualifie le ticket, elle
 		      est donc un champ spécifique (section 2). -->
-		<SectionFormulaire premiere>
-			<div class="field champ-large">
-				<label for="titre">Titre<EtoileRequis vide={!titre} /></label>
-				<input
-					id="titre"
-					type="text"
-					bind:value={titre}
-					required
-					placeholder="Ex : Ascenseur bâtiment A en panne"
-					maxlength="200"
-				/>
-			</div>
-		</SectionFormulaire>
+		<SectionTitre
+			id="titre"
+			bind:valeur={titre}
+			placeholder="Ex : Ascenseur bâtiment A en panne"
+			maxlength={200}
+		/>
 
 		<!--  2 et 3. Ce que le ticket a de PROPRE — catégorie, « Saisi pour »,
 		      options de publication, workflow. Extrait le 05/09/2026 dans
