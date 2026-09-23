@@ -54,7 +54,7 @@
 	/**  Une pastille EN TÊTE de sa grille, qui ouvre un autre CHEMIN que les
 	 *   autres (23/09/2026, variante A arbitrée à l'écran) : « Actualité » —
 	 *   on informe — avant les catégories de suivi — on fait traiter. Pleine
-	 *   ligne, teinte « information » de la charte. Retenue, elle reprend l'aplat
+	 *   ligne, bord « information » de la charte, fond blanc. Retenue, elle reprend l'aplat
 	 *   commun : son état se lit comme celui des autres. */
 	export let enTete = false;
 
@@ -218,10 +218,9 @@
 		max-width: none;
 		border: 1.5px solid var(--color-info);
 	}
-	.pastille.en-tete:not(.active) {
-		background: #e6f1fb;
-		color: var(--color-info);
-	}
+	/*  ⚠️ Non retenue, elle garde le fond BLANC des autres (23/09/2026) : un
+	    fond bleu clair la faisait paraître cochée — signalé à l'écran, sur une
+	    capture où c'était « Panne » qui l'était. Seul le bord reste bleu. */
 	.pastille.privatif {
 		border-style: dashed;
 		border-width: 1.5px;

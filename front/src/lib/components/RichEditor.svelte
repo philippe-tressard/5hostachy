@@ -43,7 +43,10 @@
 			element: editorEl,
 			extensions: [
 				StarterKit,
-				Placeholder.configure({ placeholder }),
+				//  Une FONCTION, et non la valeur : le texte indicatif suit la prop.
+				//  Il était lu une fois, à l'ouverture — une affaire devenue
+				//  actualité gardait « Décrivez le problème… » (23/09/2026).
+				Placeholder.configure({ placeholder: () => placeholder }),
 				BlocDepliable,
 				ResumeDepliable,
 			],
@@ -63,6 +66,9 @@
 			},
 		});
 	});
+
+	//  Une transaction vide redessine les décorations, dont le texte indicatif.
+	$: if (editor && placeholder !== undefined) editor.view.dispatch(editor.state.tr);
 
 	onDestroy(() => {
 		editor?.destroy();
