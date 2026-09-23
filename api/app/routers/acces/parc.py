@@ -54,6 +54,8 @@ from app.routers.acces.vues import AccesOut
 from app.utils.acces_choix import codes_autorises, valider_acces
 from app.utils.acces_detachement import detacher_acces
 from app.utils.acces_gestes import _acces_json, _prevenir_porteur, _tracer_sur_ticket
+from app.utils.porteurs_acces import porteurs_par_acces
+from app.utils.resolution_acces import exiger_code_libre
 from app.utils.dates_fr import date_courte
 from app.utils.noms import nom_affiche
 from app.utils.perimetres import perimetre_label
@@ -104,7 +106,8 @@ class AccesAdminOut(AccesOut):
     exactement ce qui était arrivé au `lot_id`.
     """
     porteur_nom: str
-    porteur_id: int
+    #: Qui l'a en main — inconnu pour un badge rattaché à un lot sans compte (#1194).
+    porteur_id: Optional[int] = None
     lot_libelle: Optional[str] = None
 
 
@@ -118,18 +121,16 @@ def _acces_admin_out(objets, session: Session,
     ferait une seconde table de correspondance à côté de `TYPES_ACCES`.
     """
     sortie = []
+    #  Les PORTEURS, déduits du lot (#1194) — le conjoint aussi, pas seulement
+    #  celui qui l'a en main. Le nom passe par `nom_affiche`, comme partout.
+    par_objet = porteurs_par_acces(session, objets)
     for o in objets:
-        porteur = session.get(Utilisateur, o.user_id)
-        sortie.append(
-            AccesAdminOut(
-                **AccesOut.champs_communs(session, type_acces, o),
-                #  Le nom passe par `nom_affiche` : « Prénom NOM », comme partout
-                #  ailleurs. Un `f"{prenom} {nom}"` local serait la 35e écriture
-                #  de cette règle.
-                porteur_nom=nom_affiche(porteur.prenom, porteur.nom) if porteur else "—",
-                porteur_id=o.user_id,
-            )
-        )
+        comptes = [session.get(Utilisateur, uid) for uid in sorted(par_objet[o.id])]
+        noms = [nom_affiche(u.prenom, u.nom) for u in comptes if u]
+        sortie.append(AccesAdminOut(
+            **AccesOut.champs_communs(session, type_acces, o),
+            porteur_nom=", ".join(noms) or "—", porteur_id=o.user_id,
+        ))
     #  Par code : c'est ce qu'on a sous les yeux quand on cherche « à qui est ce
     #  badge ? », un numéro gravé sur un objet physique.
     return sorted(sortie, key=lambda a: a.code)
@@ -209,29 +210,23 @@ def creer_acces_admin(
     code = (body.code or "").strip()
     if not code:
         raise HTTPException(422, "Code vide")
-    if not body.porteur_id:
-        raise HTTPException(422, "Porteur requis")
-    porteur = ou_404(session, Utilisateur, body.porteur_id, "Porteur")
-
-    doublon = session.exec(
-        select(type_acces.modele).where(
-            type_acces.modele.code == code,
-            type_acces.modele.user_id == porteur.id,
-        )
-    ).first()
-    if doublon:
-        raise HTTPException(400, f"{type_acces.libelle} déjà enregistré pour cette personne")
+    #  Le badge appartient au lot (#1194) : un lot SUFFIT, un porteur aussi.
+    if not body.porteur_id and not body.lot_id:
+        raise HTTPException(422, "Lot ou porteur requis")
+    porteur = ou_404(session, Utilisateur, body.porteur_id, "Porteur") if body.porteur_id else None
+    exiger_code_libre(session, type_acces, code)
 
     ticket = _ticket_par_numero(session, body.ticket_numero)
     valider_acces(session, type_acces, body.perimetre_cible)
 
     objet = type_acces.modele(
         code=code,
-        user_id=porteur.id,
+        user_id=porteur.id if porteur else None,
         lot_id=body.lot_id,
         statut=body.statut or StatutAcces.actif,
         perimetre_cible=_acces_json(
-            session, type_acces, body.perimetre_cible, body.lot_id, porteur.id,
+            session, type_acces, body.perimetre_cible, body.lot_id,
+            porteur.id if porteur else None,
         ),
     )
     session.add(objet)
@@ -239,7 +234,8 @@ def creer_acces_admin(
     session.refresh(objet)
 
     _tracer_sur_ticket(session, ticket, user, type_acces, objet, "enregistré")
-    _prevenir_porteur(session, porteur, type_acces, objet)
+    if porteur:
+        _prevenir_porteur(session, porteur, type_acces, objet)
     return _acces_admin_out([objet], session, type_acces)[0]
 
 
@@ -269,6 +265,7 @@ def modifier_acces_admin(
         code = body.code.strip()
         if not code:
             raise HTTPException(422, "Code vide")
+        exiger_code_libre(session, type_acces, code, sauf_id=objet.id)
         objet.code = code
     if body.porteur_id is not None:
         if not session.get(Utilisateur, body.porteur_id):

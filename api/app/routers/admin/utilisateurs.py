@@ -27,21 +27,17 @@ from app.models.core import (
     StatutImport,
     StatutLotImport,
     StatutUtilisateur,
-    Telecommande,
-    TelecommandeImport,
     TelemetryEvent,
     UserLot,
-    UserTelecommande,
-    UserVigik,
     Utilisateur,
-    Vigik,
-    VigikImport,
     VoteIdee,
     VoteSondage,
 )
 from app.schemas import UserRead
 from app.utils.comptes import marquer_decide
+from app.utils.porteurs_acces import ids_detenteurs
 from app.utils.purge_referentielle import purger
+from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, VIGIK
 from app.utils.roles_libelles import libelle_role
 from datetime import datetime
 from typing import Optional
@@ -67,28 +63,10 @@ def list_utilisateurs(
             select(UserLot.user_id).where(UserLot.actif == True).distinct()
         ).all()
     )
-    # Batch : user_ids ayant au moins 1 télécommande (directe ou via M2M)
-    tc_ids = set(
-        session.exec(
-            select(Telecommande.user_id).distinct()
-        ).all()
-    )
-    tc_ids |= set(
-        session.exec(
-            select(UserTelecommande.user_id).distinct()
-        ).all()
-    )
-    # Batch : user_ids ayant au moins 1 vigik (direct ou via M2M)
-    vigik_ids = set(
-        session.exec(
-            select(Vigik.user_id).distinct()
-        ).all()
-    )
-    vigik_ids |= set(
-        session.exec(
-            select(UserVigik.user_id).distinct()
-        ).all()
-    )
+    #  « A un badge » : UNE définition, `utils/porteurs_acces` (#1194). Celle
+    #  d'ici comptait aussi les badges perdus et ignorait le conjoint.
+    tc_ids = ids_detenteurs(session, TELECOMMANDE)
+    vigik_ids = ids_detenteurs(session, VIGIK)
     # Batch : user_ids liés via un bail (bailleur ou locataire)
     bail_bailleur_ids = set(
         session.exec(
@@ -291,53 +269,23 @@ def supprimer_utilisateur(
     )).all():
         session.delete(m)
 
-    # 8. Télécommandes et Vigiks (non-nullifiable → suppression)
-    deleted_tc_ids = set()
-    for tc in session.exec(select(Telecommande).where(Telecommande.user_id == user_id)).all():
-        deleted_tc_ids.add(tc.id)
-        session.delete(tc)
-    deleted_vigik_ids = set()
-    for v in session.exec(select(Vigik).where(Vigik.user_id == user_id)).all():
-        deleted_vigik_ids.add(v.id)
-        session.delete(v)
-
-    # 9. TelecommandeImport / VigikImport — nullifier FK + reset statut
-    ti_filter = [TelecommandeImport.user_proprietaire_id == user_id, TelecommandeImport.user_locataire_id == user_id]
-    if deleted_tc_ids:
-        ti_filter.append(TelecommandeImport.telecommande_id.in_(deleted_tc_ids))  # type: ignore
-    for ti in session.exec(select(TelecommandeImport).where(or_(*ti_filter))).all():
-        if ti.user_proprietaire_id == user_id:
-            ti.user_proprietaire_id = None
-        if ti.user_locataire_id == user_id:
-            ti.user_locataire_id = None
-        if ti.telecommande_id in deleted_tc_ids:
-            ti.telecommande_id = None
-        if ti.statut != StatutImport.ignore:
-            if ti.user_proprietaire_id is None and ti.user_locataire_id is None:
-                ti.statut = StatutImport.en_attente
-                ti.resolu_le = None
-            elif ti.telecommande_id is None:
-                ti.statut = StatutImport.proprietaire_lie
-                ti.resolu_le = None
-        session.add(ti)
-    vi_filter = [VigikImport.user_proprietaire_id == user_id, VigikImport.user_locataire_id == user_id]
-    if deleted_vigik_ids:
-        vi_filter.append(VigikImport.vigik_id.in_(deleted_vigik_ids))  # type: ignore
-    for vi in session.exec(select(VigikImport).where(or_(*vi_filter))).all():
-        if vi.user_proprietaire_id == user_id:
-            vi.user_proprietaire_id = None
-        if vi.user_locataire_id == user_id:
-            vi.user_locataire_id = None
-        if vi.vigik_id in deleted_vigik_ids:
-            vi.vigik_id = None
-        if vi.statut != StatutImport.ignore:
-            if vi.user_proprietaire_id is None and vi.user_locataire_id is None:
-                vi.statut = StatutImport.en_attente
-                vi.resolu_le = None
-            elif vi.vigik_id is None:
-                vi.statut = StatutImport.proprietaire_lie
-                vi.resolu_le = None
-        session.add(vi)
+    #  8. Les badges RESTENT sur leur lot (arbitrage du 23/09/2026, #1194) : la
+    #  purge délie `user_id`, désormais facultatif. Ils étaient supprimés, et
+    #  avec eux la trace d'objets physiques toujours en circulation.
+    #  9. Les lignes d'import perdent ce compte ; une ligne résolue le reste —
+    #  son badge existe toujours.
+    for type_acces in TYPES_ACCES.values():
+        modele = type_acces.modele_import
+        for ligne in session.exec(select(modele).where(or_(
+            modele.user_proprietaire_id == user_id, modele.user_locataire_id == user_id,
+        ))).all():
+            if ligne.user_proprietaire_id == user_id:
+                ligne.user_proprietaire_id = None
+            if ligne.user_locataire_id == user_id:
+                ligne.user_locataire_id = None
+            if ligne.statut == StatutImport.proprietaire_lie and not ligne.user_proprietaire_id:
+                ligne.statut = StatutImport.en_attente
+            session.add(ligne)
 
     # 10. LocationBail : locataire → nullifier ; bailleur → supprimer bail + objets remis
     for bail in session.exec(select(LocationBail).where(LocationBail.locataire_id == user_id)).all():

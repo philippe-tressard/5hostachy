@@ -28,7 +28,7 @@ from app.utils.types_acces import TypeAcces
 #  ── Ce que le badge ouvre, et ce qui en découle ────────────────────────────
 
 def _acces_json(session: Session, type_acces: TypeAcces, donne: Optional[list[str]],
-                lot_id: Optional[int], porteur_id: int) -> Optional[str]:
+                lot_id: Optional[int], porteur_id: Optional[int]) -> Optional[str]:
     """Le périmètre à enregistrer : celui qu'on a saisi, sinon celui qu'on déduit.
 
     ⚠️ **Une liste VIDE est une décision**, pas une absence : elle dit « on ne

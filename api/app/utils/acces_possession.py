@@ -44,17 +44,19 @@ def possesseur(imp) -> Optional[int]:
     endroits aurait suffi à faire diverger le détenteur affiché de celui
     enregistré. Deux de plus vivaient dans l'appariement automatique.
     """
-    if imp.chez_locataire and imp.user_locataire_id:
+    #  Remis au locataire, il est dans SA main — connue ou non (#1194). Le
+    #  propriétaire n'est plus nommé à sa place faute de compte : ce serait dire
+    #  que l'objet est là où il n'est pas.
+    if imp.chez_locataire:
         return imp.user_locataire_id
     return imp.user_proprietaire_id
 
 
 def chez_le_locataire(imp) -> bool:
-    """La possession physique, telle qu'elle doit être écrite sur l'objet.
-
-    ⚠️ `and bool(user_locataire_id)` n'est pas une précaution : un import coché
-    « chez le locataire » sans locataire lié produirait un objet marqué comme remis
-    à quelqu'un qui n'existe pas, et `bailleur/acces.py` refuserait ensuite de le
-    transférer sans pouvoir dire à qui il est.
-    """
-    return bool(imp.chez_locataire) and bool(imp.user_locataire_id)
+    """La possession physique, telle qu'elle doit être écrite sur l'objet."""
+    #  🔴 La condition « et un locataire LIÉ » est tombée le 23/09/2026 (#1194).
+    #  Le badge appartient au lot : remis au locataire, il est porté par le
+    #  locataire DU LOT (`utils/porteurs_acces`), qu'on connaisse son compte ou
+    #  non. L'exiger rendait faux le fait physique le plus courant — un
+    #  locataire sans compte qui a la télécommande en poche.
+    return bool(imp.chez_locataire)

@@ -123,6 +123,9 @@ export const acces = {
 		api.get<any[]>(`/acces/admin/imports-vigik${statut ? `?statut=${statut}` : ''}`),
 	statsImportsVigik: () => api.get<any>('/acces/admin/imports-vigik/stats'),
 	autoMatchImportsVigik: () => api.post<any>('/acces/admin/imports-vigik/auto-match', {}),
+	rattacherImportsVigik: () => api.post<any>('/acces/admin/imports-vigik/rattacher', {}),
+	/** Les lots, avec le copropriétaire que le FICHIER leur donne — pour les deux imports. */
+	lotsImports: () => api.get<any[]>('/acces/admin/imports-lots'),
 	patchImportVigik: (id: number, data: unknown) =>
 		api.patch<any>(`/acces/admin/imports-vigik/${id}`, data),
 	resoudreImportVigik: (id: number) =>
@@ -137,6 +140,7 @@ export const acces = {
 		api.get<any[]>(`/acces/admin/imports${statut ? `?statut=${statut}` : ''}`),
 	statsImportsTC: () => api.get<any>('/acces/admin/imports/stats'),
 	autoMatchImportsTC: () => api.post<any>('/acces/admin/imports/auto-match', {}),
+	rattacherImportsTC: () => api.post<any>('/acces/admin/imports/rattacher', {}),
 	patchImportTC: (id: number, data: unknown) => api.patch<any>(`/acces/admin/imports/${id}`, data),
 	resoudreImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/resoudre`, {}),
 	ignorerImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/ignorer`, {}),

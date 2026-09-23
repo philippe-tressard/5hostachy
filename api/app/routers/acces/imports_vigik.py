@@ -9,11 +9,14 @@ Ce qui reste ici et **nulle part ailleurs** : la résolution du lot par
 fichier des télécommandes ne les a pas.
 """
 from fastapi import APIRouter, Depends, File, Query, UploadFile
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
-from app.models.core import Utilisateur, VigikImport
+from app.models.copropriete import Lot
+from app.models.core import LotImport, Utilisateur, VigikImport
+from app.utils.batiments import libelle_lot
+from app.utils.valeurs import valeur
 
 from .commun import (
     _ignorer_import,
@@ -21,6 +24,7 @@ from .commun import (
     _remettre_en_attente_import,
     _stats_socle,
 )
+from app.utils.resolution_acces import rattacher_les_reconnues
 from app.utils.types_acces import VIGIK
 from app.utils.fichiers import verifier_fichier_recu
 from . import socle_imports
@@ -68,7 +72,7 @@ def stats_imports_vigik(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Statistiques synthétiques sur les imports vigik."""
-    lignes, stats = _stats_socle(VigikImport, session)
+    lignes, stats = _stats_socle(VIGIK, session)
     stats["avec_code"] = sum(1 for i in lignes if i.code)
     stats["avec_lot"] = sum(1 for i in lignes if i.lot_id)
     return stats
@@ -81,38 +85,31 @@ def list_imports_vigik(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Liste les imports vigik, optionnellement filtrés par statut."""
-    return _lister_imports(VigikImport, statut, session)
+    return _lister_imports(VIGIK, statut, session)
 
 
-def _etape_lot_par_adresse(session: Session):
-    """Le lot déduit du bâtiment et de l'appartement écrits dans l'Excel.
+@router.get("/admin/imports-lots")
+def lots_a_choisir(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Les lots, pour choisir celui d'une ligne d'import — les DEUX écrans (#1194).
 
-    🔴 **La seule chose que le Vigik fait et que la télécommande ne peut pas
-    faire.** C'est ce qui justifie le crochet `etape_supplementaire` du socle
-    plutôt qu'un `if type == "vigik"` en son sein : une différence réelle
-    s'exprime là où elle est vraie.
-
-    ⚠️ L'index est construit **une fois**, en dehors de la boucle, et c'est
-    pourquoi cette fonction rend une fermeture plutôt que d'être l'étape
-    elle-même : `_build_lot_index` lit TOUS les bâtiments et TOUS les lots. Le
-    rappeler par ligne d'import rendrait l'appariement quadratique — le code
-    d'origine le construisait déjà une fois, et une mise en commun n'a pas le
-    droit de coûter plus cher que ce qu'elle remplace.
+    Chaque lot porte le nom de son copropriétaire tel que le **fichier des lots**
+    l'écrit : c'est le seul nom qu'un lot sans compte possède, et c'est le cas
+    courant. `/copropriete/lots`, ouverte à tout résident, ne le donne pas — et
+    ne doit pas : ce nom ne regarde que le conseil syndical, qui voit déjà les
+    fichiers du syndic.
     """
-    from app.utils.import_vigiks import _build_lot_index, normaliser
-
-    index = _build_lot_index(session)
-
-    def etape(imp, _session: Session) -> bool:
-        if imp.lot_id or not imp.batiment_raw or not imp.appartement_raw:
-            return False
-        lot_id = index.get((normaliser(imp.batiment_raw), normaliser(imp.appartement_raw)))
-        if not lot_id:
-            return False
-        imp.lot_id = lot_id
-        return True
-
-    return etape
+    noms: dict[int, str] = {}
+    for li in session.exec(select(LotImport).where(LotImport.lot_id != None)).all():  # noqa: E711
+        if li.nom_coproprietaire:
+            noms.setdefault(li.lot_id, li.nom_coproprietaire)
+    return [
+        {"id": lot.id, "libelle": libelle_lot(lot), "type": valeur(lot.type),
+         "coproprietaire": noms.get(lot.id)}
+        for lot in session.exec(select(Lot)).all()
+    ]
 
 
 @router.post("/admin/imports-vigik/auto-match")
@@ -120,10 +117,17 @@ def auto_match_imports_vigik(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Apparie les imports vigik en attente aux comptes inscrits."""
-    return socle_imports.auto_match(
-        VIGIK, session, etape_supplementaire=_etape_lot_par_adresse(session)
-    )
+    """Apparie les imports vigik en attente : leur lot, puis les comptes inscrits."""
+    return socle_imports.auto_match(VIGIK, session)
+
+
+@router.post("/admin/imports-vigik/rattacher")
+def rattacher_imports_vigik(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Le rattachement en masse : chaque ligne dont le lot est connu (#1194)."""
+    return rattacher_les_reconnues(VIGIK, session)
 
 
 @router.patch("/admin/imports-vigik/{import_id}")
@@ -144,8 +148,8 @@ def resoudre_import_vigik(
     session: Session = Depends(get_session),
     admin: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Résout un import vigik : crée le Vigik réel et lie l'utilisateur.
-    Les copropriétaires du même lot sont automatiquement associés via UserVigik."""
+    """Rattache le badge de cette ligne à son lot. Ses porteurs s'en déduisent —
+    les copropriétaires du lot, conjoint compris (`utils/porteurs_acces`)."""
     return socle_imports.resoudre(VIGIK, import_id, session)
 
 

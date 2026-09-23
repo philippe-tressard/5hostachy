@@ -27,50 +27,51 @@ une règle qui ne s'appliquait nulle part.
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
-from app.models.core import (
-    StatutImport,
-    Utilisateur, Batiment, Lot,
-)
+from app.models.core import StatutImport, Utilisateur, Lot
+from app.utils.batiments import libelle_lot
+from app.utils.porteurs_acces import copros_par_lot
 from app.utils.recuperer import ou_404
+from app.utils.resolution_acces import peut_se_rattacher
 
 
-def _stats_socle(modele, session: Session) -> tuple[list, dict]:
+def _stats_socle(type_acces, session: Session) -> tuple[list, dict]:
+    modele = type_acces.modele_import
     lignes = session.exec(select(modele)).all()
     socle = {"total": len(lignes)}
     for statut in StatutImport:
         socle[statut.value] = sum(1 for i in lignes if i.statut == statut)
     socle["avec_locataire"] = sum(1 for i in lignes if i.nom_locataire)
+    #  Ce que l'écran propose depuis #1194 : rattacher ce dont le lot est connu,
+    #  préciser le lot du reste. La règle est celle du rattachement lui-même.
+    socle["a_rattacher"] = sum(1 for i in lignes if peut_se_rattacher(type_acces, i))
+    socle["lot_a_preciser"] = sum(
+        1 for i in lignes
+        if not i.lot_id and i.statut in (StatutImport.en_attente, StatutImport.proprietaire_lie)
+    )
     return lignes, socle
 
 
-def _lister_imports(modele, statut, session: Session):
+def _lister_imports(type_acces, statut, session: Session):
+    modele = type_acces.modele_import
     q = select(modele)
     if statut:
         q = q.where(modele.statut == statut)
     q = q.order_by(modele.nom_proprietaire)
     items = session.exec(q).all()
+    copros = copros_par_lot(session)
     result = []
     for item in items:
         d = item.model_dump()
-        if item.user_proprietaire_id:
-            u = session.get(Utilisateur, item.user_proprietaire_id)
-            d["proprietaire"] = {"id": u.id, "nom": u.nom, "prenom": u.prenom} if u else None
-        else:
-            d["proprietaire"] = None
-        if item.user_locataire_id:
-            u = session.get(Utilisateur, item.user_locataire_id)
-            d["locataire"] = {"id": u.id, "nom": u.nom, "prenom": u.prenom} if u else None
-        else:
-            d["locataire"] = None
-        if item.lot_id:
-            lot = session.get(Lot, item.lot_id)
-            if lot:
-                bat = session.get(Batiment, lot.batiment_id)
-                d["lot_label"] = f"Bât.{bat.numero} — {lot.numero}" if bat else lot.numero
-            else:
-                d["lot_label"] = None
-        else:
-            d["lot_label"] = None
+        for cle, uid in (("proprietaire", item.user_proprietaire_id),
+                         ("locataire", item.user_locataire_id)):
+            u = session.get(Utilisateur, uid) if uid else None
+            d[cle] = {"id": u.id, "nom": u.nom, "prenom": u.prenom} if u else None
+        lot = session.get(Lot, item.lot_id) if item.lot_id else None
+        d["lot_label"] = libelle_lot(lot) if lot else None
+        #  Combien de comptes porteront le badge une fois rattaché — « sans
+        #  compte » est un cas normal, que l'écran dit plutôt que de le taire.
+        d["lot_porteurs"] = len(copros.get(item.lot_id, ())) if lot else None
+        d["rattachable"] = peut_se_rattacher(type_acces, item)
         result.append(d)
     return result
 

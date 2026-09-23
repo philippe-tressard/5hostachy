@@ -69,8 +69,6 @@ export const copropriete = {
 	get: () => api.get<any>('/copropriete'),
 	update: (data: unknown) => api.patch<any>('/copropriete', data),
 	batiments: () => api.get<any[]>('/copropriete/batiments'),
-	lots: (batiment_id?: number) =>
-		api.get<any[]>(`/copropriete/lots${batiment_id ? `?batiment_id=${batiment_id}` : ''}`),
 	/**  Les contrats parmi lesquels la fiche DÉSIGNE sa référence.
 	 *
 	 *   `section` vaut `'assurance'` ou `'syndic'` — le serveur la valide contre

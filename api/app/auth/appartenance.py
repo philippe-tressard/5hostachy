@@ -103,8 +103,12 @@ def exiger_acces_du_porteur(session: Session, type_acces, objet_id: int, user: U
     Cette règle était écrite **quatre fois** à l'identique avant d'être ramenée
     dans `routers/acces/resident.py` ; elle est ici depuis #1028, avec les autres.
     """
+    from app.utils.porteurs_acces import porteurs
+
+    #  Porteur = ce que dit le LOT (#1194) : le conjoint signale la perte du
+    #  badge du ménage, lui aussi. `user_id` seul n'en laissait qu'un.
     objet = session.get(type_acces.modele, objet_id)
-    if not objet or objet.user_id != user.id:
+    if not objet or user.id not in porteurs(session, objet):
         raise HTTPException(404, f"{type_acces.libelle} introuvable")
     return objet
 

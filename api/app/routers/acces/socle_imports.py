@@ -42,8 +42,9 @@ qu'un second se déclare.
 
 ⚠️ Ce qui reste **hors** de ce module est ce qui diffère vraiment : la lecture du
 fichier Excel (`utils/import_telecommandes.py`, `utils/import_vigiks.py` — ni les
-mêmes colonnes ni les mêmes règles) et l'étape d'appariement propre au Vigik
-(bâtiment + appartement), passée en paramètre plutôt que codée ici.
+mêmes colonnes ni les mêmes règles) et la façon de retrouver le LOT d'une ligne
+(`utils/lot_des_imports` : bâtiment + appartement pour le Vigik, nom du
+copropriétaire dans le fichier des lots pour la télécommande).
 
 ## Ce que la mise en commun a changé de comportement, et c'est voulu
 
@@ -60,15 +61,13 @@ from __future__ import annotations
 
 from app.utils.recuperer import ou_404
 
-from datetime import datetime
-from typing import Callable, Optional
-
-from fastapi import HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.models.core import StatutAcces, StatutImport, Utilisateur
+from app.models.core import StatutImport, Utilisateur
 from app.utils.acces_possession import chez_le_locataire, possesseur
+from app.utils.lot_des_imports import trouveur_de_lot
+from app.utils.resolution_acces import rattacher
 from app.utils.types_acces import TypeAcces
 from app.utils.auto_match_service import (
     _matches_user,
@@ -106,16 +105,12 @@ class PatchImportBody(BaseModel):
     nom_locataire: str | None = None
 
 
-def auto_match(
-    type_import: TypeAcces,
-    session: Session,
-    etape_supplementaire: Optional[Callable[[object, Session], bool]] = None,
-) -> dict:
-    """Apparie les imports en attente aux comptes inscrits.
+def auto_match(type_import: TypeAcces, session: Session) -> dict:
+    """Apparie les imports en attente : leur LOT d'abord, les comptes ensuite.
 
-    `etape_supplementaire` est le crochet des différences réelles : le Vigik y
-    résout son lot par `batiment_raw` + `appartement_raw`, ce que la télécommande
-    ne peut pas faire — son fichier ne porte pas ces colonnes.
+    Le lot se retrouve sans aucun compte (`utils/lot_des_imports`) — c'est lui
+    qui rend une ligne rattachable depuis #1194. Les comptes ne servent plus
+    qu'à dire qui a le badge en main.
     """
     modele = type_import.modele_import
     imports = session.exec(
@@ -131,9 +126,10 @@ def auto_match(
         u.id: _user_keys(u.nom, u.prenom) for u in utilisateurs
     }
 
+    etape_lot = trouveur_de_lot(type_import, session)
     apparies = 0
     for imp in imports:
-        change = False
+        change = etape_lot(imp)
 
         for champ_nom, champ_lien in (
             ("nom_proprietaire", "user_proprietaire_id"),
@@ -148,13 +144,10 @@ def auto_match(
             ]
             if candidats:
                 #  Un nom d'Excel désignant un couple rend plusieurs candidats : le
-                #  premier est retenu, les autres sont rattachés à la résolution par
-                #  `creer_liaisons`.
+                #  premier est retenu comme détenteur. L'autre n'a rien à recevoir —
+                #  il porte le badge par le lot, comme conjoint (#1194).
                 setattr(imp, champ_lien, candidats[0].id)
                 change = True
-
-        if etape_supplementaire and etape_supplementaire(imp, session):
-            change = True
 
         #  La règle du lot unique vit dans `rattacher_lot_unique` — elle était
         #  écrite quatre fois, avec deux comportements différents.
@@ -186,11 +179,13 @@ def patch(
     imp = _charger(type_import, import_id, session)
 
     for champ in ("user_proprietaire_id", "user_locataire_id", "lot_id"):
-        valeur = getattr(body, champ)
-        if valeur is not None:
+        #  🔴 `null` DÉLIE (#1194) : le serveur l'ignorait, et une liaison posée
+        #  par erreur ne se défaisait plus. Un champ ABSENT du corps, lui, ne
+        #  change rien — c'est ce que distingue `model_fields_set`.
+        if champ in body.model_fields_set:
             #  `or None` : le formulaire envoie 0 pour « aucun », et un 0 stocké
             #  serait une clé étrangère vers un identifiant qui n'existe pas.
-            setattr(imp, champ, valeur or None)
+            setattr(imp, champ, getattr(body, champ) or None)
 
     if body.chez_locataire is not None:
         imp.chez_locataire = body.chez_locataire
@@ -221,15 +216,15 @@ def patch(
     if imp.statut == StatutImport.resolu and objet_id:
         objet = session.get(type_import.modele, objet_id)
         if objet:
-            detenteur = possesseur(imp)
-            if detenteur:
-                objet.user_id = detenteur
-                objet.lot_id = imp.lot_id or objet.lot_id
-                #  🔴 Reporté depuis le 08/09/2026 : sans cette ligne, corriger
-                #  « chez le locataire » sur l'import laissait l'objet en dire le
-                #  contraire, et c'est l'objet que lit le transfert de bail.
-                objet.chez_locataire = chez_le_locataire(imp)
-                session.add(objet)
+            #  Le lot de l'import EST celui du badge (#1194) : le délier ici
+            #  délie le badge, et le détenteur est celui que la ligne nomme.
+            objet.lot_id = imp.lot_id
+            objet.user_id = possesseur(imp)
+            #  🔴 Reporté depuis le 08/09/2026 : sans cette ligne, corriger
+            #  « chez le locataire » sur l'import laissait l'objet en dire le
+            #  contraire, et c'est l'objet que lit le transfert de bail.
+            objet.chez_locataire = chez_le_locataire(imp)
+            session.add(objet)
     else:
         imp.statut = (
             StatutImport.proprietaire_lie
@@ -244,37 +239,9 @@ def patch(
 
 
 def resoudre(type_import: TypeAcces, import_id: int, session: Session) -> dict:
-    """Crée l'accès réel depuis un import apparié, et lie les copropriétaires."""
+    """Rattache le badge d'une ligne à son lot — la règle : `utils/resolution_acces`."""
     imp = _charger(type_import, import_id, session)
-    if imp.statut == StatutImport.resolu:
-        raise HTTPException(400, "Import déjà résolu")
-    if imp.statut == StatutImport.ignore:
-        raise HTTPException(400, "Cet import est ignoré")
-    if not imp.user_proprietaire_id:
-        raise HTTPException(422, "Le propriétaire doit être lié avant de résoudre")
-
-    reference = getattr(imp, type_import.colonne_code_import)
-    if not reference:
-        raise HTTPException(
-            422, f"Cet import n'a pas de référence ({type_import.libelle})"
-        )
-
-    objet = type_import.modele(
-        code=reference,
-        lot_id=imp.lot_id or None,
-        user_id=possesseur(imp),
-        chez_locataire=chez_le_locataire(imp),
-        statut=StatutAcces.actif,
-    )
-    session.add(objet)
-    session.flush()
-
-    type_import.attribuer_aux_coproprietaires(objet, session)
-
-    imp.statut = StatutImport.resolu
-    setattr(imp, type_import.colonne_import, objet.id)
-    imp.resolu_le = datetime.utcnow()
-    session.add(imp)
+    objet = rattacher(type_import, imp, session)
     session.commit()
     session.refresh(objet)
     #  La clé de sortie garde le nom de l'objet : le front lit `telecommande` ou
