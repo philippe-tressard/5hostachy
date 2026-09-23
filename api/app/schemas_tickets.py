@@ -36,6 +36,11 @@ class TicketEvolutionCreate(AssisteIAEntree):
     #  Jamais persistée : c'est une décision propre à CET envoi, pas un réglage
     #  de l'objet. La recharger cochée reviendrait à l'imposer.
     envoyer_auteur: Optional[bool] = None
+    #  🔕 Faux : n'avertir PERSONNE, pas même l'auteur (#1092, 23/09/2026). C'est
+    #  le glissement d'une carte au kanban d'Affaires — arbitré « une Suite sans
+    #  texte, sans aucun courriel », comme le kanban des événements le faisait.
+    #  Vrai par défaut : une Suite écrite prévient l'auteur selon son profil.
+    notifier: bool = True
     fichiers_urls: List[str] = []
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
     #  Le périmètre que cette entrée déclare — facultatif. `None` veut dire « cette

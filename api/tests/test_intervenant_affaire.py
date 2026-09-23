@@ -187,3 +187,28 @@ def test_les_deux_nouveaux_etats_ont_leur_colonne(session, statut, colonne):
     t = _creer(session, cs, categorie="entretien", statut=statut)
     assert t.statut == statut
     assert colonne_du_ticket(t.statut) == colonne
+
+
+# ── Le glissement au kanban : une Suite d'état, sans avertir personne ───────
+
+@pytest.mark.parametrize("notifier, attendu", [(True, 1), (False, 0)])
+def test_un_glissement_au_kanban_n_avertit_personne(session, monkeypatch, notifier, attendu):
+    """Arbitré le 23/09/2026 : déplacer une carte inscrit l'état au fil, et rien ne part.
+
+    Le témoin (`notifier=True`) prouve que l'espion est bien appelé sur une
+    Suite ordinaire — sans lui, un zéro ne dirait rien (socle 04 §2).
+    """
+    from app.routers.tickets import evolutions
+    from app.schemas_tickets import TicketEvolutionCreate
+
+    appels = []
+    monkeypatch.setattr(evolutions, "_notifier_auteur", lambda *a, **k: appels.append(1))
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    auteur = _compte(session)
+    t = _creer(session, cs, categorie="etude_travaux")
+    session.get(Ticket, t.id).auteur_id = auteur.id
+    session.commit()
+    corps = TicketEvolutionCreate(type="etat", nouveau_statut="chez_prestataire", notifier=notifier)
+    evolutions.add_evolution(t.id, corps, BackgroundTasks(), session=session, user=cs)
+    assert session.get(Ticket, t.id).statut == "chez_prestataire"
+    assert len(appels) == attendu
