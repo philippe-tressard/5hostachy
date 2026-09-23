@@ -579,6 +579,14 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	align-items: center;
 	margin-bottom: 1.25rem;
 }
+/*  ⚠️ Dans un CHAMP, la marge basse est celle du `.field` (23/09/2026). Celle
+    de `.filters` décolle une barre de filtres de la LISTE qu'elle filtre ;
+    héritée par un choix de formulaire (`ChoixPastilles` dans « Au nom de »),
+    elle s'ajoutait à celle du champ — 36 px sous la section au lieu des
+    16 px de « Suivi », signalé à l'écran. */
+.field .filters {
+	margin-bottom: 0;
+}
 
 /* ── Case à cocher ──
    Une case et son libellé sur une ligne, cliquables ensemble.
