@@ -46,16 +46,12 @@ ci-dessous est également résumée dans `CLAUDE.md` et dans
 - ❌ `docker exec hostachy_api python3 … PRAGMA …` et `sqlite3` hôte sont **INTERDITS** tant
   que l'API tourne. **Sans exception de lecture seule.**
 
-**Pourquoi la lecture seule n'est PAS sûre** — leçon du 17/07/2026 : cette ligne affirmait
-l'inverse (« = OK (ne mute rien) »), ce qui a fait écrire `check-reliability.sh` C8 ainsi et
-a coûté ~12 h d'écritures. Les connexions du pool SQLAlchemy sont *ouvertes mais SANS VERROU*
-quand elles sont idle. Un process tiers qui ouvre la base puis la referme se croit donc
-**dernière connexion** → checkpoint + **`unlink` de `app.db-wal` et `app.db-shm`**. L'API
-continue alors d'écrire dans des **inodes orphelins** :
-1. writes **invisibles** aux autres connexions (générations de WAL divergentes) ;
-2. `disk I/O error` (SQLITE_IOERR) en rafales → **503** sur toute requête authentifiée ;
-3. **PERTE DES DONNÉES** au prochain arrêt : le checkpoint de shutdown échoue
-   (`WAL checkpoint échoué au shutdown (non bloquant)`) → le WAL orphelin est abandonné.
+**Pourquoi la lecture seule n'est PAS sûre**, et la signature en termes génériques :
+`standards/06` §1 — la seule copie du mécanisme (pool sans verrou → `unlink` du WAL
+→ inodes orphelins → perte au prochain arrêt). Ici, ce qui est propre à ce
+déploiement — dans les journaux de `hostachy_api` : `disk I/O error` (SQLITE_IOERR)
+en rafales → **503** sur toute requête authentifiée, puis à l'arrêt
+`WAL checkpoint échoué au shutdown (non bloquant)` = le WAL orphelin est abandonné.
 
 **Signature de diagnostic (30 s, décisive) :**
 ```bash
@@ -69,10 +65,8 @@ sudo lsof -p $(docker inspect hostachy_api --format '{{.State.Pid}}') | grep app
   ⇒ toutes les écritures depuis ce `mtime` sont en sursis.** Traiter comme une urgence.
 - 🚫 **Ne PAS redémarrer l'API dans cet état** : cela libère les inodes orphelins et rend la
   perte **définitive**. Extraire d'abord les WAL orphelins (`/proc/<pid>/fd/<n>`).
-- Zéro erreur `dmesg`/ext4/mmc ⇒ ce n'est **pas** le matériel, c'est un process tiers.
-- ⚠️ Un `integrity_check` vert **n'innocente rien** (nouveau process = vue saine).
-- ⚠️ Les rafales **se résorbent spontanément** puis récidivent (recyclage du pool) : une
-  accalmie sans explication n'est **pas** une résolution.
+- Les trois pièges de raisonnement (intégrité verte, matériel innocenté, rafales qui
+  se résorbent) : `standards/06` §1.
 
 Cause racine des corruptions `telemetry_event` des 05 et 17/06/2026 **et** de l'incident du
 17/07/2026 (login 503 + 2 publications perdues) — coupable : `check-reliability.sh` C8, qui

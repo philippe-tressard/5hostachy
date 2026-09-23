@@ -2173,14 +2173,8 @@ après une première proposition inexacte de ma part.
 
 ## Checklist UX (à vérifier avant commit)
 
-- [ ] Pattern existant réutilisé (pas de variante ad hoc)
-- [ ] Méta toujours visible en mode collapsé
-- [ ] `.clamp-3` sur l'aperçu d'une carte (`.clamp-5` seulement hors carte)
-- [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — `safeHtml`, `safeRichContent` ou `safeDescription`, jamais un helper local (`lint:html`)
-- [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`
-- [ ] Périmètre : pas affiché si `'résidence'`
-- [ ] Archiver (pas supprimer) sur la vue principale
-- [ ] Champs requis : label + `*` **collé**, rouge tant que le champ est vide (#1121)
-- [ ] Labels en français
-- [ ] En-tête : `<EntetePage>`, jamais `<div class="page-header">` (§13)
-- [ ] Icône vérifiée dans `$lib/icones-svg.json` — un nom inconnu échoue en silence
+**Une seule liste : `CLAUDE.md` → « Checklist avant commit » → Frontend.** Elle est
+chargée à chaque session, celle-ci seulement quand on ouvre la skill. Les deux ont
+coexisté et divergé : chacune avait des lignes que l'autre n'avait pas, et celle-ci
+enseignait encore « périmètre pas affiché si `'résidence'` » quand le code n'en
+contient plus un seul (claude-config#122, 23/09/2026).

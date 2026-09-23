@@ -338,6 +338,10 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       vide** : c'est son état, pas une décoration (#1121, 22/09/2026). Les
       libellés de champ sont en MAJUSCULES par le style (`champs.css`), comme
       les intitulés de section — jamais tapées (`npm run lint:champs`)
+- [ ] Libellés et nommage en français
+- [ ] En-tête de page : `<EntetePage>`, jamais `<div class="page-header">`
+      (`ux-patterns` §13)
+- [ ] Icône vérifiée dans `$lib/icones-svg.json` — un nom inconnu échoue en silence
 - [ ] Tout champ libellé dans un `.field` — jamais une nomenclature locale
       (`npm run lint:champs` ; il y en avait **six** avant #413)
 
