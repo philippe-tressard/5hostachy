@@ -111,7 +111,11 @@ def create_evenement(
         residents = session.exec(
             select(Utilisateur).where(Utilisateur.actif == True)
         ).all()
-        for r in residents:
+        #  🔴 À qui peut le VOIR, et à lui seul (#1166, 23/09/2026) : la boucle
+        #  prévenait tous les comptes actifs, et un événement réservé au conseil
+        #  ou limité à un bâtiment était annoncé à toute la copropriété — titre
+        #  et description compris. La règle est `evenement_visible`, lue ici.
+        for r in (r for r in residents if evenement_visible(ev, r)):
             session.add(Notification(
                 destinataire_id=r.id,
                 type="calendrier",
