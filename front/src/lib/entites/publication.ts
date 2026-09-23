@@ -50,7 +50,10 @@
  *
  * ## Qui consomme cette déclaration
  *
- *   • `FormulaireActualite.svelte` — création ET édition (`sectionPresente`)
+ *   • `ActualiteEnListe.svelte` — la Suite d'une actualité (`EvolForm`)
+ *   • `FormulaireTicket.svelte` — ses LIBELLÉS seulement : depuis le formulaire
+ *     unique (23/09/2026), les sections d'une actualité se lisent dans `TICKET`,
+ *     où la nature éteint ce qui ne la concerne pas (`inactivePour`).
  *
  * ⚠️ **Ce que personne ne consomme encore.** L'affichage d'une publication passe
  * par `CarteActualite`, qui ne traverse pas `FicheLecture` : ses documents sont

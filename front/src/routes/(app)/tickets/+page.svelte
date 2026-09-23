@@ -5,7 +5,7 @@
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { onMount } from 'svelte';
 	import { revelerCible } from '$lib/deepLink';
-	import { isAdmin, isCS } from '$lib/stores/auth';
+	import { isAdmin } from '$lib/stores/auth';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { optionsRapides } from '$lib/options-rapides';
@@ -18,8 +18,6 @@
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
-	import FormulaireActualite from '$lib/components/FormulaireActualite.svelte';
-	import { PUBLICATION } from '$lib/entites/publication';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
 	import {
 		OPTIONS_FILTRE_CATEGORIE,
@@ -44,14 +42,13 @@
 	// Création : boîte dans la page, comme partout ailleurs sur le site (#367).
 	// Ce fut le dernier écran à créer un objet par page dédiée — cf. l'en-tête de
 	// FormulaireTicket.svelte.
+	//  UN bouton, UN formulaire (23/09/2026) : « Actualité » y est la première
+	//  catégorie, et c'est elle qui allume ce qu'une actualité a de propre.
 	let showForm = false;
-	//  Une actualité se crée par SON formulaire (#1091) : à qui l'on parle,
-	//  l'Accès, l'affiche — ce que celui d'une affaire ne propose pas.
-	let showFormActualite = false;
 
 	function ticketCree(e: CustomEvent<Ticket>) {
 		ticketList = [e.detail, ...ticketList];
-		showForm = showFormActualite = false;
+		showForm = false;
 	}
 
 	//  Ce que la page décide, et qu'elle est seule à savoir : quel ticket est
@@ -376,17 +373,10 @@
 	      Trois écritures, dont une périmée : c'est ce qui a laissé Prestataires
 	      afficher « ✕ Annuler » jusqu'à ce que l'utilisateur le signale. -->
 	<BoutonNouveau
-		ouvert={showForm || showFormActualite}
+		ouvert={showForm}
 		libelle="Nouvelle affaire"
 		on:basculer={() => (showForm = true)}
 	/>
-	{#if $isCS}
-		<BoutonNouveau
-			ouvert={showForm || showFormActualite}
-			libelle={PUBLICATION.libelleNouveau}
-			on:basculer={() => (showFormActualite = true)}
-		/>
-	{/if}
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
@@ -429,12 +419,6 @@
       §0 ter, signalé ici le 12/09/2026. -->
 {#if showForm}
 	<FormulaireTicket cle="creation" on:cree={ticketCree} on:annule={() => (showForm = false)} />
-{:else if showFormActualite}
-	<FormulaireActualite
-		cle="creation-actualite"
-		on:cree={ticketCree}
-		on:annule={() => (showFormActualite = false)}
-	/>
 {/if}
 
 <!--  Les trois états par `EtatListe` (#796) — dont l'ERREUR, qui n'existait pas :

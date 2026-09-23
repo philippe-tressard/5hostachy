@@ -51,6 +51,13 @@
 	 *   un liseré n'a aucun équivalent parlé. */
 	export let marqueAide = '';
 
+	/**  Une pastille EN TÊTE de sa grille, qui ouvre un autre CHEMIN que les
+	 *   autres (23/09/2026, variante A arbitrée à l'écran) : « Actualité » —
+	 *   on informe — avant les catégories de suivi — on fait traiter. Pleine
+	 *   ligne, teinte « information » de la charte. Retenue, elle reprend l'aplat
+	 *   commun : son état se lit comme celui des autres. */
+	export let enTete = false;
+
 	/** Variante réduite, pour un second niveau de précision. */
 	export let petite = false;
 
@@ -124,6 +131,7 @@
 		class="pastille"
 		class:active
 		class:marquee
+		class:en-tete={enTete}
 		class:petite
 		class:privatif
 		class:avec-detail={$$slots.detail}
@@ -148,6 +156,7 @@
 		class="pastille"
 		class:active
 		class:marquee
+		class:en-tete={enTete}
 		class:petite
 		class:privatif
 		class:avec-detail={$$slots.detail}
@@ -202,6 +211,14 @@
 		padding-left: 0.55rem;
 	}
 
+	.pastille.en-tete {
+		grid-column: 1 / -1;
+		border: 1.5px solid var(--color-info);
+	}
+	.pastille.en-tete:not(.active) {
+		background: #e6f1fb;
+		color: var(--color-info);
+	}
 	.pastille.privatif {
 		border-style: dashed;
 		border-width: 1.5px;

@@ -141,6 +141,23 @@
 	 */
 	export let valeurModifiee = false;
 
+	/**
+	 * 🔒 **Inactive** — le motif pour lequel la section ne s'applique pas ici, ou
+	 * vide (23/09/2026, arbitré à l'écran avec maquette).
+	 *
+	 * Demandé : un seul formulaire pour les affaires et les actualités, *« toutes
+	 * les sections, grisées, pliées et inactives pour celles inappropriées pour
+	 * la catégorie, qui doivent être sans données »*. La section reste à son rang
+	 * — on voit ce qui s'éteint en changeant de catégorie —, mais :
+	 *
+	 *   - elle est pliée, grisée, hachurée, et ne se déplie pas ;
+	 *   - son CONTENU n'est pas rendu : aucun champ, donc aucune donnée à envoyer ;
+	 *   - son motif est ÉCRIT sur la ligne — au doigt il n'y a pas de survol.
+	 *
+	 * La valeur vient de la déclaration (`motifInactif`), jamais d'un écran.
+	 */
+	export let inactive = '';
+
 	let ouverteParLUtilisateur = false;
 	/**  Se replier est possible — tant que la valeur est celle du défaut.
 	 *
@@ -152,8 +169,19 @@
 	const idContenu = `sect-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
-<section class="section-formulaire" class:premiere class:repliee={pliable && !ouverte}>
-	{#if pliable && !ouverte}
+<section
+	class="section-formulaire"
+	class:premiere
+	class:repliee={(pliable && !ouverte) || !!inactive}
+>
+	{#if inactive}
+		<div class="section-pliee section-inactive" aria-disabled="true">
+			<span class="section-titre section-titre-plie">
+				<span aria-hidden="true">&#x1F512;</span><span class="section-titre-texte">{titre}</span>
+			</span>
+			<span class="section-motif">{inactive}</span>
+		</div>
+	{:else if pliable && !ouverte}
 		<!--  🔴 Un vrai `<button>`, et non un `<div role="button">` : il faut le
 		      clavier, le focus et l'annonce d'état sans rien réécrire. La cible
 		      fait 44 px de haut (`standards/11` §10). -->
@@ -182,7 +210,7 @@
 			>
 		</button>
 	{/if}
-	{#if titre && ouverte}
+	{#if titre && ouverte && !inactive}
 		{#if pour}
 			<label class="section-titre" for={pour} id={idTitre || undefined}>
 				{#if icone}<Icon name={icone} size={15} />{/if}<span class="section-titre-texte"
@@ -234,14 +262,16 @@
 			</h4>
 		{/if}
 	{/if}
-	<div id={idContenu} hidden={!ouverte}>
-		<!--  🔴 CACHÉ, jamais démonté. Un `{#if}` détruirait les champs, et avec
+	{#if !inactive}
+		<div id={idContenu} hidden={!ouverte}>
+			<!--  🔴 CACHÉ, jamais démonté. Un `{#if}` détruirait les champs, et avec
 		      eux l'état interne des composants qu'ils portent — un éditeur riche,
 		      une liste de pièces jointes en cours de téléversement. `hidden` les
 		      retire aussi de l'ordre de tabulation, ce qu'un simple `display:none`
 		      appliqué plus loin ne garantirait pas. -->
-		<slot />
-	</div>
+			<slot />
+		</div>
+	{/if}
 </section>
 
 <style>
@@ -355,6 +385,26 @@
 		text-transform: none;
 		letter-spacing: normal;
 		font-weight: 600;
+	}
+	/*  🔒 La section INACTIVE (23/09/2026) : grisée, hachures légères, motif
+	    écrit. Pas de curseur de clic — rien ne s'y ouvre. Le motif prend la
+	    place du résumé, et se coupe proprement sur téléphone. */
+	.section-inactive {
+		cursor: default;
+		color: var(--color-text-muted);
+		background: repeating-linear-gradient(135deg, transparent 0 6px, var(--color-border) 6px 7px);
+		border-radius: var(--radius);
+		padding: 0.25rem 0.4rem;
+	}
+	.section-inactive .section-titre {
+		color: var(--color-text-muted);
+	}
+	.section-motif {
+		margin-left: auto;
+		min-width: 0;
+		font-size: 0.72rem;
+		text-align: right;
+		line-height: 1.35;
 	}
 	.section-chev {
 		flex-shrink: 0;

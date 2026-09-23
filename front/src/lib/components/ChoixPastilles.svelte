@@ -70,7 +70,14 @@
 		desc?: string;
 		marquee?: boolean;
 		marqueAide?: string;
+		/** En tête, pleine ligne, suivie d'un filet — voir `Pastille.enTete`. */
+		enTete?: boolean;
 	}[] = [];
+
+	//  Les entrées EN TÊTE d'abord, puis un filet, puis les autres : l'ordre
+	//  se lit dans la donnée, il ne s'écrit pas dans l'écran.
+	$: ordonnees = [...options.filter((o) => o.enTete), ...options.filter((o) => !o.enTete)];
+	$: avecFilet = options.some((o) => o.enTete) && options.some((o) => !o.enTete);
 
 	/** La valeur retenue. Chaîne vide = rien de choisi. */
 	export let valeur = '';
@@ -202,12 +209,16 @@
 		      condition, il devient une erreur de compilation — pas un rendu dégradé.
 		      C'est aussi ce qui garde `$$slots.detail` faux quand il n'y a rien à
 		      montrer, donc la pastille sur une seule ligne. -->
-		{#each options as o (o.val)}
+		{#each ordonnees as o, i (o.val)}
+			{#if avecFilet && i > 0 && ordonnees[i - 1].enTete && !o.enTete}
+				<span class="filet-en-tete" aria-hidden="true"></span>
+			{/if}
 			{#if avecDetail && o.desc}
 				<Pastille
 					active={valeur === o.val}
 					marquee={!!o.marquee}
 					marqueAide={o.marqueAide}
+					enTete={!!o.enTete}
 					radio={radio ? { nom: radio, valeur: o.val } : null}
 					on:click={() => (valeur = o.val)}
 					on:change={() => (valeur = o.val)}
@@ -219,6 +230,7 @@
 					active={valeur === o.val}
 					marquee={!!o.marquee}
 					marqueAide={o.marqueAide}
+					enTete={!!o.enTete}
 					radio={radio ? { nom: radio, valeur: o.val } : null}
 					on:click={() => (valeur = o.val)}
 					on:change={() => (valeur = o.val)}
@@ -231,4 +243,12 @@
 </div>
 
 <style>
+	/*  Le filet qui sépare « informer » de « faire traiter » (variante A,
+	    23/09/2026) : pleine ligne dans la grille, pointillé discret. */
+	.filet-en-tete {
+		grid-column: 1 / -1;
+		flex-basis: 100%;
+		border-top: 1px dashed var(--color-border);
+		margin: 0.15rem 0;
+	}
 </style>

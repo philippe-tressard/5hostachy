@@ -62,7 +62,10 @@ export const TICKET: EntiteDeclaree = {
 		},
 		{
 			id: 'nature',
-			objet: 'Catégorie de l’affaire — elle décide de QUI traite',
+			//  « Actualité » en tête, pleine ligne, puis un filet avant les
+			//  catégories de suivi (23/09/2026, variante A arbitrée à l'écran) :
+			//  on choisit d'abord entre informer et faire suivre.
+			objet: 'Catégorie de l’affaire — elle décide de QUI traite ; « Actualité » en tête',
 			titreEcran: 'Catégorie',
 			requis: true,
 			absente: {
@@ -80,6 +83,10 @@ export const TICKET: EntiteDeclaree = {
 			id: 'equipement',
 			objet: 'Équipement concerné — alimente le carnet d’entretien',
 			pliee: true,
+			inactivePour: {
+				actualite:
+					'Une actualité informe : personne n’agit, elle n’a donc ni suivi, ni équipement, ni intervenant.',
+			},
 			absente: {
 				creation: {
 					motif: 'categorie',
@@ -87,6 +94,13 @@ export const TICKET: EntiteDeclaree = {
 						'Un résident signale ce qu’il voit, pas ce qu’il faut entretenir. ' +
 						'L’équipement se désigne ensuite, par le conseil syndical, et seulement ' +
 						'pour les catégories qui portent sur le bâti.',
+				},
+				//  Visible, grisée : elle existe dans le cadre et n'est pas encore
+				//  construite. La taire ferait croire qu'elle n'existera pas.
+				edition: {
+					motif: 'api',
+					explication: 'Le conseil syndical la désignera ici — pas encore construite (#1097).',
+					ticket: '#1097',
 				},
 			},
 		},
@@ -102,6 +116,10 @@ export const TICKET: EntiteDeclaree = {
 			id: 'suivi',
 			requis: true,
 			objet: 'Ouvert · En cours · Résolu · Annulé',
+			inactivePour: {
+				actualite:
+					'Une actualité informe : personne n’agit, elle n’a donc ni suivi, ni équipement, ni intervenant.',
+			},
 		},
 		{
 			id: 'quand',
@@ -117,12 +135,21 @@ export const TICKET: EntiteDeclaree = {
 			id: 'intervenant',
 			objet: 'Prestataire qui intervient',
 			pliee: true,
+			inactivePour: {
+				actualite:
+					'Une actualité informe : personne n’agit, elle n’a donc ni suivi, ni équipement, ni intervenant.',
+			},
 			absente: {
 				creation: {
 					motif: 'categorie',
 					explication:
 						'Personne n’est encore désigné quand l’affaire s’ouvre : c’est le suivi ' +
 						'qui nomme l’intervenant, et seulement pour les catégories du bâti.',
+				},
+				edition: {
+					motif: 'api',
+					explication: 'Le conseil syndical le désignera ici — pas encore construit (#1097).',
+					ticket: '#1097',
 				},
 			},
 		},
@@ -201,19 +228,18 @@ export const TICKET: EntiteDeclaree = {
 		},
 		{
 			id: 'destinataires',
-			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
-			//
-			//  L'astérisque était écrite en dur par `SectionDestinataires` : la
-			//  déclaration ne savait donc pas que la section était obligatoire, et
-			//  `lint:etats` — qui CALCULE le pliage à partir d'elle — ne voyait
-			//  aucune contradiction à la déclarer pliée. L'écran affichait donc
-			//  « DESTINATAIRES* » sur une ligne fermée, ce que la règle interdit.
+			//  🔴 Une ACTUALITÉ dit à qui elle parle (#1091) ; une affaire suivie non :
+			//  elle est vue de son auteur, de son périmètre et du conseil, et
+			//  `destinataire_syndic` / `destinataire_cs` sont des CANAUX (section 9).
+			//  Elle était `sansObjet` pour le ticket : le formulaire unique
+			//  (23/09/2026) la rend grisée pour une affaire suivie, pour qu'on voie
+			//  ce qui s'allume en choisissant « Actualité ».
 			requis: true,
-			sansObjet:
-				"Un ticket n'adresse personne nommément dans l'application : il est vu par son " +
-				'auteur et par le conseil syndical, et son périmètre dit déjà de quoi il parle. ' +
-				'`destinataire_syndic` et `destinataire_cs` ne sont PAS des destinataires au sens ' +
-				'de la section 5 — ce sont deux canaux, et ils vivent en Diffusion (section 9).',
+			objet: 'DestinatairePicker — à qui parle une actualité dans l’application',
+			inactivePour: {
+				suivie:
+					'Une affaire suivie est vue de son auteur, de son périmètre et du conseil : elle ne s’adresse à personne d’autre.',
+			},
 		},
 		{
 			//  🔴 ELLE EST OUVERTE À L'ÉVOLUTION, et c'est ce que la scission permet
@@ -227,7 +253,9 @@ export const TICKET: EntiteDeclaree = {
 			//  `lint:etats`. C'est la limite que #436 décrivait, et elle se referme
 			//  ici : chacune est maintenant sa propre section, avec son propre motif.
 			id: 'mise_en_avant',
-			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel',
+			//  Une actualité n'en garde que 📌 et 🚨 (#1096) : 🛡️ se dit par les
+			//  Destinataires, 🔒 sous le Périmètre.
+			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel (actualité : 📌 · 🚨)',
 			pliee: true,
 		},
 		{

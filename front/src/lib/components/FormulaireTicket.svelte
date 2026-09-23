@@ -1,52 +1,39 @@
 <!--
-  Le formulaire d'un ticket — celui qu'on remplit pour le CRÉER, et celui qu'on
-  rouvre pour le MODIFIER. Un seul fichier pour les deux gestes.
+  Le formulaire d'une AFFAIRE — actualités comprises —, celui qu'on remplit pour
+  la CRÉER et celui qu'on rouvre pour la MODIFIER. Un seul fichier, deux gestes.
 
-  POURQUOI CE COMPOSANT EXISTE. `tickets/nouveau` était le dernier écran du site à
-  créer un objet par **page dédiée**, le troisième paradigme que #367 avait éliminé
-  partout ailleurs sans venir jusqu'ici (cf. `FormulaireCreation.svelte`, qui le
-  nommait déjà comme le cas restant). Il en gardait les deux marques visibles : un
-  « ← Retour » à gauche du titre là où tout le site porte « ✕ Annuler » à droite,
-  et un seul bouton d'annulation en bas de formulaire.
+  ## 🔴 UN SEUL FORMULAIRE depuis le 23/09/2026 (arbitré à l'écran, maquette à l'appui)
 
-  POURQUOI UN COMPOSANT plutôt que le formulaire recopié dans la page : celle-ci
-  ferait ~940 lignes, très au-delà du rang 1 (`standards/02` §6). Il suit le
-  contrat de `FormulaireActualite` : il porte sa boîte et signale par `cree`.
+  > « Sur la page, il y a deux nouveaux boutons : Affaires et Actualités. J'en veux
+  >   qu'un seul “+ Nouvelle affaire” comprenant toutes les sections Affaires et
+  >   Actualités, avec une nouvelle catégorie Actualité qui apparaît en premier.
+  >   Selon le choix de la catégorie, les sections peuvent changer. Prévoir toutes
+  >   les sections, grisées, pliées et inactives pour celles inappropriées. »
 
-  ## POURQUOI IL SERT AUSSI L'ÉDITION (17/08/2026, #425)
+  `FormulaireActualite` a disparu dans celui-ci. « Actualité » est la première
+  pastille de la catégorie (pleine ligne, puis un filet — variante A). La NATURE
+  qu'elle décide — informer ou faire traiter — éteint des sections : Suivi,
+  Équipement et Intervenant pour une actualité, Destinataires pour une affaire
+  suivie. Elles restent à leur rang, grisées, avec leur motif, et ce qu'elles
+  portaient ne part pas. La règle vit dans `$lib/formulaire-affaire` (et le motif
+  dans la déclaration `TICKET`), pas en `{#if}` ici : la même question se pose à
+  l'affichage et à l'envoi.
 
-  Le crayon ✏️ d'une carte de ticket ouvrait un SECOND formulaire, écrit à la main
-  dans la page : aucune section nommée, « Périmètre » écrit deux fois, des `style=`
-  en ligne recomposant `.field`, et un avertissement d'accessibilité désactivé par
-  `svelte-ignore` au lieu d'être corrigé. Le remettre au standard aurait produit
-  **deux formulaires corrects pour le même objet**, donc deux libellés, deux ordres
-  de champs et deux jeux de règles libres de diverger au premier lot suivant.
-  Arbitré par l'utilisateur :
+  ## Pourquoi il sert aussi l'édition (17/08/2026, #425)
 
   > « je préfère que tu rendes paramétrable avec les valeurs déjà saisies le
   >   formulaire d'édition plutôt que de le dupliquer »
 
-  D'où la prop `ticket` : `null` = création, un ticket = édition de ses valeurs.
-  C'est le contrat qu'`EvolForm` porte déjà pour les évolutions (`editMode` +
-  valeurs initiales), servi par quatre écrans.
+  D'où la prop `ticket` : `null` = création, une affaire = correction. La
+  catégorie s'y corrige aussi — c'est ainsi qu'une affaire devient une actualité
+  ou l'inverse —, et ce qui s'efface alors est annoncé avant d'enregistrer.
 
-  ⚠️ AUCUN bouton d'annulation EN CRÉATION. La commande vit dans l'en-tête de page,
-  où le bouton d'ouverture bascule en « ✕ Annuler » — deux commandes pour un
-  formulaire est précisément le défaut relevé sur la modale du calendrier (#367).
-  En ÉDITION il n'y a pas d'en-tête pour la porter (le formulaire s'ouvre dans la
-  carte du ticket) : le bouton est alors rendu ici, comme le fait `EvolForm`.
-  ## Plus de bloc `<style>` (21/09/2026)
-
-  Il ne portait plus **aucune règle** : quatre commentaires seulement, vestiges
-  de règles parties avec leur balisage (`.cat-*` → `ChoixPastilles`,
-  `.intitule-champ` → titre de section, `.form-actions` → `app.css`,
-  `.saisi-pour-*` → `ChampSaisiPour` #498). Un `<style>` sans règle n'est pas du
-  style, c'est un commentaire mal rangé — et il comptait dans les 500 lignes.
+  ⚠️ « Annuler » est À CÔTÉ d'« Enregistrer », dans les deux gestes : la page ne
+  porte plus de « ✕ Annuler » quand le formulaire est ouvert (#367).
 -->
 <script lang="ts">
-	import { pourChampLocal, depuisChampLocal } from '$lib/date';
+	import { pourChampLocal } from '$lib/date';
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
-	import { STATUT_TICKET_LABELS } from '$lib/tickets';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { tickets as ticketsApi, admin as adminApi, ApiError, type Ticket } from '$lib/api';
@@ -55,158 +42,111 @@
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import SectionsSpecifiquesTicket from '$lib/components/SectionsSpecifiquesTicket.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
+	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
+	import RepriseAnnonceHall from '$lib/components/RepriseAnnonceHall.svelte';
+	import type { PrefillActualite } from '$lib/actualite-prefill';
 	import { isCS } from '$lib/stores/auth';
 	import {
+		CATEGORIE_ACTUALITE,
 		OPTIONS_CATEGORIE,
 		optionsCategorie,
 		OPTIONS_TICKET,
+		STATUT_TICKET_LABELS,
 		TICKET_CONFIDENTIEL_ACQUIS,
 		optionsDuTicket,
-		optionsVersTicket,
 	} from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
+	import { PUBLICATION } from '$lib/entites/publication';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
+	import { reserveAuConseil } from '$lib/destinataires';
+	import { confirmer } from '$lib/confirmation';
+	import {
+		chargeUtileAffaire,
+		natureDe,
+		pertesAuChangement,
+		sectionsInactives,
+		type SaisieAffaire,
+	} from '$lib/formulaire-affaire';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { comparerParNom } from '$lib/noms';
-	import { lotDepuisSaisie, nomCopie, saisieDepuis } from '$lib/saisi-pour';
+	import { nomCopie, saisieDepuis } from '$lib/saisi-pour';
 
-	/**  Le ticket à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut) =
+	/**  L'affaire à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut) =
 	 *   création. Le mode ne change pas pendant la vie du composant : l'appelant le
-	 *   remonte à neuf (`{#key}`) quand il passe d'un ticket à l'autre, exactement
-	 *   comme il le fait pour `EvolForm`. */
+	 *   remonte à neuf (`{#key}`) quand il passe d'une affaire à l'autre. */
 	export let ticket: Ticket | null = null;
 
 	/**  Ce qui RAMÈNE le formulaire à l'écran quand il est rendu loin du geste
-	 *   qui l'ouvre — un pied de gabarit, sous une longue liste. Relayé jusqu'à
-	 *   `FormulaireCreation`, qui ne défile que si le cadre est hors de la bande
-	 *   visible : un formulaire ouvert sous les yeux ne fait pas sauter la page.
-	 *
-	 *   ⚠️ Cette prop existait dans `FormulaireCreation` et `CadreFormulaire`, et
-	 *   AUCUN des onze formulaires qui les enveloppent ne la relayait : une prop
-	 *   non relayée prend sa valeur par défaut, et le comportement manque en
-	 *   silence. `check-geste-edition` règle F le refuse désormais (13/09/2026). */
+	 *   qui l'ouvre — relayé jusqu'à `FormulaireCreation` (`check-geste-edition`,
+	 *   règle F, 13/09/2026). */
 	export let cle: unknown = undefined;
 
 	const modeEdition = ticket !== null;
 
-	/**  L'état du cadre #430 que ce formulaire rend. C'est LUI qui décide des
-	 *   sections, via `sectionPresente(TICKET, etat, …)` — plus aucune condition
-	 *   `!modeEdition` ne gouverne une section ici, et `npm run lint:etats` le
-	 *   refuse. Le mode ne change pas pendant la vie du composant. */
+	/**  L'état du cadre #430 que ce formulaire rend : c'est LUI qui décide des
+	 *   sections, via `sectionPresente(TICKET, etat, …)` — `lint:etats` refuse
+	 *   qu'une condition en dur les gouverne. */
 	const etat: Etat = modeEdition ? 'edition' : 'creation';
 
 	const dispatch = createEventDispatcher<{ cree: Ticket; modifie: Ticket; annule: void }>();
 
 	let titre = ticket?.titre ?? '';
 	let description = ticket?.description ?? '';
-	//  Section « Quand » (#1092) : deux notions distinctes — quand ça se passe,
-	//  et avant quand c est attendu.
+	//  Section « Quand » (#1092) : une date fait paraître l'affaire au calendrier.
 	let debut = pourChampLocal(ticket?.debut);
 	let fin = pourChampLocal(ticket?.fin);
 	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
 	let assisteIA = false;
-	//  🔴 AUCUNE catégorie présélectionnée (21/09/2026, demandé à l'écran).
-	//  « Panne » l'était, et c'était un choix par défaut déguisé : une affaire
-	//  enregistrée sans y toucher arrivait classée en panne, alors que la
-	//  catégorie décide de QUI traite. Un défaut qui engage quelqu'un d'autre
-	//  n'est pas un défaut, c'est une réponse qu'on n'a pas donnée.
+	//  🔴 AUCUNE catégorie présélectionnée (21/09/2026) : un défaut qui engage
+	//  quelqu'un d'autre n'est pas un défaut, c'est une réponse qu'on n'a pas donnée.
 	let categorie = ticket?.categorie ?? '';
 	let statut = ticket?.statut ?? 'ouvert';
-	//  🛡️ Réservé au conseil syndical (#710) — le CS seul le pose, le serveur le
-	//  revérifie, et le libellé se distingue du 🔒 d'une actualité (voir le champ).
-	//  🔴 LES TROIS OPTIONS, reprises du ticket (05/09/2026) : le formulaire
-	//  montre le DERNIER état, et ce qu'on enregistre devient l'état. Le pont
-	//  écran ⇄ objet vit dans `$lib/tickets` — `brouillon` écrit `confidentiel`,
-	//  `urgente` écrit la priorité, et rien ici ne le réécrit.
+	//  Les options, reprises de l'affaire : le pont écran ⇄ objet vit dans
+	//  `$lib/tickets` (`brouillon` écrit `confidentiel`, `urgente` la priorité).
 	let options = optionsDuTicket(ticket);
-	//  Ce que l'assistant IA reçoit pour COMPRENDRE le texte — à ne pas réécrire
-	//  (#985, arbitré le 17/09/2026 : catégorie, périmètre, état).
-	$: assistant = contexteAssistant('ticket', {
-		Catégorie: OPTIONS_CATEGORIE.find((o) => o.val === categorie)?.label ?? categorie,
-		Périmètre: perimetreContexte(perimetreCible),
-		État: STATUT_TICKET_LABELS[statut] ?? statut,
-	});
-	//  `confidentiel` reste une variable à part : trois autres endroits de ce
-	//  fichier la lisent (la garde WhatsApp, notamment).
-	$: confidentiel = options.brouillon;
-	//  Workflow du ticket, VISIBLE de tous dès la création : c'est une information
-	//  capitale pour le suivi, et la masquer laissait croire qu'un ticket n'a pas
-	//  d'état tant que le CS ne l'a pas touché. Seul le CS peut la MODIFIER — un
-	//  résident verrait sinon son signalement partir « Résolu », donc hors du
-	//  suivi, sans que personne l'ait regardé. Le serveur refait le contrôle :
-	//  liste blanche réservée au CS (socle 03 §1 — ce que l'interface grise n'est
-	//  qu'un confort). Les options viennent de `$lib/tickets` — quatrième copie
-	//  de cette liste jusqu'au 17/08/2026 (#415).
-	//
-	//  ✅ EN ÉDITION AUSSI, depuis le cadre #430 (17/08/2026). L'édition CORRIGE :
-	//  une erreur, un oubli, un complément — et l'état s'y corrige comme les
-	//  autres champs. Le motif invoqué la veille (« l'état se change depuis le
-	//  fil, pour qu'il y laisse une trace ») n'existe pas dans le cadre : les
-	//  trois motifs sont `geste`, `hérité` et `api`, et aucun ne couvrait
-	//  celui-là.
-	//
-	//  La trace ne se perd pas pour autant — c'est le SERVEUR qui a changé :
-	//  `PATCH /tickets/{id}` n'écrit plus une transition de workflow mais une
-	//  **correction** (`crud.py`). Corriger une faute de frappe n'apparaît donc
-	//  plus dans l'Historique comme une étape du suivi, et le changement d'état
-	//  volontaire garde le sien, via les évolutions.
-
-	//  Copie défensive du périmètre : le tableau vient du ticket affiché dans la
-	//  liste. Lié tel quel, une sélection abandonnée resterait visible sur la carte
-	//  alors que rien n'a été enregistré.
+	//  Copies défensives : les tableaux viennent de la carte affichée, et une
+	//  sélection abandonnée y resterait visible sans avoir été enregistrée.
 	let perimetreCible: string[] = [...(ticket?.perimetre_cible ?? perimetreDefautListe())];
-	//  ✅ La DIFFUSION est rouverte à l'édition (18/08/2026, arbitrage utilisateur) :
-	//  le conseil syndical doit pouvoir décider d'envoyer au syndic un ticket déjà
-	//  saisi. Les cases reprennent les valeurs enregistrées — « telle qu'à la
-	//  création ».
-	//
-	//  ⚠️ Ce qui rend la réouverture SANS RISQUE vit côté serveur : seule la
-	//  transition décoché → coché envoie. Un canal déjà coché ne repart pas à chaque
-	//  enregistrement — sinon corriger une faute de frappe rejouerait l'envoi, et
-	//  c'est l'incident du triple envoi WhatsApp du 14/08/2026.
+	//  Ce qu'une ACTUALITÉ ajoute (#1091, #1096) : à qui l'on parle, l'Accès 🔒
+	//  sous le Périmètre, l'affiche de hall.
+	let publicCible: string[] = [...(ticket?.public_cible ?? ['résidents'])];
+	let reservePerimetre = ticket?.reserve_perimetre ?? false;
+	let annonceHall = false;
+	//  La DIFFUSION reprend les valeurs enregistrées ; seule la transition
+	//  décoché → coché envoie, et c'est le serveur qui le décide (14/08/2026).
 	let destinataireSyndic = ticket?.destinataire_syndic ?? false;
 	let destinataireCs = ticket?.destinataire_cs ?? false;
 	let envoyerAuteur = false;
-	//  ⚠️ Le partage WhatsApp est un ACTE, pas un champ : `Ticket` n'a pas cette
-	//  colonne (à la différence de `Publication`). La case repart donc DÉCOCHÉE à
-	//  chaque ouverture — il n'y a pas d'état à restaurer, seulement un envoi à
-	//  demander. La cocher publie sur le groupe, une fois.
+	//  Un ACTE, pas une colonne : la case repart décochée à chaque ouverture.
 	let partagerWhatsapp = false;
-	// Photos et documents sont téléversés dès leur sélection, avant que le ticket
-	// existe : `POST /uploads/fichier` rend l'URL immédiatement. Les envoyer avec
-	// la création est ce qui permet à l'e-mail syndic/CS de partir avec — quand
-	// les photos étaient téléversées APRÈS, l'e-mail était déjà construit et
-	// partait sans elles, sans que rien ne le signale.
-	//  RECHARGÉES en édition depuis le 18/08/2026, comme les documents : `PATCH`
-	//  remplace la liste entière, donc partir d'un tableau vide effacerait les photos
-	//  existantes au premier enregistrement — silencieusement.
+	//  Téléversés dès leur sélection, avant l'enregistrement : c'est ce qui permet
+	//  au courriel et à l'affiche de partir AVEC eux. Rechargés en correction :
+	//  `PATCH` remplace la liste entière.
 	let photosUrls: string[] = [...(ticket?.photos_urls ?? [])];
-	//  Les documents déjà joints sont RECHARGÉS en édition : `PATCH` remplace la
-	//  liste entière (`ticket.fichiers_urls = body.fichiers_urls`). Partir d'un
-	//  tableau vide effacerait les pièces existantes au premier enregistrement —
-	//  silencieusement, et sans qu'on ait touché à la section.
 	let fichiersUrls: string[] = [...(ticket?.fichiers_urls ?? [])];
 	let error = '';
 	let loading = false;
-
-	// Saisi pour (CS/Admin uniquement) — la saisie vit dans `ChampSaisiPour`.
-	//  L'état initial vient du ticket : la section est ouverte à l'édition depuis que
-	//  le serveur sait EFFACER les `saisi_pour_*` (il lit la PRÉSENCE du champ, pas
-	//  sa non-nullité). L'ouvrir sans pré-remplir aurait proposé « En mon nom » sur un
-	//  ticket saisi pour quelqu'un — et l'aurait effacé au premier enregistrement.
-	//  🔴 UN objet, comme l'actualité (#1124) : « Au nom de » est désormais rendue
-	//  par `ChampsCommuns`, à son rang, et il attend une `SaisieSaisiPour`.
-	//  Quatre variables séparées obligeaient chaque appelant à les défaire puis
-	//  les refaire — et le premier qui en oublierait une la remettrait à son
-	//  défaut sans que personne le voie.
+	//  « Au nom de » (CS/admin) — la saisie vit dans `ChampSaisiPour`.
 	let saisiPour = saisieDepuis(ticket);
 	let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
 
+	//  ── Ce que la NATURE décide (formulaire unique, 23/09/2026) ─────────────
+	$: nature = natureDe(categorie);
+	$: actualite = nature === 'actualite';
+	$: inactives = sectionsInactives(etat, categorie);
+	$: reserveeAuConseil = actualite && reserveAuConseil(publicCible);
+	//  Une actualité réservée — au périmètre ou au conseil — n'a pas d'affiche.
+	$: if ((reservePerimetre || reserveeAuConseil) && annonceHall) annonceHall = false;
+	$: assistant = contexteAssistant(actualite ? 'actualité' : 'ticket', {
+		Catégorie: OPTIONS_CATEGORIE.find((o) => o.val === categorie)?.label ?? categorie,
+		Périmètre: perimetreContexte(perimetreCible),
+		...(actualite ? {} : { État: STATUT_TICKET_LABELS[statut] ?? statut }),
+	});
+
 	onMount(async () => {
-		// Rien à charger quand la section n'est pas rendue (cf. la déclaration).
-		if ($isCS && sectionPresente(TICKET, etat, 'nature')) {
+		if ($isCS && sectionPresente(TICKET, etat, 'au_nom_de')) {
 			try {
 				const all = await adminApi.utilisateurs();
 				usersActifs = all.filter((u: any) => u.actif).sort(comparerParNom);
@@ -216,27 +156,53 @@
 		}
 	});
 
-	//  Les catégories viennent de `$lib/tickets` — quatrième copie de cette liste
-	//  jusqu'au 17/08/2026, comme les statuts l'avaient été (#415).
+	//  Le pré-remplissage depuis une affiche de hall (#832) produit une actualité.
+	//  Ce n'est pas une présélection (`lint:choix-requis`) : c'est la réponse au
+	//  geste « reprendre cette affiche », que le conseil vient de faire.
+	function appliquerReprise(p: PrefillActualite) {
+		({ titre, description } = p);
+		photosUrls = p.photos;
+		perimetreCible = p.perimetreCible;
+		categorie = CATEGORIE_ACTUALITE;
+	}
 
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
-	//  ── L'aperçu avant diffusion (#498) ───────────────────────────────────────
-	//  Il ne s'interpose QUE si un canal est coché : sans diffusion il n'y a rien
-	//  à prévisualiser, et une modale de plus serait une étape gratuite entre
-	//  l'utilisateur et son ticket.
-	//  ⚠️ Création seulement. En édition, cocher un canal renvoie l'objet tel
-	//  qu'il est déjà : c'est un geste différent, il aura son propre lot.
+	/** Tout ce qui a été saisi — la charge utile en est dérivée (`$lib/formulaire-affaire`). */
+	$: saisie = {
+		titre,
+		description,
+		assisteIA,
+		categorie,
+		statut,
+		options,
+		perimetreCible,
+		publicCible,
+		reservePerimetre,
+		debut,
+		fin,
+		photosUrls,
+		fichiersUrls,
+		destinataireSyndic,
+		destinataireCs,
+		partagerWhatsapp,
+		envoyerAuteur,
+		annonceHall,
+		saisiPour,
+	} satisfies SaisieAffaire;
+
+	//  ── L'aperçu avant diffusion (#498) — il compose avec le gabarit de la
+	//  NATURE (le serveur choisit `publication_syndic` pour une actualité).
 	$: aUneDiffusion = destinataireSyndic || destinataireCs || partagerWhatsapp;
-	//  L'état et la modale vivent dans `SectionDiffusion` depuis le 20/08/2026 —
-	//  l'aperçu appartient à l'objet Diffusion, pas à ses appelants (#498). Ne
-	//  reste ici que le BROUILLON, que ce formulaire seul connaît.
 	let refDiffusion: any = null;
 	const brouillonApercu = () =>
 		ticketsApi.apercuDiffusion({
+			ticket_id: ticket?.id,
 			titre: titre.trim(),
 			description,
 			categorie,
+			urgente: options.urgente,
+			public_cible: actualite ? publicCible : undefined,
 			perimetre_cible: perimetreCible,
 			photos_urls: photosUrls,
 			fichiers_urls: fichiersUrls,
@@ -246,12 +212,24 @@
 			envoyer_auteur: envoyerAuteur,
 		});
 
-	//  Le vocabulaire d'écran vient de la DÉCLARATION, jamais d'un libellé
-	//  réécrit ici : `TICKET.libelle` dit « Affaire » (#1107). L'édition garde
-	//  le numéro, qui est ce qui distingue une affaire d'une autre.
-	$: titreBoite = modeEdition
-		? `${TICKET.libelleModifier} #${ticket?.numero ?? ''}`
-		: TICKET.libelleNouveau;
+	//  Le vocabulaire vient des DÉCLARATIONS (#1107). Une actualité n'affiche pas
+	//  de numéro ; une affaire suivie le garde, c'est ce qui la distingue.
+	$: titreBoite = !modeEdition
+		? actualite
+			? PUBLICATION.libelleNouveau
+			: TICKET.libelleNouveau
+		: estActualiteAvant
+			? PUBLICATION.libelleModifier
+			: `${TICKET.libelleModifier} #${ticket?.numero ?? ''}`;
+	const estActualiteAvant = natureDe(ticket?.categorie ?? '') === 'actualite';
+	//  « Actualité » est réservée au conseil. Son AUTEUR peut la corriger
+	//  (`peut_editer`), mais pas la convertir : c'est un geste de modération, et
+	//  une affaire suivie ouverte par lui repartirait sans état. Il ne voit donc
+	//  que la sienne — la taire laisserait une catégorie cochée invisible.
+	const optionsCat =
+		!$isCS && estActualiteAvant
+			? OPTIONS_CATEGORIE.filter((o) => o.val === 'actualite')
+			: optionsCategorie($isCS);
 
 	/** Contrôles de saisie — communs à la soumission directe et à l'aperçu. */
 	function saisieValide(): boolean {
@@ -259,9 +237,8 @@
 			error = 'Titre et description sont obligatoires.';
 			return false;
 		}
-		//  La catégorie est déclarée `requis` dans le cadre : rien ne serait plus
-		//  trompeur que de l'exiger à l'écran et de laisser le serveur en poser
-		//  une à notre place.
+		//  Déclarée `requis` : l'exiger à l'écran et laisser le serveur en poser
+		//  une à notre place serait le plus trompeur des deux.
 		if (!categorie) {
 			error = 'Choisissez une catégorie : c’est elle qui décide de qui traite.';
 			return false;
@@ -274,12 +251,8 @@
 		return true;
 	}
 
-	/**  Le geste de soumission : aperçu d'abord si un canal est coché.
-	 *
-	 *   L'aperçu s'intercale ICI et non dans `submit` : celui-ci reste le chemin
-	 *   d'enregistrement, appelé aussi bien par le formulaire que par la
-	 *   confirmation de la modale. Deux chemins qui créeraient le ticket chacun de
-	 *   leur côté finiraient par diverger. */
+	/**  Le geste de soumission : aperçu d'abord si un canal est coché. `submit`
+	 *   reste l'unique chemin d'enregistrement. */
 	function soumettre() {
 		if (!saisieValide()) return;
 		if (!modeEdition && refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
@@ -289,71 +262,35 @@
 	async function submit() {
 		if (!saisieValide()) return;
 		refDiffusion?.fermerApercu();
+		const contexte = { creation: !modeEdition, estCS: $isCS };
+		if (ticket) {
+			//  🔴 Changer de nature EFFACE ce que les sections éteintes portaient :
+			//  on le dit avant, et rien ne part sans accord (arbitré le 23/09/2026).
+			const pertes = pertesAuChangement(ticket, saisie);
+			if (
+				pertes.length &&
+				!(await confirmer({
+					titre: actualite ? 'En faire une actualité' : 'En faire une affaire suivie',
+					message: `Ce changement de catégorie efface ${pertes.join(', ')}.`,
+					libelleConfirmer: 'Enregistrer',
+				}))
+			)
+				return;
+		}
 		loading = true;
 		try {
+			const charge = chargeUtileAffaire(saisie, contexte);
 			if (ticket) {
-				//  Tout ce que la déclaration rend en édition ET que `PATCH` sait
-				//  écrire. `statut` n'accompagne le lot que pour le conseil syndical :
-				//  le serveur répond 403 à quiconque d'autre le lui envoie, y compris
-				//  à l'auteur corrigeant son propre ticket — l'envoyer inconditionnellement
-				//  ferait échouer une correction de faute de frappe.
-				//  Tout ce que la déclaration rend en édition — les treize sections. Les
-				//  trois `saisi_pour_*` partent TOUJOURS ensemble, y compris à `null` :
-				//  c'est leur PRÉSENCE qui dit au serveur d'écrire, et c'est ce qui
-				//  permet de revenir à « En mon nom ».
-				const maj = await ticketsApi.update(ticket.id, {
-					titre: titre.trim(),
-					description,
-					assiste_ia: assisteIA || undefined,
-					categorie,
-					perimetre_cible: perimetreCible,
-					debut: depuisChampLocal(debut),
-					fin: depuisChampLocal(fin),
-					photos_urls: photosUrls,
-					fichiers_urls: fichiersUrls,
-					...($isCS
-						? {
-								statut,
-								...optionsVersTicket(options),
-								destinataire_syndic: destinataireSyndic,
-								destinataire_cs: destinataireCs,
-								partager_whatsapp: partagerWhatsapp,
-								...lotDepuisSaisie(saisiPour),
-							}
-						: {}),
-				});
-				toast('success', `${TICKET.libelle} modifiée`);
+				const maj = await ticketsApi.update(ticket.id, charge);
+				toast('success', `${actualite ? PUBLICATION.libelle : TICKET.libelle} modifiée`);
 				dispatch('modifie', maj);
 				return;
 			}
-			const payload: any = {
-				titre: titre.trim(),
-				description,
-				assiste_ia: assisteIA,
-				categorie,
-				perimetre_cible: perimetreCible,
-				debut: depuisChampLocal(debut),
-				fin: depuisChampLocal(fin),
-				destinataire_syndic: destinataireSyndic,
-				destinataire_cs: destinataireCs,
-				partager_whatsapp: partagerWhatsapp,
-				envoyer_auteur: envoyerAuteur,
-				photos_urls: photosUrls,
-				fichiers_urls: fichiersUrls,
-			};
-			if ($isCS) {
-				//  Le Workflow était DÉCORATIF à la création : les pastilles s'affichaient,
-				//  se cliquaient, et `statut` ne partait pas — le ticket repartait toujours
-				//  en « Ouvert » (#435). Le serveur l'accepte pourtant depuis le 16/08, avec
-				//  une liste blanche DÉRIVÉE de l'énumération et réservée au CS ; seule la
-				//  charge utile l'avait oublié. Comme en édition, il n'accompagne le lot que
-				//  pour le CS : un résident ne doit pas ouvrir un ticket déjà « Résolu ».
-				payload.statut = statut;
-				Object.assign(payload, optionsVersTicket(options));
-				Object.assign(payload, lotDepuisSaisie(saisiPour));
-			}
-			const t = await ticketsApi.create(payload);
-			toast('success', `${TICKET.libelle} ${t.numero} créée avec succès`);
+			const t = await ticketsApi.create(charge);
+			toast(
+				'success',
+				actualite ? `${PUBLICATION.libelle} publiée` : `${TICKET.libelle} ${t.numero} créée`,
+			);
 			dispatch('cree', t);
 		} catch (e) {
 			error =
@@ -368,16 +305,10 @@
 	}
 </script>
 
-<!--  L'avertissement n'est rendu qu'en création : c'est l'envoi du ticket qui
-      notifie. Cocher « Urgent » sur un ticket existant ne déclenche aucune
-      alerte — l'afficher ici promettrait une notification qui ne partira pas.
-
-      🔴 Il suivait la catégorie « Urgence », retirée le 07/09/2026 (#820) : elle
-      répondait à la question du DÉLAI dans la liste qui pose celle de la NATURE.
-      Il suit désormais la case « Urgent » des options, qui est ce que le
-      résident coche pour dire que ça presse — et qui pose `priorite = haute`
-      depuis #766. -->
-{#if !modeEdition && options.urgente}
+<!--  L'avertissement n'est rendu qu'en CRÉATION d'une affaire suivie : c'est
+      l'envoi qui notifie. Il suit la case « Urgent » (#820), qui pose
+      `priorite = haute` — pour le résident aussi, désormais. -->
+{#if !modeEdition && !actualite && options.urgente}
 	<div class="alert alert-error largeur-saisie" style="margin-bottom:1rem">
 		&#x1F6A8; <strong>Urgent</strong> — Le conseil syndical et le syndic seront notifiés
 		immédiatement. En cas de danger immédiat, composez le
@@ -391,10 +322,13 @@
 
 <FormulaireCreation titre={titreBoite} encadre={!modeEdition} {cle}>
 	<form on:submit|preventDefault={soumettre}>
-		<!--  1. Titre — et lui seul. La catégorie était rendue ICI, et AVANT le
-		      titre : le premier champ de la première section n'était pas le titre.
-		      Arbitré par l'utilisateur le 18/08/2026 — elle qualifie le ticket, elle
-		      est donc un champ spécifique (section 2). -->
+		<!--  Le pré-remplissage depuis une affiche vient AVANT le titre : c'est un
+		      raccourci qui REMPLIT le formulaire, pas une section de l'entité. Il
+		      produit une actualité — le conseil seul la publie. -->
+		{#if $isCS}
+			<RepriseAnnonceHall {modeEdition} on:reprise={(e) => appliquerReprise(e.detail)} />
+		{/if}
+
 		<SectionTitre
 			id="titre"
 			bind:valeur={titre}
@@ -402,33 +336,26 @@
 			maxlength={200}
 		/>
 
-		<!--  2 et 3. Ce que le ticket a de PROPRE — catégorie, « Saisi pour »,
-		      options de publication, workflow. Extrait le 05/09/2026 dans
-		      `SectionsSpecifiquesTicket` : les sections 4 à 9 venaient déjà de
-		      `ChampsCommuns`, ce formulaire n'a plus à porter que l'assemblage et la
-		      soumission. L'ORDRE des sections, lui, ne bouge pas d'une ligne (R2). -->
+		<!--  2 et 3 — Catégorie (« Actualité » en tête), Équipement, Suivi : ce
+		      que l'affaire a de PROPRE. Les sections éteintes par la nature y sont
+		      rendues grisées, à leur rang. -->
 		<SectionsSpecifiquesTicket
 			{etat}
-			OPTIONS_CATEGORIE={optionsCategorie($isCS, !modeEdition)}
+			OPTIONS_CATEGORIE={optionsCat}
 			{modeEdition}
+			{inactives}
 			bind:categorie
 			bind:statut
 			bind:options
 		/>
 
-		<!--  4 à 9 : ordre, intitulés et séparations hérités de `ChampsCommuns`.
-		      🔴 Aucune n'est gouvernée par `modeEdition` mais par la DÉCLARATION
-		      (`$lib/entites/ticket`), qui porte chaque divergence avec son motif ;
-		      `lint:etats` refuse qu'on remette une condition en dur ici.
-		      ⚠️ Les motifs NE SE RECOPIENT PAS : ce commentaire les listait, et
-		      il avait divergé — il annonçait encore Photos en motif `api`, soldé
-		      le 18/08/2026. Une copie d'une source unique est une source de plus. -->
-		<!--  Chaque prop lit SA section : « Au nom de » (10) et « Mise en avant »
-		      (11) étaient conditionnées à « Nature » (2), reliquat de l'ancienne
-		      section « Champs spécifiques » qui portait les trois. Leur
-		      déclaration n'était donc pas lue (#1095). -->
+		<!--  4 à 13 : ordre, intitulés et séparations hérités de `ChampsCommuns`,
+		      gouvernés par la DÉCLARATION (`lint:etats`). Ce qui change avec la
+		      nature — les options rendues, la case 🔒, les Destinataires, l'affiche
+		      — se lit sur `actualite`, dérivée de la catégorie. -->
 		<ChampsCommuns
 			entite={TICKET}
+			{inactives}
 			bind:refDiffusion
 			demanderApercu={brouillonApercu}
 			envoiEnCours={loading}
@@ -438,9 +365,10 @@
 			residentsSaisiPour={usersActifs}
 			bind:saisiPour
 			avecOptions={sectionPresente(TICKET, etat, 'mise_en_avant')}
-			objet="ticket"
-			optionsRendues={$isCS ? OPTIONS_TICKET : ['urgente']}
+			objet={actualite ? 'actualité' : 'ticket'}
+			optionsRendues={!$isCS ? ['urgente'] : actualite ? ['epingle', 'urgente'] : OPTIONS_TICKET}
 			confidentielAcquis={TICKET_CONFIDENTIEL_ACQUIS}
+			dejaEpingle={ticket?.epingle ?? false}
 			bind:epingle={options.epingle}
 			bind:urgente={options.urgente}
 			bind:brouillon={options.brouillon}
@@ -449,6 +377,10 @@
 			bind:fin
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
+			avecReservePerimetre={$isCS && actualite}
+			bind:reservePerimetre
+			avecDestinataires={$isCS && sectionPresente(TICKET, etat, 'destinataires')}
+			bind:destinataires={publicCible}
 			avecDescription={sectionPresente(TICKET, etat, 'description')}
 			avecNotificationCs
 			descriptionRequise
@@ -456,7 +388,9 @@
 			{assistant}
 			bind:titreObjet={titre}
 			bind:assisteIA
-			descriptionPlaceholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)"
+			descriptionPlaceholder={actualite
+				? 'Contenu de l’actualité…'
+				: 'Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)'}
 			avecPhotos={sectionPresente(TICKET, etat, 'pieces_jointes')}
 			bind:photos={photosUrls}
 			avecDocuments={sectionPresente(TICKET, etat, 'pieces_jointes')}
@@ -467,23 +401,23 @@
 			bind:cs={destinataireCs}
 			bind:auteur={envoyerAuteur}
 			auteurNom={nomCopie(ticket)}
-			aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
-			whatsappInterdit={motifWhatsappInterdit(confidentiel, 'ticket')}
-		/>
+			aideWhatsapp={actualite && reservePerimetre
+				? 'Le groupe est commun à toute la copropriété : le message portera le titre et le périmètre, avec un lien vers l’application — jamais le contenu.'
+				: 'Le message est publié sur le groupe WhatsApp ; les photos jointes partent avec.'}
+			whatsappInterdit={motifWhatsappInterdit(
+				actualite ? reserveeAuConseil : options.brouillon,
+				actualite ? 'actualité' : 'ticket',
+			)}
+		>
+			<!--  L'affiche de hall n'est pas un canal : c'est l'option d'une ACTUALITÉ,
+			      rendue dans le créneau de la Diffusion (#498). -->
+			<svelte:fragment slot="diffusion">
+				{#if actualite}
+					<DiffusionPublication reservee={reservePerimetre || reserveeAuConseil} bind:annonceHall />
+				{/if}
+			</svelte:fragment>
+		</ChampsCommuns>
 
-		<!--  « Annuler » est À CÔTÉ d'« Enregistrer », dans les DEUX gestes
-		      (18/08/2026) : *« c'est plus logique à côté du bouton de l'action »*. Il
-		      vivait en création dans l'en-tête de page et en édition ici — le même
-		      geste avait deux emplacements selon l'écran.
-
-		      ⚠️ Corollaire non négociable : l'en-tête ne porte PLUS « ✕ Annuler »
-		      quand le formulaire est ouvert. Deux commandes d'annulation pour un seul
-		      formulaire est le défaut relevé sur la modale du calendrier (#367) —
-		      c'est la page qui masque son bouton d'ouverture. -->
 		<PiedFormulaire enCours={loading} on:annule />
 	</form>
 </FormulaireCreation>
-
-<!--  L'aperçu s'ouvre PAR-DESSUS le formulaire, jamais à sa place : « Retour au
-      formulaire » doit rendre la saisie intacte, et un formulaire démonté puis
-      remonté la perdrait. C'est la moitié de l'arbitrage du 19/08. -->
