@@ -105,6 +105,12 @@
 	/** Afficher le libellé au-dessus de la rangée — le cas du formulaire. */
 	export let libelleVisible = false;
 
+	/**  Afficher le libellé DEVANT la rangée, sur la même ligne — le cas d'une
+	 *   barre de FILTRES qui en porte plusieurs (23/09/2026, variante A arbitrée
+	 *   à l'écran : « Nature » et « Suivi » se confondaient). Le libellé ne
+	 *   défile pas avec les pastilles. */
+	export let libelleDevant = false;
+
 	/**
 	 *  La rangée DÉFILE-t-elle horizontalement, ou se replie-t-elle sur plusieurs
 	 *  lignes ?
@@ -183,9 +189,12 @@
 	const idTitre = `choix-pastilles-${++compteur}`;
 </script>
 
-<div class={libelleVisible ? 'field champ-large' : ''}>
-	{#if libelleVisible}
-		<span class="libelle-groupe" id={idTitre}
+<div
+	class={libelleVisible ? 'field champ-large' : ''}
+	class:choix-libelle-devant={libelleDevant && !libelleVisible}
+>
+	{#if libelleVisible || libelleDevant}
+		<span class="libelle-groupe" class:libelle-devant={libelleDevant} id={idTitre}
 			>{libelle}{#if requis}<EtoileRequis vide={!valeur} />{/if}</span
 		>
 	{/if}
@@ -195,8 +204,8 @@
 		class:filters--grille={grille}
 		class:filters--egalisee={avecDetail && !grille}
 		role={radio ? 'radiogroup' : 'group'}
-		aria-label={libelleVisible ? undefined : libelle}
-		aria-labelledby={libelleVisible ? idTitre : undefined}
+		aria-label={libelleVisible || libelleDevant ? undefined : libelle}
+		aria-labelledby={libelleVisible || libelleDevant ? idTitre : undefined}
 	>
 		{#if tous !== false}
 			<!--  Jamais en radio : « Tous » n'est pas une valeur du modèle, c'est
@@ -245,6 +254,26 @@
 <style>
 	/*  Le filet qui sépare « informer » de « faire traiter » (variante A,
 	    23/09/2026) : pleine ligne dans la grille, pointillé discret. */
+	/*  Le libellé DEVANT la rangée : il reste en place, la rangée défile à côté
+	    (`min-width: 0` — sans lui, une rangée `--defilante` pousse la page). */
+	.choix-libelle-devant {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 0;
+		max-width: 100%;
+	}
+	.choix-libelle-devant > .libelle-groupe {
+		flex-shrink: 0;
+		/*  Compense la marge basse de la rangée qui défile (réservée à sa barre
+		    de défilement) : sans elle, le libellé tombe sous le centre des
+		    pastilles. */
+		margin-bottom: 0.25rem;
+	}
+	.choix-libelle-devant > .filters {
+		min-width: 0;
+		margin-bottom: 0;
+	}
 	.filet-en-tete {
 		grid-column: 1 / -1;
 		flex-basis: 100%;
