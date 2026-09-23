@@ -128,7 +128,6 @@ def create_ticket(
         description=body.description,
         debut=body.debut,
         fin=body.fin,
-        echeance=body.echeance,
         categorie=body.categorie,
         auteur_id=user.id,
         lot_id=body.lot_id,

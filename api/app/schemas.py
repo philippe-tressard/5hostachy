@@ -139,11 +139,9 @@ class TokenResponse(BaseModel):
 
 
 class TicketCreate(SaisiPourEntree, AssisteIAEntree):
-    #  Section « Quand » (#1092). `debut`/`fin` : quand ça se passe — le
-    #  calendrier. `echeance` : avant quand c'est attendu — le suivi.
+    #  Section « Quand » (#1092) : quand ça se passe — le calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
-    echeance: Optional[date] = None
     titre: str
     description: str
     #  🔴 AUCUN défaut, et c'est le pendant serveur de la décision d'écran du
@@ -239,6 +237,11 @@ class TicketRead(SaisiPourSortie, AssisteIASortie):
     epingle: bool = False
     #  Même raison : un état, donc relu. La case doit refléter ce qui est.
     suivi_kanban: bool = False
+    #  Section « Quand » (#1092) — RELUE depuis le 23/09/2026 : acceptée en
+    #  entrée depuis la 0200, elle n'était jamais rendue. Le calendrier et le
+    #  filtre « Événement » n'avaient rien à lire, et une édition l'effaçait.
+    debut: Optional[datetime] = None
+    fin: Optional[datetime] = None
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
@@ -257,11 +260,9 @@ class TicketRead(SaisiPourSortie, AssisteIASortie):
 
 
 class TicketUpdate(SaisiPourEntree, AssisteIACorrection):
-    #  Section « Quand » (#1092). `debut`/`fin` : quand ça se passe — le
-    #  calendrier. `echeance` : avant quand c'est attendu — le suivi.
+    #  Section « Quand » (#1092) : quand ça se passe — le calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
-    echeance: Optional[date] = None
     #  ⚠️ `Optional[str]` jusqu'au 17/08/2026, et c'était la **seule** barrière :
     #  `Ticket` est un modèle `table=True`, donc SQLModel ne valide rien à
     #  l'affectation. `PATCH /tickets/{id}` écrivait en base la chaîne qu'on lui

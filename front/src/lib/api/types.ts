@@ -129,9 +129,6 @@ export interface Ticket extends PorteSaisiPourLu {
 	 *   objet. */
 	debut?: string | null;
 	fin?: string | null;
-	/**  Avant quand c'est attendu — la relance, jamais l'agenda. Les affaires
-	 *   seules : une actualité ne se suit pas (#1092). */
-	echeance?: string | null;
 	/**  📌 Épinglé — maintenu en tête de la liste (05/09/2026).
 	 *
 	 *   ⚠️ Il n'y a pas de champ `urgente` en face : l'urgence d'un ticket EST sa

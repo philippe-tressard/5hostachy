@@ -147,6 +147,12 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - Lire un objet ou rendre 404 : `utils/recuperer.ou_404(session, Modele, id,
   "libellé")` — jamais `session.get` suivi d'un `raise HTTPException(404)`, que
   #1047 résorbe.
+- La valeur d'une énumération (`categorie`, `statut`…) : `utils/valeurs.valeur(x)`,
+  jamais `str(x)` — qui rend « CategorieTicket.etude_travaux » — ni un
+  `getattr(x, "value", x)` recopié (il l'était neuf fois ; 🔒 `test_valeur_source_unique`).
+- Lire un objet pour le RENDRE : `Schema.model_validate(objet)` puis les seuls
+  champs dérivés — jamais une recopie colonne par colonne, où tout oubli part à
+  sa valeur par défaut sans un mot (🔒 `test_ticket_read_rend_le_modele`, #1092).
 
 > 🔴 Cette section décrivait jusqu'au 23/09/2026 un backend disparu : « modèle
 > dans `models/core.py` », « trois schémas dans `schemas.py` », « soft delete par
