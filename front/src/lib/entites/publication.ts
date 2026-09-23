@@ -209,15 +209,6 @@ export const PUBLICATION: EntiteDeclaree = {
 			requis: true,
 		},
 		{
-			//  Extraite de l'ancienne section « Options de publication » (#1095). Le
-			//  pourquoi de CES quatre options-là — et pas d'autres — est en tête de
-			//  ce fichier : ce sont des qualificatifs durables, pas des actes.
-			id: 'mise_en_avant',
-			objet: 'Épinglage · Urgence · Brouillon · Confidentiel',
-			titreEcran: 'Mise en avant',
-			pliee: true,
-		},
-		{
 			id: 'destinataires',
 			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
 			//
@@ -234,6 +225,15 @@ export const PUBLICATION: EntiteDeclaree = {
 			//  qu'il suit » — vaut pour un ciblage propre à l'ENTRÉE. Ici il n'y en
 			//  a pas : on modifie celui de la publication, donc le suivi et ce qu'il
 			//  suit restent visibles des mêmes personnes, par construction.
+		},
+		{
+			//  Extraite de l'ancienne section « Options de publication » (#1095). Le
+			//  pourquoi de CES quatre options-là — et pas d'autres — est en tête de
+			//  ce fichier : ce sont des qualificatifs durables, pas des actes.
+			id: 'mise_en_avant',
+			objet: 'Épinglage · Urgence · Brouillon · Confidentiel',
+			titreEcran: 'Mise en avant',
+			pliee: true,
 		},
 		{
 			//  ✅ ROUVERTE à l'édition le 18/08/2026, comme sur les tickets — signalé

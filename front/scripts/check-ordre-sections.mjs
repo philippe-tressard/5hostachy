@@ -166,8 +166,8 @@ const PROPS_CHAMPS_COMMUNS = [
 	['avecPhotos', 'pieces_jointes'],
 	['avecDocuments', 'pieces_jointes'],
 	['avecSaisiPour', 'au_nom_de'],
-	['avecOptions', 'mise_en_avant'],
 	['avecDestinataires', 'destinataires'],
+	['avecOptions', 'mise_en_avant'],
 	['avecDiffusion', 'diffusion'],
 ].map(([prop, id]) => {
 	if (!RANGS_PAR_ID[id])

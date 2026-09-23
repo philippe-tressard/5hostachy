@@ -218,11 +218,6 @@ export const ANNONCE: EntiteDeclaree = {
 				'Une annonce est déposée par celui qui la publie, jamais pour un tiers — c’est son bien.',
 		},
 		{
-			id: 'mise_en_avant',
-			sansObjet:
-				'Une annonce ne s’épingle pas et ne se marque pas urgente : le fil de la Communauté est chronologique.',
-		},
-		{
 			//  🔴 REVIREMENT ASSUMÉ — l'utilisateur a tranché le 06/09/2026 : « ajoute
 			//  la section Destinataires ; en nouveau et en édition », et le ciblage
 			//  filtre la VISIBILITÉ, pas seulement les notifications.
@@ -260,6 +255,11 @@ export const ANNONCE: EntiteDeclaree = {
 						'ni ne le restreint — sinon répondre suffirait à faire entrer des tiers.',
 				},
 			},
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet:
+				'Une annonce ne s’épingle pas et ne se marque pas urgente : le fil de la Communauté est chronologique.',
 		},
 		{
 			//  La seule chose qui PART d'une annonce est le fait de montrer, ou non, ses

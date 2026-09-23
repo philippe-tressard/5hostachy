@@ -16,7 +16,7 @@
  *
  * ## Ce que ce contrôle REFUSE
  *
- *   1. une entité dont les sections ne sont pas **les neuf, dans l'ordre** ;
+ *   1. une entité dont les sections ne sont pas **toutes, dans l'ordre** ;
  *   2. une section qui ne dit ni ce qu'elle porte (`objet`) ni pourquoi l'entité
  *      ne la porte pas (`sansObjet`) ;
  *   3. **une divergence sans motif**, ou avec un motif hors des trois admis ;
@@ -173,7 +173,7 @@ for (const nomFichier of fichiersEntites) {
 	const ids = (decl.sections ?? []).map((s) => s.id);
 	if (ids.length !== ORDRE.length || ids.some((id, i) => id !== ORDRE[i])) {
 		echec(
-			`${court} (${nom}) — les sections ne sont pas les neuf dans l'ordre de SECTIONS_ORDRE.\n` +
+			`${court} (${nom}) — les sections ne sont pas celles de SECTIONS_ORDRE, dans son ordre.\n` +
 				`      déclarées : ${ids.join(' · ') || '(aucune)'}\n` +
 				`      attendues : ${ORDRE.join(' · ')}`,
 		);

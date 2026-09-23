@@ -133,10 +133,6 @@ export const IDEE: EntiteDeclaree = {
 			sansObjet: 'Une idée se dépose en son nom — c’est la sienne qu’on soumet au vote.',
 		},
 		{
-			id: 'mise_en_avant',
-			sansObjet: 'Une idée ne se met pas en avant : son rang vient des votes, pas d’un choix.',
-		},
-		{
 			//  🔴 REVIREMENT ASSUMÉ — tranché par l'utilisateur le 06/09/2026, en
 			//  même temps que celui de la petite annonce.
 			//
@@ -174,6 +170,10 @@ export const IDEE: EntiteDeclaree = {
 					explication: "Le public visé est celui de l'idée. Une réponse ne le redéfinit pas.",
 				},
 			},
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet: 'Une idée ne se met pas en avant : son rang vient des votes, pas d’un choix.',
 		},
 		{
 			id: 'diffusion',

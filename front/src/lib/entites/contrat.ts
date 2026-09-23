@@ -137,13 +137,6 @@ export const CONTRAT: EntiteDeclaree = {
 				'Un contrat est signé par la copropriété : il ne se saisit pas au nom de ' + "quelqu'un.",
 		},
 		{
-			id: 'mise_en_avant',
-			sansObjet:
-				"Deux contrats sont DÉSIGNÉS depuis la fiche de copropriété — l'assurance et " +
-				"le mandat de syndic —, et c'est une désignation, pas une mise en avant : " +
-				"elle dit le rôle du contrat, pas son rang d'affichage.",
-		},
-		{
 			id: 'destinataires',
 			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
 			//
@@ -158,6 +151,13 @@ export const CONTRAT: EntiteDeclaree = {
 				'Qui le consulte est décidé par les droits (conseil syndical et administration), ' +
 				'pas par un choix de saisie — la sécurité est centralisée, elle ne se règle pas ' +
 				'dans un formulaire.',
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet:
+				"Deux contrats sont DÉSIGNÉS depuis la fiche de copropriété — l'assurance et " +
+				"le mandat de syndic —, et c'est une désignation, pas une mise en avant : " +
+				"elle dit le rôle du contrat, pas son rang d'affichage.",
 		},
 		{
 			id: 'diffusion',

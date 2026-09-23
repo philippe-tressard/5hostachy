@@ -91,10 +91,6 @@ export const PRESTATAIRE: EntiteDeclaree = {
 			sansObjet: 'Un carnet d’adresses se tient, il ne se saisit pas pour un tiers.',
 		},
 		{
-			id: 'mise_en_avant',
-			sansObjet: 'Une fiche d’annuaire ne se met pas en avant : l’annuaire se lit par recherche.',
-		},
-		{
 			id: 'destinataires',
 			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
 			//
@@ -107,6 +103,10 @@ export const PRESTATAIRE: EntiteDeclaree = {
 			sansObjet:
 				"Personne n'est destinataire d'une fiche de carnet d'adresses. Qui la " +
 				'consulte relève des droits, pas de la saisie — la sécurité est centralisée.',
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet: 'Une fiche d’annuaire ne se met pas en avant : l’annuaire se lit par recherche.',
 		},
 		{
 			id: 'diffusion',

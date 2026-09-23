@@ -172,11 +172,6 @@ export const EVENEMENT: EntiteDeclaree = {
 			requis: true,
 		},
 		{
-			id: 'mise_en_avant',
-			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel',
-			pliee: true,
-		},
-		{
 			id: 'destinataires',
 			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
 			//
@@ -192,6 +187,11 @@ export const EVENEMENT: EntiteDeclaree = {
 				'lecteur. `envoyer_syndic` et `envoyer_cs` ne sont PAS des destinataires au sens ' +
 				'de la section 5 — ce sont deux canaux, et ils vivent en Diffusion (section 9), ' +
 				'comme sur les tickets.',
+		},
+		{
+			id: 'mise_en_avant',
+			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel',
+			pliee: true,
 		},
 		{
 			//  ⚠️ Le TÉLÉVERSEMENT est **immédiat** sur cet écran, et ce n'est pas un

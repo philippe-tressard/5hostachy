@@ -110,8 +110,10 @@ export const SECTIONS_ORDRE: readonly IdSection[] = [
 	'description',
 	'pieces_jointes',
 	'au_nom_de',
-	'mise_en_avant',
+	//  Destinataires AVANT Mise en avant (23/09/2026, #1096) : « elles sont
+	//  complémentaires » — à qui l'on parle, puis comment on le met en avant.
 	'destinataires',
+	'mise_en_avant',
 	'diffusion',
 ];
 
