@@ -308,11 +308,9 @@ conformes comme autant d'écarts (#429) :
 {@html safeDescription(contenu)}
 ```
 
-🔒 **`npm run lint:html` le vérifie en CI** depuis le 19/08/2026 : il lit la liste
-des assainisseurs **dans `sanitize.ts`** (une liste recopiée diverge au premier
-ajout) et exige que le nom vienne de l'**import**. Deux exceptions nommées,
-`Icon.svelte` et `QRCode.svelte`, déclarées dans le contrôle avec leur raison — et
-une exception qui ne sert plus le fait échouer.
+🔒 **`npm run lint:html` le vérifie en CI.** Ce qu'il exige et ses exceptions :
+`CLAUDE.md`, règle front n° 1 — la seule copie. Celle-ci en recopiait la date et
+la liste, et la date divergeait déjà (claude-config#122).
 
 ## Emojis non-BMP (U+10000 et au-delà)
 

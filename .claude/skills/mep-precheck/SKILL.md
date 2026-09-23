@@ -25,34 +25,12 @@ les trois règles ci-dessous priment sur la liste des contrôles.
 
 ## ⚠️ Se resynchroniser AVANT de committer (obligatoire)
 
-`origin/dev` et `origin/main` avancent **côté GitHub** : local `dev` → push → PR
-vers `main` → merge sur GitHub → « Merge branch 'main' into dev », lui aussi sur
-GitHub. Ces commits ne redescendent **jamais** tout seuls. Sans fetch explicite,
-le clone local dérive d'exactement le nombre de PR fusionnées depuis le dernier
-pull manuel — constaté le 26/07/2026 : `dev` à **16 commits** de retard, `main` à
-**151**. Committer sur cette base expose aux conflits de version
-(`front/package.json`) et à la divergence code ⇆ migrations Alembic (la panne que
-le point 10 du pré-check existe pour attraper).
-
-**Premier réflexe de toute session, avant le moindre commit :**
-```bash
-git fetch origin && git merge --ff-only origin/dev
-```
-
-Garde-fou mécanique : `.githooks/pre-commit` refuse un commit si la branche est
-en retard sur son upstream. Il est versionné mais `core.hooksPath` doit être armé
-**une fois par clone** :
-```bash
-git config core.hooksPath .githooks && git config pull.ff only
-```
-(`pull.ff only` évite qu'un `git pull` fabrique un merge commit parasite au lieu
-d'un fast-forward.) Contournement d'urgence : `ALLOW_STALE=1 git commit …`.
-
-- `main` = production protégé — toutes les modifications via PR vers `dev`
-- Prefixes commits : `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `perf:`
-- MEP : `scripts/exploitation/MaJ-Hostachy.sh` sur le **RPi actif uniquement** — bloque automatiquement sur le standby
-- `.env` non versionné · `SECRET_KEY` min 32 chars · `ENABLE_API_DOCS=false` en prod
-- Bascule manuelle (test) : `sudo bash /opt/5hostachy/scripts/exploitation/bascule.sh` depuis le RPi actif
+La commande, le hook `pre-commit` qui le refuse, son armement par clone et la
+frontière de `main` : `CLAUDE.md` → « Git & MEP — l'essentiel », déjà en contexte.
+Le pourquoi : `standards/08` §2–3. Cette section en portait une troisième copie,
+avec une ligne fausse — « MEP : `MaJ-Hostachy.sh` sur le RPi actif », alors que la
+MEP est faite par `auto-deploy.sh` et que `MaJ-Hostachy.sh` est la **reprise en
+main** (claude-config#122, 23/09/2026).
 
 ## Trois règles qui priment sur la liste des contrôles
 
@@ -83,10 +61,7 @@ de la confiance.
 | 0a | Clone à jour | `git fetch origin && git merge --ff-only origin/dev` | Fast-forward propre (cf. section ci-dessus) |
 | 0b | Modes des fichiers exécutables versionnés | **Automatisé** : job CI `test-scripts` (étape « Bits d'exécution versionnés ») | `100755` sur tout ce qui doit s'exécuter, `100644` sur les modules sourcés `lib-*.sh` |
 
-**0b — pourquoi :** `core.filemode=false` sur un clone Windows fait avaler `chmod +x`
-en silence ; le fichier part en `100644` et Linux refuse alors de l'exécuter, sans
-message. Constaté le 26/07 sur `.githooks/pre-commit` — garde-fou inerte, découvert
-seulement sur demande de relecture. Même classe que le point 7, côté dépôt.
+**0b** — pourquoi un clone Windows avale `chmod +x` : `standards/08` §3.
 Remédiation : `git update-index --chmod=+x <fichier>`.
 
 ## Étape 0 bis — exigences sans exception (avant le pré-check)
