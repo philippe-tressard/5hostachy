@@ -11,7 +11,6 @@ from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     Delegation,
-    Notification,
     StatutDelegation,
     StatutUtilisateur,
     UserLot,
@@ -22,6 +21,7 @@ from app.utils.comptes import comptes_en_attente as lister_comptes_en_attente, m
 from typing import Any
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
+from app.utils.cloche import sonner_systeme
 
 router = APIRouter()
 
@@ -99,14 +99,13 @@ def traiter_compte(
     #  puisse distinguer « refusé » de « jamais traité » (#399).
     marquer_decide(user)
 
-    notif = Notification(
+    sonner_systeme(session, "compte",
         destinataire_id=user.id,
         type="system",
         titre=notif_titre,
         corps=notif_corps,
     )
     session.add(user)
-    session.add(notif)
 
     # ── Email de confirmation au résident ─────────────────────────────────
     if user.email:

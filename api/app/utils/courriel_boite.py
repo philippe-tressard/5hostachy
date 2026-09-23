@@ -51,7 +51,6 @@ from app.auth.deps import peut_commenter
 from app.models.core import (
     ConfigSite,
     MembreSyndic,
-    Notification,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -67,6 +66,7 @@ from app.utils.courriel_ingestion import (
     RELANCE,
     examiner,
 )
+from app.utils.cloche import sonner_systeme
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +191,7 @@ def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict,
     ))
 
     for membre in membres_cs_ou_admin(session):
-        session.add(Notification(
+        sonner_systeme(session, "tache_du_conseil",
             destinataire_id=membre.id,
             type="ticket_update",
             titre="Réponse du syndic à la relance groupée",
@@ -204,7 +204,7 @@ def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict,
             #  Vers l'écran qui la CONSERVE, pas vers la liste des tickets : la
             #  notification se perd, la page se rouvre.
             lien="/espace-cs/reporting",
-        ))
+        )
     session.commit()
     #  RELANCE et non REFUSE : la réponse est reçue, conservée et notifiée. Rien
     #  n'a été refusé — seulement pas ventilé, ce qui est la décision voulue.
@@ -220,7 +220,7 @@ def _prevenir_le_cs(session: Session, ticket: Ticket | None, verdict) -> None:
 
     ou = f"le ticket #{ticket.numero}" if ticket else "un ticket"
     for membre in membres_cs_ou_admin(session):
-        session.add(Notification(
+        sonner_systeme(session, "tache_du_conseil",
             destinataire_id=membre.id,
             type="ticket_update",
             titre=f"Réponse par courriel non prise en compte sur {ou}",
@@ -230,7 +230,7 @@ def _prevenir_le_cs(session: Session, ticket: Ticket | None, verdict) -> None:
                 "Le message reste consultable dans la boîte de réception."
             ),
             lien=lien_ticket(ticket.id) if ticket else "/tickets",
-        ))
+        )
 
 
 def traiter(session: Session, entetes: dict, corps: str, recu_le: datetime | None,

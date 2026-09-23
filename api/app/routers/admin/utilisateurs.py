@@ -43,6 +43,7 @@ from datetime import datetime
 from typing import Optional
 from app.utils.communaute import notification_de_ban
 from app.utils.recuperer import ou_404
+from app.utils.cloche import sonner_systeme
 
 router = APIRouter()
 
@@ -114,7 +115,7 @@ def ajouter_role(
     #  🔴 En WARNING : c'est le geste qui donne des droits. La `Notification` part
     #  au concerné et ne dit pas QUI a agi — le journal, lui, nomme l'admin.
     journaliser_securite("role_ajoute", acteur_id=admin.id, cible_id=user.id, detail=role.value)
-    notif = Notification(
+    sonner_systeme(session, "compte",
         destinataire_id=user.id,
         type="system",
         titre="Rôle ajouté",
@@ -122,7 +123,6 @@ def ajouter_role(
         lien="/profil",
     )
     session.add(user)
-    session.add(notif)
     session.commit()
     session.refresh(user)
     from app.schemas import UserRead
@@ -148,7 +148,7 @@ def retirer_role(
         raise HTTPException(400, f"Rôle invalide : {body.role}")
     user.retirer_role(role)
     journaliser_securite("role_retire", acteur_id=admin.id, cible_id=user.id, detail=role.value)
-    notif = Notification(
+    sonner_systeme(session, "compte",
         destinataire_id=user.id,
         type="system",
         titre="Rôle retiré",
@@ -156,7 +156,6 @@ def retirer_role(
         lien="/profil",
     )
     session.add(user)
-    session.add(notif)
     session.commit()
     session.refresh(user)
     from app.schemas import UserRead
@@ -372,11 +371,10 @@ def ban_communaute(
             cible_id=user.id,
             detail=f"infraction {user.communaute_ban_count}",
         )
-        notif = Notification(
+        sonner_systeme(session, "compte",
             destinataire_id=user.id, type="system",
             titre=notif_titre, corps=notif_corps, lien="/sondages",
         )
-        session.add(notif)
     else:
         # Débannir
         user.communaute_interdit = False

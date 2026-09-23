@@ -20,7 +20,6 @@ from app.utils.batiments import libelle_batiment_ou
 from app.models.core import (
     Batiment,
     ConfigSite,
-    Notification,
     RoleUtilisateur,
     Utilisateur,
 )
@@ -28,6 +27,7 @@ from app.utils.noms import nom_affiche
 from app.utils.roles_libelles import libelle_role, libelle_statut_court
 from app.utils.liens import base_site
 from app.auth.deps import est_moderateur
+from app.utils.cloche import sonner
 
 # Code du template email (voir seed.EMAIL_TEMPLATES + _EMAIL_PREF_MAP).
 REPONSE_EMAIL_CODE = "reponse_communaute"
@@ -122,9 +122,9 @@ def notifier_nouvelle_reponse(
 ) -> None:
     """Notifie le créateur d'un contenu (idée/annonce/sondage) d'une nouvelle réponse.
 
-    - In-app : Notification (respecte la préférence communaute_app).
-    - Email  : send_email(code=reponse_communaute) (respecte communaute_mail via
-      destinataire_id — l'utilisateur qui s'y est opposé ne reçoit rien).
+    - Cloche : `utils/cloche.sonner` — le profil décide (#1187).
+    - Email  : send_email(code=reponse_communaute) — le profil décide aussi, via
+      `destinataire_id` (`utils/preferences_mail`).
     On ne notifie jamais l'auteur de sa propre réponse.
     """
     if not createur_id or createur_id == auteur.id:
@@ -134,13 +134,13 @@ def notifier_nouvelle_reponse(
         return
 
     extrait = (extrait or "").strip()
-    session.add(Notification(
+    sonner(session,
         destinataire_id=createur_id,
         type="communaute_reponse",
         titre=f"Nouvelle réponse sur {rubrique_label}",
         corps=extrait[:200],
         lien=lien_path,
-    ))
+    )
 
     if createur.email:
         # send_email importé paresseusement (comme tickets.py) — évite un import
@@ -180,7 +180,7 @@ def notifier_votants_idee(
 ) -> None:
     """Notifie les votants d'une idée qu'elle a changé de statut (retenue/réalisée).
 
-    In-app (préférence communaute_app) + email (préférence communaute_mail). On
+    Cloche et courriel, chacun selon le profil (`utils/preferences_mail`). On
     ne notifie qu'une fois chaque votant et jamais l'auteur de l'action.
     """
     site_url = _site_url(session)
@@ -188,13 +188,13 @@ def notifier_votants_idee(
         dest = session.get(Utilisateur, uid)
         if not dest:
             continue
-        session.add(Notification(
+        sonner(session,
             destinataire_id=uid,
             type="communaute_idee",
             titre=f"Une idée que vous avez soutenue est {statut_label.lower()}",
             corps=idee_titre[:200],
             lien=lien_path,
-        ))
+        )
         if dest.email:
             from app.utils.email import send_email
             ctx = {"idee": {

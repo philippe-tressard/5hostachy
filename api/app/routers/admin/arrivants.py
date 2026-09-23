@@ -36,6 +36,7 @@ from app.utils.courriel_arrivee import FICHE_CONSIGNES, destinataires_arrivee
 from app.utils.courriel_arrivee import envoyer as envoyer_message_arrivee
 from app.utils.ticket_arrivant import creer_ticket_arrivant
 from app.utils.recuperer import ou_404
+from app.utils.cloche import sonner_systeme
 
 router = APIRouter()
 
@@ -137,7 +138,7 @@ def _declencher_accueil_arrivant(
 
     FICHE_URL = FICHE_CONSIGNES
 
-    session.add(Notification(
+    sonner_systeme(session, "compte",
         destinataire_id=user.id,
         type="system",
         titre="Bienvenue dans la résidence !",
@@ -154,12 +155,12 @@ def _declencher_accueil_arrivant(
             + demarches_html
         ),
         lien=FICHE_URL,
-    ))
+    )
     nb_notifs += 1
 
     # ── B. Notification interphone → CS du bâtiment + gestionnaire du site ─────
     for mc in cs_unique:
-        session.add(Notification(
+        sonner_systeme(session, "tache_du_conseil",
             destinataire_id=mc.user_id,
             type="system",
             titre="Accueil — Demande d'ajout sur l'interphone",
@@ -167,7 +168,7 @@ def _declencher_accueil_arrivant(
                 f"Merci d'ajouter le nom **{nom_complet}**{bat_str}{ancien_str} "
                 "sur l'interphone du bâtiment concerné."
             ),
-        ))
+        )
         nb_notifs += 1
 
     # ── C. LE MESSAGE D'ARRIVÉE → syndic, arrivant, ET conseil du bâtiment ────

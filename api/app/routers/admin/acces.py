@@ -15,7 +15,6 @@ from app.models.core import (
     Batiment,
     CommandeAcces,
     Lot,
-    Notification,
     StatutCommande,
     UserLot,
     Utilisateur,
@@ -25,6 +24,7 @@ from typing import Any
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
 from app.utils.valeurs import valeur
+from app.utils.cloche import sonner_systeme
 
 router = APIRouter()
 
@@ -93,7 +93,7 @@ def traiter_commande(
     if cmd.statut == StatutCommande.acceptee:
         _poser_les_badges(session, cmd, body.codes)
 
-    notif = Notification(
+    sonner_systeme(session, "sa_demande",
         destinataire_id=cmd.user_id,
         type="vigik",
         titre=f"Commande {cmd.type} : {cmd.statut.value}",
@@ -101,7 +101,6 @@ def traiter_commande(
         lien="/mon-lot",
     )
     session.add(cmd)
-    session.add(notif)
 
     # ── Email au demandeur ────────────────────────────────────────────────
     # Les modèles `vigik_accepte` / `vigik_refuse` existaient depuis l'origine

@@ -26,7 +26,7 @@ from typing import Optional
 from fastapi import BackgroundTasks
 from sqlmodel import Session, select
 
-from app.models.core import Notification, StatutUtilisateur, Ticket, Utilisateur
+from app.models.core import StatutUtilisateur, Ticket, Utilisateur
 from app.utils.destinataires import (
     batiments_du_perimetre,
     membres_cs_notifiables,
@@ -40,6 +40,7 @@ from .commun import destinataires_syndic_cs
 #  Le CONTEXTE du message reste dans `courriels` : composer et décider-qui sont
 #  deux gestes, et c'est justement ce que ce découpage sépare.
 from .courriels import _contexte_ticket
+from app.utils.cloche import sonner
 
 
 def _notifier_cs_creation(
@@ -78,14 +79,14 @@ def _notifier_cs_creation(
         cs_members = list(cs_members) + [s for s in syndics if s.id not in cs_ids]
 
     for member in cs_members:
-        session.add(Notification(
+        sonner(session, batiments=batiments_du_perimetre(parse_json_perimetres(ticket.perimetre_cible)),
             destinataire_id=member.id,
             type="ticket_update",
             titre=f"Nouveau ticket : {ticket.titre}",
             corps=ticket.description[:200],
             lien=lien_ticket(ticket.id),
             urgente=urgence,
-        ))
+        )
 
     if background_tasks is None or auteur is None:
         #  Sans tâche de fond, il n’y a pas d’envoi possible : le dire plutôt que

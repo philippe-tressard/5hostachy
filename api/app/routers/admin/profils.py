@@ -13,7 +13,6 @@ from app.database import get_session
 from app.models.core import (
     Batiment,
     DemandeModificationProfil,
-    Notification,
     StatutDemandeProfil,
     StatutUtilisateur,
     Utilisateur,
@@ -21,6 +20,7 @@ from app.models.core import (
 from datetime import datetime
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
+from app.utils.cloche import sonner_systeme
 
 router = APIRouter()
 
@@ -80,7 +80,7 @@ def traiter_demande_profil(
         if demande.batiment_id_souhaite:
             utilisateur.batiment_id = demande.batiment_id_souhaite
         demande.statut_demande = StatutDemandeProfil.approuvee
-        notif = Notification(
+        sonner_systeme(session, "compte",
             destinataire_id=utilisateur.id,
             type="system",
             titre="Modification de profil approuvée",
@@ -90,7 +90,7 @@ def traiter_demande_profil(
     elif body.action == "rejeter":
         demande.statut_demande = StatutDemandeProfil.rejetee
         demande.motif_refus = body.motif_refus
-        notif = Notification(
+        sonner_systeme(session, "compte",
             destinataire_id=utilisateur.id,
             type="system",
             titre="Modification de profil refusée",
@@ -104,6 +104,5 @@ def traiter_demande_profil(
     demande.traite_le = datetime.utcnow()
     session.add(demande)
     session.add(utilisateur)
-    session.add(notif)
     session.commit()
     return {"statut": demande.statut_demande}

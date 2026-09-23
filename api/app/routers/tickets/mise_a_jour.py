@@ -25,7 +25,6 @@ from app.auth.deps import est_moderateur, get_current_user, peut_commenter, peut
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
-    Notification,
     RoleUtilisateur,
     StatutTicket,
     Ticket,
@@ -61,6 +60,7 @@ from app.utils.corrections import (
     PREFIXE_CORRECTION_AUTEUR,
     SEPARATEUR_CORRECTION,
 )
+from app.utils.cloche import sonner
 
 #  Seul sous-router à porter le préfixe : ses deux routes de collection ont un
 #  chemin VIDE (`GET /tickets`, `POST /tickets`), et FastAPI refuse un chemin
@@ -312,13 +312,13 @@ def update_ticket(
     #  Une actualité se corrige entre membres du conseil : l'auteur n'en est pas
     #  « prévenu » comme d'une affaire qui avance.
     if user.id != ticket.auteur_id and not est_actualite(ticket):
-        session.add(Notification(
+        sonner(session,
             destinataire_id=ticket.auteur_id,
             type="ticket_update",
             titre=f"Ticket #{ticket.numero} mis à jour",
             corps=" ; ".join(changes) if changes else f"Nouveau statut : {ticket.statut}",
             lien=lien_ticket(ticket.id),
-        ))
+        )
     if est_actualite(ticket):
         appliquer_acces(ticket, session)
     session.add(ticket)

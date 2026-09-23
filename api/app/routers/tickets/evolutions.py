@@ -18,7 +18,6 @@ from app.auth.deps import (
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
-    Notification,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -45,6 +44,7 @@ from .commun import (
     evol_read,
 )
 from .courriels import envoyer_email_externe, envoyer_email_syndic_cs
+from app.utils.cloche import sonner
 
 router = APIRouter()
 
@@ -235,13 +235,13 @@ def _notifier_auteur(
         if body.type == "etat"
         else f"Nouveau commentaire sur le ticket #{ticket.numero}"
     )
-    session.add(Notification(
+    sonner(session,
         destinataire_id=ticket.auteur_id,
         type="ticket_update",
         titre=titre_notif,
         corps=(body.contenu or "")[:200],
         lien=lien_ticket(ticket.id),
-    ))
+    )
 
 
 def _message_pour_le_groupe(ticket: Ticket, body: TicketEvolutionCreate, nb_precedents: int,

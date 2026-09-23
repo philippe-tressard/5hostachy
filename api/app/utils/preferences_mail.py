@@ -40,10 +40,18 @@ from typing import Iterable, Optional
 
 logger = logging.getLogger("hostachy.preferences_mail")
 
-#: Les deux seules clés. Le défaut de chacune est ici, et nulle part ailleurs.
+#: Les clés. Le défaut de chacune est ici, et nulle part ailleurs.
 MON_BATIMENT = "mon_batiment_mail"
 AUTRES_BATIMENTS = "autres_batiments_mail"
-DEFAUTS: dict[str, bool] = {MON_BATIMENT: True, AUTRES_BATIMENTS: False}
+#: 🔔 La CLOCHE, réglable comme les courriels depuis le 23/09/2026 (#1187) —
+#: cochées par défaut toutes deux : c'était le comportement, et rien ne doit
+#: disparaître sans un geste du résident.
+MON_BATIMENT_APP = "mon_batiment_app"
+AUTRES_BATIMENTS_APP = "autres_batiments_app"
+DEFAUTS: dict[str, bool] = {
+    MON_BATIMENT: True, AUTRES_BATIMENTS: False,
+    MON_BATIMENT_APP: True, AUTRES_BATIMENTS_APP: True,
+}
 
 #: Valeur du champ pour un compte neuf.
 DEFAUT_JSON = json.dumps(DEFAUTS)
@@ -83,13 +91,23 @@ def mail_autorise(utilisateur, batiments_concernes: Optional[Iterable[int]] = No
     Un contenu à portée globale (`batiments_concernes` vide) relève de la même
     logique : il concerne tout le monde, donc aussi le destinataire.
     """
+    return _autorise(utilisateur, batiments_concernes, MON_BATIMENT, AUTRES_BATIMENTS)
+
+
+def cloche_autorisee(utilisateur, batiments_concernes: Optional[Iterable[int]] = None) -> bool:
+    """La même question pour la CLOCHE — mêmes règles, ses deux clés (#1187)."""
+    return _autorise(utilisateur, batiments_concernes, MON_BATIMENT_APP, AUTRES_BATIMENTS_APP)
+
+
+def _autorise(utilisateur, batiments_concernes, cle_mon: str, cle_autres: str) -> bool:
+    """La règle, une fois pour les deux canaux : chez moi, ou ailleurs."""
     prefs = lire(utilisateur)
     if batiments_concernes is None:
-        return prefs[MON_BATIMENT]
+        return prefs[cle_mon]
 
     cibles = set(batiments_concernes)
     if not cibles:
-        return prefs[MON_BATIMENT]
+        return prefs[cle_mon]
 
     from app.utils.mes_batiments import batiments_de_l_utilisateur
 
@@ -97,5 +115,5 @@ def mail_autorise(utilisateur, batiments_concernes: Optional[Iterable[int]] = No
     #  Aucun bâtiment connu : on ne peut pas dire que le contenu vient d'ailleurs,
     #  donc on ne s'autorise pas à le couper (cas zéro, `standards/04` §2).
     if not miens or (miens & cibles):
-        return prefs[MON_BATIMENT]
-    return prefs[AUTRES_BATIMENTS]
+        return prefs[cle_mon]
+    return prefs[cle_autres]

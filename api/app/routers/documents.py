@@ -13,8 +13,7 @@ from app.utils.config_site import config_site
 from app.auth.deps import est_moderateur, get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    CategorieDocument, ContratEntretien, Document, Notification,
-    ProfilAccesDocument, Utilisateur
+    CategorieDocument, ContratEntretien, Document, ProfilAccesDocument, Utilisateur
 )
 from app.schemas import DocumentRead
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
@@ -24,6 +23,7 @@ from app.utils.liens import base_site
 from app.utils.liens import nom_site
 from app.utils.recuperer import ou_404
 from app.config import get_settings
+from app.utils.cloche import sonner
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ def _notifier_document_publie(
         if u.id == auteur.id or not document_visible(u, doc, session):
             continue
         lien_doc = lien_document(doc, u, session)
-        session.add(Notification(
+        sonner(session,
             destinataire_id=u.id,
             type="document",
             titre=f"Nouveau document : {doc.titre}",
@@ -107,7 +107,7 @@ def _notifier_document_publie(
             #  le repli quand elle est vide (09/09/2026).
             corps=doc.description or doc.titre,
             lien=lien_doc,
-        ))
+        )
         if not u.email:
             continue
         background_tasks.add_task(
@@ -126,8 +126,8 @@ def _notifier_document_publie(
                 "app": {"url": site_url},
             },
             session=session,
-            # Sans cet identifiant, la préférence `doc_mail` du profil ne serait
-            # toujours pas consultée : la case resterait décorative.
+            # Sans cet identifiant, le profil (`utils/preferences_mail`) ne serait
+            # pas consulté : ses cases resteraient décoratives.
             destinataire_id=u.id,
         )
     session.commit()

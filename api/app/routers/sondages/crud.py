@@ -13,7 +13,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, peut_editer, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    CommentaireSondage, Notification, OptionSondage, Sondage,
+    CommentaireSondage, OptionSondage, Sondage,
     Utilisateur, VoteSondage,
 )
 from app.schemas import liste_depuis_json
@@ -30,6 +30,7 @@ from app.utils.liens import base_site, nom_site, lien_sondage
 from app.utils.noms import contexte_personne
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.recuperer import ou_404
+from app.utils.cloche import sonner
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
 
@@ -187,13 +188,13 @@ def create_sondage(
     for r in residents:
         if not sondage_accessible(s, r):
             continue
-        session.add(Notification(
+        sonner(session,
             destinataire_id=r.id,
             type="sondage",
             titre=f"📊 Nouveau sondage : {s.question[:60]}",
             corps="Votre avis compte — participez au sondage.",
             lien=lien_sondage(s.id),
-        ))
+        )
 
     session.commit()
     session.refresh(s)

@@ -9,8 +9,12 @@
   à DEUX. Le résident devait comprendre une matrice pour dire une chose simple :
   « je veux les e-mails de chez moi, pas ceux d'à côté ». Ce que la simplification
   coûte est assumé et documenté dans `api/app/utils/preferences_mail.py` — le
-  réglage par rubrique disparaît, et les notifications dans l'application restent
-  actives sans être réglables, ce qui était déjà leur valeur par défaut.
+  réglage par rubrique disparaît.
+
+  🔔 Depuis le 23/09/2026 (#1187), la cloche se règle comme le courriel — mêmes
+  deux cases, cochées par défaut : « aucune notification autre que celles de la
+  Diffusion ou du profil ». Seuls les envois qui concernent le COMPTE, ou une
+  tâche du conseil, échappent au réglage (`api/app/utils/cloche.MOTIFS_SYSTEME`).
 
   ⚠️ La case de visibilité est une préférence d'AFFICHAGE, jamais une mesure de
   confidentialité : le résident se restreint lui-même et peut se déverrouiller
@@ -18,7 +22,7 @@
   profils d'accès aux documents. L'interface ne doit pas laisser croire l'inverse.
 -->
 <script lang="ts">
-	import { AUTRES_BATIMENTS, MON_BATIMENT } from '$lib/preferences';
+	import { CANAUX_NOTIFS } from '$lib/preferences';
 
 	export let valeurs: Record<string, boolean>;
 	export let restreindre = false;
@@ -51,25 +55,20 @@
 		confidentielles ; cochée, vous ne voyez que celles de votre bâtiment.
 	</p>
 
-	<h2 class="section-title" style="margin-top:1.5rem">Notifications par e-mail</h2>
-	<label class="checkbox-field">
-		<input type="checkbox" bind:checked={valeurs[MON_BATIMENT]} />
-		<span
-			>De mon ou mes bâtiments{#if heritees.has(MON_BATIMENT)}<span class="herite"
-					>réglage par défaut</span
-				>{/if}</span
-		>
-	</label>
-	<label class="checkbox-field" style="margin-top:.5rem">
-		<input type="checkbox" bind:checked={valeurs[AUTRES_BATIMENTS]} />
-		<span
-			>Des autres bâtiments{#if heritees.has(AUTRES_BATIMENTS)}<span class="herite"
-					>réglage par défaut</span
-				>{/if}</span
-		>
-	</label>
+	{#each CANAUX_NOTIFS as canal (canal.mon)}
+		<h2 class="section-title" style="margin-top:1.5rem">{canal.titre}</h2>
+		{#each [{ cle: canal.mon, libelle: 'De mon ou mes bâtiments' }, { cle: canal.autres, libelle: 'Des autres bâtiments' }] as c, i (c.cle)}
+			<label class="checkbox-field" style:margin-top={i ? '.5rem' : null}>
+				<input type="checkbox" bind:checked={valeurs[c.cle]} />
+				<span
+					>{c.libelle}{#if heritees.has(c.cle)}<span class="herite">réglage par défaut</span
+						>{/if}</span
+				>
+			</label>
+		{/each}
+	{/each}
 	<p class="aide sous-case">
-		Les notifications dans l'application ne sont pas concernées : elles restent actives.
+		Ce qui concerne votre compte — validation, rôle, demande traitée — vous parvient toujours.
 		{#if heritees.size > 0}
 			Les réglages marqués « par défaut » n'ont jamais été modifiés : enregistrez pour en faire
 			votre choix.
