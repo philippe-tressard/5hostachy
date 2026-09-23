@@ -46,7 +46,7 @@ _SOURCE_UNIQUE = "utils/corrections.py"
 #: écarter les corrections. La liste est explicite : un module ajouté sans y
 #: figurer serait un trou, et le cas zéro plus bas vérifie qu'ils existent
 #: toujours et parcourent bien des évolutions.
-_FLUX_AVEC_HISTORIQUE = ("evenements.py", "tickets.py")
+_FLUX_AVEC_HISTORIQUE = ("tickets.py",)
 
 
 class _Entree:

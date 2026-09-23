@@ -36,7 +36,6 @@ import pytest
 
 from app.models.annonce_hall import AnnonceHall
 from app.models.communaute import Idee, PetiteAnnonce, Sondage, StatutAnnonce
-from app.models.evenement import Evenement, StatutKanban
 from app.models.tickets import StatutTicket
 from app.utils.archivage import (
     ARCHIVAGE_DELAI_JOURS,
@@ -139,27 +138,6 @@ def test_sondage_sans_date_de_cloture_reste_actif():
     assert not archivable("sondage", cloture_le=None, cree_le=VIEUX)
 
 
-def test_evenement_passe_depuis_plus_du_delai():
-    assert archivable("evenement", debut=VIEUX, fin=VIEUX)
-
-
-def test_evenement_sans_statut_kanban_s_archive_quand_meme():
-    #  🔴 Le cas AG 2026 (19/08/2026) : `statut_kanban = NULL`, absente du
-    #  Kanban et éternellement en tête du fil. Le déclencheur est la DATE.
-    assert archivable("evenement", debut=VIEUX, fin=None, statut_kanban=None)
-
-
-def test_evenement_a_venir_reste_actif():
-    assert not archivable("evenement", debut=MAINTENANT + timedelta(days=10), fin=None)
-
-
-def test_evenement_annule_est_archive_immediatement():
-    assert archivable(
-        "evenement", debut=MAINTENANT + timedelta(days=10), fin=None,
-        statut_kanban=StatutKanban.annule,
-    )
-
-
 def test_affiche_de_hall_apres_l_envoi():
     assert archivable("annonce_hall", envoye_le=VIEUX)
 
@@ -210,7 +188,6 @@ MODELES = {
     "annonce": PetiteAnnonce,
     "idee": Idee,
     "sondage": Sondage,
-    "evenement": Evenement,
     "annonce_hall": AnnonceHall,
 }
 
@@ -234,7 +211,6 @@ STATUTS_POSSIBLES = {
     "annonce": {s.value for s in StatutAnnonce},
     "idee": {"ouverte", "retenue", "rejetee", "realisee"},
     "sondage": set(),
-    "evenement": {s.value for s in StatutKanban},
     "annonce_hall": set(),
 }
 

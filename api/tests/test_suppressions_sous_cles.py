@@ -38,7 +38,7 @@ l'authentification — laquelle a ses propres tests (`test_autorisation.py`,
 montage de session et de cookies sans rien mesurer de plus sur la question posée.
 """
 
-from datetime import date, datetime
+from datetime import date
 
 import pytest
 from sqlmodel import Session, select
@@ -211,60 +211,6 @@ def test_supprimer_un_sondage_avec_ses_options_votes_et_commentaires(contexte):
     assert session.get(Sondage, s.id) is None
 
 
-def _evenement(session: Session, admin: Utilisateur, avec_document: bool):
-    from app.models.evenement import Evenement, EvenementEvolution
-
-    ev = Evenement(titre="AG", debut=datetime(2026, 9, 1, 10, 0), auteur_id=admin.id)
-    session.add(ev)
-    session.commit()
-    session.refresh(ev)
-    session.add(EvenementEvolution(evenement_id=ev.id, type="commentaire", auteur_id=admin.id))
-    if avec_document:
-        session.add(
-            Document(
-                titre="CR",
-                fichier_nom="cr.pdf",
-                fichier_chemin="/tmp/cr-546.pdf",
-                evenement_id=ev.id,
-                publie_par_id=admin.id,
-            )
-        )
-    session.commit()
-    return ev
-
-
-def test_supprimer_un_evenement_avec_son_historique(contexte):
-    """`evenement_evolution.evenement_id` est NOT NULL et sans `Relationship`."""
-    from app.models.evenement import Evenement
-    from app.routers.calendrier import delete_evenement
-
-    session, admin = contexte
-    ev = _evenement(session, admin, avec_document=False)
-    delete_evenement(ev.id, session, admin)
-    assert session.get(Evenement, ev.id) is None
-
-
-def test_supprimer_un_evenement_qui_porte_un_document(contexte):
-    """Même famille que le ticket : `document.evenement_id` référence l'événement."""
-    from app.models.evenement import Evenement
-    from app.routers.calendrier import delete_evenement
-
-    session, admin = contexte
-    ev = _evenement(session, admin, avec_document=True)
-    delete_evenement(ev.id, session, admin)
-    assert session.get(Evenement, ev.id) is None
-    restants = session.exec(select(Document).where(Document.evenement_id == ev.id)).all()
-    assert restants == [], "les documents de l'événement doivent partir avec lui"
-
-
-# ── Les sept tables restantes du relevé du 30/08 ─────────────────────────────
-#
-#  Toutes portent au moins une référence entrante que le code doit traiter. Le
-#  tableau publié dans #546 les classait « à risque » sur la seule lecture du
-#  schéma ; ces tests disent lesquelles le sont vraiment — le sondage, lui, était
-#  déjà correct.
-
-
 def test_supprimer_une_idee_avec_ses_votes(contexte):
     """`vote_idee.idee_id` est NOT NULL et sans `Relationship` vers `Idee`."""
     from app.models.communaute import Idee, VoteIdee
@@ -305,7 +251,7 @@ def test_supprimer_une_telecommande_attribuee(contexte):
     """`user_telecommande.telecommande_id` est NOT NULL et sans `Relationship`."""
     from app.models.core import Telecommande, UserTelecommande
     from app.routers.acces.parc import supprimer_acces_admin
-    from app.utils.types_acces import TELECOMMANDE, VIGIK
+    from app.utils.types_acces import TELECOMMANDE
 
     session, admin = contexte
     tc = Telecommande(code="TC-546", user_id=admin.id)
@@ -325,7 +271,7 @@ def test_supprimer_un_vigik_attribue(contexte):
     """`user_vigik.vigik_id` est NOT NULL et sans `Relationship`."""
     from app.models.core import UserVigik, Vigik
     from app.routers.acces.parc import supprimer_acces_admin
-    from app.utils.types_acces import TELECOMMANDE, VIGIK
+    from app.utils.types_acces import VIGIK
 
     session, admin = contexte
     v = Vigik(code="VG-546", user_id=admin.id)

@@ -159,11 +159,6 @@ ECRITURES_CLIENT = [
     ("api/app/routers/tickets/messages.py", "add_message"),
     ("api/app/routers/tickets/evolutions.py", "add_evolution"),
     ("api/app/routers/tickets/evolutions.py", "update_evolution"),
-    ("api/app/routers/calendrier.py", "create_evenement"),
-    ("api/app/routers/calendrier.py", "update_evenement"),
-    #  L'Historique d'un événement en écrit aussi : même filtre.
-    ("api/app/routers/calendrier_historique.py", "add_evolution_evenement"),
-    ("api/app/routers/calendrier_historique.py", "update_evolution_evenement"),
 ]
 
 

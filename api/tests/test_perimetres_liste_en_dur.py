@@ -80,7 +80,6 @@ def test_les_regles_de_decision_ne_citent_aucun_code_de_perimetre():
     surveilles = [
         *sorted((RACINE_API / "app" / "utils" / "visibility").glob("*.py")),
         RACINE_API / "app" / "utils" / "destinataires.py",
-        RACINE_API / "app" / "routers" / "flux" / "evenements.py",
     ]
     #  🔴 CAS ZÉRO — un chemin qui ne désigne plus rien rendrait ce test vert sans
     #  rien lire. C'est arrivé au découpage : le fichier surveillé avait disparu.

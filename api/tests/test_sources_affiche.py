@@ -29,7 +29,6 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import Ticket
-from app.models.evenement import Evenement
 from app.utils.sources_affiche import FENETRE_JOURS, prefill_source, sources_disponibles
 
 
@@ -62,15 +61,7 @@ def _actualite(session, titre, **kw):
     return _ticket(session, titre, categorie="actualite", statut="publie", **kw)
 
 
-def _evenement(session, titre, **kw):
-    e = Evenement(titre=titre, description=titre, debut=datetime.utcnow(), auteur_id=1, **kw)
-    session.add(e)
-    session.commit()
-    session.refresh(e)
-    return e
-
-
-def test_actualites_affaires_et_evenements_sont_proposes(session):
+def test_actualites_et_affaires_sont_proposees(session):
     """C'est la demande : tout ce que le fil agrège, le sélecteur le propose.
 
     L'actualité est une affaire depuis le 23/09/2026 : elle vient par la famille
@@ -78,12 +69,10 @@ def test_actualites_affaires_et_evenements_sont_proposes(session):
     """
     _actualite(session, "Une actualité")
     _ticket(session, "Un ticket")
-    _evenement(session, "Un événement")
 
+    #  L'événement est parti le 23/09/2026 (#1092) : c'est une affaire.
     familles = {s.titre: s.famille for s in sources_disponibles(session)}
-    assert familles == {
-        "Une actualité": "Actualité", "Un ticket": "Affaire", "Un événement": "Événement",
-    }, f"obtenu {familles}"
+    assert familles == {"Une actualité": "Actualité", "Un ticket": "Affaire"}, f"obtenu {familles}"
 
 
 def test_un_contenu_CONFIDENTIEL_n_est_jamais_proposé(session):
@@ -208,11 +197,8 @@ def test_le_perimetre_est_repris_dans_chaque_famille(session):
 
     pub = _actualite(session, "Actualité", perimetre_cible=json.dumps(["bat:1"]))
     tk = _ticket(session, "Ticket", perimetre_cible=json.dumps(["bat:3"]))
-    ev = _evenement(session, "Événement", perimetre="parking,cave")
 
     assert prefill_source(session, "ticket", pub.id)["perimetre_cible"] == ["bat:1"]
     assert prefill_source(session, "ticket", tk.id)["perimetre_cible"] == ["bat:3"]
-    assert prefill_source(session, "evenement", ev.id)["perimetre_cible"] == ["parking", "cave"], (
-        "l'événement retombe sur le périmètre par défaut — c'est le parseur JSON "
-        "appliqué à une chaîne texte"
-    )
+    #  La famille « evenement », qui portait le périmètre en TEXTE, est partie
+    #  le 23/09/2026 (#1092) : ce cas limite n'a plus d'objet.

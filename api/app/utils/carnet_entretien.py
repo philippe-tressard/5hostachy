@@ -14,8 +14,9 @@ bâtiment ? »* :
 | Source | Ce qu'elle apporte | Filtre |
 |---|---|---|
 | `ContratEntretien` | l'équipement suivi, son prestataire, sa périodicité | `actif` |
-| `Evenement` | l'intervention réellement faite | `statut_kanban == termine` |
-| `Ticket` | l'incident résolu sur le bâti | `ferme_le` + catégorie technique |
+| `Ticket` Entretien | l'intervention réellement faite | résolue (#1092 : les événements
+  du calendrier sont devenus des affaires Entretien le 23/09/2026) |
+| `Ticket` du bâti | l'incident résolu | `ferme_le` + catégorie du bâti, hors Entretien |
 
 Créer une table `carnet` aurait produit une **quatrième** version de faits déjà
 enregistrés trois fois, à ressaisir à la main et libre de diverger dès le premier
@@ -46,7 +47,6 @@ from typing import Optional
 from sqlmodel import Session, select
 
 from app.models.core import Ticket
-from app.models.evenement import Evenement
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.models.tickets import CategorieTicket, StatutTicket
 from app.utils.liens import lien_element, lien_ticket
@@ -64,9 +64,6 @@ CATEGORIES_BATI = frozenset({
     CategorieTicket.entretien,  # les maintenances du calendrier (#1092)
 })
 
-#: Le `statut_kanban` d'un événement réellement réalisé. La colonne est une
-#: chaîne libre en base ; la valeur vient de `StatutKanban.termine`.
-KANBAN_TERMINE = "termine"
 
 
 @dataclass
@@ -223,52 +220,32 @@ def _entrees_contrats(session: Session, perimetre: Optional[str]) -> list[Entree
 
 
 def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
-    """Ce qui a été FAIT — un événement arrivé au bout de son kanban."""
-    requete = select(Evenement).where(Evenement.statut_kanban == KANBAN_TERMINE)
+    """Ce qui a été FAIT — une affaire Entretien résolue, avec son intervenant.
 
+    Elle lisait les événements « Terminé » du calendrier jusqu'au 23/09/2026 :
+    ils sont devenus des affaires Entretien (0212), et une affaire ne se lit
+    qu'une fois — ici, jamais aussi parmi les incidents.
+    """
+    requete = select(Ticket).where(
+        Ticket.categorie == CategorieTicket.entretien,
+        Ticket.statut == StatutTicket.résolu,
+    )
     entrees: list[EntreeCarnet] = []
-    for evenement in session.exec(requete).all():
-        quand = _jour(evenement.debut)
+    for ticket in session.exec(requete).all():
+        quand = _jour(ticket.debut) or _jour(ticket.ferme_le)
         if quand is None:
             continue
-        codes = _codes_de(evenement.perimetre)
+        codes = _codes_de(ticket.perimetre_cible)
         if not couvre(codes, perimetre):
             continue
-        detail = ""
-        if evenement.prestataire_id:
-            prestataire = session.get(Prestataire, evenement.prestataire_id)
-            if prestataire and prestataire.nom:
-                detail = prestataire.nom
-        if evenement.lieu:
-            detail = f"{detail} · {evenement.lieu}" if detail else evenement.lieu
-
-        #  L'équipement vient du CONTRAT rattaché quand il y en a un : un
-        #  événement ne porte pas de type d'équipement, et le deviner d'après son
-        #  titre donnerait une réponse plausible et parfois fausse.
-        equipement = None
-        if evenement.contrat_id:
-            contrat = session.get(ContratEntretien, evenement.contrat_id)
-            if contrat is not None:
-                presta = session.get(Prestataire, contrat.prestataire_id)
-                equipement = type_equipement_resolu(
-                    contrat, presta.specialite if presta else None
-                )
-
+        prestataire = session.get(Prestataire, ticket.prestataire_id) if ticket.prestataire_id else None
         entrees.append(EntreeCarnet(
             date_fait=quand,
-            libelle=evenement.titre,
+            libelle=ticket.titre,
             origine="intervention",
-            detail=detail,
-            equipement=equipement,
+            detail=prestataire.nom if prestataire else "",
             perimetre=codes,
-            #  🔴 Le carnet ne parle QUE de faits passés : la plupart de ses
-            #  événements sont archivés, et c'est le cas nominal ici, pas le cas
-            #  limite. Choisir la destination d'après l'état de l'objet est la
-            #  seule façon de ne pas envoyer le lecteur sur une liste où il ne
-            #  figure plus.
-            lien=lien_element(
-                "ev_archive" if evenement.archivee else "ev", evenement.id
-            ),
+            lien=lien_ticket(ticket.id),
         ))
     return entrees
 
@@ -282,7 +259,8 @@ def _entrees_incidents(session: Session, perimetre: Optional[str]) -> list[Entre
 
     entrees: list[EntreeCarnet] = []
     for ticket in session.exec(requete).all():
-        if ticket.categorie not in CATEGORIES_BATI:
+        #  L'Entretien est une INTERVENTION (ci-dessus), pas un incident.
+        if ticket.categorie not in CATEGORIES_BATI or ticket.categorie == CategorieTicket.entretien:
             continue
         if not couvre(_codes_de(ticket.perimetre_cible), perimetre):
             continue

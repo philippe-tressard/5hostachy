@@ -35,6 +35,7 @@ from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_internes, photos_json
 from app.utils.noms import contexte_personne
 from app.utils.recuperer import ou_404
+from app.utils.prochaine_visite import apres_cloture
 
 from .commun import (
     STATUT_LABELS,
@@ -364,6 +365,7 @@ def add_evolution(
             ticket.ferme_le = datetime.utcnow()
         ticket.mis_a_jour_le = datetime.utcnow()
         session.add(ticket)
+        apres_cloture(ticket, session)  # la prochaine visite d'un contrat (#1092)
 
     if ticket.auteur_id != user.id and body.notifier:
         _notifier_auteur(

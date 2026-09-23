@@ -137,12 +137,9 @@ def nom_site(*valeurs: str | None) -> str:
 EMPLACEMENTS: dict[str, str] = {
     #  « pub » (`/actualites`) est parti le 23/09/2026 avec la page : une
     #  actualité est une affaire, son adresse est celle de sa fiche (`lien_ticket`).
-    "ev": "/calendrier",
-    #  Un événement ARCHIVÉ ne figure plus dans la vue liste : son lien doit
-    #  mener aux archives, sinon il ouvre la bonne page et ne révèle rien
-    #  (signalé à l'écran le 10/09/2026 depuis le carnet d'entretien, dont les
-    #  entrées sont par nature d'anciens faits).
-    "ev_archive": "/calendrier/archives",
+    #  « ev » et « ev_archive » (`/calendrier`) sont partis le 23/09/2026 : un
+    #  événement est une affaire (#1092), son adresse celle de sa fiche. Les
+    #  anciens liens `#ev-N` sont rattrapés par la page `/calendrier`.
     "presta": "/prestataires",
     "annonce": "/annonces",
     "idee": "/idees",

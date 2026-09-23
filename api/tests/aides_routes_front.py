@@ -14,7 +14,10 @@ change de mécanique — c'est le seul endroit à rouvrir :
   1. les groupes `(app)` sont transparents dans l'URL ;
   2. `reroute` (`front/src/hooks.ts`) fait rendre `/annonces` par la route
      `/sondages` : une adresse d'onglet n'a **pas** de dossier à elle ;
-  3. un écran délégué à un composant ajoute un niveau de dépliage.
+  3. un écran délégué à un composant ajoute un niveau de dépliage ;
+  4. un dossier `[...reste]` sert TOUT chemin sous lui, le vide compris —
+     `/calendrier` en est un depuis le 23/09/2026 (#1092), une adresse qui
+     redirige. L'ignorer déclarait morts des liens déjà envoyés qui aboutissent.
 """
 import pathlib
 import re
@@ -26,13 +29,16 @@ _ROUTES = _FRONT_SRC / "routes"
 
 def _resoudre(base: pathlib.Path, segments: list[str]) -> bool:
     """Une page SvelteKit sert-elle ce chemin depuis `base` ?"""
+    if not base.is_dir():
+        return False
+    sous_dossiers = [d for d in base.iterdir() if d.is_dir()]
+    #  Subtilité 4 : `[...reste]` sert tout ce qui suit, y compris rien.
+    if any(d.name.startswith("[...") and (d / "+page.svelte").exists() for d in sous_dossiers):
+        return True
     if not segments:
         return (base / "+page.svelte").exists()
 
     seg, reste = segments[0], segments[1:]
-    if not base.is_dir():
-        return False
-    sous_dossiers = [d for d in base.iterdir() if d.is_dir()]
 
     # Les groupes `(app)`, `(marketing)`… n'apparaissent pas dans l'URL : on traverse.
     for groupe in (d for d in sous_dossiers if d.name.startswith("(")):

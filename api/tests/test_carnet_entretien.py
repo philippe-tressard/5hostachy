@@ -73,7 +73,7 @@ def test_les_categories_retenues_parlent_du_BATI():
     assert CategorieTicket.bug not in CATEGORIES_BATI
 
 
-@pytest.mark.parametrize("prefixe", ["contrat", "ev"])
+@pytest.mark.parametrize("prefixe", ["contrat"])
 def test_les_liens_du_carnet_sont_declares(prefixe):
     """Un lien fabriqué à la main échapperait à `test_liens_front`."""
     from app.utils.liens import EMPLACEMENTS
