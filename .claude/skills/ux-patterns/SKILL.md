@@ -202,8 +202,10 @@ données pour celles inappropriées »*. Une actualité est une affaire de caté
 **Actualité** ; elle se crée et se corrige dans `FormulaireTicket`.
 
 - Une section qui ne s'applique pas à la **nature** choisie reste **à son rang**,
-  grisée, hachurée, 🔒, avec son **motif écrit** sur la ligne (au doigt il n'y a
-  pas de survol). Elle ne se déplie pas et son contenu n'est pas rendu.
+  titre atténué précédé de 🔒, pastille grise « sans objet » à la place du
+  résumé, et son **motif écrit** en petite ligne dessous (au doigt il n'y a pas
+  de survol). Style « A », arbitré sur captures le 23/09/2026 — les hachures du
+  premier jet ont été refusées. Elle ne se déplie pas et son contenu n'est pas rendu.
 - Le motif se **déclare** : `inactivePour` sur la section, dans
   `$lib/entites/<entité>` ; `motifInactif()` le lit. Jamais un `{#if}` d'écran.
 - « Sans données » : ce qu'une section éteinte portait **ne part pas**

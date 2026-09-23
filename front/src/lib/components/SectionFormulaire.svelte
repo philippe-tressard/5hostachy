@@ -150,7 +150,7 @@
 	 * la catégorie, qui doivent être sans données »*. La section reste à son rang
 	 * — on voit ce qui s'éteint en changeant de catégorie —, mais :
 	 *
-	 *   - elle est pliée, grisée, hachurée, et ne se déplie pas ;
+	 *   - elle est pliée, atténuée, marquée « sans objet », et ne se déplie pas ;
 	 *   - son CONTENU n'est pas rendu : aucun champ, donc aucune donnée à envoyer ;
 	 *   - son motif est ÉCRIT sur la ligne — au doigt il n'y a pas de survol.
 	 *
@@ -179,6 +179,9 @@
 			<span class="section-titre section-titre-plie">
 				<span aria-hidden="true">&#x1F512;</span><span class="section-titre-texte">{titre}</span>
 			</span>
+			<!--  La pastille de résumé, en GRIS : même place et même forme que
+			      « sans date », pour dire qu'il n'y a rien à ouvrir ici. -->
+			<span class="badge badge-gray section-resume">sans objet</span>
 			<span class="section-motif">{inactive}</span>
 		</div>
 	{:else if pliable && !ouverte}
@@ -386,24 +389,26 @@
 		letter-spacing: normal;
 		font-weight: 600;
 	}
-	/*  🔒 La section INACTIVE (23/09/2026) : grisée, hachures légères, motif
-	    écrit. Pas de curseur de clic — rien ne s'y ouvre. Le motif prend la
-	    place du résumé, et se coupe proprement sur téléphone. */
+	/*  🔒 La section INACTIVE — style « A » arbitré à l'écran le 23/09/2026,
+	    captures à l'appui : les hachures du premier jet étaient « moches ».
+	    Titre atténué précédé du cadenas, pastille grise « sans objet » à la
+	    place du résumé, et le motif en petite ligne SOUS le titre — écrit, car
+	    au doigt il n'y a pas de survol. Pas de curseur de clic : rien ne s'y
+	    ouvre. */
 	.section-inactive {
 		cursor: default;
+		flex-wrap: wrap;
+		row-gap: 0.15rem;
 		color: var(--color-text-muted);
-		background: repeating-linear-gradient(135deg, transparent 0 6px, var(--color-border) 6px 7px);
-		border-radius: var(--radius);
-		padding: 0.25rem 0.4rem;
 	}
 	.section-inactive .section-titre {
 		color: var(--color-text-muted);
 	}
 	.section-motif {
-		margin-left: auto;
+		flex-basis: 100%;
 		min-width: 0;
-		font-size: 0.72rem;
-		text-align: right;
+		padding-left: 1.4rem;
+		font-size: 0.75rem;
 		line-height: 1.35;
 	}
 	.section-chev {
