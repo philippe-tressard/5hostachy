@@ -153,16 +153,9 @@ export const PAGES: PageDef[] = [
 			},
 		],
 	},
-	{
-		id: 'actualites',
-		href: '/actualites',
-		nom: 'Actualités',
-		titre: 'Actualités',
-		navLabel: 'Actualités',
-		icone: 'newspaper',
-		descriptif:
-			'Publications officielles du conseil syndical : informations importantes, travaux et actualités de la résidence.',
-	},
+	//  « Actualités » n'est plus une page (#1091, #1092, 23/09/2026) : une
+	//  actualité est une affaire, lue sous le filtre « Actualité » d'Affaires.
+	//  `/actualites` reste une ADRESSE, qui redirige — voir sa route.
 	{
 		id: 'mes-demandes',
 		href: '/tickets',
@@ -171,7 +164,7 @@ export const PAGES: PageDef[] = [
 		navLabel: 'Affaires',
 		icone: 'message-square-text',
 		descriptif:
-			'Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos affaires.',
+			'Les actualités du conseil syndical et les affaires de la résidence : signalez un problème, posez une question, suivez l’avancement.',
 	},
 	{
 		id: 'calendrier',

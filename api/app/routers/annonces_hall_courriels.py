@@ -36,7 +36,7 @@ from app.utils.destinataires import (
     syndic_puis,
 )
 from app.utils.email import send_email_group
-from app.utils.liens import lien_element
+from app.utils.liens import lien_ticket
 from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
 from app.utils.noms import contexte_personne
 from app.utils.whatsapp import (
@@ -64,7 +64,9 @@ def lien_affiche(annonce: AnnonceHall) -> str | None:
     c'est tout son contenu, et un bouton qui ne mène nulle part vaut moins que
     pas de bouton.
     """
-    return lien_element("pub", annonce.publication_id) if annonce.publication_id else None
+    #  L'affaire « Actualité » d'origine (#1091) ; la migration 0210 a reporté
+    #  sur elle les affiches nées d'une publication.
+    return lien_ticket(annonce.ticket_id) if annonce.ticket_id else None
 
 
 def contexte_annonce_hall(annonce: AnnonceHall, user: Utilisateur) -> dict:

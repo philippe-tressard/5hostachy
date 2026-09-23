@@ -1,75 +1,62 @@
-"""Router publications — actualités du fil, leur suivi et leurs envois.
+"""Les anciennes adresses d'actualité — et elles seules (#1091, lot 4).
 
-`publications.py` faisait **682 lignes**. Découpé le 11/08/2026, au fil de l'eau :
-l'ajout du renvoi WhatsApp l'avait fait passer de 653 à 682, et c'est le
-garde-fou de modularité (`scripts-ci-modularite.sh`) qui a refusé le lot. Le
-contrôle a fonctionné comme prévu — on découpe le fichier quand on y touche.
+## Ce qui reste, et pourquoi
 
-## La règle de découpage : un domaine, un module
+Depuis le 23/09/2026, une actualité EST une affaire de catégorie « Actualité ».
+La 0210 a recopié chaque publication en affaire, et `ticket.promu_depuis_publication_id`
+garde l'ancien numéro. Tout le reste du paquet — création, correction, Suite,
+envois, aperçu, promotion — a été retiré : il n'en existe qu'UNE écriture, dans
+`routers/tickets/` (`actualite.py` pour ce qui diffuse).
 
-Reprise de `app/routers/tickets/`, `admin/` et `flux/` — par domaine, chacun
-ayant sa propre raison de changer.
+Il reste cette route, parce que des adresses ont été ENVOYÉES : chaque courriel
+et chaque message WhatsApp d'une actualité portait `/actualites#pub-N`, et
+l'écran les résout par `GET /publications/{N}`. Sans elle, chacun deviendrait
+un lien mort. Le dépôt refuse de renommer les identifiants `TK-xxxx` pour la
+même raison.
 
-| Module | Ce qui y change |
-|---|---|
-| `crud` | cycle de vie : lister, créer, modifier, supprimer, renvoyer |
-| `evolutions` | fil de suivi : changements d'état et commentaires |
-| `courriels` | composition et envoi des courriels d'une publication |
-| `commun` | sérialisation, archivage, annonce de hall |
-| `promotion` | **la conversion** d'une actualité en affaire (#1094) |
+⚠️ **410 et non 404**, et la nuance porte tout l'usage : 404 dit « ça n'a
+jamais existé » ; 410 dit « ça a existé, voici où c'est parti ». L'affaire est
+cherchée D'ABORD : les lignes de `publication` subsistent, lues par rien
+d'autre, et une publication encore présente n'en est pas moins partie.
 
-## Ce qui a été factorisé au passage
+La visibilité n'est pas décidée ici : l'écran suit la redirection vers la fiche
+de l'affaire, qui applique `ticket_visible`. Le 410 ne révèle que le numéro,
+pas le contenu — et seulement à un utilisateur connecté.
 
-`EvolutionRead` était construit **trois fois** — dans `_pub_to_read`,
-`update_evolution` et `add_evolution` —, avec chaque fois la même résolution de
-l'auteur et le même `json.loads` défensif sur `fichiers_urls`. Trois copies
-d'une sérialisation de dix champs divergent au premier champ ajouté : il
-n'aurait été mis à jour qu'à deux endroits sur trois, sans que rien ne le
-signale. → `commun.evolution_read`.
-
-## Ordre de montage
-
-`evolutions` est monté avant `crud`, comme dans `tickets/` : ses chemins sont
-plus spécifiques (`/{pub_id}/evolutions`) que le `/{pub_id}` de `crud`, et
-FastAPI résout dans l'ordre d'enregistrement. Les 8 chemins sont identiques au
-caractère près à ceux d'avant le découpage.
+Verrouillé par `api/tests/test_redirection_publications.py`.
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
 
-from . import apercu, crud, evolutions, promotion
+from app.auth.deps import get_current_user
+from app.database import get_session
+from app.models.core import Ticket, Utilisateur
+from app.utils.recuperer import ou_404
 
-#  Le sous-module à chemins nus reçoit le préfixe ici. Ce littéral est aussi ce
-#  que lit `test_endpoints_orphelins` pour reconstruire les chemins d'un paquet
-#  découpé : le garder en clair n'est pas cosmétique.
-_a_prefixer = APIRouter(prefix="/publications", tags=["publications"])
-_a_prefixer.include_router(evolutions.router)
-_a_prefixer.include_router(apercu.router)
+router = APIRouter(prefix="/publications", tags=["publications"])
 
-#  ⚠️ `promotion` porte DÉJÀ son préfixe (il déclare `/publications` lui-même) et
-#  se monte donc à côté, comme `crud`. Il vient AVANT lui : son `/{pub_id}` rend
-#  410 pour une publication convertie, et c'est la seule route qui le sache —
-#  celle de `crud` répondrait 404, donc « ça n'a jamais existé », ce qui est faux.
 
-router = APIRouter(tags=["publications"])
-router.include_router(_a_prefixer)
-router.include_router(promotion.router)
-router.include_router(crud.router)
+@router.get("/{pub_id}", status_code=410)
+def ou_est_partie_la_publication(
+    pub_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(get_current_user),
+):
+    """L'affaire née de cette publication — ou 404 si le numéro n'a jamais existé."""
+    affaire = session.exec(
+        select(Ticket).where(Ticket.promu_depuis_publication_id == pub_id)
+    ).first()
+    if affaire is None:
+        #  Le 404 passe par la porte commune (`utils/recuperer`).
+        return ou_404(session, Ticket, None, "Actualité")
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "message": "Cette actualité est désormais une affaire.",
+            "promu_en_affaire": affaire.id,
+            "numero": affaire.numero,
+        },
+    )
 
-#  Surface publique conservée pour les importateurs externes : `flux/publications`
-#  décide de l'archivage avec EXACTEMENT la même règle que /actualités — les deux
-#  vues doivent trancher pareil, sinon un élément apparaît dans l'une et pas dans
-#  l'autre (bug du 17/07/2026). Le découpage ne doit pas rouvrir cette porte.
-from .commun import (  # noqa: E402  (après le montage, pour la lisibilité)
-    STATUT_LABELS,
-    STATUTS_PUBLICATION,
-    _is_archived,
-)
 
-#  ⚠️ Les deux seuils ne sont plus exportés : ils n'existent plus. Le délai du
-#  site se lit par `app.utils.archivage.seuil_archivage_jours`, et par lui seul.
-__all__ = [
-    "router",
-    "STATUT_LABELS",
-    "STATUTS_PUBLICATION",
-    "_is_archived",
-]
+__all__ = ["router"]

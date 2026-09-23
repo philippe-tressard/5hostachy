@@ -7,6 +7,7 @@ import json
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 from app.utils.nature_affaire import categorie_reservee, est_actualite, statut_pour
+from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.quand import exiger_description
 
 from app.auth.deps import (
@@ -175,6 +176,24 @@ def create_ticket(
     #  (Le droit est dans `OPTIONS_RESERVEES_AU_CS`, pas réécrit ici.)
     ticket.suivi_kanban = suivi_par_defaut(body.categorie)
     appliquer_options(ticket, body, est_cs=est_cs)
+
+    #  🔴 UNE ACTUALITÉ DIFFUSE COMME UNE ACTUALITÉ (#1091, lot 4) : son module
+    #  porte le message restreint, le gabarit `publication_syndic`, l'affiche, et
+    #  la réserve « Conseil syndical seul » (#1096). `est_cs` est redondant avec
+    #  le refus plus haut — il est écrit ICI pour que la garde se lise au point
+    #  d'envoi (`test_canaux_notification`).
+    if est_actualite(ticket) and est_cs:
+        appliquer_acces(ticket, session)
+        session.commit()
+        session.refresh(ticket)
+        diffuser_actualite(
+            session, ticket, user, background_tasks,
+            whatsapp=bool(body.partager_whatsapp),
+            syndic=ticket.destinataire_syndic, cs=ticket.destinataire_cs,
+            auteur=bool(getattr(body, "envoyer_auteur", False)),
+            externe=body.email_externe, affiche=bool(body.annonce_hall),
+        )
+        return ticket_read(ticket, session)
 
     #  ⚠️ APRÈS `appliquer_options` : c'est elle qui pose `priorite`.
     #

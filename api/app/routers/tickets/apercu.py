@@ -63,9 +63,12 @@ from app.utils.apercu_diffusion import (
 from app.utils.fichiers import est_image
 from app.utils.photos import photos_internes, photos_json
 
+from .actualite import contexte_actualite
 from .courriels import contexte_ticket_syndic, destinataires_syndic_cs
 from app.utils.categories_ticket import ticket_urgent
+from app.utils.nature_affaire import est_actualite, statut_pour
 from app.utils.recuperer import ou_404
+from app.utils.visibility import reservee_au_conseil
 
 router = APIRouter()
 
@@ -102,6 +105,10 @@ class BrouillonTicket(BaseModel):
     #  « M'envoyer une copie » — la 4e case de la Diffusion. L'aperçu doit la
     #  montrer : taire un destinataire ferait mentir l'aperçu par omission.
     envoyer_auteur: bool = False
+    #  Ce qu'une actualité ajoute (#1091, lot 4) : l'urgence, et à qui l'on
+    #  parle — Destinataires = « Conseil syndical » seul, et rien ne sort.
+    urgente: bool = False
+    public_cible: Optional[list[str]] = None
 
 
 #  🔴 Les deux schémas et les deux assembleurs viennent de `app/utils/
@@ -122,12 +129,15 @@ def _ticket_previsionnel(brouillon: BrouillonTicket, auteur: Utilisateur) -> Tic
     """
     import json
 
+    categorie = brouillon.categorie or "question"
     return Ticket(
         numero="",                      # attribué à la création
         titre=brouillon.titre,
         description=brouillon.description,
-        categorie=brouillon.categorie or "question",
-        statut="ouvert",
+        categorie=categorie,
+        statut=statut_pour(categorie),
+        priorite="haute" if brouillon.urgente else "normale",
+        public_cible=json.dumps(brouillon.public_cible, ensure_ascii=False) if brouillon.public_cible else None,
         auteur_id=auteur.id,
         perimetre_cible=json.dumps(brouillon.perimetre_cible or ["résidence"], ensure_ascii=False),
         photos_urls=photos_json(brouillon.photos_urls),
@@ -174,18 +184,39 @@ def apercu_diffusion(
 
     canaux: list[ApercuCanal] = []
     pieces = photos_internes(brouillon.photos_urls) + photos_internes(brouillon.fichiers_urls)
+    actualite = est_actualite(ticket)
+
+    #  🔴 Réservée au conseil, une actualité ne diffuse RIEN (#1096) : l'aperçu
+    #  le dit canal par canal, plutôt que de montrer ce qui ne partira pas.
+    if actualite and reservee_au_conseil(ticket):
+        motif = "Réservée au conseil syndical : rien ne sort."
+        coches = [("email", brouillon.destinataire_syndic or brouillon.destinataire_cs),
+                  ("whatsapp", brouillon.partager_whatsapp)]
+        return ApercuDiffusion(
+            canaux=[ApercuCanal(canal=c, actif=False, inactif_motif=motif) for c, oui in coches if oui],
+            attribues_a_la_creation=[],
+        )
 
     # ── E-mail syndic / conseil syndical ────────────────────────────────────
+    #  Une actualité écrit avec le gabarit de l'actualité, composé par la
+    #  fonction même qui l'enverra (`contexte_actualite`).
     if brouillon.destinataire_syndic or brouillon.destinataire_cs:
+        if actualite:
+            contexte, pieces = contexte_actualite(
+                ticket, user, session, commentaire=brouillon.commentaire or None,
+                fichiers_urls=photos_internes(brouillon.fichiers_urls) or None,
+            )
+        else:
+            contexte = contexte_ticket_syndic(
+                ticket, user, session, pieces_jointes=pieces,
+                commentaire=brouillon.commentaire or None,
+                evolutions=evolutions,
+            )
         canaux.append(
             apercu_email(
                 session,
-                code_modele="ticket_syndic",
-                contexte=contexte_ticket_syndic(
-                    ticket, user, session, pieces_jointes=pieces,
-                    commentaire=brouillon.commentaire or None,
-                    evolutions=evolutions,
-                ),
+                code_modele="publication_syndic" if actualite else "ticket_syndic",
+                contexte=contexte,
                 destinataires=destinataires_syndic_cs(
                     session, syndic=brouillon.destinataire_syndic, cs=brouillon.destinataire_cs
                 ),
@@ -206,7 +237,7 @@ def apercu_diffusion(
             apercu_whatsapp(
                 session,
                 user,
-                titre=f"🎫 {ticket.titre}",
+                titre=ticket.titre if actualite else f"🎫 {ticket.titre}",
                 contenu=ticket.description,
                 urgent=ticket_urgent(ticket),
                 perimetre=ticket.perimetre_cible,
@@ -218,7 +249,9 @@ def apercu_diffusion(
 
     #  Sur un ticket EXISTANT, rien n'est attribué plus tard : le numéro et le
     #  lien sont déjà là. Annoncer le contraire ferait douter d'un aperçu exact.
-    a_attribuer = [] if brouillon.ticket_id is not None else ["numéro du ticket", "lien permanent"]
+    #  Une actualité n'affiche pas de numéro : l'annoncer ferait attendre ce qui ne vient pas.
+    nouveaux = ["lien permanent"] if actualite else ["numéro du ticket", "lien permanent"]
+    a_attribuer = [] if brouillon.ticket_id is not None else nouveaux
     return ApercuDiffusion(
         canaux=canaux,
         attribues_a_la_creation=a_attribuer if canaux else [],

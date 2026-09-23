@@ -135,7 +135,8 @@ def nom_site(*valeurs: str | None) -> str:
 # rubriques d'un même écran. C'est ce que `test_liens_front.py` vérifie ligne à ligne,
 # en relisant la table des onglets du front.
 EMPLACEMENTS: dict[str, str] = {
-    "pub": "/actualites",
+    #  « pub » (`/actualites`) est parti le 23/09/2026 avec la page : une
+    #  actualité est une affaire, son adresse est celle de sa fiche (`lien_ticket`).
     "ev": "/calendrier",
     #  Un événement ARCHIVÉ ne figure plus dans la vue liste : son lien doit
     #  mener aux archives, sinon il ouvre la bonne page et ne révèle rien

@@ -24,13 +24,15 @@ des sondages :
 """
 import pytest
 
-from app.models.core import Publication, Sondage, StatutUtilisateur, Utilisateur
-from app.utils.visibility import publication_visible, sondage_accessible
+from app.models.core import Sondage, StatutUtilisateur, Ticket, Utilisateur
+from app.utils.visibility import actualite_visible, sondage_accessible
 
 
-def _publication(public: str | None) -> Publication:
-    #  `perimetre_cible` absent : ce fichier ne teste QUE le public.
-    return Publication(titre="T", contenu="C", perimetre_cible=None, public_cible=public)
+def _publication(public: str | None) -> Ticket:
+    #  `perimetre_cible` absent : ce fichier ne teste QUE le public. Une actualité
+    #  est une affaire de catégorie « Actualité » depuis le 23/09/2026 (#1091).
+    return Ticket(numero="TK-A1", titre="T", description="C", categorie="actualite",
+                  statut="publie", perimetre_cible=None, public_cible=public)
 
 
 def _lecteur(statut: StatutUtilisateur, roles: str = "résident") -> Utilisateur:
@@ -52,7 +54,7 @@ def _sondage(public: str | None) -> Sondage:
 
 #: Les deux porteurs du même ciblage.
 PORTEURS = [
-    pytest.param((_publication, publication_visible), id="publication"),
+    pytest.param((_publication, actualite_visible), id="actualite"),
     pytest.param((_sondage, sondage_accessible), id="sondage"),
 ]
 

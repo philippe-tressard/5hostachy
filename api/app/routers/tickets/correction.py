@@ -40,7 +40,7 @@ def _liste_json(brut: str | None) -> list:
     return valeur if isinstance(valeur, list) else []
 
 
-def _appliquer_contenu(body: TicketUpdate, ticket: Ticket) -> list[str]:
+def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = False) -> list[str]:
     """Champs de contenu, et la liste des changements qui alimentera l'historique.
 
     🔴 **CHAQUE champ est COMPARÉ à l'existant avant d'être annoncé** (18/08/2026,
@@ -104,11 +104,14 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket) -> list[str]:
     #  La section « Quand » (#1092) — écrite depuis le 23/09/2026 : `TicketUpdate`
     #  l'acceptait et rien ne l'appliquait, donc 200 sans rien écrire. Testée à
     #  la PRÉSENCE (`_envoye`) : effacer une date, c'est l'envoyer à `null`.
-    #  Ce que porte une actualité (#1091) : le public visé, l'Accès.
-    if _envoye(body, "public_cible") and (body.public_cible or None) != (_liste_json(ticket.public_cible) or None):
+    #  Ce que porte une actualité (#1091) : le public visé, l'Accès. Ils
+    #  décident qui LIT — le conseil seul, comme à la création (`crud.py`) :
+    #  pour un autre, ignorés comme les options (l'écran ne les lui propose
+    #  pas), et non refusés — l'auteur d'une annonce d'arrivée corrige son texte.
+    if est_cs and _envoye(body, "public_cible") and (body.public_cible or None) != (_liste_json(ticket.public_cible) or None):
         changes.append("Public visé modifié")
         ticket.public_cible = json.dumps(body.public_cible) if body.public_cible else None
-    if body.reserve_perimetre is not None and body.reserve_perimetre != ticket.reserve_perimetre:
+    if est_cs and body.reserve_perimetre is not None and body.reserve_perimetre != ticket.reserve_perimetre:
         changes.append("Accès modifié")
         ticket.reserve_perimetre = body.reserve_perimetre
     quand = [c for c in ("debut", "fin") if _envoye(body, c) and getattr(body, c) != getattr(ticket, c)]

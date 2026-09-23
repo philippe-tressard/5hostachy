@@ -41,7 +41,7 @@ sys.path.insert(0, str(RACINE.parent))
 SOURCE = "utils/quand.py"
 
 #: Les fichiers qui doivent appeler la règle — les deux créations.
-APPELANTS = ("routers/publications/crud.py", "routers/tickets/crud.py")
+APPELANTS = ("routers/tickets/crud.py",)
 
 #: 🔴 Les endroits où « le contenu est vide » répond à une **autre** question,
 #: avec la raison. Le test échoue si l'une cesse de servir : une exception qui ne

@@ -26,6 +26,7 @@ from app.models.core import (
 from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate
 from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
 from app.utils.nature_affaire import est_actualite
+from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.evolutions import TYPES_SAISIS, evolution_modifiable, supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
@@ -338,6 +339,20 @@ def add_evolution(
     if appliquer_options(ticket, body, est_cs=est_moderateur(user)):
         ticket.mis_a_jour_le = datetime.utcnow()
         session.add(ticket)
+    #  À qui l'on parle et l'Accès — le conseil seul, comme sur l'ancienne
+    #  publication (#1091). Puis l'invariant d'accès : une Suite qui referme
+    #  l'actualité archive ses affiches, comme la correction et la création.
+    if est_moderateur(user) and (body.public_cible is not None or body.reserve_perimetre is not None):
+        if body.public_cible is not None:
+            ticket.public_cible = (
+                json.dumps(body.public_cible, ensure_ascii=False) if body.public_cible else None
+            )
+        if body.reserve_perimetre is not None:
+            ticket.reserve_perimetre = body.reserve_perimetre
+        ticket.mis_a_jour_le = datetime.utcnow()
+        session.add(ticket)
+    if est_actualite(ticket):
+        appliquer_acces(ticket, session)
 
     if body.type == "etat":
         ticket.statut = body.nouveau_statut
@@ -358,6 +373,20 @@ def add_evolution(
 
     session.commit()
     session.refresh(evol)
+
+    #  Une ACTUALITÉ diffuse sa Suite par son module (#1091) — une parole vide
+    #  ne part nulle part, comme l'ancienne publication.
+    if est_actualite(ticket) and est_moderateur(user):
+        if body.contenu and body.contenu.strip():
+            diffuser_actualite(
+                session, ticket, user, background_tasks,
+                whatsapp=bool(body.partager_whatsapp),
+                syndic=bool(body.envoyer_syndic), cs=bool(body.envoyer_cs),
+                auteur=bool(getattr(body, "envoyer_auteur", False)),
+                externe=body.email_externe,
+                commentaire=body.contenu, fichiers_urls=body.fichiers_urls,
+            )
+        return evol_read(evol, session)
 
     # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
     #  🔴 Un ticket réservé au conseil ne part pas sur le groupe des résidents

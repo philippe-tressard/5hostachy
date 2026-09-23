@@ -33,9 +33,10 @@
   le voisin.
 -->
 <script lang="ts">
+	import ActualiteEnListe from './ActualiteEnListe.svelte';
 	import CarteTicket from './CarteTicket.svelte';
 	import type { Ticket, TicketEvolution } from '$lib/api';
-	import type { GestesTicket } from '$lib/tickets';
+	import { estActualite, type GestesTicket } from '$lib/tickets';
 
 	/**  Tout ce que la page fait quand la liste bouge — le type vit dans
 	 *   `$lib/tickets`, avec le reste du vocabulaire du ticket. */
@@ -59,10 +60,41 @@
 	export let evolEnEdition: number | null = null;
 	export let evolCorrectionEnCours = false;
 	export let peutAdministrer = false;
+
+	/**  Ce que la page a ouvert sur UNE carte — écrit une fois pour les deux
+	 *   cartes, qui le lisent de la même façon. ⚠️ `$:` et non `const` : le
+	 *   gabarit ne suit que la FONCTION, et une constante ne changerait jamais —
+	 *   ouvrir un formulaire n'aurait plus rien rouvert. */
+	$: modeDe = (id: number): 'lecture' | 'edition' | 'evolution' | 'options' =>
+		ticketEnEdition === id
+			? 'edition'
+			: ticketEnEvolution === id
+				? 'evolution'
+				: ticketEnOptions === id
+					? 'options'
+					: 'lecture';
 </script>
 
 {#each tickets as t (t.id)}
-	<!--  ⚠️ CHAQUE événement de la carte doit être RELAYÉ ici, et un oubli ne se voit
+	<!--  🔴 Une ACTUALITÉ garde sa carte (#1091, #1092) : c'est une affaire, avec
+	      les mêmes gestes, mais elle se lit comme une information — sans numéro
+	      ni état de suivi. Les gestes passent ENTIERS, par le même objet. -->
+	{#if estActualite(t)}
+		<ActualiteEnListe
+			ticket={t}
+			evolutions={evolsMap[t.id] ?? []}
+			expanded={expandedIds.has(t.id)}
+			{archive}
+			mode={modeDe(t.id)}
+			{evolutionEnCours}
+			{peutAdministrer}
+			{optionsRapidesEnCours}
+			{evolEnEdition}
+			{evolCorrectionEnCours}
+			{gestes}
+		/>
+	{:else}
+		<!--  ⚠️ CHAQUE événement de la carte doit être RELAYÉ ici, et un oubli ne se voit
 	      pas : le 18/08/2026, `evol_supprimer` manquait — la corbeille s'affichait,
 	      le clic partait, et l'événement mourait dans ce composant. Bouton
 	      parfaitement inerte, sans la moindre erreur.
@@ -70,35 +102,30 @@
 	      Trois niveaux — page → liste → carte — et il suffit qu'un maillon se taise.
 	      C'est le prix de ce relais ; il vaut la suppression des 115 lignes recopiées
 	      qui l'ont fait naître, mais il se paie à chaque nouvel événement. -->
-	<CarteTicket
-		ticket={t}
-		evolutions={evolsMap[t.id] ?? []}
-		expanded={expandedIds.has(t.id)}
-		{archive}
-		{evolutionEnCours}
-		{peutAdministrer}
-		{optionsRapidesEnCours}
-		mode={ticketEnEdition === t.id
-			? 'edition'
-			: ticketEnEvolution === t.id
-				? 'evolution'
-				: ticketEnOptions === t.id
-					? 'options'
-					: 'lecture'}
-		on:basculer={() => gestes.basculer(t)}
-		on:evoluer_ouvrir={() => gestes.evoluerOuvrir(t)}
-		on:modifier={() => gestes.modifier(t)}
-		on:options_ouvrir={() => gestes.optionsOuvrir(t)}
-		on:options_enregistrer={(e) => gestes.optionsEnregistrer(t, e.detail)}
-		on:supprimer={() => gestes.supprimer(t)}
-		{evolEnEdition}
-		{evolCorrectionEnCours}
-		on:evoluer={(e) => gestes.evoluer(t, e.detail)}
-		on:evol_modifier={(e) => gestes.evolModifier(e.detail)}
-		on:evol_corriger={(e) => gestes.evolCorriger(t, e.detail)}
-		on:evol_supprimer={(e) => gestes.evolSupprimer(e.detail)}
-		on:evol_annuler={() => gestes.evolAnnuler()}
-		on:modifie={(e) => gestes.modifie(e.detail)}
-		on:annuler={() => gestes.annuler()}
-	/>
+		<CarteTicket
+			ticket={t}
+			evolutions={evolsMap[t.id] ?? []}
+			expanded={expandedIds.has(t.id)}
+			{archive}
+			{evolutionEnCours}
+			{peutAdministrer}
+			{optionsRapidesEnCours}
+			mode={modeDe(t.id)}
+			on:basculer={() => gestes.basculer(t)}
+			on:evoluer_ouvrir={() => gestes.evoluerOuvrir(t)}
+			on:modifier={() => gestes.modifier(t)}
+			on:options_ouvrir={() => gestes.optionsOuvrir(t)}
+			on:options_enregistrer={(e) => gestes.optionsEnregistrer(t, e.detail)}
+			on:supprimer={() => gestes.supprimer(t)}
+			{evolEnEdition}
+			{evolCorrectionEnCours}
+			on:evoluer={(e) => gestes.evoluer(t, e.detail)}
+			on:evol_modifier={(e) => gestes.evolModifier(e.detail)}
+			on:evol_corriger={(e) => gestes.evolCorriger(t, e.detail)}
+			on:evol_supprimer={(e) => gestes.evolSupprimer(e.detail)}
+			on:evol_annuler={() => gestes.evolAnnuler()}
+			on:modifie={(e) => gestes.modifie(e.detail)}
+			on:annuler={() => gestes.annuler()}
+		/>
+	{/if}
 {/each}

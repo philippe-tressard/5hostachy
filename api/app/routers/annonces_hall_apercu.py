@@ -66,9 +66,10 @@ class BrouillonAnnonceHall(BaseModel):
     vérifier avant de compléter.
     """
 
-    #  Renseigné quand l'affiche est pré-remplie depuis une actualité : c'est ce
-    #  qui donne son lien au message WhatsApp, et lui seul.
-    publication_id: Optional[int] = None
+    #  Renseigné quand l'affiche est pré-remplie depuis une actualité — une
+    #  affaire depuis le 23/09/2026 (#1091) : c'est ce qui donne son lien au
+    #  message WhatsApp, et lui seul.
+    ticket_id: Optional[int] = None
     titre: str = ""
     message: str = ""
     perimetre_cible: Optional[list[str]] = None
@@ -108,7 +109,7 @@ def _annonce_previsionnelle(b: BrouillonAnnonceHall, auteur: Utilisateur) -> Ann
         #  chemin — annoncer un fichier absent vaut mieux que taire la pièce jointe.
         pdf_chemin="",
         auteur_id=auteur.id,
-        publication_id=b.publication_id,
+        ticket_id=b.ticket_id,
         cree_le=cree_le,
         images=json.dumps(images, ensure_ascii=False),
     )
@@ -128,10 +129,10 @@ def apercu_diffusion_annonce(
     partira pas. Refuser l'endpoint entier priverait d'aperçu ceux qui n'ont coché
     que l'e-mail.
     """
-    if brouillon.publication_id is not None:
-        from app.models.core import Publication
+    if brouillon.ticket_id is not None:
+        from app.models.core import Ticket
 
-        if not session.get(Publication, brouillon.publication_id):
+        if not session.get(Ticket, brouillon.ticket_id):
             raise HTTPException(404, "Actualité introuvable")
 
     annonce = _annonce_previsionnelle(brouillon, user)

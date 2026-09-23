@@ -18,13 +18,12 @@ import json
 from app.models.core import (
     Document,
     ProfilAccesDocument,
-    Publication,
     Ticket,
     Utilisateur,
 )
 from app.models.evenement import Evenement
 
-from .objets import evenement_visible, publication_visible, ticket_visible
+from .objets import evenement_visible, ticket_visible
 from app.auth.deps import est_moderateur
 
 # ── Règles document ───────────────────────────────────────────────────────────
@@ -43,7 +42,7 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
     (cf. `tests/test_documents_acces.py`). Elle est ici, avec les autres.
 
     `session` n'est typé que par usage (`.get`) pour ne pas faire dépendre ce module
-    de SQLModel : seuls `Publication` et `ProfilAccesDocument` sont chargés.
+    de SQLModel : seuls les porteurs et `ProfilAccesDocument` sont chargés.
     """
     # Admin et CS voient tout
     if est_moderateur(user):
@@ -53,19 +52,13 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
     if doc.contrat_id and not doc.categorie_id:
         return False
 
-    # Pièce jointe d'actualité : elle suit EXACTEMENT la visibilité de son actualité.
-    # Un document n'a pas de ciblage propre (ni `public_cible`, ni `perimetre_cible`) ;
-    # sa seule protection légitime est celle de la publication qui le porte.
-    if doc.publication_id and not doc.categorie_id:
-        pub = session.get(Publication, doc.publication_id)
-        # Publication introuvable → on refuse : aucune règle à appliquer.
-        # Brouillon → rien n'est publié, la pièce jointe non plus (CS/admin sont
-        # déjà sortis plus haut et gardent l'accès à leurs brouillons).
-        if not pub or pub.brouillon:
-            return False
-        return publication_visible(pub, user)
+    #  🔴 Une pièce jointe d'ACTUALITÉ porte `ticket_id` depuis le 23/09/2026 :
+    #  l'actualité est une affaire (#1091), et la 0210 a rattaché les anciennes.
+    #  Un `publication_id` résiduel n'a plus de porteur lu par personne : il
+    #  tombe dans le refus final, faute de règle à appliquer.
 
-    #  Pièce jointe de TICKET ou d'ÉVÉNEMENT (#390) : même règle, même raison.
+    #  Pièce jointe de TICKET ou d'ÉVÉNEMENT (#390) : elle suit EXACTEMENT la
+    #  visibilité de l'objet qui la porte — un document n'a pas de ciblage propre.
     #
     #  🔴 « Qui voit le porteur », et rien d'autre — décision prise le 27/08/2026.
     #  Le régime actuel de ces fichiers est celui de l'objet qui les porte ; leur
@@ -76,7 +69,7 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
     #  ⚠️ Porteur introuvable → on REFUSE. Une pièce jointe dont le ticket a été
     #  supprimé n'a plus de règle à appliquer, et « aucune règle » n'est jamais une
     #  autorisation (`standards/04` — un contrôle qui ne peut pas s'exécuter ne
-    #  rend pas OK). C'est la même branche que pour la publication ci-dessus.
+    #  rend pas OK).
     if doc.ticket_id and not doc.categorie_id:
         ticket = session.get(Ticket, doc.ticket_id)
         if not ticket:

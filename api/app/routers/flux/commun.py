@@ -155,12 +155,15 @@ def badges_marqueurs(obj) -> list[str]:
     marqueurs = []
     if getattr(obj, "epingle", False):
         marqueurs.append("📌 Épinglé")
-    if getattr(obj, "urgente", False):
+    #  Une affaire « Actualité » (#1091) dit l'urgence par sa priorité.
+    if getattr(obj, "urgente", False) or getattr(obj, "priorite", None) == "haute":
         marqueurs.append("🔴 Urgent")
     #  Confidentiel (#347) : celui qui voit la carte fait partie du périmètre —
     #  le badge lui dit que les autres bâtiments, eux, ne la voient pas. Sans
     #  lui, rien ne distingue à l'écran une actualité restreinte d'une autre, et
     #  le périmètre seul ne le dit pas (il ne décrit que le sujet depuis #339).
-    if getattr(obj, "confidentiel", False):
+    #  L'Accès « réservé au périmètre » s'appelle `reserve_perimetre` sur une
+    #  affaire (#1091) — `confidentiel` y désigne autre chose (#710).
+    if getattr(obj, "reserve_perimetre", False):
         marqueurs.append("🔒 Confidentiel")
     return marqueurs

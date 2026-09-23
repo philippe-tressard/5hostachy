@@ -10,6 +10,7 @@
   d'où le couple `id` sur le titre / `aria-labelledby` sur le groupe.
 -->
 <script lang="ts">
+	import CaseReservePerimetre from '$lib/components/CaseReservePerimetre.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
@@ -31,6 +32,12 @@
 
 	/** Un badge imposé par l'appelant — sinon celui du périmètre par défaut. */
 	export let badgeImpose: string | null = null;
+
+	/**  🔒 La réserve au périmètre, SOUS les pastilles (#1096, 23/09/2026) :
+	 *   *« c'est plus cohérent »* — elle dit qui lit ce périmètre-là. Rendue
+	 *   pour une actualité seulement ; une affaire suivie l'a d'office. */
+	export let reservable = false;
+	export let reserve = false;
 
 	/**  Le badge du TITRE de section. Il ne recalcule rien :
 	 *   `estPerimetreParDefaut` est la fonction qu'emploie déjà le sélecteur.
@@ -65,5 +72,8 @@
 		      évident. Sur une évolution, « laissé vide, le périmètre du ticket ne
 		      bouge pas » ne se déduit pas du champ. -->
 		<slot name="aidePerimetre" />
+		{#if reservable}
+			<CaseReservePerimetre bind:coche={reserve} perimetreCible={perimetre} />
+		{/if}
 	</div>
 </SectionFormulaire>

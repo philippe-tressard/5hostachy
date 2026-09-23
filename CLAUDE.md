@@ -163,8 +163,8 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - Trois formes par entité exposée : `EntiteCreate` (entrée, sans id ni
   horodatage), `EntiteRead` (sortie, `class Config: from_attributes = True` —
   la forme de tout le dépôt), `EntiteUpdate` (tout `Optional`, PATCH partiel).
-- Ils vivent dans le `schemas_<domaine>.py` de l'entité (`schemas_tickets`,
-  `schemas_publications`, `schemas_evenement`…), que `schemas.py` ré-exporte.
+- Ils vivent dans le `schemas_<domaine>.py` de l'entité (`schemas_tickets`
+  — actualités comprises —, `schemas_evenement`…), que `schemas.py` ré-exporte.
 - Un schéma **propre à un seul routeur** — le corps d'un geste, la réponse d'un
   écran — vit à côté de lui (dans le routeur ou son `_schemas.py`). Le mettre
   dans un fichier partagé créerait un couplage que personne n'a demandé.
@@ -210,7 +210,7 @@ qui *disent* sans refuser — et qui s'appellent, jamais ne se redérivent :
 |---|---|
 | `est_moderateur(user)` | conseil syndical **ou** admin — « qui modère » |
 | `est_rattache_au_lot(session, user, lot_id)` | « ce lot est le mien » (lien **actif** exigé) |
-| `peut_commenter` / `peut_editer` | l'auteur, le « saisi pour », l'admin (+ le CS pour commenter) ; une **actualité** : le CS (#1091) |
+| `peut_commenter` / `peut_editer` | l'auteur, le « saisi pour », l'admin (+ le CS pour commenter) ; une **actualité** : le CS et son auteur — l'arrivant corrige son annonce, sans décider qui la lit (#1091) |
 
 Et les règles d'**appartenance** — « cet objet est-il le mien ? » — vivent dans
 `auth/appartenance.py`, **jamais chez un routeur** : elles ne sont pas des

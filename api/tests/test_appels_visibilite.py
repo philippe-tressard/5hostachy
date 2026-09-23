@@ -48,7 +48,7 @@ def _appels_faux(source: str, fichier: str, sigs: dict[str, tuple[int, int]]) ->
 def test_chaque_appel_d_un_predicat_de_visibilite_respecte_sa_signature():
     sigs = _signatures()
     #  Cas zéro : sans définition lue, il n'y aurait rien à comparer.
-    assert {"publication_visible", "ticket_visible", "evenement_visible"} <= set(sigs), (
+    assert {"actualite_visible", "ticket_visible", "evenement_visible"} <= set(sigs), (
         f"Prédicats introuvables dans utils/visibility/ : {sorted(sigs)}"
     )
     fautes, appels = [], 0
@@ -63,6 +63,6 @@ def test_chaque_appel_d_un_predicat_de_visibilite_respecte_sa_signature():
 
 
 def test_le_releve_voit_le_cas_du_23_09():
-    sigs = {"publication_visible": (2, 2)}
-    assert _appels_faux("publication_visible(session, pub, user)\n", "x.py", sigs)
-    assert not _appels_faux("publication_visible(pub, user)\n", "x.py", sigs)
+    sigs = {"actualite_visible": (2, 2)}
+    assert _appels_faux("actualite_visible(session, pub, user)\n", "x.py", sigs)
+    assert not _appels_faux("actualite_visible(pub, user)\n", "x.py", sigs)

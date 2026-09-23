@@ -8,8 +8,6 @@ import type {
 	EpinglesCompte,
 	FluxResponse,
 	Notification,
-	Publication,
-	PublicationEvolution,
 	RelanceSyndicResponse,
 	ReponseRelance,
 	SourceAffiche,
@@ -73,6 +71,11 @@ export const auth = {
 export const tickets = {
 	list: () => api.get<Ticket[]>('/tickets'),
 	get: (id: number) => api.get<Ticket>(`/tickets/${id}`),
+	//  Le miroir du pré-remplissage des affiches (#832) : le CS compose souvent
+	//  l'affiche du hall d'abord, puis veut la même information en ligne. Une
+	//  actualité étant une affaire (#1091), la route vit chez les affaires.
+	depuisAnnonceHall: (annonceId: number) =>
+		api.get<ActualitePrefill>(`/tickets/depuis-annonce-hall/${annonceId}`),
 	create: (data: unknown) => api.post<Ticket>('/tickets', data),
 	update: (id: number, data: unknown) => api.patch<Ticket>(`/tickets/${id}`, data),
 	delete: (id: number) => api.delete(`/tickets/${id}`),
@@ -105,6 +108,9 @@ export const tickets = {
 		partager_whatsapp?: boolean;
 		/** « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). */
 		envoyer_auteur?: boolean;
+		/** Ce qu'une actualité ajoute : l'urgence, et à qui l'on parle (#1091). */
+		urgente?: boolean;
+		public_cible?: string[];
 	}) => api.post<ApercuDiffusion>('/tickets/apercu-diffusion', brouillon),
 	//  `perimetre_cible` : le périmètre que l'entrée PRÉCISE, absent quand elle
 	//  n'en parle pas — le serveur ne touche alors pas à celui du ticket (#497).
@@ -135,6 +141,9 @@ export const tickets = {
 			epingle?: boolean;
 			urgente?: boolean;
 			confidentiel?: boolean;
+			/** Une actualité (#1091) : à qui l'on parle et l'Accès — conseil seul. */
+			public_cible?: string[];
+			reserve_perimetre?: boolean;
 			/** « Rédigé avec l'assistant IA » (#985) — seulement quand c'est vrai. */
 			assiste_ia?: boolean;
 		},
@@ -168,91 +177,15 @@ export const tickets = {
 };
 
 export const publications = {
-	//  Le miroir du pré-remplissage des affiches (#832) : le CS compose souvent
-	//  l'annonce du hall d'abord, puis veut la même information en ligne.
-	depuisAnnonceHall: (annonceId: number) =>
-		api.get<ActualitePrefill>(`/publications/depuis-annonce-hall/${annonceId}`),
-	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498).
-	//
-	//  🔴 Il n'existait que pour les tickets. Le 31/08/2026, une actualité est
-	//  partie au conseil syndical sans que son auteur ait rien pu voir ni annuler.
-	//  Comme celui des tickets, il ne crée RIEN et ne recompose rien : le message
-	//  est composé par les MÊMES fonctions que l'envoi.
-	apercuDiffusion: (brouillon: {
-		/** Renseigné pour un COMMENTAIRE sur une publication existante. */
-		publication_id?: number;
-		commentaire?: string;
-		titre?: string;
-		contenu?: string;
-		urgente?: boolean;
-		perimetre_cible?: string[];
-		photos_urls?: string[];
-		fichiers_urls?: string[];
-		envoyer_syndic?: boolean;
-		envoyer_cs?: boolean;
-		partager_whatsapp?: boolean;
-		/** « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). */
-		envoyer_auteur?: boolean;
-	}) => api.post<ApercuDiffusion>('/publications/apercu-diffusion', brouillon),
-	list: (archived = false) =>
-		api.get<Publication[]>(`/publications${archived ? '?archived=true' : ''}`),
-	create: (data: unknown) => api.post<Publication>('/publications', data),
 	/**
-	 * **Cette information demande un suivi** — l'actualité devient une affaire
-	 * (#1094), sans que rien ne soit ressaisi.
+	 * **Où une ancienne actualité est allée** — et rien d'autre (#1091, lot 4).
 	 *
-	 * ⚠️ La publication DISPARAÎT : c'est l'arbitrage du 21/09/2026, *un seul
-	 * objet à la fois, jamais de doublon*. L'écran qui appelle ceci doit donc
-	 * retirer la carte et emmener le lecteur sur l'affaire rendue.
+	 * Une actualité est une affaire depuis le 23/09/2026. Les adresses
+	 * `/actualites#pub-N` envoyées par courriel et sur WhatsApp restent en
+	 * circulation : le serveur rend 410 avec `promu_en_affaire`, et 404 pour un
+	 * numéro jamais attribué. Tout le reste de ce client est parti avec l'entité.
 	 */
-	promouvoir: (id: number) => api.post<Ticket>(`/publications/${id}/promouvoir`, {}),
-	/**
-	 * Une actualité — ou **où elle est allée** si elle a été promue.
-	 *
-	 * Rend 410 avec `promu_en_affaire` pour une publication convertie : c'est ce
-	 * qui empêche un courriel déjà envoyé de finir sur un lien mort.
-	 */
-	get: (id: number) => api.get<Publication>(`/publications/${id}`),
-	update: (id: number, data: unknown) => api.patch<Publication>(`/publications/${id}`, data),
-	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }), //  @sans-appelant-declare archivage manuel retiré le 18/08/2026, cf. ci-dessous
-	delete: (id: number) => api.delete(`/publications/${id}`),
-	renvoyerEmail: (id: number) => api.post(`/publications/${id}/renvoyer-email`, {}), //  @sans-appelant-declare idem
-	//  @sans-appelant-declare Le bouton de renvoi a été RETIRÉ des actualités le
-	//  18/08/2026, sur arbitrage, avec sa conséquence écrite sur place : « un
-	//  envoi qui a échoué sans qu'on s'en rende compte n'a plus de chemin de
-	//  rattrapage depuis l'interface […] à rouvrir ailleurs si le besoin se
-	//  représente ». Le chemin est donc gardé exprès, pas oublié.
-	//
-	//  ⚠️ L'arbitrage portait sur TROIS gestes — archivage manuel, renvoi e-mail,
-	//  renvoi WhatsApp — et un seul était déclaré : le relevé ne voyait pas les
-	//  deux autres, `.archive` et `.renvoyerEmail` étant homonymes d'appels
-	//  vivants ailleurs (#932). Les deux marqueurs de fin de ligne ci-dessus les
-	//  rattachent à cette explication-ci, écrite une fois.
-	renvoyerWhatsapp: (id: number) => api.post(`/publications/${id}/renvoyer-whatsapp`, {}),
-	addEvolution: (
-		pubId: number,
-		data: {
-			type: string;
-			contenu?: string;
-			nouveau_statut?: string;
-			partager_whatsapp?: boolean;
-			/** « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). */
-			envoyer_auteur?: boolean;
-			envoyer_syndic?: boolean;
-			envoyer_cs?: boolean;
-			fichiers_urls?: string[];
-			email_externe?: string;
-			assiste_ia?: boolean;
-		},
-	) => api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
-	updateEvolution: (
-		pubId: number,
-		evolId: number,
-		data: { contenu?: string; fichiers_urls?: string[]; assiste_ia?: boolean },
-	) => api.patch<PublicationEvolution>(`/publications/${pubId}/evolutions/${evolId}`, data),
-	//  Même contrat que celui des tickets — même code côté serveur (#512).
-	deleteEvolution: (pubId: number, evolId: number) =>
-		api.delete<void>(`/publications/${pubId}/evolutions/${evolId}`),
+	get: (id: number) => api.get<void>(`/publications/${id}`),
 };
 
 export const notifications = {
@@ -372,9 +305,9 @@ export const annoncesHall = {
 	//  trois autres, il ne crée RIEN et ne recompose rien — l'e-mail et le
 	//  message sont composés par les MÊMES fonctions que l'envoi.
 	apercuDiffusion: (brouillon: {
-		/** Renseigné quand l'affiche est pré-remplie depuis une actualité : c'est
-		 *  ce qui donne son lien au message WhatsApp, et lui seul. */
-		publication_id?: number;
+		/** Renseigné quand l'affiche est pré-remplie depuis une actualité — une
+		 *  affaire (#1091) : c'est ce qui donne son lien au message WhatsApp. */
+		ticket_id?: number;
 		titre?: string;
 		message?: string;
 		perimetre_cible?: string[];

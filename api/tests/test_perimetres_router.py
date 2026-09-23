@@ -23,7 +23,7 @@ from app.models.core import (
     Batiment,
     Copropriete,
     Evenement,
-    Publication,
+    Ticket,
     TypeEvenement,
     Utilisateur,
 )
@@ -40,11 +40,11 @@ from tests.purge_test import purger_ligne
 #  La fixture `batiments` est donc injectée sans être déclarée dans ce fichier.
 def _vider(session: Session) -> None:
     """Purge locale : le patrimoine **et** les contenus que ce fichier écrit."""
-    vider_patrimoine(session, (Publication, Evenement))
+    vider_patrimoine(session, (Ticket, Evenement))
 
 
 def _auteur(session: Session) -> int:
-    """`Publication.auteur_id` et `Evenement.auteur_id` sont NOT NULL."""
+    """`Ticket.auteur_id` et `Evenement.auteur_id` sont NOT NULL."""
     existant = session.exec(
         select(Utilisateur).where(Utilisateur.email == "auteur@test.fr")
     ).first()
@@ -54,6 +54,15 @@ def _auteur(session: Session) -> int:
     session.add(u)
     session.commit()
     return u.id
+
+
+def _actualite(auteur: int, perimetre_cible: str) -> Ticket:
+    """Une actualité — une affaire de catégorie « Actualité » depuis le 23/09/2026 (#1091)."""
+    import uuid
+
+    return Ticket(numero=f"TK-A{uuid.uuid4().hex[:6]}", titre="T", description="C",
+                  categorie="actualite", statut="publie", auteur_id=auteur,
+                  perimetre_cible=perimetre_cible)
 
 
 def test_lecture_de_l_arborescence_par_le_router(batiments):
@@ -74,8 +83,7 @@ def test_lecture_de_l_arborescence_par_le_router(batiments):
         auteur = _auteur(session)
         #  Un contenu qui cite deux périmètres, pour que `utilise` ait à les trouver
         #  dans les deux formats stockés (JSON et CSV).
-        session.add(Publication(titre="T", contenu="C", auteur_id=auteur,
-                                perimetre_cible='["aful", "bat:%d"]' % batiments[0]))
+        session.add(_actualite(auteur, '["aful", "bat:%d"]' % batiments[0]))
         session.commit()
 
         cites = _codes_cites(session)
@@ -106,8 +114,7 @@ def test_codes_cites_lit_les_trois_formats_de_stockage(batiments):
 
     with Session(engine) as session:
         auteur = _auteur(session)
-        session.add(Publication(titre="J", contenu="C", auteur_id=auteur,
-                                perimetre_cible='["parking"]'))
+        session.add(_actualite(auteur, '["parking"]'))
         session.add(Evenement(titre="E", type=TypeEvenement.travaux, auteur_id=auteur,
                               debut=datetime(2026, 8, 12, 9, 0),
                               perimetre="espaces-verts,cheminements"))

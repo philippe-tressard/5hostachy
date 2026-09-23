@@ -21,22 +21,15 @@
   Ce qui part : `CanauxNotification` et l'affiche de hall → `DiffusionPublication`.
   Ce qui reste : ce qui se corrige.
 
-  ## La règle que ce composant fait respecter à l'écran
+  ## 🔒 La case « visible du seul périmètre » est partie (23/09/2026, #1096)
 
-  **« Confidentiel » exige un périmètre restreint.** Sur un périmètre qui concerne
-  déjà tous les résidents, il n'y a rien à restreindre : la case est désactivée, et
-  le texte dit pourquoi. Une case inerte sans explication laisse l'utilisateur
-  croire à un bug (`standards/11`, accessibilité).
-
-  ⚠️ La seconde règle — **« Confidentiel » interdit l'affiche de hall** — enjambe
-  désormais deux sections : elle vit chez l'hôte (`FormulaireActualite`), seul
-  endroit où les deux valeurs se rencontrent. Les deux sont **aussi** tenues côté
-  serveur (`api/app/routers/publications/commun.py`, `appliquer_confidentialite`) ;
-  celles d'ici ne sont qu'un confort d'écran — c'est le serveur qui décide.
+  Elle vit dans `CaseReservePerimetre`, avec ses règles et son avertissement :
+  une actualité la rend sous les pastilles du Périmètre, et ce composant ne la
+  rend plus que VERROUILLÉE, pour une affaire suivie (`confidentielAcquis`).
 -->
 <script lang="ts">
 	import AlerteEpinglage from './AlerteEpinglage.svelte';
-	import { concerneTous } from '$lib/utils';
+	import CaseReservePerimetre from './CaseReservePerimetre.svelte';
 	//  Glyphes et libellés : la table est la source unique (`$lib/options-publication`).
 	//  Ils étaient écrits ici ET dans les badges de `CarteActualite`, et avaient
 	//  divergé — l'épinglage n'avait pas de glyphe ici et 📌 là-bas.
@@ -99,30 +92,12 @@
 	export let options: CleOptionPublication[] = ['epingle', 'urgente', 'brouillon', 'confidentiel'];
 	$: rendue = (cle: CleOptionPublication) => options.includes(cle);
 
-	//  Identifiant unique : deux formulaires peuvent coexister à l'écran (la
-	//  création est ouverte pendant qu'une actualité est dépliée), et deux
-	//  `aria-describedby` pointant sur le même id ne décrivent plus rien.
-	const idAideConfidentiel = `aide-confidentiel-${Math.random().toString(36).slice(2, 8)}`;
-
-	//  « Rien à restreindre » : le périmètre choisi concerne déjà tout le monde.
-	//  C'est le miroir exact de `a_portee_globale` côté serveur — la question
-	//  n'est pas « est-ce la copropriété entière ? » mais « est-ce que cocher
-	//  changerait quelque chose ? ». Sur un nœud à portée globale, non : le
-	//  serveur laisse passer tout le monde avant même de regarder le bâtiment, et
-	//  le cadenas affiché ne protégerait rien.
-	//  Les quatre options, lues UNE fois dans la table. Constantes de module et
+	//  Les options, lues UNE fois dans la table. Constantes de module et
 	//  non `{@const}` de balisage : Svelte ne l'admet pas comme enfant direct
 	//  d'un `<div>`, et ces valeurs ne dépendent d'aucun état.
 	const optEpingle = optionPublication('epingle');
 	const optUrgente = optionPublication('urgente');
 	const optBrouillon = optionPublication('brouillon');
-	const optConfidentiel = optionPublication('confidentiel');
-
-	$: rienARestreindre = concerneTous(perimetreCible);
-
-	//  Le périmètre peut changer APRÈS que la case a été cochée : on ne laisse pas
-	//  une valeur devenue impossible partir dans la requête.
-	$: if (rienARestreindre && confidentiel) confidentiel = false;
 	//  Même règle pour l'épinglage : décocher « Afficher dans le fil » après avoir
 	//  épinglé laisserait partir un épinglage sur un objet absent du fil.
 	$: if (epingleInterdit && epingle) epingle = false;
@@ -159,70 +134,15 @@
 			{optBrouillon && actionOption(optBrouillon, objet)}
 		</label>
 	{/if}
-	{#if rendue('confidentiel')}
-		<label
-			class="checkbox-field"
-			class:desactivee={rienARestreindre || confidentielAcquis}
-			title={confidentielAcquis ||
-				(rienARestreindre
-					? "Le périmètre sélectionné concerne déjà tous les résidents : il n'y a rien à restreindre."
-					: optConfidentiel?.aide)}
-		>
-			<input
-				type="checkbox"
-				checked={confidentielAcquis ? true : confidentiel}
-				on:change={(e) => (confidentiel = e.currentTarget.checked)}
-				disabled={!!confidentielAcquis || rienARestreindre}
-				aria-describedby={rienARestreindre || confidentielAcquis ? idAideConfidentiel : undefined}
-			/>
-			{optConfidentiel?.glyphe}
-			{optConfidentiel && actionOption(optConfidentiel, objet)} — visible du seul périmètre sélectionné
-		</label>
-	{/if}
 </div>
 
-{#if rendue('confidentiel') && confidentielAcquis}
-	<!--  Le motif est ÉCRIT, pas seulement en infobulle : au doigt il n'y a pas
-	      de survol, et un lecteur d'écran ne lit pas un `title` sans l'y
-	      chercher (leçon du 28/08/2026). -->
-	<p class="aide" id={idAideConfidentiel}>{confidentielAcquis}</p>
-{:else if rendue('confidentiel') && rienARestreindre}
-	<p class="aide" id={idAideConfidentiel}>
-		&#x1F512; <strong>Confidentiel</strong> demande un périmètre restreint — un bâtiment, par exemple.
-		Le périmètre choisi concerne déjà tous les résidents : il n'y a rien à leur cacher.
-	</p>
-{:else if rendue('confidentiel') && confidentiel}
-	<p class="aide">
-		&#x1F512; Seuls les résidents du périmètre sélectionné verront cette actualité — ni dans le fil,
-		ni par un lien direct pour les autres. Le réglage reste modifiable après publication.
-	</p>
-	<!--  🔴 CE QUI SORT, canal par canal (#623, 29/08/2026).
-	      L'auteur découvrait la conséquence après l'envoi, ou jamais. Et elle
-	      n'est PAS la même partout : le titre part sur WhatsApp, tout part par
-	      e-mail. Un avertissement qui dirait « le contenu ne sort pas » serait
-	      faux sur un canal sur deux — et une assurance fausse au moment précis
-	      où l'auteur décide est pire que pas d'avertissement.
-
-	      ⚠️ Il s'affiche dès que « Confidentiel » est coché, sans attendre que
-	      les canaux le soient : c'est en écrivant le TITRE qu'il faut le savoir,
-	      pas au moment de cocher un envoi. -->
-	<div class="avert-diffusion" role="note">
-		<p class="avert-titre">&#x26A0;&#xFE0F; Ce qui sortira de l'application</p>
-		<ul class="avert-liste">
-			<li>
-				<strong>Groupe WhatsApp</strong> — le <strong>titre</strong> et le périmètre partent, avec
-				un lien vers l'application. Le contenu, lui, ne sort pas.
-				<span class="avert-consigne"
-					>Le groupe est commun à toute la copropriété : n'écrivez rien de confidentiel dans le
-					titre.</span
-				>
-			</li>
-			<li>
-				<strong>Syndic et conseil syndical</strong> — l'e-mail part
-				<strong>en entier</strong>, titre et contenu, sans restriction.
-			</li>
-		</ul>
-	</div>
+{#if rendue('confidentiel')}
+	<CaseReservePerimetre
+		bind:coche={confidentiel}
+		{perimetreCible}
+		acquis={confidentielAcquis}
+		{objet}
+	/>
 {/if}
 
 <AlerteEpinglage coche={epingle} {dejaEpingle} />
@@ -247,39 +167,6 @@
 	.cases .desactivee {
 		opacity: 0.5;
 		cursor: not-allowed;
-	}
-	/*  L'avertissement de diffusion : encadré, pas un simple paragraphe d'aide.
-	    Il annonce une conséquence IRRÉVERSIBLE — un message parti ne se retire
-	    pas d'un groupe — là où `.aide` explique un réglage. Deux niveaux de
-	    gravité, deux rendus. */
-	.avert-diffusion {
-		border-left: 3px solid var(--color-warning, #b07d1e);
-		background: var(--color-warning-light, #fffbeb);
-		border-radius: var(--radius);
-		padding: 0.6rem 0.8rem;
-		margin: -0.25rem 0 1rem;
-	}
-	.avert-titre {
-		margin: 0 0 0.35rem;
-		font-size: 0.8rem;
-		font-weight: 600;
-	}
-	.avert-liste {
-		margin: 0;
-		padding-left: 1.1rem;
-		font-size: 0.78rem;
-		line-height: 1.5;
-		color: var(--color-text);
-	}
-	.avert-liste li + li {
-		margin-top: 0.3rem;
-	}
-	/*  La consigne d'écriture sur sa propre ligne : c'est la SEULE phrase qui
-	    demande une action de l'auteur, les autres décrivent. */
-	.avert-consigne {
-		display: block;
-		margin-top: 0.15rem;
-		font-style: italic;
 	}
 	/*  Sous 480 px, les cases passent en colonne et gagnent une cible tactile
 	    de 44 px (socle 11 §10) — même règle que `CanauxNotification`. */

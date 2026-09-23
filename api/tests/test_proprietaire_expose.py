@@ -38,17 +38,16 @@ from sqlmodel import Session, SQLModel, create_engine
 from app.models.core import Utilisateur
 from app.schemas import TicketRead
 from app.schemas_evenement import EvenementRead
-from app.schemas_publications import PublicationRead
 from app.utils.saisi_pour import SaisiPourSortie, noms_derives
 
 RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
 
-#: Les trois lectures qui doivent porter le nom du propriétaire, et le routeur
-#: qui le pose. Une quatrième entité porteuse devra s'ajouter ici — c'est le
-#: seul endroit où la liste s'écrit.
+#: Les lectures qui doivent porter le nom du propriétaire, et le routeur qui le
+#: pose. Une entité porteuse de plus devra s'ajouter ici — c'est le seul endroit
+#: où la liste s'écrit. `PublicationRead` en est sortie le 23/09/2026 : une
+#: actualité est une affaire (#1091), elle se lit par `TicketRead`.
 LECTURES = [
     (TicketRead, "routers/tickets/commun.py"),
-    (PublicationRead, "routers/publications/commun.py"),
     (EvenementRead, "routers/calendrier.py"),
 ]
 

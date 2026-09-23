@@ -45,10 +45,12 @@ ENTITES = {
         "envoi": "routers/tickets/courriels.py",
         "contexte": "contexte_ticket_syndic",
     },
-    "publication": {
-        "apercu": "routers/publications/apercu.py",
-        "envoi": "routers/publications/courriels.py",
-        "contexte": "contexte_publication_syndic",
+    #  L'actualité est une affaire depuis le 23/09/2026 (#1091) : son aperçu est
+    #  celui des affaires, son envoi et son contexte vivent dans `actualite.py`.
+    "actualite": {
+        "apercu": "routers/tickets/apercu.py",
+        "envoi": "routers/tickets/actualite.py",
+        "contexte": "contexte_actualite",
     },
     "evenement": {
         "apercu": "routers/calendrier_apercu.py",

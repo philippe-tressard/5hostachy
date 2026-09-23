@@ -1,6 +1,7 @@
 <!--
-  **L'onglet « Archives » du calendrier** — actualités archivées, prestations
-  réalisées et événements passés, groupés par ANNÉE puis par MOIS.
+  **L'onglet « Archives » du calendrier** — prestations réalisées et événements
+  passés, groupés par ANNÉE puis par MOIS. Les actualités archivées sont parties
+  le 23/09/2026 dans les Archives d'Affaires : ce sont des affaires (#1091).
 
   ## Pourquoi ce composant (#516)
 
@@ -31,7 +32,7 @@
 <script lang="ts">
 	import RangeeCalendrier from '$lib/components/RangeeCalendrier.svelte';
 	import { isAdmin } from '$lib/stores/auth';
-	import { fmtDateShort, fmtDateLong } from '$lib/date';
+	import { fmtDateLong } from '$lib/date';
 
 	/** Tous les objets archivés, tous types confondus. */
 	export let allArchiveItems: any[] = [];
@@ -44,7 +45,6 @@
 	//  listes. Les dupliquer ici donnerait deux vérités sur l'état d'un objet.
 	export let typeLabel: (type: string) => string;
 	export let formatDate: (d: string) => string;
-	export let deleteArchivedPub: (item: any) => void;
 	export let deleteEv: (id: number) => void;
 </script>
 
@@ -80,71 +80,41 @@
 					<div class="month-group" style="padding-left:.75rem">
 						<div class="month-label">{mois}</div>
 						{#each items as item (item.id)}
-							{#if item._kind === 'pub'}
-								<!--  Publication archivée. Les trois rangées d'archives et celle des
-								      maintenances passent par `RangeeCalendrier` : la structure
-								      *type · corps · date · actions* était recopiée quatre fois, et
-								      c'est ce partage qui interdisait de découper la page (#432). -->
-								<RangeeCalendrier
-									archive
-									bordure="#0ea5e9"
-									typeTexte="&#x1F4F0;"
-									badgeType={{ texte: 'Actualité', couleur: '#0ea5e9' }}
-									titre={item.titre}
-									description={item.contenu}
-									dates={[
-										{ texte: fmtDateShort(item._date) },
-										...(item.auteur_nom ? [{ texte: item.auteur_nom, attenue: true }] : []),
-									]}
-									perimetre={item.perimetre_cible}
-									avecActions={$isAdmin}
-								>
-									<svelte:fragment slot="actions">
-										<button
-											class="btn-icon-danger"
-											aria-label="Supprimer définitivement"
-											title="Supprimer définitivement"
-											on:click={() => deleteArchivedPub(item)}>&#x1F5D1;️</button
-										>
-									</svelte:fragment>
-								</RangeeCalendrier>
-							{:else}
-								<!--  Événement archivé.
+							<!--  Événement archivé.
 								      L'ancre `ev_archive-{id}` est posée ICI : le carnet d'entretien
 								      y renvoie, et un événement archivé ne figure plus dans la vue
 								      liste — le lien ouvrait la bonne page et ne révélait rien
 								      (signalé à l'écran le 10/09/2026). -->
-								<RangeeCalendrier
-									archive
-									ancreId="ev_archive-{item.id}"
-									bordure="#10b981"
-									urgent={item.type === 'coupure'}
-									typeTexte={typeLabel(item.type)}
-									badgeType={{ texte: 'Événement', couleur: '#10b981' }}
-									titre={item.titre}
-									description={item.description}
-									metas={item.lieu ? [`\u{1F4CD} ${item.lieu}`] : []}
-									dates={[
-										{ texte: formatDate(item.debut) },
-										...(item.fin ? [{ texte: `→ ${formatDate(item.fin)}`, attenue: true }] : []),
-									]}
-									perimetre={item.perimetre}
-									pied={(item.mis_a_jour_le
-										? `Mise à jour le ${fmtDateLong(item.mis_a_jour_le)}`
-										: `Publié le ${fmtDateLong(item.cree_le)}`) +
-										(item.auteur_nom ? ` · ${item.auteur_nom}` : '')}
-									avecActions={$isAdmin}
-								>
-									<svelte:fragment slot="actions">
-										<button
-											class="btn-icon-danger"
-											aria-label="Supprimer définitivement"
-											title="Supprimer définitivement"
-											on:click={() => deleteEv(item.id)}>&#x1F5D1;️</button
-										>
-									</svelte:fragment>
-								</RangeeCalendrier>
-							{/if}
+							<RangeeCalendrier
+								archive
+								ancreId="ev_archive-{item.id}"
+								bordure="#10b981"
+								urgent={item.type === 'coupure'}
+								typeTexte={typeLabel(item.type)}
+								badgeType={{ texte: 'Événement', couleur: '#10b981' }}
+								titre={item.titre}
+								description={item.description}
+								metas={item.lieu ? [`\u{1F4CD} ${item.lieu}`] : []}
+								dates={[
+									{ texte: formatDate(item.debut) },
+									...(item.fin ? [{ texte: `→ ${formatDate(item.fin)}`, attenue: true }] : []),
+								]}
+								perimetre={item.perimetre}
+								pied={(item.mis_a_jour_le
+									? `Mise à jour le ${fmtDateLong(item.mis_a_jour_le)}`
+									: `Publié le ${fmtDateLong(item.cree_le)}`) +
+									(item.auteur_nom ? ` · ${item.auteur_nom}` : '')}
+								avecActions={$isAdmin}
+							>
+								<svelte:fragment slot="actions">
+									<button
+										class="btn-icon-danger"
+										aria-label="Supprimer définitivement"
+										title="Supprimer définitivement"
+										on:click={() => deleteEv(item.id)}>&#x1F5D1;️</button
+									>
+								</svelte:fragment>
+							</RangeeCalendrier>
 						{/each}
 					</div>
 				{/each}

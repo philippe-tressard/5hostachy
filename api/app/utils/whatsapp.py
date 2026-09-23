@@ -243,8 +243,8 @@ def _build_message_restreint(
     urgente: bool,
     perimetre_cible: str | None,
     site_url: str,
-    pub_id: int | None,
     footer: str | None = None,
+    lien: str | None = None,
 ) -> str:
     """Construit un message WhatsApp court pour une publication à audience restreinte.
 
@@ -273,9 +273,11 @@ def _build_message_restreint(
         "Elle n'est pas accessible à tous les résidents.\n"
         "Si vous êtes concerné(e), connectez-vous sur 5Hostachy pour la consulter :"
     )
-    lien = f"{site_url.rstrip('/')}/actualites"
-    if pub_id is not None:
-        lien += f"#pub-{pub_id}"
+    #  🔴 Le lien FOURNI (#1091) : l'actualité est devenue une affaire, son
+    #  adresse est celle de sa fiche. `pub_id` et `/actualites#pub-<id>` ont été
+    #  retirés avec l'entité ; sans lien, le message renvoie à l'accueil du site.
+    if not lien:
+        lien = site_url.rstrip('/') + "/"
 
     footer = (footer or "").strip() or "— Conseil Syndical 5Hostachy"
     return f"{header}\n\n{avertissement}\n{lien}\n\n{footer}"
@@ -300,7 +302,6 @@ def construire_message(
     perimetre_cible: str | None,
     config: dict,
     public_cible: str | None = None,
-    pub_id: int | None = None,
     confidentiel: bool = False,
     *,
     lien: str | None = None,
@@ -321,7 +322,7 @@ def construire_message(
         #  plus qu'aux actualités sans titre.
         titre_affiche = titre or TITRE_CONFIDENTIEL
         return _build_message_restreint(
-            titre_affiche, urgente, perimetre_cible, site_url, pub_id, footer
+            titre_affiche, urgente, perimetre_cible, site_url, footer, lien
         )
     #  Le lien ne concerne QUE le message normal : le message restreint en porte
     #  déjà un, qui renvoie vers l'application parce que le contenu n'y est pas.
@@ -337,7 +338,6 @@ def envoyer_whatsapp(
     image_url: str | None,
     config: dict,
     public_cible: str | None = None,
-    pub_id: int | None = None,
     confidentiel: bool = False,
     *,
     lien: str | None = None,
@@ -356,7 +356,7 @@ def envoyer_whatsapp(
     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
     message = construire_message(
-        titre, contenu, urgente, perimetre_cible, config, public_cible, pub_id, confidentiel,
+        titre, contenu, urgente, perimetre_cible, config, public_cible, confidentiel,
         lien=lien,
     )
     payload = {"number": group_jid, "text": message}
@@ -371,7 +371,7 @@ def envoyer_whatsapp(
             # La photo existe mais n'a pas pu être jointe. Le message part quand
             # même — un envoi perdu est bien pire qu'un envoi sans image — et il
             # dit où la voir plutôt que de laisser croire qu'il n'y en a pas.
-            payload["text"] += renvoi_photos(config)
+            payload["text"] += renvoi_photos(config, lien)
 
     try:
         _poster_au_bridge(url, payload, headers)
@@ -391,7 +391,7 @@ def envoyer_whatsapp(
             "Corps refusé par le bridge (413) — réémission sans la photo : %s", exc,
         )
         payload.pop("imageBase64")
-        payload["text"] += renvoi_photos(config)
+        payload["text"] += renvoi_photos(config, lien)
         _poster_au_bridge(url, payload, headers)
     except EnvoiIncertain as exc:
         logger.warning("Envoi WhatsApp au résultat inconnu : %s", exc)
@@ -409,7 +409,6 @@ def envoyer_whatsapp_avec_log(
     image_url: str | None,
     config: dict,
     public_cible: str | None = None,
-    pub_id: int | None = None,
     confidentiel: bool = False,
     *,
     lien: str | None = None,
@@ -422,7 +421,7 @@ def envoyer_whatsapp_avec_log(
     session = SessionLocal()
     try:
         message = construire_message(
-            titre, contenu, urgente, perimetre_cible, config, public_cible, pub_id, confidentiel,
+            titre, contenu, urgente, perimetre_cible, config, public_cible, confidentiel,
             lien=lien,
         )
         log = WhatsAppLog(label=titre, message=message)
@@ -434,7 +433,7 @@ def envoyer_whatsapp_avec_log(
             #  quand on cherche ce qui est parti.
             lambda: envoyer_whatsapp(
                 titre, contenu, urgente, perimetre_cible, image_url, config,
-                public_cible, pub_id, confidentiel, lien=lien,
+                public_cible, confidentiel, lien=lien,
             )
         )
         if log.statut == STATUT_ENVOYE:

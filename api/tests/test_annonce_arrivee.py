@@ -30,9 +30,9 @@ from app.database import engine
 from app.models.core import (
     Batiment,
     Copropriete,
-    Publication,
     RoleUtilisateur,
     StatutUtilisateur,
+    Ticket,
     Utilisateur,
 )
 from app.utils.annonce_arrivee import (
@@ -81,10 +81,10 @@ def arrivant():
         session.refresh(u)
         yield u, bat
         session.rollback()
-        for pub in session.exec(
-            select(Publication).where(Publication.auteur_id == u.id)
+        for annonce in session.exec(
+            select(Ticket).where(Ticket.auteur_id == u.id)
         ).all():
-            purger_ligne(session, Publication, pub.id)
+            purger_ligne(session, Ticket, annonce.id)
         session.commit()
         u2 = session.get(Utilisateur, u.id)
         u2.batiment_id = None
@@ -105,7 +105,7 @@ def test_l_annonce_ne_contient_AUCUNE_donnee_personnelle(arrivant):
         )
         session.commit()
 
-        texte = f"{pub.titre}\n{pub.contenu}"
+        texte = f"{pub.titre}\n{pub.description}"
         for champ in CHAMPS_INTERDITS:
             valeur = SENSIBLES[champ]
             assert valeur not in texte, (
@@ -168,8 +168,10 @@ def test_l_ARRIVANT_est_l_auteur_de_sa_propre_annonce(arrivant):
         assert pub.auteur_id == u.id
         assert pub.batiment_id == bat.id
         assert pub.perimetre_cible == f'["bat:{bat.id}"]'
-        #  Jamais sur le groupe : une annonce nominative ne quitte pas l'application.
-        assert pub.partager_whatsapp is False
+        #  Une affaire « Actualité », publiée, pour tout le monde du bâtiment.
+        assert (pub.categorie, pub.statut, pub.public_cible) == ("actualite", "publie", None)
+        #  Jamais chez le syndic : une annonce nominative ne quitte pas l'application.
+        assert pub.destinataire_syndic is False
 
 
 def test_relancer_l_accueil_ne_publie_PAS_une_seconde_annonce(arrivant):
@@ -184,6 +186,6 @@ def test_relancer_l_accueil_ne_publie_PAS_une_seconde_annonce(arrivant):
 
         assert seconde is None
         toutes = session.exec(
-            select(Publication).where(Publication.auteur_id == u.id)
+            select(Ticket).where(Ticket.auteur_id == u.id)
         ).all()
         assert len(toutes) == 1, f"{len(toutes)} annonces pour une arrivée"

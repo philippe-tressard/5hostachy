@@ -1,6 +1,3 @@
-import { parAttribut } from '$lib/table-statuts';
-import type { Publication, PublicationEvolution } from '$lib/api/types';
-
 //  Présentation des publications : ce qui ne dépend ni du DOM ni d'un store, et
 //  qui n'avait donc rien à faire dans `actualites/+page.svelte`.
 //
@@ -10,27 +7,10 @@ import type { Publication, PublicationEvolution } from '$lib/api/types';
 //  y touche » — la frontière retenue est la même que côté scripts d'infra : la
 //  décision d'un côté, testable seule ; le rendu de l'autre.
 
-//: Statuts d'une PUBLICATION — à ne pas confondre avec ceux d'un ticket
-//: (`ouvert`/`résolu`/`annulé`), qui sont une autre notion et vivent ailleurs.
-const { libelle, badge } = parAttribut({
-	publie: { libelle: 'Publié', badge: 'badge-blue' },
-	en_cours: { libelle: 'En cours', badge: 'badge-orange' },
-	resolu: { libelle: 'Résolu', badge: 'badge-green' },
-	annule: { libelle: 'Annulé', badge: 'badge-gray' },
-});
-
-export const STATUT_LABELS: Record<string, string> = libelle;
-export const STATUT_BADGE: Record<string, string> = badge;
-
-/**
- * ⚠️ **Plus aucun écran ne propose ces états** depuis le 18/08/2026 : une actualité
- * n'a pas de workflow, elle est publiée puis bascule dans l'Historique au bout de
- * son délai. Cette liste n'est donc **plus exportée** — la garder aurait laissé
- * croire qu'un écran pouvait s'en servir.
- *
- * `STATUT_LABELS` et `STATUT_BADGE`, eux, restent : d'anciennes publications
- * portent un état en base, et la carte l'affiche encore **en lecture**.
- */
+//  ⚠️ Les statuts d'une publication et le fil de la page Actualités sont partis
+//  le 23/09/2026 : une actualité est une affaire (#1091, lot 4), sans état de
+//  suivi, et son fil est celui de toute affaire. Ne restent ici que deux règles
+//  de saisie qui valent au-delà d'elle.
 
 /**
  * Vrai quand un contenu riche ne porte aucun texte — `<p></p>` en est un.
@@ -62,39 +42,3 @@ export const MAX_SOURCES_PREREMPLISSAGE = 10;
 //  décidé ici : la liste, son tri et ses exclusions viennent du serveur
 //  (`GET /annonces-hall/sources`, `api/app/utils/sources_affiche.py`). Le fil
 //  agrège trois familles, et seul le serveur sait lesquelles sont reprenables.
-
-/**
- *  Le fil d'une publication après une entrée AJOUTÉE — et l'état qu'une
- *  transition pose sur la publication elle-même.
- *
- *  Sorti de la page Actualités le 17/09/2026 (modularité) : c'est une règle de
- *  DONNÉE (que devient la liste ?), pas d'écran, et elle se lit et se teste sans
- *  monter la page.
- */
-export function avecEntreeAjoutee(
-	liste: Publication[],
-	pubId: number,
-	evol: PublicationEvolution,
-	transition: boolean,
-): Publication[] {
-	return liste.map((p) => {
-		if (p.id !== pubId) return p;
-		const maj: Publication = { ...p, evolutions: [...(p.evolutions ?? []), evol] };
-		if (transition) maj.statut = evol.nouveau_statut as Publication['statut'];
-		return maj;
-	});
-}
-
-/** Le fil après la CORRECTION d'une entrée : elle est remplacée, rien d'autre ne bouge. */
-export function avecEntreeCorrigee(
-	liste: Publication[],
-	pubId: number,
-	evolId: number,
-	maj: PublicationEvolution,
-): Publication[] {
-	return liste.map((p) =>
-		p.id !== pubId
-			? p
-			: { ...p, evolutions: (p.evolutions ?? []).map((ev) => (ev.id === evolId ? maj : ev)) },
-	);
-}

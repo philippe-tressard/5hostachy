@@ -38,9 +38,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.models.core import Publication
-from app.routers.publications.crud import INTENTIONS_HORS_MODELE
-from app.schemas_publications import PublicationUpdate
+from app.models.evenement import Evenement
+from app.schemas_evenement import EvenementUpdate
 
 #: (nom lisible, schéma de mise à jour, modèle, intentions déclarées par le
 #: routeur qui l'applique).
@@ -48,8 +47,12 @@ from app.schemas_publications import PublicationUpdate
 #: 🔴 Ajouter une ligne ici quand un nouveau routeur applique un corps à un
 #: modèle par une boucle. La table est courte exprès : elle ne couvre que les
 #: routes qui affectent en masse, les seules exposées à ce défaut.
+#: ⚠️ Le couple d'origine — `PublicationUpdate`, le 500 du 12/09/2026 — est
+#: parti avec son routeur le 23/09/2026 : une actualité est une affaire (#1091),
+#: corrigée champ par champ (`tickets/correction.py`), sans boucle. Le calendrier
+#: affecte encore en masse (`calendrier.update_evenement`) : c'est lui qu'on garde.
 COUPLES = [
-    ("publications", PublicationUpdate, Publication, INTENTIONS_HORS_MODELE),
+    ("calendrier", EvenementUpdate, Evenement, ()),
 ]
 
 
@@ -88,24 +91,9 @@ def test_chaque_intention_declaree_existe_dans_le_schema(nom, schema, modele, in
     assert not inconnues, f"{nom} : intentions déclarées mais absentes du schéma : {inconnues}"
 
 
-def test_le_routeur_ECARTE_vraiment_les_intentions():
-    """🔴 Déclarer la liste ne suffit pas : le fait qui compte est qu'elle soit
-    appliquée AVANT la boucle. Sans cette vérification, retirer la boucle de
-    nettoyage laisserait les trois tests ci-dessus au vert."""
-    import inspect
-
-    from app.routers.publications import crud
-
-    source = inspect.getsource(crud.update_publication)
-    pop = source.index("INTENTIONS_HORS_MODELE")
-    boucle = source.index("for k, v in data.items():")
-    assert pop < boucle, "les intentions doivent être retirées AVANT la boucle d'affectation"
-
-
 def test_le_cas_zero_le_couple_fautif_est_bien_MESURE():
-    """⚠️ `standards/04` §2. Si `PublicationUpdate` cessait d'exposer des champs —
+    """⚠️ `standards/04` §2. Si `EvenementUpdate` cessait d'exposer des champs —
     import cassé, schéma vidé —, les tests ci-dessus passeraient en ne comparant
     rien."""
-    assert len(PublicationUpdate.model_fields) >= 10
-    assert len(Publication.model_fields) >= 10
-    assert "envoyer_auteur" in PublicationUpdate.model_fields
+    assert len(EvenementUpdate.model_fields) >= 10
+    assert len(Evenement.model_fields) >= 10

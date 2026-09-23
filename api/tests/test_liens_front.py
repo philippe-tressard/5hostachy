@@ -309,7 +309,7 @@ class _FauxSession:
 
 
 def _faux_document(**champs):
-    base = dict(id=42, publication_id=None, contrat_id=None, categorie=None)
+    base = dict(id=42, ticket_id=None, contrat_id=None, categorie=None)
     base.update(champs)
     return types.SimpleNamespace(**base)
 
@@ -327,7 +327,8 @@ def test_chaque_document_pointe_vers_l_endroit_ou_il_est_affiche():
     categorie = lambda code: types.SimpleNamespace(code=code)  # noqa: E731
 
     cas = [
-        (_faux_document(publication_id=3), resident, "/actualites#pub-3"),
+        #  Une pièce jointe d'affaire — actualité comprise (#1091) : sa fiche.
+        (_faux_document(ticket_id=3), resident, "/tickets/3"),
         # `/prestataires` EST l'adresse de l'onglet Prestataires depuis le
         # 05/09/2026 : l'onglet n'a plus à être porté par un paramètre.
         (_faux_document(contrat_id=9), cs, "/prestataires#presta-7"),

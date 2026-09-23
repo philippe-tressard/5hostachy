@@ -45,6 +45,18 @@ export function concerneTousLesResidents(codes: string[] | null | undefined): bo
 }
 
 /**
+ * « Conseil syndical » SEUL — l'actualité est réservée au conseil, et RIEN ne
+ * sort : ni groupe WhatsApp, ni courriel, ni affiche (#1096, 23/09/2026).
+ *
+ * ⚠️ Miroir de `visibility.reserve_au_conseil` côté serveur, qui seul DÉCIDE ;
+ * l'écran ne s'en sert que pour prévenir avant l'envoi. `conseil_syndical`
+ * parmi d'autres publics n'est PAS une réserve : les autres lisent.
+ */
+export function reserveAuConseil(codes: string[] | null | undefined): boolean {
+	return !!codes && codes.length === 1 && codes[0] === 'conseil_syndical';
+}
+
+/**
  * Libellé affichable d'un public cible.
  *
  * Accepte un tableau OU une chaîne JSON — c'est ce que rend l'API, et faire la

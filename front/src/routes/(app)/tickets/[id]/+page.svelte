@@ -29,6 +29,7 @@
 		STATUT_TICKET_BADGE,
 		STATUT_TICKET_LABELS as STATUT_LABELS,
 		categorieTicketLabel,
+		estActualite,
 		estTicketClos,
 	} from '$lib/tickets';
 
@@ -257,28 +258,32 @@
 				{/if}
 			</svelte:fragment>
 
+			<!--  Une ACTUALITÉ n'a pas de suivi (#1091) : ni état, ni « Changer le
+			      statut ». Le serveur refuse d'ailleurs toute transition (422). -->
 			<svelte:fragment slot="workflow">
-				<div class="ticket-meta">
-					<span class="badge {statutBadge}">{statutLabel}</span>
-					{#if ticket.priorite && ticket.priorite !== 'normale'}
-						<span class="badge {BADGE_PRIORITE[ticket.priorite] ?? 'badge-gray'}"
-							>{LIBELLE_PRIORITE[ticket.priorite] ?? ticket.priorite}</span
-						>
-					{/if}
-				</div>
-				{#if $isCS}
-					<div class="status-actions">
-						<span class="status-label">Changer le statut :</span>
-						<div class="status-boutons">
-							{#each STATUTS_TICKET as s (s.value)}
-								<button
-									class="btn btn-sm {ticket.statut === s.value ? 'btn-primary' : 'btn-outline'}"
-									disabled={updatingStatus || ticket.statut === s.value}
-									on:click={() => updateStatus(s.value)}>{s.label}</button
-								>
-							{/each}
-						</div>
+				{#if !estActualite(ticket)}
+					<div class="ticket-meta">
+						<span class="badge {statutBadge}">{statutLabel}</span>
+						{#if ticket.priorite && ticket.priorite !== 'normale'}
+							<span class="badge {BADGE_PRIORITE[ticket.priorite] ?? 'badge-gray'}"
+								>{LIBELLE_PRIORITE[ticket.priorite] ?? ticket.priorite}</span
+							>
+						{/if}
 					</div>
+					{#if $isCS}
+						<div class="status-actions">
+							<span class="status-label">Changer le statut :</span>
+							<div class="status-boutons">
+								{#each STATUTS_TICKET as s (s.value)}
+									<button
+										class="btn btn-sm {ticket.statut === s.value ? 'btn-primary' : 'btn-outline'}"
+										disabled={updatingStatus || ticket.statut === s.value}
+										on:click={() => updateStatus(s.value)}>{s.label}</button
+									>
+								{/each}
+							</div>
+						</div>
+					{/if}
 				{/if}
 			</svelte:fragment>
 
@@ -294,17 +299,21 @@
 	      Une rubrique complète (balisage, styles, geste de réponse) que le
 	      contrôle de modularité a refusé de laisser grossir ici. À ne pas
 	      confondre avec l'Historique juste en dessous : deux tables, deux fils. -->
-	<FilMessagesTicket
-		{ticket}
-		{messages}
-		{evolutions}
-		{msgVise}
-		{clos}
-		{sending}
-		bind:repondreOuvert
-		bind:newInterne
-		on:envoyer={(e) => sendMessage(e)}
-	/>
+	<!--  Pas de fil de messages sur une actualité : elle informe, on n'y répond
+	      pas au conseil comme dans un dossier. Sa Suite, elle, reste. -->
+	{#if !estActualite(ticket)}
+		<FilMessagesTicket
+			{ticket}
+			{messages}
+			{evolutions}
+			{msgVise}
+			{clos}
+			{sending}
+			bind:repondreOuvert
+			bind:newInterne
+			on:envoyer={(e) => sendMessage(e)}
+		/>
+	{/if}
 
 	<!--  L'HISTORIQUE — le fil, avec ses gestes. Extrait le 18/08/2026 dans
 	      `HistoriqueTicket` : la liste et cette fiche le rendaient chacune de

@@ -110,7 +110,8 @@ export const RACCOURCIS: Raccourci[] = [
 	{
 		id: 'actualites',
 		libelle: 'Actualités',
-		href: '/actualites',
+		//  Le filtre « Actualité » de la vue Affaires (#1092) : la page n'existe plus.
+		href: '/tickets?nature=actualite',
 		icone: 'megaphone',
 		visible: TOUS,
 		compteurs: () => [],

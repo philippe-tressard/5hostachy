@@ -12,13 +12,15 @@ découlent, et chacune ne s'écrit qu'ici :
 | sous quels filtres paraît-elle ? | `natures` |
 | dans quel état naît-elle, ou passe-t-elle en changeant de catégorie ? | `statut_pour` |
 
-## La règle du filtre, telle que l'utilisateur l'a posée le 22/09
+## La règle du filtre, telle que l'utilisateur l'a posée (22 puis 23/09)
 
-> « Tous ; Actualité (si catégorie = Actualité), Affaires (si catégorie ≠
->   Actualité ET pas de date), Évènement (si une date) »
+> « Actualité : si catégorie Actualité ; Calendrier : si une date est
+>   définie ; Activité : le reste »
 
-Ce n'est pas une partition : une actualité datée paraît sous « Actualité » ET
-sous « Événement ». `natures` rend donc une LISTE, que l'écran interroge — il ne
+Les libellés du 22/09 (« Affaires », « Évènement ») ont été remplacés le
+23/09 (#1092), quand les pages Actualités et Calendrier ont disparu au profit
+de la seule vue Affaires. Ce n'est pas une partition : une actualité datée
+paraît sous « Actualité » ET sous « Calendrier ». `natures` rend donc une LISTE, que l'écran interroge — il ne
 redérive rien, sinon la règle divergerait au premier cas limite (le motif « deux
 copies divergent sur le cas limite », vécu trois fois dans ce dépôt).
 """
@@ -38,11 +40,11 @@ def est_actualite(objet: Any) -> bool:
 
 
 def natures(ticket: Any) -> list[str]:
-    """Les filtres sous lesquels l'affaire paraît : `actualite`, `affaire`, `evenement`."""
+    """Les filtres sous lesquels l'affaire paraît : `actualite`, `calendrier`, `activite`."""
     datee = getattr(ticket, "debut", None) is not None
     if est_actualite(ticket):
-        return ["actualite", "evenement"] if datee else ["actualite"]
-    return ["evenement"] if datee else ["affaire"]
+        return ["actualite", "calendrier"] if datee else ["actualite"]
+    return ["calendrier"] if datee else ["activite"]
 
 
 def categorie_reservee(categorie: Any) -> bool:

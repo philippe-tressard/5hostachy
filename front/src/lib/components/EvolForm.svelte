@@ -352,6 +352,7 @@
 			email_externe: showEmail ? emailExterne.trim() || undefined : undefined,
 			interne: avecInterne ? interne : undefined,
 			perimetre_cible: perimetreDeclare,
+			public_cible: sectionDestinataires ? destinataires : undefined, // affichée, donc émise (#1091)
 			assiste_ia: assisteIA || undefined, // seulement quand c'est vrai : « je n'en dis rien » sinon
 		});
 	}

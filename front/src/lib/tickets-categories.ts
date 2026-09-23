@@ -47,13 +47,14 @@ export interface CategorieTicket {
 	 */
 	reserveCS?: boolean;
 	/**
-	 *  Connue du serveur, pas encore proposée — à PERSONNE. « Actualité » ne
-	 *  s'ouvre à la grille qu'avec le lot 4 du chantier v2.0.0 (#1091), quand
-	 *  l'écran des actualités lira les affaires : avant, une actualité publiée
-	 *  ici n'y paraîtrait pas, et il y aurait deux façons de publier. Retirer ce
-	 *  drapeau EST le geste du lot 4.
+	 *  Se CRÉE par son propre formulaire, et se FILTRE par sa nature (#1091,
+	 *  #1092). « Actualité » a son bouton « Nouvelle actualité » et son filtre
+	 *  « Actualité » : la proposer aussi dans la grille d'une nouvelle affaire
+	 *  ferait deux façons de publier, dont une qui ne propose ni le public visé,
+	 *  ni l'Accès, ni l'affiche. Elle reste proposée À LA CORRECTION : c'est ainsi
+	 *  qu'une affaire devient une actualité.
 	 */
-	enPreparation?: boolean;
+	formulairePropre?: boolean;
 }
 
 /**  La marque posée sur une catégorie du carnet, et la phrase qui l'explique.
@@ -194,7 +195,7 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		//  Une INFORMATION, pas une demande : personne n'agit, elle périme (#1091).
 		description: 'Information de la copropriété — publiée par le conseil',
 		reserveCS: true,
-		enPreparation: true,
+		formulairePropre: true,
 	},
 ];
 
@@ -246,19 +247,22 @@ export function categorieTicketLabel(categorie: string | undefined | null): stri
  */
 /**
  *  La grille de CHOIX d'une catégorie : sans les catégories réservées au
- *  conseil, pour qui n'en est pas (#1091). `OPTIONS_CATEGORIE` reste entière —
- *  elle sert aussi à NOMMER la catégorie d'une affaire déjà créée.
+ *  conseil, pour qui n'en est pas (#1091), et — à la CRÉATION — sans celles qui
+ *  ont leur propre formulaire. `OPTIONS_CATEGORIE` reste entière — elle sert
+ *  aussi à NOMMER la catégorie d'une affaire déjà créée.
  */
-export function optionsCategorie(estCS: boolean) {
+export function optionsCategorie(estCS: boolean, creation = false) {
 	const reservees = new Set(CATEGORIES_TICKET.filter((c) => c.reserveCS).map((c) => c.value));
-	const cachees = new Set(CATEGORIES_TICKET.filter((c) => c.enPreparation).map((c) => c.value));
-	return OPTIONS_CATEGORIE.filter((o) => !cachees.has(o.val) && (estCS || !reservees.has(o.val)));
+	const propres = new Set(CATEGORIES_TICKET.filter((c) => c.formulairePropre).map((c) => c.value));
+	return OPTIONS_CATEGORIE.filter(
+		(o) => !(creation && propres.has(o.val)) && (estCS || !reservees.has(o.val)),
+	);
 }
 
-/**  La rangée de FILTRES de la liste : toutes les catégories proposables — celles
- *   « en préparation » exceptées (#1091), qu'aucune affaire ne porte encore. Elle
- *   était projetée dans la page même. */
-export const OPTIONS_FILTRE_CATEGORIE = CATEGORIES_TICKET.filter((c) => !c.enPreparation).map(
+/**  La rangée de FILTRES par catégorie — celles qui ont leur propre formulaire
+ *   exceptées : elles se filtrent par leur NATURE (`OPTIONS_FILTRE_NATURE`), et
+ *   deux pastilles « Actualité » sur la même page se liraient comme deux choses. */
+export const OPTIONS_FILTRE_CATEGORIE = CATEGORIES_TICKET.filter((c) => !c.formulairePropre).map(
 	(c) => ({
 		val: c.value,
 		label: `${c.emoji} ${c.label}`,
@@ -281,3 +285,17 @@ export const OPTIONS_CATEGORIE: readonly {
 	//  moins — un emoji, au moins, s'annonçait.
 	marqueAide: c.carnet ? 'consignée au carnet d’entretien' : undefined,
 }));
+
+/**
+ *  Le filtre de la vue Affaires, arbitré le 23/09/2026 (#1092) : *« Actualité :
+ *  si catégorie Actualité ; Calendrier : si une date est définie ; Activité : le
+ *  reste »*. Les VALEURS sont celles que le serveur dérive
+ *  (`nature_affaire.natures`, transportées par `Ticket.natures`) : l'écran ne
+ *  redérive rien. Ce n'est pas une partition — une actualité datée paraît sous
+ *  Actualité ET sous Calendrier.
+ */
+export const OPTIONS_FILTRE_NATURE = [
+	{ val: 'actualite', label: '\u{1F4F0} Actualité' },
+	{ val: 'calendrier', label: '\u{1F4C5} Calendrier' },
+	{ val: 'activite', label: '\u{1F6E0}️ Activité' },
+];

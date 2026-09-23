@@ -81,8 +81,8 @@ class RegleArchivage:
     champs_date: tuple[str, ...]
     #: Le champ qui porte l'état, s'il y en a un.
     champ_statut: Optional[str] = None
-    #: Ce que vaut l'état quand il est `None` en base. `Publication.statut`
-    #: vaut « publie » par défaut ; un `None` hérité doit se lire pareil.
+    #: Ce que vaut l'état quand il est `None` en base. Une actualité vaut
+    #: « publie » par défaut ; un `None` hérité doit se lire pareil.
     statut_defaut: Optional[str] = None
     #: Archivage **immédiat**, sans délai. « Annulé = immédiat quel que soit le
     #: type » — arbitré à l'écran le 19/08/2026.
@@ -118,32 +118,6 @@ class RegleArchivage:
 #  Les sept déclencheurs ont été tranchés à l'écran le 19/08/2026. Ils sont
 #  écrits ici, et **seulement** ici.
 REGLES: dict[str, RegleArchivage] = {
-    "publication": RegleArchivage(
-        champ_statut="statut",
-        statut_defaut="publie",
-        statuts_immediats=("annule",),
-        #  ⚠️ « en_cours » n'y est PAS : une actualité en cours de traitement
-        #  demande encore du suivi, elle ne doit pas s'effacer toute seule.
-        statuts_terminaux=("publie", "resolu"),
-        champs_date=("statut_change_le", "publiee_le", "cree_le"),
-        champ_archive_manuel="archivee",
-        champ_epingle="epingle",
-        champ_brouillon="brouillon",
-        declencheur=(
-            "30 jours après la publication (ou le passage en « Résolu »). "
-            "Une date de fin de validité la fait sortir dès le lendemain."
-        ),
-        #  🔴 `fin` d'abord, `debut` en repli : un événement qui dure reste
-        #  utile jusqu'à sa fin, et un événement ponctuel n'a que son début.
-        #
-        #  ⚠️ Il y avait un troisième champ en tête, `visible_jusqu_au`, saisi par
-        #  l'auteur — retiré le 22/09/2026, le jour de sa livraison : *« cette date
-        #  est à enlever, elle est calculée par l'appli »*. Ce qui n'a pas de date
-        #  d'événement ne périme pas, et l'archivage à trente jours couvre ce cas
-        #  depuis le 19/08/2026 : le champ faisait saisir ce que le produit savait
-        #  déjà décider (migration 0205).
-        champs_peremption=("fin", "debut"),
-    ),
     "ticket": RegleArchivage(
         champ_statut="statut",
         #  🔴 ACCENTUÉS, et seuls de tout le site à l'être (`StatutTicket`).
@@ -171,6 +145,14 @@ REGLES: dict[str, RegleArchivage] = {
             "30 jours après la publication. Une date d'événement la fait sortir "
             "dès le lendemain."
         ),
+        #  🔴 `fin` d'abord, `debut` en repli : un événement qui dure reste
+        #  utile jusqu'à sa fin, et un événement ponctuel n'a que son début.
+        #
+        #  ⚠️ Il y avait un troisième champ en tête, `visible_jusqu_au`, saisi par
+        #  l'auteur — retiré le 22/09/2026, le jour de sa livraison : *« cette date
+        #  est à enlever, elle est calculée par l'appli »* (migration 0205). La
+        #  règle « publication » qui le portait est partie le 23/09/2026 avec
+        #  l'entité : une actualité est une affaire (#1091).
         champs_peremption=("fin", "debut"),
     ),
     "annonce": RegleArchivage(
@@ -261,7 +243,7 @@ def _regle_de(type_objet: str, objet: Any) -> str:
     return type_objet
 
 
-def perime_le(objet: Any, type_objet: str = "publication") -> Optional[date]:
+def perime_le(objet: Any, type_objet: str = "ticket") -> Optional[date]:
     """La date a partir de laquelle cet objet n'est plus utile — ou `None` (#1093).
 
         perime_le =  fin de l'evenement      si date d'evenement
@@ -296,7 +278,7 @@ def perime_le(objet: Any, type_objet: str = "publication") -> Optional[date]:
 
 def est_perime(
     objet: Any,
-    type_objet: str = "publication",
+    type_objet: str = "ticket",
     maintenant: Optional[datetime] = None,
 ) -> bool:
     """Ce jour-la est-il PASSE ? Le soir du jour dit, jamais son matin."""

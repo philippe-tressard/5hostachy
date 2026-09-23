@@ -37,6 +37,12 @@ premier enrichissement du gabarit. Un contrôle, oui.
 du logement. Il n'est publié que si la personne l'a renseigné — et le champ est
 facultatif partout, précisément pour que ce soit un choix.
 
+## Une affaire « Actualité » depuis le 23/09/2026 (#1091, lot 4)
+
+L'actualité est devenue une catégorie d'affaire : l'annonce en est une, dans
+l'état `publie`, sans cycle. Les annonces déjà publiées ont été recopiées par la
+0210 avec leur auteur et leur titre — la garde contre le doublon les retrouve.
+
 ## L'arrivant est l'AUTEUR de sa propre annonce
 
 `auteur_id = user.id`. Ce n'est pas un détail de plomberie : c'est ce qui lui
@@ -50,7 +56,9 @@ from html import escape
 
 from sqlmodel import Session, select
 
-from app.models.core import Batiment, Publication, Utilisateur
+from app.models.core import Batiment, Ticket, Utilisateur
+from app.utils.courriel_entrant import nouveau_jeton
+from app.utils.nature_affaire import ACTUALITE, statut_pour
 
 #: Le titre est stable : c'est lui qui sert de garde contre le doublon.
 PREFIXE_TITRE = "Bienvenue à "
@@ -129,7 +137,7 @@ def corps_annonce(nom_complet: str, nom_batiment: str, etage: int | None, ancien
     )
 
 
-def annonce_existante(session: Session, user_id: int) -> Publication | None:
+def annonce_existante(session: Session, user_id: int) -> Ticket | None:
     """L'annonce déjà publiée pour cette personne, s'il y en a une.
 
     Même raison que pour le ticket : `accueil-arrivant` est rejouable par un
@@ -137,9 +145,10 @@ def annonce_existante(session: Session, user_id: int) -> Publication | None:
     que rien ne le dise.
     """
     return session.exec(
-        select(Publication).where(
-            Publication.auteur_id == user_id,
-            Publication.titre.like(PREFIXE_TITRE + "%"),
+        select(Ticket).where(
+            Ticket.auteur_id == user_id,
+            Ticket.categorie == ACTUALITE,
+            Ticket.titre.like(PREFIXE_TITRE + "%"),
         )
     ).first()
 
@@ -150,7 +159,7 @@ def creer_annonce_arrivee(
     *,
     nom_complet: str,
     ancien: str,
-) -> Publication | None:
+) -> Ticket | None:
     """Publie l'actualité de bienvenue. Rend `None` si elle existe déjà.
 
     ⚠️ Aucun `commit` : l'appelant en fait un seul à la fin de l'accueil. Une
@@ -166,23 +175,30 @@ def creer_annonce_arrivee(
     #  vaut une annonce large qu'une annonce que personne ne voit.
     perimetre_cible = f'["bat:{user.batiment_id}"]' if user.batiment_id else '["résidence"]'
 
-    pub = Publication(
+    from app.routers.tickets.commun import generer_numero
+
+    annonce = Ticket(
+        numero=generer_numero(),
+        jeton_courriel=nouveau_jeton(),
         titre=titre_annonce(nom_complet, nom_batiment),
-        contenu=corps_annonce(nom_complet, nom_batiment, user.etage, ancien),
-        perimetre="bâtiment" if user.batiment_id else "résidence",
+        description=corps_annonce(nom_complet, nom_batiment, user.etage, ancien),
+        categorie=ACTUALITE,
+        statut=statut_pour(ACTUALITE),
         batiment_id=user.batiment_id,
         perimetre_cible=perimetre_cible,
-        public_cible='["résidents"]',
+        #  `None` = tout le monde : c'est ce que « Tous les résidents » est
+        #  devenu sur une affaire (0210).
+        public_cible=None,
         #  🔴 L'arrivant est l'auteur de sa propre annonce : c'est ce qui lui
         #  permet de la voir et de la corriger. Une présentation de soi qu'on ne
         #  peut ni lire ni modifier serait le défaut de
         #  `project_auteur_toujours_visible` appliqué à sa propre arrivée.
         auteur_id=user.id,
-        statut="publie",
-        #  Jamais sur le groupe WhatsApp : une annonce nominative n'a pas à
-        #  quitter l'application, où la lecture est déjà restreinte au périmètre.
-        partager_whatsapp=False,
-        envoyer_syndic=False,
+        #  Jamais sur le groupe WhatsApp ni chez le syndic : une annonce
+        #  nominative n'a pas à quitter l'application, où la lecture est déjà
+        #  restreinte au périmètre. Rien n'est diffusé ici — seul un appel à
+        #  `diffuser_actualite` enverrait, et il n'y en a pas.
+        destinataire_syndic=False,
     )
-    session.add(pub)
-    return pub
+    session.add(annonce)
+    return annonce

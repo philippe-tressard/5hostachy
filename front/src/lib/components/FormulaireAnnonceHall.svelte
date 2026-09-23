@@ -125,9 +125,10 @@
 
 	const brouillonApercu = () =>
 		annoncesHallApi.apercuDiffusion({
-			//  L'affiche pré-remplie depuis une actualité en garde le lien : c'est
-			//  lui que le groupe WhatsApp reçoit, et l'aperçu doit le montrer.
-			publication_id: typeof sourceId === 'number' ? sourceId : undefined,
+			//  ⚠️ Plus de `publication_id` (23/09/2026) : `sourceId` est une CLÉ
+			//  (`ticket:12`), jamais un nombre, et la ligne n'envoyait donc rien
+			//  depuis le 10/09. La création ne transmet pas la source non plus :
+			//  l'aperçu et l'envoi concordent — sans lien, tous les deux.
 			titre: titre.trim(),
 			message,
 			perimetre_cible: perimetre,

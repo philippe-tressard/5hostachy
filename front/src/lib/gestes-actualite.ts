@@ -1,109 +1,88 @@
 /**
- * **Les gestes qu'on fait à une actualité** — depuis le fil, côté écran.
+ * **Les gestes propres à une actualité** — côté écran.
  *
- * Trois à ce jour : la promouvoir en affaire (#1094), la supprimer, et
- * enregistrer ses options de mise en avant. Ils vivent
- * ensemble parce qu'ils partagent leur forme — une confirmation dite avec les
- * mots du lecteur, un appel, puis le retrait de la carte — et parce que l'écran
- * qui les portait est au-dessus du plafond de modularité.
+ * Deux à ce jour : la promouvoir en affaire suivie (#1094), et retrouver où
+ * mène une ancienne adresse d'actualité. Les autres — supprimer, enregistrer
+ * les options, ajouter une Suite — sont ceux de TOUTE affaire depuis le
+ * 23/09/2026 (#1091, lot 4) : ils vivent dans la page des affaires
+ * (`GestesTicket`), et une seconde écriture ici divergerait au premier écart.
  *
- * ## La promotion : une actualité devient une affaire (#1094)
- *
- * ## Le gain, et il est pour l'utilisateur
+ * ## La promotion : une actualité devient une affaire suivie (#1094)
  *
  * Une actualité qui dérape — « attention, fuite au 3e » — obligeait à rouvrir
- * une affaire et **tout retaper**. Ici, titre, description, pièces jointes et
- * périmètre suivent ; on ajoute un statut.
+ * une affaire et **tout retaper**. Depuis que l'actualité EST une affaire, la
+ * promotion n'est plus une conversion : la même affaire change de catégorie,
+ * le serveur lui donne un état de suivi (`nature_affaire.statut_pour`), et
+ * rien ne bouge — ni le titre, ni les pièces, ni l'adresse déjà envoyée.
  *
- * ## Pourquoi un module et pas trente lignes dans l'écran
+ * ## Les anciennes adresses (#1094, puis #1091)
  *
- * `actualites/+page.svelte` est au-dessus du plafond de modularité, et le
- * contrôle a refusé qu'il grossisse — « on découpe QUAND on y touche ».
- *
- * Mais ce n'est pas la seule raison, ni la meilleure : la promotion a **deux
- * moitiés qui doivent rester ensemble**. Celle qui convertit, et celle qui
- * rattrape l'ancienne adresse. Séparées, la seconde se perd — et c'est elle
- * qui empêche un courriel déjà envoyé de finir sur un lien mort.
- *
- * ## L'arbitrage du 21/09/2026 : la publication DISPARAÎT
- *
- * Trois voies étaient possibles — convertir, coexister, archiver. La conversion
- * a été retenue : *un seul objet à la fois, jamais de doublon*.
- *
- * Verrouillé côté serveur par `api/tests/test_promotion_actualite.py`.
+ * Les courriels et messages d'une actualité portaient `/actualites#pub-42`. Le
+ * serveur rend **410** avec l'affaire née de la publication — et **404** pour un
+ * identifiant réellement inconnu, qu'on laisse alors tranquille plutôt que
+ * d'annoncer une affaire qui n'existe pas.
  */
 import { goto } from '$app/navigation';
 
-import { publications as pubsApi } from '$lib/api';
-import type { Publication, Ticket } from '$lib/api/types';
+import { publications as pubsApi, tickets as ticketsApi } from '$lib/api';
+import type { Ticket } from '$lib/api/types';
 import { confirmerPuis } from '$lib/confirmation';
-import { tenter } from '$lib/erreurs';
-import { PUBLICATION } from '$lib/entites/publication';
 import { TICKET } from '$lib/entites/ticket';
-
-/** L'adresse d'une affaire — écrite ici, et une seule fois pour ce module. */
-const versAffaire = (id: number) => `/tickets/${id}`;
+import { lienTicket } from '$lib/tickets';
 
 /**
- * Promouvoir une actualité, après confirmation, et suivre l'affaire née d'elle.
+ * La catégorie que reçoit une actualité promue. « Question » : la plus neutre,
+ * celle qui ne présume de rien — le conseil la précise ensuite à la correction,
+ * comme il précisait le statut d'une promotion avant le 23/09/2026.
+ */
+const CATEGORIE_DE_PROMOTION = 'question';
+
+/**
+ * Promouvoir une actualité, après confirmation, et suivre l'affaire.
  *
- * ⚠️ La confirmation n'est pas une politesse : l'actualité **quitte le fil** et
- * le geste ne se défait pas. Le texte le dit avec les mots du lecteur — « quittera
- * le fil », « rien n'est à ressaisir » — et jamais ceux du modèle.
+ * ⚠️ La confirmation n'est pas une politesse : l'actualité **quitte le filtre
+ * Actualité** et entre dans un suivi. Le texte le dit avec les mots du lecteur —
+ * et jamais ceux du modèle.
  *
- * @param retirerDeLaListe ce que l'écran fait de sa liste une fois la
- *   conversion faite. Il reste chez lui : chaque écran range la sienne à sa
- *   façon, et un paramètre de plus aurait obligé les appelants à se ressembler
- *   là où ils n'ont aucune raison de le faire (même choix que `confirmerPuis`).
+ * @param remplacer ce que l'écran fait de l'affaire rendue par le serveur : il
+ *   la range à sa place, et c'est sa carte d'affaire qui s'affiche désormais.
  * @returns `true` si la promotion a eu lieu.
  */
 export async function promouvoirActualite(
-	pub: Pick<Publication, 'id' | 'titre'>,
-	retirerDeLaListe: (id: number) => void,
+	pub: Pick<Ticket, 'id' | 'titre'>,
+	remplacer: (maj: Ticket) => void,
 ): Promise<boolean> {
-	let affaire: Ticket | undefined;
+	const libelle = TICKET.libelle.toLowerCase();
 	const fait = await confirmerPuis(
 		{
-			titre: `En faire une ${TICKET.libelle.toLowerCase()}`,
+			titre: `En faire une ${libelle}`,
 			message:
-				`« ${pub.titre} » quittera le fil des actualités et deviendra une ` +
-				`${TICKET.libelle.toLowerCase()} à suivre. Le titre, la description et les ` +
-				'pièces jointes suivent — rien n’est à ressaisir.',
-			libelleConfirmer: `En faire une ${TICKET.libelle.toLowerCase()}`,
+				`« ${pub.titre} » deviendra une ${libelle} à suivre. Le titre, la description ` +
+				'et les pièces jointes restent — rien n’est à ressaisir, et son adresse ne change pas.',
+			libelleConfirmer: `En faire une ${libelle}`,
 		},
 		`${TICKET.libelle} ouverte — le suivi peut commencer.`,
 		async () => {
-			affaire = await pubsApi.promouvoir(pub.id);
-			retirerDeLaListe(pub.id);
+			remplacer(await ticketsApi.update(pub.id, { categorie: CATEGORIE_DE_PROMOTION }));
 		},
 		'Impossible de promouvoir cette actualité',
 	);
-	//  Le lecteur suit l'objet : il vient de demander un suivi, c'est sur
-	//  l'affaire qu'il veut être. Le laisser sur le fil l'obligerait à la
-	//  retrouver — et la carte qu'il regardait n'y est plus.
-	if (fait && affaire) goto(versAffaire(affaire.id));
+	//  Le lecteur suit l'objet : il vient de demander un suivi, c'est sur la
+	//  fiche de l'affaire qu'il le mène.
+	if (fait) goto(lienTicket(pub.id));
 	return fait;
 }
 
 /**
  * **L'ancienne adresse mène à l'affaire** — la moitié qui rattrape.
  *
- * 🔴 Une actualité publiée a déjà été envoyée par courriel, avec son adresse
- * `/actualites#pub-42`. La promotion la supprime : sans ce rattrapage, chacun
- * de ces courriels devient un lien mort. Le chantier refuse de renommer les
- * identifiants `TK-xxxx` pour exactement cette raison.
- *
- * Le serveur répond **410** avec l'affaire née d'elle — et **404** pour un
- * identifiant réellement inconnu, qu'on laisse alors tranquille plutôt que
- * d'annoncer une affaire qui n'existe pas.
- *
  * @returns `true` si l'on a redirigé — l'appelant n'a alors plus rien à faire.
  */
 export async function suivrePublicationPromue(pubId: number): Promise<boolean> {
 	try {
 		await pubsApi.get(pubId);
-		//  Elle existe : ce n'est pas une promotion, l'écran continue son travail
-		//  (elle est peut-être simplement hors de la page chargée).
+		//  Un 2xx n'existe plus sur cette route : on ne redirige pas sur un
+		//  succès qu'on ne comprend pas.
 		return false;
 	} catch (e: unknown) {
 		const detail = (e as { data?: { detail?: { promu_en_affaire?: number } } })?.data?.detail;
@@ -111,67 +90,7 @@ export async function suivrePublicationPromue(pubId: number): Promise<boolean> {
 		//  ⚠️ Tout autre échec — 404, 403, réseau — ne redirige RIEN. Se tromper
 		//  ici enverrait le lecteur sur l'affaire de quelqu'un d'autre.
 		if (typeof id !== 'number') return false;
-		goto(versAffaire(id));
+		goto(lienTicket(id));
 		return true;
 	}
-}
-
-/**
- * Supprimer une actualité, définitivement.
- *
- * ⚠️ Passe par `confirmerPuis` et non par le `confirm()` du navigateur, qui est
- * ce que cet écran employait : la fenêtre native ne se met pas à la charte, ne
- * se traduit pas, et sa formulation n'est pas maîtrisée. Le déplacement du
- * geste a été l'occasion de l'aligner — c'est la moitié « au fil de l'eau » de
- * la règle de modularité.
- */
-export async function supprimerActualite(
-	pub: Pick<Publication, 'id' | 'titre'>,
-	retirerDeLaListe: (id: number) => void,
-): Promise<boolean> {
-	return confirmerPuis(
-		{
-			titre: `Supprimer cette ${PUBLICATION.libelle.toLowerCase()}`,
-			message: `« ${pub.titre} » sera supprimée définitivement. Ce geste ne se défait pas.`,
-			libelleConfirmer: 'Supprimer',
-			danger: true,
-		},
-		`${PUBLICATION.libelle} supprimée`,
-		async () => {
-			await pubsApi.delete(pub.id);
-			retirerDeLaListe(pub.id);
-		},
-		'Impossible de supprimer',
-	);
-}
-
-/** Les options de mise en avant d'une actualité — ce que l'écran en édite. */
-export interface OptionsActualite {
-	epingle: boolean;
-	urgente: boolean;
-	brouillon: boolean;
-	confidentiel: boolean;
-}
-
-/**
- * Enregistrer les options de mise en avant.
- *
- * 🔴 **Le serveur a le dernier mot**, et c'est pourquoi l'appelant reçoit ce
- * qu'il REND, jamais ce qu'on lui a demandé : il peut refuser « confidentiel »
- * sur un périmètre à portée globale (`appliquer_confidentialite`). Ranger le
- * brouillon local afficherait alors une option que la base n'a pas.
- */
-export async function enregistrerOptionsActualite(
-	pub: Pick<Publication, 'id'>,
-	options: OptionsActualite,
-	remplacer: (maj: Publication) => void,
-): Promise<boolean> {
-	return tenter(
-		async () => {
-			const maj = await pubsApi.update(pub.id, { ...options });
-			remplacer(maj);
-		},
-		'Options mises à jour',
-		"Erreur d'enregistrement",
-	);
 }

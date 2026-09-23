@@ -417,7 +417,7 @@
 		      soumission. L'ORDRE des sections, lui, ne bouge pas d'une ligne (R2). -->
 		<SectionsSpecifiquesTicket
 			{etat}
-			OPTIONS_CATEGORIE={optionsCategorie($isCS)}
+			OPTIONS_CATEGORIE={optionsCategorie($isCS, !modeEdition)}
 			{modeEdition}
 			bind:categorie
 			bind:statut

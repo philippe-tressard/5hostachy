@@ -185,7 +185,7 @@
 						<svelte:fragment slot="tags">
 							<span class="badge badge-blue">{annonce.format_label}</span>
 							<span class="badge badge-gray">&#x1F539; {annonce.perimetre_label}</span>
-							{#if annonce.publication_id}<span
+							{#if annonce.ticket_id}<span
 									class="badge badge-gray"
 									title="Générée depuis une actualité">&#x1F4F0; Actualité</span
 								>{/if}

@@ -73,12 +73,9 @@ def test_les_schemas_transportent_la_marque_sur_les_neuf_circuits():
     from app.routers.calendrier_historique import EvolutionEvenementCreate
     from app.routers.idees import IdeeCreate, IdeeUpdate
     from app.routers.sondages.commun import SondageCreate, SondageRead, SondageUpdate
+    #  Les quatre schémas des publications sont partis le 23/09/2026 : une
+    #  actualité est une affaire (#1091), elle passe par ceux des tickets.
     from app.schemas import (
-        EvolutionCreate,
-        PublicationCreate,
-        PublicationEvolutionUpdate,
-        PublicationRead,
-        PublicationUpdate,
         TicketCreate,
         TicketEvolutionCreate,
         TicketEvolutionUpdate,
@@ -88,14 +85,14 @@ def test_les_schemas_transportent_la_marque_sur_les_neuf_circuits():
     from app.schemas_communs import EvolutionLue
 
     creations = (
-        TicketCreate, PublicationCreate, EvenementCreate, TicketEvolutionCreate,
-        EvolutionCreate, EvolutionEvenementCreate, SondageCreate, IdeeCreate, AnnonceCreate,
+        TicketCreate, EvenementCreate, TicketEvolutionCreate,
+        EvolutionEvenementCreate, SondageCreate, IdeeCreate, AnnonceCreate,
     )
     corrections = (
-        TicketUpdate, PublicationUpdate, EvenementUpdate, TicketEvolutionUpdate,
-        PublicationEvolutionUpdate, SondageUpdate, IdeeUpdate, AnnonceUpdate,
+        TicketUpdate, EvenementUpdate, TicketEvolutionUpdate,
+        SondageUpdate, IdeeUpdate, AnnonceUpdate,
     )
-    lectures = (TicketRead, PublicationRead, EvenementRead, SondageRead)
+    lectures = (TicketRead, EvenementRead, SondageRead)
     for s in creations:
         assert issubclass(s, AssisteIAEntree), s.__name__
     for s in corrections:

@@ -20,7 +20,7 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { annoncesProposables, reprendreAnnonce } from '$lib/actualite-prefill';
 	import type { PrefillActualite } from '$lib/actualite-prefill';
-	import { annoncesHall, publications } from '$lib/api';
+	import { annoncesHall, tickets } from '$lib/api';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { fmtDateShort } from '$lib/date';
 	import { messageErreur } from '$lib/erreurs';
@@ -45,7 +45,7 @@
 		if (annonceId === '') return;
 		try {
 			const p = await reprendreAnnonce(
-				() => publications.depuisAnnonceHall(annonceId),
+				() => tickets.depuisAnnonceHall(annonceId),
 				perimetreDefautListe,
 			);
 			toast('info', p.message);

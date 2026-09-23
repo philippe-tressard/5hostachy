@@ -61,10 +61,6 @@ EXCEPTIONS = {
         "`None` = « cette entrée ne parle pas du périmètre », distinct de "
         "« plus aucun périmètre » (#497)"
     ),
-    "routers/publications/commun.py": (
-        "décision d'accès sur une publication confidentielle : refuse au lieu "
-        "d'élargir"
-    ),
 }
 
 #  La forme que prenaient les quatre copies : un `json.loads` dont le repli est la

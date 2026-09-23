@@ -188,6 +188,9 @@
 	export let debut = '';
 	export let fin = '';
 	export let perimetre: string[] = [];
+	/** 🔒 « Visible du seul périmètre », sous les pastilles — une actualité (#1096). */
+	export let avecReservePerimetre = false;
+	export let reservePerimetre = false;
 	/**  `single` : un seul code retenu. Le rendu est le MÊME (des pastilles) —
 	     seule la sélection change. Utilisé par les prestations, dont la colonne
 	     `perimetre` ne porte qu'un code ; les passer au tableau demande une
@@ -355,6 +358,8 @@
 		mode={perimetreMode}
 		requis={perimetreRequis}
 		badgeImpose={perimetreBadge}
+		reservable={avecReservePerimetre}
+		bind:reserve={reservePerimetre}
 	>
 		<slot name="aidePerimetre" slot="aidePerimetre" />
 	</SectionPerimetre>

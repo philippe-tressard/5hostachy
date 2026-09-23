@@ -687,10 +687,19 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
 ### Préfixes par page
 | Page | Préfixe CSS | Référence |
 |------|------------|-----------|
-| Actualités | `.pub-` | **`CarteActualite.svelte`** — la page ne rend plus la carte |
-| Tickets | `.tk-` | `tickets/+page.svelte` |
+| Actualités | `.pub-` | **`CarteActualite.svelte`**, rendue par `ActualiteEnListe` **dans la liste des affaires** |
+| Affaires (tickets) | `.tk-` | `tickets/+page.svelte` → `ListeTickets` |
 | Calendrier | `.ev-` | `calendrier/+page.svelte` |
 | Tableau de bord | `.pub-`, `.ev-`, `.tk-` | `tableau-de-bord/+page.svelte` |
+
+🔴 **Il n'y a plus de page Actualités** (23/09/2026, #1091 lot 4 et #1092) : une
+actualité est une affaire de catégorie « Actualité », et `ListeTickets` choisit
+sa carte — `ActualiteEnListe` (allure d'actualité, sans numéro ni état) ou
+`CarteTicket`. Les deux reçoivent le **même** objet `gestes` : un geste propre à
+l'actualité ne s'écrit pas à côté. Le filtre de la vue Affaires est
+`OPTIONS_FILTRE_NATURE` (Actualité · Calendrier · Activité), lu sur
+`Ticket.natures` que le serveur dérive — jamais redérivé à l'écran.
+`/actualites` n'est plus qu'une redirection (anciens liens `#pub-N` compris).
 
 ⚠️ **La carte des actualités est un composant depuis le 15/08/2026** (#356) :
 `CarteActualite.svelte` sert le fil **et** l'Historique, qui rendaient jusque-là
@@ -860,7 +869,7 @@ explicite du lien, pas un défaut.
 - `type="button"` obligatoire (éviter soumission formulaire)
 - Sélection multiple : toggle + reset auto vers défaut si aucun actif
 
-Pages implémentées : `actualites`, `calendrier`
+Pages implémentées : `tickets` (filtre de nature, 23/09/2026), `calendrier`
 
 ## 6. Ligne de publication
 

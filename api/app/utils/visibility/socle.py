@@ -211,6 +211,23 @@ CODES_PUBLIC_CIBLE: tuple[str, ...] = (
 )
 
 
+def reserve_au_conseil(raw: Optional[str]) -> bool:
+    """Le public visé est-il « Conseil syndical » SEUL ?
+
+    🔴 Arbitré le 23/09/2026 (#1096) : l'option « 🛡️ Visibilité réservée au
+    conseil syndical » disparaît de l'actualité — Destinataires = « Conseil
+    syndical » seul en tient lieu, **avec le même effet** : ni groupe WhatsApp,
+    ni affiche de hall. Sans cette règle, le groupe recevait un message restreint
+    (titre + lien), et le titre d'un contenu réservé fuyait. Une seule écriture :
+    la diffusion et les sources d'affiche l'appellent.
+    """
+    try:
+        codes = json.loads(raw) if isinstance(raw, str) else (raw or [])
+    except (TypeError, ValueError):
+        return False
+    return isinstance(codes, list) and [str(c) for c in codes] == ["conseil_syndical"]
+
+
 def public_cible_visible(raw: Optional[str], user: Utilisateur) -> bool:
     """L'utilisateur fait-il partie du public visé par `raw` (JSON de codes) ?
 

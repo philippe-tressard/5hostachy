@@ -48,5 +48,8 @@ class AnnonceHall(SQLModel, table=True):
     #  base neuve (`create_all`) un schéma que les bases migrées n'ont pas —
     #  divergence qui n'apparaîtrait qu'un jour, sur une machine.
     publication_id: Optional[int] = Field(default=None)
+    #  L'affaire « Actualité » d'origine (#1091, migration 0209) — même raison,
+    #  pas de clé étrangère. `publication_id` reste lu par les liens anciens.
+    ticket_id: Optional[int] = Field(default=None)
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: datetime = Field(default_factory=datetime.utcnow)

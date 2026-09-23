@@ -38,6 +38,9 @@ from app.utils.nature_affaire import categorie_reservee, est_actualite, statut_p
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_ticket
 from app.utils.recuperer import ou_404
+from app.utils.visibility import reservee_au_conseil
+
+from .actualite import appliquer_acces, diffuser_actualite
 
 from .commun import (
     appliquer_options,
@@ -140,6 +143,9 @@ def update_ticket(
     #  envoi qui n'aurait pas lieu — le defaut de `non_relancable` (#435).
     syndic_avant = ticket.destinataire_syndic
     cs_avant = ticket.destinataire_cs
+    #  Une actualité qui QUITTE la réserve du conseil fait partir ce qui était
+    #  coché et retenu (règle de l'ancienne publication : « brouillon publié »).
+    reservee_avant = reservee_au_conseil(ticket)
     #  🔴 L'ACTUALITÉ (#1091) : en faire une, ou cesser d'en être une, est un
     #  geste du conseil — c'est la promotion, qui ne convertit plus rien. Et elle
     #  n'a pas d'état à corriger : `publie` ne se pose, ni ne se quitte, que par
@@ -203,7 +209,7 @@ def update_ticket(
             StatutTicket.ouvert, StatutTicket.publie,
         ):
             raise HTTPException(403, "Modification impossible : le ticket n'est plus ouvert")
-        changes += _appliquer_contenu(body, ticket)
+        changes += _appliquer_contenu(body, ticket, est_cs=is_cs_admin)
         if change_de_nature:
             ticket.statut = statut_pour(ticket.categorie)
 
@@ -292,7 +298,9 @@ def update_ticket(
         ))
 
     # Notification auteur (in-app) — sauf si c'est l'auteur lui-même qui modifie
-    if user.id != ticket.auteur_id:
+    #  Une actualité se corrige entre membres du conseil : l'auteur n'en est pas
+    #  « prévenu » comme d'une affaire qui avance.
+    if user.id != ticket.auteur_id and not est_actualite(ticket):
         session.add(Notification(
             destinataire_id=ticket.auteur_id,
             type="ticket_update",
@@ -300,6 +308,8 @@ def update_ticket(
             corps=" ; ".join(changes) if changes else f"Nouveau statut : {ticket.statut}",
             lien=lien_ticket(ticket.id),
         ))
+    if est_actualite(ticket):
+        appliquer_acces(ticket, session)
     session.add(ticket)
 
     #  ⚠️ PLUS DE COURRIEL « changement de statut » ICI (#431).
@@ -316,6 +326,21 @@ def update_ticket(
     #  reste attaché à la vraie transition, dans `evolutions.py::_notifier_auteur`.
     session.commit()
     session.refresh(ticket)
+
+    #  Une ACTUALITÉ diffuse par son module (#1091) : les canaux cochés à
+    #  l'instant, plus ceux que la réserve du conseil retenait si elle vient
+    #  d'être levée.
+    if est_actualite(ticket) and is_cs_admin:
+        sortie = reservee_avant and not reservee_au_conseil(ticket)
+        diffuser_actualite(
+            session, ticket, user, background_tasks,
+            whatsapp=bool(body.partager_whatsapp),
+            syndic=ticket.destinataire_syndic and (not syndic_avant or sortie),
+            cs=ticket.destinataire_cs and (not cs_avant or sortie),
+            auteur=bool(getattr(body, "envoyer_auteur", False)),
+            affiche=bool(body.annonce_hall),
+        )
+        return ticket_read(ticket, session)
 
     #  L'ENVOI, et seulement sur la transition decoche -> coche (voir plus haut).
     #  Apres le commit : un courriel qui part sur une transaction annulee annonce

@@ -125,13 +125,13 @@ def _t(categorie="panne", debut=None) -> Ticket:
 
 def test_la_nature_se_deduit():
     assert natures(_t("actualite")) == ["actualite"]
-    assert natures(_t("panne")) == ["affaire"]
-    #  Une date d'événement fait paraître au filtre « Événement », quelle que
-    #  soit la catégorie — et une affaire datée N'EST PLUS « Affaire » (règle
-    #  du 22/09 : « catégorie ≠ Actualité ET pas de date »).
+    assert natures(_t("panne")) == ["activite"]
+    #  Une date fait paraître au filtre « Calendrier », quelle que soit la
+    #  catégorie — et une affaire datée N'EST PLUS « Activité » (#1092, 23/09 :
+    #  « Calendrier : si une date est définie ; Activité : le reste »).
     date = datetime(2026, 10, 1, 9, 0)
-    assert natures(_t("panne", date)) == ["evenement"]
-    assert natures(_t("actualite", date)) == ["actualite", "evenement"]
+    assert natures(_t("panne", date)) == ["calendrier"]
+    assert natures(_t("actualite", date)) == ["actualite", "calendrier"]
     assert natures(_t(CategorieTicket.actualite)) == ["actualite"], "l'énumération aussi"
 
 
@@ -166,6 +166,27 @@ def test_le_conseil_corrige_une_actualite_qu_il_n_a_pas_ecrite(session):
     corps = TicketUpdate(titre="Coupure d'eau — reportée")
     lu = mise_a_jour.update_ticket(actu.id, corps, BackgroundTasks(), session=session, user=autre_cs)
     assert lu.titre == "Coupure d'eau — reportée"
+
+
+def test_l_arrivant_corrige_son_annonce_sans_decider_qui_la_lit(session):
+    """#821 : l'arrivant est l'auteur de sa propre annonce, pour la corriger.
+
+    Il en corrige le TEXTE ; à qui l'on parle et l'Accès restent au conseil —
+    ignorés pour lui, comme les options, et non refusés.
+    """
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    arrivant = _compte(session)
+    actu = session.get(Ticket, _creer(session, cs, categorie="actualite").id)
+    #  L'annonce d'arrivée est écrite AU NOM de l'arrivant (`utils/annonce_arrivee`).
+    actu.auteur_id = arrivant.id
+    session.add(actu)
+    session.commit()
+    assert peut_editer(actu, arrivant)
+    corps = TicketUpdate(titre="Bienvenue à Alix", public_cible=["conseil_syndical"], reserve_perimetre=True)
+    lu = mise_a_jour.update_ticket(actu.id, corps, BackgroundTasks(), session=session, user=arrivant)
+    assert lu.titre == "Bienvenue à Alix"
+    relue = session.get(Ticket, actu.id)
+    assert relue.public_cible is None and relue.reserve_perimetre is False
 
 
 # ── Changer de catégorie : la promotion, sans conversion ─────────────────
@@ -217,14 +238,22 @@ def test_une_affaire_ouverte_ne_perime_jamais():
 
 # ── La lecture rend ce qu'il faut pour filtrer ──────────────────────────
 
-def test_la_lecture_rend_la_nature_et_le_public(session):
+def test_la_lecture_rend_la_nature_et_le_public(session, batiments):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
     lu = _creer(session, cs, categorie="actualite", public_cible=["locataires"],
-                reserve_perimetre=True)
+                reserve_perimetre=True, perimetre_cible=[f"bat:{batiments[0]}"])
     relu = ticket_read(session.get(Ticket, lu.id), session)
     assert relu.natures == ["actualite"]
     assert relu.public_cible == ["locataires"]
     assert relu.reserve_perimetre is True
+
+
+def test_reserve_au_perimetre_sur_la_copropriete_entiere_est_retire(session):
+    """🔒 sur un périmètre global ne retire la lecture à personne : le drapeau
+    mentirait. Il est retiré à l'écriture (`actualite.appliquer_acces`)."""
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    lu = _creer(session, cs, categorie="actualite", reserve_perimetre=True)
+    assert lu.reserve_perimetre is False
 
 
 # ── Une actualité n'a pas d'état : ni par une Suite, ni par le PATCH ──────
@@ -255,3 +284,4 @@ def test_publie_ne_s_atteint_par_aucune_transition(session):
         mise_a_jour.update_ticket(affaire.id, TicketUpdate(statut="publie"), BackgroundTasks(),
                                   session=session, user=cs)
     assert refus.value.status_code == 422
+

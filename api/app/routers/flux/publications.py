@@ -1,118 +1,85 @@
-"""Flux — rubrique Actualités (publications).
+"""Flux — rubrique Actualités : les affaires de catégorie « Actualité » (#1091).
 
 Extrait de `flux.py` le 08/08/2026. Voir `__init__.py` pour la règle de découpage.
 
-⚠️ Ce module s'appelle `publications` **dans le paquet `flux`** ; il importe le
-router `app.routers.publications`, qui est un autre fichier. L'import est absolu,
-donc sans ambiguïté pour Python — la précision est là pour le lecteur.
+🔴 Depuis le lot 4 du chantier v2.0.0, une actualité EST une affaire (catégorie
+« Actualité », état `publie`). Ce module ne lit plus `Publication` : il lit les
+affaires de cette catégorie, et le collecteur des affaires suivies les saute —
+sinon chacune paraîtrait deux fois, sous deux formes. La carte, elle, garde sa
+forme d'actualité (`type="publication"`) : c'est ce que l'écran sait rendre, et
+ce que le résident reconnaît.
+
+Le nom du module est resté : il nomme une RUBRIQUE du fil, pas un modèle.
 """
 from sqlalchemy import or_
 from sqlmodel import select
 
-from app.models.core import Publication
-from app.utils.liens import lien_element
-from app.utils.visibility import publication_visible
-
-#  Réutilise la MÊME règle d'archivage dynamique que /actualités pour éviter la
-#  divergence dashboard ⇆ liste : une publication résolue/ancienne ne doit pas
-#  rester affichée dans le fil (ni en « URGENCE ») alors qu'elle est masquée de
-#  /actualités. Cf. bug 17/07/2026 (pub « Services techniques » visible seulement
-#  au dashboard). Pas de cycle : le router publications n'importe pas le flux.
-from app.routers.publications import (
-    STATUT_LABELS,
-    _is_archived,
-)
-from app.utils.archivage import seuil_archivage_jours
-
-from app.utils.photos import parse_photos
+from app.models.core import Ticket
+from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.copie_auteur import proprietaire
+from app.utils.liens import lien_ticket
+from app.utils.nature_affaire import ACTUALITE
+from app.utils.photos import parse_photos
+from app.utils.visibility import ticket_visible
+
 from .commun import ContexteFlux, badges_marqueurs, perimetres_de, strip_html
 from .schemas import FluxItem
-
-#  Les libellés viennent de `publications/commun.py` (#433). Cette copie-ci en
-#  omettait `publie` : sans effet tant que l'appelant filtre cet état juste
-#  au-dessus, mais c'est très exactement la forme d'une divergence qui attend son
-#  premier appelant distrait.
-
-
-#  ⚠️ `_seuil` a disparu : il lisait DEUX clés de configuration, et son
-#  jumeau vivait dans `publications/crud.py`. Le fil et /actualités lisaient
-#  ainsi le même réglage par deux chemins différents — la configuration exacte
-#  qui, le 17/07/2026, a fait apparaître un élément dans une vue et pas dans
-#  l'autre. Un seul lecteur désormais : `seuil_archivage_jours`.
 
 
 def collecter(ctx: ContexteFlux) -> list[FluxItem]:
     #  Un élément ÉPINGLÉ échappe à la fenêtre glissante : il a été explicitement
-    #  désigné comme « à ne pas perdre de vue », il serait absurde qu'il s'efface
-    #  de lui-même. Même exemption pour les événements.
-    pubs = ctx.session.exec(
-        select(Publication)
+    #  désigné comme « à ne pas perdre de vue ». La péremption, elle, passe
+    #  avant l'épinglage — `est_archivable` en décide (#1093).
+    actualites = ctx.session.exec(
+        select(Ticket)
         .where(
-            or_(Publication.cree_le >= ctx.since, Publication.epingle),
-            ~Publication.brouillon,
-            ~Publication.archivee,
+            Ticket.categorie == ACTUALITE,
+            or_(Ticket.cree_le >= ctx.since, Ticket.epingle),
+            ~Ticket.archive_manuel,
         )
-        .order_by(Publication.cree_le.desc())
+        .order_by(Ticket.cree_le.desc())
     ).all()
 
     seuil_jours = seuil_archivage_jours(ctx.session)
 
     cartes: list[FluxItem] = []
-    for p in pubs:
-        #  Exclut les publications archivées dynamiquement (résolues/anciennes) —
-        #  cohérence avec /actualités : sinon elles restent au dashboard sans être
-        #  accessibles depuis la liste principale.
-        if _is_archived(p, seuil_jours):
+    for t in actualites:
+        #  La MÊME règle que la liste des affaires : une actualité que la liste
+        #  range aux archives ne reste pas au fil sans y être accessible.
+        if est_archivable("ticket", t, seuil_jours=seuil_jours):
             continue
-        if not publication_visible(p, ctx.user):
+        if not ticket_visible(t, ctx.user):
             continue
-
-        badges = badges_marqueurs(p)
-        if p.statut and p.statut != "publie":
-            badges.append(STATUT_LABELS.get(p.statut, p.statut))
         #  Le PROPRIÉTAIRE, pas l'auteur : le « Saisi pour » s'il existe (12/09).
-        auteur = proprietaire(ctx.session, p)[0]
+        auteur = proprietaire(ctx.session, t)[0]
         #  500 car. : assez pour déborder 3 lignes en pleine largeur → le clamp-3
-        #  (front) coupe proprement en fin de 3ᵉ ligne. 300 laissait la 3ᵉ ligne
-        #  incomplète.
-        contenu_extrait = strip_html(p.contenu, 500) if getattr(p, "contenu", None) else ""
-        #  🔴 L'auteur N'EST PLUS préfixé à l'extrait (14/09/2026, signalé à
-        #  l'écran) : « l'auteur est mis en début de texte, c'est inutile car il
-        #  est normalisé en dernière ligne ». Il l'était en effet deux fois —
-        #  ici, et dans `meta["auteur"]`, que `FluxCard` rend en fin de rangée
-        #  depuis le 11/09. Une notion affichée deux fois sur la même carte se
-        #  lit comme deux informations.
-        #
-        #  ⚠️ C'était le seul type de carte à le faire : le ticket met une NATURE
-        #  en tête (« Nouveau ticket »), pas une personne. Le fil s'aligne donc
-        #  sur lui, comme demandé.
-
+        #  (front) coupe proprement en fin de 3ᵉ ligne. L'auteur n'est PAS
+        #  préfixé à l'extrait : `meta["auteur"]` le rend en fin de rangée.
+        extrait = strip_html(t.description, 500) if t.description else ""
         cartes.append(FluxItem(
-            id=f"pub_{p.id}",
+            id=f"tk_{t.id}",
             type="publication",
             #  PAS `mis_a_jour_le` : cocher ou décocher « Épinglé » / « Urgent »
-            #  écrit ce champ, et la publication remontait alors en tête du fil à
+            #  écrit ce champ, et l'actualité remontait alors en tête du fil à
             #  la date du jour, pastille NEW comprise (exigé le 01/08/2026).
             #  Agir sur un marqueur est une action éditoriale, pas un événement de
             #  la copropriété : la ligne garde donc la date de son annonce et
             #  reprend simplement sa place dans la chronologie.
-            date=p.publiee_le or p.cree_le,
-            cree_le=p.cree_le,
-            titre=p.titre,
-            detail=contenu_extrait or None,
+            date=t.cree_le,
+            cree_le=t.cree_le,
+            titre=t.titre,
+            detail=extrait or None,
             icon="📰",
-            badges=badges,
-            lien=lien_element("pub", p.id),
+            badges=badges_marqueurs(t),
+            lien=lien_ticket(t.id),
             meta={
-                "pub_id": p.id,
-                "epingle": p.epingle,
-                "urgente": p.urgente,
-                "full_html": p.contenu,
+                "ticket_id": t.id,
+                "epingle": t.epingle,
+                "urgente": t.priorite == "haute",
+                "full_html": t.description,
                 "auteur": auteur,
-                "photos_urls": parse_photos(getattr(p, "photos_urls", None)),
-                "statut": p.statut,
-                "perimetre_codes": perimetres_de(p),
+                "photos_urls": parse_photos(t.photos_urls),
+                "perimetre_codes": perimetres_de(t),
             },
         ))
     return cartes

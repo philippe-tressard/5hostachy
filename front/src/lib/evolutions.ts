@@ -111,6 +111,9 @@ export interface ChargeUtileEvolution {
 	/**  Le périmètre que l'entrée PRÉCISE — absent quand elle n'en parle pas, et
 	 *   le serveur ne touche alors pas à celui de l'objet (#497). */
 	perimetre_cible?: string[];
+	/**  À qui l'on parle — émis quand la section Destinataires est affichée, et
+	 *   appliqué par le serveur au conseil seul (une actualité, #1091). */
+	public_cible?: string[];
 	/**  Message interne : proposé seulement là où `avecInterne` est activé, donc
 	 *   aujourd'hui la seule fiche d'un ticket. */
 	interne?: boolean;

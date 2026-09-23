@@ -53,7 +53,7 @@ export async function annoncesProposables(
 /** Ce que le pré-remplissage RAPPORTE — les champs du formulaire, et rien d'autre. */
 export interface PrefillActualite {
 	titre: string;
-	contenu: string;
+	description: string;
 	perimetreCible: string[];
 	photos: string[];
 	/** Le message à afficher — il dépend du nombre d'images reprises. */
@@ -88,7 +88,7 @@ export function messagePrefill(nbPhotos: number): string {
 export async function reprendreAnnonce(
 	charger: () => Promise<{
 		titre: string;
-		contenu: string;
+		description: string;
 		perimetre_cible?: string[] | null;
 		photos_urls?: string[] | null;
 	}>,
@@ -98,7 +98,7 @@ export async function reprendreAnnonce(
 	const photos = [...(src.photos_urls ?? [])];
 	return {
 		titre: src.titre,
-		contenu: src.contenu,
+		description: src.description,
 		perimetreCible: src.perimetre_cible?.length ? [...src.perimetre_cible] : perimetreDefaut(),
 		photos,
 		message: messagePrefill(photos.length),

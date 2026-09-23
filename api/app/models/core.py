@@ -381,27 +381,6 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     auteur: Optional[Utilisateur] = Relationship(back_populates="publications")
     evolutions: List["PublicationEvolution"] = Relationship(back_populates="publication")
 
-    @property
-    def perime_le(self):
-        """La date où cette actualité cesse d'être utile — **dérivée** (#1093).
-
-        Elle ne se SAISIT pas : arbitré à l'écran le 22/09/2026, *« cette date
-        est à enlever, elle est calculée par l'appli »*. Ce qui n'a pas de date
-        d'événement ne périme pas, et n'en a pas besoin : l'archivage à trente
-        jours couvre déjà ce cas pour les sept objets du site.
-
-        Elle APPELLE la règle, elle ne la redérive pas : `utils/archivage`
-        tranche pour le fil, le calendrier, les archives et cet objet. C'est
-        la même discipline que `est_moderateur` et `estPerimetreParDefaut`.
-
-        ⚠️ Une propriété et non une colonne : rien ne se stocke, donc rien ne
-        périme en silence après un report d'événement. `PublicationRead` la lit
-        par `from_attributes`.
-        """
-        from app.utils.archivage import perime_le  # import local : évite un cycle
-
-        return perime_le(self)
-
 
 class PublicationEvolution(EvolutionMixin, table=True):
     __tablename__ = "publication_evolution"

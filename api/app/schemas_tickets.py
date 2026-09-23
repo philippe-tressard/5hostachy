@@ -58,6 +58,11 @@ class TicketEvolutionCreate(AssisteIAEntree):
     #  que la catégorie « Urgence » met déjà à `haute`. Arbitré le 05/09/2026 —
     #  deux notions d'urgence sur le même écran finiraient par se contredire.
     urgente: Optional[bool] = None
+    #  Ce que porte une actualité (#1091, lot 4), corrigeable depuis une Suite
+    #  comme sur l'ancienne publication : à qui l'on parle (`[]` = tout le monde)
+    #  et l'Accès « visible du seul périmètre ». Du conseil seul.
+    public_cible: Optional[List[str]] = None
+    reserve_perimetre: Optional[bool] = None
 
 
 class TicketEvolutionUpdate(AssisteIACorrection):

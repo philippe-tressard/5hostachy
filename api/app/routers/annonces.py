@@ -126,7 +126,7 @@ class AnnonceCreate(AssisteIAEntree):
     titre: str
     description: str
     #  Section 4 du cadre #430. Reçu en LISTE, stocké en JSON — même contrat que
-    #  `PublicationCreate` : la conversion se fait ici, à la frontière, et une
+    #  `TicketCreate` : la conversion se fait ici, à la frontière, et une
     #  seule fois.
     perimetre_cible: List[str] = ["résidence"]
     #  Section 5 du cadre #430 (#782). Liste VIDE = tout le monde : c'est ce que

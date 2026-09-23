@@ -282,36 +282,9 @@ def test_supprimer_une_idee_avec_ses_votes(contexte):
     assert session.get(Idee, idee.id) is None
 
 
-def test_supprimer_une_publication_avec_son_historique_et_ses_documents(contexte):
-    """Trois références entrantes, dont `publication_evolution` en NOT NULL.
-
-    `document.publication_id` et `annonce_hall.publication_id` sont nullables —
-    mais sous les clés, une ligne qui référence un parent supprimé bloque, que
-    la colonne soit obligatoire ou non.
-    """
-    from app.models.core import Publication, PublicationEvolution
-    from app.routers.publications.crud import delete_publication
-
-    session, admin = contexte
-    pub = Publication(titre="T", contenu="c", auteur_id=admin.id)
-    session.add(pub)
-    session.commit()
-    session.refresh(pub)
-    session.add(PublicationEvolution(publication_id=pub.id, type="commentaire", auteur_id=admin.id))
-    session.add(
-        Document(
-            titre="PJ",
-            fichier_nom="pj.pdf",
-            fichier_chemin="/tmp/pj-546.pdf",
-            publication_id=pub.id,
-            publie_par_id=admin.id,
-        )
-    )
-    session.commit()
-
-    delete_publication(pub.id, session, admin)
-    assert session.get(Publication, pub.id) is None
-    assert session.exec(select(Document).where(Document.publication_id == pub.id)).all() == []
+#  La suppression d'une PUBLICATION n'a plus de porte depuis le 23/09/2026 : une
+#  actualité est une affaire (#1091), elle se supprime par `delete_ticket`, que
+#  les deux cas du haut de ce fichier gardent — évolutions et documents compris.
 
 
 #  🔴 LES DEUX SUPPRESSIONS D'ACCÈS ONT CHANGÉ DE PORTE le 15/09/2026.

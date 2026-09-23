@@ -29,7 +29,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.schemas import TicketEvolutionRead, TicketRead
-from app.utils.archivage import est_archivable, seuil_archivage_jours
+from app.utils.archivage import est_archivable, perime_le, seuil_archivage_jours
 from app.utils.photos import parse_photos
 
 #: Libellé lisible de chaque état — e-mails, notifications, fil d'évolutions.
@@ -258,6 +258,7 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         archivee=est_archivable("ticket", ticket, seuil_jours=seuil_archivage_jours(session)),
         relance_count=compter_relances(session, ticket.id),
         natures=natures(ticket),
+        perime_le=perime_le(ticket, "ticket"),
     ))
 
 
