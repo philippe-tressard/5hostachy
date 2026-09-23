@@ -119,7 +119,7 @@ def test_chaque_colonne_partagee_revient_telle_quelle(session):
 #  connaissait pas : 200, et rien d'écrit. Effacer une date, c'est envoyer
 #  `null` — que « `is not None` » confond avec « absent ».
 
-from app.routers.tickets.correction import _appliquer_contenu  # noqa: E402
+from app.routers.tickets.correction import _appliquer_contenu, _appliquer_quand  # noqa: E402
 from app.routers.tickets.mise_a_jour import _touche_au_contenu  # noqa: E402
 from app.schemas import TicketUpdate  # noqa: E402
 
@@ -131,7 +131,7 @@ def _affaire_datee() -> Ticket:
 
 def test_le_patch_ecrit_une_date_et_l_annonce():
     t = _affaire_datee()
-    changes = _appliquer_contenu(TicketUpdate(debut=datetime(2026, 10, 8, 9, 0)), t)
+    changes = _appliquer_quand(TicketUpdate(debut=datetime(2026, 10, 8, 9, 0)), t)
     assert t.debut == datetime(2026, 10, 8, 9, 0)
     assert t.fin == datetime(2026, 10, 1, 12, 0), "un champ absent ne se touche pas"
     assert any("Quand" in c for c in changes), changes
@@ -140,11 +140,12 @@ def test_le_patch_ecrit_une_date_et_l_annonce():
 def test_le_patch_efface_une_date_envoyee_a_null():
     t = _affaire_datee()
     corps = TicketUpdate(debut=None, fin=None)
-    assert _touche_au_contenu(corps), "effacer les dates est une modification du contenu"
-    _appliquer_contenu(corps, t)
+    #  « Quand » n'est plus du contenu (23/09/2026) : le conseil le planifie.
+    assert not _touche_au_contenu(corps), "les dates ne sont pas le contenu de l'auteur"
+    _appliquer_quand(corps, t)
     assert t.debut is None and t.fin is None
 
 
 def test_la_meme_date_ne_s_annonce_pas():
     t = _affaire_datee()
-    assert _appliquer_contenu(TicketUpdate(debut=t.debut, fin=t.fin), t) == []
+    assert _appliquer_quand(TicketUpdate(debut=t.debut, fin=t.fin), t) == []

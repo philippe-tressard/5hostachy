@@ -77,6 +77,8 @@
 	export let pliable = false;
 	/** Une valeur du créneau (la récurrence d'un Entretien) rouvre aussi la section. */
 	export let autreValeur = false;
+	/** Le motif d'extinction, ou `''` : planifier est au conseil syndical (23/09/2026). */
+	export let inactive = '';
 
 	/**  🔴 « Sans date » est le DÉFAUT : une date saisie rouvre la section.
 	 *
@@ -90,6 +92,7 @@
 	{premiere}
 	{pliable}
 	{resume}
+	{inactive}
 	valeurModifiee={!!debut || !!fin || autreValeur}
 	idTitre="{idPrefixe}-quand"
 >
