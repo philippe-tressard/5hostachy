@@ -56,7 +56,7 @@ caractère près à ceux d'avant le découpage, vérifié par comparaison d'inve
 """
 from fastapi import APIRouter
 
-from . import apercu, crud, evolutions, messages, mise_a_jour, relance
+from . import apercu, crud, depuis_annonce, evolutions, messages, mise_a_jour, relance
 
 #  Les sous-modules à chemins nus reçoivent le préfixe ici. Ce littéral est aussi
 #  ce que lit `test_endpoints_orphelins` pour reconstruire les chemins d'un
@@ -65,7 +65,8 @@ _a_prefixer = APIRouter(prefix="/tickets", tags=["tickets"])
 #  `apercu` est monté avec les littéraux, AVANT `crud` : `/apercu-diffusion` est
 #  un chemin fixe, et `/{ticket_id}` le capterait — la route répondrait 422 sans
 #  qu'aucune erreur ne le dise. Même raison que `/relance-syndic`.
-for _sous_router in (apercu.router, relance.router, messages.router, evolutions.router):
+for _sous_router in (apercu.router, depuis_annonce.router, relance.router, messages.router,
+                     evolutions.router):
     _a_prefixer.include_router(_sous_router)
 
 #  ⚠️ Les chemins littéraux d'abord — voir la docstring : `/relance-syndic` doit

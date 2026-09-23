@@ -52,11 +52,11 @@ from sqlmodel import Session, select
 
 from app.database import engine
 from app.models.copropriete import Lot
-from app.models.core import Publication, StatutUtilisateur, UserLot, Utilisateur
+from app.models.core import StatutUtilisateur, Ticket, UserLot, Utilisateur
 from app.utils import mes_batiments
 from tests.purge_test import purger_ligne
 from app.utils import perimetres as P
-from app.utils.visibility import perimetre_visible, publication_visible
+from app.utils.visibility import actualite_visible, perimetre_visible
 
 #: Les publics que porte `public_cible`, plus les deux formes de ciblage vide.
 PUBLICS = [
@@ -91,11 +91,16 @@ def _utilisateur(roles, statut, batiment_id, *, restreint=False) -> Utilisateur:
     )
 
 
-def _publication(perimetre_cible, public_cible, *, confidentiel=False) -> Publication:
-    return Publication(
-        titre="T", contenu="C", auteur_id=1,
-        perimetre_cible=perimetre_cible, public_cible=public_cible,
-        confidentiel=confidentiel,
+def _publication(perimetre_cible, public_cible, *, confidentiel=False) -> Ticket:
+    """Une actualité — une affaire de catégorie « Actualité » depuis le 23/09/2026.
+
+    `confidentiel` garde son nom ici, pour la lisibilité des cas : c'est l'Accès
+    « visible du seul périmètre » (`reserve_perimetre`) de l'affaire.
+    """
+    return Ticket(
+        numero="TK-A1", titre="T", description="C", categorie="actualite", statut="publie",
+        auteur_id=1, perimetre_cible=perimetre_cible, public_cible=public_cible,
+        reserve_perimetre=confidentiel,
     )
 
 
@@ -115,7 +120,7 @@ def test_aucun_profil_ne_gagne_un_acces_qu_il_n_avait_pas(batiments):
         user = _utilisateur(roles, statut, bat)
         pub = _publication(cible, public)
 
-        obtenu = publication_visible(pub, user)
+        obtenu = actualite_visible(pub, user)
         if not obtenu:
             continue
 
@@ -123,7 +128,7 @@ def test_aucun_profil_ne_gagne_un_acces_qu_il_n_avait_pas(batiments):
         #  On rejoue la seconde moitié de la règle, celle qui n'a pas bougé, en
         #  neutralisant l'axe bâtiment (une publication sans périmètre passe
         #  toujours la première moitié).
-        public_seul = publication_visible(_publication(None, public), user)
+        public_seul = actualite_visible(_publication(None, public), user)
         if not public_seul:
             gains_illegitimes.append(
                 f"  {roles}/{statut}/bât.{bat} voit une publication {public} ciblée {cible}"
@@ -146,12 +151,12 @@ def test_le_public_cible_refuse_toujours_ce_qu_il_refusait(batiments):
 
     for cible in (None, f'["bat:{batiments[0]}"]', f'["bat:{batiments[2]}"]'):
         pub = _publication(cible, '["locataires"]')
-        assert publication_visible(pub, bailleur) is False, cible
-        assert publication_visible(pub, agence) is False, cible
+        assert actualite_visible(pub, bailleur) is False, cible
+        assert actualite_visible(pub, agence) is False, cible
 
         reservee_cs = _publication(cible, '["conseil_syndical"]')
-        assert publication_visible(reservee_cs, bailleur) is False, cible
-        assert publication_visible(reservee_cs, agence) is False, cible
+        assert actualite_visible(reservee_cs, bailleur) is False, cible
+        assert actualite_visible(reservee_cs, agence) is False, cible
 
 
 # ── Ce qui change volontairement ──────────────────────────────────────────────
@@ -160,7 +165,7 @@ def test_une_actualite_d_un_autre_batiment_devient_lisible(batiments):
     """Le changement demandé, énoncé dans le sens positif."""
     resident = _utilisateur("résident", StatutUtilisateur.locataire, batiments[0])
     autre = _publication(f'["bat:{batiments[2]}"]', '["résidents"]')
-    assert publication_visible(autre, resident) is True
+    assert actualite_visible(autre, resident) is True
 
 
 def test_la_case_du_profil_rend_l_ancien_comportement(batiments):
@@ -169,8 +174,8 @@ def test_la_case_du_profil_rend_l_ancien_comportement(batiments):
     autre = _publication(f'["bat:{batiments[2]}"]', '["résidents"]')
     sien = _publication(f'["bat:{batiments[0]}"]', '["résidents"]')
 
-    assert publication_visible(autre, restreint) is False
-    assert publication_visible(sien, restreint) is True
+    assert actualite_visible(autre, restreint) is False
+    assert actualite_visible(sien, restreint) is True
 
 
 def test_la_case_ne_donne_jamais_acces_a_plus(batiments):
@@ -179,8 +184,8 @@ def test_la_case_ne_donne_jamais_acces_a_plus(batiments):
         libre = _utilisateur("résident", StatutUtilisateur.locataire, bat)
         coche = _utilisateur("résident", StatutUtilisateur.locataire, bat, restreint=True)
         pub = _publication(cible, '["résidents"]')
-        if publication_visible(pub, coche):
-            assert publication_visible(pub, libre), (
+        if actualite_visible(pub, coche):
+            assert actualite_visible(pub, libre), (
                 f"la restriction OUVRE un accès pour bât.{bat} sur {cible}"
             )
 
@@ -189,7 +194,7 @@ def test_sans_batiment_connu_la_restriction_ne_vide_pas_le_fil(batiments):
     """Cas zéro : cocher une case ne doit pas laisser devant un écran vide."""
     sans_rien = _utilisateur("résident", StatutUtilisateur.locataire, None, restreint=True)
     pub = _publication(f'["bat:{batiments[1]}"]', '["résidents"]')
-    assert publication_visible(pub, sans_rien) is True
+    assert actualite_visible(pub, sans_rien) is True
 
 
 # ── Ce qui ne doit PAS avoir bougé ────────────────────────────────────────────
@@ -212,13 +217,13 @@ def test_le_conseil_syndical_et_l_admin_voient_toujours_tout(batiments):
     for roles in ("conseil_syndical", "admin"):
         user = _utilisateur(roles, StatutUtilisateur.locataire, batiments[0], restreint=True)
         pub = _publication(f'["bat:{batiments[2]}"]', '["locataires"]')
-        assert publication_visible(pub, user) is True
+        assert actualite_visible(pub, user) is True
 
 
 def test_un_ciblage_illisible_refuse_toujours(batiments):
     """L'ouverture ne doit pas transformer une donnée abîmée en autorisation."""
     resident = _utilisateur("résident", StatutUtilisateur.locataire, batiments[0])
-    assert publication_visible(_publication("{ceci n'est pas du JSON", '["résidents"]'), resident) is False
+    assert actualite_visible(_publication("{ceci n'est pas du JSON", '["résidents"]'), resident) is False
 
 
 # ── Confidentiel (#347) : refermer l'ouverture, et RIEN de plus ───────────────
@@ -245,9 +250,9 @@ def test_confidentiel_ne_rend_jamais_une_publication_plus_visible(batiments):
         cibles, PUBLICS, PROFILS, (False, True)
     ):
         user = _utilisateur(roles, statut, bat, restreint=restreint)
-        if not publication_visible(_publication(cible, public, confidentiel=True), user):
+        if not actualite_visible(_publication(cible, public, confidentiel=True), user):
             continue
-        if not publication_visible(_publication(cible, public), user):
+        if not actualite_visible(_publication(cible, public), user):
             gains.append(
                 f"  {roles}/{statut}/bât.{bat} (restreint={restreint}) voit la version "
                 f"CONFIDENTIELLE de {public} ciblée {cible}, pas la version ouverte"
@@ -264,11 +269,11 @@ def test_confidentiel_referme_le_fil_aux_autres_batiments(batiments):
     autre = _publication(f'["bat:{batiments[2]}"]', '["résidents"]', confidentiel=True)
     sien = _publication(f'["bat:{batiments[0]}"]', '["résidents"]', confidentiel=True)
 
-    assert publication_visible(autre, resident) is False
-    assert publication_visible(sien, resident) is True
+    assert actualite_visible(autre, resident) is False
+    assert actualite_visible(sien, resident) is True
     #  Et la même publication non confidentielle reste lisible : c'est bien la
     #  case, et elle seule, qui a refermé le périmètre.
-    assert publication_visible(_publication(f'["bat:{batiments[2]}"]', '["résidents"]'), resident) is True
+    assert actualite_visible(_publication(f'["bat:{batiments[2]}"]', '["résidents"]'), resident) is True
 
 
 def test_confidentiel_se_combine_en_et_avec_le_public_cible(batiments):
@@ -284,8 +289,8 @@ def test_confidentiel_se_combine_en_et_avec_le_public_cible(batiments):
 
     for public in ('["locataires"]', '["conseil_syndical"]'):
         pub = _publication(cible, public, confidentiel=True)
-        assert publication_visible(pub, bailleur) is False, public
-        assert publication_visible(pub, agence) is False, public
+        assert actualite_visible(pub, bailleur) is False, public
+        assert actualite_visible(pub, agence) is False, public
 
 
 def test_le_conseil_syndical_et_l_admin_voient_les_confidentielles(batiments):
@@ -293,14 +298,14 @@ def test_le_conseil_syndical_et_l_admin_voient_les_confidentielles(batiments):
     for roles in ("conseil_syndical", "admin"):
         user = _utilisateur(roles, StatutUtilisateur.locataire, batiments[0])
         pub = _publication(f'["bat:{batiments[2]}"]', '["résidents"]', confidentiel=True)
-        assert publication_visible(pub, user) is True
+        assert actualite_visible(pub, user) is True
 
 
 def test_un_ciblage_illisible_refuse_aussi_en_confidentiel(batiments):
     """Une donnée abîmée ne devient pas une autorisation, dans les deux régimes."""
     resident = _utilisateur("résident", StatutUtilisateur.locataire, batiments[0])
     pub = _publication("{ceci n'est pas du JSON", '["résidents"]', confidentiel=True)
-    assert publication_visible(pub, resident) is False
+    assert actualite_visible(pub, resident) is False
 
 
 def test_sans_batiment_connu_le_confidentiel_se_referme(batiments):
@@ -320,7 +325,7 @@ def test_sans_batiment_connu_le_confidentiel_se_referme(batiments):
     """
     sans_batiment = _utilisateur("résident", StatutUtilisateur.locataire, None)
     pub = _publication(f'["bat:{batiments[2]}"]', '["résidents"]', confidentiel=True)
-    assert publication_visible(pub, sans_batiment) is False
+    assert actualite_visible(pub, sans_batiment) is False
 
 
 
@@ -434,7 +439,7 @@ def test_un_lot_donne_acces_a_son_batiment_meme_avec_un_rattachement(batiments):
             #  🔒 L'axe PUBLIC n'a pas bougé d'un pouce : le lot lui donne le
             #  bâtiment, jamais le droit de lire ce qui ne lui est pas adressé.
             reservee = _publication(f'["bat:{batiments[1]}"]', '["locataires"]')
-            assert publication_visible(reservee, user) is False
+            assert actualite_visible(reservee, user) is False
         finally:
             for ul in session.exec(
                 select(UserLot).where(UserLot.user_id == user.id)

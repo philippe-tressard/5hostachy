@@ -19,6 +19,7 @@ table, pas un quatrième bloc à recopier.
 from sqlmodel import select
 
 from app.models.core import STATUTS_TICKET_ACTIFS, Ticket, TicketEvolution
+from app.utils.nature_affaire import ACTUALITE
 from app.utils.dates_fr import duree_jhm
 from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
@@ -127,6 +128,9 @@ def _evolutions(ctx: ContexteFlux, type_evolution: str):
         .where(
             TicketEvolution.type == type_evolution,
             TicketEvolution.cree_le >= ctx.since,
+            #  Une actualité a sa rubrique (`publications`) : ici, elle
+            #  paraîtrait une seconde fois, sous une autre forme (#1091).
+            Ticket.categorie != ACTUALITE,
         )
         .order_by(TicketEvolution.cree_le.desc())
     ).all()
@@ -218,7 +222,9 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
 
     # ── Tickets récemment créés, sans aucune évolution ───────────────────────
     for tk in ctx.session.exec(
-        select(Ticket).where(Ticket.cree_le >= ctx.since).order_by(Ticket.cree_le.desc())
+        select(Ticket)
+        .where(Ticket.cree_le >= ctx.since, Ticket.categorie != ACTUALITE)
+        .order_by(Ticket.cree_le.desc())
     ).all():
         if tk.id in vus or not ticket_visible(tk, ctx.user):
             continue

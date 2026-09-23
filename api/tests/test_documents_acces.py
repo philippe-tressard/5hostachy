@@ -24,9 +24,9 @@ passer autant que ce qui doit être refusé — pour qu'un futur assouplissement
 """
 from app.models.core import (
     Document,
-    Publication,
     RoleUtilisateur,
     StatutUtilisateur,
+    Ticket,
     Utilisateur,
 )
 from app.utils.visibility import document_visible
@@ -62,29 +62,36 @@ def _utilisateur(role: str, statut: StatutUtilisateur, batiment_id=None) -> Util
 
 
 def _piece_jointe() -> Document:
-    """Pièce jointe d'actualité : rattachée à une publication, sans catégorie."""
+    """Pièce jointe d'actualité : rattachée à son affaire, sans catégorie.
+
+    Une actualité est une affaire de catégorie « Actualité » depuis le
+    23/09/2026 (#1091) : ses pièces jointes portent `ticket_id`, et la 0210 y a
+    rattaché les anciennes.
+    """
     return Document(
         id=42,
         titre="Compte rendu interne",
         fichier_nom="cr.pdf",
         fichier_chemin="/app/uploads/cr.pdf",
-        publication_id=7,
+        ticket_id=7,
         categorie_id=None,
     )
 
 
-def _publication(**champs) -> Publication:
+def _publication(**champs) -> Ticket:
     base = dict(
         id=7,
+        numero="TK-A7",
         titre="Réunion",
-        contenu="",
+        description="",
+        categorie="actualite",
+        statut="publie",
         auteur_id=1,
-        brouillon=False,
         public_cible=None,
         perimetre_cible=None,
     )
     base.update(champs)
-    return Publication(**base)
+    return Ticket(**base)
 
 
 # ── Ce qui doit être REFUSÉ ──────────────────────────────────────────────────
@@ -122,12 +129,12 @@ def test_piece_jointe_d_actualite_ciblee_ailleurs_suit_l_actualite():
     assert document_visible(restreint, _piece_jointe(), _SessionSansBase(publication_ailleurs)) is False
 
 
-def test_piece_jointe_de_brouillon_refusee():
-    """Rien n'est publié tant que l'actualité est un brouillon — le fichier non plus."""
-    locataire = _utilisateur("locataire", StatutUtilisateur.locataire)
-    session = _SessionSansBase(_publication(brouillon=True))
+def test_piece_jointe_d_actualite_reservee_au_perimetre_suit_l_actualite():
+    """🔒 L'Accès « visible du seul périmètre » referme le fichier avec l'actualité."""
+    ailleurs = _utilisateur("locataire", StatutUtilisateur.locataire, batiment_id=2)
+    session = _SessionSansBase(_publication(perimetre_cible='["bat:1"]', reserve_perimetre=True))
 
-    assert document_visible(locataire, _piece_jointe(), session) is False
+    assert document_visible(ailleurs, _piece_jointe(), session) is False
 
 
 def test_piece_jointe_orpheline_refusee():
@@ -183,7 +190,7 @@ def test_la_branche_piece_jointe_consulte_bien_la_publication():
     locataire = _utilisateur("locataire", StatutUtilisateur.locataire)
     document_visible(locataire, _piece_jointe(), _SessionEspionne(_publication()))
 
-    assert consultations == [(Publication, 7)], (
+    assert consultations == [(Ticket, 7)], (
         "la pièce jointe a été autorisée (ou refusée) sans regarder son actualité"
     )
 
@@ -271,7 +278,6 @@ def test_le_cs_voit_quand_meme_un_document_orphelin():
 #  passe une session qui rend `None`, et ne construit aucun événement. Import mort
 #  retiré le 29/08/2026 — Ruff en CI ne couvre que `api/app/`, jamais `api/tests/`,
 #  donc rien ne le signalait (il y en a 20 autres du même genre).
-from app.models.core import Ticket  # noqa: E402
 
 
 def _piece_jointe_ticket() -> Document:

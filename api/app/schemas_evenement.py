@@ -2,8 +2,8 @@
 
 Sortis de `routers/calendrier.py` le 17/09/2026, sur refus du contrôle de
 modularité : le fichier repassait au-dessus de 500 lignes en recevant la marque
-`assiste_ia` (#985). La découpe suit celle des publications
-(`schemas_publications`) et des tickets (`schemas_tickets`) ; `calendrier.py`
+`assiste_ia` (#985). La découpe suit celle des affaires (`schemas_tickets`,
+actualités comprises) ; `calendrier.py`
 les ré-exporte, et les importateurs existants n'ont pas changé.
 
 ⚠️ `EvolutionEvenementRead` vient de `calendrier_historique`, qui n'importe

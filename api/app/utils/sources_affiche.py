@@ -32,6 +32,16 @@ dans le routeur. Ici, on ne fait que désigner et lire.
 | **confidentiels** | une affiche de hall est lue par **tout le monde**, y compris des gens qui n'ont pas accès à l'objet. Reprendre un ticket refermé sur son auteur et le CS le publierait au mur — c'est le pire sens de l'erreur, et rien à l'écran ne le rattraperait |
 | **réservés au conseil syndical** (🛡️) | même raison, autre mécanisme : la restriction passe par `public_cible`, pas par `confidentiel`. Confirmé à l'écran le 10/09/2026 — *« les publications confidentielles ne sont bien sûr pas affichées, ou celles qui sont réservées au Conseil Syndical »*. Les deux notions coexistent depuis #347 et se combinent en ET : n'en filtrer qu'une laissait l'autre passer |
 | tickets **annulés** | ils disparaissent du fil et sont purgés ; les proposer serait proposer ce qui n'existera plus demain |
+| **réservés au périmètre** (🔒) | un hall se lit sans badge d'accès : ce que l'Accès referme sur un bâtiment n'y va pas |
+
+## Deux familles depuis le 23/09/2026 (#1091, lot 4)
+
+Une actualité EST une affaire de catégorie « Actualité ». Elle n'est plus une
+famille à part : elle se reprend comme affaire, sous son libellé « Actualité ».
+Les trois refus — confidentiel, réservé au conseil, réservé au périmètre — sont
+une seule règle, `visibility.hors_du_hall`, que la génération de l'affiche
+appelle aussi. Deux écritures divergeraient sur le cas limite, et l'une des deux
+publierait au mur ce que l'autre refuse.
 
 ⚠️ La confidentialité est vérifiée **ici**, à la source, et non à l'affichage du
 sélecteur : une liste qui montre ce qu'on ne doit pas reprendre invite à le
@@ -45,16 +55,19 @@ from typing import Optional
 
 from sqlmodel import Session, select
 
-from app.models.core import Publication, Ticket
+from app.models.core import Ticket
 from app.models.evenement import Evenement
+from app.utils.archivage import est_archivable, seuil_archivage_jours
+from app.utils.categories_ticket import libelle_categorie
+from app.utils.nature_affaire import est_actualite
 from app.utils.perimetres import parse_json_perimetres
 from app.utils.perimetres.arbre import parse_perimetres
-from app.utils.valeurs import valeur
+from app.utils.visibility import hors_du_hall
 
-#: Les trois familles reprenables, et leur libellé à l'écran.
+#: Les familles reprenables, et leur libellé à l'écran. Une affaire de catégorie
+#: « Actualité » garde le sien (`SourceAffiche.famille`).
 FAMILLES: dict[str, str] = {
-    "publication": "Actualité",
-    "ticket": "Ticket",
+    "ticket": "Affaire",
     "evenement": "Événement",
 }
 
@@ -62,27 +75,6 @@ FAMILLES: dict[str, str] = {
 #: l'importer créerait un cycle (le routeur importe les utilitaires). Le test
 #: `test_sources_affiche.py` refuse que les deux divergent.
 FENETRE_JOURS = 377
-
-
-#: Le code du public « conseil syndical », tel que le vocabulaire partagé le
-#: nomme. Importé de `visibility` plutôt que retapé : ce vocabulaire est déjà
-#: comparé entre le serveur et l'écran par `test_destinataires_vocabulaire.py`,
-#: et une troisième écriture échapperait à cette comparaison.
-def _code_cs() -> str:
-    from app.utils.visibility import CODES_PUBLIC_CIBLE
-
-    return CODES_PUBLIC_CIBLE[-1]
-
-
-def reserve_au_cs(public_cible: Optional[str]) -> bool:
-    """Ce contenu ne s'adresse-t-il qu'au conseil syndical ?
-
-    🔴 **Deux mécanismes, pas un** : `confidentiel` restreint la lecture au
-    périmètre visé, `public_cible` désigne à QUI l'on parle. Ils se combinent en
-    ET depuis #347, et une affiche de hall doit écarter les deux — ne filtrer que
-    le premier laissait passer une publication marquée 🛡️.
-    """
-    return _code_cs() in parse_json_perimetres(public_cible or "")
 
 
 @dataclass
@@ -94,10 +86,13 @@ class SourceAffiche:
     titre: str
     date: datetime
     epingle: bool
+    #: Le libellé propre à l'élément, quand sa famille n'en dit pas assez : une
+    #: affaire de catégorie « Actualité » se présente comme une actualité.
+    libelle: str = ""
 
     @property
     def famille(self) -> str:
-        return FAMILLES[self.type]
+        return self.libelle or FAMILLES[self.type]
 
     def cle(self) -> str:
         """Identifiant stable côté écran — le type SEUL ne suffit pas, et l'id
@@ -115,29 +110,18 @@ def sources_disponibles(session: Session, *, maintenant: Optional[datetime] = No
     depuis = maintenant - timedelta(days=FENETRE_JOURS)
     sources: list[SourceAffiche] = []
 
-    #  ── Actualités ──────────────────────────────────────────────────────────
-    #  L'archivage d'une publication est CALCULÉ (résolue, ou trop ancienne) :
-    #  la règle vit dans le routeur qui sert le fil, et on l'appelle plutôt que
-    #  de la refaire — deux copies divergeraient sur le cas limite.
-    from app.routers.publications.crud import _is_archived, seuil_archivage_jours
-
+    #  ── Affaires, actualités comprises ─────────────────────────────────────
+    #  « Archivé » est la règle des listes (`est_archivable`), qui sait qu'une
+    #  actualité se périme autrement qu'une affaire suivie : on l'appelle plutôt
+    #  que de la refaire — deux copies divergeraient sur le cas limite.
     seuil = seuil_archivage_jours(session)
-    for pub in session.exec(select(Publication)).all():
-        if pub.brouillon or pub.archivee or pub.confidentiel:
-            continue
-        if reserve_au_cs(pub.public_cible):
-            continue
-        if _is_archived(pub, seuil):
-            continue
-        sources.append(SourceAffiche("publication", pub.id, pub.titre, pub.cree_le,
-                                     bool(pub.epingle)))
-
-    #  ── Tickets ─────────────────────────────────────────────────────────────
     for tk in session.exec(select(Ticket).where(Ticket.cree_le >= depuis)).all():
-        if tk.confidentiel or (tk.statut and str(valeur(tk.statut)) == "annule"):
+        if hors_du_hall(tk) or est_archivable("ticket", tk, seuil_jours=seuil, maintenant=maintenant):
             continue
-        sources.append(SourceAffiche("ticket", tk.id, tk.titre, tk.cree_le,
-                                     bool(getattr(tk, "epingle", False))))
+        sources.append(SourceAffiche(
+            "ticket", tk.id, tk.titre, tk.cree_le, bool(tk.epingle),
+            libelle=libelle_categorie(tk.categorie) if est_actualite(tk) else "",
+        ))
 
     #  ── Événements ──────────────────────────────────────────────────────────
     for ev in session.exec(select(Evenement).where(Evenement.cree_le >= depuis)).all():
@@ -161,27 +145,22 @@ def prefill_source(session: Session, type_source: str, id_source: int) -> Option
     if f"{type_source}:{id_source}" not in reprenable:
         return None
 
-    if type_source == "publication":
-        from app.routers.annonces_hall import images_de_publication
-
-        pub = session.get(Publication, id_source)
-        return {
-            "titre": pub.titre,
-            "message": pub.contenu,
-            "perimetre_cible": parse_json_perimetres(pub.perimetre_cible),
-            "images": images_de_publication(pub, session),
-        }
-
     if type_source == "ticket":
         tk = session.get(Ticket, id_source)
-        #  ⚠️ Les photos d'un ticket sont des CONSTATS — une fuite, une porte
-        #  cassée. On ne les reprend pas : une affiche de hall montre ce qu'on
-        #  annonce, pas l'état des lieux, et le CS les ajoutera s'il les veut.
+        #  ⚠️ Les photos d'une affaire suivie sont des CONSTATS — une fuite, une
+        #  porte cassée. On ne les reprend pas : une affiche de hall montre ce
+        #  qu'on annonce, pas l'état des lieux. Celles d'une actualité, elles,
+        #  illustrent l'annonce : elles suivent, comme à la génération directe.
+        images = []
+        if est_actualite(tk):
+            from app.routers.annonces_hall import images_de
+
+            images = images_de(tk, session)
         return {
             "titre": tk.titre,
             "message": tk.description,
             "perimetre_cible": parse_json_perimetres(tk.perimetre_cible),
-            "images": [],
+            "images": images,
         }
 
     ev = session.get(Evenement, id_source)

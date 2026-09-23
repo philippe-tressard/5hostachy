@@ -20,7 +20,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import AnnonceHall, Document, Publication, Utilisateur
+from app.models.core import AnnonceHall, Document, Utilisateur
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.annonce_hall import (
     APERCU_MAX,
@@ -45,7 +45,7 @@ from app.utils.noms import nom_affiche
 router = APIRouter(prefix="/annonces-hall", tags=["annonces-hall"])
 
 #  L'aperçu avant envoi vit dans son propre module — même découpage que les
-#  actualités (`publications/apercu.py`) : il ne partage avec la création que les
+#  affaires (`tickets/apercu.py`) : il ne partage avec la création que les
 #  fonctions de composition, et surtout pas son routeur (#480/#498).
 from app.routers.annonces_hall_apercu import router as _router_apercu  # noqa: E402
 
@@ -149,7 +149,7 @@ def images_de(ticket, session: Session) -> list[str]:
     """Photos exploitables d'une affaire « Actualité », limitées à `MAX_PHOTOS`.
 
     Ses photos d'abord, puis ses pièces jointes de type image, puis les images
-    de la bibliothèque rattachées (`Document.ticket_id`). Pendant de
+    de la bibliothèque rattachées (`Document.ticket_id`). Elle remplace
     `images_de_publication`, retirée avec l'entité (#1091).
     """
     urls: list[str] = [
@@ -159,36 +159,6 @@ def images_de(ticket, session: Session) -> list[str]:
     docs = session.exec(
         select(Document).where(Document.ticket_id == ticket.id).order_by(Document.publie_le)  # type: ignore[arg-type]
     ).all()
-    for doc in docs:
-        if not (doc.mime_type or "").startswith("image/"):
-            continue
-        reel = os.path.realpath(doc.fichier_chemin or "")
-        if not reel.startswith(UPLOADS_ROOT + os.sep) or not os.path.isfile(reel):
-            continue
-        url = "/uploads/" + os.path.relpath(reel, UPLOADS_ROOT).replace(os.sep, "/")
-        if url not in urls:
-            urls.append(url)
-    return urls[:MAX_PHOTOS]
-
-
-def images_de_publication(pub: Publication, session: Session) -> list[str]:
-    """Photos exploitables d'une actualité, limitées à `MAX_PHOTOS`.
-
-    L'image de la publication vient en premier, puis ses pièces jointes de type
-    image (des `Document`, dont le `fichier_chemin` est converti en URL
-    `/uploads/...` — les documents sont écrits à la racine du volume uploads,
-    cf. `documents.py`).
-    """
-    urls: list[str] = [
-        u for u in parse_photos(pub.photos_urls) if u.startswith("/uploads/")
-    ]
-
-    docs = session.exec(
-        select(Document)
-        .where(Document.publication_id == pub.id)
-        .order_by(Document.publie_le)  # type: ignore[arg-type]
-    ).all()
-
     for doc in docs:
         if not (doc.mime_type or "").startswith("image/"):
             continue
@@ -272,7 +242,7 @@ def prefill_depuis_element(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Généralise `depuis-publication` aux trois familles du fil.
+    """Pré-remplit l'affiche depuis une affaire (actualités comprises) ou un événement.
 
     ⚠️ Un élément confidentiel, archivé ou brouillon rend **404**, sans dire
     lequel des deux motifs s'applique : distinguer « inexistant » de « existant
@@ -319,7 +289,6 @@ def creer_annonce_hall(
     perimetre_cible: list[str],
     format_demande: str = "auto",
     images: Optional[list[str]] = None,
-    publication_id: Optional[int] = None,
     ticket_id: Optional[int] = None,
     #  Décoché par défaut : la valeur par défaut d'un envoi est « ne pas envoyer ».
     #  Les autres appelants (pré-remplissage depuis une actualité) n'envoient donc
@@ -339,7 +308,7 @@ def creer_annonce_hall(
     imprimer, et sa diffusion appartient à celui qui le génère.
 
     Point d'entrée unique : utilisé par l'onglet Annonces Hall **et** par l'option
-    « Annonce Hall » d'une actualité (`publications.py`).
+    « Annonce Hall » d'une actualité (`tickets/actualite.generer_affiche`).
     """
     body = AnnonceHallCreate(
         titre=titre,
@@ -375,7 +344,6 @@ def creer_annonce_hall(
         pdf_chemin=str(chemin),
         pdf_nom=nom_fichier(body.titre, maintenant),
         taille_octets=len(pdf),
-        publication_id=publication_id,
         ticket_id=ticket_id,
         auteur_id=user.id,
         cree_le=maintenant,

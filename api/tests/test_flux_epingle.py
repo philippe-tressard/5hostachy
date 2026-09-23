@@ -5,9 +5,11 @@ d'un diff ultérieur — d'où ces tests :
 
 1. **Un élément épinglé ne s'auto-archive pas.** Épingler veut dire « garder en
    vue » : disparaître au bout de 30 jours contredirait le marqueur. La règle vit
-   dans `_is_archived`, partagée par /actualités et par le fil, pour que les deux
-   vues tranchent pareil (un élément visible dans l'une et pas dans l'autre est
-   le bug du 17/07/2026).
+   dans `utils/archivage.est_archivable`, partagée par la liste des affaires et
+   par le fil, pour que les deux vues tranchent pareil (un élément visible dans
+   l'une et pas dans l'autre est le bug du 17/07/2026). Depuis le 23/09/2026,
+   une actualité est une affaire de catégorie « Actualité » (#1091) : ces tests
+   l'éprouvent sur l'affaire.
 
 2. **Agir sur un marqueur ne republie rien.** Décocher « Épinglé » ou « Urgent »
    écrit `mis_a_jour_le` ; tant que le fil datait ses lignes sur ce champ, un
@@ -20,52 +22,45 @@ import ast
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from app.models.core import Publication
-from app.routers.publications import _is_archived
+from app.models.core import Ticket
+from app.utils.archivage import est_archivable
 
 _FLUX = Path(__file__).resolve().parents[1] / "app" / "routers" / "flux"
 
 
-def _publication(**kwargs) -> Publication:
-    """Publication en mémoire — aucune session, aucune base ouverte."""
-    defauts = dict(titre="Titre", contenu="Contenu", auteur_id=1)
+def _actualite(**kwargs) -> Ticket:
+    """Actualité en mémoire — aucune session, aucune base ouverte."""
+    defauts = dict(numero="TK-A1", titre="Titre", description="Contenu", auteur_id=1,
+                   categorie="actualite", statut="publie")
     defauts.update(kwargs)
-    return Publication(**defauts)
+    return Ticket(**defauts)
+
+
+def _archivee(actu: Ticket) -> bool:
+    return est_archivable("ticket", actu, seuil_jours=30)
 
 
 # ── 1. L'épinglage résiste au vieillissement ────────────────────────────────
 
-def test_publication_epinglee_ne_s_archive_pas_avec_l_age():
+def test_actualite_epinglee_ne_s_archive_pas_avec_l_age():
     vieille = datetime.utcnow() - timedelta(days=365)
-    pub = _publication(epingle=True, statut="publie", cree_le=vieille, publiee_le=vieille)
-    assert _is_archived(pub) is False
-
-
-def test_publication_epinglee_ne_s_archive_pas_une_fois_resolue():
-    pub = _publication(
-        epingle=True,
-        statut="resolu",
-        statut_change_le=datetime.utcnow() - timedelta(days=30),
-    )
-    assert _is_archived(pub) is False
+    assert _archivee(_actualite(epingle=True, cree_le=vieille, mis_a_jour_le=vieille)) is False
 
 
 def test_archivage_manuel_prime_sur_l_epinglage():
     """Archiver est une décision humaine explicite : elle gagne toujours."""
-    pub = _publication(epingle=True, archivee=True)
-    assert _is_archived(pub) is True
+    assert _archivee(_actualite(epingle=True, archive_manuel=True)) is True
 
 
-def test_publication_non_epinglee_s_archive_toujours_avec_l_age():
+def test_actualite_non_epinglee_s_archive_toujours_avec_l_age():
     """Non-régression : l'exemption ne doit valoir QUE pour les épinglés."""
     vieille = datetime.utcnow() - timedelta(days=365)
-    pub = _publication(epingle=False, statut="publie", cree_le=vieille, publiee_le=vieille)
-    assert _is_archived(pub) is True
+    assert _archivee(_actualite(epingle=False, cree_le=vieille, mis_a_jour_le=vieille)) is True
 
 
-def test_publication_recente_reste_visible():
-    pub = _publication(statut="publie", cree_le=datetime.utcnow(), publiee_le=datetime.utcnow())
-    assert _is_archived(pub) is False
+def test_actualite_recente_reste_visible():
+    maintenant = datetime.utcnow()
+    assert _archivee(_actualite(cree_le=maintenant, mis_a_jour_le=maintenant)) is False
 
 
 # ── 2. Un marqueur ne redate pas une ligne du fil ───────────────────────────

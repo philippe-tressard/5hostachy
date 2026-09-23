@@ -45,17 +45,15 @@ from app.utils.liens import base_site, lien_ticket, nom_site
 from app.utils.noms import contexte_personne, nom_affiche
 from app.utils.perimetres import a_portee_globale, batiments_cibles, parse_json_perimetres
 from app.utils.photos import parse_photos, premiere_photo
-from app.utils.visibility import reserve_au_conseil
+from app.utils.visibility import hors_du_hall, reservee_au_conseil
 
 logger = logging.getLogger("hostachy.actualite")
 
 
-# ── Les deux invariants ─────────────────────────────────────────────────────
-
-def reservee_au_conseil(ticket: Ticket) -> bool:
-    """Rien ne sort : ni groupe WhatsApp, ni affiche, ni courriel (#1096)."""
-    return bool(ticket.confidentiel) or reserve_au_conseil(ticket.public_cible)
-
+# ── L'invariant d'accès ─────────────────────────────────────────────────────
+#  « Réservée au conseil » et « hors du hall » vivent dans `utils/visibility` :
+#  les sources d'affiche les appellent aussi, et un utilitaire n'importe pas
+#  un routeur.
 
 def appliquer_acces(ticket: Ticket, session: Session) -> None:
     """Fait tenir, à chaque écriture, ce que l'Accès et la réserve promettent.
@@ -74,7 +72,7 @@ def appliquer_acces(ticket: Ticket, session: Session) -> None:
             codes = None
         if isinstance(codes, list) and (not codes or a_portee_globale([str(c) for c in codes])):
             ticket.reserve_perimetre = False
-    if not (ticket.reserve_perimetre or reservee_au_conseil(ticket)):
+    if not hors_du_hall(ticket):
         return
     for annonce in session.exec(
         select(AnnonceHall).where(
@@ -141,7 +139,7 @@ def contexte_actualite(
     """
     cfg = config_site(session)
     est_commentaire = commentaire is not None
-    pieces = (
+    pieces_jointes = (
         _pieces(session, ticket, fichiers_urls) if pieces_de_l_affaire
         else chemins_locaux(fichiers_urls or [])
     )
@@ -160,9 +158,9 @@ def contexte_actualite(
         "date_commentaire": _fmt_paris(datetime.utcnow()),
         "date_publication": _fmt_paris(ticket.cree_le),
         "evolutions": _historique(session, ticket, sauf_derniere=est_commentaire) if ticket.id else [],
-        "fichiers": bool(pieces),
+        "fichiers": bool(pieces_jointes),
     }
-    return ctx, pieces
+    return ctx, pieces_jointes
 
 
 # ── La diffusion ────────────────────────────────────────────────────────────
@@ -192,7 +190,7 @@ def _partager_sur_le_groupe(
     background_tasks.add_task(
         envoyer_whatsapp_avec_log,
         titre, contenu, ticket.priorite == "haute", ticket.perimetre_cible, photo, config,
-        ticket.public_cible, None, ticket.reserve_perimetre,
+        ticket.public_cible, ticket.reserve_perimetre,
         lien=lien,
     )
 
@@ -257,7 +255,7 @@ def generer_affiche(
     """
     from app.routers.annonces_hall import creer_annonce_hall, images_de
 
-    if ticket.reserve_perimetre or reservee_au_conseil(ticket):
+    if hors_du_hall(ticket):
         logger.warning("Affiche de hall refusée : l'actualité %s est réservée", ticket.id)
         return
     if session.exec(select(AnnonceHall).where(AnnonceHall.ticket_id == ticket.id)).first():
@@ -306,5 +304,4 @@ def diffuser_actualite(
 
 __all__ = [
     "appliquer_acces", "contexte_actualite", "diffuser_actualite", "generer_affiche",
-    "reservee_au_conseil",
 ]

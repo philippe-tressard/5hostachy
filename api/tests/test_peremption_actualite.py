@@ -47,16 +47,20 @@ from app.utils.archivage import est_archivable, perime_le
 
 
 class _Pub:
-    """Le strict nécessaire : l'archivage est PUR, il ne lit qu'un objet."""
+    """Le strict nécessaire : l'archivage est PUR, il ne lit qu'un objet.
+
+    Une affaire de catégorie « Actualité » depuis le 23/09/2026 (#1091) : la
+    règle se choisit sur la catégorie (`archivage._regle_de`), jamais par
+    l'appelant — d'où le type « ticket » passé partout ci-dessous.
+    """
 
     def __init__(self, **champs):
+        self.categorie = "actualite"
         self.statut = champs.get("statut", "publie")
-        self.statut_change_le = champs.get("statut_change_le")
-        self.publiee_le = champs.get("publiee_le")
+        self.mis_a_jour_le = champs.get("mis_a_jour_le")
         self.cree_le = champs.get("cree_le", datetime(2026, 9, 1))
-        self.archivee = champs.get("archivee", False)
+        self.archive_manuel = champs.get("archive_manuel", False)
         self.epingle = champs.get("epingle", False)
-        self.brouillon = champs.get("brouillon", False)
         self.debut = champs.get("debut")
         self.fin = champs.get("fin")
 
@@ -93,13 +97,13 @@ def test_la_peremption_NE_SE_SAISIT_PAS():
     entrée. Verrouiller la première seule laisserait passer un schéma qui
     accepte le champ et le jette en silence.
     """
-    from app.models.core import Publication
-    from app.schemas_publications import PublicationCreate, PublicationUpdate
+    from app.models.core import Ticket
+    from app.schemas import TicketCreate, TicketUpdate
 
-    assert "visible_jusqu_au" not in Publication.model_fields, (
+    assert "visible_jusqu_au" not in Ticket.model_fields, (
         "La colonne est revenue : la péremption se déduit, elle ne se saisit pas (#1093)."
     )
-    for schema in (PublicationCreate, PublicationUpdate):
+    for schema in (TicketCreate, TicketUpdate):
         assert "visible_jusqu_au" not in schema.model_fields, (
             f"{schema.__name__} accepte de nouveau une date de validité en entrée."
         )
@@ -128,17 +132,17 @@ def test_le_jour_meme_elle_est_encore_la():
     date dit la fin de l'événement, pas l'heure à laquelle on l'efface.
     """
     pub = _Pub(fin=AUJOURDHUI)
-    assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is False
+    assert est_archivable("ticket", pub, maintenant=AUJOURDHUI) is False
 
 
 def test_le_lendemain_elle_sort():
     pub = _Pub(fin=HIER)
-    assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is True
+    assert est_archivable("ticket", pub, maintenant=AUJOURDHUI) is True
 
 
 def test_une_date_a_venir_ne_change_rien():
     pub = _Pub(fin=DEMAIN)
-    assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is False
+    assert est_archivable("ticket", pub, maintenant=AUJOURDHUI) is False
 
 
 def test_la_peremption_DEPINGLE():
@@ -149,19 +153,13 @@ def test_la_peremption_DEPINGLE():
     fil indéfiniment, et c'est le seul cas où l'épinglage nuit.
     """
     pub = _Pub(fin=HIER, epingle=True)
-    assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is True
-
-
-def test_un_brouillon_perime_ne_sort_pas_puisqu_il_n_est_pas_entre():
-    """Il n'a rien à quitter : il n'a jamais été publié."""
-    pub = _Pub(fin=HIER, brouillon=True)
-    assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is False
+    assert est_archivable("ticket", pub, maintenant=AUJOURDHUI) is True
 
 
 def test_l_archivage_manuel_prime_toujours():
     """Une décision humaine ne se discute pas, périmée ou non."""
-    pub = _Pub(archivee=True)
-    assert est_archivable("publication", pub, maintenant=AUJOURDHUI) is True
+    pub = _Pub(archive_manuel=True)
+    assert est_archivable("ticket", pub, maintenant=AUJOURDHUI) is True
 
 
 @pytest.mark.parametrize("type_objet", ["ticket", "evenement", "annonce"])
@@ -191,37 +189,47 @@ def test_les_autres_objets_ne_periment_pas(type_objet):
 # ══════════════════════════════════════════════════════════════════════════════
 
 
+def _lu(**champs):
+    """L'affaire telle que l'écran la reçoit : `ticket_read`, sur une base jetable."""
+    from sqlmodel import Session, SQLModel, create_engine
+
+    from app.models.core import Ticket, Utilisateur
+    from app.routers.tickets.commun import ticket_read
+
+    moteur = create_engine("sqlite://")
+    SQLModel.metadata.create_all(moteur)
+    with Session(moteur) as s:
+        s.add(Utilisateur(id=1, prenom="A", nom="B", email="a@x.fr", mot_de_passe_hash="x"))
+        t = Ticket(id=1, numero="TK-A1", titre="Assemblée générale", description="…", auteur_id=1,
+                   statut="publie", **champs)
+        s.add(t)
+        s.commit()
+        return ticket_read(s.get(Ticket, 1), s)
+
+
 def test_la_derivation_traverse_le_schema_de_lecture():
     """🔴 Une règle juste que personne ne lit ne change rien à l'écran.
 
-    `perime_le` est une propriété du modèle, que `PublicationRead` lit par
-    `from_attributes`. Sans ce test, la fonction pourrait être parfaite et la
-    date ne jamais arriver au navigateur — c'est exactement ce qui est arrivé
-    à `debut`/`fin`, saisissables depuis #1092 et **jamais rendus**.
+    `perime_le` se pose dans `ticket_read`. Sans ce test, la fonction pourrait
+    être parfaite et la date ne jamais arriver au navigateur — c'est exactement
+    ce qui est arrivé à `debut`/`fin`, saisissables depuis #1092 et **jamais
+    rendus**.
     """
-    from app.models.core import Publication
-    from app.schemas_publications import PublicationRead
-
-    pub = Publication(
-        id=1, titre="Assemblée générale", contenu="…", auteur_id=1,
-        debut=datetime(2026, 9, 30, 18), fin=datetime(2026, 9, 30, 21),
-    )
-    lu = PublicationRead.model_validate(pub)
+    lu = _lu(categorie="actualite", debut=datetime(2026, 9, 30, 18), fin=datetime(2026, 9, 30, 21))
     assert lu.fin == datetime(2026, 9, 30, 21)
     assert lu.perime_le == date(2026, 9, 30)
 
 
 def test_une_actualite_datee_rend_sa_peremption_sans_rien_saisir():
     """La deuxième famille : `debut`/`fin` suffisent, l'auteur n'ajoute rien."""
-    from app.models.core import Publication
-    from app.schemas_publications import PublicationRead
-
-    pub = Publication(
-        id=2, titre="Coupure d'eau", contenu="…", auteur_id=1,
-        debut=datetime(2026, 9, 24, 9), fin=datetime(2026, 9, 24, 12),
-    )
-    lu = PublicationRead.model_validate(pub)
+    lu = _lu(categorie="actualite", debut=datetime(2026, 9, 24, 9), fin=datetime(2026, 9, 24, 12))
     assert lu.perime_le == date(2026, 9, 24)
+
+
+def test_une_affaire_suivie_datee_ne_perime_pas():
+    """Une affaire se clôt, elle ne périme pas — même datée."""
+    lu = _lu(categorie="panne", debut=datetime(2026, 9, 24, 9))
+    assert lu.perime_le is None
 
 
 def test_la_peremption_ne_se_STOCKE_nulle_part():
@@ -232,9 +240,9 @@ def test_la_peremption_ne_se_STOCKE_nulle_part():
     elle redevient utile. Ce test refuse qu'on l'ajoute un jour « pour
     accélérer une requête ».
     """
-    from app.models.core import Publication
+    from app.models.core import Ticket
 
-    assert "perime_le" not in Publication.model_fields, (
+    assert "perime_le" not in Ticket.model_fields, (
         "`perime_le` est devenue une COLONNE : elle se dérive à la lecture, "
         "sinon elle diverge au premier report de date (#1093)."
     )
@@ -242,12 +250,7 @@ def test_la_peremption_ne_se_STOCKE_nulle_part():
 
 def test_le_report_d_un_evenement_deplace_la_peremption():
     """La conséquence concrète de la dérivation : rien à resynchroniser."""
-    from app.models.core import Publication
-
-    pub = Publication(
-        id=3, titre="Réunion", contenu="…", auteur_id=1,
-        fin=datetime(2026, 9, 24, 12),
-    )
+    pub = _Pub(fin=datetime(2026, 9, 24, 12))
     assert perime_le(pub) == date(2026, 9, 24)
     pub.fin = datetime(2026, 9, 29, 12)  # reportée
     assert perime_le(pub) == date(2026, 9, 29)

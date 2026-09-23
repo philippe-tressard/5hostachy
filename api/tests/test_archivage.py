@@ -36,7 +36,6 @@ import pytest
 
 from app.models.annonce_hall import AnnonceHall
 from app.models.communaute import Idee, PetiteAnnonce, Sondage, StatutAnnonce
-from app.models.core import Publication
 from app.models.evenement import Evenement, StatutKanban
 from app.models.tickets import StatutTicket
 from app.utils.archivage import (
@@ -65,30 +64,26 @@ def archivable(type_objet, **champs):
 #  ── 1. LA DÉCISION, TYPE PAR TYPE ───────────────────────────────────────────
 
 
-def test_publication_publiee_depuis_plus_du_delai():
-    assert archivable("publication", statut="publie", cree_le=VIEUX)
+#  L'actualité est une affaire de catégorie « Actualité » depuis le 23/09/2026
+#  (#1091) : la règle « publication » est partie avec l'entité. Elle n'a plus
+#  d'état en cours ni de brouillon — la réserve au conseil en tient lieu.
 
 
-def test_publication_recente_reste_active():
-    assert not archivable("publication", statut="publie", cree_le=RECENT)
+def test_actualite_publiee_depuis_plus_du_delai():
+    assert archivable("actualite", statut="publie", cree_le=VIEUX)
 
 
-def test_publication_en_cours_ne_s_archive_jamais_seule():
-    #  « en_cours » demande encore du suivi : le temps ne doit pas l'effacer.
-    assert not archivable("publication", statut="en_cours", cree_le=VIEUX)
+def test_actualite_recente_reste_active():
+    assert not archivable("actualite", statut="publie", cree_le=RECENT)
 
 
-def test_publication_epinglee_echappe_au_delai():
+def test_actualite_epinglee_echappe_au_delai():
     #  Décision du 01/08/2026, prise avec le bandeau « Épinglé ».
-    assert not archivable("publication", statut="publie", cree_le=VIEUX, epingle=True)
-
-
-def test_publication_brouillon_n_a_rien_a_quitter():
-    assert not archivable("publication", statut="publie", cree_le=VIEUX, brouillon=True)
+    assert not archivable("actualite", statut="publie", cree_le=VIEUX, epingle=True)
 
 
 def test_archivage_manuel_prime_meme_sur_un_objet_du_jour():
-    assert archivable("publication", statut="publie", cree_le=MAINTENANT, archivee=True)
+    assert archivable("actualite", statut="publie", cree_le=MAINTENANT, archive_manuel=True)
 
 
 def test_ticket_resolu_accentue_est_bien_reconnu():
@@ -195,14 +190,14 @@ def test_type_inconnu_ne_s_archive_pas():
 def test_le_delai_est_bien_celui_qu_on_passe():
     """Le seuil est un paramètre, pas une constante lue en douce."""
     objet = type("Objet", (), {"statut": "publie", "cree_le": MAINTENANT - timedelta(days=10)})()
-    assert not est_archivable("publication", objet, seuil_jours=30, maintenant=MAINTENANT)
-    assert est_archivable("publication", objet, seuil_jours=5, maintenant=MAINTENANT)
+    assert not est_archivable("actualite", objet, seuil_jours=30, maintenant=MAINTENANT)
+    assert est_archivable("actualite", objet, seuil_jours=5, maintenant=MAINTENANT)
 
 
 def test_le_jour_pile_du_seuil_archive():
     """Frontière incluse — sinon un objet resterait un jour de plus que promis."""
     pile = MAINTENANT - timedelta(days=ARCHIVAGE_DELAI_JOURS)
-    assert archivable("publication", statut="publie", cree_le=pile)
+    assert archivable("actualite", statut="publie", cree_le=pile)
 
 
 #  ── 3. 🔴 LA CONCORDANCE AVEC LES MODÈLES RÉELS ─────────────────────────────
@@ -211,7 +206,6 @@ def test_le_jour_pile_du_seuil_archive():
 #: couverture ci-dessous — on ne peut pas déclarer une règle sans dire sur quoi
 #: elle s'applique.
 MODELES = {
-    "publication": Publication,
     "ticket": None,  # renseigné plus bas : import tardif, cf. commentaire
     "annonce": PetiteAnnonce,
     "idee": Idee,
@@ -235,7 +229,6 @@ MODELES["actualite"] = Ticket
 #: en attendant, la liste ci-dessous reprend le commentaire du modèle, qui fait
 #: foi faute de mieux.
 STATUTS_POSSIBLES = {
-    "publication": {"publie", "en_cours", "resolu", "annule"},
     "ticket": {s.value for s in StatutTicket},
     "actualite": {s.value for s in StatutTicket},
     "annonce": {s.value for s in StatutAnnonce},

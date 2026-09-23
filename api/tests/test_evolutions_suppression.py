@@ -51,10 +51,6 @@ FILS = {
         "app/routers/tickets/evolutions.py", "delete_evolution",
         "/{ticket_id}/evolutions/{evol_id}",
     ),
-    "publication": (
-        "app/routers/publications/evolutions.py", "delete_evolution",
-        "/{pub_id}/evolutions/{evol_id}",
-    ),
     "evenement": (
         "app/routers/calendrier_historique.py", "delete_evolution_evenement",
         "/{ev_id}/evolutions/{evol_id}",

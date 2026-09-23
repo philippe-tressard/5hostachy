@@ -29,7 +29,7 @@ _DRAPEAU_FICHIERS = re.compile(r'"fichiers":\s*bool\(([A-Za-z_][\w.]*)\)')
     "chemin",
     #  ⚠️ Le calendrier a déménagé le 18/08/2026 — perdre sa cible bruyamment est
     #  la bonne façon de la perdre.
-    ["api/app/routers/tickets/courriels.py", "api/app/routers/publications/courriels.py",
+    ["api/app/routers/tickets/courriels.py", "api/app/routers/tickets/actualite.py",
      "api/app/routers/calendrier_courriels.py"],
 )
 def test_le_drapeau_fichiers_decrit_ce_qui_est_vraiment_joint(chemin):

@@ -38,14 +38,13 @@ from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
 from app.models.core import (
-    Evenement, Publication, PublicationEvolution, RoleUtilisateur, Ticket,
+    Evenement, RoleUtilisateur, Ticket,
     TicketEvolution, TypeEvenement, Utilisateur,
 )
 from app.models.evenement import EvenementEvolution
 from app.routers.calendrier import EvenementUpdate, update_evenement
-from app.routers.publications.crud import update_publication
 from app.routers.tickets.mise_a_jour import update_ticket
-from app.schemas import PublicationUpdate, TicketUpdate
+from app.schemas import TicketUpdate
 
 #  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
 #  qui la référence est ce que les clés étrangères refusent (#546).
@@ -74,85 +73,11 @@ def cs() -> Utilisateur:
         session.commit()
 
 
-# ── Publications ──────────────────────────────────────────────────────────────
-
-def test_patch_publication_ecrit_une_correction_et_pas_une_transition(cs):
-    with Session(engine) as session:
-        pub = Publication(
-            titre="Ravalement",
-            contenu="<p>Début des travaux.</p>",
-            auteur_id=cs.id,
-            statut="publie",
-            perimetre_cible=json.dumps(["résidence"], ensure_ascii=False),
-            public_cible='["résidents"]',
-        )
-        session.add(pub)
-        session.commit()
-        session.refresh(pub)
-
-        update_publication(
-            pub.id, PublicationUpdate(statut="resolu", titre="Ravalement du bâtiment 2"),
-            BackgroundTasks(), session, cs,
-        )
-
-        evols = session.exec(
-            select(PublicationEvolution)
-            .where(PublicationEvolution.publication_id == pub.id)
-        ).all()
-
-        assert [e.type for e in evols] == ["commentaire"], (
-            "Une édition ne doit écrire AUCUNE évolution de type « etat » : "
-            f"trouvé {[e.type for e in evols]}."
-        )
-        ligne = evols[0].contenu or ""
-        assert ligne.startswith(PREFIXE_CORRECTION), ligne
-        assert "État : Publié → Résolu" in ligne, ligne
-        assert "Titre" in ligne, "La correction doit dire TOUT ce qui a changé : " + ligne
-        #  La ligne ne porte ni `ancien_statut` ni `nouveau_statut` : sans eux,
-        #  aucun jalon de suivi ne se dessine dans le fil.
-        assert evols[0].ancien_statut is None and evols[0].nouveau_statut is None
-        #  Le fait, lui, est enregistré : l'état a bien changé.
-        assert session.get(Publication, pub.id).statut == "resolu"
-
-        for e in evols:
-            session.delete(e)
-        purger_ligne(session, Publication, pub.id)
-        session.commit()
-
-
-def test_patch_publication_sans_changement_n_ecrit_rien(cs):
-    """Réenregistrer les mêmes valeurs n'est pas une correction.
-
-    Le cas zéro de ce mécanisme : un `PATCH` qui renvoie ce qui était déjà là ne
-    doit pas remplir l'Historique de lignes vides. C'est ce que garantit le relevé
-    de l'état d'AVANT, et rien d'autre.
-    """
-    with Session(engine) as session:
-        pub = Publication(
-            titre="Ravalement",
-            contenu="<p>Début des travaux.</p>",
-            auteur_id=cs.id,
-            statut="publie",
-            perimetre_cible=json.dumps(["résidence"], ensure_ascii=False),
-            public_cible='["résidents"]',
-        )
-        session.add(pub)
-        session.commit()
-        session.refresh(pub)
-
-        update_publication(
-            pub.id, PublicationUpdate(titre="Ravalement", statut="publie"),
-            BackgroundTasks(), session, cs,
-        )
-
-        evols = session.exec(
-            select(PublicationEvolution)
-            .where(PublicationEvolution.publication_id == pub.id)
-        ).all()
-        assert evols == [], f"Aucune ligne attendue, trouvé : {[e.contenu for e in evols]}"
-
-        purger_ligne(session, Publication, pub.id)
-        session.commit()
+# ── Publications — retirées le 23/09/2026 ─────────────────────────────────────
+#
+#  Une actualité est une affaire de catégorie « Actualité » (#1091, lot 4) :
+#  elle se corrige par le PATCH des affaires, que les tests ci-dessous gardent.
+#  Elle n'a d'ailleurs plus d'état à corriger — c'est sa catégorie qui en décide.
 
 
 # ── Tickets — le même remède, posé par #431 et jamais gardé ───────────────────

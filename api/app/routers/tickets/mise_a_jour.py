@@ -35,10 +35,12 @@ from app.models.core import (
 from app.schemas import TicketRead, TicketUpdate
 from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
 from app.utils.nature_affaire import categorie_reservee, est_actualite, statut_pour
-from .actualite import appliquer_acces, diffuser_actualite, reservee_au_conseil
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_ticket
 from app.utils.recuperer import ou_404
+from app.utils.visibility import reservee_au_conseil
+
+from .actualite import appliquer_acces, diffuser_actualite
 
 from .commun import (
     appliquer_options,
@@ -207,7 +209,7 @@ def update_ticket(
             StatutTicket.ouvert, StatutTicket.publie,
         ):
             raise HTTPException(403, "Modification impossible : le ticket n'est plus ouvert")
-        changes += _appliquer_contenu(body, ticket)
+        changes += _appliquer_contenu(body, ticket, est_cs=is_cs_admin)
         if change_de_nature:
             ticket.statut = statut_pour(ticket.categorie)
 

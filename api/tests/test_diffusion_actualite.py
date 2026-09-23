@@ -92,3 +92,40 @@ def test_lever_la_reserve_fait_partir_ce_qui_etait_retenu(contexte):
     taches = BackgroundTasks()
     mise_a_jour.update_ticket(lu.id, TicketUpdate(public_cible=["copropriétaires"]), taches, session=s, user=cs)
     assert "send_email_group" in _noms(taches), "le courriel au syndic retenu doit partir"
+
+
+# ── L'aperçu montre ce que la diffusion fera ────────────────────────────────
+
+
+def _apercu(s, cs, **champs):
+    import app.routers.tickets.apercu as apercu
+
+    corps = apercu.BrouillonTicket(
+        titre="Coupure d'eau", description="Jeudi 9h-12h.", categorie="actualite",
+        destinataire_syndic=True, partager_whatsapp=True, **champs,
+    )
+    return apercu.apercu_diffusion(corps, session=s, user=cs)
+
+
+def test_l_apercu_d_une_actualite_emploie_le_gabarit_de_l_actualite(contexte, monkeypatch):
+    s, cs, _affiches, _ = contexte
+    #  La base d'essai n'a pas de gabarits : on regarde ce que l'aperçu DEMANDE
+    #  au compositeur — le code du gabarit et son contexte —, pas le rendu.
+    from app.utils.apercu_diffusion import ApercuCanal
+
+    demandes = []
+    monkeypatch.setattr(
+        "app.routers.tickets.apercu.apercu_email",
+        lambda session, **k: demandes.append(k) or ApercuCanal(canal="email", actif=True),
+    )
+    rendu = _apercu(s, cs)
+    assert [d["code_modele"] for d in demandes] == ["publication_syndic"]
+    assert demandes[0]["contexte"]["publication"]["titre"] == "Coupure d'eau"
+    assert "numéro du ticket" not in rendu.attribues_a_la_creation
+
+
+def test_l_apercu_d_une_actualite_reservee_dit_que_rien_ne_sort(contexte):
+    s, cs, _affiches, _ = contexte
+    rendu = _apercu(s, cs, public_cible=["conseil_syndical"])
+    assert {c.canal for c in rendu.canaux} == {"email", "whatsapp"}
+    assert not any(c.actif for c in rendu.canaux)

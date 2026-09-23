@@ -26,13 +26,13 @@ from sqlmodel import Session, SQLModel, select
 from app.database import engine
 from app.models.perimetre import Perimetre
 from app.models.core import (
-    Batiment, ConfigSite, Copropriete, Publication, RoleUtilisateur, Utilisateur,
+    Batiment, ConfigSite, Copropriete, RoleUtilisateur, Ticket, Utilisateur,
 )
 from app.seed.patrimoine import CLE_SEMEE, GABARIT_BATIMENT, poser_arborescence
 from app.utils import perimetres as P
 from tests.conftest import vider_patrimoine
 from app.utils.destinataires import batiments_du_perimetre
-from app.utils.visibility import perimetre_visible, publication_visible
+from app.utils.visibility import actualite_visible, perimetre_visible
 from tests.purge_test import etat_invalide
 
 
@@ -231,6 +231,12 @@ def test_un_batiment_ne_donne_pas_acces_aux_autres(batiments):
 
 # ── Ce qui change volontairement : la donnée abîmée refuse ────────────────────
 
+def _actualite(perimetre_cible) -> Ticket:
+    """Une actualité — une affaire de catégorie « Actualité » depuis le 23/09/2026."""
+    return Ticket(numero="TK-A1", titre="T", description="C", categorie="actualite",
+                  statut="publie", perimetre_cible=perimetre_cible, public_cible='["résidents"]')
+
+
 @pytest.mark.parametrize("cible_corrompue", [
     "ceci n'est pas du json",
     '{"pas": "une liste"}',
@@ -239,26 +245,20 @@ def test_un_batiment_ne_donne_pas_acces_aux_autres(batiments):
 ])
 def test_ciblage_illisible_refuse_au_lieu_delargir(batiments, cible_corrompue):
     """Une donnée abîmée élargissait la visibilité : elle la refuse désormais."""
-    publication = Publication(
-        titre="T", contenu="C", perimetre_cible=cible_corrompue, public_cible='["résidents"]',
-    )
-    assert publication_visible(publication, utilisateur("résident", batiments[0])) is False
+    publication = _actualite(cible_corrompue)
+    assert actualite_visible(publication, utilisateur("résident", batiments[0])) is False
 
 
 def test_ciblage_illisible_reste_visible_du_conseil_syndical(batiments):
     """Sans quoi personne ne pourrait plus corriger la publication abîmée."""
-    publication = Publication(
-        titre="T", contenu="C", perimetre_cible="[", public_cible='["résidents"]',
-    )
-    assert publication_visible(publication, utilisateur("conseil_syndical", None)) is True
+    publication = _actualite("[")
+    assert actualite_visible(publication, utilisateur("conseil_syndical", None)) is True
 
 
 def test_perimetre_absent_reste_permissif(batiments):
     """Champ vide ≠ champ corrompu : l'absence de ciblage n'a jamais rien restreint."""
-    publication = Publication(
-        titre="T", contenu="C", perimetre_cible=None, public_cible='["résidents"]',
-    )
-    assert publication_visible(publication, utilisateur("résident", batiments[0])) is True
+    publication = _actualite(None)
+    assert actualite_visible(publication, utilisateur("résident", batiments[0])) is True
 
 
 # ── Échec fermé sur un arbre abîmé ───────────────────────────────────────────

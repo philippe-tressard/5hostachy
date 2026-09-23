@@ -159,7 +159,6 @@ def list_categories(
 def list_documents(
     categorie_id: int | None = None,
     contrat_id: int | None = None,
-    publication_id: int | None = None,
     ticket_id: int | None = None,
     evenement_id: int | None = None,
     session: Session = Depends(get_session),
@@ -170,8 +169,6 @@ def list_documents(
         stmt = stmt.where(Document.categorie_id == categorie_id)
     if contrat_id:
         stmt = stmt.where(Document.contrat_id == contrat_id)
-    if publication_id:
-        stmt = stmt.where(Document.publication_id == publication_id)
     if ticket_id:
         stmt = stmt.where(Document.ticket_id == ticket_id)
     if evenement_id:
@@ -268,7 +265,6 @@ async def upload_document(
     description: str = Form(""),
     categorie_id: int | None = Form(None),
     contrat_id: int | None = Form(None),
-    publication_id: int | None = Form(None),
     ticket_id: int | None = Form(None),
     evenement_id: int | None = Form(None),
     perimetre: str = Form("résidence"),
@@ -291,10 +287,12 @@ async def upload_document(
     #  relâcher : le découpage d'origine proposait de créer la ligne « sans
     #  rattachement, rattachée ensuite », ce qui l'aurait violé le temps d'un
     #  formulaire abandonné — c'est-à-dire pour toujours.
-    if not categorie_id and not contrat_id and not publication_id             and not ticket_id and not evenement_id:
+    #  `publication_id` n'en est plus un depuis le 23/09/2026 : une actualité est
+    #  une affaire (#1091), ses pièces jointes portent `ticket_id`.
+    if not categorie_id and not contrat_id and not ticket_id and not evenement_id:
         raise HTTPException(
             400,
-            "categorie_id, contrat_id, publication_id, ticket_id ou evenement_id obligatoire",
+            "categorie_id, contrat_id, ticket_id ou evenement_id obligatoire",
         )
 
     if categorie_id:
@@ -337,7 +335,6 @@ async def upload_document(
         mime_type=file.content_type or "application/octet-stream",
         categorie_id=categorie_id,
         contrat_id=contrat_id,
-        publication_id=publication_id,
         ticket_id=ticket_id,
         evenement_id=evenement_id,
         perimetre=perimetre,

@@ -27,17 +27,18 @@ import pytest
 from fastapi import HTTPException
 from sqlmodel import Session, SQLModel, create_engine
 
-from app.models.core import PublicationEvolution, TicketEvolution, Utilisateur
+from app.models.core import TicketEvolution, Utilisateur
 from app.utils.evolutions import TYPES_EFFACABLES, evolution_modifiable
 
 RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 #: (modèle, colonne du parent, fichier de la route)
 FILS = [
-    (PublicationEvolution, "publication_id", "routers/publications/evolutions.py"),
     (TicketEvolution, "ticket_id", "routers/tickets/evolutions.py"),
 ]
-IDS = ["publications", "tickets"]
+#  Le fil des publications est parti avec elles le 23/09/2026 (#1091) : la Suite
+#  d'une actualité est celle d'une affaire.
+IDS = ["tickets"]
 
 
 @pytest.fixture()

@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.utils.nature_affaire import ACTUALITE
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
-from app.models.core import Evenement, Publication, Utilisateur
+from app.models.core import Evenement, Ticket, Utilisateur
 
 from .schemas import EpinglesCompte
 
@@ -30,9 +31,11 @@ def compter_epingles(
     Mêmes filtres que le fil : un brouillon ou un événement non affichable est
     peut-être coché « épinglé », il n'occupe pas le bandeau pour autant.
     """
+    #  Les actualités sont des affaires depuis le lot 4 (#1091). Le champ de la
+    #  réponse garde son nom : c'est la RUBRIQUE que l'écran affiche.
     publications = session.exec(
-        select(func.count(Publication.id)).where(
-            Publication.epingle, ~Publication.brouillon, ~Publication.archivee
+        select(func.count(Ticket.id)).where(
+            Ticket.categorie == ACTUALITE, Ticket.epingle, ~Ticket.archive_manuel,
         )
     ).one() or 0
     evenements = session.exec(

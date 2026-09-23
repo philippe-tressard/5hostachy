@@ -37,7 +37,6 @@ from app.models.perimetre import Perimetre
 from app.models.core import (
     AnnonceHall,
     Evenement,
-    Publication,
     Ticket,
     Utilisateur,
 )
@@ -118,8 +117,12 @@ class PerimetreUpdate(BaseModel):
 def _codes_cites(session: Session) -> set[str]:
     """Tous les codes de périmètre cités par un contenu, quel que soit le format.
 
-    Les quatre entités qui portent un périmètre utilisent deux formats — JSON pour
+    Les trois entités qui portent un périmètre utilisent deux formats — JSON pour
     `perimetre_cible`, CSV pour `perimetre`.
+
+    ⚠️ `Publication` n'en fait plus partie (#1091, 23/09/2026) : les actualités
+    sont des affaires, la 0210 les a recopiées, et la table subsiste non lue —
+    même raisonnement que pour les devis ci-dessous.
 
     ⚠️ `DevisPrestataire` en faisait partie, et ne le fait plus (#603) : son modèle
     a disparu. Sa table subsiste, non lue — un périmètre cité UNIQUEMENT par un
@@ -132,7 +135,6 @@ def _codes_cites(session: Session) -> set[str]:
     cites: set[str] = set()
     for modele, champ, json_ in (
         (Ticket, "perimetre_cible", True),
-        (Publication, "perimetre_cible", True),
         (AnnonceHall, "perimetre_cible", True),
         (Evenement, "perimetre", False),
     ):

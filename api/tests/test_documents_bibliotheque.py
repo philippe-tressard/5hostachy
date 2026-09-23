@@ -158,7 +158,7 @@ def test_une_ligne_sans_aucun_rattachement_est_refusee(bibliotheque):
     admin, _ = bibliotheque
     with Session(engine) as session:
         with pytest.raises(HTTPException) as leve:
-            #  ⚠️ Les cinq rattachements sont passés EXPLICITEMENT à None : appelée
+            #  ⚠️ Les quatre rattachements sont passés EXPLICITEMENT à None : appelée
             #  hors de FastAPI, la fonction reçoit sinon ses objets `Form(None)`,
             #  qui sont VRAIS au sens booléen — la garde ne se déclencherait pas et
             #  le test échouerait plus loin, sur une requête SQL, en faisant croire
@@ -168,7 +168,6 @@ def test_une_ligne_sans_aucun_rattachement_est_refusee(bibliotheque):
                     titre="Sans porteur",
                     categorie_id=None,
                     contrat_id=None,
-                    publication_id=None,
                     ticket_id=None,
                     evenement_id=None,
                     file=None,

@@ -259,6 +259,10 @@ class TicketRead(SaisiPourSortie, AssisteIASortie):
     reserve_perimetre: bool = False
     archive_manuel: bool = False
     natures: List[str] = []
+    #  La date où une actualité cesse d'être utile — DÉRIVÉE, jamais saisie
+    #  (#1093, `utils/archivage.perime_le`). `None` pour une affaire suivie :
+    #  elle ne périme pas, elle se clôt.
+    perime_le: Optional[date] = None
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
@@ -353,11 +357,6 @@ class MessageRead(BaseModel):
         from_attributes = True
 
 
-class PublicationEvolutionUpdate(AssisteIACorrection):
-    contenu: Optional[str] = None
-    fichiers_urls: Optional[List[str]] = None
-
-
 #  Les schémas du fil d’un ticket vivent dans `schemas_tickets.py` depuis le
 #  19/08/2026 (modularité, rang 1). Ré-exportés : les routeurs appelants ne
 #  changent pas d’import.
@@ -368,18 +367,9 @@ from app.schemas_tickets import (  # noqa: E402,F401
 )
 
 
-#  Les schémas des PUBLICATIONS vivent dans leur propre module depuis le
-#  05/09/2026 : ce fichier avait dépassé son plafond de 500 lignes et grossissait
-#  encore. Même découpe que `schemas_tickets` — et même ré-export, pour que rien
-#  n'ait à changer d'import : `from app.schemas import PublicationRead` continue
-#  de fonctionner, ici comme dans les dix routeurs qui l'écrivent.
-from app.schemas_publications import (  # noqa: E402,F401
-    EvolutionCreate as EvolutionCreate,
-    EvolutionRead as EvolutionRead,
-    PublicationCreate as PublicationCreate,
-    PublicationRead as PublicationRead,
-    PublicationUpdate as PublicationUpdate,
-)
+#  Les schémas des PUBLICATIONS (`schemas_publications.py`) ont été retirés le
+#  23/09/2026 avec leur routeur : une actualité est une affaire de catégorie
+#  « Actualité » (#1091, lot 4), elle se lit et s'écrit par `schemas_tickets`.
 
 class DocumentRead(BaseModel):
     id: int

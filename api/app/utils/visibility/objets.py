@@ -20,7 +20,6 @@ from app.models.core import (
     Evenement,
     Idee,
     PetiteAnnonce,
-    Publication,
     RoleUtilisateur,
     Sondage,
     StatutUtilisateur,
@@ -38,6 +37,7 @@ from .socle import (
     _codes_json_pour_acces,
     cible_visible,
     perimetre_visible,
+    reserve_au_conseil,
 )
 from app.auth.deps import est_moderateur
 #  ⚠️ `public_cible_visible` n'est plus importé ici depuis le 06/09/2026 : aucune
@@ -45,10 +45,16 @@ from app.auth.deps import est_moderateur
 #  `cible_visible`, qui pose les deux axes. Une factorisation se termine par la
 #  suppression de ce qu'elle a remplacé, et c'est Ruff (F401) qui l'a rappelé.
 
-# ── Règles publication ────────────────────────────────────────────────────────
+# ── Règles actualité ────────────────────────────────────────────────────────
 
-def publication_visible(pub: Publication, user: Utilisateur) -> bool:
-    """L'utilisateur peut-il voir cette publication ?
+def actualite_visible(ticket: Ticket, user: Utilisateur) -> bool:
+    """L'utilisateur peut-il voir cette actualité ?
+
+    🔴 Une affaire de catégorie « Actualité » depuis le 23/09/2026 (#1091) :
+    c'était `publication_visible(pub, user)`, renommée avec l'entité. Le
+    « confidentiel » de la publication s'appelle `reserve_perimetre` (l'Accès),
+    et `ticket_visible` l'appelle pour toute actualité — auteur et conseil
+    sortis avant elle, comme avant.
 
     Périmètre puis public cible : c'est `cible_visible` qui les pose, et elle est
     la SEULE écriture de cette règle depuis le 06/09/2026 (#782). Ce corps
@@ -72,10 +78,10 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
     #  parallèle de celle-ci, et c'est ainsi que deux règles divergent.
     """
     return cible_visible(
-        pub.perimetre_cible,
-        pub.public_cible,
+        ticket.perimetre_cible,
+        ticket.public_cible,
         user,
-        ouvert_a_la_copropriete=not pub.confidentiel,
+        ouvert_a_la_copropriete=not ticket.reserve_perimetre,
     )
 
 
@@ -214,7 +220,7 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
 
     🔴 ET CE N'EST PAS LA RÈGLE DES ACTUALITÉS, malgré l'apparence. La première
     écriture de cette fonction passait `ouvert_a_la_copropriete=not confidentiel`,
-    par analogie avec `publication_visible` — deux tests l'ont refusée dans la
+    par analogie avec l'actualité (`actualite_visible`) — deux tests l'ont refusée dans la
     minute, et ils avaient raison deux fois :
 
     - ce paramètre ne restreint pas au périmètre, il **l'ignore** : un résident
@@ -259,7 +265,7 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     #  🔴 UNE ACTUALITÉ SUIT LA RÈGLE DE L'ACTUALITÉ (#1091, 23/09/2026).
     #
     #  Elle est devenue une catégorie d'affaire, mais elle s'adresse toujours à
-    #  la copropriété : périmètre + public visé, comme `publication_visible`, et
+    #  la copropriété : périmètre + public visé, par `actualite_visible`, et
     #  par la MÊME fonction (`cible_visible`). Placée AVANT la règle des
     #  locataires, qui vise les affaires suivies — un locataire lisait les
     #  actualités, il les lit encore. `confidentiel` est l'ancien « réservé au
@@ -268,10 +274,7 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     if est_actualite(ticket):
         if ticket.confidentiel:
             return False
-        return cible_visible(
-            ticket.perimetre_cible, ticket.public_cible, user,
-            ouvert_a_la_copropriete=not ticket.reserve_perimetre,
-        )
+        return actualite_visible(ticket, user)
 
     #  🔴 UN LOCATAIRE NE VOIT QUE LES SIENS (05/09/2026), demandé à l'écran :
     #  *« les locataires ne voient pas les tickets »*.
@@ -299,6 +302,28 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
         #  sortis plus haut — personne ne perd l'accès nécessaire pour corriger.
         return False
     return perimetre_visible(perims, user)
+
+
+def reservee_au_conseil(ticket: Ticket) -> bool:
+    """Rien ne sort de cette affaire : ni groupe WhatsApp, ni courriel, ni affiche.
+
+    Deux écritures pour un même geste : `confidentiel` (l'ancien « réservé au
+    conseil » des actualités migrées) et Destinataires = « Conseil syndical »
+    SEUL, qui en tient lieu depuis l'arbitrage #1096 (23/09/2026).
+    """
+    return bool(ticket.confidentiel) or reserve_au_conseil(ticket.public_cible)
+
+
+def hors_du_hall(ticket: Ticket) -> bool:
+    """Cette affaire peut-elle paraître sur une affiche de hall ? Non, si ceci est vrai.
+
+    Un hall est lu par TOUT LE MONDE, sans contrôle d'accès : une affaire
+    réservée au conseil, ou réservée à son périmètre (🔒), n'y va pas. La
+    génération de l'affiche ET la liste des éléments reprenables l'appellent —
+    deux écritures divergeraient sur le cas limite, et l'une des deux
+    publierait au mur ce que l'autre refuse.
+    """
+    return reservee_au_conseil(ticket) or bool(ticket.reserve_perimetre)
 
 # ── Règles Communauté : petite annonce et idée ────────────────────────────────
 #

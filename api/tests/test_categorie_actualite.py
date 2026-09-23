@@ -168,6 +168,27 @@ def test_le_conseil_corrige_une_actualite_qu_il_n_a_pas_ecrite(session):
     assert lu.titre == "Coupure d'eau — reportée"
 
 
+def test_l_arrivant_corrige_son_annonce_sans_decider_qui_la_lit(session):
+    """#821 : l'arrivant est l'auteur de sa propre annonce, pour la corriger.
+
+    Il en corrige le TEXTE ; à qui l'on parle et l'Accès restent au conseil —
+    ignorés pour lui, comme les options, et non refusés.
+    """
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    arrivant = _compte(session)
+    actu = session.get(Ticket, _creer(session, cs, categorie="actualite").id)
+    #  L'annonce d'arrivée est écrite AU NOM de l'arrivant (`utils/annonce_arrivee`).
+    actu.auteur_id = arrivant.id
+    session.add(actu)
+    session.commit()
+    assert peut_editer(actu, arrivant)
+    corps = TicketUpdate(titre="Bienvenue à Alix", public_cible=["conseil_syndical"], reserve_perimetre=True)
+    lu = mise_a_jour.update_ticket(actu.id, corps, BackgroundTasks(), session=session, user=arrivant)
+    assert lu.titre == "Bienvenue à Alix"
+    relue = session.get(Ticket, actu.id)
+    assert relue.public_cible is None and relue.reserve_perimetre is False
+
+
 # ── Changer de catégorie : la promotion, sans conversion ─────────────────
 
 def test_une_actualite_promue_en_affaire_s_ouvre(session):

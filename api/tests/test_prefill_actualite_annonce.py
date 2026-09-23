@@ -6,7 +6,7 @@ souvent l'affiche du hall d'abord, puis veut la même information en ligne.
 
 ## Ce que ces tests verrouillent
 
-1. les **quatre champs** repris — titre, contenu, périmètre, images ;
+1. les **quatre champs** repris — titre, description, périmètre, images ;
 2. la **symétrie** : les deux sens rendent la même information sur le même
    couple, aux noms de champs près. Sans ce test, l'un des deux gagnerait un
    champ que l'autre ignore — c'est ainsi que les deux moitiés d'un même geste
@@ -14,8 +14,12 @@ souvent l'affiche du hall d'abord, puis veut la même information en ligne.
 3. le **droit** : le pré-remplissage est réservé au CS, comme la création d'une
    actualité qu'il alimente.
 
+Depuis le 23/09/2026, une actualité est une affaire de catégorie « Actualité »
+(#1091) : le pré-remplissage vit dans `routers/tickets/depuis_annonce.py`, et
+ses champs portent le vocabulaire de l'affaire (`description`, plus `contenu`).
+
 ⚠️ Aucun lien n'est conservé vers l'annonce d'origine, contrairement au sens
-inverse qui garde `publication_id`. Là-bas le lien SERT — il donne son URL au
+inverse qui garde `ticket_id`. Là-bas le lien SERT — il donne son URL au
 message WhatsApp de l'affiche. Ici rien ne le lirait, et une colonne que personne
 n'interroge devient une seconde vérité sur « d'où vient ce texte ».
 """
@@ -29,8 +33,8 @@ from sqlmodel import Session, SQLModel
 
 from app.database import engine
 from app.models.annonce_hall import AnnonceHall
-from app.models.core import Publication, Utilisateur
-from app.routers.publications.crud import prefill_depuis_annonce_hall
+from app.models.core import Ticket, Utilisateur
+from app.routers.tickets.depuis_annonce import prefill_depuis_annonce_hall
 
 
 @pytest.fixture()
@@ -76,13 +80,13 @@ def scene(batiments):
 
 
 def test_les_QUATRE_champs_sont_repris(scene):
-    """🔴 Le geste lui-même : titre, contenu, périmètre, images."""
+    """🔴 Le geste lui-même : titre, description, périmètre, images."""
     session, annonce, code = scene
 
     prefill = prefill_depuis_annonce_hall(annonce.id, session=session, _=None)
 
     assert prefill["titre"] == annonce.titre
-    assert prefill["contenu"] == annonce.message
+    assert prefill["description"] == annonce.message
     assert prefill["perimetre_cible"] == [code], (
         "le périmètre de l'affiche n'est pas repris : l'actualité viserait toute "
         "la résidence alors que l'affiche visait un bâtiment."
@@ -102,7 +106,7 @@ def test_les_DEUX_SENS_reprennent_la_meme_information(scene):
 
     ⚠️ Les NOMS diffèrent volontairement : chaque sens emploie le vocabulaire de
     l'entité qu'il alimente (`message`/`images` pour l'affiche,
-    `contenu`/`photos_urls` pour l'actualité). Renommer au point de collage se
+    `description`/`photos_urls` pour l'actualité). Renommer au point de collage se
     paierait à chaque lecture. C'est le CONTENU qui doit concorder.
     """
     #  ⚠️ Le sens « actualité → affiche » est passé par un endpoint GÉNÉRIQUE le
@@ -113,32 +117,35 @@ def test_les_DEUX_SENS_reprennent_la_meme_information(scene):
     from app.utils.sources_affiche import prefill_source
 
     session, annonce, code = scene
-    pub = Publication(
+    actu = Ticket(
+        numero=f"TK-A{uuid.uuid4().hex[:6]}",
         titre=annonce.titre,
-        contenu=annonce.message,
+        description=annonce.message,
+        categorie="actualite",
+        statut="publie",
         perimetre_cible=annonce.perimetre_cible,
         photos_urls=annonce.images_json,
         auteur_id=annonce.auteur_id,
     )
-    session.add(pub)
+    session.add(actu)
     session.commit()
-    session.refresh(pub)
+    session.refresh(actu)
     try:
         vers_actualite = prefill_depuis_annonce_hall(annonce.id, session=session, _=None)
-        vers_affiche = prefill_source(session, "publication", pub.id)
+        vers_affiche = prefill_source(session, "ticket", actu.id)
         assert vers_affiche is not None, (
-            "la publication d'essai n'est pas reprenable — brouillon, archivée ou confidentielle ?"
+            "l'actualité d'essai n'est pas reprenable — archivée ou réservée ?"
         )
 
         assert vers_actualite["titre"] == vers_affiche["titre"]
-        assert vers_actualite["contenu"] == vers_affiche["message"]
+        assert vers_actualite["description"] == vers_affiche["message"]
         assert vers_actualite["perimetre_cible"] == vers_affiche["perimetre_cible"]
-        assert set(vers_actualite) == {"titre", "contenu", "perimetre_cible", "photos_urls"}, (
+        assert set(vers_actualite) == {"titre", "description", "perimetre_cible", "photos_urls"}, (
             "un champ a été ajouté d'un seul côté : "
             f"{sorted(vers_actualite)} contre {sorted(vers_affiche)}"
         )
     finally:
-        session.delete(pub)
+        session.delete(actu)
         session.commit()
 
 

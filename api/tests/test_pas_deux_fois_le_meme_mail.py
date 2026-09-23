@@ -192,8 +192,9 @@ def test_les_notifications_IN_APP_gardent_leur_portee_plus_large():
 def test_l_ACTUALITE_n_envoie_AUCUN_courriel_par_son_annonce_de_hall():
     """Vérifié plutôt que supposé — et la valeur par défaut peut changer.
 
-    J'ai d'abord cru à un troisième recouvrement ici. `_generer_annonce_hall`
-    appelle `creer_annonce_hall` sans passer `envoyer_cs` ni `envoyer_syndic`,
+    J'ai d'abord cru à un troisième recouvrement ici. `generer_affiche`
+    (`tickets/actualite.py` depuis le 23/09/2026, #1091) appelle
+    `creer_annonce_hall` sans passer `envoyer_cs` ni `envoyer_syndic`,
     dont les défauts sont `False` : aucun courriel ne part de ce côté, donc aucun
     doublon possible avec `publication_syndic`.
 
@@ -201,7 +202,7 @@ def test_l_ACTUALITE_n_envoie_AUCUN_courriel_par_son_annonce_de_hall():
     recouvrement devrait être traité comme celui du ticket.
     """
     from app.routers.annonces_hall import creer_annonce_hall
-    from app.routers.publications.commun import _generer_annonce_hall
+    from app.routers.tickets.actualite import generer_affiche
 
     parametres = inspect.signature(creer_annonce_hall).parameters
     for nom in ("envoyer_cs", "envoyer_syndic"):
@@ -210,9 +211,9 @@ def test_l_ACTUALITE_n_envoie_AUCUN_courriel_par_son_annonce_de_hall():
             "actualité enverrait un courriel, en doublon de `publication_syndic`."
         )
 
-    appel = inspect.getsource(_generer_annonce_hall)
+    appel = inspect.getsource(generer_affiche)
     for nom in ("envoyer_cs", "envoyer_syndic"):
         assert nom not in appel, (
-            f"`_generer_annonce_hall` passe désormais `{nom}` : le recouvrement "
+            f"`generer_affiche` passe désormais `{nom}` : le recouvrement "
             "avec `publication_syndic` doit être traité."
         )
