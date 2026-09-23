@@ -20,7 +20,7 @@ from app.utils.fichiers import chemins_locaux
 from app.utils.perimetres import batiments_cibles, parse_json_perimetres
 from app.utils.photos import parse_photos
 from app.utils.noms import contexte_personne, nom_affiche
-from app.utils.liens import base_site, nom_site
+from app.utils.liens import base_site, nom_site, lien_element
 
 
 def _batiments_de(pub) -> set[int]:
@@ -100,7 +100,7 @@ def contexte_publication_syndic(
         all_attachments.extend(chemins_locaux(fichiers_urls))
 
     ctx = {
-        "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
+        "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or "", "lien": lien_element("pub", pub.id)},
         "auteur": contexte_personne(user),
         "residence": {"nom": nom_site(cfg.get("site_nom"))},
         "app": {"url": base_site(cfg.get("site_url"))},
@@ -205,7 +205,7 @@ def _envoyer_email_externe_publication(
     attachments = chemins_locaux(fichiers_urls or [])
 
     ctx = {
-        "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
+        "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or "", "lien": lien_element("pub", pub.id)},
         "auteur": contexte_personne(user),
         "date_publication": _fmt_paris(pub.cree_le),
         "date_commentaire": _fmt_paris(datetime.utcnow()),

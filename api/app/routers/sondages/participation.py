@@ -11,6 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from app.utils.liens import lien_sondage
 from app.auth.deps import exiger_non_externe, get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import (
@@ -78,7 +79,7 @@ def voter(
             session, background_tasks,
             createur_id=s.auteur_id, auteur=user,
             rubrique_label="votre sondage", sujet=s.question,
-            extrait=contenu, lien_path=f"/sondages/{sondage_id}",
+            extrait=contenu, lien_path=lien_sondage(sondage_id),
         )
 
     session.commit()
@@ -110,7 +111,7 @@ def commenter(
         session, background_tasks,
         createur_id=s.auteur_id, auteur=user,
         rubrique_label="votre sondage", sujet=s.question,
-        extrait=contenu, lien_path=f"/sondages/{sondage_id}",
+        extrait=contenu, lien_path=lien_sondage(sondage_id),
     )
     session.commit()
     session.refresh(c)
