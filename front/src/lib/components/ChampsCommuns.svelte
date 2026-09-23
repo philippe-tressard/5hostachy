@@ -405,6 +405,16 @@
 	/>
 {/if}
 
+{#if avecDestinataires}
+	<SectionDestinataires
+		{idPrefixe}
+		premiere={premiere && !avecPerimetre}
+		pliable={plie('destinataires')}
+		requis={exige('destinataires')}
+		bind:destinataires
+	/>
+{/if}
+
 {#if avecOptions}
 	<!--  3. Les options qui DÉCRIVENT l'objet — épinglage, urgence, brouillon,
 	      confidentialité. Toujours ici, jamais dans la Diffusion : elles se
@@ -422,16 +432,6 @@
 		bind:urgente
 		bind:brouillon
 		bind:confidentiel
-	/>
-{/if}
-
-{#if avecDestinataires}
-	<SectionDestinataires
-		{idPrefixe}
-		premiere={premiere && !avecPerimetre}
-		pliable={plie('destinataires')}
-		requis={exige('destinataires')}
-		bind:destinataires
 	/>
 {/if}
 

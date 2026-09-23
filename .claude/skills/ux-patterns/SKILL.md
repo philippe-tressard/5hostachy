@@ -106,16 +106,19 @@ pas la grammaire. C'est le signe que la grammaire est la bonne.
 **l'Historique**). « Commentaire » est abandonné : trop étroit, l'entrée pouvant
 porter un changement d'état, des pièces jointes et une diffusion. C'est déjà le
 vocabulaire du code (`TicketEvolution`, `EvolForm`).
-⚠️ Le cadre parle d'évolutions ; **l'écran parle de gestes** (« Commenter »,
-« Changer l'état »).
+⚠️ Le cadre parle d'évolutions ; **l'écran parle de gestes** — « Ajouter une
+suite » (`$lib/gestes.ts`, depuis la v2.7.0 ; « Commenter » est le mot abandonné).
 
 ### Les TREIZE sections, dans cet ordre — il ne se discute pas
 
-1. **Titre** · 2. **Nature** · 3. **Équipement** · 4. **Suivi** · 5. **Quand**
-· 6. **Intervenant** · 7. **Périmètre** · 8. **Description** · 9. **Pièces
-jointes** · 10. **Au nom de** · 11. **Mise en avant** · 12. **Destinataires**
-*(qui est concerné dans l'application)* · 13. **Diffusion** *(par quels canaux
-on prévient à l'extérieur)*.
+L'ordre et les libellés se lisent dans `front/src/lib/entites/types.ts`
+(`SECTIONS_ORDRE`, `SECTIONS_LIBELLE`), et **nulle part ailleurs** : cette skill en
+tenait une copie, qui plaçait encore « Mise en avant » avant « Destinataires » le
+23/09/2026, jour où l'utilisateur les a inversées (#1096 : « elles sont
+complémentaires »). `lint:ordre-sections` et `lint:etats` tiennent l'ordre.
+
+Deux voisines à ne pas confondre : **Destinataires** = qui est concerné *dans
+l'application* ; **Diffusion** = par quels canaux on prévient *à l'extérieur*.
 
 🔴 **Treize depuis le 21/09/2026 (#1095)**, neuf le matin même. Trois
 changements, et un seul touche un rang existant :

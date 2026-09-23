@@ -383,12 +383,6 @@
 				avecSaisiPour
 				{residentsSaisiPour}
 				bind:saisiPour
-				avecOptions={sectionPresente(PUBLICATION, etat, 'mise_en_avant')}
-				dejaEpingle={epingleInitial}
-				bind:epingle
-				bind:urgente
-				bind:brouillon
-				bind:confidentiel
 				demanderApercu={brouillonApercu}
 				bind:refDiffusion
 				envoiEnCours={saving}
@@ -401,6 +395,12 @@
 				bind:perimetre={perimetreCible}
 				avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')}
 				bind:destinataires={publicCible}
+				avecOptions={sectionPresente(PUBLICATION, etat, 'mise_en_avant')}
+				dejaEpingle={epingleInitial}
+				bind:epingle
+				bind:urgente
+				bind:brouillon
+				bind:confidentiel
 				avecDescription={sectionPresente(PUBLICATION, etat, 'description')}
 				descriptionRequise
 				bind:description={contenu}

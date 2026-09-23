@@ -167,10 +167,6 @@ export const SONDAGE: EntiteDeclaree = {
 			sansObjet: 'Un sondage est ouvert par celui qui le pose.',
 		},
 		{
-			id: 'mise_en_avant',
-			sansObjet: 'Un sondage ne s’épingle pas : sa date de clôture fait son urgence.',
-		},
-		{
 			id: 'destinataires',
 			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
 			//
@@ -198,6 +194,10 @@ export const SONDAGE: EntiteDeclaree = {
 						'montrerait un débat à des résidents qui n’ont jamais vu la question.',
 				},
 			},
+		},
+		{
+			id: 'mise_en_avant',
+			sansObjet: 'Un sondage ne s’épingle pas : sa date de clôture fait son urgence.',
 		},
 		{
 			id: 'diffusion',

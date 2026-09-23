@@ -200,21 +200,6 @@ export const TICKET: EntiteDeclaree = {
 			},
 		},
 		{
-			//  🔴 ELLE EST OUVERTE À L'ÉVOLUTION, et c'est ce que la scission permet
-			//  enfin de DÉCLARER (#1095, constaté à l'écran le 05/09/2026 :
-			//  *« Options de publications n'apparaît pas sur un commentaire »*).
-			//
-			//  Les trois notions vivaient dans une seule section : catégorie et
-			//  « Saisi pour » sont héritées, les options se corrigent en commentant.
-			//  Une section absente pour l'une fermait la porte aux deux autres, et
-			//  la nuance ne pouvait s'écrire qu'en COMMENTAIRE — invisible à
-			//  `lint:etats`. C'est la limite que #436 décrivait, et elle se referme
-			//  ici : chacune est maintenant sa propre section, avec son propre motif.
-			id: 'mise_en_avant',
-			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel',
-			pliee: true,
-		},
-		{
 			id: 'destinataires',
 			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (22/09/2026, signé à l'écran deux fois).
 			//
@@ -229,6 +214,21 @@ export const TICKET: EntiteDeclaree = {
 				'auteur et par le conseil syndical, et son périmètre dit déjà de quoi il parle. ' +
 				'`destinataire_syndic` et `destinataire_cs` ne sont PAS des destinataires au sens ' +
 				'de la section 5 — ce sont deux canaux, et ils vivent en Diffusion (section 9).',
+		},
+		{
+			//  🔴 ELLE EST OUVERTE À L'ÉVOLUTION, et c'est ce que la scission permet
+			//  enfin de DÉCLARER (#1095, constaté à l'écran le 05/09/2026 :
+			//  *« Options de publications n'apparaît pas sur un commentaire »*).
+			//
+			//  Les trois notions vivaient dans une seule section : catégorie et
+			//  « Saisi pour » sont héritées, les options se corrigent en commentant.
+			//  Une section absente pour l'une fermait la porte aux deux autres, et
+			//  la nuance ne pouvait s'écrire qu'en COMMENTAIRE — invisible à
+			//  `lint:etats`. C'est la limite que #436 décrivait, et elle se referme
+			//  ici : chacune est maintenant sa propre section, avec son propre motif.
+			id: 'mise_en_avant',
+			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel',
+			pliee: true,
 		},
 		{
 			id: 'diffusion',
