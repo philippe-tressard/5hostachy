@@ -61,7 +61,6 @@ BITS=ok; for s in bascule.sh health-watch.sh maintenance.sh auto-deploy.sh MaJ-H
 echo "exec_bits=$BITS"
 echo "disk=$(df / | awk "NR==2{print \$5}" | tr -d %)"
 echo "ntp=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)"
-echo "epoch=$(date +%s)"
 echo "lock=$([ -f $R/.bascule-lock ] && stat -c %Y $R/.bascule-lock || echo 0)"
 # Quand health-watch a-t-il NETTOYÉ un verrou orphelin pour la derniere fois,
 # et combien de fois en tout ? C12 ne peut pas le lire sur le fichier :
