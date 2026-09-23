@@ -334,6 +334,7 @@
 |---|---------|--------|-------------|------|
 | 1 | GET | `/tickets` | Tickets (CS/admin = tous, résident = les siens) | Authentifié |
 | 2 | POST | `/tickets` | Créer ticket (notifie CS ; e-mail syndic avec photos en PJ + CC rôle `conseil_syndical`) | Authentifié |
+| 2 bis | POST | `/tickets/lot` | « Init. prestataires » : visites Entretien de l'exercice en une transaction, sans aucune diffusion (#1193) | CS/Admin |
 | 3 | GET | `/tickets/{ticket_id}` | Détail ticket | Authentifié |
 | 4 | PATCH | `/tickets/{ticket_id}` | Modifier statut/priorité (auto-évolution) | CS/Admin |
 | 5 | GET | `/tickets/{ticket_id}/messages` | Messages du ticket (internes filtrés) | Authentifié |
