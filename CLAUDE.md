@@ -107,7 +107,8 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
    garde-fous échouent en CI : `api/tests/test_dates_fr.py` et `npm run lint:dates`.
 3. **Accessibilité** : tout élément cliquable non-`<button>` porte `role="button"`,
    `tabindex="0"` et `on:keydown` (Enter/Space) ; `aria-label` sur les boutons
-   icône-seule ; `role="dialog"` + `aria-modal="true"` sur les modales.
+   icône-seule ; `role="dialog"` + `aria-modal="true"` sur les modales
+   (`standards/11-interface-et-ux.md` §2, seule source générique ; les skills y renvoient).
 4. **Icônes de contexte** : 📍 = lieu physique, 🔹 = périmètre logique — **jamais
    mélangés**, et le périmètre par défaut ne s'affiche pas — la question se pose à
    `estPerimetreParDefaut` (`$lib/perimetres`), jamais par un `=== 'résidence'` :
@@ -378,7 +379,8 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       et pourquoi, on ne l'omet pas en silence
 
 > ⚠️ Le manuel ne se modifie **jamais** avec `sed -i` : il est versionné en CRLF, que
-> `sed` réécrit en LF — le diff passe de 3 lignes à 5 700. Vérifier `git diff --stat`.
+> `sed` réécrit en LF (les dégâts mesurés : `standards/10-encodage-et-fichiers.md` §2). L'écrire en OCTETS, et
+> vérifier `git diff --stat`.
 >
 > Le README était vérifié par personne alors que le point **0e** du pré-check le nomme
 > depuis toujours au même rang que le manuel : cette checklist-ci ne citait que le

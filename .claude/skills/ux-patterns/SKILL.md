@@ -327,7 +327,7 @@ distinguer.
 `<input type="radio">`, comme les catégories de ticket. `Pastille` rend un
 `<button>` : la navigation par flèches et l'annonce par le lecteur d'écran y
 seraient perdues. L'uniformité ne se paie pas en accessibilité
-(`standards/11` §2).
+(`standards/11-interface-et-ux.md` §2).
 
 🔴 **La section 1 ne porte QUE le titre** (arbitré le 18/08/2026, sur les
 Tickets où la catégorie était rendue *avant* lui). Ce qui qualifie l'objet —
@@ -704,7 +704,8 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
   en-tête cliquable **+** corps *frère* (prestataires). Ne pas « corriger » une
   absence de `stopPropagation` sans regarder la structure : on casserait ce qui
   marche.
-- Accessibilité : `role="button"` + `tabindex="0"` + `on:keydown`
+- Accessibilité : `standards/11-interface-et-ux.md` §2 — mais le conteneur d'une carte est
+  `role="presentation"` (le geste appartient au titre, voir plus haut)
 
 ### Préfixes par page
 | Page | Préfixe CSS | Référence |

@@ -329,12 +329,13 @@ const icon = '\u{1F6E0}'; // 🔧
 
 ## Accessibilité
 
-- `role="button"` + `tabindex="0"` sur les éléments cliquables non-bouton
-- `on:keydown` (Enter/Space) sur tous les `role="button"`
-- `role="tablist"` / `role="tab"` sur les onglets
-- `aria-modal="true"` + `role="dialog"` sur les modales
-- Labels : `Titre *` (astérisque pour les champs requis)
-- `aria-label` sur les boutons icône-seule
+La règle : `standards/11-interface-et-ux.md` §2 (seule copie) ; son instanciation, `CLAUDE.md` —
+« Front », règle 3 ; ce qu'en vérifie la CI : `npm run lint:a11y`.
+
+🔴 Cette section en portait une septième copie, avec une ligne **fausse** depuis
+le 22/09/2026 — « Labels : `Titre *` (astérisque pour les champs requis) », là
+où la règle est `<EtoileRequis vide={!champ} />` et où `lint:champs` refuse
+l'astérisque tapée (claude-config#122, 24/09/2026).
 
 ## Archivage vs Suppression
 
