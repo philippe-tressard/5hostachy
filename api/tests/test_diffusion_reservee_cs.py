@@ -22,11 +22,12 @@ import pytest
 from fastapi import BackgroundTasks, HTTPException
 from sqlmodel import Session, SQLModel, create_engine
 
+import app.routers.tickets.crud as crud
 import app.routers.tickets.evolutions as evolutions
 import app.routers.tickets.messages as messages
 import app.utils.whatsapp as whatsapp
 from app.models.core import RoleUtilisateur, Ticket, Utilisateur
-from app.schemas import MessageCreate
+from app.schemas import MessageCreate, TicketCreate
 from app.schemas_tickets import TicketEvolutionCreate
 
 
@@ -176,3 +177,33 @@ def test_le_releve_voit_une_route_sans_controle():
     avec = "@router.post('/{ticket_id}/x')\ndef f(ticket_id: int, user=None):\n    ticket_visible(t, user)\n"
     assert _routes_sans_controle(sans, "s.py")
     assert not _routes_sans_controle(avec, "a.py")
+
+
+# ── #1171 : ce qu'on coche à la CRÉATION arrive en base ──────────────────────
+
+@pytest.fixture()
+def creation(monkeypatch):
+    #  Les envois de la création ont leurs propres tests : ici, ce qui est ÉCRIT.
+    monkeypatch.setattr(crud, "_notifier_cs_creation", lambda *a, **k: None)
+    monkeypatch.setattr(crud, "adresses_deja_servies", lambda *a, **k: set())
+
+
+def _creer(session, user, **options):
+    corps = TicketCreate(titre="Litige", description="Entre voisins.", categorie="nuisance", **options)
+    lu = crud.create_ticket(corps, BackgroundTasks(), session=session, user=user)
+    return session.get(Ticket, lu.id)
+
+
+def test_reservee_au_conseil_a_la_creation_est_ecrit(session, creation):
+    cs = _personne(session, "cs@exemple.fr", RoleUtilisateur.conseil_syndical)
+    assert _creer(session, cs, confidentiel=True).confidentiel is True
+
+
+def test_un_resident_signale_l_urgence_a_la_creation(session, creation):
+    resident = _personne(session, "r@exemple.fr")
+    assert _creer(session, resident, urgente=True).priorite == "haute"
+
+
+def test_un_resident_ne_restreint_pas_a_la_creation(session, creation):
+    resident = _personne(session, "r@exemple.fr")
+    assert _creer(session, resident, confidentiel=True).confidentiel is False

@@ -160,6 +160,12 @@ class TicketCreate(SaisiPourEntree, AssisteIAEntree):
     #  valeur, présélectionnée ou non — y compris un onglet PWA resté ouvert.
     categorie: CategorieTicket
     epingle: bool = False
+    #  🔴 DÉCLARÉES depuis le 23/09/2026 (#1171) : le formulaire les envoyait,
+    #  Pydantic les ignorait — « 🛡️ réservée au conseil » cochée à la création
+    #  laissait l'affaire lisible de tout son périmètre. `None` : le corps n'en
+    #  dit rien. Le droit est dans `appliquer_options`, pas ici.
+    urgente: Optional[bool] = None
+    confidentiel: Optional[bool] = None
     #  🔴 `None` = « le corps n'en dit rien », et le serveur pose alors le défaut
     #  de la CATÉGORIE (`kanban_tickets.suivi_par_defaut`). Un `bool = False`
     #  aurait rendu un formulaire silencieux indiscernable d'un décochage
@@ -280,6 +286,7 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection):
     destinataire_cs: Optional[bool] = None
     confidentiel: Optional[bool] = None
     epingle: Optional[bool] = None
+    urgente: Optional[bool] = None  # #1171 : ignorée en silence jusqu'au 23/09/2026
     suivi_kanban: Optional[bool] = None
     #  ⚠️ N'est PAS un champ du ticket : `Ticket` n'a pas cette colonne, à la
     #  différence de `Publication`. C'est un ACTE — « publie ce ticket sur le

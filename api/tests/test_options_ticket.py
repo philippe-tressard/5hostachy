@@ -183,3 +183,35 @@ def test_aucune_option_muette_dans_la_table():
             f"L'option « {option} » est déclarée mais n'écrit rien : une case "
             "sans effet derrière elle."
         )
+
+
+def test_les_TROIS_corps_transportent_chaque_option():
+    """🔴 #1171 (23/09/2026) — le chemin appelait la règle, et ne lui passait rien.
+
+    `appliquer_options` lit `getattr(body, option, None)`. Or `TicketCreate` ne
+    déclarait ni `urgente` ni `confidentiel` : Pydantic ignore un champ inconnu,
+    le formulaire les envoyait, le serveur lisait `None`. Une affaire créée
+    « 🛡️ réservée au conseil » partait lisible de tout son périmètre, et
+    « 🚨 Urgent » coché à la création ne comptait pas.
+
+    Le test précédent vérifie que les trois chemins APPELLENT la règle ; celui-ci,
+    que leur corps TRANSPORTE chaque option. Dérivé d'`OPTIONS_TICKET` : une
+    option ajoutée demain et oubliée dans un schéma échoue ici.
+    """
+    from app.schemas import TicketCreate, TicketUpdate
+    from app.schemas_tickets import TicketEvolutionCreate
+
+    #  Une option qui ne se pose que par un chemin se déclare ici, avec sa raison.
+    #  `suivi_kanban` : un geste de CONDUITE du suivi, pas une parole — il ne passe
+    #  pas par une Suite (#833).
+    hors_suite = {"suivi_kanban"}
+    manques = [
+        f"{schema.__name__}.{option}"
+        for schema in (TicketCreate, TicketUpdate, TicketEvolutionCreate)
+        for option in OPTIONS_TICKET
+        if option not in schema.model_fields
+        and not (schema is TicketEvolutionCreate and option in hors_suite)
+    ]
+    assert not manques, f"Options perdues en silence par le corps de requête : {manques}"
+    for option in hors_suite:
+        assert option in OPTIONS_TICKET, f"`{option}` déclarée hors Suite, mais n'est plus une option."
