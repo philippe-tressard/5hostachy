@@ -85,8 +85,14 @@ def image_pour_bridge(image_url: str | None) -> str | None:
     return base64.b64encode(reduite).decode("ascii")
 
 
-def renvoi_photos(config: dict) -> str:
+def renvoi_photos(config: dict, cible: str | None = None) -> str:
     """Phrase ajoutée au message quand la photo n'a pas pu l'accompagner.
+
+    Elle renvoie à l'adresse du MESSAGE (`cible`) quand il en porte une — la
+    fiche de l'affaire, de l'actualité, de l'événement —, et à l'accueil du site
+    sinon. Elle renvoyait à `/actualites` pour TOUT message, ticket compris : une
+    page où la photo d'un ticket ne s'est jamais trouvée, et qui n'existe plus
+    depuis le 23/09/2026 (#1091).
 
     Un envoi perdu est bien pire qu'un envoi sans image : le message part, et il
     dit où voir la photo plutôt que de laisser croire qu'il n'y en a pas.
@@ -97,4 +103,4 @@ def renvoi_photos(config: dict) -> str:
     lien = base_site(config.get("site_url")).rstrip("/")
     if not lien:
         return ""
-    return f"\n\n📷 Photos à voir sur le site : {lien}/actualites"
+    return f"\n\n📷 Photos à voir sur le site : {cible or lien + '/'}"

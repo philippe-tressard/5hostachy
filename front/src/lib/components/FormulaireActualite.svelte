@@ -1,6 +1,22 @@
 <!--
-  Le formulaire d'une publication — celui qu'on remplit pour la CRÉER, et celui
+  Le formulaire d'une actualité — celui qu'on remplit pour la CRÉER, et celui
   qu'on rouvre pour la MODIFIER. Un seul fichier pour les deux gestes.
+
+  ## 🔴 Une actualité EST une affaire depuis le 23/09/2026 (#1091, lot 4)
+
+  Ce formulaire écrit par `POST /tickets` et `PATCH /tickets/{id}`, catégorie
+  « Actualité ». Il reste distinct de `FormulaireTicket` parce que ce qu'il
+  PROPOSE diffère — à qui l'on parle, l'Accès 🔒, l'affiche de hall, pas de
+  catégorie à choisir ni de suivi —, pas parce que l'objet diffère : ce qui
+  varie est déclaré dans `$lib/entites/publication`, pas ici.
+
+  | Actualité (avant) | Affaire « Actualité » |
+  |---|---|
+  | `contenu` | `description` |
+  | `urgente` | `urgente` → `priorite` (serveur) |
+  | 🛡️ `brouillon` | Destinataires = « Conseil syndical » seul (#1096) |
+  | 🔒 `confidentiel` | `reserve_perimetre`, sous les pastilles du Périmètre |
+  | documents = entités `Document`, attachées APRÈS | `fichiers_urls`, téléversés AVANT, comme une affaire |
 
   Extrait de `actualites/+page.svelte` (#356) parce que la page dépassait le
   plafond de 500 lignes ; rendu **paramétrable** le 18/08/2026 (#433).
@@ -33,25 +49,19 @@
   remette une condition en dur. La seule chose que le mode décide encore ici est
   le **geste** : `POST` ou `PATCH`, et le bouton « Annuler ».
 
-  ## ⚠️ La danse « créer puis attacher » n'a lieu QU'À LA CRÉATION
+  ## ✅ La danse « créer puis attacher » a disparu avec l'entité
 
-  Les documents d'une actualité deviennent des entités `Document` rattachées à un
-  `publication_id` qui n'existe pas encore : ils sont retenus, la publication est
-  créée en brouillon, ils sont téléversés, puis la publication est publiée — pour
-  que l'affiche de hall les voie. Ce contournement **n'a aucun sens en édition**
-  (la publication existe), et la déclaration l'empêche plutôt que de le rejouer :
-  la section Documents y est absente, motif `api` citant #390.
-
-  ⚠️ **Le moment du téléversement porte une fonctionnalité, pas une ergonomie**, et
-  **ça ne se voit pas à l'écran** : quand les photos étaient téléversées après, le
-  courriel était déjà construit et partait sans elles, sans que rien ne le
-  signale. Toute retouche ici se vérifie sur un envoi réel.
+  Les documents d'une publication étaient des entités `Document` rattachées à
+  un `publication_id` qui n'existait pas encore : créer en brouillon, attacher,
+  puis publier, pour que l'affiche de hall les voie. Une affaire porte ses
+  documents en `fichiers_urls`, téléversés AVANT l'enregistrement — ils partent
+  donc avec le courriel et l'affiche, sans détour. Les `Document` des anciennes
+  publications restent lisibles sur la carte.
 -->
 <script lang="ts">
 	import { pourChampLocal, depuisChampLocal } from '$lib/date';
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { attacherApres } from '$lib/fichiers';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
@@ -62,12 +72,10 @@
 		saisieDepuis,
 		type ResidentProposable,
 	} from '$lib/saisi-pour';
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, tickets as ticketsApi, type Ticket } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
-	import DocumentsPublication from '$lib/components/DocumentsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { publications as pubsApi, type Publication } from '$lib/api';
 	import RepriseAnnonceHall from '$lib/components/RepriseAnnonceHall.svelte';
 	import type { PrefillActualite } from '$lib/actualite-prefill';
 	import { perimetreDefautListe } from '$lib/utils';
@@ -76,21 +84,26 @@
 	import { sectionPresente } from '$lib/entites/types';
 	import { PUBLICATION } from '$lib/entites/publication';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
+	import { reserveAuConseil } from '$lib/destinataires';
+	import { ticketUrgent } from '$lib/tickets';
+	import { isCS } from '$lib/stores/auth';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
-	/**  La publication à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut)
+	/**  L'actualité à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut)
 	 *   = création. Le mode ne change pas pendant la vie du composant : l'appelant
-	 *   la remonte à neuf (`{#key}`) quand il passe d'une publication à l'autre,
-	 *   exactement comme il le fait pour `EvolForm`. Même contrat que
-	 *   `FormulaireTicket` (#425). */
-	export let publication: Publication | null = null;
+	 *   la remonte à neuf (`{#key}`) quand il passe d'une actualité à l'autre.
+	 *   Même contrat que `FormulaireTicket` (#425). */
+	export let affaire: Ticket | null = null;
+	/**  Ce qui RAMÈNE le formulaire à l'écran quand il est rendu loin du geste qui
+	 *   l'ouvre — relayé jusqu'à `CadreFormulaire` (`check-geste-edition`, règle F). */
+	export let cle: unknown = undefined;
 
-	//  ── 2. Saisi pour — le CS publie parfois POUR quelqu'un (`$lib/saisi-pour`).
-	let saisiPour = saisieDepuis(publication);
+	//  ── Saisi pour — le CS publie parfois POUR quelqu'un (`$lib/saisi-pour`).
+	let saisiPour = saisieDepuis(affaire);
 	let residentsSaisiPour: ResidentProposable[] = [];
 
-	const modeEdition = publication !== null;
+	const modeEdition = affaire !== null;
 
 	/**  L'état du cadre #430 que ce formulaire rend. C'est LUI qui décide des
 	 *   sections — voir `$lib/entites/publication`, qui porte chaque divergence
@@ -98,8 +111,8 @@
 	const etat: Etat = modeEdition ? 'edition' : 'creation';
 
 	const dispatch = createEventDispatcher<{
-		cree: Publication;
-		modifie: Publication;
+		cree: Ticket;
+		modifie: Ticket;
 		annule: void;
 	}>();
 
@@ -107,7 +120,7 @@
 	//  Le raccourci vit dans `RepriseAnnonceHall` : ce n'est pas une section du
 	//  cadre #430, donc il n'a pas sa place dans un écran qui rend des sections.
 	function appliquerReprise(p: PrefillActualite) {
-		({ titre, contenu, photos } = p);
+		({ titre, description, photos } = p);
 		perimetreCible = p.perimetreCible;
 	}
 
@@ -115,214 +128,143 @@
 		residentsSaisiPour = await chargerResidents(adminApi.utilisateurs);
 	});
 
-	//  ── 1. Titre ────────────────────────────────────────────────────────────
-	let titre = publication?.titre ?? '';
+	let titre = affaire?.titre ?? '';
 
-	//  ── 2. Champs spécifiques : ce qui DÉCRIT la publication ────────────────
-	let epingle = publication?.epingle ?? false;
+	//  ── Mise en avant : épinglage et urgence, et plus rien d'autre (#1096).
+	let epingle = affaire?.epingle ?? false;
 	//  Épinglage à l'ouverture : sans lui, l'avertissement de plafond compterait
-	//  une seconde fois une publication déjà épinglée.
-	const epingleInitial = publication?.epingle ?? false;
-	let urgente = publication?.urgente ?? false;
-	let brouillon = publication?.brouillon ?? false;
-	let confidentiel = publication?.confidentiel ?? false;
+	//  une seconde fois une actualité déjà épinglée.
+	const epingleInitial = affaire?.epingle ?? false;
+	let urgente = ticketUrgent(affaire);
+	//  🔒 L'Accès — sous les pastilles du Périmètre (#1096).
+	let reservePerimetre = affaire?.reserve_perimetre ?? false;
 
-	//  ⚠️ PLUS DE WORKFLOW — arbitré le 18/08/2026. Une actualité n'a pas d'étapes
-	//  de vie : elle est publiée, puis bascule dans l'Historique au bout de son
-	//  délai. Le `statut` n'est donc plus envoyé du tout — ni à la création, ni à
-	//  la correction —, et la colonne garde sa valeur d'origine pour les anciennes
-	//  publications (la carte l'affiche encore, en lecture).
-
-	//  ── 4 à 8 ───────────────────────────────────────────────────────────────
-	//  Copie défensive du périmètre et du public : les tableaux viennent de la
-	//  publication affichée dans la liste. Liés tels quels, une sélection
+	//  Copie défensive du périmètre et du public : les tableaux viennent de
+	//  l'actualité affichée dans la liste. Liés tels quels, une sélection
 	//  abandonnée resterait visible sur la carte alors que rien n'a été enregistré.
-	let perimetreCible: string[] = [...(publication?.perimetre_cible ?? perimetreDefautListe())];
-	let publicCible: string[] = [...(publication?.public_cible ?? ['résidents'])];
-	let contenu = publication?.contenu ?? '';
+	let perimetreCible: string[] = [...(affaire?.perimetre_cible ?? perimetreDefautListe())];
+	let publicCible: string[] = [...(affaire?.public_cible ?? ['résidents'])];
+	let description = affaire?.description ?? '';
 	//  Section « Quand » (#1092) : une actualité datée paraît au calendrier.
-	let debut = pourChampLocal(publication?.debut);
-	let fin = pourChampLocal(publication?.fin);
+	let debut = pourChampLocal(affaire?.debut);
+	let fin = pourChampLocal(affaire?.fin);
 	//  Vrai dès qu'une proposition de l'assistant IA a été appliquée (#985).
 	let assisteIA = false;
-	//  Ce que l'assistant IA reçoit pour COMPRENDRE le texte — à ne pas réécrire
-	//  (#985) : périmètre et options. Une actualité n'a pas de catégorie.
+	//  🛡️ Destinataires = « Conseil syndical » seul : rien ne sort (#1096).
+	$: reserveeAuConseil = reserveAuConseil(publicCible);
 	$: assistant = contexteAssistant('actualité', {
 		Périmètre: perimetreContexte(perimetreCible),
 		Urgente: urgente,
 		Épinglée: epingle,
-		Brouillon: brouillon,
-		Confidentielle: confidentiel,
+		'Réservée au conseil syndical': reserveeAuConseil,
+		'Réservée au périmètre': reservePerimetre,
 	});
-	//  Les photos sont téléversées AVANT l'enregistrement (endpoint générique),
-	//  comme pour les tickets et les événements : leurs URLs partent dans la
-	//  charge utile. C'est ce qui permet au courriel de partir AVEC elles.
-	//  Rechargées en édition : `PATCH` remplace la liste entière — partir d'un
-	//  tableau vide effacerait les photos existantes au premier enregistrement,
-	//  silencieusement, et sans qu'on ait touché à la section.
-	let photos: string[] = [...(publication?.photos_urls ?? [])];
-	//  Les DOCUMENTS restent différés à la CRÉATION : ils deviennent des entités
-	//  `Document` rattachées à `publication_id`, qui n'existe pas encore.
-	let pendingFiles: File[] = [];
+	//  Photos et documents sont téléversés AVANT l'enregistrement, comme pour
+	//  toute affaire : leurs URLs partent dans la charge utile, donc avec le
+	//  courriel et l'affiche. Rechargés en édition : `PATCH` remplace la liste
+	//  entière, et partir d'un tableau vide effacerait l'existant en silence.
+	let photos: string[] = [...(affaire?.photos_urls ?? [])];
+	let fichiersUrls: string[] = [...(affaire?.fichiers_urls ?? [])];
 
-	//  ✅ EN CORRECTION, la publication existe : on ajoute et on retire à l'unité,
-	//  tout de suite. C'est ce qui a permis de rouvrir la section sans attendre
-	//  #390 — il n'a jamais été nécessaire de « remplacer la liste ».
-
-	//  ── 9. Diffusion ────────────────────────────────────────────────────────
-	//  ✅ Rouverte à l'édition (18/08/2026). Les cases reprennent les valeurs
-	//  enregistrées — « telle qu'à la création ». Ce qui rend la réouverture sûre
-	//  vit côté serveur : seule la transition décoché → coché envoie.
-	let partagerWhatsapp = publication?.partager_whatsapp ?? false;
-	let envoyerSyndic = publication?.envoyer_syndic ?? false;
-	let envoyerCs = publication?.envoyer_cs ?? false;
-	//  « Envoyer une copie à … » — la case vit dans `CanauxNotification`, qui
-	//  porte la règle et son pourquoi. Elle s'affichait ici sans être lue (31/08).
+	//  ── Diffusion — les cases de syndic et de conseil reprennent les valeurs
+	//  enregistrées ; seule la transition décoché → coché envoie, et c'est le
+	//  serveur qui en décide.
+	let partagerWhatsapp = false;
+	let envoyerSyndic = affaire?.destinataire_syndic ?? false;
+	let envoyerCs = affaire?.destinataire_cs ?? false;
+	//  « Envoyer une copie à … » — la case vit dans `CanauxNotification`.
 	let envoyerAuteur = false;
+	let annonceHall = false;
 
-	//  Les quatre canaux, écrits UNE fois pour les trois charges utiles de cet
-	//  écran — la règle et son pourquoi : `SectionDiffusion.svelte`.
-	$: canaux = {
-		partager_whatsapp: partagerWhatsapp,
-		envoyer_syndic: envoyerSyndic,
-		envoyer_cs: envoyerCs,
-		envoyer_auteur: envoyerAuteur,
-	};
+	//  Réservée — au périmètre ou au conseil —, l'actualité n'a pas d'affiche :
+	//  un hall se lit sans connexion. Confort d'écran ; le serveur décide
+	//  (`visibility.hors_du_hall`).
+	$: reservee = reservePerimetre || reserveeAuConseil;
+	$: if (reservee && annonceHall) annonceHall = false;
 
-	let annonceHall = publication?.annonce_hall ?? false;
-
-	//  ⚠️ La règle « Confidentiel interdit l'affiche de hall » enjambe les sections
-	//  2 et 9 : elle vit donc ici, seul endroit où les deux valeurs se rencontrent.
-	//  Elle est **aussi** tenue côté serveur (`appliquer_confidentialite`), qui
-	//  seul décide — celle-ci n'est qu'un confort d'écran.
-	$: if (confidentiel && annonceHall) annonceHall = false;
+	//  Les canaux, écrits UNE fois pour les charges utiles de cet écran. Le
+	//  conseil seul les envoie : l'auteur d'une annonce d'arrivée corrige son
+	//  texte, il ne diffuse pas — le serveur le refuserait en 403.
+	$: canaux = $isCS
+		? {
+				partager_whatsapp: partagerWhatsapp,
+				destinataire_syndic: envoyerSyndic,
+				destinataire_cs: envoyerCs,
+				envoyer_auteur: envoyerAuteur,
+				annonce_hall: annonceHall,
+			}
+		: {};
 
 	let saving = false;
 
-	//  L'aperçu de ce qui partira, avant de confirmer (#498). Il compose par les
-	//  MÊMES fonctions que l'envoi — voir `publications/apercu.py`.
-	//
-	//  🔴 Cet écran n'en avait pas. Le 31/08/2026, une actualité est partie au
-	//  conseil syndical sans que son auteur ait rien pu voir ni annuler. Le point
-	//  d'accroche existait pourtant depuis le 29/08 : ce qui manquait était
-	//  l'endpoint, et le contexte du gabarit que l'envoi construisait chez lui.
-	//  🔴 Sans ces deux-là, `demanderApercu` ne sert À RIEN : la modale sait
-	//  s'ouvrir, et personne ne l'ouvre. C'est l'erreur du 31/08/2026 — le
-	//  pourquoi est dans `scripts/check-apercu-branche.mjs`, qui la refuse.
+	//  L'aperçu de ce qui partira, avant de confirmer (#498) — celui des
+	//  affaires, qui compose une actualité avec SON gabarit.
 	let refDiffusion: any = null;
 	$: aUneDiffusion = envoyerSyndic || envoyerCs || partagerWhatsapp;
 
 	const brouillonApercu = () =>
-		pubsApi.apercuDiffusion({
-			publication_id: publication?.id,
+		ticketsApi.apercuDiffusion({
+			ticket_id: affaire?.id,
 			titre: titre.trim(),
-			contenu,
+			description,
+			categorie: 'actualite',
 			urgente,
 			perimetre_cible: perimetreCible,
+			public_cible: publicCible,
 			photos_urls: photos,
-			...canaux,
+			fichiers_urls: fichiersUrls,
+			destinataire_syndic: envoyerSyndic,
+			destinataire_cs: envoyerCs,
+			partager_whatsapp: partagerWhatsapp,
+			envoyer_auteur: envoyerAuteur,
 		});
 
-	//  Le vocabulaire d'écran vient de la DÉCLARATION, jamais d'un libellé
-	//  réécrit ici : `PUBLICATION.libelle` dit « Actualité » (#1107).
+	//  Le vocabulaire d'écran vient de la DÉCLARATION (#1107).
 	const titreBoite = modeEdition ? PUBLICATION.libelleModifier : PUBLICATION.libelleNouveau;
 
-	//  LE CADRE dépend du geste — `ux-patterns` §14 bis, qui porte la règle et
-	//  son pourquoi : boîte pour créer, modale pour corriger, et le cadre se pose
-	//  là où le geste est connu. Ici, c'est `modeEdition`.
-	//
-	//  ⚠️ En édition, ce composant ne vit plus dans la carte : elle ne le rendait
-	//  que dépliée, et replier pendant la saisie aurait effacé la fenêtre AVEC la
-	//  saisie. `encadre` est parti avec le problème qu'il corrigeait (#425).
-
-	function reinitialiser() {
-		titre = '';
-		contenu = '';
-		urgente = false;
-		epingle = false;
-		brouillon = false;
-		partagerWhatsapp = false;
-		envoyerSyndic = false;
-		envoyerCs = false;
-		annonceHall = false;
-		confidentiel = false;
-		perimetreCible = perimetreDefautListe();
-		publicCible = ['résidents'];
-		photos = [];
-		pendingFiles = [];
-	}
-
-	/**  Aperçu d'abord si un canal est coché — même patron que `FormulaireTicket`,
-	 *   qui en porte le pourquoi. `enregistrer` reste l'unique chemin d'écriture. */
+	/**  Aperçu d'abord si un canal est coché — même patron que `FormulaireTicket`.
+	 *   `enregistrer` reste l'unique chemin d'écriture. */
 	function soumettre() {
-		if (!titre.trim() || richEmpty(contenu)) return;
+		if (!titre.trim() || richEmpty(description)) return;
 		if (refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
 		void enregistrer();
 	}
 
 	async function enregistrer() {
-		if (!titre.trim() || richEmpty(contenu)) return;
+		if (!titre.trim() || richEmpty(description)) return;
 		refDiffusion?.fermerApercu();
 		saving = true;
+		const commun = {
+			titre: titre.trim(),
+			description,
+			urgente,
+			perimetre_cible: perimetreCible,
+			debut: depuisChampLocal(debut),
+			fin: depuisChampLocal(fin),
+			photos_urls: photos,
+			fichiers_urls: fichiersUrls,
+			//  Le conseil seul décide qui lit — ignorés pour un autre par le serveur.
+			...($isCS ? { epingle, public_cible: publicCible, reserve_perimetre: reservePerimetre } : {}),
+			...canaux,
+			...lotDepuisSaisie(saisiPour),
+		};
 		try {
-			if (publication) {
-				//  Tout ce que la déclaration rend en édition, et rien d'autre : les
-				//  canaux ne sont pas renvoyés (section 9 absente, motif `geste`), les
-				//  documents pas non plus (motif `api`, #390).
-				const maj = await pubsApi.update(publication.id, {
-					titre: titre.trim(),
-					contenu,
+			if (affaire) {
+				const maj = await ticketsApi.update(affaire.id, {
+					...commun,
 					assiste_ia: assisteIA || undefined,
-					epingle,
-					urgente,
-					brouillon,
-					confidentiel,
-					perimetre_cible: perimetreCible,
-					debut: depuisChampLocal(debut),
-					fin: depuisChampLocal(fin),
-					public_cible: publicCible,
-					photos_urls: photos,
-					...canaux,
-					annonce_hall: annonceHall,
-					...lotDepuisSaisie(saisiPour),
 				});
 				toast('success', `${PUBLICATION.libelle} mise à jour`);
 				dispatch('modifie', maj);
 				return;
 			}
-
-			//  Restent les DOCUMENTS, encore persistés en entités `Document` propres
-			//  aux publications (les tickets et les événements utilisent
-			//  `fichiers_urls`) — eux seuls imposent de publier après coup, pour que
-			//  l'affiche de hall les voie. Divergence connue, suivie en #390.
-			const publierApresDocuments = !brouillon && annonceHall && pendingFiles.length > 0;
-			let pub = await pubsApi.create({
-				titre: titre.trim(),
-				contenu,
+			const cree = await ticketsApi.create({
+				...commun,
+				categorie: 'actualite',
 				assiste_ia: assisteIA,
-				urgente,
-				epingle,
-				perimetre_cible: perimetreCible,
-				debut: depuisChampLocal(debut),
-				fin: depuisChampLocal(fin),
-				public_cible: publicCible,
-				brouillon: publierApresDocuments ? true : brouillon,
-				photos_urls: photos,
-				...canaux,
-				annonce_hall: annonceHall,
-				confidentiel,
-				...lotDepuisSaisie(saisiPour),
 			});
-			//  🔴 Le silence d'avant (« la publication existe, le document se rattrape »)
-			//  laissait croire le document joint. `attacherApres` le DIT — c'est la
-			//  version la plus disante des deux écrans qui l'écrivaient (12/09/2026).
-			await attacherApres('publication', pub.id, pendingFiles, 'Publication créée');
-			if (publierApresDocuments) {
-				pub = await pubsApi.update(pub.id, { brouillon: false });
-			}
-			toast('success', pub.brouillon ? 'Brouillon enregistré' : 'Publication créée');
-			reinitialiser();
-			dispatch('cree', pub);
+			toast('success', `${PUBLICATION.libelle} publiée`);
+			dispatch('cree', cree);
 		} catch (e: any) {
 			toast('error', messageErreur(e));
 		} finally {
@@ -341,7 +283,12 @@
 	`lint:formulaires` l'exige, et c'est lui qui distingue « créer » de
 	« corriger », ce que rien dans le balisage ne permettrait de deviner.
 -->
-<CadreFormulaire edition={modeEdition} titre={titreBoite} on:fermer={() => dispatch('annule')}>
+<CadreFormulaire
+	edition={modeEdition}
+	titre={titreBoite}
+	{cle}
+	on:fermer={() => dispatch('annule')}
+>
 	<!--  ⚠️ Plus de `class:modal-body` ici : `CadreFormulaire` enveloppe lui-même
 	      le contenu sur la classe par défaut (02/09/2026). Le laisser en
 	      poserait un SECOND, et le padding serait compté deux fois. -->
@@ -355,11 +302,9 @@
 			<!--  1. Titre. -->
 			<SectionFormulaire premiere>
 				<div class="field champ-large">
-					<label for="pub-titre-{publication?.id ?? 'new'}"
-						>Titre<EtoileRequis vide={!titre} /></label
-					>
+					<label for="pub-titre-{affaire?.id ?? 'new'}">Titre<EtoileRequis vide={!titre} /></label>
 					<input
-						id="pub-titre-{publication?.id ?? 'new'}"
+						id="pub-titre-{affaire?.id ?? 'new'}"
 						type="text"
 						bind:value={titre}
 						required
@@ -387,23 +332,24 @@
 				bind:refDiffusion
 				envoiEnCours={saving}
 				on:envoyer={() => void enregistrer()}
-				idPrefixe="pub-{publication?.id ?? 'new'}"
+				idPrefixe="pub-{affaire?.id ?? 'new'}"
 				avecQuand={sectionPresente(PUBLICATION, etat, 'quand')}
 				bind:debut
 				bind:fin
 				avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
 				bind:perimetre={perimetreCible}
-				avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')}
+				avecReservePerimetre={$isCS}
+				bind:reservePerimetre
+				avecDestinataires={$isCS && sectionPresente(PUBLICATION, etat, 'destinataires')}
 				bind:destinataires={publicCible}
 				avecOptions={sectionPresente(PUBLICATION, etat, 'mise_en_avant')}
+				optionsRendues={$isCS ? ['epingle', 'urgente'] : ['urgente']}
 				dejaEpingle={epingleInitial}
 				bind:epingle
 				bind:urgente
-				bind:brouillon
-				bind:confidentiel
 				avecDescription={sectionPresente(PUBLICATION, etat, 'description')}
 				descriptionRequise
-				bind:description={contenu}
+				bind:description
 				{assistant}
 				bind:titreObjet={titre}
 				bind:assisteIA
@@ -411,31 +357,18 @@
 				avecPhotos={sectionPresente(PUBLICATION, etat, 'pieces_jointes')}
 				bind:photos
 				avecDocuments={sectionPresente(PUBLICATION, etat, 'pieces_jointes')}
-				documentsDifferes
-				documentsControle={modeEdition ? 'slot' : 'interne'}
-				bind:documentsFichiers={pendingFiles}
-				avecDiffusion={sectionPresente(PUBLICATION, etat, 'diffusion')}
+				bind:documents={fichiersUrls}
+				avecDiffusion={$isCS && sectionPresente(PUBLICATION, etat, 'diffusion')}
 				bind:whatsapp={partagerWhatsapp}
 				bind:syndic={envoyerSyndic}
 				bind:cs={envoyerCs}
 				bind:auteur={envoyerAuteur}
-				auteurNom={nomCopie(publication)}
-				whatsappInterdit={motifWhatsappInterdit(brouillon, 'actualité')}
-				aideWhatsapp={confidentiel
-					? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
+				auteurNom={nomCopie(affaire)}
+				whatsappInterdit={motifWhatsappInterdit(reserveeAuConseil, 'actualité')}
+				aideWhatsapp={reservePerimetre
+					? "Le groupe est commun à toute la copropriété : le message portera le titre et le périmètre, avec un lien vers l'application — jamais le contenu."
 					: "Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."}
 			>
-				<!--  ✅ EN CORRECTION, les documents s'ajoutent et se retirent à l'unité :
-			      la publication existe, il n'y a rien à différer. Le contrôle vient
-			      d'ici parce que ce sont des entités `Document` avec un identifiant ;
-			      la SECTION, elle — son rang, son intitulé, sa séparation — reste
-			      celle de `ChampsCommuns`. -->
-				<svelte:fragment slot="documents">
-					{#if publication}
-						<DocumentsPublication publicationId={publication.id} />
-					{/if}
-				</svelte:fragment>
-
 				<!--  🔴 Les canaux appartiennent à l'OBJET, plus à cet écran (#498).
 			      Ce commentaire disait « les actualités rendent leurs canaux
 			      elles-mêmes : l'affiche de hall n'est pas un canal, et
@@ -446,7 +379,7 @@
 			      `avecCanaux={false}`, et les actualités se retrouvaient DANS
 			      l'objet avec des canaux qui le contournaient. -->
 				<svelte:fragment slot="diffusion">
-					<DiffusionPublication {confidentiel} bind:annonceHall />
+					<DiffusionPublication {reservee} bind:annonceHall />
 				</svelte:fragment>
 			</ChampsCommuns>
 

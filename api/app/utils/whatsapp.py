@@ -371,7 +371,7 @@ def envoyer_whatsapp(
             # La photo existe mais n'a pas pu être jointe. Le message part quand
             # même — un envoi perdu est bien pire qu'un envoi sans image — et il
             # dit où la voir plutôt que de laisser croire qu'il n'y en a pas.
-            payload["text"] += renvoi_photos(config)
+            payload["text"] += renvoi_photos(config, lien)
 
     try:
         _poster_au_bridge(url, payload, headers)
@@ -391,7 +391,7 @@ def envoyer_whatsapp(
             "Corps refusé par le bridge (413) — réémission sans la photo : %s", exc,
         )
         payload.pop("imageBase64")
-        payload["text"] += renvoi_photos(config)
+        payload["text"] += renvoi_photos(config, lien)
         _poster_au_bridge(url, payload, headers)
     except EnvoiIncertain as exc:
         logger.warning("Envoi WhatsApp au résultat inconnu : %s", exc)

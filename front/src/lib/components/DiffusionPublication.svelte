@@ -36,11 +36,11 @@
   « les fichiers ne partent pas par WhatsApp », et l'aperçu le jour où la
   publication aura son endpoint de composition.
 
-  ⚠️ **« Confidentiel » interdit l'affiche de hall**, et la case le montre. La
-  valeur arrive en lecture seule : la règle qui la fait retomber vit chez l'hôte
-  (`FormulaireActualite`), seul endroit où les sections 2 et 9 se rencontrent — et
-  elle est **aussi** tenue côté serveur (`appliquer_confidentialite`), qui seul
-  décide.
+  ⚠️ **Une actualité RÉSERVÉE n'a pas d'affiche de hall**, et la case le montre :
+  réservée au périmètre (🔒, section Périmètre) ou au conseil (Destinataires =
+  « Conseil syndical » seul, #1096). La valeur arrive en lecture seule : la règle
+  qui la fait retomber vit chez l'hôte (`FormulaireActualite`) — et elle est
+  **aussi** tenue côté serveur (`visibility.hors_du_hall`), qui seul décide.
 -->
 <script lang="ts">
 	//  ⚠️ `whatsapp`, `syndic` et `cs` ont disparu avec le rendu des canaux (#498).
@@ -48,8 +48,8 @@
 	//  aurait continué de les lier, en croyant que ce composant en fait quelque
 	//  chose, et le jour où l'objet aurait divergé rien ne l'aurait dit.
 	export let annonceHall = false;
-	/** Lecture seule : décidée en section 2, elle ferme l'affiche de hall ici. */
-	export let confidentiel = false;
+	/** Lecture seule : décidée par l'Accès ou les Destinataires, elle ferme l'affiche ici. */
+	export let reservee = false;
 
 	const idAideHall = `aide-hall-${Math.random().toString(36).slice(2, 8)}`;
 </script>
@@ -57,34 +57,34 @@
 <div class="bloc-hall">
 	<label
 		class="checkbox-field"
-		class:desactivee={confidentiel}
-		title={confidentiel
-			? 'Indisponible : une actualité confidentielle ne peut pas être affichée dans un hall.'
+		class:desactivee={reservee}
+		title={reservee
+			? 'Indisponible : une actualité réservée ne peut pas être affichée dans un hall.'
 			: "Génère l'affiche PDF à afficher dans le hall et l'envoie au CS du périmètre"}
 	>
 		<input
 			type="checkbox"
 			bind:checked={annonceHall}
-			disabled={confidentiel}
-			aria-describedby={confidentiel ? idAideHall : undefined}
+			disabled={reservee}
+			aria-describedby={reservee ? idAideHall : undefined}
 		/>
 		<span class="ico">&#x1F4C4;</span>
 		<span>Créer une annonce Hall</span>
 	</label>
 </div>
 
-{#if confidentiel}
+{#if reservee}
 	<p class="aide" id={idAideHall}>
-		&#x1F4C4; L'affiche de hall est indisponible sur une actualité confidentielle : une affiche est
-		punaisée dans un hall et lue par n'importe qui, sans connexion. Le message WhatsApp, lui, reste
-		possible — il renvoie vers l'application, qui applique la règle.
+		&#x1F4C4; L'affiche de hall est indisponible sur une actualité réservée — au périmètre ou au
+		conseil syndical : une affiche est punaisée dans un hall et lue par n'importe qui, sans
+		connexion.
 	</p>
 {:else if annonceHall}
 	<p class="aide">
 		&#x1F4C4; Une affiche PDF sera générée à partir du titre, du contenu, du périmètre et de l'image
 		de cette actualité, puis envoyée aux membres du CS du périmètre. Elle sera consultable dans <strong
 			>Espace CS → Annonces Hall</strong
-		>. Un brouillon ne déclenche rien tant qu'il n'est pas publié.
+		>.
 	</p>
 {/if}
 

@@ -105,8 +105,9 @@ export const PUBLICATION: EntiteDeclaree = {
 			//  le serveur ne porte pas est ce que le cadre interdit.
 			id: 'nature',
 			sansObjet:
-				'`Publication` ne porte aucune catégorie. La question de lui en donner ' +
-				'une est ouverte (#1091) ; elle se tranchera avant d’ouvrir un champ.',
+				'Une actualité EST une catégorie — « Actualité » (#1091, 23/09/2026). ' +
+				'Elle ne se choisit pas dans ce formulaire : en changer est une promotion ' +
+				'en affaire (bouton ↗ de la carte, #1094).',
 		},
 		{
 			id: 'equipement',
@@ -133,8 +134,8 @@ export const PUBLICATION: EntiteDeclaree = {
 			id: 'suivi',
 			sansObjet:
 				"Une actualité n'a pas d'étapes de vie : elle est publiée, puis elle " +
-				"bascule dans l'Historique au bout de son délai. Le Brouillon, lui, n'est " +
-				'pas un workflow mais une décision de diffusion — il vit en section 2.',
+				'bascule dans les Archives au bout de son délai. La réserve au conseil, ' +
+				'elle, n’est pas un workflow : c’est Destinataires = « Conseil syndical » seul (#1096).',
 		},
 		{
 			id: 'quand',
@@ -153,7 +154,7 @@ export const PUBLICATION: EntiteDeclaree = {
 		},
 		{
 			id: 'perimetre',
-			objet: 'PerimetrePicker — de quoi il s’agit',
+			objet: 'PerimetrePicker — de quoi il s’agit — et 🔒 « visible du seul périmètre » (#1096)',
 			requis: true,
 			//  Ouvert à l'évolution le 05/09/2026 (voir la section 2 ci-dessus) :
 			//  le champ part rempli du périmètre en vigueur, et ce qu'on enregistre
@@ -180,7 +181,7 @@ export const PUBLICATION: EntiteDeclaree = {
 			//  identifiant) —, parce que le SERVEUR les distingue et que ce lot ne
 			//  touche pas au modèle.
 			id: 'pieces_jointes',
-			objet: 'FichiersUpload mode mixte — photos (URLs) et documents (entités `Document`)',
+			objet: 'FichiersUpload mode mixte — photos et documents, en URLs comme une affaire',
 			//  🔴 PLIÉE, comme toute section facultative (21/09/2026, demandé à
 			//  l'écran). Elle était l'exception inverse — « dépliée parce que joindre
 			//  une photo est le premier geste sur téléphone ». C'est l'ARBITRAGE qui a
@@ -231,7 +232,9 @@ export const PUBLICATION: EntiteDeclaree = {
 			//  pourquoi de CES quatre options-là — et pas d'autres — est en tête de
 			//  ce fichier : ce sont des qualificatifs durables, pas des actes.
 			id: 'mise_en_avant',
-			objet: 'Épinglage · Urgence · Brouillon · Confidentiel',
+			//  🛡️ et 🔒 en sont sortis le 23/09/2026 (#1096) : Destinataires =
+			//  « Conseil syndical » seul et la case du Périmètre en tiennent lieu.
+			objet: 'Épinglage · Urgence',
 			titreEcran: 'Mise en avant',
 			pliee: true,
 		},

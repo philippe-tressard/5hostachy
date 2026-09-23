@@ -1,6 +1,11 @@
 <!--
-  Une publication dans une liste : le conteneur dépliable, sa ligne d'en-tête,
+  Une actualité dans une liste : le conteneur dépliable, sa ligne d'en-tête,
   son aperçu replié et son corps déplié.
+
+  🔴 Elle lit une AFFAIRE depuis le 23/09/2026 — une actualité en est la
+  catégorie « Actualité » (#1091, lot 4). Elle garde son allure, que le
+  résident reconnaît : pas de numéro, pas d'état de suivi, l'urgence en bord
+  rouge. C'est `ListeTickets` qui la choisit pour une actualité.
 
   Pourquoi ce composant (#356) : la page Actualités rendait la MÊME carte à deux
   endroits — le fil principal et l'Historique. Le lot #351 a dû y appliquer
@@ -24,26 +29,31 @@
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
-	import { documents as docsApi, type Publication } from '$lib/api';
+	import { documents as docsApi, type Ticket } from '$lib/api';
 	import { safeHtml } from '$lib/sanitize';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
-	import { STATUT_LABELS, STATUT_BADGE } from '$lib/publications';
+	import { reserveAuConseil } from '$lib/destinataires';
+	import { lienTicket, ticketUrgent } from '$lib/tickets';
 	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
 	//  écrits ici ET dans les cases du formulaire, et avaient divergé.
 	import { optionPublication } from '$lib/options-publication';
 	import { fmtDate2d as fmtDate, fmtDateLong, isNouveau } from '$lib/date';
 
-	export let pub: Publication;
+	export let pub: Ticket;
 	//  À QUI l'actualité appartient — le « Saisi pour » s'il existe, l'auteur
 	//  sinon (#1104). C'est le même nom sur la carte et dans le corps déplié.
 	$: proprietaireNom = nomProprietaire(pub);
+	//  Photos et documents, en URLs comme toute affaire.
+	$: pieces = [...(pub.photos_urls ?? []), ...(pub.fichiers_urls ?? [])];
 	export let expanded = false;
 	/**  `fil` : la liste principale. `historique` : les archives — atténuées, et
 	 *   sans épingle ni « New », qui n'ont plus de sens sur une publication rangée. */
 	export let variante: 'fil' | 'historique' = 'fil';
 	/** Aperçu replié — la page le masque quand la liste devient longue. */
 	export let apercu = true;
-	/** Documents joints, chargés par la page au premier dépliage. */
+	/**  Les documents des ANCIENNES publications — des entités `Document`, que
+	 *   la 0210 a rattachées à l'affaire. Une actualité récente n'en a pas : ses
+	 *   documents sont dans `fichiers_urls`. */
 	export let documents: any[] = [];
 	/**  Vrai quand la page affiche un formulaire à la place du contenu (édition,
 	 *   ajout d'évolution). Explicite, et non déduit de `$$slots` : un slot
@@ -55,24 +65,18 @@
 
 	$: estFil = variante === 'fil';
 
-	//  L'ancre `#pub-<id>` est la MÊME dans les deux variantes, et c'est sans
-	//  risque de collision : le fil ne liste que les publications actives,
-	//  l'historique que les archivées — les deux ensembles sont disjoints. Elle
-	//  était préfixée `hist-pub-` dans l'historique, ce que rien ne ciblait.
-	//
-	//  Elle doit rester écrite en toutes lettres (`id="pub-…"`) : le garde-fou
-	//  `api/tests/test_liens_front.py` cherche cette chaîne pour vérifier qu'un
-	//  lien `/actualites#pub-42` tombe bien sur un élément existant. Un préfixe
-	//  calculé la rendrait invisible à l'analyse, et le contrôle échouerait sans
-	//  qu'aucun lien ne soit cassé.
+	//  L'ancre est `ticket-<id>`, celle de toute affaire : la liste l'emploie pour
+	//  les liens profonds (`?open=`), et une actualité y est une affaire. Les
+	//  anciens liens `/actualites#pub-<id>` passent par la redirection de
+	//  `routes/(app)/actualites`, qui mène à la fiche.
 </script>
 
 <div
 	class="carte-liste"
 	class:expanded
-	class:urgent={pub.urgente}
+	class:urgent={ticketUrgent(pub)}
 	class:attenue={!estFil}
-	id="pub-{pub.id}"
+	id="ticket-{pub.id}"
 	role="presentation"
 	on:click={() => {
 		if (!expanded) basculer();
@@ -107,16 +111,14 @@
 			      05/09/2026 le 🛡️ de « visible du seul conseil syndical », notion
 			      commune à l'actualité et au ticket. Le balisage n'a pas bougé une
 			      seule fois : tout vient de la table. -->
-			{#if pub.brouillon}
+			<!--  🛡️ : Destinataires = « Conseil syndical » seul (#1096) — le même
+			      glyphe et le même mot qu'avant, lus sur une autre donnée. -->
+			{#if reserveAuConseil(pub.public_cible)}
 				{@const o = optionPublication('brouillon')}
 				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
 			{/if}
-			{#if pub.statut && pub.statut !== 'publie'}<span
-					class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}"
-					>{STATUT_LABELS[pub.statut] ?? pub.statut}</span
-				>{/if}
 			<BadgePerimetre perimetre={pub.perimetre_cible} />
-			{#if pub.confidentiel}
+			{#if pub.reserve_perimetre}
 				{@const o = optionPublication('confidentiel')}
 				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
 			{/if}
@@ -124,7 +126,7 @@
 			<MarqueIA assiste={pub.assiste_ia} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
-			<BoutonLien ancre="pub-{pub.id}" quoi="l'actualité" />
+			<BoutonLien chemin={lienTicket(pub.id)} quoi="l'actualité" />
 			<slot name="actions" />
 		</svelte:fragment>
 		<!--  🔴 L'aperçu passe par l'EN-TÊTE (18/09/2026) : c'est ce qui permet aux
@@ -133,7 +135,7 @@
 		      ordre CSS ne fait passer un élément sous le frère d'un autre parent. -->
 		<svelte:fragment slot="apercu">
 			{#if !expanded && apercu}
-				<ApercuCarte contenu={pub.contenu} photos={pub.photos_urls ?? []} dansLigne />
+				<ApercuCarte contenu={pub.description} photos={pub.photos_urls ?? []} dansLigne />
 			{/if}
 		</svelte:fragment>
 	</EnteteCarte>
@@ -148,10 +150,10 @@
 			{:else}
 				<!--  Texte AVANT les photos : une image en tête poussait le premier mot sous la ligne de flottaison. -->
 				<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">
-					{@html safeHtml(pub.contenu)}
+					{@html safeHtml(pub.description)}
 				</div>
-				{#if pub.photos_urls?.length}
-					<PiecesJointes urls={pub.photos_urls} format="grand" />
+				{#if pieces.length}
+					<PiecesJointes urls={pieces} format="grand" />
 				{/if}
 				{#if documents.length > 0}
 					<div class="pub-attachments">

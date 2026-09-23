@@ -35,7 +35,7 @@ from typing import Optional
 from sqlmodel import Session
 
 from app.models.core import ContratEntretien, Document, Utilisateur
-from app.utils.liens import lien_element, page_element
+from app.utils.liens import lien_element, lien_ticket, page_element
 from app.auth.deps import est_moderateur
 
 #: Les catégories qui ont une rubrique à elles sur /residence. Un document d'une
@@ -51,7 +51,7 @@ CATEGORIES_AVEC_LIEN = {
 def lien_document(doc: Document, user: Utilisateur, session: Session) -> Optional[str]:
     """L'endroit exact où CE document est affiché pour CET utilisateur, ou None.
 
-    L'ancre (`#doc-<id>`, `#pub-<id>`, `#presta-<id>`) compte autant que la page :
+    L'ancre (`#doc-<id>`, `#presta-<id>`) compte autant que la page :
     /residence enchaîne plans, règlement, PV d'AG et diagnostics — y arriver sans
     viser le document oblige à le chercher dans la bonne section.
 
@@ -59,9 +59,11 @@ def lien_document(doc: Document, user: Utilisateur, session: Session) -> Optiona
     conseil et de l'administration. Il se calcule donc PAR DESTINATAIRE, jamais
     une fois pour toute une liste d'envoi.
     """
-    if doc.publication_id:
-        # Pièce jointe d'une actualité : c'est la publication qu'on ouvre.
-        return lien_element("pub", doc.publication_id)
+    if doc.ticket_id:
+        # Pièce jointe d'une affaire — actualités comprises depuis le 23/09/2026
+        # (#1091) : c'est sa fiche qu'on ouvre. La 0210 y a rattaché les
+        # documents des anciennes publications.
+        return lien_ticket(doc.ticket_id)
 
     if doc.contrat_id:
         # Les documents de contrat ne sont visibles que dans /prestataires, page

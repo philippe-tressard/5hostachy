@@ -57,7 +57,10 @@ const SOURCE = join(RACINE, 'lib', 'options-publication.ts');
 const CONSOMMATEURS = [
 	join('lib', 'components', 'OptionsPublication.svelte'),
 	join('lib', 'components', 'CarteActualite.svelte'),
-	join('routes', '(app)', 'actualites', '+page.svelte'),
+	//  La page Actualités est devenue une redirection le 23/09/2026 (#1091) :
+	//  une actualité se rend dans la liste des affaires, et 🔒 sous le Périmètre.
+	join('lib', 'components', 'ActualiteEnListe.svelte'),
+	join('lib', 'components', 'CaseReservePerimetre.svelte'),
 ];
 
 const CLES_ATTENDUES = ['epingle', 'urgente', 'brouillon', 'confidentiel'];

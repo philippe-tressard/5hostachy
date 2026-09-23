@@ -23,6 +23,11 @@
  * Pour chaque paire déclarée dans `RELAIS` : les clés que le **formulaire** émet,
  * contre les clés que le **relais** transmet. Un manque est refusé.
  *
+ * ✅ Un relais qui ÉTALE la charge (`{ ...data, … }`) la transmet ENTIÈRE : c'est
+ * la forme que ce contrôle recommande, puisqu'elle ne peut rien oublier. Le
+ * relais de la liste des affaires l'a adoptée le 23/09/2026 (#1091) — il
+ * énumérait ses champs, et en avait perdu trois fois.
+ *
  * ⚠️ Un champ légitimement absent se **déclare**, avec sa raison — parce que
  * l'écran ne le propose pas, ou parce que l'entité ne le connaît pas. Une
  * absence non déclarée n'est pas une décision, c'est un oubli qui lui ressemble.
@@ -56,11 +61,17 @@ const RELAIS = [
 		emission: "dispatch('submit'",
 		relais: 'src/routes/(app)/tickets/+page.svelte',
 		appel: 'ticketsApi.addEvolution(',
-		absents: {
-			interne:
-				"la liste ne propose pas « message interne » (`avecInterne` n'y est pas " +
-				'activé) — seule la fiche du ticket le fait.',
-		},
+		absents: {},
+	},
+	//  La Suite d'une ACTUALITÉ dans la même liste (#1091) : son composant relaie
+	//  à la page par `gestes.evoluer`, en y ajoutant la mise en avant.
+	{
+		nom: 'actualité — liste',
+		source: 'src/lib/components/EvolForm.svelte',
+		emission: "dispatch('submit'",
+		relais: 'src/lib/components/ActualiteEnListe.svelte',
+		appel: 'gestes.evoluer(',
+		absents: {},
 	},
 	//  ✅ « ticket — Espace CS » a quitté ce relevé le 28/08/2026 : le relais
 	//  n'existe plus. L'onglet « Tickets résidence » — redondant avec `/tickets`,
@@ -70,6 +81,9 @@ const RELAIS = [
 	//  pouvait ni se diffuser, ni préciser un périmètre, là où le même geste sur
 	//  `/tickets` le peut. C'est cet écran-là qui avait tort.
 ];
+
+/** Le marqueur d'un `...charge` de premier niveau : tout ce qui est émis passe. */
+export const ETALEMENT = '...';
 
 /** Les clés d'un objet littéral, à partir de la position d'une parenthèse ouvrante. */
 export function clesDeLObjet(source, depuis) {
@@ -119,6 +133,8 @@ export function clesDeLObjet(source, depuis) {
 	return cles
 		.map((m) => {
 			const net = m.trim();
+			//  Un ÉTALEMENT de premier niveau transmet la charge entière.
+			if (net.startsWith('...')) return ETALEMENT;
 			//  ⚠️ La forme RACCOURCIE (`contenu,` au lieu de `contenu: contenu`)
 			//  est une clé comme une autre. La première version de ce contrôle
 			//  ne la voyait pas — et `contenu` est justement le champ le plus
@@ -160,6 +176,9 @@ function selftest() {
 		'f({ a: 1,\n\t//  un texte avec une virgule, et une suite\n\tb: 2 })',
 	);
 	t('virgule dans un commentaire de bloc', 'a,b', 'f({ a: 1, /* virgule, ici */ b: 2 })');
+	//  L'étalement est une clé comme une autre pour le relevé : c'est `main` qui
+	//  en déduit que tout passe.
+	t('étalement de la charge', '...,contenu', 'f({ ...data, contenu: data.contenu || undefined })');
 
 	console.log(
 		ko === 0
@@ -191,7 +210,7 @@ function main() {
 		const transmis = new Set(clesDeLObjet(rel, iRel));
 
 		for (const cle of emis) {
-			if (transmis.has(cle)) continue;
+			if (transmis.has(cle) || transmis.has(ETALEMENT)) continue;
 			if (cle in r.absents) continue;
 			erreurs.push(
 				`${r.nom} : le formulaire émet « ${cle} », le relais ne le transmet pas.\n` +
@@ -205,7 +224,7 @@ function main() {
 				erreurs.push(
 					`${r.nom} : « ${cle} » est déclaré absent, mais le formulaire ne l'émet plus — retirer la déclaration.`,
 				);
-			} else if (transmis.has(cle)) {
+			} else if (transmis.has(cle) || transmis.has(ETALEMENT)) {
 				erreurs.push(
 					`${r.nom} : « ${cle} » est déclaré absent ET transmis — retirer la déclaration.`,
 				);

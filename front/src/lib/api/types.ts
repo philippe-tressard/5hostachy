@@ -119,11 +119,25 @@ export interface Ticket extends PorteSaisiPourLu {
 	/** 🔒 Réservé à l'auteur, à la personne concernée et au conseil syndical.
 	     Le contrepoids de l'ouverture en lecture par périmètre (#710).
 
-	     ⚠️ Même mot que `Publication.confidentiel`, décision DIFFÉRENTE : là-bas
-	     il restreint au périmètre visé, ici il referme sans le regarder — sinon
-	     il ne mordrait pas sur un ticket à portée « résidence », le cas le plus
-	     fréquent. */
+	     ⚠️ Ce n'est PAS le 🔒 d'une actualité, qui restreint au périmètre visé :
+	     celui-là s'appelle `reserve_perimetre`. Celui-ci referme sans regarder le
+	     périmètre — sinon il ne mordrait pas sur un ticket à portée
+	     « résidence », le cas le plus fréquent. */
 	confidentiel?: boolean;
+	/**  À QUI l'on parle — une actualité (#1091). Absent = tout le monde ;
+	 *   « Conseil syndical » SEUL la réserve au conseil : rien ne sort (#1096). */
+	public_cible?: string[] | null;
+	/**  🔒 L'Accès d'une actualité : lisible du seul périmètre visé. */
+	reserve_perimetre?: boolean;
+	/**  Archivée par une personne, et non par le temps (#1091). */
+	archive_manuel?: boolean;
+	/**  Les filtres de la vue Affaires où elle paraît — `actualite`, `calendrier`,
+	 *   `activite` (#1092). DÉRIVÉS par le serveur : l'écran ne redérive rien. */
+	natures?: string[];
+	/**  ⚠️ DÉRIVÉE par le serveur, en LECTURE SEULE — ne jamais l'envoyer.
+	 *   La date où une actualité cesse d'être utile (`fin`, sinon `debut`,
+	 *   sinon jamais) — `null` pour une affaire suivie, qui se clôt (#1093). */
+	perime_le?: string | null;
 	/**  Section « Quand » (#1092), en ISO — quand ça se passe. C'est ce qui
 	 *   fait paraître l'objet au calendrier, devenu une vue et non plus un
 	 *   objet. */
@@ -216,20 +230,6 @@ export interface ApercuDiffusion {
 	attribues_a_la_creation: string[];
 }
 
-export interface PublicationEvolution {
-	id: number;
-	assiste_ia?: boolean;
-	publication_id: number;
-	type: 'commentaire' | 'etat' | 'correction';
-	contenu?: string;
-	ancien_statut?: string;
-	nouveau_statut?: string;
-	auteur_id: number;
-	auteur_nom?: string;
-	cree_le: string;
-	fichiers_urls?: string[];
-}
-
 /**  Un élément du fil qu'une affiche de hall peut reprendre.
  *
  *   `cle` — et non `id` — parce que trois familles peuvent porter le même
@@ -242,54 +242,6 @@ export interface SourceAffiche {
 	titre: string;
 	date: string;
 	epingle: boolean;
-}
-
-export interface Publication extends PorteSaisiPourLu {
-	id: number;
-	/** « Rédigé avec l'assistant IA » (#985). */
-	assiste_ia?: boolean;
-	titre: string;
-	contenu: string;
-	perimetre: string;
-	batiment_id?: number;
-	epingle: boolean;
-	urgente: boolean;
-	auteur_id: number;
-	auteur_nom?: string;
-	/**
-	 * À QUI l'actualité appartient — le « Saisi pour » s'il existe, l'auteur
-	 * sinon (#1104). C'est ce nom que la carte AFFICHE, via `nomProprietaire`.
-	 * Il n'était exposé que par le ticket, et l'actualité ne pouvait donc rien
-	 * montrer d'autre que son rédacteur.
-	 */
-	proprietaire_nom?: string | null;
-	photos_urls?: string[];
-	cree_le: string;
-	mis_a_jour_le?: string;
-	perimetre_cible: string[];
-	public_cible: string[];
-	statut?: 'publie' | 'en_cours' | 'resolu' | 'annule' | null;
-	statut_change_le?: string | null;
-	brouillon: boolean;
-	partager_whatsapp?: boolean;
-	envoyer_syndic?: boolean;
-	envoyer_cs?: boolean;
-	annonce_hall?: boolean;
-	/** Lecture réservée au périmètre visé — incompatible avec l'affiche de hall (#347). */
-	confidentiel?: boolean;
-	/**  Section « Quand » (#1092), en ISO — quand ça se passe. C'est ce qui
-	 *   fait paraître l'objet au calendrier, devenu une vue et non plus un
-	 *   objet. */
-	debut?: string | null;
-	fin?: string | null;
-	/**  ⚠️ DÉRIVÉE par le serveur, en LECTURE SEULE — ne jamais l'envoyer.
-	 *
-	 *   `perime_le = fin, sinon debut, sinon jamais` — elle ne se SAISIT pas.
-	 *   Elle ne se stocke nulle part : une date calculée à la création
-	 *   survivrait à un report d'événement, et l'actualité quitterait le fil
-	 *   le jour où elle redevient utile. L'écran la LIT, il ne la refait pas. */
-	perime_le?: string | null;
-	evolutions: PublicationEvolution[];
 }
 
 export interface Document {
@@ -384,7 +336,9 @@ export interface AnnonceHall {
 	     une affiche archivée par le TEMPS, retirer le drapeau manuel ne la
 	     ramènerait pas, et l'écran ne propose donc pas le geste. */
 	archivee_manuellement?: boolean;
-	publication_id: number | null;
+	/**  L'actualité reprise, s'il y en a une — c'est ce qui donne son lien au
+	 *   message WhatsApp de l'affiche. `publication_id` avant le 23/09/2026. */
+	ticket_id: number | null;
 	cree_le: string;
 	auteur_nom: string;
 }
@@ -413,14 +367,14 @@ export interface AnnonceHallPrefill {
 
 /**  Le miroir : une actualité pré-remplie DEPUIS une annonce de hall (#832).
  *
- *   ⚠️ Les noms de champs sont ceux de la PUBLICATION (`contenu`,
+ *   ⚠️ Les noms de champs sont ceux de l'AFFAIRE (`description`,
  *   `photos_urls`), pas ceux de l'affiche (`message`, `images`) : c'est le
  *   formulaire d'actualité qui les consomme, et un renommage au point de
  *   collage se paierait à chaque lecture.
  */
 export interface ActualitePrefill {
 	titre: string;
-	contenu: string;
+	description: string;
 	perimetre_cible: string[];
 	photos_urls: string[];
 }

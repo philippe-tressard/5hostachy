@@ -177,7 +177,7 @@ const aveugles = tous.filter((f) =>
 //  pour un découpage qui n'ajoute aucune interpolation nouvelle. Le jour où il
 //  monte parce qu'on a écrit une classe interpolée de plus, la bonne réponse est
 //  de ne pas l'écrire.
-const PLAFOND_NON_MESURES = 30;
+const PLAFOND_NON_MESURES = 29;
 
 const mesures = tous.length - aveugles.length;
 

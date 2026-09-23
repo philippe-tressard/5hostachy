@@ -4,12 +4,12 @@ import { api, BASE, postFormData } from './client';
 import type { Document } from './types';
 
 /**
- *  Les entités auxquelles un document peut se rattacher. **Cinq, et l'API en
+ *  Les entités auxquelles un document peut se rattacher. **Quatre, et l'API en
  *  exige une** : `documents.py` refuse en 400 une création qui n'en porte aucune,
  *  parce qu'une ligne orpheline n'aurait plus de source de protection à
  *  consulter (`document_visible`).
  */
-export type CibleDocument = 'contrat' | 'publication' | 'ticket' | 'evenement' | 'categorie';
+export type CibleDocument = 'contrat' | 'ticket' | 'evenement' | 'categorie';
 
 /**  Le nom du champ que l'API attend pour chaque rattachement.
  *
@@ -18,7 +18,6 @@ export type CibleDocument = 'contrat' | 'publication' | 'ticket' | 'evenement' |
  *  fonctions jumelles — elle diverge au premier rattachement ajouté. */
 const CHAMP_RATTACHEMENT: Record<CibleDocument, string> = {
 	contrat: 'contrat_id',
-	publication: 'publication_id',
 	ticket: 'ticket_id',
 	evenement: 'evenement_id',
 	categorie: 'categorie_id',
@@ -102,7 +101,7 @@ export const documents = {
 	},
 	/**
 	 *  Attacher un document à l'entité qui le porte — **une seule fonction pour
-	 *  les cinq rattachements**.
+	 *  les quatre rattachements**.
 	 *
 	 *  🔴 Elle en remplace deux (12/09/2026), `uploadForContrat` et
 	 *  `uploadForPublication`, identiques **à un nom de champ près** :
@@ -115,14 +114,15 @@ export const documents = {
 	 *  les cinq auraient divergé au premier paramètre ajouté — une description, un
 	 *  périmètre, un indicateur de confidentialité.
 	 *
-	 *  ⚠️ `cible` est TYPÉ sur les cinq valeurs que l'API accepte : l'invariant du
+	 *  ⚠️ `cible` est TYPÉ sur les quatre valeurs que l'API accepte : l'invariant du
 	 *  serveur — *une ligne `document` porte toujours un rattachement* — se lit
 	 *  ainsi côté client, au lieu d'être redécouvert à chaque appel.
 	 */
 	uploadPour: (cible: CibleDocument, id: number, titre: string, file: File): Promise<any> =>
 		postFormData('/documents', { titre, [CHAMP_RATTACHEMENT[cible]]: String(id), file }),
-	listByPublication: (publicationId: number) =>
-		api.get<any[]>(`/documents?publication_id=${publicationId}`),
+	//  Les `Document` d'une affaire — ceux des anciennes publications, que la
+	//  0210 lui a rattachés (#1091). Une affaire récente porte les siens en URLs.
+	listByTicket: (ticketId: number) => api.get<any[]>(`/documents?ticket_id=${ticketId}`),
 	downloadUrl: (docId: number) => `${BASE}/documents/${docId}/télécharger`,
 	delete: (id: number) => api.delete(`/documents/${id}`),
 };

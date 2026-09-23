@@ -15,7 +15,6 @@ if (browser) {
 export const NAV_LABELS: Record<Locale, Record<string, string>> = {
 	fr: {
 		'/tableau-de-bord': 'Accueil',
-		'/actualites': 'Actualités',
 		'/residence': 'Résidence',
 		'/calendrier': 'Calendrier',
 		'/tickets': 'Demandes',
@@ -33,7 +32,6 @@ export const NAV_LABELS: Record<Locale, Record<string, string>> = {
 	},
 	en: {
 		'/tableau-de-bord': 'Home',
-		'/actualites': 'News',
 		'/residence': 'Building',
 		'/calendrier': 'Calendar',
 		'/tickets': 'Requests',

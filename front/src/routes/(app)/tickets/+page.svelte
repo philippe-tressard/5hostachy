@@ -5,7 +5,7 @@
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { onMount } from 'svelte';
 	import { revelerCible } from '$lib/deepLink';
-	import { isAdmin } from '$lib/stores/auth';
+	import { isAdmin, isCS } from '$lib/stores/auth';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { optionsRapides } from '$lib/options-rapides';
@@ -18,8 +18,15 @@
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
+	import FormulaireActualite from '$lib/components/FormulaireActualite.svelte';
+	import { PUBLICATION } from '$lib/entites/publication';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
-	import { OPTIONS_FILTRE_CATEGORIE, statutsPresents } from '$lib/tickets';
+	import {
+		OPTIONS_FILTRE_CATEGORIE,
+		OPTIONS_FILTRE_NATURE,
+		estActualite,
+		statutsPresents,
+	} from '$lib/tickets';
 
 	$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
@@ -30,15 +37,21 @@
 	let erreur = '';
 	let filterStatut = '';
 	let filterCat = '';
+	//  Actualité · Calendrier · Activité (#1092) — `?nature=` le pose depuis un
+	//  lien, notamment les anciennes adresses `/actualites` et `/calendrier`.
+	let filterNature = '';
 
 	// Création : boîte dans la page, comme partout ailleurs sur le site (#367).
 	// Ce fut le dernier écran à créer un objet par page dédiée — cf. l'en-tête de
 	// FormulaireTicket.svelte.
 	let showForm = false;
+	//  Une actualité se crée par SON formulaire (#1091) : à qui l'on parle,
+	//  l'Accès, l'affiche — ce que celui d'une affaire ne propose pas.
+	let showFormActualite = false;
 
 	function ticketCree(e: CustomEvent<Ticket>) {
 		ticketList = [e.detail, ...ticketList];
-		showForm = false;
+		showForm = showFormActualite = false;
 	}
 
 	//  Ce que la page décide, et qu'elle est seule à savoir : quel ticket est
@@ -67,6 +80,9 @@
 			// à un écran de saisie doivent continuer à y mener, pas atterrir sur la
 			// liste en laissant l'utilisateur chercher le bouton.
 			if (params.get('nouveau')) showForm = true;
+			filterNature = OPTIONS_FILTRE_NATURE.some((o) => o.val === params.get('nature'))
+				? (params.get('nature') ?? '')
+				: '';
 			// Auto-ouverture depuis ?open=TK-XXXXX (lien profond depuis le tableau de bord)
 			const openNum = params.get('open');
 			if (openNum) {
@@ -123,6 +139,7 @@
 	$: filtered = affichables.filter((t) => {
 		if (filterStatut && t.statut !== filterStatut) return false;
 		if (filterCat && t.categorie !== filterCat) return false;
+		if (filterNature && !(t.natures ?? []).includes(filterNature)) return false;
 		return true;
 	});
 
@@ -306,36 +323,11 @@
 		const data = brut as ChargeUtileEvolution;
 		evolSaving = true;
 		try {
-			await ticketsApi.addEvolution(t.id, {
-				type: data.type,
-				contenu: data.contenu || undefined,
-				nouveau_statut: data.nouveau_statut,
-				fichiers_urls: data.fichiers_urls,
-				assiste_ia: data.assiste_ia,
-				email_externe: data.email_externe,
-				partager_whatsapp: data.partager_whatsapp || undefined,
-				envoyer_syndic: data.envoyer_syndic || undefined,
-				envoyer_cs: data.envoyer_cs || undefined,
-				envoyer_auteur: data.envoyer_auteur || undefined,
-				//  🔴 MANQUAIT jusqu'au 20/08/2026, et cela se voyait à l'écran :
-				//  `CarteTicket` propose bien la section Périmètre
-				//  (`avecPerimetre`), `EvolForm` la collecte et l'émet — et cette
-				//  ligne-ci la jetait avant l'appel. Le périmètre resserré ne
-				//  parvenait donc JAMAIS au serveur depuis la liste des tickets,
-				//  alors qu'il y parvient depuis la fiche, qui relaie la charge
-				//  utile entière (`HistoriqueTicket`).
-				//
-				//  ⚠️ Le défaut ne lève rien : le formulaire dit avoir enregistré,
-				//  le serveur enregistre une évolution valide, et seul le périmètre
-				//  affiché ensuite trahit la perte. Signalé à l'écran (#529).
-				perimetre_cible: data.perimetre_cible,
-				//  Même piège que la ligne au-dessus, et même remède : ce relais
-				//  ÉNUMÈRE, donc il jette ce qu'il ne nomme pas. Les options de
-				//  publication passent par ici depuis le 05/09/2026.
-				epingle: data.epingle,
-				urgente: data.urgente,
-				confidentiel: data.confidentiel,
-			});
+			//  🔴 La charge utile ENTIÈRE, comme la fiche (`HistoriqueTicket`). Ce
+			//  relais énumérait ses champs, et jetait donc ce qu'il ne nommait pas :
+			//  le périmètre resserré jusqu'au 20/08 (#529), puis les options, puis
+			//  les destinataires d'une actualité (#1091). Plus rien à oublier.
+			await ticketsApi.addEvolution(t.id, { ...data, contenu: data.contenu || undefined });
 			if (data.type === 'etat') {
 				ticketList = ticketList.map((x) =>
 					x.id === t.id ? { ...x, statut: data.nouveau_statut ?? x.statut } : x,
@@ -352,7 +344,9 @@
 	}
 
 	async function deleteTicket(t: Ticket) {
-		await confirmerPuis(SUPPRESSION(`Le ticket #${t.numero}`), 'Affaire supprimée', async () => {
+		//  Une actualité n'affiche pas de numéro : on la nomme par son titre.
+		const quoi = estActualite(t) ? `L'actualité « ${t.titre} »` : `Le ticket #${t.numero}`;
+		await confirmerPuis(SUPPRESSION(quoi), 'Suppression effectuée', async () => {
 			await ticketsApi.delete(t.id);
 			ticketList = ticketList.filter((x) => x.id !== t.id);
 		});
@@ -382,10 +376,17 @@
 	      Trois écritures, dont une périmée : c'est ce qui a laissé Prestataires
 	      afficher « ✕ Annuler » jusqu'à ce que l'utilisateur le signale. -->
 	<BoutonNouveau
-		ouvert={showForm}
+		ouvert={showForm || showFormActualite}
 		libelle="Nouvelle affaire"
 		on:basculer={() => (showForm = true)}
 	/>
+	{#if $isCS}
+		<BoutonNouveau
+			ouvert={showForm || showFormActualite}
+			libelle={PUBLICATION.libelleNouveau}
+			on:basculer={() => (showFormActualite = true)}
+		/>
+	{/if}
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
@@ -402,6 +403,13 @@
       `aria-labelledby` — c'est une des raisons d'être de ce composant, et elle
       se perdait à chaque recopie. -->
 <div class="filters">
+	<ChoixPastilles
+		options={OPTIONS_FILTRE_NATURE}
+		bind:valeur={filterNature}
+		tous="Tous"
+		libelle="Filtrer les affaires par nature"
+	/>
+	<span class="filter-sep"></span>
 	<ChoixPastilles
 		options={optionsStatut.map((s) => ({ val: s.value, label: s.label }))}
 		bind:valeur={filterStatut}
@@ -421,6 +429,12 @@
       §0 ter, signalé ici le 12/09/2026. -->
 {#if showForm}
 	<FormulaireTicket cle="creation" on:cree={ticketCree} on:annule={() => (showForm = false)} />
+{:else if showFormActualite}
+	<FormulaireActualite
+		cle="creation-actualite"
+		on:cree={ticketCree}
+		on:annule={() => (showFormActualite = false)}
+	/>
 {/if}
 
 <!--  Les trois états par `EtatListe` (#796) — dont l'ERREUR, qui n'existait pas :
@@ -442,14 +456,8 @@
       même écran : le fil d'un ticket et l'archive de la liste. Départagé le
       20/08/2026 (#516).
 
-      Le bandeau vient de `SectionRepliee`, comme les Actualités, les Petites
-      annonces et le tableau de bord — il était réécrit ici pour la troisième
-      fois, et c'est l'audit de factorisation qui l'a dit.
-
-      ⚠️ Le groupement par ANNÉE, lui, reste écrit ici : cet écran ouvre une année
-      précise sur lien profond (l. 69-71), ce qu'`ArchivesParAnnee` ne sait pas
-      encore porter. Unifier les deux demande d'exposer l'année ouverte — ça se
-      fait, mais pas en même temps qu'un renommage. Suivi en #516. -->
+      Bandeau et groupement par année : `ArchivesParAnnee`, qui ouvre aussi
+      l'année désignée par un lien profond (`anneeVisee`). -->
 {#if historyTickets.length > 0}
 	<div>
 		<ArchivesParAnnee

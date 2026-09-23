@@ -9,12 +9,7 @@
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import { routeOnglet } from '$lib/routes-onglets';
-	import {
-		calendrier as calApi,
-		publications as pubsApi,
-		prestataires as prestApi,
-		type Publication,
-	} from '$lib/api';
+	import { calendrier as calApi, prestataires as prestApi } from '$lib/api';
 	import { tickets as ticketsApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { essayer } from '$lib/chargement';
@@ -64,9 +59,6 @@
 	//  (v1.48.12), et le message de ce lot affirmait pourtant l'avoir supprimé.
 	$: trackTabView(onglet);
 	let filtreType = '';
-
-	let archivedPubs: Publication[] = [];
-	let archivedPubsLoaded = false;
 
 	const _now = new Date();
 	let expandedArchiveYears = new Set<number>();
@@ -210,16 +202,15 @@
 		return filtreType ? evs.filter((e) => e.type === filtreType) : evs;
 	})();
 
-	// Fusion événements + publications + prestations archivés en une seule liste
+	// Les événements archivés, en une seule liste datée. Les actualités archivées
+	// n'y sont plus depuis le 23/09/2026 : ce sont des affaires (#1091), rangées
+	// dans les Archives de la vue Affaires.
 	$: allArchiveItems = (() => {
-		const items: any[] = [
-			...allArchiveEvs.map((ev) => ({ ...ev, _kind: 'ev', _date: ev.fin ?? ev.debut })),
-			...archivedPubs.map((pub) => ({
-				...pub,
-				_kind: 'pub',
-				_date: pub.mis_a_jour_le ?? pub.cree_le,
-			})),
-		];
+		const items: any[] = allArchiveEvs.map((ev) => ({
+			...ev,
+			_kind: 'ev',
+			_date: ev.fin ?? ev.debut,
+		}));
 		items.sort((a, b) => new Date(b._date).getTime() - new Date(a._date).getTime());
 		return items;
 	})();
@@ -368,29 +359,6 @@
 			},
 		);
 	}
-
-	async function loadArchivedPubs() {
-		if (archivedPubsLoaded) return;
-		try {
-			archivedPubs = await pubsApi.list(true);
-		} catch {
-			/* silencieux */
-		}
-		archivedPubsLoaded = true;
-	}
-
-	async function deleteArchivedPub(pub: Publication) {
-		await confirmerPuis(
-			SUPPRESSION(`« ${pub.titre} »`),
-			'Publication supprimée définitivement',
-			async () => {
-				await pubsApi.delete(pub.id);
-				archivedPubs = archivedPubs.filter((p) => p.id !== pub.id);
-			},
-		);
-	}
-
-	$: if (onglet === 'archives') loadArchivedPubs();
 
 	function formatDate(d: string) {
 		return fmtDatetimeShort(d);
@@ -691,7 +659,6 @@
 		bind:expandedArchiveYears
 		{typeLabel}
 		{formatDate}
-		{deleteArchivedPub}
 		{deleteEv}
 	/>
 {:else if listItems.length === 0 && !recurringMaintenances.length && !kanbanEvs.length}

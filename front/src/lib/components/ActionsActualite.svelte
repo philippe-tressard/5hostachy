@@ -30,17 +30,26 @@
   automatique, lui, reste : une publication bascule dans l'Historique au bout de
   son délai.
 
+  🔴 Depuis le 23/09/2026, l'actualité est une affaire (#1091) : les gestes
+  sont ceux de la liste des affaires (`GestesTicket`), branchés par
+  `ActualiteEnListe`. Ce composant ne dit que QUELLES icônes, pour qui.
+
   ⚠️ Le bouton d'options n'existe QUE si la publication en porte au moins une :
   sur une actualité ordinaire il n'y a rien à faire évoluer, et **un bouton
   inerte se lit comme une panne**. Il montre les glyphes des options ACTIVES,
   dans l'ordre de la table — c'est ce qui le rend lisible sans l'ouvrir.
 -->
 <script lang="ts">
+	import type { Ticket } from '$lib/api';
 	import { SUITE } from '$lib/gestes';
 	import { isCS, isAdmin } from '$lib/stores/auth';
+	import { ticketUrgent } from '$lib/tickets';
 	import BoutonOptions from './BoutonOptions.svelte';
 
-	export let pub: any;
+	export let pub: Ticket;
+	//  Les options d'une actualité — épinglage et urgence (#1096). L'urgence
+	//  d'une affaire EST sa priorité : lue par `ticketUrgent`, jamais redérivée.
+	$: options = { epingle: pub.epingle, urgente: ticketUrgent(pub) };
 	/** La publication dont le formulaire de commentaire est ouvert, ou `null`. */
 	export let commentaireOuvertId: number | null = null;
 	/** Celle dont le formulaire de correction est ouvert, ou `null`. */
@@ -48,18 +57,16 @@
 	/** Celle dont le panneau d'options est ouvert, ou `null`. */
 	export let optionsOuvertesId: number | null = null;
 
-	export let onCommenter: (pub: any) => void;
+	export let onCommenter: (pub: Ticket) => void;
 	/**
-	 * **Cette information demande un suivi** — promouvoir l'actualité en
-	 * affaire (#1094).
-	 *
-	 * ⚠️ Le geste est irréversible et l'actualité DISPARAÎT du fil : l'écran
-	 * qui le branche doit donc demander confirmation avant d'appeler.
+	 * **Cette information demande un suivi** — l'actualité devient une affaire
+	 * suivie (#1094). Depuis le 23/09/2026 ce n'est plus une conversion : la
+	 * même affaire change de catégorie, et son adresse ne bouge pas.
 	 */
-	export let onPromouvoir: (pub: any) => void;
-	export let onModifier: (pub: any) => void;
-	export let onOptions: (pub: any) => void;
-	export let onSupprimer: (pub: any) => void;
+	export let onPromouvoir: (pub: Ticket) => void;
+	export let onModifier: (pub: Ticket) => void;
+	export let onOptions: (pub: Ticket) => void;
+	export let onSupprimer: (pub: Ticket) => void;
 </script>
 
 {#if $isCS}
@@ -81,25 +88,20 @@
 	      RETAPER quand une actualité dérape. Titre, description, pièces jointes
 	      et périmètre suivent ; on ajoute un statut.
 
-	      ⚠️ Il n'apparaît pas sur une actualité déjà close : promouvoir ce qui
-	      est terminé n'ouvrirait un suivi sur rien. -->
-	{#if pub.statut !== 'resolu' && pub.statut !== 'annule'}
-		<!--  🔴 « cette ACTUALITÉ », pas « cette affaire » : le bouton agit SUR une
-		      actualité pour en faire une affaire. Le renommage mécanique du 21/09
-		      avait remplacé le mot des deux côtés de la phrase, qui disait alors
-		      « Suivre cette affaire — en faire une affaire ». -->
-		<button
-			class="btn-icon"
-			aria-label="Suivre cette actualité — en faire une affaire"
-			title="Suivre cette actualité"
-			on:click|stopPropagation={() => onPromouvoir(pub)}>&#x1F3AF;</button
-		>
-	{/if}
+	      🔴 « cette ACTUALITÉ », pas « cette affaire » : le bouton agit SUR une
+	      actualité pour en faire une affaire. Le renommage mécanique du 21/09
+	      avait remplacé le mot des deux côtés de la phrase. -->
+	<button
+		class="btn-icon"
+		aria-label="Suivre cette actualité — en faire une affaire"
+		title="Suivre cette actualité"
+		on:click|stopPropagation={() => onPromouvoir(pub)}>&#x1F3AF;</button
+	>
 	<!--  Le bouton vit dans `BoutonOptions` depuis le 12/09/2026 : tickets et
 	      événements portent les mêmes options, et le recopier chez eux aurait
 	      recopié aussi ses règles d'accessibilité et sa cible tactile. -->
 	<BoutonOptions
-		objet={pub}
+		objet={options}
 		ouvert={optionsOuvertesId === pub.id}
 		onOuvrir={() => onOptions(pub)}
 	/>

@@ -346,3 +346,26 @@ export const BADGE_PRIORITE: Record<string, string> = PRIORITE.badge;
 export function ticketUrgent(ticket: { priorite?: string | null } | null | undefined): boolean {
 	return ticket?.priorite === 'haute';
 }
+
+/**
+ * L'adresse de la FICHE d'une affaire — actualités comprises (#1091).
+ *
+ * Miroir de `utils/liens.lien_ticket` côté serveur : c'est l'adresse que les
+ * courriels et le groupe WhatsApp portent, et celle que « Copier le lien »
+ * doit rendre. Écrite une fois ici, jamais recomposée dans un écran.
+ */
+export function lienTicket(id: number): string {
+	return `/tickets/${id}`;
+}
+
+/** La catégorie qui fait d'une affaire une actualité (#1091). */
+export const CATEGORIE_ACTUALITE = 'actualite';
+
+/**
+ * Cette affaire est-elle une actualité ? Miroir de `nature_affaire.est_actualite`
+ * côté serveur — la question ne se pose qu'ici, jamais par un `=== 'actualite'`
+ * recopié dans un écran.
+ */
+export function estActualite(t: { categorie?: string | null } | null | undefined): boolean {
+	return t?.categorie === CATEGORIE_ACTUALITE;
+}

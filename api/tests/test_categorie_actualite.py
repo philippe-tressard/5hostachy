@@ -125,13 +125,13 @@ def _t(categorie="panne", debut=None) -> Ticket:
 
 def test_la_nature_se_deduit():
     assert natures(_t("actualite")) == ["actualite"]
-    assert natures(_t("panne")) == ["affaire"]
-    #  Une date d'événement fait paraître au filtre « Événement », quelle que
-    #  soit la catégorie — et une affaire datée N'EST PLUS « Affaire » (règle
-    #  du 22/09 : « catégorie ≠ Actualité ET pas de date »).
+    assert natures(_t("panne")) == ["activite"]
+    #  Une date fait paraître au filtre « Calendrier », quelle que soit la
+    #  catégorie — et une affaire datée N'EST PLUS « Activité » (#1092, 23/09 :
+    #  « Calendrier : si une date est définie ; Activité : le reste »).
     date = datetime(2026, 10, 1, 9, 0)
-    assert natures(_t("panne", date)) == ["evenement"]
-    assert natures(_t("actualite", date)) == ["actualite", "evenement"]
+    assert natures(_t("panne", date)) == ["calendrier"]
+    assert natures(_t("actualite", date)) == ["actualite", "calendrier"]
     assert natures(_t(CategorieTicket.actualite)) == ["actualite"], "l'énumération aussi"
 
 
@@ -284,3 +284,4 @@ def test_publie_ne_s_atteint_par_aucune_transition(session):
         mise_a_jour.update_ticket(affaire.id, TicketUpdate(statut="publie"), BackgroundTasks(),
                                   session=session, user=cs)
     assert refus.value.status_code == 422
+
