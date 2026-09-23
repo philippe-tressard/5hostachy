@@ -28,6 +28,8 @@
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+	import { libelleLotPourBadge, lotsPourBadge, type LotPourBadge } from '$lib/imports-acces';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import type { ChoixAcces } from '$lib/api/acces';
 
@@ -38,8 +40,11 @@
 	//  exiger un tableau mutable l'obligerait à en faire une copie — pour une
 	//  liste que ce composant ne modifie jamais.
 	export let types: readonly { val: string; label: string }[] = [];
-	/** Les porteurs proposés : les comptes de la copropriété. */
+	/** Les comptes de la copropriété — pour dire qui a l'objet en main. */
 	export let porteurs: { id: number; affiche: string }[] = [];
+	/**  🔴 Les lots, avec le copropriétaire que le fichier leur donne (#1194) :
+	 *   un badge appartient au LOT, et ses porteurs s'en déduisent. */
+	export let lots: LotPourBadge[] = [];
 
 	/**  🔒 Ce que chaque type d'accès a le droit d'ouvrir, servi par le serveur.
 	 *
@@ -58,6 +63,7 @@
 		type: string;
 		code: string;
 		porteur_id: number | null;
+		lot_id: number | null;
 		perimetre_cible: string[];
 		statut: string;
 		ticket_numero: string;
@@ -81,7 +87,12 @@
 		{ val: 'perdu', label: '🔎 Perdu' },
 	];
 
-	$: incomplet = !saisie.code.trim() || !saisie.porteur_id;
+	//  Un lot OU un détenteur : le serveur accepte l'un ou l'autre (#1194).
+	$: incomplet = !saisie.code.trim() || (!saisie.lot_id && !saisie.porteur_id);
+	//  Les lots de la nature du badge d'abord : l'appartement pour un Vigik,
+	//  le parking pour une télécommande — ce que dit le serveur (`types_lot`).
+	$: natureLot = saisie.type === 'vigik' ? 'appartement' : 'parking';
+	$: lotsTries = lotsPourBadge(lots, natureLot);
 	//  ⚠️ `?? null` et non `?? []` : `null` dit « on ne restreint pas » — le temps
 	//  que la liste arrive du serveur, le sélecteur reste celui de partout
 	//  ailleurs. Une liste vide dirait « rien n'est possible », et l'écran
@@ -120,21 +131,34 @@
 	{/if}
 
 	<label class="field champ-large">
-		Code *
+		Code<EtoileRequis vide={!saisie.code.trim()} />
 		<input type="text" bind:value={saisie.code} placeholder="4521, 417D5927…" />
 		<span class="aide">La référence gravée sur l'objet, telle qu'elle s'y lit.</span>
 	</label>
 
 	<label class="field champ-large">
-		Porteur *
+		Lot<EtoileRequis vide={!saisie.lot_id && !saisie.porteur_id} />
+		<select bind:value={saisie.lot_id}>
+			<option value={null}>— aucun lot —</option>
+			{#each lotsTries as l (l.id)}
+				<option value={l.id}>{libelleLotPourBadge(l)}</option>
+			{/each}
+		</select>
+		<span class="aide">
+			Le badge appartient au lot : tous ses copropriétaires en sont porteurs, conjoint compris.
+		</span>
+	</label>
+
+	<label class="field champ-large">
+		En main
 		<select bind:value={saisie.porteur_id}>
-			<option value={null}>— choisir —</option>
+			<option value={null}>— personne de connu —</option>
 			{#each porteurs as p (p.id)}
 				<option value={p.id}>{p.affiche}</option>
 			{/each}
 		</select>
 		<span class="aide">
-			Le copropriétaire à qui l'accès est remis. Il en est prévenu dans l'application.
+			Qui a l'objet en main, s'il est connu. Il en est prévenu dans l'application.
 		</span>
 	</label>
 

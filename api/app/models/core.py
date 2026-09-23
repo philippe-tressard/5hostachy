@@ -37,8 +37,6 @@ from app.models.acces import (
     StatutImport as StatutImport,
     Telecommande as Telecommande,
     TelecommandeImport as TelecommandeImport,
-    UserTelecommande as UserTelecommande,
-    UserVigik as UserVigik,
     Vigik as Vigik,
     VigikImport as VigikImport,
 )

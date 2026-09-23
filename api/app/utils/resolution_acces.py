@@ -48,11 +48,23 @@ def exiger_code_libre(session: Session, type_acces, code: str, sauf_id: int | No
         raise HTTPException(400, f"{type_acces.libelle} {code} déjà enregistré")
 
 
+def en_stock(imp) -> bool:
+    """Une ligne « STOCK » : un badge de réserve, pas encore affecté (23/09/2026).
+
+    Le fichier du syndic écrit « STOCK » à la place du propriétaire. Le badge
+    existe, dans un tiroir : il entre au parc SANS lot, et le conseil syndical
+    l'affecte le jour où il le remet.
+    """
+    from app.utils.auto_match_service import _cle_de_nom
+
+    return _cle_de_nom(imp.nom_proprietaire) == "stock"
+
+
 def peut_se_rattacher(type_acces, imp) -> bool:
-    """Une ligne se rattache si elle a un code et un lot, et n'est ni close ni écartée."""
+    """Une ligne se rattache si elle a un code et un lot — ou si elle est en stock."""
     return (
         imp.statut in (StatutImport.en_attente, StatutImport.proprietaire_lie)
-        and bool(imp.lot_id)
+        and (bool(imp.lot_id) or en_stock(imp))
         and bool(getattr(imp, type_acces.colonne_code_import))
     )
 
@@ -66,7 +78,7 @@ def rattacher(type_acces, imp, session: Session):
     code = getattr(imp, type_acces.colonne_code_import)
     if not code:
         raise HTTPException(422, f"Cet import n'a pas de référence ({type_acces.libelle})")
-    if not imp.lot_id:
+    if not imp.lot_id and not en_stock(imp):
         raise HTTPException(422, "Choisissez le lot avant de rattacher")
 
     modele = type_acces.modele
@@ -76,6 +88,14 @@ def rattacher(type_acces, imp, session: Session):
     objet.lot_id = imp.lot_id
     objet.user_id = possesseur(imp) or objet.user_id
     objet.chez_locataire = chez_le_locataire(imp)
+    #  🔴 Ce que le badge OUVRE, déduit de son lot comme partout ailleurs : le
+    #  rattachement ne le posait pas, et la colonne « Accès » restait vide sur
+    #  tout le parc importé (signalé le 23/09/2026). Une valeur déjà posée ne
+    #  se touche pas.
+    if objet.perimetre_cible is None:
+        from app.utils.acces_gestes import _acces_json
+
+        objet.perimetre_cible = _acces_json(session, type_acces, None, objet.lot_id, objet.user_id)
     session.add(objet)
     session.flush()
 
@@ -103,4 +123,4 @@ def rattacher_les_reconnues(type_acces, session: Session) -> dict:
     return {"rattachees": rattachees, "restantes": len(lignes) - rattachees}
 
 
-__all__ = ["exiger_code_libre", "peut_se_rattacher", "rattacher", "rattacher_les_reconnues"]
+__all__ = ["en_stock", "exiger_code_libre", "peut_se_rattacher", "rattacher", "rattacher_les_reconnues"]

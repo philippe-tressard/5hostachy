@@ -8,7 +8,7 @@ enregistrés, ils se **lisent** :
 | Le badge | Ses porteurs |
 |---|---|
 | posé sur un lot | les copropriétaires du lot — le conjoint **exactement comme l'autre** |
-| … et remis au locataire | les mêmes, **plus** le locataire du lot (arbitrage 2 : les copropriétaires le voient toujours) |
+| … et remis au locataire | les mêmes, **plus** le locataire du lot — lien `user_lot` ou bail en cours (arbitrage 2 : les copropriétaires le voient toujours) |
 | sans lot connu (donnée ancienne) | celui qui le détient, et ceux qui partagent un lot avec lui |
 
 S'y ajoute toujours celui qui le détient en main (`user_id`), quand il est connu.
@@ -58,6 +58,15 @@ class _Liens:
                 self.lots_copro_de[ul.user_id].add(ul.lot_id)
             elif valeur(ul.type_lien) == "locataire":
                 self.locataires_du_lot[ul.lot_id].add(ul.user_id)
+        #  Le locataire d'un BAIL en cours l'est aussi (V3 de #1194) : c'est par
+        #  le bail que le bailleur remet un badge, et le locataire n'a pas
+        #  toujours de lien `user_lot` — « chez le locataire » n'a qu'un sens.
+        from app.models.core import LocationBail, StatutBail
+
+        for bail in session.exec(select(LocationBail).where(
+            LocationBail.statut != StatutBail.termine, LocationBail.locataire_id != None,  # noqa: E711
+        )).all():
+            self.locataires_du_lot[bail.lot_id].add(bail.locataire_id)
 
     def partages(self, user_id: int) -> set[int]:
         """Ceux qui partagent au moins un lot, comme copropriétaires, avec lui."""
@@ -104,6 +113,36 @@ def acces_de(session: Session, type_acces, user_id: int) -> list:
     return [o for o in objets if user_id in par_objet[o.id]]
 
 
+def noms_des_porteurs(session: Session, objets: Iterable) -> dict[int, str]:
+    """`{id de l'objet: ce que la colonne « Porteurs » affiche}`.
+
+    Les comptes porteurs d'abord. Sans compte, le copropriétaire tel que le
+    FICHIER des lots le nomme, « (sans compte) » — c'était un tiret, sur la
+    plupart des badges importés (signalé le 23/09/2026). Sans lot ni
+    porteur : « En stock ».
+    """
+    from app.models.core import LotImport, Utilisateur
+    from app.utils.noms import nom_affiche
+
+    objets = list(objets)
+    par_objet = porteurs_par_acces(session, objets)
+    fichier: dict[int, str] = {}
+    for li in session.exec(select(LotImport).where(LotImport.lot_id != None)).all():  # noqa: E711
+        if li.nom_coproprietaire:
+            fichier.setdefault(li.lot_id, li.nom_coproprietaire)
+    noms: dict[int, str] = {}
+    for o in objets:
+        comptes = [session.get(Utilisateur, uid) for uid in sorted(par_objet[o.id])]
+        affiches = [nom_affiche(u.prenom, u.nom) for u in comptes if u]
+        if affiches:
+            noms[o.id] = ", ".join(affiches)
+        elif o.lot_id and o.lot_id in fichier:
+            noms[o.id] = f"{fichier[o.lot_id]} (sans compte)"
+        else:
+            noms[o.id] = "—" if o.lot_id else "En stock"
+    return noms
+
+
 def lot_unique_de_nature(session: Session, type_acces, user_id: int) -> int | None:
     """Le lot de cette personne où va ce badge, s'il n'y en a qu'UN de sa nature.
 
@@ -133,4 +172,4 @@ def ids_detenteurs(session: Session, type_acces) -> set[int]:
     return ids
 
 
-__all__ = ["acces_de", "copros_par_lot", "ids_detenteurs", "lot_unique_de_nature", "porteurs", "porteurs_par_acces"]
+__all__ = ["acces_de", "copros_par_lot", "noms_des_porteurs", "ids_detenteurs", "lot_unique_de_nature", "porteurs", "porteurs_par_acces"]

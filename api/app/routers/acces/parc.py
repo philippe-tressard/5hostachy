@@ -54,10 +54,9 @@ from app.routers.acces.vues import AccesOut
 from app.utils.acces_choix import codes_autorises, valider_acces
 from app.utils.acces_detachement import detacher_acces
 from app.utils.acces_gestes import _acces_json, _prevenir_porteur, _tracer_sur_ticket
-from app.utils.porteurs_acces import porteurs_par_acces
+from app.utils.porteurs_acces import noms_des_porteurs
 from app.utils.resolution_acces import exiger_code_libre
 from app.utils.dates_fr import date_courte
-from app.utils.noms import nom_affiche
 from app.utils.perimetres import perimetre_label
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 from app.utils.recuperer import ou_404
@@ -121,15 +120,13 @@ def _acces_admin_out(objets, session: Session,
     ferait une seconde table de correspondance à côté de `TYPES_ACCES`.
     """
     sortie = []
-    #  Les PORTEURS, déduits du lot (#1194) — le conjoint aussi, pas seulement
-    #  celui qui l'a en main. Le nom passe par `nom_affiche`, comme partout.
-    par_objet = porteurs_par_acces(session, objets)
+    #  Les PORTEURS, déduits du lot (#1194) — le conjoint aussi ; sans compte,
+    #  le copropriétaire du fichier ; sans lot, « En stock ».
+    noms = noms_des_porteurs(session, objets)
     for o in objets:
-        comptes = [session.get(Utilisateur, uid) for uid in sorted(par_objet[o.id])]
-        noms = [nom_affiche(u.prenom, u.nom) for u in comptes if u]
         sortie.append(AccesAdminOut(
             **AccesOut.champs_communs(session, type_acces, o),
-            porteur_nom=", ".join(noms) or "—", porteur_id=o.user_id,
+            porteur_nom=noms[o.id], porteur_id=o.user_id,
         ))
     #  Par code : c'est ce qu'on a sous les yeux quand on cherche « à qui est ce
     #  badge ? », un numéro gravé sur un objet physique.
@@ -307,11 +304,7 @@ def supprimer_acces_admin(
     supprimer réservé à l'admin (`ux-patterns` §8).
     """
     _acces_admin(session, type_acces, objet_id)
-    detacher_acces(
-        session, objet_id,
-        type_acces.modele_attribution, type_acces.colonne_attribution,
-        type_acces.modele_import, type_acces.colonne_import,
-    )
+    detacher_acces(session, objet_id, type_acces.modele_import, type_acces.colonne_import)
     session.delete(session.get(type_acces.modele, objet_id))
     session.commit()
 

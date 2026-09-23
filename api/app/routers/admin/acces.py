@@ -46,6 +46,31 @@ def list_commandes_acces(
 class CommandeAction(BaseModel):
     action: str  # accepter | refuser
     motif_refus: str | None = None
+    #: Les codes des badges remis, s'ils sont connus à l'acceptation (#1194).
+    codes: list[str] = []
+
+
+def _poser_les_badges(session: Session, cmd: CommandeAcces, codes: list[str]) -> None:
+    """Une commande acceptée pose ses badges sur le lot commandé (#1194, V3).
+
+    🔴 Elle n'en créait AUCUN : le badge remis au résident n'existait nulle part,
+    ni dans sa liste, ni au parc — il fallait le déclarer une seconde fois. Les
+    codes se saisissent à l'acceptation quand on les connaît ; sans code, rien
+    n'est créé (un badge sans numéro ne désigne aucun objet).
+    """
+    from app.utils.acces_gestes import _acces_json
+    from app.utils.resolution_acces import exiger_code_libre
+    from app.utils.types_acces import TYPES_ACCES
+
+    type_acces = TYPES_ACCES.get(cmd.type)
+    if type_acces is None:
+        return
+    for code in {c.strip() for c in codes if c and c.strip()}:
+        exiger_code_libre(session, type_acces, code)
+        session.add(type_acces.modele(
+            code=code, lot_id=cmd.lot_id, user_id=cmd.user_id,
+            perimetre_cible=_acces_json(session, type_acces, None, cmd.lot_id, cmd.user_id),
+        ))
 
 
 @router.post("/commandes-acces/{cmd_id}/traiter")
@@ -62,6 +87,8 @@ def traiter_commande(
     cmd.traite_par_id = admin.id
     cmd.traite_le = datetime.utcnow()
     cmd.motif_refus = body.motif_refus
+    if cmd.statut == StatutCommande.acceptee:
+        _poser_les_badges(session, cmd, body.codes)
 
     notif = Notification(
         destinataire_id=cmd.user_id,

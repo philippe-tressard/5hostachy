@@ -147,8 +147,8 @@
 
 	async function accepterCommande(id: number) {
 		try {
-			await adminApi.traiterCommandeAcces(id, { action: 'accepter' });
-			toast('success', 'Commande acceptee.');
+			if (!(await accepterCommandeAcces(id))) return;
+			toast('success', 'Commande acceptée.');
 			commandes = commandes.filter((c) => c.id !== id);
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');
@@ -157,10 +157,7 @@
 
 	async function refuserCommande(id: number, motif: string) {
 		try {
-			await adminApi.traiterCommandeAcces(id, {
-				action: 'refuser',
-				motif_refus: motif,
-			});
+			await refuserCommandeAcces(id, motif);
 			toast('info', 'Commande refusee.');
 			commandes = commandes.filter((c) => c.id !== id);
 		} catch (e: any) {
@@ -508,6 +505,7 @@
 	let smtpValeurs: Record<string, string> = {};
 
 	import { getPageConfig, configStore, siteNomStore, loadSiteConfig } from '$lib/stores/pageConfig';
+	import { accepterCommandeAcces, refuserCommandeAcces } from '$lib/commandes-acces';
 	$: _pc = getPageConfig($configStore, 'admin', defautsDePage('admin'));
 	$: _siteNom = $siteNomStore;
 </script>
@@ -809,8 +807,8 @@
 										{#if u.has_vigik}<span class="utag utag-ok">Vigik</span>{:else}<span
 												class="utag utag-ko">Vigik</span
 											>{/if}
-										{#if u.has_bail}<span class="utag utag-ok">Lié</span>{:else}<span
-												class="utag utag-ko">Lié</span
+										{#if u.has_bail}<span class="utag utag-ok">Bail</span>{:else}<span
+												class="utag utag-ko">Bail</span
 											>{/if}
 									</div>
 								</td>

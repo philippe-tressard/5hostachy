@@ -52,7 +52,8 @@
 | 2 | GET | `/admin/comptes-en-attente/enrichis` | Comptes en attente + nb lots prévus import | CS/Admin |
 | 3 | POST | `/admin/comptes/{user_id}/traiter` | Valider ou refuser un compte | CS/Admin |
 | 4 | GET | `/admin/commandes-acces` | Commandes d'accès en attente | CS/Admin |
-| 5 | POST | `/admin/commandes-acces/{cmd_id}/traiter` | Accepter / refuser commande accès | CS/Admin |
+| 5 | POST | `/admin/commandes-acces/{cmd_id}/traiter` | Accepter / refuser commande accès ; `codes` à l'acceptation → badges posés sur le lot commandé (#1194) | CS/Admin |
+
 | 6 | GET | `/admin/sauvegardes/config` | Config sauvegardes | Admin |
 | 7 | PUT | `/admin/sauvegardes/config` | Mettre à jour config sauvegardes | Admin |
 | 8 | POST | `/admin/sauvegardes/maintenant` | Sauvegarde immédiate (background) | Admin |

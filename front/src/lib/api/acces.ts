@@ -27,7 +27,7 @@ export interface AccesAdmin {
 	/** Vrai quand le bailleur a transféré le badge à son locataire. */
 	chez_locataire: boolean;
 	porteur_nom: string;
-	porteur_id: number;
+	porteur_id: number | null;
 	lot_libelle: string | null;
 	lot_id: number | null;
 	/**  🔹 Ce que le badge OUVRE — des CODES, jamais un libellé.

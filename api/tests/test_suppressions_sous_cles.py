@@ -247,9 +247,13 @@ def test_supprimer_une_idee_avec_ses_votes(contexte):
 #  lignes non couvertes, sans que rien ne le dise.
 
 
-def test_supprimer_une_telecommande_attribuee(contexte):
-    """`user_telecommande.telecommande_id` est NOT NULL et sans `Relationship`."""
-    from app.models.core import Telecommande, UserTelecommande
+def test_supprimer_une_telecommande_resolue_par_un_import(contexte):
+    """La ligne d'import qui pointe la télécommande se DÉLIE, elle ne part pas.
+
+    (Ce cas éprouvait `user_telecommande`, NOT NULL et sans `Relationship` —
+    table retirée le 23/09/2026, #1194. Le satellite qui reste est l'import.)
+    """
+    from app.models.core import StatutImport, Telecommande, TelecommandeImport
     from app.routers.acces.parc import supprimer_acces_admin
     from app.utils.types_acces import TELECOMMANDE
 
@@ -258,18 +262,22 @@ def test_supprimer_une_telecommande_attribuee(contexte):
     session.add(tc)
     session.commit()
     session.refresh(tc)
-    session.add(UserTelecommande(user_id=admin.id, telecommande_id=tc.id))
+    ligne = TelecommandeImport(nom_proprietaire="X", reference="TC-546",
+                               statut=StatutImport.resolu, telecommande_id=tc.id)
+    session.add(ligne)
     session.commit()
 
     supprimer_acces_admin(
         objet_id=tc.id, type_acces=TELECOMMANDE, session=session, user=admin,
     )
     assert session.get(Telecommande, tc.id) is None
+    session.refresh(ligne)
+    assert ligne.telecommande_id is None and ligne.statut == StatutImport.en_attente
 
 
-def test_supprimer_un_vigik_attribue(contexte):
-    """`user_vigik.vigik_id` est NOT NULL et sans `Relationship`."""
-    from app.models.core import UserVigik, Vigik
+def test_supprimer_un_vigik_resolu_par_un_import(contexte):
+    """Même règle que la télécommande — les deux jumeaux, éprouvés tous deux."""
+    from app.models.core import StatutImport, Vigik, VigikImport
     from app.routers.acces.parc import supprimer_acces_admin
     from app.utils.types_acces import VIGIK
 
@@ -278,13 +286,17 @@ def test_supprimer_un_vigik_attribue(contexte):
     session.add(v)
     session.commit()
     session.refresh(v)
-    session.add(UserVigik(user_id=admin.id, vigik_id=v.id))
+    ligne = VigikImport(nom_proprietaire="X", code="VG-546",
+                        statut=StatutImport.resolu, vigik_id=v.id)
+    session.add(ligne)
     session.commit()
 
     supprimer_acces_admin(
         objet_id=v.id, type_acces=VIGIK, session=session, user=admin,
     )
     assert session.get(Vigik, v.id) is None
+    session.refresh(ligne)
+    assert ligne.vigik_id is None and ligne.statut == StatutImport.en_attente
 
 
 # ── Les deux dernières tables du relevé ──────────────────────────────────────

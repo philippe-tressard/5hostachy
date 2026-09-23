@@ -37,8 +37,6 @@ from dataclasses import dataclass
 from app.models.core import (
     Telecommande,
     TelecommandeImport,
-    UserTelecommande,
-    UserVigik,
     Vigik,
     VigikImport,
 )
@@ -54,11 +52,6 @@ class TypeAcces:
     libelle: str
     #: La table de l'objet remis au porteur.
     modele: type
-    #: L'ANCIENNE table d'attribution — plus écrite depuis #1194, les porteurs
-    #: se déduisant du lot ; seulement vidée quand un badge est supprimé.
-    modele_attribution: type
-    #: La colonne de cette table qui pointe l'objet.
-    colonne_attribution: str
     #: La table de staging de l'import Excel.
     modele_import: type
     #: La colonne de l'import qui pointe l'objet une fois résolu.
@@ -111,8 +104,6 @@ VIGIK = TypeAcces(
     cle="vigik",
     libelle="Vigik",
     modele=Vigik,
-    modele_attribution=UserVigik,
-    colonne_attribution="vigik_id",
     modele_import=VigikImport,
     colonne_import="vigik_id",
     colonne_code_import="code",
@@ -124,8 +115,6 @@ TELECOMMANDE = TypeAcces(
     cle="telecommande",
     libelle="Télécommande",
     modele=Telecommande,
-    modele_attribution=UserTelecommande,
-    colonne_attribution="telecommande_id",
     modele_import=TelecommandeImport,
     colonne_import="telecommande_id",
     colonne_code_import="reference",
