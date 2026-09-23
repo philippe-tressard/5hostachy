@@ -119,20 +119,13 @@ def downgrade():
     op.drop_table(TABLE)
 ```
 
-**Règles migration :**
-- Une **valeur** dans `op.execute()` se **lie** : `text('… :x …').bindparams(x=…)`.
-  Un **identifiant** ne peut pas se lier en SQLite : l'interpoler depuis une
-  constante du fichier, et le **dire en commentaire**.
-  🔒 `api/tests/test_migrations.py` refuse une f-string de plus que celles figées
-  dans l'historique — une migration appliquée ne se modifie jamais.
-- Tester l'existence d'une colonne avant `add_column` par
+**Règles migration :** `CLAUDE.md` → « Migrations Alembic » (liaison des
+valeurs, identifiants depuis une constante, jamais de `foreign_key` dans un
+`add_column`) et `standards/06-donnees-et-integrite.md` §3 pour le générique — seules copies
+(claude-config#122). Ce qui n'est écrit que là :
+- tester l'existence d'une colonne avant `add_column` par
   `sa.inspect(conn).get_columns(TABLE)` — **pas** par un `PRAGMA table_info` en
-  f-string, qui compterait contre le plafond ci-dessus.
-- 🔴 **Jamais de `foreign_key` dans un `add_column`** : SQLite refuse d'altérer les
-  contraintes d'une table existante, la migration plante APRÈS avoir ajouté la
-  colonne, et `start.sh` (`set -e`) arrête le conteneur. Arrivé deux fois (0117,
-  0165) ; `test_migrations.py` le refuse. Ne pas déclarer la FK dans le modèle
-  non plus, sinon base neuve et base migrée divergent.
+  f-string, qui compterait contre le plafond de `test_migrations.py`.
 - BDD = **SQLite** — pas de `ALTER TYPE`, pas de `CREATE TYPE`
 - **Jamais** modifier une migration existante : en créer une nouvelle.
 
