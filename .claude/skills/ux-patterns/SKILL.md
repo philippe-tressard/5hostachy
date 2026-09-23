@@ -212,7 +212,7 @@ données pour celles inappropriées »*. Une actualité est une affaire de caté
   (`$lib/formulaire-affaire.chargeUtileAffaire`). Changer de nature en correction
   l'**efface**, après une confirmation qui dit quoi (`pertesAuChangement`).
 - La pastille qui ouvre l'autre chemin (« 📰 Actualité — Information, sans
-  suivi ») est **en tête**, pleine ligne, teinte « information », suivie d'un filet
+  suivi ») est **en tête**, pleine ligne, bord « information » sur fond blanc (un fond bleu la faisait croire cochée), suivie d'un filet
   (`enTete` dans `CATEGORIES_TICKET`, variante A). Elle est absente des filtres
   par catégorie : elle se filtre par sa **nature**.
 
