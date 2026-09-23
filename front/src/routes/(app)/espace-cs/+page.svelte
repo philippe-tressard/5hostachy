@@ -34,6 +34,7 @@
 	import { localisationMembre } from '$lib/utils';
 	import { replier, sansAccents } from '$lib/texte';
 	import { agitPourAutrui } from '$lib/roles';
+	import { accepterCommandeAcces, refuserCommandeAcces } from '$lib/commandes-acces';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -716,9 +717,8 @@
 	async function traiterCommande(id: number, decision: 'approuver' | 'rejeter') {
 		await tenter(
 			async () => {
-				await adminApi.traiterCommandeAcces(id, {
-					action: decision === 'approuver' ? 'accepter' : 'refuser',
-				});
+				if (decision === 'rejeter') await refuserCommandeAcces(id);
+				else if (!(await accepterCommandeAcces(id))) return;
 				commandesEnAttente = commandesEnAttente.filter((c) => c.id !== id);
 			},
 			decision === 'approuver' ? 'Commande approuvée' : 'Commande rejetée',

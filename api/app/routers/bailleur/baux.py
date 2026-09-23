@@ -16,12 +16,13 @@ from sqlmodel import Session, select
 from app.auth.deps import require_cs_or_admin, require_proprietaire
 from app.database import get_session
 from app.models.core import (
-    LocationBail, RemiseObjet, Lot, StatutBail, StatutUtilisateur, Utilisateur, Vigik, Telecommande,
+    LocationBail, RemiseObjet, Lot, StatutBail, StatutUtilisateur, Utilisateur,
 )
 from app.utils.recuperer import ou_404
 from pydantic import BaseModel
 
 from .commun import BailCreateMulti, BailOut, BailTerminer, BailUpdate
+from app.utils.acces_bail import rendre_au_bailleur
 from app.auth.appartenance import exiger_bail_du_bailleur
 
 router = APIRouter()
@@ -59,15 +60,8 @@ def supprimer_bail(
 ):
     """Admin / CS : supprimer un bail et ses objets associés."""
     bail = ou_404(session, LocationBail, bail_id, "Bail")
-    # Libérer les accès confiés au locataire
-    for v in session.exec(select(Vigik).where(Vigik.bail_id == bail_id)).all():
-        v.chez_locataire = False
-        v.bail_id = None
-        session.add(v)
-    for tc in session.exec(select(Telecommande).where(Telecommande.bail_id == bail_id)).all():
-        tc.chez_locataire = False
-        tc.bail_id = None
-        session.add(tc)
+    #  Libérer les accès confiés au locataire — la même règle qu'à la fin du bail.
+    rendre_au_bailleur(session, bail)
     # Supprimer les objets remis
     for obj in session.exec(select(RemiseObjet).where(RemiseObjet.bail_id == bail_id)).all():
         session.delete(obj)
@@ -170,15 +164,8 @@ def terminer_bail(
     session: Session = Depends(get_session),
 ):
     bail = exiger_bail_du_bailleur(session, bail_id, user)
-    # Retour automatique de tous les accès confiés au locataire
-    for v in session.exec(select(Vigik).where(Vigik.bail_id == bail_id, Vigik.user_id == user.id)).all():
-        v.chez_locataire = False
-        v.bail_id = None
-        session.add(v)
-    for tc in session.exec(select(Telecommande).where(Telecommande.bail_id == bail_id, Telecommande.user_id == user.id)).all():
-        tc.chez_locataire = False
-        tc.bail_id = None
-        session.add(tc)
+    #  Retour automatique de tous les accès confiés — la règle : `utils/acces_bail`.
+    rendre_au_bailleur(session, bail)
     bail.statut = StatutBail.termine
     bail.date_sortie_reelle = data.date_sortie_reelle or date.today()
     bail.mis_a_jour_le = datetime.utcnow()

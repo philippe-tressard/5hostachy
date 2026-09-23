@@ -4,8 +4,10 @@ Un bailleur TRANSFÈRE ses badges au locataire pour la durée du bail, puis les
 RÉCUPÈRE à la sortie. `mon-bail` est le pendant côté locataire : ce qu'il voit de
 son propre bail, y compris les accès qui lui ont été confiés.
 
-⚠️ C'est le plus gros des quatre modules (318 lignes), et il le restera : les
-quatre routes se partagent la même logique de rapprochement bail ⇆ badges.
+Depuis #1194 (23/09/2026), les badges d'un bailleur sont ceux dont il est
+PORTEUR — ceux de ses lots (`utils/porteurs_acces`) —, et « remettre » met le
+badge dans la main du locataire du bail (`utils/acces_bail`). Les jumeaux
+vigik/télécommande qui doublaient chaque route sont fondus sur `TYPES_ACCES`.
 """
 from datetime import date, datetime
 from typing import List, Optional
@@ -16,12 +18,13 @@ from sqlmodel import Session, select
 from app.utils.batiments import libelle_batiment_ou
 from app.auth.deps import get_current_user, require_proprietaire
 from app.database import get_session
-from app.models.core import (
-    LocationBail, Lot, Batiment,
-    StatutBail, Utilisateur, Vigik, Telecommande, StatutAcces,
-)
+from app.models.core import LocationBail, Lot, Batiment, StatutBail, Utilisateur, StatutAcces
 from pydantic import BaseModel
 from app.auth.appartenance import exiger_bail_du_bailleur
+from app.utils.acces_bail import confies, remettre, rendre_au_bailleur
+from app.utils.porteurs_acces import acces_de
+from app.utils.types_acces import TYPES_ACCES
+from app.utils.valeurs import valeur
 
 
 router = APIRouter()
@@ -44,7 +47,7 @@ def _lot_info(lot_map: dict, session: Session, lot_id: Optional[int]) -> tuple[O
     lot = lot_map.get(lot_id) if lot_id else None
     if not lot:
         return None, None
-    lot_type = lot.type.value if hasattr(lot.type, "value") else str(lot.type)
+    lot_type = valeur(lot.type)
     bat = session.get(Batiment, lot.batiment_id) if lot.batiment_id else None
     return lot_type, f"{libelle_batiment_ou(bat, 'Sans bâtiment')} — Lot {lot.numero}"
 
@@ -75,30 +78,56 @@ class TransfertAccesIn(BaseModel):
     tc_ids: List[int] = []
 
 
+#: Le champ du corps de transfert qui porte les identifiants de chaque type —
+#: le contrat du front, qui envoie `vigik_ids` et `tc_ids`.
+_CHAMP_IDS = {"vigik": "vigik_ids", "telecommande": "tc_ids"}
+
+
+def _sortie(session: Session, lot_map: dict, cle: str, o, **extra) -> AccesOut:
+    """Un badge tel que les écrans du bail le lisent — une écriture pour les deux types."""
+    lot_type, lot_label = _lot_info(lot_map, session, o.lot_id)
+    return AccesOut(id=o.id, code=o.code, type=cle, lot_id=o.lot_id, lot_type=lot_type,
+                    lot_label=lot_label, statut=o.statut, chez_locataire=o.chez_locataire,
+                    bail_id=o.bail_id, cree_le=o.cree_le, **extra)
+
+
+def _motif_non_transferable(cle: str, o, bail, nature_bail: str, lot_map: dict) -> Optional[str]:
+    """Pourquoi ce badge ne peut pas partir avec ce bail — `None` s'il le peut.
+
+    🔴 Écrite DEUX fois jusqu'au 23/09/2026 (#1194) — la liste et le transfert —,
+    et elles divergeaient : la liste acceptait un Vigik posé sur un lot qui n'est
+    ni un parking ni une cave, que le transfert refusait ensuite. La plus stricte
+    prévaut.
+    """
+    if o.statut != StatutAcces.actif:
+        return "Accès inactif"
+    if o.chez_locataire and o.bail_id != bail.id:
+        return "Déjà affecté à un autre bail"
+    if cle == "vigik":
+        if nature_bail != "appartement":
+            return "Vigik non autorisé pour un bail parking/cave"
+        lot = lot_map.get(o.lot_id) if o.lot_id else None
+        if lot is not None and valeur(lot.type) != "appartement":
+            return "Vigik uniquement issu d'un lot appartement"
+    return None
+
+
+def _nature_du_bail(session: Session, bail) -> str:
+    lot = session.get(Lot, bail.lot_id)
+    return valeur(lot.type) if lot else ""
+
+
 @router.get("/mes-acces", response_model=List[AccesOut])
 def mes_acces(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    """Bailleur : voir tous ses Vigik et TC avec leur statut de présence."""
-    vigiks = session.exec(select(Vigik).where(Vigik.user_id == user.id)).all()
-    tcs = session.exec(select(Telecommande).where(Telecommande.user_id == user.id)).all()
-    result = []
+    """Bailleur : ses badges — ceux de ses lots, confiés ou non (`utils/porteurs_acces`)."""
     lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
-
-    for v in vigiks:
-        lot_type, lot_label = _lot_info(lot_map, session, v.lot_id)
-        result.append(AccesOut(id=v.id, code=v.code, type="vigik", lot_id=v.lot_id,
-                                lot_type=lot_type, lot_label=lot_label,
-                                statut=v.statut, chez_locataire=v.chez_locataire,
-                                bail_id=v.bail_id, cree_le=v.cree_le))
-    for tc in tcs:
-        lot_type, lot_label = _lot_info(lot_map, session, tc.lot_id)
-        result.append(AccesOut(id=tc.id, code=tc.code, type="telecommande", lot_id=tc.lot_id,
-                                lot_type=lot_type, lot_label=lot_label,
-                                statut=tc.statut, chez_locataire=tc.chez_locataire,
-                                bail_id=tc.bail_id, cree_le=tc.cree_le))
-    return result
+    return [
+        _sortie(session, lot_map, t.cle, o)
+        for t in TYPES_ACCES.values() for o in acces_de(session, t, user.id)
+    ]
 
 
 @router.get("/baux/{bail_id}/acces", response_model=List[AccesOut])
@@ -107,53 +136,20 @@ def acces_du_bail(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    """Accès (Vigik+TC) du bailleur avec règles d'éligibilité de transfert."""
+    """Les badges du bailleur, avec ce qui les rend transférables à CE bail."""
     bail = exiger_bail_du_bailleur(session, bail_id, user)
-    bail_lot = session.get(Lot, bail.lot_id)
-    bail_lot_type = (bail_lot.type.value if (bail_lot and hasattr(bail_lot.type, "value")) else str(bail_lot.type)) if bail_lot else ""
-    vigiks = session.exec(select(Vigik).where(Vigik.user_id == user.id)).all()
-    tcs = session.exec(select(Telecommande).where(Telecommande.user_id == user.id)).all()
+    nature_bail = _nature_du_bail(session, bail)
     lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
-
-    def _eligibility(acces_type: str, lot_type: Optional[str], statut: StatutAcces, chez_locataire: bool, current_bail_id: Optional[int]) -> tuple[bool, Optional[str]]:
-        if statut != StatutAcces.actif:
-            return False, "Accès inactif"
-        if chez_locataire and current_bail_id != bail_id:
-            return False, "Déjà affecté à un autre bail"
-        if acces_type == "vigik":
-            if bail_lot_type != "appartement":
-                return False, "Vigik non autorisé pour un bail parking/cave"
-            if lot_type in ("parking", "cave"):
-                return False, "Vigik issu d'un lot parking/cave non applicable"
-        return True, None
-
     result = []
-    # Bail parking/cave : pas de Vigik affiché (TC uniquement)
-    if bail_lot_type == "appartement":
-        for v in vigiks:
-            lot_type, lot_label = _lot_info(lot_map, session, v.lot_id)
-            eligible, reason = _eligibility("vigik", lot_type, v.statut, v.chez_locataire, v.bail_id)
-            recommended = bool(eligible and not v.chez_locataire and (v.lot_id is None or v.lot_id == bail.lot_id))
-            result.append(AccesOut(id=v.id, code=v.code, type="vigik", lot_id=v.lot_id,
-                                    lot_type=lot_type, lot_label=lot_label,
-                                    statut=v.statut, chez_locataire=v.chez_locataire,
-                                    bail_id=v.bail_id,
-                                    eligible_transfert=eligible,
-                                    recommande=recommended,
-                                    motif_non_eligible=reason,
-                                    cree_le=v.cree_le))
-    for tc in tcs:
-        lot_type, lot_label = _lot_info(lot_map, session, tc.lot_id)
-        eligible, reason = _eligibility("telecommande", lot_type, tc.statut, tc.chez_locataire, tc.bail_id)
-        recommended = bool(eligible and not tc.chez_locataire and (tc.lot_id is None or tc.lot_id == bail.lot_id))
-        result.append(AccesOut(id=tc.id, code=tc.code, type="telecommande", lot_id=tc.lot_id,
-                                lot_type=lot_type, lot_label=lot_label,
-                                statut=tc.statut, chez_locataire=tc.chez_locataire,
-                                bail_id=tc.bail_id,
-                                eligible_transfert=eligible,
-                                recommande=recommended,
-                                motif_non_eligible=reason,
-                                cree_le=tc.cree_le))
+    for t in TYPES_ACCES.values():
+        #  Bail parking/cave : pas de Vigik affiché (télécommandes seulement).
+        if t.cle == "vigik" and nature_bail != "appartement":
+            continue
+        for o in acces_de(session, t, user.id):
+            motif = _motif_non_transferable(t.cle, o, bail, nature_bail, lot_map)
+            recommande = motif is None and not o.chez_locataire and o.lot_id in (None, bail.lot_id)
+            result.append(_sortie(session, lot_map, t.cle, o, eligible_transfert=motif is None,
+                                  recommande=recommande, motif_non_eligible=motif))
     return result
 
 
@@ -164,48 +160,27 @@ def transferer_acces(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    """Marquer des Vigik/TC comme étant chez le locataire."""
+    """Remettre des badges au locataire du bail — il les a désormais en main."""
     bail = exiger_bail_du_bailleur(session, bail_id, user)
     if bail.statut == StatutBail.termine:
         raise HTTPException(400, "Bail terminé — impossible de transférer des accès")
-    bail_lot = session.get(Lot, bail.lot_id)
-    bail_lot_type = (bail_lot.type.value if (bail_lot and hasattr(bail_lot.type, "value")) else str(bail_lot.type)) if bail_lot else ""
+    nature_bail = _nature_du_bail(session, bail)
     lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
-
-    def _assert_transferable(acces_type: str, lot_id: Optional[int], statut: StatutAcces, chez_locataire: bool, current_bail_id: Optional[int]):
-        if statut != StatutAcces.actif:
-            raise HTTPException(400, "Certains accès sélectionnés sont inactifs")
-        if chez_locataire and current_bail_id != bail_id:
-            raise HTTPException(400, "Un ou plusieurs accès sont déjà affectés à un autre bail")
-        lot = lot_map.get(lot_id) if lot_id else None
-        lot_type = (lot.type.value if (lot and hasattr(lot.type, "value")) else str(lot.type)) if lot else None
-        if acces_type == "vigik":
-            if bail_lot_type != "appartement":
-                raise HTTPException(400, "Vigik non autorisé pour un bail parking/cave")
-            if lot_type is not None and lot_type != "appartement":
-                raise HTTPException(400, "Vigik uniquement issu d'un lot appartement")
-
     updated = []
-    for vid in data.vigik_ids:
-        v = session.get(Vigik, vid)
-        if v and v.user_id == user.id:
-            _assert_transferable("vigik", v.lot_id, v.statut, v.chez_locataire, v.bail_id)
-            v.chez_locataire = True
-            v.bail_id = bail_id
-            session.add(v)
-            updated.append(AccesOut(id=v.id, code=v.code, type="vigik", lot_id=v.lot_id,
-                                     statut=v.statut, chez_locataire=v.chez_locataire,
-                                     bail_id=v.bail_id, cree_le=v.cree_le))
-    for tcid in data.tc_ids:
-        tc = session.get(Telecommande, tcid)
-        if tc and tc.user_id == user.id:
-            _assert_transferable("telecommande", tc.lot_id, tc.statut, tc.chez_locataire, tc.bail_id)
-            tc.chez_locataire = True
-            tc.bail_id = bail_id
-            session.add(tc)
-            updated.append(AccesOut(id=tc.id, code=tc.code, type="telecommande", lot_id=tc.lot_id,
-                                     statut=tc.statut, chez_locataire=tc.chez_locataire,
-                                     bail_id=tc.bail_id, cree_le=tc.cree_le))
+    for t in TYPES_ACCES.values():
+        #  🔒 Seuls les badges dont le bailleur est PORTEUR : un identifiant
+        #  quelconque glissé dans le corps est ignoré, comme avant.
+        les_siens = {o.id: o for o in acces_de(session, t, user.id)}
+        for oid in getattr(data, _CHAMP_IDS[t.cle]):
+            o = les_siens.get(oid)
+            if o is None:
+                continue
+            motif = _motif_non_transferable(t.cle, o, bail, nature_bail, lot_map)
+            if motif:
+                raise HTTPException(400, motif)
+            remettre(o, bail)
+            session.add(o)
+            updated.append(_sortie(session, lot_map, t.cle, o))
     session.commit()
     return updated
 
@@ -217,43 +192,19 @@ def recuperer_acces(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
-    """Retour virtuel des accès chez_locataire=True pour ce bail.
+    """Les badges du bail reviennent au bailleur — ceux désignés, ou tous.
 
     Si ``data.vigik_ids`` ou ``data.tc_ids`` sont fournis, seuls ces accès sont
-    récupérés.  Sinon tous les accès du bail sont récupérés (comportement
-    historique conservé).
+    récupérés. Sinon tous les accès du bail le sont (comportement historique).
     """
-    exiger_bail_du_bailleur(session, bail_id, user)
-    selective = bool(data.vigik_ids or data.tc_ids)
-    updated = []
-
-    vigik_q = select(Vigik).where(Vigik.bail_id == bail_id, Vigik.user_id == user.id)
-    if selective and data.vigik_ids:
-        vigik_q = vigik_q.where(Vigik.id.in_(data.vigik_ids))
-    elif selective:
-        vigik_q = vigik_q.where(Vigik.id == -1)  # aucun vigik demandé
-
-    for v in session.exec(vigik_q).all():
-        v.chez_locataire = False
-        v.bail_id = None
-        session.add(v)
-        updated.append(AccesOut(id=v.id, code=v.code, type="vigik", lot_id=v.lot_id,
-                                 statut=v.statut, chez_locataire=False, bail_id=None, cree_le=v.cree_le))
-
-    tc_q = select(Telecommande).where(Telecommande.bail_id == bail_id, Telecommande.user_id == user.id)
-    if selective and data.tc_ids:
-        tc_q = tc_q.where(Telecommande.id.in_(data.tc_ids))
-    elif selective:
-        tc_q = tc_q.where(Telecommande.id == -1)
-
-    for tc in session.exec(tc_q).all():
-        tc.chez_locataire = False
-        tc.bail_id = None
-        session.add(tc)
-        updated.append(AccesOut(id=tc.id, code=tc.code, type="telecommande", lot_id=tc.lot_id,
-                                 statut=tc.statut, chez_locataire=False, bail_id=None, cree_le=tc.cree_le))
+    bail = exiger_bail_du_bailleur(session, bail_id, user)
+    choix = None
+    if data.vigik_ids or data.tc_ids:
+        choix = {cle: getattr(data, champ) for cle, champ in _CHAMP_IDS.items()}
+    lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
+    rendus = rendre_au_bailleur(session, bail, choix)
     session.commit()
-    return updated
+    return [_sortie(session, lot_map, cle, o) for cle, o in rendus]
 
 
 # ── Vue locataire : voir les accès reçus de son bailleur ──────────────────────
@@ -264,23 +215,11 @@ def mes_acces_recus(
     session: Session = Depends(get_session),
 ):
     """Locataire : voir les Vigik/TC qui lui ont été confiés par son bailleur."""
-    result = []
-    # Trouver les baux où cet utilisateur est locataire_id
     baux = session.exec(select(LocationBail).where(
         LocationBail.locataire_id == user.id,
         LocationBail.statut != StatutBail.termine,
     )).all()
-    bail_ids = [b.id for b in baux]
-    if not bail_ids:
-        return []
-    for bid in bail_ids:
-        for v in session.exec(select(Vigik).where(Vigik.bail_id == bid, Vigik.chez_locataire == True)).all():
-            result.append(AccesOut(id=v.id, code=v.code, type="vigik", lot_id=v.lot_id,
-                                    statut=v.statut, chez_locataire=True, bail_id=bid, cree_le=v.cree_le))
-        for tc in session.exec(select(Telecommande).where(Telecommande.bail_id == bid, Telecommande.chez_locataire == True)).all():
-            result.append(AccesOut(id=tc.id, code=tc.code, type="telecommande", lot_id=tc.lot_id,
-                                    statut=tc.statut, chez_locataire=True, bail_id=bid, cree_le=tc.cree_le))
-    return result
+    return [_sortie(session, {}, cle, o) for b in baux for cle, o in confies(session, b.id)]
 
 
 # ── Vue locataire : son bail actif ────────────────────────────────────────────
@@ -322,18 +261,12 @@ def mon_bail(
     bailleur = session.get(Utilisateur, bail.bailleur_id)
     bail_lot = session.get(Lot, bail.lot_id)
     bail_bat = session.get(Batiment, bail_lot.batiment_id) if (bail_lot and bail_lot.batiment_id) else None
-    acces_list = []
-    for v in session.exec(select(Vigik).where(Vigik.bail_id == bail.id, Vigik.chez_locataire == True)).all():
-        acces_list.append(AccesOut(id=v.id, code=v.code, type="vigik", lot_id=v.lot_id,
-                                    statut=v.statut, chez_locataire=True, bail_id=bail.id, cree_le=v.cree_le))
-    for tc in session.exec(select(Telecommande).where(Telecommande.bail_id == bail.id, Telecommande.chez_locataire == True)).all():
-        acces_list.append(AccesOut(id=tc.id, code=tc.code, type="telecommande", lot_id=tc.lot_id,
-                                    statut=tc.statut, chez_locataire=True, bail_id=bail.id, cree_le=tc.cree_le))
+    acces_list = [_sortie(session, {}, cle, o) for cle, o in confies(session, bail.id)]
     return BailLocataireOut(
         id=bail.id,
         lot_id=bail.lot_id,
         lot_numero=bail_lot.numero if bail_lot else None,
-        lot_type=(bail_lot.type.value if hasattr(bail_lot.type, 'value') else str(bail_lot.type)) if bail_lot else None,
+        lot_type=valeur(bail_lot.type) if bail_lot else None,
         lot_type_appartement=bail_lot.type_appartement if bail_lot else None,
         lot_etage=bail_lot.etage if bail_lot else None,
         lot_superficie=bail_lot.superficie if bail_lot else None,

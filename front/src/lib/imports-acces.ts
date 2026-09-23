@@ -148,3 +148,36 @@ const { libelle, badge } = parAttribut({
 
 export const STATUT_BADGE: Record<string, string> = badge;
 export const STATUT_LABEL: Record<string, string> = libelle;
+
+/** Un lot tel que le proposent les deux formulaires de badge (import, parc). */
+export interface LotPourBadge {
+	id: number;
+	libelle: string;
+	type: string;
+	coproprietaire: string | null;
+}
+
+/**
+ * Les lots à proposer pour un badge — une écriture pour les deux formulaires
+ * (import et parc, #1194). Ceux de sa nature d'abord (l'appartement pour un
+ * Vigik, le parking pour une télécommande), puis les autres ; dans chaque
+ * groupe par NOM du copropriétaire : c'est lui qu'on cherche, et la frappe des
+ * premières lettres y saute dans la liste (retour du 23/09/2026).
+ */
+export function lotsPourBadge(lots: LotPourBadge[], nature: string): LotPourBadge[] {
+	//  Sans nom connu → en fin de groupe : un numéro seul ne se cherche pas par nom.
+	const parNom = (a: LotPourBadge, b: LotPourBadge) =>
+		!a.coproprietaire !== !b.coproprietaire
+			? a.coproprietaire
+				? -1
+				: 1
+			: (a.coproprietaire ?? '').localeCompare(b.coproprietaire ?? '', 'fr');
+	return [
+		...lots.filter((l) => l.type === nature).sort(parNom),
+		...lots.filter((l) => l.type !== nature).sort(parNom),
+	];
+}
+
+/** « DUPONT Jean — Parking 450 » : le nom d'abord, c'est lui qu'on cherche. */
+export const libelleLotPourBadge = (l: LotPourBadge) =>
+	`${l.coproprietaire ? `${l.coproprietaire} — ` : ''}${l.libelle}`;

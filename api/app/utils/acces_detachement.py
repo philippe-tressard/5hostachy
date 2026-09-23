@@ -17,7 +17,9 @@ recréé la même paire, avec la même dérive à venir.
 
 ## La règle, et elle n'est pas la même pour les deux satellites
 
-🔴 **L'attribution PART, la ligne d'import RESTE.**
+🔴 **La ligne d'import RESTE.** (Les attributions `user_*` qui partaient avec
+le badge n'existent plus depuis le 23/09/2026, #1194 : ses porteurs se
+déduisent de son lot.)
 
   • `user_vigik` / `user_telecommande` — « ce badge est attribué à cette
     personne » n'a plus d'objet quand le badge disparaît. La colonne est
@@ -45,8 +47,6 @@ from app.utils.suppression_liee import flush_si_necessaire
 def detacher_acces(
     session: Session,
     objet_id: int,
-    modele_attribution,
-    colonne_attribution: str,
     modele_import,
     colonne_import: str,
 ) -> None:
@@ -55,11 +55,6 @@ def detacher_acces(
     N'exécute **ni `flush` final ni `commit`** au-delà de ce qu'exige l'ordre des
     DELETE : l'appelant supprime l'objet lui-même et décide de sa transaction.
     """
-    champ_attr = getattr(modele_attribution, colonne_attribution)
-    attributions = session.exec(select(modele_attribution).where(champ_attr == objet_id)).all()
-    for attribution in attributions:
-        session.delete(attribution)
-
     champ_imp = getattr(modele_import, colonne_import)
     ligne_import = session.exec(select(modele_import).where(champ_imp == objet_id)).first()
     if ligne_import:
@@ -75,4 +70,4 @@ def detacher_acces(
         )
         session.add(ligne_import)
 
-    flush_si_necessaire(session, len(attributions))
+    flush_si_necessaire(session, 1 if ligne_import else 0)

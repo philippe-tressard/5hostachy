@@ -11,7 +11,7 @@ peut-être jamais. Le lot, lui, se lit dans les fichiers du syndic.
 | Badge | Ce que son fichier donne | Comment on retrouve le lot |
 |---|---|---|
 | Vigik | bâtiment + appartement | directement — 180 lignes sur 182 |
-| télécommande | le seul nom du copropriétaire | ce nom, dans le **fichier des lots**, désigne un copropriétaire ; s'il a **un** parking, c'est lui |
+| télécommande | le seul nom du copropriétaire | ce nom, dans le **fichier des lots**, désigne un copropriétaire ; son **premier** parking (à défaut, son premier lot) |
 
 ## 🔴 Ce que ce module remplace
 
@@ -19,12 +19,17 @@ La règle du Vigik était écrite **deux fois** : `_etape_lot_par_adresse` dans 
 routeur des imports, `_resoudre_lot_vigik` dans l'appariement à l'inscription.
 La télécommande n'en avait aucune, faute de colonnes.
 
-## ⚠️ Ce qu'il ne fait pas : deviner
+## ⚠️ Ce qu'il ne fait pas : deviner la PERSONNE
 
-Un nom qui désigne deux copropriétaires, ou un copropriétaire qui a deux
-parkings, ne rattache rien : la ligne reste à préciser à l'écran. Un badge
-rattaché au mauvais lot montrerait son code aux voisins — mieux vaut une ligne
-de plus à choisir.
+Un nom qui désigne deux copropriétaires ne rattache rien : la ligne reste à
+préciser à l'écran. Le nom COMPLET départage d'abord — « DUBREUIL FRANCOIS »
+parmi trois DUBREUIL —, puis un nom inclus dans un seul, puis un mot commun à
+un seul. Un badge rattaché au mauvais copropriétaire montrerait son code aux
+voisins.
+
+Plusieurs PARKINGS, en revanche, ne bloquent plus (arbitré le 23/09/2026 :
+« si plusieurs parkings, prendre le 1er ») : les porteurs sont les mêmes —
+ceux du copropriétaire —, seul le numéro affiché change, et il se corrige.
 """
 from __future__ import annotations
 
@@ -43,12 +48,14 @@ from app.utils.valeurs import valeur
 #: « Madame X » et « Madame Y » seraient le même copropriétaire.
 _MOTS_VIDES = {
     "madame", "monsieur", "mademoiselle", "epoux", "epouse", "indivision",
-    "succession", "consorts", "veuve", "societe",
+    "succession", "consorts", "veuve", "societe", "mme", "des", "les", "ste", "sci", "cie",
 }
 
 
 def _mots(nom: str | None) -> set[str]:
-    return {m for m in _cle_de_nom(nom).split() if len(m) > 3 and m not in _MOTS_VIDES}
+    #  Trois lettres suffisent : « LUC », « ROY » départagent, et les écarter
+    #  rendait « BERNARD Luc » indiscernable de « BERNARD » tout court.
+    return {m for m in _cle_de_nom(nom).split() if len(m) >= 3 and m not in _MOTS_VIDES}
 
 
 def _par_adresse(session: Session) -> Callable[[object], int | None]:
@@ -68,6 +75,7 @@ def _par_adresse(session: Session) -> Callable[[object], int | None]:
 def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int | None]:
     """Télécommande : le nom du fichier → un copropriétaire du fichier des lots → son lot."""
     natures = {lot.id: valeur(lot.type) for lot in session.exec(select(Lot)).all()}
+    numeros = {lot.id: lot.numero for lot in session.exec(select(Lot)).all()}
     lots_de: dict[str, set[int]] = defaultdict(set)
     mots_de: dict[str, set[str]] = {}
     for li in session.exec(select(LotImport).where(LotImport.lot_id != None)).all():  # noqa: E711
@@ -75,20 +83,34 @@ def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int
         if not copro:
             continue
         mots_de.setdefault(copro, _mots(li.nom_coproprietaire))
-        if natures.get(li.lot_id) == nature:
-            lots_de[copro].add(li.lot_id)
+        lots_de[copro].add(li.lot_id)
+
+    def premier(lots: set[int]) -> int | None:
+        """Le premier parking par numéro, à défaut le premier lot."""
+        ordre = sorted(lots, key=lambda i: (natures.get(i) != nature, _cle_numero(numeros.get(i))))
+        return ordre[0] if ordre else None
 
     def trouver(imp) -> int | None:
         mots = _mots(imp.nom_proprietaire)
         if not mots:
             return None
-        candidats = {c for c, m in mots_de.items() if m & mots}
-        if len(candidats) != 1:
-            return None
-        lots = lots_de.get(candidats.pop(), set())
-        return next(iter(lots)) if len(lots) == 1 else None
+        #  Du plus sûr au plus large ; le premier palier qui désigne UN
+        #  copropriétaire l'emporte, un palier ambigu arrête la recherche.
+        for garder in (lambda m: m == mots, lambda m: mots <= m, lambda m: bool(m & mots)):
+            candidats = [c for c, m in mots_de.items() if garder(m)]
+            if len(candidats) == 1:
+                return premier(lots_de[candidats[0]])
+            if candidats:
+                return None
+        return None
 
     return trouver
+
+
+def _cle_numero(numero: str | None) -> tuple:
+    """« 9 » avant « 10 » : un numéro de lot se trie comme un nombre quand il en est un."""
+    n = (numero or "").strip()
+    return (0, int(n), "") if n.isdigit() else (1, 0, n)
 
 
 def trouveur_de_lot(type_acces, session: Session) -> Callable[[object], bool]:

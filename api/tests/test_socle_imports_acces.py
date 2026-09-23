@@ -44,8 +44,6 @@ from app.models.core import (
     Telecommande,
     TelecommandeImport,
     Utilisateur,
-    UserTelecommande,
-    UserVigik,
     Vigik,
     VigikImport,
 )
@@ -58,16 +56,11 @@ from app.routers.acces.socle_imports import PatchImportBody
 #: ⚠️ Le paramétrage porte le CHAMP de référence, pas une valeur codée en dur :
 #: c'est justement ce champ qui diffère, et l'écrire ici le rendrait faux le jour
 #: où il change.
-#: Le quatrième élément est la table de liaison M2M, nécessaire au NETTOYAGE :
-#: `conftest` active `foreign_keys=ON` (#546), donc supprimer un utilisateur
-#: encore référencé échoue — et l'échec survient en teardown, où il est le plus
-#: pénible à lire.
+#: (La table de liaison M2M qui venait en quatrième a disparu le 23/09/2026,
+#: #1194 : les porteurs se déduisent du lot.)
 CHAINES = [
-    pytest.param(
-        TELECOMMANDE, TelecommandeImport, Telecommande, UserTelecommande,
-        id="telecommande",
-    ),
-    pytest.param(VIGIK, VigikImport, Vigik, UserVigik, id="vigik"),
+    pytest.param(TELECOMMANDE, TelecommandeImport, Telecommande, id="telecommande"),
+    pytest.param(VIGIK, VigikImport, Vigik, id="vigik"),
 ]
 
 
@@ -118,7 +111,7 @@ def _creer_import(type_import, modele_import, proprio, locataire, session, *, ch
     return imp
 
 
-def _purger(session, type_import, modele_import, modele_objet, modele_liaison, import_id):
+def _purger(session, type_import, modele_import, modele_objet, import_id):
     """Defait TOUTE la chaine creee : lien, liaisons M2M, objet, import.
 
     ATTENTION a l'ORDRE, et il n'est pas negociable : les cles etrangeres sont
@@ -137,13 +130,6 @@ def _purger(session, type_import, modele_import, modele_objet, modele_liaison, i
         session.flush()
 
     if objet_id:
-        for liaison in session.exec(
-            select(modele_liaison).where(
-                getattr(modele_liaison, type_import.colonne_import) == objet_id
-            )
-        ).all():
-            session.delete(liaison)
-        session.flush()
         objet = session.get(modele_objet, objet_id)
         if objet:
             session.delete(objet)
@@ -157,9 +143,9 @@ def _purger(session, type_import, modele_import, modele_objet, modele_liaison, i
     session.commit()
 
 
-@pytest.mark.parametrize("type_import,modele_import,modele_objet,modele_liaison", CHAINES)
+@pytest.mark.parametrize("type_import,modele_import,modele_objet", CHAINES)
 def test_la_POSSESSION_est_reportee_sur_l_objet(
-    type_import, modele_import, modele_objet, modele_liaison, deux_comptes
+    type_import, modele_import, modele_objet, deux_comptes
 ):
     """🔴 Le défaut lui-même — il n'existait que côté Vigik."""
     session, proprio, locataire = deux_comptes
@@ -180,12 +166,12 @@ def test_la_POSSESSION_est_reportee_sur_l_objet(
             "qu'il est déjà remis (routers/bailleur/acces.py)."
         )
     finally:
-        _purger(session, type_import, modele_import, modele_objet, modele_liaison, imp.id)
+        _purger(session, type_import, modele_import, modele_objet, imp.id)
 
 
-@pytest.mark.parametrize("type_import,modele_import,modele_objet,modele_liaison", CHAINES)
+@pytest.mark.parametrize("type_import,modele_import,modele_objet", CHAINES)
 def test_la_CORRECTION_d_un_import_resolu_redescend_sur_l_objet(
-    type_import, modele_import, modele_objet, modele_liaison, deux_comptes
+    type_import, modele_import, modele_objet, deux_comptes
 ):
     """L'import et l'objet ne peuvent pas dire deux choses différentes.
 
@@ -211,12 +197,12 @@ def test_la_CORRECTION_d_un_import_resolu_redescend_sur_l_objet(
         )
         assert objet.user_id == locataire.id
     finally:
-        _purger(session, type_import, modele_import, modele_objet, modele_liaison, imp.id)
+        _purger(session, type_import, modele_import, modele_objet, imp.id)
 
 
-@pytest.mark.parametrize("type_import,modele_import,modele_objet,modele_liaison", CHAINES)
+@pytest.mark.parametrize("type_import,modele_import,modele_objet", CHAINES)
 def test_chez_le_locataire_SANS_compte_reste_chez_le_locataire(
-    type_import, modele_import, modele_objet, modele_liaison, deux_comptes
+    type_import, modele_import, modele_objet, deux_comptes
 ):
     """🔴 Inversé le 23/09/2026 (#1194) : le fait physique prime sur le compte.
 
@@ -237,7 +223,7 @@ def test_chez_le_locataire_SANS_compte_reste_chez_le_locataire(
         assert objet.chez_locataire is True
         assert objet.user_id is None, "le propriétaire est nommé détenteur d'un badge qu'il n'a pas"
     finally:
-        _purger(session, type_import, modele_import, modele_objet, modele_liaison, imp.id)
+        _purger(session, type_import, modele_import, modele_objet, imp.id)
 
 
 def test_cas_zero_SANS_report_l_objet_dit_le_CONTRAIRE_de_l_import(deux_comptes):
@@ -279,7 +265,6 @@ def test_les_DEUX_chaines_sont_bien_deux(deux_comptes):
     assert TELECOMMANDE.modele is not VIGIK.modele
     assert TELECOMMANDE.colonne_code_import != VIGIK.colonne_code_import
     assert TELECOMMANDE.colonne_import != VIGIK.colonne_import
-    assert TELECOMMANDE.modele_attribution is not VIGIK.modele_attribution
     assert len(CHAINES) == 2
 
 def test_UN_SEUL_objet_decrit_les_deux_types_d_acces():

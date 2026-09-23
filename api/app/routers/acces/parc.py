@@ -307,11 +307,7 @@ def supprimer_acces_admin(
     supprimer réservé à l'admin (`ux-patterns` §8).
     """
     _acces_admin(session, type_acces, objet_id)
-    detacher_acces(
-        session, objet_id,
-        type_acces.modele_attribution, type_acces.colonne_attribution,
-        type_acces.modele_import, type_acces.colonne_import,
-    )
+    detacher_acces(session, objet_id, type_acces.modele_import, type_acces.colonne_import)
     session.delete(session.get(type_acces.modele, objet_id))
     session.commit()
 

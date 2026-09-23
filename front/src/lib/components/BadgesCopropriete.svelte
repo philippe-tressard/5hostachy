@@ -108,6 +108,7 @@
 	 *   deux gestes d'écriture. Ici elle PROPOSE, et c'est tout ce qu'un écran
 	 *   sait faire. */
 	let choixAcces: Record<string, ChoixAcces> = {};
+	let lots: any[] = [];
 	let formOuvert = false;
 	let editId: string | null = null;
 	let enregistrement = false;
@@ -116,6 +117,7 @@
 		type: 'vigik',
 		code: '',
 		porteur_id: null as number | null,
+		lot_id: null as number | null,
 		perimetre_cible: [] as string[],
 		statut: 'actif',
 		ticket_numero: '',
@@ -132,7 +134,8 @@
 		saisie = {
 			type: a.type,
 			code: a.code,
-			porteur_id: a.porteur_id,
+			porteur_id: a.porteur_id ?? null,
+			lot_id: a.lot_id ?? null,
 			perimetre_cible: [...(a.perimetre_cible ?? [])],
 			statut: String(a.statut),
 			ticket_numero: '',
@@ -161,6 +164,8 @@
 			const corps = {
 				code: saisie.code.trim(),
 				porteur_id: saisie.porteur_id,
+				//  `0` DÉLIE en correction ; à la création, « aucun » s'envoie vide.
+				lot_id: saisie.lot_id ?? (editId ? 0 : null),
 				perimetre_cible: saisie.perimetre_cible,
 				statut: saisie.statut,
 				ticket_numero: saisie.ticket_numero.trim() || null,
@@ -216,6 +221,7 @@
 				nom: u.nom ?? '',
 			}));
 			choixAcces = await accesApi.choixAcces();
+			lots = await accesApi.lotsImports();
 		} catch (e) {
 			erreur = messageErreur(e, 'Chargement impossible');
 		} finally {
@@ -294,7 +300,7 @@
 		.sort((x, y) => {
 			const ordre = triAsc ? 1 : -1;
 			if (triCol === 'porteur') {
-				return ordre * comparerParNom(parId.get(x.porteur_id), parId.get(y.porteur_id));
+				return ordre * comparerParNom(parId.get(x.porteur_id ?? -1), parId.get(y.porteur_id ?? -1));
 			}
 			return ordre * cle(x).localeCompare(cle(y), 'fr', { sensitivity: 'base' });
 		});
@@ -378,6 +384,7 @@
 		<FormulaireAcces
 			types={TYPES}
 			{porteurs}
+			{lots}
 			{choixAcces}
 			bind:saisie
 			{enregistrement}
@@ -417,6 +424,7 @@
 					<FormulaireAcces
 						types={TYPES}
 						{porteurs}
+						{lots}
 						{choixAcces}
 						bind:saisie
 						modeEdition

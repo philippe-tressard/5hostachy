@@ -62,8 +62,10 @@ export const admin = {
 		api.post<any>(`/admin/comptes/${id}/traiter`, data),
 	// Commandes accès
 	commandesAccesEnAttente: () => api.get<any[]>('/admin/commandes-acces'),
-	traiterCommandeAcces: (id: number, data: { action: string; motif_refus?: string }) =>
-		api.post(`/admin/commandes-acces/${id}/traiter`, data),
+	traiterCommandeAcces: (
+		id: number,
+		data: { action: string; motif_refus?: string; codes?: string[] },
+	) => api.post(`/admin/commandes-acces/${id}/traiter`, data),
 	// Sauvegardes
 	backupConfig: () => api.get<any>('/admin/sauvegardes/config'),
 	updateBackupConfig: (data: unknown) => api.put<any>('/admin/sauvegardes/config', data),

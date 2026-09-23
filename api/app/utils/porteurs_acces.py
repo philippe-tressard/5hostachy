@@ -8,7 +8,7 @@ enregistrés, ils se **lisent** :
 | Le badge | Ses porteurs |
 |---|---|
 | posé sur un lot | les copropriétaires du lot — le conjoint **exactement comme l'autre** |
-| … et remis au locataire | les mêmes, **plus** le locataire du lot (arbitrage 2 : les copropriétaires le voient toujours) |
+| … et remis au locataire | les mêmes, **plus** le locataire du lot — lien `user_lot` ou bail en cours (arbitrage 2 : les copropriétaires le voient toujours) |
 | sans lot connu (donnée ancienne) | celui qui le détient, et ceux qui partagent un lot avec lui |
 
 S'y ajoute toujours celui qui le détient en main (`user_id`), quand il est connu.
@@ -58,6 +58,15 @@ class _Liens:
                 self.lots_copro_de[ul.user_id].add(ul.lot_id)
             elif valeur(ul.type_lien) == "locataire":
                 self.locataires_du_lot[ul.lot_id].add(ul.user_id)
+        #  Le locataire d'un BAIL en cours l'est aussi (V3 de #1194) : c'est par
+        #  le bail que le bailleur remet un badge, et le locataire n'a pas
+        #  toujours de lien `user_lot` — « chez le locataire » n'a qu'un sens.
+        from app.models.core import LocationBail, StatutBail
+
+        for bail in session.exec(select(LocationBail).where(
+            LocationBail.statut != StatutBail.termine, LocationBail.locataire_id != None,  # noqa: E711
+        )).all():
+            self.locataires_du_lot[bail.lot_id].add(bail.locataire_id)
 
     def partages(self, user_id: int) -> set[int]:
         """Ceux qui partagent au moins un lot, comme copropriétaires, avec lui."""

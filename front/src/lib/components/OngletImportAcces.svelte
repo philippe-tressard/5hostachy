@@ -19,12 +19,19 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { acces as accesApi } from '$lib/api';
+	import { acces as accesApi, admin as adminApi } from '$lib/api';
+	import { nomAffiche } from '$lib/noms';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { confirmer } from '$lib/confirmation';
 	import { messageErreur } from '$lib/erreurs';
-	import { STATUT_BADGE, STATUT_LABEL, type ModeleImportAcces } from '$lib/imports-acces';
+	import {
+		STATUT_BADGE,
+		STATUT_LABEL,
+		libelleLotPourBadge,
+		lotsPourBadge,
+		type ModeleImportAcces,
+	} from '$lib/imports-acces';
 	import BarreImport from '$lib/components/BarreImport.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
@@ -42,12 +49,9 @@
 	let filtre = '';
 	let enCours = false;
 
-	/** Les lots où va ce badge d'abord, les autres ensuite : un Vigik peut être
-	 *  posé sur un lot d'une autre nature, mais c'est l'exception. */
-	$: lotsTries = [
-		...lots.filter((l) => l.type === modele.natureLot),
-		...lots.filter((l) => l.type !== modele.natureLot),
-	];
+	$: lotsTries = lotsPourBadge(lots, modele.natureLot);
+	/** Les comptes, pour désigner le locataire qui a le badge en main. */
+	let comptes: any[] = [];
 
 	async function geste(appel: () => Promise<any>, succes: (r: any) => string) {
 		enCours = true;
@@ -105,6 +109,7 @@
 	let editId: number | null = null;
 	let editLot = '';
 	let editChezLoc = false;
+	let editLocataire = '';
 	let editNotes = '';
 	//  Les cases propres à un type (« Locataire a refusé ») : le modèle les déclare.
 	let editBooleens: Record<string, boolean> = {};
@@ -113,6 +118,7 @@
 		editId = imp.id;
 		editLot = String(imp.lot_id ?? '');
 		editChezLoc = imp.chez_locataire;
+		editLocataire = String(imp.user_locataire_id ?? '');
 		editNotes = imp.notes_admin ?? '';
 		editBooleens = Object.fromEntries(
 			modele.champsBooleens.map((c) => [c.cle, imp[c.cle] ?? false]),
@@ -129,6 +135,8 @@
 				modele.api.patch(id, {
 					lot_id: editLot ? Number(editLot) : null,
 					chez_locataire: editChezLoc,
+					//  Le locataire qui l'a en main : il en devient porteur (#1194).
+					user_locataire_id: editChezLoc && editLocataire ? Number(editLocataire) : null,
 					notes_admin: editNotes || null,
 					...editBooleens,
 				}),
@@ -146,7 +154,11 @@
 
 	onMount(async () => {
 		try {
-			[lots] = await Promise.all([accesApi.lotsImports(), recharger()]);
+			[lots, comptes] = await Promise.all([
+				accesApi.lotsImports(),
+				adminApi.utilisateurs(),
+				recharger(),
+			]);
 		} catch (e) {
 			erreur = messageErreur(e);
 		} finally {
@@ -303,9 +315,7 @@
 												<!--  Le copropriétaire est celui du FICHIER DES LOTS : c'est le
 												      seul nom qu'un lot sans compte possède (#1154, #1194). -->
 												{#each lotsTries as l (l.id)}
-													<option value={String(l.id)}
-														>{l.libelle}{l.coproprietaire ? ` · ${l.coproprietaire}` : ''}</option
-													>
+													<option value={String(l.id)}>{libelleLotPourBadge(l)}</option>
 												{/each}
 											</select>
 										</div>
@@ -316,6 +326,19 @@
 											</label>
 											<p class="aide sous-case">Sinon, il est chez les copropriétaires du lot.</p>
 										</div>
+										{#if editChezLoc}
+											<!--  Retour du 23/09/2026 : « on ne peut pas rattacher le
+											      locataire ». Son compte, s'il en a un, le rend porteur. -->
+											<div class="field">
+												<label for="imp-locataire">Locataire</label>
+												<select id="imp-locataire" bind:value={editLocataire}>
+													<option value="">— sans compte —</option>
+													{#each comptes as u (u.id)}
+														<option value={String(u.id)}>{nomAffiche(u)}</option>
+													{/each}
+												</select>
+											</div>
+										{/if}
 										{#each modele.champsBooleens as c (c.cle)}
 											<div class="field imp-field-checkbox">
 												<label>
