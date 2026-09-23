@@ -17,7 +17,6 @@ from app.database import get_session
 from app.models.core import (
     CommentaireSondage,
     Idee,
-    Notification,
     PetiteAnnonce,
     ReponseCommunaute,
     Signalement,
@@ -29,6 +28,7 @@ from app.utils.noms import nom_affiche
 from app.utils.destinataires import membres_cs_ou_admin
 from app.utils.liens import lien_element, lien_sondage
 from app.utils.recuperer import ou_404
+from app.utils.cloche import sonner_systeme
 
 router = APIRouter(prefix="/signalements", tags=["signalements"])
 
@@ -128,14 +128,14 @@ def creer_signalement(
     cs_members = membres_cs_ou_admin(session)
     for m in cs_members:
         if m.id != user.id:
-            session.add(Notification(
+            sonner_systeme(session, "moderation",
                 destinataire_id=m.id, type="moderation",
                 titre="Nouveau signalement à modérer",
                 corps=f"{_CIBLE_LABELS[body.cible_type]} — {motif[:150]}",
                 # Le modérateur doit atterrir sur le contenu signalé, pas sur
                 # l'onglet Sondages par défaut (cf. flux.py, même correctif).
                 lien=_lien_cible(body.cible_type, body.cible_id),
-            ))
+            )
 
     session.commit()
     session.refresh(sig)

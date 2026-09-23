@@ -178,7 +178,8 @@ def test_les_notifications_IN_APP_gardent_leur_portee_plus_large():
     fin = source.index("_envoyer_email_cs_creation")
     boucle_in_app = source[debut:fin]
 
-    assert "Notification(" in boucle_in_app, "la boucle in-app a disparu du champ du test"
+    #  La cloche passe par sa porte depuis #1187 (`utils/cloche.sonner`).
+    assert "sonner(" in boucle_in_app, "la boucle in-app a disparu du champ du test"
     assert "deja_servies" not in boucle_in_app, (
         "la déduplication a gagné les notifications in-app : leur portée est "
         "volontairement plus large que celle des courriels."

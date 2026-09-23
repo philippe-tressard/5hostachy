@@ -11,7 +11,6 @@ from app.auth.deps import est_moderateur, get_current_user
 from app.database import get_session
 from app.models.core import (
     MessageTicket,
-    Notification,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -26,6 +25,7 @@ from .courriels import envoyer_email_externe
 from app.utils.destinataires import membres_cs_ou_admin
 from app.utils.noms import contexte_personne
 from app.utils.recuperer import ou_404
+from app.utils.cloche import sonner
 
 router = APIRouter()
 
@@ -84,13 +84,13 @@ def _prevenir(
         },
         destinataire_id=destinataire_id,
     )
-    session.add(Notification(
+    sonner(session,
         destinataire_id=destinataire_id,
         type="ticket_update",
         titre=titre_notif,
         corps=contenu[:200],
         lien=lien,
-    ))
+    )
 
 
 @router.post("/{ticket_id}/messages", response_model=MessageRead, status_code=201)

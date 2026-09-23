@@ -11,13 +11,30 @@
  */
 export const MON_BATIMENT = 'mon_batiment_mail';
 export const AUTRES_BATIMENTS = 'autres_batiments_mail';
+/** 🔔 La cloche, réglable comme le courriel depuis #1187 (23/09/2026). */
+export const MON_BATIMENT_APP = 'mon_batiment_app';
+export const AUTRES_BATIMENTS_APP = 'autres_batiments_app';
 
 /** Coché pour son propre bâtiment, décoché pour les autres : personne n'a
  *  jamais consenti à recevoir les e-mails d'ailleurs. */
 export const DEFAUTS_NOTIFS: Record<string, boolean> = {
 	[MON_BATIMENT]: true,
 	[AUTRES_BATIMENTS]: false,
+	//  La cloche sonnait pour tout : ses défauts le reproduisent — rien ne
+	//  disparaît sans un geste du résident.
+	[MON_BATIMENT_APP]: true,
+	[AUTRES_BATIMENTS_APP]: true,
 };
+
+/** Les deux canaux du profil, et leurs deux cases — une table, rendue une fois. */
+export const CANAUX_NOTIFS = [
+	{ titre: 'Notifications par e-mail', mon: MON_BATIMENT, autres: AUTRES_BATIMENTS },
+	{
+		titre: "Notifications dans l'application",
+		mon: MON_BATIMENT_APP,
+		autres: AUTRES_BATIMENTS_APP,
+	},
+] as const;
 
 /**
  * Les clés que l'utilisateur n'a **jamais réglées** — leur valeur est héritée.

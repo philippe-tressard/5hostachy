@@ -18,7 +18,7 @@ from sqlmodel import Session, select
 from app.auth.deps import est_rattache_au_lot, get_current_user
 from app.database import get_session
 from app.models.core import (
-    CommandeAcces, Notification, StatutAcces, StatutImport,
+    CommandeAcces, StatutAcces, StatutImport,
     Utilisateur, Lot,
 )
 from app.schemas import CommandeAccesCreate, CommandeAccesRead
@@ -29,6 +29,7 @@ from app.utils.noms import contexte_personne, nom_affiche
 from app.auth.appartenance import exiger_acces_du_porteur
 from app.utils.porteurs_acces import acces_de, lot_unique_de_nature, porteurs
 from app.utils.resolution_acces import exiger_code_libre, rattacher
+from app.utils.cloche import sonner
 
 router = APIRouter()
 
@@ -207,20 +208,19 @@ def creer_commande(
     lot = session.get(Lot, body.lot_id)
     lot_numero = lot.numero if lot else str(body.lot_id)
 
-    # Notifier CS
-    cs = session.exec(
-        select(Utilisateur).where(
-            Utilisateur.role.in_(["conseil_syndical", "admin"])
-        )
-    ).all()
-    for membre in cs:
-        session.add(Notification(
+    #  Notifier le CS — par ses RÔLES (`membres_cs_ou_admin`), et non par
+    #  `Utilisateur.role`, le rôle principal hérité : un conseiller dont le rôle
+    #  principal est « résident » n'était pas prévenu (relevé par #1187).
+    from app.utils.destinataires import membres_cs_ou_admin
+
+    for membre in membres_cs_ou_admin(session):
+        sonner(session,
             destinataire_id=membre.id,
             type="vigik",
             titre=f"Nouvelle demande de {body.type}",
             corps=f"{nom_affiche(user.prenom, user.nom)} — lot {lot_numero}",
             lien="/espace-cs",
-        ))
+        )
 
     # ── Email au CS ───────────────────────────────────────────────────────
     # `vigik_commande_recue` n'était envoyé par personne : le CS ne découvrait

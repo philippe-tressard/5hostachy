@@ -227,8 +227,8 @@
 
 		{#if avecNotificationCs}
 			<p class="aide sous-case">
-				ℹ️ Indépendamment de ces cases, le conseil syndical du périmètre est prévenu à la création —
-				chaque conseiller selon ce qu'il a réglé dans son profil.
+				ℹ️ En plus de ces cases, chacun est prévenu selon les réglages de son profil — dont le
+				conseil syndical du périmètre pour chaque nouvelle affaire.
 			</p>
 		{/if}
 

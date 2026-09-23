@@ -45,7 +45,22 @@ def _utilisateur(prefs: str | None = None, batiment_id: int | None = None) -> Ut
 
 def test_les_defauts_sont_recevoir_le_sien_pas_les_autres():
     """Personne n'a consenti aux autres bâtiments : le défaut ne peut pas être oui."""
-    assert DEFAUTS == {MON_BATIMENT: True, AUTRES_BATIMENTS: False}
+    assert (DEFAUTS[MON_BATIMENT], DEFAUTS[AUTRES_BATIMENTS]) == (True, False)
+
+
+def test_la_cloche_sonne_par_defaut_partout_et_se_regle_comme_le_courriel():
+    """#1187 : la cloche est réglable ; ses défauts reproduisent l'existant."""
+    from app.utils.preferences_mail import (
+        AUTRES_BATIMENTS_APP, MON_BATIMENT_APP, cloche_autorisee,
+    )
+
+    assert (DEFAUTS[MON_BATIMENT_APP], DEFAUTS[AUTRES_BATIMENTS_APP]) == (True, True)
+
+    class Compte:
+        id = 1
+        preferences_notifications = '{"mon_batiment_app": false}'
+
+    assert cloche_autorisee(Compte()) is False, "la préférence de la cloche n'est pas lue"
 
 
 def test_un_json_illisible_rend_les_defauts():
@@ -148,7 +163,11 @@ def test_le_site_emploie_exactement_les_memes_cles():
         pytest.fail(f"Fichier attendu introuvable : {source}")
     contenu = source.read_text(encoding="utf-8")
 
-    for nom, valeur in (("MON_BATIMENT", MON_BATIMENT), ("AUTRES_BATIMENTS", AUTRES_BATIMENTS)):
+    from app.utils.preferences_mail import AUTRES_BATIMENTS_APP, MON_BATIMENT_APP
+
+    for nom, valeur in (("MON_BATIMENT", MON_BATIMENT), ("AUTRES_BATIMENTS", AUTRES_BATIMENTS),
+                        ("MON_BATIMENT_APP", MON_BATIMENT_APP),
+                        ("AUTRES_BATIMENTS_APP", AUTRES_BATIMENTS_APP)):
         motif = rf"export const {nom} = '([^']+)'"
         trouve = re.search(motif, contenu)
         assert trouve, f"{nom} introuvable dans preferences.ts"
@@ -157,6 +176,8 @@ def test_le_site_emploie_exactement_les_memes_cles():
     #  Et les défauts, qui décident de ce que voit un compte neuf.
     assert re.search(rf"\[MON_BATIMENT\]:\s*{str(DEFAUTS[MON_BATIMENT]).lower()}", contenu)
     assert re.search(rf"\[AUTRES_BATIMENTS\]:\s*{str(DEFAUTS[AUTRES_BATIMENTS]).lower()}", contenu)
+    assert re.search(rf"\[MON_BATIMENT_APP\]:\s*{str(DEFAUTS[MON_BATIMENT_APP]).lower()}", contenu)
+    assert re.search(rf"\[AUTRES_BATIMENTS_APP\]:\s*{str(DEFAUTS[AUTRES_BATIMENTS_APP]).lower()}", contenu)
 
 
 def test_l_ecran_sait_dire_qu_un_reglage_est_HERITE():

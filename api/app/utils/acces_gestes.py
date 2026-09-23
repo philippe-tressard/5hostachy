@@ -18,11 +18,12 @@ from typing import Optional
 from sqlmodel import Session, select
 
 from app.models.copropriete import Lot
-from app.models.core import Notification, TicketEvolution, UserLot, Utilisateur
+from app.models.core import TicketEvolution, UserLot, Utilisateur
 from app.utils.acces_choix import acces_par_defaut
 from app.utils.acces_perimetre import acces_deduit
 from app.utils.perimetres import parse_json_perimetres, perimetre_label
 from app.utils.types_acces import TypeAcces
+from app.utils.cloche import sonner_systeme
 
 
 #  ── Ce que le badge ouvre, et ce qui en découle ────────────────────────────
@@ -113,11 +114,11 @@ def _prevenir_porteur(session: Session, porteur: Utilisateur,
     """
     perimetre = parse_json_perimetres(objet.perimetre_cible)
     portee = perimetre_label(perimetre) if perimetre else "non précisé"
-    session.add(Notification(
+    sonner_systeme(session, "sa_demande",
         destinataire_id=porteur.id,
         type=type_acces.cle,
         titre=f"{type_acces.libelle} enregistré à votre nom",
         corps=f"{objet.code} — accès : {portee}.",
         lien="/mon-lot",
-    ))
+    )
     session.commit()
