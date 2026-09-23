@@ -23,6 +23,7 @@
 	import { nomAffiche } from '$lib/noms';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
+	import { isAdmin } from '$lib/stores/auth';
 	import { confirmer } from '$lib/confirmation';
 	import { messageErreur } from '$lib/erreurs';
 	import {
@@ -97,6 +98,19 @@
 			() => modele.api.ignorer(id),
 			() => 'Ligne ignorée',
 		);
+	}
+
+	async function supprimer(id: number) {
+		const ok = await confirmer({
+			message: 'Supprimer cette ligne du fichier ? Le badge qu’elle aurait créé reste au parc.',
+			libelleConfirmer: 'Supprimer',
+			danger: true,
+		});
+		if (ok)
+			await geste(
+				() => modele.api.supprimer(id),
+				() => 'Ligne supprimée',
+			);
 	}
 
 	const remettreEnAttente = (id: number) =>
@@ -292,6 +306,16 @@
 											on:click={() => ignorer(imp.id)}>⊘</button
 										>
 									{/if}
+								{/if}
+								<!--  🔒 Supprimer : l'administrateur seul, comme toute suppression
+								      définitive (`ux-patterns` §8) — le 🗑️ vient en dernier. -->
+								{#if $isAdmin}
+									<button
+										class="btn-icon-danger"
+										aria-label="Supprimer cette ligne"
+										title="Supprimer la ligne"
+										on:click={() => supprimer(imp.id)}>🗑️</button
+									>
 								{/if}
 							</div>
 						</td>

@@ -55,7 +55,7 @@ from app.utils.acces_choix import codes_autorises, valider_acces
 from app.utils.acces_detachement import detacher_acces
 from app.utils.acces_gestes import _acces_json, _prevenir_porteur, _tracer_sur_ticket
 from app.utils.porteurs_acces import noms_des_porteurs
-from app.utils.resolution_acces import exiger_code_libre
+from app.utils.resolution_acces import exiger_code_libre, synchroniser_import
 from app.utils.dates_fr import date_courte
 from app.utils.perimetres import perimetre_label
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
@@ -227,6 +227,8 @@ def creer_acces_admin(
         ),
     )
     session.add(objet)
+    session.flush()
+    synchroniser_import(session, type_acces, objet)  # le parc complète l'import
     session.commit()
     session.refresh(objet)
 
@@ -279,6 +281,7 @@ def modifier_acces_admin(
         )
 
     session.add(objet)
+    synchroniser_import(session, type_acces, objet)  # le parc complète l'import
     session.commit()
     session.refresh(objet)
     _tracer_sur_ticket(session, ticket, user, type_acces, objet, "corrigé")

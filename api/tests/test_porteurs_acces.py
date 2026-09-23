@@ -23,56 +23,17 @@ from __future__ import annotations
 
 import pytest
 from fastapi import HTTPException
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import select
 
-from app.models.copropriete import Batiment, Lot
-from app.models.core import LotImport, StatutAcces, StatutImport, UserLot, Utilisateur
+from app.models.copropriete import Batiment
+from app.models.core import StatutAcces, StatutImport, UserLot
 from app.utils.lot_des_imports import trouveur_de_lot
 from app.utils.porteurs_acces import acces_de, ids_detenteurs, porteurs
 from app.utils.resolution_acces import exiger_code_libre, rattacher, rattacher_les_reconnues
 from app.utils.types_acces import TELECOMMANDE, VIGIK
-
-TYPES = [pytest.param(TELECOMMANDE, id="telecommande"), pytest.param(VIGIK, id="vigik")]
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
-
-
-def _compte(session, nom: str) -> Utilisateur:
-    u = Utilisateur(email=f"{nom.lower()}@exemple.fr", hashed_password="x", prenom="P", nom=nom)
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
-
-
-def _lot(session, type_acces, numero="12", batiment_id=None) -> Lot:
-    lot = Lot(numero=numero, type=type_acces.types_lot[0], batiment_id=batiment_id)
-    session.add(lot)
-    session.commit()
-    session.refresh(lot)
-    return lot
-
-
-def _lier(session, user, lot, type_lien="propriétaire"):
-    session.add(UserLot(user_id=user.id, lot_id=lot.id, type_lien=type_lien, actif=True))
-    session.commit()
-
-
-def _badge(session, type_acces, *, code="C1", lot=None, detenteur=None, chez_locataire=False,
-           statut=StatutAcces.actif):
-    objet = type_acces.modele(code=code, lot_id=lot.id if lot else None,
-                              user_id=detenteur.id if detenteur else None,
-                              chez_locataire=chez_locataire, statut=statut)
-    session.add(objet)
-    session.commit()
-    session.refresh(objet)
-    return objet
+from tests.aides_badges import (  # noqa: F401 — `session` est une fixture
+    TYPES, _badge, _bail, _compte, _copro_du_fichier, _ligne, _lier, _lot, session,
+)
 
 
 # ── 1. Le conjoint ──────────────────────────────────────────────────────────
@@ -168,15 +129,6 @@ def test_a_un_badge_ne_compte_pas_les_badges_PERDUS(session):
 
 # ── 5. Rattacher une ligne d'import ─────────────────────────────────────────
 
-def _ligne(session, type_acces, *, code="REF-1", lot=None, nom="DUPONT Jean", **extra):
-    ligne = type_acces.modele_import(nom_proprietaire=nom, statut=StatutImport.en_attente,
-                                     lot_id=lot.id if lot else None, **extra)
-    setattr(ligne, type_acces.colonne_code_import, code)
-    session.add(ligne)
-    session.commit()
-    session.refresh(ligne)
-    return ligne
-
 
 @pytest.mark.parametrize("type_acces", TYPES)
 def test_une_ligne_se_rattache_SANS_aucun_compte(session, type_acces):
@@ -255,13 +207,6 @@ def test_le_vigik_retrouve_son_lot_par_batiment_et_appartement(session):
     assert ligne.lot_id == lot.id
 
 
-def _copro_du_fichier(session, nom, *lots):
-    for lot in lots:
-        session.add(LotImport(numero=lot.numero, type_raw="PS", no_coproprietaire=nom,
-                              nom_coproprietaire=nom, lot_id=lot.id))
-    session.commit()
-
-
 def test_la_telecommande_retrouve_le_parking_de_son_coproprietaire(session):
     parking = _lot(session, TELECOMMANDE, "450")
     _copro_du_fichier(session, "M. MARTIN-LEROY Jean", parking)
@@ -331,137 +276,3 @@ def test_le_conjoint_peut_signaler_la_perte_du_badge_du_menage(session):
     with pytest.raises(HTTPException) as refus:
         exiger_acces_du_porteur(session, VIGIK, badge.id, voisin)
     assert refus.value.status_code == 404
-
-
-# ── 9. Le bail : un seul sens de « chez le locataire » (V3) ─────────────────
-
-def _bail(session, lot, bailleur, locataire):
-    from datetime import date
-
-    from app.models.core import LocationBail
-
-    bail = LocationBail(lot_id=lot.id, bailleur_id=bailleur.id, locataire_id=locataire.id,
-                        date_entree=date(2026, 9, 1))
-    session.add(bail)
-    session.commit()
-    session.refresh(bail)
-    return bail
-
-
-def test_remettre_par_le_bail_met_le_badge_dans_la_main_du_locataire(session):
-    """🔴 Le bail laissait `user_id` au bailleur, l'import le donnait au locataire."""
-    from app.routers.bailleur.acces import TransfertAccesIn, recuperer_acces, transferer_acces
-
-    lot = _lot(session, VIGIK)
-    bailleur, locataire = _compte(session, "Bailleur"), _compte(session, "Locataire")
-    _lier(session, bailleur, lot, "bailleur")
-    badge = _badge(session, VIGIK, lot=lot, detenteur=bailleur)
-    bail = _bail(session, lot, bailleur, locataire)
-
-    transferer_acces(bail.id, TransfertAccesIn(vigik_ids=[badge.id]), user=bailleur, session=session)
-    session.refresh(badge)
-    assert (badge.chez_locataire, badge.user_id) == (True, locataire.id)
-    #  Le locataire du BAIL le porte, sans lien `user_lot` ; le bailleur le voit toujours.
-    assert porteurs(session, badge) == {bailleur.id, locataire.id}
-
-    recuperer_acces(bail.id, TransfertAccesIn(), user=bailleur, session=session)
-    session.refresh(badge)
-    assert (badge.chez_locataire, badge.user_id, badge.bail_id) == (False, bailleur.id, None)
-
-
-def test_cas_zero_le_badge_d_un_autre_lot_ne_se_transfere_pas(session):
-    from app.routers.bailleur.acces import TransfertAccesIn, transferer_acces
-
-    lot, autre = _lot(session, VIGIK, "1"), _lot(session, VIGIK, "2")
-    bailleur, locataire = _compte(session, "Bailleur"), _compte(session, "Locataire")
-    _lier(session, bailleur, lot, "bailleur")
-    etranger = _badge(session, VIGIK, code="E", lot=autre)
-    bail = _bail(session, lot, bailleur, locataire)
-
-    assert transferer_acces(bail.id, TransfertAccesIn(vigik_ids=[etranger.id]),
-                            user=bailleur, session=session) == []
-    session.refresh(etranger)
-    assert etranger.chez_locataire is False
-
-
-# ── 10. Une commande acceptée pose ses badges (V3) ──────────────────────────
-
-def test_une_commande_acceptee_avec_ses_codes_pose_les_badges_sur_le_lot(session):
-    """🔴 Elle n'en créait aucun : le badge remis n'existait nulle part."""
-    from fastapi import BackgroundTasks
-
-    from app.models.core import CommandeAcces
-    from app.routers.admin.acces import CommandeAction, traiter_commande
-
-    lot = _lot(session, VIGIK)
-    anne, paul, cs = _compte(session, "Anne"), _compte(session, "Paul"), _compte(session, "Cs")
-    _lier(session, anne, lot)
-    _lier(session, paul, lot)
-    cmd = CommandeAcces(user_id=anne.id, lot_id=lot.id, type="vigik")
-    session.add(cmd)
-    session.commit()
-
-    traiter_commande(cmd.id, CommandeAction(action="accepter", codes=["N-1", " N-2 ", ""]),
-                     BackgroundTasks(), session=session, admin=cs)
-
-    badges = session.exec(select(VIGIK.modele)).all()
-    assert sorted(b.code for b in badges) == ["N-1", "N-2"]
-    assert all(b.lot_id == lot.id for b in badges)
-    assert len(acces_de(session, VIGIK, paul.id)) == 2, "le conjoint ne voit pas les badges commandés"
-
-
-def test_cas_zero_une_commande_acceptee_sans_code_ne_cree_rien(session):
-    from fastapi import BackgroundTasks
-
-    from app.models.core import CommandeAcces
-    from app.routers.admin.acces import CommandeAction, traiter_commande
-
-    lot = _lot(session, VIGIK)
-    anne, cs = _compte(session, "Anne"), _compte(session, "Cs")
-    cmd = CommandeAcces(user_id=anne.id, lot_id=lot.id, type="vigik")
-    session.add(cmd)
-    session.commit()
-
-    traiter_commande(cmd.id, CommandeAction(action="accepter"), BackgroundTasks(), session=session, admin=cs)
-    assert session.exec(select(VIGIK.modele)).first() is None
-
-
-# ── 11. Retours du 23/09/2026 : PARIS, STOCK, l'accès, le nom affiché ──────
-
-def test_un_nom_de_famille_seul_designe_le_bon_copropriétaire(session):
-    """« PARIS » est un propriétaire, pas la BANQUE NATIONALE DE PARIS."""
-    _copro_du_fichier(session, "BANQUE NATIONALE DE PARIS", _lot(session, TELECOMMANDE, "460"))
-    francis = _lot(session, TELECOMMANDE, "461")
-    _copro_du_fichier(session, "PARIS FRANCIS", francis)
-    ligne = _ligne(session, TELECOMMANDE, nom="PARIS", code="T4")
-    assert trouveur_de_lot(TELECOMMANDE, session)(ligne) is True
-    assert ligne.lot_id == francis.id
-
-
-def test_une_ligne_STOCK_entre_au_parc_sans_lot(session):
-    ligne = _ligne(session, TELECOMMANDE, nom="STOCK", code="S-1")
-    assert rattacher_les_reconnues(TELECOMMANDE, session)["rattachees"] == 1
-    objet = session.get(TELECOMMANDE.modele, ligne.telecommande_id)
-    assert objet.lot_id is None and objet.user_id is None
-
-
-def test_le_rattachement_deduit_ce_qu_ouvre_le_vigik(session):
-    """🔴 Il ne le posait pas : colonne « Accès » vide sur tout le parc importé."""
-    bat = Batiment(numero="3", copropriete_id=1)
-    session.add(bat)
-    session.commit()
-    lot = _lot(session, VIGIK, "110", batiment_id=bat.id)
-    objet = rattacher(VIGIK, _ligne(session, VIGIK, lot=lot, code="V-9"), session)
-    assert objet.perimetre_cible == f'["bat:{bat.id}"]'
-
-
-def test_sans_compte_le_parc_nomme_le_copropriétaire_du_fichier(session):
-    from app.utils.porteurs_acces import noms_des_porteurs
-
-    lot = _lot(session, VIGIK, "205")
-    session.add(LotImport(numero="205", type_raw="AP", nom_coproprietaire="DURAND Paul", lot_id=lot.id))
-    session.commit()
-    badge = _badge(session, VIGIK, lot=lot)
-    stock = _badge(session, VIGIK, code="ST")
-    noms = noms_des_porteurs(session, [badge, stock])
-    assert noms == {badge.id: "DURAND Paul (sans compte)", stock.id: "En stock"}

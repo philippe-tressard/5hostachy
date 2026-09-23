@@ -106,6 +106,42 @@ def rattacher(type_acces, imp, session: Session):
     return objet
 
 
+def synchroniser_import(session: Session, type_acces, objet) -> None:
+    """Le PARC corrige, l'IMPORT suit — demandé le 23/09/2026.
+
+    « Est-ce que cette vue enrichie peut compléter les imports, notamment quand
+    une modification manuelle est faite ? » Le sens inverse existait déjà : une
+    ligne corrigée à l'import redescend sur son badge (`socle_imports.patch`).
+    Celui-ci manquait — un badge saisi ou corrigé au parc laissait sa ligne du
+    fichier « en attente », et « Rattacher » l'aurait proposée une seconde fois.
+
+    - la ligne qui porte le CODE du badge s'y rattache, sur son lot ;
+    - une ligne rattachée à ce badge sous un AUTRE code (le code a été corrigé
+      au parc) est libérée : elle ne désigne plus cet objet.
+
+    Une ligne ignorée le reste : c'est une décision prise. Sans `commit`.
+    """
+    modele = type_acces.modele_import
+    lien = getattr(modele, type_acces.colonne_import)
+    for ligne in session.exec(select(modele).where(lien == objet.id)).all():
+        if getattr(ligne, type_acces.colonne_code_import) != objet.code:
+            setattr(ligne, type_acces.colonne_import, None)
+            ligne.statut = (StatutImport.proprietaire_lie if ligne.user_proprietaire_id
+                            else StatutImport.en_attente)
+            ligne.resolu_le = None
+            session.add(ligne)
+    for ligne in session.exec(select(modele).where(
+        type_acces.champ_code_import == objet.code, modele.statut != StatutImport.ignore,
+    )).all():
+        setattr(ligne, type_acces.colonne_import, objet.id)
+        ligne.lot_id = objet.lot_id
+        ligne.chez_locataire = objet.chez_locataire
+        if ligne.statut != StatutImport.resolu:
+            ligne.statut = StatutImport.resolu
+            ligne.resolu_le = datetime.utcnow()
+        session.add(ligne)
+
+
 def rattacher_les_reconnues(type_acces, session: Session) -> dict:
     """Le rattachement en masse : toutes les lignes dont le lot est connu."""
     modele = type_acces.modele_import
@@ -123,4 +159,7 @@ def rattacher_les_reconnues(type_acces, session: Session) -> dict:
     return {"rattachees": rattachees, "restantes": len(lignes) - rattachees}
 
 
-__all__ = ["en_stock", "exiger_code_libre", "peut_se_rattacher", "rattacher", "rattacher_les_reconnues"]
+__all__ = [
+    "en_stock", "exiger_code_libre", "peut_se_rattacher", "rattacher",
+    "rattacher_les_reconnues", "synchroniser_import",
+]

@@ -131,6 +131,8 @@ export const acces = {
 	resoudreImportVigik: (id: number) =>
 		api.post<any>(`/acces/admin/imports-vigik/${id}/resoudre`, {}),
 	ignorerImportVigik: (id: number) => api.post<any>(`/acces/admin/imports-vigik/${id}/ignorer`, {}),
+	/** 🔒 Administrateur : une ligne erronée disparaît, son badge éventuel reste. */
+	supprimerImportVigik: (id: number) => api.delete(`/acces/admin/imports-vigik/${id}`),
 	remettreEnAttenteImportVigik: (id: number) =>
 		api.post<any>(`/acces/admin/imports-vigik/${id}/remettre-en-attente`, {}),
 	// CS/Admin — import télécommandes
@@ -144,6 +146,7 @@ export const acces = {
 	patchImportTC: (id: number, data: unknown) => api.patch<any>(`/acces/admin/imports/${id}`, data),
 	resoudreImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/resoudre`, {}),
 	ignorerImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/ignorer`, {}),
+	supprimerImportTC: (id: number) => api.delete(`/acces/admin/imports/${id}`),
 	remettreEnAttenteImportTC: (id: number) =>
 		api.post<any>(`/acces/admin/imports/${id}/remettre-en-attente`, {}),
 };

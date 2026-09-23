@@ -108,6 +108,7 @@
 | 19 | POST | `/acces/admin/imports/{import_id}/resoudre` | Rattache la télécommande à son LOT — plus aucun compte exigé (#1194) | CS/Admin |
 | 20 | POST | `/acces/admin/imports/{import_id}/ignorer` | Ignorer un import TC | CS/Admin |
 | 21 | POST | `/acces/admin/imports/{import_id}/remettre-en-attente` | Remettre import ignoré en attente | CS/Admin |
+| 21 bis | DELETE | `/acces/admin/imports/{import_id}` | Supprimer une ligne erronée — le badge éventuel reste au parc | Admin |
 | 22 | POST | `/acces/admin/imports/{import_id}/refuser-locataire` | Locataire refuse la TC | CS/Admin |
 | 23 | GET | `/acces/admin/imports/stats` | Statistiques imports TC | CS/Admin |
 | 24 | POST | `/acces/admin/imports-vigik/upload` | Upload Excel vigiks (staging) | CS/Admin |
@@ -120,6 +121,7 @@
 | 29 | POST | `/acces/admin/imports-vigik/{import_id}/resoudre` | Rattache le Vigik à son LOT — plus aucun compte exigé (#1194) | CS/Admin |
 
 | 30 | POST | `/acces/admin/imports-vigik/{import_id}/ignorer` | Ignorer un import vigik | CS/Admin |
+| 30 bis | DELETE | `/acces/admin/imports-vigik/{import_id}` | Supprimer une ligne erronée — le badge éventuel reste au parc | Admin |
 
 ---
 
