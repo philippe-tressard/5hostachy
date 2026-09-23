@@ -138,6 +138,7 @@ gh pr create --base main --head dev …
 gh pr checks <n> --watch          # les 5 checks REQUIS, pas un de moins
 gh pr merge <n> --squash --delete-branch
 git fetch --prune && git checkout -B dev origin/main
+SKIP_PRECHECK=1 git push -u origin dev   # recrée `dev` distante (piège 2)
 ```
 
 ⚠️ **Trois pièges, tous rencontrés le 28/08 :**
@@ -145,9 +146,14 @@ git fetch --prune && git checkout -B dev origin/main
 1. `--delete-branch` supprime aussi la branche **locale** et bascule sur `main`.
    Committer ensuite sans regarder `git branch --show-current` met le lot suivant
    sur `main`, où le push est refusé. Recréer `dev` **avant** de committer.
-2. `origin/dev` **n'existe plus** après la fusion. Un `git fetch` sans `--prune`
-   laisse une ref fantôme, et `--force-with-lease` échoue alors en « stale info »
-   sur ce qui n'est en réalité qu'une **création** de branche.
+2. `origin/dev` **n'existe plus** après la fusion — et ce n'est **pas**
+   `--delete-branch` : le dépôt a `delete_branch_on_merge = true`, qui supprime
+   la branche source de toute PR fusionnée (mesuré le 22/09 en fusionnant sans
+   l'option, #1140). Un `git fetch` sans `--prune` laisse une ref fantôme, et
+   `--force-with-lease` échoue alors en « stale info » sur ce qui n'est en
+   réalité qu'une **création** de branche. La recréer par un push simple, sous
+   `SKIP_PRECHECK=1` : le sha de squash n'a jamais été pré-checké, et le hook
+   refuserait un commit que la CI de la PR vient de valider.
 3. **La fusion n'est pas le déploiement.** `auto-deploy.sh` fait le `git pull`
    **puis** le build : entre les deux, les points **12** et **18** échouent
    légitimement — le code est à jour, l'image ne l'est pas encore. Attendre la

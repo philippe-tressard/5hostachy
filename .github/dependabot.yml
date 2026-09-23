@@ -129,16 +129,10 @@ updates:
       - dependency-name: "@sveltejs/vite-plugin-svelte"
         update-types: ["version-update:semver-major"]
       #
-      #  ── Tiptap 2 → 3 : une migration, pas un bump ────────────────────────
-      #  `@tiptap/extension-placeholder@3.29.2` exige `@tiptap/extensions`
-      #  épinglé à l'EXACT `3.29.2` — un paquet qui n'est même pas dans nos
-      #  dépendances aujourd'hui. Passer en 3 suppose donc d'ajouter ce paquet
-      #  et de déplacer core / starter-kit / underline ensemble : c'est un
-      #  chantier à mener, pas une PR à relire. Le groupe `tiptap` ci-dessus
-      #  reste utile le jour où on le fera.
-      #  LEVÉE : le jour où la migration tiptap 3 est décidée et planifiée.
-      - dependency-name: "@tiptap/*"
-        update-types: ["version-update:semver-major"]
+      #  ── Tiptap 2 → 3 : LEVÉE (23/09/2026, #1161) ─────────────────────────
+      #  La migration est faite (`@tiptap/*` en ^3.31) : la règle ne protégeait
+      #  plus rien et aurait masqué la majeure suivante (3 → 4). Le groupe
+      #  `tiptap` ci-dessus garde les paquets ensemble.
       #
       #  ── TypeScript 7 : refusé par SvelteKit ──────────────────────────────
       #  `@sveltejs/kit@2.70.2` déclare `typescript: "^5.3.3 || ^6.0.0"`.
