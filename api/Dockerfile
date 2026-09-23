@@ -41,6 +41,15 @@ COPY . .
 #  seule, sur les deux nœuds, sans geste manuel sur une base en production.
 RUN useradd --system --uid 10001 --shell /usr/sbin/nologin app
 
+#  Un cache INSCRIPTIBLE pour Fontconfig (#1066). `useradd --system` ne crée pas
+#  de répertoire personnel, et `setpriv` garde HOME=/root, illisible pour `app` :
+#  WeasyPrint écrivait donc « Fontconfig error: No writable cache directories »
+#  quinze fois à chaque démarrage. Une variable d'environnement de l'image, et
+#  non de `start.sh` : l'enfant `spawn` du rendu PDF (`utils/pdf_rendu.py`)
+#  hérite de l'environnement, pas des gestes du script qui l'a lancé.
+ENV XDG_CACHE_HOME=/app/.cache
+RUN mkdir -p /app/.cache && chown app:app /app/.cache
+
 # Répertoires de données
 RUN mkdir -p /app/data /app/uploads /backups     && chown -R app:app /app/data /app/uploads /backups
 
