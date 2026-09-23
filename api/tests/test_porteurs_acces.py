@@ -424,3 +424,44 @@ def test_cas_zero_une_commande_acceptee_sans_code_ne_cree_rien(session):
 
     traiter_commande(cmd.id, CommandeAction(action="accepter"), BackgroundTasks(), session=session, admin=cs)
     assert session.exec(select(VIGIK.modele)).first() is None
+
+
+# ── 11. Retours du 23/09/2026 : PARIS, STOCK, l'accès, le nom affiché ──────
+
+def test_un_nom_de_famille_seul_designe_le_bon_copropriétaire(session):
+    """« PARIS » est un propriétaire, pas la BANQUE NATIONALE DE PARIS."""
+    _copro_du_fichier(session, "BANQUE NATIONALE DE PARIS", _lot(session, TELECOMMANDE, "460"))
+    francis = _lot(session, TELECOMMANDE, "461")
+    _copro_du_fichier(session, "PARIS FRANCIS", francis)
+    ligne = _ligne(session, TELECOMMANDE, nom="PARIS", code="T4")
+    assert trouveur_de_lot(TELECOMMANDE, session)(ligne) is True
+    assert ligne.lot_id == francis.id
+
+
+def test_une_ligne_STOCK_entre_au_parc_sans_lot(session):
+    ligne = _ligne(session, TELECOMMANDE, nom="STOCK", code="S-1")
+    assert rattacher_les_reconnues(TELECOMMANDE, session)["rattachees"] == 1
+    objet = session.get(TELECOMMANDE.modele, ligne.telecommande_id)
+    assert objet.lot_id is None and objet.user_id is None
+
+
+def test_le_rattachement_deduit_ce_qu_ouvre_le_vigik(session):
+    """🔴 Il ne le posait pas : colonne « Accès » vide sur tout le parc importé."""
+    bat = Batiment(numero="3", copropriete_id=1)
+    session.add(bat)
+    session.commit()
+    lot = _lot(session, VIGIK, "110", batiment_id=bat.id)
+    objet = rattacher(VIGIK, _ligne(session, VIGIK, lot=lot, code="V-9"), session)
+    assert objet.perimetre_cible == f'["bat:{bat.id}"]'
+
+
+def test_sans_compte_le_parc_nomme_le_copropriétaire_du_fichier(session):
+    from app.utils.porteurs_acces import noms_des_porteurs
+
+    lot = _lot(session, VIGIK, "205")
+    session.add(LotImport(numero="205", type_raw="AP", nom_coproprietaire="DURAND Paul", lot_id=lot.id))
+    session.commit()
+    badge = _badge(session, VIGIK, lot=lot)
+    stock = _badge(session, VIGIK, code="ST")
+    noms = noms_des_porteurs(session, [badge, stock])
+    assert noms == {badge.id: "DURAND Paul (sans compte)", stock.id: "En stock"}

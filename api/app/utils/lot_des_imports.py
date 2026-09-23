@@ -23,8 +23,9 @@ La télécommande n'en avait aucune, faute de colonnes.
 
 Un nom qui désigne deux copropriétaires ne rattache rien : la ligne reste à
 préciser à l'écran. Le nom COMPLET départage d'abord — « DUBREUIL FRANCOIS »
-parmi trois DUBREUIL —, puis un nom inclus dans un seul, puis un mot commun à
-un seul. Un badge rattaché au mauvais copropriétaire montrerait son code aux
+parmi trois DUBREUIL —, puis le NOM DE FAMILLE (le premier mot : « PARIS »
+désigne « PARIS Francis » et non la « BANQUE NATIONALE DE PARIS », signalé le
+23/09/2026), puis un nom inclus dans un seul, puis un mot commun à un seul. Un badge rattaché au mauvais copropriétaire montrerait son code aux
 voisins.
 
 Plusieurs PARKINGS, en revanche, ne bloquent plus (arbitré le 23/09/2026 :
@@ -58,6 +59,14 @@ def _mots(nom: str | None) -> set[str]:
     return {m for m in _cle_de_nom(nom).split() if len(m) >= 3 and m not in _MOTS_VIDES}
 
 
+def _famille(nom: str | None) -> str:
+    """Le nom de famille d'un fichier du syndic : son premier mot significatif."""
+    for m in _cle_de_nom(nom).split():
+        if len(m) >= 3 and m not in _MOTS_VIDES:
+            return m
+    return ""
+
+
 def _par_adresse(session: Session) -> Callable[[object], int | None]:
     """Vigik : le lot par son bâtiment et son appartement."""
     from app.utils.import_vigiks import _build_lot_index
@@ -78,11 +87,13 @@ def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int
     numeros = {lot.id: lot.numero for lot in session.exec(select(Lot)).all()}
     lots_de: dict[str, set[int]] = defaultdict(set)
     mots_de: dict[str, set[str]] = {}
+    famille_de: dict[str, str] = {}
     for li in session.exec(select(LotImport).where(LotImport.lot_id != None)).all():  # noqa: E711
         copro = li.no_coproprietaire or li.nom_coproprietaire
         if not copro:
             continue
         mots_de.setdefault(copro, _mots(li.nom_coproprietaire))
+        famille_de.setdefault(copro, _famille(li.nom_coproprietaire))
         lots_de[copro].add(li.lot_id)
 
     def premier(lots: set[int]) -> int | None:
@@ -94,10 +105,17 @@ def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int
         mots = _mots(imp.nom_proprietaire)
         if not mots:
             return None
+        famille = _famille(imp.nom_proprietaire)
         #  Du plus sûr au plus large ; le premier palier qui désigne UN
         #  copropriétaire l'emporte, un palier ambigu arrête la recherche.
-        for garder in (lambda m: m == mots, lambda m: mots <= m, lambda m: bool(m & mots)):
-            candidats = [c for c, m in mots_de.items() if garder(m)]
+        paliers = (
+            lambda c: mots_de[c] == mots,
+            lambda c: len(mots) == 1 and famille_de[c] == famille,
+            lambda c: mots <= mots_de[c],
+            lambda c: bool(mots_de[c] & mots),
+        )
+        for garder in paliers:
+            candidats = [c for c in mots_de if garder(c)]
             if len(candidats) == 1:
                 return premier(lots_de[candidats[0]])
             if candidats:

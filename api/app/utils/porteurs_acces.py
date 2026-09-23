@@ -113,6 +113,36 @@ def acces_de(session: Session, type_acces, user_id: int) -> list:
     return [o for o in objets if user_id in par_objet[o.id]]
 
 
+def noms_des_porteurs(session: Session, objets: Iterable) -> dict[int, str]:
+    """`{id de l'objet: ce que la colonne « Porteurs » affiche}`.
+
+    Les comptes porteurs d'abord. Sans compte, le copropriétaire tel que le
+    FICHIER des lots le nomme, « (sans compte) » — c'était un tiret, sur la
+    plupart des badges importés (signalé le 23/09/2026). Sans lot ni
+    porteur : « En stock ».
+    """
+    from app.models.core import LotImport, Utilisateur
+    from app.utils.noms import nom_affiche
+
+    objets = list(objets)
+    par_objet = porteurs_par_acces(session, objets)
+    fichier: dict[int, str] = {}
+    for li in session.exec(select(LotImport).where(LotImport.lot_id != None)).all():  # noqa: E711
+        if li.nom_coproprietaire:
+            fichier.setdefault(li.lot_id, li.nom_coproprietaire)
+    noms: dict[int, str] = {}
+    for o in objets:
+        comptes = [session.get(Utilisateur, uid) for uid in sorted(par_objet[o.id])]
+        affiches = [nom_affiche(u.prenom, u.nom) for u in comptes if u]
+        if affiches:
+            noms[o.id] = ", ".join(affiches)
+        elif o.lot_id and o.lot_id in fichier:
+            noms[o.id] = f"{fichier[o.lot_id]} (sans compte)"
+        else:
+            noms[o.id] = "—" if o.lot_id else "En stock"
+    return noms
+
+
 def lot_unique_de_nature(session: Session, type_acces, user_id: int) -> int | None:
     """Le lot de cette personne où va ce badge, s'il n'y en a qu'UN de sa nature.
 
@@ -142,4 +172,4 @@ def ids_detenteurs(session: Session, type_acces) -> set[int]:
     return ids
 
 
-__all__ = ["acces_de", "copros_par_lot", "ids_detenteurs", "lot_unique_de_nature", "porteurs", "porteurs_par_acces"]
+__all__ = ["acces_de", "copros_par_lot", "noms_des_porteurs", "ids_detenteurs", "lot_unique_de_nature", "porteurs", "porteurs_par_acces"]
