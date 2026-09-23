@@ -213,6 +213,9 @@
 
 	.pastille.en-tete {
 		grid-column: 1 / -1;
+		/*  Pleine ligne : la borne des pastilles à sous-texte (11 rem, plus bas)
+		    ne la concerne pas — elle la réduisait à une vignette. */
+		max-width: none;
 		border: 1.5px solid var(--color-info);
 	}
 	.pastille.en-tete:not(.active) {

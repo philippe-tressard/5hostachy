@@ -123,9 +123,6 @@ export const TOLERANCES = {
 		'charte habille une icône nue',
 	'lib/components/ActionsMembre.svelte::btn-icon-edit':
 		'le crayon est en couleur primaire — il est l’action principale de la rangée',
-	'lib/components/ChampSaisiPour.svelte::tab-btn':
-		'onglets ENCADRÉS et non soulignés : boutons de bascule dans un champ, pas la ' +
-		'barre d’onglets d’une page',
 
 	//  ── Divers, chacun avec sa raison ────────────────────────────────────────
 	'lib/components/ImageUpload.svelte::spinner':

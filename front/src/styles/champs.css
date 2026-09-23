@@ -43,8 +43,12 @@
     ⚠️ La casse est POSÉE PAR LE STYLE, jamais tapée : `TITRE` écrit en dur
     serait épelé lettre à lettre par certains lecteurs d'écran, et le jour où
     la règle change il faudrait rouvrir chaque écran. Même geste que
-    `.section-titre`, qui le fait depuis toujours. */
-.field label {
+    `.section-titre`, qui le fait depuis toujours.
+
+    ⚠️ `:not(.pastille)` (23/09/2026) : une pastille RADIO est un `<label>`, et
+    la règle la passait en capitales — « EN MON NOM » dans « Au nom de »,
+    signalé à l'écran. Une pastille est une valeur, pas un libellé de champ. */
+.field label:not(.pastille) {
 	font-size: 0.875rem;
 	font-weight: 500;
 	color: var(--color-text);
@@ -86,8 +90,11 @@
     ⚠️ Une section à UN seul champ n'a pas de libellé de champ : son titre EST
     le libellé (`SectionFormulaire`, `pour=`). La section 1 l'oubliait dans sept
     formulaires — d'où `SectionTitre`. */
+/*  Même typographie pour le libellé DEVANT une rangée de filtres (23/09/2026) :
+    il nomme un groupe comme un titre de section nomme ses champs. */
 .section-formulaire .field > label,
-.section-formulaire .libelle-groupe {
+.section-formulaire .libelle-groupe,
+.libelle-groupe.libelle-devant {
 	font-size: 0.72rem;
 	font-weight: 500;
 	color: var(--color-text-muted);

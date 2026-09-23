@@ -1,7 +1,7 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
-	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import FiltresAffaires from '$lib/components/FiltresAffaires.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { onMount } from 'svelte';
 	import { revelerCible } from '$lib/deepLink';
@@ -19,12 +19,7 @@
 	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
-	import {
-		OPTIONS_FILTRE_CATEGORIE,
-		OPTIONS_FILTRE_NATURE,
-		estActualite,
-		statutsPresents,
-	} from '$lib/tickets';
+	import { OPTIONS_FILTRE_NATURE, estActualite, statutsPresents } from '$lib/tickets';
 
 	$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
@@ -382,38 +377,14 @@
 
 <AvertissementUrgence />
 
-<!--  🔴 DEUX rangées écrites à la main, soit la deuxième et la troisième
-      écriture du motif « choisir une entrée d'une liste courte » —
-      `ChoixPastilles` (#491) le porte, avec l'entrée qui ne choisit rien, le
-      défilement horizontal et le libellé de groupe accessible.
-
-      ⚠️ Le libellé N'EST PAS un `<label>` : une rangée de `<button>` n'est pas
-      labelable, et un `for` posé dessus n'associe rien **en silence**
-      (`ux-patterns` §9 septies). Le composant pose `role="group"` +
-      `aria-labelledby` — c'est une des raisons d'être de ce composant, et elle
-      se perdait à chaque recopie. -->
-<div class="filters">
-	<ChoixPastilles
-		options={OPTIONS_FILTRE_NATURE}
-		bind:valeur={filterNature}
-		tous="Tous"
-		libelle="Filtrer les affaires par nature"
-	/>
-	<span class="filter-sep"></span>
-	<ChoixPastilles
-		options={optionsStatut.map((s) => ({ val: s.value, label: s.label }))}
-		bind:valeur={filterStatut}
-		tous="Tous"
-		libelle="Filtrer les affaires par état"
-	/>
-	<span class="filter-sep"></span>
-	<ChoixPastilles
-		options={OPTIONS_FILTRE_CATEGORIE}
-		bind:valeur={filterCat}
-		tous="Toutes"
-		libelle="Filtrer les affaires par catégorie"
-	/>
-</div>
+<!--  Nature · Suivi · Catégorie : la barre et sa mise en page vivent dans
+      `FiltresAffaires` ; la page ne garde que les valeurs retenues. -->
+<FiltresAffaires
+	{optionsStatut}
+	bind:nature={filterNature}
+	bind:statut={filterStatut}
+	bind:categorie={filterCat}
+/>
 
 <!--  Le formulaire s'ouvre APRÈS l'avertissement et les filtres : `ux-patterns`
       §0 ter, signalé ici le 12/09/2026. -->
@@ -462,21 +433,6 @@
 	/*  `.etat-chargement` a disparu le 06/09/2026 (#796) : `EtatListe` porte le
 	    message de chargement, et sa mise en forme avec. svelte-check a signalé le
 	    sélecteur orphelin à la compilation suivante. */
-
-	/* Filtres (style identique à calendrier) */
-	/*  `.filters` vient d'`app.css` — sa marge basse et son `align-items` y sont
-	    remontés (#446). Ne restent ici que le groupe et le séparateur, qui n'ont
-	    pas d'équivalent ailleurs. */
-	/*  🔴 `.filter-group` a disparu le 06/09/2026 (#795) : `ChoixPastilles` porte
-	    lui-même son groupe, son défilement et son libellé accessible. Le
-	    sélecteur est resté orphelin le temps d'une compilation — svelte-check
-	    l'a dit tout de suite, et c'est la bonne façon d'échouer. */
-	.filter-sep {
-		width: 1px;
-		height: 1.2rem;
-		background: var(--color-border);
-		margin: 0 0.3rem;
-	}
 
 	/*  Le badge « ⚡ Urgente » réécrivait ici `.badge-orange` en `:global(…)`, donc
 	    pour tout le site une fois la feuille de cette page chargée : sa teinte
