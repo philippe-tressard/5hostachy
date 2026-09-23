@@ -26,7 +26,7 @@ from .commun import (
     SondageCreate, SondageRead, SondageUpdate,
 )
 from app.utils.communaute import exiger_acces
-from app.utils.liens import base_site, nom_site
+from app.utils.liens import base_site, nom_site, lien_sondage
 from app.utils.noms import contexte_personne
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.recuperer import ou_404
@@ -192,7 +192,7 @@ def create_sondage(
             type="sondage",
             titre=f"📊 Nouveau sondage : {s.question[:60]}",
             corps="Votre avis compte — participez au sondage.",
-            lien=f"/sondages/{s.id}",
+            lien=lien_sondage(s.id),
         ))
 
     session.commit()
@@ -230,6 +230,9 @@ def create_sondage(
                     "id": s.id,
                     "titre": s.question,
                     "contenu": s.description or "",
+                    #  Le bouton du gabarit : il menait à `/actualites#pub-<id du
+                    #  SONDAGE>`, c'est-à-dire à une autre actualité (23/09/2026).
+                    "lien": lien_sondage(s.id),
                 },
                 "auteur": contexte_personne(user),
                 "residence": {"nom": nom_site(cfg_map.get("site_nom"))},

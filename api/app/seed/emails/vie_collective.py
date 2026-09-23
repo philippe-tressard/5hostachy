@@ -97,7 +97,7 @@ MODELES = [
      + "{% endif %}"
      + _encart_publication(initiale_conditionnelle=True)
      + _FIL_EVOLUTIONS
-     + bouton("{{ app.url }}/actualites#pub-{{ publication.id }}", "Voir la publication",
+     + bouton("{{ app.url }}{{ publication.lien }}", "Voir la publication",
               marge=MARGE_BOUTON_SELON_COMMENTAIRE),
      True),
     ("publication_externe", "Notification publication (email externe)",

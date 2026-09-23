@@ -10,7 +10,7 @@ from sqlalchemy import func
 from sqlmodel import select
 
 from app.models.core import Idee, OptionSondage, PetiteAnnonce, Sondage, VoteIdee, VoteSondage
-from app.utils.liens import lien_element
+from app.utils.liens import lien_element, lien_sondage
 from app.utils.montants import montant_fr
 from app.utils.photos import parse_photos
 from app.utils.visibility import sondage_accessible, sondage_clos
@@ -69,7 +69,7 @@ def _collecter_sondages(ctx: ContexteFlux) -> list[FluxItem]:
                 detail=_pluriel_votes(nb_votants) + echeance,
                 icon="📊",
                 badges=["En cours"],
-                lien=f"/sondages/{s.id}",
+                lien=lien_sondage(s.id),
                 meta={"sondage_id": s.id, "nb_votants": nb_votants, "full_html": s.description},
             ))
             continue
@@ -93,7 +93,7 @@ def _collecter_sondages(ctx: ContexteFlux) -> list[FluxItem]:
                    + (f" · Résultat : {gagnant}" if gagnant else ""),
             icon="🗳️",
             badges=["Clôturé"],
-            lien=f"/sondages/{s.id}",
+            lien=lien_sondage(s.id),
             meta={
                 "sondage_id": s.id,
                 "nb_votants": nb_votants,

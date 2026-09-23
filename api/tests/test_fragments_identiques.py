@@ -44,7 +44,9 @@ from app.seed import EMAIL_TEMPLATES
 #: plus « ticket ». Le changement est accompagné de la migration **0203**, qui
 #: le porte aux bases existantes — sans elle, le code montrerait une version et
 #: la production en enverrait une autre, ce que ce test existe pour empêcher.
-EMPREINTE = "3054e1f3ba19263cbe2cf70eb4f1faf8f0b358e011555861a6af92011f351632"
+#: ⬇️ Mise à jour le 23/09/2026 : le bouton de `publication_syndic` suit le lien
+#: fourni par l'appelant (`publication.lien`) — migration **0208**.
+EMPREINTE = "834f6704e550ae9edb538da8a6ab86d984f8cedbca9b975067e585b4f12b75fc"
 NOMBRE_ATTENDU = 27
 
 
