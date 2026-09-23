@@ -11,7 +11,7 @@ fichier des télécommandes ne les a pas.
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlmodel import Session, select
 
-from app.auth.deps import require_cs_or_admin
+from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.copropriete import Lot
 from app.models.core import LotImport, Utilisateur, VigikImport
@@ -20,6 +20,7 @@ from app.utils.valeurs import valeur
 
 from .commun import (
     _ignorer_import,
+    _supprimer_import,
     _lister_imports,
     _remettre_en_attente_import,
     _stats_socle,
@@ -171,3 +172,13 @@ def ignorer_import_vigik(
 ):
     """Marque un import vigik comme ignoré."""
     return _ignorer_import(VigikImport, import_id, session)
+
+
+@router.delete("/admin/imports-vigik/{import_id}", status_code=204)
+def supprimer_ligne_import_vigik(
+    import_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    """🔒 Supprimer une ligne erronée — le badge éventuel reste au parc."""
+    _supprimer_import(VigikImport, import_id, session)

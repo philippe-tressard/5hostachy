@@ -59,7 +59,7 @@ def _poser_les_badges(session: Session, cmd: CommandeAcces, codes: list[str]) ->
     n'est créé (un badge sans numéro ne désigne aucun objet).
     """
     from app.utils.acces_gestes import _acces_json
-    from app.utils.resolution_acces import exiger_code_libre
+    from app.utils.resolution_acces import exiger_code_libre, synchroniser_import
     from app.utils.types_acces import TYPES_ACCES
 
     type_acces = TYPES_ACCES.get(cmd.type)
@@ -67,10 +67,13 @@ def _poser_les_badges(session: Session, cmd: CommandeAcces, codes: list[str]) ->
         return
     for code in {c.strip() for c in codes if c and c.strip()}:
         exiger_code_libre(session, type_acces, code)
-        session.add(type_acces.modele(
+        objet = type_acces.modele(
             code=code, lot_id=cmd.lot_id, user_id=cmd.user_id,
             perimetre_cible=_acces_json(session, type_acces, None, cmd.lot_id, cmd.user_id),
-        ))
+        )
+        session.add(objet)
+        session.flush()
+        synchroniser_import(session, type_acces, objet)
 
 
 @router.post("/commandes-acces/{cmd_id}/traiter")

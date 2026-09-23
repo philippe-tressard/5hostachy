@@ -79,6 +79,8 @@ export interface ModeleImportAcces {
 		/**  Rattrape un import ignoré par erreur. OBLIGATOIRE depuis #576 : les
 		 *   deux objets ont le même cycle d'import, donc les mêmes gestes. */
 		remettreEnAttente: (id: number) => Promise<any>;
+		/** 🔒 Administrateur : supprimer une ligne erronée (23/09/2026). */
+		supprimer: (id: number) => Promise<any>;
 	};
 }
 
@@ -106,6 +108,7 @@ export const IMPORT_TELECOMMANDES: ModeleImportAcces = {
 		resoudre: accesApi.resoudreImportTC,
 		ignorer: accesApi.ignorerImportTC,
 		remettreEnAttente: accesApi.remettreEnAttenteImportTC,
+		supprimer: accesApi.supprimerImportTC,
 	},
 };
 
@@ -135,6 +138,7 @@ export const IMPORT_VIGIK: ModeleImportAcces = {
 		//  cycle d'import, donc les mêmes gestes — l'asymétrie venait de l'ordre
 		//  dans lequel les deux écrans ont été écrits, pas d'un arbitrage.
 		remettreEnAttente: accesApi.remettreEnAttenteImportVigik,
+		supprimer: accesApi.supprimerImportVigik,
 	},
 };
 

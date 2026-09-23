@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from app.auth.deps import require_cs_or_admin
+from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     TelecommandeImport,
@@ -21,6 +21,7 @@ from app.models.core import (
 
 from .commun import (
     _ignorer_import,
+    _supprimer_import,
     _lister_imports,
     _remettre_en_attente_import,
     _stats_socle,
@@ -185,3 +186,13 @@ def stats_imports(
     lignes, stats = _stats_socle(TELECOMMANDE, session)
     stats["avec_reference"] = sum(1 for i in lignes if i.reference)
     return stats
+
+
+@router.delete("/admin/imports/{import_id}", status_code=204)
+def supprimer_ligne_import_tc(
+    import_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    """🔒 Supprimer une ligne erronée — le badge éventuel reste au parc."""
+    _supprimer_import(TelecommandeImport, import_id, session)

@@ -95,6 +95,18 @@ def _remettre_en_attente_import(modele, import_id: int, session: Session):
     return {"statut": imp.statut}
 
 
+def _supprimer_import(modele, import_id: int, session: Session) -> None:
+    """🔒 Supprimer une ligne d'import ERRONÉE — administrateur seulement (23/09/2026).
+
+    Demandé à l'écran : « possibilité de supprimer des lignes erronées ». Une
+    ligne n'est qu'une copie du fichier du syndic : la retirer ne touche à
+    AUCUN badge — celui qu'elle aurait créé reste au parc, sur son lot.
+    « Ignorer » reste le geste du conseil syndical : il se rattrape.
+    """
+    session.delete(ou_404(session, modele, import_id, "Import"))
+    session.commit()
+
+
 def _ignorer_import(modele, import_id: int, session: Session):
     """Écarte un import du traitement — accès non résidentiel, doublon…"""
     imp = ou_404(session, modele, import_id, "Import")
