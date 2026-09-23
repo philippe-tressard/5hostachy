@@ -950,7 +950,20 @@
 					on:delier={() => clearUserCS(i)}
 				>
 					<svelte:fragment slot="badge">
-						{#if m.est_president}<span class="badge-president">&#x1F451; Président</span>{/if}
+						<!--  Les rôles se disent par UNE pastille, celle de « Gestionnaire du
+						      Site » (23/09/2026, signalé à l'écran) — et une seule fois : le
+						      Président paraissait deux fois, ici et dans le résumé. -->
+						{#if m.est_gestionnaire_site}
+							<span class="summary-role-badge" title="Gestionnaire du Site">
+								&#x1F3E2; Gestionnaire du Site
+							</span>
+						{/if}
+						{#if m.est_president}
+							<span
+								class="summary-role-badge summary-role-badge-president"
+								title="Président du Conseil Syndical">&#x1F451; Président</span
+							>
+						{/if}
 					</svelte:fragment>
 
 					<svelte:fragment slot="edition">
@@ -978,17 +991,6 @@
 					<svelte:fragment slot="resume">
 						{#if m.batiment_nom || m.etage != null}
 							<span class="summary-loc">&#x1F4CD; {localisationMembre(m)}</span>
-						{/if}
-						{#if m.est_gestionnaire_site}
-							<span class="summary-role-badge" title="Gestionnaire du Site">
-								&#x1F3E2; Gestionnaire du Site
-							</span>
-						{/if}
-						{#if m.est_president}
-							<span
-								class="summary-role-badge summary-role-badge-president"
-								title="Président du Conseil Syndical">&#x1F451; Président</span
-							>
 						{/if}
 						{#if m.user_id}
 							<span class="summary-lien">&#x1F517; Inscrit lié</span>
@@ -1042,7 +1044,12 @@
 					on:delier={() => clearUserSyndic(i)}
 				>
 					<svelte:fragment slot="badge">
-						{#if m.est_principal}<span class="badge-principal">Interlocuteur principal</span>{/if}
+						{#if m.est_principal}
+							<span
+								class="summary-role-badge summary-role-badge-principal"
+								title="Interlocuteur principal du syndic">&#x2B50; Interlocuteur principal</span
+							>
+						{/if}
 					</svelte:fragment>
 
 					<svelte:fragment slot="champs">
@@ -1235,29 +1242,9 @@
 	    d'actions d'un membre — CS, syndic, et le crayon seul du bandeau. Elles
 	    étaient écrites ici parce que le balisage l'était ; il ne l'est plus. */
 
-	/* Badge principal */
-	.badge-principal {
-		display: inline-block;
-		font-size: 0.72rem;
-		font-weight: 700;
-		background: var(--color-accent, #c9983a);
-		color: #fff;
-		border-radius: 999px;
-		padding: 0.1rem 0.55rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-	.badge-president {
-		display: inline-block;
-		font-size: 0.72rem;
-		font-weight: 700;
-		background: #fbbf24;
-		color: #7c2d12;
-		border-radius: 999px;
-		padding: 0.1rem 0.55rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
+	/*  `.badge-principal` et `.badge-president` sont partis le 23/09/2026 : en
+	    capitales, gras, sur fond plein, ils disaient un rôle autrement que
+	    `.summary-role-badge` juste en dessous. Une notion, une pastille. */
 
 	/* Localisation auto */
 	.localisation-info {
@@ -1338,6 +1325,11 @@
 		color: #7c2d12;
 		background: #fffbeb;
 		border-color: #fcd34d;
+	}
+	.summary-role-badge-principal {
+		color: #7a5a1a;
+		background: #fdf6e7;
+		border-color: #e8cf95;
 	}
 
 	/*  🔴 Les vingt-huit règles de l'onglet « Tickets résidence » sont parties
