@@ -23,13 +23,13 @@
  * base une valeur qu'aucun écran ne montre plus.
  */
 import type { Ticket } from '$lib/api';
-import type { Etat, IdSection, NatureAffaire } from '$lib/entites/types';
+import type { ConditionInactive, Etat, IdSection, NatureAffaire } from '$lib/entites/types';
 import { motifInactif } from '$lib/entites/types';
 import { TICKET } from '$lib/entites/ticket';
 import { concerneTousLesResidents } from '$lib/destinataires';
 import { depuisChampLocal } from '$lib/date';
 import { lotDepuisSaisie, type SaisieSaisiPour } from '$lib/saisi-pour';
-import { estActualite, optionsVersTicket } from '$lib/tickets';
+import { CATEGORIES_TICKET, estActualite, optionsVersTicket } from '$lib/tickets';
 
 /** La nature d'une catégorie : Actualité informe, toute autre se suit. */
 export function natureDe(categorie: string): NatureAffaire {
@@ -44,15 +44,27 @@ const SECTIONS_ETEIGNABLES: readonly IdSection[] = [
 	'destinataires',
 ];
 
-/** Le motif de chaque section inactive, pour cet état et cette catégorie. */
+/** Une catégorie du bâti — celles du carnet, au liseré doré (`carnet`). */
+export function estBati(categorie: string): boolean {
+	return CATEGORIES_TICKET.some((c) => c.value === categorie && c.carnet);
+}
+
+/** La catégorie de la récurrence : un Entretien seul se répète (#1092). */
+export const CATEGORIE_ENTRETIEN = 'entretien';
+
+/** Le motif de chaque section inactive, pour cet état, cette catégorie et ce rôle. */
 export function sectionsInactives(
 	etat: Etat,
 	categorie: string,
+	estCS = true,
 ): Partial<Record<IdSection, string>> {
-	const nature = natureDe(categorie);
+	//  Dans l'ordre : la nature, puis le rôle, puis la catégorie (`motifInactif`).
+	const conditions: ConditionInactive[] = [natureDe(categorie)];
+	if (!estCS) conditions.push('resident');
+	if (categorie && !estBati(categorie)) conditions.push('horsBati');
 	const inactives: Partial<Record<IdSection, string>> = {};
 	for (const id of SECTIONS_ETEIGNABLES) {
-		const motif = motifInactif(TICKET, etat, id, nature);
+		const motif = motifInactif(TICKET, etat, id, conditions);
 		if (motif) inactives[id] = motif;
 	}
 	return inactives;
@@ -79,6 +91,9 @@ export interface SaisieAffaire {
 	envoyerAuteur: boolean;
 	annonceHall: boolean;
 	saisiPour: SaisieSaisiPour;
+	prestataireId: number | null;
+	frequenceType: string;
+	frequenceValeur: number | string | null;
 }
 
 /**
@@ -125,6 +140,14 @@ export function chargeUtileAffaire(
 	if (!contexte.estCS) return charge;
 
 	Object.assign(charge, lotDepuisSaisie(s.saisiPour));
+	//  Intervenant et récurrence : envoyés à vide hors de leur catégorie — le
+	//  serveur les efface de toute façon (`utils/intervenant`), l'écran le dit.
+	const entretien = s.categorie === CATEGORIE_ENTRETIEN;
+	Object.assign(charge, {
+		prestataire_id: estBati(s.categorie) ? s.prestataireId : null,
+		frequence_type: entretien && s.frequenceType ? s.frequenceType : null,
+		frequence_valeur: entretien && s.frequenceType ? Number(s.frequenceValeur) || null : null,
+	});
 	if (actualite) {
 		//  Pas de suivi : ni état, ni 🛡️, ni kanban — effacés s'ils venaient
 		//  d'une affaire suivie. À qui l'on parle, l'Accès et l'affiche, oui.
@@ -158,9 +181,11 @@ export function chargeUtileAffaire(
  * Vide quand la nature ne change pas, ou quand il n'y avait rien à perdre.
  */
 export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[] {
-	const etait = natureDe(avant.categorie);
-	if (etait === natureDe(apres.categorie)) return [];
 	const pertes: string[] = [];
+	if (avant.prestataire_id && !estBati(apres.categorie)) pertes.push('l’intervenant');
+	if (avant.frequence_type && apres.categorie !== CATEGORIE_ENTRETIEN) pertes.push('la récurrence');
+	const etait = natureDe(avant.categorie);
+	if (etait === natureDe(apres.categorie)) return pertes;
 	if (etait === 'actualite') {
 		if (!concerneTousLesResidents(avant.public_cible ?? [])) pertes.push('le public visé');
 		if (avant.reserve_perimetre) pertes.push('la réserve au périmètre (🔒)');

@@ -22,6 +22,7 @@
 	import { fmtDateLong, fmtDateShort } from '$lib/date';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import { optionsDuTicket } from '$lib/tickets';
+	import { intervenantAffiche } from '$lib/prestataires';
 	import {
 		BADGE_PRIORITE,
 		LIBELLE_PRIORITE,
@@ -230,6 +231,7 @@
 			entite={TICKET}
 			perimetre={ticket.perimetre_cible ?? []}
 			description={ticket.description}
+			intervenant={intervenantAffiche(ticket)}
 			photos={ticket.photos_urls ?? []}
 			documents={ticket.fichiers_urls ?? []}
 		>

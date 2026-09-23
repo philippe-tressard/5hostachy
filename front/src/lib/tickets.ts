@@ -35,11 +35,21 @@ export interface StatutTicket {
 	badge: string;
 }
 
-//: Les quatre états, dans l'ordre du workflow : c'est celui dans lequel ils
+//: Les six états, dans l'ordre du workflow : c'est celui dans lequel ils
 //: s'affichent partout, boutons de la fiche comme listes déroulantes.
+//: « À l'AG » et « Chez le prestataire » sont nés le 23/09/2026 (#1092, lot 5) :
+//: les colonnes du kanban des événements, qu'aucun état d'affaire ne disait. Leur
+//: pastille reprend la couleur de leur colonne (`KANBAN_COLS`).
 export const STATUTS_TICKET: readonly StatutTicket[] = [
 	{ value: 'ouvert', label: 'Ouvert', emoji: '\u{1F535}', badge: 'badge-blue' },
+	{ value: 'en_ag', label: 'À l’AG', emoji: '\u{1F7E3}', badge: 'badge-purple' },
 	{ value: 'en_cours', label: 'En cours', emoji: '\u{1F7E1}', badge: 'badge-orange' },
+	{
+		value: 'chez_prestataire',
+		label: 'Chez le prestataire',
+		emoji: '\u{1F7E0}',
+		badge: 'badge-yellow',
+	},
 	{ value: 'résolu', label: 'Résolu', emoji: '\u{1F7E2}', badge: 'badge-green' },
 	{ value: 'annulé', label: 'Annulé', emoji: '⚫', badge: 'badge-gray' },
 ];

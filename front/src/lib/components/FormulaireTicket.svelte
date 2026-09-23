@@ -36,7 +36,13 @@
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
-	import { tickets as ticketsApi, admin as adminApi, ApiError, type Ticket } from '$lib/api';
+	import {
+		tickets as ticketsApi,
+		admin as adminApi,
+		prestataires as prestatairesApi,
+		ApiError,
+		type Ticket,
+	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
@@ -44,6 +50,10 @@
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import RepriseAnnonceHall from '$lib/components/RepriseAnnonceHall.svelte';
+	import SectionIntervenant from '$lib/components/SectionIntervenant.svelte';
+	import ChampFrequence from '$lib/components/ChampFrequence.svelte';
+	import { essayer } from '$lib/chargement';
+	import { pliageDe } from '$lib/pliage';
 	import type { PrefillActualite } from '$lib/actualite-prefill';
 	import { isCS } from '$lib/stores/auth';
 	import {
@@ -63,6 +73,7 @@
 	import { reserveAuConseil } from '$lib/destinataires';
 	import { confirmer } from '$lib/confirmation';
 	import {
+		CATEGORIE_ENTRETIEN,
 		chargeUtileAffaire,
 		natureDe,
 		pertesAuChangement,
@@ -131,11 +142,17 @@
 	//  « Au nom de » (CS/admin) — la saisie vit dans `ChampSaisiPour`.
 	let saisiPour = saisieDepuis(ticket);
 	let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
+	//  Section « Intervenant » et récurrence d'un Entretien (#1092, lot 5).
+	let prestataireId: number | null = ticket?.prestataire_id ?? null;
+	let frequenceType = ticket?.frequence_type ?? '';
+	let frequenceValeur: number | string | null = ticket?.frequence_valeur ?? null;
+	let prestataires: { id: number; nom: string; actif?: boolean }[] = [];
+	let erreurPrestataires = '';
 
 	//  ── Ce que la NATURE décide (formulaire unique, 23/09/2026) ─────────────
 	$: nature = natureDe(categorie);
 	$: actualite = nature === 'actualite';
-	$: inactives = sectionsInactives(etat, categorie);
+	$: inactives = sectionsInactives(etat, categorie, $isCS);
 	$: reserveeAuConseil = actualite && reserveAuConseil(publicCible);
 	//  Une actualité réservée — au périmètre ou au conseil — n'a pas d'affiche.
 	$: if ((reservePerimetre || reserveeAuConseil) && annonceHall) annonceHall = false;
@@ -146,6 +163,9 @@
 	});
 
 	onMount(async () => {
+		if ($isCS && sectionPresente(TICKET, etat, 'intervenant')) {
+			[prestataires, erreurPrestataires] = await essayer(prestatairesApi.list(), []);
+		}
 		if ($isCS && sectionPresente(TICKET, etat, 'au_nom_de')) {
 			try {
 				const all = await adminApi.utilisateurs();
@@ -189,6 +209,9 @@
 		envoyerAuteur,
 		annonceHall,
 		saisiPour,
+		prestataireId,
+		frequenceType,
+		frequenceValeur,
 	} satisfies SaisieAffaire;
 
 	//  ── L'aperçu avant diffusion (#498) — il compose avec le gabarit de la
@@ -375,6 +398,7 @@
 			avecQuand={sectionPresente(TICKET, etat, 'quand')}
 			bind:debut
 			bind:fin
+			quandAutreValeur={!!frequenceType}
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecReservePerimetre={$isCS && actualite}
@@ -411,6 +435,25 @@
 		>
 			<!--  L'affiche de hall n'est pas un canal : c'est l'option d'une ACTUALITÉ,
 			      rendue dans le créneau de la Diffusion (#498). -->
+			<!--  6. Intervenant, et la récurrence d'un Entretien dans « Quand » :
+			      rendus à LEUR rang par `ChampsCommuns`, qui les grise quand la
+			      déclaration les éteint (hors bâti, résident, actualité). -->
+			<svelte:fragment slot="intervenant">
+				{#if sectionPresente(TICKET, etat, 'intervenant')}
+					<SectionIntervenant
+						idPrefixe="ticket"
+						{prestataires}
+						erreur={erreurPrestataires}
+						pliable={pliageDe(TICKET, 'intervenant')}
+						bind:prestataireId
+					/>
+				{/if}
+			</svelte:fragment>
+			<svelte:fragment slot="quand">
+				{#if $isCS && categorie === CATEGORIE_ENTRETIEN}
+					<ChampFrequence idPrefixe="ticket-frequence" bind:frequenceType bind:frequenceValeur />
+				{/if}
+			</svelte:fragment>
 			<svelte:fragment slot="diffusion">
 				{#if actualite}
 					<DiffusionPublication reservee={reservePerimetre || reserveeAuConseil} bind:annonceHall />

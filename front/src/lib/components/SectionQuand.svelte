@@ -75,6 +75,8 @@
 
 	/** Repliée par défaut — la valeur vient de la déclaration (#1095). */
 	export let pliable = false;
+	/** Une valeur du créneau (la récurrence d'un Entretien) rouvre aussi la section. */
+	export let autreValeur = false;
 
 	/**  🔴 « Sans date » est le DÉFAUT : une date saisie rouvre la section.
 	 *
@@ -88,7 +90,7 @@
 	{premiere}
 	{pliable}
 	{resume}
-	valeurModifiee={!!debut || !!fin}
+	valeurModifiee={!!debut || !!fin || autreValeur}
 	idTitre="{idPrefixe}-quand"
 >
 	<div class="quand-grille">
@@ -104,6 +106,8 @@
 	<p class="quand-aide">
 		Une <strong>date de début</strong> fait paraître l'entrée au calendrier.
 	</p>
+	<!--  La récurrence d'un Entretien (#1092) — rendue par l'appelant. -->
+	<slot />
 </SectionFormulaire>
 
 <style>

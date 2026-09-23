@@ -6,6 +6,7 @@ import json
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
+from app.utils.intervenant import appliquer_intervenant
 from app.utils.nature_affaire import categorie_reservee, est_actualite, statut_pour
 from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.quand import exiger_description
@@ -119,7 +120,7 @@ def create_ticket(
     #  Une actualité est publiée par le conseil (#1091) — refusée, pas neutralisée :
     #  la retomber en « panne » publierait sous une autre catégorie que celle choisie.
     if categorie_reservee(body.categorie) and not est_cs:
-        raise HTTPException(403, "Une actualité est publiée par le conseil syndical")
+        raise HTTPException(403, "Cette catégorie est réservée au conseil syndical")
     #  Même règle que pour une actualité, et au même endroit (#1092).
     exiger_description(body.description, debut=body.debut)
     ticket = Ticket(
@@ -176,6 +177,7 @@ def create_ticket(
     #  (Le droit est dans `OPTIONS_RESERVEES_AU_CS`, pas réécrit ici.)
     ticket.suivi_kanban = suivi_par_defaut(body.categorie)
     appliquer_options(ticket, body, est_cs=est_cs)
+    appliquer_intervenant(ticket, body, session, est_cs=est_cs)
 
     #  🔴 UNE ACTUALITÉ DIFFUSE COMME UNE ACTUALITÉ (#1091, lot 4) : son module
     #  porte le message restreint, le gabarit `publication_syndic`, l'affiche, et

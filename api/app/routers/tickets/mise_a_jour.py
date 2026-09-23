@@ -34,7 +34,9 @@ from app.models.core import (
 )
 from app.schemas import TicketRead, TicketUpdate
 from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
-from app.utils.nature_affaire import categorie_reservee, est_actualite, statut_pour
+from app.utils.intervenant import appliquer_intervenant
+from app.utils.nature_affaire import categorie_reservee, change_de_nature, est_actualite, statut_pour
+from app.utils.valeurs import valeur
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_ticket
 from app.utils.recuperer import ou_404
@@ -150,11 +152,15 @@ def update_ticket(
     #  geste du conseil — c'est la promotion, qui ne convertit plus rien. Et elle
     #  n'a pas d'état à corriger : `publie` ne se pose, ni ne se quitte, que par
     #  la catégorie (`nature_affaire.statut_pour`).
-    change_de_nature = body.categorie is not None and (
-        categorie_reservee(body.categorie) != est_actualite(ticket)
-    )
-    if change_de_nature and not is_cs_admin:
+    nature_changee = change_de_nature(ticket, body.categorie)
+    if nature_changee and not is_cs_admin:
         raise HTTPException(403, "Seul le conseil syndical fait d'une affaire une actualité, ou l'inverse")
+    #  Passer VERS une catégorie réservée (Étude & travaux, Entretien) est aussi
+    #  un geste du conseil ; GARDER celle qu'on a ne l'est pas — l'auteur d'une
+    #  ancienne étude corrige son texte sans rien demander.
+    vers_reservee = body.categorie is not None and valeur(body.categorie) != valeur(ticket.categorie)
+    if vers_reservee and categorie_reservee(body.categorie) and not is_cs_admin:
+        raise HTTPException(403, "Cette catégorie est réservée au conseil syndical")
     if body.statut is not None and (body.statut in STATUTS_TICKET_SANS_CYCLE or est_actualite(ticket)):
         raise HTTPException(422, "Une actualité n'a pas d'état de suivi : c'est sa catégorie qui en décide")
 
@@ -210,8 +216,10 @@ def update_ticket(
         ):
             raise HTTPException(403, "Modification impossible : le ticket n'est plus ouvert")
         changes += _appliquer_contenu(body, ticket, est_cs=is_cs_admin)
-        if change_de_nature:
+        if nature_changee:
             ticket.statut = statut_pour(ticket.categorie)
+    #  APRÈS le contenu : la récurrence dépend de la catégorie FINALE.
+    changes += appliquer_intervenant(ticket, body, session, est_cs=is_cs_admin)
 
     # Champs relationnels/destinataires : CS/admin uniquement
     #  ⚠️ `non_relancable` MANQUAIT à cette liste : un `PATCH` qui ne portait

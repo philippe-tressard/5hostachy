@@ -38,6 +38,7 @@ LIBELLES_CATEGORIE: dict[str, str] = {
     "espaces_verts": "Espaces verts",
     "sinistre": "Sinistre",
     "etude_travaux": "Étude & travaux",
+    "entretien": "Entretien",
     "acces_accueil": "Accès & accueil",
     "question": "Question",
     "bug": "Bug",

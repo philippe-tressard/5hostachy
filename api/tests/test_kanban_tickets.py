@@ -79,17 +79,16 @@ def test_les_colonnes_visees_EXISTENT_dans_le_kanban():
     assert not inconnues, f"colonnes inconnues du kanban : {sorted(inconnues)}"
 
 
-def test_la_colonne_FOURNISSEUR_reste_inatteignable():
-    """⚠️ Un constat déclaré, pas un oubli.
+def test_TOUTES_les_colonnes_du_kanban_sont_atteignables():
+    """Les six colonnes ont chacune un état d'affaire (#1092, lot 5, 23/09/2026).
 
-    Aucun statut de ticket ne dit « chez le prestataire ». L'écrire ici rend la
-    décision visible : le jour où un cinquième statut apparaîtra, ce test posera
-    la question au lieu de laisser quelqu'un l'ajouter en passant.
+    Ce test disait l'inverse — « la colonne fournisseur reste inatteignable » —
+    et posait la question le jour où un état apparaîtrait. Elle a été posée et
+    tranchée : `en_ag` et `chez_prestataire` sont nés quand les événements du
+    calendrier sont devenus des affaires. Une colonne sans état redeviendrait un
+    endroit où une carte atterrit dans un état que le serveur ne connaît pas.
     """
-    assert "fournisseur" not in COLONNE_PAR_STATUT.values()
-    assert "fournisseur" in _colonnes_du_front(), (
-        "la colonne a disparu du kanban — ce test ne dit alors plus rien"
-    )
+    assert set(COLONNE_PAR_STATUT.values()) == set(_colonnes_du_front())
 
 
 def test_le_FRONT_ecrit_EXACTEMENT_la_meme_table():

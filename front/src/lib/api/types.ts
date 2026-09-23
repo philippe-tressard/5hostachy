@@ -138,6 +138,12 @@ export interface Ticket extends PorteSaisiPourLu {
 	 *   La date où une actualité cesse d'être utile (`fin`, sinon `debut`,
 	 *   sinon jamais) — `null` pour une affaire suivie, qui se clôt (#1093). */
 	perime_le?: string | null;
+	/**  Section « Intervenant » et récurrence d'un Entretien (#1092, lot 5).
+	 *   `prestataire_nom` est dérivé par le serveur, en lecture seule. */
+	prestataire_id?: number | null;
+	prestataire_nom?: string | null;
+	frequence_type?: string | null;
+	frequence_valeur?: number | null;
 	/**  Section « Quand » (#1092), en ISO — quand ça se passe. C'est ce qui
 	 *   fait paraître l'objet au calendrier, devenu une vue et non plus un
 	 *   objet. */

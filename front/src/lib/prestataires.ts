@@ -94,6 +94,29 @@ export const TYPES_PRESTATAIRE: readonly { val: string; label: string; desc: str
 	{ val: 'gestion', label: '\u{1F3E2} Gestion', desc: 'Syndic, gestion locative' },
 ];
 
+/**  Les unités de fréquence — celles du contrat, qui fixe le rythme d'un
+ *   prestataire (#1092, 23/09/2026). `nombre` : le libellé du nombre à saisir,
+ *   absent quand il n'y en a pas (« mensuelle »). Lues par `ChampFrequence`,
+ *   et côté serveur par `utils/intervenant.FREQUENCES` — mêmes valeurs. */
+export const FREQUENCES: readonly { val: string; label: string; nombre?: string }[] = [
+	{ val: 'semaines', label: 'Toutes les X semaines', nombre: 'Toutes les … sem.' },
+	{ val: 'mois', label: 'Mensuelle' },
+	{ val: 'fois_par_an', label: 'X fois par an', nombre: '… fois/an' },
+	{ val: 'ans', label: 'Tous les X ans', nombre: 'Tous les … ans' },
+];
+
+/**  L'intervenant d'une affaire, tel que la fiche l'affiche : « Otis · ↺ Mensuel ».
+ *   Vide sans intervenant — la ligne ne s'affiche pas (#1092, lot 5). */
+export function intervenantAffiche(t: {
+	prestataire_nom?: string | null;
+	frequence_type?: string | null;
+	frequence_valeur?: number | null;
+}): string {
+	if (!t.prestataire_nom) return '';
+	const rythme = frequenceLabel(t);
+	return rythme ? `${t.prestataire_nom} · ${rythme}` : t.prestataire_nom;
+}
+
 /**  La fréquence d'un contrat, en une expression courte.
  *
  *   Rend une chaîne vide quand aucune fréquence n'est définie : l'appelant

@@ -65,7 +65,8 @@ def test_les_categories_retenues_parlent_du_BATI():
     from app.models.tickets import CategorieTicket
 
     valeurs = {c.value for c in CATEGORIES_BATI}
-    assert valeurs == {"panne", "espaces_verts", "sinistre", "etude_travaux"}
+    #  « entretien » : les maintenances du calendrier, devenues affaires (#1092).
+    assert valeurs == {"panne", "espaces_verts", "sinistre", "etude_travaux", "entretien"}
     #  Et le filtre EXCLUT bien quelque chose : un ensemble qui contiendrait tout
     #  passerait ce test-ci sans rien filtrer.
     assert CategorieTicket.question not in CATEGORIES_BATI

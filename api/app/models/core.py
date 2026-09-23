@@ -275,20 +275,20 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, table=True):
     #  `echeance` (« avant quand c'est attendu ») a été RETIRÉE le 23/09/2026
     #  (migration 0206) : ôtée du formulaire le 21/09 — la relance mensuelle
     #  couvre le besoin —, elle n'était plus ni saisie ni lue.
-    #  Noms alignés sur `Evenement.debut`/`fin` : le lot qui fera disparaître
-    #  l'entité y recopiera ses lignes littéralement.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
+    #  Section « Intervenant » et récurrence d'un Entretien (#1092, lot 5, 0211) —
+    #  sans `foreign_key` : SQLite refuse de l'ajouter à une table existante.
+    prestataire_id: Optional[int] = None
+    frequence_type: Optional[str] = None  # « semaines » · « mois » · « fois_par_an »
+    frequence_valeur: Optional[int] = None
     non_relancable_motif: Optional[str] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
     ferme_le: Optional[datetime] = None
-    #  Adresse de réponse `tickets+<jeton>@…` (#703) : tiré au sort, jamais dérivé
-    #  de l'id — il voyage dans les carnets d'adresses de toute la chaîne.
+    #  Adresse `tickets+<jeton>@…` (#703) : tirée au sort, jamais dérivée de l'id.
     jeton_courriel: Optional[str] = Field(default=None, index=True)
-    #  Refermé sur son auteur et le CS (#710). Défaut `False`, comme
-    #  `Publication.confidentiel` — voir la migration 0166 pour le pourquoi.
-    confidentiel: bool = False
+    confidentiel: bool = False  # 🛡️ son auteur et le CS (#710, migration 0166)
     #  📌 Épinglé (05/09/2026) ; ce que chaque option écrit : migration 0175.
     epingle: bool = False
     #  Paraît-il au kanban ? SI, jamais OÙ — `utils/kanban_tickets.py` (#833).

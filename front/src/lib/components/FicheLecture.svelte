@@ -54,6 +54,8 @@
 
 	//  ── 6. Description ───────────────────────────────────────────────────────
 	export let description = '';
+	/** L'intervenant, déjà composé (`intervenantAffiche`) — vide : rien. */
+	export let intervenant = '';
 
 	//  ── 7. Photos · 8. Documents — DEUX sections, jamais une seule ───────────
 	export let photos: string[] | null | undefined = [];
@@ -78,6 +80,10 @@
 		<slot name="specifiques" />
 	{:else if s.id === 'suivi'}
 		<slot name="workflow" />
+	{:else if s.id === 'intervenant'}
+		{#if intervenant}
+			<p class="fiche-intervenant">Intervenant : <strong>{intervenant}</strong></p>
+		{/if}
 	{:else if s.id === 'perimetre'}
 		{#if textePerimetre}
 			<p class="fiche-perimetre">&#x1F539; {textePerimetre}</p>
@@ -113,7 +119,8 @@
 	    rend : une classe posée par un parent sur le balisage d'un enfant n'est
 	    pas atteinte par le `<style>` du parent — c'est la panne qui a envoyé des
 	    pastilles nues en production (v2.67.11). */
-	.fiche-perimetre {
+	.fiche-perimetre,
+	.fiche-intervenant {
 		font-size: 0.8rem;
 		color: var(--color-text-muted);
 		margin: 0.25rem 0 0.5rem;
