@@ -52,6 +52,7 @@ cas zéro, et il rend `None`.
 """
 from datetime import date
 from typing import NamedTuple, Optional, Protocol
+from app.utils.valeurs import valeur
 
 
 class _Contrat(Protocol):
@@ -129,16 +130,16 @@ def echeance_du_contrat(contrat: _Contrat, aujourdhui: Optional[date] = None) ->
         return None
 
     reference = aujourdhui or date.today()
-    valeur = contrat.duree_initiale_valeur
+    duree = contrat.duree_initiale_valeur
     unite = contrat.duree_initiale_unite
     #  `TypeEquipement` est un `str, Enum` : `str(...)` rendrait « TypeEquipement.syndic ».
-    type_ = getattr(contrat.type_equipement, "value", contrat.type_equipement)
+    type_ = valeur(contrat.type_equipement)
     tacite = type_ not in SANS_RECONDUCTION_TACITE
 
-    if valeur and unite == "ans":
-        fin = _ajouter_mois(contrat.date_debut, 12 * valeur)
-    elif valeur and unite == "mois":
-        fin = _ajouter_mois(contrat.date_debut, valeur)
+    if duree and unite == "ans":
+        fin = _ajouter_mois(contrat.date_debut, 12 * duree)
+    elif duree and unite == "mois":
+        fin = _ajouter_mois(contrat.date_debut, duree)
     elif tacite:
         #  Durée inconnue → annuel. Voir l'avertissement du module.
         fin = _ajouter_mois(contrat.date_debut, 12)

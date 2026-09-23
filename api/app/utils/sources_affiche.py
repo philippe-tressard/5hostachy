@@ -49,6 +49,7 @@ from app.models.core import Publication, Ticket
 from app.models.evenement import Evenement
 from app.utils.perimetres import parse_json_perimetres
 from app.utils.perimetres.arbre import parse_perimetres
+from app.utils.valeurs import valeur
 
 #: Les trois familles reprenables, et leur libellé à l'écran.
 FAMILLES: dict[str, str] = {
@@ -133,7 +134,7 @@ def sources_disponibles(session: Session, *, maintenant: Optional[datetime] = No
 
     #  ── Tickets ─────────────────────────────────────────────────────────────
     for tk in session.exec(select(Ticket).where(Ticket.cree_le >= depuis)).all():
-        if tk.confidentiel or (tk.statut and str(getattr(tk.statut, "value", tk.statut)) == "annule"):
+        if tk.confidentiel or (tk.statut and str(valeur(tk.statut)) == "annule"):
             continue
         sources.append(SourceAffiche("ticket", tk.id, tk.titre, tk.cree_le,
                                      bool(getattr(tk, "epingle", False))))

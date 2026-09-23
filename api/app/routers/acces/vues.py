@@ -41,6 +41,7 @@ from app.models.core import StatutAcces, UserLot
 from app.utils.batiments import libelle_lot
 from app.utils.perimetres import SEPARATEUR_ELEMENT, parse_json_perimetres
 from app.utils.types_acces import TypeAcces
+from app.utils.valeurs import valeur
 
 
 def libelle_lots(session: Session, type_acces: TypeAcces, objet) -> Optional[str]:
@@ -75,7 +76,7 @@ def libelle_lots(session: Session, type_acces: TypeAcces, objet) -> Optional[str
     """
     if objet.lot_id:
         lot = session.get(Lot, objet.lot_id)
-        if lot and getattr(lot.type, "value", lot.type) in type_acces.types_lot:
+        if lot and valeur(lot.type) in type_acces.types_lot:
             return libelle_lot(lot)
     lots = session.exec(
         select(Lot)
@@ -84,7 +85,7 @@ def libelle_lots(session: Session, type_acces: TypeAcces, objet) -> Optional[str
     ).all()
     libelles = [
         libelle_lot(lot) for lot in lots
-        if getattr(lot.type, "value", lot.type) in type_acces.types_lot
+        if valeur(lot.type) in type_acces.types_lot
     ]
     return SEPARATEUR_ELEMENT.join(x for x in libelles if x) or None
 

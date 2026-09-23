@@ -26,6 +26,7 @@ libellé retouché, et c'est le courriel — que personne ne relit — qui garde
 l'ancien.
 """
 from __future__ import annotations
+from app.utils.valeurs import valeur
 
 #  ⚠️ Les VALEURS sont celles de `CategorieTicket` (`models/tickets.py`), les
 #  libellés ceux de `CATEGORIES` (`front/src/lib/tickets.ts`). Les deux sont
@@ -56,8 +57,8 @@ def libelle_categorie(categorie) -> str:
     """
     if not categorie:
         return ""
-    valeur = str(getattr(categorie, "value", categorie))
-    return LIBELLES_CATEGORIE.get(valeur, valeur)
+    brute = str(valeur(categorie))
+    return LIBELLES_CATEGORIE.get(brute, brute)
 
 
 #  ══════════════════════════════════════════════════════════════════════════
@@ -91,4 +92,4 @@ def ticket_urgent(ticket) -> bool:
     if ticket is None:
         return False
     priorite = getattr(ticket, "priorite", None)
-    return str(getattr(priorite, "value", priorite)) == "haute"
+    return str(valeur(priorite)) == "haute"

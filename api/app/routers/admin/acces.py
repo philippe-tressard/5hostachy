@@ -24,6 +24,7 @@ from datetime import datetime
 from typing import Any
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
+from app.utils.valeurs import valeur
 
 router = APIRouter()
 
@@ -284,7 +285,7 @@ def audit_reclassement_tickets(
     total = 0
     for tk in session.exec(select(Ticket).order_by(Ticket.cree_le.desc())).all():
         total += 1
-        actuelle = str(getattr(tk.categorie, "value", tk.categorie))
+        actuelle = str(valeur(tk.categorie))
         suggestion = proposer(tk.titre or "", tk.description or "", actuelle)
         if not suggestion:
             continue
@@ -293,7 +294,7 @@ def audit_reclassement_tickets(
             "ticket_id": tk.id,
             "numero": tk.numero,
             "titre": tk.titre,
-            "statut": str(getattr(tk.statut, "value", tk.statut)),
+            "statut": str(valeur(tk.statut)),
             "actuelle": actuelle,
             "actuelle_libelle": libelle_categorie(actuelle),
             "proposee": categorie,
