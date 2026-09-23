@@ -51,6 +51,13 @@ cd "$RACINE_DEPOT" || exit 1   # les contrôles lisent api/, .git/ et front/ en 
 # shellcheck source=../lib/lib-reecriture.sh
 . "$RACINE_DEPOT/scripts/lib/lib-reecriture.sh"
 
+#  Ce que le point 6 compte comme une erreur de l'API — écrit UNE fois, lu par
+#  ses deux requêtes et par son auto-test. Les niveaux de log, et les erreurs de
+#  bibliothèque qui écrivent sur stderr SANS niveau (« Fontconfig error: … ») :
+#  quinze d'entre elles passaient à chaque démarrage sous « compte=0 » (#1066).
+#  Pas de guillemet ni de « $ » ici : le motif traverse SSH entre guillemets.
+MOTIF_ERREURS_API='ERROR|CRITICAL|^[A-Za-z][A-Za-z0-9_-]* error:'
+
 if [ "${1:-}" = "--selftest" ]; then
   #  Les auto-tests vivent à part depuis le 20/08/2026 (#511) : ils ne sont
   #  chargés QUE pour `--selftest`, jamais pendant un pré-check réel.
@@ -384,7 +391,7 @@ rapporter 5 "$V5" "Bridge WhatsApp connecté" "dernier état : ${WA:-?}"
 #     rien, le point ÉCHOUE (`verdict_erreurs_api`). Le raisonnement complet, et
 #     pourquoi la fenêtre glissante depuis le dernier déploiement a été écartée,
 #     sont dans `lib-verdicts-mep.sh`.
-ERR=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -cE "ERROR|CRITICAL"; true')
+ERR=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -cE "'"$MOTIF_ERREURS_API"'"; true')
 SIG6=""; SIGC6=""; ECART6=""; DET6="compte=${ERR:-?}"
 if [ -f "$RACINE_DEPOT/.git/erreur-corrigee" ]; then
   SIGC6=$(sed -n '1s/^commit:[[:space:]]*//p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '\r')
@@ -392,7 +399,7 @@ if [ -f "$RACINE_DEPOT/.git/erreur-corrigee" ]; then
   #  Le motif est appliqué EN LOCAL sur les lignes rapatriées, jamais injecté
   #  dans la commande SSH : l'oubli des guillemets autour d'un motif distant a
   #  déjà coûté un correctif en trois passes (check-reliability, 11/08/2026).
-  LIG6=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -E "ERROR|CRITICAL" | head -500; true')
+  LIG6=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -E "'"$MOTIF_ERREURS_API"'" | head -500; true')
   NBLIG6=$(printf '%s
 ' "$LIG6" | grep -c . || true)
   #  Moins de lignes rapatriées que comptées = troncature ou mesure partielle :

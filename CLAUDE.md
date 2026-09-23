@@ -277,9 +277,10 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
   jamais une adresse, un mot de passe ou un jeton, même tronqué. Le défaut
   inverse existe dans ce dépôt (#777, adresses journalisées en clair), et
   `test_journal_securite.py` le refuse **chez la fonction et chez ses appelants**.
-  ⚠️ `WARNING`, jamais `ERROR` : le point 6 du pré-check et `check-reliability.sh`
-  comptent les `ERROR`/`CRITICAL`, et une faute de frappe sur un mot de passe
-  ferait alors sonner le téléphone.
+  ⚠️ `WARNING`, jamais `ERROR` : le point 6 du pré-check compte les
+  `ERROR`/`CRITICAL` (motif `MOTIF_ERREURS_API`), et une faute de frappe sur un
+  mot de passe bloquerait alors la MEP. Cette ligne nommait aussi
+  `check-reliability.sh`, qui ne compte rien de tel (23/09/2026).
 - **Téléversement : une seule porte.** Un fichier reçu s'écrit sur disque par
   `utils/fichiers.enregistrer_fichier_recu` **et nulle part ailleurs** ; les
   règles — liste blanche de types, plafond de taille, cohérence de la signature —

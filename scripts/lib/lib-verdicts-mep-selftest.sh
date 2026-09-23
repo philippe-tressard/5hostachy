@@ -237,6 +237,21 @@ feat(b) : deux"
   t "écartées non mesurées"              INCONNU verdict_erreurs_api 2 "" abc123 abc123 "auth/refresh"
   t "plus d'écartées que d'observées"    INCONNU verdict_erreurs_api 1 2 abc123 abc123 "auth/refresh"
   t "ancrage : chemin"                   oui     signature_ancree "auth/refresh"
+  #  ── Le MOTIF du point 6 (#1066) : ce qu'il compte, et ce qu'il laisse. ──
+  #  🔴 Il ne comptait que les niveaux de log. Une bibliothèque qui écrit sur
+  #  stderr n'a pas de niveau : 15 « Fontconfig error » à chaque démarrage de
+  #  l'API, et le point rendait « compte=0 ».
+  _compte() { printf '%s' "$1" | grep -cE "$MOTIF_ERREURS_API"; }
+  t "motif : niveau ERROR"               1       _compte "2026-09-23 07:10:49,676 ERROR app.x — boum"
+  t "motif : niveau CRITICAL"            1       _compte "2026-09-23 07:10:49,676 CRITICAL app.x — boum"
+  t "motif : erreur de bibliothèque"     1       _compte "Fontconfig error: No writable cache directories"
+  #  ⚠️ Un WARNING qui CITE une erreur reste un WARNING : le journal de sécurité
+  #  et les échecs d'envoi l'emploient exprès pour ne pas faire sonner le point.
+  t "motif : WARNING citant une erreur"  0       _compte "2026-09-19 14:54:14 WARNING app.utils.whatsapp — échec : Client error '413'"
+  t "motif : INFO anodin"                0       _compte "2026-09-23 06:00:00 INFO httpx — HTTP Request: GET /status 200 OK"
+  #  Une trace Python SUIT sa ligne ERROR : la compter aussi doublerait
+  #  l'erreur, et l'écartement par signature rendrait « une erreur de plus ».
+  t "motif : dernière ligne d'une trace" 0       _compte "ValueError: boum"
   t "ancrage : joker seul"               non     signature_ancree ".*"
   t "ancrage : motif vide"               non     signature_ancree ""
   t "ancrage : mot trop court"           non     signature_ancree "db|io"
