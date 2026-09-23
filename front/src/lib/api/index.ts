@@ -127,6 +127,8 @@ export const tickets = {
 			envoyer_auteur?: boolean;
 			envoyer_syndic?: boolean;
 			envoyer_cs?: boolean;
+			/** Faux : n'avertir personne — le glissement au kanban (#1092). */
+			notifier?: boolean;
 			perimetre_cible?: string[];
 			/**  🔴 LES OPTIONS DE PUBLICATION, corrigées depuis un commentaire
 			 *   (05/09/2026) — comme sur une actualité : le formulaire montre le

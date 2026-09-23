@@ -4,8 +4,12 @@
 	import FiltresAffaires from '$lib/components/FiltresAffaires.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
+	import VueKanbanAffaires from '$lib/components/VueKanbanAffaires.svelte';
+	import { routeOnglet } from '$lib/routes-onglets';
 	import { revelerCible } from '$lib/deepLink';
-	import { isAdmin } from '$lib/stores/auth';
+	import { isAdmin, isCS } from '$lib/stores/auth';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { optionsRapides } from '$lib/options-rapides';
@@ -39,6 +43,11 @@
 	// FormulaireTicket.svelte.
 	//  UN bouton, UN formulaire (23/09/2026) : « Actualité » y est la première
 	//  catégorie, et c'est elle qui allume ce qu'une actualité a de propre.
+	export let data: { onglet: string };
+	$: onglet = data.onglet;
+	//  L'onglet Archives n'a qu'un contenu : il l'ouvre (#1092).
+	$: if (onglet === 'archives') historyExpanded = true;
+
 	let showForm = false;
 
 	function ticketCree(e: CustomEvent<Ticket>) {
@@ -82,6 +91,11 @@
 				if (target) {
 					if (estArchive(target)) {
 						historyExpanded = true;
+						//  Une affaire archivée se montre dans SON onglet (#1092).
+						if (onglet !== 'archives')
+							await goto(routeOnglet('mes-demandes', 'archives') + location.search, {
+								replaceState: true,
+							});
 						//  On DÉSIGNE l'année ; le composant l'ouvre. Cette page posait
 						//  auparavant l'état interne du groupement, ce qui l'obligeait
 						//  à en porter sa propre copie.
@@ -375,16 +389,22 @@
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
+<!--  Liste · Kanban · Archives (#1092) — masquage et refus d'une route réservée :
+      `BarreOnglets`, d'après `pages.ts`. -->
+<BarreOnglets pageId="mes-demandes" actif={onglet} />
+
 <AvertissementUrgence />
 
-<!--  Nature · Suivi · Catégorie : la barre et sa mise en page vivent dans
+{#if onglet === 'liste'}
+	<!--  Nature · Suivi · Catégorie : la barre et sa mise en page vivent dans
       `FiltresAffaires` ; la page ne garde que les valeurs retenues. -->
-<FiltresAffaires
-	{optionsStatut}
-	bind:nature={filterNature}
-	bind:statut={filterStatut}
-	bind:categorie={filterCat}
-/>
+	<FiltresAffaires
+		{optionsStatut}
+		bind:nature={filterNature}
+		bind:statut={filterStatut}
+		bind:categorie={filterCat}
+	/>
+{/if}
 
 <!--  Le formulaire s'ouvre APRÈS l'avertissement et les filtres : `ux-patterns`
       §0 ter, signalé ici le 12/09/2026. -->
@@ -394,16 +414,27 @@
 
 <!--  Les trois états par `EtatListe` (#796) — dont l'ERREUR, qui n'existait pas :
       une panne affichait « Aucune demande ». -->
-<EtatListe
-	chargement={loading}
-	{erreur}
-	vide={filtered.length === 0}
-	titreErreur="Impossible d'afficher les demandes"
-	titreVide="Aucune demande"
-	messageVide="Signalez un problème ou posez une question au conseil syndical."
->
-	<ListeTickets tickets={filtered} {...etatListe} {gestes} />
-</EtatListe>
+{#if onglet === 'kanban'}
+	<VueKanbanAffaires
+		tickets={ticketList}
+		peutDeplacer={$isCS}
+		on:deplace={(e) =>
+			(ticketList = ticketList.map((x) =>
+				x.id === e.detail.id ? { ...x, statut: e.detail.statut } : x,
+			))}
+	/>
+{:else if onglet === 'liste'}
+	<EtatListe
+		chargement={loading}
+		{erreur}
+		vide={filtered.length === 0}
+		titreErreur="Impossible d'afficher les demandes"
+		titreVide="Aucune demande"
+		messageVide="Signalez un problème ou posez une question au conseil syndical."
+	>
+		<ListeTickets tickets={filtered} {...etatListe} {gestes} />
+	</EtatListe>
+{/if}
 
 <!--  Section ARCHIVES — les tickets clos depuis plus du délai de grâce.
       ⚠️ Elle s'appelait « Historique », et ce mot est réservé au FIL d'évolutions
@@ -413,8 +444,15 @@
 
       Bandeau et groupement par année : `ArchivesParAnnee`, qui ouvre aussi
       l'année désignée par un lien profond (`anneeVisee`). -->
-{#if historyTickets.length > 0}
-	<div>
+{#if onglet === 'archives'}
+	<EtatListe
+		chargement={loading}
+		{erreur}
+		vide={historyTickets.length === 0}
+		titreErreur="Impossible d'afficher les archives"
+		titreVide="Aucune archive"
+		messageVide="Les affaires closes et les actualités passées rejoignent cet onglet."
+	>
 		<ArchivesParAnnee
 			items={historyTickets}
 			dateDe={(t) => t.mis_a_jour_le ?? t.cree_le}
@@ -426,30 +464,5 @@
 		>
 			<ListeTickets tickets={[ticketArchive]} archive {...etatListe} {gestes} />
 		</ArchivesParAnnee>
-	</div>
+	</EtatListe>
 {/if}
-
-<style>
-	/*  `.etat-chargement` a disparu le 06/09/2026 (#796) : `EtatListe` porte le
-	    message de chargement, et sa mise en forme avec. svelte-check a signalé le
-	    sélecteur orphelin à la compilation suivante. */
-
-	/*  Le badge « ⚡ Urgente » réécrivait ici `.badge-orange` en `:global(…)`, donc
-	    pour tout le site une fois la feuille de cette page chargée : sa teinte
-	    dépendait des écrans déjà visités. Le diagnostic était écrit ici depuis #431
-	    et la règle est quand même restée — un commentaire n'est pas un garde-fou.
-	    Retiré (#562) ; la charte de `styles/composants.css` s'applique désormais
-	    seule, et `lint:classes-nues` refuse le retour de cette forme. */
-
-	/*  Section historique. L'allure des cartes d'archive, elle, vit dans
-	    `CarteTicket` : le `<style>` d'une page n'atteint pas le balisage d'un
-	    composant enfant — c'est la panne des pastilles nues (v2.67.11). */
-	/*  🔴 Douze règles sont parties avec `ArchivesParAnnee` : le bandeau, son
-	    compteur, son chevron, et tout le groupement par année. Elles décrivaient
-	    un balisage que cette page ne rend plus — et les laisser aurait entretenu
-	    l'illusion qu'on règle ici l'aspect des Archives (#516).
-
-	    Ne reste que l'encadré de la section, seul balisage encore rendu ici. */
-	/*  Le séparateur est celui de `SectionRepliee` — il était dessiné ici AUSSI,
-	    d'où deux traits (#536). Le pourquoi est dans le composant. */
-</style>
