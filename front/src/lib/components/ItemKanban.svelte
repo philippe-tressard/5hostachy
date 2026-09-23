@@ -25,15 +25,21 @@
 	 * sans gestes, pas une autre brique.
 	 */
 	import { goto } from '$app/navigation';
-	import { typeEvenementLabel } from '$lib/evenements';
+	import { categorieTicketLabel, lienTicket } from '$lib/tickets';
 	import { perimetreTags } from '$lib/perimetres-pastilles';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { relire } from '$lib/utils';
 
-	/** L'événement rendu — on n'en lit que l'identifiant, le type, le titre, le périmètre. */
-	export let item: { id: number; type: string; titre: string; perimetre: string };
+	/** L'affaire rendue (un événement jusqu'au 23/09/2026, #1092) — on n'en lit
+	 *  que l'identifiant, la catégorie, le titre et le périmètre. */
+	export let item: {
+		id: number;
+		categorie: string;
+		titre: string;
+		perimetre_cible?: string[] | null;
+	};
 
-	$: lien = `/calendrier#ev-${item.id}`;
+	$: lien = lienTicket(item.id);
 
 	//  ⚠️ `$perimetresStore` n'est pas lu : il dit à Svelte que ce calcul dépend de
 	//  l'arbre, que `perimetreTags` lit dans un état de MODULE. Sans lui, un
@@ -51,12 +57,12 @@
 	on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && goto(lien)}
 >
 	<div class="kanban-card-tags">
-		{#each pastilles(item.perimetre) as tag (tag.code)}
+		{#each pastilles((item.perimetre_cible ?? []).join(',')) as tag (tag.code)}
 			<span class="kb-tag" style="background:{tag.color}">{tag.label}</span>
 		{/each}
 	</div>
 	<strong class="kanban-card-titre">{item.titre}</strong>
 	<div class="kanban-card-footer">
-		<span class="kanban-card-type">{typeEvenementLabel(item.type)}</span>
+		<span class="kanban-card-type">{categorieTicketLabel(item.categorie)}</span>
 	</div>
 </div>

@@ -70,22 +70,10 @@ const RESERVES = [
 			'décret n° 2001-477 — le carnet est destiné aux copropriétaires, et il porte ' +
 			'des références de contrats qui ne regardent pas un locataire',
 	},
-	{
-		page: 'calendrier',
-		onglet: 'kanban',
-		predicat: 'nonLocataire',
-		routeurApi: 'api/app/routers/calendrier.py',
-		dependance: 'require_cs_or_admin',
-		pourquoi: "le suivi des dossiers appartient au conseil ; un locataire n'y intervient pas",
-	},
-	{
-		page: 'calendrier',
-		onglet: 'archives',
-		predicat: 'nonLocataire',
-		routeurApi: 'api/app/routers/calendrier.py',
-		dependance: 'require_cs_or_admin',
-		pourquoi: 'même arbitrage que le Kanban — les archives du calendrier suivent',
-	},
+	//  Les onglets Kanban et Archives du Calendrier sont partis avec lui le
+	//  23/09/2026 (#1092). Ceux d'Affaires ne sont PAS réservés : ils montrent
+	//  des affaires que le serveur filtre déjà (`ticket_visible`) — un masque
+	//  sans refus serveur passerait pour une protection qu'il n'est pas.
 ];
 
 const pages = readFileSync(join(FRONT, 'src/lib/pages.ts'), 'utf8');

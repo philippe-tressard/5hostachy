@@ -1,6 +1,7 @@
 <!--
-  Reporting CS — **suivi des dossiers** : les événements du calendrier
-  rangés par colonne de kanban, avec l'ancienneté de chacun.
+  Reporting CS — **suivi des dossiers** : les affaires suivies rangées par
+  colonne de kanban, avec l'ancienneté de chacune (des événements du calendrier
+  jusqu'au 23/09/2026 : ils sont devenus des affaires, #1092).
 
   Extrait d'`espace-cs/+page.svelte` avec #453. Il ne charge rien : les événements
   arrivent en prop d'`OngletReporting`, qui les a demandés une seule fois pour les
@@ -17,14 +18,9 @@
 <script lang="ts">
 	import { safeDescription } from '$lib/sanitize';
 	import { fmtDate, daysSince } from '$lib/date';
-	import {
-		REPORT_KANBAN_COLS,
-		KANBAN_COLORS,
-		TYPE_LABELS,
-		type ReportEvenement,
-	} from '$lib/reporting';
+	import { REPORT_KANBAN_COLS, KANBAN_COLORS, type ReportDossier } from '$lib/reporting';
 
-	export let reportEvenements: ReportEvenement[] = [];
+	export let reportDossiers: ReportDossier[] = [];
 
 	//  🔴 Les colonnes étaient écrites en dur ICI, deux fois — dans le filtre et
 	//  dans la boucle —, et il en manquait une : `fournisseur`. Un dossier passé
@@ -34,7 +30,7 @@
 	//  `REPORT_KANBAN_COLS` dérive de `KANBAN_COLS` — une seule liste, un seul
 	//  endroit où l'oubli serait visible.
 	const colonnesSuivies = REPORT_KANBAN_COLS.map((c) => c.id);
-	$: reportKanbanEvents = reportEvenements
+	$: reportKanbanEvents = reportDossiers
 		.filter((ev) => !!ev.statut_kanban && colonnesSuivies.includes(ev.statut_kanban))
 		.sort((a, b) => daysSince(b.cree_le) - daysSince(a.cree_le));
 	$: reportKanbanByCol = REPORT_KANBAN_COLS.map((c) => ({
@@ -74,7 +70,7 @@
 				<table class="report-table">
 					<thead>
 						<tr>
-							<th>Événement</th>
+							<th>Affaire</th>
 							<th>Contexte</th>
 							<th>Dates</th>
 						</tr>
@@ -91,7 +87,7 @@
 									{/if}
 								</td>
 								<td>
-									<div>{TYPE_LABELS[ev.type] ?? ev.type}</div>
+									<div>{ev.type}</div>
 									{#if ev.prestataire_nom}<div class="text-muted-sm">{ev.prestataire_nom}</div>{/if}
 									<div class="text-muted-sm">
 										{ev.perimetre}{#if ev.batiment_id}

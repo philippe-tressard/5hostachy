@@ -101,13 +101,10 @@ const ONGLETS_SUR_PLACE = /\bonglets\s*:\s*\{/;
  * Une tolérance sans raison se transforme en dépotoir : chacune est nommée, et le
  * contrôle échoue si l'une devient inutile.
  */
-const EXCEPTIONS = {
-	'lib/raccourcis.ts':
-		'autre axe — les tuiles du tableau de bord, qui portent des compteurs et des ' +
-		"règles de visibilité que le menu n'a pas. ⚠️ Ses libellés et ses icônes ne " +
-		'suivent PAS la configuration des pages (« Sondages » quand le menu dit ' +
-		'« Communauté ») : divergence connue et assumée, pas un oubli.',
-};
+//  Vide depuis le 23/09/2026 : `raccourcis.ts` ne cite plus trois pages depuis
+//  que Calendrier et Actualités n'en sont plus (#1091, #1092) — ses tuiles ne
+//  se confondent plus avec la table.
+const EXCEPTIONS = {};
 
 /**
  * L'identifiant est-il DÉCLARÉ (inventaire) plutôt que simplement mentionné (usage) ?

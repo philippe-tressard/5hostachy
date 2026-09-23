@@ -32,7 +32,6 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import {
 		prestataires as prestApi,
-		calendrier as calApi,
 		diagnostics as diagnosticsApi,
 		tickets as ticketsApi,
 		type Ticket,
@@ -43,7 +42,8 @@
 	import {
 		REPORT_VUES,
 		type ReportVue,
-		type ReportEvenement,
+		type ReportDossier,
+		dossiersSuivis,
 		type ReportPrestataire,
 		type ReportContrat,
 		type DiagType,
@@ -65,7 +65,7 @@
 	let reportingLoaded = false;
 	let reportPrintTitle = '';
 	let reportPrestataires: ReportPrestataire[] = [];
-	let reportEvenements: ReportEvenement[] = [];
+	let reportDossiers: ReportDossier[] = [];
 	let reportContrats: ReportContrat[] = [];
 	let reportDiagTypes: DiagType[] = [];
 	let reportNoteMoyParPrest: Map<number, { moy: number; nb: number }> = new Map();
@@ -156,18 +156,16 @@
 		if (reportingLoaded && !force) return;
 		reportingLoading = true;
 		try {
-			const [ticketsList, prestataires, evenements, contrats, diagTypes, notations] =
-				await Promise.all([
-					ticketsApi.list(),
-					prestApi.list(),
-					calApi.list(),
-					prestApi.contrats(),
-					diagnosticsApi.listTypes(),
-					prestApi.notations(),
-				]);
+			const [ticketsList, prestataires, contrats, diagTypes, notations] = await Promise.all([
+				ticketsApi.list(),
+				prestApi.list(),
+				prestApi.contrats(),
+				diagnosticsApi.listTypes(),
+				prestApi.notations(),
+			]);
 			tickets = ticketsList;
 			reportPrestataires = prestataires as ReportPrestataire[];
-			reportEvenements = evenements as ReportEvenement[];
+			reportDossiers = dossiersSuivis(ticketsList);
 			reportContrats = contrats as ReportContrat[];
 			reportDiagTypes = diagTypes as DiagType[];
 			// Calcul note moyenne par prestataire
@@ -261,7 +259,7 @@
 	{#if reportingLoading}
 		<p style="color:var(--color-text-muted)">Chargement des reportings…</p>
 	{:else if reportView === 'kanban'}
-		<VueKanban {reportEvenements} />
+		<VueKanban {reportDossiers} />
 	{:else if reportView === 'tickets'}
 		<VueTickets {tickets} />
 	{:else if reportView === 'prestataires'}

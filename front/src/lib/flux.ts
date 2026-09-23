@@ -55,7 +55,6 @@ const {
 	ticket_ouvert: { libelle: 'Affaire', couleur: '#B91C1C', fond: '#FEF2F2' },
 	ticket_mis_a_jour: { libelle: 'Affaire mise à jour', couleur: '#B91C1C', fond: '#FEF2F2' },
 	annonce: { libelle: 'Petite annonce', couleur: '#C2410C', fond: '#FFF7ED' }, //  17° orange
-	evenement: { libelle: 'Événement', couleur: '#A16207', fond: '#FFFBEB' }, //  35° ambre
 	diagnostic: { libelle: 'Diagnostic', couleur: '#4D7C0F', fond: '#F7FEE7' }, //  86° olive
 	annuaire: { libelle: 'Annuaire', couleur: '#15803D', fond: '#F0FDF4' }, // 142° vert
 	prestataire: { libelle: 'Prestataire', couleur: '#0F766E', fond: '#F0FDFA' }, // 175° sarcelle
@@ -140,7 +139,6 @@ export function typeVoirLabel(item: FluxItem): string {
 	if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type))
 		return "Voir l'affaire →";
 	if (item.type === 'publication') return "Voir l'actualité →";
-	if (item.type === 'evenement') return "Voir l'événement →";
 	if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return 'Voir le sondage →';
 	if (item.type === 'annonce') return "Voir l'annonce →";
 	if (item.type === 'idee') return "Voir l'idée →";
@@ -191,7 +189,6 @@ export function estTicketUrgent(item: FluxItem): boolean {
  *  qu'en urgence. Il retombera dans le bandeau épinglé en cessant d'être urgent. */
 export function estUrgent(item: FluxItem): boolean {
 	return (
-		(item.type === 'evenement' && item.meta?.type === 'coupure') ||
 		estTicketUrgent(item) ||
 		(item.type === 'publication' && Boolean(item.meta?.urgente) && item.meta?.statut !== 'resolu')
 	);
@@ -210,22 +207,6 @@ export function estNonResolu(item: FluxItem): boolean {
 		//  indéfiniment, comme s'il attendait encore quelque chose. `$lib/tickets`
 		//  porte la question une fois pour toutes (#415).
 		return !estTicketClos((item.meta?.statut as string) ?? '');
-	}
-	if (item.type === 'evenement') {
-		//  🔴 Un événement PASSÉ n'attend plus rien, quel que soit son kanban
-		//  (20/08/2026, signalé à l'écran : « pourquoi des événements de plus de
-		//  30 j sont visibles ? »). L'AG du 1er mars était encore en tête du fil
-		//  cinq mois plus tard : personne ne l'avait passée en « terminé », et
-		//  ce seul oubli la rendait éternelle.
-		//
-		//  La règle du site est « après la date de l'événement » (#515) : c'est
-		//  la DATE qui décide, pas un clic dans le kanban. Un ticket ouvert, lui,
-		//  attend vraiment quelque chose — d'où la différence de traitement juste
-		//  au-dessus.
-		const debut = item.meta?.debut ?? item.date ?? item.cree_le;
-		if (debut && new Date(debut as string).getTime() < Date.now()) return false;
-		const k = (item.meta?.statut_kanban as string) ?? '';
-		return !['termine', 'annule'].includes(k);
 	}
 	return false;
 }
@@ -277,13 +258,9 @@ export function estNonResolu(item: FluxItem): boolean {
  * entité veut une autre date, elle le DIT, et la fonction ne bouge pas. C'est la
  * forme retenue pour l'archivage (#515) et pour les périodes par nœud (#542).
  */
-const DATE_QUI_CLASSE: Record<string, (item: FluxItem) => string | undefined> = {
-	//  ⚠️ `estNonResolu` lit DÉJÀ `meta.debut` pour décider qu'un événement passé
-	//  n'attend plus rien. Les deux règles lisaient donc deux dates différentes
-	//  pour le même objet — ce qui ne pouvait pas durer, et c'est ce que ce
-	//  ticket a corrigé en les faisant converger sur `debut`.
-	evenement: (item) => item.meta?.debut as string | undefined,
-};
+//  L'événement, seul type qui déclarait sa date, est parti le 23/09/2026 : c'est
+//  une affaire (#1092). La table reste — un type à venir s'y déclarera.
+const DATE_QUI_CLASSE: Record<string, (item: FluxItem) => string | undefined> = {};
 
 export function dateDeReference(item: FluxItem): number {
 	const cloture = (item.meta?.cloture_le || item.meta?.ferme_le) as string | undefined;

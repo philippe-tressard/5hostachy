@@ -94,7 +94,8 @@ export const RACCOURCIS: Raccourci[] = [
 	{
 		id: 'calendrier',
 		libelle: 'Calendrier',
-		href: '/calendrier',
+		//  Le Calendrier est le filtre « Calendrier » d'Affaires (#1092, 23/09/2026).
+		href: '/tickets?nature=calendrier',
 		icone: 'calendar',
 		visible: TOUS,
 		compteurs: () => [],

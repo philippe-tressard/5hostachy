@@ -177,7 +177,6 @@ export const PAGES: PageDef[] = [
 			{
 				id: 'kanban',
 				route: '/tickets/kanban',
-				reserve: 'nonLocataire',
 				label: '\u{1F5C3}️ Kanban',
 				descriptif: 'Les affaires suivies, par état.',
 			},
@@ -189,40 +188,9 @@ export const PAGES: PageDef[] = [
 			},
 		],
 	},
-	{
-		id: 'calendrier',
-		href: '/calendrier',
-		nom: 'Calendrier',
-		titre: 'Calendrier',
-		navLabel: 'Calendrier',
-		icone: 'calendar-days',
-		descriptif: 'Agenda des événements et interventions de la résidence.',
-		onglets: [
-			{
-				id: 'liste',
-				route: '/calendrier',
-				label: '\u{1F4CB} Liste',
-				descriptif: 'Les événements, du plus lointain au plus ancien.',
-			},
-			{
-				id: 'kanban',
-				route: '/calendrier/kanban',
-				reserve: 'nonLocataire',
-				label: '\u{1F5C3}️ Kanban',
-				descriptif: 'Organisation visuelle des événements par statut.',
-			},
-			{
-				id: 'archives',
-				route: '/calendrier/archives',
-				reserve: 'nonLocataire',
-				//  Le mot ET son icône viennent de `$lib/archives` : ils étaient recopiés
-				//  ici, et #516 existe précisément pour qu'« Archives » ne s'écrive qu'une
-				//  fois — la recopie concordait, à l'instant où on l'avait posée.
-				label: TITRE_ARCHIVES,
-				descriptif: 'Actualités et événements archivés.',
-			},
-		],
-	},
+	//  « Calendrier » n'est plus une page (#1092, lot 5, 23/09/2026) : ses événements
+	//  sont des affaires, lues sous le filtre « Calendrier » d'Affaires ; son kanban
+	//  est l'onglet Kanban d'Affaires. `/calendrier` reste une ADRESSE, qui redirige.
 	{
 		id: 'mon-lot',
 		href: '/mon-lot',

@@ -16,24 +16,32 @@
 	 * ⚠️ Les classes `kb-*` sont **globales** (`styles/composants.css`), comme
 	 * pour `ItemKanban` : le balisage déménage sans emporter de style.
 	 *
-	 * La page garde ce qui lui appartient : le CHARGEMENT des événements, et le
+	 * La page garde ce qui lui appartient : le CHARGEMENT des affaires, et le
 	 * contexte de droits qu'elle calcule déjà pour le fil.
+	 *
+	 * ## Il lit les AFFAIRES depuis le 23/09/2026 (#1092, lot 5)
+	 *
+	 * Les événements du calendrier sont devenus des affaires. Paraissent les
+	 * affaires suivies, non archivées et non annulées, rangées par leur état
+	 * (`colonneDuTicket`). Le filtre par exercice est parti avec eux : une
+	 * affaire suivie en cours reste à l'accueil tant qu'elle n'est pas close,
+	 * quelle que soit l'année ; la visibilité est celle du serveur.
 	 */
 	import ItemKanban from '$lib/components/ItemKanban.svelte';
+	import { routeOnglet } from '$lib/routes-onglets';
+	import type { Ticket } from '$lib/api';
 	import {
 		KANBAN_COLS_ACCUEIL,
 		SEUIL_KANBAN_ETROIT,
-		colonneDeLEvenement,
+		colonneDuTicket,
 		kanbanColVisible,
-		kanbanEvMatchesYear,
-		kanbanEvVisible,
 		MAX_CARTES_ACCUEIL,
 		MOT_COLONNE_VIDE,
 		type KanbanCtx,
 	} from '$lib/kanban';
 
-	/** Les événements bruts du calendrier — la page les charge, ce composant les trie. */
-	export let evenements: any[] = [];
+	/** Les affaires — la page les charge, ce composant les trie. */
+	export let affaires: Ticket[] = [];
 	/** Le contexte de droits, calculé UNE fois par la page (elle en a besoin pour le fil). */
 	export let ctx: KanbanCtx;
 	/** Le chargement est en cours : on ne dit pas « aucun dossier » avant d'avoir regardé. */
@@ -55,8 +63,7 @@
 		videsDepliees = suivant;
 	}
 
-	const _kanbanYear =
-		new Date().getMonth() < 1 ? new Date().getFullYear() - 1 : new Date().getFullYear();
+	const lienKanban = routeOnglet('mes-demandes', 'kanban');
 
 	//  🔴 Cette table était RECOPIÉE ici jusqu'au 19/09/2026 (#1030) — mêmes
 	//  identifiants, mêmes couleurs, mais cinq colonnes au lieu de six et des
@@ -74,21 +81,20 @@
 	//  employé que là. Le garder ici aurait laissé une fonction sans appelant dans
 	//  un fichier de mille lignes — exactement ce qui se recopie (13/09/2026).
 
-	$: dashKanbanEvs = evenements.filter((ev) => {
-		if (!ev.statut_kanban || ev.statut_kanban === 'annule') return false;
-		if (!kanbanEvVisible(ev, ctx)) return false;
-		if (!kanbanEvMatchesYear(ev, _kanbanYear)) return false;
-		return true;
+	$: dashKanbanEvs = affaires.filter((t) => {
+		const colonne = colonneDuTicket(t.statut);
+		return t.suivi_kanban && !t.archivee && colonne !== null && colonne !== 'annule';
 	});
 
 	$: dashKanbanCols = DASH_KANBAN_COLS.filter((col) => kanbanColVisible(col.id, ctx)).map((col) => {
 		//  🔴 Le rangement vit dans `$lib/kanban` : il était écrit ici ET dans le
 		//  calendrier, et les deux ont divergé (signalé à l'écran, 02/09/2026).
-		let items: any[] = dashKanbanEvs.filter((ev: any) => colonneDeLEvenement(ev) === col.id);
+		let items: Ticket[] = dashKanbanEvs.filter((t) => colonneDuTicket(t.statut) === col.id);
 		if (col.id === 'termine') {
 			items = [...items].sort(
-				(a: any, b: any) =>
-					new Date(b.fin ?? b.debut).getTime() - new Date(a.fin ?? a.debut).getTime(),
+				(a, b) =>
+					new Date(b.mis_a_jour_le ?? b.cree_le).getTime() -
+					new Date(a.mis_a_jour_le ?? a.cree_le).getTime(),
 			);
 		}
 		return { ...col, total: items.length, items: items.slice(0, MAX_CARTES_ACCUEIL) };
@@ -111,11 +117,11 @@
 
 <div class="kb-header">
 	<h2 class="section-title" style="margin:0">&#x1F4CB; Kanban</h2>
-	<a href="/calendrier/kanban" class="kb-voir-lien">Voir le Kanban complet →</a>
+	<a href={lienKanban} class="kb-voir-lien">Voir le Kanban complet →</a>
 </div>
 
 {#if dashKanbanEvs.length === 0 && !loading}
-	<p class="kb-vide">Aucun dossier actif pour {_kanbanYear}.</p>
+	<p class="kb-vide">Aucun dossier actif.</p>
 {:else}
 	{#if !vueEtroite}
 		<div class="kb-grid">
@@ -206,12 +212,12 @@
 					{#if mobileKanbanCurrent.total > 5}
 						<p class="kb-mobile-plus">
 							+{mobileKanbanCurrent.total - 5} élément{mobileKanbanCurrent.total - 5 > 1 ? 's' : ''} —
-							<a href="/calendrier" class="kb-mobile-plus-lien">voir tout</a>
+							<a href={lienKanban} class="kb-mobile-plus-lien">voir tout</a>
 						</p>
 					{/if}
 				</div>
 			{/if}
-			<a href="/calendrier/kanban" class="kb-mobile-lien">Voir le Kanban complet →</a>
+			<a href={lienKanban} class="kb-mobile-lien">Voir le Kanban complet →</a>
 		</div>
 	{/if}
 {/if}

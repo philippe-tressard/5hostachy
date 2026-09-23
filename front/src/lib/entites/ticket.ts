@@ -232,7 +232,9 @@ export const TICKET: EntiteDeclaree = {
 			objet: 'DestinatairePicker — à qui parle une actualité dans l’application',
 			inactivePour: {
 				suivie:
-					'Une affaire suivie est vue de son auteur, de son périmètre et du conseil : elle ne s’adresse à personne d’autre.',
+					//  Vérifié le 23/09/2026 dans `visibility.ticket_visible` : un locataire ne
+					//  voit que ses propres affaires, jamais celles de son périmètre.
+					'Une affaire suivie est vue de son auteur, des copropriétaires du périmètre sélectionné et du conseil syndical — un locataire ne voit que les siennes. Elle ne s’adresse à personne d’autre.',
 			},
 		},
 		{

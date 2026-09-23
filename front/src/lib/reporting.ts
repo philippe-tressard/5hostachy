@@ -12,9 +12,12 @@
 //  ⚠️ `KANBAN_COLS` est importé, pas recopié : les colonnes du suivi ont UNE
 //  définition, dans `$lib/kanban`. Aucun cycle — `kanban.ts` ne connaît pas ce
 //  module.
-import { KANBAN_COLS } from '$lib/kanban';
+import { KANBAN_COLS, colonneDuTicket } from '$lib/kanban';
+import { categorieTicketLabel } from '$lib/tickets';
+import type { Ticket } from '$lib/api/types';
 
-export interface ReportEvenement {
+//  Un DOSSIER suivi : une affaire au kanban (#1092, 23/09/2026 — c'était un événement).
+export interface ReportDossier {
 	id: number;
 	titre: string;
 	description?: string | null;
@@ -28,6 +31,29 @@ export interface ReportEvenement {
 	mis_a_jour_le?: string | null;
 	statut_kanban?: string | null;
 	prestataire_nom?: string | null;
+}
+
+/**  Les dossiers du reporting : les affaires SUIVIES et non archivées, chacune
+ *   dans la colonne que son état désigne (`colonneDuTicket` — la table du
+ *   kanban, pas une copie). */
+export function dossiersSuivis(tickets: Ticket[]): ReportDossier[] {
+	return tickets
+		.filter((t) => t.suivi_kanban && !t.archivee && colonneDuTicket(t.statut))
+		.map((t) => ({
+			id: t.id,
+			titre: t.titre,
+			description: t.description,
+			type: categorieTicketLabel(t.categorie),
+			debut: t.debut ?? t.cree_le,
+			fin: t.fin ?? null,
+			perimetre: (t.perimetre_cible ?? []).join(', '),
+			batiment_id: t.batiment_id ?? null,
+			auteur_nom: t.auteur_nom ?? null,
+			cree_le: t.cree_le,
+			mis_a_jour_le: t.mis_a_jour_le ?? null,
+			statut_kanban: colonneDuTicket(t.statut),
+			prestataire_nom: t.prestataire_nom ?? null,
+		}));
 }
 export interface ReportPrestataire {
 	id: number;
@@ -125,14 +151,6 @@ export const KANBAN_COLORS: Record<string, string> = {
 	fournisseur: 'badge-yellow',
 	termine: 'badge-green',
 	annule: 'badge-gray',
-};
-export const TYPE_LABELS: Record<string, string> = {
-	travaux: 'Travaux',
-	coupure: 'Coupure',
-	ag: 'AG',
-	maintenance: 'Maintenance',
-	maintenance_recurrente: 'Maintenance récurrente',
-	autre: 'Autre',
 };
 
 /* ── Renouvellements : calculs ────────────────────────────────────────────
