@@ -70,6 +70,30 @@
 	font-weight: 500;
 	color: var(--color-text);
 }
+/*  🔴 DANS UNE SECTION, un libellé de champ se lit UN CRAN SOUS le titre de
+    sa section (23/09/2026, arbitré à l'écran). Il était PLUS GRAND que lui —
+    0,875 rem contre 0,72 — et la hiérarchie se lisait à l'envers : « Nom » et
+    « Courriel » dominaient « AU NOM DE » qui les coiffe.
+
+    Même corps et mêmes capitales que `.section-titre` (`SectionFormulaire`),
+    graisse moyenne et couleur atténuée : on lit la section, puis ses champs.
+    Le contraste de `--color-text-muted` sur fond blanc tient l'AA (6,3:1).
+
+    ⚠️ Portée : les formulaires À SECTIONS seulement. Un formulaire sans
+    section (connexion, réglages) n'a pas de titre au-dessus de ses champs, et
+    le libellé y est le seul repère : il garde sa taille.
+
+    ⚠️ Une section à UN seul champ n'a pas de libellé de champ : son titre EST
+    le libellé (`SectionFormulaire`, `pour=`). La section 1 l'oubliait dans sept
+    formulaires — d'où `SectionTitre`. */
+.section-formulaire .field > label,
+.section-formulaire .libelle-groupe {
+	font-size: 0.72rem;
+	font-weight: 500;
+	color: var(--color-text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
 /* ── Grille de formulaire ──
    Des champs courts côte à côte, qui repassent en colonne quand la place manque.
 

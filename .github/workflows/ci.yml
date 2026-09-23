@@ -1640,6 +1640,15 @@ jobs:
         working-directory: front
         run: npm run lint:pliage-transmis
 
+      # UNE SECTION SE NOMME PAR SON TITRE, JAMAIS PAR UN LIBELLE DE CHAMP
+      # (23/09/2026, signale a l'ecran : « TITRE » ne ressemblait pas aux autres
+      # intitules). Sept formulaires ouvraient leur section 1 sans `titre=`,
+      # avec un `<label>` de champ : deux typographies pour un meme role.
+      # La section 1 vit desormais dans `SectionTitre`.
+      - name: Une section se nomme par son titre
+        working-directory: front
+        run: npm run lint:section-nommee
+
       # 🔴 « ARIA-LABEL SUR LES BOUTONS ICONE-SEULE » ETAIT ECRIT TROIS FOIS
       # ET APPLIQUE ZERO (22/09/2026) : CLAUDE.md, ux-patterns §3, standards/11 §2.
       #

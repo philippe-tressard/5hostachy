@@ -19,6 +19,7 @@
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
+	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { PRESTATAIRE } from '$lib/entites/prestataire';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
@@ -45,12 +46,7 @@
       l'entreprise et lesquels la décrivent. -->
 <!--  ══ 1. NOM ══ La section n'a pas de titre : le champ porte le sien, comme
       sur les dix autres écrans (12/09/2026). Voir `ChampsContrat`. -->
-<SectionFormulaire premiere>
-	<div class="field champ-large">
-		<label for={idNom}>Nom<EtoileRequis vide={!prestForm.nom} /></label>
-		<input id={idNom} bind:value={prestForm.nom} required />
-	</div>
-</SectionFormulaire>
+<SectionTitre id={idNom} libelle="Nom" bind:valeur={prestForm.nom} />
 
 <!--  ══ 2. CHAMPS SPÉCIFIQUES ══ Ce qui décrit l'entreprise. -->
 {#if sectionPresente(PRESTATAIRE, etat, 'nature')}

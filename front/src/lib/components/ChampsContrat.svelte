@@ -48,7 +48,7 @@
 	import PerimetrePicker from './PerimetrePicker.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
-	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import { CONTRAT } from '$lib/entites/contrat';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
@@ -79,12 +79,7 @@
       capitales — une troisième forme pour le même champ, et l'astérisque collé.
       Mesuré : DIX écrans sur onze emploient `<SectionFormulaire premiere>` avec
       un `.field champ-large` qui porte `Titre *`. L'exception, c'était moi. -->
-<SectionFormulaire premiere>
-	<div class="field champ-large">
-		<label for="{idNotes}-titre">Titre<EtoileRequis vide={!contratForm.libelle} /></label>
-		<input id="{idNotes}-titre" bind:value={contratForm.libelle} required />
-	</div>
-</SectionFormulaire>
+<SectionTitre id="{idNotes}-titre" bind:valeur={contratForm.libelle} />
 
 <!--  ══ 2. CHAMPS SPÉCIFIQUES ══ Tout ce qui QUALIFIE le contrat : avec qui, sur
       quoi, depuis quand, à quel rythme. Les dates et la fréquence étaient rendues

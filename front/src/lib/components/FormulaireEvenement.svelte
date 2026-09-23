@@ -18,6 +18,7 @@
 	import { typeEvenementLabel } from '$lib/evenements';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
@@ -219,12 +220,7 @@
 	<div>
 		<form on:submit|preventDefault={soumettre}>
 			<!--  1. Titre. -->
-			<SectionFormulaire premiere>
-				<div class="field champ-large">
-					<label for="ev-titre">Titre<EtoileRequis vide={!form.titre} /></label>
-					<input id="ev-titre" bind:value={form.titre} required />
-				</div>
-			</SectionFormulaire>
+			<SectionTitre id="ev-titre" bind:valeur={form.titre} />
 
 			<!--  2. Champs spécifiques de l'événement. -->
 			{#if sectionPresente(EVENEMENT, etat, 'nature')}

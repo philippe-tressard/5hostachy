@@ -29,6 +29,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { SONDAGE } from '$lib/entites/sondage';
@@ -37,7 +38,6 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
-	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	//  L'API des sondages ne rend pas de type dédié : la page recharge sa liste.
 	const dispatch = createEventDispatcher<{ cree: unknown; modifie: unknown; annule: void }>();
@@ -207,12 +207,7 @@
 	<form on:submit|preventDefault={enregistrer}>
 		<!--  1. Titre — ici, la question posée, et le titre de la section EST son
 		      libellé (`titreEcran: 'Question'`). -->
-		<SectionFormulaire premiere>
-			<div class="field champ-large">
-				<label for="sondage-question">Question<EtoileRequis vide={!question} /></label>
-				<input id="sondage-question" bind:value={question} required />
-			</div>
-		</SectionFormulaire>
+		<SectionTitre id="sondage-question" libelle="Question" bind:valeur={question} />
 
 		<!--  2. Champs spécifiques du sondage : ses options et sa clôture. DEUX
 		      groupes nommés pour une seule section — la déclaration les annonce
