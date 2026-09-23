@@ -40,7 +40,7 @@
 	import { toast } from './Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
-	import { STATUT_TICKET_LABELS, optionsVersTicket } from '$lib/tickets';
+	import { STATUT_TICKET_LABELS, STATUT_TICKET_OPTIONS, optionsVersTicket } from '$lib/tickets';
 	import { evolutionIcone } from '$lib/evolutions';
 	import { TICKET } from '$lib/entites/ticket';
 
@@ -230,6 +230,7 @@
 					{auteurNom}
 					titre={SUITE.libelle}
 					demanderApercu={apercuDuCommentaire}
+					statutOptions={STATUT_TICKET_OPTIONS}
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}
 					entite={TICKET}
