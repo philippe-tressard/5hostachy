@@ -101,6 +101,14 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket) -> list[str]:
         if retenues != _liste_json(ticket.photos_urls):
             changes.append("Photos modifiées")
         ticket.photos_urls = photos_json(retenues)
+    #  La section « Quand » (#1092) — écrite depuis le 23/09/2026 : `TicketUpdate`
+    #  l'acceptait et rien ne l'appliquait, donc 200 sans rien écrire. Testée à
+    #  la PRÉSENCE (`_envoye`) : effacer une date, c'est l'envoyer à `null`.
+    quand = [c for c in ("debut", "fin") if _envoye(body, c) and getattr(body, c) != getattr(ticket, c)]
+    if quand:
+        changes.append("Quand modifié")
+        for c in quand:
+            setattr(ticket, c, getattr(body, c))
     return changes
 
 

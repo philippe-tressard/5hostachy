@@ -271,15 +271,14 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, table=True):
     saisi_pour_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     non_relancable: bool = False
     #  -- Section « Quand » (#1092) ----------------------------------
-    #  Deux notions, jamais la même : `debut`/`fin` disent QUAND ÇA SE PASSE
-    #  et alimentent le calendrier ; `echeance` dit AVANT QUAND C'EST ATTENDU
-    #  et alimente le suivi. Les confondre afficherait « devis attendu » dans
-    #  l'agenda de la résidence, et n'alerterait jamais sur un retard.
+    #  `debut`/`fin` disent QUAND ÇA SE PASSE et alimentent le calendrier.
+    #  `echeance` (« avant quand c'est attendu ») a été RETIRÉE le 23/09/2026
+    #  (migration 0206) : ôtée du formulaire le 21/09 — la relance mensuelle
+    #  couvre le besoin —, elle n'était plus ni saisie ni lue.
     #  Noms alignés sur `Evenement.debut`/`fin` : le lot qui fera disparaître
     #  l'entité y recopiera ses lignes littéralement.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
-    echeance: Optional[date] = None
     non_relancable_motif: Optional[str] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)

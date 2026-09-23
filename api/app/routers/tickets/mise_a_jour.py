@@ -76,9 +76,17 @@ CHAMPS_DE_CONTENU = (
 )
 
 
+#: Les champs de contenu qu'on EFFACE en les envoyant à `null` : leur seule
+#: présence compte (#1092). Les autres restent testés à la non-nullité — le
+#: formulaire les envoie tous, et un titre vide n'a pas de sens.
+CHAMPS_EFFACABLES = ("debut", "fin")
+
+
 def _touche_au_contenu(body) -> bool:
     """Cette modification porte-t-elle sur la demande elle-même ?"""
-    return any(getattr(body, champ, None) is not None for champ in CHAMPS_DE_CONTENU)
+    return any(getattr(body, champ, None) is not None for champ in CHAMPS_DE_CONTENU) or any(
+        champ in body.model_fields_set for champ in CHAMPS_EFFACABLES
+    )
 
 
 @router.patch("/{ticket_id}", response_model=TicketRead)

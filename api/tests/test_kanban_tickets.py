@@ -133,3 +133,24 @@ def test_la_categorie_visee_EXISTE_vraiment():
             f"catégorie inconnue : {categorie}. `suivi_par_defaut` rendrait "
             "toujours False, et aucun ticket n'entrerait au tableau."
         )
+
+
+# ── Avec l'ÉNUMÉRATION, pas seulement la chaîne (#1092, 23/09/2026) ───────────
+#
+#  🔴 `str(CategorieTicket.etude_travaux)` vaut « CategorieTicket.etude_travaux »,
+#  pas « etude_travaux ». La création passe l'énumération (`body.categorie`) :
+#  le défaut « Étude & travaux entre au kanban » ne s'est donc jamais posé. Les
+#  tests ci-dessus n'éprouvaient que des chaînes.
+
+def test_le_defaut_de_suivi_accepte_l_enumeration():
+    from app.models.tickets import CategorieTicket
+
+    assert suivi_par_defaut(CategorieTicket.etude_travaux) is True
+    assert suivi_par_defaut(CategorieTicket.panne) is False
+
+
+def test_la_colonne_accepte_l_enumeration():
+    from app.models.tickets import StatutTicket
+    from app.utils.kanban_tickets import colonne_du_ticket
+
+    assert colonne_du_ticket(StatutTicket.ouvert) == colonne_du_ticket("ouvert") is not None

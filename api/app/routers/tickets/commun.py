@@ -230,32 +230,23 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
     #  ici en ligne, et autrement dans l'actualité et l'événement — d'où un
     #  `proprietaire_nom` que seul le ticket exposait.
     proprietaire_nom, saisi_pour_affichage = noms_derives(session, ticket)
-    return TicketRead(
-        id=ticket.id,
-        numero=ticket.numero,
-        titre=ticket.titre,
-        description=ticket.description,
-        categorie=ticket.categorie,
-        statut=ticket.statut,
-        priorite=ticket.priorite,
-        auteur_id=ticket.auteur_id,
+    #  🔴 PARTIR DU MODÈLE, puis ajouter ce qui se CALCULE (#1092, 23/09/2026).
+    #
+    #  Cette fonction recopiait les colonnes une par une : tout champ déclaré au
+    #  schéma et oublié ici prenait sa valeur par défaut, sans un mot. Le
+    #  commentaire qui suivait `confidentiel` le décrivait déjà (« un champ au
+    #  schéma et jamais rempli prend sa valeur par défaut »), corrigé à la main
+    #  pour ce champ-là — et le même défaut restait entier pour `debut`, `fin`
+    #  (la section Quand ne se relisait pas), `suivi_kanban` (kanban vide),
+    #  `epingle` et `assiste_ia`. Une liste recopiée se complète une ligne à la
+    #  fois ; la lire sur le modèle ne s'oublie pas.
+    #  🔒 `test_ticket_read_rend_le_modele.py` : chaque colonne partagée revient.
+    return TicketRead.model_validate(ticket).model_copy(update=dict(
         auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else None,
         auteur_batiment_nom=libelle_batiment_ou(batiment, None),
-        lot_id=ticket.lot_id,
-        batiment_id=ticket.batiment_id,
-        perimetre_cible=ticket.perimetre_cible,
-        photos_urls=ticket.photos_urls,
-        fichiers_urls=ticket.fichiers_urls,
         apercu_pieces=apercu_pieces(ticket, session),
-        destinataire_syndic=ticket.destinataire_syndic,
-        destinataire_cs=ticket.destinataire_cs,
-        saisi_pour_user_id=ticket.saisi_pour_user_id,
-        saisi_pour_nom=ticket.saisi_pour_nom,
-        saisi_pour_email=ticket.saisi_pour_email,
         saisi_pour_affichage=saisi_pour_affichage,
         proprietaire_nom=proprietaire_nom,
-        cree_le=ticket.cree_le,
-        mis_a_jour_le=ticket.mis_a_jour_le,
         #  ⚠️ `seuil_archivage_jours` interroge la configuration, et l'on est ici
         #  dans une fonction appelée PAR TICKET : c'est un appel par ticket, et
         #  c'est assumé — la liste en compte quelques dizaines. Le factoriser
@@ -263,16 +254,8 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         #  dont plusieurs n'en rendent qu'un. À revoir si la liste grossit, et à
         #  mesurer avant d'optimiser.
         archivee=est_archivable("ticket", ticket, seuil_jours=seuil_archivage_jours(session)),
-        #  ⚠️ REMPLI, et pas seulement déclaré. C'est le défaut SYMÉTRIQUE de
-        #  celui du 02/09 : un champ passé sans être au schéma est ignoré par
-        #  Pydantic ; un champ au schéma et jamais rempli prend sa valeur par
-        #  défaut — ici `False`, donc « aucun ticket n'est confidentiel ».
-        #  `test_schemas_champs` ne voit que le premier, et il le dit.
-        confidentiel=ticket.confidentiel,
-        non_relancable=ticket.non_relancable,
-        non_relancable_motif=ticket.non_relancable_motif,
         relance_count=compter_relances(session, ticket.id),
-    )
+    ))
 
 
 def compter_relances(session: Session, ticket_id: int) -> int:

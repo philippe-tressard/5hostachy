@@ -48,6 +48,7 @@ les statuts de ticket sont les seuls accentués de tout le site (`résolu`,
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
+from app.utils.valeurs import valeur
 
 #: Le délai unique, en jours. Arbitré à l'écran le 19/08/2026 : *« un seul
 #: champ, mais valable pour tous les types d'écran… 30 j »*. Surchargeable en
@@ -218,15 +219,15 @@ def _statut_de(objet: Any, regle: RegleArchivage) -> Optional[str]:
         return regle.statut_defaut
     #  `StatutTicket.résolu` est une `str` Enum : comparer l'objet enum
     #  fonctionnerait aujourd'hui et casserait au premier enum ordinaire.
-    return getattr(brut, "value", brut)
+    return valeur(brut)
 
 
 def _date_de_reference(objet: Any, regle: RegleArchivage) -> Optional[datetime]:
     """La première date renseignée parmi les candidates, ou `None`."""
     for champ in regle.champs_date:
-        valeur = getattr(objet, champ, None)
-        if isinstance(valeur, datetime):
-            return valeur
+        lue = getattr(objet, champ, None)
+        if isinstance(lue, datetime):
+            return lue
     return None
 
 
@@ -254,11 +255,11 @@ def perime_le(objet: Any, type_objet: str = "publication") -> Optional[date]:
     if regle is None:
         return None
     for champ in regle.champs_peremption:
-        valeur = getattr(objet, champ, None)
-        if isinstance(valeur, datetime):
-            return valeur.date()
-        if isinstance(valeur, date):
-            return valeur
+        lue = getattr(objet, champ, None)
+        if isinstance(lue, datetime):
+            return lue.date()
+        if isinstance(lue, date):
+            return lue
     return None
 
 
