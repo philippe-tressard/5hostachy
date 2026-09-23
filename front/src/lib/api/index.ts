@@ -197,64 +197,12 @@ export const notifications = {
 	delete: (id: number) => api.delete(`/notifications/${id}`),
 };
 
+//  Le calendrier n'est plus qu'une ADRESSE (#1092, lot 5) : ses événements sont
+//  des affaires. Reste la question des anciens liens `#ev-N` — le serveur répond
+//  410 avec l'affaire née de l'événement (`routers/calendrier.py`).
 export const calendrier = {
-	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498).
-	//
-	//  🔴 Cet écran n'en avait pas : seuls les tickets en avaient un. Comme eux,
-	//  il ne crée RIEN et ne recompose rien — le message est composé par les
-	//  MÊMES fonctions que l'envoi (`contexte_evenement_canaux`).
-	apercuDiffusion: (brouillon: {
-		/** Renseigné pour une entrée d'Historique sur un événement existant. */
-		evenement_id?: number;
-		/** L'entrée en cours : sa présence bascule le gabarit ET le message. */
-		suivi?: { etat?: string; commentaire?: string };
-		fichiers_suivi?: string[];
-		titre?: string;
-		description?: string;
-		type?: string;
-		debut?: string;
-		perimetre?: string;
-		photos_urls?: string[];
-		fichiers_urls?: string[];
-		envoyer_syndic?: boolean;
-		envoyer_cs?: boolean;
-		partager_whatsapp?: boolean;
-		/** « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). */
-		envoyer_auteur?: boolean;
-	}) => api.post<ApercuDiffusion>('/calendrier/apercu-diffusion', brouillon),
-	list: () => api.get<any[]>('/calendrier'),
-	//  🔴 `get` A ÉTÉ RETIRÉE (12/09/2026, #932), avec son endpoint : il n'y a pas
-	//  d'écran `/calendrier/[id]`, et la page tient ses événements par `list()`.
-	create: (data: unknown) => api.post<any>('/calendrier', data),
-	//  🔴 UNE requête, UNE transaction (#605, point 3). Le pré-remplissage du
-	//  kanban écrivait en boucle : `for (const ev of aCreer) await create(ev)`.
-	//  Un échec au 7e sur 20 laissait SIX événements créés et l'écran disait
-	//  « Erreur lors de l'initialisation » sans dire lesquels.
-	//
-	//  ⚠️ Ce point d'entrée ne DIFFUSE jamais et refuse les types qui notifient
-	//  (coupure, travaux) : un lot est un pré-remplissage silencieux, en faire un
-	//  canal offrirait cent envois en une requête. Le serveur les rejette en 422
-	//  plutôt que de les ignorer — sinon l'appelant croirait avoir diffusé.
-	createLot: (evenements: unknown[]) => api.post<any[]>('/calendrier/lot', { evenements }),
-	update: (id: number, data: unknown) => api.patch<any>(`/calendrier/${id}`, data),
-	archive: (id: number) => api.patch<any>(`/calendrier/${id}`, { archivee: true }),
-	delete: (id: number) => api.delete(`/calendrier/${id}`),
-	// Pas de `uploadPhoto` : comme pour les tickets, les pièces jointes sont
-	// téléversées par `fichiersApi.upload` avant la création et passent dans le
-	// payload ; le retrait passe par `update`, qui n'accepte que nos URLs.
-
-	//  L'HISTORIQUE d'un événement (18/08/2026). Le Kanban ÉTANT son workflow,
-	//  une entrée de type `etat` déplace aussi l'événement : le fil ne raconte
-	//  jamais un mouvement qui n'a pas eu lieu.
-	addEvolution: (id: number, data: unknown) => api.post<any>(`/calendrier/${id}/evolutions`, data),
-	updateEvolution: (id: number, evolId: number, data: unknown) =>
-		api.patch<any>(`/calendrier/${id}/evolutions/${evolId}`, data),
-	//  Même contrat que celui des tickets — même code côté serveur (#512).
-	deleteEvolution: (id: number, evolId: number) =>
-		api.delete<void>(`/calendrier/${id}/evolutions/${evolId}`),
+	get: (id: number) => api.get<void>(`/calendrier/${id}`),
 };
-
-// ── Flux temps réel (dashboard pouls) ───────────────────────────────────────
 
 export const flux = {
 	get: () => api.get<FluxResponse>('/flux'),

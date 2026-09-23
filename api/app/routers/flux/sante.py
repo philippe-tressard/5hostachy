@@ -19,7 +19,6 @@ from app.models.core import (
     ContratEntretien,
     Copropriete,
     DemandeModificationProfil,
-    Evenement,
     Prestataire,
     RoleUtilisateur,
     Sondage,
@@ -31,14 +30,12 @@ from app.routers.copropriete import contrat_de_reference
 from app.utils.comptes import nb_comptes_en_attente
 from app.utils.echeance_contrat import echeance_du_contrat
 from app.utils.visibility import (
-    evenement_visible,
     sondage_accessible,
     sondage_clos,
     ticket_visible,
 )
 
 from .commun import ContexteFlux
-from .evenements import TYPE_EMOJI, perimetres_evenement
 from .schemas import FluxSante
 from app.utils.categories_ticket import ticket_urgent
 from app.auth.deps import est_moderateur
@@ -46,45 +43,17 @@ from app.auth.deps import est_moderateur
 #: Délai par défaut, en jours, avant qu'un ticket syndic soit relançable.
 _RELANCE_SYNDIC_DEFAUT_J = 30
 #: Bornes de l'agenda : par source, puis au total.
-_MAX_EVENEMENTS = 15
 _MAX_VISITES = 5
 _MAX_PROCHAINS = 12
 
 
 def _prochains(ctx: ContexteFlux) -> list[dict]:
-    """Agenda « Prochaines échéances » : événements, visites de contrat, assurance."""
+    """Agenda « Prochaines échéances » : visites de contrat, assurance."""
     prochains: list[dict] = []
 
-    evts = ctx.session.exec(
-        select(Evenement)
-        .where(Evenement.debut >= ctx.now, ~Evenement.archivee)
-        .order_by(Evenement.debut.asc())
-    ).all()
-    #  Filtrer AVANT de tronquer : la troncature portait sur la liste brute, donc
-    #  15 événements invisibles en tête (les maintenances récurrentes générées par
-    #  le Kanban le sont pour TOUS, y compris admin) suffisaient à vider l'agenda.
-    visibles = [ev for ev in evts if evenement_visible(ev, ctx.user)]
-    for ev in visibles[:_MAX_EVENEMENTS]:
-        prest_nom = None
-        if ev.prestataire_id:
-            prest = ctx.session.get(Prestataire, ev.prestataire_id)
-            if prest:
-                prest_nom = prest.nom
-        prochains.append({
-            "id": f"ev_{ev.id}",
-            "date": ev.debut.isoformat(),
-            "titre": ev.titre,
-            "type": "evenement",
-            "icon": TYPE_EMOJI.get(ev.type, "📌"),
-            "ev_type": ev.type,
-            "description": ev.description,
-            "lieu": ev.lieu,
-            "perimetre_codes": perimetres_evenement(ev),
-            "prestataire": prest_nom,
-            "fin": ev.fin.isoformat() if ev.fin else None,
-            "statut_kanban": ev.statut_kanban,
-        })
-
+    #  Les événements du calendrier sont des affaires depuis le lot 5 (#1092) :
+    #  cet agenda ne les lit plus. Il n'est d'ailleurs affiché par aucun écran
+    #  (relevé le 23/09/2026) — ce qui reste sert l'API, sans consommateur.
     visites = ctx.session.exec(
         select(ContratEntretien, Prestataire)
         .join(Prestataire, ContratEntretien.prestataire_id == Prestataire.id)

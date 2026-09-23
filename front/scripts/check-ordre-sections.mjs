@@ -370,7 +370,9 @@ for (const p of tous) {
 //  ⬇️ Il SUIT le relevé : 69 sections lues au 21/09/2026 — contre 54 la veille,
 //  parce que le contrôle voit enfin les composants qui PORTENT leur section et
 //  les intitulés lus dans `SECTIONS_LIBELLE` (#1124).
-const PLANCHER_SECTIONS = 60;
+//  60 → 55 le 23/09/2026 : le formulaire d'événement est parti avec le Calendrier
+//  (#1092) — ses sections, pas le repérage. 58 lues ce jour-là.
+const PLANCHER_SECTIONS = 55;
 if (sectionsLues < PLANCHER_SECTIONS) {
 	console.error(
 		`\n✗ Cas zéro : ${sectionsLues} section(s) lue(s), au moins ${PLANCHER_SECTIONS} attendues —\n` +

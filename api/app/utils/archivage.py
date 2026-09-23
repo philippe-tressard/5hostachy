@@ -188,19 +188,8 @@ REGLES: dict[str, RegleArchivage] = {
         champs_date=("cloture_le",),
         declencheur="30 jours après la date de clôture.",
     ),
-    "evenement": RegleArchivage(
-        champ_statut="statut_kanban",
-        statuts_immediats=("annule",),
-        #  🔴 `statuts_terminaux` volontairement VIDE : le déclencheur est **la
-        #  date de l'événement**, pas son statut. C'est ce qui rend la règle
-        #  robuste au cas rencontré le 19/08/2026 — l'AG 2026 portait
-        #  `statut_kanban = NULL`, absente du Kanban et éternellement en tête
-        #  du fil. Une règle qui aurait lu le statut serait restée muette.
-        champs_date=("fin", "debut"),
-        champ_archive_manuel="archivee",
-        champ_epingle="epingle",
-        declencheur="30 jours après la fin de l'événement. « Annulé » : immédiat.",
-    ),
+    #  « evenement » est partie le 23/09/2026 (#1092) : les événements sont des
+    #  affaires, archivées par la règle « ticket » ou « actualite ».
     "annonce_hall": RegleArchivage(
         #  Pas envoyée = pas de date = pas d'archivage. Une affiche préparée et
         #  jamais affichée reste en préparation.

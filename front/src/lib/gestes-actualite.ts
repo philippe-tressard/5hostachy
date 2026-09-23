@@ -24,7 +24,7 @@
  */
 import { goto } from '$app/navigation';
 
-import { publications as pubsApi, tickets as ticketsApi } from '$lib/api';
+import { calendrier as calApi, publications as pubsApi, tickets as ticketsApi } from '$lib/api';
 import type { Ticket } from '$lib/api/types';
 import { confirmerPuis } from '$lib/confirmation';
 import { TICKET } from '$lib/entites/ticket';
@@ -79,8 +79,21 @@ export async function promouvoirActualite(
  * @returns `true` si l'on a redirigé — l'appelant n'a alors plus rien à faire.
  */
 export async function suivrePublicationPromue(pubId: number): Promise<boolean> {
+	return suivreVersAffaire(pubsApi.get(pubId));
+}
+
+/**  Même geste pour un ancien lien d'événement `#ev-N` (#1092, lot 5) : les
+ *   événements sont devenus des affaires, et le serveur répond de la même façon. */
+export async function suivreEvenementPromu(evId: number): Promise<boolean> {
+	return suivreVersAffaire(calApi.get(evId));
+}
+
+/**  Le 410 `promu_en_affaire` mène à la fiche ; tout autre échec ne mène NULLE
+ *   PART — se tromper enverrait le lecteur sur l'affaire de quelqu'un d'autre.
+ *   Écrit une fois pour les deux anciennes adresses. */
+async function suivreVersAffaire(appel: Promise<unknown>): Promise<boolean> {
 	try {
-		await pubsApi.get(pubId);
+		await appel;
 		//  Un 2xx n'existe plus sur cette route : on ne redirige pas sur un
 		//  succès qu'on ne comprend pas.
 		return false;

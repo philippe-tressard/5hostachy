@@ -83,9 +83,9 @@ def test_les_TREIZE_ecrans_sont_dans_le_PDF(document):
     """La grille est l'essentiel du manuel : en perdre une carte le mutilerait.
 
     🔴 Quinze jusqu'au 12/09/2026, puis quatorze (« Accès & badges » absorbé par
-    « Mes lots & accès », #928), treize depuis le 23/09 : la carte Actualités est
-    absorbée par celle d'Affaires, dont elle est devenue un filtre (#1091, #1092).
-    Aucune carte n'a été PERDUE : deux ont été absorbées, par décision.
+    « Mes lots & accès », #928), puis douze le 23/09 : Actualités et Calendrier
+    sont absorbées par Affaires, dont elles sont devenues des filtres (#1091,
+    #1092). Aucune carte n'a été PERDUE : trois ont été absorbées, par décision.
 
     ⚠️ Le nombre est FIGÉ, et c'est délibéré : ce test protège contre la perte
     accidentelle d'une carte, pas contre une réorganisation voulue. Un test qui
@@ -93,7 +93,7 @@ def test_les_TREIZE_ecrans_sont_dans_le_PDF(document):
     supprime une page ET sa carte — c'est-à-dire précisément le jour où il
     devrait crier. La comparaison avec `pages.ts`, elle, est faite par
     `npm run lint:manuel-menus`."""
-    assert document.count('class="ecran-card"') == 13
+    assert document.count('class="ecran-card"') == 12
 
 
 # ── 🔴 Les blocs dépliables : du contenu invisible serait du contenu perdu ────

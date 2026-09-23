@@ -1,391 +1,54 @@
-"""Router calendrier — événements de la résidence."""
-import json
-from datetime import datetime, date, timedelta
+"""Le calendrier n'est plus qu'une adresse — les anciens liens `#ev-N` (#1092, lot 5).
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
+## Pourquoi il reste un routeur
+
+Les événements sont devenus des affaires le 23/09/2026 (migration 0212) : la
+page Calendrier a disparu au profit d'Affaires — le filtre « Calendrier »
+(une date est définie), l'onglet Kanban. Mais des liens `/calendrier#ev-N`
+dorment dans les courriels envoyés, les messages WhatsApp, les notifications
+et les favoris. Un lien mort ferait croire que l'objet a disparu.
+
+La page `/calendrier` lit le fragment `#ev-N` et demande ici où l'événement est
+parti — même contrat que `GET /publications/{id}` au lot 4 :
+
+⚠️ **410 et non 404** : 404 dit « ça n'a jamais existé » ; 410 dit « ça a
+existé, voici où c'est parti ». La visibilité n'est pas décidée ici : l'écran
+suit la redirection vers la fiche de l'affaire, qui applique `ticket_visible`.
+Le 410 ne révèle que le numéro, et seulement à un utilisateur connecté.
+
+Verrouillé par `api/tests/test_redirection_evenements.py`.
+"""
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import est_moderateur, get_current_user, require_admin, require_cs_or_admin
+from app.auth.deps import get_current_user
 from app.database import get_session
-from app.models.core import Evenement, Notification, TypeEvenement, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien
-from app.models.evenement import EvenementEvolution
-from app.routers.calendrier_courriels import notifier_canaux
-from app.routers.calendrier_historique import (
-    CHAMPS_CORRIGEABLES,
-    _evolutions_de,
-)
-from app.utils.archivage import est_archivable, seuil_archivage_jours
-from app.utils.liens import lien_element
-from app.utils.suppression_liee import flush_si_necessaire, supprimer_documents_de
-from app.utils.photos import parse_photos, photos_internes, photos_json
-from app.utils.visibility import evenement_visible
-from app.utils.noms import nom_affiche
-from app.utils.corrections import contenu_correction
+from app.models.core import Ticket, Utilisateur
 from app.utils.recuperer import ou_404
-from app.utils.assiste_ia import marquer as marquer_assiste_ia
-from app.utils.saisi_pour import noms_derives
-#  Les schémas vivent à part depuis le 17/09/2026 (modularité) — ré-exportés
-#  d'ici pour les tests et `calendrier_lot`, qui les importaient de ce module.
-from app.schemas_evenement import EvenementCreate, EvenementRead, EvenementUpdate
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
 
-
-_ROLES_AG = (RoleUtilisateur.propriétaire, RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-
-
-def _ev_to_read(ev: Evenement, session: Session) -> EvenementRead:
-    # La colonne stocke un tableau JSON, le schéma expose une liste : on convertit
-    # AVANT la validation, sinon pydantic reçoit une chaîne là où il attend une
-    # liste et rejette l'événement entier.
-    brut = ev.model_dump()
-    brut["photos_urls"] = parse_photos(ev.photos_urls)
-    brut["fichiers_urls"] = parse_photos(ev.fichiers_urls)
-    data = EvenementRead.model_validate(brut)
-    #  La colonne d'abord — `model_validate` a déjà posé `archivee` depuis elle —
-    #  puis l'état effectif par-dessus. L'ordre compte : l'inverse écraserait le
-    #  calcul par la colonne.
-    data.archivee_manuellement = ev.archivee
-    data.archivee = est_archivable("evenement", ev, seuil_jours=seuil_archivage_jours(session))
-    data.evolutions = _evolutions_de(ev.id, session)
-    auteur = session.get(Utilisateur, ev.auteur_id)
-    data.auteur_nom = nom_affiche(auteur.prenom, auteur.nom) if auteur else "?"
-    #  Les DEUX noms dérivés, en un seul calcul (`utils/saisi_pour`, #1104) :
-    #  « Saisi pour X » seulement s'il y a un X, et le PROPRIÉTAIRE — qui
-    #  retombe sur l'auteur — que la carte affiche.
-    data.proprietaire_nom, data.saisi_pour_affichage = noms_derives(session, ev)
-    if ev.prestataire_id:
-        prest = session.get(Prestataire, ev.prestataire_id)
-        data.prestataire_nom = prest.nom if prest else None
-    return data
-
-
-@router.get("", response_model=list[EvenementRead])
-def list_evenements(
+@router.get("/{ev_id}", status_code=410)
+def ou_est_parti_l_evenement(
+    ev_id: int,
     session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
+    _: Utilisateur = Depends(get_current_user),
 ):
-    stmt = select(Evenement).order_by(Evenement.debut)
-    evenements = session.exec(stmt).all()
-    # CS/admin : accès complet (ils gèrent ici les maintenances récurrentes → ne pas
-    # les masquer via evenement_visible). Non-CS/admin : filtrage périmètre + AG +
-    # maintenance_recurrente interne, aligné sur flux.py — sinon un résident du bât. 2
-    # voyait les événements ciblés bât. 1.
-    is_cs = est_moderateur(user)
-    if not is_cs:
-        evenements = [e for e in evenements if evenement_visible(e, user)]
-    return [_ev_to_read(e, session) for e in evenements]
-
-
-#  🔴 `GET /calendrier/{ev_id}` A ÉTÉ RETIRÉ le 12/09/2026 (#932), avec sa
-#  méthode du client. Il n'existe pas d'écran `/calendrier/[id]` : la page tient
-#  ses événements par `GET /calendrier`, et le contrôle de périmètre que cette
-#  route portait est celui de `list_evenements`, écrit une fois.
-
-
-@router.post("", response_model=EvenementRead, status_code=201)
-def create_evenement(
-    body: EvenementCreate,
-    background_tasks: BackgroundTasks,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
-):
-    champs = body.model_dump(exclude_none=True)
-    # Les colonnes stockent un tableau JSON, le schéma reçoit une liste :
-    # convertir ici, sinon SQLite reçoit une liste Python et lève à l'insertion.
-    # `photos_internes` écarte toute URL qui ne vient pas de notre endpoint
-    # d'upload — une pièce jointe pointant vers un site tiers révélerait l'IP de
-    # chaque lecteur, avec un contenu hors de notre contrôle.
-    for champ in ("photos_urls", "fichiers_urls"):
-        champs[champ] = json.dumps(
-            photos_internes(champs.get(champ) or []), ensure_ascii=False
-        )
-    ev = Evenement(**champs, auteur_id=user.id)
-    session.add(ev)
-    session.flush()
-
-    # Notifier les résidents — urgences immédiates
-    if body.type in (TypeEvenement.coupure, TypeEvenement.travaux):
-        residents = session.exec(
-            select(Utilisateur).where(Utilisateur.actif == True)
-        ).all()
-        #  🔴 À qui peut le VOIR, et à lui seul (#1166, 23/09/2026) : la boucle
-        #  prévenait tous les comptes actifs, et un événement réservé au conseil
-        #  ou limité à un bâtiment était annoncé à toute la copropriété — titre
-        #  et description compris. La règle est `evenement_visible`, lue ici.
-        for r in (r for r in residents if evenement_visible(ev, r)):
-            session.add(Notification(
-                destinataire_id=r.id,
-                type="calendrier",
-                titre=f"📅 {body.type.value.capitalize()} : {body.titre}",
-                corps=body.description or "",
-                # `session.flush()` juste au-dessus a attribué l'id : le lecteur
-                # arrive sur l'événement annoncé, pas en haut du calendrier.
-                lien=lien_element("ev", ev.id),
-                urgente=(body.type == TypeEvenement.coupure),
-            ))
-
-    session.commit()
-    session.refresh(ev)
-
-    #  Les envois vivent dans `calendrier_courriels` : ils servent AUSSI une
-    #  entrée d'Historique depuis le 18/08/2026, et une seconde copie du bloc
-    #  aurait divergé au premier template modifié.
-    notifier_canaux(
-        ev, user, session, background_tasks,
-        whatsapp=bool(body.partager_whatsapp),
-        syndic=bool(body.envoyer_syndic),
-        cs=bool(body.envoyer_cs),
-        auteur=bool(getattr(body, "envoyer_auteur", False)),
+    """L'affaire née de cet événement — ou 404 si le numéro n'a jamais existé."""
+    affaire = session.exec(
+        select(Ticket).where(Ticket.promu_depuis_evenement_id == ev_id)
+    ).first()
+    if affaire is None:
+        return ou_404(session, Ticket, None, "Événement")
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "message": "Cet événement est désormais une affaire.",
+            "promu_en_affaire": affaire.id,
+            "numero": affaire.numero,
+        },
     )
 
-    return _ev_to_read(ev, session)
 
-
-#  Plafond d'un lot. Le pré-remplissage des prestataires en crée au plus quatre
-#  par contrat, et le site en compte quelques dizaines : cent laisse une marge
-#  large sans qu'une requête forgée puisse écrire dix mille lignes.
-LOT_MAX = 100
-
-
-class EvenementsLot(BaseModel):
-    """Un pré-remplissage : plusieurs événements, tout ou rien."""
-
-    evenements: list[EvenementCreate]
-
-
-@router.post("/lot", response_model=list[EvenementRead], status_code=201)
-def create_evenements_lot(
-    body: EvenementsLot,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Crée plusieurs événements en UNE transaction — ou aucun (#605, point 3).
-
-    🔴 POURQUOI. Le pré-remplissage du kanban écrivait en boucle depuis le
-    navigateur :
-
-        for (const ev of plan.aCreer) await calApi.create(ev);
-
-    Un échec au 7ᵉ sur 20 laissait **six** événements créés, et l'écran affichait
-    « Erreur lors de l'initialisation » sans dire lesquels. Le second passage en
-    ignorait une partie — mais seulement si aucun titre n'avait bougé, la clé
-    anti-doublon étant le titre littéral (point 2 du ticket, encore ouvert).
-
-    Ici, `session.commit()` est appelé **une fois** : soit les vingt existent,
-    soit aucun. Le geste redevient rejouable.
-
-    ## 🔴 Ce que ce point d'entrée REFUSE, et pourquoi c'est le cœur du sujet
-
-    **Aucune notification, aucune diffusion, jamais.** Un lot est un
-    pré-remplissage silencieux ; en faire un canal, c'est offrir l'envoi de cent
-    courriels ou messages WhatsApp en une requête.
-
-    Deux refus, donc, plutôt qu'un silence :
-
-    - un événement portant `partager_whatsapp`, `envoyer_syndic`, `envoyer_cs` ou
-      `envoyer_auteur` est **rejeté** (422). Les ignorer serait pire : l'appelant
-      croirait avoir diffusé.
-    - un `coupure` ou un `travaux` est **rejeté** lui aussi. La création unitaire
-      notifie tous les résidents pour ces deux types ; les créer ici sans
-      notification produirait deux comportements pour un même type, selon le
-      point d'entrée employé — exactement la divergence que ce dépôt traque.
-    """
-    if not body.evenements:
-        raise HTTPException(422, "Aucun événement à créer.")
-    if len(body.evenements) > LOT_MAX:
-        raise HTTPException(422, f"Lot trop grand : {len(body.evenements)} > {LOT_MAX}.")
-
-    canaux = ("partager_whatsapp", "envoyer_syndic", "envoyer_cs", "envoyer_auteur")
-    for i, item in enumerate(body.evenements, start=1):
-        if any(getattr(item, c, None) for c in canaux):
-            raise HTTPException(
-                422,
-                f"Événement {i} : un lot ne diffuse pas. Retirer les canaux, ou "
-                "créer cet événement un par un.",
-            )
-        if item.type in (TypeEvenement.coupure, TypeEvenement.travaux):
-            raise HTTPException(
-                422,
-                f"Événement {i} : « {item.type.value} » notifie tous les résidents "
-                "à la création unitaire. Le créer en lot le rendrait silencieux — "
-                "passer par la création un par un.",
-            )
-
-    crees: list[Evenement] = []
-    for item in body.evenements:
-        champs = item.model_dump(exclude_none=True)
-        #  Même conversion que la création unitaire, et pour la même raison :
-        #  les colonnes stockent un tableau JSON, et `photos_internes` écarte
-        #  toute URL qui ne vient pas de notre endpoint d'upload.
-        for champ in ("photos_urls", "fichiers_urls"):
-            champs[champ] = json.dumps(
-                photos_internes(champs.get(champ) or []), ensure_ascii=False
-            )
-        for c in canaux:
-            champs.pop(c, None)
-        ev = Evenement(**champs, auteur_id=user.id)
-        session.add(ev)
-        crees.append(ev)
-
-    #  UN seul commit — c'est tout l'objet de ce point d'entrée.
-    session.commit()
-    for ev in crees:
-        session.refresh(ev)
-    return [_ev_to_read(ev, session) for ev in crees]
-
-
-def _next_visit_date(contrat: ContratEntretien, from_date: date) -> date | None:
-    """Calcule la prochaine visite à partir de la fréquence du contrat."""
-    ft, fv = contrat.frequence_type, contrat.frequence_valeur
-    if not ft or not fv:
-        return None
-    if ft == "semaines":
-        return from_date + timedelta(weeks=fv)
-    if ft == "mois":
-        month = from_date.month + fv
-        year = from_date.year + (month - 1) // 12
-        month = (month - 1) % 12 + 1
-        day = min(from_date.day, 28)
-        return date(year, month, day)
-    if ft == "fois_par_an":
-        interval_months = max(1, 12 // fv)
-        month = from_date.month + interval_months
-        year = from_date.year + (month - 1) // 12
-        month = (month - 1) % 12 + 1
-        day = min(from_date.day, 28)
-        return date(year, month, day)
-    return None
-
-
-def _update_contrat_prochaine_visite(ev: Evenement, session: Session) -> None:
-    """Met à jour prochaine_visite du contrat lié quand un événement maintenance_recurrente passe en terminé."""
-    if ev.type != TypeEvenement.maintenance_recurrente or not ev.prestataire_id:
-        return
-    contrats = session.exec(
-        select(ContratEntretien).where(
-            ContratEntretien.prestataire_id == ev.prestataire_id,
-            ContratEntretien.actif == True,
-        )
-    ).all()
-    if not contrats:
-        return
-    # Match par libellé dans le titre (format "Prestataire — Libellé")
-    best = None
-    for c in contrats:
-        if c.libelle and c.libelle.lower() in ev.titre.lower():
-            best = c
-            break
-    if not best:
-        best = contrats[0] if len(contrats) == 1 else None
-    if not best:
-        return
-    next_date = _next_visit_date(best, ev.debut.date() if isinstance(ev.debut, datetime) else ev.debut)
-    if next_date:
-        best.prochaine_visite = next_date
-        session.add(best)
-
-
-@router.patch("/{ev_id}", response_model=EvenementRead)
-def update_evenement(
-    ev_id: int,
-    body: EvenementUpdate,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
-):
-    ev = ou_404(session, Evenement, ev_id, "Événement")
-    data = body.model_dump(exclude_unset=True)
-    if data.get('archivee') is True and ev.statut_kanban != "termine":
-        raise HTTPException(422, "Seuls les événements terminés peuvent être archivés")
-    for champ in ("photos_urls", "fichiers_urls"):
-        if champ in data:
-            # Liste → tableau JSON, en ne conservant que nos propres URLs (cf.
-            # photos_internes). Ces champs ne servent qu'à retirer des fichiers.
-            data[champ] = photos_json(data[champ])
-    old_statut = ev.statut_kanban
-    #  L'état d'AVANT, relevé avant la boucle : c'est lui qui dit ce qui a
-    #  réellement changé. Sans ce relevé, réenregistrer une valeur identique
-    #  s'inscrirait quand même dans l'Historique.
-    #  La marque « assistant IA » ne s'écrit que dans UN sens (`utils/assiste_ia`) :
-    #  sortie de la boucle, sinon un `False` effacerait une contribution passée.
-    marquer_assiste_ia(ev, body)
-    data.pop("assiste_ia", None)
-    avant = {champ: getattr(ev, champ, None) for champ in data}
-    for k, v in data.items():
-        setattr(ev, k, v)
-    ev.mis_a_jour_le = datetime.utcnow()
-    # Si le statut passe à "termine", mettre à jour la prochaine visite du contrat
-    if data.get('statut_kanban') == 'termine' and old_statut != 'termine':
-        _update_contrat_prochaine_visite(ev, session)
-
-    #  🔴 LE CHANGEMENT DE COLONNE EST UNE TRANSITION, LE RESTE UNE CORRECTION.
-    #
-    #  Le Kanban EST le workflow d'un événement — il répond à « où en est cet
-    #  objet ? ». Le faire avancer laisse donc un jalon daté dans l'Historique,
-    #  avec son avant et son après ; corriger un titre ou un lieu n'en laisse pas.
-    #  C'est la même distinction que sur les tickets (#431) et les publications
-    #  (#433), et elle porte ici la même forme de ligne : sans `ancien_statut` ni
-    #  `nouveau_statut`, une correction ne dessine aucune étape de suivi.
-    if 'statut_kanban' in data and data['statut_kanban'] != old_statut:
-        session.add(EvenementEvolution(
-            evenement_id=ev.id,
-            type="etat",
-            ancien_statut=old_statut,
-            nouveau_statut=ev.statut_kanban,
-            auteur_id=user.id,
-            cree_le=datetime.utcnow(),
-        ))
-    #  ⚠️ **Dédoublonné**, et ce n'est pas une précaution de style : plusieurs
-    #  champs peuvent porter le MÊME libellé quand ils forment une seule notion —
-    #  les trois `saisi_pour_*` changent ensemble (`utils/saisi_pour`). Sans
-    #  `dict.fromkeys`, un changement de « Saisi pour » écrirait trois lignes
-    #  identiques dans l'historique, qui se liraient comme trois gestes.
-    #
-    #  `dict.fromkeys` plutôt qu'un `set` : l'ordre des libellés est celui de
-    #  `CHAMPS_CORRIGEABLES`, et un `set` le rendrait différent à chaque
-    #  démarrage.
-    corrections = list(dict.fromkeys(
-        libelle
-        for champ, libelle in CHAMPS_CORRIGEABLES.items()
-        if champ in data and data[champ] != avant.get(champ)
-    ))
-    if corrections:
-        session.add(EvenementEvolution(
-            evenement_id=ev.id,
-            type="commentaire",
-            contenu=contenu_correction(corrections),
-            auteur_id=user.id,
-            cree_le=datetime.utcnow(),
-        ))
-    session.add(ev)
-    session.commit()
-    session.refresh(ev)
-    return _ev_to_read(ev, session)
-
-
-@router.delete("/{ev_id}", status_code=204)
-def delete_evenement(
-    ev_id: int,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_admin),
-):
-    ev = ou_404(session, Evenement, ev_id, "Événement")
-    #  🔴 L'ÉVÉNEMENT PARTAIT SEUL (#546, 30/08/2026). Deux tables le
-    #  référencent, aucune n'était nettoyée : `evenement_evolution` (**NOT
-    #  NULL** — tout l'historique) et `document`. Sans les clés — le régime
-    #  actuel de la production — la suppression réussit et laisse des lignes
-    #  orphelines ; celles de l'historique sont même irrécupérables, leur
-    #  `evenement_id` étant obligatoire. Rien ne le signalait.
-    #  Le `flush()` ordonne les DELETE ; le pourquoi vit dans
-    #  `utils/suppression_liee.py`.
-    evolutions = session.exec(
-        select(EvenementEvolution).where(EvenementEvolution.evenement_id == ev_id)
-    ).all()
-    for evol in evolutions:
-        session.delete(evol)
-    n_docs = supprimer_documents_de(session, "evenement_id", ev_id)
-    flush_si_necessaire(session, len(evolutions), n_docs)
-    session.delete(ev)
-    session.commit()
+__all__ = ["router"]

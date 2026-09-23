@@ -27,10 +27,9 @@ _DRAPEAU_FICHIERS = re.compile(r'"fichiers":\s*bool\(([A-Za-z_][\w.]*)\)')
 
 @pytest.mark.parametrize(
     "chemin",
-    #  ⚠️ Le calendrier a déménagé le 18/08/2026 — perdre sa cible bruyamment est
-    #  la bonne façon de la perdre.
-    ["api/app/routers/tickets/courriels.py", "api/app/routers/tickets/actualite.py",
-     "api/app/routers/calendrier_courriels.py"],
+    #  Le calendrier est parti le 23/09/2026 (#1092) : ses événements sont des
+    #  affaires, dont les envois passent par les deux modules restants.
+    ["api/app/routers/tickets/courriels.py", "api/app/routers/tickets/actualite.py"],
 )
 def test_le_drapeau_fichiers_decrit_ce_qui_est_vraiment_joint(chemin):
     """« Pièces jointes disponibles ci-dessous » ne doit pas mentir.

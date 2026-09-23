@@ -28,16 +28,16 @@ from app.utils.assiste_ia import (
 def _modeles():
     from app.models.communaute import Idee, PetiteAnnonce, Sondage
     from app.models.core import Publication, PublicationEvolution, Ticket, TicketEvolution
-    from app.models.evenement import Evenement, EvenementEvolution
 
     return [
-        Ticket, Publication, Evenement,
-        TicketEvolution, PublicationEvolution, EvenementEvolution,
+        Ticket, Publication,
+        TicketEvolution, PublicationEvolution,
         Sondage, Idee, PetiteAnnonce,
     ]
 
 
-def test_les_neuf_entites_portent_la_colonne_par_le_mixin():
+def test_les_entites_portent_la_colonne_par_le_mixin():
+    #  L'événement est parti le 23/09/2026 (#1092) : c'est une affaire.
     for modele in _modeles():
         assert issubclass(modele, AssisteIAMixin), modele.__name__
         assert "assiste_ia" in modele.model_fields, modele.__name__
@@ -69,8 +69,6 @@ def test_un_faux_n_efface_pas_une_marque_posee():
 
 def test_les_schemas_transportent_la_marque_sur_les_neuf_circuits():
     from app.routers.annonces import AnnonceCreate, AnnonceUpdate
-    from app.routers.calendrier import EvenementCreate, EvenementRead, EvenementUpdate
-    from app.routers.calendrier_historique import EvolutionEvenementCreate
     from app.routers.idees import IdeeCreate, IdeeUpdate
     from app.routers.sondages.commun import SondageCreate, SondageRead, SondageUpdate
     #  Les quatre schémas des publications sont partis le 23/09/2026 : une
@@ -85,14 +83,14 @@ def test_les_schemas_transportent_la_marque_sur_les_neuf_circuits():
     from app.schemas_communs import EvolutionLue
 
     creations = (
-        TicketCreate, EvenementCreate, TicketEvolutionCreate,
-        EvolutionEvenementCreate, SondageCreate, IdeeCreate, AnnonceCreate,
+        TicketCreate, TicketEvolutionCreate,
+        SondageCreate, IdeeCreate, AnnonceCreate,
     )
     corrections = (
-        TicketUpdate, EvenementUpdate, TicketEvolutionUpdate,
+        TicketUpdate, TicketEvolutionUpdate,
         SondageUpdate, IdeeUpdate, AnnonceUpdate,
     )
-    lectures = (TicketRead, EvenementRead, SondageRead)
+    lectures = (TicketRead, SondageRead)
     for s in creations:
         assert issubclass(s, AssisteIAEntree), s.__name__
     for s in corrections:
@@ -103,5 +101,4 @@ def test_les_schemas_transportent_la_marque_sur_les_neuf_circuits():
     #  champ y est déclaré à la main, et ce test le garde d'accord avec le mixin.
     assert EvolutionLue.model_fields["assiste_ia"].default is False
     #  L'idée et l'annonce rendent le modèle (ou son `model_dump`) : la colonne
-    #  du mixin sort d'elle-même. Le calendrier des évolutions aussi
-    #  (`EvolutionEvenementCreate` sert à la correction, voir le routeur).
+    #  du mixin sort d'elle-même.

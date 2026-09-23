@@ -103,8 +103,6 @@
 		$perimetresStore,
 		() => perimetreCodes.length > 0 && !estPerimetreParDefaut(perimetreCodes),
 	);
-	$: debut = item.meta?.debut as string | undefined;
-	$: aVenir = item.type === 'evenement' && debut ? new Date(debut) > new Date() : false;
 </script>
 
 <div class="flux-item" class:flux-urgent={estTicketUrgent(item)} class:flux-expanded={expanded}>
@@ -171,15 +169,10 @@
 				/>
 			{/if}
 		</div>
-		{#if item.badges.length > 0 || aPerimetre || aVenir || item.meta?.auteur}
+		{#if item.badges.length > 0 || aPerimetre || item.meta?.auteur}
 			<div class="flux-badges">
-				<!-- La ligne est datée de l'annonce : sans ce repère, un événement
-				     à venir se lirait comme s'il avait déjà eu lieu. -->
-				{#if aVenir}
-					<span class="badge badge-orange" style="font-size:.7rem"
-						>🗓️ prévu le {fmtDatetimeShort(String(debut))}</span
-					>
-				{/if}
+				<!--  « 🗓️ prévu le … » était propre à l'événement, parti le 23/09/2026 :
+				      c'est une affaire (#1092). -->
 				<!--  🔴 `BadgePerimetre` — le composant qui rend ce badge partout ailleurs
 				      (annonce, actualité, ticket, sondage, document…). Le fil le composait
 				      à la main : même glyphe, même classe, mais sa propre décision de

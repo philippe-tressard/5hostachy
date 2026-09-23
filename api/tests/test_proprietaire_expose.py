@@ -37,7 +37,6 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import Utilisateur
 from app.schemas import TicketRead
-from app.schemas_evenement import EvenementRead
 from app.utils.saisi_pour import SaisiPourSortie, noms_derives
 
 RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
@@ -48,7 +47,6 @@ RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
 #: actualité est une affaire (#1091), elle se lit par `TicketRead`.
 LECTURES = [
     (TicketRead, "routers/tickets/commun.py"),
-    (EvenementRead, "routers/calendrier.py"),
 ]
 
 

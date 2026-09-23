@@ -9,7 +9,14 @@
 	import { goto } from '$app/navigation';
 	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
 	import { currentUser, isAdmin, isCS, isLocataire, isProprioOuCS } from '$lib/stores/auth';
-	import { flux, lots, calendrier as calApi, type FluxItem, type FluxResponse } from '$lib/api';
+	import {
+		flux,
+		lots,
+		tickets as ticketsApi,
+		type FluxItem,
+		type FluxResponse,
+		type Ticket,
+	} from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
@@ -38,19 +45,19 @@
 	let userLots: any[] = [];
 	let loading = true;
 	let ready = false;
-	let kanbanRawEvs: any[] = [];
+	let kanbanAffaires: Ticket[] = [];
 
 	onMount(async () => {
 		try {
 			const [fluxRes, lotsRes, calRes] = await Promise.allSettled([
 				flux.get(),
 				lots.mesList(),
-				calApi.list(),
+				ticketsApi.list(),
 			]);
 			if (fluxRes.status === 'fulfilled') data = fluxRes.value;
 			else toast('error', 'Erreur chargement du flux');
 			if (lotsRes.status === 'fulfilled') userLots = lotsRes.value;
-			if (calRes.status === 'fulfilled') kanbanRawEvs = calRes.value;
+			if (calRes.status === 'fulfilled') kanbanAffaires = calRes.value;
 		} catch (e: any) {
 			toast('error', 'Erreur chargement : ' + (e?.message ?? String(e)));
 		} finally {
@@ -452,7 +459,7 @@
 	<!-- ═══ KANBAN (masqué pour les locataires) ═════════════════════════════ -->
 	{#if !$isLocataire}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.2s">
-			<KanbanTableauBord evenements={kanbanRawEvs} ctx={_dashKanbanCtx} {loading} />
+			<KanbanTableauBord affaires={kanbanAffaires} ctx={_dashKanbanCtx} {loading} />
 		</div>
 	{/if}
 

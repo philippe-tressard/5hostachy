@@ -65,8 +65,6 @@ export const TOLERANCES = {
 	//  espacement — jamais la règle entière ». C'est exactement ce qu'ils font.
 	'lib/components/ChampsPrestataire.svelte::form-grid':
 		'colonnes de 180 px et gap resserré, même raison',
-	'lib/components/FormulaireEvenement.svelte::form-grid':
-		'colonnes de 200 px : ce formulaire a des champs courts (date, heure, fréquence)',
 	'lib/components/OngletCopropriete.svelte::form-grid':
 		'`auto-fill` et non `auto-fit` — les champs ne s’étirent pas quand il en manque',
 	'routes/(app)/admin/+page.svelte::form-grid':

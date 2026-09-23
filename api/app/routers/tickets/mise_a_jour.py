@@ -35,6 +35,7 @@ from app.models.core import (
 from app.schemas import TicketRead, TicketUpdate
 from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
 from app.utils.intervenant import appliquer_intervenant
+from app.utils.prochaine_visite import apres_cloture
 from app.utils.nature_affaire import categorie_reservee, change_de_nature, est_actualite, statut_pour
 from app.utils.valeurs import valeur
 from app.utils.fichiers import chemins_locaux
@@ -174,6 +175,7 @@ def update_ticket(
             ticket.statut = body.statut
             if body.statut in STATUTS_TICKET_CLOS:
                 ticket.ferme_le = datetime.utcnow()
+            apres_cloture(ticket, session)  # la prochaine visite d'un contrat (#1092)
         if body.priorite is not None:
             ticket.priorite = body.priorite
 

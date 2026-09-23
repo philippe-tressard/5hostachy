@@ -35,7 +35,6 @@ FLUX = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "flux"
 #: le vérifie, pour qu'on ne puisse pas s'en dispenser en l'oubliant.
 PORTEURS = {
     "tickets.py": "auteur_id",
-    "evenements.py": "auteur_id",
     "publications.py": "auteur_id",
     "communaute.py": "auteur_id",
     "ressources.py": "publie_par_id",

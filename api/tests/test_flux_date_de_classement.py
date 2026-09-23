@@ -59,26 +59,6 @@ def test_le_module_existe():
     assert "dateDeReference" in _source(), "la fonction a changé de nom : le contrôle est aveugle."
 
 
-def test_l_evenement_declare_sa_date_de_tenue():
-    """Le défaut réel : sans cette ligne, l'événement se classe sur sa saisie."""
-    src = _source()
-    #  ⚠️ Le motif s'ancre sur `const DATE_QUI_CLASSE` et sur l'accolade
-    #  ouvrante, PAS sur « tout ce qui n'est pas un `=` » : l'annotation de type
-    #  contient un `=>`, et le premier jet s'y arrêtait — un test qui échouait
-    #  sur son propre motif, pas sur le code.
-    table = re.search(r"const DATE_QUI_CLASSE.*?\{(.*?)\n\};", src, re.S)
-    assert table, "la table `DATE_QUI_CLASSE` est introuvable ou a changé de forme."
-    corps = table.group(1)
-    assert "evenement:" in corps, (
-        "le type `evenement` ne déclare plus sa date : il se classera de nouveau "
-        "sur sa date d'annonce, et descendra dans le fil à mesure qu'il approche."
-    )
-    assert "meta?.debut" in corps, (
-        "la date déclarée pour `evenement` n'est plus `meta.debut` — c'est "
-        "pourtant celle que `estNonResolu` lit déjà pour le même objet."
-    )
-
-
 def test_la_fonction_CONSULTE_la_table():
     """⚠️ Une table déclarée mais jamais lue est pire qu'une absence de table.
 
@@ -97,20 +77,5 @@ def test_la_fonction_CONSULTE_la_table():
     )
 
 
-def test_les_deux_regles_lisent_la_MEME_date_pour_un_evenement():
-    """🔴 L'invariant que ce ticket a corrigé, et qui doit le rester.
-
-    `estNonResolu` décidait déjà qu'un événement **passé** n'attend plus rien, en
-    lisant `meta.debut`. `dateDeReference`, lui, lisait la date d'annonce. Deux
-    règles, deux dates, un seul objet — l'écran pouvait donc juger un événement
-    « encore à venir » tout en le classant comme vieux de cinq mois.
-    """
-    src = _source()
-    for nom in ("estNonResolu", "dateDeReference"):
-        bloc = re.search(rf"export function {nom}\(.*?\n\}}", src, re.S)
-        assert bloc, f"`{nom}` introuvable."
-    #  Les deux doivent nommer `debut` — l'une directement, l'autre via la table.
-    assert src.count("meta?.debut") >= 2, (
-        "une seule des deux règles lit `meta.debut` : elles jugeront de nouveau "
-        "le même événement sur deux dates différentes."
-    )
+#  Les deux tests de l'ÉVÉNEMENT — sa date de tenue, lue par les deux règles —
+#  sont partis le 23/09/2026 avec lui : c'est une affaire (#1092).

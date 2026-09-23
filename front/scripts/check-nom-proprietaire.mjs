@@ -64,17 +64,11 @@ const TYPES = join(SOURCE, 'lib', 'api', 'types.ts');
  * Les écrans qui rendent un porteur **sans que leur type le dise**.
  *
  * ⚠️ Cette liste ÉTEND le contrôle, elle n'exempte rien. `CarteEvenement` et
- * `HistoriqueEvenement` déclarent `export let ev: any` / `evenement: any` :
- * aucun type ne les relie à `PorteSaisiPourLu`, alors que l'entité `Evenement`
- * porte bien le mixin côté serveur (`api/app/models/evenement.py`). Sans cette
- * liste, ce sont les deux seuls écrans porteurs que le contrôle ne verrait pas.
- *
- * Elles disparaîtront quand l'événement deviendra une propriété (#1094) — et le
- * contrôle échoue si l'un de ces fichiers n'existe plus, pour qu'on les retire.
+ * `HistoriqueEvenement` y figuraient ; ils sont partis le 23/09/2026 avec
+ * l'événement, devenu une affaire (#1092). Le contrôle échoue si un fichier de
+ * la liste n'existe plus, pour qu'on l'en retire.
  */
 const PORTEURS_NON_TYPES = [
-	'lib/components/CarteEvenement.svelte',
-	'lib/components/HistoriqueEvenement.svelte',
 	//  `let ticket: any = null` — la fiche d'un ticket, dont le type est le
 	//  seul du lot à n'avoir jamais été posé. Sans cette ligne, l'écran le plus
 	//  détaillé d'une affaire serait le seul à n'être pas contrôlé.

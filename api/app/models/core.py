@@ -247,11 +247,11 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, table=True):
     __tablename__ = "ticket"
     id: Optional[int] = Field(default=None, primary_key=True)
     numero: str = Field(unique=True, index=True)
-    #  D'où vient cette affaire, quand elle est née d'une actualité promue
-    #  (#1094). Pas de `foreign_key` : la publication référencée est SUPPRIMÉE
-    #  par la promotion même. Le pourquoi — et ce que cette trace empêche — est
-    #  dans `routers/publications/promotion.py`, qui est le seul à l'écrire.
+    #  D'où vient cette affaire : une publication (0210) ou un événement (0212),
+    #  recopiés en affaires. Sans `foreign_key` ; la redirection des anciens liens
+    #  lit ces colonnes (`routers/publications`, #1091 ; `#ev-N`, #1092).
     promu_depuis_publication_id: Optional[int] = Field(default=None, index=True)
+    promu_depuis_evenement_id: Optional[int] = Field(default=None, index=True)
     titre: str
     description: str
     categorie: CategorieTicket = CategorieTicket.panne

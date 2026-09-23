@@ -57,11 +57,8 @@ const EXCEPTIONS = {
 	//  aussitôt — « exception déclarée et jamais servie » — et c'est exactement
 	//  ce qu'on lui demande : une dérogation reconduite « au cas où » masquerait
 	//  la suivante.
-	'lib/components/VueKanbanCalendrier.svelte':
-		'Les deux sélecteurs « Exercice » et « Bâtiment » de la barre du kanban : ce sont ' +
-		"des filtres de VUE, pas des champs d'un formulaire. Ils portent un libellé parce " +
-		"qu'on doit savoir ce qu'ils filtrent, et vivent sur une ligne dans `.kanban-toolbar` " +
-		'— un `.field`, qui empile en colonne sur toute la largeur, les sortirait de la barre.',
+	//  Vide depuis le 23/09/2026 : la vue kanban du Calendrier est partie avec lui
+	//  (#1092) ; celle d'Affaires n'a pas de sélecteur.
 };
 
 /**

@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 from app.utils.nature_affaire import ACTUALITE
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
-from app.models.core import Evenement, Ticket, Utilisateur
+from app.models.core import Ticket, Utilisateur
 
 from .schemas import EpinglesCompte
 
@@ -38,11 +38,10 @@ def compter_epingles(
             Ticket.categorie == ACTUALITE, Ticket.epingle, ~Ticket.archive_manuel,
         )
     ).one() or 0
-    evenements = session.exec(
-        select(func.count(Evenement.id)).where(
-            Evenement.epingle, ~Evenement.archivee, Evenement.affichable
-        )
-    ).one() or 0
+    #  Les événements sont des affaires depuis le lot 5 (#1092) : il n'en reste
+    #  aucun à compter. Le champ reste dans la réponse, à zéro, pour un onglet
+    #  resté ouvert sur l'ancienne version.
+    evenements = 0
     return EpinglesCompte(
         total=publications + evenements,
         publications=publications,

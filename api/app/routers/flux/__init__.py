@@ -23,7 +23,6 @@ treizième section à intercaler au milieu de 780 lignes.
 |---|---|
 | `tickets` | ouvertures, changements d'état, réponses du CS, commentaires |
 | `publications` | actualités, et leur règle d'archivage partagée avec /actualités |
-| `evenements` | calendrier ; porte `TYPE_EMOJI`, réutilisé par l'agenda |
 | `prestataires` | nouvelles fiches — page réservée au CS/admin |
 | `communaute` | sondages, petites annonces, boîte à idées |
 | `ressources` | questions fréquentes, documents partagés, diagnostics |
@@ -79,7 +78,6 @@ from . import (
     annuaire,
     communaute,
     epingles,
-    evenements,
     prestataires,
     publications,
     ressources,
@@ -99,7 +97,6 @@ _FENETRE_JOURS = 377
 _COLLECTEURS = (
     tickets.collecter,
     publications.collecter,
-    evenements.collecter,
     prestataires.collecter,
     communaute.collecter,
     ressources.collecter,

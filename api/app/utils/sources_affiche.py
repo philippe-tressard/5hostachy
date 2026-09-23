@@ -34,7 +34,7 @@ dans le routeur. Ici, on ne fait que désigner et lire.
 | tickets **annulés** | ils disparaissent du fil et sont purgés ; les proposer serait proposer ce qui n'existera plus demain |
 | **réservés au périmètre** (🔒) | un hall se lit sans badge d'accès : ce que l'Accès referme sur un bâtiment n'y va pas |
 
-## Deux familles depuis le 23/09/2026 (#1091, lot 4)
+## Une famille depuis le 23/09/2026 (#1091 lot 4, #1092 lot 5)
 
 Une actualité EST une affaire de catégorie « Actualité ». Elle n'est plus une
 famille à part : elle se reprend comme affaire, sous son libellé « Actualité ».
@@ -56,20 +56,19 @@ from typing import Optional
 from sqlmodel import Session, select
 
 from app.models.core import Ticket
-from app.models.evenement import Evenement
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.categories_ticket import libelle_categorie
 from app.utils.nature_affaire import est_actualite
 from app.utils.perimetres import parse_json_perimetres
-from app.utils.perimetres.arbre import parse_perimetres
 from app.utils.visibility import hors_du_hall
 
 #: Les familles reprenables, et leur libellé à l'écran. Une affaire de catégorie
 #: « Actualité » garde le sien (`SourceAffiche.famille`).
 FAMILLES: dict[str, str] = {
     "ticket": "Affaire",
-    "evenement": "Événement",
 }
+#  « evenement » est parti le 23/09/2026 (#1092, lot 5) : les événements du
+#  calendrier sont devenus des affaires, reprises par la famille « ticket ».
 
 #: Fenêtre du fil, en jours. Recopiée depuis `routers/flux/__init__.py` —
 #: l'importer créerait un cycle (le routeur importe les utilitaires). Le test
@@ -123,12 +122,6 @@ def sources_disponibles(session: Session, *, maintenant: Optional[datetime] = No
             libelle=libelle_categorie(tk.categorie) if est_actualite(tk) else "",
         ))
 
-    #  ── Événements ──────────────────────────────────────────────────────────
-    for ev in session.exec(select(Evenement).where(Evenement.cree_le >= depuis)).all():
-        if ev.archivee:
-            continue
-        sources.append(SourceAffiche("evenement", ev.id, ev.titre, ev.cree_le, False))
-
     sources.sort(key=lambda s: (not s.epingle, -s.date.timestamp()))
     return sources
 
@@ -163,24 +156,4 @@ def prefill_source(session: Session, type_source: str, id_source: int) -> Option
             "images": images,
         }
 
-    ev = session.get(Evenement, id_source)
-    #  🔴 DEUX PARSEURS, ET ILS NE SONT PAS INTERCHANGEABLES (11/09/2026).
-    #
-    #  Un événement porte `perimetre`, une chaîne en TEXTE (« parking,cave ») ;
-    #  publications et tickets portent `perimetre_cible`, du JSON (`["bat:1"]`).
-    #  La première écriture de cette fonction appelait `parse_json_perimetres`
-    #  sur les deux, avec un commentaire affirmant qu'il « accepte les deux
-    #  formes ». C'était faux : `json.loads("bat:1")` lève, le parseur retombe
-    #  sur le périmètre par DÉFAUT, et l'affiche héritait de « résidence » au
-    #  lieu du bâtiment visé — signalé à l'écran, « le périmètre n'est pas pris
-    #  en compte ».
-    #
-    #  ⚠️ Le repli silencieux est ce qui l'a rendu invisible : le parseur ne lève
-    #  pas, il rend une valeur PLAUSIBLE. Un défaut qui ressemble à une réponse
-    #  ne se voit qu'à l'usage.
-    return {
-        "titre": ev.titre,
-        "message": ev.description or "",
-        "perimetre_cible": parse_perimetres(ev.perimetre),
-        "images": [],
-    }
+    return None

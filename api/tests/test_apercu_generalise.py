@@ -52,11 +52,6 @@ ENTITES = {
         "envoi": "routers/tickets/actualite.py",
         "contexte": "contexte_actualite",
     },
-    "evenement": {
-        "apercu": "routers/calendrier_apercu.py",
-        "envoi": "routers/calendrier_courriels.py",
-        "contexte": "contexte_evenement_canaux",
-    },
     #  Dernière des quatre à recevoir l'aperçu (01/09/2026), et la seule qui en
     #  était privée DÉLIBÉRÉMENT : tant que son serveur ne consommait qu'un canal
     #  sur trois, un aperçu y aurait montré un envoi qui n'a pas lieu — le
