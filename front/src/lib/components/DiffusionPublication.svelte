@@ -39,7 +39,7 @@
   ⚠️ **Une actualité RÉSERVÉE n'a pas d'affiche de hall**, et la case le montre :
   réservée au périmètre (🔒, section Périmètre) ou au conseil (Destinataires =
   « Conseil syndical » seul, #1096). La valeur arrive en lecture seule : la règle
-  qui la fait retomber vit chez l'hôte (`FormulaireActualite`) — et elle est
+  qui la fait retomber vit chez l'hôte (`FormulaireTicket`) — et elle est
   **aussi** tenue côté serveur (`visibility.hors_du_hall`), qui seul décide.
 -->
 <script lang="ts">

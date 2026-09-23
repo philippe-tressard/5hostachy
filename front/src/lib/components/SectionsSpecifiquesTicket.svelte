@@ -25,7 +25,7 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { LEGENDE_CARNET, STATUT_TICKET_OPTIONS } from '$lib/tickets';
-	import type { Etat } from '$lib/entites/types';
+	import type { Etat, IdSection } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
 
@@ -52,6 +52,9 @@
 	 *   le même objet — et le premier qui en oublierait une la remettrait à son
 	 *   défaut sans que personne le voie. */
 	export let options = { epingle: false, urgente: false, brouillon: false, suiviKanban: false };
+	/**  Les sections ÉTEINTES par la nature de l'affaire, avec leur motif
+	 *   (`$lib/formulaire-affaire`, 23/09/2026) : grisées, pliées, sans champ. */
+	export let inactives: Partial<Record<IdSection, string>> = {};
 </script>
 
 <!--  2. NATURE — la catégorie de l'affaire, et elle seule.
@@ -116,6 +119,18 @@
       `avecOptions`), qui rend dans l'ordre de `SECTIONS_ORDRE` — la même
       porte que pour l'actualité, l'idée et l'événement. -->
 
+<!--  🔒 L'ÉQUIPEMENT (section 3) : visible, et toujours inactif à ce jour —
+      absent de la création (motif `categorie`), pas encore construit en
+      correction (#1097), sans objet pour une actualité. Il reste à son rang
+      pour qu'on sache qu'il existe (formulaire unique, 23/09/2026). -->
+{#if inactives.equipement}
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.equipement}
+		pliable={pliageDe(TICKET, 'equipement')}
+		inactive={inactives.equipement}
+	/>
+{/if}
+
 <!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
 	      dit qui le voit et où (section 9). IDENTIQUE en création et en
 	      édition depuis le cadre #430 : une correction corrige l'état comme
@@ -126,6 +141,7 @@
 	pliable={pliageDe(TICKET, 'suivi')}
 	requis={requisDe(TICKET, 'suivi')}
 	idTitre="ticket-workflow-titre"
+	inactive={inactives.suivi ?? ''}
 >
 	<div class="field champ-large">
 		<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). « Ouvert » est

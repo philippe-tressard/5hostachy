@@ -47,14 +47,14 @@ export interface CategorieTicket {
 	 */
 	reserveCS?: boolean;
 	/**
-	 *  Se CRÉE par son propre formulaire, et se FILTRE par sa nature (#1091,
-	 *  #1092). « Actualité » a son bouton « Nouvelle actualité » et son filtre
-	 *  « Actualité » : la proposer aussi dans la grille d'une nouvelle affaire
-	 *  ferait deux façons de publier, dont une qui ne propose ni le public visé,
-	 *  ni l'Accès, ni l'affiche. Elle reste proposée À LA CORRECTION : c'est ainsi
-	 *  qu'une affaire devient une actualité.
+	 *  EN TÊTE de la grille, pleine ligne, suivie d'un filet — et filtrée par sa
+	 *  NATURE plutôt que par sa catégorie (#1092). C'est « Actualité » : on
+	 *  choisit d'abord entre informer et faire traiter (23/09/2026, un seul
+	 *  formulaire, variante A arbitrée à l'écran). Elle avait son propre bouton
+	 *  et son propre formulaire pendant quelques heures : deux façons de créer
+	 *  la même chose, retirées à la demande.
 	 */
-	formulairePropre?: boolean;
+	enTete?: boolean;
 }
 
 /**  La marque posée sur une catégorie du carnet, et la phrase qui l'explique.
@@ -193,9 +193,9 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		label: 'Actualité',
 		emoji: '\u{1F4F0}',
 		//  Une INFORMATION, pas une demande : personne n'agit, elle périme (#1091).
-		description: 'Information de la copropriété — publiée par le conseil',
+		description: 'Information, sans suivi',
 		reserveCS: true,
-		formulairePropre: true,
+		enTete: true,
 	},
 ];
 
@@ -247,27 +247,21 @@ export function categorieTicketLabel(categorie: string | undefined | null): stri
  */
 /**
  *  La grille de CHOIX d'une catégorie : sans les catégories réservées au
- *  conseil, pour qui n'en est pas (#1091), et — à la CRÉATION — sans celles qui
- *  ont leur propre formulaire. `OPTIONS_CATEGORIE` reste entière — elle sert
- *  aussi à NOMMER la catégorie d'une affaire déjà créée.
+ *  conseil, pour qui n'en est pas (#1091). `OPTIONS_CATEGORIE` reste entière —
+ *  elle sert aussi à NOMMER la catégorie d'une affaire déjà créée.
  */
-export function optionsCategorie(estCS: boolean, creation = false) {
+export function optionsCategorie(estCS: boolean) {
 	const reservees = new Set(CATEGORIES_TICKET.filter((c) => c.reserveCS).map((c) => c.value));
-	const propres = new Set(CATEGORIES_TICKET.filter((c) => c.formulairePropre).map((c) => c.value));
-	return OPTIONS_CATEGORIE.filter(
-		(o) => !(creation && propres.has(o.val)) && (estCS || !reservees.has(o.val)),
-	);
+	return OPTIONS_CATEGORIE.filter((o) => estCS || !reservees.has(o.val));
 }
 
-/**  La rangée de FILTRES par catégorie — celles qui ont leur propre formulaire
- *   exceptées : elles se filtrent par leur NATURE (`OPTIONS_FILTRE_NATURE`), et
- *   deux pastilles « Actualité » sur la même page se liraient comme deux choses. */
-export const OPTIONS_FILTRE_CATEGORIE = CATEGORIES_TICKET.filter((c) => !c.formulairePropre).map(
-	(c) => ({
-		val: c.value,
-		label: `${c.emoji} ${c.label}`,
-	}),
-);
+/**  La rangée de FILTRES par catégorie — celles d'en tête exceptées : elles se
+ *   filtrent par leur NATURE (`OPTIONS_FILTRE_NATURE`), et deux pastilles
+ *   « Actualité » sur la même page se liraient comme deux choses. */
+export const OPTIONS_FILTRE_CATEGORIE = CATEGORIES_TICKET.filter((c) => !c.enTete).map((c) => ({
+	val: c.value,
+	label: `${c.emoji} ${c.label}`,
+}));
 
 export const OPTIONS_CATEGORIE: readonly {
 	val: string;
@@ -275,11 +269,13 @@ export const OPTIONS_CATEGORIE: readonly {
 	desc: string;
 	marquee?: boolean;
 	marqueAide?: string;
+	enTete?: boolean;
 }[] = CATEGORIES_TICKET.map((c) => ({
 	val: c.value,
 	label: `${c.emoji} ${c.label}`,
 	desc: c.description,
 	marquee: !!c.carnet,
+	enTete: !!c.enTete,
 	//  ⚠️ OBLIGATOIRE dès que `marquee` est vrai : un liseré ne dit rien à un
 	//  lecteur d'écran. L'équivalent textuel compte plus qu'avec un emoji, pas
 	//  moins — un emoji, au moins, s'annonçait.

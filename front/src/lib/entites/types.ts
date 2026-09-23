@@ -293,7 +293,30 @@ export interface SectionDeclaree {
 	 * entité a une de ces notions, elle est à la même place et a la même tête ».
 	 */
 	sansObjet?: string;
+	/**
+	 * **Sans objet pour UNE nature d'affaire** — la section reste visible, grisée,
+	 * pliée et inactive, avec ce motif (23/09/2026, arbitré à l'écran).
+	 *
+	 * Demandé : *« un seul “+ Nouvelle affaire” comprenant toutes les sections
+	 * Affaires et Actualités ; selon le choix de la catégorie, les sections
+	 * peuvent changer. Prévoir toutes les sections, grisées, pliées et inactives
+	 * pour celles inappropriées, qui doivent être sans données »*.
+	 *
+	 * À distinguer de `sansObjet` (l'entité ne porte jamais la notion, la
+	 * section n'est pas rendue) et d'`absente` (un ÉTAT ne la porte pas) : ici
+	 * c'est la NATURE de l'objet, qui change quand on change de catégorie — la
+	 * section doit donc rester à sa place, pour qu'on voie ce qui s'éteint.
+	 */
+	inactivePour?: Partial<Record<NatureAffaire, string>>;
 }
+
+/**
+ * La nature d'une affaire, qui décide des sections actives : une ACTUALITÉ
+ * (catégorie « Actualité ») informe ; une affaire SUIVIE se traite. Même mot
+ * que le serveur (`utils/nature_affaire`) pour le premier ; le second n'y a pas
+ * de nom, parce qu'il n'y décide de rien.
+ */
+export type NatureAffaire = 'actualite' | 'suivie';
 
 export interface EntiteDeclaree {
 	/** Identifiant technique — `ticket`, `actualite`… */
@@ -359,6 +382,39 @@ export function sectionPresente(entite: EntiteDeclaree, etat: Etat, id: IdSectio
 	const s = section(entite, id);
 	if (!s || s.sansObjet) return false;
 	return !s.absente?.[etat];
+}
+
+/**
+ * Pourquoi cette section est-elle INACTIVE ici — ou `''` si elle ne l'est pas.
+ *
+ * Une section inactive se rend grisée, pliée, sans données, avec ce motif
+ * (`SectionFormulaire inactive=`). Deux sources, dans cet ordre :
+ *
+ *   1. la **nature** de l'affaire (`inactivePour`) — elle change avec la
+ *      catégorie ;
+ *   2. une **absence de l'état** qui tient à la catégorie ou à une dette
+ *      (`absente[etat]`, motifs `categorie` et `api`) : l'Équipement et
+ *      l'Intervenant ne se saisissent pas à la création, et pas encore en
+ *      correction (#1097). Ils restent visibles, pour qu'on sache qu'ils existent.
+ *
+ * ⚠️ Les absences de motif `geste` ou `hérité` ne sont PAS des sections
+ * inactives : elles n'ont pas de sens dans ce geste-là, et les montrer grisées
+ * ferait croire à une case qu'on pourrait débloquer.
+ */
+export function motifInactif(
+	entite: EntiteDeclaree,
+	etat: Etat,
+	id: IdSection,
+	nature: NatureAffaire,
+): string {
+	const s = section(entite, id);
+	if (!s) return '';
+	const parNature = s.inactivePour?.[nature];
+	if (parNature) return parNature;
+	const absence = s.absente?.[etat];
+	return absence && (absence.motif === 'categorie' || absence.motif === 'api')
+		? absence.explication
+		: '';
 }
 
 /** Les sections rendues dans cet état, **dans l'ordre déclaré**. */

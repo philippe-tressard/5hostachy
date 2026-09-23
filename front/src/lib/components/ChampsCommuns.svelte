@@ -188,6 +188,9 @@
 	export let debut = '';
 	export let fin = '';
 	export let perimetre: string[] = [];
+	/**  Les sections ÉTEINTES par la nature de l'affaire, avec leur motif
+	 *   (formulaire unique, 23/09/2026) : rendues grisées, sans champ. */
+	export let inactives: Partial<Record<IdSection, string>> = {};
 	/** 🔒 « Visible du seul périmètre », sous les pastilles — une actualité (#1096). */
 	export let avecReservePerimetre = false;
 	export let reservePerimetre = false;
@@ -349,6 +352,16 @@
 	<SectionQuand {idPrefixe} premiere={premiereQuand} pliable={plie('quand')} bind:debut bind:fin />
 {/if}
 
+<!--  🔒 L'INTERVENANT (section 6) : inactif à ce jour, à son rang — voir
+      `SectionsSpecifiquesTicket` pour l'Équipement, même raison. -->
+{#if inactives.intervenant}
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.intervenant}
+		pliable={plie('intervenant')}
+		inactive={inactives.intervenant}
+	/>
+{/if}
+
 {#if avecPerimetre}
 	<SectionPerimetre
 		{idPrefixe}
@@ -410,7 +423,13 @@
 	/>
 {/if}
 
-{#if avecDestinataires}
+{#if inactives.destinataires}
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.destinataires}
+		pliable={plie('destinataires')}
+		inactive={inactives.destinataires}
+	/>
+{:else if avecDestinataires}
 	<SectionDestinataires
 		{idPrefixe}
 		premiere={premiere && !avecPerimetre}

@@ -19,7 +19,7 @@
   | Geste | Relais |
   |---|---|
   | ↩️ Suite (commentaire, ciblage, mise en avant) | `gestes.evoluer` |
-  | ✏️ correction — `FormulaireActualite`, en modale | `gestes.modifie` |
+  | ✏️ correction — `FormulaireTicket`, dans la carte, comme une affaire | `gestes.modifie` |
   | ⚙️ Options rapides — épinglage, urgence | `gestes.optionsEnregistrer` |
   | 🎯 En faire une affaire suivie (#1094) | `promouvoirActualite` → `gestes.modifie` |
   | 🗑️ Supprimer (admin) | `gestes.supprimer` |
@@ -39,7 +39,7 @@
 	import ActionsActualite from './ActionsActualite.svelte';
 	import CarteActualite from './CarteActualite.svelte';
 	import EvolForm from './EvolForm.svelte';
-	import FormulaireActualite from './FormulaireActualite.svelte';
+	import FormulaireTicket from './FormulaireTicket.svelte';
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
@@ -93,7 +93,7 @@
 	{expanded}
 	variante={archive ? 'historique' : 'fil'}
 	{documents}
-	formulaireOuvert={mode === 'evolution' || mode === 'options'}
+	formulaireOuvert={mode === 'evolution' || mode === 'options' || mode === 'edition'}
 	on:toggle={() => gestes.basculer(ticket)}
 >
 	<svelte:fragment slot="actions">
@@ -113,7 +113,19 @@
 	</svelte:fragment>
 
 	<svelte:fragment slot="formulaire">
-		{#if mode === 'options'}
+		<!--  Correction — LE formulaire des affaires (23/09/2026) : une actualité
+		      s'y corrige comme toute affaire, et sa catégorie avec elle. Il était
+		      rendu en modale par `FormulaireActualite`, disparu dans celui-ci ;
+		      le corps de la carte ne se replie pas pendant la saisie (#640). -->
+		{#if mode === 'edition'}
+			{#key ticket.id}
+				<FormulaireTicket
+					{ticket}
+					on:modifie={(e) => gestes.modifie(e.detail)}
+					on:annule={gestes.annuler}
+				/>
+			{/key}
+		{:else if mode === 'options'}
 			<PanneauOptionsPublication
 				optionsRendues={OPTIONS}
 				perimetreCible={ticket.perimetre_cible ?? []}
@@ -208,18 +220,6 @@
 		{/if}
 	</svelte:fragment>
 </CarteActualite>
-
-<!--  Correction — LE MÊME composant qu'à la création (#433), en modale : il sort
-      de la carte, que replier pendant la saisie effacerait avec elle (#640). -->
-{#if mode === 'edition'}
-	{#key ticket.id}
-		<FormulaireActualite
-			affaire={ticket}
-			on:modifie={(e) => gestes.modifie(e.detail)}
-			on:annule={gestes.annuler}
-		/>
-	{/key}
-{/if}
 
 <style>
 	/*  La marge qui sépare le fil de ce qu'il suit — le parent seul sait ce

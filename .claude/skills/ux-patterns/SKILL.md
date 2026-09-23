@@ -194,6 +194,26 @@ dev », restée fausse des semaines.
 des `Document` (des entités avec un identifiant), et la fusion ne touche pas au
 modèle. Ce qui s'uniformise est la SECTION.
 
+### 🔒 Une section INACTIVE — le formulaire unique d'une affaire (23/09/2026)
+
+Arbitré à l'écran, maquette à l'appui : *« un seul “+ Nouvelle affaire”… selon
+la catégorie, les sections peuvent changer — grisées, pliées, inactives et sans
+données pour celles inappropriées »*. Une actualité est une affaire de catégorie
+**Actualité** ; elle se crée et se corrige dans `FormulaireTicket`.
+
+- Une section qui ne s'applique pas à la **nature** choisie reste **à son rang**,
+  grisée, hachurée, 🔒, avec son **motif écrit** sur la ligne (au doigt il n'y a
+  pas de survol). Elle ne se déplie pas et son contenu n'est pas rendu.
+- Le motif se **déclare** : `inactivePour` sur la section, dans
+  `$lib/entites/<entité>` ; `motifInactif()` le lit. Jamais un `{#if}` d'écran.
+- « Sans données » : ce qu'une section éteinte portait **ne part pas**
+  (`$lib/formulaire-affaire.chargeUtileAffaire`). Changer de nature en correction
+  l'**efface**, après une confirmation qui dit quoi (`pertesAuChangement`).
+- La pastille qui ouvre l'autre chemin (« 📰 Actualité — Information, sans
+  suivi ») est **en tête**, pleine ligne, teinte « information », suivie d'un filet
+  (`enTete` dans `CATEGORIES_TICKET`, variante A). Elle est absente des filtres
+  par catégorie : elle se filtre par sa **nature**.
+
 ### Un champ n'est pas un geste — d'où la seule différence création/édition
 
 Les sections **1 à 8 décrivent l'entité** ; la **9 est un acte**.
