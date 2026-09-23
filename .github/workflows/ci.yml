@@ -1781,6 +1781,19 @@ jobs:
         run: node scripts/check-choix-requis.mjs --selftest
 
       # ──────────────────────────────────────────────────────────────────────
+      # Un onglet `.tab-btn` ne vit que dans Onglet / BarreOnglets (23/09/2026)
+      # « Au nom de » rendait trois `.tab-btn` à coins carrés, dans un cadre,
+      # restylés localement : un choix de formulaire passe par ChoixPastilles
+      # (#1160, signalé à l'écran).
+      - name: Aucun onglet rendu hors des composants d'onglets
+        working-directory: front
+        run: npm run lint:onglet-local
+
+      - name: Le contrôle des onglets s'éprouve lui-même
+        working-directory: front
+        run: node scripts/check-onglet-local.mjs --selftest
+
+      # ──────────────────────────────────────────────────────────────────────
       # Un intitulé de section du cadre ne s'écrit pas en dur (22/09/2026)
       #
       # `ChampSaisiPour` affichait « SAISI POUR » quand la table déclare

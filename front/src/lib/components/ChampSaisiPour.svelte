@@ -14,14 +14,15 @@
   silence. La composition du lot reste chez l'appelant, qui seul sait s'il crée ou
   corrige ; ce composant ne porte que la saisie.
 
-  ⚠️ Le style voyage avec le balisage : `.saisi-pour-*` et `.tab-btn` sont définis
-  ici. Un style de page n'atteint pas un composant — c'est la panne des pastilles
+  ⚠️ Le style voyage avec le balisage : `.saisi-pour-*` est défini ici — le
+  choix, lui, vient de `ChoixPastilles` (#1160). Un style de page n'atteint pas un composant — c'est la panne des pastilles
   nues (v2.67.11), que `npm run lint:classes-nues` refuse depuis.
 -->
 <script lang="ts">
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import { nomAffiche } from '$lib/noms';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import type { ModeSaisiPour } from '$lib/saisi-pour';
 
 	/** Lié par l'appelant : lui seul sait ce que ces valeurs deviennent. */
@@ -51,6 +52,12 @@
 		resident: 'Un résident inscrit',
 		exterieur: 'Une personne extérieure',
 	};
+	//: Les trois réponses, dans l'ordre où on les rencontre.
+	const OPTIONS_MODE: { val: ModeSaisiPour; label: string }[] = [
+		{ val: 'moi', label: 'En mon nom' },
+		{ val: 'resident', label: 'Résident inscrit' },
+		{ val: 'exterieur', label: 'Personne extérieure' },
+	];
 	export let userId: number | null = null;
 	export let nom = '';
 	export let email = '';
@@ -72,33 +79,19 @@
 	valeurModifiee={mode !== 'moi'}
 	resume={RESUME_MODE[mode] ?? ''}
 >
-	<div class="field champ-large saisi-pour-section">
-		<div class="saisi-pour-tabs">
-			<button
-				type="button"
-				class="tab-btn"
-				class:active={mode === 'moi'}
-				on:click={() => (mode = 'moi')}
-			>
-				En mon nom
-			</button>
-			<button
-				type="button"
-				class="tab-btn"
-				class:active={mode === 'resident'}
-				on:click={() => (mode = 'resident')}
-			>
-				Résident inscrit
-			</button>
-			<button
-				type="button"
-				class="tab-btn"
-				class:active={mode === 'exterieur'}
-				on:click={() => (mode = 'exterieur')}
-			>
-				Personne extérieure
-			</button>
-		</div>
+	<div class="field champ-large">
+		<!--  🔴 Le choix passe par `ChoixPastilles` (#1160, signalé à l'écran le
+		      23/09/2026) : trois `.tab-btn` à coins carrés, dans un cadre que nulle
+		      autre section n'a, réécrivaient ce que Suivi, Catégorie et Périmètre
+		      font déjà — sans groupe accessible. -->
+		<ChoixPastilles
+			options={OPTIONS_MODE}
+			bind:valeur={mode}
+			tous={false}
+			radio="au-nom-de"
+			libelle={SECTIONS_LIBELLE.au_nom_de}
+			defilante={false}
+		/>
 		{#if mode === 'resident'}
 			<select bind:value={userId} style="margin-top:.5rem" aria-label="Résident concerné">
 				<option value={null}>— Sélectionner un résident —</option>
@@ -133,18 +126,6 @@
 </SectionFormulaire>
 
 <style>
-	.saisi-pour-section {
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		padding: 0.75rem;
-		margin-bottom: 0.5rem;
-	}
-	.saisi-pour-tabs {
-		display: flex;
-		gap: 0.25rem;
-		margin-top: 0.5rem;
-		flex-wrap: wrap;
-	}
 	/*  Les deux champs de la personne extérieure. Le `style=` en ligne qu'ils
 	    portaient dans le formulaire est devenu une classe en sortant : une règle
 	    nommée se relit, se surcharge et se contrôle — un `style=` ne fait rien de
@@ -155,24 +136,5 @@
 	    de la charte — c'est ce que `lint:charte` refuse. */
 	.saisi-pour-exterieur {
 		margin-top: 0.5rem;
-	}
-	/*  Ces onglets-ci sont ENCADRES et non soulignes : ce sont des boutons de
-	    bascule dans un champ, pas la barre d'onglets d'une page. Bordure, rayon,
-	    fond et densite leur sont propres ; le reste vient de la charte (#607). */
-	.tab-btn {
-		padding: 0.375rem 0.75rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: transparent;
-		font-size: 0.85rem;
-		transition:
-			background 0.15s,
-			color 0.15s,
-			border-color 0.15s;
-	}
-	.tab-btn.active {
-		background: var(--color-primary);
-		color: #fff;
-		border-color: var(--color-primary);
 	}
 </style>

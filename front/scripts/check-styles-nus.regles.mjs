@@ -24,7 +24,9 @@ export const CONTROLES = ['input', 'select', 'textarea'];
 export const SIGNATURES = [
 	{
 		nom: 'libelle-champ',
-		regle: '.field label',
+		//  `:not(.pastille)` depuis le 23/09/2026 : une pastille radio est un
+		//  `<label>`, et la règle la passait en capitales.
+		regle: '.field label:not(.pastille)',
 		proprietes: ['font-size', 'font-weight'],
 		mode: 'valeurs',
 		quoi: 'la typographie du libellé de champ',
