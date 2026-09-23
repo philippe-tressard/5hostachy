@@ -1,0 +1,178 @@
+"""Ce qu'un résident ne fait PAS partir, par une Suite ou un message (#1164).
+
+Pendant COMPORTEMENTAL de `test_canaux_notification.py`, qui lit la forme des
+gardes. Ici on poste vraiment, en résident puis en conseil syndical, et on
+regarde ce qui part.
+
+## Le défaut du 23/09/2026
+
+La création d'une affaire réservait au conseil le groupe WhatsApp et le courriel
+externe. Une Suite et un message, non : l'auteur d'une affaire — n'importe quel
+résident — publiait sur le groupe des résidents et écrivait, depuis l'adresse du
+site, à qui il voulait. Et `POST …/messages` ne vérifiait même pas que l'on
+VOYAIT l'affaire : son `GET` voisin le faisait.
+"""
+from __future__ import annotations
+
+import ast
+import pathlib
+from datetime import datetime
+
+import pytest
+from fastapi import BackgroundTasks, HTTPException
+from sqlmodel import Session, SQLModel, create_engine
+
+import app.routers.tickets.evolutions as evolutions
+import app.routers.tickets.messages as messages
+import app.utils.whatsapp as whatsapp
+from app.models.core import RoleUtilisateur, Ticket, Utilisateur
+from app.schemas import MessageCreate
+from app.schemas_tickets import TicketEvolutionCreate
+
+
+@pytest.fixture()
+def session():
+    moteur = create_engine("sqlite://")
+    SQLModel.metadata.create_all(moteur)
+    with Session(moteur) as s:
+        yield s
+
+
+def _personne(session, email, role=None):
+    kw = {"role": role} if role else {}
+    u = Utilisateur(email=email, mot_de_passe_hash="x", prenom="P", nom="N", **kw)
+    session.add(u)
+    session.commit()
+    session.refresh(u)
+    return u
+
+
+def _affaire(session, auteur, *, confidentiel=False):
+    t = Ticket(
+        numero=f"TK-{auteur.id:06d}{int(confidentiel)}",
+        titre="Porte du hall",
+        description="Elle ne ferme plus.",
+        categorie="panne",
+        auteur_id=auteur.id,
+        confidentiel=confidentiel,
+        cree_le=datetime.utcnow(),
+        mis_a_jour_le=datetime.utcnow(),
+    )
+    session.add(t)
+    session.commit()
+    session.refresh(t)
+    return t
+
+
+@pytest.fixture()
+def envois(monkeypatch):
+    """Ce qui PART : courriels externes et messages sur le groupe."""
+    parti = {"externe": [], "whatsapp": []}
+    externe = lambda ticket, user, adresse, *a, **k: parti["externe"].append(adresse)  # noqa: E731
+    monkeypatch.setattr(evolutions, "envoyer_email_externe", externe)
+    monkeypatch.setattr(messages, "envoyer_email_externe", externe)
+    monkeypatch.setattr(whatsapp, "config_whatsapp", lambda s: {"site_url": "https://x"})
+    monkeypatch.setattr(whatsapp, "whatsapp_actif", lambda c: True)
+    return parti
+
+
+def _suite(session, ticket, user):
+    taches = BackgroundTasks()
+    corps = TicketEvolutionCreate(
+        type="commentaire", contenu="Toujours cassée.",
+        partager_whatsapp=True, email_externe="quiconque@exemple.org",
+    )
+    evolutions.add_evolution(ticket.id, corps, taches, session=session, user=user)
+    return [t.func.__name__ for t in taches.tasks]
+
+
+def test_une_suite_de_resident_ne_publie_ni_n_ecrit_au_dehors(session, envois):
+    resident = _personne(session, "r@exemple.fr")
+    taches = _suite(session, _affaire(session, resident), resident)
+    assert envois["externe"] == [], "un résident a fait partir un courriel vers une adresse libre"
+    assert "envoyer_whatsapp_avec_log" not in taches, "un résident a publié sur le groupe"
+
+
+def test_une_suite_du_conseil_publie_et_ecrit(session, envois):
+    """Témoin : sans lui, le test précédent serait vert si plus RIEN ne partait."""
+    resident = _personne(session, "r@exemple.fr")
+    cs = _personne(session, "cs@exemple.fr", RoleUtilisateur.conseil_syndical)
+    taches = _suite(session, _affaire(session, resident), cs)
+    assert envois["externe"] == ["quiconque@exemple.org"]
+    assert "envoyer_whatsapp_avec_log" in taches
+
+
+def test_un_message_de_resident_n_ecrit_pas_au_dehors(session, envois):
+    resident = _personne(session, "r@exemple.fr")
+    ticket = _affaire(session, resident)
+    corps = MessageCreate(contenu="Relance.", email_externe="quiconque@exemple.org")
+    messages.add_message(ticket.id, corps, BackgroundTasks(), session=session, user=resident)
+    assert envois["externe"] == []
+
+
+def test_un_message_du_conseil_ecrit_au_dehors(session, envois):
+    resident = _personne(session, "r@exemple.fr")
+    cs = _personne(session, "cs@exemple.fr", RoleUtilisateur.conseil_syndical)
+    ticket = _affaire(session, resident)
+    corps = MessageCreate(contenu="Réponse.", email_externe="syndic@exemple.org")
+    messages.add_message(ticket.id, corps, BackgroundTasks(), session=session, user=cs)
+    assert envois["externe"] == ["syndic@exemple.org"]
+
+
+def test_on_n_ecrit_pas_sur_une_affaire_qu_on_ne_voit_pas(session, envois):
+    """Le `GET …/messages` refusait déjà ; le `POST` voisin, non."""
+    auteur = _personne(session, "auteur@exemple.fr")
+    voisin = _personne(session, "voisin@exemple.fr")
+    ticket = _affaire(session, auteur, confidentiel=True)
+    with pytest.raises(HTTPException) as refus:
+        messages.add_message(
+            ticket.id, MessageCreate(contenu="Je lis tout."), BackgroundTasks(),
+            session=session, user=voisin,
+        )
+    assert refus.value.status_code == 403
+
+
+# ── La CLASSE du défaut : une route d'affaire qui ne contrôle pas l'accès ─────
+#
+#  `POST …/messages` n'avait aucun contrôle, son `GET` voisin si. Rien ne relevait
+#  l'écart : chaque route se relit seule. Toute route qui reçoit un `ticket_id`
+#  doit poser UNE question d'accès — un prédicat, ou une dépendance de rôle.
+
+_TICKETS = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "tickets"
+_CONTROLES = (
+    "ticket_visible", "peut_commenter", "peut_editer", "est_rattache_au_lot",
+    "require_cs_or_admin", "require_admin", "require_proprietaire",
+)
+
+
+def _routes_sans_controle(source: str, fichier: str) -> list[str]:
+    fautes = []
+    for f in ast.walk(ast.parse(source)):
+        if not isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        est_route = any(
+            isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute)
+            and d.func.attr in {"get", "post", "patch", "put", "delete"}
+            for d in f.decorator_list
+        )
+        if est_route and "ticket_id" in [a.arg for a in f.args.args]:
+            if not any(c in ast.unparse(f) for c in _CONTROLES):
+                fautes.append(f"{fichier}:{f.lineno} ({f.name})")
+    return fautes
+
+
+def test_toute_route_d_une_affaire_controle_l_acces():
+    fautes, routes = [], 0
+    for p in sorted(_TICKETS.glob("*.py")):
+        source = p.read_text(encoding="utf-8")
+        routes += source.count("ticket_id: int")
+        fautes += _routes_sans_controle(source, p.name)
+    assert routes >= 6, f"Seulement {routes} route(s) à `ticket_id` relevées — portée cassée."
+    assert not fautes, "Route d'affaire sans contrôle d'accès (#1164) :\n  " + "\n  ".join(fautes)
+
+
+def test_le_releve_voit_une_route_sans_controle():
+    sans = "@router.post('/{ticket_id}/x')\ndef f(ticket_id: int, user=None):\n    return 1\n"
+    avec = "@router.post('/{ticket_id}/x')\ndef f(ticket_id: int, user=None):\n    ticket_visible(t, user)\n"
+    assert _routes_sans_controle(sans, "s.py")
+    assert not _routes_sans_controle(avec, "a.py")

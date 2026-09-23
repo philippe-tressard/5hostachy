@@ -102,6 +102,11 @@ def add_message(
     user: Utilisateur = Depends(get_current_user),
 ):
     ticket = ou_404(session, Ticket, ticket_id, "Ticket")
+    #  🔴 La même garde que le `GET` ci-dessus : sans elle, n'importe quel compte
+    #  écrivait sur une affaire qu'il ne peut pas lire — une affaire réservée au
+    #  conseil comprise — et alertait le CS en son nom (#1164, 23/09/2026).
+    if not ticket_visible(ticket, user):
+        raise HTTPException(403, "Accès refusé")
     est_cs = est_moderateur(user)
     if body.interne and not est_cs:
         raise HTTPException(403, "Messages internes réservés au CS")
@@ -166,7 +171,11 @@ def add_message(
     session.refresh(msg)
 
     # Email externe (CS/Admin uniquement, après commit pour avoir l'id)
-    if body.email_externe and body.email_externe.strip() and not body.interne:
+    #  🔴 `est_cs` : quiconque VOIT l'affaire peut lui écrire un message, et une
+    #  affaire ordinaire est visible de tout son périmètre. Sans cette garde,
+    #  n'importe quel résident faisait partir un courriel vers une adresse de son
+    #  choix, depuis celle du site (#1164, 23/09/2026).
+    if body.email_externe and body.email_externe.strip() and not body.interne and est_cs:
         envoyer_email_externe(
             ticket, user, body.email_externe.strip(), background_tasks, session,
             is_commentaire=True,

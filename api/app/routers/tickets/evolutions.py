@@ -358,7 +358,12 @@ def add_evolution(
     #  (05/09/2026) : la même règle qu'à la création, au troisième point d'envoi.
     #  Le syndic et le CS, eux, restent joignables — ce sont les destinataires
     #  légitimes d'un dossier fermé au voisinage.
-    partage_whatsapp = body.partager_whatsapp and not ticket.confidentiel
+    #
+    #  🔴 Et le groupe est un MÉGAPHONE vers tous les résidents : réservé au
+    #  conseil, comme à la création (`crud.py`). L'auteur d'une affaire ouvre une
+    #  Suite sur la sienne — il ne publie pas au nom du site (#1164, 23/09/2026).
+    est_cs = est_moderateur(user)
+    partage_whatsapp = body.partager_whatsapp and est_cs and not ticket.confidentiel
     if partage_whatsapp or body.envoyer_syndic or body.envoyer_cs:
         # Évolutions précédentes (hors celle qui vient d'être créée) — le même
         # historique alimente le message WhatsApp et le tableau de l'e-mail.
@@ -408,8 +413,10 @@ def add_evolution(
                 auteur=bool(getattr(body, "envoyer_auteur", False)),
             )
 
-    # Email externe (CS/Admin uniquement)
-    if body.email_externe and body.email_externe.strip():
+    #  Email externe — CS/Admin uniquement, et ce commentaire le disait sans que
+    #  le code le fasse : un résident écrivait, depuis l'adresse du site, à qui
+    #  il voulait (#1164).
+    if body.email_externe and body.email_externe.strip() and est_cs:
         envoyer_email_externe(
             ticket, user, body.email_externe.strip(), background_tasks, session,
             is_commentaire=True,

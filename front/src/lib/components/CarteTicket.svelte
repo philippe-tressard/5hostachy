@@ -349,7 +349,7 @@
 						perimetreCourant={ticket.perimetre_cible ?? []}
 						entrees={evolutions}
 						whatsappInterdit={motifWhatsappInterdit(ticket.confidentiel ?? false, 'ticket')}
-						peutDiffuser={peutSuivreCeTicket}
+						peutDiffuser={$isCS}
 						saving={evolutionEnCours}
 						on:submit={(e) =>
 							dispatch('evoluer', { ...e.detail, ...optionsVersTicket(optionsEvol) })}
