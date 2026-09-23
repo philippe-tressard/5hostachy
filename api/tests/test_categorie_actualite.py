@@ -217,14 +217,22 @@ def test_une_affaire_ouverte_ne_perime_jamais():
 
 # ── La lecture rend ce qu'il faut pour filtrer ──────────────────────────
 
-def test_la_lecture_rend_la_nature_et_le_public(session):
+def test_la_lecture_rend_la_nature_et_le_public(session, batiments):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
     lu = _creer(session, cs, categorie="actualite", public_cible=["locataires"],
-                reserve_perimetre=True)
+                reserve_perimetre=True, perimetre_cible=[f"bat:{batiments[0]}"])
     relu = ticket_read(session.get(Ticket, lu.id), session)
     assert relu.natures == ["actualite"]
     assert relu.public_cible == ["locataires"]
     assert relu.reserve_perimetre is True
+
+
+def test_reserve_au_perimetre_sur_la_copropriete_entiere_est_retire(session):
+    """🔒 sur un périmètre global ne retire la lecture à personne : le drapeau
+    mentirait. Il est retiré à l'écriture (`actualite.appliquer_acces`)."""
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    lu = _creer(session, cs, categorie="actualite", reserve_perimetre=True)
+    assert lu.reserve_perimetre is False
 
 
 # ── Une actualité n'a pas d'état : ni par une Suite, ni par le PATCH ──────

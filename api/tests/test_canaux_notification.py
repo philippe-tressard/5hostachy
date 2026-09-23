@@ -280,11 +280,11 @@ def test_le_schema_de_creation_de_ticket_porte_le_canal_whatsapp():
 #  relevé ci-dessous garde aussi les envois nus — c'est le cas le plus grave.
 
 #: Ce qui part hors de l'application vers un public que l'auteur choisit.
-_ENVOIS_RESERVES = _ENVOIS + ("envoyer_email_externe",)
+_ENVOIS_RESERVES = _ENVOIS + ("envoyer_email_externe", "diffuser_actualite")
 
 #: Le module qui DÉFINIT les envois : la garde se lit au point d'APPEL, pas dans
 #: la fonction qui envoie. Déclaré, et le test échoue s'il cesse d'exister.
-_MODULES_DEFINISSANT = {"courriels.py"}
+_MODULES_DEFINISSANT = {"courriels.py", "actualite.py"}
 
 
 def _envois_et_gardes(fonction: ast.AST, noms: tuple[str, ...]) -> list[tuple[int, str]]:

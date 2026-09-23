@@ -139,9 +139,36 @@ def _to_read(annonce: AnnonceHall, session: Session) -> dict:
         "archivee": est_archivable("annonce_hall", annonce, seuil_jours=seuil_archivage_jours(session)),
         "archivee_manuellement": annonce.archivee,
         "publication_id": annonce.publication_id,
+        "ticket_id": annonce.ticket_id,
         "cree_le": annonce.cree_le.isoformat(),
         "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "",
     }
+
+
+def images_de(ticket, session: Session) -> list[str]:
+    """Photos exploitables d'une affaire « Actualité », limitées à `MAX_PHOTOS`.
+
+    Ses photos d'abord, puis ses pièces jointes de type image, puis les images
+    de la bibliothèque rattachées (`Document.ticket_id`). Pendant de
+    `images_de_publication`, retirée avec l'entité (#1091).
+    """
+    urls: list[str] = [
+        u for u in parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
+        if u.startswith("/uploads/")
+    ]
+    docs = session.exec(
+        select(Document).where(Document.ticket_id == ticket.id).order_by(Document.publie_le)  # type: ignore[arg-type]
+    ).all()
+    for doc in docs:
+        if not (doc.mime_type or "").startswith("image/"):
+            continue
+        reel = os.path.realpath(doc.fichier_chemin or "")
+        if not reel.startswith(UPLOADS_ROOT + os.sep) or not os.path.isfile(reel):
+            continue
+        url = "/uploads/" + os.path.relpath(reel, UPLOADS_ROOT).replace(os.sep, "/")
+        if url not in urls:
+            urls.append(url)
+    return urls[:MAX_PHOTOS]
 
 
 def images_de_publication(pub: Publication, session: Session) -> list[str]:
@@ -293,6 +320,7 @@ def creer_annonce_hall(
     format_demande: str = "auto",
     images: Optional[list[str]] = None,
     publication_id: Optional[int] = None,
+    ticket_id: Optional[int] = None,
     #  Décoché par défaut : la valeur par défaut d'un envoi est « ne pas envoyer ».
     #  Les autres appelants (pré-remplissage depuis une actualité) n'envoient donc
     #  rien sans le demander.
@@ -348,6 +376,7 @@ def creer_annonce_hall(
         pdf_nom=nom_fichier(body.titre, maintenant),
         taille_octets=len(pdf),
         publication_id=publication_id,
+        ticket_id=ticket_id,
         auteur_id=user.id,
         cree_le=maintenant,
     )

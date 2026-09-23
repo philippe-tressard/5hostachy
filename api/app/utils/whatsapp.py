@@ -245,6 +245,7 @@ def _build_message_restreint(
     site_url: str,
     pub_id: int | None,
     footer: str | None = None,
+    lien: str | None = None,
 ) -> str:
     """Construit un message WhatsApp court pour une publication à audience restreinte.
 
@@ -273,9 +274,13 @@ def _build_message_restreint(
         "Elle n'est pas accessible à tous les résidents.\n"
         "Si vous êtes concerné(e), connectez-vous sur 5Hostachy pour la consulter :"
     )
-    lien = f"{site_url.rstrip('/')}/actualites"
-    if pub_id is not None:
-        lien += f"#pub-{pub_id}"
+    #  🔴 Le lien FOURNI d'abord (#1091) : l'actualité est devenue une affaire,
+    #  et `/actualites#pub-<id>` n'a plus rien à révéler. Le repli ne sert plus
+    #  qu'aux anciens appelants, retirés avec l'entité.
+    if not lien:
+        lien = f"{site_url.rstrip('/')}/actualites"
+        if pub_id is not None:
+            lien += f"#pub-{pub_id}"
 
     footer = (footer or "").strip() or "— Conseil Syndical 5Hostachy"
     return f"{header}\n\n{avertissement}\n{lien}\n\n{footer}"
@@ -321,7 +326,7 @@ def construire_message(
         #  plus qu'aux actualités sans titre.
         titre_affiche = titre or TITRE_CONFIDENTIEL
         return _build_message_restreint(
-            titre_affiche, urgente, perimetre_cible, site_url, pub_id, footer
+            titre_affiche, urgente, perimetre_cible, site_url, pub_id, footer, lien
         )
     #  Le lien ne concerne QUE le message normal : le message restreint en porte
     #  déjà un, qui renvoie vers l'application parce que le contenu n'y est pas.

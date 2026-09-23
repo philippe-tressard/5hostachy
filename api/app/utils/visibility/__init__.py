@@ -33,6 +33,7 @@ from .socle import (
     cible_visible,
     perimetre_visible,
     public_cible_visible,
+    reserve_au_conseil,
 )
 from .objets import (
     annonce_visible,
@@ -59,6 +60,7 @@ __all__ = [
     "cible_visible",
     "CODES_PUBLIC_CIBLE",
     "public_cible_visible",
+    "reserve_au_conseil",
     "annonce_visible",
     "idee_visible",
     "publication_visible",

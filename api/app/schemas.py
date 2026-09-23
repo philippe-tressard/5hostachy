@@ -166,6 +166,8 @@ class TicketCreate(SaisiPourEntree, AssisteIAEntree):
     #  dit rien. Le droit est dans `appliquer_options`, pas ici.
     urgente: Optional[bool] = None
     confidentiel: Optional[bool] = None
+    #  Un ACTE, pas une colonne : produire l'affiche de hall d'une actualité (#1091).
+    annonce_hall: Optional[bool] = None
     #  🔴 `None` = « le corps n'en dit rien », et le serveur pose alors le défaut
     #  de la CATÉGORIE (`kanban_tickets.suivi_par_defaut`). Un `bool = False`
     #  aurait rendu un formulaire silencieux indiscernable d'un décochage
@@ -309,6 +311,7 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection):
     confidentiel: Optional[bool] = None
     epingle: Optional[bool] = None
     urgente: Optional[bool] = None  # #1171 : ignorée en silence jusqu'au 23/09/2026
+    annonce_hall: Optional[bool] = None  # un acte : l'affiche d'une actualité (#1091)
     suivi_kanban: Optional[bool] = None
     #  ⚠️ N'est PAS un champ du ticket : `Ticket` n'a pas cette colonne, à la
     #  différence de `Publication`. C'est un ACTE — « publie ce ticket sur le

@@ -26,6 +26,7 @@ from app.models.core import (
 from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate
 from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
 from app.utils.nature_affaire import est_actualite
+from .actualite import diffuser_actualite
 from app.utils.evolutions import TYPES_SAISIS, evolution_modifiable, supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
@@ -358,6 +359,20 @@ def add_evolution(
 
     session.commit()
     session.refresh(evol)
+
+    #  Une ACTUALITÉ diffuse sa Suite par son module (#1091) — une parole vide
+    #  ne part nulle part, comme l'ancienne publication.
+    if est_actualite(ticket) and est_moderateur(user):
+        if body.contenu and body.contenu.strip():
+            diffuser_actualite(
+                session, ticket, user, background_tasks,
+                whatsapp=bool(body.partager_whatsapp),
+                syndic=bool(body.envoyer_syndic), cs=bool(body.envoyer_cs),
+                auteur=bool(getattr(body, "envoyer_auteur", False)),
+                externe=body.email_externe,
+                commentaire=body.contenu, fichiers_urls=body.fichiers_urls,
+            )
+        return evol_read(evol, session)
 
     # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
     #  🔴 Un ticket réservé au conseil ne part pas sur le groupe des résidents
