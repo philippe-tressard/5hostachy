@@ -99,6 +99,19 @@ const enumere = (texte, attendus) => attendus.filter((x) => texte.includes(x)).l
 const tableauxEtBlocs = (texte) =>
 	[...texte.matchAll(/```[\s\S]*?```|(?:^\|.*\|$\n?)+/gm)].map((m) => m[0]);
 
+/**
+ * Les PARAGRAPHES d'un fichier — pour une énumération écrite en prose.
+ *
+ * 🔴 Lu sur le fichier entier, le déclencheur des exceptions XSS rougissait sur
+ * un `import Icon from '$lib/components/Icon.svelte'` d'exemple, parce que le mot
+ * « exception » figurait trois cents lignes plus loin. C'est arrivé le 23/09/2026,
+ * quand `svelte-patterns` a remplacé sa liste par un renvoi : le contrôle punissait
+ * exactement le geste qu'il recommande (claude-config#122). Une liste d'exceptions
+ * tient dans un paragraphe ; un paragraphe qui en nomme une sans l'autre est bien
+ * le défaut visé.
+ */
+const paragraphes = (texte) => texte.split(/\r?\n[ \t]*\r?\n/);
+
 const NOTIONS = [
 	{
 		nom: 'assainisseurs HTML',
@@ -130,6 +143,7 @@ const NOTIONS = [
 			return bloc ? [...bloc[0].matchAll(/'[^']*\/(\w+\.svelte)'/g)].map((m) => m[1]) : [];
 		},
 		ou: 'front/scripts/check-html.mjs (EXCEPTIONS)',
+		portions: paragraphes,
 		declencheur: (texte, attendus) =>
 			/exception/i.test(texte) && attendus.some((x) => texte.includes(x)),
 		pourquoi:
