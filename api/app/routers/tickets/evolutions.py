@@ -24,6 +24,8 @@ from app.models.core import (
     Utilisateur,
 )
 from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate
+from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
+from app.utils.nature_affaire import est_actualite
 from app.utils.evolutions import TYPES_SAISIS, evolution_modifiable, supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
@@ -280,6 +282,10 @@ def add_evolution(
         raise HTTPException(422, "Type invalide (commentaire ou etat)")
     if body.type == "etat" and not body.nouveau_statut:
         raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
+    #  Une actualité n'a pas de cycle (#1091) : une Suite y parle, elle ne la
+    #  fait pas avancer — et `publie` ne s'atteint par aucune transition.
+    if body.type == "etat" and (est_actualite(ticket) or body.nouveau_statut in STATUTS_TICKET_SANS_CYCLE):
+        raise HTTPException(422, "Une actualité n'a pas d'état de suivi")
 
     ancien_statut = ticket.statut if body.type == "etat" else None
     evol = TicketEvolution(

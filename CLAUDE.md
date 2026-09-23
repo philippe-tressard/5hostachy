@@ -210,7 +210,7 @@ qui *disent* sans refuser — et qui s'appellent, jamais ne se redérivent :
 |---|---|
 | `est_moderateur(user)` | conseil syndical **ou** admin — « qui modère » |
 | `est_rattache_au_lot(session, user, lot_id)` | « ce lot est le mien » (lien **actif** exigé) |
-| `peut_commenter` / `peut_editer` | l'auteur, le « saisi pour », l'admin (+ le CS pour commenter) |
+| `peut_commenter` / `peut_editer` | l'auteur, le « saisi pour », l'admin (+ le CS pour commenter) ; une **actualité** : le CS (#1091) |
 
 Et les règles d'**appartenance** — « cet objet est-il le mien ? » — vivent dans
 `auth/appartenance.py`, **jamais chez un routeur** : elles ne sont pas des

@@ -19,7 +19,7 @@
 	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
-	import { CATEGORIES_TICKET, statutsPresents } from '$lib/tickets';
+	import { OPTIONS_FILTRE_CATEGORIE, statutsPresents } from '$lib/tickets';
 
 	$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
@@ -410,7 +410,7 @@
 	/>
 	<span class="filter-sep"></span>
 	<ChoixPastilles
-		options={CATEGORIES_TICKET.map((c) => ({ val: c.value, label: `${c.emoji} ${c.label}` }))}
+		options={OPTIONS_FILTRE_CATEGORIE}
 		bind:valeur={filterCat}
 		tous="Toutes"
 		libelle="Filtrer les affaires par catégorie"

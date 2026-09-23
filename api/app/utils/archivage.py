@@ -48,6 +48,7 @@ les statuts de ticket sont les seuls accentués de tout le site (`résolu`,
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
+from app.utils.nature_affaire import est_actualite
 from app.utils.valeurs import valeur
 
 #: Le délai unique, en jours. Arbitré à l'écran le 19/08/2026 : *« un seul
@@ -154,6 +155,24 @@ REGLES: dict[str, RegleArchivage] = {
         champs_date=("ferme_le", "mis_a_jour_le", "cree_le"),
         declencheur="30 jours après le passage en « Résolu ». « Annulé » : immédiat.",
     ),
+    #  🔴 Une affaire de catégorie « Actualité » (#1091, 23/09/2026) : la règle
+    #  de l'ancienne publication, sur les colonnes de l'affaire. Elle n'a pas de
+    #  cycle — son seul état, `publie`, est terminal : trente jours après sa
+    #  dernière modification, ou dès sa date d'événement passée. Choisie par
+    #  `_regle_de`, jamais par l'appelant.
+    "actualite": RegleArchivage(
+        champ_statut="statut",
+        statut_defaut="publie",
+        statuts_terminaux=("publie",),
+        champs_date=("mis_a_jour_le", "cree_le"),
+        champ_archive_manuel="archive_manuel",
+        champ_epingle="epingle",
+        declencheur=(
+            "30 jours après la publication. Une date d'événement la fait sortir "
+            "dès le lendemain."
+        ),
+        champs_peremption=("fin", "debut"),
+    ),
     "annonce": RegleArchivage(
         champ_statut="statut",
         statuts_immediats=("annule",),
@@ -231,6 +250,17 @@ def _date_de_reference(objet: Any, regle: RegleArchivage) -> Optional[datetime]:
     return None
 
 
+def _regle_de(type_objet: str, objet: Any) -> str:
+    """Le type EFFECTIF : une affaire de catégorie « Actualité » suit sa règle.
+
+    Le seul endroit où la catégorie choisit la règle — l'appelant dit « ticket »,
+    et n'a pas à savoir qu'il en existe deux (#1091).
+    """
+    if type_objet == "ticket" and est_actualite(objet):
+        return "actualite"
+    return type_objet
+
+
 def perime_le(objet: Any, type_objet: str = "publication") -> Optional[date]:
     """La date a partir de laquelle cet objet n'est plus utile — ou `None` (#1093).
 
@@ -251,6 +281,7 @@ def perime_le(objet: Any, type_objet: str = "publication") -> Optional[date]:
     `datetime(2026, 9, 22, 0, 0)` ferait disparaitre l'information le matin meme,
     alors que l'auteur a ecrit une fin de validite, pas une heure de disparition.
     """
+    type_objet = _regle_de(type_objet, objet)
     regle = REGLES.get(type_objet)
     if regle is None:
         return None
@@ -299,6 +330,7 @@ def est_archivable(
     6. **état terminal** (s'il y en a) — sinon l'objet reste actif ;
     7. **délai écoulé** depuis la date de référence.
     """
+    type_objet = _regle_de(type_objet, objet)
     regle = REGLES.get(type_objet)
     if regle is None:
         #  Un type inconnu ne s'archive pas : la règle ne le connaît pas, elle

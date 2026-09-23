@@ -16,7 +16,7 @@ from sqlmodel import Session, select
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    STATUTS_TICKET_CLOS,
+    STATUTS_TICKET_ACTIFS,
     ConfigSite,
     GenreCivilite,
     Ticket,
@@ -78,7 +78,9 @@ def list_relance_syndic(
     tickets = session.exec(
         select(Ticket).where(
             Ticket.categorie != "bug",
-            Ticket.statut.notin_(STATUTS_TICKET_CLOS),
+            #  ACTIFS, pas « non clos » : une actualité (`publie`) n'est ni l'un ni
+            #  l'autre, et ne se relance pas (#1091).
+            Ticket.statut.in_(STATUTS_TICKET_ACTIFS),
             Ticket.non_relancable == False,  # noqa: E712
         ).order_by(Ticket.mis_a_jour_le)
     ).all()

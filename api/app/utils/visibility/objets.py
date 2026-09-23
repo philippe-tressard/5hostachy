@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from app.utils.nature_affaire import est_actualite
 from app.models.core import (
     Evenement,
     Idee,
@@ -254,6 +255,23 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
         return True
     if ticket.saisi_pour_user_id is not None and ticket.saisi_pour_user_id == user.id:
         return True
+
+    #  🔴 UNE ACTUALITÉ SUIT LA RÈGLE DE L'ACTUALITÉ (#1091, 23/09/2026).
+    #
+    #  Elle est devenue une catégorie d'affaire, mais elle s'adresse toujours à
+    #  la copropriété : périmètre + public visé, comme `publication_visible`, et
+    #  par la MÊME fonction (`cible_visible`). Placée AVANT la règle des
+    #  locataires, qui vise les affaires suivies — un locataire lisait les
+    #  actualités, il les lit encore. `confidentiel` est l'ancien « réservé au
+    #  conseil » (auteur et CS, déjà sortis plus haut) ; `reserve_perimetre`,
+    #  l'Accès « Réservé au périmètre » (#1096).
+    if est_actualite(ticket):
+        if ticket.confidentiel:
+            return False
+        return cible_visible(
+            ticket.perimetre_cible, ticket.public_cible, user,
+            ouvert_a_la_copropriete=not ticket.reserve_perimetre,
+        )
 
     #  🔴 UN LOCATAIRE NE VOIT QUE LES SIENS (05/09/2026), demandé à l'écran :
     #  *« les locataires ne voient pas les tickets »*.

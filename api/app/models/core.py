@@ -289,18 +289,15 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, table=True):
     #  Refermé sur son auteur et le CS (#710). Défaut `False`, comme
     #  `Publication.confidentiel` — voir la migration 0166 pour le pourquoi.
     confidentiel: bool = False
-    #  📌 ÉPINGLÉ — maintenu en tête de la liste (05/09/2026).
-    #
-    #  ⚠️ C'est la SEULE colonne que les options de publication ont ajoutée au
-    #  ticket : 🚨 pilote `priorite`, et 🔒 n'a pas lieu d'être (un ticket est
-    #  déjà restreint à son périmètre). Le tableau des quatre options et de ce
-    #  que chacune écrit vit dans la migration 0175 — le recopier ici en ferait
-    #  deux écritures libres de diverger.
+    #  📌 Épinglé (05/09/2026) ; ce que chaque option écrit : migration 0175.
     epingle: bool = False
-
-    #  Paraît-il au kanban ? Elle dit SI, jamais OÙ — le pourquoi et la
-    #  correspondance vivent dans `utils/kanban_tickets.py` (#833).
+    #  Paraît-il au kanban ? SI, jamais OÙ — `utils/kanban_tickets.py` (#833).
     suivi_kanban: bool = False
+    #  Rapatriées de `Publication` (#1091, migration 0207) : le public visé
+    #  (JSON), l'Accès « Réservé au périmètre » (#1096), l'archivage manuel.
+    public_cible: Optional[str] = None
+    reserve_perimetre: bool = False
+    archive_manuel: bool = False
 
     auteur: Optional[Utilisateur] = Relationship(back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"})
     saisi_pour: Optional[Utilisateur] = Relationship(sa_relationship_kwargs={"foreign_keys": "[Ticket.saisi_pour_user_id]"})

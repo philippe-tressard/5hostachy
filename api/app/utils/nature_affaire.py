@@ -1,0 +1,69 @@
+"""Ce qu'une affaire EST — actualité, affaire suivie, événement — dérivé, jamais saisi.
+
+## Pourquoi un module (#1091, 23/09/2026)
+
+Depuis l'arbitrage du 22/09, il n'y a plus qu'un objet : l'Affaire. « Actualité »
+est une catégorie, réservée au conseil, sans cycle de vie. Trois questions en
+découlent, et chacune ne s'écrit qu'ici :
+
+| Question | Fonction |
+|---|---|
+| est-ce une actualité ? | `est_actualite` |
+| sous quels filtres paraît-elle ? | `natures` |
+| dans quel état naît-elle, ou passe-t-elle en changeant de catégorie ? | `statut_pour` |
+
+## La règle du filtre, telle que l'utilisateur l'a posée le 22/09
+
+> « Tous ; Actualité (si catégorie = Actualité), Affaires (si catégorie ≠
+>   Actualité ET pas de date), Évènement (si une date) »
+
+Ce n'est pas une partition : une actualité datée paraît sous « Actualité » ET
+sous « Événement ». `natures` rend donc une LISTE, que l'écran interroge — il ne
+redérive rien, sinon la règle divergerait au premier cas limite (le motif « deux
+copies divergent sur le cas limite », vécu trois fois dans ce dépôt).
+"""
+from __future__ import annotations
+
+from typing import Any, Optional
+
+from app.models.tickets import CATEGORIES_RESERVEES_AU_CS, CategorieTicket, StatutTicket
+from app.utils.valeurs import valeur
+
+ACTUALITE = CategorieTicket.actualite.value
+
+
+def est_actualite(objet: Any) -> bool:
+    """Cet objet est-il une affaire de catégorie « Actualité » ?"""
+    return valeur(getattr(objet, "categorie", None)) == ACTUALITE
+
+
+def natures(ticket: Any) -> list[str]:
+    """Les filtres sous lesquels l'affaire paraît : `actualite`, `affaire`, `evenement`."""
+    datee = getattr(ticket, "debut", None) is not None
+    if est_actualite(ticket):
+        return ["actualite", "evenement"] if datee else ["actualite"]
+    return ["evenement"] if datee else ["affaire"]
+
+
+def categorie_reservee(categorie: Any) -> bool:
+    """Un résident ne pose pas cette catégorie (création comme correction)."""
+    return valeur(categorie) in CATEGORIES_RESERVEES_AU_CS
+
+
+def statut_pour(categorie: Any, demande: Optional[str] = None, *, est_cs: bool = False) -> str:
+    """L'état d'une affaire de cette catégorie, à la création ou quand elle en change.
+
+    - une actualité est `publie`, toujours : elle n'a pas de cycle, et aucun
+      état demandé ne l'y fait entrer ;
+    - une affaire suivie est `ouvert`, sauf état demandé par le conseil — dans
+      la liste blanche des états PROPOSABLES : `publie` n'en fait pas partie.
+    """
+    if valeur(categorie) == ACTUALITE:
+        return StatutTicket.publie.value
+    proposables = {s.value for s in StatutTicket} - {StatutTicket.publie.value}
+    if est_cs and demande in proposables:
+        return demande
+    return StatutTicket.ouvert.value
+
+
+__all__ = ["ACTUALITE", "categorie_reservee", "est_actualite", "natures", "statut_pour"]

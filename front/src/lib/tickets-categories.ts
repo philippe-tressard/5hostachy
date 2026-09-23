@@ -39,6 +39,21 @@ export interface CategorieTicket {
 	 *  inscription au carnet que le serveur ne ferait pas.
 	 */
 	carnet?: boolean;
+	/**
+	 *  Réservée au conseil syndical (#1091) — le résident ne la voit pas dans la
+	 *  grille de choix. La règle fait autorité côté SERVEUR
+	 *  (`CATEGORIES_RESERVEES_AU_CS`, qui refuse en 403) : ce drapeau n'en est
+	 *  que l'affichage.
+	 */
+	reserveCS?: boolean;
+	/**
+	 *  Connue du serveur, pas encore proposée — à PERSONNE. « Actualité » ne
+	 *  s'ouvre à la grille qu'avec le lot 4 du chantier v2.0.0 (#1091), quand
+	 *  l'écran des actualités lira les affaires : avant, une actualité publiée
+	 *  ici n'y paraîtrait pas, et il y aurait deux façons de publier. Retirer ce
+	 *  drapeau EST le geste du lot 4.
+	 */
+	enPreparation?: boolean;
 }
 
 /**  La marque posée sur une catégorie du carnet, et la phrase qui l'explique.
@@ -172,6 +187,15 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		//  et il n'a pas à savoir si sa gêne vient du site ou de la PWA.
 		description: 'Pb technique sur 5Hostachy',
 	},
+	{
+		value: 'actualite',
+		label: 'Actualité',
+		emoji: '\u{1F4F0}',
+		//  Une INFORMATION, pas une demande : personne n'agit, elle périme (#1091).
+		description: 'Information de la copropriété — publiée par le conseil',
+		reserveCS: true,
+		enPreparation: true,
+	},
 ];
 
 //: Emoji seul — la pastille de contexte d'une carte. Repli sur 📋 : une catégorie
@@ -220,6 +244,27 @@ export function categorieTicketLabel(categorie: string | undefined | null): stri
  *  composant — une variante ajoutée pour accueillir un écart existant ne
  *  factorise pas, elle entérine.
  */
+/**
+ *  La grille de CHOIX d'une catégorie : sans les catégories réservées au
+ *  conseil, pour qui n'en est pas (#1091). `OPTIONS_CATEGORIE` reste entière —
+ *  elle sert aussi à NOMMER la catégorie d'une affaire déjà créée.
+ */
+export function optionsCategorie(estCS: boolean) {
+	const reservees = new Set(CATEGORIES_TICKET.filter((c) => c.reserveCS).map((c) => c.value));
+	const cachees = new Set(CATEGORIES_TICKET.filter((c) => c.enPreparation).map((c) => c.value));
+	return OPTIONS_CATEGORIE.filter((o) => !cachees.has(o.val) && (estCS || !reservees.has(o.val)));
+}
+
+/**  La rangée de FILTRES de la liste : toutes les catégories proposables — celles
+ *   « en préparation » exceptées (#1091), qu'aucune affaire ne porte encore. Elle
+ *   était projetée dans la page même. */
+export const OPTIONS_FILTRE_CATEGORIE = CATEGORIES_TICKET.filter((c) => !c.enPreparation).map(
+	(c) => ({
+		val: c.value,
+		label: `${c.emoji} ${c.label}`,
+	}),
+);
+
 export const OPTIONS_CATEGORIE: readonly {
 	val: string;
 	label: string;
