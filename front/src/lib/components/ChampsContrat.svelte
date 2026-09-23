@@ -49,6 +49,7 @@
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
+	import ChampFrequence from '$lib/components/ChampFrequence.svelte';
 	import { CONTRAT } from '$lib/entites/contrat';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
@@ -121,37 +122,10 @@
 				</select>
 			</div>
 		</label>
-		<label class="field"
-			>Fréquence
-			<select bind:value={contratForm.frequence_type}>
-				<option value="">— Aucune —</option>
-				<option value="semaines">Toutes les X semaines</option>
-				<option value="mois">Mensuelle</option>
-				<option value="fois_par_an">X fois par an</option>
-				<option value="ans">Tous les X ans</option>
-			</select>
-		</label>
-		{#if contratForm.frequence_type === 'semaines'}
-			<label class="field"
-				>Toutes les … sem.<input
-					type="number"
-					min="1"
-					bind:value={contratForm.frequence_valeur}
-				/></label
-			>
-		{:else if contratForm.frequence_type === 'fois_par_an'}
-			<label class="field"
-				>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label
-			>
-		{:else if contratForm.frequence_type === 'ans'}
-			<label class="field"
-				>Tous les … ans<input
-					type="number"
-					min="1"
-					bind:value={contratForm.frequence_valeur}
-				/></label
-			>
-		{/if}
+		<ChampFrequence
+			bind:frequenceType={contratForm.frequence_type}
+			bind:frequenceValeur={contratForm.frequence_valeur}
+		/>
 		<label class="field"
 			>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label
 		>

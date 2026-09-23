@@ -10,9 +10,8 @@
   façons, toutes invisibles à la relecture :
 
     • le badge NEW n'existait que sur la première ;
-    • le bouton ✏️ *Modifier* n'existait que sur la première, sans qu'aucun commit
-      ni aucune issue ne dise pourquoi un administrateur perdrait ce geste au bout
-      de sept jours ;
+    • le bouton ✏️ *Modifier* n'existait que sur la première, sans que rien ne
+      dise pourquoi un administrateur le perdrait au bout de sept jours ;
     • le fil de suivi y était réécrit intégralement, deux fois.
 
   Une carte, un fichier. La seule différence retenue est l'**allure d'archive**
@@ -67,6 +66,7 @@
 	import { fmtDate, isNouveau } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { nomCopie, nomProprietaire } from '$lib/saisi-pour';
+	import { intervenantAffiche } from '$lib/prestataires';
 	import {
 		BADGE_PRIORITE,
 		PRIORITE_BREVE,
@@ -366,12 +366,12 @@
 				<FicheLecture
 					entite={TICKET}
 					description={ticket.description}
+					intervenant={intervenantAffiche(ticket)}
 					photos={ticket.photos_urls ?? []}
 					documents={ticket.fichiers_urls ?? []}
 				>
 					<svelte:fragment slot="pied">
-						<!--  Le NUMÉRO est monté dans l'en-tête : le répéter ici en
-						      ferait deux mentions du même fait sur une carte déjà dense. -->
+						<!--  Le NUMÉRO est dans l'en-tête : pas deux fois le même fait. -->
 						<small class="tk-meta">Créé le {fmtDate(ticket.cree_le)}</small>
 					</svelte:fragment>
 				</FicheLecture>

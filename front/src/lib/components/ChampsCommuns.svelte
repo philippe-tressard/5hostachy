@@ -67,13 +67,9 @@
 
   ## L'ordre — il ne se discute pas par écran
 
-  4. Périmètre · 5. Destinataires · 6. Description · 7. Photos · 8. Documents
-  · 9. Diffusion.
-
-  Le périmètre dit *de quoi* il s'agit, les destinataires *à qui* on l'adresse :
-  le premier cadre le second (§9 ter). La **diffusion** (*qui le voit, et où ?*)
-  est distincte du **workflow** (*où en est cet objet ?*), qui reste en section 3,
-  avant le périmètre — les confondre est l'erreur d'origine.
+  Il se lit dans `SECTIONS_ORDRE` (`$lib/entites/types`), tenu par
+  `lint:ordre-sections`. Ce bloc en portait une copie — neuf sections, quand le
+  cadre en compte treize : une liste recopiée ment dès le lot suivant.
 -->
 <script lang="ts">
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
@@ -100,9 +96,7 @@
 	 * L'entité rendue — elle sert à lire le PLIAGE déclaré (#1095).
 	 *
 	 * 🔴 Une prop plutôt que treize booléens : le pliage se LIT dans la
-	 * déclaration (`section(ENTITE, id).pliee`), il ne se décide pas ici. Un
-	 * booléen par section aurait laissé chaque écran choisir, et c'est
-	 * exactement la divergence que le cadre ferme.
+	 * déclaration, il ne se décide pas ici — ni par chaque écran.
 	 *
 	 * ⚠️ Absente, rien n'est plié : ce composant sert aussi des écrans qui ne
 	 * sont pas encore au cadre, et leur imposer un pliage qu'aucune déclaration
@@ -187,6 +181,7 @@
 
 	export let debut = '';
 	export let fin = '';
+	export let quandAutreValeur = false; // le créneau « quand » porte une valeur
 	export let perimetre: string[] = [];
 	/**  Les sections ÉTEINTES par la nature de l'affaire, avec leur motif
 	 *   (formulaire unique, 23/09/2026) : rendues grisées, sans champ. */
@@ -221,11 +216,8 @@
 	export let description = '';
 	/**  L'intitulé de la section — « Description » par défaut.
 	 *
-	 *   🔴 Il était FIGÉ, et c'est ce qui empêchait `EvolForm` d'hériter de ce
-	 *   composant : une évolution parle de « Commentaire », pas de « Description »
-	 *   (#463). Le formulaire recopiait donc l'ordre ET les intitulés des sections
-	 *   4 à 9 — deux endroits qui doivent rester d'accord, sans contrôle pour le
-	 *   vérifier, ce que le cadre #430 supprime partout ailleurs.
+	 *   🔴 Il était FIGÉ : `EvolForm`, qui parle de « Commentaire » (#463), ne
+	 *   pouvait pas hériter de ce composant et recopiait l'ordre et les intitulés.
 	 *
 	 *   ⚠️ Ce n'est pas une porte ouverte à un libellé par écran : **R3** demande
 	 *   le même mot d'un formulaire à l'autre pour la même notion. Le paramètre
@@ -349,17 +341,28 @@
 {#if avecQuand}
 	<!--  5. Quand — QUAND ÇA SE PASSE, et pour quand c'est attendu. Placée
 	      avant le Périmètre : on sait ce qui arrive avant de dire où. -->
-	<SectionQuand {idPrefixe} premiere={premiereQuand} pliable={plie('quand')} bind:debut bind:fin />
+	<SectionQuand
+		{idPrefixe}
+		premiere={premiereQuand}
+		pliable={plie('quand')}
+		autreValeur={quandAutreValeur}
+		bind:debut
+		bind:fin
+	>
+		<slot name="quand" />
+	</SectionQuand>
 {/if}
 
-<!--  🔒 L'INTERVENANT (section 6) : inactif à ce jour, à son rang — voir
-      `SectionsSpecifiquesTicket` pour l'Équipement, même raison. -->
+<!--  6. L'INTERVENANT, à son rang : rendu par l'appelant (créneau), ou grisé
+      avec son motif quand la déclaration l'éteint (#1092). -->
 {#if inactives.intervenant}
 	<SectionFormulaire
 		titre={SECTIONS_LIBELLE.intervenant}
 		pliable={plie('intervenant')}
 		inactive={inactives.intervenant}
 	/>
+{:else}
+	<slot name="intervenant" />
 {/if}
 
 {#if avecPerimetre}

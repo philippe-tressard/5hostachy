@@ -175,8 +175,21 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		value: 'etude_travaux',
 		label: 'Étude & travaux',
 		carnet: true,
+		//  Réservée au conseil depuis le 23/09/2026 (#1098) : lancer une étude
+		//  est une décision ; un résident signale une panne ou pose une question.
+		reserveCS: true,
 		emoji: '\u{1F3D7}️',
 		description: 'Diagnostic, sondage, devis, chantier suivi par le conseil',
+	},
+	{
+		//  Le passage d'un prestataire — visite, maintenance, récurrente ou non
+		//  (#1092, lot 5) : les maintenances du calendrier en deviennent.
+		value: 'entretien',
+		label: 'Entretien',
+		carnet: true,
+		reserveCS: true,
+		emoji: '\u{1F9F0}',
+		description: 'Visite ou maintenance d’un prestataire, récurrente ou non',
 	},
 	{ value: 'question', label: 'Question', emoji: '❓', description: 'Information, procédure…' },
 	{

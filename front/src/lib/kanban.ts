@@ -267,7 +267,9 @@ export function colonneDeLEvenement(ev: any): string {
 /** Statut d'un ticket → colonne du kanban. */
 export const COLONNE_PAR_STATUT_TICKET: Record<string, string> = {
 	ouvert: 'cs',
+	en_ag: 'ag',
 	en_cours: 'syndic',
+	chez_prestataire: 'fournisseur',
 	résolu: 'termine',
 	annulé: 'annule',
 };

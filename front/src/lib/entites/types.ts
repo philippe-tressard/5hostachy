@@ -307,7 +307,10 @@ export interface SectionDeclaree {
 	 * c'est la NATURE de l'objet, qui change quand on change de catégorie — la
 	 * section doit donc rester à sa place, pour qu'on voie ce qui s'éteint.
 	 */
-	inactivePour?: Partial<Record<NatureAffaire, string>>;
+	//  Clés : la NATURE (`actualite`, `suivie`) et, depuis le 23/09/2026 (#1092),
+	//  deux conditions de plus : `resident` (le geste est au conseil) et
+	//  `horsBati` (la catégorie ne porte pas sur le bâti).
+	inactivePour?: Partial<Record<ConditionInactive, string>>;
 }
 
 /**
@@ -317,6 +320,9 @@ export interface SectionDeclaree {
  * de nom, parce qu'il n'y décide de rien.
  */
 export type NatureAffaire = 'actualite' | 'suivie';
+
+/** Ce qui éteint une section : la nature, le rôle, ou une catégorie hors bâti. */
+export type ConditionInactive = NatureAffaire | 'resident' | 'horsBati';
 
 export interface EntiteDeclaree {
 	/** Identifiant technique — `ticket`, `actualite`… */
@@ -390,8 +396,8 @@ export function sectionPresente(entite: EntiteDeclaree, etat: Etat, id: IdSectio
  * Une section inactive se rend grisée, pliée, sans données, avec ce motif
  * (`SectionFormulaire inactive=`). Deux sources, dans cet ordre :
  *
- *   1. la **nature** de l'affaire (`inactivePour`) — elle change avec la
- *      catégorie ;
+ *   1. une **condition** déclarée (`inactivePour`), dans l'ordre où l'appelant
+ *      les donne — la nature d'abord, puis le rôle, puis la catégorie ;
  *   2. une **absence de l'état** qui tient à la catégorie ou à une dette
  *      (`absente[etat]`, motifs `categorie` et `api`) : l'Équipement et
  *      l'Intervenant ne se saisissent pas à la création, et pas encore en
@@ -405,12 +411,14 @@ export function motifInactif(
 	entite: EntiteDeclaree,
 	etat: Etat,
 	id: IdSection,
-	nature: NatureAffaire,
+	conditions: readonly ConditionInactive[],
 ): string {
 	const s = section(entite, id);
 	if (!s) return '';
-	const parNature = s.inactivePour?.[nature];
-	if (parNature) return parNature;
+	for (const c of conditions) {
+		const motif = s.inactivePour?.[c];
+		if (motif) return motif;
+	}
 	const absence = s.absente?.[etat];
 	return absence && (absence.motif === 'categorie' || absence.motif === 'api')
 		? absence.explication

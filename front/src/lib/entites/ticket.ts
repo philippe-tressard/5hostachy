@@ -135,22 +135,16 @@ export const TICKET: EntiteDeclaree = {
 			id: 'intervenant',
 			objet: 'Prestataire qui intervient',
 			pliee: true,
+			//  ✅ CONSTRUITE le 23/09/2026 (#1092, lot 5) : les événements du
+			//  calendrier, qui portaient leur prestataire, deviennent des affaires.
+			//  Présente à la création comme à la correction ; éteinte là où elle
+			//  n'a pas de sens — et le serveur efface ce qu'elle portait
+			//  (`utils/intervenant`).
 			inactivePour: {
 				actualite:
 					'Une actualité informe : personne n’agit, elle n’a donc ni suivi, ni équipement, ni intervenant.',
-			},
-			absente: {
-				creation: {
-					motif: 'categorie',
-					explication:
-						'Personne n’est encore désigné quand l’affaire s’ouvre : c’est le suivi ' +
-						'qui nomme l’intervenant, et seulement pour les catégories du bâti.',
-				},
-				edition: {
-					motif: 'api',
-					explication: 'Le conseil syndical le désignera ici — pas encore construit (#1097).',
-					ticket: '#1097',
-				},
+				resident: 'Le conseil syndical désigne l’intervenant.',
+				horsBati: 'Seulement pour les catégories du bâti — celles au liseré doré.',
 			},
 		},
 		{
