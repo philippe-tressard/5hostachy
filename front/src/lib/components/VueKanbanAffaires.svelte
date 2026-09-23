@@ -37,6 +37,7 @@
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { createEventDispatcher } from 'svelte';
+	import InitPrestataires from '$lib/components/InitPrestataires.svelte';
 
 	export let tickets: Ticket[] = [];
 	/** Le conseil glisse les cartes ; les autres lisent. */
@@ -75,6 +76,10 @@
 	}
 </script>
 
+{#if peutDeplacer}
+	<!--  Le pré-remplissage de l'exercice — au conseil, comme le glissement (#1193). -->
+	<InitPrestataires {tickets} on:cree />
+{/if}
 <p class="kanban-count-total">
 	{suivis.length} affaire{suivis.length > 1 ? 's' : ''} suivie{suivis.length > 1 ? 's' : ''}
 </p>

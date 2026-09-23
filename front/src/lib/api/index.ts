@@ -77,6 +77,8 @@ export const tickets = {
 	depuisAnnonceHall: (annonceId: number) =>
 		api.get<ActualitePrefill>(`/tickets/depuis-annonce-hall/${annonceId}`),
 	create: (data: unknown) => api.post<Ticket>('/tickets', data),
+	/** « Init. prestataires » : les visites de l'exercice, toutes ou aucune (#1193). */
+	creerLot: (affaires: unknown[]) => api.post<{ crees: number }>('/tickets/lot', { affaires }),
 	update: (id: number, data: unknown) => api.patch<Ticket>(`/tickets/${id}`, data),
 	delete: (id: number) => api.delete(`/tickets/${id}`),
 	messages: (id: number) => api.get<TicketMessage[]>(`/tickets/${id}/messages`),

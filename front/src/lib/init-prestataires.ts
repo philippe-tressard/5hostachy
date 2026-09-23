@@ -1,6 +1,14 @@
 /**
  * Pré-remplissage du kanban à partir des prestataires — la DÉCISION, isolée.
  *
+ * 🔴 Depuis le 23/09/2026 (#1193), elle pose des **affaires Entretien** « Chez
+ * le prestataire » (`POST /tickets/lot`) : les événements du calendrier sont
+ * devenus des affaires au lot 5b2 de #1092, et le bouton avait disparu avec eux.
+ * Les sources sont les contrats et les affaires Entretien récurrentes ; la clé
+ * anti-doublon lit les TITRES des affaires de l'exercice — une affaire ne porte
+ * pas de contrat, la clé par source (`contrat:N#i`) n'a plus rien à relire et
+ * a été retirée avec elle.
+ *
  * Extrait de `calendrier/+page.svelte` le 28/08/2026 (#605), pour trois raisons
  * qui vont ensemble :
  *
@@ -49,22 +57,35 @@ export interface SourceRecurrente {
 	description: string | null;
 }
 
-export interface EvenementPlanifie {
+export interface VisitePlanifiee {
 	titre: string;
-	type: 'maintenance_recurrente';
+	/** Le code de périmètre de la source — `''` quand elle n'en a pas. */
 	perimetre: string;
-	batiment_id: null;
-	statut_kanban: 'fournisseur';
 	prestataire_id: number | null;
-	/** La source, quand la visite vient d'un contrat — la clé anti-doublon (#605). */
+	/** La source, quand la visite vient d'un contrat — pour le compte rendu. */
 	contrat_id: number | null;
 	debut: string;
 	description: string | null;
-	affichable: false;
+	/** La récurrence de la source : l'affaire Entretien la porte (#1092). */
+	frequence_type: string | null;
+	frequence_valeur: number | null;
+}
+
+/** Ce que `POST /tickets/lot` reçoit pour une visite — rien d'autre, aucun canal. */
+export function versAffaire(v: VisitePlanifiee) {
+	return {
+		titre: v.titre,
+		description: v.description,
+		debut: v.debut,
+		perimetre_cible: v.perimetre ? [v.perimetre] : [],
+		prestataire_id: v.prestataire_id,
+		frequence_type: v.frequence_type,
+		frequence_valeur: v.frequence_valeur,
+	};
 }
 
 export interface Plan {
-	aCreer: EvenementPlanifie[];
+	aCreer: VisitePlanifiee[];
 	/** Combien existaient déjà — ce qui n'est PAS une erreur, mais se dit. */
 	ignores: number;
 	/** Les sources écartées faute de tenir sous le plafond, avec leur fréquence. */
@@ -134,79 +155,40 @@ export function titreBase(titre: string): string {
 /**
  * La clé qui dit « cette occurrence existe déjà » : titre de base + mois.
  *
- * ⚠️ Elle est **fragile**, et c'est pourquoi `cleSource` existe depuis le
- * 01/09/2026 : elle repose sur une chaîne d'affichage, que renommer un contrat ou
- * son prestataire fait perdre.
- *
- * Elle ne disparaît pas pour autant — c'est le **repli** qui reconnaît les visites
- * créées avant cette date, qui ne portent aucun `contrat_id`. Le retirer ferait
- * recréer l'intégralité de l'exercice au premier clic.
+ * ⚠️ Elle est **fragile** : elle repose sur une chaîne d'affichage, que renommer
+ * un contrat ou son prestataire fait perdre — le clic suivant recréerait les
+ * visites de ce contrat. Une clé par source (`contrat:N#i`) l'a doublée du
+ * 01/09 au 23/09/2026 ; une affaire ne portant pas de contrat, elle n'avait
+ * plus rien à relire (#1193). Renommer un contrat en cours d'exercice demande
+ * donc de retirer à la main les visites en double.
  */
 export function clePlanifiee(titre: string, mois: number): string {
 	return `${titreBase(titre)}||${mois}`;
 }
 
-/**
- * La clé qui dit « cette occurrence existe déjà », par sa SOURCE (#605, point 2).
- *
- * 🔴 Une chaîne d'affichage n'est pas une identité. `clePlanifiee` rapproche sur
- * le titre littéral et le mois, et les deux se dérobent :
- *
- * - renommer un contrat — ou renommer le prestataire, qui compose le titre —
- *   fait perdre la correspondance, et le clic suivant **recrée tout l'exercice
- *   en double** ;
- * - passer la fréquence de 2 à 3 par an déplace les visites : les anciennes ne
- *   correspondent plus, et l'on obtient 3 nouvelles **en plus** des 2 existantes.
- *
- * L'index d'occurrence remplace le mois pour cette seconde raison : de 2 à 3 par
- * an, les index 0 et 1 correspondent toujours, et seul le 2 est créé. Les deux
- * premières visites restent aux mois de l'ancienne répartition — imparfait, et
- * franchement meilleur que cinq cartes.
- */
-export function cleSource(contratId: number, index: number): string {
-	return `contrat:${contratId}#${index}`;
-}
-
-/** Une visite déjà posée, telle que l'API la rend — seuls ces champs comptent. */
+/** Une affaire déjà posée, telle que l'API la rend — seuls ces champs comptent. */
 export interface VisiteExistante {
 	titre: string;
-	debut: string;
-	type?: string;
-	archivee?: boolean;
-	contrat_id?: number | null;
+	debut: string | null;
+	categorie?: string;
 }
 
 /**
- * Les clés des visites DÉJÀ posées pour un exercice — les deux formes.
+ * Les clés des visites DÉJÀ posées pour un exercice : titre de base + mois.
  *
- * 🔴 Elle vivait dans l'écran, où rien ne l'éprouvait : c'est pourtant elle qui
- * décide si le clic recrée ou non l'exercice entier. Le contrôle de modularité
- * a refusé de la laisser grossir dans une page de 1 114 lignes, et il désignait
- * le bon endroit — cette fonction parle de clés, comme ses deux voisines.
- *
- * ⚠️ **Deux clés par visite**, et la rétro-compatibilité l'impose : celles créées
- * avant le 01/09/2026 ne portent aucun `contrat_id`. Ne rapprocher que par la
- * source ferait recréer tout l'exercice au premier clic.
- *
- * L'index d'occurrence se déduit du **rang** de la visite parmi celles du même
- * contrat, triées par date — l'ordre dans lequel `planifier` les fabrique.
+ * 🔴 C'est elle qui décide si le clic recrée ou non l'exercice entier. Une
+ * affaire Entretien de l'exercice compte, **archivée comprise** : une visite
+ * faite et close reste faite — l'ancien filtre sur les événements archivés ne
+ * se transpose pas.
  */
-export function clesDesEvenements(evenements: VisiteExistante[], exercice: number): Set<string> {
-	const retenus = evenements.filter(
-		(ev) =>
-			ev.type === 'maintenance_recurrente' &&
-			!ev.archivee &&
-			new Date(ev.debut).getFullYear() === exercice,
-	);
+export function clesDesAffaires(affaires: VisiteExistante[], exercice: number): Set<string> {
 	return new Set(
-		retenus.flatMap((ev) => {
-			const parTitre = clePlanifiee(ev.titre, new Date(ev.debut).getMonth());
-			if (!ev.contrat_id) return [parTitre];
-			const fratrie = retenus
-				.filter((o) => o.contrat_id === ev.contrat_id)
-				.sort((a, b) => a.debut.localeCompare(b.debut));
-			return [parTitre, cleSource(ev.contrat_id, fratrie.indexOf(ev))];
-		}),
+		affaires
+			.filter(
+				(a) =>
+					a.categorie === 'entretien' && !!a.debut && new Date(a.debut).getFullYear() === exercice,
+			)
+			.map((a) => clePlanifiee(a.titre, new Date(a.debut as string).getMonth())),
 	);
 }
 
@@ -247,13 +229,13 @@ export interface ContratSource {
 	echu: boolean;
 }
 
-/**  Un événement de maintenance saisi à la main — l'autre source. */
-export interface EvenementSource {
-	type: string;
+/**  Une affaire Entretien récurrente — l'autre source, qui remplace les
+ *   événements de maintenance saisis à la main (#1193). */
+export interface AffaireSource {
 	titre: string;
+	categorie: string;
 	prestataire_id: number | null;
-	batiment_id: number | null;
-	perimetre: string | null;
+	perimetre_cible?: string[] | null;
 	frequence_type: string | null;
 	frequence_valeur: number | null;
 	description: string | null;
@@ -307,30 +289,35 @@ export function sourcesDesContrats(
 }
 
 /**
- * Les événements de maintenance saisis à la main, normalisés en sources.
+ * Les affaires Entretien récurrentes, normalisées en sources.
  *
- * ⚠️ Le périmètre retombe sur celui du bâtiment quand l'événement n'en porte
- * pas. C'était le correctif de #605 : cette branche posait `ev.perimetre ?? ''`
- * — une chaîne VIDE là où la branche des contrats calculait le périmètre. Les
- * deux le calculent maintenant, et elles sont ici côte à côte, ce qui est la
- * seule façon de ne pas les laisser diverger à nouveau.
+ * ⚠️ Les visites que ce module a lui-même posées portent la récurrence de leur
+ * source, et sont donc des affaires Entretien récurrentes : sans le filtre sur
+ * `dejaSources` (les titres des contrats), chaque contrat compterait deux fois
+ * dès la deuxième année. Un même titre ne fait qu'une source.
  */
-export function sourcesDesEvenements(
-	evenements: EvenementSource[],
-	ctx: ContexteSources,
+export function sourcesDesAffaires(
+	affaires: AffaireSource[],
+	dejaSources: Set<string>,
 ): SourceRecurrente[] {
-	return evenements
-		.filter((ev) => ev.type === 'maintenance' && ev.prestataire_id && !ev.archivee)
-		.map((ev) => ({
-			titre: ev.titre,
-			frequence_type: ev.frequence_type ?? null,
-			frequence_valeur: ev.frequence_valeur ?? null,
-			prestataire_id: ev.prestataire_id ?? null,
-			//  Un événement de maintenance saisi à la main n'a pas de contrat.
+	const vues = new Set(dejaSources);
+	const sources: SourceRecurrente[] = [];
+	for (const a of affaires) {
+		const titre = titreBase(a.titre);
+		if (a.categorie !== 'entretien' || !a.prestataire_id || !a.frequence_type) continue;
+		if (a.archivee || vues.has(titre)) continue;
+		vues.add(titre);
+		sources.push({
+			titre,
+			frequence_type: a.frequence_type,
+			frequence_valeur: a.frequence_valeur ?? null,
+			prestataire_id: a.prestataire_id,
 			contrat_id: null,
-			perimetre: ev.perimetre || ctx.perimetreDuBatiment(ev.batiment_id),
-			description: ev.description ?? null,
-		}));
+			perimetre: a.perimetre_cible?.[0] ?? '',
+			description: a.description ?? null,
+		});
+	}
+	return sources;
 }
 
 export function planifier(
@@ -353,35 +340,21 @@ export function planifier(
 		}
 		for (let i = 0; i < parAn; i++) {
 			const mois = moisOccurrence(parAn, i);
-			//  🔴 DEUX clés, et c'est la rétro-compatibilité qui l'impose. Les
-			//  visites créées avant le 01/09/2026 n'ont pas de `contrat_id` : ne
-			//  rapprocher que par la source ferait recréer l'intégralité de
-			//  l'exercice au premier clic — le défaut même qu'on corrige, en pire.
-			//
-			//  ⚠️ Le repli par titre disparaîtra tout seul : un exercice
-			//  entièrement pré-rempli après cette date n'a plus que des visites
-			//  portant leur contrat. Le retirer AVANT serait le retirer trop tôt.
-			//
-			//  La clé de titre se calcule sur le mois EN BASE 0, comme les
-			//  événements lus.
-			const dejaLa =
-				(source.contrat_id !== null && clesExistantes.has(cleSource(source.contrat_id, i))) ||
-				clesExistantes.has(clePlanifiee(source.titre, mois - 1));
+			//  La clé de titre se calcule sur le mois EN BASE 0, comme les affaires lues.
+			const dejaLa = clesExistantes.has(clePlanifiee(source.titre, mois - 1));
 			if (dejaLa) {
 				plan.ignores++;
 				continue;
 			}
 			plan.aCreer.push({
 				titre: titreOccurrence(source.titre, i, parAn),
-				type: 'maintenance_recurrente',
 				perimetre: source.perimetre,
-				batiment_id: null,
-				statut_kanban: 'fournisseur',
 				prestataire_id: source.prestataire_id || null,
 				contrat_id: source.contrat_id,
 				debut: `${exercice}-${String(mois).padStart(2, '0')}-15T09:00`,
 				description: source.description || null,
-				affichable: false,
+				frequence_type: source.frequence_type,
+				frequence_valeur: source.frequence_valeur,
 			});
 		}
 	}
@@ -411,6 +384,6 @@ export function resumePlan(plan: Plan, exercice: number): string {
 			? `Aucune source de maintenance récurrente pour ${exercice}.`
 			: `Rien à créer pour ${exercice} — ${parts.join(' · ')}.`;
 	}
-	const entete = `Créer ${plan.aCreer.length} événement(s) prestataire pour ${exercice} ?`;
+	const entete = `Créer ${plan.aCreer.length} visite(s) prestataire pour ${exercice} (affaires Entretien) ?`;
 	return parts.length === 0 ? entete : `${entete}\n(${parts.join('\n')})`;
 }
