@@ -46,6 +46,7 @@ l'est — exactement comme `KANBAN_LABELS` de `calendrier_historique.py`.
 from __future__ import annotations
 
 from typing import Optional
+from app.utils.valeurs import valeur
 
 #: La catégorie dont les tickets entrent au kanban. Une seule pour l'instant, et
 #: le nommer plutôt que le coder en dur permet d'en ajouter sans chercher.
@@ -70,7 +71,7 @@ def colonne_du_ticket(statut: Optional[str]) -> Optional[str]:
     """
     if not statut:
         return None
-    return COLONNE_PAR_STATUT.get(str(statut))
+    return COLONNE_PAR_STATUT.get(str(valeur(statut)))
 
 
 def suivi_par_defaut(categorie: Optional[str]) -> bool:
@@ -79,7 +80,9 @@ def suivi_par_defaut(categorie: Optional[str]) -> bool:
     Le conseil peut décocher à la création comme après : c'est une case du
     formulaire, pas une fatalité de la catégorie.
     """
-    return str(categorie) in CATEGORIES_SUIVIES
+    #  `valeur` : la création passe l'ÉNUMÉRATION, dont `str()` rend
+    #  « CategorieTicket.etude_travaux » — le défaut ne se posait jamais (#1092).
+    return str(valeur(categorie)) in CATEGORIES_SUIVIES
 
 
 __all__ = [
