@@ -404,6 +404,7 @@ jobs:
         run: |
           bash scripts/lib/lib-role.sh              --selftest
           bash scripts/lib/lib-env-role.sh          --selftest
+          bash scripts/lib/lib-horloge.sh           --selftest
           bash scripts/lib/lib-modules-sources.sh   --selftest
           bash scripts/lib/lib-parite.sh            --selftest
           # 🔒 Le verdict du point 19 : barre finale, 404, page derrière une

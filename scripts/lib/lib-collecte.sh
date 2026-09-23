@@ -61,7 +61,6 @@ BITS=ok; for s in bascule.sh health-watch.sh maintenance.sh auto-deploy.sh MaJ-H
 echo "exec_bits=$BITS"
 echo "disk=$(df / | awk "NR==2{print \$5}" | tr -d %)"
 echo "ntp=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)"
-echo "epoch=$(date +%s)"
 echo "lock=$([ -f $R/.bascule-lock ] && stat -c %Y $R/.bascule-lock || echo 0)"
 # Quand health-watch a-t-il NETTOYÉ un verrou orphelin pour la derniere fois,
 # et combien de fois en tout ? C12 ne peut pas le lire sur le fichier :
@@ -116,6 +115,9 @@ echo "deploylog_owner=$(stat -c %U /var/log/hostachy-deploy.log 2>/dev/null || e
 #  Un seul stat, trois champs : les separer ferait trois appels qui peuvent
 #  ne pas voir le meme fichier.
 echo "envdroits=$(stat -c %U:%G:%a $R/.env 2>/dev/null || echo :: )"
+#  C29 (#1109) : les NOMS des cles du .env, jamais leurs valeurs. Le 21/09/2026
+#  les deux noeuds ne portaient pas le meme jeu, et rien ne les comparait.
+echo "envcles=$(cut -d= -f1 $R/.env 2>/dev/null | grep -E "^[A-Za-z_][A-Za-z0-9_]*$" | sort -u | tr "[:space:]" " ")"
 #  Le DERNIER verdict de build d auto-deploy. Il ecrit une ligne par tick ; celle
 #  qui porte ECHEC du build dit que le code est aligne et pas les images — la
 #  parite git n est pas la parite d image (C27).
