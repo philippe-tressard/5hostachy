@@ -201,3 +201,48 @@ def test_la_date_est_examinee_AVANT_le_reste():
     """
     v = examiner(_entetes(nouveau_jeton(), auth=None), recu_le=datetime(2026, 1, 1))
     assert v.decision == IGNORE
+
+
+# ── #1168 : le repli reconnaît NOS sujets, tels que les modèles les écrivent ──
+#
+#  🔴 Le motif exigeait « Ticket » ; depuis v2.10.4 (#1137) les modèles disent
+#  « Affaire #TK-… ». Une réponse du syndic hors adresse à jeton — le cas courant —
+#  ne se rattachait plus, et aucun test ne le voyait : ils éprouvaient le motif
+#  sur des sujets RECOPIÉS dans le test, qui disaient encore « Ticket ».
+#  Celui-ci rend les sujets des modèles semés : un renommage futur les suivra.
+
+def _sujets_a_numero() -> list[tuple[str, str]]:
+    from jinja2 import ChainableUndefined, Environment
+
+    from app.seed.emails import EMAIL_TEMPLATES
+
+    env = Environment(undefined=ChainableUndefined)
+    rendus = []
+    for code, _libelle, sujet, *_ in EMAIL_TEMPLATES:
+        if "ticket.numero" in sujet:
+            rendus.append((code, env.from_string(sujet).render(
+                ticket={"numero": "TK-482910", "titre": "Fuite au 3e"},
+                residence={"nom": "Les Hostachys"},
+            )))
+    return rendus
+
+
+def test_le_repli_reconnait_chaque_sujet_que_nous_envoyons():
+    from app.utils.courriel_entrant import numero_dans_sujet
+
+    rendus = _sujets_a_numero()
+    #  Cas zéro : sans sujet à numéro, ce test serait vert sans rien avoir lu.
+    assert len(rendus) >= 3, f"Seulement {len(rendus)} modèle(s) à numéro relevé(s)."
+    manques = [
+        f"{code} : « Re: {sujet} »" for code, sujet in rendus
+        if numero_dans_sujet(f"Re: {sujet}") != "TK-482910"
+    ]
+    assert not manques, "Le repli par sujet ne reconnaît pas :\n  " + "\n  ".join(manques)
+
+
+def test_un_ancien_sujet_ticket_reste_reconnu():
+    """Les courriels déjà partis disent « Ticket #TK-… » : on y répond encore."""
+    from app.utils.courriel_entrant import numero_dans_sujet
+
+    assert numero_dans_sujet("Re: Ticket #TK-482910 — Fuite") == "TK-482910"
+    assert numero_dans_sujet("Re: votre facture TK-482910") is None
