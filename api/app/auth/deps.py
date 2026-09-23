@@ -4,6 +4,7 @@ from sqlmodel import Session, select, or_
 
 from app.auth.jwt import decode_token, empreinte_secret
 from app.database import get_session
+from app.utils.nature_affaire import est_actualite
 from app.models.core import (
     Delegation,
     Notification,
@@ -223,7 +224,13 @@ def peut_editer(objet, user: Utilisateur) -> bool:
 
     L'auteur (ou le « saisi pour »), et l'admin en cas de problème. **Pas le
     conseil syndical** : il agit sur le suivi, il ne réécrit pas la demande.
+
+    ⚠️ Sauf une ACTUALITÉ (#1091) : c'est une information du conseil, et le
+    conseil la corrige — comme il corrigeait l'ancienne publication, quel qu'en
+    soit l'auteur. La règle vit ici, avec l'autre, et non dans un routeur.
     """
+    if est_actualite(objet):
+        return est_moderateur(user)
     return est_auteur(objet, user) or user.has_role(RoleUtilisateur.admin)
 
 

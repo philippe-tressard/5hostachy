@@ -6,6 +6,7 @@ import json
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
+from app.utils.nature_affaire import categorie_reservee, est_actualite, statut_pour
 from app.utils.quand import exiger_description
 
 from app.auth.deps import (
@@ -16,7 +17,6 @@ from app.auth.deps import (
 )
 from app.database import get_session
 from app.models.core import (
-    StatutTicket,
     Ticket,
     Utilisateur,
 )
@@ -115,6 +115,10 @@ def create_ticket(
     #  geste-ci et que les vingt-cinq autres points d'usage n'ont donc jamais
     #  reconnu comme le leur (#1028).
     est_cs = est_moderateur(user)
+    #  Une actualité est publiée par le conseil (#1091) — refusée, pas neutralisée :
+    #  la retomber en « panne » publierait sous une autre catégorie que celle choisie.
+    if categorie_reservee(body.categorie) and not est_cs:
+        raise HTTPException(403, "Une actualité est publiée par le conseil syndical")
     #  Même règle que pour une actualité, et au même endroit (#1092).
     exiger_description(body.description, debut=body.debut)
     ticket = Ticket(
@@ -141,8 +145,11 @@ def create_ticket(
         #  le sortirait du suivi. Une valeur inconnue retombe sur « ouvert »
         #  plutôt que d'être refusée — le ticket doit exister même si le client
         #  envoie n'importe quoi (socle 03 §2, liste blanche ancrée).
-        statut=(body.statut if est_cs and body.statut in {s.value for s in StatutTicket}
-               else StatutTicket.ouvert),
+        #  La liste blanche vit dans `statut_pour`, avec la règle de l'actualité
+        #  (sans cycle, toujours `publie`) : une seule écriture des deux (#1091).
+        statut=statut_pour(body.categorie, body.statut, est_cs=est_cs),
+        public_cible=json.dumps(body.public_cible) if est_cs and body.public_cible else None,
+        reserve_perimetre=bool(body.reserve_perimetre) and est_cs,
         destinataire_syndic=body.destinataire_syndic if est_cs else False,
         destinataire_cs=body.destinataire_cs if est_cs else False,
         saisi_pour_user_id=body.saisi_pour_user_id if est_cs else None,
@@ -181,11 +188,14 @@ def create_ticket(
     #  quand les deux autres portent les pièces jointes, l'adresse de réponse ou
     #  le nom du bogue. Le destinataire reçoit donc PLUS, pas moins — c'est ce
     #  qui rend la déduplication acceptable (`courriels.adresses_deja_servies`).
-    _notifier_cs_creation(
-        session, ticket, urgence=ticket_urgent(ticket),
-        auteur=user, background_tasks=background_tasks,
-        deja_servies=adresses_deja_servies(session, ticket, categorie=body.categorie),
-    )
+    #  Une actualité, c'est le conseil qui la publie : lui annoncer « nouvelle
+    #  affaire » lui renverrait sa propre information (#1091, « jamais deux fois »).
+    if not est_actualite(ticket):
+        _notifier_cs_creation(
+            session, ticket, urgence=ticket_urgent(ticket),
+            auteur=user, background_tasks=background_tasks,
+            deja_servies=adresses_deja_servies(session, ticket, categorie=body.categorie),
+        )
 
     if body.categorie == "bug":
         _alerter_bug(session, ticket, user, background_tasks)

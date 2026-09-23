@@ -58,14 +58,23 @@ const STATUTS_TICKET_HISTORIQUES: Record<string, { label: string; badge: string 
 	fermé: { label: 'Fermé', badge: 'badge-gray' },
 };
 
+//: L'état SANS CYCLE d'une affaire de catégorie « Actualité » (#1091) : affichable,
+//: jamais proposé — seule la catégorie y mène. Pendant de `STATUTS_TICKET_SANS_CYCLE`
+//: côté serveur ; `test_statuts_tickets.py` tient la concordance.
+const STATUTS_TICKET_SANS_CYCLE: Record<string, { label: string; badge: string }> = {
+	publie: { label: 'Publiée', badge: 'badge-blue' },
+};
+
 export const STATUT_TICKET_LABELS: Record<string, string> = {
 	...Object.fromEntries(STATUTS_TICKET.map((s) => [s.value, s.label])),
 	...Object.fromEntries(Object.entries(STATUTS_TICKET_HISTORIQUES).map(([v, h]) => [v, h.label])),
+	...Object.fromEntries(Object.entries(STATUTS_TICKET_SANS_CYCLE).map(([v, h]) => [v, h.label])),
 };
 
 export const STATUT_TICKET_BADGE: Record<string, string> = {
 	...Object.fromEntries(STATUTS_TICKET.map((s) => [s.value, s.badge])),
 	...Object.fromEntries(Object.entries(STATUTS_TICKET_HISTORIQUES).map(([v, h]) => [v, h.badge])),
+	...Object.fromEntries(Object.entries(STATUTS_TICKET_SANS_CYCLE).map(([v, h]) => [v, h.badge])),
 };
 
 //: Un ticket dans l'un de ces états ne demande plus de suivi : il quitte la liste

@@ -40,6 +40,11 @@ _FRONT_SRC = _RACINE / "front" / "src"
 _MODULE_FRONT = _FRONT_SRC / "lib" / "tickets.ts"
 
 _VALEURS = {s.value for s in StatutTicket}
+#: Ce que l'écran PROPOSE : l'énumération, moins l'état sans cycle (#1091) —
+#: `publie` s'affiche, il ne se choisit pas ; seule la catégorie y mène.
+from app.models.tickets import STATUTS_TICKET_SANS_CYCLE  # noqa: E402
+
+_PROPOSABLES = [s.value for s in StatutTicket if s.value not in STATUTS_TICKET_SANS_CYCLE]
 
 
 # ── Ce que l'écran propose ────────────────────────────────────────────────────
@@ -61,10 +66,10 @@ def _options_du_front() -> list[str]:
 
 def test_le_front_propose_exactement_les_etats_de_lenumeration():
     """Ni plus (`fermé` proposé alors qu'il n'existe plus), ni moins."""
-    assert _options_du_front() == [s.value for s in StatutTicket]
+    assert _options_du_front() == _PROPOSABLES
 
 
-@pytest.mark.parametrize("valeur", sorted(_VALEURS))
+@pytest.mark.parametrize("valeur", sorted(_PROPOSABLES))
 def test_chaque_option_est_acceptee_par_les_deux_endpoints(valeur):
     """Le même geste doit réussir, quel que soit l'écran d'où il part.
 

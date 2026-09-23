@@ -58,6 +58,7 @@
 	import { isCS } from '$lib/stores/auth';
 	import {
 		OPTIONS_CATEGORIE,
+		optionsCategorie,
 		OPTIONS_TICKET,
 		TICKET_CONFIDENTIEL_ACQUIS,
 		optionsDuTicket,
@@ -416,7 +417,7 @@
 		      soumission. L'ORDRE des sections, lui, ne bouge pas d'une ligne (R2). -->
 		<SectionsSpecifiquesTicket
 			{etat}
-			{OPTIONS_CATEGORIE}
+			OPTIONS_CATEGORIE={optionsCategorie($isCS)}
 			{modeEdition}
 			bind:categorie
 			bind:statut

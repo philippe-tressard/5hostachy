@@ -226,6 +226,8 @@ MODELES = {
 from app.models.core import Ticket  # noqa: E402
 
 MODELES["ticket"] = Ticket
+#  Une affaire de catégorie « Actualité » (#1091) : même modèle, autre règle.
+MODELES["actualite"] = Ticket
 
 #: Les valeurs de statut possibles, par type. `Idee` n'a **pas** d'énumération
 #: côté serveur — son champ est un `str` libre, et `PATCH /idees/{id}/statut`
@@ -235,6 +237,7 @@ MODELES["ticket"] = Ticket
 STATUTS_POSSIBLES = {
     "publication": {"publie", "en_cours", "resolu", "annule"},
     "ticket": {s.value for s in StatutTicket},
+    "actualite": {s.value for s in StatutTicket},
     "annonce": {s.value for s in StatutAnnonce},
     "idee": {"ouverte", "retenue", "rejetee", "realisee"},
     "sondage": set(),

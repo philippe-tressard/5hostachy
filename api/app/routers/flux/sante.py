@@ -14,7 +14,6 @@ from sqlmodel import select
 
 from app.models.core import (
     STATUTS_TICKET_ACTIFS,
-    STATUTS_TICKET_CLOS,
     CommandeAcces,
     ConfigSite,
     ContratEntretien,
@@ -219,7 +218,9 @@ def _relances_syndic(ctx: ContexteFlux) -> int:
     return ctx.session.exec(
         select(func.count(Ticket.id)).where(
             Ticket.destinataire_syndic == True,  # noqa: E712  (colonne SQL, pas un booléen Python)
-            Ticket.statut.notin_(STATUTS_TICKET_CLOS),
+            #  ACTIFS, pas « non clos » : une actualité (`publie`) n'est ni l'un ni
+            #  l'autre, et ne se relance pas (#1091).
+            Ticket.statut.in_(STATUTS_TICKET_ACTIFS),
             Ticket.non_relancable == False,  # noqa: E712
             Ticket.mis_a_jour_le < seuil,
         )

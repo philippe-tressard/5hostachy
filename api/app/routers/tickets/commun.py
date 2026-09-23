@@ -20,6 +20,7 @@ import string
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.utils.nature_affaire import natures
 from app.utils.batiments import libelle_batiment_ou
 from app.models.core import (
     Batiment,
@@ -45,6 +46,7 @@ STATUT_LABELS = {
     "ouvert": "Ouvert", "en_cours": "En cours",
     "résolu": "Résolu", "annulé": "Annulé",
     "fermé": "Fermé",  # historique seulement — cf. STATUTS_TICKET_HISTORIQUES
+    "publie": "Publiée",  # sans cycle — une actualité (#1091)
 }
 
 
@@ -255,6 +257,7 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         #  mesurer avant d'optimiser.
         archivee=est_archivable("ticket", ticket, seuil_jours=seuil_archivage_jours(session)),
         relance_count=compter_relances(session, ticket.id),
+        natures=natures(ticket),
     ))
 
 

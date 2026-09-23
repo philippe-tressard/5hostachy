@@ -184,6 +184,9 @@ class TicketCreate(SaisiPourEntree, AssisteIAEntree):
     lot_id: Optional[int] = None
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
+    #  Ce que porte une affaire de catégorie « Actualité » (#1091) — vide : tous.
+    public_cible: Optional[List[str]] = None
+    reserve_perimetre: bool = False
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     envoyer_auteur: bool = False
@@ -248,8 +251,24 @@ class TicketRead(SaisiPourSortie, AssisteIASortie):
     #  filtre « Événement » n'avaient rien à lire, et une édition l'effaçait.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
+    #  Une affaire de catégorie « Actualité » (#1091). `natures` est DÉRIVÉE
+    #  (`utils/nature_affaire.natures`) : l'écran filtre dessus, sans redériver.
+    public_cible: Optional[List[str]] = None
+    reserve_perimetre: bool = False
+    archive_manuel: bool = False
+    natures: List[str] = []
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
+
+    @field_validator('public_cible', mode='before')
+    @classmethod
+    def parse_public_ticket(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v) or None
+            except Exception:
+                return None
+        return v
 
     @field_validator('perimetre_cible', mode='before')
     @classmethod
@@ -280,6 +299,9 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection):
     description: Optional[str] = None
     categorie: Optional[str] = None
     perimetre_cible: Optional[List[str]] = None
+    public_cible: Optional[List[str]] = None
+    reserve_perimetre: Optional[bool] = None
+    archive_manuel: Optional[bool] = None
     lot_id: Optional[int] = None
     batiment_id: Optional[int] = None
     destinataire_syndic: Optional[bool] = None

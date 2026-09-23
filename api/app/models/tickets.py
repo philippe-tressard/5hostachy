@@ -48,6 +48,13 @@ class StatutTicket(str, Enum):
     en_cours = "en_cours"
     résolu = "résolu"
     annulé = "annulé"
+    #  🔴 HORS du workflow (#1091, 23/09/2026) : l'état d'une affaire de
+    #  catégorie « Actualité », qui n'a pas de cycle de vie — elle PÉRIME au lieu
+    #  de se clore. Jamais proposé (`STATUTS_TICKET_SANS_CYCLE`), jamais atteint
+    #  par une transition : seul un changement de catégorie y mène, ou en sort.
+    #  Un état plutôt qu'un test de catégorie chez chaque consommateur : il sort
+    #  PAR CONSTRUCTION des états actifs, des colonnes du kanban et des relances.
+    publie = "publie"
 
 
 #: Un ticket dans l'un de ces états ne demande plus de suivi : il quitte la liste
@@ -59,8 +66,13 @@ STATUTS_TICKET_CLOS: tuple[str, ...] = (StatutTicket.résolu.value, StatutTicket
 #: Le complément : un ticket qui demande encore du suivi. Écrit `("ouvert",
 #: "en_cours")` à la main dans deux modules de `flux/`, où il aurait fallu penser
 #: à l'ajouter le jour où un cinquième état serait apparu.
+#: L'état sans cycle — ni actif, ni clos, jamais proposé (#1091). Déclaré ici
+#: comme les valeurs historiques le sont plus bas : affichable, pas saisissable.
+STATUTS_TICKET_SANS_CYCLE: tuple[str, ...] = (StatutTicket.publie.value,)
+
 STATUTS_TICKET_ACTIFS: tuple[str, ...] = tuple(
-    s.value for s in StatutTicket if s.value not in STATUTS_TICKET_CLOS
+    s.value for s in StatutTicket
+    if s.value not in STATUTS_TICKET_CLOS and s.value not in STATUTS_TICKET_SANS_CYCLE
 )
 
 #: Valeurs qu'aucun ticket ne porte plus, mais que l'historique du fil
@@ -173,6 +185,16 @@ class CategorieTicket(str, Enum):
     acces_accueil = "acces_accueil"  # interphone, BAL, badge — installer quelqu'un
     question = "question"
     bug = "bug"
+    #  🔴 Une INFORMATION, pas une demande (#1091, arbitré les 22 et 23/09/2026) :
+    #  l'actualité a cessé d'être un objet pour devenir une catégorie d'affaire.
+    #  Réservée au conseil syndical, sans cycle (`StatutTicket.publie`). Elle
+    #  change bien ce qu'on FAIT de l'affaire — personne n'agit, elle périme.
+    actualite = "actualite"
+
+
+#: Les catégories qu'un résident ne pose pas — ni à la création, ni en changeant
+#: celle d'une affaire. La règle est lue par `nature_affaire`, jamais recopiée.
+CATEGORIES_RESERVEES_AU_CS: tuple[str, ...] = (CategorieTicket.actualite.value,)
 
 
 class PrioriteTicket(str, Enum):

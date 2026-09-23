@@ -56,7 +56,15 @@ def test_TOUS_les_statuts_de_ticket_ont_une_colonne():
     L'énumération fait foi : si un cinquième état apparaît, ce test l'exige ici
     avant que le tableau ne se mette à perdre des tickets.
     """
+    #  ⚠️ SAUF l'état sans cycle (#1091) : une actualité ne paraît PAS au kanban,
+    #  et c'est l'absence de colonne qui l'en sort. Déclaré par le modèle, lu ici
+    #  — et le test suivant exige qu'il n'en ait vraiment aucune.
+    from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
+
     for statut in StatutTicket:
+        if statut.value in STATUTS_TICKET_SANS_CYCLE:
+            assert statut.value not in COLONNE_PAR_STATUT, f"{statut.value} a une colonne : l'actualité paraîtrait au kanban."
+            continue
         assert statut.value in COLONNE_PAR_STATUT, (
             f"statut sans colonne kanban : {statut.value}. Le ticket "
             "disparaîtrait du tableau sans que rien ne le signale."
