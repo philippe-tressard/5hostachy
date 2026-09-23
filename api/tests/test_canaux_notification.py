@@ -69,10 +69,19 @@ def _condition_resolue(fonction: ast.AST, test: ast.AST) -> str:
             for cible in n.targets:
                 if isinstance(cible, ast.Name):
                     affectations[cible.id] = n.value
+    #  TRANSITIVE depuis le 23/09/2026 (#1164) : `partage = … and est_cs` puis
+    #  `est_cs = est_moderateur(user)` — un seul niveau voyait `est_cs` et non le
+    #  rôle, et obligeait à réécrire le prédicat en ligne pour rester visible.
     morceaux = [ast.unparse(test)]
-    for n in ast.walk(test):
-        if isinstance(n, ast.Name) and n.id in affectations:
-            morceaux.append(ast.unparse(affectations[n.id]))
+    vus: set[str] = set()
+    a_lire = [test]
+    while a_lire:
+        noeud = a_lire.pop()
+        for n in ast.walk(noeud):
+            if isinstance(n, ast.Name) and n.id in affectations and n.id not in vus:
+                vus.add(n.id)
+                morceaux.append(ast.unparse(affectations[n.id]))
+                a_lire.append(affectations[n.id])
     return " ".join(morceaux)
 
 
@@ -255,3 +264,107 @@ def test_le_schema_de_creation_de_ticket_porte_le_canal_whatsapp():
             f"`{canal}` absent de TicketCreate — un canal de notification a disparu "
             "du contrat d'entrée ; l'interface l'affichera sans effet."
         )
+
+
+# ── #1164 : TOUTES les portes d'envoi d'une affaire, pas seulement la création ──
+#
+#  🔴 Le 23/09/2026 : la création réservait WhatsApp et le courriel externe au
+#  conseil — et ce test ne regardait QUE `crud.py`. Une Suite (`evolutions.py`)
+#  et un message (`messages.py`) laissaient l'auteur, ou n'importe quel résident
+#  qui voit l'affaire, publier sur le groupe des résidents et écrire à une
+#  adresse quelconque depuis celle du site. Un contrôle limité à une porte
+#  garde cette porte-là.
+#
+#  ⚠️ Et `_gardes_des_envois` ne relève un envoi que s'il est sous un `if`
+#  (`and pile`) : un envoi SANS AUCUNE condition lui échappe entièrement. Le
+#  relevé ci-dessous garde aussi les envois nus — c'est le cas le plus grave.
+
+#: Ce qui part hors de l'application vers un public que l'auteur choisit.
+_ENVOIS_RESERVES = _ENVOIS + ("envoyer_email_externe",)
+
+#: Le module qui DÉFINIT les envois : la garde se lit au point d'APPEL, pas dans
+#: la fonction qui envoie. Déclaré, et le test échoue s'il cesse d'exister.
+_MODULES_DEFINISSANT = {"courriels.py"}
+
+
+def _envois_et_gardes(fonction: ast.AST, noms: tuple[str, ...]) -> list[tuple[int, str]]:
+    """Chaque envoi (ligne) avec la conjonction de ses conditions — vide s'il est nu."""
+    trouves: list[tuple[int, str]] = []
+
+    def descendre(noeud: ast.AST, pile: list[str]) -> None:
+        for enfant in ast.iter_child_nodes(noeud):
+            if isinstance(enfant, ast.If):
+                condition = _condition_resolue(fonction, enfant.test)
+                for instruction in enfant.body:
+                    descendre(instruction, pile + [condition])
+                for instruction in enfant.orelse:
+                    descendre(instruction, pile)
+                continue
+            if isinstance(enfant, ast.Call) and any(
+                n in ast.unparse(enfant.func) or n in ast.unparse(enfant) for n in noms
+            ):
+                trouves.append((enfant.lineno, " et ".join(pile)))
+                continue
+            descendre(enfant, pile)
+
+    descendre(fonction, [])
+    return trouves
+
+
+def _garde_de_role(condition: str) -> bool:
+    return "est_moderateur" in condition or (
+        "has_role" in condition and "conseil_syndical" in condition and "admin" in condition
+    )
+
+
+def _envois_reserves_non_gardes(source: str, fichier: str) -> list[str]:
+    fautes = []
+    for fonction in ast.walk(ast.parse(source)):
+        if isinstance(fonction, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for ligne, garde in _envois_et_gardes(fonction, _ENVOIS_RESERVES):
+                if not _garde_de_role(garde):
+                    fautes.append(f"{fichier}:{ligne} ({fonction.name}) — garde : {garde or 'AUCUNE'}")
+    return fautes
+
+
+def test_toutes_les_portes_d_une_affaire_reservent_whatsapp_et_l_externe_au_cs():
+    dossier = _APP / "routers" / "tickets"
+    modules = sorted(p for p in dossier.glob("*.py") if p.name not in _MODULES_DEFINISSANT)
+    assert len(modules) >= 8, f"Portée cassée : {len(modules)} module(s) sous {dossier}."
+    for nom in _MODULES_DEFINISSANT:
+        assert (dossier / nom).exists(), f"`{nom}` déclaré comme module d'envoi, introuvable."
+
+    appels = 0
+    liste: list[str] = []
+    for p in modules:
+        source = p.read_text(encoding="utf-8")
+        arbre = ast.parse(source)
+        for f in ast.walk(arbre):
+            if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                appels += len(_envois_et_gardes(f, _ENVOIS_RESERVES))
+        liste += _envois_reserves_non_gardes(source, p.name)
+    #  Cas zéro : un motif qui ne reconnaît plus aucun envoi rendrait vert sans
+    #  rien avoir lu. Création, Suite, message, PATCH : au moins quatre.
+    assert appels >= 4, f"Seulement {appels} envoi(s) relevé(s) — le relevé est cassé."
+    assert not liste, (
+        "Envoi WhatsApp ou courriel externe accessible hors du conseil syndical "
+        "(#1164) — la garde doit porter `est_moderateur(user)` :\n  " + "\n  ".join(liste)
+    )
+
+
+def test_le_releve_voit_un_envoi_nu_et_un_envoi_mal_garde():
+    """Le contrôle s'éprouve : sans ces deux cas, il pourrait être vert par cécité."""
+    nu = "def f(body, user):\n    envoyer_email_externe(body.email_externe)\n"
+    mal = (
+        "def f(body, user, ticket):\n"
+        "    ok = body.partager_whatsapp and not ticket.confidentiel\n"
+        "    if ok:\n        envoyer_whatsapp_avec_log('x')\n"
+    )
+    bon = (
+        "def f(body, user):\n"
+        "    est_cs = est_moderateur(user)\n"
+        "    if body.email_externe and est_cs:\n        envoyer_email_externe(body.email_externe)\n"
+    )
+    assert _envois_reserves_non_gardes(nu, "nu.py"), "un envoi sans condition doit être refusé"
+    assert _envois_reserves_non_gardes(mal, "mal.py"), "une garde sans rôle doit être refusée"
+    assert not _envois_reserves_non_gardes(bon, "bon.py"), "la garde par est_moderateur doit passer"
