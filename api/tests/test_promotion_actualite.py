@@ -202,6 +202,20 @@ def test_l_ancienne_adresse_retrouve_l_affaire(session: Session, client: TestCli
     assert r.json()["detail"]["promu_en_affaire"] == attendu
 
 
+def test_une_publication_QUI_EXISTE_se_lit(session: Session, client: TestClient, cs):
+    """🔴 Le cas nominal, qu'aucun test ne couvrait (#1167, 23/09/2026).
+
+    Seuls le 410 et le 404 étaient éprouvés. La lecture d'une actualité qui
+    existe appelait `publication_visible` avec trois arguments pour deux :
+    `TypeError`, donc 500 — sur l'appel que fait chaque lien `#pub-N` d'un
+    courriel ou d'un message WhatsApp.
+    """
+    pub = _publication(session, cs)
+    r = client.get(f"/publications/{pub.id}")
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == pub.id
+
+
 def test_une_publication_INCONNUE_reste_un_404(session: Session, client: TestClient, cs):
     """⚠️ La nuance qui donne son sens au 410 : sans ce test, rendre 410 pour
     tout identifiant absent passerait — et l'on annoncerait une affaire qui
