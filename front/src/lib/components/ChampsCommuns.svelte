@@ -346,6 +346,7 @@
 		premiere={premiereQuand}
 		pliable={plie('quand')}
 		autreValeur={quandAutreValeur}
+		inactive={inactives.quand ?? ''}
 		bind:debut
 		bind:fin
 	>

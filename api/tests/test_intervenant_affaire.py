@@ -212,3 +212,37 @@ def test_un_glissement_au_kanban_n_avertit_personne(session, monkeypatch, notifi
     evolutions.add_evolution(t.id, corps, BackgroundTasks(), session=session, user=cs)
     assert session.get(Ticket, t.id).statut == "chez_prestataire"
     assert len(appels) == attendu
+
+
+# ── « Quand » : planifié par le conseil syndical seul (23/09/2026) ──────────
+
+def test_un_resident_ne_planifie_pas_a_la_creation(session):
+    """Ignoré, pas refusé : son affaire se crée, sans date."""
+    from datetime import datetime
+
+    resident = _compte(session)
+    lu = _creer(session, resident, categorie="panne", debut=datetime(2026, 10, 1, 9, 0))
+    assert lu.debut is None
+
+
+def test_le_conseil_planifie_l_affaire_d_un_resident(session):
+    """Il ne réécrit pas la demande, mais il en fixe la date : ce n'est pas du contenu."""
+    from datetime import datetime
+
+    resident = _compte(session)
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    t = _creer(session, resident, categorie="panne")
+    lu = _corriger(session, cs, t.id, debut=datetime(2026, 10, 1, 9, 0))
+    assert lu.debut == datetime(2026, 10, 1, 9, 0)
+
+
+def test_cas_zero_la_correction_d_un_resident_laisse_la_date(session):
+    from datetime import datetime
+
+    resident = _compte(session)
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    t = _creer(session, resident, categorie="panne")
+    _corriger(session, cs, t.id, debut=datetime(2026, 10, 1, 9, 0))
+    lu = _corriger(session, resident, t.id, titre="Fuite au 2e", debut=None)
+    assert lu.titre == "Fuite au 2e"
+    assert lu.debut == datetime(2026, 10, 1, 9, 0), "un résident a effacé la date planifiée"

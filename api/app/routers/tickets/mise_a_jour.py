@@ -51,7 +51,7 @@ from .commun import (
     ticket_read,
     pieces_du_ticket,
 )
-from .correction import _appliquer_contenu, _appliquer_relations, _envoye
+from .correction import _appliquer_contenu, _appliquer_quand, _appliquer_relations, _envoye
 from .courriels import (
     _partager_sur_le_groupe,
     envoyer_email_syndic_cs,
@@ -85,17 +85,14 @@ CHAMPS_DE_CONTENU = (
 )
 
 
-#: Les champs de contenu qu'on EFFACE en les envoyant à `null` : leur seule
-#: présence compte (#1092). Les autres restent testés à la non-nullité — le
-#: formulaire les envoie tous, et un titre vide n'a pas de sens.
-CHAMPS_EFFACABLES = ("debut", "fin")
+#  🔴 `debut` et `fin` ne sont plus du CONTENU depuis le 23/09/2026 : la
+#  section « Quand » se planifie par le conseil syndical seul
+#  (`correction._appliquer_quand`), comme le suivi — et non par l'auteur.
 
 
 def _touche_au_contenu(body) -> bool:
     """Cette modification porte-t-elle sur la demande elle-même ?"""
-    return any(getattr(body, champ, None) is not None for champ in CHAMPS_DE_CONTENU) or any(
-        champ in body.model_fields_set for champ in CHAMPS_EFFACABLES
-    )
+    return any(getattr(body, champ, None) is not None for champ in CHAMPS_DE_CONTENU)
 
 
 @router.patch("/{ticket_id}", response_model=TicketRead)
@@ -222,6 +219,10 @@ def update_ticket(
             ticket.statut = statut_pour(ticket.categorie)
     #  APRÈS le contenu : la récurrence dépend de la catégorie FINALE.
     changes += appliquer_intervenant(ticket, body, session, est_cs=is_cs_admin)
+    #  « Quand » : planifié par le conseil seul — ignoré pour un autre, comme
+    #  l'intervenant (l'écran ne lui ouvre pas la section).
+    if is_cs_admin:
+        changes += _appliquer_quand(body, ticket)
 
     # Champs relationnels/destinataires : CS/admin uniquement
     #  ⚠️ `non_relancable` MANQUAIT à cette liste : un `PATCH` qui ne portait

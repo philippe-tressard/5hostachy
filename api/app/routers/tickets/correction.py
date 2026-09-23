@@ -101,9 +101,6 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
         if retenues != _liste_json(ticket.photos_urls):
             changes.append("Photos modifiées")
         ticket.photos_urls = photos_json(retenues)
-    #  La section « Quand » (#1092) — écrite depuis le 23/09/2026 : `TicketUpdate`
-    #  l'acceptait et rien ne l'appliquait, donc 200 sans rien écrire. Testée à
-    #  la PRÉSENCE (`_envoye`) : effacer une date, c'est l'envoyer à `null`.
     #  Ce que porte une actualité (#1091) : le public visé, l'Accès. Ils
     #  décident qui LIT — le conseil seul, comme à la création (`crud.py`) :
     #  pour un autre, ignorés comme les options (l'écran ne les lui propose
@@ -114,12 +111,23 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
     if est_cs and body.reserve_perimetre is not None and body.reserve_perimetre != ticket.reserve_perimetre:
         changes.append("Accès modifié")
         ticket.reserve_perimetre = body.reserve_perimetre
-    quand = [c for c in ("debut", "fin") if _envoye(body, c) and getattr(body, c) != getattr(ticket, c)]
-    if quand:
-        changes.append("Quand modifié")
-        for c in quand:
-            setattr(ticket, c, getattr(body, c))
     return changes
+
+
+def _appliquer_quand(body: TicketUpdate, ticket: Ticket) -> list[str]:
+    """La section « Quand » — PLANIFIÉE par le conseil syndical seul (23/09/2026).
+
+    Ce n'est pas du contenu : l'auteur décrit sa demande, le conseil décide
+    quand on intervient. Elle sort donc de `_appliquer_contenu`, et son droit
+    est celui du suivi — le conseil la pose sur n'importe quelle affaire qu'il
+    peut commenter ; l'appelant ne l'appelle pas pour un autre.
+
+    Testée à la PRÉSENCE (`_envoye`) : effacer une date, c'est l'envoyer à `null`.
+    """
+    quand = [c for c in ("debut", "fin") if _envoye(body, c) and getattr(body, c) != getattr(ticket, c)]
+    for c in quand:
+        setattr(ticket, c, getattr(body, c))
+    return ["Quand modifié"] if quand else []
 
 
 def _envoye(body: TicketUpdate, champ: str) -> bool:

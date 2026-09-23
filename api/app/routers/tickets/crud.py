@@ -132,8 +132,11 @@ def create_ticket(
         jeton_courriel=nouveau_jeton(),
         titre=body.titre,
         description=body.description,
-        debut=body.debut,
-        fin=body.fin,
+        #  🔴 « Quand » se PLANIFIE par le conseil syndical, et par lui seul
+        #  (arbitré le 23/09/2026) : ce qu'un résident enverrait est ignoré,
+        #  comme l'intervenant — l'écran ne lui ouvre pas la section.
+        debut=body.debut if est_cs else None,
+        fin=body.fin if est_cs else None,
         categorie=body.categorie,
         auteur_id=user.id,
         lot_id=body.lot_id,

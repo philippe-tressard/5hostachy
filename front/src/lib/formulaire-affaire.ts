@@ -40,6 +40,7 @@ export function natureDe(categorie: string): NatureAffaire {
 const SECTIONS_ETEIGNABLES: readonly IdSection[] = [
 	'equipement',
 	'suivi',
+	'quand',
 	'intervenant',
 	'destinataires',
 ];
@@ -119,8 +120,6 @@ export function chargeUtileAffaire(
 		description: s.description,
 		categorie: s.categorie,
 		perimetre_cible: s.perimetreCible,
-		debut: depuisChampLocal(s.debut),
-		fin: depuisChampLocal(s.fin),
 		photos_urls: s.photosUrls,
 		fichiers_urls: s.fichiersUrls,
 		urgente: s.options.urgente,
@@ -140,6 +139,9 @@ export function chargeUtileAffaire(
 	if (!contexte.estCS) return charge;
 
 	Object.assign(charge, lotDepuisSaisie(s.saisiPour));
+	//  « Quand » se planifie par le conseil seul (23/09/2026) : un autre ne
+	//  l'envoie pas — la section lui est éteinte, le serveur l'ignorerait.
+	Object.assign(charge, { debut: depuisChampLocal(s.debut), fin: depuisChampLocal(s.fin) });
 	//  Intervenant et récurrence : envoyés à vide hors de leur catégorie — le
 	//  serveur les efface de toute façon (`utils/intervenant`), l'écran le dit.
 	const entretien = s.categorie === CATEGORIE_ENTRETIEN;

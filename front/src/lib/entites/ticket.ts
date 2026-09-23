@@ -130,6 +130,11 @@ export const TICKET: EntiteDeclaree = {
 			//  relance. Une échéance dans l agenda y mettrait « devis attendu sous
 			//  15 jours » entre l AG et la coupure d eau (#1092).
 			pliee: true,
+			//  🔴 Planifiée par le conseil syndical, et par lui seul (arbitré le
+			//  23/09/2026) : le serveur ignore ce qu'un autre y enverrait.
+			inactivePour: {
+				resident: 'Le conseil syndical planifie la date.',
+			},
 		},
 		{
 			id: 'intervenant',
