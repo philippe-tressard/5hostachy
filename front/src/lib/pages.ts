@@ -165,6 +165,29 @@ export const PAGES: PageDef[] = [
 		icone: 'message-square-text',
 		descriptif:
 			'Les actualités du conseil syndical et les affaires de la résidence : signalez un problème, posez une question, suivez l’avancement.',
+		//  Les onglets du Calendrier le rejoignent (#1092, lot 5, 23/09/2026) :
+		//  le Calendrier devient une vue d'Affaires, son kanban un onglet.
+		onglets: [
+			{
+				id: 'liste',
+				route: '/tickets',
+				label: '\u{1F4CB} Liste',
+				descriptif: 'Les actualités et les affaires en cours.',
+			},
+			{
+				id: 'kanban',
+				route: '/tickets/kanban',
+				reserve: 'nonLocataire',
+				label: '\u{1F5C3}️ Kanban',
+				descriptif: 'Les affaires suivies, par état.',
+			},
+			{
+				id: 'archives',
+				route: '/tickets/archives',
+				label: TITRE_ARCHIVES,
+				descriptif: 'Les affaires closes et les actualités passées.',
+			},
+		],
 	},
 	{
 		id: 'calendrier',

@@ -365,7 +365,7 @@ def add_evolution(
         ticket.mis_a_jour_le = datetime.utcnow()
         session.add(ticket)
 
-    if ticket.auteur_id != user.id:
+    if ticket.auteur_id != user.id and body.notifier:
         _notifier_auteur(
             session, background_tasks,
             ticket=ticket, user=user, body=body, ancien_statut=ancien_statut,
