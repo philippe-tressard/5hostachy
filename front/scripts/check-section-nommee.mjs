@@ -85,8 +85,16 @@ function selftest() {
 		0,
 		'<SectionFormulaire premiere titre="Titre" pour="t">\n<div class="field"><input id="t" /></div>\n</SectionFormulaire>',
 	);
-	t('titre passé en raccourci', 0, '<SectionFormulaire {titre}><label for="x">X</label></SectionFormulaire>');
-	t('groupe évident, sans aucun libellé', 0, '<SectionFormulaire premiere><input /></SectionFormulaire>');
+	t(
+		'titre passé en raccourci',
+		0,
+		'<SectionFormulaire {titre}><label for="x">X</label></SectionFormulaire>',
+	);
+	t(
+		'groupe évident, sans aucun libellé',
+		0,
+		'<SectionFormulaire premiere><input /></SectionFormulaire>',
+	);
 	t(
 		'une case à cocher n’est pas un libellé de champ',
 		0,
@@ -97,7 +105,11 @@ function selftest() {
 		0,
 		'<SectionFormulaire premiere><!-- <label>Titre</label> --><input /></SectionFormulaire>',
 	);
-	console.log(ko === 0 ? '\n✓ Autotest : la section nommée par son champ est refusée, le reste non.' : '\n✗ Autotest en échec');
+	console.log(
+		ko === 0
+			? '\n✓ Autotest : la section nommée par son champ est refusée, le reste non.'
+			: '\n✗ Autotest en échec',
+	);
 	return ko;
 }
 
@@ -114,11 +126,15 @@ function main() {
 	}
 	//  Cas zéro : sans section trouvée, ce contrôle ne regarderait rien.
 	if (sections < 20) {
-		console.error(`✗ Seulement ${sections} <SectionFormulaire> trouvée(s) — le relevé est cassé, INCONNU.`);
+		console.error(
+			`✗ Seulement ${sections} <SectionFormulaire> trouvée(s) — le relevé est cassé, INCONNU.`,
+		);
 		return 2;
 	}
 	if (fautes.length) {
-		console.error('✗ Section nommée par un libellé de champ — le titre de section doit être le libellé :\n');
+		console.error(
+			'✗ Section nommée par un libellé de champ — le titre de section doit être le libellé :\n',
+		);
 		console.error(fautes.join('\n'));
 		console.error(
 			'\n  → `SectionTitre` pour la section 1, ou `titre=` + `pour=` sur `SectionFormulaire`\n' +
