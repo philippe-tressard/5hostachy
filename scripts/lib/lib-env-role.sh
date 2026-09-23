@@ -181,6 +181,47 @@ verdict_env_lisible() {
 # ---------------------------------------------------------------------------
 #  Self-test — le contrat du module, exécuté par le job CI `test-scripts`.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+#  C29. verdict_env_cles <cles du noeud A> <cles du noeud B>
+#
+#  PURE. Deux listes de NOMS de cles, separes par des espaces — jamais les
+#  valeurs : ce controle ne doit rien faire circuler de secret.
+#  Rend OK, INCONNU, ou « ECART <cles de A seul>|<cles de B seul> ».
+# ---------------------------------------------------------------------------
+verdict_env_cles() {
+  [ -n "${1// /}" ] && [ -n "${2// /}" ] || { echo INCONNU; return; }
+  #  Chaque jeu passe par la regle qui ECRIT le `.env` selon le role : ce qui
+  #  en depend (ORIGIN, COOKIE_SECURE) se normalise tout seul, sans liste
+  #  recopiee ici. On prend le role « actif » pour les deux : seule compte
+  #  l egalite, et c est le seul role qui ne demande pas d IP.
+  _env_cles_normalisees() {
+    local k texte=""
+    for k in $1; do texte+="$k="$'\n'; done
+    env_role_transformer "$texte" actif | cut -d= -f1 | grep -E '^[A-Za-z_][A-Za-z0-9_]*$' | sort -u
+  }
+  local a b seul_a seul_b
+  a=$(_env_cles_normalisees "$1"); b=$(_env_cles_normalisees "$2")
+  seul_a=$(comm -23 <(echo "$a") <(echo "$b") | paste -sd, -)
+  seul_b=$(comm -13 <(echo "$a") <(echo "$b") | paste -sd, -)
+  if [ -z "$seul_a$seul_b" ]; then echo OK; else echo "ECART $seul_a|$seul_b"; fi
+}
+
+#  Les lignes C29 de check-reliability. Depend de ok/warn de l appelant.
+#  $1 noeud local, $2 pair, $3 cles locales, $4 cles du pair, $5 code SSH du pair.
+env_cles_verdicts() {
+  [ "${5:-1}" -eq 0 ] || return 0
+  local v d
+  v=$(verdict_env_cles "$3" "$4")
+  case "$v" in
+    OK) ok "Cles du .env identiques sur les 2 noeuds (hors ORIGIN et COOKIE_SECURE, qui suivent le role)" ;;
+    ECART*)
+      d=${v#ECART }
+      local a=${d%%|*} b=${d#*|}
+      warn "Cles du .env DIVERGENTES : sur $1 seul : ${a:-aucune} · sur $2 seul : ${b:-aucune} (comparer les deux /opt/5hostachy/.env)" ;;
+    *) warn "Cles du .env non relevees sur l un des noeuds : la comparaison n a pas eu lieu, son silence ne prouve rien" ;;
+  esac
+}
+
 _env_role_selftest() {
   local echecs=0 obtenu
 
@@ -288,6 +329,23 @@ _env_role_selftest() {
   _cas "C28 : proprietaire non releve" INCONNU "$(verdict_env_lisible '' '' '' ptressard)"
   _cas "C28 : utilisateur du cron inconnu" INCONNU        "$(verdict_env_lisible root root 600 '')"
   _cas "C28 : mode illisible" INCONNU "$(verdict_env_lisible root root '' ptressard)"
+
+  # ── C29. Les deux `.env` portent-ils les memes CLES ? (#1109) ─────────────
+  #
+  #  🔴 LE CAS VECU le 21/09/2026 : rpi1 portait WHATSAPP_DB_PASSWORD, que rpi2
+  #  n avait pas — et aucun controle ne comparait la configuration dont depend
+  #  le demarrage de la pile. Quatrieme divergence rpi1/rpi2 du depot.
+  _cas "C29 : une cle presente sur un seul noeud" "ECART WHATSAPP_DB_PASSWORD|"        "$(verdict_env_cles 'A ORIGIN SECRET_KEY WHATSAPP_DB_PASSWORD' 'A ORIGIN SECRET_KEY')"
+  _cas "C29 : l ecart est dit dans les deux sens" "ECART B|C"        "$(verdict_env_cles 'A B ORIGIN' 'A C ORIGIN')"
+  #  ⚠️ L ECART LEGITIME : COOKIE_SECURE est retiree chez l actif et posee chez
+  #  le standby, ORIGIN ajoutee si elle manque. La liste n est pas recopiee :
+  #  les deux jeux passent par `env_role_transformer`, la regle qui les ecrit.
+  _cas "C29 : COOKIE_SECURE sur le seul standby n est pas un ecart" OK        "$(verdict_env_cles 'A COOKIE_SECURE ORIGIN SECRET_KEY' 'A ORIGIN SECRET_KEY')"
+  _cas "C29 : ORIGIN absente d un cote n est pas un ecart (elle est posee)" OK        "$(verdict_env_cles 'A SECRET_KEY' 'A ORIGIN SECRET_KEY')"
+  _cas "C29 : l ordre ne compte pas" OK "$(verdict_env_cles 'B A' 'A B')"
+  #  CAS ZERO : un `.env` non lu n a pas « les memes cles » que l autre.
+  _cas "C29 : jeu de cles vide d un cote" INCONNU "$(verdict_env_cles 'A B' '')"
+  _cas "C29 : les deux vides" INCONNU "$(verdict_env_cles '' '')"
 
   if [ "$echecs" -eq 0 ]; then
     echo "✓ lib-env-role : tous les cas passent."

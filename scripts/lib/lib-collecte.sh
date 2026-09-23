@@ -115,6 +115,9 @@ echo "deploylog_owner=$(stat -c %U /var/log/hostachy-deploy.log 2>/dev/null || e
 #  Un seul stat, trois champs : les separer ferait trois appels qui peuvent
 #  ne pas voir le meme fichier.
 echo "envdroits=$(stat -c %U:%G:%a $R/.env 2>/dev/null || echo :: )"
+#  C29 (#1109) : les NOMS des cles du .env, jamais leurs valeurs. Le 21/09/2026
+#  les deux noeuds ne portaient pas le meme jeu, et rien ne les comparait.
+echo "envcles=$(cut -d= -f1 $R/.env 2>/dev/null | grep -E "^[A-Za-z_][A-Za-z0-9_]*$" | sort -u | tr "[:space:]" " ")"
 #  Le DERNIER verdict de build d auto-deploy. Il ecrit une ligne par tick ; celle
 #  qui porte ECHEC du build dit que le code est aligne et pas les images — la
 #  parite git n est pas la parite d image (C27).
