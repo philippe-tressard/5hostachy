@@ -125,7 +125,14 @@ def domaine_de(adresse: str) -> str:
 #: dépendre la relève du courriel d'un choix de génération qui n'a rien à voir
 #: avec elle, et la panne serait silencieuse — le message deviendrait « sans
 #: rapport avec un ticket ».
-_SUJET_NUMERO = re.compile(r"ticket\s*#?\s*(TK-[0-9A-Za-z]{4,12})", re.IGNORECASE)
+#:
+#: 🔴 « Affaire » OU « Ticket » (#1168, 23/09/2026) : les modèles disent
+#: « Affaire #TK-… » depuis v2.10.4, et le motif n'acceptait que « Ticket » —
+#: nos propres sujets n'étaient plus reconnus. L'ancien mot reste : les courriels
+#: déjà envoyés le portent. `test_le_repli_reconnait_chaque_sujet_que_nous_
+#: envoyons` rend les sujets des modèles semés, pour qu'un prochain renommage
+#: échoue en CI et non en silence.
+_SUJET_NUMERO = re.compile(r"(?:affaire|ticket)\s*#?\s*(TK-[0-9A-Za-z]{4,12})", re.IGNORECASE)
 
 
 def numero_dans_sujet(sujet: str | None) -> str | None:
@@ -136,9 +143,11 @@ def numero_dans_sujet(sujet: str | None) -> str | None:
     l'appelant de vérifier que l'expéditeur avait quelque chose à y faire —
     `courriel_boite.correspondant_du_ticket`.
 
-    Le motif exige le mot « Ticket » devant : sans lui, un sujet qui contient
+    Le motif exige le mot « Affaire » ou « Ticket » devant : sans lui, un sujet qui contient
     « TK-123456 » pour toute autre raison rattacherait un message au hasard.
 
+    >>> numero_dans_sujet("Re: Affaire #TK-482910 — Fuite au 3e — Les Hostachys")
+    'TK-482910'
     >>> numero_dans_sujet("Re: Ticket #TK-482910 — Fuite au 3e — Les Hostachys")
     'TK-482910'
     >>> numero_dans_sujet("Re: votre facture TK-482910")

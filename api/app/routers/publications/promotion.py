@@ -105,7 +105,9 @@ def lire_publication(
     #  La règle de visibilité est celle du site, jamais réécrite ici. Un objet
     #  qu'on n'a pas le droit de voir se dit INTROUVABLE et non « interdit » :
     #  un 403 confirmerait son existence.
-    if not publication_visible(session, pub, user):
+    #  `(pub, user)` : un troisième argument, `session`, levait TypeError — 500
+    #  sur toute actualité existante, donc sur chaque lien `#pub-N` (#1167).
+    if not publication_visible(pub, user):
         return ou_404(session, Publication, None, "Publication")
     return _pub_to_read(pub, session)
 
