@@ -36,6 +36,7 @@
 	import { admin } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	//  Les NOMS DU MODÈLE, pas des noms inventés : c'est ce qui manquait.
 	let heure_execution = 3;
@@ -85,7 +86,7 @@
 	</p>
 
 	{#if chargement}
-		<p class="aide">Chargement…</p>
+		<EtatListe chargement />
 	{:else}
 		<form id="config-sauvegarde" on:submit|preventDefault={enregistrer} class="grille">
 			<label class="field champ-en-ligne">

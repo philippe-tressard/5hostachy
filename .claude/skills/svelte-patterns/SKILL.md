@@ -113,9 +113,16 @@ en erreur. Une page ne compose plus ces états elle-même.
 côté — le plus souvent l'erreur, affichée comme une liste vide. Et
 `npm run lint:apercu` tient l'aperçu d'une carte.
 
-⚠️ `<p>Chargement…</p>` écrit à la main n'existe plus nulle part, et cette
-section l'enseignait encore. `$lib/chargement.ts` porte les libellés, et
-`ChargementPartiel` le cas d'un bloc qui se recharge seul.
+🔴 **L'attente s'écrit `<EtatListe chargement />`** — ou `messageChargement="…"`
+pour un message propre à l'écran —, jamais un paragraphe. Cette section affirmait
+que `<p>Chargement…</p>` écrit à la main « n'existait plus nulle part » : il y en
+avait **vingt-trois** le 24/09/2026, sous cinq allures, dont une copie de la
+classe `.etat-chargement` d'`EtatListe` avec son style (#1045). 🔒
+`npm run lint:chargement` refuse le suivant ; un bouton qui attend
+(`{envoi ? 'Chargement…' : label}`) n'est pas concerné.
+`$lib/chargement.ts` porte `essayer` et `messagePartiel` (elle ne porte pas de
+libellés, contrairement à ce que disait cette ligne), et `ChargementPartiel` le
+cas d'un bloc qui se recharge seul.
 
 ## Pattern: Onglets (Tabs) — un onglet est une ADRESSE
 

@@ -15,6 +15,7 @@
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { parAttribut } from '$lib/table-statuts';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	// Cette page importait déjà getPageConfig sans s'en servir : son titre était en
 	// dur, elle était donc la seule entrée du menu qu'on ne pouvait ni renommer ni
@@ -133,7 +134,7 @@
 </p>
 
 {#if loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 {:else}
 	{#if $isCS}
 		<div style="margin-bottom:1.25rem">

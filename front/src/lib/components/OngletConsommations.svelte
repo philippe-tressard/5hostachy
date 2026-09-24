@@ -110,6 +110,7 @@
 	//  gains de l'extraction — la page n'a plus à dire à l'onglet qu'il est
 	//  visible.
 	import { onMount } from 'svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	onMount(() => {
 		if (!compteursDemandes) loadCompteurConfigs();
 	});
@@ -379,7 +380,7 @@
 {/if}
 
 {#if releveLoading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 {:else if releves.length === 0}
 	<div class="empty-state card">
 		<h3>Aucun relevé</h3>

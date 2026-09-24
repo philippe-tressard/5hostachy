@@ -7,6 +7,7 @@
 	import BarreImport from '$lib/components/BarreImport.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { parAttribut } from '$lib/table-statuts';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _siteNom = $siteNomStore;
 	// ── Données ─────────────────────────────────────────────────────────────
@@ -247,7 +248,7 @@
 
 <!-- ── Table ─────────────────────────────────────────────────────────────── -->
 {#if loading}
-	<p class="muted">Chargement…</p>
+	<EtatListe chargement />
 {:else if imports.length === 0}
 	<div class="empty-state card">
 		<h3>Aucun import</h3>

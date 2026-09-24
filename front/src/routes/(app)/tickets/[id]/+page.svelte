@@ -33,6 +33,7 @@
 		estActualite,
 		estTicketClos,
 	} from '$lib/tickets';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -209,7 +210,7 @@
 />
 
 {#if loading}
-	<p class="etat-chargement">Chargement…</p>
+	<EtatListe chargement />
 {:else if erreur}
 	<!--  L'échec AVANT le vide : dire « introuvable » quand on n'a pas pu
 	      regarder, c'est affirmer une absence qu'on n'a pas constatée. -->
@@ -352,11 +353,10 @@
 	    habillent. Les laisser ici en aurait fait la quatrième copie d'un même
 	    bloc, et Svelte ne les aurait de toute façon pas appliqués au composant. */
 
-	.etat-chargement {
-		color: var(--color-text-muted);
-	}
+	/*  `.etat-chargement` est parti avec son paragraphe : `EtatListe` le rend et le
+	    stylise (#1045). C'en était une copie, sous le même nom de classe.
 
-	/*  `.back-link` est parti dans `FilAriane` (#365) : il était défini trois
+	    `.back-link` est parti dans `FilAriane` (#365) : il était défini trois
 	    fois à l'identique dans le dépôt, et disait « Retour aux tickets » là où
 	    le sondage disait « Communauté ». */
 

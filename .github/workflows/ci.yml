@@ -1620,6 +1620,15 @@ jobs:
         working-directory: front
         run: npm run lint:etat-liste
 
+      # 🔴 Le PREMIER des trois états, lui, n'était tenu par rien : le 24/09/2026,
+      # vingt-trois écrans écrivaient encore leur propre « Chargement… », sous
+      # cinq allures — dont une copie de la classe `.etat-chargement` d'EtatListe,
+      # avec son style, dans une page (#1045). La skill affirmait qu'il n'en
+      # restait aucun. Lance son `--selftest` avant de mesurer.
+      - name: L'attente d'un écran se rend par EtatListe
+        working-directory: front
+        run: npm run lint:chargement
+
       # 🔴 Le libellé d'un étage était écrit SEPT fois, en QUATRE rendus : un
       # lot au premier sous-sol s'affichait « -1 » sur `mon-lot`, « SS 1 » sur le
       # profil, et « Ét. -1 » dans une troisième forme de la même page.

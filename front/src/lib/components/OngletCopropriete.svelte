@@ -11,6 +11,7 @@
 	import SectionContratReference from '$lib/components/SectionContratReference.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { fmtDateShort as fmtDate } from '$lib/date';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -104,7 +105,7 @@
 <svelte:head><title>Admin — Fiche copropriété — {_siteNom}</title></svelte:head>
 
 {#if loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 {:else}
 	<section class="card config-section">
 		<h2 class="config-section-title">

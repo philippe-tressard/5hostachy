@@ -15,6 +15,7 @@
 	import { contexteAssistant } from '$lib/assistant';
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { fmtDateShort } from '$lib/date';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let sondage: any = null;
 	let loading = true;
@@ -202,7 +203,7 @@
 />
 
 {#if loading}
-	<p style="color:var(--color-text-muted);margin-top:1rem">Chargement…</p>
+	<EtatListe chargement />
 {:else if !sondage}
 	<p style="color:var(--color-danger)">Sondage introuvable.</p>
 {:else}

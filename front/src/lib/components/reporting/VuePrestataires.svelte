@@ -17,6 +17,7 @@
 	import { fmtDate } from '$lib/date';
 	import NoteEtoiles from '$lib/components/NoteEtoiles.svelte';
 	import { type ReportPrestataire } from '$lib/reporting';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	export let reportPrestataires: ReportPrestataire[] = [];
 
@@ -72,7 +73,7 @@
 
 <!-- Fiche synthèse prestataire (modale inline) -->
 {#if reportPrestSynthLoading}
-	<p style="color:var(--color-text-muted)">Chargement synthèse…</p>
+	<EtatListe chargement messageChargement="Chargement synthèse…" />
 {:else if reportPrestSynth}
 	<section class="report-card" style="margin-bottom:1.5rem">
 		<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">

@@ -34,6 +34,7 @@
 	const ROUTE_BAUX_ARCHIVES = routeSousOnglet('mon-lot', 'location', 'archives');
 	import { routeSousOnglet } from '$lib/routes-onglets';
 	import BadgeStatutBail from '$lib/components/BadgeStatutBail.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	/** Les baux, tels que l'écran les tient. */
 	export let baux: any[] = [];
@@ -109,7 +110,7 @@
 	</div>
 
 	{#if bauxLoading}
-		<p style="color:var(--color-text-muted)">Chargement…</p>
+		<EtatListe chargement />
 	{:else}
 		{@const displayed = bailTab === 'actif' ? bauxActifs : bauxTermines}
 		{@const grouped = (() => {

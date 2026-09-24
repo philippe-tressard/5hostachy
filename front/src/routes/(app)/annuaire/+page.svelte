@@ -12,6 +12,7 @@
 	import { fmtDateLong as formatDate } from '$lib/date';
 	import { revelerCible } from '$lib/deepLink';
 	import { etageLabel, telephonesDe } from '$lib/utils';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _pc = getPageConfig($configStore, 'annuaire', defautsDePage('annuaire'));
 	$: _siteNom = $siteNomStore;
@@ -134,7 +135,7 @@
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 {:else}
 	<section style="margin-bottom:2rem">
 		<div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem">

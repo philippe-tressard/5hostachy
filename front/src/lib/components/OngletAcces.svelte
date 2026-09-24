@@ -49,6 +49,7 @@
 	import MesAcces from '$lib/components/MesAcces.svelte';
 	import AccesConnexes from '$lib/components/AccesConnexes.svelte';
 	import { bailEnCours } from '$lib/bail';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let vigiks: any[] = [];
 	let telecommandes: any[] = [];
@@ -222,7 +223,7 @@
 </script>
 
 {#if loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 {:else}
 	<!--  🔴 Les deux sections étaient écrites À L'IDENTIQUE, à quatre mots près
 	      (#805). Quarante lignes en double — table, colonnes, boutons et leurs
