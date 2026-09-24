@@ -53,6 +53,20 @@ def liste_depuis_json(v):
 #: identique. Renommé pour ce qu'il est — une liste sérialisée en JSON.
 ListeJson = Annotated[List[str], BeforeValidator(liste_depuis_json)]
 
+def nom_en_majuscules(v: Optional[str]) -> Optional[str]:
+    """Un NOM se range en capitales, sans espaces autour — « Dupont » → « DUPONT ».
+
+    Écrit deux fois (inscription, profil) jusqu'au 24/09/2026, et oublié par la
+    correction d'un compte en administration (#1155) : un nom corrigé par
+    l'administrateur restait en minuscules à côté de tous les autres.
+    """
+    return v.strip().upper() if v else v
+
+
+#: Un nom saisi — pour le schéma qui n'a pas d'autre validateur à porter.
+NomMajuscules = Annotated[Optional[str], BeforeValidator(nom_en_majuscules)]
+
+
 class ChampsIntervenant(BaseModel):
     """Intervenant, récurrence et équipement d'une affaire — conseil seul.
 

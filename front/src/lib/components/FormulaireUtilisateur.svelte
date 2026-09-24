@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { ETAGE_MAX, ETAGE_MIN } from '$lib/utils';
+
 	/**
 	 * Le formulaire d'édition d'un compte utilisateur (Administration → Comptes).
 	 *
@@ -67,6 +69,17 @@
 				{/each}
 			</select>
 		</label>
+		<!--  #1155 : ce que l'inscription demande, l'administration le corrige.
+		      Mêmes bornes et mêmes capitales côté serveur (`AdminUserUpdate`). -->
+		<label class="field"
+			>Étage où il habite
+			<input type="number" min={ETAGE_MIN} max={ETAGE_MAX} bind:value={editForm.etage} />
+		</label>
+		{#if editForm.statut === 'locataire'}
+			<label class="field"
+				>Nom du bailleur<input type="text" bind:value={editForm.nom_proprietaire} /></label
+			>
+		{/if}
 		<label class="case" style="padding-top:1.2rem">
 			<input type="checkbox" bind:checked={editForm.actif} />
 			Compte actif

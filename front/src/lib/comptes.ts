@@ -149,6 +149,10 @@ export interface FormulaireCompte {
 	statut: string;
 	batiment_id: number | null;
 	actif: boolean;
+	/** Où la personne habite — `0` est le rez-de-chaussée, jamais une absence. */
+	etage: number | null;
+	/** Pour un locataire : le nom de son bailleur, tel qu'il l'a saisi (#1155). */
+	nom_proprietaire: string;
 }
 
 /**
@@ -167,5 +171,7 @@ export function formulaireCompte(u?: Record<string, any> | null): FormulaireComp
 		statut: u?.statut ?? '',
 		batiment_id: u?.batiment_id ?? null,
 		actif: u?.actif ?? true,
+		etage: u?.etage ?? null,
+		nom_proprietaire: u?.nom_proprietaire ?? '',
 	};
 }
