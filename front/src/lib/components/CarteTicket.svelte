@@ -54,7 +54,7 @@
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import EvolForm from './EvolForm.svelte';
-	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
+	import SectionsSuiteConseil from './SectionsSuiteConseil.svelte';
 	import { TICKET } from '$lib/entites/ticket';
 	import {
 		OPTIONS_TICKET,
@@ -99,10 +99,8 @@
 	/** Le panneau d'options rapides attend-il le serveur ? */
 	export let optionsRapidesEnCours = false;
 
-	//  🔴 LES OPTIONS DE PUBLICATION du ticket, reprises À CHAQUE OUVERTURE du
-	//  formulaire de commentaire (05/09/2026) : ce qui s'affiche est l'état réel,
-	//  et ce qu'on enregistre devient l'état. Une COPIE — cocher une case ne
-	//  modifie pas le ticket avant l'envoi.
+	//  🔴 LES OPTIONS du ticket, reprises À CHAQUE OUVERTURE de la Suite (05/09/2026) :
+	//  l'état réel s'affiche, l'enregistré le devient ; une COPIE jusqu'à l'envoi.
 	let optionsEvol = optionsDuTicket(ticket);
 	$: if (mode === 'evolution') optionsEvol = optionsDuTicket(ticket);
 	//  Le brouillon du panneau rapide : on ne touche PAS au ticket affiché tant
@@ -356,7 +354,7 @@
 						<!--  Section 2 — le MÊME composant que la fiche du ticket : deux
 						      écrans commentent un ticket, un seul bloc les sert. -->
 						<svelte:fragment slot="specifiques" let:premiere>
-							<OptionsEvolutionTicket {premiere} bind:options={optionsEvol} />
+							<SectionsSuiteConseil {ticket} {premiere} bind:options={optionsEvol} />
 						</svelte:fragment>
 					</EvolForm>
 				</div>

@@ -24,7 +24,9 @@ from app.models.core import (
 )
 from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate
 from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
+from app.utils.intervenant import appliquer_intervenant
 from app.utils.nature_affaire import est_actualite
+from app.routers.tickets.correction import _appliquer_quand
 from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.evolutions import TYPES_SAISIS, evolution_modifiable, supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
@@ -340,6 +342,17 @@ def add_evolution(
     if appliquer_options(ticket, body, est_cs=est_moderateur(user)):
         ticket.mis_a_jour_le = datetime.utcnow()
         session.add(ticket)
+    #  📅🛠️ QUAND, INTERVENANT, ÉQUIPEMENT — le conseil les pose dans une Suite
+    #  (#1207, arbitré le 24/09/2026) : le crayon ne lui est pas montré sur
+    #  l'affaire d'un résident, et il n'avait aucun autre chemin. Mêmes règles
+    #  que la correction — `appliquer_intervenant`, `_appliquer_quand` —, et ce
+    #  qui a changé s'écrit dans la Suite même : la trace est au fil.
+    if est_moderateur(user) and not est_actualite(ticket):
+        planifie = appliquer_intervenant(ticket, body, session, est_cs=True) + _appliquer_quand(body, ticket)
+        if planifie:
+            evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(planifie)}</em></p>"
+            ticket.mis_a_jour_le = datetime.utcnow()
+            session.add(ticket)
     #  À qui l'on parle et l'Accès — le conseil seul, comme sur l'ancienne
     #  publication (#1091). Puis l'invariant d'accès : une Suite qui referme
     #  l'actualité archive ses affiches, comme la correction et la création.

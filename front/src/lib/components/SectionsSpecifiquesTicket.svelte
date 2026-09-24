@@ -25,7 +25,7 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { LEGENDE_CARNET, STATUT_TICKET_OPTIONS } from '$lib/tickets';
-	import { EQUIPEMENTS_AFFAIRE, equipLabel } from '$lib/prestataires';
+	import SectionEquipement from '$lib/components/SectionEquipement.svelte';
 	import type { Etat, IdSection } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
@@ -125,20 +125,11 @@
 <!--  L'ÉQUIPEMENT (section 3, #1097) : le conseil le désigne, pour une
       catégorie du bâti. Ailleurs, grisé avec son motif (`inactivePour`). -->
 {#if sectionPresente(TICKET, etat, 'equipement')}
-	<SectionFormulaire
-		titre={SECTIONS_LIBELLE.equipement}
+	<SectionEquipement
 		pliable={pliageDe(TICKET, 'equipement')}
 		inactive={inactives.equipement ?? ''}
-		resume={equipement ? equipLabel(equipement) : 'aucun'}
-		valeurModifiee={equipement !== ''}
-		pour="ticket-equipement"
-	>
-		<select id="ticket-equipement" bind:value={equipement}>
-			<option value="">— Aucun —</option>
-			{#each EQUIPEMENTS_AFFAIRE as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-		</select>
-		<p class="aide">Au carnet d’entretien, l’affaire résolue se range sous cet équipement.</p>
-	</SectionFormulaire>
+		bind:equipement
+	/>
 {/if}
 
 <!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
