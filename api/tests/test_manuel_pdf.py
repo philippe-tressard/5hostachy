@@ -134,7 +134,10 @@ def test_les_blocs_depliables_sont_OUVERTS(document, manuel):
         f"{document.count('En détail')} déplié(s) dans le document"
     )
     #  Et leur contenu doit vraiment être là.
-    assert "votre réponse rejoint le fil de l'affaire" in document
+    #  Le bloc « Tout le détail » des Affaires, qui portait le premier témoin,
+    #  a été retiré du manuel le 24/09/2026 (jugé trop détaillé) : le témoin
+    #  passe à un bloc qui reste, celui de Mes lots & accès.
+    assert "C'est cet inventaire qui fait foi" in document
     assert "Boîte à idées" in document
     #  Le cinquième, ajouté le 05/09/2026 : ce qu'on trouve sur l'Accueil.
     assert "Consignes de la copropriété" in document
