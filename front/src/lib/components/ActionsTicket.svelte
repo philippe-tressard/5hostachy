@@ -18,6 +18,7 @@
 -->
 <script lang="ts">
 	import { SUITE } from '$lib/gestes';
+	import { isCS } from '$lib/stores/auth';
 	import { createEventDispatcher } from 'svelte';
 	import BoutonLien from './BoutonLien.svelte';
 	import BoutonOptions from './BoutonOptions.svelte';
@@ -29,12 +30,15 @@
 	export let peutSuivre = false;
 	export let peutEditer = false;
 	export let peutAdministrer = false;
+	/** Rendue aux Archives : 🗑️ y remplace 📦 (`ux-patterns` §8). */
+	export let archive = false;
 
 	const dispatch = createEventDispatcher<{
 		evoluer_ouvrir: void;
 		modifier: void;
 		options_ouvrir: void;
 		supprimer: void;
+		archiver: void;
 	}>();
 </script>
 
@@ -88,8 +92,17 @@
 	/>
 {/if}
 <!--  ⚠️ La corbeille NE SUIT PAS le droit d'édition : supprimer
-	      définitivement est irréversible, et cela reste à l'administrateur. -->
-{#if peutAdministrer}
+	      définitivement est irréversible, et cela reste à l'administrateur.
+	      🔴 Et seulement aux ARCHIVES (24/09/2026) : dans la liste, le conseil
+	      ARCHIVE (📦) — un clic de trop n'y efface plus rien. -->
+{#if !archive && $isCS}
+	<button
+		class="btn-icon"
+		aria-label="Archiver"
+		title="Archiver — rejoint l'onglet Archives"
+		on:click|stopPropagation={() => dispatch('archiver')}>&#x1F4E6;</button
+	>
+{:else if archive && peutAdministrer}
 	<button
 		class="btn-icon-danger"
 		aria-label="Supprimer"

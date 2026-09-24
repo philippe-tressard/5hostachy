@@ -117,6 +117,7 @@
 			on:options_ouvrir={() => gestes.optionsOuvrir(t)}
 			on:options_enregistrer={(e) => gestes.optionsEnregistrer(t, e.detail)}
 			on:supprimer={() => gestes.supprimer(t)}
+			on:archiver={() => gestes.archiver(t)}
 			{evolEnEdition}
 			{evolCorrectionEnCours}
 			on:evoluer={(e) => gestes.evoluer(t, e.detail)}

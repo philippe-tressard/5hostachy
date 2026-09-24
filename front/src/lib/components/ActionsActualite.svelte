@@ -67,9 +67,13 @@
 	export let onModifier: (pub: Ticket) => void;
 	export let onOptions: (pub: Ticket) => void;
 	export let onSupprimer: (pub: Ticket) => void;
+	/** 📦 Le geste de la liste ; 🗑️ n'est offert qu'aux Archives (24/09/2026). */
+	export let onArchiver: (pub: Ticket) => void;
+	/** Rendue aux Archives : seule la suppression y reste, à l'administrateur. */
+	export let archive = false;
 </script>
 
-{#if $isCS}
+{#if !archive && $isCS}
 	<button
 		class="btn-icon"
 		aria-pressed={commentaireOuvertId === pub.id}
@@ -105,8 +109,13 @@
 		ouvert={optionsOuvertesId === pub.id}
 		onOuvrir={() => onOptions(pub)}
 	/>
-{/if}
-{#if $isAdmin}
+	<button
+		class="btn-icon"
+		aria-label="Archiver"
+		title="Archiver — rejoint l'onglet Archives"
+		on:click|stopPropagation={() => onArchiver(pub)}>&#x1F4E6;</button
+	>
+{:else if archive && $isAdmin}
 	<button
 		class="btn-icon-danger"
 		aria-label="Supprimer"

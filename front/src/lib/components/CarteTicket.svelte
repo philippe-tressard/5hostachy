@@ -128,10 +128,8 @@
 	//  🔴 Les deux droits, calculés SUR CE TICKET — l'appelant ne peut pas les
 	//  fournir : ils dépendent de qui l'a déposé, et une liste en affiche vingt.
 	//
-	//  Avant, `peutCommenter` valait « membre du CS » et `peutAdministrer`
-	//  « admin » : le crayon n'apparaissait donc JAMAIS à l'auteur d'un ticket,
-	//  ni à la personne pour qui il avait été saisi. Le serveur, lui, les accepte
-	//  depuis la v2.85.0 — la capacité existait sans être atteignable.
+	//  Avant, le crayon n'apparaissait JAMAIS à l'auteur ni au « saisi pour »,
+	//  que le serveur accepte depuis la v2.85.0.
 	//
 	//  ⚠️ `peutAdministrer` reste ce qu'il est pour la SUPPRESSION : effacer
 	//  définitivement n'est pas éditer, et cela reste réservé à l'admin.
@@ -268,10 +266,12 @@
 				peutSuivre={peutSuivreCeTicket}
 				peutEditer={peutEditerCeTicket}
 				{peutAdministrer}
+				{archive}
 				on:evoluer_ouvrir
 				on:modifier
 				on:options_ouvrir
 				on:supprimer
+				on:archiver
 			/>
 		</svelte:fragment>
 		<!--  🔴 L'aperçu passe par l'EN-TÊTE (18/09/2026) : c'est ce qui permet aux

@@ -110,19 +110,21 @@
 	on:toggle={() => gestes.basculer(ticket)}
 >
 	<svelte:fragment slot="actions">
-		{#if !archive}
-			<ActionsActualite
-				pub={ticket}
-				commentaireOuvertId={idSi('evolution')}
-				editionOuverteId={idSi('edition')}
-				optionsOuvertesId={idSi('options')}
-				onCommenter={gestes.evoluerOuvrir}
-				onModifier={gestes.modifier}
-				onOptions={gestes.optionsOuvrir}
-				onPromouvoir={(p) => promouvoirActualite(p, gestes.modifie)}
-				onSupprimer={gestes.supprimer}
-			/>
-		{/if}
+		<!--  Aux Archives aussi : c'est là, et là seulement, que l'administrateur
+		      supprime (24/09/2026) — la rangée n'y montre que 🗑️. -->
+		<ActionsActualite
+			pub={ticket}
+			{archive}
+			onArchiver={gestes.archiver}
+			commentaireOuvertId={idSi('evolution')}
+			editionOuverteId={idSi('edition')}
+			optionsOuvertesId={idSi('options')}
+			onCommenter={gestes.evoluerOuvrir}
+			onModifier={gestes.modifier}
+			onOptions={gestes.optionsOuvrir}
+			onPromouvoir={(p) => promouvoirActualite(p, gestes.modifie)}
+			onSupprimer={gestes.supprimer}
+		/>
 	</svelte:fragment>
 
 	<svelte:fragment slot="formulaire">

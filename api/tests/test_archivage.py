@@ -98,6 +98,12 @@ def test_ticket_ouvert_ne_s_archive_pas():
     assert not archivable("ticket", statut=StatutTicket.ouvert, cree_le=VIEUX)
 
 
+def test_une_affaire_archivee_par_le_conseil_quitte_la_liste():
+    """📦 remplace la corbeille dans la liste (24/09/2026) : même ouverte, elle part aux Archives."""
+    assert archivable("ticket", statut=StatutTicket.ouvert, cree_le=MAINTENANT, archive_manuel=True)
+    assert not archivable("ticket", statut=StatutTicket.ouvert, cree_le=MAINTENANT, archive_manuel=False)
+
+
 def test_annonce_vendue_depuis_plus_du_delai():
     assert archivable("annonce", statut=StatutAnnonce.vendu, statut_change_le=VIEUX)
 

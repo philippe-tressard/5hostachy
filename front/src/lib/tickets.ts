@@ -226,6 +226,8 @@ export interface GestesTicket {
 	optionsOuvrir: (t: Ticket) => void;
 	optionsEnregistrer: (t: Ticket, data: unknown) => void;
 	supprimer: (t: Ticket) => void;
+	/** 📦 Le geste de la LISTE ; `supprimer` n'est plus offert qu'aux Archives. */
+	archiver: (t: Ticket) => void;
 	evoluer: (t: Ticket, data: unknown) => void;
 	evolModifier: (evolId: number) => void;
 	evolCorriger: (t: Ticket, data: unknown) => void;
