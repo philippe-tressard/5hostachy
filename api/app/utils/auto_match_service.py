@@ -430,17 +430,13 @@ def auto_match_pour_utilisateur(user, session: Session) -> dict:
     Ne committe pas — l'appelant doit faire session.commit().
     """
     from app.models.core import StatutUtilisateur
-    
     lots         = _auto_match_lots(user, session)
-    # Flush pour que les nouveaux statuts soient visibles dans _auto_resoudre
     session.flush()
     from app.utils.resolution_lots import resoudre_pour_utilisateur
 
     lots_resolus = resoudre_pour_utilisateur(user, session)
-    # Flush pour que les UserLot soient visibles dans TC/Vigik
     session.flush()
     
-    # Déterminer si c'est un copropriétaire et vérifier s'il y a des lots résolus
     user_statut = user.statut.value if hasattr(user.statut, "value") else str(user.statut)
     is_coproprietaire = user_statut in {
         StatutUtilisateur.copropriétaire_résident.value,
@@ -462,6 +458,9 @@ def auto_match_pour_utilisateur(user, session: Session) -> dict:
     #  dès qu'il y est rattaché — par ce service ou par l'administration.
 
     baux    = _auto_match_baux_locataire(user, session)
+    #  Sans bail à son adresse, le nom de propriétaire déclaré rattache (#1136).
+    from app.utils.rattachement_bailleur import rattacher_au_bailleur
+    rattache = 0 if baux else rattacher_au_bailleur(user, session)
     annuaire = _auto_link_annuaire(user, session)
     return {
         "lots": lots,
@@ -469,9 +468,10 @@ def auto_match_pour_utilisateur(user, session: Session) -> dict:
         "tc": tc,
         "vigik": vigik,
         "baux": baux,
+        "rattache": rattache,
         "annuaire_cs": annuaire["cs"],
         "annuaire_syndic": annuaire["syndic"],
-        "total": lots + tc + vigik + baux + annuaire["cs"] + annuaire["syndic"],
+        "total": lots + tc + vigik + baux + rattache + annuaire["cs"] + annuaire["syndic"],
     }
 
 

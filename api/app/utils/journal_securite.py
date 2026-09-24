@@ -54,6 +54,8 @@ _NIVEAUX: dict[str, int] = {
     "ban_communaute": logging.WARNING,
     "mot_de_passe_change": logging.INFO,
     "mot_de_passe_reinitialise": logging.WARNING,
+    #  Un locataire lié à un lot par le seul nom (#1136) : il en porte les badges.
+    "rattachement_auto": logging.WARNING,
 }
 
 
