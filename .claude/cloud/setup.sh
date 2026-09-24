@@ -71,7 +71,9 @@ pip_installer() {
         || python3 -m pip install -q --break-system-packages --ignore-installed "$@" 2>/dev/null \
         || python3 -m pip install -q "$@"
 }
-OUTILS=$(sed -nE 's/.*pip install ([A-Za-z][A-Za-z0-9_.-]*)[[:space:]]*$/\1/p' "$CI" | sort -u | tr '\n' ' ')
+#  `=` admis : un outil épinglé (`ruff==0.15.8`, #1048) n'était plus extrait du tout,
+#  donc plus installé ici — et `ruff format --check` ne tournait plus en session.
+OUTILS=$(sed -nE 's/.*pip install ([A-Za-z][A-Za-z0-9_.=-]*)[[:space:]]*$/\1/p' "$CI" | sort -u | tr '\n' ' ')
 if [ -z "$OUTILS" ]; then
     signaler "aucun outil Python extrait de ci.yml"
 else
