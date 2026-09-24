@@ -36,4 +36,23 @@ def remplacer_si_intact(conn, table: str, avant: dict[str, str], apres: dict[str
     return conn.execute(requete).rowcount or 0
 
 
-__all__ = ["remplacer_si_intact"]
+def remplacer_passage(
+    conn, table: str, cle: dict[str, str], colonne: str, avant: str, apres: str
+) -> int:
+    """Remplace un PASSAGE d'un texte long, s'il y figure tel quel ; rend 0 ou 1.
+
+    Le cas que `remplacer_si_intact` ne couvre pas (#1073, 24/09/2026) : une
+    phrase fausse au milieu d'un texte juridique dont la migration ne connaît
+    pas — et ne doit pas recopier — le reste. Même garde, à l'échelle de la
+    phrase : si elle a été reformulée depuis l'administration, rien ne change.
+    """
+    t = sa.table(table, *(sa.column(c) for c in sorted({*cle, colonne})))
+    filtre = sa.and_(*(t.c[c] == v for c, v in cle.items()))
+    actuel = conn.execute(sa.select(t.c[colonne]).where(filtre)).scalar()
+    if not actuel or avant not in actuel:
+        return 0
+    conn.execute(sa.update(t).where(filtre).values({colonne: actuel.replace(avant, apres)}))
+    return 1
+
+
+__all__ = ["remplacer_si_intact", "remplacer_passage"]

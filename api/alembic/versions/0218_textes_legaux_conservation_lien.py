@@ -28,8 +28,6 @@ touché. Le downgrade fait le remplacement inverse, et lui seul.
 Revision ID: 0218
 Revises: 0217
 """
-from sqlalchemy import text
-
 from alembic import op
 
 revision = "0218"
@@ -54,27 +52,20 @@ def _nouvelle_conservation() -> str:
     return CONSERVATION_COURRIELS
 
 
-def _remplacer(cle: str, avant: str, apres: str) -> None:
-    lien = op.get_bind()
-    ligne = lien.execute(
-        text("SELECT valeur FROM config_site WHERE cle = :c").bindparams(c=cle)
-    ).fetchone()
-    #  Rien en base : le seed sert de repli, et il est déjà juste.
-    if ligne is None or avant not in (ligne[0] or ""):
-        return
-    lien.execute(
-        text("UPDATE config_site SET valeur = :v WHERE cle = :c").bindparams(
-            v=ligne[0].replace(avant, apres), c=cle
-        )
-    )
+def _corriger(cle: str, avant: str, apres: str) -> None:
+    #  Rien en base, ou phrase reformulée : rien ne change — le seed sert de
+    #  repli, et il est déjà juste. Le geste vit dans `utils/textes_livres`.
+    from app.utils.textes_livres import remplacer_passage
+
+    remplacer_passage(op.get_bind(), "config_site", {"cle": cle}, "valeur", avant, apres)
 
 
 def upgrade() -> None:
-    _remplacer("politique_confidentialite", ANCIENNE_CONSERVATION, _nouvelle_conservation())
-    _remplacer("mentions_legales", LIEN_MORT, LIEN_JUSTE)
+    _corriger("politique_confidentialite", ANCIENNE_CONSERVATION, _nouvelle_conservation())
+    _corriger("mentions_legales", LIEN_MORT, LIEN_JUSTE)
 
 
 def downgrade() -> None:
     #  Le lien n'est PAS remis en 404 : `LIEN_JUSTE` peut figurer ailleurs dans le
     #  texte, et le remplacer partout casserait des liens qui l'étaient déjà.
-    _remplacer("politique_confidentialite", _nouvelle_conservation(), ANCIENNE_CONSERVATION)
+    _corriger("politique_confidentialite", _nouvelle_conservation(), ANCIENNE_CONSERVATION)
