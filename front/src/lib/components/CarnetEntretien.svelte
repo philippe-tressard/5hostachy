@@ -98,8 +98,8 @@
 	<p class="aide">
 		Ce que la copropriété a fait entretenir, réparer et contrôler. Il est constitué automatiquement
 		à partir des contrats, des entretiens terminés et des affaires résolues du bâti, rangées sous
-		l'équipement que le conseil syndical désigne — rien n'y est saisi à la main. Une question ou
-		une nuisance n'y figure pas.
+		l'équipement que le conseil syndical désigne — rien n'y est saisi à la main. Une question ou une
+		nuisance n'y figure pas.
 	</p>
 
 	<!--  Le filtre est le composant STANDARD : il prend ses pastilles dans
