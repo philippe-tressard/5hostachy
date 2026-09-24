@@ -34,11 +34,18 @@ aussi celle des tests.
 
 ```bash
 #!/bin/bash
-f=$(find / -maxdepth 5 -path '*/.claude/cloud/setup.sh' -not -path '/proc/*' 2>/dev/null | head -1)
+f=$(find / -maxdepth 6 -path '*/.claude/cloud/setup.sh' -not -path '/proc/*' 2>/dev/null | head -1)
 [ -n "$f" ] && exec bash "$f"
-echo "⚠️ Dépôt pas encore cloné : lancer « bash .claude/cloud/setup.sh » en session."
+echo "⚠️ setup.sh introuvable (dépôt pas encore cloné ?) : lancer « bash .claude/cloud/setup.sh » en session."
 exit 0
 ```
+
+🔴 **`-maxdepth 6`, pas 5** (24/09/2026). Le dépôt est cloné sous
+`/home/user/5hostachy`, donc `setup.sh` est au **sixième** niveau depuis `/`.
+Avec 5, le `find` ne trouvait rien, le script affichait son message et sortait
+en **succès** : l'environnement démarrait sans rien installer, et l'interface
+n'en disait rien. Mesuré dans une session : `-maxdepth 5` → vide,
+`-maxdepth 6` → `/home/user/5hostachy/.claude/cloud/setup.sh`.
 
 La documentation ne dit pas si le dépôt est déjà cloné quand le setup s'exécute.
 S'il ne l'est pas, rien n'est perdu : `env-report.sh` affiche
