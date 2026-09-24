@@ -35,6 +35,8 @@
 	import { TITRE_HISTORIQUE } from '$lib/archives';
 	import EvolForm from './EvolForm.svelte';
 	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
+	import type { Ticket } from '$lib/api';
+	import SectionsSuiteConseil from './SectionsSuiteConseil.svelte';
 	import { tickets as ticketsApi, type TicketEvolution } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from './Toast.svelte';
@@ -45,6 +47,8 @@
 	import { TICKET } from '$lib/entites/ticket';
 
 	export let ticketId: number;
+	/** L'affaire : la Suite du conseil en lit la catégorie et les valeurs (#1207). */
+	export let ticket: Ticket | null = null;
 	/**  Le contexte de l'assistant IA (#985) — composé par la fiche, seule à
 	 *   tenir le ticket entier (`contexteCommentaire`). `null` = pas d'assistant. */
 	export let assistant: ContexteAssistant | null = null;
@@ -247,7 +251,11 @@
 					<!--  Section 2 — le MÊME composant que la liste des tickets : deux
 					      écrans commentent un ticket, un seul bloc les sert. -->
 					<svelte:fragment slot="specifiques" let:premiere>
-						<OptionsEvolutionTicket {premiere} bind:options />
+						{#if ticket}
+							<SectionsSuiteConseil {ticket} {premiere} bind:options />
+						{:else}
+							<OptionsEvolutionTicket {premiere} bind:options />
+						{/if}
 					</svelte:fragment>
 				</EvolForm>
 			{/key}

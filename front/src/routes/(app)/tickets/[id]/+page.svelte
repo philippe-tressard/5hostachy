@@ -323,6 +323,7 @@
 	      sens — le crayon manquait à la liste, la corbeille manquait ici. -->
 	<HistoriqueTicket
 		{ticketId}
+		{ticket}
 		auteurNom={nomCopie(ticket)}
 		statutCourant={ticket?.statut ?? ''}
 		assistant={ticket

@@ -13,15 +13,16 @@ une ligne à changer.
 ⚠️ N'importe que `schemas_communs` et `models.core` — jamais `schemas`, qui
 l'importe. Un cycle ferait dépendre le démarrage de l'ordre des imports.
 """
+from datetime import datetime
 from typing import List, Optional
 
 from app.models.core import StatutTicket
-from app.schemas_communs import EvolutionLue, ListeJson
+from app.schemas_communs import ChampsIntervenant, EvolutionLue, ListeJson
 from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree
 
 
 
-class TicketEvolutionCreate(AssisteIAEntree):
+class TicketEvolutionCreate(AssisteIAEntree, ChampsIntervenant):
     type: str  # commentaire | etat
     contenu: Optional[str] = None
     #  Même type que `TicketUpdate.statut`, donc **même verdict** : les deux
@@ -29,6 +30,11 @@ class TicketEvolutionCreate(AssisteIAEntree):
     #  chose, au même endroit. `_STATUTS_ADMIS` — la liste écrite à la main qui
     #  refusait `annulé` depuis toujours — a disparu du routeur (#415).
     nouveau_statut: Optional[StatutTicket] = None
+    #  Ce que le CONSEIL pose dans une Suite (#1207, 24/09/2026) : « Quand », et
+    #  par `ChampsIntervenant` l'intervenant et l'équipement. Ignorés pour tout
+    #  autre auteur ; mêmes règles que la correction.
+    debut: Optional[datetime] = None
+    fin: Optional[datetime] = None
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None

@@ -324,12 +324,17 @@ export function optionsVersTicket(options: {
 	urgente: boolean;
 	brouillon: boolean;
 	suiviKanban: boolean;
-}): { epingle: boolean; urgente: boolean; confidentiel: boolean; suivi_kanban: boolean } {
+	//  Ce que le CONSEIL pose dans une Suite (#1207) — Quand, Intervenant,
+	//  Équipement : `SectionsSuiteConseil` l'écrit ici, et il voyage par ce même
+	//  pont plutôt que par une variable de plus dans chaque carte.
+	planification?: Record<string, unknown>;
+}): Record<string, unknown> {
 	return {
 		epingle: options.epingle,
 		urgente: options.urgente,
 		confidentiel: options.brouillon,
 		suivi_kanban: options.suiviKanban,
+		...(options.planification ?? {}),
 	};
 }
 
