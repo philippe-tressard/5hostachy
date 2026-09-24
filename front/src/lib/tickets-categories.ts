@@ -309,10 +309,13 @@ export const OPTIONS_CATEGORIE: readonly {
 //: (`[data-nature=…]`), avec les autres couleurs.
 //: « Affaire » et non plus « Activité » (24/09/2026, arbitré à l'écran) : le
 //: libellé change, la valeur `activite` reste — liens et serveur inchangés.
+//: `abrege` est le mot de la GOUTTIÈRE (#1220, arbitré à l'écran le 24/09) :
+//: écrit en entier, « CALENDRIER » dépassait de la bande ou l'élargissait. Le
+//: filtre, lui, garde le mot entier — il a la place.
 export const NATURES = [
-	{ val: 'actualite', emoji: '\u{1F4F0}', libelle: 'Actualité' },
-	{ val: 'calendrier', emoji: '\u{1F4C5}', libelle: 'Calendrier' },
-	{ val: 'activite', emoji: '\u{1F6E0}️', libelle: 'Affaire' },
+	{ val: 'actualite', emoji: '\u{1F4F0}', libelle: 'Actualité', abrege: 'ACTU.' },
+	{ val: 'calendrier', emoji: '\u{1F4C5}', libelle: 'Calendrier', abrege: 'CAL.' },
+	{ val: 'activite', emoji: '\u{1F6E0}️', libelle: 'Affaire', abrege: 'AFF.' },
 ] as const;
 
 export const OPTIONS_FILTRE_NATURE = NATURES.map((n) => ({
@@ -328,5 +331,5 @@ export const OPTIONS_FILTRE_NATURE = NATURES.map((n) => ({
  */
 export function attributsNature(t: { natures?: string[] }): Record<string, string> {
 	const n = NATURES.find((x) => (t.natures ?? []).includes(x.val)) ?? NATURES[2];
-	return { 'data-nature': n.val, 'data-nature-icone': n.emoji, 'data-nature-libelle': n.libelle };
+	return { 'data-nature': n.val, 'data-nature-icone': n.emoji, 'data-nature-libelle': n.abrege };
 }
