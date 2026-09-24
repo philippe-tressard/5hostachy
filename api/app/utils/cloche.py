@@ -42,6 +42,7 @@ MOTIFS_SYSTEME: dict[str, str] = {
     "tache_du_conseil": "un geste attendu du conseil (interphone d'un arrivant, "
                         "courriel entrant à reporter) : une tâche, pas une information",
     "bug": "un bogue signalé : il revient au gestionnaire du site, et à lui seul (#1191)",
+    "rattachement": "un locataire rattaché à son bailleur par le seul nom : le gestionnaire vérifie (#1136)",
 }
 
 
