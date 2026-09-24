@@ -11,6 +11,7 @@ from app.models.tickets import CategorieTicket
 #  19/08/2026 : `schemas_tickets` en a besoin et ne peut pas importer ce
 #  fichier-ci, qui l’importe. Ré-exportés, donc rien à changer ailleurs.
 from app.schemas_communs import (  # noqa: F401
+    ChampsIntervenant,
     ListeJson as ListeJson,
     liste_depuis_json as liste_depuis_json,
 )
@@ -138,7 +139,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
-class TicketCreate(SaisiPourEntree, AssisteIAEntree):
+class TicketCreate(SaisiPourEntree, AssisteIAEntree, ChampsIntervenant):
     #  Section « Quand » (#1092) : quand ça se passe — le calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
@@ -206,14 +207,10 @@ class TicketCreate(SaisiPourEntree, AssisteIAEntree):
     # quelle URL est jointe, il ne peut que désigner nos propres fichiers.
     photos_urls: List[str] = []
     fichiers_urls: List[str] = []
-    #  Section « Intervenant » et récurrence d'un Entretien (#1092) — conseil seul,
-    #  règles dans `utils/intervenant`.
-    prestataire_id: Optional[int] = None
-    frequence_type: Optional[str] = None
-    frequence_valeur: Optional[int] = None
+    #  Intervenant, récurrence, équipement : `ChampsIntervenant` — conseil seul.
 
 
-class TicketRead(SaisiPourSortie, AssisteIASortie):
+class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
     id: int
     numero: str
     titre: str
@@ -268,10 +265,7 @@ class TicketRead(SaisiPourSortie, AssisteIASortie):
     #  (#1093, `utils/archivage.perime_le`). `None` pour une affaire suivie :
     #  elle ne périme pas, elle se clôt.
     perime_le: Optional[date] = None
-    prestataire_id: Optional[int] = None
     prestataire_nom: Optional[str] = None  # dérivé, pour la fiche et la carte
-    frequence_type: Optional[str] = None
-    frequence_valeur: Optional[int] = None
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
@@ -299,7 +293,7 @@ class TicketRead(SaisiPourSortie, AssisteIASortie):
         from_attributes = True
 
 
-class TicketUpdate(SaisiPourEntree, AssisteIACorrection):
+class TicketUpdate(SaisiPourEntree, AssisteIACorrection, ChampsIntervenant):
     #  Section « Quand » (#1092) : quand ça se passe — le calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
@@ -344,9 +338,6 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection):
     #  Les photos se corrigent désormais comme les documents — même règle, même
     #  endpoint de téléversement, et une liste vide efface sans ambiguïté.
     photos_urls: Optional[List[str]] = None
-    prestataire_id: Optional[int] = None
-    frequence_type: Optional[str] = None
-    frequence_valeur: Optional[int] = None
 
 
 class MessageCreate(AssisteIAEntree):

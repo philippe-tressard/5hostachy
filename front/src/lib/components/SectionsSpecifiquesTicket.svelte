@@ -25,6 +25,7 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { LEGENDE_CARNET, STATUT_TICKET_OPTIONS } from '$lib/tickets';
+	import { EQUIPEMENTS_AFFAIRE, equipLabel } from '$lib/prestataires';
 	import type { Etat, IdSection } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
@@ -55,6 +56,8 @@
 	/**  Les sections ÉTEINTES par la nature de l'affaire, avec leur motif
 	 *   (`$lib/formulaire-affaire`, 23/09/2026) : grisées, pliées, sans champ. */
 	export let inactives: Partial<Record<IdSection, string>> = {};
+	/** L'équipement concerné (#1097) — une valeur de `TypeEquipement`, ou `''`. */
+	export let equipement = '';
 </script>
 
 <!--  2. NATURE — la catégorie de l'affaire, et elle seule.
@@ -119,16 +122,23 @@
       `avecOptions`), qui rend dans l'ordre de `SECTIONS_ORDRE` — la même
       porte que pour l'actualité, l'idée et l'événement. -->
 
-<!--  🔒 L'ÉQUIPEMENT (section 3) : visible, et toujours inactif à ce jour —
-      absent de la création (motif `categorie`), pas encore construit en
-      correction (#1097), sans objet pour une actualité. Il reste à son rang
-      pour qu'on sache qu'il existe (formulaire unique, 23/09/2026). -->
-{#if inactives.equipement}
+<!--  L'ÉQUIPEMENT (section 3, #1097) : le conseil le désigne, pour une
+      catégorie du bâti. Ailleurs, grisé avec son motif (`inactivePour`). -->
+{#if sectionPresente(TICKET, etat, 'equipement')}
 	<SectionFormulaire
 		titre={SECTIONS_LIBELLE.equipement}
 		pliable={pliageDe(TICKET, 'equipement')}
-		inactive={inactives.equipement}
-	/>
+		inactive={inactives.equipement ?? ''}
+		resume={equipement ? equipLabel(equipement) : 'aucun'}
+		valeurModifiee={equipement !== ''}
+		pour="ticket-equipement"
+	>
+		<select id="ticket-equipement" bind:value={equipement}>
+			<option value="">— Aucun —</option>
+			{#each EQUIPEMENTS_AFFAIRE as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
+		</select>
+		<p class="aide">Une affaire résolue n’entre au carnet d’entretien qu’avec son équipement.</p>
+	</SectionFormulaire>
 {/if}
 
 <!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui

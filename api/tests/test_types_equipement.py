@@ -128,3 +128,19 @@ def test_aucun_ecran_ne_recopie_la_table():
         f"la table des équipements est recopiée dans {fautifs} : elle vit dans "
         "`$lib/prestataires.ts`, et nulle part ailleurs."
     )
+
+
+def test_ce_qui_n_est_pas_un_equipement_est_le_meme_des_deux_cotes():
+    """#1097 : une affaire désigne un équipement, jamais `assurance` ni `syndic`.
+
+    L'écran dérive `EQUIPEMENTS_AFFAIRE` de `HORS_EQUIPEMENT` ; le serveur refuse
+    en 422 ce que sa propre liste exclut. Deux listes, donc une comparaison — et
+    le cas zéro : vides des deux côtés, elles seraient d'accord sans rien exclure.
+    """
+    from app.utils.intervenant import HORS_EQUIPEMENT
+
+    source = _MODULE.read_text(encoding="utf-8")
+    debut = source.index("export const HORS_EQUIPEMENT")
+    ecran = set(re.findall(r"'([^']+)'", source[debut:source.index(";", debut)]))
+    assert ecran == set(HORS_EQUIPEMENT) and ecran, (ecran, HORS_EQUIPEMENT)
+

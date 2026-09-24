@@ -74,8 +74,9 @@ export interface CategorieTicket {
  *   c'est le genre de texte qu'on ne relit jamais, parce qu'il a été juste. */
 export const LEGENDE_CARNET =
 	'Les catégories marquées d’un liseré doré alimentent le carnet d’entretien : une ' +
-	'affaire close dans l’une d’elles y est consignée, consultable par tout ' +
-	'copropriétaire (décret n° 2001-477).';
+	'affaire résolue dans l’une d’elles y est consignée dès que le conseil syndical a ' +
+	'désigné l’équipement concerné, consultable par tout copropriétaire ' +
+	'(décret n° 2001-477).';
 
 /**
  *  Les huit catégories, **dans l'ordre de fréquence attendue** en copropriété.

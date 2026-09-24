@@ -75,6 +75,7 @@
 	import {
 		CATEGORIE_ENTRETIEN,
 		chargeUtileAffaire,
+		intervenantPropose,
 		natureDe,
 		pertesAuChangement,
 		sectionsInactives,
@@ -144,6 +145,12 @@
 	let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
 	//  Section « Intervenant » et récurrence d'un Entretien (#1092, lot 5).
 	let prestataireId: number | null = ticket?.prestataire_id ?? null;
+	let equipement = ticket?.equipement ?? '';
+	let contrats: {
+		actif?: boolean;
+		type_equipement?: string | null;
+		prestataire_id?: number | null;
+	}[] = [];
 	let frequenceType = ticket?.frequence_type ?? '';
 	let frequenceValeur: number | string | null = ticket?.frequence_valeur ?? null;
 	let prestataires: { id: number; nom: string; actif?: boolean }[] = [];
@@ -162,9 +169,21 @@
 		...(actualite ? {} : { État: STATUT_TICKET_LABELS[statut] ?? statut }),
 	});
 
+	//  L'équipement PROPOSE l'intervenant sous contrat (#1097) — seulement quand
+	//  il vient de changer et qu'aucun n'est désigné : une proposition, jamais
+	//  un remplacement.
+	let equipementVu = equipement;
+	$: if (equipement !== equipementVu) {
+		equipementVu = equipement;
+		if (prestataireId === null)
+			prestataireId = intervenantPropose(equipement, contrats, prestataires);
+	}
+
 	onMount(async () => {
 		if ($isCS && sectionPresente(TICKET, etat, 'intervenant')) {
 			[prestataires, erreurPrestataires] = await essayer(prestatairesApi.list(), []);
+			//  Pour PROPOSER l'intervenant sous contrat (#1097) — sans eux, rien n'est proposé.
+			[contrats] = await essayer(prestatairesApi.contrats(), []);
 		}
 		if ($isCS && sectionPresente(TICKET, etat, 'au_nom_de')) {
 			try {
@@ -210,6 +229,7 @@
 		annonceHall,
 		saisiPour,
 		prestataireId,
+		equipement,
 		frequenceType,
 		frequenceValeur,
 	} satisfies SaisieAffaire;
@@ -370,6 +390,7 @@
 			bind:categorie
 			bind:statut
 			bind:options
+			bind:equipement
 		/>
 
 		<!--  4 à 13 : ordre, intitulés et séparations hérités de `ChampsCommuns`,

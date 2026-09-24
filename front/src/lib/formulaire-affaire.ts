@@ -30,6 +30,7 @@ import { concerneTousLesResidents } from '$lib/destinataires';
 import { depuisChampLocal } from '$lib/date';
 import { lotDepuisSaisie, type SaisieSaisiPour } from '$lib/saisi-pour';
 import { CATEGORIES_TICKET, estActualite, optionsVersTicket } from '$lib/tickets';
+import { typeEquipementDuContrat } from '$lib/reporting';
 
 /** La nature d'une catégorie : Actualité informe, toute autre se suit. */
 export function natureDe(categorie: string): NatureAffaire {
@@ -102,6 +103,8 @@ export interface SaisieAffaire {
 	annonceHall: boolean;
 	saisiPour: SaisieSaisiPour;
 	prestataireId: number | null;
+	/** La valeur de `TypeEquipement`, ou `''` — posée par le conseil (#1097). */
+	equipement: string;
 	frequenceType: string;
 	frequenceValeur: number | string | null;
 }
@@ -156,6 +159,7 @@ export function chargeUtileAffaire(
 	const entretien = s.categorie === CATEGORIE_ENTRETIEN;
 	Object.assign(charge, {
 		prestataire_id: estBati(s.categorie) ? s.prestataireId : null,
+		equipement: estBati(s.categorie) ? s.equipement || null : null,
 		frequence_type: entretien && s.frequenceType ? s.frequenceType : null,
 		frequence_valeur: entretien && s.frequenceType ? Number(s.frequenceValeur) || null : null,
 	});
@@ -194,6 +198,7 @@ export function chargeUtileAffaire(
 export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[] {
 	const pertes: string[] = [];
 	if (avant.prestataire_id && !estBati(apres.categorie)) pertes.push('l’intervenant');
+	if (avant.equipement && !estBati(apres.categorie)) pertes.push('l’équipement');
 	if (avant.frequence_type && apres.categorie !== CATEGORIE_ENTRETIEN) pertes.push('la récurrence');
 	const etait = natureDe(avant.categorie);
 	if (etait === natureDe(apres.categorie)) return pertes;
@@ -206,4 +211,26 @@ export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[
 		if (avant.suivi_kanban) pertes.push('l’inscription au kanban');
 	}
 	return pertes;
+}
+
+/**
+ * L'intervenant que l'équipement PROPOSE (#1097) : le prestataire d'un contrat
+ * actif qui couvre cet équipement — « Toiture » propose le couvreur sous
+ * contrat. `null` sans contrat : on ne devine pas.
+ *
+ * ⚠️ Une proposition, jamais une décision : l'écran ne l'applique que si aucun
+ * intervenant n'est déjà désigné, et le conseil la change d'un geste.
+ * L'équipement d'un contrat se lit par `typeEquipementDuContrat` — la règle de
+ * tous les écrans, « autre » laissant parler la spécialité du prestataire.
+ */
+export function intervenantPropose(
+	equipement: string,
+	contrats: { actif?: boolean; type_equipement?: string | null; prestataire_id?: number | null }[],
+	prestataires: { id: number; specialite?: string | null }[],
+): number | null {
+	if (!equipement) return null;
+	const contrat = contrats.find(
+		(c) => c.actif !== false && typeEquipementDuContrat(c, prestataires) === equipement,
+	);
+	return contrat?.prestataire_id ?? null;
 }

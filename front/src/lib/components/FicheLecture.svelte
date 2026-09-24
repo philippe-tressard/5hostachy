@@ -56,6 +56,8 @@
 	export let description = '';
 	/** L'intervenant, déjà composé (`intervenantAffiche`) — vide : rien. */
 	export let intervenant = '';
+	/** L'équipement, déjà en libellé (`equipLabel`) — vide : rien (#1097). */
+	export let equipement = '';
 
 	//  ── 7. Photos · 8. Documents — DEUX sections, jamais une seule ───────────
 	export let photos: string[] | null | undefined = [];
@@ -80,6 +82,10 @@
 		<slot name="specifiques" />
 	{:else if s.id === 'suivi'}
 		<slot name="workflow" />
+	{:else if s.id === 'equipement'}
+		{#if equipement}
+			<p class="fiche-intervenant">Équipement : <strong>{equipement}</strong></p>
+		{/if}
 	{:else if s.id === 'intervenant'}
 		{#if intervenant}
 			<p class="fiche-intervenant">Intervenant : <strong>{intervenant}</strong></p>

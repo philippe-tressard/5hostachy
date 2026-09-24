@@ -78,30 +78,21 @@ export const TICKET: EntiteDeclaree = {
 			},
 		},
 		{
-			//  🔓 Réservée aux catégories du BÂTI : on n'attache un équipement qu'à
-			//  ce qui s'entretient. Le motif `categorie` est entré avec elle (#1095).
+			//  ✅ CONSTRUITE le 24/09/2026 (#1097) — « sur quoi », que le décret
+			//  n° 2001-477 attend du carnet. Posée par le CONSEIL, jamais demandée au
+			//  résident : il voit une flaque, il ne sait pas si c'est la plomberie
+			//  ou la toiture. Mêmes extinctions que l'Intervenant, dont elle propose
+			//  le prestataire sous contrat ; règles serveur : `utils/intervenant`.
+			//  C'est elle qui fait entrer une affaire résolue au carnet.
 			id: 'equipement',
 			objet: 'Équipement concerné — alimente le carnet d’entretien',
 			pliee: true,
 			inactivePour: {
 				actualite:
 					'Une actualité informe : personne n’agit, elle n’a donc ni suivi, ni équipement, ni intervenant.',
-			},
-			absente: {
-				creation: {
-					motif: 'categorie',
-					explication:
-						'Un résident signale ce qu’il voit, pas ce qu’il faut entretenir. ' +
-						'L’équipement se désigne ensuite, par le conseil syndical, et seulement ' +
-						'pour les catégories qui portent sur le bâti.',
-				},
-				//  Visible, grisée : elle existe dans le cadre et n'est pas encore
-				//  construite. La taire ferait croire qu'elle n'existera pas.
-				edition: {
-					motif: 'api',
-					explication: 'Le conseil syndical la désignera ici — pas encore construite (#1097).',
-					ticket: '#1097',
-				},
+				resident:
+					'Le conseil syndical désigne l’équipement : on signale ce qu’on voit, pas ce qu’il faut entretenir.',
+				horsBati: 'Seulement pour les catégories du bâti — celles au liseré doré.',
 			},
 		},
 		{

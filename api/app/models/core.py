@@ -74,6 +74,7 @@ from app.models.tickets import (  # noqa: E402
     STATUTS_TICKET_CLOS as STATUTS_TICKET_CLOS,
     STATUTS_TICKET_HISTORIQUES as STATUTS_TICKET_HISTORIQUES,
     CategorieTicket as CategorieTicket,
+    IntervenantMixin as IntervenantMixin,
     PrioriteTicket as PrioriteTicket,
     StatutTicket as StatutTicket,
 )
@@ -241,7 +242,7 @@ from app.models.validations import (  # noqa: E402,F401
 #  Tickets
 # ──────────────────────────────────────────────
 
-class Ticket(SaisiPourMixin, AssisteIAMixin, table=True):
+class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     __tablename__ = "ticket"
     id: Optional[int] = Field(default=None, primary_key=True)
     numero: str = Field(unique=True, index=True)
@@ -275,11 +276,7 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, table=True):
     #  couvre le besoin —, elle n'était plus ni saisie ni lue.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
-    #  Section « Intervenant » et récurrence d'un Entretien (#1092, lot 5, 0211) —
-    #  sans `foreign_key` : SQLite refuse de l'ajouter à une table existante.
-    prestataire_id: Optional[int] = None
-    frequence_type: Optional[str] = None  # « semaines » · « mois » · « fois_par_an »
-    frequence_valeur: Optional[int] = None
+    #  Intervenant, récurrence et équipement : `IntervenantMixin` (#1097).
     non_relancable_motif: Optional[str] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)

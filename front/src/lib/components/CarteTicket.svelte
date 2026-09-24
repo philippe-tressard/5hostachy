@@ -66,7 +66,7 @@
 	import { fmtDate, isNouveau } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { nomCopie, nomProprietaire } from '$lib/saisi-pour';
-	import { intervenantAffiche } from '$lib/prestataires';
+	import { equipLabel, intervenantAffiche } from '$lib/prestataires';
 	import {
 		BADGE_PRIORITE,
 		PRIORITE_BREVE,
@@ -367,6 +367,7 @@
 					entite={TICKET}
 					description={ticket.description}
 					intervenant={intervenantAffiche(ticket)}
+					equipement={ticket.equipement ? equipLabel(ticket.equipement) : ''}
 					photos={ticket.photos_urls ?? []}
 					documents={ticket.fichiers_urls ?? []}
 				>
