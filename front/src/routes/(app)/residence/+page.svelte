@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
+	import { supprimerDocument } from '$lib/gestes-document';
 	import { tenter, messageErreur } from '$lib/erreurs';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
@@ -287,18 +287,8 @@
 		savingPlan = false;
 	}
 
-	/**  Supprimer un document de l'une des trois sections.
-	 *
-	 *   🔴 Les trois suppressions — plan, règlement, CR d'AG — étaient écrites au
-	 *   caractère près, à quarante lignes d'intervalle, et avaient déjà divergé
-	 *   sur ce qu'elles annonçaient (« Plan supprimé » contre « Supprimé »). Seul
-	 *   change ce qu'on retire de quelle liste : c'est le paramètre. */
-	async function supprimerDocument(id: number, quoi: string, retirer: (id: number) => void) {
-		await confirmerPuis(SUPPRESSION(quoi), 'Document supprimé', async () => {
-			await documentsApi.delete(id);
-			retirer(id);
-		});
-	}
+	//  Supprimer un document de l'une des trois sections : `supprimerDocument`
+	//  (`$lib/gestes-document`), paramétré par la liste d'où le retirer.
 
 	async function deletePlan(id: number) {
 		await supprimerDocument(id, 'Ce plan', (i) => (plans = plans.filter((d) => d.id !== i)));

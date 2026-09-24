@@ -30,6 +30,7 @@
 	import { PUBLICATION } from '$lib/entites/publication';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { SUITE } from '$lib/gestes';
+	import { supprimerDocument } from '$lib/gestes-document';
 	import { promouvoirActualite } from '$lib/gestes-actualite';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import { reserveAuConseil } from '$lib/destinataires';
@@ -85,6 +86,17 @@
 		}
 	}
 
+	//  🔴 Les retirer (#1178) : ils ne passent pas par le formulaire, qui ne
+	//  connaît que `fichiers_urls`. Écart DÉCLARÉ, et voulu — les migrer en URLs
+	//  les ferait passer de `uploads/prive/` (contrôle `document_visible`) à
+	//  `uploads/fichiers/`, lisible de toute session : la sécurité tranche (#390).
+	const retirerDocument = (doc: { id: number }) =>
+		supprimerDocument(
+			doc.id,
+			'Ce document',
+			(id) => (documents = documents.filter((d) => d.id !== id)),
+		);
+
 	const idSi = (m: typeof mode) => (mode === m ? ticket.id : null);
 </script>
 
@@ -93,6 +105,7 @@
 	{expanded}
 	variante={archive ? 'historique' : 'fil'}
 	{documents}
+	onRetirerDocument={$isCS && !archive ? retirerDocument : null}
 	formulaireOuvert={mode === 'evolution' || mode === 'options' || mode === 'edition'}
 	on:toggle={() => gestes.basculer(ticket)}
 >

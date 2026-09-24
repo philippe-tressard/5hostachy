@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { perimetreDefautListe } from '$lib/perimetres';
-	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
+	import { confirmerPuis } from '$lib/confirmation';
+	import { supprimerDocument } from '$lib/gestes-document';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import CarteContrat from '$lib/components/CarteContrat.svelte';
 	import ChampsPrestataire from '$lib/components/ChampsPrestataire.svelte';
@@ -465,13 +466,9 @@
 		contratDocsMap = { ...contratDocsMap, [contratId]: await docsApi.list(undefined, contratId) };
 	}
 
-	async function deleteDoc(contratId: number, docId: number) {
-		await confirmerPuis(SUPPRESSION('Ce document'), 'Document supprimé', async () => {
-			await docsApi.delete(docId);
-			//  Le rechargement est écrit UNE fois, juste en dessous.
-			await rechargerDocs(contratId);
-		});
-	}
+	//  Le geste est partagé (`$lib/gestes-document`) ; la liste se recharge.
+	const deleteDoc = (contratId: number, docId: number) =>
+		supprimerDocument(docId, 'Ce document', () => rechargerDocs(contratId));
 
 	async function deleteContrat(id: number) {
 		await confirmerPuis('Archiver ce contrat ?', 'Archivé', async () => {

@@ -55,6 +55,8 @@
 	 *   la 0210 a rattachées à l'affaire. Une actualité récente n'en a pas : ses
 	 *   documents sont dans `fichiers_urls`. */
 	export let documents: any[] = [];
+	/**  Le geste qui retire l'un d'eux (#1178) — `null` : pas de 🗑️ (hors conseil). */
+	export let onRetirerDocument: ((doc: { id: number }) => void) | null = null;
 	/**  Vrai quand la page affiche un formulaire à la place du contenu (édition,
 	 *   ajout d'évolution). Explicite, et non déduit de `$$slots` : un slot
 	 *   fourni mais vide masquerait le corps en permanence. */
@@ -161,6 +163,14 @@
 							<a href={docsApi.downloadUrl(doc.id)} target="_blank" class="pub-attachment-link">
 								📎 {doc.titre || doc.fichier_nom}
 							</a>
+							{#if onRetirerDocument}
+								<button
+									type="button"
+									class="btn-icon"
+									aria-label="Supprimer le document {doc.titre || doc.fichier_nom}"
+									on:click|stopPropagation={() => onRetirerDocument?.(doc)}>🗑️</button
+								>
+							{/if}
 						{/each}
 					</div>
 				{/if}
