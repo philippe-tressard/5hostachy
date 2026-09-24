@@ -192,8 +192,15 @@
 			background-color 0.12s,
 			border-color 0.12s,
 			box-shadow 0.12s,
-			transform var(--duree-geste, 0.12s) var(--ease-out, ease);
+			transform var(--duree-geste) var(--ease-out);
 		white-space: nowrap;
+	}
+	/*  L'appui, comme les boutons de la charte (`composants.css`) : 97 %, et
+	    `transform` seul pour que la rangée ne tremble pas. Une pastille RETENUE
+	    s'enfonce aussi — contrairement à l'icône active, elle n'est pas
+	    grossie, donc rien ne la fait retomber sous sa taille. */
+	.pastille:active:not(:disabled) {
+		transform: scale(0.97);
 	}
 	/*  PRIVATIF : un contour discontinu au repos.
 	    Pas de couleur — elle est prise par l'état retenu — ni de symbole —

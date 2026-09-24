@@ -140,14 +140,23 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 		box-shadow 0.15s ease,
 		border-left-color 0.15s ease;
 }
-.carte-liste:hover,
 .carte-liste.expanded {
 	border-left-color: var(--color-primary);
 }
-/*  L'ombre ne se renforce qu'au survol : au repos, une ombre marquée sur chaque
-    carte fatigue une liste longue. Au survol elle isole celle qu'on vise. */
-.carte-liste:hover {
-	box-shadow: 0 4px 14px rgba(30, 58, 95, 0.13);
+/*  🔴 LE SURVOL NE VAUT QU'AU POINTEUR (24/09/2026, généralisé après l'essai
+    des Petites annonces). Au doigt, `:hover` RESTE COLLÉ après un appui : la
+    carte touchée gardait son liseré bleu, son ombre et son titre coloré une
+    fois refermée — elle avait l'air encore ouverte. La requête ne retire rien
+    à la souris ; elle cesse de mentir au tactile. Même garde pour la couleur
+    du titre, plus bas. */
+@media (hover: hover) and (pointer: fine) {
+	.carte-liste:hover {
+		border-left-color: var(--color-primary);
+		/*  L'ombre ne se renforce qu'au survol : au repos, une ombre marquée sur
+		    chaque carte fatigue une liste longue. Au survol elle isole celle
+		    qu'on vise. */
+		box-shadow: 0 4px 14px rgba(30, 58, 95, 0.13);
+	}
 }
 /*  🔴 LE FOND CHANGE AU SURVOL — c'est ce qui dit « cette carte se déplie ».
     Demandé le 18/08/2026 : « appliquer partout la logique du fil d'actualité,
@@ -246,13 +255,15 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
     La règle vit ICI et non dans `EnteteCarte` : le déclencheur est le survol du
     PARENT, qu'un composant enfant ne peut pas connaître. `.carte-liste` est déjà
     une classe globale de ce fichier — les deux vont ensemble. */
-.carte-liste:not(.expanded):hover .ec-titre {
-	color: var(--color-primary);
-}
-/*  Dépliée, la carte n'est plus une cible : le titre se colore à son propre
-    survol, puisqu'il est le seul à répondre. */
-.carte-liste.expanded .ec-titre:hover {
-	color: var(--color-primary);
+@media (hover: hover) and (pointer: fine) {
+	.carte-liste:not(.expanded):hover .ec-titre {
+		color: var(--color-primary);
+	}
+	/*  Dépliée, la carte n'est plus une cible : le titre se colore à son propre
+	    survol, puisqu'il est le seul à répondre. */
+	.carte-liste.expanded .ec-titre:hover {
+		color: var(--color-primary);
+	}
 }
 
 /*  Les listes qui portent ENCORE leur propre balisage de ligne, en attendant
