@@ -127,7 +127,14 @@ REGLES: dict[str, RegleArchivage] = {
         statuts_immediats=("annulé",),
         statuts_terminaux=("résolu",),
         champs_date=("ferme_le", "mis_a_jour_le", "cree_le"),
-        declencheur="30 jours après le passage en « Résolu ». « Annulé » : immédiat.",
+        #  📦 Le conseil archive une affaire d'un geste (24/09/2026) : c'est ce qui
+        #  remplace, dans la liste, la corbeille de l'administrateur — supprimer
+        #  n'est plus proposé qu'aux Archives (`ux-patterns` §8).
+        champ_archive_manuel="archive_manuel",
+        declencheur=(
+            "30 jours après le passage en « Résolu ». « Annulé » : immédiat. "
+            "📦 Archivée par le conseil : immédiat."
+        ),
     ),
     #  🔴 Une affaire de catégorie « Actualité » (#1091, 23/09/2026) : la règle
     #  de l'ancienne publication, sur les colonnes de l'affaire. Elle n'a pas de

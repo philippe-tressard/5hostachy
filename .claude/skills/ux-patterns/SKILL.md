@@ -926,6 +926,8 @@ une quatrième aurait suivi à la prochaine liste.
 
 Vue archives unifiée dans `tickets/+page.svelte` (onglet Archives) depuis que le calendrier y a été fondu (#1092).
 
+🔴 Les affaires et actualités ne le respectaient pas jusqu'au 24/09/2026 : le 🗑️ de l'admin était dans la liste, et une actualité s'y effaçait entière. Pour une affaire, l'archivage est `archive_manuel` (`utils/archivage.REGLES`). 🔒 `api/tests/test_suppression_aux_archives.py`.
+
 ## 9. Champs de formulaire
 
 > 🔴 **La largeur de saisie appartient au SQUELETTE, pas à la page (R1) — et elle

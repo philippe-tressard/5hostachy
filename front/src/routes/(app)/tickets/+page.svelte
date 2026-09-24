@@ -258,6 +258,7 @@
 		optionsOuvrir: openOptions,
 		optionsEnregistrer: enregistrerOptionsTicket,
 		supprimer: deleteTicket,
+		archiver: archiverTicket,
 		evoluer: addEvolution,
 		evolModifier: (id) => (evolEnEdition = id),
 		evolCorriger: corrigerEvolution,
@@ -349,10 +350,26 @@
 		}
 	}
 
+	//  Une actualité n'affiche pas de numéro : on la nomme par son titre.
+	const designation = (t: Ticket) =>
+		estActualite(t) ? `L'actualité « ${t.titre} »` : `L'affaire ${t.numero}`;
+
+	//  📦 Archiver, et non supprimer, depuis la liste (24/09/2026, `ux-patterns`
+	//  §8) : le 🗑️ y effaçait une actualité entière, sans retour possible.
+	async function archiverTicket(t: Ticket) {
+		const question = {
+			titre: 'Archiver',
+			message: `${designation(t)} rejoindra l'onglet Archives.`,
+			libelleConfirmer: 'Archiver',
+		};
+		await confirmerPuis(question, 'Archivée', async () => {
+			const maj = await ticketsApi.update(t.id, { archive_manuel: true });
+			ticketList = ticketList.map((x) => (x.id === t.id ? { ...x, ...maj } : x));
+		});
+	}
+
 	async function deleteTicket(t: Ticket) {
-		//  Une actualité n'affiche pas de numéro : on la nomme par son titre.
-		const quoi = estActualite(t) ? `L'actualité « ${t.titre} »` : `Le ticket #${t.numero}`;
-		await confirmerPuis(SUPPRESSION(quoi), 'Suppression effectuée', async () => {
+		await confirmerPuis(SUPPRESSION(designation(t)), 'Suppression effectuée', async () => {
 			await ticketsApi.delete(t.id);
 			ticketList = ticketList.filter((x) => x.id !== t.id);
 		});
