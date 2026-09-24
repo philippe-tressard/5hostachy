@@ -128,6 +128,7 @@ valeurs, identifiants depuis une constante, jamais de `foreign_key` dans un
   f-string, qui compterait contre le plafond de `test_migrations.py`.
 - BDD = **SQLite** — pas de `ALTER TYPE`, pas de `CREATE TYPE`
 - **Jamais** modifier une migration existante : en créer une nouvelle.
+- Corriger un texte **livré** en base (FAQ, modèle d'e-mail) : `utils/textes_livres.remplacer_si_intact` — il ne touche que les lignes intactes. Recopié quinze fois avant le 24/09/2026 ; `test_textes_livres.py` refuse la seizième copie.
 
 ### 4. Routeur FastAPI — `api/app/routers/`
 
