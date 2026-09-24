@@ -16,7 +16,7 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import { prestataires as prestatairesApi } from '$lib/api';
-	import { EQUIPEMENTS } from '$lib/prestataires';
+	import { EQUIPEMENTS, contactJoignable } from '$lib/prestataires';
 	import { tenter } from '$lib/erreurs';
 
 	/** L'identifiant du prestataire retenu, ou `null`. */
@@ -32,27 +32,34 @@
 	export let equipement = '';
 
 	//  ＋ CRÉER celui qui manque, sans quitter le formulaire (#1145, demandé à
-	//  l'écran le 22/09/2026). Deux champs seulement — nom et équipement, ceux que
-	//  le serveur exige : en demander autant que la fiche complète ferait
-	//  renoncer, et la fiche se complète ensuite dans Prestataires. Le droit est
+	//  l'écran le 22/09/2026). Ce que le serveur exige, et rien de plus : nom,
+	//  équipement — et, depuis le 24/09/2026 (#1229), UN CONTACT JOIGNABLE (un
+	//  nom, un téléphone ou un e-mail). En demander autant que la fiche complète
+	//  ferait renoncer ; la fiche se complète ensuite dans Prestataires. Le droit est
 	//  tenu par la route (`require_cs_or_admin`) ; la section, elle, n'est
 	//  ouverte qu'au conseil (`inactivePour.resident`).
 	let creation = false;
 	let nouveauNom = '';
 	let nouvelEquipement = '';
+	let contact = { nom: '', telephone: '', email: '' };
 	function ouvrirCreation() {
 		creation = true;
 		nouvelEquipement = equipement;
 	}
 	async function creer() {
 		const nom = nouveauNom.trim();
-		if (!nom || !nouvelEquipement) return;
+		if (!nom || !nouvelEquipement || !contactJoignable(contact)) return;
 		await tenter(async () => {
-			const cree = await prestatairesApi.create({ nom, specialite: nouvelEquipement });
+			const cree = await prestatairesApi.create({
+				nom,
+				specialite: nouvelEquipement,
+				contacts: [contact],
+			});
 			prestataires = [...prestataires, cree].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 			prestataireId = cree.id;
 			creation = false;
 			nouveauNom = '';
+			contact = { nom: '', telephone: '', email: '' };
 		}, 'Prestataire créé');
 	}
 
@@ -97,6 +104,12 @@
 					{#each EQUIPEMENTS as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
 				</select>
 			</label>
+			<label class="field">Nom du contact<input bind:value={contact.nom} /></label>
+			<div class="form-grid form-grid-2">
+				<label class="field">Téléphone<input bind:value={contact.telephone} /></label>
+				<label class="field">E-mail<input type="email" bind:value={contact.email} /></label>
+			</div>
+			<p class="aide">Un contact : son nom, et un téléphone ou un e-mail.</p>
 			<div class="actions-creation">
 				<button type="button" class="btn btn-sm btn-outline" on:click={() => (creation = false)}
 					>Annuler</button
@@ -104,7 +117,7 @@
 				<button
 					type="button"
 					class="btn btn-sm btn-primary"
-					disabled={!nouveauNom.trim() || !nouvelEquipement}
+					disabled={!nouveauNom.trim() || !nouvelEquipement || !contactJoignable(contact)}
 					on:click={creer}>Créer</button
 				>
 			</div>

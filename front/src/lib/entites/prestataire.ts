@@ -70,12 +70,13 @@ export const PRESTATAIRE: EntiteDeclaree = {
 		},
 		{
 			//  Les personnes à joindre, et le courriel de l'entreprise : une fiche
-			//  d'annuaire se lit par eux. Ils vivaient dans une section « Contact »
-			//  que le cadre ne connaissait pas. Facultatifs, donc pliés.
+			//  d'annuaire se lit par eux. 🔴 OBLIGATOIRE, donc dépliée, depuis le
+			//  24/09/2026 (#1229) : un contact avec un nom, et un téléphone ou un
+			//  e-mail — exigé à la CRÉATION par le serveur (`prestataires_schemas`).
 			id: 'intervenant',
-			objet: 'Courriel · contacts (téléphone, nom, fonction, courriel)',
+			objet: 'Courriel · contacts (prénom, nom, fonction · téléphone, courriel)',
 			titreEcran: ['Contacts'],
-			pliee: true,
+			requis: true,
 		},
 		{
 			id: 'perimetre',

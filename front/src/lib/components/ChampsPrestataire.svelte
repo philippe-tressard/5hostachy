@@ -23,6 +23,7 @@
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import { PRESTATAIRE } from '$lib/entites/prestataire';
+	import { contactJoignable } from '$lib/prestataires';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
 	export let prestForm: any;
@@ -101,21 +102,28 @@
 	<SectionFormulaire
 		titre="Contacts"
 		pliable={pliageDe(PRESTATAIRE, 'intervenant')}
+		requis={requisDe(PRESTATAIRE, 'intervenant')}
+		rempli={prestContacts.some(contactJoignable)}
 		valeurModifiee={!!prestForm.email || prestContacts.some((c) => c.telephone?.trim())}
-		resume={prestContacts.filter((c) => c.telephone?.trim()).length
-			? `${prestContacts.filter((c) => c.telephone?.trim()).length} contact(s)`
+		resume={prestContacts.filter(contactJoignable).length
+			? `${prestContacts.filter(contactJoignable).length} contact(s)`
 			: 'aucun'}
 	>
+		<p class="aide">Au moins un contact : son nom, et un téléphone ou un e-mail.</p>
 		<label class="field"
 			>E-mail de l’entreprise<input type="email" bind:value={prestForm.email} /></label
 		>
 		{#each prestContacts as _contact, i (_contact)}
 			<div class="contact">
+				<!--  Deux lignes, demandées à l'écran (#1229) : QUI, puis COMMENT le
+				      joindre. La grille auto-fit les répartissait au hasard de la largeur. -->
 				<div class="form-grid">
-					<label class="field">Téléphone<input bind:value={prestContacts[i].telephone} /></label>
 					<label class="field">Prénom<input bind:value={prestContacts[i].prenom} /></label>
 					<label class="field">Nom<input bind:value={prestContacts[i].nom} /></label>
 					<label class="field">Fonction<input bind:value={prestContacts[i].fonction} /></label>
+				</div>
+				<div class="form-grid">
+					<label class="field">Téléphone<input bind:value={prestContacts[i].telephone} /></label>
 					<label class="field"
 						>E-mail<input type="email" bind:value={prestContacts[i].email} /></label
 					>
