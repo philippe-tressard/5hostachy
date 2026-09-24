@@ -177,13 +177,13 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
     fois, pour la liste comme pour les Archives. */
 :is(.carte-liste, .history-item)[data-nature] {
 	position: relative;
-	padding-left: 3.6rem;
+	padding-left: 3.8rem;
 }
 :is(.carte-liste, .history-item)[data-nature]::before {
 	content: attr(data-nature-icone);
 	position: absolute;
 	inset: 0 auto 0 0;
-	width: 3.6rem;
+	width: 3.8rem;
 	display: flex;
 	justify-content: center;
 	padding-top: 0.5rem;
@@ -196,7 +196,7 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	position: absolute;
 	left: 0;
 	top: 2rem;
-	width: 3.6rem;
+	width: 3.8rem;
 	text-align: center;
 	white-space: nowrap;
 	font-size: 0.5rem;
