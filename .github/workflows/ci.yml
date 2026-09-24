@@ -896,6 +896,14 @@ jobs:
         working-directory: front
         run: npm run lint:a11y
 
+      # 🔴 `Icon` rend un nom inconnu en « ? » sans un mot. La checklist disait
+      # « icône vérifiée dans icones-svg.json » et aucun script ne lisait le
+      # catalogue côté front : `icone="database"` s'affichait en « ? » depuis
+      # v2.19.0 (#1045).
+      - name: Tout nom d'icône existe dans le catalogue
+        working-directory: front
+        run: npm run lint:icones
+
       - name: Aucune redéfinition scopée de la charte
         working-directory: front
         run: npm run lint:charte
@@ -1024,6 +1032,7 @@ jobs:
           node scripts/check-csp-servie.mjs --selftest
           node scripts/check-lien-evitement.mjs --selftest
           node scripts/check-a11y.mjs --selftest
+          node scripts/check-icones.mjs --selftest
           node scripts/check-seuil-listes-courtes.mjs --selftest
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
