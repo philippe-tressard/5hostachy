@@ -35,7 +35,7 @@ d'infrastructure déguisé.
 |---|---|
 | Les 5 tâches cron | **basculées** vers `scripts/exploitation/` le 15/08/2026, sur les deux nœuds |
 | L'unité systemd | **reste sur le relais** `/opt/5hostachy/boot-role-guard.sh` — voir ci-dessous |
-| Les relais à la racine | encore présents, retrait dans une PR séparée après le constat de la bascule de 02:00 |
+| Les relais à la racine | **six retirés** le 16/08/2026 ; seul `boot-role-guard.sh` reste, volontairement |
 
 **Pourquoi l'unité systemd garde son relais.** L'écrire demande d'écrire dans
 `/etc/systemd/system/`, ce que l'allowlist `sudo` de rpi2 n'autorise pas (#302) :
