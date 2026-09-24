@@ -1089,6 +1089,13 @@ jobs:
         working-directory: front
         run: npm run lint:modales
 
+      # Le défilement du document et la touche Échap, empruntés par Modale ET la
+      # visionneuse : écrits deux fois, une photo ouverte depuis une modale
+      # rendait le défilement, et Échap fermait les deux couches (#1042).
+      - name: Couches superposées passant par $lib/couche
+        working-directory: front
+        run: npm run lint:couches
+
       # Une section Workflow DÉCORATIVE : les pastilles s'affichaient en création
       # d'un ticket, se cliquaient, et `statut` ne partait pas dans le POST — le
       # ticket repartait toujours en « Ouvert » (#435). Le serveur l'acceptait

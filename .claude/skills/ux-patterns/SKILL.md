@@ -1549,12 +1549,12 @@ qu'à signaler la présence d'une image.
 - **Un clic sur une photo n'ouvre jamais un onglet.** L'ancien `<a target="_blank">`
   sortait de la PWA vers le fichier brut, et le retour ramenait sur une page dont
   l'article s'était refermé — le geste le plus coûteux de l'écran, sur mobile surtout.
-- **Le verrou de défilement est un état global** : fonction idempotente appelée depuis
-  *chaque* sortie (fermeture, `Échap`, clic sur le fond) **et** depuis `onDestroy` —
-  l'utilisateur peut naviguer ailleurs sans jamais fermer la visionneuse, et la page
-  d'arrivée resterait figée jusqu'au rechargement. Cf. `standards/11-interface-et-ux.md`
-  §12, et l'incident du 04/08/2026 qui est exactement ce cas.
-- `Échap` ferme, les flèches naviguent, le compteur suit ; cible tactile **≥ 44 px**
+- **Le verrou de défilement et `Échap` sont des biens du document** : ils passent par
+  `poserCouche` (`$lib/couche.ts`), commun à `Modale` et à la visionneuse, dont le
+  retrait se lance à la fermeture **et** depuis `onDestroy`. Pourquoi une seule
+  porte — une photo ouverte depuis une modale rendait le défilement, et `Échap`
+  fermait les deux : l'en-tête du module (#1042). 🔒 `npm run lint:couches`.
+- `Échap` ferme la couche du dessus, les flèches naviguent, le compteur suit ; cible tactile **≥ 44 px**
   sur le bouton de fermeture — mesurée, pas supposée : la relecture avait laissé
   passer un bouton à 40 px, trouvé en mesurant dans un navigateur à 375×812.
 
