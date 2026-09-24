@@ -35,6 +35,11 @@ export function pliageDe(entite: EntiteDeclaree | null, id: IdSection): boolean 
  *
  * Résultat à l'écran : « DESTINATAIRES* » sur une ligne pliée, ce que la règle
  * interdit. Signalé deux fois (22/09/2026).
+ *
+ * ⚠️ Et une troisième, par une autre porte (#1186, 24/09/2026) : `ChampsCommuns`
+ * portait `perimetreRequis = true`, et la Boîte à idées affichait « PÉRIMÈTRE* »
+ * pliée. `lint:pliage-transmis` refuse désormais une prop `requis` vraie par
+ * défaut dans un composant porteur.
  */
 export function requisDe(entite: EntiteDeclaree | null, id: IdSection): boolean {
 	return entite ? !!section(entite, id)?.requis : false;

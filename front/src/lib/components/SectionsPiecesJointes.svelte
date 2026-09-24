@@ -79,8 +79,10 @@
 	/**  `'interne'` : la liste d'URLs ci-dessus · `'slot'` : l'écran fournit son
 	 *   propre contrôle (documents d'une publication, qui ont un identifiant). */
 	export let documentsControle: 'interne' | 'slot' = 'interne';
-	/** Téléversement différé — les fichiers attendent que l'objet existe. Il
-	 *  vaut pour la SECTION : photos comme documents (#1186). */
+	/** Téléversement différé — les fichiers attendent que l'objet existe, et
+	 *  l'écran les téléverse après création. Il vaut pour la SECTION, photos
+	 *  comme documents : il s'appelait `documentsDifferes`, sans aucun appelant,
+	 *  et la petite annonce en a eu besoin pour ses PHOTOS (#1186). */
 	export let differes = false;
 	export let fichiersDifferes: File[] = [];
 	/** Plafond de la section — `MAX_FICHIERS` sauf quand l'objet en fixe un plus bas. */

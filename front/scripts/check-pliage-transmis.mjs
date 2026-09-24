@@ -170,7 +170,9 @@ if (process.argv.includes('--selftest')) {
 		console.error(`\n✗ Auto-test : ${ko} cas en échec.\n`);
 		process.exit(1);
 	}
-	console.log(`✓ Auto-test : ${cas.length + casDefaut.length} cas — le pliage manquant est vu, le reste passe.`);
+	console.log(
+		`✓ Auto-test : ${cas.length + casDefaut.length} cas — le pliage manquant est vu, le reste passe.`,
+	);
 	process.exit(0);
 }
 

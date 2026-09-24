@@ -57,7 +57,11 @@ export function formulairesAvantFiltre(source) {
 		c.replace(/[^\n]/g, ' '),
 	);
 	const decalage = debut >= 0 ? source.slice(0, debut).split('\n').length - 1 : 0;
-	const coupes = [0, ...[...balisage.matchAll(BRANCHE_ONGLET)].map((m) => m.index), balisage.length];
+	const coupes = [
+		0,
+		...[...balisage.matchAll(BRANCHE_ONGLET)].map((m) => m.index),
+		balisage.length,
+	];
 	const fautes = [];
 	for (let i = 0; i < coupes.length - 1; i++) {
 		const branche = balisage.slice(coupes[i], coupes[i + 1]);
@@ -106,7 +110,9 @@ if (process.argv.includes('--selftest')) {
 		console.error(`\n✗ Auto-test : ${ko} cas en échec.\n`);
 		process.exit(1);
 	}
-	console.log(`✓ Auto-test : ${cas.length} cas — la boîte avant le filtre est vue, le reste passe.`);
+	console.log(
+		`✓ Auto-test : ${cas.length} cas — la boîte avant le filtre est vue, le reste passe.`,
+	);
 	process.exit(0);
 }
 
