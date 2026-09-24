@@ -521,6 +521,18 @@
     .pour-vous-facultatif  { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
     .pour-vous-conseil     { color: #b45309; background: #fffbeb; border-color: #fde68a; }
     .pour-vous-sans-objet  { color: #64748b; background: #f8fafc; border-color: #e2e8f0; }
+    /*  Les icônes d'une carte (24/09/2026) : le zoom numéroté, puis la rangée
+        de chaque profil. */
+    .icones-zoom { display: flex; flex-wrap: wrap; gap: .9rem; margin: .5rem 0 1rem; }
+    .icone-zoom { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 3rem; height: 3rem; border-radius: 10px; background: #fff; border: 1px solid var(--border); font-size: 1.4rem; }
+    .icone-zoom .icone-num { position: absolute; top: -.55rem; right: -.55rem; }
+    .icone-num { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; background: #1e3a5f; color: #fff; font-size: .7rem; font-weight: 700; }
+    .icones-legende { list-style: none; padding: 0; margin: 0; display: grid; gap: .45rem; font-size: .85rem; }
+    @media (min-width: 720px) { .icones-legende { grid-template-columns: 1fr 1fr; column-gap: 1.5rem; } }
+    .icones-profil { padding: .6rem 0; border-top: 1px solid var(--border); }
+    .icones-profil:first-of-type { border-top: 0; }
+    .icones-rangee { display: flex; flex-wrap: wrap; gap: .35rem; margin: .35rem 0 .15rem; }
+    .icone-case { display: inline-flex; align-items: center; justify-content: center; min-width: 2.2rem; height: 2.2rem; padding: 0 .3rem; border-radius: 8px; background: #fff; border: 1px solid var(--border); font-size: 1.05rem; }
     .ecran-note {
       margin-top: .5rem;
       padding: .45rem .55rem;
@@ -993,6 +1005,9 @@
       <a class="nav-item" href="#affaire">
         <span class="dot" style="background:#ea580c"></span> Ouvrir une affaire
       </a>
+      <a class="nav-item" href="#icones">
+        <span class="dot" style="background:#ea580c"></span> Les icônes
+      </a>
       <a class="nav-item" href="#aide">
         <span class="dot" style="background:#0d9488"></span> Une question ?
       </a>
@@ -1013,7 +1028,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 1.70 · Septembre 2026</span>
+      <span class="topbar-badge">Version 1.71 · Septembre 2026</span>
     </div>
   </header>
 
@@ -1617,6 +1632,33 @@
     </section>
 
     <!-- ════════════════════════════════
+         LES ICÔNES D'UNE CARTE (24/09/2026) — palettes 3 puis 2, choisies sur
+         maquettes. `data-geste` porte l'intitulé que le code donne au bouton :
+         `npm run lint:manuel-profils` exige que chaque icône d'une carte
+         d'affaire y soit documentée.
+    ════════════════════════════════ -->
+    <section class="chapter" id="icones" data-section="tickets">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#fff7ed; color:var(--c-ticket)" aria-hidden="true">&#x1F50D;</div>
+        <div>
+          <h2>Les icônes d’une carte</h2>
+          <p>En haut à droite de chaque carte, une rangée d’icônes. Chacun ne voit que celles qu’il a le droit d’utiliser.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>L’en-tête d’une carte, agrandi</h3>
+        <div class="icones-zoom"><span class="icone-zoom" data-geste="Copier le lien"><span aria-hidden="true">🔗</span><span class="icone-num">1</span></span><span class="icone-zoom" data-geste="Ajouter une suite"><span aria-hidden="true">🔄</span><span class="icone-num">2</span></span><span class="icone-zoom" data-geste="Modifier"><span aria-hidden="true">✏️</span><span class="icone-num">3</span></span><span class="icone-zoom" data-geste="Options rapides"><span aria-hidden="true">📌🚨</span><span class="icone-num">4</span></span><span class="icone-zoom" data-geste="Suivre cette actualité — en faire une affaire"><span aria-hidden="true">🎯</span><span class="icone-num">5</span></span><span class="icone-zoom" data-geste="Archiver"><span aria-hidden="true">📦</span><span class="icone-num">6</span></span><span class="icone-zoom" data-geste="Supprimer"><span aria-hidden="true">🗑️</span><span class="icone-num">7</span></span><span class="icone-zoom" data-geste="Déplier"><span aria-hidden="true">›</span><span class="icone-num">8</span></span></div>
+        <ol class="icones-legende"><li><span class="icone-num">1</span> <strong>🔗 Copier le lien</strong> — copie l’adresse de l’élément, à envoyer. <em>tout le monde</em>.</li><li><span class="icone-num">2</span> <strong>🔄 Ajouter une suite</strong> — répondre, préciser, joindre une photo. <em>l’auteur, la personne pour qui l’affaire a été saisie, le conseil syndical</em>.</li><li><span class="icone-num">3</span> <strong>✏️ Modifier</strong> — corriger son texte tant que l’affaire est ouverte. <em>l’auteur et la personne pour qui elle a été saisie ; sur une actualité, le conseil syndical</em>.</li><li><span class="icone-num">4</span> <strong>📌🚨 Options rapides</strong> — épingler, marquer urgent. <em>les mêmes que ✏️</em>.</li><li><span class="icone-num">5</span> <strong>🎯 Suivre cette actualité</strong> — faire d’une actualité une affaire suivie. <em>le conseil syndical</em>.</li><li><span class="icone-num">6</span> <strong>📦 Archiver</strong> — ranger dans l’onglet Archives. <em>le conseil syndical</em>.</li><li><span class="icone-num">7</span> <strong>🗑️ Supprimer définitivement</strong> — effacer sans retour — dans l’onglet Archives seulement. <em>l’administrateur</em>.</li><li><span class="icone-num">8</span> <strong>› Déplier</strong> — ouvrir la carte pour tout lire. <em>tout le monde</em>.</li></ol>
+      </div>
+
+      <div class="card">
+        <h3>Ce que voit chaque profil</h3>
+        <div class="icones-profil"><strong>Copropriétaire ou locataire</strong><div class="icones-rangee"><span class="icone-case">🔗</span><span class="icone-case">🔄</span><span class="icone-case">✏️</span><span class="icone-case">📌🚨</span><span class="icone-case">›</span></div><p class="aide">sur <strong>ses</strong> affaires ; sur celles des autres, 🔗 et › seulement.</p></div><div class="icones-profil"><strong>Conseil syndical</strong><div class="icones-rangee"><span class="icone-case">🔗</span><span class="icone-case">🔄</span><span class="icone-case">📦</span><span class="icone-case">›</span></div><p class="aide">et, sur une actualité, ✏️ 📌🚨 🎯.</p></div><div class="icones-profil"><strong>Administrateur</strong><div class="icones-rangee"><span class="icone-case">🔗</span><span class="icone-case">🔄</span><span class="icone-case">✏️</span><span class="icone-case">📌🚨</span><span class="icone-case">🎯</span><span class="icone-case">📦</span><span class="icone-case">›</span></div><p class="aide">et 🗑️ dans l’onglet Archives.</p></div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
          UNE QUESTION ? — le manuel s'arrête ici, exprès
     ════════════════════════════════ -->
     <div class="divider"></div>
@@ -1674,7 +1716,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v1.70
+    <span>© 2026 5Hostachy — Manuel utilisateur v1.71
 </span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
