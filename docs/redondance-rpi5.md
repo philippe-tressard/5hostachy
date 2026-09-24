@@ -25,12 +25,21 @@ Un seul RPi est actif à la fois. Le tunnel Cloudflare du RPi actif achemine tou
 
 ## Scripts d'exploitation
 
-| Script | Rôle | Cron |
+Tous dans `scripts/exploitation/`. **Quand** chacun tourne ne s'écrit pas ici : la
+cadence se lit dans [`infra/points-entree/`](../infra/points-entree/LISEZMOI.md),
+seule source versionnée des crons et de l'unité systemd, comparée à l'installé par
+le point 17 du pré-check. Ce tableau en recopiait une partie, et elle avait dérivé
+(#1049).
+
+| Script | Rôle | Lancé par |
 |---|---|---|
-| `bascule.sh` | Bascule quotidienne rpi1 ↔ rpi2 | `0 2 * * *` sur chaque RPi |
-| `health-watch.sh` | Surveillance et failover automatique | `*/5 * * * *` sur chaque RPi |
-| `maintenance.sh` | Purge DB, VACUUM, rotation logs | `0 3 * * 0` (dimanche) |
-| `MaJ-Hostachy.sh` | Mise en production d'une nouvelle version | Manuel |
+| `bascule.sh` | Bascule quotidienne rpi1 ↔ rpi2 | cron root, sur chaque RPi |
+| `health-watch.sh` | Surveillance et failover automatique | cron root, sur chaque RPi |
+| `check-reliability.sh` | Contrôles de fiabilité, alerte e-mail sur `FAIL` | cron root, sur chaque RPi |
+| `maintenance.sh` | Purges, VACUUM API arrêtée, rotation des logs | cron root, sur chaque RPi |
+| `auto-deploy.sh` | Déploiement (actif) ou alignement du code et des images (standby) | cron `ptressard`, sur chaque RPi |
+| `boot-role-guard.sh` | Garde-fou anti-split-brain au démarrage | unité `hostachy-role-guard.service` |
+| `MaJ-Hostachy.sh` | Reprise en main d'une mise en production | Manuel, sur l'actif |
 
 ---
 
