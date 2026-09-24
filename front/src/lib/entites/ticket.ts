@@ -83,7 +83,8 @@ export const TICKET: EntiteDeclaree = {
 			//  résident : il voit une flaque, il ne sait pas si c'est la plomberie
 			//  ou la toiture. Mêmes extinctions que l'Intervenant, dont elle propose
 			//  le prestataire sous contrat ; règles serveur : `utils/intervenant`.
-			//  C'est elle qui fait entrer une affaire résolue au carnet.
+			//  C'est elle qui RANGE une affaire résolue au carnet (sans elle :
+			//  « Sans équipement rattaché », jamais exclue — 24/09/2026).
 			id: 'equipement',
 			objet: 'Équipement concerné — alimente le carnet d’entretien',
 			pliee: true,
