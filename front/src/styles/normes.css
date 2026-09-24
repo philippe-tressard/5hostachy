@@ -169,18 +169,21 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 
 /*  🗂️ LA NATURE D'UNE AFFAIRE, dans une gouttière teintée à gauche de sa carte
     (24/09/2026, variante 3 choisie à l'écran parmi cinq maquettes) : l'icône en
-    tête, le mot à la verticale dessous. La carte porte trois attributs
+    tête, le mot dessous — À PLAT, en petites capitales (alternative C, #1220) :
+    écrit à la verticale, « CALENDRIER » dépassait d'une carte d'une ligne.
+    `e2e/gouttiere-nature.spec.ts` mesure que chaque mot tient dans la bande.
+    La carte porte trois attributs
     (`attributsNature`, `$lib/tickets-categories`) ; tout le reste est ici, une
     fois, pour la liste comme pour les Archives. */
 :is(.carte-liste, .history-item)[data-nature] {
 	position: relative;
-	padding-left: 2.6rem;
+	padding-left: 3.6rem;
 }
 :is(.carte-liste, .history-item)[data-nature]::before {
 	content: attr(data-nature-icone);
 	position: absolute;
 	inset: 0 auto 0 0;
-	width: 2.6rem;
+	width: 3.6rem;
 	display: flex;
 	justify-content: center;
 	padding-top: 0.5rem;
@@ -192,15 +195,13 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	content: attr(data-nature-libelle);
 	position: absolute;
 	left: 0;
-	top: 2.2rem;
-	width: 2.6rem;
-	writing-mode: vertical-rl;
-	transform: rotate(180deg);
-	display: flex;
-	align-items: center;
-	font-size: 0.56rem;
+	top: 2rem;
+	width: 3.6rem;
+	text-align: center;
+	white-space: nowrap;
+	font-size: 0.5rem;
 	font-weight: 700;
-	letter-spacing: 0.05em;
+	letter-spacing: 0.03em;
 	text-transform: uppercase;
 	color: var(--nature-fort);
 	pointer-events: none;
@@ -217,8 +218,8 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	--nature-fort: #c2410c;
 	--nature-pale: #fff7ed;
 }
-/*  Au pouce, la gouttière se resserre et ne garde que l'icône : le mot à la
-    verticale y prendrait la place du titre. */
+/*  Au pouce, la gouttière se resserre et ne garde que l'icône : même à plat,
+    le mot y prendrait la place du titre. */
 @media (max-width: 480px) {
 	:is(.carte-liste, .history-item)[data-nature] {
 		padding-left: 2rem;
