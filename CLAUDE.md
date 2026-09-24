@@ -115,6 +115,11 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
    le code n'en contient plus un seul, et le nom du périmètre racine est
    **administrable**.
 
+   🔒 **Garde-fou : `npm run lint:pictogrammes`** (#1045, 24/09/2026). Le badge 🔹
+   ne se rend que par `BadgePerimetre` ; une phrase qui nomme un périmètre et
+   chaque vrai lieu 📍 se **déclarent** dans le contrôle, avec leur nombre
+   d'occurrences. Il a trouvé « 📍 Concerne votre bâtiment » et « 📍 Dépannage ».
+
 ---
 
 ## Conventions Backend (Python / FastAPI)
@@ -319,12 +324,15 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 
 ### Frontend
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)
-- [ ] Méta toujours visible en mode collapsé
+- [ ] Méta toujours visible en mode collapsé — tenue par `EnteteCarte`, qui porte
+      les tags sur la carte repliée (`npm run lint:entete-carte` exige qu'une
+      carte passe par lui)
 - [ ] Corps déplié d'une carte : `class="carte-corps …"` — c'est ce qui le fait
       entrer (fondu 200 ms) ; sans elle il apparaît sec, sans un mot. Un survol
       qui ne sert qu'à la souris vit sous `@media (hover: hover) and (pointer:
       fine)` — au doigt, `:hover` reste collé (`ux-patterns` §17)
-- [ ] `.clamp-3` sur l'aperçu d'une carte (`.clamp-5` seulement hors carte)
+- [ ] `.clamp-3` sur l'aperçu d'une carte (`.clamp-5` seulement hors carte) ;
+      aucune troncature écrite hors de `normes.css` (`npm run lint:clamp`)
 - [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — jamais un helper
       local, même correct (`npm run lint:html` le refuse)
 - [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`
@@ -350,8 +358,11 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       `libelleModifier`), **jamais** réécrit dans un écran. « Publication » et
       « Ticket » sont des noms de modèle ; l'écran dit « Actualité » et
       « Affaire ». Il y en avait **20** avant #1107 (`npm run lint:vocabulaire-ecran`)
-- [ ] Périmètre : masqué s'il est celui par défaut (`estPerimetreParDefaut`)
-- [ ] Archiver (pas supprimer) sur la vue principale
+- [ ] Périmètre : masqué s'il est celui par défaut — le badge passe par
+      `BadgePerimetre`, qui le tait (`npm run lint:pictogrammes`)
+- [ ] Archiver (pas supprimer) sur la vue principale — la corbeille ne s'offre
+      qu'aux Archives (`api/tests/test_suppression_aux_archives.py`, affaires et
+      actualités) ; le titre des archives vient d'une constante (`lint:archives`)
 - [ ] Champs requis : `<EtoileRequis vide={!champ} />` — jamais une astérisque
       tapée. Elle est **collée** au libellé et **rouge tant que le champ est
       vide** : c'est son état, pas une décoration (#1121, 22/09/2026). Les
