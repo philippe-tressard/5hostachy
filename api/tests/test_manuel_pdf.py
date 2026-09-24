@@ -69,7 +69,7 @@ def test_le_contenu_du_manuel_se_retrouve_dans_le_PDF(document, manuel):
     """
     for extrait in (
         "Le menu, écran par écran",
-        "Réglez vos notifications",
+        "Réglez votre profil",
         "Mini sommaire par profil",
     ):
         assert extrait in manuel, f"le manuel a changé : « {extrait} » a disparu"
