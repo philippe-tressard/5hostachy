@@ -133,6 +133,9 @@
 		titre={SECTIONS_LIBELLE.pieces_jointes}
 		pliable={pliageDe(CONTRAT, 'pieces_jointes')}
 		valeurModifiee={documents.length > 0 || fichiersEnAttente.length > 0}
+		resume={documents.length + fichiersEnAttente.length
+			? `${documents.length + fichiersEnAttente.length} fichier(s)`
+			: 'aucune'}
 		pour="contrat-{contratId ?? 'nouveau'}-doc"
 	>
 		<!--  `.field champ-large` : l'enveloppe que `SectionsPiecesJointes` pose

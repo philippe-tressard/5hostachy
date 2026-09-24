@@ -38,15 +38,24 @@ export const PRESTATAIRE: EntiteDeclaree = {
 			titreEcran: ['Nom'],
 		},
 		{
+			//  🔴 Les sections STANDARD (24/09/2026, signalé à l'écran : « Prendre
+			//  exemple sur l'UX d'Affaires »). « L'entreprise » mêlait le type, la
+			//  spécialité et le courriel ; le type est la CATÉGORIE de l'entreprise,
+			//  comme celle d'une affaire.
 			id: 'nature',
-			objet: 'Type · Spécialité · Courriel',
+			objet: 'Type',
 			requis: true,
-			titreEcran: ["L'entreprise"],
+			titreEcran: ['Catégorie'],
 		},
 		{
+			//  🔴 La « Spécialité » ÉTAIT l'équipement (24/09/2026, question posée à
+			//  l'écran : « spécialité c'est équipement ? ») — même liste
+			//  (`TypeEquipement`), et le carnet s'en sert quand un contrat n'en
+			//  désigne pas. Elle prend le nom et le rang de la section qui le porte
+			//  partout ailleurs.
 			id: 'equipement',
-			sansObjet:
-				'Une fiche d’entreprise ne porte pas d’équipement : ce sont ses CONTRATS qui en désignent un.',
+			objet: 'Équipement dont l’entreprise s’occupe',
+			requis: true,
 		},
 		{
 			id: 'suivi',
@@ -60,8 +69,13 @@ export const PRESTATAIRE: EntiteDeclaree = {
 			sansObjet: "un prestataire est une fiche d'annuaire, pas un fait daté",
 		},
 		{
+			//  Les personnes à joindre, et le courriel de l'entreprise : une fiche
+			//  d'annuaire se lit par eux. Ils vivaient dans une section « Contact »
+			//  que le cadre ne connaissait pas. Facultatifs, donc pliés.
 			id: 'intervenant',
-			sansObjet: 'L’entreprise EST l’intervenant ; la section se rapporterait à elle-même.',
+			objet: 'Courriel · contacts (téléphone, nom, fonction, courriel)',
+			titreEcran: ['Contacts'],
+			pliee: true,
 		},
 		{
 			id: 'perimetre',
