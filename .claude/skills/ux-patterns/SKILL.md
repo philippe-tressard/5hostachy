@@ -1306,6 +1306,12 @@ composant, qui porte leur ordre, leurs intitulés et leurs séparations
 Les sections **1 à 3** (Titre, champs spécifiques, Workflow) restent dans l'écran :
 lui seul sait ce qu'elles portent.
 
+🔴 **Une Description se rend par `SectionDescription`**, assistant IA et marque ✨
+compris — jamais un `RichEditor` posé sous un intitulé « Description ». L'annonce
+de hall le faisait, sous « Message » : seule Description du site privée de
+l'assistant (#1089). 🔒 `npm run lint:description-unique` ; les écarts restants y
+sont déclarés (#1240).
+
 #### Une section à UN seul champ ne répète pas son nom
 
 Première livraison, l'écran affichait :

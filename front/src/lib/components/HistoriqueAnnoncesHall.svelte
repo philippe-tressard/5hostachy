@@ -23,6 +23,7 @@
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import type { AnnonceHall } from '$lib/api';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
+	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -182,6 +183,9 @@
 						basculable
 						on:toggle={() => (ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}
 					>
+						<svelte:fragment slot="titre-suffixe">
+							<MarqueIA assiste={annonce.assiste_ia} />
+						</svelte:fragment>
 						<svelte:fragment slot="tags">
 							<span class="badge badge-blue">{annonce.format_label}</span>
 							<span class="badge badge-gray">&#x1F539; {annonce.perimetre_label}</span>

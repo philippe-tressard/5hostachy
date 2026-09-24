@@ -17,10 +17,12 @@ import qui enregistre la table dans les métadonnées SQLModel.
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+
+from app.utils.assiste_ia import AssisteIAMixin
 
 
-class AnnonceHall(SQLModel, table=True):
+class AnnonceHall(AssisteIAMixin, table=True):
     """Annonce imprimable affichée dans le hall des bâtiments (PDF A4 / A5).
 
     Le PDF est généré à la création puis figé sur disque : il fait foi (c'est
