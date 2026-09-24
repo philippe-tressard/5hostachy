@@ -54,11 +54,10 @@
  * Usage : npm run lint:manuel-menus
  */
 import { readFileSync } from 'node:fs';
+import { FICHIERS_PAGES, blocsDePages } from './lib-pages.mjs';
 
 const RACINE = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const MANUEL = `${RACINE}../docs/manuel-utilisateur.html`;
-const PAGES = `${RACINE}src/lib/pages.ts`;
-const ROLES = `${RACINE}src/lib/pages-roles.ts`;
 const NAV = `${RACINE}src/lib/components/Nav.svelte`;
 
 /**
@@ -85,8 +84,7 @@ const manuel = readFileSync(MANUEL, 'utf8');
 //  aussitôt déclaré que le manuel citait des routes « qui n'existent pas » —
 //  elles existaient, il ne les voyait plus. La portée du contrôle fait partie du
 //  contrôle.
-const pages =
-	readFileSync(PAGES, 'utf8') + readFileSync(PAGES.replace('pages.ts', 'pages-roles.ts'), 'utf8');
+const pages = FICHIERS_PAGES.map((f) => readFileSync(f, 'utf8')).join('');
 const nav = readFileSync(NAV, 'utf8');
 
 const erreurs = [];
@@ -169,15 +167,11 @@ function ordreParDefaut() {
 		return m ? m[1] : null;
 	};
 	const noms = [];
-	for (const fichier of [PAGES, ROLES]) {
-		const src = readFileSync(fichier, 'utf8');
-		const table = src.slice(src.indexOf('PageDef[] = ['));
-		for (const bloc of table.split(/^\t\{$/m).slice(1)) {
-			//  Une page sans `href` ne paraît pas au menu (profil, notifications).
-			if (/href: null/.test(bloc.split(/^\t\},$/m)[0])) continue;
-			const nom = libelle(bloc.split(/^\t\},$/m)[0]);
-			if (nom) noms.push(nom);
-		}
+	for (const bloc of blocsDePages()) {
+		//  Une page sans `href` ne paraît pas au menu (profil, notifications).
+		if (/href: null/.test(bloc)) continue;
+		const nom = libelle(bloc);
+		if (nom) noms.push(nom);
 	}
 	return noms;
 }

@@ -192,6 +192,7 @@ sont des points *pré*-push. Lire les points **1 à 18**, qui sont le post-check
 | 14 | Hygiène disque sur les **2** nœuds | OK · FAIL |
 | 17 | **Points d'entrée conformes au dépôt** (crons, unité systemd) | OK · FAIL · INCONNU |
 | 19 | **Liens des courriels servis par la production** | OK · ÉCART · FAIL · INCONNU |
+| 20 | **Ordre du menu servi** (`pages_order`) — un fantôme rend ÉCART, une répétition FAIL (#1114) | OK · ÉCART · FAIL · INCONNU |
 
 ### Lire le verdict
 
