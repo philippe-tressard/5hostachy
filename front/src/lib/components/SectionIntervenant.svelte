@@ -15,6 +15,9 @@
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
+	import { prestataires as prestatairesApi } from '$lib/api';
+	import { EQUIPEMENTS } from '$lib/prestataires';
+	import { tenter } from '$lib/erreurs';
 
 	/** L'identifiant du prestataire retenu, ou `null`. */
 	export let prestataireId: number | null = null;
@@ -25,6 +28,33 @@
 	export let idPrefixe = 'intervenant';
 	/** Relayé par l'appelant depuis la déclaration (`lint:pliage-transmis`). */
 	export let pliable = false;
+	/** L'équipement de l'affaire : il pré-remplit celui d'un prestataire créé ici. */
+	export let equipement = '';
+
+	//  ＋ CRÉER celui qui manque, sans quitter le formulaire (#1145, demandé à
+	//  l'écran le 22/09/2026). Deux champs seulement — nom et équipement, ceux que
+	//  le serveur exige : en demander autant que la fiche complète ferait
+	//  renoncer, et la fiche se complète ensuite dans Prestataires. Le droit est
+	//  tenu par la route (`require_cs_or_admin`) ; la section, elle, n'est
+	//  ouverte qu'au conseil (`inactivePour.resident`).
+	let creation = false;
+	let nouveauNom = '';
+	let nouvelEquipement = '';
+	function ouvrirCreation() {
+		creation = true;
+		nouvelEquipement = equipement;
+	}
+	async function creer() {
+		const nom = nouveauNom.trim();
+		if (!nom || !nouvelEquipement) return;
+		await tenter(async () => {
+			const cree = await prestatairesApi.create({ nom, specialite: nouvelEquipement });
+			prestataires = [...prestataires, cree].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+			prestataireId = cree.id;
+			creation = false;
+			nouveauNom = '';
+		}, 'Prestataire créé');
+	}
 
 	//  `<select>` rend des chaînes : la valeur se lit et s'écrit ici, une fois.
 	//  ⚠️ Dans les DEUX sens : l'équipement peut proposer un intervenant depuis
@@ -53,4 +83,52 @@
 			<option value={String(p.id)}>{p.nom}</option>
 		{/each}
 	</select>
+	{#if creation}
+		<!--  Pas de `<form>` : on est DANS celui de l'affaire, et un formulaire
+		      imbriqué soumettrait l'affaire. Les boutons sont `type="button"`. -->
+		<div class="creation-prestataire">
+			<label class="field">Nom du prestataire<input bind:value={nouveauNom} /></label>
+			<label class="field"
+				>Équipement
+				<select bind:value={nouvelEquipement}>
+					<option value="">— Sélectionner —</option>
+					{#each EQUIPEMENTS as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
+				</select>
+			</label>
+			<div class="actions-creation">
+				<button type="button" class="btn btn-sm btn-outline" on:click={() => (creation = false)}
+					>Annuler</button
+				>
+				<button
+					type="button"
+					class="btn btn-sm btn-primary"
+					disabled={!nouveauNom.trim() || !nouvelEquipement}
+					on:click={creer}>Créer</button
+				>
+			</div>
+		</div>
+	{:else}
+		<button type="button" class="btn btn-sm btn-outline ajout-prestataire" on:click={ouvrirCreation}
+			>＋ Nouveau prestataire</button
+		>
+	{/if}
 </SectionFormulaire>
+
+<style>
+	.ajout-prestataire,
+	.creation-prestataire {
+		margin-top: 0.5rem;
+	}
+	.creation-prestataire {
+		display: grid;
+		gap: 0.5rem;
+		padding: 0.6rem;
+		border: 1px dashed var(--color-border);
+		border-radius: 6px;
+	}
+	.actions-creation {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+</style>
