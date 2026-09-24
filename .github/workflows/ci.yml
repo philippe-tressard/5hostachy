@@ -1359,6 +1359,13 @@ jobs:
         working-directory: front
         run: npm run lint:filtre-statuts
 
+      - name: Le carnet filtré par année suit le décret n° 2001-477
+        # Les travaux se datent par leur année de réalisation (art. 4), les
+        # contrats EN VIGUEUR restent (art. 3 et 4), rien ne se purge. La règle
+        # (`$lib/carnet`) est transpilée et exécutée ici.
+        working-directory: front
+        run: npm run lint:carnet-annee
+
       - name: « Prénom NOM » concorde entre le front et l'API
         # La règle « le nom passe en capitales, le prénom garde sa casse » est
         # écrite DEUX fois — les contextes de construction sont ./api et ./front,
