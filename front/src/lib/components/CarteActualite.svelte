@@ -147,7 +147,12 @@
 		<!--  Le corps ne referme pas la carte : on referme par l'en-tête. Sans cela,
 		      impossible de sélectionner du texte, et un clic sur une photo ou un
 		      formulaire referme ce qu'on lisait (ux-patterns §3). -->
-		<div class="pub-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+		<div
+			class="carte-corps pub-body"
+			role="presentation"
+			on:click|stopPropagation
+			on:keydown|stopPropagation
+		>
 			{#if formulaireOuvert}
 				<slot name="formulaire" />
 			{:else}
@@ -246,9 +251,14 @@
 	}
 
 	/*  Archives : la carte s'efface tant qu'on ne la vise pas — `.attenue` vient de
-	    la charte ; ici la carte DÉPLIÉE reprend aussi son opacité pleine. */
-	.attenue:hover,
+	    la charte ; ici la carte DÉPLIÉE reprend aussi son opacité pleine.
+	    Le survol, au pointeur seulement : au doigt, `:hover` reste collé. */
 	.attenue.expanded {
 		opacity: 1;
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.attenue:hover {
+			opacity: 1;
+		}
 	}
 </style>
