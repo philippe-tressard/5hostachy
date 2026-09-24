@@ -29,7 +29,6 @@ set -uo pipefail
 SITE="${SITE:-https://5hostachy.fr}"
 RPI1="${RPI1:-ptressard@192.168.1.222}"
 RPI2="${RPI2:-ptressard@192.168.1.223}"
-MARQUEUR="${MARQUEUR:-.git/precheck-mep.ok}"
 
 #: Seuils, tous nommés — un nombre nu dans un test est un seuil qu'on ne peut pas
 #: discuter. Cf. socle 04 §18 : un seuil se règle sur le RÉGIME de ce qu'il surveille.
@@ -48,6 +47,9 @@ BATTEMENT_DEPLOY_MIN=20    # auto-deploy écrit ~12 lignes/h sur le standby
 RACINE_DEPOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$RACINE_DEPOT" || exit 1   # les contrôles lisent api/, .git/ et front/ en relatif
 . "$RACINE_DEPOT/scripts/lib/lib-verdicts-mep.sh"
+. "$RACINE_DEPOT/scripts/lib/lib-depot.sh"   # traces : répertoire git DU clone, worktree compris (#1226)
+GIT_DEPOT="$(dossier_git)"
+MARQUEUR="${MARQUEUR:-$GIT_DEPOT/precheck-mep.ok}"
 # shellcheck source=../lib/lib-reecriture.sh
 . "$RACINE_DEPOT/scripts/lib/lib-reecriture.sh"
 
@@ -138,11 +140,11 @@ fi
 #  contenu n'est perdu. Sans lui, ce serait une case à cocher pour écraser le
 #  travail d'une autre session.
 DECL0A=""; DECL0A_SHAS=""; MANQUANTS0A=""; NON_RECOUVERTS=""
-if [ -f "$RACINE_DEPOT/.git/reecriture-dev" ] && [ "$AMONT" = "present" ]; then
+if [ -f "$GIT_DEPOT/reecriture-dev" ] && [ "$AMONT" = "present" ]; then
   #  Le parsing vit dans `lib-reecriture.sh`, où il est éprouvé — CRLF, lignes
   #  vides et sha tronqués s'y traitent, et aucun de ces défauts ne lève.
-  DECL0A=$(lire_declaration_reecriture "$RACINE_DEPOT/.git/reecriture-dev" | sed -n 1p)
-  DECL0A_SHAS=$(lire_declaration_reecriture "$RACINE_DEPOT/.git/reecriture-dev" | sed -n 2p)
+  DECL0A=$(lire_declaration_reecriture "$GIT_DEPOT/reecriture-dev" | sed -n 1p)
+  DECL0A_SHAS=$(lire_declaration_reecriture "$GIT_DEPOT/reecriture-dev" | sed -n 2p)
   MANQUANTS0A=$(git rev-list "HEAD..origin/$BRANCHE" 2>/dev/null | cut -c1-7 | tr '
 ' ' ')
   #  Un fichier touché par un commit retiré et que HEAD n'a pas réécrit depuis
@@ -276,7 +278,7 @@ rapporter 0g "$V0G" "Rang du bump conforme à ce que le lot apporte" "$D0G"
 #          # feat(admin): …
 #          ### Ce qui change
 #          …
-BRIEF=".git/pr-brief.md"
+BRIEF="$GIT_DEPOT/pr-brief.md"
 if [ -f "$BRIEF" ]; then
   BRIEF_SHA=$(head -1 "$BRIEF" | grep -oE '[0-9a-f]{7,40}')
   BRIEF_CORPS=$(tail -n +3 "$BRIEF" | grep -cvE '^\s*$')
@@ -312,8 +314,8 @@ rapporter 15 "$V15" "Aucun endpoint orphelin" "$ORPH"
 #      Ruff — est le seul qui a échoué. La consigne de tout rejouer existe
 #      (skill `avant-commit` §7) et n'a pas tenu. `rejouer-ci.sh` EXTRAIT les
 #      commandes de ci.yml et écrit sa trace ; ce point la lit.
-if [ -f .git/rejeu-ci.ok ]; then
-  read -r R_SHA _ R_OK R_FAIL R_INC < .git/rejeu-ci.ok
+if [ -f "$GIT_DEPOT/rejeu-ci.ok" ]; then
+  read -r R_SHA _ R_OK R_FAIL R_INC < "$GIT_DEPOT/rejeu-ci.ok"
   R_FAIL=${R_FAIL#FAIL=}; R_INC=${R_INC#INCONNU=}; R_OK=${R_OK#OK=}
 else
   R_SHA=""; R_OK="?"; R_FAIL=""; R_INC=""
@@ -393,9 +395,9 @@ rapporter 5 "$V5" "Bridge WhatsApp connecté" "dernier état : ${WA:-?}"
 #     sont dans `lib-verdicts-mep.sh`.
 ERR=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -cE "'"$MOTIF_ERREURS_API"'"; true')
 SIG6=""; SIGC6=""; ECART6=""; DET6="compte=${ERR:-?}"
-if [ -f "$RACINE_DEPOT/.git/erreur-corrigee" ]; then
-  SIGC6=$(sed -n '1s/^commit:[[:space:]]*//p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '\r')
-  SIG6=$(sed -n '2p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '\r')
+if [ -f "$GIT_DEPOT/erreur-corrigee" ]; then
+  SIGC6=$(sed -n '1s/^commit:[[:space:]]*//p' "$GIT_DEPOT/erreur-corrigee" | tr -d '\r')
+  SIG6=$(sed -n '2p' "$GIT_DEPOT/erreur-corrigee" | tr -d '\r')
   #  Le motif est appliqué EN LOCAL sur les lignes rapatriées, jamais injecté
   #  dans la commande SSH : l'oubli des guillemets autour d'un motif distant a
   #  déjà coûté un correctif en trois passes (check-reliability, 11/08/2026).

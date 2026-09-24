@@ -24,7 +24,9 @@
     exit 0
 }
 
-MARQUEUR=".git/precheck-mep.ok"
+#  Répertoire git DU clone : `.git` est un fichier dans un worktree (#1226).
+. "$(git rev-parse --show-toplevel)/scripts/lib/lib-depot.sh"
+MARQUEUR="$(dossier_git)/precheck-mep.ok"
 AGE_MAX_S=7200          # 2 h : au-delà, l'état des RPi a pu changer
 
 # stdin : <ref locale> <sha local> <ref distante> <sha distant>
