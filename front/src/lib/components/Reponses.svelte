@@ -11,6 +11,7 @@
 	import { fmtDateShort } from '$lib/date';
 
 	import { peutCommenter } from '$lib/droits';
+	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 
 	export let reponses: any[] = [];
 	export let currentUserId: number | undefined = undefined;
@@ -41,8 +42,10 @@
 		}
 	}
 
+	//  La boîte de la charte, et non `confirm()` natif (#605) : une réponse
+	//  supprimée ne revient pas, le rouge le dit.
 	async function remove(id: number) {
-		if (!confirm('Supprimer cette réponse ?')) return;
+		if (!(await confirmer(SUPPRESSION('Cette réponse')))) return;
 		await onDelete(id);
 	}
 </script>
