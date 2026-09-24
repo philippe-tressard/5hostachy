@@ -304,10 +304,29 @@ export const OPTIONS_CATEGORIE: readonly {
  *  redérive rien. Ce n'est pas une partition — une actualité datée paraît sous
  *  Actualité ET sous Calendrier.
  */
-export const OPTIONS_FILTRE_NATURE = [
-	{ val: 'actualite', label: '\u{1F4F0} Actualité' },
-	{ val: 'calendrier', label: '\u{1F4C5} Calendrier' },
-	//  « Affaire » et non plus « Activité » (24/09/2026, arbitré à l'écran) :
-	//  le libellé change, la valeur `activite` reste — liens et serveur inchangés.
-	{ val: 'activite', label: '\u{1F6E0}️ Affaire' },
-];
+//: Les trois natures, écrites UNE fois : le filtre et la gouttière des cartes
+//: (24/09/2026) en dérivent. Leurs teintes vivent dans `styles/normes.css`
+//: (`[data-nature=…]`), avec les autres couleurs.
+//: « Affaire » et non plus « Activité » (24/09/2026, arbitré à l'écran) : le
+//: libellé change, la valeur `activite` reste — liens et serveur inchangés.
+export const NATURES = [
+	{ val: 'actualite', emoji: '\u{1F4F0}', libelle: 'Actualité' },
+	{ val: 'calendrier', emoji: '\u{1F4C5}', libelle: 'Calendrier' },
+	{ val: 'activite', emoji: '\u{1F6E0}️', libelle: 'Affaire' },
+] as const;
+
+export const OPTIONS_FILTRE_NATURE = NATURES.map((n) => ({
+	val: n.val,
+	label: `${n.emoji} ${n.libelle}`,
+}));
+
+/**
+ *  La nature qu'une CARTE affiche, dans sa gouttière teintée (24/09/2026,
+ *  variante 3 choisie à l'écran parmi cinq). Une affaire peut en porter deux
+ *  (une actualité datée) : l'actualité prime, puis la date — c'est l'ordre du
+ *  filtre. Les natures viennent du serveur (`Ticket.natures`), jamais redérivées.
+ */
+export function attributsNature(t: { natures?: string[] }): Record<string, string> {
+	const n = NATURES.find((x) => (t.natures ?? []).includes(x.val)) ?? NATURES[2];
+	return { 'data-nature': n.val, 'data-nature-icone': n.emoji, 'data-nature-libelle': n.libelle };
+}
