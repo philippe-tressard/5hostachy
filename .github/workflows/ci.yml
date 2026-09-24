@@ -1300,6 +1300,15 @@ jobs:
         working-directory: front
         run: npm run lint:manuel-menus
 
+      - name: Le manuel dit ce que chaque profil voit
+        # `lint:manuel-menus` vérifie qui voit une ENTRÉE ; il laissait passer
+        # « Tout le monde » sur Résidence, dont le carnet est fermé aux
+        # locataires (signalé à l'écran le 24/09/2026). Celui-ci confronte au
+        # code les onglets réservés, la table des treize sections vue du
+        # résident et les catégories qu'il peut choisir.
+        working-directory: front
+        run: npm run lint:manuel-profils
+
       - name: Confirmation dans la charte (plafond décroissant)
         # Le nombre de `confirm()` NATIFS ne peut que baisser. La boîte du
         # navigateur bloque le fil d'exécution, ignore la charte, et donne le

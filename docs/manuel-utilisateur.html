@@ -396,7 +396,9 @@
       box-shadow: 0 8px 18px rgba(15, 23, 42, .05);
     }
 
-    .persona-card strong {
+    /*  L'intitulé de la carte, et lui seul : le sélecteur visait TOUT `strong`,
+        et « Affaires, filtre Actualité » se cassait en deux lignes. */
+    .persona-card > strong {
       display: block;
       font-size: .93rem;
       margin-bottom: .25rem;
@@ -415,6 +417,13 @@
       padding-left: .9rem;
       position: relative;
     }
+
+    .persona-intro { font-size: .82rem; color: var(--muted); margin-top: .35rem; }
+    .persona-detail { margin-top: .3rem; }
+    .persona-detail summary { cursor: pointer; font-weight: 600; font-size: .8rem; color: #2563eb; }
+    .persona-detail summary::before { content: '▸ '; }
+    .persona-detail[open] summary::before { content: '▾ '; }
+    .persona-detail p { font-size: .8rem; color: var(--muted); margin-top: .25rem; }
 
     .persona-card li::before {
       content: '-';
@@ -501,6 +510,17 @@
     .ecran-detail-corps { font-size: .84rem; color: var(--muted); margin-top: .5rem; }
     .ecran-detail-corps ul { margin: .4rem 0 .4rem 1.05rem; }
     .ecran-detail-corps li { margin-bottom: .3rem; }
+    /*  Ce que chaque PROFIL voit derrière une même entrée de menu (24/09/2026) :
+        « Tous les résidents » y entrent, pas tous pour y voir la même chose. */
+    .ecran-profils { list-style: none; margin: .5rem 0 0; display: grid; gap: .25rem; font-size: .8rem; }
+    .ecran-profils li { color: var(--muted); }
+    .ecran-profils .profil { font-weight: 700; color: var(--text); margin-right: .3rem; }
+    .affaire-table td:first-child { white-space: nowrap; color: var(--muted); }
+    .pour-vous { display: inline-block; font-size: .74rem; font-weight: 700; border-radius: 999px; padding: .1rem .5rem; border: 1px solid; }
+    .pour-vous-obligatoire { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+    .pour-vous-facultatif  { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
+    .pour-vous-conseil     { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    .pour-vous-sans-objet  { color: #64748b; background: #f8fafc; border-color: #e2e8f0; }
     .ecran-note {
       margin-top: .5rem;
       padding: .45rem .55rem;
@@ -970,6 +990,9 @@
       <a class="nav-item" href="#ecrans">
         <span class="dot" style="background:#7c3aed"></span> Le menu
       </a>
+      <a class="nav-item" href="#affaire">
+        <span class="dot" style="background:#ea580c"></span> Ouvrir une affaire
+      </a>
       <a class="nav-item" href="#aide">
         <span class="dot" style="background:#0d9488"></span> Une question ?
       </a>
@@ -990,7 +1013,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 1.59 · Septembre 2026</span>
+      <span class="topbar-badge">Version 1.60 · Septembre 2026</span>
     </div>
   </header>
 
@@ -1121,30 +1144,35 @@
 
       <div class="persona-block" id="par-profil">
         <h3>Mini sommaire par profil</h3>
-        <p>Choisissez votre profil : voici les trois écrans qui vous serviront le plus.</p>
+        <p>Choisissez votre profil : voici les écrans qui vous serviront le plus.</p>
         <div class="persona-grid">
           <div class="persona-card">
             <strong>Je suis copropriétaire résident</strong>
             <ul>
               <li><strong>Mes lots &amp; accès</strong> — vos biens, vos diagnostics, vos badges et télécommandes</li>
-              <li><strong>Affaires</strong> — tout signalement</li>
-              <li><strong>Affaires, filtre Calendrier</strong> — les interventions à venir</li>
+              <li><strong>Affaires</strong> — signaler, suivre, et lire les actualités du conseil syndical (filtre <em>Actualité</em>)&nbsp;; ce qui est daté paraît sous le filtre <em>Calendrier</em></li>
+              <li><strong>Résidence</strong> — les documents de la copropriété
+                <details class="persona-detail">
+                  <summary>Carnet d’entretien</summary>
+                  <p>Ce qui a été entretenu, réparé et contrôlé, rangé par équipement. Il se constitue tout seul — contrats, entretiens terminés, affaires résolues dont le conseil syndical a désigné l’équipement — et signale les visites en retard. Il se filtre par périmètre.</p>
+                </details>
+              </li>
+            </ul>
+          </div>
+          <div class="persona-card">
+            <strong>Je suis bailleur</strong>
+            <p class="persona-intro">Les mêmes écrans que le copropriétaire résident, plus ce qui touche à vos locataires&nbsp;:</p>
+            <ul>
+              <li><strong>Mes lots &amp; accès → Gestion locative</strong> — vos baux, vos locataires, et l’inventaire de ce que vous leur remettez&nbsp;: clés, badges, télécommandes</li>
+              <li><strong>Mes lots &amp; accès → badges</strong> — un badge remis à votre locataire reste visible de vous&nbsp;: il appartient au lot</li>
             </ul>
           </div>
           <div class="persona-card">
             <strong>Je suis locataire</strong>
             <ul>
+              <li><strong>Affaires</strong> — vos demandes, et elles seules (celles de la copropriété sont réservées aux copropriétaires et au conseil syndical), et les actualités qui vous sont adressées, sous le filtre <em>Actualité</em></li>
+              <li><strong>Mes lots &amp; accès</strong> — le lot que vous louez, vos badges et télécommandes</li>
               <li><strong>Mon profil</strong> — régler vos notifications</li>
-              <li><strong>Affaires</strong>, filtre <em>Actualité</em> — les infos officielles du conseil syndical</li>
-              <li><strong>Affaires</strong> — vos demandes, et elles seules&nbsp;: les affaires de la copropriété sont réservées aux copropriétaires et au conseil syndical.</li>
-            </ul>
-          </div>
-          <div class="persona-card">
-            <strong>Je suis bailleur</strong>
-            <ul>
-              <li><strong>Mes lots &amp; accès</strong> — vos baux et vos locataires</li>
-              <li><strong>Résidence</strong> — les documents de la copropriété, et son <strong>carnet d’entretien</strong>&nbsp;: tout ce qui a été entretenu, réparé et contrôlé, rangé par équipement. Il se constitue tout seul à partir des contrats, des entretiens terminés et des affaires résolues du bâti dont le conseil syndical a désigné l’équipement — rien n’y est saisi à la main — et signale les visites dont l’échéance est dépassée. Il se filtre par <strong>périmètre</strong> — un bâtiment, le parking, les caves… — et les entretiens qui couvrent toute la résidence restent visibles dans chaque périmètre, puisqu’ils l’entretiennent aussi. <strong>Sauf pour ce qui n’appartient pas à la copropriété</strong>&nbsp;: l’<strong>AFUL</strong> est une association distincte, et ce que la copropriété entretient «&nbsp;en entier&nbsp;» ne l’entretient pas — son filtre ne montre donc que ce qui la concerne vraiment. Un administrateur déclare ces espaces dans <em>Admin → Périmètres</em>. Réservé aux copropriétaires, au conseil syndical et à l'administration.</li>
-              <li><strong>Affaires</strong>, filtre <em>Actualité</em> — ce qui touche votre bien</li>
             </ul>
           </div>
           <div class="persona-card">
@@ -1259,7 +1287,10 @@
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span>
           <h3>Accueil</h3>
           <p>La première page après la connexion&nbsp;: ce qui vous concerne aujourd'hui, rassemblé en un écran.</p>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <span class="ecran-acces ecran-acces-tous">Tous les résidents</span>
+          <ul class="ecran-profils">
+            <li><span class="profil">Chacun</span> n’y voit que ce que son profil lui ouvre&nbsp;: un locataire, ses affaires et les actualités qui lui sont adressées.</li>
+          </ul>
           <details class="ecran-detail">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
@@ -1276,7 +1307,11 @@
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg></span>
           <h3>Résidence</h3>
           <p>Les documents communs — procès-verbaux, règlement, rapports —, les informations sur la copropriété, et son <strong>carnet d'entretien</strong>&nbsp;: ce qui a été entretenu, réparé et contrôlé, rangé par équipement. Le carnet est réservé aux copropriétaires, au conseil syndical et à l'administration&nbsp;; le reste de l'écran est ouvert à tous.</p>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <span class="ecran-acces ecran-acces-tous">Tous les résidents</span>
+          <ul class="ecran-profils">
+            <li><span class="profil">Copropriétaire · bailleur</span> la fiche, les documents ouverts à leur profil et le carnet d’entretien.</li>
+            <li data-onglet="carnet" data-reserve="proprioOuCS"><span class="profil">Locataire</span> la fiche et les documents ouverts aux locataires — pas le <strong>carnet d’entretien</strong>, réservé aux copropriétaires et au conseil syndical.</li>
+          </ul>
         </div>
         <div class="ecran-card" data-page="/tickets" data-acces="tous">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></svg></span>
@@ -1284,7 +1319,12 @@
           <p>Signaler un problème et suivre son traitement — c'est le point d'entrée de toute demande. On y lit aussi les <strong>actualités</strong> du conseil syndical.</p>
           <p id="actualites"><strong>&#x1F4F0; Où sont passées les Actualités&nbsp;?</strong> Elles n'ont plus d'entrée dans le menu&nbsp;: une actualité est désormais une affaire de catégorie <em>Actualité</em>. En tête de liste, le filtre <strong>Actualité</strong> les rassemble d'un clic. Les anciens liens — un favori, un courriel reçu — mènent toujours au bon endroit&nbsp;: la liste ainsi filtrée, ou la fiche de l'actualité visée.</p>
           <p id="calendrier"><strong>&#x1F4C5; Et le Calendrier&nbsp;?</strong> Lui aussi a rejoint <strong>Affaires</strong>&nbsp;: ce qui est daté paraît sous le filtre <strong>Calendrier</strong>, et son kanban est l'onglet <strong>Kanban</strong>. Les événements d'hier sont devenus des affaires&nbsp;: une coupure ou une assemblée, une <em>actualité</em> datée&nbsp;; une maintenance, une affaire <em>Entretien</em>&nbsp;; des travaux suivis, une <em>Étude &amp; travaux</em>. Les anciens liens mènent toujours au bon endroit.</p>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <span class="ecran-acces ecran-acces-tous">Tous les résidents</span>
+          <ul class="ecran-profils">
+            <li><span class="profil">Copropriétaire · bailleur</span> ses affaires, celles de son périmètre (sauf 🛡️ confidentielles) et les actualités.</li>
+            <li><span class="profil">Locataire</span> ses propres affaires, et les actualités qui lui sont adressées.</li>
+            <li><span class="profil">Conseil syndical</span> tout — c’est lui qui fait avancer le suivi.</li>
+          </ul>
           <details class="ecran-detail">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
@@ -1350,7 +1390,12 @@
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg></span>
           <h3>Mes lots &amp; accès</h3>
           <p>Vos lots, vos badges Vigik et télécommandes de parking, vos baux et vos diagnostics. Un bailleur y gère aussi ses locataires.</p>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <span class="ecran-acces ecran-acces-tous">Tous les résidents</span>
+          <ul class="ecran-profils">
+            <li><span class="profil">Copropriétaire</span> ses lots, ses diagnostics, ses badges et télécommandes.</li>
+            <li data-onglet="location" data-reserve="bailleur"><span class="profil">Bailleur</span> en plus, l’onglet <strong>Gestion locative</strong>&nbsp;: baux, locataires, inventaire de ce qui leur est remis.</li>
+            <li><span class="profil">Locataire</span> le lot qu’il loue, ses badges et télécommandes.</li>
+          </ul>
           <details class="ecran-detail">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
@@ -1367,7 +1412,7 @@
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <h3>Annuaire</h3>
           <p>Qui contacter, et pour quoi&nbsp;: les membres du <strong>conseil syndical</strong> et le <strong>syndic</strong>. Les prestataires ont leur propre écran, et les numéros d'urgence sont dans la FAQ.</p>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <span class="ecran-acces ecran-acces-tous">Tous les résidents</span>
         </div>
         <div class="ecran-card" data-page="/prestataires" data-acces="cs">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v3"/></svg></span>
@@ -1433,7 +1478,10 @@
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>
           <h3>FAQ</h3>
           <p>Les questions déjà posées et leurs réponses. À regarder avant d'ouvrir une affaire.</p>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <span class="ecran-acces ecran-acces-tous">Tous les résidents</span>
+          <ul class="ecran-profils">
+            <li><span class="profil">Chacun</span> voit les questions qui concernent son profil.</li>
+          </ul>
         </div>
         <div class="ecran-card" data-page="/espace-cs" data-acces="cs">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 22V2"/></svg></span>
@@ -1467,7 +1515,7 @@
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
           <h3>Mon profil</h3>
           <p>Vos informations, votre mot de passe, et le réglage de ce que vous recevez.</p>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <span class="ecran-acces ecran-acces-tous">Tous les résidents</span>
           <details class="ecran-detail">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><p>Accessible par <strong>votre prénom</strong>, en bas du menu — il n'a pas d'entrée propre.</p>
@@ -1501,6 +1549,65 @@
         affaire confidentiel ne le rend pas lisible.
       </p>
 
+    </section>
+
+    <!-- ════════════════════════════════
+         OUVRIR UNE AFFAIRE — vue du résident (24/09/2026). Les trois tables
+         portent des attributs que `npm run lint:manuel-profils` confronte au
+         code : ordre et rôle des sections, catégories ouvertes aux résidents.
+    ════════════════════════════════ -->
+    <section class="chapter" id="affaire" data-section="tickets">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#fff7ed; color:var(--c-ticket)" aria-hidden="true">&#x1F4DD;</div>
+        <div>
+          <h2>Ouvrir une affaire</h2>
+          <p>Une affaire, c’est un problème que la copropriété doit traiter. Vous la signalez&nbsp;; le conseil syndical la suit jusqu’à sa résolution, et vous voyez où elle en est.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>La catégorie&nbsp;: qui va traiter</h3>
+        <table class="affaire-table">
+          <thead><tr><th>Catégorie</th><th>Pour quoi</th></tr></thead>
+          <tbody>
+            <tr data-categorie="panne"><td>🛠️ Panne</td><td>Ascenseur, chauffage, éclairage, fuite, porte — à réparer.</td></tr>
+            <tr data-categorie="nuisance"><td>📢 Nuisance &amp; propreté</td><td>Bruit, odeurs, stationnement, parties communes, encombrants.</td></tr>
+            <tr data-categorie="acces_accueil"><td>🔑 Accès &amp; accueil</td><td>Interphone, boîte aux lettres, emménagement. <em>Un badge ou une télécommande&nbsp;: Mes lots &amp; accès.</em></td></tr>
+            <tr data-categorie="espaces_verts"><td>🌳 Espaces verts</td><td>Élagage, haies, arrosage, allées.</td></tr>
+            <tr data-categorie="sinistre"><td>💧 Sinistre</td><td>Dégât constaté — eau, incendie, vandalisme&nbsp;: le syndic déclare à l’assurance.</td></tr>
+            <tr data-categorie="question"><td>❓ Question</td><td>Une information, une procédure.</td></tr>
+            <tr data-categorie="bug"><td>🐛 Bug</td><td>Un problème sur ce site&nbsp;: il ne va qu’au gestionnaire du site.</td></tr>
+          </tbody>
+        </table>
+        <p class="ecran-note">Trois autres catégories sont posées par le conseil syndical seul&nbsp;: <em>Étude &amp; travaux</em>, <em>Entretien</em> et <em>Actualité</em>. L’urgence n’est pas une catégorie&nbsp;: c’est une case à cocher.</p>
+      </div>
+
+      <div class="card">
+        <h3>Les treize sections du formulaire</h3>
+        <p>Toutes restent à leur place, dans le même ordre sur tout le site. Celles que le conseil syndical remplit apparaissent <strong>grisées</strong> pour vous, avec leur motif.</p>
+        <table class="affaire-table">
+          <thead><tr><th>#</th><th>Section</th><th>Pour vous</th><th>Ce qu’on y met</th></tr></thead>
+          <tbody>
+            <tr data-section-affaire="titre" data-resident="obligatoire"><td>1</td><td>Titre</td><td><span class="pour-vous pour-vous-obligatoire">Obligatoire</span></td><td>Ce qui se passe, en quelques mots.</td></tr>
+            <tr data-section-affaire="nature" data-resident="obligatoire"><td>2</td><td>Catégorie</td><td><span class="pour-vous pour-vous-obligatoire">Obligatoire</span></td><td>Ce qu’il faut faire — elle décide de qui traite.</td></tr>
+            <tr data-section-affaire="equipement" data-resident="conseil"><td>3</td><td>Équipement</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>Sur quoi porte l’affaire — vous n’avez pas à faire le diagnostic.</td></tr>
+            <tr data-section-affaire="suivi" data-resident="conseil"><td>4</td><td>Suivi</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>Ouvert à la création&nbsp;; le conseil le fait avancer, vous le voyez.</td></tr>
+            <tr data-section-affaire="quand" data-resident="conseil"><td>5</td><td>Quand</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>La date d’une intervention.</td></tr>
+            <tr data-section-affaire="intervenant" data-resident="conseil"><td>6</td><td>Intervenant</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>L’entreprise qui intervient.</td></tr>
+            <tr data-section-affaire="perimetre" data-resident="obligatoire"><td>7</td><td>Périmètre</td><td><span class="pour-vous pour-vous-obligatoire">Obligatoire</span></td><td>Où&nbsp;: votre bâtiment, un étage, le parking…</td></tr>
+            <tr data-section-affaire="description" data-resident="obligatoire"><td>8</td><td>Description</td><td><span class="pour-vous pour-vous-obligatoire">Obligatoire</span></td><td>Le détail&nbsp;: depuis quand, ce que vous avez constaté.</td></tr>
+            <tr data-section-affaire="pieces_jointes" data-resident="facultatif"><td>9</td><td>Pièces jointes</td><td><span class="pour-vous pour-vous-facultatif">Facultatif</span></td><td>Photos et documents — la photo du dégât vaut mieux qu’un long texte.</td></tr>
+            <tr data-section-affaire="au_nom_de" data-resident="conseil"><td>10</td><td>Au nom de</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>Vous signalez en votre nom&nbsp;; le conseil peut saisir pour quelqu’un.</td></tr>
+            <tr data-section-affaire="destinataires" data-resident="sans-objet"><td>11</td><td>Destinataires</td><td><span class="pour-vous pour-vous-sans-objet">Sans objet</span></td><td>Pour une actualité seulement.</td></tr>
+            <tr data-section-affaire="mise_en_avant" data-resident="facultatif"><td>12</td><td>Mise en avant</td><td><span class="pour-vous pour-vous-facultatif">Facultatif</span></td><td>Pour vous, la case 🚨 <em>Urgente</em>.</td></tr>
+            <tr data-section-affaire="diffusion" data-resident="conseil"><td>13</td><td>Diffusion</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>WhatsApp, syndic, conseil&nbsp;: le conseil choisit qui prévenir.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout tip">
+          <strong>💡 Et ensuite&nbsp;?</strong>
+          <p>Vous êtes prévenu à chaque avancée. Tant que l’affaire est <em>Ouverte</em>, vous la corrigez avec le crayon ✏️&nbsp;; à tout moment, vous ajoutez une <strong>Suite</strong> — une précision, une photo.</p>
+        </div>
+      </div>
     </section>
 
     <!-- ════════════════════════════════
@@ -1561,7 +1668,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v1.59
+    <span>© 2026 5Hostachy — Manuel utilisateur v1.60
 </span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
