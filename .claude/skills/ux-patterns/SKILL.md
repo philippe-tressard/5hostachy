@@ -53,7 +53,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 6 | **Le mode se lit sur l'icône** qui a ouvert le formulaire (`aria-pressed`), jamais sur un titre au-dessus | §13 bis |
 | 7 | **Section 1 = le titre SEUL** ; ce qui qualifie l'objet est en section 2 | §0 |
 | 8 | **Un workflow se déclare, le tracer est une AUTRE décision** — cinq états sur une annonce, aucun fil | §16 |
-| 9 | **L'archivage se calcule, il ne se choisit pas** : 30 j après un état terminal, sur `statut_change_le`, jamais de bouton 📦 | §16 |
+| 9 | **L'archivage se calcule** : 30 j après un état terminal, sur `statut_change_le` — ⚠️ révisé le 24/09/2026 : sur une affaire ou une actualité, le conseil **peut aussi archiver d'un geste 📦**, à la place du 🗑️ de la liste | §8, §16 |
 | 10 | **Deux droits** : éditer = auteur · saisi_pour · admin ; commenter = les mêmes **+ CS** | §15 |
 | 11 | **L'écran dit ce que le serveur fait**, ni plus ni moins | §15 |
 | 12 | **L'objet DOCUMENTS a UNE forme** — pastilles « TYPE: nom », bouton puis champ de libellé, sans exception | §0 bis |
@@ -2158,7 +2158,13 @@ et une seule a un workflow tracé. Confondre les deux fait importer un
 
 **30 jours** après l'entrée dans un état **terminal** — mesuré sur
 `statut_change_le`, **jamais** sur `mis_a_jour_le`. *Annulé* disparaît
-**immédiatement**. **Aucun bouton 📦.**
+**immédiatement**.
+
+🔴 **« Aucun bouton 📦 » est RÉVISÉ le 24/09/2026 pour les affaires et les
+actualités** : l'administrateur y supprimait définitivement depuis la liste, d'un
+clic (« c'est une suppression ou pas ? »). Le 🗑️ y cède la place à 📦 — geste du
+conseil, `archive_manuel` — et ne reste qu'aux Archives (§8). Le calcul
+ci-dessous continue de s'appliquer ; le geste s'y ajoute, il ne le remplace pas.
 
 ⚠️ `mis_a_jour_le` paraît équivalent et ne l'est pas : corriger une faute de
 frappe sur un objet conclu **repousserait son archivage d'un mois**, à chaque
