@@ -26,6 +26,8 @@
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { relire } from '$lib/utils';
 	import FiltrePerimetre from './FiltrePerimetre.svelte';
+	import ChoixPastilles from './ChoixPastilles.svelte';
+	import { anneesDuCarnet, entreesDeLAnnee } from '$lib/carnet';
 	import { fmtDate } from '$lib/date';
 	import { essayer } from '$lib/chargement';
 	import EtatListe from './EtatListe.svelte';
@@ -75,9 +77,15 @@
 	 *   ⚠️ Les groupes sont triés par leur entrée la plus RÉCENTE, pas par ordre
 	 *   alphabétique : ce qui a bougé récemment se lit en premier, et l'équipement
 	 *   dont plus rien ne bouge tombe en bas — où il se remarque. */
+	//  📅 Le filtre par ANNÉE (24/09/2026) — la règle, et ce que le décret
+	//  n° 2001-477 en dit, vivent dans `$lib/carnet`.
+	let anneeChoisie = '';
+	$: annees = anneesDuCarnet(donnees?.entrees ?? []).map((a) => ({ val: a, label: a }));
+	$: entreesVues = entreesDeLAnnee(donnees?.entrees ?? [], anneeChoisie);
+
 	$: groupes = (() => {
 		const par = new Map<string, EntreeCarnet[]>();
-		for (const entree of donnees?.entrees ?? []) {
+		for (const entree of entreesVues) {
 			const cle = entree.equipement ?? '';
 			if (!par.has(cle)) par.set(cle, []);
 			par.get(cle)!.push(entree);
@@ -106,6 +114,16 @@
 	      l'arborescence administrée, donc un périmètre créé demain y apparaît
 	      sans qu'on touche à cet écran. -->
 	<FiltrePerimetre bind:choisi={perimetreChoisi} on:changer={charger} />
+	{#if annees.length > 1}
+		<ChoixPastilles
+			options={annees}
+			bind:valeur={anneeChoisie}
+			tous="Toutes"
+			libelle="Année"
+			libelleDevant
+		/>
+		<p class="aide">Les contrats en cours restent affichés : ils valent pour chaque année.</p>
+	{/if}
 
 	{#if enRetard > 0}
 		<!--  L'alerte est en TÊTE parce que c'est ce que le carnet apprend et que
