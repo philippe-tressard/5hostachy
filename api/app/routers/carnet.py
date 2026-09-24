@@ -28,7 +28,7 @@ from app.database import get_session
 from app.models.core import Utilisateur
 from app.utils.carnet_entretien import construire_carnet
 
-router = APIRouter(prefix="/carnet-entretien", tags=["carnet d'entretien"])
+router = APIRouter(prefix="/carnet-entretien", tags=["carnet-entretien"])
 
 
 @router.get("")

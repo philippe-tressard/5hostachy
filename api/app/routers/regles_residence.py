@@ -11,7 +11,7 @@ from app.database import get_session
 from app.models.core import RegleResidence, Utilisateur
 from app.utils.recuperer import ou_404
 
-router = APIRouter(prefix="/regles-residence", tags=["règles résidence"])
+router = APIRouter(prefix="/regles-residence", tags=["règles-résidence"])
 
 
 class RegleCreate(BaseModel):

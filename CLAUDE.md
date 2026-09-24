@@ -160,6 +160,13 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 > `actif` ». Suivre la consigne violait la modularité (rang 1), et ce fichier est
 > relu à chaque session (#1046).
 
+- **Nommage : français, tables, routes et tags compris.** Les noms anglais
+  existants (9 tables, 46 routes) sont **figés** dans `api/tests/test_nommage_francais.py`,
+  qui refuse le suivant : ils se renomment **au fil de l'eau**, quand un lot touche
+  déjà la table ou la route — jamais en bloc (migration + client front) —, et on retire
+  alors l'entrée, la liste ne fait que décroître. Un **tag** OpenAPI s'écrit en
+  minuscules à tirets (`carnet-entretien`), un **préfixe** de routeur au pluriel (#1056).
+
 ### Schémas Pydantic
 - Trois formes par entité exposée : `EntiteCreate` (entrée, sans id ni
   horodatage), `EntiteRead` (sortie, `class Config: from_attributes = True` —

@@ -13,7 +13,7 @@ from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
 from app.auth.appartenance import exiger_aidant_de_la_delegation
 
-router = APIRouter(prefix="/delegations", tags=["délégations aidant"])
+router = APIRouter(prefix="/delegations", tags=["délégations-aidant"])
 
 
 # ── Schemas ─────────────────────────────────────────────────────────────────
