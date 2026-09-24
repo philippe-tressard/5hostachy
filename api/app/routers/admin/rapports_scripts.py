@@ -26,6 +26,7 @@ from app.database import get_session
 from app.models.core import HistoriqueEmail, HistoriqueMaintenance
 
 from .exploitation import _purger_anciens_rapports
+from app.utils.maintenance import purger
 
 router = APIRouter()
 
@@ -132,6 +133,23 @@ def maintenance_rapport(
     session.refresh(entry)
     _purger_anciens_rapports(session)
     return entry
+
+
+@router.post("/maintenance/purges")
+def maintenance_purges(
+    x_maintenance_key: Optional[str] = Header(default=None, alias="x-maintenance-key"),
+):
+    """Les purges hebdomadaires, exécutées DANS ce process (#1232).
+
+    `maintenance.sh` les faisait par `docker exec hostachy_api python`, API en
+    marche : un process tiers qui ouvre `app.db`, la règle d'or enfreinte chaque
+    dimanche. Il les demande désormais ici, et reçoit les comptes pour son
+    rapport. Ne rend que des nombres et des messages d'erreur techniques —
+    aucune donnée de copropriétaire, la portée de ce canal.
+    """
+    exiger_cle_maintenance(x_maintenance_key)
+    comptes, erreurs = purger()
+    return {"comptes": comptes, "erreurs": erreurs}
 
 
 @router.get("/emails/echecs-recents")
