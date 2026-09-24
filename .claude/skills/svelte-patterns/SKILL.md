@@ -124,17 +124,17 @@ On ne l'affecte pas, on y navigue. Le détail (forme des URL, redirection des
 anciennes, masquage vs redirection) est dans `ux-patterns` §4.
 
 ```svelte
-<!-- src/routes/(app)/calendrier/+page.ts — la page ne bouge pas -->
+<!-- src/routes/(app)/tickets/+page.ts — la page ne bouge pas -->
 import { resoudreOnglet } from '$lib/deepLink';
 
-export const load = ({ url }) => resoudreOnglet('calendrier', url);
+export const load = ({ url }) => resoudreOnglet('mes-demandes', url);
 ```
 
-`/calendrier/kanban` arrive sur cette même route : `reroute` (`src/hooks.ts`) l'y
+`/tickets/kanban` arrive sur cette même route : `reroute` (`src/hooks.ts`) l'y
 envoie, et `url` reste l'adresse demandée.
 
 ```svelte
-<!-- src/routes/(app)/calendrier/+page.svelte -->
+<!-- src/routes/(app)/tickets/+page.svelte -->
 <script lang="ts">
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 
@@ -142,7 +142,7 @@ envoie, et `url` reste l'adresse demandée.
 	$: onglet = data.onglet;
 </script>
 
-<BarreOnglets pageId="calendrier" actif={onglet} />
+<BarreOnglets pageId="mes-demandes" actif={onglet} />
 
 {#if onglet === 'liste'}
 	<!-- contenu liste -->
