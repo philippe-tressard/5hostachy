@@ -12,6 +12,7 @@ propre (le protocole des scripts), et un régime d'authentification qui n'est ce
 d'aucune autre route du projet. Les isoler rend ce régime visible plutôt que noyé
 au milieu d'endpoints protégés par `require_admin`.
 """
+
 import json
 from datetime import datetime, timedelta
 from typing import Optional
@@ -44,9 +45,9 @@ class RapportMaintenance(BaseModel):
     # identiques au comportement d'avant), donc un nœud dont le script n'a pas
     # encore été redéployé continue d'être accepté.
     tache: str = "maintenance"
-    noeud: Optional[str] = None                # rpi1 | rpi2
-    portee: str = "applicative"                # applicative | hygiene_locale
-    details: Optional[dict] = None             # chiffres propres à la tâche
+    noeud: Optional[str] = None  # rpi1 | rpi2
+    portee: str = "applicative"  # applicative | hygiene_locale
+    details: Optional[dict] = None  # chiffres propres à la tâche
 
 
 #  🔴 `_exiger_cle_maintenance` a été DÉPLACÉE le 19/09/2026 (#1028) dans
@@ -58,6 +59,7 @@ class RapportMaintenance(BaseModel):
 #  La conséquence était un faux vert : une route déclarée publique reste verte si
 #  l'on retire son contrôle d'authentification. Le test les classe à part
 #  désormais, et vérifie que chacune appelle bien la fonction.
+
 
 @router.get("/maintenance/dernier-rapport")
 def maintenance_dernier_rapport(
@@ -100,7 +102,7 @@ def maintenance_dernier_rapport(
     par_noeud: dict = {}
     for ligne in lignes:
         cle = ligne.noeud or "inconnu"
-        if cle not in par_noeud:      # la première vue est la plus récente
+        if cle not in par_noeud:  # la première vue est la plus récente
             par_noeud[cle] = ligne.cree_le
     return {"tache": tache, "noeuds": par_noeud, "genere_le": datetime.utcnow()}
 
@@ -185,8 +187,9 @@ def emails_echecs_recents(
     depuis = datetime.utcnow() - timedelta(days=jours)
 
     lignes = session.exec(
-        select(HistoriqueEmail)
-        .where(HistoriqueEmail.statut == "erreur", HistoriqueEmail.cree_le >= depuis)
+        select(HistoriqueEmail).where(
+            HistoriqueEmail.statut == "erreur", HistoriqueEmail.cree_le >= depuis
+        )
     ).all()
 
     par_code: dict[str, int] = {}

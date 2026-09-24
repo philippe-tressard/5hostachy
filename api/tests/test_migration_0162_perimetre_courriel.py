@@ -22,6 +22,7 @@ erreur, et le contrôle des migrations vérifie la CHAÎNE, pas l'effet.
 Que les trois fragments cherchés existent **dans le gabarit tel qu'il est semé** —
 donc tels que la base les porte.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -30,8 +31,7 @@ from pathlib import Path
 from app.seed import EMAIL_TEMPLATES
 
 _MIGRATION = (
-    Path(__file__).resolve().parents[1]
-    / "alembic" / "versions" / "0162_ticket_syndic_perimetre.py"
+    Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0162_ticket_syndic_perimetre.py"
 )
 
 

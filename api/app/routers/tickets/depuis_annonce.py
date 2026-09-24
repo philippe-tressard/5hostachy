@@ -12,6 +12,7 @@ inverse qui garde `ticket_id`. Là-bas le lien SERT — c'est lui qui donne son 
 au message WhatsApp de l'affiche. Ici rien ne le lirait, et une colonne que
 personne n'interroge devient une seconde vérité sur « d'où vient ce texte ».
 """
+
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
@@ -26,8 +27,10 @@ from app.utils.recuperer import ou_404
 router = APIRouter()
 
 
-@router.get("/depuis-annonce-hall/{annonce_id}",
-            summary="Pré-remplissage d'une actualité depuis une annonce de hall (CS/Admin)")
+@router.get(
+    "/depuis-annonce-hall/{annonce_id}",
+    summary="Pré-remplissage d'une actualité depuis une annonce de hall (CS/Admin)",
+)
 def prefill_depuis_annonce_hall(
     annonce_id: int,
     session: Session = Depends(get_session),

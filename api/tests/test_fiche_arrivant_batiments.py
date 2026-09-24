@@ -15,6 +15,7 @@ Le test qui compte ici est `test_un_batiment_renomme_apparait_renomme` : c'est l
 seul qui prouve qu'on passe par l'arbre, et non par une convention recopiée qui
 produirait par hasard le même texte.
 """
+
 from __future__ import annotations
 
 import re
@@ -40,9 +41,14 @@ def _fiche(membres: list[dict]) -> str:
 
 def _membre(batiment_id: int | None, nom: str = "Dupont") -> dict:
     return {
-        "genre": "M.", "prenom": "Jean", "nom": nom,
-        "batiment_id": batiment_id, "batiment_nom": str(batiment_id or "?"),
-        "etage": "2", "est_gestionnaire_site": False, "est_president": False,
+        "genre": "M.",
+        "prenom": "Jean",
+        "nom": nom,
+        "batiment_id": batiment_id,
+        "batiment_nom": str(batiment_id or "?"),
+        "etage": "2",
+        "est_gestionnaire_site": False,
+        "est_president": False,
         "photo_url": None,
     }
 
@@ -53,6 +59,7 @@ def _entetes(html: str) -> list[str]:
 
 
 # ── Le libellé vient de l'arbre ───────────────────────────────────────────────
+
 
 def test_le_document_nomme_les_batiments_avec_le_libelle_de_l_arbre(batiments):
     entetes = _entetes(_fiche([_membre(batiments[0])]))
@@ -67,9 +74,7 @@ def test_un_batiment_renomme_apparait_renomme(batiments):
     test précédent sans passer celui-ci.
     """
     with Session(engine) as session:
-        noeud = session.exec(
-            select(Perimetre).where(Perimetre.code == f"bat:{batiments[0]}")
-        ).one()
+        noeud = session.exec(select(Perimetre).where(Perimetre.code == f"bat:{batiments[0]}")).one()
         noeud.libelle = "Villa des Tilleuls"
         session.add(noeud)
         session.commit()
@@ -85,10 +90,8 @@ def test_un_batiment_renomme_apparait_renomme(batiments):
 def test_le_libelle_venu_de_la_base_est_echappe(batiments):
     """Un nom de bâtiment est une donnée : il ne doit pas pouvoir injecter de balise."""
     with Session(engine) as session:
-        noeud = session.exec(
-            select(Perimetre).where(Perimetre.code == f"bat:{batiments[0]}")
-        ).one()
-        noeud.libelle = '<script>alert(1)</script>'
+        noeud = session.exec(select(Perimetre).where(Perimetre.code == f"bat:{batiments[0]}")).one()
+        noeud.libelle = "<script>alert(1)</script>"
         session.add(noeud)
         session.commit()
     P.invalider_cache()
@@ -102,9 +105,7 @@ def test_l_ordre_est_celui_de_l_administration(batiments):
     """`Noeud.ordre`, et non l'ordre alphabétique — « Bât. 10 » précédait « Bât. 2 »."""
     with Session(engine) as session:
         for rang, bid in enumerate(reversed(batiments[:3])):
-            noeud = session.exec(
-                select(Perimetre).where(Perimetre.code == f"bat:{bid}")
-            ).one()
+            noeud = session.exec(select(Perimetre).where(Perimetre.code == f"bat:{bid}")).one()
             noeud.ordre = rang
             session.add(noeud)
         session.commit()
@@ -116,6 +117,7 @@ def test_l_ordre_est_celui_de_l_administration(batiments):
 
 
 # ── L'icône ───────────────────────────────────────────────────────────────────
+
 
 def test_le_document_porte_l_icone_du_perimetre(batiments):
     """Un bâtiment semé porte `building-2` : le document doit la dessiner."""
@@ -129,9 +131,7 @@ def test_le_document_porte_l_icone_du_perimetre(batiments):
 def test_un_noeud_sans_icone_ne_produit_ni_carre_vide_ni_point_d_interrogation(batiments):
     """Cas zéro : `icone` est facultatif, et son absence est un état normal."""
     with Session(engine) as session:
-        noeud = session.exec(
-            select(Perimetre).where(Perimetre.code == f"bat:{batiments[0]}")
-        ).one()
+        noeud = session.exec(select(Perimetre).where(Perimetre.code == f"bat:{batiments[0]}")).one()
         noeud.icone = None
         session.add(noeud)
         session.commit()
@@ -151,6 +151,7 @@ def test_icone_svg_rend_vide_sur_un_nom_absent_ou_inconnu():
 
 
 # ── Les replis ────────────────────────────────────────────────────────────────
+
 
 def test_sans_arbre_le_document_se_produit_quand_meme(arbre_vide):
     """Une copropriété qui n'a pas configuré ses périmètres reçoit son document.

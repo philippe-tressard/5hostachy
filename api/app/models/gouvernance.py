@@ -29,6 +29,7 @@ la table manquerait sans le moindre message.
 `destinataires.py` s'appuie sur les deux, et ne les confond jamais : « le CS par
 le rôle » et « le syndic principal » sont deux questions distinctes.
 """
+
 from datetime import date, datetime
 from enum import Enum
 from typing import Optional
@@ -39,58 +40,61 @@ from sqlmodel import Field, SQLModel
 #  Annuaire CS & Syndic
 # ──────────────────────────────────────────────
 
+
 class GenreCivilite(str, Enum):
-    mr   = "Mr"
-    mme  = "Mme"
+    mr = "Mr"
+    mme = "Mme"
     mlle = "Mlle"
 
 
 class AgCsInfo(SQLModel, table=True):
     """Informations AG du Conseil Syndical. Un seul enregistrement (upsert)."""
+
     __tablename__ = "ag_cs_info"
-    id:       Optional[int]  = Field(default=None, primary_key=True)
-    ag_annee: Optional[int]  = None
-    ag_date:  Optional[date] = None
+    id: Optional[int] = Field(default=None, primary_key=True)
+    ag_annee: Optional[int] = None
+    ag_date: Optional[date] = None
 
 
 class MembreCS(SQLModel, table=True):
     """Membre du Conseil Syndical (indépendant des comptes Utilisateur)."""
+
     __tablename__ = "membre_cs"
-    id:          Optional[int]          = Field(default=None, primary_key=True)
-    genre:       GenreCivilite
-    prenom:      str
-    nom:         str
-    batiment_id: Optional[int]          = Field(default=None, foreign_key="batiment.id")
-    etage:       Optional[int]          = None
-    est_gestionnaire_site: bool         = False
-    est_president: bool                 = False
-    ordre:       int                    = 0
-    user_id:     Optional[int]          = Field(default=None, foreign_key="utilisateur.id")
-    cree_le:     datetime               = Field(default_factory=datetime.utcnow)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    genre: GenreCivilite
+    prenom: str
+    nom: str
+    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
+    etage: Optional[int] = None
+    est_gestionnaire_site: bool = False
+    est_president: bool = False
+    ordre: int = 0
+    user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
 
 
 class SyndicInfo(SQLModel, table=True):
     """Informations du syndic. Un seul enregistrement (upsert)."""
+
     __tablename__ = "syndic_info"
-    id:         Optional[int] = Field(default=None, primary_key=True)
-    nom_syndic: str           = ""
-    adresse:    str           = ""
-    site_web:   Optional[str] = None
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nom_syndic: str = ""
+    adresse: str = ""
+    site_web: Optional[str] = None
 
 
 class MembreSyndic(SQLModel, table=True):
     """Membre du syndic (indépendant des comptes Utilisateur)."""
+
     __tablename__ = "membre_syndic"
-    id:            Optional[int]    = Field(default=None, primary_key=True)
-    genre:         GenreCivilite
-    prenom:        str
-    nom:           str
-    fonction:      Optional[str]    = None
-    email:         Optional[str]    = None
-    telephone:     Optional[str]    = None   # CSV comma-separated, même pattern que Prestataire
-    est_principal: bool             = False
-    ordre:         int              = 0
-    user_id:       Optional[int]    = Field(default=None, foreign_key="utilisateur.id")
-    cree_le:       datetime         = Field(default_factory=datetime.utcnow)
-
-
+    id: Optional[int] = Field(default=None, primary_key=True)
+    genre: GenreCivilite
+    prenom: str
+    nom: str
+    fonction: Optional[str] = None
+    email: Optional[str] = None
+    telephone: Optional[str] = None  # CSV comma-separated, même pattern que Prestataire
+    est_principal: bool = False
+    ordre: int = 0
+    user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
+    cree_le: datetime = Field(default_factory=datetime.utcnow)

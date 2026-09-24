@@ -11,6 +11,7 @@ visé), `objets` les règles par entité, `documents` l'algorithme d'accès en c
 étapes — le seul qui interroge la base, et le seul adossé à un modèle de profil
 d'accès.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -46,6 +47,7 @@ from app.auth.deps import est_moderateur
 #  suppression de ce qu'elle a remplacé, et c'est Ruff (F401) qui l'a rappelé.
 
 # ── Règles actualité ────────────────────────────────────────────────────────
+
 
 def actualite_visible(ticket: Ticket, user: Utilisateur) -> bool:
     """L'utilisateur peut-il voir cette actualité ?
@@ -86,6 +88,7 @@ def actualite_visible(ticket: Ticket, user: Utilisateur) -> bool:
 
 
 # ── Règles sondage ────────────────────────────────────────────────────────────
+
 
 def sondage_clos(sondage: Sondage, maintenant: datetime) -> bool:
     """Ce sondage est-il terminé — de force, ou parce que l'échéance est passée ?
@@ -156,6 +159,7 @@ def sondage_accessible(sondage: Sondage, user: Utilisateur) -> bool:
 
 # ── Règles événement ──────────────────────────────────────────────────────────
 
+
 def evenement_visible(ev: Evenement, user: Utilisateur) -> bool:
     """
     Retourne True si l'utilisateur peut voir cet événement.
@@ -195,6 +199,7 @@ def evenement_visible(ev: Evenement, user: Utilisateur) -> bool:
 
 # ── Règle AG (helper rapide) ──────────────────────────────────────────────────
 
+
 def can_see_ag(user: Utilisateur) -> bool:
     """True si l'utilisateur peut voir les événements AG."""
     return user.has_role(
@@ -202,6 +207,7 @@ def can_see_ag(user: Utilisateur) -> bool:
         RoleUtilisateur.conseil_syndical,
         RoleUtilisateur.admin,
     )
+
 
 # ── Règles ticket ─────────────────────────────────────────────────────────────
 def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
@@ -325,6 +331,7 @@ def hors_du_hall(ticket: Ticket) -> bool:
     """
     return reservee_au_conseil(ticket) or bool(ticket.reserve_perimetre)
 
+
 # ── Règles Communauté : petite annonce et idée ────────────────────────────────
 #
 #  🔴 CES DEUX FONCTIONS N'ONT PAS DE CORPS, ET C'EST LE SUJET.
@@ -343,6 +350,7 @@ def hors_du_hall(ticket: Ticket) -> bool:
 #  est-elle visible ? » se lit mieux que trois arguments), et elles sont l'endroit
 #  où s'écrira une divergence FUTURE, si le produit en décide une — avec son
 #  motif, à un seul endroit.
+
 
 def annonce_visible(annonce: PetiteAnnonce, user: Utilisateur) -> bool:
     """Cette petite annonce est-elle visible de cet utilisateur ?

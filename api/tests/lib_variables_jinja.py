@@ -15,6 +15,7 @@ lèvent l'accès à un attribut ou à une clé, et l'itération. Exiger davantag
 ferait crier au loup là où rien ne casse — et un garde-fou dont on apprend à
 ignorer les alertes ne protège plus rien.
 """
+
 from jinja2 import BaseLoader, nodes
 from jinja2.sandbox import SandboxedEnvironment
 
@@ -45,10 +46,7 @@ def _variables_qui_font_echouer(sujet: str | None, corps: str | None) -> set[str
     # Trouvé le 03/08/2026 : `acces_apparies_auto` déréférence `utilisateur` dans
     # son sujet et le teste dans une condition du corps ; sa clé manquante ne
     # faisait rougir aucun test alors que l'envoi levait bien `UndefinedError`.
-    return (
-        _risquees_dans(sujet or "")
-        | _risquees_dans(corps or "")
-    )
+    return _risquees_dans(sujet or "") | _risquees_dans(corps or "")
 
 
 def _risquees_dans(source: str) -> set[str]:
@@ -78,10 +76,10 @@ def _risquees_dans(source: str) -> set[str]:
         return node.name if isinstance(node, nodes.Name) else None
 
     for n in arbre.find_all((nodes.Getattr, nodes.Getitem)):
-        if (nom := _nom(n.node)):
+        if nom := _nom(n.node):
             risquees.add(nom)
     for n in arbre.find_all(nodes.For):
-        if (nom := _nom(n.iter)):
+        if nom := _nom(n.iter):
             risquees.add(nom)
     # Variables testées par un `{% if %}` quelque part dans le template : leur
     # absence rend la condition fausse, donc le bloc qui les déréférence n'est

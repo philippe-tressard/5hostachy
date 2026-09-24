@@ -43,6 +43,7 @@ Le contrôle rejoue donc **tous** les couples (publication × profil) contre la
 règle d'avant, et exige que le seul écart possible soit un refus qui portait
 uniquement sur le bâtiment.
 """
+
 from __future__ import annotations
 
 import itertools
@@ -85,8 +86,13 @@ PROFILS = [
 
 def _utilisateur(roles, statut, batiment_id, *, restreint=False) -> Utilisateur:
     return Utilisateur(
-        nom="X", prenom="Y", email=f"{roles}-{statut}-{batiment_id}-{restreint}@test.fr",
-        roles_json=roles, statut=statut, batiment_id=batiment_id, actif=True,
+        nom="X",
+        prenom="Y",
+        email=f"{roles}-{statut}-{batiment_id}-{restreint}@test.fr",
+        roles_json=roles,
+        statut=statut,
+        batiment_id=batiment_id,
+        actif=True,
         restreindre_a_mes_batiments=restreint,
     )
 
@@ -98,13 +104,20 @@ def _publication(perimetre_cible, public_cible, *, confidentiel=False) -> Ticket
     « visible du seul périmètre » (`reserve_perimetre`) de l'affaire.
     """
     return Ticket(
-        numero="TK-A1", titre="T", description="C", categorie="actualite", statut="publie",
-        auteur_id=1, perimetre_cible=perimetre_cible, public_cible=public_cible,
+        numero="TK-A1",
+        titre="T",
+        description="C",
+        categorie="actualite",
+        statut="publie",
+        auteur_id=1,
+        perimetre_cible=perimetre_cible,
+        public_cible=public_cible,
         reserve_perimetre=confidentiel,
     )
 
 
 # ── Le contrôle central ───────────────────────────────────────────────────────
+
 
 def test_aucun_profil_ne_gagne_un_acces_qu_il_n_avait_pas(batiments):
     """Le seul écart admis : un refus qui portait UNIQUEMENT sur le bâtiment.
@@ -113,7 +126,11 @@ def test_aucun_profil_ne_gagne_un_acces_qu_il_n_avait_pas(batiments):
     refusait alors que le public convenait, le nouvel accès est légitime ; si elle
     refusait pour une raison de public, le refus doit tenir.
     """
-    cibles = [None, "[]"] + [f'["bat:{b}"]' for b in batiments] + ['["bat:%d","bat:%d"]' % (batiments[0], batiments[1])]
+    cibles = (
+        [None, "[]"]
+        + [f'["bat:{b}"]' for b in batiments]
+        + ['["bat:%d","bat:%d"]' % (batiments[0], batiments[1])]
+    )
 
     gains_illegitimes = []
     for cible, public, (roles, statut, bat) in itertools.product(cibles, PUBLICS, PROFILS):
@@ -161,6 +178,7 @@ def test_le_public_cible_refuse_toujours_ce_qu_il_refusait(batiments):
 
 # ── Ce qui change volontairement ──────────────────────────────────────────────
 
+
 def test_une_actualite_d_un_autre_batiment_devient_lisible(batiments):
     """Le changement demandé, énoncé dans le sens positif."""
     resident = _utilisateur("résident", StatutUtilisateur.locataire, batiments[0])
@@ -180,7 +198,9 @@ def test_la_case_du_profil_rend_l_ancien_comportement(batiments):
 
 def test_la_case_ne_donne_jamais_acces_a_plus(batiments):
     """Se restreindre ne peut pas ouvrir : le verdict coché ⊆ le verdict décoché."""
-    for bat, cible in itertools.product([None] + batiments, [f'["bat:{b}"]' for b in batiments] + [None]):
+    for bat, cible in itertools.product(
+        [None] + batiments, [f'["bat:{b}"]' for b in batiments] + [None]
+    ):
         libre = _utilisateur("résident", StatutUtilisateur.locataire, bat)
         coche = _utilisateur("résident", StatutUtilisateur.locataire, bat, restreint=True)
         pub = _publication(cible, '["résidents"]')
@@ -198,6 +218,7 @@ def test_sans_batiment_connu_la_restriction_ne_vide_pas_le_fil(batiments):
 
 
 # ── Ce qui ne doit PAS avoir bougé ────────────────────────────────────────────
+
 
 def test_les_autres_contenus_gardent_leur_regle_de_batiment(batiments):
     """Documents, sondages et AG : `perimetre_visible` sans le drapeau d'ouverture.
@@ -223,7 +244,10 @@ def test_le_conseil_syndical_et_l_admin_voient_toujours_tout(batiments):
 def test_un_ciblage_illisible_refuse_toujours(batiments):
     """L'ouverture ne doit pas transformer une donnée abîmée en autorisation."""
     resident = _utilisateur("résident", StatutUtilisateur.locataire, batiments[0])
-    assert actualite_visible(_publication("{ceci n'est pas du JSON", '["résidents"]'), resident) is False
+    assert (
+        actualite_visible(_publication("{ceci n'est pas du JSON", '["résidents"]'), resident)
+        is False
+    )
 
 
 # ── Confidentiel (#347) : refermer l'ouverture, et RIEN de plus ───────────────
@@ -232,6 +256,7 @@ def test_un_ciblage_illisible_refuse_toujours(batiments):
 #  elle repasse `ouvert_a_la_copropriete` à sa valeur par défaut, c'est-à-dire au
 #  comportement d'avant #339. Ces contrôles vérifient les deux moitiés de cette
 #  phrase — qu'elle referme bien, et qu'elle n'ouvre nulle part.
+
 
 def test_confidentiel_ne_rend_jamais_une_publication_plus_visible(batiments):
     """Le sens de la confidentialité : elle RESTREINT, elle n'accorde jamais.
@@ -258,8 +283,8 @@ def test_confidentiel_ne_rend_jamais_une_publication_plus_visible(batiments):
                 f"CONFIDENTIELLE de {public} ciblée {cible}, pas la version ouverte"
             )
 
-    assert not gains, (
-        "La confidentialité OUVRE un accès au lieu de le fermer :\n" + "\n".join(gains)
+    assert not gains, "La confidentialité OUVRE un accès au lieu de le fermer :\n" + "\n".join(
+        gains
     )
 
 
@@ -273,7 +298,10 @@ def test_confidentiel_referme_le_fil_aux_autres_batiments(batiments):
     assert actualite_visible(sien, resident) is True
     #  Et la même publication non confidentielle reste lisible : c'est bien la
     #  case, et elle seule, qui a refermé le périmètre.
-    assert actualite_visible(_publication(f'["bat:{batiments[2]}"]', '["résidents"]'), resident) is True
+    assert (
+        actualite_visible(_publication(f'["bat:{batiments[2]}"]', '["résidents"]'), resident)
+        is True
+    )
 
 
 def test_confidentiel_se_combine_en_et_avec_le_public_cible(batiments):
@@ -328,7 +356,6 @@ def test_sans_batiment_connu_le_confidentiel_se_referme(batiments):
     assert actualite_visible(pub, sans_batiment) is False
 
 
-
 # ── La fermeture du repli ne RETIRE que — elle n'accorde rien ─────────────────
 #
 #  🔴 C'est l'invariant que ce fichier entier existe pour tenir, appliqué au lot
@@ -350,9 +377,13 @@ def bailleur_avec_lot(batiments):
     """
     with Session(engine) as session:
         user = Utilisateur(
-            nom="Bailleur", prenom="Sans", email="bailleur-sans-rattachement@test.fr",
-            roles_json="propriétaire", statut=StatutUtilisateur.copropriétaire_bailleur,
-            batiment_id=None, actif=True,
+            nom="Bailleur",
+            prenom="Sans",
+            email="bailleur-sans-rattachement@test.fr",
+            roles_json="propriétaire",
+            statut=StatutUtilisateur.copropriétaire_bailleur,
+            batiment_id=None,
+            actif=True,
         )
         session.add(user)
         lot = Lot(batiment_id=batiments[1], numero="B12")
@@ -366,9 +397,7 @@ def bailleur_avec_lot(batiments):
 
         yield user
 
-        for ul in session.exec(
-            select(UserLot).where(UserLot.user_id == user.id)
-        ).all():
+        for ul in session.exec(select(UserLot).where(UserLot.user_id == user.id)).all():
             purger_ligne(session, UserLot, ul.id)
         purger_ligne(session, Lot, lot.id)
         purger_ligne(session, Utilisateur, user.id)
@@ -412,10 +441,13 @@ def test_un_lot_donne_acces_a_son_batiment_meme_avec_un_rattachement(batiments):
     """
     with Session(engine) as session:
         user = Utilisateur(
-            nom="Mixte", prenom="Cas", email="rattache-et-proprietaire@test.fr",
+            nom="Mixte",
+            prenom="Cas",
+            email="rattache-et-proprietaire@test.fr",
             roles_json="propriétaire",
             statut=StatutUtilisateur.copropriétaire_bailleur,
-            batiment_id=batiments[0], actif=True,
+            batiment_id=batiments[0],
+            actif=True,
         )
         session.add(user)
         lot = Lot(batiment_id=batiments[1], numero="C7")
@@ -441,15 +473,12 @@ def test_un_lot_donne_acces_a_son_batiment_meme_avec_un_rattachement(batiments):
             reservee = _publication(f'["bat:{batiments[1]}"]', '["locataires"]')
             assert actualite_visible(reservee, user) is False
         finally:
-            for ul in session.exec(
-                select(UserLot).where(UserLot.user_id == user.id)
-            ).all():
+            for ul in session.exec(select(UserLot).where(UserLot.user_id == user.id)).all():
                 purger_ligne(session, UserLot, ul.id)
             purger_ligne(session, Lot, lot.id)
             purger_ligne(session, Utilisateur, user.id)
             session.commit()
             mes_batiments.invalider_cache()
-
 
 
 def test_un_compte_sans_rattachement_ni_lot_ne_voit_rien_de_cible(batiments):

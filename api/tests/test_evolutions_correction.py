@@ -18,6 +18,7 @@ Que les deux routes l'appellent bien est vérifié par analyse statique, comme l
 fait le fichier jumeau pour la suppression : une dépendance relâchée ne se voit
 pas dans une réponse HTTP nominale.
 """
+
 from __future__ import annotations
 
 import ast
@@ -73,9 +74,12 @@ def _entree(session, modele, champ_parent, parent_id, auteur, type_="commentaire
 def test_l_auteur_peut_corriger_son_entree(session, modele, champ, _):
     auteur = _auteur(session)
     evol = _entree(session, modele, champ, 1, auteur)
-    assert evolution_modifiable(
-        session, modele, evol.id, champ_parent=champ, parent_id=1, user=auteur
-    ).id == evol.id
+    assert (
+        evolution_modifiable(
+            session, modele, evol.id, champ_parent=champ, parent_id=1, user=auteur
+        ).id
+        == evol.id
+    )
 
 
 @pytest.mark.parametrize("modele,champ,_", FILS, ids=IDS)
@@ -89,9 +93,7 @@ def test_une_entree_d_un_AUTRE_objet_est_introuvable(session, modele, champ, _):
     auteur = _auteur(session)
     evol = _entree(session, modele, champ, 1, auteur)
     with pytest.raises(HTTPException) as erreur:
-        evolution_modifiable(
-            session, modele, evol.id, champ_parent=champ, parent_id=2, user=auteur
-        )
+        evolution_modifiable(session, modele, evol.id, champ_parent=champ, parent_id=2, user=auteur)
     assert erreur.value.status_code == 404
 
 
@@ -101,9 +103,7 @@ def test_une_entree_tracee_automatiquement_ne_se_corrige_pas(session, modele, ch
     auteur = _auteur(session)
     evol = _entree(session, modele, champ, 1, auteur, type_="correction")
     with pytest.raises(HTTPException) as erreur:
-        evolution_modifiable(
-            session, modele, evol.id, champ_parent=champ, parent_id=1, user=auteur
-        )
+        evolution_modifiable(session, modele, evol.id, champ_parent=champ, parent_id=1, user=auteur)
     assert erreur.value.status_code == 422
 
 
@@ -119,9 +119,7 @@ def test_le_type_passe_AVANT_le_droit(session, modele, champ, _):
     tiers = _auteur(session, "tiers@exemple.fr")
     evol = _entree(session, modele, champ, 1, auteur, type_="correction")
     with pytest.raises(HTTPException) as erreur:
-        evolution_modifiable(
-            session, modele, evol.id, champ_parent=champ, parent_id=1, user=tiers
-        )
+        evolution_modifiable(session, modele, evol.id, champ_parent=champ, parent_id=1, user=tiers)
     assert erreur.value.status_code == 422
 
 
@@ -135,11 +133,13 @@ def test_chaque_route_delegue_a_la_garde_partagee(modele, champ, fichier):
     source = (RACINE / fichier).read_text(encoding="utf-8")
     arbre = ast.parse(source)
     patch = next(
-        n for n in ast.walk(arbre)
+        n
+        for n in ast.walk(arbre)
         if isinstance(n, ast.FunctionDef) and n.name == "update_evolution"
     )
     appels = {
-        n.func.id for n in ast.walk(patch)
+        n.func.id
+        for n in ast.walk(patch)
         if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
     }
     assert "evolution_modifiable" in appels, (

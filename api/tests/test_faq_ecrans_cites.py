@@ -33,6 +33,7 @@ ce qui l'a remplacé — c'est un contrôle de non-régression, pas un analyseur
 c'est ce qui empêche l'ancien nom de revenir dans un texte, un an plus tard, par
 une reformulation faite de mémoire.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -45,18 +46,12 @@ _FRONT = pathlib.Path(__file__).resolve().parents[2] / "front" / "src"
 #: avec ce qui les remplace. La clé est cherchée **sans** tenir compte de la
 #: casse, mais telle quelle : un mot ordinaire n'y a pas sa place.
 TERMES_MORTS = {
-    "rubrique Gouvernance":
-        "l'écran redirige vers /residence depuis #516 — dire « rubrique Résidence »",
-    "Historique de mes tickets":
-        "renommé « 🗂️ Archives » le 20/08/2026 (#516)",
-    "messagerie":
-        "il n'y a aucune messagerie dans le produit — citer documents ou calendrier",
-    "Mon profil > Sécurité":
-        "le bloc s'appelle « Modifier le mot de passe » (#1025)",
-    "Admin → Patrimoine":
-        "l'onglet s'appelle « Périmètres » (#1025)",
-    "Signalements & tickets":
-        "le libellé de la page est « Tickets » (pages.ts)",
+    "rubrique Gouvernance": "l'écran redirige vers /residence depuis #516 — dire « rubrique Résidence »",
+    "Historique de mes tickets": "renommé « 🗂️ Archives » le 20/08/2026 (#516)",
+    "messagerie": "il n'y a aucune messagerie dans le produit — citer documents ou calendrier",
+    "Mon profil > Sécurité": "le bloc s'appelle « Modifier le mot de passe » (#1025)",
+    "Admin → Patrimoine": "l'onglet s'appelle « Périmètres » (#1025)",
+    "Signalements & tickets": "le libellé de la page est « Tickets » (pages.ts)",
 }
 
 

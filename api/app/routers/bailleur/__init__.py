@@ -44,6 +44,7 @@ découpage : le préfixe `/bailleur` est posé ici, une seule fois, et
 `api/tests/test_endpoints_orphelins.py` le vérifie en même temps qu'il vérifie
 que chacun a un consommateur.
 """
+
 from fastapi import APIRouter
 
 from . import acces, baux, objets

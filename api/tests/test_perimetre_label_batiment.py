@@ -46,6 +46,7 @@ occurrence est une question de temps.
 verrouille la forme **serveur** et **nomme** son jumeau, pour qu'une correction
 d'un côté rappelle l'autre.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -55,6 +56,7 @@ from sqlmodel import Session, SQLModel
 
 from app.database import engine
 from app.models.perimetre import Perimetre
+
 #  Importé pour ses tables : `create_all` ne peut pas résoudre la clé étrangère
 #  `perimetre.modifie_par_id` sans le modèle `Utilisateur` en mémoire.
 from app.models.core import Utilisateur  # noqa: F401
@@ -85,9 +87,15 @@ def arbre_deux_batiments():
         for numero, batiment_id in zip(("3", "4"), monter_batiments(session, ("3", "4"))):
             bat = f"bat{suffixe}:{numero}"
             noeud_bat = Perimetre(
-                code=bat, libelle=f"Bâtiment {numero}",
-                libelle_court=f"Bât. {numero}", description="", batiment_id=batiment_id,
-                profondeur=0, ordre=int(numero), actif=True, selectionnable=True,
+                code=bat,
+                libelle=f"Bâtiment {numero}",
+                libelle_court=f"Bât. {numero}",
+                description="",
+                batiment_id=batiment_id,
+                profondeur=0,
+                ordre=int(numero),
+                actif=True,
+                selectionnable=True,
             )
             session.add(noeud_bat)
             #  ⚠️ Le lien de parenté est `parent_id`, un ENTIER — pas un code. Mon
@@ -98,11 +106,20 @@ def arbre_deux_batiments():
             session.commit()
             session.refresh(noeud_bat)
             toit = f"{bat}/toit"
-            session.add(Perimetre(
-                code=toit, parent_id=noeud_bat.id, libelle="Toit",
-                libelle_court="Toit", description="", batiment_id=batiment_id,
-                profondeur=1, ordre=1, actif=True, selectionnable=True,
-            ))
+            session.add(
+                Perimetre(
+                    code=toit,
+                    parent_id=noeud_bat.id,
+                    libelle="Toit",
+                    libelle_court="Toit",
+                    description="",
+                    batiment_id=batiment_id,
+                    profondeur=1,
+                    ordre=1,
+                    actif=True,
+                    selectionnable=True,
+                )
+            )
             codes.append((bat, toit))
         session.commit()
     P.invalider_cache()
@@ -153,21 +170,39 @@ def arbre_du_ticket():
         #  Un REGROUPEMENT : racine, non sélectionnable. Il ne doit jamais préfixer
         #  ses enfants — « Bâtiments › Bât. 4 » n'apprendrait rien.
         groupe = Perimetre(
-            code=f"batiments{suffixe}", libelle="Bâtiments", libelle_court="Bâtiments",
-            description="", profondeur=0, ordre=10, actif=True, selectionnable=False,
+            code=f"batiments{suffixe}",
+            libelle="Bâtiments",
+            libelle_court="Bâtiments",
+            description="",
+            profondeur=0,
+            ordre=10,
+            actif=True,
+            selectionnable=False,
         )
         aful = Perimetre(
-            code=f"aful{suffixe}", libelle="AFUL", libelle_court="AFUL",
-            description="", profondeur=0, ordre=40, actif=True, selectionnable=True,
+            code=f"aful{suffixe}",
+            libelle="AFUL",
+            libelle_court="AFUL",
+            description="",
+            profondeur=0,
+            ordre=40,
+            actif=True,
+            selectionnable=True,
             portee_globale=True,
         )
         #  La racine par défaut : c'est elle qu'un contenu SANS périmètre désigne,
         #  et c'est son libellé — pas la chaîne « Copropriété entière » écrite dans
         #  le code — que l'affiche de hall doit imprimer.
         racine = Perimetre(
-            code=f"residence{suffixe}", libelle="Copropriété entière",
-            libelle_court="Copropriété", description="", profondeur=0, ordre=0,
-            actif=True, selectionnable=True, portee_globale=True,
+            code=f"residence{suffixe}",
+            libelle="Copropriété entière",
+            libelle_court="Copropriété",
+            description="",
+            profondeur=0,
+            ordre=0,
+            actif=True,
+            selectionnable=True,
+            portee_globale=True,
         )
         session.add_all([groupe, aful, racine])
         session.commit()
@@ -175,9 +210,16 @@ def arbre_du_ticket():
         session.refresh(aful)
 
         bat = Perimetre(
-            code=f"bat{suffixe}:4", parent_id=groupe.id, libelle="Bâtiment 4",
-            libelle_court="Bât. 4", description="", batiment_id=4,
-            profondeur=1, ordre=3, actif=True, selectionnable=True,
+            code=f"bat{suffixe}:4",
+            parent_id=groupe.id,
+            libelle="Bâtiment 4",
+            libelle_court="Bât. 4",
+            description="",
+            batiment_id=4,
+            profondeur=1,
+            ordre=3,
+            actif=True,
+            selectionnable=True,
         )
         session.add(bat)
         session.commit()
@@ -187,19 +229,37 @@ def arbre_du_ticket():
         #  (Logement en 2ᵉ, Jardin Bâtiment en 9ᵉ), et le tri doit s'y conformer.
         espaces = {
             "logement": Perimetre(
-                code=f"{bat.code}/logement", parent_id=bat.id, libelle="Logement",
-                libelle_court="Logement", description="", profondeur=2, ordre=1,
-                actif=True, selectionnable=True,
+                code=f"{bat.code}/logement",
+                parent_id=bat.id,
+                libelle="Logement",
+                libelle_court="Logement",
+                description="",
+                profondeur=2,
+                ordre=1,
+                actif=True,
+                selectionnable=True,
             ),
             "jardin": Perimetre(
-                code=f"{bat.code}/jardin", parent_id=bat.id, libelle="Jardin Bâtiment",
-                libelle_court="Jardin Bât.", description="", profondeur=2, ordre=7,
-                actif=True, selectionnable=True,
+                code=f"{bat.code}/jardin",
+                parent_id=bat.id,
+                libelle="Jardin Bâtiment",
+                libelle_court="Jardin Bât.",
+                description="",
+                profondeur=2,
+                ordre=7,
+                actif=True,
+                selectionnable=True,
             ),
             "voie": Perimetre(
-                code=f"{aful.code}/voie", parent_id=aful.id, libelle="Voie d'accès",
-                libelle_court="Voie d'accès", description="", profondeur=1, ordre=0,
-                actif=True, selectionnable=True,
+                code=f"{aful.code}/voie",
+                parent_id=aful.id,
+                libelle="Voie d'accès",
+                libelle_court="Voie d'accès",
+                description="",
+                profondeur=1,
+                ordre=0,
+                actif=True,
+                selectionnable=True,
             ),
         }
         session.add_all(espaces.values())
@@ -234,9 +294,7 @@ def test_le_rendu_du_ticket_signale(arbre_du_ticket):
     """La chaîne validée par l'utilisateur, au caractère près."""
     codes = [arbre_du_ticket["logement"], arbre_du_ticket["voie"], arbre_du_ticket["jardin"]]
 
-    assert P.perimetre_label(codes) == (
-        "Bât. 4 › Logement · Jardin Bâtiment — AFUL › Voie d'accès"
-    )
+    assert P.perimetre_label(codes) == ("Bât. 4 › Logement · Jardin Bâtiment — AFUL › Voie d'accès")
 
 
 def test_l_ordre_des_clics_n_a_plus_d_effet(arbre_du_ticket):
@@ -298,15 +356,17 @@ def test_le_front_porte_la_meme_regle():
     """
     from pathlib import Path
 
-    jumeau = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "perimetres" / "libelles.ts"
+    jumeau = (
+        Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "perimetres" / "libelles.ts"
+    )
     assert jumeau.exists(), (
         f"{jumeau} est introuvable : ce contrôle ne peut plus rien établir. "
         "Ne pas lire son silence comme un succès."
     )
     source = jumeau.read_text(encoding="utf-8")
     manquants = [
-        nom for nom in ("parentQualifiant", "estGroupeRacine", "cheminOrdre",
-                        "SEPARATEUR_GROUPE", "›")
+        nom
+        for nom in ("parentQualifiant", "estGroupeRacine", "cheminOrdre", "SEPARATEUR_GROUPE", "›")
         if nom not in source
     ]
     assert not manquants, (

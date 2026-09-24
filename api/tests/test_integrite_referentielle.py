@@ -21,6 +21,7 @@ Pour rejouer la mesure complète :
 
     HOSTACHY_FK_STRICTES=1 pytest tests/ -q
 """
+
 import os
 import tempfile
 
@@ -215,6 +216,7 @@ def test_delier_ne_touche_PAS_les_colonnes_non_nullables(moteur_strict):
 
 
 # ── Le garde-fou du garde-fou (#546, 29/08/2026) ─────────────────────────────
+
 
 def test_la_suite_TOURNE_avec_les_cles_actives():
     """🔴 Sans ce test, tout le chantier peut redevenir inutile en silence.

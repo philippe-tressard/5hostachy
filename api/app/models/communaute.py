@@ -16,6 +16,7 @@ modules appelants n'a une ligne à changer. C'est aussi ce qui garantit que les
 tables restent enregistrées dans les métadonnées SQLModel — un modèle défini dans
 un module que personne n'importe n'existe pas pour Alembic.
 """
+
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
@@ -27,6 +28,7 @@ from app.utils.assiste_ia import AssisteIAMixin
 # ──────────────────────────────────────────────
 #  Sondages
 # ──────────────────────────────────────────────
+
 
 class Sondage(AssisteIAMixin, table=True):
     __tablename__ = "sondage"
@@ -42,7 +44,7 @@ class Sondage(AssisteIAMixin, table=True):
     #  seul de tout le site, si bien qu'on ne pouvait cibler ni le parking, ni
     #  l'AFUL, ni un espace de bâtiment. Unifié le 16/08/2026 (migration 0147).
     perimetre_cible: Optional[str] = Field(default=None)  # JSON de codes de périmètre
-    public_cible: Optional[str] = Field(default=None)     # JSON de codes de public
+    public_cible: Optional[str] = Field(default=None)  # JSON de codes de public
     cloture_forcee: bool = Field(default=False)
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
@@ -80,6 +82,7 @@ class VoteSondage(SQLModel, table=True):
 # ──────────────────────────────────────────────
 #  Petites annonces
 # ──────────────────────────────────────────────
+
 
 class TypeAnnonce(str, Enum):
     vente = "vente"
@@ -184,6 +187,7 @@ class CommentaireSondage(SQLModel, table=True):
 #  Boîte à idées
 # ──────────────────────────────────────────────
 
+
 class Idee(AssisteIAMixin, table=True):
     __tablename__ = "idee"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -231,10 +235,11 @@ class ReponseCommunaute(SQLModel, table=True):
     sémantique « commentaire attaché au vote »), mais partagent les mêmes
     helpers d'enrichissement/notification et le même composant front.
     """
+
     __tablename__ = "reponse_communaute"
     id: Optional[int] = Field(default=None, primary_key=True)
-    rubrique: str = Field(index=True)          # 'idee' | 'annonce'
-    cible_id: int = Field(index=True)          # id de l'idée / annonce (polymorphe)
+    rubrique: str = Field(index=True)  # 'idee' | 'annonce'
+    cible_id: int = Field(index=True)  # id de l'idée / annonce (polymorphe)
     auteur_id: int = Field(foreign_key="utilisateur.id")
     contenu: str
     cree_le: datetime = Field(default_factory=datetime.utcnow)
@@ -246,11 +251,12 @@ class Signalement(SQLModel, table=True):
     cible_type : 'idee' | 'annonce' | 'sondage' | 'reponse' (ReponseCommunaute)
                  | 'commentaire' (CommentaireSondage).
     """
+
     __tablename__ = "signalement"
     id: Optional[int] = Field(default=None, primary_key=True)
     cible_type: str = Field(index=True)
     cible_id: int = Field(index=True)
-    apercu: str = ""                            # extrait/titre du contenu (pour la file)
+    apercu: str = ""  # extrait/titre du contenu (pour la file)
     auteur_cible_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     signale_par_id: int = Field(foreign_key="utilisateur.id")
     motif: str

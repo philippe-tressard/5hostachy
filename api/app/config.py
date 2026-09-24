@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     uploads_dir: str = "/app/uploads"
     backup_frequency: Literal["daily", "weekly", "monthly"] = "daily"
     backup_hour: int = 3
-    backup_day_of_week: int = 6   # 0=lun … 6=dim
+    backup_day_of_week: int = 6  # 0=lun … 6=dim
     backup_keep_versions: int = 7
 
     # Maintenance cron — clé partagée pour l'endpoint /admin/maintenance/rapport

@@ -20,6 +20,7 @@ consigne :
 Le test lit `front/` depuis `api/tests/` comme le fait déjà `test_documentation.py` :
 la CI n'exécute pytest qu'ici, et un contrôle sans exécution est un contrôle absent.
 """
+
 import pathlib
 import re
 

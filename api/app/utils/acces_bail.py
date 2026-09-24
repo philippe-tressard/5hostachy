@@ -21,6 +21,7 @@ du bail —, chacune en deux jumeaux vigik/télécommande, et toutes quatre filt
 sur `user_id == bailleur` : un badge remis par l'import, dont le détenteur était
 le locataire, ne revenait jamais.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -35,9 +36,12 @@ def confies(session: Session, bail_id: int) -> list[tuple[str, object]]:
     return [
         (t.cle, o)
         for t in TYPES_ACCES.values()
-        for o in session.exec(select(t.modele).where(
-            t.modele.bail_id == bail_id, t.modele.chez_locataire == True,  # noqa: E712
-        )).all()
+        for o in session.exec(
+            select(t.modele).where(
+                t.modele.bail_id == bail_id,
+                t.modele.chez_locataire == True,  # noqa: E712
+            )
+        ).all()
     ]
 
 
@@ -49,7 +53,9 @@ def remettre(objet, bail) -> None:
 
 
 def rendre_au_bailleur(
-    session: Session, bail, choix: Optional[dict[str, list[int]]] = None,
+    session: Session,
+    bail,
+    choix: Optional[dict[str, list[int]]] = None,
 ) -> list[tuple[str, object]]:
     """Les badges du bail reviennent au bailleur — tous, ou ceux de `choix`.
 

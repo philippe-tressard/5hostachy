@@ -28,6 +28,7 @@ est accepté.
 `standards/04` §11 : un autotest couvre la construction, jamais le tuyau. Mais
 la construction est justement ce qui a cassé, et deux fois.
 """
+
 from __future__ import annotations
 
 import json
@@ -73,9 +74,17 @@ def test_la_bibliotheque_existe():
 def test_un_rapport_NOMINAL_est_accepte():
     """Le cas de tous les dimanches. S'il casse, la maintenance devient muette."""
     charge = _payload(
-        "maintenance", "rpi1", "applicative", "succes", "42",
-        '{"images":"3","lignes_rotees":12}', "", "2026-08-16T03:00:00",
-        "2026-08-16T03:02:14", "5", "1234",
+        "maintenance",
+        "rpi1",
+        "applicative",
+        "succes",
+        "42",
+        '{"images":"3","lignes_rotees":12}',
+        "",
+        "2026-08-16T03:00:00",
+        "2026-08-16T03:02:14",
+        "5",
+        "1234",
     )
     RapportMaintenance(**charge)
 

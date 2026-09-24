@@ -31,6 +31,7 @@ regarder la **déclaration**, pas le comportement du cas heureux — c'est la m�
 famille que `test_emails_contexte_appel.py`, qui a trouvé un bug latent là où
 tous les envois fonctionnaient.
 """
+
 from __future__ import annotations
 
 import ast
@@ -48,7 +49,8 @@ FRONT = RACINE.parent / "front"
 #: et le chemin DÉCLARÉ dans son décorateur (préfixe de montage exclu).
 FILS = {
     "ticket": (
-        "app/routers/tickets/evolutions.py", "delete_evolution",
+        "app/routers/tickets/evolutions.py",
+        "delete_evolution",
         "/{ticket_id}/evolutions/{evol_id}",
     ),
 }
@@ -132,11 +134,7 @@ def test_effacer_est_reserve_a_l_administrateur(fil):
     #  échouait sur les tickets — dont la docstring explique justement pourquoi
     #  ce n'est PAS cette dépendance. Un contrôle qui lit de la prose mesure
     #  autre chose que ce qu'il croit.
-    deps = {
-        ast.unparse(d)
-        for d in fonction.args.defaults
-        if isinstance(d, ast.Call)
-    }
+    deps = {ast.unparse(d) for d in fonction.args.defaults if isinstance(d, ast.Call)}
     assert any("require_admin" in d for d in deps), (
         f"{fil} : la suppression n'exige pas `require_admin` — dépendances : {sorted(deps)}"
     )
@@ -161,8 +159,7 @@ def test_les_types_effacables_sont_les_memes_des_deux_cotes():
     assert m, "TYPES_EFFACABLES introuvable dans RubriqueHistorique.svelte"
     cote_ecran = tuple(re.findall(r"'([^']+)'", m.group(1)))
     assert cote_ecran == TYPES_EFFACABLES, (
-        f"écran={cote_ecran} serveur={TYPES_EFFACABLES} — "
-        "les deux listes ont divergé."
+        f"écran={cote_ecran} serveur={TYPES_EFFACABLES} — les deux listes ont divergé."
     )
 
 

@@ -10,6 +10,7 @@ photo justificative.
 `main.py`. Changer les chemins aurait cassé le client TypeScript et les liens
 existants pour un gain nul : c'est le RANGEMENT du code qui change, pas l'API.
 """
+
 import logging
 import os
 from datetime import date, datetime
@@ -33,6 +34,7 @@ router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 
 
 # ── Relevés compteurs ────────────────────────────────────────────────────────
+
 
 class ReleveCreate(BaseModel):
     type_compteur: str
@@ -118,6 +120,7 @@ def delete_releve(
 
 # ── Photo relevé ──────────────────────────────────────────
 
+
 @router.post("/releves/{r_id}/photo", response_model=ReleveRead)
 async def upload_releve_photo(
     r_id: int,
@@ -142,6 +145,7 @@ async def upload_releve_photo(
 
 
 # ── Compteurs config ──────────────────────────────────────
+
 
 class CompteurConfigCreate(BaseModel):
     type_compteur: str
@@ -225,8 +229,6 @@ def delete_compteur_config(
     session.commit()
 
 
-
-
 # ── Téléchargement des pièces (CS/admin) ─────────────────────────────────────
 #
 # Ces fichiers — conditions d'assurance, relevés de
@@ -240,6 +242,7 @@ def delete_compteur_config(
 #
 # Servis par ces endpoints, ils suivent enfin la même règle que la bibliothèque
 # documentaire : fichier hors du tronc servi, autorisation appliquée à la lecture.
+
 
 def _servir_fichier_prive(nom: str, noms_autorises: set[str], libelle: str) -> FileResponse:
     """Sert un fichier de `prive/`, à condition qu'il appartienne à la ressource.

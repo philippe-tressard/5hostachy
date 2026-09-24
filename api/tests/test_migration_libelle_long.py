@@ -11,6 +11,7 @@ déploiement, sans que rien ne le signale et sans retour en arrière possible.
 La décision est isolée en fonction pure (`decider`) précisément pour être
 vérifiable ici : elle ne l'est pas à travers `op.get_bind()`.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -20,7 +21,9 @@ import pytest
 
 CHEMIN = (
     Path(__file__).resolve().parents[1]
-    / "alembic" / "versions" / "0143_libelle_long_des_batiments.py"
+    / "alembic"
+    / "versions"
+    / "0143_libelle_long_des_batiments.py"
 )
 
 

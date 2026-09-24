@@ -35,6 +35,7 @@ sonde, et qu'est-ce qui compte comme sonde. Ils s'éprouvent sur la fonction
 pure, avec une horloge fixe — sans base, sans conteneur, en quelques
 millisecondes.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -163,7 +164,6 @@ def test_les_taches_qui_alternent_sont_declarees():
         )
 
 
-
 def test_une_tache_absente_de_la_table_garde_la_periode_de_la_tache():
     """La maintenance hebdomadaire tourne sur les DEUX nœuds, pas en alternance.
 
@@ -179,7 +179,6 @@ def test_une_tache_absente_de_la_table_garde_la_periode_de_la_tache():
     res = _grouper([ligne("rpi1", 0), ligne("rpi2", 8)], tache="maintenance", periode_h=168)
     etats = {d["noeud"]: d["statut"] for d in res["detail"]}
     assert etats == {"rpi1": "ok", "rpi2": "manquante"}, etats
-
 
 
 #  ── La FORME des sous-lignes, éprouvée à l'exécution ────────────────────────
@@ -209,6 +208,7 @@ def test_chaque_sous_ligne_porte_les_cles_attendues():
         "la synthèse et les sous-lignes partagent la même forme : l'écran les "
         "rend avec le même composant"
     )
+
 
 #  ── Le battement de début : la seconde sonde (#488) ─────────────────────────
 #
@@ -246,8 +246,7 @@ def test_le_battement_prime_sur_l_AGE():
     """
     res = _grouper([ligne("rpi1", 3, statut="en_cours")], periode_h=24)
     assert res["detail"][0]["statut"] == "rapport_perdu", (
-        "un battement de début doit rester lisible comme « a tourné », quel que "
-        "soit son âge"
+        "un battement de début doit rester lisible comme « a tourné », quel que soit son âge"
     )
 
 
@@ -258,10 +257,12 @@ def test_un_rapport_de_FIN_efface_le_battement():
     c'est le rapport de fin. Sans cela, le battement rendrait la tâche
     éternellement « en cours ».
     """
-    res = _grouper([
-        ligne("rpi1", 0, statut="succes", heure=4),
-        ligne("rpi1", 0, statut="en_cours", heure=3),
-    ])
+    res = _grouper(
+        [
+            ligne("rpi1", 0, statut="succes", heure=4),
+            ligne("rpi1", 0, statut="en_cours", heure=3),
+        ]
+    )
     assert res["detail"][0]["statut"] == "ok"
 
 
@@ -271,9 +272,11 @@ def test_le_rapport_perdu_est_PLUS_GRAVE_qu_une_erreur():
     C'est ce silence qui a duré deux jours. La synthèse doit donc désigner le
     nœud dont le rapport manque, pas celui qui a échoué bruyamment.
     """
-    res = _grouper([
-        ligne("rpi2", 0, statut="echouee", heure=4),
-        ligne("rpi1", 0, statut="en_cours", heure=10),
-    ])
+    res = _grouper(
+        [
+            ligne("rpi2", 0, statut="echouee", heure=4),
+            ligne("rpi1", 0, statut="en_cours", heure=10),
+        ]
+    )
     assert res["pire"]["noeud"] == "rpi1"
     assert res["pire"]["statut"] == "rapport_perdu"

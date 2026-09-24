@@ -22,6 +22,7 @@ celui-ci sans savoir « ce qui est facultatif ».
 Une COLONNE du modèle qui porte le nom d'un champ du schéma doit revenir telle
 quelle. On pose sur chacune une valeur qui n'est pas son défaut, et on relit.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -71,14 +72,21 @@ def session():
 
 
 def test_chaque_colonne_partagee_revient_telle_quelle(session):
-    auteur = Utilisateur(email=f"{uuid.uuid4().hex[:6]}@x.fr", mot_de_passe_hash="x", prenom="A", nom="B")
+    auteur = Utilisateur(
+        email=f"{uuid.uuid4().hex[:6]}@x.fr", mot_de_passe_hash="x", prenom="A", nom="B"
+    )
     session.add(auteur)
     session.commit()
     session.refresh(auteur)
 
     ticket = Ticket(
-        numero="TK-000001", titre="T", description="D", categorie="panne",
-        auteur_id=auteur.id, cree_le=datetime.utcnow(), mis_a_jour_le=datetime.utcnow(),
+        numero="TK-000001",
+        titre="T",
+        description="D",
+        categorie="panne",
+        auteur_id=auteur.id,
+        cree_le=datetime.utcnow(),
+        mis_a_jour_le=datetime.utcnow(),
     )
     colonnes = Ticket.__table__.columns
     champs_lus = set(TicketRead.model_fields)
@@ -108,8 +116,7 @@ def test_chaque_colonne_partagee_revient_telle_quelle(session):
         if getattr(lu, nom) != attendu
     }
     assert not perdus, (
-        "Colonnes de l'affaire que sa lecture ne rend pas (valeur posée → valeur lue) : "
-        f"{perdus}"
+        f"Colonnes de l'affaire que sa lecture ne rend pas (valeur posée → valeur lue) : {perdus}"
     )
 
 
@@ -125,8 +132,15 @@ from app.schemas import TicketUpdate  # noqa: E402
 
 
 def _affaire_datee() -> Ticket:
-    return Ticket(numero="TK-1", titre="T", description="D", categorie="panne", auteur_id=1,
-                  debut=datetime(2026, 10, 1, 9, 0), fin=datetime(2026, 10, 1, 12, 0))
+    return Ticket(
+        numero="TK-1",
+        titre="T",
+        description="D",
+        categorie="panne",
+        auteur_id=1,
+        debut=datetime(2026, 10, 1, 9, 0),
+        fin=datetime(2026, 10, 1, 12, 0),
+    )
 
 
 def test_le_patch_ecrit_une_date_et_l_annonce():

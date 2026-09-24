@@ -29,6 +29,7 @@ Il ne lit pas la base et ne passe aucun appel : il DÉCRIT. La lecture de la
 configuration vit dans `llm.py` (`config_llm(session, usage)`), la matière de
 chaque usage chez son appelant (`synthese_contrat.py`, `assistant_description.py`).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -20,6 +20,7 @@ trois dérives s'étaient installées sans que rien ne les signale :
 
 Aucune de ces dérives n'était détectable autrement qu'à la relecture. D'où ce test.
 """
+
 import ast
 import pathlib
 
@@ -42,10 +43,7 @@ def _fichiers_routers() -> list[pathlib.Path]:
     d'exceptions est vérifiée dans les deux sens. Ce test-ci n'avait pas cette
     chance ; d'où le contrôle de couverture minimale ci-dessous.
     """
-    fichiers = [
-        f for f in sorted(_ROUTERS.rglob("*.py"))
-        if "__pycache__" not in f.parts
-    ]
+    fichiers = [f for f in sorted(_ROUTERS.rglob("*.py")) if "__pycache__" not in f.parts]
     #  Garde-fou du garde-fou : un glob cassé rendrait une liste vide, et tous les
     #  tests de ce fichier passeraient sans rien examiner.
     assert len(fichiers) >= 25, (
@@ -53,6 +51,7 @@ def _fichiers_routers() -> list[pathlib.Path]:
         "la portée du contrôle est cassée, ne pas lire les tests suivants comme verts."
     )
     return fichiers
+
 
 # Dépendances d'autorisation — TOUTES définies dans app/auth/deps.py.
 #
@@ -65,8 +64,12 @@ def _fichiers_routers() -> list[pathlib.Path]:
 # module où elle est écrite, et c'est précisément le point (audit du 26/07/2026,
 # `_require_bailleur` posé hors du module central avec 17 endpoints dessus).
 _DEPS_AUTORISATION = {
-    "get_current_user", "get_acting_user", "require_role",
-    "require_proprietaire", "require_cs_or_admin", "require_admin",
+    "get_current_user",
+    "get_acting_user",
+    "require_role",
+    "require_proprietaire",
+    "require_cs_or_admin",
+    "require_admin",
     "ma_notification",
 }
 
@@ -79,8 +82,11 @@ _VERBES = {"get", "post", "put", "patch", "delete"}
 # ─────────────────────────────────────────────────────────────────────────────
 _PUBLICS_ASSUMES = {
     # Pré-authentification : impossible d'exiger une session pour se connecter.
-    ("auth.py", "login"), ("auth.py", "register"), ("auth.py", "refresh"),
-    ("auth.py", "logout"), ("auth.py", "verify_email"),
+    ("auth.py", "login"),
+    ("auth.py", "register"),
+    ("auth.py", "refresh"),
+    ("auth.py", "logout"),
+    ("auth.py", "verify_email"),
     ("auth.py", "resend_verification"),
     #  Le bloc « mot de passe » a quitté `auth.py` le 14/08/2026 (modularité) : ces
     #  deux exemptions ont suivi le code, sans changer de nature. Qui a perdu son
@@ -102,7 +108,8 @@ _PUBLICS_ASSUMES = {
     ("manuel.py", "manuel_pdf"),
     # Coquille d'interface et pages légales, filtrées par LISTE BLANCHE
     # (cf. `_PUBLIC_KEYS` dans routers/config.py) — vérifié plus bas.
-    ("config.py", "get_config"), ("config.py", "get_legal_config"),
+    ("config.py", "get_config"),
+    ("config.py", "get_legal_config"),
     # Télémétrie par `sendBeacon`, visiteurs anonymes inclus : rate-limité
     # (60/min), plafonné à 50 événements, champs tronqués, opt-out RGPD honoré.
     ("telemetry.py", "collect"),
@@ -192,9 +199,8 @@ def test_chaque_route_a_cle_partagee_exige_VRAIMENT_la_cle():
         elif "x_maintenance_key" not in corps[fonction]:
             manquantes.append(f"  {fichier}::{fonction} — ne reçoit pas l'en-tête")
 
-    assert not manquantes, (
-        "Ces routes sont ouvertes sans vérifier la clé partagée :\n"
-        + "\n".join(manquantes)
+    assert not manquantes, "Ces routes sont ouvertes sans vérifier la clé partagée :\n" + "\n".join(
+        manquantes
     )
 
 
@@ -218,9 +224,13 @@ def _endpoints():
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             deco = next(
-                (d for d in node.decorator_list
-                 if isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute)
-                 and d.func.attr in _VERBES),
+                (
+                    d
+                    for d in node.decorator_list
+                    if isinstance(d, ast.Call)
+                    and isinstance(d.func, ast.Attribute)
+                    and d.func.attr in _VERBES
+                ),
                 None,
             )
             if deco is None:
@@ -235,9 +245,7 @@ def _endpoints():
                 ]
                 trouve = any(_noms(d) & _DEPS_AUTORISATION for d in defauts)
             chemin = (
-                deco.args[0].value
-                if deco.args and isinstance(deco.args[0], ast.Constant)
-                else ""
+                deco.args[0].value if deco.args and isinstance(deco.args[0], ast.Constant) else ""
             )
             yield f.name, node.lineno, deco.func.attr.upper(), chemin, node.name, trouve
 
@@ -338,8 +346,16 @@ def test_config_publique_filtree_par_liste_blanche():
     bloc = re.search(r"^_PUBLIC_KEYS\s*=\s*\{(.*?)\}", src, re.DOTALL | re.MULTILINE)
     assert bloc, "impossible de lire `_PUBLIC_KEYS`"
     contenu = bloc.group(1)
-    for interdit in ("smtp", "api_key", "password", "secret", "token",
-                     "group_jid", "community_url", "manager_user_id"):
+    for interdit in (
+        "smtp",
+        "api_key",
+        "password",
+        "secret",
+        "token",
+        "group_jid",
+        "community_url",
+        "manager_user_id",
+    ):
         assert interdit not in contenu, (
             f"`_PUBLIC_KEYS` contient une clé sensible ('{interdit}') : "
             "cet endpoint est lisible sans authentification"

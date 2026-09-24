@@ -9,6 +9,7 @@ inventer une clé de plus pour une notion qui en a déjà une — une photo se
 transmet sous `photos_urls`, partout, sinon la rubrique est la seule à ne pas
 avoir d'aperçu.
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -16,8 +17,8 @@ from pydantic import BaseModel
 
 
 class FluxItem(BaseModel):
-    id: str = ""         # e.g. "ev_42", "tk_15", "pub_7", "dv_3", "sond_1"
-    type: str            # ticket_resolu, ticket_ouvert, publication, evenement, sondage_clos, sondage_ouvert
+    id: str = ""  # e.g. "ev_42", "tk_15", "pub_7", "dv_3", "sond_1"
+    type: str  # ticket_resolu, ticket_ouvert, publication, evenement, sondage_clos, sondage_ouvert
     date: datetime
     cree_le: Optional[datetime] = None
     titre: str

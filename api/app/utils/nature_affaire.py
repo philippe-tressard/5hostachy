@@ -24,6 +24,7 @@ paraît sous « Actualité » ET sous « Calendrier ». `natures` rend donc une 
 redérive rien, sinon la règle divergerait au premier cas limite (le motif « deux
 copies divergent sur le cas limite », vécu trois fois dans ce dépôt).
 """
+
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -94,4 +95,11 @@ def statut_pour(categorie: Any, demande: Optional[str] = None, *, est_cs: bool =
     return StatutTicket.ouvert.value
 
 
-__all__ = ["ACTUALITE", "categorie_reservee", "change_de_nature", "est_actualite", "natures", "statut_pour"]
+__all__ = [
+    "ACTUALITE",
+    "categorie_reservee",
+    "change_de_nature",
+    "est_actualite",
+    "natures",
+    "statut_pour",
+]

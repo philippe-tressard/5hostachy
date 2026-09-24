@@ -27,8 +27,15 @@ EXPECTED_VARS: dict[str, set[str]] = {
     #  sien dans `ticket.perimetre`, chaque entrée de l'historique dans
     #  `m.perimetre`, et celle en cours ici.
     "ticket_syndic": {
-        "messages", "date_creation", "commentaire", "is_commentaire", "ticket",
-        "fichiers", "date_commentaire", "historique", "auteur",
+        "messages",
+        "date_creation",
+        "commentaire",
+        "is_commentaire",
+        "ticket",
+        "fichiers",
+        "date_commentaire",
+        "historique",
+        "auteur",
         "commentaire_perimetre",
     },
     #  `urgent` conditionne un liseré rouge et la mention URGENT : c'est le
@@ -39,7 +46,9 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "reponse_communaute": {"reponse"},
     "idee_statut": {"idee"},
     "relance_syndic": {
-        "tickets", "interlocuteurs", "anciennete",
+        "tickets",
+        "interlocuteurs",
+        "anciennete",
     },
     "vigik_commande_recue": {"lot", "demandeur", "type"},
     "vigik_accepte": {"destinataire", "type"},
@@ -55,8 +64,14 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "calendrier_evenement_suivi": {"evenement", "suivi", "fichiers"},
     "document_publie": {"document"},
     "publication_syndic": {
-        "date_publication", "evolutions", "commentaire", "is_commentaire",
-        "fichiers", "publication", "date_commentaire", "auteur",
+        "date_publication",
+        "evolutions",
+        "commentaire",
+        "is_commentaire",
+        "fichiers",
+        "publication",
+        "date_commentaire",
+        "auteur",
     },
     # Remplace `sauvegarde_echec` et `alerte_espace_disque` : le contrôle
     # quotidien découvre les problèmes ensemble et n'envoie qu'un message.
@@ -77,16 +92,32 @@ EXPECTED_VARS: dict[str, set[str]] = {
     #  Un second modèle aurait été la copie de celui-ci : « standardiser et non
     #  dupliquer » (consigne du 08/09/2026).
     "nouvel_arrivant_bal": {
-        "nom_complet", "batiment", "ancien_resident",
-        "role_destinataire", "lien_consignes", "destinataire",
+        "nom_complet",
+        "batiment",
+        "ancien_resident",
+        "role_destinataire",
+        "lien_consignes",
+        "destinataire",
     },
     "publication_externe": {
-        "date_publication", "evolutions", "commentaire", "is_commentaire",
-        "fichiers", "publication", "date_commentaire", "auteur",
+        "date_publication",
+        "evolutions",
+        "commentaire",
+        "is_commentaire",
+        "fichiers",
+        "publication",
+        "date_commentaire",
+        "auteur",
     },
     "ticket_externe": {
-        "messages", "date_creation", "commentaire", "is_commentaire", "ticket",
-        "fichiers", "date_commentaire", "auteur",
+        "messages",
+        "date_creation",
+        "commentaire",
+        "is_commentaire",
+        "ticket",
+        "fichiers",
+        "date_commentaire",
+        "auteur",
     },
 }
 

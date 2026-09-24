@@ -13,6 +13,7 @@ La surface publique ne bouge pas : `send_email`, `send_email_group`,
 `connexion_smtp` s'importent depuis `app.utils.email` comme avant — vingt
 modules en dépendent, plus les tests.
 """
+
 import logging
 from datetime import datetime
 from typing import Any
@@ -26,6 +27,7 @@ from app.config import get_settings
 from app.utils.preferences_mail import mail_autorise
 from app.models.core import HistoriqueEmail, ModeleEmail, Utilisateur
 from app.utils.fichiers import nom_lisible
+
 #  La configuration du canal SMTP est un sujet distinct de la composition
 #  d'un message : elle vit dans `app/utils/smtp.py` depuis le 08/08/2026.
 from app.utils.liens import base_site, nom_site
@@ -88,10 +90,14 @@ def get_site_manager_notification_email(session: Session) -> tuple[str, dict[str
     return site_manager_email or site_email, config
 
 
-def _log_email(session: Session, code: str, to: str, statut: str, *, sujet: str = "", erreur: str | None = None) -> None:
+def _log_email(
+    session: Session, code: str, to: str, statut: str, *, sujet: str = "", erreur: str | None = None
+) -> None:
     """Enregistre une entrée dans historique_email (fail-safe)."""
     try:
-        entry = HistoriqueEmail(code=code, destinataire=to, sujet=sujet[:200], statut=statut, erreur=erreur)
+        entry = HistoriqueEmail(
+            code=code, destinataire=to, sujet=sujet[:200], statut=statut, erreur=erreur
+        )
         session.add(entry)
         session.commit()
     except Exception:
@@ -303,15 +309,23 @@ async def _envoyer_modele(
             smtp_cfg,
             #  🔴 `intention_servie` : celle de la LIGNE, pas du code — les deux
             #  sources et leur histoire sont dans `expediteur_du_modele`.
-            expediteur=adresse_expedition(smtp_cfg, expediteur_du_modele(
-                code, jeton_reponse=jeton_reponse,
-                intention_servie=template.intention,
-            )),
+            expediteur=adresse_expedition(
+                smtp_cfg,
+                expediteur_du_modele(
+                    code,
+                    jeton_reponse=jeton_reponse,
+                    intention_servie=template.intention,
+                ),
+            ),
         )
         fm = FastMail(cfg)
         rendered_subject, full_html = composer_email(
-            template, ctx, site_nom=site_nom, site_url=site_url,
-            email_footer=email_footer, attachments=attachments,
+            template,
+            ctx,
+            site_nom=site_nom,
+            site_url=site_url,
+            email_footer=email_footer,
+            attachments=attachments,
         )
         msg_kwargs: dict[str, Any] = dict(
             subject=rendered_subject,
@@ -338,7 +352,9 @@ async def _envoyer_modele(
         if len(to) + len(cc or []) > 1:
             logger.error(
                 "Erreur envoi email groupe [%s] -> %d destinataire(s) : %s",
-                code, len(to) + len(cc or []), exc,
+                code,
+                len(to) + len(cc or []),
+                exc,
             )
         else:
             logger.error("Erreur envoi email [%s] -> %s : %s", code, _masquer(trace), exc)
@@ -398,7 +414,8 @@ async def send_email(
             if user and not mail_autorise(user, batiments_concernes):
                 logger.debug(
                     "Email [%s] non envoye -> preference de batiment, user %s",
-                    code, destinataire_id,
+                    code,
+                    destinataire_id,
                 )
                 _log_email(session, code, to, "ignore", erreur="preference de batiment")
                 return
@@ -407,17 +424,23 @@ async def send_email(
             return
 
         await _envoyer_modele(
-            code, context, session,
-            to=[to], cc=cc, bcc=bcc,
-            attachments=attachments, jeton_reponse=jeton_reponse,
+            code,
+            context,
+            session,
+            to=[to],
+            cc=cc,
+            bcc=bcc,
+            attachments=attachments,
+            jeton_reponse=jeton_reponse,
         )
     finally:
         if close_session:
             session.close()
 
 
-def _check_pref(user_id: int | None, session: Session,
-                batiments_concernes: set[int] | None = None) -> bool:
+def _check_pref(
+    user_id: int | None, session: Session, batiments_concernes: set[int] | None = None
+) -> bool:
     """L'utilisateur veut-il cet e-mail ? — délègue à la décision unique."""
     if not user_id:
         return True
@@ -453,11 +476,11 @@ async def send_email_group(
             return
 
         to_emails = [
-            email for uid, email in to_recipients
-            if _check_pref(uid, session, batiments_concernes)
+            email for uid, email in to_recipients if _check_pref(uid, session, batiments_concernes)
         ]
         cc_emails = [
-            email for uid, email in (cc_recipients or [])
+            email
+            for uid, email in (cc_recipients or [])
             if _check_pref(uid, session, batiments_concernes)
         ]
         #  Personne ne veut de ce message : ce n'est pas un echec, c'est la
@@ -466,9 +489,14 @@ async def send_email_group(
             return
 
         await _envoyer_modele(
-            code, context, session,
-            to=to_emails, cc=cc_emails, bcc=bcc,
-            attachments=attachments, jeton_reponse=jeton_reponse,
+            code,
+            context,
+            session,
+            to=to_emails,
+            cc=cc_emails,
+            bcc=bcc,
+            attachments=attachments,
+            jeton_reponse=jeton_reponse,
         )
     finally:
         if close_session:

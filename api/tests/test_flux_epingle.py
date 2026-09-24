@@ -18,6 +18,7 @@ d'un diff ultérieur — d'où ces tests :
    dans la date d'une ligne du fil — le correctif ne tient pas si un futur appel
    le remet.
 """
+
 import ast
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -30,8 +31,14 @@ _FLUX = Path(__file__).resolve().parents[1] / "app" / "routers" / "flux"
 
 def _actualite(**kwargs) -> Ticket:
     """Actualité en mémoire — aucune session, aucune base ouverte."""
-    defauts = dict(numero="TK-A1", titre="Titre", description="Contenu", auteur_id=1,
-                   categorie="actualite", statut="publie")
+    defauts = dict(
+        numero="TK-A1",
+        titre="Titre",
+        description="Contenu",
+        auteur_id=1,
+        categorie="actualite",
+        statut="publie",
+    )
     defauts.update(kwargs)
     return Ticket(**defauts)
 
@@ -41,6 +48,7 @@ def _archivee(actu: Ticket) -> bool:
 
 
 # ── 1. L'épinglage résiste au vieillissement ────────────────────────────────
+
 
 def test_actualite_epinglee_ne_s_archive_pas_avec_l_age():
     vieille = datetime.utcnow() - timedelta(days=365)
@@ -145,8 +153,7 @@ def _dates_des_cartes(arbre: ast.AST) -> list[tuple[int, ast.AST]]:
 
 def _date_sur_mise_a_jour(expression: ast.AST) -> bool:
     return any(
-        isinstance(n, ast.Attribute) and n.attr == "mis_a_jour_le"
-        for n in ast.walk(expression)
+        isinstance(n, ast.Attribute) and n.attr == "mis_a_jour_le" for n in ast.walk(expression)
     )
 
 
@@ -177,8 +184,7 @@ def test_le_fil_ne_date_aucune_ligne_sur_mis_a_jour_le():
     assert not fautifs, (
         "Une ligne du fil est datée sur `mis_a_jour_le` : cocher ou décocher un "
         "marqueur (Épinglé, Urgent) la ferait remonter en tête à la date du jour, "
-        "pastille NEW comprise. Utiliser `publiee_le or cree_le`.\n"
-        + "\n".join(fautifs)
+        "pastille NEW comprise. Utiliser `publiee_le or cree_le`.\n" + "\n".join(fautifs)
     )
 
     #  Vérification EN SENS INVERSE : une exemption qui ne sert plus doit tomber,

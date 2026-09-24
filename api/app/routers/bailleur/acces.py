@@ -9,6 +9,7 @@ PORTEUR — ceux de ses lots (`utils/porteurs_acces`) —, et « remettre » met
 badge dans la main du locataire du bail (`utils/acces_bail`). Les jumeaux
 vigik/télécommande qui doublaient chaque route sont fondus sur `TYPES_ACCES`.
 """
+
 from datetime import date, datetime
 from typing import List, Optional
 
@@ -30,7 +31,9 @@ from app.utils.valeurs import valeur
 router = APIRouter()
 
 
-def _lot_info(lot_map: dict, session: Session, lot_id: Optional[int]) -> tuple[Optional[str], Optional[str]]:
+def _lot_info(
+    lot_map: dict, session: Session, lot_id: Optional[int]
+) -> tuple[Optional[str], Optional[str]]:
     """Le type d'un lot et son libellé « Bât. A — Lot 12 ».
 
     🔴 Cette fonction était écrite DEUX FOIS, à l'identique, dans ce fichier —
@@ -53,6 +56,7 @@ def _lot_info(lot_map: dict, session: Session, lot_id: Optional[int]) -> tuple[O
 
 
 # ── Accès (Vigik / Télécommandes) liés à un bail ────────────────────────────
+
 
 class AccesOut(BaseModel):
     id: int
@@ -86,9 +90,19 @@ _CHAMP_IDS = {"vigik": "vigik_ids", "telecommande": "tc_ids"}
 def _sortie(session: Session, lot_map: dict, cle: str, o, **extra) -> AccesOut:
     """Un badge tel que les écrans du bail le lisent — une écriture pour les deux types."""
     lot_type, lot_label = _lot_info(lot_map, session, o.lot_id)
-    return AccesOut(id=o.id, code=o.code, type=cle, lot_id=o.lot_id, lot_type=lot_type,
-                    lot_label=lot_label, statut=o.statut, chez_locataire=o.chez_locataire,
-                    bail_id=o.bail_id, cree_le=o.cree_le, **extra)
+    return AccesOut(
+        id=o.id,
+        code=o.code,
+        type=cle,
+        lot_id=o.lot_id,
+        lot_type=lot_type,
+        lot_label=lot_label,
+        statut=o.statut,
+        chez_locataire=o.chez_locataire,
+        bail_id=o.bail_id,
+        cree_le=o.cree_le,
+        **extra,
+    )
 
 
 def _motif_non_transferable(cle: str, o, bail, nature_bail: str, lot_map: dict) -> Optional[str]:
@@ -126,7 +140,8 @@ def mes_acces(
     lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
     return [
         _sortie(session, lot_map, t.cle, o)
-        for t in TYPES_ACCES.values() for o in acces_de(session, t, user.id)
+        for t in TYPES_ACCES.values()
+        for o in acces_de(session, t, user.id)
     ]
 
 
@@ -148,8 +163,17 @@ def acces_du_bail(
         for o in acces_de(session, t, user.id):
             motif = _motif_non_transferable(t.cle, o, bail, nature_bail, lot_map)
             recommande = motif is None and not o.chez_locataire and o.lot_id in (None, bail.lot_id)
-            result.append(_sortie(session, lot_map, t.cle, o, eligible_transfert=motif is None,
-                                  recommande=recommande, motif_non_eligible=motif))
+            result.append(
+                _sortie(
+                    session,
+                    lot_map,
+                    t.cle,
+                    o,
+                    eligible_transfert=motif is None,
+                    recommande=recommande,
+                    motif_non_eligible=motif,
+                )
+            )
     return result
 
 
@@ -209,20 +233,24 @@ def recuperer_acces(
 
 # ── Vue locataire : voir les accès reçus de son bailleur ──────────────────────
 
+
 @router.get("/mes-acces-recus", response_model=List[AccesOut])
 def mes_acces_recus(
     user: Utilisateur = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """Locataire : voir les Vigik/TC qui lui ont été confiés par son bailleur."""
-    baux = session.exec(select(LocationBail).where(
-        LocationBail.locataire_id == user.id,
-        LocationBail.statut != StatutBail.termine,
-    )).all()
+    baux = session.exec(
+        select(LocationBail).where(
+            LocationBail.locataire_id == user.id,
+            LocationBail.statut != StatutBail.termine,
+        )
+    ).all()
     return [_sortie(session, {}, cle, o) for b in baux for cle, o in confies(session, b.id)]
 
 
 # ── Vue locataire : son bail actif ────────────────────────────────────────────
+
 
 class BailLocataireOut(BaseModel):
     id: int
@@ -252,15 +280,19 @@ def mon_bail(
     session: Session = Depends(get_session),
 ):
     """Locataire inscrit : voir son bail actif et les accès confiés par le bailleur."""
-    bail = session.exec(select(LocationBail).where(
-        LocationBail.locataire_id == user.id,
-        LocationBail.statut != StatutBail.termine,
-    )).first()
+    bail = session.exec(
+        select(LocationBail).where(
+            LocationBail.locataire_id == user.id,
+            LocationBail.statut != StatutBail.termine,
+        )
+    ).first()
     if not bail:
         return None
     bailleur = session.get(Utilisateur, bail.bailleur_id)
     bail_lot = session.get(Lot, bail.lot_id)
-    bail_bat = session.get(Batiment, bail_lot.batiment_id) if (bail_lot and bail_lot.batiment_id) else None
+    bail_bat = (
+        session.get(Batiment, bail_lot.batiment_id) if (bail_lot and bail_lot.batiment_id) else None
+    )
     acces_list = [_sortie(session, {}, cle, o) for cle, o in confies(session, bail.id)]
     return BailLocataireOut(
         id=bail.id,

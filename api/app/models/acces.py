@@ -22,6 +22,7 @@ changent pas : `core` réexporte ces noms, exactement comme il réexporte déjà
 déclaration ne doit pas obliger à relire dix-huit fichiers pour un gain de
 rangement.
 """
+
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -46,7 +47,9 @@ class Vigik(SQLModel, table=True):
     user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     statut: StatutAcces = StatutAcces.actif
     chez_locataire: bool = False  # True = en possession du locataire
-    bail_id: Optional[int] = Field(default=None, foreign_key="location_bail.id")  # bail actif lors du transfert
+    bail_id: Optional[int] = Field(
+        default=None, foreign_key="location_bail.id"
+    )  # bail actif lors du transfert
     #: 🔹 **Ce que le badge OUVRE** — une liste de codes de périmètre au
     #: format JSON, comme `perimetre_cible` partout ailleurs.
     #:
@@ -73,7 +76,9 @@ class Telecommande(SQLModel, table=True):
     user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     statut: StatutAcces = StatutAcces.actif
     chez_locataire: bool = False  # True = la TC est en possession du locataire
-    bail_id: Optional[int] = Field(default=None, foreign_key="location_bail.id")  # bail actif lors du transfert
+    bail_id: Optional[int] = Field(
+        default=None, foreign_key="location_bail.id"
+    )  # bail actif lors du transfert
     #: 🔹 **Ce que le badge OUVRE** — une liste de codes de périmètre au
     #: format JSON, comme `perimetre_cible` partout ailleurs.
     #:
@@ -98,23 +103,25 @@ class Telecommande(SQLModel, table=True):
 #  Import télécommandes (staging depuis Excel)
 # ──────────────────────────────────────────────
 
+
 class StatutImport(str, Enum):
-    en_attente         = "en_attente"          # aucun user matché
-    proprietaire_lie   = "proprietaire_lie"    # proprio matché, locataire en attente
-    resolu             = "resolu"              # TC créée, tout lié
-    ignore             = "ignore"              # admin a choisi d'ignorer cette ligne
+    en_attente = "en_attente"  # aucun user matché
+    proprietaire_lie = "proprietaire_lie"  # proprio matché, locataire en attente
+    resolu = "resolu"  # TC créée, tout lié
+    ignore = "ignore"  # admin a choisi d'ignorer cette ligne
 
 
 class TelecommandeImport(SQLModel, table=True):
     """Staging des télécommandes importées depuis l'Excel, en attente de résolution
     par l'admin au fur et à mesure des inscriptions des résidents."""
+
     __tablename__ = "telecommande_import"
 
     id: Optional[int] = Field(default=None, primary_key=True)
 
     # ── Données brutes issues de l'Excel ──────────────────────────────────
-    nom_proprietaire: str            # colonne A
-    nom_locataire: Optional[str] = None   # colonne B — None si vide
+    nom_proprietaire: str  # colonne A
+    nom_locataire: Optional[str] = None  # colonne B — None si vide
     reference: Optional[str] = None  # colonne C — None sur quelques lignes spéciales
 
     # ── Résolution (rempli par l'admin) ──────────────────────────────────
@@ -125,8 +132,8 @@ class TelecommandeImport(SQLModel, table=True):
     lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
 
     # Possession physique de la TC
-    chez_locataire: bool = False           # TC en possession du locataire
-    refuse_par_locataire: bool = False     # locataire a refusé → reste chez proprio
+    chez_locataire: bool = False  # TC en possession du locataire
+    refuse_par_locataire: bool = False  # locataire a refusé → reste chez proprio
 
     # Lien vers la Telecommande créée lors de la résolution
     telecommande_id: Optional[int] = Field(default=None, foreign_key="telecommande.id")
@@ -141,19 +148,21 @@ class TelecommandeImport(SQLModel, table=True):
 #  Import vigiks (staging depuis Excel)
 # ──────────────────────────────────────────────
 
+
 class VigikImport(SQLModel, table=True):
     """Staging des vigiks importés depuis l'Excel, en attente de résolution
     par l'admin au fur et à mesure des inscriptions des résidents."""
+
     __tablename__ = "vigik_import"
 
     id: Optional[int] = Field(default=None, primary_key=True)
 
     # ── Données brutes issues de l'Excel ──────────────────────────────────
-    batiment_raw: Optional[str] = None       # col A — numéro de bâtiment
-    appartement_raw: Optional[str] = None    # col B — numéro d'appartement
-    nom_proprietaire: str                    # col C
-    nom_locataire: Optional[str] = None      # col D — None si vide
-    code: Optional[str] = None              # col E — N° CLÉS
+    batiment_raw: Optional[str] = None  # col A — numéro de bâtiment
+    appartement_raw: Optional[str] = None  # col B — numéro d'appartement
+    nom_proprietaire: str  # col C
+    nom_locataire: Optional[str] = None  # col D — None si vide
+    code: Optional[str] = None  # col E — N° CLÉS
 
     # ── Résolution (rempli par l'admin) ──────────────────────────────────
     statut: StatutImport = StatutImport.en_attente

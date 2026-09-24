@@ -14,6 +14,7 @@ conseil syndical : deux axes, jamais un. La contrepartie front est
 `front/src/lib/roles.ts`, et `api/tests/test_roles_libelles.py` échoue si les
 deux divergent.
 """
+
 from __future__ import annotations
 
 from enum import Enum
@@ -25,7 +26,7 @@ class StatutUtilisateur(str, Enum):
     locataire = "locataire"
     syndic = "syndic"
     mandataire = "mandataire"
-    aidant = "aidant"   # proche aidant (famille) — accès délégué, pas de vote AG
+    aidant = "aidant"  # proche aidant (famille) — accès délégué, pas de vote AG
     admin_technique = "admin_technique"  # compte technique sans lot ni statut résidentiel
 
 

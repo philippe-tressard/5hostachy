@@ -65,6 +65,7 @@ aussi, et ils écrivaient leur propre version — plus pauvre. Ils vivent dans
 `app/utils/documents`, et le ré-export a disparu avec eux : un alias qui délègue
 masque l'origine sans rien apporter (`standards/02` §1, règle 6).
 """
+
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends

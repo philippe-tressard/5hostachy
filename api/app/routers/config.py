@@ -2,6 +2,7 @@
 Configuration du site — paramètres admin persistants en base de données.
 Remplace le localStorage pour permettre la synchronisation multi-appareils.
 """
+
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,7 +18,7 @@ from app.utils.liens import base_site
 
 router = APIRouter(prefix="/config", tags=["config"])
 
-_LEGAL_KEYS = {'mentions_legales', 'politique_confidentialite'}
+_LEGAL_KEYS = {"mentions_legales", "politique_confidentialite"}
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  LISTE BLANCHE des clés exposables SANS authentification.
@@ -42,14 +43,14 @@ _LEGAL_KEYS = {'mentions_legales', 'politique_confidentialite'}
 #  Tout le reste passe par `GET /config/admin`, protégé par `require_admin`.
 # ─────────────────────────────────────────────────────────────────────────────
 _PUBLIC_KEYS = {
-    'site_nom',            # titre de l'onglet et en-tête, écran de connexion inclus
-    'site_url',            # liens des pages légales
-    'site_icone',          # icône de la barre de navigation et de l'écran de connexion
-    'login_sous_titre',    # sous-titre de l'écran de connexion
-    'pages_order',         # ordre des entrées de navigation
+    "site_nom",  # titre de l'onglet et en-tête, écran de connexion inclus
+    "site_url",  # liens des pages légales
+    "site_icone",  # icône de la barre de navigation et de l'écran de connexion
+    "login_sous_titre",  # sous-titre de l'écran de connexion
+    "pages_order",  # ordre des entrées de navigation
 }
 # Titres et descriptifs des pages, consommés par `getPageConfig()` côté front.
-_PUBLIC_PREFIXES = ('page_config_',)
+_PUBLIC_PREFIXES = ("page_config_",)
 
 
 def _est_public(cle: str) -> bool:
@@ -68,10 +69,10 @@ def _est_public(cle: str) -> bool:
 #:
 #: ⚠️ Le marqueur conserve ce dont l'écran a besoin — savoir si la valeur EXISTE —
 #: sans transmettre laquelle. C'est pourquoi il n'est pas une chaîne vide.
-_SECRETS = {'smtp_password', 'imap_password', 'whatsapp_api_key', 'llm_api_key'}
+_SECRETS = {"smtp_password", "imap_password", "whatsapp_api_key", "llm_api_key"}
 
 #: Ce que l'API renvoie à la place. L'écran teste sa présence, jamais sa valeur.
-MARQUEUR_SECRET = '••••••••'
+MARQUEUR_SECRET = "••••••••"
 
 
 def _valeur_pour_admin(cle: str, valeur: str) -> str:
@@ -92,7 +93,7 @@ def _valeur_pour_admin(cle: str, valeur: str) -> str:
 #: une restauration peut la ramener, et rien n'oblige à passer par cet écran. On
 #: normalise aux DEUX bouts — ici pour que la donnée soit propre, là-bas pour que
 #: le lien le soit même quand elle ne l'est pas.
-_NORMALISEURS = {'site_url': lambda v: base_site(str(v))}
+_NORMALISEURS = {"site_url": lambda v: base_site(str(v))}
 
 
 @router.get("", response_model=Dict[str, str])
@@ -115,11 +116,7 @@ def get_config_admin(
 ):
     """Retourne toutes les clés de configuration, y compris les clés privées (admin uniquement)."""
     rows = session.exec(select(ConfigSite)).all()
-    return {
-        r.cle: _valeur_pour_admin(r.cle, r.valeur)
-        for r in rows
-        if r.cle not in _LEGAL_KEYS
-    }
+    return {r.cle: _valeur_pour_admin(r.cle, r.valeur) for r in rows if r.cle not in _LEGAL_KEYS}
 
 
 @router.get("/legal", response_model=Dict[str, str])
@@ -154,6 +151,7 @@ def save_config(
 
 # ── WhatsApp scheduled messages ──────────────────────────────────────
 
+
 class WhatsAppScheduledUpdate(BaseModel):
     label: str | None = None
     message: str | None = None
@@ -168,10 +166,17 @@ def list_whatsapp_scheduled(
 ):
     """Liste les messages WhatsApp planifiés."""
     from app.models.core import WhatsAppScheduled
+
     rows = session.exec(select(WhatsAppScheduled).order_by(WhatsAppScheduled.id)).all()
     return [
-        {"id": r.id, "label": r.label, "message": r.message, "cron_rule": r.cron_rule,
-         "enabled": r.enabled, "mis_a_jour_le": r.mis_a_jour_le.isoformat() if r.mis_a_jour_le else None}
+        {
+            "id": r.id,
+            "label": r.label,
+            "message": r.message,
+            "cron_rule": r.cron_rule,
+            "enabled": r.enabled,
+            "mis_a_jour_le": r.mis_a_jour_le.isoformat() if r.mis_a_jour_le else None,
+        }
         for r in rows
     ]
 
@@ -186,6 +191,7 @@ def update_whatsapp_scheduled(
     """Met à jour un message WhatsApp planifié."""
     from app.models.core import WhatsAppScheduled
     from datetime import datetime as _dt
+
     item = session.get(WhatsAppScheduled, item_id)
     if not item:
         raise HTTPException(404, "Message planifié introuvable.")
@@ -210,12 +216,17 @@ def list_whatsapp_logs(
 ):
     """Retourne les 6 derniers messages WhatsApp envoyés."""
     from app.models.core import WhatsAppLog
-    rows = session.exec(
-        select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc()).limit(6)
-    ).all()
+
+    rows = session.exec(select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc()).limit(6)).all()
     return [
-        {"id": r.id, "label": r.label, "message": r.message, "statut": r.statut,
-         "erreur": r.erreur, "envoye_le": r.envoye_le.isoformat() if r.envoye_le else None}
+        {
+            "id": r.id,
+            "label": r.label,
+            "message": r.message,
+            "statut": r.statut,
+            "erreur": r.erreur,
+            "envoye_le": r.envoye_le.isoformat() if r.envoye_le else None,
+        }
         for r in rows
     ]
 
@@ -231,7 +242,12 @@ def whatsapp_test(
     session: Session = Depends(get_session),
 ):
     """Envoie un message de test sur le groupe WhatsApp (admin uniquement)."""
-    from app.utils.whatsapp import STATUT_ENVOYE, STATUT_INCERTAIN, envoyer_whatsapp_raw, verdict_envoi
+    from app.utils.whatsapp import (
+        STATUT_ENVOYE,
+        STATUT_INCERTAIN,
+        envoyer_whatsapp_raw,
+        verdict_envoi,
+    )
     from app.models.core import WhatsAppLog
     from app.utils.whatsapp_scheduler import _prune_logs
 
@@ -295,8 +311,8 @@ def whatsapp_qr(
     rows = session.exec(select(ConfigSite)).all()
     config = {r.cle: r.valeur for r in rows}
 
-    api_url = config.get('whatsapp_api_url', '').strip()
-    api_key = config.get('whatsapp_api_key', '').strip()
+    api_url = config.get("whatsapp_api_url", "").strip()
+    api_key = config.get("whatsapp_api_key", "").strip()
     if not api_url:
         raise HTTPException(400, "whatsapp_api_url non configuré.")
 
@@ -330,7 +346,7 @@ async def smtp_test(
     settings = get_settings()
     smtp_cfg = _get_smtp_config(session)
 
-    if smtp_cfg.get('smtp_enabled') != '1' and not settings.mail_enabled:
+    if smtp_cfg.get("smtp_enabled") != "1" and not settings.mail_enabled:
         raise HTTPException(400, "L'envoi d'e-mails est désactivé. Activez-le avant de tester.")
 
     #  UN envoi PAR ADRESSE d'expédition configurée (#756). Le test n'en exerçait
@@ -429,7 +445,10 @@ def imap_test(
         "actif": actif,
         "message": (
             f"Connexion réussie — {non_lus} message(s) non lu(s) dans « {dossier} ». "
-            + ("La relève est active." if actif else
-               "⚠️ La relève est INACTIVE : cochez « Relever les réponses » et enregistrez.")
+            + (
+                "La relève est active."
+                if actif
+                else "⚠️ La relève est INACTIVE : cochez « Relever les réponses » et enregistrez."
+            )
         ),
     }

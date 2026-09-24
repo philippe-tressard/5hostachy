@@ -10,6 +10,7 @@ existants (`from app.models.core import Perimetre`) continuent de fonctionner �
 et surtout que la table reste enregistrée auprès de SQLModel au moment du
 `create_all`, ce qu'un module jamais importé ne garantirait pas.
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -36,6 +37,7 @@ class Perimetre(SQLModel, table=True):
     un fichier. Les deux axes restent distincts — le glossaire nomme le second
     « granularité documentaire ».
     """
+
     __tablename__ = "perimetre"
     id: Optional[int] = Field(default=None, primary_key=True)
 

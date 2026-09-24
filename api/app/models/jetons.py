@@ -16,6 +16,7 @@ valide, et c'est cet import qui enregistre les tables dans les métadonnées
 SQLModel. Le retirer ferait disparaître trois tables d'une base neuve — sans
 erreur, jusqu'à la première écriture.
 """
+
 from datetime import datetime
 from typing import Optional
 

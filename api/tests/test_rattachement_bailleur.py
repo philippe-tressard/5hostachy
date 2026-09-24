@@ -3,6 +3,7 @@
 Arbitré le 24/09/2026. Le risque des homonymes est accepté, et borné : un seul
 bailleur de ce nom, un seul bail libre ou un seul logement, aucun lien déjà posé.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -19,8 +20,15 @@ _N = [0]
 
 def _user(session, nom, statut, **champs):
     _N[0] += 1
-    u = Utilisateur(email=f"r{_N[0]}-{nom.lower()}@exemple.fr", hashed_password="x", prenom="P", nom=nom,
-                    statut=statut, actif=True, **champs)
+    u = Utilisateur(
+        email=f"r{_N[0]}-{nom.lower()}@exemple.fr",
+        hashed_password="x",
+        prenom="P",
+        nom=nom,
+        statut=statut,
+        actif=True,
+        **champs,
+    )
     session.add(u)
     session.commit()
     session.refresh(u)
@@ -52,7 +60,9 @@ def test_le_locataire_est_rattache_au_logement_de_son_bailleur(session):
     loc = _locataire(session)
     assert rattacher_au_bailleur(loc, session) == 1
     session.commit()
-    assert [(ul.lot_id, ul.type_lien) for ul in _liens(session, loc)] == [(lot.id, TypeLien.locataire)]
+    assert [(ul.lot_id, ul.type_lien) for ul in _liens(session, loc)] == [
+        (lot.id, TypeLien.locataire)
+    ]
 
 
 def test_un_bail_libre_passe_avant_le_logement(session):
@@ -84,7 +94,9 @@ def test_deux_logements_et_rien_n_est_fait(session):
 def test_un_lien_deja_pose_n_est_pas_touche(session):
     b = _user(session, "DURANDAL", StatutUtilisateur.copropriétaire_bailleur)
     _logement(session, b)
-    autre = _logement(session, _user(session, "MARTINEAU", StatutUtilisateur.copropriétaire_bailleur))
+    autre = _logement(
+        session, _user(session, "MARTINEAU", StatutUtilisateur.copropriétaire_bailleur)
+    )
     loc = _locataire(session)
     session.add(UserLot(user_id=loc.id, lot_id=autre.id, type_lien=TypeLien.locataire, actif=True))
     session.commit()
@@ -93,7 +105,9 @@ def test_un_lien_deja_pose_n_est_pas_touche(session):
 
 def test_seul_un_locataire_est_rattache(session):
     _logement(session, _user(session, "DURANDAL", StatutUtilisateur.copropriétaire_bailleur))
-    proprio = _user(session, "Autre", StatutUtilisateur.copropriétaire_résident, nom_proprietaire="Durandal")
+    proprio = _user(
+        session, "Autre", StatutUtilisateur.copropriétaire_résident, nom_proprietaire="Durandal"
+    )
     assert rattacher_au_bailleur(proprio, session) == 0
 
 

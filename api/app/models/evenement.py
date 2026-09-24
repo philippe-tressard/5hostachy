@@ -39,6 +39,7 @@ connaît aucune entité — elle attend `type`, `contenu`, `ancien_statut`,
 obligé à lui ajouter une variante, et *une variante ajoutée pour accueillir un
 écart existant ne factorise pas : elle entérine*.
 """
+
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -95,7 +96,7 @@ class Evenement(SaisiPourMixin, AssisteIAMixin, table=True):
     #  tenté. Une base neuve et une base migrée doivent porter le même schéma —
     #  le déclarer ici et pas là ferait diverger les deux en silence.
     contrat_id: Optional[int] = Field(default=None)
-    frequence_type: Optional[str] = Field(default=None)   # "semaines", "mois", "fois_par_an"
+    frequence_type: Optional[str] = Field(default=None)  # "semaines", "mois", "fois_par_an"
     frequence_valeur: Optional[int] = Field(default=None)
     affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)
     # Même convention que Ticket.photos_urls (tableau JSON d'URLs internes) : le

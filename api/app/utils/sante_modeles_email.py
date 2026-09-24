@@ -57,6 +57,7 @@ Sont donc regardés les trois axes qui ne changent **pas** quand on reformule :
    décide de l'expéditeur. La signaler ferait crier le contrôle sur une décision
    d'administrateur.
 """
+
 from __future__ import annotations
 
 from sqlmodel import Session, select
@@ -83,6 +84,7 @@ def _extrait(modele, largeur: int = 70) -> str:
     ⚠️ Un modèle d'e-mail ne contient aucune donnée personnelle : ce sont des
     emplacements, remplis à l'envoi. L'extrait peut donc partir dans l'alerte.
     """
+
     def court(valeur: str | None) -> str:
         texte = " ".join((valeur or "").split())
         return (texte[:largeur] + "…") if len(texte) > largeur else (texte or "(vide)")

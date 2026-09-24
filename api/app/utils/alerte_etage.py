@@ -17,6 +17,7 @@ La déduplication. Elle vit dans l'appelant, sous la forme d'une condition sur l
 **changement** (`body.etage != user.etage`) : c'est la seule qui n'exige aucun
 stockage, et elle dit exactement ce qu'on veut dire — une alerte par valeur neuve.
 """
+
 from __future__ import annotations
 
 from fastapi import BackgroundTasks

@@ -29,6 +29,7 @@ celle qu'un administrateur a choisie s'il l'a changée. Le code reste le repli,
 pour un modèle sans ligne ou dont la ligne ne la porte pas — jamais l'inverse,
 sinon l'écran d'administration mentirait sur ce qu'il permet.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -68,10 +69,7 @@ def test_l_inverse_aussi_ce_n_est_pas_un_sens_unique():
     répondre passerait le test précédent en n'ayant rien compris.
     """
     assert expediteur_du_modele("ticket_syndic") == EXPEDITEUR_REPONSE
-    assert (
-        expediteur_du_modele("ticket_syndic", intention_servie="information")
-        == EXPEDITEUR_MUET
-    )
+    assert expediteur_du_modele("ticket_syndic", intention_servie="information") == EXPEDITEUR_MUET
 
 
 @pytest.mark.parametrize("servie", [None, "", "   "])

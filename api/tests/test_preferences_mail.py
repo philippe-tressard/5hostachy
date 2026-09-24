@@ -13,6 +13,7 @@ Ce fichier couvre trois choses qu'aucune relecture ne garantit :
    décide. Une clé recopiée de travers ne produirait aucune erreur : l'écran
    enregistrerait un réglage que le serveur ne lirait jamais.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -43,6 +44,7 @@ def _utilisateur(prefs: str | None = None, batiment_id: int | None = None) -> Ut
 
 # ── Les défauts ───────────────────────────────────────────────────────────────
 
+
 def test_les_defauts_sont_recevoir_le_sien_pas_les_autres():
     """Personne n'a consenti aux autres bâtiments : le défaut ne peut pas être oui."""
     assert (DEFAUTS[MON_BATIMENT], DEFAUTS[AUTRES_BATIMENTS]) == (True, False)
@@ -51,7 +53,9 @@ def test_les_defauts_sont_recevoir_le_sien_pas_les_autres():
 def test_la_cloche_sonne_par_defaut_partout_et_se_regle_comme_le_courriel():
     """#1187 : la cloche est réglable ; ses défauts reproduisent l'existant."""
     from app.utils.preferences_mail import (
-        AUTRES_BATIMENTS_APP, MON_BATIMENT_APP, cloche_autorisee,
+        AUTRES_BATIMENTS_APP,
+        MON_BATIMENT_APP,
+        cloche_autorisee,
     )
 
     assert (DEFAUTS[MON_BATIMENT_APP], DEFAUTS[AUTRES_BATIMENTS_APP]) == (True, True)
@@ -77,6 +81,7 @@ def test_un_json_illisible_rend_les_defauts():
 
 # ── La décision ───────────────────────────────────────────────────────────────
 
+
 def test_sans_batiment_connu_du_contenu_c_est_mon_batiment_qui_decide():
     """Rappel de mot de passe, validation de compte : ça s'adresse à moi."""
     coupe = json.dumps({MON_BATIMENT: False, AUTRES_BATIMENTS: True})
@@ -90,8 +95,9 @@ def test_le_contenu_de_mon_batiment_suit_ma_premiere_case(batiments):
     mien = _utilisateur(batiment_id=batiments[0])
     assert mail_autorise(mien, {batiments[0]}) is True
 
-    coupe = _utilisateur(json.dumps({MON_BATIMENT: False, AUTRES_BATIMENTS: True}),
-                         batiment_id=batiments[0])
+    coupe = _utilisateur(
+        json.dumps({MON_BATIMENT: False, AUTRES_BATIMENTS: True}), batiment_id=batiments[0]
+    )
     assert mail_autorise(coupe, {batiments[0]}) is False
 
 
@@ -100,8 +106,9 @@ def test_le_contenu_d_ailleurs_suit_la_seconde_case(batiments):
     mien = _utilisateur(batiment_id=batiments[0])
     assert mail_autorise(mien, {batiments[2]}) is False
 
-    accepte = _utilisateur(json.dumps({MON_BATIMENT: True, AUTRES_BATIMENTS: True}),
-                           batiment_id=batiments[0])
+    accepte = _utilisateur(
+        json.dumps({MON_BATIMENT: True, AUTRES_BATIMENTS: True}), batiment_id=batiments[0]
+    )
     assert mail_autorise(accepte, {batiments[2]}) is True
 
 
@@ -112,6 +119,7 @@ def test_sans_batiment_de_rattachement_on_ne_coupe_rien(batiments):
 
 
 # ── La conversion des préférences existantes ──────────────────────────────────
+
 
 def _migration():
     chemin = RACINE / "api" / "alembic" / "versions" / "0145_notifications_deux_choix.py"
@@ -124,15 +132,22 @@ def _migration():
 
 
 def test_qui_recevait_des_mails_continue_d_en_recevoir():
-    ancien = json.dumps({"ticket_mail": False, "actu_mail": True,
-                         "doc_mail": False, "communaute_mail": False,
-                         "ticket_app": True})
+    ancien = json.dumps(
+        {
+            "ticket_mail": False,
+            "actu_mail": True,
+            "doc_mail": False,
+            "communaute_mail": False,
+            "ticket_app": True,
+        }
+    )
     assert json.loads(_migration().convertir(ancien))[MON_BATIMENT] is True
 
 
 def test_qui_avait_tout_coupe_reste_au_silence():
-    ancien = json.dumps({"ticket_mail": False, "actu_mail": False,
-                         "doc_mail": False, "communaute_mail": False})
+    ancien = json.dumps(
+        {"ticket_mail": False, "actu_mail": False, "doc_mail": False, "communaute_mail": False}
+    )
     converti = json.loads(_migration().convertir(ancien))
     assert converti[MON_BATIMENT] is False
 
@@ -140,7 +155,9 @@ def test_qui_avait_tout_coupe_reste_au_silence():
 def test_les_autres_batiments_ne_sont_jamais_actives_d_office():
     """Le test qui compte : on n'invente le consentement de personne."""
     for ancien in (
-        json.dumps({"ticket_mail": True, "actu_mail": True, "doc_mail": True, "communaute_mail": True}),
+        json.dumps(
+            {"ticket_mail": True, "actu_mail": True, "doc_mail": True, "communaute_mail": True}
+        ),
         json.dumps({"ticket_mail": False}),
         "{}",
         "{pas du json",
@@ -156,6 +173,7 @@ def test_la_conversion_est_idempotente():
 
 # ── L'accord du site et du serveur ────────────────────────────────────────────
 
+
 def test_le_site_emploie_exactement_les_memes_cles():
     """Une clé recopiée de travers n'échouerait nulle part — elle mentirait."""
     source = RACINE / "front" / "src" / "lib" / "preferences.ts"
@@ -165,9 +183,12 @@ def test_le_site_emploie_exactement_les_memes_cles():
 
     from app.utils.preferences_mail import AUTRES_BATIMENTS_APP, MON_BATIMENT_APP
 
-    for nom, valeur in (("MON_BATIMENT", MON_BATIMENT), ("AUTRES_BATIMENTS", AUTRES_BATIMENTS),
-                        ("MON_BATIMENT_APP", MON_BATIMENT_APP),
-                        ("AUTRES_BATIMENTS_APP", AUTRES_BATIMENTS_APP)):
+    for nom, valeur in (
+        ("MON_BATIMENT", MON_BATIMENT),
+        ("AUTRES_BATIMENTS", AUTRES_BATIMENTS),
+        ("MON_BATIMENT_APP", MON_BATIMENT_APP),
+        ("AUTRES_BATIMENTS_APP", AUTRES_BATIMENTS_APP),
+    ):
         motif = rf"export const {nom} = '([^']+)'"
         trouve = re.search(motif, contenu)
         assert trouve, f"{nom} introuvable dans preferences.ts"
@@ -177,7 +198,9 @@ def test_le_site_emploie_exactement_les_memes_cles():
     assert re.search(rf"\[MON_BATIMENT\]:\s*{str(DEFAUTS[MON_BATIMENT]).lower()}", contenu)
     assert re.search(rf"\[AUTRES_BATIMENTS\]:\s*{str(DEFAUTS[AUTRES_BATIMENTS]).lower()}", contenu)
     assert re.search(rf"\[MON_BATIMENT_APP\]:\s*{str(DEFAUTS[MON_BATIMENT_APP]).lower()}", contenu)
-    assert re.search(rf"\[AUTRES_BATIMENTS_APP\]:\s*{str(DEFAUTS[AUTRES_BATIMENTS_APP]).lower()}", contenu)
+    assert re.search(
+        rf"\[AUTRES_BATIMENTS_APP\]:\s*{str(DEFAUTS[AUTRES_BATIMENTS_APP]).lower()}", contenu
+    )
 
 
 def test_l_ecran_sait_dire_qu_un_reglage_est_HERITE():

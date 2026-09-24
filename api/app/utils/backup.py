@@ -1,4 +1,5 @@
 """Système de sauvegarde — APScheduler + rotation automatique."""
+
 import glob
 import os
 import tarfile
@@ -10,7 +11,8 @@ from sqlmodel import Session, select
 from app.utils.declenchement import AUTOMATIQUE
 from app.config import get_settings
 from app.database import engine
-from app.models.core import ConfigSauvegarde, HistoriqueSauvegarde, StatutSauvegarde
+from app.models.core import ConfigSauvegarde, HistoriqueSauvegarde, StatutSauvegarde
+
 from app.utils.noeud import noeud_courant
 
 settings = get_settings()
@@ -40,7 +42,7 @@ def horodatage_archive(nom_fichier: str) -> datetime | None:
     base = os.path.basename(nom_fichier)
     if not base.startswith(PREFIXE_ARCHIVE) or not base.endswith(_SUFFIXE_ARCHIVE):
         return None
-    brut = base[len(PREFIXE_ARCHIVE): -len(_SUFFIXE_ARCHIVE)]
+    brut = base[len(PREFIXE_ARCHIVE) : -len(_SUFFIXE_ARCHIVE)]
     try:
         return datetime.strptime(brut, _FORMAT_HORODATAGE)
     except ValueError:
@@ -139,9 +141,7 @@ def _rotate_backups(session: Session):
 
     # Marquer comme supprimées dans l'historique
     all_entries = session.exec(
-        select(HistoriqueSauvegarde).where(
-            HistoriqueSauvegarde.statut == StatutSauvegarde.reussie
-        )
+        select(HistoriqueSauvegarde).where(HistoriqueSauvegarde.statut == StatutSauvegarde.reussie)
     ).all()
     deleted_names = {os.path.basename(f) for f in to_delete}
     for e in all_entries:

@@ -23,6 +23,7 @@ bougeront ensemble.
 ⚠️ Aucune valeur n'a été modifiée en introduisant ces noms : chaque route garde
 exactement le plafond qu'elle avait. Renommer et rerégler sont deux gestes.
 """
+
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 

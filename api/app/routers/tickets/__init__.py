@@ -54,6 +54,7 @@ refuse un chemin vide sur un router sans préfixe. Les trois autres déclarent d
 chemins nus et reçoivent le préfixe au montage. Les 12 chemins sont identiques au
 caractère près à ceux d'avant le découpage, vérifié par comparaison d'inventaire.
 """
+
 from fastapi import APIRouter
 
 from . import apercu, crud, depuis_annonce, evolutions, lot, messages, mise_a_jour, relance
@@ -65,8 +66,14 @@ _a_prefixer = APIRouter(prefix="/tickets", tags=["tickets"])
 #  `apercu` est monté avec les littéraux, AVANT `crud` : `/apercu-diffusion` est
 #  un chemin fixe, et `/{ticket_id}` le capterait — la route répondrait 422 sans
 #  qu'aucune erreur ne le dise. Même raison que `/relance-syndic`.
-for _sous_router in (apercu.router, depuis_annonce.router, relance.router, messages.router,
-                     evolutions.router, lot.router):
+for _sous_router in (
+    apercu.router,
+    depuis_annonce.router,
+    relance.router,
+    messages.router,
+    evolutions.router,
+    lot.router,
+):
     _a_prefixer.include_router(_sous_router)
 
 #  ⚠️ Les chemins littéraux d'abord — voir la docstring : `/relance-syndic` doit

@@ -21,6 +21,7 @@ l'autre — c'est ce qui a manqué à `perimetreLabel` pendant neuf jours.
 Toute modification des cas ci-dessous doit être reportée dans `check-noms.mjs`,
 qui échoue sinon.
 """
+
 from __future__ import annotations
 
 from app.utils.noms import nom_affiche

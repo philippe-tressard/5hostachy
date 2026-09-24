@@ -20,6 +20,7 @@ FastAPI résout dans l'ordre de déclaration, et l'ordre relatif est ici sans
 conséquence (ces chemins ont trois segments ou plus, `/{lot_id}` un seul) — mais
 le préserver évite d'avoir à le redémontrer au prochain ajout.
 """
+
 from __future__ import annotations
 
 import json
@@ -54,6 +55,7 @@ router = APIRouter()
 #  servaient qu'à lui. Une extraction qui laisse une copie derrière elle n'a rien
 #  extrait — elle a dupliqué (`standards/02` §5).
 
+
 def _parse_users(utilisateurs_json: str) -> list[dict]:
     """Retourne la liste [{user_id, type_lien}] ou [] en cas d'erreur."""
     try:
@@ -70,7 +72,8 @@ def _type_lien_from_str(s: str) -> TypeLien:
         return TypeLien.propriétaire
 
 
-#  Import staging  endpoints 
+#  Import staging  endpoints
+
 
 @router.post("/admin/imports/upload", status_code=201)
 async def upload_import_lots(
@@ -81,6 +84,7 @@ async def upload_import_lots(
 ):
     """Upload un Excel, auto-matche et résout automatiquement les copropriétaires."""
     from app.utils.import_lots import importer_depuis_bytes
+
     contenu = await file.read()
     #  🔴 Les trois règles AVANT de lire le classeur (#1026). Cet import
     #  n'avait AUCUN contrôle : ni type, ni taille — `await file.read()` lisait
@@ -122,13 +126,15 @@ def _imp_row(imp: LotImport, session: Session) -> dict:
     utilisateurs_out = []
     for entry in _parse_users(imp.utilisateurs_json):
         uid = entry.get("user_id")
-        tl  = entry.get("type_lien", "propriétaire")
+        tl = entry.get("type_lien", "propriétaire")
         u = session.get(Utilisateur, uid) if uid else None
-        utilisateurs_out.append({
-            "user_id": uid,
-            "type_lien": tl,
-            "utilisateur": {"id": u.id, "prenom": u.prenom, "nom": u.nom} if u else None,
-        })
+        utilisateurs_out.append(
+            {
+                "user_id": uid,
+                "type_lien": tl,
+                "utilisateur": {"id": u.id, "prenom": u.prenom, "nom": u.nom} if u else None,
+            }
+        )
 
     return {
         "id": imp.id,
@@ -143,7 +149,8 @@ def _imp_row(imp: LotImport, session: Session) -> dict:
         "lot_id": imp.lot_id,
         "lot_label": (
             f"{libelle_batiment(lot.batiment)} — {lot.numero} ({lot.type.value})"
-            if lot and lot.batiment else (f"#{imp.lot_id}" if imp.lot_id else None)
+            if lot and lot.batiment
+            else (f"#{imp.lot_id}" if imp.lot_id else None)
         ),
         "utilisateurs": utilisateurs_out,
         "notes_admin": imp.notes_admin,
@@ -167,7 +174,12 @@ def list_imports(
     elif tri == "numero":
         stmt = stmt.order_by(LotImport.numero)
     else:  # copro (défaut)
-        stmt = stmt.order_by(LotImport.nom_coproprietaire, LotImport.no_coproprietaire, LotImport.batiment_id, LotImport.numero)
+        stmt = stmt.order_by(
+            LotImport.nom_coproprietaire,
+            LotImport.no_coproprietaire,
+            LotImport.batiment_id,
+            LotImport.numero,
+        )
     imports = session.exec(stmt).all()
     return [_imp_row(imp, session) for imp in imports]
 
@@ -179,13 +191,13 @@ def stats_imports(
 ):
     all_imps = session.exec(select(LotImport)).all()
     return {
-        "total":           len(all_imps),
-        "en_attente":      sum(1 for x in all_imps if x.statut == StatutLotImport.en_attente),
+        "total": len(all_imps),
+        "en_attente": sum(1 for x in all_imps if x.statut == StatutLotImport.en_attente),
         "utilisateur_lie": sum(1 for x in all_imps if x.statut == StatutLotImport.utilisateur_lie),
-        "lot_lie":         sum(1 for x in all_imps if x.statut == StatutLotImport.lot_lie),
-        "resolu":          sum(1 for x in all_imps if x.statut == StatutLotImport.resolu),
-        "ignore":          sum(1 for x in all_imps if x.statut == StatutLotImport.ignore),
-        "avec_user":       sum(1 for x in all_imps if _parse_users(x.utilisateurs_json)),
+        "lot_lie": sum(1 for x in all_imps if x.statut == StatutLotImport.lot_lie),
+        "resolu": sum(1 for x in all_imps if x.statut == StatutLotImport.resolu),
+        "ignore": sum(1 for x in all_imps if x.statut == StatutLotImport.ignore),
+        "avec_user": sum(1 for x in all_imps if _parse_users(x.utilisateurs_json)),
     }
 
 
@@ -196,7 +208,7 @@ class UserLienItem(BaseModel):
 
 class PatchImport(BaseModel):
     lot_id: Optional[int] = None
-    utilisateurs: Optional[list[UserLienItem]] = None   # remplace l'ancien user_id unique
+    utilisateurs: Optional[list[UserLienItem]] = None  # remplace l'ancien user_id unique
     notes_admin: Optional[str] = None
 
 
@@ -211,7 +223,9 @@ def patch_import(
     if body.lot_id is not None:
         imp.lot_id = body.lot_id or None
     # Capturer les anciens user_ids AVANT mise à jour (pour diff UserLot si résolu)
-    old_user_ids: set[int] = {e["user_id"] for e in _parse_users(imp.utilisateurs_json) if e.get("user_id")}
+    old_user_ids: set[int] = {
+        e["user_id"] for e in _parse_users(imp.utilisateurs_json) if e.get("user_id")
+    }
     if body.utilisateurs is not None:
         imp.utilisateurs_json = json.dumps(
             [{"user_id": u.user_id, "type_lien": u.type_lien} for u in body.utilisateurs],
@@ -238,7 +252,7 @@ def patch_import(
         # Créer les nouveaux UserLot
         for entry in new_entries:
             uid = entry.get("user_id")
-            tl  = _type_lien_from_str(entry.get("type_lien", "propriétaire"))
+            tl = _type_lien_from_str(entry.get("type_lien", "propriétaire"))
             if not uid:
                 continue
             existing_ul = session.exec(
@@ -292,7 +306,7 @@ def resoudre_import(
     # 2. Créer les UserLot pour chaque utilisateur lié
     for entry in _parse_users(imp.utilisateurs_json):
         uid = entry.get("user_id")
-        tl  = _type_lien_from_str(entry.get("type_lien", "propriétaire"))
+        tl = _type_lien_from_str(entry.get("type_lien", "propriétaire"))
         if not uid:
             continue
         existing_ul = session.exec(
@@ -302,12 +316,14 @@ def resoudre_import(
             )
         ).first()
         if not existing_ul:
-            session.add(UserLot(
-                user_id=uid,
-                lot_id=lot.id,
-                type_lien=tl,
-                actif=True,
-            ))
+            session.add(
+                UserLot(
+                    user_id=uid,
+                    lot_id=lot.id,
+                    type_lien=tl,
+                    actif=True,
+                )
+            )
     session.flush()
 
     imp.statut = StatutLotImport.resolu

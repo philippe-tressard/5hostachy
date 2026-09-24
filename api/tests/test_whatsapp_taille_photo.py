@@ -28,6 +28,7 @@ sans option, le plafond redeviendrait 100 kio **sans qu'aucune valeur ne change
 de signe**. Un test qui ne lirait que des nombres ne le verrait pas —
 `test_le_bridge_declare_explicitement_un_plafond` lit la forme de l'appel.
 """
+
 import base64
 import io
 import re
@@ -96,9 +97,9 @@ def test_le_bridge_declare_explicitement_un_plafond():
         "redevient celui par défaut d'express — 100 kio — et tout message portant "
         "une photo est refusé par 413 (#1057)."
     )
-    assert re.search(
-        r'PHOTO_BUDGET_KO\s*=\s*parseInt\(process\.env\.WA_PHOTO_BUDGET_KO', BRIDGE
-    ), "Le bridge doit lire le budget de l'environnement, pas le réécrire."
+    assert re.search(r"PHOTO_BUDGET_KO\s*=\s*parseInt\(process\.env\.WA_PHOTO_BUDGET_KO", BRIDGE), (
+        "Le bridge doit lire le budget de l'environnement, pas le réécrire."
+    )
 
 
 def test_le_plafond_du_bridge_depasse_ce_que_l_api_peut_envoyer():
@@ -190,8 +191,12 @@ def test_un_corps_refuse_reemet_le_message_sans_la_photo(bridge_factice):
     bridge_factice.codes = [413, 200]
 
     wa.envoyer_whatsapp(
-        "Porte des boîtes aux lettres", "Elle ne ferme plus.", False, None,
-        "/uploads/fichiers/photo.jpg", CONFIG_WA,
+        "Porte des boîtes aux lettres",
+        "Elle ne ferme plus.",
+        False,
+        None,
+        "/uploads/fichiers/photo.jpg",
+        CONFIG_WA,
     )
 
     assert len(bridge_factice.corps) == 2, "Le message doit être réémis une fois, pas zéro."
@@ -210,7 +215,12 @@ def test_une_seule_reemission(bridge_factice):
 
     with pytest.raises(httpx.HTTPStatusError):
         wa.envoyer_whatsapp(
-            "Titre", "Contenu", False, None, "/uploads/fichiers/photo.jpg", CONFIG_WA,
+            "Titre",
+            "Contenu",
+            False,
+            None,
+            "/uploads/fichiers/photo.jpg",
+            CONFIG_WA,
         )
     assert len(bridge_factice.corps) == 2
 
@@ -221,7 +231,12 @@ def test_un_refus_qui_n_est_pas_413_ne_reemet_rien(bridge_factice):
 
     with pytest.raises(httpx.HTTPStatusError):
         wa.envoyer_whatsapp(
-            "Titre", "Contenu", False, None, "/uploads/fichiers/photo.jpg", CONFIG_WA,
+            "Titre",
+            "Contenu",
+            False,
+            None,
+            "/uploads/fichiers/photo.jpg",
+            CONFIG_WA,
         )
     assert len(bridge_factice.corps) == 1
 

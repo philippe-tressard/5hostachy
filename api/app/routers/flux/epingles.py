@@ -2,6 +2,7 @@
 
 Extrait de `flux.py` le 08/08/2026. Voir `__init__.py` pour la règle de découpage.
 """
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -33,11 +34,16 @@ def compter_epingles(
     """
     #  Les actualités sont des affaires depuis le lot 4 (#1091). Le champ de la
     #  réponse garde son nom : c'est la RUBRIQUE que l'écran affiche.
-    publications = session.exec(
-        select(func.count(Ticket.id)).where(
-            Ticket.categorie == ACTUALITE, Ticket.epingle, ~Ticket.archive_manuel,
-        )
-    ).one() or 0
+    publications = (
+        session.exec(
+            select(func.count(Ticket.id)).where(
+                Ticket.categorie == ACTUALITE,
+                Ticket.epingle,
+                ~Ticket.archive_manuel,
+            )
+        ).one()
+        or 0
+    )
     #  Les événements sont des affaires depuis le lot 5 (#1092) : il n'en reste
     #  aucun à compter. Le champ reste dans la réponse, à zéro, pour un onglet
     #  resté ouvert sur l'ancienne version.

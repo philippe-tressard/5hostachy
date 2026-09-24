@@ -11,6 +11,7 @@ aurait divergé de la source sans que rien ne le signale. Les badges du README o
 connu la dérive inverse, réelle celle-là : le badge Python annonçait 3.10+ alors que
 l'image de production tourne en 3.12 (corrigé le 26/07/2026).
 """
+
 import pathlib
 import re
 
@@ -86,9 +87,7 @@ def test_badge_node_du_readme_suit_la_ci():
 def test_readme_expose_un_badge_ci():
     """Un dépôt qui a une CI doit l'afficher : c'est le premier signal de santé."""
     readme = (_RACINE / "README.md").read_text(encoding="utf-8-sig")
-    assert "workflows/ci.yml/badge.svg" in readme, (
-        "README.md n'expose pas le badge de la CI"
-    )
+    assert "workflows/ci.yml/badge.svg" in readme, "README.md n'expose pas le badge de la CI"
 
 
 def test_ancrage_du_controle_p3_reste_valide():
@@ -110,7 +109,9 @@ def test_ancrage_du_controle_p3_reste_valide():
     import json
 
     nom = json.loads((_RACINE / "front" / "package.json").read_text(encoding="utf-8"))["name"]
-    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(encoding="utf-8")
+    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
 
     assert f'"{nom}"' in skill, (
         f"Le paquet front s'appelle « {nom} », mais le contrôle P3 de "

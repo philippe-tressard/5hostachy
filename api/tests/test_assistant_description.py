@@ -13,6 +13,7 @@
 4. **Le contexte ne se réécrit pas** — annoncé au modèle dans le MESSAGE, pas
    seulement dans le prompt modifiable.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -56,7 +57,7 @@ def test_un_titre_null_reste_None():
 
 @pytest.mark.parametrize(
     "texte",
-    ["", "Une fuite d'eau au 3e.", "{\"titre\": \"x\"}", "{pas du json}", "[1, 2]"],
+    ["", "Une fuite d'eau au 3e.", '{"titre": "x"}', "{pas du json}", "[1, 2]"],
 )
 def test_sans_description_la_reponse_est_ILLISIBLE_jamais_un_texte(texte):
     """Prendre la prose du modèle pour une proposition ferait remplacer une
@@ -102,7 +103,11 @@ def test_le_contexte_est_annonce_comme_a_ne_pas_reecrire():
 
 def test_sans_titre_demande_le_message_le_dit():
     m = construire_message(
-        entite="commentaire", titre=None, description="x", contexte={}, precision=None,
+        entite="commentaire",
+        titre=None,
+        description="x",
+        contexte={},
+        precision=None,
         avec_titre=False,
     )
     assert "Aucun titre n'est demandé" in m
@@ -112,7 +117,12 @@ def test_sans_titre_demande_le_message_le_dit():
 def test_un_champ_vide_est_annonce_vide_pas_omis():
     """Le modèle doit SAVOIR qu'il n'y a pas de titre pour en proposer un."""
     m = construire_message(
-        entite="ticket", titre="", description="x", contexte={}, precision=None, avec_titre=True,
+        entite="ticket",
+        titre="",
+        description="x",
+        contexte={},
+        precision=None,
+        avec_titre=True,
     )
     assert "Titre actuel :\n(aucun)" in m
 
@@ -135,9 +145,7 @@ def test_une_demande_vide_est_refusee_AVANT_l_appel():
 
 
 def test_le_contexte_est_borne_et_les_vides_ecartes():
-    d = preparer(
-        Demande("ticket", "t", None, {"a": "x" * 2000, "b": ""}, "p" * 9999, True)
-    )
+    d = preparer(Demande("ticket", "t", None, {"a": "x" * 2000, "b": ""}, "p" * 9999, True))
     assert len(d.contexte["a"]) == MAX_CARACTERES_CONTEXTE
     assert "b" not in d.contexte
     assert len(d.precision) < 9999

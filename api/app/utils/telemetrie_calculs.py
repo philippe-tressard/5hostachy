@@ -62,6 +62,7 @@ def vues_non_attribuees(total_vues: int, vues_attribuees: int) -> int:
     """
     return max(0, total_vues - vues_attribuees)
 
+
 def _cumul_par_page(lignes, uniques=None) -> dict[str, dict]:
     """Les vues cumulées par page — écrit UNE fois (14/09/2026, #779).
 
@@ -98,7 +99,10 @@ def _cumul_par_page(lignes, uniques=None) -> dict[str, dict]:
 #: formulation, parce que deux écrans qui disent « Inconnu » et « ? » laissent
 #: croire à deux situations différentes.
 _FICHE_INCONNUE = {
-    "nom": "Inconnu", "derniere_connexion": None, "statut": None, "batiment_id": None,
+    "nom": "Inconnu",
+    "derniere_connexion": None,
+    "statut": None,
+    "batiment_id": None,
 }
 
 

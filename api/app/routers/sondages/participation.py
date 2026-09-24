@@ -4,6 +4,7 @@ Extrait de `sondages.py` le 17/08/2026 (cf. `__init__.py`). Chemins NUS : le
 préfixe `/sondages` est posé par le paquet, qui monte ce module avant `crud`
 pour que `/{sondage_id}/voter` soit reconnu avant `/{sondage_id}`.
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -15,7 +16,10 @@ from app.utils.liens import lien_sondage
 from app.auth.deps import exiger_non_externe, get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import (
-    CommentaireSondage, OptionSondage, Sondage, Utilisateur,
+    CommentaireSondage,
+    OptionSondage,
+    Sondage,
+    Utilisateur,
     VoteSondage,
 )
 from app.utils.reponses import auteur_meta, notifier_nouvelle_reponse
@@ -63,23 +67,33 @@ def voter(
         raise HTTPException(400, "Option invalide")
 
     reponse_libre_val = body.reponse_libre.strip() if body.reponse_libre else None
-    session.add(VoteSondage(
-        sondage_id=sondage_id, option_id=body.option_id, user_id=user.id,
-        reponse_libre=reponse_libre_val,
-    ))
+    session.add(
+        VoteSondage(
+            sondage_id=sondage_id,
+            option_id=body.option_id,
+            user_id=user.id,
+            reponse_libre=reponse_libre_val,
+        )
+    )
 
     if body.commentaire and body.commentaire.strip():
         contenu = body.commentaire.strip()
-        session.add(CommentaireSondage(
-            sondage_id=sondage_id,
-            auteur_id=user.id,
-            contenu=contenu,
-        ))
+        session.add(
+            CommentaireSondage(
+                sondage_id=sondage_id,
+                auteur_id=user.id,
+                contenu=contenu,
+            )
+        )
         notifier_nouvelle_reponse(
-            session, background_tasks,
-            createur_id=s.auteur_id, auteur=user,
-            rubrique_label="votre sondage", sujet=s.question,
-            extrait=contenu, lien_path=lien_sondage(sondage_id),
+            session,
+            background_tasks,
+            createur_id=s.auteur_id,
+            auteur=user,
+            rubrique_label="votre sondage",
+            sujet=s.question,
+            extrait=contenu,
+            lien_path=lien_sondage(sondage_id),
         )
 
     session.commit()
@@ -108,15 +122,24 @@ def commenter(
     c = CommentaireSondage(sondage_id=sondage_id, auteur_id=user.id, contenu=contenu)
     session.add(c)
     notifier_nouvelle_reponse(
-        session, background_tasks,
-        createur_id=s.auteur_id, auteur=user,
-        rubrique_label="votre sondage", sujet=s.question,
-        extrait=contenu, lien_path=lien_sondage(sondage_id),
+        session,
+        background_tasks,
+        createur_id=s.auteur_id,
+        auteur=user,
+        rubrique_label="votre sondage",
+        sujet=s.question,
+        extrait=contenu,
+        lien_path=lien_sondage(sondage_id),
     )
     session.commit()
     session.refresh(c)
-    return {"id": c.id, "contenu": c.contenu, "cree_le": c.cree_le,
-            "auteur_id": c.auteur_id, **auteur_meta(user, session)}
+    return {
+        "id": c.id,
+        "contenu": c.contenu,
+        "cree_le": c.cree_le,
+        "auteur_id": c.auteur_id,
+        **auteur_meta(user, session),
+    }
 
 
 @router.delete("/{sondage_id}/commentaires/{commentaire_id}", status_code=204)

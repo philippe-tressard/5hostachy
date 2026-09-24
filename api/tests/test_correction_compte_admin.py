@@ -7,6 +7,7 @@ part — une faute de frappe ne se corrigeait que par la base.
 
 Mêmes règles qu'à l'inscription : l'étage dans ses bornes, les noms en capitales.
 """
+
 from __future__ import annotations
 
 import pytest

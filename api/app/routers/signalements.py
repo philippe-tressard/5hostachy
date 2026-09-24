@@ -6,6 +6,7 @@ modération visible du conseil syndical et des admins, qui peuvent la traiter ou
 la rejeter (la suppression du contenu et le bannissement restent gérés par les
 contrôles existants).
 """
+
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -40,8 +41,6 @@ _CIBLE_LABELS = {
     "reponse": "Réponse",
     "commentaire": "Commentaire",
 }
-
-
 
 
 def _lien_cible(cible_type: str, cible_id: int) -> str:
@@ -118,9 +117,12 @@ def creer_signalement(
         raise HTTPException(409, "Vous avez déjà signalé ce contenu")
 
     sig = Signalement(
-        cible_type=body.cible_type, cible_id=body.cible_id,
-        apercu=apercu or "", auteur_cible_id=auteur_cible_id,
-        signale_par_id=user.id, motif=motif,
+        cible_type=body.cible_type,
+        cible_id=body.cible_id,
+        apercu=apercu or "",
+        auteur_cible_id=auteur_cible_id,
+        signale_par_id=user.id,
+        motif=motif,
     )
     session.add(sig)
 
@@ -128,8 +130,11 @@ def creer_signalement(
     cs_members = membres_cs_ou_admin(session)
     for m in cs_members:
         if m.id != user.id:
-            sonner_systeme(session, "moderation",
-                destinataire_id=m.id, type="moderation",
+            sonner_systeme(
+                session,
+                "moderation",
+                destinataire_id=m.id,
+                type="moderation",
                 titre="Nouveau signalement à modérer",
                 corps=f"{_CIBLE_LABELS[body.cible_type]} — {motif[:150]}",
                 # Le modérateur doit atterrir sur le contenu signalé, pas sur
@@ -179,9 +184,7 @@ def compter_en_attente(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    n = len(session.exec(
-        select(Signalement).where(Signalement.statut == "en_attente")
-    ).all())
+    n = len(session.exec(select(Signalement).where(Signalement.statut == "en_attente")).all())
     return {"en_attente": n}
 
 

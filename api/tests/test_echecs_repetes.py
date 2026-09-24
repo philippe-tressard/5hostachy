@@ -20,6 +20,7 @@ La décision est une fonction **pure** : elle s'éprouve sans horloge, sans rés
 et sans journal. Le compteur, lui, doit se remettre à zéro — c'est le seul défaut
 possible de ce module, et il est silencieux.
 """
+
 from __future__ import annotations
 
 import logging

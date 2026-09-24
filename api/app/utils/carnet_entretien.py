@@ -39,6 +39,7 @@ Les montants. Ils vivent dans les documents et les devis, et les faire remonter
 demanderait de décider qui les voit — une question distincte de celle du carnet.
 Le lot suivant, s'il est demandé.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -57,14 +58,15 @@ from app.utils.perimetres import couvre, parse_json_perimetres
 #: un signalement de bug, une nuisance de voisinage, une demande d'accès — sont
 #: de la vie de la copropriété, pas de son entretien. Les inclure noierait le
 #: carnet dans des faits qu'un acquéreur ou un syndic n'y cherche pas.
-CATEGORIES_BATI = frozenset({
-    CategorieTicket.panne,
-    CategorieTicket.espaces_verts,
-    CategorieTicket.sinistre,
-    CategorieTicket.etude_travaux,
-    CategorieTicket.entretien,  # les maintenances du calendrier (#1092)
-})
-
+CATEGORIES_BATI = frozenset(
+    {
+        CategorieTicket.panne,
+        CategorieTicket.espaces_verts,
+        CategorieTicket.sinistre,
+        CategorieTicket.etude_travaux,
+        CategorieTicket.entretien,  # les maintenances du calendrier (#1092)
+    }
+)
 
 
 @dataclass
@@ -205,18 +207,20 @@ def _entrees_contrats(session: Session, perimetre: Optional[str]) -> list[Entree
 
         alerte = alerte_visite(_jour(contrat.prochaine_visite), aujourdhui)
 
-        entrees.append(EntreeCarnet(
-            date_fait=debut,
-            libelle=contrat.libelle,
-            origine="contrat",
-            detail=detail,
-            equipement=type_equipement_resolu(
-                contrat, prestataire.specialite if prestataire else None
-            ),
-            perimetre=codes,
-            lien=lien_element("contrat", contrat.id),
-            alerte=alerte,
-        ))
+        entrees.append(
+            EntreeCarnet(
+                date_fait=debut,
+                libelle=contrat.libelle,
+                origine="contrat",
+                detail=detail,
+                equipement=type_equipement_resolu(
+                    contrat, prestataire.specialite if prestataire else None
+                ),
+                perimetre=codes,
+                lien=lien_element("contrat", contrat.id),
+                alerte=alerte,
+            )
+        )
     return entrees
 
 
@@ -239,18 +243,22 @@ def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[E
         codes = _codes_de(ticket.perimetre_cible)
         if not couvre(codes, perimetre):
             continue
-        prestataire = session.get(Prestataire, ticket.prestataire_id) if ticket.prestataire_id else None
-        entrees.append(EntreeCarnet(
-            date_fait=quand,
-            libelle=ticket.titre,
-            origine="intervention",
-            detail=prestataire.nom if prestataire else "",
-            #  Celui que le conseil a désigné, sinon la spécialité de
-            #  l'intervenant — la règle des contrats, jamais une déduction du titre.
-            equipement=ticket.equipement or (prestataire.specialite if prestataire else None),
-            perimetre=codes,
-            lien=lien_ticket(ticket.id),
-        ))
+        prestataire = (
+            session.get(Prestataire, ticket.prestataire_id) if ticket.prestataire_id else None
+        )
+        entrees.append(
+            EntreeCarnet(
+                date_fait=quand,
+                libelle=ticket.titre,
+                origine="intervention",
+                detail=prestataire.nom if prestataire else "",
+                #  Celui que le conseil a désigné, sinon la spécialité de
+                #  l'intervenant — la règle des contrats, jamais une déduction du titre.
+                equipement=ticket.equipement or (prestataire.specialite if prestataire else None),
+                perimetre=codes,
+                lien=lien_ticket(ticket.id),
+            )
+        )
     return entrees
 
 
@@ -280,16 +288,20 @@ def _entrees_incidents(session: Session, perimetre: Optional[str]) -> list[Entre
         quand = _jour(ticket.ferme_le)
         if quand is None:
             continue
-        categorie = ticket.categorie.value if hasattr(ticket.categorie, "value") else str(ticket.categorie)
-        entrees.append(EntreeCarnet(
-            date_fait=quand,
-            libelle=ticket.titre,
-            origine="incident",
-            detail=f"ticket {ticket.numero} · {categorie}",
-            equipement=ticket.equipement,
-            perimetre=_codes_de(ticket.perimetre_cible),
-            lien=lien_ticket(ticket.id),
-        ))
+        categorie = (
+            ticket.categorie.value if hasattr(ticket.categorie, "value") else str(ticket.categorie)
+        )
+        entrees.append(
+            EntreeCarnet(
+                date_fait=quand,
+                libelle=ticket.titre,
+                origine="incident",
+                detail=f"ticket {ticket.numero} · {categorie}",
+                equipement=ticket.equipement,
+                perimetre=_codes_de(ticket.perimetre_cible),
+                lien=lien_ticket(ticket.id),
+            )
+        )
     return entrees
 
 

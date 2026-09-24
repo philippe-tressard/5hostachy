@@ -24,6 +24,7 @@ intégration continue, où le job installe ce qu'il faut. Un contrôle qui s'abs
 partout serait un contrôle absent : cf. standards/04 §1, un contrôle qui ne peut pas
 s'exécuter rend INCONNU, jamais OK.
 """
+
 from tests.aides_pdf import besoin_weasyprint, exiger_weasyprint_en_ci
 
 
@@ -98,12 +99,19 @@ def test_la_fiche_avec_ses_icones_se_rend_en_pdf(batiments, caplog):
     from app.utils.fiche_arrivant import generer_fiche_arrivant
     from app.utils.pdf_theme import html_to_pdf
 
-    membres = [{
-        "genre": "M.", "prenom": "Jean", "nom": "Dupont",
-        "batiment_id": batiments[0], "batiment_nom": str(batiments[0]),
-        "etage": "2", "est_gestionnaire_site": False, "est_president": True,
-        "photo_url": None,
-    }]
+    membres = [
+        {
+            "genre": "M.",
+            "prenom": "Jean",
+            "nom": "Dupont",
+            "batiment_id": batiments[0],
+            "batiment_nom": str(batiments[0]),
+            "etage": "2",
+            "est_gestionnaire_site": False,
+            "est_president": True,
+            "photo_url": None,
+        }
+    ]
     html = generer_fiche_arrivant(
         cs_data={"membres": membres},
         syndic_data={"nom_syndic": "Syndic Test", "adresse": "1 rue Test", "membres": []},
@@ -132,7 +140,8 @@ def test_la_fiche_avec_ses_icones_se_rend_en_pdf(batiments, caplog):
     )
 
     plaintes = [
-        r.getMessage() for r in caplog.records
+        r.getMessage()
+        for r in caplog.records
         if r.name.startswith("weasyprint") and "unknown property" not in r.getMessage()
     ]
     assert not plaintes, f"WeasyPrint s'est plaint du document : {plaintes}"

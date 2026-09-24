@@ -23,6 +23,7 @@ CE QUE CE TEST VÉRIFIE — le fait, pas le symptôme :
 Le point 1 attrape la copie qui change de NOM : c'est ainsi qu'une 4ᵉ table en dur
 avait survécu à une consolidation précédente (`perimetre_libelle`, 27/08/2026).
 """
+
 import ast
 import pathlib
 from datetime import datetime, timedelta
@@ -99,8 +100,11 @@ def test_le_vocabulaire_du_refus_n_est_ecrit_qu_une_fois():
     """Les messages de refus n'existent que dans le module source."""
     from app.utils import communaute
 
-    fragments = ["n'est pas accessible à votre profil", "définitivement suspendu",
-                 "période probatoire"]
+    fragments = [
+        "n'est pas accessible à votre profil",
+        "définitivement suspendu",
+        "période probatoire",
+    ]
     ailleurs = {}
     for chemin in _modules_python():
         if chemin == _SOURCE_UNIQUE:
@@ -109,9 +113,7 @@ def test_le_vocabulaire_du_refus_n_est_ecrit_qu_une_fois():
         trouves = [f for f in fragments if f in texte]
         if trouves:
             ailleurs[chemin.relative_to(_APP).as_posix()] = trouves
-    assert not ailleurs, (
-        f"Messages de refus Communauté recopiés hors du module source : {ailleurs}"
-    )
+    assert not ailleurs, f"Messages de refus Communauté recopiés hors du module source : {ailleurs}"
 
 
 class _Faux:

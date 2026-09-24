@@ -14,6 +14,7 @@ Ce test verrouille le rendu ET interdit qu'un futur formatage monétaire
 réapparaisse à la main dans `app/` — c'est le second point qui évite la récidive,
 le correctif ne tenant pas si un prochain appel réintroduit un `:,.0f €`.
 """
+
 import re
 from pathlib import Path
 
@@ -33,9 +34,9 @@ _MONTANT_A_LA_MAIN = re.compile(r":[,\.]?\d*[,\.]?\d*f\}\s*(€|\\u20ac)")
     [
         (None, "—"),
         (0, "0 €"),
-        (1234, "1 234 €"),          # rond : pas de « ,00 »
-        (1234.5, "1 234,50 €"),     # décimales conservées
-        (1234.567, "1 234,57 €"),   # arrondi au centime
+        (1234, "1 234 €"),  # rond : pas de « ,00 »
+        (1234.5, "1 234,50 €"),  # décimales conservées
+        (1234.567, "1 234,57 €"),  # arrondi au centime
         (999999.99, "999 999,99 €"),
     ],
 )
@@ -66,9 +67,10 @@ def test_aucun_montant_formate_a_la_main_dans_app():
     for chemin in fichiers:
         for n, ligne in enumerate(chemin.read_text(encoding="utf-8").splitlines(), 1):
             if _MONTANT_A_LA_MAIN.search(ligne):
-                fautifs.append(f"{chemin.relative_to(_APP_DIR).as_posix()}:{n}: {ligne.strip()[:90]}")
+                fautifs.append(
+                    f"{chemin.relative_to(_APP_DIR).as_posix()}:{n}: {ligne.strip()[:90]}"
+                )
     assert not fautifs, (
         "Montant formaté à la main — utiliser `app.utils.montants.montant_fr()`, "
-        "sous peine de voir le même champ rendu différemment selon l'écran :\n"
-        + "\n".join(fautifs)
+        "sous peine de voir le même champ rendu différemment selon l'écran :\n" + "\n".join(fautifs)
     )

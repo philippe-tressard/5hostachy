@@ -3,6 +3,7 @@
 Extrait de `admin.py` (2057 lignes) le 06/08/2026, sans modification de logique.
 Voir `__init__.py` pour la règle de découpage.
 """
+
 import json
 
 from fastapi import APIRouter, BackgroundTasks, Depends
@@ -30,6 +31,7 @@ router = APIRouter()
 
 
 # ── Commandes d'accès (vigik / télécommande) ────────────────────────────────
+
 
 @router.get("/commandes-acces")
 def list_commandes_acces(
@@ -68,7 +70,9 @@ def _poser_les_badges(session: Session, cmd: CommandeAcces, codes: list[str]) ->
     for code in {c.strip() for c in codes if c and c.strip()}:
         exiger_code_libre(session, type_acces, code)
         objet = type_acces.modele(
-            code=code, lot_id=cmd.lot_id, user_id=cmd.user_id,
+            code=code,
+            lot_id=cmd.lot_id,
+            user_id=cmd.user_id,
             perimetre_cible=_acces_json(session, type_acces, None, cmd.lot_id, cmd.user_id),
         )
         session.add(objet)
@@ -93,7 +97,9 @@ def traiter_commande(
     if cmd.statut == StatutCommande.acceptee:
         _poser_les_badges(session, cmd, body.codes)
 
-    sonner_systeme(session, "sa_demande",
+    sonner_systeme(
+        session,
+        "sa_demande",
         destinataire_id=cmd.user_id,
         type="vigik",
         titre=f"Commande {cmd.type} : {cmd.statut.value}",
@@ -112,6 +118,7 @@ def traiter_commande(
     demandeur = session.get(Utilisateur, cmd.user_id)
     if demandeur and demandeur.email:
         from app.utils.email import send_email
+
         ctx_vigik: dict[str, Any] = {
             "destinataire": {"prenom": demandeur.prenom, "nom": demandeur.nom},
             "type": cmd.type,
@@ -128,7 +135,10 @@ def traiter_commande(
 
     session.commit()
     return {"statut": cmd.statut}
+
+
 # ── Audit associations user-lot ─────────────────────────────────────────────
+
 
 @router.get("/audit/user-lots")
 def audit_user_lots(
@@ -145,21 +155,34 @@ def audit_user_lots(
         user = session.get(Utilisateur, ul.user_id)
         lot = session.get(Lot, ul.lot_id)
         bat = session.get(Batiment, lot.batiment_id) if lot and lot.batiment_id else None
-        result.append({
-            "user_lot_id": ul.id,
-            "user_id": ul.user_id,
-            "user_nom": nom_affiche(user.prenom, user.nom) if user else "?",
-            "user_statut": user.statut.value if user and hasattr(user.statut, "value") else str(user.statut) if user else "?",
-            "lot_id": ul.lot_id,
-            "lot_numero": lot.numero if lot else "?",
-            "lot_type": lot.type.value if lot and hasattr(lot.type, "value") else str(lot.type) if lot else "?",
-            "batiment": libelle_batiment_ou(bat, "—"),
-            "type_lien": ul.type_lien.value if hasattr(ul.type_lien, "value") else str(ul.type_lien),
-        })
+        result.append(
+            {
+                "user_lot_id": ul.id,
+                "user_id": ul.user_id,
+                "user_nom": nom_affiche(user.prenom, user.nom) if user else "?",
+                "user_statut": user.statut.value
+                if user and hasattr(user.statut, "value")
+                else str(user.statut)
+                if user
+                else "?",
+                "lot_id": ul.lot_id,
+                "lot_numero": lot.numero if lot else "?",
+                "lot_type": lot.type.value
+                if lot and hasattr(lot.type, "value")
+                else str(lot.type)
+                if lot
+                else "?",
+                "batiment": libelle_batiment_ou(bat, "—"),
+                "type_lien": ul.type_lien.value
+                if hasattr(ul.type_lien, "value")
+                else str(ul.type_lien),
+            }
+        )
     return result
 
 
 # ── Baux dont le locataire n'a pas été rattaché ──────────────────────────────
+
 
 @router.get("/audit/baux-sans-locataire")
 def audit_baux_sans_locataire(
@@ -223,21 +246,23 @@ def audit_baux_sans_locataire(
                     candidats.append(
                         {"id": u.id, "nom": nom_affiche(u.prenom, u.nom), "email": u.email}
                     )
-        result.append({
-            "bail_id": bail.id,
-            "lot": libelle_lot(lot)
-            if lot else "?",
-            "batiment": libelle_batiment_ou(bat, "—"),
-            "locataire_nom": nom_affiche(bail.locataire_prenom, bail.locataire_nom)
-            if (bail.locataire_nom or bail.locataire_prenom) else "—",
-            "locataire_email": bail.locataire_email,
-            "date_entree": bail.date_entree,
-            #  🔴 La catégorie est calculée ICI, une fois : la laisser à l'écran
-            #  en ferait une seconde règle, et deux vues du même relevé pourraient
-            #  ranger le même bail dans deux cases.
-            "categorie": "compte_probable" if candidats else "sans_compte",
-            "candidats": candidats,
-        })
+        result.append(
+            {
+                "bail_id": bail.id,
+                "lot": libelle_lot(lot) if lot else "?",
+                "batiment": libelle_batiment_ou(bat, "—"),
+                "locataire_nom": nom_affiche(bail.locataire_prenom, bail.locataire_nom)
+                if (bail.locataire_nom or bail.locataire_prenom)
+                else "—",
+                "locataire_email": bail.locataire_email,
+                "date_entree": bail.date_entree,
+                #  🔴 La catégorie est calculée ICI, une fois : la laisser à l'écran
+                #  en ferait une seconde règle, et deux vues du même relevé pourraient
+                #  ranger le même bail dans deux cases.
+                "categorie": "compte_probable" if candidats else "sans_compte",
+                "candidats": candidats,
+            }
+        )
     #  Les rattachements manquants d'abord : c'est ce sur quoi on peut agir.
     result.sort(key=lambda r: (r["categorie"] != "compte_probable", r["locataire_nom"]))
     return result
@@ -258,9 +283,8 @@ def supprimer_user_lot(
     session.delete(ul)
     # Retirer ce user de l'utilisateurs_json de tout import lié à ce lot
     from app.models.core import LotImport
-    imports_lies = session.exec(
-        select(LotImport).where(LotImport.lot_id == lot_id_supprime)
-    ).all()
+
+    imports_lies = session.exec(select(LotImport).where(LotImport.lot_id == lot_id_supprime)).all()
     for imp in imports_lies:
         users = json.loads(imp.utilisateurs_json or "[]")
         nouveau = [e for e in users if e.get("user_id") != uid_supprime]
@@ -319,20 +343,22 @@ def audit_reclassement_tickets(
         if not suggestion:
             continue
         categorie, confiance, indice = suggestion
-        propositions.append({
-            "ticket_id": tk.id,
-            "numero": tk.numero,
-            "titre": tk.titre,
-            "statut": str(valeur(tk.statut)),
-            "actuelle": actuelle,
-            "actuelle_libelle": libelle_categorie(actuelle),
-            "proposee": categorie,
-            "proposee_libelle": libelle_categorie(categorie),
-            "confiance": confiance,
-            #  Le mot qui a déclenché la règle : sans lui, on valide à l'aveugle.
-            #  C'est la différence entre « fais-moi confiance » et « voilà pourquoi ».
-            "indice": indice,
-        })
+        propositions.append(
+            {
+                "ticket_id": tk.id,
+                "numero": tk.numero,
+                "titre": tk.titre,
+                "statut": str(valeur(tk.statut)),
+                "actuelle": actuelle,
+                "actuelle_libelle": libelle_categorie(actuelle),
+                "proposee": categorie,
+                "proposee_libelle": libelle_categorie(categorie),
+                "confiance": confiance,
+                #  Le mot qui a déclenché la règle : sans lui, on valide à l'aveugle.
+                #  C'est la différence entre « fais-moi confiance » et « voilà pourquoi ».
+                "indice": indice,
+            }
+        )
 
     propositions.sort(key=lambda p: (p["confiance"] != "haute", p["numero"]))
     return {

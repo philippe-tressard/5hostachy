@@ -14,6 +14,7 @@ sur ce ticket, et sous quel nom cela se lit-il dans l'Historique ?*
 C'est ce qui les rend lisibles seules, et c'est ce qui permettra de les tester
 sans monter une requête.
 """
+
 import json
 
 from app.models.core import Ticket
@@ -105,10 +106,18 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
     #  décident qui LIT — le conseil seul, comme à la création (`crud.py`) :
     #  pour un autre, ignorés comme les options (l'écran ne les lui propose
     #  pas), et non refusés — l'auteur d'une annonce d'arrivée corrige son texte.
-    if est_cs and _envoye(body, "public_cible") and (body.public_cible or None) != (_liste_json(ticket.public_cible) or None):
+    if (
+        est_cs
+        and _envoye(body, "public_cible")
+        and (body.public_cible or None) != (_liste_json(ticket.public_cible) or None)
+    ):
         changes.append("Public visé modifié")
         ticket.public_cible = json.dumps(body.public_cible) if body.public_cible else None
-    if est_cs and body.reserve_perimetre is not None and body.reserve_perimetre != ticket.reserve_perimetre:
+    if (
+        est_cs
+        and body.reserve_perimetre is not None
+        and body.reserve_perimetre != ticket.reserve_perimetre
+    ):
         changes.append("Accès modifié")
         ticket.reserve_perimetre = body.reserve_perimetre
     return changes
@@ -124,7 +133,9 @@ def _appliquer_quand(body: TicketUpdate, ticket: Ticket) -> list[str]:
 
     Testée à la PRÉSENCE (`_envoye`) : effacer une date, c'est l'envoyer à `null`.
     """
-    quand = [c for c in ("debut", "fin") if _envoye(body, c) and getattr(body, c) != getattr(ticket, c)]
+    quand = [
+        c for c in ("debut", "fin") if _envoye(body, c) and getattr(body, c) != getattr(ticket, c)
+    ]
     for c in quand:
         setattr(ticket, c, getattr(body, c))
     return ["Quand modifié"] if quand else []

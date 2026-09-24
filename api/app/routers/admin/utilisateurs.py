@@ -3,6 +3,7 @@
 Extrait de `admin.py` (2057 lignes) le 06/08/2026, sans modification de logique.
 Voir `__init__.py` pour la règle de découpage.
 """
+
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -52,6 +53,7 @@ router = APIRouter()
 
 # ── Gestion des utilisateurs (rôles) ────────────────────────────────────────────
 
+
 @router.get("/utilisateurs")
 def list_utilisateurs(
     session: Session = Depends(get_session),
@@ -71,11 +73,7 @@ def list_utilisateurs(
     tc_ids = ids_detenteurs(session, TELECOMMANDE)
     vigik_ids = ids_detenteurs(session, VIGIK)
     # Batch : user_ids liés via un bail (bailleur ou locataire)
-    bail_bailleur_ids = set(
-        session.exec(
-            select(LocationBail.bailleur_id).distinct()
-        ).all()
-    )
+    bail_bailleur_ids = set(session.exec(select(LocationBail.bailleur_id).distinct()).all())
     bail_locataire_ids = set(
         session.exec(
             select(LocationBail.locataire_id).where(LocationBail.locataire_id != None).distinct()  # noqa: E711
@@ -117,7 +115,9 @@ def ajouter_role(
     #  🔴 En WARNING : c'est le geste qui donne des droits. La `Notification` part
     #  au concerné et ne dit pas QUI a agi — le journal, lui, nomme l'admin.
     journaliser_securite("role_ajoute", acteur_id=admin.id, cible_id=user.id, detail=role.value)
-    sonner_systeme(session, "compte",
+    sonner_systeme(
+        session,
+        "compte",
         destinataire_id=user.id,
         type="system",
         titre="Rôle ajouté",
@@ -128,6 +128,7 @@ def ajouter_role(
     session.commit()
     session.refresh(user)
     from app.schemas import UserRead
+
     return UserRead.from_orm_with_roles(user)
 
 
@@ -143,14 +144,18 @@ def retirer_role(
         raise HTTPException(400, "Vous ne pouvez pas vous retirer le rôle admin.")
     user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     if body.role == RoleUtilisateur.résident.value:
-        raise HTTPException(400, "Le rôle 'Résident' est le rôle de base, il ne peut pas être retiré.")
+        raise HTTPException(
+            400, "Le rôle 'Résident' est le rôle de base, il ne peut pas être retiré."
+        )
     try:
         role = RoleUtilisateur(body.role)
     except ValueError:
         raise HTTPException(400, f"Rôle invalide : {body.role}")
     user.retirer_role(role)
     journaliser_securite("role_retire", acteur_id=admin.id, cible_id=user.id, detail=role.value)
-    sonner_systeme(session, "compte",
+    sonner_systeme(
+        session,
+        "compte",
         destinataire_id=user.id,
         type="system",
         titre="Rôle retiré",
@@ -161,7 +166,10 @@ def retirer_role(
     session.commit()
     session.refresh(user)
     from app.schemas import UserRead
+
     return UserRead.from_orm_with_roles(user)
+
+
 class AdminUserUpdate(BaseModel):
     nom: NomMajuscules = None
     prenom: Optional[str] = None
@@ -193,7 +201,9 @@ def modifier_utilisateur(
     """Modifier les informations d'un utilisateur (admin)."""
     user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     if body.email and body.email != user.email.lower():
-        existing = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
+        existing = session.exec(
+            select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)
+        ).first()
         if existing:
             raise HTTPException(400, "Cet e-mail est déjà utilisé.")
     if body.etage is not None and etage_hors_bornes(body.etage):
@@ -231,7 +241,9 @@ def supprimer_utilisateur(
     # 1. Tokens d'authentification
     for t in session.exec(select(RefreshToken).where(RefreshToken.user_id == user_id)).all():
         session.delete(t)
-    for t in session.exec(select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)).all():
+    for t in session.exec(
+        select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
+    ).all():
         session.delete(t)
 
     # 2. UserLot + nettoyage utilisateurs_json dans LotImport + reset statut
@@ -246,7 +258,9 @@ def supprimer_utilisateur(
             if len(nouveau) != len(users):
                 imp.utilisateurs_json = json.dumps(nouveau, ensure_ascii=False)
                 if not nouveau and imp.statut != StatutLotImport.ignore:
-                    imp.statut = StatutLotImport.lot_lie if imp.lot_id else StatutLotImport.en_attente
+                    imp.statut = (
+                        StatutLotImport.lot_lie if imp.lot_id else StatutLotImport.en_attente
+                    )
                     imp.resolu_le = None
                 session.add(imp)
 
@@ -255,7 +269,9 @@ def supprimer_utilisateur(
         session.delete(c)
 
     # 4. Notifications
-    for n in session.exec(select(Notification).where(Notification.destinataire_id == user_id)).all():
+    for n in session.exec(
+        select(Notification).where(Notification.destinataire_id == user_id)
+    ).all():
         session.delete(n)
 
     # 5. Votes
@@ -265,16 +281,20 @@ def supprimer_utilisateur(
         session.delete(v)
 
     # 6. Demandes modification profil
-    for d in session.exec(select(DemandeModificationProfil).where(DemandeModificationProfil.utilisateur_id == user_id)).all():
+    for d in session.exec(
+        select(DemandeModificationProfil).where(DemandeModificationProfil.utilisateur_id == user_id)
+    ).all():
         session.delete(d)
-    for d in session.exec(select(DemandeModificationProfil).where(DemandeModificationProfil.traite_par_id == user_id)).all():
+    for d in session.exec(
+        select(DemandeModificationProfil).where(DemandeModificationProfil.traite_par_id == user_id)
+    ).all():
         d.traite_par_id = None
         session.add(d)
 
     # 7. Mandats (bailleur ou mandataire)
-    for m in session.exec(select(Mandat).where(
-        or_(Mandat.bailleur_id == user_id, Mandat.mandataire_id == user_id)
-    )).all():
+    for m in session.exec(
+        select(Mandat).where(or_(Mandat.bailleur_id == user_id, Mandat.mandataire_id == user_id))
+    ).all():
         session.delete(m)
 
     #  8. Les badges RESTENT sur leur lot (arbitrage du 23/09/2026, #1194) : la
@@ -284,9 +304,14 @@ def supprimer_utilisateur(
     #  son badge existe toujours.
     for type_acces in TYPES_ACCES.values():
         modele = type_acces.modele_import
-        for ligne in session.exec(select(modele).where(or_(
-            modele.user_proprietaire_id == user_id, modele.user_locataire_id == user_id,
-        ))).all():
+        for ligne in session.exec(
+            select(modele).where(
+                or_(
+                    modele.user_proprietaire_id == user_id,
+                    modele.user_locataire_id == user_id,
+                )
+            )
+        ).all():
             if ligne.user_proprietaire_id == user_id:
                 ligne.user_proprietaire_id = None
             if ligne.user_locataire_id == user_id:
@@ -296,7 +321,9 @@ def supprimer_utilisateur(
             session.add(ligne)
 
     # 10. LocationBail : locataire → nullifier ; bailleur → supprimer bail + objets remis
-    for bail in session.exec(select(LocationBail).where(LocationBail.locataire_id == user_id)).all():
+    for bail in session.exec(
+        select(LocationBail).where(LocationBail.locataire_id == user_id)
+    ).all():
         bail.locataire_id = None
         session.add(bail)
     for bail in session.exec(select(LocationBail).where(LocationBail.bailleur_id == user_id)).all():
@@ -305,7 +332,9 @@ def supprimer_utilisateur(
         session.delete(bail)
 
     # 11. HistoriqueSauvegarde — nullifier la référence optionnelle
-    for h in session.exec(select(HistoriqueSauvegarde).where(HistoriqueSauvegarde.declenchee_par_user_id == user_id)).all():
+    for h in session.exec(
+        select(HistoriqueSauvegarde).where(HistoriqueSauvegarde.declenchee_par_user_id == user_id)
+    ).all():
         h.declenchee_par_user_id = None
         session.add(h)
 
@@ -343,6 +372,7 @@ def supprimer_utilisateur(
 #  `retirer_role()` du modèle. Un endpoint sans appelant n'est pas seulement du
 #  code mort — c'est du code qui n'est plus corrigé quand la règle bouge.
 
+
 class BanCommunauteBody(BaseModel):
     interdit: bool
 
@@ -364,6 +394,7 @@ def ban_communaute(
 
     if body.interdit:
         from datetime import timedelta
+
         user.communaute_ban_count = (user.communaute_ban_count or 0) + 1
         if user.communaute_ban_count >= 2:
             # 2e infraction → ban permanent
@@ -380,9 +411,14 @@ def ban_communaute(
             cible_id=user.id,
             detail=f"infraction {user.communaute_ban_count}",
         )
-        sonner_systeme(session, "compte",
-            destinataire_id=user.id, type="system",
-            titre=notif_titre, corps=notif_corps, lien="/sondages",
+        sonner_systeme(
+            session,
+            "compte",
+            destinataire_id=user.id,
+            type="system",
+            titre=notif_titre,
+            corps=notif_corps,
+            lien="/sondages",
         )
     else:
         # Débannir
@@ -394,4 +430,5 @@ def ban_communaute(
     session.commit()
     session.refresh(user)
     from app.schemas import UserRead
+
     return UserRead.from_orm_with_roles(user)

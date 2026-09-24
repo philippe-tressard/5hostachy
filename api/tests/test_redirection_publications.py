@@ -16,6 +16,7 @@ Ce que ces tests verrouillent :
 4. **plus rien d'autre** sous `/publications` : le paquet ne doit pas regrossir
    en silence d'une seconde écriture de l'actualité.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -30,7 +31,9 @@ from app.models.core import Publication, RoleUtilisateur, Ticket, Utilisateur
 
 @pytest.fixture(name="session")
 def session_fixture():
-    moteur = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    moteur = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
     SQLModel.metadata.create_all(moteur)
     with Session(moteur) as session:
         yield session
@@ -40,8 +43,13 @@ def session_fixture():
 def client_fixture(session: Session):
     from app.auth.deps import get_current_user
 
-    lecteur = Utilisateur(email="r@test.fr", hashed_password="x", nom="R", prenom="R",
-                          roles_json=RoleUtilisateur.résident.value)
+    lecteur = Utilisateur(
+        email="r@test.fr",
+        hashed_password="x",
+        nom="R",
+        prenom="R",
+        roles_json=RoleUtilisateur.résident.value,
+    )
     session.add(lecteur)
     session.commit()
     session.refresh(lecteur)
@@ -57,8 +65,15 @@ def test_une_publication_migree_rend_410_avec_son_affaire(session: Session, clie
     session.add(pub)
     session.commit()
     session.refresh(pub)
-    affaire = Ticket(numero="TK-A00001", titre="Coupure", description="x", categorie="actualite",
-                     statut="publie", auteur_id=lecteur.id, promu_depuis_publication_id=pub.id)
+    affaire = Ticket(
+        numero="TK-A00001",
+        titre="Coupure",
+        description="x",
+        categorie="actualite",
+        statut="publie",
+        auteur_id=lecteur.id,
+        promu_depuis_publication_id=pub.id,
+    )
     session.add(affaire)
     session.commit()
 

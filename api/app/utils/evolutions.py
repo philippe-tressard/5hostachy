@@ -36,6 +36,7 @@ de traçabilité — on ne saura plus quand l'objet est passé « En cours » �
 incohérence de données. C'est un coût réel : le fil sert de preuve au conseil
 syndical face au syndic, et une transition effacée ne se retrouve pas.
 """
+
 from typing import Any
 
 from fastapi import HTTPException

@@ -19,6 +19,7 @@ par l'administration, et non par l'activation de son compte.
 ⚠️ Chaque règle a son **cas zéro** : un calcul qui rendrait tout le monde
 porteur de tout passerait les cas positifs sans faillir.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -32,11 +33,20 @@ from app.utils.porteurs_acces import acces_de, ids_detenteurs, porteurs
 from app.utils.resolution_acces import exiger_code_libre, rattacher, rattacher_les_reconnues
 from app.utils.types_acces import TELECOMMANDE, VIGIK
 from tests.aides_badges import (  # noqa: F401 — `session` est une fixture
-    TYPES, _badge, _bail, _compte, _copro_du_fichier, _ligne, _lier, _lot, session,
+    TYPES,
+    _badge,
+    _bail,
+    _compte,
+    _copro_du_fichier,
+    _ligne,
+    _lier,
+    _lot,
+    session,
 )
 
 
 # ── 1. Le conjoint ──────────────────────────────────────────────────────────
+
 
 @pytest.mark.parametrize("type_acces", TYPES)
 def test_le_conjoint_rattache_APRES_le_badge_le_porte_aussi(session, type_acces):
@@ -87,6 +97,7 @@ def test_un_lien_DESACTIVE_ne_porte_plus_rien(session):
 
 # ── 2. Le locataire ─────────────────────────────────────────────────────────
 
+
 @pytest.mark.parametrize("type_acces", TYPES)
 def test_remis_au_locataire_il_est_porte_par_lui_ET_les_coproprietaires(session, type_acces):
     lot = _lot(session, type_acces)
@@ -98,14 +109,21 @@ def test_remis_au_locataire_il_est_porte_par_lui_ET_les_coproprietaires(session,
     garde = _badge(session, type_acces, code="G", lot=lot)
 
     assert porteurs(session, remis) == {bailleur.id, locataire.id}
-    assert porteurs(session, garde) == {bailleur.id}, "le locataire porte un badge qu'on ne lui a pas remis"
+    assert porteurs(session, garde) == {bailleur.id}, (
+        "le locataire porte un badge qu'on ne lui a pas remis"
+    )
 
 
 # ── 3. Donnée ancienne : un badge sans lot ──────────────────────────────────
 
+
 def test_sans_lot_le_detenteur_et_ceux_qui_partagent_son_lot(session):
     lot = _lot(session, VIGIK)
-    anne, paul, etranger = _compte(session, "Anne"), _compte(session, "Paul"), _compte(session, "Etr")
+    anne, paul, etranger = (
+        _compte(session, "Anne"),
+        _compte(session, "Paul"),
+        _compte(session, "Etr"),
+    )
     _lier(session, anne, lot)
     _lier(session, paul, lot)
     badge = _badge(session, VIGIK, detenteur=anne)
@@ -115,6 +133,7 @@ def test_sans_lot_le_detenteur_et_ceux_qui_partagent_son_lot(session):
 
 
 # ── 4. « A un badge » ───────────────────────────────────────────────────────
+
 
 def test_a_un_badge_ne_compte_pas_les_badges_PERDUS(session):
     lot = _lot(session, TELECOMMANDE)
@@ -196,6 +215,7 @@ def test_un_code_deja_porte_par_un_AUTRE_badge_est_refuse(session, type_acces):
 
 # ── 6. Retrouver le lot sans compte ─────────────────────────────────────────
 
+
 def test_le_vigik_retrouve_son_lot_par_batiment_et_appartement(session):
     bat = Batiment(numero="2", copropriete_id=1)
     session.add(bat)
@@ -245,6 +265,7 @@ def test_cas_zero_deux_homonymes_ne_rattachent_rien(session):
 
 # ── 7. Supprimer un compte ──────────────────────────────────────────────────
 
+
 @pytest.mark.parametrize("type_acces", TYPES)
 def test_supprimer_un_compte_LAISSE_ses_badges_au_lot(session, type_acces):
     from app.routers.admin.utilisateurs import supprimer_utilisateur
@@ -262,6 +283,7 @@ def test_supprimer_un_compte_LAISSE_ses_badges_au_lot(session, type_acces):
 
 
 # ── 8. Le porteur, pour un geste ────────────────────────────────────────────
+
 
 def test_le_conjoint_peut_signaler_la_perte_du_badge_du_menage(session):
     from app.auth.appartenance import exiger_acces_du_porteur

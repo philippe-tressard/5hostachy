@@ -23,6 +23,7 @@ L'écran a besoin de savoir si une valeur existe, pour afficher « Mot de passe
 masqué » et le bouton « Changer » plutôt qu'un champ vide. Le marqueur le lui
 dit, sans transmettre laquelle — c'est pourquoi ce n'est pas une chaîne vide.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -54,8 +55,12 @@ def base():
                 session.add(ligne)
         session.commit()
         admin = Utilisateur(
-            email=f"admin-{uuid.uuid4().hex[:8]}@exemple.test", mot_de_passe_hash="x",
-            prenom="A", nom="D", roles_json="admin", actif=True,
+            email=f"admin-{uuid.uuid4().hex[:8]}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="A",
+            nom="D",
+            roles_json="admin",
+            actif=True,
         )
         session.add(admin)
         session.commit()

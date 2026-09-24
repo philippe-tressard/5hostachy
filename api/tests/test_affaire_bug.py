@@ -4,6 +4,7 @@
 gestionnaire est notifié, et la rubrique Périmètre n'a pas de sens et doit être
 verrouillée ».
 """
+
 from __future__ import annotations
 
 from fastapi import BackgroundTasks
@@ -31,7 +32,9 @@ def test_seul_le_gestionnaire_est_prevenu(session):
     gestionnaire = _avec_gestionnaire(session)
     conseiller = _compte(session, "Conseil")
     conseiller.roles_json = RoleUtilisateur.conseil_syndical.value
-    conseiller.actif = True  # sans lui, le conseil ne serait prévenu de rien : le test ne prouverait rien
+    conseiller.actif = (
+        True  # sans lui, le conseil ne serait prévenu de rien : le test ne prouverait rien
+    )
     session.add(conseiller)
     session.commit()
     resident = _compte(session, "Resident")
@@ -53,7 +56,9 @@ def test_cas_zero_une_panne_previent_toujours_le_conseil(session):
     _avec_gestionnaire(session)
     conseiller = _compte(session, "Conseil")
     conseiller.roles_json = RoleUtilisateur.conseil_syndical.value
-    conseiller.actif = True  # sans lui, le conseil ne serait prévenu de rien : le test ne prouverait rien
+    conseiller.actif = (
+        True  # sans lui, le conseil ne serait prévenu de rien : le test ne prouverait rien
+    )
     session.add(conseiller)
     session.commit()
     _creer(session, _compte(session, "Resident"), categorie="panne")

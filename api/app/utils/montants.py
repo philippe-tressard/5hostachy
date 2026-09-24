@@ -13,6 +13,7 @@ l'écran regardé.
 Ce module aligne le backend sur la règle du front : espace fine insécable comme
 séparateur de milliers, décimales seulement si elles existent.
 """
+
 from __future__ import annotations
 
 # Espace insécable étroit (U+202F), comme le rendu `Intl.NumberFormat('fr-FR')`

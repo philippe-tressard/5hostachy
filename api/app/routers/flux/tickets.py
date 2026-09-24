@@ -16,6 +16,7 @@ Il n'en reste qu'une écriture : `_carte_mise_a_jour`, alimentée par
 `_MISES_A_JOUR`. Ajouter un type d'évolution au fil est désormais une ligne de
 table, pas un quatrième bloc à recopier.
 """
+
 from sqlmodel import select
 
 from app.models.core import STATUTS_TICKET_ACTIFS, Ticket, TicketEvolution
@@ -25,7 +26,14 @@ from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
 
 from app.utils.copie_auteur import proprietaire
-from .commun import ContexteFlux, auteur_nom, badges_ticket, perimetres_de, pieces_de_evolution, strip_html
+from .commun import (
+    ContexteFlux,
+    auteur_nom,
+    badges_ticket,
+    perimetres_de,
+    pieces_de_evolution,
+    strip_html,
+)
 from .schemas import FluxItem
 from app.utils.corrections import est_correction
 
@@ -163,42 +171,48 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
             duree = None
             if tk.ferme_le and tk.cree_le:
                 duree = duree_jhm(tk.ferme_le - tk.cree_le)
-            cartes.append(FluxItem(
-                id=f"tk_{tk.id}",
-                type="ticket_resolu",
-                date=evol.cree_le,
-                cree_le=tk.cree_le,
-                titre=tk.titre,
-                #  ⚠️ `is not None` et non `if duree`. L'ancien code testait un
-                #  FLOAT : une résolution en moins de six minutes s'arrondissait à
-                #  `0.0`, donc falsy, et la mention disparaissait — le ticket le
-                #  plus vite résolu était le seul à ne pas le dire. `duree_jhm`
-                #  rend `None` sur une donnée incohérente, jamais sur un zéro.
-                detail=f"Résolu{f' en {duree}' if duree is not None else ''}",
-                icon="✅",
-                badges=badges_ticket(tk),
-                lien="/tickets",
-                meta={
-                    **_meta_ticket(ctx, tk),
-                    "statut": "résolu",
-                    #  Le nom dit désormais ce que la valeur EST : plus des heures
-                    #  décimales, mais `00j23h54'`. Aucun écran ne la lisait — le
-                    #  renommer maintenant évite qu'un futur lecteur croie à un nombre.
-                    "duree": duree,
-                    "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
-                    #  Même règle que les trois autres cartes de ticket : une photo
-                    #  jointe au commentaire de clôture doit se voir.
-                    **pieces_de_evolution(evol, tk),
-                },
-            ))
+            cartes.append(
+                FluxItem(
+                    id=f"tk_{tk.id}",
+                    type="ticket_resolu",
+                    date=evol.cree_le,
+                    cree_le=tk.cree_le,
+                    titre=tk.titre,
+                    #  ⚠️ `is not None` et non `if duree`. L'ancien code testait un
+                    #  FLOAT : une résolution en moins de six minutes s'arrondissait à
+                    #  `0.0`, donc falsy, et la mention disparaissait — le ticket le
+                    #  plus vite résolu était le seul à ne pas le dire. `duree_jhm`
+                    #  rend `None` sur une donnée incohérente, jamais sur un zéro.
+                    detail=f"Résolu{f' en {duree}' if duree is not None else ''}",
+                    icon="✅",
+                    badges=badges_ticket(tk),
+                    lien="/tickets",
+                    meta={
+                        **_meta_ticket(ctx, tk),
+                        "statut": "résolu",
+                        #  Le nom dit désormais ce que la valeur EST : plus des heures
+                        #  décimales, mais `00j23h54'`. Aucun écran ne la lisait — le
+                        #  renommer maintenant évite qu'un futur lecteur croie à un nombre.
+                        "duree": duree,
+                        "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
+                        #  Même règle que les trois autres cartes de ticket : une photo
+                        #  jointe au commentaire de clôture doit se voir.
+                        **pieces_de_evolution(evol, tk),
+                    },
+                )
+            )
         elif nouveau in STATUTS_TICKET_ACTIFS:
-            cartes.append(_carte_mise_a_jour(
-                ctx, evol, tk,
-                ident=f"tk_{tk.id}",
-                detail="Réouvert" if nouveau == "ouvert" else "Pris en charge",
-                icon="🔧",
-                statut=nouveau,
-            ))
+            cartes.append(
+                _carte_mise_a_jour(
+                    ctx,
+                    evol,
+                    tk,
+                    ident=f"tk_{tk.id}",
+                    detail="Réouvert" if nouveau == "ouvert" else "Pris en charge",
+                    icon="🔧",
+                    statut=nouveau,
+                )
+            )
 
     # ── Réponses du CS et commentaires ───────────────────────────────────────
     for type_evolution, prefixe, detail, icon in _MISES_A_JOUR:
@@ -212,13 +226,17 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
             if est_correction(evol):
                 continue
             vus.add(tk.id)
-            cartes.append(_carte_mise_a_jour(
-                ctx, evol, tk,
-                ident=f"{prefixe}_{evol.id}",
-                detail=detail,
-                icon=icon,
-                statut=tk.statut,
-            ))
+            cartes.append(
+                _carte_mise_a_jour(
+                    ctx,
+                    evol,
+                    tk,
+                    ident=f"{prefixe}_{evol.id}",
+                    detail=detail,
+                    icon=icon,
+                    statut=tk.statut,
+                )
+            )
 
     # ── Tickets récemment créés, sans aucune évolution ───────────────────────
     for tk in ctx.session.exec(
@@ -228,23 +246,25 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
     ).all():
         if tk.id in vus or not ticket_visible(tk, ctx.user):
             continue
-        cartes.append(FluxItem(
-            id=f"tk_{tk.id}",
-            type="ticket_ouvert",
-            date=tk.cree_le,
-            cree_le=tk.cree_le,
-            titre=tk.titre,
-            detail="Nouveau ticket",
-            icon="🎫",
-            badges=badges_ticket(tk),
-            lien="/tickets",
-            meta={
-                **_meta_ticket(ctx, tk),
-                "statut": tk.statut,
-                "photos_urls": parse_photos(tk.photos_urls),
-                "fichiers_urls": parse_photos(tk.fichiers_urls),
-            },
-        ))
+        cartes.append(
+            FluxItem(
+                id=f"tk_{tk.id}",
+                type="ticket_ouvert",
+                date=tk.cree_le,
+                cree_le=tk.cree_le,
+                titre=tk.titre,
+                detail="Nouveau ticket",
+                icon="🎫",
+                badges=badges_ticket(tk),
+                lien="/tickets",
+                meta={
+                    **_meta_ticket(ctx, tk),
+                    "statut": tk.statut,
+                    "photos_urls": parse_photos(tk.photos_urls),
+                    "fichiers_urls": parse_photos(tk.fichiers_urls),
+                },
+            )
+        )
 
     # Un seul événement par ticket dans le fil : le plus récent.
     dernier: dict[int, FluxItem] = {}

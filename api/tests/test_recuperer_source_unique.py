@@ -40,6 +40,7 @@ questions dans une ligne. Les convertir demande de les séparer une par une, et
 c'est le volet 404 de #1047, pas celui-ci. Descendre le plafond en bloc aurait
 fait passer une réécriture sémantique pour un remplacement mécanique.
 """
+
 import ast
 from pathlib import Path
 

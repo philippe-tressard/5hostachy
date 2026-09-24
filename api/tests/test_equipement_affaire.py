@@ -10,6 +10,7 @@ quand même, sous « Sans équipement rattaché » : la v2.31.0 l'excluait, et l
 carnet a perdu toutes les affaires résolues d'avant — arbitré à l'écran le
 24/09/2026 : « on a perdu les affaires, c'est dommage ».
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -45,7 +46,10 @@ def test_le_conseil_le_designe_apres_coup_meme_une_fois_l_affaire_close(session)
 
 def test_un_resident_ne_designe_pas_l_equipement(session):
     """Ignoré, pas refusé : son signalement doit passer."""
-    assert _creer(session, _compte(session), categorie="panne", equipement="toiture").equipement is None
+    assert (
+        _creer(session, _compte(session), categorie="panne", equipement="toiture").equipement
+        is None
+    )
 
 
 def test_l_equipement_ne_vaut_que_pour_le_bati(session):
@@ -55,7 +59,9 @@ def test_l_equipement_ne_vaut_que_pour_le_bati(session):
     assert _corriger(session, cs, t.id, categorie="question").equipement is None
 
 
-@pytest.mark.parametrize("valeur", ["licorne", TypeEquipement.assurance.value, TypeEquipement.syndic.value])
+@pytest.mark.parametrize(
+    "valeur", ["licorne", TypeEquipement.assurance.value, TypeEquipement.syndic.value]
+)
 def test_ce_qui_n_est_pas_un_equipement_est_refuse(session, valeur):
     """`assurance` et `syndic` classent des CONTRATS : on n'intervient pas dessus."""
     with pytest.raises(HTTPException) as refus:
@@ -75,6 +81,7 @@ def test_la_liste_blanche_n_est_pas_vide():
 
 
 # ── Le carnet d'entretien ───────────────────────────────────────────────────
+
 
 def _resolue(session, cs, titre, **champs):
     t = _creer(session, cs, categorie="panne", **champs)

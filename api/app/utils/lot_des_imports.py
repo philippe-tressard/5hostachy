@@ -32,6 +32,7 @@ Plusieurs PARKINGS, en revanche, ne bloquent plus (arbitré le 23/09/2026 :
 « si plusieurs parkings, prendre le 1er ») : les porteurs sont les mêmes —
 ceux du copropriétaire —, seul le numéro affiché change, et il se corrige.
 """
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -48,8 +49,22 @@ from app.utils.valeurs import valeur
 #: Les mots d'un nom qui ne désignent personne en particulier. Sans eux,
 #: « Madame X » et « Madame Y » seraient le même copropriétaire.
 _MOTS_VIDES = {
-    "madame", "monsieur", "mademoiselle", "epoux", "epouse", "indivision",
-    "succession", "consorts", "veuve", "societe", "mme", "des", "les", "ste", "sci", "cie",
+    "madame",
+    "monsieur",
+    "mademoiselle",
+    "epoux",
+    "epouse",
+    "indivision",
+    "succession",
+    "consorts",
+    "veuve",
+    "societe",
+    "mme",
+    "des",
+    "les",
+    "ste",
+    "sci",
+    "cie",
 }
 
 

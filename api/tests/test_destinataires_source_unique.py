@@ -33,6 +33,7 @@ c'est le rôle des tests d'envoi de chaque entité.
 Les deux motifs sont cherchés séparément parce qu'ils se réintroduisent
 séparément : on recopie d'abord le syndic, la liste du CS vient après.
 """
+
 from __future__ import annotations
 
 import io
@@ -50,12 +51,10 @@ EXCEPTIONS = {
 
 MOTIFS = {
     "est_principal == True": "le syndic principal — `syndic_principal(session)`",
-    'roles_json.contains("admin")':
-        "les destinataires d'une notification IN-APP (CS **ou** admin) — "
-        "`membres_cs_ou_admin(session)`",
-    'roles_json.contains("conseil_syndical")':
-        "la liste du CS par le rôle — `membres_cs_avec_email(session)` "
-        "ou `destinataires_syndic_cs(...)`",
+    'roles_json.contains("admin")': "les destinataires d'une notification IN-APP (CS **ou** admin) — "
+    "`membres_cs_ou_admin(session)`",
+    'roles_json.contains("conseil_syndical")': "la liste du CS par le rôle — `membres_cs_avec_email(session)` "
+    "ou `destinataires_syndic_cs(...)`",
 }
 
 #  🔴 L'EXEMPTION DES NOTIFICATIONS IN-APP EST TOMBÉE LE 02/09/2026.
@@ -109,7 +108,10 @@ def test_la_regle_des_destinataires_ne_s_ecrit_qu_a_un_endroit():
                 continue
             #  Un appel in-app cite les DEUX rôles : ne le compter qu'une fois,
             #  sur le motif « admin », qui désigne le bon remède.
-            if motif == 'roles_json.contains("conseil_syndical")'                     and 'roles_json.contains("admin")' in source:
+            if (
+                motif == 'roles_json.contains("conseil_syndical")'
+                and 'roles_json.contains("admin")' in source
+            ):
                 continue
             if rel in EXCEPTIONS:
                 exceptions_utiles.add(rel)

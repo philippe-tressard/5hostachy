@@ -41,6 +41,7 @@ défaut qu'il cherche. Il raisonne donc sur l'arbre syntaxique :
 * tout le reste — `Champ(mon_champ=…)`, `user.mon_champ = …`, un champ de
   `*Create` ou `*Update` — est une **écriture**, et ne compte pas.
 """
+
 from __future__ import annotations
 
 import ast
@@ -76,12 +77,16 @@ def _colonnes_utilisateur() -> list[str]:
     source = MODELE.read_text(encoding="utf-8")
     debut = source.index("class Utilisateur(")
     #  La classe s'arrête à la déclaration suivante au niveau du module.
-    suite = re.search(r"\nclass \w+\(", source[debut + 10:])
-    corps = source[debut: debut + 10 + suite.start()] if suite else source[debut:]
+    suite = re.search(r"\nclass \w+\(", source[debut + 10 :])
+    corps = source[debut : debut + 10 + suite.start()] if suite else source[debut:]
     noms = re.findall(r"^    ([a-z][a-z0-9_]*)\s*:", corps, re.MULTILINE)
     #  Les `Relationship` ne sont pas des colonnes : elles se lisent par
     #  navigation, et leur absence de mention littérale ne prouve rien.
-    return [n for n in noms if f"{n}:" in corps and "Relationship(" not in corps.split(f"\n    {n}:")[1].split("\n")[0]]
+    return [
+        n
+        for n in noms
+        if f"{n}:" in corps and "Relationship(" not in corps.split(f"\n    {n}:")[1].split("\n")[0]
+    ]
 
 
 def _transports(arbre: ast.AST) -> set[int]:
@@ -104,11 +109,7 @@ def _transports(arbre: ast.AST) -> set[int]:
     for noeud in ast.walk(arbre):
         for mot_cle in getattr(noeud, "keywords", []):
             valeur = mot_cle.value
-            if (
-                mot_cle.arg
-                and isinstance(valeur, ast.Attribute)
-                and valeur.attr == mot_cle.arg
-            ):
+            if mot_cle.arg and isinstance(valeur, ast.Attribute) and valeur.attr == mot_cle.arg:
                 a_ignorer.add(id(valeur))
     return a_ignorer
 
@@ -183,7 +184,9 @@ def test_le_controle_regarde_bien_quelque_chose():
     en ne mesurant rien.
     """
     colonnes = _colonnes_utilisateur()
-    assert len(colonnes) > 20, f"seulement {len(colonnes)} colonne(s) trouvée(s) — extraction cassée"
+    assert len(colonnes) > 20, (
+        f"seulement {len(colonnes)} colonne(s) trouvée(s) — extraction cassée"
+    )
     #  Deux colonnes témoins, choisies parce qu'elles ne disparaîtront pas : le
     #  cas zéro doit échouer si l'extraction casse, et il ne peut pas s'appuyer
     #  sur une colonne qu'un lot supprimera — c'est ce qui vient d'arriver à

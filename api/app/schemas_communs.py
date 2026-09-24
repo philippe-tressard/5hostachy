@@ -9,12 +9,12 @@ qui permet à `schemas_tickets.py` de s'en servir sans dépendre de `schemas.py`
 qui l'importe lui-même — un cycle rendrait l'ordre de chargement décisif pour le
 démarrage de l'application.
 """
+
 import json
 from datetime import datetime
 from typing import Annotated, List, Optional
 
 from pydantic import BaseModel, BeforeValidator
-
 
 
 def liste_depuis_json(v):
@@ -52,6 +52,7 @@ def liste_depuis_json(v):
 #: type nommé « URLs » pour des périmètres, soit on en écrivait un second,
 #: identique. Renommé pour ce qu'il est — une liste sérialisée en JSON.
 ListeJson = Annotated[List[str], BeforeValidator(liste_depuis_json)]
+
 
 def nom_en_majuscules(v: Optional[str]) -> Optional[str]:
     """Un NOM se range en capitales, sans espaces autour — « Dupont » → « DUPONT ».

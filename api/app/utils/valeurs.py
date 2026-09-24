@@ -14,6 +14,7 @@ que `suivi_par_defaut` comparait `str(categorie)`. L'idiome qui l'évite,
 `getattr(x, "value", x)`, était écrit NEUF fois : il vit ici désormais.
 🔒 `test_valeur_source_unique.py` refuse une dixième copie.
 """
+
 from __future__ import annotations
 
 from enum import Enum

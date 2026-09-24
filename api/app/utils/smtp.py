@@ -9,6 +9,7 @@ un message** sont deux sujets : le premier tient en trois éléments et ne chang
 que lorsque l'hébergeur change ; le second occupe six cents lignes de gabarits,
 de rendu Jinja et de pièces jointes.
 """
+
 from sqlmodel import Session, select
 
 from app.config import get_settings
@@ -19,7 +20,18 @@ from app.models.core import ConfigSite
 #  qui n'en appelle aucune. Une clé absente ou vide se replie sur `smtp_from` —
 #  une installation qui n'a pas encore renseigné la seconde adresse continue
 #  d'envoyer exactement comme avant, plutôt que depuis une adresse vide.
-_SMTP_KEYS = {'smtp_enabled', 'smtp_server', 'smtp_port', 'smtp_from', 'smtp_from_reponse', 'smtp_from_name', 'smtp_username', 'smtp_password', 'smtp_starttls', 'smtp_ssl_tls'}
+_SMTP_KEYS = {
+    "smtp_enabled",
+    "smtp_server",
+    "smtp_port",
+    "smtp_from",
+    "smtp_from_reponse",
+    "smtp_from_name",
+    "smtp_username",
+    "smtp_password",
+    "smtp_starttls",
+    "smtp_ssl_tls",
+}
 
 
 def _get_smtp_config(session: Session) -> dict:
@@ -89,12 +101,10 @@ def connexion_smtp(smtp_cfg: dict, *, expediteur: str | None = None):
     #  en base, ce qu'un `or` traiterait comme absent et remplacerait par la
     #  valeur du .env — l'utilisateur ne pourrait alors jamais désactiver STARTTLS.
     starttls = (
-        smtp_cfg["smtp_starttls"] == "1" if "smtp_starttls" in smtp_cfg
-        else settings.mail_starttls
+        smtp_cfg["smtp_starttls"] == "1" if "smtp_starttls" in smtp_cfg else settings.mail_starttls
     )
     ssl_tls = (
-        smtp_cfg["smtp_ssl_tls"] == "1" if "smtp_ssl_tls" in smtp_cfg
-        else settings.mail_ssl_tls
+        smtp_cfg["smtp_ssl_tls"] == "1" if "smtp_ssl_tls" in smtp_cfg else settings.mail_ssl_tls
     )
     username = smtp_cfg.get("smtp_username") or settings.mail_username
 

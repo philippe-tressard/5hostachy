@@ -21,6 +21,7 @@ pas s'exécuter renvoie INCONNU » :
   - une entrée de la liste d'exceptions qui a retrouvé un consommateur le fait aussi,
     sinon la liste se remplit et ne protège plus rien.
 """
+
 import ast
 import pathlib
 import re
@@ -35,16 +36,13 @@ ROUTEURS = RACINE / "api" / "app" / "routers"
 #: ici est une décision consciente : si la raison ne tient pas en une ligne,
 #: c'est probablement que la route doit être supprimée.
 SANS_CONSOMMATEUR_FRONT = {
-    "/admin/db/checkpoint":
-        "voie in-process obligatoire contre la corruption SQLite (CLAUDE.md, "
-        "règle d'or) — appelée à la main pendant un incident, jamais par le front",
-    "/acces/admin/imports/{import_id}/refuser-locataire":
-        "pendant de `resoudre` documenté dans specs/architecture/api.md, "
-        "conservé pour l'exploitation manuelle des imports Vigik",
-    "/prestataires/releves/{r_id}/photo/{nom}":
-        "idem, pour `releve_compteur.photo_url` — le GET passait auparavant par "
-        "coïncidence, le POST d'upload partageant son chemin (cf. limite de "
-        "`_motif`) ; les chemins diffèrent depuis la 0126, il est donc vu",
+    "/admin/db/checkpoint": "voie in-process obligatoire contre la corruption SQLite (CLAUDE.md, "
+    "règle d'or) — appelée à la main pendant un incident, jamais par le front",
+    "/acces/admin/imports/{import_id}/refuser-locataire": "pendant de `resoudre` documenté dans specs/architecture/api.md, "
+    "conservé pour l'exploitation manuelle des imports Vigik",
+    "/prestataires/releves/{r_id}/photo/{nom}": "idem, pour `releve_compteur.photo_url` — le GET passait auparavant par "
+    "coïncidence, le POST d'upload partageant son chemin (cf. limite de "
+    "`_motif`) ; les chemins diffèrent depuis la 0126, il est donc vu",
 }
 
 
@@ -96,7 +94,11 @@ def _routes() -> list[tuple[str, str, str]]:
                     and isinstance(deco.args[0], ast.Constant)
                 ):
                     trouvees.append(
-                        (fichier.name, deco.func.attr.upper(), (prefixe + deco.args[0].value) or "/")
+                        (
+                            fichier.name,
+                            deco.func.attr.upper(),
+                            (prefixe + deco.args[0].value) or "/",
+                        )
                     )
     return trouvees
 
@@ -121,10 +123,7 @@ def _sources_consommatrices() -> str:
         for p in (RACINE / "front" / "src").rglob("*")
         if p.suffix in {".ts", ".js", ".svelte"}
     ]
-    morceaux += [
-        p.read_text(encoding="utf-8", errors="ignore")
-        for p in scripts_shell_versionnes()
-    ]
+    morceaux += [p.read_text(encoding="utf-8", errors="ignore") for p in scripts_shell_versionnes()]
     morceaux.append((RACINE / "Caddyfile").read_text(encoding="utf-8", errors="ignore"))
     return "\n".join(morceaux)
 
@@ -160,7 +159,7 @@ def test_aucun_endpoint_orphelin_non_declare(orphelines):
         "Endpoints sans aucun consommateur (front ni script d'infra) :\n  "
         + "\n  ".join(inattendues)
         + "\n\nSupprimer l'endpoint ET son client TypeScript, ou l'inscrire dans "
-          "SANS_CONSOMMATEUR_FRONT avec sa raison."
+        "SANS_CONSOMMATEUR_FRONT avec sa raison."
     )
 
 

@@ -8,6 +8,7 @@ liste se filtre Tous / Actualité / Affaire / Événement, la nature se DÉDUIT.
 Chaque règle est éprouvée là où elle vit, et une fois : ces tests en sont la
 spécification (conception dans #1091).
 """
+
 from __future__ import annotations
 
 import ast
@@ -52,8 +53,12 @@ def session(monkeypatch, batiments):
 
 def _compte(session, *, role=None, statut=StatutUtilisateur.copropriétaire_résident):
     u = Utilisateur(
-        email=f"act-{uuid.uuid4().hex[:8]}@exemple.test", mot_de_passe_hash="x",
-        prenom="P", nom="N", actif=True, statut=statut,
+        email=f"act-{uuid.uuid4().hex[:8]}@exemple.test",
+        mot_de_passe_hash="x",
+        prenom="P",
+        nom="N",
+        actif=True,
+        statut=statut,
         roles_json=role.value if role else "résident",
     )
     session.add(u)
@@ -68,6 +73,7 @@ def _creer(session, user, **champs):
 
 
 # ── La catégorie, et qui la pose ────────────────────────────────────────────
+
 
 def test_la_categorie_existe():
     assert CategorieTicket("actualite") is CategorieTicket.actualite
@@ -96,6 +102,7 @@ def test_une_affaire_ne_nait_jamais_publiee(session):
 
 # ── « Sans cycle » : hors des suivis, par construction ─────────────────────
 
+
 def test_publie_n_est_pas_un_etat_actif_ni_une_colonne_du_kanban():
     assert "publie" not in STATUTS_TICKET_ACTIFS
     assert colonne_du_ticket("publie") is None
@@ -110,17 +117,23 @@ def test_personne_ne_selectionne_plus_par_non_clos():
         if "__pycache__" in p.parts:
             continue
         for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
-            if (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
-                    and n.func.attr == "notin_" and "STATUTS_TICKET_CLOS" in ast.unparse(n)):
+            if (
+                isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Attribute)
+                and n.func.attr == "notin_"
+                and "STATUTS_TICKET_CLOS" in ast.unparse(n)
+            ):
                 fautes.append(f"{p.relative_to(_APP)}:{n.lineno}")
     assert not fautes, f"Sélection « non clos » — employer STATUTS_TICKET_ACTIFS : {fautes}"
 
 
 # ── La nature, pour le filtre — dérivée, jamais saisie ────────────────────
 
+
 def _t(categorie="panne", debut=None) -> Ticket:
-    return Ticket(numero="TK-1", titre="T", description="D", categorie=categorie,
-                  auteur_id=1, debut=debut)
+    return Ticket(
+        numero="TK-1", titre="T", description="D", categorie=categorie, auteur_id=1, debut=debut
+    )
 
 
 def test_la_nature_se_deduit():
@@ -136,6 +149,7 @@ def test_la_nature_se_deduit():
 
 
 # ── La visibilité : celle de l'ACTUALITÉ, pas celle de l'affaire ─────────
+
 
 def test_un_locataire_lit_une_actualite_mais_pas_une_affaire(session):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
@@ -156,6 +170,7 @@ def test_une_actualite_reservee_au_conseil_ne_se_lit_pas(session):
 
 # ── L'édition : par le conseil, tant qu'elle est publiée ─────────────────
 
+
 def test_le_conseil_corrige_une_actualite_qu_il_n_a_pas_ecrite(session):
     auteur = _compte(session, role=RoleUtilisateur.conseil_syndical)
     autre_cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
@@ -164,7 +179,9 @@ def test_le_conseil_corrige_une_actualite_qu_il_n_a_pas_ecrite(session):
     assert peut_editer(actu, autre_cs)
     assert not peut_editer(actu, resident)
     corps = TicketUpdate(titre="Coupure d'eau — reportée")
-    lu = mise_a_jour.update_ticket(actu.id, corps, BackgroundTasks(), session=session, user=autre_cs)
+    lu = mise_a_jour.update_ticket(
+        actu.id, corps, BackgroundTasks(), session=session, user=autre_cs
+    )
     assert lu.titre == "Coupure d'eau — reportée"
 
 
@@ -182,8 +199,12 @@ def test_l_arrivant_corrige_son_annonce_sans_decider_qui_la_lit(session):
     session.add(actu)
     session.commit()
     assert peut_editer(actu, arrivant)
-    corps = TicketUpdate(titre="Bienvenue à Alix", public_cible=["conseil_syndical"], reserve_perimetre=True)
-    lu = mise_a_jour.update_ticket(actu.id, corps, BackgroundTasks(), session=session, user=arrivant)
+    corps = TicketUpdate(
+        titre="Bienvenue à Alix", public_cible=["conseil_syndical"], reserve_perimetre=True
+    )
+    lu = mise_a_jour.update_ticket(
+        actu.id, corps, BackgroundTasks(), session=session, user=arrivant
+    )
     assert lu.titre == "Bienvenue à Alix"
     relue = session.get(Ticket, actu.id)
     assert relue.public_cible is None and relue.reserve_perimetre is False
@@ -191,14 +212,17 @@ def test_l_arrivant_corrige_son_annonce_sans_decider_qui_la_lit(session):
 
 # ── Changer de catégorie : la promotion, sans conversion ─────────────────
 
+
 def test_une_actualite_promue_en_affaire_s_ouvre(session):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
     actu = _creer(session, cs, categorie="actualite")
-    lu = mise_a_jour.update_ticket(actu.id, TicketUpdate(categorie="panne"), BackgroundTasks(),
-                                   session=session, user=cs)
+    lu = mise_a_jour.update_ticket(
+        actu.id, TicketUpdate(categorie="panne"), BackgroundTasks(), session=session, user=cs
+    )
     assert (lu.categorie, lu.statut) == ("panne", "ouvert")
-    lu = mise_a_jour.update_ticket(actu.id, TicketUpdate(categorie="actualite"), BackgroundTasks(),
-                                   session=session, user=cs)
+    lu = mise_a_jour.update_ticket(
+        actu.id, TicketUpdate(categorie="actualite"), BackgroundTasks(), session=session, user=cs
+    )
     assert (lu.categorie, lu.statut) == ("actualite", "publie")
 
 
@@ -206,12 +230,18 @@ def test_un_resident_ne_fait_pas_de_son_affaire_une_actualite(session):
     resident = _compte(session)
     affaire = _creer(session, resident, categorie="panne")
     with pytest.raises(HTTPException) as refus:
-        mise_a_jour.update_ticket(affaire.id, TicketUpdate(categorie="actualite"), BackgroundTasks(),
-                                  session=session, user=resident)
+        mise_a_jour.update_ticket(
+            affaire.id,
+            TicketUpdate(categorie="actualite"),
+            BackgroundTasks(),
+            session=session,
+            user=resident,
+        )
     assert refus.value.status_code == 403
 
 
 # ── L'archivage : la péremption de l'actualité ───────────────────────────
+
 
 def test_une_actualite_datee_perimee_s_archive_meme_epinglee():
     passee = datetime.utcnow() - timedelta(days=3)
@@ -238,10 +268,17 @@ def test_une_affaire_ouverte_ne_perime_jamais():
 
 # ── La lecture rend ce qu'il faut pour filtrer ──────────────────────────
 
+
 def test_la_lecture_rend_la_nature_et_le_public(session, batiments):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
-    lu = _creer(session, cs, categorie="actualite", public_cible=["locataires"],
-                reserve_perimetre=True, perimetre_cible=[f"bat:{batiments[0]}"])
+    lu = _creer(
+        session,
+        cs,
+        categorie="actualite",
+        public_cible=["locataires"],
+        reserve_perimetre=True,
+        perimetre_cible=[f"bat:{batiments[0]}"],
+    )
     relu = ticket_read(session.get(Ticket, lu.id), session)
     assert relu.natures == ["actualite"]
     assert relu.public_cible == ["locataires"]
@@ -258,6 +295,7 @@ def test_reserve_au_perimetre_sur_la_copropriete_entiere_est_retire(session):
 
 # ── Une actualité n'a pas d'état : ni par une Suite, ni par le PATCH ──────
 
+
 def test_une_suite_ne_fait_pas_avancer_une_actualite(session):
     from app.routers.tickets import evolutions
     from app.schemas_tickets import TicketEvolutionCreate
@@ -266,14 +304,20 @@ def test_une_suite_ne_fait_pas_avancer_une_actualite(session):
     actu = _creer(session, cs, categorie="actualite")
     with pytest.raises(HTTPException) as refus:
         evolutions.add_evolution(
-            actu.id, TicketEvolutionCreate(type="etat", nouveau_statut="résolu"),
-            BackgroundTasks(), session=session, user=cs,
+            actu.id,
+            TicketEvolutionCreate(type="etat", nouveau_statut="résolu"),
+            BackgroundTasks(),
+            session=session,
+            user=cs,
         )
     assert refus.value.status_code == 422
     #  Une parole, elle, passe : une actualité se commente.
     evolutions.add_evolution(
-        actu.id, TicketEvolutionCreate(type="commentaire", contenu="Report à mardi."),
-        BackgroundTasks(), session=session, user=cs,
+        actu.id,
+        TicketEvolutionCreate(type="commentaire", contenu="Report à mardi."),
+        BackgroundTasks(),
+        session=session,
+        user=cs,
     )
 
 
@@ -281,7 +325,7 @@ def test_publie_ne_s_atteint_par_aucune_transition(session):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
     affaire = _creer(session, cs, categorie="panne")
     with pytest.raises(HTTPException) as refus:
-        mise_a_jour.update_ticket(affaire.id, TicketUpdate(statut="publie"), BackgroundTasks(),
-                                  session=session, user=cs)
+        mise_a_jour.update_ticket(
+            affaire.id, TicketUpdate(statut="publie"), BackgroundTasks(), session=session, user=cs
+        )
     assert refus.value.status_code == 422
-

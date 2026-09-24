@@ -13,6 +13,7 @@ deux-ci ne partagent rien avec elles : elles listent des objets physiques.
 additionne les routeurs, et `main.py` inclut les deux — c'est la même forme que
 `auth_profil` ou `calendrier_historique`, sortis pour la même raison.
 """
+
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
@@ -23,6 +24,7 @@ from app.models.core import Batiment, Utilisateur
 from .copropriete import BatimentRead
 
 router = APIRouter(prefix="/copropriete", tags=["copropriété"])
+
 
 @router.get("/batiments", response_model=list[BatimentRead])
 def get_batiments(

@@ -6,6 +6,7 @@ au périmètre, annulée, avec évolutions, document, affiche et carte masquée.
 C'est la migration de données la plus lourde du chantier : elle se prouve avant
 de toucher une base en service.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -23,7 +24,12 @@ from app.models.communaute import FluxMasque
 from app.models.core import Publication, PublicationEvolution, Ticket, TicketEvolution, Utilisateur
 from app.models.documents import Document
 
-_MIGRATION = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0210_actualites_deviennent_des_affaires.py"
+_MIGRATION = (
+    Path(__file__).resolve().parents[1]
+    / "alembic"
+    / "versions"
+    / "0210_actualites_deviennent_des_affaires.py"
+)
 
 
 def _module():
@@ -44,14 +50,18 @@ def base():
     moteur = create_engine("sqlite://")
     SQLModel.metadata.create_all(moteur)
     with Session(moteur) as s:
-        auteur = Utilisateur(email=f"a-{uuid.uuid4().hex[:6]}@x.fr", mot_de_passe_hash="x", prenom="A", nom="B")
+        auteur = Utilisateur(
+            email=f"a-{uuid.uuid4().hex[:6]}@x.fr", mot_de_passe_hash="x", prenom="A", nom="B"
+        )
         s.add(auteur)
         s.commit()
         s.refresh(auteur)
         quand = datetime(2026, 9, 1, 10, 0)
 
         def pub(**kw):
-            p = Publication(titre=kw.pop("titre"), contenu="Texte", auteur_id=auteur.id, cree_le=quand, **kw)
+            p = Publication(
+                titre=kw.pop("titre"), contenu="Texte", auteur_id=auteur.id, cree_le=quand, **kw
+            )
             s.add(p)
             s.commit()
             s.refresh(p)
@@ -62,10 +72,30 @@ def base():
         reservee = pub(titre="Réservée", brouillon=True)
         perimetre = pub(titre="Périmètre", confidentiel=True, perimetre_cible='["bat:1"]')
         annulee = pub(titre="Annulée", statut="annule")
-        s.add(PublicationEvolution(publication_id=ouverte.id, type="etat", ancien_statut="publie",
-                                   nouveau_statut="resolu", auteur_id=auteur.id, cree_le=quand))
-        s.add(Document(titre="Plan", fichier_nom="plan.pdf", publication_id=ouverte.id, fichier_chemin="/tmp/x.pdf", publie_par_id=auteur.id))
-        s.add(AnnonceHall(titre="Affiche", message="m", publication_id=ouverte.id, auteur_id=auteur.id))
+        s.add(
+            PublicationEvolution(
+                publication_id=ouverte.id,
+                type="etat",
+                ancien_statut="publie",
+                nouveau_statut="resolu",
+                auteur_id=auteur.id,
+                cree_le=quand,
+            )
+        )
+        s.add(
+            Document(
+                titre="Plan",
+                fichier_nom="plan.pdf",
+                publication_id=ouverte.id,
+                fichier_chemin="/tmp/x.pdf",
+                publie_par_id=auteur.id,
+            )
+        )
+        s.add(
+            AnnonceHall(
+                titre="Affiche", message="m", publication_id=ouverte.id, auteur_id=auteur.id
+            )
+        )
         s.add(FluxMasque(item_id=f"pub_{urgente.id}", masque_par_id=auteur.id))
         s.commit()
         ids = {p.titre: p.id for p in (ouverte, urgente, reservee, perimetre, annulee)}

@@ -14,6 +14,7 @@ qu'absent — il donne à croire que le contrôle a tourné et n'a rien trouvé.
 Le fichier vérifie donc le rendu de bout en bout : chaînes brutes des `_check_*`
 → découpage → modèle → HTML final.
 """
+
 import pytest
 from jinja2 import BaseLoader
 from jinja2.sandbox import SandboxedEnvironment
@@ -107,6 +108,7 @@ def test_aucun_marqueur_jinja_ne_subsiste():
 # %}` rend l'omission totalement silencieuse : pas d'erreur, pas d'objet dégradé,
 # aucune trace. Aucun test de modèle ne peut voir ça, ils resteraient tous verts.
 
+
 def _base_jetable():
     """Base SQLite en mémoire portant la seule table dont le contrôle a besoin."""
     from sqlmodel import Session, SQLModel, create_engine
@@ -177,7 +179,8 @@ def test_TOUS_les_controles_sont_branches_dans_la_collecte():
     from app.utils import health_monitor
 
     controles = [
-        nom for nom in dir(health_monitor)
+        nom
+        for nom in dir(health_monitor)
         if nom.startswith("_check_") and callable(getattr(health_monitor, nom))
     ]
     #  Cas zéro : si le préfixe change, l'énumération devient vide et ce test
@@ -188,9 +191,7 @@ def test_TOUS_les_controles_sont_branches_dans_la_collecte():
     )
 
     atteignable = inspect.getsource(health_monitor.collecter_problemes)
-    atteignable += "".join(
-        inspect.getsource(getattr(health_monitor, nom)) for nom in controles
-    )
+    atteignable += "".join(inspect.getsource(getattr(health_monitor, nom)) for nom in controles)
     for nom in controles:
         #  La définition elle-même ne compte pas comme un appel.
         appels = atteignable.replace(f"def {nom}(", "")

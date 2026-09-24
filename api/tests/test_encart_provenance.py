@@ -9,6 +9,7 @@ que l'encart **annonce** au lecteur, là-bas la matière qu'on envoie au modèle
 document d'un autre contrat, et il disait vrai. Un encart qui tait ce qu'il a lu
 ne peut pas être contredit par l'écran.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime

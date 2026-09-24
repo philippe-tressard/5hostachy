@@ -24,6 +24,7 @@ d'un accent aurait rapproché les personnes d'un côté et pas de l'autre — sa
 qu'ici la copie ne servait à rien du tout, ce qui est pire : elle donnait à lire
 une règle qui ne s'appliquait nulle part.
 """
+
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
@@ -45,7 +46,8 @@ def _stats_socle(type_acces, session: Session) -> tuple[list, dict]:
     #  préciser le lot du reste. La règle est celle du rattachement lui-même.
     socle["a_rattacher"] = sum(1 for i in lignes if peut_se_rattacher(type_acces, i))
     socle["lot_a_preciser"] = sum(
-        1 for i in lignes
+        1
+        for i in lignes
         if not i.lot_id and i.statut in (StatutImport.en_attente, StatutImport.proprietaire_lie)
     )
     return lignes, socle
@@ -62,8 +64,10 @@ def _lister_imports(type_acces, statut, session: Session):
     result = []
     for item in items:
         d = item.model_dump()
-        for cle, uid in (("proprietaire", item.user_proprietaire_id),
-                         ("locataire", item.user_locataire_id)):
+        for cle, uid in (
+            ("proprietaire", item.user_proprietaire_id),
+            ("locataire", item.user_locataire_id),
+        ):
             u = session.get(Utilisateur, uid) if uid else None
             d[cle] = {"id": u.id, "nom": u.nom, "prenom": u.prenom} if u else None
         lot = session.get(Lot, item.lot_id) if item.lot_id else None

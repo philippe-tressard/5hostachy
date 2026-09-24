@@ -23,6 +23,7 @@ Exiger le mot `USER` aurait donc refusé la seule solution qui marche, et pouss�
 root ? » — et accepte les deux formes, en vérifiant pour chacune ce qui la rend
 vraie.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -74,8 +75,7 @@ def test_l_api_bascule_hors_de_root_avant_d_ecrire():
     )
     bascule = re.search(r"^\s*exec setpriv .*--reuid=app\b.*$", start, re.M)
     assert bascule, (
-        "start.sh ne bascule plus hors de root : l'API sert en root, ce que "
-        "#769 corrigeait."
+        "start.sh ne bascule plus hors de root : l'API sert en root, ce que #769 corrigeait."
     )
     alembic = re.search(r"^\s*alembic upgrade head\s*$", start, re.M)
     assert alembic, "start.sh ne lance plus les migrations"

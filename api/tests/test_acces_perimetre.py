@@ -14,6 +14,7 @@ genre de couple qui diverge en silence.
 Ce fichier exerce les deux sur les **mêmes cas**, dans une base réelle. C'est le
 motif de `lint:libelle-perimetre`, qui fait déjà cela entre le front et l'API.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -151,7 +152,8 @@ def test_la_MIGRATION_dit_la_meme_chose(batiments_voulus):
         s.refresh(badge)
 
         #  ⚠️ La requête de 0190, mot pour mot.
-        s.execute(text("""
+        s.execute(
+            text("""
             UPDATE vigik
                SET perimetre_cible = (
                    SELECT '["bat:' || MIN(lot.batiment_id) || '"]'
@@ -164,7 +166,8 @@ def test_la_MIGRATION_dit_la_meme_chose(batiments_voulus):
                )
              WHERE perimetre_cible IS NULL
                AND user_id IS NOT NULL
-        """))
+        """)
+        )
         s.commit()
         obtenu = s.execute(
             text("SELECT perimetre_cible FROM vigik WHERE id = :i").bindparams(i=badge.id)

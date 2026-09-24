@@ -17,6 +17,7 @@ Les deux propriétés vérifiées ici sont celles dont tout le reste dépend :
 2. **le rejeu ne crée pas de doublon** — c'est ce qui rend sûr un appel à chaque
    démarrage, et c'est exactement ce que `_poser_les_absents` garantit.
 """
+
 import tempfile
 import uuid
 from pathlib import Path
@@ -25,11 +26,22 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine, func, select
 
 from app.models.core import (
-    CategorieDocument, ConfigSauvegarde, ConfigSite, Copropriete, DiagnosticType,
-    FaqItem, ModeleEmail, ProfilAccesDocument, Utilisateur,
+    CategorieDocument,
+    ConfigSauvegarde,
+    ConfigSite,
+    Copropriete,
+    DiagnosticType,
+    FaqItem,
+    ModeleEmail,
+    ProfilAccesDocument,
+    Utilisateur,
 )
 from app.seed import (
-    CATEGORIES, DIAGNOSTICS, EMAIL_TEMPLATES, FAQ_COMPLEMENTAIRE, FAQ_INITIALE,
+    CATEGORIES,
+    DIAGNOSTICS,
+    EMAIL_TEMPLATES,
+    FAQ_COMPLEMENTAIRE,
+    FAQ_INITIALE,
     PROFILS,
 )
 

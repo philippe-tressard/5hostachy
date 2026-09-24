@@ -37,6 +37,7 @@ que l'interface n'affiche pas reste atteignable par l'API — c'est la règle qu
 ne pas ouvrir un champ que le serveur ne consomme pas, ne pas laisser le serveur
 écrire ce que la règle interdit.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -75,8 +76,12 @@ def base():
 
 def _user(session: Session, email: str, roles: str = "conseil_syndical") -> Utilisateur:
     u = Utilisateur(
-        nom="N", prenom=email.split("@")[0], email=email, roles_json=roles,
-        actif=True, decision_compte_le=datetime.utcnow(),
+        nom="N",
+        prenom=email.split("@")[0],
+        email=email,
+        roles_json=roles,
+        actif=True,
+        decision_compte_le=datetime.utcnow(),
     )
     session.add(u)
     session.commit()
@@ -99,9 +104,7 @@ def _sondage(session: Session, auteur: Utilisateur, **kw) -> Sondage:
 
 def _voter(session: Session, sondage: Sondage, votant: Utilisateur) -> None:
     option = sorted(sondage.options, key=lambda o: o.ordre)[0]
-    session.add(
-        VoteSondage(sondage_id=sondage.id, option_id=option.id, user_id=votant.id)
-    )
+    session.add(VoteSondage(sondage_id=sondage.id, option_id=option.id, user_id=votant.id))
     session.commit()
 
 
@@ -112,6 +115,7 @@ def _patch(session, sondage, user, **champs):
 
 
 # ── Ce qui reste corrigeable, même après un vote ─────────────────────────────
+
 
 def test_la_question_se_corrige_apres_un_vote(base):
     """Le cas d'usage même du ticket : une faute de frappe ne coûte plus les votes."""
@@ -145,6 +149,7 @@ def test_le_libelle_d_une_option_se_corrige_apres_un_vote(base):
 
 
 # ── La frontière : ce que le serveur REFUSE ──────────────────────────────────
+
 
 def test_une_option_d_un_autre_sondage_ne_peut_pas_etre_renommee(base):
     """L'`id` doit appartenir à CE sondage — sinon on renomme le choix d'à côté."""
@@ -206,6 +211,7 @@ def test_poser_une_echeance_sur_un_sondage_sans_fin_est_un_raccourcissement(base
 
 # ── Avant le premier vote, rien n'engage personne ────────────────────────────
 
+
 def test_avant_tout_vote_la_cloture_se_deplace_librement(base):
     """Un sondage que personne n'a lu se corrige sans contrainte."""
     cs = _user(base, "cs@test.fr")
@@ -246,6 +252,7 @@ def test_retirer_l_echeance_est_permis_apres_un_vote(base):
 
 
 # ── Le schéma lui-même interdit l'ajout et le retrait ────────────────────────
+
 
 def test_le_schema_rend_l_ajout_d_option_impossible(base):
     """Pas de garde à oublier : une option sans `id` ne passe pas la validation.

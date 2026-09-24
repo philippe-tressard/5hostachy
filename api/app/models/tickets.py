@@ -23,6 +23,7 @@ Les noms restent **ré-exportés par `core.py`** : aucun des dix-huit modules
 appelants n'a une ligne à changer, comme pour `copropriete.py` (13/08),
 `communaute.py` (16/08) et `validations.py` (17/08).
 """
+
 from enum import Enum
 from typing import Optional
 
@@ -80,7 +81,8 @@ STATUTS_TICKET_CLOS: tuple[str, ...] = (StatutTicket.résolu.value, StatutTicket
 STATUTS_TICKET_SANS_CYCLE: tuple[str, ...] = (StatutTicket.publie.value,)
 
 STATUTS_TICKET_ACTIFS: tuple[str, ...] = tuple(
-    s.value for s in StatutTicket
+    s.value
+    for s in StatutTicket
     if s.value not in STATUTS_TICKET_CLOS and s.value not in STATUTS_TICKET_SANS_CYCLE
 )
 
@@ -187,9 +189,9 @@ class CategorieTicket(str, Enum):
     """
 
     panne = "panne"
-    nuisance = "nuisance"            # comportement ET propreté — voir la note ci-dessous
+    nuisance = "nuisance"  # comportement ET propreté — voir la note ci-dessous
     espaces_verts = "espaces_verts"  # autre prestataire, et une saisonnalité
-    sinistre = "sinistre"            # constat + déclaration à l'assurance sous 5 jours ouvrés
+    sinistre = "sinistre"  # constat + déclaration à l'assurance sous 5 jours ouvrés
     etude_travaux = "etude_travaux"  # le dossier long que le conseil syndical suit
     acces_accueil = "acces_accueil"  # interphone, BAL, badge — installer quelqu'un
     question = "question"

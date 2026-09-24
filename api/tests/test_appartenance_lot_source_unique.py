@@ -42,6 +42,7 @@ demandé quinze exceptions, c'est-à-dire un contrôle que l'on contourne par
 habitude. Ce qui se recopie ici, c'est la **décision d'accès**, et c'est elle qui
 est tenue.
 """
+
 from __future__ import annotations
 
 import ast
@@ -62,16 +63,22 @@ SOURCE = ("auth/deps.py", "est_rattache_au_lot")
 #: d'elles disparaît ou cesse de lire `UserLot`, ce test échoue et l'exception se
 #: retire. Une exception qui survit à son motif finit par couvrir autre chose.
 EXCEPTIONS = {
-    ("routers/admin/utilisateurs.py", "supprimer_utilisateur"):
-        "détache les liens d'un compte supprimé — l'exception porte sur la "
-        "suppression, pas sur une appartenance",
-    ("routers/lots_imports.py", "resoudre_import"):
-        "crée et retire les liens d'un import de lots — c'est elle qui décide "
-        "quels rattachements existent",
-    ("routers/admin/comptes.py", "traiter_compte"):
-        "recopie les rattachements d'un compte aidé vers celui qu'il aide, en "
-        "ne lisant que les liens actifs — elle fabrique l'appartenance, elle ne "
-        "s'y fie pas",
+    (
+        "routers/admin/utilisateurs.py",
+        "supprimer_utilisateur",
+    ): "détache les liens d'un compte supprimé — l'exception porte sur la "
+    "suppression, pas sur une appartenance",
+    (
+        "routers/lots_imports.py",
+        "resoudre_import",
+    ): "crée et retire les liens d'un import de lots — c'est elle qui décide "
+    "quels rattachements existent",
+    (
+        "routers/admin/comptes.py",
+        "traiter_compte",
+    ): "recopie les rattachements d'un compte aidé vers celui qu'il aide, en "
+    "ne lisant que les liens actifs — elle fabrique l'appartenance, elle ne "
+    "s'y fie pas",
 }
 
 
@@ -142,10 +149,12 @@ def test_aucune_decision_d_acces_ne_relit_UserLot_elle_meme():
 def test_aucune_exception_ne_survit_a_son_motif():
     """Une exception qui ne sert plus finit par couvrir autre chose."""
     vues = {(f, n) for f, n, _ in _fonctions_decidant_sur_userlot()}
-    perimees = [f"  {f}::{n} — « {raison} »" for (f, n), raison in EXCEPTIONS.items()
-                if (f, n) not in vues]
+    perimees = [
+        f"  {f}::{n} — « {raison} »" for (f, n), raison in EXCEPTIONS.items() if (f, n) not in vues
+    ]
     assert not perimees, (
         "Ces exceptions ne correspondent plus à rien : la fonction a disparu, a "
-        "été renommée, ou ne lit plus `UserLot`.\n" + "\n".join(perimees)
+        "été renommée, ou ne lit plus `UserLot`.\n"
+        + "\n".join(perimees)
         + "\n\nLes retirer de EXCEPTIONS."
     )

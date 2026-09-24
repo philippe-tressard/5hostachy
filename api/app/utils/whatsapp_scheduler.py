@@ -27,6 +27,7 @@ Ce qui protège du doublon depuis :
 
 Si la fenêtre se ferme sans envoi réussi, une alerte e-mail est déclenchée.
 """
+
 import calendar
 import logging
 from datetime import datetime, timedelta, timezone
@@ -105,7 +106,7 @@ def check_and_send():
         rows = session.exec(select(ConfigSite)).all()
         config = {r.cle: r.valeur for r in rows}
 
-        if config.get('whatsapp_enabled') != '1':
+        if config.get("whatsapp_enabled") != "1":
             logger.info("WhatsApp désactivé, pas d'envoi planifié.")
             return
 
@@ -137,7 +138,8 @@ def check_and_send():
             if deja is not None:
                 logger.info(
                     "Message '%s' : tentative du jour au statut « %s », pas de rejeu.",
-                    sched.label, deja.statut,
+                    sched.label,
+                    deja.statut,
                 )
                 #  « en cours » = tentative interrompue (redémarrage en plein
                 #  envoi) : personne n'a encore été prévenu. « incertain » a
@@ -146,16 +148,20 @@ def check_and_send():
                     _alerter(session, sched, deja.statut, deja.erreur)
                 continue
 
-            footer = (config.get('whatsapp_footer') or '').strip() or "— Conseil Syndical 5Hostachy"
+            footer = (config.get("whatsapp_footer") or "").strip() or "— Conseil Syndical 5Hostachy"
             message_complet = f"{sched.message}\n\n{footer}"
 
             # Réutilise le log d'échec du jour au lieu d'en empiler un nouveau à
             # chaque créneau de 15 min — sinon _prune_logs (qui ne garde que les
             # 6 derniers logs, tous messages confondus) purgerait tout
             # l'historique récent en moins de 2h de tentatives.
-            log = today_logs[0] if today_logs else WhatsAppLog(
-                scheduled_id=sched.id,
-                label=sched.label,
+            log = (
+                today_logs[0]
+                if today_logs
+                else WhatsAppLog(
+                    scheduled_id=sched.id,
+                    label=sched.label,
+                )
             )
             log.message = message_complet
             log.envoye_le = datetime.utcnow()
@@ -182,7 +188,9 @@ def check_and_send():
             elif log.statut == STATUT_INCERTAIN:
                 logger.warning(
                     "Envoi planifié '%s' au résultat inconnu (%s) — pas de rejeu : "
-                    "le groupe l'a peut-être reçu.", sched.label, log.erreur,
+                    "le groupe l'a peut-être reçu.",
+                    sched.label,
+                    log.erreur,
                 )
                 _alerter(session, sched, log.statut, log.erreur)
             else:
@@ -207,7 +215,10 @@ def _alerter(session: Session, sched: WhatsAppScheduled, statut: str, erreur: st
     from app.utils.whatsapp_alerte import alerter_envoi
 
     alerter_envoi(
-        session, sched.label, statut, erreur,
+        session,
+        sched.label,
+        statut,
+        erreur,
         precision=(
             f" Malgré la fenêtre de rattrapage (18h00 → "
             f"{CATCHUP_END_HOUR:02d}h{CATCHUP_END_MINUTE:02d})."
@@ -228,9 +239,7 @@ def _prune_logs(session: Session):
     évincer le log « envoyé » des encombrants — et le créneau suivant, ne voyant
     plus rien, renvoyait le message.
     """
-    all_logs = session.exec(
-        select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())
-    ).all()
+    all_logs = session.exec(select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())).all()
     if len(all_logs) <= 6:
         return
     seuil_verrou = datetime.utcnow() - DUREE_VERROU

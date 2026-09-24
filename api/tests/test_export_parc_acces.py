@@ -24,6 +24,7 @@ décision renversée sans trace se re-renverse au prochain audit — c'est ce qu
 4. le format reste lisible par un tableur français : BOM, `;`, CRLF ;
 5. un type inconnu est refusé (422), et pas silencieusement vide.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -43,7 +44,10 @@ def parc_dessai():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         porteur = Utilisateur(
-            email="parc@essai.fr", hashed_password="x", prenom="Anne", nom="Durand",
+            email="parc@essai.fr",
+            hashed_password="x",
+            prenom="Anne",
+            nom="Durand",
         )
         session.add(porteur)
         session.commit()
@@ -144,6 +148,7 @@ def test_un_type_inconnu_est_refuse():
     #  donc un troisième type y apparaîtra sans qu'on touche à ce test.
     for cle in TYPES_ACCES:
         assert cle in erreur.value.detail
+
 
 def test_chaque_ligne_porte_SON_PROPRE_perimetre(parc_dessai):
     """🔴 Le défaut du 15/09/2026 : l'export portait le périmètre d'un AUTRE badge.

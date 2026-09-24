@@ -5,6 +5,7 @@ Extrait de `flux.py` le 08/08/2026. Voir `__init__.py` pour la règle de découp
 Visible de **tous les résidents** : savoir qui siège au CS ou représente le
 syndic n'est pas une information réservée.
 """
+
 from sqlmodel import select
 
 from app.models.core import MembreCS, MembreSyndic, RoleUtilisateur

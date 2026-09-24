@@ -35,6 +35,7 @@ un formulaire qui s'enregistre normalement. Seule l'information disparaît.
 lire (#710). Ni l'une ni l'autre n'est une description de la situation de
 l'auteur — elles restent au conseil, et ce fichier le vérifie aussi.
 """
+
 from __future__ import annotations
 
 import uuid

@@ -19,6 +19,7 @@ Trois classes d'erreurs sont verrouillées ici.
    `photos_internes` n'accepte que nos propres URLs ; un routeur qui l'oublie
    laisse servir un contenu tiers dans un `<img src>` à chaque lecteur.
 """
+
 import ast
 import json
 import pathlib
@@ -40,6 +41,7 @@ FICHIERS_TS = RACINE / "front" / "src" / "lib" / "fichiers.ts"
 
 
 # ── 1. Nommage sur disque ────────────────────────────────────────────────────
+
 
 def test_extension_vient_du_parametre_pas_du_nom_fourni():
     """Un `.html` déguisé ne doit pas ressortir en `.html` sur le disque."""
@@ -91,6 +93,7 @@ def test_radical_borne_la_longueur():
 
 # ── 2. Listes blanches front ⇆ serveur ───────────────────────────────────────
 
+
 def _constante_ts(nom: str) -> str:
     """Valeur d'une constante `export const NOM = '...'` de fichiers.ts."""
     source = FICHIERS_TS.read_text(encoding="utf-8")
@@ -109,9 +112,7 @@ def test_liste_blanche_documents_alignee():
     assert extensions_front, "aucune extension listée côté front"
     assert extensions_front == set(FAMILLES["document"].extensions)
 
-    types_front = {
-        e for e in _constante_ts("ACCEPT_DOCUMENTS").split(",") if not e.startswith(".")
-    }
+    types_front = {e for e in _constante_ts("ACCEPT_DOCUMENTS").split(",") if not e.startswith(".")}
     assert types_front <= set(FAMILLES["document"].types)
 
 
@@ -133,14 +134,17 @@ def test_toute_image_acceptee_est_reconnue_comme_image_par_le_front():
 
 # ── 3. Filtrage des URLs fournies par le client ──────────────────────────────
 
+
 def test_photos_internes_ecarte_les_urls_externes():
     interne = "/uploads/fichiers/abc_devis.pdf"
-    assert photos_internes([
-        interne,
-        "https://exemple.test/pixel.gif",
-        "/uploads/../etc/passwd",
-        "//evil.test/x.png",
-    ]) == [interne]
+    assert photos_internes(
+        [
+            interne,
+            "https://exemple.test/pixel.gif",
+            "/uploads/../etc/passwd",
+            "//evil.test/x.png",
+        ]
+    ) == [interne]
 
 
 #: Toute fonction qui écrit `fichiers_urls` depuis une entrée client. Ajouter une
@@ -166,7 +170,8 @@ ECRITURES_CLIENT = [
 def test_ecriture_de_pieces_jointes_passe_par_le_filtre(chemin, fonction):
     arbre = ast.parse((RACINE / chemin).read_text(encoding="utf-8"))
     noeuds = [
-        n for n in ast.walk(arbre)
+        n
+        for n in ast.walk(arbre)
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == fonction
     ]
     # Fonction renommée ou supprimée → INCONNU, donc échec, jamais un vert vide.
@@ -191,12 +196,14 @@ def test_photos_json_ecarte_les_urls_etrangeres():
     Vérifié sur le COMPORTEMENT : ce qui ressort de la fonction, pas le fait
     qu'elle mentionne `photos_internes` quelque part.
     """
-    sortie = photos_json([
-        "/uploads/publications/ok.jpg",
-        "https://tiers.example/pixel.png",   # traceur : révélerait l'IP de chaque lecteur
-        "/uploads/../../etc/passwd",          # traversée
-        "javascript:alert(1)",
-    ])
+    sortie = photos_json(
+        [
+            "/uploads/publications/ok.jpg",
+            "https://tiers.example/pixel.png",  # traceur : révélerait l'IP de chaque lecteur
+            "/uploads/../../etc/passwd",  # traversée
+            "javascript:alert(1)",
+        ]
+    )
     assert json.loads(sortie) == ["/uploads/publications/ok.jpg"]
 
 
@@ -207,6 +214,7 @@ def test_photos_json_tolere_l_absence():
 
 
 # ── 4. Nom des pièces jointes dans l'e-mail ──────────────────────────────────
+
 
 def test_nom_lisible_retire_le_prefixe_technique():
     """Le destinataire doit lire « devis.pdf », pas « 0d41107a6c…lasseurs.pdf ».
@@ -258,8 +266,9 @@ def test_la_piece_jointe_part_avec_son_nom_dorigine(tmp_path):
 
     prets = _preparer_pieces_jointes([str(fichier)])
 
-    msg = MessageSchema(subject="s", recipients=["a@b.fr"], body="<p>x</p>",
-                        subtype="html", attachments=prets)
+    msg = MessageSchema(
+        subject="s", recipients=["a@b.fr"], body="<p>x</p>", subtype="html", attachments=prets
+    )
     brut = asyncio.run(MailMsg(msg)._message("5Hostachy <no-reply@x.fr>")).as_string()
 
     assert 'filename="devis-ramonage.pdf"' in brut
@@ -269,6 +278,7 @@ def test_la_piece_jointe_part_avec_son_nom_dorigine(tmp_path):
 
 
 # ── 5. Sommaire des pièces jointes dans le corps du message ──────────────────
+
 
 def test_le_sommaire_annonce_exactement_les_pieces_jointes():
     """Décompte, accord au pluriel, numérotation et noms — sur une liste réelle."""
@@ -297,7 +307,7 @@ def test_le_sommaire_echappe_les_noms():
     """
     from app.utils.email.gabarit import _bandeau_pieces_jointes
 
-    bandeau = _bandeau_pieces_jointes(['<img src=x onerror=alert(1)>.pdf'])
+    bandeau = _bandeau_pieces_jointes(["<img src=x onerror=alert(1)>.pdf"])
     assert "<img src=x" not in bandeau
     assert "&lt;img src=x" in bandeau
 
@@ -315,9 +325,13 @@ def test_le_sommaire_vient_du_meme_endroit_que_les_pieces_jointes():
     compte : la composition est désormais **unique**, et l'aperçu avant envoi
     montre donc exactement ce qui partira.
     """
-    source = (RACINE / "api" / "app" / "utils" / "email" / "__init__.py").read_text(encoding="utf-8")
+    source = (RACINE / "api" / "app" / "utils" / "email" / "__init__.py").read_text(
+        encoding="utf-8"
+    )
 
-    appels = re.findall(r"pieces_jointes=\[nom_lisible\(p\) for p in \(attachments or \[\]\)\]", source)
+    appels = re.findall(
+        r"pieces_jointes=\[nom_lisible\(p\) for p in \(attachments or \[\]\)\]", source
+    )
     assert len(appels) == 1, (
         f"{len(appels)} écriture(s) du sommaire — il en faut UNE, dans `composer_email`. "
         "Une seconde serait libre de diverger, et l'aperçu ne montrerait plus ce qui part."
@@ -326,15 +340,18 @@ def test_le_sommaire_vient_du_meme_endroit_que_les_pieces_jointes():
     #  Le corollaire : personne ne compose en dehors d'elle. `_wrap_email` est la
     #  mise en gabarit ; l'appeler ailleurs rendrait la règle invisible à l'aperçu.
     hors = [
-        m.start() for m in re.finditer(r"_wrap_email\(", source)
-        if "def _wrap_email" not in source[max(0, m.start() - 200):m.start()]
+        m.start()
+        for m in re.finditer(r"_wrap_email\(", source)
+        if "def _wrap_email" not in source[max(0, m.start() - 200) : m.start()]
     ]
     #  🔴 LES BORNES VIENNENT DE L'AST, PLUS D'UN `index()` (05/09/2026).
     #  Elles étaient calculées entre `def composer_email(` et `async def
     #  send_email(` — c'est-à-dire en supposant l'ORDRE des fonctions dans le
     #  fichier. La factorisation des deux envois a inséré `_envoyer_modele`
     #  entre les deux, et ce découpage s'est mis à mesurer autre chose.
-    corps_composer = corps_de(RACINE / "api" / "app" / "utils" / "email" / "__init__.py", "composer_email")
+    corps_composer = corps_de(
+        RACINE / "api" / "app" / "utils" / "email" / "__init__.py", "composer_email"
+    )
     debut_composer = source.index(corps_composer)
     fin_composer = debut_composer + len(corps_composer)
     assert all(debut_composer < p < fin_composer for p in hors), (
@@ -351,6 +368,7 @@ def test_le_sommaire_vient_du_meme_endroit_que_les_pieces_jointes():
 # ─────────────────────────────────────────────────────────────────────────────
 #  Nommage des fichiers téléversés — une seule source, tenue par un contrôle
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_aucun_nom_de_fichier_fabrique_hors_de_nom_stocke():
     """`app/utils/fichiers.py` annonce « écrit une seule fois ». Il faut le vérifier.
@@ -431,11 +449,12 @@ def test_est_image_et_estImage_sont_la_meme_regle():
     import pathlib
     import re
 
-    ts = (pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "fichiers.ts")
+    ts = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "fichiers.ts"
     m = re.search(r"EXTENSIONS_IMAGE\s*=\s*/\\.\(([^)]+)\)\$/i", ts.read_text(encoding="utf-8"))
     assert m, "EXTENSIONS_IMAGE introuvable dans fichiers.ts — parité invérifiable"
 
     from app.utils import fichiers
+
     py = re.search(r"\\.\(([^)]+)\)\$", fichiers._EXTENSIONS_IMAGE.pattern)
     assert py, "motif Python illisible — parité invérifiable"
     assert m.group(1) == py.group(1), (
@@ -450,6 +469,7 @@ def test_est_image_et_estImage_sont_la_meme_regle():
 #  SANS LA MOINDRE ERREUR : le courriel est parti sans ses photos, et le message
 #  WhatsApp a disparu entièrement du groupe (401 sur une URL publique devenue
 #  authentifiée). Un chemin fabriqué à la main ne signale jamais qu'il est faux.
+
 
 def test_aucun_sous_dossier_d_upload_colle_a_la_main():
     """Définir la RACINE des uploads est normal ; y coller un sous-dossier ne l'est pas.
@@ -484,9 +504,6 @@ def test_whatsapp_n_envoie_plus_d_url_publique_pour_les_medias():
     source = (RACINE / "api" / "app" / "utils" / "whatsapp.py").read_text(encoding="utf-8")
     assert "imageBase64" in source, "l'image n'est plus transmise en octets"
     lignes_actives = [
-        l for l in source.splitlines()
-        if "imageUrl" in l and not l.lstrip().startswith("#")
+        l for l in source.splitlines() if "imageUrl" in l and not l.lstrip().startswith("#")
     ]
-    assert not lignes_actives, (
-        f"whatsapp.py construit encore une URL d'image : {lignes_actives}"
-    )
+    assert not lignes_actives, f"whatsapp.py construit encore une URL d'image : {lignes_actives}"

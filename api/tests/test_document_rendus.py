@@ -22,6 +22,7 @@ Il ne peut pas deviner qu'un CINQUIÈME rendu apparaît — aucun test ne le peu
 Sa valeur est ailleurs : le jour où l'on ajoute un champ à `Document`, ce fichier
 est la liste qui dit où il doit aller, et il échoue tant qu'il n'y est pas.
 """
+
 from __future__ import annotations
 
 import ast
@@ -57,9 +58,7 @@ def test_la_NOTIFICATION_et_le_COURRIEL_rendent_les_champs_du_document():
 
     source = inspect.getsource(_notifier_document_publie)
     for champ in CHAMPS_RENDUS:
-        assert f"doc.{champ}" in source, (
-            f"ni la notification ni le courriel ne portent `{champ}`."
-        )
+        assert f"doc.{champ}" in source, f"ni la notification ni le courriel ne portent `{champ}`."
 
 
 def test_l_ECRAN_rend_les_champs_du_document():
@@ -80,9 +79,7 @@ def test_le_MODELE_de_courriel_rend_les_champs_du_document():
     """
     from app.seed import EMAIL_TEMPLATES
 
-    _c, _l, _sujet, corps, _d = next(
-        t for t in EMAIL_TEMPLATES if t[0] == "document_publie"
-    )
+    _c, _l, _sujet, corps, _d = next(t for t in EMAIL_TEMPLATES if t[0] == "document_publie")
     for champ in CHAMPS_RENDUS:
         assert f"document.{champ}" in corps, (
             f"le modèle `document_publie` n'affiche pas `{champ}` : le destinataire "

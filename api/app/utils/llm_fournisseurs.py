@@ -27,10 +27,12 @@ ici sans ouvrir l'autre fichier, et `llm.py` ne grossit pas d'un service de plus
 Il ne connaît ni `ConfigSite`, ni `Session`, ni le réseau : ce sont des
 descriptions, pas des appels. C'est ce qui les rend testables sans rien monter.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar
+
 
 class ErreurLLM(RuntimeError):
     """Le modèle n'a pas répondu, ou a répondu ce qu'on ne sait pas lire.
@@ -235,8 +237,15 @@ class Fournisseur:
         """
         familles = ("gpt-", "chatgpt-", "o1", "o3", "o4")
         exclus = (
-            "-audio", "-realtime", "-transcribe", "-tts", "-search",
-            "-instruct", "-image", "-moderation", "-embedding",
+            "-audio",
+            "-realtime",
+            "-transcribe",
+            "-tts",
+            "-search",
+            "-instruct",
+            "-image",
+            "-moderation",
+            "-embedding",
         )
         vus = []
         for m in reponse.get("data") or []:

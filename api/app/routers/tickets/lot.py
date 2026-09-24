@@ -19,6 +19,7 @@ prestataire », suivies au kanban.
    enverrait un reçoit un 422 au lieu de croire avoir diffusé.
 3. **Le conseil seul** — comme la catégorie Entretien elle-même.
 """
+
 from __future__ import annotations
 
 import json
@@ -85,26 +86,28 @@ def creer_visites_en_lot(
             raise HTTPException(422, f"Visite {i} : fréquence inconnue.")
         if v.prestataire_id is not None and session.get(Prestataire, v.prestataire_id) is None:
             raise HTTPException(422, f"Visite {i} : prestataire introuvable.")
-        session.add(Ticket(
-            numero=generer_numero(),
-            jeton_courriel=nouveau_jeton(),
-            titre=v.titre.strip(),
-            #  La description est obligatoire pour une affaire : le titre la porte
-            #  à défaut — c'est ce que faisait la migration des événements (0212).
-            description=v.description or f"<p>{escape(v.titre.strip())}</p>",
-            categorie=CategorieTicket.entretien,
-            statut=StatutTicket.chez_prestataire,
-            priorite="normale",
-            suivi_kanban=True,
-            auteur_id=user.id,
-            perimetre_cible=json.dumps(v.perimetre_cible or ["résidence"], ensure_ascii=False),
-            debut=v.debut,
-            prestataire_id=v.prestataire_id,
-            frequence_type=v.frequence_type,
-            frequence_valeur=v.frequence_valeur if v.frequence_type else None,
-            cree_le=maintenant,
-            mis_a_jour_le=maintenant,
-        ))
+        session.add(
+            Ticket(
+                numero=generer_numero(),
+                jeton_courriel=nouveau_jeton(),
+                titre=v.titre.strip(),
+                #  La description est obligatoire pour une affaire : le titre la porte
+                #  à défaut — c'est ce que faisait la migration des événements (0212).
+                description=v.description or f"<p>{escape(v.titre.strip())}</p>",
+                categorie=CategorieTicket.entretien,
+                statut=StatutTicket.chez_prestataire,
+                priorite="normale",
+                suivi_kanban=True,
+                auteur_id=user.id,
+                perimetre_cible=json.dumps(v.perimetre_cible or ["résidence"], ensure_ascii=False),
+                debut=v.debut,
+                prestataire_id=v.prestataire_id,
+                frequence_type=v.frequence_type,
+                frequence_valeur=v.frequence_valeur if v.frequence_type else None,
+                cree_le=maintenant,
+                mis_a_jour_le=maintenant,
+            )
+        )
     session.commit()
     return {"crees": len(body.affaires)}
 

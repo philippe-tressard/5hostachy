@@ -9,6 +9,7 @@ Pour chaque nouveau user, passe en revue les 3 files d'import staging
 (lots, TC, vigik) et tente de lier automatiquement les lignes en attente
 dont le nom correspond à ce user.
 """
+
 from __future__ import annotations
 
 import json
@@ -25,6 +26,7 @@ from app.utils.types_acces import TELECOMMANDE, TypeAcces, VIGIK
 
 
 # ── Normalisation ────────────────────────────────────────────────────────────
+
 
 def _cle_de_nom(s: Optional[str]) -> str:
     """La clé de COMPARAISON d'un nom — pas la normalisation d'une cellule (#829).
@@ -43,10 +45,7 @@ def _cle_de_nom(s: Optional[str]) -> str:
     if not s:
         return ""
     s = s.strip().casefold()
-    s = "".join(
-        c for c in unicodedata.normalize("NFKD", s)
-        if unicodedata.category(c) != "Mn"
-    )
+    s = "".join(c for c in unicodedata.normalize("NFKD", s) if unicodedata.category(c) != "Mn")
     # Uniformise apostrophes/traits d'union/ponctuation en séparateurs neutres.
     s = re.sub(r"[^0-9a-z]+", " ", s)
     return " ".join(s.split())
@@ -135,15 +134,18 @@ def count_lots_for_user(nom: str, prenom: str, session: Session) -> int:
     """Dry-run : compte les LotImport dont le nom_coproprietaire correspond à ce user.
     Inclut tous les statuts pour donner un aperçu global (même 'resolu')."""
     from app.models.core import LotImport, StatutLotImport
+
     keys = _user_keys(nom, prenom)
     imports = session.exec(
         select(LotImport).where(
-            LotImport.statut.in_([
-                StatutLotImport.en_attente,
-                StatutLotImport.utilisateur_lie,
-                StatutLotImport.lot_lie,
-                StatutLotImport.resolu,
-            ])
+            LotImport.statut.in_(
+                [
+                    StatutLotImport.en_attente,
+                    StatutLotImport.utilisateur_lie,
+                    StatutLotImport.lot_lie,
+                    StatutLotImport.resolu,
+                ]
+            )
         )
     ).all()
     count = 0
@@ -194,6 +196,7 @@ def _matches_user(raw_name: str, user_keys: set[str]) -> bool:
 
 # ── Auto-match TC ─────────────────────────────────────────────────────────────
 
+
 def _auto_match_acces(user, session: Session, type_acces: TypeAcces) -> int:
     """Apparie les imports de CE type au nouvel arrivant, et résout ce qui peut l'être.
 
@@ -222,9 +225,7 @@ def _auto_match_acces(user, session: Session, type_acces: TypeAcces) -> int:
     cles = _user_keys(user.nom, user.prenom)
     imports = session.exec(
         select(modele_import).where(
-            modele_import.statut.in_(
-                [StatutImport.en_attente, StatutImport.proprietaire_lie]
-            )
+            modele_import.statut.in_([StatutImport.en_attente, StatutImport.proprietaire_lie])
         )
     ).all()
 
@@ -271,6 +272,7 @@ def _auto_match_vigik(user, session: Session) -> int:
 
 # ── Auto-match Lots ───────────────────────────────────────────────────────────
 
+
 def _auto_match_lots(user, session: Session) -> int:
     from app.models.core import LotImport, StatutLotImport, UserLot, TypeLien
 
@@ -285,11 +287,13 @@ def _auto_match_lots(user, session: Session) -> int:
     # Passe 1 : imports en attente / utilisateur_lie / lot_lie → ajouter à utilisateurs_json
     imports = session.exec(
         select(LotImport).where(
-            LotImport.statut.in_([
-                StatutLotImport.en_attente,
-                StatutLotImport.utilisateur_lie,
-                StatutLotImport.lot_lie,       # lot connu mais user pas encore matché
-            ])
+            LotImport.statut.in_(
+                [
+                    StatutLotImport.en_attente,
+                    StatutLotImport.utilisateur_lie,
+                    StatutLotImport.lot_lie,  # lot connu mais user pas encore matché
+                ]
+            )
         )
     ).all()
 
@@ -348,7 +352,9 @@ def _auto_match_lots(user, session: Session) -> int:
         if existing_ul:
             continue  # déjà lié correctement
         # Créer le UserLot manquant
-        session.add(UserLot(user_id=user.id, lot_id=imp.lot_id, type_lien=_tl(type_lien), actif=True))
+        session.add(
+            UserLot(user_id=user.id, lot_id=imp.lot_id, type_lien=_tl(type_lien), actif=True)
+        )
         # Synchroniser utilisateurs_json si l'entry est absente
         current_users = json.loads(imp.utilisateurs_json or "[]")
         existing_ids = {e["user_id"] for e in current_users}
@@ -378,6 +384,7 @@ def _is_coproprietaire(user) -> bool:
 
 
 # ── Auto-liaison annuaire CS / Syndic ──────────────────────────────────────
+
 
 def _auto_link_annuaire(user, session: Session) -> dict:
     """Lie ce user aux membres CS et Syndic dont le NOM correspond (NFD, insensible casse).
@@ -411,6 +418,7 @@ def _auto_link_annuaire(user, session: Session) -> dict:
 
 # ── Point d'entrée principal ──────────────────────────────────────────────────
 
+
 def auto_match_pour_utilisateur(user, session: Session) -> dict:
     """
     Lance l'auto-match sur les 3 systèmes d'import pour un utilisateur donné,
@@ -430,36 +438,38 @@ def auto_match_pour_utilisateur(user, session: Session) -> dict:
     Ne committe pas — l'appelant doit faire session.commit().
     """
     from app.models.core import StatutUtilisateur
-    lots         = _auto_match_lots(user, session)
+
+    lots = _auto_match_lots(user, session)
     session.flush()
     from app.utils.resolution_lots import resoudre_pour_utilisateur
 
     lots_resolus = resoudre_pour_utilisateur(user, session)
     session.flush()
-    
+
     user_statut = user.statut.value if hasattr(user.statut, "value") else str(user.statut)
     is_coproprietaire = user_statut in {
         StatutUtilisateur.copropriétaire_résident.value,
         StatutUtilisateur.copropriétaire_bailleur.value,
-        StatutUtilisateur.mandataire.value
+        StatutUtilisateur.mandataire.value,
     }
-    
+
     # RÈGLE : Pour les propriétaires, TC/Vigik ne sont traités que si lots ont réussi
     if is_coproprietaire and lots_resolus == 0:
         tc = 0
         vigik = 0
     else:
-        tc      = _auto_match_tc(user, session)
-        vigik   = _auto_match_vigik(user, session)
+        tc = _auto_match_tc(user, session)
+        vigik = _auto_match_vigik(user, session)
 
     #  🔴 Le conjoint inscrit après la résolution n'a plus de chemin à lui
     #  (#1194) : `_propagate_acces_pour_utilisateur` recopiait les badges du
     #  ménage dans les tables d'attribution. Il les voit désormais par son lot,
     #  dès qu'il y est rattaché — par ce service ou par l'administration.
 
-    baux    = _auto_match_baux_locataire(user, session)
+    baux = _auto_match_baux_locataire(user, session)
     #  Sans bail à son adresse, le nom de propriétaire déclaré rattache (#1136).
     from app.utils.rattachement_bailleur import rattacher_au_bailleur
+
     rattache = 0 if baux else rattacher_au_bailleur(user, session)
     annuaire = _auto_link_annuaire(user, session)
     return {
@@ -476,6 +486,7 @@ def auto_match_pour_utilisateur(user, session: Session) -> dict:
 
 
 # ── Auto-liaison bail par email (locataires) ─────────────────────────────────
+
 
 def _auto_match_baux_locataire(user, session: Session) -> int:
     """Lie ce user comme locataire sur les baux créés avec son email.
@@ -508,7 +519,10 @@ def _auto_match_baux_locataire(user, session: Session) -> int:
 
 # ── Notification du gestionnaire du site ─────────────────────────────────────
 
-def notifier_gestionnaire_appariement(user, resultat: dict, background_tasks, session: Session) -> None:
+
+def notifier_gestionnaire_appariement(
+    user, resultat: dict, background_tasks, session: Session
+) -> None:
     """Prévient le gestionnaire du site quand des accès ont été créés tout seuls.
 
     Pourquoi ce message existe (demandé le 03/08/2026) : l'appariement se fait

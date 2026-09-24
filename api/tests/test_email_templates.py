@@ -19,6 +19,7 @@ Limite assumée : ce test garde le **côté template**. Le côté point d'appel
 (une clé oubliée dans le `context`) reste couvert *a posteriori* par le point 9
 (inspection de `historique_email`). Les deux forment une défense en profondeur.
 """
+
 import re
 
 import pytest
@@ -57,10 +58,16 @@ BASE_CTX_VARS = set(VARIABLES_DU_GABARIT)
 # Les deux canaux « externes » en font partie bien que leur destinataire soit
 # une adresse saisie à la main : rien ne dit que ce n'est pas le syndic, et une
 # règle sans exception ne peut pas dépendre de ce que le code ignore.
-MODELES_VERS_LE_SYNDIC = frozenset({
-    "ticket_syndic", "publication_syndic", "relance_syndic",
-    "nouvel_arrivant_bal", "ticket_externe", "publication_externe",
-})
+MODELES_VERS_LE_SYNDIC = frozenset(
+    {
+        "ticket_syndic",
+        "publication_syndic",
+        "relance_syndic",
+        "nouvel_arrivant_bal",
+        "ticket_externe",
+        "publication_externe",
+    }
+)
 
 
 _env = SandboxedEnvironment(loader=BaseLoader())
@@ -103,9 +110,7 @@ def test_chaque_modele_declare_son_intention():
     )
 
     inconnues = {
-        code: valeur
-        for code, valeur in INTENTIONS_PAR_MODELE.items()
-        if valeur not in INTENTIONS
+        code: valeur for code, valeur in INTENTIONS_PAR_MODELE.items() if valeur not in INTENTIONS
     }
     assert not inconnues, (
         f"Intentions non reconnues par le gabarit : {inconnues}. Elles ne "
@@ -123,7 +128,11 @@ def test_le_bandeau_dintention_est_rendu_dans_le_gabarit():
     from app.utils.email import INTENTIONS, _wrap_email
 
     html = _wrap_email(
-        "<p>corps</p>", "Résidence", "https://exemple.fr", "", 2026,
+        "<p>corps</p>",
+        "Résidence",
+        "https://exemple.fr",
+        "",
+        2026,
         intention="action_requise",
     )
     assert INTENTIONS["action_requise"][0] in html, (
@@ -275,14 +284,16 @@ def test_lobjet_au_syndic_porte_toujours_la_reference(code):
 
     for is_commentaire in (False, True):
         ctx = {nom: _Quelconque() for nom in EXPECTED_VARS[code]}
-        ctx.update({
-            "reference_copro": "00213",
-            "prefixe_copro": prefixe,
-            "is_commentaire": is_commentaire,
-            "residence": _Quelconque(),
-            "app": _Quelconque(),
-            "annee": 2026,
-        })
+        ctx.update(
+            {
+                "reference_copro": "00213",
+                "prefixe_copro": prefixe,
+                "is_commentaire": is_commentaire,
+                "residence": _Quelconque(),
+                "app": _Quelconque(),
+                "annee": 2026,
+            }
+        )
         rendu = _env.from_string(sujets[code]).render(**ctx)
         assert prefixe in rendu, (
             f"L'objet de {code} n'affiche pas la référence de copropriété quand "
@@ -449,11 +460,13 @@ def test_aucun_objet_ne_recompose_la_reference_a_la_main():
 
     assert not fautifs, (
         "Ces objets composent la référence eux-mêmes au lieu d'utiliser "
-        "`{{ prefixe_copro }}` :\n  " + "\n  ".join(fautifs)
+        "`{{ prefixe_copro }}` :\n  "
+        + "\n  ".join(fautifs)
         + "\nLa forme est écrite une seule fois, dans `email._prefixe_copro` — "
         "et un modèle se réécrit depuis Admin → Emails, donc une règle qui y "
         "serait recopiée pourrait être retirée par un formulaire."
     )
+
 
 def test_aucun_gabarit_ne_recompose_un_nom_de_personne():
     """La regle « Prenom NOM » se rend AVANT l'envoi, jamais dans le gabarit (#959).

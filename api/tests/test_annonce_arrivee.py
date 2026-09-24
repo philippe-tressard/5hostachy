@@ -19,6 +19,7 @@ SORT, pas ce qu'on a eu l'intention de ne pas mettre.
 courant à l'inscription, et un gabarit qui suppose ces valeurs produirait
 « vient d'emménager au  » ou « Bienvenue à X — ».
 """
+
 from __future__ import annotations
 
 import uuid
@@ -81,9 +82,7 @@ def arrivant():
         session.refresh(u)
         yield u, bat
         session.rollback()
-        for annonce in session.exec(
-            select(Ticket).where(Ticket.auteur_id == u.id)
-        ).all():
+        for annonce in session.exec(select(Ticket).where(Ticket.auteur_id == u.id)).all():
             purger_ligne(session, Ticket, annonce.id)
         session.commit()
         u2 = session.get(Utilisateur, u.id)
@@ -100,9 +99,7 @@ def test_l_annonce_ne_contient_AUCUNE_donnee_personnelle(arrivant):
     user, _ = arrivant
     with Session(engine) as session:
         u = session.get(Utilisateur, user.id)
-        pub = creer_annonce_arrivee(
-            session, u, nom_complet="Alix RIVANT", ancien="Mme BERNAERT"
-        )
+        pub = creer_annonce_arrivee(session, u, nom_complet="Alix RIVANT", ancien="Mme BERNAERT")
         session.commit()
 
         texte = f"{pub.titre}\n{pub.description}"
@@ -185,7 +182,5 @@ def test_relancer_l_accueil_ne_publie_PAS_une_seconde_annonce(arrivant):
         session.commit()
 
         assert seconde is None
-        toutes = session.exec(
-            select(Ticket).where(Ticket.auteur_id == u.id)
-        ).all()
+        toutes = session.exec(select(Ticket).where(Ticket.auteur_id == u.id)).all()
         assert len(toutes) == 1, f"{len(toutes)} annonces pour une arrivée"

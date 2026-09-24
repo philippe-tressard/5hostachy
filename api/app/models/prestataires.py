@@ -20,6 +20,7 @@ que personne n'a chargé n'existe pas pour `SQLModel.metadata.create_all` : la
 table manquerait, sans le moindre message. C'est la raison écrite dans
 `models/__init__.py`, et elle vaut ici mot pour mot.
 """
+
 from datetime import date, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
@@ -72,12 +73,9 @@ class TypeEquipement(str, Enum):
     autre = "autre"
 
 
-
-
 # ──────────────────────────────────────────────
 #  FAQ
 # ──────────────────────────────────────────────
-
 
 
 class Prestataire(SQLModel, table=True):
@@ -150,6 +148,7 @@ class ContratEntretien(SQLModel, table=True):
 
 class NotationPrestataire(SQLModel, table=True):
     """Notation d'un prestataire (1-5 étoiles), après une visite sous contrat."""
+
     __tablename__ = "notation_prestataire"
     id: Optional[int] = Field(default=None, primary_key=True)
     prestataire_id: int = Field(foreign_key="prestataire.id")

@@ -13,6 +13,7 @@ d'adresse.
 depuis toujours, et un client les appelle. Déplacer le code ne déplace pas
 l'adresse — c'est le seul point sur lequel une extraction peut casser en silence.
 """
+
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -57,9 +58,7 @@ def effacer_telemetrie(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Effacer ses données de télémétrie (RGPD art. 17 — droit à l'effacement)."""
-    events = session.exec(
-        select(TelemetryEvent).where(TelemetryEvent.user_id == user.id)
-    ).all()
+    events = session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user.id)).all()
     for ev in events:
         session.delete(ev)
     session.commit()

@@ -3,6 +3,7 @@
 On crée et on corrige par les VRAIES routes, et l'on regarde les tâches mises en
 file : message sur le groupe, courriel au syndic / au CS, affiche.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -24,18 +25,26 @@ from app.utils.perimetres import arbre
 @pytest.fixture()
 def contexte(monkeypatch, batiments):
     affiches: list[int] = []
-    monkeypatch.setattr(whatsapp, "config_whatsapp", lambda s, *a: {"site_url": "https://5hostachy.fr"})
+    monkeypatch.setattr(
+        whatsapp, "config_whatsapp", lambda s, *a: {"site_url": "https://5hostachy.fr"}
+    )
     monkeypatch.setattr(whatsapp, "whatsapp_actif", lambda c: True)
     monkeypatch.setattr(
         "app.utils.destinataires.destinataires_syndic_cs",
         lambda session, syndic, cs: [("Syndic", "syndic@exemple.fr")] if (syndic or cs) else [],
     )
-    monkeypatch.setattr(annonces_hall, "creer_annonce_hall", lambda **k: affiches.append(k["ticket_id"]))
+    monkeypatch.setattr(
+        annonces_hall, "creer_annonce_hall", lambda **k: affiches.append(k["ticket_id"])
+    )
     arbre()
     with Session(engine) as s:
         cs = Utilisateur(
-            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test", mot_de_passe_hash="x",
-            prenom="C", nom="S", actif=True, roles_json=RoleUtilisateur.conseil_syndical.value,
+            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="C",
+            nom="S",
+            actif=True,
+            roles_json=RoleUtilisateur.conseil_syndical.value,
         )
         s.add(cs)
         s.commit()
@@ -50,8 +59,13 @@ def _noms(taches: BackgroundTasks) -> list[str]:
 def _creer(s, cs, **champs):
     taches = BackgroundTasks()
     corps = TicketCreate(
-        titre="Coupure d'eau", description="Jeudi 9h-12h.", categorie="actualite",
-        partager_whatsapp=True, destinataire_syndic=True, annonce_hall=True, **champs,
+        titre="Coupure d'eau",
+        description="Jeudi 9h-12h.",
+        categorie="actualite",
+        partager_whatsapp=True,
+        destinataire_syndic=True,
+        annonce_hall=True,
+        **champs,
     )
     lu = crud.create_ticket(corps, taches, session=s, user=cs)
     return lu, taches
@@ -90,7 +104,9 @@ def test_lever_la_reserve_fait_partir_ce_qui_etait_retenu(contexte):
     lu, taches = _creer(s, cs, public_cible=["conseil_syndical"])
     assert _noms(taches) == []
     taches = BackgroundTasks()
-    mise_a_jour.update_ticket(lu.id, TicketUpdate(public_cible=["copropriétaires"]), taches, session=s, user=cs)
+    mise_a_jour.update_ticket(
+        lu.id, TicketUpdate(public_cible=["copropriétaires"]), taches, session=s, user=cs
+    )
     assert "send_email_group" in _noms(taches), "le courriel au syndic retenu doit partir"
 
 
@@ -101,8 +117,12 @@ def _apercu(s, cs, **champs):
     import app.routers.tickets.apercu as apercu
 
     corps = apercu.BrouillonTicket(
-        titre="Coupure d'eau", description="Jeudi 9h-12h.", categorie="actualite",
-        destinataire_syndic=True, partager_whatsapp=True, **champs,
+        titre="Coupure d'eau",
+        description="Jeudi 9h-12h.",
+        categorie="actualite",
+        destinataire_syndic=True,
+        partager_whatsapp=True,
+        **champs,
     )
     return apercu.apercu_diffusion(corps, session=s, user=cs)
 

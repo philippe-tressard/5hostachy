@@ -14,6 +14,7 @@ Ces noms restent importables depuis `app.models.core`, qui les réexporte : sept
 modules les y prennent déjà, dont `auth.py` (736 lignes) qu'une ligne d'import
 de plus ferait refuser par le même contrôle de modularité.
 """
+
 from datetime import date
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
@@ -30,7 +31,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from app.models.core import ContratEntretien, Ticket, UserLot
 
 
-
 class TypeLot(str, Enum):
     appartement = "appartement"
     cave = "cave"
@@ -40,6 +40,7 @@ class TypeLot(str, Enum):
 # ──────────────────────────────────────────────
 #  Copropriété
 # ──────────────────────────────────────────────
+
 
 class Copropriete(SQLModel, table=True):
     __tablename__ = "copropriete"
@@ -119,7 +120,9 @@ class Batiment(SQLModel, table=True):
 class Lot(SQLModel, table=True):
     __tablename__ = "lot"
     id: Optional[int] = Field(default=None, primary_key=True)
-    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")  # None pour les parkings
+    batiment_id: Optional[int] = Field(
+        default=None, foreign_key="batiment.id"
+    )  # None pour les parkings
     numero: str
     type: TypeLot = TypeLot.appartement
     type_appartement: Optional[str] = None  # Studio, T1, T2…
@@ -129,4 +132,3 @@ class Lot(SQLModel, table=True):
     batiment: Optional[Batiment] = Relationship(back_populates="lots")
     user_lots: List["UserLot"] = Relationship(back_populates="lot")
     tickets: List["Ticket"] = Relationship(back_populates="lot")
-

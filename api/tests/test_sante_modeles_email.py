@@ -23,6 +23,7 @@ un contrôle absent.**
    de la changer, et c'est elle qui décide depuis le 08/09/2026 ;
 5. 🔴 le **cas zéro** : une base sans aucun modèle rend INCONNU, pas OK.
 """
+
 from __future__ import annotations
 
 from app.utils.email.variables import ModeleIllisible
@@ -210,8 +211,7 @@ def test_il_NOMME_le_modele_BOUCHON_au_lieu_d_accuser_une_migration():
     excès » n'est pas une dérive : c'est une absence.
     """
     ecarts = controler(
-        _Session([_Ligne("ticket_externe", "Notification ticket externe",
-                         "<p>Notification.</p>")])
+        _Session([_Ligne("ticket_externe", "Notification ticket externe", "<p>Notification.</p>")])
     )
 
     assert len(ecarts) == 1, f"écart non détecté : {ecarts}"

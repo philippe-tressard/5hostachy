@@ -1,4 +1,5 @@
 """Router boîte à idées — idées + upvotes + réponses."""
+
 import json
 from datetime import datetime
 from typing import Optional
@@ -135,27 +136,37 @@ def _enrich(idees: list, user_id: int, session: Session) -> list[dict]:
     result = []
     for idee in idees:
         nb = len(session.exec(select(VoteIdee).where(VoteIdee.idee_id == idee.id)).all())
-        mon_vote = bool(session.exec(
-            select(VoteIdee).where(VoteIdee.idee_id == idee.id, VoteIdee.user_id == user_id)
-        ).first())
+        mon_vote = bool(
+            session.exec(
+                select(VoteIdee).where(VoteIdee.idee_id == idee.id, VoteIdee.user_id == user_id)
+            ).first()
+        )
         reponses = _reponses_for(idee.id, session)
-        result.append({
-            "id": idee.id, "titre": idee.titre, "description": idee.description,
-            "auteur_id": idee.auteur_id, "statut": idee.statut,
-            #  Exposé en LISTE pour que le front n'ait rien à désérialiser — même
-            #  contrat que les événements et les annonces.
-            "perimetre_cible": _perimetre_liste(idee.perimetre_cible),
-            #  Même contrat pour le public cible : une LISTE de codes, que
-            #  `$lib/destinataires.ts` lit. Vide = tous les résidents.
-            "public_cible": json.loads(idee.public_cible or "[]"),
-            "cree_le": idee.cree_le, "nb_votes": nb, "mon_vote": mon_vote,
-            #  Calculé côté SERVEUR et transporté (#515). L'écran ne doit pas
-            #  refaire la règle : la liste et les Archives trancheraient alors
-            #  séparément, et une idée apparaîtrait dans l'une sans l'autre —
-            #  c'est le bug du 17/07/2026 sur les actualités.
-            "archivee": est_archivable("idee", idee, seuil_jours=seuil_jours),
-            "reponses": reponses, "nb_reponses": len(reponses),
-        })
+        result.append(
+            {
+                "id": idee.id,
+                "titre": idee.titre,
+                "description": idee.description,
+                "auteur_id": idee.auteur_id,
+                "statut": idee.statut,
+                #  Exposé en LISTE pour que le front n'ait rien à désérialiser — même
+                #  contrat que les événements et les annonces.
+                "perimetre_cible": _perimetre_liste(idee.perimetre_cible),
+                #  Même contrat pour le public cible : une LISTE de codes, que
+                #  `$lib/destinataires.ts` lit. Vide = tous les résidents.
+                "public_cible": json.loads(idee.public_cible or "[]"),
+                "cree_le": idee.cree_le,
+                "nb_votes": nb,
+                "mon_vote": mon_vote,
+                #  Calculé côté SERVEUR et transporté (#515). L'écran ne doit pas
+                #  refaire la règle : la liste et les Archives trancheraient alors
+                #  séparément, et une idée apparaîtrait dans l'une sans l'autre —
+                #  c'est le bug du 17/07/2026 sur les actualités.
+                "archivee": est_archivable("idee", idee, seuil_jours=seuil_jours),
+                "reponses": reponses,
+                "nb_reponses": len(reponses),
+            }
+        )
     return result
 
 
@@ -182,7 +193,9 @@ def create_idee(
     exiger_acces(user)
     exiger_non_externe(user, "soumettre d'idées")
     idee = Idee(
-        titre=body.titre, description=body.description, auteur_id=user.id,
+        titre=body.titre,
+        description=body.description,
+        auteur_id=user.id,
         assiste_ia=body.assiste_ia,
         #  Liste vide == aucune restriction : on retombe sur le défaut, comme le
         #  serveur le fait déjà pour les publications et les sondages.
@@ -191,9 +204,7 @@ def create_idee(
         #  déposées avant la migration 0176, et deux écritures pour un même
         #  sens finissent par se traiter différemment quelque part.
         public_cible=(
-            json.dumps(body.public_cible, ensure_ascii=False)
-            if body.public_cible
-            else None
+            json.dumps(body.public_cible, ensure_ascii=False) if body.public_cible else None
         ),
     )
     session.add(idee)
@@ -307,12 +318,12 @@ def update_statut(
     # Passage à un statut positif (retenue/réalisée) → prévenir les votants.
     if body.statut != ancien and body.statut in _STATUT_NOTIF_LABELS:
         votant_ids = [
-            v.user_id for v in session.exec(
-                select(VoteIdee).where(VoteIdee.idee_id == idee_id)
-            ).all()
+            v.user_id
+            for v in session.exec(select(VoteIdee).where(VoteIdee.idee_id == idee_id)).all()
         ]
         notifier_votants_idee(
-            session, background_tasks,
+            session,
+            background_tasks,
             votant_ids=votant_ids,
             idee_titre=idee.titre,
             statut_label=_STATUT_NOTIF_LABELS[body.statut],

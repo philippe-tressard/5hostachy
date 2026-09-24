@@ -14,6 +14,7 @@ chaîne attendue :
   - `front/scripts/check-libelle-perimetre.mjs` — transpile et exécute la forme
     front, puis vérifie que le test ci-dessus attend la même chaîne.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -141,7 +142,7 @@ def perimetre_label_un(perim: str) -> str:
     #  l'arbre reste seul juge. Elle survit ici parce qu'un badge vide ou un
     #  `bat:5` brut sont deux façons de se voir en production.
     if perim and perim.lower().startswith(_PREFIXE_BATIMENT):
-        return f"Bât. {perim[len(_PREFIXE_BATIMENT):]}"
+        return f"Bât. {perim[len(_PREFIXE_BATIMENT) :]}"
     return perim
 
 

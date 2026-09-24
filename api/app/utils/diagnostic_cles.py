@@ -109,7 +109,9 @@ def compter_orphelins(engine) -> dict:
             #  relation. Interrogé seulement pour les tables en défaut.
             colonnes: dict[tuple[str, int], str] = {}
             for table in {ligne[0] for ligne in lignes}:
-                for fk in conn.execute(text(f'PRAGMA foreign_key_list("{_sur(table)}")')).fetchall():
+                for fk in conn.execute(
+                    text(f'PRAGMA foreign_key_list("{_sur(table)}")')
+                ).fetchall():
                     colonnes[(table, fk[0])] = fk[3]
     except Exception as exc:  # pragma: no cover - éprouvé par un moteur simulé
         return {"ok": False, "inconnu": True, "erreur": str(exc)}
@@ -250,22 +252,35 @@ def purger_orphelins(engine, *, simuler: bool = True) -> dict:
         with engine.connect() as conn:
             lignes = conn.execute(text("PRAGMA foreign_key_check")).fetchall()
             if not lignes:
-                return {"ok": True, "inconnu": False, "simule": simuler,
-                        "supprimees": 0, "deliees": 0, "par_table": []}
+                return {
+                    "ok": True,
+                    "inconnu": False,
+                    "simule": simuler,
+                    "supprimees": 0,
+                    "deliees": 0,
+                    "par_table": [],
+                }
 
             remedes = _remedes(conn, lignes)
             par_table = Counter((t, r) for t, _rowid, _c, r in remedes)
-            resume = [{"table": t, "remede": r, "lignes": n}
-                      for (t, r), n in sorted(par_table.items(), key=lambda x: -x[1])]
+            resume = [
+                {"table": t, "remede": r, "lignes": n}
+                for (t, r), n in sorted(par_table.items(), key=lambda x: -x[1])
+            ]
             a_supprimer = sum(1 for _t, _r, _c, r in remedes if r == "suppression")
             a_delier = len(remedes) - a_supprimer
 
             if simuler:
-                return {"ok": True, "inconnu": False, "simule": True,
-                        "supprimees": 0, "deliees": 0,
-                        "seraient_supprimees": a_supprimer,
-                        "seraient_deliees": a_delier,
-                        "par_table": resume}
+                return {
+                    "ok": True,
+                    "inconnu": False,
+                    "simule": True,
+                    "supprimees": 0,
+                    "deliees": 0,
+                    "seraient_supprimees": a_supprimer,
+                    "seraient_deliees": a_delier,
+                    "par_table": resume,
+                }
 
             etat_cles = conn.execute(text("PRAGMA foreign_keys")).scalar()
             try:
@@ -283,7 +298,8 @@ def purger_orphelins(engine, *, simuler: bool = True) -> dict:
                         )
                     else:
                         conn.execute(
-                            text(f'DELETE FROM "{_sur(table)}" WHERE rowid = :r'), {"r": rowid}  # noqa: S608 — idem : _sur() lève sur tout nom hors regex
+                            text(f'DELETE FROM "{_sur(table)}" WHERE rowid = :r'),  # noqa: S608 — idem : _sur() lève sur tout nom hors regex
+                            {"r": rowid},
                         )
                 conn.commit()
             finally:
@@ -297,12 +313,19 @@ def purger_orphelins(engine, *, simuler: bool = True) -> dict:
             for e in resume:
                 logger.warning(
                     "Integrite — %s : %d ligne(s) en %s",
-                    e["table"], e["lignes"], e["remede"],
+                    e["table"],
+                    e["lignes"],
+                    e["remede"],
                 )
 
-            return {"ok": True, "inconnu": False, "simule": False,
-                    "supprimees": a_supprimer, "deliees": a_delier,
-                    "par_table": resume}
+            return {
+                "ok": True,
+                "inconnu": False,
+                "simule": False,
+                "supprimees": a_supprimer,
+                "deliees": a_delier,
+                "par_table": resume,
+            }
     except Exception as exc:  # pragma: no cover - éprouvé par un moteur simulé
         #  INCONNU, jamais « 0 traitée » : une réparation qui échoue à mi-chemin
         #  doit se dire, sinon l'appelant croirait la base assainie.

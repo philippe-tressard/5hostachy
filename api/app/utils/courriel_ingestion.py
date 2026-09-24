@@ -46,6 +46,7 @@ regarde.
 déverserait dans les tickets des réponses déjà traitées à la main. Elle est
 **configurable**, mais elle a une valeur : `PLANCHER_PAR_DEFAUT`.
 """
+
 from __future__ import annotations
 
 import re
@@ -61,9 +62,9 @@ PLANCHER_PAR_DEFAUT = datetime(2026, 9, 2)
 #: Verdicts possibles. Ils sont trois et pas deux : « je ne sais pas rattacher »
 #: n'est pas « je refuse », et les confondre ferait notifier le conseil syndical
 #: pour chaque prospectus arrivé dans la boîte.
-ACCEPTE = "accepte"          # à écrire dans le ticket
-REFUSE = "refuse"            # rattaché, mais non authentifié → prévenir le CS
-IGNORE = "ignore"            # sans rapport avec un ticket → ne rien faire
+ACCEPTE = "accepte"  # à écrire dans le ticket
+REFUSE = "refuse"  # rattaché, mais non authentifié → prévenir le CS
+IGNORE = "ignore"  # sans rapport avec un ticket → ne rien faire
 
 #: 🔴 Un QUATRIÈME verdict, ajouté le 04/09/2026. Une réponse à une relance
 #: GROUPÉE est reçue, conservée et notifiée — mais elle n'entre dans aucun fil.
@@ -71,7 +72,7 @@ IGNORE = "ignore"            # sans rapport avec un ticket → ne rien faire
 #: exactement ce qu'il fallait. Le journal disait « refusées=1 » sur un
 #: traitement réussi, et c'est le journal qu'on lit pour savoir si la relève va
 #: bien.
-RELANCE = "relance"          # rattachée à une relance groupée → conservée, non ventilée
+RELANCE = "relance"  # rattachée à une relance groupée → conservée, non ventilée
 
 
 @dataclass(frozen=True)
@@ -187,5 +188,6 @@ def examiner(
 
     ok, motif = expediteur_authentifie(lire.get("authentication-results"), from_)
     decision = ACCEPTE if ok else REFUSE
-    return Verdict(decision, jeton=jeton, reference=reference, numero=numero,
-                   expediteur=from_, motif=motif)
+    return Verdict(
+        decision, jeton=jeton, reference=reference, numero=numero, expediteur=from_, motif=motif
+    )

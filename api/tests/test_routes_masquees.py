@@ -34,6 +34,7 @@ route (le montage dépend du démarrage). Ce test ne couvre donc QUE le module
 quatre sous-routeurs sur le même préfixe. Le dire plutôt que de laisser croire
 à une garantie générale (`standards/04` §12).
 """
+
 from __future__ import annotations
 
 import re
@@ -65,9 +66,9 @@ def test_l_ordre_declare_ici_est_celui_du_fichier():
     programme que celui qui tourne."""
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "app" / "routers" / "acces" / "__init__.py").read_text(
-        encoding="utf-8"
-    )
+    source = (
+        Path(__file__).resolve().parents[1] / "app" / "routers" / "acces" / "__init__.py"
+    ).read_text(encoding="utf-8")
     trouves = re.findall(r"router\.include_router\((\w+)\.router\)", source)
     assert trouves == [nom for nom, _ in ORDRE], (
         f"l'ordre d'inclusion a changé — fichier : {trouves}, test : {[n for n, _ in ORDRE]}.\n"
@@ -77,10 +78,7 @@ def test_l_ordre_declare_ici_est_celui_du_fichier():
 
 def _routes() -> list[tuple[str, APIRoute]]:
     return [
-        (nom, r)
-        for nom, module in ORDRE
-        for r in module.router.routes
-        if isinstance(r, APIRoute)
+        (nom, r) for nom, module in ORDRE for r in module.router.routes if isinstance(r, APIRoute)
     ]
 
 
@@ -88,8 +86,7 @@ def test_le_controle_lit_bien_des_routes():
     """Sans routes, tout ce qui suit serait vert sans rien mesurer."""
     routes = _routes()
     assert len(routes) > 20, (
-        f"seulement {len(routes)} route(s) lues dans le module accès : "
-        "le contrôle ne mesure rien."
+        f"seulement {len(routes)} route(s) lues dans le module accès : le contrôle ne mesure rien."
     )
 
 

@@ -25,6 +25,7 @@ Le second point est la leçon du 11/08 (cf. `check-reliability.sh`) : je testais
 décision, pas le tuyau qui la nourrit. Une fonction pure parfaite qu'un routeur
 n'appelle pas laisse le défaut intact, et le test reste vert.
 """
+
 import ast
 from pathlib import Path
 
@@ -42,16 +43,26 @@ ROUTER = Path(__file__).resolve().parents[1] / "app" / "routers" / "sondages" / 
 
 # ── 1. La décision ────────────────────────────────────────────────────────────
 
+
 @pytest.mark.parametrize(
     "resultats_publics, cloture, attendu, pourquoi",
     [
-        (True,  False, True,  "case cochée, sondage ouvert : c'est le cas nominal"),
-        (True,  True,  True,  "case cochée, sondage clos : visibles a fortiori"),
-        (False, True,  True,  "case DÉCOCHÉE mais sondage CLOS — « avant clôture » "
-                              "ne veut pas dire « jamais » : c'est le cas que le front "
-                              "rendait impossible en écrasant sa propre condition"),
-        (False, False, False, "case décochée, sondage ouvert : LE seul cas à masquer, "
-                              "et celui qui ne l'était pas"),
+        (True, False, True, "case cochée, sondage ouvert : c'est le cas nominal"),
+        (True, True, True, "case cochée, sondage clos : visibles a fortiori"),
+        (
+            False,
+            True,
+            True,
+            "case DÉCOCHÉE mais sondage CLOS — « avant clôture » "
+            "ne veut pas dire « jamais » : c'est le cas que le front "
+            "rendait impossible en écrasant sa propre condition",
+        ),
+        (
+            False,
+            False,
+            False,
+            "case décochée, sondage ouvert : LE seul cas à masquer, et celui qui ne l'était pas",
+        ),
     ],
 )
 def test_table_de_verite(resultats_publics, cloture, attendu, pourquoi):
@@ -76,6 +87,7 @@ def test_aucune_exception_pour_personne():
 
 
 # ── 2. Le point d'appel ───────────────────────────────────────────────────────
+
 
 def _arbre_et_parents():
     arbre = ast.parse(ROUTER.read_text(encoding="utf-8"))
@@ -106,7 +118,8 @@ def test_cas_zero_le_routeur_est_analysable():
 def test_le_routeur_appelle_la_regle_partagee():
     arbre, _ = _arbre_et_parents()
     appels = [
-        n for n in ast.walk(arbre)
+        n
+        for n in ast.walk(arbre)
         if isinstance(n, ast.Call)
         and isinstance(n.func, ast.Name)
         and n.func.id == "resultats_sondage_visibles"
@@ -130,7 +143,8 @@ def test_nb_votes_est_produit_sous_la_decision():
     get_sondage = _fonction(arbre, "get_sondage")
 
     mentions = [
-        n for n in ast.walk(get_sondage)
+        n
+        for n in ast.walk(get_sondage)
         if isinstance(n, ast.Constant) and n.value in ("nb_votes", "reponses_libres")
     ]
     assert mentions, (
@@ -146,9 +160,7 @@ def test_nb_votes_est_produit_sous_la_decision():
             if courant is get_sondage:
                 break
             if isinstance(courant, ast.If):
-                noms = {
-                    n.id for n in ast.walk(courant.test) if isinstance(n, ast.Name)
-                }
+                noms = {n.id for n in ast.walk(courant.test) if isinstance(n, ast.Name)}
                 if "resultats_visibles" in noms:
                     garde = True
                     break

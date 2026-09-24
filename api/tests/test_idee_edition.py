@@ -36,6 +36,7 @@ Ni le `statut` : il a sa route, réservée au conseil syndical, qui horodate
 `statut_change_le` et prévient les votants. Deux chemins vers le même fait, dont
 un qui oublierait les deux effets de bord.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -117,6 +118,7 @@ def conseiller() -> Utilisateur:
 
 # ── 🔴 L'auteur voit toujours ce qu'il a écrit ────────────────────────────────
 
+
 def test_l_auteur_voit_son_idee_meme_s_il_l_a_ciblee_ailleurs(locataire):
     """Sans ce court-circuit, l'auteur perd sa propre idée, sans recours."""
     with Session(engine) as session:
@@ -169,7 +171,8 @@ def test_un_tiers_hors_public_ne_voit_toujours_pas(locataire, voisin):
     with Session(engine) as session:
         idee = create_idee(
             IdeeCreate(
-                titre="Composteur", description="<p>Espaces verts.</p>",
+                titre="Composteur",
+                description="<p>Espaces verts.</p>",
                 public_cible=["locataires"],
             ),
             session=session,
@@ -185,6 +188,7 @@ def test_un_tiers_hors_public_ne_voit_toujours_pas(locataire, voisin):
 
 
 # ── Corriger une idée ─────────────────────────────────────────────────────────
+
 
 def _idee_de(auteur: Utilisateur) -> int:
     """Une idée visible de tous — l'axe géographique est neutralisé.
@@ -227,9 +231,7 @@ def test_un_voisin_ne_corrige_pas_l_idee_d_un_autre(locataire, voisin):
     try:
         with Session(engine) as session:
             with pytest.raises(HTTPException) as refus:
-                update_idee(
-                    idee_id, IdeeUpdate(titre="Détourné"), session=session, user=voisin
-                )
+                update_idee(idee_id, IdeeUpdate(titre="Détourné"), session=session, user=voisin)
             assert refus.value.status_code == 403
     finally:
         _supprimer(Idee, idee_id)
@@ -279,8 +281,10 @@ def test_corriger_ne_repousse_pas_l_archivage(locataire):
             avant = session.get(Idee, idee_id).statut_change_le
         with Session(engine) as session:
             update_idee(
-                idee_id, IdeeUpdate(description="<p>Corrigée.</p>"),
-                session=session, user=locataire,
+                idee_id,
+                IdeeUpdate(description="<p>Corrigée.</p>"),
+                session=session,
+                user=locataire,
             )
         with Session(engine) as session:
             assert session.get(Idee, idee_id).statut_change_le == avant
@@ -291,7 +295,5 @@ def test_corriger_ne_repousse_pas_l_archivage(locataire):
 def test_idee_inexistante_rend_404(locataire):
     with Session(engine) as session:
         with pytest.raises(HTTPException) as refus:
-            update_idee(
-                999_999, IdeeUpdate(titre="Fantôme"), session=session, user=locataire
-            )
+            update_idee(999_999, IdeeUpdate(titre="Fantôme"), session=session, user=locataire)
         assert refus.value.status_code == 404

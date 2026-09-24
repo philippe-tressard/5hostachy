@@ -14,6 +14,7 @@ les deux appelants n'ont pas la même contrainte :
   - `documents.py` sert par un endpoint authentifié qui impose lui-même le
     `media_type` → il conserve l'extension d'origine, utile au diagnostic.
 """
+
 import os
 import re
 import unicodedata
@@ -360,15 +361,11 @@ def verifier_fichier_recu(
 
     if content_type not in regles.types:
         attendus = ", ".join(sorted(regles.extensions))
-        raise HTTPException(
-            400, f"Format non supporté : {content_type}. Attendu : {attendus}."
-        )
+        raise HTTPException(400, f"Format non supporté : {content_type}. Attendu : {attendus}.")
 
     plafond = regles.plafond_mo * 1024 * 1024
     if len(octets) > plafond:
-        raise HTTPException(
-            413, f"Fichier trop volumineux (max {regles.plafond_mo} Mo)."
-        )
+        raise HTTPException(413, f"Fichier trop volumineux (max {regles.plafond_mo} Mo).")
 
     extension = regles.types[content_type]
 

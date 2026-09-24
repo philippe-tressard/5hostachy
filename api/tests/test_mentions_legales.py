@@ -45,6 +45,7 @@ retouche en administration. Le relevé se fait à la main :
 Une limite nommée vaut mieux qu'une limite tue — sans ce paragraphe, un vert ici
 se lirait « le site est conforme », ce qu'il ne dit pas.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -55,9 +56,7 @@ from app.seed.contenus_legaux import DEFAULT_LEGAL
 
 _RACINE = Path(__file__).resolve().parents[1]
 _MIGRATION = _RACINE / "alembic" / "versions" / "0170_mentions_legales_reelles.py"
-_MIGRATION_POLITIQUE = (
-    _RACINE / "alembic" / "versions" / "0171_politique_confidentialite_exacte.py"
-)
+_MIGRATION_POLITIQUE = _RACINE / "alembic" / "versions" / "0171_politique_confidentialite_exacte.py"
 
 
 def _charger(chemin: Path, nom: str):
@@ -157,6 +156,7 @@ def test_la_migration_n_ecrase_PAS_une_redaction_a_la_main():
 
 # ── La politique de confidentialité (migration 0171) ─────────────────────────
 
+
 def test_le_seed_n_affirme_plus_qu_aucune_donnee_ne_sort_de_l_UE():
     """🔴 L'affirmation était FAUSSE, et deux pages du site se contredisaient.
 
@@ -213,9 +213,7 @@ def test_les_corrections_de_0171_sont_bien_formees():
     for avant, apres in corrections:
         assert avant.strip(), "un fragment cherché est vide : il correspondrait partout"
         assert avant != apres, "une correction qui ne change rien est une migration inerte"
-        assert len(avant) > 40, (
-            f"fragment trop court pour être sûr de sa cible : {avant!r}"
-        )
+        assert len(avant) > 40, f"fragment trop court pour être sûr de sa cible : {avant!r}"
     #  Et le défaut nommé par le lot doit bien être celui qu'on corrige.
     assert any("Aucun transfert hors UE" in avant for avant, _ in corrections)
     assert not any("Aucun transfert hors UE" in apres for _, apres in corrections)
@@ -223,9 +221,7 @@ def test_les_corrections_de_0171_sont_bien_formees():
 
 # ── Aucune personne physique nommée sur une page publique (0173) ─────────────
 
-_MIGRATION_ANONYME = (
-    _RACINE / "alembic" / "versions" / "0173_editeur_sans_nom_de_personne.py"
-)
+_MIGRATION_ANONYME = _RACINE / "alembic" / "versions" / "0173_editeur_sans_nom_de_personne.py"
 
 
 def test_l_editeur_publie_n_est_plus_une_personne_nommee():

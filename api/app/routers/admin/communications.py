@@ -22,6 +22,7 @@ router = APIRouter()
 
 # ── Historique emails ─────────────────────────────────────────────────────────
 
+
 @router.get("/emails/historique")
 def emails_historique(
     session: Session = Depends(get_session),
@@ -54,6 +55,8 @@ def telemetry_history(
     _: Utilisateur = Depends(require_admin),
 ):
     return derniers_rapports(session, HistoriqueTelemetrie)
+
+
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────
 
 from app.utils.recuperer import derniers_rapports, ou_404
@@ -118,10 +121,7 @@ def list_modeles_email(
     plus cesse de mentir sans qu'il faille la supprimer partout.
     """
     modeles = session.exec(select(ModeleEmail).order_by(ModeleEmail.code)).all()
-    return [
-        {**m.model_dump(), "variables_disponibles": _variables_du_modele(m)}
-        for m in modeles
-    ]
+    return [{**m.model_dump(), "variables_disponibles": _variables_du_modele(m)} for m in modeles]
 
 
 @router.patch("/modeles-email/{modele_id}")
@@ -191,6 +191,7 @@ def update_modele_email(
                 )
         setattr(modele, key, value)
     from datetime import datetime
+
     modele.modifie_le = datetime.utcnow()
     modele.modifie_par_id = _.id
     session.add(modele)

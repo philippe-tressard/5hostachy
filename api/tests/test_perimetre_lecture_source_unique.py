@@ -43,6 +43,7 @@ C'est la leçon du ticket : **factoriser suppose d'avoir tranché**. Cinq copies
 identiques (`exiger_non_externe`) se factorisent sans risque ; trois lectures aux
 défauts différents demandent d'abord de savoir lequel est le bon, et où.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -65,7 +66,7 @@ EXCEPTIONS = {
 
 #  La forme que prenaient les quatre copies : un `json.loads` dont le repli est la
 #  chaîne « résidence » écrite dans le code.
-MOTIF = 'or \'["résidence"]\''
+MOTIF = "or '[\"résidence\"]'"
 
 
 def _fichiers_python() -> list[Path]:

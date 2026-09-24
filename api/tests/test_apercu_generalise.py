@@ -25,6 +25,7 @@ même façon, et personne ne le verrait avant qu'un message soit parti.
 Le point 3 est le plus important : un aperçu peut appeler la bonne fonction de
 composition et rester faux si on lui donne un contexte fabriqué à la main.
 """
+
 from __future__ import annotations
 
 import ast
@@ -157,8 +158,12 @@ def test_l_assembleur_appelle_les_fonctions_de_l_envoi():
     entités montreraient la même chose — et la même chose fausse.
     """
     source = ASSEMBLEUR.read_text(encoding="utf-8")
-    for attendu in ("composer_email(", "_contexte_rendu(", "construire_message(",
-                    "message_sans_contenu("):
+    for attendu in (
+        "composer_email(",
+        "_contexte_rendu(",
+        "construire_message(",
+        "message_sans_contenu(",
+    ):
         assert attendu in source, (
             f"L'assembleur n'appelle plus `{attendu}` : il compose de son côté, "
             "et les trois aperçus mentiront ensemble."

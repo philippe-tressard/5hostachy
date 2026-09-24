@@ -5,6 +5,7 @@ administrateur n'avait aucun chemin d'écran pour le faire sur l'affaire d'un
 résident : le crayon ne lui est pas montré, et le serveur refuse qu'il en
 réécrive le texte. Mêmes règles que la correction ; la trace est au fil.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,7 +19,9 @@ from tests.test_intervenant_affaire import _compte, _creer, session  # noqa: F40
 
 
 def _suite(session, user, ticket_id, **champs):
-    corps = TicketEvolutionCreate(type="commentaire", contenu="<p>Pris en charge.</p>", notifier=False, **champs)
+    corps = TicketEvolutionCreate(
+        type="commentaire", contenu="<p>Pris en charge.</p>", notifier=False, **champs
+    )
     return evolutions.add_evolution(ticket_id, corps, BackgroundTasks(), session=session, user=user)
 
 
@@ -30,7 +33,12 @@ def test_le_conseil_planifie_l_affaire_d_un_resident_par_une_suite(session):
     lu = session.get(Ticket, t.id)
     assert (lu.equipement, lu.debut) == ("toiture", datetime(2026, 10, 2, 9, 0))
     #  La trace est AU FIL : la Suite dit ce qu'elle a posé.
-    derniere = max(session.exec(evolutions.select(TicketEvolution).where(TicketEvolution.ticket_id == t.id)).all(), key=lambda e: e.id)
+    derniere = max(
+        session.exec(
+            evolutions.select(TicketEvolution).where(TicketEvolution.ticket_id == t.id)
+        ).all(),
+        key=lambda e: e.id,
+    )
     assert "Équipement" in derniere.contenu and "Quand" in derniere.contenu
 
 

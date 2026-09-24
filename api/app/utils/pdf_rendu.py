@@ -77,6 +77,7 @@ loggers de même nom, où ses propres niveaux et handlers s'appliquent comme
 avant. Seule différence observable : elles arrivent groupées à la fin du rendu
 plutôt qu'au fil de l'eau.
 """
+
 from __future__ import annotations
 
 import logging
@@ -126,11 +127,13 @@ def _rendre_dans_l_enfant(tube, html: str) -> None:
     class _Collecteur(logging.Handler):
         def emit(self, enregistrement: logging.LogRecord) -> None:
             if len(journal) < MAX_JOURNAL:
-                journal.append((
-                    enregistrement.name,
-                    enregistrement.levelno,
-                    enregistrement.getMessage(),
-                ))
+                journal.append(
+                    (
+                        enregistrement.name,
+                        enregistrement.levelno,
+                        enregistrement.getMessage(),
+                    )
+                )
 
     #  L'enfant ne sait pas de quoi il hérite : avec `spawn` il réimporte le
     #  module principal de l'appelant (pytest, uvicorn…), qui a pu désactiver le
@@ -230,8 +233,7 @@ def rendre_pdf(html: str, *, delai_s: float = DELAI_RENDU_S) -> bytes:
     try:
         if not lecture.poll(delai_s):
             raise RenduPdfImpossible(
-                f"rendu abandonné après {delai_s:.0f} s — document trop lourd "
-                "ou moteur bloqué"
+                f"rendu abandonné après {delai_s:.0f} s — document trop lourd ou moteur bloqué"
             )
         try:
             message = lecture.recv()
@@ -246,7 +248,7 @@ def rendre_pdf(html: str, *, delai_s: float = DELAI_RENDU_S) -> bytes:
             raise RenduPdfImpossible(
                 f"le process de rendu est mort sans rien produire (code de "
                 f"sortie {enfant.exitcode}) — mémoire insuffisante, ou module "
-                f"principal sans garde `if __name__ == \"__main__\"` "
+                f'principal sans garde `if __name__ == "__main__"` '
                 f"(voir la trace du process enfant ci-dessus)"
             ) from exc
     finally:

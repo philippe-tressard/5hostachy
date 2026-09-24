@@ -13,6 +13,7 @@ Arbitrages de l'utilisateur, 23/09/2026 :
 Les règles vivent dans `utils/intervenant` et `utils/nature_affaire` ; ces
 tests passent par les vraies routes de création et de correction.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -41,8 +42,12 @@ def session(monkeypatch, batiments):
 
 def _compte(session, *, role=None):
     u = Utilisateur(
-        email=f"int-{uuid.uuid4().hex[:8]}@exemple.test", mot_de_passe_hash="x",
-        prenom="P", nom="N", actif=True, statut=StatutUtilisateur.copropriétaire_résident,
+        email=f"int-{uuid.uuid4().hex[:8]}@exemple.test",
+        mot_de_passe_hash="x",
+        prenom="P",
+        nom="N",
+        actif=True,
+        statut=StatutUtilisateur.copropriétaire_résident,
         roles_json=role.value if role else "résident",
     )
     session.add(u)
@@ -66,17 +71,28 @@ def _creer(session, user, **champs):
 
 def _corriger(session, user, ticket_id, **champs):
     return mise_a_jour.update_ticket(
-        ticket_id, TicketUpdate(**champs), BackgroundTasks(), session=session, user=user,
+        ticket_id,
+        TicketUpdate(**champs),
+        BackgroundTasks(),
+        session=session,
+        user=user,
     )
 
 
 # ── L'intervenant et la récurrence ──────────────────────────────────────────
 
+
 def test_le_conseil_designe_l_intervenant_et_la_recurrence(session):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
     p = _prestataire(session)
-    lu = _creer(session, cs, categorie="entretien", prestataire_id=p.id,
-                frequence_type="mois", frequence_valeur=3)
+    lu = _creer(
+        session,
+        cs,
+        categorie="entretien",
+        prestataire_id=p.id,
+        frequence_type="mois",
+        frequence_valeur=3,
+    )
     assert (lu.prestataire_id, lu.prestataire_nom) == (p.id, p.nom)
     assert (lu.frequence_type, lu.frequence_valeur) == ("mois", 3)
 
@@ -117,7 +133,9 @@ def test_la_recurrence_ne_vaut_que_pour_un_entretien(session):
     lu = _creer(session, cs, categorie="panne", frequence_type="mois", frequence_valeur=3)
     assert (lu.frequence_type, lu.frequence_valeur) == (None, None)
 
-    entretien = _creer(session, cs, categorie="entretien", frequence_type="mois", frequence_valeur=6)
+    entretien = _creer(
+        session, cs, categorie="entretien", frequence_type="mois", frequence_valeur=6
+    )
     lu = _corriger(session, cs, entretien.id, categorie="panne")
     assert (lu.frequence_type, lu.frequence_valeur) == (None, None)
 
@@ -138,6 +156,7 @@ def test_le_conseil_change_et_efface_l_intervenant(session):
 
 
 # ── Les catégories du conseil ───────────────────────────────────────────────
+
 
 @pytest.mark.parametrize("categorie", ["etude_travaux", "entretien", "actualite"])
 def test_un_resident_ne_cree_pas_une_categorie_du_conseil(session, categorie):
@@ -181,6 +200,7 @@ def test_une_categorie_du_conseil_ne_fait_pas_une_actualite(session):
 
 # ── Les deux états nés des colonnes du kanban ───────────────────────────────
 
+
 @pytest.mark.parametrize("statut, colonne", [("en_ag", "ag"), ("chez_prestataire", "fournisseur")])
 def test_les_deux_nouveaux_etats_ont_leur_colonne(session, statut, colonne):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
@@ -190,6 +210,7 @@ def test_les_deux_nouveaux_etats_ont_leur_colonne(session, statut, colonne):
 
 
 # ── Le glissement au kanban : une Suite d'état, sans avertir personne ───────
+
 
 @pytest.mark.parametrize("notifier, attendu", [(True, 1), (False, 0)])
 def test_un_glissement_au_kanban_n_avertit_personne(session, monkeypatch, notifier, attendu):
@@ -215,6 +236,7 @@ def test_un_glissement_au_kanban_n_avertit_personne(session, monkeypatch, notifi
 
 
 # ── « Quand » : planifié par le conseil syndical seul (23/09/2026) ──────────
+
 
 def test_un_resident_ne_planifie_pas_a_la_creation(session):
     """Ignoré, pas refusé : son affaire se crée, sans date."""

@@ -26,6 +26,7 @@ seul geste nécessaire pour exposer un nouveau type d'élément, et
 `api/tests/test_liens_front.py` vérifie que chaque ligne pointe vers une page
 réelle, un onglet réellement déclaré, et un onglet qui rend bien cette ancre.
 """
+
 from __future__ import annotations
 
 #: L'adresse publique du site, telle qu'on peut la CONCATÉNER.
@@ -175,6 +176,7 @@ def lien_element(prefixe: str, identifiant: int) -> str:
 def page_element(prefixe: str) -> str:
     """Route seule (sans ancre) — pour un repli quand l'identifiant est inconnu."""
     return EMPLACEMENTS[prefixe]
+
 
 def lien_sondage(sondage_id: int | None = None) -> str:
     """Fiche d'un sondage, ou la rubrique elle-même quand l'identifiant est inconnu.
