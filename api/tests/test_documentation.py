@@ -119,3 +119,50 @@ def test_ancrage_du_controle_p3_reste_valide():
     )
     # Le contrôle doit rester capable de dire qu'il n'a pas pu mesurer.
     assert "INCONNU" in skill, "P3 ne prévoit plus de sortie INCONNU"
+
+
+#: Les nombres qu'une consigne écrit en lettres devant une liste.
+_NOMBRES_EN_LETTRES = {"deux": 2, "trois": 3, "quatre": 4, "cinq": 5, "six": 6}
+
+
+def _etape_0_bis(skill: str) -> tuple[int | None, list[str]]:
+    """Le compte annoncé par l'étape 0 bis, et les lignes de son tableau."""
+    m = re.search(r"^## Étape 0 bis.*?(?=^## )", skill, re.MULTILINE | re.DOTALL)
+    assert m, "section « Étape 0 bis » introuvable dans mep-precheck/SKILL.md"
+    section = m.group(0)
+    annonce = re.search(r"\*\*(\w+)\*\* exigences", section)
+    compte = _NOMBRES_EN_LETTRES.get(annonce.group(1).lower()) if annonce else None
+    lignes = re.findall(r"^\| (0[a-z]) \| \*\*([^*|—]+)", section, re.MULTILINE)
+    return compte, [f"{code} {nom.split(',')[0].strip()}" for code, nom in lignes]
+
+
+def test_etape_0_bis_annonce_autant_d_exigences_qu_elle_en_tabule():
+    """Le nombre écrit en tête de l'étape 0 bis = les lignes de son tableau (#122).
+
+    Il a divergé DEUX fois : « deux » au-dessus d'un tableau de trois, corrigé le
+    21/09/2026, puis revenu dans la copie du même tableau que portait la fin du
+    fichier (v2.19.0). Un audit de doublons par date et chiffre ne le voyait pas.
+    """
+    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(encoding="utf-8")
+    compte, lignes = _etape_0_bis(skill)
+    assert compte is not None, "l'étape 0 bis n'annonce plus son nombre d'exigences en « **N** exigences »"
+    assert compte == len(lignes), (
+        f"L'étape 0 bis annonce {compte} exigences mais en tabule {len(lignes)} ({', '.join(lignes)})."
+    )
+
+
+def test_etape_0_bis_n_est_tabulee_qu_une_fois():
+    """Les exigences 0c–0e ne s'écrivent qu'au tableau de l'étape 0 bis (#122).
+
+    La seconde copie, en fin de fichier, portait d'autres outils dans sa colonne
+    « Automatisé par » et un autre compte en titre : deux tableaux pour une liste.
+    """
+    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(encoding="utf-8")
+    _, lignes = _etape_0_bis(skill)
+    assert lignes, "le tableau de l'étape 0 bis est vide ou illisible"
+    for ligne in lignes:
+        code, nom = ligne.split(" ", 1)
+        # Le code seul ne suffit pas : les points 0a–0d du script réemploient
+        # « 0c » et « 0d » pour autre chose. C'est l'exigence qui ne se recopie pas.
+        n = len(re.findall(rf"^\| {code} \| \*\*{re.escape(nom)}", skill, re.MULTILINE))
+        assert n == 1, f"l'exigence « {ligne} » est tabulée {n} fois dans mep-precheck/SKILL.md — un seul tableau"

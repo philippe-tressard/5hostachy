@@ -77,10 +77,11 @@ règles reste un mauvais déploiement.
 | # | Exigence | Vérification | Automatisé par |
 |---|---|---|---|
 | 0c | **Autorisation centralisée, aucun passe-droit** | Toute règle de sécurité dans `app/auth/deps.py` · tout endpoint porte une dépendance · exceptions publiques énumérées et justifiées · `has_role(RoleUtilisateur.…)` jamais `user.role` ni chaîne · exposition publique en **liste blanche** | `api/tests/test_autorisation.py` (5 tests, CI) |
-| 0d | **Factorisation** | Aucun code spécifique ne réimplémente une bibliothèque partagée (dates, montants, alertes, thème PDF, destinataires) | `test_dates_fr.py` · `front/scripts/check-dates.mjs` — le reste par relecture |
+| 0d | **Factorisation** | Aucun code spécifique ne réimplémente une bibliothèque partagée (dates, montants, alertes, thème PDF, destinataires) | `test_dates_fr.py` · `npm run lint:dates` · `npm run lint:notifications` — le reste par relecture |
 | 0e | **Documentation à jour** | README (et ses badges) · manuel utilisateur · `specs/` reflètent l'état livré | `api/tests/test_documentation.py` pour la partie mécanique ; le fond reste à relire |
 
-**0c — pourquoi cette exigence a besoin d'un test et non d'une consigne.** L'audit du
+**0c — pourquoi cette exigence a besoin d'un test et non d'une consigne** (principe :
+`standards/03-securite.md` §1 ; ici, son instanciation). L'audit du
 26/07/2026 a trouvé l'exigence globalement respectée — 276 endpoints, aucun contrôle
 sur `user.role`, tout par `has_role()` — et pourtant **trois dérives installées sans
 que rien ne les signale** :
@@ -328,13 +329,11 @@ sont des points *pré*-push. Lire les points **1 à 18**, qui sont le post-check
   vérifier à la main dans **Admin → E-mails → Historique**, filtre `erreur`,
   7 jours. Repli quand le standby est au repos : voir `HISTORIQUE.md`.
 
-### Avant même le script — les deux exigences hors machines
+### Avant même le script — l'étape 0 bis
 
-| # | Exigence | Automatisé par |
-|---|---|---|
-| 0c | **Autorisation centralisée**, aucun passe-droit | `api/tests/test_autorisation.py` |
-| 0d | **Factorisation** — aucun code spécifique ne réimplémente une bibliothèque partagée | `test_dates_fr.py`, `npm run lint:dates`, `lint:notifications` |
-| 0e | **Documentation à jour** — manuel, README, `specs/` | `api/tests/test_documentation.py` (partie mécanique) |
+Les exigences 0c à 0e, hors machines, sont au tableau de l'**étape 0 bis** plus
+haut, et nulle part ailleurs : ce fichier en portait une seconde copie, qui avait
+recompté « deux » au-dessus de trois lignes (#122).
 
 **Protocole si anomalie** : diagnostiquer → proposer un plan → corriger après
 validation → relancer le script → livrer seulement si tout est vert.

@@ -28,6 +28,7 @@
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
+	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { IDEE } from '$lib/entites/idee';
@@ -105,14 +106,14 @@
 
 <CadreFormulaire edition={modeEdition} titre={modeEdition ? 'Modifier l’idée' : 'Nouvelle idée'}>
 	<form on:submit|preventDefault={enregistrer}>
-		<label class="field champ-large">
-			Titre *
-			<input
-				bind:value={form.titre}
-				placeholder="Ex. Vélos électriques en libre-service"
-				required
-			/>
-		</label>
+		<!--  1. Le titre, par `SectionTitre` comme les six autres formulaires : il
+		      était écrit ici en libellé de champ, « Titre * » en noir, au lieu de la
+		      section TITRE* dont l'astérisque rougit tant qu'elle est vide (#1186). -->
+		<SectionTitre
+			id="idee-titre-{idee?.id ?? 'new'}"
+			bind:valeur={form.titre}
+			placeholder="Ex. Vélos électriques en libre-service"
+		/>
 		<!--  4 et 6 : le PÉRIMÈTRE et la description, hérités du composant partagé.
 		      Le périmètre est arrivé le 18/08/2026 (migration 0153) — l'idée était la
 		      dernière entité de la Communauté sans aucune notion de lieu, alors que

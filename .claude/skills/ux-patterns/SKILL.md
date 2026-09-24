@@ -453,6 +453,11 @@ le **bouton** qui reste en haut, pas la boîte qu'il ouvre. Le bouton s'efface
 pendant la saisie (#367), le formulaire prend sa place dans le flux — après ce
 qui qualifie la liste.
 
+🔒 **Garde-fou depuis le 24/09/2026 : `npm run lint:filtre-avant-formulaire`.**
+La règle était écrite ici depuis douze jours, et la Boîte à idées comme les Petites
+annonces rendaient encore leur filtre SOUS la boîte ouverte (#1186) — signalé à
+l'écran, jamais en relecture, puisque l'écart n'existe que le formulaire ouvert.
+
 ## 1. Icônes de contexte
 
 | Icône | Signification | Usage |

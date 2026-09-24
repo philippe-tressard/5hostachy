@@ -69,10 +69,6 @@
 	//  annonces, qui ont tranché la question le 18/08.
 </script>
 
-{#if showForm}
-	<FormulaireIdee on:cree on:annule />
-{/if}
-
 <!--  🔴 LE FORMULAIRE DE CORRECTION N'EST PLUS ICI (#787, 06/09/2026).
       Il était monté après les deux listes : « c'est tout en bas, et on ne voit
       pas ». Il remplace maintenant la description DANS la carte, par le slot
@@ -93,6 +89,12 @@
 	tous="Toutes"
 	libelle="Filtrer les idées par état"
 />
+
+<!--  §0 ter : la boîte de création vient APRÈS les filtres — ce qui qualifie la
+      liste reste au-dessus du formulaire ouvert (#1186). `lint:filtre-avant-formulaire`. -->
+{#if showForm}
+	<FormulaireIdee on:cree on:annule />
+{/if}
 
 <EtatListe
 	{chargement}

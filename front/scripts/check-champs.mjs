@@ -43,6 +43,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
+import { etoilesEnLigne, etoilesFinDeLigne, PLAFOND_ETOILES_FIN_DE_LIGNE } from './lib-etoiles.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
@@ -431,32 +432,30 @@ if (optMortes.length) {
 	process.exit(1);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  L'ASTÉRISQUE DES CHAMPS REQUIS NE S'ÉCRIT PAS À LA MAIN (#1121, 22/09/2026)
-// ════════════════════════════════════════════════════════════════════════════
-//
-//  🔴 La règle, demandée à l'écran : l'astérisque est **collée** au libellé, et
-//  **rouge tant que le champ est vide** — elle cesse d'être une décoration pour
-//  devenir l'état du champ.
-//
-//  Un caractère ne sait pas si le champ est vide. Elle était écrite trente-cinq
-//  fois — vingt-six `<label>Titre *</label>` en clair et cinq composants qui
-//  calculaient `{requis ? ' *' : ''}` —, et aucun de ces points ne connaissait
-//  la valeur. C'est `EtoileRequis` qui la reçoit, et lui seul.
-//
-//  ⚠️ Ce qui est refusé : une astérisque **précédée d'un espace** juste avant
-//  une fin de libellé. Pas toutes les astérisques — une note de bas de tableau,
-//  un motif de recherche, une multiplication en gardent le droit.
+//  L'astérisque tapée : deux formes, dans `lib-etoiles.mjs` (#1121, #1186).
 const ETOILES = [];
+const ETOILES_FIN_DE_LIGNE = [];
 for (const chemin of composants(RACINE)) {
 	const relatif = relative(RACINE, chemin).split(sep).join('/');
 	if (relatif.endsWith('EtoileRequis.svelte')) continue;
-	const source = sansCommentaires(readFileSync(chemin, 'utf8'));
-	source.split('\n').forEach((ligne, i) => {
-		if (/ \*<\/(label|span)>/.test(ligne) || /\{requis \? ' \*' : ''\}/.test(ligne)) {
-			ETOILES.push(`src/${relatif}:${i + 1}  ${ligne.trim().slice(0, 70)}`);
-		}
-	});
+	const brut = readFileSync(chemin, 'utf8');
+	for (const f of etoilesEnLigne(brut)) ETOILES.push(`src/${relatif}:${f.ligne}  ${f.texte}`);
+	for (const f of etoilesFinDeLigne(brut))
+		ETOILES_FIN_DE_LIGNE.push(`src/${relatif}:${f.ligne}  ${f.texte}`);
+}
+if (ETOILES_FIN_DE_LIGNE.length > PLAFOND_ETOILES_FIN_DE_LIGNE) {
+	ETOILES.push(...ETOILES_FIN_DE_LIGNE);
+	console.error(
+		`\n✗ ${ETOILES_FIN_DE_LIGNE.length} astérisque(s) en fin de ligne de libellé — le plafond est ` +
+			`${PLAFOND_ETOILES_FIN_DE_LIGNE}.`,
+	);
+} else if (ETOILES_FIN_DE_LIGNE.length < PLAFOND_ETOILES_FIN_DE_LIGNE) {
+	console.error(
+		`\n✗ Le plafond est PÉRIMÉ : ${ETOILES_FIN_DE_LIGNE.length} astérisque(s) en fin de ligne pour ` +
+			`un plafond de ${PLAFOND_ETOILES_FIN_DE_LIGNE}.\n\n  Abaisser \`PLAFOND_ETOILES_FIN_DE_LIGNE\` ` +
+			`à ${ETOILES_FIN_DE_LIGNE.length} : un plafond au-dessus du réel laisse la place d'en réintroduire.\n`,
+	);
+	process.exit(1);
 }
 if (ETOILES.length > 0) {
 	console.error(`\n✗ ${ETOILES.length} astérisque(s) de champ requis écrite(s) à la main :\n`);

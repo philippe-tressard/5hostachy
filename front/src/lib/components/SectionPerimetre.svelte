@@ -28,7 +28,8 @@
 
 	export let perimetre: string[] = [];
 	export let mode: 'multi' | 'single' = 'multi';
-	export let requis = true;
+	/**  Lu dans la déclaration par l'appelant (`requisDe`) — jamais vrai d'office (#1186). */
+	export let requis = false;
 
 	/** Un badge imposé par l'appelant — sinon celui du périmètre par défaut. */
 	export let badgeImpose: string | null = null;
