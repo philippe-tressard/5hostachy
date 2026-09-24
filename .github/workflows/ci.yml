@@ -138,9 +138,21 @@ jobs:
         # Ce qui couvre les migrations, c'est `test_migrations.py` :
         # `test_aucune_NOUVELLE_fstring_sans_bindparams` refuse la 28ᵉ, avec la
         # liste des 27 d'avant FIGÉE — de l'historique, pas une tolérance.
+        #
+        # `tests/` depuis le 24/09/2026 (#1048) : la CI n'y passait AUCUNE règle,
+        # et `test_verrou_bascule.py` employait `nl` sans le définir. Le message
+        # d'un `assert` n'est évalué qu'en cas d'échec : le test était vert, et
+        # aurait levé `NameError` au lieu de son rapport le jour où il attrapait
+        # une recopie — un contrôle qui ne peut pas rendre son verdict.
+        # Même jeu « erreurs réelles » qu'`alembic/`, et rien de plus :
+        # 🔴 F811 est ÉCARTÉ exprès — pytest injecte une fixture (`session`,
+        # `scene`) sous le nom de la fonction qui la déclare, et Ruff y lit ~70
+        # redéfinitions qui n'en sont pas. Les « corriger » casserait les tests.
+        # F401 (46 imports inutiles) relève du point 2 de #1048, pas de ce lot.
         run: |
           ruff check api/app/ --select E9,F63,F7,F82,F401,S608
           ruff check api/alembic/ --select E9,F63,F7,F82
+          ruff check api/tests/ --select E9,F63,F7,F82
         # On garde un garde-fou « erreurs réelles » (syntaxe, noms invalides, runtime)
         # sans bloquer le CI sur des règles de style legacy.
 
@@ -979,6 +991,7 @@ jobs:
           node scripts/check-evenements.mjs --selftest
           node scripts/check-csp-servie.mjs --selftest
           node scripts/check-lien-evitement.mjs --selftest
+          node scripts/check-a11y.mjs --selftest
           node scripts/check-seuil-listes-courtes.mjs --selftest
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
