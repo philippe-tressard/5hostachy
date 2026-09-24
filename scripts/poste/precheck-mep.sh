@@ -492,6 +492,8 @@ rapporter 11 "$V11" "Auto-deploy de l'actif vivant" "log appartient à ${PROPRIO
 #  aucun test de CI ne pouvait le voir, la valeur fautive étant en BASE.
 . "$RACINE_DEPOT/scripts/lib/lib-precheck-liens.sh"
 precheck_point_liens
+. "$RACINE_DEPOT/scripts/lib/lib-precheck-pages.sh"   # 20 — l'ordre du menu servi (#1114)
+precheck_point_pages
 
 . "$RACINE_DEPOT/scripts/lib/lib-precheck-infra.sh"
 precheck_points_infra
