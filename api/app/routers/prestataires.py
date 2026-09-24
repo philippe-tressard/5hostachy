@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import json
 
 from pydantic import BaseModel, field_validator, field_validator
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 #  ⚠️ `get_current_user` n'est plus importé : il ne servait qu'à `list_devis`,
@@ -102,7 +103,11 @@ def list_prestataires(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    prests = session.exec(select(Prestataire).where(Prestataire.actif == True)).all()
+    #  Par ordre ALPHABÉTIQUE (#1145) : on cherche une entreprise par son nom, et
+    #  l'ordre d'insertion n'aidait personne. Sans tenir compte de la casse.
+    prests = session.exec(
+        select(Prestataire).where(Prestataire.actif == True).order_by(func.lower(Prestataire.nom))  # noqa: E712
+    ).all()
     return [_prest_to_read(p) for p in prests]
 
 

@@ -463,7 +463,8 @@
 				{#if sectionPresente(TICKET, etat, 'intervenant')}
 					<SectionIntervenant
 						idPrefixe="ticket"
-						{prestataires}
+						bind:prestataires
+						{equipement}
 						erreur={erreurPrestataires}
 						pliable={pliageDe(TICKET, 'intervenant')}
 						bind:prestataireId
