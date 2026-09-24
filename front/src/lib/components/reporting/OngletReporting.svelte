@@ -53,6 +53,7 @@
 	import VuePrestataires from './VuePrestataires.svelte';
 	import VueRenouvellements from './VueRenouvellements.svelte';
 	import VueRelanceSyndic from './VueRelanceSyndic.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	/** Libellé de l'onglet, pour l'en-tête d'impression. */
 	export let titreOnglet = 'Reporting';
@@ -257,7 +258,7 @@
 	</div>
 
 	{#if reportingLoading}
-		<p style="color:var(--color-text-muted)">Chargement des reportings…</p>
+		<EtatListe chargement messageChargement="Chargement des reportings…" />
 	{:else if reportView === 'kanban'}
 		<VueKanban {reportDossiers} />
 	{:else if reportView === 'tickets'}

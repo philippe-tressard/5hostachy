@@ -32,6 +32,7 @@
 	import { messageErreur } from '$lib/erreurs';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let releve: CspReleve | null = null;
 	let chargement = true;
@@ -64,7 +65,7 @@
 </p>
 
 {#if chargement && !releve}
-	<p>Chargement…</p>
+	<EtatListe chargement />
 {:else if releve}
 	{#if releve.note}
 		<!--  🔴 En AVERTISSEMENT, jamais en réussite : « aucun rapport » peut

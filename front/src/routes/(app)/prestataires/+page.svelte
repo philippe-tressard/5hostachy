@@ -40,6 +40,7 @@
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import { routeOnglet } from '$lib/routes-onglets';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', defautsDePage('prestataires'));
 	$: _siteNom = $siteNomStore;
@@ -523,7 +524,7 @@
 <BarreOnglets pageId="prestataires" actif={onglet} />
 
 {#if loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 
 	<!-- ══════════════════════════════════════════════════════════════ -->
 	<!-- ONGLET 3 : CONTRATS                                          -->

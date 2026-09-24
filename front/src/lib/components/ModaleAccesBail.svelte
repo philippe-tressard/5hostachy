@@ -31,6 +31,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	/** Le bail dont on gère les accès. */
 	export let bailId: number;
@@ -241,7 +242,7 @@
 <Modale edition {titre} styleBoite="width:min(620px,95vw)" on:fermer={fermer}>
 	<div class="modal-body">
 		{#if loadingAcces}
-			<p style="color:var(--color-text-muted)">Chargement…</p>
+			<EtatListe chargement />
 		{:else if erreurAcces}
 			<!--  L'échec AVANT le vide : « aucun accès » et « je n'ai pas pu lire les
 			      accès » mènent à des décisions opposées. -->

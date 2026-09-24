@@ -11,6 +11,7 @@
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { replier } from '$lib/texte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _pc = getPageConfig($configStore, 'faq', defautsDePage('faq'));
 	$: _siteNom = $siteNomStore;
@@ -424,7 +425,7 @@
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 {:else if items.length === 0}
 	<div class="card" style="padding:2rem;text-align:center;color:var(--color-text-muted)">
 		Aucune question pour l'instant.

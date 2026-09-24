@@ -358,6 +358,8 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       libellés de champ sont en MAJUSCULES par le style (`champs.css`), comme
       les intitulés de section — jamais tapées (`npm run lint:champs`)
 - [ ] Libellés et nommage en français
+- [ ] Attente d'un écran : `<EtatListe chargement />`, jamais un « Chargement… »
+      écrit à la main — il y en avait **23** avant #1045 (`npm run lint:chargement`)
 - [ ] En-tête de page : `<EntetePage>`, jamais `<div class="page-header">`
       (`ux-patterns` §13)
 - [ ] Icône vérifiée dans `$lib/icones-svg.json` — un nom inconnu échoue en silence
