@@ -653,6 +653,14 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .field .filters {
 	margin-bottom: 0;
 }
+/*  Même raison pour une rangée IMBRIQUÉE dans une barre (24/09/2026) : un
+    `ChoixPastilles` posé dans un `.filters` apporte le sien. Sa marge basse,
+    prise dans l'`align-items: center` de la barre, remontait les pastilles de
+    10 px au-dessus des listes voisines — les Petites annonces. C'est la barre
+    extérieure qui se décolle de la liste, pas chacune de ses rangées. */
+.filters .filters {
+	margin-bottom: 0;
+}
 
 /* ── Case à cocher ──
    Une case et son libellé sur une ligne, cliquables ensemble.
@@ -767,13 +775,8 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	height: 100%;
 	align-self: stretch;
 }
-.filter-select {
-	padding: 0.35rem 0.5rem;
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius);
-	font-size: 0.85rem;
-	background: var(--color-bg);
-}
+/*  `.filter-select` n'existe plus (24/09/2026) : une liste de filtre au-delà du
+    seuil se rend par `PastilleDeroulante`, qui porte sa forme. */
 
 /* ── Modals (global) ── */
 .modal-overlay {
