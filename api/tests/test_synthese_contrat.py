@@ -149,7 +149,6 @@ def test_TOUS_les_documents_du_contrat_sont_lus(session):
 def test_l_ordre_est_CHRONOLOGIQUE_car_un_avenant_modifie_ce_qui_précède(session):
     """Ce qui vient après amende ce qui précède : l'ordre porte le sens, on ne
     trie donc ni par titre ni par taille."""
-    from datetime import datetime
 
     c = _contrat(session)
     recent = _document(session, c, publie_le=datetime(2026, 5, 1))

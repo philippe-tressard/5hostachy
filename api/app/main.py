@@ -119,7 +119,7 @@ async def lifespan(app: FastAPI):
     with Session(engine) as _s:
         _s.exec(
             delete(RefreshToken).where(
-                (RefreshToken.revoked == True) | (RefreshToken.expires_at < datetime.utcnow())
+                (RefreshToken.revoked == True) | (RefreshToken.expires_at < datetime.utcnow())  # noqa: E712
             )
         )
         _s.commit()

@@ -174,7 +174,7 @@ def list_compteurs_config(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     return session.exec(
-        select(CompteurConfig).where(CompteurConfig.actif == True).order_by(CompteurConfig.ordre)
+        select(CompteurConfig).where(CompteurConfig.actif == True).order_by(CompteurConfig.ordre)  # noqa: E712
     ).all()
 
 

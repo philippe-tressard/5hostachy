@@ -141,7 +141,7 @@ def traiter_compte(
                 select(Utilisateur).where(
                     func.lower(Utilisateur.nom) == user.nom_aide.strip().lower(),
                     func.lower(Utilisateur.prenom) == user.prenom_aide.strip().lower(),
-                    Utilisateur.actif == True,
+                    Utilisateur.actif == True,  # noqa: E712
                 )
             ).first()
             aide_result = {"aide_trouve": False, "lots": 0, "tc": 0, "vigik": 0, "delegation": False}
@@ -149,7 +149,7 @@ def traiter_compte(
                 aide_result["aide_trouve"] = True
                 aide_result["aide_nom"] = nom_affiche(aide.prenom, aide.nom)
                 # Copier les lots
-                aide_lots = session.exec(select(UserLot).where(UserLot.user_id == aide.id, UserLot.actif == True)).all()
+                aide_lots = session.exec(select(UserLot).where(UserLot.user_id == aide.id, UserLot.actif == True)).all()  # noqa: E712
                 for ul in aide_lots:
                     exists = session.exec(select(UserLot).where(UserLot.user_id == user.id, UserLot.lot_id == ul.lot_id)).first()
                     if not exists:

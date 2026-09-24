@@ -138,7 +138,7 @@ def audit_user_lots(
     """Liste toutes les associations user-lot avec détails pour audit.
     Permet de repérer les affectations erronées."""
     rows = session.exec(
-        select(UserLot).where(UserLot.actif == True).order_by(UserLot.user_id)
+        select(UserLot).where(UserLot.actif == True).order_by(UserLot.user_id)  # noqa: E712
     ).all()
     result = []
     for ul in rows:

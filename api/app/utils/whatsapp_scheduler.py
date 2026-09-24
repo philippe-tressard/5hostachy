@@ -95,7 +95,7 @@ def check_and_send():
 
     with Session(engine) as session:
         schedules = session.exec(
-            select(WhatsAppScheduled).where(WhatsAppScheduled.enabled == True)
+            select(WhatsAppScheduled).where(WhatsAppScheduled.enabled == True)  # noqa: E712
         ).all()
 
         if not schedules:

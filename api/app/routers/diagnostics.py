@@ -70,7 +70,7 @@ def list_types(
 ):
     types = session.exec(
         select(DiagnosticType)
-        .where(DiagnosticType.actif == True)
+        .where(DiagnosticType.actif == True)  # noqa: E712
         .order_by(DiagnosticType.ordre)
     ).all()
     result = []
@@ -131,7 +131,7 @@ async def upload_rapport(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    diag_type = ou_404(session, DiagnosticType, type_id, "Type de diagnostic")
+    ou_404(session, DiagnosticType, type_id, "Type de diagnostic")
 
     # REPERTOIRE_PRIVE et non la racine du volume : un rapport de diagnostic
     # (DPE, amiante, plomb) se télécharge par un endpoint authentifié ; posé à la

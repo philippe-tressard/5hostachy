@@ -183,7 +183,7 @@ def create_sondage(
     #  la main les deux filtres de ciblage — une seconde écriture de la règle
     #  d'accès, qui ne connaissait donc ni les périmètres transverses ni le CS.
     #  `sondage_accessible` est désormais la seule à en décider.
-    q = select(Utilisateur).where(Utilisateur.actif == True, Utilisateur.id != user.id)
+    q = select(Utilisateur).where(Utilisateur.actif == True, Utilisateur.id != user.id)  # noqa: E712
     residents = session.exec(q).all()
     for r in residents:
         if not sondage_accessible(s, r):

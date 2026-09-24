@@ -63,7 +63,7 @@ def list_utilisateurs(
     # Batch : user_ids ayant au moins 1 lot lié
     loti_ids = set(
         session.exec(
-            select(UserLot.user_id).where(UserLot.actif == True).distinct()
+            select(UserLot.user_id).where(UserLot.actif == True).distinct()  # noqa: E712
         ).all()
     )
     #  « A un badge » : UNE définition, `utils/porteurs_acces` (#1194). Celle
@@ -78,7 +78,7 @@ def list_utilisateurs(
     )
     bail_locataire_ids = set(
         session.exec(
-            select(LocationBail.locataire_id).where(LocationBail.locataire_id != None).distinct()
+            select(LocationBail.locataire_id).where(LocationBail.locataire_id != None).distinct()  # noqa: E711
         ).all()
     )
     lie_ids = bail_bailleur_ids | bail_locataire_ids
@@ -222,7 +222,7 @@ def supprimer_utilisateur(
     Nettoie toutes les interactions liées : lots, tokens, accès, notifications, votes, baux, etc."""
     if admin.id == user_id:
         raise HTTPException(400, "Vous ne pouvez pas supprimer votre propre compte.")
-    user = ou_404(session, Utilisateur, user_id, "Utilisateur")
+    ou_404(session, Utilisateur, user_id, "Utilisateur")
 
     # 0. Télémétrie (RGPD art. 17 — droit à l'effacement)
     for ev in session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user_id)).all():
