@@ -1100,6 +1100,13 @@ jobs:
         working-directory: front
         run: npm run lint:couches
 
+      # Une section Description passe par SectionDescription (assistant IA
+      # compris) : l'annonce de hall la montait à la main (#1089) ; les deux
+      # écarts restants sont déclarés avec #1240.
+      - name: Description passant par SectionDescription
+        working-directory: front
+        run: npm run lint:description-unique
+
       # Une section Workflow DÉCORATIVE : les pastilles s'affichaient en création
       # d'un ticket, se cliquaient, et `statut` ne partait pas dans le POST — le
       # ticket repartait toujours en « Ouvert » (#435). Le serveur l'acceptait

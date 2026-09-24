@@ -59,6 +59,7 @@
 	// Formulaire de création
 	let ahTitre = '';
 	let ahMessage = '';
+	let ahAssisteIA = false;
 	let ahPerimetre: string[] = perimetreDefautListe();
 	let ahFormat: AhFormat = 'auto';
 	let ahPhotos: string[] = [];
@@ -162,12 +163,14 @@
 			envoyer_auteur: ahEnvoyerAuteur,
 			format_demande: ahFormat,
 			images: ahPhotos,
+			assiste_ia: ahAssisteIA || undefined,
 		};
 	}
 
 	function ahResetForm() {
 		ahTitre = '';
 		ahMessage = '';
+		ahAssisteIA = false;
 		ahPerimetre = perimetreDefautListe();
 		ahFormat = 'auto';
 		ahPhotos = [];
@@ -238,6 +241,7 @@
 				<FormulaireAnnonceHall
 					bind:titre={ahTitre}
 					bind:message={ahMessage}
+					bind:assisteIA={ahAssisteIA}
 					bind:perimetre={ahPerimetre}
 					bind:format={ahFormat}
 					bind:photos={ahPhotos}

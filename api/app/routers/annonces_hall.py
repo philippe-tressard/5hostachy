@@ -123,6 +123,7 @@ def _to_read(annonce: AnnonceHall, session: Session) -> dict:
         "id": annonce.id,
         "titre": annonce.titre,
         "message": annonce.message,
+        "assiste_ia": annonce.assiste_ia,
         "apercu": texte_brut(annonce.message)[:APERCU_MAX],
         "perimetre_cible": perimetres,
         "perimetre_label": perimetre_label_liste(perimetres),
@@ -301,6 +302,8 @@ def creer_annonce_hall(
     envoyer_syndic: bool = False,
     partager_whatsapp: bool = False,
     envoyer_auteur: bool = False,
+    #  La section Description a l'assistant IA, et sa marque (#1089).
+    assiste_ia: bool = False,
 ) -> AnnonceHall:
     """Génère le PDF et l'enregistre dans l'historique.
 
@@ -347,6 +350,7 @@ def creer_annonce_hall(
         ticket_id=ticket_id,
         auteur_id=user.id,
         cree_le=maintenant,
+        assiste_ia=assiste_ia,
     )
     session.add(annonce)
     session.commit()
@@ -415,6 +419,7 @@ def create_annonce_hall(
         envoyer_syndic=body.envoyer_syndic,
         partager_whatsapp=body.partager_whatsapp,
         envoyer_auteur=body.envoyer_auteur,
+        assiste_ia=body.assiste_ia,
     )
     return _to_read(annonce, session)
 

@@ -326,6 +326,8 @@ export interface AnnonceHall {
 	id: number;
 	titre: string;
 	message: string;
+	/** « Rédigé avec l'assistant IA » (#1089). */
+	assiste_ia?: boolean;
 	apercu: string;
 	perimetre_cible: string[];
 	perimetre_label: string;
@@ -354,6 +356,7 @@ export interface AnnonceHall {
 export interface AnnonceHallInput {
 	titre: string;
 	message: string;
+	assiste_ia?: boolean;
 	perimetre_cible: string[];
 	format_demande: string;
 	images?: string[];

@@ -12,6 +12,8 @@ déclarer ici en ferait une seconde description de la même sortie.
 """
 from pydantic import BaseModel
 
+from app.utils.assiste_ia import AssisteIAEntree
+
 
 class AnnonceHallBase(BaseModel):
     titre: str
@@ -21,7 +23,7 @@ class AnnonceHallBase(BaseModel):
     images: list[str] = []
 
 
-class AnnonceHallCreate(AnnonceHallBase):
+class AnnonceHallCreate(AnnonceHallBase, AssisteIAEntree):
     #  🔴 La DIFFUSION est un ACTE, et elle se coche (section 9 du cadre #430).
     #
     #  L'envoi au CS était AUTOMATIQUE jusqu'au 18/08, puis supprimé le même jour

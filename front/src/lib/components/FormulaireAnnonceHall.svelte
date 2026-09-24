@@ -33,7 +33,8 @@
 <script lang="ts">
 	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
 	import { annoncesHall as annoncesHallApi } from '$lib/api';
-	import RichEditor from '$lib/components/RichEditor.svelte';
+	import SectionDescription from '$lib/components/SectionDescription.svelte';
+	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -49,6 +50,8 @@
 	export let perimetre: string[] = [];
 	export let format: AhFormat = 'auto';
 	export let photos: string[] = [];
+	/** Vrai dès qu'une proposition de l'assistant a été appliquée (#1089). */
+	export let assisteIA = false;
 
 	/**  Éléments du fil proposés au pré-remplissage — actualités, tickets ET
 	 *   événements (10/09/2026). Vide : le bloc ne s'affiche pas. */
@@ -254,10 +257,19 @@
 	<p class="aide">Imprimé sur l'affiche : il dit où elle doit être posée.</p>
 </SectionFormulaire>
 
-<!--  6. Description — ici, le message affiché. -->
-<SectionFormulaire titre="Message" requis rempli={!!message?.trim()} idTitre="ah-message-titre">
-	<RichEditor bind:value={message} placeholder="Rédigez l'annonce telle qu'elle sera affichée…" />
-</SectionFormulaire>
+<!--  6. Description — le texte affiché sur l'affiche (#1089, arbitré le 20/09/2026).
+      Elle s'appelait « Message » et montait un éditeur à la main : c'était le seul
+      formulaire à Description privé de l'assistant IA — celui d'une affiche lue par
+      toute la résidence. Le champ garde son nom technique (`message`) côté API. -->
+<SectionDescription
+	idPrefixe="ah"
+	requis
+	placeholder="Rédigez l'annonce telle qu'elle sera affichée…"
+	bind:valeur={message}
+	assistant={contexteAssistant('annonce de hall', { Périmètre: perimetreContexte(perimetre) })}
+	bind:titreObjet={titre}
+	bind:assisteIA
+/>
 
 <SectionFormulaire titre="Photos" pour="ah-photos">
 	<!--  7. Photos. Le champ n'écrit PAS son intitulé : la section le porte déjà,

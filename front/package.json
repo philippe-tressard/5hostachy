@@ -46,6 +46,7 @@
 		"lint:titres": "node scripts/check-titre-double.mjs",
 		"lint:modales": "node scripts/check-modales.mjs",
 		"lint:couches": "node scripts/check-couches.mjs",
+		"lint:description-unique": "node scripts/check-description-unique.mjs",
 		"lint:workflow": "node scripts/check-workflow-envoye.mjs",
 		"lint:consignes": "node scripts/check-consignes.mjs",
 		"lint:session": "node scripts/check-renouvellement-session.mjs",
