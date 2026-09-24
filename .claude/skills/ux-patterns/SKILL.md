@@ -1685,7 +1685,8 @@ de l'utilisateur. *Une consigne fausse fait lire l'écart comme une décision.*
 ⚠️ **Vérifier que l'icône existe** dans `$lib/icones-svg.json` : `Icon` retombe
 **silencieusement** sur `help-circle` pour un nom inconnu. `message-square-plus`
 n'existe pas et aurait affiché un point d'interrogation sans qu'aucun contrôle ne
-le dise (constaté le 15/08/2026).
+le dise (constaté le 15/08/2026). Depuis le 24/09/2026, `npm run lint:icones` le
+dit : il a trouvé `database`, affiché en « ? » depuis v2.19.0 (#1045).
 
 **Garde-fou** : `npm run lint:entetes` (job `build-frontend`) refuse un
 `class="page-header"` écrit à la main, une redéfinition locale de `.page-header`,
