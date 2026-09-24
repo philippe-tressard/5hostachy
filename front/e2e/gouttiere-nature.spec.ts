@@ -7,7 +7,8 @@
  *  nature à la verticale. Sur une carte d'une ou deux lignes, « CALENDRIER »
  *  était plus long que la carte : il en dépassait. Trois alternatives ont été
  *  maquettées ; la C est choisie à l'écran — le mot à l'HORIZONTALE, en petites
- *  capitales, sous l'icône, la bande un peu élargie.
+ *  capitales, sous l'icône — puis ABRÉGÉ (ACTU. · CAL. · AFF.) pour que la bande
+ *  garde sa largeur d'origine.
  *
  *  Le risque qu'elle prend est l'inverse : un mot trop LARGE pour la bande.
  *  Ce test le mesure pour chaque nature, avec la police que le navigateur
@@ -41,7 +42,10 @@ test('le mot de chaque nature tient, à plat, dans la gouttière', async ({ page
 			const mot = getComputedStyle(temoin, '::after');
 			const bande = getComputedStyle(temoin, '::before');
 			ctx.font = `${mot.fontWeight} ${mot.fontSize} ${mot.fontFamily}`;
-			const texte = mot.textTransform === 'uppercase' ? n.libelle.toUpperCase() : n.libelle;
+			//  Le mot AFFICHÉ, lu sur l'attribut que le CSS rend — pas le libellé
+			//  du filtre, qui est plus long et n'est pas celui de la gouttière.
+			const affiche = temoin.getAttribute('data-nature-libelle') ?? '';
+			const texte = mot.textTransform === 'uppercase' ? affiche.toUpperCase() : affiche;
 			const espacement = parseFloat(mot.letterSpacing) || 0;
 			sortie.push({
 				nature: n.val,
