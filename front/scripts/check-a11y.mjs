@@ -67,6 +67,15 @@ const TROIS_CAS =
  * chaque édition, et une exception qui pointe à côté ne protège plus rien.
  */
 const EXCEPTIONS = {
+	'src/lib/components/Saisie.svelte::a11y_autofocus': {
+		depuis: '24/09/2026',
+		raison:
+			'la boîte ne sert qu’à ce champ, et `Modale` ne déplace pas le focus : sans ' +
+			'`autofocus`, le clavier et le lecteur d’écran restent sur le bouton DERRIÈRE la ' +
+			'boîte (motif « dialog » de l’APG : le focus entre dans la boîte à l’ouverture). ' +
+			'Tombe quand `Modale` posera elle-même le focus initial. Était tu par un ' +
+			'`svelte-ignore` jusqu’à #1045.',
+	},
 	'src/routes/(app)/tableau-de-bord/+page.svelte::a11y_no_noninteractive_element_to_interactive_role':
 		{
 			depuis: '28/08/2026',

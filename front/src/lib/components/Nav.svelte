@@ -186,9 +186,9 @@
 
 <!-- ─── Overlay menu mobile ────────────────────────────────────────────── -->
 {#if menuOpen}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div class="overlay-backdrop" on:click={closeMenu}></div>
+	<!--  Le fond de `Modale` : `role="presentation"`, rien à activer au clavier —
+	      le menu se ferme par le bouton ☰, qui porte `aria-expanded` (#1045). -->
+	<div class="overlay-backdrop" role="presentation" on:click={closeMenu}></div>
 	<div class="overlay-menu">
 		<div class="overlay-nav">
 			{#each allNav as item (item.href)}
