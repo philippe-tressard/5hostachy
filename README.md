@@ -156,11 +156,11 @@ Toute la configuration se fait via le fichier `.env` (voir [.env.example](.env.e
 | Document | Description |
 |---|---|
 | [specs/](specs/) | Spécifications fonctionnelles et techniques |
-| [docs/deploy-rpi5-auto.md](docs/deploy-rpi5-auto.md) | Déploiement automatique sur Raspberry Pi 5 |
+| [docs/deploy-rpi5-auto.md](docs/deploy-rpi5-auto.md) | Renvois : où se lit le déploiement automatique (`auto-deploy.sh`, `infra/points-entree/`) — plus une procédure |
 | [docs/restauration-complete.md](docs/restauration-complete.md) | Procédure de restauration complète |
 | [docs/redondance-rpi5.md](docs/redondance-rpi5.md) | Architecture de redondance (failover) |
 | [docs/cloudflare-worker-maintenance.md](docs/cloudflare-worker-maintenance.md) | Page de maintenance Cloudflare |
-| [docs/icones-menu.md](docs/icones-menu.md) | Les icônes du menu, écran par écran |
+| [docs/icones-menu.md](docs/icones-menu.md) | Renvois : où se lisent les icônes du menu (`pages.ts`, `pages-roles.ts`) — plus un inventaire |
 | [docs/manuel-utilisateur.html](docs/manuel-utilisateur.html) | **Manuel utilisateur** — ce que chaque écran contient et qui peut le voir |
 
 ## Sécurité

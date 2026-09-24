@@ -56,12 +56,20 @@ en une journée par un coup d'œil humain, et c'est exactement le genre de
 vérification que ces tests existent pour automatiser — sans pouvoir encore
 l'atteindre.
 
-## ⚠️ Ces tests ne sont pas encore dans la CI
+## En CI : le job `e2e-frontend` (depuis le 08/09/2026, #839)
 
-Les navigateurs pèsent une centaine de mégaoctets à installer sur un exécuteur.
-Le job s'ajoutera quand le périmètre couvert le justifiera ; d'ici là ils se
-lancent à la main, et `.gitignore` tient leurs sorties à l'écart
-(`e2e-rapport/`, `test-results/`).
+Ils tournent à chaque PR, dans un job **à part** de `.github/workflows/ci.yml`
+(`e2e-frontend`, « Tests de navigateur (Playwright) ») : Chromium seul — les deux
+profils, bureau et mobile, l'emploient — installé par
+`npx playwright install --with-deps chromium`, puis `npm run e2e`. Job séparé et
+non une étape de `build-frontend`, pour ne pas faire payer l'installation des
+navigateurs à chaque lint de style.
+
+⚠️ Cette section a dit « Ces tests ne sont pas encore dans la CI » jusqu'au
+24/09/2026, seize jours après le branchement du job (#1045) : une consigne fausse
+est pire qu'absente. Sur le poste, ils se lancent par `npm run e2e` (ou
+`bash scripts/poste/rejouer-ci.sh e2e-frontend`), et `.gitignore` tient leurs
+sorties à l'écart (`e2e-rapport/`, `test-results/`).
 
 🔴 **Un test d'interface qui échoue pour une raison étrangère à l'interface finit
 désarmé.** C'est pourquoi le contrôle des erreurs de console écarte explicitement

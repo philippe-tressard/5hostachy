@@ -235,35 +235,29 @@ Le token est disponible dans **Cloudflare Zero Trust > Networks > Tunnels > Conf
 
 ---
 
-## Étape 11 — Crons (sudo crontab -e)
+## Étape 11 — Points d'entrée : crons et unité systemd
+
+Les tâches cron et l'unité systemd attendues **ne sont pas recopiées ici** : elles
+vivent dans [`infra/points-entree/`](../infra/points-entree/LISEZMOI.md), seule
+source versionnée, que le point 17 du pré-check compare à l'installé. Une copie
+dans ce document divergerait au premier changement de cadence — c'est arrivé :
+cette étape ne listait que trois crons sur cinq, avec des minutes qui n'étaient
+plus les bonnes, et oubliait l'unité systemd (#1049).
+
+| Fichier du dépôt | À poser |
+|---|---|
+| `infra/points-entree/cron-root.crontab` | `sudo crontab -e` — les lignes actives, à l'identique |
+| `infra/points-entree/cron-ptressard.crontab` | `crontab -e` en `ptressard` (propriétaire du clone) |
+| `infra/points-entree/hostachy-role-guard.service` | voir ci-dessous |
 
 ```bash
-sudo crontab -e
+sudo cp /opt/5hostachy/infra/points-entree/hostachy-role-guard.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable hostachy-role-guard.service
 ```
 
-Ajouter les trois lignes suivantes :
-
-```cron
-# Bascule quotidienne rpi1 ↔ rpi2 (02h00)
-0 2 * * * /opt/5hostachy/scripts/exploitation/bascule.sh >> /var/log/hostachy-bascule.log 2>&1
-
-# Surveillance site + failover automatique (toutes les 5 min)
-*/5 * * * * /opt/5hostachy/scripts/exploitation/health-watch.sh >> /var/log/hostachy-health-watch.log 2>&1
-
-# Maintenance hebdomadaire (dimanche 03h00)
-0 3 * * 0 /opt/5hostachy/scripts/exploitation/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
-```
-
-Rendre les scripts exécutables :
+Vérifier la conformité, **depuis le poste** :
 ```bash
-chmod +x /opt/5hostachy/scripts/exploitation/bascule.sh
-chmod +x /opt/5hostachy/scripts/exploitation/health-watch.sh
-chmod +x /opt/5hostachy/scripts/exploitation/maintenance.sh
-```
-
-Vérifier :
-```bash
-sudo crontab -l
+bash scripts/poste/verifier-points-entree.sh ptressard@<IP-du-RPi>
 ```
 
 ---
@@ -326,7 +320,7 @@ sudo systemctl enable --now unattended-upgrades
 | UFW actif | `sudo ufw status` |
 | Fail2ban actif | `sudo systemctl status fail2ban` |
 | Cloudflare tunnel | `sudo systemctl status cloudflared` |
-| Crons actifs | `sudo crontab -l` |
+| Crons et unité systemd | `bash scripts/poste/verifier-points-entree.sh ptressard@<IP>` (depuis le poste) |
 | Flag .active | `cat /opt/5hostachy/.active` |
 | Accès web LAN | `http://192.168.1.222` |
 | Accès web public | `https://5hostachy.fr` |
@@ -350,11 +344,15 @@ sudo bash /opt/5hostachy/scripts/exploitation/MaJ-Hostachy.sh
 ├── docker-compose.yml
 ├── Caddyfile
 ├── Dockerfile.caddy              ← Image Caddy custom (tzdata)
-├── bascule.sh                    ← Bascule quotidienne rpi1 ↔ rpi2
-├── health-watch.sh               ← Surveillance + failover automatique
-├── maintenance.sh                ← Maintenance hebdomadaire (cron)
-├── MaJ-Hostachy.sh               ← Mise à jour manuelle
-├── install-cloudflared.sh        ← Installation tunnel Cloudflare
+├── boot-role-guard.sh            ← Seul relais gardé : l'unité systemd le désigne
+├── scripts/
+│   ├── exploitation/             ← Lancés par cron/systemd (bascule, health-watch,
+│   │                               maintenance, check-reliability, auto-deploy,
+│   │                               MaJ-Hostachy…)
+│   ├── installation/             ← install-cloudflared.sh…
+│   ├── lib/                      ← Bibliothèques partagées
+│   └── poste/                    ← Lancés depuis le poste (pré-check…)
+├── infra/points-entree/          ← Crons et unité systemd attendus (source unique)
 ├── api/                          ← FastAPI + Alembic
 │   ├── Dockerfile
 │   ├── requirements.txt
