@@ -49,6 +49,8 @@
 	 *   Il n'invente rien : `concerneTousLesResidents` est la fonction qu'emploie
 	 *   déjà le sélecteur lui-même. */
 	$: badge = concerneTousLesResidents(destinataires) ? 'Tous les résidents' : '';
+	/** Le motif d'extinction de la section, ou `''` (`inactivePour`, #1191). */
+	export let inactive = '';
 </script>
 
 <SectionFormulaire
@@ -56,6 +58,7 @@
 	{pliable}
 	{badge}
 	titre={SECTIONS_LIBELLE.destinataires}
+	{inactive}
 	{requis}
 	rempli={destinataires.length > 0}
 	valeurModifiee={!concerneTousLesResidents(destinataires)}

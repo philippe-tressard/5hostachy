@@ -48,6 +48,9 @@
 	import ChampsContrat from './ChampsContrat.svelte';
 	import DocumentsContrat from './DocumentsContrat.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
+	import { CONTRAT } from '$lib/entites/contrat';
+	import { SECTIONS_LIBELLE } from '$lib/entites/types';
+	import { pliageDe } from '$lib/pliage';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	/** L'état du formulaire, lié dans les deux sens par l'appelant. */
@@ -123,7 +126,15 @@
 	      attachant une fois l'objet enregistré. Aucun endpoint ne manquait, le
 	      geste existait sur un autre écran. La dette déclarée était une dette
 	      d'inattention. -->
-	<SectionFormulaire titre="Documents" pour="contrat-{contratId ?? 'nouveau'}-doc">
+	<!--  🔴 « Pièces jointes », le nom de la section 8 partout (#1095) : elle
+	      s'appelait encore « Documents » ici, et ne suivait pas son pliage
+	      déclaré (24/09/2026, signalé à l'écran). -->
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.pieces_jointes}
+		pliable={pliageDe(CONTRAT, 'pieces_jointes')}
+		valeurModifiee={documents.length > 0 || fichiersEnAttente.length > 0}
+		pour="contrat-{contratId ?? 'nouveau'}-doc"
+	>
 		<!--  `.field champ-large` : l'enveloppe que `SectionsPiecesJointes` pose
 		      pour les tickets. Sans elle, le champ de nommage ne prend pas la
 		      largeur de la boîte. -->

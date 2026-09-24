@@ -93,6 +93,7 @@
 /*  Même typographie pour le libellé DEVANT une rangée de filtres (23/09/2026) :
     il nomme un groupe comme un titre de section nomme ses champs. */
 .section-formulaire .field > label,
+.section-formulaire label.field,
 .section-formulaire .libelle-groupe,
 .libelle-groupe.libelle-devant {
 	font-size: 0.72rem;
@@ -248,6 +249,21 @@ label.field {
 	font-size: 0.875rem;
 	font-weight: 500;
 	color: var(--color-text);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+/*  🔴 Le libellé qui ENVELOPPE son champ échappait aux deux règles ci-dessus
+    (24/09/2026, signalé à l'écran sur « Nouveau contrat ») : elles visaient
+    `.field label`, un libellé DANS un `.field` — pas un `<label>` qui EST le
+    `.field`. Six champs sur sept de la section « Le contrat » s'affichaient en
+    casse ordinaire et en gras, « FRÉQUENCE » seule en capitales. La règle est
+    corrigée ici, une fois, pour tous les écrans qui emploient cette forme.
+
+    ⚠️ Le champ lui-même ne prend pas les capitales : la saisie d'un résident
+    se lit telle qu'il l'a tapée. */
+label.field :is(input, select, textarea) {
+	text-transform: none;
+	letter-spacing: normal;
 }
 /*  ⚠️ DÉFINITION UNIQUE du champ de saisie. Elle l'était si peu qu'`app.css`
     la portait DEUX FOIS — ici et 300 lignes plus bas — avec des valeurs

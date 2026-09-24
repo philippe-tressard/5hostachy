@@ -42,13 +42,20 @@ const SECTIONS_ETEIGNABLES: readonly IdSection[] = [
 	'suivi',
 	'quand',
 	'intervenant',
+	'perimetre',
+	'au_nom_de',
 	'destinataires',
+	'mise_en_avant',
+	'diffusion',
 ];
 
 /** Une catégorie du bâti — celles du carnet, au liseré doré (`carnet`). */
 export function estBati(categorie: string): boolean {
 	return CATEGORIES_TICKET.some((c) => c.value === categorie && c.carnet);
 }
+
+/** La catégorie d'un bogue du site : au gestionnaire seul (#1191). */
+export const CATEGORIE_BUG = 'bug';
 
 /** La catégorie de la récurrence : un Entretien seul se répète (#1092). */
 export const CATEGORIE_ENTRETIEN = 'entretien';
@@ -61,6 +68,8 @@ export function sectionsInactives(
 ): Partial<Record<IdSection, string>> {
 	//  Dans l'ordre : la nature, puis le rôle, puis la catégorie (`motifInactif`).
 	const conditions: ConditionInactive[] = [natureDe(categorie)];
+	//  Le bogue d'abord : son motif dit mieux pourquoi que celui du rôle (#1191).
+	if (categorie === CATEGORIE_BUG) conditions.push('bug');
 	if (!estCS) conditions.push('resident');
 	if (categorie && !estBati(categorie)) conditions.push('horsBati');
 	const inactives: Partial<Record<IdSection, string>> = {};

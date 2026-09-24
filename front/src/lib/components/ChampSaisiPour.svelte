@@ -63,6 +63,8 @@
 	export let email = '';
 	/** Résidents proposables — chargés par l'appelant, qui connaît ses droits. */
 	export let residents: { id: number; prenom: string; nom: string; email: string }[] = [];
+	/** Le motif d'extinction de la section, ou `''` (`inactivePour`, #1191). */
+	export let inactive = '';
 </script>
 
 <!--  `rempli` : « En mon nom » EST une réponse — la section n'attend rien
@@ -73,6 +75,7 @@
       déclaré — signalé à l'écran le 22/09/2026. -->
 <SectionFormulaire
 	titre={SECTIONS_LIBELLE.au_nom_de}
+	{inactive}
 	{requis}
 	rempli={mode !== null && mode !== undefined}
 	{pliable}

@@ -49,12 +49,15 @@
 	$: badgeCalcule = relire($perimetresStore, () =>
 		estPerimetreParDefaut(perimetre) ? perimetreLabelUn(perimetreParDefaut() ?? '') : '',
 	);
+	/** Le motif d'extinction de la section, ou `''` (`inactivePour`, #1191). */
+	export let inactive = '';
 </script>
 
 <SectionFormulaire
 	{premiere}
 	{pliable}
 	titre={SECTIONS_LIBELLE.perimetre}
+	{inactive}
 	{requis}
 	badge={badgeImpose ?? badgeCalcule}
 	valeurModifiee={!estPerimetreParDefaut(perimetre)}

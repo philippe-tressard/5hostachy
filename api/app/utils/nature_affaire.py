@@ -59,6 +59,20 @@ def change_de_nature(ticket: Any, nouvelle_categorie: Any) -> bool:
     return (valeur(nouvelle_categorie) == ACTUALITE) != est_actualite(ticket)
 
 
+#: Le périmètre d'un BOGUE : il n'en a pas — il concerne le site, pas un lieu.
+PERIMETRE_BUG = '["résidence"]'
+
+
+def est_bug(categorie: Any) -> bool:
+    """Un bogue du site (#1191, 24/09/2026) — arbitré par l'utilisateur :
+
+    « tout le monde peut en détecter un et donc en ouvrir un, mais seul le
+    gestionnaire est notifié, et la rubrique Périmètre n'a pas de sens et doit
+    être verrouillée ». Ni diffusion, ni conseil syndical, ni mise en avant.
+    """
+    return valeur(categorie) == CategorieTicket.bug.value
+
+
 def categorie_reservee(categorie: Any) -> bool:
     """Un résident ne pose pas cette catégorie (création comme correction)."""
     return valeur(categorie) in CATEGORIES_RESERVEES_AU_CS
