@@ -250,9 +250,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: api
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
+        # `requirements-dev.txt` = la production (`-r requirements.txt`) + pytest
+        # ÉPINGLÉ (#1048, 24/09/2026). Il était installé ici sans version : les
+        # tests changeaient de moteur d'un run à l'autre sans que le dépôt bouge.
+        run: pip install -r requirements-dev.txt
 
       - name: Run pytest
         working-directory: api
