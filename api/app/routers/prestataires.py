@@ -24,68 +24,21 @@ from sqlmodel import Session, select
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.utils.perimetres.arbre import batiments_cibles, parse_json_perimetres
-from app.models.core import ContratEntretien, NotationPrestataire, Prestataire, TypeEquipement, TypePrestataire, Utilisateur
+from app.models.core import ContratEntretien, NotationPrestataire, Prestataire, TypeEquipement, Utilisateur
 
 from app.utils.echeance_contrat import poser_echeance
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
+from app.routers.prestataires_schemas import (
+    PrestataireCreate,
+    PrestataireRead,
+    PrestataireUpdate,
+)
 
 router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 
 
 # ── Prestataires ─────────────────────────────────────────────────────────────
-
-class PrestataireContact(BaseModel):
-    telephone: Optional[str] = None
-    prenom: Optional[str] = None
-    nom: Optional[str] = None
-    fonction: Optional[str] = None
-    email: Optional[str] = None
-
-
-class PrestataireCreate(BaseModel):
-    nom: str
-    specialite: str
-    type_prestataire: TypePrestataire = TypePrestataire.ponctuel
-    telephone: Optional[str] = None
-    email: Optional[str] = None
-    contacts: Optional[list[PrestataireContact]] = None
-
-
-class PrestataireUpdate(BaseModel):
-    nom: Optional[str] = None
-    specialite: Optional[str] = None
-    type_prestataire: Optional[TypePrestataire] = None
-    telephone: Optional[str] = None
-    email: Optional[str] = None
-    contacts: Optional[list[PrestataireContact]] = None
-
-
-class PrestataireRead(BaseModel):
-    id: int
-    nom: str
-    specialite: str
-    type_prestataire: TypePrestataire = TypePrestataire.ponctuel
-    telephone: Optional[str] = None
-    email: Optional[str] = None
-    contacts: list[PrestataireContact] = []
-    actif: bool
-
-    class Config:
-        from_attributes = True
-
-    @field_validator('contacts', mode='before')
-    @classmethod
-    def parse_contacts(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except Exception:
-                return []
-        if v is None:
-            return []
-        return v
-
 
 def _prest_to_read(p: Prestataire) -> PrestataireRead:
     """Construit un PrestataireRead en parsant contacts_json."""
