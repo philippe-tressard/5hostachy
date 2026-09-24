@@ -377,6 +377,7 @@
 		badgeImpose={perimetreBadge}
 		reservable={avecReservePerimetre}
 		bind:reserve={reservePerimetre}
+		inactive={inactives.perimetre ?? ''}
 	>
 		<slot name="aidePerimetre" slot="aidePerimetre" />
 	</SectionPerimetre>
@@ -419,6 +420,7 @@
 	<ChampSaisiPour
 		pliable={plie('au_nom_de')}
 		requis={exige('au_nom_de')}
+		inactive={inactives.au_nom_de ?? ''}
 		bind:mode={saisiPour.mode}
 		bind:userId={saisiPour.userId}
 		bind:nom={saisiPour.nom}
@@ -427,18 +429,13 @@
 	/>
 {/if}
 
-{#if inactives.destinataires}
-	<SectionFormulaire
-		titre={SECTIONS_LIBELLE.destinataires}
-		pliable={plie('destinataires')}
-		inactive={inactives.destinataires}
-	/>
-{:else if avecDestinataires}
+{#if avecDestinataires || inactives.destinataires}
 	<SectionDestinataires
 		{idPrefixe}
 		premiere={premiere && !avecPerimetre}
 		pliable={plie('destinataires')}
 		requis={exige('destinataires')}
+		inactive={inactives.destinataires ?? ''}
 		bind:destinataires
 	/>
 {/if}
@@ -451,6 +448,7 @@
 		{objet}
 		{premiere}
 		pliable={plie('mise_en_avant')}
+		inactive={inactives.mise_en_avant ?? ''}
 		options={optionsRendues}
 		perimetreCible={perimetre}
 		{dejaEpingle}
@@ -480,6 +478,7 @@
 {#if avecDiffusion}
 	<SectionDiffusion
 		pliable={plie('diffusion')}
+		inactive={inactives.diffusion ?? ''}
 		{avecCanaux}
 		{avecNotificationCs}
 		bind:whatsapp

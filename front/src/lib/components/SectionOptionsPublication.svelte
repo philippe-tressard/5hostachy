@@ -64,10 +64,13 @@
 	$: resume = actives.length
 		? actives.map((c) => optionPublication(c)?.etat ?? c).join(' · ')
 		: 'ni épinglée ni urgente';
+	/** Le motif d'extinction de la section, ou `''` (`inactivePour`, #1191). */
+	export let inactive = '';
 </script>
 
 <SectionFormulaire
 	titre={SECTIONS_LIBELLE.mise_en_avant}
+	{inactive}
 	{premiere}
 	{pliable}
 	{resume}

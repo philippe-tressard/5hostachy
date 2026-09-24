@@ -7,7 +7,7 @@ import json
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 from app.utils.intervenant import appliquer_intervenant
-from app.utils.nature_affaire import categorie_reservee, est_actualite, statut_pour
+from app.utils.nature_affaire import PERIMETRE_BUG, categorie_reservee, est_actualite, est_bug, statut_pour
 from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.quand import exiger_description
 
@@ -123,6 +123,7 @@ def create_ticket(
         raise HTTPException(403, "Cette catégorie est réservée au conseil syndical")
     #  Même règle que pour une actualité, et au même endroit (#1092).
     exiger_description(body.description, debut=body.debut)
+    bug = est_bug(body.categorie)
     ticket = Ticket(
         numero=generer_numero(),
         #  L'adresse de réponse est fixée à la CRÉATION (#703) : la poser plus
@@ -141,7 +142,8 @@ def create_ticket(
         auteur_id=user.id,
         lot_id=body.lot_id,
         batiment_id=body.batiment_id,
-        perimetre_cible=json.dumps(body.perimetre_cible) if body.perimetre_cible else '["résidence"]',
+        perimetre_cible=(PERIMETRE_BUG if bug else
+                         json.dumps(body.perimetre_cible) if body.perimetre_cible else '["résidence"]'),
         #  Posée juste en dessous par `appliquer_options`, depuis la case
         #  « Urgent » — plus jamais déduite de la catégorie (`CategorieTicket`).
         priorite="normale",
@@ -155,8 +157,8 @@ def create_ticket(
         statut=statut_pour(body.categorie, body.statut, est_cs=est_cs),
         public_cible=json.dumps(body.public_cible) if est_cs and body.public_cible else None,
         reserve_perimetre=bool(body.reserve_perimetre) and est_cs,
-        destinataire_syndic=body.destinataire_syndic if est_cs else False,
-        destinataire_cs=body.destinataire_cs if est_cs else False,
+        destinataire_syndic=body.destinataire_syndic if est_cs and not bug else False,
+        destinataire_cs=body.destinataire_cs if est_cs and not bug else False,
         saisi_pour_user_id=body.saisi_pour_user_id if est_cs else None,
         saisi_pour_nom=body.saisi_pour_nom if est_cs else None,
         saisi_pour_email=body.saisi_pour_email if est_cs else None,
@@ -179,7 +181,8 @@ def create_ticket(
     #  contredire ensuite : poser le défaut APRÈS effacerait un décochage.
     #  (Le droit est dans `OPTIONS_RESERVEES_AU_CS`, pas réécrit ici.)
     ticket.suivi_kanban = suivi_par_defaut(body.categorie)
-    appliquer_options(ticket, body, est_cs=est_cs)
+    if not bug:  # un bogue n'a pas de mise en avant (#1191)
+        appliquer_options(ticket, body, est_cs=est_cs)
     appliquer_intervenant(ticket, body, session, est_cs=est_cs)
 
     #  🔴 UNE ACTUALITÉ DIFFUSE COMME UNE ACTUALITÉ (#1091, lot 4) : son module
@@ -214,14 +217,15 @@ def create_ticket(
     #  qui rend la déduplication acceptable (`courriels.adresses_deja_servies`).
     #  Une actualité, c'est le conseil qui la publie : lui annoncer « nouvelle
     #  affaire » lui renverrait sa propre information (#1091, « jamais deux fois »).
-    if not est_actualite(ticket):
+    #  Un BOGUE ne prévient que le gestionnaire du site (#1191) : `_alerter_bug`.
+    if not est_actualite(ticket) and not bug:
         _notifier_cs_creation(
             session, ticket, urgence=ticket_urgent(ticket),
             auteur=user, background_tasks=background_tasks,
             deja_servies=adresses_deja_servies(session, ticket, categorie=body.categorie),
         )
 
-    if body.categorie == "bug":
+    if bug:
         _alerter_bug(session, ticket, user, background_tasks)
 
     #  🔴 CE QUI EST RÉSERVÉ AU CONSEIL NE PART PAS SUR LE GROUPE (05/09/2026),
@@ -232,7 +236,7 @@ def create_ticket(
     #  ticket, non — un ticket fermé au voisinage pouvait partir en entier sur le
     #  groupe des résidents. La garde est ici plutôt que dans l'écran : une case
     #  masquée ne protège rien, le champ peut être posté directement.
-    if body.partager_whatsapp and est_cs and not ticket.confidentiel:
+    if body.partager_whatsapp and est_cs and not ticket.confidentiel and not bug:
         _partager_sur_le_groupe(session, ticket, background_tasks)
 
     if ticket.destinataire_syndic or ticket.destinataire_cs:
@@ -251,7 +255,7 @@ def create_ticket(
 
     # Email externe si adresse fournie (CS/Admin uniquement)
     email_ext = (body.email_externe or "").strip()
-    if email_ext and est_cs:
+    if email_ext and est_cs and not bug:
         envoyer_email_externe(
             ticket, user, email_ext, background_tasks, session,
             is_commentaire=False,

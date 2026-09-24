@@ -49,6 +49,7 @@
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import ChampFrequence from '$lib/components/ChampFrequence.svelte';
 	import { CONTRAT } from '$lib/entites/contrat';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
@@ -89,7 +90,7 @@
 <SectionFormulaire titre="Le contrat">
 	<div class="form-grid">
 		<label class="field"
-			>Prestataire *
+			>Prestataire<EtoileRequis vide={!contratForm.prestataire_id} />
 			<select bind:value={contratForm.prestataire_id} required>
 				<option value="">— Sélectionner —</option>
 				{#each prestataires as pr (pr.id)}<option value={String(pr.id)}>{pr.nom}</option>{/each}
@@ -105,7 +106,11 @@
 		</label>
 		<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
 		<label class="field"
-			>Début *<input type="date" bind:value={contratForm.date_debut} required /></label
+			>Début<EtoileRequis vide={!contratForm.date_debut} /><input
+				type="date"
+				bind:value={contratForm.date_debut}
+				required
+			/></label
 		>
 		<label class="field"
 			>Durée initiale

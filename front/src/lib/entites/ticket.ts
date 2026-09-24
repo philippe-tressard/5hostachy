@@ -133,6 +133,7 @@ export const TICKET: EntiteDeclaree = {
 			//  🔴 Planifiée par le conseil syndical, et par lui seul (arbitré le
 			//  23/09/2026) : le serveur ignore ce qu'un autre y enverrait.
 			inactivePour: {
+				bug: 'Un bogue se corrige, il ne se planifie pas.',
 				resident: 'Le conseil syndical planifie la date.',
 			},
 		},
@@ -175,6 +176,9 @@ export const TICKET: EntiteDeclaree = {
 			id: 'perimetre',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
+			inactivePour: {
+				bug: 'Un bogue concerne le site, pas un lieu de la copropriété : le périmètre est verrouillé.',
+			},
 		},
 		{
 			id: 'description',
@@ -224,6 +228,9 @@ export const TICKET: EntiteDeclaree = {
 						'ne la ré-attribue pas — `EvolForm` n’a jamais proposé ce champ.',
 				},
 			},
+			inactivePour: {
+				bug: 'Un bogue se signale en son propre nom.',
+			},
 		},
 		{
 			id: 'destinataires',
@@ -258,6 +265,9 @@ export const TICKET: EntiteDeclaree = {
 			//  Destinataires, 🔒 sous le Périmètre.
 			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel (actualité : 📌 · 🚨)',
 			pliee: true,
+			inactivePour: {
+				bug: 'Un bogue va au gestionnaire du site : ni épingle, ni urgence, ni réserve.',
+			},
 		},
 		{
 			id: 'diffusion',
@@ -266,6 +276,9 @@ export const TICKET: EntiteDeclaree = {
 				affichage: DIFFUSION_NE_SE_LIT_PAS,
 			},
 			pliee: true,
+			inactivePour: {
+				bug: 'Un bogue ne prévient que le gestionnaire du site, et lui seul.',
+			},
 		},
 	],
 };

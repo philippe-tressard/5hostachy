@@ -154,6 +154,8 @@
 	 *   dire son état laisserait un envoi se préparer sans qu'on le voie. */
 	$: nbCanaux = [whatsapp, syndic, cs, auteur].filter(Boolean).length;
 	$: resume = nbCanaux === 0 ? "rien ne part à l'extérieur" : `${nbCanaux} envoi(s) prévu(s)`;
+	/** Le motif d'extinction de la section, ou `''` (`inactivePour`, #1191). */
+	export let inactive = '';
 </script>
 
 {#if $apercu.ouvert}
@@ -174,6 +176,7 @@
 	     toute la rubrique (#416). -->
 	<SectionFormulaire
 		titre={SECTIONS_LIBELLE.diffusion}
+		{inactive}
 		{pliable}
 		{resume}
 		valeurModifiee={nbCanaux > 0}

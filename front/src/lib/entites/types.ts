@@ -309,7 +309,8 @@ export interface SectionDeclaree {
 	 */
 	//  Clés : la NATURE (`actualite`, `suivie`) et, depuis le 23/09/2026 (#1092),
 	//  deux conditions de plus : `resident` (le geste est au conseil) et
-	//  `horsBati` (la catégorie ne porte pas sur le bâti).
+	//  `horsBati` (la catégorie ne porte pas sur le bâti) ; et `bug` (#1191) : un
+	//  bogue du site ne garde que Titre, Nature, Suivi, Description, Pièces jointes.
 	inactivePour?: Partial<Record<ConditionInactive, string>>;
 }
 
@@ -322,7 +323,7 @@ export interface SectionDeclaree {
 export type NatureAffaire = 'actualite' | 'suivie';
 
 /** Ce qui éteint une section : la nature, le rôle, ou une catégorie hors bâti. */
-export type ConditionInactive = NatureAffaire | 'resident' | 'horsBati';
+export type ConditionInactive = NatureAffaire | 'resident' | 'horsBati' | 'bug';
 
 export interface EntiteDeclaree {
 	/** Identifiant technique — `ticket`, `actualite`… */

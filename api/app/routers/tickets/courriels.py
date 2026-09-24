@@ -297,7 +297,20 @@ def envoyer_email_externe(
 def _alerter_bug(
     session: Session, ticket: Ticket, user: Utilisateur, background_tasks: BackgroundTasks
 ) -> None:
-    """Un ticket « bug » prévient le gestionnaire du site : c'est du ressort admin."""
+    """Un ticket « bug » prévient le gestionnaire du site : c'est du ressort admin.
+
+    Lui SEUL (#1191, 24/09/2026) : sa cloche sonne toujours — le bogue est sa
+    tâche —, le courriel suit le réglage `notify_ticket_bug_email`.
+    """
+    from app.utils.cloche import sonner_systeme
+    from app.utils.destinataires import site_manager_user_id
+    from app.utils.liens import lien_ticket
+
+    gestionnaire = site_manager_user_id(session)
+    if gestionnaire is not None:
+        sonner_systeme(session, "bug", destinataire_id=gestionnaire, type="ticket_update",
+                       titre=f"Bogue signalé : {ticket.titre}", corps=ticket.description[:200],
+                       lien=lien_ticket(ticket.id))
     cfg = config_site(session, "notify_ticket_bug_email", "site_email", "site_manager_user_id")
     if cfg.get("notify_ticket_bug_email") != "1":
         return
