@@ -44,6 +44,7 @@ proposer d'effacer une information.
 ambigu (« eau », « badge ») donne « moyenne » — le mot « eau » apparaît aussi
 dans « fuite d'eau chaude », qui est une panne de chauffe-eau.
 """
+
 from __future__ import annotations
 
 import re
@@ -73,9 +74,16 @@ REGLES: tuple[Regle, ...] = (
     Regle(
         "sinistre",
         univoques=(
-            "degat des eaux", "degats des eaux", "infiltration", "incendie",
-            "vandalisme", "sinistre", "assurance", "constat amiable",
-            "bris de glace", "effraction",
+            "degat des eaux",
+            "degats des eaux",
+            "infiltration",
+            "incendie",
+            "vandalisme",
+            "sinistre",
+            "assurance",
+            "constat amiable",
+            "bris de glace",
+            "effraction",
         ),
         #  ⚠️ PAS « fuite » : une fuite qu'on répare est une PANNE. Ne restent
         #  que les mots qui disent un DOMMAGE — inondation, dégât.
@@ -84,24 +92,45 @@ REGLES: tuple[Regle, ...] = (
     Regle(
         "acces_accueil",
         univoques=(
-            "interphone", "digicode", "boite aux lettres", "bal ", "platine",
-            "emmenag", "amenag", "nouvel arrivant", "etiquette",
+            "interphone",
+            "digicode",
+            "boite aux lettres",
+            "bal ",
+            "platine",
+            "emmenag",
+            "amenag",
+            "nouvel arrivant",
+            "etiquette",
         ),
         ambigus=("badge", "vigik", "telecommande", "cle ", "acces "),
     ),
     Regle(
         "espaces_verts",
         univoques=(
-            "elagage", "espaces verts", "espace vert", "haie", "tonte",
-            "arrosage", "jardin", "arbre", "taille des",
+            "elagage",
+            "espaces verts",
+            "espace vert",
+            "haie",
+            "tonte",
+            "arrosage",
+            "jardin",
+            "arbre",
+            "taille des",
         ),
         ambigus=("plantation", "massif"),
     ),
     Regle(
         "etude_travaux",
         univoques=(
-            "diagnostic", "sondage", "prelevement", "etancheite", "devis",
-            "appel d'offre", "maitre d'oeuvre", "expertise", "ravalement",
+            "diagnostic",
+            "sondage",
+            "prelevement",
+            "etancheite",
+            "devis",
+            "appel d'offre",
+            "maitre d'oeuvre",
+            "expertise",
+            "ravalement",
             "audit energetique",
         ),
         ambigus=("travaux", "chantier", "etude"),
@@ -112,10 +141,22 @@ REGLES: tuple[Regle, ...] = (
     Regle(
         "nuisance",
         univoques=(
-            "nuisance", "tapage", "aboiement", "musique", "voisin bruyant",
-            "stationnement genant", "incivilite",
-            "proprete", "nettoyage", "encombrant", "poubelle", "ordures",
-            "menage", "salete", "detritus", "local velo",
+            "nuisance",
+            "tapage",
+            "aboiement",
+            "musique",
+            "voisin bruyant",
+            "stationnement genant",
+            "incivilite",
+            "proprete",
+            "nettoyage",
+            "encombrant",
+            "poubelle",
+            "ordures",
+            "menage",
+            "salete",
+            "detritus",
+            "local velo",
         ),
         ambigus=("bruit", "odeur", "stationnement", "tri", "container", "conteneur"),
     ),

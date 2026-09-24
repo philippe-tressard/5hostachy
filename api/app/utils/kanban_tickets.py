@@ -45,6 +45,7 @@ les événements du calendrier sont devenus des affaires.
 l'est — exactement comme `KANBAN_LABELS` de `calendrier_historique.py`.
 `api/tests/test_kanban_tickets.py` échoue si les deux dérivent.
 """
+
 from __future__ import annotations
 
 from typing import Optional

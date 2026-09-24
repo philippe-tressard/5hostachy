@@ -48,6 +48,7 @@ autorisation : c'est la traduction d'une règle métier déjà tranchée par la
 dépendance qui protège la route. Un résident qui enverrait ces champs les voit
 simplement ignorés.
 """
+
 from __future__ import annotations
 
 from typing import Optional

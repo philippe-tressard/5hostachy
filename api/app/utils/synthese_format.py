@@ -24,6 +24,7 @@ que fait « Rétablir le prompt d'origine ».
 qui se présente comme la source de vérité alors qu'il n'est plus qu'un défaut
 fait annoncer des livraisons sans effet.
 """
+
 from __future__ import annotations
 
 #: 🔴 LE FORMAT, tel que le conseil syndical l'a arrêté (11/09/2026).

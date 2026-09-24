@@ -4,6 +4,7 @@ Extrait de `sondages.py` le 17/08/2026 lors du découpage (cf. `__init__.py`).
 Ce module ne porte AUCUN endpoint : il est importé par `crud` et par
 `participation`, qui en dépendent tous les deux.
 """
+
 from datetime import datetime
 from typing import List, Optional
 
@@ -17,8 +18,8 @@ from app.schemas import ListeJson
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
-
 # ── schémas ──────────────────────────────────────────────────────────────────
+
 
 class OptionCreate(BaseModel):
     libelle: str
@@ -132,4 +133,3 @@ class SondageDetail(SondageRead):
     mon_vote: Optional[int] = None
     #  `cloture` est HÉRITÉ de `SondageRead` depuis le 19/08/2026 — il y était
     #  déclaré deux fois.
-

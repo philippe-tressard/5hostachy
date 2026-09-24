@@ -21,10 +21,11 @@ confondre produit une fausse alerte quotidienne sur une infrastructure saine, et
 c'est arrivé deux fois : le 09/08/2026 sur `bascule`, le 20/08/2026 sur
 `backup` et `telemetrie`.
 """
+
 from __future__ import annotations
 
 _PERIODICITE_ATTENDUE_H = {
-    "maintenance": 7 * 24,     # dimanche 03:00, sur les deux nœuds
+    "maintenance": 7 * 24,  # dimanche 03:00, sur les deux nœuds
     #  ⚠️ 48 h et non 24, parce que le rôle ALTERNE. `bascule.sh` sort
     #  immédiatement sur le standby (« Ce RPi n'est pas actif — rien à faire ») :
     #  seul le nœud actif agit, donc **chaque nœud n'opère qu'une nuit sur deux**.
@@ -37,7 +38,7 @@ _PERIODICITE_ATTENDUE_H = {
     #  règle sur le RÉGIME de ce qu'il surveille, pas sur la fréquence du cron
     #  (`standards/04-fiabilite-des-controles.md` §18). Avec la tolérance de 6 h,
     #  un nœud qui n'a rien fait depuis 54 h est en revanche réellement muet.
-    "bascule": 48,             # 02:00, une nuit sur deux par nœud
+    "bascule": 48,  # 02:00, une nuit sur deux par nœud
     #  Copie hors site : lancée À LA MAIN depuis le poste, qui n'est pas
     #  allumé en permanence. Attendre 24 h ferait crier ce contrôle presque
     #  tous les jours, et une alerte qui crie tout le temps finit ignorée —
@@ -52,8 +53,8 @@ _PERIODICITE_ATTENDUE_H = {
 #  fausses sans qu'aucun écran ne le signale — c'est le même besoin que pour la
 #  maintenance et la sauvegarde, donc le même traitement plutôt qu'un régime à
 #  part pour une troisième table.
-_PERIODICITE_SAUVEGARDE_H = 24     # 03:00, tracée dans historique_sauvegarde
-_PERIODICITE_TELEMETRIE_H = 24     # 02:00, tracée dans historique_telemetrie
+_PERIODICITE_SAUVEGARDE_H = 24  # 03:00, tracée dans historique_sauvegarde
+_PERIODICITE_TELEMETRIE_H = 24  # 02:00, tracée dans historique_telemetrie
 #: 🔴 La période attendue de CHAQUE NŒUD, quand elle diffère de celle de la
 #: tâche. Deux notions distinctes, et les confondre produit une fausse alerte
 #: quotidienne sur une infrastructure saine.
@@ -76,7 +77,7 @@ _PERIODICITE_PAR_NOEUD_H = {
     "telemetrie": 48,
 }
 
-_TOLERANCE_H = 6                   # marge avant de déclarer un retard
+_TOLERANCE_H = 6  # marge avant de déclarer un retard
 
 
 #  Gravité croissante : sert à choisir l'état d'une tâche qui s'exécute sur les
@@ -128,7 +129,11 @@ _LIGNES_REMONTEES = 20
 
 
 def _sante_par_noeud(
-    tache: str, lignes, periode_h: float, statut_erreur, maintenant,
+    tache: str,
+    lignes,
+    periode_h: float,
+    statut_erreur,
+    maintenant,
 ) -> dict:
     """L'état d'une tâche, **un sous-état par nœud** — pour TOUTES les tâches.
 
@@ -237,15 +242,17 @@ def _sante_par_noeud(
     detail = []
     for noeud, ligne in sorted(par_noeud.items()):
         statut, retard = _etat(ligne, periode_noeud_h)
-        detail.append({
-            "noeud": noeud,
-            "statut": statut,
-            #  `portee` n'existe que sur `historique_maintenance` ; les deux
-            #  autres tables n'ont qu'une portée, applicative.
-            "portee": getattr(ligne, "portee", "applicative"),
-            "derniere": ligne.cree_le,
-            "retard_heures": retard,
-        })
+        detail.append(
+            {
+                "noeud": noeud,
+                "statut": statut,
+                #  `portee` n'existe que sur `historique_maintenance` ; les deux
+                #  autres tables n'ont qu'une portée, applicative.
+                "portee": getattr(ligne, "portee", "applicative"),
+                "derniere": ligne.cree_le,
+                "retard_heures": retard,
+            }
+        )
     return {
         "detail": detail,
         "synthese": synthese,
@@ -263,10 +270,18 @@ def _entree_sante(tache: str, periode_h: float, groupes: dict) -> dict:
     impossible plutôt qu'improbable.
     """
     if not groupes:
-        return {"tache": tache, "noeud": None, "noeuds": [], "noeud_enregistre": False,
-                "statut": "aucune_execution", "derniere": None,
-                "retard_heures": None, "periodicite_heures": periode_h,
-                "noeud_en_retard": None, "statut_en_retard": None}
+        return {
+            "tache": tache,
+            "noeud": None,
+            "noeuds": [],
+            "noeud_enregistre": False,
+            "statut": "aucune_execution",
+            "derniere": None,
+            "retard_heures": None,
+            "periodicite_heures": periode_h,
+            "noeud_en_retard": None,
+            "statut_en_retard": None,
+        }
     detail, synthese, pire = groupes["detail"], groupes["synthese"], groupes["pire"]
     degrade = bool(pire) and _GRAVITE.get(pire["statut"], 0) > _GRAVITE.get(synthese["statut"], 0)
     return {
@@ -291,7 +306,11 @@ def _entree_sante(tache: str, periode_h: float, groupes: dict) -> dict:
 
 
 def _etat_tache_a_table_propre(
-    tache: str, lignes_historique, periode_h: float, statut_erreur, maintenant,
+    tache: str,
+    lignes_historique,
+    periode_h: float,
+    statut_erreur,
+    maintenant,
 ) -> dict:
     """Santé d'une tâche qui a SA PROPRE table (sauvegarde, agrégation).
 
@@ -312,6 +331,7 @@ def _etat_tache_a_table_propre(
     mesure).
     """
     return _entree_sante(
-        tache, periode_h,
+        tache,
+        periode_h,
         _sante_par_noeud(tache, lignes_historique, periode_h, statut_erreur, maintenant),
     )

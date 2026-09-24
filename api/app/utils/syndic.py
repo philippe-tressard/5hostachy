@@ -30,6 +30,7 @@ c'est ce qui permet de ne casser aucune installation.
 est absente. Deux sources qui répondent *en même temps* seraient le doublon
 qu'on ferme ici.
 """
+
 from typing import Optional
 
 from sqlmodel import Session, select

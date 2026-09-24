@@ -1,4 +1,5 @@
 """Génération dynamique de la fiche d'accueil (fiche arrivant) en HTML."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -18,6 +19,7 @@ from app.utils.etages import etage_label
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def _initials(prenom: str, nom: str) -> str:
     p = prenom.strip()[0].upper() if prenom and prenom.strip() else "?"
@@ -76,6 +78,7 @@ _CONSIGNES = [
 
 
 # ── Builders ─────────────────────────────────────────────────────────────────
+
 
 def _build_cs_card(m: dict) -> str:
     """Carte d'un membre CS."""
@@ -175,9 +178,11 @@ def _build_cs_section(cs_data: dict) -> str:
         by_bat[m.get("batiment_id")].append(m)
 
     html = '<div class="annuaire-section">\n'
-    html += '  <h3>📇 Conseil Syndical</h3>\n'
+    html += "  <h3>📇 Conseil Syndical</h3>\n"
     if ag_annee:
-        html += f'  <p class="muted" style="margin-bottom:8px;font-size:11.5px">Voté en AG {ag_annee}'
+        html += (
+            f'  <p class="muted" style="margin-bottom:8px;font-size:11.5px">Voté en AG {ag_annee}'
+        )
         if ag_date:
             from datetime import date as dt_date
 
@@ -218,7 +223,7 @@ def _build_syndic_section(syndic_data: dict) -> str:
         if qr_src:
             qr_html = f'<img class="qr-code" src="{qr_src}" alt="QR Extranet">'
 
-    html = f'<h3>🏛 Syndic — {escape(nom)}</h3>\n'
+    html = f"<h3>🏛 Syndic — {escape(nom)}</h3>\n"
     html += '<div class="syndic-header" style="display:flex;align-items:center;gap:10px;">\n'
     html += '  <div style="flex:1;">\n'
     html += '    <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">\n'
@@ -237,7 +242,11 @@ def _build_syndic_section(syndic_data: dict) -> str:
             avatar_color = "gold" if is_principal else "purple"
             initials = _initials(m.get("prenom", ""), m.get("nom", ""))
 
-            role_label = "★ " + (m.get("fonction") or "Gestionnaire") if is_principal else (m.get("fonction") or "")
+            role_label = (
+                "★ " + (m.get("fonction") or "Gestionnaire")
+                if is_principal
+                else (m.get("fonction") or "")
+            )
 
             info_parts = []
             if m.get("email"):
@@ -264,7 +273,7 @@ def _build_syndic_section(syndic_data: dict) -> str:
 
 
 def _build_consignes_section(site_url: str) -> str:
-    html = '<h3>📋 Consignes de la copropriété</h3>\n'
+    html = "<h3>📋 Consignes de la copropriété</h3>\n"
     html += '<div class="consignes-intro">\n'
     html += (
         "  <p>À la demande du Conseil syndical, il est rappelé à Mesdames et Messieurs "
@@ -285,6 +294,7 @@ def _build_consignes_section(site_url: str) -> str:
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
+
 
 def generer_fiche_arrivant(
     *,
@@ -370,4 +380,3 @@ def generer_fiche_arrivant(
 </div>
 </body>
 </html>"""
-

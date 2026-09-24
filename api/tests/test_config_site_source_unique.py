@@ -27,6 +27,7 @@ alimentent chaque courriel et chaque document. Une portée qui viserait la table
 crierait sur du légitime, et serait désarmée dans la semaine
 (`standards/04` §40).
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -84,7 +85,7 @@ def test_personne_ne_RECOPIE_la_lecture_du_couple():
     assert not fautifs, (
         f"Ces modules relisent `site_nom` / `site_url` eux-mêmes : {fautifs}. "
         "Employer `config_site(session)` de `app.utils.config_site` — et "
-        "`config_site(session, \"autre_cle\")` si d'autres clés sont nécessaires."
+        '`config_site(session, "autre_cle")` si d\'autres clés sont nécessaires.'
     )
 
 

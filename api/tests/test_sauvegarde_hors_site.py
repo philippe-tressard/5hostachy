@@ -23,6 +23,7 @@ ces tests verrouillent ce qui peut redevenir silencieux :
     compilateur ne relie : un renommage silencieux les désaccorderait
     (même motif que test_email_contexte_appel.py).
 """
+
 import json
 import re
 from datetime import datetime, timedelta
@@ -56,13 +57,15 @@ def session():
 def repertoire_sauvegardes(tmp_path, monkeypatch):
     """Redirige `settings.backup_dir` vers un répertoire jetable."""
     monkeypatch.setattr(
-        health_monitor, "get_settings",
+        health_monitor,
+        "get_settings",
         lambda: SimpleNamespace(backup_dir=str(tmp_path)),
     )
     return tmp_path
 
 
 # ── Horodatage lu dans le nom de l'archive ───────────────────────────────────
+
 
 def test_horodatage_lu_dans_le_nom():
     """La convention de nommage est porteuse de sens : elle doit se relire."""
@@ -73,12 +76,18 @@ def test_horodatage_lu_dans_le_nom():
 def test_horodatage_illisible_rend_none_sans_lever():
     """Un nom non conforme ne doit pas faire ÉCHOUER un contrôle de santé — il
     doit le faire répondre « je ne sais pas », que l'appelant traite en anomalie."""
-    for nom in ("", "autre.tar.gz", "hostachy_backup_pasunedate.tar.gz",
-                "hostachy_backup_20260804_030000.zip", None):
+    for nom in (
+        "",
+        "autre.tar.gz",
+        "hostachy_backup_pasunedate.tar.gz",
+        "hostachy_backup_20260804_030000.zip",
+        None,
+    ):
         assert horodatage_archive(nom) is None
 
 
 # ── Le contrôle regarde le fichier, pas la ligne d'historique ────────────────
+
 
 def test_archive_fraiche_ne_signale_rien(repertoire_sauvegardes):
     fichier = repertoire_sauvegardes / nom_archive(datetime.utcnow() - timedelta(hours=3))
@@ -119,8 +128,10 @@ def test_nom_non_datable_vaut_anomalie_pas_ok(repertoire_sauvegardes):
 
 # ── Copie hors site ──────────────────────────────────────────────────────────
 
-def enregistrer_export(session, *, quand=None, archive_quand=None,
-                       statut="succes", integrite="ok", erreur=None):
+
+def enregistrer_export(
+    session, *, quand=None, archive_quand=None, statut="succes", integrite="ok", erreur=None
+):
     quand = quand or datetime.utcnow()
     archive_quand = archive_quand or datetime.utcnow()
     ligne = HistoriqueMaintenance(
@@ -129,11 +140,13 @@ def enregistrer_export(session, *, quand=None, archive_quand=None,
         statut=statut,
         erreur=erreur,
         cree_le=quand,
-        details=json.dumps({
-            "archive": nom_archive(archive_quand),
-            "taille_octets": 1024,
-            "integrite": integrite,
-        }),
+        details=json.dumps(
+            {
+                "archive": nom_archive(archive_quand),
+                "taille_octets": 1024,
+                "integrite": integrite,
+            }
+        ),
     )
     session.add(ligne)
     session.commit()
@@ -152,8 +165,11 @@ def test_export_recent_et_archive_fraiche_ne_signale_rien(session):
 
 
 def test_export_ancien_est_signale(session):
-    enregistrer_export(session, quand=datetime.utcnow() - timedelta(days=20),
-                       archive_quand=datetime.utcnow() - timedelta(days=20))
+    enregistrer_export(
+        session,
+        quand=datetime.utcnow() - timedelta(days=20),
+        archive_quand=datetime.utcnow() - timedelta(days=20),
+    )
     anomalies = health_monitor._check_export_hors_site(session)
     assert any("Aucun export hors site depuis" in a for a in anomalies)
 
@@ -165,8 +181,9 @@ def test_export_fidele_mais_archive_perimee(session):
     archive vieille de trois semaines (sauvegarde bloquée en amont). Vérifier
     seulement que « l'export a tourné » déclarerait la situation saine.
     """
-    enregistrer_export(session, quand=datetime.utcnow(),
-                       archive_quand=datetime.utcnow() - timedelta(days=21))
+    enregistrer_export(
+        session, quand=datetime.utcnow(), archive_quand=datetime.utcnow() - timedelta(days=21)
+    )
     anomalies = health_monitor._check_export_hors_site(session)
     assert any("recopie une archive périmée" in a for a in anomalies)
 
@@ -193,6 +210,7 @@ def test_integrite_non_verifiee_est_signalee(session):
 
 # ── Pas de seuil dupliqué ────────────────────────────────────────────────────
 
+
 def test_seuil_partage_avec_ecran_de_sante():
     """Le mail d'alerte et l'écran Admin doivent parler du même délai.
 
@@ -206,6 +224,7 @@ def test_seuil_partage_avec_ecran_de_sante():
 
 
 # ── Couplage implicite script shell ⇄ contrôle Python ────────────────────────
+
 
 def test_le_script_existe_et_expose_un_selftest():
     contenu = SCRIPT.read_text(encoding="utf-8")
@@ -242,8 +261,7 @@ def test_le_script_ne_touche_jamais_la_base_de_production():
     """
     contenu = SCRIPT.read_text(encoding="utf-8")
     lignes_actives = [
-        l for l in contenu.splitlines()
-        if l.strip() and not l.strip().startswith("#")
+        l for l in contenu.splitlines() if l.strip() and not l.strip().startswith("#")
     ]
     # On ne cherche pas le MOT « sqlite3 » (il apparaît légitimement dans un
     # message et dans un `command -v`), mais une INVOCATION sur un fichier .db :

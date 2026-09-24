@@ -19,6 +19,7 @@ est indistinguable d'une règle absente.
 Ce qui est vérifiable dès maintenant, et que ce fichier éprouve : **qui a le droit
 de poser le drapeau**, et **qu'il arrive bien jusqu'à l'API**.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -38,8 +39,11 @@ from tests.purge_test import purger_ligne
 def _utilisateur(session, roles: str) -> Utilisateur:
     u = Utilisateur(
         email=f"{roles}-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x", prenom="Camille", nom="Sorel",
-        roles_json=roles, actif=True,
+        mot_de_passe_hash="x",
+        prenom="Camille",
+        nom="Sorel",
+        roles_json=roles,
+        actif=True,
     )
     session.add(u)
     session.commit()
@@ -55,8 +59,11 @@ def contexte():
         auteur = _utilisateur(session, "résident")
         cs = _utilisateur(session, "conseil_syndical")
         ticket = Ticket(
-            numero=f"T-{uuid.uuid4().hex[:6]}", titre="Fuite au 3e",
-            description="…", categorie="panne", auteur_id=auteur.id,
+            numero=f"T-{uuid.uuid4().hex[:6]}",
+            titre="Fuite au 3e",
+            description="…",
+            categorie="panne",
+            auteur_id=auteur.id,
             statut=StatutTicket.ouvert,
         )
         session.add(ticket)
@@ -95,8 +102,11 @@ def test_lauteur_ne_peut_PAS_refermer_son_propre_ticket(contexte):
     session, ticket, auteur, _cs = contexte
     with pytest.raises(HTTPException) as e:
         update_ticket(
-            ticket.id, TicketUpdate(confidentiel=True), BackgroundTasks(),
-            session=session, user=auteur,
+            ticket.id,
+            TicketUpdate(confidentiel=True),
+            BackgroundTasks(),
+            session=session,
+            user=auteur,
         )
     assert e.value.status_code == 403
     session.refresh(ticket)

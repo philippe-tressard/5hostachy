@@ -12,6 +12,7 @@ ce qui part vraiment, et de conclure « SMTP OK » pendant que les e-mails
 échouent. Personne ne l'aurait vu — un e-mail qui ne part pas ne fait pas de
 bruit.
 """
+
 import ast
 import pathlib
 
@@ -37,7 +38,8 @@ def _modules() -> list[tuple[str, str]]:
 
 def test_la_connexion_smtp_n_est_construite_qu_a_un_endroit():
     porteurs = {
-        rel for rel, src in _modules()
+        rel
+        for rel, src in _modules()
         for n in ast.walk(ast.parse(src))
         if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "ConnectionConfig"
     }
@@ -55,7 +57,8 @@ def test_les_envois_passent_par_le_helper_partage():
     resterait vert en ne surveillant rien — un ensemble vide est égal à lui-même
     seulement quand le helper existe et sert (`standards/04` §2)."""
     appelants = {
-        rel for rel, src in _modules()
+        rel
+        for rel, src in _modules()
         for n in ast.walk(ast.parse(src))
         if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "connexion_smtp"
     }
@@ -77,13 +80,18 @@ def test_le_repli_sur_le_env_reste_champ_par_champ():
     source = (_APP / "utils" / "smtp.py").read_text(encoding="utf-8")
     arbre = ast.parse(source)
     fonction = next(
-        n for n in ast.walk(arbre)
-        if isinstance(n, ast.FunctionDef) and n.name == "connexion_smtp"
+        n for n in ast.walk(arbre) if isinstance(n, ast.FunctionDef) and n.name == "connexion_smtp"
     )
     corps = ast.unparse(fonction)
     for cle in (
-        "smtp_server", "smtp_port", "smtp_from", "smtp_from_name",
-        "smtp_username", "smtp_password", "smtp_starttls", "smtp_ssl_tls",
+        "smtp_server",
+        "smtp_port",
+        "smtp_from",
+        "smtp_from_name",
+        "smtp_username",
+        "smtp_password",
+        "smtp_starttls",
+        "smtp_ssl_tls",
     ):
         assert cle in corps, f"`{cle}` n'a plus de repli propre dans connexion_smtp"
 

@@ -45,6 +45,7 @@ lui. Les fonctions ci-dessous l'appellent, puis ajoutent leur question propre :
 révéler l'existence » est une décision de sécurité, pas une réponse à
 « existe-t-il ? ».
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable

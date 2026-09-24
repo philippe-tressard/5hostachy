@@ -27,6 +27,7 @@ C'est cette **portée** qui rend le canal tenable, pas sa commodité — le jour
 une route de ce genre rendrait une adresse, un sujet de courriel ou un
 identifiant de ligne, elle devrait passer par une session d'administrateur.
 """
+
 from typing import Optional
 
 from fastapi import HTTPException

@@ -35,6 +35,7 @@ l'écran ne le dise :
 un IMPORT sont deux responsabilités, et la seconde faisait déjà dépasser le
 premier de son plafond de modularité (884 lignes).
 """
+
 from __future__ import annotations
 
 import json
@@ -142,9 +143,7 @@ def _poser_liens(session: Session, imp, lot, occupants: list[dict]) -> None:
                     session.delete(existant)
                 continue
         if not existant:
-            session.add(
-                UserLot(user_id=uid, lot_id=lot.id, type_lien=_lien(type_lien), actif=True)
-            )
+            session.add(UserLot(user_id=uid, lot_id=lot.id, type_lien=_lien(type_lien), actif=True))
 
 
 def resoudre_imports(session: Session, *, pour_user=None) -> dict:
@@ -199,8 +198,6 @@ def resoudre_imports(session: Session, *, pour_user=None) -> dict:
 def resoudre_pour_utilisateur(user, session: Session) -> int:
     """Le chemin de la validation d'un compte — rend le nombre d'imports résolus."""
     return resoudre_imports(session, pour_user=user)["resolus"]
-
-
 
 
 def rapprocher_imports(session: Session) -> int:

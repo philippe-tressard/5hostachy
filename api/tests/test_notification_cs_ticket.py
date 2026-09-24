@@ -26,6 +26,7 @@ depuis le 31/08/2026, et que ce circuit n'appliquait pas.
 Un test qui se contente de compter les appels passerait au vert sur un envoi
 adressé au mauvais conseiller.
 """
+
 from __future__ import annotations
 
 import json
@@ -86,15 +87,21 @@ def conseil(batiments):
         comptes, membres = [], []
         for suffixe, bat_id in (("a", batiments[0]), ("b", batiments[1])):
             compte = Utilisateur(
-                email=f"cs-{suffixe}-{marque}@exemple.test", mot_de_passe_hash="x",
-                prenom=f"C{suffixe.upper()}", nom="CONSEIL", roles_json="conseil_syndical",
+                email=f"cs-{suffixe}-{marque}@exemple.test",
+                mot_de_passe_hash="x",
+                prenom=f"C{suffixe.upper()}",
+                nom="CONSEIL",
+                roles_json="conseil_syndical",
                 actif=True,
             )
             session.add(compte)
             session.flush()
             membre = MembreCS(
-                genre="mme", prenom=compte.prenom, nom=compte.nom,
-                batiment_id=bat_id, user_id=compte.id,
+                genre="mme",
+                prenom=compte.prenom,
+                nom=compte.nom,
+                batiment_id=bat_id,
+                user_id=compte.id,
             )
             session.add(membre)
             comptes.append(compte)
@@ -130,7 +137,10 @@ def test_le_CS_du_BATIMENT_concerne_est_vise(conseil):
     tampon = _Tampon()
 
     vises = _envoyer_email_cs_creation(
-        session, _Ticket([code]), auteur, urgence=False,
+        session,
+        _Ticket([code]),
+        auteur,
+        urgence=False,
         background_tasks=tampon,
     )
 
@@ -159,12 +169,15 @@ def test_un_perimetre_GLOBAL_vise_tout_le_conseil(conseil):
     tampon = _Tampon()
 
     vises = _envoyer_email_cs_creation(
-        session, _Ticket([]), auteur, urgence=False, background_tasks=tampon,
+        session,
+        _Ticket([]),
+        auteur,
+        urgence=False,
+        background_tasks=tampon,
     )
 
     assert cs_a.email in vises and cs_b.email in vises, (
-        "un ticket sans périmètre ne vise pas tout le conseil : "
-        f"{vises}"
+        f"un ticket sans périmètre ne vise pas tout le conseil : {vises}"
     )
 
 
@@ -183,7 +196,10 @@ def test_la_PREFERENCE_est_laissee_a_send_email_group(conseil):
     tampon = _Tampon()
 
     _envoyer_email_cs_creation(
-        session, _Ticket([code]), auteur, urgence=False,
+        session,
+        _Ticket([code]),
+        auteur,
+        urgence=False,
         background_tasks=tampon,
     )
 
@@ -219,7 +235,11 @@ def test_le_CONFIDENTIEL_ne_change_rien_a_l_envoi(conseil):
     for nom, ticket in (("ouvert", ouvert), ("reserve", reserve)):
         tampon = _Tampon()
         _envoyer_email_cs_creation(
-            session, ticket, auteur, urgence=False, background_tasks=tampon,
+            session,
+            ticket,
+            auteur,
+            urgence=False,
+            background_tasks=tampon,
         )
         vises[nom] = sorted(
             email for _, email in (tampon.taches[0][2]["to_recipients"] if tampon.taches else [])
@@ -243,7 +263,10 @@ def test_cas_zero_sans_conseil_aucun_envoi(conseil):
     tampon = _Tampon()
 
     vises = _envoyer_email_cs_creation(
-        session, _Ticket([code]), auteur, urgence=False,
+        session,
+        _Ticket([code]),
+        auteur,
+        urgence=False,
         background_tasks=tampon,
     )
 
@@ -263,7 +286,10 @@ def test_l_urgence_atteint_le_modele(conseil):
     tampon = _Tampon()
 
     _envoyer_email_cs_creation(
-        session, _Ticket([code]), auteur, urgence=True,
+        session,
+        _Ticket([code]),
+        auteur,
+        urgence=True,
         background_tasks=tampon,
     )
 
@@ -293,7 +319,11 @@ def test_le_point_d_APPEL_declenche_bien_le_courriel(conseil):
     tampon = _Tampon()
 
     _notifier_cs_creation(
-        session, ticket, urgence=False, auteur=auteur, background_tasks=tampon,
+        session,
+        ticket,
+        urgence=False,
+        auteur=auteur,
+        background_tasks=tampon,
     )
 
     codes = [kwargs.get("code") for _, _, kwargs in tampon.taches]

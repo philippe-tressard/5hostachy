@@ -47,6 +47,7 @@ Même parti pris que `utils/perimetres.arbre()` : une durée courte, et **aucune
 mise en cache d'un résultat obtenu sur une base indisponible** — figer une liste
 vide masquerait le rétablissement, et une liste vide vaut ici « je ne sais pas ».
 """
+
 from __future__ import annotations
 
 import logging
@@ -120,7 +121,9 @@ def batiments_de_l_utilisateur(user) -> frozenset[int]:
         #  ferait durer la panne au-delà d'elle-même.
         logger.error(
             "Lots de l'utilisateur %s illisibles (%s) — seul son bâtiment de "
-            "rattachement est retenu", user_id, exc,
+            "rattachement est retenu",
+            user_id,
+            exc,
         )
         return frozenset(connus)
 

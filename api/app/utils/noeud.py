@@ -7,6 +7,7 @@ automatique, agrégation de la télémétrie). L'importer depuis un router dans 
 job aurait inversé la dépendance ; la recopier en aurait fait un second
 mécanisme d'identification du nœud, ce que #312 interdit explicitement.
 """
+
 from typing import Optional
 
 from app.config import get_settings

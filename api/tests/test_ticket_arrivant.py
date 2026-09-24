@@ -18,6 +18,7 @@ chose. Rien ne mesurait la chose.
 destinataires et son bénéficiaire — et non le code de retour de l'endpoint.
 Un `{"ok": true}` ne dit pas qu'un ticket a été créé.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -151,8 +152,9 @@ def test_le_ticket_vise_les_destinataires_des_DEUX_demarches(arrivant):
         session.add(membre_cs)
         session.commit()
         session.refresh(membre_cs)
-        mc = MembreCS(user_id=membre_cs.id, genre="mme", nom="Sorel", prenom="Camille",
-                      batiment_id=bat.id)
+        mc = MembreCS(
+            user_id=membre_cs.id, genre="mme", nom="Sorel", prenom="Camille", batiment_id=bat.id
+        )
         session.add(mc)
         session.commit()
 

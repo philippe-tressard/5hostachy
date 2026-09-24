@@ -23,6 +23,7 @@ pour qu'elle ne reparte pas en arrière.
   4. aucun module hors `utils/syndic.py` ne LIT `SyndicInfo.nom_syndic` pour en
      déduire un affichage. C'est ce point qui attrape la réapparition du doublon.
 """
+
 import ast
 import pathlib
 import types
@@ -85,8 +86,12 @@ def _appeler(fn, nom_contrat=None, nom_saisi=None, monkeypatch=None):
 
 # ── Le contrat fait foi ──────────────────────────────────────────────────────
 
+
 def test_le_contrat_fait_foi_quand_il_existe():
-    assert _appeler("nom_du_syndic", nom_contrat="Cabinet Nouveau", nom_saisi="Ancien Syndic") == "Cabinet Nouveau"
+    assert (
+        _appeler("nom_du_syndic", nom_contrat="Cabinet Nouveau", nom_saisi="Ancien Syndic")
+        == "Cabinet Nouveau"
+    )
 
 
 def test_la_source_est_nommee_pour_l_ecran():
@@ -95,6 +100,7 @@ def test_la_source_est_nommee_pour_l_ecran():
 
 
 # ── Le repli, et rien de plus ────────────────────────────────────────────────
+
 
 def test_la_saisie_sert_de_repli_sans_contrat():
     assert _appeler("nom_du_syndic", nom_contrat=None, nom_saisi="Cabinet Saisi") == "Cabinet Saisi"
@@ -117,6 +123,7 @@ def test_un_contrat_sans_nom_de_prestataire_retombe_sur_la_saisie():
 
 
 # ── Personne ne relit la colonne pour afficher ───────────────────────────────
+
 
 def test_aucun_module_ne_lit_la_colonne_pour_afficher():
     """C'est ce point qui attrape la réapparition du doublon.
@@ -175,6 +182,7 @@ def test_les_exceptions_declarees_servent_encore():
 #  ⚠️ La règle vit côté SERVEUR, pas dans l'écran : un second écran, ou un appel
 #  direct à l'API, contournerait un garde posé côté front.
 
+
 def test_le_serveur_refuse_d_ecraser_la_saisie_quand_le_contrat_fait_foi():
     """Le contrôle porte sur le CODE : l'écriture est gardée par la source."""
     chemin = APP / "routers" / "admin" / "annuaire.py"
@@ -190,12 +198,8 @@ def test_le_serveur_refuse_d_ecraser_la_saisie_quand_le_contrat_fait_foi():
         if "source_du_nom" not in condition:
             continue
         for enfant in ast.walk(noeud):
-            if (
-                isinstance(enfant, ast.Assign)
-                and any(
-                    isinstance(c, ast.Attribute) and c.attr == "nom_syndic"
-                    for c in enfant.targets
-                )
+            if isinstance(enfant, ast.Assign) and any(
+                isinstance(c, ast.Attribute) and c.attr == "nom_syndic" for c in enfant.targets
             ):
                 gardees.append(condition)
 
@@ -205,7 +209,6 @@ def test_le_serveur_refuse_d_ecraser_la_saisie_quand_le_contrat_fait_foi():
         "remplace la saisie de repli par le nom du contrat — et retirer le "
         "contrat ferait réapparaître une valeur jamais saisie."
     )
-
 
 
 def _base_avec_copro(nom_saisi: str | None):

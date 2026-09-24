@@ -1,0 +1,16 @@
+# Configuration Ruff de l'API (#1048, point 2 — 24/09/2026).
+#
+# Les RÈGLES vérifiées restent choisies dans `.github/workflows/ci.yml`, par
+# répertoire : `app/`, `alembic/` et `tests/` n'en portent pas les mêmes, et
+# c'est là qu'est écrite la raison de chaque écart.
+#
+# Ce fichier ne porte que ce qui doit être IDENTIQUE partout — le formatage.
+
+# 100, comme le `printWidth` de Prettier côté front : une seule largeur dans le
+# dépôt. 88 ou 120 ne changeaient presque rien au volume (499 à 504 fichiers).
+line-length = 100
+
+[format]
+# 🔴 Une migration appliquée ne se modifie JAMAIS (CLAUDE.md) — pas même pour
+# des guillemets. `alembic/env.py`, lui, n'est pas une migration.
+exclude = ["alembic/versions/**"]

@@ -29,6 +29,7 @@ Qu'un changement de rendu soit **délibéré**. Si l'empreinte bouge :
 qui vérifie qu'une migration et le seed concordent. Celui-ci répond à l'autre
 question : *« quelqu'un a-t-il changé le rendu sans s'en apercevoir ? »*
 """
+
 from __future__ import annotations
 
 import hashlib

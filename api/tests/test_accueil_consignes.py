@@ -36,6 +36,7 @@ socle du message — la carte d'arrivée — qui est écrit une fois pour les tr
    REPREND. Une règle « pas de diffusion » écrite en dur laisserait le suivi sans
    personne à prévenir le jour où le courriel ne part pas.
 """
+
 from __future__ import annotations
 
 import html
@@ -142,9 +143,7 @@ def test_les_CONSIGNES_vont_au_resident_et_au_conseil_PAS_au_syndic():
     """
     for role in ("resident", "cs"):
         _, corps = _rendu(role)
-        assert "fiche-arrivant" in corps, (
-            f"le rôle « {role} » ne reçoit pas le lien des consignes"
-        )
+        assert "fiche-arrivant" in corps, f"le rôle « {role} » ne reçoit pas le lien des consignes"
         assert "https://5hostachy.fr/api/admin/fiche-arrivant" in corps, (
             "le lien est relatif dans le message : un courriel n'a pas de base."
         )
@@ -251,15 +250,11 @@ def test_le_courriel_vise_EXACTEMENT_les_notifies_et_pas_un_de_plus():
 
     #  Le routeur passe la liste ; le module d'envoi la fait respecter. Les deux
     #  moitiés sont vérifiées, sans quoi retirer l'une passerait inaperçue.
-    assert "membres_cs_notifies={mc.user_id for mc in cs_unique}" in inspect.getsource(
-        arrivants
-    ), (
+    assert "membres_cs_notifies={mc.user_id for mc in cs_unique}" in inspect.getsource(arrivants), (
         "le routeur ne transmet plus les membres réellement notifiés : le module "
         "d'envoi n'aurait plus rien contre quoi filtrer."
     )
-    assert "if cs_user_id not in membres_cs_notifies:" in inspect.getsource(
-        courriel_arrivee
-    ), (
+    assert "if cs_user_id not in membres_cs_notifies:" in inspect.getsource(courriel_arrivee), (
         "le courriel ne filtre plus sur les membres réellement notifiés : sans "
         "bâtiment connu, il partirait à TOUT le conseil syndical."
     )

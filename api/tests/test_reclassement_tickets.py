@@ -4,6 +4,7 @@
 proposition fausse posée en silence est pire qu'une catégorie approximative
 assumée — et rien, dans un jeu de mots-clés, ne dit tout seul qu'il vise à côté.
 """
+
 from __future__ import annotations
 
 from app.utils.reclassement_tickets import JAMAIS_PROPOSEE, proposer

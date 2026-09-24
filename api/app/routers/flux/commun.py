@@ -9,6 +9,7 @@ le fil : le libellé d'un périmètre, le résumé d'un texte riche, les marqueu
 notion sous deux formes selon la ligne — c'est précisément ce que le découpage
 doit empêcher, pas provoquer.
 """
+
 import html as _html
 import re
 from dataclasses import dataclass
@@ -48,6 +49,7 @@ class ContexteFlux:
 
 # ── Périmètres ───────────────────────────────────────────────────────────────
 
+
 def perimetres_de(obj) -> list[str]:
     """Périmètre d'un élément qui porte `perimetre_cible` — ticket ou publication.
 
@@ -75,6 +77,7 @@ def perimetres_de(obj) -> list[str]:
 
 
 # ── Résumés, auteurs, marqueurs ──────────────────────────────────────────────
+
 
 def auteur_nom(session: Session, uid: Optional[int]) -> Optional[str]:
     if not uid:
@@ -144,6 +147,7 @@ def pieces_de_evolution(evol, porteur) -> dict:
         "photos_urls": [u for u in urls if est_image(u)],
         "fichiers_urls": [u for u in urls if not est_image(u)],
     }
+
 
 def badges_marqueurs(obj) -> list[str]:
     """Marqueurs « Épinglé » / « Urgent », identiques quelle que soit la rubrique.

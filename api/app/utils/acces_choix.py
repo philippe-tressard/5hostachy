@@ -50,6 +50,7 @@ retourne en blocage total sur une donnée absente ferait d'une copropriété non
 configurée une copropriété paralysée — c'est le « cas zéro » de
 `standards/04-fiabilite-des-controles.md` §2.
 """
+
 from __future__ import annotations
 
 import json
@@ -80,9 +81,7 @@ def _codes_configures(session: Session, cle: str) -> list[str]:
     l'écran des badges inutilisable. Elle se voit alors — plus aucun choix n'est
     proposé — ce qui est le bon sens de l'échec.
     """
-    ligne = session.exec(
-        select(ConfigSite).where(ConfigSite.cle == cle)
-    ).first()
+    ligne = session.exec(select(ConfigSite).where(ConfigSite.cle == cle)).first()
     if not ligne or not ligne.valeur:
         return []
     try:
@@ -103,8 +102,7 @@ def _codes_batiments() -> list[str]:
     reconnaître un préfixe de code.
     """
     noeuds = [
-        n for n in arbre().values()
-        if n.batiment_id is not None and n.actif and n.selectionnable
+        n for n in arbre().values() if n.batiment_id is not None and n.actif and n.selectionnable
     ]
     return [n.code for n in sorted(noeuds, key=lambda n: (n.ordre, n.code))]
 
@@ -146,8 +144,7 @@ def acces_par_defaut(session: Session, type_acces: TypeAcces) -> Optional[list[s
     return codes or None
 
 
-def valider_acces(session: Session, type_acces: TypeAcces,
-                  codes: Optional[list[str]]) -> None:
+def valider_acces(session: Session, type_acces: TypeAcces, codes: Optional[list[str]]) -> None:
     """Refuse un accès qui sort de la liste — 422, en nommant le fautif.
 
     ⚠️ Trois cas passent, et chacun est une décision :
@@ -166,6 +163,5 @@ def valider_acces(session: Session, type_acces: TypeAcces,
     if intrus:
         raise HTTPException(
             422,
-            f"Accès impossible pour un(e) {type_acces.libelle} : "
-            + ", ".join(intrus),
+            f"Accès impossible pour un(e) {type_acces.libelle} : " + ", ".join(intrus),
         )

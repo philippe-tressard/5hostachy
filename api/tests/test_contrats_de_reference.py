@@ -21,6 +21,7 @@ même moule (`syndic_contrat_id`).
    l'assurance sans le donner au syndic, ce fichier le dit — c'est
    `standards/02` §2 rendu exécutoire.
 """
+
 from __future__ import annotations
 
 import ast
@@ -178,9 +179,7 @@ def test_une_seule_fonction_lit_le_contrat_de_reference():
     """
     arbre = ast.parse(SOURCE.read_text(encoding="utf-8"))
     for nom in ("assurance_du_contrat", "syndic_du_contrat"):
-        fonction = next(
-            n for n in arbre.body if isinstance(n, ast.FunctionDef) and n.name == nom
-        )
+        fonction = next(n for n in arbre.body if isinstance(n, ast.FunctionDef) and n.name == nom)
         appels = {
             n.func.id
             for n in ast.walk(fonction)
@@ -200,9 +199,7 @@ def test_une_seule_fonction_lit_le_contrat_de_reference():
             if isinstance(n, ast.Call)
             and isinstance(n.func, ast.Name)
             and n.func.id == "select"
-            and any(
-                isinstance(a, ast.Name) and a.id == "ContratEntretien" for a in n.args
-            )
+            and any(isinstance(a, ast.Name) and a.id == "ContratEntretien" for a in n.args)
         ]
         assert not selects_contrat, (
             f"{nom} refait sa propre requête sur ContratEntretien au lieu de "

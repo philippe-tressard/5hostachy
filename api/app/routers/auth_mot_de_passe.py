@@ -13,6 +13,7 @@ Le router porte le même préfixe `/auth` et est monté à part dans `main.py` :
 FastAPI additionne les routers, les URL publiques sont donc rigoureusement
 inchangées. `api/tests/test_endpoints_orphelins.py` le vérifie.
 """
+
 from datetime import datetime, timedelta
 import secrets
 
@@ -85,7 +86,9 @@ def request_password_reset(
     site_url = base_site(cfg.get("site_url"))
     site_nom = nom_site(cfg.get("site_nom"))
 
-    user = session.exec(select(Utilisateur).where(Utilisateur.email == body.email.strip().lower())).first()
+    user = session.exec(
+        select(Utilisateur).where(Utilisateur.email == body.email.strip().lower())
+    ).first()
     if user and user.actif:
         # Invalider les tokens de reset précédents non utilisés
         old_tokens = session.exec(
@@ -108,6 +111,7 @@ def request_password_reset(
         session.commit()
 
         from app.utils.email import send_email
+
         background_tasks.add_task(
             send_email,
             code="reinitialisation_mdp",

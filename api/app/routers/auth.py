@@ -11,6 +11,7 @@ soi* reste ici, *décrire qui l'on est* s'en va. Le router garde le préfixe
 `/auth` et est monté à part dans `main.py` : FastAPI additionne les routers, les
 URL publiques sont donc rigoureusement inchangées.
 """
+
 import secrets
 from datetime import datetime, timedelta
 
@@ -31,7 +32,14 @@ from app.auth.jwt import (
 from app.auth.deps import get_current_user
 from app.config import get_settings
 from app.database import get_session
-from app.models.core import (Utilisateur, RefreshToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment)
+from app.models.core import (
+    Utilisateur,
+    RefreshToken,
+    EmailVerificationToken,
+    StatutUtilisateur,
+    RoleUtilisateur,
+    Batiment,
+)
 from app.schemas import UserCreate, UserRead, LoginRequest
 from app.utils.lecture_utilisateur import construire_user_read
 from app.utils.limiter import (
@@ -46,6 +54,7 @@ from app.utils.mots_de_passe import verifier_robustesse as _check_password_stren
 from app.utils.liens import base_site, nom_site
 
 from app.utils.noms import contexte_personne
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
 
@@ -131,18 +140,28 @@ def register(
     """Créer un compte. Pour les profils syndic et mandataire, société et fonction sont obligatoires."""
     if body.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire):
         if not body.societe or not body.fonction:
-            raise HTTPException(400, "Pour un profil syndic ou mandataire, la société et la fonction sont obligatoires.")
+            raise HTTPException(
+                400,
+                "Pour un profil syndic ou mandataire, la société et la fonction sont obligatoires.",
+            )
     if body.statut == StatutUtilisateur.locataire:
         if not body.nom_proprietaire or not body.nom_proprietaire.strip():
             raise HTTPException(400, "Le nom du propriétaire est obligatoire pour un locataire.")
     if body.statut in (StatutUtilisateur.aidant, StatutUtilisateur.mandataire):
-        if not body.nom_aide or not body.nom_aide.strip() or not body.prenom_aide or not body.prenom_aide.strip():
+        if (
+            not body.nom_aide
+            or not body.nom_aide.strip()
+            or not body.prenom_aide
+            or not body.prenom_aide.strip()
+        ):
             raise HTTPException(400, "Le nom et prénom du copropriétaire aidé sont obligatoires.")
     if not body.consentement_rgpd:
         raise HTTPException(400, "Le consentement RGPD est obligatoire.")
     _check_password_strength(body.password)
 
-    existing = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
+    existing = session.exec(
+        select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)
+    ).first()
     if existing:
         raise HTTPException(400, "Email déjà utilisé.")
 
@@ -165,12 +184,19 @@ def register(
         prenom_aide=body.prenom_aide or None,
     )
     # Attribuer les rôles selon le statut
-    if body.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire, StatutUtilisateur.aidant):
+    if body.statut in (
+        StatutUtilisateur.syndic,
+        StatutUtilisateur.mandataire,
+        StatutUtilisateur.aidant,
+    ):
         user.role = RoleUtilisateur.externe
         user.roles_json = body.statut.value  # "syndic", "mandataire" ou "aidant"
     else:
         _STATUT_ROLES = {
-            StatutUtilisateur.copropriétaire_résident: [RoleUtilisateur.propriétaire, RoleUtilisateur.résident],
+            StatutUtilisateur.copropriétaire_résident: [
+                RoleUtilisateur.propriétaire,
+                RoleUtilisateur.résident,
+            ],
             StatutUtilisateur.copropriétaire_bailleur: [RoleUtilisateur.propriétaire],
             StatutUtilisateur.locataire: [RoleUtilisateur.résident],
         }
@@ -221,8 +247,10 @@ def register(
     # lancer l'auto-match immédiatement
     if user.actif:
         from app.utils.auto_match_service import (
-            auto_match_pour_utilisateur, notifier_gestionnaire_appariement,
+            auto_match_pour_utilisateur,
+            notifier_gestionnaire_appariement,
         )
+
         resultat = auto_match_pour_utilisateur(user, session)
         session.commit()
         # Le résultat était jusqu'ici jeté : des accès pouvaient être créés
@@ -234,8 +262,15 @@ def register(
 
 @router.post("/login")
 @limiter.limit(LIMITE_SECRET_EPROUVE)
-def login(request: Request, body: LoginRequest, response: Response, session: Session = Depends(get_session)):
-    user = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
+def login(
+    request: Request,
+    body: LoginRequest,
+    response: Response,
+    session: Session = Depends(get_session),
+):
+    user = session.exec(
+        select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)
+    ).first()
     if not user or not user.hashed_password:
         #  🔴 L'adresse essayée ne s'écrit PAS dans le journal (#777) : la ligne dit
         #  qu'une tentative a échoué sur un compte inconnu, et cela suffit.
@@ -248,7 +283,10 @@ def login(request: Request, body: LoginRequest, response: Response, session: Ses
     if not user.actif:
         raise HTTPException(status_code=403, detail="Compte en attente de validation.")
     if not user.email_verifie:
-        raise HTTPException(status_code=403, detail="Veuillez vérifier votre adresse e-mail. Consultez votre boîte de réception.")
+        raise HTTPException(
+            status_code=403,
+            detail="Veuillez vérifier votre adresse e-mail. Consultez votre boîte de réception.",
+        )
     if new_hash:
         user.hashed_password = new_hash  # rehash silencieux 12→10 rounds
 
@@ -265,14 +303,23 @@ def login(request: Request, body: LoginRequest, response: Response, session: Ses
     session.add(rt)
     session.commit()
 
-    response.set_cookie("access_token", access, max_age=settings.access_token_expire_minutes * 60, **COOKIE_OPTS)
-    response.set_cookie("refresh_token", refresh, max_age=settings.refresh_token_expire_days * 86400, **COOKIE_OPTS)
+    response.set_cookie(
+        "access_token", access, max_age=settings.access_token_expire_minutes * 60, **COOKIE_OPTS
+    )
+    response.set_cookie(
+        "refresh_token", refresh, max_age=settings.refresh_token_expire_days * 86400, **COOKIE_OPTS
+    )
     return construire_user_read(user, session)
 
 
 @router.post("/refresh")
 @limiter.limit(LIMITE_SESSION)
-def refresh(request: Request, response: Response, refresh_token: str | None = Cookie(default=None), session: Session = Depends(get_session)):
+def refresh(
+    request: Request,
+    response: Response,
+    refresh_token: str | None = Cookie(default=None),
+    session: Session = Depends(get_session),
+):
     if not refresh_token:
         raise HTTPException(401, "Refresh token manquant.")
     payload = decode_token(refresh_token)
@@ -301,16 +348,30 @@ def refresh(request: Request, response: Response, refresh_token: str | None = Co
     session.commit()
 
     access = creer_jeton_acces(user.id, user.hashed_password)
-    response.set_cookie("access_token", access, max_age=settings.access_token_expire_minutes * 60, **COOKIE_OPTS)
-    response.set_cookie("refresh_token", new_refresh, max_age=settings.refresh_token_expire_days * 86400, **COOKIE_OPTS)
+    response.set_cookie(
+        "access_token", access, max_age=settings.access_token_expire_minutes * 60, **COOKIE_OPTS
+    )
+    response.set_cookie(
+        "refresh_token",
+        new_refresh,
+        max_age=settings.refresh_token_expire_days * 86400,
+        **COOKIE_OPTS,
+    )
     return {"message": "Token rafraîchi"}
 
 
 @router.post("/logout")
 @limiter.limit(LIMITE_SESSION)
-def logout(request: Request, response: Response, refresh_token: str | None = Cookie(default=None), session: Session = Depends(get_session)):
+def logout(
+    request: Request,
+    response: Response,
+    refresh_token: str | None = Cookie(default=None),
+    session: Session = Depends(get_session),
+):
     if refresh_token:
-        stored = session.exec(select(RefreshToken).where(RefreshToken.token == refresh_token)).first()
+        stored = session.exec(
+            select(RefreshToken).where(RefreshToken.token == refresh_token)
+        ).first()
         if stored:
             stored.revoked = True
             session.add(stored)

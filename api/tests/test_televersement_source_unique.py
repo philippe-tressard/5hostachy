@@ -36,6 +36,7 @@ raisonnement que `test_regle_acces_source_unique.py` et
 500 Mo lui conviendrait. Il dit qu'elles existent, qu'elles sont nommées, et
 qu'elles ne sont écrites qu'une fois. Le réglage se relit, il ne se mesure pas.
 """
+
 from __future__ import annotations
 
 import ast
@@ -54,10 +55,12 @@ SOURCE = "utils/fichiers.py"
 #: l'application ne peut pas mentir sur son type, puisque c'est nous qui le
 #: fabriquons. Un fichier **reçu** vient du réseau.
 ECRITURES_NON_TELEVERSEMENT = {
-    ("routers/annonces_hall.py", "write_bytes"):
-        "écrit le PDF d'affiche que l'application vient de PRODUIRE (WeasyPrint) "
-        "— rien n'est reçu du client, il n'y a donc ni type à vérifier ni "
-        "signature à confronter",
+    (
+        "routers/annonces_hall.py",
+        "write_bytes",
+    ): "écrit le PDF d'affiche que l'application vient de PRODUIRE (WeasyPrint) "
+    "— rien n'est reçu du client, il n'y a donc ni type à vérifier ni "
+    "signature à confronter",
 }
 
 #: Un plafond de taille en mégaoctets, écrit en clair.
@@ -112,7 +115,8 @@ def test_un_fichier_recu_ne_s_ecrit_que_dans_la_source():
 
     assert not fautes, (
         "Ces lignes écrivent un fichier sur disque hors de la source unique :\n"
-        + "\n".join(fautes) + "\n\n"
+        + "\n".join(fautes)
+        + "\n\n"
         f"Un fichier REÇU passe par `{SOURCE}`, qui porte la liste blanche de "
         "types, le plafond de taille et la vérification de signature. Un fichier "
         "PRODUIT par l'application est une autre notion : l'inscrire dans "
@@ -152,8 +156,10 @@ def test_aucun_routeur_ne_redeclare_un_plafond_ou_une_liste_de_types():
             if isinstance(noeud, (ast.Set, ast.Dict)):
                 valeurs = noeud.elts if isinstance(noeud, ast.Set) else noeud.keys
                 types = [
-                    v.value for v in valeurs
-                    if isinstance(v, ast.Constant) and isinstance(v.value, str)
+                    v.value
+                    for v in valeurs
+                    if isinstance(v, ast.Constant)
+                    and isinstance(v.value, str)
                     and _MOTIF_MIME.match(v.value)
                 ]
                 if types:
@@ -171,8 +177,7 @@ def test_aucun_routeur_ne_redeclare_un_plafond_ou_une_liste_de_types():
                 fautes.append(f"  {nom}:{i} — plafond de taille : {nue[:70]}")
 
     assert not fautes, (
-        "Ces routeurs déclarent eux-mêmes ce qu'ils acceptent :\n"
-        + "\n".join(fautes) + "\n\n"
+        "Ces routeurs déclarent eux-mêmes ce qu'ils acceptent :\n" + "\n".join(fautes) + "\n\n"
         f"Les familles de téléversement sont déclarées dans `{SOURCE}` "
         "(FAMILLES), avec leur liste de types, leur plafond et leurs extensions. "
         "Un routeur nomme la famille, il ne redéfinit pas ses règles."
@@ -209,9 +214,7 @@ def test_chaque_famille_porte_les_TROIS_regles():
             f"la famille « {nom} » n'a **aucun plafond** : un envoi de n'importe "
             "quelle taille est accepté, et il est lu en mémoire avant de l'être"
         )
-        assert regles.extensions, (
-            f"la famille « {nom} » ne produit aucune extension connue"
-        )
+        assert regles.extensions, f"la famille « {nom} » ne produit aucune extension connue"
         #  🔴 L'extension écrite sur disque doit venir de la table, jamais du nom
         #  fourni : `/uploads/*` est servi en statique, et Caddy pose le
         #  `Content-Type` d'après l'extension du fichier.
@@ -262,12 +265,16 @@ def test_les_trois_regles_refusent_VRAIMENT(tmp_path):
 
     #  3. la signature : un exécutable annoncé PDF — le défaut de #773
     with pytest.raises(HTTPException) as refus:
-        enregistrer_fichier_recu(b"MZ\x90\x00" + b"0" * 20, "x.pdf", "application/pdf", "document", tmp_path)
+        enregistrer_fichier_recu(
+            b"MZ\x90\x00" + b"0" * 20, "x.pdf", "application/pdf", "document", tmp_path
+        )
     assert refus.value.status_code == 400
 
     #  Et le cas qui doit PASSER, sans quoi les trois refus ne prouvent rien :
     #  un contrôle qui refuse tout est aussi faux qu'un contrôle qui accepte tout.
-    nom = enregistrer_fichier_recu(pdf, "Devis toiture.pdf", "application/pdf", "document", tmp_path)
+    nom = enregistrer_fichier_recu(
+        pdf, "Devis toiture.pdf", "application/pdf", "document", tmp_path
+    )
     assert nom.endswith(".pdf")
     assert "toiture" in nom, "le radical du nom d'origine est perdu"
     assert (tmp_path / nom).read_bytes() == pdf
@@ -282,6 +289,7 @@ def test_aucune_exception_ne_survit_a_son_motif():
         if (f, a) not in vues
     ]
     assert not perimees, (
-        "Ces exceptions ne correspondent plus à rien :\n" + "\n".join(perimees)
+        "Ces exceptions ne correspondent plus à rien :\n"
+        + "\n".join(perimees)
         + "\n\nLes retirer de ECRITURES_NON_TELEVERSEMENT."
     )

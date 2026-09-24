@@ -9,6 +9,7 @@ supprimer le troisième exemplaire de la liste des destinataires : les deux
 appelants (création d'un ticket, ajout d'une évolution) construisaient le même
 e-mail `ticket_syndic` avec deux blocs de code distincts.
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -93,8 +94,12 @@ def envoyer_email_syndic_cs(
     from app.utils.email import send_email_group
 
     ctx = contexte_ticket_syndic(
-        ticket, user, session,
-        pieces_jointes=pieces_jointes, commentaire=commentaire, evolutions=evolutions,
+        ticket,
+        user,
+        session,
+        pieces_jointes=pieces_jointes,
+        commentaire=commentaire,
+        evolutions=evolutions,
     )
 
     #  🔴 LA COPIE VA AU PROPRIÉTAIRE DU TICKET, pas à qui écrit — et le
@@ -162,32 +167,35 @@ def contexte_ticket_syndic(
     messages_ctx = []
     historique = [{"date": date_courte(ticket.cree_le), "label": "Création du ticket"}]
     for ev in evolutions or []:
-        historique.append({"date": fmt_paris(ev.cree_le), "label": libelle_evolution(ev, avec_extrait=True)})
+        historique.append(
+            {"date": fmt_paris(ev.cree_le), "label": libelle_evolution(ev, avec_extrait=True)}
+        )
         if ev.contenu:
             auteur_e = session.get(Utilisateur, ev.auteur_id)
-            messages_ctx.append({
-                "auteur_nom": nom_affiche(
-                    auteur_e.prenom if auteur_e else None,
-                    auteur_e.nom if auteur_e else None,
-                ) or "?",
-                "date": fmt_paris(ev.cree_le),
-                "contenu": ev.contenu,
-                #  🔴 Le périmètre de CETTE entrée, demandé le 31/08/2026 :
-                #  *« il faut signaler l'auteur et le périmètre de chaque
-                #  commentaire »*. Une entrée peut préciser le périmètre — « on a
-                #  trouvé d'où vient la fuite » — et c'est justement ce qu'un
-                #  syndic cherche dans un fil.
-                #
-                #  ⚠️ VIDE quand l'entrée n'en parle pas, et le gabarit n'affiche
-                #  alors rien. Reprendre celui du ticket ferait croire que chaque
-                #  commentaire l'a redit — donc l'a confirmé — alors qu'il ne
-                #  faisait que ne rien préciser. C'est la même règle que le
-                #  serveur applique déjà à l'écriture : « laissé vide, le
-                #  périmètre du ticket ne bouge pas » (#497).
-                "perimetre": perimetre_label_json(
-                    getattr(ev, "perimetre_cible", None)
-                ),
-            })
+            messages_ctx.append(
+                {
+                    "auteur_nom": nom_affiche(
+                        auteur_e.prenom if auteur_e else None,
+                        auteur_e.nom if auteur_e else None,
+                    )
+                    or "?",
+                    "date": fmt_paris(ev.cree_le),
+                    "contenu": ev.contenu,
+                    #  🔴 Le périmètre de CETTE entrée, demandé le 31/08/2026 :
+                    #  *« il faut signaler l'auteur et le périmètre de chaque
+                    #  commentaire »*. Une entrée peut préciser le périmètre — « on a
+                    #  trouvé d'où vient la fuite » — et c'est justement ce qu'un
+                    #  syndic cherche dans un fil.
+                    #
+                    #  ⚠️ VIDE quand l'entrée n'en parle pas, et le gabarit n'affiche
+                    #  alors rien. Reprendre celui du ticket ferait croire que chaque
+                    #  commentaire l'a redit — donc l'a confirmé — alors qu'il ne
+                    #  faisait que ne rien préciser. C'est la même règle que le
+                    #  serveur applique déjà à l'écriture : « laissé vide, le
+                    #  périmètre du ticket ne bouge pas » (#497).
+                    "perimetre": perimetre_label_json(getattr(ev, "perimetre_cible", None)),
+                }
+            )
 
     ctx = {
         "ticket": _contexte_ticket(ticket),
@@ -256,11 +264,13 @@ def envoyer_email_externe(
     msgs_ctx = []
     for m in msgs_for_history:
         auteur_m = session.get(Utilisateur, m.auteur_id)
-        msgs_ctx.append({
-            "auteur_nom": nom_affiche(auteur_m.prenom, auteur_m.nom) if auteur_m else "?",
-            "date": fmt_paris(m.cree_le),
-            "contenu": m.contenu,
-        })
+        msgs_ctx.append(
+            {
+                "auteur_nom": nom_affiche(auteur_m.prenom, auteur_m.nom) if auteur_m else "?",
+                "date": fmt_paris(m.cree_le),
+                "contenu": m.contenu,
+            }
+        )
 
     attachments = chemins_locaux(fichiers_urls or [])
 
@@ -294,6 +304,7 @@ def envoyer_email_externe(
 #  l'envoyer ». Elles étaient restées dans le CRUD par l'accident du
 #  découpage initial, pas par choix.
 
+
 def _alerter_bug(
     session: Session, ticket: Ticket, user: Utilisateur, background_tasks: BackgroundTasks
 ) -> None:
@@ -308,9 +319,15 @@ def _alerter_bug(
 
     gestionnaire = site_manager_user_id(session)
     if gestionnaire is not None:
-        sonner_systeme(session, "bug", destinataire_id=gestionnaire, type="ticket_update",
-                       titre=f"Bogue signalé : {ticket.titre}", corps=ticket.description[:200],
-                       lien=lien_ticket(ticket.id))
+        sonner_systeme(
+            session,
+            "bug",
+            destinataire_id=gestionnaire,
+            type="ticket_update",
+            titre=f"Bogue signalé : {ticket.titre}",
+            corps=ticket.description[:200],
+            lien=lien_ticket(ticket.id),
+        )
     cfg = config_site(session, "notify_ticket_bug_email", "site_email", "site_manager_user_id")
     if cfg.get("notify_ticket_bug_email") != "1":
         return
@@ -337,6 +354,7 @@ def _alerter_bug(
             "app": {"url": base_site(site_cfg.get("site_url") or cfg.get("site_url"))},
         },
     )
+
 
 def _partager_sur_le_groupe(
     session: Session, ticket: Ticket, background_tasks: BackgroundTasks

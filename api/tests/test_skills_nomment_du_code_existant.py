@@ -37,6 +37,7 @@ renvoie pas vers un fichier absent. Une skill peut être à jour sur les noms et
 périmée sur le fond ; c'est ce que l'audit de cohérence mesure, et il ne
 s'automatise pas.
 """
+
 from __future__ import annotations
 
 import json
@@ -59,10 +60,26 @@ MARQUEURS_HISTORIQUE = (
     #  une mention morte écrit souvent la première forme — « cette ligne nommait
     #  X, qui n'existe pas ». Le marqueur ne reconnaissait que la seconde, et le
     #  contrôle accusait la correction elle-même.
-    "supprim", "retir", "n'existe plus", "nexiste plus", "n'existe pas",
-    "nexiste pas", "remplac", "renomm",
-    "disparu", "avant le", "jusqu'au", "jusquau", "périmé", "perime",
-    "ne porte plus", "cessé", "cesse de", "obsolèt", "obsolet", "plus aucun",
+    "supprim",
+    "retir",
+    "n'existe plus",
+    "nexiste plus",
+    "n'existe pas",
+    "nexiste pas",
+    "remplac",
+    "renomm",
+    "disparu",
+    "avant le",
+    "jusqu'au",
+    "jusquau",
+    "périmé",
+    "perime",
+    "ne porte plus",
+    "cessé",
+    "cesse de",
+    "obsolèt",
+    "obsolet",
+    "plus aucun",
 )
 
 
@@ -111,7 +128,8 @@ def test_aucun_composant_cite_n_a_disparu():
 
     assert not fautes, (
         "Ces skills renvoient vers des composants qui n'existent pas :\n"
-        + "\n".join(fautes) + "\n\n"
+        + "\n".join(fautes)
+        + "\n\n"
         "Une skill est lue AVANT d'écrire : un nom mort présenté comme vivant "
         "fait recréer le motif qu'il désignait (`standards/02` §5 — c'est ainsi "
         "que `renderContent` est né, #429).\n"
@@ -148,6 +166,4 @@ def test_aucun_module_de_lib_cite_n_a_disparu():
                 if not (_FRONT / "src" / "lib" / chemin).exists():
                     fautes.append(f"  {skill}:{numero} — $lib/{chemin}")
 
-    assert not fautes, (
-        "Ces skills renvoient vers des modules absents :\n" + "\n".join(fautes)
-    )
+    assert not fautes, "Ces skills renvoient vers des modules absents :\n" + "\n".join(fautes)

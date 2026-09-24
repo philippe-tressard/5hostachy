@@ -18,6 +18,7 @@ commentaire qui *explique* pourquoi « résidence » a disparu est légitime, et
 contrôle qui le refuserait pousserait à supprimer les explications plutôt que les
 défauts.
 """
+
 import ast
 from pathlib import Path
 
@@ -31,9 +32,12 @@ def _constantes_texte_hors_docstring(fichier: Path) -> list[str]:
     for noeud in ast.walk(arbre_py):
         if isinstance(noeud, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
             corps = getattr(noeud, "body", [])
-            if (corps and isinstance(corps[0], ast.Expr)
-                    and isinstance(corps[0].value, ast.Constant)
-                    and isinstance(corps[0].value.value, str)):
+            if (
+                corps
+                and isinstance(corps[0], ast.Expr)
+                and isinstance(corps[0].value, ast.Constant)
+                and isinstance(corps[0].value.value, str)
+            ):
                 docstrings.add(id(corps[0].value))
     return [
         noeud.value

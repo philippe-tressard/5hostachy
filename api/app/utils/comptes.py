@@ -16,6 +16,7 @@ rétro-remplissage sait, et ce qu'il s'interdit d'inventer.
 il appelle `condition_compte_en_attente()` — c'est le seul moyen pour que la
 définition reste unique, et donc corrigible en un seul endroit.
 """
+
 from datetime import datetime
 
 from sqlalchemy import and_
@@ -41,18 +42,17 @@ def comptes_en_attente(session: Session) -> list[Utilisateur]:
     """Les comptes qui attendent une décision, du plus ancien au plus récent."""
     return list(
         session.exec(
-            select(Utilisateur)
-            .where(condition_compte_en_attente())
-            .order_by(Utilisateur.cree_le)
+            select(Utilisateur).where(condition_compte_en_attente()).order_by(Utilisateur.cree_le)
         ).all()
     )
 
 
 def nb_comptes_en_attente(session: Session) -> int:
     """Combien de comptes attendent une décision."""
-    return session.exec(
-        select(func.count(Utilisateur.id)).where(condition_compte_en_attente())
-    ).one() or 0
+    return (
+        session.exec(select(func.count(Utilisateur.id)).where(condition_compte_en_attente())).one()
+        or 0
+    )
 
 
 def marquer_decide(user: Utilisateur, maintenant: datetime | None = None) -> None:

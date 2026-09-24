@@ -19,6 +19,7 @@ La règle ne vaut que si les **quatre** points de téléversement l'appellent �
 seul appelant emploie ne protège qu'un seul chemin, et donne l'illusion des
 quatre (`standards/03` §1).
 """
+
 from __future__ import annotations
 
 import pathlib

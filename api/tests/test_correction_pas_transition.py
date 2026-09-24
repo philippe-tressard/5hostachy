@@ -19,6 +19,7 @@ attendu : il relit les évolutions en base après l'appel, au lieu de se fier au
 code de retour de l'endpoint (`standards/04` §14 — observer la chose, pas son
 enregistrement).
 """
+
 from __future__ import annotations
 
 
@@ -31,8 +32,10 @@ from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
 from app.models.core import (
-    RoleUtilisateur, Ticket,
-    TicketEvolution, Utilisateur,
+    RoleUtilisateur,
+    Ticket,
+    TicketEvolution,
+    Utilisateur,
 )
 from app.routers.tickets.mise_a_jour import update_ticket
 from app.schemas import TicketUpdate
@@ -73,6 +76,7 @@ def cs() -> Utilisateur:
 
 # ── Tickets — le même remède, posé par #431 et jamais gardé ───────────────────
 
+
 def test_patch_ticket_ecrit_une_correction_et_pas_une_transition(cs):
     with Session(engine) as session:
         ticket = Ticket(
@@ -89,7 +93,11 @@ def test_patch_ticket_ecrit_une_correction_et_pas_une_transition(cs):
         session.refresh(ticket)
 
         update_ticket(
-            ticket.id, TicketUpdate(statut="en_cours"), BackgroundTasks(), session, cs,
+            ticket.id,
+            TicketUpdate(statut="en_cours"),
+            BackgroundTasks(),
+            session,
+            cs,
         )
 
         evols = session.exec(
@@ -151,7 +159,9 @@ def test_patch_ticket_corriger_un_champ_n_ecrit_rien_dans_le_fil(cs):
                 photos_urls=[],
                 fichiers_urls=[],
             ),
-            BackgroundTasks(), session, cs,
+            BackgroundTasks(),
+            session,
+            cs,
         )
 
         evols = session.exec(
@@ -211,7 +221,9 @@ def test_patch_ticket_sans_rien_changer_n_ecrit_rien(cs):
                 saisi_pour_nom=None,
                 saisi_pour_email=None,
             ),
-            BackgroundTasks(), session, cs,
+            BackgroundTasks(),
+            session,
+            cs,
         )
 
         evols = session.exec(

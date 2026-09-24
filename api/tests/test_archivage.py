@@ -30,6 +30,7 @@ n'avait vu, et qui aurait archivé d'un coup toutes les idées anciennes.
 ⚠️ Ce n'est pas un test de plus, c'est **le** garde-fou du module : sans lui,
 `REGLES` est un commentaire exécuté.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -101,7 +102,9 @@ def test_ticket_ouvert_ne_s_archive_pas():
 def test_une_affaire_archivee_par_le_conseil_quitte_la_liste():
     """📦 remplace la corbeille dans la liste (24/09/2026) : même ouverte, elle part aux Archives."""
     assert archivable("ticket", statut=StatutTicket.ouvert, cree_le=MAINTENANT, archive_manuel=True)
-    assert not archivable("ticket", statut=StatutTicket.ouvert, cree_le=MAINTENANT, archive_manuel=False)
+    assert not archivable(
+        "ticket", statut=StatutTicket.ouvert, cree_le=MAINTENANT, archive_manuel=False
+    )
 
 
 def test_annonce_vendue_depuis_plus_du_delai():
@@ -163,8 +166,9 @@ def test_etat_terminal_sans_aucune_date_ne_s_archive_pas():
     absence sans l'avoir constatée (`standards/04` §1). Un objet resté visible
     se voit et se corrige ; un objet effacé à tort ne se voit pas.
     """
-    assert not archivable("ticket", statut=StatutTicket.résolu,
-                          ferme_le=None, mis_a_jour_le=None, cree_le=None)
+    assert not archivable(
+        "ticket", statut=StatutTicket.résolu, ferme_le=None, mis_a_jour_le=None, cree_le=None
+    )
 
 
 def test_type_inconnu_ne_s_archive_pas():
@@ -243,8 +247,12 @@ def test_les_champs_declares_existent_sur_le_modele(type_objet):
     #  l'événement au lieu de celle que l'auteur a choisie. Vrai pour les six
     #  autres objets, faux pour celui-là, et silencieux.
     declares = set(regle.champs_date) | set(regle.champs_peremption)
-    for champ in (regle.champ_statut, regle.champ_archive_manuel,
-                  regle.champ_epingle, regle.champ_brouillon):
+    for champ in (
+        regle.champ_statut,
+        regle.champ_archive_manuel,
+        regle.champ_epingle,
+        regle.champ_brouillon,
+    ):
         if champ:
             declares.add(champ)
     inconnus = declares - connus
@@ -301,8 +309,9 @@ def test_la_migration_0155_remplit_les_memes_statuts_que_la_regle():
     import importlib.util
     import pathlib
 
-    chemin = (pathlib.Path(__file__).parent.parent
-              / "alembic" / "versions" / "0155_archivage_unifie.py")
+    chemin = (
+        pathlib.Path(__file__).parent.parent / "alembic" / "versions" / "0155_archivage_unifie.py"
+    )
     spec = importlib.util.spec_from_file_location("migration_0155", chemin)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)

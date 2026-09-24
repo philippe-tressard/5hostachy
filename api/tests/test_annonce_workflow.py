@@ -24,6 +24,7 @@ fil sur `mis_a_jour_le`) avait fait remonter une actualité de l'an dernier.
 C'est ce qui la rend vérifiable sans monter de fixture, donc ce qui rend ces
 tests rapides — et un test rapide est un test qu'on garde.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -61,6 +62,7 @@ def _annonce(statut: StatutAnnonce, jours: float | None, **kw) -> PetiteAnnonce:
 
 # ── Les états qui n'archivent jamais ────────────────────────────────────────
 
+
 @pytest.mark.parametrize("statut", [StatutAnnonce.en_cours, StatutAnnonce.reserve])
 def test_un_etat_non_terminal_ne_s_archive_jamais(statut):
     """Même très ancienne : tant qu'elle est en cours ou réservée, elle est là.
@@ -73,6 +75,7 @@ def test_un_etat_non_terminal_ne_s_archive_jamais(statut):
 
 
 # ── Les états terminaux, et le délai ────────────────────────────────────────
+
 
 @pytest.mark.parametrize("statut", STATUTS_TERMINAUX)
 def test_un_etat_terminal_reste_visible_un_mois(statut):
@@ -96,6 +99,7 @@ def test_le_delai_est_atteint_a_la_seconde_pres_pas_apres():
 
 
 # ── 🔴 Le piège : quel horodatage fait foi ──────────────────────────────────
+
 
 def test_une_correction_recente_ne_repousse_PAS_l_archivage():
     """Le cœur du garde-fou.
@@ -126,6 +130,7 @@ def test_sans_horodatage_le_repli_ne_bloque_pas_l_archivage():
 
 
 # ── Le changement de comportement de la v3.1.0 ──────────────────────────────
+
 
 def test_une_annonce_annulee_est_archivee_IMMEDIATEMENT():
     """🔴 Nouveau (#515) : `annule` n'attend plus le délai.

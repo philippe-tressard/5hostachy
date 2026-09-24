@@ -71,15 +71,19 @@ pip_installer() {
         || python3 -m pip install -q --break-system-packages --ignore-installed "$@" 2>/dev/null \
         || python3 -m pip install -q "$@"
 }
-OUTILS=$(sed -nE 's/.*pip install ([A-Za-z][A-Za-z0-9_.-]*)[[:space:]]*$/\1/p' "$CI" | sort -u | tr '\n' ' ')
+#  `=` admis : un outil épinglé (`ruff==0.15.8`, #1048) n'était plus extrait du tout,
+#  donc plus installé ici — et `ruff format --check` ne tournait plus en session.
+OUTILS=$(sed -nE 's/.*pip install ([A-Za-z][A-Za-z0-9_.=-]*)[[:space:]]*$/\1/p' "$CI" | sort -u | tr '\n' ' ')
 if [ -z "$OUTILS" ]; then
     signaler "aucun outil Python extrait de ci.yml"
 else
     # shellcheck disable=SC2086
     pip_installer $OUTILS && echo "✓ outils Python : $OUTILS" || signaler "pip : échec sur $OUTILS"
 fi
-pip_installer -r "$DEPOT/api/requirements.txt" \
-    && echo "✓ dépendances de l'API" || signaler "pip : échec sur api/requirements.txt"
+#  `requirements-dev.txt` inclut la production et y ajoute pytest, épinglé : la CI
+#  l'installe ainsi depuis #1048, et l'extraction ci-dessus ne le voit plus.
+pip_installer -r "$DEPOT/api/requirements-dev.txt" \
+    && echo "✓ dépendances de l'API (+ dev)" || signaler "pip : échec sur api/requirements-dev.txt"
 
 # ── 3. Front : Node de la CI, dépendances, navigateur des tests e2e ─────────
 NODE_CI=$(sed -nE 's/.*node-version:[[:space:]]*"?([0-9]+)"?.*/\1/p' "$CI" | head -1)

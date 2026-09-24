@@ -30,6 +30,7 @@ télécommande, et ce que le descripteur `utils/types_acces` a corrigé.
 ⚠️ Ce module ne connaît **ni route, ni droit** : il dit ce qu'un accès montre,
 pas qui a le droit de le regarder. Les droits vivent dans `auth/deps`.
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -83,10 +84,7 @@ def libelle_lots(session: Session, type_acces: TypeAcces, objet) -> Optional[str
         .join(UserLot, UserLot.lot_id == Lot.id)
         .where(UserLot.user_id == objet.user_id, UserLot.actif == True)  # noqa: E712
     ).all()
-    libelles = [
-        libelle_lot(lot) for lot in lots
-        if valeur(lot.type) in type_acces.types_lot
-    ]
+    libelles = [libelle_lot(lot) for lot in lots if valeur(lot.type) in type_acces.types_lot]
     return SEPARATEUR_ELEMENT.join(x for x in libelles if x) or None
 
 

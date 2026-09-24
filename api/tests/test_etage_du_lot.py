@@ -19,6 +19,7 @@ Ce que ces tests verrouillent, c'est donc la **portée** de cette ouverture :
 4. 🔴 le cas zéro : une modification légitime passe — sans quoi les trois refus
    ci-dessus resteraient verts sur un endpoint qui refuse tout.
 """
+
 from __future__ import annotations
 
 import pytest

@@ -1,4 +1,5 @@
 """Tâches de maintenance exécutables directement depuis l'API."""
+
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -46,21 +47,36 @@ def purger() -> tuple[dict[str, int], list[str]]:
     erreurs: list[str] = []
 
     etapes = (
-        ("tokens", "purge tokens",
-         "DELETE FROM refresh_token WHERE expires_at < :now OR revoked = 1",
-         {"now": maintenant.isoformat()}),
-        ("prt", "purge password reset tokens",
-         "DELETE FROM password_reset_token WHERE expires_at < :now OR used = 1",
-         {"now": maintenant.isoformat()}),
-        ("notifications", "purge notifications",
-         "DELETE FROM notification WHERE lue = 1 AND cree_le < :cutoff",
-         {"cutoff": il_y_a_90_j}),
-        ("historique", "purge historique",
-         "DELETE FROM historique_maintenance WHERE cree_le < :cutoff",
-         {"cutoff": (maintenant - timedelta(days=365)).isoformat()}),
-        ("emails", "purge historique emails",
-         "DELETE FROM historique_email WHERE cree_le < :cutoff",
-         {"cutoff": (maintenant - timedelta(days=CONSERVATION_COURRIELS_JOURS)).isoformat()}),
+        (
+            "tokens",
+            "purge tokens",
+            "DELETE FROM refresh_token WHERE expires_at < :now OR revoked = 1",
+            {"now": maintenant.isoformat()},
+        ),
+        (
+            "prt",
+            "purge password reset tokens",
+            "DELETE FROM password_reset_token WHERE expires_at < :now OR used = 1",
+            {"now": maintenant.isoformat()},
+        ),
+        (
+            "notifications",
+            "purge notifications",
+            "DELETE FROM notification WHERE lue = 1 AND cree_le < :cutoff",
+            {"cutoff": il_y_a_90_j},
+        ),
+        (
+            "historique",
+            "purge historique",
+            "DELETE FROM historique_maintenance WHERE cree_le < :cutoff",
+            {"cutoff": (maintenant - timedelta(days=365)).isoformat()},
+        ),
+        (
+            "emails",
+            "purge historique emails",
+            "DELETE FROM historique_email WHERE cree_le < :cutoff",
+            {"cutoff": (maintenant - timedelta(days=CONSERVATION_COURRIELS_JOURS)).isoformat()},
+        ),
     )
     for cle, libelle, sql, params in etapes:
         try:
@@ -71,9 +87,7 @@ def purger() -> tuple[dict[str, int], list[str]]:
     # Logs WhatsApp : garder les 6 derniers.
     try:
         with Session(engine) as s:
-            anciens = s.exec(
-                select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())
-            ).all()[6:]
+            anciens = s.exec(select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())).all()[6:]
             for old in anciens:
                 s.delete(old)
             s.commit()
@@ -121,9 +135,7 @@ def run_maintenance(history_id: int | None = None) -> None:
             #  déclenchée à la main, sur un nœud inconnu, dans la colonne que
             #  `TachesPlanifiees` montre. C'est le défaut que l'endpoint de
             #  lancement disait avoir corrigé en v2.32.0, resté entier ici.
-            entry = HistoriqueMaintenance(
-                declenchee_par=AUTOMATIQUE, noeud=noeud_courant()
-            )
+            entry = HistoriqueMaintenance(declenchee_par=AUTOMATIQUE, noeud=noeud_courant())
             session.add(entry)
             session.commit()
             session.refresh(entry)

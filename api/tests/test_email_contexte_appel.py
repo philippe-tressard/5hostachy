@@ -17,11 +17,13 @@ dictionnaire littéral analysable, et vérifie qu'il couvre le contrat du templa
 Un contexte trop riche est permis (fournir plus qu'il n'en faut ne casse rien) ;
 un contexte incomplet échoue.
 """
+
 import ast
 from pathlib import Path
 
 import pytest
 from app.seed import EMAIL_TEMPLATES
+
 #  L'analyse du GABARIT vit à part depuis le 31/08/2026 : ce fichier-ci n'analyse
 #  que le POINT D'APPEL. Deux analyses de natures différentes, deux modules.
 from tests.lib_variables_jinja import _variables_qui_font_echouer
@@ -186,7 +188,9 @@ def _cles_du_contexte(node_context, portee: ast.AST, ligne_appel: int) -> set[st
                 dictionnaire = valeur
                 appel_fabrique = None
             #  `ctx = contexte_xxx(…)` — une FONCTION DE CONTEXTE dédiée.
-            elif isinstance(valeur, ast.Call) and (_nom_appele(valeur) or "").startswith("contexte_"):
+            elif isinstance(valeur, ast.Call) and (_nom_appele(valeur) or "").startswith(
+                "contexte_"
+            ):
                 appel_fabrique = _nom_appele(valeur)
                 dictionnaire = None
         if dictionnaire is None and appel_fabrique:
@@ -197,7 +201,8 @@ def _cles_du_contexte(node_context, portee: ast.AST, ligne_appel: int) -> set[st
         return None
 
     cles = {
-        c.value for c in dictionnaire.keys
+        c.value
+        for c in dictionnaire.keys
         if isinstance(c, ast.Constant) and isinstance(c.value, str)
     }
     # `ctx["x"] = …` et `ctx.update({...})` après la déclaration.
@@ -223,7 +228,8 @@ def _cles_du_contexte(node_context, portee: ast.AST, ligne_appel: int) -> set[st
                 for arg in n.args:
                     if isinstance(arg, ast.Dict):
                         cles |= {
-                            c.value for c in arg.keys
+                            c.value
+                            for c in arg.keys
                             if isinstance(c, ast.Constant) and isinstance(c.value, str)
                         }
                     else:

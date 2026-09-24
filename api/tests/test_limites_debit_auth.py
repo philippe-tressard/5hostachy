@@ -33,6 +33,7 @@ douzième route sans limite n'aurait rien fait échouer non plus.
    route décorée sans paramètre `request` lève une erreur **à l'appel**, pas au
    démarrage : sans ce contrôle, la panne attend le premier visiteur.
 """
+
 from __future__ import annotations
 
 import ast
@@ -68,11 +69,10 @@ def _routes(module: str):
         if not isinstance(noeud, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
         decores = [ast.unparse(d) for d in noeud.decorator_list]
-        if any(d.startswith("router.") and d.split("(")[0].split(".")[-1] in _METHODES
-               for d in decores):
-            arguments = [a.arg for a in noeud.args.args] + [
-                a.arg for a in noeud.args.kwonlyargs
-            ]
+        if any(
+            d.startswith("router.") and d.split("(")[0].split(".")[-1] in _METHODES for d in decores
+        ):
+            arguments = [a.arg for a in noeud.args.args] + [a.arg for a in noeud.args.kwonlyargs]
             yield noeud.name, decores, arguments
 
 

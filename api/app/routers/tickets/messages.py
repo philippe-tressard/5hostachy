@@ -2,6 +2,7 @@
 
 Extrait de `tickets.py` le 08/08/2026. Voir `__init__.py` pour la règle de découpage.
 """
+
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -74,7 +75,8 @@ def _prevenir(
     from app.utils.email import send_email
 
     background_tasks.add_task(
-        send_email, code="ticket_nouveau_message",
+        send_email,
+        code="ticket_nouveau_message",
         to=email,
         context={
             "ticket": {"id": ticket.id, "numero": ticket.numero, "titre": ticket.titre},
@@ -84,7 +86,8 @@ def _prevenir(
         },
         destinataire_id=destinataire_id,
     )
-    sonner(session,
+    sonner(
+        session,
         destinataire_id=destinataire_id,
         type="ticket_update",
         titre=titre_notif,
@@ -119,12 +122,16 @@ def add_message(
         fichiers_urls=photos_json(body.fichiers_urls),
     )
     # Auto-log évolution "réponse"
-    session.add(TicketEvolution(
-        ticket_id=ticket_id, type="reponse",
-        contenu="Message interne" if body.interne else None,
-        auteur_id=user.id, cree_le=datetime.utcnow(),
-        assiste_ia=body.assiste_ia,
-    ))
+    session.add(
+        TicketEvolution(
+            ticket_id=ticket_id,
+            type="reponse",
+            contenu="Message interne" if body.interne else None,
+            auteur_id=user.id,
+            cree_le=datetime.utcnow(),
+            assiste_ia=body.assiste_ia,
+        )
+    )
     ticket.mis_a_jour_le = datetime.utcnow()
     session.add(msg)
     session.add(ticket)
@@ -137,7 +144,11 @@ def add_message(
         cfg = config_site(session)
         lien = lien_ticket(ticket.id, msg.id)
         commun = dict(
-            ticket=ticket, user=user, contenu=body.contenu, cfg=cfg, lien=lien,
+            ticket=ticket,
+            user=user,
+            contenu=body.contenu,
+            cfg=cfg,
+            lien=lien,
         )
 
         if est_cs:
@@ -146,8 +157,10 @@ def add_message(
                 auteur = session.get(Utilisateur, ticket.auteur_id)
                 if auteur and auteur.email:
                     _prevenir(
-                        session, background_tasks,
-                        destinataire_id=ticket.auteur_id, email=auteur.email,
+                        session,
+                        background_tasks,
+                        destinataire_id=ticket.auteur_id,
+                        email=auteur.email,
                         titre_notif=f"Nouvelle réponse sur le ticket #{ticket.numero}",
                         **commun,
                     )
@@ -161,8 +174,10 @@ def add_message(
             for member in cs_members:
                 if member.id != user.id:
                     _prevenir(
-                        session, background_tasks,
-                        destinataire_id=member.id, email=member.email,
+                        session,
+                        background_tasks,
+                        destinataire_id=member.id,
+                        email=member.email,
                         titre_notif=f"Nouveau message sur le ticket #{ticket.numero}",
                         **commun,
                     )
@@ -177,7 +192,11 @@ def add_message(
     #  choix, depuis celle du site (#1164, 23/09/2026).
     if body.email_externe and body.email_externe.strip() and not body.interne and est_cs:
         envoyer_email_externe(
-            ticket, user, body.email_externe.strip(), background_tasks, session,
+            ticket,
+            user,
+            body.email_externe.strip(),
+            background_tasks,
+            session,
             is_commentaire=True,
             nouveau_message=body.contenu,
             fichiers_urls=body.fichiers_urls,

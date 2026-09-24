@@ -25,6 +25,7 @@ Règles métier appliquées :
       site : une deuxième règle d'accès à maintenir, et un écran qui ne savait
       cibler ni le parking, ni l'AFUL, ni un espace. Unifié le 16/08/2026.
 """
+
 #  🔴 La surface publique NE BOUGE PAS. Seize modules et huit tests écrivent
 #  `from app.utils.visibility import …` ; un découpage qui casse ses importateurs
 #  n'est pas un découpage, c'est un déménagement à leurs frais.

@@ -4,6 +4,7 @@ Le lot pose des affaires Entretien « Chez le prestataire », toutes ou aucune, 
 ne diffuse RIEN : un canal glissé dans le corps est refusé (422), jamais ignoré —
 l'appelant croirait avoir diffusé.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -20,16 +21,22 @@ from tests.aides_badges import _compte, session  # noqa: F401 — `session` est 
 
 
 def _visite(**extra):
-    return {"titre": "Otis — Ascenseur (1/2)", "debut": datetime(2027, 1, 15, 9, 0),
-            "perimetre_cible": ["bat:1"], "frequence_type": "fois_par_an",
-            "frequence_valeur": 2, **extra}
+    return {
+        "titre": "Otis — Ascenseur (1/2)",
+        "debut": datetime(2027, 1, 15, 9, 0),
+        "perimetre_cible": ["bat:1"],
+        "frequence_type": "fois_par_an",
+        "frequence_valeur": 2,
+        **extra,
+    }
 
 
 def test_le_lot_pose_des_affaires_entretien_suivies(session):
     cs = _compte(session, "Cs")
     rendu = creer_visites_en_lot(
         LotDeVisites(affaires=[_visite(), _visite(titre="Otis — Ascenseur (2/2)")]),
-        session=session, user=cs,
+        session=session,
+        user=cs,
     )
     assert rendu == {"crees": 2}
     affaires = session.exec(select(Ticket)).all()
@@ -46,7 +53,9 @@ def test_un_canal_dans_le_corps_est_refuse_pas_ignore():
 
 def test_cas_zero_un_lot_vide_est_refuse(session):
     with pytest.raises(HTTPException) as refus:
-        creer_visites_en_lot(LotDeVisites(affaires=[]), session=session, user=_compte(session, "Cs"))
+        creer_visites_en_lot(
+            LotDeVisites(affaires=[]), session=session, user=_compte(session, "Cs")
+        )
     assert refus.value.status_code == 422
 
 
@@ -54,7 +63,10 @@ def test_toutes_ou_aucune(session):
     """Une fréquence inconnue à la 2ᵉ visite : la 1ʳᵉ n'est pas créée non plus."""
     cs = _compte(session, "Cs")
     with pytest.raises(HTTPException):
-        creer_visites_en_lot(LotDeVisites(affaires=[_visite(), _visite(frequence_type="lunes")]),
-                             session=session, user=cs)
+        creer_visites_en_lot(
+            LotDeVisites(affaires=[_visite(), _visite(frequence_type="lunes")]),
+            session=session,
+            user=cs,
+        )
     session.rollback()
     assert session.exec(select(Ticket)).first() is None

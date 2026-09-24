@@ -25,6 +25,7 @@ domaine, chacun ayant sa propre raison de changer.
 9 chemins sont identiques au caractère près à ceux d'avant le découpage —
 `tests/test_endpoints_orphelins.py` les vérifie.
 """
+
 from fastapi import APIRouter
 
 from . import crud, participation

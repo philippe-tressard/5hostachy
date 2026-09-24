@@ -15,6 +15,7 @@ un jeton en entrée, un genre d'expéditeur en sortie), et c'est ce qui permet d
 l'éprouver modèle par modèle. Le tuyau, lui, est éprouvé par le fait qu'il n'y a
 qu'un seul appel — `connexion_smtp(..., expediteur=…)`.
 """
+
 from __future__ import annotations
 
 from app.seed.emails import (
@@ -52,8 +53,7 @@ def test_une_adresse_de_reponse_de_ticket_rend_l_envoi_parlant():
     """
     assert expediteur_du_modele("ticket_nouveau_message") == EXPEDITEUR_MUET
     assert (
-        expediteur_du_modele("ticket_nouveau_message", jeton_reponse="a" * 32)
-        == EXPEDITEUR_REPONSE
+        expediteur_du_modele("ticket_nouveau_message", jeton_reponse="a" * 32) == EXPEDITEUR_REPONSE
     )
 
 

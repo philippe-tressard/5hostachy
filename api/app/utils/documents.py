@@ -28,6 +28,7 @@ session. Il reste ainsi éprouvable seul, et `test_liens_front` peut confronter 
 table aux onglets du front. Cette fonction-ci a besoin du document, de la session
 et de **qui regarde** : elle a sa propre place.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -72,11 +73,7 @@ def lien_document(doc: Document, user: Utilisateur, session: Session) -> Optiona
             return None
         contrat = session.get(ContratEntretien, doc.contrat_id)
         # Les documents d'un contrat sont listés dans la fiche de son prestataire.
-        return (
-            lien_element("presta", contrat.prestataire_id)
-            if contrat
-            else page_element("presta")
-        )
+        return lien_element("presta", contrat.prestataire_id) if contrat else page_element("presta")
 
     code = doc.categorie.code if doc.categorie else None
     return lien_element("doc", doc.id) if code in CATEGORIES_AVEC_LIEN else None

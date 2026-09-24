@@ -2,6 +2,7 @@
 
 Extrait de `tickets.py` le 08/08/2026. Voir `__init__.py` pour la règle de découpage.
 """
+
 import json
 from datetime import datetime
 
@@ -87,8 +88,12 @@ def update_evolution(
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
     evol = evolution_modifiable(
-        session, TicketEvolution, evol_id,
-        champ_parent="ticket_id", parent_id=ticket_id, user=user,
+        session,
+        TicketEvolution,
+        evol_id,
+        champ_parent="ticket_id",
+        parent_id=ticket_id,
+        user=user,
     )
     if body.contenu is not None:
         evol.contenu = body.contenu
@@ -99,9 +104,7 @@ def update_evolution(
         #  🔴 CORRIGER, pas raturer. La règle et son pourquoi vivent dans
         #  `app/utils/perimetre_fil.py` — elle a son `--selftest`.
         evol.perimetre_cible = (
-            json.dumps(body.perimetre_cible, ensure_ascii=False)
-            if body.perimetre_cible
-            else None
+            json.dumps(body.perimetre_cible, ensure_ascii=False) if body.perimetre_cible else None
         )
         fil = session.exec(
             select(TicketEvolution)
@@ -180,11 +183,13 @@ def delete_evolution(
     #  au premier ajustement de la liste des types. Ce qui reste ici est le
     #  contrôle d'accès — c'est au routeur de dire qui il laisse entrer.
     supprimer_evolution(
-        session, TicketEvolution, evol_id,
-        champ_parent="ticket_id", parent_id=ticket_id,
+        session,
+        TicketEvolution,
+        evol_id,
+        champ_parent="ticket_id",
+        parent_id=ticket_id,
     )
     return None
-
 
 
 def _notifier_auteur(
@@ -206,7 +211,9 @@ def _notifier_auteur(
     if auteur and auteur.email:
         if body.type == "etat":
             background_tasks.add_task(
-                send_email, code="ticket_statut_change", to=auteur.email,
+                send_email,
+                code="ticket_statut_change",
+                to=auteur.email,
                 context={
                     "ticket": {
                         **base_ticket,
@@ -221,7 +228,9 @@ def _notifier_auteur(
             )
         elif body.type == "commentaire" and body.contenu:
             background_tasks.add_task(
-                send_email, code="ticket_nouveau_message", to=auteur.email,
+                send_email,
+                code="ticket_nouveau_message",
+                to=auteur.email,
                 context={
                     "ticket": base_ticket,
                     "message": {"contenu": body.contenu[:300]},
@@ -237,7 +246,8 @@ def _notifier_auteur(
         if body.type == "etat"
         else f"Nouveau commentaire sur le ticket #{ticket.numero}"
     )
-    sonner(session,
+    sonner(
+        session,
         destinataire_id=ticket.auteur_id,
         type="ticket_update",
         titre=titre_notif,
@@ -246,13 +256,15 @@ def _notifier_auteur(
     )
 
 
-def _message_pour_le_groupe(ticket: Ticket, body: TicketEvolutionCreate, nb_precedents: int,
-                            site_url: str) -> str:
+def _message_pour_le_groupe(
+    ticket: Ticket, body: TicketEvolutionCreate, nb_precedents: int, site_url: str
+) -> str:
     """Texte WhatsApp d'une évolution, renvoi vers l'historique si besoin."""
     msg = body.contenu or (
         f"Ticket #{ticket.numero} — {ticket.titre} : statut → "
         f"{STATUT_LABELS.get(body.nouveau_statut or '', body.nouveau_statut or '')}"
-        if body.type == "etat" else ticket.titre
+        if body.type == "etat"
+        else ticket.titre
     )
     if msg and nb_precedents:
         msg += (
@@ -288,20 +300,23 @@ def add_evolution(
         raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
     #  Une actualité n'a pas de cycle (#1091) : une Suite y parle, elle ne la
     #  fait pas avancer — et `publie` ne s'atteint par aucune transition.
-    if body.type == "etat" and (est_actualite(ticket) or body.nouveau_statut in STATUTS_TICKET_SANS_CYCLE):
+    if body.type == "etat" and (
+        est_actualite(ticket) or body.nouveau_statut in STATUTS_TICKET_SANS_CYCLE
+    ):
         raise HTTPException(422, "Une actualité n'a pas d'état de suivi")
 
     ancien_statut = ticket.statut if body.type == "etat" else None
     evol = TicketEvolution(
-        ticket_id=ticket_id, type=body.type,
+        ticket_id=ticket_id,
+        type=body.type,
         contenu=body.contenu,
         ancien_statut=ancien_statut,
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
-        auteur_id=user.id, cree_le=datetime.utcnow(),
+        auteur_id=user.id,
+        cree_le=datetime.utcnow(),
         fichiers_urls=photos_json(body.fichiers_urls),
         perimetre_cible=(
-            json.dumps(body.perimetre_cible, ensure_ascii=False)
-            if body.perimetre_cible else None
+            json.dumps(body.perimetre_cible, ensure_ascii=False) if body.perimetre_cible else None
         ),
         assiste_ia=body.assiste_ia,
     )
@@ -348,7 +363,9 @@ def add_evolution(
     #  que la correction — `appliquer_intervenant`, `_appliquer_quand` —, et ce
     #  qui a changé s'écrit dans la Suite même : la trace est au fil.
     if est_moderateur(user) and not est_actualite(ticket):
-        planifie = appliquer_intervenant(ticket, body, session, est_cs=True) + _appliquer_quand(body, ticket)
+        planifie = appliquer_intervenant(ticket, body, session, est_cs=True) + _appliquer_quand(
+            body, ticket
+        )
         if planifie:
             evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(planifie)}</em></p>"
             ticket.mis_a_jour_le = datetime.utcnow()
@@ -356,7 +373,9 @@ def add_evolution(
     #  À qui l'on parle et l'Accès — le conseil seul, comme sur l'ancienne
     #  publication (#1091). Puis l'invariant d'accès : une Suite qui referme
     #  l'actualité archive ses affiches, comme la correction et la création.
-    if est_moderateur(user) and (body.public_cible is not None or body.reserve_perimetre is not None):
+    if est_moderateur(user) and (
+        body.public_cible is not None or body.reserve_perimetre is not None
+    ):
         if body.public_cible is not None:
             ticket.public_cible = (
                 json.dumps(body.public_cible, ensure_ascii=False) if body.public_cible else None
@@ -382,8 +401,12 @@ def add_evolution(
 
     if ticket.auteur_id != user.id and body.notifier:
         _notifier_auteur(
-            session, background_tasks,
-            ticket=ticket, user=user, body=body, ancien_statut=ancien_statut,
+            session,
+            background_tasks,
+            ticket=ticket,
+            user=user,
+            body=body,
+            ancien_statut=ancien_statut,
         )
 
     session.commit()
@@ -394,12 +417,17 @@ def add_evolution(
     if est_actualite(ticket) and est_moderateur(user):
         if body.contenu and body.contenu.strip():
             diffuser_actualite(
-                session, ticket, user, background_tasks,
+                session,
+                ticket,
+                user,
+                background_tasks,
                 whatsapp=bool(body.partager_whatsapp),
-                syndic=bool(body.envoyer_syndic), cs=bool(body.envoyer_cs),
+                syndic=bool(body.envoyer_syndic),
+                cs=bool(body.envoyer_cs),
                 auteur=bool(getattr(body, "envoyer_auteur", False)),
                 externe=body.email_externe,
-                commentaire=body.contenu, fichiers_urls=body.fichiers_urls,
+                commentaire=body.contenu,
+                fichiers_urls=body.fichiers_urls,
             )
         return evol_read(evol, session)
 
@@ -442,16 +470,23 @@ def add_evolution(
                     envoyer_whatsapp_avec_log,
                     f"🔧 {ticket.titre}",
                     _message_pour_le_groupe(
-                        ticket, body,
+                        ticket,
+                        body,
                         nb_precedents=sum(1 for ev in evols_hist if ev.contenu),
                         site_url=base_site(wa_config.get("site_url")),
                     ),
-                    False, ticket.perimetre_cible, None, wa_config,
+                    False,
+                    ticket.perimetre_cible,
+                    None,
+                    wa_config,
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:
             envoyer_email_syndic_cs(
-                ticket, user, background_tasks, session,
+                ticket,
+                user,
+                background_tasks,
+                session,
                 syndic=bool(body.envoyer_syndic),
                 cs=bool(body.envoyer_cs),
                 # `photos_internes` avant résolution : même filtre qu'à
@@ -468,7 +503,11 @@ def add_evolution(
     #  il voulait (#1164).
     if body.email_externe and body.email_externe.strip() and est_cs:
         envoyer_email_externe(
-            ticket, user, body.email_externe.strip(), background_tasks, session,
+            ticket,
+            user,
+            body.email_externe.strip(),
+            background_tasks,
+            session,
             is_commentaire=True,
             nouveau_message=body.contenu,
             fichiers_urls=body.fichiers_urls,

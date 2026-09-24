@@ -44,6 +44,7 @@ qui figurent parfois au pied d'un contrat signé : ils partiraient avec le reste
 reste alors possible, mais elle ne remplit que ce que la base sait — et elle le
 DIT, plutôt que de rendre des sections vides sans explication.
 """
+
 from __future__ import annotations
 
 import base64
@@ -83,6 +84,7 @@ MAX_OCTETS_JOINTS = 8 * 1024 * 1024
 #: passer un format ; au-delà on paie des jetons pour répéter la même leçon.
 MAX_EXEMPLES = 3
 
+
 def documents_du_contrat(session: Session, contrat: ContratEntretien) -> list[Document]:
     """TOUS les documents du contrat, du plus ancien au plus récent.
 
@@ -111,9 +113,7 @@ def documents_du_contrat(session: Session, contrat: ContratEntretien) -> list[Do
     """
     return list(
         session.exec(
-            select(Document)
-            .where(Document.contrat_id == contrat.id)
-            .order_by(Document.publie_le)
+            select(Document).where(Document.contrat_id == contrat.id).order_by(Document.publie_le)
         ).all()
     )
 
@@ -191,7 +191,10 @@ def ce_que_la_base_sait(session: Session, contrat: ContratEntretien) -> str:
         ("Date de début", contrat.date_debut.isoformat() if contrat.date_debut else None),
         ("Durée initiale", duree),
         ("Fréquence des visites", frequence),
-        ("Périmètre couvert", perimetre_label_liste(parse_json_perimetres(contrat.perimetre_cible))),
+        (
+            "Périmètre couvert",
+            perimetre_label_liste(parse_json_perimetres(contrat.perimetre_cible)),
+        ),
     ]
     return "\n".join(f"- {k} : {v}" for k, v in lignes if v)
 
@@ -296,9 +299,7 @@ def construire_matiere(
             extrait = texte_doc[:budget]
             budget -= len(extrait)
             tronque = " — TRONQUÉ" if len(extrait) < len(texte_doc) else ""
-            lus.append(
-                f"--- Document « {doc.titre} » (déposé le {quand}){tronque} ---\n{extrait}"
-            )
+            lus.append(f"--- Document « {doc.titre} » (déposé le {quand}){tronque} ---\n{extrait}")
             en_texte.append(doc.titre)
             continue
         #  Pas de texte : le fichier part tel quel. C'est le cas NORMAL d'un
@@ -403,10 +404,7 @@ def entete_provenance(
     )
     if ecartes:
         details = " ; ".join(f"{e(titre)} ({e(motif)})" for titre, motif in ecartes)
-        entete += (
-            "<p><em>⚠️ Document non lu, la synthèse est donc partielle : "
-            f"{details}.</em></p>"
-        )
+        entete += f"<p><em>⚠️ Document non lu, la synthèse est donc partielle : {details}.</em></p>"
     return entete + "</blockquote>"
 
 

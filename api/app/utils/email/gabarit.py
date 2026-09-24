@@ -8,6 +8,7 @@ Le partage est net : ici on décide de ce que le destinataire **voit** ; dans
 `__init__.py`, de ce qu'on **envoie** et à qui. Les deux ont des raisons de
 changer distinctes — une retouche de charte graphique ne touche pas au SMTP.
 """
+
 import re as _re
 
 from app.utils.fichiers import libelle_pieces_jointes
@@ -54,7 +55,7 @@ def _bandeau_intention(intention: str | None) -> str:
         f'<td style="background:{fond};border-radius:6px;padding:10px 14px">'
         f'<span style="font-size:12px;font-weight:700;letter-spacing:.6px;'
         f'text-transform:uppercase;color:{couleur}">{libelle}</span>'
-        f'</td></tr></table>'
+        f"</td></tr></table>"
     )
 
 
@@ -75,9 +76,11 @@ _LOGO_SVG = _logo_svg(48)
 def _linkify_urls(text: str) -> str:
     """Transforme les URLs brutes en liens cliquables dans le footer."""
     return _re.sub(
-        r'(https?://\S+|(?<!\w)([a-zA-Z0-9-]+\.)+[a-z]{2,}(?:/\S*)?)',
-        lambda m: f'<a href="{m.group(0) if m.group(0).startswith("http") else "https://" + m.group(0)}" '
-                  f'style="color:#1E3A5F;text-decoration:underline">{m.group(0)}</a>',
+        r"(https?://\S+|(?<!\w)([a-zA-Z0-9-]+\.)+[a-z]{2,}(?:/\S*)?)",
+        lambda m: (
+            f'<a href="{m.group(0) if m.group(0).startswith("http") else "https://" + m.group(0)}" '
+            f'style="color:#1E3A5F;text-decoration:underline">{m.group(0)}</a>'
+        ),
         text,
     )
 
@@ -91,7 +94,9 @@ def _html_echappe(texte: str) -> str:
     """
     return (
         (texte or "")
-        .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
         .replace('"', "&quot;")
     )
 
@@ -150,20 +155,25 @@ def _bandeau_pieces_jointes(noms: list[str]) -> str:
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
         'style="border-top:1px solid #E4E7EC">'
         '<tr><td style="padding-top:14px;font-size:13px;color:#5A6070">'
-        f'📎 Ce message comporte <strong>{libelle}</strong> :'
-        '</td></tr>'
+        f"📎 Ce message comporte <strong>{libelle}</strong> :"
+        "</td></tr>"
         f'<tr><td style="padding-top:6px"><table role="presentation" cellpadding="0" '
         f'cellspacing="0">{lignes}</table></td></tr>'
         '<tr><td style="padding-top:8px;font-size:12px;color:#8A8FA0">'
         "Si l'une d'elles n'apparaît pas, votre messagerie a pu la filtrer."
-        '</td></tr>'
-        '</table></td></tr>'
+        "</td></tr>"
+        "</table></td></tr>"
     )
 
 
 def _wrap_email(
-    body_html: str, site_nom: str, site_url: str, footer: str, annee: int,
-    pieces_jointes: list[str] | None = None, intention: str | None = None,
+    body_html: str,
+    site_nom: str,
+    site_url: str,
+    footer: str,
+    annee: int,
+    pieces_jointes: list[str] | None = None,
+    intention: str | None = None,
 ) -> str:
     """Encapsule le contenu HTML dans un gabarit email aux couleurs du site."""
     bandeau_pj = _bandeau_pieces_jointes(pieces_jointes or [])
@@ -174,7 +184,7 @@ def _wrap_email(
         safe_footer = (
             f'<tr><td style="background-color:#FAFAF7;padding:20px 32px 24px;text-align:center">'
             f'<p style="margin:0;font-size:13px;color:#5A6070">{linked_footer}</p>'
-            f'</td></tr>'
+            f"</td></tr>"
         )
     return f'''<!DOCTYPE html>
 <html lang="fr">
@@ -213,7 +223,7 @@ def _wrap_email(
 
   <!-- Notification preferences -->
   <tr><td style="background-color:#FFFFFF;padding:0 32px 20px;text-align:center">
-    <p style="margin:0;font-size:12px;color:#8A8FA0">Pour gérer vos préférences de notification, rendez-vous dans votre <a href="{site_url.rstrip('/')}/profil" style="color:#1E3A5F;text-decoration:underline">profil</a>.</p>
+    <p style="margin:0;font-size:12px;color:#8A8FA0">Pour gérer vos préférences de notification, rendez-vous dans votre <a href="{site_url.rstrip("/")}/profil" style="color:#1E3A5F;text-decoration:underline">profil</a>.</p>
   </td></tr>
 
   <!-- Footer -->

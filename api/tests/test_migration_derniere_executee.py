@@ -32,6 +32,7 @@ Il ne rejoue pas toute la chaîne : cette dette-là est connue et documentée. I
 couvre **la migration du lot en cours**, celle qui va tourner ce soir en
 production — c'est-à-dire la seule dont on ne sait encore rien.
 """
+
 from __future__ import annotations
 
 import os
@@ -76,21 +77,30 @@ def _base_avant_migration(chemin: str):
         c.execute(text("DROP TABLE copropriete"))
         c.execute(text("ALTER TABLE copro_tmp RENAME TO copropriete"))
 
-        c.execute(text(
-            "INSERT INTO copropriete (id, nom, adresse, nb_parkings_communs) "
-            "VALUES (1, 'Résidence du Parc', '5 boulevard', 0)"))
-        c.execute(text(
-            "INSERT INTO prestataire (id, nom, specialite, type_prestataire, actif, cree_le) "
-            "VALUES (3, 'ASA Assurances', 'assurance', 'contrat_recurrent', 1, '2026-01-01')"))
+        c.execute(
+            text(
+                "INSERT INTO copropriete (id, nom, adresse, nb_parkings_communs) "
+                "VALUES (1, 'Résidence du Parc', '5 boulevard', 0)"
+            )
+        )
+        c.execute(
+            text(
+                "INSERT INTO prestataire (id, nom, specialite, type_prestataire, actif, cree_le) "
+                "VALUES (3, 'ASA Assurances', 'assurance', 'contrat_recurrent', 1, '2026-01-01')"
+            )
+        )
         #  Deux contrats d'assurance : l'ancien et le courant. La reprise doit
         #  choisir le plus récent — c'est la règle qu'elle applique une dernière
         #  fois avant d'être remplacée par un choix explicite.
         for cid, debut in ((10, "2023-01-01"), (11, "2025-01-01")):
-            c.execute(text(
-                "INSERT INTO contrat_entretien "
-                "(id, copropriete_id, prestataire_id, type_equipement, libelle, "
-                " numero_contrat, date_debut, actif) "
-                f"VALUES ({cid}, 1, 3, 'assurance', 'Multirisque', 'P-{cid}', '{debut}', 1)"))
+            c.execute(
+                text(
+                    "INSERT INTO contrat_entretien "
+                    "(id, copropriete_id, prestataire_id, type_equipement, libelle, "
+                    " numero_contrat, date_debut, actif) "
+                    f"VALUES ({cid}, 1, 3, 'assurance', 'Multirisque', 'P-{cid}', '{debut}', 1)"
+                )
+            )
     return moteur
 
 
@@ -137,7 +147,9 @@ def test_la_migration_S_EXECUTE(base):
     _appliquer(chemin)
     with moteur.begin() as c:
         cols = {r[1] for r in c.execute(text("PRAGMA table_info(copropriete)")).fetchall()}
-    assert set(COLONNES_POSEES) <= cols, f"colonnes manquantes après {REVISION} : {sorted(set(COLONNES_POSEES) - cols)}"
+    assert set(COLONNES_POSEES) <= cols, (
+        f"colonnes manquantes après {REVISION} : {sorted(set(COLONNES_POSEES) - cols)}"
+    )
 
 
 def test_la_reprise_choisit_le_contrat_le_plus_recent(base):
@@ -149,8 +161,9 @@ def test_la_reprise_choisit_le_contrat_le_plus_recent(base):
     chemin, moteur = base
     _appliquer(chemin)
     with moteur.begin() as c:
-        assurance, syndic = c.execute(text(
-            "SELECT assurance_contrat_id, syndic_contrat_id FROM copropriete WHERE id = 1")).one()
+        assurance, syndic = c.execute(
+            text("SELECT assurance_contrat_id, syndic_contrat_id FROM copropriete WHERE id = 1")
+        ).one()
     assert assurance == 11, f"la reprise n'a pas choisi le contrat le plus récent : {assurance}"
     assert syndic is None, "le syndic ne doit rien inventer : aucun contrat de ce type n'existe"
 

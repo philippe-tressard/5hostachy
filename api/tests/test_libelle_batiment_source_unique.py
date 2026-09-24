@@ -25,6 +25,7 @@ Une exception non écrite n'est pas une exception, c'est un oubli qui ressemble 
 une décision. Elles sont déclarées ci-dessous avec leur raison — et le test échoue
 si l'une d'elles cesse de servir, sinon la liste deviendrait un cimetière.
 """
+
 from __future__ import annotations
 
 import ast
@@ -49,9 +50,7 @@ _AVANT_INTERPOLATION = "Bât. "
 
 #: Chemin → raison. Une entrée qui ne sert plus fait ÉCHOUER ce test.
 EXCEPTIONS = {
-    "utils/batiments.py": (
-        "la forme elle-même, et le module qui la rend — c'est la source."
-    ),
+    "utils/batiments.py": ("la forme elle-même, et le module qui la rend — c'est la source."),
     "seed/patrimoine.py": (
         "l'arbre des périmètres nomme ses nœuds « Bât. {id} », pas « {numero} ». "
         "La divergence est DÉCLARÉE dans ce fichier depuis sa création et "
@@ -83,9 +82,7 @@ def compose_le_libelle(source: str) -> bool:
         if not isinstance(n, ast.JoinedStr):
             continue
         for morceau, suivant in zip(n.values, n.values[1:]):
-            est_litteral = isinstance(morceau, ast.Constant) and isinstance(
-                morceau.value, str
-            )
+            est_litteral = isinstance(morceau, ast.Constant) and isinstance(morceau.value, str)
             if (
                 est_litteral
                 and morceau.value.endswith(_AVANT_INTERPOLATION)
@@ -133,9 +130,7 @@ def test_chaque_EXCEPTION_sert_encore():
 def test_cas_zero_le_balayage_regarde_bien_quelque_chose():
     """Si l'arborescence ou la forme changent, le contrôle ne mesure plus rien."""
     assert len(_fichiers()) > 50, "le parcours ne décrit plus `app/`."
-    assert compose_le_libelle('x = f"Bât. {bat.numero}"'), (
-        "la forme fautive n'est plus reconnue."
-    )
+    assert compose_le_libelle('x = f"Bât. {bat.numero}"'), "la forme fautive n'est plus reconnue."
     assert not compose_le_libelle("x = libelle_batiment(bat)"), (
         "le contrôle crie sur la forme voulue."
     )

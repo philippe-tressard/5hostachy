@@ -13,6 +13,7 @@ Trois duplications que le fichier long avait fabriquées vivent désormais ici :
 - **le libellé d'une évolution**, écrit deux fois avec deux résultats différents
   (« Commentaire CS » d'un côté, « Commentaire : … » de l'autre).
 """
+
 import json
 import random
 import string
@@ -45,9 +46,12 @@ from app.utils.photos import parse_photos
 #: Un couvercle vérifie que ce dictionnaire couvre l'énumération et rien de
 #: fantaisiste : `api/tests/test_statuts_tickets.py`.
 STATUT_LABELS = {
-    "ouvert": "Ouvert", "en_ag": "À l’AG", "en_cours": "Chez le syndic",
+    "ouvert": "Ouvert",
+    "en_ag": "À l’AG",
+    "en_cours": "Chez le syndic",
     "chez_prestataire": "Chez le prestataire",
-    "résolu": "Résolu", "annulé": "Annulé",
+    "résolu": "Résolu",
+    "annulé": "Annulé",
     "fermé": "Fermé",  # historique seulement — cf. STATUTS_TICKET_HISTORIQUES
     "publie": "Publiée",  # sans cycle — une actualité (#1091)
 }
@@ -118,6 +122,7 @@ from app.utils.noms import nom_affiche
 
 # ── Libellés d'évolution ─────────────────────────────────────────────────────
 
+
 def libelle_evolution(e: TicketEvolution, *, avec_extrait: bool = False) -> str:
     """Ligne d'historique décrivant une évolution.
 
@@ -143,12 +148,17 @@ def libelle_evolution(e: TicketEvolution, *, avec_extrait: bool = False) -> str:
 
 # ── Sérialisation ────────────────────────────────────────────────────────────
 
+
 def evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
     auteur = session.get(Utilisateur, e.auteur_id)
     return TicketEvolutionRead(
-        id=e.id, ticket_id=e.ticket_id, type=e.type,
-        contenu=e.contenu, ancien_statut=e.ancien_statut,
-        nouveau_statut=e.nouveau_statut, auteur_id=e.auteur_id,
+        id=e.id,
+        ticket_id=e.ticket_id,
+        type=e.type,
+        contenu=e.contenu,
+        ancien_statut=e.ancien_statut,
+        nouveau_statut=e.nouveau_statut,
+        auteur_id=e.auteur_id,
         auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else "?",
         cree_le=e.cree_le,
         fichiers_urls=json.loads(e.fichiers_urls) if e.fichiers_urls else [],
@@ -246,24 +256,26 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
     #  `epingle` et `assiste_ia`. Une liste recopiée se complète une ligne à la
     #  fois ; la lire sur le modèle ne s'oublie pas.
     #  🔒 `test_ticket_read_rend_le_modele.py` : chaque colonne partagée revient.
-    return TicketRead.model_validate(ticket).model_copy(update=dict(
-        auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else None,
-        auteur_batiment_nom=libelle_batiment_ou(batiment, None),
-        apercu_pieces=apercu_pieces(ticket, session),
-        saisi_pour_affichage=saisi_pour_affichage,
-        proprietaire_nom=proprietaire_nom,
-        #  ⚠️ `seuil_archivage_jours` interroge la configuration, et l'on est ici
-        #  dans une fonction appelée PAR TICKET : c'est un appel par ticket, et
-        #  c'est assumé — la liste en compte quelques dizaines. Le factoriser
-        #  demanderait de passer le seuil à tous les appelants de `ticket_read`,
-        #  dont plusieurs n'en rendent qu'un. À revoir si la liste grossit, et à
-        #  mesurer avant d'optimiser.
-        archivee=est_archivable("ticket", ticket, seuil_jours=seuil_archivage_jours(session)),
-        relance_count=compter_relances(session, ticket.id),
-        natures=natures(ticket),
-        perime_le=perime_le(ticket, "ticket"),
-        prestataire_nom=nom_prestataire(session, ticket.prestataire_id),
-    ))
+    return TicketRead.model_validate(ticket).model_copy(
+        update=dict(
+            auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else None,
+            auteur_batiment_nom=libelle_batiment_ou(batiment, None),
+            apercu_pieces=apercu_pieces(ticket, session),
+            saisi_pour_affichage=saisi_pour_affichage,
+            proprietaire_nom=proprietaire_nom,
+            #  ⚠️ `seuil_archivage_jours` interroge la configuration, et l'on est ici
+            #  dans une fonction appelée PAR TICKET : c'est un appel par ticket, et
+            #  c'est assumé — la liste en compte quelques dizaines. Le factoriser
+            #  demanderait de passer le seuil à tous les appelants de `ticket_read`,
+            #  dont plusieurs n'en rendent qu'un. À revoir si la liste grossit, et à
+            #  mesurer avant d'optimiser.
+            archivee=est_archivable("ticket", ticket, seuil_jours=seuil_archivage_jours(session)),
+            relance_count=compter_relances(session, ticket.id),
+            natures=natures(ticket),
+            perime_le=perime_le(ticket, "ticket"),
+            prestataire_nom=nom_prestataire(session, ticket.prestataire_id),
+        )
+    )
 
 
 def nom_prestataire(session: Session, prestataire_id: Optional[int]) -> Optional[str]:
@@ -274,12 +286,14 @@ def nom_prestataire(session: Session, prestataire_id: Optional[int]) -> Optional
 
 def compter_relances(session: Session, ticket_id: int) -> int:
     """Nombre de relances syndic déjà envoyées — compté à trois endroits avant."""
-    return len(session.exec(
-        select(TicketEvolution).where(
-            TicketEvolution.ticket_id == ticket_id,
-            TicketEvolution.type == "relance",
-        )
-    ).all())
+    return len(
+        session.exec(
+            select(TicketEvolution).where(
+                TicketEvolution.ticket_id == ticket_id,
+                TicketEvolution.type == "relance",
+            )
+        ).all()
+    )
 
 
 def trier_par_activite(session: Session, tickets: list[Ticket]) -> list[Ticket]:
@@ -311,8 +325,9 @@ def trier_par_activite(session: Session, tickets: list[Ticket]) -> list[Ticket]:
     """
     derniere_activite = dict(
         session.exec(
-            select(TicketEvolution.ticket_id, func.max(TicketEvolution.cree_le))
-            .group_by(TicketEvolution.ticket_id)
+            select(TicketEvolution.ticket_id, func.max(TicketEvolution.cree_le)).group_by(
+                TicketEvolution.ticket_id
+            )
         ).all()
     )
     #  📌 LES ÉPINGLÉS D'ABORD (05/09/2026) — c'est le sens même de l'option :

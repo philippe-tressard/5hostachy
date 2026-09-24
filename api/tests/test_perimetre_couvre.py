@@ -21,6 +21,7 @@ périmètre **et le sens qui doit rester fermé**.
 ⚠️ L'arbre est injecté : ces règles ne dépendent d'aucune base, et un test qui
 aurait besoin de la production pour s'exécuter ne s'exécuterait jamais.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -31,7 +32,7 @@ from app.utils.perimetres.arbre import Noeud, couvre
 
 #  ⚠️ `import app.utils.perimetres.arbre as m` ne rend PAS le module : le paquet
 #  réexporte une FONCTION `arbre`, qui masque le sous-module homonyme.
-module_arbre = importlib.import_module('app.utils.perimetres.arbre')
+module_arbre = importlib.import_module("app.utils.perimetres.arbre")
 
 
 def _noeud(code, parent=None, globale=False, batiment=None, hors=False) -> Noeud:

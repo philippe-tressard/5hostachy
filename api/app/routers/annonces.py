@@ -1,4 +1,5 @@
 """Router petites annonces — communauté résidence."""
+
 import json
 from datetime import datetime
 from typing import List, Optional
@@ -10,8 +11,12 @@ from sqlmodel import Session, select
 from app.auth.deps import est_auteur, get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import (
-    PetiteAnnonce, TypeAnnonce, CategorieAnnonce, StatutAnnonce,
-    ReponseCommunaute, Utilisateur,
+    PetiteAnnonce,
+    TypeAnnonce,
+    CategorieAnnonce,
+    StatutAnnonce,
+    ReponseCommunaute,
+    Utilisateur,
 )
 from app.routers.uploads import _save_image
 from app.utils.archivage import (
@@ -69,8 +74,6 @@ def _reponses_for(cible_id: int, session: Session) -> list[dict]:
     return reponses_de(RUBRIQUE, cible_id, session)
 
 
-
-
 def _can_manage(annonce: PetiteAnnonce, user: Utilisateur) -> bool:
     """Auteur, CS ou admin peut modifier/supprimer.
 
@@ -122,6 +125,7 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
 
 # ── Schémas ────────────────────────────────────────────────────────────────
 
+
 class AnnonceCreate(AssisteIAEntree):
     titre: str
     description: str
@@ -160,6 +164,7 @@ class AnnonceStatutUpdate(BaseModel):
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
+
 
 @router.get("")
 def list_annonces(
@@ -210,9 +215,7 @@ def create_annonce(
         #  déposées avant la migration 0176 : deux écritures pour un même sens
         #  finissent par se traiter différemment quelque part.
         public_cible=(
-            json.dumps(data.public_cible, ensure_ascii=False)
-            if data.public_cible
-            else None
+            json.dumps(data.public_cible, ensure_ascii=False) if data.public_cible else None
         ),
         auteur_id=user.id,
         assiste_ia=data.assiste_ia,
@@ -250,9 +253,7 @@ def update_annonce(
     #  séparément a produit exactement ce genre d'oubli ailleurs.
     for axe in ("perimetre_cible", "public_cible"):
         if axe in maj:
-            maj[axe] = (
-                json.dumps(maj[axe], ensure_ascii=False) if maj[axe] else None
-            )
+            maj[axe] = json.dumps(maj[axe], ensure_ascii=False) if maj[axe] else None
     #  ⚠️ `perimetre_cible` vidé retombe donc sur `None`, que `_enrich` relit
     #  comme `["résidence"]` : le défaut du champ, et non une annonce sans lieu.
     for field, value in maj.items():
@@ -332,6 +333,8 @@ enregistrer_routes_reponses(
     #  routes de réponses la posent, une seule écriture la porte.
     visible_de=annonce_visible,
 )
+
+
 @router.post("/{annonce_id}/photo")
 def add_photo(
     annonce_id: int,

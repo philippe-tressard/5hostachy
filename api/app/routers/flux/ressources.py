@@ -22,6 +22,7 @@ from app.utils.documents import lien_document
 from .commun import ContexteFlux, auteur_nom, strip_html
 from .schemas import FluxItem
 
+
 # Où un document est-il RÉELLEMENT consultable ? Il n'existe pas de page « tous les
 # documents » : chaque document s'affiche là où il est rattaché. Le fil renvoyait vers
 # `/documents`, une route qui n'a jamais existé côté front → 404 sur « Voir → »,
@@ -58,9 +59,7 @@ def _collecter_faq(ctx: ContexteFlux) -> list[FluxItem]:
 
 def _collecter_documents(ctx: ContexteFlux) -> list[FluxItem]:
     docs = ctx.session.exec(
-        select(Document)
-        .where(Document.publie_le >= ctx.since)
-        .order_by(Document.publie_le.desc())
+        select(Document).where(Document.publie_le >= ctx.since).order_by(Document.publie_le.desc())
     ).all()
 
     cartes: list[FluxItem] = []
@@ -69,38 +68,40 @@ def _collecter_documents(ctx: ContexteFlux) -> list[FluxItem]:
         #  document ciblé bât. 1 ne remonte pas au fil d'un résident du bât. 2.
         if not document_visible(ctx.user, d, ctx.session):
             continue
-        cartes.append(FluxItem(
-            id=f"doc_{d.id}",
-            type="document",
-            date=d.publie_le,
-            cree_le=d.publie_le,
-            titre=d.titre,
-            detail="Nouveau document",
-            icon="📄",
-            badges=[],
-            lien=lien_document(d, ctx.user, ctx.session),
-            #  Un document EST un fichier : sa carte doit le signaler comme
-            #  n'importe quelle pièce jointe (décision du 07/08/2026, « PJ =
-            #  fichiers ou photo »). On transmet un DÉCOMPTE et non une URL : la
-            #  galerie dépliée afficherait « télécharger », dernier segment de
-            #  /documents/{id}/télécharger, au lieu du titre du document — et
-            #  ferait doublon avec le lien que la carte porte déjà.
-            meta={
-                "document_id": d.id,
-                "auteur": auteur_nom(ctx.session, d.publie_par_id),
-                "fichier_nom": d.fichier_nom,
-                "mime_type": d.mime_type,
-                "pj_compte": 1,
-                #  🔴 La DESCRIPTION, ajoutée au document le 08/09/2026 et restée
-                #  sur le seul écran Résidence — signalé à l'écran le 09/09.
-                #
-                #  Elle passe par `meta` et non par `detail` : `detail` dit ce qui
-                #  s'est PASSÉ (« Nouveau document »), la description dit ce que le
-                #  document COUVRE. La carte affiche « libellé — extrait » depuis
-                #  #531, et se tait d'elle-même si l'un répète l'autre.
-                "description": strip_html(d.description),
-            },
-        ))
+        cartes.append(
+            FluxItem(
+                id=f"doc_{d.id}",
+                type="document",
+                date=d.publie_le,
+                cree_le=d.publie_le,
+                titre=d.titre,
+                detail="Nouveau document",
+                icon="📄",
+                badges=[],
+                lien=lien_document(d, ctx.user, ctx.session),
+                #  Un document EST un fichier : sa carte doit le signaler comme
+                #  n'importe quelle pièce jointe (décision du 07/08/2026, « PJ =
+                #  fichiers ou photo »). On transmet un DÉCOMPTE et non une URL : la
+                #  galerie dépliée afficherait « télécharger », dernier segment de
+                #  /documents/{id}/télécharger, au lieu du titre du document — et
+                #  ferait doublon avec le lien que la carte porte déjà.
+                meta={
+                    "document_id": d.id,
+                    "auteur": auteur_nom(ctx.session, d.publie_par_id),
+                    "fichier_nom": d.fichier_nom,
+                    "mime_type": d.mime_type,
+                    "pj_compte": 1,
+                    #  🔴 La DESCRIPTION, ajoutée au document le 08/09/2026 et restée
+                    #  sur le seul écran Résidence — signalé à l'écran le 09/09.
+                    #
+                    #  Elle passe par `meta` et non par `detail` : `detail` dit ce qui
+                    #  s'est PASSÉ (« Nouveau document »), la description dit ce que le
+                    #  document COUVRE. La carte affiche « libellé — extrait » depuis
+                    #  #531, et se tait d'elle-même si l'un répète l'autre.
+                    "description": strip_html(d.description),
+                },
+            )
+        )
     return cartes
 
 

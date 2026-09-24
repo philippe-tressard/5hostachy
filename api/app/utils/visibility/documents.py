@@ -11,6 +11,7 @@ visé), `objets` les règles par entité, `documents` l'algorithme d'accès en c
 étapes — le seul qui interroge la base, et le seul adossé à un modèle de profil
 d'accès.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,6 +28,7 @@ from .objets import evenement_visible, ticket_visible
 from app.auth.deps import est_moderateur
 
 # ── Règles document ───────────────────────────────────────────────────────────
+
 
 def document_visible(user: Utilisateur, doc: Document, session) -> bool:
     """Retourne True si l'utilisateur a le droit de lire ce document.
@@ -131,9 +133,7 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
     #  29/08/2026). Corrigé à la source : l'écran n'en pose plus, et la migration
     #  0159 reverse les documents déjà en base.
 
-    user_batiments = {
-        ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot
-    }
+    user_batiments = {ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot}
     if doc.perimetre == "bâtiment" and doc.batiment_id:
         if doc.batiment_id not in user_batiments:
             return False

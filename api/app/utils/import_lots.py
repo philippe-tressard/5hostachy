@@ -25,6 +25,7 @@ Usage depuis le conteneur :
   importer_depuis_fichier('/import-data/213 - liste des lots.xlsx')
   "
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -49,6 +50,7 @@ from app.models.core import LotImport, StatutLotImport
 
 # -- Types de lots spéciaux ---------------------------------------------------
 
+
 def _est_parking(type_raw: Optional[str]) -> bool:
     """Vrai si le lot est un parking (PS)."""
     return bool(type_raw and type_raw.strip().upper().startswith("PS"))
@@ -60,7 +62,6 @@ def _est_cave(type_raw: Optional[str]) -> bool:
 
 
 # -- Helpers -------------------------------------------------------------------
-
 
 
 def _resolve_batiment_id(bat_raw) -> Optional[int]:
@@ -156,12 +157,12 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
         if not row or len(row) < 3:
             continue
 
-        bat_raw   = row[0]
-        num_raw   = str(row[1]).strip() if row[1] is not None else None
-        type_raw  = str(row[2]).strip() if row[2] else None
+        bat_raw = row[0]
+        num_raw = str(row[1]).strip() if row[1] is not None else None
+        type_raw = str(row[2]).strip() if row[2] else None
         etage_raw = str(row[3]).strip() if len(row) > 3 and row[3] else None
-        no_cop    = str(row[5]).strip() if len(row) > 5 and row[5] not in (None, "") else None
-        nom_cop   = str(row[6]).strip() if len(row) > 6 and row[6] not in (None, "") else None
+        no_cop = str(row[5]).strip() if len(row) > 5 and row[5] not in (None, "") else None
+        nom_cop = str(row[6]).strip() if len(row) > 6 and row[6] not in (None, "") else None
 
         # Champs requis (bat_raw peut être absent pour parking)
         if not num_raw or not type_raw:
@@ -170,7 +171,7 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
 
         # ── Résolution du bâtiment selon le type ───────────────────────────
         if _est_parking(type_raw):
-            bat_id = None          # parking : pas de bâtiment
+            bat_id = None  # parking : pas de bâtiment
         elif _est_cave(type_raw):
             # Cave : bâtiment = bâtiment du lot résidentiel du même propriétaire
             bat_id = owner_bat.get(no_cop) if no_cop else None
@@ -197,15 +198,17 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
             stats["doublons"] += 1
             continue
 
-        session.add(LotImport(
-            batiment_id=bat_id,
-            numero=numero,
-            type_raw=type_raw,
-            etage_raw=etage_raw,
-            no_coproprietaire=no_cop,
-            nom_coproprietaire=nom_cop,
-            importe_le=datetime.utcnow(),
-        ))
+        session.add(
+            LotImport(
+                batiment_id=bat_id,
+                numero=numero,
+                type_raw=type_raw,
+                etage_raw=etage_raw,
+                no_coproprietaire=no_cop,
+                nom_coproprietaire=nom_cop,
+                importe_le=datetime.utcnow(),
+            )
+        )
         stats["importes"] += 1
 
     return stats

@@ -14,6 +14,7 @@ vers une route que `pages.ts` ne déclare pas (le préfixe `contrat` a été ajo
 avec ce lot), et `test_types_equipement.py` tient déjà la correspondance entre
 `TypeEquipement` et la table des libellés du front.
 """
+
 from __future__ import annotations
 
 from datetime import date

@@ -20,6 +20,7 @@ compare l'heure d'expiration du jeton réellement posé à la durée annoncée d
 contexte. Une réécriture qui redéclarerait un littéral échouerait ici, quelle que
 soit la façon dont elle s'y prend.
 """
+
 import uuid
 from datetime import datetime
 

@@ -82,7 +82,9 @@ def admin_et_ticket():
         #  échec du test.
         session.rollback()
         session.expire_all()
-        for e in session.exec(select(TicketEvolution).where(TicketEvolution.auteur_id == admin.id)).all():
+        for e in session.exec(
+            select(TicketEvolution).where(TicketEvolution.auteur_id == admin.id)
+        ).all():
             session.delete(e)
         for t in session.exec(select(Ticket).where(Ticket.auteur_id == admin.id)).all():
             session.delete(t)
@@ -139,9 +141,7 @@ def test_un_orphelin_est_compte_ET_nomme(admin_et_ticket):
     assert resultat["ok"] is False, "une base qui porte un orphelin n'est pas ok"
     assert resultat["orphelins"] >= 1
 
-    relations = {
-        (r["table"], r["colonne"], r["table_parente"]) for r in resultat["par_relation"]
-    }
+    relations = {(r["table"], r["colonne"], r["table_parente"]) for r in resultat["par_relation"]}
     assert ("ticket_evolution", "ticket_id", "ticket") in relations, (
         "la relation fautive doit être nommée par sa COLONNE, pas par un index de clé. "
         f"Obtenu : {resultat['par_relation']}"
@@ -318,6 +318,7 @@ def test_le_releve_dit_si_les_cles_sont_ACTIVES(admin_et_ticket):
 
 # ── La régression du 31/08/2026 : un membre du CS supprimé pour un lien cassé ──
 
+
 def _membre_cs_orphelin(session) -> int:
     """Un membre du CS dont le compte lié a disparu — l'état exact de la production.
 
@@ -328,15 +329,22 @@ def _membre_cs_orphelin(session) -> int:
     from app.models.core import GenreCivilite, MembreCS, Utilisateur
 
     compte = Utilisateur(
-        email="christine.test@example.org", prenom="Christine", nom="LONGUEVE",
-        hashed_password="x", actif=True,
+        email="christine.test@example.org",
+        prenom="Christine",
+        nom="LONGUEVE",
+        hashed_password="x",
+        actif=True,
     )
     session.add(compte)
     session.commit()
     session.refresh(compte)
     membre = MembreCS(
-        genre=GenreCivilite.mme, prenom="Christine", nom="LONGUEVE",
-        etage=3, ordre=5, user_id=compte.id,
+        genre=GenreCivilite.mme,
+        prenom="Christine",
+        nom="LONGUEVE",
+        etage=3,
+        ordre=5,
+        user_id=compte.id,
     )
     session.add(membre)
     session.commit()
@@ -403,8 +411,8 @@ def test_la_simulation_annonce_les_DEUX_remedes(admin_et_ticket):
     from app.utils.diagnostic_cles import purger_orphelins
 
     session, _admin, ticket, _evol = admin_et_ticket
-    _orpheliner(session, ticket.id)          # clé OBLIGAToire → suppression
-    _membre_cs_orphelin(session)             # clé nullable    → déliaison
+    _orpheliner(session, ticket.id)  # clé OBLIGAToire → suppression
+    _membre_cs_orphelin(session)  # clé nullable    → déliaison
 
     simulation = purger_orphelins(engine, simuler=True)
     assert simulation["seraient_supprimees"] >= 1
@@ -415,6 +423,8 @@ def test_la_simulation_annonce_les_DEUX_remedes(admin_et_ticket):
     assert remedes == {"suppression", "deliaison"}, (
         f"les deux remèdes doivent être nommés dans le relevé, obtenu : {remedes}"
     )
+
+
 # ── L'interpolation d'identifiants SQL, et pourquoi elle est VÉRIFIÉE ────────
 
 

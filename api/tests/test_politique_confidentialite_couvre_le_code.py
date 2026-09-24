@@ -42,6 +42,7 @@ une fonctionnalité arrive sans que personne relise la page légale.
 ne la nomme pas.** C'est le seul moment où quelqu'un y pensera : au moment de
 l'écrire.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -237,9 +238,7 @@ def test_le_gabarit_et_la_migration_lisent_le_MEME_texte():
         "après migration ont divergé.\n  " + "\n  ".join(absents)
     )
 
-    migration = next(
-        (_APP.parent / "alembic" / "versions").glob("0199_*.py"), None
-    )
+    migration = next((_APP.parent / "alembic" / "versions").glob("0199_*.py"), None)
     assert migration is not None, "la migration 0199 a disparu"
     source = migration.read_text(encoding="utf-8")
     assert "AJOUTS_1034" in source, (
@@ -249,7 +248,7 @@ def test_le_gabarit_et_la_migration_lisent_le_MEME_texte():
     #  Un fragment de balisage dans la migration signerait une recopie. On
     #  cherche `<li><strong>` : présent dans les paragraphes, absent d'un code
     #  qui se contente de les lire.
-    corps = source[source.index("def upgrade"):]
+    corps = source[source.index("def upgrade") :]
     assert "<li><strong>" not in corps, (
         "la migration 0199 porte du balisage en dur : elle recopie le texte au "
         "lieu de le lire dans le seed"

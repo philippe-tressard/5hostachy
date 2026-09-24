@@ -32,6 +32,7 @@ précises** : un nombre suivi d'une unité technique, une extension de fichier, 
 énumération de catégories. « 3 minutes pour démarrer » n'en est pas une : aucune
 constante du code ne dit combien de temps prend une lecture.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -106,7 +107,7 @@ def _corps() -> str:
     sur du légitime finit désarmé.
     """
     texte = _MANUEL.read_text(encoding="utf-8")
-    texte = texte[texte.index("</style>"):]
+    texte = texte[texte.index("</style>") :]
     return re.sub(r"<svg.*?</svg>", "", texte, flags=re.S)
 
 

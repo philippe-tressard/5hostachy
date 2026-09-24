@@ -15,16 +15,19 @@ déplacement de modèle ne doit pas se payer d'un diff de vingt fichiers, ni du
 risque d'en oublier un — un import manquant ne se voit qu'à l'exécution du
 chemin concerné, c'est-à-dire ici la nuit, pendant la sauvegarde.
 """
+
 from datetime import datetime
 from enum import Enum
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
 
+
 class StatutSauvegarde(str, Enum):
     en_cours = "en_cours"
     reussie = "reussie"
     echouee = "echouee"
+
 
 class FrequenceSauvegarde(str, Enum):
     quotidienne = "quotidienne"
@@ -38,8 +41,8 @@ class ConfigSauvegarde(SQLModel, table=True):
     active: bool = True
     frequence: FrequenceSauvegarde = FrequenceSauvegarde.quotidienne
     heure_execution: int = 3  # 0-23
-    jour_semaine: int = 6     # 0=lun … 6=dim
-    jour_mois: int = 1        # 1-28
+    jour_semaine: int = 6  # 0=lun … 6=dim
+    jour_mois: int = 1  # 1-28
     nb_versions_conservees: int = 7
     modifie_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     modifie_le: Optional[datetime] = None
@@ -56,7 +59,7 @@ class HistoriqueSauvegarde(SQLModel, table=True):
     #: les lignes antérieures au 12/08/2026 resteront `None`, et c'est correct
     #: — personne ne sait sur quel nœud elles ont tourné, et l'inventer serait
     #: la faute retirée le 11/08 (#312).
-    noeud: Optional[str] = Field(default=None, index=True)   # rpi1 | rpi2
+    noeud: Optional[str] = Field(default=None, index=True)  # rpi1 | rpi2
     fichier_nom: Optional[str] = None
     fichier_chemin: Optional[str] = None
     taille_octets: Optional[int] = None

@@ -9,6 +9,7 @@ Ce contrôle refuse :
 1. un `Notification(` construit ailleurs que dans `utils/cloche.py` ;
 2. un `sonner_systeme` dont le motif n'est pas déclaré dans `MOTIFS_SYSTEME`.
 """
+
 from __future__ import annotations
 
 import ast

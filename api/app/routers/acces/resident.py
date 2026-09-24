@@ -9,8 +9,12 @@ porteur.
 commentaire qui les remplace dit pourquoi — enregistrer un badge est déjà
 couvert deux fois, et une troisième voie jamais exercée dérive.
 """
+
 from fastapi import (
-    APIRouter, BackgroundTasks, Depends, HTTPException,
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
 )
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -18,8 +22,11 @@ from sqlmodel import Session, select
 from app.auth.deps import est_rattache_au_lot, get_current_user
 from app.database import get_session
 from app.models.core import (
-    CommandeAcces, StatutAcces, StatutImport,
-    Utilisateur, Lot,
+    CommandeAcces,
+    StatutAcces,
+    StatutImport,
+    Utilisateur,
+    Lot,
 )
 from app.schemas import CommandeAccesCreate, CommandeAccesRead
 from app.routers.acces.vues import AccesOut
@@ -51,8 +58,7 @@ router = APIRouter()
 #  divergent volontairement.
 
 
-def _mes_acces(session: Session, type_acces: TypeAcces,
-               user: Utilisateur) -> list[AccesOut]:
+def _mes_acces(session: Session, type_acces: TypeAcces, user: Utilisateur) -> list[AccesOut]:
     """Les accès d'un porteur : les siens, plus ceux qui lui sont attribués.
 
     ⚠️ Le dédoublonnage n'est pas décoratif : un copropriétaire peut être à la
@@ -73,8 +79,9 @@ def _mes_acces(session: Session, type_acces: TypeAcces,
     return AccesOut.depuis(session, type_acces, sortie)
 
 
-def _signaler_perdu(session: Session, type_acces: TypeAcces, objet_id: int,
-                    user: Utilisateur) -> dict:
+def _signaler_perdu(
+    session: Session, type_acces: TypeAcces, objet_id: int, user: Utilisateur
+) -> dict:
     objet = exiger_acces_du_porteur(session, type_acces, objet_id, user)
     objet.statut = StatutAcces.perdu
     session.add(objet)
@@ -104,8 +111,7 @@ def _signaler_perdu(session: Session, type_acces: TypeAcces, objet_id: int,
 #  `utils/acces_detachement`, et c'est pour cela qu'il n'était pas écrit ici.
 
 
-def _declarer_acces(session: Session, type_acces: TypeAcces, code: str,
-                    user: Utilisateur) -> dict:
+def _declarer_acces(session: Session, type_acces: TypeAcces, code: str, user: Utilisateur) -> dict:
     """Un porteur déclare un accès qu'il détient déjà.
 
     Si le code correspond à une ligne d'import non résolue, celle-ci est marquée
@@ -128,28 +134,42 @@ def _declarer_acces(session: Session, type_acces: TypeAcces, code: str,
     ligne = session.exec(
         select(type_acces.modele_import).where(
             type_acces.champ_code_import == code,
-            type_acces.modele_import.statut.in_([StatutImport.en_attente, StatutImport.proprietaire_lie]),
+            type_acces.modele_import.statut.in_(
+                [StatutImport.en_attente, StatutImport.proprietaire_lie]
+            ),
         )
     ).first()
     if ligne and ligne.lot_id and not est_rattache_au_lot(user, ligne.lot_id):
-        raise HTTPException(400, "Ce code figure au fichier du syndic pour un autre lot : "
-                                 "le conseil syndical peut le corriger")
+        raise HTTPException(
+            400,
+            "Ce code figure au fichier du syndic pour un autre lot : "
+            "le conseil syndical peut le corriger",
+        )
     if ligne and ligne.lot_id:
         ligne.user_proprietaire_id = ligne.user_proprietaire_id or user.id
         objet = rattacher(type_acces, ligne, session)
     else:
-        objet = type_acces.modele(code=code, user_id=user.id, statut=StatutAcces.actif,
-                                  lot_id=lot_unique_de_nature(session, type_acces, user.id))
+        objet = type_acces.modele(
+            code=code,
+            user_id=user.id,
+            statut=StatutAcces.actif,
+            lot_id=lot_unique_de_nature(session, type_acces, user.id),
+        )
         session.add(objet)
         ligne = None
 
     session.commit()
     session.refresh(objet)
-    return {"type": type_acces.cle, "id": objet.id, "code": code,
-            "import_resolu": ligne is not None}
+    return {
+        "type": type_acces.cle,
+        "id": objet.id,
+        "code": code,
+        "import_resolu": ligne is not None,
+    }
 
 
 # ── Vue résident ────────────────────────────────────────────────────────────
+
 
 @router.get("/mes-vigiks")
 def mes_vigiks(
@@ -214,7 +234,8 @@ def creer_commande(
     from app.utils.destinataires import membres_cs_ou_admin
 
     for membre in membres_cs_ou_admin(session):
-        sonner(session,
+        sonner(
+            session,
             destinataire_id=membre.id,
             type="vigik",
             titre=f"Nouvelle demande de {body.type}",
@@ -230,6 +251,7 @@ def creer_commande(
     destinataires_cs = membres_cs_notifiables(session)
     if destinataires_cs:
         from app.utils.email import send_email_group
+
         background_tasks.add_task(
             send_email_group,
             code="vigik_commande_recue",

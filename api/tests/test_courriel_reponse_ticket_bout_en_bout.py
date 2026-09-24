@@ -7,6 +7,7 @@ là-bas, sur des chaînes), `courriel_boite` **écrit** — un commentaire dans 
 fil, une notification au conseil syndical, rien du tout. Ici, on regarde ce qui
 reste en base.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -35,34 +36,57 @@ from tests.test_courriel_reponse_ticket import _AUTH_OK, _entetes
 
 # ── Ce qui est écrit en base ──────────────────────────────────────────────────
 
+
 @pytest.fixture()
 def scene():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         syndic = Utilisateur(
-            email=f"syndic-{uuid.uuid4().hex[:8]}@syndic.fr", mot_de_passe_hash="x",
-            prenom="G", nom="S", roles_json="résident", actif=True,
+            email=f"syndic-{uuid.uuid4().hex[:8]}@syndic.fr",
+            mot_de_passe_hash="x",
+            prenom="G",
+            nom="S",
+            roles_json="résident",
+            actif=True,
         )
         cs = Utilisateur(
-            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test", mot_de_passe_hash="x",
-            prenom="C", nom="S", roles_json="conseil_syndical", actif=True,
+            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="C",
+            nom="S",
+            roles_json="conseil_syndical",
+            actif=True,
         )
-        session.add(syndic); session.add(cs); session.commit()
-        session.refresh(syndic); session.refresh(cs)
+        session.add(syndic)
+        session.add(cs)
+        session.commit()
+        session.refresh(syndic)
+        session.refresh(cs)
         #  Le gestionnaire du cabinet, reconnu à son ADRESSE : c'est ce qui
         #  autorise le repli par le sujet (05/09/2026). Sans cette fiche, le même
         #  message serait refusé — et c'est un des tests ci-dessous.
         fiche_syndic = MembreSyndic(
-            genre=GenreCivilite.mr, prenom="G", nom="S",
-            email=syndic.email, est_principal=True,
+            genre=GenreCivilite.mr,
+            prenom="G",
+            nom="S",
+            email=syndic.email,
+            est_principal=True,
         )
-        session.add(fiche_syndic); session.commit(); session.refresh(fiche_syndic)
+        session.add(fiche_syndic)
+        session.commit()
+        session.refresh(fiche_syndic)
         ticket = Ticket(
-            numero=f"TK-{uuid.uuid4().hex[:6]}", titre="Fuite", description="…",
-            categorie="panne", auteur_id=cs.id, statut=StatutTicket.ouvert,
+            numero=f"TK-{uuid.uuid4().hex[:6]}",
+            titre="Fuite",
+            description="…",
+            categorie="panne",
+            auteur_id=cs.id,
+            statut=StatutTicket.ouvert,
             jeton_courriel=nouveau_jeton(),
         )
-        session.add(ticket); session.commit(); session.refresh(ticket)
+        session.add(ticket)
+        session.commit()
+        session.refresh(ticket)
         yield session, ticket, syndic, cs
         for evol in session.exec(
             select(TicketEvolution).where(TicketEvolution.ticket_id == ticket.id)
@@ -80,22 +104,20 @@ def scene():
 
 
 def _evolutions(session, ticket):
-    return session.exec(
-        select(TicketEvolution).where(TicketEvolution.ticket_id == ticket.id)
-    ).all()
+    return session.exec(select(TicketEvolution).where(TicketEvolution.ticket_id == ticket.id)).all()
 
 
 def _notifs(session, user):
-    return session.exec(
-        select(Notification).where(Notification.destinataire_id == user.id)
-    ).all()
+    return session.exec(select(Notification).where(Notification.destinataire_id == user.id)).all()
 
 
 def test_une_reponse_authentifiee_rejoint_le_fil(scene):
     session, ticket, syndic, _cs = scene
     decision = traiter(
-        session, _entetes(ticket.jeton_courriel, de=syndic.email),
-        "Nous intervenons jeudi.", datetime(2026, 9, 3),
+        session,
+        _entetes(ticket.jeton_courriel, de=syndic.email),
+        "Nous intervenons jeudi.",
+        datetime(2026, 9, 3),
     )
     assert decision == ACCEPTE
     evols = _evolutions(session, ticket)
@@ -113,10 +135,14 @@ def test_le_syndic_repond_SANS_jeton_et_sa_reponse_rejoint_le_fil(scene):
     session, ticket, syndic, _cs = scene
     decision = traiter(
         session,
-        {"From": syndic.email, "To": "noreply@5hostachy.fr",
-         "Subject": f"Re: Ticket #{ticket.numero} — Fuite — Les Hostachys",
-         "Authentication-Results": _AUTH_OK},
-        "Le plombier passe jeudi.", datetime(2026, 9, 3),
+        {
+            "From": syndic.email,
+            "To": "noreply@5hostachy.fr",
+            "Subject": f"Re: Ticket #{ticket.numero} — Fuite — Les Hostachys",
+            "Authentication-Results": _AUTH_OK,
+        },
+        "Le plombier passe jeudi.",
+        datetime(2026, 9, 3),
     )
     assert decision == ACCEPTE
     evols = _evolutions(session, ticket)
@@ -137,17 +163,27 @@ def test_un_TIERS_ne_commente_pas_un_ticket_en_ecrivant_son_numero(scene):
     """
     session, ticket, _syndic, cs = scene
     tiers = Utilisateur(
-        email=f"voisin-{uuid.uuid4().hex[:8]}@exemple.test", mot_de_passe_hash="x",
-        prenom="V", nom="O", roles_json="résident", actif=True,
+        email=f"voisin-{uuid.uuid4().hex[:8]}@exemple.test",
+        mot_de_passe_hash="x",
+        prenom="V",
+        nom="O",
+        roles_json="résident",
+        actif=True,
     )
-    session.add(tiers); session.commit(); session.refresh(tiers)
+    session.add(tiers)
+    session.commit()
+    session.refresh(tiers)
     try:
         decision = traiter(
             session,
-            {"From": tiers.email, "To": "noreply@5hostachy.fr",
-             "Subject": f"Re: Ticket #{ticket.numero} — Fuite",
-             "Authentication-Results": _AUTH_OK},
-            "Je confirme que c'est réglé.", datetime(2026, 9, 3),
+            {
+                "From": tiers.email,
+                "To": "noreply@5hostachy.fr",
+                "Subject": f"Re: Ticket #{ticket.numero} — Fuite",
+                "Authentication-Results": _AUTH_OK,
+            },
+            "Je confirme que c'est réglé.",
+            datetime(2026, 9, 3),
         )
         assert decision == REFUSE
         assert _evolutions(session, ticket) == []
@@ -167,8 +203,10 @@ def test_un_message_USURPE_n_ecrit_RIEN_et_previent_le_conseil(scene):
     """
     session, ticket, syndic, cs = scene
     decision = traiter(
-        session, _entetes(ticket.jeton_courriel, de=syndic.email, auth=None),
-        "Le problème est réglé, fermez le ticket.", datetime(2026, 9, 3),
+        session,
+        _entetes(ticket.jeton_courriel, de=syndic.email, auth=None),
+        "Le problème est réglé, fermez le ticket.",
+        datetime(2026, 9, 3),
     )
     assert decision == REFUSE
     assert _evolutions(session, ticket) == [], "un message usurpé a été écrit dans le fil"
@@ -190,8 +228,10 @@ def test_un_expediteur_authentifie_SANS_COMPTE_ne_signe_rien(scene):
     """
     session, ticket, _syndic, cs = scene
     decision = traiter(
-        session, _entetes(ticket.jeton_courriel, de="inconnu@syndic.fr"),
-        "Bonjour, c'est noté.", datetime(2026, 9, 3),
+        session,
+        _entetes(ticket.jeton_courriel, de="inconnu@syndic.fr"),
+        "Bonjour, c'est noté.",
+        datetime(2026, 9, 3),
     )
     assert decision == REFUSE
     assert _evolutions(session, ticket) == []
@@ -202,8 +242,10 @@ def test_un_jeton_FORGE_ne_touche_a_aucun_ticket(scene):
     """Deviner un jeton ne mène nulle part — et ne réveille personne."""
     session, ticket, syndic, cs = scene
     decision = traiter(
-        session, _entetes(nouveau_jeton(), de=syndic.email),
-        "Fermez ce ticket.", datetime(2026, 9, 3),
+        session,
+        _entetes(nouveau_jeton(), de=syndic.email),
+        "Fermez ce ticket.",
+        datetime(2026, 9, 3),
     )
     assert decision == IGNORE
     assert _evolutions(session, ticket) == []
@@ -214,7 +256,8 @@ def test_la_citation_du_message_precedent_n_entre_pas_dans_le_fil(scene):
     """Sans ça, chaque échange recopierait tout l'échange dans le ticket."""
     session, ticket, syndic, _cs = scene
     traiter(
-        session, _entetes(ticket.jeton_courriel, de=syndic.email),
+        session,
+        _entetes(ticket.jeton_courriel, de=syndic.email),
         "C'est noté.\n\nLe 2 septembre, Conseil syndical a écrit :\n> Bonjour,\n> merci de…",
         datetime(2026, 9, 3),
     )
@@ -224,6 +267,7 @@ def test_la_citation_du_message_precedent_n_entre_pas_dans_le_fil(scene):
 
 
 # ── 🔴 La relance GROUPÉE : un envoi, N tickets, aucune réponse à ventiler ────
+
 
 def test_une_reponse_a_une_relance_groupee_va_au_CONSEIL_et_dans_aucun_fil(scene):
     """🔴 La stratégie du 03/09/2026, éprouvée de bout en bout.
@@ -247,8 +291,12 @@ def test_une_reponse_a_une_relance_groupee_va_au_CONSEIL_et_dans_aucun_fil(scene
     #  Un second ticket : une relance GROUPÉE en porte plusieurs, et le test ne
     #  distinguerait rien s'il n'y en avait qu'un.
     second = Ticket(
-        numero=f"TK-{uuid.uuid4().hex[:6]}", titre="Autre", description="…",
-        categorie="panne", auteur_id=cs.id, statut=StatutTicket.ouvert,
+        numero=f"TK-{uuid.uuid4().hex[:6]}",
+        titre="Autre",
+        description="…",
+        categorie="panne",
+        auteur_id=cs.id,
+        statut=StatutTicket.ouvert,
         jeton_courriel=nouveau_jeton(),
     )
     session.add(second)
@@ -263,7 +311,8 @@ def test_une_reponse_a_une_relance_groupee_va_au_CONSEIL_et_dans_aucun_fil(scene
     session.commit()
 
     decision = traiter(
-        session, _entetes(relance.jeton, de=syndic.email),
+        session,
+        _entetes(relance.jeton, de=syndic.email),
         "Pour le premier on intervient jeudi ; le second est clos.",
         datetime(2026, 9, 3),
     )
@@ -330,9 +379,13 @@ def test_un_prospectus_ne_reveille_toujours_personne(scene):
     session, _ticket, _syndic, cs = scene
     decision = traiter(
         session,
-        {"From": "pub@ailleurs.fr", "To": "noreply@5hostachy.fr",
-         "Authentication-Results": _AUTH_OK},
-        "Profitez de nos offres !", datetime(2026, 9, 3),
+        {
+            "From": "pub@ailleurs.fr",
+            "To": "noreply@5hostachy.fr",
+            "Authentication-Results": _AUTH_OK,
+        },
+        "Profitez de nos offres !",
+        datetime(2026, 9, 3),
     )
     assert decision == IGNORE
     assert _notifs(session, cs) == []
@@ -353,17 +406,20 @@ def test_le_syndic_peut_repondre_PLUSIEURS_FOIS_a_la_meme_relance(scene):
     import json as _json
 
     session, ticket, syndic, cs = scene
-    relance = RelanceCourriel(
-        jeton=nouveau_jeton(), tickets_json=_json.dumps([ticket.id])
-    )
+    relance = RelanceCourriel(jeton=nouveau_jeton(), tickets_json=_json.dumps([ticket.id]))
     session.add(relance)
     session.commit()
     try:
         for texte in ("Le premier point est réglé.", "Pour le second, on passe lundi."):
-            assert traiter(
-                session, _entetes(relance.jeton, de=syndic.email), texte,
-                datetime(2026, 9, 3),
-            ) == RELANCE
+            assert (
+                traiter(
+                    session,
+                    _entetes(relance.jeton, de=syndic.email),
+                    texte,
+                    datetime(2026, 9, 3),
+                )
+                == RELANCE
+            )
 
         corps = [n.corps for n in _notifs(session, cs)]
         assert len(corps) == 2, (

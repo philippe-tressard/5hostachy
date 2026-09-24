@@ -62,6 +62,7 @@ dans une liste qu'on parcourt ne l'est pas dans une boîte aux lettres »*
 (`tickets/courriels.py`). Deux notifications in-app pour le même fait sont deux
 lignes dans une liste ; deux courriels sont deux dérangements.
 """
+
 from __future__ import annotations
 
 from typing import Iterable, Optional
@@ -101,11 +102,7 @@ def sans_les_deja_servies(
     laisserait une trace d'envoi sans destinataire dans `historique_email`.
     """
     servies = {normaliser(a) for a in deja_servies if normaliser(a)}
-    return [
-        (uid, email)
-        for uid, email in destinataires
-        if normaliser(email) not in servies
-    ]
+    return [(uid, email) for uid, email in destinataires if normaliser(email) not in servies]
 
 
 __all__ = ["Destinataire", "adresses", "normaliser", "sans_les_deja_servies"]

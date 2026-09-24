@@ -45,6 +45,7 @@ pour cet objet, et vraie pour les six autres. Le risque n'est pas théorique —
 les statuts de ticket sont les seuls accentués de tout le site (`résolu`,
 `annulé`), et le ticket #515 le signalait comme le piège principal.
 """
+
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
@@ -149,8 +150,7 @@ REGLES: dict[str, RegleArchivage] = {
         champ_archive_manuel="archive_manuel",
         champ_epingle="epingle",
         declencheur=(
-            "30 jours après la publication. Une date d'événement la fait sortir "
-            "dès le lendemain."
+            "30 jours après la publication. Une date d'événement la fait sortir dès le lendemain."
         ),
         #  🔴 `fin` d'abord, `debut` en repli : un événement qui dure reste
         #  utile jusqu'à sa fin, et un événement ponctuel n'a que son début.
@@ -283,6 +283,7 @@ def est_perime(
         return False
     maintenant = maintenant or datetime.utcnow()
     return maintenant.date() > echeance
+
 
 def est_archivable(
     type_objet: str,

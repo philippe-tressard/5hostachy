@@ -32,6 +32,7 @@ correspondant demande un changement visible, à faire constater (R5). Mais une
 tolérance sans raison devient un dépotoir : le second test échoue si l'une cesse
 de servir, donc le jour où l'objet est branché, il FAUT venir retirer la ligne.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -83,9 +84,13 @@ def test_les_regles_declarees_sont_lues():
     trouves = _appelants()
     source = SOURCE.read_text(encoding="utf-8")
     for cle, parent in CHOISIES_PAR_L_OBJET.items():
-        assert f'return "{cle}"' in source, f"`_regle_de` ne rend plus « {cle} » : la règle est inerte."
+        assert f'return "{cle}"' in source, (
+            f"`_regle_de` ne rend plus « {cle} » : la règle est inerte."
+        )
         trouves[cle] = trouves[parent]
-    orphelines = [cle for cle, fichiers in trouves.items() if not fichiers and cle not in NON_BRANCHEES]
+    orphelines = [
+        cle for cle, fichiers in trouves.items() if not fichiers and cle not in NON_BRANCHEES
+    ]
     assert not orphelines, (
         "Règle(s) d'archivage déclarée(s) et lue(s) par PERSONNE : "
         + ", ".join(orphelines)

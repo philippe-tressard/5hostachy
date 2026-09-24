@@ -30,6 +30,7 @@ reviendrait à comparer une fonction à elle-même — c'est la leçon de #415, 
 écrite en tête de `test_compteurs_tableau_de_bord.py`. Il compare deux **chemins**
 qui doivent dire la même chose.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -65,8 +66,12 @@ def base():
 
 def _cs(session: Session) -> Utilisateur:
     u = Utilisateur(
-        nom="N", prenom="cs", email="cs@test.fr", roles_json="conseil_syndical",
-        actif=True, decision_compte_le=datetime.utcnow(),
+        nom="N",
+        prenom="cs",
+        email="cs@test.fr",
+        roles_json="conseil_syndical",
+        actif=True,
+        decision_compte_le=datetime.utcnow(),
     )
     session.add(u)
     session.commit()

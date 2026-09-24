@@ -9,6 +9,7 @@ question — d'où un fichier à part plutôt que soixante lignes de plus là-ba
 Un modèle d'e-mail ne connaît pas ses destinataires : ils sont choisis au point
 d'appel, et le même modèle sert souvent plusieurs audiences.
 """
+
 import pathlib
 import re
 
@@ -57,7 +58,8 @@ def _routes_gardees() -> set[str]:
         # `(app)/espace-cs/+page.svelte` → `/espace-cs` : les groupes SvelteKit
         # sont transparents dans l'URL, comme dans `_resoudre` plus haut.
         segments = [
-            s for s in page.relative_to(_ROUTES).parent.parts
+            s
+            for s in page.relative_to(_ROUTES).parent.parts
             if not (s.startswith("(") and s.endswith(")"))
         ]
         gardees.add("/" + "/".join(segments))
@@ -94,6 +96,5 @@ def test_aucun_modele_email_ne_vise_une_route_reservee():
 
     assert not fautifs, (
         "modèle(s) d'e-mail visant une page que le front réserve à un rôle — "
-        "leurs destinataires sans ce rôle seront redirigés :\n  "
-        + "\n  ".join(fautifs)
+        "leurs destinataires sans ce rôle seront redirigés :\n  " + "\n  ".join(fautifs)
     )

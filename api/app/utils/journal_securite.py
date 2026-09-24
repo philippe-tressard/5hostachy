@@ -38,6 +38,7 @@ d'alerte est `check-reliability.sh`, et il compte les `ERROR`/`CRITICAL` de
 l'API — journaliser une connexion refusée en `ERROR` ferait sonner le téléphone
 à chaque faute de frappe sur un mot de passe.
 """
+
 import logging
 from typing import Optional
 

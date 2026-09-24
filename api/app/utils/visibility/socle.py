@@ -11,6 +11,7 @@ visé), `objets` les règles par entité, `documents` l'algorithme d'accès en c
 étapes — le seul qui interroge la base, et le seul adossé à un modèle de profil
 d'accès.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,6 +25,7 @@ from app.utils.perimetres import a_portee_globale, batiments_cibles
 from app.auth.deps import est_moderateur
 
 # ── Parseurs internes ─────────────────────────────────────────────────────────
+
 
 def _parse_json_list(raw: Optional[str], default: list[str]) -> list[str]:
     """Parse un champ JSON stocké en base (ex: '["bat:1","bat:3"]')."""
@@ -65,6 +67,7 @@ def _codes_json_pour_acces(raw: Optional[str]) -> Optional[list[str]]:
 
 
 # ── Règles géographiques ──────────────────────────────────────────────────────
+
 
 def perimetre_visible(
     perimetres: list[str], user: Utilisateur, *, ouvert_a_la_copropriete: bool = False
@@ -360,8 +363,6 @@ def cible_visible(
         #  ne renvoie jamais OK (`standards/04`), et le CS est déjà sorti plus
         #  haut — il garde donc de quoi corriger l'objet.
         return False
-    if not perimetre_visible(
-        perims, user, ouvert_a_la_copropriete=ouvert_a_la_copropriete
-    ):
+    if not perimetre_visible(perims, user, ouvert_a_la_copropriete=ouvert_a_la_copropriete):
         return False
     return public_cible_visible(public_cible, user)

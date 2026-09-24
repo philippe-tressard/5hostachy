@@ -31,6 +31,7 @@ contraire. Ce manque est un sujet à lui seul, suivi séparément.
 📖 Même patron que `test_pieces_jointes.py` pour les types acceptés : la liste qui
 fait autorité est celle du serveur, le front ne fait que filtrer le sélecteur.
 """
+
 from __future__ import annotations
 
 import re
@@ -62,11 +63,17 @@ def _constante_ts(fichier: Path, nom: str) -> int:
 #: des deux constantes disparaît, donc elle ne peut pas pointer dans le vide.
 PLAFONDS = [
     pytest.param(
-        "app.routers.annonces", "MAX_PHOTOS", "annonces.ts", "MAX_PHOTOS_ANNONCE",
+        "app.routers.annonces",
+        "MAX_PHOTOS",
+        "annonces.ts",
+        "MAX_PHOTOS_ANNONCE",
         id="petite-annonce",
     ),
     pytest.param(
-        "app.utils.annonce_hall", "MAX_PHOTOS", "annonces.ts", "MAX_PHOTOS_AFFICHE",
+        "app.utils.annonce_hall",
+        "MAX_PHOTOS",
+        "annonces.ts",
+        "MAX_PHOTOS_AFFICHE",
         id="affiche-de-hall",
     ),
 ]
@@ -114,9 +121,7 @@ def test_le_plafond_commun_n_est_borne_par_aucun_routeur():
     routeurs = (_RACINE / "api" / "app" / "routers").rglob("*.py")
     motif = re.compile(r"len\((?:body\.)?(?:photos_urls|fichiers_urls)\)\s*[><]")
     bornes = [
-        str(c.relative_to(_RACINE))
-        for c in routeurs
-        if motif.search(c.read_text(encoding="utf-8"))
+        str(c.relative_to(_RACINE)) for c in routeurs if motif.search(c.read_text(encoding="utf-8"))
     ]
     assert not bornes, (
         "Un routeur borne désormais le nombre de pièces jointes : "

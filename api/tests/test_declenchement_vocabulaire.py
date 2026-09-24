@@ -13,6 +13,7 @@ Le vocabulaire vit désormais dans `utils/declenchement`. Ce fichier refuse
 qu'un quatrième mot apparaisse, et vérifie que le geste de lancement manuel
 reste unique.
 """
+
 from __future__ import annotations
 
 import pathlib

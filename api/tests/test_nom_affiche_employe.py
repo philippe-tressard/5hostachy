@@ -20,6 +20,7 @@ contrôle existait, il mesurait la bonne chose, mais pas au bon endroit. Vérifi
 que deux implémentations concordent ne dit rien de ce qui les contourne — c'est
 « la portée du contrôle fait partie du contrôle » (`standards/05` §9).
 """
+
 import re
 from pathlib import Path
 
@@ -34,18 +35,17 @@ APP = Path(__file__).resolve().parents[1] / "app"
 #: ⚠️ Le préfixe est FACULTATIF : `{prenom} {nom}` s'écrit aussi sans objet
 #: porteur, et la première version du motif l'exigeait — elle laissait donc
 #: passer la forme la plus courte. Son cas zéro l'a dit tout de suite.
-_COMPOSITION = re.compile(r'\{[\w.]*prenom[^}]*\}\s*\{[\w.]*nom\b[^}]*\}')
+_COMPOSITION = re.compile(r"\{[\w.]*prenom[^}]*\}\s*\{[\w.]*nom\b[^}]*\}")
 
 #: Les endroits où composer le nom à la main est JUSTE, avec leur raison.
 #:
 #: ⚠️ Une exception qui ne sert plus fait échouer ce test : une tolérance qui
 #: survit à son objet finit par en couvrir une qui compte.
 EXCEPTIONS = {
-    "routers/bailleur/baux.py":
-        "ce n'est PAS un affichage : la chaîne est aussitôt passée en minuscules "
-        "et découpée en mots pour RAPPROCHER un bailleur d'un bail. `nom_affiche` "
-        "mettrait le nom en capitales, que le `.lower()` défferait — un détour "
-        "pour le même résultat, et un lecteur croirait à un rendu.",
+    "routers/bailleur/baux.py": "ce n'est PAS un affichage : la chaîne est aussitôt passée en minuscules "
+    "et découpée en mots pour RAPPROCHER un bailleur d'un bail. `nom_affiche` "
+    "mettrait le nom en capitales, que le `.lower()` défferait — un détour "
+    "pour le même résultat, et un lecteur croirait à un rendu.",
 }
 
 
@@ -87,7 +87,8 @@ def test_aucune_composition_manuelle_du_nom():
             if _COMPOSITION.search(ligne) and rel not in EXCEPTIONS:
                 fautifs.append(f"{rel}:{numero}")
     assert not fautifs, (
-        "Le nom est composé à la main :\n  " + "\n  ".join(fautifs)
+        "Le nom est composé à la main :\n  "
+        + "\n  ".join(fautifs)
         + "\n→ `nom_affiche(prenom, nom)` (`app.utils.noms`) — la casse du nom est "
         "une règle arbitrée, pas un détail de mise en forme."
     )
@@ -104,13 +105,13 @@ def test_chaque_exception_sert_encore():
             inutiles.append(f"{rel} (ne compose plus de nom) — {raison}")
     assert not inutiles, f"Exceptions devenues inutiles : {inutiles}"
 
+
 #: Les fichiers qui LISENT le prénom et le nom d'un utilisateur sans les
 #: afficher — avec leur raison.
 EXCEPTIONS_LECTURE = {
     "routers/bailleur/baux.py": "rapprochement, pas affichage (voir ci-dessus)",
-    "routers/acces/commun.py":
-        "rend le prénom et le nom SÉPARÉMENT au client, qui compose lui-même — "
-        "le front a sa propre `nomAffiche`, éprouvée identique par `lint:noms`.",
+    "routers/acces/commun.py": "rend le prénom et le nom SÉPARÉMENT au client, qui compose lui-même — "
+    "le front a sa propre `nomAffiche`, éprouvée identique par `lint:noms`.",
 }
 
 
@@ -150,7 +151,8 @@ def test_lire_un_prenom_et_un_nom_oblige_a_employer_la_regle():
             fautifs.append(rel)
     assert not fautifs, (
         "Ces modules lisent le prénom et le nom sans employer la règle "
-        "d'affichage :\n  " + "\n  ".join(fautifs)
+        "d'affichage :\n  "
+        + "\n  ".join(fautifs)
         + "\n→ `nom_affiche(prenom, nom)`, ou une entrée dans EXCEPTIONS_LECTURE "
         "qui dit pourquoi ils n'affichent pas."
     )

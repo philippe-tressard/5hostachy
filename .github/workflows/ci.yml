@@ -60,7 +60,12 @@ jobs:
           python-version: "3.11"
 
       - name: Install Ruff
-        run: pip install ruff
+        # ÉPINGLÉ depuis le 24/09/2026 (#1048) : `ruff format --check` compare le
+        # code au style de LA version installée, et Ruff change son style de
+        # formatage chaque année. Non épinglé, le job passerait au rouge un
+        # matin sans qu'un octet du dépôt ait bougé. Monter la version = un
+        # lot dédié : `pip install ruff==X`, `ruff format api/`, commit seul.
+        run: pip install ruff==0.15.8
 
       # 🔴 PREMIÈRE MESURE DES DÉPENDANCES PYTHON (#537, 20/08/2026).
       #
@@ -167,6 +172,18 @@ jobs:
           ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712
           ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712
           ruff check api/tests/ --select E9,F63,F7,F82,F841,E711,E712
+
+      - name: Ruff format (API)
+        # Depuis le 24/09/2026 (#1048) : aucun formateur n'était en usage côté
+        # API, alors que le front passe Prettier. Le formatage a été appliqué
+        # en UN commit, seul — relire son diff n'a de sens que s'il ne porte
+        # rien d'autre.
+        # La configuration (largeur 100, migrations exclues) vit dans
+        # `api/ruff.toml` : l'exécuter ailleurs que depuis `api/` la lit aussi.
+        # ⚠️ Le formatage DÉPLACE un commentaire de fin de ligne quand il coupe
+        # la ligne : un `# noqa` peut quitter la ligne qu'il vise. `ruff check`
+        # juste au-dessus le voit — c'est ce qui a été corrigé six fois ici.
+        run: ruff format --check api/
         # On garde un garde-fou « erreurs réelles » (syntaxe, noms invalides, runtime)
         # sans bloquer le CI sur des règles de style legacy.
 
@@ -233,9 +250,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: api
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
+        # `requirements-dev.txt` = la production (`-r requirements.txt`) + pytest
+        # ÉPINGLÉ (#1048, 24/09/2026). Il était installé ici sans version : les
+        # tests changeaient de moteur d'un run à l'autre sans que le dépôt bouge.
+        run: pip install -r requirements-dev.txt
 
       - name: Run pytest
         working-directory: api
@@ -878,6 +896,14 @@ jobs:
         working-directory: front
         run: npm run lint:a11y
 
+      # 🔴 `Icon` rend un nom inconnu en « ? » sans un mot. La checklist disait
+      # « icône vérifiée dans icones-svg.json » et aucun script ne lisait le
+      # catalogue côté front : `icone="database"` s'affichait en « ? » depuis
+      # v2.19.0 (#1045).
+      - name: Tout nom d'icône existe dans le catalogue
+        working-directory: front
+        run: npm run lint:icones
+
       - name: Aucune redéfinition scopée de la charte
         working-directory: front
         run: npm run lint:charte
@@ -1006,6 +1032,7 @@ jobs:
           node scripts/check-csp-servie.mjs --selftest
           node scripts/check-lien-evitement.mjs --selftest
           node scripts/check-a11y.mjs --selftest
+          node scripts/check-icones.mjs --selftest
           node scripts/check-seuil-listes-courtes.mjs --selftest
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
@@ -1645,15 +1672,12 @@ jobs:
       # « 📍 Concerne votre bâtiment » et « 📍 Dépannage » (📍 est un LIEU, un
       # périmètre se dit 🔹), un badge 🔹 recopié qui affichait le périmètre par
       # défaut, et `icone="database"` rendu en point d'interrogation — `Icon`
-      # retombe en silence sur `help-circle`. Chacun lance son `--selftest`
+      # retombe en silence sur `help-circle` : celui-là est tenu par
+      # `lint:icones`, branché plus haut (#1264). Chacun lance son `--selftest`
       # avant de mesurer.
       - name: Pictogrammes de contexte — 📍 lieu, 🔹 périmètre
         working-directory: front
         run: npm run lint:pictogrammes
-
-      - name: Icônes présentes au catalogue
-        working-directory: front
-        run: npm run lint:icones
 
       - name: Troncature d'aperçu issue de normes.css
         working-directory: front

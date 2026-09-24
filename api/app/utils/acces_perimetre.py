@@ -25,6 +25,7 @@ change alors qu'elle non. Les deux écritures sont donc assumées, et
 `test_acces_perimetre.py` vérifie qu'elles décrivent le même comportement sur les
 mêmes cas.
 """
+
 from __future__ import annotations
 
 from typing import Iterable, Optional

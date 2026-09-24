@@ -8,6 +8,7 @@ d'autorisation, pas ce routeur. Elle était écrite QUATRE fois au
 routes. `standards/03` §1 — l'autorisation est centralisée, et une règle
 d'autorisation en quatre exemplaires se durcit une fois sur quatre.
 """
+
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 

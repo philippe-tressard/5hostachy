@@ -25,6 +25,7 @@ Il ne vérifie pas que les règles sont justes — `test_documents_acces.py`,
 `test_visibilite_ouverte.py` et `test_perimetres_arbre.py` s'en chargent. Il
 vérifie qu'aucune n'est devenue **inatteignable** en changeant de fichier.
 """
+
 from __future__ import annotations
 
 import ast

@@ -2,6 +2,7 @@
 
 Extrait de `email.py` le 11/08/2026. Voir `gabarit.py` pour la règle de partage.
 """
+
 import re as _re
 
 from app.utils.fichiers import nom_lisible
@@ -38,8 +39,10 @@ def _preparer_pieces_jointes(paths: list[str]) -> list[dict]:
         # neutralise malgré tout guillemets et sauts de ligne, qui casseraient
         # l'en-tête pour les fichiers plus anciens, aux noms non assainis.
         affiche = _re.sub(r'["\r\n]', "_", nom_lisible(chemin))
-        prets.append({
-            "file": chemin,
-            "headers": {"Content-Disposition": f'attachment; filename="{affiche}"'},
-        })
+        prets.append(
+            {
+                "file": chemin,
+                "headers": {"Content-Disposition": f'attachment; filename="{affiche}"'},
+            }
+        )
     return prets

@@ -1,0 +1,7 @@
+#  Ce que la CI et le poste installent EN PLUS de la production (#1048, 24/09/2026).
+#  Jamais dans l'image : le Dockerfile n'installe que `requirements.txt`.
+#
+#  `pytest` était installé à part, non épinglé, dans `ci.yml` — la version des
+#  tests changeait donc d'un run à l'autre sans que le dépôt bouge.
+-r requirements.txt
+pytest==9.1.1

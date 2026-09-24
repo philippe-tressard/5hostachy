@@ -18,6 +18,7 @@ pouvaient pas la voir : celle des libellés serveur cherche les chaînes
 paraphrase devient invisible à un contrôle qui cherche le texte. D'où un contrôle
 qui regarde la **forme** — les clés — et pas les valeurs.
 """
+
 from __future__ import annotations
 
 from tests.roles_libelles_lecture import (
@@ -76,6 +77,7 @@ def test_chaque_libelle_de_role_ou_statut_a_une_TEINTE():
         "BADGE_STATUT et LIBELLES_STATUT ne couvrent pas les mêmes statuts : "
         f"{set(libelles_statut) ^ set(badges_statut)}"
     )
+
 
 def test_aucune_TEINTE_de_role_n_est_REECRITE_dans_un_ecran():
     """Le garde-fou contre la troisième table de badges.
@@ -139,11 +141,7 @@ def test_le_garde_fou_des_TEINTES_refuse_bien_une_reecriture():
     #  c'est pourquoi le cas zéro l'écrit noir sur blanc.
     assert len(tables_par_cle(homonymie, {"locataire", "conseil_syndical"}, VALEUR_TEINTE)) == 0
 
-    ternaire = (
-        "<span\n"
-        "\tclass=\"badge {u.statut === 'locataire' ? 'badge-gray' : ''}\"\n"
-        "></span>\n"
-    )
+    ternaire = "<span\n\tclass=\"badge {u.statut === 'locataire' ? 'badge-gray' : ''}\"\n></span>\n"
     assert len(tables_par_cle(ternaire, cles, VALEUR_TEINTE)) == 0
 
     #  Un commentaire qui cite la forme ne la pose pas — `standards/04` §39, et
@@ -200,6 +198,7 @@ SOURCE_LIBELLES = "src/lib/roles.ts"
 #:  d'excuser un FICHIER laisse le contrôle actif partout, y compris dans le
 #:  fichier où l'homonymie vit.
 _CLES_PARTAGEES_AVEC_TYPE_LIEN = {"locataire", "mandataire"}
+
 
 def test_la_table_ABREGEE_couvre_tout_ce_que_la_table_complete_couvre():
     """Une clé absente s'imprime en brut — c'est le défaut exact de #828.
@@ -282,4 +281,3 @@ def test_le_garde_fou_des_LIBELLES_ABREGES_refuse_bien_une_reecriture():
         "une table de `TypeLien` n'est pas une table de statuts — les deux mots "
         "communs ne doivent pas suffire à la condamner."
     )
-

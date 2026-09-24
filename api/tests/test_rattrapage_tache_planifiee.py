@@ -31,6 +31,7 @@ qui aurait besoin d'un redémarrage pour être vérifiée ne serait vérifiée q
 production, c'est-à-dire trop tard — c'est exactement ce que cet incident a
 coûté.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -156,6 +157,7 @@ def test_une_lecture_qui_LEVE_ne_tue_pas_le_demarrage():
     """🔴 Ces appels sont des jobs APScheduler : une exception y tuerait le job
     sans tuer le démarrage, et le rattrapage s'arrêterait EN SILENCE — le défaut
     même qu'il corrige. Cas zéro appliqué au correctif."""
+
     def lecture_cassee():
         raise RuntimeError("base indisponible")
 

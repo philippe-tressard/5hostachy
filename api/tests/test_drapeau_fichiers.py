@@ -12,6 +12,7 @@ en se fiant à `body.fichiers_urls`, alors que l'attachement, lui, partait de
 `chemins_locaux(...)` — une URL externe ou un fichier hors du répertoire des
 téléversements disparaissait en route, et le lecteur cherchait une pièce absente.
 """
+
 import re
 
 import pytest

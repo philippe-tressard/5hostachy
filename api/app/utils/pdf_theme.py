@@ -8,6 +8,7 @@ palette, de logo ni de moteur PDF ailleurs. Cette consigne existait déjà et
 n'était pas tenue : `utils/email/gabarit.py` redessinait le logo (14/08/2026).
 Elle vaut aussi pour ce qui n'est pas un PDF — un e-mail affiche la même marque.
 """
+
 from __future__ import annotations
 
 import base64
@@ -35,8 +36,7 @@ PALETTE_CSS = """\
 
 FONT_SERIF = "Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif"
 FONT_SANS = (
-    "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, "
-    "'Helvetica Neue', Arial, sans-serif"
+    "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif"
 )
 
 
@@ -100,18 +100,12 @@ def regle_page(
         else ""
     )
     return (
-        "@page {"
-        + saut
-        + f"  size: {taille};"
-        + saut
-        + f"  margin: {marges};"
-        + pied
-        + saut
-        + "}"
+        "@page {" + saut + f"  size: {taille};" + saut + f"  margin: {marges};" + pied + saut + "}"
     )
 
 
 # ── Logo ─────────────────────────────────────────────────────────────────────
+
 
 def logo_svg(size: int = 36) -> str:
     """Logo 5Hostachy en SVG inline (immeuble + vague de Seine)."""
@@ -126,9 +120,9 @@ def logo_svg(size: int = 36) -> str:
         '    <path d="M46 30h6a4 4 0 0 1 4 4v20H46"/>\n'
         '    <path d="M25 22h14"/><path d="M25 30h14"/><path d="M25 38h14"/>'
         '<path d="M25 46h14"/>\n'
-        '  </g>\n'
+        "  </g>\n"
         '  <path d="M48 50c0 4.4-3.6 8-8 8h14a8 8 0 0 0-6-8Z" fill="#C9983A" opacity=".95"/>\n'
-        '</svg>'
+        "</svg>"
     )
 
 
@@ -199,6 +193,7 @@ def icone_svg(
 
 # ── Data-URI ─────────────────────────────────────────────────────────────────
 
+
 def qr_data_uri(url: str) -> str:
     """QR code → `data:image/png;base64,…` (chaîne vide si génération impossible)."""
     if not url:
@@ -236,6 +231,7 @@ def image_data_uri(image_url: str | None) -> str | None:
 
 
 # ── Rendu PDF ────────────────────────────────────────────────────────────────
+
 
 def html_to_pdf(html: str) -> bytes:
     """Rend un document HTML autonome en PDF — **le seul point d'entrée du rendu**.

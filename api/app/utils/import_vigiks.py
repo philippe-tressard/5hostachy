@@ -14,6 +14,7 @@ Usage depuis le conteneur :
   importer_depuis_fichier('/chemin/vers/vigik.xlsx')
   "
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -42,8 +43,6 @@ from app.models.core import Batiment, Lot, StatutImport, VigikImport
 #  L'écrire ainsi plutôt que de recopier les trois noms fait que le jour où un
 #  quatrième non-résident apparaît, il apparaît ICI AUSSI, sans qu'on y pense.
 _NOMS_IGNORES = NOMS_NON_RESIDENTS
-
-
 
 
 #:  Ce que « Remplacer » efface — et, par omission, ce qu'il PRÉSERVE (#824).
@@ -84,11 +83,11 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
         if len(row) < 5:
             continue
 
-        batiment_raw  = str(row[0]).strip() if row[0] else None
-        appt_raw      = str(row[1]).strip() if row[1] else None
-        nom_prop_raw  = str(row[2]).strip() if row[2] else None
-        nom_loc_raw   = str(row[3]).strip() if row[3] else None
-        code_raw      = str(row[4]).strip() if row[4] else None
+        batiment_raw = str(row[0]).strip() if row[0] else None
+        appt_raw = str(row[1]).strip() if row[1] else None
+        nom_prop_raw = str(row[2]).strip() if row[2] else None
+        nom_loc_raw = str(row[3]).strip() if row[3] else None
+        code_raw = str(row[4]).strip() if row[4] else None
 
         if not nom_prop_raw:
             continue
@@ -98,7 +97,12 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
         if nom_prop_norm in _NOMS_IGNORES:
             stats["ignores"] += 1
             _creer_import(
-                session, batiment_raw, appt_raw, nom_prop_raw, nom_loc_raw, code_raw,
+                session,
+                batiment_raw,
+                appt_raw,
+                nom_prop_raw,
+                nom_loc_raw,
+                code_raw,
                 statut=StatutImport.ignore,
                 notes_admin=f"Ignoré automatiquement (hors résidents) — ligne Excel {i}",
             )
@@ -125,7 +129,9 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
         if batiment_raw and appt_raw:
             lot_id = lot_index.get((normaliser(batiment_raw), normaliser(appt_raw)))
 
-        _creer_import(session, batiment_raw, appt_raw, nom_prop_raw, nom_loc_raw, code_raw, lot_id=lot_id)
+        _creer_import(
+            session, batiment_raw, appt_raw, nom_prop_raw, nom_loc_raw, code_raw, lot_id=lot_id
+        )
         stats["importes"] += 1
 
     return stats

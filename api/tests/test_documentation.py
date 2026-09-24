@@ -11,6 +11,7 @@ aurait divergé de la source sans que rien ne le signale. Les badges du README o
 connu la dérive inverse, réelle celle-là : le badge Python annonçait 3.10+ alors que
 l'image de production tourne en 3.12 (corrigé le 26/07/2026).
 """
+
 import pathlib
 import re
 
@@ -86,9 +87,7 @@ def test_badge_node_du_readme_suit_la_ci():
 def test_readme_expose_un_badge_ci():
     """Un dépôt qui a une CI doit l'afficher : c'est le premier signal de santé."""
     readme = (_RACINE / "README.md").read_text(encoding="utf-8-sig")
-    assert "workflows/ci.yml/badge.svg" in readme, (
-        "README.md n'expose pas le badge de la CI"
-    )
+    assert "workflows/ci.yml/badge.svg" in readme, "README.md n'expose pas le badge de la CI"
 
 
 def test_ancrage_du_controle_p3_reste_valide():
@@ -110,7 +109,9 @@ def test_ancrage_du_controle_p3_reste_valide():
     import json
 
     nom = json.loads((_RACINE / "front" / "package.json").read_text(encoding="utf-8"))["name"]
-    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(encoding="utf-8")
+    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
 
     assert f'"{nom}"' in skill, (
         f"Le paquet front s'appelle « {nom} », mais le contrôle P3 de "
@@ -143,9 +144,13 @@ def test_etape_0_bis_annonce_autant_d_exigences_qu_elle_en_tabule():
     21/09/2026, puis revenu dans la copie du même tableau que portait la fin du
     fichier (v2.19.0). Un audit de doublons par date et chiffre ne le voyait pas.
     """
-    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(encoding="utf-8")
+    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
     compte, lignes = _etape_0_bis(skill)
-    assert compte is not None, "l'étape 0 bis n'annonce plus son nombre d'exigences en « **N** exigences »"
+    assert compte is not None, (
+        "l'étape 0 bis n'annonce plus son nombre d'exigences en « **N** exigences »"
+    )
     assert compte == len(lignes), (
         f"L'étape 0 bis annonce {compte} exigences mais en tabule {len(lignes)} ({', '.join(lignes)})."
     )
@@ -157,7 +162,9 @@ def test_etape_0_bis_n_est_tabulee_qu_une_fois():
     La seconde copie, en fin de fichier, portait d'autres outils dans sa colonne
     « Automatisé par » et un autre compte en titre : deux tableaux pour une liste.
     """
-    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(encoding="utf-8")
+    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
     _, lignes = _etape_0_bis(skill)
     assert lignes, "le tableau de l'étape 0 bis est vide ou illisible"
     for ligne in lignes:
@@ -165,4 +172,6 @@ def test_etape_0_bis_n_est_tabulee_qu_une_fois():
         # Le code seul ne suffit pas : les points 0a–0d du script réemploient
         # « 0c » et « 0d » pour autre chose. C'est l'exigence qui ne se recopie pas.
         n = len(re.findall(rf"^\| {code} \| \*\*{re.escape(nom)}", skill, re.MULTILINE))
-        assert n == 1, f"l'exigence « {ligne} » est tabulée {n} fois dans mep-precheck/SKILL.md — un seul tableau"
+        assert n == 1, (
+            f"l'exigence « {ligne} » est tabulée {n} fois dans mep-precheck/SKILL.md — un seul tableau"
+        )

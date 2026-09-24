@@ -18,6 +18,7 @@ deux, jamais d'aucun** ».
 Les deux ne partagent aucun montage : le premier a besoin d'un porteur, le
 second d'un profil. Les garder ensemble obligeait chaque lecteur à trier.
 """
+
 from app.models.core import StatutUtilisateur
 from app.utils.visibility import document_visible
 
@@ -45,6 +46,7 @@ from app.utils.visibility import document_visible
 #  Ces tests fixent la règle dans les DEUX sens : ce qui doit passer autant que ce
 #  qui doit être refusé. Un test qui ne vérifierait que le refus laisserait
 #  fermer un accès légitime sans que rien ne le dise.
+
 
 class _ProfilOuvertATous:
     """Profil d'accès de catégorie qui n'exclut personne par son RÔLE.
@@ -127,6 +129,7 @@ def _resident_du_batiment(numero: int) -> _ResidentDuBatiment:
 
 # ── Ce qui doit être REFUSÉ ──────────────────────────────────────────────────
 
+
 def test_document_de_batiment_refuse_a_un_resident_d_ailleurs():
     """`perimetre='bâtiment'` RESTREINT — c'est son rôle, et il le garde.
 
@@ -139,6 +142,7 @@ def test_document_de_batiment_refuse_a_un_resident_d_ailleurs():
 
 
 # ── Ce qui doit RESTER lisible ───────────────────────────────────────────────
+
 
 def test_pv_ag_multi_batiments_lisible_par_tout_copropriétaire():
     """🔴 LA règle : « une AG doit être visible par tous les copropriétaires ».
@@ -191,6 +195,7 @@ def test_document_de_batiment_lisible_par_son_batiment():
 #  🔴 **Le syndic RÉDIGE le PV d'AG.** C'est l'argument qui a tranché la question,
 #  posée puis reposée le 29/08/2026 : un rédacteur qui ne peut pas relire son
 #  propre document est un défaut, pas une règle. Migration 0159.
+
 
 def _syndic():
     """Le syndic : un STATUT, aucun rôle de copropriétaire, et AUCUN LOT.

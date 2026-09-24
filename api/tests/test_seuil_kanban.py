@@ -41,6 +41,7 @@ un arbitrage d'ergonomie qui peut changer. Il dit qu'elles doivent changer
 se manifeste qu'à une largeur donnée, sur un appareil donné. Aucun test de
 comportement ne l'aurait vu sans piloter un navigateur à 810 px de large.
 """
+
 from __future__ import annotations
 
 import re
@@ -66,7 +67,9 @@ def _constante_seuil() -> int:
     """`SEUIL_KANBAN_ETROIT` dans `$lib/kanban.ts` — le seuil du condensé."""
     fichier = _FRONT / "lib" / "kanban.ts"
     assert fichier.exists(), f"{fichier} est introuvable — ce test ne mesure plus rien."
-    m = re.search(r"^export const SEUIL_KANBAN_ETROIT = (\d+);", fichier.read_text(encoding="utf-8"), re.M)
+    m = re.search(
+        r"^export const SEUIL_KANBAN_ETROIT = (\d+);", fichier.read_text(encoding="utf-8"), re.M
+    )
     assert m, (
         "`SEUIL_KANBAN_ETROIT` introuvable — renommée, ou la bascule est repassée "
         "au CSS. Dans les deux cas ce test ne surveille plus rien (INCONNU, pas OK)."

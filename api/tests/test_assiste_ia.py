@@ -12,6 +12,7 @@
    symétrique est ici : une colonne posée qu'un schéma ne transporterait pas
    n'arriverait jamais en base.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -30,9 +31,13 @@ def _modeles():
     from app.models.core import Publication, PublicationEvolution, Ticket, TicketEvolution
 
     return [
-        Ticket, Publication,
-        TicketEvolution, PublicationEvolution,
-        Sondage, Idee, PetiteAnnonce,
+        Ticket,
+        Publication,
+        TicketEvolution,
+        PublicationEvolution,
+        Sondage,
+        Idee,
+        PetiteAnnonce,
     ]
 
 
@@ -71,6 +76,7 @@ def test_les_schemas_transportent_la_marque_sur_les_neuf_circuits():
     from app.routers.annonces import AnnonceCreate, AnnonceUpdate
     from app.routers.idees import IdeeCreate, IdeeUpdate
     from app.routers.sondages.commun import SondageCreate, SondageRead, SondageUpdate
+
     #  Les quatre schémas des publications sont partis le 23/09/2026 : une
     #  actualité est une affaire (#1091), elle passe par ceux des tickets.
     from app.schemas import (
@@ -83,12 +89,18 @@ def test_les_schemas_transportent_la_marque_sur_les_neuf_circuits():
     from app.schemas_communs import EvolutionLue
 
     creations = (
-        TicketCreate, TicketEvolutionCreate,
-        SondageCreate, IdeeCreate, AnnonceCreate,
+        TicketCreate,
+        TicketEvolutionCreate,
+        SondageCreate,
+        IdeeCreate,
+        AnnonceCreate,
     )
     corrections = (
-        TicketUpdate, TicketEvolutionUpdate,
-        SondageUpdate, IdeeUpdate, AnnonceUpdate,
+        TicketUpdate,
+        TicketEvolutionUpdate,
+        SondageUpdate,
+        IdeeUpdate,
+        AnnonceUpdate,
     )
     lectures = (TicketRead, SondageRead)
     for s in creations:

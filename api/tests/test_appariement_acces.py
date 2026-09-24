@@ -20,6 +20,7 @@ y compris ses arbitrages discutables (voir `test_le_prenom_seul_ne_matche_pas`).
 Les faire échouer n'est donc pas nécessairement un défaut — c'est un changement
 de règle qui doit être conscient.
 """
+
 import pytest
 
 from app.utils.auto_match_service import (
@@ -33,19 +34,23 @@ from app.utils.auto_match_service import (
 
 # ── Normalisation ────────────────────────────────────────────────────────────
 
-@pytest.mark.parametrize("brut, attendu", [
-    ("DUPONT", "dupont"),
-    ("  Dupont  ", "dupont"),
-    ("Éric", "eric"),
-    ("MÜLLER", "muller"),
-    ("D'ARTAGNAN", "d artagnan"),
-    ("Saint-Exupéry", "saint exupery"),
-    ("de La Fontaine", "de la fontaine"),
-    ("M. DUPONT", "m dupont"),
-    (None, ""),
-    ("", ""),
-    ("   ", ""),
-])
+
+@pytest.mark.parametrize(
+    "brut, attendu",
+    [
+        ("DUPONT", "dupont"),
+        ("  Dupont  ", "dupont"),
+        ("Éric", "eric"),
+        ("MÜLLER", "muller"),
+        ("D'ARTAGNAN", "d artagnan"),
+        ("Saint-Exupéry", "saint exupery"),
+        ("de La Fontaine", "de la fontaine"),
+        ("M. DUPONT", "m dupont"),
+        (None, ""),
+        ("", ""),
+        ("   ", ""),
+    ],
+)
 def test_normalisation(brut, attendu):
     """Accents, casse, ponctuation et espaces multiples se neutralisent."""
     assert _cle_de_nom(brut) == attendu
@@ -53,19 +58,23 @@ def test_normalisation(brut, attendu):
 
 # ── Découpage des cellules multi-occupants ───────────────────────────────────
 
-@pytest.mark.parametrize("brut, attendu", [
-    ("DUPONT Jean", ["DUPONT Jean"]),
-    ("DUPONT; MARTIN", ["DUPONT", "MARTIN"]),
-    ("DUPONT / MARTIN", ["DUPONT", "MARTIN"]),
-    ("DUPONT | MARTIN", ["DUPONT", "MARTIN"]),
-    ("DUPONT & MARTIN", ["DUPONT", "MARTIN"]),
-    ("DUPONT + MARTIN", ["DUPONT", "MARTIN"]),
-    ("DUPONT ET MARTIN", ["DUPONT", "MARTIN"]),
-    ("DUPONT et MARTIN", ["DUPONT", "MARTIN"]),
-    ("DUPONT OU MARTIN", ["DUPONT", "MARTIN"]),
-    ("", []),
-    (None, []),
-])
+
+@pytest.mark.parametrize(
+    "brut, attendu",
+    [
+        ("DUPONT Jean", ["DUPONT Jean"]),
+        ("DUPONT; MARTIN", ["DUPONT", "MARTIN"]),
+        ("DUPONT / MARTIN", ["DUPONT", "MARTIN"]),
+        ("DUPONT | MARTIN", ["DUPONT", "MARTIN"]),
+        ("DUPONT & MARTIN", ["DUPONT", "MARTIN"]),
+        ("DUPONT + MARTIN", ["DUPONT", "MARTIN"]),
+        ("DUPONT ET MARTIN", ["DUPONT", "MARTIN"]),
+        ("DUPONT et MARTIN", ["DUPONT", "MARTIN"]),
+        ("DUPONT OU MARTIN", ["DUPONT", "MARTIN"]),
+        ("", []),
+        (None, []),
+    ],
+)
 def test_decoupage_multi_occupants(brut, attendu):
     """Une cellule d'import contient souvent plusieurs occupants d'un même lot."""
     assert _split_name_candidates(brut) == attendu
@@ -77,6 +86,7 @@ def test_le_decoupage_ne_casse_pas_un_nom_contenant_et():
 
 
 # ── Clés de recherche d'un résident ──────────────────────────────────────────
+
 
 def test_les_cles_couvrent_les_deux_ordres_et_les_variantes_compactes():
     cles = _user_keys("Dupont", "Jean")
@@ -100,26 +110,33 @@ def test_un_nom_compose_reste_apparie():
 
 # ── Correspondance — les cas réels des fichiers du syndic ────────────────────
 
-@pytest.mark.parametrize("saisie", [
-    "DUPONT Jean",
-    "Jean DUPONT",
-    "dupont jean",
-    "DUPONT  JEAN",          # espaces multiples
-    "M. DUPONT JEAN",        # civilité en préfixe
-    "DUPONT",                # nom seul
-    "Mme DUPONT",
-    "DUPONT-Jean",           # trait d'union
-])
+
+@pytest.mark.parametrize(
+    "saisie",
+    [
+        "DUPONT Jean",
+        "Jean DUPONT",
+        "dupont jean",
+        "DUPONT  JEAN",  # espaces multiples
+        "M. DUPONT JEAN",  # civilité en préfixe
+        "DUPONT",  # nom seul
+        "Mme DUPONT",
+        "DUPONT-Jean",  # trait d'union
+    ],
+)
 def test_correspondances_attendues(saisie):
     assert _matches_user(saisie, _user_keys("Dupont", "Jean")), saisie
 
 
-@pytest.mark.parametrize("saisie", [
-    "MARTIN Pierre",
-    "",
-    "   ",
-    "SCI DU PARC",
-])
+@pytest.mark.parametrize(
+    "saisie",
+    [
+        "MARTIN Pierre",
+        "",
+        "   ",
+        "SCI DU PARC",
+    ],
+)
 def test_non_correspondances(saisie):
     assert not _matches_user(saisie, _user_keys("Dupont", "Jean")), saisie
 
@@ -144,6 +161,7 @@ def test_un_homonyme_de_prenom_n_est_pas_apparie():
 
 # ── Tokens significatifs ─────────────────────────────────────────────────────
 
+
 def test_les_mots_courts_sont_ecartes():
     """Un seuil trop bas apparierait sur « de », « la », « du »."""
     assert _tokens("de la fontaine") == ["fontaine"]
@@ -151,6 +169,7 @@ def test_les_mots_courts_sont_ecartes():
 
 
 # ── La chaîne d'appel doit rester branchée ───────────────────────────────────
+
 
 def test_l_appariement_est_declenche_a_la_validation_d_un_compte():
     """Sans ces points d'appel, un nouveau résident n'obtient jamais ses badges.
@@ -183,6 +202,7 @@ def test_l_appariement_est_declenche_a_la_validation_d_un_compte():
 # à risque pour qu'il soit visible et surveillé. Les faire échouer signifierait
 # que la règle a changé — ce qui serait une bonne nouvelle, mais doit être
 # conscient.
+
 
 def test_le_prenom_de_l_import_n_ecarte_jamais():
     """VOULU : le prénom ajoute des clés, il n'en exclut jamais.

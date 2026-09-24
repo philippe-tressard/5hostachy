@@ -14,6 +14,7 @@ sans date.
 `BailCreateMulti` ne porte pas d'objets : il était donc impossible d'enregistrer
 quoi que ce soit dans cet inventaire. L'écran manquait, pas le serveur (#806).
 """
+
 from datetime import date, datetime
 from typing import List
 
@@ -23,7 +24,9 @@ from sqlmodel import Session, select
 from app.auth.deps import require_proprietaire
 from app.database import get_session
 from app.models.core import (
-    RemiseObjet, StatutObjet, Utilisateur,
+    RemiseObjet,
+    StatutObjet,
+    Utilisateur,
 )
 
 from .commun import ObjetCreate, ObjetOut, ObjetUpdate, RetourObjet
@@ -33,6 +36,7 @@ router = APIRouter()
 
 # ── Routes objets ─────────────────────────────────────────────────────────────
 
+
 @router.get("/baux/{bail_id}/objets", response_model=List[ObjetOut])
 def list_objets(
     bail_id: int,
@@ -40,9 +44,7 @@ def list_objets(
     session: Session = Depends(get_session),
 ):
     exiger_bail_du_bailleur(session, bail_id, user)
-    objets = session.exec(
-        select(RemiseObjet).where(RemiseObjet.bail_id == bail_id)
-    ).all()
+    objets = session.exec(select(RemiseObjet).where(RemiseObjet.bail_id == bail_id)).all()
     return objets
 
 

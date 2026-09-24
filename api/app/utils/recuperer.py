@@ -31,6 +31,7 @@ rendrait 404 « pour ne pas révéler l'existence » relève de la sécurité, e
 être écrit là où les autres règles d'accès le sont — sinon il y a deux endroits
 où lire les droits (`standards/03` §1).
 """
+
 from __future__ import annotations
 
 from typing import Optional, Type, TypeVar
@@ -58,6 +59,7 @@ def ou_404(session: Session, modele: Type[T], identifiant, libelle: str) -> T:
         raise HTTPException(404, f"{libelle} introuvable")
     return objet
 
+
 #: La FENÊTRE d'un historique d'exploitation : on ne lit que les derniers
 #: rapports. Au-delà, ils n'apprennent plus rien — la santé d'une tâche se lit
 #: sur ses dernières exécutions, pas sur un an d'archives.
@@ -77,6 +79,4 @@ def derniers_rapports(session: Session, modele: Type[T], combien: int = DERNIERS
     routes qui l'emploient portent `require_admin`, et c'est là que la
     décision se prend.
     """
-    return session.exec(
-        select(modele).order_by(modele.cree_le.desc()).limit(combien)
-    ).all()
+    return session.exec(select(modele).order_by(modele.cree_le.desc()).limit(combien)).all()

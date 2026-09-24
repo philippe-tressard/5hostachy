@@ -10,6 +10,7 @@ boutons, titres. Ce fichier partageait une vingtaine de lignes de HTML avec
 `tickets.py`, au pixel près (#959). Ne pas réécrire un `<table>` ici : ajouter
 un paramètre là-bas.
 """
+
 from app.seed.emails.fragments import (
     BLEU,
     CREME,
@@ -41,18 +42,19 @@ _ENCART_EVENEMENT = encart(
     f'<p style="margin:0;font-weight:700;font-size:16px;color:{BLEU}">{{{{ evenement.titre }}}}</p>'
 )
 
+
 #: Le corps d'une publication dans son encart — commun aux deux modèles qui la
 #: transmettent, à la ligne « Publication initiale » près (conditionnelle pour
 #: le syndic, toujours présente pour un destinataire externe).
 def _encart_publication(*, initiale_conditionnelle: bool) -> str:
-    initiale = (
-        f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Publication initiale — {{{{ date_publication }}}}</p>'
-    )
+    initiale = f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Publication initiale — {{{{ date_publication }}}}</p>'
     if initiale_conditionnelle:
         return encart(
-            "{% if is_commentaire %}" + initiale + "{% endif %}"
+            "{% if is_commentaire %}"
+            + initiale
+            + "{% endif %}"
             + '<p style="margin:0 0 {% if is_commentaire %}8{% else %}12{% endif %}px;'
-              f'font-weight:700;font-size:16px;color:{BLEU}">{{{{ publication.titre }}}}</p>'
+            f'font-weight:700;font-size:16px;color:{BLEU}">{{{{ publication.titre }}}}</p>'
             + contenu_riche("publication.contenu"),
             marge=MARGE_SELON_COMMENTAIRE,
         )
@@ -67,137 +69,169 @@ def _encart_publication(*, initiale_conditionnelle: bool) -> str:
 #: Le fil des évolutions d'une publication, sous garde.
 _FIL_EVOLUTIONS = (
     "{% if is_commentaire and evolutions %}"
-    "{% for e in evolutions %}"
-    + entree_historique("e")
-    + "{% endfor %}"
+    "{% for e in evolutions %}" + entree_historique("e") + "{% endfor %}"
     "{% endif %}"
 )
 
 MODELES = [
-    ("publication_syndic", "Publication transmise au syndic",
-     #  Mêmes deux règles que `ticket_syndic`, où elles sont expliquées. Ici la
-     #  branche « commentaire » nommait déjà la publication ; c'est celle de la
-     #  création qui annonçait « Nouvelle publication » sans dire laquelle.
-     '{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire sur «\xa0{{ publication.titre }}\xa0»{% else %}{{ prefixe_copro }}Nouvelle publication — {{ publication.titre }}{% endif %} — {{ residence.nom }}',
-     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}📢 Publication du conseil syndical{% endif %}')
-     + '<p style="margin:0 0 16px">'
-       '{% if is_commentaire %}'
-       'Un nouveau commentaire a été ajouté sur la publication <strong>{{ publication.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
-       '{% else %}'
-       'Une publication a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
-       '{% endif %}'
-       '</p>'
-     #  ⚠️ Pas de périmètre ici : `PublicationEvolution` n'en porte AUCUN, là où
-     #  `TicketEvolution` a `perimetre_cible`. Ce n'est pas une divergence entre
-     #  deux copies — c'est une différence de modèle, et le paramètre absent la
-     #  déclare (#959).
-     + "{% if is_commentaire %}"
-     + cadre_commentaire()
-     + HISTORIQUE_DISCRET
-     + "{% endif %}"
-     + _encart_publication(initiale_conditionnelle=True)
-     + _FIL_EVOLUTIONS
-     + bouton("{{ app.url }}{{ publication.lien }}", "Voir la publication",
-              marge=MARGE_BOUTON_SELON_COMMENTAIRE),
-     True),
-    ("publication_externe", "Notification publication (email externe)",
-     #  Même raison que `ticket_externe` : l'adresse est saisie à la main et peut
-     #  être celle du syndic.
-     '{% if is_commentaire %}{{ prefixe_copro }}Relance {{ publication.titre }}{% else %}{{ prefixe_copro }}{{ publication.titre }} — {{ residence.nom }}{% endif %}',
-     titre('{% if is_commentaire %}💬 Nouveau commentaire{% else %}📢 Publication{% endif %} : {{ publication.titre }}')
-     + "{% if is_commentaire %}"
-     + cadre_commentaire(voir_pj=True)
-     #  ⚠️ Le titre « Historique » de ce modèle n'est PAS celui du précédent :
-     #  14px/gris contre 13px/gris clair. Les deux existaient déjà, dans les deux
-     #  fichiers ; les fondre changerait le texte de modèles en base, donc
-     #  exigerait une migration. Nommés distinctement, au moins le choix est vu.
-     + HISTORIQUE_SOBRE
-     + "{% endif %}"
-     + _encart_publication(initiale_conditionnelle=False)
-     + _FIL_EVOLUTIONS
-     + SEPARATEUR
-     + PIED_OUVRE
-     + SIGNATURE_CS,
-     False),
-    ("calendrier_evenement_cree", "Événement calendrier créé", "Nouvel événement : {{ evenement.titre }} — {{ residence.nom }}",
-     titre("📅 Nouvel événement")
-     + _ENCART_EVENEMENT
-     + _BOUTON_CALENDRIER,
-     True),
+    (
+        "publication_syndic",
+        "Publication transmise au syndic",
+        #  Mêmes deux règles que `ticket_syndic`, où elles sont expliquées. Ici la
+        #  branche « commentaire » nommait déjà la publication ; c'est celle de la
+        #  création qui annonçait « Nouvelle publication » sans dire laquelle.
+        "{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire sur «\xa0{{ publication.titre }}\xa0»{% else %}{{ prefixe_copro }}Nouvelle publication — {{ publication.titre }}{% endif %} — {{ residence.nom }}",
+        titre(
+            "{% if is_commentaire %}💬 Nouveau commentaire{% else %}📢 Publication du conseil syndical{% endif %}"
+        )
+        + '<p style="margin:0 0 16px">'
+        "{% if is_commentaire %}"
+        "Un nouveau commentaire a été ajouté sur la publication <strong>{{ publication.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}."
+        "{% else %}"
+        "Une publication a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}."
+        "{% endif %}"
+        "</p>"
+        #  ⚠️ Pas de périmètre ici : `PublicationEvolution` n'en porte AUCUN, là où
+        #  `TicketEvolution` a `perimetre_cible`. Ce n'est pas une divergence entre
+        #  deux copies — c'est une différence de modèle, et le paramètre absent la
+        #  déclare (#959).
+        + "{% if is_commentaire %}"
+        + cadre_commentaire()
+        + HISTORIQUE_DISCRET
+        + "{% endif %}"
+        + _encart_publication(initiale_conditionnelle=True)
+        + _FIL_EVOLUTIONS
+        + bouton(
+            "{{ app.url }}{{ publication.lien }}",
+            "Voir la publication",
+            marge=MARGE_BOUTON_SELON_COMMENTAIRE,
+        ),
+        True,
+    ),
+    (
+        "publication_externe",
+        "Notification publication (email externe)",
+        #  Même raison que `ticket_externe` : l'adresse est saisie à la main et peut
+        #  être celle du syndic.
+        "{% if is_commentaire %}{{ prefixe_copro }}Relance {{ publication.titre }}{% else %}{{ prefixe_copro }}{{ publication.titre }} — {{ residence.nom }}{% endif %}",
+        titre(
+            "{% if is_commentaire %}💬 Nouveau commentaire{% else %}📢 Publication{% endif %} : {{ publication.titre }}"
+        )
+        + "{% if is_commentaire %}"
+        + cadre_commentaire(voir_pj=True)
+        #  ⚠️ Le titre « Historique » de ce modèle n'est PAS celui du précédent :
+        #  14px/gris contre 13px/gris clair. Les deux existaient déjà, dans les deux
+        #  fichiers ; les fondre changerait le texte de modèles en base, donc
+        #  exigerait une migration. Nommés distinctement, au moins le choix est vu.
+        + HISTORIQUE_SOBRE
+        + "{% endif %}"
+        + _encart_publication(initiale_conditionnelle=False)
+        + _FIL_EVOLUTIONS
+        + SEPARATEUR
+        + PIED_OUVRE
+        + SIGNATURE_CS,
+        False,
+    ),
+    (
+        "calendrier_evenement_cree",
+        "Événement calendrier créé",
+        "Nouvel événement : {{ evenement.titre }} — {{ residence.nom }}",
+        titre("📅 Nouvel événement") + _ENCART_EVENEMENT + _BOUTON_CALENDRIER,
+        True,
+    ),
     #  ⚠️ Modèle du SUIVI, distinct de la création (18/08/2026). Réutiliser
     #  « Nouvel événement » pour un commentaire aurait annoncé une création à
     #  chaque entrée d'Historique — le message aurait été faux, pas seulement
     #  maladroit.
-    ("calendrier_evenement_suivi", "Événement calendrier — suivi", "Suivi : {{ evenement.titre }} — {{ residence.nom }}",
-     titre("🔄 Suivi d’un événement")
-     + _ENCART_EVENEMENT
-     + '{% if suivi.etat %}<p style="margin:0 0 12px"><strong>État :</strong> {{ suivi.etat }}</p>{% endif %}'
-       '{% if suivi.commentaire %}<div style="margin:0 0 20px">{{ suivi.commentaire|safe }}</div>{% endif %}'
-     #  Le pied qui annonce les pieces : meme forme que `ticket_nouveau_message`
-     #  et `ticket_externe`. Il manquait ici, et les pieces elles-memes n'etaient
-     #  pas attachees (elles l'etaient depuis l'evenement, jamais depuis l'entree)
-     #  -- signale a l'ecran le 18/08/2026.
-     #  ⚠️ `fichiers` est calcule sur la liste REELLEMENT attachee, jamais sur
-     #  l'intention : ce que le courriel annonce doit etre ce qu'il transporte.
-     + f'{{% if fichiers %}}<p style="margin:0 0 16px;font-size:13px;color:{GRIS}">📎 Pièces jointes ci-dessous.</p>{{% endif %}}'
-     + _BOUTON_CALENDRIER,
-     True),
-    ("document_publie", "Document publié", "Nouveau document disponible — {{ residence.nom }}",
-     titre("📄 Nouveau document")
-     + '<p style="margin:0 0 16px">Un nouveau document a été publié sur l’espace de votre résidence :</p>'
-     + encart(
-         f'<p style="margin:0;font-weight:700;font-size:16px;color:{BLEU}">{{{{ document.titre }}}}</p>'
-         #  La DESCRIPTION sous le titre, quand elle existe (09/09/2026, migration
-         #  0185). Le titre NOMME le document, elle dit ce qu'il couvre — sans elle,
-         #  le destinataire doit ouvrir le fichier pour savoir s'il le concerne.
-         "{% if document.description %}"
-         f'<p style="margin:8px 0 0;font-size:14px;color:{GRIS}">{{{{ document.description }}}}</p>'
-         "{% endif %}"
-     )
-     # `/documents` n'a jamais existé côté front : chaque document s'affiche là
-     # où il est rattaché. Le bouton menait donc à un 404 — le même que celui
-     # signalé depuis un PV d'AG le 26/07/2026, resté ici parce que ce modèle
-     # n'était envoyé par personne. Le lien vient de `app/utils/liens.py`.
-     #  🔴 Le bouton n'existe QUE s'il mène quelque part (09/09/2026). Sept des
-     #  dix catégories de documents n'ont pas de rubrique sur /residence :
-     #  `lien_document` rend alors `None`, et sans cette garde le lien devenait
-     #  « <site>/None ». Un bouton absent vaut mieux qu'un bouton qui ment.
-     + "{% if document.lien %}"
-     + bouton("{{ app.url }}{{ document.lien }}", "Consulter le document", fond="#3D6B4F")
-     + "{% endif %}",
-     True),
-    ("reponse_communaute", "Nouvelle réponse (Communauté)", "💬 Nouvelle réponse sur {{ reponse.rubrique_label }} — {{ residence.nom }}",
-     titre("💬 Nouvelle réponse")
-     + '<p style="margin:0 0 16px">{{ reponse.auteur }} a répondu à {{ reponse.rubrique_label }} <strong>« {{ reponse.sujet }} »</strong> :</p>'
-     + encart(f'<p style="margin:0;font-size:14px;color:{TEXTE}">{{{{ reponse.extrait }}}}</p>')
-     + bouton("{{ reponse.lien }}", "Voir et répondre"),
-     True),
-    ("idee_statut", "Idée soutenue — changement de statut", "💡 L'idée « {{ idee.titre }} » est {{ idee.statut_label }} — {{ residence.nom }}",
-     titre("💡 Une idée que vous avez soutenue avance")
-     + '<p style="margin:0 0 16px">Bonne nouvelle : l\'idée <strong>« {{ idee.titre }} »</strong>, que vous avez soutenue, est désormais <strong>{{ idee.statut_label }}</strong>.</p>'
-     + bouton("{{ idee.lien }}", "Voir la boîte à idées"),
-     True),
-    ("annonce_hall", "Annonce hall (PDF à afficher)",
-     "📄 Annonce à afficher — {{ annonce.titre }} — {{ residence.nom }}",
-     titre("📄 Annonce à afficher dans le hall")
-     + '<p style="margin:0 0 16px">{{ auteur.affiche }} a préparé une annonce pour <strong>{{ annonce.perimetre }}</strong>. '
-       'Le PDF est en pièce jointe, prêt à imprimer au format <strong>{{ annonce.format }}</strong> et à afficher.</p>'
-     + encart(
-         f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">{{{{ annonce.perimetre }}}} · Format {{{{ annonce.format }}}} · {{{{ annonce.date }}}}</p>'
-         f'<p style="margin:0 0 8px;font-weight:700;font-size:17px;color:{BLEU}">{{{{ annonce.titre }}}}</p>'
-         f'{{% if annonce.apercu %}}<p style="margin:0;font-size:14px;color:{GRIS}">{{{{ annonce.apercu }}}}</p>{{% endif %}}',
-         fond=CREME,
-         filet=OR,
-     )
-     + f'<p style="margin:0 0 20px;font-size:13px;color:{GRIS}">📎 Pièce jointe : <strong>{{{{ annonce.fichier }}}}</strong> '
-       '— imprimer en couleur, sans mise à l’échelle (100 %).</p>'
-     #  🔴 Le bouton pointe l'ACTUALITÉ d'origine, et n'apparaît que s'il y en
-     #  a une (`annonce.lien`, cf. `annonces_hall_courriels.lien_affiche`).
-     #  Il visait `/espace-cs`, que le front réserve au conseil syndical : depuis
-     #  que le syndic reçoit ce courriel (#480), il y était renvoyé au tableau de
-     #  bord. C'était le seul modèle du site à viser une route à accès restreint.
-     + "{% if annonce.lien %}"
-     + bouton("{{ app.url }}{{ annonce.lien }}", "Voir l’actualité d’origine")
-     + "{% endif %}",
-     True),
+    (
+        "calendrier_evenement_suivi",
+        "Événement calendrier — suivi",
+        "Suivi : {{ evenement.titre }} — {{ residence.nom }}",
+        titre("🔄 Suivi d’un événement")
+        + _ENCART_EVENEMENT
+        + '{% if suivi.etat %}<p style="margin:0 0 12px"><strong>État :</strong> {{ suivi.etat }}</p>{% endif %}'
+        '{% if suivi.commentaire %}<div style="margin:0 0 20px">{{ suivi.commentaire|safe }}</div>{% endif %}'
+        #  Le pied qui annonce les pieces : meme forme que `ticket_nouveau_message`
+        #  et `ticket_externe`. Il manquait ici, et les pieces elles-memes n'etaient
+        #  pas attachees (elles l'etaient depuis l'evenement, jamais depuis l'entree)
+        #  -- signale a l'ecran le 18/08/2026.
+        #  ⚠️ `fichiers` est calcule sur la liste REELLEMENT attachee, jamais sur
+        #  l'intention : ce que le courriel annonce doit etre ce qu'il transporte.
+        + f'{{% if fichiers %}}<p style="margin:0 0 16px;font-size:13px;color:{GRIS}">📎 Pièces jointes ci-dessous.</p>{{% endif %}}'
+        + _BOUTON_CALENDRIER,
+        True,
+    ),
+    (
+        "document_publie",
+        "Document publié",
+        "Nouveau document disponible — {{ residence.nom }}",
+        titre("📄 Nouveau document")
+        + '<p style="margin:0 0 16px">Un nouveau document a été publié sur l’espace de votre résidence :</p>'
+        + encart(
+            f'<p style="margin:0;font-weight:700;font-size:16px;color:{BLEU}">{{{{ document.titre }}}}</p>'
+            #  La DESCRIPTION sous le titre, quand elle existe (09/09/2026, migration
+            #  0185). Le titre NOMME le document, elle dit ce qu'il couvre — sans elle,
+            #  le destinataire doit ouvrir le fichier pour savoir s'il le concerne.
+            "{% if document.description %}"
+            f'<p style="margin:8px 0 0;font-size:14px;color:{GRIS}">{{{{ document.description }}}}</p>'
+            "{% endif %}"
+        )
+        # `/documents` n'a jamais existé côté front : chaque document s'affiche là
+        # où il est rattaché. Le bouton menait donc à un 404 — le même que celui
+        # signalé depuis un PV d'AG le 26/07/2026, resté ici parce que ce modèle
+        # n'était envoyé par personne. Le lien vient de `app/utils/liens.py`.
+        #  🔴 Le bouton n'existe QUE s'il mène quelque part (09/09/2026). Sept des
+        #  dix catégories de documents n'ont pas de rubrique sur /residence :
+        #  `lien_document` rend alors `None`, et sans cette garde le lien devenait
+        #  « <site>/None ». Un bouton absent vaut mieux qu'un bouton qui ment.
+        + "{% if document.lien %}"
+        + bouton("{{ app.url }}{{ document.lien }}", "Consulter le document", fond="#3D6B4F")
+        + "{% endif %}",
+        True,
+    ),
+    (
+        "reponse_communaute",
+        "Nouvelle réponse (Communauté)",
+        "💬 Nouvelle réponse sur {{ reponse.rubrique_label }} — {{ residence.nom }}",
+        titre("💬 Nouvelle réponse")
+        + '<p style="margin:0 0 16px">{{ reponse.auteur }} a répondu à {{ reponse.rubrique_label }} <strong>« {{ reponse.sujet }} »</strong> :</p>'
+        + encart(f'<p style="margin:0;font-size:14px;color:{TEXTE}">{{{{ reponse.extrait }}}}</p>')
+        + bouton("{{ reponse.lien }}", "Voir et répondre"),
+        True,
+    ),
+    (
+        "idee_statut",
+        "Idée soutenue — changement de statut",
+        "💡 L'idée « {{ idee.titre }} » est {{ idee.statut_label }} — {{ residence.nom }}",
+        titre("💡 Une idée que vous avez soutenue avance")
+        + '<p style="margin:0 0 16px">Bonne nouvelle : l\'idée <strong>« {{ idee.titre }} »</strong>, que vous avez soutenue, est désormais <strong>{{ idee.statut_label }}</strong>.</p>'
+        + bouton("{{ idee.lien }}", "Voir la boîte à idées"),
+        True,
+    ),
+    (
+        "annonce_hall",
+        "Annonce hall (PDF à afficher)",
+        "📄 Annonce à afficher — {{ annonce.titre }} — {{ residence.nom }}",
+        titre("📄 Annonce à afficher dans le hall")
+        + '<p style="margin:0 0 16px">{{ auteur.affiche }} a préparé une annonce pour <strong>{{ annonce.perimetre }}</strong>. '
+        "Le PDF est en pièce jointe, prêt à imprimer au format <strong>{{ annonce.format }}</strong> et à afficher.</p>"
+        + encart(
+            f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">{{{{ annonce.perimetre }}}} · Format {{{{ annonce.format }}}} · {{{{ annonce.date }}}}</p>'
+            f'<p style="margin:0 0 8px;font-weight:700;font-size:17px;color:{BLEU}">{{{{ annonce.titre }}}}</p>'
+            f'{{% if annonce.apercu %}}<p style="margin:0;font-size:14px;color:{GRIS}">{{{{ annonce.apercu }}}}</p>{{% endif %}}',
+            fond=CREME,
+            filet=OR,
+        )
+        + f'<p style="margin:0 0 20px;font-size:13px;color:{GRIS}">📎 Pièce jointe : <strong>{{{{ annonce.fichier }}}}</strong> '
+        "— imprimer en couleur, sans mise à l’échelle (100 %).</p>"
+        #  🔴 Le bouton pointe l'ACTUALITÉ d'origine, et n'apparaît que s'il y en
+        #  a une (`annonce.lien`, cf. `annonces_hall_courriels.lien_affiche`).
+        #  Il visait `/espace-cs`, que le front réserve au conseil syndical : depuis
+        #  que le syndic reçoit ce courriel (#480), il y était renvoyé au tableau de
+        #  bord. C'était le seul modèle du site à viser une route à accès restreint.
+        + "{% if annonce.lien %}"
+        + bouton("{{ app.url }}{{ annonce.lien }}", "Voir l’actualité d’origine")
+        + "{% endif %}",
+        True,
+    ),
 ]

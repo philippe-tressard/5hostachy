@@ -25,12 +25,21 @@ Réutilise la comparaison des noms d'`auto_match_service` (`_user_keys`,
 `_matches_user`), la même que pour les imports du syndic : deux règles pour
 « ce nom est-il le sien ? » divergeraient au premier cas limite.
 """
+
 from __future__ import annotations
 
 from sqlmodel import Session, select
 
 from app.models.copropriete import TypeLot
-from app.models.core import LocationBail, Lot, StatutBail, StatutUtilisateur, TypeLien, UserLot, Utilisateur
+from app.models.core import (
+    LocationBail,
+    Lot,
+    StatutBail,
+    StatutUtilisateur,
+    TypeLien,
+    UserLot,
+    Utilisateur,
+)
 from app.utils.auto_match_service import _matches_user, _user_keys
 from app.utils.cloche import sonner_systeme
 from app.utils.destinataires import site_manager_user_id
@@ -39,14 +48,18 @@ from app.utils.noms import nom_affiche
 from app.utils.valeurs import valeur
 
 #: Qui peut louer un lot : un copropriétaire, résident ou non.
-STATUTS_BAILLEUR = frozenset({
-    StatutUtilisateur.copropriétaire_bailleur.value,
-    StatutUtilisateur.copropriétaire_résident.value,
-})
+STATUTS_BAILLEUR = frozenset(
+    {
+        StatutUtilisateur.copropriétaire_bailleur.value,
+        StatutUtilisateur.copropriétaire_résident.value,
+    }
+)
 
 
 def _deja_rattache(user: Utilisateur, session: Session) -> bool:
-    lien = session.exec(select(UserLot).where(UserLot.user_id == user.id, UserLot.actif == True)).first()  # noqa: E712
+    lien = session.exec(
+        select(UserLot).where(UserLot.user_id == user.id, UserLot.actif == True)  # noqa: E712
+    ).first()
     bail = session.exec(select(LocationBail).where(LocationBail.locataire_id == user.id)).first()
     return lien is not None or bail is not None
 
@@ -56,7 +69,8 @@ def bailleur_designe(user: Utilisateur, session: Session) -> Utilisateur | None:
     if not user.nom_proprietaire:
         return None
     candidats = [
-        b for b in session.exec(select(Utilisateur).where(Utilisateur.actif == True)).all()  # noqa: E712
+        b
+        for b in session.exec(select(Utilisateur).where(Utilisateur.actif == True)).all()  # noqa: E712
         if b.id != user.id
         and valeur(b.statut) in STATUTS_BAILLEUR
         and _matches_user(user.nom_proprietaire, _user_keys(b.nom or "", b.prenom or ""))
@@ -75,38 +89,52 @@ def rattacher_au_bailleur(user: Utilisateur, session: Session) -> int:
     if bailleur is None:
         return 0
 
-    baux = session.exec(select(LocationBail).where(
-        LocationBail.bailleur_id == bailleur.id,
-        LocationBail.locataire_id.is_(None),  # type: ignore[union-attr]
-        LocationBail.statut != StatutBail.termine,
-    )).all()
+    baux = session.exec(
+        select(LocationBail).where(
+            LocationBail.bailleur_id == bailleur.id,
+            LocationBail.locataire_id.is_(None),  # type: ignore[union-attr]
+            LocationBail.statut != StatutBail.termine,
+        )
+    ).all()
     if len(baux) == 1:
         baux[0].locataire_id = user.id
         session.add(baux[0])
         quoi = f"bail {baux[0].id}"
     else:
         logements = [
-            ul.lot_id for ul in session.exec(select(UserLot).where(
-                UserLot.user_id == bailleur.id, UserLot.actif == True,  # noqa: E712
-            )).all()
-            if (lot := session.get(Lot, ul.lot_id)) is not None and valeur(lot.type) == TypeLot.appartement.value
+            ul.lot_id
+            for ul in session.exec(
+                select(UserLot).where(
+                    UserLot.user_id == bailleur.id,
+                    UserLot.actif == True,  # noqa: E712
+                )
+            ).all()
+            if (lot := session.get(Lot, ul.lot_id)) is not None
+            and valeur(lot.type) == TypeLot.appartement.value
         ]
         if len(set(logements)) != 1:
             return 0
-        session.add(UserLot(user_id=user.id, lot_id=logements[0], type_lien=TypeLien.locataire, actif=True))
+        session.add(
+            UserLot(user_id=user.id, lot_id=logements[0], type_lien=TypeLien.locataire, actif=True)
+        )
         quoi = f"lot {logements[0]}"
 
     #  Des IDENTIFIANTS, jamais un nom : le journal ne porte aucune donnée
     #  personnelle (`test_journal_securite.py`).
-    journaliser_securite("rattachement_auto", cible_id=user.id, detail=f"bailleur {bailleur.id} · {quoi}")
+    journaliser_securite(
+        "rattachement_auto", cible_id=user.id, detail=f"bailleur {bailleur.id} · {quoi}"
+    )
     gestionnaire = site_manager_user_id(session)
     if gestionnaire is not None:
         sonner_systeme(
-            session, "rattachement", destinataire_id=gestionnaire, type="system",
+            session,
+            "rattachement",
+            destinataire_id=gestionnaire,
+            type="system",
             titre="Locataire rattaché automatiquement",
             corps=f"{nom_affiche(user.prenom, user.nom)} a été rattaché au {quoi} de "
-                  f"{nom_affiche(bailleur.prenom, bailleur.nom)}, "
-                  "d'après le nom de propriétaire déclaré. À défaire s'il s'agit d'un homonyme.",
+            f"{nom_affiche(bailleur.prenom, bailleur.nom)}, "
+            "d'après le nom de propriétaire déclaré. À défaire s'il s'agit d'un homonyme.",
             lien="/admin?onglet=comptes",
         )
     return 1

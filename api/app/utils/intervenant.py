@@ -35,6 +35,7 @@ C'est lui qui RANGE une affaire résolue au carnet d'entretien
 Création (`crud.py`) et correction (`mise_a_jour.py`) l'appellent : deux
 écritures de ces trois règles divergeraient au premier cas limite.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -58,7 +59,9 @@ CHAMPS: tuple[str, ...] = ("prestataire_id", "frequence_type", "frequence_valeur
 #: Ce qu'une affaire peut désigner comme équipement : `TypeEquipement`, moins
 #: ce qui classe un CONTRAT sans être un équipement. Même liste côté écran :
 #: `EQUIPEMENTS_AFFAIRE` de `$lib/prestataires` (`test_types_equipement.py`).
-HORS_EQUIPEMENT: frozenset[str] = frozenset({TypeEquipement.assurance.value, TypeEquipement.syndic.value})
+HORS_EQUIPEMENT: frozenset[str] = frozenset(
+    {TypeEquipement.assurance.value, TypeEquipement.syndic.value}
+)
 EQUIPEMENTS_AFFAIRE: tuple[str, ...] = tuple(
     e.value for e in TypeEquipement if e.value not in HORS_EQUIPEMENT
 )
@@ -80,12 +83,20 @@ def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: b
         ticket.prestataire_id = None
         ticket.equipement = None
     else:
-        if est_cs and _envoye(body, "prestataire_id") and body.prestataire_id != ticket.prestataire_id:
+        if (
+            est_cs
+            and _envoye(body, "prestataire_id")
+            and body.prestataire_id != ticket.prestataire_id
+        ):
             if body.prestataire_id is not None:
                 ou_404(session, Prestataire, body.prestataire_id, "Prestataire")
             ticket.prestataire_id = body.prestataire_id
             changes.append("Intervenant")
-        if est_cs and _envoye(body, "equipement") and (body.equipement or None) != ticket.equipement:
+        if (
+            est_cs
+            and _envoye(body, "equipement")
+            and (body.equipement or None) != ticket.equipement
+        ):
             if body.equipement and body.equipement not in EQUIPEMENTS_AFFAIRE:
                 raise HTTPException(422, "Équipement inconnu")
             ticket.equipement = body.equipement or None

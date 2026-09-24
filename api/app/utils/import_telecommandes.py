@@ -12,6 +12,7 @@ Usage depuis le conteneur :
   importer_depuis_fichier('/chemin/vers/fichier.xlsx')
   "
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -47,8 +48,6 @@ _NOMS_IGNORES = NOMS_NON_RESIDENTS | {
 }
 
 
-
-
 #:  Ce que « Remplacer » efface — et, par omission, ce qu'il PRÉSERVE (#824).
 #:  Seul le non-traité. `proprietaire_lie` est un rapprochement à demi fait sur
 #:  un objet déjà remis à quelqu'un : le refaire coûte plus qu'un réimport.
@@ -81,8 +80,8 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
         purger_staging(session, TelecommandeImport, _PURGES_PAR_REMPLACER)
 
     for i, row in enumerate(data_rows, start=2):
-        nom_prop_raw  = str(row[0]).strip() if row[0] else None
-        nom_loc_raw   = str(row[1]).strip() if row[1] else None
+        nom_prop_raw = str(row[0]).strip() if row[0] else None
+        nom_loc_raw = str(row[1]).strip() if row[1] else None
         reference_raw = str(row[2]).strip() if row[2] else None
 
         if not nom_prop_raw:
@@ -93,7 +92,10 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
         if nom_prop_norm in _NOMS_IGNORES:
             stats["ignores"] += 1
             _creer_import(
-                session, nom_prop_raw, nom_loc_raw, reference_raw,
+                session,
+                nom_prop_raw,
+                nom_loc_raw,
+                reference_raw,
                 statut=StatutImport.ignore,
                 notes_admin=f"Ignoré automatiquement (hors résidents) — ligne Excel {i}",
             )

@@ -372,7 +372,7 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - [ ] En-tête de page : `<EntetePage>`, jamais `<div class="page-header">`
       (`ux-patterns` §13)
 - [ ] Icône vérifiée dans `$lib/icones-svg.json` — un nom inconnu échoue en silence
-      (`npm run lint:icones` le refuse ; `database` l'était depuis sa création)
+      (`npm run lint:icones` le refuse ; un relais d'icône s'appelle `icone`)
 - [ ] Tout champ libellé dans un `.field` — jamais une nomenclature locale
       (`npm run lint:champs` ; il y en avait **six** avant #413) — **y compris**
       le champ dont l'intitulé de section est le libellé, et une étoile dans un
@@ -392,6 +392,12 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       `test_routes_masquees.py` le tient pour `acces`
 - [ ] Lecture d'un objet par `ou_404`, pas `session.get` + 404
 - [ ] Client TypeScript ajouté dans le paquet `front/src/lib/api/` — dans le module de son domaine (`acces`, `patrimoine`, `communaute`…), jamais dans un `api.ts` ressuscité à la racine
+- [ ] `cd api && ruff format .` — la CI refuse un fichier non formaté depuis le
+      24/09/2026 (#1048 ; Ruff **épinglé** dans `ci.yml`, largeur 100, migrations
+      exclues par `api/ruff.toml`). ⚠️ Une ligne coupée emporte son `# noqa` sur
+      une autre ligne : relancer `ruff check` après. Une comparaison SQLAlchemy
+      (`Model.actif == True`) garde `# noqa: E712` — jamais `is True`, qui vide
+      le filtre sans un mot
 
 ### Documentation utilisateur — **deux** documents de même rang
 - [ ] `docs/manuel-utilisateur.html` — **comment on s'en sert** : mis à jour dans le

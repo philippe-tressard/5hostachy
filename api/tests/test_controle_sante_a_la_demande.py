@@ -17,6 +17,7 @@ dont on voit le résultat.
 `test_alerte_systeme` garde l'autre moitié : que tout `_check_*` du module soit
 branché dans `collecter_problemes`.
 """
+
 from __future__ import annotations
 
 from app.routers.admin.exploitation import relancer_controle_sante

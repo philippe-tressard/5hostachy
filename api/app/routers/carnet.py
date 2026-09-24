@@ -16,6 +16,7 @@ condition dans ce fichier en aurait fait une seconde version, libre de diverger 
 premier durcissement — c'est `standards/03` §1, et c'est la dérive que
 `_require_bailleur` avait produite sur dix-sept endpoints.
 """
+
 from __future__ import annotations
 
 from typing import Optional

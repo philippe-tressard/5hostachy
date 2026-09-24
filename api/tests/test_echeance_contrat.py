@@ -13,6 +13,7 @@ différentes que « échéance » désignait selon l'écran — est dans le modu
 passe au vert ou au rouge selon le mois, et n'éprouve alors plus rien
 (`standards/04` §1 — un contrôle qui ne mesure pas ce qu'on croit).
 """
+
 from datetime import date
 
 import pytest

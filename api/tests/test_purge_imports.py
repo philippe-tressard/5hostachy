@@ -25,6 +25,7 @@ seed des périmètres qui annulait les suppressions de l'administration
 après un réimport — et non le prédicat. Vérifier `_PURGES_PAR_REMPLACER` aurait
 recopié la décision au lieu de la constater (`standards/04` §14).
 """
+
 import io
 
 import pytest
@@ -42,7 +43,7 @@ from app.utils import import_lots, import_telecommandes, import_vigiks
 openpyxl = pytest.importorskip(
     "openpyxl",
     reason="openpyxl est une dépendance de production ; son absence rend ces "
-           "tests INCONNUS, pas verts",
+    "tests INCONNUS, pas verts",
 )
 
 
@@ -82,8 +83,11 @@ _IMPORTS = [
         LotImport,
         [["Bât", "Lot", "Nom", "Type"], [1, "A101", "DUPONT Jean", "Appartement"]],
         lambda statut: LotImport(
-            numero="ABSENT-DU-CLASSEUR", batiment_id=9, type_raw="AP",
-            nom_coproprietaire="MIS DE COTE", statut=statut,
+            numero="ABSENT-DU-CLASSEUR",
+            batiment_id=9,
+            type_raw="AP",
+            nom_coproprietaire="MIS DE COTE",
+            statut=statut,
         ),
         StatutLotImport.en_attente,
     ),
@@ -93,7 +97,9 @@ _IMPORTS = [
         TelecommandeImport,
         [["Copropriétaire", "Locataire", "Réf"], ["DUPONT Jean", "", "TC-001"]],
         lambda statut: TelecommandeImport(
-            nom_proprietaire="MIS DE COTE", reference="TC-ABSENTE", statut=statut,
+            nom_proprietaire="MIS DE COTE",
+            reference="TC-ABSENTE",
+            statut=statut,
         ),
         StatutImport.en_attente,
     ),
@@ -103,7 +109,9 @@ _IMPORTS = [
         VigikImport,
         [["Bât", "Appt", "Prop", "Loc", "Code"], [1, "101", "DUPONT Jean", "", "V-001"]],
         lambda statut: VigikImport(
-            nom_proprietaire="MIS DE COTE", code="V-ABSENT", statut=statut,
+            nom_proprietaire="MIS DE COTE",
+            code="V-ABSENT",
+            statut=statut,
         ),
         StatutImport.en_attente,
     ),
@@ -164,9 +172,13 @@ def test_remplacer_efface_BIEN_le_non_traite(
 
 def test_sans_remplacer_rien_n_est_purge(session):
     """Cas zéro du geste : la purge ne doit se produire QUE sur demande."""
-    session.add(TelecommandeImport(
-        nom_proprietaire="DEJA LA", reference="TC-000", statut=StatutImport.en_attente,
-    ))
+    session.add(
+        TelecommandeImport(
+            nom_proprietaire="DEJA LA",
+            reference="TC-000",
+            statut=StatutImport.en_attente,
+        )
+    )
     session.commit()
 
     import_telecommandes.importer_depuis_bytes(

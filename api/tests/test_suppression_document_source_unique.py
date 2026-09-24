@@ -9,6 +9,7 @@ annonçaient (« Plan supprimé » contre « Supprimé »).
 Le contrôle suit les ALIAS : le client s'importe `documents as docsApi`,
 `documents as documentsApi`… — un motif sur un seul nom ne verrait rien.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -33,6 +34,10 @@ def _appels_de_suppression() -> dict[str, int]:
 def test_un_seul_lieu_supprime_un_document():
     appels = _appels_de_suppression()
     #  Cas zéro : sans la source, le contrôle ne mesurerait rien.
-    assert str(_SOURCE.relative_to(_FRONT)) in appels, "la source unique n'appelle plus la suppression"
+    assert str(_SOURCE.relative_to(_FRONT)) in appels, (
+        "la source unique n'appelle plus la suppression"
+    )
     ailleurs = {f: n for f, n in appels.items() if pathlib.Path(_FRONT / f) != _SOURCE}
-    assert not ailleurs, f"suppression de document recopiée — appeler `supprimerDocument` : {ailleurs}"
+    assert not ailleurs, (
+        f"suppression de document recopiée — appeler `supprimerDocument` : {ailleurs}"
+    )

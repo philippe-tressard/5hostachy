@@ -19,6 +19,7 @@ ton, la langue ou les interdits sans pouvoir casser la lecture de la réponse :
 un prompt qui aurait perdu la phrase « rends du JSON » ferait échouer chaque
 appel, sans qu'aucun écran ne dise pourquoi.
 """
+
 from __future__ import annotations
 
 import json
@@ -152,13 +153,11 @@ def construire_message(
     if contexte:
         lignes = "\n".join(f"- {k} : {v}" for k, v in contexte.items() if v)
         if lignes:
-            blocs.append(
-                "Contexte, à comprendre et à ne pas réécrire ni recopier :\n" + lignes
-            )
+            blocs.append("Contexte, à comprendre et à ne pas réécrire ni recopier :\n" + lignes)
     if avec_titre:
         blocs.append("Titre actuel :\n" + (titre.strip() if titre and titre.strip() else "(aucun)"))
     else:
-        blocs.append("Aucun titre n'est demandé : réponds avec \"titre\": null.")
+        blocs.append('Aucun titre n\'est demandé : réponds avec "titre": null.')
     blocs.append(
         "Description actuelle :\n"
         + (description.strip() if description and description.strip() else "(aucune)")

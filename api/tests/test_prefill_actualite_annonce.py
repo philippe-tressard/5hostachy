@@ -23,6 +23,7 @@ inverse qui garde `ticket_id`. Là-bas le lien SERT — il donne son URL au
 message WhatsApp de l'affiche. Ici rien ne le lirait, et une colonne que personne
 n'interroge devient une seconde vérité sur « d'où vient ce texte ».
 """
+
 from __future__ import annotations
 
 import json
@@ -56,8 +57,12 @@ def scene(batiments):
         #  active `foreign_keys=ON` (#546), donc un auteur inventé ferait échouer
         #  l'insertion — pas le test, ce qui est plus difficile à lire.
         auteur = Utilisateur(
-            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test", mot_de_passe_hash="x",
-            prenom="C", nom="CONSEIL", roles_json="conseil_syndical", actif=True,
+            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="C",
+            nom="CONSEIL",
+            roles_json="conseil_syndical",
+            actif=True,
         )
         session.add(auteur)
         session.flush()

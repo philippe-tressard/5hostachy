@@ -44,6 +44,7 @@ qu'une fois, et la migration `0141` ne remplit que les icônes RESTÉES VIDES : 
 icône choisie depuis l'administration n'est jamais écrasée, exactement comme un
 libellé renommé.
 """
+
 from sqlmodel import Session, select
 
 from app.models.core import Batiment, ConfigSite
@@ -54,27 +55,42 @@ from app.models.perimetre import Perimetre
 #: On s'arrête à l'espace : pas de niveau « élément » (porte, éclairage, canalisation),
 #: la finesse utile pour localiser une demande s'arrête là.
 GABARIT_BATIMENT: list[tuple[str, str, str]] = [
-    ("hall", "Hall d'entrée",
-     "Le hall du bâtiment : sas, boîtes aux lettres, interphone, affichage."),
-    ("paliers", "Paliers",
-     "Les paliers d'étage du bâtiment, du rez-de-chaussée au dernier niveau."),
-    ("escaliers", "Escaliers",
-     "La cage d'escalier du bâtiment, garde-corps et éclairage compris."),
-    ("ascenseur", "Ascenseur",
-     "L'ascenseur du bâtiment, sa cabine, sa gaine et sa machinerie."),
-    ("caves", "Caves",
-     "Les caves de ce bâtiment. Remplace l'ancien périmètre « Cave », "
-     "qui désignait les caves de toute la copropriété sans distinction."),
-    ("toit", "Toit",
-     "Toiture et charpente du bâtiment, y compris les descentes d'eaux pluviales."),
-    ("local-electrique", "Local électrique",
-     "Le local électrique propre à ce bâtiment — à distinguer des locaux techniques "
-     "partagés par toute la copropriété."),
-    ("jardins-privatifs", "Jardins privatifs",
-     "Les jardins attachés aux lots du rez-de-chaussée. Parties privatives : "
-     "une demande qui les concerne relève de leur occupant."),
-    ("autres", "Autres espaces",
-     "Tout espace du bâtiment qui n'entre pas dans les catégories ci-dessus."),
+    (
+        "hall",
+        "Hall d'entrée",
+        "Le hall du bâtiment : sas, boîtes aux lettres, interphone, affichage.",
+    ),
+    (
+        "paliers",
+        "Paliers",
+        "Les paliers d'étage du bâtiment, du rez-de-chaussée au dernier niveau.",
+    ),
+    ("escaliers", "Escaliers", "La cage d'escalier du bâtiment, garde-corps et éclairage compris."),
+    ("ascenseur", "Ascenseur", "L'ascenseur du bâtiment, sa cabine, sa gaine et sa machinerie."),
+    (
+        "caves",
+        "Caves",
+        "Les caves de ce bâtiment. Remplace l'ancien périmètre « Cave », "
+        "qui désignait les caves de toute la copropriété sans distinction.",
+    ),
+    ("toit", "Toit", "Toiture et charpente du bâtiment, y compris les descentes d'eaux pluviales."),
+    (
+        "local-electrique",
+        "Local électrique",
+        "Le local électrique propre à ce bâtiment — à distinguer des locaux techniques "
+        "partagés par toute la copropriété.",
+    ),
+    (
+        "jardins-privatifs",
+        "Jardins privatifs",
+        "Les jardins attachés aux lots du rez-de-chaussée. Parties privatives : "
+        "une demande qui les concerne relève de leur occupant.",
+    ),
+    (
+        "autres",
+        "Autres espaces",
+        "Tout espace du bâtiment qui n'entre pas dans les catégories ci-dessus.",
+    ),
 ]
 
 
@@ -152,11 +168,10 @@ def _racines() -> list[dict]:
             "code": "résidence",
             "libelle": "Copropriété entière",
             "libelle_court": "Copropriété",
-            "description":
-                "Toute la copropriété. C'est le périmètre le plus large : le contenu "
-                "est visible de tous les résidents et notifie l'ensemble du conseil "
-                "syndical. C'est aussi le périmètre retenu par défaut quand aucun "
-                "autre n'est précisé.",
+            "description": "Toute la copropriété. C'est le périmètre le plus large : le contenu "
+            "est visible de tous les résidents et notifie l'ensemble du conseil "
+            "syndical. C'est aussi le périmètre retenu par défaut quand aucun "
+            "autre n'est précisé.",
             "portee_globale": True,
             "selectionnable": True,
             "ordre": 0,
@@ -165,9 +180,8 @@ def _racines() -> list[dict]:
             "code": "batiments",
             "libelle": "Bâtiments",
             "libelle_court": "Bâtiments",
-            "description":
-                "Regroupement des bâtiments. Ce nœud ne se cible pas lui-même : on "
-                "choisit un bâtiment, ou l'un de ses espaces.",
+            "description": "Regroupement des bâtiments. Ce nœud ne se cible pas lui-même : on "
+            "choisit un bâtiment, ou l'un de ses espaces.",
             "portee_globale": False,
             "selectionnable": False,
             "ordre": 10,
@@ -176,35 +190,42 @@ def _racines() -> list[dict]:
             "code": "parking",
             "libelle": "Parking",
             "libelle_court": "Parking",
-            "description":
-                "Le parking privé de la copropriété, au niveau −2. On y accède par le "
-                "portail depuis le parking public de l'AFUL, au niveau −1. Concerne "
-                "tous les résidents.",
+            "description": "Le parking privé de la copropriété, au niveau −2. On y accède par le "
+            "portail depuis le parking public de l'AFUL, au niveau −1. Concerne "
+            "tous les résidents.",
             "portee_globale": True,
             "selectionnable": True,
             "ordre": 20,
             "enfants": [
                 ("places", "Places", "Les places de stationnement et leur marquage."),
-                ("voies", "Voies de circulation",
-                 "Les voies de circulation et de manœuvre du parking."),
-                ("portail", "Portail d'accès",
-                 "Le portail qui sépare le parking privé de la copropriété (−2) du "
-                 "parking public de l'AFUL (−1). Il protège le parking privé : son "
-                 "entretien revient à la copropriété."),
-                ("eclairage", "Éclairage",
-                 "L'éclairage du parking, éclairage de sécurité compris."),
+                (
+                    "voies",
+                    "Voies de circulation",
+                    "Les voies de circulation et de manœuvre du parking.",
+                ),
+                (
+                    "portail",
+                    "Portail d'accès",
+                    "Le portail qui sépare le parking privé de la copropriété (−2) du "
+                    "parking public de l'AFUL (−1). Il protège le parking privé : son "
+                    "entretien revient à la copropriété.",
+                ),
+                (
+                    "eclairage",
+                    "Éclairage",
+                    "L'éclairage du parking, éclairage de sécurité compris.",
+                ),
             ],
         },
         {
             "code": "cave",
             "libelle": "Cave",
             "libelle_court": "Cave",
-            "description":
-                "Ancien périmètre désignant les caves de toute la copropriété sans "
-                "distinction de bâtiment. Conservé pour que les contenus déjà publiés "
-                "gardent leur libellé et leur visibilité, mais **plus proposé à la "
-                "saisie** : une cave relève d'un bâtiment, il faut désormais choisir "
-                "les caves du bâtiment concerné.",
+            "description": "Ancien périmètre désignant les caves de toute la copropriété sans "
+            "distinction de bâtiment. Conservé pour que les contenus déjà publiés "
+            "gardent leur libellé et leur visibilité, mais **plus proposé à la "
+            "saisie** : une cave relève d'un bâtiment, il faut désormais choisir "
+            "les caves du bâtiment concerné.",
             "portee_globale": True,
             "selectionnable": False,
             "ordre": 30,
@@ -213,11 +234,10 @@ def _racines() -> list[dict]:
             "code": "aful",
             "libelle": "AFUL",
             "libelle_court": "AFUL",
-            "description":
-                "Le parking public géré par l'association foncière urbaine libre, au "
-                "niveau −1 : celui que l'on traverse pour rejoindre le parking de la "
-                "copropriété. Il n'appartient pas à la copropriété, mais celle-ci "
-                "participe à son assemblée générale. Concerne tous les résidents.",
+            "description": "Le parking public géré par l'association foncière urbaine libre, au "
+            "niveau −1 : celui que l'on traverse pour rejoindre le parking de la "
+            "copropriété. Il n'appartient pas à la copropriété, mais celle-ci "
+            "participe à son assemblée générale. Concerne tous les résidents.",
             "portee_globale": True,
             #  🔴 Elle concerne tous les résidents (qui VOIT) mais n'appartient pas
             #  à la copropriété (ce qui la COUVRE) : deux questions, deux drapeaux.
@@ -231,9 +251,8 @@ def _racines() -> list[dict]:
             "code": "espaces-verts",
             "libelle": "Espaces verts",
             "libelle_court": "Espaces verts",
-            "description":
-                "Les espaces verts communs de la copropriété. Concerne tous les "
-                "résidents.",
+            "description": "Les espaces verts communs de la copropriété. Concerne tous les "
+            "résidents.",
             "portee_globale": True,
             "selectionnable": True,
             "ordre": 50,
@@ -248,50 +267,63 @@ def _racines() -> list[dict]:
             "code": "cheminements",
             "libelle": "Cheminements",
             "libelle_court": "Cheminements",
-            "description":
-                "Les circulations extérieures de la copropriété, hors bâtiment et hors "
-                "parking. Concerne tous les résidents.",
+            "description": "Les circulations extérieures de la copropriété, hors bâtiment et hors "
+            "parking. Concerne tous les résidents.",
             "portee_globale": True,
             "selectionnable": True,
             "ordre": 60,
             "enfants": [
-                ("chemin-pietonne", "Chemin piétonné",
-                 "Le chemin piétonné traversant la copropriété : revêtement, bordures, "
-                 "signalisation."),
-                ("escalier-exterieur", "Escalier extérieur",
-                 "Les escaliers extérieurs et leurs garde-corps."),
-                ("acces-batiments", "Accès aux bâtiments",
-                 "Les allées et rampes desservant les entrées des bâtiments."),
-                ("eclairage-exterieur", "Éclairage extérieur",
-                 "L'éclairage des cheminements et des abords."),
+                (
+                    "chemin-pietonne",
+                    "Chemin piétonné",
+                    "Le chemin piétonné traversant la copropriété : revêtement, bordures, "
+                    "signalisation.",
+                ),
+                (
+                    "escalier-exterieur",
+                    "Escalier extérieur",
+                    "Les escaliers extérieurs et leurs garde-corps.",
+                ),
+                (
+                    "acces-batiments",
+                    "Accès aux bâtiments",
+                    "Les allées et rampes desservant les entrées des bâtiments.",
+                ),
+                (
+                    "eclairage-exterieur",
+                    "Éclairage extérieur",
+                    "L'éclairage des cheminements et des abords.",
+                ),
             ],
         },
         {
             "code": "locaux-techniques",
             "libelle": "Locaux techniques",
             "libelle_court": "Locaux tech.",
-            "description":
-                "Les locaux techniques **partagés** par toute la copropriété. Ceux qui "
-                "appartiennent à un bâtiment donné — son local électrique, par exemple "
-                "— sont rangés sous ce bâtiment.",
+            "description": "Les locaux techniques **partagés** par toute la copropriété. Ceux qui "
+            "appartiennent à un bâtiment donné — son local électrique, par exemple "
+            "— sont rangés sous ce bâtiment.",
             "portee_globale": True,
             "selectionnable": True,
             "ordre": 70,
             "enfants": [
-                ("chaufferie", "Chaufferie",
-                 "La chaufferie commune et la production d'eau chaude collective."),
-                ("local-eau", "Local eau",
-                 "Le local d'arrivée d'eau et le comptage général."),
-                ("autres", "Autres locaux techniques",
-                 "Tout local technique partagé qui n'entre pas dans les catégories "
-                 "ci-dessus."),
+                (
+                    "chaufferie",
+                    "Chaufferie",
+                    "La chaufferie commune et la production d'eau chaude collective.",
+                ),
+                ("local-eau", "Local eau", "Le local d'arrivée d'eau et le comptage général."),
+                (
+                    "autres",
+                    "Autres locaux techniques",
+                    "Tout local technique partagé qui n'entre pas dans les catégories ci-dessus.",
+                ),
             ],
         },
     ]
 
 
-def _poser(session: Session, connus: dict[str, int], entree: dict,
-           parent_id: int | None) -> int:
+def _poser(session: Session, connus: dict[str, int], entree: dict, parent_id: int | None) -> int:
     """Pose un nœud s'il est absent, et renvoie son identifiant dans tous les cas.
 
     Le `flush` est nécessaire et non décoratif : les enfants ont besoin de l'`id`
@@ -354,28 +386,31 @@ def poser_arborescence(session: Session) -> int:
 
     connus = {
         code: identifiant
-        for identifiant, code in session.exec(
-            select(Perimetre.id, Perimetre.code)
-        ).all()
+        for identifiant, code in session.exec(select(Perimetre.id, Perimetre.code)).all()
     }
     avant = len(connus)
 
     for racine in _racines():
         racine_id = _poser(session, connus, racine, None)
         for rang, (suffixe, libelle, description) in enumerate(racine.get("enfants", [])):
-            _poser(session, connus, {
-                "code": f"{racine['code']}/{suffixe}",
-                "libelle": libelle,
-                "description": description,
-                #  Pas de `portee_globale` sur les enfants : ils l'héritent de leur
-                #  parent au moment de la lecture. La poser deux fois, c'est
-                #  autoriser les deux valeurs à diverger.
-                #
-                #  `ordre` suit l'ordre de déclaration : sans lui, tous les enfants
-                #  valaient 0 et se rangeaient alphabétiquement — « Éclairage »
-                #  arrivait avant « Places » sous Parking.
-                "ordre": rang,
-            }, racine_id)
+            _poser(
+                session,
+                connus,
+                {
+                    "code": f"{racine['code']}/{suffixe}",
+                    "libelle": libelle,
+                    "description": description,
+                    #  Pas de `portee_globale` sur les enfants : ils l'héritent de leur
+                    #  parent au moment de la lecture. La poser deux fois, c'est
+                    #  autoriser les deux valeurs à diverger.
+                    #
+                    #  `ordre` suit l'ordre de déclaration : sans lui, tous les enfants
+                    #  valaient 0 et se rangeaient alphabétiquement — « Éclairage »
+                    #  arrivait avant « Places » sous Parking.
+                    "ordre": rang,
+                },
+                racine_id,
+            )
 
     _poser_les_batiments(session, connus)
 
@@ -402,34 +437,43 @@ def _poser_les_batiments(session: Session, connus: dict[str, int]) -> None:
     batiments = session.exec(select(Batiment).order_by(Batiment.id)).all()
     for rang, batiment in enumerate(batiments):
         code = f"bat:{batiment.id}"
-        bat_id = _poser(session, connus, {
-            "code": code,
-            #  « {id} » et non « {numero} » : voir la règle 1 du docstring du
-            #  module. Le numéro figure dans la description.
-            #
-            #  Le libellé LONG et l'ABRÉGÉ diffèrent, et c'est tout l'intérêt des
-            #  deux champs : ils valaient la même chose (« Bât. 1 »), ce qui rendait
-            #  `libelle_court` inutile et imposait l'abréviation partout — y compris
-            #  sur le document imprimé, où la place ne manque pas (14/08/2026).
-            #  Le long sert aux documents et aux e-mails, l'abrégé aux badges
-            #  contraints (calendrier, sélecteur de périmètre).
-            "libelle": f"Bâtiment {batiment.id}",
-            "libelle_court": f"Bât. {batiment.id}",
-            "description":
-                f"Le bâtiment {batiment.numero} et ses parties communes. "
+        bat_id = _poser(
+            session,
+            connus,
+            {
+                "code": code,
+                #  « {id} » et non « {numero} » : voir la règle 1 du docstring du
+                #  module. Le numéro figure dans la description.
+                #
+                #  Le libellé LONG et l'ABRÉGÉ diffèrent, et c'est tout l'intérêt des
+                #  deux champs : ils valaient la même chose (« Bât. 1 »), ce qui rendait
+                #  `libelle_court` inutile et imposait l'abréviation partout — y compris
+                #  sur le document imprimé, où la place ne manque pas (14/08/2026).
+                #  Le long sert aux documents et aux e-mails, l'abrégé aux badges
+                #  contraints (calendrier, sélecteur de périmètre).
+                "libelle": f"Bâtiment {batiment.id}",
+                "libelle_court": f"Bât. {batiment.id}",
+                "description": f"Le bâtiment {batiment.numero} et ses parties communes. "
                 "Un contenu ciblé sur ce bâtiment, ou sur l'un de ses espaces, "
                 "n'est visible que de ses résidents.",
-            "batiment_id": batiment.id,
-            "portee_globale": False,
-            "selectionnable": True,
-            "ordre": rang,
-        }, parent_id)
+                "batiment_id": batiment.id,
+                "portee_globale": False,
+                "selectionnable": True,
+                "ordre": rang,
+            },
+            parent_id,
+        )
 
         for rang_espace, (suffixe, libelle, description) in enumerate(GABARIT_BATIMENT):
-            _poser(session, connus, {
-                "code": f"{code}/{suffixe}",
-                "libelle": libelle,
-                "description": description,
-                #  `batiment_id` non répété : il est hérité de l'ancêtre bâtiment.
-                "ordre": rang_espace,
-            }, bat_id)
+            _poser(
+                session,
+                connus,
+                {
+                    "code": f"{code}/{suffixe}",
+                    "libelle": libelle,
+                    "description": description,
+                    #  `batiment_id` non répété : il est hérité de l'ancêtre bâtiment.
+                    "ordre": rang_espace,
+                },
+                bat_id,
+            )

@@ -28,6 +28,7 @@ les images, donc la règle ne peut pas être partagée — seulement copiée. C'
 même régime que `etage_label` et que le libellé de périmètre, et le même remède :
 un test qui refuse que les deux dérivent.
 """
+
 from __future__ import annotations
 
 import re

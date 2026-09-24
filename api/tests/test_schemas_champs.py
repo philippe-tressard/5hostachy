@@ -36,6 +36,7 @@ perd pas en silence : il prend sa valeur par défaut, ce qui est souvent voulu
 (`Optional[...] = None`). Le distinguer demanderait de savoir ce qui est facultatif,
 et un contrôle qui crie sur du légitime finit désarmé.
 """
+
 from __future__ import annotations
 
 import ast

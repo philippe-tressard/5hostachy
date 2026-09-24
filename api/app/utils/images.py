@@ -16,6 +16,7 @@ métadonnées, donc l'orientation avec elles. L'ordre inverse stocke la photo de
 travers, et plus rien ensuite ne sait la redresser
 (cf. mémoire « Orientation des photos », 18/09/2026).
 """
+
 import io
 
 from PIL import Image, ImageOps

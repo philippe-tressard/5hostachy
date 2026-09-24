@@ -10,6 +10,7 @@ QUI a le droit et QUOI répondre ; ce qui suit dit ce que le geste entraîne.
 C'est le même raisonnement que `utils/telemetrie_calculs` : ce qui n'est pas du
 routage se relit mieux ailleurs, et devient éprouvable sans monter une requête.
 """
+
 from __future__ import annotations
 
 import json
@@ -28,8 +29,14 @@ from app.utils.cloche import sonner_systeme
 
 #  ── Ce que le badge ouvre, et ce qui en découle ────────────────────────────
 
-def _acces_json(session: Session, type_acces: TypeAcces, donne: Optional[list[str]],
-                lot_id: Optional[int], porteur_id: Optional[int]) -> Optional[str]:
+
+def _acces_json(
+    session: Session,
+    type_acces: TypeAcces,
+    donne: Optional[list[str]],
+    lot_id: Optional[int],
+    porteur_id: Optional[int],
+) -> Optional[str]:
     """Le périmètre à enregistrer : celui qu'on a saisi, sinon celui qu'on déduit.
 
     ⚠️ **Une liste VIDE est une décision**, pas une absence : elle dit « on ne
@@ -62,7 +69,8 @@ def _acces_json(session: Session, type_acces: TypeAcces, donne: Optional[list[st
         batiments = [
             lot.batiment_id
             for lot in session.exec(
-                select(Lot).join(UserLot, UserLot.lot_id == Lot.id)
+                select(Lot)
+                .join(UserLot, UserLot.lot_id == Lot.id)
                 .where(UserLot.user_id == porteur_id, UserLot.actif == True)  # noqa: E712
             ).all()
         ]
@@ -70,8 +78,9 @@ def _acces_json(session: Session, type_acces: TypeAcces, donne: Optional[list[st
     return json.dumps(deduit, ensure_ascii=False) if deduit else None
 
 
-def _tracer_sur_ticket(session: Session, ticket, auteur: Utilisateur,
-                       type_acces: TypeAcces, objet, verbe: str) -> None:
+def _tracer_sur_ticket(
+    session: Session, ticket, auteur: Utilisateur, type_acces: TypeAcces, objet, verbe: str
+) -> None:
     """Le geste s'inscrit dans le fil du ticket dont le numéro a été saisi.
 
     ⚠️ Par une **entrée d'historique**, comme n'importe quel commentaire — pas
@@ -86,19 +95,18 @@ def _tracer_sur_ticket(session: Session, ticket, auteur: Utilisateur,
         return
     perimetre = parse_json_perimetres(objet.perimetre_cible)
     portee = perimetre_label(perimetre) if perimetre else "non précisé"
-    session.add(TicketEvolution(
-        ticket_id=ticket.id,
-        type="commentaire",
-        contenu=(
-            f"{type_acces.libelle} {objet.code} {verbe} — accès : {portee}."
-        ),
-        auteur_id=auteur.id,
-    ))
+    session.add(
+        TicketEvolution(
+            ticket_id=ticket.id,
+            type="commentaire",
+            contenu=(f"{type_acces.libelle} {objet.code} {verbe} — accès : {portee}."),
+            auteur_id=auteur.id,
+        )
+    )
     session.commit()
 
 
-def _prevenir_porteur(session: Session, porteur: Utilisateur,
-                      type_acces: TypeAcces, objet) -> None:
+def _prevenir_porteur(session: Session, porteur: Utilisateur, type_acces: TypeAcces, objet) -> None:
     """Le porteur apprend qu'un accès est enregistré à son nom.
 
     ⚠️ **Une notification dans l'application, pas un courriel** — et c'est une
@@ -114,7 +122,9 @@ def _prevenir_porteur(session: Session, porteur: Utilisateur,
     """
     perimetre = parse_json_perimetres(objet.perimetre_cible)
     portee = perimetre_label(perimetre) if perimetre else "non précisé"
-    sonner_systeme(session, "sa_demande",
+    sonner_systeme(
+        session,
+        "sa_demande",
         destinataire_id=porteur.id,
         type=type_acces.cle,
         titre=f"{type_acces.libelle} enregistré à votre nom",

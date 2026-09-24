@@ -33,6 +33,7 @@ Usage : `python scripts/check_audit_python.py`
     1 = vulnérabilité non couverte, ou exception périmée / inutile
     2 = INCONNU (l'audit n'a pas pu être mesuré)
 """
+
 from __future__ import annotations
 
 import datetime
@@ -56,8 +57,7 @@ def inconnu(raison: str, detail: str = "") -> None:
         for ligne in str(detail).strip().split("\n")[:5]:
             print(f"   {ligne}", file=sys.stderr)
     print(
-        "   L'audit n'a PAS été mesuré : ce n'est ni un succès ni un échec. "
-        "Relancer le job.\n",
+        "   L'audit n'a PAS été mesuré : ce n'est ni un succès ni un échec. Relancer le job.\n",
         file=sys.stderr,
     )
     sys.exit(2)
@@ -71,12 +71,20 @@ def mesurer() -> list[dict]:
     try:
         proc = subprocess.run(
             [
-                sys.executable, "-m", "pip_audit",
-                "-r", str(REQUIREMENTS),
-                "--format", "json",
-                "--progress-spinner", "off",
+                sys.executable,
+                "-m",
+                "pip_audit",
+                "-r",
+                str(REQUIREMENTS),
+                "--format",
+                "json",
+                "--progress-spinner",
+                "off",
             ],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=300,
         )
     except FileNotFoundError as exc:

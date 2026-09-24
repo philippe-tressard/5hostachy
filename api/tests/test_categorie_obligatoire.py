@@ -27,6 +27,7 @@ Le garde-fou d'écran est `front/scripts/check-choix-requis.mjs`, qui refuse
 toute initialisation à une valeur de `CATEGORIES_TICKET`. Aucun des deux ne
 suffit seul : l'un lit le formulaire, l'autre le contrat d'API.
 """
+
 from __future__ import annotations
 
 import pytest

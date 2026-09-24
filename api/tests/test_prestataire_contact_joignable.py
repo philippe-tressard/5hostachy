@@ -8,6 +8,7 @@ seulement : les fiches existantes se corrigent sans être bloquées.
 La règle vit dans le schéma de CRÉATION, pour qu'aucun autre chemin (import,
 appel direct) ne la contourne ; l'écran n'en montre que l'état.
 """
+
 from __future__ import annotations
 
 import pytest

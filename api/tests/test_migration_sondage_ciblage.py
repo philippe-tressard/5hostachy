@@ -15,6 +15,7 @@ justifie.
 ⚠️ Ces fonctions sont importées de la migration elle-même, et non recopiées : un
 test qui rejoue sa propre version de la règle ne teste que lui-même.
 """
+
 import importlib.util
 from pathlib import Path
 
@@ -22,7 +23,9 @@ import pytest
 
 _CHEMIN = (
     Path(__file__).resolve().parents[1]
-    / "alembic" / "versions" / "0147_sondage_ciblage_standard.py"
+    / "alembic"
+    / "versions"
+    / "0147_sondage_ciblage_standard.py"
 )
 _spec = importlib.util.spec_from_file_location("migration_0147", _CHEMIN)
 _migration = importlib.util.module_from_spec(_spec)
@@ -33,6 +36,7 @@ codes_public = _migration._codes_public
 
 
 # ── Axe géographique ─────────────────────────────────────────────────────────
+
 
 @pytest.mark.parametrize("vide", [None, "", "   ", ",", " , "])
 def test_perimetre_vide_reste_vide(vide):
@@ -54,6 +58,7 @@ def test_perimetre_tolere_les_espaces():
 
 
 # ── Axe public ───────────────────────────────────────────────────────────────
+
 
 @pytest.mark.parametrize("vide", [None, "", "   ", ","])
 def test_public_vide_reste_vide(vide):
@@ -79,7 +84,7 @@ def test_occupant_seul_ne_devient_pas_coproprietaires():
     """
     converti = codes_public("copropriétaire_résident")
     assert converti == '["copropriétaires_occupants"]'
-    assert "copropriétaires\"" not in converti
+    assert 'copropriétaires"' not in converti
 
 
 def test_locataire():
@@ -111,5 +116,5 @@ def test_aucune_conversion_ne_produit_coproprietaires_par_accident():
     for i in range(1, 1 << len(STATUTS)):
         choisis = {s for j, s in enumerate(STATUTS) if i >> j & 1}
         converti = codes_public(",".join(sorted(choisis)))
-        if "copropriétaires\"" in converti.replace("copropriétaires_occupants", ""):
+        if 'copropriétaires"' in converti.replace("copropriétaires_occupants", ""):
             assert {"copropriétaire_résident", "copropriétaire_bailleur"} <= choisis, choisis

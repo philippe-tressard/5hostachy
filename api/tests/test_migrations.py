@@ -10,6 +10,7 @@ base est créé par `SQLModel.create_all` puis ajusté par des migrations
 incrémentales (non rejouables seules sur une base vide / déjà au schéma final).
 La validation porte donc sur la cohérence du graphe de révisions.
 """
+
 from pathlib import Path
 
 from alembic.config import Config
@@ -75,7 +76,8 @@ def test_les_migrations_qui_lisent_le_seed_y_trouvent_leur_modele():
 
     assert not manquants, (
         "Migrations qui cherchent dans seed.EMAIL_TEMPLATES un modèle qui n'y "
-        "est plus :\n  " + "\n  ".join(manquants)
+        "est plus :\n  "
+        + "\n  ".join(manquants)
         + "\nSur une base neuve, `next(...)` lève StopIteration et le conteneur "
         "reste bloqué au démarrage. Garder une copie du contenu dans la "
         "migration concernée plutôt que de la laisser lire le seed."
@@ -128,7 +130,9 @@ def test_aucune_cle_etrangere_dans_un_add_column():
             #  dans le `sa.Column(...)`, pas au premier niveau.
             for inner in ast.walk(noeud):
                 nom = getattr(inner.func, "attr", None) if isinstance(inner, ast.Call) else None
-                nom = nom or (getattr(inner.func, "id", None) if isinstance(inner, ast.Call) else None)
+                nom = nom or (
+                    getattr(inner.func, "id", None) if isinstance(inner, ast.Call) else None
+                )
                 if nom == "ForeignKey":
                     fautives.append(f"{chemin.name}:{noeud.lineno}")
                     break

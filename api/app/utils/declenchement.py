@@ -35,6 +35,7 @@ frontière, pas dans la colonne que l'utilisateur lit.
 tâche : c'est cette entrée qui porte le nœud, parce qu'une tâche déclenchée
 depuis l'interface s'exécute dans CE processus, donc sur ce nœud-ci.
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable, Optional

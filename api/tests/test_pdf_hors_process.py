@@ -31,6 +31,7 @@ avait écrit un second, par ignorance du premier. Il n'en reste qu'un : celui qu
 existait, mis à jour, et qui porte maintenant les deux raisons de tenir la porte
 fermée (la dérogation de sécurité et l'isolation).
 """
+
 import logging
 import os
 

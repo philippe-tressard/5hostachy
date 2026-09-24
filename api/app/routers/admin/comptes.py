@@ -28,14 +28,17 @@ router = APIRouter()
 
 # ── Gestion des comptes ──────────────────────────────────────────────────────
 
+
 class CompteEnAttenteItem(BaseModel):
     """User en attente enrichi du nombre de lots trouvés dans l'import."""
+
     user: UserRead
     lots_prevus: int  # 0 = pas dans l'import Lots
 
 
 class CompteTraiteResult(BaseModel):
     """Résultat de la validation / refus d'un compte."""
+
     user: UserRead
     auto_match: dict[str, Any] = {}
 
@@ -59,6 +62,7 @@ def comptes_en_attente_enrichis(
     """Comptes en attente enrichis du nombre de lots trouvés dans l'import.
     Permet à l'admin de vérifier si un copropriétaire est bien dans le fichier Lots."""
     from app.utils.auto_match_service import count_lots_for_user
+
     users = lister_comptes_en_attente(session)
     return [
         CompteEnAttenteItem(
@@ -99,7 +103,9 @@ def traiter_compte(
     #  puisse distinguer « refusé » de « jamais traité » (#399).
     marquer_decide(user)
 
-    sonner_systeme(session, "compte",
+    sonner_systeme(
+        session,
+        "compte",
         destinataire_id=user.id,
         type="system",
         titre=notif_titre,
@@ -110,6 +116,7 @@ def traiter_compte(
     # ── Email de confirmation au résident ─────────────────────────────────
     if user.email:
         from app.utils.email import send_email
+
         email_code = "compte_active" if body.action == "valider" else "compte_refuse"
         email_ctx: dict[str, Any] = {
             "destinataire": {"prenom": user.prenom, "nom": user.nom},
@@ -127,16 +134,23 @@ def traiter_compte(
     auto_match_result: dict[str, Any] = {}
     if body.action == "valider":
         from app.utils.auto_match_service import (
-            auto_match_pour_utilisateur, notifier_gestionnaire_appariement,
+            auto_match_pour_utilisateur,
+            notifier_gestionnaire_appariement,
         )
+
         auto_match_result = auto_match_pour_utilisateur(user, session)
         # Des accès ont pu être créés sans validation préalable : le
         # gestionnaire du site doit pouvoir le vérifier sans aller le chercher.
         notifier_gestionnaire_appariement(user, auto_match_result, background_tasks, session)
 
         # ── Aidant / mandataire : copier lots, TC, vigik de l'aidé ───────
-        if user.statut in (StatutUtilisateur.aidant, StatutUtilisateur.mandataire) and user.nom_aide and user.prenom_aide:
+        if (
+            user.statut in (StatutUtilisateur.aidant, StatutUtilisateur.mandataire)
+            and user.nom_aide
+            and user.prenom_aide
+        ):
             from sqlalchemy import func
+
             aide = session.exec(
                 select(Utilisateur).where(
                     func.lower(Utilisateur.nom) == user.nom_aide.strip().lower(),
@@ -144,16 +158,35 @@ def traiter_compte(
                     Utilisateur.actif == True,  # noqa: E712
                 )
             ).first()
-            aide_result = {"aide_trouve": False, "lots": 0, "tc": 0, "vigik": 0, "delegation": False}
+            aide_result = {
+                "aide_trouve": False,
+                "lots": 0,
+                "tc": 0,
+                "vigik": 0,
+                "delegation": False,
+            }
             if aide:
                 aide_result["aide_trouve"] = True
                 aide_result["aide_nom"] = nom_affiche(aide.prenom, aide.nom)
                 # Copier les lots
-                aide_lots = session.exec(select(UserLot).where(UserLot.user_id == aide.id, UserLot.actif == True)).all()  # noqa: E712
+                aide_lots = session.exec(
+                    select(UserLot).where(UserLot.user_id == aide.id, UserLot.actif == True)  # noqa: E712
+                ).all()
                 for ul in aide_lots:
-                    exists = session.exec(select(UserLot).where(UserLot.user_id == user.id, UserLot.lot_id == ul.lot_id)).first()
+                    exists = session.exec(
+                        select(UserLot).where(
+                            UserLot.user_id == user.id, UserLot.lot_id == ul.lot_id
+                        )
+                    ).first()
                     if not exists:
-                        session.add(UserLot(user_id=user.id, lot_id=ul.lot_id, type_lien=ul.type_lien, quote_part=ul.quote_part))
+                        session.add(
+                            UserLot(
+                                user_id=user.id,
+                                lot_id=ul.lot_id,
+                                type_lien=ul.type_lien,
+                                quote_part=ul.quote_part,
+                            )
+                        )
                         aide_result["lots"] += 1
                 #  🔴 Les badges ne se COPIENT plus (#1194) : chaque copie créait
                 #  un second objet pour le même badge physique, que l'unicité du
@@ -170,17 +203,21 @@ def traiter_compte(
                     select(Delegation).where(
                         Delegation.mandant_id == aide.id,
                         Delegation.aidant_id == user.id,
-                        Delegation.statut.in_([StatutDelegation.en_attente, StatutDelegation.active]),
+                        Delegation.statut.in_(
+                            [StatutDelegation.en_attente, StatutDelegation.active]
+                        ),
                     )
                 ).first()
                 if not existing_del:
-                    session.add(Delegation(
-                        mandant_id=aide.id,
-                        aidant_id=user.id,
-                        motif="Affectation automatique à l'activation du compte",
-                        cree_par_id=admin.id,
-                        statut=StatutDelegation.active,
-                    ))
+                    session.add(
+                        Delegation(
+                            mandant_id=aide.id,
+                            aidant_id=user.id,
+                            motif="Affectation automatique à l'activation du compte",
+                            cree_par_id=admin.id,
+                            statut=StatutDelegation.active,
+                        )
+                    )
                     aide_result["delegation"] = True
             auto_match_result["aide_match"] = aide_result
 
@@ -199,6 +236,7 @@ def relancer_auto_match(
     Utile quand un import a été résolu après la validation du compte."""
     user = ou_404(session, Utilisateur, user_id, "Utilisateur")
     from app.utils.auto_match_service import auto_match_pour_utilisateur
+
     result = auto_match_pour_utilisateur(user, session)
     session.commit()
     return {"ok": True, "auto_match": result}

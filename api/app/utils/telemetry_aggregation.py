@@ -11,6 +11,7 @@ NOTE : Les événements (cree_le) sont stockés en UTC.
 Les bornes jour/mois utilisent le fuseau Europe/Paris pour que le
 découpage corresponde aux journées réelles des utilisateurs.
 """
+
 from datetime import datetime, timedelta
 import logging
 from typing import Optional
@@ -21,8 +22,11 @@ from sqlmodel import Session, select
 
 from app.utils.declenchement import AUTOMATIQUE
 from app.database import engine
-from app.models.core import (
-    TelemetryEvent, TelemetryDaily, TelemetryMonthly, HistoriqueTelemetrie,
+from app.models.core import (
+    TelemetryEvent,
+    TelemetryDaily,
+    TelemetryMonthly,
+    HistoriqueTelemetrie,
 )
 from app.utils.noeud import noeud_courant
 
@@ -49,6 +53,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
     Si *entry_id* est fourni, met à jour l'entrée HistoriqueTelemetrie correspondante.
     """
     import time
+
     t0 = time.monotonic()
 
     rapport = {
@@ -70,14 +75,14 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
         try:
             # Trouver le dernier jour agrégé
             last_daily = session.exec(
-                select(TelemetryDaily.jour)
-                .order_by(TelemetryDaily.jour.desc())
-                .limit(1)
+                select(TelemetryDaily.jour).order_by(TelemetryDaily.jour.desc()).limit(1)
             ).first()
 
             # Commencer à partir du jour suivant le dernier agrégé, ou il y a 30 jours
             if last_daily:
-                start_paris = datetime.strptime(last_daily, "%Y-%m-%d").replace(tzinfo=_PARIS) + timedelta(days=1)
+                start_paris = datetime.strptime(last_daily, "%Y-%m-%d").replace(
+                    tzinfo=_PARIS
+                ) + timedelta(days=1)
             else:
                 start_paris = now_paris - timedelta(days=30)
 
@@ -111,31 +116,37 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                 if rows:
                     rapport["jours_agreges"] += 1
                 for r in rows:
-                    session.add(TelemetryDaily(
-                        jour=jour_str,
-                        page=r[0],
-                        action=r[1],
-                        total=r[2],
-                        utilisateurs_uniques=r[3],
-                    ))
+                    session.add(
+                        TelemetryDaily(
+                            jour=jour_str,
+                            page=r[0],
+                            action=r[1],
+                            total=r[2],
+                            utilisateurs_uniques=r[3],
+                        )
+                    )
 
                 # Ligne __total__ : vrais uniques site-wide (COUNT DISTINCT user_id)
                 if rows:
-                    total_uniques = session.exec(
-                        select(func.count(func.distinct(TelemetryEvent.user_id)))
-                        .where(
-                            TelemetryEvent.cree_le >= current_utc,
-                            TelemetryEvent.cree_le < jour_fin_utc,
-                            TelemetryEvent.user_id.isnot(None),
+                    total_uniques = (
+                        session.exec(
+                            select(func.count(func.distinct(TelemetryEvent.user_id))).where(
+                                TelemetryEvent.cree_le >= current_utc,
+                                TelemetryEvent.cree_le < jour_fin_utc,
+                                TelemetryEvent.user_id.isnot(None),
+                            )
+                        ).one()
+                        or 0
+                    )
+                    session.add(
+                        TelemetryDaily(
+                            jour=jour_str,
+                            page="__total__",
+                            action="view",
+                            total=sum(r[2] for r in rows),
+                            utilisateurs_uniques=total_uniques,
                         )
-                    ).one() or 0
-                    session.add(TelemetryDaily(
-                        jour=jour_str,
-                        page="__total__",
-                        action="view",
-                        total=sum(r[2] for r in rows),
-                        utilisateurs_uniques=total_uniques,
-                    ))
+                    )
 
                 current_paris = next_paris
 
@@ -147,9 +158,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
         # ─── 2. Agrégation mensuelle : daily → monthly ──────────────────
         try:
             last_monthly = session.exec(
-                select(TelemetryMonthly.mois)
-                .order_by(TelemetryMonthly.mois.desc())
-                .limit(1)
+                select(TelemetryMonthly.mois).order_by(TelemetryMonthly.mois.desc()).limit(1)
             ).first()
 
             # Mois à agréger : ceux terminés et non encore agrégés
@@ -162,10 +171,13 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                     start_month = datetime(y, m + 1, 1, tzinfo=_PARIS)
             else:
                 start_month = (now_paris - timedelta(days=365)).replace(
-                    day=1, hour=0, minute=0, second=0, microsecond=0)
+                    day=1, hour=0, minute=0, second=0, microsecond=0
+                )
 
             # Ne pas agréger le mois en cours
-            current_month_start = now_paris.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            current_month_start = now_paris.replace(
+                day=1, hour=0, minute=0, second=0, microsecond=0
+            )
 
             cursor = start_month
             while cursor < current_month_start:
@@ -187,35 +199,38 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
 
                 for r in rows:
                     if r[2]:  # Ne pas insérer si aucune donnée
-                        session.add(TelemetryMonthly(
-                            mois=mois_str,
-                            page=r[0],
-                            action=r[1],
-                            total=r[2],
-                            utilisateurs_uniques=r[3],
-                        ))
+                        session.add(
+                            TelemetryMonthly(
+                                mois=mois_str,
+                                page=r[0],
+                                action=r[1],
+                                total=r[2],
+                                utilisateurs_uniques=r[3],
+                            )
+                        )
 
                 # Ligne __total__ mensuelle : somme des __total__ daily du mois
                 total_row = session.exec(
                     select(
                         func.sum(TelemetryDaily.total).label("total"),
                         func.sum(TelemetryDaily.utilisateurs_uniques).label("uniques"),
-                    )
-                    .where(
+                    ).where(
                         TelemetryDaily.jour.startswith(mois_str),
                         TelemetryDaily.page == "__total__",
                     )
                 ).first()
                 if total_row and total_row[0]:
-                    session.add(TelemetryMonthly(
-                        mois=mois_str,
-                        page="__total__",
-                        action="view",
-                        total=total_row[0],
-                        # Approximation : somme des uniques quotidiens (même user sur 2 jours = compté 2×)
-                        # Acceptable pour les tendances mensuelles longue durée.
-                        utilisateurs_uniques=total_row[1] or 0,
-                    ))
+                    session.add(
+                        TelemetryMonthly(
+                            mois=mois_str,
+                            page="__total__",
+                            action="view",
+                            total=total_row[0],
+                            # Approximation : somme des uniques quotidiens (même user sur 2 jours = compté 2×)
+                            # Acceptable pour les tendances mensuelles longue durée.
+                            utilisateurs_uniques=total_row[1] or 0,
+                        )
+                    )
 
                 if any(r[2] for r in rows):
                     rapport["mois_agreges"] += 1

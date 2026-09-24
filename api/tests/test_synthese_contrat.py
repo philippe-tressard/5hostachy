@@ -13,6 +13,7 @@
    valide. Une synthèse fausse au carnet d'entretien serait pire que pas de
    synthèse : ce carnet est un document réglementaire (décret n° 2001-477).
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -184,6 +185,7 @@ def test_un_document_DÉSIGNÉ_qui_n_est_PAS_du_contrat_est_ignoré(session):
     session.commit()
     assert [d.id for d in documents_du_contrat(session, c)] == [sien.id]
 
+
 # ── 2. Ce qu'on envoie ──────────────────────────────────────────────────────
 
 
@@ -205,8 +207,12 @@ def test_la_consigne_INTERDIT_d_inventer():
 
 def test_les_synthèses_existantes_servent_d_EXEMPLES(session):
     """Le format s'apprend des synthèses de la maison, il ne se décrit pas."""
-    _contrat(session, "Ancien", notes="1. Identification du fournisseur\n- Untel",
-             type_equipement="ascenseur")
+    _contrat(
+        session,
+        "Ancien",
+        notes="1. Identification du fournisseur\n- Untel",
+        type_equipement="ascenseur",
+    )
     c = _contrat(session, type_equipement="ascenseur")
     assert exemples(session, c) == ["1. Identification du fournisseur\n- Untel"]
 
@@ -237,14 +243,14 @@ def test_sans_texte_lisible_on_le_DIT_au_modèle(session):
 
 
 def test_les_champs_connus_de_la_base_partent_toujours(session):
-    c = _contrat(session, numero_contrat="AB123", duree_initiale_valeur=3,
-                 duree_initiale_unite="ans")
+    c = _contrat(
+        session, numero_contrat="AB123", duree_initiale_valeur=3, duree_initiale_unite="ans"
+    )
     _config(session)
     message = construire_message(session, c, avec_document=False)
     assert "5M Services" in message
     assert "AB123" in message
     assert "3 ans" in message
-
 
 
 def test_la_consigne_impose_le_HTML_que_le_champ_de_notes_accepte(session):
@@ -489,4 +495,3 @@ def test_l_unite_d_un_montant_ne_se_perd_pas():
     et une option chiffrée n'est pas une prestation incluse."""
     assert "HT ou TTC" in CONSIGNE
     assert "en supplément" in CONSIGNE
-

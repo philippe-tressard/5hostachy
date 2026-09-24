@@ -33,6 +33,7 @@ Un test qui ne vérifierait que « 202 → incertain » ne prouverait pas qu'il 
 distinguer : les trois verdicts sont éprouvés côté à côté, plus le cas où l'on
 sait que rien n'est parti (`ConnectError`), qui doit rester REJOUABLE.
 """
+
 import httpx
 import pytest
 
@@ -46,6 +47,7 @@ def _reponse(code: int) -> httpx.Response:
 
 def test_202_est_incertain_et_dit_que_le_message_est_parti(monkeypatch):
     """Le cas de l'incident : émis, accusé non observé."""
+
     def faux_post(url, json=None, headers=None, timeout=None):
         return _reponse(202)
 
@@ -81,6 +83,7 @@ def test_202_est_incertain_et_dit_que_le_message_est_parti(monkeypatch):
 
 def test_500_reste_incertain_mais_pour_une_autre_raison(monkeypatch):
     """Un vrai 500 : le bridge a échoué en route, sans dire de quel côté."""
+
     class FauxClient:
         def __init__(self, **_):
             pass
@@ -103,6 +106,7 @@ def test_500_reste_incertain_mais_pour_une_autre_raison(monkeypatch):
 
 def test_4xx_est_un_echec_etabli_donc_rejouable(monkeypatch):
     """400/401 : la requête a été refusée sans être traitée. Rien n'est parti."""
+
     class FauxClient:
         def __init__(self, **_):
             pass
@@ -124,6 +128,7 @@ def test_4xx_est_un_echec_etabli_donc_rejouable(monkeypatch):
 
 def test_connexion_impossible_est_un_echec_etabli(monkeypatch):
     """Aucune connexion : le groupe n'a rien reçu, rejouer est SÛR."""
+
     class FauxClient:
         def __init__(self, **_):
             pass

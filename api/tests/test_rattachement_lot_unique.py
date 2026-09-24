@@ -24,6 +24,7 @@ pour `auteur_id`, et le même schéma se rejouait ici.
    protège dans la durée : les deux premiers passeraient au vert alors qu'un
    nouveau site réécrirait la règle à côté.
 """
+
 from __future__ import annotations
 
 import re
@@ -74,17 +75,19 @@ def scene():
         for lot in lots:
             session.add(lot)
         user = Utilisateur(
-            email=f"p-{uuid.uuid4().hex[:8]}@exemple.test", mot_de_passe_hash="x",
-            prenom="P", nom="T", roles_json="propriétaire", actif=True,
+            email=f"p-{uuid.uuid4().hex[:8]}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="P",
+            nom="T",
+            roles_json="propriétaire",
+            actif=True,
         )
         session.add(user)
         session.commit()
         for o in (*lots, user, bat, copro):
             session.refresh(o)
         yield session, user, lots
-        for liaison in session.exec(
-            select(UserLot).where(UserLot.user_id == user.id)
-        ).all():
+        for liaison in session.exec(select(UserLot).where(UserLot.user_id == user.id)).all():
             session.delete(liaison)
         for o in (*lots, user, bat, copro):
             session.delete(o)

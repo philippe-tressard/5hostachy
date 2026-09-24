@@ -15,6 +15,7 @@ les quinze restent, figées — `test_migrations.py` refuse la seizième.
 Le SQL est composé par SQLAlchemy, jamais par une chaîne : le nom de la table et
 des colonnes vient de l'appelant, et une f-string SQL est refusée (Ruff S608).
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -28,11 +29,7 @@ def remplacer_si_intact(conn, table: str, avant: dict[str, str], apres: dict[str
     """
     colonnes = sorted(set(avant) | set(apres))
     t = sa.table(table, *(sa.column(c) for c in colonnes))
-    requete = (
-        sa.update(t)
-        .where(sa.and_(*(t.c[c] == v for c, v in avant.items())))
-        .values(**apres)
-    )
+    requete = sa.update(t).where(sa.and_(*(t.c[c] == v for c, v in avant.items()))).values(**apres)
     return conn.execute(requete).rowcount or 0
 
 

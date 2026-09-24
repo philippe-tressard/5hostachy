@@ -7,6 +7,7 @@ nul. Ce qui les sépare est le SUJET : un relevé d'eau ne parle ni d'un
 prestataire ni d'un contrat, il parle d'un compteur. Coupé le 29/08/2026, la
 modularité (rang 1) refusant que ce fichier grossisse encore.
 """
+
 from datetime import date, datetime
 from typing import Optional
 
@@ -24,7 +25,13 @@ from sqlmodel import Session, select
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.utils.perimetres.arbre import batiments_cibles, parse_json_perimetres
-from app.models.core import ContratEntretien, NotationPrestataire, Prestataire, TypeEquipement, Utilisateur
+from app.models.core import (
+    ContratEntretien,
+    NotationPrestataire,
+    Prestataire,
+    TypeEquipement,
+    Utilisateur,
+)
 
 from app.utils.echeance_contrat import poser_echeance
 from app.utils.noms import nom_affiche
@@ -39,6 +46,7 @@ router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 
 
 # ── Prestataires ─────────────────────────────────────────────────────────────
+
 
 def _prest_to_read(p: Prestataire) -> PrestataireRead:
     """Construit un PrestataireRead en parsant contacts_json."""
@@ -70,9 +78,11 @@ def create_prestataire(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    data = body.model_dump(exclude={'contacts'})
+    data = body.model_dump(exclude={"contacts"})
     if body.contacts is not None:
-        data['contacts_json'] = json.dumps([c.model_dump() for c in body.contacts], ensure_ascii=False)
+        data["contacts_json"] = json.dumps(
+            [c.model_dump() for c in body.contacts], ensure_ascii=False
+        )
     p = Prestataire(**data)
     session.add(p)
     session.commit()
@@ -88,9 +98,11 @@ def update_prestataire(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     p = ou_404(session, Prestataire, p_id, "Prestataire")
-    data = body.model_dump(exclude_unset=True, exclude={'contacts'})
-    if 'contacts' in body.model_fields_set:
-        data['contacts_json'] = json.dumps([c.model_dump() for c in (body.contacts or [])], ensure_ascii=False)
+    data = body.model_dump(exclude_unset=True, exclude={"contacts"})
+    if "contacts" in body.model_fields_set:
+        data["contacts_json"] = json.dumps(
+            [c.model_dump() for c in (body.contacts or [])], ensure_ascii=False
+        )
     for k, v in data.items():
         setattr(p, k, v)
     session.add(p)
@@ -112,6 +124,7 @@ def archive_prestataire(
 
 
 # ── Contrats d'entretien ──────────────────────────────────────────────────────
+
 
 class ContratCreate(BaseModel):
     copropriete_id: int
@@ -218,8 +231,7 @@ def list_contrats(
     return lus
 
 
-@router.post("/contrats/{c_id}/synthese",
-             summary="Proposer la synthèse d'un contrat (CS/Admin)")
+@router.post("/contrats/{c_id}/synthese", summary="Proposer la synthèse d'un contrat (CS/Admin)")
 async def proposer_synthese(
     c_id: int,
     session: Session = Depends(get_session),
@@ -318,6 +330,7 @@ def archive_contrat(
 
 # ── Notations prestataires ─────────────────────────────────────────────────
 
+
 class NotationCreate(BaseModel):
     #  ⚠️ `devis_id` a disparu avec la prestation ponctuelle (#603). La COLONNE,
     #  elle, reste en base : les notations deja posees sur un devis gardent leur
@@ -328,11 +341,11 @@ class NotationCreate(BaseModel):
     commentaire: Optional[str] = None
     contrat_id: Optional[int] = None
 
-    @field_validator('note')
+    @field_validator("note")
     @classmethod
     def validate_note(cls, v):
         if v < 1 or v > 5:
-            raise ValueError('La note doit être entre 1 et 5')
+            raise ValueError("La note doit être entre 1 et 5")
         return v
 
 
@@ -413,22 +426,31 @@ def get_prestataire_synthese(
     p = ou_404(session, Prestataire, p_id, "Prestataire")
 
     contrats = session.exec(
-        select(ContratEntretien).where(ContratEntretien.prestataire_id == p_id, ContratEntretien.actif == True)  # noqa: E712
+        select(ContratEntretien).where(
+            ContratEntretien.prestataire_id == p_id,
+            ContratEntretien.actif == True,  # noqa: E712
+        )
     ).all()
     notations = session.exec(
-        select(NotationPrestataire).where(NotationPrestataire.prestataire_id == p_id).order_by(NotationPrestataire.cree_le.desc())
+        select(NotationPrestataire)
+        .where(NotationPrestataire.prestataire_id == p_id)
+        .order_by(NotationPrestataire.cree_le.desc())
     ).all()
 
     note_moy = round(sum(n.note for n in notations) / len(notations), 1) if notations else None
     notations_read = []
     for n in notations:
         auteur = session.get(Utilisateur, n.auteur_id)
-        notations_read.append({
-            "id": n.id, "note": n.note, "commentaire": n.commentaire,
-            "contrat_id": n.contrat_id,
-            "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "?",
-            "cree_le": n.cree_le.isoformat(),
-        })
+        notations_read.append(
+            {
+                "id": n.id,
+                "note": n.note,
+                "commentaire": n.commentaire,
+                "contrat_id": n.contrat_id,
+                "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "?",
+                "cree_le": n.cree_le.isoformat(),
+            }
+        )
 
     prest_data = _prest_to_read(p).model_dump()
     return {
@@ -440,6 +462,7 @@ def get_prestataire_synthese(
         "nb_contrats": len(contrats),
         "prochaines_visites": [
             {"contrat": c.libelle, "date": c.prochaine_visite.isoformat()}
-            for c in contrats if c.prochaine_visite
+            for c in contrats
+            if c.prochaine_visite
         ],
     }

@@ -4,6 +4,7 @@ Neuf copies de `getattr(x, "value", x)` jusqu'au 23/09/2026, et le défaut
 qu'elles prévenaient est revenu par la dixième écriture, qui ne l'avait pas :
 `str(categorie)` dans `kanban_tickets` (#1092). Voir `app/utils/valeurs.py`.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -29,8 +30,7 @@ def test_aucune_copie_de_l_idiome_hors_de_sa_source():
         if p.relative_to(_APP).as_posix() != _SOURCE and _copies(p.read_text(encoding="utf-8"))
     ]
     assert not fautes, (
-        "Valeur d'énumération relue à la main — employer `app.utils.valeurs.valeur` : "
-        f"{fautes}"
+        f"Valeur d'énumération relue à la main — employer `app.utils.valeurs.valeur` : {fautes}"
     )
 
 

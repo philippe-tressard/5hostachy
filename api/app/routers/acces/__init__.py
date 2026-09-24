@@ -78,6 +78,7 @@ qui distingue les deux routes ; leur corps passe déjà par `_acces_admin_out`.
 Une divergence légitime qui ne se déclare pas est indistinguable d'un oubli
 (`standards/02` §4).
 """
+
 from fastapi import APIRouter
 
 from . import imports_telecommandes, imports_vigik, parc, resident

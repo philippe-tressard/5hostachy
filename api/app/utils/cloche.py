@@ -22,6 +22,7 @@ sans un geste du résident.
 🔒 `tests/test_cloche_porte_unique.py` refuse un `Notification(` construit
 ailleurs qu'ici, et un motif système qui ne serait pas déclaré.
 """
+
 from __future__ import annotations
 
 from typing import Iterable, Optional
@@ -35,12 +36,12 @@ from app.utils.preferences_mail import cloche_autorisee
 #: Un motif ajouté ici est une décision : le contrôle refuse un motif inconnu.
 MOTIFS_SYSTEME: dict[str, str] = {
     "compte": "la vie du compte — validation, rôle, profil, bannissement : "
-              "c'est à la personne elle-même, et elle doit le savoir",
+    "c'est à la personne elle-même, et elle doit le savoir",
     "sa_demande": "la réponse à une demande que la personne a faite elle-même "
-                  "(commande d'accès, accès enregistré à son nom)",
+    "(commande d'accès, accès enregistré à son nom)",
     "moderation": "un signalement à modérer : l'obligation du conseil, pas un contenu",
     "tache_du_conseil": "un geste attendu du conseil (interphone d'un arrivant, "
-                        "courriel entrant à reporter) : une tâche, pas une information",
+    "courriel entrant à reporter) : une tâche, pas une information",
     "bug": "un bogue signalé : il revient au gestionnaire du site, et à lui seul (#1191)",
     "rattachement": "un locataire rattaché à son bailleur par le seul nom : le gestionnaire vérifie (#1136)",
 }

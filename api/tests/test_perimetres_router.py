@@ -13,6 +13,7 @@ La vérification en navigateur, elle, avait bien exercé l'écran — mais sur u
 fraîchement semée où aucun contenu ne citait de périmètre, si bien que la boucle
 fautive n'était jamais atteinte. Ces tests écrivent donc du contenu AVANT de lire.
 """
+
 from datetime import datetime
 
 import pytest
@@ -60,9 +61,15 @@ def _actualite(auteur: int, perimetre_cible: str) -> Ticket:
     """Une actualité — une affaire de catégorie « Actualité » depuis le 23/09/2026 (#1091)."""
     import uuid
 
-    return Ticket(numero=f"TK-A{uuid.uuid4().hex[:6]}", titre="T", description="C",
-                  categorie="actualite", statut="publie", auteur_id=auteur,
-                  perimetre_cible=perimetre_cible)
+    return Ticket(
+        numero=f"TK-A{uuid.uuid4().hex[:6]}",
+        titre="T",
+        description="C",
+        categorie="actualite",
+        statut="publie",
+        auteur_id=auteur,
+        perimetre_cible=perimetre_cible,
+    )
 
 
 def test_lecture_de_l_arborescence_par_le_router(batiments):
@@ -115,9 +122,15 @@ def test_codes_cites_lit_les_trois_formats_de_stockage(batiments):
     with Session(engine) as session:
         auteur = _auteur(session)
         session.add(_actualite(auteur, '["parking"]'))
-        session.add(Evenement(titre="E", type=TypeEvenement.travaux, auteur_id=auteur,
-                              debut=datetime(2026, 8, 12, 9, 0),
-                              perimetre="espaces-verts,cheminements"))
+        session.add(
+            Evenement(
+                titre="E",
+                type=TypeEvenement.travaux,
+                auteur_id=auteur,
+                debut=datetime(2026, 8, 12, 9, 0),
+                perimetre="espaces-verts,cheminements",
+            )
+        )
         session.commit()
         cites = _codes_cites(session)
 
@@ -125,6 +138,7 @@ def test_codes_cites_lit_les_trois_formats_de_stockage(batiments):
 
 
 # ── Le seed ne doit plus jamais annuler une suppression ───────────────────────
+
 
 def test_le_seed_ne_repose_pas_ce_qui_a_ete_supprime(batiments):
     """Une suppression doit survivre au déploiement suivant.
@@ -195,6 +209,7 @@ def test_le_seed_pose_bien_l_arbre_sur_une_base_vierge():
 
 
 # ── Icônes : initialisation, jamais écrasement ────────────────────────────────
+
 
 def test_le_seed_pose_les_icones_initiales(batiments):
     """Chaque périmètre semé porte une icône que `Icon.svelte` sait rendre."""

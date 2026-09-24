@@ -9,6 +9,7 @@ une affaire (#1091) : `/actualites#pub-` n'aura bientôt plus rien à révéler.
 Le lien est désormais fourni par l'appelant (`publication.lien`, relatif) — le
 motif des autres gabarits (`document.lien`, `annonce.lien`).
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -25,9 +26,13 @@ def _corps(code: str) -> str:
 
 
 def test_le_bouton_suit_le_lien_fourni():
-    html = Environment(undefined=ChainableUndefined).from_string(_corps("publication_syndic")).render(
-        publication={"id": 7, "titre": "T", "contenu": "C", "lien": lien_sondage(7)},
-        app={"url": "https://5hostachy.fr"},
+    html = (
+        Environment(undefined=ChainableUndefined)
+        .from_string(_corps("publication_syndic"))
+        .render(
+            publication={"id": 7, "titre": "T", "contenu": "C", "lien": lien_sondage(7)},
+            app={"url": "https://5hostachy.fr"},
+        )
     )
     assert "https://5hostachy.fr/sondages/7" in html
     assert "actualites#pub" not in html, "le gabarit fabrique encore son propre lien"
@@ -50,8 +55,11 @@ _A_LA_MAIN = re.compile(r"""f["']/(sondages|tickets)/\{""")
 def test_aucune_url_de_sondage_ou_d_affaire_a_la_main():
     fautes = [
         f"{p.relative_to(_APP).as_posix()}:{n}"
-        for p in _APP.rglob("*.py") if "__pycache__" not in p.parts and p.name != "liens.py"
+        for p in _APP.rglob("*.py")
+        if "__pycache__" not in p.parts and p.name != "liens.py"
         for n, ligne in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
         if _A_LA_MAIN.search(ligne) and not ligne.lstrip().startswith("#")
     ]
-    assert not fautes, f"URL fabriquée à la main — employer `lien_sondage` / `lien_ticket` : {fautes}"
+    assert not fautes, (
+        f"URL fabriquée à la main — employer `lien_sondage` / `lien_ticket` : {fautes}"
+    )

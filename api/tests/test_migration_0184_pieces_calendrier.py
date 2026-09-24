@@ -20,6 +20,7 @@ Le texte « d'avant » est reconstitué en retirant la ligne du texte du seed �
 depuis la source, jamais recopié : une copie ici se périmerait à la première
 retouche du modèle, et ce test deviendrait vert sur autre chose que la réalité.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -29,7 +30,9 @@ from app.seed import EMAIL_TEMPLATES
 
 _MIGRATION = (
     Path(__file__).resolve().parents[1]
-    / "alembic" / "versions" / "0184_calendrier_suivi_annonce_ses_pieces.py"
+    / "alembic"
+    / "versions"
+    / "0184_calendrier_suivi_annonce_ses_pieces.py"
 )
 
 

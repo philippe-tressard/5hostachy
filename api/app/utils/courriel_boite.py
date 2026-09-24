@@ -34,6 +34,7 @@ Tout vit dans `ConfigSite`, administrable, et **rien n'est activé par défaut**
 boîte d'envoi — c'est le même compte chez l'hébergeur —, mais le serveur IMAP est
 distinct du SMTP et se déclare à part.
 """
+
 from __future__ import annotations
 
 import email
@@ -75,15 +76,19 @@ _ECHECS_RELEVE = CompteurEchecs("relève de la boîte des réponses")
 
 #: Les clés lues dans `ConfigSite`. `imap_enabled` d'abord : sans elle, rien.
 _CLES = {
-    "imap_enabled", "imap_server", "imap_port", "imap_username",
-    "imap_password", "imap_dossier", "imap_plancher",
+    "imap_enabled",
+    "imap_server",
+    "imap_port",
+    "imap_username",
+    "imap_password",
+    "imap_dossier",
+    "imap_plancher",
 }
+
 
 def config_imap(session: Session) -> dict:
     lignes = session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_CLES))).all()
     return {r.cle: r.valeur for r in lignes}
-
-
 
 
 def _ticket_de(session: Session, verdict) -> Ticket | None:
@@ -96,9 +101,7 @@ def _ticket_de(session: Session, verdict) -> Ticket | None:
     `correspondant_du_ticket`, qui n'est exigé QUE sur ce chemin.
     """
     if verdict.jeton:
-        return session.exec(
-            select(Ticket).where(Ticket.jeton_courriel == verdict.jeton)
-        ).first()
+        return session.exec(select(Ticket).where(Ticket.jeton_courriel == verdict.jeton)).first()
     if verdict.numero:
         #  Comparaison insensible à la casse : un client de messagerie peut
         #  remettre le sujet en capitales, et le numéro y perdrait sa forme.
@@ -135,9 +138,7 @@ def correspondant_du_ticket(session: Session, ticket: Ticket, auteur: Utilisateu
     if not adresse:
         return False
     return bool(
-        session.exec(
-            select(MembreSyndic).where(func.lower(MembreSyndic.email) == adresse)
-        ).first()
+        session.exec(select(MembreSyndic).where(func.lower(MembreSyndic.email) == adresse)).first()
     )
 
 
@@ -150,8 +151,7 @@ def _relance_de(session: Session, verdict) -> RelanceCourriel | None:
     ).first()
 
 
-def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict,
-                           corps: str) -> str:
+def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict, corps: str) -> str:
     """Ce qu'on fait d'une réponse à un envoi GROUPÉ.
 
     🔴 ELLE N'EST PAS VENTILÉE DANS LES FILS, et c'est la décision de fond.
@@ -172,9 +172,11 @@ def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict,
         ids = [int(i) for i in json.loads(relance.tickets_json or "[]")]
     except (ValueError, TypeError):
         pass
-    numeros = [
-        t.numero for t in session.exec(select(Ticket).where(Ticket.id.in_(ids))).all()
-    ] if ids else []
+    numeros = (
+        [t.numero for t in session.exec(select(Ticket).where(Ticket.id.in_(ids))).all()]
+        if ids
+        else []
+    )
     liste = ", ".join(f"#{n}" for n in numeros) or "aucun ticket retrouvé"
 
     texte = _sans_citation(corps)
@@ -183,15 +185,19 @@ def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict,
     #  elle ne conserve pas. Sans cette ligne, la réponse n'existait que dans un
     #  champ `corps` qu'on ne relit jamais — le défaut que ce chantier corrige,
     #  déplacé de la boîte aux lettres vers une table de notifications.
-    session.add(ReponseRelance(
-        relance_id=relance.id,
-        expediteur=verdict.expediteur,
-        contenu=texte,
-        recue_le=datetime.utcnow(),
-    ))
+    session.add(
+        ReponseRelance(
+            relance_id=relance.id,
+            expediteur=verdict.expediteur,
+            contenu=texte,
+            recue_le=datetime.utcnow(),
+        )
+    )
 
     for membre in membres_cs_ou_admin(session):
-        sonner_systeme(session, "tache_du_conseil",
+        sonner_systeme(
+            session,
+            "tache_du_conseil",
             destinataire_id=membre.id,
             type="ticket_update",
             titre="Réponse du syndic à la relance groupée",
@@ -220,7 +226,9 @@ def _prevenir_le_cs(session: Session, ticket: Ticket | None, verdict) -> None:
 
     ou = f"le ticket #{ticket.numero}" if ticket else "un ticket"
     for membre in membres_cs_ou_admin(session):
-        sonner_systeme(session, "tache_du_conseil",
+        sonner_systeme(
+            session,
+            "tache_du_conseil",
             destinataire_id=membre.id,
             type="ticket_update",
             titre=f"Réponse par courriel non prise en compte sur {ou}",
@@ -233,8 +241,13 @@ def _prevenir_le_cs(session: Session, ticket: Ticket | None, verdict) -> None:
         )
 
 
-def traiter(session: Session, entetes: dict, corps: str, recu_le: datetime | None,
-            plancher: datetime | None = None) -> str:
+def traiter(
+    session: Session,
+    entetes: dict,
+    corps: str,
+    recu_le: datetime | None,
+    plancher: datetime | None = None,
+) -> str:
     """Applique le verdict d'UN message. Rend la décision prise, pour le journal.
 
     Séparée de la connexion IMAP pour être éprouvable : un test lui passe des
@@ -263,12 +276,18 @@ def traiter(session: Session, entetes: dict, corps: str, recu_le: datetime | Non
             #  qu'on a sollicitée — le défaut même que le jeton de relance vient
             #  corriger, et il en resterait d'autres formes (un fil transféré,
             #  un client qui réécrit le destinataire).
-            _prevenir_le_cs(session, None, verdict.__class__(
-                decision=REFUSE, jeton=verdict.jeton, reference=verdict.reference,
-                expediteur=verdict.expediteur,
-                motif="ce message répond à un envoi du site, mais rien ne permet "
-                      "de dire à quel ticket",
-            ))
+            _prevenir_le_cs(
+                session,
+                None,
+                verdict.__class__(
+                    decision=REFUSE,
+                    jeton=verdict.jeton,
+                    reference=verdict.reference,
+                    expediteur=verdict.expediteur,
+                    motif="ce message répond à un envoi du site, mais rien ne permet "
+                    "de dire à quel ticket",
+                ),
+            )
             session.commit()
             return REFUSE
 
@@ -282,16 +301,24 @@ def traiter(session: Session, entetes: dict, corps: str, recu_le: datetime | Non
         return REFUSE
 
     auteur = session.exec(
-        select(Utilisateur).where(Utilisateur.email == verdict.expediteur.split("<")[-1]
-                                  .strip(">").strip(), Utilisateur.actif == True)  # noqa: E712
+        select(Utilisateur).where(
+            Utilisateur.email == verdict.expediteur.split("<")[-1].strip(">").strip(),
+            Utilisateur.actif == True,  # noqa: E712
+        )
     ).first()
     if auteur is None:
         #  Voir l'en-tête : pas de compte, pas d'écriture — mais on le DIT.
-        _prevenir_le_cs(session, ticket, verdict.__class__(
-            decision=REFUSE, jeton=verdict.jeton, reference=verdict.reference,
-            expediteur=verdict.expediteur,
-            motif="cet expéditeur, pourtant authentifié, n'a pas de compte sur le site",
-        ))
+        _prevenir_le_cs(
+            session,
+            ticket,
+            verdict.__class__(
+                decision=REFUSE,
+                jeton=verdict.jeton,
+                reference=verdict.reference,
+                expediteur=verdict.expediteur,
+                motif="cet expéditeur, pourtant authentifié, n'a pas de compte sur le site",
+            ),
+        )
         session.commit()
         return REFUSE
 
@@ -300,13 +327,20 @@ def traiter(session: Session, entetes: dict, corps: str, recu_le: datetime | Non
     #  dans un sujet ne prouve rien. On exige donc, sur ce chemin seulement, que
     #  la personne soit quelqu'un à qui le site écrit à propos de ce dossier.
     if verdict.jeton is None and not correspondant_du_ticket(session, ticket, auteur):
-        _prevenir_le_cs(session, ticket, verdict.__class__(
-            decision=REFUSE, jeton=None, reference=verdict.reference,
-            numero=verdict.numero, expediteur=verdict.expediteur,
-            motif="ce message désigne un ticket par son numéro dans le sujet, mais "
-                  "son expéditeur n'est ni l'auteur du ticket, ni le conseil "
-                  "syndical, ni le syndic",
-        ))
+        _prevenir_le_cs(
+            session,
+            ticket,
+            verdict.__class__(
+                decision=REFUSE,
+                jeton=None,
+                reference=verdict.reference,
+                numero=verdict.numero,
+                expediteur=verdict.expediteur,
+                motif="ce message désigne un ticket par son numéro dans le sujet, mais "
+                "son expéditeur n'est ni l'auteur du ticket, ni le conseil "
+                "syndical, ni le syndic",
+            ),
+        )
         session.commit()
         return REFUSE
 
@@ -314,10 +348,15 @@ def traiter(session: Session, entetes: dict, corps: str, recu_le: datetime | Non
     if not texte:
         return IGNORE
 
-    session.add(TicketEvolution(
-        ticket_id=ticket.id, type="commentaire", contenu=texte,
-        auteur_id=auteur.id, cree_le=datetime.utcnow(),
-    ))
+    session.add(
+        TicketEvolution(
+            ticket_id=ticket.id,
+            type="commentaire",
+            contenu=texte,
+            auteur_id=auteur.id,
+            cree_le=datetime.utcnow(),
+        )
+    )
     ticket.mis_a_jour_le = datetime.utcnow()
     session.add(ticket)
     session.commit()
@@ -365,15 +404,16 @@ def relever() -> dict[str, int]:
             try:
                 plancher = datetime.fromisoformat(cfg["imap_plancher"])
             except ValueError:
-                logger.warning("imap_plancher illisible (%s) — plancher par défaut",
-                               cfg["imap_plancher"])
+                logger.warning(
+                    "imap_plancher illisible (%s) — plancher par défaut", cfg["imap_plancher"]
+                )
 
         boite = imaplib.IMAP4_SSL(cfg.get("imap_server", ""), int(cfg.get("imap_port") or 993))
         try:
             boite.login(cfg.get("imap_username", ""), cfg.get("imap_password", ""))
             boite.select(cfg.get("imap_dossier") or "INBOX")
             _statut, donnees = boite.search(None, "UNSEEN")
-            for numero in (donnees[0].split() if donnees and donnees[0] else []):
+            for numero in donnees[0].split() if donnees and donnees[0] else []:
                 #  🔴 `BODY.PEEK[]` ET NON `RFC822` (05/09/2026). En IMAP, lire un
                 #  message avec `RFC822` pose `\Seen` **au moment de la lecture** :
                 #  le message était donc acquitté avant qu'on ait décidé quoi que ce
@@ -395,9 +435,7 @@ def relever() -> dict[str, int]:
                 except Exception:
                     recu_le = None
                 try:
-                    decision = traiter(
-                        session, entetes, _corps_lisible(message), recu_le, plancher
-                    )
+                    decision = traiter(session, entetes, _corps_lisible(message), recu_le, plancher)
                 except Exception as exc:
                     #  Le message reste NON LU : il sera repris dans dix minutes. Et
                     #  l'échec est journalisé en ERROR, donc visible du point 6 du
@@ -405,9 +443,10 @@ def relever() -> dict[str, int]:
                     #  échouerait indéfiniment se signale au lieu de tourner en
                     #  silence. Une erreur qui se répète est un appel, pas du bruit.
                     logger.error(
-                        "Réponse par courriel non traitée (laissée non lue) — de %s, "
-                        "objet %r : %s",
-                        entetes.get("From", "?"), entetes.get("Subject", "?"), exc,
+                        "Réponse par courriel non traitée (laissée non lue) — de %s, objet %r : %s",
+                        entetes.get("From", "?"),
+                        entetes.get("Subject", "?"),
+                        exc,
                     )
                     session.rollback()
                     continue
@@ -448,7 +487,10 @@ def relever() -> dict[str, int]:
     elif any(comptes.values()):
         logger.info(
             "Réponses par courriel — écrites=%d relances=%d refusées=%d ignorées=%d",
-            comptes[ACCEPTE], comptes[RELANCE], comptes[REFUSE], comptes[IGNORE],
+            comptes[ACCEPTE],
+            comptes[RELANCE],
+            comptes[REFUSE],
+            comptes[IGNORE],
         )
     else:
         #  Même raison : c'est CE passage-là qui prouve que la relève est vivante

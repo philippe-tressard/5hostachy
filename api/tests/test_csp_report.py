@@ -107,7 +107,9 @@ def test_le_plafond_de_cles_borne_la_memoire(client):
     #  plafond. Deux bornes distinctes, deux tests distincts — et surtout, la
     #  décision n'est pas RECOPIÉE ici, sans quoi le test se vérifierait
     #  lui-même.
-    refus = sum(not csp.retenir(("img-src", f"https://x/{i}")) for i in range(csp.PLAFOND_CLES + 10))
+    refus = sum(
+        not csp.retenir(("img-src", f"https://x/{i}")) for i in range(csp.PLAFOND_CLES + 10)
+    )
     assert len(csp._violations) == csp.PLAFOND_CLES
     assert refus == 10
     #  Une clé DÉJÀ connue passe encore : le plafond borne la variété, pas le compte.
@@ -128,6 +130,7 @@ def test_le_releve_est_reserve_aux_admins(client):
 
 
 # ── La persistance : ce que six déploiements dans la journée ont appris ──────
+
 
 def test_le_releve_SURVIT_a_un_redemarrage():
     """🔴 Sans cela, ce point de collecte ne collecte rien sur un site vivant.
