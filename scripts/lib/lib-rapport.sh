@@ -120,6 +120,43 @@ except Exception as e:
     return 0
 }
 
+# ── Purges hebdomadaires, DANS l'API (#1232) ────────────────────────────────
+# `maintenance.sh` purgeait cinq tables par `docker exec hostachy_api python`,
+# API en marche : un process tiers qui ouvre `app.db`, la règle d'or enfreinte
+# chaque dimanche. Il les DEMANDE désormais à l'API, qui les fait dans son
+# process et rend les comptes.
+rapport_purges() { # $1=url_base $2=clé → corps JSON sur stdout, code 1 si ≠ 200
+    local base="${1:-}" cle="${2:-}" corps http
+    [ -n "$base" ] && [ -n "$cle" ] || return 1
+    corps=$(curl -s --max-time 120 -w '\n%{http_code}' \
+        -X POST "$base/api/admin/maintenance/purges" \
+        -H "x-maintenance-key: $cle" 2>/dev/null) || return 1
+    http="${corps##*$'\n'}"
+    [ "$http" = "200" ] || { printf 'HTTP %s' "$http"; return 1; }
+    printf '%s' "${corps%$'\n'*}"
+}
+
+# Fonction PURE : lit la réponse des purges. $1=json $2=clé de `comptes`, ou
+# « erreurs » → la liste jointe par « | ». Un compte absent vaut 0 ET le dit
+# sur stderr : une clé renommée côté API ne doit pas devenir un zéro muet.
+purges_lire() {
+    printf '%s' "${1:-}" | PYTHONIOENCODING=utf-8 python3 -c '
+import json, sys
+cle = sys.argv[1]
+try:
+    d = json.load(sys.stdin)
+except Exception as e:
+    print(f"réponse illisible : {e}", file=sys.stderr); print(0 if cle != "erreurs" else "réponse illisible"); sys.exit(1)
+if cle == "erreurs":
+    print(" | ".join(d.get("erreurs") or []))
+else:
+    c = (d.get("comptes") or {})
+    if cle not in c:
+        print(f"compte « {cle} » absent de la réponse", file=sys.stderr)
+    print(int(c.get(cle, 0)))
+' "${2:-}"
+}
+
 # Journalisation : réutilise le log() de l'appelant s'il en définit un.
 if ! declare -f log >/dev/null 2>&1; then
     log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
@@ -187,6 +224,16 @@ ligne' 'anti\slash'; do
         # standards/04 §1 : un contrôle qui ne peut pas s'exécuter rend INCONNU.
         echo "FAIL  python3 absent — validité JSON NON vérifiée (INCONNU, pas OK)"; st_fail=1
     fi
+
+    # purges_lire — la lecture de la réponse de l'API (#1232).
+    REP='{"comptes":{"tokens":2,"prt":0,"emails":5},"erreurs":[]}'
+    check "purges : compte lu"            '2' "$(purges_lire "$REP" tokens 2>/dev/null)"
+    check "purges : zéro réel"            '0' "$(purges_lire "$REP" prt 2>/dev/null)"
+    check "purges : aucune erreur"        ''  "$(purges_lire "$REP" erreurs 2>/dev/null)"
+    check "purges : erreurs jointes"      'a | b' \
+        "$(purges_lire '{"comptes":{},"erreurs":["a","b"]}' erreurs 2>/dev/null)"
+    check "purges : clé absente DITE"     'compte « notifications » absent de la réponse' \
+        "$(purges_lire "$REP" notifications 2>&1 >/dev/null)"
 
     [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
     exit $st_fail

@@ -11,8 +11,11 @@ prochain arrêt. Corruptions `telemetry_event` des 05 et 17/06/2026, panne de co
 du 17/07/2026 (~12 h d'écritures perdues).
 
 Ces trois incidents ont été corrigés **au cas par cas** : le contrôle fautif de
-`check-reliability.sh` a été supprimé, la purge de `maintenance.sh` est passée
-in-process. Personne n'avait corrigé la **classe** — et le 04/08/2026 on a retrouvé
+`check-reliability.sh` a été supprimé, UNE purge de `maintenance.sh` (1d) est
+passée in-process — et ce paragraphe affirmait « la purge », au singulier défini,
+alors que cinq autres ouvraient encore la base chaque dimanche par `docker exec
+… python` (#1232, 24/09/2026). Le test ne les voyait pas : il ne cherchait que
+`sqlite3`. Personne n'avait corrigé la **classe** — et le 04/08/2026 on a retrouvé
 dans `setup-rpi5.sh` un installeur qui posait un cron `sqlite3 … ".backup"` côté hôte
 à 03:00. Il datait de l'époque mono-RPi, il était encore inscrit dans `/etc/crontab`
 de rpi1, et il n'était inoffensif que parce que le script appelé avait disparu.
@@ -168,6 +171,35 @@ def test_aucun_docker_exec_sur_la_base():
     assert not fautes, (
         "accès à la base par `docker exec` — interdit sans exception, l'API tourne "
         "forcément dans ce conteneur :\n" + "\n".join(fautes)
+    )
+
+
+#: Du Python lancé DANS le conteneur de l'API qui importe son moteur de base :
+#: `docker exec hostachy_api python -c "from app.database import engine …"`.
+#: C'est un process TIERS aussi sûrement qu'un `sqlite3` hôte — même conteneur,
+#: autre PID, autre pool. Aucune exception : à chaud, la base se touche par une
+#: route de l'API (`POST /admin/maintenance/purges`, `/admin/db/checkpoint`…).
+BASE_PAR_LE_CODE_DE_L_API = re.compile(r"\bapp\.database\b")
+
+
+def test_aucun_script_n_importe_la_base_de_l_api():
+    """Un script shell n'importe jamais `app.database` (#1232, 24/09/2026).
+
+    `maintenance.sh` purgeait cinq tables chaque dimanche à 03:00 par
+    `docker exec hostachy_api python -c "from app.database import engine …"`,
+    API en marche — la forme exacte que la règle d'or interdit, que ce fichier
+    ne voyait pas parce qu'il ne cherchait que `sqlite3`.
+    """
+    fautes = []
+    for script in scripts_versionnes():
+        if script.suffix != ".sh":
+            continue
+        for numero, ligne in lignes_de_code(script):
+            if BASE_PAR_LE_CODE_DE_L_API.search(ligne):
+                fautes.append(f"{script.name}:{numero} : {ligne.strip()}")
+    assert not fautes, (
+        "un script ouvre la base par le code de l'API, depuis un process tiers — "
+        "passer par une route in-process :\n" + "\n".join(fautes)
     )
 
 

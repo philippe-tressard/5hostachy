@@ -15,22 +15,94 @@ from app.models.core import (
 )
 
 
-def run_maintenance(history_id: int | None = None) -> None:
+def _supprimer(sql: str, **params) -> int:
+    """Un DELETE lié, dans sa propre connexion ; rend le nombre de lignes ôtées."""
+    with engine.connect() as conn:
+        n = conn.execute(text(sql), params).rowcount
+        conn.commit()
+    return n
+
+
+def purger() -> tuple[dict[str, int], list[str]]:
+    """Les purges de la maintenance, DANS le process de l'API (#1232).
+
+    Deux appelants, une écriture : `run_maintenance` (déclenchement manuel) et
+    `POST /admin/maintenance/purges`, que `maintenance.sh` appelle chaque
+    dimanche. Le script les faisait lui-même par `docker exec … python`, API en
+    marche — un process tiers qui ouvre `app.db`, ce que la règle d'or
+    interdit. Une étape en échec n'arrête pas les suivantes : elle s'inscrit
+    dans `erreurs`, et le compte de ce qui a réussi reste juste.
     """
-    Exécute les tâches de maintenance Python (identiques au script maintenance.sh) :
-      1. Purge des refresh tokens expirés / révoqués
-      2. Purge des password reset tokens expirés / utilisés
-      3. Purge des notifications lues > 90 jours
-      4. Purge de l'historique maintenance > 12 mois
-      5. Purge de l'historique emails > 90 jours
-      6. VACUUM + PRAGMA optimize SQLite
-      7. Nettoyage logs WhatsApp (garde les 6 derniers)
-      8. Nettoyage évolutions archivées > 90 jours
-    Met à jour (ou crée) l'entrée HistoriqueMaintenance correspondante.
+    maintenant = datetime.now(timezone.utc)
+    il_y_a_90_j = (maintenant - timedelta(days=90)).isoformat()
+    comptes = dict.fromkeys(
+        ("tokens", "prt", "notifications", "historique", "emails", "whatsapp", "evolutions"), 0
+    )
+    erreurs: list[str] = []
+
+    etapes = (
+        ("tokens", "purge tokens",
+         "DELETE FROM refresh_token WHERE expires_at < :now OR revoked = 1",
+         {"now": maintenant.isoformat()}),
+        ("prt", "purge password reset tokens",
+         "DELETE FROM password_reset_token WHERE expires_at < :now OR used = 1",
+         {"now": maintenant.isoformat()}),
+        ("notifications", "purge notifications",
+         "DELETE FROM notification WHERE lue = 1 AND cree_le < :cutoff",
+         {"cutoff": il_y_a_90_j}),
+        ("historique", "purge historique",
+         "DELETE FROM historique_maintenance WHERE cree_le < :cutoff",
+         {"cutoff": (maintenant - timedelta(days=365)).isoformat()}),
+        ("emails", "purge historique emails",
+         "DELETE FROM historique_email WHERE cree_le < :cutoff",
+         {"cutoff": il_y_a_90_j}),
+    )
+    for cle, libelle, sql, params in etapes:
+        try:
+            comptes[cle] = _supprimer(sql, **params)
+        except Exception as exc:
+            erreurs.append(f"{libelle}: {exc}")
+
+    # Logs WhatsApp : garder les 6 derniers.
+    try:
+        with Session(engine) as s:
+            anciens = s.exec(
+                select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())
+            ).all()[6:]
+            for old in anciens:
+                s.delete(old)
+            s.commit()
+            comptes["whatsapp"] = len(anciens)
+    except Exception as exc:
+        erreurs.append(f"logs WhatsApp: {exc}")
+
+    # Évolutions archivées de plus de 90 jours.
+    try:
+        with Session(engine) as s:
+            anciennes = s.exec(
+                select(PublicationEvolution).where(
+                    PublicationEvolution.cree_le < maintenant - timedelta(days=90)
+                )
+            ).all()
+            for evol in anciennes:
+                s.delete(evol)
+            s.commit()
+            comptes["evolutions"] = len(anciennes)
+    except Exception as exc:
+        erreurs.append(f"évolutions: {exc}")
+
+    return comptes, erreurs
+
+
+def run_maintenance(history_id: int | None = None) -> None:
+    """La maintenance lancée depuis l'administration : `purger()`, puis VACUUM.
+
+    Met à jour (ou crée) l'entrée HistoriqueMaintenance correspondante. La
+    maintenance HEBDOMADAIRE, elle, est celle de `maintenance.sh`, qui demande
+    les mêmes purges à l'API (`POST /admin/maintenance/purges`) puis compacte
+    la base API arrêtée — aucun planificateur n'appelle cette fonction.
     """
     start = datetime.utcnow()
-    tokens_supprimes = 0
-    erreurs: list[str] = []
 
     with Session(engine) as session:
         entry: HistoriqueMaintenance | None = None
@@ -38,8 +110,8 @@ def run_maintenance(history_id: int | None = None) -> None:
             entry = session.get(HistoriqueMaintenance, history_id)
         if not entry:
             #  🔴 AUTOMATIQUE, et avec le nœud (18/09/2026). Ce repli est le
-            #  chemin du PLANIFICATEUR : il n'y a pas d'entrée préexistante
-            #  parce que personne n'a cliqué. Il posait « manuelle » et aucun
+            #  chemin d'un appel SANS entrée préexistante — prévu pour un
+            #  planificateur, qu'aucun `add_job` ne branche au 24/09/2026 (#1232). Il posait « manuelle » et aucun
             #  nœud — une maintenance automatique s'affichait donc comme
             #  déclenchée à la main, sur un nœud inconnu, dans la colonne que
             #  `TachesPlanifiees` montre. C'est le défaut que l'endpoint de
@@ -51,99 +123,16 @@ def run_maintenance(history_id: int | None = None) -> None:
             session.commit()
             session.refresh(entry)
 
-        # 1. Purge refresh tokens
-        try:
-            with engine.connect() as conn:
-                result = conn.execute(
-                    text("DELETE FROM refresh_token WHERE expires_at < :now OR revoked = 1"),
-                    {"now": datetime.now(timezone.utc).isoformat()},
-                )
-                conn.commit()
-                tokens_supprimes = result.rowcount
-        except Exception as exc:
-            erreurs.append(f"purge tokens: {exc}")
+        comptes, erreurs = purger()
+        tokens_supprimes = comptes["tokens"]
 
-        # 2. Purge password reset tokens expirés / utilisés
-        try:
-            with engine.connect() as conn:
-                conn.execute(
-                    text("DELETE FROM password_reset_token WHERE expires_at < :now OR used = 1"),
-                    {"now": datetime.now(timezone.utc).isoformat()},
-                )
-                conn.commit()
-        except Exception as exc:
-            erreurs.append(f"purge password reset tokens: {exc}")
-
-        # 3. Purge notifications lues > 90 jours
-        try:
-            cutoff_notif = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
-            with engine.connect() as conn:
-                conn.execute(
-                    text("DELETE FROM notification WHERE lue = 1 AND cree_le < :cutoff"),
-                    {"cutoff": cutoff_notif},
-                )
-                conn.commit()
-        except Exception as exc:
-            erreurs.append(f"purge notifications: {exc}")
-
-        # 4. Purge historique maintenance > 12 mois
-        try:
-            cutoff_hist = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
-            with engine.connect() as conn:
-                conn.execute(
-                    text("DELETE FROM historique_maintenance WHERE cree_le < :cutoff"),
-                    {"cutoff": cutoff_hist},
-                )
-                conn.commit()
-        except Exception as exc:
-            erreurs.append(f"purge historique: {exc}")
-
-        # 5. Purge historique emails > 90 jours
-        try:
-            cutoff_emails = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
-            with engine.connect() as conn:
-                conn.execute(
-                    text("DELETE FROM historique_email WHERE cree_le < :cutoff"),
-                    {"cutoff": cutoff_emails},
-                )
-                conn.commit()
-        except Exception as exc:
-            erreurs.append(f"purge historique emails: {exc}")
-
-        # 6. VACUUM + PRAGMA optimize SQLite
+        # VACUUM + PRAGMA optimize SQLite — après les purges, qu'il compacte.
         try:
             with engine.execution_options(isolation_level="AUTOCOMMIT").connect() as conn:
                 conn.execute(text("VACUUM"))
                 conn.execute(text("PRAGMA optimize"))
         except Exception as exc:
             erreurs.append(f"VACUUM: {exc}")
-
-        # 7. Nettoyage logs WhatsApp (garder 6 max)
-        try:
-            with Session(engine) as s:
-                all_logs = s.exec(
-                    select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())
-                ).all()
-                if len(all_logs) > 6:
-                    for old in all_logs[6:]:
-                        s.delete(old)
-                    s.commit()
-        except Exception as exc:
-            erreurs.append(f"logs WhatsApp: {exc}")
-
-        # 8. Nettoyage évolutions anciennes (> 90 jours)
-        try:
-            cutoff = datetime.now(timezone.utc) - timedelta(days=90)
-            with Session(engine) as s:
-                old_evols = s.exec(
-                    select(PublicationEvolution).where(PublicationEvolution.cree_le < cutoff)
-                ).all()
-                for evol in old_evols:
-                    s.delete(evol)
-                if old_evols:
-                    s.commit()
-        except Exception as exc:
-            erreurs.append(f"évolutions: {exc}")
 
         # Taille DB après VACUUM
         taille_db: int | None = None
