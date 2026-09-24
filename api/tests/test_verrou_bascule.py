@@ -168,7 +168,7 @@ MODULE_VERROU = RACINE / "lib" / "lib-verrou.sh"
 #  affectation, jamais une mention en commentaire — un commentaire qui RACONTE la
 #  divergence supprimée est utile, et c'est le faux positif que l'audit du 12/09
 #  avait déjà rencontré ailleurs.
-SEUIL_RECOPIE = re.compile(r"^\s*(LOCK_MAX_AGE_S|LOCK_STALE_MIN)\s*=\s*[0-9]", re.M)
+SEUIL_RECOPIE = re.compile(r"^\s*(LOCK_MAX_AGE_S|LOCK_STALE_MIN)\s*=\s*[0-9]+", re.M)
 
 
 def test_le_seuil_de_peremption_n_est_ecrit_qu_une_fois():
@@ -184,7 +184,7 @@ def test_le_seuil_de_peremption_n_est_ecrit_qu_une_fois():
             recopies.append(f"{f.name} : {m.group(0).strip()}")
     assert not recopies, (
         "Seuil de péremption recopié — il vit dans lib-verrou.sh (VERROU_STALE_S) "
-        "et se DÉRIVE ailleurs :" + nl + "  " + (nl + "  ").join(recopies)
+        "et se DÉRIVE ailleurs :\n  " + "\n  ".join(recopies)
     )
 
 
