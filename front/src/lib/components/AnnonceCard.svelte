@@ -233,9 +233,15 @@
 						aria-expanded={gestionOuverte}
 						on:click={onToggleGestion}
 					>
-						{gestionOuverte ? '▲' : '▼'} Gérer les photos{annonce.photos?.length
-							? ` (${annonce.photos.length})`
-							: ''}
+						<!--  Le chevron `›` du site, qui TOURNE — pas `▲/▼`, qui SAUTE
+						      d'un glyphe à l'autre et que toutes les autres cartes ont
+						      abandonné (ux-patterns §3). -->
+						<span
+							class="chevron annonce-gerer-chevron"
+							class:open={gestionOuverte}
+							aria-hidden="true">›</span
+						>
+						Gérer les photos{annonce.photos?.length ? ` (${annonce.photos.length})` : ''}
 					</button>
 					{#if gestionOuverte}
 						<FichiersUpload
@@ -332,6 +338,35 @@
 	.annonce-body {
 		padding: 0.75rem 1rem 1rem;
 		border-top: 1px solid var(--color-border);
+		animation: annonce-entree var(--duree-apparition) var(--ease-out);
+	}
+	/*  🔹 Le corps ENTRE — il descend de 4 px en apparaissant — et SORT sans
+	    délai. Asymétrie voulue : à l'ouverture, on suit l'œil vers ce qui arrive ;
+	    à la fermeture, on a déjà décidé, et attendre la fin d'un fondu ne sert
+	    personne. Pas de hauteur animée : elle recalcule la mise en page à chaque
+	    image, et une carte à photos saccade sur un téléphone.
+	    Une animation au MONTAGE plutôt qu'une transition Svelte : le `{#if}` la
+	    rejoue à chaque ouverture, et la règle `prefers-reduced-motion` la coupe
+	    sans une ligne de JavaScript. */
+	@keyframes annonce-entree {
+		from {
+			opacity: 0;
+			transform: translateY(-4px);
+		}
+	}
+	.annonce-gerer-chevron {
+		font-size: 1rem;
+		color: inherit;
+		transition-timing-function: var(--ease-out);
+	}
+	/*  🔴 La charte fait tourner TOUT chevron d'une carte dépliée
+	    (`.carte-liste.expanded .chevron`) — c'est celui de l'en-tête qu'elle
+	    vise, mais ce bouton n'existe que carte dépliée : sans cette règle, son
+	    chevron était ouvert avant même le clic (mesuré en navigateur). Le
+	    préfixe `.annonce-gerer` est ce qui la fait passer devant la charte, à
+	    spécificité et non à ordre de chargement. */
+	.annonce-gerer .annonce-gerer-chevron:not(.open) {
+		transform: none;
 	}
 	.annonce-texte {
 		font-size: 0.875rem;
@@ -364,8 +399,19 @@
 	}
 
 	/*  Archives : la carte s'efface tant qu'on ne la vise pas — `.attenue` vient de
-	    la charte ; seul le retour à l'opacité pleine diffère d'un écran à l'autre. */
-	.attenue:hover {
-		opacity: 1;
+	    la charte ; seul le retour à l'opacité pleine diffère d'un écran à l'autre.
+
+	    ⚠️ Au pointeur seulement : sur un écran tactile, `:hover` reste collé
+	    après un appui, et la carte d'archive restait pleine une fois lue. */
+	@media (hover: hover) and (pointer: fine) {
+		.attenue:hover {
+			opacity: 1;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.annonce-body {
+			animation: none;
+		}
 	}
 </style>

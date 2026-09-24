@@ -38,8 +38,11 @@ const SOURCE = join(RACINE, 'src');
  * `messageErreur`, et c'est délibéré : les deux dettes vivent dans les mêmes
  * gestes, et les traiter séparément aurait fait rouvrir deux fois les mêmes
  * fichiers.
+ *
+ * 24/09/2026 : 14 → 12 — `OngletAnnonces` et `Reponses`, avec la passe de
+ * finition des Petites annonces.
  */
-const PLAFOND = 14;
+const PLAFOND = 12;
 
 /**
  * Fichiers qui PARLENT de `confirm()` sans en appeler un : le composant de
