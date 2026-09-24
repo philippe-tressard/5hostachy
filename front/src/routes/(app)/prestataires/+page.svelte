@@ -324,7 +324,7 @@
 
 	async function savePrest() {
 		if (!prestForm.nom || !prestForm.specialite) {
-			toast('error', 'Nom et spécialité obligatoires');
+			toast('error', 'Nom et équipement obligatoires');
 			return;
 		}
 		const contacts = prestContacts.filter((c) => c.telephone.trim());

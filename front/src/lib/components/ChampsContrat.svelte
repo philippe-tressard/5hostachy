@@ -39,7 +39,7 @@
   téléversement — un autre lot, et il est nommé dans #390.
 -->
 <script context="module" lang="ts">
-	import { pliageDe } from '$lib/pliage';
+	import { pliageDe, requisDe } from '$lib/pliage';
 	let compteur = 0;
 </script>
 
@@ -83,59 +83,105 @@
       un `.field champ-large` qui porte `Titre *`. L'exception, c'était moi. -->
 <SectionTitre id="{idNotes}-titre" bind:valeur={contratForm.libelle} />
 
-<!--  ══ 2. CHAMPS SPÉCIFIQUES ══ Tout ce qui QUALIFIE le contrat : avec qui, sur
-      quoi, depuis quand, à quel rythme. Les dates et la fréquence étaient rendues
-      APRÈS le périmètre — elles passent avant, l'ordre des treize sections ne se
-      discute pas (R2). -->
-<SectionFormulaire titre="Le contrat">
-	<div class="form-grid">
-		<label class="field"
-			>Prestataire<EtoileRequis vide={!contratForm.prestataire_id} />
-			<select bind:value={contratForm.prestataire_id} required>
-				<option value="">— Sélectionner —</option>
-				{#each prestataires as pr (pr.id)}<option value={String(pr.id)}>{pr.nom}</option>{/each}
-			</select>
-		</label>
+<!--  🔴 LES SECTIONS STANDARD (24/09/2026, signalé à l'écran : « Prendre exemple
+      sur l'UX d'Affaires »). Tout vivait dans une section « Le contrat » que le
+      cadre ne connaît pas : prestataire, équipement, dates et numéro, sans
+      distinguer l'obligatoire du facultatif. Chaque groupe rejoint la section
+      qui le nomme sur les affaires — Équipement, Quand, Intervenant —, et le
+      numéro, seul facultatif, la section 2 (« Référence »), pliée. -->
+
+<!--  ══ 2. RÉFÉRENCE ══ Le numéro du contrat, facultatif : plié. -->
+{#if sectionPresente(CONTRAT, etat, 'nature')}
+	<SectionFormulaire
+		titre="Référence"
+		pliable={pliageDe(CONTRAT, 'nature')}
+		valeurModifiee={!!contratForm.numero_contrat}
+		resume={contratForm.numero_contrat || 'aucune'}
+		pour="{idNotes}-numero"
+	>
+		<input
+			id="{idNotes}-numero"
+			bind:value={contratForm.numero_contrat}
+			placeholder="N° du contrat"
+		/>
+	</SectionFormulaire>
+{/if}
+
+<!--  ══ 3. ÉQUIPEMENT ══ Ce que le contrat entretient — il le DÉFINIT. -->
+{#if sectionPresente(CONTRAT, etat, 'equipement')}
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.equipement}
+		pliable={pliageDe(CONTRAT, 'equipement')}
+		requis={requisDe(CONTRAT, 'equipement')}
+		rempli={!!contratForm.type_equipement}
+		pour="{idNotes}-equipement"
+	>
 		<!--  🔴 Ce champ MANQUAIT à l'édition en ligne avant le 30/08/2026 : le type
 		      d'équipement d'un contrat ne s'y modifiait pas, et rien ne le disait. -->
-		<label class="field"
-			>Équipement
-			<select bind:value={contratForm.type_equipement}>
-				{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-			</select>
-		</label>
-		<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-		<label class="field"
-			>Début<EtoileRequis vide={!contratForm.date_debut} /><input
-				type="date"
-				bind:value={contratForm.date_debut}
-				required
-			/></label
-		>
-		<label class="field"
-			>Durée initiale
-			<div class="duo">
-				<input
-					type="number"
-					min="1"
-					placeholder="Ex. 12"
-					bind:value={contratForm.duree_initiale_valeur}
-				/>
-				<select bind:value={contratForm.duree_initiale_unite}>
-					<option value="mois">mois</option>
-					<option value="ans">ans</option>
-				</select>
-			</div>
-		</label>
-		<ChampFrequence
-			bind:frequenceType={contratForm.frequence_type}
-			bind:frequenceValeur={contratForm.frequence_valeur}
-		/>
-		<label class="field"
-			>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label
-		>
-	</div>
-</SectionFormulaire>
+		<select id="{idNotes}-equipement" bind:value={contratForm.type_equipement}>
+			{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
+		</select>
+	</SectionFormulaire>
+{/if}
+
+<!--  ══ 5. QUAND ══ Depuis quand, pour combien de temps, à quel rythme. -->
+{#if sectionPresente(CONTRAT, etat, 'quand')}
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.quand}
+		pliable={pliageDe(CONTRAT, 'quand')}
+		requis={requisDe(CONTRAT, 'quand')}
+		rempli={!!contratForm.date_debut}
+	>
+		<div class="form-grid">
+			<label class="field"
+				>Début<EtoileRequis vide={!contratForm.date_debut} /><input
+					type="date"
+					bind:value={contratForm.date_debut}
+					required
+				/></label
+			>
+			<label class="field"
+				>Durée initiale
+				<div class="duo">
+					<input
+						type="number"
+						min="1"
+						placeholder="Ex. 12"
+						bind:value={contratForm.duree_initiale_valeur}
+					/>
+					<select bind:value={contratForm.duree_initiale_unite}>
+						<option value="mois">mois</option>
+						<option value="ans">ans</option>
+					</select>
+				</div>
+			</label>
+			<ChampFrequence
+				bind:frequenceType={contratForm.frequence_type}
+				bind:frequenceValeur={contratForm.frequence_valeur}
+			/>
+			<label class="field"
+				>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label
+			>
+		</div>
+	</SectionFormulaire>
+{/if}
+
+<!--  ══ 6. INTERVENANT ══ Le prestataire qui signe — la section qui le nomme
+      sur les affaires. -->
+{#if sectionPresente(CONTRAT, etat, 'intervenant')}
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.intervenant}
+		pliable={pliageDe(CONTRAT, 'intervenant')}
+		requis={requisDe(CONTRAT, 'intervenant')}
+		rempli={!!contratForm.prestataire_id}
+		pour="{idNotes}-prestataire"
+	>
+		<select id="{idNotes}-prestataire" bind:value={contratForm.prestataire_id} required>
+			<option value="">— Sélectionner —</option>
+			{#each prestataires as pr (pr.id)}<option value={String(pr.id)}>{pr.nom}</option>{/each}
+		</select>
+	</SectionFormulaire>
+{/if}
 
 <!--  ══ 4. PÉRIMÈTRE ══ « Périmètre », pas « Périmètre couvert » : c'est le même
       objet que partout ailleurs, il porte le même nom (R3, signalé le 12/09).
@@ -149,6 +195,8 @@
 	<SectionFormulaire
 		titre={SECTIONS_LIBELLE.perimetre}
 		pliable={pliageDe(CONTRAT, 'perimetre')}
+		requis={requisDe(CONTRAT, 'perimetre')}
+		rempli={(contratForm.perimetre_cible ?? []).length > 0}
 		pour={idPerimetre}
 	>
 		<div role="group" aria-labelledby={idPerimetre}>
@@ -168,6 +216,7 @@
 		titre={SECTIONS_LIBELLE.description}
 		pliable={pliageDe(CONTRAT, 'description')}
 		valeurModifiee={!!contratForm.notes?.trim()}
+		resume={contratForm.notes?.trim() ? 'renseignée' : 'aucune'}
 		pour={idNotes}
 	>
 		<RichEditor

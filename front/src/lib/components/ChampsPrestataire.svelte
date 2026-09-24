@@ -19,8 +19,9 @@
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
+	import { pliageDe, requisDe } from '$lib/pliage';
+	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
-	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { PRESTATAIRE } from '$lib/entites/prestataire';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
@@ -48,90 +49,84 @@
       sur les dix autres écrans (12/09/2026). Voir `ChampsContrat`. -->
 <SectionTitre id={idNom} libelle="Nom" bind:valeur={prestForm.nom} />
 
-<!--  ══ 2. CHAMPS SPÉCIFIQUES ══ Ce qui décrit l'entreprise. -->
+<!--  🔴 LES SECTIONS STANDARD (24/09/2026, signalé à l'écran : « Prendre exemple
+      sur l'UX d'Affaires »). « L'entreprise » et « Contact » n'étaient pas au
+      cadre : le type devient la CATÉGORIE, la spécialité l'ÉQUIPEMENT — c'était
+      la même liste —, et le courriel rejoint les CONTACTS, facultatifs donc
+      pliés. -->
+
+<!--  ══ 2. CATÉGORIE ══ Le type d'entreprise. -->
 {#if sectionPresente(PRESTATAIRE, etat, 'nature')}
-	<SectionFormulaire titre="L'entreprise">
-		<div class="form-grid">
-			<!--  🔴 Six entrées portant chacune une description : c'est le cas
-					      qui a fait donner un sous-texte à `Pastille` (#491, seuil arbitré
-					      à 6). Le FILTRE de cette même liste la montre depuis le 29/08 —
-					      le formulaire, lui, gardait un `<select>` où la description ne
-					      s'affichait nulle part. Deux rendus du même objet, et c'est
-					      celui qui sert à CHOISIR qui perdait ce qui aide à choisir.
-					      `champ-large` : dix pastilles à sous-texte dans une colonne de
-					      grille s'empileraient une par ligne (`ux-patterns` §9 bis). -->
-			<ChoixPastilles
-				options={typesPrestataire}
-				bind:valeur={prestForm.type_prestataire}
-				tous={false}
-				libelle="Type"
-				libelleVisible
-				requis
-				avecDetail
-			/>
-			<label class="field"
-				>Spécialité<EtoileRequis vide={!prestForm.specialite} />
-				<select bind:value={prestForm.specialite} required>
-					<option value="">— Sélectionner —</option>
-					{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-				</select>
-			</label>
-			<label class="field">Email<input type="email" bind:value={prestForm.email} /></label>
-		</div>
+	<SectionFormulaire
+		titre="Catégorie"
+		pliable={pliageDe(PRESTATAIRE, 'nature')}
+		requis={requisDe(PRESTATAIRE, 'nature')}
+		rempli={!!prestForm.type_prestataire}
+		idTitre="{idNom}-categorie"
+	>
+		<!--  🔴 Six entrées portant chacune une description : c'est le cas qui a
+		      fait donner un sous-texte à `Pastille` (#491, seuil arbitré à 6). -->
+		<ChoixPastilles
+			options={typesPrestataire}
+			bind:valeur={prestForm.type_prestataire}
+			tous={false}
+			libelle="Catégorie"
+			avecDetail
+		/>
 	</SectionFormulaire>
 {/if}
 
-<!--  Les CONTACTS : une section à part, parce que c'est une liste répétable et
-      non un champ de plus. Elle n'est pas au cadre des neuf — un prestataire est
-      un carnet d'adresses, et ses personnes SONT son contenu.
+<!--  ══ 3. ÉQUIPEMENT ══ Ce que l'entreprise entretient — ex-« Spécialité ». -->
+{#if sectionPresente(PRESTATAIRE, etat, 'equipement')}
+	<SectionFormulaire
+		titre={SECTIONS_LIBELLE.equipement}
+		pliable={pliageDe(PRESTATAIRE, 'equipement')}
+		requis={requisDe(PRESTATAIRE, 'equipement')}
+		rempli={!!prestForm.specialite}
+		pour="{idNom}-equipement"
+	>
+		<select id="{idNom}-equipement" bind:value={prestForm.specialite} required>
+			<option value="">— Sélectionner —</option>
+			{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
+		</select>
+	</SectionFormulaire>
+{/if}
 
-      ⚠️ Son intitulé passait par un `<div>` habillé en ligne
-      (`font-size:.85rem;font-weight:600`) : la troisième écriture d'un titre de
-      section, celle que `SectionFormulaire` existe pour supprimer. -->
-<SectionFormulaire titre={prestContacts.length > 1 ? 'Contacts' : 'Contact'}>
-	<div>
+<!--  ══ 6. CONTACTS ══ Une liste répétable : ses personnes SONT le contenu d'une
+      fiche d'annuaire. Chaque champ porte son libellé (`.field`) — ils n'avaient
+      qu'un placeholder, qui disparaît dès qu'on tape. -->
+{#if sectionPresente(PRESTATAIRE, etat, 'intervenant')}
+	<SectionFormulaire
+		titre="Contacts"
+		pliable={pliageDe(PRESTATAIRE, 'intervenant')}
+		valeurModifiee={!!prestForm.email || prestContacts.some((c) => c.telephone?.trim())}
+		resume={prestContacts.filter((c) => c.telephone?.trim()).length
+			? `${prestContacts.filter((c) => c.telephone?.trim()).length} contact(s)`
+			: 'aucun'}
+	>
+		<label class="field"
+			>E-mail de l’entreprise<input type="email" bind:value={prestForm.email} /></label
+		>
 		{#each prestContacts as _contact, i (_contact)}
-			<div
-				style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)"
-			>
-				<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.35rem">
-					<input
-						style="flex:2;min-width:140px"
-						bind:value={prestContacts[i].telephone}
-						placeholder="Téléphone *"
-					/>
-					<input
-						style="flex:1;min-width:100px"
-						bind:value={prestContacts[i].prenom}
-						placeholder="Prénom"
-					/>
-					<input
-						style="flex:1;min-width:100px"
-						bind:value={prestContacts[i].nom}
-						placeholder="Nom"
-					/>
+			<div class="contact">
+				<div class="form-grid">
+					<label class="field">Téléphone<input bind:value={prestContacts[i].telephone} /></label>
+					<label class="field">Prénom<input bind:value={prestContacts[i].prenom} /></label>
+					<label class="field">Nom<input bind:value={prestContacts[i].nom} /></label>
+					<label class="field">Fonction<input bind:value={prestContacts[i].fonction} /></label>
+					<label class="field"
+						>E-mail<input type="email" bind:value={prestContacts[i].email} /></label
+					>
 				</div>
-				<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
-					<input
-						style="flex:1;min-width:120px"
-						bind:value={prestContacts[i].fonction}
-						placeholder="Fonction"
-					/>
-					<input
-						style="flex:1;min-width:140px"
-						type="email"
-						bind:value={prestContacts[i].email}
-						placeholder="Email"
-					/>
-					{#if prestContacts.length > 1}
-						<button
-							type="button"
-							class="btn btn-sm btn-outline"
-							style="color:#dc2626;border-color:#dc2626;flex-shrink:0"
-							on:click={() => (prestContacts = prestContacts.filter((_, j) => j !== i))}>−</button
-						>
-					{/if}
-				</div>
+				{#if prestContacts.length > 1}
+					<button
+						type="button"
+						class="btn btn-sm btn-outline btn-retirer"
+						aria-label="Retirer ce contact"
+						on:click={() => (prestContacts = prestContacts.filter((_, j) => j !== i))}
+						>− Retirer</button
+					>
+				{/if}
 			</div>
 		{/each}
 		<button
@@ -143,8 +138,8 @@
 					{ telephone: '', prenom: '', nom: '', fonction: '', email: '' },
 				])}>+ Nouveau contact</button
 		>
-	</div>
-</SectionFormulaire>
+	</SectionFormulaire>
+{/if}
 
 <style>
 	/*  Une grille plus SERRÉE que la norme — 180 px de colonne minimale au lieu de
@@ -168,5 +163,18 @@
 	.form-grid {
 		grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
 		gap: 0.65rem;
+	}
+	/*  Un contact : un cadre, pour qu'on voie où s'arrête une personne et où
+	    commence la suivante. Il était posé par un `style=` en ligne. */
+	.contact {
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		padding: 0.6rem;
+		margin: 0.5rem 0;
+	}
+	.btn-retirer {
+		color: var(--color-danger, #dc2626);
+		border-color: currentColor;
+		margin-top: 0.4rem;
 	}
 </style>

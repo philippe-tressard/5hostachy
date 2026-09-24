@@ -45,26 +45,23 @@ export const CONTRAT: EntiteDeclaree = {
 			requis: true,
 		},
 		{
+			//  🔴 Les sections STANDARD (24/09/2026, signalé à l'écran : « Prendre
+			//  exemple sur l'UX d'Affaires »). Tout vivait dans une section « Le
+			//  contrat » que le cadre ne connaît pas — prestataire, équipement, dates
+			//  et numéro, sans distinguer l'obligatoire du facultatif. Chaque groupe
+			//  rejoint la section qui le nomme sur les affaires ; ne reste ici que le
+			//  numéro, facultatif, donc plié.
 			id: 'nature',
-			objet:
-				'Prestataire · Équipement · N° de contrat · Début · Durée · Fréquence · Prochaine visite',
-			requis: true,
-			//  L'intitulé rendu à l'écran : « Champs spécifiques » est le nom du
-			//  CADRE, pas ce qu'un gestionnaire lit. `lint:etats` exige qu'il soit
-			//  déclaré ici plutôt qu'inventé dans le balisage — sinon deux écrans
-			//  nomment différemment la même section.
-			titreEcran: ['Le contrat'],
+			objet: 'N° de contrat',
+			titreEcran: ['Référence'],
+			pliee: true,
 		},
 		{
-			//  🔴 L'équipement EST déclaré, mais dans la section « Nature » : le
-			//  formulaire d'un contrat le demande avec le prestataire et la fréquence,
-			//  parce qu'un contrat d'entretien se définit PAR ce qu'il entretient.
-			//  Le déclarer ici en plus donnerait deux sections pour un champ.
+			//  Il ne qualifie pas le contrat, il le DÉFINIT — un contrat d'entretien
+			//  sans ce qu'il entretient n'existe pas : obligatoire.
 			id: 'equipement',
-			sansObjet:
-				"L'équipement d'un contrat vit dans sa section « Le contrat » (`nature`) : " +
-				"il ne qualifie pas le contrat, il le DÉFINIT — un contrat d'entretien sans " +
-				"ce qu'il entretient n'existe pas.",
+			objet: 'Équipement entretenu',
+			requis: true,
 		},
 		{
 			id: 'suivi',
@@ -75,26 +72,31 @@ export const CONTRAT: EntiteDeclaree = {
 				'contrats en cours et les contrats échus.',
 		},
 		{
+			//  Ses DATES — début, durée, rythme, prochaine visite. Le contrat ne
+			//  paraît pas pour autant sous le filtre Calendrier : ce sont les
+			//  entretiens qu'il déclenche qui s'y inscrivent.
 			id: 'quand',
-			sansObjet:
-				"un contrat ne paraît pas au calendrier de la résidence : ce sont les interventions qu'il déclenche qui s'y inscrivent, pas lui",
+			objet: 'Début · Durée initiale · Fréquence · Prochaine visite',
+			requis: true,
 		},
 		{
+			//  Le prestataire qui signe : la section qui le nomme sur une affaire.
 			id: 'intervenant',
-			sansObjet:
-				"Même raison : le prestataire est dans « Le contrat ». C'est lui qui signe, " +
-				'pas un intervenant de passage.',
+			objet: 'Prestataire',
+			requis: true,
 		},
 		{
 			id: 'perimetre',
 			objet: 'PerimetrePicker — ce que le contrat entretient',
-			//  ⚠️ Pas `requis` : un contrat d'assurance ou de syndic couvre la
-			//  copropriété entière, et l'imposer ferait cocher « résidence » à la
-			//  main sur un tiers des contrats pour ne rien apprendre.
+			//  🔴 OBLIGATOIRE, donc DÉPLIÉ (24/09/2026, arbitré à l'écran : « le
+			//  périmètre est toujours obligatoire »). Il ne l'était pas, au motif
+			//  qu'un contrat d'assurance couvre la copropriété entière — c'est
+			//  justement la valeur que le sélecteur propose d'office : rien à
+			//  cocher, et le serveur la pose si la liste arrive vide.
 			//  ⚠️ L'aide (« il apparaît dans le carnet d'entretien de ce périmètre »)
 			//  vit AVEC le champ : la déclaration dit ce qui est rendu, pas comment
 			//  on l'explique.
-			pliee: true,
+			requis: true,
 		},
 		{
 			id: 'description',

@@ -48,7 +48,7 @@
 		<thead>
 			<tr>
 				<th>Prestataire</th>
-				<th>Spécialité</th>
+				<th>Équipement</th>
 				<th>Type</th>
 				<th>Actions</th>
 			</tr>
@@ -57,7 +57,7 @@
 			{#each reportPrestataires as p (p.id)}
 				<tr>
 					<td><strong>{p.nom}</strong></td>
-					<td>{p.specialite ?? '—'}</td>
+					<td>{equipLabel(p.specialite)}</td>
 					<td>{p.type_prestataire ?? '—'}</td>
 					<td
 						><button class="btn btn-sm btn-outline" on:click={() => loadPrestSynthese(p.id)}
@@ -83,7 +83,7 @@
 		</div>
 		<div class="report-grid-2" style="margin-bottom:1rem">
 			<div>
-				<p><strong>Spécialité :</strong> {reportPrestSynth.specialite}</p>
+				<p><strong>Équipement :</strong> {equipLabel(reportPrestSynth.specialite)}</p>
 				<p><strong>Type :</strong> {reportPrestSynth.type_prestataire}</p>
 				{#if reportPrestSynth.email}<p><strong>Email :</strong> {reportPrestSynth.email}</p>{/if}
 				{#if reportPrestSynth.contacts && reportPrestSynth.contacts.length > 0}
