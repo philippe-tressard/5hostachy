@@ -155,10 +155,10 @@ def test_les_blocs_depliables_sont_OUVERTS(document, manuel):
     #  Même raison que plus haut : le compte vient de la SOURCE, pas d'un chiffre
     #  figé. Ce qui est vérifié est que **chaque** bloc converti a gardé sa
     #  classe — pas qu'il y en a un nombre convenu.
-    assert document.count('<div class="ecran-detail">') == attendus, (
-        "les blocs convertis ont perdu leurs attributs : ils s'imprimeraient "
-        "sans leur habillage"
-    )
+    classes = re.findall(r'<details class="([^"]+)"', manuel)  # ecran- et persona-detail
+    assert len(classes) == attendus and all(
+        document.count(f'<div class="{c}">') == classes.count(c) for c in set(classes)
+    ), "les blocs convertis ont perdu leurs attributs : ils s'imprimeraient sans leur habillage"
     #  Les trois seuls caractères de contrôle voulus, désignés par leur code —
     #  les écrire en littéral dans ce fichier serait précisément le défaut.
     voulus = {9, 10, 13}
