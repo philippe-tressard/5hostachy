@@ -42,8 +42,7 @@
 	$: fichiers = (item.meta?.fichiers_urls as string[] | undefined) ?? [];
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="flux-body" on:click|stopPropagation>
+<div class="flux-body" role="presentation" on:click|stopPropagation>
 	{#if item.meta?.lieu}<p class="flux-meta-line">📍 {item.meta.lieu}</p>{/if}
 	<!--  ⚠️ Le périmètre n'est PAS répété ici : il est déjà en badge dans
 		      l'en-tête de la carte, visible replié comme déplié. Il s'affichait
