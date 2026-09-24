@@ -4,6 +4,7 @@
 	import AideSource from '$lib/components/AideSource.svelte';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import ChampsCrAg from '$lib/components/ChampsCrAg.svelte';
 	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
 	import SectionDiagnostics from '$lib/components/SectionDiagnostics.svelte';
 	import FormulaireEditionDocument, {
@@ -693,23 +694,12 @@
 						on:annuler={() => (showCrAgForm = false)}
 						on:enregistrer={addCrAg}
 					>
-						<div class="paire" slot="specifiques">
-							<label class="field" for="ag-annee">
-								Année *
-								<input
-									id="ag-annee"
-									type="number"
-									bind:value={newCrAgAnnee}
-									min="1900"
-									max="2100"
-									placeholder="2025"
-								/>
-							</label>
-							<label class="field" for="ag-date">
-								Date de l'AG *
-								<input id="ag-date" type="date" bind:value={newCrAgDateAg} />
-							</label>
-						</div>
+						<ChampsCrAg
+							slot="specifiques"
+							requis
+							bind:annee={newCrAgAnnee}
+							bind:dateAg={newCrAgDateAg}
+						/>
 						<label class="field" for="ag-description" slot="description">
 							Description
 							<textarea
@@ -767,13 +757,6 @@
 {/if}
 
 <style>
-	/*  Deux champs courts qui vont ensemble — année et date d'AG. La règle
-	    était écrite en `style=` sur la balise, dans les deux formulaires. */
-	.paire {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.75rem;
-	}
 	/* ── Photo bannière ─────────────────────────────────────────── */
 	.photo-figure {
 		margin: 0 auto 2rem;

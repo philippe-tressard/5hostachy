@@ -86,6 +86,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
+	import ChampsCrAg from '$lib/components/ChampsCrAg.svelte';
 	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
 
 	const dispatch = createEventDispatcher<{ annuler: void; enregistrer: void }>();
@@ -109,22 +110,11 @@
 >
 	<svelte:fragment slot="specifiques">
 		{#if correction.mode === 'ag'}
-			<div class="paire">
-				<label class="field" for="edit-doc-annee">
-					Année
-					<input
-						id="edit-doc-annee"
-						type="number"
-						bind:value={correction.annee}
-						min="1900"
-						max="2100"
-					/>
-				</label>
-				<label class="field" for="edit-doc-date">
-					Date de l'AG
-					<input id="edit-doc-date" type="date" bind:value={correction.dateAg} />
-				</label>
-			</div>
+			<ChampsCrAg
+				idPrefixe="edit-doc"
+				bind:annee={correction.annee}
+				bind:dateAg={correction.dateAg}
+			/>
 		{/if}
 	</svelte:fragment>
 
@@ -137,15 +127,3 @@
 			rows="3"></textarea>
 	</label>
 </FormulaireDocument>
-
-<style>
-	/*  Deux champs courts qui vont ensemble — année et date d'AG. La règle
-	    voyage AVEC le balisage : laissée dans la page que le balisage vient de
-	    quitter, elle ne s'appliquerait plus à rien, Svelte scopant les styles
-	    (#344, refait le 15/08/2026 sur `FormulaireEvenement`). */
-	.paire {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.5rem;
-	}
-</style>

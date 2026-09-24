@@ -31,6 +31,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { config as configApi, type UsageIA } from '$lib/api';
 	import { memePrompt } from '$lib/promptOrigine';
 
@@ -150,7 +151,7 @@
 	<SectionFormulaire titre="Modèle">
 		<div class="form-grid">
 			<label class="field">
-				Modèle *
+				<span>Modèle<EtoileRequis vide={!modele} /></span>
 				{#if catalogue.etat === 'pret'}
 					<select value={modele} on:change={(e) => poser(cles.modele, e.currentTarget.value)}>
 						<option value="">— choisir un modèle —</option>

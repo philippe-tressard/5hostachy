@@ -31,7 +31,11 @@ export function etoilesEnLigne(brut) {
 	sansCommentaires(brut)
 		.split('\n')
 		.forEach((ligne, i) => {
-			if (/ \*<\/(label|span)>/.test(ligne) || /\{requis \? ' \*' : ''\}/.test(ligne)) {
+			if (
+				/ \*<\/(label|span)>/.test(ligne) ||
+				/ \*<(input|select|textarea)\b/.test(ligne) ||
+				/\{requis \? ' \*' : ''\}/.test(ligne)
+			) {
 				fautes.push({ ligne: i + 1, texte: ligne.trim().slice(0, 70) });
 			}
 		});
@@ -47,11 +51,16 @@ export function etoilesEnLigne(brut) {
 //
 //  Rien ne la suit sur la ligne, donc ni `</label>` ni `</span>`. La Boîte à
 //  idées l'affichait en noir, signalée à l'écran. Le relevé en a trouvé QUINZE,
-//  dans neuf fichiers : plafond décroissant, comme `lint:confirmation` ; la
-//  conversion des quatorze restantes est suivie par #1254.
+//  dans neuf fichiers ; un plafond décroissant les a tenues le temps de les
+//  convertir, et il est tombé à zéro avec #1254 : c'est désormais un refus pur.
 //  Seul le BALISAGE est lu — dans un `<script>`, « a * » en fin de ligne est une
 //  multiplication.
-export const PLAFOND_ETOILES_FIN_DE_LIGNE = 14;
+//
+//  ⚠️ En convertissant, #1254 en a trouvé TROIS d'une troisième forme, que ni
+//  l'un ni l'autre motif ne voyait : l'astérisque collée au CONTRÔLE qui suit,
+//  `>Question *<input …` (FAQ, relevé de consommation). `etoilesEnLigne` la
+//  refuse désormais. Un relevé par motif ne prouve rien sur ce qu'il n'a pas
+//  cherché — d'où les cas ci-dessous, que `--selftest` rejoue.
 
 /** Astérisques en fin de ligne d'un libellé, dans le balisage seul. */
 export function etoilesFinDeLigne(brut) {
@@ -65,4 +74,23 @@ export function etoilesFinDeLigne(brut) {
 		}
 	});
 	return fautes;
+}
+
+/** Les cas que `check-champs.mjs --selftest` rejoue : [nom, source, fautes attendues]. */
+export const CAS_ETOILES = [
+	['collée à la fin du libellé', '<label for="t">Titre *</label>', 1],
+	['calculée en chaîne', "<label>{libelle}{requis ? ' *' : ''}</label>", 1],
+	['collée au contrôle qui suit', '<label class="field">Question *<input /></label>', 1],
+	['en fin de ligne, libellé enveloppant', '<label class="field">\n\tTitre *\n\t<input />', 1],
+	[
+		'EtoileRequis dans un <span>',
+		'<label class="field"><span>Titre<EtoileRequis vide={!t} /></span><input /></label>',
+		0,
+	],
+	['multiplication dans le script', '<script>\nconst a = b *\n2;\n</script>\n<p>ok</p>', 0],
+];
+
+/** Toutes les formes refusées, pour une source. */
+export function etoiles(brut) {
+	return [...etoilesEnLigne(brut), ...etoilesFinDeLigne(brut)];
 }

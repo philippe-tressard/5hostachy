@@ -90,7 +90,6 @@ export const EXCEPTIONS = {
 	'routes/(app)/profil/+page.svelte':
 		'« Envoyer la demande » / « Envoi… » (l. ~451) et « Je suis un nouvel arrivant » ' +
 		'/ « Envoi… » (l. ~526)',
-	'routes/(app)/sondages/[id]/+page.svelte': 'attente « Sauvegarde… » (l. ~328)',
 	//  ⚠️ L'exception de `tickets/[id]` disait « c'est une seconde écriture
 	//  d'`EvolForm`, à fusionner avant d'aligner le verbe ». La fusion a eu lieu le
 	//  17/08/2026 (#431) : le formulaire de réponse écrit à la main a disparu, le
