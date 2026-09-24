@@ -62,12 +62,7 @@
 		optionsDuTicket,
 		optionsVersTicket,
 		ticketUrgent,
-	} from '$lib/tickets';
-	import { fmtDate, isNouveau } from '$lib/date';
-	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
-	import { nomCopie, nomProprietaire } from '$lib/saisi-pour';
-	import { equipLabel, intervenantAffiche } from '$lib/prestataires';
-	import {
+		attributsNature,
 		BADGE_PRIORITE,
 		PRIORITE_BREVE,
 		STATUT_TICKET_BADGE,
@@ -75,6 +70,10 @@
 		STATUT_TICKET_OPTIONS,
 		categorieTicketEmoji,
 	} from '$lib/tickets';
+	import { fmtDate, isNouveau } from '$lib/date';
+	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
+	import { nomCopie, nomProprietaire } from '$lib/saisi-pour';
+	import { equipLabel, intervenantAffiche } from '$lib/prestataires';
 
 	export let ticket: Ticket;
 	//  À QUI l'affaire appartient — le « Saisi pour » s'il existe, l'auteur
@@ -156,6 +155,7 @@
 
 <div
 	id="ticket-{ticket.id}"
+	{...attributsNature(ticket)}
 	class:carte-liste={!archive}
 	class:history-item={archive}
 	class:expanded
@@ -165,8 +165,6 @@
 		if (!expanded) dispatch('basculer');
 	}}
 >
-	<!--  Titre sur sa propre ligne, puis tags à gauche / date + actions à droite :
-	      la norme de toutes les cartes du site (`EnteteCarte`, 18/08/2026). -->
 	<!--  Le geste de dépliage vit dans `EnteteCarte` : le TITRE plie, avec un
 	      survol qui le dit (18/08/2026). Le conteneur ne porte plus
 	      `role="button"` — il interceptait la sélection de texte, et obligeait

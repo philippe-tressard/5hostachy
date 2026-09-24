@@ -33,7 +33,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { reserveAuConseil } from '$lib/destinataires';
-	import { lienTicket, ticketUrgent } from '$lib/tickets';
+	import { attributsNature, lienTicket, ticketUrgent } from '$lib/tickets';
 	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
 	//  écrits ici ET dans les cases du formulaire, et avaient divergé.
 	import { optionPublication } from '$lib/options-publication';
@@ -75,6 +75,7 @@
 
 <div
 	class="carte-liste"
+	{...attributsNature(pub)}
 	class:expanded
 	class:urgent={ticketUrgent(pub)}
 	class:attenue={!estFil}
