@@ -13,7 +13,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 import json
 
-from pydantic import BaseModel, field_validator, field_validator
+from pydantic import BaseModel, field_validator
 from sqlalchemy import func
 from sqlmodel import Session, select
 
@@ -194,7 +194,7 @@ def list_contrats(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    contrats = session.exec(select(ContratEntretien).where(ContratEntretien.actif == True)).all()
+    contrats = session.exec(select(ContratEntretien).where(ContratEntretien.actif == True)).all()  # noqa: E712
     #  ⚠️ La configuration de l'assistant se lit UNE fois, pas par contrat : elle
     #  est la même pour tous, et la relire à chaque ligne ferait autant d'allers
     #  en base que de contrats pour une réponse identique.
@@ -376,7 +376,7 @@ def create_notation(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    p = ou_404(session, Prestataire, body.prestataire_id, "Prestataire")
+    ou_404(session, Prestataire, body.prestataire_id, "Prestataire")
     n = NotationPrestataire(
         prestataire_id=body.prestataire_id,
         note=body.note,
@@ -413,7 +413,7 @@ def get_prestataire_synthese(
     p = ou_404(session, Prestataire, p_id, "Prestataire")
 
     contrats = session.exec(
-        select(ContratEntretien).where(ContratEntretien.prestataire_id == p_id, ContratEntretien.actif == True)
+        select(ContratEntretien).where(ContratEntretien.prestataire_id == p_id, ContratEntretien.actif == True)  # noqa: E712
     ).all()
     notations = session.exec(
         select(NotationPrestataire).where(NotationPrestataire.prestataire_id == p_id).order_by(NotationPrestataire.cree_le.desc())

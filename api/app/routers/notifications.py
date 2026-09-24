@@ -51,7 +51,7 @@ def tout_marquer_lu(
     notifs = session.exec(
         select(Notification)
         .where(Notification.destinataire_id == user.id)
-        .where(Notification.lue == False)
+        .where(Notification.lue == False)  # noqa: E712
     ).all()
     for n in notifs:
         n.lue = True

@@ -139,7 +139,7 @@ def list_categories(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Retourne les catégories de documents actives accessibles à l'utilisateur."""
-    cats = session.exec(select(CategorieDocument).where(CategorieDocument.actif == True).order_by(CategorieDocument.libelle)).all()
+    cats = session.exec(select(CategorieDocument).where(CategorieDocument.actif == True).order_by(CategorieDocument.libelle)).all()  # noqa: E712
     # CS et admin voient toutes les catégories
     if est_moderateur(user):
         return [{"id": c.id, "code": c.code, "libelle": c.libelle} for c in cats]

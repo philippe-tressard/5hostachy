@@ -17,7 +17,6 @@ from app.models.core import (
     Utilisateur,
 )
 from app.utils.limiter import LIMITE_JOURNAL, limiter
-from app.utils.noms import nom_affiche
 from app.utils.telemetrie_calculs import (
     _palmares,
     _cumul_par_page,
@@ -139,7 +138,6 @@ def dashboard(
     # Minuit Paris aujourd'hui → converti en UTC naïf pour requête sur cree_le
     today_start_utc = now_paris.replace(hour=0, minute=0, second=0, microsecond=0) \
         .astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
-    today_paris_str = now_paris.strftime("%Y-%m-%d")
 
     # Offset horaire Paris (pour convertir les heures UTC → Paris dans les labels)
     paris_offset = int(now_paris.utcoffset().total_seconds() // 3600)

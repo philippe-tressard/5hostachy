@@ -79,11 +79,8 @@ def test_toute_tache_attendue_a_un_producteur():
     Ce test verrouille la classe et non le cas : toute tâche ajoutée au tableau sans
     producteur échouera ici, avant d'aller peindre un faux rouge sur l'écran.
     """
-    from pathlib import Path
-
     from app.routers.admin import _PERIODICITE_ATTENDUE_H
 
-    racine = Path(__file__).resolve().parents[2]
     #  Portée du scan : source unique dans conftest — un glob local ici avait
     #  cessé de voir les scripts déplacés dans `scripts/` (#337).
     scripts = {p.name: p.read_text(encoding="utf-8") for p in scripts_shell_versionnes()}

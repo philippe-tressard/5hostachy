@@ -95,8 +95,8 @@ def create_delegation(
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Créer une délégation (CS/Admin uniquement)."""
-    mandant = ou_404(session, Utilisateur, body.mandant_id, "Mandant")
-    aidant = ou_404(session, Utilisateur, body.aidant_id, "Aidant")
+    ou_404(session, Utilisateur, body.mandant_id, "Mandant")
+    ou_404(session, Utilisateur, body.aidant_id, "Aidant")
     if body.mandant_id == body.aidant_id:
         raise HTTPException(400, "Le mandant et l'aidant doivent être différents")
 

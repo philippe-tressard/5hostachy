@@ -66,7 +66,7 @@ def list_faq(
     """Retourne toutes les entrées FAQ actives, triées par catégorie puis ordre."""
     return session.exec(
         select(FaqItem)
-        .where(FaqItem.actif == True)
+        .where(FaqItem.actif == True)  # noqa: E712
         .order_by(FaqItem.categorie, FaqItem.ordre, FaqItem.id)
     ).all()
 
@@ -79,7 +79,7 @@ def list_categories(
     """Retourne la liste des catégories distinctes existantes."""
     rows = session.exec(
         select(distinct(FaqItem.categorie))
-        .where(FaqItem.categorie != None, FaqItem.categorie != "")
+        .where(FaqItem.categorie != None, FaqItem.categorie != "")  # noqa: E711
         .order_by(FaqItem.categorie)
     ).all()
     return [r for r in rows if r]

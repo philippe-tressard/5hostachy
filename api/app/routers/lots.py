@@ -88,7 +88,7 @@ def mes_lots(
     # Toujours privilégier les associations explicites UserLot.
     # Évite qu'un profil CS/admin voie "tous les lots" alors qu'il attend ses lots personnels.
     user_lots = session.exec(
-        select(UserLot).where(UserLot.user_id == user.id, UserLot.actif == True)
+        select(UserLot).where(UserLot.user_id == user.id, UserLot.actif == True)  # noqa: E712
     ).all()
     user_lot_ids = [ul.lot_id for ul in user_lots]
 
