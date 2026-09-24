@@ -1314,8 +1314,9 @@ lui seul sait ce qu'elles portent.
 🔴 **Une Description se rend par `SectionDescription`**, assistant IA et marque ✨
 compris — jamais un `RichEditor` posé sous un intitulé « Description ». L'annonce
 de hall le faisait, sous « Message » : seule Description du site privée de
-l'assistant (#1089). 🔒 `npm run lint:description-unique` ; les écarts restants y
-sont déclarés (#1240).
+l'assistant (#1089). 🔒 `npm run lint:description-unique` ; deux écarts LÉGITIMES y
+sont déclarés — le descriptif d'une page du menu, et le contrat, qui garde sa
+synthèse IA seule (arbitré, #1240).
 
 #### Une section à UN seul champ ne répète pas son nom
 

@@ -11,7 +11,8 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FilAriane from '$lib/components/FilAriane.svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
+	import SectionDescription from '$lib/components/SectionDescription.svelte';
+	import { contexteAssistant } from '$lib/assistant';
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { fmtDateShort } from '$lib/date';
 
@@ -27,7 +28,8 @@
 	$: champLibreActif = !!optionSelectionnee?.champ_libre;
 
 	// Édition
-	let showEditModal = false;
+	let showEditModal = false,
+		editAssisteIA = false;
 	//  `options` ne porte que l'`id` et le LIBELLÉ : le serveur n'accepte rien
 	//  d'autre, et c'est ce qui rend l'ajout et le retrait impossibles par
 	//  construction plutôt que par un contrôle qu'on pourrait oublier (#467).
@@ -134,6 +136,7 @@
 	}
 
 	function openEdit() {
+		editAssisteIA = false;
 		editForm = {
 			question: sondage.question,
 			description: sondage.description ?? '',
@@ -153,6 +156,7 @@
 				cloture_le: editForm.cloture_le ? new Date(editForm.cloture_le).toISOString() : null,
 				resultats_publics: editForm.resultats_publics,
 				options: editForm.options,
+				assiste_ia: editAssisteIA || undefined,
 			});
 			sondage = await sondagesApi.get(sondageId);
 			showEditModal = false;
@@ -392,18 +396,14 @@
 				Question *
 				<input bind:value={editForm.question} required />
 			</label>
-			<label
-				for="sondage-edit-description"
-				style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem"
-			>
-				Description
-				<RichEditor
-					id="sondage-edit-description"
-					bind:value={editForm.description}
-					placeholder="Description du sondage…"
-					minHeight="80px"
-				/>
-			</label>
+			<SectionDescription
+				idPrefixe="sondage-edit"
+				placeholder="Description du sondage…"
+				bind:valeur={editForm.description}
+				assistant={contexteAssistant('sondage', {})}
+				bind:titreObjet={editForm.question}
+				bind:assisteIA={editAssisteIA}
+			/>
 			<!--  Les RÉPONSES : leur libellé se corrige, la liste ne bouge pas.
 			      Ni ajout ni retrait — un vote déjà exprimé sur une option retirée n'a
 			      pas de repli honnête : le compter ailleurs fausse le résultat, le

@@ -8,9 +8,9 @@
  * c'était le seul formulaire à Description privé de l'assistant de rédaction
  * (#985) — celui d'une affiche lue par toute la résidence. Le composant existait,
  * et l'écran le réécrivait (`project_le_composant_existait_deja`, 9ᵉ fois).
- * En traitant ce cas, deux autres sont apparus (#1240) : ils sont déclarés
- * ci-dessous, et le contrôle échoue le jour où ils sont convertis — pour que la
- * déclaration parte avec eux.
+ * En traitant ce cas, deux autres sont apparus (#1240) : la modification d'un
+ * sondage a été convertie ; le contrat garde sa synthèse IA seule, par
+ * arbitrage — un écart LÉGITIME, déclaré ci-dessous avec sa raison.
  *
  * ## Ce qu'il lit
  *
@@ -36,9 +36,11 @@ const EXCEPTIONS = {
 	//  l'administrateur, n'est pas la section Description d'un objet du cadre.
 	'lib/components/OngletDescriptifPages.svelte':
 		"le descriptif d'une page du menu, pas la Description d'un objet",
-	'lib/components/ChampsContrat.svelte': '#1240 — la synthèse IA du contrat y atterrit, à arbitrer',
-	'routes/(app)/sondages/[id]/+page.svelte':
-		'#1240 — la création passe par SectionDescription, pas la correction',
+	//  Légitime, arbitré le 24/09/2026 (#1240) : la Description d'un contrat
+	//  reçoit la SYNTHÈSE IA de ses documents (#899), et seulement elle — pas
+	//  l'assistant de reformulation commun.
+	'lib/components/ChampsContrat.svelte':
+		'la synthèse IA du contrat seule, sans l’assistant commun (arbitré, #1240)',
 };
 
 const NOMME_UNE_DESCRIPTION =
