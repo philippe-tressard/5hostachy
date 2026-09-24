@@ -458,6 +458,47 @@ for (const chemin of composants(RACINE)) {
 		}
 	});
 }
+//  🔴 L'AUTRE FORME, que le motif ci-dessus ne voyait pas (#1186, 24/09/2026) :
+//  l'astérisque en FIN DE LIGNE, dans un libellé qui enveloppe son champ —
+//
+//      <label class="field">
+//          Titre *
+//          <input … />
+//
+//  Rien ne la suit sur la ligne, donc ni `</label>` ni `</span>`. La Boîte à
+//  idées l'affichait en noir, signalée à l'écran. Le relevé en a trouvé QUINZE,
+//  dans neuf fichiers : plafond décroissant, comme `lint:confirmation` ; la
+//  conversion des quatorze restantes est suivie par #1254.
+//  Seul le BALISAGE est lu — dans un `<script>`, « a * » en fin de ligne est une
+//  multiplication.
+const PLAFOND_ETOILES_FIN_DE_LIGNE = 14;
+const ETOILES_FIN_DE_LIGNE = [];
+for (const chemin of composants(RACINE)) {
+	const relatif = relative(RACINE, chemin).split(sep).join('/');
+	if (relatif.endsWith('EtoileRequis.svelte')) continue;
+	const source = sansCommentaires(readFileSync(chemin, 'utf8'));
+	const debut = source.lastIndexOf('</script>');
+	const decalage = debut >= 0 ? source.slice(0, debut).split('\n').length - 1 : 0;
+	(debut >= 0 ? source.slice(debut) : source).split('\n').forEach((ligne, i) => {
+		if (/[A-Za-zÀ-ÿ)'’/] \*\s*$/.test(ligne) && !/^\s*\*/.test(ligne)) {
+			ETOILES_FIN_DE_LIGNE.push(`src/${relatif}:${decalage + i + 1}  ${ligne.trim().slice(0, 70)}`);
+		}
+	});
+}
+if (ETOILES_FIN_DE_LIGNE.length > PLAFOND_ETOILES_FIN_DE_LIGNE) {
+	ETOILES.push(...ETOILES_FIN_DE_LIGNE);
+	console.error(
+		`\n✗ ${ETOILES_FIN_DE_LIGNE.length} astérisque(s) en fin de ligne de libellé — le plafond est ` +
+			`${PLAFOND_ETOILES_FIN_DE_LIGNE}.`,
+	);
+} else if (ETOILES_FIN_DE_LIGNE.length < PLAFOND_ETOILES_FIN_DE_LIGNE) {
+	console.error(
+		`\n✗ Le plafond est PÉRIMÉ : ${ETOILES_FIN_DE_LIGNE.length} astérisque(s) en fin de ligne pour ` +
+			`un plafond de ${PLAFOND_ETOILES_FIN_DE_LIGNE}.\n\n  Abaisser \`PLAFOND_ETOILES_FIN_DE_LIGNE\` ` +
+			`à ${ETOILES_FIN_DE_LIGNE.length} : un plafond au-dessus du réel laisse la place d'en réintroduire.\n`,
+	);
+	process.exit(1);
+}
 if (ETOILES.length > 0) {
 	console.error(`\n✗ ${ETOILES.length} astérisque(s) de champ requis écrite(s) à la main :\n`);
 	for (const e of ETOILES) console.error(`  ${e}`);

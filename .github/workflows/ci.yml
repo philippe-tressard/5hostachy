@@ -1674,6 +1674,15 @@ jobs:
         working-directory: front
         run: npm run lint:pliage-transmis
 
+      # LES FILTRES D'UNE LISTE PRECEDENT SA BOITE DE CREATION (#1186, 24/09/2026)
+      #
+      # `ux-patterns` §0 ter l'ecrivait depuis le 12/09 ; la Boite a idees et les
+      # Petites annonces rendaient pourtant leur filtre SOUS le formulaire ouvert.
+      # L'ecart ne se voit que la boite ouverte, donc jamais en relecture d'ecran.
+      - name: Les filtres precedent la boite de creation
+        working-directory: front
+        run: npm run lint:filtre-avant-formulaire
+
       # UNE SECTION SE NOMME PAR SON TITRE, JAMAIS PAR UN LIBELLE DE CHAMP
       # (23/09/2026, signale a l'ecran : « TITRE » ne ressemblait pas aux autres
       # intitules). Sept formulaires ouvraient leur section 1 sans `titre=`,
