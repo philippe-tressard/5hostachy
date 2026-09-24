@@ -176,17 +176,6 @@
 	}
 </script>
 
-{#if showForm}
-	<FormulaireAnnonce
-		on:cree={(e) => {
-			annonces = [e.detail, ...annonces];
-			showForm = false;
-			expandedAnnonce = e.detail.id;
-		}}
-		on:annule={() => (showForm = false)}
-	/>
-{/if}
-
 <div class="filters">
 	<!--  🔴 TROIS valeurs : sous le seuil des listes courtes, donc des PASTILLES —
 	      la règle est écrite dans `ux-patterns` depuis le 29/08/2026 (#491) et
@@ -215,6 +204,19 @@
 		<option value="prix_desc">Prix décroissant</option>
 	</select>
 </div>
+
+<!--  §0 ter : la boîte de création vient APRÈS les filtres — ce qui qualifie la
+      liste reste au-dessus du formulaire ouvert (#1186). `lint:filtre-avant-formulaire`. -->
+{#if showForm}
+	<FormulaireAnnonce
+		on:cree={(e) => {
+			annonces = [e.detail, ...annonces];
+			showForm = false;
+			expandedAnnonce = e.detail.id;
+		}}
+		on:annule={() => (showForm = false)}
+	/>
+{/if}
 
 <!--  🔴 Les trois états — chargement, erreur, vide — étaient écrits ICI, à la
       main, alors que `EtatListe` les porte (#796). Ils reproduisaient le

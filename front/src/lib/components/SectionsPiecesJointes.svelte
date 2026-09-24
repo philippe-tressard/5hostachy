@@ -52,7 +52,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
-	import { ACCEPT_PHOTOS, separerFichiers } from '$lib/fichiers';
+	import { ACCEPT_PHOTOS, MAX_FICHIERS, separerFichiers } from '$lib/fichiers';
 
 	/** Préfixe des identifiants — l'écran en ouvre parfois plusieurs à la fois. */
 	export let idPrefixe: string;
@@ -79,9 +79,12 @@
 	/**  `'interne'` : la liste d'URLs ci-dessus · `'slot'` : l'écran fournit son
 	 *   propre contrôle (documents d'une publication, qui ont un identifiant). */
 	export let documentsControle: 'interne' | 'slot' = 'interne';
-	/** Téléversement différé — les fichiers attendent que l'objet existe. */
-	export let documentsDifferes = false;
-	export let documentsFichiers: File[] = [];
+	/** Téléversement différé — les fichiers attendent que l'objet existe. Il
+	 *  vaut pour la SECTION : photos comme documents (#1186). */
+	export let differes = false;
+	export let fichiersDifferes: File[] = [];
+	/** Plafond de la section — `MAX_FICHIERS` sauf quand l'objet en fixe un plus bas. */
+	export let max: number = MAX_FICHIERS;
 	/**  Le libellé que l'auteur donne au document — vide, c'est le nom du fichier
 	 *   qui sert. L'appelant le lit au moment d'envoyer (même règle de repli que
 	 *   les contrats : `libelle.trim() || fichier.name`). */
@@ -158,8 +161,9 @@
 					titre=""
 					avecLibelle
 					bind:libelleFichier={photosLibelle}
-					differe={documentsDifferes}
-					bind:fichiers={documentsFichiers}
+					differe={differes}
+					bind:fichiers={fichiersDifferes}
+					{max}
 					size={80}
 				/>
 			</div>
@@ -174,6 +178,9 @@
 						accept={ACCEPT_PHOTOS}
 						avecLibelle
 						bind:libelleFichier={photosLibelle}
+						differe={differes}
+						bind:fichiers={fichiersDifferes}
+						{max}
 						size={80}
 					/>
 				</div>
@@ -193,9 +200,9 @@
 							titre=""
 							avecLibelle
 							bind:libelleFichier={documentsLibelle}
-							differe={documentsDifferes}
+							differe={differes}
 							bind:urls={documents}
-							bind:fichiers={documentsFichiers}
+							bind:fichiers={fichiersDifferes}
 						/>
 					{/if}
 				</div>

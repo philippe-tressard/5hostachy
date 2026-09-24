@@ -78,6 +78,7 @@
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import { SECTIONS_LIBELLE, type EntiteDeclaree, type IdSection } from '$lib/entites/types';
 	import { pliageDe, requisDe } from '$lib/pliage';
+	import { MAX_FICHIERS } from '$lib/fichiers';
 	import SectionDiffusion from './SectionDiffusion.svelte';
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
 	import SectionPerimetre from './SectionPerimetre.svelte';
@@ -194,10 +195,12 @@
 	     `perimetre` ne porte qu'un code ; les passer au tableau demande une
 	     migration, suivie à part. */
 	export let perimetreMode: 'multi' | 'single' = 'multi';
-	/**  Le périmètre est-il OBLIGATOIRE ? Vrai partout sauf sur une évolution, où
-	 *   il sert à **préciser** le périmètre de l'objet porteur : ne rien y toucher
-	 *   ne change rien (#497). */
-	export let perimetreRequis = true;
+	//  🔴 Le périmètre est OBLIGATOIRE si la DÉCLARATION le dit (`exige`), comme
+	//  les destinataires et « Au nom de ». Une prop `perimetreRequis = true` le
+	//  décidait ici : l'idée affichait « PÉRIMÈTRE* » sur une section pliée, que
+	//  sa déclaration ne savait pas obligatoire (#1186). Une évolution ne passe
+	//  pas d'entité — elle PRÉCISE le périmètre du porteur (#497) — et n'a donc
+	//  pas d'astérisque.
 	/**  Le badge de la section. `null` = calculé (le périmètre par défaut, quand
 	 *   c'est lui). Une évolution y met le périmètre COURANT de l'objet porteur —
 	 *   on voit d'où l'on part, ce qu'aucun calcul local ne peut deviner. */
@@ -248,12 +251,19 @@
 	//  ── 9. Documents ──────────────────────────────────────────────────────────
 	export let avecDocuments = false;
 	export let documents: string[] = [];
-	/**  Mode différé : les documents d'une actualité deviennent des entités
-	     `Document` rattachées à la publication, qui n'existe pas encore. Le
+	/**  Mode différé, pour TOUTE la section Pièces jointes : l'objet n'existe
+	     pas encore, et son endpoint de fichiers en réclame l'identifiant. Le
 	     composant retient les `File`, l'écran les téléverse après création.
-	     Voir l'en-tête de `FichiersUpload.svelte`. */
-	export let documentsDifferes = false;
-	export let documentsFichiers: File[] = [];
+	     Voir l'en-tête de `FichiersUpload.svelte`.
+
+	     ⚠️ Il s'appelait `documentsDifferes` et ne valait que pour les
+	     documents — sans aucun appelant. La petite annonce en a eu besoin pour
+	     ses PHOTOS (#1186) : c'est une notion de la section, pas d'un réservoir. */
+	export let differes = false;
+	export let fichiersDifferes: File[] = [];
+	/**  Le plafond de la section — `MAX_FICHIERS` sauf quand l'objet en fixe un
+	     plus bas (cinq photos pour une petite annonce). */
+	export let piecesMax: number = MAX_FICHIERS;
 	/**  Qui rend le CONTRÔLE des documents. `interne` (défaut) : `FichiersUpload`,
 	     comme partout. `slot` : l'écran fournit le sien — les documents d'une
 	     publication sont des entités `Document` avec un identifiant, qu'on ajoute
@@ -373,7 +383,7 @@
 		pliable={plie('perimetre')}
 		bind:perimetre
 		mode={perimetreMode}
-		requis={perimetreRequis}
+		requis={exige('perimetre')}
 		badgeImpose={perimetreBadge}
 		reservable={avecReservePerimetre}
 		bind:reserve={reservePerimetre}
@@ -406,9 +416,10 @@
 	bind:photos
 	{avecDocuments}
 	{documentsControle}
-	{documentsDifferes}
+	{differes}
+	max={piecesMax}
 	bind:documents
-	bind:documentsFichiers
+	bind:fichiersDifferes
 >
 	<svelte:fragment slot="documents"><slot name="documents" /></svelte:fragment>
 </SectionsPiecesJointes>
