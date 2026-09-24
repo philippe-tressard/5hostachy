@@ -23,7 +23,12 @@
 	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
-	import { OPTIONS_FILTRE_NATURE, estActualite, statutsPresents } from '$lib/tickets';
+	import {
+		OPTIONS_FILTRE_NATURE,
+		estActualite,
+		statutsPresents,
+		suiviCorrespond,
+	} from '$lib/tickets';
 
 	$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
@@ -143,7 +148,7 @@
 	$: if (filterStatut && !optionsStatut.some((o) => o.value === filterStatut)) filterStatut = '';
 
 	$: filtered = affichables.filter((t) => {
-		if (filterStatut && t.statut !== filterStatut) return false;
+		if (filterStatut && !suiviCorrespond(optionsStatut, filterStatut, t.statut)) return false;
 		if (filterCat && t.categorie !== filterCat) return false;
 		if (filterNature && !(t.natures ?? []).includes(filterNature)) return false;
 		return true;

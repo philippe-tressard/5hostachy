@@ -43,7 +43,10 @@ export interface StatutTicket {
 export const STATUTS_TICKET: readonly StatutTicket[] = [
 	{ value: 'ouvert', label: 'Ouvert', emoji: '\u{1F535}', badge: 'badge-blue' },
 	{ value: 'en_ag', label: 'À l’AG', emoji: '\u{1F7E3}', badge: 'badge-purple' },
-	{ value: 'en_cours', label: 'En cours', emoji: '\u{1F7E1}', badge: 'badge-orange' },
+	//  « Chez le syndic » et non plus « En cours » (24/09/2026, arbitré à l'écran) :
+	//  À l'AG et Chez le prestataire sont AUSSI en cours — le mot désigne
+	//  désormais leur regroupement dans le filtre (`GROUPES_SUIVI`).
+	{ value: 'en_cours', label: 'Chez le syndic', emoji: '\u{1F7E1}', badge: 'badge-orange' },
 	{
 		value: 'chez_prestataire',
 		label: 'Chez le prestataire',
@@ -116,17 +119,49 @@ export const STATUTS_TICKET_ACTIFS: readonly string[] = STATUTS_TICKET.map((s) =
 //:
 //: L'ordre reste celui du workflow, jamais celui d'apparition : un filtre dont
 //: les boutons bougent d'un chargement à l'autre n'est pas un filtre.
+//: 🔴 LE FILTRE REGROUPE ce que le travail sépare (24/09/2026, arbitré à
+//: l'écran) : « Ouvert · En cours · Résolu », sur une ligne. À l'AG, Chez le
+//: syndic et Chez le prestataire sont trois étapes du TRAITEMENT — le kanban
+//: et la fiche les distinguent, la liste n'a besoin que de savoir que ça avance.
+//: Un groupe ne paraît que si l'un de ses états est présent (règle ci-dessus).
+export const GROUPES_SUIVI: readonly {
+	value: string;
+	label: string;
+	statuts: readonly string[];
+}[] = [
+	{
+		value: 'en_cours',
+		label: '\u{1F7E1} En cours',
+		statuts: ['en_ag', 'en_cours', 'chez_prestataire'],
+	},
+];
+
 export function statutsPresents(
 	tickets: readonly { statut: string }[],
-): { value: string; label: string }[] {
+): { value: string; label: string; statuts: readonly string[] }[] {
 	const presents = new Set(tickets.map((t) => t.statut));
-	const connus = STATUT_TICKET_OPTIONS.filter((o) => presents.has(o.value));
+	const options: { value: string; label: string; statuts: readonly string[] }[] = [];
+	for (const o of STATUT_TICKET_OPTIONS) {
+		if (!presents.has(o.value)) continue;
+		const groupe = GROUPES_SUIVI.find((g) => g.statuts.includes(o.value));
+		if (!groupe) options.push({ ...o, statuts: [o.value] });
+		else if (!options.some((x) => x.value === groupe.value)) options.push(groupe);
+	}
 	//: Les états historiques (`fermé`) n'ont pas d'emoji : ils portent leur
 	//: libellé seul, ce qui les distingue sans les mettre en avant.
 	const historiques = Object.keys(STATUTS_TICKET_HISTORIQUES)
 		.filter((v) => presents.has(v))
-		.map((v) => ({ value: v, label: STATUT_TICKET_LABELS[v] }));
-	return [...connus, ...historiques];
+		.map((v) => ({ value: v, label: STATUT_TICKET_LABELS[v], statuts: [v] }));
+	return [...options, ...historiques];
+}
+
+/** Le statut d'une affaire relève-t-il de l'option de filtre choisie ? */
+export function suiviCorrespond(
+	options: readonly { value: string; statuts: readonly string[] }[],
+	choix: string,
+	statut: string,
+): boolean {
+	return options.find((o) => o.value === choix)?.statuts.includes(statut) ?? false;
 }
 
 //  ── Les catégories — même histoire que les statuts, un cran plus tard ────────

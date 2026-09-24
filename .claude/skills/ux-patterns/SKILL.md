@@ -720,7 +720,7 @@ actualité est une affaire de catégorie « Actualité », et `ListeTickets` cho
 sa carte — `ActualiteEnListe` (allure d'actualité, sans numéro ni état) ou
 `CarteTicket`. Les deux reçoivent le **même** objet `gestes` : un geste propre à
 l'actualité ne s'écrit pas à côté. Le filtre de la vue Affaires est
-`OPTIONS_FILTRE_NATURE` (Actualité · Calendrier · Activité), lu sur
+`OPTIONS_FILTRE_NATURE` (Actualité · Calendrier · Affaire — valeur `activite`, libellé renommé le 24/09/2026), lu sur
 `Ticket.natures` que le serveur dérive — jamais redérivé à l'écran.
 `/actualites` n'est plus qu'une redirection (anciens liens `#pub-N` compris).
 

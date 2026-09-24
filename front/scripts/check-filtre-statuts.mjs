@@ -82,6 +82,11 @@ const CAS = [
 		attendu: ['ouvert', 'en_cours', 'résolu'],
 	},
 	{
+		quoi: 'les trois états du traitement forment UN bouton « En cours » (24/09/2026)',
+		tickets: [t('chez_prestataire'), t('en_ag'), t('ouvert')],
+		attendu: ['ouvert', 'en_cours'],
+	},
+	{
 		quoi: 'un doublon ne produit pas deux boutons',
 		tickets: [t('ouvert'), t('ouvert'), t('ouvert')],
 		attendu: ['ouvert'],
@@ -112,8 +117,11 @@ for (const { quoi, tickets, attendu } of CAS) {
 //  sans bouton. C'est la formulation exacte du défaut, éprouvée sur TOUS les
 //  états du workflow d'un coup — un cas par état aurait pu en oublier un.
 const tous = STATUTS_TICKET.map((s) => s.value);
-const rendus = valeurs(statutsPresents(tous.map(t)));
-const manquants = tous.filter((v) => !rendus.includes(v));
+//  Un état est COUVERT par l'option qui le regroupe (`statuts`), pas seulement
+//  par un bouton à son nom : depuis le 24/09/2026 le filtre dit « En cours »
+//  pour À l'AG, Chez le syndic et Chez le prestataire.
+const couverts = statutsPresents(tous.map(t)).flatMap((o) => o.statuts ?? [o.value]);
+const manquants = tous.filter((v) => !couverts.includes(v));
 if (manquants.length) {
 	echecs.push(
 		`   des états s’affichent SANS bouton de filtre : ${JSON.stringify(manquants)}\n` +
