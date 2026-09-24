@@ -77,12 +77,14 @@
 		{erreur}
 		consequence="Le menu des prestataires est vide : ce n'est pas qu'il n'en existe aucun."
 	/>
-	<select id="{idPrefixe}-prestataire" bind:value={choix} on:change={choisir}>
-		<option value="">— Aucun —</option>
-		{#each prestataires.filter((p) => p.actif !== false || p.id === prestataireId) as p (p.id)}
-			<option value={String(p.id)}>{p.nom}</option>
-		{/each}
-	</select>
+	<div class="field">
+		<select id="{idPrefixe}-prestataire" bind:value={choix} on:change={choisir}>
+			<option value="">— Aucun —</option>
+			{#each prestataires.filter((p) => p.actif !== false || p.id === prestataireId) as p (p.id)}
+				<option value={String(p.id)}>{p.nom}</option>
+			{/each}
+		</select>
+	</div>
 	{#if creation}
 		<!--  Pas de `<form>` : on est DANS celui de l'affaire, et un formulaire
 		      imbriqué soumettrait l'affaire. Les boutons sont `type="button"`. -->

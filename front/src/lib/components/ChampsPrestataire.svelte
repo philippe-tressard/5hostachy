@@ -85,10 +85,12 @@
 		rempli={!!prestForm.specialite}
 		pour="{idNom}-equipement"
 	>
-		<select id="{idNom}-equipement" bind:value={prestForm.specialite} required>
-			<option value="">— Sélectionner —</option>
-			{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-		</select>
+		<div class="field">
+			<select id="{idNom}-equipement" bind:value={prestForm.specialite} required>
+				<option value="">— Sélectionner —</option>
+				{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
+			</select>
+		</div>
 	</SectionFormulaire>
 {/if}
 

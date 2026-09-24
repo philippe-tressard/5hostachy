@@ -131,13 +131,13 @@
 	{/if}
 
 	<label class="field champ-large">
-		Code<EtoileRequis vide={!saisie.code.trim()} />
+		<span>Code<EtoileRequis vide={!saisie.code.trim()} /></span>
 		<input type="text" bind:value={saisie.code} placeholder="4521, 417D5927…" />
 		<span class="aide">La référence gravée sur l'objet, telle qu'elle s'y lit.</span>
 	</label>
 
 	<label class="field champ-large">
-		Lot<EtoileRequis vide={!saisie.lot_id && !saisie.porteur_id} />
+		<span>Lot<EtoileRequis vide={!saisie.lot_id && !saisie.porteur_id} /></span>
 		<select bind:value={saisie.lot_id}>
 			<option value={null}>— aucun lot —</option>
 			{#each lotsTries as l (l.id)}
