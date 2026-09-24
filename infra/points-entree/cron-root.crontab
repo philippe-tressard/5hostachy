@@ -6,8 +6,10 @@
 # logs applicatifs — auto-deploy à 11h58 et check-reliability à 12h06, tous deux
 # postérieurs à la bascule.
 #
-# Les relais à la racine du dépôt sont encore en place : ils partiront dans une
-# PR séparée, après le constat de la bascule de 02:00 sur les deux nœuds.
+# Les six relais de la racine du dépôt ont été retirés le 16/08/2026, une fois
+# la bascule de 02:00 constatée sur les deux nœuds. Un seul reste, et c'est
+# voulu : `boot-role-guard.sh`, que désigne l'unité systemd et non un cron
+# (voir LISEZMOI.md, « Pourquoi l'unité systemd garde son relais »).
 #
 # Pose : sudo crontab -e sur chaque nœud (geste explicite, jamais automatique).
 0 2 * * * /opt/5hostachy/scripts/exploitation/bascule.sh >> /var/log/hostachy-bascule.log 2>&1
