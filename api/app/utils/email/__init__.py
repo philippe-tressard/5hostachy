@@ -24,7 +24,7 @@ from sqlmodel import Session, select
 from app.utils.config_site import config_site
 from app.config import get_settings
 from app.utils.preferences_mail import mail_autorise
-from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateur
+from app.models.core import HistoriqueEmail, ModeleEmail, Utilisateur
 from app.utils.fichiers import nom_lisible
 #  La configuration du canal SMTP est un sujet distinct de la composition
 #  d'un message : elle vit dans `app/utils/smtp.py` depuis le 08/08/2026.
@@ -131,16 +131,7 @@ def _contexte_rendu(session: Session, context: dict) -> tuple[dict, str, str, st
     Les deux fonctions d'envoi lisaient ces valeurs chacune de leur côté, en
     trois `session.get` recopiés — la même configuration, deux fois.
     """
-    lignes = {
-        r.cle: r.valeur
-        for r in session.exec(
-            select(ConfigSite).where(
-                ConfigSite.cle.in_(
-                    ("site_nom", "site_url", "email_footer", "reference_copro")
-                )
-            )
-        ).all()
-    }
+    lignes = config_site(session, "email_footer", "reference_copro")
     site_nom = nom_site(lignes.get("site_nom"))
     site_url = base_site(lignes.get("site_url"))
     reference = (lignes.get("reference_copro") or "").strip()
