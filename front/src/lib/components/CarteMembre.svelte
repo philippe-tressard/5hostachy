@@ -167,7 +167,7 @@
 	</EnteteCarte>
 
 	{#if ouvert}
-		<div class="carte-membre-corps">
+		<div class="carte-corps carte-membre-corps">
 			{#if edite}
 				<div class="form-grid">
 					<label class="field">

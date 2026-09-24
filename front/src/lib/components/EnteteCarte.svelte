@@ -147,9 +147,13 @@
 			      carte elle-même (`.carte-liste.expanded`), que l'appelant pose
 			      déjà. Deux écritures d'un même fait — « cette carte est dépliée » —
 			      avaient d'ailleurs commencé à diverger : quatre cartes disaient
-			      `expanded`, deux `expanded || enEdition`, pour la même classe. -->
+			      `expanded`, deux `expanded || enEdition`, pour la même classe.
+
+			      ⚠️ `chevron-carte` NOMME ce chevron-ci : la règle de charte qui le
+			      fait tourner ne doit atteindre que lui, pas un chevron posé dans le
+			      corps déplié (voir `composants.css`). -->
 			{#if basculable}
-				<span class="chevron" aria-hidden="true">›</span>
+				<span class="chevron chevron-carte" aria-hidden="true">›</span>
 			{/if}
 		</div>
 	</div>

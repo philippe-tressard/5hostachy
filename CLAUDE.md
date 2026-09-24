@@ -313,6 +313,10 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 ### Frontend
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)
 - [ ] Méta toujours visible en mode collapsé
+- [ ] Corps déplié d'une carte : `class="carte-corps …"` — c'est ce qui le fait
+      entrer (fondu 200 ms) ; sans elle il apparaît sec, sans un mot. Un survol
+      qui ne sert qu'à la souris vit sous `@media (hover: hover) and (pointer:
+      fine)` — au doigt, `:hover` reste collé (`ux-patterns` §17)
 - [ ] `.clamp-3` sur l'aperçu d'une carte (`.clamp-5` seulement hors carte)
 - [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — jamais un helper
       local, même correct (`npm run lint:html` le refuse)

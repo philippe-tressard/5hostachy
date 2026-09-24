@@ -211,7 +211,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .chevron {
 	font-size: 1.1rem;
 	color: var(--color-text-muted);
-	transition: transform 0.15s;
+	transition: transform 0.15s var(--ease-out);
 	display: inline-block;
 	line-height: 1;
 }
@@ -221,10 +221,76 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
       (fil d'activité, onglets d'administration, sections dépliables) ;
     • `.carte-liste.expanded` — l'état que la carte porte DÉJÀ. Le chevron d'une
       carte n'a donc rien à recevoir : il lit l'état de son parent. C'est ce qui
-      a permis de supprimer les six `slot="chevron"` identiques (18/09/2026). */
+      a permis de supprimer les six `slot="chevron"` identiques (18/09/2026).
+
+    🔴 La seconde vise `.chevron-carte` — celui d'`EnteteCarte` — et plus
+    `.chevron` tout court (24/09/2026). Écrite sur `.chevron`, elle faisait
+    tourner TOUT chevron d'une carte dépliée : « Gérer les photos » d'une
+    annonce, une section repliée dans le corps d'une affaire, paraissaient
+    ouverts avant tout clic. Mesuré en navigateur sur les Petites annonces. */
 .chevron.open,
-.carte-liste.expanded .chevron {
+.carte-liste.expanded .chevron-carte {
 	transform: rotate(90deg);
+}
+
+/* ── Le RETOUR AU TOUCHER et l'ENTRÉE du corps déplié ────────────────────
+   Essayés sur les Petites annonces (v2.44.0), généralisés le 24/09/2026.
+
+   • L'APPUI enfonce ce qu'on touche à 97 %. Sur téléphone, c'est la seule
+     preuve immédiate que le geste a été pris : le serveur répond 300 ms plus
+     tard, et l'écran restait figé entre les deux. `transform` seul, jamais
+     la taille ni la marge : rien ne se décale autour. Pas sur une icône déjà
+     ACTIVE (`aria-pressed`) : grossie à 115 % pour dire le mode, l'appui la
+     ferait retomber sous sa taille. La pastille porte le sien dans
+     `Pastille.svelte`, où vit sa transition.
+     Pas de coupure sous `prefers-reduced-motion` : 3 % sur place, sans
+     déplacement, c'est un retour d'état, pas un mouvement.
+
+   • Le CORPS d'une carte dépliée entre en 200 ms (fondu + 4 px) et sort sans
+     délai : à l'ouverture on suit l'œil vers ce qui arrive, à la fermeture on
+     a déjà décidé. Jamais la hauteur animée — elle recalcule la mise en page
+     à chaque image, et une carte à photos saccade sur un téléphone. Une
+     animation au MONTAGE : le `{#if expanded}` la rejoue à chaque ouverture.
+     Le corps porte `.carte-corps` — c'est la classe que `ux-patterns` §3
+     nomme pour lui, et que seule la carte d'affaire posait. */
+.btn,
+.btn-icon,
+.btn-icon-edit,
+.btn-icon-danger,
+.btn-icon-warn,
+.btn-icon-success,
+.signaler-inline {
+	transition:
+		opacity 0.15s,
+		background 0.15s,
+		color 0.15s,
+		transform var(--duree-geste) var(--ease-out);
+}
+:is(
+		.btn,
+		.btn-icon,
+		.btn-icon-edit,
+		.btn-icon-danger,
+		.btn-icon-warn,
+		.btn-icon-success,
+		.signaler-inline
+	):active:not(:disabled, [aria-pressed='true']) {
+	transform: scale(0.97);
+}
+
+.carte-liste .carte-corps {
+	animation: carte-entree var(--duree-apparition) var(--ease-out);
+}
+@keyframes carte-entree {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.carte-liste .carte-corps {
+		animation: none;
+	}
 }
 .btn-icon-warn {
 	background: transparent;

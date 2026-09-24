@@ -59,8 +59,16 @@ fi
 # ── 2. Outils Python de la CI, puis dépendances de l'API ────────────────────
 #  `--break-system-packages` : Ubuntu 24.04 refuse sinon un pip hors venv. La
 #  VM est jetable et ne sert qu'à ce dépôt — l'isolation n'y protège rien.
+#
+#  `--ignore-installed` en repli (24/09/2026) : l'image porte des paquets posés
+#  par Debian (PyJWT, blinker, cryptography…) SANS fichier RECORD. pip ne sait
+#  pas les désinstaller pour les mettre à la version demandée, et abandonnait
+#  TOUTE la liste — donc pytest sans `sqlmodel`, et un rejeu de CI rouge qui ne
+#  disait rien du code. Réinstaller par-dessus est sans risque ici : la VM ne
+#  sert qu'à ce dépôt.
 pip_installer() {
     python3 -m pip install -q --break-system-packages "$@" 2>/dev/null \
+        || python3 -m pip install -q --break-system-packages --ignore-installed "$@" 2>/dev/null \
         || python3 -m pip install -q "$@"
 }
 OUTILS=$(sed -nE 's/.*pip install ([A-Za-z][A-Za-z0-9_.-]*)[[:space:]]*$/\1/p' "$CI" | sort -u | tr '\n' ' ')

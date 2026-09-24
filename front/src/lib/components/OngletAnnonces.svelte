@@ -176,22 +176,19 @@
 	}
 </script>
 
-<!--  Enveloppe sans rendu propre : elle ne sert qu'à borner à CET onglet le
-      retour au toucher ci-dessous, le temps qu'il soit constaté (R5). -->
-<div class="onglet-annonces">
-	{#if showForm}
-		<FormulaireAnnonce
-			on:cree={(e) => {
-				annonces = [e.detail, ...annonces];
-				showForm = false;
-				expandedAnnonce = e.detail.id;
-			}}
-			on:annule={() => (showForm = false)}
-		/>
-	{/if}
+{#if showForm}
+	<FormulaireAnnonce
+		on:cree={(e) => {
+			annonces = [e.detail, ...annonces];
+			showForm = false;
+			expandedAnnonce = e.detail.id;
+		}}
+		on:annule={() => (showForm = false)}
+	/>
+{/if}
 
-	<div class="filters">
-		<!--  🔴 TROIS valeurs : sous le seuil des listes courtes, donc des PASTILLES —
+<div class="filters">
+	<!--  🔴 TROIS valeurs : sous le seuil des listes courtes, donc des PASTILLES —
 	      la règle est écrite dans `ux-patterns` depuis le 29/08/2026 (#491) et
 	      n'avait pas été appliquée ici. Confirmée par l'utilisateur le 06/09
 	      (« ≤ 5 valeurs en pastilles ») : les deux seuils coïncident, aucune liste
@@ -202,24 +199,24 @@
 	      une incohérence — c'est la cardinalité qui choisit, pas l'écran. Le
 	      §« seuil des listes courtes » nomme d'ailleurs `CATEGORIES_ANNONCE` comme
 	      le cas qui reste dehors. -->
-		<ChoixPastilles
-			options={TYPES_ANNONCE}
-			bind:valeur={filtreType}
-			tous="Tous types"
-			libelle="Filtrer les annonces par type"
-		/>
-		<select bind:value={filtreCategorie} class="filter-select" aria-label="Filtrer par catégorie">
-			<option value="">Toutes catégories</option>
-			{#each CATEGORIES_ANNONCE as c (c.val)}<option value={c.val}>{c.label}</option>{/each}
-		</select>
-		<select bind:value={filtreTri} class="filter-select" aria-label="Trier les annonces">
-			<option value="recent">Plus récentes</option>
-			<option value="prix_asc">Prix croissant</option>
-			<option value="prix_desc">Prix décroissant</option>
-		</select>
-	</div>
+	<ChoixPastilles
+		options={TYPES_ANNONCE}
+		bind:valeur={filtreType}
+		tous="Tous types"
+		libelle="Filtrer les annonces par type"
+	/>
+	<select bind:value={filtreCategorie} class="filter-select" aria-label="Filtrer par catégorie">
+		<option value="">Toutes catégories</option>
+		{#each CATEGORIES_ANNONCE as c (c.val)}<option value={c.val}>{c.label}</option>{/each}
+	</select>
+	<select bind:value={filtreTri} class="filter-select" aria-label="Trier les annonces">
+		<option value="recent">Plus récentes</option>
+		<option value="prix_asc">Prix croissant</option>
+		<option value="prix_desc">Prix décroissant</option>
+	</select>
+</div>
 
-	<!--  🔴 Les trois états — chargement, erreur, vide — étaient écrits ICI, à la
+<!--  🔴 Les trois états — chargement, erreur, vide — étaient écrits ICI, à la
       main, alors que `EtatListe` les porte (#796). Ils reproduisaient le
       composant à l'identique : même `Chargement…`, même `empty-state` avec titre
       et message, même priorité de l'erreur sur le vide.
@@ -233,101 +230,57 @@
       La condition de vide porte sur la liste ENTIÈRE, archives comprises : une
       annonce archivée n'est pas rien, et annoncer « Aucune annonce » alors que
       les Archives en portent trois serait faux (#519). -->
-	<EtatListe
-		{chargement}
-		{erreur}
-		vide={triees.length === 0}
-		titreErreur="Impossible d'afficher les annonces"
-		titreVide="Aucune annonce"
-		messageVide="Déposez la première annonce en cliquant sur « Déposer une annonce »."
+<EtatListe
+	{chargement}
+	{erreur}
+	vide={triees.length === 0}
+	titreErreur="Impossible d'afficher les annonces"
+	titreVide="Aucune annonce"
+	messageVide="Déposez la première annonce en cliquant sur « Déposer une annonce »."
+>
+	<ListeEtArchives
+		liste={triees}
+		titreVideCourant="Aucune annonce en cours"
+		messageVideCourant="Les annonces conclues sont rangées dans les Archives, ci-dessous."
 	>
-		<ListeEtArchives
-			liste={triees}
-			titreVideCourant="Aucune annonce en cours"
-			messageVideCourant="Les annonces conclues sont rangées dans les Archives, ci-dessous."
-		>
-			<svelte:fragment let:items>
-				<ListeAnnonces
-					liste={items}
-					expandedId={expandedAnnonce}
-					gestionPhotosId={gestionPhotos}
-					{estCS}
-					{estAdmin}
-					{currentUserId}
-					onToggle={basculer}
-					onToggleGestion={basculerGestion}
-					onModifier={modifier}
-					editId={editAnnonce?.id ?? null}
-					onUpload={uploadPhoto}
-					onRemove={supprimerPhoto}
-					onStatut={changerStatut}
-					onSupprimer={supprimer}
-					onRepondre={repondre}
-					onSupprimerReponse={supprimerReponse}
-					{onSignaler}
-				>
-					<svelte:fragment slot="formulaire" let:annonce>
-						<!--  `{#key}` remonte le composant d'une annonce à l'autre : ses champs
+		<svelte:fragment let:items>
+			<ListeAnnonces
+				liste={items}
+				expandedId={expandedAnnonce}
+				gestionPhotosId={gestionPhotos}
+				{estCS}
+				{estAdmin}
+				{currentUserId}
+				onToggle={basculer}
+				onToggleGestion={basculerGestion}
+				onModifier={modifier}
+				editId={editAnnonce?.id ?? null}
+				onUpload={uploadPhoto}
+				onRemove={supprimerPhoto}
+				onStatut={changerStatut}
+				onSupprimer={supprimer}
+				onRepondre={repondre}
+				onSupprimerReponse={supprimerReponse}
+				{onSignaler}
+			>
+				<svelte:fragment slot="formulaire" let:annonce>
+					<!--  `{#key}` remonte le composant d'une annonce à l'autre : ses champs
 					      sont initialisés une seule fois, à la construction. -->
-						{#key annonce.id}
-							<FormulaireAnnonce
-								{annonce}
-								on:modifie={(e) => appliquerModification(e.detail)}
-								on:annule={() => (editAnnonce = null)}
-							/>
-						{/key}
-					</svelte:fragment>
-				</ListeAnnonces>
-			</svelte:fragment>
-		</ListeEtArchives>
-	</EtatListe>
+					{#key annonce.id}
+						<FormulaireAnnonce
+							{annonce}
+							on:modifie={(e) => appliquerModification(e.detail)}
+							on:annule={() => (editAnnonce = null)}
+						/>
+					{/key}
+				</svelte:fragment>
+			</ListeAnnonces>
+		</svelte:fragment>
+	</ListeEtArchives>
+</EtatListe>
 
-	<!--  🔴 LE FORMULAIRE DE CORRECTION N'EST PLUS ICI (#787, 06/09/2026).
+<!--  🔴 LE FORMULAIRE DE CORRECTION N'EST PLUS ICI (#787, 06/09/2026).
       Il était monté en bas, après les deux listes : « c'est tout en bas, et on
       ne voit pas ». Il vit maintenant DANS la carte de l'annonce, par le slot
       `formulaire` que `ListeAnnonces` relaie — le pattern de la carte
       d'actualité, qui existait déjà. -->
-</div>
-
-<style>
-	/*  🔹 LE RETOUR AU TOUCHER (24/09/2026) — en essai sur les Petites annonces,
-	    selon R5 : proposé sur UN écran, constaté, puis généralisé.
-
-	    Un appui enfonce légèrement ce qu'on touche (97 %). Sur téléphone, c'est
-	    la seule preuve immédiate que le geste a été pris : le serveur répond
-	    300 ms plus tard, et l'écran restait figé entre les deux.
-
-	    ⚠️ `transform` seul, jamais la taille ni la marge : rien ne se décale
-	    autour, et la rangée de pastilles ne tremble pas. La courbe est celle
-	    du socle (`--ease-out`) : l'enfoncement est immédiat, le retour se pose.
-
-	    ⚠️ Pas sur une icône déjà ACTIVE (`aria-pressed`) : elle est grossie à
-	    115 % pour dire le mode, et l'appui la ferait retomber sous sa taille.
-
-	    ⚠️ Scopé par `:global` sous `.onglet-annonces` et non écrit dans la
-	    charte : c'est la charte qui le recevra si l'essai est retenu — l'écrire
-	    ici ET là-bas donnerait deux règles pour un geste. */
-	.onglet-annonces :global(:is(.btn-icon, .btn-icon-danger, .signaler-inline)) {
-		transition: transform var(--duree-geste) var(--ease-out);
-	}
-	.onglet-annonces :global(.btn) {
-		transition:
-			opacity 0.15s,
-			background 0.15s,
-			transform var(--duree-geste) var(--ease-out);
-	}
-	.onglet-annonces
-		:global(
-			:is(.btn, .btn-icon, .btn-icon-danger, .signaler-inline, .pastille):active:not(
-					:disabled,
-					[aria-pressed='true']
-				)
-		) {
-		transform: scale(0.97);
-	}
-
-	/*  ⚠️ Pas de coupure sous `prefers-reduced-motion`, et c'est pesé : 3 % sur
-	    place, sans déplacement, c'est un RETOUR D'ÉTAT, pas un mouvement — ce
-	    que ce réglage demande d'éteindre, ce sont les glissements et les
-	    rotations (le corps qui entre, dans `AnnonceCard`, y est coupé). */
-</style>
