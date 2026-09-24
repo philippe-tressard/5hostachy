@@ -204,9 +204,17 @@ def _module():
     return module
 
 
+#: Migrations qui posent `assiste_ia` sur UNE table, après la 0194.
+_MIGRATIONS_TARDIVES = ("0220_*.py",)
+
+
 def test_la_migration_couvre_TOUTES_les_tables_qui_portent_la_marque():
-    """Le mixin est hérité par neuf modèles ; la migration doit poser la
-    colonne sur les neuf, ni plus ni moins — comparé au CODE, pas à une liste."""
+    """Le mixin est hérité par les modèles porteurs ; les migrations doivent
+    poser la colonne sur tous, ni plus ni moins — comparé au CODE, pas à une liste.
+
+    La 0194 en a posé neuf. Une table qui reçoit la marque plus tard a sa PROPRE
+    migration — une migration appliquée ne se modifie jamais : l'annonce de hall
+    (0220, #1089). Elles se déclarent dans `_MIGRATIONS_TARDIVES`."""
     from app.utils.assiste_ia import AssisteIAMixin
 
     import app.models.core  # noqa: F401 — charge les tables dans la metadata
@@ -226,7 +234,15 @@ def test_la_migration_couvre_TOUTES_les_tables_qui_portent_la_marque():
         if getattr(m, "__table__", None) is not None
     }
     assert len(attendues) >= 9, attendues
-    assert set(_module().TABLES_ASSISTE_IA) == attendues
+    posees = set(_module().TABLES_ASSISTE_IA)
+    for motif in _MIGRATIONS_TARDIVES:
+        chemin = next(_MIGRATION.parent.glob(motif))
+        spec = importlib.util.spec_from_file_location(chemin.stem, chemin)
+        tardive = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tardive)
+        assert tardive.COLONNE == "assiste_ia", chemin.name
+        posees.add(tardive.TABLE)
+    assert posees == attendues
 
 
 def test_la_migration_deplace_les_anciennes_cles_et_ne_les_laisse_pas(session):
