@@ -92,3 +92,45 @@ test.describe("L'astérisque des champs obligatoires", () => {
 		expect(rempli, 'la couleur ne change pas quand le champ se remplit').not.toBe(vide);
 	});
 });
+
+test.describe('L’étoile dans un libellé qui ENVELOPPE son champ (#1230)', () => {
+	//  `label.field` est une colonne flex : un texte et une étoile posés
+	//  directement dedans y deviennent deux éléments, et l'étoile tombe SOUS le
+	//  libellé (« un * sous Début, c'est quoi ? », signalé le 24/09/2026). Le
+	//  remède est un `<span>` qui les tient ensemble ; `lint:champs` l'exige.
+	//  Le témoin reprend le balisage d'`EtoileRequis`, et le CSS réel du site.
+	const etoile =
+		'<span class="requis requis--vide"><span aria-hidden="true">*</span><span class="sr-only">obligatoire</span></span>';
+
+	async function ecart(page: import('@playwright/test').Page, libelle: string) {
+		return page.evaluate(
+			({ libelle, etoile }) => {
+				const temoin = document.createElement('div');
+				temoin.innerHTML = `<label class="field">${libelle.replace('ETOILE', etoile)}<input type="date" /></label>`;
+				document.querySelector('main, body')!.append(temoin);
+				const star = temoin.querySelector('[aria-hidden="true"]')!.getBoundingClientRect();
+				const range = document.createRange();
+				const texte = [...temoin.querySelectorAll('label, label > span')]
+					.flatMap((n) => [...n.childNodes])
+					.find((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim())!;
+				range.selectNodeContents(texte);
+				const mot = range.getBoundingClientRect();
+				temoin.remove();
+				return Math.abs(star.top - mot.top);
+			},
+			{ libelle, etoile },
+		);
+	}
+
+	test('tenue par un <span>, l’étoile reste sur la ligne du libellé', async ({ page }) => {
+		await page.goto('/auth/connexion');
+		await attendreHydratation(page);
+		expect(await ecart(page, '<span>Début ETOILE</span>'.replace(' ', ''))).toBeLessThan(4);
+	});
+
+	test('posée à nu dans le label, elle tombe — le test voit donc le défaut', async ({ page }) => {
+		await page.goto('/auth/connexion');
+		await attendreHydratation(page);
+		expect(await ecart(page, 'DébutETOILE')).toBeGreaterThan(8);
+	});
+});

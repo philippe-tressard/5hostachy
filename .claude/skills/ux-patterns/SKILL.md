@@ -973,6 +973,11 @@ calendrier reste à 640 px, délibérément).
   en clair et cinq composants qui calculaient `{requis ? ' *' : ''}` —, et
   aucun de ces points ne connaissait la valeur. 🔒 `npm run lint:champs`.
 
+  ⚠️ **Dans un `label.field` qui ENVELOPPE son champ**, le texte et l'étoile
+  vont dans un `<span>` : ce libellé est une colonne flex, et posés à nu ils y
+  deviennent deux lignes — l'étoile tombait sous « Début » (#1230, mesuré par
+  `e2e/etoile-requis.spec.ts`, refusé par `lint:champs`).
+
   ⚠️ Les libellés de champ sont en **MAJUSCULES par le style**
   (`.field label`, `champs.css`), comme les intitulés de section. Jamais
   tapées : `TITRE` écrit en dur est épelé lettre à lettre par certains

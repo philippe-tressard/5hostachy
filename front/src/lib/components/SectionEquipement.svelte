@@ -28,9 +28,11 @@
 	valeurModifiee={equipement !== ''}
 	pour="{idPrefixe}-equipement"
 >
-	<select id="{idPrefixe}-equipement" bind:value={equipement}>
-		<option value="">— Aucun —</option>
-		{#each EQUIPEMENTS_AFFAIRE as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-	</select>
+	<div class="field">
+		<select id="{idPrefixe}-equipement" bind:value={equipement}>
+			<option value="">— Aucun —</option>
+			{#each EQUIPEMENTS_AFFAIRE as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
+		</select>
+	</div>
 	<p class="aide">Au carnet d’entretien, l’affaire résolue se range sous cet équipement.</p>
 </SectionFormulaire>

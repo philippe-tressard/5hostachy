@@ -351,7 +351,9 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       (`ux-patterns` §13)
 - [ ] Icône vérifiée dans `$lib/icones-svg.json` — un nom inconnu échoue en silence
 - [ ] Tout champ libellé dans un `.field` — jamais une nomenclature locale
-      (`npm run lint:champs` ; il y en avait **six** avant #413)
+      (`npm run lint:champs` ; il y en avait **six** avant #413) — **y compris**
+      le champ dont l'intitulé de section est le libellé, et une étoile dans un
+      `label.field` enveloppant se tient dans un `<span>` avec son texte (#1230)
 
 ### Backend (nouveau endpoint)
 - [ ] Modèle dans le module de **son domaine** (`app/models/<domaine>.py`), importé

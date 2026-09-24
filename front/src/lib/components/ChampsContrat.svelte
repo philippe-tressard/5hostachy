@@ -99,11 +99,14 @@
 		resume={contratForm.numero_contrat || 'aucune'}
 		pour="{idNotes}-numero"
 	>
-		<input
-			id="{idNotes}-numero"
-			bind:value={contratForm.numero_contrat}
-			placeholder="N° du contrat"
-		/>
+		<div class="field">
+			<input
+				id="{idNotes}-numero"
+				type="text"
+				bind:value={contratForm.numero_contrat}
+				placeholder="N° du contrat"
+			/>
+		</div>
 	</SectionFormulaire>
 {/if}
 
@@ -118,9 +121,11 @@
 	>
 		<!--  🔴 Ce champ MANQUAIT à l'édition en ligne avant le 30/08/2026 : le type
 		      d'équipement d'un contrat ne s'y modifiait pas, et rien ne le disait. -->
-		<select id="{idNotes}-equipement" bind:value={contratForm.type_equipement}>
-			{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-		</select>
+		<div class="field">
+			<select id="{idNotes}-equipement" bind:value={contratForm.type_equipement}>
+				{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
+			</select>
+		</div>
 	</SectionFormulaire>
 {/if}
 
@@ -134,7 +139,7 @@
 	>
 		<div class="form-grid">
 			<label class="field"
-				>Début<EtoileRequis vide={!contratForm.date_debut} /><input
+				><span>Début<EtoileRequis vide={!contratForm.date_debut} /></span><input
 					type="date"
 					bind:value={contratForm.date_debut}
 					required
@@ -155,14 +160,17 @@
 					</select>
 				</div>
 			</label>
-			<ChampFrequence
-				bind:frequenceType={contratForm.frequence_type}
-				bind:frequenceValeur={contratForm.frequence_valeur}
-			/>
 			<label class="field"
 				>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label
 			>
 		</div>
+		<!--  La fréquence SOUS la rangée des dates, comme sur une affaire d'entretien
+		      (`FormulaireTicket`) : posée dans une cellule de la grille, sa propre
+		      grille et sa marge la décalaient d'une demi-ligne (#1230). -->
+		<ChampFrequence
+			bind:frequenceType={contratForm.frequence_type}
+			bind:frequenceValeur={contratForm.frequence_valeur}
+		/>
 	</SectionFormulaire>
 {/if}
 
@@ -176,10 +184,12 @@
 		rempli={!!contratForm.prestataire_id}
 		pour="{idNotes}-prestataire"
 	>
-		<select id="{idNotes}-prestataire" bind:value={contratForm.prestataire_id} required>
-			<option value="">— Sélectionner —</option>
-			{#each prestataires as pr (pr.id)}<option value={String(pr.id)}>{pr.nom}</option>{/each}
-		</select>
+		<div class="field">
+			<select id="{idNotes}-prestataire" bind:value={contratForm.prestataire_id} required>
+				<option value="">— Sélectionner —</option>
+				{#each prestataires as pr (pr.id)}<option value={String(pr.id)}>{pr.nom}</option>{/each}
+			</select>
+		</div>
 	</SectionFormulaire>
 {/if}
 

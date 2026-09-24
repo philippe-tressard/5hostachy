@@ -207,7 +207,11 @@ export function releve(source, chemin = '?') {
 			const id = (/\bid\s*=\s*["']([^"']+)["']/.exec(attributs) || [])[1];
 			const enveloppe = pile.some((e) => e.tag === 'label');
 			const frere = Boolean(id && cibles.has(id));
-			if (!enveloppe && !frere) continue; // pas de libellé : hors périmètre
+			//  4ᵉ forme (#1230, 24/09/2026) : le libellé est l'INTITULÉ de la section
+			//  (`<SectionFormulaire pour=…>`). Posé nu, le contrôle n'hérite d'aucun
+			//  style — « ces champs encadrés, c'est vraiment pas beau », sept fois.
+			const enSection = pile.some((e) => e.tag === 'sectionformulaire');
+			if (!enveloppe && !frere && !enSection) continue; // pas de libellé : hors périmètre
 
 			libelles++;
 			if (pile.some((e) => porteField(e.classes)) || porteField(classes)) continue;
@@ -217,7 +221,11 @@ export function releve(source, chemin = '?') {
 				ligne: src.slice(0, m.index).split('\n').length,
 				tag,
 				type,
-				forme: enveloppe ? 'libellé enveloppant' : 'libellé frère (for=)',
+				forme: enveloppe
+					? 'libellé enveloppant'
+					: frere
+						? 'libellé frère (for=)'
+						: 'intitulé de section',
 				contexte: pile
 					.slice(-2)
 					.map((e) => e.tag + (e.classes ? '.' + e.classes.split(/\s+/)[0] : ''))
@@ -226,7 +234,26 @@ export function releve(source, chemin = '?') {
 			continue;
 		}
 
-		if (!autofermante && !BALISES_VIDES.has(tag) && /^[a-z]/.test(nom)) {
+		//  L'étoile d'un champ obligatoire, enfant DIRECT d'un `label.field` : ce
+		//  libellé est une colonne flex, le texte et l'étoile y deviennent deux
+		//  éléments — l'étoile tombe seule sur sa ligne (#1230, « un * sous Début »).
+		if (tag === 'etoilerequis') {
+			const parent = pile[pile.length - 1];
+			if (parent && parent.tag === 'label' && porteField(parent.classes)) {
+				trouves.push({
+					chemin,
+					ligne: src.slice(0, m.index).split('\n').length,
+					tag: 'EtoileRequis',
+					type: undefined,
+					forme: 'étoile orpheline (enfant direct d’un label.field)',
+					contexte: 'label.field',
+				});
+			}
+			continue;
+		}
+
+		const suivie = /^[a-z]/.test(nom) || tag === 'sectionformulaire';
+		if (!autofermante && !BALISES_VIDES.has(tag) && suivie) {
 			pile.push({ tag, classes });
 		}
 	}
@@ -248,6 +275,14 @@ if (process.argv.includes('--selftest')) {
 			'libellé frère, relié par for=',
 			'<div><label for="faq-q">Question *</label>\n<input id="faq-q" class="input-field" type="text" /></div>',
 		],
+		[
+			'intitulé de section, contrôle nu',
+			'<SectionFormulaire titre="Équipement" pour="e">\n<select id="e"><option>a</option></select>\n</SectionFormulaire>',
+		],
+		[
+			'étoile orpheline dans un label.field',
+			'<label class="field">Début<EtoileRequis vide={!d} /><input type="date" /></label>',
+		],
 	];
 	let echecs = 0;
 	for (const [nom, gabaritCas] of cas) {
@@ -266,6 +301,14 @@ if (process.argv.includes('--selftest')) {
 		[
 			'libellé frère dans un .field',
 			'<div class="field"><label for="x">Sujet</label><input id="x" type="text" /></div>',
+		],
+		[
+			'intitulé de section, contrôle dans un .field',
+			'<SectionFormulaire titre="Titre" pour="t"><div class="field"><input id="t" type="text" /></div></SectionFormulaire>',
+		],
+		[
+			'étoile dans un libellé frère',
+			'<div class="field"><label for="d">Début<EtoileRequis vide={!d} /></label><input id="d" type="date" /></div>',
 		],
 		[
 			'contrôle SANS libellé : hors périmètre',
