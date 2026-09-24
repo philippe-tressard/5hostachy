@@ -184,7 +184,15 @@
 		font-size: 0.82rem;
 		cursor: pointer;
 		color: var(--color-text-muted);
-		transition: all 0.12s;
+		/*  Les propriétés NOMMÉES, jamais `all` : `all` anime aussi ce qu'une
+		    règle voisine change sans le vouloir (largeur, rembourrage), et la
+		    rangée se déforme pendant 120 ms. `transform` y figure pour l'appui. */
+		transition:
+			color 0.12s,
+			background-color 0.12s,
+			border-color 0.12s,
+			box-shadow 0.12s,
+			transform var(--duree-geste, 0.12s) var(--ease-out, ease);
 		white-space: nowrap;
 	}
 	/*  PRIVATIF : un contour discontinu au repos.

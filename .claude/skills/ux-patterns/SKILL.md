@@ -2230,6 +2230,28 @@ après une première proposition inexacte de ma part.
 
 
 
+## 17. MOUVEMENT ET RETOUR AU TOUCHER — en essai sur les Petites annonces (24/09/2026)
+
+🔹 **Proposé sur UN écran (R5), pas encore généralisé.** À constater à l'écran,
+puis à remonter dans la charte si l'essai est retenu.
+
+| Quoi | Règle | Où |
+|---|---|---|
+| jetons | `--ease-out` (courbe de sortie marquée), `--duree-geste` 120 ms, `--duree-apparition` 200 ms | `styles/socle.css` |
+| corps déplié | **entre** en 200 ms (fondu + 4 px), **sort** sans délai ; jamais la hauteur animée | `AnnonceCard` |
+| appui | `scale(0.97)` sur `:active`, `transform` seul ; pas sur une icône `aria-pressed` | `OngletAnnonces` (`:global` borné) |
+| survol | ce qui ne sert qu'à la souris passe sous `@media (hover: hover) and (pointer: fine)` — au doigt, `:hover` reste collé | `AnnonceCard` (`.attenue`) |
+| transitions | les propriétés **nommées**, jamais `all` | `Pastille` |
+| mouvement réduit | coupe les glissements ; garde l'appui (3 % sur place = retour d'état) | les deux |
+
+⚠️ **Piège mesuré** : `.carte-liste.expanded .chevron` fait tourner TOUT chevron
+d'une carte dépliée, pas seulement celui de l'en-tête. Un chevron posé dans le
+corps doit s'en exempter (`AnnonceCard`, « Gérer les photos »).
+
+**Pour généraliser** : déplacer l'appui dans la charte (`.btn`, `.btn-icon*`,
+`Pastille`), retirer l'enveloppe `.onglet-annonces` et son `<style>`, et passer
+`.carte-liste:hover` sous la même requête média. Une seule écriture, pas deux.
+
 ## Checklist UX (à vérifier avant commit)
 
 **Une seule liste : `CLAUDE.md` → « Checklist avant commit » → Frontend.** Elle est

@@ -61,6 +61,14 @@ body {
 	--radius: 0.5rem;
 	--shadow-sm: 0 1px 3px rgba(30, 58, 95, 0.1);
 	--shadow: 0 4px 12px rgba(30, 58, 95, 0.12);
+	/*  Mouvement (24/09/2026). Une courbe de SORTIE marquée : le geste répond
+	    tout de suite, puis se pose. Un `ease` par défaut démarre mou, et
+	    l'écran paraît en retard sur le doigt. Deux durées, pas davantage :
+	    `geste` pour ce qui répond à un appui, `apparition` pour ce qui entre.
+	    En essai sur les Petites annonces (R5) avant d'être généralisées. */
+	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+	--duree-geste: 120ms;
+	--duree-apparition: 200ms;
 	font-family:
 		'Segoe UI',
 		-apple-system,
