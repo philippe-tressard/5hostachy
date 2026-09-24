@@ -12,6 +12,7 @@ from app.models.tickets import CategorieTicket
 #  fichier-ci, qui l’importe. Ré-exportés, donc rien à changer ailleurs.
 from app.schemas_communs import (  # noqa: F401
     ChampsIntervenant,
+    nom_en_majuscules,
     ListeJson as ListeJson,
     liste_depuis_json as liste_depuis_json,
 )
@@ -48,7 +49,7 @@ class UserCreate(BaseModel):
     @field_validator("nom", "nom_aide", "nom_proprietaire", mode="before")
     @classmethod
     def uppercase_nom(cls, v: str | None) -> str | None:
-        return v.strip().upper() if v else v
+        return nom_en_majuscules(v)
 
     @field_validator("prenom", "prenom_aide", mode="before")
     @classmethod

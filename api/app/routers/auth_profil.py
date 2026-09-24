@@ -36,6 +36,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.schemas import UserRead
+from app.schemas_communs import nom_en_majuscules
 from app.utils.alerte_etage import alerter_divergence_etage
 from app.utils.limiter import (
     LIMITE_LECTURE_AUTHENTIFIEE,
@@ -78,7 +79,7 @@ class MeUpdate(BaseModel):
     @field_validator("nom", mode="before")
     @classmethod
     def uppercase_nom(cls, v: str | None) -> str | None:
-        return v.strip().upper() if v else v
+        return nom_en_majuscules(v)
 
     @field_validator("prenom", mode="before")
     @classmethod

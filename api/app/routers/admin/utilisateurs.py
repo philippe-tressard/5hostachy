@@ -43,6 +43,8 @@ from datetime import datetime
 from typing import Optional
 from app.utils.communaute import notification_de_ban
 from app.utils.recuperer import ou_404
+from app.utils.etages import ETAGE_HORS_BORNES, etage_hors_bornes
+from app.schemas_communs import NomMajuscules
 from app.utils.cloche import sonner_systeme
 
 router = APIRouter()
@@ -161,7 +163,7 @@ def retirer_role(
     from app.schemas import UserRead
     return UserRead.from_orm_with_roles(user)
 class AdminUserUpdate(BaseModel):
-    nom: Optional[str] = None
+    nom: NomMajuscules = None
     prenom: Optional[str] = None
     email: Optional[str] = None
     telephone: Optional[str] = None
@@ -169,6 +171,11 @@ class AdminUserUpdate(BaseModel):
     statut: Optional[StatutUtilisateur] = None
     batiment_id: Optional[int] = None
     actif: Optional[bool] = None
+    #  Corriger une saisie de l'inscription (#1155) : où la personne habite, et,
+    #  pour un locataire, le nom de son bailleur — ce qui sert à la rapprocher
+    #  de son lot. Mêmes règles qu'à l'inscription : bornes, capitales.
+    etage: Optional[int] = None
+    nom_proprietaire: NomMajuscules = None
 
     @field_validator("email", mode="before")
     @classmethod
@@ -189,6 +196,8 @@ def modifier_utilisateur(
         existing = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
         if existing:
             raise HTTPException(400, "Cet e-mail est déjà utilisé.")
+    if body.etage is not None and etage_hors_bornes(body.etage):
+        raise HTTPException(400, ETAGE_HORS_BORNES)
     for field, val in body.model_dump(exclude_unset=True).items():
         setattr(user, field, val)
     #  Basculer `actif` — dans un sens comme dans l'autre — EST une décision de
