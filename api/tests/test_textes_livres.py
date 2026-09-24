@@ -11,7 +11,7 @@ import pathlib
 
 import sqlalchemy as sa
 
-from app.utils.textes_livres import remplacer_si_intact
+from app.utils.textes_livres import remplacer_passage, remplacer_si_intact
 
 _VERSIONS = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions"
 
@@ -43,3 +43,16 @@ def test_seul_le_texte_intact_est_remplace():
         lignes = sorted(r[0] for r in conn.execute(sa.text("SELECT reponse FROM faq_item")))
     assert n == 1
     assert lignes == ["corrigé", "reformulé par le conseil"]
+
+
+def test_un_passage_n_est_remplace_que_s_il_figure_tel_quel():
+    moteur = sa.create_engine("sqlite://")
+    with moteur.begin() as conn:
+        conn.execute(sa.text("CREATE TABLE config_site (cle TEXT, valeur TEXT)"))
+        conn.execute(sa.text("INSERT INTO config_site VALUES ('a', 'avant FAUX après'), ('b', 'reformulé')"))
+        n_a = remplacer_passage(conn, "config_site", {"cle": "a"}, "valeur", "FAUX", "JUSTE")
+        n_b = remplacer_passage(conn, "config_site", {"cle": "b"}, "valeur", "FAUX", "JUSTE")
+        n_c = remplacer_passage(conn, "config_site", {"cle": "absente"}, "valeur", "FAUX", "JUSTE")
+        lignes = dict(conn.execute(sa.text("SELECT cle, valeur FROM config_site")).all())
+    assert (n_a, n_b, n_c) == (1, 0, 0)
+    assert lignes == {"a": "avant JUSTE après", "b": "reformulé"}
