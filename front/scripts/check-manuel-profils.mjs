@@ -161,6 +161,31 @@ if ([...annoncees].sort().join(',') !== [...ouvertes].sort().join(',')) {
 	);
 }
 
+// ── 4. Les icônes d'une carte (24/09/2026) ─────────────────────────────────
+//  Chaque bouton des rangées d'actions porte un `aria-label` littéral ; le
+//  chapitre « Les icônes d'une carte » doit le documenter (`data-geste`). Une
+//  icône ajoutée à une carte sans passer par le manuel échoue ici.
+const gestesManuel = new Set([...manuel.matchAll(/data-geste="([^"]+)"/g)].map((m) => m[1]));
+const rangees = [
+	'src/lib/components/ActionsTicket.svelte',
+	'src/lib/components/ActionsActualite.svelte',
+];
+const gestesCode = new Set(
+	rangees.flatMap((f) => [...lire(f).matchAll(/aria-label="([^"{]+)"/g)].map((m) => m[1])),
+);
+if (gestesCode.size < 3) {
+	console.error(
+		`✗ Cas zéro : ${gestesCode.size} geste(s) lu(s) dans les rangées d'actions — le motif a dérivé.`,
+	);
+	process.exit(1);
+}
+for (const g of gestesCode) {
+	if (!gestesManuel.has(g))
+		erreurs.push(
+			`l'icône « ${g} » d'une carte n'est pas documentée dans « Les icônes d'une carte »`,
+		);
+}
+
 if (erreurs.length > 0) {
 	console.error(
 		'✗ Le manuel et le code ne disent pas la même chose de ce que voit chaque profil :',
