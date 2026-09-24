@@ -45,7 +45,7 @@ from app.utils.photos import parse_photos
 #: Un couvercle vérifie que ce dictionnaire couvre l'énumération et rien de
 #: fantaisiste : `api/tests/test_statuts_tickets.py`.
 STATUT_LABELS = {
-    "ouvert": "Ouvert", "en_ag": "À l’AG", "en_cours": "En cours",
+    "ouvert": "Ouvert", "en_ag": "À l’AG", "en_cours": "Chez le syndic",
     "chez_prestataire": "Chez le prestataire",
     "résolu": "Résolu", "annulé": "Annulé",
     "fermé": "Fermé",  # historique seulement — cf. STATUTS_TICKET_HISTORIQUES

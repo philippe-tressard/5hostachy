@@ -307,5 +307,7 @@ export const OPTIONS_CATEGORIE: readonly {
 export const OPTIONS_FILTRE_NATURE = [
 	{ val: 'actualite', label: '\u{1F4F0} Actualité' },
 	{ val: 'calendrier', label: '\u{1F4C5} Calendrier' },
-	{ val: 'activite', label: '\u{1F6E0}️ Activité' },
+	//  « Affaire » et non plus « Activité » (24/09/2026, arbitré à l'écran) :
+	//  le libellé change, la valeur `activite` reste — liens et serveur inchangés.
+	{ val: 'activite', label: '\u{1F6E0}️ Affaire' },
 ];
