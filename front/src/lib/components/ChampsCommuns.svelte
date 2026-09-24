@@ -78,6 +78,7 @@
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import { SECTIONS_LIBELLE, type EntiteDeclaree, type IdSection } from '$lib/entites/types';
 	import { pliageDe, requisDe } from '$lib/pliage';
+	import { MAX_FICHIERS } from '$lib/fichiers';
 	import SectionDiffusion from './SectionDiffusion.svelte';
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
 	import SectionPerimetre from './SectionPerimetre.svelte';
@@ -194,10 +195,8 @@
 	     `perimetre` ne porte qu'un code ; les passer au tableau demande une
 	     migration, suivie à part. */
 	export let perimetreMode: 'multi' | 'single' = 'multi';
-	/**  Le périmètre est-il OBLIGATOIRE ? Vrai partout sauf sur une évolution, où
-	 *   il sert à **préciser** le périmètre de l'objet porteur : ne rien y toucher
-	 *   ne change rien (#497). */
-	export let perimetreRequis = true;
+	//  Périmètre obligatoire : lu dans la DÉCLARATION (`exige`), jamais posé ici —
+	//  pourquoi, voir `requisDe` (#1186). Une évolution, sans entité, n'en a pas (#497).
 	/**  Le badge de la section. `null` = calculé (le périmètre par défaut, quand
 	 *   c'est lui). Une évolution y met le périmètre COURANT de l'objet porteur —
 	 *   on voit d'où l'on part, ce qu'aucun calcul local ne peut deviner. */
@@ -248,12 +247,11 @@
 	//  ── 9. Documents ──────────────────────────────────────────────────────────
 	export let avecDocuments = false;
 	export let documents: string[] = [];
-	/**  Mode différé : les documents d'une actualité deviennent des entités
-	     `Document` rattachées à la publication, qui n'existe pas encore. Le
-	     composant retient les `File`, l'écran les téléverse après création.
-	     Voir l'en-tête de `FichiersUpload.svelte`. */
-	export let documentsDifferes = false;
-	export let documentsFichiers: File[] = [];
+	/**  Mode différé de TOUTE la section Pièces jointes, et son plafond : voir
+	     `SectionsPiecesJointes` (#1186) et l'en-tête de `FichiersUpload`. */
+	export let differes = false;
+	export let fichiersDifferes: File[] = [];
+	export let piecesMax: number = MAX_FICHIERS;
 	/**  Qui rend le CONTRÔLE des documents. `interne` (défaut) : `FichiersUpload`,
 	     comme partout. `slot` : l'écran fournit le sien — les documents d'une
 	     publication sont des entités `Document` avec un identifiant, qu'on ajoute
@@ -373,7 +371,7 @@
 		pliable={plie('perimetre')}
 		bind:perimetre
 		mode={perimetreMode}
-		requis={perimetreRequis}
+		requis={exige('perimetre')}
 		badgeImpose={perimetreBadge}
 		reservable={avecReservePerimetre}
 		bind:reserve={reservePerimetre}
@@ -406,9 +404,10 @@
 	bind:photos
 	{avecDocuments}
 	{documentsControle}
-	{documentsDifferes}
+	{differes}
+	max={piecesMax}
 	bind:documents
-	bind:documentsFichiers
+	bind:fichiersDifferes
 >
 	<svelte:fragment slot="documents"><slot name="documents" /></svelte:fragment>
 </SectionsPiecesJointes>

@@ -55,7 +55,6 @@
 		{premiere}
 		{avecPerimetre}
 		bind:perimetre
-		perimetreRequis={false}
 		{perimetreBadge}
 		{avecDestinataires}
 		bind:destinataires

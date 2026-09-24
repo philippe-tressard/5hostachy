@@ -500,8 +500,8 @@ le vérifie aussi en CI, dans les deux sens. Aucun des deux ne suffit seul : le 
 lit le code, le contrôle au démarrage lit le scheduler (#1047).
 
 ⚠️ « Identique sur les 2 nœuds » **est un invariant, pas un constat** : il était faux
-jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` qui y échouait 144 fois
-par jour. Le vérifier fait partie du point 8 du pré-check. `auto-deploy.sh` (`*/5`) est
+jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` en échec permanent (récit et
+chiffres : `mep-precheck/HISTORIQUE.md`, à « check-stack »). Le vérifier fait partie du point 8 du pré-check. `auto-deploy.sh` (`*/5`) est
 à part : c'est le seul cron **utilisateur** (`ptressard`), et c'est ce qui fait
 l'objet du point 11.
 

@@ -92,8 +92,14 @@ export const IDEE: EntiteDeclaree = {
 		},
 		{
 			//  ✅ AJOUTÉ le 18/08/2026 (migration 0153), sur demande à l'écran.
+			//
+			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (#1186, 24/09/2026) — comme sur les cinq
+			//  autres entités qui portent un périmètre. L'écran affichait l'astérisque
+			//  (posée d'office par `ChampsCommuns`) sur une section pliée : la
+			//  déclaration ne le savait pas, et `lint:etats` ne pouvait rien y voir.
 			id: 'perimetre',
 			objet: 'PerimetrePicker — ce que l’idée concerne',
+			requis: true,
 			absente: {
 				//  🔒 Le CIBLAGE NE SE CORRIGE PAS (#783). Restreindre après coup
 				//  masquerait l'idée à des gens qui l'ont déjà votée — exactement la
@@ -114,7 +120,6 @@ export const IDEE: EntiteDeclaree = {
 					explication: "Le périmètre est celui de l'idée ; une réponse ne le redéfinit pas.",
 				},
 			},
-			pliee: true,
 		},
 		{
 			id: 'description',
