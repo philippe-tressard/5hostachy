@@ -105,8 +105,27 @@ esac
 #  rejoué, ce que ce script existe précisément pour empêcher.
 #  Le chemin est DEMANDÉ à Python, jamais écrit en dur : il dépend de la version
 #  installée et changerait au prochain interpréteur.
+#
+#  🔴 SES FICHIERS en tête, jamais le RÉPERTOIRE entier (24/09/2026). Ce
+#  répertoire n'est pas réservé à pip : en session cloud c'est `/usr/local/bin`,
+#  qui porte aussi `node`, `npm` et `npx` — des LIENS vers un Node 20. Placé
+#  devant tel quel, il masquait le Node 22 de la CI, et sept contrôles du front
+#  échouaient au rejeu (`fs.globSync` absent, `--experimental-strip-types`
+#  refusé) alors qu'ils passaient sur GitHub. Placé DERRIÈRE, c'est le `pytest`
+#  isolé de `uv` (`~/.local/bin`, sans les dépendances de l'API) qui gagnait.
+#  Aucun ordre de répertoires ne convient aux deux : on expose donc, en tête,
+#  des liens vers les seuls FICHIERS ordinaires du répertoire — ce que pip y
+#  écrit (`pytest`, `ruff`, `pip-audit`…) —, jamais les liens symboliques qu'un
+#  autre installateur y a posés. Sous Windows, où tout y est fichier, rien ne
+#  change.
 SCRIPTS_PY=$(python -c "import sysconfig; print(sysconfig.get_path('scripts'))" 2>/dev/null)
-[ -n "$SCRIPTS_PY" ] && [ -d "$SCRIPTS_PY" ] && PATH="$SCRIPTS_PY:$PATH" && export PATH
+if [ -n "$SCRIPTS_PY" ] && [ -d "$SCRIPTS_PY" ]; then
+  SCRIPTS_PY_EXPOSES=$(mktemp -d) || exit 2
+  for f in "$SCRIPTS_PY"/*; do
+    [ -f "$f" ] && [ ! -L "$f" ] && [ -x "$f" ] && ln -s "$f" "$SCRIPTS_PY_EXPOSES/"
+  done
+  PATH="$SCRIPTS_PY_EXPOSES:$PATH" && export PATH
+fi
 
 FILTRE="$*"
 SHA=$(git rev-parse HEAD 2>/dev/null)
@@ -122,7 +141,7 @@ if [ "${ECRIT:-0}" -eq 0 ] || [ "$ECRIT" != "$EXTRAIT" ]; then
 fi
 
 TMP=$(mktemp -d) || exit 2
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP" ${SCRIPTS_PY_EXPOSES:+"$SCRIPTS_PY_EXPOSES"}' EXIT
 ci_extraire < "$CI" > "$TMP/flux"
 
 NB_OK=0; NB_FAIL=0; NB_INCONNU=0; NB_PREP=0
