@@ -712,7 +712,7 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
 |------|------------|-----------|
 | Actualités | `.pub-` | **`CarteActualite.svelte`**, rendue par `ActualiteEnListe` **dans la liste des affaires** |
 | Affaires (tickets) | `.tk-` | `tickets/+page.svelte` → `ListeTickets` |
-| Calendrier | `.ev-` | `calendrier/+page.svelte` |
+| Calendrier | — | plus une page (#1092, 23/09/2026) : filtre « Calendrier » et onglet Kanban d'Affaires |
 | Tableau de bord | `.pub-`, `.ev-`, `.tk-` | `tableau-de-bord/+page.svelte` |
 
 🔴 **Il n'y a plus de page Actualités** (23/09/2026, #1091 lot 4 et #1092) : une
@@ -791,7 +791,7 @@ eu à copier que l'adresse de la page voisine.
 | l'onglet dans l'écran | `export let data` → `$: onglet = data.onglet` — **jamais** un `let onglet` qu'on affecte |
 
 **La forme de l'adresse** : *plate quand l'onglet est un CONTENU* (`/annonces`,
-`/idees`, `/sondages`), *imbriquée quand il est une VUE* (`/calendrier/kanban`,
+`/idees`, `/sondages`), *imbriquée quand il est une VUE* (`/tickets/kanban`,
 `/espace-cs/reporting`, `/mon-lot/location/archives`). `/kanban` seul ne dit pas de
 quoi il parle.
 
@@ -892,7 +892,7 @@ explicite du lien, pas un défaut.
 - `type="button"` obligatoire (éviter soumission formulaire)
 - Sélection multiple : toggle + reset auto vers défaut si aucun actif
 
-Pages implémentées : `tickets` (filtre de nature, 23/09/2026), `calendrier`
+Pages implémentées : `tickets` (filtre de nature, 23/09/2026) — le calendrier y est un filtre depuis #1092
 
 ## 6. Ligne de publication
 
@@ -924,7 +924,7 @@ une quatrième aurait suivi à la prochaine liste.
 | 📦 Archiver | CS + admin | Vue principale | `PATCH { archivee: true }` |
 | 🗑️ Supprimer | Admin seul | Vue Archives seule | `DELETE` (require_admin) |
 
-Vue archives unifiée dans `calendrier/+page.svelte` (onglet Archives).
+Vue archives unifiée dans `tickets/+page.svelte` (onglet Archives) depuis que le calendrier y a été fondu (#1092).
 
 ## 9. Champs de formulaire
 
@@ -1593,7 +1593,7 @@ cartes, pas une porte de plus.
 Variante « K4 », puis la brique du calendrier. Deux décisions, et elles se
 tiennent :
 
-- **la brique est celle de `/calendrier/kanban`** (`ItemKanban.svelte`, depuis
+- **la brique est celle de `/tickets/kanban`** (ex-`/calendrier/kanban`, qui y redirige) (`ItemKanban.svelte`, depuis
   le 19/09/2026, demandé à l'écran : *« utilise le même UX des briques »*) :
   pastilles de périmètre en haut, titre en gras, type en pied — plus de colonne
   d'icône à gauche. La K4 du 18/09 (icône sur la dernière ligne) est remplacée ;
@@ -1615,7 +1615,7 @@ tiennent :
   donne un compteur qui ment sans qu'aucun test ne le voie (`lint:plafond-liste`
   refuse qu'un nombre coupe une liste *et* serve de seuil dans un écran).
 
-  ⚠️ **L'accueil seulement.** `/calendrier/kanban` est l'écran dédié : il a la
+  ⚠️ **L'accueil seulement.** `/tickets/kanban` est l'écran dédié : il a la
   place, et y borner les colonnes cacherait ce qu'on vient y chercher.
 
 La grille est donc en **flex** et non en `grid` : une grille donne la même part
