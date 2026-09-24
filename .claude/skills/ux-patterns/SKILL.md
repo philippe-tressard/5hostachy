@@ -467,6 +467,12 @@ l'écran, jamais en relecture, puisque l'écart n'existe que le formulaire ouver
 
 **Ne JAMAIS utiliser** 📍 pour un périmètre logique.
 
+🔒 **`npm run lint:pictogrammes`** (#1045, 24/09/2026) : 🔹 ne se rend que par
+`BadgePerimetre` ; une phrase qui nomme un périmètre (`LOSANGE`) et chaque vrai
+lieu 📍 (`LIEUX`) se déclarent dans le contrôle, avec leur nombre d'occurrences.
+Il a trouvé « 📍 Concerne votre bâtiment » (→ 🔹), « 📍 Dépannage » (→ 🔧) et un
+badge recopié dans l'historique des annonces de hall.
+
 ## 2. Affichage du périmètre
 
 **Il n'y a plus de table de libellés, ni ici ni dans le code.** L'arborescence vit
@@ -916,6 +922,8 @@ Pages implémentées : `tickets` (filtre de nature, 23/09/2026) — le calendrie
 | `.clamp-2` | un **titre** de carte | 18/08/2026 |
 
 Les trois vivent dans `styles/normes.css`, et nulle part ailleurs.
+🔒 `npm run lint:clamp` refuse une troncature écrite ailleurs, et `.clamp-5`
+dans un fichier qui rend une `.carte-liste`.
 
 ⚠️ `.clamp-3` **existait déjà**, écrit à la main dans `FluxCard` : le fil
 d'activité tronquait à trois lignes depuis toujours, et c'est lui qui a servi de
@@ -1686,6 +1694,8 @@ de l'utilisateur. *Une consigne fausse fait lire l'écart comme une décision.*
 **silencieusement** sur `help-circle` pour un nom inconnu. `message-square-plus`
 n'existe pas et aurait affiché un point d'interrogation sans qu'aucun contrôle ne
 le dise (constaté le 15/08/2026).
+🔒 C'est désormais `npm run lint:icones` qui le dit (#1045) — il a trouvé
+`icone="database"`, rendu en point d'interrogation depuis sa création.
 
 **Garde-fou** : `npm run lint:entetes` (job `build-frontend`) refuse un
 `class="page-header"` écrit à la main, une redéfinition locale de `.page-header`,

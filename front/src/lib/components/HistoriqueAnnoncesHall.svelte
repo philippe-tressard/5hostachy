@@ -24,6 +24,7 @@
 	import type { AnnonceHall } from '$lib/api';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
+	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -188,7 +189,7 @@
 						</svelte:fragment>
 						<svelte:fragment slot="tags">
 							<span class="badge badge-blue">{annonce.format_label}</span>
-							<span class="badge badge-gray">&#x1F539; {annonce.perimetre_label}</span>
+							<BadgePerimetre perimetre={annonce.perimetre_cible} />
 							{#if annonce.ticket_id}<span
 									class="badge badge-gray"
 									title="Générée depuis une actualité">&#x1F4F0; Actualité</span

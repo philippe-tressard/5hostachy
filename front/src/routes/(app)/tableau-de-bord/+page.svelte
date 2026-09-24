@@ -411,7 +411,7 @@
 							<p class="urgence-horaire">{u.detail}</p>
 						{/if}
 						{#if u.meta?.concerne_mon_batiment}
-							<p class="urgence-concerne">📍 Concerne votre bâtiment</p>
+							<p class="urgence-concerne">🔹 Concerne votre bâtiment</p>
 						{/if}
 						{#if progress}
 							<div class="urgence-progress-wrap">
