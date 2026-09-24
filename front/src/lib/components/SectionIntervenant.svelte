@@ -27,8 +27,12 @@
 	export let pliable = false;
 
 	//  `<select>` rend des chaînes : la valeur se lit et s'écrit ici, une fois.
-	let choix = prestataireId === null ? '' : String(prestataireId);
-	$: prestataireId = choix === '' ? null : Number(choix);
+	//  ⚠️ Dans les DEUX sens : l'équipement peut proposer un intervenant depuis
+	//  l'extérieur (#1097). Une liaison `$: prestataireId = …` à sens unique
+	//  l'écrasait aussitôt par le choix affiché.
+	let choix = '';
+	$: choix = prestataireId === null ? '' : String(prestataireId);
+	const choisir = () => (prestataireId = choix === '' ? null : Number(choix));
 	$: retenu = prestataires.find((p) => p.id === prestataireId);
 </script>
 
@@ -43,7 +47,7 @@
 		{erreur}
 		consequence="Le menu des prestataires est vide : ce n'est pas qu'il n'en existe aucun."
 	/>
-	<select id="{idPrefixe}-prestataire" bind:value={choix}>
+	<select id="{idPrefixe}-prestataire" bind:value={choix} on:change={choisir}>
 		<option value="">— Aucun —</option>
 		{#each prestataires.filter((p) => p.actif !== false || p.id === prestataireId) as p (p.id)}
 			<option value={String(p.id)}>{p.nom}</option>

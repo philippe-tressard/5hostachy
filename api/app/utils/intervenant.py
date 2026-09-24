@@ -1,4 +1,4 @@
-"""L'intervenant d'une affaire et la récurrence d'un Entretien — une écriture, deux chemins.
+"""L'intervenant d'une affaire, son équipement et la récurrence d'un Entretien — une écriture, deux chemins.
 
 ## Pourquoi (#1092, lot 5, arbitré le 23/09/2026)
 
@@ -20,6 +20,18 @@ construit, et la récurrence la rejoint pour la seule catégorie Entretien.
   recatégorisée garderait en base ce qu'aucun écran ne montre plus (« sans
   données », arbitré le 23/09/2026).
 
+## L'équipement (#1097, 24/09/2026)
+
+« Sur quoi » : la **valeur** de `TypeEquipement`, posée par le conseil et jamais
+demandée au résident — il voit une flaque, il ne sait pas si c'est la plomberie,
+la toiture ou la VMC. Mêmes règles que l'intervenant (conseil seul, bâti seul,
+effacé ailleurs), plus une liste blanche : `assurance` et `syndic` classent des
+**contrats**, pas un équipement sur lequel on intervient.
+
+C'est lui qui fait entrer une affaire résolue au carnet d'entretien
+(`carnet_entretien._entrees_incidents`) : une affaire sans équipement n'y entre
+pas, sans que personne ait eu à le décider.
+
 Création (`crud.py`) et correction (`mise_a_jour.py`) l'appellent : deux
 écritures de ces trois règles divergeraient au premier cas limite.
 """
@@ -30,7 +42,7 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.models.prestataires import Prestataire
+from app.models.prestataires import Prestataire, TypeEquipement
 from app.models.tickets import CategorieTicket
 from app.utils.carnet_entretien import CATEGORIES_BATI
 from app.utils.recuperer import ou_404
@@ -41,7 +53,15 @@ from app.utils.valeurs import valeur
 #: « mois » vaut « mensuelle » : sans nombre saisi, il vaut 1.
 FREQUENCES: tuple[str, ...] = ("semaines", "mois", "fois_par_an", "ans")
 
-CHAMPS: tuple[str, ...] = ("prestataire_id", "frequence_type", "frequence_valeur")
+CHAMPS: tuple[str, ...] = ("prestataire_id", "frequence_type", "frequence_valeur", "equipement")
+
+#: Ce qu'une affaire peut désigner comme équipement : `TypeEquipement`, moins
+#: ce qui classe un CONTRAT sans être un équipement. Même liste côté écran :
+#: `EQUIPEMENTS_AFFAIRE` de `$lib/prestataires` (`test_types_equipement.py`).
+HORS_EQUIPEMENT: frozenset[str] = frozenset({TypeEquipement.assurance.value, TypeEquipement.syndic.value})
+EQUIPEMENTS_AFFAIRE: tuple[str, ...] = tuple(
+    e.value for e in TypeEquipement if e.value not in HORS_EQUIPEMENT
+)
 
 
 def _envoye(body: Any, champ: str) -> bool:
@@ -55,12 +75,21 @@ def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: b
     if valeur(ticket.categorie) not in {valeur(c) for c in CATEGORIES_BATI}:
         if ticket.prestataire_id is not None:
             changes.append("Intervenant effacé")
+        if ticket.equipement is not None:
+            changes.append("Équipement effacé")
         ticket.prestataire_id = None
-    elif est_cs and _envoye(body, "prestataire_id") and body.prestataire_id != ticket.prestataire_id:
-        if body.prestataire_id is not None:
-            ou_404(session, Prestataire, body.prestataire_id, "Prestataire")
-        ticket.prestataire_id = body.prestataire_id
-        changes.append("Intervenant")
+        ticket.equipement = None
+    else:
+        if est_cs and _envoye(body, "prestataire_id") and body.prestataire_id != ticket.prestataire_id:
+            if body.prestataire_id is not None:
+                ou_404(session, Prestataire, body.prestataire_id, "Prestataire")
+            ticket.prestataire_id = body.prestataire_id
+            changes.append("Intervenant")
+        if est_cs and _envoye(body, "equipement") and (body.equipement or None) != ticket.equipement:
+            if body.equipement and body.equipement not in EQUIPEMENTS_AFFAIRE:
+                raise HTTPException(422, "Équipement inconnu")
+            ticket.equipement = body.equipement or None
+            changes.append("Équipement")
 
     if valeur(ticket.categorie) != CategorieTicket.entretien.value:
         #  Hors Entretien : rien ne se garde, quel que soit l'auteur du geste.
@@ -83,4 +112,4 @@ def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: b
     return changes
 
 
-__all__ = ["CHAMPS", "FREQUENCES", "appliquer_intervenant"]
+__all__ = ["CHAMPS", "EQUIPEMENTS_AFFAIRE", "FREQUENCES", "appliquer_intervenant"]

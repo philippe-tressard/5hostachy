@@ -142,6 +142,8 @@ export interface Ticket extends PorteSaisiPourLu {
 	 *   `prestataire_nom` est dérivé par le serveur, en lecture seule. */
 	prestataire_id?: number | null;
 	prestataire_nom?: string | null;
+	/**  La valeur de `TypeEquipement`, posée par le conseil (#1097). */
+	equipement?: string | null;
 	frequence_type?: string | null;
 	frequence_valeur?: number | null;
 	/**  Section « Quand » (#1092), en ISO — quand ça se passe. C'est ce qui

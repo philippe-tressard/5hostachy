@@ -63,6 +63,17 @@ export const EQUIPEMENTS: readonly TypeEquipementOption[] = [
 	{ val: 'autre', label: '\u{1F527} Autre' },
 ];
 
+/**  Ce qui classe un CONTRAT sans être un équipement sur lequel on intervient.
+ *   Même liste côté serveur : `utils/intervenant.HORS_EQUIPEMENT`
+ *   (`test_types_equipement.py` les compare). */
+export const HORS_EQUIPEMENT: readonly string[] = ['assurance', 'syndic'];
+
+/**  Les équipements qu'une AFFAIRE peut désigner (#1097) : la table des
+ *   contrats, moins ce qui n'est pas un équipement. Dérivée, jamais recopiée. */
+export const EQUIPEMENTS_AFFAIRE: readonly TypeEquipementOption[] = EQUIPEMENTS.filter(
+	(e) => !HORS_EQUIPEMENT.includes(e.val),
+);
+
 /**  Le libellé d'un type d'équipement.
  *
  *   ⚠️ Le repli rend la valeur BRUTE plutôt qu'un tiret : une valeur inconnue

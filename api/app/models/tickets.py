@@ -24,6 +24,9 @@ appelants n'a une ligne à changer, comme pour `copropriete.py` (13/08),
 `communaute.py` (16/08) et `validations.py` (17/08).
 """
 from enum import Enum
+from typing import Optional
+
+from sqlmodel import SQLModel
 
 
 class StatutTicket(str, Enum):
@@ -218,3 +221,23 @@ class PrioriteTicket(str, Enum):
     basse = "basse"
     normale = "normale"
     haute = "haute"
+
+
+class IntervenantMixin(SQLModel):
+    """Ce que le CONSEIL pose sur une affaire du bâti : qui intervient, à quel
+    rythme, et sur quoi. Les règles vivent dans `utils/intervenant`.
+
+    - `prestataire_id`, `frequence_*` : #1092, lot 5 (migration 0211) ;
+    - `equipement` : #1097 (migration 0216) — la **valeur** de `TypeEquipement`,
+      posée par le conseil et jamais demandée au résident : il voit une flaque,
+      il ne sait pas si c'est la plomberie ou la toiture. C'est elle qui fait
+      entrer une affaire résolue au carnet d'entretien.
+
+    Colonnes simples, **sans clé étrangère** : SQLite refuse de l'ajouter à une
+    table existante (0117, 0165 — le conteneur s'arrêtait).
+    """
+
+    prestataire_id: Optional[int] = None
+    frequence_type: Optional[str] = None  # « semaines » · « mois » · « fois_par_an »
+    frequence_valeur: Optional[int] = None
+    equipement: Optional[str] = None

@@ -53,6 +53,20 @@ def liste_depuis_json(v):
 #: identique. Renommé pour ce qu'il est — une liste sérialisée en JSON.
 ListeJson = Annotated[List[str], BeforeValidator(liste_depuis_json)]
 
+class ChampsIntervenant(BaseModel):
+    """Intervenant, récurrence et équipement d'une affaire — conseil seul.
+
+    Les trois formes du ticket (création, lecture, correction) portaient chacune
+    les trois premiers champs, recopiés ; l'équipement (#1097) aurait fait la
+    quatrième ligne de chaque copie. Les règles vivent dans `utils/intervenant`.
+    """
+
+    prestataire_id: Optional[int] = None
+    frequence_type: Optional[str] = None
+    frequence_valeur: Optional[int] = None
+    equipement: Optional[str] = None
+
+
 class EvolutionLue(BaseModel):
     """**Une entrée de fil, telle qu'un écran la reçoit** — les neuf champs
     communs aux trois historiques (ticket, actualité, événement).
