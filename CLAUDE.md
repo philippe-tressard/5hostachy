@@ -554,6 +554,9 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
   post-check. Ne jamais conclure sur le seul `git log` du nœud.
   Reprise en main : `scripts/exploitation/MaJ-Hostachy.sh` sur le **RPi actif**
   uniquement (le script bloque sur le standby)
+- **Session cloud** (claude.ai/code) : aucun SSH vers les RPi, donc le lot s'arrête
+  à une PR vers `dev` — pré-check, fusion vers `main` et MEP se font du poste.
+  Environnement, setup et ce qui y manque : `.claude/cloud/LISEZMOI.md`.
 - `.env` non versionné · `SECRET_KEY` ≥ 32 caractères · `ENABLE_API_DOCS=false` en prod
 - Bascule manuelle (test) : `sudo bash /opt/5hostachy/scripts/exploitation/bascule.sh` depuis le RPi actif
   (chemin de **relais** ; le script vit dans `scripts/exploitation/` — cf. #337)
