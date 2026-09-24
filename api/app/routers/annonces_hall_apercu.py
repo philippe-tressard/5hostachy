@@ -26,6 +26,7 @@ création. Le **format** et le **nom du fichier**, eux, sont calculés par les m
 fonctions que la création (`choisir_format`, `nom_fichier`) — les taire aurait fait
 mentir l'aperçu sur deux valeurs que le gabarit cite en toutes lettres.
 """
+
 from __future__ import annotations
 
 import json
@@ -95,9 +96,7 @@ def _annonce_previsionnelle(b: BrouillonAnnonceHall, auteur: Utilisateur) -> Ann
     """
     cree_le = datetime.utcnow()
     images = photos_internes(b.images)
-    fmt = choisir_format(
-        b.message, b.format_demande, titre=b.titre, avec_photos=bool(images)
-    )
+    fmt = choisir_format(b.message, b.format_demande, titre=b.titre, avec_photos=bool(images))
     return AnnonceHall(
         titre=b.titre,
         message=b.message,

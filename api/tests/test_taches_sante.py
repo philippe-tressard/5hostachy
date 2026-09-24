@@ -8,6 +8,7 @@ La coupure suit une vraie frontière, pas une commodité : ce qui reste là-bas
 porte le MODÈLE et les périodicités attendues, ce qui vient ici porte la
 SYNTHÈSE rendue à l'écran. Les deux changent pour des raisons différentes.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -25,6 +26,7 @@ def session_memoire():
     with Session(moteur) as s:
         yield s
 
+
 #  ─────────────────────────────────────────────────────────────────────────────
 #  Cohérence du tableau de santé — signalé à l'écran par l'utilisateur le
 #  11/08/2026 : « certaines tâches sont doublées car exécutées sur 2 nœuds,
@@ -33,8 +35,10 @@ def session_memoire():
 #  pouvait vouloir dire « une seule exécution » OU « une seule ligne pour deux ».
 #  ─────────────────────────────────────────────────────────────────────────────
 
+
 def _sante(session):
     from app.routers.admin.exploitation import maintenance_sante
+
     return maintenance_sante(session=session, _=None)
 
 
@@ -47,9 +51,14 @@ def test_la_sante_rend_une_seule_ligne_par_tache(session_memoire):
     """
     maintenant = datetime.utcnow()
     for noeud in ("rpi1", "rpi2"):
-        session_memoire.add(HistoriqueMaintenance(
-            tache="bascule", noeud=noeud, statut="succes",
-            cree_le=maintenant - timedelta(hours=2)))
+        session_memoire.add(
+            HistoriqueMaintenance(
+                tache="bascule",
+                noeud=noeud,
+                statut="succes",
+                cree_le=maintenant - timedelta(hours=2),
+            )
+        )
     session_memoire.commit()
 
     lignes = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"]
@@ -77,11 +86,14 @@ def test_la_synthese_porte_la_derniere_execution_reelle(session_memoire):
     """
     maintenant = datetime.utcnow()
     recent = maintenant - timedelta(hours=2)
-    session_memoire.add(HistoriqueMaintenance(
-        tache="bascule", noeud="rpi2", statut="succes", cree_le=recent))
-    session_memoire.add(HistoriqueMaintenance(        # muet depuis 20 jours
-        tache="bascule", noeud="rpi1", statut="succes",
-        cree_le=maintenant - timedelta(days=20)))
+    session_memoire.add(
+        HistoriqueMaintenance(tache="bascule", noeud="rpi2", statut="succes", cree_le=recent)
+    )
+    session_memoire.add(
+        HistoriqueMaintenance(  # muet depuis 20 jours
+            tache="bascule", noeud="rpi1", statut="succes", cree_le=maintenant - timedelta(days=20)
+        )
+    )
     session_memoire.commit()
 
     ligne = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"][0]
@@ -102,12 +114,16 @@ def test_un_noeud_muet_reste_signale_malgre_une_synthese_saine(session_memoire):
     et le standby dérivait sans que rien ne le dise).
     """
     maintenant = datetime.utcnow()
-    session_memoire.add(HistoriqueMaintenance(
-        tache="bascule", noeud="rpi2", statut="succes",
-        cree_le=maintenant - timedelta(hours=2)))
-    session_memoire.add(HistoriqueMaintenance(
-        tache="bascule", noeud="rpi1", statut="succes",
-        cree_le=maintenant - timedelta(days=20)))
+    session_memoire.add(
+        HistoriqueMaintenance(
+            tache="bascule", noeud="rpi2", statut="succes", cree_le=maintenant - timedelta(hours=2)
+        )
+    )
+    session_memoire.add(
+        HistoriqueMaintenance(
+            tache="bascule", noeud="rpi1", statut="succes", cree_le=maintenant - timedelta(days=20)
+        )
+    )
     session_memoire.commit()
 
     ligne = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"][0]
@@ -133,9 +149,14 @@ def test_aucun_noeud_en_retard_quand_les_deux_sont_a_jour(session_memoire):
     """
     maintenant = datetime.utcnow()
     for noeud, heures in (("rpi1", 2), ("rpi2", 26)):
-        session_memoire.add(HistoriqueMaintenance(
-            tache="bascule", noeud=noeud, statut="succes",
-            cree_le=maintenant - timedelta(hours=heures)))
+        session_memoire.add(
+            HistoriqueMaintenance(
+                tache="bascule",
+                noeud=noeud,
+                statut="succes",
+                cree_le=maintenant - timedelta(hours=heures),
+            )
+        )
     session_memoire.commit()
 
     ligne = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"][0]
@@ -185,17 +206,27 @@ def test_le_noeud_enregistre_est_restitue_tel_quel(session_memoire):
     from datetime import datetime
 
     from app.models.core import (
-        HistoriqueSauvegarde, HistoriqueTelemetrie, StatutSauvegarde,
+        HistoriqueSauvegarde,
+        HistoriqueTelemetrie,
+        StatutSauvegarde,
     )
 
-    session_memoire.add(HistoriqueSauvegarde(
-        declenchee_par="automatique", statut=StatutSauvegarde.reussie, noeud="rpi1",
-        cree_le=datetime.utcnow(),
-    ))
-    session_memoire.add(HistoriqueTelemetrie(
-        declenchee_par="cron", statut="succes", noeud="rpi2",
-        cree_le=datetime.utcnow(),
-    ))
+    session_memoire.add(
+        HistoriqueSauvegarde(
+            declenchee_par="automatique",
+            statut=StatutSauvegarde.reussie,
+            noeud="rpi1",
+            cree_le=datetime.utcnow(),
+        )
+    )
+    session_memoire.add(
+        HistoriqueTelemetrie(
+            declenchee_par="cron",
+            statut="succes",
+            noeud="rpi2",
+            cree_le=datetime.utcnow(),
+        )
+    )
     session_memoire.commit()
 
     lignes = {t["tache"]: t for t in _sante(session_memoire)["taches"]}

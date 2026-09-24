@@ -49,6 +49,7 @@ Le contrôle ne juge pas une langue — il compte des mots **exclusivement**
 anglais, hors blocs de code, liens et URL. Calibré avant d'être écrit : 0
 occurrence sur les trois fichiers français, 33 et 23 sur les deux anglais.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -149,7 +150,7 @@ def test_aucun_fichier_public_ne_promet_une_licence_non_accordee():
         for licence in LICENCES_NON_ACCORDEES:
             for trouve in re.finditer(rf"\b{re.escape(licence)}\b", prose, re.I):
                 debut = max(0, trouve.start() - 60)
-                fautes.append(f"  {nom} : …{prose[debut:trouve.end() + 40].strip()}…")
+                fautes.append(f"  {nom} : …{prose[debut : trouve.end() + 40].strip()}…")
 
     assert not fautes, (
         "Un fichier public nomme une licence que le dépôt n'accorde pas "
@@ -171,9 +172,7 @@ def test_contributing_nomme_la_licence_reelle_et_son_fichier():
     assert liens, "CONTRIBUTING.md ne renvoie vers aucun fichier de licence"
     for lien in liens:
         cible = _RACINE / lien.split("#")[0]
-        assert cible.exists(), (
-            f"CONTRIBUTING.md renvoie vers « {lien} », qui n'existe pas"
-        )
+        assert cible.exists(), f"CONTRIBUTING.md renvoie vers « {lien} », qui n'existe pas"
 
 
 def test_les_trois_copies_de_la_licence_sont_identiques():

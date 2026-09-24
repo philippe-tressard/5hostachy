@@ -31,6 +31,7 @@ saisi ne pouvait, lui, rien corriger. Les deux erreurs étaient symétriques.
 qu'après lecture en base, une dépendance FastAPI ne peut donc pas trancher. Ce
 sont elles qu'on teste — pas leur recopie.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -99,6 +100,7 @@ def acteurs():
 
 # ── ÉDITER : le contenu de la demande ───────────────────────────────────────
 
+
 def test_l_auteur_edite(acteurs):
     ticket, auteur, *_ = acteurs
     assert peut_editer(ticket, auteur) is True
@@ -134,6 +136,7 @@ def test_un_tiers_n_edite_pas(acteurs):
 
 # ── COMMENTER : le suivi ────────────────────────────────────────────────────
 
+
 def test_le_CS_commente(acteurs):
     """L'autre moitié de la règle, et sa raison d'être : « s'il est au courant de
     certaines choses et influer sur le workflow »."""
@@ -156,6 +159,7 @@ def test_un_tiers_ne_commente_pas(acteurs):
 
 # ── Un objet SANS « saisi pour » ────────────────────────────────────────────
 
+
 def test_un_utilisateur_sans_identifiant_n_a_aucun_droit():
     """⚠️ La garde `None == None`, dans l'autre sens.
 
@@ -168,7 +172,7 @@ def test_un_utilisateur_sans_identifiant_n_a_aucun_droit():
     sinon les comparer côte à côte ne prouve rien. C'est l'audit du 18/08/2026 qui
     a relevé l'écart.
     """
-    anonyme = _user(RoleUtilisateur.résident)   # jamais écrit en base : `id` est None
+    anonyme = _user(RoleUtilisateur.résident)  # jamais écrit en base : `id` est None
     assert anonyme.id is None
     orphelin = Ticket(numero=99998, titre="Sans auteur", description="x", auteur_id=None)
     assert peut_editer(orphelin, anonyme) is False
@@ -185,8 +189,7 @@ def test_sans_saisi_pour_la_regle_ne_s_elargit_pas(acteurs):
     """
     _t, auteur, _b, _cs, _admin, tiers = acteurs
     #  En mémoire seulement : la règle est pure, elle n'a pas besoin de la base.
-    orphelin = Ticket(numero=99999, titre="Sans bénéficiaire", description="x",
-                      auteur_id=auteur.id)
+    orphelin = Ticket(numero=99999, titre="Sans bénéficiaire", description="x", auteur_id=auteur.id)
     assert orphelin.saisi_pour_user_id is None
     assert peut_editer(orphelin, tiers) is False
     assert peut_editer(orphelin, auteur) is True

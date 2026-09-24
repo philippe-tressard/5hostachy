@@ -20,6 +20,7 @@ d'une seconde écriture*, et aucune exécution ne la révèle tant que les deux
 copies sont d'accord. C'est exactement ce qui a laissé la clé `fichiers` absente
 d'un des deux envois pendant des mois (`test_email_contexte_appel.py`).
 """
+
 from __future__ import annotations
 
 import ast
@@ -151,6 +152,7 @@ def test_l_apercu_whatsapp_transmet_TOUT_ce_que_l_envoi_transmet():
     pas comparés : leur ordre est déjà verrouillé par la signature, et les nommer
     ici recopierait cette signature — une seconde liste qui divergerait.
     """
+
     def _mots_cles(source: str, dans: str) -> set[str]:
         """Les arguments NOMMÉS de l'appel à `construire_message` dans `dans`."""
         arbre = ast.parse(source)

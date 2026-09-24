@@ -44,6 +44,7 @@ reçoit en plus « 📷 Photos à voir sur le site ». Cela se décide à l'envo
 L'aperçu montre donc *le message tel qu'il sera composé*, pas *ce que le groupe
 recevra à coup sûr* — la nuance est petite et réelle.
 """
+
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -131,13 +132,15 @@ def _ticket_previsionnel(brouillon: BrouillonTicket, auteur: Utilisateur) -> Tic
 
     categorie = brouillon.categorie or "question"
     return Ticket(
-        numero="",                      # attribué à la création
+        numero="",  # attribué à la création
         titre=brouillon.titre,
         description=brouillon.description,
         categorie=categorie,
         statut=statut_pour(categorie),
         priorite="haute" if brouillon.urgente else "normale",
-        public_cible=json.dumps(brouillon.public_cible, ensure_ascii=False) if brouillon.public_cible else None,
+        public_cible=json.dumps(brouillon.public_cible, ensure_ascii=False)
+        if brouillon.public_cible
+        else None,
         auteur_id=auteur.id,
         perimetre_cible=json.dumps(brouillon.perimetre_cible or ["résidence"], ensure_ascii=False),
         photos_urls=photos_json(brouillon.photos_urls),
@@ -190,10 +193,14 @@ def apercu_diffusion(
     #  le dit canal par canal, plutôt que de montrer ce qui ne partira pas.
     if actualite and reservee_au_conseil(ticket):
         motif = "Réservée au conseil syndical : rien ne sort."
-        coches = [("email", brouillon.destinataire_syndic or brouillon.destinataire_cs),
-                  ("whatsapp", brouillon.partager_whatsapp)]
+        coches = [
+            ("email", brouillon.destinataire_syndic or brouillon.destinataire_cs),
+            ("whatsapp", brouillon.partager_whatsapp),
+        ]
         return ApercuDiffusion(
-            canaux=[ApercuCanal(canal=c, actif=False, inactif_motif=motif) for c, oui in coches if oui],
+            canaux=[
+                ApercuCanal(canal=c, actif=False, inactif_motif=motif) for c, oui in coches if oui
+            ],
             attribues_a_la_creation=[],
         )
 
@@ -203,12 +210,18 @@ def apercu_diffusion(
     if brouillon.destinataire_syndic or brouillon.destinataire_cs:
         if actualite:
             contexte, pieces = contexte_actualite(
-                ticket, user, session, commentaire=brouillon.commentaire or None,
+                ticket,
+                user,
+                session,
+                commentaire=brouillon.commentaire or None,
                 fichiers_urls=photos_internes(brouillon.fichiers_urls) or None,
             )
         else:
             contexte = contexte_ticket_syndic(
-                ticket, user, session, pieces_jointes=pieces,
+                ticket,
+                user,
+                session,
+                pieces_jointes=pieces,
                 commentaire=brouillon.commentaire or None,
                 evolutions=evolutions,
             )

@@ -20,6 +20,7 @@ le serveur accepte**, et fait de `StatutTicket` l'unique arbitre. Même forme qu
 Il vérifie aussi qu'aucune **sixième** liste ne réapparaît : c'est la recopie qui
 fabrique la divergence, pas la faute d'inattention qui la suit.
 """
+
 import pathlib
 import re
 
@@ -49,6 +50,7 @@ _PROPOSABLES = [s.value for s in StatutTicket if s.value not in STATUTS_TICKET_S
 
 # ── Ce que l'écran propose ────────────────────────────────────────────────────
 
+
 def _options_du_front() -> list[str]:
     """Les états proposés par l'interface, lus dans `$lib/tickets.ts`.
 
@@ -57,9 +59,7 @@ def _options_du_front() -> list[str]:
     c'est exactement le mécanisme qui a produit les cinq listes divergentes.
     """
     src = _MODULE_FRONT.read_text(encoding="utf-8")
-    bloc = re.search(
-        r"export const STATUTS_TICKET\s*:[^=]*=\s*\[(.*?)\];", src, re.S
-    )
+    bloc = re.search(r"export const STATUTS_TICKET\s*:[^=]*=\s*\[(.*?)\];", src, re.S)
     assert bloc, "STATUTS_TICKET introuvable dans front/src/lib/tickets.ts"
     return re.findall(r"value:\s*'([^']+)'", bloc.group(1))
 
@@ -98,6 +98,7 @@ def test_les_deux_endpoints_refusent_ce_qui_nest_pas_un_etat(valeur):
 
 # ── Ce que l'écran affiche ────────────────────────────────────────────────────
 
+
 def test_tout_etat_affichable_a_un_libelle_des_deux_cotes():
     """Un état sans libellé s'affiche en valeur brute — dans un e-mail compris.
 
@@ -109,9 +110,9 @@ def test_tout_etat_affichable_a_un_libelle_des_deux_cotes():
 
     src = _MODULE_FRONT.read_text(encoding="utf-8")
     for valeur in affichables:
-        assert re.search(rf"['\"]?{re.escape(valeur)}['\"]?\s*:", src) or (
-            f"'{valeur}'" in src
-        ), f"{valeur} n'a ni libellé ni pastille côté front"
+        assert re.search(rf"['\"]?{re.escape(valeur)}['\"]?\s*:", src) or (f"'{valeur}'" in src), (
+            f"{valeur} n'a ni libellé ni pastille côté front"
+        )
 
 
 def test_les_etats_clos_sont_les_memes_des_deux_cotes():
@@ -231,7 +232,7 @@ def test_aucun_routeur_ne_reecrit_une_liste_detats():
         #  Même précaution qu'au-dessus : les docstrings en DOTALL, les
         #  commentaires `#` ligne à ligne.
         code = chemin.read_text(encoding="utf-8")
-        code = re.sub(r'\"\"\".*?\"\"\"', "", code, flags=re.S)
+        code = re.sub(r"\"\"\".*?\"\"\"", "", code, flags=re.S)
         code = re.sub(r"#.*", "", code)
         for etats in _listes_detats(code):
             coupables.append(f"{rel} → {etats}")

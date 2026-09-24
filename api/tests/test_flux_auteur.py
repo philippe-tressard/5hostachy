@@ -19,6 +19,7 @@ remarque — c'est exactement ce qui vient d'arriver.
 qui porte un champ d'auteur** le rend dans son `meta`. Viser la notion, pas la
 chaîne — sinon un douzième collecteur arrive avec sa propre clé et passe au vert.
 """
+
 from __future__ import annotations
 
 import ast
@@ -174,8 +175,7 @@ def test_le_socle_des_tickets_le_porte_UNE_fois_pour_les_quatre_cartes():
     src = (FLUX / "tickets.py").read_text(encoding="utf-8")
     arbre = ast.parse(src)
     socle = next(
-        n for n in ast.walk(arbre)
-        if isinstance(n, ast.FunctionDef) and n.name == "_meta_ticket"
+        n for n in ast.walk(arbre) if isinstance(n, ast.FunctionDef) and n.name == "_meta_ticket"
     )
     corps = "\n".join(src.splitlines()[socle.lineno - 1 : socle.end_lineno])
     assert '"auteur"' in corps, "l'auteur d'un ticket doit vivre dans le socle commun"

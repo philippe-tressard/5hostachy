@@ -40,6 +40,7 @@ l'utilisateur pour en DÉDUIRE un droit. Les trois régimes vivent dans
 d'elles cesse de servir** : une tolérance qui ne protège plus rien finit par
 couvrir autre chose.
 """
+
 import ast
 import pathlib
 import re
@@ -80,8 +81,7 @@ def test_les_trois_regimes_existent_et_sont_publics():
     publiques = {
         n.name
         for n in arbre.body
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and not n.name.startswith("_")
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and not n.name.startswith("_")
     }
     manquants = [r for r in REGIMES if r not in publiques]
     assert not manquants, (
@@ -173,6 +173,7 @@ def test_aucune_comparaison_directe_de_role_ou_de_statut():
 #  durcir `ticket_visible` laisserait la LISTE ouverte, ou l'inverse : deux
 #  chemins vers la même donnée, d'accord entre eux jusqu'au jour où l'un change.
 
+
 def test_list_tickets_ne_REECRIT_pas_la_visibilite_en_SQL():
     """🔴 Ce test a remplacé un test de concordance, et le remplacement est la leçon.
 
@@ -195,13 +196,11 @@ def test_list_tickets_ne_REECRIT_pas_la_visibilite_en_SQL():
     d'une liste.
     """
     source = (
-        pathlib.Path(__file__).resolve().parents[1]
-        / "app" / "routers" / "tickets" / "crud.py"
+        pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "tickets" / "crud.py"
     ).read_text(encoding="utf-8")
     arbre = ast.parse(source)
     fn = next(
-        n for n in ast.walk(arbre)
-        if isinstance(n, ast.FunctionDef) and n.name == "list_tickets"
+        n for n in ast.walk(arbre) if isinstance(n, ast.FunctionDef) and n.name == "list_tickets"
     )
     corps = ast.get_source_segment(source, fn) or ""
 

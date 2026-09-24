@@ -1,4 +1,5 @@
 """Router lots — consultation et import (staging) des lots."""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -37,7 +38,7 @@ from app.models.core import (
 router = APIRouter(prefix="/lots", tags=["lots"])
 
 
-#  Helpers 
+#  Helpers
 
 #  🔴 Le vocabulaire de la colonne TYPE (tables, `_norm`, `_type_from_raw`,
 #  `_etage_from_raw`) vit dans `utils/import_xlsx` depuis #829 : il décrit ce
@@ -46,7 +47,8 @@ router = APIRouter(prefix="/lots", tags=["lots"])
 #  fonction pour contourner un homonyme.
 
 
-#  Schémas 
+#  Schémas
+
 
 class LotRead(BaseModel):
     id: int
@@ -78,7 +80,8 @@ def _lot_read(lot: Lot) -> LotRead:
     )
 
 
-#  Endpoints publics 
+#  Endpoints publics
+
 
 @router.get("/mes-lots")
 def mes_lots(

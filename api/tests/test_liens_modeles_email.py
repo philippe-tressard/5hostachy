@@ -29,6 +29,7 @@ soit nommée, et qu'à cet endroit-là une URL absolue soit construite. Une vari
 non déclarée échoue : c'est la seule façon d'empêcher qu'un futur modèle emporte
 un chemin nu sans que personne le voie.
 """
+
 from __future__ import annotations
 
 import pathlib

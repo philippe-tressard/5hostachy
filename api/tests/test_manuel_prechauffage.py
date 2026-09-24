@@ -16,6 +16,7 @@ exiger un rendu ici rendrait le contrôle INCONNU plutôt que vert. Il vérifie 
 qui peut l'être partout : que le préchauffage existe, qu'il ne lève jamais, et
 qu'il est bien PLANIFIÉ — écrire une fonction et la brancher sont deux gestes.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -30,6 +31,7 @@ def test_le_prechauffage_ne_leve_jamais():
 
     origine = manuel_pdf.generer_manuel_pdf
     try:
+
         def _casse(*_a, **_k):
             raise RuntimeError("moteur indisponible")
 
@@ -46,6 +48,7 @@ def test_le_prechauffage_garnit_le_cache():
     appels = []
     origine = manuel_pdf.generer_manuel_pdf
     try:
+
         def _compte(nom, url, **_k):
             appels.append((nom, url))
             return b"%PDF-1.7 factice"

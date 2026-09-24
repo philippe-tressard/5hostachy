@@ -35,6 +35,7 @@ troisième fois de la journée.
 fichiers que je venais de lire. C'est pourquoi ce contrôle balaie `app/` en
 entier et non une liste que j'aurais dressée.
 """
+
 from __future__ import annotations
 
 import re

@@ -32,6 +32,7 @@ l'annonce aux voisins (`annonce_arrivee`). L'ajout de cet envoi l'a porté à
 routeur route, il ne rédige pas. Les trois gestes de l'accueil vivent désormais
 côte à côte.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -95,9 +96,7 @@ def destinataires_arrivee(
     destinataires: list[tuple[Optional[int], str, str]] = []
 
     if syndic_principal and syndic_principal.email:
-        destinataires.append(
-            (syndic_principal.user_id, syndic_principal.email, ROLE_SYNDIC)
-        )
+        destinataires.append((syndic_principal.user_id, syndic_principal.email, ROLE_SYNDIC))
     if user.email:
         destinataires.append((user.id, user.email, ROLE_RESIDENT))
 

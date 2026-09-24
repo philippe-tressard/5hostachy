@@ -16,6 +16,7 @@ un lien vers un onglet disparu ; retirer la ligne sans retirer l'appelant aurait
 fait lever le fil en production. Les deux voyagent donc ensemble, et
 `test_liens_front.py` l'a démontré avant la mise en production.
 """
+
 from sqlmodel import select
 
 from app.models.core import Prestataire

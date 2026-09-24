@@ -8,6 +8,7 @@ rien** — un périmètre vide vaut « concerne tout le monde ».
 écrivent `from app.utils.perimetres import …` ; un découpage qui casse ses
 importateurs n'est pas un découpage, c'est un déménagement à leurs frais.
 """
+
 from .arbre import (
     Noeud,
     a_portee_globale,

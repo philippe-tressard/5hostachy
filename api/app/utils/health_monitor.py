@@ -1,4 +1,5 @@
 """Vérification quotidienne de santé du système — WhatsApp, sauvegardes, disque."""
+
 import glob
 import json
 import logging
@@ -14,8 +15,12 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.utils.dates_fr import datetime_longue
 from app.models.core import (
-    ConfigSite, HistoriqueMaintenance, HistoriqueSauvegarde, StatutSauvegarde,
-    TachePlanifiee, WhatsAppLog,
+    ConfigSite,
+    HistoriqueMaintenance,
+    HistoriqueSauvegarde,
+    StatutSauvegarde,
+    TachePlanifiee,
+    WhatsAppLog,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,7 +54,9 @@ def _check_whatsapp(session: Session) -> list[str]:
             resp = client.get(f"{api_url.rstrip('/')}/status", headers={"x-api-key": api_key})
             state = resp.json().get("state", "unknown")
         if state != "open":
-            issues.append(f"Bridge WhatsApp déconnecté (état : {state}). Reconnexion requise via Admin → WhatsApp → Statut.")
+            issues.append(
+                f"Bridge WhatsApp déconnecté (état : {state}). Reconnexion requise via Admin → WhatsApp → Statut."
+            )
     except Exception as exc:
         issues.append(f"Bridge WhatsApp injoignable : {exc}")
         return issues
@@ -65,6 +72,7 @@ def _check_whatsapp(session: Session) -> list[str]:
     ).all()
     if len(logs) >= 3 and all(l.statut == "échec" for l in logs[:3]):
         from zoneinfo import ZoneInfo
+
         extrait = "\n".join(
             f"    [{l.envoye_le.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('Europe/Paris')).strftime('%d/%m %H:%M')}] "
             f"« {l.label[:40]} » → {l.erreur or 'erreur inconnue'}"
@@ -94,8 +102,7 @@ def _check_backups(session: Session) -> list[str]:
     if age > timedelta(hours=25):
         heures = int(age.total_seconds() / 3600)
         issues.append(
-            f"Dernière sauvegarde réussie il y a {heures}h (> 25h). "
-            f"Vérifier Admin → Sauvegardes."
+            f"Dernière sauvegarde réussie il y a {heures}h (> 25h). Vérifier Admin → Sauvegardes."
         )
 
     # Dernière sauvegarde en échec ?
@@ -187,6 +194,7 @@ def _check_export_hors_site(session: Session) -> list[str]:
     exactement le faux vert que ce lot corrige ailleurs.
     """
     from app.utils.backup import horodatage_archive
+
     #  Seuil lu là où l'écran de santé le lit déjà : deux constantes séparées
     #  divergeraient au premier ajustement, et l'e-mail contredirait l'écran.
     from app.routers.admin import _PERIODICITE_ATTENDUE_H, _TOLERANCE_H
@@ -211,8 +219,7 @@ def _check_export_hors_site(session: Session) -> list[str]:
     issues = []
     if derniere.statut == "erreur":
         issues.append(
-            f"Le dernier export hors site a ÉCHOUÉ : "
-            f"{derniere.erreur or 'erreur inconnue'}."
+            f"Le dernier export hors site a ÉCHOUÉ : {derniere.erreur or 'erreur inconnue'}."
         )
 
     age_execution = datetime.utcnow() - derniere.cree_le
@@ -263,7 +270,7 @@ def _check_disk() -> list[str]:
         usage = shutil.disk_usage("/")
         pct_free = (usage.free / usage.total) * 100
         if pct_free < 15:
-            free_gb = usage.free / (1024 ** 3)
+            free_gb = usage.free / (1024**3)
             issues.append(
                 f"Espace disque faible : {pct_free:.1f}% libre ({free_gb:.1f} Go). "
                 f"Vérifier et nettoyer si nécessaire."
@@ -343,10 +350,12 @@ def _en_problemes(issues: list[str]) -> list[dict]:
     problemes = []
     for issue in issues:
         lignes = issue.split("\n")
-        problemes.append({
-            "titre": lignes[0],
-            "details": [l.strip() for l in lignes[1:] if l.strip()],
-        })
+        problemes.append(
+            {
+                "titre": lignes[0],
+                "details": [l.strip() for l in lignes[1:] if l.strip()],
+            }
+        )
     return problemes
 
 

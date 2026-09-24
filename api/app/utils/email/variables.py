@@ -41,13 +41,12 @@ attendu).
 C'est le seul défaut que rien ne rattrape en aval : `send_email` capture toute
 exception et n'enregistre l'échec que dans `historique_email` (#850).
 """
+
 from __future__ import annotations
 
 #: Injectées d'office par `email._contexte_rendu` — communes à tous les modèles,
 #: donc hors du contrat de chacun. Source unique : les trois lecteurs l'importent.
-VARIABLES_DU_GABARIT = frozenset(
-    {"annee", "app", "residence", "reference_copro", "prefixe_copro"}
-)
+VARIABLES_DU_GABARIT = frozenset({"annee", "app", "residence", "reference_copro", "prefixe_copro"})
 
 
 class ModeleIllisible(Exception):
@@ -83,8 +82,7 @@ def variables_de(sujet: str | None, corps_html: str | None) -> set[str]:
     si ce modèle échouerait à l'envoi.
     """
     return (
-        _variables_dun_champ(sujet, "sujet")
-        | _variables_dun_champ(corps_html, "corps_html")
+        _variables_dun_champ(sujet, "sujet") | _variables_dun_champ(corps_html, "corps_html")
     ) - VARIABLES_DU_GABARIT
 
 

@@ -73,6 +73,7 @@ def activer_cles_etrangeres(moteur) -> None:
         curseur.execute("PRAGMA foreign_keys=ON")
         curseur.close()
 
+
 #  🔴 LES CLÉS ÉTRANGÈRES SONT ACTIVES — 30/08/2026, fin de #546. Les trois
 #  conditions qui l'ont permis sont dans le docstring ci-dessus.
 #
@@ -110,7 +111,6 @@ with engine.connect() as _conn:
     _conn.execute(text("PRAGMA synchronous=FULL"))
     _conn.execute(text("PRAGMA busy_timeout=5000"))
     _conn.commit()
-
 
 
 def get_session():
@@ -177,12 +177,19 @@ def _run_migrations():
             if "batiment_id" in cols:
                 # Vérifier si la colonne est déjà nullable en tentant un INSERT NULL
                 # Plus simple : recréer si la définition contient NOT NULL
-                schema = conn.execute(
-                    text("SELECT sql FROM sqlite_master WHERE type='table' AND name='lot'")
-                ).scalar() or ""
-                if "batiment_id INTEGER NOT NULL" in schema or 'batiment_id" INTEGER NOT NULL' in schema:
+                schema = (
+                    conn.execute(
+                        text("SELECT sql FROM sqlite_master WHERE type='table' AND name='lot'")
+                    ).scalar()
+                    or ""
+                )
+                if (
+                    "batiment_id INTEGER NOT NULL" in schema
+                    or 'batiment_id" INTEGER NOT NULL' in schema
+                ):
                     conn.execute(text("PRAGMA foreign_keys=off"))
-                    conn.execute(text("""
+                    conn.execute(
+                        text("""
                         CREATE TABLE lot_migration_tmp (
                             id INTEGER PRIMARY KEY,
                             batiment_id INTEGER REFERENCES batiment(id),
@@ -192,11 +199,14 @@ def _run_migrations():
                             etage INTEGER,
                             superficie REAL
                         )
-                    """))
-                    conn.execute(text(
-                        "INSERT INTO lot_migration_tmp "
-                        "SELECT id, batiment_id, numero, type, type_appartement, etage, superficie FROM lot"
-                    ))
+                    """)
+                    )
+                    conn.execute(
+                        text(
+                            "INSERT INTO lot_migration_tmp "
+                            "SELECT id, batiment_id, numero, type, type_appartement, etage, superficie FROM lot"
+                        )
+                    )
                     conn.execute(text("DROP TABLE lot"))
                     conn.execute(text("ALTER TABLE lot_migration_tmp RENAME TO lot"))
                     conn.execute(text("PRAGMA foreign_keys=on"))
@@ -212,29 +222,35 @@ def _run_category_migrations():
             # Supprimer la catégorie Budget / Comptes annuels
             conn.execute(text("DELETE FROM categorie_document WHERE code = 'budget_comptes'"))
             # PV AG : copropriétaires_et_cs + bâtiment
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 UPDATE categorie_document
                 SET profil_acces_id = (SELECT id FROM profil_acces_document WHERE code = 'copropriétaires_et_cs'),
                     perimetre_defaut = 'bâtiment',
                     surcharge_autorisee = 1
                 WHERE code = 'pv_ag'
-            """))
+            """)
+            )
             # Diagnostic : copropriétaires_et_cs + bâtiment (était lot_occupants + lot)
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 UPDATE categorie_document
                 SET libelle = 'Diagnostic',
                     profil_acces_id = (SELECT id FROM profil_acces_document WHERE code = 'copropriétaires_et_cs'),
                     perimetre_defaut = 'bâtiment',
                     surcharge_autorisee = 1
                 WHERE code = 'diagnostic_lot'
-            """))
+            """)
+            )
             # Contrat fournisseur : périmètre bâtiment (était résidence)
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 UPDATE categorie_document
                 SET perimetre_defaut = 'bâtiment',
                     surcharge_autorisee = 1
                 WHERE code = 'contrat_fournisseur'
-            """))
+            """)
+            )
             conn.commit()
         except Exception:
             pass

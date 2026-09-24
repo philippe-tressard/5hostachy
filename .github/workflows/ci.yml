@@ -60,7 +60,12 @@ jobs:
           python-version: "3.11"
 
       - name: Install Ruff
-        run: pip install ruff
+        # ÉPINGLÉ depuis le 24/09/2026 (#1048) : `ruff format --check` compare le
+        # code au style de LA version installée, et Ruff change son style de
+        # formatage chaque année. Non épinglé, le job passerait au rouge un
+        # matin sans qu'un octet du dépôt ait bougé. Monter la version = un
+        # lot dédié : `pip install ruff==X`, `ruff format api/`, commit seul.
+        run: pip install ruff==0.15.8
 
       # 🔴 PREMIÈRE MESURE DES DÉPENDANCES PYTHON (#537, 20/08/2026).
       #
@@ -167,6 +172,18 @@ jobs:
           ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712
           ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712
           ruff check api/tests/ --select E9,F63,F7,F82,F841,E711,E712
+
+      - name: Ruff format (API)
+        # Depuis le 24/09/2026 (#1048) : aucun formateur n'était en usage côté
+        # API, alors que le front passe Prettier. Le formatage a été appliqué
+        # en UN commit, seul — relire son diff n'a de sens que s'il ne porte
+        # rien d'autre.
+        # La configuration (largeur 100, migrations exclues) vit dans
+        # `api/ruff.toml` : l'exécuter ailleurs que depuis `api/` la lit aussi.
+        # ⚠️ Le formatage DÉPLACE un commentaire de fin de ligne quand il coupe
+        # la ligne : un `# noqa` peut quitter la ligne qu'il vise. `ruff check`
+        # juste au-dessus le voit — c'est ce qui a été corrigé six fois ici.
+        run: ruff format --check api/
         # On garde un garde-fou « erreurs réelles » (syntaxe, noms invalides, runtime)
         # sans bloquer le CI sur des règles de style legacy.
 

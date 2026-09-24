@@ -10,6 +10,7 @@ version de FastAPI y garde des nœuds de routeurs opaques, sans `path` — la
 première version de ce test n'y voyait AUCUNE route (`test_demarrage.py`).
 Caddy retire le préfixe `/api` : `/api/manuel/pdf` est la route `/manuel/pdf`.
 """
+
 from __future__ import annotations
 
 import pathlib

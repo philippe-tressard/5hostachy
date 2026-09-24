@@ -25,6 +25,7 @@ par semaine, tous déclenchés par une personne. Une alerte par geste raté est 
 proportionnée. Si un jour un envoi devient périodique, c'est à ce moment-là qu'une
 temporisation se posera — pas avant.
 """
+
 import logging
 
 from sqlmodel import Session
@@ -77,7 +78,10 @@ def alerter_envoi(
         if not to:
             logger.warning(
                 "Envoi WhatsApp '%s' au statut « %s » — pas d'email admin configuré "
-                "pour alerter. %s", label, statut, erreur or "",
+                "pour alerter. %s",
+                label,
+                statut,
+                erreur or "",
             )
             return
         _send_alert(to, [issue], session)

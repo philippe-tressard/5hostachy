@@ -15,6 +15,7 @@ sert de `besoin_weasyprint` doit donc porter son test de portée — cf.
 Un contrôle qui s'abstient partout est un contrôle absent
 (`standards/04-fiabilite-des-controles.md` §1).
 """
+
 import os
 
 import pytest

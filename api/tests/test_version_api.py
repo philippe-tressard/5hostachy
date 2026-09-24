@@ -22,6 +22,7 @@ lit la version servie dans le bundle du front, ce qui n'expose rien de plus.
 Sans ce test, la « correction » consistant à publier la vraie version paraîtrait un
 progrès à qui n'a pas l'historique — et personne ne verrait passer la régression.
 """
+
 import json
 import pathlib
 import re
@@ -44,11 +45,14 @@ def _version_api() -> str:
     interdit ici (règle d'or anti-corruption DB), et inutile pour ce que l'on
     vérifie.
     """
-    m = re.search(r"""^API_VERSION\s*=\s*["']([^"']+)["']""",
-                  _MAIN.read_text(encoding="utf-8"), re.MULTILINE)
-    assert m, ("`API_VERSION` introuvable dans main.py — la constante a été renommée "
-               "ou supprimée. Ce test ne peut alors rien garantir : le corriger, ne "
-               "pas le supprimer.")
+    m = re.search(
+        r"""^API_VERSION\s*=\s*["']([^"']+)["']""", _MAIN.read_text(encoding="utf-8"), re.MULTILINE
+    )
+    assert m, (
+        "`API_VERSION` introuvable dans main.py — la constante a été renommée "
+        "ou supprimée. Ce test ne peut alors rien garantir : le corriger, ne "
+        "pas le supprimer."
+    )
     return m.group(1)
 
 

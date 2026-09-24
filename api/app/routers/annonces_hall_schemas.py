@@ -10,6 +10,7 @@ part, ce qui DÉCIDE reste.
 `_to_read`, qui compose le PDF, les destinataires et l'état d'archivage. La
 déclarer ici en ferait une seconde description de la même sortie.
 """
+
 from pydantic import BaseModel
 
 from app.utils.assiste_ia import AssisteIAEntree

@@ -46,6 +46,7 @@ le ticket suit. Retirer l'alerte immédiate au profit d'une ligne dans une liste
 aurait échangé un défaut contre un autre — c'est justement parce que personne ne
 regarde une liste spontanément que l'alerte existe.
 """
+
 from __future__ import annotations
 
 from html import escape

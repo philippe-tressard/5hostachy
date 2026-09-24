@@ -22,6 +22,7 @@ Le dépôt a payé l'inverse : *« je testais la décision, pas le tuyau qui la
 nourrit »* (check-reliability, 11/08/2026). Ici les deux sont séparés — et
 `traiter()` est éprouvée en base, sans IMAP non plus.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -63,6 +64,7 @@ def _entetes(jeton: str, *, de: str = "gestion@syndic.fr", auth: str | None = _A
 
 # ── Le jeton ──────────────────────────────────────────────────────────────────
 
+
 def test_deux_jetons_ne_se_ressemblent_pas():
     """Un jeton dérivé de l'identifiant se devinerait ; celui-ci se tire au sort.
 
@@ -79,7 +81,7 @@ def test_le_jeton_se_relit_dans_les_en_tetes_qui_le_portent():
     jeton = nouveau_jeton()
     adresse = adresse_de_reponse(jeton, "5hostachy.fr")
     assert jeton_dans(adresse) == jeton
-    assert jeton_dans(f'Conseil syndical <{adresse.upper()}>') == jeton
+    assert jeton_dans(f"Conseil syndical <{adresse.upper()}>") == jeton
     assert jeton_dans(None, "", "autre@ailleurs.fr") is None
     #  Une adresse trop courte n'est pas un jeton tronqué acceptable.
     assert jeton_dans("tickets+abc@5hostachy.fr") is None
@@ -94,18 +96,22 @@ def test_le_domaine_vient_de_l_adresse_d_envoi_ou_de_rien():
 
 # ── 🔴 L'authentification ─────────────────────────────────────────────────────
 
+
 def test_un_message_authentifie_est_accepte():
     v = examiner(_entetes(nouveau_jeton()), recu_le=datetime(2026, 9, 3))
     assert v.decision == ACCEPTE
 
 
-@pytest.mark.parametrize("auth, ce_qui_manque", [
-    (None, "aucun en-tête de vérification"),
-    ("mx.ovh.net; spf=pass; dkim=fail; dmarc=fail", "DKIM et DMARC"),
-    ("mx.ovh.net; spf=softfail; dkim=pass; dmarc=pass", "SPF"),
-    ("mx.ovh.net; dmarc=pass", "SPF et DKIM"),
-    ("", "en-tête vide"),
-])
+@pytest.mark.parametrize(
+    "auth, ce_qui_manque",
+    [
+        (None, "aucun en-tête de vérification"),
+        ("mx.ovh.net; spf=pass; dkim=fail; dmarc=fail", "DKIM et DMARC"),
+        ("mx.ovh.net; spf=softfail; dkim=pass; dmarc=pass", "SPF"),
+        ("mx.ovh.net; dmarc=pass", "SPF et DKIM"),
+        ("", "en-tête vide"),
+    ],
+)
 def test_un_message_NON_authentifie_est_refuse(auth, ce_qui_manque):
     """🔴 Le cœur du fichier — cinq façons d'usurper, cinq refus.
 
@@ -126,8 +132,9 @@ def test_un_message_sans_rapport_est_IGNORE_et_non_refuse():
     le confondre avec un refus produirait une notification par publicité reçue,
     et le filtre deviendrait lui-même la nuisance. On finirait par ne plus le lire.
     """
-    v = examiner({"From": "pub@ailleurs.fr", "To": "noreply@5hostachy.fr"},
-                 recu_le=datetime(2026, 9, 3))
+    v = examiner(
+        {"From": "pub@ailleurs.fr", "To": "noreply@5hostachy.fr"}, recu_le=datetime(2026, 9, 3)
+    )
     assert v.decision == IGNORE
 
 
@@ -144,10 +151,15 @@ def test_le_sujet_rattache_en_REPLI_quand_le_jeton_manque():
     premier choix (voir le test suivant), et payé par un contrôle que le jeton
     n'exigeait pas (`correspondant_du_ticket`).
     """
-    v = examiner({"From": "gestion@syndic.fr", "To": "noreply@5hostachy.fr",
-                  "Subject": "Re: Ticket #TK-482910 — Fuite au 3e",
-                  "Authentication-Results": _AUTH_OK},
-                 recu_le=datetime(2026, 9, 3))
+    v = examiner(
+        {
+            "From": "gestion@syndic.fr",
+            "To": "noreply@5hostachy.fr",
+            "Subject": "Re: Ticket #TK-482910 — Fuite au 3e",
+            "Authentication-Results": _AUTH_OK,
+        },
+        recu_le=datetime(2026, 9, 3),
+    )
     assert v.decision == ACCEPTE
     assert v.numero == "TK-482910"
     assert v.jeton is None
@@ -160,11 +172,15 @@ def test_le_jeton_PRIME_toujours_sur_le_sujet():
     les deux ferait dépendre le rattachement de l'ordre des tests.
     """
     jeton = nouveau_jeton()
-    v = examiner({"From": "gestion@syndic.fr",
-                  "To": f"tickets+{jeton}@5hostachy.fr",
-                  "Subject": "Re: Ticket #TK-000001 — un AUTRE dossier",
-                  "Authentication-Results": _AUTH_OK},
-                 recu_le=datetime(2026, 9, 3))
+    v = examiner(
+        {
+            "From": "gestion@syndic.fr",
+            "To": f"tickets+{jeton}@5hostachy.fr",
+            "Subject": "Re: Ticket #TK-000001 — un AUTRE dossier",
+            "Authentication-Results": _AUTH_OK,
+        },
+        recu_le=datetime(2026, 9, 3),
+    )
     assert v.jeton == jeton
     assert v.numero is None, "le sujet ne doit même pas être lu quand le jeton est là"
 
@@ -173,14 +189,20 @@ def test_un_numero_sans_le_mot_ticket_ne_rattache_rien():
     """Le motif exige « Ticket » devant : sinon une référence quelconque —
     facture, commande, lot — rattacherait un message au hasard.
     """
-    v = examiner({"From": "quelquun@ailleurs.fr", "To": "noreply@5hostachy.fr",
-                  "Subject": "Re: votre facture TK-482910",
-                  "Authentication-Results": _AUTH_OK},
-                 recu_le=datetime(2026, 9, 3))
+    v = examiner(
+        {
+            "From": "quelquun@ailleurs.fr",
+            "To": "noreply@5hostachy.fr",
+            "Subject": "Re: votre facture TK-482910",
+            "Authentication-Results": _AUTH_OK,
+        },
+        recu_le=datetime(2026, 9, 3),
+    )
     assert v.decision == IGNORE
 
 
 # ── La date plancher ──────────────────────────────────────────────────────────
+
 
 def test_les_messages_anterieurs_au_2_septembre_sont_ignores():
     """Arbitrage du 02/09/2026 : sans plancher, la première relève déverserait
@@ -211,6 +233,7 @@ def test_la_date_est_examinee_AVANT_le_reste():
 #  sur des sujets RECOPIÉS dans le test, qui disaient encore « Ticket ».
 #  Celui-ci rend les sujets des modèles semés : un renommage futur les suivra.
 
+
 def _sujets_a_numero() -> list[tuple[str, str]]:
     from jinja2 import ChainableUndefined, Environment
 
@@ -220,10 +243,15 @@ def _sujets_a_numero() -> list[tuple[str, str]]:
     rendus = []
     for code, _libelle, sujet, *_ in EMAIL_TEMPLATES:
         if "ticket.numero" in sujet:
-            rendus.append((code, env.from_string(sujet).render(
-                ticket={"numero": "TK-482910", "titre": "Fuite au 3e"},
-                residence={"nom": "Les Hostachys"},
-            )))
+            rendus.append(
+                (
+                    code,
+                    env.from_string(sujet).render(
+                        ticket={"numero": "TK-482910", "titre": "Fuite au 3e"},
+                        residence={"nom": "Les Hostachys"},
+                    ),
+                )
+            )
     return rendus
 
 
@@ -234,7 +262,8 @@ def test_le_repli_reconnait_chaque_sujet_que_nous_envoyons():
     #  Cas zéro : sans sujet à numéro, ce test serait vert sans rien avoir lu.
     assert len(rendus) >= 3, f"Seulement {len(rendus)} modèle(s) à numéro relevé(s)."
     manques = [
-        f"{code} : « Re: {sujet} »" for code, sujet in rendus
+        f"{code} : « Re: {sujet} »"
+        for code, sujet in rendus
         if numero_dans_sujet(f"Re: {sujet}") != "TK-482910"
     ]
     assert not manques, "Le repli par sujet ne reconnaît pas :\n  " + "\n  ".join(manques)

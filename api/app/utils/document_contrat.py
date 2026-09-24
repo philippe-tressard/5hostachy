@@ -33,6 +33,7 @@ Il ne dit pas quels documents un contrat porte : c'est une requête, et elle vit
 chez son appelant (`synthese_contrat.documents_du_contrat`). Il répond à une
 seule question, celle qui n'était posée nulle part.
 """
+
 from __future__ import annotations
 
 import logging

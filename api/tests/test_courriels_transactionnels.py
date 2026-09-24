@@ -22,6 +22,7 @@ passé (`utils/email/__init__.py`).
 cherche, dans l'arbre syntaxique, les appels qui envoient l'un de ces codes, et
 on regarde s'ils portent l'argument qui déclenche la préférence.
 """
+
 from __future__ import annotations
 
 import ast

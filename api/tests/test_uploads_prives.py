@@ -18,6 +18,7 @@ Deux conditions doivent tenir ensemble, et aucune ne se suffit :
 Le second point est un piège classique : la protection tient à l'**ordre** de
 deux blocs, ce qu'aucune relecture rapide ne vérifie.
 """
+
 import os
 import pathlib
 import re
@@ -26,6 +27,7 @@ import pytest
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 CADDYFILE = RACINE / "Caddyfile"
+
 
 def _routeurs_prives() -> tuple:
     """Les routeurs qui écrivent dans le répertoire privé — DÉDUITS, pas listés.
@@ -96,9 +98,7 @@ def test_les_routeurs_prives_n_ecrivent_plus_a_la_racine(routeur):
     """Un fichier privé posé à la racine serait servi malgré le Caddyfile."""
     source = (RACINE / "api" / "app" / "routers" / routeur).read_text(encoding="utf-8")
 
-    assert "REPERTOIRE_PRIVE" in source, (
-        f"{routeur} n'utilise plus REPERTOIRE_PRIVE"
-    )
+    assert "REPERTOIRE_PRIVE" in source, f"{routeur} n'utilise plus REPERTOIRE_PRIVE"
     fautifs = re.findall(r"os\.path\.join\(\s*UPLOADS_DIR\s*,", source)
     assert not fautifs, (
         f"{routeur} écrit encore à la racine du volume servi "
@@ -127,6 +127,7 @@ def test_le_repertoire_prive_est_bien_sous_le_volume_repliqué():
 
 
 # ── Migration 0124 : déplacement des fichiers existants ──────────────────────
+
 
 def _module_migration():
     """Charge la migration sans contexte Alembic (on ne teste que sa logique)."""
@@ -186,12 +187,11 @@ def test_la_migration_ne_leve_jamais(tmp_path, monkeypatch):
 
 # ── forward_auth : le reste de /uploads exige une session ────────────────────
 
+
 def test_uploads_exige_une_session_authentifiee():
     """Photos de profil, de ticket et pièces jointes ne sont plus publiques."""
     contenu = _caddyfile()
-    bloc = re.search(
-        r"handle\s+/uploads/\*\s*\{(.*?)\n    \}", contenu, re.S
-    )
+    bloc = re.search(r"handle\s+/uploads/\*\s*\{(.*?)\n    \}", contenu, re.S)
     assert bloc, "bloc /uploads/* introuvable"
     assert "forward_auth" in bloc.group(1), (
         "Le service statique de /uploads/* ne passe plus par forward_auth : "
@@ -256,9 +256,7 @@ def test_les_fichiers_proteges_ne_sont_pas_mis_en_cache_par_le_cdn():
     bloc = re.search(r"handle\s+/uploads/\*\s*\{(.*?)\n    \}", contenu, re.S)
     assert bloc, "bloc /uploads/* introuvable"
 
-    directive = re.search(
-        r'header\s+Cache-Control\s+"([^"]+)"', bloc.group(1)
-    )
+    directive = re.search(r'header\s+Cache-Control\s+"([^"]+)"', bloc.group(1))
     assert directive, (
         "Le bloc protégé n'impose plus de Cache-Control : Cloudflare remettra "
         "les pièces jointes en cache et les servira sans authentification."
@@ -278,9 +276,7 @@ def test_les_images_publiques_restent_cacheables():
     de cache ferait repartir chaque vignette jusqu'au Raspberry Pi.
     """
     contenu = _caddyfile()
-    bloc = re.search(
-        r"handle\s+/uploads/publications/\*\s*\{(.*?)\n    \}", contenu, re.S
-    )
+    bloc = re.search(r"handle\s+/uploads/publications/\*\s*\{(.*?)\n    \}", contenu, re.S)
     assert bloc, "bloc /uploads/publications/* introuvable"
     assert "no-store" not in bloc.group(1), (
         "Les images d'actualité sont devenues non-cacheables : chaque affichage "
@@ -289,6 +285,7 @@ def test_les_images_publiques_restent_cacheables():
 
 
 # ── Fichiers de prestataires : autorisation, pas seulement authentification ──
+
 
 def test_les_fichiers_de_prestataires_exigent_le_role_cs():
     """`forward_auth` ne vérifie qu'une session — pas le rôle.
@@ -299,9 +296,7 @@ def test_les_fichiers_de_prestataires_exigent_le_role_cs():
     lire : authentifié n'est pas autorisé. Servis par un endpoint, ils héritent
     enfin de `require_cs_or_admin`.
     """
-    source = (
-        RACINE / "api" / "app" / "routers" / "compteurs.py"
-    ).read_text(encoding="utf-8")
+    source = (RACINE / "api" / "app" / "routers" / "compteurs.py").read_text(encoding="utf-8")
 
     #  ⚠️ `/devis/{d_id}/fichier/{nom}` est parti avec la prestation ponctuelle
     #  (#603). Le contrôle NE PERD RIEN : il portait sur deux endpoints qui
@@ -313,8 +308,8 @@ def test_les_fichiers_de_prestataires_exigent_le_role_cs():
             "pointent dans le vide et les pièces jointes deviennent illisibles."
         )
 
-    bloc = source[source.index("def _servir_fichier_prive"):]
-    assert "require_cs_or_admin" in source[source.index("download_photo_releve") - 400:], (
+    bloc = source[source.index("def _servir_fichier_prive") :]
+    assert "require_cs_or_admin" in source[source.index("download_photo_releve") - 400 :], (
         "Le téléchargement des photos de relevé n'exige plus le rôle CS/admin."
     )
     assert "noms_autorises" in bloc, "la validation d'appartenance a disparu"
@@ -328,9 +323,7 @@ def test_un_endpoint_prestataire_ne_peut_pas_servir_un_pv_dag():
     documentaire. La validation par appartenance à la ressource est donc une
     condition de sécurité, pas une commodité — et un `basename` ne suffit pas.
     """
-    source = (
-        RACINE / "api" / "app" / "routers" / "compteurs.py"
-    ).read_text(encoding="utf-8")
+    source = (RACINE / "api" / "app" / "routers" / "compteurs.py").read_text(encoding="utf-8")
 
     assert "if nom not in noms_autorises:" in source, (
         "La vérification d'appartenance a été retirée : l'endpoint peut servir "
@@ -347,15 +340,11 @@ def test_les_urls_stockees_pointent_vers_les_endpoints_authentifies():
     en statique — donc introuvables (ils sont dans `prive/`), et l'affichage
     casserait sans erreur serveur.
     """
-    source = (
-        RACINE / "api" / "app" / "routers" / "compteurs.py"
-    ).read_text(encoding="utf-8")
+    source = (RACINE / "api" / "app" / "routers" / "compteurs.py").read_text(encoding="utf-8")
 
     fautifs = re.findall(r'f"/uploads/\{[^"]*\}"', source)
-    assert not fautifs, (
-        f"{len(fautifs)} URL(s) publique(s) encore écrite(s) en base : {fautifs}"
-    )
-    assert '/api/prestataires/releves/' in source
+    assert not fautifs, f"{len(fautifs)} URL(s) publique(s) encore écrite(s) en base : {fautifs}"
+    assert "/api/prestataires/releves/" in source
 
 
 def test_les_urls_de_fichiers_portent_le_nom_du_fichier():
@@ -370,9 +359,7 @@ def test_les_urls_de_fichiers_portent_le_nom_du_fichier():
     La leçon tient en une phrase : **ne pas écraser la seule copie d'une donnée
     par une valeur qui en dépend**. Le circuit était fermé sur lui-même.
     """
-    source = (
-        RACINE / "api" / "app" / "routers" / "compteurs.py"
-    ).read_text(encoding="utf-8")
+    source = (RACINE / "api" / "app" / "routers" / "compteurs.py").read_text(encoding="utf-8")
 
     urls = re.findall(r'= f"(/api/prestataires/[^"]+)"', source)
     assert urls, "aucune URL de fichier construite — le module a changé de forme"
@@ -382,9 +369,7 @@ def test_les_urls_de_fichiers_portent_le_nom_du_fichier():
             "c'est le nom du fichier qui manque, l'endpoint ne pourra pas le "
             "retrouver et la donnée d'origine sera perdue."
         )
-        assert "basename(dest)" in source, (
-            "le nom du fichier n'est plus injecté dans l'URL stockée"
-        )
+        assert "basename(dest)" in source, "le nom du fichier n'est plus injecté dans l'URL stockée"
 
 
 def test_l_api_entiere_est_non_cacheable():
@@ -415,6 +400,5 @@ def test_l_api_entiere_est_non_cacheable():
     )
     valeur = directive.group(1).lower()
     assert "private" in valeur or "no-store" in valeur, (
-        f"Cache-Control « {directive.group(1)} » n'interdit pas le stockage par "
-        "un cache partagé."
+        f"Cache-Control « {directive.group(1)} » n'interdit pas le stockage par un cache partagé."
     )

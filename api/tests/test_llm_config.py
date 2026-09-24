@@ -13,6 +13,7 @@
    il n'en redéfinit que l'URL et l'en-tête d'authentification. Si quelqu'un
    recopiait le corps de requête au lieu d'en hériter, ce test le dirait.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -180,9 +181,9 @@ def test_le_TEST_de_connexion_n_exige_pas_l_activation():
     qu'on accepte d'être facturé.
     """
     cfg = _config(actif=False)
-    cfg.verifier(exiger_actif=False)          # le test passe
+    cfg.verifier(exiger_actif=False)  # le test passe
     with pytest.raises(ErreurLLM):
-        cfg.verifier()                        # l'usage, non
+        cfg.verifier()  # l'usage, non
 
 
 # ── 4. Le catalogue de modèles — demandé au fournisseur, jamais recopié ─────
@@ -231,7 +232,9 @@ def test_anthropic_rend_le_nom_commercial_que_le_gestionnaire_lit():
 def test_azure_n_a_PAS_de_liste_et_le_dit():
     """⚠️ `None` n'est pas une panne : sur Azure on choisit un DÉPLOIEMENT, que
     seule l'API de gestion connaît. L'écran garde la saisie libre."""
-    assert FOURNISSEURS["azure_openai"].url_modeles("https://x.openai.azure.com", "2024-06-01") is None
+    assert (
+        FOURNISSEURS["azure_openai"].url_modeles("https://x.openai.azure.com", "2024-06-01") is None
+    )
     assert FOURNISSEURS["openai"].url_modeles("https://api.openai.com/v1", "") is not None
 
 
@@ -314,9 +317,7 @@ def test_une_vraie_liste_est_rendue_listable(monkeypatch, session_llm):
 
     from app.utils.llm import modeles_disponibles
 
-    _brancher_httpx(
-        monkeypatch, _ReponseFactice(200, {"data": [{"id": "gpt-4o", "created": 9}]})
-    )
+    _brancher_httpx(monkeypatch, _ReponseFactice(200, {"data": [{"id": "gpt-4o", "created": 9}]}))
     r = asyncio.run(modeles_disponibles(session_llm))
     assert r["listable"] is True
     assert r["modeles"] == [{"id": "gpt-4o", "libelle": "gpt-4o"}]
@@ -356,9 +357,7 @@ def test_un_parametre_sans_equivalent_est_RETIRE():
     """Une température refusée : le modèle prend la sienne. Une synthèse moins
     pilotée vaut mieux que pas de synthèse."""
     f = FOURNISSEURS["openai"]
-    suite = f.adapter(
-        {"model": "m", "temperature": 0.2}, "temperature", "unsupported_value"
-    )
+    suite = f.adapter({"model": "m", "temperature": 0.2}, "temperature", "unsupported_value")
     assert suite == {"model": "m"}
 
 
@@ -461,4 +460,3 @@ def test_le_test_de_connexion_emploie_le_plafond_CONFIGURE():
     source = inspect.getsource(llm.tester)
     assert "max_jetons=16" not in source
     assert "max_jetons=" not in source
-

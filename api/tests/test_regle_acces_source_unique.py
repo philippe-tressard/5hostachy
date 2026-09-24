@@ -32,6 +32,7 @@ la duplication d'une règle de sécurité ne produit **aucun signal** — un acc
 donné à trop de monde ne fait pas de bruit, personne ne se plaint de voir quelque
 chose.
 """
+
 from __future__ import annotations
 
 import ast
@@ -47,38 +48,31 @@ SOURCE_ACCES = RACINE / "utils" / "visibility" / "socle.py"
 #: échoue si l'une d'elles cesse de servir : une exception qui ne sert plus fait
 #: croire que la règle est plus poreuse qu'elle ne l'est.
 EXCEPTIONS = {
-    "utils/mes_batiments.py":
-        "la source unique elle-même : c'est ici que le rattachement est lu.",
-    "utils/lecture_utilisateur.py":
-        "AFFICHAGE seul — compose le libellé « Bât. N » du profil, ne décide rien. "
-        "Extrait de `routers/auth.py` le 09/09/2026, quand le bloc profil en est "
-        "sorti : les DEUX routeurs d'authentification sérialisent un utilisateur. "
-        "⚠️ Deuxième fois en deux jours qu'une exception voyage avec son code "
-        "(cf. `utils/courriel_arrivee.py` ci-dessous) — le contrôle l'a dit tout "
-        "de suite, dans les deux sens : refus sur le fichier neuf, ET exception "
-        "devenue inutile sur l'ancien.",
-    "routers/admin/profils.py":
-        "ADMINISTRATION — pose le rattachement demandé, ne lit aucun accès.",
-    "routers/admin/arrivants.py":
-        "DESTINATAIRES d'une notification, pas un accès : choisit les membres du "
-        "CS du bâtiment de l'arrivant. Relève de `utils/destinataires`, et son "
-        "rapprochement est un sujet à part.",
-    "utils/courriel_arrivee.py":
-        "DESTINATAIRES d'un courriel, pas un accès : même raison que "
-        "`routers/admin/arrivants.py`, dont ce module a été extrait le "
-        "08/09/2026 (#848) quand le routeur a franchi les 500 lignes. "
-        "⚠️ L'exception a voyagé AVEC le code — une exception qui reste sur le "
-        "fichier d'origine se transforme en tolérance sur un fichier qui ne fait "
-        "plus rien, et en refus sur celui qui fait le travail.",
-    "utils/annonce_arrivee.py":
-        "RECOPIE un attribut sur l'objet créé : l'annonce de bienvenue porte le "
-        "bâtiment de l'arrivant, qui EST son périmètre de publication. Ne lit "
-        "aucun accès — c'est `perimetre_visible` qui tranchera qui la voit.",
-    "utils/ticket_arrivant.py":
-        "RECOPIE un attribut sur l'objet créé : le ticket de suivi d'un "
-        "emménagement porte le bâtiment de l'arrivant, comme tout ticket porte le "
-        "sien. Ne lit aucun accès et n'en décide aucun — c'est `ticket_visible` "
-        "qui tranchera ensuite qui le voit, à partir de ce champ-là.",
+    "utils/mes_batiments.py": "la source unique elle-même : c'est ici que le rattachement est lu.",
+    "utils/lecture_utilisateur.py": "AFFICHAGE seul — compose le libellé « Bât. N » du profil, ne décide rien. "
+    "Extrait de `routers/auth.py` le 09/09/2026, quand le bloc profil en est "
+    "sorti : les DEUX routeurs d'authentification sérialisent un utilisateur. "
+    "⚠️ Deuxième fois en deux jours qu'une exception voyage avec son code "
+    "(cf. `utils/courriel_arrivee.py` ci-dessous) — le contrôle l'a dit tout "
+    "de suite, dans les deux sens : refus sur le fichier neuf, ET exception "
+    "devenue inutile sur l'ancien.",
+    "routers/admin/profils.py": "ADMINISTRATION — pose le rattachement demandé, ne lit aucun accès.",
+    "routers/admin/arrivants.py": "DESTINATAIRES d'une notification, pas un accès : choisit les membres du "
+    "CS du bâtiment de l'arrivant. Relève de `utils/destinataires`, et son "
+    "rapprochement est un sujet à part.",
+    "utils/courriel_arrivee.py": "DESTINATAIRES d'un courriel, pas un accès : même raison que "
+    "`routers/admin/arrivants.py`, dont ce module a été extrait le "
+    "08/09/2026 (#848) quand le routeur a franchi les 500 lignes. "
+    "⚠️ L'exception a voyagé AVEC le code — une exception qui reste sur le "
+    "fichier d'origine se transforme en tolérance sur un fichier qui ne fait "
+    "plus rien, et en refus sur celui qui fait le travail.",
+    "utils/annonce_arrivee.py": "RECOPIE un attribut sur l'objet créé : l'annonce de bienvenue porte le "
+    "bâtiment de l'arrivant, qui EST son périmètre de publication. Ne lit "
+    "aucun accès — c'est `perimetre_visible` qui tranchera qui la voit.",
+    "utils/ticket_arrivant.py": "RECOPIE un attribut sur l'objet créé : le ticket de suivi d'un "
+    "emménagement porte le bâtiment de l'arrivant, comme tout ticket porte le "
+    "sien. Ne lit aucun accès et n'en décide aucun — c'est `ticket_visible` "
+    "qui tranchera ensuite qui le voit, à partir de ce champ-là.",
     #  🔴 `routers/delegations.py` A ÉTÉ RETIRÉ de cette liste le 06/09/2026
     #  (#801) : son unique lecture de `batiment_id` vivait dans
     #  `GET /mes-mandants`, endpoint supprimé le même jour parce qu'il doublait
@@ -184,6 +178,5 @@ def test_aucune_exception_ne_survit_a_son_objet():
             inutiles.append(f"{rel} (ne lit plus `batiment_id`)")
 
     assert not inutiles, (
-        "Exception(s) devenue(s) inutile(s), à retirer de EXCEPTIONS : "
-        + ", ".join(inutiles)
+        "Exception(s) devenue(s) inutile(s), à retirer de EXCEPTIONS : " + ", ".join(inutiles)
     )

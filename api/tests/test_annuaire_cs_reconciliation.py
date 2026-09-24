@@ -34,6 +34,7 @@ juste » laisserait revenir le remplacement — c'est bien pour cela qu'aucun de
 client authentifié n'existe pas dans ce dépôt, et en fabriquer un ici ferait
 dépendre ce test d'une chaîne qu'il ne cherche pas à vérifier.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -61,12 +62,25 @@ def _poser_le_conseil(session) -> list[MembreCS]:
     """Trois membres, entrés il y a longtemps."""
     ancien = datetime(2020, 1, 1)
     membres = [
-        MembreCS(genre=GenreCivilite.mme, prenom="Christine", nom="LONGUEVE",
-                 etage=3, ordre=0, cree_le=ancien),
-        MembreCS(genre=GenreCivilite.mr, prenom="Marco", nom="RICCI",
-                 etage=1, ordre=1, cree_le=ancien),
-        MembreCS(genre=GenreCivilite.mr, prenom="Philippe", nom="TRESSARD",
-                 etage=2, ordre=2, cree_le=ancien),
+        MembreCS(
+            genre=GenreCivilite.mme,
+            prenom="Christine",
+            nom="LONGUEVE",
+            etage=3,
+            ordre=0,
+            cree_le=ancien,
+        ),
+        MembreCS(
+            genre=GenreCivilite.mr, prenom="Marco", nom="RICCI", etage=1, ordre=1, cree_le=ancien
+        ),
+        MembreCS(
+            genre=GenreCivilite.mr,
+            prenom="Philippe",
+            nom="TRESSARD",
+            etage=2,
+            ordre=2,
+            cree_le=ancien,
+        ),
     ]
     for m in membres:
         session.add(m)
@@ -109,7 +123,7 @@ def test_modifier_UN_membre_n_en_recree_aucun_autre(session):
     dates_avant = {m.id: m.cree_le for m in membres}
 
     corps = _corps(membres)
-    corps["membres"][0]["etage"] = 4          # seule Christine change
+    corps["membres"][0]["etage"] = 4  # seule Christine change
     _enregistrer(session, corps)
 
     session.expire_all()
@@ -134,10 +148,18 @@ def test_un_membre_VRAIMENT_nouveau_est_bien_cree(session):
     """
     membres = _poser_le_conseil(session)
     corps = _corps(membres)
-    corps["membres"].append({
-        "id": None, "genre": "mr", "prenom": "Nouveau", "nom": "VENU",
-        "batiment_id": None, "etage": 5, "est_president": False, "user_id": None,
-    })
+    corps["membres"].append(
+        {
+            "id": None,
+            "genre": "mr",
+            "prenom": "Nouveau",
+            "nom": "VENU",
+            "batiment_id": None,
+            "etage": 5,
+            "est_president": False,
+            "user_id": None,
+        }
+    )
     _enregistrer(session, corps)
 
     session.expire_all()
@@ -152,7 +174,7 @@ def test_un_membre_retire_de_la_liste_quitte_le_conseil(session):
     """L'autre moitié : réconcilier ne veut pas dire ne plus rien supprimer."""
     membres = _poser_le_conseil(session)
     corps = _corps(membres)
-    parti = corps["membres"].pop(1)            # Marco s'en va
+    parti = corps["membres"].pop(1)  # Marco s'en va
     _enregistrer(session, corps)
 
     session.expire_all()

@@ -11,6 +11,7 @@ ce que le résident reconnaît.
 
 Le nom du module est resté : il nomme une RUBRIQUE du fil, pas un modèle.
 """
+
 from sqlalchemy import or_
 from sqlmodel import select
 
@@ -56,30 +57,32 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
         #  (front) coupe proprement en fin de 3ᵉ ligne. L'auteur n'est PAS
         #  préfixé à l'extrait : `meta["auteur"]` le rend en fin de rangée.
         extrait = strip_html(t.description, 500) if t.description else ""
-        cartes.append(FluxItem(
-            id=f"tk_{t.id}",
-            type="publication",
-            #  PAS `mis_a_jour_le` : cocher ou décocher « Épinglé » / « Urgent »
-            #  écrit ce champ, et l'actualité remontait alors en tête du fil à
-            #  la date du jour, pastille NEW comprise (exigé le 01/08/2026).
-            #  Agir sur un marqueur est une action éditoriale, pas un événement de
-            #  la copropriété : la ligne garde donc la date de son annonce et
-            #  reprend simplement sa place dans la chronologie.
-            date=t.cree_le,
-            cree_le=t.cree_le,
-            titre=t.titre,
-            detail=extrait or None,
-            icon="📰",
-            badges=badges_marqueurs(t),
-            lien=lien_ticket(t.id),
-            meta={
-                "ticket_id": t.id,
-                "epingle": t.epingle,
-                "urgente": t.priorite == "haute",
-                "full_html": t.description,
-                "auteur": auteur,
-                "photos_urls": parse_photos(t.photos_urls),
-                "perimetre_codes": perimetres_de(t),
-            },
-        ))
+        cartes.append(
+            FluxItem(
+                id=f"tk_{t.id}",
+                type="publication",
+                #  PAS `mis_a_jour_le` : cocher ou décocher « Épinglé » / « Urgent »
+                #  écrit ce champ, et l'actualité remontait alors en tête du fil à
+                #  la date du jour, pastille NEW comprise (exigé le 01/08/2026).
+                #  Agir sur un marqueur est une action éditoriale, pas un événement de
+                #  la copropriété : la ligne garde donc la date de son annonce et
+                #  reprend simplement sa place dans la chronologie.
+                date=t.cree_le,
+                cree_le=t.cree_le,
+                titre=t.titre,
+                detail=extrait or None,
+                icon="📰",
+                badges=badges_marqueurs(t),
+                lien=lien_ticket(t.id),
+                meta={
+                    "ticket_id": t.id,
+                    "epingle": t.epingle,
+                    "urgente": t.priorite == "haute",
+                    "full_html": t.description,
+                    "auteur": auteur,
+                    "photos_urls": parse_photos(t.photos_urls),
+                    "perimetre_codes": perimetres_de(t),
+                },
+            )
+        )
     return cartes

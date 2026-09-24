@@ -1,4 +1,5 @@
 """Utilitaire envoi WhatsApp via whatsapp-bridge."""
+
 import html
 import json
 import logging
@@ -114,6 +115,7 @@ def verdict_envoi(envoi: Callable[[], Any]) -> tuple[str, str | None]:
     except Exception as exc:
         return STATUT_ECHEC, str(exc)
 
+
 #: Clés de `ConfigSite` qui décrivent le canal WhatsApp.
 #:
 #: Elles étaient recopiées dans QUATRE routers (publications, calendrier,
@@ -124,14 +126,16 @@ def verdict_envoi(envoi: Callable[[], Any]) -> tuple[str, str | None]:
 #:
 #: `site_url` fait partie de l'ensemble : `_build_message_restreint` en a besoin
 #: pour renvoyer vers l'application quand la publication est à public restreint.
-CLES_CONFIG = frozenset({
-    "whatsapp_enabled",
-    "whatsapp_api_url",
-    "whatsapp_api_key",
-    "whatsapp_group_jid",
-    "whatsapp_footer",
-    "site_url",
-})
+CLES_CONFIG = frozenset(
+    {
+        "whatsapp_enabled",
+        "whatsapp_api_url",
+        "whatsapp_api_key",
+        "whatsapp_group_jid",
+        "whatsapp_footer",
+        "site_url",
+    }
+)
 
 
 def config_whatsapp(session, *cles_en_plus: str) -> dict:
@@ -179,7 +183,11 @@ def _build_message(
     """
     # Périmètre
     try:
-        lieux = json.loads(perimetre_cible) if isinstance(perimetre_cible, str) else (perimetre_cible or [])
+        lieux = (
+            json.loads(perimetre_cible)
+            if isinstance(perimetre_cible, str)
+            else (perimetre_cible or [])
+        )
     except Exception:
         lieux = []
     if lieux and not (len(lieux) == 1 and lieux[0] == "résidence"):
@@ -194,11 +202,23 @@ def _build_message(
 
     # Contenu : convertir le formatage HTML en markdown WhatsApp
     # Gras : <b>, <strong>  → *texte*
-    text = re.sub(r"<(b|strong)(\s[^>]*)?>(.+?)</(b|strong)>", r"*\3*", contenu, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(
+        r"<(b|strong)(\s[^>]*)?>(.+?)</(b|strong)>",
+        r"*\3*",
+        contenu,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
     # Italique : <i>, <em>  → _texte_
-    text = re.sub(r"<(i|em)(\s[^>]*)?>(.+?)</(i|em)>", r"_\3_", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(
+        r"<(i|em)(\s[^>]*)?>(.+?)</(i|em)>", r"_\3_", text, flags=re.IGNORECASE | re.DOTALL
+    )
     # Barré : <s>, <strike>, <del>  → ~texte~
-    text = re.sub(r"<(s|strike|del)(\s[^>]*)?>(.+?)</(s|strike|del)>", r"~\3~", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(
+        r"<(s|strike|del)(\s[^>]*)?>(.+?)</(s|strike|del)>",
+        r"~\3~",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
     # Saut de ligne : <br>, </p>
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"</p>", "\n", text, flags=re.IGNORECASE)
@@ -255,7 +275,11 @@ def _build_message_restreint(
     ou du lien (`standards/02-factorisation.md` §2).
     """
     try:
-        lieux = json.loads(perimetre_cible) if isinstance(perimetre_cible, str) else (perimetre_cible or [])
+        lieux = (
+            json.loads(perimetre_cible)
+            if isinstance(perimetre_cible, str)
+            else (perimetre_cible or [])
+        )
     except Exception:
         lieux = []
     if lieux and not (len(lieux) == 1 and lieux[0] == "résidence"):
@@ -277,7 +301,7 @@ def _build_message_restreint(
     #  adresse est celle de sa fiche. `pub_id` et `/actualites#pub-<id>` ont été
     #  retirés avec l'entité ; sans lien, le message renvoie à l'accueil du site.
     if not lien:
-        lien = site_url.rstrip('/') + "/"
+        lien = site_url.rstrip("/") + "/"
 
     footer = (footer or "").strip() or "— Conseil Syndical 5Hostachy"
     return f"{header}\n\n{avertissement}\n{lien}\n\n{footer}"
@@ -315,9 +339,9 @@ def construire_message(
     décide de ce qui part dans le groupe, l'autre de ce qu'on croit y avoir
     envoyé.
     """
-    footer = config.get('whatsapp_footer', '').strip()
+    footer = config.get("whatsapp_footer", "").strip()
     if message_sans_contenu(public_cible, confidentiel):
-        site_url = base_site(config.get('site_url'))
+        site_url = base_site(config.get("site_url"))
         #  🔴 Le titre PART, confidentiel compris (#623) ; le repli ne sert
         #  plus qu'aux actualités sans titre.
         titre_affiche = titre or TITRE_CONFIDENTIEL
@@ -343,11 +367,11 @@ def envoyer_whatsapp(
     lien: str | None = None,
 ) -> None:
     """Envoie un message sur le groupe WhatsApp. Silencieux en cas d'échec."""
-    if config.get('whatsapp_enabled') != '1':
+    if config.get("whatsapp_enabled") != "1":
         return
-    api_url = config.get('whatsapp_api_url', '').strip()
-    api_key = config.get('whatsapp_api_key', '').strip()
-    group_jid = config.get('whatsapp_group_jid', '').strip()
+    api_url = config.get("whatsapp_api_url", "").strip()
+    api_key = config.get("whatsapp_api_key", "").strip()
+    group_jid = config.get("whatsapp_group_jid", "").strip()
     if not api_url or not group_jid:
         logger.warning("WhatsApp activé mais whatsapp_api_url ou whatsapp_group_jid manquant.")
         return
@@ -356,7 +380,13 @@ def envoyer_whatsapp(
     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
     message = construire_message(
-        titre, contenu, urgente, perimetre_cible, config, public_cible, confidentiel,
+        titre,
+        contenu,
+        urgente,
+        perimetre_cible,
+        config,
+        public_cible,
+        confidentiel,
         lien=lien,
     )
     payload = {"number": group_jid, "text": message}
@@ -388,7 +418,8 @@ def envoyer_whatsapp(
             logger.warning("Échec envoi WhatsApp : %s", exc)
             raise
         logger.warning(
-            "Corps refusé par le bridge (413) — réémission sans la photo : %s", exc,
+            "Corps refusé par le bridge (413) — réémission sans la photo : %s",
+            exc,
         )
         payload.pop("imageBase64")
         payload["text"] += renvoi_photos(config, lien)
@@ -421,7 +452,13 @@ def envoyer_whatsapp_avec_log(
     session = SessionLocal()
     try:
         message = construire_message(
-            titre, contenu, urgente, perimetre_cible, config, public_cible, confidentiel,
+            titre,
+            contenu,
+            urgente,
+            perimetre_cible,
+            config,
+            public_cible,
+            confidentiel,
             lien=lien,
         )
         log = WhatsAppLog(label=titre, message=message)
@@ -432,8 +469,15 @@ def envoyer_whatsapp_avec_log(
             #  que le groupe n'a jamais reçu — et c'est le journal qu'on relit
             #  quand on cherche ce qui est parti.
             lambda: envoyer_whatsapp(
-                titre, contenu, urgente, perimetre_cible, image_url, config,
-                public_cible, confidentiel, lien=lien,
+                titre,
+                contenu,
+                urgente,
+                perimetre_cible,
+                image_url,
+                config,
+                public_cible,
+                confidentiel,
+                lien=lien,
             )
         )
         if log.statut == STATUT_ENVOYE:
@@ -459,9 +503,9 @@ def envoyer_whatsapp_avec_log(
 
 def envoyer_whatsapp_raw(text: str, config: dict) -> dict:
     """Envoie un message brut sur le groupe WhatsApp. Lève une exception en cas d'échec."""
-    api_url = config.get('whatsapp_api_url', '').strip()
-    api_key = config.get('whatsapp_api_key', '').strip()
-    group_jid = config.get('whatsapp_group_jid', '').strip()
+    api_url = config.get("whatsapp_api_url", "").strip()
+    api_key = config.get("whatsapp_api_key", "").strip()
+    group_jid = config.get("whatsapp_group_jid", "").strip()
     if not api_url or not group_jid:
         raise ValueError("whatsapp_api_url ou whatsapp_group_jid manquant.")
 
@@ -474,8 +518,8 @@ def envoyer_whatsapp_raw(text: str, config: dict) -> dict:
 
 def get_whatsapp_status(config: dict) -> dict:
     """Interroge le bridge pour connaître l'état de la connexion WhatsApp."""
-    api_url = config.get('whatsapp_api_url', '').strip()
-    api_key = config.get('whatsapp_api_key', '').strip()
+    api_url = config.get("whatsapp_api_url", "").strip()
+    api_key = config.get("whatsapp_api_key", "").strip()
     if not api_url:
         raise ValueError("whatsapp_api_url manquant.")
 

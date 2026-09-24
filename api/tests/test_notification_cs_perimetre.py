@@ -18,11 +18,17 @@ vérifie la liste des adresses retenues, qui est ce que le défaut ferait varier
 Aucun envoi réel n'a eu lieu depuis la mise en production de l'arborescence, donc
 c'est la seule preuve disponible tant qu'une annonce n'a pas été publiée.
 """
+
 import pytest
 from sqlmodel import Session, SQLModel, select
 
 from app.models.core import (
-    Batiment, ConfigSite, Copropriete, GenreCivilite, MembreCS, Utilisateur,
+    Batiment,
+    ConfigSite,
+    Copropriete,
+    GenreCivilite,
+    MembreCS,
+    Utilisateur,
 )
 from app.models.perimetre import Perimetre
 from app.database import engine
@@ -68,12 +74,20 @@ def conseil() -> dict:
 
         emails = {}
         for identifiant in batiments:
-            u = Utilisateur(nom="CS", prenom=f"B{identifiant}",
-                            email=f"cs{identifiant}@cs.test", actif=True)
+            u = Utilisateur(
+                nom="CS", prenom=f"B{identifiant}", email=f"cs{identifiant}@cs.test", actif=True
+            )
             session.add(u)
             session.flush()
-            session.add(MembreCS(user_id=u.id, batiment_id=identifiant, nom="CS",
-                                 prenom=f"B{identifiant}", genre=GenreCivilite.mme))
+            session.add(
+                MembreCS(
+                    user_id=u.id,
+                    batiment_id=identifiant,
+                    nom="CS",
+                    prenom=f"B{identifiant}",
+                    genre=GenreCivilite.mme,
+                )
+            )
             emails[identifiant] = u.email
 
         #  Le gestionnaire du site, rattaché à AUCUN bâtiment : il doit être ajouté
@@ -82,16 +96,30 @@ def conseil() -> dict:
         gestionnaire = Utilisateur(nom="Gest", prenom="Site", email="gest@cs.test", actif=True)
         session.add(gestionnaire)
         session.flush()
-        session.add(MembreCS(user_id=gestionnaire.id, batiment_id=None, nom="Gest",
-                             prenom="Site", genre=GenreCivilite.mme))
+        session.add(
+            MembreCS(
+                user_id=gestionnaire.id,
+                batiment_id=None,
+                nom="Gest",
+                prenom="Site",
+                genre=GenreCivilite.mme,
+            )
+        )
         session.add(ConfigSite(cle="site_manager_user_id", valeur=str(gestionnaire.id)))
 
         #  Un membre du CS au compte DÉSACTIVÉ : il ne doit jamais être retenu.
         inactif = Utilisateur(nom="Parti", prenom="Ex", email="parti@cs.test", actif=False)
         session.add(inactif)
         session.flush()
-        session.add(MembreCS(user_id=inactif.id, batiment_id=batiments[0], nom="Parti",
-                             prenom="Ex", genre=GenreCivilite.mme))
+        session.add(
+            MembreCS(
+                user_id=inactif.id,
+                batiment_id=batiments[0],
+                nom="Parti",
+                prenom="Ex",
+                genre=GenreCivilite.mme,
+            )
+        )
 
         session.commit()
         poser_arborescence(session)
@@ -112,9 +140,7 @@ def _adresses(perimetres: list[str]) -> set[str]:
     with Session(engine) as session:
         return {
             email
-            for _, email in membres_cs_notifiables(
-                session, batiments_du_perimetre(perimetres)
-            )
+            for _, email in membres_cs_notifiables(session, batiments_du_perimetre(perimetres))
         }
 
 
@@ -127,9 +153,7 @@ def test_perimetre_global_notifie_tout_le_conseil(conseil):
 def test_perimetre_de_batiment_ne_notifie_que_le_sien(conseil):
     """Un contenu ciblé sur un bâtiment ne réveille pas les trois autres."""
     second = conseil["batiments"][1]
-    assert _adresses([f"bat:{second}"]) == {
-        conseil["emails"][second], conseil["gestionnaire"]
-    }
+    assert _adresses([f"bat:{second}"]) == {conseil["emails"][second], conseil["gestionnaire"]}
 
 
 def test_espace_d_un_batiment_notifie_comme_son_batiment(conseil):
@@ -139,9 +163,7 @@ def test_espace_d_un_batiment_notifie_comme_son_batiment(conseil):
     implémentation ne pouvait couvrir — ces codes n'existaient pas.
     """
     second = conseil["batiments"][1]
-    assert _adresses([f"bat:{second}/hall"]) == {
-        conseil["emails"][second], conseil["gestionnaire"]
-    }
+    assert _adresses([f"bat:{second}/hall"]) == {conseil["emails"][second], conseil["gestionnaire"]}
 
 
 def test_enfant_d_un_perimetre_global_notifie_tout_le_conseil(conseil):
@@ -153,7 +175,9 @@ def test_enfant_d_un_perimetre_global_notifie_tout_le_conseil(conseil):
 def test_deux_batiments_notifient_les_deux(conseil):
     premier, second = conseil["batiments"][0], conseil["batiments"][1]
     assert _adresses([f"bat:{premier}", f"bat:{second}"]) == {
-        conseil["emails"][premier], conseil["emails"][second], conseil["gestionnaire"]
+        conseil["emails"][premier],
+        conseil["emails"][second],
+        conseil["gestionnaire"],
     }
 
 

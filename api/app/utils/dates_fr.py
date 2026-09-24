@@ -15,6 +15,7 @@ dépend plus de l'environnement d'exécution.
 `date_longue()` / `datetime_longue()`. `tests/test_dates_fr.py` échoue si un
 format dépendant de la locale réapparaît dans `app/`.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -24,8 +25,18 @@ TZ_PARIS = ZoneInfo("Europe/Paris")
 _TZ_UTC = ZoneInfo("UTC")
 
 MOIS = (
-    "janvier", "février", "mars", "avril", "mai", "juin",
-    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
 )
 
 JOURS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")

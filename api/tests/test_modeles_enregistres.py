@@ -23,6 +23,7 @@ d'Alembic. C'est ce que ce test empêcherait de faire en silence (#1157).
 trop ». Mesuré, `import app.models` seul n'en charge que 7 sur 21 : sans la
 seconde voie, 14 modules ne seraient chargés par rien d'autre que les routeurs.
 """
+
 from __future__ import annotations
 
 import pkgutil
@@ -47,7 +48,10 @@ def _modules_non_charges_apres(import_: str) -> tuple[list[str], int]:
     )
     sortie = subprocess.run(
         [sys.executable, "-W", "ignore", "-c", code],
-        cwd=RACINE_API, capture_output=True, text=True, encoding="utf-8",
+        cwd=RACINE_API,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
     )
     assert sortie.returncode == 0, f"l'import de {import_} échoue :\n{sortie.stderr[-800:]}"
     #  ⚠️ Des lignes BALISÉES, pas des positions : quand rien ne manque, la

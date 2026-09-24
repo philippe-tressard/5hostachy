@@ -26,6 +26,7 @@ router = APIRouter()
 
 # ── Annuaire public ──────────────────────────────────────────────────────────
 
+
 @router.get("/annuaire")
 def annuaire(
     session: Session = Depends(get_session),
@@ -63,13 +64,17 @@ def annuaire(
             "membres": syndic_membres_out,
         },
         "whatsapp_url": (
-            session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+            session.exec(
+                select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")
+            ).first()
             or ConfigSite(cle="", valeur="")
-        ).valeur or None,
+        ).valeur
+        or None,
     }
 
 
 # ── Annuaire CS — gestion (CS + admin) ──────────────────────────────────────
+
 
 class MembreCSIn(BaseModel):
     #  🔴 L'IDENTIFIANT, ajouté le 31/08/2026. Le front le renvoyait DÉJÀ — il
@@ -85,11 +90,13 @@ class MembreCSIn(BaseModel):
     est_president: bool = False
     user_id: Optional[int] = None
 
+
 class CompositionCSIn(BaseModel):
     ag_annee: Optional[int] = None
-    ag_date: Optional[str] = None   # ISO "YYYY-MM-DD" ou None
+    ag_date: Optional[str] = None  # ISO "YYYY-MM-DD" ou None
     whatsapp_url: Optional[str] = None
     membres: list[MembreCSIn] = []
+
 
 @router.get("/annuaire/cs")
 def get_composition_cs(
@@ -101,9 +108,12 @@ def get_composition_cs(
         "ag_annee": ag.ag_annee if ag else None,
         "ag_date": ag.ag_date.isoformat() if (ag and ag.ag_date) else None,
         "whatsapp_url": (
-            session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+            session.exec(
+                select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")
+            ).first()
             or ConfigSite(cle="", valeur="")
-        ).valeur or "",
+        ).valeur
+        or "",
         #  La composition vient de `utils/annuaire`, comme pour l'écran des
         #  résidents six lignes plus haut. Elle était REFAITE ici — avec son
         #  propre cache de bâtiments et sa propre écriture de la règle du
@@ -122,10 +132,13 @@ def put_composition_cs(
     # Valider qu'il y a au maximum 1 président
     presidents_count = sum(1 for mb in body.membres if mb.est_president)
     if presidents_count > 1:
-        raise HTTPException(status_code=400, detail="Il ne peut y avoir qu'un seul président du Conseil Syndical.")
+        raise HTTPException(
+            status_code=400, detail="Il ne peut y avoir qu'un seul président du Conseil Syndical."
+        )
 
     # Upsert AgCsInfo
     from datetime import date as date_type
+
     ag = session.exec(select(AgCsInfo)).first()
     if ag is None:
         ag = AgCsInfo()
@@ -134,7 +147,9 @@ def put_composition_cs(
     ag.ag_date = date_type.fromisoformat(body.ag_date) if body.ag_date else None
 
     # WhatsApp URL
-    wa_cfg = session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+    wa_cfg = session.exec(
+        select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")
+    ).first()
     if wa_cfg is None:
         wa_cfg = ConfigSite(cle="whatsapp_community_url", valeur="")
         session.add(wa_cfg)
@@ -184,17 +199,19 @@ def put_composition_cs(
         else:
             #  Sans identifiant connu, c'est une arrivée : elle date d'aujourd'hui
             #  et le fil a raison de l'annoncer.
-            session.add(MembreCS(
-                genre=mb.genre,
-                prenom=mb.prenom,
-                nom=mb.nom,
-                batiment_id=mb.batiment_id,
-                etage=mb.etage,
-                est_gestionnaire_site=False,
-                est_president=mb.est_president,
-                ordre=i,
-                user_id=mb.user_id,
-            ))
+            session.add(
+                MembreCS(
+                    genre=mb.genre,
+                    prenom=mb.prenom,
+                    nom=mb.nom,
+                    batiment_id=mb.batiment_id,
+                    etage=mb.etage,
+                    est_gestionnaire_site=False,
+                    est_president=mb.est_president,
+                    ordre=i,
+                    user_id=mb.user_id,
+                )
+            )
 
     #  Ce que la nouvelle liste ne contient plus a quitté le conseil.
     for id_, membre in existants.items():
@@ -207,6 +224,7 @@ def put_composition_cs(
 
 # ── Annuaire Syndic — gestion (CS + admin) ──────────────────────────────────
 
+
 class MembreSyndicIn(BaseModel):
     genre: str
     prenom: str
@@ -217,11 +235,13 @@ class MembreSyndicIn(BaseModel):
     est_principal: bool = False
     user_id: Optional[int] = None
 
+
 class SyndicIn(BaseModel):
     nom_syndic: str = ""
     adresse: str = ""
     site_web: Optional[str] = None
     membres: list[MembreSyndicIn] = []
+
 
 @router.get("/annuaire/syndic")
 def get_syndic_info(
@@ -272,17 +292,19 @@ def put_syndic_info(
     session.flush()
 
     for i, mb in enumerate(body.membres):
-        session.add(MembreSyndic(
-            genre=mb.genre,
-            prenom=mb.prenom,
-            nom=mb.nom,
-            fonction=mb.fonction,
-            email=mb.email,
-            telephone=mb.telephone,
-            est_principal=mb.est_principal,
-            ordre=i,
-            user_id=mb.user_id,
-        ))
+        session.add(
+            MembreSyndic(
+                genre=mb.genre,
+                prenom=mb.prenom,
+                nom=mb.nom,
+                fonction=mb.fonction,
+                email=mb.email,
+                telephone=mb.telephone,
+                est_principal=mb.est_principal,
+                ordre=i,
+                user_id=mb.user_id,
+            )
+        )
 
     session.commit()
     return {"ok": True}

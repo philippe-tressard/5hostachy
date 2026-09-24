@@ -32,6 +32,7 @@ rien d'autre. Tout ce qui n'est pas ici est commun, donc s'écrit une fois.
 entrée ici. S'il fallait en plus recopier quatre fonctions, il serait ajouté à
 moitié — c'est précisément ce qui est arrivé au ``lot_id``.
 """
+
 from dataclasses import dataclass
 
 from app.models.core import (
@@ -99,6 +100,7 @@ class TypeAcces:
     #  🔴 `attribuer` et `attribuer_aux_coproprietaires` ont été RETIRÉS le
     #  23/09/2026 (#1194) : les porteurs d'un badge se déduisent de son lot
     #  (`utils/porteurs_acces`), plus rien ne les écrit.
+
 
 VIGIK = TypeAcces(
     cle="vigik",

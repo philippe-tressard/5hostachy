@@ -16,6 +16,7 @@ et pas seulement une taille de fichier.
 **après** `crud` : les chemins littéraux avant le motif `/{ticket_id}`, comme le
 dit la docstring du paquet.
 """
+
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -36,7 +37,12 @@ from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
 from app.utils.intervenant import appliquer_intervenant
 from app.utils.prochaine_visite import apres_cloture
 from app.utils.nature_affaire import (
-    PERIMETRE_BUG, categorie_reservee, change_de_nature, est_actualite, est_bug, statut_pour,
+    PERIMETRE_BUG,
+    categorie_reservee,
+    change_de_nature,
+    est_actualite,
+    est_bug,
+    statut_pour,
 )
 from app.utils.valeurs import valeur
 from app.utils.fichiers import chemins_locaux
@@ -81,9 +87,15 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 #: nouveau champ mal classé sera au pire trop ouvert au CS, jamais fermé à
 #: l'auteur. Le contraire bloquerait l'auteur en silence.
 CHAMPS_DE_CONTENU = (
-    "titre", "description", "categorie", "perimetre_cible",
-    "photos_urls", "fichiers_urls", "batiment_id",
-    "public_cible", "reserve_perimetre",
+    "titre",
+    "description",
+    "categorie",
+    "perimetre_cible",
+    "photos_urls",
+    "fichiers_urls",
+    "batiment_id",
+    "public_cible",
+    "reserve_perimetre",
 )
 
 
@@ -154,15 +166,23 @@ def update_ticket(
     #  la catégorie (`nature_affaire.statut_pour`).
     nature_changee = change_de_nature(ticket, body.categorie)
     if nature_changee and not is_cs_admin:
-        raise HTTPException(403, "Seul le conseil syndical fait d'une affaire une actualité, ou l'inverse")
+        raise HTTPException(
+            403, "Seul le conseil syndical fait d'une affaire une actualité, ou l'inverse"
+        )
     #  Passer VERS une catégorie réservée (Étude & travaux, Entretien) est aussi
     #  un geste du conseil ; GARDER celle qu'on a ne l'est pas — l'auteur d'une
     #  ancienne étude corrige son texte sans rien demander.
-    vers_reservee = body.categorie is not None and valeur(body.categorie) != valeur(ticket.categorie)
+    vers_reservee = body.categorie is not None and valeur(body.categorie) != valeur(
+        ticket.categorie
+    )
     if vers_reservee and categorie_reservee(body.categorie) and not is_cs_admin:
         raise HTTPException(403, "Cette catégorie est réservée au conseil syndical")
-    if body.statut is not None and (body.statut in STATUTS_TICKET_SANS_CYCLE or est_actualite(ticket)):
-        raise HTTPException(422, "Une actualité n'a pas d'état de suivi : c'est sa catégorie qui en décide")
+    if body.statut is not None and (
+        body.statut in STATUTS_TICKET_SANS_CYCLE or est_actualite(ticket)
+    ):
+        raise HTTPException(
+            422, "Une actualité n'a pas d'état de suivi : c'est sa catégorie qui en décide"
+        )
 
     # Statut et priorité : CS/admin uniquement
     if body.statut is not None or body.priorite is not None:
@@ -213,7 +233,8 @@ def update_ticket(
         #  avant d'agir. L'admin, lui, intervient précisément quand il y a un
         #  problème — c'est sa raison d'être dans cette règle.
         if not user.has_role(RoleUtilisateur.admin) and ticket.statut not in (
-            StatutTicket.ouvert, StatutTicket.publie,
+            StatutTicket.ouvert,
+            StatutTicket.publie,
         ):
             raise HTTPException(403, "Modification impossible : le ticket n'est plus ouvert")
         changes += _appliquer_contenu(body, ticket, est_cs=is_cs_admin)
@@ -238,18 +259,23 @@ def update_ticket(
     extra_fields = any(
         _envoye(body, c)
         for c in (
-            'lot_id', 'batiment_id', 'destinataire_syndic', 'destinataire_cs',
-            'partager_whatsapp',
-            'saisi_pour_user_id', 'saisi_pour_nom', 'saisi_pour_email',
-            'non_relancable', 'non_relancable_motif', 'archive_manuel',
+            "lot_id",
+            "batiment_id",
+            "destinataire_syndic",
+            "destinataire_cs",
+            "partager_whatsapp",
+            "saisi_pour_user_id",
+            "saisi_pour_nom",
+            "saisi_pour_email",
+            "non_relancable",
+            "non_relancable_motif",
+            "archive_manuel",
         )
     )
     if extra_fields:
         if not is_cs_admin:
             raise HTTPException(403, "Seul le CS ou un administrateur peut modifier ces champs")
         changes += _appliquer_relations(body, ticket)
-
-
 
     ticket.mis_a_jour_le = datetime.utcnow()
 
@@ -305,18 +331,23 @@ def update_ticket(
         #  Le préfixe et son assemblage viennent de `app/utils/corrections.py` :
         #  la chaîne était écrite quatre fois, et le fil avait besoin d'un
         #  cinquième pour la RECONNAÎTRE (01/09/2026).
-        session.add(TicketEvolution(
-            ticket_id=ticket.id, type="commentaire",
-            contenu=(PREFIXE_CORRECTION if is_cs_admin else PREFIXE_CORRECTION_AUTEUR)
-            + SEPARATEUR_CORRECTION.join(changes),
-            auteur_id=user.id, cree_le=datetime.utcnow(),
-        ))
+        session.add(
+            TicketEvolution(
+                ticket_id=ticket.id,
+                type="commentaire",
+                contenu=(PREFIXE_CORRECTION if is_cs_admin else PREFIXE_CORRECTION_AUTEUR)
+                + SEPARATEUR_CORRECTION.join(changes),
+                auteur_id=user.id,
+                cree_le=datetime.utcnow(),
+            )
+        )
 
     # Notification auteur (in-app) — sauf si c'est l'auteur lui-même qui modifie
     #  Une actualité se corrige entre membres du conseil : l'auteur n'en est pas
     #  « prévenu » comme d'une affaire qui avance.
     if user.id != ticket.auteur_id and not est_actualite(ticket):
-        sonner(session,
+        sonner(
+            session,
             destinataire_id=ticket.auteur_id,
             type="ticket_update",
             titre=f"Ticket #{ticket.numero} mis à jour",
@@ -348,7 +379,10 @@ def update_ticket(
     if est_actualite(ticket) and is_cs_admin:
         sortie = reservee_avant and not reservee_au_conseil(ticket)
         diffuser_actualite(
-            session, ticket, user, background_tasks,
+            session,
+            ticket,
+            user,
+            background_tasks,
             whatsapp=bool(body.partager_whatsapp),
             syndic=ticket.destinataire_syndic and (not syndic_avant or sortie),
             cs=ticket.destinataire_cs and (not cs_avant or sortie),
@@ -376,7 +410,10 @@ def update_ticket(
         ticket.destinataire_cs and not cs_avant
     ):
         envoyer_email_syndic_cs(
-            ticket, user, background_tasks, session,
+            ticket,
+            user,
+            background_tasks,
+            session,
             syndic=ticket.destinataire_syndic and not syndic_avant,
             cs=ticket.destinataire_cs and not cs_avant,
             pieces_jointes=chemins_locaux(pieces_du_ticket(ticket)),

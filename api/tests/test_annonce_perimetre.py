@@ -24,6 +24,7 @@ lieu de croire le corps de la réponse (`standards/04` §14 — observer la chos
 pas son enregistrement). Une réponse fabriquée à partir de l'objet en mémoire
 serait juste alors que la base serait fausse.
 """
+
 from __future__ import annotations
 
 

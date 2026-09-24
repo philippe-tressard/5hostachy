@@ -78,7 +78,7 @@ class UserRead(BaseModel):
     restreindre_a_mes_batiments: bool = False
     demarche_arrivant: Optional[str] = None
     batiment_id: Optional[int] = None
-    batiment_nom: Optional[str] = None   # ex. "Bât. A"
+    batiment_nom: Optional[str] = None  # ex. "Bât. A"
     #  L'étage où la personne HABITE. Sans lui, le profil ne pourrait pas
     #  afficher la valeur qu'il vient d'enregistrer.
     etage: Optional[int] = None
@@ -102,7 +102,9 @@ class UserRead(BaseModel):
         from_attributes = True
 
     @classmethod
-    def from_orm_with_roles(cls, u, batiment_nom: Optional[str] = None, delegations_aidant: list[dict] | None = None) -> "UserRead":
+    def from_orm_with_roles(
+        cls, u, batiment_nom: Optional[str] = None, delegations_aidant: list[dict] | None = None
+    ) -> "UserRead":
         from app.utils.communaute import motif_de_refus
 
         data = cls.model_validate(u)
@@ -270,7 +272,7 @@ class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
-    @field_validator('public_cible', mode='before')
+    @field_validator("public_cible", mode="before")
     @classmethod
     def parse_public_ticket(cls, v):
         if isinstance(v, str):
@@ -280,14 +282,14 @@ class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
                 return None
         return v
 
-    @field_validator('perimetre_cible', mode='before')
+    @field_validator("perimetre_cible", mode="before")
     @classmethod
     def parse_perimetre_ticket(cls, v):
         if isinstance(v, str):
             try:
                 return json.loads(v)
             except Exception:
-                return ['résidence']
+                return ["résidence"]
         return v
 
     class Config:
@@ -374,6 +376,7 @@ from app.schemas_tickets import (  # noqa: E402,F401
 #  Les schémas des PUBLICATIONS (`schemas_publications.py`) ont été retirés le
 #  23/09/2026 avec leur routeur : une actualité est une affaire de catégorie
 #  « Actualité » (#1091, lot 4), elle se lit et s'écrit par `schemas_tickets`.
+
 
 class DocumentRead(BaseModel):
     id: int

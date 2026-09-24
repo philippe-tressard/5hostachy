@@ -13,13 +13,13 @@ une ligne à changer.
 ⚠️ N'importe que `schemas_communs` et `models.core` — jamais `schemas`, qui
 l'importe. Un cycle ferait dépendre le démarrage de l'ordre des imports.
 """
+
 from datetime import datetime
 from typing import List, Optional
 
 from app.models.core import StatutTicket
 from app.schemas_communs import ChampsIntervenant, EvolutionLue, ListeJson
 from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree
-
 
 
 class TicketEvolutionCreate(AssisteIAEntree, ChampsIntervenant):

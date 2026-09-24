@@ -14,6 +14,7 @@
 le même dispositif que `KANBAN_LABELS` de `calendrier_historique.py`, et c'est ce
 test qui rend la copie tenable.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -27,9 +28,7 @@ from app.utils.kanban_tickets import (
     suivi_par_defaut,
 )
 
-_KANBAN_TS = (
-    pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "kanban.ts"
-)
+_KANBAN_TS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "kanban.ts"
 
 
 def _table_ts(nom: str) -> dict[str, str]:
@@ -37,8 +36,7 @@ def _table_ts(nom: str) -> dict[str, str]:
     debut = source.index(f"export const {nom}")
     corps = source[source.index("{", debut) + 1 : source.index("};", debut)]
     return {
-        m.group(1): m.group(2)
-        for m in re.finditer(r"^\t(\S+?):\s*'([^']*)',", corps, re.MULTILINE)
+        m.group(1): m.group(2) for m in re.finditer(r"^\t(\S+?):\s*'([^']*)',", corps, re.MULTILINE)
     }
 
 
@@ -63,7 +61,9 @@ def test_TOUS_les_statuts_de_ticket_ont_une_colonne():
 
     for statut in StatutTicket:
         if statut.value in STATUTS_TICKET_SANS_CYCLE:
-            assert statut.value not in COLONNE_PAR_STATUT, f"{statut.value} a une colonne : l'actualité paraîtrait au kanban."
+            assert statut.value not in COLONNE_PAR_STATUT, (
+                f"{statut.value} a une colonne : l'actualité paraîtrait au kanban."
+            )
             continue
         assert statut.value in COLONNE_PAR_STATUT, (
             f"statut sans colonne kanban : {statut.value}. Le ticket "
@@ -148,6 +148,7 @@ def test_la_categorie_visee_EXISTE_vraiment():
 #  pas « etude_travaux ». La création passe l'énumération (`body.categorie`) :
 #  le défaut « Étude & travaux entre au kanban » ne s'est donc jamais posé. Les
 #  tests ci-dessus n'éprouvaient que des chaînes.
+
 
 def test_le_defaut_de_suivi_accepte_l_enumeration():
     from app.models.tickets import CategorieTicket

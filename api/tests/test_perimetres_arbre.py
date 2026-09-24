@@ -18,6 +18,7 @@ Deux comportements changent **volontairement**, et sont testés comme tels :
 2. un arbre vide ou inconnu ne restreint rien, ce qui permet de servir une autre
    copropriété sans qu'aucun code de périmètre existe dans le code.
 """
+
 import itertools
 
 import pytest
@@ -26,7 +27,12 @@ from sqlmodel import Session, SQLModel, select
 from app.database import engine
 from app.models.perimetre import Perimetre
 from app.models.core import (
-    Batiment, ConfigSite, Copropriete, RoleUtilisateur, Ticket, Utilisateur,
+    Batiment,
+    ConfigSite,
+    Copropriete,
+    RoleUtilisateur,
+    Ticket,
+    Utilisateur,
 )
 from app.seed.patrimoine import CLE_SEMEE, GABARIT_BATIMENT, poser_arborescence
 from app.utils import perimetres as P
@@ -42,8 +48,9 @@ from tests.purge_test import etat_invalide
 ANCIENS_SCOPES = frozenset({"résidence", "parking", "cave", "aful"})
 
 
-def ancien_perimetre_visible(perimetres: list[str], roles: list[str],
-                             batiment_id: int | None) -> bool:
+def ancien_perimetre_visible(
+    perimetres: list[str], roles: list[str], batiment_id: int | None
+) -> bool:
     """`utils/visibility.perimetre_visible` d'avant le remplacement."""
     if "admin" in roles or "conseil_syndical" in roles:
         return True
@@ -95,8 +102,12 @@ _vider = vider_patrimoine
 
 def utilisateur(roles: str, batiment_id: int | None) -> Utilisateur:
     return Utilisateur(
-        nom="X", prenom="Y", email=f"{roles}-{batiment_id}@test.fr",
-        roles_json=roles, batiment_id=batiment_id, actif=True,
+        nom="X",
+        prenom="Y",
+        email=f"{roles}-{batiment_id}@test.fr",
+        roles_json=roles,
+        batiment_id=batiment_id,
+        actif=True,
     )
 
 
@@ -118,6 +129,7 @@ def _auteur(session: Session) -> int:
 
 
 # ── Le contrôle central : aucun verdict ne change ─────────────────────────────
+
 
 def test_equivalence_stricte_sur_les_codes_en_service(batiments):
     """Personne ne gagne ni ne perd un accès. C'est ce qui autorise le changement."""
@@ -201,6 +213,7 @@ def test_libelles_des_codes_en_service_inchanges(batiments):
 
 # ── Le repli permissif est FERMÉ (02/09/2026) — épinglé fermé ────────────────
 
+
 def test_utilisateur_sans_aucun_batiment_ne_voit_rien(batiments):
     """*« Un utilisateur sans bâtiment ne doit rien voir car il n'est pas résident. »*
 
@@ -224,25 +237,34 @@ def test_un_batiment_ne_donne_pas_acces_aux_autres(batiments):
     assert perimetre_visible([f"bat:{batiments[0]}"], du_premier) is True
     assert perimetre_visible([f"bat:{batiments[1]}"], du_premier) is False
     #  Ciblage multiple : il suffit qu'UN des périmètres visés soit le sien.
-    assert perimetre_visible(
-        [f"bat:{batiments[1]}", f"bat:{batiments[0]}"], du_premier
-    ) is True
+    assert perimetre_visible([f"bat:{batiments[1]}", f"bat:{batiments[0]}"], du_premier) is True
 
 
 # ── Ce qui change volontairement : la donnée abîmée refuse ────────────────────
 
+
 def _actualite(perimetre_cible) -> Ticket:
     """Une actualité — une affaire de catégorie « Actualité » depuis le 23/09/2026."""
-    return Ticket(numero="TK-A1", titre="T", description="C", categorie="actualite",
-                  statut="publie", perimetre_cible=perimetre_cible, public_cible='["résidents"]')
+    return Ticket(
+        numero="TK-A1",
+        titre="T",
+        description="C",
+        categorie="actualite",
+        statut="publie",
+        perimetre_cible=perimetre_cible,
+        public_cible='["résidents"]',
+    )
 
 
-@pytest.mark.parametrize("cible_corrompue", [
-    "ceci n'est pas du json",
-    '{"pas": "une liste"}',
-    "[",
-    '"résidence"',
-])
+@pytest.mark.parametrize(
+    "cible_corrompue",
+    [
+        "ceci n'est pas du json",
+        '{"pas": "une liste"}',
+        "[",
+        '"résidence"',
+    ],
+)
 def test_ciblage_illisible_refuse_au_lieu_delargir(batiments, cible_corrompue):
     """Une donnée abîmée élargissait la visibilité : elle la refuse désormais."""
     publication = _actualite(cible_corrompue)
@@ -263,9 +285,12 @@ def test_perimetre_absent_reste_permissif(batiments):
 
 # ── Échec fermé sur un arbre abîmé ───────────────────────────────────────────
 
+
 def test_code_inconnu_naccorde_rien(batiments):
     """Un contenu qui cite un nœud supprimé n'ouvre aucun accès."""
-    assert perimetre_visible(["periscope-imaginaire"], utilisateur("résident", batiments[0])) is False
+    assert (
+        perimetre_visible(["periscope-imaginaire"], utilisateur("résident", batiments[0])) is False
+    )
 
 
 def test_cycle_de_parente_ne_suspend_pas_et_refuse(batiments):
@@ -303,6 +328,7 @@ def test_parent_orphelin_ne_suspend_pas_et_refuse(batiments):
 
 
 # ── L'arbre vide : servir une autre copropriété ──────────────────────────────
+
 
 def test_arbre_vide_ne_leve_aucune_erreur(arbre_vide):
     """Aucun périmètre configuré est un état valide, pas une panne.
@@ -359,6 +385,7 @@ def test_perimetre_par_defaut_vient_des_donnees(batiments):
 
 # ── La cave relève d'un bâtiment, sans casser l'historique ───────────────────
 
+
 def test_cave_retiree_de_la_saisie_mais_toujours_rendue(batiments):
     """Historique préservé, pastille retirée : le seul compromis qui ne coûte rien."""
     with Session(engine) as session:
@@ -414,6 +441,7 @@ def test_regroupement_batiments_ne_se_cible_pas(batiments):
 
 
 # ── Le seed ───────────────────────────────────────────────────────────────────
+
 
 def test_seed_idempotent_et_respectueux(batiments):
     """Le seed pose ce qui manque et ne réécrit jamais ce qui existe."""

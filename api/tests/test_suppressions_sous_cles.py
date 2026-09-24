@@ -262,13 +262,17 @@ def test_supprimer_une_telecommande_resolue_par_un_import(contexte):
     session.add(tc)
     session.commit()
     session.refresh(tc)
-    ligne = TelecommandeImport(nom_proprietaire="X", reference="TC-546",
-                               statut=StatutImport.resolu, telecommande_id=tc.id)
+    ligne = TelecommandeImport(
+        nom_proprietaire="X", reference="TC-546", statut=StatutImport.resolu, telecommande_id=tc.id
+    )
     session.add(ligne)
     session.commit()
 
     supprimer_acces_admin(
-        objet_id=tc.id, type_acces=TELECOMMANDE, session=session, user=admin,
+        objet_id=tc.id,
+        type_acces=TELECOMMANDE,
+        session=session,
+        user=admin,
     )
     assert session.get(Telecommande, tc.id) is None
     session.refresh(ligne)
@@ -286,13 +290,17 @@ def test_supprimer_un_vigik_resolu_par_un_import(contexte):
     session.add(v)
     session.commit()
     session.refresh(v)
-    ligne = VigikImport(nom_proprietaire="X", code="VG-546",
-                        statut=StatutImport.resolu, vigik_id=v.id)
+    ligne = VigikImport(
+        nom_proprietaire="X", code="VG-546", statut=StatutImport.resolu, vigik_id=v.id
+    )
     session.add(ligne)
     session.commit()
 
     supprimer_acces_admin(
-        objet_id=v.id, type_acces=VIGIK, session=session, user=admin,
+        objet_id=v.id,
+        type_acces=VIGIK,
+        session=session,
+        user=admin,
     )
     assert session.get(Vigik, v.id) is None
     session.refresh(ligne)
@@ -316,6 +324,7 @@ def test_supprimer_un_bail_avec_ses_objets_remis_et_ses_acces(contexte, batiment
     """
     from app.models.copropriete import Lot
     from app.models.core import LocationBail, RemiseObjet, Telecommande, Vigik
+
     #  `bailleur.py` est devenu un paquet le 06/09/2026 (#806) : la suppression
     #  d'un bail vit dans le module qui porte son cycle de vie.
     from app.routers.bailleur.baux import supprimer_bail

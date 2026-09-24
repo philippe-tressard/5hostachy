@@ -19,6 +19,7 @@ change de mécanique — c'est le seul endroit à rouvrir :
      `/calendrier` en est un depuis le 23/09/2026 (#1092), une adresse qui
      redirige. L'ignorer déclarait morts des liens déjà envoyés qui aboutissent.
 """
+
 import pathlib
 import re
 
@@ -51,6 +52,7 @@ def _resoudre(base: pathlib.Path, segments: list[str]) -> bool:
         candidats = [d for d in sous_dossiers if d.name == seg]
 
     return any(_resoudre(c, reste) for c in candidats)
+
 
 #  Les URL dédiées des onglets, lues dans la table du front (`$lib/pages.ts`).
 #  Aucune n'a de dossier de route à elle : `reroute` (`front/src/hooks.ts`) les
@@ -97,11 +99,13 @@ def _routes_onglets_du_front() -> dict[str, str]:
             table[route] = href.group(1)
     return table
 
+
 def _page_existe(lien: str) -> bool:
     chemin = lien.split("#")[0].split("?")[0]
     chemin = _routes_onglets_du_front().get(chemin.rstrip("/"), chemin)
     segments = [s for s in chemin.strip("/").split("/") if s]
     return _resoudre(_ROUTES, segments)
+
 
 def _page_du_lien(lien: str) -> pathlib.Path | None:
     """Fichier `+page.svelte` qui sert ce lien (pour inspecter ancres et onglets).
@@ -183,11 +187,12 @@ def contenu_deplie(fichier: pathlib.Path, _profondeur: int = 3) -> str:
             continue
         position = contenu.find(f"<{nom}", contenu.find("</script>"))
         if position == -1:
-            continue                       # importé mais pas utilisé dans le balisage
+            continue  # importé mais pas utilisé dans le balisage
         interne = contenu_deplie(chemin, _profondeur - 1)
         contenu = contenu[:position] + interne + contenu[position:]
 
     return contenu
+
 
 def _onglet_de_la_route(route: str) -> str | None:
     """L'identifiant d'onglet que cette route ouvre, ou `None` si la page n'en a pas."""
@@ -217,5 +222,5 @@ def _segments_par_onglet(contenu: str) -> dict[str, str]:
     segments: dict[str, str] = {}
     for i, m in enumerate(marqueurs):
         fin = marqueurs[i + 1].start() if i + 1 < len(marqueurs) else len(contenu)
-        segments[m.group(1)] = segments.get(m.group(1), "") + contenu[m.start():fin]
+        segments[m.group(1)] = segments.get(m.group(1), "") + contenu[m.start() : fin]
     return segments

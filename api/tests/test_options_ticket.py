@@ -18,6 +18,7 @@ destinataires, en quatre exemplaires (`commun.py`, en-tête). Ces tests vérifie
 donc **le fait par les trois portes**, et refusent qu'une quatrième option
 apparaisse dans la table sans que quelqu'un décide ce qu'elle écrit.
 """
+
 from __future__ import annotations
 
 import ast
@@ -114,9 +115,7 @@ def test_un_non_CS_peut_dire_que_ca_PRESSE():
 def test_decocher_marche_aussi():
     """Une option se retire comme elle se pose — sinon elle serait à sens unique."""
     t = _Ticket(epingle=True, confidentiel=True, priorite="haute")
-    appliquer_options(
-        t, _Corps(epingle=False, urgente=False, confidentiel=False), est_cs=True
-    )
+    appliquer_options(t, _Corps(epingle=False, urgente=False, confidentiel=False), est_cs=True)
     assert (t.epingle, t.confidentiel, t.priorite) == (False, False, "normale")
 
 
@@ -214,4 +213,6 @@ def test_les_TROIS_corps_transportent_chaque_option():
     ]
     assert not manques, f"Options perdues en silence par le corps de requête : {manques}"
     for option in hors_suite:
-        assert option in OPTIONS_TICKET, f"`{option}` déclarée hors Suite, mais n'est plus une option."
+        assert option in OPTIONS_TICKET, (
+            f"`{option}` déclarée hors Suite, mais n'est plus une option."
+        )

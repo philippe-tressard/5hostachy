@@ -7,6 +7,7 @@ Format : le PLUS PETIT feuillet qui accueille le texte (cf. `choisir_format`),
 parce qu'une affiche prend de la place sur le tableau d'affichage du hall. Le CS
 peut forcer un format depuis l'interface.
 """
+
 from __future__ import annotations
 
 import re
@@ -150,7 +151,7 @@ _GABARITS: dict[str, dict[str, str]] = {
         "titre": "15pt",
         "meta": "7pt",
         "corps": "8.5pt",
-        "galerie_max": "0mm",   # pas de photo en dessous de l'A5
+        "galerie_max": "0mm",  # pas de photo en dessous de l'A5
         "qr": "11mm",
         "pied": "6pt",
     },
@@ -166,7 +167,7 @@ _GABARITS: dict[str, dict[str, str]] = {
         "meta": "5.5pt",
         "corps": "7pt",
         "galerie_max": "0mm",
-        "qr": "0mm",            # pied simplifié : plus de QR
+        "qr": "0mm",  # pied simplifié : plus de QR
         "pied": "5pt",
     },
 }
@@ -194,8 +195,11 @@ def texte_brut(html: str) -> str:
     """HTML riche → texte brut (pendant serveur de `stripHtml` côté front)."""
     txt = re.sub(r"<[^>]*>", " ", html or "")
     txt = (
-        txt.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<")
-        .replace("&gt;", ">").replace("&quot;", '"')
+        txt.replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", '"')
     )
     return re.sub(r"\s+", " ", txt).strip()
 
@@ -253,9 +257,6 @@ def format_libelle(fmt: str) -> str:
 #  `perimetre_label_liste`, qui lit l'arbre.
 
 
-
-
-
 def nom_fichier(titre: str, cree_le: date | datetime) -> str:
     """Nom de fichier proposé au téléchargement / en pièce jointe.
 
@@ -270,17 +271,16 @@ def nom_fichier(titre: str, cree_le: date | datetime) -> str:
 
 # ── CSS ──────────────────────────────────────────────────────────────────────
 
+
 def _css(fmt: str) -> str:
     g = _GABARITS[fmt]
     # Sous l'A4, la feuille imprimée est plus grande que l'affiche : on matérialise
     # le trait de coupe.
-    coupe = (
-        "border: .35mm dashed var(--light-muted);" if fmt != "a4" else ""
-    )
+    coupe = "border: .35mm dashed var(--light-muted);" if fmt != "a4" else ""
     # Très petits formats : on sacrifie la date d'affichage pour préserver le texte.
     meta_allegee = ".date-affichage { display: none; }" if fmt in _SANS_QR else ""
     return f"""\
-{regle_page(taille=g['page_size'], marges='0', numeroter=False)}
+{regle_page(taille=g["page_size"], marges="0", numeroter=False)}
 {PALETTE_CSS}\
 * {{ box-sizing: border-box; margin: 0; padding: 0; }}
 body {{
@@ -288,10 +288,10 @@ body {{
   color: var(--ink); background: var(--card); line-height: 1.5;
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }}
-/* Dimensions physiques du feuillet : le pied de page se cale au bas du {g['page_size']},
+/* Dimensions physiques du feuillet : le pied de page se cale au bas du {g["page_size"]},
    à l'impression comme à l'aperçu écran (où @page n'est pas appliqué). */
 .page {{
-  width: {g['largeur']}; min-height: {g['hauteur']};
+  width: {g["largeur"]}; min-height: {g["hauteur"]};
   margin: 0 auto; background: var(--card);
   display: flex; flex-direction: column;
   {coupe}
@@ -305,17 +305,17 @@ body {{
 /* ── En-tête ── */
 .entete {{
   background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
-  padding: {g['padding']}; padding-top: 5mm; padding-bottom: 4mm;
+  padding: {g["padding"]}; padding-top: 5mm; padding-bottom: 4mm;
   display: flex; align-items: center; gap: 4mm;
 }}
 .entete svg {{ flex-shrink: 0; }}
 .entete-texte {{ flex: 1; }}
 .surtitre {{
-  font-size: {g['surtitre']}; color: var(--gold); font-weight: 700;
+  font-size: {g["surtitre"]}; color: var(--gold); font-weight: 700;
   letter-spacing: 2.2px; text-transform: uppercase;
 }}
 .residence {{
-  font-family: {FONT_SERIF}; font-size: {g['residence']};
+  font-family: {FONT_SERIF}; font-size: {g["residence"]};
   font-weight: 700; color: #FFFFFF; margin-top: 1mm;
 }}
 .barre-accent {{
@@ -324,7 +324,7 @@ body {{
 }}
 
 /* ── Corps ── */
-.corps {{ flex: 1; padding: {g['padding']}; display: flex; flex-direction: column; }}
+.corps {{ flex: 1; padding: {g["padding"]}; display: flex; flex-direction: column; }}
 .meta {{
   display: flex; align-items: center; justify-content: space-between;
   gap: 4mm; margin-bottom: 3mm;
@@ -352,20 +352,20 @@ body {{
       n'est pas ce qui manque à WeasyPrint. C'est la seule chose que j'aie pu
       VÉRIFIER — sur la capture de l'affiche. */
   display: flex; align-items: stretch;
-  font-size: {g['meta']}; font-weight: 700; color: var(--navy);
+  font-size: {g["meta"]}; font-weight: 700; color: var(--navy);
   background: #F0EDE6; border-radius: 0 1mm 1mm 0;
   text-transform: uppercase; letter-spacing: .6px;
 }}
 .chip-filet {{ flex: 0 0 1.2mm; width: 1.2mm; background: var(--gold); }}
 .chip-texte {{ padding: 1.1mm 3mm; }}
-.date-affichage {{ font-size: {g['meta']}; color: var(--muted); white-space: nowrap; }}
+.date-affichage {{ font-size: {g["meta"]}; color: var(--muted); white-space: nowrap; }}
 {meta_allegee}
 .titre {{
-  font-family: {FONT_SERIF}; font-size: {g['titre']}; font-weight: 700;
+  font-family: {FONT_SERIF}; font-size: {g["titre"]}; font-weight: 700;
   color: var(--navy); line-height: 1.15; margin-bottom: 3mm;
 }}
 .filet {{ height: .4mm; background: var(--border); margin-bottom: 3mm; }}
-.message {{ font-size: {g['corps']}; color: var(--ink); }}
+.message {{ font-size: {g["corps"]}; color: var(--ink); }}
 .message p {{ margin-bottom: 2.5mm; }}
 .message ul, .message ol {{ margin: 0 0 2.5mm 6mm; }}
 .message li {{ margin-bottom: 1.2mm; }}
@@ -380,24 +380,25 @@ body {{
 /* ── Photos : secondaires, calées en pied de contenu (le texte reste central) ── */
 .galerie {{ display: flex; gap: 3mm; margin-top: auto; padding-top: 6mm; }}
 .galerie img {{
-  flex: 1 1 0; min-width: 0; height: {g['galerie_max']};
+  flex: 1 1 0; min-width: 0; height: {g["galerie_max"]};
   object-fit: cover; border-radius: 2mm; border: .3mm solid var(--border);
 }}
 
 /* ── Pied de page ── */
 .pied {{
   background: var(--footer-bg); border-top: .3mm solid var(--border);
-  padding: {g['padding']}; padding-top: 3.5mm; padding-bottom: 3.5mm;
+  padding: {g["padding"]}; padding-top: 3.5mm; padding-bottom: 3.5mm;
   display: flex; align-items: center; gap: 4mm;
 }}
-.pied-texte {{ flex: 1; font-size: {g['pied']}; color: var(--muted); line-height: 1.45; }}
+.pied-texte {{ flex: 1; font-size: {g["pied"]}; color: var(--muted); line-height: 1.45; }}
 .pied-signature {{ font-weight: 700; color: var(--navy); }}
 .pied-site {{ color: var(--navy); font-weight: 600; }}
-.pied-qr {{ width: {g['qr']}; height: {g['qr']}; flex-shrink: 0; }}
+.pied-qr {{ width: {g["qr"]}; height: {g["qr"]}; flex-shrink: 0; }}
 """
 
 
 # ── Rendu ────────────────────────────────────────────────────────────────────
+
 
 def construire_html(
     *,
@@ -447,7 +448,7 @@ def construire_html(
 <div class="page">
 
   <div class="entete">
-    {logo_svg(int(g['logo']))}
+    {logo_svg(int(g["logo"]))}
     <div class="entete-texte">
       <div class="surtitre">Avis aux résidents</div>
       <div class="residence">{escape(site_nom)}</div>

@@ -23,6 +23,7 @@ démarrage — `verifier_taches_enregistrees` compare ce qui tourne vraiment, da
 le process, et journalise l'écart. Aucun des deux contrôles ne suffit seul
 (`standards/04` §12 — un contrôle borné dit ce qu'il ne couvre pas).
 """
+
 import ast
 from pathlib import Path
 

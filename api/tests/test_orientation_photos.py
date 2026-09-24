@@ -48,6 +48,7 @@ JPEG écrit ne reporte pas la balise — `save()` ne l'écrit que si on la lui p
 Le commentaire d'`uploads.py` (« Corriger l'orientation AVANT convert ») dit une
 prudence exacte mais pas nécessaire ; ces tests, eux, mesurent le résultat.
 """
+
 from __future__ import annotations
 
 import io
@@ -58,7 +59,7 @@ import pytest
 Image = pytest.importorskip(
     "PIL.Image",
     reason="Pillow est une dépendance de production ; son absence rend ces "
-           "tests INCONNUS, pas verts",
+    "tests INCONNUS, pas verts",
 )
 from fastapi import UploadFile  # noqa: E402
 from starlette.datastructures import Headers  # noqa: E402
@@ -153,9 +154,7 @@ def test_une_photo_DROITE_n_est_pas_tournee(tmp_path, monkeypatch):
     )
 
 
-def test_cas_zero_SANS_exif_transpose_dans_uploads_la_photo_reste_couchee(
-    tmp_path, monkeypatch
-):
+def test_cas_zero_SANS_exif_transpose_dans_uploads_la_photo_reste_couchee(tmp_path, monkeypatch):
     """🔴 La preuve que ces tests mesurent le MODULE DE PRODUCTION.
 
     On neutralise `exif_transpose` là où il est appelé — dans
@@ -183,6 +182,8 @@ def test_cas_zero_SANS_exif_transpose_dans_uploads_la_photo_reste_couchee(
         "l'image se redresse sans `exif_transpose` : ces tests ne prouvent plus "
         "que le réencodage partagé la redresse."
     )
+
+
 def test_le_courriel_joint_la_photo_TELLE_QUELLE(tmp_path):
     """L'orientation a UN propriétaire : le téléversement (17/09/2026).
 

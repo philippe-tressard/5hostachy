@@ -57,6 +57,7 @@ message du site ; l'authentification de l'expéditeur est une décision **sépar
 (`courriel_ingestion.expediteur_authentifie`). Les confondre reviendrait à faire
 d'un jeton lisible dans un carnet d'adresses un droit d'écriture signé du syndic.
 """
+
 from __future__ import annotations
 
 import re

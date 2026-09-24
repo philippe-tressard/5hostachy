@@ -21,6 +21,7 @@ la publication s'appelle l'Accès « visible du seul périmètre »
 (`reserve_perimetre`), et Destinataires = « Conseil syndical » seul referme
 tout (#1096). L'invariant vit dans `tickets/actualite.appliquer_acces`.
 """
+
 from __future__ import annotations
 
 import json
@@ -52,13 +53,22 @@ def scene():
     with Session(engine) as session:
         auteur = Utilisateur(
             email=f"affiche-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x", prenom="A", nom="H", actif=True,
+            mot_de_passe_hash="x",
+            prenom="A",
+            nom="H",
+            actif=True,
         )
         session.add(auteur)
         session.commit()
         session.refresh(auteur)
-        actu = Ticket(numero=f"TK-A{uuid.uuid4().hex[:6]}", titre=VRAI_TITRE, description=VRAI_CONTENU,
-                      categorie="actualite", statut="publie", auteur_id=auteur.id)
+        actu = Ticket(
+            numero=f"TK-A{uuid.uuid4().hex[:6]}",
+            titre=VRAI_TITRE,
+            description=VRAI_CONTENU,
+            categorie="actualite",
+            statut="publie",
+            auteur_id=auteur.id,
+        )
         session.add(actu)
         session.commit()
         session.refresh(actu)
@@ -73,8 +83,9 @@ def scene():
 
 
 def _affiche(session: Session, actu: Ticket) -> AnnonceHall:
-    affiche = AnnonceHall(titre=VRAI_TITRE, message=VRAI_CONTENU, ticket_id=actu.id,
-                          auteur_id=actu.auteur_id)
+    affiche = AnnonceHall(
+        titre=VRAI_TITRE, message=VRAI_CONTENU, ticket_id=actu.id, auteur_id=actu.auteur_id
+    )
     session.add(affiche)
     session.commit()
     return affiche
@@ -88,6 +99,7 @@ def _cibler(actu: Ticket, perimetre: list[str], **champs) -> Ticket:
 
 
 # ── 1. L'affiche de hall ──────────────────────────────────────────────────────
+
 
 def test_une_affiche_deja_generee_est_archivee(batiments, scene):
     """Réserver au périmètre une actualité déjà affichée l'en retire.
@@ -106,7 +118,9 @@ def test_reservee_au_conseil_l_affiche_est_archivee_aussi(batiments, scene):
     """#1096 : Destinataires = « Conseil syndical » seul referme tout, le hall compris."""
     session, actu = scene
     affiche = _affiche(session, actu)
-    appliquer_acces(_cibler(actu, [f"bat:{batiments[0]}"], public_cible='["conseil_syndical"]'), session)
+    appliquer_acces(
+        _cibler(actu, [f"bat:{batiments[0]}"], public_cible='["conseil_syndical"]'), session
+    )
     session.commit()
     assert affiche.archivee is True
 
@@ -145,11 +159,18 @@ def test_un_perimetre_de_batiment_conserve_la_case(batiments, scene):
 
 # ── 2. Le message WhatsApp ────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def message_confidentiel() -> str:
     return construire_message(
-        VRAI_TITRE, VRAI_CONTENU, urgente=False, perimetre_cible='["bat:3"]',
-        config=CONFIG, public_cible='["résidents"]', confidentiel=True, lien=LIEN,
+        VRAI_TITRE,
+        VRAI_CONTENU,
+        urgente=False,
+        perimetre_cible='["bat:3"]',
+        config=CONFIG,
+        public_cible='["résidents"]',
+        confidentiel=True,
+        lien=LIEN,
     )
 
 
@@ -180,8 +201,13 @@ def test_le_titre_de_repli_ne_sert_QUE_aux_actualites_sans_titre():
     croyant l'arbitrage clos, et qu'on obtienne alors un message décapité.
     """
     message = construire_message(
-        "", VRAI_CONTENU, urgente=False, perimetre_cible='["bat:3"]',
-        config=CONFIG, public_cible='["résidents"]', confidentiel=True,
+        "",
+        VRAI_CONTENU,
+        urgente=False,
+        perimetre_cible='["bat:3"]',
+        config=CONFIG,
+        public_cible='["résidents"]',
+        confidentiel=True,
     )
     assert TITRE_CONFIDENTIEL in message
 
@@ -195,8 +221,13 @@ def test_le_message_whatsapp_garde_le_perimetre_et_le_lien(message_confidentiel)
 def test_une_actualite_ordinaire_garde_son_message_complet():
     """Le contrôle sait rougir dans l'autre sens : rien n'a changé sans la case."""
     message = construire_message(
-        VRAI_TITRE, VRAI_CONTENU, urgente=False, perimetre_cible='["bat:3"]',
-        config=CONFIG, public_cible='["résidents"]', confidentiel=False,
+        VRAI_TITRE,
+        VRAI_CONTENU,
+        urgente=False,
+        perimetre_cible='["bat:3"]',
+        config=CONFIG,
+        public_cible='["résidents"]',
+        confidentiel=False,
     )
     assert VRAI_TITRE in message
     assert "3ᵉ étage" in message
@@ -211,8 +242,13 @@ def test_le_public_restreint_garde_son_vrai_titre():
     confidentialité — l'axe bâtiment — qui retire aussi le titre.
     """
     message = construire_message(
-        VRAI_TITRE, VRAI_CONTENU, urgente=False, perimetre_cible='["bat:3"]',
-        config=CONFIG, public_cible='["locataires"]', confidentiel=False,
+        VRAI_TITRE,
+        VRAI_CONTENU,
+        urgente=False,
+        perimetre_cible='["bat:3"]',
+        config=CONFIG,
+        public_cible='["locataires"]',
+        confidentiel=False,
     )
     assert VRAI_TITRE in message
     assert "3ᵉ étage" not in message

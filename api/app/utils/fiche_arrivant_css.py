@@ -9,17 +9,22 @@ pas un changement de contenu).
 Elle reste **propre à ce document** : ce qui est commun à tous les imprimables —
 palette, logo, icônes, moteur — vit dans `pdf_theme.py`, et ne se redéfinit pas ici.
 """
+
 from __future__ import annotations
 
 from app.utils.pdf_theme import PALETTE_CSS, regle_page
 
 
-CSS = regle_page(marges="6mm 8mm", numeroter=False) + """
+CSS = (
+    regle_page(marges="6mm 8mm", numeroter=False)
+    + """
 @media print {
   body { background: none !important; }
   .page { box-shadow: none !important; border: none !important; }
 }
-""" + PALETTE_CSS + """\
+"""
+    + PALETTE_CSS
+    + """\
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -162,3 +167,4 @@ body {
 .whatsapp-cta .wa-desc { font-size: 9px; color: var(--muted); line-height: 1.3; }
 .whatsapp-cta .wa-desc strong { color: var(--ink); }
 """
+)

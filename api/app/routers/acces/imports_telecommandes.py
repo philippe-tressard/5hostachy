@@ -8,6 +8,7 @@ concorde, à la main sinon. La résolution crée la `Telecommande` réelle.
 cycle lui-même — appariement, correction, résolution — vit dans `socle_imports`,
 avec le récit de ce qu'il a coûté d'en avoir eu deux copies (#847).
 """
+
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from pydantic import BaseModel
 from sqlmodel import Session
@@ -52,6 +53,7 @@ async def upload_import_excel(
 ):
     """Upload un fichier Excel et importe les télécommandes dans la table de staging."""
     from app.utils.import_telecommandes import importer_depuis_bytes
+
     contenu = await file.read()
     #  🔴 Les trois règles AVANT de lire le classeur (#1026). Cet import
     #  n'avait AUCUN contrôle : ni type, ni taille — `await file.read()` lisait
@@ -132,6 +134,7 @@ def resoudre_import(
 #  #576 : `remettre-en-attente` n'existait que côté télécommandes, et un import
 #  Vigik ignoré par erreur était définitivement perdu. Écrits une fois, la
 #  symétrie est STRUCTURELLE ; `test_symetrie_imports_acces.py` garde le reste.
+
 
 @router.post("/admin/imports/{import_id}/ignorer")
 def ignorer_import(

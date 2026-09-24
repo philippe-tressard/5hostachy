@@ -11,6 +11,7 @@ Ce test verrouille les deux bouts :
 2. aucun `%B`/`%b`/`%A`/`%a` ne réapparaît dans `app/` — c'est ce point qui évite
    la récidive, le correctif ne tenant pas si un futur appel réintroduit `%B`.
 """
+
 import locale as _locale
 import re
 from datetime import date, datetime
@@ -63,8 +64,18 @@ def test_tous_les_mois_traduits():
     """Aucun mois ne doit fuiter en anglais (table complète et bien ordonnée)."""
     rendus = [date_longue(date(2026, m, 1)) for m in range(1, 13)]
     assert [r.split()[1] for r in rendus] == [
-        "janvier", "février", "mars", "avril", "mai", "juin",
-        "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+        "janvier",
+        "février",
+        "mars",
+        "avril",
+        "mai",
+        "juin",
+        "juillet",
+        "août",
+        "septembre",
+        "octobre",
+        "novembre",
+        "décembre",
     ]
 
 
@@ -89,9 +100,7 @@ def test_aucune_directive_strftime_localisee_dans_app():
     for chemin in sorted(_APP_DIR.rglob("*.py")):
         if chemin.name == "dates_fr.py":
             continue  # documente l'interdiction : cite `%B` en prose
-        for num, ligne in enumerate(
-            chemin.read_text(encoding="utf-8").splitlines(), start=1
-        ):
+        for num, ligne in enumerate(chemin.read_text(encoding="utf-8").splitlines(), start=1):
             if "strftime" not in ligne and "%" not in ligne:
                 continue
             if _DIRECTIVES_LOCALISEES.search(ligne):
@@ -113,6 +122,7 @@ def test_aucune_directive_strftime_localisee_dans_app():
 #
 # ⚠️ Le format porte ses UNITÉS, et pas seulement des deux-points : `00:00:30` se
 # lit spontanément trente secondes alors qu'il voulait dire trente minutes.
+
 
 def test_duree_jhm_rend_le_format_demande():
     """`jj:hh:mm`, sur deux chiffres, jusqu'au-delà de 99 jours."""
@@ -173,9 +183,7 @@ def test_aucune_duree_en_heures_decimales_dans_app():
     motif = re.compile(r"round\(\s*\([^)]*\)\.total_seconds\(\)\s*/\s*3600")
     fautifs: list[str] = []
     for chemin in sorted(_APP_DIR.rglob("*.py")):
-        for num, ligne in enumerate(
-            chemin.read_text(encoding="utf-8").splitlines(), start=1
-        ):
+        for num, ligne in enumerate(chemin.read_text(encoding="utf-8").splitlines(), start=1):
             if motif.search(ligne):
                 fautifs.append(f"{chemin.relative_to(_APP_DIR.parent)}:{num}: {ligne.strip()}")
 

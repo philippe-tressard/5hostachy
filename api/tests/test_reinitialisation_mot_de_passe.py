@@ -22,6 +22,7 @@ La **limitation de débit** (`5/minute` sur ces routes) n'est pas éprouvée ici
 elle est portée par slowapi, au niveau du décorateur, et son contrôle vit avec
 les autres garde-fous d'autorisation.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -82,9 +83,7 @@ def utilisateur():
             select(PasswordResetToken).where(PasswordResetToken.user_id == u.id)
         ).all():
             session.delete(jeton)
-        for rt in session.exec(
-            select(RefreshToken).where(RefreshToken.user_id == u.id)
-        ).all():
+        for rt in session.exec(select(RefreshToken).where(RefreshToken.user_id == u.id)).all():
             session.delete(rt)
         session.commit()
         purger_ligne(session, Utilisateur, u.id)
@@ -105,6 +104,7 @@ def _jeton(session: Session, user_id: int, **surcharges) -> PasswordResetToken:
 
 
 # ── La robustesse, aux trois portes ──────────────────────────────────────────
+
 
 def test_la_regle_de_robustesse_refuse_ce_qu_elle_doit_refuser():
     """Les quatre critères, un par un — sinon « le mot de passe est vérifié »
@@ -163,6 +163,7 @@ def test_les_TROIS_portes_appellent_la_regle():
 
 
 # ── Le jeton ─────────────────────────────────────────────────────────────────
+
 
 def test_un_jeton_ne_sert_QU_UNE_fois(utilisateur):
     """Le second usage doit être refusé, même quelques secondes après le premier.
@@ -230,6 +231,7 @@ def test_un_compte_DESACTIVE_ne_se_reinitialise_pas(utilisateur):
 
 
 # ── Ce que la réinitialisation doit VRAIMENT faire ───────────────────────────
+
 
 def test_le_mot_de_passe_change_et_l_ancien_ne_vaut_plus(utilisateur):
     with Session(engine) as session:
@@ -316,6 +318,7 @@ def test_un_mot_de_passe_FAIBLE_est_refuse_AVANT_de_consommer_le_jeton(utilisate
 #  gagné, non la plus répandue : en sécurité, la minorité prudente prime
 #  (`standards/02` §4 bis).
 
+
 def _session_ouverte(session: Session, user_id: int, jeton: str | None = None) -> RefreshToken:
     rt = RefreshToken(
         user_id=user_id,
@@ -397,7 +400,9 @@ def test_les_DEUX_portes_passent_par_la_MEME_pose_de_mot_de_passe():
     import ast
     import pathlib
 
-    fichier = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "auth_mot_de_passe.py"
+    fichier = (
+        pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "auth_mot_de_passe.py"
+    )
     arbre = ast.parse(fichier.read_text(encoding="utf-8"))
     corps = {
         n.name: ast.unparse(n)

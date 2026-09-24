@@ -10,6 +10,7 @@ auprès de SQLModel avant `create_all`. Un modèle défini dans un module que
 personne n'a importé n'existe pas pour `metadata.create_all`, et la table
 manquerait sans le moindre message.
 """
+
 from app.models.copropriete import (  # patrimoine PHYSIQUE, extrait le 13/08/2026
     Batiment as Batiment,
     Copropriete as Copropriete,

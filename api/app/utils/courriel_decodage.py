@@ -14,6 +14,7 @@ mal formés, sans réseau.
 même module vu de plus près. Deux appelants seulement, tous deux dans
 `courriel_boite`.
 """
+
 from __future__ import annotations
 
 from email.header import decode_header, make_header

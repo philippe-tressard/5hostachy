@@ -11,6 +11,7 @@ Ruff ne vérifie pas l'arité. Ce contrôle confronte chaque appel d'une fonctio
 de `utils/visibility/` à sa définition, dans tout `app/` : une règle d'accès
 qui lève au lieu de répondre est une règle qui ne s'applique pas.
 """
+
 from __future__ import annotations
 
 import ast

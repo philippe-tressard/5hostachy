@@ -25,6 +25,7 @@ appartient à `utils/liens` (`nom_site`, `base_site`), et c'est voulu — une
 lecture qui invente sa valeur par défaut la rend invisible à qui veut savoir si
 la clé est posée.
 """
+
 from __future__ import annotations
 
 from sqlmodel import Session, select

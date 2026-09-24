@@ -23,6 +23,7 @@ routeur sans importer l'application. Pas de base, pas d'effet de bord.
 `ModeleImportAcces`, dont le champ `remettreEnAttente` est redevenu OBLIGATOIRE —
 les deux bouts sont donc gardés, chacun par son outil.
 """
+
 import re
 from pathlib import Path
 
@@ -45,6 +46,7 @@ def _source_du_domaine() -> str:
     fichiers = sorted(PAQUET.glob("*.py"))
     assert fichiers, f"{PAQUET} ne porte aucun module : le contrôle ne peut pas conclure"
     return "\n".join(f.read_text(encoding="utf-8") for f in fichiers)
+
 
 #  Les gestes qui n'ont volontairement PAS d'équivalent, avec leur raison.
 #  ⚠️ Une entrée qui ne sert plus fait échouer le test : une dérogation oubliée

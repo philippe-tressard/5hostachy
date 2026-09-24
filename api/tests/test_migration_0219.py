@@ -2,6 +2,7 @@
 
 Rejouée sur une vraie base SQLite, comme la 0218.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -41,10 +42,23 @@ def _ordre(moteur, valeur):
 
 
 def test_les_trois_fantomes_partent_l_ordre_du_reste_est_garde(base):
-    servi = ["tableau-de-bord", "residence", "actualites", "mes-demandes",
-             "calendrier", "mon-lot", "acces-badges", "annuaire"]
+    servi = [
+        "tableau-de-bord",
+        "residence",
+        "actualites",
+        "mes-demandes",
+        "calendrier",
+        "mon-lot",
+        "acces-badges",
+        "annuaire",
+    ]
     assert json.loads(_ordre(base, json.dumps(servi))) == [
-        "tableau-de-bord", "residence", "mes-demandes", "mon-lot", "annuaire"]
+        "tableau-de-bord",
+        "residence",
+        "mes-demandes",
+        "mon-lot",
+        "annuaire",
+    ]
 
 
 def test_une_valeur_illisible_n_est_pas_reparee_a_l_aveugle(base):

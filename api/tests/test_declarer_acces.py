@@ -17,6 +17,7 @@ ce que ces cas corrigent : chaque comportement est éprouvé sur les DEUX types,
 par paramétrage. Un troisième accès entrera dans les mêmes cas sans qu'on écrive
 une ligne — et c'est ce qui empêchera la prochaine divergence.
 """
+
 from datetime import datetime
 
 import pytest

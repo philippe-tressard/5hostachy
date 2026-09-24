@@ -36,6 +36,7 @@ sachant. Il vaut mieux que rien : sans lui, vider `DATE_QUI_CLASSE` ramènerait
 l'ancien comportement **en silence**, sur le tri de la page la plus regardée du
 site.
 """
+
 from __future__ import annotations
 
 import pathlib

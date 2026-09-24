@@ -28,6 +28,7 @@ Elles restent chez leurs routeurs, et le ticket les nomme. Les couvrir demandera
 de reconnaître « un champ qui désigne une personne », ce qu'aucun motif ne sait
 faire sans se tromper (`standards/04` §12).
 """
+
 import ast
 from pathlib import Path
 

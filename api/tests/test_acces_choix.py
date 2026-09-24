@@ -19,6 +19,7 @@ proposée par l'écran. Ce fichier exerce donc les deux faces :
 reprendrait `parking` ou `aful` passerait aussi bien avec un produit qui les
 aurait écrits en dur — c'est ce qu'il doit interdire.
 """
+
 from __future__ import annotations
 
 import json
@@ -88,8 +89,11 @@ def arbre_dessai():
         groupe = noeud("copro:bats", "Bâtiments", selectionnable=False, ordre=1)
         for rang, b in enumerate(batiments):
             noeud(
-                f"copro:b{b.numero}", f"Bâtiment {b.numero}",
-                parent_id=groupe.id, batiment_id=b.id, ordre=10 + rang,
+                f"copro:b{b.numero}",
+                f"Bâtiment {b.numero}",
+                parent_id=groupe.id,
+                batiment_id=b.id,
+                ordre=10 + rang,
             )
         parc = noeud("parc", "Parking résidence", ordre=20)
         noeud("parc:portail", "Portail d'accès", parent_id=parc.id, ordre=21)
@@ -99,10 +103,12 @@ def arbre_dessai():
         noeud("dehors:portillon", "Portillons", parent_id=dehors.id, ordre=41)
 
         for type_acces, codes in ((TELECOMMANDE, PORTAILS), (VIGIK, PORTILLONS)):
-            s.add(ConfigSite(
-                cle=cle_config(type_acces),
-                valeur=json.dumps(codes, ensure_ascii=False),
-            ))
+            s.add(
+                ConfigSite(
+                    cle=cle_config(type_acces),
+                    valeur=json.dumps(codes, ensure_ascii=False),
+                )
+            )
         s.commit()
         invalider_cache()
         yield s, batiments
@@ -135,9 +141,15 @@ def test_un_vigik_ouvre_la_copropriete_un_batiment_ou_un_portillon(arbre_dessai)
     se voir attribuer « Bât. 2 › Local poubelles », qu'aucun vigik ne commande.
     """
     session, batiments = arbre_dessai
-    assert codes_autorises(session, VIGIK) == [
-        "copro:tout", "copro:b1", "copro:b2",
-    ] + PORTILLONS
+    assert (
+        codes_autorises(session, VIGIK)
+        == [
+            "copro:tout",
+            "copro:b1",
+            "copro:b2",
+        ]
+        + PORTILLONS
+    )
 
 
 def test_lordre_servi_est_celui_de_la_rangee(arbre_dessai):
@@ -198,7 +210,10 @@ def test_un_portillon_nest_pas_un_defaut_de_vigik(arbre_dessai):
     """
     session, batiments = arbre_dessai
     porteur = Utilisateur(
-        email="defaut@essai.fr", hashed_password="x", prenom="C", nom="D",
+        email="defaut@essai.fr",
+        hashed_password="x",
+        prenom="C",
+        nom="D",
     )
     session.add(porteur)
     session.commit()
@@ -263,7 +278,10 @@ def test_une_telecommande_ignore_le_batiment_du_lot(arbre_dessai):
     """
     session, batiments = arbre_dessai
     porteur = Utilisateur(
-        email="porteur@essai.fr", hashed_password="x", prenom="A", nom="B",
+        email="porteur@essai.fr",
+        hashed_password="x",
+        prenom="A",
+        nom="B",
     )
     session.add(porteur)
     session.commit()
@@ -281,9 +299,7 @@ def test_une_telecommande_ignore_le_batiment_du_lot(arbre_dessai):
     assert json.loads(vu_par_un_vigik) == ["copro:b1"]
     assert json.loads(vu_par_une_telecommande) == PORTAILS
 
-    session.delete(session.exec(
-        select(UserLot).where(UserLot.user_id == porteur.id)
-    ).first())
+    session.delete(session.exec(select(UserLot).where(UserLot.user_id == porteur.id)).first())
     session.commit()
     session.delete(lot)
     session.delete(porteur)

@@ -14,6 +14,7 @@ tous deux invisibles à la relecture d'un diff :
    partage doit rester réservé au CS et aux admins, contrôlé **côté serveur**,
    la case de l'interface n'étant qu'un confort (`standards/03-securite.md` §1).
 """
+
 import ast
 import pathlib
 
@@ -236,8 +237,11 @@ def test_le_predicat_moderateur_est_reserve_au_cs():
     source = (_APP / "auth" / "deps.py").read_text(encoding="utf-8")
     arbre = ast.parse(source)
     fn = next(
-        (n for n in ast.walk(arbre)
-         if isinstance(n, ast.FunctionDef) and n.name == "est_moderateur"),
+        (
+            n
+            for n in ast.walk(arbre)
+            if isinstance(n, ast.FunctionDef) and n.name == "est_moderateur"
+        ),
         None,
     )
     assert fn is not None, "`est_moderateur` a disparu d'auth/deps.py"
@@ -323,7 +327,9 @@ def _envois_reserves_non_gardes(source: str, fichier: str) -> list[str]:
         if isinstance(fonction, (ast.FunctionDef, ast.AsyncFunctionDef)):
             for ligne, garde in _envois_et_gardes(fonction, _ENVOIS_RESERVES):
                 if not _garde_de_role(garde):
-                    fautes.append(f"{fichier}:{ligne} ({fonction.name}) — garde : {garde or 'AUCUNE'}")
+                    fautes.append(
+                        f"{fichier}:{ligne} ({fonction.name}) — garde : {garde or 'AUCUNE'}"
+                    )
     return fautes
 
 

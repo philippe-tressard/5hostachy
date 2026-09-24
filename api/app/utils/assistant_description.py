@@ -27,6 +27,7 @@ Le titre, la description, le contexte déclaré par l'écran (des libellés cour
 plafonnés) et la précision. **Aucune pièce jointe, aucun autre objet.** Le
 contexte est déclaré au modèle comme « à ne pas réécrire ».
 """
+
 from __future__ import annotations
 
 import logging

@@ -31,6 +31,7 @@ module d'un appelant est une règle que le deuxième appelant ne peut pas prendr
 même s'il le veut : le cycle d'import l'en empêche, et il recopie. Ce fichier
 n'appartient à personne, et c'est ce qui le rend prenable.
 """
+
 from __future__ import annotations
 
 from typing import Optional

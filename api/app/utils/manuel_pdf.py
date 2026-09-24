@@ -33,6 +33,7 @@ Le sommaire mérite un mot : le construire **depuis le document** est ce qui
 l'empêche de mentir. Une table des matières recopiée est une table de plus, et ce
 manuel vient précisément de perdre toutes ses tables recopiées (#651).
 """
+
 from __future__ import annotations
 
 import logging
@@ -139,9 +140,7 @@ def corps_du_manuel(html: str) -> str:
     #  tout le reste de la page est repris tel quel. Une section retirée est une
     #  section qu'un lecteur du PDF n'a jamais vue — cf. les blocs dépliables
     #  juste au-dessus, ouverts pour la même raison, en sens inverse.
-    corps = re.sub(
-        r'<section[^>]*id="logiciel-libre".*?</section>', "", corps, flags=re.S | re.I
-    )
+    corps = re.sub(r'<section[^>]*id="logiciel-libre".*?</section>', "", corps, flags=re.S | re.I)
     #  Les liens de navigation interne (#ancre) n'ont pas de sens imprimés, mais
     #  on garde le texte : les retirer amputerait des phrases.
     return corps
@@ -213,7 +212,7 @@ def _garde(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
     bloc_qr = (
         f'<div class="garde-qr"><img src="{qr}" alt="">'
         f"<p>Ouvrez le site en photographiant ce code<br>"
-        f'<strong>{escape(site_url)}</strong></p></div>'
+        f"<strong>{escape(site_url)}</strong></p></div>"
         if qr
         else f'<div class="garde-qr"><p><strong>{escape(site_url)}</strong></p></div>'
     )
@@ -227,7 +226,8 @@ def _garde(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
   <div class="garde-filet"></div>
   {bloc_qr}
   <p class="garde-pied">Édition du {date_longue(edite_le)}{
-      f" · {escape(version)}" if version else ""}</p>
+        f" · {escape(version)}" if version else ""
+    }</p>
 </section>
 """
 
@@ -247,10 +247,7 @@ def _sommaire(releve: list[tuple[int, str, str]]) -> str:
         f'<li class="som-n{niveau}"><a href="#{ancre}">{escape(titre)}</a></li>'
         for niveau, titre, ancre in releve
     )
-    return (
-        '<section class="sommaire"><h2>Sommaire</h2>'
-        f"<ol>{lignes}</ol></section>"
-    )
+    return f'<section class="sommaire"><h2>Sommaire</h2><ol>{lignes}</ol></section>'
 
 
 def _mentions(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
@@ -371,9 +368,7 @@ def generer_manuel_pdf(
     if cle in _CACHE:
         return _CACHE[cle]
 
-    pdf = html_to_pdf(
-        composer_html(site_nom, site_url, html_manuel=html, edite_le=edite_le)
-    )
+    pdf = html_to_pdf(composer_html(site_nom, site_url, html_manuel=html, edite_le=edite_le))
     if len(_CACHE) >= _CACHE_MAX:
         _CACHE.pop(next(iter(_CACHE)))
     _CACHE[cle] = pdf

@@ -17,6 +17,7 @@ des bâtiments, la détection des doublons. Ce sont trois règles métier distin
 qui se ressemblent peu ; les fondre créerait le couplage que le §4 du même
 standard met en garde.
 """
+
 import io
 import unicodedata
 from pathlib import Path
@@ -41,11 +42,13 @@ from app.database import engine
 #: rien à faire dans le code — même famille que « 5Hostachy » (v1.36.7) et que
 #: « 4 SAISONS » (#953). Les réunir ici est le PRÉALABLE à les administrer : on
 #: ne déplace pas vers un écran ce qui est écrit à deux endroits.
-NOMS_NON_RESIDENTS = frozenset({
-    "PARKINGS PUBLIQUES",
-    "0. ACCES MAIRIE",
-    "ATPE",
-})
+NOMS_NON_RESIDENTS = frozenset(
+    {
+        "PARKINGS PUBLIQUES",
+        "0. ACCES MAIRIE",
+        "ATPE",
+    }
+)
 
 #: Signature du traitement propre à chaque import : (lignes, session, remplacer) → stats.
 Traitement = Callable[[list, Session, bool], dict]
@@ -63,10 +66,7 @@ def normaliser(s: Optional[str]) -> str:
     if not s:
         return ""
     s = s.strip().upper()
-    s = "".join(
-        c for c in unicodedata.normalize("NFD", s)
-        if unicodedata.category(c) != "Mn"
-    )
+    s = "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
     return " ".join(s.split())
 
 
@@ -189,10 +189,14 @@ TYPE_CAVE = {"CA"}
 #: Les mentions d'étage du classeur, en entiers. Les sous-sols sont négatifs.
 ETAGE_PAR_MENTION: dict[str, int] = {
     "RDC": 0,
-    "1ER": 1, "1SS": -1,
-    "2EME": 2, "2SS": -2,
-    "3EME": 3, "3SS": -3,
-    "4EME": 4, "5EME": 5,
+    "1ER": 1,
+    "1SS": -1,
+    "2EME": 2,
+    "2SS": -2,
+    "3EME": 3,
+    "3SS": -3,
+    "4EME": 4,
+    "5EME": 5,
 }
 
 #: Les valeurs de TYPE qui ne qualifient PAS un appartement — « AP » est le cas

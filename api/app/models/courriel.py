@@ -10,6 +10,7 @@ domaine à part — `utils/courriel_entrant`, `utils/courriel_ingestion`,
 `utils/courriel_boite` — et son modèle n'a pas plus sa place dans le « cœur » que
 sa décision.
 """
+
 from datetime import datetime
 from typing import Optional
 

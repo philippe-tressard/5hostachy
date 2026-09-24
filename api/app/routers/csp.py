@@ -175,7 +175,11 @@ def _extraire(rapport: dict[str, Any]) -> tuple[str, str] | None:
     corps = rapport.get("csp-report") or rapport.get("body") or rapport
     if not isinstance(corps, dict):
         return None
-    directive = corps.get("effective-directive") or corps.get("effectiveDirective") or corps.get("violated-directive")
+    directive = (
+        corps.get("effective-directive")
+        or corps.get("effectiveDirective")
+        or corps.get("violated-directive")
+    )
     bloque = corps.get("blocked-uri") or corps.get("blockedURL") or corps.get("blocked-url")
     if not directive:
         return None
@@ -267,7 +271,6 @@ def lire_violations(
         "cles_distinctes": len(_violations),
         "plafond_atteint": len(_violations) >= PLAFOND_CLES,
         "violations": [
-            {"directive": d, "bloque": b, "compte": n}
-            for (d, b), n in _violations.most_common(100)
+            {"directive": d, "bloque": b, "compte": n} for (d, b), n in _violations.most_common(100)
         ],
     }

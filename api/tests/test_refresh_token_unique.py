@@ -29,6 +29,7 @@ assez lente pour que la seconde change entre les deux appels, l'assertion rester
 vraie — mais elle ne prouverait plus rien. D'où le troisième test, qui vérifie la
 propriété *par construction* : le `jti` est présent et il diffère.
 """
+
 from __future__ import annotations
 
 from app.auth.jwt import create_access_token, create_refresh_token, decode_token

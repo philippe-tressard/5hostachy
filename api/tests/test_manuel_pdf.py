@@ -24,6 +24,7 @@ c'est la composition qui porte toutes les décisions.
 Même coupure que `courriel_ingestion` / `courriel_boite` : la décision se teste,
 le tuyau se branche.
 """
+
 from __future__ import annotations
 
 import re
@@ -53,12 +54,15 @@ def manuel() -> str:
 @pytest.fixture(scope="module")
 def document(manuel) -> str:
     return composer_html(
-        "5Hostachy", "https://5hostachy.fr",
-        html_manuel=manuel, edite_le=date(2026, 9, 3),
+        "5Hostachy",
+        "https://5hostachy.fr",
+        html_manuel=manuel,
+        edite_le=date(2026, 9, 3),
     )
 
 
 # ── La source est bien le manuel, et rien d'autre ────────────────────────────
+
 
 def test_le_contenu_du_manuel_se_retrouve_dans_le_PDF(document, manuel):
     """🔴 Le cœur : une phrase du manuel doit être dans le document composé.
@@ -97,6 +101,7 @@ def test_les_TREIZE_ecrans_sont_dans_le_PDF(document):
 
 
 # ── 🔴 Les blocs dépliables : du contenu invisible serait du contenu perdu ────
+
 
 def test_les_blocs_depliables_sont_OUVERTS(document, manuel):
     """Un `<details>` fermé, sur du papier, est du contenu perdu.
@@ -170,6 +175,7 @@ def test_les_blocs_depliables_sont_OUVERTS(document, manuel):
 
 # ── Le sommaire est CONSTRUIT, pas recopié ───────────────────────────────────
 
+
 def test_le_sommaire_suit_les_titres_du_document(manuel, document):
     """Une table des matières recopiée est une table de plus.
 
@@ -220,6 +226,7 @@ def test_le_sommaire_decode_les_entites(manuel):
 
 # ── La page de garde et les mentions ─────────────────────────────────────────
 
+
 def test_la_page_de_garde_porte_le_QR_code_et_la_date(document):
     assert 'class="garde"' in document
     assert "data:image/png;base64," in document, "le QR code n'a pas été généré"
@@ -258,9 +265,7 @@ def test_les_mentions_identifient_l_editeur(document):
     feuillet sans licence — le défaut inverse, et silencieux.
     """
     assert 'class="mentions"' in document
-    assert "conseil syndical de la copropriété" in document, (
-        "les mentions ne nomment aucun éditeur"
-    )
+    assert "conseil syndical de la copropriété" in document, "les mentions ne nomment aucun éditeur"
     assert "Philippe Tressard" not in document, (
         "un nom de personne réapparaît dans un document distribuable"
     )
@@ -280,6 +285,7 @@ def test_les_mentions_identifient_l_editeur(document):
 
 # ── La lecture de la source ──────────────────────────────────────────────────
 
+
 def test_un_manuel_illisible_LEVE_au_lieu_de_composer_du_vide():
     """Un PDF d'un manuel qu'on n'a pas pu lire serait une couverture, rien de plus.
 
@@ -294,7 +300,7 @@ def test_le_manuel_annonce_le_lien_vers_son_PDF(manuel):
     """Le lien vit dans la section « Une question ? », comme demandé."""
     assert "/api/manuel/pdf" in manuel
     corps = corps_du_manuel(manuel)
-    apres_aide = corps[corps.index('id="aide"'):]
+    apres_aide = corps[corps.index('id="aide"') :]
     assert "/api/manuel/pdf" in apres_aide, (
         "le lien PDF n'est pas dans la section « Une question ? »"
     )
@@ -329,15 +335,14 @@ def test_le_PDF_est_atteignable_depuis_TROIS_endroits(manuel):
         "menu du site": (front / "lib" / "components" / "LiensGuide.svelte").read_text(
             encoding="utf-8"
         ),
-        "FAQ": (front / "routes" / "(app)" / "faq" / "+page.svelte").read_text(
-            encoding="utf-8"
-        ),
+        "FAQ": (front / "routes" / "(app)" / "faq" / "+page.svelte").read_text(encoding="utf-8"),
     }
     manquants = [ou for ou, texte in endroits.items() if "/api/manuel/pdf" not in texte]
     assert not manquants, "le lien vers le PDF a disparu de : " + ", ".join(manquants)
 
 
 # ── Le cache : servir vite, sans jamais servir périmé ────────────────────────
+
 
 def test_le_cache_sert_le_MEME_pdf_et_ne_recompose_pas(manuel, monkeypatch):
     """🔴 Signalé à l'écran : *« plus de 10 secondes avec une page vide »*.
@@ -352,10 +357,12 @@ def test_le_cache_sert_le_MEME_pdf_et_ne_recompose_pas(manuel, monkeypatch):
     appels = []
     monkeypatch.setattr(m, "html_to_pdf", lambda doc: appels.append(doc) or b"%PDF-x")
 
-    a = m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel,
-                             edite_le=date(2026, 9, 4))
-    b = m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel,
-                             edite_le=date(2026, 9, 4))
+    a = m.generer_manuel_pdf(
+        "5Hostachy", "https://x.fr", html_manuel=manuel, edite_le=date(2026, 9, 4)
+    )
+    b = m.generer_manuel_pdf(
+        "5Hostachy", "https://x.fr", html_manuel=manuel, edite_le=date(2026, 9, 4)
+    )
     assert a == b
     assert len(appels) == 1, "le document a été recomposé alors qu'il n'a pas changé"
 
@@ -373,11 +380,13 @@ def test_un_manuel_MODIFIE_produit_un_pdf_neuf(manuel, monkeypatch):
     appels = []
     monkeypatch.setattr(m, "html_to_pdf", lambda doc: appels.append(doc) or b"%PDF-x")
 
-    m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel,
-                         edite_le=date(2026, 9, 4))
-    m.generer_manuel_pdf("5Hostachy", "https://x.fr",
-                         html_manuel=manuel + "<!-- retouche -->",
-                         edite_le=date(2026, 9, 4))
+    m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel, edite_le=date(2026, 9, 4))
+    m.generer_manuel_pdf(
+        "5Hostachy",
+        "https://x.fr",
+        html_manuel=manuel + "<!-- retouche -->",
+        edite_le=date(2026, 9, 4),
+    )
     assert len(appels) == 2, "un manuel modifié a servi le PDF de l'ancien"
 
 
@@ -392,12 +401,14 @@ def test_le_cache_est_BORNE(manuel, monkeypatch):
     m._CACHE.clear()
     monkeypatch.setattr(m, "html_to_pdf", lambda doc: b"%PDF-x")
     for jour in range(1, 12):
-        m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel,
-                             edite_le=date(2026, 9, jour))
+        m.generer_manuel_pdf(
+            "5Hostachy", "https://x.fr", html_manuel=manuel, edite_le=date(2026, 9, jour)
+        )
     assert len(m._CACHE) <= m._CACHE_MAX
 
 
 # ── Le manuel doit être REVALIDÉ, jamais servi de mémoire ────────────────────
+
 
 def test_le_manuel_impose_la_revalidation_au_navigateur():
     """🔴 Signalé le 04/09/2026 : *« je ne vois pas le menu générer un PDF »*.
@@ -415,9 +426,7 @@ def test_le_manuel_impose_la_revalidation_au_navigateur():
     reste donc en cache local, et un `304` suffit quand il n'a pas changé.
     """
     caddy = (_MANUEL.resolve().parents[1] / "Caddyfile").read_text(encoding="utf-8")
-    bloc = re.search(
-        r"handle\s+/manuel-utilisateur\.html\s*\{(.*?)\n    \}", caddy, re.S
-    )
+    bloc = re.search(r"handle\s+/manuel-utilisateur\.html\s*\{(.*?)\n    \}", caddy, re.S)
     assert bloc, (
         "aucun bloc `handle /manuel-utilisateur.html` : le manuel est servi sans "
         "directive de cache, donc mis en cache à l'heuristique du navigateur"

@@ -33,6 +33,7 @@ comportements pour une seule case, sur les mêmes écrans.
 retenues** : un auteur qui est aussi membre du CS ne doit pas recevoir deux
 fois. C'est le même fait, dit par ce qui compte.
 """
+
 from __future__ import annotations
 
 from typing import Iterable, Optional
@@ -159,9 +160,7 @@ def objet_de(session: Session, modele, objet_id: Optional[int]):
     return session.get(modele, objet_id)
 
 
-def adresse_copie(
-    session: Session, objet, redacteur: Utilisateur
-) -> Optional[str]:
+def adresse_copie(session: Session, objet, redacteur: Utilisateur) -> Optional[str]:
     """L'adresse que la case copierait — pour l'APERÇU, qui doit l'annoncer.
 
     ⚠️ Un aperçu se demande **avant** que l'objet existe. À la création, l'auteur

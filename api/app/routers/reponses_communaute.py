@@ -34,6 +34,7 @@ que dans le schéma OpenAPI, lui-même fermé en production.
 `tri_reponses`, `auteur_meta`) : ces fonctions vivaient déjà dans
 `utils/communaute.py`, partagées. On ne déplace que ce qui était en double.
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -83,6 +84,7 @@ def reponses_de(rubrique: str, cible_id: int, session: Session) -> list[dict]:
 
 #  La règle « existe-t-il ET puis-je le voir ? » vit dans `auth/appartenance`
 #  (#1028) : c'est une décision de VISIBILITÉ, donc d'autorisation.
+
 
 def enregistrer_routes_reponses(
     router: APIRouter,
@@ -148,9 +150,7 @@ def enregistrer_routes_reponses(
         contenu = (body.contenu or "").strip()
         if not contenu:
             raise HTTPException(422, "La réponse ne peut pas être vide")
-        cible = exiger_cible_visible(
-            session, modele, cible_id, libelle, user, visible_de
-        )
+        cible = exiger_cible_visible(session, modele, cible_id, libelle, user, visible_de)
 
         rep = ReponseCommunaute(
             rubrique=rubrique, cible_id=cible_id, auteur_id=user.id, contenu=contenu

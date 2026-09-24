@@ -4,6 +4,7 @@ Ces deux tables décident QUI voit QUOI dans la bibliothèque : un profil liste
 les rôles autorisés, une catégorie s'y rattache. `visibility.document_visible`
 les lit à chaque consultation — les modifier change des droits, pas un affichage.
 """
+
 import json
 
 PROFILS = [
@@ -60,13 +61,13 @@ PROFILS = [
 
 CATEGORIES = [
     ("reglement_copropriete", "Règlement de copropriété", "résidence_tous", "résidence", False),
-    ("pv_ag",               "PV d'Assemblée Générale",  "résidence_tous", "bâtiment",  True),
-    ("fiche_synthetique",   "Fiche synthétique annuelle",  "résidence_tous",   "résidence", False),
-    ("plan_residence",      "Plan de la résidence",        "résidence_tous",   "résidence", False),
-    ("attestation_lot",     "Attestation (lot)",           "lot_occupants",    "lot",        True),
-    ("diagnostic_lot",      "Diagnostic",                  "copropriétaires_et_cs", "bâtiment", True),
-    ("contrat_fournisseur", "Contrat fournisseur",         "copropriétaires_et_cs", "bâtiment", True),
-    ("contrat_assurance",   "Contrat assurance",           "copropriétaires_et_cs", "résidence", True),
-    ("devis_travaux",       "Devis travaux",               "cs_syndic_uniquement", "bâtiment", True),
-    ("document_interne_cs", "Document interne CS",         "cs_syndic_uniquement", "résidence", False),
+    ("pv_ag", "PV d'Assemblée Générale", "résidence_tous", "bâtiment", True),
+    ("fiche_synthetique", "Fiche synthétique annuelle", "résidence_tous", "résidence", False),
+    ("plan_residence", "Plan de la résidence", "résidence_tous", "résidence", False),
+    ("attestation_lot", "Attestation (lot)", "lot_occupants", "lot", True),
+    ("diagnostic_lot", "Diagnostic", "copropriétaires_et_cs", "bâtiment", True),
+    ("contrat_fournisseur", "Contrat fournisseur", "copropriétaires_et_cs", "bâtiment", True),
+    ("contrat_assurance", "Contrat assurance", "copropriétaires_et_cs", "résidence", True),
+    ("devis_travaux", "Devis travaux", "cs_syndic_uniquement", "bâtiment", True),
+    ("document_interne_cs", "Document interne CS", "cs_syndic_uniquement", "résidence", False),
 ]

@@ -49,6 +49,7 @@ il n'y a aucune migration à écrire.
 La règle n'est pas « jamais de clé étrangère dans un mixin » — c'est « le modèle
 doit décrire ce que la base porte réellement ».
 """
+
 from __future__ import annotations
 
 from datetime import datetime

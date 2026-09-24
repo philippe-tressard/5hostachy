@@ -34,6 +34,7 @@ titre « Mes tickets »), et aucun motif ne les sépare sans se tromper
 (`standards/04` §12 — un contrôle borné dit ce qu'il ne couvre pas). Ce qui
 protège ces fichiers-là, c'est `lint:etats` et la relecture, pas ce test.
 """
+
 import re
 from pathlib import Path
 

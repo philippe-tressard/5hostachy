@@ -42,6 +42,7 @@ Il ne sait rien des contrats, des synthèses ni d'aucun métier : il envoie une
 consigne et un message, il rend du texte. Ce qu'on demande au modèle vit chez
 l'appelant — sinon ce fichier deviendrait le catalogue de tous les usages.
 """
+
 from __future__ import annotations
 
 import logging
@@ -98,6 +99,7 @@ logger = logging.getLogger("hostachy.llm")
 #: Délai au-delà duquel on renonce. Une requête d'écran ne peut pas attendre
 #: indéfiniment : le geste doit rendre la main, fût-ce sur un échec.
 DELAI_DEFAUT_S = 45
+
 
 @dataclass(frozen=True)
 class Reponse:
@@ -206,9 +208,7 @@ class ConfigLLM:
             libelle = f" pour « {self.usage.libelle} »" if self.usage else ""
             raise ErreurLLM(f"Aucun modèle n'est indiqué{libelle}.")
         if self.fournisseur.base_url_obligatoire and not self.base_url:
-            raise ErreurLLM(
-                f"{self.fournisseur.libelle} exige l'adresse de votre point d'accès."
-            )
+            raise ErreurLLM(f"{self.fournisseur.libelle} exige l'adresse de votre point d'accès.")
 
     @property
     def pret(self) -> bool:

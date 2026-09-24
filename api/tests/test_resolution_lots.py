@@ -29,6 +29,7 @@ Les suivants fixent les deux décisions prises en fusionnant :
 ⚠️ Ce second point n'est pas du confort. Un `UserLot` donne accès au lot, à ses
 badges et à ses documents : c'est une décision d'autorisation.
 """
+
 from __future__ import annotations
 
 import json
@@ -74,12 +75,20 @@ def scene():
         session.add(bat)
         session.flush()
         proprio = Utilisateur(
-            email=f"p-{marque}@exemple.test", mot_de_passe_hash="x",
-            prenom="Alix", nom="RIVANT", roles_json="propriétaire", actif=True,
+            email=f"p-{marque}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="Alix",
+            nom="RIVANT",
+            roles_json="propriétaire",
+            actif=True,
         )
         locataire = Utilisateur(
-            email=f"l-{marque}@exemple.test", mot_de_passe_hash="x",
-            prenom="Camille", nom="BERNAERT", roles_json="résident", actif=True,
+            email=f"l-{marque}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="Camille",
+            nom="BERNAERT",
+            roles_json="résident",
+            actif=True,
         )
         session.add(proprio)
         session.add(locataire)
@@ -147,13 +156,17 @@ def test_les_DEUX_voies_rendent_le_meme_resultat(scene):
     session.commit()
     resoudre_imports(session)
     session.commit()
-    par_admin = sorted((lien.user_id, lien.type_lien.value) for lien in _liens(session, "A101", bat))
+    par_admin = sorted(
+        (lien.user_id, lien.type_lien.value) for lien in _liens(session, "A101", bat)
+    )
 
     session.add(_import(bat, "A102", occupants))
     session.commit()
     resoudre_pour_utilisateur(proprio, session)
     session.commit()
-    par_compte = sorted((lien.user_id, lien.type_lien.value) for lien in _liens(session, "A102", bat))
+    par_compte = sorted(
+        (lien.user_id, lien.type_lien.value) for lien in _liens(session, "A102", bat)
+    )
 
     assert par_admin == par_compte, (
         "les deux voies d'auto-résolution ne produisent pas les mêmes liens : "
@@ -172,10 +185,16 @@ def test_un_import_avec_un_LOCATAIRE_est_traite_et_seul_le_lien_est_exclu(scene)
     que le LIEN locataire — son rattachement relève du workflow de bail.
     """
     session, bat, proprio, locataire = scene
-    session.add(_import(bat, "A201", [
-        {"user_id": proprio.id, "type_lien": "propriétaire"},
-        {"user_id": locataire.id, "type_lien": "locataire"},
-    ]))
+    session.add(
+        _import(
+            bat,
+            "A201",
+            [
+                {"user_id": proprio.id, "type_lien": "propriétaire"},
+                {"user_id": locataire.id, "type_lien": "locataire"},
+            ],
+        )
+    )
     session.commit()
 
     stats = resoudre_imports(session)
@@ -207,11 +226,14 @@ def test_le_garde_fou_ANTI_POLLUTION_vaut_pour_les_deux_voies(scene, voie):
     """
     session, bat, proprio, locataire = scene
     #  Le classeur dit RIVANT ; `utilisateurs_json` désigne BERNAERT.
-    session.add(_import(
-        bat, "A301",
-        [{"user_id": locataire.id, "type_lien": "propriétaire"}],
-        nom="RIVANT",
-    ))
+    session.add(
+        _import(
+            bat,
+            "A301",
+            [{"user_id": locataire.id, "type_lien": "propriétaire"}],
+            nom="RIVANT",
+        )
+    )
     session.commit()
 
     if voie == "admin":
@@ -234,11 +256,14 @@ def test_un_lien_devenu_faux_est_SUPPRIME_pas_seulement_ignore(scene):
     session.add(lot)
     session.flush()
     session.add(UserLot(user_id=locataire.id, lot_id=lot.id, type_lien="propriétaire", actif=True))
-    session.add(_import(
-        bat, "A401",
-        [{"user_id": locataire.id, "type_lien": "propriétaire"}],
-        nom="RIVANT",
-    ))
+    session.add(
+        _import(
+            bat,
+            "A401",
+            [{"user_id": locataire.id, "type_lien": "propriétaire"}],
+            nom="RIVANT",
+        )
+    )
     session.commit()
 
     resoudre_imports(session)
@@ -278,11 +303,16 @@ def test_le_rapprochement_ne_regresse_JAMAIS_un_import_deja_lie(scene):
     session, bat, proprio, _ = scene
     lot = Lot(batiment_id=bat.id, numero="A601", type="appartement")
     session.add(lot)
-    session.add(LotImport(
-        batiment_id=bat.id, numero="A601", type_raw="AP",
-        nom_coproprietaire="RIVANT", statut=StatutLotImport.en_attente,
-        utilisateurs_json="[]",
-    ))
+    session.add(
+        LotImport(
+            batiment_id=bat.id,
+            numero="A601",
+            type_raw="AP",
+            nom_coproprietaire="RIVANT",
+            statut=StatutLotImport.en_attente,
+            utilisateurs_json="[]",
+        )
+    )
     session.commit()
 
     rapprocher_imports(session)

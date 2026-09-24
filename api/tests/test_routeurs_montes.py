@@ -27,6 +27,7 @@ version, ce test ÉCHOUE — il ne se saute pas. Un contrôle qui ne peut plus
 s'exécuter rend INCONNU, jamais OK (`standards/04` §1) : se taire ici, ce serait
 annoncer « tout est monté » sans avoir rien vérifié.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -100,13 +101,16 @@ def test_le_controle_mesure_quelque_chose():
     declares = _routeurs_declares()
     atteints = _routeurs_atteints()
     assert len(declares) > 30, f"seulement {len(declares)} routeur(s) déclaré(s) relevé(s)"
-    assert len(atteints) > 30, f"seulement {len(atteints)} routeur(s) atteint(s) depuis l'application"
+    assert len(atteints) > 30, (
+        f"seulement {len(atteints)} routeur(s) atteint(s) depuis l'application"
+    )
 
 
 def test_tout_routeur_declare_est_monte():
     atteints = _routeurs_atteints()
     orphelins = sorted(
-        nom for nom, r in _routeurs_declares().items()
+        nom
+        for nom, r in _routeurs_declares().items()
         if id(r) not in atteints and nom not in EXCEPTIONS
     )
     assert not orphelins, (
@@ -124,8 +128,5 @@ def test_les_exceptions_servent_encore():
     sans que personne ne relise la liste."""
     declares = _routeurs_declares()
     atteints = _routeurs_atteints()
-    mortes = [
-        nom for nom in EXCEPTIONS
-        if nom not in declares or id(declares[nom]) in atteints
-    ]
+    mortes = [nom for nom in EXCEPTIONS if nom not in declares or id(declares[nom]) in atteints]
     assert not mortes, f"exceptions à retirer : {mortes}"

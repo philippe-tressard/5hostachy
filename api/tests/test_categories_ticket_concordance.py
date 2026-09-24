@@ -23,6 +23,7 @@ COURRIEL qui garde l'ancien, c'est-à-dire l'endroit que personne ne relit.
 Le point 1 attrape une catégorie ajoutée au modèle sans libellé — elle
 s'afficherait alors en brut, ce qui est le défaut d'origine.
 """
+
 from __future__ import annotations
 
 import re
@@ -35,9 +36,7 @@ from app.utils.categories_ticket import LIBELLES_CATEGORIE, libelle_categorie
 #  ⚠️ `tickets-categories.ts` depuis le 21/09/2026 : la table a quitté
 #  `tickets.ts`, qui dépassait 500 lignes. `$lib/tickets` la réexporte, donc
 #  aucun écran n'a bougé — mais un test qui lit un FICHIER, si.
-_FRONT = (
-    Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "tickets-categories.ts"
-)
+_FRONT = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "tickets-categories.ts"
 
 
 def _libelles_du_front() -> dict[str, str]:
@@ -54,9 +53,7 @@ def _libelles_du_front() -> dict[str, str]:
     #  au-dessus, et l'englober ferait comparer des pommes et des poires.
     debut = source.index("export const CATEGORIES")
     bloc = source[debut:]
-    couples = re.findall(
-        r"value:\s*'([a-z]+)'\s*,\s*(?:\n\s*)?label:\s*'([^']+)'", bloc
-    )
+    couples = re.findall(r"value:\s*'([a-z]+)'\s*,\s*(?:\n\s*)?label:\s*'([^']+)'", bloc)
     return dict(couples)
 
 

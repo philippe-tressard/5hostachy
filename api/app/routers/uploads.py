@@ -3,6 +3,7 @@ Router uploads — gestion des photos (avatar, résidence, publications).
 Les fichiers sont enregistrés dans /app/uploads/{type}/{uuid}.ext
 et servis en statique via /uploads/*.
 """
+
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -38,6 +39,7 @@ router = APIRouter(prefix="/uploads", tags=["uploads"])
 UPLOADS_ROOT = Path(get_settings().uploads_dir)
 
 # ── helpers ────────────────────────────────────────────────────────────────
+
 
 def _save_image(file: UploadFile, subfolder: str, max_dim: int = 1600) -> str:
     """Valide, redimensionne si besoin et sauvegarde le fichier. Retourne l'URL relative."""
@@ -94,6 +96,7 @@ def _save_image(file: UploadFile, subfolder: str, max_dim: int = 1600) -> str:
 
 
 # ── endpoints ──────────────────────────────────────────────────────────────
+
 
 @router.post("/avatar", summary="Mettre à jour la photo de profil")
 def upload_avatar(

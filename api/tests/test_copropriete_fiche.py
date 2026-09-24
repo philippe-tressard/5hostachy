@@ -27,6 +27,7 @@ Supprimer un test parce que son champ a bougé, c'est perdre la raison pour
 laquelle il existait. La classe d'erreur — une valeur mal typée qui emporte tout
 l'enregistrement — n'a pas disparu avec le champ.
 """
+
 from datetime import date
 
 import pytest
@@ -34,10 +35,15 @@ from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
 from app.models.core import (
-    ContratEntretien, Copropriete, Prestataire, TypeEquipement,
+    ContratEntretien,
+    Copropriete,
+    Prestataire,
+    TypeEquipement,
 )
 from app.routers.copropriete import (
-    CoproprieteUpdate, copropriete_lue, update_copropriete,
+    CoproprieteUpdate,
+    copropriete_lue,
+    update_copropriete,
 )
 
 
@@ -68,9 +74,7 @@ def copro() -> int:
 def _patch(**champs):
     """Appelle le router directement : c'est la couche où le défaut vivait."""
     with Session(engine) as session:
-        return update_copropriete(
-            body=CoproprieteUpdate(**champs), session=session, _=None
-        )
+        return update_copropriete(body=CoproprieteUpdate(**champs), session=session, _=None)
 
 
 def test_modifier_un_champ_n_ecrase_pas_les_autres(copro):
@@ -161,13 +165,17 @@ def test_l_assurance_affichee_vient_du_CONTRAT_pas_des_colonnes(copro):
         session.commit()
         session.refresh(presta)
 
-        session.add(ContratEntretien(
-            copropriete_id=copro, prestataire_id=presta.id,
-            type_equipement=TypeEquipement.assurance,
-            libelle="Assurance de la copropriété",
-            numero_contrat="POL-2026", date_debut=date(2026, 1, 1),
-            prochaine_visite=date(2027, 6, 30),
-        ))
+        session.add(
+            ContratEntretien(
+                copropriete_id=copro,
+                prestataire_id=presta.id,
+                type_equipement=TypeEquipement.assurance,
+                libelle="Assurance de la copropriété",
+                numero_contrat="POL-2026",
+                date_debut=date(2026, 1, 1),
+                prochaine_visite=date(2027, 6, 30),
+            )
+        )
         session.commit()
 
         lu = copropriete_lue(session, session.get(Copropriete, copro))
@@ -209,18 +217,24 @@ def test_le_contrat_le_plus_recent_gagne(copro):
     trouvé afficherait l'assureur de l'an dernier sans que rien ne le dise.
     """
     with Session(engine) as session:
-        for nom, debut, police in (("Ancien", date(2024, 1, 1), "A-1"),
-                                   ("Récent", date(2026, 1, 1), "R-1")):
+        for nom, debut, police in (
+            ("Ancien", date(2024, 1, 1), "A-1"),
+            ("Récent", date(2026, 1, 1), "R-1"),
+        ):
             presta = Prestataire(nom=nom, specialite="Assurance")
             session.add(presta)
             session.commit()
             session.refresh(presta)
-            session.add(ContratEntretien(
-                copropriete_id=copro, prestataire_id=presta.id,
-                type_equipement=TypeEquipement.assurance,
-                libelle="Assurance de la copropriété",
-                numero_contrat=police, date_debut=debut,
-            ))
+            session.add(
+                ContratEntretien(
+                    copropriete_id=copro,
+                    prestataire_id=presta.id,
+                    type_equipement=TypeEquipement.assurance,
+                    libelle="Assurance de la copropriété",
+                    numero_contrat=police,
+                    date_debut=debut,
+                )
+            )
         session.commit()
         lu = copropriete_lue(session, session.get(Copropriete, copro))
     assert lu.assurance_compagnie == "Récent"

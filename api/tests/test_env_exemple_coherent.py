@@ -45,6 +45,7 @@ compare.
 aussi quand l'une d'elles cesse de servir — sinon la liste grossit jusqu'à tout
 couvrir (`standards/05` §2).
 """
+
 import re
 from pathlib import Path
 
@@ -229,9 +230,11 @@ def test_les_reglages_de_role_ne_s_ecrivent_qu_une_fois():
             if re.search(r"(sed|echo|printf).*\b(ORIGIN|COOKIE_SECURE)=", nue):
                 fautes.append(f"{script.relative_to(RACINE)}:{numero} : {nue[:90]}")
     assert not fautes, (
-        "`ORIGIN` ou `COOKIE_SECURE` écrit hors de scripts/lib/" + module + " :\n"
+        "`ORIGIN` ou `COOKIE_SECURE` écrit hors de scripts/lib/"
+        + module
+        + " :\n"
         + "\n".join(fautes)
-        + "\n\nAppeler `env_role_appliquer \"$REPO/.env\" actif|standby [ip]`. Les deux "
+        + '\n\nAppeler `env_role_appliquer "$REPO/.env" actif|standby [ip]`. Les deux '
         "gestes sont asymétriques — l'actif RETIRE la ligne, le standby la pose à "
         "false — et une copie qui prend le mauvais des deux sert le public sans "
         "drapeau Secure."

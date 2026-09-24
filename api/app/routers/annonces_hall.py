@@ -5,6 +5,7 @@ Deux usages :
      membres du CS du périmètre, le PDF en pièce jointe ;
   2. historique consultable, archivable (CS) et supprimable (admin).
 """
+
 from __future__ import annotations
 
 import json
@@ -101,8 +102,9 @@ def _valider(body: AnnonceHallBase) -> None:
         raise HTTPException(422, "Photo invalide")
 
 
-def _html_params(body: AnnonceHallBase, session: Session, *, format_effectif: str,
-                 date_affichage: datetime) -> dict:
+def _html_params(
+    body: AnnonceHallBase, session: Session, *, format_effectif: str, date_affichage: datetime
+) -> dict:
     cfg = config_site(session)
     return {
         "titre": body.titre.strip(),
@@ -137,7 +139,9 @@ def _to_read(annonce: AnnonceHall, session: Session) -> dict:
         "envoye_le": annonce.envoye_le.isoformat() if annonce.envoye_le else None,
         #  🔴 EFFECTIF, et non la colonne : la règle du site archive une affiche
         #  30 jours après son envoi, que personne n'ait rien coché.
-        "archivee": est_archivable("annonce_hall", annonce, seuil_jours=seuil_archivage_jours(session)),
+        "archivee": est_archivable(
+            "annonce_hall", annonce, seuil_jours=seuil_archivage_jours(session)
+        ),
         "archivee_manuellement": annonce.archivee,
         "publication_id": annonce.publication_id,
         "ticket_id": annonce.ticket_id,
@@ -154,7 +158,8 @@ def images_de(ticket, session: Session) -> list[str]:
     `images_de_publication`, retirée avec l'entité (#1091).
     """
     urls: list[str] = [
-        u for u in parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
+        u
+        for u in parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
         if u.startswith("/uploads/")
     ]
     docs = session.exec(
@@ -187,6 +192,7 @@ def _supprimer_fichier(chemin: str | None) -> None:
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
+
 @router.get("", summary="Historique des annonces de hall (CS/Admin)")
 def list_annonces_hall(
     archivees: bool = False,
@@ -208,8 +214,7 @@ def list_annonces_hall(
         select(AnnonceHall).order_by(AnnonceHall.cree_le.desc())  # type: ignore[arg-type]
     ).all()
     retenues = [
-        a for a in toutes
-        if est_archivable("annonce_hall", a, seuil_jours=seuil_jours) == archivees
+        a for a in toutes if est_archivable("annonce_hall", a, seuil_jours=seuil_jours) == archivees
     ]
     return [_to_read(a, session) for a in retenues]
 
@@ -229,14 +234,23 @@ def sources_reprenables(
     from app.utils.sources_affiche import sources_disponibles
 
     return [
-        {"cle": s.cle(), "type": s.type, "famille": s.famille, "id": s.id,
-         "titre": s.titre, "date": s.date, "epingle": s.epingle}
+        {
+            "cle": s.cle(),
+            "type": s.type,
+            "famille": s.famille,
+            "id": s.id,
+            "titre": s.titre,
+            "date": s.date,
+            "epingle": s.epingle,
+        }
         for s in sources_disponibles(session)
     ]
 
 
-@router.get("/depuis/{type_source}/{id_source}",
-            summary="Pré-remplissage depuis un élément du fil (CS/Admin)")
+@router.get(
+    "/depuis/{type_source}/{id_source}",
+    summary="Pré-remplissage depuis un élément du fil (CS/Admin)",
+)
 def prefill_depuis_element(
     type_source: str,
     id_source: int,
@@ -268,8 +282,10 @@ def previsualiser_annonce(
     """Rend l'annonce en HTML sans rien enregistrer ni envoyer."""
     _valider(body)
     fmt = choisir_format(
-        body.message, body.format_demande,
-        titre=body.titre, avec_photos=bool(body.images),
+        body.message,
+        body.format_demande,
+        titre=body.titre,
+        avec_photos=bool(body.images),
     )
     params = _html_params(body, session, format_effectif=fmt, date_affichage=datetime.utcnow())
     return {
@@ -323,8 +339,10 @@ def creer_annonce_hall(
     _valider(body)
     maintenant = datetime.utcnow()
     fmt = choisir_format(
-        body.message, body.format_demande,
-        titre=body.titre, avec_photos=bool(body.images),
+        body.message,
+        body.format_demande,
+        titre=body.titre,
+        avec_photos=bool(body.images),
     )
     params = _html_params(body, session, format_effectif=fmt, date_affichage=maintenant)
 
@@ -377,8 +395,13 @@ def creer_annonce_hall(
     diffuse = False
     if envoyer_cs or envoyer_syndic:
         emails = _envoyer_email_annonce(
-            annonce, user, background_tasks, session,
-            syndic=envoyer_syndic, cs=envoyer_cs, auteur=envoyer_auteur,
+            annonce,
+            user,
+            background_tasks,
+            session,
+            syndic=envoyer_syndic,
+            cs=envoyer_cs,
+            auteur=envoyer_auteur,
         )
         if emails:
             annonce.destinataires = json.dumps(emails, ensure_ascii=False)
@@ -440,8 +463,11 @@ def download_pdf(
     )
 
 
-@router.post("/{annonce_id}/renvoyer-email", status_code=204,
-             summary="Renvoyer l'annonce au CS du périmètre (CS/Admin)")
+@router.post(
+    "/{annonce_id}/renvoyer-email",
+    status_code=204,
+    summary="Renvoyer l'annonce au CS du périmètre (CS/Admin)",
+)
 def renvoyer_email(
     annonce_id: int,
     background_tasks: BackgroundTasks,
@@ -478,8 +504,9 @@ def archiver_annonce(
     return _to_read(annonce, session)
 
 
-@router.delete("/{annonce_id}", status_code=204,
-               summary="Supprimer définitivement une annonce (Admin)")
+@router.delete(
+    "/{annonce_id}", status_code=204, summary="Supprimer définitivement une annonce (Admin)"
+)
 def delete_annonce_hall(
     annonce_id: int,
     session: Session = Depends(get_session),

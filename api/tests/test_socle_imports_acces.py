@@ -29,6 +29,7 @@ résultat**. Un jour, quelqu'un réécrira une des deux résolutions en ligne po
    et un import coché « chez le locataire » SANS locataire lié n'invente personne ;
 4. le **cas zéro** : sans le report, l'objet dit le contraire de l'import.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -71,12 +72,18 @@ def deux_comptes():
     with Session(engine) as session:
         jeton = uuid.uuid4().hex[:8]
         proprio = Utilisateur(
-            email=f"proprio-{jeton}@exemple.test", mot_de_passe_hash="x",
-            prenom="P", nom="PROPRIO", actif=True,
+            email=f"proprio-{jeton}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="P",
+            nom="PROPRIO",
+            actif=True,
         )
         locataire = Utilisateur(
-            email=f"loc-{jeton}@exemple.test", mot_de_passe_hash="x",
-            prenom="L", nom="LOCATAIRE", actif=True,
+            email=f"loc-{jeton}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="L",
+            nom="LOCATAIRE",
+            actif=True,
         )
         session.add(proprio)
         session.add(locataire)
@@ -154,8 +161,9 @@ def test_la_POSSESSION_est_reportee_sur_l_objet(
     )
     try:
         socle_imports.resoudre(type_import, imp.id, session)
-        objet = session.get(modele_objet, getattr(session.get(modele_import, imp.id),
-                                                  type_import.colonne_import))
+        objet = session.get(
+            modele_objet, getattr(session.get(modele_import, imp.id), type_import.colonne_import)
+        )
         assert objet is not None, "la résolution n'a créé aucun objet"
         assert objet.user_id == locataire.id, (
             "l'accès a été affecté au propriétaire alors qu'il est chez le locataire"
@@ -186,9 +194,7 @@ def test_la_CORRECTION_d_un_import_resolu_redescend_sur_l_objet(
     )
     try:
         socle_imports.resoudre(type_import, imp.id, session)
-        socle_imports.patch(
-            type_import, imp.id, PatchImportBody(chez_locataire=True), session
-        )
+        socle_imports.patch(type_import, imp.id, PatchImportBody(chez_locataire=True), session)
 
         recharge = session.get(modele_import, imp.id)
         objet = session.get(modele_objet, getattr(recharge, type_import.colonne_import))
@@ -213,9 +219,7 @@ def test_chez_le_locataire_SANS_compte_reste_chez_le_locataire(
     propose plus au transfert — ce qui est exact, il n'est plus disponible.
     """
     session, proprio, _ = deux_comptes
-    imp = _creer_import(
-        type_import, modele_import, proprio, None, session, chez_locataire=True
-    )
+    imp = _creer_import(type_import, modele_import, proprio, None, session, chez_locataire=True)
     try:
         socle_imports.resoudre(type_import, imp.id, session)
         recharge = session.get(modele_import, imp.id)
@@ -266,6 +270,7 @@ def test_les_DEUX_chaines_sont_bien_deux(deux_comptes):
     assert TELECOMMANDE.colonne_code_import != VIGIK.colonne_code_import
     assert TELECOMMANDE.colonne_import != VIGIK.colonne_import
     assert len(CHAINES) == 2
+
 
 def test_UN_SEUL_objet_decrit_les_deux_types_d_acces():
     """🔴 Le garde-fou du 18/09/2026 : pas de second descripteur.

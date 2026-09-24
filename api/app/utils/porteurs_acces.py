@@ -28,6 +28,7 @@ perdus. Il n'en reste qu'une : `ids_detenteurs`.
 ⚠️ Ce module ne connaît ni route ni écran. Il dit qui porte, pas qui peut
 regarder le parc : le conseil syndical voit tout, par ses propres routes.
 """
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -63,9 +64,12 @@ class _Liens:
         #  toujours de lien `user_lot` — « chez le locataire » n'a qu'un sens.
         from app.models.core import LocationBail, StatutBail
 
-        for bail in session.exec(select(LocationBail).where(
-            LocationBail.statut != StatutBail.termine, LocationBail.locataire_id != None,  # noqa: E711
-        )).all():
+        for bail in session.exec(
+            select(LocationBail).where(
+                LocationBail.statut != StatutBail.termine,
+                LocationBail.locataire_id != None,  # noqa: E711
+            )
+        ).all():
             self.locataires_du_lot[bail.lot_id].add(bail.locataire_id)
 
     def partages(self, user_id: int) -> set[int]:
@@ -152,7 +156,9 @@ def lot_unique_de_nature(session: Session, type_acces, user_id: int) -> int | No
     from app.models.copropriete import Lot
 
     lots = session.exec(
-        select(Lot.id).join(UserLot, UserLot.lot_id == Lot.id).where(
+        select(Lot.id)
+        .join(UserLot, UserLot.lot_id == Lot.id)
+        .where(
             UserLot.user_id == user_id,
             UserLot.actif == True,  # noqa: E712
             Lot.type.in_(list(type_acces.types_lot)),  # type: ignore[attr-defined]
@@ -172,4 +178,12 @@ def ids_detenteurs(session: Session, type_acces) -> set[int]:
     return ids
 
 
-__all__ = ["acces_de", "copros_par_lot", "noms_des_porteurs", "ids_detenteurs", "lot_unique_de_nature", "porteurs", "porteurs_par_acces"]
+__all__ = [
+    "acces_de",
+    "copros_par_lot",
+    "noms_des_porteurs",
+    "ids_detenteurs",
+    "lot_unique_de_nature",
+    "porteurs",
+    "porteurs_par_acces",
+]

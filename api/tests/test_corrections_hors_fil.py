@@ -24,6 +24,7 @@ plus lire. Personne ne s'en apercevrait avant de voir la carte.
 l'Historique dit QUI a corrigé. Un contrôle qui ne connaîtrait que la première
 laisserait passer toutes les corrections d'auteur.
 """
+
 from __future__ import annotations
 
 import ast
@@ -72,9 +73,7 @@ def test_une_TRANSITION_reste_une_nouvelle_meme_marquee():
     Une entrée qui porte un changement d'état est un fait : le fil doit la
     montrer, quoi que dise son contenu.
     """
-    assert not est_correction(
-        _Entree(contenu_correction(["Périmètre"]), "ouvert", "en_cours")
-    )
+    assert not est_correction(_Entree(contenu_correction(["Périmètre"]), "ouvert", "en_cours"))
 
 
 def test_un_vrai_commentaire_n_est_pas_ecarte():

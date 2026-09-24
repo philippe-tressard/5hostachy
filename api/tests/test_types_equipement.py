@@ -25,6 +25,7 @@ chacune cohérente avec elle-même et aucune juste.
 
 Même forme, donc, que `test_statuts_tickets.py`.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -59,7 +60,9 @@ def test_le_module_front_existe_et_declare_ses_tables():
     """
     assert _MODULE.is_file(), f"{_MODULE} est introuvable : ce fichier ne mesure plus rien."
     assert len(_valeurs("EQUIPEMENTS")) >= 10, "la table EQUIPEMENTS est vide ou illisible"
-    assert len(_valeurs("TYPES_PRESTATAIRE")) >= 3, "la table TYPES_PRESTATAIRE est vide ou illisible"
+    assert len(_valeurs("TYPES_PRESTATAIRE")) >= 3, (
+        "la table TYPES_PRESTATAIRE est vide ou illisible"
+    )
 
 
 def test_l_ecran_nomme_TOUS_les_types_d_equipement():
@@ -141,6 +144,5 @@ def test_ce_qui_n_est_pas_un_equipement_est_le_meme_des_deux_cotes():
 
     source = _MODULE.read_text(encoding="utf-8")
     debut = source.index("export const HORS_EQUIPEMENT")
-    ecran = set(re.findall(r"'([^']+)'", source[debut:source.index(";", debut)]))
+    ecran = set(re.findall(r"'([^']+)'", source[debut : source.index(";", debut)]))
     assert ecran == set(HORS_EQUIPEMENT) and ecran, (ecran, HORS_EQUIPEMENT)
-

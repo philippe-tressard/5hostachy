@@ -23,6 +23,7 @@ aussi ce qui garantit que les tables restent enregistrées dans les métadonnée
 SQLModel — un modèle défini dans un module que personne n'importe n'existe pas
 pour `create_all`, ni pour Alembic.
 """
+
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -32,6 +33,7 @@ from sqlmodel import Field, SQLModel
 # ──────────────────────────────────────────────
 #  Accès (Vigik / Télécommandes)
 # ──────────────────────────────────────────────
+
 
 class StatutCommande(str, Enum):
     en_attente = "en_attente"
@@ -58,6 +60,7 @@ class CommandeAcces(SQLModel, table=True):
 #  Demandes de modification de profil
 # ──────────────────────────────────────────────
 
+
 class StatutDemandeProfil(str, Enum):
     en_attente = "en_attente"
     approuvee = "approuvee"
@@ -66,13 +69,14 @@ class StatutDemandeProfil(str, Enum):
 
 class DemandeModificationProfil(SQLModel, table=True):
     """Demande de modification du type de résident ou du bâtiment, soumise à validation CS."""
+
     __tablename__ = "demande_modification_profil"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     utilisateur_id: int = Field(foreign_key="utilisateur.id", index=True)
-    statut_souhaite: Optional[str] = None      # valeur de StatutUtilisateur souhaitée
+    statut_souhaite: Optional[str] = None  # valeur de StatutUtilisateur souhaitée
     batiment_id_souhaite: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    motif: Optional[str] = None                # justification libre de l'utilisateur
+    motif: Optional[str] = None  # justification libre de l'utilisateur
     statut_demande: StatutDemandeProfil = StatutDemandeProfil.en_attente
     motif_refus: Optional[str] = None
     traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")

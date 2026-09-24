@@ -4,6 +4,7 @@ Le routeur approchait les 500 lignes, et le contrôle de la création y ajoutait
 un validateur : les schémas partent à côté, comme `annonces_hall_schemas`. Ceux
 des contrats et des notations restent dans le routeur, qui les porte seul.
 """
+
 import json
 from typing import Optional
 
@@ -43,9 +44,7 @@ class PrestataireCreate(BaseModel):
     @classmethod
     def un_contact_joignable(cls, v):
         if not any(contact_joignable(c) for c in (v or [])):
-            raise ValueError(
-                "un contact au moins : son nom, et un téléphone ou un e-mail"
-            )
+            raise ValueError("un contact au moins : son nom, et un téléphone ou un e-mail")
         return v
 
 
@@ -71,7 +70,7 @@ class PrestataireRead(BaseModel):
     class Config:
         from_attributes = True
 
-    @field_validator('contacts', mode='before')
+    @field_validator("contacts", mode="before")
     @classmethod
     def parse_contacts(cls, v):
         if isinstance(v, str):

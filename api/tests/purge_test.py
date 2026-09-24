@@ -8,6 +8,7 @@ et cette copie avait divergé, comme la conftest le prédisait elle-même.
 Ils vivent donc ici, importables par les deux.
 """
 
+
 def delier_references(session, modele) -> int:
     """Met à NULL toutes les colonnes NULLABLES qui pointent vers `modele`.
 
@@ -195,7 +196,6 @@ def vider_patrimoine(session, modeles_sup=()) -> None:
     session.commit()
 
 
-
 def monter_batiments(session, numeros=("1", "2", "3", "4")) -> list:
     """Monte une copropriété et ses bâtiments. Rend leurs identifiants, dans l'ordre.
 
@@ -231,6 +231,7 @@ def monter_batiments(session, numeros=("1", "2", "3", "4")) -> list:
         ids.append(bat.id)
     session.commit()
     return ids
+
 
 def etat_invalide(session):
     """Suspend la vérification des clés le temps d'un bloc. À n'employer QUE pour

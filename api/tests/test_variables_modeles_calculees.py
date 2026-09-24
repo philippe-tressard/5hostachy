@@ -26,6 +26,7 @@ de modifier un modèle**. Il y voyait trois variables sur six.
 4. 🔴 le **cas zéro** : sur `nouvel_arrivant_bal`, la liste calculée diffère de
    celle que la 0066 avait posée. Sans cet écart, ce fichier ne prouverait rien.
 """
+
 from __future__ import annotations
 
 import json

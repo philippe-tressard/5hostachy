@@ -15,6 +15,7 @@ Ce test est **inter-langages**, comme `test_liens_front.py` : le producteur des
 types est en Python, leur apparence en TypeScript, et rien ne reliait les deux.
 Ajouter une rubrique au fil sans son apparence échoue désormais en CI.
 """
+
 import pathlib
 import re
 
@@ -70,9 +71,7 @@ def _apparences() -> dict[str, dict[str, str]]:
     source = _FLUX_TS.read_text(encoding="utf-8")
     debut = source.index("} = parAttribut({")
     corps = source[debut : source.index("});", debut)]
-    apparences = {
-        m.group(1): dict(_ATTRIBUT.findall(m.group(2))) for m in _ENTREE.finditer(corps)
-    }
+    apparences = {m.group(1): dict(_ATTRIBUT.findall(m.group(2))) for m in _ENTREE.finditer(corps)}
     #  Cas zéro : un motif cassé rendrait une table vide, et toutes les
     #  inclusions ci-dessous seraient vraies à vide (`standards/04` §2).
     assert len(apparences) >= 12, (
@@ -123,9 +122,10 @@ def test_aucune_apparence_orpheline():
 def _contraste(avant_plan: str, arriere_plan: str) -> float:
     def luminance(hexa: str) -> float:
         hexa = hexa.lstrip("#")
-        canaux = [int(hexa[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        canaux = [int(hexa[i : i + 2], 16) / 255 for i in (0, 2, 4)]
         lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in canaux]
         return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
     a, b = luminance(avant_plan), luminance(arriere_plan)
     return (max(a, b) + 0.05) / (min(a, b) + 0.05)
 

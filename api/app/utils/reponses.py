@@ -9,6 +9,7 @@ Source unique de vérité pour :
 Utilisé par idees.py, annonces.py et sondages.py pour une UX cohérente et éviter
 toute divergence de code entre les sous-rubriques.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -47,8 +48,12 @@ def auteur_meta(auteur: Optional[Utilisateur], session: Session) -> dict:
     mise en avant côté front).
     """
     if auteur is None:
-        return {"auteur_nom": "Utilisateur supprimé", "auteur_batiment": None,
-                "auteur_role": None, "est_cs": False}
+        return {
+            "auteur_nom": "Utilisateur supprimé",
+            "auteur_batiment": None,
+            "auteur_role": None,
+            "est_cs": False,
+        }
     est_cs = est_moderateur(auteur)
     if auteur.has_role(RoleUtilisateur.conseil_syndical):
         role = libelle_role(RoleUtilisateur.conseil_syndical)
@@ -96,6 +101,7 @@ def tri_reponses(reponses: list[dict]) -> list[dict]:
 #  laisser mentir. Seul l'e-mail se règle désormais, par bâtiment
 #  (`utils/preferences_mail.py`).
 
+
 def _site_url(session: Session) -> str:
     """L'adresse du site, normalisée par `base_site` et par rien d'autre.
 
@@ -134,7 +140,8 @@ def notifier_nouvelle_reponse(
         return
 
     extrait = (extrait or "").strip()
-    sonner(session,
+    sonner(
+        session,
         destinataire_id=createur_id,
         type="communaute_reponse",
         titre=f"Nouvelle réponse sur {rubrique_label}",
@@ -146,6 +153,7 @@ def notifier_nouvelle_reponse(
         # send_email importé paresseusement (comme tickets.py) — évite un import
         # lourd au chargement du module et les cycles.
         from app.utils.email import send_email
+
         ctx = {
             "reponse": {
                 "auteur": nom_affiche(auteur.prenom, auteur.nom),
@@ -188,7 +196,8 @@ def notifier_votants_idee(
         dest = session.get(Utilisateur, uid)
         if not dest:
             continue
-        sonner(session,
+        sonner(
+            session,
             destinataire_id=uid,
             type="communaute_idee",
             titre=f"Une idée que vous avez soutenue est {statut_label.lower()}",
@@ -197,11 +206,14 @@ def notifier_votants_idee(
         )
         if dest.email:
             from app.utils.email import send_email
-            ctx = {"idee": {
-                "titre": idee_titre,
-                "statut_label": statut_label,
-                "lien": f"{site_url}{lien_path}",
-            }}
+
+            ctx = {
+                "idee": {
+                    "titre": idee_titre,
+                    "statut_label": statut_label,
+                    "lien": f"{site_url}{lien_path}",
+                }
+            }
             background_tasks.add_task(
                 send_email,
                 code=IDEE_STATUT_EMAIL_CODE,

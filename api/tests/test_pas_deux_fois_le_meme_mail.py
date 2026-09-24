@@ -46,6 +46,7 @@ son annonce de hall appelle `creer_annonce_hall` avec `envoyer_cs=False`, donc
 aucun courriel ne part de ce côté. Vérifié plutôt que supposé — un test le tient,
 parce que la valeur par défaut peut changer.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -54,6 +55,7 @@ from app.utils.envois_uniques import adresses, normaliser, sans_les_deja_servies
 
 
 # ── Le module de déduplication, éprouvé seul ─────────────────────────────────
+
 
 def test_les_adresses_se_comparent_sans_casse_ni_espaces():
     """Deux écritures de la même boîte doivent se reconnaître."""
@@ -95,6 +97,7 @@ def test_adresses_ignore_les_entrees_vides():
 
 
 # ── Le branchement, sans lequel le module ne servirait à rien ────────────────
+
 
 def test_la_notification_d_arrivee_CEDE_aux_envois_plus_disants():
     """🔴 Le défaut lui-même, lu dans le code qui le corrige.
@@ -162,6 +165,7 @@ def test_adresses_deja_servies_ne_reclame_RIEN_sans_diffusion():
 
 
 # ── Ce qui ne doit PAS changer ───────────────────────────────────────────────
+
 
 def test_les_notifications_IN_APP_gardent_leur_portee_plus_large():
     """Deux lignes dans une liste ne dérangent personne ; deux courriels, si.

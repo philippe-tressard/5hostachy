@@ -42,6 +42,7 @@ Le **périmètre** interroge l'arbre des périmètres ; sur une base de test non
 migrée il est illisible, et la règle refuse alors tout — « INCONNU, jamais OK ».
 Les tests qui en dépendent le disent et s'abstiennent plutôt que de conclure.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -114,6 +115,7 @@ def test_un_public_illisible_ne_donne_jamais_l_acces():
 
 
 #  ── Périmètre : les deux écritures de « aucune restriction géographique » ─────
+
 
 @pytest.mark.parametrize(
     "brut",

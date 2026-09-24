@@ -16,6 +16,7 @@ plausible et fausse : c'est ce qui survit à un déplacement de champ.
 est une conséquence — il se vérifie par la condition qui le déclenche, dans
 `routers/auth_profil.py`, et non en observant un message parti.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

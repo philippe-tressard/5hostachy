@@ -31,6 +31,7 @@ caractère imposait donc de détruire les textes choisis pour les vingt-trois
 autres : un remède qu'on n'applique pas, et le défaut reste alors en place — le
 contrôle quotidien signale, et personne ne peut agir.
 """
+
 from __future__ import annotations
 
 import pytest

@@ -32,6 +32,7 @@ positifs, et un contrôle qu'on apprend à ignorer ne garde plus rien.
 n'est pas suivi. C'est délibéré — la propriété surveillée ici est « au même
 endroit », et « ailleurs » est justement ce qu'on veut voir.
 """
+
 from __future__ import annotations
 
 import ast
@@ -41,9 +42,7 @@ from pathlib import Path
 def _fonctions(source: str) -> dict[str, ast.AST]:
     arbre = ast.parse(source)
     return {
-        n.name: n
-        for n in ast.walk(arbre)
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        n.name: n for n in ast.walk(arbre) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
 
 

@@ -23,6 +23,7 @@ D'où celui-ci.
 Le test est statique : il regarde des noms de fichiers, n'importe rien et
 n'exécute aucun code applicatif.
 """
+
 import pathlib
 
 import pytest
@@ -77,7 +78,8 @@ def test_le_controle_regarde_reellement_l_arborescence():
     """
     assert APP.is_dir(), f"arborescence introuvable : {APP}"
     paquets = [
-        d for d in APP.rglob("*")
+        d
+        for d in APP.rglob("*")
         if d.is_dir() and (d / "__init__.py").exists() and "__pycache__" not in d.parts
     ]
     assert len(paquets) >= 5, (

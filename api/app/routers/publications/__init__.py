@@ -25,6 +25,7 @@ pas le contenu — et seulement à un utilisateur connecté.
 
 Verrouillé par `api/tests/test_redirection_publications.py`.
 """
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 

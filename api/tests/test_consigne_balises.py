@@ -28,6 +28,7 @@ que le front refuse.
 fait `test_liens_front.py`, et c'est le seul moyen de tenir un contrat qui
 traverse les deux.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -61,9 +62,31 @@ _EDITEUR = _RACINE / "front" / "src" / "lib" / "components" / "RichEditor.svelte
 #: Les balises que StarterKit apporte d'office : elles n'ont pas de nœud déclaré
 #: dans le dépôt, et exiger qu'on les y trouve serait un faux rouge.
 _FOURNIES_PAR_STARTERKIT = {
-    "p", "br", "b", "i", "u", "s", "strong", "em", "ul", "ol", "li",
-    "blockquote", "pre", "code", "h1", "h2", "h3", "h4", "h5", "h6",
-    "a", "img", "hr", "span", "div",
+    "p",
+    "br",
+    "b",
+    "i",
+    "u",
+    "s",
+    "strong",
+    "em",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "pre",
+    "code",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "a",
+    "img",
+    "hr",
+    "span",
+    "div",
 }
 
 
