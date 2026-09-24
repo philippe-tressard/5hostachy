@@ -16,8 +16,8 @@ bâtiment ? »* :
 | `ContratEntretien` | l'équipement suivi, son prestataire, sa périodicité | `actif` |
 | `Ticket` Entretien | l'intervention réellement faite | résolue (#1092 : les événements
   du calendrier sont devenus des affaires Entretien le 23/09/2026) |
-| `Ticket` du bâti | l'incident résolu | `ferme_le` + catégorie du bâti, hors Entretien, |
-|  |  | **et un équipement désigné par le conseil** (#1097) |
+| `Ticket` du bâti | l'incident résolu | `ferme_le` + catégorie du bâti, hors Entretien — |
+|  |  | rangé sous l'équipement désigné par le conseil, s'il l'a été (#1097) |
 
 Créer une table `carnet` aurait produit une **quatrième** version de faits déjà
 enregistrés trois fois, à ressaisir à la main et libre de diverger dès le premier
@@ -257,14 +257,13 @@ def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[E
 def _entrees_incidents(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
     """Un incident résolu sur le bâti — ce que le carnet appelle un sinistre.
 
-    🔴 **Seulement s'il porte un équipement** (#1097, 24/09/2026). « J'étudie
-    l'archivage des dossiers », en Étude & travaux, n'a rien à faire dans un
-    document qu'un acquéreur réclame : c'est l'absence d'équipement qui le dit,
-    sans que personne ait eu à le décider. L'équipement est posé par le
-    conseil, jamais deviné du titre (#1079) — le carnet est opposable.
-
-    ⚠️ Une intervention (Entretien) n'a pas cette condition : elle est par
-    nature un travail sur le bâti, fait par un prestataire.
+    L'équipement posé par le conseil (#1097) le RANGE ; son absence ne
+    l'exclut pas. 🔴 Revirement, arbitré le 24/09/2026, à l'écran : « on a perdu les affaires, c'est dommage » :
+    la v2.31.0 réservait le carnet aux affaires équipées, et toutes celles
+    résolues auparavant — aucune n'avait d'équipement — en avaient disparu.
+    Elles reviennent sous « Sans équipement rattaché », jusqu'à ce que le
+    conseil les range. L'équipement n'est jamais deviné du titre (#1079) : le
+    carnet est opposable.
     """
     requete = select(Ticket).where(
         Ticket.statut == StatutTicket.résolu,
@@ -275,8 +274,6 @@ def _entrees_incidents(session: Session, perimetre: Optional[str]) -> list[Entre
     for ticket in session.exec(requete).all():
         #  L'Entretien est une INTERVENTION (ci-dessus), pas un incident.
         if ticket.categorie not in CATEGORIES_BATI or ticket.categorie == CategorieTicket.entretien:
-            continue
-        if not ticket.equipement:
             continue
         if not couvre(_codes_de(ticket.perimetre_cible), perimetre):
             continue

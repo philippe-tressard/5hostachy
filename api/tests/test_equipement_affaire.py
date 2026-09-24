@@ -5,9 +5,10 @@ Le décret n° 2001-477 attend d'un carnet d'entretien qu'il dise quels travaux,
 plomberie, la toiture ou la VMC : le lui demander, c'est obtenir une réponse
 fausse qu'on retrouvera au carnet dans dix ans. Le conseil le désigne ensuite.
 
-Et c'est lui qui fait entrer une affaire résolue au carnet : « J'étudie
-l'archivage des dossiers », sans équipement, n'y entre pas — sans que personne
-ait eu à le décider.
+Et c'est lui qui RANGE une affaire résolue au carnet. Sans lui, elle y figure
+quand même, sous « Sans équipement rattaché » : la v2.31.0 l'excluait, et le
+carnet a perdu toutes les affaires résolues d'avant — arbitré à l'écran le
+24/09/2026 : « on a perdu les affaires, c'est dommage ».
 """
 from __future__ import annotations
 
@@ -83,11 +84,12 @@ def _resolue(session, cs, titre, **champs):
     return t
 
 
-def test_une_affaire_resolue_n_entre_au_carnet_qu_avec_son_equipement(session):
+def test_l_equipement_range_l_affaire_et_son_absence_ne_l_exclut_pas(session):
     cs = _cs(session)
     _resolue(session, cs, "Infiltration hall B — sans équipement")
     _resolue(session, cs, "Infiltration hall B — toiture", equipement="toiture")
     carnet = {e["libelle"]: e for e in construire_carnet(session)}
-    #  Témoin : sans lui, un carnet vide ferait passer l'assertion d'absence.
     assert carnet["Infiltration hall B — toiture"]["equipement"] == "toiture"
-    assert "Infiltration hall B — sans équipement" not in carnet
+    assert carnet["Infiltration hall B — sans équipement"]["equipement"] is None, (
+        "une affaire résolue sans équipement a disparu du carnet"
+    )

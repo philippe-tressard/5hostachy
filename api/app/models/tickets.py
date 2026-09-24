@@ -230,8 +230,8 @@ class IntervenantMixin(SQLModel):
     - `prestataire_id`, `frequence_*` : #1092, lot 5 (migration 0211) ;
     - `equipement` : #1097 (migration 0216) — la **valeur** de `TypeEquipement`,
       posée par le conseil et jamais demandée au résident : il voit une flaque,
-      il ne sait pas si c'est la plomberie ou la toiture. C'est elle qui fait
-      entrer une affaire résolue au carnet d'entretien.
+      il ne sait pas si c'est la plomberie ou la toiture. C'est elle qui range
+      une affaire résolue au carnet d'entretien.
 
     Colonnes simples, **sans clé étrangère** : SQLite refuse de l'ajouter à une
     table existante (0117, 0165 — le conteneur s'arrêtait).

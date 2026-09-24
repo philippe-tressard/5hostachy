@@ -137,7 +137,7 @@
 			<option value="">— Aucun —</option>
 			{#each EQUIPEMENTS_AFFAIRE as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
 		</select>
-		<p class="aide">Une affaire résolue n’entre au carnet d’entretien qu’avec son équipement.</p>
+		<p class="aide">Au carnet d’entretien, l’affaire résolue se range sous cet équipement.</p>
 	</SectionFormulaire>
 {/if}
 
