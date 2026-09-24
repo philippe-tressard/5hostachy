@@ -28,6 +28,7 @@
 	import {
 		EQUIPEMENTS as equipements,
 		TYPES_PRESTATAIRE as typesPrestataire,
+		contactsAEnvoyer,
 		contratDepuis,
 		contratVierge,
 	} from '$lib/prestataires';
@@ -327,8 +328,7 @@
 			toast('error', 'Nom et équipement obligatoires');
 			return;
 		}
-		const contacts = prestContacts.filter((c) => c.telephone.trim());
-		const telephone = contacts.map((c) => c.telephone.trim()).join(',') || null;
+		const { contacts, telephone } = contactsAEnvoyer(prestContacts);
 		submitting = true;
 		await tenter(
 			async () => {
