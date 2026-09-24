@@ -255,3 +255,19 @@ def test_le_gabarit_et_la_migration_lisent_le_MEME_texte():
         "lieu de le lire dans le seed"
     )
     assert _pathlib.Path(migration).name.startswith("0199"), "numéro inattendu"
+
+
+def test_la_duree_annoncee_des_courriels_est_celle_que_le_code_applique():
+    """La politique a dit « aucune purge automatique » alors que l'historique des
+    envois était purgé à 90 jours (#1073, 24/09/2026) : un texte faux dans
+    l'autre sens. La durée se lit désormais dans le code, et le texte la répète.
+    """
+    from app.seed.contenus_legaux import CONSERVATION_COURRIELS, DEFAULT_LEGAL
+    from app.utils.maintenance import CONSERVATION_COURRIELS_JOURS
+
+    politique = DEFAULT_LEGAL["politique_confidentialite"]
+    assert f"{CONSERVATION_COURRIELS_JOURS}\xa0jours" in CONSERVATION_COURRIELS, (
+        "la politique n'annonce plus la durée que `purger()` applique"
+    )
+    assert CONSERVATION_COURRIELS in politique
+    assert "Aucune purge automatique" not in politique

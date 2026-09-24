@@ -23,6 +23,18 @@ se rend, elle a l'air finie, et personne ne la lit jusqu'à ce que quelqu'un
 cherche qui contacter. La nôtre a vécu ainsi jusqu'à ce qu'un lecteur le voie.
 """
 
+#: La conservation de l'historique des envois (#1073, 24/09/2026). Il disait
+#: « aucune purge automatique n'est en place à ce jour » — c'était FAUX : la
+#: purge à 90 jours existait (maintenance hebdomadaire), le relevé qui avait
+#: conclu à son absence cherchait le nom du modèle et non celui de la table.
+#: Écrite UNE fois : le gabarit, les ajouts de #1034 et la migration 0218, qui
+#: corrige le texte servi, la lisent ici.
+CONSERVATION_COURRIELS = (
+    "<li>Historique des envois de courriels\xa0: conservé <strong>90\xa0jours</strong> "
+    "pour le suivi des notifications, puis <strong>supprimé automatiquement</strong>. "
+    "L'effacement anticipé s'obtient sur demande à l'adresse du point\xa01."
+)
+
 DEFAULT_LEGAL = {
     'mentions_legales': (
         '<h2>Éditeur du service</h2>'
@@ -105,10 +117,9 @@ DEFAULT_LEGAL = {
         'ans.</li><li>Tokens de rafraîchissement\xa0: 7 jours glissants.</li><li>Sauvegardes\xa0: selon la '
         "configuration.</li></ul><ul><li>Mesure d'audience\xa0: événements détaillés "
         '<strong>30\xa0jours</strong>, puis agrégats sans détail — par jour pendant 12\xa0mois, par mois '
-        "pendant 10\xa0ans. L'effacement demandé depuis votre profil est immédiat.</li><li>Historique "
-        'des envois de courriels\xa0: conservé pour le suivi des notifications. <strong>Aucune purge '
-        "automatique n'est en place à ce jour</strong>\xa0; l'effacement s'obtient sur demande à "
-        "l'adresse du point\xa01.</li></ul><h2>6. Vos droits</h2><p>Conformément au RGPD vous disposez "
+        "pendant 10\xa0ans. L'effacement demandé depuis votre profil est immédiat.</li>"
+        + CONSERVATION_COURRIELS
+        + "</li></ul><h2>6. Vos droits</h2><p>Conformément au RGPD vous disposez "
         "des droits d'accès (art.\xa015), rectification (art.\xa016), effacement (art.\xa017), portabilité "
         '(art.\xa020), opposition (art.\xa021) et retrait du consentement (art.\xa07-3). Pour les exercer, '
         "écrivez à l'adresse indiquée au point 1 — cette voie doit rester ouverte même sans compte, y"
@@ -181,10 +192,9 @@ AJOUTS_1034 = [
         '<h2>6. Vos droits</h2>',
         "<ul><li>Mesure d'audience\xa0: événements détaillés <strong>30\xa0jours</strong>, puis "
         "agrégats sans détail — par jour pendant 12\xa0mois, par mois pendant 10\xa0ans. L'effacement "
-        'demandé depuis votre profil est immédiat.</li><li>Historique des envois de courriels\xa0: '
-        "conservé pour le suivi des notifications. <strong>Aucune purge automatique n'est en "
-        "place à ce jour</strong>\xa0; l'effacement s'obtient sur demande à l'adresse du "
-        'point\xa01.</li></ul>'
+        'demandé depuis votre profil est immédiat.</li>'
+        + CONSERVATION_COURRIELS
+        + '</li></ul>'
     ),
     (
         '<p><strong>Hébergement et acheminement.</strong>',

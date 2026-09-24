@@ -14,6 +14,11 @@ from app.models.core import (
     WhatsAppLog,
 )
 
+#: Durée de conservation de l'historique des envois (#1073). La politique de
+#: confidentialité l'annonce : `test_politique_confidentialite_couvre_le_code`
+#: compare les deux, pour que le texte ne mente plus dans aucun sens.
+CONSERVATION_COURRIELS_JOURS = 90
+
 
 def _supprimer(sql: str, **params) -> int:
     """Un DELETE lié, dans sa propre connexion ; rend le nombre de lignes ôtées."""
@@ -55,7 +60,7 @@ def purger() -> tuple[dict[str, int], list[str]]:
          {"cutoff": (maintenant - timedelta(days=365)).isoformat()}),
         ("emails", "purge historique emails",
          "DELETE FROM historique_email WHERE cree_le < :cutoff",
-         {"cutoff": il_y_a_90_j}),
+         {"cutoff": (maintenant - timedelta(days=CONSERVATION_COURRIELS_JOURS)).isoformat()}),
     )
     for cle, libelle, sql, params in etapes:
         try:
