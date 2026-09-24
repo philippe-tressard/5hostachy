@@ -64,8 +64,8 @@
 			>{libelle}{#if requis}<EtoileRequis vide={!valeur} />{/if}</label
 		>
 		<!--  Ctrl/⌘+Entrée valide depuis la zone : Entrée seule y fait un retour à
-		      la ligne, et c'est la convention des zones multilignes du site. -->
-		<!-- svelte-ignore a11y-autofocus -->
+		      la ligne, et c'est la convention des zones multilignes du site.
+		      `autofocus` est VOULU, et déclaré dans `check-a11y.mjs` (#1045). -->
 		<textarea
 			id="saisie-texte"
 			rows="3"
