@@ -16,33 +16,15 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher, onDestroy } from 'svelte';
+	import { poserCouche } from '$lib/couche';
 
 	export let photos: string[] = [];
 	export let index = 0;
 
 	const dispatch = createEventDispatcher();
 
-	//  Le défilement du fond est un état PARTAGÉ : s'il n'était pas restauré, la
-	//  page entière resterait bloquée jusqu'au rechargement (standards/11 §12).
-	//  D'où une fonction idempotente, appelée depuis chaque sortie — fermeture,
-	//  touche Échap, clic sur le fond — ET depuis `onDestroy`, car l'utilisateur
-	//  peut naviguer ailleurs sans jamais fermer la visionneuse.
-	let defilementBloque = false;
-
-	function bloquerDefilement() {
-		if (defilementBloque || typeof document === 'undefined') return;
-		document.body.style.overflow = 'hidden';
-		defilementBloque = true;
-	}
-
-	function restaurerDefilement() {
-		if (!defilementBloque || typeof document === 'undefined') return;
-		document.body.style.overflow = '';
-		defilementBloque = false;
-	}
-
 	function fermer() {
-		restaurerDefilement();
+		retirerCouche();
 		dispatch('fermer');
 	}
 
@@ -97,15 +79,16 @@
 	}
 
 	function auClavier(e: KeyboardEvent) {
-		if (e.key === 'Escape') fermer();
-		else if (e.key === 'ArrowLeft' && photos.length > 1) precedente();
+		if (e.key === 'ArrowLeft' && photos.length > 1) precedente();
 		else if (e.key === 'ArrowRight' && photos.length > 1) suivante();
 	}
 
-	//  Le blocage est posé au montage et non dans un `on:click` : la visionneuse
-	//  peut être ouverte au clavier comme à la souris.
-	bloquerDefilement();
-	onDestroy(restaurerDefilement);
+	//  Défilement du fond et Échap : `$lib/couche.ts`, partagé avec `Modale`.
+	//  Ouverte depuis une modale, la visionneuse ne rend plus le défilement en se
+	//  fermant, et Échap ne ferme qu'elle (#1042). Posée au montage et non dans
+	//  un `on:click` : elle s'ouvre au clavier comme à la souris.
+	const retirerCouche = poserCouche(fermer);
+	onDestroy(retirerCouche);
 </script>
 
 <svelte:window on:keydown={auClavier} />

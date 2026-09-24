@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.41.0",
+	"version": "2.41.1",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -45,6 +45,7 @@
 		"lint:html": "node scripts/check-html.mjs",
 		"lint:titres": "node scripts/check-titre-double.mjs",
 		"lint:modales": "node scripts/check-modales.mjs",
+		"lint:couches": "node scripts/check-couches.mjs",
 		"lint:workflow": "node scripts/check-workflow-envoye.mjs",
 		"lint:consignes": "node scripts/check-consignes.mjs",
 		"lint:session": "node scripts/check-renouvellement-session.mjs",
