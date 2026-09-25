@@ -103,7 +103,9 @@ fi
 # ── 4. Hooks git du dépôt (pre-commit : retard sur l'upstream ; pre-push) ───
 git -C "$DEPOT" config core.hooksPath .githooks
 git -C "$DEPOT" config pull.ff only
-echo "✓ hooks git armés (.githooks)"
+#  `git blame` saute les commits mécaniques déclarés (voir le fichier).
+git -C "$DEPOT" config blame.ignoreRevsFile .git-blame-ignore-revs
+echo "✓ hooks git armés (.githooks), blame sans les reformatages déclarés"
 
 # ── 5. Socle commun `claude-config` — seulement s'il est attaché ─────────────
 #  Le proxy GitHub du cloud ne donne accès qu'aux dépôts ATTACHÉS à la session :
