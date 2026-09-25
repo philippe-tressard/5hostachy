@@ -485,7 +485,7 @@
 		{#if editing}
 			<!--  Le cadre et le pied STANDARD (#1329) : une carte et une rangée de
 			      boutons écrites à la main, « Annuler » en bouton plein. -->
-			<FormulaireCreation titre="Modifier la fiche de la résidence">
+			<FormulaireCreation titre="Modifier la fiche de la résidence" cle="fiche">
 				<form on:submit|preventDefault={saveEdit}>
 					<div class="edit-grid">
 						<div class="field">
