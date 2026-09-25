@@ -39,7 +39,8 @@
 	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
-	import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
+	import PastilleDeroulante from '$lib/components/PastilleDeroulante.svelte';
+	import { CATEGORIES_ANNONCE, TRIS_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
 	import { annonces as annoncesApi } from '$lib/api';
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -183,26 +184,38 @@
 	      (« ≤ 5 valeurs en pastilles ») : les deux seuils coïncident, aucune liste
 	      du produit n'a cinq ou six valeurs.
 
-	      ⚠️ La catégorie reste un `<select>` juste à côté, et c'est la règle qui
-	      le veut : NEUF valeurs. Deux formes voisines sur une même barre n'est pas
-	      une incohérence — c'est la cardinalité qui choisit, pas l'écran. Le
-	      §« seuil des listes courtes » nomme d'ailleurs `CATEGORIES_ANNONCE` comme
-	      le cas qui reste dehors. -->
+	      ⚠️ La catégorie reste une LISTE juste à côté, et c'est la règle qui le
+	      veut : NEUF valeurs. Le §« seuil des listes courtes » nomme d'ailleurs
+	      `CATEGORIES_ANNONCE` comme le cas qui reste dehors.
+
+	      🔴 Mais plus un `<select>` natif (24/09/2026) : coins carrés, fond gris
+	      et police plus grande à côté de pastilles arrondies, signalé à l'écran
+	      (« son UX dénote à côté du filtre »). `PastilleDeroulante` garde la
+	      liste native et lui donne la forme d'une pastille ; le tri, qui est un
+	      ORDRE et non un filtre, se cale à droite.
+
+	      ⚠️ `defilante={false}` : la barre passe déjà à la ligne, et la rangée
+	      défilante réservait 4 px sous elle pour sa barre de défilement — ce qui
+	      la remontait de 2 px au-dessus des deux listes, mesuré au navigateur. -->
 	<ChoixPastilles
 		options={TYPES_ANNONCE}
 		bind:valeur={filtreType}
 		tous="Tous types"
 		libelle="Filtrer les annonces par type"
+		defilante={false}
 	/>
-	<select bind:value={filtreCategorie} class="filter-select" aria-label="Filtrer par catégorie">
-		<option value="">Toutes catégories</option>
-		{#each CATEGORIES_ANNONCE as c (c.val)}<option value={c.val}>{c.label}</option>{/each}
-	</select>
-	<select bind:value={filtreTri} class="filter-select" aria-label="Trier les annonces">
-		<option value="recent">Plus récentes</option>
-		<option value="prix_asc">Prix croissant</option>
-		<option value="prix_desc">Prix décroissant</option>
-	</select>
+	<PastilleDeroulante
+		options={CATEGORIES_ANNONCE}
+		bind:valeur={filtreCategorie}
+		tous="Toutes catégories"
+		libelle="Filtrer par catégorie"
+	/>
+	<PastilleDeroulante
+		options={TRIS_ANNONCE}
+		bind:valeur={filtreTri}
+		libelle="Trier les annonces"
+		tri
+	/>
 </div>
 
 <!--  §0 ter : la boîte de création vient APRÈS les filtres — ce qui qualifie la
