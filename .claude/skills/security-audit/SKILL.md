@@ -176,6 +176,11 @@ celui de la route (au-dessus, il n'a aucun effet, en silence) et que la fonction
 reçoive une `request` (sans elle, slowapi lève au premier visiteur, pas au
 démarrage).
 
+🔒 **Les limites valent PAR VISITEUR** depuis le 25/09/2026 (#1300) : Caddy lit
+`Cf-Connecting-Ip` d'un proxy de confiance (le réseau Docker, pas le LAN) et
+uvicorn prend ce qu'il transmet. `api/tests/test_adresse_client.py` tient la
+chaîne. Avant, un seul seau pour tout le site.
+
 🔒 **Un appel qui se FACTURE** (fournisseur d'IA, `utils.llm.demander`) porte
 `LIMITE_APPEL_FACTURE` : `api/tests/test_limite_appel_facture.py` relève dans le
 code les routes qui l'atteignent. Aucune ne l'avait avant le 25/09/2026 (#1299).
