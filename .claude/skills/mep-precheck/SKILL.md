@@ -177,9 +177,17 @@ SKIP_PRECHECK=1 git push -u origin dev   # recrée `dev` distante (piège 2)
    dédiée**, et c'est le SHA de son squash sur `main` qui entre dans le fichier.
    `test_documentation.py` refuse un SHA absent de l'historique.
 
-⚠️ Après la MEP, les points **0d, 0f et 16** échouent **par construction** —
-version inchangée, brief d'un commit déjà fusionné, trace d'un autre commit. Ce
-sont des points *pré*-push. Lire les points **1 à 18**, qui sont le post-check.
+🔴 **Après la MEP : `bash scripts/poste/precheck-mep.sh --post-mep`** (#1282,
+25/09/2026). Il ne lance pas les points du LOT (0a à 0g, 15, 16), qui échouent
+par construction une fois le lot fusionné — version inchangée, brief d'un commit
+déjà parti, trace d'un autre commit — et il ajoute **P1** (la ligne `Déployé:` de
+l'actif porte le commit de `origin/main`) et **P3** (la version servie est celle
+de `origin/main`). Il conclut « MEP VÉRIFIÉE » ou « MEP NON VÉRIFIÉE », et
+n'écrit **jamais** la trace qui autorise un push.
+⚠️ Cette ligne disait « lire les points 1 à 18 » : lancé sans option après la
+fusion, le script concluait « MEP NON AUTORISÉE » sur une MEP réussie, et il
+fallait savoir lesquels de ses échecs ne comptaient pas. Une consigne pour lire
+AUTOUR d'un verdict faux est un contrôle qu'on finit par ne plus lire.
 
 ### Ce que le script couvre
 
