@@ -71,6 +71,20 @@ est pire qu'absente. Sur le poste, ils se lancent par `npm run e2e` (ou
 `bash scripts/poste/rejouer-ci.sh e2e-frontend`), et `.gitignore` tient leurs
 sorties à l'écart (`e2e-rapport/`, `test-results/`).
 
+🔴 **Chaque exécution lance SON serveur, sur SON port** (#1150, 25/09/2026). Le
+port était 5173 — celui de `npm run dev` — et un serveur trouvé là était
+réutilisé sans un mot : celui du poste, ou celui d'une autre session dans un
+autre worktree. Le test lisait alors le code de qui avait lancé ce serveur, et
+tombait en `ERR_CONNECTION_REFUSED` quand celui-ci s'arrêtait — un test
+différent à chaque fois, jamais en isolé, jamais en CI. Le port se dérive
+désormais du processus (`playwright.config.ts`), et deux exécutions dans le
+**même** dossier sont refusées d'emblée : elles partagent `test-results/` et
+s'effaçaient leurs traces. Le message donne le pid de celle qui tourne.
+
+Une étape en échec de `rejouer-ci.sh` garde sa sortie **complète** dans
+`.git/rejeu-ci-echecs/` (chemin affiché) : la queue montrée à l'écran n'est
+souvent que le bruit `ECONNREFUSED` du proxy `/api`.
+
 🔴 **Un test d'interface qui échoue pour une raison étrangère à l'interface finit
 désarmé.** C'est pourquoi le contrôle des erreurs de console écarte explicitement
 les échecs de chargement de ressource : sans API lancée, `/api/*` répond 500, et

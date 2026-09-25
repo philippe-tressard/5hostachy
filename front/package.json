@@ -93,6 +93,7 @@
 		"lint:entete-carte": "node scripts/check-entete-carte.mjs",
 		"lint:pictogrammes": "node scripts/check-pictogrammes.mjs --selftest && node scripts/check-pictogrammes.mjs",
 		"lint:clamp": "node scripts/check-clamp.mjs --selftest && node scripts/check-clamp.mjs",
+		"lint:e2e-serveur": "node scripts/check-e2e-serveur.mjs --selftest && node scripts/check-e2e-serveur.mjs",
 		"lint:message-erreur": "node scripts/check-message-erreur.mjs",
 		"lint:points-rupture": "node scripts/check-points-rupture.mjs",
 		"lint:pied-formulaire": "node scripts/check-pied-formulaire.mjs",

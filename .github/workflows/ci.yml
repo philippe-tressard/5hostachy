@@ -2005,6 +2005,12 @@ jobs:
           fi
           npx playwright install --with-deps chromium
 
+      # 🔴 Avant les tests, pas après : un serveur emprunté les ferait passer
+      # sur le code d'un autre (#1150). Voir l'en-tête du script.
+      - name: Les tests de navigateur lancent leur serveur, jamais un emprunté
+        working-directory: front
+        run: npm run lint:e2e-serveur
+
       - name: Tests de navigateur (bureau et mobile)
         working-directory: front
         run: npm run e2e

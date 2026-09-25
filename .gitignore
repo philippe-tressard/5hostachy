@@ -36,6 +36,7 @@ front/.env.local
 # Playwright — sorties de tests, jamais versionnées
 front/e2e-rapport/
 front/test-results/
+front/.e2e-en-cours
 front/playwright/.cache/
 
 # Donnees runtime

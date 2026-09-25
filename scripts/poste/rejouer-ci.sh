@@ -146,6 +146,14 @@ ci_extraire < "$CI" > "$TMP/flux"
 
 NB_OK=0; NB_FAIL=0; NB_INCONNU=0; NB_PREP=0
 
+#  🔴 La sortie COMPLÈTE d'une étape en échec est gardée (#1150, 25/09/2026).
+#  Le rapport n'en montre que la queue, et pour Playwright la queue est faite
+#  des `ECONNREFUSED` du proxy — l'assertion en cause n'y apparaissait jamais,
+#  et trois échecs e2e sont restés sans diagnostic. Un dossier par rejeu, vidé
+#  au suivant : ce qu'il contient parle TOUJOURS du dernier rejeu.
+ECHECS="$(dirname "$MARQUEUR")/rejeu-ci-echecs"
+rm -rf "$ECHECS"
+
 #  Le verdict et le job sont en TÊTE, le nom de l'étape en queue : `printf`
 #  compte des OCTETS, pas des caractères, si bien qu'une colonne de largeur fixe
 #  contenant « Modularité » ou « Libellés » se décale d'autant d'accents. Une
@@ -207,7 +215,10 @@ executer() {               # $1 = job, $2 = étape, $3 = rép, corps dans $TMP/c
     OK)       rapporter OK "$1" "$2" "${duree}s" ;;
     INCONNU*) rapporter INCONNU "$1" "$2" "${sortie#INCONNU } (${duree}s)" ;;
     *)        rapporter FAIL "$1" "$2" "code $code (${duree}s)"
-              sed 's/^/      │ /' "$TMP/sortie" | tail -15 ;;
+              sed 's/^/      │ /' "$TMP/sortie" | tail -15
+              mkdir -p "$ECHECS"
+              cp "$TMP/sortie" "$ECHECS/$1-$NB_FAIL.log"
+              echo "      │ … sortie complète : $ECHECS/$1-$NB_FAIL.log" ;;
   esac
 }
 
