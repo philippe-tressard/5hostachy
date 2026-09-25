@@ -373,6 +373,7 @@
 	      `$lib/evolutions`) — Équipement avant le Suivi, Quand et Intervenant
 	      après, Mise en avant après les Destinataires. -->
 	{#if sectionAvantSuivi}
+		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
 		<slot name="avant_suivi" premiere={true} {partage} />
 	{/if}
 
@@ -393,6 +394,7 @@
 	{/if}
 
 	{#if sectionSpecifiques}
+		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
 		<slot name="specifiques" premiere={!sectionWorkflow && !sectionAvantSuivi} {partage} />
 	{/if}
 
@@ -445,6 +447,7 @@
 		bind:destinataires
 	/>
 	{#if sectionMiseEnAvant}
+		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
 		<slot name="mise_en_avant" premiere={false} {partage} />
 	{/if}
 
