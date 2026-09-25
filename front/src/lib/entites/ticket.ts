@@ -252,6 +252,11 @@ export const TICKET: EntiteDeclaree = {
 			//  la nuance ne pouvait s'écrire qu'en COMMENTAIRE — invisible à
 			//  `lint:etats`. C'est la limite que #436 décrivait, et elle se referme
 			//  ici : chacune est maintenant sa propre section, avec son propre motif.
+			//
+			//  ⚠️ Déclarée ouverte, elle n'était pourtant PAS RENDUE dans la Suite
+			//  d'une affaire jusqu'au 25/09/2026 : `EvolForm` n'ouvrait son créneau
+			//  que sur `nature`, héritée ici. Signalé à l'écran — « une affaire peut
+			//  devenir urgente » ; le créneau suit désormais toutes ses sections.
 			id: 'mise_en_avant',
 			//  Une actualité n'en garde que 📌 et 🚨 (#1096) : 🛡️ se dit par les
 			//  Destinataires, 🔒 sous le Périmètre.

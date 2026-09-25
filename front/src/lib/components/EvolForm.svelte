@@ -71,6 +71,7 @@
 		typeDeLEntree,
 		entreeEnregistrable,
 		etatInitialEntree,
+		creneauSpecifiquesPresent,
 		type ChargeUtileEvolution,
 	} from '$lib/evolutions';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
@@ -254,7 +255,7 @@
 	$: sectionPerimetre = peutPreciserPerimetre && sectionPresente(entite, 'evolution', 'perimetre');
 	//  Ouvertes par la DÉCLARATION de l'entité — voir `SectionsCiblageEvolution`.
 	$: sectionDestinataires = sectionPresente(entite, 'evolution', 'destinataires');
-	$: sectionSpecifiques = sectionPresente(entite, 'evolution', 'nature');
+	$: sectionSpecifiques = !!$$slots.specifiques && creneauSpecifiquesPresent(entite);
 	$: sectionPhotos = avecPiecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes');
 	$: sectionDocuments = avecPiecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes');
 	$: sectionDiffusion = peutDiffuser && sectionPresente(entite, 'evolution', 'diffusion');

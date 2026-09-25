@@ -1,5 +1,6 @@
 import { separerFichiers } from '$lib/fichiers';
 import { perimetreHerite } from '$lib/perimetres';
+import { sectionPresente, type EntiteDeclaree, type IdSection } from '$lib/entites/types';
 /**
  * Le vocabulaire d'un **fil d'évolution** — écrit une fois pour les trois entités
  * qui en portent un : tickets, actualités, événements de calendrier.
@@ -199,4 +200,28 @@ export function etatInitialEntree(
 	const destinataires = initialDestinataires.length ? [...initialDestinataires] : ['résidents'];
 	const tries = separerFichiers(editMode ? initialFichiers.map((f) => f.url) : []);
 	return { perimetre, destinataires, photos: tries.photos, documents: tries.documents };
+}
+
+/**
+ * Les sections que porte le créneau `specifiques` d'`EvolForm` — la Catégorie,
+ * et ce qu'une Suite d'affaire y pose : Équipement · Quand · Intervenant pour le
+ * conseil (`SectionsSuiteConseil`, #1207), et la Mise en avant
+ * (`OptionsEvolutionTicket`).
+ *
+ * 🔴 Le créneau ne s'ouvrait que sur `nature` (25/09/2026). L'affaire la déclare
+ * `hérité` en évolution : sa Suite ne rendait donc AUCUNE de ces sections, et une
+ * affaire ne pouvait pas devenir urgente en cours de suivi — le serveur,
+ * lui, appliquait bien ce qu'on lui envoyait (`appliquer_options`).
+ */
+const SECTIONS_DU_CRENEAU: readonly IdSection[] = [
+	'nature',
+	'equipement',
+	'quand',
+	'intervenant',
+	'mise_en_avant',
+];
+
+/** Le créneau s'ouvre dès que l'une de ses sections est déclarée en évolution. */
+export function creneauSpecifiquesPresent(entite: EntiteDeclaree): boolean {
+	return SECTIONS_DU_CRENEAU.some((id) => sectionPresente(entite, 'evolution', id));
 }
