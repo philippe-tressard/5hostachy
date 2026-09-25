@@ -26,9 +26,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from email.utils import parsedate_to_datetime
+from email.utils import parseaddr, parsedate_to_datetime
 
 from sqlmodel import Session
 
@@ -136,20 +137,53 @@ def mettre_en_forme(session: Session, nettoye: str, recu: str) -> Texte:
     return Texte(contenu=propre, origine=(recu or nettoye)[:MAX_ORIGINE], assiste=True)
 
 
-def suite_de_reponse(session: Session, ticket_id: int, auteur_id: int, corps: str, envoye_le):
+def contenu_de_la_suite(
+    expediteur: str, nom_du_compte: str, envoye_le: datetime, texte: str
+) -> str:
+    """Le HTML de la Suite : « Réponse de … le … » en italique, puis le texte.
+
+    La ligne d'en-tête est écrite par le CODE, jamais par le modèle (arbitré le
+    25/09/2026) : un nom et une date lus dans l'en-tête ne s'inventent pas. Le nom
+    est celui que le courriel affiche (« Jean Martin <jm@…> »), à défaut celui du
+    compte ; la date, l'envoi en heure de Paris.
+
+    🔴 Le texte est ÉCHAPPÉ : c'est un courriel reçu, et `safeDescription` ne
+    ré-échappe pas une chaîne qui commence par une balise.
+    """
+    from html import escape
+
+    from app.utils.dates_fr import datetime_longue_paris
+
+    nom = parseaddr(expediteur or "")[0].strip() or nom_du_compte
+    entete = f"<p><em>Réponse de {escape(nom, quote=False)} le {datetime_longue_paris(envoye_le)}</em></p>"
+    paragraphes = [p.strip() for p in re.split(r"\n\s*\n", texte) if p.strip()]
+    corps = "".join(
+        "<p>" + "<br>".join(escape(ligne.strip(), quote=False) for ligne in p.splitlines()) + "</p>"
+        for p in paragraphes
+    )
+    return entete + corps
+
+
+def suite_de_reponse(
+    session: Session, ticket_id: int, auteur, expediteur: str, corps: str, envoye_le
+):
     """La Suite à ajouter au fil, ou None si le message n'a rien d'utile."""
     from app.models.core import TicketEvolution
     from app.utils.courriel_decodage import _sans_citation
+    from app.utils.noms import nom_affiche
 
     texte = mettre_en_forme(session, _sans_citation(corps), corps)
     if not texte.contenu:
         return None
+    quand = moment_de_la_suite(envoye_le)
     return TicketEvolution(
         ticket_id=ticket_id,
         type="commentaire",
-        contenu=texte.contenu,
+        contenu=contenu_de_la_suite(
+            expediteur, nom_affiche(auteur.prenom, auteur.nom), quand, texte.contenu
+        ),
         contenu_origine=texte.origine,
         assiste_ia=texte.assiste,
-        auteur_id=auteur_id,
-        cree_le=moment_de_la_suite(envoye_le),
+        auteur_id=auteur.id,
+        cree_le=quand,
     )
