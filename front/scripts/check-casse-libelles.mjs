@@ -111,7 +111,11 @@ if (process.argv.includes('--selftest')) {
 	process.exit(ko);
 }
 
-const remis = remisEnCasse(readFileSync(FEUILLE, 'utf8'));
+const feuille = readFileSync(FEUILLE, 'utf8');
+const remis = remisEnCasse(feuille);
+//  Un libellé qui EST une case (`class="field case"`) : son texte est une valeur,
+//  et la feuille doit le remettre en casse (#1324 — « ENVOYER LE DOCUMENT… »).
+export const CASE_LIBELLE = /label\.field\.case\s*\{[^}]*text-transform:\s*none/;
 if (!remis) {
 	console.error(
 		`\n✗ INCONNU : la règle \`label.field :is(…) { text-transform: none }\` a disparu de ${FEUILLE}.\n`,
@@ -143,6 +147,17 @@ for (const f of fichiers(RACINE))
 				`${f.split(sep).join('/')}  <${enfant.balise}${enfant.classe ? ` class="${enfant.classe}"` : ''}>`,
 			);
 	}
+const casesLibelles = fichiers(RACINE).filter((f) =>
+	/<label\s+class="(?=[^"]*\bfield\b)(?=[^"]*\bcase\b)[^"]*"/.test(readFileSync(f, 'utf8')),
+);
+if (casesLibelles.length && !CASE_LIBELLE.test(feuille)) {
+	console.error(
+		`\n✗ ${casesLibelles.length} fichier(s) ont un <label class="field case">, et champs.css ` +
+			'ne remet pas `label.field.case` en casse : son texte serait en capitales (#1324).\n',
+	);
+	for (const f of casesLibelles) console.error(`  ${f.split(sep).join('/')}`);
+	process.exit(1);
+}
 if (vus === 0) {
 	console.error('\n✗ INCONNU : aucun enfant de `label.field` relevé — la forme a changé.\n');
 	process.exit(2);
