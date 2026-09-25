@@ -118,6 +118,18 @@ points_entree_verdicts_locaux() {  # $1 = racine du dépôt
   echo "$(verdict_conformite "$att" "$ins")|unité role-guard"
 }
 
+#  L'état d'un service (`systemctl is-enabled`) en verdict — PURE.
+#  Une sortie VIDE veut dire qu'on n'a rien lu (SSH refusé, nœud injoignable) :
+#  c'est INCONNU. Seul un état LU et différent d'`enabled` est un écart (#1302 —
+#  le poste concluait à un ÉCART quand il n'avait rien mesuré).
+verdict_etat_service() {  # $1 = sortie de `systemctl is-enabled`
+  case "$1" in
+    "")      echo INCONNU ;;
+    enabled) echo OK ;;
+    *)       echo ECART ;;
+  esac
+}
+
 #  Agrège les lignes `VERDICT|libellé` en UN verdict : `ECART|liste`,
 #  `INCONNU|liste` ou `OK|`. PURE (lit stdin), donc éprouvée par le self-test.
 #
@@ -206,8 +218,21 @@ INCONNU|cron ptressard"                                 "INCONNU|cron ptressard"
   #  primait, une dérive réelle y serait masquée tous les jours.
   ta "écart ET illisible → l'écart prime" "INCONNU|cron root
 ECART|unité role-guard"                                 "ECART|unité role-guard"
+  #  #1302 : l'ordre des nœuds ne change rien — un écart LU puis un INCONNU.
+  ta "écart PUIS illisible → l'écart prime" "ECART|rpi1 cron root
+INCONNU|rpi2 cron root"                                 "ECART|rpi1 cron root"
   ta "deux écarts, listés"          "ECART|cron root
 ECART|unité role-guard"                                 "ECART|cron root, unité role-guard"
+
+  #  L'état du service (#1302) : rien lu n'est pas un écart.
+  te() {  # $1 = libellé, $2 = sortie de systemctl, $3 = attendu
+    local obtenu; obtenu=$(verdict_etat_service "$2")
+    if [ "$obtenu" = "$3" ]; then echo "PASS  $1"
+    else echo "ÉCHEC $1 — attendu $3, obtenu $obtenu"; echecs=$((echecs+1)); fi
+  }
+  te "service activé"                 "enabled"  OK
+  te "service désactivé"              "disabled" ECART
+  te "état illisible (SSH refusé)"    ""         INCONNU
 
   [ "$echecs" -eq 0 ] && echo "== TOUS OK ==" || echo "== $echecs ÉCHEC(S) =="
   return $((echecs > 0))
