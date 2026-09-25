@@ -31,17 +31,15 @@ def _phrases() -> tuple[str, str]:
     return ASSISTANT_SANS_GESTE_ANCIEN, ASSISTANT_SANS_GESTE
 
 
-def _remplacer(avant: str, apres: str) -> None:
+def upgrade() -> None:
     from app.utils.textes_livres import remplacer_passage
 
-    remplacer_passage(op.get_bind(), "config_site", {"cle": CLE}, "valeur", avant, apres)
-
-
-def upgrade() -> None:
     ancien, nouveau = _phrases()
-    _remplacer(ancien, nouveau)
+    remplacer_passage(op.get_bind(), "config_site", {"cle": CLE}, "valeur", ancien, nouveau)
 
 
 def downgrade() -> None:
+    from app.utils.textes_livres import remplacer_passage
+
     ancien, nouveau = _phrases()
-    _remplacer(nouveau, ancien)
+    remplacer_passage(op.get_bind(), "config_site", {"cle": CLE}, "valeur", nouveau, ancien)
