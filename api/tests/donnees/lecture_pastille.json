@@ -1,0 +1,266 @@
+{
+	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ».",
+	"cas": [
+		{
+			"nom": "actualité à tous, copropriété entière",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "actualité à tous, bâtiment choisi mais non réservé",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [
+				"résidents"
+			],
+			"perimetre": "batiment",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": true
+		},
+		{
+			"nom": "actualité à tous, réservée au bâtiment",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [],
+			"perimetre": "batiment",
+			"reserve_perimetre": true,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "actualité réservée, cochée sur la copropriété entière (rien à restreindre)",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [],
+			"perimetre": "global",
+			"reserve_perimetre": true,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "actualité aux copropriétaires occupants, réservée au bâtiment",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [
+				"copropriétaires_occupants"
+			],
+			"perimetre": "batiment",
+			"reserve_perimetre": true,
+			"lecteurs": [
+				"copropriétaire_résident"
+			],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "actualité aux copropriétaires bailleurs",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [
+				"bailleurs"
+			],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "actualité aux locataires",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [
+				"locataires"
+			],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"locataire"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "actualité aux copropriétaires (les deux statuts)",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [
+				"copropriétaires"
+			],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "actualité aux résidents (occupants et locataires), bâtiment non réservé",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [
+				"copropriétaires_occupants",
+				"locataires"
+			],
+			"perimetre": "batiment",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"locataire"
+			],
+			"hors_perimetre": true
+		},
+		{
+			"nom": "actualité au seul conseil syndical",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [
+				"conseil_syndical"
+			],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "actualité confidentielle : elle passe outre le reste",
+			"actualite": true,
+			"confidentiel": true,
+			"public_cible": [],
+			"perimetre": "batiment",
+			"reserve_perimetre": true,
+			"lecteurs": [],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "affaire, copropriété entière",
+			"actualite": false,
+			"confidentiel": false,
+			"public_cible": [],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "affaire sur un bâtiment : réservée d'office",
+			"actualite": false,
+			"confidentiel": false,
+			"public_cible": [],
+			"perimetre": "batiment",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire"
+			],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "affaire : un public visé resté d'une actualité ne compte pas",
+			"actualite": false,
+			"confidentiel": false,
+			"public_cible": [
+				"locataires"
+			],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "affaire confidentielle",
+			"actualite": false,
+			"confidentiel": true,
+			"public_cible": [],
+			"perimetre": "batiment",
+			"reserve_perimetre": false,
+			"lecteurs": [],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "affaire datée, copropriété entière : les locataires la lisent (#1269)",
+			"actualite": false,
+			"confidentiel": false,
+			"public_cible": [],
+			"reserve_perimetre": false,
+			"perimetre": "global",
+			"datee": true,
+			"en_ag": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "affaire datée sur un bâtiment : ses locataires la lisent, pas ceux d'ailleurs",
+			"actualite": false,
+			"confidentiel": false,
+			"public_cible": [],
+			"reserve_perimetre": false,
+			"perimetre": "batiment",
+			"datee": true,
+			"en_ag": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "affaire datée en AG : retirée aux locataires",
+			"actualite": false,
+			"confidentiel": false,
+			"public_cible": [],
+			"reserve_perimetre": false,
+			"perimetre": "global",
+			"datee": true,
+			"en_ag": true,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire"
+			],
+			"hors_perimetre": null
+		}
+	]
+}

@@ -15,12 +15,25 @@
   🔴 Le sélecteur se tait (`titre=""`) : c'est la SECTION qui nomme. Sans quoi
   on lirait « DESTINATAIRES » puis « Destinataires * », le nom deux fois —
   signalé à l'écran le 16/08/2026, dès la mise en production.
+
+  ## La pastille de lecture (lot 1, 25/09/2026)
+
+  Quand l'écran dit la NATURE (`lecture`), la section répond à « qui d'autre
+  la lit ? » : la pastille est son badge d'état — et son résumé, pliée —, la
+  case « Confidentielle » l'ouvre, et la phrase entière se lit dessous. Une
+  affaire n'a pas de profils à choisir : la règle est écrite à leur place.
+  Sans `lecture`, la section reste celle d'avant (sondages, événements).
 -->
 <script lang="ts">
 	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import CaseConfidentielle from '$lib/components/CaseConfidentielle.svelte';
 	import { LIBELLE_TOUS, concerneTousLesResidents } from '$lib/destinataires';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
+	import { lectureDe, titreLecture } from '$lib/lecture';
+	import { perimetreRestreint, type NatureLue } from '$lib/lecture-ticket';
+	import { perimetresStore } from '$lib/stores/perimetres';
+	import { relire } from '$lib/utils';
 
 	/** Préfixe des identifiants — l'écran en ouvre parfois plusieurs à la fois. */
 	export let idPrefixe: string;
@@ -51,23 +64,83 @@
 	$: badge = concerneTousLesResidents(destinataires) ? LIBELLE_TOUS : '';
 	/** Le motif d'extinction de la section, ou `''` (`inactivePour`, #1191). */
 	export let inactive = '';
+
+	/**  La nature lue — `null` : pas de pastille de lecture (section d'avant).
+	 *   Avec elle viennent la case, le périmètre et sa réserve, qui la décident. */
+	export let lecture: NatureLue | null = null;
+	export let confidentiel = false;
+	export let perimetre: string[] = [];
+	export let reservePerimetre = false;
+	$: lue = relire($perimetresStore, () =>
+		lectureDe({
+			actualite: !!lecture?.actualite,
+			datee: lecture?.datee,
+			enAg: lecture?.enAg,
+			confidentiel,
+			publicCible: destinataires,
+			perimetreRestreint: perimetreRestreint(perimetre),
+			reservePerimetre,
+		}),
+	);
+	$: modifiee =
+		confidentiel || ((!lecture || lecture.actualite) && !concerneTousLesResidents(destinataires));
 </script>
 
 <SectionFormulaire
 	{premiere}
 	{pliable}
-	{badge}
+	badge={lecture ? titreLecture(lue) : badge}
+	badgeIcones={lecture ? lue.icones : []}
+	badgeIconeFin={lecture && lue.perimetreReserve ? 'lock' : ''}
 	titre={SECTIONS_LIBELLE.destinataires}
 	{inactive}
 	{requis}
 	rempli={destinataires.length > 0}
-	valeurModifiee={!concerneTousLesResidents(destinataires)}
+	valeurModifiee={modifiee}
 	idTitre="{idPrefixe}-destinataires-titre"
 >
-	<!--  Les pastilles ne sont pas un contrôle labelable — `for` n'y associerait
-	      rien —, d'où le couple `id` sur le titre / `aria-labelledby` sur le
-	      groupe. -->
-	<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-destinataires-titre">
-		<DestinatairePicker bind:value={destinataires} titre="" />
-	</div>
+	{#if lecture}
+		<CaseConfidentielle bind:coche={confidentiel} />
+	{/if}
+	{#if lecture && !lecture.actualite}
+		<p class="aide">
+			Pas de profils à choisir pour une affaire suivie : la règle des affaires décide, et la phrase
+			ci-dessous la dit.
+		</p>
+	{:else}
+		<!--  Les pastilles ne sont pas un contrôle labelable — `for` n'y associerait
+		      rien —, d'où le couple `id` sur le titre / `aria-labelledby` sur le
+		      groupe. Éteintes, pas effacées, quand « Confidentielle » passe outre :
+		      `disabled` d'un `fieldset` désactive chaque bouton sans les recopier. -->
+		<fieldset
+			class="field champ-large destinataires-groupe"
+			disabled={lecture !== null && confidentiel}
+			aria-labelledby="{idPrefixe}-destinataires-titre"
+		>
+			<DestinatairePicker bind:value={destinataires} titre="" />
+		</fieldset>
+	{/if}
+	{#if lecture}
+		<p class="aide">
+			{lue.phrase}
+			{lue.exclus}
+		</p>
+		{#if lue.avertissement}<p class="aide avertissement">{lue.avertissement}</p>{/if}
+	{/if}
 </SectionFormulaire>
+
+<style>
+	/*  Un `fieldset` sans son cadre natif : il ne sert qu'à éteindre le groupe. */
+	.destinataires-groupe {
+		border: none;
+		margin: 0;
+		padding: 0;
+		min-width: 0;
+	}
+	.destinataires-groupe:disabled {
+		opacity: 0.45;
+	}
+	.avertissement {
+		color: var(--color-warning, #b07d1e);
+	}
+</style>
