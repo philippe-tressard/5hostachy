@@ -241,11 +241,8 @@ function creneauSpecifiquesPresent(entite: EntiteDeclaree): boolean {
  * pour montrer ce qu'un changement de catégorie rallumerait ; une Suite ne
  * change pas la catégorie, il n'y a donc rien à rallumer.
  *
- * 🔴 Les Destinataires d'une affaire SUIVIE (25/09/2026) : déclarés
- * `inactivePour.suivie`, grisés en édition, ils restaient offerts dans la
- * Suite. Pour le conseil, le serveur ÉCRIVAIT le public choisi sur l'affaire
- * (`add_evolution`), une valeur qu'aucun écran ne montre et que la correction
- * efface (`chargeUtileAffaire`) ; pour un résident, il l'ignorait.
+ * 🔴 Les Destinataires d'une affaire SUIVIE ne s'offrent pas dans la Suite
+ * (25/09/2026) — voir `sectionsDeLaSuite`.
  */
 function sectionDeLaSuite(
 	entite: EntiteDeclaree,
@@ -295,9 +292,17 @@ export function sectionsDeLaSuite(
 	conditions: readonly ConditionInactive[],
 	droits: { perimetre: boolean; piecesJointes: boolean; diffusion: boolean; creneau: boolean },
 ): SectionsDeLaSuite {
+	//  🔴 Pas de Destinataires dans la Suite d'une affaire SUIVIE (25/09/2026).
+	//  Le formulaire les lui ouvre depuis la v2.50.0 (#1296), mais pour une seule
+	//  chose : la case « Confidentielle » — « pas de profils à choisir pour une
+	//  affaire suivie » (`SectionDestinataires`). La Suite ne porte pas cette case,
+	//  et elle proposait les profils : pour le conseil, le serveur les ÉCRIVAIT
+	//  sur l'affaire, valeur qu'aucun écran ne montre et que la correction efface
+	//  (`chargeUtileAffaire`). Il ne l'écrit plus (`add_evolution`).
+	const affaireSuivie = conditions.includes('suivie');
 	return {
 		perimetre: droits.perimetre && sectionPresente(entite, 'evolution', 'perimetre'),
-		destinataires: sectionDeLaSuite(entite, 'destinataires', conditions),
+		destinataires: sectionDeLaSuite(entite, 'destinataires', conditions) && !affaireSuivie,
 		specifiques: droits.creneau && creneauSpecifiquesPresent(entite),
 		piecesJointes: droits.piecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes'),
 		diffusion: droits.diffusion && sectionPresente(entite, 'evolution', 'diffusion'),
