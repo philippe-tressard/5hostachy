@@ -34,4 +34,7 @@ echo "==> Démarrage de l'API..."
 #  --no-access-log (#1300, 25/09/2026) : pas une ligne par requête avec l'adresse
 #  du client — une donnée personnelle dès que l'API lira l'adresse réelle. Les
 #  erreurs restent journalisées (uvicorn.error). 🔒 tests/test_journal_acces.py
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log
+#  --proxy-headers (#1300) : l'adresse du visiteur, transmise par Caddy — le
+#  réseau Docker, et lui seul, est de confiance. Même réseau que
+#  `trusted_proxies` du Caddyfile. 🔒 tests/test_adresse_client.py
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --proxy-headers --forwarded-allow-ips=172.16.0.0/12

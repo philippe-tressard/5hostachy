@@ -1,3 +1,17 @@
+# ── L'adresse du VISITEUR (#1300, 25/09/2026) ────────────────────────────────
+# cloudflared tourne sur l'HÔTE : son trafic arrive de la passerelle du réseau
+# Docker. On lui fait confiance — et à lui seul, le LAN (192.168.1.x) n'est pas
+# dedans — pour lire `Cf-Connecting-Ip`, que Cloudflare pose. Pas
+# X-Forwarded-For : Cloudflare AJOUTE à celui du client, dont la partie gauche
+# est donc falsifiable. Le même réseau est déclaré à uvicorn (`api/start.sh`),
+# et `api/tests/test_adresse_client.py` exige que les deux concordent.
+{
+    servers {
+        trusted_proxies static 172.16.0.0/12
+        client_ip_headers Cf-Connecting-Ip
+    }
+}
+
 :80 {
     # TLS géré par Cloudflare Tunnel (pas de TLS local nécessaire)
     encode zstd gzip
@@ -178,7 +192,11 @@
         # réponse d'API dépend d'une session par nature, et la prochaine route
         # qui servira un fichier n'aura pas à y penser.
         header Cache-Control "private, no-store"
-        reverse_proxy api:8000
+        # UN X-Forwarded-For, écrasé : l'adresse que Caddy a établie ci-dessus
+        # (#1300). Les limites de débit de l'API valent ainsi PAR VISITEUR.
+        reverse_proxy api:8000 {
+            header_up X-Forwarded-For {client_ip}
+        }
     }
 
     # Annonces de hall — jamais servies en direct (accès via /api/annonces-hall/{id}/pdf,

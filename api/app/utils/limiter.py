@@ -27,6 +27,11 @@ exactement le plafond qu'elle avait. Renommer et rerégler sont deux gestes.
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+#  🔴 PAR VISITEUR depuis #1300 (25/09/2026) : `get_remote_address` lit l'adresse
+#  qu'uvicorn a établie (`--proxy-headers`, depuis ce que Caddy transmet). Avant,
+#  toutes les requêtes portaient l'adresse de Caddy : un seul seau pour tout le
+#  site, et un attaquant qui épuisait `/auth/login` bloquait tous les résidents.
+#  Les valeurs ci-dessous n'ont pas changé : elles valent désormais par adresse.
 limiter = Limiter(key_func=get_remote_address)
 
 #: Une requête qui soumet un **secret devinable** — mot de passe, jeton de
