@@ -11,14 +11,7 @@ from typing import Optional
 from pydantic import BaseModel, field_validator
 
 from app.models.core import TypePrestataire
-
-
-def contact_joignable(contact: "PrestataireContact") -> bool:
-    """Un nom, et un moyen de le joindre — la règle de #1229, écrite une fois."""
-    return bool(
-        (contact.nom or "").strip()
-        and ((contact.telephone or "").strip() or (contact.email or "").strip())
-    )
+from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree, AssisteIASortie
 
 
 class PrestataireContact(BaseModel):
@@ -29,35 +22,32 @@ class PrestataireContact(BaseModel):
     email: Optional[str] = None
 
 
-class PrestataireCreate(BaseModel):
+class PrestataireCreate(AssisteIAEntree):
     nom: str
     specialite: str
     type_prestataire: TypePrestataire = TypePrestataire.ponctuel
     telephone: Optional[str] = None
     email: Optional[str] = None
+    #  🔴 FACULTATIFS depuis le 25/09/2026 (#1327) — revirement arbitré à l'écran :
+    #  « le contact ne doit pas être obligatoire ». #1229 exigeait la veille un
+    #  contact joignable à la création ; la règle et son validateur sont retirés.
     contacts: Optional[list[PrestataireContact]] = None
-
-    #  🔴 Un contact JOIGNABLE à la création (#1229, arbitré le 24/09/2026) : un
-    #  nom, et un téléphone OU un e-mail. Seulement ici — `PrestataireUpdate`
-    #  ne l'exige pas, les fiches existantes se corrigent sans être bloquées.
-    @field_validator("contacts")
-    @classmethod
-    def un_contact_joignable(cls, v):
-        if not any(contact_joignable(c) for c in (v or [])):
-            raise ValueError("un contact au moins : son nom, et un téléphone ou un e-mail")
-        return v
+    adresse: Optional[str] = None
+    description: Optional[str] = None
 
 
-class PrestataireUpdate(BaseModel):
+class PrestataireUpdate(AssisteIACorrection):
     nom: Optional[str] = None
     specialite: Optional[str] = None
     type_prestataire: Optional[TypePrestataire] = None
     telephone: Optional[str] = None
     email: Optional[str] = None
     contacts: Optional[list[PrestataireContact]] = None
+    adresse: Optional[str] = None
+    description: Optional[str] = None
 
 
-class PrestataireRead(BaseModel):
+class PrestataireRead(AssisteIASortie):
     id: int
     nom: str
     specialite: str
@@ -65,6 +55,8 @@ class PrestataireRead(BaseModel):
     telephone: Optional[str] = None
     email: Optional[str] = None
     contacts: list[PrestataireContact] = []
+    adresse: Optional[str] = None
+    description: Optional[str] = None
     actif: bool
 
     class Config:

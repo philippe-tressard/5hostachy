@@ -187,9 +187,9 @@
 						})}
 					on:cancel={gestes.annuler}
 				>
-					<svelte:fragment slot="specifiques" let:premiere>
+					<!--  La Mise en avant à SON rang, après les Destinataires (#1326). -->
+					<svelte:fragment slot="mise_en_avant">
 						<SectionOptionsPublication
-							{premiere}
 							options={OPTIONS}
 							perimetreCible={ticket.perimetre_cible ?? []}
 							dejaEpingle={ticket.epingle ?? false}

@@ -1,49 +1,59 @@
-"""Un prestataire se CRÉE avec un contact joignable (#1229, arbitré le 24/09/2026).
+"""La fiche d'un prestataire : contact FACULTATIF, adresse et description (#1327).
 
-« Contacts » devient une section obligatoire, donc dépliée, du formulaire
-« Nouveau prestataire ». Ce qui est exigé, tranché par l'utilisateur :
-**un contact avec un nom, et un téléphone OU un e-mail** — à la création
-seulement : les fiches existantes se corrigent sans être bloquées.
+## Revirement du 25/09/2026
 
-La règle vit dans le schéma de CRÉATION, pour qu'aucun autre chemin (import,
-appel direct) ne la contourne ; l'écran n'en montre que l'état.
+#1229 (24/09) exigeait à la création « un contact avec un nom, et un téléphone
+ou un e-mail ». Arbitré à l'écran le lendemain, capture à l'appui : « le contact
+ne doit pas être obligatoire ». La fiche gagne en même temps :
+
+- l'**adresse de l'entreprise**, facultative, dans la section Contacts ;
+- une **description** (section rouverte, avec l'assistant ✨ comme partout) —
+  donc la marque `assiste_ia`, que toute entité à Description porte.
+
+Ce fichier garde son nom : c'est l'histoire de la même règle, dans l'autre sens.
 """
 
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
 
-from app.routers.prestataires_schemas import PrestataireCreate, PrestataireUpdate
+from app.models.prestataires import Prestataire
+from app.routers.prestataires_schemas import PrestataireCreate, PrestataireRead, PrestataireUpdate
+from app.utils.assiste_ia import AssisteIAMixin
 
 BASE = {"nom": "Ascenseurs Durand", "specialite": "ascenseur"}
 
 
 @pytest.mark.parametrize(
     "contacts",
-    [
-        None,
-        [],
-        [{"nom": "Durand"}],  # un nom, mais personne à joindre
-        [{"telephone": "0600000000"}],  # un numéro, mais sans nom
-        [{"nom": "  ", "email": "a@b.fr"}],  # un nom blanc n'est pas un nom
-    ],
+    [None, [], [{"nom": "Durand"}], [{"telephone": "0600000000"}]],
 )
-def test_une_creation_sans_contact_joignable_est_refusee(contacts):
-    with pytest.raises(ValidationError, match="contact"):
-        PrestataireCreate(**BASE, contacts=contacts)
+def test_une_creation_sans_contact_joignable_est_acceptee(contacts):
+    """🔴 Cas zéro : ces quatre créations étaient refusées (422) depuis #1229."""
+    cree = PrestataireCreate(**BASE, contacts=contacts)
+    assert cree.nom == "Ascenseurs Durand"
 
 
-@pytest.mark.parametrize(
-    "contact",
-    [{"nom": "Durand", "telephone": "0600000000"}, {"nom": "Durand", "email": "d@exemple.fr"}],
-)
-def test_un_nom_et_un_moyen_de_joindre_suffisent(contact):
-    cree = PrestataireCreate(**BASE, contacts=[{"prenom": "", "nom": ""}, contact])
-    assert len(cree.contacts) == 2
+def test_l_adresse_et_la_description_voyagent_aux_trois_moments():
+    cree = PrestataireCreate(
+        **BASE, adresse="12 rue des Lilas\n75012 Paris", description="<p>Réactif.</p>"
+    )
+    assert cree.adresse == "12 rue des Lilas\n75012 Paris"
+    assert cree.description == "<p>Réactif.</p>"
+    assert PrestataireUpdate(adresse="ailleurs").adresse == "ailleurs"
+    lu = PrestataireRead(
+        id=1, nom="X", specialite="y", actif=True, adresse="a", description="d", assiste_ia=True
+    )
+    assert (lu.adresse, lu.description, lu.assiste_ia) == ("a", "d", True)
 
 
-def test_la_modification_ne_l_exige_pas():
-    """Les fiches existantes sans contact se corrigent sans être bloquées."""
-    assert PrestataireUpdate(nom="Nouveau nom").contacts is None
-    assert PrestataireUpdate(contacts=[]).contacts == []
+def test_le_prestataire_porte_la_marque_de_l_assistant_par_le_mixin():
+    assert issubclass(Prestataire, AssisteIAMixin)
+    assert Prestataire.model_fields["assiste_ia"].default is False
+    for champ in ("adresse", "description"):
+        assert champ in Prestataire.model_fields, champ
+
+
+def test_une_correction_sans_l_assistant_n_efface_pas_la_marque():
+    assert PrestataireUpdate(nom="Nouveau nom").assiste_ia is None
+    assert PrestataireCreate(**BASE).assiste_ia is False

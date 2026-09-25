@@ -147,6 +147,28 @@ const COMPOSANTS_SECTION = [
 	['SectionDescription', 'description'],
 	['SectionDiffusion', 'diffusion'],
 	['SectionWorkflow', 'suivi'],
+	//  🔴 #1326 (25/09/2026) : ces cinq-là étaient invisibles, et la Suite d'une
+	//  affaire rendait l'Équipement après le Suivi, la Mise en avant avant le
+	//  Périmètre. `SectionsSuiteConseil` compte au rang de sa PREMIÈRE section.
+	['SectionEquipement', 'equipement'],
+	['SuiteConseilEquipement', 'equipement'],
+	['SectionsSuiteConseil', 'quand'],
+	['SectionIntervenant', 'intervenant'],
+	['OptionsEvolutionTicket', 'mise_en_avant'],
+];
+
+/**  Les créneaux d'`EvolForm` à nom UNIQUE, et le rang où il les rend (#1326).
+ *   `specifiques` n'y est pas : d'autres composants portent un créneau de ce
+ *   nom, à un autre rang. */
+const CRENEAUX = [
+	['avant_suivi', 'equipement'],
+	['mise_en_avant', 'mise_en_avant'],
+];
+
+/**  `SectionsCiblageEvolution` rend la section de CHAQUE prop activée. */
+const PROPS_CIBLAGE = [
+	['avecPerimetre', 'perimetre'],
+	['avecDestinataires', 'destinataires'],
 ];
 
 /**  Les props de `ChampsCommuns` et la SECTION que chacune active.
@@ -240,6 +262,27 @@ export function sectionsDe(source) {
 		while ((x = re.exec(source))) {
 			if (!ignoree(x.index)) {
 				trouvees.push({ position: x.index, rang: RANGS_PAR_ID[id], quoi: balise });
+			}
+		}
+	}
+	//  Les créneaux d'`EvolForm`, à leur rang — dans l'hôte (`<slot name>`) comme
+	//  chez qui les remplit (`slot=`).
+	for (const [nom, id] of CRENEAUX) {
+		const re = new RegExp(String.raw`<slot name="${nom}"|slot="${nom}"`, 'g');
+		let x;
+		while ((x = re.exec(source))) {
+			if (!ignoree(x.index)) {
+				trouvees.push({ position: x.index, rang: RANGS_PAR_ID[id], quoi: `créneau ${nom}` });
+			}
+		}
+	}
+	const reCiblage = /<SectionsCiblageEvolution\b/g;
+	while ((m = reCiblage.exec(source))) {
+		if (ignoree(m.index)) continue;
+		const props = source.slice(m.index, finBaliseOuvrante(source, m.index));
+		for (const [prop, id] of PROPS_CIBLAGE) {
+			if (new RegExp(String.raw`\b${prop}\b(?!=\{false\})`).test(props)) {
+				trouvees.push({ position: m.index, rang: RANGS_PAR_ID[id], quoi: `Ciblage/${prop}` });
 			}
 		}
 	}

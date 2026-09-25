@@ -74,40 +74,36 @@ export const EQUIPEMENTS_AFFAIRE: readonly TypeEquipementOption[] = EQUIPEMENTS.
 	(e) => !HORS_EQUIPEMENT.includes(e.val),
 );
 
-/**  Le libellé d'un type d'équipement.
- *
- *   ⚠️ Le repli rend la valeur BRUTE plutôt qu'un tiret : une valeur inconnue
- *   signale une divergence avec le serveur, et l'afficher telle quelle la rend
- *   visible. Un `—` la masquerait, et le garde-fou étant côté tests, l'écran
- *   serait le seul endroit où elle pourrait encore se voir. */
 /**
- *  Un contact JOIGNABLE : un nom, et un téléphone ou un e-mail (#1229, arbitré le
- *  24/09/2026). Un prestataire ne se CRÉE qu'avec au moins un — la règle fait foi
- *  côté serveur (`prestataires_schemas.contact_joignable`) ; celle-ci ne sert qu'à
- *  montrer l'état à l'écran (étoile, bouton), jamais à décider.
+ *  Un contact RENSEIGNÉ : au moins une de ses valeurs est saisie. Les contacts
+ *  sont FACULTATIFS depuis le 25/09/2026 (#1327) — `contactJoignable`, qui
+ *  exigeait un nom et un moyen de joindre (#1229), est retiré avec la règle.
+ *  Un contact vide ne part pas : il n'est qu'une ligne de saisie restée blanche.
  */
-export function contactJoignable(c: {
-	nom?: string | null;
-	telephone?: string | null;
-	email?: string | null;
-}): boolean {
-	return !!(c.nom?.trim() && (c.telephone?.trim() || c.email?.trim()));
+export function contactRenseigne(c: Record<string, string | null | undefined>): boolean {
+	return Object.values(c).some((v) => v?.trim());
 }
 
 /**
- *  Ce qui part à l'enregistrement d'une fiche : tout contact qui porte une valeur
- *  — il ne partait qu'avec un TÉLÉPHONE, et un contact joignable par e-mail seul
+ *  Ce qui part à l'enregistrement d'une fiche : tout contact renseigné — il ne
+ *  partait qu'avec un TÉLÉPHONE, et un contact joignable par e-mail seul
  *  disparaissait en silence (#1229) —, et le téléphone de la fiche, composé des
  *  seuls numéros saisis.
  */
 export function contactsAEnvoyer<C extends Record<string, string | null | undefined>>(
 	saisis: C[],
 ): { contacts: C[]; telephone: string | null } {
-	const contacts = saisis.filter((c) => Object.values(c).some((v) => v?.trim()));
+	const contacts = saisis.filter(contactRenseigne);
 	const numeros = contacts.map((c) => c.telephone?.trim()).filter(Boolean);
 	return { contacts, telephone: numeros.join(',') || null };
 }
 
+/**  Le libellé d'un type d'équipement.
+ *
+ *   ⚠️ Le repli rend la valeur BRUTE plutôt qu'un tiret : une valeur inconnue
+ *   signale une divergence avec le serveur, et l'afficher telle quelle la rend
+ *   visible. Un `—` la masquerait, et le garde-fou étant côté tests, l'écran
+ *   serait le seul endroit où elle pourrait encore se voir. */
 export function equipLabel(val: string | null | undefined): string {
 	if (!val) return '—';
 	return EQUIPEMENTS.find((e) => e.val === val)?.label ?? val;
@@ -265,5 +261,26 @@ export function contratDepuis(
 		frequence_valeur: c.frequence_valeur ?? '',
 		prochaine_visite: c.prochaine_visite ?? '',
 		notes: c.notes ?? '',
+	};
+}
+
+/**
+ * La FICHE d'un prestataire, vierge ou d'après un prestataire existant.
+ *
+ * Écrite à la façon de `contratVierge` / `contratDepuis` : l'objet vide était
+ * recopié deux fois dans la page, et la correction énumérait ses champs à part —
+ * l'adresse et la description (#1327) auraient dû s'ajouter aux trois endroits.
+ */
+export function prestataireDepuis(p: Record<string, any> = {}) {
+	return {
+		nom: p.nom ?? '',
+		specialite: p.specialite ?? '',
+		type_prestataire: p.type_prestataire ?? 'ponctuel',
+		email: p.email ?? '',
+		adresse: p.adresse ?? '',
+		description: p.description ?? '',
+		//  Jamais relue du serveur : la marque ne s'écrit que si l'assistant
+		//  sert pendant CETTE saisie (`marquer`, sens unique).
+		assiste_ia: false,
 	};
 }

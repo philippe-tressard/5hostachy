@@ -29,6 +29,7 @@ from app.utils.assiste_ia import (
 def _modeles():
     from app.models.communaute import Idee, PetiteAnnonce, Sondage
     from app.models.core import Publication, PublicationEvolution, Ticket, TicketEvolution
+    from app.models.prestataires import Prestataire
 
     return [
         Ticket,
@@ -38,6 +39,8 @@ def _modeles():
         Sondage,
         Idee,
         PetiteAnnonce,
+        #  #1327 (25/09/2026) : la fiche prestataire porte une section Description.
+        Prestataire,
     ]
 
 

@@ -227,6 +227,13 @@ Les sections **1 à 8 décrivent l'entité** ; la **9 est un acte**.
 | **Édition** | **1→9 identiques à la création** — la Diffusion y est **rouverte** (18/08), mais **seule la transition décoché → coché envoie** |
 | **Évolution** | **création sans le titre** (hérité) · workflow **tracé** · périmètre et destinataires hérités · **9 rejouable** |
 
+🔒 **La Suite suit le MÊME ordre** (#1326, 25/09/2026, signalé à l'écran) :
+`EvolForm` offre trois créneaux, rendus à leur rang — `avant_suivi` (Équipement),
+`specifiques` (Quand, Intervenant), `mise_en_avant` (après les Destinataires) —,
+déduits de `SECTIONS_ORDRE` (`$lib/evolutions.creneauDe`). Il n'en avait qu'un,
+et la Mise en avant y passait avant le Périmètre. `lint:ordre-sections` tient
+l'ordre dans `EvolForm`, `test_creneaux_suite.py` le créneau chez chaque hôte.
+
 **L'édition corrige** — une erreur, un oubli, un complément. Le `PATCH` écrit une
 **correction**, jamais une transition.
 

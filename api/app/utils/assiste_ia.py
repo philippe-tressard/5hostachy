@@ -42,7 +42,11 @@ CHAMP = "assiste_ia"
 class AssisteIAMixin(SQLModel):
     """La colonne, héritée plutôt que recopiée neuf fois."""
 
-    assiste_ia: bool = Field(default=False)
+    #  `server_default` : une base NEUVE (`create_all`) porte le même défaut que
+    #  les bases migrées (0194, 0220, 0225 posent toutes `server_default="0"`).
+    #  Sans lui, un INSERT qui ne nomme pas la colonne passait en production et
+    #  échouait sur une base neuve (#1327).
+    assiste_ia: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})
 
 
 class AssisteIAEntree(BaseModel):

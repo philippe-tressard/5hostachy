@@ -29,6 +29,7 @@
 		EQUIPEMENTS as equipements,
 		TYPES_PRESTATAIRE as typesPrestataire,
 		contactsAEnvoyer,
+		prestataireDepuis,
 		contratDepuis,
 		contratVierge,
 	} from '$lib/prestataires';
@@ -116,7 +117,7 @@
 	// ── Prestataire form ──────────────────────────────────────────
 	let showPrestForm = false;
 	let editPrestId: number | null = null;
-	let prestForm = { nom: '', specialite: '', type_prestataire: 'ponctuel', email: '' };
+	let prestForm = prestataireDepuis();
 	let prestContacts: {
 		telephone: string;
 		prenom: string;
@@ -281,17 +282,12 @@
 	});
 
 	function resetPrestForm() {
-		prestForm = { nom: '', specialite: '', type_prestataire: 'ponctuel', email: '' };
+		prestForm = prestataireDepuis();
 		prestContacts = [{ telephone: '', prenom: '', nom: '', fonction: '', email: '' }];
 		editPrestId = null;
 	}
 	function startEditPrest(p: any) {
-		prestForm = {
-			nom: p.nom,
-			specialite: p.specialite ?? '',
-			type_prestataire: p.type_prestataire ?? 'ponctuel',
-			email: p.email ?? '',
-		};
+		prestForm = prestataireDepuis(p);
 		if (p.contacts && p.contacts.length > 0) {
 			prestContacts = p.contacts.map((c: any) => ({
 				telephone: c.telephone ?? '',

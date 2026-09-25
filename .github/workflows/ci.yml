@@ -1490,6 +1490,12 @@ jobs:
         working-directory: front
         run: npm run lint:carnet-annee
 
+      - name: Un refus du serveur se lit en phrase, jamais en JSON
+        # #1327 : le toast de « Nouveau prestataire » affichait la liste de
+        # validation brute d'un 422. `$lib/detail-erreur` est exécuté ici.
+        working-directory: front
+        run: npm run lint:detail-erreur
+
       - name: « Prénom NOM » concorde entre le front et l'API
         # La règle « le nom passe en capitales, le prénom garde sa casse » est
         # écrite DEUX fois — les contextes de construction sont ./api et ./front,

@@ -67,6 +67,7 @@
 	import SectionWorkflow from '$lib/components/SectionWorkflow.svelte';
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { writable } from 'svelte/store';
 	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
 	import {
 		typeDeLEntree,
@@ -125,6 +126,12 @@
 	/**  Une variante du GESTE, pas de la section — R4 ne sait pas la déclarer
 	 *   (#436) : faux sur une note interne, ligne de suivi et non signalement. */
 	export let avecPiecesJointes = true;
+	/**  L'hôte a-t-il quelque chose à poser AVANT le Suivi (l'Équipement, #1326) ?
+	 *   Un créneau déclaré mais vide ôterait au Suivi son rang de première section. */
+	export let avantSuivi = true;
+	/**  L'état que les TROIS créneaux partagent : l'Équipement (avant le Suivi)
+	 *   propose l'Intervenant (après) — `$lib/suite-conseil`. */
+	const partage = writable<Record<string, unknown>>({});
 	/** Valeurs par défaut des notifications */
 	export let defaultPartagerWhatsapp = false;
 	export let defaultEnvoyerSyndic = false;
@@ -240,11 +247,17 @@
 		perimetre: peutPreciserPerimetre,
 		piecesJointes: avecPiecesJointes,
 		diffusion: peutDiffuser,
-		creneau: !!$$slots.specifiques,
+		creneaux: {
+			avant_suivi: !!$$slots.avant_suivi && avantSuivi,
+			specifiques: !!$$slots.specifiques,
+			mise_en_avant: !!$$slots.mise_en_avant,
+		},
 	});
 	$: sectionPerimetre = sections.perimetre;
 	$: sectionDestinataires = sections.destinataires;
 	$: sectionSpecifiques = sections.specifiques;
+	$: sectionAvantSuivi = sections.avantSuivi;
+	$: sectionMiseEnAvant = sections.miseEnAvant;
 	$: sectionPhotos = sections.piecesJointes;
 	$: sectionDocuments = sections.piecesJointes;
 	$: sectionDiffusion = sections.diffusion;
@@ -355,24 +368,23 @@
       imbriquées pour un seul objet est le défaut signalé sur #425. Le titre,
       lui, reste — c'est lui qui dit ce qu'on fait. -->
 <FormulaireCreation {titre} encadre={false}>
-	<!-- ── 3. Workflow ───────────────────────────────────────────────────────
-	     Plus de rangée de pastilles : le geste a été déclaré par le bouton qui a
-	     ouvert ce formulaire (#426). Ne reste que ce qu'il faut encore préciser —
-	     vers quel état. Le libellé porte l'état ACTUEL en badge, à droite
-	     (`ux-patterns` §9 quater). -->
+	<!--  🔴 L'ORDRE EST CELUI DE `SECTIONS_ORDRE`, comme dans l'édition (#1326) :
+	      les trois créneaux de l'hôte se rendent à LEUR rang (`creneauDe`,
+	      `$lib/evolutions`) — Équipement avant le Suivi, Quand et Intervenant
+	      après, Mise en avant après les Destinataires. -->
+	{#if sectionAvantSuivi}
+		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
+		<slot name="avant_suivi" premiere={true} {partage} />
+	{/if}
+
 	{#if sectionWorkflow}
-		<!--  Section à UN champ : le titre EST le libellé, et le sélecteur ne
-		      réécrit rien (`ux-patterns` §9 septies). Même forme que la section
-		      Workflow de `FormulaireTicket`, au mot près. -->
-		<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). L'état COURANT est
-		      actif à l'ouverture : on voit où en est l'objet, et en changer est un
-		      clic. Laisser la pastille active telle quelle ne change rien — l'entrée
-		      est alors un simple commentaire, et c'est ce qui permet de n'avoir
-		      qu'UN point d'entrée sur la carte.
-		      Section à un champ : le titre EST le libellé, et il porte l'état actuel
-		      en badge (`ux-patterns` §9 septies et §9 quater). -->
+		<!--  Suivi : des PASTILLES, jamais un `<select>` nu (R3, #423). L'état
+		      COURANT est actif à l'ouverture ; le laisser tel quel fait de l'entrée
+		      un simple commentaire — UN point d'entrée sur la carte. Section à un
+		      champ : le titre EST le libellé, l'état actuel en badge
+		      (`ux-patterns` §9 septies et quater). -->
 		<SectionWorkflow
-			premiere
+			premiere={!sectionAvantSuivi}
 			idTitre="{idPrefixe}-workflow-titre"
 			options={statutOptions}
 			valeur={nouveauStatut || currentStatut}
@@ -381,32 +393,26 @@
 		/>
 	{/if}
 
-	<!--  2. Champs spécifiques — AVANT le ciblage : même ordre dans les quatre
-	      états (cadre #430, R2). Le commentaire l'inversait (05/09/2026). -->
 	{#if sectionSpecifiques}
-		<slot name="specifiques" premiere={!sectionWorkflow} />
+		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
+		<slot name="specifiques" premiere={!sectionWorkflow && !sectionAvantSuivi} {partage} />
 	{/if}
 
-	<!--  4. Périmètre · 5. Destinataires — dans `SectionsCiblageEvolution`. -->
+	<!--  Périmètre — les Destinataires viennent APRÈS les pièces jointes (#1326). -->
 	<SectionsCiblageEvolution
 		{idPrefixe}
-		premiere={!sectionWorkflow && !sectionSpecifiques}
+		premiere={!sectionWorkflow && !sectionSpecifiques && !sectionAvantSuivi}
 		avecPerimetre={sectionPerimetre}
 		bind:perimetre
 		perimetreBadge={libellePerimetreActuel}
 		{aidePerimetre}
-		avecDestinataires={sectionDestinataires}
-		bind:destinataires
 	/>
 
-	<!-- ── 6. Description ───────────────────────────────────────────────────
-	     Section à UN champ : le titre EST le libellé. Le rendu vient de
-	     `SectionDescription`, écrit une fois pour ce composant et
-	     `ChampsCommuns` (01/09/2026). -->
+	<!--  Description — `SectionDescription`, commun à `ChampsCommuns` (01/09/2026). -->
 	<SectionDescription
 		{idPrefixe}
 		idChamp="contenu"
-		premiere={!sectionWorkflow && !sectionSpecifiques && !sectionPerimetre && !sectionDestinataires}
+		premiere={!sectionWorkflow && !sectionSpecifiques && !sectionAvantSuivi && !sectionPerimetre}
 		titre={titreContenu}
 		requis={contenuRequis}
 		hauteur="90px"
@@ -421,14 +427,9 @@
 		bind:assisteIA
 	/>
 
-	<!-- ── 7-8. Photos et Documents ─────────────────────────────────────────
-	     ✅ Les pièces jointes ne dépendent PLUS du geste (18/08/2026). Une
-	     condition héritée les fermait sur un changement d'état — sans qu'aucun
-	     commit ni aucune issue n'en porte la raison, alors qu'une photo justifie
-	     souvent un passage à « Résolu ».
-
-	     Les deux sections viennent de `SectionsPiecesJointes` : elles étaient
-	     écrites à l'identique ici et dans `ChampsCommuns` (01/09/2026). -->
+	<!--  Pièces jointes — `SectionsPiecesJointes`, commun à `ChampsCommuns`. Elles ne
+	      dépendent PAS du geste (18/08/2026) : une photo justifie souvent un
+	      passage à « Résolu ». -->
 	<SectionsPiecesJointes
 		{idPrefixe}
 		avecPhotos={sectionPhotos}
@@ -438,11 +439,19 @@
 		idDocuments="docs"
 	/>
 
-	<!-- ── 9. Diffusion — un OBJET du site, rendu partout pareil (#498) ─────
-	     Arbitré à l'écran le 19/08/2026 : *« C'est une évolution sur l'objet
-	     Diffusion, qu'il soit positionné sur n'importe quel formulaire. »* Le
-	     bloc était écrit ici ET dans `ChampsCommuns` — deux écritures d'une même
-	     notion, donc deux valeurs libres de diverger. -->
+	<!--  Destinataires, puis Mise en avant — « à qui l'on parle, puis comment on
+	      le met en avant » (#1096), dans l'ordre de l'édition (#1326). -->
+	<SectionsCiblageEvolution
+		{idPrefixe}
+		avecDestinataires={sectionDestinataires}
+		bind:destinataires
+	/>
+	{#if sectionMiseEnAvant}
+		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
+		<slot name="mise_en_avant" premiere={false} {partage} />
+	{/if}
+
+	<!--  Diffusion — un OBJET du site, rendu partout pareil (#498, 19/08/2026). -->
 	<SectionDiffusion
 		bind:this={refDiffusion}
 		demanderApercu={demanderApercu ? brouillonApercu : null}

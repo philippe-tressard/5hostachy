@@ -1,40 +1,45 @@
 <!--
-  SectionsSuiteConseil.svelte — ce que le CONSEIL pose dans une Suite 🔄 :
-  Équipement, Quand, Intervenant, puis les options de publication.
+  SectionsSuiteConseil.svelte — ce que le CONSEIL pose dans une Suite 🔄, APRÈS
+  le Suivi : Quand, Intervenant, et la planification qu'il envoie.
 
   ## Pourquoi (#1207, arbitré le 24/09/2026)
 
   Un membre du conseil qui n'est pas administrateur n'avait AUCUN chemin
   d'écran pour dater l'affaire d'un résident, désigner son intervenant ou son
   équipement : le crayon ne lui est pas montré (`droits.peutEditer`), et le
-  serveur refuse qu'il réécrive le texte d'un autre. Ces trois sections sont
-  pourtant les siennes (`inactivePour.resident`). Arbitré : « via la Suite » —
-  chaque changement laisse sa trace au fil de l'affaire.
+  serveur refuse qu'il réécrive le texte d'un autre. Ces sections sont pourtant
+  les siennes (`inactivePour.resident`). Arbitré : « via la Suite » — chaque
+  changement laisse sa trace au fil de l'affaire.
 
-  Rendu dans le créneau `specifiques` d'`EvolForm`, à la place des seules
-  options : la carte et la fiche d'une affaire l'emploient, jamais une copie.
-  Hors conseil, ou sur une actualité, il ne rend que les options — comme avant.
+  ## Découpé à son rang (#1326, 25/09/2026)
+
+  Il rendait aussi l'Équipement et la Mise en avant, d'un bloc, dans le créneau
+  `specifiques` : l'Équipement passait après le Suivi, la Mise en avant avant le
+  Périmètre. L'Équipement est désormais `SuiteConseilEquipement` (créneau
+  `avant_suivi`), la Mise en avant `OptionsEvolutionTicket` (créneau
+  `mise_en_avant`), et l'état qu'ils partagent vit dans `$lib/suite-conseil`.
+
   Les règles serveur sont celles de la correction (`utils/intervenant`,
   `_appliquer_quand`), appliquées par `add_evolution`.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { Writable } from 'svelte/store';
 	import { prestataires as prestatairesApi, type Ticket } from '$lib/api';
 	import { essayer } from '$lib/chargement';
-	import { depuisChampLocal, pourChampLocal } from '$lib/date';
-	import { estBati, intervenantPropose, natureDe } from '$lib/formulaire-affaire';
+	import { depuisChampLocal } from '$lib/date';
+	import { intervenantPropose } from '$lib/formulaire-affaire';
 	import { isCS } from '$lib/stores/auth';
-	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
-	import SectionEquipement from './SectionEquipement.svelte';
+	import { conseilDansLaSuite, equipementDansLaSuite, etatSuite } from '$lib/suite-conseil';
 	import SectionIntervenant from './SectionIntervenant.svelte';
 	import SectionQuand from './SectionQuand.svelte';
 
 	export let ticket: Ticket;
 	export let premiere = false;
-	/** Les options de publication, liées comme avant — et `planification`, ce
-	 *  que la Suite envoie en plus, qu'`optionsVersTicket` fait voyager. Le serveur
-	 *  ne change que ce qui diffère de l'affaire : renvoyer une valeur inchangée
-	 *  est muet. Vide hors conseil. */
+	export let partage: Writable<Record<string, unknown>>;
+	/** Les options de la Suite : cette section n'y pose que `planification` — ce
+	 *  qu'`optionsVersTicket` fait voyager. Le serveur ne change que ce qui diffère
+	 *  de l'affaire : renvoyer une valeur inchangée est muet. Vide hors conseil. */
 	export let options: {
 		epingle: boolean;
 		urgente: boolean;
@@ -43,13 +48,11 @@
 		planification?: Record<string, unknown>;
 	};
 
-	$: conseil = $isCS && natureDe(ticket.categorie) !== 'actualite';
-	$: bati = estBati(ticket.categorie);
+	const etat = etatSuite(partage, ticket);
 
-	let equipement = ticket.equipement ?? '';
-	let prestataireId: number | null = ticket.prestataire_id ?? null;
-	let debut = pourChampLocal(ticket.debut);
-	let fin = pourChampLocal(ticket.fin);
+	$: conseil = conseilDansLaSuite(ticket, $isCS);
+	$: bati = equipementDansLaSuite(ticket, $isCS);
+
 	let prestataires: { id: number; nom: string; actif?: boolean; specialite?: string | null }[] = [];
 	let contrats: {
 		actif?: boolean;
@@ -59,42 +62,46 @@
 	let erreur = '';
 
 	onMount(async () => {
-		if (!conseil || !bati) return;
+		if (!bati) return;
 		[prestataires, erreur] = await essayer(prestatairesApi.list(), []);
 		[contrats] = await essayer(prestatairesApi.contrats(), []);
 	});
 
 	//  L'équipement PROPOSE l'intervenant sous contrat, comme dans le formulaire.
-	let equipementVu = equipement;
-	$: if (equipement !== equipementVu) {
-		equipementVu = equipement;
-		if (prestataireId === null)
-			prestataireId = intervenantPropose(equipement, contrats, prestataires);
+	let equipementVu = $etat.equipement;
+	$: if ($etat.equipement !== equipementVu) {
+		equipementVu = $etat.equipement;
+		if ($etat.prestataireId === null)
+			$etat.prestataireId = intervenantPropose($etat.equipement, contrats, prestataires);
 	}
 
 	$: options.planification = !conseil
 		? {}
 		: {
-				debut: depuisChampLocal(debut),
-				fin: depuisChampLocal(fin),
-				...(bati ? { equipement: equipement || null, prestataire_id: prestataireId } : {}),
+				debut: depuisChampLocal($etat.debut),
+				fin: depuisChampLocal($etat.fin),
+				...(bati
+					? { equipement: $etat.equipement || null, prestataire_id: $etat.prestataireId }
+					: {}),
 			};
 </script>
 
 {#if conseil}
-	{#if bati}
-		<SectionEquipement idPrefixe="suite-{ticket.id}" pliable bind:equipement />
-	{/if}
-	<SectionQuand idPrefixe="suite-{ticket.id}-quand" pliable bind:debut bind:fin />
+	<SectionQuand
+		idPrefixe="suite-{ticket.id}-quand"
+		{premiere}
+		pliable
+		bind:debut={$etat.debut}
+		bind:fin={$etat.fin}
+	/>
 	{#if bati}
 		<SectionIntervenant
 			idPrefixe="suite-{ticket.id}"
 			pliable
-			{equipement}
+			equipement={$etat.equipement}
 			{erreur}
 			bind:prestataires
-			bind:prestataireId
+			bind:prestataireId={$etat.prestataireId}
 		/>
 	{/if}
 {/if}
-<OptionsEvolutionTicket {premiere} bind:options />

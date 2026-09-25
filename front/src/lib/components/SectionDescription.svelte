@@ -62,6 +62,10 @@
 	export let hauteur = '120px';
 	/** Première section rendue : elle ne porte pas de filet au-dessus. */
 	export let premiere = false;
+	/**  Pliée quand la déclaration de l'entité le dit — une description
+	 *   facultative (#1327, fiche prestataire). Elle se rouvre d'office dès
+	 *   qu'elle porte un texte. */
+	export let pliable = false;
 
 	export let valeur = '';
 
@@ -87,6 +91,9 @@
 	{premiere}
 	{titre}
 	{requis}
+	{pliable}
+	valeurModifiee={!richEmpty(valeur)}
+	resume={richEmpty(valeur) ? 'aucune' : 'renseignée'}
 	rempli={!richEmpty(valeur)}
 	idTitre="{idPrefixe}-{idChamp}-titre"
 >
