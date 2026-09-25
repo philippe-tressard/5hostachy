@@ -37,6 +37,8 @@
 	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
 	import type { Ticket } from '$lib/api';
 	import SectionsSuiteConseil from './SectionsSuiteConseil.svelte';
+	import SuiteConseilEquipement from './SuiteConseilEquipement.svelte';
+	import { equipementDansLaSuite } from '$lib/suite-conseil';
 	import { tickets as ticketsApi, type TicketEvolution } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from './Toast.svelte';
@@ -247,17 +249,23 @@
 					{whatsappInterdit}
 					showEmail={$isCS}
 					saving={enregistre}
+					avantSuivi={!!ticket && equipementDansLaSuite(ticket, $isCS)}
 					on:submit={ajouter}
 					on:cancel={() => (ouvert = false)}
 				>
-					<!--  Section 2 — le MÊME composant que la liste des tickets : deux
-					      écrans commentent un ticket, un seul bloc les sert. -->
-					<svelte:fragment slot="specifiques" let:premiere>
+					<!--  Les MÊMES composants que la liste des tickets, chacun à son
+					      rang (#1326) : Équipement, puis Quand et Intervenant, puis
+					      la Mise en avant. -->
+					<svelte:fragment slot="avant_suivi" let:partage>
+						{#if ticket}<SuiteConseilEquipement {ticket} {partage} />{/if}
+					</svelte:fragment>
+					<svelte:fragment slot="specifiques" let:premiere let:partage>
 						{#if ticket}
-							<SectionsSuiteConseil {ticket} {premiere} bind:options />
-						{:else}
-							<OptionsEvolutionTicket {premiere} bind:options />
+							<SectionsSuiteConseil {ticket} {premiere} {partage} bind:options />
 						{/if}
+					</svelte:fragment>
+					<svelte:fragment slot="mise_en_avant">
+						<OptionsEvolutionTicket bind:options />
 					</svelte:fragment>
 				</EvolForm>
 			{/key}

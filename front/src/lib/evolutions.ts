@@ -2,6 +2,7 @@ import { separerFichiers } from '$lib/fichiers';
 import { perimetreHerite } from '$lib/perimetres';
 import {
 	motifInactif,
+	SECTIONS_ORDRE,
 	sectionPresente,
 	type ConditionInactive,
 	type EntiteDeclaree,
@@ -209,17 +210,16 @@ export function etatInitialEntree(
 }
 
 /**
- * Les sections que porte le créneau `specifiques` d'`EvolForm` — la Catégorie,
- * et ce qu'une Suite d'affaire y pose : Équipement · Quand · Intervenant pour le
- * conseil (`SectionsSuiteConseil`, #1207), et la Mise en avant
- * (`OptionsEvolutionTicket`).
+ * Les sections qu'un ÉCRAN HÔTE pose dans une Suite — la Catégorie, et ce qu'une
+ * Suite d'affaire y ajoute : Équipement · Quand · Intervenant pour le conseil
+ * (`SectionsSuiteConseil`, #1207), et la Mise en avant (`OptionsEvolutionTicket`,
+ * `SectionOptionsPublication`).
  *
  * 🔴 Le créneau ne s'ouvrait que sur `nature` (25/09/2026). L'affaire la déclare
  * `hérité` en évolution : sa Suite ne rendait donc AUCUNE de ces sections, et une
- * affaire ne pouvait pas devenir urgente en cours de suivi — le serveur,
- * lui, appliquait bien ce qu'on lui envoyait (`appliquer_options`).
+ * affaire ne pouvait pas devenir urgente en cours de suivi.
  */
-const SECTIONS_DU_CRENEAU: readonly IdSection[] = [
+const SECTIONS_DE_L_HOTE: readonly IdSection[] = [
 	'nature',
 	'equipement',
 	'quand',
@@ -227,9 +227,32 @@ const SECTIONS_DU_CRENEAU: readonly IdSection[] = [
 	'mise_en_avant',
 ];
 
+/**
+ * Les TROIS créneaux d'`EvolForm`, à leur rang (#1326, 25/09/2026).
+ *
+ * Il n'y en avait qu'UN, rendu après le Suivi et avant le Périmètre : l'Équipement
+ * (rang 2) y passait APRÈS le Suivi (3), et la Mise en avant (12) avant le
+ * Périmètre (7). Signalé à l'écran : « l'ordre de section d'une affaire n'est pas
+ * le même en mode édition et en mode suite ».
+ *
+ * Le créneau d'une section se DÉDUIT de `SECTIONS_ORDRE` — avant le Suivi, avant
+ * le Périmètre, ou après les Destinataires — jamais d'une seconde table : c'est
+ * elle qui avait laissé la Suite dans l'ordre d'avant les treize sections.
+ */
+export type Creneau = 'avant_suivi' | 'specifiques' | 'mise_en_avant';
+
+export function creneauDe(id: IdSection): Creneau {
+	const rang = SECTIONS_ORDRE.indexOf(id);
+	if (rang < SECTIONS_ORDRE.indexOf('suivi')) return 'avant_suivi';
+	if (rang < SECTIONS_ORDRE.indexOf('perimetre')) return 'specifiques';
+	return 'mise_en_avant';
+}
+
 /** Le créneau s'ouvre dès que l'une de ses sections est déclarée en évolution. */
-function creneauSpecifiquesPresent(entite: EntiteDeclaree): boolean {
-	return SECTIONS_DU_CRENEAU.some((id) => sectionPresente(entite, 'evolution', id));
+function creneauPresent(entite: EntiteDeclaree, creneau: Creneau): boolean {
+	return SECTIONS_DE_L_HOTE.some(
+		(id) => creneauDe(id) === creneau && sectionPresente(entite, 'evolution', id),
+	);
 }
 
 /**
@@ -258,7 +281,9 @@ function sectionDeLaSuite(
 export interface SectionsDeLaSuite {
 	perimetre: boolean;
 	destinataires: boolean;
+	avantSuivi: boolean;
 	specifiques: boolean;
+	miseEnAvant: boolean;
 	piecesJointes: boolean;
 	diffusion: boolean;
 }
@@ -290,7 +315,13 @@ export interface SectionsDeLaSuite {
 export function sectionsDeLaSuite(
 	entite: EntiteDeclaree,
 	conditions: readonly ConditionInactive[],
-	droits: { perimetre: boolean; piecesJointes: boolean; diffusion: boolean; creneau: boolean },
+	droits: {
+		perimetre: boolean;
+		piecesJointes: boolean;
+		diffusion: boolean;
+		/** Les créneaux que l'écran hôte REMPLIT (`$$slots`). */
+		creneaux: Record<Creneau, boolean>;
+	},
 ): SectionsDeLaSuite {
 	//  🔴 Pas de Destinataires dans la Suite d'une affaire SUIVIE (25/09/2026).
 	//  Le formulaire les lui ouvre depuis la v2.50.0 (#1296), mais pour une seule
@@ -303,7 +334,9 @@ export function sectionsDeLaSuite(
 	return {
 		perimetre: droits.perimetre && sectionPresente(entite, 'evolution', 'perimetre'),
 		destinataires: sectionDeLaSuite(entite, 'destinataires', conditions) && !affaireSuivie,
-		specifiques: droits.creneau && creneauSpecifiquesPresent(entite),
+		avantSuivi: droits.creneaux.avant_suivi && creneauPresent(entite, 'avant_suivi'),
+		specifiques: droits.creneaux.specifiques && creneauPresent(entite, 'specifiques'),
+		miseEnAvant: droits.creneaux.mise_en_avant && creneauPresent(entite, 'mise_en_avant'),
 		piecesJointes: droits.piecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes'),
 		diffusion: droits.diffusion && sectionPresente(entite, 'evolution', 'diffusion'),
 	};

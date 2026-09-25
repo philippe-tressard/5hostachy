@@ -56,6 +56,9 @@
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import EvolForm from './EvolForm.svelte';
 	import SectionsSuiteConseil from './SectionsSuiteConseil.svelte';
+	import SuiteConseilEquipement from './SuiteConseilEquipement.svelte';
+	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
+	import { equipementDansLaSuite } from '$lib/suite-conseil';
 	import { TICKET } from '$lib/entites/ticket';
 	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
 	import {
@@ -339,14 +342,22 @@
 						whatsappInterdit={motifWhatsappInterdit(ticket.confidentiel ?? false, 'ticket')}
 						peutDiffuser={$isCS}
 						saving={evolutionEnCours}
+						avantSuivi={equipementDansLaSuite(ticket, $isCS)}
 						on:submit={(e) =>
 							dispatch('evoluer', { ...e.detail, ...optionsVersTicket(optionsEvol) })}
 						on:cancel={() => dispatch('annuler')}
 					>
-						<!--  Section 2 — le MÊME composant que la fiche du ticket : deux
-						      écrans commentent un ticket, un seul bloc les sert. -->
-						<svelte:fragment slot="specifiques" let:premiere>
-							<SectionsSuiteConseil {ticket} {premiere} bind:options={optionsEvol} />
+						<!--  Les MÊMES composants que la fiche du ticket, chacun à son
+						      rang (#1326) : Équipement, puis Quand et Intervenant, puis
+						      la Mise en avant. -->
+						<svelte:fragment slot="avant_suivi" let:partage>
+							<SuiteConseilEquipement {ticket} {partage} />
+						</svelte:fragment>
+						<svelte:fragment slot="specifiques" let:premiere let:partage>
+							<SectionsSuiteConseil {ticket} {premiere} {partage} bind:options={optionsEvol} />
+						</svelte:fragment>
+						<svelte:fragment slot="mise_en_avant">
+							<OptionsEvolutionTicket bind:options={optionsEvol} />
 						</svelte:fragment>
 					</EvolForm>
 				</div>
