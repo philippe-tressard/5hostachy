@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 
 ARG GIT_HASH=dev
 ARG INSTANCE_ID=
@@ -17,7 +17,7 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine AS runner
+FROM node:25-alpine AS runner
 RUN apk add --no-cache tzdata
 WORKDIR /app
 COPY --from=builder /app/build ./build
