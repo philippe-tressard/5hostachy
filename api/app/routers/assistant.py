@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
@@ -22,6 +22,7 @@ from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import Utilisateur
 from app.utils.assistant_description import Demande, disponible, retravailler
+from app.utils.limiter import LIMITE_APPEL_FACTURE, limiter
 from app.utils.llm import ErreurLLM
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
@@ -65,7 +66,9 @@ def assistant_disponible(
     response_model=PropositionDescription,
     summary="Retravailler un titre et une description (CS/Admin)",
 )
+@limiter.limit(LIMITE_APPEL_FACTURE)
 async def proposer_description(
+    request: Request,
     body: DemandeDescription,
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),

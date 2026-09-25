@@ -9,11 +9,12 @@ Tout est réservé à l'administrateur, comme l'onglet. Rien de la clé ne sort 
 elle s'emploie côté serveur, et `config.py` la masque à la lecture (`_SECRETS`).
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import Session
 
 from app.auth.deps import require_admin
 from app.database import get_session
+from app.utils.limiter import LIMITE_APPEL_FACTURE, limiter
 from app.models.core import Utilisateur
 
 router = APIRouter(prefix="/config", tags=["config"])
@@ -35,7 +36,9 @@ def llm_usages(
 
 
 @router.post("/llm-test")
+@limiter.limit(LIMITE_APPEL_FACTURE)
 async def llm_test(
+    request: Request,
     usage: str,
     user: Utilisateur = Depends(require_admin),
     session: Session = Depends(get_session),

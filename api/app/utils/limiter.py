@@ -77,3 +77,16 @@ LIMITE_JOURNAL = "60/minute"
 #: le formulaire d'inscription affiche. La limite n'y protège rien d'autre que le
 #: serveur, d'où un plafond large.
 LIMITE_LECTURE_PUBLIQUE = "60/minute"
+
+#: Un appel qui **se facture** : le fournisseur d'IA (`utils.llm.demander`) —
+#: synthèse de contrat, assistant de description, test de configuration.
+#: Ailleurs une requête en trop coûte du CPU ; ici un double-clic, une tempête
+#: de réessais, un onglet qui se recharge se lisent sur une facture (#1299).
+#:
+#: ⚠️ C'est un garde-BOUCLE, pas un plafond de dépense : il ne connaît ni le
+#: prix d'un appel ni le solde. Le seul plafond qui vaille se pose sur le
+#: compte du fournisseur. 10/minute reste hors d'atteinte d'un usage
+#: légitime — une synthèse dure de quelques secondes à plusieurs minutes.
+#: 🔒 `tests/test_limite_appel_facture.py` l'exige de TOUTE route qui atteint
+#: `demander`, relevée dans le code.
+LIMITE_APPEL_FACTURE = "10/minute"
