@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { confirmer, SUPPRESSION } from '$lib/confirmation';
+	import { messageErreur } from '$lib/erreurs';
 	import FormulaireFaq from '$lib/components/FormulaireFaq.svelte';
 	import CarteFaq from '$lib/components/CarteFaq.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -10,7 +12,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import { replier } from '$lib/texte';
+	import { categoriesPourStatut, grouperParCategorie, normalizeCategorieLabel } from '$lib/faq';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _pc = getPageConfig($configStore, 'faq', defautsDePage('faq'));
@@ -41,87 +43,9 @@
 
 	$: canEdit = $isCS;
 
-	function normalizeCategorieLabel(cat: string | null | undefined): string {
-		const original = cat ?? 'Général';
-		const n = replier(original);
-		if (n.includes('coproprietaire') && n.includes('mandataire')) {
-			return '📋 Copropriétaire bailleur';
-		}
-		return original;
-	}
-
-	function isLocataireCategory(cat: string): boolean {
-		const n = replier(cat);
-		return n.includes('locataire');
-	}
-
-	function isCoproBailleurCategory(cat: string): boolean {
-		const n = replier(cat);
-		return n.includes('coproprietaire') && (n.includes('bailleur') || n.includes('mandataire'));
-	}
-
-	function isCoproResidentCategory(cat: string): boolean {
-		const n = replier(cat);
-		return n.includes('coproprietaire') && n.includes('resident');
-	}
-
-	function isCoproprietaireStatus(statut: string): boolean {
-		const n = replier(statut);
-		return n.includes('coproprietaire');
-	}
-
-	function isCoproBailleurStatus(statut: string): boolean {
-		const n = replier(statut);
-		return isCoproprietaireStatus(statut) && (n.includes('bailleur') || n.includes('mandataire'));
-	}
-
-	function isCoproResidentStatus(statut: string): boolean {
-		const n = replier(statut);
-		return isCoproprietaireStatus(statut) && n.includes('resident');
-	}
-
-	$: grouped = items.reduce((acc: Record<string, any[]>, it) => {
-		const cat = normalizeCategorieLabel(it.categorie ?? 'Général');
-		if (!acc[cat]) acc[cat] = [];
-		acc[cat].push(it);
-		return acc;
-	}, {});
-
+	$: grouped = grouperParCategorie(items);
 	// Masquer les catégories FAQ non pertinentes selon le statut
-	$: filteredGrouped = (() => {
-		const statut = $currentUser?.statut;
-		if (!statut || canEdit) return grouped;
-
-		const out: Record<string, any[]> = {};
-		for (const [cat, catItems] of Object.entries(grouped)) {
-			if (replier(statut) === 'locataire') {
-				if (isCoproResidentCategory(cat) || isCoproBailleurCategory(cat)) continue;
-				out[cat] = catItems;
-				continue;
-			}
-
-			if (isCoproResidentStatus(statut)) {
-				if (isLocataireCategory(cat) || isCoproBailleurCategory(cat)) continue;
-				out[cat] = catItems;
-				continue;
-			}
-
-			if (isCoproBailleurStatus(statut)) {
-				if (isLocataireCategory(cat) || isCoproResidentCategory(cat)) continue;
-				out[cat] = catItems;
-				continue;
-			}
-
-			if (isCoproprietaireStatus(statut)) {
-				if (isLocataireCategory(cat)) continue;
-				out[cat] = catItems;
-				continue;
-			}
-
-			out[cat] = catItems;
-		}
-		return out;
-	})();
+	$: filteredGrouped = canEdit ? grouped : categoriesPourStatut(grouped, $currentUser?.statut);
 
 	onMount(async () => {
 		await loadFaq();
@@ -247,13 +171,13 @@
 	}
 
 	async function deleteItem(it: any) {
-		if (!confirm(`Supprimer "${it.question}" ?`)) return;
+		if (!(await confirmer(SUPPRESSION(`« ${it.question} »`)))) return;
 		try {
 			await faqApi.delete(it.id);
 			items = items.filter((i) => i.id !== it.id);
 			toast('info', 'Élément supprimé.');
 		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 

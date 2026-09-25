@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 /**
- * Garde-fou : le nombre de `confirm()` NATIFS ne peut que DÉCROÎTRE (#605).
+ * Garde-fou : AUCUN `confirm()` NATIF (#605, #1043).
  *
- * ## Pourquoi un plafond et non une interdiction
+ * 🔴 **Interdiction sèche depuis le 25/09/2026.** Les douze derniers ont été
+ * convertis (#1043) : le plafond est tombé à zéro, et un plafond à zéro et une
+ * interdiction disent la même chose — mais seule la seconde le dit à qui lit le
+ * code. C'est le chemin qu'avaient déjà suivi `prompt()` et `alert()`.
+ *
+ * ## Pourquoi il a d'abord été un plafond
  *
  * Quarante gestes du site demandaient confirmation avec la boîte native du
  * navigateur. Elle bloque le fil d'exécution, ignore la charte, et — le plus
@@ -17,11 +22,7 @@
  * baisse à chaque écran repris. Une interdiction sèche aurait été désarmée dans
  * la semaine ; un simple avertissement n'aurait rien empêché.
  *
- * ⚠️ **Le plafond se met à jour EN BAISSANT, jamais en montant.** Un lot qui
- * l'augmente a introduit un `confirm()` natif, ce que ce contrôle existe pour
- * refuser.
- *
- * Usage : npm run lint:confirmation   (exit 1 si le plafond est dépassé)
+ * Usage : npm run lint:confirmation   (exit 1 au premier `confirm()` natif)
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 
@@ -33,16 +34,10 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
 
 /**
- * Le compte au 12/09/2026 : 28 → 18, en convertissant `sondages/[id]`, `tickets`,
- * `PageCommunaute`, `OngletPerimetres` et `OngletAcces` — les mêmes écrans que le lot sur
- * `messageErreur`, et c'est délibéré : les deux dettes vivent dans les mêmes
- * gestes, et les traiter séparément aurait fait rouvrir deux fois les mêmes
- * fichiers.
- *
- * 24/09/2026 : 14 → 12 — `OngletAnnonces` et `Reponses`, avec la passe de
- * finition des Petites annonces.
+ * L'historique du compte, gardé parce qu'il dit à quel rythme une dette se
+ * solde : 40 → 28 → 18 (12/09/2026, avec le lot `messageErreur` : mêmes écrans,
+ * mêmes gestes) → 14 → 12 (24/09, Petites annonces) → **0** (25/09, #1043).
  */
-const PLAFOND = 12;
 
 /**
  * Fichiers qui PARLENT de `confirm()` sans en appeler un : le composant de
@@ -174,27 +169,20 @@ if (sansAwait.length) {
 	process.exit(1);
 }
 
-if (releve.length > PLAFOND) {
+if (releve.length) {
 	console.error(
-		`\n✗ ${releve.length} appel(s) à \`confirm()\` natif — le plafond est ${PLAFOND}.\n\n` +
+		`\n✗ ${releve.length} appel(s) à \`confirm()\` natif :\n\n` +
 			releve.map((l) => `   ${l}`).join('\n') +
 			`\n\n  La boîte native bloque le navigateur, ignore la charte, et donne le MÊME` +
-			`\n  aspect à « archiver » et à « supprimer définitivement ».` +
-			`\n  Employer \`confirmer()\` de \`$lib/confirmation\` — une ligne, comme avant.\n`,
-	);
-	process.exit(1);
-}
-
-if (releve.length < PLAFOND) {
-	console.error(
-		`\n✗ Le plafond est PÉRIMÉ : ${releve.length} appel(s) restants pour un plafond de ${PLAFOND}.\n\n` +
-			`  Abaisser \`PLAFOND\` à ${releve.length} dans ce fichier. Un plafond qui reste\n` +
-			`  au-dessus du réel laisse la place d'en réintroduire sans que rien ne le dise.\n`,
+			`\n  aspect à « archiver » et à « supprimer définitivement ». Le compte est à` +
+			`\n  ZÉRO depuis le 25/09/2026 (#1043).` +
+			`\n  → \`if (!(await confirmer('…'))) return;\` — \`$lib/confirmation\`, une ligne,` +
+			`\n    et \`SUPPRESSION(…)\` pour ce qui ne se défait pas.\n`,
 	);
 	process.exit(1);
 }
 
 console.log(
-	`✓ Confirmation : ${releve.length} \`confirm()\` natif(s) restant(s) sur un plafond de ${PLAFOND} ` +
-		`(${tous.length} fichiers analysés) — la conversion vers \`confirmer()\` se poursuit écran par écran.`,
+	`✓ Confirmation : aucun \`confirm()\`, \`prompt()\` ni \`alert()\` natif ` +
+		`(${tous.length} fichiers analysés), et chaque \`confirmer()\` est attendu.`,
 );

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { confirmer } from '$lib/confirmation';
+	import { messageErreur } from '$lib/erreurs';
 	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, admin as adminApi } from '$lib/api';
@@ -157,24 +159,24 @@
 
 	// ── Résolution / Ignorer ─────────────────────────────────────────────────
 	async function resoudre(id: number) {
-		if (!confirm('Créer/confirmer le lot et créer le lien copropriétaire ?')) return;
+		if (!(await confirmer('Créer/confirmer le lot et créer le lien copropriétaire ?'))) return;
 		try {
 			await lotsApi.resoudreImport(id);
 			toast('success', 'Lot confirmé et lien copropriétaire créé');
 			await reload();
 		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur résolution');
+			toast('error', messageErreur(e, 'Erreur résolution'));
 		}
 	}
 
 	async function ignorer(id: number) {
-		if (!confirm('Ignorer cet import ?')) return;
+		if (!(await confirmer('Ignorer cet import ?'))) return;
 		try {
 			await lotsApi.ignorerimport(id);
 			toast('info', 'Import ignoré');
 			await reload();
 		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+			toast('error', messageErreur(e));
 		}
 	}
 

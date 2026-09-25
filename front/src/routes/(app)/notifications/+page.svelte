@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	//  🔴 Les deux `class:` du gabarit remplacent un ternaire INTERPOLÉ (#810).
 	//  Devant `class="… {cond ? 'a' : 'b'}"`, Svelte cesse de déclarer les
 	//  sélecteurs inutilisés pour TOUT le fichier — le contrôle devenait aveugle
@@ -56,7 +57,7 @@
 	}
 
 	async function remove(id: number) {
-		if (!confirm('Supprimer cette notification ?')) return;
+		if (!(await confirmer(SUPPRESSION('Cette notification')))) return;
 		deleting = new Set([...deleting, id]);
 		try {
 			await notifApi.delete(id);

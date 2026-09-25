@@ -24,6 +24,7 @@
   commentaire, et qui se serait produit à cette extraction-ci.
 -->
 <script lang="ts">
+	import { confirmer } from '$lib/confirmation';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { bailleur as bailApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
@@ -181,7 +182,7 @@
 	}
 
 	async function recupererAcces() {
-		if (!confirm('Récupérer tous les accès confiés au locataire pour ce bail ?')) return;
+		if (!(await confirmer('Récupérer tous les accès confiés au locataire pour ce bail ?'))) return;
 		try {
 			const updated = await bailApi.recupererAcces(bailId);
 			accesListe = accesListe.map((a) => {
