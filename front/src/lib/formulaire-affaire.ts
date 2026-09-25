@@ -169,11 +169,13 @@ export function chargeUtileAffaire(
 		frequence_valeur: entretien && s.frequenceType ? Number(s.frequenceValeur) || null : null,
 	});
 	if (actualite) {
-		//  Pas de suivi : ni état, ni 🛡️, ni kanban — effacés s'ils venaient
-		//  d'une affaire suivie. À qui l'on parle, l'Accès et l'affiche, oui.
+		//  Pas de suivi : ni état ni kanban — effacés s'ils venaient d'une
+		//  affaire suivie. À qui l'on parle, l'Accès, l'affiche, oui — et 🛡️
+		//  « Confidentielle », en tête de Destinataires pour les deux natures
+		//  depuis le 25/09/2026 (le serveur l'honorait déjà : `ticket_visible`).
 		Object.assign(charge, {
 			epingle: s.options.epingle,
-			confidentiel: false,
+			confidentiel: s.options.brouillon,
 			suivi_kanban: false,
 			public_cible: concerneTousLesResidents(s.publicCible) ? [] : s.publicCible,
 			reserve_perimetre: s.reservePerimetre,
@@ -212,7 +214,6 @@ export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[
 		if (avant.reserve_perimetre) pertes.push('la réserve au périmètre (🔒)');
 	} else {
 		pertes.push('l’état de suivi');
-		if (avant.confidentiel) pertes.push('la réserve au conseil syndical (🛡️)');
 		if (avant.suivi_kanban) pertes.push('l’inscription au kanban');
 	}
 	return pertes;

@@ -48,6 +48,7 @@
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import PastilleLecture from '$lib/components/PastilleLecture.svelte';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { peutCommenter as peutCommenterCe, peutEditer } from '$lib/droits';
@@ -59,7 +60,6 @@
 	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
 	import {
 		OPTIONS_TICKET,
-		TICKET_CONFIDENTIEL_ACQUIS,
 		optionsDuTicket,
 		optionsVersTicket,
 		ticketUrgent,
@@ -107,11 +107,9 @@
 	//  Le brouillon du panneau rapide : on ne touche PAS au ticket affiché tant
 	//  que le serveur n'a pas répondu — sinon l'écran montre un état enregistré
 	//  qui ne l'est pas, et le laisse faux si la requête échoue.
-	//  ⚠️ `confidentiel: true` n'est pas un choix : sur un ticket l'option est
-	//  ACQUISE — sa lecture est déjà bornée au périmètre — et le panneau la montre
-	//  cochée et verrouillée (`TICKET_CONFIDENTIEL_ACQUIS`). La clé doit être là
-	//  pour que la case s'affiche ; elle ne repart pas au serveur.
-	const optionsRapidesInitiales = () => ({ ...optionsDuTicket(ticket), confidentiel: true });
+	//  `confidentiel` : la clé que le panneau attend. La case 🔒 n'y est plus
+	//  rendue (en tête du Périmètre, 25/09/2026), et elle ne repart pas.
+	const optionsRapidesInitiales = () => ({ ...optionsDuTicket(ticket), confidentiel: false });
 	let optionsRapides = optionsRapidesInitiales();
 	$: if (mode === 'options') optionsRapides = optionsRapidesInitiales();
 	/** Enregistrement d'une évolution en cours — porté par la page (appel d'API). */
@@ -204,28 +202,21 @@
 				{STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut}
 			</span>
 			<BadgePerimetre perimetre={ticket.perimetre_cible} />
+			<!--  Qui la lit (lot 1, 25/09/2026) — elle remplace le badge 🛡️, filtré
+			      ci-dessous : « CS » le dit, avec le reste des lecteurs. -->
+			<PastilleLecture {ticket} />
 			{#if ticketUrgent(ticket)}
 				<span class="badge {BADGE_PRIORITE[ticket.priorite] ?? 'badge-gray'}"
 					>{PRIORITE_BREVE[ticket.priorite]}</span
 				>
 			{/if}
-			<!--  🛡️ Le contrepoids de l'ouverture en lecture (#710) doit SE VOIR :
-			      sans ce badge, le conseil syndical ne peut pas relire ce qu'il a
-			      fermé, et « confidentiel » redeviendrait une case qu'on coche sans
-			      jamais vérifier. Il n'apparaît que sur les tickets fermés — un
-			      badge posé sur tous ne distinguerait rien.
-
-			      ⚠️ 🛡️ ET NON 🔒 (05/09/2026) : le cadenas dit « Confidentiel » sur une
-			      ACTUALITÉ, où il restreint la lecture au périmètre. Ici la règle est
-			      autre — l'auteur, la personne concernée, le conseil. Deux règles sous
-			      un même glyphe se lisent comme une seule. -->
 			<!--  🔴 TOUTES LES OPTIONS ACTIVES, pas seulement 🛡️ (05/09/2026) : un
 			      ticket porte les mêmes options qu'une actualité, il doit les
 			      montrer pareil. Glyphe et mot viennent de la TABLE — deux
 			      écritures divergeraient au premier changement de libellé.
 			      Le pont clé d'écran ⇄ champ du ticket vit dans `$lib/tickets` :
 			      `urgente` s'y lit sur la priorité, `brouillon` sur `confidentiel`. -->
-			{#each optionsActives(optionsDuTicket(ticket)) as opt (opt.cle)}
+			{#each optionsActives(optionsDuTicket(ticket)).filter((o) => o.cle !== 'brouillon') as opt (opt.cle)}
 				<span class="badge badge-gray" title={opt.aide}>{opt.glyphe} {opt.etat}</span>
 			{/each}
 			<span class="tk-numero">#{ticket.numero}</span>
@@ -297,7 +288,6 @@
 					<PanneauOptionsPublication
 						objet="ticket"
 						optionsRendues={OPTIONS_TICKET}
-						confidentielAcquis={TICKET_CONFIDENTIEL_ACQUIS}
 						perimetreCible={ticket.perimetre_cible ?? []}
 						dejaEpingle={ticket.epingle ?? false}
 						enregistrement={optionsRapidesEnCours}

@@ -28,10 +28,21 @@
   ⚠️ Ce n'est qu'un confort d'écran : le serveur retire le drapeau sur un
   périmètre global et refuse l'affiche (`tickets/actualite.appliquer_acces`,
   `visibility.hors_du_hall`). C'est lui qui décide.
+
+  ## 🔴 EN TÊTE de la section, et plus sous les pastilles (25/09/2026)
+
+  Lot 1 de la pastille de lecture, arbitré à l'écran — *« Comme la capture
+  c'est parfait »* : les deux cases qui RESTREIGNENT la lecture ont une seule
+  forme (case, icône du catalogue, libellé) et ouvrent leur section —
+  « Réservé au périmètre sélectionné » le Périmètre, « Confidentielle » les
+  Destinataires (`CaseConfidentielle`). Cela renverse le « sous les pastilles »
+  de #1096 ; le reste de l'UX du périmètre ne bouge pas. Elle a quitté la Mise
+  en avant : une affaire la montre ici, cochée d'office (`acquis`).
 -->
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { concerneTous } from '$lib/utils';
-	import { actionOption, optionPublication } from '$lib/options-publication';
+	import { optionPublication } from '$lib/options-publication';
 
 	/** La case — `reserve_perimetre` sur une actualité. */
 	export let coche = false;
@@ -43,6 +54,9 @@
 	export let acquis = '';
 	/** Le nom de l'objet, pour les libellés qui le nomment. */
 	export let objet = 'actualité';
+	/**  SANS OBJET — le motif quand « Confidentielle » est cochée : elle passe
+	 *   outre le périmètre. La valeur n'est pas effacée, elle revient au décoché. */
+	export let sansObjet = '';
 
 	//  Identifiant unique : deux formulaires peuvent coexister à l'écran.
 	const idAide = `aide-reserve-${Math.random().toString(36).slice(2, 8)}`;
@@ -59,37 +73,40 @@
 
 <label
 	class="checkbox-field case-reserve"
-	class:desactivee={rienARestreindre || acquis}
-	title={acquis ||
+	class:desactivee={rienARestreindre || acquis || sansObjet}
+	title={sansObjet ||
+		acquis ||
 		(rienARestreindre
-			? "Le périmètre sélectionné concerne déjà tous les résidents : il n'y a rien à restreindre."
+			? 'Le périmètre sélectionné concerne déjà tout le monde : il n’y a rien à restreindre.'
 			: option?.aide)}
 >
 	<input
 		type="checkbox"
-		checked={acquis ? true : coche}
+		checked={sansObjet ? false : acquis ? !rienARestreindre : coche}
 		on:change={(e) => (coche = e.currentTarget.checked)}
-		disabled={!!acquis || rienARestreindre}
-		aria-describedby={rienARestreindre || acquis ? idAide : undefined}
+		disabled={!!acquis || !!sansObjet || rienARestreindre}
+		aria-describedby={rienARestreindre || acquis || sansObjet ? idAide : undefined}
 	/>
-	{option?.glyphe}
-	{option && actionOption(option, objet)} — visible du seul périmètre sélectionné
+	<Icon name="lock" size={15} />
+	Réservé au périmètre sélectionné
 </label>
 
-{#if acquis}
+{#if sansObjet}
+	<p class="aide" id={idAide}>{sansObjet}</p>
+{:else if acquis}
 	<!--  Le motif est ÉCRIT, pas seulement en infobulle : au doigt il n'y a pas
 	      de survol, et un lecteur d'écran ne lit pas un `title` sans l'y
 	      chercher (leçon du 28/08/2026). -->
 	<p class="aide" id={idAide}>{acquis}</p>
 {:else if rienARestreindre}
 	<p class="aide" id={idAide}>
-		&#x1F512; Cette réserve demande un périmètre restreint — un bâtiment, par exemple. Le périmètre
-		choisi concerne déjà tous les résidents : il n'y a rien à leur cacher.
+		Le périmètre concerne déjà tout le monde : rien à restreindre. Choisissez un bâtiment, par
+		exemple, pour que seuls ceux qui y sont la lisent.
 	</p>
 {:else if coche}
 	<p class="aide">
-		&#x1F512; Seuls les résidents du périmètre sélectionné verront cette {objet} — ni dans le fil, ni
-		par un lien direct pour les autres. Le réglage reste modifiable après publication.
+		Seuls ceux du périmètre sélectionné verront cette {objet} — ni dans le fil, ni par un lien direct
+		pour les autres. Le réglage reste modifiable après publication.
 	</p>
 	<!--  🔴 CE QUI SORT, canal par canal (#623, 29/08/2026). Il n'est PAS le même
 	      partout : le titre part sur WhatsApp, tout part par e-mail. Il s'affiche
@@ -115,8 +132,9 @@
 {/if}
 
 <style>
+	/*  En tête de section : elle précède les pastilles, l'air est dessous. */
 	.case-reserve {
-		margin-top: 0.6rem;
+		margin-bottom: 0.5rem;
 	}
 	/*  Une case grisée doit se VOIR grisée, pas seulement refuser le clic. */
 	.desactivee {

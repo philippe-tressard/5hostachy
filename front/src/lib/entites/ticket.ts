@@ -227,18 +227,19 @@ export const TICKET: EntiteDeclaree = {
 		{
 			id: 'destinataires',
 			//  🔴 Une ACTUALITÉ dit à qui elle parle (#1091) ; une affaire suivie non :
-			//  elle est vue de son auteur, de son périmètre et du conseil, et
+			//  elle est lue de tous sauf les locataires, dans son périmètre, et
 			//  `destinataire_syndic` / `destinataire_cs` sont des CANAUX (section 9).
-			//  Elle était `sansObjet` pour le ticket : le formulaire unique
-			//  (23/09/2026) la rend grisée pour une affaire suivie, pour qu'on voie
-			//  ce qui s'allume en choisissant « Actualité ».
+			//
+			//  🔴 RALLUMÉE pour l'affaire le 25/09/2026 (lot 1 de la pastille de
+			//  lecture) : elle répond à « qui d'autre la lit ? » pour les deux
+			//  natures, et s'ouvre par « Confidentielle ». L'affaire n'y choisit pas
+			//  de profils — la règle y est écrite à leur place.
 			requis: true,
-			objet: 'DestinatairePicker — à qui parle une actualité dans l’application',
+			objet: 'Qui la lit — Confidentielle, puis DestinatairePicker (actualité)',
 			inactivePour: {
-				suivie:
-					//  Vérifié le 23/09/2026 dans `visibility.ticket_visible` : un locataire ne
-					//  voit que ses propres affaires, jamais celles de son périmètre.
-					'Une affaire suivie est vue de son auteur, des copropriétaires du périmètre sélectionné et du conseil syndical — un locataire ne voit que les siennes. Elle ne s’adresse à personne d’autre.',
+				resident:
+					'Le conseil syndical décide qui la lit. Sur la carte, la pastille de lecture le dit à tous.',
+				bug: 'Un bogue va au gestionnaire du site : il n’a pas d’autre lecteur.',
 			},
 		},
 		{
@@ -258,9 +259,9 @@ export const TICKET: EntiteDeclaree = {
 			//  que sur `nature`, héritée ici. Signalé à l'écran — « une affaire peut
 			//  devenir urgente » ; le créneau suit désormais toutes ses sections.
 			id: 'mise_en_avant',
-			//  Une actualité n'en garde que 📌 et 🚨 (#1096) : 🛡️ se dit par les
-			//  Destinataires, 🔒 sous le Périmètre.
-			objet: 'Épinglage · Urgence · Réservé au conseil · Confidentiel (actualité : 📌 · 🚨)',
+			//  📌 et 🚨 seulement, pour les deux natures (25/09/2026) : 🛡️ et 🔒
+			//  disent qui LIT, ils ouvrent Destinataires et Périmètre.
+			objet: 'Épinglage · Urgence',
 			pliee: true,
 			inactivePour: {
 				bug: 'Un bogue va au gestionnaire du site : ni épingle, ni urgence, ni réserve.',

@@ -52,6 +52,7 @@
 <script lang="ts">
 	import Icon from './Icon.svelte';
 	import EtoileRequis from './EtoileRequis.svelte';
+	import ContenuBadge from './ContenuBadge.svelte';
 
 	/** Intitulé de la section — ex. « Diffusion ». Vide : aucun titre, mais la
 	    séparation reste, ce qui sert aux groupes évidents (le titre d'un objet). */
@@ -87,6 +88,10 @@
 	    résidents ». On lit ce qui est retenu sans dépiler les pastilles
 	    (`ux-patterns` §9 quater). Vide : aucun badge. */
 	export let badge = '';
+	/** Les icônes du badge, et celle qui le termine — la pastille de lecture
+	    des Destinataires (25/09/2026), la même qu'en carte (`ContenuBadge`). */
+	export let badgeIcones: string[] = [];
+	export let badgeIconeFin = '';
 
 	/** `id` du contrôle labelable unique de la section : le titre devient alors
 	    un `<label for>`. Ne l'utiliser QUE pour `<select>`, `<input>`, `<textarea>` —
@@ -200,7 +205,13 @@
 					>{titre}{#if requis}<EtoileRequis vide={!rempli} />{/if}</span
 				>
 			</span>
-			<span class="badge badge-green section-resume">{resume || badge}</span>
+			<span class="badge badge-green section-resume"
+				>{#if resume}{resume}{:else}<ContenuBadge
+						icones={badgeIcones}
+						texte={badge}
+						icone={badgeIconeFin}
+					/>{/if}</span
+			>
 			<svg
 				class="section-chev"
 				width="12"
@@ -222,7 +233,8 @@
 				{#if badge}<span
 						class="badge section-badge"
 						class:badge-green={!valeurModifiee}
-						class:badge-bleu={valeurModifiee}>{badge}</span
+						class:badge-bleu={valeurModifiee}
+						><ContenuBadge icones={badgeIcones} texte={badge} icone={badgeIconeFin} /></span
 					>{/if}
 			</label>
 		{:else}
@@ -233,7 +245,8 @@
 				{#if badge}<span
 						class="badge section-badge"
 						class:badge-green={!valeurModifiee}
-						class:badge-bleu={valeurModifiee}>{badge}</span
+						class:badge-bleu={valeurModifiee}
+						><ContenuBadge icones={badgeIcones} texte={badge} icone={badgeIconeFin} /></span
 					>{/if}
 				<!--  🔴 Replier est un GESTE, donc un `<button>` — et il n'existe que
 				      quand il est permis. Une commande visible qui ne ferait rien dit

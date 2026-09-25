@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.49.6",
+	"version": "2.50.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -24,6 +24,7 @@
 		"lint:perimetres": "node scripts/check-perimetres.mjs",
 		"lint:statuts": "node scripts/check-statuts.mjs",
 		"lint:libelle-perimetre": "node scripts/check-libelle-perimetre.mjs",
+		"lint:lecture": "node scripts/check-lecture.mjs",
 		"lint:entetes": "node scripts/check-entete-page.mjs",
 		"lint:api-svelte4": "node scripts/check-api-svelte4.mjs",
 		"lint:formulaires": "node scripts/check-formulaire-creation.mjs",
