@@ -25,6 +25,7 @@
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { TICKET } from '$lib/entites/ticket';
+	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import type { Ticket, TicketMessage, TicketEvolution } from '$lib/api';
 	import { nomCopie } from '$lib/saisi-pour';
@@ -95,6 +96,7 @@
 					auteurNom={nomCopie(ticket)}
 					titre="Répondre"
 					entite={TICKET}
+					conditions={conditionsDeLaSuite(ticket)}
 					assistant={contexteCommentaire(ticket)}
 					avecPiecesJointes={!newInterne}
 					whatsappInterdit={motifWhatsappInterdit(ticket?.confidentiel ?? false, 'ticket')}

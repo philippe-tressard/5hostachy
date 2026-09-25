@@ -37,6 +37,11 @@ export function natureDe(categorie: string): NatureAffaire {
 	return estActualite({ categorie }) ? 'actualite' : 'suivie';
 }
 
+/** Ce que l'affaire EST, pour sa Suite 🔄 — sa nature (`sectionDeLaSuite`). */
+export function conditionsDeLaSuite(ticket: { categorie: string } | null): ConditionInactive[] {
+	return ticket ? [natureDe(ticket.categorie)] : [];
+}
+
 /** Les sections que la nature éteint — celles qui ont un motif déclaré. */
 const SECTIONS_ETEIGNABLES: readonly IdSection[] = [
 	'equipement',

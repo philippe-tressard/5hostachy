@@ -49,6 +49,31 @@ def test_manuels_synchronises_docs_et_static():
     )
 
 
+#: Le numéro du manuel s'écrit à DEUX endroits : le badge de l'en-tête et le pied
+#: de page. La v2.50.0 a livré « Version 1.78 » en tête et « v1.76 » au pied, et
+#: rien ne l'a vu (#1306) — la consigne de bumper les deux existait déjà.
+_VERSION_BADGE = re.compile(r'class="topbar-badge">Version (\d+\.\d+)\b')
+_VERSION_PIED = re.compile(r"Manuel utilisateur v(\d+\.\d+)\b")
+
+
+def versions_du_manuel(html: str) -> tuple[list[str], list[str]]:
+    """Les numéros lus dans le badge et dans le pied de page, dans cet ordre."""
+    return _VERSION_BADGE.findall(html), _VERSION_PIED.findall(html)
+
+
+def test_badge_et_pied_du_manuel_portent_la_meme_version():
+    """Un numéro illisible échoue aussi : une liste vide n'est pas un accord."""
+    for nom in _MANUELS:
+        html = (_RACINE / "docs" / nom).read_text(encoding="utf-8")
+        badge, pied = versions_du_manuel(html)
+        assert len(badge) == 1 and len(pied) == 1, (
+            f"{nom} : badge {badge}, pied {pied} — un numéro, et un seul, à chaque endroit"
+        )
+        assert badge == pied, (
+            f"{nom} : le badge dit {badge[0]}, le pied de page {pied[0]} — bumper les deux"
+        )
+
+
 def test_badge_python_du_readme_suit_l_image_de_production():
     """Le badge Python du README doit refléter `api/Dockerfile`.
 
