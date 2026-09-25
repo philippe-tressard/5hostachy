@@ -31,4 +31,7 @@ echo "==> Lancement des migrations Alembic... (utilisateur : $(id -un))"
 alembic upgrade head
 
 echo "==> Démarrage de l'API..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+#  --no-access-log (#1300, 25/09/2026) : pas une ligne par requête avec l'adresse
+#  du client — une donnée personnelle dès que l'API lira l'adresse réelle. Les
+#  erreurs restent journalisées (uvicorn.error). 🔒 tests/test_journal_acces.py
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log
