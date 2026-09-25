@@ -1,7 +1,7 @@
 fastapi==0.141.1
-uvicorn[standard]==0.52.4
+uvicorn[standard]==0.53.0
 slowapi==0.1.10
-sqlmodel==0.0.39
+sqlmodel==0.0.46
 #  Importés DIRECTEMENT par le code — pydantic ~50 fois, sqlalchemy ~250 fois,
 #  pydantic_settings par `config.py` — mais qui n'arrivaient ici que par
 #  transitivité (fastapi, sqlmodel, fastapi-mail). Une montée de l'un de ceux-là
@@ -10,8 +10,8 @@ sqlmodel==0.0.39
 pydantic==2.13.5
 pydantic-settings==2.15.0
 sqlalchemy==2.0.54
-alembic==1.19.1
-PyJWT==2.13.0
+alembic==1.20.0
+PyJWT==2.14.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.32
@@ -21,7 +21,7 @@ httpx==0.28.1
 #  Lecture du texte d'un PDF — la synthèse assistée d'un contrat (#899). Pur
 #  Python, aucune bibliothèque système : rien à ajouter au Dockerfile, à la
 #  différence de WeasyPrint qui, lui, ÉCRIT des PDF et réclame GTK.
-pypdf==6.16.1
+pypdf==6.19.0
 #  Jamais importé, et pourtant nécessaire : c'est lui qui lit `env_file = ".env"`
 #  pour pydantic-settings (`app/config.py`). Sans lui, le `.env` serait ignoré.
 #  `aiofiles`, qui le suivait ici, n'était ni importé ni requis par rien : retiré.
