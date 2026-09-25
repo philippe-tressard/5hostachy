@@ -207,7 +207,7 @@ def _module():
 
 
 #: Migrations qui posent `assiste_ia` sur UNE table, après la 0194.
-_MIGRATIONS_TARDIVES = ("0220_*.py",)
+_MIGRATIONS_TARDIVES = ("0220_*.py", "0225_*.py")
 
 
 def test_la_migration_couvre_TOUTES_les_tables_qui_portent_la_marque():

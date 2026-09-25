@@ -23,10 +23,13 @@ branch_labels = None
 depends_on = None
 
 TABLE = "prestataire"  # identifiant : constante du fichier
+#: La marque de l'assistant — lue par `test_llm_usages` (`_MIGRATIONS_TARDIVES`),
+#: comme celle de la 0220.
+COLONNE = "assiste_ia"
 COLONNES = (
     ("adresse", sa.Text(), {"nullable": True}),
     ("description", sa.Text(), {"nullable": True}),
-    ("assiste_ia", sa.Boolean(), {"nullable": False, "server_default": "0"}),
+    (COLONNE, sa.Boolean(), {"nullable": False, "server_default": "0"}),
 )
 
 
