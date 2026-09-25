@@ -175,3 +175,48 @@ def test_etape_0_bis_n_est_tabulee_qu_une_fois():
         assert n == 1, (
             f"l'exigence « {ligne} » est tabulée {n} fois dans mep-precheck/SKILL.md — un seul tableau"
         )
+
+
+def test_blame_ignore_revs_ne_nomme_que_des_commits_de_l_historique():
+    """`.git-blame-ignore-revs` : SHA complets, et présents dans l'historique.
+
+    Le premier candidat (`d665b62`, `ruff format` sur api/, #1261) n'existait déjà
+    plus quand on a voulu l'y ajouter : la MEP l'avait squashé dans v2.49.0 avec
+    d'autres lots, puis `dev` avait été réaligné sur `main`. Un SHA absent de
+    l'historique n'ignore rien — et le fichier laisserait croire le contraire.
+    Règle d'entrée : `mep-precheck`, piège 4.
+
+    L'appartenance ne se vérifie que sur un clone COMPLET : la CI clone en
+    profondeur 1. Le test le dit alors (skip motivé), il ne conclut pas au vert.
+    """
+    import subprocess
+
+    fichier = _RACINE / ".git-blame-ignore-revs"
+    assert fichier.exists(), (
+        "`.git-blame-ignore-revs` a disparu — setup.sh et CONTRIBUTING.md l'arment"
+    )
+    shas = [
+        ligne.strip()
+        for ligne in fichier.read_text(encoding="utf-8").splitlines()
+        if ligne.strip() and not ligne.lstrip().startswith("#")
+    ]
+    mal_formes = [s for s in shas if not re.fullmatch(r"[0-9a-f]{40}", s)]
+    assert not mal_formes, f"SHA complets (40 caractères) exigés : {mal_formes}"
+    if not shas:
+        return
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", "-C", str(_RACINE), *args], capture_output=True, text=True)
+
+    peu_profond = git("rev-parse", "--is-shallow-repository")
+    if peu_profond.returncode != 0 or peu_profond.stdout.strip() != "false":
+        import pytest
+
+        pytest.skip(
+            "INCONNU : clone partiel ou sans git — l'appartenance à l'historique n'est pas mesurable ici"
+        )
+    absents = [s for s in shas if git("merge-base", "--is-ancestor", s, "HEAD").returncode != 0]
+    assert not absents, (
+        f"Ces commits ne sont pas dans l'historique de HEAD : {absents}. "
+        "Un reformatage squashé avec d'autres lots n'a plus de SHA propre (mep-precheck, piège 4)."
+    )
