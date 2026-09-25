@@ -273,9 +273,12 @@ label.field :is(input, select, textarea, button, div, code, .aide, .case) {
 	text-transform: none;
 	letter-spacing: normal;
 }
-/*  Une case à cocher posée DANS un `.field` en div : son texte est une valeur,
-    pas un libellé de champ — même raison que `:not(.pastille)` plus haut. */
-.field label.case {
+/*  Une case à cocher : son texte est une valeur, pas un libellé de champ — même
+    raison que `:not(.pastille)` plus haut. Qu'elle soit posée DANS un `.field`
+    en div, ou qu'elle SOIT le libellé (`label.field.case` : « Activer cet
+    usage », « Envoyer le document du contrat », #1324). */
+.field label.case,
+label.field.case {
 	text-transform: none;
 	letter-spacing: normal;
 }

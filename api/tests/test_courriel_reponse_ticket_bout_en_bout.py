@@ -122,7 +122,8 @@ def test_une_reponse_authentifiee_rejoint_le_fil(scene):
     assert decision == ACCEPTE
     evols = _evolutions(session, ticket)
     assert len(evols) == 1
-    assert evols[0].contenu == "Nous intervenons jeudi."
+    #  Depuis #1322 la Suite est en HTML, précédée de « Réponse de … le … ».
+    assert evols[0].contenu.endswith("<p>Nous intervenons jeudi.</p>")
     assert evols[0].auteur_id == syndic.id, "l'entrée doit être signée de son auteur réel"
 
 
@@ -263,7 +264,7 @@ def test_la_citation_du_message_precedent_n_entre_pas_dans_le_fil(scene):
     )
     evols = _evolutions(session, ticket)
     assert len(evols) == 1
-    assert evols[0].contenu == "C'est noté."
+    assert evols[0].contenu.endswith("<p>C'est noté.</p>")
 
 
 # ── 🔴 La relance GROUPÉE : un envoi, N tickets, aucune réponse à ventiler ────

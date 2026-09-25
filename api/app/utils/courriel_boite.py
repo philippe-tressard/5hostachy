@@ -346,7 +346,7 @@ def traiter(
 
     #  Texte nettoyé, mis en forme par l'assistant si l'usage est prêt, et daté
     #  de l'envoi — `utils/reponse_courriel` (#1322).
-    suite = suite_de_reponse(session, ticket.id, auteur.id, corps, recu_le)
+    suite = suite_de_reponse(session, ticket.id, auteur, verdict.expediteur, corps, recu_le)
     if suite is None:
         return IGNORE
     session.add(suite)

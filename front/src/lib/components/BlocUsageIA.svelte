@@ -142,10 +142,15 @@
 			/>
 			Activer cet usage
 			<span class="aide">
-				Désactivé, l’icône ✨ de cet usage n’apparaît nulle part et aucun appel n’est facturé.
-				L’activation globale, dans le bloc Commun, coupe tous les usages d’un geste.
+				Désactivé, cet usage ne sert nulle part — ni icône ✨, ni traitement automatique — et aucun
+				appel n’est facturé. L’activation globale, dans le bloc Commun, coupe tous les usages d’un
+				geste.
 			</span>
 		</label>
+		<!--  Le réglage propre à UN usage (la synthèse : envoyer le document). DANS le
+		      bloc, pour qu'il se replie avec lui (#1324) : posé à côté du composant,
+		      il restait visible sous le bloc replié. -->
+		<slot name="option" />
 	</SectionFormulaire>
 
 	<SectionFormulaire titre="Modèle">

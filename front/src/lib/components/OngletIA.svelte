@@ -276,24 +276,27 @@
 				{chargerModeles}
 				ouvert={usageOuvert === usage.code}
 				on:basculer={(e) => basculerUsage(usage.code, e.detail)}
-			/>
-			{#if usage.code === 'synthese_contrat'}
+			>
 				<!--  Le seul réglage propre à UN usage : ce que la synthèse envoie du
-				      contrat. Il vit sous son bloc, pas dans le commun — un autre
+				      contrat. Il vit DANS son bloc (#1324), pas dans le commun — un autre
 				      usage n'a pas de document à envoyer. -->
-				<label class="field case option-usage">
-					<input type="checkbox" bind:checked={cfg.envoi_document} />
-					Envoyer le document du contrat au service
-					<span class="aide">
-						Sans lui, quatre sections de la synthèse sur sept restent vides : montants, prestations
-						incluses et exclues ne vivent que dans le PDF. Sont transmis <strong
-							>tous les documents du contrat</strong
-						> — l’initial, ses avenants, ses conditions générales : n’en lire qu’un rendrait les montants
-						faux dès le premier avenant. Rien d’autre ne part : ni pièce jointe d’une affaire, ni document
-						d’un autre contrat.
-					</span>
-				</label>
-			{/if}
+				<svelte:fragment slot="option">
+					{#if usage.code === 'synthese_contrat'}
+						<label class="field case option-usage">
+							<input type="checkbox" bind:checked={cfg.envoi_document} />
+							Envoyer le document du contrat au service
+							<span class="aide">
+								Sans lui, quatre sections de la synthèse sur sept restent vides : montants,
+								prestations incluses et exclues ne vivent que dans le PDF. Sont transmis <strong
+									>tous les documents du contrat</strong
+								> — l’initial, ses avenants, ses conditions générales : n’en lire qu’un rendrait les montants
+								faux dès le premier avenant. Rien d’autre ne part : ni pièce jointe d’une affaire, ni
+								document d’un autre contrat.
+							</span>
+						</label>
+					{/if}
+				</svelte:fragment>
+			</BlocUsageIA>
 		{/each}
 	</SectionFormulaire>
 
@@ -315,6 +318,6 @@
 	}
 	/*  Le réglage propre à un usage se lit sous son bloc, légèrement rentré. */
 	.option-usage {
-		margin: 0.4rem 0 0.9rem 0.9rem;
+		margin-top: 0.6rem;
 	}
 </style>
