@@ -94,3 +94,17 @@ def test_le_badge_nouveau_ne_s_ecrit_qu_une_fois():
         if f.name != "BadgeNouveau.svelte" and "isNouveau(" in f.read_text(encoding="utf-8")
     ]
     assert not fautes, "Badge « Nouveau » réécrit : " + ", ".join(fautes)
+
+
+def test_le_titre_d_une_section_porte_son_identifiant_dans_ses_trois_etats():
+    """Le contenu d'une section PLIÉE ou éteinte reste dans la page, et ce qui
+    s'y rattache (`aria-labelledby="…-titre"`) pointait sur un identifiant
+    absent : seul le titre OUVERT le portait (#1329, relevé en production sur la
+    Description d'un prestataire). Les quatre rendus du titre — éteint, plié,
+    `<label>`, `<h4>` — posent `idTitre`."""
+    source = (_FRONT / "lib" / "components" / "SectionFormulaire.svelte").read_text(
+        encoding="utf-8"
+    )
+    assert source.count("id={idTitre || undefined}") >= 4, (
+        "un rendu du titre de section ne pose pas `idTitre`"
+    )

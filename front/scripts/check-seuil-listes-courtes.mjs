@@ -125,6 +125,20 @@ const CAS = [
 	['9 valeurs en select → accepté', 9, 0],
 ];
 
+/**
+ * 🔴 Un `<select>` NATIF lié à une variable de FILTRE (#1329, 26/09/2026).
+ *
+ * La détection ci-dessus lit la classe `filter-select` — que plus aucun écran
+ * ne porte depuis `PastilleDeroulante` (24/09/2026). Elle ne voyait donc plus
+ * rien, et les deux filtres de la liste des utilisateurs (Admin) sont restés des
+ * listes natives repeintes à la main. Le signe qui ne dépend pas d'une classe :
+ * la variable liée s'appelle un filtre. PURE.
+ */
+export function selectsDeFiltre(source) {
+	const re = /<select\b[^>]*\bbind:value=\{([^}]*(?:[Ff]ilter|[Ff]iltre)[^}]*)\}/g;
+	return [...source.matchAll(re)].map((m) => m[1].trim());
+}
+
 function selftest() {
 	let echecs = 0;
 	for (const [nom, n, attendu] of CAS) {
@@ -178,6 +192,22 @@ function selftest() {
 	echecs += ok2 ? 0 : 1;
 	console.log(`${ok2 ? 'PASS' : 'ÉCHEC'}  comptage d'une liste → ${compte}`);
 
+	//  Le <select> natif lié à un filtre (#1329), quelle que soit sa classe.
+	for (const [nom, vue, attendu] of [
+		[
+			'select natif lié à un filtre → refusé',
+			'<select class="x" bind:value={userCompteFilter}>',
+			1,
+		],
+		['select de filtre en français → refusé', '<select bind:value={filtreType} style="a">', 1],
+		['select de SAISIE → hors portée', '<select bind:value={form.type}>', 0],
+	]) {
+		const obtenu = selectsDeFiltre(vue).length;
+		const okf = obtenu === attendu;
+		echecs += okf ? 0 : 1;
+		console.log(`${okf ? 'PASS' : 'ÉCHEC'}  ${nom} → ${obtenu} signalement(s)`);
+	}
+
 	console.log(echecs ? `== ${echecs} ÉCHEC(S) ==` : '== TOUS OK ==');
 	return echecs ? 1 : 0;
 }
@@ -196,6 +226,11 @@ const ecarts = [];
 let selectsLus = 0;
 for (const chemin of fichiers(SOURCE, '.svelte')) {
 	const src = readFileSync(chemin, 'utf8');
+	for (const v of selectsDeFiltre(src)) {
+		ecarts.push(
+			`  ${relative(SOURCE, chemin).split(sep).join('/')} — <select> natif lié au filtre « ${v} » : PastilleDeroulante ou ChoixPastilles`,
+		);
+	}
 	if (!src.includes('filter-select') && !src.includes('<PastilleDeroulante')) continue;
 	selectsLus++;
 	for (const f of selectsFautifs(src, tailles)) {

@@ -13,6 +13,8 @@
 		type ModeDocument,
 	} from '$lib/components/FormulaireEditionDocument.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, isLocataire } from '$lib/stores/auth';
 	import {
@@ -469,7 +471,7 @@
 	<!-- ── Section : Résidence ───────────────────────────────────────────── -->
 	<section style="margin-bottom:2.5rem">
 		<div class="section-header">
-			<h2 class="section-title">&#x1F3E2; Résidence : {copropriete.nom}</h2>
+			<h2 class="section-title">Résidence : {copropriete.nom}</h2>
 			{#if $isCS && !editing}
 				<button
 					class="btn-icon-edit"
@@ -481,7 +483,9 @@
 		</div>
 
 		{#if editing}
-			<div class="card" style="padding:1.25rem">
+			<!--  Le cadre et le pied STANDARD (#1329) : une carte et une rangée de
+			      boutons écrites à la main, « Annuler » en bouton plein. -->
+			<FormulaireCreation titre="Modifier la fiche de la résidence">
 				<form on:submit|preventDefault={saveEdit}>
 					<div class="edit-grid">
 						<div class="field">
@@ -544,14 +548,9 @@
 							/>
 						</div>
 					</div>
-					<div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
-						<button type="button" class="btn" on:click={() => (editing = false)}>Annuler</button>
-						<button type="submit" class="btn btn-primary" disabled={saving}
-							>{saving ? 'Enregistrement…' : 'Enregistrer'}</button
-						>
-					</div>
+					<PiedFormulaire enCours={saving} on:annule={() => (editing = false)} />
 				</form>
-			</div>
+			</FormulaireCreation>
 		{:else}
 			<FicheResidence {copropriete} {batiments} />
 		{/if}
