@@ -29,7 +29,7 @@ from fastapi import BackgroundTasks, HTTPException
 from sqlmodel import Session, SQLModel
 
 from app.database import engine
-from app.models.core import RoleUtilisateur, StatutTicket, Ticket, Utilisateur
+from app.models.core import StatutTicket, Ticket, Utilisateur
 from app.routers.tickets.commun import ticket_read
 from app.routers.tickets.mise_a_jour import update_ticket
 from app.schemas import TicketUpdate

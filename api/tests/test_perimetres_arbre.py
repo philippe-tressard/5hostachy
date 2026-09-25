@@ -22,19 +22,15 @@ Deux comportements changent **volontairement**, et sont testés comme tels :
 import itertools
 
 import pytest
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, select
 
 from app.database import engine
 from app.models.perimetre import Perimetre
 from app.models.core import (
-    Batiment,
-    ConfigSite,
-    Copropriete,
-    RoleUtilisateur,
     Ticket,
     Utilisateur,
 )
-from app.seed.patrimoine import CLE_SEMEE, GABARIT_BATIMENT, poser_arborescence
+from app.seed.patrimoine import GABARIT_BATIMENT, poser_arborescence
 from app.utils import perimetres as P
 from tests.conftest import vider_patrimoine
 from app.utils.destinataires import batiments_du_perimetre

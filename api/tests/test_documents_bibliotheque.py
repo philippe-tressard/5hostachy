@@ -31,7 +31,7 @@ import uuid
 from datetime import datetime
 
 import pytest
-from sqlmodel import SQLModel, Session, delete, select
+from sqlmodel import SQLModel, Session, delete
 
 from app.database import engine
 from app.models.core import (

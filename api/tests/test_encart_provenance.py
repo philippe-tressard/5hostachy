@@ -12,13 +12,13 @@ ne peut pas être contredit par l'écran.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import ConfigSite
-from app.models.prestataires import ContratEntretien, Prestataire
+from app.models.prestataires import Prestataire
 from app.utils.llm import config_llm
 from app.utils.synthese_contrat import entete_provenance
 

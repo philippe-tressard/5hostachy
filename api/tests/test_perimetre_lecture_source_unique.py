@@ -76,7 +76,7 @@ def _fichiers_python() -> list[Path]:
 def _sans_commentaires(source: str) -> str:
     """Expliquer la règle ne doit pas la violer — les commentaires posés le
     06/09 dans les deux fichiers exemptés citent le motif qu'ils décrivent."""
-    return "\n".join(l for l in source.splitlines() if not l.lstrip().startswith("#"))
+    return "\n".join(ligne for ligne in source.splitlines() if not ligne.lstrip().startswith("#"))
 
 
 def test_le_defaut_du_perimetre_n_est_pas_ecrit_en_dur():

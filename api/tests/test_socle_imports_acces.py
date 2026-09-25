@@ -36,7 +36,7 @@ import pathlib
 import uuid
 
 import pytest
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, SQLModel
 
 from app.database import engine
 from app.models.copropriete import Lot

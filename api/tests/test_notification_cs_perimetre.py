@@ -30,9 +30,8 @@ from app.models.core import (
     MembreCS,
     Utilisateur,
 )
-from app.models.perimetre import Perimetre
 from app.database import engine
-from app.seed.patrimoine import CLE_SEMEE, poser_arborescence
+from app.seed.patrimoine import poser_arborescence
 from app.utils import perimetres as P
 from app.utils.destinataires import batiments_du_perimetre, membres_cs_notifiables
 from app.utils.purge_referentielle import purger

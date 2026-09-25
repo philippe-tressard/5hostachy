@@ -85,7 +85,7 @@ def _sans_commentaires(source: str) -> str:
     Ce test-ci en est le premier bénéficiaire — les commentaires posés le
     31/08/2026 dans `tickets/commun.py` CITENT le motif qu'ils décrivent.
     """
-    return "\n".join(l for l in source.splitlines() if not l.lstrip().startswith("#"))
+    return "\n".join(ligne for ligne in source.splitlines() if not ligne.lstrip().startswith("#"))
 
 
 def test_la_regle_des_destinataires_ne_s_ecrit_qu_a_un_endroit():
