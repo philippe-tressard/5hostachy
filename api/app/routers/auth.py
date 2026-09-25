@@ -13,7 +13,8 @@ URL publiques sont donc rigoureusement inchangées.
 """
 
 import secrets
-from datetime import datetime, timedelta
+from datetime import timedelta
+from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Cookie, Request
 from pydantic import BaseModel
@@ -101,7 +102,7 @@ def emettre_verification_email(
         EmailVerificationToken(
             user_id=user.id,
             token=raw_token,
-            expires_at=datetime.utcnow() + VALIDITE_VERIFICATION_EMAIL,
+            expires_at=horloge.maintenant() + VALIDITE_VERIFICATION_EMAIL,
         )
     )
     session.commit()
@@ -290,7 +291,7 @@ def login(
     if new_hash:
         user.hashed_password = new_hash  # rehash silencieux 12→10 rounds
 
-    user.derniere_connexion = datetime.utcnow()
+    user.derniere_connexion = horloge.maintenant()
     session.add(user)
 
     access = creer_jeton_acces(user.id, user.hashed_password)
@@ -298,7 +299,7 @@ def login(
     rt = RefreshToken(
         user_id=user.id,
         token=refresh,
-        expires_at=datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days),
+        expires_at=horloge.maintenant() + timedelta(days=settings.refresh_token_expire_days),
     )
     session.add(rt)
     session.commit()
@@ -327,7 +328,7 @@ def refresh(
         raise HTTPException(401, "Refresh token invalide.")
 
     stored = session.exec(select(RefreshToken).where(RefreshToken.token == refresh_token)).first()
-    if not stored or stored.revoked or stored.expires_at < datetime.utcnow():
+    if not stored or stored.revoked or stored.expires_at < horloge.maintenant():
         raise HTTPException(401, "Session expirée. Reconnectez-vous.")
 
     user = session.get(Utilisateur, stored.user_id)
@@ -342,7 +343,7 @@ def refresh(
     rt = RefreshToken(
         user_id=user.id,
         token=new_refresh,
-        expires_at=datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days),
+        expires_at=horloge.maintenant() + timedelta(days=settings.refresh_token_expire_days),
     )
     session.add(rt)
     session.commit()
@@ -417,7 +418,7 @@ def verify_email(request: Request, token: str, session: Session = Depends(get_se
         select(EmailVerificationToken).where(EmailVerificationToken.token == token)
     ).first()
 
-    if not evt or evt.used or evt.expires_at < datetime.utcnow():
+    if not evt or evt.used or evt.expires_at < horloge.maintenant():
         raise HTTPException(400, "Lien de vérification invalide ou expiré.")
 
     user = session.get(Utilisateur, evt.user_id)

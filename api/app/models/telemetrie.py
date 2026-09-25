@@ -17,6 +17,7 @@ disparaître de la création de schéma.
 """
 
 from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
@@ -35,7 +36,7 @@ class TelemetryEvent(SQLModel, table=True):
     page: str = Field(index=True)  # ex: /actualites, /tickets
     action: str = "view"  # view | click | submit
     detail: Optional[str] = None  # ex: bouton cliqué, id ticket
-    cree_le: datetime = Field(default_factory=datetime.utcnow, index=True)
+    cree_le: datetime = Field(default_factory=horloge.maintenant, index=True)
 
 
 class TelemetryDaily(SQLModel, table=True):
@@ -82,5 +83,5 @@ class HistoriqueTelemetrie(SQLModel, table=True):
     monthly_purges: int = 0
     duree_secondes: Optional[float] = None
     erreur: Optional[str] = None
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     terminee_le: Optional[datetime] = None

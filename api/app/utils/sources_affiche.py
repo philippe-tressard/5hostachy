@@ -52,6 +52,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Session, select
@@ -107,7 +108,7 @@ def sources_disponibles(
 
     Trié comme le fil : les épinglés d'abord, puis du plus récent au plus ancien.
     """
-    maintenant = maintenant or datetime.utcnow()
+    maintenant = maintenant or horloge.maintenant()
     depuis = maintenant - timedelta(days=FENETRE_JOURS)
     sources: list[SourceAffiche] = []
 

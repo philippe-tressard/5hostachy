@@ -10,7 +10,7 @@ appelants (création d'un ticket, ajout d'une évolution) construisaient le mêm
 e-mail `ticket_syndic` avec deux blocs de code distincts.
 """
 
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import BackgroundTasks
@@ -203,7 +203,7 @@ def contexte_ticket_syndic(
         **contexte_site(cfg),
         "is_commentaire": bool(commentaire and commentaire.strip()),
         "commentaire": commentaire or "",
-        "date_commentaire": fmt_paris(datetime.utcnow()),
+        "date_commentaire": fmt_paris(horloge.maintenant()),
         #  Le périmètre que le COMMENTAIRE en cours précise, s'il en précise
         #  un. Vide sinon, et le gabarit n'affiche alors rien : reprendre celui
         #  du ticket ferait croire que ce commentaire l'a redit, donc confirmé.
@@ -278,7 +278,7 @@ def envoyer_email_externe(
         "ticket": _contexte_ticket(ticket),
         "auteur": contexte_personne(user),
         "date_ticket": fmt_paris(ticket.cree_le),
-        "date_commentaire": fmt_paris(datetime.utcnow()),
+        "date_commentaire": fmt_paris(horloge.maintenant()),
         **contexte_site(cfg),
         "app": {"url": base_site(cfg.get("site_url"))},
         "is_commentaire": is_commentaire,

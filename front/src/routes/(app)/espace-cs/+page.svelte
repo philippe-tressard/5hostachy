@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmer } from '$lib/confirmation';
 	import { page } from '$app/stores';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { comparerParNom, nomAffiche } from '$lib/noms';
@@ -455,9 +456,11 @@
 			// Demander confirmation
 			const oldName = nomAffiche(membresCS[currentPresident]);
 			const newName = nomAffiche(membresCS[i]);
-			const confirmed = confirm(
-				`Un président existe déjà (${oldName}).\n\nVoulez-vous remplacer par ${newName} ?`,
-			);
+			const confirmed = await confirmer({
+				titre: 'Remplacer le président',
+				message: `Un président existe déjà (${oldName}).\n\nVoulez-vous remplacer par ${newName} ?`,
+				libelleConfirmer: 'Remplacer',
+			});
 
 			if (confirmed) {
 				// Désélectionner l'ancien

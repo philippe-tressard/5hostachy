@@ -2,10 +2,10 @@
 
 ## Ce que ce contrôle protège (18/09/2026)
 
-Le cache du manuel vit dans le process : il repart vide à chaque déploiement, ce
-qui évite d'avoir une invalidation à écrire. Le prix en était payé par le
-premier lecteur d'après, et il a été MESURÉ en production : **21,1 secondes**,
-contre 0,15 s ensuite.
+Le cache du manuel vivait dans le process : il repartait vide à chaque
+déploiement. Depuis #1071 il est doublé sur disque, mais un manuel MODIFIÉ change
+sa clé. Le prix en était payé par le premier lecteur d'après, et il a été MESURÉ
+en production : **21,1 secondes**, contre 0,15 s ensuite.
 
 Deux rendez-vous le remplissent d'avance — vingt secondes après le démarrage, et
 chaque nuit à 00:05. Le second n'est pas un luxe : la clé du cache porte la DATE

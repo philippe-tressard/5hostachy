@@ -4,7 +4,7 @@ Extrait de `tickets.py` le 08/08/2026. Voir `__init__.py` pour la règle de déc
 """
 
 import json
-from datetime import datetime
+from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
@@ -313,7 +313,7 @@ def add_evolution(
         ancien_statut=ancien_statut,
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
         auteur_id=user.id,
-        cree_le=datetime.utcnow(),
+        cree_le=horloge.maintenant(),
         fichiers_urls=photos_json(body.fichiers_urls),
         perimetre_cible=(
             json.dumps(body.perimetre_cible, ensure_ascii=False) if body.perimetre_cible else None
@@ -338,7 +338,7 @@ def add_evolution(
     #  qui ne parle pas du périmètre ne l'élargit pas à la résidence entière.
     if body.perimetre_cible:
         ticket.perimetre_cible = json.dumps(body.perimetre_cible, ensure_ascii=False)
-        ticket.mis_a_jour_le = datetime.utcnow()
+        ticket.mis_a_jour_le = horloge.maintenant()
         session.add(ticket)
     #  🔴 LES OPTIONS DE PUBLICATION SE CORRIGENT DEPUIS UN COMMENTAIRE
     #  (05/09/2026), demandé à l'écran :
@@ -355,7 +355,7 @@ def add_evolution(
     #  `commun.appliquer_options` — le troisième chemin qui les applique, et le
     #  troisième à ne pas les réécrire.
     if appliquer_options(ticket, body, est_cs=est_moderateur(user)):
-        ticket.mis_a_jour_le = datetime.utcnow()
+        ticket.mis_a_jour_le = horloge.maintenant()
         session.add(ticket)
     #  📅🛠️ QUAND, INTERVENANT, ÉQUIPEMENT — le conseil les pose dans une Suite
     #  (#1207, arbitré le 24/09/2026) : le crayon ne lui est pas montré sur
@@ -368,7 +368,7 @@ def add_evolution(
         )
         if planifie:
             evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(planifie)}</em></p>"
-            ticket.mis_a_jour_le = datetime.utcnow()
+            ticket.mis_a_jour_le = horloge.maintenant()
             session.add(ticket)
     #  À qui l'on parle — sur une ACTUALITÉ seule : une affaire suivie ne s'adresse
     #  à personne (`inactivePour.suivie`) — et l'Accès, le conseil seul (#1091).
@@ -382,7 +382,7 @@ def add_evolution(
             )
         if body.reserve_perimetre is not None:
             ticket.reserve_perimetre = body.reserve_perimetre
-        ticket.mis_a_jour_le = datetime.utcnow()
+        ticket.mis_a_jour_le = horloge.maintenant()
         session.add(ticket)
     if est_actualite(ticket):
         appliquer_acces(ticket, session)
@@ -394,8 +394,8 @@ def add_evolution(
         #  un ticket depuis le fil ne posait aucun `ferme_le`. Une seule liste,
         #  désormais — celle du modèle.
         if body.nouveau_statut in STATUTS_TICKET_CLOS:
-            ticket.ferme_le = datetime.utcnow()
-        ticket.mis_a_jour_le = datetime.utcnow()
+            ticket.ferme_le = horloge.maintenant()
+        ticket.mis_a_jour_le = horloge.maintenant()
         session.add(ticket)
         apres_cloture(ticket, session)  # la prochaine visite d'un contrat (#1092)
 

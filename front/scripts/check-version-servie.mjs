@@ -112,11 +112,35 @@ function chunksLocaux() {
 	return sortie;
 }
 
-/** Les chunks servis par un site, atteints depuis son point d'entrée. */
-async function chunksDistants(site) {
+/**
+ * Un refus HTTP : le site a RÉPONDU, mais pas ce qu'on demandait.
+ *
+ * 🔴 Distinct de « injoignable » (aucune réponse) et de « pas de build »
+ * (une page servie sans point d'entrée). Jusqu'au 25/09/2026 (#1283), `lire()`
+ * changeait toute réponse non 2xx en texte vide : une 403 du proxy d'une
+ * session cloud s'affichait « le site ne sert pas un build SvelteKit », et
+ * envoyait chercher une panne du site qui n'existait pas — le site servait
+ * bien 2.49.2. Le code HTTP était le seul renseignement utile, et il se perdait.
+ */
+export class RefusHttp extends Error {
+	constructor(url, statut) {
+		super(`${url} a répondu HTTP ${statut}`);
+		this.url = url;
+		this.statut = statut;
+	}
+}
+
+/**
+ * Les chunks servis par un site, atteints depuis son point d'entrée.
+ *
+ * `obtenir` est `fetch`, injectable pour l'autotest : c'est la seule façon
+ * d'éprouver une 403 ou un chunk en 404 sans dépendre du réseau.
+ */
+export async function chunksDistants(site, obtenir = fetch) {
 	const lire = async (url) => {
-		const r = await fetch(url, { redirect: 'follow' });
-		return r.ok ? await r.text() : '';
+		const r = await obtenir(url, { redirect: 'follow' });
+		if (!r.ok) throw new RefusHttp(url, r.status);
+		return await r.text();
 	};
 	const racine = await lire(`${site}/`);
 	const entree = racine.match(/\/_app\/immutable\/entry\/app\.[A-Za-z0-9_-]+\.js/)?.[0];
@@ -141,25 +165,35 @@ export function versionDansChunks(chunks) {
 
 //  ── Modes ───────────────────────────────────────────────────────────────────
 
-async function modeSite(site) {
+/**
+ * La mesure de P3 : la version servie, ou `INCONNU: <raison>`. PURE à `obtenir`
+ * près — c'est elle que l'autotest éprouve, et `modeSite` ne fait que l'afficher.
+ */
+export async function mesurerSite(site, obtenir = fetch) {
 	let chunks;
 	try {
-		chunks = await chunksDistants(site);
+		chunks = await chunksDistants(site, obtenir);
 	} catch (e) {
-		console.log(`INCONNU: ${site} injoignable (${e.message})`);
-		return 2;
+		if (e instanceof RefusHttp) return { code: 2, ligne: `INCONNU: ${e.message}` };
+		return { code: 2, ligne: `INCONNU: ${site} injoignable (${e.message})` };
 	}
 	if (chunks === null) {
-		console.log("INCONNU: point d'entrée introuvable — le site ne sert pas un build SvelteKit");
-		return 2;
+		return {
+			code: 2,
+			ligne: "INCONNU: point d'entrée introuvable — le site ne sert pas un build SvelteKit",
+		};
 	}
 	const trouve = versionDansChunks(chunks);
 	if (!trouve) {
-		console.log(`INCONNU: version absente des ${chunks.length} chunk(s) servi(s)`);
-		return 2;
+		return { code: 2, ligne: `INCONNU: version absente des ${chunks.length} chunk(s) servi(s)` };
 	}
-	console.log(trouve.version);
-	return 0;
+	return { code: 0, ligne: trouve.version };
+}
+
+async function modeSite(site) {
+	const { code, ligne } = await mesurerSite(site);
+	console.log(ligne);
+	return code;
 }
 
 function modeCI() {
@@ -200,7 +234,7 @@ function modeCI() {
 	return 0;
 }
 
-function selftest() {
+async function selftest() {
 	let ko = 0;
 	const t = (libelle, source, attendu) => {
 		const obtenu = versionDansChunk(source);
@@ -228,11 +262,60 @@ function selftest() {
 	//  P3 dira INCONNU et quelqu'un regardera.
 	t('deux formes en désaccord', 'const fn="3.20.0",hn={version:fn};var z={version:"9.9.9"};', null);
 
+	//  ── Le mode site : chaque cause d'INCONNU dit la sienne (#1283) ──────────
+	//  Un faux site, servi par un `fetch` simulé : aucune requête réseau.
+	const SITE = 'https://exemple.test';
+	const ENTREE = '/_app/immutable/entry/app.Abc123.js';
+	const faux = (pages) => async (url) => {
+		const p = pages[url];
+		if (p instanceof Error) throw p;
+		if (p === undefined) return { ok: false, status: 404, text: async () => '' };
+		const [statut, corps] = typeof p === 'string' ? [200, p] : p;
+		return { ok: statut >= 200 && statut < 300, status: statut, text: async () => corps };
+	};
+	const m = async (libelle, pages, attendu) => {
+		const { ligne } = await mesurerSite(SITE, faux(pages));
+		if (ligne === attendu) console.log(`PASS  ${libelle}`);
+		else {
+			console.log(`FAIL  ${libelle} — obtenu « ${ligne} », attendu « ${attendu} »`);
+			ko = 1;
+		}
+	};
+	const sain = {
+		[`${SITE}/`]: `<script src="${ENTREE}"></script>`,
+		[`${SITE}${ENTREE}`]: 'import("./nodes/0.Xyz.js")',
+		[`${SITE}/_app/immutable/nodes/0.Xyz.js`]: 'const fn="2.49.2",hn={version:fn};',
+	};
+	await m('site sain → la version', sain, '2.49.2');
+	//  🔴 Le cas du 25/09/2026 : le proxy d'une session cloud refuse le domaine.
+	//  Avant #1283 : « le site ne sert pas un build SvelteKit ».
+	await m(
+		'racine en 403 → le refus est nommé, pas le build',
+		{ [`${SITE}/`]: [403, 'Forbidden'] },
+		`INCONNU: ${SITE}/ a répondu HTTP 403`,
+	);
+	await m(
+		'chunk en 404 → le refus est nommé, pas une absence de version',
+		{ ...sain, [`${SITE}/_app/immutable/nodes/0.Xyz.js`]: [404, ''] },
+		`INCONNU: ${SITE}/_app/immutable/nodes/0.Xyz.js a répondu HTTP 404`,
+	);
+	await m(
+		'racine servie sans point d’entrée → le message du build manquant',
+		{ [`${SITE}/`]: '<html>maintenance</html>' },
+		"INCONNU: point d'entrée introuvable — le site ne sert pas un build SvelteKit",
+	);
+	await m(
+		'aucune réponse → injoignable',
+		{ [`${SITE}/`]: new Error('ECONNREFUSED') },
+		`INCONNU: ${SITE} injoignable (ECONNREFUSED)`,
+	);
+
 	//  Le cas zéro du mode CI : sans build, il refuse au lieu de conclure au vert.
 	//  Éprouvé ici parce que c'est la propriété qui rend ce contrôle utile.
 	console.log(
 		ko === 0
-			? '\n✓ Autotest : les deux formes de bundle sont lues, les cas ambigus rendent null.'
+			? '\n✓ Autotest : les deux formes de bundle sont lues, les cas ambigus rendent null, ' +
+					'et chaque cause d’INCONNU du mode site dit la sienne.'
 			: '\n✗ Autotest en échec',
 	);
 	return ko;
@@ -242,7 +325,7 @@ const _lance = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 if (import.meta.url === _lance) {
 	const args = process.argv.slice(2);
 	const iSite = args.indexOf('--site');
-	if (args.includes('--selftest')) process.exit(selftest());
+	if (args.includes('--selftest')) process.exit(await selftest());
 	else if (iSite !== -1) process.exit(await modeSite(args[iSite + 1]?.replace(/\/$/, '') ?? ''));
 	else process.exit(modeCI());
 }

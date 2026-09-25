@@ -60,6 +60,7 @@
   la duplication que la table supprime. Le sujet est le CONTRÔLE, pas ce code.
 -->
 <script lang="ts">
+	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import { createEventDispatcher } from 'svelte';
 	import { bailleur as bailApi, type ObjetRemis } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
@@ -198,7 +199,7 @@
 	}
 
 	async function supprimer(o: ObjetRemis) {
-		if (!confirm(`Supprimer "${o.libelle}" ?`)) return;
+		if (!(await confirmer(SUPPRESSION(`« ${o.libelle} »`)))) return;
 		try {
 			await bailApi.supprimerObjet(bailId, o.id);
 			objets = objets.filter((x) => x.id !== o.id);

@@ -177,8 +177,13 @@ jobs:
         # des imports tardifs cassent des cycles, et 39 des 70 sont dans des
         # migrations qu'on ne modifie jamais. Les déplacer pour un linter
         # changerait le démarrage de l'API sans rien corriger.
+        # DTZ003 (`datetime.utcnow()`) sur `app/` seulement (#1047, 25/09/2026) :
+        # déprécié depuis Python 3.12, l'image de l'API. L'heure passe par
+        # `utils/horloge.maintenant()`, qui rend le même UTC naïf. Les tests et
+        # les migrations le gardent : ils ne tournent pas en production, et une
+        # migration appliquée ne se modifie jamais.
         run: |
-          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731
+          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731,DTZ003
           ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712,E741,E731
           ruff check api/tests/ --select E9,F63,F7,F82,F401,F841,E711,E712,E741,E731
 
@@ -390,14 +395,33 @@ jobs:
         # 27 fichiers versionnés en portaient encore un le 01/08/2026 — dont deux
         # sources Python, douze pages Svelte et `.gitignore`. Aucun ne cassait
         # aujourd'hui ; rien ne garantissait que le prochain ne casserait pas.
-        # Les fins de ligne, elles, ne sont PAS contrôlées ici : le dépôt est
-        # légitimement mixte CRLF/LF hors des scripts.
+        # Les fins de ligne, elles, ne sont PAS contrôlées ici : le DÉPÔT est
+        # légitimement mixte CRLF/LF hors des scripts — un FICHIER ne l'est jamais
+        # (étape suivante).
         run: |
           st=0
           for f in $(git ls-files -- '*.py' '*.ts' '*.js' '*.mjs' '*.svelte' '*.json' '*.yml' '*.yaml' '*.css' '*.html' '.gitignore'); do
             head -c3 "$f" | grep -q $'\xef\xbb\xbf' && { echo "::error file=$f::BOM UTF-8 en tête — écrire ce fichier sans BOM (Set-Content -Encoding utf8 en pose un)"; st=1; }
           done
           exit $st
+
+      - name: Aucun fichier à fins de ligne mixtes
+        # Le dépôt mêle des fichiers CRLF et des fichiers LF, et c'est assumé.
+        # Un FICHIER qui mêle les deux ne l'est nulle part (#1050) : c'est la
+        # trace d'une édition qui a réécrit une partie des lignes avec l'autre
+        # terminaison, et le prochain diff de ce fichier sera illisible. Il y en
+        # avait 32 le 19/09/2026, 4 le 25/09 — normalisés dans un commit seul.
+        # Ce contrôle garde le compte à zéro ; `verifier-fins-de-ligne.py`
+        # (pre-commit) refuse, lui, une conversion INVOLONTAIRE.
+        run: |
+          #  Le chemin suit une TABULATION : couper sur les espaces tronquerait un
+          #  nom qui en contient.
+          mixtes=$(git ls-files --eol | awk -F '\t' '$1 ~ /^i\/mixed/ { print $2 }')
+          [ -z "$mixtes" ] && exit 0
+          while IFS= read -r f; do
+            echo "::error file=$f::fins de ligne mixtes CRLF/LF — normaliser vers la terminaison majoritaire du fichier (commit dédié, ALLOW_EOL=1)"
+          done <<< "$mixtes"
+          exit 1
 
       - name: Aucun caractère de contrôle invisible dans le code
         # 🔴 Un caractère de RECUL (U+0008) collé au milieu d'une expression
@@ -467,6 +491,9 @@ jobs:
           # des liens de courriel — la décision se vérifie ici, la mesure se
           # fait devant la production (11/09/2026, 404 constaté à l'écran).
           bash scripts/lib/lib-precheck-liens.sh    --selftest
+          # Le mode --post-mep (#1282) : P1 (déployé) et P3 (version servie),
+          # dont les cas zéro — un journal illisible ne rend jamais OK.
+          bash scripts/lib/lib-precheck-post.sh     --selftest
           # Point 20 : la sonde de l'ordre du menu servi (#1114), décision pure.
           node front/scripts/sonde-pages-order.mjs  --selftest
           # 🔒 Vérifie la FORME du geste d'installation dans un volume du peer :
@@ -617,7 +644,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: front
-        run: npm install
+        # `npm ci`, comme `front/Dockerfile` (#1050) : `npm install` re-résolvait
+        # les plages et réécrivait le lock — la CI validait donc un arbre que
+        # l'image ne construisait pas. `--legacy-peer-deps` : le même drapeau que
+        # l'image — la CI doit installer exactement comme elle.
+        run: npm ci --legacy-peer-deps
 
       # Vulnérabilités connues des dépendances. Le 17/08/2026, `npm audit` en local
       # en relevait QUATRE dont une haute, quand le bandeau GitHub n'en annonçait
@@ -1701,6 +1732,12 @@ jobs:
         working-directory: front
         run: npm run lint:clamp
 
+      # Un type d'entité se déclare là où le client le rend, jamais dans un
+      # écran (#1044) : sinon deux écrans retypent la même entité, et divergent.
+      - name: Types d'entité déclarés hors des écrans
+        working-directory: front
+        run: npm run lint:types-locaux
+
       # 🔴 `e instanceof ApiError ? e.message : 'Erreur'` est écrit 123 fois.
       # Ce n'est pas une redite cosmétique : c'est la MÊME information perdue
       # 82 fois — `messageErreur` sait dire « votre session a expiré, rechargez
@@ -1983,7 +2020,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: front
-        run: npm install
+        # `npm ci`, comme `front/Dockerfile` (#1050) : `npm install` re-résolvait
+        # les plages et réécrivait le lock — la CI validait donc un arbre que
+        # l'image ne construisait pas. `--legacy-peer-deps` : le même drapeau que
+        # l'image — la CI doit installer exactement comme elle.
+        run: npm ci --legacy-peer-deps
 
       # Chromium seul : les deux profils (bureau et mobile) l'emploient, et
       # installer Firefox et WebKit pour rien coûterait deux minutes par PR.
@@ -2013,6 +2054,12 @@ jobs:
             ls -1 /etc/apt/sources.list.d/ || true
           fi
           npx playwright install --with-deps chromium
+
+      # 🔴 Avant les tests, pas après : un serveur emprunté les ferait passer
+      # sur le code d'un autre (#1150). Voir l'en-tête du script.
+      - name: Les tests de navigateur lancent leur serveur, jamais un emprunté
+        working-directory: front
+        run: npm run lint:e2e-serveur
 
       - name: Tests de navigateur (bureau et mobile)
         working-directory: front

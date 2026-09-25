@@ -7,7 +7,7 @@ la rejeter (la suppression du contenu et le bannissement restent gérés par les
 contrôles existants).
 """
 
-from datetime import datetime
+from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
@@ -204,7 +204,7 @@ def resoudre_signalement(
     sig = ou_404(session, Signalement, sig_id, "Signalement")
     sig.statut = body.statut
     sig.traite_par_id = user.id
-    sig.traite_le = datetime.utcnow()
+    sig.traite_le = horloge.maintenant()
     session.add(sig)
     session.commit()
     return {"id": sig.id, "statut": sig.statut}

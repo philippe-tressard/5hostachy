@@ -3,7 +3,7 @@
 Extrait de `tickets.py` le 08/08/2026. Voir `__init__.py` pour la règle de découpage.
 """
 
-from datetime import datetime
+from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
@@ -128,11 +128,11 @@ def add_message(
             type="reponse",
             contenu="Message interne" if body.interne else None,
             auteur_id=user.id,
-            cree_le=datetime.utcnow(),
+            cree_le=horloge.maintenant(),
             assiste_ia=body.assiste_ia,
         )
     )
-    ticket.mis_a_jour_le = datetime.utcnow()
+    ticket.mis_a_jour_le = horloge.maintenant()
     session.add(msg)
     session.add(ticket)
     #  L'id du message est nécessaire AVANT le commit : les notifications

@@ -1,6 +1,6 @@
 """Router règles & recommandations de la résidence."""
 
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -58,7 +58,7 @@ def create_regle(
         titre=body.titre,
         contenu=body.contenu,
         cree_par_id=user.id,
-        cree_le=datetime.utcnow(),
+        cree_le=horloge.maintenant(),
     )
     session.add(regle)
     session.commit()
@@ -76,7 +76,7 @@ def update_regle(
     regle = ou_404(session, RegleResidence, regle_id, "Règle")
     for k, v in body.model_dump(exclude_none=True).items():
         setattr(regle, k, v)
-    regle.modifie_le = datetime.utcnow()
+    regle.modifie_le = horloge.maintenant()
     session.add(regle)
     session.commit()
     session.refresh(regle)

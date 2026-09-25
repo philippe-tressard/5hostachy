@@ -43,7 +43,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
-import { etoilesEnLigne, etoilesFinDeLigne, PLAFOND_ETOILES_FIN_DE_LIGNE } from './lib-etoiles.mjs';
+import { etoiles, CAS_ETOILES } from './lib-etoiles.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
@@ -322,6 +322,11 @@ if (process.argv.includes('--selftest')) {
 		console.log(`${vu ? '✓' : '✗'} accepté — ${nom}`);
 		if (!vu) echecs++;
 	}
+	for (const [nom, source, attendu] of CAS_ETOILES) {
+		const vu = etoiles(source).length === attendu;
+		console.log(`${vu ? '✓' : '✗'} ${attendu ? 'refusé' : 'accepté'} — astérisque ${nom}`);
+		if (!vu) echecs++;
+	}
 	if (echecs) {
 		console.error(`\n✗ ${echecs} cas d'autotest en échec.`);
 		process.exit(1);
@@ -432,30 +437,13 @@ if (optMortes.length) {
 	process.exit(1);
 }
 
-//  L'astérisque tapée : deux formes, dans `lib-etoiles.mjs` (#1121, #1186).
+//  L'astérisque tapée : trois formes, dans `lib-etoiles.mjs` (#1121, #1186, #1254).
 const ETOILES = [];
-const ETOILES_FIN_DE_LIGNE = [];
 for (const chemin of composants(RACINE)) {
 	const relatif = relative(RACINE, chemin).split(sep).join('/');
 	if (relatif.endsWith('EtoileRequis.svelte')) continue;
-	const brut = readFileSync(chemin, 'utf8');
-	for (const f of etoilesEnLigne(brut)) ETOILES.push(`src/${relatif}:${f.ligne}  ${f.texte}`);
-	for (const f of etoilesFinDeLigne(brut))
-		ETOILES_FIN_DE_LIGNE.push(`src/${relatif}:${f.ligne}  ${f.texte}`);
-}
-if (ETOILES_FIN_DE_LIGNE.length > PLAFOND_ETOILES_FIN_DE_LIGNE) {
-	ETOILES.push(...ETOILES_FIN_DE_LIGNE);
-	console.error(
-		`\n✗ ${ETOILES_FIN_DE_LIGNE.length} astérisque(s) en fin de ligne de libellé — le plafond est ` +
-			`${PLAFOND_ETOILES_FIN_DE_LIGNE}.`,
-	);
-} else if (ETOILES_FIN_DE_LIGNE.length < PLAFOND_ETOILES_FIN_DE_LIGNE) {
-	console.error(
-		`\n✗ Le plafond est PÉRIMÉ : ${ETOILES_FIN_DE_LIGNE.length} astérisque(s) en fin de ligne pour ` +
-			`un plafond de ${PLAFOND_ETOILES_FIN_DE_LIGNE}.\n\n  Abaisser \`PLAFOND_ETOILES_FIN_DE_LIGNE\` ` +
-			`à ${ETOILES_FIN_DE_LIGNE.length} : un plafond au-dessus du réel laisse la place d'en réintroduire.\n`,
-	);
-	process.exit(1);
+	for (const f of etoiles(readFileSync(chemin, 'utf8')))
+		ETOILES.push(`src/${relatif}:${f.ligne}  ${f.texte}`);
 }
 if (ETOILES.length > 0) {
 	console.error(`\n✗ ${ETOILES.length} astérisque(s) de champ requis écrite(s) à la main :\n`);

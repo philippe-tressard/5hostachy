@@ -14,6 +14,7 @@ existants pour un gain nul : c'est le RANGEMENT du code qui change, pas l'API.
 import logging
 import os
 from datetime import date, datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -84,7 +85,7 @@ def create_releve(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    r = ReleveCompteur(**body.model_dump(), cree_le=datetime.utcnow(), cree_par_id=user.id)
+    r = ReleveCompteur(**body.model_dump(), cree_le=horloge.maintenant(), cree_par_id=user.id)
     session.add(r)
     session.commit()
     session.refresh(r)

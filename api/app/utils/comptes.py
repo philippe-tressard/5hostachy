@@ -18,6 +18,7 @@ définition reste unique, et donc corrigible en un seul endroit.
 """
 
 from datetime import datetime
+from app.utils import horloge
 
 from sqlalchemy import and_
 from sqlmodel import Session, func, select
@@ -66,4 +67,4 @@ def marquer_decide(user: Utilisateur, maintenant: datetime | None = None) -> Non
     qui compte, la repousser n'apprendrait rien et effacerait un historique.
     """
     if user.decision_compte_le is None:
-        user.decision_compte_le = maintenant or datetime.utcnow()
+        user.decision_compte_le = maintenant or horloge.maintenant()

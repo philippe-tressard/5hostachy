@@ -13,6 +13,7 @@ découpage corresponde aux journées réelles des utilisateurs.
 """
 
 from datetime import datetime, timedelta
+from app.utils import horloge
 import logging
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -66,7 +67,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
     }
 
     with Session(engine) as session:
-        now_utc = datetime.utcnow()
+        now_utc = horloge.maintenant()
         now_paris = _paris_now()
 
         # ─── 1. Agrégation journalière : events → daily ─────────────────
@@ -297,7 +298,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                 entry.daily_purges = rapport["daily_purges"]
                 entry.monthly_purges = rapport["monthly_purges"]
                 entry.duree_secondes = duree
-                entry.terminee_le = datetime.utcnow()
+                entry.terminee_le = horloge.maintenant()
                 if rapport["erreurs"]:
                     entry.statut = "erreur"
                     entry.erreur = "; ".join(rapport["erreurs"])

@@ -17,7 +17,7 @@ Usage depuis le conteneur :
 
 from __future__ import annotations
 
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Session, select
@@ -171,7 +171,7 @@ def _creer_import(
         lot_id=lot_id,
         statut=statut,
         notes_admin=notes_admin,
-        importe_le=datetime.utcnow(),
+        importe_le=horloge.maintenant(),
     )
     session.add(record)
     return record

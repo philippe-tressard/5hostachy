@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import { onMount } from 'svelte';
 	import { admin as adminApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
@@ -28,9 +29,11 @@
 
 	async function supprimer(ul: any) {
 		if (
-			!confirm(
-				`Supprimer l'association de « ${ul.user_nom} » au lot ${ul.lot_numero} (${ul.batiment}) ?`,
-			)
+			!(await confirmer(
+				SUPPRESSION(
+					`L'association de « ${ul.user_nom} » au lot ${ul.lot_numero} (${ul.batiment}).`,
+				),
+			))
 		)
 			return;
 		try {
@@ -48,7 +51,12 @@
 		lots: any[];
 	}) {
 		if (!g.lots.length) return;
-		if (!confirm(`Supprimer ${g.lots.length} association(s) pour « ${g.user_nom} » ?`)) return;
+		if (
+			!(await confirmer(
+				SUPPRESSION(`${g.lots.length} association(s) de « ${g.user_nom} » à ses lots.`),
+			))
+		)
+			return;
 		deletingUserId = g.user_id;
 		try {
 			const results = await Promise.allSettled(

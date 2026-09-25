@@ -39,6 +39,7 @@ jamais été concerné.
 """
 
 from datetime import datetime, timedelta
+from app.utils import horloge
 import logging
 from typing import Any, Callable, NamedTuple, Optional
 
@@ -98,7 +99,7 @@ def rattraper_si_manquee(
         return None
 
     quand = derniere.isoformat() if derniere else "aucune"
-    if not rattrapage_necessaire(derniere, datetime.utcnow(), periode_h):
+    if not rattrapage_necessaire(derniere, horloge.maintenant(), periode_h):
         logger.info("%s : rien à rattraper (dernière réussite %s).", libelle, quand)
         return None
 

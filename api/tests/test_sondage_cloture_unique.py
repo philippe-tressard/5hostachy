@@ -32,6 +32,7 @@ qui doivent dire la même chose.
 """
 
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from sqlmodel import Session, SQLModel
@@ -139,22 +140,19 @@ def test_un_seul_instant_date_toute_la_liste(base):
         _sondage(base, cs.id, f"s{i}", cloture_le=datetime.utcnow() + timedelta(days=1))
 
     appels = {"n": 0}
-    vrai_datetime = crud.datetime
+    vraie_horloge = crud.horloge
 
-    class _HorlogeComptee:
-        @staticmethod
-        def utcnow():
-            appels["n"] += 1
-            return vrai_datetime.utcnow()
+    def _maintenant_compte():
+        appels["n"] += 1
+        return vraie_horloge.maintenant()
 
-        def __getattr__(self, nom):  # tout le reste passe au vrai module
-            return getattr(vrai_datetime, nom)
-
-    crud.datetime = _HorlogeComptee()
+    #  L'horloge du module passe par `horloge` depuis #1047 : c'est elle qu'on
+    #  compte, dans CE module seulement — comme on comptait son `datetime`.
+    crud.horloge = SimpleNamespace(maintenant=_maintenant_compte)
     try:
         list_sondages(session=base, user=cs)
     finally:
-        crud.datetime = vrai_datetime
+        crud.horloge = vraie_horloge
 
     assert appels["n"] == 1, (
         f"{appels['n']} appels à utcnow() pour une seule liste — un par sondage "

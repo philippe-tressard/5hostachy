@@ -1,6 +1,7 @@
 """Router FAQ — lecture publique, CRUD réservé CS/Admin."""
 
 from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -102,7 +103,7 @@ def rename_category(
         raise HTTPException(404, "Catégorie introuvable")
     for item in items:
         item.categorie = body.new_name.strip()
-        item.mis_a_jour_le = datetime.utcnow()
+        item.mis_a_jour_le = horloge.maintenant()
         session.add(item)
     session.commit()
     return {"count": len(items), "new_name": body.new_name.strip()}
@@ -158,7 +159,7 @@ def update_faq(
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(item, k, v)
-    item.mis_a_jour_le = datetime.utcnow()
+    item.mis_a_jour_le = horloge.maintenant()
     session.add(item)
     session.commit()
     session.refresh(item)

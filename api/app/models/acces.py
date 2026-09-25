@@ -24,6 +24,7 @@ rangement.
 """
 
 from datetime import datetime
+from app.utils import horloge
 from enum import Enum
 from typing import Optional
 
@@ -62,7 +63,7 @@ class Vigik(SQLModel, table=True):
     #: migration `0190`. Le raisonnement n'est pas recopié ici — il l'était
     #: quatre fois le jour où ce champ est né (#953).
     perimetre_cible: Optional[str] = Field(default=None)
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
 
 
 class Telecommande(SQLModel, table=True):
@@ -91,7 +92,7 @@ class Telecommande(SQLModel, table=True):
     #: migration `0190`. Le raisonnement n'est pas recopié ici — il l'était
     #: quatre fois le jour où ce champ est né (#953).
     perimetre_cible: Optional[str] = Field(default=None)
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
 
 
 #  🔴 `UserVigik` et `UserTelecommande` ont été RETIRÉS le 23/09/2026 (#1194) :
@@ -140,7 +141,7 @@ class TelecommandeImport(SQLModel, table=True):
 
     # ── Métadonnées ───────────────────────────────────────────────────────
     notes_admin: Optional[str] = None
-    importe_le: datetime = Field(default_factory=datetime.utcnow)
+    importe_le: datetime = Field(default_factory=horloge.maintenant)
     resolu_le: Optional[datetime] = None
 
 
@@ -180,5 +181,5 @@ class VigikImport(SQLModel, table=True):
 
     # ── Métadonnées ───────────────────────────────────────────────────────
     notes_admin: Optional[str] = None
-    importe_le: datetime = Field(default_factory=datetime.utcnow)
+    importe_le: datetime = Field(default_factory=horloge.maintenant)
     resolu_le: Optional[datetime] = None

@@ -53,6 +53,7 @@ doit décrire ce que la base porte réellement ».
 from __future__ import annotations
 
 from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Field
@@ -73,7 +74,7 @@ class EvolutionMixin(AssisteIAMixin):
     ancien_statut: Optional[str] = None
     nouveau_statut: Optional[str] = None
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     #: Tableau JSON d'URLs. `"[]"` et non `None` : « aucune pièce jointe » est
     #: une liste vide, pas une absence de réponse — c'est ce qui permet de lire
     #: la colonne sans garde à chaque appel.

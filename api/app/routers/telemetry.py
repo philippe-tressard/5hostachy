@@ -1,6 +1,7 @@
 """Router telemetry — collecte (beacon) + dashboard admin."""
 
 from datetime import datetime, timedelta
+from app.utils import horloge
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
@@ -60,7 +61,7 @@ def collect(
     except Exception:
         pass  # Visiteur non connecté — on enregistre quand même avec user_id=None
 
-    now = datetime.utcnow()
+    now = horloge.maintenant()
     for ev in body.events[:50]:  # Max 50 événements par batch (sécurité)
         page = str(ev.get("page", ""))[:200]
         action = str(ev.get("action", "view"))[:50]

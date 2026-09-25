@@ -9,6 +9,7 @@
 -->
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	export let types: readonly { val: string; label: string; desc?: string }[] = [];
 	export let fType = '';
@@ -30,7 +31,7 @@
 
 <div class="form-grid">
 	<label class="field champ-large">
-		Libellé *
+		<span>Libellé<EtoileRequis vide={!fLibelle.trim()} /></span>
 		<input type="text" bind:value={fLibelle} required maxlength="120" />
 	</label>
 	<label class="field">

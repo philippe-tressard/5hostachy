@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import { nomCopie } from '$lib/saisi-pour';
 	import { contexteCommentaire } from '$lib/assistant';
 	import { messageErreur } from '$lib/erreurs';
@@ -186,12 +187,7 @@
 	}
 
 	async function deleteTicket() {
-		if (
-			!confirm(
-				`Supprimer définitivement le ticket #${ticket.numero} ? Cette action est irréversible.`,
-			)
-		)
-			return;
+		if (!(await confirmer(SUPPRESSION(`${TICKET.libelle} #${ticket.numero}`)))) return;
 		try {
 			await ticketsApi.delete(ticketId);
 			toast('success', `${TICKET.libelle} supprimée`);

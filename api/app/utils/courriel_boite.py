@@ -42,6 +42,7 @@ import imaplib
 import json
 import logging
 from datetime import datetime
+from app.utils import horloge
 from email.utils import parsedate_to_datetime
 
 from sqlalchemy import func
@@ -190,7 +191,7 @@ def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict, 
             relance_id=relance.id,
             expediteur=verdict.expediteur,
             contenu=texte,
-            recue_le=datetime.utcnow(),
+            recue_le=horloge.maintenant(),
         )
     )
 
@@ -354,10 +355,10 @@ def traiter(
             type="commentaire",
             contenu=texte,
             auteur_id=auteur.id,
-            cree_le=datetime.utcnow(),
+            cree_le=horloge.maintenant(),
         )
     )
-    ticket.mis_a_jour_le = datetime.utcnow()
+    ticket.mis_a_jour_le = horloge.maintenant()
     session.add(ticket)
     session.commit()
     return ACCEPTE
