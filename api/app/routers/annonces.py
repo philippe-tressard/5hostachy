@@ -1,7 +1,7 @@
 """Router petites annonces — communauté résidence."""
 
 import json
-from datetime import datetime
+from app.utils import horloge
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -248,7 +248,7 @@ def update_annonce(
     #  d'état arrivant par `PATCH` doit s'horodater comme celui du raccourci de
     #  la carte. Deux chemins vers le même fait, une seule règle.
     if "statut" in maj and maj["statut"] != annonce.statut:
-        annonce.statut_change_le = datetime.utcnow()
+        annonce.statut_change_le = horloge.maintenant()
     #  Les DEUX axes du ciblage subissent la même conversion : les traiter
     #  séparément a produit exactement ce genre d'oubli ailleurs.
     for axe in ("perimetre_cible", "public_cible"):
@@ -258,7 +258,7 @@ def update_annonce(
     #  comme `["résidence"]` : le défaut du champ, et non une annonce sans lieu.
     for field, value in maj.items():
         setattr(annonce, field, value)
-    annonce.mis_a_jour_le = datetime.utcnow()
+    annonce.mis_a_jour_le = horloge.maintenant()
     session.add(annonce)
     session.commit()
     session.refresh(annonce)
@@ -280,9 +280,9 @@ def update_statut(
     #  chaque appel ferait repartir le compte à rebours d'archivage même quand
     #  on repose l'état déjà en place — un double-clic suffirait.
     if annonce.statut != data.statut:
-        annonce.statut_change_le = datetime.utcnow()
+        annonce.statut_change_le = horloge.maintenant()
     annonce.statut = data.statut
-    annonce.mis_a_jour_le = datetime.utcnow()
+    annonce.mis_a_jour_le = horloge.maintenant()
     session.add(annonce)
     session.commit()
     return {"ok": True}
@@ -353,7 +353,7 @@ def add_photo(
     url = _save_image(file, "annonces", max_dim=1200)
     photos.append(url)
     annonce.photos_json = json.dumps(photos)
-    annonce.mis_a_jour_le = datetime.utcnow()
+    annonce.mis_a_jour_le = horloge.maintenant()
     session.add(annonce)
     session.commit()
     return {"url": url, "photos": photos}
@@ -372,7 +372,7 @@ def remove_photo(
         raise HTTPException(403, "Seul l'auteur peut supprimer ses photos")
     photos = [p for p in json.loads(annonce.photos_json) if p != url]
     annonce.photos_json = json.dumps(photos)
-    annonce.mis_a_jour_le = datetime.utcnow()
+    annonce.mis_a_jour_le = horloge.maintenant()
     session.add(annonce)
     session.commit()
     return {"photos": photos}

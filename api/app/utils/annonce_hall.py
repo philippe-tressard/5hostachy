@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from datetime import date, datetime
+from app.utils import horloge
 from html import escape
 
 # `date_longue` vit désormais dans `dates_fr` (source unique, partagée avec la
@@ -413,7 +414,7 @@ def construire_html(
 ) -> str:
     """Assemble le HTML autonome de l'annonce (images et QR en data-URI)."""
     g = _GABARITS[format_effectif]
-    d = date_affichage or datetime.utcnow()
+    d = date_affichage or horloge.maintenant()
     url_complete = site_url if site_url.startswith("http") else f"https://{site_url}"
     site_affiche = re.sub(r"^https?://", "", site_url).rstrip("/")
 

@@ -5,7 +5,7 @@ lui-même — `participation`, dont les chemins sont nus, le reçoit du paquet.
 """
 
 import json
-from datetime import datetime
+from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import func
@@ -63,7 +63,7 @@ def list_sondages(
     #  `utcnow()` chacun ne dateraient plus la même clôture. Même raison que
     #  `ContexteFlux.now` — c'est d'ailleurs pourquoi `sondage_clos` prend
     #  `maintenant` en paramètre au lieu de le lire lui-même.
-    maintenant = datetime.utcnow()
+    maintenant = horloge.maintenant()
     seuil_jours = seuil_archivage_jours(session)
     result = []
     for s in accessible:
@@ -102,7 +102,7 @@ def get_sondage(
         )
     ).first()
 
-    cloture = sondage_clos(s, datetime.utcnow())
+    cloture = sondage_clos(s, horloge.maintenant())
 
     #  Le filtrage est ICI, pas côté front : un masquage d'affichage laisse les
     #  décomptes dans la réponse réseau. La règle elle-même vit dans
@@ -306,7 +306,7 @@ def modifier_sondage(
     #  L'auteur ou un admin — `peut_editer`, du module central.
     if not peut_editer(s, user):
         raise HTTPException(403, "Seul l'auteur ou un admin peut modifier ce sondage")
-    if sondage_clos(s, datetime.utcnow()):
+    if sondage_clos(s, horloge.maintenant()):
         raise HTTPException(400, "Ce sondage est clôturé et ne peut plus être modifié")
 
     #  Y a-t-il DÉJÀ des votes ? Tout ce qui suit en dépend : avant le premier

@@ -3,6 +3,7 @@
 import logging
 import os
 from datetime import datetime, date as dateclass
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -173,7 +174,7 @@ async def upload_rapport(
         taille_octets=os.path.getsize(dest),
         mime_type=file.content_type or "application/octet-stream",
         publie_par_id=user.id,
-        publie_le=datetime.utcnow(),
+        publie_le=horloge.maintenant(),
     )
     session.add(rapport)
     session.commit()

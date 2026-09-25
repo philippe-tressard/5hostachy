@@ -14,6 +14,7 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { ICONES_PERIMETRE } from '$lib/perimetres';
 
 	/** L'objet de saisie, lié dans les deux sens : l'onglet porte son cycle de vie. */
@@ -46,7 +47,7 @@
 </p>
 
 <label class="field"
-	>Libellé *
+	><span>Libellé<EtoileRequis vide={!form.libelle.trim()} /></span>
 	<input bind:value={form.libelle} required />
 </label>
 <label class="field"

@@ -41,10 +41,13 @@ import logging
 _logger = logging.getLogger("hostachy.manuel")
 
 import re
+import threading
 import urllib.request
 from datetime import date
 from html import escape, unescape
+from pathlib import Path
 
+from app.utils import manuel_pdf_cache
 from app.utils.dates_fr import date_longue
 from app.utils.manuel_pdf_css import css_du_pdf
 from app.utils.pdf_theme import (
@@ -336,15 +339,21 @@ def composer_html(
 #: servi un document périmé sans que rien ne le signale — le défaut qu'on
 #: passe son temps à corriger ailleurs.
 #:
-#: ⚠️ Le cache vit dans le PROCESS : il disparaît à chaque redémarrage, donc à
-#: chaque déploiement. C'est voulu — pas d'invalidation à écrire, donc pas
-#: d'invalidation à oublier.
+#: ⚠️ Le cache en mémoire disparaît à chaque redémarrage, donc à chaque
+#: déploiement. Il est doublé, depuis le 25/09/2026, d'une copie SUR DISQUE :
+#: voir `manuel_pdf_cache` (#1071).
 _CACHE: dict[tuple[str, str, str, str], bytes] = {}
 
 #: Au-delà, on jette le plus ancien. Deux entrées suffisent (la date change à
 #: minuit) ; la borne existe pour qu'une boucle anormale ne gonfle pas la mémoire
-#: d'un conteneur qui n'en a pas beaucoup.
+#: d'un conteneur qui n'en a pas beaucoup. Même borne sur le disque.
 _CACHE_MAX = 4
+
+#: 🔴 UN SEUL RENDU À LA FOIS (#1071, 25/09/2026). Deux lecteurs sur un cache
+#: vide lançaient deux rendus complets de 21 s — sur un Raspberry Pi, chacun
+#: dans son propre process. Le second attend désormais le premier, et repart
+#: avec son résultat au lieu de tout recomposer.
+_VERROU = threading.Lock()
 
 
 def generer_manuel_pdf(
@@ -353,8 +362,12 @@ def generer_manuel_pdf(
     *,
     html_manuel: str | None = None,
     edite_le: date | None = None,
+    dossier: Path | None = None,
 ) -> bytes:
-    """Le manuel complet en PDF, mis en cache sur l'empreinte de sa source."""
+    """Le manuel complet en PDF : la mémoire, puis le disque, puis le rendu.
+
+    `dossier` sert aux tests ; en service, c'est celui de `manuel_pdf_cache`.
+    """
     import hashlib
 
     html = html_manuel if html_manuel is not None else lire_manuel()
@@ -368,38 +381,66 @@ def generer_manuel_pdf(
     if cle in _CACHE:
         return _CACHE[cle]
 
-    pdf = html_to_pdf(composer_html(site_nom, site_url, html_manuel=html, edite_le=edite_le))
-    if len(_CACHE) >= _CACHE_MAX:
-        _CACHE.pop(next(iter(_CACHE)))
-    _CACHE[cle] = pdf
+    with _VERROU:
+        #  Relu SOUS le verrou : un rendu a pu aboutir pendant l'attente.
+        if cle in _CACHE:
+            return _CACHE[cle]
+        dossier = dossier if dossier is not None else manuel_pdf_cache.dossier_par_defaut()
+        pdf = manuel_pdf_cache.lire(cle, dossier)
+        if pdf is None:
+            pdf = html_to_pdf(
+                composer_html(site_nom, site_url, html_manuel=html, edite_le=edite_le)
+            )
+            manuel_pdf_cache.ecrire(cle, pdf, dossier, garder=_CACHE_MAX)
+        if len(_CACHE) >= _CACHE_MAX:
+            _CACHE.pop(next(iter(_CACHE)))
+        _CACHE[cle] = pdf
     return pdf
 
 
-def prechauffer(site_nom: str, site_url: str) -> bool:
+#: Combien de fois le préchauffage réessaie quand le MANUEL est illisible, et
+#: à quel intervalle. Après un déploiement, `front` démarre APRÈS l'API
+#: (`depends_on: api`) : la première lecture pouvait tomber sur un front pas
+#: encore prêt, et le préchauffage abandonnait — le premier lecteur payait alors
+#: le rendu entier (#1071). Six essais à 15 s couvrent une minute et demie.
+TENTATIVES_PRECHAUFFAGE = 6
+PAUSE_PRECHAUFFAGE_S = 15.0
+
+
+def prechauffer(site_nom: str, site_url: str, *, pause_s: float | None = None) -> bool:
     """Rend le manuel une fois, pour que personne n'attende le premier rendu.
 
     ## 🔴 Pourquoi (18/09/2026, demandé par Philippe)
 
-    Le cache vit dans le PROCESS : il disparaît à chaque déploiement, ce qui
-    évite d'avoir une invalidation à écrire — donc à oublier. Le prix en était
-    payé par le premier lecteur d'après, et il est lourd : **21,1 secondes**
-    mesurées en production, contre 0,15 s ensuite. Vingt et une secondes d'écran
-    blanc, à chaque mise en production.
-
-    ⚠️ Le préchauffage ne remplace pas le cache, il le REMPLIT d'avance. Rien
-    d'autre ne change : même clé, même contenu, et un lecteur qui arriverait
-    pendant le rendu attend exactement ce qu'il attendait avant.
+    Un manuel modifié change la clé du cache, en mémoire comme sur disque. Le
+    prix en était payé par le premier lecteur d'après, et il est lourd :
+    **21,1 secondes** mesurées en production, contre 0,15 s ensuite.
 
     ⚠️ Il se relance chaque nuit, parce que la clé du cache porte la DATE
     d'édition : sans cela, le premier lecteur du jour repaierait les 21 s.
 
+    ⚠️ Il RÉESSAIE quand le manuel est illisible — le front démarre après
+    l'API —, jamais quand le MOTEUR échoue : un rendu cassé le serait encore
+    quinze secondes plus tard.
+
     Ne lève jamais : un manuel indisponible ou un moteur en panne ne doit pas
     empêcher l'application de démarrer. Rend `True` si le cache est garni.
     """
-    try:
-        generer_manuel_pdf(site_nom, site_url)
-    except Exception as exc:  # noqa: BLE001 — au démarrage, aucune panne ne doit remonter
-        _logger.warning("Préchauffage du manuel PDF impossible : %s", exc)
-        return False
-    _logger.info("Manuel PDF préchauffé (cache garni, %d entrée(s)).", len(_CACHE))
-    return True
+    import time
+
+    pause = PAUSE_PRECHAUFFAGE_S if pause_s is None else pause_s
+    for essai in range(1, TENTATIVES_PRECHAUFFAGE + 1):
+        try:
+            generer_manuel_pdf(site_nom, site_url)
+        except ManuelIndisponible as exc:
+            if essai == TENTATIVES_PRECHAUFFAGE:
+                _logger.warning("Préchauffage du manuel PDF impossible : %s", exc)
+                return False
+            time.sleep(pause)
+            continue
+        except Exception as exc:  # noqa: BLE001 — au démarrage, aucune panne ne doit remonter
+            _logger.warning("Préchauffage du manuel PDF impossible : %s", exc)
+            return False
+        _logger.info("Manuel PDF préchauffé (cache garni, %d entrée(s)).", len(_CACHE))
+        return True
+    return False

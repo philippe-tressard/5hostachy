@@ -142,6 +142,45 @@ updates:
       - dependency-name: "typescript"
         versions: [">= 7"]
 
+  # ── Bridge WhatsApp (npm) — ajouté le 25/09/2026 (#1050) ───────────────────
+  # Il n'était suivi par RIEN : `baileys`, `express`, `pino` et `qrcode` ne
+  # recevaient ni correctif ni alerte de sécurité, alors que le bridge tient
+  # la session WhatsApp du compte et reçoit des requêtes de l'API.
+  #
+  # ⚠️ Baileys parle un protocole NON OFFICIEL : une mineure peut suffire à
+  # rompre la connexion. Les majeures arrivent donc seules (règle commune), et
+  # une PR du bridge ne se juge qu'après un envoi réel constaté — aucun test
+  # de la CI ne traverse WhatsApp (#1057).
+  - package-ecosystem: npm
+    directory: /whatsapp-bridge
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      bridge-mineur:
+        applies-to: version-updates
+        update-types: [minor, patch]
+      bridge-securite:
+        applies-to: security-updates
+        update-types: [minor, patch]
+
+  # ── Images de base Docker — ajouté le 25/09/2026 (#1050) ──────────────────
+  # Les quatre images (`api`, `front`, `whatsapp-bridge`, Caddy à la racine)
+  # portent le système et l'interpréteur de chaque conteneur : une faille de
+  # Node, de Python ou d'Alpine n'arrivait jusqu'ici que par hasard, au
+  # prochain `docker compose build` qui tirait une étiquette flottante.
+  - package-ecosystem: docker
+    directories: ["/api", "/front", "/whatsapp-bridge", "/"]
+    target-branch: dev
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(deps)"
+
   # ── Actions GitHub ─────────────────────────────────────────────────────────
   # Une action figée sur une version vulnérable a accès au dépôt et aux
   # secrets du workflow : elle mérite le même suivi que le code.

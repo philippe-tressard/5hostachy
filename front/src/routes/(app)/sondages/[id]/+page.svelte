@@ -11,8 +11,9 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FilAriane from '$lib/components/FilAriane.svelte';
-	import SectionDescription from '$lib/components/SectionDescription.svelte';
-	import { contexteAssistant } from '$lib/assistant';
+	import ChampsEditionSondage, {
+		type EditionSondage,
+	} from '$lib/components/ChampsEditionSondage.svelte';
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { fmtDateShort } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -31,16 +32,15 @@
 	// Édition
 	let showEditModal = false,
 		editAssisteIA = false;
-	//  `options` ne porte que l'`id` et le LIBELLÉ : le serveur n'accepte rien
-	//  d'autre, et c'est ce qui rend l'ajout et le retrait impossibles par
-	//  construction plutôt que par un contrôle qu'on pourrait oublier (#467).
-	let editForm: {
-		question: string;
-		description: string;
-		cloture_le: string;
-		resultats_publics: boolean;
-		options: { id: number; libelle: string }[];
-	} = { question: '', description: '', cloture_le: '', resultats_publics: true, options: [] };
+	//  La forme de la correction, et pourquoi elle ne porte que des libellés :
+	//  `ChampsEditionSondage` (#467).
+	let editForm: EditionSondage = {
+		question: '',
+		description: '',
+		cloture_le: '',
+		resultats_publics: true,
+		options: [],
+	};
 	let saving = false;
 	let deleting = false;
 
@@ -393,64 +393,13 @@
 {#if showEditModal}
 	<FormulaireCreation titre="Modifier le sondage" cle="edition">
 		<form on:submit|preventDefault={saveEdit}>
-			<label class="field">
-				Question *
-				<input bind:value={editForm.question} required />
-			</label>
-			<SectionDescription
-				idPrefixe="sondage-edit"
-				placeholder="Description du sondage…"
-				bind:valeur={editForm.description}
-				assistant={contexteAssistant('sondage', {})}
-				bind:titreObjet={editForm.question}
-				bind:assisteIA={editAssisteIA}
-			/>
-			<!--  Les RÉPONSES : leur libellé se corrige, la liste ne bouge pas.
-			      Ni ajout ni retrait — un vote déjà exprimé sur une option retirée n'a
-			      pas de repli honnête : le compter ailleurs fausse le résultat, le
-			      supprimer efface l'expression de quelqu'un sans le lui dire (#467).
-			      L'interface dit donc EXACTEMENT ce que le serveur accepte : pas de
-			      bouton « + », pas de croix, et l'ordre ne se change pas non plus. -->
-			{#if editForm.options.length}
-				<div class="field">
-					<span class="champ-titre">Réponses possibles</span>
-					{#each editForm.options as opt, i (opt.id)}
-						<input
-							class="reponse-saisie"
-							bind:value={editForm.options[i].libelle}
-							aria-label="Libellé de la réponse {i + 1}"
-							required
-						/>
-					{/each}
-					<p class="aide">
-						Seul le <strong>texte</strong> se corrige. Ajouter ou retirer une réponse invaliderait les
-						votes déjà exprimés : il faudrait alors créer un nouveau sondage.
-					</p>
-				</div>
-			{/if}
-
-			<label class="field">
-				Date de clôture
-				<input type="datetime-local" bind:value={editForm.cloture_le} />
-			</label>
-			<p class="aide">
-				Elle peut être <strong>reculée</strong>, jamais avancée une fois qu'un vote a été exprimé —
-				raccourcir priverait de leur voix ceux qui n'ont pas encore voté.
-			</p>
-			<label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;cursor:pointer">
-				<input type="checkbox" bind:checked={editForm.resultats_publics} />
-				Afficher les résultats avant la clôture
-			</label>
-			<p style="margin:-.6rem 0 1rem 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
-				Ils seront lus par les destinataires du sondage. Sinon, ils n'apparaissent qu'une fois le
-				sondage clôturé.
-			</p>
+			<ChampsEditionSondage bind:form={editForm} bind:assisteIA={editAssisteIA} />
 			<div style="display:flex;gap:.5rem;justify-content:flex-end">
 				<button type="button" class="btn btn-outline" on:click={() => (showEditModal = false)}
 					>Annuler</button
 				>
 				<button type="submit" class="btn btn-primary" disabled={saving}
-					>{saving ? 'Sauvegarde…' : 'Enregistrer'}</button
+					>{saving ? 'Enregistrement…' : 'Enregistrer'}</button
 				>
 			</div>
 		</form>
@@ -458,18 +407,6 @@
 {/if}
 
 <style>
-	/*  Saisie des libellés de réponse dans la modale d'édition (#467). */
-	.champ-titre {
-		display: block;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--color-text);
-		margin-bottom: 0.3rem;
-	}
-	.reponse-saisie {
-		width: 100%;
-		margin-bottom: 0.35rem;
-	}
 	/*  `.back-link` est parti dans `FilAriane` (#365). Il disait « Communauté »
 	    ici et « Retour aux tickets » sur la fiche de ticket : deux pages du même
 	    site, deux conventions, aucune ne nommant la rubrique. */

@@ -31,6 +31,7 @@ Si la fenêtre se ferme sans envoi réussi, une alerte e-mail est déclenchée.
 import calendar
 import logging
 from datetime import datetime, timedelta, timezone
+from app.utils import horloge
 from zoneinfo import ZoneInfo
 
 from sqlmodel import Session, select
@@ -164,7 +165,7 @@ def check_and_send():
                 )
             )
             log.message = message_complet
-            log.envoye_le = datetime.utcnow()
+            log.envoye_le = horloge.maintenant()
 
             #  ── Verrou, posé AVANT l'envoi ────────────────────────────────
             #  Écrire le log après coup ne protège que des envois dont on a vu
@@ -242,7 +243,7 @@ def _prune_logs(session: Session):
     all_logs = session.exec(select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())).all()
     if len(all_logs) <= 6:
         return
-    seuil_verrou = datetime.utcnow() - DUREE_VERROU
+    seuil_verrou = horloge.maintenant() - DUREE_VERROU
     supprimes = False
     for old in all_logs[6:]:
         if old.scheduled_id is not None and old.envoye_le >= seuil_verrou:

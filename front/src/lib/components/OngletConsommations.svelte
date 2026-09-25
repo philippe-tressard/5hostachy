@@ -25,6 +25,7 @@
 	import { fmtDayMonth } from '$lib/date';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	/** L'annuaire des prestataires — la page le charge déjà, on ne le recharge pas. */
@@ -335,7 +336,7 @@
 			<div>
 				<div class="form-grid">
 					<label class="field"
-						>Date du relevé *<input
+						><span>Date du relevé<EtoileRequis vide={!releveForm.date_releve} /></span><input
 							type="date"
 							bind:value={releveForm.date_releve}
 							required

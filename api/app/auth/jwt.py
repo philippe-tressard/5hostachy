@@ -1,6 +1,7 @@
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import timedelta
+from app.utils import horloge
 from typing import Optional
 
 import jwt
@@ -52,7 +53,7 @@ def create_access_token(
     data: dict, expires_delta: Optional[timedelta] = None, empreinte: str | None = None
 ) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (
+    expire = horloge.maintenant() + (
         expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
     )
     to_encode.update({"exp": expire, "type": "access"})
@@ -110,7 +111,7 @@ def create_refresh_token(data: dict) -> str:
     en-tête de requête sans rien protéger.
     """
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days)
+    expire = horloge.maintenant() + timedelta(days=settings.refresh_token_expire_days)
     to_encode.update({"exp": expire, "type": "refresh", "jti": secrets.token_urlsafe(16)})
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 

@@ -24,8 +24,9 @@
   commentaire, et qui se serait produit à cette extraction-ci.
 -->
 <script lang="ts">
+	import { confirmer } from '$lib/confirmation';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { bailleur as bailApi } from '$lib/api';
+	import { bailleur as bailApi, type AccesBail } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { lotTypeLabel } from '$lib/utils';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -44,23 +45,7 @@
 	const dispatch = createEventDispatcher();
 	const fermer = () => dispatch('fermer');
 
-	interface Acces {
-		id: number;
-		code: string;
-		type: 'vigik' | 'telecommande';
-		lot_id: number | null;
-		lot_type: 'appartement' | 'parking' | 'cave' | string | null;
-		lot_label: string | null;
-		statut: string;
-		chez_locataire: boolean;
-		bail_id: number | null;
-		eligible_transfert: boolean;
-		recommande: boolean;
-		motif_non_eligible: string | null;
-		cree_le: string;
-	}
-
-	let accesListe: Acces[] = [];
+	let accesListe: AccesBail[] = [];
 	let loadingAcces = true;
 	/**  🔴 Non vide = on n'a PAS pu regarder (#816).
 	 *
@@ -89,7 +74,7 @@
 		}
 	});
 
-	function isSelectable(acces: Acces): boolean {
+	function isSelectable(acces: AccesBail): boolean {
 		if (bailId == null) return false;
 		if (!acces.eligible_transfert) return false;
 		if (acces.chez_locataire && acces.bail_id !== bailId) return false;
@@ -137,7 +122,7 @@
 				tc_ids: tTc,
 			});
 			accesListe = accesListe.map((a) => {
-				const u = updated.find((x: Acces) => x.id === a.id && x.type === a.type);
+				const u = updated.find((x: AccesBail) => x.id === a.id && x.type === a.type);
 				return u ?? a;
 			});
 			selectionVigik = new Set();
@@ -167,7 +152,7 @@
 				tc_ids: rTc,
 			});
 			accesListe = accesListe.map((a) => {
-				const u = updated.find((x: Acces) => x.id === a.id && x.type === a.type);
+				const u = updated.find((x: AccesBail) => x.id === a.id && x.type === a.type);
 				return u ?? a;
 			});
 			for (const id of rVigik) selectionVigik.delete(id);
@@ -181,11 +166,11 @@
 	}
 
 	async function recupererAcces() {
-		if (!confirm('Récupérer tous les accès confiés au locataire pour ce bail ?')) return;
+		if (!(await confirmer('Récupérer tous les accès confiés au locataire pour ce bail ?'))) return;
 		try {
 			const updated = await bailApi.recupererAcces(bailId);
 			accesListe = accesListe.map((a) => {
-				const u = updated.find((x: Acces) => x.id === a.id && x.type === a.type);
+				const u = updated.find((x: AccesBail) => x.id === a.id && x.type === a.type);
 				return u ?? a;
 			});
 			selectionVigik = new Set();

@@ -1,7 +1,7 @@
 """Router boîte à idées — idées + upvotes + réponses."""
 
 import json
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -313,7 +313,7 @@ def update_statut(
         #  chaque appel, même sans changement, repousserait l'archivage d'un mois
         #  à chaque clic — le défaut que `PetiteAnnonce` évite déjà en se datant
         #  sur `statut_change_le` et non sur `mis_a_jour_le`.
-        idee.statut_change_le = datetime.utcnow()
+        idee.statut_change_le = horloge.maintenant()
     session.add(idee)
     # Passage à un statut positif (retenue/réalisée) → prévenir les votants.
     if body.statut != ancien and body.statut in _STATUT_NOTIF_LABELS:

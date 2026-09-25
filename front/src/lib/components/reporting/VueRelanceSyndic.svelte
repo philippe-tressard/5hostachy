@@ -9,6 +9,7 @@
   « Rafraîchir » doit savoir quoi recharger.
 -->
 <script lang="ts">
+	import { confirmer } from '$lib/confirmation';
 	import { onMount } from 'svelte';
 	import { TICKET } from '$lib/entites/ticket';
 	import { tickets as ticketsApi, type Ticket, type ReponseRelance } from '$lib/api';
@@ -68,9 +69,9 @@
 		const ids = Array.from(relanceSelected);
 		if (ids.length === 0) return;
 		if (
-			!confirm(
+			!(await confirmer(
 				`Envoyer la relance pour ${ids.length} ${TICKET.libelle.toLowerCase()}(s) au syndic ?`,
-			)
+			))
 		)
 			return;
 		relanceSending = true;

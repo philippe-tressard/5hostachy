@@ -66,7 +66,8 @@ aussi, et ils écrivaient leur propre version — plus pauvre. Ils vivent dans
 masque l'origine sans rien apporter (`standards/02` §1, règle 6).
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+from app.utils import horloge
 
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
@@ -115,7 +116,7 @@ def get_flux(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    now = datetime.utcnow()
+    now = horloge.maintenant()
     ctx = ContexteFlux(
         session=session,
         user=user,

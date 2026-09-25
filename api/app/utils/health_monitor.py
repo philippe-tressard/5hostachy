@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 from datetime import datetime, timedelta
+from app.utils import horloge
 
 import httpx
 from sqlmodel import Session, select
@@ -63,7 +64,7 @@ def _check_whatsapp(session: Session) -> list[str]:
 
     # Vérifier les logs des dernières 24h : >= 3 échecs consécutifs
     # (on ignore les anciens échecs antérieurs à une reconnexion)
-    depuis = datetime.utcnow() - timedelta(hours=24)
+    depuis = horloge.maintenant() - timedelta(hours=24)
     logs = session.exec(
         select(WhatsAppLog)
         .where(WhatsAppLog.envoye_le >= depuis)
@@ -98,7 +99,7 @@ def _check_backups(session: Session) -> list[str]:
         issues.append("Aucune sauvegarde réussie trouvée dans l'historique.")
         return issues
 
-    age = datetime.utcnow() - last_ok.terminee_le
+    age = horloge.maintenant() - last_ok.terminee_le
     if age > timedelta(hours=25):
         heures = int(age.total_seconds() / 3600)
         issues.append(
@@ -165,7 +166,7 @@ def _check_archive_locale() -> list[str]:
         # Ne pas savoir dater n'est pas un OK : c'est un INCONNU, donc une anomalie.
         return [f"Archive au nom non conforme, impossible d'en vérifier l'âge : {nom}."]
 
-    age = datetime.utcnow() - horodatage
+    age = horloge.maintenant() - horodatage
     if age > timedelta(hours=_AGE_MAX_ARCHIVE_LOCALE_H):
         heures = int(age.total_seconds() / 3600)
         return [
@@ -222,7 +223,7 @@ def _check_export_hors_site(session: Session) -> list[str]:
             f"Le dernier export hors site a ÉCHOUÉ : {derniere.erreur or 'erreur inconnue'}."
         )
 
-    age_execution = datetime.utcnow() - derniere.cree_le
+    age_execution = horloge.maintenant() - derniere.cree_le
     if age_execution > timedelta(hours=seuil_h):
         j = int(age_execution.total_seconds() / 86400)
         issues.append(
@@ -246,7 +247,7 @@ def _check_export_hors_site(session: Session) -> list[str]:
             "copiée — impossible d'en vérifier la fraîcheur."
         )
     else:
-        age_copie = datetime.utcnow() - horodatage
+        age_copie = horloge.maintenant() - horodatage
         if age_copie > timedelta(hours=seuil_h):
             j = int(age_copie.total_seconds() / 86400)
             issues.append(

@@ -39,7 +39,7 @@ premier de son plafond de modularité (884 lignes).
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from app.utils import horloge
 
 from sqlmodel import Session, select
 
@@ -189,7 +189,7 @@ def resoudre_imports(session: Session, *, pour_user=None) -> dict:
             continue
         imp.lot_id = lot.id
         imp.statut = StatutLotImport.resolu
-        imp.resolu_le = datetime.utcnow()
+        imp.resolu_le = horloge.maintenant()
         session.add(imp)
         stats["resolus"] += 1
     return stats

@@ -14,7 +14,8 @@ FastAPI additionne les routers, les URL publiques sont donc rigoureusement
 inchangées. `api/tests/test_endpoints_orphelins.py` le vérifie.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+from app.utils import horloge
 import secrets
 
 from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Request
@@ -105,7 +106,7 @@ def request_password_reset(
         prt = PasswordResetToken(
             user_id=user.id,
             token=raw_token,
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=horloge.maintenant() + timedelta(hours=1),
         )
         session.add(prt)
         session.commit()
@@ -151,7 +152,7 @@ def reset_password(
         select(PasswordResetToken).where(PasswordResetToken.token == body.token)
     ).first()
 
-    if not prt or prt.used or prt.expires_at < datetime.utcnow():
+    if not prt or prt.used or prt.expires_at < horloge.maintenant():
         raise HTTPException(400, "Lien de réinitialisation invalide ou expiré.")
 
     user = session.get(Utilisateur, prt.user_id)

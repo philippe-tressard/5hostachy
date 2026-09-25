@@ -4,6 +4,7 @@ Remplace le localStorage pour permettre la synchronisation multi-appareils.
 """
 
 from typing import Dict
+from app.utils import horloge
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
@@ -190,7 +191,6 @@ def update_whatsapp_scheduled(
 ):
     """Met à jour un message WhatsApp planifié."""
     from app.models.core import WhatsAppScheduled
-    from datetime import datetime as _dt
 
     item = session.get(WhatsAppScheduled, item_id)
     if not item:
@@ -203,7 +203,7 @@ def update_whatsapp_scheduled(
         item.cron_rule = data.cron_rule
     if data.enabled is not None:
         item.enabled = data.enabled
-    item.mis_a_jour_le = _dt.utcnow()
+    item.mis_a_jour_le = horloge.maintenant()
     session.add(item)
     session.commit()
     return {"ok": True}

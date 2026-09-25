@@ -15,7 +15,7 @@ from app.models.core import (
     ModeleEmail,
     Utilisateur,
 )
-from datetime import datetime
+from app.utils import horloge
 
 router = APIRouter()
 
@@ -190,9 +190,8 @@ def update_modele_email(
                     + ", ".join(sorted(INTENTIONS)),
                 )
         setattr(modele, key, value)
-    from datetime import datetime
 
-    modele.modifie_le = datetime.utcnow()
+    modele.modifie_le = horloge.maintenant()
     modele.modifie_par_id = _.id
     session.add(modele)
     session.commit()
@@ -219,7 +218,7 @@ def _remettre_par_defaut(session: Session, modele: ModeleEmail, par_id: int) -> 
     modele.sujet = sujet
     modele.corps_html = corps_html
     modele.intention = INTENTIONS_PAR_MODELE.get(modele.code, "")
-    modele.modifie_le = datetime.utcnow()
+    modele.modifie_le = horloge.maintenant()
     modele.modifie_par_id = par_id
     session.add(modele)
     return True

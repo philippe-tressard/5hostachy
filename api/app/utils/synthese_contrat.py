@@ -53,6 +53,7 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime
+from app.utils import horloge
 
 from sqlmodel import Session, select
 
@@ -427,7 +428,7 @@ async def synthetiser(session: Session, contrat: ContratEntretien) -> str:
     #  L'horodatage est pris APRÈS la réponse : c'est la date de la synthèse
     #  rendue, pas celle de la demande — une requête peut durer une minute.
     entete = entete_provenance(
-        cfg, matiere, quand=datetime.utcnow(), documents_joints=reponse.documents_joints
+        cfg, matiere, quand=horloge.maintenant(), documents_joints=reponse.documents_joints
     )
     return entete + "\n" + reponse.texte.strip()
 

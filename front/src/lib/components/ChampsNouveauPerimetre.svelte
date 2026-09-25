@@ -13,16 +13,17 @@
   cadre (`ux-patterns` §0) — ce n'est pas une divergence à réduire.
 -->
 <script lang="ts">
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	export let nouveau: { code: string; libelle: string; description: string };
 	export let codePropose = '';
 </script>
 
 <label class="field"
-	>Libellé *
+	><span>Libellé<EtoileRequis vide={!nouveau.libelle.trim()} /></span>
 	<input bind:value={nouveau.libelle} required />
 </label>
 <label class="field"
-	>Code *
+	><span>Code<EtoileRequis vide={!nouveau.code.trim() && !codePropose} /></span>
 	<input bind:value={nouveau.code} placeholder={codePropose} />
 	<span class="aide">
 		Laissé vide, il vaudra <code>{codePropose || '…'}</code>. Il ne pourra plus être modifié : c’est
