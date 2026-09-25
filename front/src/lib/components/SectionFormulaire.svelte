@@ -182,7 +182,10 @@
 	{#if inactive}
 		<div class="section-pliee section-inactive" aria-disabled="true">
 			<span class="section-titre section-titre-plie">
-				<span aria-hidden="true">&#x1F512;</span><span class="section-titre-texte">{titre}</span>
+				<span aria-hidden="true">&#x1F512;</span><span
+					class="section-titre-texte"
+					id={idTitre || undefined}>{titre}</span
+				>
 			</span>
 			<!--  La pastille de résumé, en GRIS : même place et même forme que
 			      « sans date », pour dire qu'il n'y a rien à ouvrir ici. -->
@@ -200,8 +203,13 @@
 			aria-controls={idContenu}
 			on:click={() => (ouverteParLUtilisateur = true)}
 		>
+			<!--  `idTitre` AUSSI sur le titre plié (#1329) : le contenu reste dans la
+			      page, et ce qui s'y rattache (`aria-labelledby`) pointait sur un
+			      identifiant absent tant que la section était pliée. -->
 			<span class="section-titre section-titre-plie">
-				{#if icone}<Icon name={icone} size={15} />{/if}<span class="section-titre-texte"
+				{#if icone}<Icon name={icone} size={15} />{/if}<span
+					class="section-titre-texte"
+					id={idTitre || undefined}
 					>{titre}{#if requis}<EtoileRequis vide={!rempli} />{/if}</span
 				>
 			</span>

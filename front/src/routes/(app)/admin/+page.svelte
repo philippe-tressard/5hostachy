@@ -7,6 +7,7 @@
 	import { admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
 	import { badgeRole, badgeStatut, badgesDeRoles, libelleRole } from '$lib/roles';
 	import { LIBELLES_STATUT_ABREGE } from '$lib/roles';
+	import FiltresUtilisateurs from '$lib/components/FiltresUtilisateurs.svelte';
 	import { essayer } from '$lib/chargement';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -747,33 +748,15 @@
 	{#if utilisateursLoading}
 		<EtatListe chargement />
 	{:else}
-		<!-- Barre de recherche + filtres + compteurs -->
-		<div class="users-toolbar">
-			<input
-				type="search"
-				class="input-sm user-search"
-				placeholder="Rechercher par nom ou e-mail…"
-				bind:value={userSearch}
-			/>
-			<select class="input-sm role-select" bind:value={userStatutFilter} style="min-width:160px">
-				<option value="">— Tous les types —</option>
-				{#each Object.entries(LIBELLES_STATUT_ABREGE) as [val, label] (val)}
-					<option value={val}>{label}</option>
-				{/each}
-			</select>
-			<select class="input-sm role-select" bind:value={userCompteFilter} style="min-width:130px">
-				<option value="">— Tous comptes —</option>
-				<option value="actif">Actifs</option>
-				<option value="inactif">En attente</option>
-			</select>
-			<span class="muted" style="font-size:.8rem">
-				{filteredUsers.length} / {utilisateurs.length} utilisateur{utilisateurs.length > 1
-					? 's'
-					: ''}
-				&nbsp;·&nbsp;
-				{nbCS} membre{nbCS > 1 ? 's' : ''} CS
-			</span>
-		</div>
+		<!--  Recherche, filtres en pastilles, compteurs (#1329). -->
+		<FiltresUtilisateurs
+			bind:recherche={userSearch}
+			bind:statut={userStatutFilter}
+			bind:compte={userCompteFilter}
+			affiches={filteredUsers.length}
+			total={utilisateurs.length}
+			{nbCS}
+		/>
 
 		{#if filteredUsers.length === 0}
 			<div class="empty-state"><h3>Aucun résultat</h3></div>
@@ -1231,31 +1214,6 @@
 		padding: 0.1rem 0.35rem;
 		border-radius: 0.25rem;
 		font-size: 0.85em;
-	}
-	.role-select {
-		padding: 0.25rem 0.4rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		font-size: 0.82rem;
-		background: var(--color-surface);
-		color: var(--color-text);
-		cursor: pointer;
-	}
-	.users-toolbar {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		margin-bottom: 1rem;
-		flex-wrap: wrap;
-	}
-	.user-search {
-		flex: 1;
-		min-width: 200px;
-		max-width: 340px;
-		padding: 0.4rem 0.7rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		font-size: 0.875rem;
 	}
 	.row-cs td {
 		background: #eff6ff;
