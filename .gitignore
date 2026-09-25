@@ -57,8 +57,7 @@ desktop.ini
 .idea/
 *.swp
 
-# Claude Code (local uniquement, ne pas versionner)
-CLAUDE.md
+# Claude Code — `CLAUDE.md` et `.claude/` SONT versionnés (consignes du projet).
 # Overrides Claude Code personnels — versionner .claude/settings.json + hooks, PAS le local
 .claude/settings.local.json
 

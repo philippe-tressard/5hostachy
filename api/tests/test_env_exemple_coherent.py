@@ -125,7 +125,9 @@ def test_aucune_variable_du_gabarit_n_est_morte():
     """
     champs = {c.upper() for c in _champs_de_settings()}
     lues_par_compose = set(re.findall(r"\$\{([A-Z0-9_]+)", COMPOSE_TXT))
-    motif_getenv = r"getenv\(\s*[\"']([A-Z0-9_]+)"
+    #  `os.environ.get` autant qu'`os.getenv` : `main.py` lit `LOG_LEVEL` par la
+    #  première, et ce motif ne voyait que la seconde (#1050).
+    motif_getenv = r"(?:getenv|environ\.get)\(\s*[\"']([A-Z0-9_]+)"
     lues_par_getenv = set(re.findall(motif_getenv, _sources_python()))
     mortes = [
         c
@@ -151,6 +153,28 @@ def test_tout_champ_de_settings_est_dans_le_gabarit_ou_declare_hors():
     assert not absents, (
         f"`Settings` déclare {absents}, que .env.example ne montre pas : ajoutez-les "
         f"au gabarit, ou inscrivez-les dans HORS_GABARIT avec la raison qui les en exclut"
+    )
+
+
+def test_tout_champ_de_settings_est_lu_par_le_code():
+    """Un champ que rien ne lit fait passer une clé morte pour une clé vivante.
+
+    Le trou que ce test ferme (#1050) : les tests ci-dessus confrontent le
+    gabarit à `Settings`, jamais `Settings` au CODE. `BACKUP_FREQUENCY`,
+    `BACKUP_DAY_OF_WEEK` et `GOOGLE_CLIENT_ID/SECRET` y ont donc survécu : ils
+    étaient déclarés des deux côtés, et aucune ligne de l'API ne les lisait. Un
+    exploitant qui réglait la fréquence des sauvegardes croyait la changer — la
+    sauvegarde tourne chaque jour, à l'heure de la configuration du site.
+    """
+    sources = " ".join(
+        p.read_text(encoding="utf-8", errors="ignore")
+        for p in (RACINE / "api" / "app").rglob("*.py")
+        if p.name != "config.py"
+    )
+    jamais_lus = sorted(c for c in _champs_de_settings() if not re.search(rf"\.{c}\b", sources))
+    assert not jamais_lus, (
+        f"`Settings` déclare {jamais_lus}, qu'aucune ligne de api/app/ ne lit : "
+        f"le réglage ne fait rien. Retirer le champ, et sa clé de .env.example"
     )
 
 
