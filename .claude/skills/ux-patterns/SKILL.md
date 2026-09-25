@@ -1075,6 +1075,10 @@ calendrier reste à 640 px, délibérément).
   (`.field label`, `champs.css`), comme les intitulés de section. Jamais
   tapées : `TITRE` écrit en dur est épelé lettre à lettre par certains
   lecteurs d'écran, et une règle qui change obligerait à rouvrir chaque écran.
+  🔒 **Le libellé seul** : quand il enveloppe son champ (`label.field`), sa phrase
+  d'aide, ses cases à cocher, un bouton gardent leur casse — la liste vit dans
+  `champs.css`, et `lint:champs` refuse un enfant qu'elle oublierait (#1315 :
+  « tout l'admin est en majuscules »).
 - **Pas** de mention « (optionnel) » : l'absence de `*` suffit
 - Actions : bouton secondaire / Annuler **à gauche**, action primaire **à droite**
 

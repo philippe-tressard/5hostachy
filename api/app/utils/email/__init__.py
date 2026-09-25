@@ -36,6 +36,7 @@ from app.utils.smtp import (  # noqa: F401  (ré-export : config.py l'importe d'
     _get_smtp_config,
     adresse_expedition,
     connexion_smtp,
+    entete_reponse,
 )
 
 from .gabarit import INTENTIONS, _wrap_email  # noqa: F401  (ré-export : admin/communications l'importe d'ici)
@@ -242,28 +243,6 @@ def composer_email(
     return _sujet_sur_une_ligne(_render(template.sujet, ctx)), html
 
 
-def _reply_to(smtp_cfg: dict, jeton_reponse: str | None) -> dict[str, str]:
-    """L'en-tete `Reply-To` d'un envoi lié à un ticket (#703).
-
-    Écrit ICI et nulle part ailleurs : `send_email` et `send_email_group`
-    partent tous deux vers le syndic sur un ticket, et deux constructions de la
-    même adresse divergeraient au premier changement de domaine.
-
-    Rend un dictionnaire vide quand il n'y a pas de jeton ou pas de domaine
-    exploitable : mieux vaut aucune adresse de réponse qu'une adresse fabriquée
-    sur un domaine inventé, dont les réponses partiraient dans le vide sans que
-    personne ne le sache.
-    """
-    if not jeton_reponse:
-        return {}
-    from app.utils.courriel_entrant import adresse_de_reponse, domaine_de
-
-    domaine = domaine_de(smtp_cfg.get("smtp_from") or get_settings().mail_from)
-    if not domaine:
-        return {}
-    return {"Reply-To": adresse_de_reponse(jeton_reponse, domaine)}
-
-
 async def _envoyer_modele(
     code: str,
     context: dict[str, Any],
@@ -334,7 +313,7 @@ async def _envoyer_modele(
             recipients=to if to else (cc or []),
             body=full_html,
             subtype="html",
-            headers=_reply_to(smtp_cfg, jeton_reponse) or None,
+            headers=entete_reponse(smtp_cfg, jeton_reponse) or None,
         )
         if to and cc:
             msg_kwargs["cc"] = cc

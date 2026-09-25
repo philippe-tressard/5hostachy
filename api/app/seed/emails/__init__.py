@@ -111,6 +111,11 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
 # lieu d'un défaut silencieux.
 EXPEDITEUR_REPONSE = "reponse"  # contact@ — on peut nous répondre
 EXPEDITEUR_MUET = "muet"  # noreply@ — il n'y a rien à répondre
+#  Un courriel d'AFFAIRE (#1314, 25/09/2026) : il part de l'adresse des affaires
+#  (`affaire@`, réglée dans Paramétrage → SMTP) et la réponse y revient. Elle
+#  remplace l'adresse à jeton `tickets+<jeton>@`, qu'OVH n'achemine pas ; la
+#  réponse se rattache par « Affaire #TK-… » dans le sujet.
+EXPEDITEUR_AFFAIRE = "affaire"
 
 EXPEDITEUR_PAR_INTENTION: dict[str, str] = {
     #  On attend une réponse écrite : c'est le cas qui a motivé la consigne.
@@ -128,13 +133,13 @@ EXPEDITEUR_PAR_INTENTION: dict[str, str] = {
 def expediteur_du_modele(
     code: str, *, jeton_reponse: str | None = None, intention_servie: str | None = None
 ) -> str:
-    """`EXPEDITEUR_REPONSE` ou `EXPEDITEUR_MUET` pour ce modèle.
+    """`EXPEDITEUR_AFFAIRE`, `EXPEDITEUR_REPONSE` ou `EXPEDITEUR_MUET` pour ce modèle.
 
-    ⚠️ **Un envoi qui porte une adresse de réponse de ticket est TOUJOURS
-    parlant**, quelle que soit son intention : `Reply-To: tickets+<jeton>@` dit
-    explicitement « répondez à ce message », et le site sait rattacher cette
-    réponse au dossier (#703, #754). L'expédier depuis `noreply@` se
-    contredirait dans le même message.
+    ⚠️ **Un envoi d'affaire (il porte un jeton de réponse) est TOUJOURS
+    parlant**, quelle que soit son intention : son `Reply-To` dit « répondez à
+    ce message », et le site sait rattacher cette réponse au dossier (#703,
+    #754). L'expédier depuis `noreply@` se contredirait dans le même message.
+    Il part de l'adresse des AFFAIRES depuis #1314.
 
     Une intention inconnue — un modèle ajouté sans l'inscrire dans
     `INTENTIONS_PAR_MODELE` — rend `EXPEDITEUR_REPONSE` : entre laisser une
@@ -164,6 +169,6 @@ def expediteur_du_modele(
     repli — pour un modèle sans ligne, ou dont la ligne ne la porte pas.
     """
     if jeton_reponse:
-        return EXPEDITEUR_REPONSE
+        return EXPEDITEUR_AFFAIRE
     intention = (intention_servie or "").strip() or INTENTIONS_PAR_MODELE.get(code, "")
     return EXPEDITEUR_PAR_INTENTION.get(intention, EXPEDITEUR_REPONSE)

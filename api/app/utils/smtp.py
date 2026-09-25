@@ -26,6 +26,9 @@ _SMTP_KEYS = {
     "smtp_port",
     "smtp_from",
     "smtp_from_reponse",
+    #  L'adresse des AFFAIRES (#1314) : expéditeur et `Reply-To` d'un courriel
+    #  d'affaire. Vide : repli sur `smtp_from_reponse`.
+    "smtp_from_affaires",
     "smtp_from_name",
     "smtp_username",
     "smtp_password",
@@ -47,12 +50,39 @@ def adresse_expedition(smtp_cfg: dict, genre: str) -> str:
     vide — un message sans expéditeur est refusé par le serveur, et l'envoi
     échouerait sans que le motif ait quoi que ce soit à voir avec son contenu.
     """
-    from app.seed.emails import EXPEDITEUR_REPONSE
+    from app.seed.emails import EXPEDITEUR_AFFAIRE, EXPEDITEUR_REPONSE
 
     defaut = smtp_cfg.get("smtp_from") or get_settings().mail_from
-    if genre != EXPEDITEUR_REPONSE:
+    if genre not in (EXPEDITEUR_REPONSE, EXPEDITEUR_AFFAIRE):
         return defaut
-    return (smtp_cfg.get("smtp_from_reponse") or "").strip() or defaut
+    reponse = (smtp_cfg.get("smtp_from_reponse") or "").strip() or defaut
+    if genre == EXPEDITEUR_AFFAIRE:
+        #  L'adresse des affaires (#1314), repliée sur celle des réponses : une
+        #  affaire appelle une réponse, elle ne part jamais de `noreply@` par oubli.
+        return (smtp_cfg.get("smtp_from_affaires") or "").strip() or reponse
+    return reponse
+
+
+def entete_reponse(smtp_cfg: dict, jeton_reponse: str | None) -> dict[str, str]:
+    """L'en-tête `Reply-To` d'un envoi d'affaire (#703), écrit ICI et nulle part
+    ailleurs — à côté de l'adresse d'expédition dont il est le pendant.
+
+    Rend un dictionnaire vide quand il n'y a pas de jeton (l'envoi n'est pas une
+    affaire) ou pas d'adresse exploitable.
+
+    🔴 **L'adresse des affaires, plus l'adresse à jeton** (#1314, 25/09/2026).
+    `tickets+<jeton>@` rattachait la réponse par le jeton — mais OVH n'achemine
+    pas le sous-adressage, et la réponse du syndic partait dans le vide (#754
+    l'avait constaté le 05/09 et ajouté le repli par le sujet, sans changer
+    l'adresse). La réponse revient désormais à l'adresse d'où l'affaire part,
+    et se rattache par « Affaire #TK-… » dans le sujet.
+    """
+    if not jeton_reponse:
+        return {}
+    from app.seed.emails import EXPEDITEUR_AFFAIRE
+
+    adresse = adresse_expedition(smtp_cfg, EXPEDITEUR_AFFAIRE)
+    return {"Reply-To": adresse} if adresse else {}
 
 
 def adresses_a_tester(smtp_cfg: dict) -> list[str]:
@@ -70,10 +100,10 @@ def adresses_a_tester(smtp_cfg: dict) -> list[str]:
     fois). Une seule adresse configurée rend une seule entrée : on ne fabrique
     pas un second envoi pour faire nombre.
     """
-    from app.seed.emails import EXPEDITEUR_MUET, EXPEDITEUR_REPONSE
+    from app.seed.emails import EXPEDITEUR_AFFAIRE, EXPEDITEUR_MUET, EXPEDITEUR_REPONSE
 
     vues: list[str] = []
-    for genre in (EXPEDITEUR_MUET, EXPEDITEUR_REPONSE):
+    for genre in (EXPEDITEUR_MUET, EXPEDITEUR_REPONSE, EXPEDITEUR_AFFAIRE):
         adresse = adresse_expedition(smtp_cfg, genre)
         if adresse and adresse not in vues:
             vues.append(adresse)
