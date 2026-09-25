@@ -34,7 +34,6 @@ _FRONT = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "destin
 #: Un porteur possible pour chaque code : le statut (et le rôle) d'un utilisateur
 #: qui DOIT le voir. Sert à prouver que la règle connaît vraiment le code.
 _TEMOIN = {
-    "copropriétaires": (StatutUtilisateur.copropriétaire_résident, "résident"),
     "copropriétaires_occupants": (StatutUtilisateur.copropriétaire_résident, "résident"),
     "bailleurs": (StatutUtilisateur.copropriétaire_bailleur, "résident"),
     "locataires": (StatutUtilisateur.locataire, "résident"),

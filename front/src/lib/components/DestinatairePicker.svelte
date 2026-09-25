@@ -8,7 +8,7 @@
 		concerneTousLesResidents,
 	} from '$lib/destinataires';
 
-	/** Valeurs sélectionnées — tableau de strings. Ex: ['résidents'] ou ['copropriétaires','locataires'] */
+	/** Valeurs sélectionnées — tableau de strings. Ex: ['résidents'] ou ['copropriétaires_occupants','locataires'] */
 	export let value: string[] = ['résidents'];
 
 	/** Intitulé du champ — porté par l'objet, comme pour le périmètre. Les pages

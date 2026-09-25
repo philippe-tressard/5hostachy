@@ -601,9 +601,11 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
   - 🔒 **tenue contre le serveur** : `api/tests/donnees/lecture_pastille.json`,
     exécuté par `test_lecture_pastille.py` (règle) et `npm run lint:lecture`
     (résumé). Une règle d'accès qui change fait tomber les deux.
+  - ✅ la pastille « Copropriétaires » a quitté le sélecteur (#1301, migration
+    0221 : ses données portent désormais les deux codes). Le serveur et la
+    pastille de lecture LISENT encore l'ancien code, aucun écran ne l'offre.
   - ⏳ **lot 2** : le code serveur des « Bailleurs » (mandataires) dans
-    Destinataires, et le retrait de la pastille « Copropriétaires » (son code
-    couvre occupants ET bailleurs : migrer les données vers les deux).
+    Destinataires.
 
 ⚠️ **Aucun contrôle ne tient encore cette règle.** Restes connus, à relire
 avec elle : le profil de document « Tous les résidents » (`seed/profils_documents.py`),

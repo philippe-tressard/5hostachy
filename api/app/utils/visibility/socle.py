@@ -205,8 +205,12 @@ def perimetre_visible(
 #: ET que `front/src/lib/destinataires.ts` propose exactement les mêmes. Sans
 #: cela, un code ajouté d'un seul côté produit une pastille qui ne cible rien,
 #: ou une règle que personne ne peut choisir.
+#:
+#: 🔴 `copropriétaires` n'y est plus (#1301, 25/09/2026) : la pastille faisait
+#: double emploi avec les deux suivants, et la migration 0221 a converti les
+#: données. La règle ci-dessous le LIT encore — un client resté en cache peut
+#: l'envoyer — mais aucun écran ne le propose.
 CODES_PUBLIC_CIBLE: tuple[str, ...] = (
-    "copropriétaires",
     "copropriétaires_occupants",
     "bailleurs",
     "locataires",
@@ -272,6 +276,7 @@ def public_cible_visible(raw: Optional[str], user: Utilisateur) -> bool:
     if "résidents" in public:
         return True
     statut = user.statut.value if user.statut is not None else ""
+    #  Héritage : plus proposé depuis #1301 (migration 0221), toujours lu.
     if "copropriétaires" in public and statut.startswith("copropriétaire_"):
         return True
     if "locataires" in public and statut == "locataire":
