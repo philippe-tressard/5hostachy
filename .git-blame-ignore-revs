@@ -1,0 +1,18 @@
+# Commits purement mécaniques que `git blame` doit sauter : sans cela, il
+# attribue chaque ligne au dernier reformatage, et plus jamais à qui l'a écrite.
+#
+# GitHub lit ce fichier tout seul. En local, l'armer une fois par clone :
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (fait par `.claude/cloud/setup.sh` ; voir CONTRIBUTING.md).
+#
+# 🔴 UN COMMIT N'ENTRE ICI QUE S'IL EST SEUL DANS SON COMMIT DE `main`.
+# La MEP fusionne `dev → main` en squash, puis réaligne `dev` : un reformatage
+# fusionné sur `dev` avec d'autres lots est absorbé dans le squash de la MEP, et
+# son SHA disparaît de l'historique. C'est arrivé au premier : `ruff format` sur
+# api/ (d665b62, #1261) a été squashé dans v2.49.0 (6737a6c) avec #1186, #1263,
+# #1266… — et ignorer ce squash cacherait la paternité de vrais changements.
+# D'où : une MEP DÉDIÉE au reformatage, puis son SHA de squash sur `main` ici
+# (`mep-precheck`, piège 4). `test_documentation.py` refuse un SHA absent de
+# l'historique.
+#
+# (aucun commit pour l'instant)

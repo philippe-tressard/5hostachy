@@ -549,7 +549,9 @@ git fetch origin && git merge --ff-only origin/dev
 
 Garde-fou mécanique : `.githooks/pre-commit` refuse un commit dont la branche est en
 retard sur son upstream. Il est versionné mais doit être armé **une fois par clone** :
-`git config core.hooksPath .githooks && git config pull.ff only`. Contournement
+`git config core.hooksPath .githooks && git config pull.ff only` — et
+`git config blame.ignoreRevsFile .git-blame-ignore-revs`, pour que `blame` saute
+les reformatages déclarés (règle d'entrée : `mep-precheck`, piège 4). Contournement
 d'urgence : `ALLOW_STALE=1 git commit …`.
 
 > 📖 `standards/08-git-et-versioning.md` §2–3 — un hook versionné **n'est pas** un
