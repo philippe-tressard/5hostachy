@@ -143,8 +143,6 @@ export const TOLERANCES = {
 	//  quitté l'écran avec l'onglet Gestion locative, et le composant qui la
 	//  reçoit n'aligne plus rien à la main.
 	'routes/(app)/residence/+page.svelte::form-actions': 'pied de modale aligné à la main (l. ~584)',
-	'routes/(app)/sondages/[id]/+page.svelte::form-actions':
-		'rangée d’actions alignée à la main (l. ~326)',
 
 	//  ── controle-saisie : la peau de `.field input` repeinte à la main ───────
 	//  ✅ Tolérée pour `/admin` jusqu'au 07/09/2026, et TOMBÉE — pas par un lot de
