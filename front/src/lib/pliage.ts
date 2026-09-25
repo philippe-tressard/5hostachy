@@ -12,7 +12,7 @@
  *
  * 🔴 Et cette seconde moitié se calcule contre le DÉFAUT, jamais contre le
  * vide : le périmètre porte toujours « Copropriété entière », les destinataires
- * « Tous les résidents ». Tester leur présence rouvrait la section à chaque
+ * « Tous ». Tester leur présence rouvrait la section à chaque
  * fois, et rien ne pliait — constaté à l'écran le 21/09/2026, « Visu sans
  * pliages ». `estPerimetreParDefaut` et `concerneTousLesResidents` savent, eux,
  * ce qu'est le défaut.

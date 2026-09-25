@@ -23,6 +23,16 @@
 /** Ce que « rien de précisé » veut dire. Vide et `['résidents']` sont équivalents. */
 export const TOUS_LES_RESIDENTS = 'résidents';
 
+/**
+ * Le LIBELLÉ de ce cas — « Tous », et non plus « Tous les résidents »
+ * (arbitré le 25/09/2026) : le bailleur n'est pas un résident, et c'est
+ * pourtant lui aussi que ce choix vise. Le mot promettait moins que la règle.
+ *
+ * ⚠️ Seul le libellé change : le CODE reste `résidents`, stocké en base et lu
+ * par le serveur (`public_cible_visible`). Le renommer serait une migration.
+ */
+export const LIBELLE_TOUS = 'Tous';
+
 export type Destinataire = { code: string; libelle: string; icone: string };
 
 export const DESTINATAIRES: Destinataire[] = [
@@ -31,7 +41,10 @@ export const DESTINATAIRES: Destinataire[] = [
 	//  loue). Les deux existent au catalogue `$lib/icones-svg.json` — un nom
 	//  inconnu y retombe SILENCIEUSEMENT sur `help-circle`.
 	{ code: 'copropriétaires_occupants', libelle: 'Copropriétaires occupants', icone: 'home' },
-	{ code: 'bailleurs', libelle: 'Bailleurs', icone: 'building-2' },
+	//  « Copropriétaires bailleurs » et non plus « Bailleurs » (25/09/2026) : le
+	//  mot seul désignera celui qui loue PAR DÉLÉGATION d'un copropriétaire. Le
+	//  code reste `bailleurs` — stocké, lu par le serveur.
+	{ code: 'bailleurs', libelle: 'Copropriétaires bailleurs', icone: 'building-2' },
 	{ code: 'locataires', libelle: 'Locataires', icone: 'user' },
 	{ code: 'conseil_syndical', libelle: 'Conseil syndical', icone: 'shield-check' },
 ];
@@ -85,6 +98,6 @@ export function destinatairesLabel(valeur: string[] | string | null | undefined)
 	} else {
 		codes = [];
 	}
-	if (concerneTousLesResidents(codes)) return 'Tous les résidents';
+	if (concerneTousLesResidents(codes)) return LIBELLE_TOUS;
 	return codes.map((c) => PAR_CODE.get(c)?.libelle ?? c).join(' · ');
 }

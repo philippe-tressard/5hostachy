@@ -19,7 +19,7 @@
 <script lang="ts">
 	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
-	import { concerneTousLesResidents } from '$lib/destinataires';
+	import { LIBELLE_TOUS, concerneTousLesResidents } from '$lib/destinataires';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 
 	/** Préfixe des identifiants — l'écran en ouvre parfois plusieurs à la fois. */
@@ -48,7 +48,7 @@
 	 *
 	 *   Il n'invente rien : `concerneTousLesResidents` est la fonction qu'emploie
 	 *   déjà le sélecteur lui-même. */
-	$: badge = concerneTousLesResidents(destinataires) ? 'Tous les résidents' : '';
+	$: badge = concerneTousLesResidents(destinataires) ? LIBELLE_TOUS : '';
 	/** Le motif d'extinction de la section, ou `''` (`inactivePour`, #1191). */
 	export let inactive = '';
 </script>
