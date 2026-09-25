@@ -40,6 +40,7 @@ le point 17 du pré-check. Ce tableau en recopiait une partie, et elle avait dé
 | `auto-deploy.sh` | Déploiement (actif) ou alignement du code et des images (standby) | cron `ptressard`, sur chaque RPi |
 | `boot-role-guard.sh` | Garde-fou anti-split-brain au démarrage | unité `hostachy-role-guard.service` |
 | `MaJ-Hostachy.sh` | Reprise en main d'une mise en production | Manuel, sur l'actif |
+| `changer-jeton-tunnel.sh` | Rotation du jeton du tunnel Cloudflare (refuse ce qui n'est pas un jeton, l'éprouve sur l'actif avant de l'installer) | Manuel, `sudo`, l'actif puis le secours |
 
 ---
 
@@ -82,12 +83,15 @@ Tourne toutes les **5 minutes** sur les deux RPi. Chaque RPi détermine son rôl
 
 1. Si HTTP 200 → rien à faire, reset cooldown email
 2. Si pas 200 → attend 30s, re-vérifie (évite les faux positifs sur micro-coupure réseau)
-3. Si toujours HS → **failover automatique** :
+3. Si toujours HS, et si les sondes LAN + edge désignent bien le nœud actif → **failover automatique** :
    - Pose `.bascule-lock` (bloque la bascule cron en parallèle)
+   - `systemctl start cloudflared` **en premier** — s'il ne démarre pas, le failover est
+     **abandonné** : aucun conteneur démarré, l'actif n'est pas démoté, alerte avec la
+     cause relevée dans le journal (#1318 : un jeton invalide sur les deux nœuds avait
+     produit deux bascules inutiles et une API servie sur une base périmée)
    - Met `.env` en mode production (`ORIGIN=https://5hostachy.fr`)
    - `docker compose up -d`
-   - `systemctl start cloudflared`
-   - Met à jour `.active`
+   - Démote l'ancien actif, met à jour `.active`
    - Re-vérifie l'URL publique après 20s
    - Envoie un email d'alerte (cooldown 30 min)
 

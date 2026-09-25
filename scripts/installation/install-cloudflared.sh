@@ -8,7 +8,18 @@ TOKEN="${1}"
 
 if [ -z "$TOKEN" ]; then
   echo "Usage: bash install-cloudflared.sh <TOKEN>"
-  echo "Le token se trouve dans Cloudflare Zero Trust > Networks > Tunnels > ton tunnel > Configure"
+  echo "Le token se trouve dans Cloudflare Zero Trust > Networks > Tunnels > ton tunnel > Ajouter un connecteur :"
+  echo "c'est la longue chaîne eyJ… de la commande d'installation — PAS l'« ID du tunnel » (91d1afa9-…)."
+  exit 1
+fi
+
+# L'identifiant du tunnel a déjà été collé à la place du jeton (25/09/2026, #1318).
+# La règle vit dans lib-jeton-tunnel.sh, partagée avec changer-jeton-tunnel.sh.
+# shellcheck source=../lib/lib-jeton-tunnel.sh
+source "$(dirname "$0")/../lib/lib-jeton-tunnel.sh"
+VERDICT=$(verdict_jeton "$TOKEN" "")
+if [ "$VERDICT" != "ok" ]; then
+  echo "REFUSÉ — $(motif_refus "$VERDICT")"
   exit 1
 fi
 
