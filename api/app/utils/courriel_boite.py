@@ -43,7 +43,6 @@ import json
 import logging
 from datetime import datetime
 from app.utils import horloge
-from email.utils import parsedate_to_datetime
 
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -54,7 +53,6 @@ from app.models.core import (
     ConfigSite,
     MembreSyndic,
     Ticket,
-    TicketEvolution,
     Utilisateur,
 )
 from app.models.courriel import RelanceCourriel, ReponseRelance
@@ -69,6 +67,7 @@ from app.utils.courriel_ingestion import (
     examiner,
 )
 from app.utils.cloche import sonner_systeme
+from app.utils.reponse_courriel import date_d_envoi, suite_de_reponse
 
 logger = logging.getLogger(__name__)
 
@@ -345,19 +344,12 @@ def traiter(
         session.commit()
         return REFUSE
 
-    texte = _sans_citation(corps)
-    if not texte:
+    #  Texte nettoyé, mis en forme par l'assistant si l'usage est prêt, et daté
+    #  de l'envoi — `utils/reponse_courriel` (#1322).
+    suite = suite_de_reponse(session, ticket.id, auteur.id, corps, recu_le)
+    if suite is None:
         return IGNORE
-
-    session.add(
-        TicketEvolution(
-            ticket_id=ticket.id,
-            type="commentaire",
-            contenu=texte,
-            auteur_id=auteur.id,
-            cree_le=horloge.maintenant(),
-        )
-    )
+    session.add(suite)
     ticket.mis_a_jour_le = horloge.maintenant()
     session.add(ticket)
     session.commit()
@@ -431,10 +423,7 @@ def relever() -> dict[str, int]:
                     continue
                 message = email.message_from_bytes(brut[0][1])
                 entetes = {cle: _texte(val) for cle, val in message.items()}
-                try:
-                    recu_le = parsedate_to_datetime(message.get("Date", "")).replace(tzinfo=None)
-                except Exception:
-                    recu_le = None
+                recu_le = date_d_envoi(message.get("Date"))  # UTC, fuseau converti (#1322)
                 try:
                     decision = traiter(session, entetes, _corps_lisible(message), recu_le, plancher)
                 except Exception as exc:

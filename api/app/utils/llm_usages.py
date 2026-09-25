@@ -35,6 +35,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.utils.description_format import CONSIGNE_DEFAUT as CONSIGNE_DESCRIPTION
+from app.utils.reponse_courriel import CONSIGNE as CONSIGNE_REPONSE_COURRIEL
+from app.utils.reponse_courriel import USAGE_REPONSE_COURRIEL
 from app.utils.synthese_format import CONSIGNE as CONSIGNE_SYNTHESE
 
 
@@ -84,6 +86,21 @@ USAGES: dict[str, Usage] = {
         ),
         prompt_defaut=CONSIGNE_DESCRIPTION,
         max_jetons_defaut=4_000,
+    ),
+    #  Le seul usage AUTOMATIQUE (#1322, 25/09/2026) : aucun clic, il tourne à
+    #  la relève des courriels. Coupé ou non réglé, le texte nettoyé sans IA
+    #  entre dans le fil — `utils/reponse_courriel.mettre_en_forme`.
+    USAGE_REPONSE_COURRIEL: Usage(
+        code=USAGE_REPONSE_COURRIEL,
+        libelle="Mise en forme des réponses par courriel",
+        description=(
+            "Automatique : quand le syndic répond par courriel à une affaire, sa "
+            "réponse entre dans le fil débarrassée de la signature, des mentions "
+            "légales et des lignes vides. Le texte reçu reste consultable sous "
+            "« Message d'origine »."
+        ),
+        prompt_defaut=CONSIGNE_REPONSE_COURRIEL,
+        max_jetons_defaut=2_000,
     ),
 }
 

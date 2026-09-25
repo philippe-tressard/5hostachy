@@ -200,6 +200,8 @@ export interface TicketMessage {
 export interface TicketEvolution {
 	id: number;
 	assiste_ia?: boolean;
+	/** Le texte reçu, quand l'assistant a mis en forme une réponse par courriel (#1322). */
+	contenu_origine?: string | null;
 	ticket_id: number;
 	type: 'commentaire' | 'etat' | 'reponse';
 	contenu?: string;

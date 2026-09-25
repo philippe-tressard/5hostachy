@@ -126,6 +126,9 @@ class EvolutionLue(BaseModel):
     auteur_nom: Optional[str] = None
     cree_le: datetime
     fichiers_urls: ListeJson = []
+    #: Le texte reçu, quand l'assistant a mis en forme une réponse par courriel
+    #: (#1322) — l'écran l'offre sous « Message d'origine ».
+    contenu_origine: Optional[str] = None
     #: « Rédigé avec l'assistant IA » (#985). Déclaré ici et non par le mixin
     #: `AssisteIASortie` : ce module n'importe RIEN du projet, c'est sa raison
     #: d'être (voir l'en-tête).
