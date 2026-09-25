@@ -212,6 +212,10 @@ def can_see_ag(user: Utilisateur) -> bool:
 
 
 # ── Règles ticket ─────────────────────────────────────────────────────────────
+#: Ceux qui ne lisent d'une affaire suivie que ce qui les concerne (#1311).
+_LECTURE_RESTREINTE = (StatutUtilisateur.locataire, StatutUtilisateur.mandataire)
+
+
 def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     """Qui peut LIRE ce ticket — jamais qui peut y écrire.
 
@@ -314,7 +318,14 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     #  ⚠️ Sauf `en_ag` : `evenement_visible` cachait les AG aux locataires, et
     #  une AG suivie est devenue une affaire à l'état `en_ag` (0212). Rouvrir
     #  sans ce filet aurait montré au locataire ce que le calendrier lui taisait.
-    if user.statut == StatutUtilisateur.locataire:
+    #
+    #  🔴 …ET LE MANDATAIRE, COMME LE LOCATAIRE (#1311, 25/09/2026). Arbitré à
+    #  l'écran : une affaire suivie se lit par les COPROPRIÉTAIRES — occupants
+    #  et bailleurs —, pas par l'agence ou le gestionnaire qui loue pour eux.
+    #  Mêmes filets que le locataire : ce qu'il a déposé ou qu'on a saisi pour
+    #  lui (plus haut), et l'affaire datée hors AG, que la pastille dit « Tous ».
+    #  La pastille (`$lib/lecture`) le dit aussi : `lecture_pastille.json`.
+    if user.statut in _LECTURE_RESTREINTE:
         if "calendrier" not in natures(ticket):
             return False
         if valeur(ticket.statut) == StatutTicket.en_ag.value:

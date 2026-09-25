@@ -95,11 +95,12 @@ const PROFILS_DU_CODE: Record<string, Profil[]> = {
 };
 
 /**
- * Une affaire suivie : tout le monde SAUF les locataires (`ticket_visible`) —
- * sauf une affaire DATÉE (au calendrier), que les locataires de son périmètre
- * lisent aussi, hors « En AG » (#1269, 25/09/2026).
+ * Une affaire suivie : les COPROPRIÉTAIRES seuls, occupants et bailleurs
+ * (`ticket_visible`) — ni locataires, ni mandataires depuis #1311 (25/09/2026) —,
+ * sauf une affaire DATÉE (au calendrier), que tous ceux de son périmètre
+ * lisent, hors « En AG » (#1269).
  */
-const PROFILS_AFFAIRE: Profil[] = ['occupants', 'copro_bailleurs', 'bailleurs'];
+const PROFILS_AFFAIRE: Profil[] = ['occupants', 'copro_bailleurs'];
 
 type Vocable = { cle: string; icones: string[]; court: string; long: string; qui?: string };
 
@@ -113,20 +114,17 @@ const NOMMEES: (Vocable & { profils: Profil[] })[] = [
 		court: 'Résidents',
 		long: 'Résidents (occupants et locataires)',
 	},
+	//  🔴 UN ensemble, UN nom (#1311, 25/09/2026) : c'est désormais aussi celui
+	//  d'une affaire suivie, qui disait « Tous sauf locataires » tant que les
+	//  mandataires la lisaient. « Propriétaires » (actualités) et « Copropriétaires
+	//  seuls » (demandé pour les affaires) auraient nommé deux fois les mêmes
+	//  lecteurs ; arbitré : « Copropriétaires ».
 	{
-		cle: 'proprietaires',
-		profils: ['occupants', 'copro_bailleurs'],
-		icones: ['key-round'],
-		court: 'Propriétaires',
-		long: 'Propriétaires (occupants et bailleurs)',
-	},
-	{
-		cle: 'sauf_locataires',
+		cle: 'coproprietaires',
 		profils: PROFILS_AFFAIRE,
-		icones: ['home', 'building-2', 'heart-handshake'],
-		court: 'Tous sauf locataires',
-		long: 'Tous sauf les locataires',
-		qui: 'tous sauf les locataires',
+		icones: ['key-round'],
+		court: 'Copropriétaires',
+		long: 'Copropriétaires (occupants et bailleurs)',
 	},
 ];
 

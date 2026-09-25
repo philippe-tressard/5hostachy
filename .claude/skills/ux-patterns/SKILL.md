@@ -565,7 +565,7 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
 | **Tous** | aucune restriction de profil | tous | ✅ `LIBELLE_TOUS`, code `résidents` |
 | **Copropriétaires occupants** | copropriétaires qui habitent leur lot | `copropriétaire_résident` | ✅ |
 | **Copropriétaires bailleurs** | copropriétaires qui louent leur lot | `copropriétaire_bailleur` | ✅ libellé, code `bailleurs` |
-| **Bailleurs** | louent **par délégation** d'un copropriétaire | `mandataire` (confirmé ; les **aidants** n'en sont pas, ils héritent du droit du copropriétaire qu'ils aident) | ⏳ maquette — nouveau code serveur |
+| **Bailleurs** | louent **par délégation** d'un copropriétaire — ils ne lisent **pas** les affaires suivies (#1311) | `mandataire` (confirmé ; les **aidants** n'en sont pas, ils héritent du droit du copropriétaire qu'ils aident) | ⏳ maquette — nouveau code serveur |
 | **Locataires** | locataires | `locataire` | ✅ |
 | **CS** | le conseil syndical seul (confidentialité) | rôle `conseil_syndical` | ✅ pastille « CS » (lot 1) |
 
@@ -585,9 +585,13 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
     périmètre est réservé ; « CS » remplace tout quand elle est confidentielle.
     Elle **remplace** les badges 🔒 et 🛡️ des cartes ; le 🔹 reste.
   - combinaisons nommées : **Résidents** (occupants + locataires),
-    **Propriétaires** (occupants + copropriétaires bailleurs), **Tous sauf
-    locataires** — la règle des affaires, **montrée** (arbitré). Les autres se
-    composent par « + » (court) et « et » (long).
+    **Copropriétaires** (occupants + copropriétaires bailleurs) — c'est aussi
+    la règle des affaires suivies, **montrée** (arbitré), depuis que les
+    mandataires ne les lisent plus (#1311, 25/09/2026 : elle s'appelait « Tous
+    sauf locataires », et « Propriétaires » côté actualités — un ensemble, un
+    nom). Les autres se composent par « + » (court) et « et » (long).
+  - au survol, la pastille entière porte la phrase complète (`title`) ; au
+    doigt, c'est le toucher qui ouvre la bulle (#1311).
   - les deux cases qui restreignent ont **une** forme (case, icône du catalogue,
     libellé) et ouvrent leur section : « Réservé au périmètre sélectionné »
     (`lock`) en tête du Périmètre — cochée d'office pour une affaire —,

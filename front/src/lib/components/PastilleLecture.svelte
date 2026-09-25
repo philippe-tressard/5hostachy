@@ -4,9 +4,11 @@
 
   - **Une seule couleur**, celle des badges bleus du site ; les icônes sont
     celles des pastilles de Destinataires.
-  - **Court sur la carte** (« Tous sauf locataires », « CS »), la phrase entière
+  - **Court sur la carte** (« Copropriétaires », « CS »), la phrase entière
     dans une bulle qui s'ouvre AU TOUCHER : au doigt il n'y a pas de survol, et
-    l'infobulle native ne s'y montre pas (leçon du 07/09/2026).
+    l'infobulle native ne s'y montre pas (leçon du 07/09/2026). À la souris,
+    la même phrase est AUSSI dans le `title` (#1311) : elle ne remplace pas
+    la bulle, elle évite le clic.
   - **Rien** quand personne n'est exclu — comme le 🔹 du périmètre par défaut.
   - Elle remplace les badges 🔒 « Confidentielle » et 🛡️ « Conseil syndical » :
     le cadenas s'ajoute à droite quand le périmètre est réservé, et « CS » dit
@@ -49,6 +51,7 @@
 			aria-expanded={ouverte}
 			aria-controls={idBulle}
 			aria-label="Qui la lit : {titre}. {lecture.phrase}"
+			title="{titre} — {lecture.phrase} {lecture.exclus}"
 			on:click|stopPropagation={() => (ouverte = !ouverte)}
 			on:keydown|stopPropagation
 		>
