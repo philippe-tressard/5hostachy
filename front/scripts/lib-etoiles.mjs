@@ -31,10 +31,14 @@ export function etoilesEnLigne(brut) {
 	sansCommentaires(brut)
 		.split('\n')
 		.forEach((ligne, i) => {
+			//  🔴 Quatre formes de plus, relevées par l'audit du 25/09/2026 (#1329) :
+			//  `</label` coupé par Prettier avant son `>`, un NOM autre que `requis`
+			//  dans la chaîne calculée, et l'astérisque seule dans un `<span>` stylé.
 			if (
-				/ \*<\/(label|span)>/.test(ligne) ||
+				/ \*<\/(label|span)\b/.test(ligne) ||
 				/ \*<(input|select|textarea)\b/.test(ligne) ||
-				/\{requis \? ' \*' : ''\}/.test(ligne)
+				/\{\w+ \? ' \*' : ''\}/.test(ligne) ||
+				/>\s*\*\s*<\/span>/.test(ligne)
 			) {
 				fautes.push({ ligne: i + 1, texte: ligne.trim().slice(0, 70) });
 			}
@@ -69,7 +73,8 @@ export function etoilesFinDeLigne(brut) {
 	const decalage = debut >= 0 ? source.slice(0, debut).split('\n').length - 1 : 0;
 	const fautes = [];
 	(debut >= 0 ? source.slice(debut) : source).split('\n').forEach((ligne, i) => {
-		if (/[A-Za-zÀ-ÿ)'’/] \*\s*$/.test(ligne) && !/^\s*\*/.test(ligne)) {
+		//  `}` compte (#1329) : `{libelleFichier} *` passait, faute d'une lettre.
+		if (/[A-Za-zÀ-ÿ)}'’/] \*\s*$/.test(ligne) && !/^\s*\*/.test(ligne)) {
 			fautes.push({ ligne: decalage + i + 1, texte: ligne.trim().slice(0, 70) });
 		}
 	});
@@ -88,6 +93,15 @@ export const CAS_ETOILES = [
 		0,
 	],
 	['multiplication dans le script', '<script>\nconst a = b *\n2;\n</script>\n<p>ok</p>', 0],
+	//  Les quatre formes de l'audit du 25/09/2026 (#1329).
+	['`</label` coupé par Prettier', '<label for="r">Réponse *</label\n>', 1],
+	['autre nom dans la chaîne', "<label>{libelle}{titreRequis ? ' *' : ''}</label>", 1],
+	[
+		'après une expression, en fin de ligne',
+		'<label class="field">\n\t{libelleFichier} *\n\t<input />',
+		1,
+	],
+	['seule dans un <span> stylé', 'Précisez <span style="color:red">*</span>', 1],
 ];
 
 /** Toutes les formes refusées, pour une source. */

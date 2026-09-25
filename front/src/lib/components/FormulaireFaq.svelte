@@ -20,6 +20,7 @@
   éditeur riche. Le contrôle compte les champs depuis ce lot.
 -->
 <script lang="ts">
+	import { richEmpty } from '$lib/publications';
 	import { createEventDispatcher } from 'svelte';
 
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
@@ -115,7 +116,7 @@
 		>
 
 		<div class="field">
-			<label for="faq-reponse">Réponse *</label
+			<label for="faq-reponse">Réponse<EtoileRequis vide={richEmpty(reponse)} /></label
 			><!-- RichEditor : pas labelable, donc pas d'enveloppement -->
 			<RichEditor
 				id="faq-reponse"

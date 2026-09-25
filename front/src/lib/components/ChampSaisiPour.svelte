@@ -23,6 +23,7 @@
 	import { nomAffiche } from '$lib/noms';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import type { ModeSaisiPour } from '$lib/saisi-pour';
 
 	/** Lié par l'appelant : lui seul sait ce que ces valeurs deviennent. */
@@ -96,7 +97,7 @@
 			defilante={false}
 		/>
 		{#if mode === 'resident'}
-			<select bind:value={userId} style="margin-top:.5rem" aria-label="Résident concerné">
+			<select bind:value={userId} class="saisi-pour-suite" aria-label="Résident concerné">
 				<option value={null}>— Sélectionner un résident —</option>
 				{#each residents as u (u.id)}
 					<option value={u.id}>{nomAffiche(u)}{u.email ? ` (${u.email})` : ''}</option>
@@ -109,20 +110,16 @@
 			      01/09/2026, avec son repassage à UNE colonne sur téléphone. Écrire
 			      ici un `flex-direction: column` de plus, c'était la septième fois
 			      qu'un composant existant n'était pas employé. -->
-			<div class="form-grid form-grid-2 saisi-pour-exterieur">
-				<input
-					type="text"
-					bind:value={nom}
-					placeholder="Nom complet *"
-					aria-label="Nom complet de la personne"
-					required
-				/>
-				<input
-					type="email"
-					bind:value={email}
-					placeholder="Email (optionnel)"
-					aria-label="Email de la personne"
-				/>
+			<!--  🔴 Des champs LIBELLÉS (#1329) : ils n'avaient qu'un placeholder —
+			      « Nom complet * », « Email (optionnel) » —, qui disparaît dès qu'on
+			      tape, avec une étoile tapée et un « (optionnel) » que la charte
+			      refuse. Les contacts d'un prestataire avaient été corrigés ainsi. -->
+			<div class="form-grid form-grid-2 saisi-pour-suite">
+				<label class="field">
+					<span>Nom complet<EtoileRequis vide={!nom.trim()} /></span>
+					<input type="text" bind:value={nom} required />
+				</label>
+				<label class="field">E-mail<input type="email" bind:value={email} /></label>
 			</div>
 		{/if}
 	</div>
@@ -137,7 +134,8 @@
 	    (`styles/champs.css`), y compris son passage à une colonne sur téléphone.
 	    Redéfinir `display` ou `gap` ici les ferait diverger au premier ajustement
 	    de la charte — c'est ce que `lint:charte` refuse. */
-	.saisi-pour-exterieur {
+	/*  L'espace sous les pastilles — la liste des résidents le portait en `style=`. */
+	.saisi-pour-suite {
 		margin-top: 0.5rem;
 	}
 </style>

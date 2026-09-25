@@ -36,11 +36,9 @@ const EXCEPTIONS = {
 	//  l'administrateur, n'est pas la section Description d'un objet du cadre.
 	'lib/components/OngletDescriptifPages.svelte':
 		"le descriptif d'une page du menu, pas la Description d'un objet",
-	//  Légitime, arbitré le 24/09/2026 (#1240) : la Description d'un contrat
-	//  reçoit la SYNTHÈSE IA de ses documents (#899), et seulement elle — pas
-	//  l'assistant de reformulation commun.
-	'lib/components/ChampsContrat.svelte':
-		'la synthèse IA du contrat seule, sans l’assistant commun (arbitré, #1240)',
+	//  ⚠️ `ChampsContrat` n'est plus une exception (#1329) : sa Description passe
+	//  par `SectionDescription`, SANS `assistant` — l'arbitrage #1240 (la
+	//  synthèse IA seule, pas l'assistant commun) tient par l'absence de la prop.
 };
 
 const NOMME_UNE_DESCRIPTION =

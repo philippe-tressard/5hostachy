@@ -45,8 +45,9 @@
 
 <script lang="ts">
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
-	import PerimetrePicker from './PerimetrePicker.svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
+	import SectionEquipement from './SectionEquipement.svelte';
+	import SectionPerimetre from './SectionPerimetre.svelte';
+	import SectionDescription from './SectionDescription.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
@@ -68,7 +69,6 @@
 	//  et deux `id` identiques feraient pointer les deux `aria-labelledby` sur le
 	//  premier — un défaut qui ne se voit qu'au lecteur d'écran.
 	const idNotes = `contrat-notes-${++compteur}`;
-	const idPerimetre = `contrat-perimetre-${compteur}`;
 </script>
 
 <!--  ══ 1. TITRE ══ Le titre SEUL (§0, arbitré le 18/08/2026 : ce qui qualifie
@@ -112,21 +112,15 @@
 
 <!--  ══ 3. ÉQUIPEMENT ══ Ce que le contrat entretient — il le DÉFINIT. -->
 {#if sectionPresente(CONTRAT, etat, 'equipement')}
-	<SectionFormulaire
-		titre={SECTIONS_LIBELLE.equipement}
+	<!--  `SectionEquipement`, la section de l'affaire et du prestataire (#1329). -->
+	<SectionEquipement
+		idPrefixe={idNotes}
+		options={equipements}
 		pliable={pliageDe(CONTRAT, 'equipement')}
 		requis={requisDe(CONTRAT, 'equipement')}
-		rempli={!!contratForm.type_equipement}
-		pour="{idNotes}-equipement"
-	>
-		<!--  🔴 Ce champ MANQUAIT à l'édition en ligne avant le 30/08/2026 : le type
-		      d'équipement d'un contrat ne s'y modifiait pas, et rien ne le disait. -->
-		<div class="field">
-			<select id="{idNotes}-equipement" bind:value={contratForm.type_equipement}>
-				{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-			</select>
-		</div>
-	</SectionFormulaire>
+		aide=""
+		bind:equipement={contratForm.type_equipement}
+	/>
 {/if}
 
 <!--  ══ 5. QUAND ══ Depuis quand, pour combien de temps, à quel rythme. -->
@@ -193,49 +187,38 @@
 	</SectionFormulaire>
 {/if}
 
-<!--  ══ 4. PÉRIMÈTRE ══ « Périmètre », pas « Périmètre couvert » : c'est le même
-      objet que partout ailleurs, il porte le même nom (R3, signalé le 12/09).
-      La section n'a qu'un champ : son titre EST le libellé, et le champ n'écrit
-      plus rien (`titre=""`) — sinon le nom paraît deux fois.
+<!--  ══ 7. PÉRIMÈTRE ══ `SectionPerimetre`, la section de toutes les entités
+      (#1329). Elle était réécrite ici, et son titre se rattachait (`for`,
+      `aria-labelledby`) à un identifiant qui n'existait pas.
 
       🔴 Le périmètre n'existait PAS avant le 10/09/2026 : `batiment_id` figurait
       dans la charge utile sans que rien ne le remplisse, donc tous les contrats
       portaient `NULL` et le carnet d'entretien ne pouvait filtrer sur rien. -->
 {#if sectionPresente(CONTRAT, etat, 'perimetre')}
-	<SectionFormulaire
-		titre={SECTIONS_LIBELLE.perimetre}
+	<SectionPerimetre
+		idPrefixe={idNotes}
 		pliable={pliageDe(CONTRAT, 'perimetre')}
 		requis={requisDe(CONTRAT, 'perimetre')}
-		rempli={(contratForm.perimetre_cible ?? []).length > 0}
-		pour={idPerimetre}
+		bind:perimetre={contratForm.perimetre_cible}
 	>
-		<div role="group" aria-labelledby={idPerimetre}>
-			<PerimetrePicker bind:value={contratForm.perimetre_cible} titre="" />
-		</div>
-		<p class="aide">
+		<p class="aide" slot="aidePerimetre">
 			Ce que ce contrat entretient. Il apparaîtra dans le carnet d’entretien de ce périmètre — et
 			dans celui de chacun des espaces qu’il contient.
 		</p>
-	</SectionFormulaire>
+	</SectionPerimetre>
 {/if}
 
-<!--  ══ 6. DESCRIPTION ══ C'est ici qu'atterrit la synthèse proposée par
-      l'assistant IA (#899), relue et corrigée avant enregistrement. -->
+<!--  ══ 8. DESCRIPTION ══ C'est ici qu'atterrit la synthèse proposée par
+      l'assistant IA (#899), relue et corrigée avant enregistrement.
+      `SectionDescription`, à la hauteur de toutes les autres (#1329) : elle
+      était réécrite ici, à 60 px, liée à un identifiant inexistant. -->
 {#if sectionPresente(CONTRAT, etat, 'description')}
-	<SectionFormulaire
-		titre={SECTIONS_LIBELLE.description}
+	<SectionDescription
+		idPrefixe={idNotes}
 		pliable={pliageDe(CONTRAT, 'description')}
-		valeurModifiee={!!contratForm.notes?.trim()}
-		resume={contratForm.notes?.trim() ? 'renseignée' : 'aucune'}
-		pour={idNotes}
-	>
-		<RichEditor
-			bind:value={contratForm.notes}
-			ariaLabelledby={idNotes}
-			placeholder="Ce que couvre le contrat, ses points d’attention…"
-			minHeight="60px"
-		/>
-	</SectionFormulaire>
+		placeholder="Ce que couvre le contrat, ses points d’attention…"
+		bind:valeur={contratForm.notes}
+	/>
 {/if}
 
 <style>

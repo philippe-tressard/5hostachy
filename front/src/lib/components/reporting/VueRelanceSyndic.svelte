@@ -265,7 +265,8 @@
 							<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
 								<input
 									type="text"
-									placeholder="Motif (optionnel)"
+									placeholder="Motif"
+									aria-label="Motif de la mise hors relance"
 									bind:value={relanceMotifTemp}
 									style="font-size:.8rem;padding:2px 6px;border:1px solid var(--color-border);border-radius:4px;width:180px"
 								/>

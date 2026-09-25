@@ -20,10 +20,10 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import { pliageDe, requisDe } from '$lib/pliage';
-	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import { PRESTATAIRE } from '$lib/entites/prestataire';
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
+	import SectionEquipement from '$lib/components/SectionEquipement.svelte';
 	import { contexteAssistant } from '$lib/assistant';
 	import { contactRenseigne } from '$lib/prestataires';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
@@ -81,20 +81,15 @@
 
 <!--  ══ 3. ÉQUIPEMENT ══ Ce que l'entreprise entretient — ex-« Spécialité ». -->
 {#if sectionPresente(PRESTATAIRE, etat, 'equipement')}
-	<SectionFormulaire
-		titre={SECTIONS_LIBELLE.equipement}
+	<!--  `SectionEquipement`, la section de l'affaire et du contrat (#1329). -->
+	<SectionEquipement
+		idPrefixe={idNom}
+		options={equipements}
 		pliable={pliageDe(PRESTATAIRE, 'equipement')}
 		requis={requisDe(PRESTATAIRE, 'equipement')}
-		rempli={!!prestForm.specialite}
-		pour="{idNom}-equipement"
-	>
-		<div class="field">
-			<select id="{idNom}-equipement" bind:value={prestForm.specialite} required>
-				<option value="">— Sélectionner —</option>
-				{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
-			</select>
-		</div>
-	</SectionFormulaire>
+		aide=""
+		bind:equipement={prestForm.specialite}
+	/>
 {/if}
 
 <!--  ══ 6. CONTACTS ══ Une liste répétable : ses personnes SONT le contenu d'une
