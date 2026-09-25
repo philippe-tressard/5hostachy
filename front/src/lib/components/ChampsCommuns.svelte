@@ -46,15 +46,8 @@
   très exactement le défaut que ce composant existait pour supprimer sur les
   sections 4 à 9, laissé en place sur les deux précédentes.
 
-  L'ordre arbitré (`ux-patterns` §9 sexies) :
-
-  | # | Section | Écrite par |
-  |---|---|---|
-  | 1 | Titre | l'écran |
-  | 2 | Champs spécifiques | l'écran |
-  | 3 | **Options de publication** | **ici** |
-  | 4 | **Workflow** | **ici** (contenu par `slot`) |
-  | 5 à 10 | Périmètre · Destinataires · Description · Photos · Documents · Diffusion | ici |
+  L'ordre arbitré vit dans `SECTIONS_ORDRE` (voir plus bas) — la table qui
+  était recopiée ici s'était arrêtée à dix sections, et a été retirée.
 
   ⚠️ Le Workflow reste un `slot` : son CONTENU est propre à l'objet (les six
   colonnes du Kanban, les états d'un ticket). Ce composant en impose le rang, le
@@ -88,6 +81,7 @@
 	import type { SaisieSaisiPour } from '$lib/saisi-pour';
 	import type { CleOptionPublication } from '$lib/options-publication';
 	import type { ContexteAssistant } from '$lib/assistant';
+	import type { NatureLue } from '$lib/lecture-ticket';
 
 	/** Préfixe des `id` des champs — deux formulaires peuvent coexister à l'écran,
 	    et deux `<label for="…">` pointant le même id ne désignent plus rien. */
@@ -187,9 +181,12 @@
 	/**  Les sections ÉTEINTES par la nature de l'affaire, avec leur motif
 	 *   (formulaire unique, 23/09/2026) : rendues grisées, sans champ. */
 	export let inactives: Partial<Record<IdSection, string>> = {};
-	/** 🔒 « Visible du seul périmètre », sous les pastilles — une actualité (#1096). */
+	/** 🔒 « Réservé au périmètre sélectionné », en tête de la section (25/09/2026). */
 	export let avecReservePerimetre = false;
 	export let reservePerimetre = false;
+	/**  La pastille de lecture (25/09/2026), `null` sinon : « Confidentielle » (`brouillon`,
+	 *   qui écrit `confidentiel`) ouvre Destinataires ; une affaire a la réserve d'office. */
+	export let lecture: NatureLue | null = null;
 	/**  `single` : un seul code retenu. Le rendu est le MÊME (des pastilles) —
 	     seule la sélection change. Utilisé par les prestations, dont la colonne
 	     `perimetre` ne porte qu'un code ; les passer au tableau demande une
@@ -375,6 +372,8 @@
 		badgeImpose={perimetreBadge}
 		reservable={avecReservePerimetre}
 		bind:reserve={reservePerimetre}
+		reserveAcquise={lecture && !lecture.actualite ? confidentielAcquis : ''}
+		reserveSansObjet={lecture && brouillon ? 'Sans objet : elle est confidentielle.' : ''}
 		inactive={inactives.perimetre ?? ''}
 	>
 		<slot name="aidePerimetre" slot="aidePerimetre" />
@@ -436,6 +435,10 @@
 		requis={exige('destinataires')}
 		inactive={inactives.destinataires ?? ''}
 		bind:destinataires
+		{lecture}
+		bind:confidentiel={brouillon}
+		{perimetre}
+		{reservePerimetre}
 	/>
 {/if}
 

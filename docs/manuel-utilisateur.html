@@ -1028,7 +1028,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 1.77 · Septembre 2026</span>
+      <span class="topbar-badge">Version 1.78 · Septembre 2026</span>
     </div>
   </header>
 
@@ -1506,8 +1506,8 @@
       </p>
       <p class="ecran-note">
         Le lien ne donne aucun droit&nbsp;: la personne qui l'ouvre doit être connectée, et
-        elle voit ce qu'elle a le droit de voir, ni plus ni moins. Envoyer le lien d'un
-        affaire confidentiel ne le rend pas lisible.
+        elle voit ce qu'elle a le droit de voir, ni plus ni moins. Envoyer le lien d'une
+        affaire confidentielle ne la rend pas lisible.
       </p>
 
     </section>
@@ -1543,6 +1543,21 @@
         <p class="ecran-note">Trois autres catégories sont posées par le conseil syndical seul&nbsp;: <em>Étude &amp; travaux</em>, <em>Entretien</em> et <em>Actualité</em>. L’urgence n’est pas une catégorie&nbsp;: c’est une case à cocher.</p>
       </div>
 
+      <div class="card" id="qui-la-lit">
+        <h3>Qui la lit&nbsp;: la pastille bleue</h3>
+        <p>Sur la carte d’une affaire ou d’une actualité, à côté du périmètre 🔹, une <strong>pastille bleue</strong> dit qui d’autre la lit. Touchez-la&nbsp;: la phrase complète s’affiche, avec ceux qui ne la lisent pas. Quand tout le monde la lit, il n’y a rien sur la carte.</p>
+        <table class="affaire-table">
+          <thead><tr><th>Pastille</th><th>Ce qu’elle veut dire</th></tr></thead>
+          <tbody>
+            <tr><td>Tous sauf locataires</td><td>Une affaire suivie&nbsp;: copropriétaires occupants, copropriétaires bailleurs et bailleurs la lisent. Un locataire ne lit que celles qu’il a déposées — et, dans son périmètre, les affaires <strong>datées</strong> (au calendrier), sauf en AG&nbsp;: la pastille dit alors «&nbsp;Tous&nbsp;».</td></tr>
+            <tr><td>Occupants, Copro-bailleurs, Locataires…</td><td>Une actualité adressée à ceux-là seulement. <em>Résidents</em>&nbsp;= occupants et locataires&nbsp;; <em>Propriétaires</em>&nbsp;= occupants et copropriétaires bailleurs.</td></tr>
+            <tr><td>… avec un cadenas</td><td>Réservée au périmètre&nbsp;: seuls ceux du bâtiment (ou de l’espace) indiqué par le 🔹 la lisent.</td></tr>
+            <tr><td>CS</td><td>Confidentielle&nbsp;: le conseil syndical seulement, en plus de son auteur.</td></tr>
+          </tbody>
+        </table>
+        <p class="ecran-note">Pour le conseil syndical, dans le formulaire&nbsp;: la case <strong>Réservé au périmètre sélectionné</strong> ouvre la section Périmètre (cochée d’office pour une affaire suivie), la case <strong>Confidentielle&nbsp;: le conseil syndical seulement</strong> ouvre la section Destinataires, pour une affaire comme pour une actualité. Cochée, elle passe outre le périmètre et les destinataires, et rien ne sort&nbsp;: ni groupe WhatsApp, ni affiche. La section Destinataires porte la même pastille que la carte.</p>
+      </div>
+
       <div class="card">
         <h3>Les treize sections du formulaire</h3>
         <p>Toutes restent à leur place, dans le même ordre sur tout le site. Celles que le conseil syndical remplit apparaissent <strong>grisées</strong> pour vous, avec leur motif.</p>
@@ -1559,7 +1574,7 @@
             <tr data-section-affaire="description" data-resident="obligatoire"><td>8</td><td>Description</td><td><span class="pour-vous pour-vous-obligatoire">Obligatoire</span></td><td>Le détail&nbsp;: depuis quand, ce que vous avez constaté.</td></tr>
             <tr data-section-affaire="pieces_jointes" data-resident="facultatif"><td>9</td><td>Pièces jointes</td><td><span class="pour-vous pour-vous-facultatif">Facultatif</span></td><td>Photos et documents — la photo du dégât vaut mieux qu’un long texte.</td></tr>
             <tr data-section-affaire="au_nom_de" data-resident="conseil"><td>10</td><td>Au nom de</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>Vous signalez en votre nom&nbsp;; le conseil peut saisir pour quelqu’un.</td></tr>
-            <tr data-section-affaire="destinataires" data-resident="sans-objet"><td>11</td><td>Destinataires</td><td><span class="pour-vous pour-vous-sans-objet">Sans objet</span></td><td>Pour une actualité seulement.</td></tr>
+            <tr data-section-affaire="destinataires" data-resident="conseil"><td>11</td><td>Destinataires</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>Qui la lit&nbsp;: le conseil peut la rendre confidentielle.</td></tr>
             <tr data-section-affaire="mise_en_avant" data-resident="facultatif"><td>12</td><td>Mise en avant</td><td><span class="pour-vous pour-vous-facultatif">Facultatif</span></td><td>Pour vous, la case 🚨 <em>Urgente</em>.</td></tr>
             <tr data-section-affaire="diffusion" data-resident="conseil"><td>13</td><td>Diffusion</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>WhatsApp, syndic, conseil&nbsp;: le conseil choisit qui prévenir.</td></tr>
           </tbody>

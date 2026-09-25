@@ -34,11 +34,14 @@
 	/** Un badge imposé par l'appelant — sinon celui du périmètre par défaut. */
 	export let badgeImpose: string | null = null;
 
-	/**  🔒 La réserve au périmètre, SOUS les pastilles (#1096, 23/09/2026) :
-	 *   *« c'est plus cohérent »* — elle dit qui lit ce périmètre-là. Rendue
-	 *   pour une actualité seulement ; une affaire suivie l'a d'office. */
+	/**  🔒 La réserve au périmètre, EN TÊTE de la section (25/09/2026) — elle
+	 *   était sous les pastilles depuis #1096. Cochable pour une actualité ;
+	 *   cochée d'office pour une affaire, avec son motif (`reserveAcquise`). */
 	export let reservable = false;
 	export let reserve = false;
+	export let reserveAcquise = '';
+	/** Le motif qui la rend sans objet — « Confidentielle » cochée. */
+	export let reserveSansObjet = '';
 
 	/**  Le badge du TITRE de section. Il ne recalcule rien :
 	 *   `estPerimetreParDefaut` est la fonction qu'emploie déjà le sélecteur.
@@ -64,6 +67,14 @@
 	valeurModifiee={!estPerimetreParDefaut(perimetre)}
 	idTitre="{idPrefixe}-perimetre-titre"
 >
+	{#if reservable}
+		<CaseReservePerimetre
+			bind:coche={reserve}
+			perimetreCible={perimetre}
+			acquis={reserveAcquise}
+			sansObjet={reserveSansObjet}
+		/>
+	{/if}
 	<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
 		<PerimetrePicker bind:value={perimetre} {mode} titre="" />
 		<!--  🔴 Un SLOT et non une prop de texte : l'aide porte du balisage (un
@@ -76,8 +87,5 @@
 		      évident. Sur une évolution, « laissé vide, le périmètre du ticket ne
 		      bouge pas » ne se déduit pas du champ. -->
 		<slot name="aidePerimetre" />
-		{#if reservable}
-			<CaseReservePerimetre bind:coche={reserve} perimetreCible={perimetre} />
-		{/if}
 	</div>
 </SectionFormulaire>

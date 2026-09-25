@@ -81,23 +81,28 @@ export function reserveAuConseil(codes: string[] | null | undefined): boolean {
  * se lire de la même façon.
  */
 export function destinatairesLabel(valeur: string[] | string | null | undefined): string {
-	let codes: string[];
-	if (Array.isArray(valeur)) {
-		codes = valeur;
-	} else if (typeof valeur === 'string' && valeur.trim()) {
-		try {
-			const parse = JSON.parse(valeur);
-			codes = Array.isArray(parse) ? parse.map(String) : [];
-		} catch {
-			//  Ancien format CSV, ou donnée abîmée : on rend ce qu'on a plutôt que rien.
-			codes = valeur
-				.split(',')
-				.map((v) => v.trim())
-				.filter(Boolean);
-		}
-	} else {
-		codes = [];
-	}
+	const codes = codesDestinataires(valeur);
 	if (concerneTousLesResidents(codes)) return LIBELLE_TOUS;
 	return codes.map((c) => PAR_CODE.get(c)?.libelle ?? c).join(' · ');
+}
+
+/**
+ * Les CODES d'un public cible, qu'il arrive en tableau ou en chaîne JSON — ce
+ * que rend l'API. Écrite une fois : le libellé ci-dessus et la pastille de
+ * lecture (`$lib/lecture`) lisent la même donnée, et deux lectures d'une
+ * chaîne abîmée divergeraient sur le cas limite.
+ */
+export function codesDestinataires(valeur: string[] | string | null | undefined): string[] {
+	if (Array.isArray(valeur)) return valeur;
+	if (typeof valeur !== 'string' || !valeur.trim()) return [];
+	try {
+		const parse = JSON.parse(valeur);
+		return Array.isArray(parse) ? parse.map(String) : [];
+	} catch {
+		//  Ancien format CSV, ou donnée abîmée : on rend ce qu'on a plutôt que rien.
+		return valeur
+			.split(',')
+			.map((v) => v.trim())
+			.filter(Boolean);
+	}
 }

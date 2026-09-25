@@ -272,31 +272,29 @@ export interface GestesTicket {
 	annuler: () => void;
 }
 
-export const OPTIONS_TICKET: CleOptionPublication[] = [
-	'epingle',
-	'urgente',
-	'brouillon',
-	'confidentiel',
-];
+/**
+ * Les options de MISE EN AVANT d'une affaire — l'épinglage et l'urgence.
+ *
+ * 🔴 🛡️ et 🔒 en sont SORTIS le 25/09/2026 (lot 1 de la pastille de lecture) :
+ * ils ne mettent rien en avant, ils disent qui LIT. Ils vivent désormais en
+ * tête de leur section — « Confidentielle » en tête de Destinataires,
+ * « Réservé au périmètre » en tête de Périmètre —, affaires comprises. La clé
+ * `brouillon` continue d'écrire `confidentiel` (`optionsVersTicket`).
+ */
+export const OPTIONS_TICKET: CleOptionPublication[] = ['epingle', 'urgente'];
 
 /**
- * 🔒 Pourquoi « Confidentiel » est MONTRÉ mais VERROUILLÉ sur un ticket.
+ * 🔒 Pourquoi « Réservé au périmètre » est COCHÉ et VERROUILLÉ sur une affaire.
  *
- * Demandé à l'écran le 05/09/2026 : *« il manque l'option confidentiel sur
- * l'objet Options de publication »*. Elle manquait en effet — et elle n'aurait
- * rien pu restreindre : `ticket_visible` appelle `perimetre_visible` **sans**
- * `ouvert_a_la_copropriete`, là où une actualité le passe (#339). Un ticket se
- * comporte donc déjà comme une actualité confidentielle, toujours.
- *
- * Trois issues étaient possibles, deux sont mauvaises : l'omettre laissait un
- * trou dans une liste de quatre ; la rendre cochable aurait promis une
- * protection que rien n'applique, et le premier qui s'y fie se croit couvert.
- * Elle est donc **cochée et verrouillée**, avec ce motif écrit sous elle — ce
- * n'est pas une case morte, c'est un état de l'objet, et il mérite d'être lu.
+ * Une affaire suivie n'est lue que dans son périmètre : `ticket_visible` appelle
+ * `perimetre_visible` SANS `ouvert_a_la_copropriete`, là où une actualité le
+ * passe (#339). La case la rendrait cochable pour une promesse que rien
+ * n'applique — elle est donc montrée cochée, avec ce motif, en tête de la
+ * section Périmètre (lot 1, 25/09/2026). Ce n'est pas une case morte : c'est un
+ * état de l'objet, et il mérite d'être lu.
  */
 export const TICKET_CONFIDENTIEL_ACQUIS =
-	'🔒 Un ticket est toujours visible des seuls résidents du périmètre sélectionné : ' +
-	'contrairement à une actualité, son ciblage restreint la lecture. Rien à cocher.';
+	'Une affaire suivie l’est d’office : seuls ceux du périmètre sélectionné la lisent.';
 
 /** L'état COURANT des options — ce que le formulaire reprend à l'ouverture. */
 export function optionsDuTicket(ticket: Ticket | null | undefined): {
