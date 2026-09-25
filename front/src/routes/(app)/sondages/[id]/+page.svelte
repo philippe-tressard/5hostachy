@@ -1,4 +1,5 @@
 <script lang="ts">
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -263,7 +264,7 @@
 						<div class="champ-libre-box">
 							<div class="field">
 								<label for="sondage-reponse-libre" style="font-weight:600">
-									Précisez votre réponse <span style="color:var(--color-danger)">*</span>
+									Précisez votre réponse<EtoileRequis vide={!reponseLibre.trim()} />
 								</label>
 								<textarea
 									id="sondage-reponse-libre"
