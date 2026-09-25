@@ -27,7 +27,12 @@
 <script lang="ts">
 	import { documents as docsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { contexteCommentaire } from '$lib/assistant';
-	import { PUBLICATION } from '$lib/entites/publication';
+	//  🔴 L'actualité est une AFFAIRE de catégorie Actualité (v2.0.0) : sa Suite
+	//  suit `TICKET`, comme son édition (`FormulaireTicket`). Elle suivait
+	//  `PUBLICATION` — deux déclarations pour un objet (#1329). La nature
+	//  éteint ce qui ne la concerne pas (`conditionsDeLaSuite`).
+	import { TICKET } from '$lib/entites/ticket';
+	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
 	import { pliageDe } from '$lib/pliage';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { SUITE } from '$lib/gestes';
@@ -174,7 +179,8 @@
 					defaultEnvoyerSyndic={ticket.destinataire_syndic ?? false}
 					defaultEnvoyerCs={ticket.destinataire_cs ?? false}
 					showEmail={$isCS}
-					entite={PUBLICATION}
+					entite={TICKET}
+					conditions={conditionsDeLaSuite(ticket)}
 					assistant={contexteCommentaire(ticket)}
 					saving={evolutionEnCours}
 					perimetreCourant={ticket.perimetre_cible ?? []}
@@ -191,7 +197,7 @@
 					<!--  La Mise en avant à SON rang, après les Destinataires (#1326). -->
 					<svelte:fragment slot="mise_en_avant">
 						<SectionOptionsPublication
-							pliable={pliageDe(PUBLICATION, 'mise_en_avant')}
+							pliable={pliageDe(TICKET, 'mise_en_avant')}
 							options={OPTIONS}
 							perimetreCible={ticket.perimetre_cible ?? []}
 							dejaEpingle={ticket.epingle ?? false}
@@ -225,7 +231,8 @@
 							editMode={true}
 							initialContenu={evol.contenu || ''}
 							initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-							entite={PUBLICATION}
+							entite={TICKET}
+							conditions={conditionsDeLaSuite(ticket)}
 							assistant={contexteCommentaire(ticket)}
 							saving={evolCorrectionEnCours}
 							on:submit={(e) => gestes.evolCorriger(ticket, e.detail)}
