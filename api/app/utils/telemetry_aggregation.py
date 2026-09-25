@@ -22,6 +22,7 @@ from sqlalchemy import func, text
 from sqlmodel import Session, select
 
 from app.utils.declenchement import AUTOMATIQUE
+from app.utils.requete_liee import requete_liee
 from app.database import engine
 from app.models.core import (
     TelemetryEvent,
@@ -251,9 +252,11 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
         try:
             cutoff = now_utc - timedelta(days=30)
             with engine.connect() as conn:
+                #  Le `datetime` lié, jamais son `isoformat()` (#1298).
                 result = conn.execute(
-                    text("DELETE FROM telemetry_event WHERE cree_le < :cutoff"),
-                    {"cutoff": cutoff.isoformat()},
+                    requete_liee(
+                        "DELETE FROM telemetry_event WHERE cree_le < :cutoff", cutoff=cutoff
+                    )
                 )
                 conn.commit()
                 rapport["events_purges"] = result.rowcount
