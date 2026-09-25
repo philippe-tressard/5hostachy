@@ -209,3 +209,49 @@ def test_un_resident_ne_change_pas_a_qui_l_on_parle(cs):
             _nettoyer(session, t.id)
             purger_ligne(session, Utilisateur, resident.id)
             session.commit()
+
+
+def _affaire_suivie(session: Session, auteur_id: int) -> Ticket:
+    t = Ticket(
+        numero=f"TK-S{uuid.uuid4().hex[:6]}",
+        titre="Fuite au 3e étage",
+        description="<p>Sous l'évier.</p>",
+        categorie="panne",
+        statut="ouvert",
+        auteur_id=auteur_id,
+        perimetre_cible=json.dumps(BAT_2, ensure_ascii=False),
+    )
+    session.add(t)
+    session.commit()
+    session.refresh(t)
+    return t
+
+
+def test_une_affaire_suivie_ne_prend_pas_de_public_vise_par_sa_suite(cs):
+    """🔴 Le public visé est celui d'une ACTUALITÉ (#1091) — 25/09/2026.
+
+    Une affaire suivie est vue de son auteur, du périmètre et du conseil ; elle
+    ne s'adresse à personne d'autre (`entites/ticket.ts`, `inactivePour.suivie`).
+    La Suite de l'écran l'offrait pourtant, et ce qu'on y choisissait s'ÉCRIVAIT
+    sur l'affaire : une valeur qu'aucun écran ne montre, et que la correction
+    efface (`chargeUtileAffaire`). L'écran ne l'offre plus ; le serveur ne
+    l'écrit plus — un onglet PWA en cache peut encore l'envoyer.
+
+    La même Suite peut, elle, rendre l'affaire URGENTE : c'est la Mise en avant,
+    rouverte dans la Suite par le même lot.
+    """
+    with Session(engine) as session:
+        t = _affaire_suivie(session, cs.id)
+        try:
+            relue = _suite(
+                session,
+                cs,
+                t.id,
+                contenu="La fuite s'aggrave.",
+                public_cible=["locataires"],
+                urgente=True,
+            )
+            assert relue.public_cible is None
+            assert relue.priorite == "haute"
+        finally:
+            _nettoyer(session, t.id)

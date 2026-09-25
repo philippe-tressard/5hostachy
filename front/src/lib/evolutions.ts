@@ -1,6 +1,12 @@
 import { separerFichiers } from '$lib/fichiers';
 import { perimetreHerite } from '$lib/perimetres';
-import { sectionPresente, type EntiteDeclaree, type IdSection } from '$lib/entites/types';
+import {
+	motifInactif,
+	sectionPresente,
+	type ConditionInactive,
+	type EntiteDeclaree,
+	type IdSection,
+} from '$lib/entites/types';
 /**
  * Le vocabulaire d'un **fil d'évolution** — écrit une fois pour les trois entités
  * qui en portent un : tickets, actualités, événements de calendrier.
@@ -222,6 +228,78 @@ const SECTIONS_DU_CRENEAU: readonly IdSection[] = [
 ];
 
 /** Le créneau s'ouvre dès que l'une de ses sections est déclarée en évolution. */
-export function creneauSpecifiquesPresent(entite: EntiteDeclaree): boolean {
+function creneauSpecifiquesPresent(entite: EntiteDeclaree): boolean {
 	return SECTIONS_DU_CRENEAU.some((id) => sectionPresente(entite, 'evolution', id));
+}
+
+/**
+ * Une section du CIBLAGE est-elle offerte dans la Suite, pour cet objet-là ?
+ *
+ * Présente dans l'état `evolution` ET non éteinte par ce que l'objet EST
+ * (`conditions` — la nature d'une affaire, `natureDe`). Une section éteinte
+ * ne se rend pas du tout dans une Suite : dans le formulaire, elle reste grisée
+ * pour montrer ce qu'un changement de catégorie rallumerait ; une Suite ne
+ * change pas la catégorie, il n'y a donc rien à rallumer.
+ *
+ * 🔴 Les Destinataires d'une affaire SUIVIE (25/09/2026) : déclarés
+ * `inactivePour.suivie`, grisés en édition, ils restaient offerts dans la
+ * Suite. Pour le conseil, le serveur ÉCRIVAIT le public choisi sur l'affaire
+ * (`add_evolution`), une valeur qu'aucun écran ne montre et que la correction
+ * efface (`chargeUtileAffaire`) ; pour un résident, il l'ignorait.
+ */
+function sectionDeLaSuite(
+	entite: EntiteDeclaree,
+	id: IdSection,
+	conditions: readonly ConditionInactive[],
+): boolean {
+	return (
+		sectionPresente(entite, 'evolution', id) && !motifInactif(entite, 'evolution', id, conditions)
+	);
+}
+
+/** Les sections qu'une Suite offre — `EvolForm` n'en décide plus lui-même. */
+export interface SectionsDeLaSuite {
+	perimetre: boolean;
+	destinataires: boolean;
+	specifiques: boolean;
+	piecesJointes: boolean;
+	diffusion: boolean;
+}
+
+/**
+ * Ce qu'une Suite (ou la correction d'une entrée) offre, pour CET objet et CE
+ * lecteur. Chaque ligne combine ce qui EXISTE (la déclaration de l'entité) et
+ * ce que cet utilisateur-ci PEUT (le droit, passé par l'appelant) — jamais l'un
+ * à la place de l'autre (#463). Extrait d'`EvolForm` le 25/09/2026 : la règle
+ * est pure, et le composant dépassait 500 lignes.
+ *
+ * 🔴 LE PÉRIMÈTRE SE CORRIGE AUSSI (01/09/2026, à l'écran) :
+ *
+ * > *« L'édition peut modifier le périmètre (correction d'erreur
+ * > d'affectation d'un périmètre) »*
+ *
+ * La ligne valait `avecPerimetre && !editMode`, au motif que « préciser est un
+ * geste de SUIVI, qui raturerait un fait daté en réécrivant une entrée passée »
+ * — et le serveur refusait le champ en PATCH, ce qui fermait la question. Le
+ * motif vaut pour un RESSERREMENT, pas pour une faute de clic. Et la faute coûte
+ * cher : le périmètre d'une entrée écrase celui du ticket, donc une erreur
+ * d'affectation reclasse tout le ticket.
+ *
+ * ⚠️ Côté serveur, la correction ne se propage à l'objet que si l'entrée
+ * corrigée est la dernière à avoir précisé quelque chose
+ * (`app/utils/perimetre_fil.py`) : corriger une vieille entrée ne défait pas une
+ * précision récente.
+ */
+export function sectionsDeLaSuite(
+	entite: EntiteDeclaree,
+	conditions: readonly ConditionInactive[],
+	droits: { perimetre: boolean; piecesJointes: boolean; diffusion: boolean; creneau: boolean },
+): SectionsDeLaSuite {
+	return {
+		perimetre: droits.perimetre && sectionPresente(entite, 'evolution', 'perimetre'),
+		destinataires: sectionDeLaSuite(entite, 'destinataires', conditions),
+		specifiques: droits.creneau && creneauSpecifiquesPresent(entite),
+		piecesJointes: droits.piecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes'),
+		diffusion: droits.diffusion && sectionPresente(entite, 'evolution', 'diffusion'),
+	};
 }

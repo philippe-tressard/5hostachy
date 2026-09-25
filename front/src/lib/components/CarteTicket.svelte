@@ -56,6 +56,7 @@
 	import EvolForm from './EvolForm.svelte';
 	import SectionsSuiteConseil from './SectionsSuiteConseil.svelte';
 	import { TICKET } from '$lib/entites/ticket';
+	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
 	import {
 		OPTIONS_TICKET,
 		TICKET_CONFIDENTIEL_ACQUIS,
@@ -337,6 +338,7 @@
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
 						entite={TICKET}
+						conditions={conditionsDeLaSuite(ticket)}
 						assistant={contexteCommentaire(
 							ticket,
 							STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut,

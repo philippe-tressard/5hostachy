@@ -370,13 +370,13 @@ def add_evolution(
             evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(planifie)}</em></p>"
             ticket.mis_a_jour_le = datetime.utcnow()
             session.add(ticket)
-    #  À qui l'on parle et l'Accès — le conseil seul, comme sur l'ancienne
-    #  publication (#1091). Puis l'invariant d'accès : une Suite qui referme
-    #  l'actualité archive ses affiches, comme la correction et la création.
+    #  À qui l'on parle — sur une ACTUALITÉ seule : une affaire suivie ne s'adresse
+    #  à personne (`inactivePour.suivie`) — et l'Accès, le conseil seul (#1091).
+    #  Puis l'invariant d'accès : une Suite qui referme l'actualité archive ses affiches.
     if est_moderateur(user) and (
         body.public_cible is not None or body.reserve_perimetre is not None
     ):
-        if body.public_cible is not None:
+        if body.public_cible is not None and est_actualite(ticket):
             ticket.public_cible = (
                 json.dumps(body.public_cible, ensure_ascii=False) if body.public_cible else None
             )
