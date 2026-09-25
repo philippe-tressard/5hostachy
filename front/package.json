@@ -91,7 +91,7 @@
 		"lint:chargement": "node scripts/check-chargement.mjs --selftest && node scripts/check-chargement.mjs",
 		"lint:etage-libelle": "node scripts/check-etage-libelle.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",
-		"lint:entete-carte": "node scripts/check-entete-carte.mjs",
+		"lint:entete-carte": "node scripts/check-entete-carte.mjs --selftest && node scripts/check-entete-carte.mjs",
 		"lint:pictogrammes": "node scripts/check-pictogrammes.mjs --selftest && node scripts/check-pictogrammes.mjs",
 		"lint:clamp": "node scripts/check-clamp.mjs --selftest && node scripts/check-clamp.mjs",
 		"lint:types-locaux": "node scripts/check-types-locaux.mjs --selftest && node scripts/check-types-locaux.mjs",

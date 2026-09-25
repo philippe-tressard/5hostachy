@@ -209,7 +209,6 @@
 		vertical-align: middle;
 	}
 	.pub-auteur {
-		font-size: 0.78rem;
 		color: var(--color-text-muted);
 	}
 

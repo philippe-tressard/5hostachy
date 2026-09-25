@@ -75,7 +75,11 @@
 	.pastille-lecture-bouton {
 		border: none;
 		cursor: pointer;
-		font: inherit;
+		/*  `font-family` et non `font: inherit` : le raccourci réinitialisait la
+		    taille et la graisse du `.badge` — la pastille se lisait plus grande
+		    que ses voisines (#1308). */
+		font-family: inherit;
+		line-height: inherit;
 		min-width: 0;
 		max-width: 100%;
 	}

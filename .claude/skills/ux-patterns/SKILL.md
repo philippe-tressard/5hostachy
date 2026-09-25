@@ -632,6 +632,11 @@ de quoi elle parlait.
 - puis l'**aperçu**, **trois** lignes (`.clamp-3`) ;
 - **en dernier** : tags à gauche (workflow, périmètre, confidentiel, auteur),
   **date à droite**.
+  🔒 **Toute la ligne est à UNE taille**, celle d'un `.badge` (0,75 rem), posée
+  sur `.ec-tags` et héritée : état, périmètre, pastille de lecture, numéro,
+  auteur. Ils en avaient quatre (#1308). `lint:entete-carte` refuse une autre
+  taille sur un élément du slot `tags`, et `font: inherit`, qui réinitialise
+  celle du badge.
 
 🔴 **Cet ordre a été dicté à l'écran le 18/09/2026**, capture à l'appui : *« Titre
 en gras (à gauche) et icônes à droite sur la 1ʳᵉ ligne · Description (extrait sur

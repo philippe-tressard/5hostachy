@@ -359,7 +359,6 @@
 	    `lint:classes-nues` qui l'ont refusée — la relecture, elle, ne l'avait pas
 	    vue. */
 	.contrat-echeance {
-		font-size: 0.82rem;
 		font-weight: 600;
 		color: var(--color-primary);
 	}
@@ -408,7 +407,6 @@
 	    seconde ayant perdu le `@media` qui la justifiait — un vestige que rien ne
 	    signalait, puisqu'une redéclaration est valide en CSS. */
 	.contrat-meta {
-		font-size: 0.78rem;
 		color: var(--color-text-muted);
 	}
 	/*  Seuls la taille et la couleur restent ici : le rendu du contenu riche

@@ -36,6 +36,19 @@
  *  dépôt est conforme aujourd'hui. Une exception ajoutée plus tard devra dire
  *  pourquoi, et une exception qui ne sert plus fait échouer ce contrôle.
  *
+ *  ## Et la ligne de méta a UNE taille (#1308, 25/09/2026)
+ *
+ *  Signalé à l'écran, capture à l'appui : « Ouvert » et le périmètre en petit,
+ *  « Tous sauf locataires » et « #TK-121048 » nettement plus grands, l'auteur
+ *  entre les deux. Trois causes, une par élément : un `font: inherit` sur la
+ *  pastille de lecture (le raccourci RÉINITIALISE la taille du `.badge`), un
+ *  numéro sans taille en monospace, un auteur à 0,78 rem.
+ *
+ *  La taille se pose une fois, sur `.ec-tags` d'`EnteteCarte`. Dans le slot
+ *  `tags` d'une carte — et dans les composants qu'il rend —, une classe ne
+ *  déclare pas de taille, ou déclare CELLE-LÀ ; le raccourci `font:` y est
+ *  refusé. Les écarts légitimes se déclarent dans `TAILLE_LIBRE`.
+ *
  *  Lancer : node scripts/check-entete-carte.mjs [--selftest]
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -82,6 +95,60 @@ export function verdictCarte(source) {
 	if (!CARTE.test(source)) return 'hors-sujet';
 	if (!EMPLOI.test(source)) return 'sans-entete';
 	return CHEVRON_RECOPIE.test(source) ? 'chevron-recopie' : 'ok';
+}
+
+/**  Les classes de la ligne de méta qui gardent LEUR taille, avec la raison.
+ *   Une entrée qui ne sert plus fait échouer. */
+const TAILLE_LIBRE = {
+	'tk-cat': 'pictogramme de catégorie en tête de ligne — un émoji, pas du texte',
+	'pastille-lecture-bulle': 'la bulle ouverte au toucher, posée SOUS la ligne',
+	//  `NotationsPrestataire` a deux modes : `resume` (le badge ★, dans la ligne)
+	//  et la liste des avis, rendue dans le CORPS de la carte. Le contrôle lit le
+	//  composant entier ; ces trois classes n'appartiennent qu'au second mode.
+	'not-entete': 'liste des avis (NotationsPrestataire sans `resume`), dans le corps',
+	'not-date': 'liste des avis (NotationsPrestataire sans `resume`), dans le corps',
+	'not-commentaire': 'liste des avis (NotationsPrestataire sans `resume`), dans le corps',
+};
+
+/** Le fragment du slot `tags`, ou la chaîne vide. */
+export function fragmentTags(source) {
+	const m = source.match(/<svelte:fragment slot="tags">([\s\S]*?)<\/svelte:fragment>/);
+	return m ? m[1] : '';
+}
+
+/** Les classes STATIQUES d'un balisage (hors expressions `{…}`). */
+export function classesDe(balisage) {
+	const acc = new Set();
+	for (const m of balisage.matchAll(/\bclass="([^"]*)"/g))
+		for (const c of m[1].replace(/\{[^}]*\}/g, ' ').split(/\s+/))
+			if (/^[a-z][\w-]*$/.test(c)) acc.add(c);
+	for (const m of balisage.matchAll(/\bclass:([a-z][\w-]*)/g)) acc.add(m[1]);
+	return acc;
+}
+
+/** Les composants (`<Majuscule`) rendus par un balisage. */
+export function composantsDe(balisage) {
+	return new Set([...balisage.matchAll(/<([A-Z]\w+)/g)].map((m) => m[1]));
+}
+
+/**  Les écarts de taille d'un `<style>` pour un ensemble de classes, PUR.
+ *   @returns {{classe: string, decl: string}[]} */
+export function ecartsTaille(source, classes, reference) {
+	const style = (source.match(/<style[^>]*>([\s\S]*?)<\/style>/) ?? [])[1] ?? '';
+	const sansCommentaires = style.replace(/\/\*[\s\S]*?\*\//g, '');
+	const ecarts = [];
+	for (const m of sansCommentaires.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+		const [selecteur, corps] = [m[1], m[2]];
+		for (const c of classes) {
+			if (!new RegExp(`\\.${c}(?![\\w-])`).test(selecteur)) continue;
+			const raccourci = corps.match(/(?:^|[;\s])font\s*:[^;]*/);
+			const taille = corps.match(/font-size\s*:\s*([^;]+)/);
+			if (raccourci) ecarts.push({ classe: c, decl: raccourci[0].trim() });
+			else if (taille && taille[1].trim() !== reference)
+				ecarts.push({ classe: c, decl: `font-size: ${taille[1].trim()}` });
+		}
+	}
+	return ecarts;
 }
 
 if (process.argv.includes('--selftest')) {
@@ -131,6 +198,33 @@ if (process.argv.includes('--selftest')) {
 		`import EnteteCarte from './x';
 <div class="carte-liste"><svelte:fragment slot="chevron">`,
 	);
+	const e = (libelle, attendu, src, classes) => {
+		const r = ecartsTaille(src, new Set(classes), '0.75rem').map((x) => x.classe);
+		if (JSON.stringify(r) === JSON.stringify(attendu)) console.log(`PASS  ${libelle} → [${r}]`);
+		else {
+			console.error(`FAIL  ${libelle}  attendu=[${attendu}] obtenu=[${r}]`);
+			ko = 1;
+		}
+	};
+	//  🔴 Les trois formes exactes d'avant #1308.
+	e('raccourci font: inherit', ['b'], '<style>.b { border: none; font: inherit; }</style>', ['b']);
+	e('taille propre', ['a'], '<style>.a { font-size: 0.78rem; }</style>', ['a']);
+	e('taille de référence', [], '<style>.a { font-size: 0.75rem; }</style>', ['a']);
+	e('sans taille', [], '<style>.a { color: red; }</style>', ['a']);
+	e('font-family seul', [], '<style>.b { font-family: inherit; }</style>', ['b']);
+	e('classe voisine ignorée', [], '<style>.a-b { font-size: 2rem; }</style>', ['a']);
+	e('commentaire ignoré', [], '<style>/* .a { font: x } */ .a { color: red; }</style>', ['a']);
+	const frag = fragmentTags(
+		'<svelte:fragment slot="tags"><span class="x {y}">1</span><Pastille /></svelte:fragment>',
+	);
+	if (
+		!classesDe(frag).has('x') ||
+		classesDe(frag).has('{y}') ||
+		!composantsDe(frag).has('Pastille')
+	) {
+		console.error('FAIL  classes et composants du fragment');
+		ko = 1;
+	} else console.log('PASS  classes et composants du fragment');
 	//  Le cas zéro : une source vide ne rend pas « ok », elle rend « hors-sujet ».
 	t('source vide', 'hors-sujet', '');
 	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
@@ -159,7 +253,66 @@ for (const f of tous) {
 	(verdict === 'chevron-recopie' ? chevrons : fautifs).push(rel);
 }
 
+//  La taille de référence se LIT dans `EnteteCarte` : une valeur recopiée ici
+//  divergerait au premier ajustement.
+const entete = readFileSync(join(RACINE, 'lib/components/EnteteCarte.svelte'), 'utf8');
+const REFERENCE = (entete.match(/\.ec-tags\s*\{[^}]*font-size:\s*([^;]+);/) ?? [])[1]?.trim();
+if (!REFERENCE) {
+	console.error('\n✗ INCONNU : `.ec-tags` ne porte plus de `font-size` dans EnteteCarte.\n');
+	process.exit(2);
+}
+const tailles = new Set();
+const libresVues = new Set();
+let lignesMeta = 0;
+for (const f of tous) {
+	const source = readFileSync(f, 'utf8');
+	const frag = fragmentTags(source);
+	if (!frag) continue;
+	lignesMeta++;
+	const rel = f
+		.split(sep)
+		.join('/')
+		.replace(/^src\//, '');
+	const cibles = [[rel, source, classesDe(frag)]];
+	for (const nom of composantsDe(frag)) {
+		try {
+			const src = readFileSync(join(RACINE, 'lib/components', `${nom}.svelte`), 'utf8');
+			cibles.push([`lib/components/${nom}.svelte`, src, classesDe(src)]);
+		} catch {
+			/* composant d'ailleurs (icône, bibliothèque) : hors de la ligne */
+		}
+	}
+	for (const [fichier, src, classes] of cibles)
+		for (const { classe, decl } of ecartsTaille(src, classes, REFERENCE)) {
+			if (classe in TAILLE_LIBRE) {
+				libresVues.add(classe);
+				continue;
+			}
+			tailles.add(`${fichier}  .${classe} { ${decl} }`);
+		}
+}
+if (lignesMeta === 0) {
+	console.error('\n✗ INCONNU : aucun slot `tags` trouvé — la ligne de méta a changé de forme.\n');
+	process.exit(2);
+}
+
 let echec = false;
+if (tailles.size) {
+	echec = true;
+	console.error(`\n✗ ${tailles.size} taille(s) propre(s) sur la ligne de méta d’une carte :\n`);
+	for (const t of tailles) console.error(`  ${t}`);
+	console.error(
+		`\n  La ligne se lit à UNE taille, ${REFERENCE}, posée sur \`.ec-tags\` (#1308).\n` +
+			'  → retirer la taille (elle s’hérite), ou déclarer l’écart dans `TAILLE_LIBRE`.\n' +
+			'  ⚠️ `font: inherit` réinitialise la taille d’un `.badge` : écrire\n' +
+			'    `font-family: inherit`.\n',
+	);
+}
+const libresPerimees = Object.keys(TAILLE_LIBRE).filter((c) => !libresVues.has(c));
+if (libresPerimees.length) {
+	echec = true;
+	console.error(`\n✗ Tailles libres qui ne servent plus : ${libresPerimees.join(', ')}\n`);
+}
 
 //  🔴 LE CAS ZÉRO (`standards/04` §2) : si le parcours n'a trouvé AUCUNE carte,
 //  le contrôle n'a pas mesuré — il ne rend pas OK. C'est l'erreur qui rendrait
@@ -211,5 +364,6 @@ if (perimees.length) {
 if (echec) process.exit(1);
 console.log(
 	`✓ En-tête de carte : ${cartes} carte(s) de liste, toutes rendues par ` +
-		`EnteteCarte — ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s).`,
+		`EnteteCarte — ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s) ; ` +
+		`${lignesMeta} ligne(s) de méta à ${REFERENCE}.`,
 );
