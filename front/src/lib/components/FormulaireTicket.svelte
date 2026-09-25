@@ -13,8 +13,8 @@
   `FormulaireActualite` a disparu dans celui-ci. « Actualité » est la première
   pastille de la catégorie (pleine ligne, puis un filet — variante A). La NATURE
   qu'elle décide — informer ou faire traiter — éteint des sections : Suivi,
-  Équipement et Intervenant pour une actualité, Destinataires pour une affaire
-  suivie. Elles restent à leur rang, grisées, avec leur motif, et ce qu'elles
+  Équipement et Intervenant pour une actualité (Destinataires, éteinte pour une
+  affaire, s'y rallume le 25/09/2026 : elle porte « Confidentielle »). Elles restent à leur rang, grisées, avec leur motif, et ce qu'elles
   portaient ne part pas. La règle vit dans `$lib/formulaire-affaire` (et le motif
   dans la déclaration `TICKET`), pas en `{#if}` ici : la même question se pose à
   l'affichage et à l'envoi.
@@ -160,7 +160,9 @@
 	$: nature = natureDe(categorie);
 	$: actualite = nature === 'actualite';
 	$: inactives = sectionsInactives(etat, categorie, $isCS);
-	$: reserveeAuConseil = actualite && reserveAuConseil(publicCible);
+	//  Réservée au conseil : « Confidentielle » (`brouillon` → `confidentiel`),
+	//  pour les deux natures depuis le 25/09/2026, ou Destinataires = CS seul.
+	$: reserveeAuConseil = options.brouillon || (actualite && reserveAuConseil(publicCible));
 	//  Une actualité réservée — au périmètre ou au conseil — n'a pas d'affiche.
 	$: if ((reservePerimetre || reserveeAuConseil) && annonceHall) annonceHall = false;
 	$: assistant = contexteAssistant(actualite ? 'actualité' : 'ticket', {
@@ -410,7 +412,7 @@
 			bind:saisiPour
 			avecOptions={sectionPresente(TICKET, etat, 'mise_en_avant')}
 			objet={actualite ? 'actualité' : 'ticket'}
-			optionsRendues={!$isCS ? ['urgente'] : actualite ? ['epingle', 'urgente'] : OPTIONS_TICKET}
+			optionsRendues={!$isCS ? ['urgente'] : OPTIONS_TICKET}
 			confidentielAcquis={TICKET_CONFIDENTIEL_ACQUIS}
 			dejaEpingle={ticket?.epingle ?? false}
 			bind:epingle={options.epingle}
@@ -422,7 +424,8 @@
 			quandAutreValeur={!!frequenceType}
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
-			avecReservePerimetre={$isCS && actualite}
+			avecReservePerimetre={$isCS}
+			lecture={$isCS ? { actualite, datee: !!debut, enAg: statut === 'en_ag' } : null}
 			bind:reservePerimetre
 			avecDestinataires={$isCS && sectionPresente(TICKET, etat, 'destinataires')}
 			bind:destinataires={publicCible}
@@ -450,7 +453,7 @@
 				? 'Le groupe est commun à toute la copropriété : le message portera le titre et le périmètre, avec un lien vers l’application — jamais le contenu.'
 				: 'Le message est publié sur le groupe WhatsApp ; les photos jointes partent avec.'}
 			whatsappInterdit={motifWhatsappInterdit(
-				actualite ? reserveeAuConseil : options.brouillon,
+				reserveeAuConseil,
 				actualite ? 'actualité' : 'ticket',
 			)}
 		>

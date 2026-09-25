@@ -565,9 +565,9 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
 | **Tous** | aucune restriction de profil | tous | ✅ `LIBELLE_TOUS`, code `résidents` |
 | **Copropriétaires occupants** | copropriétaires qui habitent leur lot | `copropriétaire_résident` | ✅ |
 | **Copropriétaires bailleurs** | copropriétaires qui louent leur lot | `copropriétaire_bailleur` | ✅ libellé, code `bailleurs` |
-| **Bailleurs** | louent **par délégation** d'un copropriétaire | `mandataire` (à confirmer) | ⏳ maquette — nouveau code serveur |
+| **Bailleurs** | louent **par délégation** d'un copropriétaire | `mandataire` (confirmé ; les **aidants** n'en sont pas, ils héritent du droit du copropriétaire qu'ils aident) | ⏳ maquette — nouveau code serveur |
 | **Locataires** | locataires | `locataire` | ✅ |
-| **CS** | le conseil syndical seul (confidentialité) | rôle `conseil_syndical` | ⏳ maquette |
+| **CS** | le conseil syndical seul (confidentialité) | rôle `conseil_syndical` | ✅ pastille « CS » (lot 1) |
 
 - Un **résident** HABITE la résidence : copropriétaire occupant **ou** locataire.
   Un copropriétaire bailleur, un bailleur **ne sont pas** des résidents.
@@ -576,7 +576,30 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
   la section et `destinatairesLabel`. Le **code** reste `résidents` — stocké en
   base, lu par `public_cible_visible` ; le renommer serait une migration.
 - Le manuel suit (cartes d'écran « Tous »).
-- La **pastille de lecture** (maquette) : https://claude.ai/artifact/WRVxXqqJaFATAmWfz7WTsn
+- La **pastille de lecture** — livrée au lot 1 (25/09/2026), maquette :
+  https://claude.ai/artifact/WRVxXqqJaFATAmWfz7WTsn
+  - calcul **unique** : `$lib/lecture` (`lectureDe`), appliqué à l'objet par
+    `$lib/lecture-ticket` ; rendu `PastilleLecture` (carte) et badge d'état de
+    `SectionDestinataires` (icônes par `ContenuBadge`). **Une** couleur, bleue ;
+    rien sur la carte quand personne n'est exclu ; cadenas `lock` quand le
+    périmètre est réservé ; « CS » remplace tout quand elle est confidentielle.
+    Elle **remplace** les badges 🔒 et 🛡️ des cartes ; le 🔹 reste.
+  - combinaisons nommées : **Résidents** (occupants + locataires),
+    **Propriétaires** (occupants + copropriétaires bailleurs), **Tous sauf
+    locataires** — la règle des affaires, **montrée** (arbitré). Les autres se
+    composent par « + » (court) et « et » (long).
+  - les deux cases qui restreignent ont **une** forme (case, icône du catalogue,
+    libellé) et ouvrent leur section : « Réservé au périmètre sélectionné »
+    (`lock`) en tête du Périmètre — cochée d'office pour une affaire —,
+    « Confidentielle : le conseil syndical seulement » (`shield-check`) en tête
+    des Destinataires, **affaires comprises**. Cela renverse le « sous les
+    pastilles » de #1096. Elles ont quitté la Mise en avant (📌 🚨 seuls).
+  - 🔒 **tenue contre le serveur** : `api/tests/donnees/lecture_pastille.json`,
+    exécuté par `test_lecture_pastille.py` (règle) et `npm run lint:lecture`
+    (résumé). Une règle d'accès qui change fait tomber les deux.
+  - ⏳ **lot 2** : le code serveur des « Bailleurs » (mandataires) dans
+    Destinataires, et le retrait de la pastille « Copropriétaires » (son code
+    couvre occupants ET bailleurs : migrer les données vers les deux).
 
 ⚠️ **Aucun contrôle ne tient encore cette règle.** Restes connus, à relire
 avec elle : le profil de document « Tous les résidents » (`seed/profils_documents.py`),

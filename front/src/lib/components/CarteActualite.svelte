@@ -32,7 +32,7 @@
 	import { documents as docsApi, type Ticket } from '$lib/api';
 	import { safeHtml } from '$lib/sanitize';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
-	import { reserveAuConseil } from '$lib/destinataires';
+	import PastilleLecture from '$lib/components/PastilleLecture.svelte';
 	import { attributsNature, lienTicket, ticketUrgent } from '$lib/tickets';
 	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
 	//  écrits ici ET dans les cases du formulaire, et avaient divergé.
@@ -109,22 +109,11 @@
 			{#if estFil && isNouveau(pub.cree_le)}<span class="badge badge-gray pub-neuf">New</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="tags">
-			<!--  ⚠️ Ce badge a changé DEUX fois de glyphe, et jamais ici : il portait
-			      ✏️ — le crayon qui EST l'icône « Modifier » — puis 📝, et depuis le
-			      05/09/2026 le 🛡️ de « visible du seul conseil syndical », notion
-			      commune à l'actualité et au ticket. Le balisage n'a pas bougé une
-			      seule fois : tout vient de la table. -->
-			<!--  🛡️ : Destinataires = « Conseil syndical » seul (#1096) — le même
-			      glyphe et le même mot qu'avant, lus sur une autre donnée. -->
-			{#if reserveAuConseil(pub.public_cible)}
-				{@const o = optionPublication('brouillon')}
-				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
-			{/if}
 			<BadgePerimetre perimetre={pub.perimetre_cible} />
-			{#if pub.reserve_perimetre}
-				{@const o = optionPublication('confidentiel')}
-				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
-			{/if}
+			<!--  🔴 La PASTILLE DE LECTURE remplace les badges 🛡️ « Conseil syndical »
+			      et 🔒 « Confidentielle » (lot 1, 25/09/2026) : « CS » dit l'un, le
+			      cadenas l'autre, et elle dit en plus à QUI l'actualité s'adresse. -->
+			<PastilleLecture ticket={pub} />
 			{#if proprietaireNom}<span class="pub-auteur">{proprietaireNom}</span>{/if}
 			<MarqueIA assiste={pub.assiste_ia} />
 		</svelte:fragment>

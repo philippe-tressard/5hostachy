@@ -780,6 +780,15 @@ jobs:
         working-directory: front
         run: npm run lint:libelle-perimetre
 
+      # Et QUI LIT une affaire, exécuté (pastille de lecture, 25/09/2026). La
+      # carte résume à l'écran une règle qui vit au serveur (`ticket_visible`) ;
+      # un écart ne casse rien, il ment à chaque lecteur. Même montage : une
+      # attente, `api/tests/donnees/lecture_pastille.json`, que le test Python
+      # exécute contre la règle et ce contrôle contre `lib/lecture.ts`.
+      - name: Pastille de lecture conforme à la règle du serveur
+        working-directory: front
+        run: npm run lint:lecture
+
       # L'en-tête de page était écrit de DOUZE façons : `.page-header` redéfini en
       # CSS local dans six pages, surchargé en ligne dans six autres, et le style du
       # <h1> recopié en ligne dans onze. Une page l'avait réécrit sans redéclarer
