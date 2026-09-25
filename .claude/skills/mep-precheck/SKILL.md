@@ -132,6 +132,11 @@ autant : il est désormais **le seul** filtre entre un lot et la production, là
 il n'était qu'un préalable à une relecture. La contrepartie demandée est un
 **compte rendu après** : version servie et fonctionnalités apportées.
 
+🔴 **En session cloud, la même chaîne s'enchaîne sans validation intermédiaire**
+(25/09/2026) — pré-check INCONNU dit dans la PR, post-check laissé au poste, `dev`
+recréée par l'API GitHub. La règle vit dans `CLAUDE.md`, « Session cloud » : elle
+n'est pas recopiée ici.
+
 Le déroulé complet, une fois le pré-check vert :
 
 ```
