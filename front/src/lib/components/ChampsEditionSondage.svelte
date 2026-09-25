@@ -24,6 +24,8 @@
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import { contexteAssistant } from '$lib/assistant';
+	import { pliageDe } from '$lib/pliage';
+	import { SONDAGE } from '$lib/entites/sondage';
 
 	export let form: EditionSondage;
 	export let assisteIA = false;
@@ -35,6 +37,7 @@
 </label>
 <SectionDescription
 	idPrefixe="sondage-edit"
+	pliable={pliageDe(SONDAGE, 'description')}
 	placeholder="Description du sondage…"
 	bind:valeur={form.description}
 	assistant={contexteAssistant('sondage', {})}

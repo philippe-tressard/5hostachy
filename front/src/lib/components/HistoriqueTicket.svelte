@@ -211,7 +211,7 @@
 					entrees={evolutions}
 					idPrefixe="tk-evol-edit-{evol.id}"
 					{auteurNom}
-					titre="Modifier le commentaire"
+					titre={SUITE.libelleModifier}
 					editMode={true}
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}

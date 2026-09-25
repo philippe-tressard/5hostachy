@@ -33,6 +33,8 @@
 	import { conseilDansLaSuite, equipementDansLaSuite, etatSuite } from '$lib/suite-conseil';
 	import SectionIntervenant from './SectionIntervenant.svelte';
 	import SectionQuand from './SectionQuand.svelte';
+	import { pliageDe } from '$lib/pliage';
+	import { TICKET } from '$lib/entites/ticket';
 
 	export let ticket: Ticket;
 	export let premiere = false;
@@ -90,14 +92,14 @@
 	<SectionQuand
 		idPrefixe="suite-{ticket.id}-quand"
 		{premiere}
-		pliable
+		pliable={pliageDe(TICKET, 'quand')}
 		bind:debut={$etat.debut}
 		bind:fin={$etat.fin}
 	/>
 	{#if bati}
 		<SectionIntervenant
 			idPrefixe="suite-{ticket.id}"
-			pliable
+			pliable={pliageDe(TICKET, 'intervenant')}
 			equipement={$etat.equipement}
 			{erreur}
 			bind:prestataires

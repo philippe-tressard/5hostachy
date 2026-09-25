@@ -19,9 +19,8 @@
 -->
 <script lang="ts">
 	import { pliageDe, requisDe } from '$lib/pliage';
-	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
-	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
+	import SectionWorkflow from '$lib/components/SectionWorkflow.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { LEGENDE_CARNET, STATUT_TICKET_OPTIONS } from '$lib/tickets';
@@ -70,7 +69,14 @@
 	      son rang. Le commentaire, lui, était resté : il disait indéclarable ce
 	      qui venait d'être déclaré, dans le fichier où l'on va vérifier. -->
 {#if sectionPresente(TICKET, etat, 'nature')}
-	<SectionFormulaire titre="Catégorie" requis idTitre="ticket-categorie-titre">
+	<!--  `requis` LU dans la déclaration, et `rempli` transmis : l'étoile
+	      restait rouge même une catégorie choisie (#1329). -->
+	<SectionFormulaire
+		titre="Catégorie"
+		requis={requisDe(TICKET, 'nature')}
+		rempli={!!categorie}
+		idTitre="ticket-categorie-titre"
+	>
 		<!--  🔴 `ChoixPastilles` en mode radio depuis le 30/08/2026, signalé à
 			      l'écran : *« dans tickets tu ne peux pas réduire ces pastilles à la
 			      même taille que nouveau prestataire »*. C'étaient des cartes maison,
@@ -132,40 +138,29 @@
 	/>
 {/if}
 
-<!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
-	      dit qui le voit et où (section 9). IDENTIQUE en création et en
-	      édition depuis le cadre #430 : une correction corrige l'état comme
-	      elle corrige un titre, et c'est le `PATCH` qui a changé de nature
-	      côté serveur (voir le bloc de commentaires du script). -->
-<SectionFormulaire
-	titre={SECTIONS_LIBELLE.suivi}
+<!--  3. Suivi — où en est l'affaire. IDENTIQUE en création et en édition
+	      depuis le cadre #430 : une correction corrige l'état comme elle corrige
+	      un titre. 🔴 `SectionWorkflow`, la section de la Suite : elle était
+	      réécrite ici à la main, et les deux avaient divergé (#1329).
+	      Un résident ne peut pas faire avancer le suivi : la rangée est en
+	      lecture, et le serveur refait le contrôle (liste blanche CS). -->
+<SectionWorkflow
+	idTitre="ticket-workflow-titre"
+	options={STATUT_TICKET_OPTIONS}
+	valeur={statut}
+	lecture={!$isCS}
 	pliable={pliageDe(TICKET, 'suivi')}
 	requis={requisDe(TICKET, 'suivi')}
-	idTitre="ticket-workflow-titre"
 	inactive={inactives.suivi ?? ''}
+	on:choisir={(e) => (statut = e.detail)}
 >
-	<div class="field champ-large">
-		<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). « Ouvert » est
-			      active par défaut à la création — l'état de départ se voit, il ne
-			      se devine pas. Un résident ne peut pas faire avancer le suivi :
-			      la rangée est alors en lecture, et le serveur refait le contrôle
-			      (liste blanche CS) — ce que l'interface interdit n'est qu'un
-			      confort. -->
-		<WorkflowPastilles
-			options={STATUT_TICKET_OPTIONS}
-			valeur={statut}
-			lecture={!$isCS}
-			idTitre="ticket-workflow-titre"
-			on:choisir={(e) => (statut = e.detail)}
-		/>
-		{#if !$isCS}
-			<p class="aide">
-				{modeEdition
-					? `Seul le conseil syndical fait avancer le suivi d’une ${TICKET.libelle.toLowerCase()}.`
-					: 'Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.'}
-			</p>
-		{/if}
-	</div>
+	{#if !$isCS}
+		<p class="aide">
+			{modeEdition
+				? `Seul le conseil syndical fait avancer le suivi d’une ${TICKET.libelle.toLowerCase()}.`
+				: 'Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.'}
+		</p>
+	{/if}
 
 	<!--  🔴 LE SUIVI KANBAN EST DANS LE WORKFLOW, pas dans la Diffusion (#833).
 
@@ -193,7 +188,7 @@
 			</p>
 		</div>
 	{/if}
-</SectionFormulaire>
+</SectionWorkflow>
 
 <style>
 	/*  Le style PART AVEC le balisage (05/09/2026) : il est resté ici quand les

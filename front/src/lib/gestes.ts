@@ -36,6 +36,9 @@ export interface GesteDeclare {
 	 * porter. Absent quand le geste n'a jamais changé de nom.
 	 */
 	motAbandonne?: string;
+	/**  Le titre de la boîte qui CORRIGE une entrée déjà faite par ce geste.
+	 *   Il était écrit « Modifier le commentaire » dans trois écrans (#1329). */
+	libelleModifier?: string;
 }
 
 /**
@@ -52,6 +55,7 @@ export const SUITE: GesteDeclare = {
 	libelle: 'Ajouter une suite',
 	court: 'Suite',
 	motAbandonne: 'Commenter',
+	libelleModifier: 'Modifier la suite',
 };
 
 /** Tous les gestes déclarés — ce que le garde-fou parcourt. */

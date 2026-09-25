@@ -401,7 +401,7 @@
 									<EvolForm
 										idPrefixe="tk-evol-edit-{evol.id}"
 										auteurNom={nomCopie(ticket)}
-										titre="Modifier le commentaire"
+										titre={SUITE.libelleModifier}
 										editMode={true}
 										initialContenu={evol.contenu || ''}
 										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}

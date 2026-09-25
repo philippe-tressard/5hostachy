@@ -11,6 +11,8 @@
 	import { isCS } from '$lib/stores/auth';
 	import { equipementDansLaSuite, etatSuite } from '$lib/suite-conseil';
 	import SectionEquipement from './SectionEquipement.svelte';
+	import { pliageDe } from '$lib/pliage';
+	import { TICKET } from '$lib/entites/ticket';
 
 	export let ticket: Ticket;
 	export let partage: Writable<Record<string, unknown>>;
@@ -19,5 +21,10 @@
 </script>
 
 {#if equipementDansLaSuite(ticket, $isCS)}
-	<SectionEquipement idPrefixe="suite-{ticket.id}" pliable bind:equipement={$etat.equipement} />
+	<!--  Le pliage de la DÉCLARATION, comme en édition — il était écrit en dur (#1329). -->
+	<SectionEquipement
+		idPrefixe="suite-{ticket.id}"
+		pliable={pliageDe(TICKET, 'equipement')}
+		bind:equipement={$etat.equipement}
+	/>
 {/if}

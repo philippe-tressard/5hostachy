@@ -181,7 +181,6 @@ const PROPS_CIBLAGE = [
  *   ⚠️ C'est exactement ce qui a été trouvé le 21/09/2026 : « Au nom de » (10)
  *   et « Mise en avant » (11) étaient rendus en tête, avant « Suivi » (4). */
 const PROPS_CHAMPS_COMMUNS = [
-	['avecWorkflow', 'suivi'],
 	['avecQuand', 'quand'],
 	['avecPerimetre', 'perimetre'],
 	['avecDescription', 'description'],

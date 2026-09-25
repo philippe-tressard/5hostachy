@@ -39,7 +39,9 @@ export const TICKET: EntiteDeclaree = {
 	id: 'ticket',
 	libelle: 'Affaire',
 	motDeCode: 'ticket',
-	libelleNouveau: 'Signaler une affaire',
+	//  « Nouvelle affaire », le mot du bouton qui l'ouvre : la boîte disait
+	//  « Signaler une affaire » sous un bouton « Nouvelle affaire » (#1329).
+	libelleNouveau: 'Nouvelle affaire',
 	libelleModifier: "Modifier l'affaire",
 	sections: [
 		{

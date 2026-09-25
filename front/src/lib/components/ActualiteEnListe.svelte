@@ -28,6 +28,7 @@
 	import { documents as docsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { contexteCommentaire } from '$lib/assistant';
 	import { PUBLICATION } from '$lib/entites/publication';
+	import { pliageDe } from '$lib/pliage';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { SUITE } from '$lib/gestes';
 	import { supprimerDocument } from '$lib/gestes-document';
@@ -190,6 +191,7 @@
 					<!--  La Mise en avant à SON rang, après les Destinataires (#1326). -->
 					<svelte:fragment slot="mise_en_avant">
 						<SectionOptionsPublication
+							pliable={pliageDe(PUBLICATION, 'mise_en_avant')}
 							options={OPTIONS}
 							perimetreCible={ticket.perimetre_cible ?? []}
 							dejaEpingle={ticket.epingle ?? false}
@@ -219,7 +221,7 @@
 						<EvolForm
 							idPrefixe="actu-evol-edit-{evol.id}"
 							auteurNom={nomCopie(ticket)}
-							titre="Modifier le commentaire"
+							titre={SUITE.libelleModifier}
 							editMode={true}
 							initialContenu={evol.contenu || ''}
 							initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
