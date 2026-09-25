@@ -26,7 +26,6 @@ seconde voie, 14 modules ne seraient chargés par rien d'autre que les routeurs.
 
 from __future__ import annotations
 
-import pkgutil
 import subprocess
 import sys
 from pathlib import Path

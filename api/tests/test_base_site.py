@@ -90,13 +90,17 @@ def test_aucune_lecture_de_site_url_hors_de_base_site():
         #  abondamment, et un contrôle qui lit son propre récit se déclenche sur
         #  lui-même (`standards/04` §39).
         for nom, corps, debut in _portees(src):
-            code = ("\n").join(l for l in corps.splitlines() if not l.lstrip().startswith("#"))
+            code = ("\n").join(
+                ligne for ligne in corps.splitlines() if not ligne.lstrip().startswith("#")
+            )
             if not LECTURE.search(code):
                 continue
             #  Une clause SQL qui SÉLECTIONNE la ligne de configuration n'est pas
             #  une lecture de valeur : c'est la requête qui la rapporte.
             code_utile = ("\n").join(
-                l for l in code.splitlines() if "cle.in_" not in l and "ConfigSite.cle" not in l
+                ligne
+                for ligne in code.splitlines()
+                if "cle.in_" not in ligne and "ConfigSite.cle" not in ligne
             )
             if not LECTURE.search(code_utile):
                 continue

@@ -103,7 +103,9 @@ def test_le_verrou_du_PEER_ne_se_touche_que_dans_le_module():
         if f == VERROU:
             continue
         code = (chr(10)).join(
-            l for l in f.read_text(encoding="utf-8").splitlines() if not l.lstrip().startswith("#")
+            ligne
+            for ligne in f.read_text(encoding="utf-8").splitlines()
+            if not ligne.lstrip().startswith("#")
         )
         if POSE_PEER.search(code) or LIBERE_PEER.search(code):
             fautifs.append(f"{f.name} : touche au verrou du PEER — passer par `lib-verrou.sh`")
@@ -125,7 +127,9 @@ def test_tout_verrou_LOCAL_pose_est_relache_par_un_trap():
     sans_trap = []
     for f in sorted(RACINE.rglob("*.sh")):
         src = f.read_text(encoding="utf-8")
-        code = (chr(10)).join(l for l in src.splitlines() if not l.lstrip().startswith("#"))
+        code = (chr(10)).join(
+            ligne for ligne in src.splitlines() if not ligne.lstrip().startswith("#")
+        )
         if not POSE_LOCAL.search(code):
             continue
         if "trap" not in code:
@@ -267,12 +271,12 @@ def test_le_verrou_est_pose_AVANT_la_premiere_action():
     #  On ne regarde que le corps PRINCIPAL : tout ce qui est indenté appartient
     #  à une fonction ou à un bloc conditionnel intérieur.
     lignes = src.splitlines()
-    i_pose = next((n for n, l in enumerate(lignes) if l.strip() == "verrou_poser"), None)
+    i_pose = next((n for n, ligne in enumerate(lignes) if ligne.strip() == "verrou_poser"), None)
     assert i_pose is not None, "`verrou_poser` introuvable dans bascule.sh"
 
     avant = []
-    for n, l in enumerate(lignes[:i_pose]):
-        nu = l.strip()
+    for n, ligne in enumerate(lignes[:i_pose]):
+        nu = ligne.strip()
         if nu.startswith("#") or not nu:
             continue
         #  `run "` en début d'instruction : l'exécution réelle.

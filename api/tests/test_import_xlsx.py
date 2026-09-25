@@ -108,7 +108,7 @@ def test_import_telecommandes_compte_doublons_ignores_et_importes(session):
 
     lignes = session.exec(select(TelecommandeImport)).all()
     assert len(lignes) == 4  # 3 importées + 1 marquée « ignoré »
-    exclue = next(l for l in lignes if l.reference == "TC-900")
+    exclue = next(ligne for ligne in lignes if ligne.reference == "TC-900")
     assert exclue.statut.value == "ignore"
     assert "ligne Excel 6" in (exclue.notes_admin or ""), (
         "Le numéro de ligne doit désigner la ligne du FICHIER, en-tête comprise — "
@@ -136,7 +136,7 @@ def test_import_lots_signale_un_batiment_illisible_sans_interrompre(session):
     assert stats["importes"] == 2
     assert len(stats["erreurs"]) == 1
     assert "P12" in stats["erreurs"][0]
-    assert {l.numero for l in session.exec(select(LotImport)).all()} == {"A101", "B201"}
+    assert {lot.numero for lot in session.exec(select(LotImport)).all()} == {"A101", "B201"}
 
 
 def test_un_classeur_sans_donnee_ne_casse_pas(session):

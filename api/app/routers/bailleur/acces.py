@@ -137,7 +137,7 @@ def mes_acces(
     session: Session = Depends(get_session),
 ):
     """Bailleur : ses badges — ceux de ses lots, confiés ou non (`utils/porteurs_acces`)."""
-    lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
+    lot_map = {lot.id: lot for lot in session.exec(select(Lot)).all()}
     return [
         _sortie(session, lot_map, t.cle, o)
         for t in TYPES_ACCES.values()
@@ -154,7 +154,7 @@ def acces_du_bail(
     """Les badges du bailleur, avec ce qui les rend transférables à CE bail."""
     bail = exiger_bail_du_bailleur(session, bail_id, user)
     nature_bail = _nature_du_bail(session, bail)
-    lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
+    lot_map = {lot.id: lot for lot in session.exec(select(Lot)).all()}
     result = []
     for t in TYPES_ACCES.values():
         #  Bail parking/cave : pas de Vigik affiché (télécommandes seulement).
@@ -189,7 +189,7 @@ def transferer_acces(
     if bail.statut == StatutBail.termine:
         raise HTTPException(400, "Bail terminé — impossible de transférer des accès")
     nature_bail = _nature_du_bail(session, bail)
-    lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
+    lot_map = {lot.id: lot for lot in session.exec(select(Lot)).all()}
     updated = []
     for t in TYPES_ACCES.values():
         #  🔒 Seuls les badges dont le bailleur est PORTEUR : un identifiant
@@ -225,7 +225,7 @@ def recuperer_acces(
     choix = None
     if data.vigik_ids or data.tc_ids:
         choix = {cle: getattr(data, champ) for cle, champ in _CHAMP_IDS.items()}
-    lot_map = {l.id: l for l in session.exec(select(Lot)).all()}
+    lot_map = {lot.id: lot for lot in session.exec(select(Lot)).all()}
     rendus = rendre_au_bailleur(session, bail, choix)
     session.commit()
     return [_sortie(session, lot_map, cle, o) for cle, o in rendus]

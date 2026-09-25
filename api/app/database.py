@@ -16,8 +16,12 @@ engine = create_engine(
     pool_pre_ping=True,  # Teste chaque connexion avant usage → détecte les inodes orphelins (ex: post-VACUUM)
 )
 
-# SessionLocal pour les tâches asynchrones et les contextes hors requête HTTP
-SessionLocal = lambda: Session(engine)
+
+# SessionLocal pour les tâches asynchrones et les contextes hors requête HTTP.
+# `engine` est lu à l'APPEL, pas à la définition : un test qui remplace
+# `app.database.engine` obtient des sessions sur sa base.
+def SessionLocal() -> Session:
+    return Session(engine)
 
 
 def activer_cles_etrangeres(moteur) -> None:

@@ -70,13 +70,13 @@ def _check_whatsapp(session: Session) -> list[str]:
         .order_by(WhatsAppLog.envoye_le.desc())
         .limit(5)
     ).all()
-    if len(logs) >= 3 and all(l.statut == "échec" for l in logs[:3]):
+    if len(logs) >= 3 and all(log.statut == "échec" for log in logs[:3]):
         from zoneinfo import ZoneInfo
 
         extrait = "\n".join(
-            f"    [{l.envoye_le.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('Europe/Paris')).strftime('%d/%m %H:%M')}] "
-            f"« {l.label[:40]} » → {l.erreur or 'erreur inconnue'}"
-            for l in logs[:3]
+            f"    [{log.envoye_le.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('Europe/Paris')).strftime('%d/%m %H:%M')}] "
+            f"« {log.label[:40]} » → {log.erreur or 'erreur inconnue'}"
+            for log in logs[:3]
         )
         issues.append(
             f"3 derniers envois WhatsApp en échec consécutif (dernières 24h) :\n{extrait}"
@@ -353,7 +353,7 @@ def _en_problemes(issues: list[str]) -> list[dict]:
         problemes.append(
             {
                 "titre": lignes[0],
-                "details": [l.strip() for l in lignes[1:] if l.strip()],
+                "details": [ligne.strip() for ligne in lignes[1:] if ligne.strip()],
             }
         )
     return problemes

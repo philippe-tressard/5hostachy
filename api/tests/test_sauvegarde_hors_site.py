@@ -261,7 +261,9 @@ def test_le_script_ne_touche_jamais_la_base_de_production():
     """
     contenu = SCRIPT.read_text(encoding="utf-8")
     lignes_actives = [
-        l for l in contenu.splitlines() if l.strip() and not l.strip().startswith("#")
+        ligne
+        for ligne in contenu.splitlines()
+        if ligne.strip() and not ligne.strip().startswith("#")
     ]
     # On ne cherche pas le MOT « sqlite3 » (il apparaît légitimement dans un
     # message et dans un `command -v`), mais une INVOCATION sur un fichier .db :
