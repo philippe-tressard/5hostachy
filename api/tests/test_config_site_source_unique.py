@@ -26,10 +26,24 @@ du **couple** `site_nom` / `site_url` — le nom et l'adresse de la résidence, 
 alimentent chaque courriel et chaque document. Une portée qui viserait la table
 crierait sur du légitime, et serait désarmée dans la semaine
 (`standards/04` §40).
+
+## 🔴 Lu en AST, et non ligne à ligne (#1273, 25/09/2026)
+
+Le contrôle cherchait `ConfigSite` et les deux clés **sur une même ligne**. Le
+formatage de l'API (#1261) a révélé une recopie qu'il ne voyait pas :
+`utils/email/__init__.py` relisait le couple dans une compréhension écrite sur
+six lignes — `select(ConfigSite)` sur l'une, les clés sur une autre. Il n'avait
+jamais regardé que la forme du code, pas ce qu'il fait.
+
+Une lecture est désormais une INSTRUCTION dont les expressions nomment
+l'identifiant `ConfigSite` et portent les deux chaînes, où qu'elles tombent.
+La prose sort d'elle-même : un commentaire n'existe pas dans l'AST, et une
+docstring n'y est qu'une chaîne — elle ne nomme pas l'identifiant.
 """
 
 from __future__ import annotations
 
+import ast
 import pathlib
 
 RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
@@ -43,6 +57,41 @@ def _fichiers() -> list[pathlib.Path]:
     return [p for p in RACINE.rglob("*.py") if "__pycache__" not in p.parts]
 
 
+def _expressions_propres(instruction: ast.stmt) -> list[ast.AST]:
+    """Les expressions d'une instruction, SANS les instructions qu'elle contient.
+
+    Sans cette coupe, une fonction entière serait « une instruction » qui nomme
+    `ConfigSite` quelque part et les deux clés ailleurs — deux lectures
+    distinctes et légitimes y passeraient pour une recopie.
+    """
+    propres = []
+    for _, valeur in ast.iter_fields(instruction):
+        for noeud in valeur if isinstance(valeur, list) else [valeur]:
+            if isinstance(noeud, ast.AST) and not isinstance(noeud, ast.stmt):
+                propres.append(noeud)
+    return propres
+
+
+def lectures_du_couple(source: str) -> list[int]:
+    """Les lignes où une instruction relit le couple elle-même. PURE."""
+    trouvees = []
+    for instruction in ast.walk(ast.parse(source)):
+        if not isinstance(instruction, ast.stmt):
+            continue
+        noms, chaines = set(), set()
+        for expression in _expressions_propres(instruction):
+            for noeud in ast.walk(expression):
+                if isinstance(noeud, ast.Name):
+                    noms.add(noeud.id)
+                elif isinstance(noeud, ast.Attribute):
+                    noms.add(noeud.attr)
+                elif isinstance(noeud, ast.Constant) and isinstance(noeud.value, str):
+                    chaines.add(noeud.value)
+        if "ConfigSite" in noms and all(cle in chaines for cle in COUPLE):
+            trouvees.append(instruction.lineno)
+    return sorted(trouvees)
+
+
 def _lecteurs() -> dict[str, list[int]]:
     """Les modules qui lisent le couple eux-mêmes — hors source, hors prose."""
     trouves: dict[str, list[int]] = {}
@@ -50,16 +99,53 @@ def _lecteurs() -> dict[str, list[int]]:
         rel = chemin.relative_to(RACINE).as_posix()
         if rel == SOURCE:
             continue
-        lignes = [
-            n + 1
-            for n, ligne in enumerate(chemin.read_text(encoding="utf-8").split(chr(10)))
-            if "ConfigSite" in ligne
-            and all(cle in ligne for cle in COUPLE)
-            and not ligne.lstrip().startswith(("#", "*"))
-        ]
+        lignes = lectures_du_couple(chemin.read_text(encoding="utf-8"))
         if lignes:
             trouves[rel] = lignes
     return trouves
+
+
+#: La recopie que la lecture ligne à ligne a laissé passer, telle qu'elle était
+#: écrite dans `utils/email/__init__.py` avant #1261.
+_RECOPIE_SUR_SIX_LIGNES = """
+lignes = {
+    r.cle: r.valeur
+    for r in session.exec(
+        select(ConfigSite).where(
+            ConfigSite.cle.in_(
+                ("site_nom", "site_url", "email_footer", "reference_copro")
+            )
+        )
+    ).all()
+}
+"""
+
+
+def test_le_detecteur_voit_une_lecture_sur_plusieurs_lignes():
+    """Cas zéro : la forme qui a échappé au contrôle ligne à ligne est refusée."""
+    assert lectures_du_couple(_RECOPIE_SUR_SIX_LIGNES) == [2]
+    assert lectures_du_couple(
+        'x = session.exec(select(ConfigSite).where(ConfigSite.cle.in_(["site_nom", "site_url"])))'
+    ) == [1]
+
+
+def test_le_detecteur_ne_crie_pas_sur_ce_qui_n_est_pas_une_lecture():
+    """La prose, une seule clé, deux instructions distinctes : rien à signaler."""
+    prose = '''
+def f():
+    """Relit ConfigSite site_nom et site_url — ceci est une docstring."""
+    # ConfigSite "site_nom" "site_url" dans un commentaire
+    return 1
+'''
+    une_cle = 'x = session.get(ConfigSite, "site_nom")'
+    deux_instructions = """
+def f(session):
+    a = session.get(ConfigSite, "smtp_host")
+    b = {"site_nom": 1, "site_url": 2}
+"""
+    assert lectures_du_couple(prose) == []
+    assert lectures_du_couple(une_cle) == []
+    assert lectures_du_couple(deux_instructions) == []
 
 
 def test_cas_zero_la_source_nomme_bien_les_deux_cles():
