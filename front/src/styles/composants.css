@@ -678,14 +678,21 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
    Les variantes restent NOMMÉES et locales : `.case + .case` (espacement d'une
    pile de cases, événement), `.case-secondaire` (case d'option sous un champ,
    sondage). Ce qui diffère se lit dans le balisage. */
-.case {
+/*  🔴 `.checkbox-field` est la MÊME case, sous un second nom (#1329) : les deux
+    règles étaient identiques, écrites à 400 lignes d'écart, et `.checkbox-field`
+    n'avait pas la règle de sa case — elle héritait du `width: 100%` des champs.
+    Une règle, deux noms tant que les onze écrans qui portent le second n'ont pas
+    migré ; un nouvel écran écrit `.case`. */
+.case,
+.checkbox-field {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
 	cursor: pointer;
 	font-size: 0.875rem;
 }
-.case input[type='checkbox'] {
+.case input[type='checkbox'],
+.checkbox-field input[type='checkbox'] {
 	width: auto;
 	margin: 0;
 	flex-shrink: 0;
@@ -1097,15 +1104,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     pas. */
 /*  `.kb-vide-col` — le tiret d'une colonne vide — est parti le 18/09/2026 avec
     son balisage : une colonne vide n'a plus de corps du tout. */
-
-/*  Case + libellé. Remontée le 02/09/2026 — cf. `OptionsPublication.svelte`. */
-.checkbox-field {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	font-size: 0.875rem;
-	cursor: pointer;
-}
 
 /*  Icône de menu. Remontée le 03/09 : un style ne franchit pas un composant. */
 .nav-icon {

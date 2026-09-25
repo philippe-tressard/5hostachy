@@ -63,6 +63,7 @@
 	titre={SECTIONS_LIBELLE.perimetre}
 	{inactive}
 	{requis}
+	rempli={perimetre.length > 0}
 	badge={badgeImpose ?? badgeCalcule}
 	valeurModifiee={!estPerimetreParDefaut(perimetre)}
 	idTitre="{idPrefixe}-perimetre-titre"
