@@ -153,7 +153,6 @@ jobs:
         # 🔴 F811 est ÉCARTÉ exprès — pytest injecte une fixture (`session`,
         # `scene`) sous le nom de la fonction qui la déclare, et Ruff y lit ~70
         # redéfinitions qui n'en sont pas. Les « corriger » casserait les tests.
-        # F401 (46 imports inutiles) relève du point 2 de #1048, pas de ce lot.
         #
         # F811, F841, E711, E712 partout depuis le 24/09/2026 (#1048, point 2).
         # Ce ne sont pas des règles de style : un import redoublé, une variable
@@ -165,13 +164,23 @@ jobs:
         # (ou E711) sur la ligne ; elle existait déjà 41 fois.
         # F811 reste hors de `tests/` : pytest injecte une fixture (`session`,
         # `scene`) sous le nom de la fonction qui la déclare — ~70 faux positifs.
-        # F401 n'y est pas encore : 46 imports inutiles dans `tests/`, qu'il faut
-        # relire un à un (un import peut y être voulu pour son effet de bord).
         # `alembic/` passe ces quatre règles sans qu'une migration soit touchée.
+        #
+        # F401 sur `tests/` depuis le 25/09/2026 (#1273) : les 45 imports inutiles
+        # ont été relus un à un. Aucun n'enregistrait un modèle ni ne prouvait
+        # l'existence d'un symbole (`app.models.core` est importé partout).
+        # E741 (`l`, `O`, `I`) et E731 (`lambda` assignée) partout, même lot :
+        # 27 `l` renommés, `SessionLocal` devenue une vraie fonction.
+        # 🔴 E402 reste DEHORS, et c'est une décision : l'ordre des imports y est
+        # du comportement. `main.py` pose le correctif UTC avant d'importer les
+        # routeurs, `core.py` ré-exporte pour ENREGISTRER les tables (#1157),
+        # des imports tardifs cassent des cycles, et 39 des 70 sont dans des
+        # migrations qu'on ne modifie jamais. Les déplacer pour un linter
+        # changerait le démarrage de l'API sans rien corriger.
         run: |
-          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712
-          ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712
-          ruff check api/tests/ --select E9,F63,F7,F82,F841,E711,E712
+          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731
+          ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712,E741,E731
+          ruff check api/tests/ --select E9,F63,F7,F82,F401,F841,E711,E712,E741,E731
 
       - name: Ruff format (API)
         # Depuis le 24/09/2026 (#1048) : aucun formateur n'était en usage côté

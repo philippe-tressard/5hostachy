@@ -26,7 +26,6 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from app.models.core import (
     StatutAcces,
     StatutImport,
-    TelecommandeImport,
     Utilisateur,
     VigikImport,
 )

@@ -24,7 +24,6 @@ from sqlmodel import Session, SQLModel, create_engine
 from app.models.documents import Document
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.models.core import ConfigSite
-from app.utils.llm import config_llm
 from app.utils.synthese_contrat import (
     GABARIT,
     CONSIGNE,
@@ -32,7 +31,6 @@ from app.utils.synthese_contrat import (
     construire_matiere,
     construire_message,
     documents_du_contrat,
-    entete_provenance,
     exemples,
     synthese_disponible,
 )

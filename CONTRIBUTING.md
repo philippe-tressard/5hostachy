@@ -38,7 +38,11 @@ Le site répond alors sur `http://localhost`.
 
 ```bash
 git config core.hooksPath .githooks && git config pull.ff only
+git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
+
+La dernière ligne fait sauter à `git blame` les commits purement mécaniques
+(reformatage) déclarés dans `.git-blame-ignore-revs` ; GitHub le lit déjà seul.
 
 Le hook de pré-commit refuse un commit dont la branche est en retard sur son
 distant ; celui de pré-poussée refuse un envoi sans trace de pré-contrôle. Un

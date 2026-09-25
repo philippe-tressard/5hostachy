@@ -25,32 +25,17 @@ nourrit »* (check-reliability, 11/08/2026). Ici les deux sont séparés — et
 
 from __future__ import annotations
 
-import uuid
 from datetime import datetime
 
 import pytest
-from sqlmodel import Session, SQLModel, select
 
-from app.database import engine
-from app.models.core import (
-    GenreCivilite,
-    MembreSyndic,
-    Notification,
-    StatutTicket,
-    Ticket,
-    TicketEvolution,
-    Utilisateur,
-)
-from app.models.courriel import RelanceCourriel
-from app.utils.courriel_boite import traiter
 from app.utils.courriel_entrant import (
     adresse_de_reponse,
     domaine_de,
     jeton_dans,
     nouveau_jeton,
 )
-from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, RELANCE, examiner
-from tests.purge_test import purger_ligne
+from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, examiner
 
 _AUTH_OK = "mx.ovh.net; spf=pass smtp.mailfrom=syndic.fr; dkim=pass; dmarc=pass"
 

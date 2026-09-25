@@ -42,7 +42,6 @@ from __future__ import annotations
 import ast
 import pathlib
 
-import pytest
 
 #  ⚠️ La décision a été extraite du routeur le 20/08/2026 (#542). Ce chemin
 #  suit le CODE, pas le fichier d'origine : pointé sur l'ancien, l'analyse

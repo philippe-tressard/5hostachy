@@ -504,6 +504,8 @@ def test_whatsapp_n_envoie_plus_d_url_publique_pour_les_medias():
     source = (RACINE / "api" / "app" / "utils" / "whatsapp.py").read_text(encoding="utf-8")
     assert "imageBase64" in source, "l'image n'est plus transmise en octets"
     lignes_actives = [
-        l for l in source.splitlines() if "imageUrl" in l and not l.lstrip().startswith("#")
+        ligne
+        for ligne in source.splitlines()
+        if "imageUrl" in ligne and not ligne.lstrip().startswith("#")
     ]
     assert not lignes_actives, f"whatsapp.py construit encore une URL d'image : {lignes_actives}"

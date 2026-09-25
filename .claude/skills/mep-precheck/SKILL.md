@@ -142,7 +142,7 @@ git fetch --prune && git checkout -B dev origin/main
 SKIP_PRECHECK=1 git push -u origin dev   # recrée `dev` distante (piège 2)
 ```
 
-⚠️ **Trois pièges, tous rencontrés le 28/08 :**
+⚠️ **Quatre pièges — les trois premiers rencontrés le 28/08, le quatrième le 25/09 :**
 
 1. `--delete-branch` supprime aussi la branche **locale** et bascule sur `main`.
    Committer ensuite sans regarder `git branch --show-current` met le lot suivant
@@ -161,6 +161,16 @@ SKIP_PRECHECK=1 git push -u origin dev   # recrée `dev` distante (piège 2)
    ligne `Déployé: <sha>` dans `/var/log/hostachy-deploy.log` sur l'**actif**.
    Le `git log` du nœud passe au vert **avant** que l'image soit bâtie : s'y fier
    fait annoncer une MEP qui n'a pas eu lieu.
+4. **Un commit mécanique se perd dans le squash.** Un reformatage (`ruff format`,
+   Prettier sur tout un dossier) ne se saute dans `git blame` que par son SHA
+   dans `.git-blame-ignore-revs` — et ce SHA doit être celui d'un commit de
+   `main` qui ne contient **que** lui. Fusionné sur `dev` avec d'autres lots, il
+   est absorbé dans le squash de la MEP, puis `dev` est réaligné : son SHA
+   n'existe plus nulle part. Vécu avec `ruff format` sur `api/` (#1261), fondu
+   dans v2.49.0 avec #1186, #1263, #1266… — ignorer ce squash aurait caché la
+   paternité de vrais changements. **Un reformatage part donc dans une MEP
+   dédiée**, et c'est le SHA de son squash sur `main` qui entre dans le fichier.
+   `test_documentation.py` refuse un SHA absent de l'historique.
 
 ⚠️ Après la MEP, les points **0d, 0f et 16** échouent **par construction** —
 version inchangée, brief d'un commit déjà fusionné, trace d'un autre commit. Ce

@@ -73,7 +73,7 @@ def _sans_commentaires(source: str) -> str:
     Ce test-ci en est le premier bénéficiaire — le commentaire posé dans
     `reponses_communaute.py` cite la règle qu'il décrit.
     """
-    return "\n".join(l for l in source.splitlines() if not l.lstrip().startswith("#"))
+    return "\n".join(ligne for ligne in source.splitlines() if not ligne.lstrip().startswith("#"))
 
 
 def test_le_refus_des_comptes_externes_ne_se_recopie_pas():

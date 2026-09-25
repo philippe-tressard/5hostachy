@@ -134,7 +134,7 @@ def check_and_send():
             #  Seul un échec ÉTABLI autorise une nouvelle tentative. Un envoi
             #  réussi, un résultat inconnu ou une tentative dont on n'a pas vu
             #  la fin valent tous « le groupe l'a peut-être déjà reçu ».
-            deja = next((l for l in today_logs if l.statut in STATUTS_NON_REJOUABLES), None)
+            deja = next((log for log in today_logs if log.statut in STATUTS_NON_REJOUABLES), None)
             if deja is not None:
                 logger.info(
                     "Message '%s' : tentative du jour au statut « %s », pas de rejeu.",

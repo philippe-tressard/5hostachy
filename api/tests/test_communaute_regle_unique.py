@@ -98,7 +98,6 @@ def test_les_exceptions_declarees_servent_encore():
 
 def test_le_vocabulaire_du_refus_n_est_ecrit_qu_une_fois():
     """Les messages de refus n'existent que dans le module source."""
-    from app.utils import communaute
 
     fragments = [
         "n'est pas accessible à votre profil",

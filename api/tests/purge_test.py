@@ -151,7 +151,6 @@ def vider_patrimoine(session, modeles_sup=()) -> None:
     from sqlmodel import select
 
     from app.models.core import Batiment, ConfigSite, Copropriete
-    from app.models.perimetre import Perimetre
     from app.seed.patrimoine import CLE_SEMEE
 
     marqueur = session.get(ConfigSite, CLE_SEMEE)

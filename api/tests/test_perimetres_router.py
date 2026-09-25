@@ -16,13 +16,10 @@ fautive n'était jamais atteinte. Ces tests écrivent donc du contenu AVANT de l
 
 from datetime import datetime
 
-import pytest
 from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
 from app.models.core import (
-    Batiment,
-    Copropriete,
     Evenement,
     Ticket,
     TypeEvenement,
@@ -31,7 +28,6 @@ from app.models.core import (
 from app.models.perimetre import Perimetre
 from app.routers.patrimoine import _codes_cites, _en_lecture
 from app.seed.patrimoine import poser_arborescence
-from app.utils import perimetres as P
 from tests.conftest import vider_patrimoine
 from tests.purge_test import purger_ligne
 
