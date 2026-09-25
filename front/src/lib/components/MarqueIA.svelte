@@ -26,7 +26,7 @@
 	/*  Discrète : la taille d'un badge, estompée, sans fond. Elle se lit en
 	    passant, elle ne concurrence ni le nom ni la date. */
 	.marque-ia {
-		font-size: 0.72rem;
+		font-size: 0.75rem;
 		opacity: 0.6;
 		cursor: help;
 		line-height: 1;

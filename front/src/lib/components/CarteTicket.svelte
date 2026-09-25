@@ -219,7 +219,7 @@
 			{#each optionsActives(optionsDuTicket(ticket)).filter((o) => o.cle !== 'brouillon') as opt (opt.cle)}
 				<span class="badge badge-gray" title={opt.aide}>{opt.glyphe} {opt.etat}</span>
 			{/each}
-			<span class="tk-numero">#{ticket.numero}</span>
+			<span>#{ticket.numero}</span>
 			<!--  🔴 PAS DE BADGE 📍 DU DEMANDEUR — arbitré à l'écran le 30/08/2026
 			      (#653) : *« se restreindre uniquement au périmètre »*.
 
@@ -430,7 +430,6 @@
 		font-size: 0.95rem;
 	}
 	.tk-auteur {
-		font-size: 0.78rem;
 		color: var(--color-text-muted);
 	}
 	.tk-neuf {
@@ -450,9 +449,6 @@
 	.tk-meta {
 		color: var(--color-text-muted);
 		font-size: 0.78rem;
-	}
-	.tk-numero {
-		font-family: monospace;
 	}
 	/*  La marge haute du fil appartient à son hôte : la rubrique ne sait pas ce
 	    qu'elle suit. C'est cette marge que la fiche du ticket avait perdue. */

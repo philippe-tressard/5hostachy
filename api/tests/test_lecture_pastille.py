@@ -3,7 +3,7 @@
 ## Pourquoi ce test (lot 1 de la pastille de lecture, 25/09/2026)
 
 La carte d'une affaire porte désormais une PASTILLE qui dit qui la lit :
-« Tous sauf locataires », « Occupants », « CS »… Ce résumé est calculé à
+« Copropriétaires », « Occupants », « CS »… Ce résumé est calculé à
 l'écran (`front/src/lib/lecture.ts`), alors que la règle, elle, vit ici
 (`ticket_visible`). Deux écritures d'une même notion — c'est le motif exact de
 `test_destinataires_vocabulaire.py`, et un écart y serait SILENCIEUX : une

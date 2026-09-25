@@ -167,8 +167,7 @@
 			"reserve_perimetre": false,
 			"lecteurs": [
 				"copropriétaire_résident",
-				"copropriétaire_bailleur",
-				"mandataire"
+				"copropriétaire_bailleur"
 			],
 			"hors_perimetre": null
 		},
@@ -181,8 +180,7 @@
 			"reserve_perimetre": false,
 			"lecteurs": [
 				"copropriétaire_résident",
-				"copropriétaire_bailleur",
-				"mandataire"
+				"copropriétaire_bailleur"
 			],
 			"hors_perimetre": false
 		},
@@ -197,8 +195,7 @@
 			"reserve_perimetre": false,
 			"lecteurs": [
 				"copropriétaire_résident",
-				"copropriétaire_bailleur",
-				"mandataire"
+				"copropriétaire_bailleur"
 			],
 			"hors_perimetre": null
 		},
@@ -257,8 +254,7 @@
 			"en_ag": true,
 			"lecteurs": [
 				"copropriétaire_résident",
-				"copropriétaire_bailleur",
-				"mandataire"
+				"copropriétaire_bailleur"
 			],
 			"hors_perimetre": null
 		}

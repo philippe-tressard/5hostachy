@@ -122,7 +122,6 @@
 	.not-badge {
 		margin-left: 0.25rem;
 		color: #f59e0b;
-		font-size: 0.82rem;
 	}
 	.not-liste {
 		display: flex;

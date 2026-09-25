@@ -565,7 +565,7 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
 | **Tous** | aucune restriction de profil | tous | ✅ `LIBELLE_TOUS`, code `résidents` |
 | **Copropriétaires occupants** | copropriétaires qui habitent leur lot | `copropriétaire_résident` | ✅ |
 | **Copropriétaires bailleurs** | copropriétaires qui louent leur lot | `copropriétaire_bailleur` | ✅ libellé, code `bailleurs` |
-| **Bailleurs** | louent **par délégation** d'un copropriétaire | `mandataire` (confirmé ; les **aidants** n'en sont pas, ils héritent du droit du copropriétaire qu'ils aident) | ⏳ maquette — nouveau code serveur |
+| **Bailleurs** | louent **par délégation** d'un copropriétaire — ils ne lisent **pas** les affaires suivies (#1311) | `mandataire` (confirmé ; les **aidants** n'en sont pas, ils héritent du droit du copropriétaire qu'ils aident) | ⏳ maquette — nouveau code serveur |
 | **Locataires** | locataires | `locataire` | ✅ |
 | **CS** | le conseil syndical seul (confidentialité) | rôle `conseil_syndical` | ✅ pastille « CS » (lot 1) |
 
@@ -585,9 +585,13 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
     périmètre est réservé ; « CS » remplace tout quand elle est confidentielle.
     Elle **remplace** les badges 🔒 et 🛡️ des cartes ; le 🔹 reste.
   - combinaisons nommées : **Résidents** (occupants + locataires),
-    **Propriétaires** (occupants + copropriétaires bailleurs), **Tous sauf
-    locataires** — la règle des affaires, **montrée** (arbitré). Les autres se
-    composent par « + » (court) et « et » (long).
+    **Copropriétaires** (occupants + copropriétaires bailleurs) — c'est aussi
+    la règle des affaires suivies, **montrée** (arbitré), depuis que les
+    mandataires ne les lisent plus (#1311, 25/09/2026 : elle s'appelait « Tous
+    sauf locataires », et « Propriétaires » côté actualités — un ensemble, un
+    nom). Les autres se composent par « + » (court) et « et » (long).
+  - au survol, la pastille entière porte la phrase complète (`title`) ; au
+    doigt, c'est le toucher qui ouvre la bulle (#1311).
   - les deux cases qui restreignent ont **une** forme (case, icône du catalogue,
     libellé) et ouvrent leur section : « Réservé au périmètre sélectionné »
     (`lock`) en tête du Périmètre — cochée d'office pour une affaire —,
@@ -597,9 +601,11 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
   - 🔒 **tenue contre le serveur** : `api/tests/donnees/lecture_pastille.json`,
     exécuté par `test_lecture_pastille.py` (règle) et `npm run lint:lecture`
     (résumé). Une règle d'accès qui change fait tomber les deux.
+  - ✅ la pastille « Copropriétaires » a quitté le sélecteur (#1301, migration
+    0221 : ses données portent désormais les deux codes). Le serveur et la
+    pastille de lecture LISENT encore l'ancien code, aucun écran ne l'offre.
   - ⏳ **lot 2** : le code serveur des « Bailleurs » (mandataires) dans
-    Destinataires, et le retrait de la pastille « Copropriétaires » (son code
-    couvre occupants ET bailleurs : migrer les données vers les deux).
+    Destinataires.
 
 ⚠️ **Aucun contrôle ne tient encore cette règle.** Restes connus, à relire
 avec elle : le profil de document « Tous les résidents » (`seed/profils_documents.py`),
@@ -632,6 +638,11 @@ de quoi elle parlait.
 - puis l'**aperçu**, **trois** lignes (`.clamp-3`) ;
 - **en dernier** : tags à gauche (workflow, périmètre, confidentiel, auteur),
   **date à droite**.
+  🔒 **Toute la ligne est à UNE taille**, celle d'un `.badge` (0,75 rem), posée
+  sur `.ec-tags` et héritée : état, périmètre, pastille de lecture, numéro,
+  auteur. Ils en avaient quatre (#1308). `lint:entete-carte` refuse une autre
+  taille sur un élément du slot `tags`, et `font: inherit`, qui réinitialise
+  celle du badge.
 
 🔴 **Cet ordre a été dicté à l'écran le 18/09/2026**, capture à l'appui : *« Titre
 en gras (à gauche) et icônes à droite sur la 1ʳᵉ ligne · Description (extrait sur
@@ -985,12 +996,14 @@ Pages implémentées : `tickets` (filtre de nature, 23/09/2026) — le calendrie
 | Classe | Où | Depuis |
 |---|---|---|
 | `.clamp-3` | l'aperçu d'une **carte de liste** (`ApercuCarte`) | 18/09/2026 |
+| `.clamp-3` | le **sous-texte** d'une pastille (`Pastille`, vignette de catégorie) | 25/09/2026 |
 | `.clamp-5` | un bloc expansible qui **n'est pas** une carte | 15/08/2026 |
 | `.clamp-2` | un **titre** de carte | 18/08/2026 |
 
 Les trois vivent dans `styles/normes.css`, et nulle part ailleurs.
 🔒 `npm run lint:clamp` refuse une troncature écrite ailleurs, et `.clamp-5`
-dans un fichier qui rend une `.carte-liste`.
+dans un fichier qui rend une `.carte-liste`, et un sous-texte déclaré dans
+`SOUS_TEXTES` qui ne porte pas `.clamp-3` (#1310).
 
 ⚠️ `.clamp-3` **existait déjà**, écrit à la main dans `FluxCard` : le fil
 d'activité tronquait à trois lignes depuis toujours, et c'est lui qui a servi de

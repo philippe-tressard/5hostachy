@@ -136,7 +136,9 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		value: 'nuisance',
 		label: 'Nuisance & propreté',
 		emoji: '\u{1F4E2}',
-		description: 'Bruit, odeurs, stationnement, parties communes, encombrants',
+		//  Raccourcie le 25/09/2026 (#1310) : quatre lignes dans sa vignette. Le
+		//  manuel garde la liste entière (parties communes, encombrants).
+		description: 'Bruit, odeurs, stationnement…',
 	},
 	{
 		value: 'acces_accueil',
@@ -170,7 +172,9 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		//  une fuite qu'on répare est une panne ; de l'eau chez le voisin, un
 		//  plafond taché, un parquet gondolé — il y a un tiers lésé et un délai
 		//  d'assurance, c'est un sinistre.
-		description: 'Dégât constaté : eau, incendie, vandalisme — déclaration à l’assurance',
+		//  Raccourcie le 25/09/2026 (#1310) : la déclaration à l'assurance est
+		//  dite par le manuel, la vignette garde le mot qui tranche.
+		description: 'Dégât constaté : eau, incendie, vandalisme…',
 	},
 	{
 		value: 'etude_travaux',

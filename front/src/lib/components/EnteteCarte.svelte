@@ -310,7 +310,12 @@
 		border-radius: 3px;
 	}
 
+	/*  🔴 UNE taille pour toute la ligne, celle d'un `.badge` (#1308) : état,
+	    périmètre, pastille de lecture, numéro, auteur. Ils en avaient quatre.
+	    Un élément de la ligne l'HÉRITE — `lint:entete-carte` refuse une autre
+	    taille posée sur lui, et le raccourci `font:` qui la réinitialise. */
 	.ec-tags {
+		font-size: 0.75rem;
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;

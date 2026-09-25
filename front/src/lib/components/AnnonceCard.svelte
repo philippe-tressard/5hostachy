@@ -322,7 +322,6 @@
 		vertical-align: middle;
 	}
 	.annonce-prix {
-		font-size: 0.85rem;
 		font-weight: 700;
 		color: var(--color-primary);
 		white-space: nowrap;
@@ -331,7 +330,6 @@
 		color: var(--color-success, #16a34a);
 	}
 	.annonce-nego {
-		font-size: 0.68rem;
 		font-weight: 500;
 	}
 

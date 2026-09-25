@@ -4,7 +4,7 @@
  *
  * ## Pourquoi (lot 1 de la pastille de lecture, 25/09/2026)
  *
- * La carte d'une affaire dit qui la lit (« Tous sauf locataires », « CS »…).
+ * La carte d'une affaire dit qui la lit (« Copropriétaires », « CS »…).
  * Le résumé est calculé à l'écran (`src/lib/lecture.ts`) ; la règle vit au
  * serveur (`ticket_visible`). Un écart ne casse rien, il MENT : une pastille
  * « Tous » sur une affaire que les locataires ne lisent pas.

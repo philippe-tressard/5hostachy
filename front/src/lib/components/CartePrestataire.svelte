@@ -207,7 +207,6 @@
 	.badge-type {
 		background: var(--color-bg-secondary, #f0f0f0);
 		color: var(--color-text);
-		font-size: 0.75rem;
 	}
 	/*  L'aperçu de la carte : les contacts, sous l'en-tête. */
 	/*  Plus de retrait propre : les contacts sont rendus DANS l'en-tête

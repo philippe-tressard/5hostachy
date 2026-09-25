@@ -36,7 +36,9 @@ export const LIBELLE_TOUS = 'Tous';
 export type Destinataire = { code: string; libelle: string; icone: string };
 
 export const DESTINATAIRES: Destinataire[] = [
-	{ code: 'copropriétaires', libelle: 'Copropriétaires', icone: 'key-round' },
+	//  🔴 « Copropriétaires » n'est plus proposée (#1301, 25/09/2026) : elle
+	//  couvrait exactement les deux suivantes. Migration 0221 ; la règle du
+	//  serveur et la pastille de lecture LISENT encore l'ancien code.
 	//  `home` pour l'occupant (il y habite), `building-2` pour le bailleur (il le
 	//  loue). Les deux existent au catalogue `$lib/icones-svg.json` — un nom
 	//  inconnu y retombe SILENCIEUSEMENT sur `help-circle`.
