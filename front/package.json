@@ -32,7 +32,7 @@
 		"lint:seuils-affiche": "node scripts/check-seuils-affiche.mjs",
 		"lint:section-formulaire": "node scripts/check-formulaire-dans-section.mjs",
 		"lint:styles": "node scripts/check-styles-nus.mjs",
-		"lint:champs": "node scripts/check-champs.mjs",
+		"lint:champs": "node scripts/check-champs.mjs && node scripts/check-casse-libelles.mjs --selftest && node scripts/check-casse-libelles.mjs",
 		"lint:classes-nues": "node scripts/check-classes-nues.mjs",
 		"lint:css-orphelin": "node scripts/check-css-orphelin.mjs",
 		"lint:libelles": "node scripts/check-libelles-associes.mjs",

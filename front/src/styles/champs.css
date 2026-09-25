@@ -261,7 +261,21 @@ label.field {
 
     ⚠️ Le champ lui-même ne prend pas les capitales : la saisie d'un résident
     se lit telle qu'il l'a tapée. */
-label.field :is(input, select, textarea) {
+/*  🔴 …NI RIEN DE CE QUE LE LIBELLÉ ENVELOPPE (#1315, 25/09/2026, signalé à
+    l'écran : « tout l'admin est en majuscules »). Les capitales sont celles du
+    LIBELLÉ ; hériter d'elles, c'était mettre en capitales la phrase d'aide
+    (`.aide`, 51 emplois), le texte d'une case à cocher (« ACTIVER L'ENVOI
+    D'E-MAILS »), un bouton, un bloc de code. Le texte du libellé — nu, ou dans
+    un `<span>` sans classe avec son `EtoileRequis` (#1230) — garde les siennes.
+    🔒 `npm run lint:champs` refuse un enfant de `label.field` que cette liste ne
+    remet pas en casse et qui n'est pas du libellé. */
+label.field :is(input, select, textarea, button, div, code, .aide, .case) {
+	text-transform: none;
+	letter-spacing: normal;
+}
+/*  Une case à cocher posée DANS un `.field` en div : son texte est une valeur,
+    pas un libellé de champ — même raison que `:not(.pastille)` plus haut. */
+.field label.case {
 	text-transform: none;
 	letter-spacing: normal;
 }
