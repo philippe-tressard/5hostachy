@@ -7,7 +7,7 @@
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
 	import ModaleAccesBail from '$lib/components/ModaleAccesBail.svelte';
 	import { onMount } from 'svelte';
-	import { lots as lotsApi, bailleur as bailApi, type ObjetRemis } from '$lib/api';
+	import { lots as lotsApi, bailleur as bailApi, type Bail, type ObjetRemis } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { isBailleur, isCS, isCoproprietaire, isLocataire, isResident } from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -71,22 +71,6 @@
 	//  🔴 `Objet` est devenu `ObjetRemis`, dans `$lib/api` (#806) : c'est une
 	//  réponse d'API, pas une notion de cet écran, et il était déclaré à
 	//  l'identique ici et dans le composant qui le rend.
-
-	interface Bail {
-		id: number;
-		lot_id: number;
-		locataire_id: number | null;
-		locataire_nom: string | null;
-		locataire_prenom: string | null;
-		locataire_email: string | null;
-		locataire_telephone: string | null;
-		date_entree: string;
-		date_sortie_prevue: string | null;
-		date_sortie_reelle: string | null;
-		statut: string;
-		notes: string | null;
-		objets: ObjetRemis[];
-	}
 
 	// ── State (locataire bail) ────────────────────────────────────────────────
 	let monBailData: any = null;

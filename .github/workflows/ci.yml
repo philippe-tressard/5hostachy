@@ -1692,6 +1692,12 @@ jobs:
         working-directory: front
         run: npm run lint:clamp
 
+      # Un type d'entité se déclare là où le client le rend, jamais dans un
+      # écran (#1044) : sinon deux écrans retypent la même entité, et divergent.
+      - name: Types d'entité déclarés hors des écrans
+        working-directory: front
+        run: npm run lint:types-locaux
+
       # 🔴 `e instanceof ApiError ? e.message : 'Erreur'` est écrit 123 fois.
       # Ce n'est pas une redite cosmétique : c'est la MÊME information perdue
       # 82 fois — `messageErreur` sait dire « votre session a expiré, rechargez

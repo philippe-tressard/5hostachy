@@ -131,8 +131,58 @@ export interface ObjetRemis {
 	cree_le: string;
 }
 
+/**
+ *  Un bail, tel que le rend l'API (`BailOut`, `routers/bailleur/commun.py`).
+ *
+ *  ⚠️ Il était déclaré dans l'écran `mon-lot` (#1044) pendant que le client
+ *  rendait `any` : l'écran retypait ce que le client aurait dû dire, et il en
+ *  omettait trois champs du contrat. Même raison qu'`ObjetRemis` juste au-dessus.
+ */
+export interface Bail {
+	id: number;
+	lot_id: number;
+	bailleur_id: number;
+	locataire_id: number | null;
+	locataire_nom: string | null;
+	locataire_prenom: string | null;
+	locataire_email: string | null;
+	locataire_telephone: string | null;
+	date_entree: string;
+	date_sortie_prevue: string | null;
+	date_sortie_reelle: string | null;
+	statut: string;
+	notes: string | null;
+	cree_le: string;
+	mis_a_jour_le: string;
+	objets: ObjetRemis[];
+}
+
+/**
+ *  Un Vigik ou une télécommande vu depuis un bail (`AccesOut`,
+ *  `routers/bailleur/acces.py`) : où il est, et s'il peut être confié au
+ *  locataire. Déclaré dans `ModaleAccesBail` jusqu'au #1044.
+ *
+ *  ⚠️ Ne pas le confondre avec `AccesAdmin` (`./acces`) : même objet, autre
+ *  point de vue — l'inventaire du parc, sans la question du bail.
+ */
+export interface AccesBail {
+	id: number;
+	code: string;
+	type: 'vigik' | 'telecommande';
+	lot_id: number | null;
+	lot_type: 'appartement' | 'parking' | 'cave' | string | null;
+	lot_label: string | null;
+	statut: string;
+	chez_locataire: boolean;
+	bail_id: number | null;
+	eligible_transfert: boolean;
+	recommande: boolean;
+	motif_non_eligible: string | null;
+	cree_le: string;
+}
+
 export const bailleur = {
-	mesBaux: () => api.get<any[]>('/bailleur/mes-baux'),
+	mesBaux: () => api.get<Bail[]>('/bailleur/mes-baux'),
 	//  🔴 `creerBail` A ÉTÉ RETIRÉE (12/09/2026, #932), avec son endpoint.
 	//
 	//  `POST /bailleur/lots/{lot_id}/bail` était `creer-multi` **recopié pour un
@@ -142,13 +192,14 @@ export const bailleur = {
 	//  relevé par l'homonyme `creerBailMulti`.
 	//
 	//  Créer un bail sur un lot, c'est `creerBailMulti({ lot_ids: [id], … })`.
-	creerBailMulti: (data: unknown) => api.post<any[]>('/bailleur/baux/creer-multi', data),
+	creerBailMulti: (data: unknown) => api.post<Bail[]>('/bailleur/baux/creer-multi', data),
 	//  🔴 `getBail` A ÉTÉ RETIRÉE (#801) : l'écran `mon-lot` tient déjà ses baux
 	//  par `mesBaux()` / `tousBaux()` / `monBail()`, et travaille dessus. Relire
 	//  un bail seul depuis le serveur donnerait un second exemplaire du même
 	//  objet, libre de diverger de celui de la liste affichée.
-	updateBail: (id: number, data: unknown) => api.patch<any>(`/bailleur/baux/${id}`, data),
-	terminerBail: (id: number, data: unknown) => api.post<any>(`/bailleur/baux/${id}/terminer`, data),
+	updateBail: (id: number, data: unknown) => api.patch<Bail>(`/bailleur/baux/${id}`, data),
+	terminerBail: (id: number, data: unknown) =>
+		api.post<Bail>(`/bailleur/baux/${id}/terminer`, data),
 	//  ✅ Ces deux méthodes ont porté la déclaration « sans appelant » de #806
 	//  pendant quelques heures : rien ne les appelait, et il était donc impossible
 	//  d'enregistrer un objet remis dans l'inventaire d'un bail — ni d'en corriger
@@ -170,17 +221,17 @@ export const bailleur = {
 	supprimerObjet: (bail_id: number, obj_id: number) =>
 		api.delete(`/bailleur/baux/${bail_id}/objets/${obj_id}`),
 	supprimerBail: (bail_id: number) => api.delete(`/bailleur/baux/${bail_id}`),
-	tousBaux: () => api.get<any[]>('/bailleur/tous-les-baux'),
+	tousBaux: () => api.get<Bail[]>('/bailleur/tous-les-baux'),
 	// Recherche locataire & gestion accès
 	searchLocataire: (q: string) =>
 		api.get<any[]>(`/bailleur/search-locataire?q=${encodeURIComponent(q)}`),
 	locatairesSuggeres: () => api.get<any[]>('/bailleur/locataires-suggeres'),
-	accesBail: (bail_id: number) => api.get<any[]>(`/bailleur/baux/${bail_id}/acces`),
+	accesBail: (bail_id: number) => api.get<AccesBail[]>(`/bailleur/baux/${bail_id}/acces`),
 	transfererAcces: (bail_id: number, data: { vigik_ids: number[]; tc_ids: number[] }) =>
-		api.post<any[]>(`/bailleur/baux/${bail_id}/transferer-acces`, data),
+		api.post<AccesBail[]>(`/bailleur/baux/${bail_id}/transferer-acces`, data),
 	recupererAcces: (bail_id: number, data?: { vigik_ids: number[]; tc_ids: number[] }) =>
-		api.post<any[]>(`/bailleur/baux/${bail_id}/recuperer-acces`, data ?? {}),
-	mesAccesRecus: () => api.get<any[]>('/bailleur/mes-acces-recus'),
+		api.post<AccesBail[]>(`/bailleur/baux/${bail_id}/recuperer-acces`, data ?? {}),
+	mesAccesRecus: () => api.get<AccesBail[]>('/bailleur/mes-acces-recus'),
 	monBail: () => api.get<any>('/bailleur/mon-bail'),
 };
 
