@@ -79,3 +79,7 @@ class EvolutionMixin(AssisteIAMixin):
     #: une liste vide, pas une absence de réponse — c'est ce qui permet de lire
     #: la colonne sans garde à chaque appel.
     fichiers_urls: str = "[]"
+    #: Le texte REÇU d'une réponse par courriel, quand l'assistant l'a mis en
+    #: forme (#1322) ; `contenu` porte alors la version mise en forme. Vide
+    #: partout ailleurs — sur le mixin pour que les trois fils se lisent pareil.
+    contenu_origine: Optional[str] = None

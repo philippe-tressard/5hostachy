@@ -35,6 +35,22 @@ CONSERVATION_COURRIELS = (
     "L'effacement anticipé s'obtient sur demande à l'adresse du point\xa01."
 )
 
+#: La phrase de la politique sur ce que l'assistant transmet SANS geste (#1322).
+#: Elle affirmait « rien ne l'est automatiquement » : faux depuis la mise en forme
+#: des réponses par courriel. Écrite une fois : le gabarit, les ajouts de #1034 et
+#: la migration 0223, qui corrige le texte servi, la lisent ici.
+ASSISTANT_SANS_GESTE_ANCIEN = (
+    "Rien n'est transmis si l'assistant est désactivé, et rien ne l'est "
+    "automatiquement\xa0: la demande est toujours un geste explicite."
+)
+ASSISTANT_SANS_GESTE = (
+    "Rien n'est transmis si l'assistant est désactivé. Une seule transmission est "
+    "automatique, et seulement si l'administration en active l'usage\xa0: la "
+    "<strong>réponse reçue par courriel</strong> sur une affaire — sans le message "
+    "qu'elle cite — est transmise pour en retirer la signature, les mentions légales et "
+    "les lignes vides\xa0; le texte reçu reste conservé tel quel dans l'affaire."
+)
+
 DEFAULT_LEGAL = {
     "mentions_legales": (
         "<h2>Éditeur du service</h2>"
@@ -108,9 +124,9 @@ DEFAULT_LEGAL = {
         "langage)</strong> — lorsqu'un membre du conseil syndical demande une reformulation ou la "
         "synthèse d'un contrat, le texte concerné — et, pour un contrat, le <strong>contenu des "
         "documents joints</strong> — est transmis au service de modèle de langage configuré. "
-        "<strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il opère. Rien n'est transmis si"
-        " l'assistant est désactivé, et rien ne l'est automatiquement\xa0: la demande est toujours un "
-        "geste explicite.</li><li><strong>Acheminement des courriels</strong> — les notifications "
+        "<strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il opère. "
+        + ASSISTANT_SANS_GESTE
+        + "</li><li><strong>Acheminement des courriels</strong> — les notifications "
         "partent par un service d'envoi de courriels, qui traite donc l'adresse du destinataire et le"
         " contenu du message. <strong>À RENSEIGNER</strong>\xa0: lequel.</li></ul><h2>5. Durée de "
         "conservation</h2><ul><li>Données de compte actif\xa0: durée de la relation + 2 "
@@ -182,9 +198,9 @@ AJOUTS_1034 = [
         " une reformulation ou la synthèse d'un contrat, le texte concerné — et, pour un contrat,"
         " le <strong>contenu des documents joints</strong> — est transmis au service de modèle de"
         " langage configuré. <strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il "
-        "opère. Rien n'est transmis si l'assistant est désactivé, et rien ne l'est "
-        "automatiquement\xa0: la demande est toujours un geste "
-        "explicite.</li><li><strong>Acheminement des courriels</strong> — les notifications "
+        "opère. "
+        + ASSISTANT_SANS_GESTE
+        + "</li><li><strong>Acheminement des courriels</strong> — les notifications "
         "partent par un service d'envoi de courriels, qui traite donc l'adresse du destinataire "
         "et le contenu du message. <strong>À RENSEIGNER</strong>\xa0: lequel.</li></ul>",
     ),

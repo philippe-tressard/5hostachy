@@ -42,6 +42,7 @@
 <script lang="ts">
 	import FiltreFil from './FiltreFil.svelte';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
+	import MessageOrigine from '$lib/components/MessageOrigine.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import PiecesJointes from './PiecesJointes.svelte';
 	import { safeDescription } from '$lib/sanitize';
@@ -63,6 +64,8 @@
 		auteur_nom?: string;
 		/** « Rédigé avec l'assistant IA » (#985). */
 		assiste_ia?: boolean;
+		/** Le texte reçu, quand l'assistant a mis en forme une réponse par courriel (#1322). */
+		contenu_origine?: string | null;
 		cree_le: string;
 		fichiers_urls?: string[];
 		/** Le périmètre que cette entrée déclare, quand elle en déclare un (#497). */
@@ -317,6 +320,7 @@
 						{#if evol.contenu}
 							<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 						{/if}
+						<MessageOrigine texte={evol.contenu_origine} />
 						<!--  🔴 GRAND FORMAT, et c'est un REVIREMENT (18/08/2026).
 						      `ux-patterns` §11 rangeait les fils d'évolutions du côté
 						      « vignette », avec un argument juste : elle signale la photo

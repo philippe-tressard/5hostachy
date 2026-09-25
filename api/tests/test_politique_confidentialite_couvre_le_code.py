@@ -86,6 +86,13 @@ EXIGENCES = [
         ("modèle de langage", "intelligence artificielle", "assistant ia"),
     ),
     (
+        #  #1322 : la SEULE transmission sans geste. Le texte disait « rien ne l'est
+        #  automatiquement » — voir aussi le test qui refuse cette phrase.
+        "la mise en forme automatique des réponses reçues par courriel",
+        ("utils/reponse_courriel.py", "def mettre_en_forme"),
+        ("réponse reçue par courriel",),
+    ),
+    (
         "l'acheminement des courriels par un tiers",
         ("utils/smtp.py", "def "),
         #  ⚠️ Pas « courriel » ni « e-mail » seuls : le texte les emploie déjà
@@ -189,6 +196,21 @@ def test_la_politique_ne_pretend_plus_qu_aucune_donnee_ne_sort():
         "nommer les services qui en reçoivent pourtant : groupe de messagerie, "
         "fournisseur de modèle de langage, acheminement des courriels. La phrase "
         "est vraie au sens commercial et trompeuse au sens du RGPD."
+    )
+
+
+def test_la_politique_ne_pretend_pas_que_rien_ne_part_automatiquement():
+    """🔴 #1322 : la réponse du syndic reçue par courriel part au modèle SANS geste.
+
+    La phrase « rien ne l'est automatiquement : la demande est toujours un geste
+    explicite » était vraie jusqu'au 25/09/2026. Un texte juridique qui reste
+    juste le jour où le code change ne l'est que si un contrôle le tient.
+    """
+    if not _declencheur_present("utils/reponse_courriel.py", "def mettre_en_forme"):
+        return
+    assert "rien ne l'est automatiquement" not in _texte_du_gabarit(), (
+        "La politique affirme qu'aucune transmission à l'assistant n'est "
+        "automatique, alors que la mise en forme des réponses par courriel l'est."
     )
 
 
