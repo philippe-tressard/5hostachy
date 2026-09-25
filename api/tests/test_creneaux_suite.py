@@ -69,3 +69,28 @@ def test_le_controle_refuse_la_forme_d_avant():
     assert poses_hors_rang(avant) == [
         "SectionOptionsPublication dans « specifiques » au lieu de « mise_en_avant »"
     ]
+
+
+def test_la_suite_d_une_actualite_suit_la_declaration_de_l_affaire():
+    """🔴 Une actualité est une AFFAIRE de catégorie Actualité (v2.0.0) : sa Suite
+    suit `TICKET`, comme son édition. Elle suivait `PUBLICATION` — deux
+    déclarations pour un objet, qui ne diffèrent que par ce qu'une Suite ne rend
+    pas (#1329). `PUBLICATION` garde ses libellés ; il ne gouverne plus un rendu."""
+    fautes = [
+        str(f.relative_to(_FRONT))
+        for f in _FRONT.rglob("*.svelte")
+        if re.search(r"entite=\{PUBLICATION\}", f.read_text(encoding="utf-8"))
+    ]
+    assert not fautes, "Une Suite gouvernée par PUBLICATION : " + ", ".join(fautes)
+
+
+def test_le_badge_nouveau_ne_s_ecrit_qu_une_fois():
+    """Le badge « Nouveau » d'une carte était écrit CINQ fois, avec deux mots
+    (« NEW », « New ») et deux marges (#1329). `BadgeNouveau` le porte seul :
+    aucun autre écran n'appelle `isNouveau(` pour le rendre."""
+    fautes = [
+        str(f.relative_to(_FRONT))
+        for f in _FRONT.rglob("*.svelte")
+        if f.name != "BadgeNouveau.svelte" and "isNouveau(" in f.read_text(encoding="utf-8")
+    ]
+    assert not fautes, "Badge « Nouveau » réécrit : " + ", ".join(fautes)

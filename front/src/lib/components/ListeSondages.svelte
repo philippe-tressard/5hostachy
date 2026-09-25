@@ -22,8 +22,9 @@
   l'API et recharge la liste.
 -->
 <script lang="ts">
+	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
-	import { fmtDateShort, isNouveau } from '$lib/date';
+	import { fmtDateShort } from '$lib/date';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import { safeHtml } from '$lib/sanitize';
@@ -59,7 +60,7 @@
 		<EnteteCarte titre={s.question} date={fmtDateShort(s.cree_le)}>
 			<svelte:fragment slot="titre-suffixe">
 				<MarqueIA assiste={s.assiste_ia} />
-				{#if isNouveau(s.cree_le)}<span class="badge badge-gray sondage-neuf">New</span>{/if}
+				<BadgeNouveau le={s.cree_le} />
 			</svelte:fragment>
 			<svelte:fragment slot="tags">
 				<span class="badge {s.cloture ? 'badge-gray' : 'badge-green'}"
@@ -109,7 +110,7 @@
 			</svelte:fragment>
 		</EnteteCarte>
 		{#if s.description}
-			<div class="sondage-desc rich-content clamp-5">{@html safeHtml(s.description)}</div>
+			<div class="sondage-desc rich-content clamp-3">{@html safeHtml(s.description)}</div>
 		{/if}
 	</a>
 {/each}
@@ -128,12 +129,6 @@
 	}
 	.sondage-card:hover {
 		border-color: var(--color-primary);
-	}
-	.sondage-neuf {
-		font-size: 0.82em;
-		font-weight: 500;
-		margin-left: 0.5em;
-		vertical-align: middle;
 	}
 	.sondage-desc {
 		font-size: 0.85rem;

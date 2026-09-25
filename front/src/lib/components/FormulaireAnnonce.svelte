@@ -47,7 +47,7 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
-	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
+	import SectionWorkflow from '$lib/components/SectionWorkflow.svelte';
 	import {
 		CATEGORIES_ANNONCE,
 		MAX_PHOTOS_ANNONCE,
@@ -62,7 +62,7 @@
 	import { perimetreDefautListe } from '$lib/utils';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
-	import { requisDe } from '$lib/pliage';
+	import { pliageDe, requisDe } from '$lib/pliage';
 	import { ANNONCE } from '$lib/entites/annonce';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
@@ -125,7 +125,7 @@
 
 	let submitting = false;
 
-	const titreBoite = modeEdition ? "Modifier l'annonce" : 'Déposer une annonce';
+	const titreBoite = modeEdition ? ANNONCE.libelleModifier : ANNONCE.libelleNouveau;
 
 	function reinitialiser() {
 		titre = '';
@@ -220,7 +220,9 @@
 	Le ticket citait deux écrans déjà conformes et oubliait celui-ci — c'est ce
 	qui a décidé l'écriture de `lint:cadre-geste`, qui le recense désormais.
 -->
-<CadreFormulaire edition={modeEdition} titre={titreBoite}>
+<!--  `encadre` : la correction s'ouvre DANS la carte, qui est déjà le cadre —
+      la carte dans la carte, relevée par l'audit (#1329, §14 ter). -->
+<CadreFormulaire edition={modeEdition} encadre={!modeEdition} titre={titreBoite}>
 	<form on:submit|preventDefault={enregistrer}>
 		<!--  1. Titre. -->
 		<SectionTitre
@@ -272,17 +274,18 @@
 			</SectionFormulaire>
 		{/if}
 
-		<!--  3. Workflow — des PASTILLES, jamais un `<select>` nu (R3 / #423).
-		      La liste vient de `$lib/annonces`, source unique : la carte la rend
-		      aussi, dans son raccourci. -->
+		<!--  3. Suivi — `SectionWorkflow`, la section de TOUTES les entités (#1329) :
+		      elle s'appelait « Où en est cette annonce ? » et ignorait son pliage.
+		      La liste vient de `$lib/annonces`, que la carte rend aussi. -->
 		{#if sectionPresente(ANNONCE, etat, 'suivi')}
-			<SectionFormulaire titre="Où en est cette annonce ?">
-				<WorkflowPastilles
-					options={OPTIONS_STATUT_ANNONCE}
-					valeur={statut}
-					on:choisir={(e) => (statut = e.detail)}
-				/>
-			</SectionFormulaire>
+			<SectionWorkflow
+				idTitre="annonce-{annonce?.id ?? 'new'}-suivi"
+				options={OPTIONS_STATUT_ANNONCE}
+				valeur={statut}
+				pliable={pliageDe(ANNONCE, 'suivi')}
+				requis={requisDe(ANNONCE, 'suivi')}
+				on:choisir={(e) => (statut = e.detail)}
+			/>
 		{/if}
 
 		<!--  4 à 9 : le composant partagé. Aucune de ces sections n'est gouvernée

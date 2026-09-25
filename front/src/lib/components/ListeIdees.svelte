@@ -29,13 +29,14 @@
   l'autre.
 -->
 <script lang="ts">
+	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { safeHtml } from '$lib/sanitize';
-	import { fmtDateShort, isNouveau } from '$lib/date';
+	import { fmtDateShort } from '$lib/date';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 	import { STATUTS_IDEE, STATUT_IDEE_LABELS } from '$lib/idees';
@@ -93,7 +94,7 @@
 			<EnteteCarte titre={idee.titre} date={fmtDateShort(idee.cree_le)}>
 				<svelte:fragment slot="titre-suffixe">
 					<MarqueIA assiste={idee.assiste_ia} />
-					{#if isNouveau(idee.cree_le)}<span class="badge badge-gray idee-neuf">New</span>{/if}
+					<BadgeNouveau le={idee.cree_le} />
 				</svelte:fragment>
 				<svelte:fragment slot="tags">
 					<span class="badge {statutClass(idee.statut)}"
@@ -120,6 +121,7 @@
 							class="btn-icon"
 							title="Modifier"
 							aria-label="Modifier l'idée"
+							aria-pressed={editId === idee.id}
 							on:click|stopPropagation={() => onModifier(idee)}>&#x270F;&#xFE0F;</button
 						>
 					{/if}
@@ -128,7 +130,7 @@
 			{#if editId === idee.id}
 				<slot name="formulaire" {idee} />
 			{:else}
-				<div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
+				<div class="idee-desc rich-content clamp-3">{@html safeHtml(idee.description)}</div>
 			{/if}
 			{#if idee.auteur_id !== currentUserId}
 				<button
@@ -233,12 +235,6 @@
 	}
 	.idee-body {
 		flex: 1;
-	}
-	.idee-neuf {
-		margin-left: 0.5em;
-		font-size: 0.82em;
-		font-weight: 500;
-		vertical-align: middle;
 	}
 	.idee-desc {
 		font-size: 0.85rem;

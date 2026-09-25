@@ -124,7 +124,6 @@ export const ANNONCE: EntiteDeclaree = {
 			//  notions pour la même chose — celle qu'on pose et celle qui arrive.
 			id: 'suivi',
 			objet: 'En cours · Réservé · Vendu · Donné · Annulé',
-			titreEcran: 'Où en est cette annonce ?',
 			absente: {
 				creation: {
 					motif: 'geste',

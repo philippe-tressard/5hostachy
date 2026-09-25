@@ -65,8 +65,10 @@ function fichiersSvelte(dir) {
 }
 
 //  Tout fichier qui REND la rangée, quel que soit son nom (voir l'en-tête).
+//  🔴 `SectionWorkflow` compte aussi (#1329) : l'affaire et l'annonce rendent
+//  leur Suivi par elle depuis le 25/09/2026, et le relevé tombait à deux rangées.
 const fichiers = fichiersSvelte(RACINE).filter((f) =>
-	readFileSync(f, 'utf8').includes('<WorkflowPastilles'),
+	/<(WorkflowPastilles|SectionWorkflow)\b/.test(readFileSync(f, 'utf8')),
 );
 if (fichiers.length === 0) {
 	console.error('✗ Cas zéro : aucun fichier ne rend <WorkflowPastilles> — portée cassée.');
@@ -78,7 +80,7 @@ const erreurs = [];
 let rangees = 0;
 
 //  `<WorkflowPastilles … valeur={X} …>` — la balise entière, attributs compris.
-const PASTILLES = /<WorkflowPastilles\b([^>]*)>/g;
+const PASTILLES = /<(?:WorkflowPastilles|SectionWorkflow)\b([^>]*)>/g;
 
 for (const chemin of fichiers) {
 	const relatif = relative(RACINE, chemin).replace(/\\/g, '/');
@@ -116,7 +118,7 @@ for (const chemin of fichiers) {
 		//  On retire la balise elle-même et la déclaration `let nom = …` avant de
 		//  chercher : sinon le rendu se répondrait à lui-même.
 		const sansRendu = source
-			.replace(/<WorkflowPastilles[^>]*>/g, '')
+			.replace(/<(?:WorkflowPastilles|SectionWorkflow)[^>]*>/g, '')
 			.replace(new RegExp(`\\blet\\s+${nom}\\b[^;\\n]*`, 'g'), '')
 			.replace(new RegExp(`\\bexport\\s+let\\s+${nom}\\b[^;\\n]*`, 'g'), '');
 
