@@ -19,6 +19,7 @@ de 15 s à 60 s rend le cas rare, elle ne le supprime pas.
 """
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -145,6 +146,9 @@ def planifie(monkeypatch):
 
     _HorlogeFigee.instant = VENDREDI_INCIDENT
     monkeypatch.setattr(S, "datetime", _HorlogeFigee)
+    #  L'heure UTC du module passe par `horloge` depuis #1047 : c'est elle qu'on
+    #  fige, et dans CE module seulement — comme `datetime` juste au-dessus.
+    monkeypatch.setattr(S, "horloge", SimpleNamespace(maintenant=_HorlogeFigee.utcnow))
 
     alertes: list[list[str]] = []
     import app.utils.health_monitor as HM

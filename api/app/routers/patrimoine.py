@@ -25,7 +25,7 @@ Trois refus serveur, et ils ne sont pas décoratifs :
    bâtiment » sans migrer une seule ligne.
 """
 
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -347,7 +347,7 @@ def creer_perimetre(
         hors_copropriete=body.hors_copropriete,
         ordre=body.ordre,
         modifie_par_id=admin.id,
-        modifie_le=datetime.utcnow(),
+        modifie_le=horloge.maintenant(),
     )
     session.add(noeud)
     session.commit()
@@ -374,7 +374,7 @@ def modifier_perimetre(
         setattr(noeud, champ, valeur)
 
     noeud.modifie_par_id = admin.id
-    noeud.modifie_le = datetime.utcnow()
+    noeud.modifie_le = horloge.maintenant()
     session.add(noeud)
     session.commit()
     invalider_cache()

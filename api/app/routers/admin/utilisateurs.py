@@ -40,7 +40,7 @@ from app.utils.porteurs_acces import ids_detenteurs
 from app.utils.purge_referentielle import purger
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, VIGIK
 from app.utils.roles_libelles import libelle_role
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 from app.utils.communaute import notification_de_ban
 from app.utils.recuperer import ou_404
@@ -403,7 +403,7 @@ def ban_communaute(
             notif_titre, notif_corps = notification_de_ban(definitif=True)
         else:
             # 1re infraction → ban 1 mois (30 jours)
-            user.communaute_ban_jusqu_au = datetime.utcnow() + timedelta(days=30)
+            user.communaute_ban_jusqu_au = horloge.maintenant() + timedelta(days=30)
             notif_titre, notif_corps = notification_de_ban(definitif=False)
         journaliser_securite(
             "ban_communaute",

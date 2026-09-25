@@ -10,6 +10,7 @@ import re as _re
 import traceback as _traceback
 from contextlib import asynccontextmanager
 from datetime import datetime
+from app.utils import horloge
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -146,7 +147,7 @@ async def lifespan(app: FastAPI):
     with Session(engine) as _s:
         _s.exec(
             delete(RefreshToken).where(
-                (RefreshToken.revoked == True) | (RefreshToken.expires_at < datetime.utcnow())  # noqa: E712
+                (RefreshToken.revoked == True) | (RefreshToken.expires_at < horloge.maintenant())  # noqa: E712
             )
         )
         _s.commit()
@@ -159,7 +160,7 @@ async def lifespan(app: FastAPI):
     from app.models.core import HistoriqueSauvegarde, StatutSauvegarde
 
     with Session(engine) as _s:
-        _seuil = datetime.utcnow() - _timedelta(hours=2)
+        _seuil = horloge.maintenant() - _timedelta(hours=2)
         _orphelines = _s.exec(
             _select(HistoriqueSauvegarde).where(
                 (HistoriqueSauvegarde.statut == StatutSauvegarde.en_cours)
@@ -169,7 +170,7 @@ async def lifespan(app: FastAPI):
         for _b in _orphelines:
             _b.statut = StatutSauvegarde.echouee
             _b.message_erreur = "Interrompue par redémarrage du conteneur"
-            _b.terminee_le = datetime.utcnow()
+            _b.terminee_le = horloge.maintenant()
             _s.add(_b)
         if _orphelines:
             _s.commit()

@@ -16,6 +16,7 @@ import qui enregistre la table dans les métadonnées SQLModel.
 """
 
 from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Field
@@ -56,4 +57,4 @@ class AnnonceHall(AssisteIAMixin, table=True):
     #  pas de clé étrangère. `publication_id` reste lu par les liens anciens.
     ticket_id: Optional[int] = Field(default=None)
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)

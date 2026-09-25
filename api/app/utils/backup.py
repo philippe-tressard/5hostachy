@@ -4,6 +4,7 @@ import glob
 import os
 import tarfile
 from datetime import datetime
+from app.utils import horloge
 
 from sqlalchemy import text
 from sqlmodel import Session, select
@@ -66,7 +67,7 @@ def run_backup(history_id: int | None = None):
 
         try:
             os.makedirs(settings.backup_dir, exist_ok=True)
-            ts = datetime.utcnow().strftime(_FORMAT_HORODATAGE)
+            ts = horloge.maintenant().strftime(_FORMAT_HORODATAGE)
             filename = f"{PREFIXE_ARCHIVE}{ts}{_SUFFIXE_ARCHIVE}"
             dest = os.path.join(settings.backup_dir, filename)
 
@@ -94,7 +95,7 @@ def run_backup(history_id: int | None = None):
                         f"Sauvegarde annulée — base corrompue (quick_check : {verdict}). "
                         f"Backups sains préservés (pas de rotation)."
                     )
-                    entry.terminee_le = datetime.utcnow()
+                    entry.terminee_le = horloge.maintenant()
                     session.add(entry)
                     session.commit()
                     return
@@ -111,14 +112,14 @@ def run_backup(history_id: int | None = None):
             entry.fichier_nom = filename
             entry.fichier_chemin = dest
             entry.taille_octets = size
-            entry.terminee_le = datetime.utcnow()
+            entry.terminee_le = horloge.maintenant()
 
             _rotate_backups(session)
 
         except Exception as exc:
             entry.statut = StatutSauvegarde.echouee
             entry.message_erreur = str(exc)
-            entry.terminee_le = datetime.utcnow()
+            entry.terminee_le = horloge.maintenant()
 
         session.add(entry)
         session.commit()

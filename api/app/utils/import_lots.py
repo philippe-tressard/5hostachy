@@ -28,7 +28,7 @@ Usage depuis le conteneur :
 
 from __future__ import annotations
 
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Session, select
@@ -206,7 +206,7 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
                 etage_raw=etage_raw,
                 no_coproprietaire=no_cop,
                 nom_coproprietaire=nom_cop,
-                importe_le=datetime.utcnow(),
+                importe_le=horloge.maintenant(),
             )
         )
         stats["importes"] += 1

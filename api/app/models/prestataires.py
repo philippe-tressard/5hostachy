@@ -22,6 +22,7 @@ table manquerait, sans le moindre message. C'est la raison écrite dans
 """
 
 from datetime import date, datetime
+from app.utils import horloge
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
 
@@ -88,7 +89,7 @@ class Prestataire(SQLModel, table=True):
     email: Optional[str] = None
     contacts_json: Optional[str] = None  # JSON: [{prenom, nom, fonction, email, telephone}]
     actif: bool = True
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
 
     contrats: List["ContratEntretien"] = Relationship(back_populates="prestataire")
 
@@ -161,4 +162,4 @@ class NotationPrestataire(SQLModel, table=True):
     #  arrière du code le retrouve. On cesse de la lire ; on n'efface rien.
     contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)

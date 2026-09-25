@@ -1,6 +1,7 @@
 """Router délégations aidant — gestion des accès délégués pour les proches."""
 
-from datetime import date, datetime
+from datetime import date
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -120,7 +121,7 @@ def create_delegation(
         date_debut=date.today(),
         date_fin=date.fromisoformat(body.date_fin) if body.date_fin else None,
         cree_par_id=user.id,
-        cree_le=datetime.utcnow(),
+        cree_le=horloge.maintenant(),
         statut=StatutDelegation.en_attente,
     )
     session.add(delegation)
@@ -194,7 +195,7 @@ def revoquer_delegation(
         raise HTTPException(400, "Délégation déjà terminée")
 
     d.statut = StatutDelegation.revoquee
-    d.revoque_le = datetime.utcnow()
+    d.revoque_le = horloge.maintenant()
     d.revoque_par_id = user.id
     session.add(d)
     session.commit()

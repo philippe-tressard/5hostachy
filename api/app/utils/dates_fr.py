@@ -19,6 +19,7 @@ format dépendant de la locale réapparaît dans `app/`.
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from app.utils import horloge
 from zoneinfo import ZoneInfo
 
 TZ_PARIS = ZoneInfo("Europe/Paris")
@@ -90,7 +91,7 @@ def mois_ecoules(depuis: datetime, maintenant: datetime | None = None) -> int:
     Compte des mois calendaires, pas des tranches de 30 jours : entre le 31/01 et
     le 28/02 il s'est écoulé un mois, ce qu'une division par 30 jours nierait.
     """
-    ref = maintenant or datetime.utcnow()
+    ref = maintenant or horloge.maintenant()
     mois = (ref.year - depuis.year) * 12 + (ref.month - depuis.month)
     if (ref.day, ref.hour, ref.minute) < (depuis.day, depuis.hour, depuis.minute):
         mois -= 1

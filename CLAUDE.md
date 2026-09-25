@@ -143,7 +143,9 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   `app/models/` doit être chargé par `import app.models.core`.
 - `__tablename__` = snake_case français
 - Champs en français snake_case : `statut_validation`, `date_debut`
-- Timestamps : suffixe `_le` → `cree_le`, `mis_a_jour_le`
+- Timestamps : suffixe `_le` → `cree_le`, `mis_a_jour_le` ; la valeur par
+  `horloge.maintenant()` (UTC **naïf**, comme la base), jamais `datetime.utcnow()`
+  — déprécié en 3.12, refusé par Ruff `DTZ003` (#1047)
 - FK : `{modele}_id = Field(default=None, foreign_key="table.id")`
 - Enums : `class MonEnum(str, Enum)` → slugs français lowercase
 - **Archiver, pas une colonne `actif` par réflexe.** Les objets qui quittent les

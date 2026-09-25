@@ -41,6 +41,7 @@ obligé à lui ajouter une variante, et *une variante ajoutée pour accueillir u
 """
 
 from datetime import datetime
+from app.utils import horloge
 from enum import Enum
 from typing import Optional
 
@@ -80,7 +81,7 @@ class Evenement(SaisiPourMixin, AssisteIAMixin, table=True):
     perimetre: str = "résidence"  # résidence | bâtiment
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     mis_a_jour_le: Optional[datetime] = None
     archivee: bool = False
     statut_kanban: Optional[str] = Field(default=None)  # ag|cs|syndic|fournisseur|termine|annule
@@ -138,6 +139,6 @@ class EvenementEvolution(EvolutionMixin, table=True):
     ancien_statut: Optional[str] = None
     nouveau_statut: Optional[str] = None
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     #  Tableau JSON d'URLs internes — même convention que `Ticket.photos_urls`.
     fichiers_urls: str = "[]"

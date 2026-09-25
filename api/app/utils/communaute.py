@@ -46,6 +46,7 @@ frontière front/API en double, c'est sa CONCLUSION qui la franchit.
 """
 
 from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import HTTPException
@@ -90,7 +91,7 @@ def motif_de_refus(user: Utilisateur, maintenant: Optional[datetime] = None) -> 
     ⚠️ Ne lève pas : un compteur doit pouvoir poser la question sans interrompre
     sa réponse. `exiger_acces` s'en charge pour les endpoints.
     """
-    maintenant = maintenant or datetime.utcnow()
+    maintenant = maintenant or horloge.maintenant()
     if user.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire):
         return MOTIF_PROFIL
     if user.communaute_interdit:

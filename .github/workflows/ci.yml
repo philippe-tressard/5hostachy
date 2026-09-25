@@ -177,8 +177,13 @@ jobs:
         # des imports tardifs cassent des cycles, et 39 des 70 sont dans des
         # migrations qu'on ne modifie jamais. Les déplacer pour un linter
         # changerait le démarrage de l'API sans rien corriger.
+        # DTZ003 (`datetime.utcnow()`) sur `app/` seulement (#1047, 25/09/2026) :
+        # déprécié depuis Python 3.12, l'image de l'API. L'heure passe par
+        # `utils/horloge.maintenant()`, qui rend le même UTC naïf. Les tests et
+        # les migrations le gardent : ils ne tournent pas en production, et une
+        # migration appliquée ne se modifie jamais.
         run: |
-          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731
+          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731,DTZ003
           ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712,E741,E731
           ruff check api/tests/ --select E9,F63,F7,F82,F401,F841,E711,E712,E741,E731
 

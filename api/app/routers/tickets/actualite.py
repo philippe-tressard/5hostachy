@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import BackgroundTasks
@@ -167,7 +167,7 @@ def contexte_actualite(
         "app": {"url": base_site(cfg.get("site_url"))},
         "is_commentaire": est_commentaire,
         "commentaire": commentaire or "",
-        "date_commentaire": _fmt_paris(datetime.utcnow()),
+        "date_commentaire": _fmt_paris(horloge.maintenant()),
         "date_publication": _fmt_paris(ticket.cree_le),
         "evolutions": _historique(session, ticket, sauf_derniere=est_commentaire)
         if ticket.id

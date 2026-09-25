@@ -17,7 +17,7 @@ from app.models.core import (
     StatutUtilisateur,
     Utilisateur,
 )
-from datetime import datetime
+from app.utils import horloge
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
 from app.utils.cloche import sonner_systeme
@@ -109,7 +109,7 @@ def traiter_demande_profil(
         raise HTTPException(400, "Action invalide (approuver | rejeter)")
 
     demande.traite_par_id = cs.id
-    demande.traite_le = datetime.utcnow()
+    demande.traite_le = horloge.maintenant()
     session.add(demande)
     session.add(utilisateur)
     session.commit()

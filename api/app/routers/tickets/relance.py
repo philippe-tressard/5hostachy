@@ -8,7 +8,7 @@ l'historique de chaque ticket.
 """
 
 import json
-from datetime import datetime
+from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
@@ -217,7 +217,7 @@ def envoyer_relance_syndic(
             )
         tickets_relance.append(t)
 
-    now = datetime.utcnow()
+    now = horloge.maintenant()
     for ticket in tickets_relance:
         session.add(
             TicketEvolution(

@@ -12,6 +12,7 @@ import json
 import os
 import uuid
 from datetime import datetime
+from app.utils import horloge
 from pathlib import Path
 from typing import Optional
 
@@ -287,7 +288,7 @@ def previsualiser_annonce(
         titre=body.titre,
         avec_photos=bool(body.images),
     )
-    params = _html_params(body, session, format_effectif=fmt, date_affichage=datetime.utcnow())
+    params = _html_params(body, session, format_effectif=fmt, date_affichage=horloge.maintenant())
     return {
         "format_effectif": fmt,
         "format_label": format_libelle(fmt),
@@ -337,7 +338,7 @@ def creer_annonce_hall(
         images=(images or [])[:MAX_PHOTOS],
     )
     _valider(body)
-    maintenant = datetime.utcnow()
+    maintenant = horloge.maintenant()
     fmt = choisir_format(
         body.message,
         body.format_demande,
@@ -413,7 +414,7 @@ def creer_annonce_hall(
     #  case était cochée. Un WhatsApp éteint ou un périmètre sans conseiller ne
     #  doivent pas inscrire dans l'historique une diffusion qui n'a pas eu lieu.
     if diffuse:
-        annonce.envoye_le = datetime.utcnow()
+        annonce.envoye_le = horloge.maintenant()
         session.add(annonce)
         session.commit()
         session.refresh(annonce)
@@ -484,7 +485,7 @@ def renvoyer_email(
             "Aucun membre du CS rattaché à ce périmètre ne dispose d'un compte avec e-mail",
         )
     annonce.destinataires = json.dumps(emails, ensure_ascii=False)
-    annonce.envoye_le = datetime.utcnow()
+    annonce.envoye_le = horloge.maintenant()
     session.add(annonce)
     session.commit()
 

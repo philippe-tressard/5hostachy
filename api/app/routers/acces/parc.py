@@ -38,7 +38,7 @@ pour voir et corriger, `require_admin` pour supprimer définitivement.
 import csv
 import io
 import json
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -488,7 +488,7 @@ def exporter_parc(
     Deux fonctions `exporter_vigiks` / `exporter_telecommandes` auraient divergé
     à la première colonne ajoutée.
     """
-    horodatage = datetime.utcnow().strftime("%Y-%m-%d")
+    horodatage = horloge.maintenant().strftime("%Y-%m-%d")
     #  Le nom du fichier porte le type : c'est ce qui remplace la colonne
     #  « Type », et c'est ce que l'utilisateur lit dans son dossier de
     #  téléchargements six mois plus tard.

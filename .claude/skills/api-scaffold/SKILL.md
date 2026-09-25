@@ -33,9 +33,16 @@ class NouvelleEntite(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nom: str                                           # français, snake_case
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     mis_a_jour_le: Optional[datetime] = None
 ```
+
+⚠️ **L'heure s'écrit `horloge.maintenant()`** (`from app.utils import horloge`),
+jamais `datetime.utcnow()` : déprécié depuis Python 3.12, et refusé par Ruff
+`DTZ003` sur `api/app/` (#1047). Elle rend de l'**UTC naïf**, la forme de
+toutes les dates en base — `now(timezone.utc)` rendrait une date consciente,
+qui lève à la première comparaison avec une date lue en base. Et **par son
+module**, jamais importée seule : treize fichiers ont une variable `maintenant`.
 
 Puis **l'enregistrer** dans `app/models/__init__.py` — c'est cet import qui
 déclare la table à SQLModel. Oublié, elle manque à `create_all` sans un mot.
@@ -176,7 +183,7 @@ def modifier(entite_id: int, body: EntiteUpdate, session: Session = Depends(get_
     obj = ou_404(session, NouvelleEntite, entite_id, "entité")
     for k, v in body.model_dump(exclude_unset=True).items():
         setattr(obj, k, v)
-    obj.mis_a_jour_le = datetime.utcnow()
+    obj.mis_a_jour_le = horloge.maintenant()
     session.add(obj)
     session.commit()
     session.refresh(obj)
