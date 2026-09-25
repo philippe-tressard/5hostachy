@@ -555,6 +555,34 @@ Rendus par page — l'icône du périmètre est **🔹**, jamais 📍 (cf. §1) 
 Le label vient de `perimetreLabel()` (`$lib/utils`) — ne pas réimplémenter la table
 de correspondance dans une page.
 
+## 2 bis. Les DESTINATAIRES — la nomenclature (arbitrée le 25/09/2026)
+
+*« Tous les résidents était faux, car un copropriétaire bailleur ou un bailleur
+n'est pas résident. »* Les libellés sont **au pluriel**.
+
+| Libellé | Ce qu'il désigne | Statut serveur | Dans le code |
+|---|---|---|---|
+| **Tous** | aucune restriction de profil | tous | ✅ `LIBELLE_TOUS`, code `résidents` |
+| **Copropriétaires occupants** | copropriétaires qui habitent leur lot | `copropriétaire_résident` | ✅ |
+| **Copropriétaires bailleurs** | copropriétaires qui louent leur lot | `copropriétaire_bailleur` | ✅ libellé, code `bailleurs` |
+| **Bailleurs** | louent **par délégation** d'un copropriétaire | `mandataire` (à confirmer) | ⏳ maquette — nouveau code serveur |
+| **Locataires** | locataires | `locataire` | ✅ |
+| **CS** | le conseil syndical seul (confidentialité) | rôle `conseil_syndical` | ⏳ maquette |
+
+- Un **résident** HABITE la résidence : copropriétaire occupant **ou** locataire.
+  Un copropriétaire bailleur, un bailleur **ne sont pas** des résidents.
+- Le choix sans restriction s'écrit **« Tous »**, jamais « Tous les résidents » :
+  `LIBELLE_TOUS` (`$lib/destinataires`), lu par le sélecteur, le badge d'état de
+  la section et `destinatairesLabel`. Le **code** reste `résidents` — stocké en
+  base, lu par `public_cible_visible` ; le renommer serait une migration.
+- Le manuel suit (cartes d'écran « Tous »).
+- La **pastille de lecture** (maquette) : https://claude.ai/artifact/WRVxXqqJaFATAmWfz7WTsn
+
+⚠️ **Aucun contrôle ne tient encore cette règle.** Restes connus, à relire
+avec elle : le profil de document « Tous les résidents » (`seed/profils_documents.py`),
+les descriptions « Concerne tous les résidents » du seed patrimoine, la carte
+Communauté « Résidents » du manuel.
+
 ## 3. Carte expansible (Expand Card)
 
 **Le pattern principal** pour les listes (tickets, publications, événements, prestataires).
