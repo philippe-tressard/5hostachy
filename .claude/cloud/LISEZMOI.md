@@ -55,7 +55,7 @@ S'il ne l'est pas, rien n'est perdu : `env-report.sh` affiche
 
 | Absent | Pourquoi | Conséquence |
 |---|---|---|
-| SSH vers les RPi | réseau local injoignable | ni pré-check complet, ni MEP, ni post-check : **le lot s'arrête à une PR vers `dev`** ; pré-check, fusion vers `main` et MEP se font du poste |
+| SSH vers les RPi | réseau local injoignable | pré-check **INCONNU** et post-check au poste ; la MEP, elle, **s'enchaîne sans validation intermédiaire** jusqu'à `main` — la règle vit dans `CLAUDE.md`, « Session cloud », et nulle part ailleurs |
 | `~/.claude` (consignes globales, mémoire) | le cloud ne lit que le `.claude/` du dépôt | la banque de mémoire n'est ni lue ni écrite |
 | le socle `claude-config` | le proxy GitHub ne sert que les dépôts **attachés** à la session | l'attacher à la session le rend disponible (`~/claude-config`, liens dans `~/.claude/`) |
 | le garde-fou `git reset --hard` | il vit dans `claude-config` | relayé par `garde-git.sh` **s'il est présent** ; sinon affiché 🔴 ABSENT |
