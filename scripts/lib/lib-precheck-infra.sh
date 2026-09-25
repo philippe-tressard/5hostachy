@@ -101,6 +101,21 @@ precheck_points_infra() {
   echo "───────────────────────────────────────────────────────────────"
   printf "OK=%d  ÉCART=%d  INCONNU=%d  ÉCHEC=%d\n" "$NB_OK" "$NB_ECART" "$NB_INCONNU" "$NB_FAIL"
 
+  #  Le mode post-MEP (#1282) conclut sur la PRODUCTION, et n'écrit JAMAIS la
+  #  trace : elle autorise un push, et il n'y a rien à pousser.
+  if [ -n "${MODE_POST_MEP:-}" ]; then
+    if [ "$NB_FAIL" -gt 0 ]; then
+      echo "✗ MEP NON VÉRIFIÉE — la production porte un échec (ci-dessus) : diagnostiquer, ou rollback."
+      exit 1
+    fi
+    if [ "$NB_INCONNU" -gt 1 ]; then
+      echo "? Trop de points non mesurables : un INCONNU n'est pas un vert (socle 04 §1)."
+      exit 2
+    fi
+    echo "✓ MEP VÉRIFIÉE — l'actif sert ${VERSION_SERVIE:-?}, déployée depuis origin/main."
+    [ "$NB_INCONNU" -gt 0 ] && echo "  (non mesuré : point(s) $POINTS_INCONNUS — un INCONNU n'est pas un vert.)"
+    exit 0
+  fi
   if [ "$NB_FAIL" -gt 0 ]; then
     echo "✗ MEP NON AUTORISÉE — diagnostiquer les échecs, corriger, relancer."
     exit 1

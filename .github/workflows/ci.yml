@@ -491,6 +491,9 @@ jobs:
           # des liens de courriel — la décision se vérifie ici, la mesure se
           # fait devant la production (11/09/2026, 404 constaté à l'écran).
           bash scripts/lib/lib-precheck-liens.sh    --selftest
+          # Le mode --post-mep (#1282) : P1 (déployé) et P3 (version servie),
+          # dont les cas zéro — un journal illisible ne rend jamais OK.
+          bash scripts/lib/lib-precheck-post.sh     --selftest
           # Point 20 : la sonde de l'ordre du menu servi (#1114), décision pure.
           node front/scripts/sonde-pages-order.mjs  --selftest
           # 🔒 Vérifie la FORME du geste d'installation dans un volume du peer :
