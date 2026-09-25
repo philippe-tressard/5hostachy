@@ -159,7 +159,7 @@ def planifie(monkeypatch):
 
 def _statuts() -> list[str]:
     with Session(engine) as session:
-        return [l.statut for l in session.exec(select(WhatsAppLog)).all()]
+        return [log.statut for log in session.exec(select(WhatsAppLog)).all()]
 
 
 # ── Le défaut du 14/08/2026 ───────────────────────────────────────────────────
@@ -320,7 +320,7 @@ def test_la_purge_epargne_le_verrou_du_jour(planifie):
 
     with Session(engine) as session:
         restants = session.exec(select(WhatsAppLog)).all()
-    assert any(l.scheduled_id is not None for l in restants), (
+    assert any(log.scheduled_id is not None for log in restants), (
         "le verrou du message planifié a été purgé — le rejeu peut recommencer"
     )
 

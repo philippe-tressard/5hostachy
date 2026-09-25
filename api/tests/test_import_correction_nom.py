@@ -29,7 +29,7 @@ limite ne mesure plus le produit.
 from __future__ import annotations
 
 import pytest
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, SQLModel
 
 from app.database import engine
 from app.models.acces import StatutImport, TelecommandeImport, VigikImport

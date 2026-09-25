@@ -200,7 +200,7 @@ def emails_echecs_recents(
         "jours": jours,
         "total": len(lignes),
         "par_code": par_code,
-        "dernier": max((l.cree_le for l in lignes), default=None),
+        "dernier": max((ligne.cree_le for ligne in lignes), default=None),
         "genere_le": datetime.utcnow(),
     }
 

@@ -56,7 +56,6 @@ from app.models.copropriete import Lot
 from app.models.core import StatutUtilisateur, Ticket, UserLot, Utilisateur
 from app.utils import mes_batiments
 from tests.purge_test import purger_ligne
-from app.utils import perimetres as P
 from app.utils.visibility import actualite_visible, perimetre_visible
 
 #: Les publics que porte `public_cible`, plus les deux formes de ciblage vide.

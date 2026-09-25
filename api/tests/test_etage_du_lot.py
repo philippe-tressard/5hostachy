@@ -61,7 +61,7 @@ class _Utilisateur:
 
 class _Session:
     def __init__(self, lots):
-        self._lots = {l.id: l for l in lots}
+        self._lots = {lot.id: lot for lot in lots}
         self.commits = 0
 
     def get(self, _classe, id_):

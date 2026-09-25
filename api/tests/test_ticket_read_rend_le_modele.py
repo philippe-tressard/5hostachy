@@ -126,7 +126,7 @@ def test_chaque_colonne_partagee_revient_telle_quelle(session):
 #  connaissait pas : 200, et rien d'écrit. Effacer une date, c'est envoyer
 #  `null` — que « `is not None` » confond avec « absent ».
 
-from app.routers.tickets.correction import _appliquer_contenu, _appliquer_quand  # noqa: E402
+from app.routers.tickets.correction import _appliquer_quand  # noqa: E402
 from app.routers.tickets.mise_a_jour import _touche_au_contenu  # noqa: E402
 from app.schemas import TicketUpdate  # noqa: E402
 

@@ -253,7 +253,7 @@ def test_les_rattrapables_sont_en_TETE(session: Session, client: TestClient):
     session.commit()
 
     lignes = client.get("/admin/audit/baux-sans-locataire").json()
-    assert [l["categorie"] for l in lignes] == ["compte_probable", "sans_compte"], (
+    assert [ligne["categorie"] for ligne in lignes] == ["compte_probable", "sans_compte"], (
         "le rattachement manquant doit passer avant le locataire non inscrit, "
         "même quand l'ordre alphabétique dit l'inverse"
     )

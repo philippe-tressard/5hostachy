@@ -31,7 +31,6 @@ from datetime import datetime, timedelta
 import pytest
 from fastapi import HTTPException
 from sqlmodel import Session, SQLModel, select
-from starlette.requests import Request
 
 from app.auth.jwt import hash_password, verify_password
 from app.database import engine

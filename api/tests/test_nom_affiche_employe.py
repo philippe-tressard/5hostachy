@@ -146,7 +146,7 @@ def test_lire_un_prenom_et_un_nom_oblige_a_employer_la_regle():
         #  défaut, elle restait verte. Troisième fois que ce dépôt l'apprend
         #  (`lint:html` comptait les mentions dans les commentaires).
         if "from app.utils.noms import" not in source or "nom_affiche" not in "".join(
-            l for l in source.splitlines() if l.startswith("from app.utils.noms import")
+            ligne for ligne in source.splitlines() if ligne.startswith("from app.utils.noms import")
         ):
             fautifs.append(rel)
     assert not fautifs, (

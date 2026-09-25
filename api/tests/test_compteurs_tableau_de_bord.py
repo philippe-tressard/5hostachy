@@ -41,7 +41,6 @@ from app.models.core import (
     Lot,
     Sondage,
     StatutCommande,
-    StatutDemandeProfil,
     Ticket,
     Utilisateur,
 )
