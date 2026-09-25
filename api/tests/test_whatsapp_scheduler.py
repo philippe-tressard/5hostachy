@@ -17,6 +17,7 @@ Ce fichier verrouille la seule règle qui empêche la récidive : on ne rejoue q
 sur un échec **établi**. Il ne teste pas la valeur du délai d'attente — la porter
 de 15 s à 60 s rend le cas rare, elle ne le supprime pas.
 """
+
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -75,8 +76,10 @@ class _ClientFactice:
 
 def _leve(exc):
     """Un `post` qui lève `exc`."""
+
     def _post(*args, **kwargs):
         raise exc
+
     return _post
 
 
@@ -115,22 +118,29 @@ def planifie(monkeypatch):
         for modele in (WhatsAppLog, WhatsAppScheduled):
             for ligne in session.exec(select(modele)).all():
                 session.delete(ligne)
-        for cle in ("whatsapp_enabled", "whatsapp_api_url", "whatsapp_group_jid", "whatsapp_footer"):
+        for cle in (
+            "whatsapp_enabled",
+            "whatsapp_api_url",
+            "whatsapp_group_jid",
+            "whatsapp_footer",
+        ):
             existant = session.get(ConfigSite, cle)
             if existant:
                 session.delete(existant)
         session.commit()
-        session.add_all([
-            ConfigSite(cle="whatsapp_enabled", valeur="1"),
-            ConfigSite(cle="whatsapp_api_url", valeur="http://whatsapp-bridge:3000"),
-            ConfigSite(cle="whatsapp_group_jid", valeur="123@g.us"),
-            WhatsAppScheduled(
-                label="Encombrants Bd Hostachy",
-                message="📢 Infos copro – Encombrants",
-                cron_rule="3eme_samedi",
-                enabled=True,
-            ),
-        ])
+        session.add_all(
+            [
+                ConfigSite(cle="whatsapp_enabled", valeur="1"),
+                ConfigSite(cle="whatsapp_api_url", valeur="http://whatsapp-bridge:3000"),
+                ConfigSite(cle="whatsapp_group_jid", valeur="123@g.us"),
+                WhatsAppScheduled(
+                    label="Encombrants Bd Hostachy",
+                    message="📢 Infos copro – Encombrants",
+                    cron_rule="3eme_samedi",
+                    enabled=True,
+                ),
+            ]
+        )
         session.commit()
 
     _HorlogeFigee.instant = VENDREDI_INCIDENT
@@ -141,7 +151,9 @@ def planifie(monkeypatch):
     import app.utils.email as E
 
     monkeypatch.setattr(HM, "_send_alert", lambda to, issues, session: alertes.append(issues))
-    monkeypatch.setattr(E, "get_site_manager_notification_email", lambda session: ("admin@test", {}))
+    monkeypatch.setattr(
+        E, "get_site_manager_notification_email", lambda session: ("admin@test", {})
+    )
     yield alertes
 
 
@@ -151,6 +163,7 @@ def _statuts() -> list[str]:
 
 
 # ── Le défaut du 14/08/2026 ───────────────────────────────────────────────────
+
 
 def test_un_delai_depasse_ne_declenche_aucun_rejeu(planifie, monkeypatch):
     """Le cœur de l'incident : timeout de lecture → un seul envoi, jamais deux."""
@@ -181,6 +194,7 @@ def test_un_delai_depasse_alerte_un_humain(planifie, monkeypatch):
 
 
 # ── Ce qu'il faut continuer de rejouer ────────────────────────────────────────
+
 
 def test_un_echec_etabli_est_rejoue(planifie, monkeypatch):
     """Bridge injoignable = rien n'est parti : la fenêtre de rattrapage doit jouer.
@@ -221,13 +235,15 @@ def test_une_tentative_interrompue_bloque_le_rejeu(planifie, monkeypatch):
     """
     with Session(engine) as session:
         sched = session.exec(select(WhatsAppScheduled)).one()
-        session.add(WhatsAppLog(
-            scheduled_id=sched.id,
-            label=sched.label,
-            message="…",
-            statut=W.STATUT_EN_COURS,
-            envoye_le=_HorlogeFigee.utcnow(),
-        ))
+        session.add(
+            WhatsAppLog(
+                scheduled_id=sched.id,
+                label=sched.label,
+                message="…",
+                statut=W.STATUT_EN_COURS,
+                envoye_le=_HorlogeFigee.utcnow(),
+            )
+        )
         session.commit()
 
     appels = _bridge_simule(monkeypatch, _reponse_ok())
@@ -240,14 +256,18 @@ def test_une_tentative_interrompue_bloque_le_rejeu(planifie, monkeypatch):
 
 # ── Classification : ce qu'on sait, ce qu'on ne sait pas ──────────────────────
 
-@pytest.mark.parametrize("exc, incertain", [
-    (httpx.ConnectError("refused", request=_requete()), False),
-    (httpx.ConnectTimeout("connect timed out", request=_requete()), False),
-    (httpx.PoolTimeout("pool", request=_requete()), False),
-    (httpx.ReadTimeout("timed out", request=_requete()), True),
-    (httpx.WriteTimeout("timed out", request=_requete()), True),
-    (httpx.RemoteProtocolError("tronqué", request=_requete()), True),
-])
+
+@pytest.mark.parametrize(
+    "exc, incertain",
+    [
+        (httpx.ConnectError("refused", request=_requete()), False),
+        (httpx.ConnectTimeout("connect timed out", request=_requete()), False),
+        (httpx.PoolTimeout("pool", request=_requete()), False),
+        (httpx.ReadTimeout("timed out", request=_requete()), True),
+        (httpx.WriteTimeout("timed out", request=_requete()), True),
+        (httpx.RemoteProtocolError("tronqué", request=_requete()), True),
+    ],
+)
 def test_classification_des_pannes_de_transport(monkeypatch, exc, incertain):
     """Connexion jamais établie ⇒ rien n'est parti. Coupure ensuite ⇒ on ne sait pas."""
     monkeypatch.setattr(W.httpx, "Client", lambda **kw: _ClientFactice(_leve(exc)))
@@ -264,9 +284,8 @@ def test_classification_des_reponses_du_bridge(monkeypatch, code, incertain):
         W._poster_au_bridge("http://b/send", {}, {})
 
 
-
-
 # ── La purge ne doit pas manger le verrou ─────────────────────────────────────
+
 
 def test_la_purge_epargne_le_verrou_du_jour(planifie):
     """Six publications dans la soirée évinçaient le log qui bloquait le rejeu.
@@ -277,26 +296,37 @@ def test_la_purge_epargne_le_verrou_du_jour(planifie):
     maintenant = _HorlogeFigee.utcnow()
     with Session(engine) as session:
         sched = session.exec(select(WhatsAppScheduled)).one()
-        session.add(WhatsAppLog(
-            scheduled_id=sched.id, label=sched.label, message="planifié",
-            statut=W.STATUT_ENVOYE, envoye_le=maintenant,
-        ))
+        session.add(
+            WhatsAppLog(
+                scheduled_id=sched.id,
+                label=sched.label,
+                message="planifié",
+                statut=W.STATUT_ENVOYE,
+                envoye_le=maintenant,
+            )
+        )
         #  Huit publications postérieures : le verrou sort largement des 6 derniers.
         for i in range(8):
-            session.add(WhatsAppLog(
-                label=f"Publication {i}", message="…", statut=W.STATUT_ENVOYE,
-                envoye_le=maintenant + timedelta(minutes=i + 1),
-            ))
+            session.add(
+                WhatsAppLog(
+                    label=f"Publication {i}",
+                    message="…",
+                    statut=W.STATUT_ENVOYE,
+                    envoye_le=maintenant + timedelta(minutes=i + 1),
+                )
+            )
         session.commit()
         S._prune_logs(session)
 
     with Session(engine) as session:
         restants = session.exec(select(WhatsAppLog)).all()
-    assert any(l.scheduled_id is not None for l in restants), \
+    assert any(l.scheduled_id is not None for l in restants), (
         "le verrou du message planifié a été purgé — le rejeu peut recommencer"
+    )
 
 
 # ── La borne du jour ──────────────────────────────────────────────────────────
+
 
 def test_la_borne_du_jour_est_en_utc():
     """`envoye_le` est écrit en UTC : la borne de déduplication doit l'être aussi.

@@ -33,6 +33,7 @@ la chaîne. C'est `standards/04` §14 — observer la chose, pas son enregistrem
 `test_calendrier_lot.py` : ce qu'on vérifie est ce que l'objet rendu contient,
 pas un code HTTP.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -59,7 +60,9 @@ def auteur():
     with Session(engine) as session:
         u = Utilisateur(
             email=f"arch-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x", prenom="Alix", nom="Renard",
+            mot_de_passe_hash="x",
+            prenom="Alix",
+            nom="Renard",
             role=RoleUtilisateur.conseil_syndical,
         )
         session.add(u)
@@ -79,19 +82,28 @@ def test_une_idee_decidee_il_y_a_longtemps_ressort_archivee(auteur):
     """🔴 Le cas que l'écran ne pouvait pas départager d'une absence de données."""
     with Session(engine) as session:
         vieille = Idee(
-            titre="Composteur collectif", description="…", auteur_id=auteur.id,
-            statut="retenue", statut_change_le=datetime.utcnow() - VIEUX,
+            titre="Composteur collectif",
+            description="…",
+            auteur_id=auteur.id,
+            statut="retenue",
+            statut_change_le=datetime.utcnow() - VIEUX,
         )
         recente = Idee(
-            titre="Local à vélos", description="…", auteur_id=auteur.id,
-            statut="retenue", statut_change_le=datetime.utcnow(),
+            titre="Local à vélos",
+            description="…",
+            auteur_id=auteur.id,
+            statut="retenue",
+            statut_change_le=datetime.utcnow(),
         )
         #  Une idée OUVERTE ne s'archive pas, quelle que soit son ancienneté : elle
         #  n'a pas de décision à dater. C'est ce qui distingue « rien à archiver »
         #  de « le drapeau ne sort pas ».
         ouverte = Idee(
-            titre="Repas de quartier", description="…", auteur_id=auteur.id,
-            statut="ouverte", cree_le=datetime.utcnow() - VIEUX,
+            titre="Repas de quartier",
+            description="…",
+            auteur_id=auteur.id,
+            statut="ouverte",
+            cree_le=datetime.utcnow() - VIEUX,
         )
         session.add_all([vieille, recente, ouverte])
         session.commit()
@@ -121,11 +133,13 @@ def test_un_sondage_clos_il_y_a_longtemps_ressort_archive(auteur):
     """Même chaîne, sur l'autre objet dont l'écran ne montrait rien."""
     with Session(engine) as session:
         vieux = Sondage(
-            question="Couleur du hall ?", auteur_id=auteur.id,
+            question="Couleur du hall ?",
+            auteur_id=auteur.id,
             cloture_le=datetime.utcnow() - VIEUX,
         )
         recent = Sondage(
-            question="Horaires du local ?", auteur_id=auteur.id,
+            question="Horaires du local ?",
+            auteur_id=auteur.id,
             cloture_le=datetime.utcnow(),
         )
         #  Sans date de clôture, on ne sait pas dater : on n'archive pas.
@@ -136,7 +150,9 @@ def test_un_sondage_clos_il_y_a_longtemps_ressort_archive(auteur):
             session.refresh(o)
         ids = {vieux.id, recent.id, sans_date.id}
         try:
-            rendus = {s.id: s for s in _sans_bruit(list_sondages(session=session, user=auteur), ids)}
+            rendus = {
+                s.id: s for s in _sans_bruit(list_sondages(session=session, user=auteur), ids)
+            }
             assert set(rendus) == ids, "les trois sondages doivent être rendus"
             assert rendus[vieux.id].archivee is True, (
                 "un sondage clos il y a plus d'un an doit ressortir ARCHIVÉ"

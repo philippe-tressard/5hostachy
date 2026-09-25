@@ -62,7 +62,9 @@ def test_les_references_sont_lues_dans_les_metadonnees_pas_recitees():
     qu'il est du bon ORDRE DE GRANDEUR : une liste de onze, c'était le défaut.
     """
     refs = references_entrantes("utilisateur")
-    assert len(refs) > 40, f"seulement {len(refs)} références lues — la lecture des métadonnées est cassée"
+    assert len(refs) > 40, (
+        f"seulement {len(refs)} références lues — la lecture des métadonnées est cassée"
+    )
     obligatoires = [r for r in refs if r[2]]
     assert len(obligatoires) > 30
     #  La table qui a révélé le défaut doit en faire partie.
@@ -79,9 +81,7 @@ def test_supprimer_un_compte_emporte_son_contenu_et_ne_laisse_aucun_orphelin(bas
     base_stricte.add(auteur)
     base_stricte.commit()
     base_stricte.refresh(auteur)
-    base_stricte.add(
-        Publication(titre="Une actualité", contenu="…", auteur_id=auteur.id)
-    )
+    base_stricte.add(Publication(titre="Une actualité", contenu="…", auteur_id=auteur.id))
     base_stricte.commit()
 
     comptes = purger(base_stricte, "utilisateur", auteur.id)

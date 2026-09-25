@@ -36,6 +36,7 @@ se *ressemblent* — il vérifie qu'il n'existe **pas d'autre** point d'assembla
 C'est la mesure la plus forte des deux : deux formes ne peuvent pas diverger si
 un seul endroit les produit.
 """
+
 from __future__ import annotations
 
 import ast

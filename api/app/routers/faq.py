@@ -1,4 +1,5 @@
 """Router FAQ — lecture publique, CRUD réservé CS/Admin."""
+
 from datetime import datetime
 from typing import Optional
 
@@ -16,6 +17,7 @@ router = APIRouter(prefix="/faq", tags=["faq"])
 
 
 # ── Schémas ────────────────────────────────────────────────────────────────
+
 
 class FaqItemCreate(BaseModel):
     categorie: str
@@ -58,6 +60,7 @@ class FaqItemRead(BaseModel):
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
+
 @router.get("", response_model=list[FaqItemRead])
 def list_faq(
     session: Session = Depends(get_session),
@@ -66,7 +69,7 @@ def list_faq(
     """Retourne toutes les entrées FAQ actives, triées par catégorie puis ordre."""
     return session.exec(
         select(FaqItem)
-        .where(FaqItem.actif == True)
+        .where(FaqItem.actif == True)  # noqa: E712
         .order_by(FaqItem.categorie, FaqItem.ordre, FaqItem.id)
     ).all()
 
@@ -79,7 +82,7 @@ def list_categories(
     """Retourne la liste des catégories distinctes existantes."""
     rows = session.exec(
         select(distinct(FaqItem.categorie))
-        .where(FaqItem.categorie != None, FaqItem.categorie != "")
+        .where(FaqItem.categorie != None, FaqItem.categorie != "")  # noqa: E711
         .order_by(FaqItem.categorie)
     ).all()
     return [r for r in rows if r]
@@ -94,9 +97,7 @@ def rename_category(
     """Renomme une catégorie sur toutes les entrées FAQ correspondantes."""
     if not body.new_name.strip():
         raise HTTPException(400, "Le nouveau nom de catégorie ne peut pas être vide")
-    items = session.exec(
-        select(FaqItem).where(FaqItem.categorie == body.old_name)
-    ).all()
+    items = session.exec(select(FaqItem).where(FaqItem.categorie == body.old_name)).all()
     if not items:
         raise HTTPException(404, "Catégorie introuvable")
     for item in items:

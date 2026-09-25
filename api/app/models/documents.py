@@ -15,6 +15,7 @@ par un contrôle à trois couches.
 l'importe. Les clés étrangères sont déclarées par CHAÎNE (`foreign_key="ticket.id"`),
 ce qui n'exige aucun import — c'est ce qui rend le découpage possible sans cycle.
 """
+
 from datetime import date, datetime
 from typing import List, Optional
 
@@ -24,6 +25,7 @@ from sqlmodel import Field, Relationship, SQLModel
 # ──────────────────────────────────────────────
 #  Documents
 # ──────────────────────────────────────────────
+
 
 class ProfilAccesDocument(SQLModel, table=True):
     __tablename__ = "profil_acces_document"
@@ -68,7 +70,9 @@ class Document(SQLModel, table=True):
     #  tables d'évolution en ont chacune un —, jamais à l'évolution elle-même.
     ticket_id: Optional[int] = Field(default=None, foreign_key="ticket.id")
     evenement_id: Optional[int] = Field(default=None, foreign_key="evenement.id")
-    profil_acces_override_id: Optional[int] = Field(default=None, foreign_key="profil_acces_document.id")
+    profil_acces_override_id: Optional[int] = Field(
+        default=None, foreign_key="profil_acces_document.id"
+    )
     perimetre: str = "résidence"
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")

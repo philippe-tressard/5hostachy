@@ -745,7 +745,7 @@
 	{/if}
 {:else if onglet === 'utilisateurs'}
 	{#if utilisateursLoading}
-		<p class="muted">Chargement...</p>
+		<EtatListe chargement />
 	{:else}
 		<!-- Barre de recherche + filtres + compteurs -->
 		<div class="users-toolbar">

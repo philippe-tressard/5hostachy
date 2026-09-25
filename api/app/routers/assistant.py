@@ -9,6 +9,7 @@ serveur refuse aux autres, ce que l'interface masque n'étant qu'un confort
 ⚠️ La synthèse de contrat, elle, garde sa route dans `prestataires.py` : elle
 part d'un contrat en base, celle-ci part d'un texte en cours de saisie.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -59,8 +60,11 @@ def assistant_disponible(
     return {"description": disponible(session)}
 
 
-@router.post("/description", response_model=PropositionDescription,
-             summary="Retravailler un titre et une description (CS/Admin)")
+@router.post(
+    "/description",
+    response_model=PropositionDescription,
+    summary="Retravailler un titre et une description (CS/Admin)",
+)
 async def proposer_description(
     body: DemandeDescription,
     session: Session = Depends(get_session),

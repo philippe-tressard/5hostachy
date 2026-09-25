@@ -9,6 +9,7 @@ contenu de la copropriété, seulement la description des écrans.
 ⚠️ Le PDF ne réécrit rien : il met en page le manuel **tel qu'il est servi**.
 Voir `utils/manuel_pdf` pour le pourquoi.
 """
+
 from __future__ import annotations
 
 from datetime import date

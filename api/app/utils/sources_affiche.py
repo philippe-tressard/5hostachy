@@ -47,6 +47,7 @@ publierait au mur ce que l'autre refuse.
 sélecteur : une liste qui montre ce qu'on ne doit pas reprendre invite à le
 reprendre, et le premier qui contournera l'écran passera par l'API.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -99,8 +100,9 @@ class SourceAffiche:
         return f"{self.type}:{self.id}"
 
 
-def sources_disponibles(session: Session, *, maintenant: Optional[datetime] = None
-                        ) -> list[SourceAffiche]:
+def sources_disponibles(
+    session: Session, *, maintenant: Optional[datetime] = None
+) -> list[SourceAffiche]:
     """Tout ce que le fil montre aujourd'hui et qu'on peut reprendre au hall.
 
     Trié comme le fil : les épinglés d'abord, puis du plus récent au plus ancien.
@@ -115,12 +117,20 @@ def sources_disponibles(session: Session, *, maintenant: Optional[datetime] = No
     #  que de la refaire — deux copies divergeraient sur le cas limite.
     seuil = seuil_archivage_jours(session)
     for tk in session.exec(select(Ticket).where(Ticket.cree_le >= depuis)).all():
-        if hors_du_hall(tk) or est_archivable("ticket", tk, seuil_jours=seuil, maintenant=maintenant):
+        if hors_du_hall(tk) or est_archivable(
+            "ticket", tk, seuil_jours=seuil, maintenant=maintenant
+        ):
             continue
-        sources.append(SourceAffiche(
-            "ticket", tk.id, tk.titre, tk.cree_le, bool(tk.epingle),
-            libelle=libelle_categorie(tk.categorie) if est_actualite(tk) else "",
-        ))
+        sources.append(
+            SourceAffiche(
+                "ticket",
+                tk.id,
+                tk.titre,
+                tk.cree_le,
+                bool(tk.epingle),
+                libelle=libelle_categorie(tk.categorie) if est_actualite(tk) else "",
+            )
+        )
 
     sources.sort(key=lambda s: (not s.epingle, -s.date.timestamp()))
     return sources

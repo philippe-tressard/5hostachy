@@ -19,6 +19,7 @@ from app.models.core import (
     SyndicInfo,
     Utilisateur,
 )
+
 #  Importé sous un autre nom : plusieurs de ces fonctions affectent une variable
 #  LOCALE `site_manager_user_id`, et l'import serait alors masqué. C'est la raison
 #  d'être de l'ancien alias `_get_site_manager_user_id`, supprimé au découpage.
@@ -30,6 +31,7 @@ from html import escape
 from typing import Optional
 from app.utils.noms import nom_affiche
 from app.utils.annonce_arrivee import creer_annonce_arrivee
+
 #  Les trois gestes de l'accueil vivent côte à côte : le ticket de suivi,
 #  l'annonce aux voisins, et le message d'arrivée avec ses consignes.
 from app.utils.courriel_arrivee import FICHE_CONSIGNES, destinataires_arrivee
@@ -39,7 +41,6 @@ from app.utils.recuperer import ou_404
 from app.utils.cloche import sonner_systeme
 
 router = APIRouter()
-
 
 
 class AccueilArrivantBody(BaseModel):
@@ -75,7 +76,9 @@ def _declencher_accueil_arrivant(
             )
         ).first()
         if deja_declenche:
-            raise HTTPException(409, "La démarche Nouvel Arrivant a déjà été déclarée pour ce compte")
+            raise HTTPException(
+                409, "La démarche Nouvel Arrivant a déjà été déclarée pour ce compte"
+            )
 
     nom_complet = nom_affiche(user.prenom, user.nom)
     bat = body.batiment or ""
@@ -98,13 +101,15 @@ def _declencher_accueil_arrivant(
     cs_query = select(MembreCS).where(MembreCS.user_id != None)  # noqa: E711
     site_manager_user_id = _site_manager_user_id(session)
     if user.batiment_id:
-        cs_filters = (MembreCS.batiment_id == user.batiment_id)
+        cs_filters = MembreCS.batiment_id == user.batiment_id
         if site_manager_user_id is not None:
             cs_filters = cs_filters | (MembreCS.user_id == site_manager_user_id)
         cs_members = session.exec(cs_query.where(cs_filters)).all()
     else:
         if site_manager_user_id is not None:
-            cs_members = session.exec(cs_query.where(MembreCS.user_id == site_manager_user_id)).all()
+            cs_members = session.exec(
+                cs_query.where(MembreCS.user_id == site_manager_user_id)
+            ).all()
         else:
             cs_members = []
     # Dédoublonner par user_id
@@ -131,14 +136,13 @@ def _declencher_accueil_arrivant(
         # Les puces arrivent préfixées « • » (format texte) — on les retire au
         # profit d'un vrai <ul>.
         items = "".join(f"<li>{escape(d.lstrip('• ').strip())}</li>" for d in demarches)
-        demarches_html = (
-            "<p><strong>Démarches initiées en votre nom</strong></p>"
-            f"<ul>{items}</ul>"
-        )
+        demarches_html = f"<p><strong>Démarches initiées en votre nom</strong></p><ul>{items}</ul>"
 
     FICHE_URL = FICHE_CONSIGNES
 
-    sonner_systeme(session, "compte",
+    sonner_systeme(
+        session,
+        "compte",
         destinataire_id=user.id,
         type="system",
         titre="Bienvenue dans la résidence !",
@@ -151,8 +155,7 @@ def _declencher_accueil_arrivant(
             "Règlement intérieur, consignes de tri, modalités d'accès, "
             "stationnement et contacts utiles sont réunis dans votre fiche "
             f'd\'accueil : <a href="{FICHE_URL}" target="_blank" rel="noopener">'
-            "consulter les consignes de la copropriété</a>.</p>"
-            + demarches_html
+            "consulter les consignes de la copropriété</a>.</p>" + demarches_html
         ),
         lien=FICHE_URL,
     )
@@ -160,7 +163,9 @@ def _declencher_accueil_arrivant(
 
     # ── B. Notification interphone → CS du bâtiment + gestionnaire du site ─────
     for mc in cs_unique:
-        sonner_systeme(session, "tache_du_conseil",
+        sonner_systeme(
+            session,
+            "tache_du_conseil",
             destinataire_id=mc.user_id,
             type="system",
             titre="Accueil — Demande d'ajout sur l'interphone",
@@ -179,7 +184,8 @@ def _declencher_accueil_arrivant(
     #  ⚠️ Les membres passés ici sont ceux que la section B vient de notifier :
     #  le courriel ne doit atteindre personne d'autre.
     destinataires = destinataires_arrivee(
-        session, user,
+        session,
+        user,
         syndic_principal=syndic_principal,
         membres_cs_notifies={mc.user_id for mc in cs_unique},
     )
@@ -187,8 +193,12 @@ def _declencher_accueil_arrivant(
     #  consignes sont parties au résident ET au conseil, la diffusion ferait un
     #  second message disant la même chose, le même jour, aux mêmes personnes.
     consignes_transmises = envoyer_message_arrivee(
-        session, background_tasks, destinataires,
-        nom_complet=nom_complet, batiment=bat, ancien_resident=ancien,
+        session,
+        background_tasks,
+        destinataires,
+        nom_complet=nom_complet,
+        batiment=bat,
+        ancien_resident=ancien,
     )
 
     # ── D. LE TICKET DE SUIVI ────────────────────────────────────────────────
@@ -223,9 +233,7 @@ def _declencher_accueil_arrivant(
     #  depuis un compte dont l'e-mail, le téléphone et le nom du propriétaire
     #  sont remplis de valeurs reconnaissables. Une intention ne survit pas au
     #  premier enrichissement du gabarit ; un contrôle, oui.
-    annonce = creer_annonce_arrivee(
-        session, user, nom_complet=nom_complet, ancien=ancien
-    )
+    annonce = creer_annonce_arrivee(session, user, nom_complet=nom_complet, ancien=ancien)
 
     # ── Persister le choix en base ───────────────────────────────────────────
     user.demarche_arrivant = "nouvel_arrivant"
@@ -243,6 +251,7 @@ def _declencher_accueil_arrivant(
         #  c'est ce fait, et lui seul, qui a coupé la diffusion du ticket.
         "consignes_transmises": consignes_transmises,
     }
+
 
 @router.post("/utilisateurs/{user_id}/accueil-arrivant")
 def accueil_arrivant(
@@ -267,10 +276,14 @@ def accueil_arrivant_me(
     """Self-service : l'utilisateur déclare lui-même son arrivée dans la résidence."""
     ancien = (body.ancien_resident or "").strip()
     if not ancien and not body.ancien_resident_inconnu:
-        raise HTTPException(422, "Le nom de l'ancien résident est requis (ou cochez 'Je ne sais pas').")
+        raise HTTPException(
+            422, "Le nom de l'ancien résident est requis (ou cochez 'Je ne sais pas')."
+        )
     if body.ancien_resident_inconnu:
         body.ancien_resident = "Ne sait pas"
     return _declencher_accueil_arrivant(user, body, background_tasks, session, allow_repeat=False)
+
+
 # ── Gestion manuelle des baux locatifs ────────────────────────────────────────
 
 #  🔴 DEUX ENDPOINTS RETIRÉS LE 13/09/2026, SUR OBSERVATION (#808).
@@ -295,6 +308,7 @@ def accueil_arrivant_me(
 
 
 # ── Fiche arrivant (génération dynamique) ────────────────────────────────────
+
 
 @router.get("/fiche-arrivant")
 def get_fiche_arrivant(

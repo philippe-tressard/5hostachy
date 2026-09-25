@@ -7,13 +7,16 @@ règle d'autorisation écrite deux fois se durcit une fois sur deux, et ce dép�
 déjà payé ce prix avec `_require_bailleur` (17 endpoints sur un doublon posé hors
 du module central).
 """
+
 from datetime import date, datetime
 from typing import List, Optional
 
 from pydantic import BaseModel
 
 from app.models.core import (
-    StatutBail, StatutObjet, TypeObjet,
+    StatutBail,
+    StatutObjet,
+    TypeObjet,
 )
 
 
@@ -27,6 +30,7 @@ from app.models.core import (
 
 
 # ── Schemas in / out ─────────────────────────────────────────────────────────
+
 
 class ObjetOut(BaseModel):
     id: int
@@ -76,6 +80,7 @@ class BailOut(BaseModel):
 
 class BailCreateMulti(BaseModel):
     """Création d'un bail sur plusieurs lots simultanément (un LocationBail par lot)."""
+
     lot_ids: List[int]
     locataire_id: Optional[int] = None
     locataire_nom: Optional[str] = None

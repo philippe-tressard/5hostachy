@@ -8,6 +8,7 @@ additionne les routers, les URL publiques ne changent pas — le geste de
 Tout est réservé à l'administrateur, comme l'onglet. Rien de la clé ne sort :
 elle s'emploie côté serveur, et `config.py` la masque à la lecture (`_SECRETS`).
 """
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 

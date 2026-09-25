@@ -306,9 +306,25 @@ d'annonce). Le seuil de 6 est conservé avec sa justification d'origine ; le not
 moins que le fait qu'il soit **écrit une fois**.
 
 ⚠️ **Deux formes voisines sur une même barre ne sont pas une incohérence** : les
-annonces portent des pastilles (3 types) à côté d'un `<select>` (9 catégories).
+annonces portent des pastilles (3 types) à côté d'une liste (9 catégories).
 C'est la **cardinalité** qui choisit, pas l'écran — sinon la question se repose à
 chaque barre, et c'est ainsi qu'on a obtenu trois formes pour la même intention.
+
+🔴 **Mais au-delà du seuil, la liste a l'ALLURE d'une pastille** (24/09/2026,
+arbitré avec l'utilisateur) : `PastilleDeroulante.svelte`, jamais un `<select>`
+natif dans une barre de filtres. Le `<select>` d'origine — coins carrés, fond
+gris, autre police, autre hauteur — « dénotait à côté du filtre ». Le composant
+garde la liste NATIVE sous la pastille (roue du téléphone, clavier, lecteur
+d'écran) ; un **filtre** se remplit en bleu dès qu'il filtre, comme une pastille
+retenue ; un **tri** (prop `tri`) porte ⇅ et se cale à droite. `.filter-select`
+n'existe plus.
+
+⚠️ **Le tri est la seule exception au seuil** : trois valeurs, mais un ORDRE et
+non un filtre — trois pastilles de tri à côté des pastilles de type se liraient
+comme un seul filtre. Elle est **déclarée** par la prop `tri`, que
+`lint:seuil-listes` lit : le contrôle mesure aussi `<PastilleDeroulante
+options={CONSTANTE}>`, sans quoi il serait devenu aveugle le jour où le `{#each}`
+est parti dans le composant.
 
 ⚠️ **Le seuil décide d'une CONVERSION, il n'impose pas de revenir en arrière.**
 Les douze filtres d'équipement de `prestataires` restent des pastilles : ils
@@ -453,6 +469,11 @@ le **bouton** qui reste en haut, pas la boîte qu'il ouvre. Le bouton s'efface
 pendant la saisie (#367), le formulaire prend sa place dans le flux — après ce
 qui qualifie la liste.
 
+🔒 **Garde-fou depuis le 24/09/2026 : `npm run lint:filtre-avant-formulaire`.**
+La règle était écrite ici depuis douze jours, et la Boîte à idées comme les Petites
+annonces rendaient encore leur filtre SOUS la boîte ouverte (#1186) — signalé à
+l'écran, jamais en relecture, puisque l'écart n'existe que le formulaire ouvert.
+
 ## 1. Icônes de contexte
 
 | Icône | Signification | Usage |
@@ -461,6 +482,12 @@ qui qualifie la liste.
 | 🔹 | Périmètre logique (Parking, Bât.) | Badge `.badge-gray` ou `.badge-blue` |
 
 **Ne JAMAIS utiliser** 📍 pour un périmètre logique.
+
+🔒 **`npm run lint:pictogrammes`** (#1045, 24/09/2026) : 🔹 ne se rend que par
+`BadgePerimetre` ; une phrase qui nomme un périmètre (`LOSANGE`) et chaque vrai
+lieu 📍 (`LIEUX`) se déclarent dans le contrôle, avec leur nombre d'occurrences.
+Il a trouvé « 📍 Concerne votre bâtiment » (→ 🔹), « 📍 Dépannage » (→ 🔧) et un
+badge recopié dans l'historique des annonces de hall.
 
 ## 2. Affichage du périmètre
 
@@ -911,6 +938,8 @@ Pages implémentées : `tickets` (filtre de nature, 23/09/2026) — le calendrie
 | `.clamp-2` | un **titre** de carte | 18/08/2026 |
 
 Les trois vivent dans `styles/normes.css`, et nulle part ailleurs.
+🔒 `npm run lint:clamp` refuse une troncature écrite ailleurs, et `.clamp-5`
+dans un fichier qui rend une `.carte-liste`.
 
 ⚠️ `.clamp-3` **existait déjà**, écrit à la main dans `FluxCard` : le fil
 d'activité tronquait à trois lignes depuis toujours, et c'est lui qui a servi de
@@ -1680,7 +1709,8 @@ de l'utilisateur. *Une consigne fausse fait lire l'écart comme une décision.*
 ⚠️ **Vérifier que l'icône existe** dans `$lib/icones-svg.json` : `Icon` retombe
 **silencieusement** sur `help-circle` pour un nom inconnu. `message-square-plus`
 n'existe pas et aurait affiché un point d'interrogation sans qu'aucun contrôle ne
-le dise (constaté le 15/08/2026).
+le dise (constaté le 15/08/2026). Depuis le 24/09/2026, `npm run lint:icones` le
+dit : il a trouvé `database`, affiché en « ? » depuis v2.19.0 (#1045).
 
 **Garde-fou** : `npm run lint:entetes` (job `build-frontend`) refuse un
 `class="page-header"` écrit à la main, une redéfinition locale de `.page-header`,

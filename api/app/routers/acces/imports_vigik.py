@@ -8,6 +8,7 @@ Ce qui reste ici et **nulle part ailleurs** : la résolution du lot par
 `batiment_raw` + `appartement_raw`. Le fichier Vigik porte ces deux colonnes, le
 fichier des télécommandes ne les a pas.
 """
+
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlmodel import Session, select
 
@@ -51,6 +52,7 @@ async def upload_import_vigik_excel(
 ):
     """Upload un fichier Excel et importe les vigiks dans la table de staging."""
     from app.utils.import_vigiks import importer_depuis_bytes
+
     contenu = await file.read()
     #  🔴 Les trois règles AVANT de lire le classeur (#1026). Cet import
     #  n'avait AUCUN contrôle : ni type, ni taille — `await file.read()` lisait
@@ -107,8 +109,12 @@ def lots_a_choisir(
         if li.nom_coproprietaire:
             noms.setdefault(li.lot_id, li.nom_coproprietaire)
     return [
-        {"id": lot.id, "libelle": libelle_lot(lot), "type": valeur(lot.type),
-         "coproprietaire": noms.get(lot.id)}
+        {
+            "id": lot.id,
+            "libelle": libelle_lot(lot),
+            "type": valeur(lot.type),
+            "coproprietaire": noms.get(lot.id),
+        }
         for lot in session.exec(select(Lot)).all()
     ]
 

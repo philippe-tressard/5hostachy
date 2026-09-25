@@ -3,6 +3,7 @@
 Extrait de `sondages.py` le 17/08/2026 (cf. `__init__.py`). Porte son préfixe
 lui-même — `participation`, dont les chemins sont nus, le reçoit du paquet.
 """
+
 import json
 from datetime import datetime
 
@@ -13,8 +14,11 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, peut_editer, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    CommentaireSondage, OptionSondage, Sondage,
-    Utilisateur, VoteSondage,
+    CommentaireSondage,
+    OptionSondage,
+    Sondage,
+    Utilisateur,
+    VoteSondage,
 )
 from app.schemas import liste_depuis_json
 from app.utils.archivage import est_archivable, seuil_archivage_jours
@@ -23,7 +27,9 @@ from app.utils.visibility import resultats_sondage_visibles, sondage_accessible,
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
 from .commun import (
-    SondageCreate, SondageRead, SondageUpdate,
+    SondageCreate,
+    SondageRead,
+    SondageUpdate,
 )
 from app.utils.communaute import exiger_acces
 from app.utils.liens import base_site, nom_site, lien_sondage
@@ -106,16 +112,19 @@ def get_sondage(
 
     options_out = []
     for opt in sorted(options_db, key=lambda o: o.ordre):
-        option = {"id": opt.id, "libelle": opt.libelle, "ordre": opt.ordre,
-                  "champ_libre": opt.champ_libre}
+        option = {
+            "id": opt.id,
+            "libelle": opt.libelle,
+            "ordre": opt.ordre,
+            "champ_libre": opt.champ_libre,
+        }
         if resultats_visibles:
             votes_opt = session.exec(
                 select(VoteSondage).where(VoteSondage.option_id == opt.id)
             ).all()
             option["nb_votes"] = len(votes_opt)
             option["reponses_libres"] = [
-                v.reponse_libre for v in votes_opt
-                if v.reponse_libre and v.reponse_libre.strip()
+                v.reponse_libre for v in votes_opt if v.reponse_libre and v.reponse_libre.strip()
             ]
         #  Clés ABSENTES et non mises à zéro quand les résultats sont masqués :
         #  « 0 vote » se lirait comme « personne n'a voté », ce qui est une autre
@@ -130,16 +139,23 @@ def get_sondage(
     commentaires_out = tri_reponses([enrich_reponse(c, session) for c in commentaires_db])
 
     return {
-        "id": s.id, "question": s.question, "description": s.description,
-        "cloture_le": s.cloture_le, "resultats_publics": s.resultats_publics,
-        "auteur_id": s.auteur_id, "cree_le": s.cree_le,
+        "id": s.id,
+        "question": s.question,
+        "description": s.description,
+        "cloture_le": s.cloture_le,
+        "resultats_publics": s.resultats_publics,
+        "auteur_id": s.auteur_id,
+        "cree_le": s.cree_le,
         #  Cette réponse est construite à la main (pas de `response_model`) : la
         #  conversion JSON → liste ne se fait donc pas toute seule. Même règle
         #  que `ListeJson`, appelée et non recopiée.
         "perimetre_cible": liste_depuis_json(s.perimetre_cible),
         "public_cible": liste_depuis_json(s.public_cible),
-        "options": options_out, "mon_vote": mon_vote.option_id if mon_vote else None,
-        "cloture": cloture, "cloture_forcee": s.cloture_forcee, "commentaires": commentaires_out,
+        "options": options_out,
+        "mon_vote": mon_vote.option_id if mon_vote else None,
+        "cloture": cloture,
+        "cloture_forcee": s.cloture_forcee,
+        "commentaires": commentaires_out,
         #  Source UNIQUE de la décision d'affichage. Le front recomposait la sienne
         #  à partir de `resultats_publics`, `cloture` et « ai-je voté » — et se
         #  contredisait d'une ligne à l'autre. Il ne la recompose plus : il ne peut
@@ -157,7 +173,9 @@ def create_sondage(
 ):
     #  Sérialisation JSON, comme les publications. `None` quand la liste est vide :
     #  un `"[]"` et un `None` répondraient à la même question de deux façons.
-    perimetre_json = json.dumps(body.perimetre_cible, ensure_ascii=False) if body.perimetre_cible else None
+    perimetre_json = (
+        json.dumps(body.perimetre_cible, ensure_ascii=False) if body.perimetre_cible else None
+    )
     public_json = json.dumps(body.public_cible, ensure_ascii=False) if body.public_cible else None
 
     s = Sondage(
@@ -183,12 +201,13 @@ def create_sondage(
     #  la main les deux filtres de ciblage — une seconde écriture de la règle
     #  d'accès, qui ne connaissait donc ni les périmètres transverses ni le CS.
     #  `sondage_accessible` est désormais la seule à en décider.
-    q = select(Utilisateur).where(Utilisateur.actif == True, Utilisateur.id != user.id)
+    q = select(Utilisateur).where(Utilisateur.actif == True, Utilisateur.id != user.id)  # noqa: E712
     residents = session.exec(q).all()
     for r in residents:
         if not sondage_accessible(s, r):
             continue
-        sonner(session,
+        sonner(
+            session,
             destinataire_id=r.id,
             type="sondage",
             titre=f"📊 Nouveau sondage : {s.question[:60]}",
@@ -207,7 +226,12 @@ def create_sondage(
             if whatsapp_actif(cfg_map):
                 background_tasks.add_task(
                     envoyer_whatsapp_avec_log,
-                    f"📊 Nouveau sondage : {s.question}", s.description or "", False, None, None, cfg_map,
+                    f"📊 Nouveau sondage : {s.question}",
+                    s.description or "",
+                    False,
+                    None,
+                    None,
+                    cfg_map,
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:
@@ -248,14 +272,18 @@ def create_sondage(
             }
             if destinataires:
                 background_tasks.add_task(
-                    send_email_group, code="publication_syndic",
-                    to_recipients=destinataires, context=ctx,
+                    send_email_group,
+                    code="publication_syndic",
+                    to_recipients=destinataires,
+                    context=ctx,
                     session=session,
                     #  La copie à l'auteur du sondage — règle commune dans
                     #  `app/utils/copie_auteur.py`. Elle n'existait pas ici,
                     #  alors que la case s'affichait sur cet écran.
                     bcc=copie_demandee(
-                        session, s.auteur_id, (e for _, e in destinataires),
+                        session,
+                        s.auteur_id,
+                        (e for _, e in destinataires),
                         demandee=bool(body.envoyer_auteur),
                     ),
                 )
@@ -283,9 +311,12 @@ def modifier_sondage(
 
     #  Y a-t-il DÉJÀ des votes ? Tout ce qui suit en dépend : avant le premier
     #  vote un sondage se corrige librement, après il engage des gens.
-    deja_vote = session.exec(
-        select(VoteSondage.id).where(VoteSondage.sondage_id == sondage_id).limit(1)
-    ).first() is not None
+    deja_vote = (
+        session.exec(
+            select(VoteSondage.id).where(VoteSondage.sondage_id == sondage_id).limit(1)
+        ).first()
+        is not None
+    )
 
     donnees = body.model_dump(exclude_unset=True)
     #  La marque « assistant IA » ne s'écrit que dans UN sens (`utils/assiste_ia`).
@@ -334,14 +365,19 @@ def modifier_sondage(
     session.add(s)
     session.commit()
     session.refresh(s)
-    return {"id": s.id, "question": s.question, "description": s.description,
-            "cloture_le": s.cloture_le, "resultats_publics": s.resultats_publics,
-            #  Les libellés corrigés, dans l'ordre d'affichage : l'écran relit ce
-            #  qu'il vient d'écrire sans redemander la fiche entière.
-            "options": [
-                {"id": o.id, "libelle": o.libelle, "ordre": o.ordre}
-                for o in sorted(s.options, key=lambda o: o.ordre)
-            ]}
+    return {
+        "id": s.id,
+        "question": s.question,
+        "description": s.description,
+        "cloture_le": s.cloture_le,
+        "resultats_publics": s.resultats_publics,
+        #  Les libellés corrigés, dans l'ordre d'affichage : l'écran relit ce
+        #  qu'il vient d'écrire sans redemander la fiche entière.
+        "options": [
+            {"id": o.id, "libelle": o.libelle, "ordre": o.ordre}
+            for o in sorted(s.options, key=lambda o: o.ordre)
+        ],
+    }
 
 
 @router.delete("/{sondage_id}", status_code=204)
@@ -356,11 +392,15 @@ def supprimer_sondage(
     if not peut_editer(s, user):
         raise HTTPException(403, "Seul l'auteur ou un admin peut supprimer ce sondage")
     # Suppression en cascade
-    for c in session.exec(select(CommentaireSondage).where(CommentaireSondage.sondage_id == sondage_id)).all():
+    for c in session.exec(
+        select(CommentaireSondage).where(CommentaireSondage.sondage_id == sondage_id)
+    ).all():
         session.delete(c)
     for v in session.exec(select(VoteSondage).where(VoteSondage.sondage_id == sondage_id)).all():
         session.delete(v)
-    for o in session.exec(select(OptionSondage).where(OptionSondage.sondage_id == sondage_id)).all():
+    for o in session.exec(
+        select(OptionSondage).where(OptionSondage.sondage_id == sondage_id)
+    ).all():
         session.delete(o)
     session.delete(s)
     session.commit()

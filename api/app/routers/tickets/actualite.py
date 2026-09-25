@@ -24,6 +24,7 @@ Suite), adaptée aux colonnes de l'affaire :
 ⚠️ Il n'en existe qu'UNE écriture : le code des publications est retiré dans le
 même lot.
 """
+
 from __future__ import annotations
 
 import json
@@ -55,6 +56,7 @@ logger = logging.getLogger("hostachy.actualite")
 #  les sources d'affiche les appellent aussi, et un utilitaire n'importe pas
 #  un routeur.
 
+
 def appliquer_acces(ticket: Ticket, session: Session) -> None:
     """Fait tenir, à chaque écriture, ce que l'Accès et la réserve promettent.
 
@@ -76,7 +78,8 @@ def appliquer_acces(ticket: Ticket, session: Session) -> None:
         return
     for annonce in session.exec(
         select(AnnonceHall).where(
-            AnnonceHall.ticket_id == ticket.id, AnnonceHall.archivee == False,  # noqa: E712
+            AnnonceHall.ticket_id == ticket.id,
+            AnnonceHall.archivee == False,  # noqa: E712
         )
     ).all():
         annonce.archivee = True
@@ -85,6 +88,7 @@ def appliquer_acces(ticket: Ticket, session: Session) -> None:
 
 # ── Le contexte des gabarits `publication_*` ────────────────────────────────
 
+
 def _historique(session: Session, ticket: Ticket, *, sauf_derniere: bool) -> list[dict]:
     """Les paroles du fil, pour l'encart « historique » des courriels.
 
@@ -92,7 +96,8 @@ def _historique(session: Session, ticket: Ticket, *, sauf_derniere: bool) -> lis
     pour l'adresse externe.
     """
     evols = [
-        e for e in session.exec(
+        e
+        for e in session.exec(
             select(TicketEvolution)
             .where(TicketEvolution.ticket_id == ticket.id)
             .order_by(TicketEvolution.cree_le)
@@ -105,11 +110,13 @@ def _historique(session: Session, ticket: Ticket, *, sauf_derniere: bool) -> lis
         if not e.contenu:
             continue
         auteur = session.get(Utilisateur, e.auteur_id)
-        lignes.append({
-            "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "?",
-            "date": _fmt_paris(e.cree_le),
-            "contenu": e.contenu,
-        })
+        lignes.append(
+            {
+                "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "?",
+                "date": _fmt_paris(e.cree_le),
+                "contenu": e.contenu,
+            }
+        )
     return lignes
 
 
@@ -127,8 +134,12 @@ def _pieces(session: Session, ticket: Ticket, fichiers_urls: Optional[list[str]]
 
 
 def contexte_actualite(
-    ticket: Ticket, user: Utilisateur, session: Session, *,
-    commentaire: Optional[str] = None, fichiers_urls: Optional[list[str]] = None,
+    ticket: Ticket,
+    user: Utilisateur,
+    session: Session,
+    *,
+    commentaire: Optional[str] = None,
+    fichiers_urls: Optional[list[str]] = None,
     pieces_de_l_affaire: bool = True,
 ) -> tuple[dict, list[str]]:
     """Le contexte des gabarits `publication_syndic` / `publication_externe`, et les pièces.
@@ -140,7 +151,8 @@ def contexte_actualite(
     cfg = config_site(session)
     est_commentaire = commentaire is not None
     pieces_jointes = (
-        _pieces(session, ticket, fichiers_urls) if pieces_de_l_affaire
+        _pieces(session, ticket, fichiers_urls)
+        if pieces_de_l_affaire
         else chemins_locaux(fichiers_urls or [])
     )
     ctx = {
@@ -157,7 +169,9 @@ def contexte_actualite(
         "commentaire": commentaire or "",
         "date_commentaire": _fmt_paris(datetime.utcnow()),
         "date_publication": _fmt_paris(ticket.cree_le),
-        "evolutions": _historique(session, ticket, sauf_derniere=est_commentaire) if ticket.id else [],
+        "evolutions": _historique(session, ticket, sauf_derniere=est_commentaire)
+        if ticket.id
+        else [],
         "fichiers": bool(pieces_jointes),
     }
     return ctx, pieces_jointes
@@ -165,9 +179,13 @@ def contexte_actualite(
 
 # ── La diffusion ────────────────────────────────────────────────────────────
 
+
 def _partager_sur_le_groupe(
-    session: Session, ticket: Ticket, background_tasks: BackgroundTasks,
-    *, commentaire: Optional[str] = None,
+    session: Session,
+    ticket: Ticket,
+    background_tasks: BackgroundTasks,
+    *,
+    commentaire: Optional[str] = None,
 ) -> None:
     from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
@@ -177,7 +195,11 @@ def _partager_sur_le_groupe(
     #  L'adresse du site lue dans la configuration du CANAL, comme le partage
     #  d'une affaire suivie (`courriels._partager_sur_le_groupe`).
     lien = base_site(config.get("site_url")) + lien_ticket(ticket.id)
-    titre, contenu, photo = ticket.titre, ticket.description or "", premiere_photo(ticket.photos_urls)
+    titre, contenu, photo = (
+        ticket.titre,
+        ticket.description or "",
+        premiere_photo(ticket.photos_urls),
+    )
     if commentaire is not None:
         #  Une Suite part seule : le fil qui la précède se lit dans l'application.
         precedents = len(_historique(session, ticket, sauf_derniere=True))
@@ -189,16 +211,29 @@ def _partager_sur_le_groupe(
             )
     background_tasks.add_task(
         envoyer_whatsapp_avec_log,
-        titre, contenu, ticket.priorite == "haute", ticket.perimetre_cible, photo, config,
-        ticket.public_cible, ticket.reserve_perimetre,
+        titre,
+        contenu,
+        ticket.priorite == "haute",
+        ticket.perimetre_cible,
+        photo,
+        config,
+        ticket.public_cible,
+        ticket.reserve_perimetre,
         lien=lien,
     )
 
 
 def _ecrire_au_syndic_et_au_cs(
-    session: Session, ticket: Ticket, user: Utilisateur, background_tasks: BackgroundTasks,
-    *, syndic: bool, cs: bool, auteur: bool,
-    commentaire: Optional[str], fichiers_urls: Optional[list[str]],
+    session: Session,
+    ticket: Ticket,
+    user: Utilisateur,
+    background_tasks: BackgroundTasks,
+    *,
+    syndic: bool,
+    cs: bool,
+    auteur: bool,
+    commentaire: Optional[str],
+    fichiers_urls: Optional[list[str]],
 ) -> None:
     from app.utils.copie_auteur import copie_demandee
     from app.utils.destinataires import destinataires_syndic_cs
@@ -208,7 +243,11 @@ def _ecrire_au_syndic_et_au_cs(
     if not destinataires:
         return
     ctx, pieces = contexte_actualite(
-        ticket, user, session, commentaire=commentaire, fichiers_urls=fichiers_urls,
+        ticket,
+        user,
+        session,
+        commentaire=commentaire,
+        fichiers_urls=fichiers_urls,
     )
     background_tasks.add_task(
         send_email_group,
@@ -224,13 +263,23 @@ def _ecrire_au_syndic_et_au_cs(
 
 
 def _ecrire_au_dehors(
-    session: Session, ticket: Ticket, user: Utilisateur, background_tasks: BackgroundTasks,
-    adresse: str, *, commentaire: Optional[str], fichiers_urls: Optional[list[str]],
+    session: Session,
+    ticket: Ticket,
+    user: Utilisateur,
+    background_tasks: BackgroundTasks,
+    adresse: str,
+    *,
+    commentaire: Optional[str],
+    fichiers_urls: Optional[list[str]],
 ) -> None:
     from app.utils.email import send_email
 
     ctx, pieces = contexte_actualite(
-        ticket, user, session, commentaire=commentaire, fichiers_urls=fichiers_urls,
+        ticket,
+        user,
+        session,
+        commentaire=commentaire,
+        fichiers_urls=fichiers_urls,
         pieces_de_l_affaire=False,
     )
     ctx["is_commentaire"] = commentaire is not None
@@ -245,7 +294,10 @@ def _ecrire_au_dehors(
 
 
 def generer_affiche(
-    session: Session, ticket: Ticket, user: Utilisateur, background_tasks: BackgroundTasks,
+    session: Session,
+    ticket: Ticket,
+    user: Utilisateur,
+    background_tasks: BackgroundTasks,
 ) -> None:
     """L'affiche de hall d'une actualité — une seule, et jamais pour un contenu refermé.
 
@@ -262,8 +314,11 @@ def generer_affiche(
         return
     try:
         creer_annonce_hall(
-            session=session, user=user, background_tasks=background_tasks,
-            titre=ticket.titre, message=ticket.description or "",
+            session=session,
+            user=user,
+            background_tasks=background_tasks,
+            titre=ticket.titre,
+            message=ticket.description or "",
             perimetre_cible=parse_json_perimetres(ticket.perimetre_cible),
             images=images_de(ticket, session),
             ticket_id=ticket.id,
@@ -273,11 +328,19 @@ def generer_affiche(
 
 
 def diffuser_actualite(
-    session: Session, ticket: Ticket, user: Utilisateur, background_tasks: BackgroundTasks,
+    session: Session,
+    ticket: Ticket,
+    user: Utilisateur,
+    background_tasks: BackgroundTasks,
     *,
-    whatsapp: bool = False, syndic: bool = False, cs: bool = False, auteur: bool = False,
-    externe: Optional[str] = None, affiche: bool = False,
-    commentaire: Optional[str] = None, fichiers_urls: Optional[list[str]] = None,
+    whatsapp: bool = False,
+    syndic: bool = False,
+    cs: bool = False,
+    auteur: bool = False,
+    externe: Optional[str] = None,
+    affiche: bool = False,
+    commentaire: Optional[str] = None,
+    fichiers_urls: Optional[list[str]] = None,
 ) -> None:
     """Fait partir ce que l'auteur a coché — rien du tout si l'actualité est réservée.
 
@@ -290,18 +353,33 @@ def diffuser_actualite(
         _partager_sur_le_groupe(session, ticket, background_tasks, commentaire=commentaire)
     if syndic or cs:
         _ecrire_au_syndic_et_au_cs(
-            session, ticket, user, background_tasks, syndic=syndic, cs=cs, auteur=auteur,
-            commentaire=commentaire, fichiers_urls=fichiers_urls,
+            session,
+            ticket,
+            user,
+            background_tasks,
+            syndic=syndic,
+            cs=cs,
+            auteur=auteur,
+            commentaire=commentaire,
+            fichiers_urls=fichiers_urls,
         )
     if externe and externe.strip():
         _ecrire_au_dehors(
-            session, ticket, user, background_tasks, externe.strip(),
-            commentaire=commentaire, fichiers_urls=fichiers_urls,
+            session,
+            ticket,
+            user,
+            background_tasks,
+            externe.strip(),
+            commentaire=commentaire,
+            fichiers_urls=fichiers_urls,
         )
     if affiche and commentaire is None:
         generer_affiche(session, ticket, user, background_tasks)
 
 
 __all__ = [
-    "appliquer_acces", "contexte_actualite", "diffuser_actualite", "generer_affiche",
+    "appliquer_acces",
+    "contexte_actualite",
+    "diffuser_actualite",
+    "generer_affiche",
 ]

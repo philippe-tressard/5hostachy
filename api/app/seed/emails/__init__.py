@@ -31,14 +31,15 @@ les modèles et fausse à chaque envoi.
 Les **corps** HTML, eux, écrivent librement « — réf. {{ reference_copro }} » :
 c'est une phrase, pas le préambule d'un objet.
 """
+
 from app.seed.emails.comptes import MODELES as _COMPTES
 from app.seed.emails.exploitation import MODELES as _EXPLOITATION
 from app.seed.emails.tickets import MODELES as _TICKETS
 from app.seed.emails.vie_collective import MODELES as _VIE_COLLECTIVE
 
-    # ── Styles inline mutualisés (CTA = Call-to-action button) ──
-    # Les templates sont encapsulés dans le gabarit email.py (_wrap_email)
-    # => pas besoin de <html>/<body>, juste le contenu riche.
+# ── Styles inline mutualisés (CTA = Call-to-action button) ──
+# Les templates sont encapsulés dans le gabarit email.py (_wrap_email)
+# => pas besoin de <html>/<body>, juste le contenu riche.
 EMAIL_TEMPLATES = [
     *_COMPTES,
     *_TICKETS,
@@ -108,8 +109,8 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
 # La décision suit l'INTENTION, qui est déjà déclarée pour chaque modèle : pas de
 # seconde table à tenir d'accord, et un modèle neuf hérite d'un choix explicite au
 # lieu d'un défaut silencieux.
-EXPEDITEUR_REPONSE = "reponse"   # contact@ — on peut nous répondre
-EXPEDITEUR_MUET = "muet"         # noreply@ — il n'y a rien à répondre
+EXPEDITEUR_REPONSE = "reponse"  # contact@ — on peut nous répondre
+EXPEDITEUR_MUET = "muet"  # noreply@ — il n'y a rien à répondre
 
 EXPEDITEUR_PAR_INTENTION: dict[str, str] = {
     #  On attend une réponse écrite : c'est le cas qui a motivé la consigne.

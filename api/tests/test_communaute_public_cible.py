@@ -35,6 +35,7 @@ C'est ce que portent toutes les annonces et idées déposées avant la migration
 0176. L'inverse les aurait fait disparaître d'un coup, sans message ni ligne de
 journal — la panne la plus difficile à diagnostiquer, parce que rien ne casse.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -127,12 +128,15 @@ def coproprietaire() -> Utilisateur:
 
 @pytest.fixture()
 def conseiller() -> Utilisateur:
-    u = _utilisateur(RoleUtilisateur.conseil_syndical, StatutUtilisateur.copropriétaire_résident, "Charlie")
+    u = _utilisateur(
+        RoleUtilisateur.conseil_syndical, StatutUtilisateur.copropriétaire_résident, "Charlie"
+    )
     yield u
     _supprimer(Utilisateur, u.id)
 
 
 # ── Petite annonce ────────────────────────────────────────────────────────────
+
 
 def test_annonce_ciblee_invisible_hors_public(locataire, coproprietaire):
     """Une annonce réservée aux copropriétaires n'apparaît pas au locataire."""
@@ -201,6 +205,7 @@ def test_annonce_ciblee_reste_visible_du_conseil(locataire, coproprietaire, cons
 
 
 # ── Idée ──────────────────────────────────────────────────────────────────────
+
 
 def test_idee_ciblee_invisible_hors_public(locataire, coproprietaire):
     with Session(engine) as session:

@@ -28,6 +28,7 @@ Régénérer la copie après avoir modifié la source :
 
     cp front/src/lib/icones-svg.json api/app/utils/icones-svg.json
 """
+
 from __future__ import annotations
 
 import json

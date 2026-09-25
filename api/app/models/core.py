@@ -2,6 +2,7 @@
 Modèles SQLModel — version 0.1
 Correspond au modèle de données défini dans specs/architecture/modele-donnees.md
 """
+
 from datetime import date, datetime
 from enum import Enum
 from typing import List, Optional
@@ -51,18 +52,17 @@ from app.models.evolution import EvolutionMixin
 
 
 class StatutDelegation(str, Enum):
-    en_attente = "en_attente"       # créée par le CS, en attente d'acceptation
-    active = "active"               # acceptée par l'aidant
-    revoquee = "revoquee"           # révoquée par le mandant ou le CS
-    expiree = "expiree"             # date de fin dépassée
-
+    en_attente = "en_attente"  # créée par le CS, en attente d'acceptation
+    active = "active"  # acceptée par l'aidant
+    revoquee = "revoquee"  # révoquée par le mandant ou le CS
+    expiree = "expiree"  # date de fin dépassée
 
 
 class TypeLien(str, Enum):
-    propriétaire = "propriétaire"   # copropriétaire résident (occupe le lot)
-    bailleur     = "bailleur"       # copropriétaire non-résident (loue le lot)
-    locataire    = "locataire"      # locataire d'un bailleur
-    mandataire   = "mandataire"     # mandataire de gestion (se substitue au bailleur)
+    propriétaire = "propriétaire"  # copropriétaire résident (occupe le lot)
+    bailleur = "bailleur"  # copropriétaire non-résident (loue le lot)
+    locataire = "locataire"  # locataire d'un bailleur
+    mandataire = "mandataire"  # mandataire de gestion (se substitue au bailleur)
 
 
 #  Le vocabulaire du ticket — états, catégories, priorités — vit dans
@@ -84,22 +84,23 @@ from app.models.tickets import (  # noqa: E402
 #  `models/prestataires.py` ; elles sont réimportées plus bas, avec eux.
 #  `StatutDevis` a suivi la prestation ponctuelle (#603) et n'existe plus.
 
+
 class FaqItem(SQLModel, table=True):
     __tablename__ = "faq_item"
     id: Optional[int] = Field(default=None, primary_key=True)
-    categorie: str          # ex. "🗑️ Tri des déchets"
+    categorie: str  # ex. "🗑️ Tri des déchets"
     question: str
     reponse: str
-    ordre: int = 0          # ordre d'affichage dans la catégorie
+    ordre: int = 0  # ordre d'affichage dans la catégorie
     actif: bool = True
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
 
 
-
 # ──────────────────────────────────────────────
 #  Utilisateurs
 # ──────────────────────────────────────────────
+
 
 class Utilisateur(SQLModel, table=True):
     __tablename__ = "utilisateur"
@@ -111,7 +112,9 @@ class Utilisateur(SQLModel, table=True):
     hashed_password: Optional[str] = None
     statut: StatutUtilisateur = StatutUtilisateur.copropriétaire_résident
     role: RoleUtilisateur = RoleUtilisateur.résident  # rôle principal (legacy + fallback)
-    roles_json: str = Field(default="")  # rôles cumulés, virgule-séparés : "résident,conseil_syndical"
+    roles_json: str = Field(
+        default=""
+    )  # rôles cumulés, virgule-séparés : "résident,conseil_syndical"
     actif: bool = Field(default=False)  # False = pas (ou plus) autorisé à se connecter
     #  Quand l'administration a TRANCHÉ sur ce compte — validation, refus ou
     #  désactivation. `actif == False` ne suffisait pas à dire « en attente » :
@@ -138,7 +141,9 @@ class Utilisateur(SQLModel, table=True):
     communaute_ban_jusqu_au: Optional[datetime] = Field(default=None)  # fin du ban temporaire
     #  Deux clés depuis le 14/08/2026 (#339) — `utils/preferences_mail.py` fait foi
     #  et réapplique ces défauts à la lecture, quel que soit l'état du champ.
-    preferences_notifications: str = Field(default='{"mon_batiment_mail": true, "autres_batiments_mail": false}')
+    preferences_notifications: str = Field(
+        default='{"mon_batiment_mail": true, "autres_batiments_mail": false}'
+    )
     #  Préférence d'AFFICHAGE, jamais un droit : ne voir que ses bâtiments (#339).
     #  Elle ne protège rien — la confidentialité reste portée par `public_cible`
     #  et les profils d'accès aux documents, que ce lot ne touche pas.
@@ -146,8 +151,8 @@ class Utilisateur(SQLModel, table=True):
     demarche_arrivant: Optional[str] = Field(default=None)  # nouvel_arrivant | deja_resident | None
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     nom_proprietaire: Optional[str] = None  # pour les locataires : nom du propriétaire bailleur
-    nom_aide: Optional[str] = None      # pour aidant/mandataire : nom du copropriétaire aidé
-    prenom_aide: Optional[str] = None   # pour aidant/mandataire : prénom du copropriétaire aidé
+    nom_aide: Optional[str] = None  # pour aidant/mandataire : nom du copropriétaire aidé
+    prenom_aide: Optional[str] = None  # pour aidant/mandataire : prénom du copropriétaire aidé
     last_seen_actualites: Optional[datetime] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     derniere_connexion: Optional[datetime] = None
@@ -173,8 +178,6 @@ class Utilisateur(SQLModel, table=True):
                 return True
         return False
 
-
-
     def ajouter_role(self, role: "RoleUtilisateur") -> None:
         """Ajoute un rôle sans doublon. Met aussi à jour `role` (rôle principal)."""
         rv = role.value if hasattr(role, "value") else str(role)
@@ -191,11 +194,11 @@ class Utilisateur(SQLModel, table=True):
         if not current:
             current = [RoleUtilisateur.résident.value]
         self.roles_json = ",".join(current)
-        self.role = (
-            role_principal(current, defaut=RoleUtilisateur.résident.value)
-            or self.role
-        )
-    tickets: List["Ticket"] = Relationship(back_populates="auteur", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"})
+        self.role = role_principal(current, defaut=RoleUtilisateur.résident.value) or self.role
+
+    tickets: List["Ticket"] = Relationship(
+        back_populates="auteur", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"}
+    )
     publications: List["Publication"] = Relationship(back_populates="auteur")
 
 
@@ -242,6 +245,7 @@ from app.models.validations import (  # noqa: E402,F401
 #  Tickets
 # ──────────────────────────────────────────────
 
+
 class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     __tablename__ = "ticket"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -259,7 +263,9 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     auteur_id: int = Field(foreign_key="utilisateur.id")
     lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave
+    perimetre_cible: Optional[str] = Field(
+        default='["résidence"]'
+    )  # JSON: résidence|bat:{id}|parking|cave
     photos_urls: Optional[str] = None  # JSON array of photo URLs
     # Pièces jointes non-images (PDF, bureautique). Même convention que
     # TicketEvolution.fichiers_urls : un seul nom pour la notion « fichier joint ».
@@ -294,8 +300,12 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     reserve_perimetre: bool = False
     archive_manuel: bool = False
 
-    auteur: Optional[Utilisateur] = Relationship(back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"})
-    saisi_pour: Optional[Utilisateur] = Relationship(sa_relationship_kwargs={"foreign_keys": "[Ticket.saisi_pour_user_id]"})
+    auteur: Optional[Utilisateur] = Relationship(
+        back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"}
+    )
+    saisi_pour: Optional[Utilisateur] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[Ticket.saisi_pour_user_id]"}
+    )
     lot: Optional[Lot] = Relationship(back_populates="tickets")
     messages: List["MessageTicket"] = Relationship(back_populates="ticket")
     evolutions: List["TicketEvolution"] = Relationship(back_populates="ticket")
@@ -335,6 +345,7 @@ class TicketEvolution(EvolutionMixin, table=True):
 #  Publications / Actualités
 # ──────────────────────────────────────────────
 
+
 class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     __tablename__ = "publication"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -356,8 +367,12 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     fin: Optional[datetime] = None
     mis_a_jour_le: Optional[datetime] = None
     photos_urls: Optional[str] = None  # JSON array — même convention que Ticket/Evenement
-    perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave|résidents
-    public_cible: Optional[str] = Field(default='["résidents"]')     # JSON: résidents|locataires|copropriétaires
+    perimetre_cible: Optional[str] = Field(
+        default='["résidence"]'
+    )  # JSON: résidence|bat:{id}|parking|cave|résidents
+    public_cible: Optional[str] = Field(
+        default='["résidents"]'
+    )  # JSON: résidents|locataires|copropriétaires
     # statut : publie (défaut, hors workflow) | en_cours | resolu | annule
     statut: Optional[str] = "publie"
     statut_change_le: Optional[datetime] = None
@@ -404,16 +419,17 @@ class RegleResidence(SQLModel, table=True):
 #  Délégations aidant
 # ──────────────────────────────────────────────
 
+
 class Delegation(SQLModel, table=True):
     __tablename__ = "delegation"
     id: Optional[int] = Field(default=None, primary_key=True)
-    mandant_id: int = Field(foreign_key="utilisateur.id")      # la personne aidée
-    aidant_id: int = Field(foreign_key="utilisateur.id")        # le proche aidant
+    mandant_id: int = Field(foreign_key="utilisateur.id")  # la personne aidée
+    aidant_id: int = Field(foreign_key="utilisateur.id")  # le proche aidant
     statut: StatutDelegation = StatutDelegation.en_attente
-    motif: str = ""                                              # raison de la délégation
+    motif: str = ""  # raison de la délégation
     date_debut: date = Field(default_factory=date.today)
-    date_fin: Optional[date] = None                              # null = pas de limite
-    cree_par_id: int = Field(foreign_key="utilisateur.id")       # CS/admin qui a créé
+    date_fin: Optional[date] = None  # null = pas de limite
+    cree_par_id: int = Field(foreign_key="utilisateur.id")  # CS/admin qui a créé
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     revoque_le: Optional[datetime] = None
     revoque_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
@@ -457,6 +473,7 @@ from app.models.compteurs import (  # noqa: E402,F401
 #  Templates email
 # ──────────────────────────────────────────────
 
+
 class Notification(SQLModel, table=True):
     __tablename__ = "notification"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -479,28 +496,30 @@ class Notification(SQLModel, table=True):
 #  Import lots (staging depuis Excel)
 # ──────────────────────────────────────────────
 
+
 class StatutLotImport(str, Enum):
-    en_attente      = "en_attente"       # importé, rien de lié
+    en_attente = "en_attente"  # importé, rien de lié
     utilisateur_lie = "utilisateur_lie"  # occupant(s) identifié(s), lot pas encore trouvé
-    lot_lie         = "lot_lie"          # lot_id trouvé/confirmé en base
-    resolu          = "resolu"           # UserLot créé (lot + occupants confirmés)
-    ignore          = "ignore"
+    lot_lie = "lot_lie"  # lot_id trouvé/confirmé en base
+    resolu = "resolu"  # UserLot créé (lot + occupants confirmés)
+    ignore = "ignore"
 
 
 class LotImport(SQLModel, table=True):
     """Staging des lots importés depuis l'Excel,
     en attente de liaison avec les utilisateurs de l'application."""
+
     __tablename__ = "lot_import"
 
     id: Optional[int] = Field(default=None, primary_key=True)
 
     # ── Données brutes de l'Excel ─────────────────────────────────────────
-    batiment_id: Optional[int] = None          # col A — None pour les parkings
-    numero: str                                # col B
-    type_raw: str                              # col C (AP, ST, T2, CA, PS…)
-    etage_raw: Optional[str] = None            # col D
-    no_coproprietaire: Optional[str] = None    # col F
-    nom_coproprietaire: Optional[str] = None   # col G
+    batiment_id: Optional[int] = None  # col A — None pour les parkings
+    numero: str  # col B
+    type_raw: str  # col C (AP, ST, T2, CA, PS…)
+    etage_raw: Optional[str] = None  # col D
+    no_coproprietaire: Optional[str] = None  # col F
+    nom_coproprietaire: Optional[str] = None  # col G
 
     # ── Résolution par l'admin ────────────────────────────────────────────
     statut: StatutLotImport = StatutLotImport.en_attente
@@ -579,6 +598,7 @@ from app.models.gouvernance import (  # noqa: E402
 #  Diagnostics et Contrôles Réglementaires
 # ──────────────────────────────────────────────
 
+
 class DiagnosticType(SQLModel, table=True):
     __tablename__ = "diagnostic_type"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -622,28 +642,30 @@ from app.models.annonce_hall import AnnonceHall  # noqa: E402,F401
 #  Location (gestion bailleur → locataire)
 # ──────────────────────────────────────────────
 
+
 class StatutBail(str, Enum):
-    actif   = "actif"    # locataire en place
+    actif = "actif"  # locataire en place
     termine = "termine"  # locataire parti
     en_cours_sortie = "en_cours_sortie"  # préavis en cours
 
 
 class StatutObjet(str, Enum):
     en_possession = "en_possession"  # remis, pas encore rendu
-    rendu         = "rendu"          # rendu à la sortie
-    perdu         = "perdu"          # déclaré perdu
-    non_remis     = "non_remis"      # prévu mais pas encore remis
+    rendu = "rendu"  # rendu à la sortie
+    perdu = "perdu"  # déclaré perdu
+    non_remis = "non_remis"  # prévu mais pas encore remis
 
 
 class TypeObjet(str, Enum):
-    cle           = "cle"
-    telecommande  = "telecommande"
-    vigik         = "vigik"
-    autre         = "autre"
+    cle = "cle"
+    telecommande = "telecommande"
+    vigik = "vigik"
+    autre = "autre"
 
 
 class LocationBail(SQLModel, table=True):
     """Contrat locatif : lie un bailleur, un locataire (compte ou coordonnées libres) et un lot."""
+
     __tablename__ = "location_bail"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -671,12 +693,13 @@ class LocationBail(SQLModel, table=True):
 
 class RemiseObjet(SQLModel, table=True):
     """Objet physique remis (ou à remettre) au locataire dans le cadre d'un bail."""
+
     __tablename__ = "remise_objet"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     bail_id: int = Field(foreign_key="location_bail.id", index=True)
     type: TypeObjet = TypeObjet.autre
-    libelle: str            # ex. "Clé Porte palière", "Télécommande Parking"
+    libelle: str  # ex. "Clé Porte palière", "Télécommande Parking"
     quantite: int = 1
     reference: Optional[str] = None  # ex. "TC-042", "VGK-007"
     statut: StatutObjet = StatutObjet.en_possession
@@ -697,9 +720,11 @@ class RemiseObjet(SQLModel, table=True):
 #  Configuration site (persistance multi-appareils)
 # ──────────────────────────────────────────────
 
+
 class ConfigSite(SQLModel, table=True):
     """Paramètres de configuration sauvegardés par l'admin (titre, descriptif, nom du site…).
     Stockés en base pour être visibles de tous les appareils."""
+
     __tablename__ = "config_site"
     cle: str = Field(primary_key=True)
     valeur: str
@@ -729,33 +754,56 @@ from app.models.documents import (
 #  Règles & Recommandations de la résidence
 # ──────────────────────────────────────────────
 
-# ──────────────────────────────────────────────
-#  Sauvegardes
-# ──────────────────────────────────────────────
-#  Les deux tables vivent dans `models/sauvegarde.py` depuis le 14/08/2026
-#  (modularité). Ré-exportées ici : les imports existants ne bougent pas.
-from app.models.sauvegarde import (  # noqa: E402,F401
-    ConfigSauvegarde,
-    FrequenceSauvegarde,
-    HistoriqueSauvegarde,
-    StatutSauvegarde,
-)
-# ──────────────────────────────────────────────────────────────────────────
-#  Jetons d'authentification — extraits dans `models/jetons.py` (#833).
-#
-#  ⚠️ Réimportés ici pour la même raison que la télémétrie : c'est CET import
-#  qui enregistre les tables dans les métadonnées SQLModel.
-# ──────────────────────────────────────────────────────────────────────────
-from app.models.jetons import (  # noqa: E402,F401
-    EmailVerificationToken, PasswordResetToken, RefreshToken,
-)
-# ──────────────────────────────────────────────────────────────────────────
-#  Télémétrie — extraite dans `models/telemetrie.py` (plafond de modularité).
-#  Réimportée ici : `from app.models.core import TelemetryEvent` reste valide,
-#  et c'est cet import qui enregistre les tables dans les métadonnées SQLModel.
-# ──────────────────────────────────────────────────────────────────────────
-from app.models.telemetrie import (  # noqa: E402,F401
-    TelemetryEvent, TelemetryDaily, TelemetryMonthly, HistoriqueTelemetrie,
+# ──────────────────────────────────────────────
+
+#  Sauvegardes
+
+# ──────────────────────────────────────────────
+
+#  Les deux tables vivent dans `models/sauvegarde.py` depuis le 14/08/2026
+
+#  (modularité). Ré-exportées ici : les imports existants ne bougent pas.
+
+from app.models.sauvegarde import (  # noqa: E402,F401
+    ConfigSauvegarde,
+    FrequenceSauvegarde,
+    HistoriqueSauvegarde,
+    StatutSauvegarde,
+)
+
+# ──────────────────────────────────────────────────────────────────────────
+
+#  Jetons d'authentification — extraits dans `models/jetons.py` (#833).
+
+#
+
+#  ⚠️ Réimportés ici pour la même raison que la télémétrie : c'est CET import
+
+#  qui enregistre les tables dans les métadonnées SQLModel.
+
+# ──────────────────────────────────────────────────────────────────────────
+
+from app.models.jetons import (  # noqa: E402,F401
+    EmailVerificationToken,
+    PasswordResetToken,
+    RefreshToken,
+)
+
+# ──────────────────────────────────────────────────────────────────────────
+
+#  Télémétrie — extraite dans `models/telemetrie.py` (plafond de modularité).
+
+#  Réimportée ici : `from app.models.core import TelemetryEvent` reste valide,
+
+#  et c'est cet import qui enregistre les tables dans les métadonnées SQLModel.
+
+# ──────────────────────────────────────────────────────────────────────────
+
+from app.models.telemetrie import (  # noqa: E402,F401
+    TelemetryEvent,
+    TelemetryDaily,
+    TelemetryMonthly,
+    HistoriqueTelemetrie,
 )
 
 #  ── L'EXPLOITATION vit dans `models/exploitation.py` (20/09/2026, #1092) ──

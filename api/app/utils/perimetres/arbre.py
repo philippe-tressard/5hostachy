@@ -50,6 +50,7 @@ est notifié), `routers/flux/evenements.py` (le badge « concerne mon bâtiment 
 propre copie de la liste des périmètres transverses, ou sa propre convention de
 nommage.
 """
+
 from __future__ import annotations
 
 import json
@@ -71,6 +72,7 @@ _PREFIXE_BATIMENT = "bat:"
 
 class Noeud(NamedTuple):
     """Un périmètre, tel que l'arbre le donne. Immuable, sans session attachée."""
+
     code: str
     libelle: str
     libelle_court: str
@@ -155,7 +157,8 @@ def arbre() -> dict[str, Noeud]:
         #  de base, un document réservé à un autre bâtiment.
         logger.error(
             "Arbre des périmètres illisible (%s) — les contenus à périmètre "
-            "deviennent invisibles des résidents jusqu'au rétablissement", exc,
+            "deviennent invisibles des résidents jusqu'au rétablissement",
+            exc,
         )
         return {}
 
@@ -165,6 +168,7 @@ def arbre() -> dict[str, Noeud]:
 
 
 # ── Parcours de l'arbre : les trois primitives ────────────────────────────────
+
 
 def _chaine(code: str, noeuds: dict[str, Noeud]) -> list[Noeud]:
     """Le nœud puis ses ancêtres, du plus proche au plus lointain.
@@ -202,11 +206,7 @@ def a_portee_globale(codes: list[str]) -> bool:
     noeuds = arbre()
     if not noeuds:
         return False
-    return any(
-        n.portee_globale
-        for code in codes
-        for n in _chaine(code, noeuds)
-    )
+    return any(n.portee_globale for code in codes for n in _chaine(code, noeuds))
 
 
 def _hors_copropriete(chaine: list["Noeud"]) -> bool:
@@ -333,16 +333,14 @@ def perimetre_du_batiment(batiment_id: Optional[int]) -> Optional[Noeud]:
     """
     if batiment_id is None:
         return None
-    candidats = [
-        n for n in arbre().values()
-        if n.batiment_id == batiment_id and n.actif
-    ]
+    candidats = [n for n in arbre().values() if n.batiment_id == batiment_id and n.actif]
     if not candidats:
         return None
     return min(candidats, key=lambda n: (n.ordre, n.code))
 
 
 # ── Analyse des champs stockés ────────────────────────────────────────────────
+
 
 def code_par_defaut() -> Optional[str]:
     """Le périmètre qu'un contenu sans périmètre explicite désigne implicitement.
@@ -355,10 +353,7 @@ def code_par_defaut() -> Optional[str]:
     Renvoie `None` sur un arbre vide, et alors `parse_perimetres` rend une liste
     vide — que `perimetre_visible` traite déjà comme « visible de tous ».
     """
-    candidats = [
-        n for n in arbre().values()
-        if n.portee_globale and n.parent is None and n.actif
-    ]
+    candidats = [n for n in arbre().values() if n.portee_globale and n.parent is None and n.actif]
     if not candidats:
         return None
     return min(candidats, key=lambda n: (n.ordre, n.code)).code

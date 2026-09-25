@@ -24,6 +24,7 @@ explicitement ce qui porte un `ticket_id` ou un `evenement_id`.
 la pièce jointe lui est bien lisible. Elle n'a pas sa place dans la bibliothèque
 pour autant. Deux questions différentes, deux mécanismes.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -34,7 +35,11 @@ from sqlmodel import SQLModel, Session, delete, select
 
 from app.database import engine
 from app.models.core import (
-    Document, Evenement, RoleUtilisateur, Ticket, Utilisateur,
+    Document,
+    Evenement,
+    RoleUtilisateur,
+    Ticket,
+    Utilisateur,
 )
 from app.routers.documents import list_documents, upload_document
 
@@ -47,8 +52,12 @@ def bibliotheque():
         session.exec(delete(Document))
         admin = Utilisateur(
             email=f"admin-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x", prenom="A", nom="D",
-            role=RoleUtilisateur.admin, roles_json="admin", actif=True,
+            mot_de_passe_hash="x",
+            prenom="A",
+            nom="D",
+            role=RoleUtilisateur.admin,
+            roles_json="admin",
+            actif=True,
         )
         session.add(admin)
         session.commit()
@@ -70,11 +79,15 @@ def bibliotheque():
         #  la fixture tourne une fois par test, un numéro en dur passe au premier
         #  et refuse au second.
         porteur_ticket = Ticket(
-            numero=uuid.uuid4().hex[:8], titre="Fuite au sous-sol",
-            description="…", auteur_id=admin.id,
+            numero=uuid.uuid4().hex[:8],
+            titre="Fuite au sous-sol",
+            description="…",
+            auteur_id=admin.id,
         )
         porteur_evenement = Evenement(
-            titre="Visite de l'ascensoriste", debut=datetime.utcnow(), auteur_id=admin.id,
+            titre="Visite de l'ascensoriste",
+            debut=datetime.utcnow(),
+            auteur_id=admin.id,
         )
         session.add_all([porteur_ticket, porteur_evenement])
         session.commit()
@@ -84,20 +97,27 @@ def bibliotheque():
         #  Le document de dépôt porte une catégorie — c'est ce qui en fait un
         #  document de la bibliothèque, et non le fait d'exister.
         depot = Document(
-            titre="Règlement de copropriété", fichier_nom="reglement.pdf",
+            titre="Règlement de copropriété",
+            fichier_nom="reglement.pdf",
             fichier_chemin="/app/uploads/prive/reglement.pdf",
-            categorie_id=None, contrat_id=None, publication_id=None,
+            categorie_id=None,
+            contrat_id=None,
+            publication_id=None,
             publie_par_id=admin.id,
         )
         jointe_ticket = Document(
-            titre="Photo de la fuite", fichier_nom="fuite.jpg",
+            titre="Photo de la fuite",
+            fichier_nom="fuite.jpg",
             fichier_chemin="/app/uploads/prive/fuite.jpg",
-            ticket_id=porteur_ticket.id, publie_par_id=admin.id,
+            ticket_id=porteur_ticket.id,
+            publie_par_id=admin.id,
         )
         jointe_evenement = Document(
-            titre="Plan d'accès", fichier_nom="plan.pdf",
+            titre="Plan d'accès",
+            fichier_nom="plan.pdf",
             fichier_chemin="/app/uploads/prive/plan.pdf",
-            evenement_id=porteur_evenement.id, publie_par_id=admin.id,
+            evenement_id=porteur_evenement.id,
+            publie_par_id=admin.id,
         )
         session.add_all([depot, jointe_ticket, jointe_evenement])
         session.commit()
@@ -106,8 +126,11 @@ def bibliotheque():
         #  inventées que la fixture. Deux endroits à corriger ensemble, et rien
         #  ne le disait.
         ids = {
-            "depot": depot.id, "ticket": jointe_ticket.id, "evenement": jointe_evenement.id,
-            "porteur_ticket": porteur_ticket.id, "porteur_evenement": porteur_evenement.id,
+            "depot": depot.id,
+            "ticket": jointe_ticket.id,
+            "evenement": jointe_evenement.id,
+            "porteur_ticket": porteur_ticket.id,
+            "porteur_evenement": porteur_evenement.id,
         }
         yield admin, ids
     with Session(engine) as session:
@@ -134,8 +157,16 @@ def test_les_pieces_jointes_se_lisent_par_leur_porteur(bibliotheque):
     """
     admin, ids = bibliotheque
     with Session(engine) as session:
-        du_ticket = {d.id for d in list_documents(ticket_id=ids["porteur_ticket"], session=session, user=admin)}
-        de_l_evenement = {d.id for d in list_documents(evenement_id=ids["porteur_evenement"], session=session, user=admin)}
+        du_ticket = {
+            d.id
+            for d in list_documents(ticket_id=ids["porteur_ticket"], session=session, user=admin)
+        }
+        de_l_evenement = {
+            d.id
+            for d in list_documents(
+                evenement_id=ids["porteur_evenement"], session=session, user=admin
+            )
+        }
 
     assert du_ticket == {ids["ticket"]}
     assert de_l_evenement == {ids["evenement"]}

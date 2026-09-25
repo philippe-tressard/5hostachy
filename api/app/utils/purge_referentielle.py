@@ -83,12 +83,7 @@ def purger(session: Session, nom_table: str, ligne_id: int, _vues=None, _profond
             #  La ligne n'existe pas sans son parent : elle part, et ses propres
             #  enfants avec elle. On descend AVANT de supprimer, sinon les
             #  petits-enfants deviendraient orphelins à leur tour.
-            ids = [
-                r[0]
-                for r in session.exec(
-                    select(table.c.id).where(colonne == ligne_id)
-                ).all()
-            ]
+            ids = [r[0] for r in session.exec(select(table.c.id).where(colonne == ligne_id)).all()]
             #  ⚠️ La descente supprime DÉJÀ la ligne (dernière instruction de cette
             #  fonction) : un `delete` groupé ajouté ici la compterait deux fois.
             #  C'est ce que le test a relevé — « assert 2 == 1 » sur une seule
@@ -103,7 +98,9 @@ def purger(session: Session, nom_table: str, ligne_id: int, _vues=None, _profond
                 update(table).where(colonne == ligne_id).values({colonne.name: None})
             )
             if res.rowcount:
-                comptes[f"{table.name} (délié)"] = comptes.get(f"{table.name} (délié)", 0) + res.rowcount
+                comptes[f"{table.name} (délié)"] = (
+                    comptes.get(f"{table.name} (délié)", 0) + res.rowcount
+                )
 
     table_cible = SQLModel.metadata.tables[nom_table]
     session.exec(delete(table_cible).where(table_cible.c.id == ligne_id))

@@ -122,7 +122,9 @@ export const TYPES_PRESTATAIRE: readonly { val: string; label: string; desc: str
 		label: '\u{1F504} Contrat récurrent',
 		desc: 'Entretien, maintenance',
 	},
-	{ val: 'ponctuel', label: '\u{1F4CD} Dépannage', desc: 'Interventions ponctuelles' },
+	//  🔧 et non 📍 (#1045) : 📍 désigne un LIEU physique (CLAUDE.md, règle 4), et
+	//  un dépannage n'en est pas un. `lint:pictogrammes` le refuse désormais.
+	{ val: 'ponctuel', label: '\u{1F527} Dépannage', desc: 'Interventions ponctuelles' },
 	{ val: 'travaux', label: '\u{1F3D7}\u{FE0F} Travaux', desc: 'Interventions importantes' },
 	{ val: 'reglementaire', label: '\u{1F4CB} Réglementaire', desc: 'Contrôles obligatoires' },
 	{

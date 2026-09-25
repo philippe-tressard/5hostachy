@@ -1,4 +1,5 @@
 """Router règles & recommandations de la résidence."""
+
 from datetime import datetime
 from typing import Optional
 

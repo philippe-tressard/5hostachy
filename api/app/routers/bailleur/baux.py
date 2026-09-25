@@ -7,6 +7,7 @@ moment de rattacher un compte à un bail qu'on crée ou qu'on corrige.
 quatre modules partagent. Les redéclarer donnerait deux formes de la même
 réponse, libres de diverger au premier champ ajouté.
 """
+
 from datetime import date, datetime
 from typing import List
 
@@ -16,7 +17,12 @@ from sqlmodel import Session, select
 from app.auth.deps import require_cs_or_admin, require_proprietaire
 from app.database import get_session
 from app.models.core import (
-    LocationBail, RemiseObjet, Lot, StatutBail, StatutUtilisateur, Utilisateur,
+    LocationBail,
+    RemiseObjet,
+    Lot,
+    StatutBail,
+    StatutUtilisateur,
+    Utilisateur,
 )
 from app.utils.recuperer import ou_404
 from pydantic import BaseModel
@@ -29,13 +35,15 @@ router = APIRouter()
 
 # ── Routes baux ──────────────────────────────────────────────────────────────
 
+
 @router.get("/mes-baux", response_model=List[BailOut])
 def mes_baux(
     user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     baux = session.exec(
-        select(LocationBail).where(LocationBail.bailleur_id == user.id)
+        select(LocationBail)
+        .where(LocationBail.bailleur_id == user.id)
         .order_by(LocationBail.cree_le.desc())
     ).all()
     return baux
@@ -47,9 +55,7 @@ def tous_les_baux(
     session: Session = Depends(get_session),
 ):
     """Admin / CS : liste de tous les baux (tous statuts, tous bailleurs)."""
-    return session.exec(
-        select(LocationBail).order_by(LocationBail.cree_le.desc())
-    ).all()
+    return session.exec(select(LocationBail).order_by(LocationBail.cree_le.desc())).all()
 
 
 @router.delete("/baux/{bail_id}", status_code=204)
@@ -175,8 +181,8 @@ def terminer_bail(
     return bail
 
 
-
 # ── Recherche locataire inscrit ────────────────────────────────────────────────
+
 
 class LocataireInfo(BaseModel):
     id: int
@@ -210,7 +216,9 @@ def locataires_suggeres(
             continue
         np = u.nom_proprietaire.lower()
         if any(mot in np for mot in bailleur_mots):
-            result.append(LocataireInfo(id=u.id, nom=u.nom, prenom=u.prenom, email=u.email, actif=u.actif))
+            result.append(
+                LocataireInfo(id=u.id, nom=u.nom, prenom=u.prenom, email=u.email, actif=u.actif)
+            )
     return result
 
 
@@ -226,17 +234,14 @@ def search_locataire(
         return []
     if "@" in q:
         # Recherche exacte par email
-        results = session.exec(
-            select(Utilisateur).where(Utilisateur.email == q.lower())
-        ).all()
+        results = session.exec(select(Utilisateur).where(Utilisateur.email == q.lower())).all()
     else:
         # Recherche partielle insensible à la casse par nom ou prénom
         pattern = f"%{q.lower()}%"
         results = session.exec(
-            select(Utilisateur).where(
-                (Utilisateur.nom.ilike(pattern))
-                | (Utilisateur.prenom.ilike(pattern))
-            ).limit(10)
+            select(Utilisateur)
+            .where((Utilisateur.nom.ilike(pattern)) | (Utilisateur.prenom.ilike(pattern)))
+            .limit(10)
         ).all()
     return [
         LocataireInfo(id=u.id, nom=u.nom, prenom=u.prenom, email=u.email, actif=u.actif)

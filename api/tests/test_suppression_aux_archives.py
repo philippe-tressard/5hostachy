@@ -9,6 +9,7 @@ rangées d'icônes ne le respectaient pas.
 Le contrôle lit la condition qui ouvre le bloc du bouton : elle doit exiger
 `archive`, jamais `!archive`.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -23,7 +24,9 @@ _COMPOSANTS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "l
 def test_la_corbeille_n_est_offerte_qu_aux_archives(fichier):
     source = (_COMPOSANTS / fichier).read_text(encoding="utf-8")
     i = source.find("Supprimer définitivement")
-    assert i > 0, f"{fichier} : le bouton de suppression a disparu — ce contrôle ne mesure plus rien"
+    assert i > 0, (
+        f"{fichier} : le bouton de suppression a disparu — ce contrôle ne mesure plus rien"
+    )
     conditions = re.findall(r"\{(?:#if|:else if) ([^}]*)\}", source[:i])
     assert conditions, f"{fichier} : la corbeille n'est gardée par aucune condition"
     derniere = conditions[-1]

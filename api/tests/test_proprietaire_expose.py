@@ -28,6 +28,7 @@ Ce test verrouille donc les deux bouts :
 ⚠️ Un test de valeur seul serait passé au vert le jour où un quatrième objet
 porterait le mixin sans que personne ne pense à lui.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -69,10 +70,26 @@ def session():
     moteur = create_engine("sqlite://")
     SQLModel.metadata.create_all(moteur)
     with Session(moteur) as s:
-        s.add(Utilisateur(id=1, prenom="Alice", nom="Martin", email="alice@x.fr",
-                          mot_de_passe_hash="x", role="conseil_syndical"))
-        s.add(Utilisateur(id=2, prenom="Bruno", nom="Dupont", email="bruno@x.fr",
-                          mot_de_passe_hash="x", role="propriétaire"))
+        s.add(
+            Utilisateur(
+                id=1,
+                prenom="Alice",
+                nom="Martin",
+                email="alice@x.fr",
+                mot_de_passe_hash="x",
+                role="conseil_syndical",
+            )
+        )
+        s.add(
+            Utilisateur(
+                id=2,
+                prenom="Bruno",
+                nom="Dupont",
+                email="bruno@x.fr",
+                mot_de_passe_hash="x",
+                role="propriétaire",
+            )
+        )
         s.commit()
         yield s
 
@@ -94,7 +111,11 @@ def test_le_champ_est_declare_UNE_fois_dans_la_classe_de_base():
         "lectures héritent déjà — pas recopié dans chacune."
     )
     for lecture, _ in LECTURES:
-        propre = {n for n, c in lecture.__annotations__.items()} if hasattr(lecture, "__annotations__") else set()
+        propre = (
+            {n for n, c in lecture.__annotations__.items()}
+            if hasattr(lecture, "__annotations__")
+            else set()
+        )
         assert "proprietaire_nom" not in propre, (
             f"{lecture.__name__} REDÉCLARE `proprietaire_nom` : une redéclaration "
             "peut diverger du parent sans que rien ne le dise."
@@ -135,9 +156,7 @@ def test_avec_un_resident_inscrit_les_deux_noms_coincident(session):
 def test_avec_une_personne_exterieure_aussi(session):
     """Le second cas : personne d'inscrit, seulement un nom saisi. Il prime de
     la même façon, et l'absence d'adresse n'y change rien."""
-    proprietaire_nom, affichage = noms_derives(
-        session, _Objet(auteur_id=1, sp_nom="Paul EXTERNE")
-    )
+    proprietaire_nom, affichage = noms_derives(session, _Objet(auteur_id=1, sp_nom="Paul EXTERNE"))
     assert proprietaire_nom == "Paul EXTERNE"
     assert affichage == "Paul EXTERNE"
 

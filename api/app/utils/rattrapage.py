@@ -37,6 +37,7 @@ c'est une décision, pas un oubli :
 `courriel_reponses` est un `interval`, qui repart de zéro au démarrage : il n'a
 jamais été concerné.
 """
+
 from datetime import datetime, timedelta
 import logging
 from typing import Any, Callable, NamedTuple, Optional
@@ -91,7 +92,9 @@ def rattraper_si_manquee(
     try:
         derniere = derniere_reussite()
     except Exception as exc:  # noqa: BLE001 — journalisé, jamais propagé
-        logger.error("%s : rattrapage impossible, lecture du dernier passage KO (%s).", libelle, exc)
+        logger.error(
+            "%s : rattrapage impossible, lecture du dernier passage KO (%s).", libelle, exc
+        )
         return None
 
     quand = derniere.isoformat() if derniere else "aucune"

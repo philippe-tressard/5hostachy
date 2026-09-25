@@ -10,6 +10,7 @@ Règles :
   - Le **gestionnaire du site** est toujours ajouté, quel que soit le périmètre.
   - Périmètre à portée globale (ou dont un ancêtre l'est) → tout le CS.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -118,11 +119,10 @@ def interlocuteurs_syndic(session: Session) -> list[MembreSyndic]:
     inattendu produirait une formule d'appel vide, et un e-mail qui commence par
     une virgule ne se remarque qu'une fois parti.
     """
-    membres = session.exec(
-        select(MembreSyndic).order_by(MembreSyndic.ordre, MembreSyndic.id)
-    ).all()
+    membres = session.exec(select(MembreSyndic).order_by(MembreSyndic.ordre, MembreSyndic.id)).all()
     retenus = [
-        m for m in membres
+        m
+        for m in membres
         if any(f in _sans_accent_minuscule(m.fonction or "") for f in FONCTIONS_INTERLOCUTRICES)
     ]
     if retenus:
@@ -170,6 +170,7 @@ def formule_appel(membres: list[MembreSyndic]) -> str:
 # ni une relecture, ne puisse le voir.
 #
 # 🔒 `api/tests/test_destinataires_source_unique.py` refuse une cinquième.
+
 
 def syndic_principal(session: Session) -> Optional[MembreSyndic]:
     """Le gestionnaire syndic principal, ou None s'il n'est pas configuré."""
@@ -222,15 +223,17 @@ def membres_cs_ou_admin(session: Session) -> list[Utilisateur]:
     boîte aux lettres (CS seul, adresse obligatoire). Deux publics, deux
     fonctions, un seul endroit chacune.
     """
-    return list(session.exec(
-        select(Utilisateur).where(
-            Utilisateur.actif == True,  # noqa: E712
-            or_(
-                Utilisateur.roles_json.contains("conseil_syndical"),
-                Utilisateur.roles_json.contains("admin"),
-            ),
-        )
-    ).all())
+    return list(
+        session.exec(
+            select(Utilisateur).where(
+                Utilisateur.actif == True,  # noqa: E712
+                or_(
+                    Utilisateur.roles_json.contains("conseil_syndical"),
+                    Utilisateur.roles_json.contains("admin"),
+                ),
+            )
+        ).all()
+    )
 
 
 def destinataires_syndic_cs(

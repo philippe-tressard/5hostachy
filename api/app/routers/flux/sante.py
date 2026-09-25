@@ -7,6 +7,7 @@ tableau de bord — « où en est-on ? » et « quoi ensuite ? ». C'est pour ce
 date les événements sur `debut` là où le fil les date sur `cree_le`
 (cf. `evenements.py`).
 """
+
 from datetime import timedelta
 
 from sqlalchemy import func
@@ -61,15 +62,17 @@ def _prochains(ctx: ContexteFlux) -> list[dict]:
         .order_by(ContratEntretien.prochaine_visite.asc())
     ).all()
     for ct, prest in visites[:_MAX_VISITES]:
-        prochains.append({
-            "id": f"ct_{ct.id}",
-            "date": ct.prochaine_visite.isoformat() if ct.prochaine_visite else "",
-            "titre": f"{ct.libelle} — {prest.nom}",
-            "type": "contrat",
-            "icon": "🔧",
-            "description": ct.notes,
-            "prestataire": prest.nom,
-        })
+        prochains.append(
+            {
+                "id": f"ct_{ct.id}",
+                "date": ct.prochaine_visite.isoformat() if ct.prochaine_visite else "",
+                "titre": f"{ct.libelle} — {prest.nom}",
+                "type": "contrat",
+                "icon": "🔧",
+                "description": ct.notes,
+                "prestataire": prest.nom,
+            }
+        )
 
     #  🔴 L'échéance d'assurance venait de `Copropriete.assurance_echeance` — la
     #  COLONNE HÉRITÉE, hors du circuit depuis #490. `copropriete_lue` l'efface
@@ -102,13 +105,15 @@ def _prochains(ctx: ContexteFlux) -> list[dict]:
                 suffixe = " (reconduction tacite)"
             else:
                 suffixe = ""
-            prochains.append({
-                "id": section,
-                "date": e.date.isoformat(),
-                "titre": f"Échéance {section} {presta.nom if presta else ''}".strip() + suffixe,
-                "type": section,
-                "icon": icone,
-            })
+            prochains.append(
+                {
+                    "id": section,
+                    "date": e.date.isoformat(),
+                    "titre": f"Échéance {section} {presta.nom if presta else ''}".strip() + suffixe,
+                    "type": section,
+                    "icon": icone,
+                }
+            )
 
     prochains.sort(key=lambda x: x.get("date", ""))
     return prochains[:_MAX_PROCHAINS]
@@ -116,10 +121,14 @@ def _prochains(ctx: ContexteFlux) -> list[dict]:
 
 def _nb_commandes_acces(ctx: ContexteFlux) -> int:
     """Commandes d'accès (vigik, télécommande) en attente de traitement."""
-    return ctx.session.exec(
-        select(func.count(CommandeAcces.id))
-        .where(CommandeAcces.statut == StatutCommande.en_attente)
-    ).one() or 0
+    return (
+        ctx.session.exec(
+            select(func.count(CommandeAcces.id)).where(
+                CommandeAcces.statut == StatutCommande.en_attente
+            )
+        ).one()
+        or 0
+    )
 
 
 def _nb_demandes_profil(ctx: ContexteFlux) -> int:
@@ -130,10 +139,14 @@ def _nb_demandes_profil(ctx: ContexteFlux) -> int:
     **nulle part** avant #399 — l'admin ne pouvait l'apprendre qu'en ouvrant
     l'écran.
     """
-    return ctx.session.exec(
-        select(func.count(DemandeModificationProfil.id))
-        .where(DemandeModificationProfil.statut_demande == StatutDemandeProfil.en_attente)
-    ).one() or 0
+    return (
+        ctx.session.exec(
+            select(func.count(DemandeModificationProfil.id)).where(
+                DemandeModificationProfil.statut_demande == StatutDemandeProfil.en_attente
+            )
+        ).one()
+        or 0
+    )
 
 
 def _validations_cs(ctx: ContexteFlux) -> int:
@@ -167,11 +180,7 @@ def _validations_admin(ctx: ContexteFlux) -> int:
     """
     if not ctx.user.has_role(RoleUtilisateur.admin):
         return 0
-    return (
-        nb_comptes_en_attente(ctx.session)
-        + _nb_commandes_acces(ctx)
-        + _nb_demandes_profil(ctx)
-    )
+    return nb_comptes_en_attente(ctx.session) + _nb_commandes_acces(ctx) + _nb_demandes_profil(ctx)
 
 
 def _relances_syndic(ctx: ContexteFlux) -> int:
@@ -184,16 +193,19 @@ def _relances_syndic(ctx: ContexteFlux) -> int:
     ).first()
     delai_jours = int(cfg_delai.valeur) if cfg_delai else _RELANCE_SYNDIC_DEFAUT_J
     seuil = ctx.now - timedelta(days=delai_jours)
-    return ctx.session.exec(
-        select(func.count(Ticket.id)).where(
-            Ticket.destinataire_syndic == True,  # noqa: E712  (colonne SQL, pas un booléen Python)
-            #  ACTIFS, pas « non clos » : une actualité (`publie`) n'est ni l'un ni
-            #  l'autre, et ne se relance pas (#1091).
-            Ticket.statut.in_(STATUTS_TICKET_ACTIFS),
-            Ticket.non_relancable == False,  # noqa: E712
-            Ticket.mis_a_jour_le < seuil,
-        )
-    ).one() or 0
+    return (
+        ctx.session.exec(
+            select(func.count(Ticket.id)).where(
+                Ticket.destinataire_syndic == True,  # noqa: E712  (colonne SQL, pas un booléen Python)
+                #  ACTIFS, pas « non clos » : une actualité (`publie`) n'est ni l'un ni
+                #  l'autre, et ne se relance pas (#1091).
+                Ticket.statut.in_(STATUTS_TICKET_ACTIFS),
+                Ticket.non_relancable == False,  # noqa: E712
+                Ticket.mis_a_jour_le < seuil,
+            )
+        ).one()
+        or 0
+    )
 
 
 def calculer(ctx: ContexteFlux) -> FluxSante:
@@ -210,7 +222,8 @@ def calculer(ctx: ContexteFlux) -> FluxSante:
     # Temps moyen de résolution sur les 30 derniers jours
     depuis_30j = ctx.now - timedelta(days=30)
     resolus = [
-        t for t in tous
+        t
+        for t in tous
         if t.statut == "résolu" and t.ferme_le and t.cree_le and t.ferme_le >= depuis_30j
     ]
     resolution_moy = None

@@ -12,6 +12,7 @@ retouche de charte n'est pas un changement de contenu.
 impose. Redessiner ici les cartes et les couleurs du manuel créerait une seconde
 charte, qui dériverait à la première retouche de l'écran.
 """
+
 from __future__ import annotations
 
 from app.utils.pdf_theme import FONT_SANS, FONT_SERIF, PALETTE_CSS, regle_page
@@ -484,5 +485,3 @@ a {{ color: var(--navy); text-decoration: none; }}
   border-left: 3px solid var(--gold);
 }}
 """
-
-

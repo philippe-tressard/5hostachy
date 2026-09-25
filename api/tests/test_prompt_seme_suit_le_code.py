@@ -33,6 +33,7 @@ peut encore y penser.
 ⚠️ Un usage AJOUTÉ échoue ici aussi, et c'est voulu : il lui faut une migration
 pour semer son prompt, sans quoi il démarrerait sur une clé absente.
 """
+
 import hashlib
 import re
 from pathlib import Path
@@ -101,7 +102,7 @@ def test_un_prompt_d_origine_ne_change_pas_sans_migration():
             "      1. écrire une migration qui remplace la valeur stockée SI elle "
             "porte encore une empreinte écrite par le code (motif de la 0197) ;\n"
             "      2. ajouter l'empreinte précédente à la liste de cette migration ;\n"
-            f"      3. mettre à jour cette ligne : \"{code}\": \"{obtenue}\"."
+            f'      3. mettre à jour cette ligne : "{code}": "{obtenue}".'
         )
 
 
@@ -116,7 +117,9 @@ def test_la_migration_0197_connait_l_empreinte_qu_elle_remplace():
     #  migration s'importe dans un contexte alembic qu'un test n'a pas à monter.
     source = (
         Path(__file__).resolve().parents[1]
-        / "alembic" / "versions" / "0197_consigne_description_rappel.py"
+        / "alembic"
+        / "versions"
+        / "0197_consigne_description_rappel.py"
     ).read_text(encoding="utf-8")
     empreintes = set(re.findall(r'"([0-9a-f]{64})"', source))
 

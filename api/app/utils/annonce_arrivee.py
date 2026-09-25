@@ -50,6 +50,7 @@ permet de la **voir et de la corriger**. Une annonce sur quelqu'un que
 l'intéressé ne pourrait ni lire ni modifier serait exactement le défaut de
 `project_auteur_toujours_visible`, appliqué à sa propre présentation.
 """
+
 from __future__ import annotations
 
 from html import escape

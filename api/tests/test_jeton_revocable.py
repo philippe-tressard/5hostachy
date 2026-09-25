@@ -29,6 +29,7 @@ le rafraîchissement émet un jeton complet.
 refuse `actif = False`), mais une élévation ou une perte de rôle ne l'est pas —
 le rôle n'entre pas dans l'empreinte.
 """
+
 from __future__ import annotations
 
 import ast

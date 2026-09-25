@@ -18,6 +18,7 @@ le moteur d'envoi). Deux défauts, dont un silencieux :
 ⚠️ La divergence était **invisible à la lecture** : les deux formes se
 ressemblent, et chaque fichier était cohérent avec lui-même.
 """
+
 import re
 from pathlib import Path
 
@@ -49,7 +50,7 @@ def test_aucun_nom_de_copropriete_en_dur():
     leçon de `lint:html`, dont la première version comptait les mentions dans les
     commentaires qui expliquaient la règle.
     """
-    motif = re.compile(r'''["']5Hostachy["']''')
+    motif = re.compile(r"""["']5Hostachy["']""")
     fautifs = []
     for p in _sources():
         texte = p.read_text(encoding="utf-8")
@@ -80,8 +81,8 @@ def test_aucun_repli_de_nom_recopie():
             #  liste de clés à lire, et la première version du motif la comptait —
             #  dix faux positifs, tous légitimes. Un contrôle qui crie sur du code
             #  juste se fait désarmer.
-            if re.search(r'''get\(\s*["']site_nom["']\s*,\s*["']''', ligne) or re.search(
-                r'''get\(\s*["']site_nom["']\s*\)\s*or\s*["']''', ligne
+            if re.search(r"""get\(\s*["']site_nom["']\s*,\s*["']""", ligne) or re.search(
+                r"""get\(\s*["']site_nom["']\s*\)\s*or\s*["']""", ligne
             ):
                 fautifs.append(f"{p.relative_to(APP)}:{numero}")
     assert not fautifs, (

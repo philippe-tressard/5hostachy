@@ -29,6 +29,7 @@ Elle ne touche **ni à la donnée, ni au prénom**. Le nom reste enregistré tel
 qu'il a été saisi : c'est un rendu, pas une normalisation. Une particule
 (« de La Tour ») passe donc en capitales à l'affichage, ce qui est l'usage.
 """
+
 from __future__ import annotations
 
 from typing import Optional

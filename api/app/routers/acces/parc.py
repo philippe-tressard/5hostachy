@@ -34,6 +34,7 @@ Ce choix est **renversé, sur demande explicite** :
 🔒 **Les droits vivent dans `auth/deps`**, jamais ici : `require_cs_or_admin`
 pour voir et corriger, `require_admin` pour supprimer définitivement.
 """
+
 import csv
 import io
 import json
@@ -48,7 +49,11 @@ from sqlmodel import Session, select
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    StatutAcces, Telecommande, Ticket, Utilisateur, Vigik,
+    StatutAcces,
+    Telecommande,
+    Ticket,
+    Utilisateur,
+    Vigik,
 )
 from app.routers.acces.vues import AccesOut
 from app.utils.acces_choix import codes_autorises, valider_acces
@@ -104,14 +109,14 @@ class AccesAdminOut(AccesOut):
     sont ici. Deux modèles jumeaux auraient divergé au premier ajout — c'est
     exactement ce qui était arrivé au `lot_id`.
     """
+
     porteur_nom: str
     #: Qui l'a en main — inconnu pour un badge rattaché à un lot sans compte (#1194).
     porteur_id: Optional[int] = None
     lot_libelle: Optional[str] = None
 
 
-def _acces_admin_out(objets, session: Session,
-                     type_acces: TypeAcces) -> list[AccesAdminOut]:
+def _acces_admin_out(objets, session: Session, type_acces: TypeAcces) -> list[AccesAdminOut]:
     """Sérialise une liste de Vigik OU de Telecommande — les deux ont les mêmes
     champs utiles, et deux fonctions jumelles auraient divergé au premier ajout.
 
@@ -124,10 +129,13 @@ def _acces_admin_out(objets, session: Session,
     #  le copropriétaire du fichier ; sans lot, « En stock ».
     noms = noms_des_porteurs(session, objets)
     for o in objets:
-        sortie.append(AccesAdminOut(
-            **AccesOut.champs_communs(session, type_acces, o),
-            porteur_nom=noms[o.id], porteur_id=o.user_id,
-        ))
+        sortie.append(
+            AccesAdminOut(
+                **AccesOut.champs_communs(session, type_acces, o),
+                porteur_nom=noms[o.id],
+                porteur_id=o.user_id,
+            )
+        )
     #  Par code : c'est ce qu'on a sous les yeux quand on cherche « à qui est ce
     #  badge ? », un numéro gravé sur un objet physique.
     return sorted(sortie, key=lambda a: a.code)
@@ -141,6 +149,7 @@ class AccesAdminBody(BaseModel):
     le `code`, et c'est le geste qui l'exige, pas le schéma — un schéma qui
     rendrait `code` obligatoire empêcherait de s'en servir pour la correction.
     """
+
     code: Optional[str] = None
     #: Le copropriétaire pour qui l'accès est enregistré — le « saisi pour » des
     #: tickets, appliqué à un objet physique.
@@ -178,9 +187,7 @@ def _ticket_par_numero(session: Session, numero: Optional[str]):
     """
     if not numero or not numero.strip():
         return None
-    ticket = session.exec(
-        select(Ticket).where(Ticket.numero == numero.strip())
-    ).first()
+    ticket = session.exec(select(Ticket).where(Ticket.numero == numero.strip())).first()
     if not ticket:
         raise HTTPException(422, f"Aucun ticket ne porte le numéro {numero.strip()}")
     return ticket
@@ -222,7 +229,10 @@ def creer_acces_admin(
         lot_id=body.lot_id,
         statut=body.statut or StatutAcces.actif,
         perimetre_cible=_acces_json(
-            session, type_acces, body.perimetre_cible, body.lot_id,
+            session,
+            type_acces,
+            body.perimetre_cible,
+            body.lot_id,
             porteur.id if porteur else None,
         ),
     )
@@ -276,8 +286,7 @@ def modifier_acces_admin(
         objet.statut = body.statut
     if body.perimetre_cible is not None:
         objet.perimetre_cible = (
-            json.dumps(body.perimetre_cible, ensure_ascii=False)
-            if body.perimetre_cible else None
+            json.dumps(body.perimetre_cible, ensure_ascii=False) if body.perimetre_cible else None
         )
 
     session.add(objet)
@@ -332,7 +341,9 @@ def list_telecommandes(
 ):
     """Toutes les télécommandes de parking, avec leur porteur."""
     return _acces_admin_out(
-        session.exec(select(Telecommande)).all(), session, TELECOMMANDE,
+        session.exec(select(Telecommande)).all(),
+        session,
+        TELECOMMANDE,
     )
 
 
@@ -362,6 +373,7 @@ def list_telecommandes(
 #  Ce qui RESTE, et pourquoi : les deux LECTURES ci-dessus répondent à une
 #  question qu'aucun autre écran ne sait poser — « quels badges circulent, et
 #  chez qui ? ». C'est le seul trou réel qu'avait ce domaine.
+
 
 class ChoixAccesOut(BaseModel):
     """Ce qu'un type d'accès peut ouvrir, et comment son défaut se décide."""
@@ -425,14 +437,16 @@ def _csv_du_parc(session: Session, type_acces: TypeAcces) -> str:
     lignes = []
     #  🔴 La fiche seule : un `zip` décalé donnait le périmètre d'un AUTRE badge (15/09).
     for fiche in _acces_admin_out(objets, session, type_acces):
-        lignes.append([
-            fiche.code,
-            fiche.porteur_nom,
-            fiche.lot_libelle or "",
-            perimetre_label(fiche.perimetre_cible) if fiche.perimetre_cible else "",
-            fiche.statut.value if hasattr(fiche.statut, "value") else str(fiche.statut),
-            date_courte(fiche.cree_le),
-        ])
+        lignes.append(
+            [
+                fiche.code,
+                fiche.porteur_nom,
+                fiche.lot_libelle or "",
+                perimetre_label(fiche.perimetre_cible) if fiche.perimetre_cible else "",
+                fiche.statut.value if hasattr(fiche.statut, "value") else str(fiche.statut),
+                date_courte(fiche.cree_le),
+            ]
+        )
 
     tampon = io.StringIO()
     graveur = csv.writer(tampon, delimiter=";", lineterminator="\r\n")

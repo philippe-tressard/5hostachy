@@ -25,6 +25,7 @@ exige que les deux disent la même chose. Sans lui, la copie diverge au premier
 libellé retouché, et c'est le courriel — que personne ne relit — qui garde
 l'ancien.
 """
+
 from __future__ import annotations
 from app.utils.valeurs import valeur
 

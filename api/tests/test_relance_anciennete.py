@@ -6,6 +6,7 @@ n'avancent plus. Une formule fausse — « plus de 1 mois », « 3 à 3 mois »,
 tout le courrier, et c'est exactement ce que le CS y cherche : un fait qui se
 conteste mal. D'où ces tests sur une fonction pure.
 """
+
 from datetime import datetime
 
 import pytest
@@ -18,9 +19,9 @@ _MAINTENANT = datetime(2026, 8, 1, 12, 0)
 @pytest.mark.parametrize(
     "depuis,attendu",
     [
-        (datetime(2026, 7, 25, 12, 0), 0),   # une semaine
-        (datetime(2026, 7, 1, 12, 0), 1),    # un mois pile
-        (datetime(2026, 7, 2, 12, 0), 0),    # un jour de moins qu'un mois
+        (datetime(2026, 7, 25, 12, 0), 0),  # une semaine
+        (datetime(2026, 7, 1, 12, 0), 1),  # un mois pile
+        (datetime(2026, 7, 2, 12, 0), 0),  # un jour de moins qu'un mois
         (datetime(2026, 3, 1, 12, 0), 5),
         (datetime(2025, 8, 1, 12, 0), 12),
     ],
@@ -40,9 +41,9 @@ def test_mois_ecoules_compte_des_mois_calendaires():
     [
         ([], "plus d'un mois"),
         ([0], "plus d'un mois"),
-        ([1], "plus d'un mois"),          # jamais « plus de 1 mois »
+        ([1], "plus d'un mois"),  # jamais « plus de 1 mois »
         ([4], "plus de 4 mois"),
-        ([3, 3], "plus de 3 mois"),       # jamais « 3 à 3 mois »
+        ([3, 3], "plus de 3 mois"),  # jamais « 3 à 3 mois »
         ([1, 5], "un à 5 mois"),
         ([2, 7], "2 à 7 mois"),
         ([0, 4], "un à 4 mois"),

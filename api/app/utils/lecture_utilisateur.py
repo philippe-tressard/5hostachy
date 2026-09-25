@@ -10,6 +10,7 @@ premier — un routeur n'est pas une bibliothèque, et le nom souligné disait d
 qu'il n'était pas fait pour voyager. La duplication aurait suivi au premier champ
 ajouté à `UserRead`, comme pour `EvolutionRead` dans les publications (#294).
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -24,6 +25,7 @@ from app.utils.noms import nom_affiche
 
 def construire_user_read(user: Utilisateur, session: Session) -> UserRead:
     from app.models.core import Delegation, StatutDelegation
+
     batiment_nom = None
     if user.batiment_id:
         bat = session.get(Batiment, user.batiment_id)
@@ -43,9 +45,13 @@ def construire_user_read(user: Utilisateur, session: Session) -> UserRead:
     for d in deleg_rows:
         mandant = session.get(Utilisateur, d.mandant_id)
         if mandant:
-            delegations_aidant.append({
-                "delegation_id": d.id,
-                "mandant_id": mandant.id,
-                "mandant_nom": nom_affiche(mandant.prenom, mandant.nom),
-            })
-    return UserRead.from_orm_with_roles(user, batiment_nom=batiment_nom, delegations_aidant=delegations_aidant)
+            delegations_aidant.append(
+                {
+                    "delegation_id": d.id,
+                    "mandant_id": mandant.id,
+                    "mandant_nom": nom_affiche(mandant.prenom, mandant.nom),
+                }
+            )
+    return UserRead.from_orm_with_roles(
+        user, batiment_nom=batiment_nom, delegations_aidant=delegations_aidant
+    )

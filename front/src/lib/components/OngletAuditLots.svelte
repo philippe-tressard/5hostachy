@@ -6,6 +6,7 @@
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import BauxSansLocataire from '$lib/components/BauxSansLocataire.svelte';
 	import ReclassementTickets from '$lib/components/ReclassementTickets.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -126,7 +127,7 @@
 </div>
 
 {#if loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 {:else if grouped.length === 0}
 	<p style="color:var(--color-text-muted)">Aucune association trouvée.</p>
 {:else}

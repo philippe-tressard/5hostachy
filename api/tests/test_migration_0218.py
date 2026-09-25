@@ -6,6 +6,7 @@ sur ce qu'elle laisse dans la table, pas sur son code. Trois cas :
 2. un texte réécrit depuis l'administration n'est PAS touché ;
 3. le downgrade rend la phrase de conservation, mais jamais le lien en 404.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -56,12 +57,12 @@ def _jouer(moteur, sens):
 def test_les_deux_phrases_fausses_sont_corrigees(base):
     m = _migration()
     _poser(base, "politique_confidentialite", f"<ul>{m.ANCIENNE_CONSERVATION}</li></ul>")
-    _poser(base, "mentions_legales", f'<p>Voir la <a {m.LIEN_MORT}>politique</a>.</p>')
+    _poser(base, "mentions_legales", f"<p>Voir la <a {m.LIEN_MORT}>politique</a>.</p>")
     _jouer(base, "upgrade")
     politique = _lire(base, "politique_confidentialite")
     assert "Aucune purge automatique" not in politique
     assert m._nouvelle_conservation() in politique
-    assert _lire(base, "mentions_legales") == f'<p>Voir la <a {m.LIEN_JUSTE}>politique</a>.</p>'
+    assert _lire(base, "mentions_legales") == f"<p>Voir la <a {m.LIEN_JUSTE}>politique</a>.</p>"
 
 
 def test_un_texte_reecrit_a_la_main_n_est_pas_touche(base):

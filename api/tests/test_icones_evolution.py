@@ -32,6 +32,7 @@ une carte de flux, « commentaire » une entrée de fil. Deux rendus du même fa
 peuvent porter des mots différents — seul le **signe** doit être commun, parce
 que c'est lui qu'on reconnaît sans lire.
 """
+
 from __future__ import annotations
 
 import re
@@ -103,9 +104,7 @@ def test_les_icones_communes_sont_identiques():
     types.
     """
     front, api = _icones_front(), _icones_api()
-    ecarts = {
-        t: (front[t], api[t]) for t in set(front) & set(api) if front[t] != api[t]
-    }
+    ecarts = {t: (front[t], api[t]) for t in set(front) & set(api) if front[t] != api[t]}
     assert not ecarts, (
         "Le front et l'API ne donnent pas la même icône à ces types : "
         + ", ".join(f"{t} → front={f!r} api={a!r}" for t, (f, a) in sorted(ecarts.items()))

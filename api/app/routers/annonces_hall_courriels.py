@@ -19,6 +19,7 @@ enverrait le bon message aux mauvaises personnes.
 Ce qui est **commun**, en revanche, c'est la déduplication — le syndic passe en
 premier et gagne le doublon — et elle vit dans `syndic_puis`.
 """
+
 from __future__ import annotations
 
 import os
@@ -118,8 +119,13 @@ def destinataires_annonce(
 
 
 def _envoyer_email_annonce(
-    annonce: AnnonceHall, user: Utilisateur, background_tasks: BackgroundTasks,
-    session: Session, *, syndic: bool = False, cs: bool = True,
+    annonce: AnnonceHall,
+    user: Utilisateur,
+    background_tasks: BackgroundTasks,
+    session: Session,
+    *,
+    syndic: bool = False,
+    cs: bool = True,
     auteur: bool = False,
 ) -> list[str]:
     """Programme l'envoi de l'annonce, et rend les e-mails visés.
@@ -138,7 +144,10 @@ def _envoyer_email_annonce(
     #  d'office — le formulaire annonçait ses destinataires et en servait un de
     #  plus. Règle commune : `app/utils/copie_auteur.py` (01/09/2026).
     auteur_bcc = copie_demandee(
-        session, annonce, emails, demandee=auteur,
+        session,
+        annonce,
+        emails,
+        demandee=auteur,
     )
     background_tasks.add_task(
         send_email_group,

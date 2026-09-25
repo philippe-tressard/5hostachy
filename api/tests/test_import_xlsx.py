@@ -12,6 +12,7 @@ Ce que ces tests couvrent — le chemin du **téléversement**, celui qu'emprunt
 l'interface d'administration : ouverture du classeur, en-tête ignorée, lignes
 vides, doublons, noms exclus, accents, et la transaction validée.
 """
+
 import io
 
 import pytest
@@ -24,7 +25,7 @@ from app.utils.import_xlsx import normaliser
 openpyxl = pytest.importorskip(
     "openpyxl",
     reason="openpyxl est une dépendance de production (requirements.txt) ; "
-           "son absence rend ces tests INCONNUS, pas verts",
+    "son absence rend ces tests INCONNUS, pas verts",
 )
 
 
@@ -53,14 +54,18 @@ def session():
 
 # ── normaliser : la fonction que les trois modules partagent ─────────────────
 
-@pytest.mark.parametrize("entree,attendu", [
-    ("  Élodie   MARTIN ", "ELODIE MARTIN"),   # accents, espaces multiples, bords
-    ("DUPONT-martin", "DUPONT-MARTIN"),        # le tiret est signifiant, il reste
-    ("ÀÉÎÕÜ", "AEIOU"),
-    ("Ça va", "CA VA"),
-    (None, ""),
-    ("", ""),
-])
+
+@pytest.mark.parametrize(
+    "entree,attendu",
+    [
+        ("  Élodie   MARTIN ", "ELODIE MARTIN"),  # accents, espaces multiples, bords
+        ("DUPONT-martin", "DUPONT-MARTIN"),  # le tiret est signifiant, il reste
+        ("ÀÉÎÕÜ", "AEIOU"),
+        ("Ça va", "CA VA"),
+        (None, ""),
+        ("", ""),
+    ],
+)
 def test_normaliser_aplatit_casse_et_accents(entree, attendu):
     """C'est de cette normalisation que dépend l'appariement des accès.
 
@@ -81,16 +86,19 @@ def test_les_trois_modules_exposent_la_meme_normalisation():
 
 # ── Le chemin réel du téléversement ──────────────────────────────────────────
 
+
 def test_import_telecommandes_compte_doublons_ignores_et_importes(session):
-    contenu = _classeur([
-        ["Copropriétaire", "Locataire", "Référence"],   # en-tête, ignorée
-        ["DUPONT Jean", "", "TC-001"],
-        ["dupont  jean", "", "TC-002"],                 # même personne, autre casse
-        ["Élodie MARTIN", "LOCATAIRE X", "TC-003"],
-        ["DUPONT Jean", "", "TC-001"],                  # doublon exact
-        ["ATPE", "", "TC-900"],                         # nom exclu (hors résidents)
-        [None, None, None],                             # ligne vide
-    ])
+    contenu = _classeur(
+        [
+            ["Copropriétaire", "Locataire", "Référence"],  # en-tête, ignorée
+            ["DUPONT Jean", "", "TC-001"],
+            ["dupont  jean", "", "TC-002"],  # même personne, autre casse
+            ["Élodie MARTIN", "LOCATAIRE X", "TC-003"],
+            ["DUPONT Jean", "", "TC-001"],  # doublon exact
+            ["ATPE", "", "TC-900"],  # nom exclu (hors résidents)
+            [None, None, None],  # ligne vide
+        ]
+    )
     stats = import_telecommandes.importer_depuis_bytes(contenu, session, False)
 
     assert stats["importes"] == 3
@@ -99,7 +107,7 @@ def test_import_telecommandes_compte_doublons_ignores_et_importes(session):
     assert stats["erreurs"] == []
 
     lignes = session.exec(select(TelecommandeImport)).all()
-    assert len(lignes) == 4        # 3 importées + 1 marquée « ignoré »
+    assert len(lignes) == 4  # 3 importées + 1 marquée « ignoré »
     exclue = next(l for l in lignes if l.reference == "TC-900")
     assert exclue.statut.value == "ignore"
     assert "ligne Excel 6" in (exclue.notes_admin or ""), (
@@ -114,13 +122,15 @@ def test_import_lots_signale_un_batiment_illisible_sans_interrompre(session):
     Un import qui s'arrête à la première erreur oblige à recommencer autant de
     fois qu'il y a de fautes de frappe dans le classeur.
     """
-    contenu = _classeur([
-        ["Bât", "Lot", "Nom", "Type"],
-        [1, "A101", "DUPONT Jean", "Appartement"],
-        ["P", "P12", "DUPONT Jean", "Parking"],        # 'P' n'est pas un bâtiment
-        [2, "B201", "Élodie MARTIN", "Appartement"],
-        [None, None, None, None],
-    ])
+    contenu = _classeur(
+        [
+            ["Bât", "Lot", "Nom", "Type"],
+            [1, "A101", "DUPONT Jean", "Appartement"],
+            ["P", "P12", "DUPONT Jean", "Parking"],  # 'P' n'est pas un bâtiment
+            [2, "B201", "Élodie MARTIN", "Appartement"],
+            [None, None, None, None],
+        ]
+    )
     stats = import_lots.importer_depuis_bytes(contenu, session, False)
 
     assert stats["importes"] == 2

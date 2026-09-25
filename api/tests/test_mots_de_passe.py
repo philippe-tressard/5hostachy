@@ -18,6 +18,7 @@ cette suite ne touchait ces deux fonctions ; la CI ne pouvait que dire vert.
 Ce fichier ferme ce trou. Il couvre trois choses distinctes, et la deuxième est la
 plus importante — c'est celle qu'une migration d'algorithme casserait en silence.
 """
+
 import pytest
 
 from app.auth.jwt import hash_password, verify_password

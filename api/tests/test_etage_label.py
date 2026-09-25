@@ -21,6 +21,7 @@ l'information manquait est celui où elle est la plus simple à donner.
 `./front` : le partage d'un fichier est impossible, seule la copie l'est. C'est
 ce test qui rend la copie tenable.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -30,9 +31,7 @@ import pytest
 
 from app.utils.etages import etage_label
 
-_UTILS_TS = (
-    pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "utils.ts"
-)
+_UTILS_TS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "utils.ts"
 
 
 @pytest.mark.parametrize(

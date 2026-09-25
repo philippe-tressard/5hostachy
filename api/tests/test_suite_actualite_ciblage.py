@@ -28,6 +28,7 @@ savait pas porter.
 ⚠️ Ces tests relisent la BASE après l'appel, jamais le code de retour
 (`standards/04` §14 — observer la chose, pas son enregistrement).
 """
+
 from __future__ import annotations
 
 import json
@@ -84,7 +85,9 @@ def _actualite(session: Session, auteur_id: int) -> Ticket:
 
 
 def _nettoyer(session: Session, ticket_id: int) -> None:
-    for e in session.exec(select(TicketEvolution).where(TicketEvolution.ticket_id == ticket_id)).all():
+    for e in session.exec(
+        select(TicketEvolution).where(TicketEvolution.ticket_id == ticket_id)
+    ).all():
         session.delete(e)
     purger_ligne(session, Ticket, ticket_id)
     session.commit()
@@ -92,8 +95,11 @@ def _nettoyer(session: Session, ticket_id: int) -> None:
 
 def _suite(session, cs, ticket_id, **champs):
     add_evolution(
-        ticket_id, TicketEvolutionCreate(type="commentaire", **champs),
-        BackgroundTasks(), session=session, user=cs,
+        ticket_id,
+        TicketEvolutionCreate(type="commentaire", **champs),
+        BackgroundTasks(),
+        session=session,
+        user=cs,
     )
     session.expire_all()
     return session.get(Ticket, ticket_id)
@@ -123,10 +129,15 @@ def test_le_ciblage_enregistre_sur_la_suite_devient_celui_de_l_actualite(cs):
         t = _actualite(session, cs.id)
         try:
             relue = _suite(
-                session, cs, t.id, contenu="Le bâtiment 3 est concerné aussi.",
+                session,
+                cs,
+                t.id,
+                contenu="Le bâtiment 3 est concerné aussi.",
                 perimetre_cible=["bat:2", "bat:3"],
                 public_cible=["copropriétaires", "locataires"],
-                reserve_perimetre=True, epingle=True, urgente=True,
+                reserve_perimetre=True,
+                epingle=True,
+                urgente=True,
             )
             assert json.loads(relue.perimetre_cible) == ["bat:2", "bat:3"]
             assert json.loads(relue.public_cible) == ["copropriétaires", "locataires"]
@@ -172,15 +183,26 @@ def test_l_invariant_d_acces_est_bien_APPELE_sur_ce_chemin(cs, monkeypatch):
 def test_un_resident_ne_change_pas_a_qui_l_on_parle(cs):
     """À qui l'on parle et l'Accès appartiennent au conseil — jamais à l'auteur."""
     with Session(engine) as session:
-        resident = Utilisateur(email=f"r-{uuid.uuid4().hex[:8]}@exemple.test", mot_de_passe_hash="x",
-                               prenom="R", nom="S", role=RoleUtilisateur.résident)
+        resident = Utilisateur(
+            email=f"r-{uuid.uuid4().hex[:8]}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="R",
+            nom="S",
+            role=RoleUtilisateur.résident,
+        )
         session.add(resident)
         session.commit()
         session.refresh(resident)
         t = _actualite(session, resident.id)
         try:
-            relue = _suite(session, resident, t.id, contenu="Pour le CS seulement ?",
-                           public_cible=["conseil_syndical"], reserve_perimetre=True)
+            relue = _suite(
+                session,
+                resident,
+                t.id,
+                contenu="Pour le CS seulement ?",
+                public_cible=["conseil_syndical"],
+                reserve_perimetre=True,
+            )
             assert json.loads(relue.public_cible) == ["copropriétaires"]
             assert relue.reserve_perimetre is False
         finally:

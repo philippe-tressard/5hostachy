@@ -16,6 +16,7 @@ parti au service. C'est ce que ces tests refusent désormais.
 celui qui a montré le défaut : la portée du contrôle fait partie du contrôle
 (`standards/05` §9).
 """
+
 from __future__ import annotations
 
 from datetime import date

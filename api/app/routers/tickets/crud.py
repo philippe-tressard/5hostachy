@@ -2,12 +2,19 @@
 
 Extrait de `tickets.py` le 08/08/2026. Voir `__init__.py` pour la règle de découpage.
 """
+
 import json
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 from app.utils.intervenant import appliquer_intervenant
-from app.utils.nature_affaire import PERIMETRE_BUG, categorie_reservee, est_actualite, est_bug, statut_pour
+from app.utils.nature_affaire import (
+    PERIMETRE_BUG,
+    categorie_reservee,
+    est_actualite,
+    est_bug,
+    statut_pour,
+)
 from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.quand import exiger_description
 
@@ -86,13 +93,7 @@ def list_tickets(
     #  Le tri suit l'ACTIVITÉ, pas la date de dépôt (05/09/2026) : la règle et sa
     #  raison vivent dans `commun.py`, avec les autres décisions partagées.
     tickets = trier_par_activite(session, tickets)
-    return [
-        ticket_read(ticket, session)
-        for ticket in tickets
-        if ticket_visible(ticket, user)
-    ]
-
-
+    return [ticket_read(ticket, session) for ticket in tickets if ticket_visible(ticket, user)]
 
 
 @router.post("", response_model=TicketRead, status_code=201)
@@ -142,8 +143,13 @@ def create_ticket(
         auteur_id=user.id,
         lot_id=body.lot_id,
         batiment_id=body.batiment_id,
-        perimetre_cible=(PERIMETRE_BUG if bug else
-                         json.dumps(body.perimetre_cible) if body.perimetre_cible else '["résidence"]'),
+        perimetre_cible=(
+            PERIMETRE_BUG
+            if bug
+            else json.dumps(body.perimetre_cible)
+            if body.perimetre_cible
+            else '["résidence"]'
+        ),
         #  Posée juste en dessous par `appliquer_options`, depuis la case
         #  « Urgent » — plus jamais déduite de la catégorie (`CategorieTicket`).
         priorite="normale",
@@ -195,11 +201,16 @@ def create_ticket(
         session.commit()
         session.refresh(ticket)
         diffuser_actualite(
-            session, ticket, user, background_tasks,
+            session,
+            ticket,
+            user,
+            background_tasks,
             whatsapp=bool(body.partager_whatsapp),
-            syndic=ticket.destinataire_syndic, cs=ticket.destinataire_cs,
+            syndic=ticket.destinataire_syndic,
+            cs=ticket.destinataire_cs,
             auteur=bool(getattr(body, "envoyer_auteur", False)),
-            externe=body.email_externe, affiche=bool(body.annonce_hall),
+            externe=body.email_externe,
+            affiche=bool(body.annonce_hall),
         )
         return ticket_read(ticket, session)
 
@@ -220,8 +231,11 @@ def create_ticket(
     #  Un BOGUE ne prévient que le gestionnaire du site (#1191) : `_alerter_bug`.
     if not est_actualite(ticket) and not bug:
         _notifier_cs_creation(
-            session, ticket, urgence=ticket_urgent(ticket),
-            auteur=user, background_tasks=background_tasks,
+            session,
+            ticket,
+            urgence=ticket_urgent(ticket),
+            auteur=user,
+            background_tasks=background_tasks,
             deja_servies=adresses_deja_servies(session, ticket, categorie=body.categorie),
         )
 
@@ -241,7 +255,10 @@ def create_ticket(
 
     if ticket.destinataire_syndic or ticket.destinataire_cs:
         envoyer_email_syndic_cs(
-            ticket, user, background_tasks, session,
+            ticket,
+            user,
+            background_tasks,
+            session,
             syndic=ticket.destinataire_syndic,
             cs=ticket.destinataire_cs,
             # Mêmes règles de résolution que partout ailleurs : URL interne →
@@ -257,7 +274,11 @@ def create_ticket(
     email_ext = (body.email_externe or "").strip()
     if email_ext and est_cs and not bug:
         envoyer_email_externe(
-            ticket, user, email_ext, background_tasks, session,
+            ticket,
+            user,
+            email_ext,
+            background_tasks,
+            session,
             is_commentaire=False,
             fichiers_urls=parse_photos(ticket.fichiers_urls),
         )

@@ -24,6 +24,7 @@ Trois refus serveur, et ils ne sont pas décoratifs :
    libellé et leur visibilité. C'est le mécanisme retenu pour « la cave relève d'un
    bâtiment » sans migrer une seule ligne.
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -48,8 +49,10 @@ router = APIRouter(prefix="/perimetres", tags=["perimetres"])
 
 # ── Schémas ───────────────────────────────────────────────────────────────────
 
+
 class PerimetreRead(BaseModel):
     """Un nœud, tel que le front en a besoin pour afficher ET pour faire choisir."""
+
     id: int
     code: str
     parent: Optional[str]
@@ -98,6 +101,7 @@ class PerimetreCreate(BaseModel):
 
 class PerimetreUpdate(BaseModel):
     """Tout est optionnel — sauf `code`, qui n'y figure pas du tout."""
+
     libelle: Optional[str] = None
     parent: Optional[str] = None
     libelle_court: Optional[str] = None
@@ -113,6 +117,7 @@ class PerimetreUpdate(BaseModel):
 
 
 # ── Aides internes ────────────────────────────────────────────────────────────
+
 
 def _codes_cites(session: Session) -> set[str]:
     """Tous les codes de périmètre cités par un contenu, quel que soit le format.
@@ -210,25 +215,27 @@ def _en_lecture(noeuds: list[Perimetre], cites: set[str]) -> list[PerimetreRead]
             if noeud.id in vus:
                 continue
             vus.add(noeud.id)
-            sortie.append(PerimetreRead(
-                id=noeud.id,
-                code=noeud.code,
-                parent=par_id[noeud.parent_id].code if noeud.parent_id in par_id else None,
-                libelle=noeud.libelle,
-                libelle_court=noeud.libelle_court or noeud.libelle,
-                description=noeud.description or "",
-                icone=noeud.icone,
-                batiment_id=noeud.batiment_id,
-                profondeur=profondeur.get(noeud.id, 0),
-                ordre=noeud.ordre,
-                actif=noeud.actif,
-                portee_globale=noeud.portee_globale,
-                concerne_tous=_concerne_tous(noeud, par_id),
-                selectionnable=noeud.selectionnable,
-                privatif=noeud.privatif,
-                hors_copropriete=noeud.hors_copropriete,
-                utilise=noeud.code.lower() in cites,
-            ))
+            sortie.append(
+                PerimetreRead(
+                    id=noeud.id,
+                    code=noeud.code,
+                    parent=par_id[noeud.parent_id].code if noeud.parent_id in par_id else None,
+                    libelle=noeud.libelle,
+                    libelle_court=noeud.libelle_court or noeud.libelle,
+                    description=noeud.description or "",
+                    icone=noeud.icone,
+                    batiment_id=noeud.batiment_id,
+                    profondeur=profondeur.get(noeud.id, 0),
+                    ordre=noeud.ordre,
+                    actif=noeud.actif,
+                    portee_globale=noeud.portee_globale,
+                    concerne_tous=_concerne_tous(noeud, par_id),
+                    selectionnable=noeud.selectionnable,
+                    privatif=noeud.privatif,
+                    hors_copropriete=noeud.hors_copropriete,
+                    utilise=noeud.code.lower() in cites,
+                )
+            )
             descendre(noeud.id)
 
     descendre(None)
@@ -236,17 +243,27 @@ def _en_lecture(noeuds: list[Perimetre], cites: set[str]) -> list[PerimetreRead]
     #  rend quand même, sinon l'écran ne permettrait pas de le réparer.
     for noeud in noeuds:
         if noeud.id not in vus:
-            sortie.append(PerimetreRead(
-                id=noeud.id, code=noeud.code, parent=None, libelle=noeud.libelle,
-                libelle_court=noeud.libelle_court or noeud.libelle,
-                description=noeud.description or "", icone=noeud.icone,
-                batiment_id=noeud.batiment_id, profondeur=0, ordre=noeud.ordre,
-                actif=noeud.actif, portee_globale=noeud.portee_globale,
-                concerne_tous=noeud.portee_globale, selectionnable=noeud.selectionnable,
-                privatif=noeud.privatif,
-                hors_copropriete=noeud.hors_copropriete,
-                utilise=noeud.code.lower() in cites,
-            ))
+            sortie.append(
+                PerimetreRead(
+                    id=noeud.id,
+                    code=noeud.code,
+                    parent=None,
+                    libelle=noeud.libelle,
+                    libelle_court=noeud.libelle_court or noeud.libelle,
+                    description=noeud.description or "",
+                    icone=noeud.icone,
+                    batiment_id=noeud.batiment_id,
+                    profondeur=0,
+                    ordre=noeud.ordre,
+                    actif=noeud.actif,
+                    portee_globale=noeud.portee_globale,
+                    concerne_tous=noeud.portee_globale,
+                    selectionnable=noeud.selectionnable,
+                    privatif=noeud.privatif,
+                    hors_copropriete=noeud.hors_copropriete,
+                    utilise=noeud.code.lower() in cites,
+                )
+            )
     return sortie
 
 
@@ -271,9 +288,7 @@ def _noeud(session: Session, perimetre_id: int) -> Perimetre:
 def _resoudre_parent(session: Session, code_parent: Optional[str]) -> Optional[int]:
     if not code_parent:
         return None
-    parent = session.exec(
-        select(Perimetre).where(Perimetre.code == code_parent)
-    ).first()
+    parent = session.exec(select(Perimetre).where(Perimetre.code == code_parent)).first()
     if not parent:
         raise HTTPException(422, f"Périmètre parent inconnu : {code_parent}")
     return parent.id
@@ -285,15 +300,14 @@ def _refuser_cycle(session: Session, noeud_id: int, parent_id: Optional[int]) ->
     vus: set[int] = set()
     while courant_id is not None and courant_id not in vus:
         if courant_id == noeud_id:
-            raise HTTPException(
-                422, "Ce déplacement ferait d'un périmètre son propre ancêtre."
-            )
+            raise HTTPException(422, "Ce déplacement ferait d'un périmètre son propre ancêtre.")
         vus.add(courant_id)
         parent = session.get(Perimetre, courant_id)
         courant_id = parent.parent_id if parent else None
 
 
 # ── Lecture ───────────────────────────────────────────────────────────────────
+
 
 @router.get("", response_model=list[PerimetreRead])
 def lister_perimetres(
@@ -305,6 +319,7 @@ def lister_perimetres(
 
 
 # ── Écriture (administration) ─────────────────────────────────────────────────
+
 
 @router.post("", response_model=PerimetreRead, status_code=201)
 def creer_perimetre(
@@ -383,9 +398,7 @@ def supprimer_perimetre(
             "leur libellé et leur visibilité.",
         )
 
-    enfants = session.exec(
-        select(Perimetre).where(Perimetre.parent_id == noeud.id)
-    ).all()
+    enfants = session.exec(select(Perimetre).where(Perimetre.parent_id == noeud.id)).all()
     if enfants:
         raise HTTPException(
             409,

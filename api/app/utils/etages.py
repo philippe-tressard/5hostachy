@@ -4,6 +4,7 @@ Un module à lui seul, et non une ligne dans `dates_fr` : un étage n'est pas un
 date, et ranger une notion là où elle tombe sous la main est ce qui produit les
 fichiers de mille lignes que le plafond de modularité refuse ensuite.
 """
+
 from __future__ import annotations
 
 #: Les bornes d'un étage saisi. Au-delà, ce n'est pas une donnée, c'est une faute

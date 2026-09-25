@@ -4,6 +4,7 @@
 	import { auth } from '$lib/api';
 	import { setUser } from '$lib/stores/auth';
 	import { CHEMIN_CONNEXION } from '$lib/redirection';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	onMount(async () => {
 		try {
@@ -17,5 +18,5 @@
 </script>
 
 <div style="display:flex;align-items:center;justify-content:center;height:100vh;">
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 </div>

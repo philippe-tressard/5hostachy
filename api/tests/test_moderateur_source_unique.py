@@ -37,6 +37,7 @@ nom, est vu exactement pareil. Les vingt-six occurrences d'origine s'écrivaient
 de quatre façons différentes (`admin` d'abord, `conseil_syndical` d'abord, sur
 une ligne ou sur trois) — un `grep` en aurait manqué la moitié.
 """
+
 import ast
 from pathlib import Path
 
@@ -131,9 +132,7 @@ def test_le_refus_passe_par_le_predicat():
     )
     assert fn is not None, "`require_cs_or_admin` a disparu de auth/deps.py"
     appels = {
-        n.func.id
-        for n in ast.walk(fn)
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+        n.func.id for n in ast.walk(fn) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
     }
     assert "est_moderateur" in appels, (
         "`require_cs_or_admin` n'appelle pas `est_moderateur` : la règle « qui "

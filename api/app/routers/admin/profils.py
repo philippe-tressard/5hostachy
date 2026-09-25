@@ -27,6 +27,7 @@ router = APIRouter()
 
 # ── Demandes de modification de profil ─────────────────────────────────
 
+
 @router.get("/demandes-profil")
 def list_demandes_profil(
     session: Session = Depends(get_session),
@@ -43,12 +44,15 @@ def list_demandes_profil(
         utilisateur = session.get(Utilisateur, d.utilisateur_id)
         bat = session.get(Batiment, d.batiment_id_souhaite) if d.batiment_id_souhaite else None
         item = d.model_dump()
-        item["utilisateur_nom"] = nom_affiche(utilisateur.prenom, utilisateur.nom) if utilisateur else "?"
+        item["utilisateur_nom"] = (
+            nom_affiche(utilisateur.prenom, utilisateur.nom) if utilisateur else "?"
+        )
         item["utilisateur_email"] = utilisateur.email if utilisateur else None
         item["statut_actuel"] = utilisateur.statut.value if utilisateur else None
         item["batiment_actuel"] = libelle_batiment_ou(
             session.get(Batiment, utilisateur.batiment_id)
-            if utilisateur and utilisateur.batiment_id else None,
+            if utilisateur and utilisateur.batiment_id
+            else None,
             None,
         )
         item["batiment_nom_souhaite"] = libelle_batiment_ou(bat, None)
@@ -80,7 +84,9 @@ def traiter_demande_profil(
         if demande.batiment_id_souhaite:
             utilisateur.batiment_id = demande.batiment_id_souhaite
         demande.statut_demande = StatutDemandeProfil.approuvee
-        sonner_systeme(session, "compte",
+        sonner_systeme(
+            session,
+            "compte",
             destinataire_id=utilisateur.id,
             type="system",
             titre="Modification de profil approuvée",
@@ -90,7 +96,9 @@ def traiter_demande_profil(
     elif body.action == "rejeter":
         demande.statut_demande = StatutDemandeProfil.rejetee
         demande.motif_refus = body.motif_refus
-        sonner_systeme(session, "compte",
+        sonner_systeme(
+            session,
+            "compte",
             destinataire_id=utilisateur.id,
             type="system",
             titre="Modification de profil refusée",

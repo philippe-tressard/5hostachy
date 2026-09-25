@@ -29,6 +29,7 @@ absentes sous Windows). Ce contrôle est donc le seul moyen d'attraper la classe
 d'erreur ici, avant la production : il lit la règle **dans la source de
 WeasyPrint** plutôt que de la recopier, et l'applique aux CSS qu'on écrit.
 """
+
 from __future__ import annotations
 
 import re
@@ -58,7 +59,7 @@ def _regle_weasyprint() -> int:
     if not tokens.exists():
         pytest.skip("La source de WeasyPrint n'a pas la forme attendue")
     source = tokens.read_text(encoding="utf-8")
-    corps = source[source.index("def parse_color_stop"):]
+    corps = source[source.index("def parse_color_stop") :]
     corps = corps[: corps.index("\ndef ", 1)]
     longueurs = [int(n) for n in re.findall(r"len\(tokens\) == (\d+)", corps)]
     assert longueurs, "Cas zéro : `parse_color_stop` a changé de forme — contrôle inopérant."
@@ -95,7 +96,9 @@ def test_aucun_arret_de_couleur_ne_depasse_ce_que_weasyprint_lit():
             #  `var(--x)` compte pour UN jeton, comme dans tinycss2.
             jetons = re.sub(r"var\([^)]*\)", "VAR", arret).split()
             if len(jetons) > maxi:
-                fautes.append(f"{rel} — « {arret} » ({len(jetons)} jetons) dans « {gradient[:60]}… »")
+                fautes.append(
+                    f"{rel} — « {arret} » ({len(jetons)} jetons) dans « {gradient[:60]}… »"
+                )
 
     assert vus > 0, (
         "Cas zéro : aucun dégradé trouvé dans les feuilles imprimables — "
@@ -104,7 +107,8 @@ def test_aucun_arret_de_couleur_ne_depasse_ce_que_weasyprint_lit():
     assert not fautes, (
         f"WeasyPrint n'accepte qu'un arrêt de {maxi} jetons au plus "
         "(`css/tokens.py::parse_color_stop`) ; au-delà il lève et jette la "
-        "déclaration ENTIÈRE, en silence :\n  " + "\n  ".join(fautes) +
-        "\n\n  L'aperçu HTML continuerait de l'afficher — c'est ce qui a fait "
+        "déclaration ENTIÈRE, en silence :\n  "
+        + "\n  ".join(fautes)
+        + "\n\n  L'aperçu HTML continuerait de l'afficher — c'est ce qui a fait "
         "disparaître le filet du bandeau de périmètre le 11/09/2026."
     )

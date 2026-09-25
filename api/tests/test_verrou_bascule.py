@@ -40,6 +40,7 @@ relâche localement partout où il le relâche sur le peer — chemins d'échec 
 que le peer laisserait ce nœud verrouillé **à vie**, donc sans aucun déploiement,
 en silence.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -102,14 +103,15 @@ def test_le_verrou_du_PEER_ne_se_touche_que_dans_le_module():
         if f == VERROU:
             continue
         code = (chr(10)).join(
-            l for l in f.read_text(encoding="utf-8").splitlines()
-            if not l.lstrip().startswith("#")
+            l for l in f.read_text(encoding="utf-8").splitlines() if not l.lstrip().startswith("#")
         )
         if POSE_PEER.search(code) or LIBERE_PEER.search(code):
             fautifs.append(f"{f.name} : touche au verrou du PEER — passer par `lib-verrou.sh`")
-    assert not fautifs, "Verrou bilatéral manipulé hors du module :" + (chr(10) + "  ") + (
-        chr(10) + "  "
-    ).join(fautifs)
+    assert not fautifs, (
+        "Verrou bilatéral manipulé hors du module :"
+        + (chr(10) + "  ")
+        + (chr(10) + "  ").join(fautifs)
+    )
 
 
 def test_tout_verrou_LOCAL_pose_est_relache_par_un_trap():
@@ -123,16 +125,16 @@ def test_tout_verrou_LOCAL_pose_est_relache_par_un_trap():
     sans_trap = []
     for f in sorted(RACINE.rglob("*.sh")):
         src = f.read_text(encoding="utf-8")
-        code = (chr(10)).join(
-            l for l in src.splitlines() if not l.lstrip().startswith("#")
-        )
+        code = (chr(10)).join(l for l in src.splitlines() if not l.lstrip().startswith("#"))
         if not POSE_LOCAL.search(code):
             continue
         if "trap" not in code:
             sans_trap.append(f"{f.name} : pose `.bascule-lock` sans armer de `trap`")
-    assert not sans_trap, "Verrou local sans filet de libération :" + (chr(10) + "  ") + (
-        chr(10) + "  "
-    ).join(sans_trap)
+    assert not sans_trap, (
+        "Verrou local sans filet de libération :"
+        + (chr(10) + "  ")
+        + (chr(10) + "  ").join(sans_trap)
+    )
 
 
 def test_la_decision_d_auto_deploy_fait_PRIMER_le_verrou():
@@ -240,7 +242,7 @@ def test_la_peremption_S_ABSTIENT_quand_elle_ne_peut_pas_MESURER():
     src = MODULE_VERROU.read_text(encoding="utf-8")
     corps = src[src.index("verrou_recent()") :]
     #  Les trois abstentions : non numérique, nul, âge négatif.
-    for garde in ("*[!0-9]*)", '-le 0 ]', '-lt 0 ]'):
+    for garde in ("*[!0-9]*)", "-le 0 ]", "-lt 0 ]"):
         assert garde in corps, f"garde manquante dans verrou_recent : {garde}"
     assert "echo non" in corps, "verrou_recent ne conclut jamais à la péremption"
 
@@ -265,9 +267,7 @@ def test_le_verrou_est_pose_AVANT_la_premiere_action():
     #  On ne regarde que le corps PRINCIPAL : tout ce qui est indenté appartient
     #  à une fonction ou à un bloc conditionnel intérieur.
     lignes = src.splitlines()
-    i_pose = next(
-        (n for n, l in enumerate(lignes) if l.strip() == "verrou_poser"), None
-    )
+    i_pose = next((n for n, l in enumerate(lignes) if l.strip() == "verrou_poser"), None)
     assert i_pose is not None, "`verrou_poser` introuvable dans bascule.sh"
 
     avant = []

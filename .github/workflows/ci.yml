@@ -60,7 +60,12 @@ jobs:
           python-version: "3.11"
 
       - name: Install Ruff
-        run: pip install ruff
+        # ÉPINGLÉ depuis le 24/09/2026 (#1048) : `ruff format --check` compare le
+        # code au style de LA version installée, et Ruff change son style de
+        # formatage chaque année. Non épinglé, le job passerait au rouge un
+        # matin sans qu'un octet du dépôt ait bougé. Monter la version = un
+        # lot dédié : `pip install ruff==X`, `ruff format api/`, commit seul.
+        run: pip install ruff==0.15.8
 
       # 🔴 PREMIÈRE MESURE DES DÉPENDANCES PYTHON (#537, 20/08/2026).
       #
@@ -149,10 +154,36 @@ jobs:
         # `scene`) sous le nom de la fonction qui la déclare, et Ruff y lit ~70
         # redéfinitions qui n'en sont pas. Les « corriger » casserait les tests.
         # F401 (46 imports inutiles) relève du point 2 de #1048, pas de ce lot.
+        #
+        # F811, F841, E711, E712 partout depuis le 24/09/2026 (#1048, point 2).
+        # Ce ne sont pas des règles de style : un import redoublé, une variable
+        # jamais lue, c'est le résidu d'une factorisation inachevée.
+        # 🔴 E711/E712 dans une requête SQLAlchemy (`Model.actif == True`,
+        # `Model.x != None`) : le remède que Ruff propose (`is True`, `is not
+        # None`) compare l'OBJET colonne en Python et rend un booléen constant —
+        # le filtre disparaît sans un mot. La forme du dépôt est `# noqa: E712`
+        # (ou E711) sur la ligne ; elle existait déjà 41 fois.
+        # F811 reste hors de `tests/` : pytest injecte une fixture (`session`,
+        # `scene`) sous le nom de la fonction qui la déclare — ~70 faux positifs.
+        # F401 n'y est pas encore : 46 imports inutiles dans `tests/`, qu'il faut
+        # relire un à un (un import peut y être voulu pour son effet de bord).
+        # `alembic/` passe ces quatre règles sans qu'une migration soit touchée.
         run: |
-          ruff check api/app/ --select E9,F63,F7,F82,F401,S608
-          ruff check api/alembic/ --select E9,F63,F7,F82
-          ruff check api/tests/ --select E9,F63,F7,F82
+          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712
+          ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712
+          ruff check api/tests/ --select E9,F63,F7,F82,F841,E711,E712
+
+      - name: Ruff format (API)
+        # Depuis le 24/09/2026 (#1048) : aucun formateur n'était en usage côté
+        # API, alors que le front passe Prettier. Le formatage a été appliqué
+        # en UN commit, seul — relire son diff n'a de sens que s'il ne porte
+        # rien d'autre.
+        # La configuration (largeur 100, migrations exclues) vit dans
+        # `api/ruff.toml` : l'exécuter ailleurs que depuis `api/` la lit aussi.
+        # ⚠️ Le formatage DÉPLACE un commentaire de fin de ligne quand il coupe
+        # la ligne : un `# noqa` peut quitter la ligne qu'il vise. `ruff check`
+        # juste au-dessus le voit — c'est ce qui a été corrigé six fois ici.
+        run: ruff format --check api/
         # On garde un garde-fou « erreurs réelles » (syntaxe, noms invalides, runtime)
         # sans bloquer le CI sur des règles de style legacy.
 
@@ -219,9 +250,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: api
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
+        # `requirements-dev.txt` = la production (`-r requirements.txt`) + pytest
+        # ÉPINGLÉ (#1048, 24/09/2026). Il était installé ici sans version : les
+        # tests changeaient de moteur d'un run à l'autre sans que le dépôt bouge.
+        run: pip install -r requirements-dev.txt
 
       - name: Run pytest
         working-directory: api
@@ -864,6 +896,14 @@ jobs:
         working-directory: front
         run: npm run lint:a11y
 
+      # 🔴 `Icon` rend un nom inconnu en « ? » sans un mot. La checklist disait
+      # « icône vérifiée dans icones-svg.json » et aucun script ne lisait le
+      # catalogue côté front : `icone="database"` s'affichait en « ? » depuis
+      # v2.19.0 (#1045).
+      - name: Tout nom d'icône existe dans le catalogue
+        working-directory: front
+        run: npm run lint:icones
+
       - name: Aucune redéfinition scopée de la charte
         working-directory: front
         run: npm run lint:charte
@@ -992,6 +1032,7 @@ jobs:
           node scripts/check-csp-servie.mjs --selftest
           node scripts/check-lien-evitement.mjs --selftest
           node scripts/check-a11y.mjs --selftest
+          node scripts/check-icones.mjs --selftest
           node scripts/check-seuil-listes-courtes.mjs --selftest
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
@@ -1579,6 +1620,15 @@ jobs:
         working-directory: front
         run: npm run lint:etat-liste
 
+      # 🔴 Le PREMIER des trois états, lui, n'était tenu par rien : le 24/09/2026,
+      # vingt-trois écrans écrivaient encore leur propre « Chargement… », sous
+      # cinq allures — dont une copie de la classe `.etat-chargement` d'EtatListe,
+      # avec son style, dans une page (#1045). La skill affirmait qu'il n'en
+      # restait aucun. Lance son `--selftest` avant de mesurer.
+      - name: L'attente d'un écran se rend par EtatListe
+        working-directory: front
+        run: npm run lint:chargement
+
       # 🔴 Le libellé d'un étage était écrit SEPT fois, en QUATRE rendus : un
       # lot au premier sous-sol s'affichait « -1 » sur `mon-lot`, « SS 1 » sur le
       # profil, et « Ét. -1 » dans une troisième forme de la même page.
@@ -1625,6 +1675,22 @@ jobs:
       - name: En-tête de carte rendu par le composant partagé
         working-directory: front
         run: npm run lint:entete-carte
+
+      # 🔴 Trois règles de la checklist qui n'avaient AUCUN garde-fou (#1045,
+      # point 2). La mesure du 24/09/2026 en a trouvé quatre écarts vivants :
+      # « 📍 Concerne votre bâtiment » et « 📍 Dépannage » (📍 est un LIEU, un
+      # périmètre se dit 🔹), un badge 🔹 recopié qui affichait le périmètre par
+      # défaut, et `icone="database"` rendu en point d'interrogation — `Icon`
+      # retombe en silence sur `help-circle` : celui-là est tenu par
+      # `lint:icones`, branché plus haut (#1264). Chacun lance son `--selftest`
+      # avant de mesurer.
+      - name: Pictogrammes de contexte — 📍 lieu, 🔹 périmètre
+        working-directory: front
+        run: npm run lint:pictogrammes
+
+      - name: Troncature d'aperçu issue de normes.css
+        working-directory: front
+        run: npm run lint:clamp
 
       # 🔴 `e instanceof ApiError ? e.message : 'Erreur'` est écrit 123 fois.
       # Ce n'est pas une redite cosmétique : c'est la MÊME information perdue
@@ -1686,6 +1752,15 @@ jobs:
       - name: Le pliage atteint les composants porteurs de section
         working-directory: front
         run: npm run lint:pliage-transmis
+
+      # LES FILTRES D'UNE LISTE PRECEDENT SA BOITE DE CREATION (#1186, 24/09/2026)
+      #
+      # `ux-patterns` §0 ter l'ecrivait depuis le 12/09 ; la Boite a idees et les
+      # Petites annonces rendaient pourtant leur filtre SOUS le formulaire ouvert.
+      # L'ecart ne se voit que la boite ouverte, donc jamais en relecture d'ecran.
+      - name: Les filtres precedent la boite de creation
+        working-directory: front
+        run: npm run lint:filtre-avant-formulaire
 
       # UNE SECTION SE NOMME PAR SON TITRE, JAMAIS PAR UN LIBELLE DE CHAMP
       # (23/09/2026, signale a l'ecran : « TITRE » ne ressemblait pas aux autres

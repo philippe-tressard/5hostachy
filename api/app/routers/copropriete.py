@@ -1,4 +1,5 @@
 """Router copropriété — fiche, bâtiments, lots."""
+
 from datetime import date
 from typing import Optional
 
@@ -9,8 +10,11 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin
 from app.database import get_session
 from app.models.core import (
-    ContratEntretien, Copropriete, Prestataire,
-    TypeEquipement, Utilisateur,
+    ContratEntretien,
+    Copropriete,
+    Prestataire,
+    TypeEquipement,
+    Utilisateur,
 )
 
 from app.utils.destinataires import syndic_principal
@@ -125,7 +129,6 @@ class BatimentRead(BaseModel):
 
     class Config:
         from_attributes = True
-
 
 
 #: Les deux sections de la fiche adossées à un contrat, et ce qui les distingue.
@@ -257,7 +260,13 @@ def syndic_du_contrat(session: Session, copro: Copropriete) -> dict:
     lu: dict = {}
     if principal:
         lu["syndic_interlocuteur"] = " ".join(
-            x for x in (principal.prenom, principal.nom, f"({principal.fonction})" if principal.fonction else "") if x
+            x
+            for x in (
+                principal.prenom,
+                principal.nom,
+                f"({principal.fonction})" if principal.fonction else "",
+            )
+            if x
         ).strip()
         lu["syndic_interlocuteur_email"] = principal.email
 
@@ -269,16 +278,18 @@ def syndic_du_contrat(session: Session, copro: Copropriete) -> dict:
         return lu
 
     presta = session.get(Prestataire, contrat.prestataire_id)
-    lu.update({
-        "syndic_contrat_id": contrat.id,
-        "syndic_cabinet": presta.nom if presta else None,
-        "syndic_telephone": presta.telephone if presta else None,
-        "syndic_email": presta.email if presta else None,
-        "syndic_numero_mandat": contrat.numero_contrat,
-        "syndic_debut": contrat.date_debut,
-        **_echeance_lue("syndic", contrat),
-        "syndic_document_id": id_document_designe(session, contrat),
-    })
+    lu.update(
+        {
+            "syndic_contrat_id": contrat.id,
+            "syndic_cabinet": presta.nom if presta else None,
+            "syndic_telephone": presta.telephone if presta else None,
+            "syndic_email": presta.email if presta else None,
+            "syndic_numero_mandat": contrat.numero_contrat,
+            "syndic_debut": contrat.date_debut,
+            **_echeance_lue("syndic", contrat),
+            "syndic_document_id": id_document_designe(session, contrat),
+        }
+    )
     return lu
 
 
@@ -378,6 +389,7 @@ class ContratCandidat(BaseModel):
     rien de plus. La fiche lit les détails par `contrat_de_reference` une fois le
     choix fait — deux chemins pour la même donnée en feraient deux vérités.
     """
+
     id: int
     libelle: str
     prestataire: Optional[str] = None

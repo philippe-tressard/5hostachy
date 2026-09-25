@@ -32,6 +32,7 @@
 	import SectionDocuments from '$lib/components/SectionDocuments.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	/**  L'onglet vient du CHEMIN, résolu par `+page.ts` — jamais d'un `let`
 	 *   qu'on affecte : une page qui écrit son propre onglet ne peut plus être
@@ -441,7 +442,7 @@
 {#if onglet === 'carnet'}
 	<CarnetEntretien />
 {:else if onglet === 'fiche' && loading}
-	<p style="color:var(--color-text-muted)">Chargement…</p>
+	<EtatListe chargement />
 {:else if onglet === 'fiche' && copropriete}
 	<!-- ── Photo Bannière ─────────────────────────────────────────────────── -->
 	<figure class="photo-figure">

@@ -1,4 +1,5 @@
 """Router délégations aidant — gestion des accès délégués pour les proches."""
+
 from datetime import date, datetime
 from typing import Optional
 
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/delegations", tags=["délégations-aidant"])
 
 
 # ── Schemas ─────────────────────────────────────────────────────────────────
+
 
 class DelegationCreate(BaseModel):
     mandant_id: int
@@ -40,6 +42,7 @@ class DelegationRead(BaseModel):
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
+
 
 def _user_display(u: Utilisateur) -> str:
     return nom_affiche(u.prenom, u.nom)
@@ -65,6 +68,7 @@ def _to_read(d: Delegation, session: Session) -> dict:
 
 # ── Endpoints CS/Admin ──────────────────────────────────────────────────────
 
+
 @router.get("", response_model=list[dict])
 def list_delegations(
     session: Session = Depends(get_session),
@@ -76,9 +80,7 @@ def list_delegations(
     - Mandant : les délégations le concernant
     """
     if est_moderateur(user):
-        delegations = session.exec(
-            select(Delegation).order_by(Delegation.cree_le.desc())
-        ).all()
+        delegations = session.exec(select(Delegation).order_by(Delegation.cree_le.desc())).all()
     else:
         delegations = session.exec(
             select(Delegation)
@@ -95,8 +97,8 @@ def create_delegation(
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Créer une délégation (CS/Admin uniquement)."""
-    mandant = ou_404(session, Utilisateur, body.mandant_id, "Mandant")
-    aidant = ou_404(session, Utilisateur, body.aidant_id, "Aidant")
+    ou_404(session, Utilisateur, body.mandant_id, "Mandant")
+    ou_404(session, Utilisateur, body.aidant_id, "Aidant")
     if body.mandant_id == body.aidant_id:
         raise HTTPException(400, "Le mandant et l'aidant doivent être différents")
 
@@ -152,6 +154,7 @@ def create_delegation(
 
 # ── Acceptation par l'aidant ────────────────────────────────────────────────
 
+
 @router.post("/{delegation_id}/accepter")
 def accepter_delegation(
     delegation_id: int,
@@ -171,6 +174,7 @@ def accepter_delegation(
 
 
 # ── Révocation ──────────────────────────────────────────────────────────────
+
 
 @router.post("/{delegation_id}/revoquer")
 def revoquer_delegation(

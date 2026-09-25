@@ -28,6 +28,7 @@ elle ne se RETIRE pas à la correction suivante — le client ne l'envoie qu'à
 `True`, quand une proposition a été appliquée dans le formulaire, et ne l'envoie
 pas sinon (`AssisteIACorrection`).
 """
+
 from __future__ import annotations
 
 from typing import Optional

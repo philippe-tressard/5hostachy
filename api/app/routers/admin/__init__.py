@@ -49,6 +49,7 @@ de tâches planifiées, que `health_monitor` consomme légitimement. Leur place 
 module dédié — non fait ici pour ne pas mélanger un déplacement mécanique et un
 changement de conception, et noté comme suite à donner.
 """
+
 from fastapi import APIRouter
 
 from . import (
@@ -98,6 +99,7 @@ from .exploitation import (  # noqa: E402  (après le montage du router, pour la
     _RAPPORTS_CONSERVES,
     _purger_anciens_rapports,
 )
+
 #  Le canal des scripts vit dans son propre module depuis le 11/08/2026 ;
 #  la surface publique, elle, ne bouge pas.
 from .rapports_scripts import maintenance_rapport  # noqa: E402

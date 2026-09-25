@@ -31,6 +31,7 @@ violations CSP.
 ⚠️ Ces tests lisent l'arbre syntaxique, pas le texte : un appel réparti sur
 plusieurs lignes ou renommé à l'import est vu pareil.
 """
+
 import ast
 from pathlib import Path
 
@@ -45,8 +46,7 @@ FONCTION = "journaliser_securite"
 GESTES_SENSIBLES = {
     ("routers/auth.py", "login"): "une connexion refusée — sans elle, une attaque "
     "par force brute est freinée par le rate limit mais jamais signalée",
-    ("routers/auth_mot_de_passe.py", "change_password"): "un mot de passe changé par "
-    "son porteur",
+    ("routers/auth_mot_de_passe.py", "change_password"): "un mot de passe changé par son porteur",
     ("routers/auth_mot_de_passe.py", "reset_password"): "un mot de passe réinitialisé "
     "par jeton — le chemin qu'emprunterait quelqu'un qui a pris la boîte mail",
     ("routers/admin/utilisateurs.py", "ajouter_role"): "une élévation de rôle : c'est "
@@ -169,6 +169,4 @@ def test_le_journal_ne_porte_aucune_donnee_personnelle():
                 texte = ast.unparse(valeur)
                 if any(x in texte for x in ("email", "password", "mot_de_passe", "token")):
                     fautes.append(f"app/{fichier}::{fonction} — {texte[:90]}")
-    assert not fautes, (
-        "Une adresse ou un mot de passe est passé au journal :\n" + "\n".join(fautes)
-    )
+    assert not fautes, "Une adresse ou un mot de passe est passé au journal :\n" + "\n".join(fautes)

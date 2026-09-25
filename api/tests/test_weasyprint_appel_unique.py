@@ -28,6 +28,7 @@ pas par accident.
 levée. C'est ce qui a permis de la lever en une passe, au lieu d'un « on verra » :
 une exception sans date de revue devient une porte qu'on croit fermée.
 """
+
 from __future__ import annotations
 
 import ast
@@ -49,14 +50,18 @@ def _appels_weasyprint():
             if not isinstance(n, ast.Call):
                 continue
             nom = (
-                n.func.id if isinstance(n.func, ast.Name)
-                else n.func.attr if isinstance(n.func, ast.Attribute)
+                n.func.id
+                if isinstance(n.func, ast.Name)
+                else n.func.attr
+                if isinstance(n.func, ast.Attribute)
                 else None
             )
             if nom in ("HTML", "write_pdf"):
-                yield chemin.relative_to(RACINE).as_posix(), nom, {
-                    k.arg for k in n.keywords if k.arg
-                }
+                yield (
+                    chemin.relative_to(RACINE).as_posix(),
+                    nom,
+                    {k.arg for k in n.keywords if k.arg},
+                )
 
 
 def test_aucun_argument_a_risque_n_est_employe():

@@ -19,6 +19,7 @@ inchangées**. `api/tests/test_endpoints_orphelins.py` le vérifie.
 ⚠️ `construire_user_read` a suivi, mais dans `utils/`, pas ici : les DEUX routeurs
 en ont besoin, et un routeur qui en importe un autre n'est plus un routeur.
 """
+
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -103,7 +104,9 @@ def update_me(
     if body.email is not None:
         new_email = body.email.strip().lower()
         if new_email != user.email.lower():
-            existing = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == new_email)).first()
+            existing = session.exec(
+                select(Utilisateur).where(func.lower(Utilisateur.email) == new_email)
+            ).first()
             if existing:
                 raise HTTPException(400, "Cette adresse e-mail est déjà utilisée")
             user.email = new_email
@@ -138,7 +141,9 @@ def update_me(
             alerter_divergence_etage(session, background_tasks, user, body.etage)
         user.etage = body.etage
     if body.last_seen_actualites is not None:
-        user.last_seen_actualites = datetime.fromisoformat(body.last_seen_actualites.replace("Z", "+00:00"))
+        user.last_seen_actualites = datetime.fromisoformat(
+            body.last_seen_actualites.replace("Z", "+00:00")
+        )
     if body.preferences_notifications is not None:
         user.preferences_notifications = body.preferences_notifications
     if body.restreindre_a_mes_batiments is not None:
@@ -156,6 +161,7 @@ def update_me(
 
 
 # ── Demandes de modification de profil (statut / bâtiment) ───────────────────
+
 
 class DemandeModifCreate(BaseModel):
     statut_souhaite: str | None = None

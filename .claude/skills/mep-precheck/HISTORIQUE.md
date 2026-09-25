@@ -237,7 +237,7 @@ Un point **INCONNU** (contrôle impossible à exécuter) se traite comme une ano
 soit on trouve un moyen de le mesurer, soit on décide explicitement de passer outre
 en le disant. Jamais de vert par défaut.
 
-**Point 14 — pourquoi (31/07/2026) :** trois oublis d'hygiène, tous silencieux, tous
+**Point 14 — pourquoi (31/07/2026 ; principe : `standards/07-observabilite-et-alertes.md` §6–7) :** trois oublis d'hygiène, tous silencieux, tous
 sur le **standby** que le pré-check n'inspectait pas :
 - `maintenance.sh` ne tournait **que sur l'actif**, alors que rotation, `chown` et
   prune ne touchent ni l'appli ni la base. Un nœud n'étant actif qu'**un dimanche

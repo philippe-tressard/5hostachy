@@ -6,6 +6,7 @@ Domaine à part entière : c'est le seul endroit qui écrit au syndic **au nom d
 conseil syndical**, avec sa civilité, l'ancienneté réelle des dossiers et
 l'historique de chaque ticket.
 """
+
 import json
 from datetime import datetime
 
@@ -76,13 +77,15 @@ def list_relance_syndic(
     éligibles (passé le délai) des candidats (pas encore au délai).
     """
     tickets = session.exec(
-        select(Ticket).where(
+        select(Ticket)
+        .where(
             Ticket.categorie != "bug",
             #  ACTIFS, pas « non clos » : une actualité (`publie`) n'est ni l'un ni
             #  l'autre, et ne se relance pas (#1091).
             Ticket.statut.in_(STATUTS_TICKET_ACTIFS),
             Ticket.non_relancable == False,  # noqa: E712
-        ).order_by(Ticket.mis_a_jour_le)
+        )
+        .order_by(Ticket.mis_a_jour_le)
     ).all()
     return RelanceSyndicResponse(
         delai_jours=_delai_jours(session),
@@ -97,13 +100,13 @@ def _contexte_ticket(session: Session, ticket: Ticket) -> dict:
         .where(TicketEvolution.ticket_id == ticket.id)
         .order_by(TicketEvolution.cree_le)
     ).all()
-    historique = [{
-        "date": date_courte(ticket.cree_le),
-        "label": f"Création du ticket (statut : {STATUT_LABELS.get(ticket.statut, ticket.statut)})",
-    }]
-    historique += [
-        {"date": date_courte(e.cree_le), "label": libelle_evolution(e)} for e in evols
+    historique = [
+        {
+            "date": date_courte(ticket.cree_le),
+            "label": f"Création du ticket (statut : {STATUT_LABELS.get(ticket.statut, ticket.statut)})",
+        }
     ]
+    historique += [{"date": date_courte(e.cree_le), "label": libelle_evolution(e)} for e in evols]
     return {
         "numero": ticket.numero,
         "titre": ticket.titre,
@@ -148,9 +151,7 @@ def list_reponses_relance(
     relances = {
         r.id: r
         for r in session.exec(
-            select(RelanceCourriel).where(
-                RelanceCourriel.id.in_({x.relance_id for x in reponses})
-            )
+            select(RelanceCourriel).where(RelanceCourriel.id.in_({x.relance_id for x in reponses}))
         ).all()
     }
     #  Les numéros sont résolus ICI, une fois : le front n'a pas à savoir que la
@@ -164,8 +165,7 @@ def list_reponses_relance(
     numeros = {
         t.id: t.numero
         for t in (
-            session.exec(select(Ticket).where(Ticket.id.in_(ids_tous))).all()
-            if ids_tous else []
+            session.exec(select(Ticket).where(Ticket.id.in_(ids_tous))).all() if ids_tous else []
         )
     }
 
@@ -176,14 +176,16 @@ def list_reponses_relance(
             ids = [int(i) for i in json.loads(rel.tickets_json or "[]")] if rel else []
         except (ValueError, TypeError):
             ids = []
-        sortie.append({
-            "id": rep.id,
-            "expediteur": rep.expediteur,
-            "contenu": rep.contenu,
-            "recue_le": rep.recue_le,
-            "relance_le": rel.cree_le if rel else None,
-            "tickets": [numeros[i] for i in ids if i in numeros],
-        })
+        sortie.append(
+            {
+                "id": rep.id,
+                "expediteur": rep.expediteur,
+                "contenu": rep.contenu,
+                "recue_le": rep.recue_le,
+                "relance_le": rel.cree_le if rel else None,
+                "tickets": [numeros[i] for i in ids if i in numeros],
+            }
+        )
     return {"reponses": sortie}
 
 
@@ -217,13 +219,15 @@ def envoyer_relance_syndic(
 
     now = datetime.utcnow()
     for ticket in tickets_relance:
-        session.add(TicketEvolution(
-            ticket_id=ticket.id,
-            type="relance",
-            contenu=f"Relance syndic n°{compter_relances(session, ticket.id) + 1}",
-            auteur_id=user.id,
-            cree_le=now,
-        ))
+        session.add(
+            TicketEvolution(
+                ticket_id=ticket.id,
+                type="relance",
+                contenu=f"Relance syndic n°{compter_relances(session, ticket.id) + 1}",
+                auteur_id=user.id,
+                cree_le=now,
+            )
+        )
         ticket.mis_a_jour_le = now
         #  Relancer un ticket l'escalade au syndic (utile pour ceux pas encore
         #  explicitement adressés au syndic) → cohérence avec le mail envoyé.

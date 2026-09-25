@@ -1,4 +1,5 @@
 """Router diagnostics réglementaires — types + rapports avec upload."""
+
 import logging
 import os
 from datetime import datetime, date as dateclass
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/diagnostics", tags=["diagnostics"])
 
 
 # ── Schémas ────────────────────────────────────────────────────────────────
+
 
 class RapportRead(BaseModel):
     id: int
@@ -63,6 +65,7 @@ class RapportUpdate(BaseModel):
 
 # ── Endpoints ─────────────────────────────────────────────────────────────
 
+
 @router.get("/types", response_model=list[DiagnosticTypeRead])
 def list_types(
     session: Session = Depends(get_session),
@@ -70,7 +73,7 @@ def list_types(
 ):
     types = session.exec(
         select(DiagnosticType)
-        .where(DiagnosticType.actif == True)
+        .where(DiagnosticType.actif == True)  # noqa: E712
         .order_by(DiagnosticType.ordre)
     ).all()
     result = []
@@ -78,18 +81,23 @@ def list_types(
         rapports = session.exec(
             select(DiagnosticRapport)
             .where(DiagnosticRapport.diagnostic_type_id == t.id)
-            .order_by(DiagnosticRapport.date_rapport.desc().nullslast(), DiagnosticRapport.publie_le.desc())
+            .order_by(
+                DiagnosticRapport.date_rapport.desc().nullslast(),
+                DiagnosticRapport.publie_le.desc(),
+            )
         ).all()
-        result.append(DiagnosticTypeRead(
-            id=t.id,
-            code=t.code,
-            nom=t.nom,
-            texte_legislatif=t.texte_legislatif,
-            frequence=t.frequence,
-            ordre=t.ordre,
-            non_applicable=t.non_applicable,
-            rapports=[RapportRead.model_validate(r) for r in rapports],
-        ))
+        result.append(
+            DiagnosticTypeRead(
+                id=t.id,
+                code=t.code,
+                nom=t.nom,
+                texte_legislatif=t.texte_legislatif,
+                frequence=t.frequence,
+                ordre=t.ordre,
+                non_applicable=t.non_applicable,
+                rapports=[RapportRead.model_validate(r) for r in rapports],
+            )
+        )
     return result
 
 
@@ -108,7 +116,9 @@ def toggle_non_applicable(
     rapports = session.exec(
         select(DiagnosticRapport)
         .where(DiagnosticRapport.diagnostic_type_id == diag_type.id)
-        .order_by(DiagnosticRapport.date_rapport.desc().nullslast(), DiagnosticRapport.publie_le.desc())
+        .order_by(
+            DiagnosticRapport.date_rapport.desc().nullslast(), DiagnosticRapport.publie_le.desc()
+        )
     ).all()
     return DiagnosticTypeRead(
         id=diag_type.id,
@@ -131,7 +141,7 @@ async def upload_rapport(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    diag_type = ou_404(session, DiagnosticType, type_id, "Type de diagnostic")
+    ou_404(session, DiagnosticType, type_id, "Type de diagnostic")
 
     # REPERTOIRE_PRIVE et non la racine du volume : un rapport de diagnostic
     # (DPE, amiante, plomb) se télécharge par un endpoint authentifié ; posé à la
@@ -183,7 +193,9 @@ def update_rapport(
         rapport.titre = body.titre
     if body.date_rapport is not None:
         try:
-            rapport.date_rapport = dateclass.fromisoformat(body.date_rapport) if body.date_rapport else None
+            rapport.date_rapport = (
+                dateclass.fromisoformat(body.date_rapport) if body.date_rapport else None
+            )
         except ValueError:
             pass
     elif body.date_rapport == "":
@@ -219,4 +231,6 @@ def download_rapport(
     rapport = ou_404(session, DiagnosticRapport, rapport_id, "Rapport")
     if not os.path.exists(rapport.fichier_chemin):
         raise HTTPException(404, "Fichier introuvable sur le serveur")
-    return FileResponse(rapport.fichier_chemin, filename=rapport.fichier_nom, media_type=rapport.mime_type)
+    return FileResponse(
+        rapport.fichier_chemin, filename=rapport.fichier_nom, media_type=rapport.mime_type
+    )

@@ -29,6 +29,7 @@ Les deux clés qui manquaient à l'un ou à l'autre sont rendues à tout le mond
 on fusionne deux copies (`standards/02` §4 bis) — une clé en trop est ignorée par
 qui ne la lit pas, une clé en moins est une fonctionnalité perdue.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -103,7 +104,7 @@ def membres_du_conseil(session: Session, *, pour_administration: bool = False) -
     membres = sorted(
         session.exec(select(MembreCS)).all(),
         key=(
-            (lambda m: (m.ordre or 0))
+            (lambda m: m.ordre or 0)
             if pour_administration
             else (lambda m: (m.batiment_id or 9999, _ordre_genre(m.genre), m.nom.lower()))
         ),
@@ -123,8 +124,7 @@ def membres_du_conseil(session: Session, *, pour_administration: bool = False) -
             #  `is not None` et non la valeur de vérité : les deux copies ne
             #  disaient déjà pas la même chose pour l'identifiant 0.
             "est_gestionnaire_site": bool(
-                m.est_gestionnaire_site
-                or (gestionnaire is not None and m.user_id == gestionnaire)
+                m.est_gestionnaire_site or (gestionnaire is not None and m.user_id == gestionnaire)
             ),
             "est_president": m.est_president,
             "photo_url": caches.photo(m.user_id),

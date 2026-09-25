@@ -42,6 +42,7 @@ voir reste échappé.** La frontière est la CATÉGORIE Unicode, jamais une list
 Tout le reste — lettres accentuées, tirets, apostrophes, symboles — est visible,
 donc s'écrit visiblement.
 """
+
 from __future__ import annotations
 
 import re
@@ -125,15 +126,11 @@ def lignes_fautives(texte: str, court: str = "<texte>") -> list[str]:
         for m in _SEQUENCE.finditer(ligne):
             if _visible(m.group(1)):
                 c = chr(int(m.group(1), 16))
-                trouves.append(
-                    f"  {court}:{ligne_no} — la lettre « {c} » écrite en séquence"
-                )
+                trouves.append(f"  {court}:{ligne_no} — la lettre « {c} » écrite en séquence")
         if emoji:
             for m in _EMOJI.finditer(ligne):
                 c = chr(int(m.group(1), 16))
-                trouves.append(
-                    f"  {court}:{ligne_no} — l'emoji « {c} » écrit en séquence"
-                )
+                trouves.append(f"  {court}:{ligne_no} — l'emoji « {c} » écrit en séquence")
     return trouves
 
 
@@ -152,7 +149,8 @@ def test_aucune_lettre_francaise_ecrite_en_sequence_d_echappement():
     fautifs = [x for lignes in _releve().values() for x in lignes]
     assert not fautifs, (
         f"{len(fautifs)} séquence(s) d'échappement pour des caractères "
-        "IMPRIMABLES :\n" + "\n".join(fautifs[:40])
+        "IMPRIMABLES :\n"
+        + "\n".join(fautifs[:40])
         + "\n\nCe texte ne sera pas relu, donc pas vérifié. L'écrire en clair.\n"
         "Si l'outil qui produit le fichier échappe tout seul : "
         "`json.dumps(..., ensure_ascii=False)`, et jamais `ascii()`."

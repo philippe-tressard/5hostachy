@@ -29,6 +29,7 @@ sens : une exception qui ne correspond plus à rien fait échouer le test, sinon
 liste grossit à chaque cas et finit par tout couvrir (même règle que
 `test_endpoints_orphelins.py`).
 """
+
 import re
 from pathlib import Path
 
@@ -42,18 +43,18 @@ EXCEPTIONS_JUSTIFIEES = {
         "bascule.sh",
         "/tmp/sync_app_data/app.db",
     ): "copie fraîchement rsyncée sur le peer, dont AUCUNE API ne tient les fichiers "
-       "ouverts (conteneurs du peer arrêtés en phase 0) — c'est le contrôle d'intégrité "
-       "qui précède l'installation dans le volume",
+    "ouverts (conteneurs du peer arrêtés en phase 0) — c'est le contrôle d'intégrité "
+    "qui précède l'installation dans le volume",
     (
         "maintenance.sh",
         "$DB_DIR/app.db",
     ): "VACUUM hebdomadaire, exécuté API STOPPÉE (0 writer) — la seule façon sûre de "
-       "compacter, et la raison pour laquelle la maintenance arrête la pile d'abord",
+    "compacter, et la raison pour laquelle la maintenance arrête la pile d'abord",
     (
         "export-hors-site.sh",
         "$TMP/app.db",
     ): "copie extraite d'une archive .tar.gz sur le POSTE, jamais la base de "
-       "production — aucun process ne la tient ouverte",
+    "production — aucun process ne la tient ouverte",
 }
 
 #: Motifs interdits sans exception possible : ils désignent toujours la base d'un
@@ -116,7 +117,9 @@ def test_le_detecteur_voit_quelque_chose():
     vérification, un chemin de base faux le rendrait vert à vide, pour toujours.
     """
     scripts = scripts_versionnes()
-    assert len(scripts) >= 10, f"seulement {len(scripts)} script(s) trouvé(s) — chemin de scan cassé ?"
+    assert len(scripts) >= 10, (
+        f"seulement {len(scripts)} script(s) trouvé(s) — chemin de scan cassé ?"
+    )
     assert any(OUVERTURE.search(s.read_text(encoding="utf-8")) for s in scripts), (
         "aucune ouverture de base détectée nulle part : le motif de détection ne "
         "fonctionne plus, et ce test ne protège donc plus de rien"
@@ -224,13 +227,11 @@ def test_aucun_script_ne_pose_de_cron_de_sauvegarde_cote_hote():
         for numero, ligne in lignes_de_code(script):
             for interdit in ("scripts/backup.sh", "hostachy-backup", "5hostachy-backup"):
                 if interdit in ligne:
-                    fautes.append(
-                        f"{script.relative_to(RACINE)}:{numero} (« {interdit} »)"
-                    )
+                    fautes.append(f"{script.relative_to(RACINE)}:{numero} (« {interdit} »)")
     assert not fautes, (
         "sauvegarde côté hôte réintroduite dans un script versionné :\n"
         + "\n".join(fautes)
         + "\n\nLa sauvegarde est in-process depuis la v2.18 (api/app/utils/backup.py), "
-        "avec `PRAGMA quick_check` préalable : un `sqlite3 \".backup\"` lancé depuis "
+        'avec `PRAGMA quick_check` préalable : un `sqlite3 ".backup"` lancé depuis '
         "l'hôte pendant que l'API tourne casse la base."
     )

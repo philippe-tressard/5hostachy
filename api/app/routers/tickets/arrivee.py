@@ -19,6 +19,7 @@ courriel             CS du **périmètre**, moins  une boîte aux lettres, si �
 ⚠️ Le reste de `courriels.py` compose et envoie des messages ; ceci **décide qui
 les reçoit**. Les deux se lisaient ensemble par accident du découpage initial.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -37,6 +38,7 @@ from app.utils.perimetres import parse_json_perimetres
 from app.utils.noms import contexte_personne
 
 from .commun import destinataires_syndic_cs
+
 #  Le CONTEXTE du message reste dans `courriels` : composer et décider-qui sont
 #  deux gestes, et c'est justement ce que ce découpage sépare.
 from .courriels import _contexte_ticket
@@ -79,7 +81,9 @@ def _notifier_cs_creation(
         cs_members = list(cs_members) + [s for s in syndics if s.id not in cs_ids]
 
     for member in cs_members:
-        sonner(session, batiments=batiments_du_perimetre(parse_json_perimetres(ticket.perimetre_cible)),
+        sonner(
+            session,
+            batiments=batiments_du_perimetre(parse_json_perimetres(ticket.perimetre_cible)),
             destinataire_id=member.id,
             type="ticket_update",
             titre=f"Nouveau ticket : {ticket.titre}",
@@ -93,7 +97,11 @@ def _notifier_cs_creation(
         #  de laisser croire que le courriel est parti.
         return
     _envoyer_email_cs_creation(
-        session, ticket, auteur, urgence, background_tasks,
+        session,
+        ticket,
+        auteur,
+        urgence,
+        background_tasks,
         deja_servies=deja_servies,
     )
 

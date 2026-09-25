@@ -32,6 +32,7 @@ chaîne doit exister à **un** endroit, sinon écrire et reconnaître divergent 
 c'est la RECONNAISSANCE qui se tromperait en silence, en laissant passer dans le
 fil ce qu'elle ne sait plus lire.
 """
+
 from __future__ import annotations
 
 from typing import Any, Iterable

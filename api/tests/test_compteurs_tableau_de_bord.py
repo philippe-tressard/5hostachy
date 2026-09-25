@@ -26,6 +26,7 @@ via `ticket_visible`. Deux écritures de la même règle, gardées séparées pa
 l'une doit filtrer en base — le jour où l'une bougera sans l'autre, c'est ici que
 ça tombera.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -89,8 +90,12 @@ def _batiments(session: Session) -> list[int]:
 
 def _utilisateur(session: Session, email: str, roles: str, batiment_id=None) -> Utilisateur:
     u = Utilisateur(
-        nom="N", prenom=email.split("@")[0], email=email,
-        roles_json=roles, actif=True, batiment_id=batiment_id,
+        nom="N",
+        prenom=email.split("@")[0],
+        email=email,
+        roles_json=roles,
+        actif=True,
+        batiment_id=batiment_id,
         decision_compte_le=datetime.utcnow(),
     )
     session.add(u)
@@ -130,6 +135,7 @@ def _clos_pour_l_ecran(sondage_lu) -> bool:
 
 # ── Sondages — (b) le ciblage, (c) la clôture ────────────────────────────────
 
+
 def test_le_compteur_sondages_egale_ce_que_l_ecran_montre(base):
     """Pour chaque profil : la pastille annonce ce que `/sondages` rendra d'ouvert."""
     bat1, bat2 = _batiments(base)
@@ -143,10 +149,7 @@ def test_le_compteur_sondages_egale_ce_que_l_ecran_montre(base):
 
     for user in (resident, cs):
         annonce = calculer(_contexte(base, user)).sondages_actifs
-        a_l_ecran = [
-            s for s in list_sondages(session=base, user=user)
-            if not _clos_pour_l_ecran(s)
-        ]
+        a_l_ecran = [s for s in list_sondages(session=base, user=user) if not _clos_pour_l_ecran(s)]
         assert annonce == len(a_l_ecran), (
             f"{user.email} : pastille {annonce}, écran {len(a_l_ecran)}"
         )
@@ -173,6 +176,7 @@ def test_une_echeance_passee_clot_le_sondage_pour_le_compteur(base):
 
 # ── Tickets — (a) la portée du décompte ──────────────────────────────────────
 
+
 def test_le_compteur_tickets_egale_ce_que_l_ecran_montre(base):
     """La pastille compte les tickets ouverts que l'utilisateur peut ouvrir.
 
@@ -195,34 +199,41 @@ def test_le_compteur_tickets_egale_ce_que_l_ecran_montre(base):
 
     #  (auteur, périmètre) — qui le voit se lit dans la colonne de droite.
     lot = [
-        (resident, f'["bat:{bat1}"]'),   # resident (auteur+bât.), cs
-        (autre, f'["bat:{bat2}"]'),      # autre (auteur+bât.), cs
-        (autre, '["résidence"]'),        # tout le monde : portée globale
+        (resident, f'["bat:{bat1}"]'),  # resident (auteur+bât.), cs
+        (autre, f'["bat:{bat2}"]'),  # autre (auteur+bât.), cs
+        (autre, '["résidence"]'),  # tout le monde : portée globale
     ]
     for i, (auteur, perimetre) in enumerate(lot):
-        base.add(Ticket(
-            numero=f"T{i}", titre="T", description="D",
-            auteur_id=auteur.id, perimetre_cible=perimetre,
-        ))
+        base.add(
+            Ticket(
+                numero=f"T{i}",
+                titre="T",
+                description="D",
+                auteur_id=auteur.id,
+                perimetre_cible=perimetre,
+            )
+        )
     base.commit()
 
     for user, attendu in ((resident, 2), (autre, 2), (cs, 3)):
         annonce = calculer(_contexte(base, user)).tickets_ouverts
         ouverts_a_l_ecran = [
-            t for t in list_tickets(session=base, user=user)
-            if t.statut in ("ouvert", "en_cours")
+            t for t in list_tickets(session=base, user=user) if t.statut in ("ouvert", "en_cours")
         ]
         assert annonce == len(ouverts_a_l_ecran) == attendu, (
-            f"{user.email} : pastille {annonce}, écran {len(ouverts_a_l_ecran)}, "
-            f"attendu {attendu}"
+            f"{user.email} : pastille {annonce}, écran {len(ouverts_a_l_ecran)}, attendu {attendu}"
         )
 
 
 # ── Validations — (d) ce qu'est un compte « en attente » ─────────────────────
 
+
 def _compte_inactif(session: Session, email: str, decide: bool) -> Utilisateur:
     u = Utilisateur(
-        nom="N", prenom="P", email=email, actif=False,
+        nom="N",
+        prenom="P",
+        email=email,
+        actif=False,
         decision_compte_le=datetime.utcnow() if decide else None,
     )
     session.add(u)
@@ -290,6 +301,7 @@ def test_la_pastille_admin_somme_les_trois_files_de_son_ecran(base):
 
 
 # ── Cohérence visibilité / compteur ──────────────────────────────────────────
+
 
 def test_un_compteur_reserve_vaut_zero_pour_qui_ne_voit_pas_sa_pastille(base):
     """L'autre moitié de la règle : ne pas calculer ce qui ne s'affichera pas.

@@ -32,14 +32,24 @@ a sa propre raison de changer :
 depuis `app.seed` : quatre migrations **figées** en dépendent (0104, 0108, 0129,
 0130, 0132), ainsi que l'administration et les tests. Cette surface ne bouge pas.
 """
+
 from sqlmodel import Session, select
 
 from app.auth.jwt import hash_password
 from app.database import create_db_and_tables, engine
 from app.models.core import (
-    Batiment, CategorieDocument, ConfigSauvegarde, ConfigSite, Copropriete,
-    DiagnosticType, FaqItem, ModeleEmail, ProfilAccesDocument, RoleUtilisateur,
-    StatutUtilisateur, Utilisateur,
+    Batiment,
+    CategorieDocument,
+    ConfigSauvegarde,
+    ConfigSite,
+    Copropriete,
+    DiagnosticType,
+    FaqItem,
+    ModeleEmail,
+    ProfilAccesDocument,
+    RoleUtilisateur,
+    StatutUtilisateur,
+    Utilisateur,
 )
 from app.seed.contenus_legaux import DEFAULT_LEGAL
 from app.seed.diagnostics import DIAGNOSTICS
@@ -119,33 +129,35 @@ def _admin_initial(session: Session) -> None:
     Le mot de passe n'est **jamais** écrit en dur : il est tiré au sort et affiché
     une seule fois, au premier lancement, pour être changé immédiatement.
     """
-    if session.exec(
-        select(Utilisateur).where(Utilisateur.role == RoleUtilisateur.admin)
-    ).first():
+    if session.exec(select(Utilisateur).where(Utilisateur.role == RoleUtilisateur.admin)).first():
         return
 
     import logging
     import secrets
 
     mot_de_passe = secrets.token_urlsafe(16)
-    session.add(Utilisateur(
-        nom="Admin",
-        prenom="Site",
-        email="admin@localhost",
-        hashed_password=hash_password(mot_de_passe),
-        statut=StatutUtilisateur.admin_technique,
-        role=RoleUtilisateur.admin,
-        roles_json="admin",
-        actif=True,
-        consentement_rgpd=True,
-    ))
+    session.add(
+        Utilisateur(
+            nom="Admin",
+            prenom="Site",
+            email="admin@localhost",
+            hashed_password=hash_password(mot_de_passe),
+            statut=StatutUtilisateur.admin_technique,
+            role=RoleUtilisateur.admin,
+            roles_json="admin",
+            actif=True,
+            consentement_rgpd=True,
+        )
+    )
     logging.getLogger("app.seed").warning(
-        "\n" + "=" * 60
+        "\n"
+        + "=" * 60
         + "\n  ADMIN INITIAL CRÉÉ"
         + "\n  Email : admin@localhost"
         + f"\n  Mot de passe temporaire : {mot_de_passe}"
         + "\n  ⚠ Changez-le immédiatement après la 1ʳᵉ connexion."
-        + "\n" + "=" * 60
+        + "\n"
+        + "=" * 60
     )
 
 
@@ -165,41 +177,53 @@ def _profils_et_categories(session: Session) -> None:
             select(ProfilAccesDocument.id, ProfilAccesDocument.code)
         ).all()
     }
-    _poser_les_absents(session, CategorieDocument, "code", [
-        {
-            "code": code,
-            "libelle": libelle,
-            "profil_acces_id": profil_id[profil_code],
-            "perimetre_defaut": perimetre,
-            "surcharge_autorisee": surcharge,
-        }
-        for code, libelle, profil_code, perimetre, surcharge in CATEGORIES
-    ])
+    _poser_les_absents(
+        session,
+        CategorieDocument,
+        "code",
+        [
+            {
+                "code": code,
+                "libelle": libelle,
+                "profil_acces_id": profil_id[profil_code],
+                "perimetre_defaut": perimetre,
+                "surcharge_autorisee": surcharge,
+            }
+            for code, libelle, profil_code, perimetre, surcharge in CATEGORIES
+        ],
+    )
 
 
 def _configuration_par_defaut(session: Session) -> None:
     """Configuration de sauvegarde et clés de configuration du site."""
     if not session.exec(select(ConfigSauvegarde)).first():
         session.add(ConfigSauvegarde())
-    _poser_les_absents(session, ConfigSite, "cle", [
-        {"cle": cle, "valeur": valeur}
-        for cle, valeur in CONFIG_SITE_PAR_DEFAUT.items()
-    ])
+    _poser_les_absents(
+        session,
+        ConfigSite,
+        "cle",
+        [{"cle": cle, "valeur": valeur} for cle, valeur in CONFIG_SITE_PAR_DEFAUT.items()],
+    )
 
 
 def _modeles_email(session: Session) -> None:
     """Modèles d'e-mail, avec l'intention que chacun annonce au destinataire."""
-    _poser_les_absents(session, ModeleEmail, "code", [
-        {
-            "code": code,
-            "libelle": libelle,
-            "sujet": sujet,
-            "corps_html": corps_html,
-            "desactivable": desactivable,
-            "intention": INTENTIONS_PAR_MODELE.get(code, ""),
-        }
-        for code, libelle, sujet, corps_html, desactivable in EMAIL_TEMPLATES
-    ])
+    _poser_les_absents(
+        session,
+        ModeleEmail,
+        "code",
+        [
+            {
+                "code": code,
+                "libelle": libelle,
+                "sujet": sujet,
+                "corps_html": corps_html,
+                "desactivable": desactivable,
+                "intention": INTENTIONS_PAR_MODELE.get(code, ""),
+            }
+            for code, libelle, sujet, corps_html, desactivable in EMAIL_TEMPLATES
+        ],
+    )
 
 
 def _questions_frequentes(session: Session) -> None:
@@ -210,10 +234,16 @@ def _questions_frequentes(session: Session) -> None:
     ferait réapparaître ce qu'il a retiré. `FAQ_COMPLEMENTAIRE` s'ajoute sans
     écraser, et c'est la voie à suivre pour enrichir la FAQ après coup.
     """
+
     def en_dict(entrees):
         return [
-            {"categorie": cat, "question": question, "reponse": reponse,
-             "ordre": ordre, "actif": True}
+            {
+                "categorie": cat,
+                "question": question,
+                "reponse": reponse,
+                "ordre": ordre,
+                "actif": True,
+            }
             for cat, question, reponse, ordre in entrees
         ]
 

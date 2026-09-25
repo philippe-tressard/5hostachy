@@ -20,6 +20,7 @@ plus que leur égalité. Il vérifie AUSSI que chaque code annoncé est réellem
 honoré par la règle — autrement, `CODES_PUBLIC_CIBLE` pourrait annoncer un code
 que la fonction ignore, et les deux côtés seraient d'accord sur une fiction.
 """
+
 import re
 from pathlib import Path
 
@@ -28,9 +29,7 @@ import pytest
 from app.models.core import RoleUtilisateur, StatutUtilisateur, Utilisateur
 from app.utils.visibility import CODES_PUBLIC_CIBLE, public_cible_visible
 
-_FRONT = (
-    Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "destinataires.ts"
-)
+_FRONT = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "destinataires.ts"
 
 #: Un porteur possible pour chaque code : le statut (et le rôle) d'un utilisateur
 #: qui DOIT le voir. Sert à prouver que la règle connaît vraiment le code.
@@ -80,8 +79,12 @@ def test_chaque_code_annonce_est_reellement_honore(code):
     """
     statut, roles = _TEMOIN[code]
     temoin = Utilisateur(
-        nom="X", prenom="Y", email=f"{code}@test.fr",
-        statut=statut, roles_json=roles, actif=True,
+        nom="X",
+        prenom="Y",
+        email=f"{code}@test.fr",
+        statut=statut,
+        roles_json=roles,
+        actif=True,
     )
     assert public_cible_visible(f'["{code}"]', temoin) is True, (
         f"« {code} » est annoncé au catalogue mais la règle ne l'honore pour personne."
@@ -103,8 +106,12 @@ def test_le_code_par_defaut_n_est_pas_dans_le_catalogue():
     assert "résidents" not in _codes_du_front()
     #  Et il reste bien reconnu par la règle, lui.
     quiconque = Utilisateur(
-        nom="X", prenom="Y", email="tous@test.fr",
-        statut=StatutUtilisateur.locataire, roles_json="résident", actif=True,
+        nom="X",
+        prenom="Y",
+        email="tous@test.fr",
+        statut=StatutUtilisateur.locataire,
+        roles_json="résident",
+        actif=True,
     )
     assert public_cible_visible('["résidents"]', quiconque) is True
 

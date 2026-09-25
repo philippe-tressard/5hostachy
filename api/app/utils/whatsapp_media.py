@@ -20,6 +20,7 @@ dérive la borne de son corps JSON. Deux nombres écrits séparément auraient
 divergé au premier ajustement — c'est exactement ce qui vient de coûter un
 message (`standards/02-factorisation.md` §4 bis).
 """
+
 import base64
 import logging
 
@@ -73,14 +74,17 @@ def image_pour_bridge(image_url: str | None) -> str | None:
     if len(reduite) != len(octets):
         logger.info(
             "Photo WhatsApp réduite pour tenir le budget : %d → %d octets (budget %d).",
-            len(octets), len(reduite), budget,
+            len(octets),
+            len(reduite),
+            budget,
         )
     if len(reduite) > budget:
         #  Aucun palier n'a suffi. On tente quand même : le bridge acceptera
         #  peut-être, et s'il refuse, l'appelant se replie sur le texte seul.
         logger.warning(
             "Photo WhatsApp encore au-dessus du budget après réduction : %d > %d octets.",
-            len(reduite), budget,
+            len(reduite),
+            budget,
         )
     return base64.b64encode(reduite).decode("ascii")
 

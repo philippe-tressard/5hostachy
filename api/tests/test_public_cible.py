@@ -22,6 +22,7 @@ des sondages :
     moyen de vérifier que la règle est bien UNE règle, et pas deux qui se
     ressemblent aujourd'hui.
 """
+
 import pytest
 
 from app.models.core import Sondage, StatutUtilisateur, Ticket, Utilisateur
@@ -31,13 +32,26 @@ from app.utils.visibility import actualite_visible, sondage_accessible
 def _publication(public: str | None) -> Ticket:
     #  `perimetre_cible` absent : ce fichier ne teste QUE le public. Une actualité
     #  est une affaire de catégorie « Actualité » depuis le 23/09/2026 (#1091).
-    return Ticket(numero="TK-A1", titre="T", description="C", categorie="actualite",
-                  statut="publie", perimetre_cible=None, public_cible=public)
+    return Ticket(
+        numero="TK-A1",
+        titre="T",
+        description="C",
+        categorie="actualite",
+        statut="publie",
+        perimetre_cible=None,
+        public_cible=public,
+    )
 
 
 def _lecteur(statut: StatutUtilisateur, roles: str = "résident") -> Utilisateur:
-    return Utilisateur(nom="X", prenom="Y", email=f"{statut.value}@test.fr",
-                       statut=statut, roles_json=roles, actif=True)
+    return Utilisateur(
+        nom="X",
+        prenom="Y",
+        email=f"{statut.value}@test.fr",
+        statut=statut,
+        roles_json=roles,
+        actif=True,
+    )
 
 
 TOUS = [
@@ -125,10 +139,14 @@ def test_conseil_syndical_n_est_visible_que_du_conseil(porteur):
     for statut in TOUS:
         assert _voit(porteur, cible, _lecteur(statut)) is False
     #  Le CS et l'admin sortent avant tout filtrage : ils voient tout.
-    assert _voit(
-        porteur, cible,
-        _lecteur(StatutUtilisateur.copropriétaire_résident, "conseil_syndical"),
-    ) is True
+    assert (
+        _voit(
+            porteur,
+            cible,
+            _lecteur(StatutUtilisateur.copropriétaire_résident, "conseil_syndical"),
+        )
+        is True
+    )
 
 
 @pytest.mark.parametrize("porteur", PORTEURS)

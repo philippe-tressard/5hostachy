@@ -28,7 +28,9 @@ def _get_current_user(
     user_id: int = payload.get("sub")
     user = session.get(Utilisateur, int(user_id))
     if not user or not user.actif:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Utilisateur introuvable ou inactif")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Utilisateur introuvable ou inactif"
+        )
 
     #  🔴 Le jeton d'accès est AUTOPORTEUR : sans cette comparaison, rien côté
     #  serveur ne peut l'invalider avant ses 120 minutes — ni un changement de
@@ -80,7 +82,9 @@ def get_acting_user(
 
     mandant = session.get(Utilisateur, x_acting_as)
     if not mandant or not mandant.actif:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Mandant introuvable ou inactif")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Mandant introuvable ou inactif"
+        )
     return mandant
 
 
@@ -89,12 +93,17 @@ def require_role(*roles: RoleUtilisateur):
         if not user.has_role(*roles):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Droits insuffisants")
         return user
+
     return checker
 
 
 def require_proprietaire(user: Utilisateur = Depends(get_current_user)) -> Utilisateur:
-    if not user.has_role(RoleUtilisateur.propriétaire, RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Réservé aux propriétaires")
+    if not user.has_role(
+        RoleUtilisateur.propriétaire, RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Réservé aux propriétaires"
+        )
     return user
 
 
@@ -103,7 +112,9 @@ def require_cs_or_admin(user: Utilisateur = Depends(get_current_user)) -> Utilis
     #  de « qui modère » divergeraient sans que rien ne le dise — l'une
     #  répondrait oui, l'autre lèverait un 403 (#1028).
     if not est_moderateur(user):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Réservé au conseil syndical et à l'admin")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Réservé au conseil syndical et à l'admin"
+        )
     return user
 
 
@@ -216,7 +227,10 @@ def est_auteur(objet, user: Utilisateur) -> bool:
     #  limites, sinon les comparer côte à côte ne prouve rien.
     if uid is None:
         return False
-    return getattr(objet, "auteur_id", None) == uid or getattr(objet, "saisi_pour_user_id", None) == uid
+    return (
+        getattr(objet, "auteur_id", None) == uid
+        or getattr(objet, "saisi_pour_user_id", None) == uid
+    )
 
 
 def peut_editer(objet, user: Utilisateur) -> bool:

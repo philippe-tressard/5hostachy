@@ -40,6 +40,7 @@ décompte. Elle se signalera au bout de `SEUIL` cycles de plus, soit une demi-he
 sur une relève à dix minutes. C'est le prix d'un état qui ne ment pas sur ce qu'il
 a réellement observé.
 """
+
 from __future__ import annotations
 
 import logging

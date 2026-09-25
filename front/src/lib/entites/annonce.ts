@@ -84,6 +84,10 @@ export const ANNONCE: EntiteDeclaree = {
 			id: 'nature',
 			objet: 'Type · Catégorie · Prix · Négociable',
 			titreEcran: "L'objet",
+			//  🔴 OBLIGATOIRE, donc DÉPLIÉE (#1186, 24/09/2026, signalé à l'écran). Une
+			//  annonce sans type ni catégorie ne se range ni ne se filtre : c'est ce
+			//  qui la qualifie. Elle était pliée, sans astérisque.
+			requis: true,
 			absente: {
 				evolution: {
 					motif: 'hérité',
@@ -92,7 +96,6 @@ export const ANNONCE: EntiteDeclaree = {
 						'de voisin ne rebaptise pas un don en vente, et ne fixe pas le prix.',
 				},
 			},
-			pliee: true,
 		},
 		{
 			id: 'equipement',
@@ -182,14 +185,10 @@ export const ANNONCE: EntiteDeclaree = {
 			id: 'pieces_jointes',
 			objet: 'FichiersUpload mode photos (5 maximum) — pas de document',
 			absente: {
-				creation: {
-					motif: 'api',
-					explication:
-						"`POST /annonces/{id}/photo` exige l'identifiant de l'annonce, qui n'existe pas " +
-						"encore au dépôt. Les photos s'ajoutent donc depuis la carte, une fois " +
-						"l'annonce déposée — divergence subie, pas choisie.",
-					ticket: '#441',
-				},
+				//  ✅ PRÉSENTE au dépôt depuis le 24/09/2026 (#1186, signalé à l'écran).
+				//  La dette `api` de #441 est soldée SANS toucher à l'API : les photos
+				//  attendent dans le formulaire (mode différé) et partent par
+				//  `POST /annonces/{id}/photo` une fois l'annonce créée.
 				edition: {
 					motif: 'api',
 					explication:

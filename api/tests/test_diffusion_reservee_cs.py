@@ -12,6 +12,7 @@ résident — publiait sur le groupe des résidents et écrivait, depuis l'adres
 site, à qui il voulait. Et `POST …/messages` ne vérifiait même pas que l'on
 VOYAIT l'affaire : son `GET` voisin le faisait.
 """
+
 from __future__ import annotations
 
 import ast
@@ -80,8 +81,10 @@ def envois(monkeypatch):
 def _suite(session, ticket, user):
     taches = BackgroundTasks()
     corps = TicketEvolutionCreate(
-        type="commentaire", contenu="Toujours cassée.",
-        partager_whatsapp=True, email_externe="quiconque@exemple.org",
+        type="commentaire",
+        contenu="Toujours cassée.",
+        partager_whatsapp=True,
+        email_externe="quiconque@exemple.org",
     )
     evolutions.add_evolution(ticket.id, corps, taches, session=session, user=user)
     return [t.func.__name__ for t in taches.tasks]
@@ -127,8 +130,11 @@ def test_on_n_ecrit_pas_sur_une_affaire_qu_on_ne_voit_pas(session, envois):
     ticket = _affaire(session, auteur, confidentiel=True)
     with pytest.raises(HTTPException) as refus:
         messages.add_message(
-            ticket.id, MessageCreate(contenu="Je lis tout."), BackgroundTasks(),
-            session=session, user=voisin,
+            ticket.id,
+            MessageCreate(contenu="Je lis tout."),
+            BackgroundTasks(),
+            session=session,
+            user=voisin,
         )
     assert refus.value.status_code == 403
 
@@ -141,8 +147,13 @@ def test_on_n_ecrit_pas_sur_une_affaire_qu_on_ne_voit_pas(session, envois):
 
 _TICKETS = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "tickets"
 _CONTROLES = (
-    "ticket_visible", "peut_commenter", "peut_editer", "est_rattache_au_lot",
-    "require_cs_or_admin", "require_admin", "require_proprietaire",
+    "ticket_visible",
+    "peut_commenter",
+    "peut_editer",
+    "est_rattache_au_lot",
+    "require_cs_or_admin",
+    "require_admin",
+    "require_proprietaire",
 )
 
 
@@ -152,7 +163,8 @@ def _routes_sans_controle(source: str, fichier: str) -> list[str]:
         if not isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
         est_route = any(
-            isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute)
+            isinstance(d, ast.Call)
+            and isinstance(d.func, ast.Attribute)
             and d.func.attr in {"get", "post", "patch", "put", "delete"}
             for d in f.decorator_list
         )
@@ -181,6 +193,7 @@ def test_le_releve_voit_une_route_sans_controle():
 
 # ── #1171 : ce qu'on coche à la CRÉATION arrive en base ──────────────────────
 
+
 @pytest.fixture()
 def creation(monkeypatch):
     #  Les envois de la création ont leurs propres tests : ici, ce qui est ÉCRIT.
@@ -189,7 +202,9 @@ def creation(monkeypatch):
 
 
 def _creer(session, user, **options):
-    corps = TicketCreate(titre="Litige", description="Entre voisins.", categorie="nuisance", **options)
+    corps = TicketCreate(
+        titre="Litige", description="Entre voisins.", categorie="nuisance", **options
+    )
     lu = crud.create_ticket(corps, BackgroundTasks(), session=session, user=user)
     return session.get(Ticket, lu.id)
 

@@ -13,6 +13,7 @@ La protection contre l'« open redirect » est vérifiée ici sur le code source
 de lanceur de tests JavaScript dans le projet (cf. `front/scripts/check-dates.mjs`,
 même contrainte).
 """
+
 import pathlib
 
 import pytest
@@ -81,9 +82,13 @@ def test_aucune_redirection_en_dur_vers_l_ecran_de_connexion():
     l'utilisateur choisit de suivre, sans destination à mémoriser.
     """
     fautifs = []
-    motifs = ("goto('/auth/connexion')", 'goto("/auth/connexion")',
-              "location.href = '/auth/connexion'", 'location.href = "/auth/connexion"',
-              "location.replace('/auth/connexion')")
+    motifs = (
+        "goto('/auth/connexion')",
+        'goto("/auth/connexion")',
+        "location.href = '/auth/connexion'",
+        'location.href = "/auth/connexion"',
+        "location.replace('/auth/connexion')",
+    )
     for chemin in sorted(_FRONT.rglob("*")):
         if chemin.suffix not in (".ts", ".svelte", ".js") or not chemin.is_file():
             continue

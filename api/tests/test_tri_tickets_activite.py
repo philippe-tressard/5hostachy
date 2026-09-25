@@ -21,6 +21,7 @@ sans qu'il se soit rien passé.
 C'est la même distinction que l'archivage, qui se mesure sur `statut_change_le`
 et jamais sur `mis_a_jour_le` (`ux-patterns` §16) : une colonne par question.
 """
+
 from __future__ import annotations
 
 import uuid

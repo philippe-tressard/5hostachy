@@ -32,9 +32,11 @@ il se tranchera.
 ⚠️ Ne pas « unifier » les deux en passant : ce serait modifier ce qu'affichent les
 badges de périmètre de toute la copropriété, sans que personne l'ait demandé.
 """
+
 from __future__ import annotations
 
 from typing import Optional
+
 
 def libelle_batiment(batiment) -> str:
     """« Bât. A » — ou une chaîne VIDE quand il n'y a pas de bâtiment.
@@ -68,6 +70,7 @@ def libelle_batiment_ou(batiment, defaut: Optional[str]) -> Optional[str]:
 
 
 __all__ = ["libelle_batiment", "libelle_batiment_ou"]
+
 
 def libelle_lot(lot) -> Optional[str]:
     """« Appartement 314 » — le lot, tel qu'un humain le lit.

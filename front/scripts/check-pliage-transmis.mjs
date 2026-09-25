@@ -94,6 +94,24 @@ export function pliageManquant(source) {
 	return manques;
 }
 
+/**
+ * 🔴 `requis` VRAI PAR DÉFAUT — le troisième chemin du même angle mort (#1186,
+ * 24/09/2026). Ni attribut nu, ni valeur lue : une prop `export let requis =
+ * true` (ou `perimetreRequis = true`) dans un porteur. Tout appelant qui ne dit
+ * rien reçoit l'astérisque — et la déclaration n'en sait rien.
+ *
+ * C'est ce qui affichait « PÉRIMÈTRE* » PLIÉ sur la Boîte à idées : `idee.ts`
+ * ne déclarait pas le périmètre obligatoire, `lint:etats` ne voyait donc
+ * aucune raison de le déplier, et `ChampsCommuns` posait l'étoile quand même.
+ *
+ * PURE : rend les noms de props fautives.
+ */
+export function requisParDefaut(source) {
+	return [...source.matchAll(/export\s+let\s+(\w*[Rr]equis\w*)\s*(?::[^=;]+)?=\s*true\b/g)].map(
+		(m) => ({ ligne: ligneDe(source, m.index), nom: m[1] }),
+	);
+}
+
 if (process.argv.includes('--selftest')) {
 	const cas = [
 		//  🔴 Le cas réel du 22/09 : la section du cadre, rendue sans pliage.
@@ -126,7 +144,21 @@ if (process.argv.includes('--selftest')) {
 		//  Aucun SectionFormulaire : rien à dire.
 		['<div>rien</div>', 0],
 	];
+	//  `requis` vrai par défaut dans un porteur (#1186).
+	const casDefaut = [
+		['export let perimetreRequis = true;', 1],
+		['export let requis: boolean = true;', 1],
+		['export let requis = false;', 0],
+		['export let perimetrePrecise = true;', 0],
+	];
 	let ko = 0;
+	for (const [src, attendu] of casDefaut) {
+		const n = requisParDefaut(src).length;
+		if (n !== attendu) {
+			console.error(`  ✗ « ${src} » → ${n}, attendu ${attendu}`);
+			ko++;
+		}
+	}
 	for (const [src, attendu] of cas) {
 		const n = pliageManquant(src).length;
 		if (n !== attendu) {
@@ -138,7 +170,9 @@ if (process.argv.includes('--selftest')) {
 		console.error(`\n✗ Auto-test : ${ko} cas en échec.\n`);
 		process.exit(1);
 	}
-	console.log(`✓ Auto-test : ${cas.length} cas — le pliage manquant est vu, le reste passe.`);
+	console.log(
+		`✓ Auto-test : ${cas.length + casDefaut.length} cas — le pliage manquant est vu, le reste passe.`,
+	);
 	process.exit(0);
 }
 
@@ -149,8 +183,14 @@ for (const chemin of svelte(RACINE)) {
 	if (!source.includes('SECTIONS_LIBELLE.')) continue;
 	if (!source.includes('<SectionFormulaire')) continue;
 	porteurs++;
+	const relatif = relative(RACINE, chemin).split(sep).join('/');
+	for (const m of requisParDefaut(source)) {
+		fautifs.push(
+			`src/${relatif}:${m.ligne}  \`${m.nom}\` vaut \`true\` par défaut — l'astérisque ` +
+				'doit se lire dans la déclaration (`requisDe`), pas venir du composant',
+		);
+	}
 	for (const m of pliageManquant(source)) {
-		const relatif = relative(RACINE, chemin).split(sep).join('/');
 		fautifs.push(
 			`src/${relatif}:${m.ligne}  ` +
 				(m.quoi === 'requis en dur'

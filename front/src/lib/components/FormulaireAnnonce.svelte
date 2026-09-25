@@ -50,6 +50,7 @@
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import {
 		CATEGORIES_ANNONCE,
+		MAX_PHOTOS_ANNONCE,
 		OPTIONS_STATUT_ANNONCE,
 		TYPES_ANNONCE,
 		categorieAnnonceLabel,
@@ -61,6 +62,7 @@
 	import { perimetreDefautListe } from '$lib/utils';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
+	import { requisDe } from '$lib/pliage';
 	import { ANNONCE } from '$lib/entites/annonce';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
@@ -115,6 +117,12 @@
 	});
 	let contactVisible = annonce?.contact_visible ?? true;
 
+	//  ── 8. Pièces jointes, au DÉPÔT (#1186) ─────────────────────────────────
+	//  `POST /annonces/{id}/photo` réclame l'identifiant : les photos attendent
+	//  ici (mode différé de `FichiersUpload`) et partent APRÈS la création, par
+	//  l'endpoint qui les réduit et les compte. Aucune seconde porte d'écriture.
+	let photosEnAttente: File[] = [];
+
 	let submitting = false;
 
 	const titreBoite = modeEdition ? "Modifier l'annonce" : 'Déposer une annonce';
@@ -128,6 +136,25 @@
 		negotiable = false;
 		contactVisible = true;
 		perimetreCible = perimetreDefautListe();
+		photosEnAttente = [];
+	}
+
+	/**  Téléverse les photos retenues, une à une, sur l'annonce qui vient
+	 *   d'exister. Rend la liste que le SERVEUR tient — pas celle qu'on croit
+	 *   avoir envoyée — et dit combien ont échoué : l'annonce est publiée, une
+	 *   photo refusée ne doit pas le faire croire annulé. */
+	async function envoyerPhotos(id: number): Promise<{ photos: string[] | null; echecs: number }> {
+		let photos: string[] | null = null;
+		let echecs = 0;
+		for (const fichier of photosEnAttente) {
+			try {
+				photos = (await annoncesApi.uploadPhoto(id, fichier)).photos;
+			} catch (e) {
+				echecs++;
+				toast('error', messageErreur(e));
+			}
+		}
+		return { photos, echecs };
 	}
 
 	async function enregistrer() {
@@ -165,8 +192,15 @@
 				return;
 			}
 			const cree: any = await annoncesApi.create(charge);
+			const { photos, echecs } = await envoyerPhotos(cree.id);
+			if (photos) cree.photos = photos;
 			reinitialiser();
-			toast('success', 'Annonce publiée !');
+			toast(
+				'success',
+				echecs
+					? `Annonce publiée — ${echecs} photo${echecs > 1 ? 's' : ''} non jointe${echecs > 1 ? 's' : ''}, à ajouter depuis la carte`
+					: 'Annonce publiée !',
+			);
 			dispatch('cree', cree);
 		} catch (e) {
 			toast('error', messageErreur(e));
@@ -197,7 +231,11 @@
 
 		<!--  2. Champs spécifiques de l'annonce. -->
 		{#if sectionPresente(ANNONCE, etat, 'nature')}
-			<SectionFormulaire titre="L'objet">
+			<SectionFormulaire
+				titre="L'objet"
+				requis={requisDe(ANNONCE, 'nature')}
+				rempli={!!typeAnnonce && !!categorie}
+			>
 				<div class="form-grid">
 					<div class="field">
 						<label for="annonce-type-{annonce?.id ?? 'new'}">Type</label>
@@ -265,7 +303,9 @@
 			bind:assisteIA
 			descriptionPlaceholder="Décrivez l'objet, son état, conditions de remise…"
 			avecPhotos={sectionPresente(ANNONCE, etat, 'pieces_jointes')}
-			avecDocuments={sectionPresente(ANNONCE, etat, 'pieces_jointes')}
+			differes
+			bind:fichiersDifferes={photosEnAttente}
+			piecesMax={MAX_PHOTOS_ANNONCE}
 			avecDiffusion={sectionPresente(ANNONCE, etat, 'diffusion')}
 			avecCanaux={false}
 		>

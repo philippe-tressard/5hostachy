@@ -17,6 +17,7 @@ Suite d'état (`evolutions.py`) et la correction (`mise_a_jour.py`).
 - sa `prochaine_visite` part de la date de l'intervention (`debut`, à défaut
   aujourd'hui), selon la fréquence du CONTRAT.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -70,7 +71,11 @@ def apres_cloture(ticket, session: Session) -> None:
     )
     if retenu is None:
         return
-    depuis = ticket.debut.date() if isinstance(ticket.debut, datetime) else (ticket.debut or date.today())
+    depuis = (
+        ticket.debut.date()
+        if isinstance(ticket.debut, datetime)
+        else (ticket.debut or date.today())
+    )
     suivante = date_prochaine_visite(retenu, depuis)
     if suivante:
         retenu.prochaine_visite = suivante

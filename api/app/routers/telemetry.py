@@ -1,4 +1,5 @@
 """Router telemetry — collecte (beacon) + dashboard admin."""
+
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -17,7 +18,6 @@ from app.models.core import (
     Utilisateur,
 )
 from app.utils.limiter import LIMITE_JOURNAL, limiter
-from app.utils.noms import nom_affiche
 from app.utils.telemetrie_calculs import (
     _palmares,
     _cumul_par_page,
@@ -29,6 +29,7 @@ router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
 
 # ── Collecte (fire-and-forget depuis sendBeacon) ─────────────────────────────
+
 
 class TelemetryBatch(BaseModel):
     events: list[dict]  # [{page, action?, detail?}, ...]
@@ -46,6 +47,7 @@ def collect(
     user_id: int | None = None
     try:
         from app.auth.jwt import decode_token
+
         token = request.cookies.get("access_token")
         if token:
             payload = decode_token(token)
@@ -67,17 +69,20 @@ def collect(
             detail = str(detail)[:500]
         if not page:
             continue
-        session.add(TelemetryEvent(
-            user_id=user_id,
-            page=page,
-            action=action,
-            detail=detail,
-            cree_le=now,
-        ))
+        session.add(
+            TelemetryEvent(
+                user_id=user_id,
+                page=page,
+                action=action,
+                detail=detail,
+                cree_le=now,
+            )
+        )
     session.commit()
 
 
 # ── Dashboard admin ───────────────────────────────────────────────────────────
+
 
 def _fiches_utilisateurs(session: Session, lignes) -> dict[int, dict]:
     """Qui sont ces gens — nom, dernière visite, statut, bâtiment.
@@ -106,8 +111,12 @@ def _fiches_utilisateurs(session: Session, lignes) -> dict[int, dict]:
         return {}
     rangs = session.exec(
         select(
-            Utilisateur.id, Utilisateur.prenom, Utilisateur.nom,
-            Utilisateur.derniere_connexion, Utilisateur.statut, Utilisateur.batiment_id,
+            Utilisateur.id,
+            Utilisateur.prenom,
+            Utilisateur.nom,
+            Utilisateur.derniere_connexion,
+            Utilisateur.statut,
+            Utilisateur.batiment_id,
         ).where(Utilisateur.id.in_(ids))
     ).all()
     return {
@@ -133,13 +142,16 @@ def dashboard(
     scope=annee → stats 10 ans (monthly)
     """
     from zoneinfo import ZoneInfo
+
     _PARIS = ZoneInfo("Europe/Paris")
 
     now_paris = datetime.now(_PARIS)
     # Minuit Paris aujourd'hui → converti en UTC naïf pour requête sur cree_le
-    today_start_utc = now_paris.replace(hour=0, minute=0, second=0, microsecond=0) \
-        .astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
-    today_paris_str = now_paris.strftime("%Y-%m-%d")
+    today_start_utc = (
+        now_paris.replace(hour=0, minute=0, second=0, microsecond=0)
+        .astimezone(ZoneInfo("UTC"))
+        .replace(tzinfo=None)
+    )
 
     # Offset horaire Paris (pour convertir les heures UTC → Paris dans les labels)
     paris_offset = int(now_paris.utcoffset().total_seconds() // 3600)
@@ -159,8 +171,9 @@ def dashboard(
         ).all()
 
         active_today = session.exec(
-            select(func.count(func.distinct(TelemetryEvent.user_id)))
-            .where(TelemetryEvent.cree_le >= today_start_utc, TelemetryEvent.user_id.isnot(None))
+            select(func.count(func.distinct(TelemetryEvent.user_id))).where(
+                TelemetryEvent.cree_le >= today_start_utc, TelemetryEvent.user_id.isnot(None)
+            )
         ).one()
 
         total_today = session.exec(
@@ -183,11 +196,18 @@ def dashboard(
 
         # Convertir en heure Paris et trier correctement
         chart_raw = [
-            {"paris_h": (h[0] + paris_offset) % 24, "label": f"{(h[0] + paris_offset) % 24}h", "total": h[1], "uniques": h[2]}
+            {
+                "paris_h": (h[0] + paris_offset) % 24,
+                "label": f"{(h[0] + paris_offset) % 24}h",
+                "total": h[1],
+                "uniques": h[2],
+            }
             for h in hour_stats
         ]
         chart_raw.sort(key=lambda x: x["paris_h"])
-        chart = [{"label": c["label"], "total": c["total"], "uniques": c["uniques"]} for c in chart_raw]
+        chart = [
+            {"label": c["label"], "total": c["total"], "uniques": c["uniques"]} for c in chart_raw
+        ]
 
         # Heure de pointe aujourd'hui
         hour_peak = None
@@ -250,8 +270,9 @@ def dashboard(
         daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
 
         total_rows = session.exec(
-            select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques)
-            .where(TelemetryDaily.jour >= thirty_days_ago, TelemetryDaily.page == "__total__")
+            select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques).where(
+                TelemetryDaily.jour >= thirty_days_ago, TelemetryDaily.page == "__total__"
+            )
         ).all()
         for r in total_rows:
             if r[0] not in daily_uniques_map:
@@ -261,7 +282,11 @@ def dashboard(
         daily_chart: dict[str, dict] = {}
         for r in daily_rows:
             if r.jour not in daily_chart:
-                daily_chart[r.jour] = {"label": r.jour[5:], "total": 0, "uniques": daily_uniques_map.get(r.jour, 0)}
+                daily_chart[r.jour] = {
+                    "label": r.jour[5:],
+                    "total": 0,
+                    "uniques": daily_uniques_map.get(r.jour, 0),
+                }
             daily_chart[r.jour]["total"] += r.total
 
         # Top pages
@@ -296,7 +321,9 @@ def dashboard(
         total_uniques = max(daily_uniques_map.values()) if daily_uniques_map else 0
         nb_jours = len(daily_chart) or 1
         moy_vues_jour = round(total_vues / nb_jours, 1)
-        moy_utilisateurs_jour = round(sum(daily_uniques_map.values()) / nb_jours, 1) if daily_uniques_map else 0
+        moy_utilisateurs_jour = (
+            round(sum(daily_uniques_map.values()) / nb_jours, 1) if daily_uniques_map else 0
+        )
 
         # Jour le plus actif (par utilisateurs uniques)
         jour_pointe = None
@@ -376,8 +403,9 @@ def dashboard(
         monthly_uniques_map = {r[0]: r[1] for r in monthly_uniques_raw}
 
         total_monthly_rows = session.exec(
-            select(TelemetryMonthly.mois, TelemetryMonthly.utilisateurs_uniques)
-            .where(TelemetryMonthly.mois >= ten_years_ago, TelemetryMonthly.page == "__total__")
+            select(TelemetryMonthly.mois, TelemetryMonthly.utilisateurs_uniques).where(
+                TelemetryMonthly.mois >= ten_years_ago, TelemetryMonthly.page == "__total__"
+            )
         ).all()
         for r in total_monthly_rows:
             if r[0] not in monthly_uniques_map:
@@ -387,7 +415,11 @@ def dashboard(
         monthly_chart: dict[str, dict] = {}
         for r in monthly_rows:
             if r.mois not in monthly_chart:
-                monthly_chart[r.mois] = {"label": r.mois, "total": 0, "uniques": monthly_uniques_map.get(r.mois, 0)}
+                monthly_chart[r.mois] = {
+                    "label": r.mois,
+                    "total": 0,
+                    "uniques": monthly_uniques_map.get(r.mois, 0),
+                }
             monthly_chart[r.mois]["total"] += r.total
 
         #  Sans `uniques` : le cumul mois par mois — voir `_cumul_par_page`,
@@ -411,8 +443,9 @@ def dashboard(
         daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
         # Add fallback from daily totals
         total_daily_all = session.exec(
-            select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques)
-            .where(TelemetryDaily.page == "__total__")
+            select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques).where(
+                TelemetryDaily.page == "__total__"
+            )
         ).all()
         for r in total_daily_all:
             if r[0] not in daily_uniques_map:
@@ -451,7 +484,10 @@ def users_active(
 ):
     """Top utilisateurs actifs sur les 30 derniers jours."""
     from zoneinfo import ZoneInfo
-    thirty_days_ago = (datetime.now(ZoneInfo("Europe/Paris")) - timedelta(days=30)).strftime("%Y-%m-%d")
+
+    thirty_days_ago = (datetime.now(ZoneInfo("Europe/Paris")) - timedelta(days=30)).strftime(
+        "%Y-%m-%d"
+    )
     rows = session.exec(
         select(
             TelemetryEvent.user_id,
@@ -471,7 +507,4 @@ def users_active(
     #  Prendre la version complète coûte quatre colonnes de plus sur trente
     #  lignes au maximum, et supprime la troisième écriture de la règle de nom.
     fiches = _fiches_utilisateurs(session, rows)
-    return [
-        {"user_id": r[0], **ligne}
-        for r, ligne in zip(rows, _palmares(rows, fiches))
-    ]
+    return [{"user_id": r[0], **ligne} for r, ligne in zip(rows, _palmares(rows, fiches))]

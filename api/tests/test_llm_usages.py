@@ -15,6 +15,7 @@
 5. **La migration 0194** déplace les anciennes clés et pose les prompts UNE
    fois, sans écraser ce qu'un administrateur a déjà réglé.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -102,8 +103,8 @@ def test_le_par_usage_vient_des_cles_de_l_usage(session):
         llm_description_modele="gpt-4o-mini",
     )
     cfg = config_llm(session, USAGE_SYNTHESE_CONTRAT)
-    assert cfg.delai_s == 12                    # commun
-    assert cfg.modele == "gpt-5"                # usage
+    assert cfg.delai_s == 12  # commun
+    assert cfg.modele == "gpt-5"  # usage
     assert cfg.prompt == "MA CONSIGNE"
     assert cfg.max_jetons == 4200
     assert cfg.actif_usage is True

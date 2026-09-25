@@ -16,6 +16,7 @@ L'une voulait `'badge-…'`, l'autre n'importe quelle chaîne.
 Ce qui varie est donc un motif, c'est-à-dire une **donnée**, et non une raison
 d'écrire le parcours deux fois. `tables_par_cle` le prend en paramètre.
 """
+
 from __future__ import annotations
 
 import re
@@ -82,9 +83,7 @@ def tables_par_cle(source: str, cles: set[str], valeur: str) -> list[tuple[int, 
     sur la prose qui l'explique finit désarmé.
     """
     lignes = source.splitlines()
-    motif = re.compile(
-        r"^\s*(" + "|".join(re.escape(c) for c in cles) + r")\s*:\s*" + valeur
-    )
+    motif = re.compile(r"^\s*(" + "|".join(re.escape(c) for c in cles) + r")\s*:\s*" + valeur)
     tables: list[tuple[int, list[str]]] = []
     debut, trouvees = None, []
     for numero, ligne in enumerate(lignes, 1):

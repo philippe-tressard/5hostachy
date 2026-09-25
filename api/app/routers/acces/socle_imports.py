@@ -57,6 +57,7 @@ copropriétaire dans le fichier des lots pour la télécommande).
 
 `api/tests/test_socle_imports_acces.py` verrouille les deux.
 """
+
 from __future__ import annotations
 
 from app.utils.recuperer import ou_404
@@ -227,9 +228,7 @@ def patch(
             session.add(objet)
     else:
         imp.statut = (
-            StatutImport.proprietaire_lie
-            if imp.user_proprietaire_id
-            else StatutImport.en_attente
+            StatutImport.proprietaire_lie if imp.user_proprietaire_id else StatutImport.en_attente
         )
 
     session.add(imp)

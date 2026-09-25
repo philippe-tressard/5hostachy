@@ -22,6 +22,7 @@ Rien ne le signalait : les trois chemins partagent la fonction fautive, donc ils
 passer autant que ce qui doit être refusé — pour qu'un futur assouplissement de
 `_user_can_read` échoue ici plutôt qu'en production.
 """
+
 from app.models.core import (
     Document,
     RoleUtilisateur,
@@ -96,6 +97,7 @@ def _publication(**champs) -> Ticket:
 
 # ── Ce qui doit être REFUSÉ ──────────────────────────────────────────────────
 
+
 def test_piece_jointe_d_actualite_reservee_au_cs_refusee_a_un_locataire():
     """Le cas d'origine : `public_cible=["conseil_syndical"]` ne protégeait que le texte."""
     locataire = _utilisateur("locataire", StatutUtilisateur.locataire)
@@ -126,7 +128,10 @@ def test_piece_jointe_d_actualite_ciblee_ailleurs_suit_l_actualite():
 
     restreint = _utilisateur("locataire", StatutUtilisateur.locataire, batiment_id=2)
     restreint.restreindre_a_mes_batiments = True
-    assert document_visible(restreint, _piece_jointe(), _SessionSansBase(publication_ailleurs)) is False
+    assert (
+        document_visible(restreint, _piece_jointe(), _SessionSansBase(publication_ailleurs))
+        is False
+    )
 
 
 def test_piece_jointe_d_actualite_reservee_au_perimetre_suit_l_actualite():
@@ -145,6 +150,7 @@ def test_piece_jointe_orpheline_refusee():
 
 
 # ── Ce qui doit rester AUTORISÉ ──────────────────────────────────────────────
+
 
 def test_piece_jointe_d_actualite_tout_public_reste_lisible():
     """Le correctif ne doit pas fermer le cas courant : une actualité pour tous."""
@@ -173,6 +179,7 @@ def test_le_conseil_syndical_garde_acces_a_tout():
 
 
 # ── La règle elle-même, pour qu'on ne puisse pas la rouvrir par inadvertance ──
+
 
 def test_la_branche_piece_jointe_consulte_bien_la_publication():
     """Si un jour la branche redevient un `return True` sec, ce test le dit.
@@ -282,17 +289,23 @@ def test_le_cs_voit_quand_meme_un_document_orphelin():
 
 def _piece_jointe_ticket() -> Document:
     return Document(
-        id=51, titre="Photo de la fuite", fichier_nom="fuite.jpg",
+        id=51,
+        titre="Photo de la fuite",
+        fichier_nom="fuite.jpg",
         fichier_chemin="/app/uploads/prive/fuite.jpg",
-        ticket_id=11, categorie_id=None,
+        ticket_id=11,
+        categorie_id=None,
     )
 
 
 def _piece_jointe_evenement() -> Document:
     return Document(
-        id=52, titre="Plan d'accès", fichier_nom="plan.pdf",
+        id=52,
+        titre="Plan d'accès",
+        fichier_nom="plan.pdf",
         fichier_chemin="/app/uploads/prive/plan.pdf",
-        evenement_id=22, categorie_id=None,
+        evenement_id=22,
+        categorie_id=None,
     )
 
 
@@ -303,6 +316,7 @@ def test_piece_jointe_de_ticket_suit_son_ticket():
     session = _SessionSansBase(ticket)
 
     from app.utils.visibility import ticket_visible
+
     assert document_visible(resident, _piece_jointe_ticket(), session) is ticket_visible(
         ticket, resident
     )

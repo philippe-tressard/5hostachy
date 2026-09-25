@@ -4,6 +4,7 @@ Découpé de `test_porteurs_acces.py` le 23/09/2026 (plus de 500 lignes) : ce
 fichier-là tient la RÈGLE (qui porte, le rattachement), celui-ci les gestes qui
 l'appliquent. Aides communes : `tests/aides_badges.py`.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -17,7 +18,15 @@ from app.utils.porteurs_acces import acces_de, porteurs
 from app.utils.resolution_acces import rattacher, rattacher_les_reconnues
 from app.utils.types_acces import TELECOMMANDE, VIGIK
 from tests.aides_badges import (  # noqa: F401 — `session` est une fixture
-    TYPES, _badge, _bail, _compte, _copro_du_fichier, _ligne, _lier, _lot, session,
+    TYPES,
+    _badge,
+    _bail,
+    _compte,
+    _copro_du_fichier,
+    _ligne,
+    _lier,
+    _lot,
+    session,
 )
 
 
@@ -34,7 +43,9 @@ def test_remettre_par_le_bail_met_le_badge_dans_la_main_du_locataire(session):
     badge = _badge(session, VIGIK, lot=lot, detenteur=bailleur)
     bail = _bail(session, lot, bailleur, locataire)
 
-    transferer_acces(bail.id, TransfertAccesIn(vigik_ids=[badge.id]), user=bailleur, session=session)
+    transferer_acces(
+        bail.id, TransfertAccesIn(vigik_ids=[badge.id]), user=bailleur, session=session
+    )
     session.refresh(badge)
     assert (badge.chez_locataire, badge.user_id) == (True, locataire.id)
     #  Le locataire du BAIL le porte, sans lien `user_lot` ; le bailleur le voit toujours.
@@ -54,13 +65,18 @@ def test_cas_zero_le_badge_d_un_autre_lot_ne_se_transfere_pas(session):
     etranger = _badge(session, VIGIK, code="E", lot=autre)
     bail = _bail(session, lot, bailleur, locataire)
 
-    assert transferer_acces(bail.id, TransfertAccesIn(vigik_ids=[etranger.id]),
-                            user=bailleur, session=session) == []
+    assert (
+        transferer_acces(
+            bail.id, TransfertAccesIn(vigik_ids=[etranger.id]), user=bailleur, session=session
+        )
+        == []
+    )
     session.refresh(etranger)
     assert etranger.chez_locataire is False
 
 
 # ── 10. Une commande acceptée pose ses badges (V3) ──────────────────────────
+
 
 def test_une_commande_acceptee_avec_ses_codes_pose_les_badges_sur_le_lot(session):
     """🔴 Elle n'en créait aucun : le badge remis n'existait nulle part."""
@@ -77,13 +93,20 @@ def test_une_commande_acceptee_avec_ses_codes_pose_les_badges_sur_le_lot(session
     session.add(cmd)
     session.commit()
 
-    traiter_commande(cmd.id, CommandeAction(action="accepter", codes=["N-1", " N-2 ", ""]),
-                     BackgroundTasks(), session=session, admin=cs)
+    traiter_commande(
+        cmd.id,
+        CommandeAction(action="accepter", codes=["N-1", " N-2 ", ""]),
+        BackgroundTasks(),
+        session=session,
+        admin=cs,
+    )
 
     badges = session.exec(select(VIGIK.modele)).all()
     assert sorted(b.code for b in badges) == ["N-1", "N-2"]
     assert all(b.lot_id == lot.id for b in badges)
-    assert len(acces_de(session, VIGIK, paul.id)) == 2, "le conjoint ne voit pas les badges commandés"
+    assert len(acces_de(session, VIGIK, paul.id)) == 2, (
+        "le conjoint ne voit pas les badges commandés"
+    )
 
 
 def test_cas_zero_une_commande_acceptee_sans_code_ne_cree_rien(session):
@@ -98,11 +121,14 @@ def test_cas_zero_une_commande_acceptee_sans_code_ne_cree_rien(session):
     session.add(cmd)
     session.commit()
 
-    traiter_commande(cmd.id, CommandeAction(action="accepter"), BackgroundTasks(), session=session, admin=cs)
+    traiter_commande(
+        cmd.id, CommandeAction(action="accepter"), BackgroundTasks(), session=session, admin=cs
+    )
     assert session.exec(select(VIGIK.modele)).first() is None
 
 
 # ── 11. Retours du 23/09/2026 : PARIS, STOCK, l'accès, le nom affiché ──────
+
 
 def test_un_nom_de_famille_seul_designe_le_bon_copropriétaire(session):
     """« PARIS » est un propriétaire, pas la BANQUE NATIONALE DE PARIS."""
@@ -135,7 +161,9 @@ def test_sans_compte_le_parc_nomme_le_copropriétaire_du_fichier(session):
     from app.utils.porteurs_acces import noms_des_porteurs
 
     lot = _lot(session, VIGIK, "205")
-    session.add(LotImport(numero="205", type_raw="AP", nom_coproprietaire="DURAND Paul", lot_id=lot.id))
+    session.add(
+        LotImport(numero="205", type_raw="AP", nom_coproprietaire="DURAND Paul", lot_id=lot.id)
+    )
     session.commit()
     badge = _badge(session, VIGIK, lot=lot)
     stock = _badge(session, VIGIK, code="ST")
@@ -144,6 +172,7 @@ def test_sans_compte_le_parc_nomme_le_copropriétaire_du_fichier(session):
 
 
 # ── 12. Le parc complète l'import ; supprimer une ligne erronée (23/09) ────
+
 
 @pytest.mark.parametrize("type_acces", TYPES)
 def test_un_badge_saisi_au_parc_rattache_sa_ligne_d_import(session, type_acces):
@@ -155,19 +184,26 @@ def test_un_badge_saisi_au_parc_rattache_sa_ligne_d_import(session, type_acces):
     ligne = _ligne(session, type_acces, code="P-1")
     autre = _ligne(session, type_acces, code="P-2")
 
-    cree = creer_acces_admin(AccesAdminBody(code="P-1", lot_id=lot.id), type_acces=type_acces,
-                             session=session, user=cs)
+    cree = creer_acces_admin(
+        AccesAdminBody(code="P-1", lot_id=lot.id), type_acces=type_acces, session=session, user=cs
+    )
     session.refresh(ligne)
     assert (ligne.statut, ligne.lot_id) == (StatutImport.resolu, lot.id)
     assert getattr(ligne, type_acces.colonne_import) == cree.id
 
     #  Le code corrigé au parc : l'ancienne ligne est libérée, la bonne rattachée.
-    modifier_acces_admin(cree.id, AccesAdminBody(code="P-2"), type_acces=type_acces,
-                         session=session, user=cs)
+    modifier_acces_admin(
+        cree.id, AccesAdminBody(code="P-2"), type_acces=type_acces, session=session, user=cs
+    )
     session.refresh(ligne)
     session.refresh(autre)
-    assert getattr(ligne, type_acces.colonne_import) is None and ligne.statut == StatutImport.en_attente
-    assert getattr(autre, type_acces.colonne_import) == cree.id and autre.statut == StatutImport.resolu
+    assert (
+        getattr(ligne, type_acces.colonne_import) is None
+        and ligne.statut == StatutImport.en_attente
+    )
+    assert (
+        getattr(autre, type_acces.colonne_import) == cree.id and autre.statut == StatutImport.resolu
+    )
 
 
 def test_cas_zero_une_ligne_ignoree_le_reste(session):
@@ -178,8 +214,12 @@ def test_cas_zero_une_ligne_ignoree_le_reste(session):
     ligne.statut = StatutImport.ignore
     session.add(ligne)
     session.commit()
-    creer_acces_admin(AccesAdminBody(code="I-1", lot_id=lot.id), type_acces=VIGIK,
-                      session=session, user=_compte(session, "Cs"))
+    creer_acces_admin(
+        AccesAdminBody(code="I-1", lot_id=lot.id),
+        type_acces=VIGIK,
+        session=session,
+        user=_compte(session, "Cs"),
+    )
     session.refresh(ligne)
     assert ligne.statut == StatutImport.ignore
 

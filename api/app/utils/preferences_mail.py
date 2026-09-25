@@ -32,6 +32,7 @@ comprend.
 Trois copies d'une règle de consentement, c'est trois façons d'être en désaccord
 sur ce que l'utilisateur a demandé.
 """
+
 from __future__ import annotations
 
 import json
@@ -49,8 +50,10 @@ AUTRES_BATIMENTS = "autres_batiments_mail"
 MON_BATIMENT_APP = "mon_batiment_app"
 AUTRES_BATIMENTS_APP = "autres_batiments_app"
 DEFAUTS: dict[str, bool] = {
-    MON_BATIMENT: True, AUTRES_BATIMENTS: False,
-    MON_BATIMENT_APP: True, AUTRES_BATIMENTS_APP: True,
+    MON_BATIMENT: True,
+    AUTRES_BATIMENTS: False,
+    MON_BATIMENT_APP: True,
+    AUTRES_BATIMENTS_APP: True,
 }
 
 #: Valeur du champ pour un compte neuf.
@@ -72,8 +75,10 @@ def lire(utilisateur) -> dict[str, bool]:
         if not isinstance(prefs, dict):
             prefs = {}
     except (json.JSONDecodeError, TypeError):
-        logger.warning("Préférences illisibles pour l'utilisateur %s — défauts appliqués",
-                       getattr(utilisateur, "id", "?"))
+        logger.warning(
+            "Préférences illisibles pour l'utilisateur %s — défauts appliqués",
+            getattr(utilisateur, "id", "?"),
+        )
         prefs = {}
     return {cle: bool(prefs.get(cle, defaut)) for cle, defaut in DEFAUTS.items()}
 

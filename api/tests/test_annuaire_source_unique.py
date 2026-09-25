@@ -26,6 +26,7 @@ Le **tri** et la composition, par leur marqueur le plus distinctif : la sentinel
 `9999` qui range les membres sans bâtiment en dernier. Un fichier qui la réécrit
 vient de recopier le tri, et le tri est la moitié de la composition.
 """
+
 from __future__ import annotations
 
 import ast
@@ -45,8 +46,7 @@ def _fichiers():
 def _emploie_la_sentinelle(source: str) -> bool:
     """Cherche la VALEUR dans le code, jamais le texte : la prose la cite."""
     return any(
-        isinstance(n, ast.Constant) and n.value == SENTINELLE
-        for n in ast.walk(ast.parse(source))
+        isinstance(n, ast.Constant) and n.value == SENTINELLE for n in ast.walk(ast.parse(source))
     )
 
 
@@ -129,8 +129,7 @@ def _dictionnaires_de_membre(source: str) -> list[str]:
         if not isinstance(noeud, ast.Dict):
             continue
         cles = {
-            c.value for c in noeud.keys
-            if isinstance(c, ast.Constant) and isinstance(c.value, str)
+            c.value for c in noeud.keys if isinstance(c, ast.Constant) and isinstance(c.value, str)
         }
         for nom, marqueurs in MARQUEURS:
             if marqueurs <= cles:

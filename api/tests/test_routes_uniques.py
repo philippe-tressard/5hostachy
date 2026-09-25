@@ -25,6 +25,7 @@ Il aplatit les routeurs **tels qu'ils sont montés**, en suivant
 déclarations d'un même chemin : `app.routes` n'expose que des nœuds de routeurs
 inclus, et `app.openapi()` a déjà choisi.
 """
+
 from __future__ import annotations
 
 import collections

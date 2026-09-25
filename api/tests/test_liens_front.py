@@ -24,6 +24,7 @@ qui a échappé aux trois tests précédents avec `/prestataires#presta-23` : la
 existait, l'ancre existait, aucun `?onglet=` n'était présent — donc rien à valider — et
 la fiche restait invisible derrière l'onglet « Prestations ponctuelles ».
 """
+
 import pathlib
 import re
 import types
@@ -177,7 +178,7 @@ def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
         if not _pose_ancre(contenu_deplie(page), prefixe):
             orphelines.append(
                 f"  {lien}  ← {', '.join(sorted(set(fichiers)))}\n"
-                f"      {page.relative_to(_RACINE)} ne pose aucun id=\"{prefixe}-…\""
+                f'      {page.relative_to(_RACINE)} ne pose aucun id="{prefixe}-…"'
             )
 
     assert not orphelines, (
@@ -270,14 +271,15 @@ def test_l_ancre_est_rendue_par_l_onglet_que_le_lien_selectionne():
             )
         elif ancre not in segments[onglet] and ancre_prop not in segments[onglet]:
             #  Les DEUX formes, ici aussi : `_pose_ancre` documente pourquoi.
-            rendu_par = [
-                o for o, seg in segments.items() if ancre in seg or ancre_prop in seg
-            ]
+            rendu_par = [o for o, seg in segments.items() if ancre in seg or ancre_prop in seg]
             ecarts.append(
                 f"  {prefixe} → {lien_element(prefixe, 1)} : l'onglet '{onglet}' ne "
-                f"rend aucun {ancre}…\" — "
-                + (f"c'est l'onglet '{rendu_par[0]}' qui le rend"
-                   if rendu_par else "aucun onglet ne le rend")
+                f'rend aucun {ancre}…" — '
+                + (
+                    f"c'est l'onglet '{rendu_par[0]}' qui le rend"
+                    if rendu_par
+                    else "aucun onglet ne le rend"
+                )
             )
 
     assert not ecarts, (

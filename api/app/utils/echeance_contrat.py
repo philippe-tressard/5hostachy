@@ -50,6 +50,7 @@ regarder.
 un repli sur « aujourd'hui + 1 an » afficherait une échéance inventée. C'est le
 cas zéro, et il rend `None`.
 """
+
 from datetime import date
 from typing import NamedTuple, Optional, Protocol
 from app.utils.valeurs import valeur
@@ -112,8 +113,20 @@ def _ajouter_mois(depart: date, mois: int) -> date:
     """
     total = (depart.year * 12 + depart.month - 1) + mois
     annee, mois_final = divmod(total, 12)
-    dernier = [31, 29 if (annee % 4 == 0 and annee % 100 != 0) or annee % 400 == 0 else 28,
-               31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mois_final]
+    dernier = [
+        31,
+        29 if (annee % 4 == 0 and annee % 100 != 0) or annee % 400 == 0 else 28,
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ][mois_final]
     return date(annee, mois_final + 1, min(depart.day, dernier))
 
 

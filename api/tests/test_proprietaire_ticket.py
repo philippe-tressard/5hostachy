@@ -27,6 +27,7 @@ silence. Les deux viennent donc de `proprietaire()`, et d'elle seule.
 que le nom. L'écran doit alors annoncer ce nom et n'envoyer aucune copie. Les
 confondre ferait soit taire le nom, soit promettre un envoi qui n'a pas lieu.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -58,10 +59,26 @@ def session():
     moteur = create_engine("sqlite://")
     SQLModel.metadata.create_all(moteur)
     with Session(moteur) as s:
-        s.add(Utilisateur(id=1, prenom="Alice", nom="Martin", email="alice@x.fr",
-                          mot_de_passe_hash="x", role="conseil_syndical"))
-        s.add(Utilisateur(id=2, prenom="Bruno", nom="Dupont", email="bruno@x.fr",
-                          mot_de_passe_hash="x", role="propriétaire"))
+        s.add(
+            Utilisateur(
+                id=1,
+                prenom="Alice",
+                nom="Martin",
+                email="alice@x.fr",
+                mot_de_passe_hash="x",
+                role="conseil_syndical",
+            )
+        )
+        s.add(
+            Utilisateur(
+                id=2,
+                prenom="Bruno",
+                nom="Dupont",
+                email="bruno@x.fr",
+                mot_de_passe_hash="x",
+                role="propriétaire",
+            )
+        )
         s.commit()
         yield s
 
@@ -124,9 +141,7 @@ def test_la_copie_n_est_pas_DOUBLEE_quand_le_proprietaire_est_deja_servi(session
     """La déduplication vaut pour le propriétaire comme elle valait pour
     l'auteur : un résident déjà destinataire principal ne reçoit pas deux fois le
     même courriel."""
-    bcc = copie_demandee(
-        session, _Ticket(auteur_id=1, sp_user=2), ["BRUNO@X.FR"], demandee=True
-    )
+    bcc = copie_demandee(session, _Ticket(auteur_id=1, sp_user=2), ["BRUNO@X.FR"], demandee=True)
     assert bcc is None
 
 
@@ -135,8 +150,9 @@ def test_le_FIL_et_la_COPIE_lisent_la_MEME_fonction():
     le fil recalculait le nom de son côté, l'écran pourrait annoncer une personne
     et le courriel partir à une autre — sans qu'aucun test de valeur ne le voie,
     puisque les deux seraient « corrects » séparément."""
-    flux = (pathlib.Path(__file__).resolve().parents[1]
-            / "app" / "routers" / "flux" / "tickets.py").read_text(encoding="utf-8")
+    flux = (
+        pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "flux" / "tickets.py"
+    ).read_text(encoding="utf-8")
     assert "proprietaire(" in flux, (
         "le fil des tickets doit nommer le propriétaire par `copie_auteur.proprietaire`"
     )

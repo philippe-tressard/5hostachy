@@ -14,6 +14,7 @@ Ce que ces tests verrouillent :
 `test_acces_base_scripts.py` tient l'autre moitié : plus aucun script
 n'importe `app.database`.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -48,15 +49,22 @@ def moteur_fixture(monkeypatch):
 def _jetons(moteur) -> list[str]:
     with Session(moteur) as s:
         user = Utilisateur(
-            email="m@test.fr", hashed_password="x", nom="M", prenom="M",
+            email="m@test.fr",
+            hashed_password="x",
+            nom="M",
+            prenom="M",
             roles_json=RoleUtilisateur.résident.value,
         )
         s.add(user)
         s.commit()
         s.refresh(user)
         maintenant = datetime.now(timezone.utc)
-        s.add(RefreshToken(user_id=user.id, token="expire", expires_at=maintenant - timedelta(days=1)))
-        s.add(RefreshToken(user_id=user.id, token="valide", expires_at=maintenant + timedelta(days=1)))
+        s.add(
+            RefreshToken(user_id=user.id, token="expire", expires_at=maintenant - timedelta(days=1))
+        )
+        s.add(
+            RefreshToken(user_id=user.id, token="valide", expires_at=maintenant + timedelta(days=1))
+        )
         s.commit()
     return ["expire", "valide"]
 
@@ -84,6 +92,12 @@ def test_avec_la_cle_les_purges_ont_lieu_et_rendent_leurs_comptes(moteur):
     #  Les clés que `maintenance.sh` lit pour son rapport : les renommer côté
     #  API sans le script ferait des zéros silencieux dans l'historique.
     assert set(corps["comptes"]) == {
-        "tokens", "prt", "notifications", "historique", "emails", "whatsapp", "evolutions",
+        "tokens",
+        "prt",
+        "notifications",
+        "historique",
+        "emails",
+        "whatsapp",
+        "evolutions",
     }
     assert _restants(moteur) == {"valide"}

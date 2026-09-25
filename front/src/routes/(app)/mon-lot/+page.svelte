@@ -23,6 +23,7 @@
 	import { routeOnglet, routeSousOnglet } from '$lib/routes-onglets';
 	import { bailEnCours, bailVierge, champsLocataire } from '$lib/bail';
 	import BadgeStatutBail from '$lib/components/BadgeStatutBail.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _pc = getPageConfig($configStore, 'mon-lot', defautsDePage('mon-lot'));
 	$: _siteNom = $siteNomStore;
@@ -399,7 +400,7 @@
 <!-- ── Onglet : Mes lots ────────────────────────────────────────────── -->
 {#if mainTab === 'lots'}
 	{#if loading}
-		<p style="color:var(--color-text-muted)">Chargement…</p>
+		<EtatListe chargement />
 	{:else if erreurLots}
 		<!--  L'échec AVANT le vide : « aucun lot » est une affirmation, et on ne
 		      l'a pas constatée. -->

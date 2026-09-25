@@ -33,6 +33,7 @@ La règle géographique elle-même : elle vit dans `perimetre_visible`, et
 par couple. La rejouer ici en dupliquerait la définition — le défaut même que le
 lot supprime.
 """
+
 from __future__ import annotations
 
 import json
@@ -59,10 +60,14 @@ from tests.purge_test import purger_ligne
 
 def _utilisateur(session, roles, statut, batiment_id) -> Utilisateur:
     u = Utilisateur(
-        nom="X", prenom="Y",
+        nom="X",
+        prenom="Y",
         email=f"tk-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x", roles_json=roles, statut=statut,
-        batiment_id=batiment_id, actif=True,
+        mot_de_passe_hash="x",
+        roles_json=roles,
+        statut=statut,
+        batiment_id=batiment_id,
+        actif=True,
     )
     session.add(u)
     session.commit()
@@ -72,8 +77,12 @@ def _utilisateur(session, roles, statut, batiment_id) -> Utilisateur:
 
 def _ticket(session, auteur_id, perimetre, *, confidentiel=False) -> Ticket:
     t = Ticket(
-        numero=f"T-{uuid.uuid4().hex[:6]}", titre="Fuite", description="…",
-        categorie="panne", auteur_id=auteur_id, statut=StatutTicket.ouvert,
+        numero=f"T-{uuid.uuid4().hex[:6]}",
+        titre="Fuite",
+        description="…",
+        categorie="panne",
+        auteur_id=auteur_id,
+        statut=StatutTicket.ouvert,
         perimetre_cible=json.dumps(perimetre, ensure_ascii=False),
         confidentiel=confidentiel,
     )
@@ -104,7 +113,9 @@ def scene(batiments):
         #  filtre par périmètre ne serait plus mesuré du tout.
         auteur = _utilisateur(session, "résident", StatutUtilisateur.copropriétaire_résident, b1)
         voisin = _utilisateur(session, "résident", StatutUtilisateur.copropriétaire_résident, b2)
-        cs = _utilisateur(session, "conseil_syndical", StatutUtilisateur.copropriétaire_résident, b2)
+        cs = _utilisateur(
+            session, "conseil_syndical", StatutUtilisateur.copropriétaire_résident, b2
+        )
         tickets = {
             "chez_moi": _ticket(session, auteur.id, [f"bat:{b1}"]),
             "chez_le_voisin": _ticket(session, auteur.id, [f"bat:{b2}"]),
@@ -122,6 +133,7 @@ def scene(batiments):
 
 
 # ── 1. La liste et la fiche disent la même chose ──────────────────────────────
+
 
 def test_la_liste_rend_exactement_ce_que_la_fiche_accepte(scene):
     """🔴 Le piège n° 1 du ticket, vérifié sur des tickets réels.
@@ -155,6 +167,7 @@ def test_le_voisin_ne_voit_PAS_un_ticket_d_un_autre_batiment(scene):
 
 
 # ── 2. Le drapeau referme, et rien de plus ────────────────────────────────────
+
 
 def test_confidentiel_referme_pour_le_voisin(scene):
     _session, tickets, _auteur, voisin, _cs = scene
@@ -193,6 +206,7 @@ def test_un_ciblage_illisible_refuse(scene):
 
 # ── 3. Lire n'est pas écrire ──────────────────────────────────────────────────
 
+
 def test_voir_un_ticket_ne_donne_AUCUN_droit_d_ecriture(scene):
     """🔴 Le point 4 du ticket, vérifié plutôt que promis.
 
@@ -225,6 +239,7 @@ def test_le_batiment_du_voisin_est_bien_celui_qu_on_croit(scene, batiments):
 
 
 # ── 3. Le locataire : ses tickets, et rien d'autre (05/09/2026) ───────────────
+
 
 def test_un_LOCATAIRE_ne_voit_pas_le_ticket_d_un_voisin(scene):
     """Demandé à l'écran : *« les locataires ne voient pas les tickets »*.

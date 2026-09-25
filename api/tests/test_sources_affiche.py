@@ -21,6 +21,7 @@ défaut ne se verrait qu'une fois l'affiche imprimée et posée.
 C'est une règle de sécurité, donc elle se teste, et elle se teste sur le
 **comportement** : ce que la fonction rend, pas ce qu'elle déclare.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -47,8 +48,7 @@ def _ticket(session, titre, **kw):
     #  `numero` est attribué par le routeur (compteur annuel) : ici on le pose,
     #  la contrainte NOT NULL n'ayant rien à voir avec ce qu'on mesure.
     _numero[0] += 1
-    t = Ticket(titre=titre, description=titre, auteur_id=1,
-               numero=f"T-{_numero[0]:04d}", **kw)
+    t = Ticket(titre=titre, description=titre, auteur_id=1, numero=f"T-{_numero[0]:04d}", **kw)
     session.add(t)
     session.commit()
     session.refresh(t)
@@ -113,8 +113,12 @@ def test_une_actualite_RESERVEE_AU_PERIMETRE_n_est_pas_proposee(session):
     passer ce que l'autre refusait (#1091, lot 4)."""
     import json
 
-    _actualite(session, "Bâtiment 1 seulement", reserve_perimetre=True,
-               perimetre_cible=json.dumps(["bat:1"]))
+    _actualite(
+        session,
+        "Bâtiment 1 seulement",
+        reserve_perimetre=True,
+        perimetre_cible=json.dumps(["bat:1"]),
+    )
     _actualite(session, "Pour tout le monde")
 
     assert {s.titre for s in sources_disponibles(session)} == {"Pour tout le monde"}
@@ -171,8 +175,9 @@ def test_la_FENETRE_ne_diverge_pas_de_celle_du_fil():
     import re
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "app" / "routers" / "flux" / "__init__.py"
-              ).read_text(encoding="utf-8")
+    source = (
+        Path(__file__).resolve().parents[1] / "app" / "routers" / "flux" / "__init__.py"
+    ).read_text(encoding="utf-8")
     trouve = re.search(r"_FENETRE_JOURS\s*=\s*(\d+)", source)
     assert trouve, "Cas zéro : _FENETRE_JOURS introuvable dans routers/flux — contrôle inopérant."
     assert int(trouve.group(1)) == FENETRE_JOURS, (

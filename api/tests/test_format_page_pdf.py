@@ -19,6 +19,7 @@ déclarent pas un format : elles surchargent les marges d'une page particulière
 d'un document dont le format est déjà fixé. Les interdire obligerait à faire
 passer par le thème une décision qui n'appartient qu'à ce document-là.
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -54,9 +55,7 @@ def test_une_affiche_peut_choisir_son_format_et_renoncer_au_pied():
     rendu = regle_page(taille="A6", marges="0", numeroter=False)
     assert "size: A6;" in rendu
     assert "margin: 0;" in rendu
-    assert "counter(page)" not in rendu, (
-        "une affiche d'une seule page ne porte pas « 1 / 1 »"
-    )
+    assert "counter(page)" not in rendu, "une affiche d'une seule page ne porte pas « 1 / 1 »"
 
 
 def test_aucun_module_ne_REECRIT_la_regle_de_page():

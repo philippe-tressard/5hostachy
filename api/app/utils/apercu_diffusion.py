@@ -43,6 +43,7 @@ L'aperçu est demandé **avant** que l'objet existe. Les champs attribués plus 
 — numéro, lien permanent — sont nommés dans `attribues_a_la_creation` plutôt
 qu'inventés.
 """
+
 from __future__ import annotations
 
 from typing import Any, Optional

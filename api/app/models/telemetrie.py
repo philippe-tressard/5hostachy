@@ -15,6 +15,7 @@ découpage n'a pas à réécrire ses appelants. L'import y est aussi ce qui
 enregistre ces tables dans les métadonnées SQLModel : le retirer les ferait
 disparaître de la création de schéma.
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -24,22 +25,25 @@ from sqlmodel import Field, SQLModel
 #  Télémétrie
 # ──────────────────────────────────────────────
 
+
 class TelemetryEvent(SQLModel, table=True):
     """Événement brut de télémétrie — conservé 30 jours puis agrégé."""
+
     __tablename__ = "telemetry_event"
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    page: str = Field(index=True)          # ex: /actualites, /tickets
-    action: str = "view"                    # view | click | submit
-    detail: Optional[str] = None            # ex: bouton cliqué, id ticket
+    page: str = Field(index=True)  # ex: /actualites, /tickets
+    action: str = "view"  # view | click | submit
+    detail: Optional[str] = None  # ex: bouton cliqué, id ticket
     cree_le: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 class TelemetryDaily(SQLModel, table=True):
     """Agrégation journalière — conservée 12 mois."""
+
     __tablename__ = "telemetry_daily"
     id: Optional[int] = Field(default=None, primary_key=True)
-    jour: str = Field(index=True)           # YYYY-MM-DD
+    jour: str = Field(index=True)  # YYYY-MM-DD
     page: str
     action: str = "view"
     utilisateurs_uniques: int = 0
@@ -48,9 +52,10 @@ class TelemetryDaily(SQLModel, table=True):
 
 class TelemetryMonthly(SQLModel, table=True):
     """Agrégation mensuelle — conservée 10 ans."""
+
     __tablename__ = "telemetry_monthly"
     id: Optional[int] = Field(default=None, primary_key=True)
-    mois: str = Field(index=True)           # YYYY-MM
+    mois: str = Field(index=True)  # YYYY-MM
     page: str
     action: str = "view"
     utilisateurs_uniques: int = 0
@@ -59,16 +64,17 @@ class TelemetryMonthly(SQLModel, table=True):
 
 class HistoriqueTelemetrie(SQLModel, table=True):
     """Historique des exécutions d'agrégation de la télémétrie."""
+
     __tablename__ = "historique_telemetrie"
     id: Optional[int] = Field(default=None, primary_key=True)
-    declenchee_par: str = "cron"               # cron | manuelle
+    declenchee_par: str = "cron"  # cron | manuelle
     #: Nœud qui a exécuté la tâche — renseigné À L'ÉCRITURE, jamais déduit à
     #: la lecture (cf. `utils/noeud.py`). Nullable et sans valeur par défaut :
     #: les lignes antérieures au 12/08/2026 resteront `None`, et c'est correct
     #: — personne ne sait sur quel nœud elles ont tourné, et l'inventer serait
     #: la faute retirée le 11/08 (#312).
-    noeud: Optional[str] = Field(default=None, index=True)   # rpi1 | rpi2
-    statut: str = "en_cours"                   # en_cours | succes | erreur
+    noeud: Optional[str] = Field(default=None, index=True)  # rpi1 | rpi2
+    statut: str = "en_cours"  # en_cours | succes | erreur
     jours_agreges: int = 0
     mois_agreges: int = 0
     events_purges: int = 0

@@ -8,6 +8,7 @@ d'un router, ou — bien pire — à recopier les quatre critères.
 Un critère recopié diverge : c'est exactement ce qui produirait un mot de passe
 accepté à l'inscription et refusé au changement, sans que rien ne le signale.
 """
+
 import re
 
 from fastapi import HTTPException

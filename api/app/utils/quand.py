@@ -53,6 +53,7 @@ quel que soit l'écran où l'on saisit. C'est ce qui referme #1089 — et, depui
 les deux créations, et le **cas zéro** (une fonction qui ne lève jamais rendrait
 les deux premiers contrôles verts).
 """
+
 from __future__ import annotations
 
 from datetime import datetime

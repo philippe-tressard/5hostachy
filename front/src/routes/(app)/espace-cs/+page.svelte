@@ -35,6 +35,7 @@
 	import { replier, sansAccents } from '$lib/texte';
 	import { agitPourAutrui } from '$lib/roles';
 	import { accepterCommandeAcces, refuserCommandeAcces } from '$lib/commandes-acces';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -745,7 +746,7 @@
 
 {#if onglet === 'validations'}
 	{#if loading}
-		<p style="color:var(--color-text-muted)">Chargement…</p>
+		<EtatListe chargement />
 	{:else}
 		<!-- KPI Cards -->
 		<div class="kpi-row" style="margin-bottom:1.5rem">
@@ -865,7 +866,7 @@
 	<OngletAnnoncesHall />
 {:else if onglet === 'annuaire'}
 	{#if annuaireLoading}
-		<p style="color:var(--color-text-muted)">Chargement…</p>
+		<EtatListe chargement />
 	{:else}
 		<!-- ── Lien consignes de copropriété ─────────────────────────────────── -->
 		<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">

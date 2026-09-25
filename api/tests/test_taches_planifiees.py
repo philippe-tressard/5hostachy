@@ -15,6 +15,7 @@ Ces tests verrouillent le contrat : les nouveaux champs existent, ils ont des
 défauts rétrocompatibles, et une exécution attendue mais absente est signalée
 `manquante` au lieu de passer pour un silence normal.
 """
+
 import pytest
 from datetime import datetime, timedelta
 
@@ -79,11 +80,8 @@ def test_toute_tache_attendue_a_un_producteur():
     Ce test verrouille la classe et non le cas : toute tâche ajoutée au tableau sans
     producteur échouera ici, avant d'aller peindre un faux rouge sur l'écran.
     """
-    from pathlib import Path
-
     from app.routers.admin import _PERIODICITE_ATTENDUE_H
 
-    racine = Path(__file__).resolve().parents[2]
     #  Portée du scan : source unique dans conftest — un glob local ici avait
     #  cessé de voir les scripts déplacés dans `scripts/` (#337).
     scripts = {p.name: p.read_text(encoding="utf-8") for p in scripts_shell_versionnes()}
@@ -94,7 +92,8 @@ def test_toute_tache_attendue_a_un_producteur():
     # ce test faux au premier refactor — et un test faux est pire qu'aucun test.
     for tache in _PERIODICITE_ATTENDUE_H:
         producteurs = [
-            nom for nom, src in scripts.items()
+            nom
+            for nom, src in scripts.items()
             if f'"tache":"{tache}"' in src or f"rapport_payload {tache} " in src
         ]
         assert producteurs, (
@@ -155,8 +154,7 @@ def test_sauvegarde_nest_pas_dupliquee_dans_la_table_maintenance():
     from app.routers.admin import _PERIODICITE_ATTENDUE_H, _PERIODICITE_SAUVEGARDE_H
 
     assert "backup" not in _PERIODICITE_ATTENDUE_H, (
-        "le backup ne doit pas être attendu dans historique_maintenance : "
-        "il a sa propre table"
+        "le backup ne doit pas être attendu dans historique_maintenance : il a sa propre table"
     )
     assert _PERIODICITE_SAUVEGARDE_H == 24
 
@@ -243,6 +241,7 @@ def test_retard_declenche_le_statut_manquante():
 
 # ── Deux faux positifs constatés à l'écran le 09/08/2026 ────────────────────
 
+
 @pytest.fixture()
 def session_memoire():
     """Base en mémoire, isolée. Aucun `app.db` n'est approché (règle d'or)."""
@@ -282,7 +281,9 @@ def test_le_script_de_bascule_s_abstient_sur_le_standby():
     """
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[2] / "scripts" / "exploitation" / "bascule.sh").read_text(encoding="utf-8")
+    source = (
+        Path(__file__).resolve().parents[2] / "scripts" / "exploitation" / "bascule.sh"
+    ).read_text(encoding="utf-8")
     assert 'if [ "$ACTIVE" != "$SELF" ]' in source and "exit 0" in source, (
         "bascule.sh ne s'abstient plus sur le standby : la périodicité attendue "
         "de 48 h reposait sur cette abstention."
@@ -305,18 +306,25 @@ def test_une_tache_hebdomadaire_survit_aux_quotidiennes(session_memoire):
     from app.routers.admin import _purger_anciens_rapports
 
     base = datetime(2026, 8, 2, 1, 0)
-    session_memoire.add(HistoriqueMaintenance(
-        tache="maintenance", noeud="rpi1", statut="succes", cree_le=base))
+    session_memoire.add(
+        HistoriqueMaintenance(tache="maintenance", noeud="rpi1", statut="succes", cree_le=base)
+    )
     #  Trente exécutions quotidiennes postérieures : bien plus que le quota.
     for j in range(30):
-        session_memoire.add(HistoriqueMaintenance(
-            tache="bascule", noeud="rpi1" if j % 2 else "rpi2", statut="succes",
-            cree_le=base + timedelta(days=j + 1)))
+        session_memoire.add(
+            HistoriqueMaintenance(
+                tache="bascule",
+                noeud="rpi1" if j % 2 else "rpi2",
+                statut="succes",
+                cree_le=base + timedelta(days=j + 1),
+            )
+        )
     session_memoire.commit()
 
     _purger_anciens_rapports(session_memoire)
 
     from sqlmodel import select
+
     restantes = session_memoire.exec(
         select(HistoriqueMaintenance).where(HistoriqueMaintenance.tache == "maintenance")
     ).all()

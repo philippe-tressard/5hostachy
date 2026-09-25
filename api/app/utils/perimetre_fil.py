@@ -37,6 +37,7 @@ Sans elle, corriger une vieille faute de frappe reclasserait le ticket sur un
 périmètre abandonné depuis — un défaut silencieux, qui ne se verrait que sur la
 liste filtrée.
 """
+
 from __future__ import annotations
 
 import json

@@ -37,6 +37,7 @@ automatique — « garder en vue » — mais une information périmée n'a plus 
 garder en vue. La péremption passe donc **avant** l'épinglage, et c'est la
 seule règle qui le fasse après la décision humaine d'archiver.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -200,8 +201,15 @@ def _lu(**champs):
     SQLModel.metadata.create_all(moteur)
     with Session(moteur) as s:
         s.add(Utilisateur(id=1, prenom="A", nom="B", email="a@x.fr", mot_de_passe_hash="x"))
-        t = Ticket(id=1, numero="TK-A1", titre="Assemblée générale", description="…", auteur_id=1,
-                   statut="publie", **champs)
+        t = Ticket(
+            id=1,
+            numero="TK-A1",
+            titre="Assemblée générale",
+            description="…",
+            auteur_id=1,
+            statut="publie",
+            **champs,
+        )
         s.add(t)
         s.commit()
         return ticket_read(s.get(Ticket, 1), s)

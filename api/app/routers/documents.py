@@ -1,4 +1,5 @@
 """Router documents — bibliothèque documentaire avec contrôle d'accès 3 couches."""
+
 import json
 import logging
 import os
@@ -13,10 +14,15 @@ from app.utils.config_site import config_site
 from app.auth.deps import est_moderateur, get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    CategorieDocument, ContratEntretien, Document, ProfilAccesDocument, Utilisateur
+    CategorieDocument,
+    ContratEntretien,
+    Document,
+    ProfilAccesDocument,
+    Utilisateur,
 )
 from app.schemas import DocumentRead
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
+
 # Toute règle de visibilité — documents compris — vient du module central.
 from app.utils.visibility import document_visible
 from app.utils.liens import base_site
@@ -38,7 +44,10 @@ UPLOADS_DIR = get_settings().uploads_dir
 
 
 def _notifier_document_publie(
-    doc: Document, auteur: Utilisateur, background_tasks: BackgroundTasks, session: Session,
+    doc: Document,
+    auteur: Utilisateur,
+    background_tasks: BackgroundTasks,
+    session: Session,
 ) -> None:
     """Prévient les résidents qui ont le droit de voir ce document.
 
@@ -96,7 +105,8 @@ def _notifier_document_publie(
         if u.id == auteur.id or not document_visible(u, doc, session):
             continue
         lien_doc = lien_document(doc, u, session)
-        sonner(session,
+        sonner(
+            session,
             destinataire_id=u.id,
             type="document",
             titre=f"Nouveau document : {doc.titre}",
@@ -139,7 +149,11 @@ def list_categories(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Retourne les catégories de documents actives accessibles à l'utilisateur."""
-    cats = session.exec(select(CategorieDocument).where(CategorieDocument.actif == True).order_by(CategorieDocument.libelle)).all()
+    cats = session.exec(
+        select(CategorieDocument)
+        .where(CategorieDocument.actif == True)  # noqa: E712
+        .order_by(CategorieDocument.libelle)
+    ).all()
     # CS et admin voient toutes les catégories
     if est_moderateur(user):
         return [{"id": c.id, "code": c.code, "libelle": c.libelle} for c in cats]
@@ -250,6 +264,7 @@ def update_document(
         doc.annee = body.annee
     if body.date_ag is not None:
         from datetime import date as dateclass
+
         doc.date_ag = dateclass.fromisoformat(body.date_ag) if body.date_ag else None
     session.add(doc)
     session.commit()
@@ -321,6 +336,7 @@ async def upload_document(
     parsed_date_ag = None
     if date_ag:
         from datetime import date as dateclass
+
         try:
             parsed_date_ag = dateclass.fromisoformat(date_ag)
         except ValueError:

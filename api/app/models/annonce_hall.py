@@ -14,6 +14,7 @@ les seuls liens sont deux clés étrangères déclarées par nom de table.
 `from app.models.core import AnnonceHall` continuent de fonctionner, et c'est cet
 import qui enregistre la table dans les métadonnées SQLModel.
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -29,18 +30,19 @@ class AnnonceHall(AssisteIAMixin, table=True):
     lui qui a été envoyé au CS et affiché dans le hall). Une correction passe
     donc par une nouvelle annonce, jamais par une régénération silencieuse.
     """
+
     __tablename__ = "annonce_hall"
     id: Optional[int] = Field(default=None, primary_key=True)
     titre: str
-    message: str                                    # HTML riche (RichEditor)
-    perimetre_cible: str = '["résidence"]'          # JSON: résidence|bat:{id}|parking|cave|aful
-    format_demande: str = "auto"                    # auto | a4 | a5
-    format_effectif: str = "a4"                     # a4 | a5
-    images_json: str = "[]"                         # JSON: photos facultatives (max 2)
-    pdf_chemin: str = ""                            # chemin du PDF dans le volume uploads
-    pdf_nom: str = ""                               # nom proposé au téléchargement
+    message: str  # HTML riche (RichEditor)
+    perimetre_cible: str = '["résidence"]'  # JSON: résidence|bat:{id}|parking|cave|aful
+    format_demande: str = "auto"  # auto | a4 | a5
+    format_effectif: str = "a4"  # a4 | a5
+    images_json: str = "[]"  # JSON: photos facultatives (max 2)
+    pdf_chemin: str = ""  # chemin du PDF dans le volume uploads
+    pdf_nom: str = ""  # nom proposé au téléchargement
     taille_octets: Optional[int] = None
-    destinataires: str = "[]"                       # JSON: emails notifiés
+    destinataires: str = "[]"  # JSON: emails notifiés
     envoye_le: Optional[datetime] = None
     archivee: bool = False
     # Publication d'origine si l'annonce a été générée depuis une actualité

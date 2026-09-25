@@ -28,6 +28,7 @@ vérifiable. C'est ce qui permet de refermer #1089 sans exception déclarée.
 3. **le cas zéro** : la règle refuse vraiment ce qu'elle doit refuser. Sans ce
    test, une fonction qui ne lève jamais rendrait les deux premiers verts.
 """
+
 import ast
 import sys
 from pathlib import Path
@@ -105,9 +106,7 @@ def test_aucune_autre_ecriture_de_la_regle():
             if not isinstance(noeud, ast.If):
                 continue
             condition = ast.unparse(noeud.test)
-            vise_le_vide = any(
-                m in condition for m in ("not body.contenu", "not body.description")
-            )
+            vise_le_vide = any(m in condition for m in ("not body.contenu", "not body.description"))
             if not vise_le_vide:
                 continue
             leve = any(
@@ -139,6 +138,7 @@ def test_aucune_autre_ecriture_de_la_regle():
 #
 #  Les trois tests ci-dessus sont satisfaits par une fonction vide. Ceux-ci
 #  l'appellent (`standards/04` §2 — vérifier le comportement, pas l'artefact).
+
 
 def _regle():
     from app.utils.quand import exiger_description

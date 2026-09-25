@@ -25,6 +25,7 @@ est partagée, et ma première rédaction voyait le second paramétrage apparier
 compte du premier — même nom, même score. Un test qui fabrique son propre cas
 limite ne mesure plus le produit.
 """
+
 from __future__ import annotations
 
 import pytest

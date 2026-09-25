@@ -4,6 +4,7 @@
 n'existe pas… » — on cherche une entreprise par son nom ; l'ordre d'insertion
 n'aidait personne. Sans tenir compte de la casse.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -19,7 +20,11 @@ def test_la_liste_est_alphabetique_sans_tenir_compte_de_la_casse(session):
     for nom in noms:
         session.add(Prestataire(nom=nom, specialite="plomberie"))
     session.commit()
-    lus = [p.nom for p in list_prestataires(session=session, _=_compte(session, "Cs")) if p.nom.endswith(suffixe)]
+    lus = [
+        p.nom
+        for p in list_prestataires(session=session, _=_compte(session, "Cs"))
+        if p.nom.endswith(suffixe)
+    ]
     #  Témoin : les trois sont bien là, sinon l'ordre d'une liste vide passerait.
     assert sorted(lus) == sorted(noms)
     assert lus == sorted(noms, key=str.lower)

@@ -36,6 +36,7 @@ un même fichier hors exception : c'est la forme que prend cette règle, et la
 chercher ligne à ligne raterait les copies coupées sur plusieurs lignes — ce que
 trois des cinq étaient.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

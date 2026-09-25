@@ -1,7 +1,8 @@
-""" 
+"""
 5Hostachy — Application de gestion de copropriété
 API FastAPI v0.1
 """
+
 import json as _json
 import logging as _logging
 import os as _os
@@ -58,8 +59,8 @@ _logger = _logging.getLogger("hostachy.api")
 # pour les cas où un dict brut contient des objets datetime Python.
 from fastapi.encoders import ENCODERS_BY_TYPE
 
-ENCODERS_BY_TYPE[datetime] = (
-    lambda dt: dt.isoformat() + "Z" if dt.tzinfo is None else dt.isoformat()
+ENCODERS_BY_TYPE[datetime] = lambda dt: (
+    dt.isoformat() + "Z" if dt.tzinfo is None else dt.isoformat()
 )
 
 # Regex : "2026-04-10T00:00:00" ou "2026-04-10T00:00:00.123456" (sans suffixe TZ)
@@ -69,6 +70,7 @@ _NAIVE_DT_RE = _re.compile(r'"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?)"')
 class _UTCEncoder(_json.JSONEncoder):
     """Filet de sécurité : si un datetime arrive directement dans le JSON
     (retour de dict brut), on ajoute Z aussi."""
+
     def default(self, obj: Any) -> Any:
         if isinstance(obj, datetime):
             if obj.tzinfo is None:
@@ -89,12 +91,36 @@ class UTCJSONResponse(JSONResponse):
         body = _NAIVE_DT_RE.sub(r'"\1Z"', body)
         return body.encode("utf-8")
 
+
 from app.database import _run_migrations, engine
 from app.routers import (
-    auth, auth_mot_de_passe, auth_profil, auth_telemetrie, tickets, publications, documents, lots, admin,
-    notifications, acces, calendrier, prestataires, compteurs, sondages, idees, copropriete, copropriete_patrimoine, carnet,
-    bailleur, config, diagnostics, annonces, regles_residence, delegations,
-    telemetry, flux,
+    auth,
+    auth_mot_de_passe,
+    auth_profil,
+    auth_telemetrie,
+    tickets,
+    publications,
+    documents,
+    lots,
+    admin,
+    notifications,
+    acces,
+    calendrier,
+    prestataires,
+    compteurs,
+    sondages,
+    idees,
+    copropriete,
+    copropriete_patrimoine,
+    carnet,
+    bailleur,
+    config,
+    diagnostics,
+    annonces,
+    regles_residence,
+    delegations,
+    telemetry,
+    flux,
 )
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
 from app.routers import manuel
@@ -116,10 +142,11 @@ async def lifespan(app: FastAPI):
     # Purge des refresh tokens expirés ou révoqués
     from sqlmodel import Session, delete
     from app.models.core import RefreshToken
+
     with Session(engine) as _s:
         _s.exec(
             delete(RefreshToken).where(
-                (RefreshToken.revoked == True) | (RefreshToken.expires_at < datetime.utcnow())
+                (RefreshToken.revoked == True) | (RefreshToken.expires_at < datetime.utcnow())  # noqa: E712
             )
         )
         _s.commit()
@@ -130,6 +157,7 @@ async def lifespan(app: FastAPI):
     from datetime import timedelta as _timedelta
     from sqlmodel import select as _select
     from app.models.core import HistoriqueSauvegarde, StatutSauvegarde
+
     with Session(engine) as _s:
         _seuil = datetime.utcnow() - _timedelta(hours=2)
         _orphelines = _s.exec(
@@ -145,7 +173,9 @@ async def lifespan(app: FastAPI):
             _s.add(_b)
         if _orphelines:
             _s.commit()
-            _logger.info("Sauvegardes orphelines nettoyées : %d marquée(s) en échec.", len(_orphelines))
+            _logger.info(
+                "Sauvegardes orphelines nettoyées : %d marquée(s) en échec.", len(_orphelines)
+            )
 
     scheduler = setup_scheduler()
 
@@ -155,11 +185,15 @@ async def lifespan(app: FastAPI):
     # La dédup dans whatsapp_scheduler.check_and_send() rend les tentatives
     # répétées sûres (aucun risque de doublon).
     from app.utils.whatsapp_scheduler import check_and_send as _wa_check
+
     scheduler.add_job(_wa_check, "cron", hour="18-21", minute="*/15", id="whatsapp_scheduled")
 
     # Agrégation télémétrie : chaque nuit à 2h
     from app.utils.telemetry_aggregation import run_telemetry_aggregation_cron
-    scheduler.add_job(run_telemetry_aggregation_cron, "cron", hour=2, minute=0, id="telemetry_aggregation")
+
+    scheduler.add_job(
+        run_telemetry_aggregation_cron, "cron", hour=2, minute=0, id="telemetry_aggregation"
+    )
 
     #  🔴 LES RATTRAPAGES — et ils ne concernent PLUS que la télémétrie (#876).
     #
@@ -174,6 +208,7 @@ async def lifespan(app: FastAPI):
     #  pas (contrôle santé, WhatsApp) vivent désormais dans `utils/rattrapage.py`,
     #  écrits une seule fois.
     from app.utils.rattrapage import planifier_rattrapages
+
     planifier_rattrapages(scheduler)
 
     #  🔴 PRÉCHAUFFAGE DU MANUEL EN PDF (18/09/2026, demandé par Philippe).
@@ -210,6 +245,7 @@ async def lifespan(app: FastAPI):
 
     # Contrôle santé quotidien : WhatsApp, sauvegardes, disque (06h00)
     from app.utils.health_monitor import run_health_check
+
     scheduler.add_job(run_health_check, "cron", hour=6, minute=0, id="health_check")
 
     #  Réponses par courriel aux tickets (#703). Toutes les 10 minutes : assez
@@ -223,6 +259,7 @@ async def lifespan(app: FastAPI):
     #  Rien ne tourne tant que `imap_enabled` n'est pas posé en administration :
     #  la fonction sort immédiatement.
     from app.utils.courriel_boite import relever as _relever_reponses
+
     scheduler.add_job(_relever_reponses, "interval", minutes=10, id="courriel_reponses")
 
     #  🔴 Ce qui tourne VRAIMENT est comparé à ce qui est déclaré (#1047). Un
@@ -233,6 +270,7 @@ async def lifespan(app: FastAPI):
     #  L'analyse statique de la CI ne suffit pas : elle voit l'appel dans le code,
     #  pas le fait qu'une condition l'ait sauté. Ce contrôle-ci lit le scheduler.
     from app.utils.taches import verifier_taches_enregistrees
+
     verifier_taches_enregistrees(scheduler, _logging.getLogger("taches"))
 
     yield
@@ -245,6 +283,7 @@ async def lifespan(app: FastAPI):
     try:
         from sqlalchemy import text as _text
         from app.database import engine as _engine
+
         with _engine.connect() as _conn:
             _conn.execute(_text("PRAGMA wal_checkpoint(TRUNCATE)"))
             _conn.commit()
@@ -254,6 +293,7 @@ async def lifespan(app: FastAPI):
 
 
 import os as _os
+
 _enable_docs = _os.getenv("ENABLE_API_DOCS", "false").lower() == "true"
 
 #  Version du CONTRAT de l'API, délibérément distincte de celle de l'application
@@ -297,16 +337,20 @@ app.add_middleware(SlowAPIMiddleware)
 
 # ── Gestionnaires d'erreurs globaux ──────────────────────────────────────────
 
+
 @app.exception_handler(_SAOperationalError)
 async def db_operational_error_handler(request: Request, exc: _SAOperationalError):
     """SQLite I/O error, DB locked, pool corrompu → 503 avec log structuré.
     Le pool est purgé ici pour que la prochaine requête reparte sur une connexion saine.
     """
     from app.database import engine as _engine
+
     _engine.dispose()
     _logger.error(
         "DB OperationalError sur %s %s — pool purgé : %s",
-        request.method, request.url.path, exc,
+        request.method,
+        request.url.path,
+        exc,
     )
     return JSONResponse(
         status_code=503,
@@ -319,13 +363,15 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     """Filet de sécurité : toute exception non gérée → 500 loggué, jamais de crash silencieux."""
     _logger.error(
         "Exception non gérée sur %s %s :\n%s",
-        request.method, request.url.path,
+        request.method,
+        request.url.path,
         _traceback.format_exc(),
     )
     return JSONResponse(
         status_code=500,
         content={"detail": "Erreur interne du serveur."},
     )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -420,6 +466,7 @@ def health():
     """
     from sqlmodel import Session, text as _text
     from app.database import engine as _engine
+
     try:
         with Session(_engine) as _s:
             _s.exec(_text("SELECT 1"))  # type: ignore[arg-type]

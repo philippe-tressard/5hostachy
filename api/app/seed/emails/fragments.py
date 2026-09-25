@@ -36,6 +36,7 @@ figée de chaque modèle.
 Une évolution de style **volontaire** se fait donc ici *et* dans une migration —
 jamais ici seul.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -150,9 +151,7 @@ def ligne_auteur(
         par opposition à celui du commentaire courant (13px, semi-gras).
     """
     suffixe = (
-        "{%% if %s %%} — 🔹 {{ %s }}{%% endif %%}" % (perimetre, perimetre)
-        if perimetre
-        else ""
+        "{%% if %s %%} — 🔹 {{ %s }}{%% endif %%}" % (perimetre, perimetre) if perimetre else ""
     )
     if petite:
         return (
@@ -217,8 +216,7 @@ def entree_historique(prefixe: str, *, perimetre: Optional[str] = None) -> str:
         pour une évolution de publication).
     """
     return encart(
-        ligne_auteur(f"{prefixe}.auteur_nom", f"{prefixe}.date",
-                     perimetre=perimetre, petite=True)
+        ligne_auteur(f"{prefixe}.auteur_nom", f"{prefixe}.date", perimetre=perimetre, petite=True)
         + contenu_riche(f"{prefixe}.contenu"),
         marge="0 0 8px",
         fond=BLANC,

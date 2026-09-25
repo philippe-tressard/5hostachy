@@ -23,6 +23,7 @@ Le code d'un badge est unique (migration 0213). Les fichiers du syndic, eux,
 répètent des codes — 16 fois pour les télécommandes. Une seconde ligne qui porte
 un code déjà connu se rattache donc à l'objet existant au lieu d'en créer un.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -126,13 +127,19 @@ def synchroniser_import(session: Session, type_acces, objet) -> None:
     for ligne in session.exec(select(modele).where(lien == objet.id)).all():
         if getattr(ligne, type_acces.colonne_code_import) != objet.code:
             setattr(ligne, type_acces.colonne_import, None)
-            ligne.statut = (StatutImport.proprietaire_lie if ligne.user_proprietaire_id
-                            else StatutImport.en_attente)
+            ligne.statut = (
+                StatutImport.proprietaire_lie
+                if ligne.user_proprietaire_id
+                else StatutImport.en_attente
+            )
             ligne.resolu_le = None
             session.add(ligne)
-    for ligne in session.exec(select(modele).where(
-        type_acces.champ_code_import == objet.code, modele.statut != StatutImport.ignore,
-    )).all():
+    for ligne in session.exec(
+        select(modele).where(
+            type_acces.champ_code_import == objet.code,
+            modele.statut != StatutImport.ignore,
+        )
+    ).all():
         setattr(ligne, type_acces.colonne_import, objet.id)
         ligne.lot_id = objet.lot_id
         ligne.chez_locataire = objet.chez_locataire
@@ -160,6 +167,10 @@ def rattacher_les_reconnues(type_acces, session: Session) -> dict:
 
 
 __all__ = [
-    "en_stock", "exiger_code_libre", "peut_se_rattacher", "rattacher",
-    "rattacher_les_reconnues", "synchroniser_import",
+    "en_stock",
+    "exiger_code_libre",
+    "peut_se_rattacher",
+    "rattacher",
+    "rattacher_les_reconnues",
+    "synchroniser_import",
 ]

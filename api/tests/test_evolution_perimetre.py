@@ -22,6 +22,7 @@ c'est pour cette raison que la colonne 0154 n'a **pas** de `server_default`.
 de retour de l'endpoint (`standards/04` §14 — observer la chose, pas son
 enregistrement).
 """
+
 from __future__ import annotations
 
 
@@ -108,7 +109,9 @@ def test_un_commentaire_ordinaire_ne_touche_pas_au_perimetre(cs):
         add_evolution(
             ticket.id,
             TicketEvolutionCreate(type="commentaire", contenu="<p>Le plombier passe demain.</p>"),
-            BackgroundTasks(), session, cs,
+            BackgroundTasks(),
+            session,
+            cs,
         )
 
         apres = session.get(Ticket, ticket.id)
@@ -139,7 +142,9 @@ def test_une_liste_vide_ne_vaut_pas_declaration(cs):
         add_evolution(
             ticket.id,
             TicketEvolutionCreate(type="commentaire", contenu="<p>RAS.</p>", perimetre_cible=[]),
-            BackgroundTasks(), session, cs,
+            BackgroundTasks(),
+            session,
+            cs,
         )
 
         assert json.loads(session.get(Ticket, ticket.id).perimetre_cible) == BAT_2
@@ -158,7 +163,9 @@ def test_un_perimetre_declare_devient_celui_du_ticket(cs):
                 contenu="<p>La fuite vient de la cave.</p>",
                 perimetre_cible=PRECIS,
             ),
-            BackgroundTasks(), session, cs,
+            BackgroundTasks(),
+            session,
+            cs,
         )
 
         assert json.loads(session.get(Ticket, ticket.id).perimetre_cible) == PRECIS
@@ -182,11 +189,13 @@ def test_le_dernier_perimetre_declare_l_emporte(cs):
         ticket = _ticket(session, cs.id, ["résidence"])
 
         for corps in (
-            TicketEvolutionCreate(type="commentaire", contenu="<p>Signalé.</p>",
-                                  perimetre_cible=BAT_2),
+            TicketEvolutionCreate(
+                type="commentaire", contenu="<p>Signalé.</p>", perimetre_cible=BAT_2
+            ),
             TicketEvolutionCreate(type="commentaire", contenu="<p>Le plombier cherche.</p>"),
-            TicketEvolutionCreate(type="commentaire", contenu="<p>Trouvé : la cave.</p>",
-                                  perimetre_cible=PRECIS),
+            TicketEvolutionCreate(
+                type="commentaire", contenu="<p>Trouvé : la cave.</p>", perimetre_cible=PRECIS
+            ),
             TicketEvolutionCreate(type="commentaire", contenu="<p>Réparé.</p>"),
         ):
             add_evolution(ticket.id, corps, BackgroundTasks(), session, cs)
@@ -202,8 +211,7 @@ def test_le_dernier_perimetre_declare_l_emporte(cs):
             ).all()
         ]
         assert declares == [BAT_2, None, PRECIS, None], (
-            "Le fil doit garder qui a déclaré quoi, et qui n'a rien dit : "
-            f"trouvé {declares}."
+            f"Le fil doit garder qui a déclaré quoi, et qui n'a rien dit : trouvé {declares}."
         )
         _nettoyer(session, ticket.id)
 
@@ -257,8 +265,7 @@ def test_corriger_une_ANCIENNE_entree_ne_defait_pas_une_precision_recente():
     ancienne, muette, recente = _E(1, BAT_2), _E(2, None), _E(3, PRECIS)
     fil = [ancienne, muette, recente]
     assert not doit_propager(ancienne, fil), (
-        "Corriger la PREMIÈRE entrée ne doit pas défaire ce que la dernière a "
-        "précisé."
+        "Corriger la PREMIÈRE entrée ne doit pas défaire ce que la dernière a précisé."
     )
     assert doit_propager(recente, fil)
     #  Et le cas zéro : une entrée qui ne dit plus rien n'impose rien.

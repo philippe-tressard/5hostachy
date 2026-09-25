@@ -23,6 +23,7 @@ Importer `app.main` exerce, en une ligne, la totalité de la chaîne d'assemblag
 chaque modèle SQLModel, chaque schéma Pydantic, chaque routeur, chaque dépendance
 d'authentification, et le montage des fichiers statiques.
 """
+
 import pytest
 
 
@@ -72,8 +73,7 @@ def test_le_schema_expose_toutes_les_routes(schema):
     """
     chemins = schema.get("paths", {})
     assert len(chemins) > 180, (
-        f"seulement {len(chemins)} chemins exposés — un routeur entier ne "
-        f"s'enregistre plus"
+        f"seulement {len(chemins)} chemins exposés — un routeur entier ne s'enregistre plus"
     )
 
 
@@ -86,8 +86,7 @@ def test_les_modeles_sont_tous_exploitables(schema):
     """
     modeles = schema.get("components", {}).get("schemas", {})
     assert len(modeles) > 120, (
-        f"seulement {len(modeles)} modèles exploitables — des schémas ne se "
-        f"génèrent plus"
+        f"seulement {len(modeles)} modèles exploitables — des schémas ne se génèrent plus"
     )
 
 
@@ -98,8 +97,16 @@ def test_les_pans_fonctionnels_sont_montes(schema):
     a disparu — c'est « la portée du contrôle fait partie du contrôle ».
     """
     chemins = set(schema.get("paths", {}))
-    for prefixe in ("/auth", "/admin", "/tickets", "/lots", "/acces",
-                    "/prestataires", "/bailleur", "/config"):
+    for prefixe in (
+        "/auth",
+        "/admin",
+        "/tickets",
+        "/lots",
+        "/acces",
+        "/prestataires",
+        "/bailleur",
+        "/config",
+    ):
         assert any(c.startswith(prefixe) for c in chemins), (
             f"aucune route sous « {prefixe} » : ce pan de l'application n'est plus monté"
         )
@@ -147,6 +154,5 @@ def test_la_documentation_reste_fermee_par_defaut(application):
     #  Cas zéro : si l'application ne montait plus rien, tout répondrait 404 et le
     #  test ci-dessus serait vert sans rien prouver (`standards/04` §2).
     assert client.get("/health").status_code == 200, (
-        "L'application ne répond même pas sur /health — les 404 ci-dessus ne "
-        "prouvent rien."
+        "L'application ne répond même pas sur /health — les 404 ci-dessus ne prouvent rien."
     )

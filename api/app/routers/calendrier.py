@@ -18,6 +18,7 @@ Le 410 ne révèle que le numéro, et seulement à un utilisateur connecté.
 
 Verrouillé par `api/tests/test_redirection_evenements.py`.
 """
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
@@ -36,9 +37,7 @@ def ou_est_parti_l_evenement(
     _: Utilisateur = Depends(get_current_user),
 ):
     """L'affaire née de cet événement — ou 404 si le numéro n'a jamais existé."""
-    affaire = session.exec(
-        select(Ticket).where(Ticket.promu_depuis_evenement_id == ev_id)
-    ).first()
+    affaire = session.exec(select(Ticket).where(Ticket.promu_depuis_evenement_id == ev_id)).first()
     if affaire is None:
         return ou_404(session, Ticket, None, "Événement")
     raise HTTPException(

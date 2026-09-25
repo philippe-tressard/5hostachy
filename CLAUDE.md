@@ -115,6 +115,11 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
    le code n'en contient plus un seul, et le nom du périmètre racine est
    **administrable**.
 
+   🔒 **Garde-fou : `npm run lint:pictogrammes`** (#1045, 24/09/2026). Le badge 🔹
+   ne se rend que par `BadgePerimetre` ; une phrase qui nomme un périmètre et
+   chaque vrai lieu 📍 se **déclarent** dans le contrôle, avec leur nombre
+   d'occurrences. Il a trouvé « 📍 Concerne votre bâtiment » et « 📍 Dépannage ».
+
 ---
 
 ## Conventions Backend (Python / FastAPI)
@@ -319,12 +324,15 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 
 ### Frontend
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)
-- [ ] Méta toujours visible en mode collapsé
+- [ ] Méta toujours visible en mode collapsé — tenue par `EnteteCarte`, qui porte
+      les tags sur la carte repliée (`npm run lint:entete-carte` exige qu'une
+      carte passe par lui)
 - [ ] Corps déplié d'une carte : `class="carte-corps …"` — c'est ce qui le fait
       entrer (fondu 200 ms) ; sans elle il apparaît sec, sans un mot. Un survol
       qui ne sert qu'à la souris vit sous `@media (hover: hover) and (pointer:
       fine)` — au doigt, `:hover` reste collé (`ux-patterns` §17)
-- [ ] `.clamp-3` sur l'aperçu d'une carte (`.clamp-5` seulement hors carte)
+- [ ] `.clamp-3` sur l'aperçu d'une carte (`.clamp-5` seulement hors carte) ;
+      aucune troncature écrite hors de `normes.css` (`npm run lint:clamp`)
 - [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — jamais un helper
       local, même correct (`npm run lint:html` le refuse)
 - [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`
@@ -350,17 +358,23 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       `libelleModifier`), **jamais** réécrit dans un écran. « Publication » et
       « Ticket » sont des noms de modèle ; l'écran dit « Actualité » et
       « Affaire ». Il y en avait **20** avant #1107 (`npm run lint:vocabulaire-ecran`)
-- [ ] Périmètre : masqué s'il est celui par défaut (`estPerimetreParDefaut`)
-- [ ] Archiver (pas supprimer) sur la vue principale
+- [ ] Périmètre : masqué s'il est celui par défaut — le badge passe par
+      `BadgePerimetre`, qui le tait (`npm run lint:pictogrammes`)
+- [ ] Archiver (pas supprimer) sur la vue principale — la corbeille ne s'offre
+      qu'aux Archives (`api/tests/test_suppression_aux_archives.py`, affaires et
+      actualités) ; le titre des archives vient d'une constante (`lint:archives`)
 - [ ] Champs requis : `<EtoileRequis vide={!champ} />` — jamais une astérisque
       tapée. Elle est **collée** au libellé et **rouge tant que le champ est
       vide** : c'est son état, pas une décoration (#1121, 22/09/2026). Les
       libellés de champ sont en MAJUSCULES par le style (`champs.css`), comme
       les intitulés de section — jamais tapées (`npm run lint:champs`)
 - [ ] Libellés et nommage en français
+- [ ] Attente d'un écran : `<EtatListe chargement />`, jamais un « Chargement… »
+      écrit à la main — il y en avait **23** avant #1045 (`npm run lint:chargement`)
 - [ ] En-tête de page : `<EntetePage>`, jamais `<div class="page-header">`
       (`ux-patterns` §13)
 - [ ] Icône vérifiée dans `$lib/icones-svg.json` — un nom inconnu échoue en silence
+      (`npm run lint:icones` le refuse ; un relais d'icône s'appelle `icone`)
 - [ ] Tout champ libellé dans un `.field` — jamais une nomenclature locale
       (`npm run lint:champs` ; il y en avait **six** avant #413) — **y compris**
       le champ dont l'intitulé de section est le libellé, et une étoile dans un
@@ -380,6 +394,12 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       `test_routes_masquees.py` le tient pour `acces`
 - [ ] Lecture d'un objet par `ou_404`, pas `session.get` + 404
 - [ ] Client TypeScript ajouté dans le paquet `front/src/lib/api/` — dans le module de son domaine (`acces`, `patrimoine`, `communaute`…), jamais dans un `api.ts` ressuscité à la racine
+- [ ] `cd api && ruff format .` — la CI refuse un fichier non formaté depuis le
+      24/09/2026 (#1048 ; Ruff **épinglé** dans `ci.yml`, largeur 100, migrations
+      exclues par `api/ruff.toml`). ⚠️ Une ligne coupée emporte son `# noqa` sur
+      une autre ligne : relancer `ruff check` après. Une comparaison SQLAlchemy
+      (`Model.actif == True`) garde `# noqa: E712` — jamais `is True`, qui vide
+      le filtre sans un mot
 
 ### Documentation utilisateur — **deux** documents de même rang
 - [ ] `docs/manuel-utilisateur.html` — **comment on s'en sert** : mis à jour dans le
@@ -494,8 +514,8 @@ le vérifie aussi en CI, dans les deux sens. Aucun des deux ne suffit seul : le 
 lit le code, le contrôle au démarrage lit le scheduler (#1047).
 
 ⚠️ « Identique sur les 2 nœuds » **est un invariant, pas un constat** : il était faux
-jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` qui y échouait 144 fois
-par jour. Le vérifier fait partie du point 8 du pré-check. `auto-deploy.sh` (`*/5`) est
+jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` en échec permanent (récit et
+chiffres : `mep-precheck/HISTORIQUE.md`, à « check-stack »). Le vérifier fait partie du point 8 du pré-check. `auto-deploy.sh` (`*/5`) est
 à part : c'est le seul cron **utilisateur** (`ptressard`), et c'est ce qui fait
 l'objet du point 11.
 
