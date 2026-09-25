@@ -107,6 +107,26 @@ nœud, `curl http://<actif>/api/health` depuis l'autre RPi. S'il répond 200, le
 problème est sur le chemin (box, DNS, Cloudflare) — ne pas basculer, ne pas
 redémarrer la stack.
 
+### Un failover dont le tunnel ne démarre pas s'abandonne (25/09/2026, #1318)
+
+Rotation du jeton du tunnel : l'**identifiant** du tunnel (`91d1afa9-…`) a été collé à
+la place du **jeton** (`eyJ…`) sur les deux nœuds. Chacun a basculé à son tour
+(19:27, 19:32) : `⚠ Échec démarrage cloudflared` était journalisé **puis ignoré**, les
+conteneurs démarraient, l'actif était démoté. Pendant cinq minutes, rpi1 a servi l'API
+sur la base de la veille, et son planificateur a **renvoyé le message WhatsApp du
+mois** — un seul est arrivé dans le groupe, par chance (l'envoi de rpi2 était
+« incertain »).
+
+Depuis, `health-watch.sh` démarre le tunnel **avant** les conteneurs et
+s'abstient s'il n'est pas `active` (`decide_suite_tunnel`, `--selftest`). Un tunnel
+qui ne démarre pas sur le standby a souvent une cause **commune** — jeton, config,
+compte : basculer ne peut rien réparer.
+
+**Changer le jeton** : `sudo bash /opt/5hostachy/scripts/exploitation/changer-jeton-tunnel.sh`,
+l'**actif** d'abord (le jeton est éprouvé par un connecteur temporaire avant de
+toucher à celui qui sert), puis le secours (tunnel laissé arrêté). Jamais
+`cloudflared service install` sur le standby : il démarre et active l'unité.
+
 ## Risques connus
 - **Build OOM** : `npm run build` peut saturer la RAM du RPi → préférer `--nocache` en cas de build lourd
 - **health-watch failover** → peut créer un split-brain ; toujours vérifier `docker ps` sur les 2 RPi

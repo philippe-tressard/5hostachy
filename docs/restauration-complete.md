@@ -229,7 +229,18 @@ sudo bash /opt/5hostachy/scripts/installation/install-cloudflared.sh <VOTRE_TOKE
 sudo systemctl status cloudflared
 ```
 
-Le token est disponible dans **Cloudflare Zero Trust > Networks > Tunnels > Configure**.
+Le token est disponible dans **Cloudflare Zero Trust > Networks > Tunnels > ton tunnel > Ajouter un connecteur** :
+c'est la longue chaîne `eyJ…` de la commande d'installation, **pas** l'« ID du tunnel »
+(`91d1afa9-…`) affiché en haut de la page. Le script refuse l'un pour l'autre.
+
+**Changer le jeton** d'un nœud déjà installé (rotation) : ne pas relancer ce script, qui
+démarre le tunnel — sur le standby, cela enverrait du trafic vers un nœud sans conteneurs.
+Utiliser, l'**actif** d'abord (le jeton y est éprouvé auprès de Cloudflare avant d'être
+installé), puis le secours :
+
+```bash
+sudo bash /opt/5hostachy/scripts/exploitation/changer-jeton-tunnel.sh
+```
 
 > ⚠️ Ne démarrer cloudflared que sur le RPi **actif** (voir `.active`). Le standby laisse cloudflared arrêté.
 

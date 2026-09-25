@@ -503,6 +503,9 @@ jobs:
           bash scripts/lib/lib-volumes.sh           --selftest
           bash scripts/exploitation/boot-role-guard.sh   --selftest
           bash scripts/exploitation/health-watch.sh      --selftest
+          # Le jeton du tunnel : l'identifiant n'est pas un jeton (#1318, 25/09/2026).
+          bash scripts/lib/lib-jeton-tunnel.sh      --selftest
+          bash scripts/exploitation/changer-jeton-tunnel.sh --selftest
           bash scripts/exploitation/auto-deploy.sh       --selftest
           bash scripts/exploitation/check-reliability.sh --selftest
           bash scripts/poste/export-hors-site.sh --selftest
