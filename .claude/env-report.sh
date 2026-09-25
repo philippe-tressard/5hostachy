@@ -20,8 +20,8 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
   # Ce bloc est le contrôle de `.claude/cloud/setup.sh` : il relit à CHAQUE
   # session ce que le setup a posé, et déclare ABSENT ce qui manque au lieu de
   # laisser croire que tout est là (socle 04 : INCONNU, jamais OK).
-  echo "  Session       : ☁️  CLOUD — pas de SSH vers les RPi : ni pré-check complet,"
-  echo "                  ni MEP, ni post-check d'ici. Le lot s'arrête à une PR vers dev."
+  echo "  Session       : ☁️  CLOUD — pas de SSH : pré-check INCONNU, post-check au poste."
+  echo "                  La MEP s'enchaîne SANS validation jusqu'à main (CLAUDE.md, « Session cloud »)."
   echo "  Mémoire       : banque du poste ABSENTE — rien de ce qui s'écrit ici n'est gardé."
   [ -d front/node_modules ] \
     && echo "  Dépendances   : présentes" \
