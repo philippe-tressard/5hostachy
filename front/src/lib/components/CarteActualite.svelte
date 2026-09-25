@@ -22,6 +22,7 @@
   passés en slots — ils sont écrits dans la page, donc leurs styles y restent.
 -->
 <script lang="ts">
+	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import { nomProprietaire } from '$lib/saisi-pour';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -37,7 +38,7 @@
 	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
 	//  écrits ici ET dans les cases du formulaire, et avaient divergé.
 	import { optionPublication } from '$lib/options-publication';
-	import { fmtDate2d as fmtDate, fmtDateLong, isNouveau } from '$lib/date';
+	import { fmtDate2d as fmtDate, fmtDateLong } from '$lib/date';
 
 	export let pub: Ticket;
 	//  À QUI l'actualité appartient — le « Saisi pour » s'il existe, l'auteur
@@ -106,7 +107,7 @@
 		on:toggle={basculer}
 	>
 		<svelte:fragment slot="titre-suffixe">
-			{#if estFil && isNouveau(pub.cree_le)}<span class="badge badge-gray pub-neuf">New</span>{/if}
+			<BadgeNouveau le={pub.cree_le} si={estFil} />
 		</svelte:fragment>
 		<svelte:fragment slot="tags">
 			<BadgePerimetre perimetre={pub.perimetre_cible} />
@@ -202,12 +203,6 @@
 
 	/*  L'en-tête vit dans `EnteteCarte` — titre, tags, date, actions et leur repli.
 	    Ne reste ici que ce qui est propre à une publication. */
-	.pub-neuf {
-		margin-left: 0.4em;
-		font-size: 0.82em;
-		font-weight: 500;
-		vertical-align: middle;
-	}
 	.pub-auteur {
 		color: var(--color-text-muted);
 	}

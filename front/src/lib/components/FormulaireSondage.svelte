@@ -33,6 +33,7 @@
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { SONDAGE } from '$lib/entites/sondage';
+	import { pliageDe, requisDe } from '$lib/pliage';
 	import { sondages as sondagesApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -202,7 +203,7 @@
 
 <CadreFormulaire
 	edition={modeEdition}
-	titre={modeEdition ? 'Modifier le sondage' : 'Nouveau sondage'}
+	titre={modeEdition ? SONDAGE.libelleModifier : SONDAGE.libelleNouveau}
 >
 	<form on:submit|preventDefault={enregistrer}>
 		<!--  1. Titre — ici, la question posée, et le titre de la section EST son
@@ -214,7 +215,12 @@
 		      tous les deux (`titreEcran`), et `lint:etats` refuse tout intitulé
 		      inventé sur place. -->
 		{#if sectionPresente(SONDAGE, etat, 'nature')}
-			<SectionFormulaire titre="Réponses possibles">
+			<SectionFormulaire
+				titre="Réponses possibles"
+				pliable={pliageDe(SONDAGE, 'nature')}
+				requis={requisDe(SONDAGE, 'nature')}
+				rempli={options.filter((o) => o.libelle.trim()).length >= 2}
+			>
 				<div class="options">
 					{#each options as _opt, i (i)}
 						<div class="option">
@@ -277,7 +283,7 @@
 				</div>
 			</SectionFormulaire>
 
-			<SectionFormulaire titre="Clôture">
+			<SectionFormulaire titre="Clôture" pliable={pliageDe(SONDAGE, 'nature')}>
 				<div class="form-grid">
 					<div class="field">
 						<label for="sondage-cloture">Date de clôture</label>

@@ -32,6 +32,7 @@
   `$lib/annonces.ts` : la carte le rend, l'onglet en fait ses filtres.
 -->
 <script lang="ts">
+	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { nomAffiche } from '$lib/noms';
 	import EnteteCarte from './EnteteCarte.svelte';
@@ -42,7 +43,7 @@
 	import Reponses from './Reponses.svelte';
 	import WorkflowPastilles from './WorkflowPastilles.svelte';
 	import { safeHtml } from '$lib/sanitize';
-	import { fmtDate2d as fmtDate, isNouveau } from '$lib/date';
+	import { fmtDate2d as fmtDate } from '$lib/date';
 	import { fmtMontant } from '$lib/utils';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
@@ -118,9 +119,7 @@
 	>
 		<svelte:fragment slot="titre-suffixe">
 			<MarqueIA assiste={annonce.assiste_ia} />
-			{#if !annonce.archivee && isNouveau(annonce.cree_le)}<span
-					class="badge badge-gray annonce-neuf">New</span
-				>{/if}
+			<BadgeNouveau le={annonce.cree_le} si={!annonce.archivee} />
 		</svelte:fragment>
 
 		<svelte:fragment slot="tags">
@@ -170,6 +169,7 @@
 					class="btn-icon"
 					title="Modifier"
 					aria-label="Modifier l'annonce"
+					aria-pressed={formulaireOuvert}
 					on:click|stopPropagation={onModifier}>&#x270F;&#xFE0F;</button
 				>
 			{/if}
@@ -315,12 +315,6 @@
 	/*  Conteneur, survol et espacement : `.carte-liste` (app.css). L'en-tête, ses
 	    tags et leur repli : `EnteteCarte`. L'aperçu et sa vignette : `ApercuCarte`.
 	    Ne reste ici que ce qui est propre à une annonce. */
-	.annonce-neuf {
-		margin-left: 0.4em;
-		font-size: 0.82em;
-		font-weight: 500;
-		vertical-align: middle;
-	}
 	.annonce-prix {
 		font-weight: 700;
 		color: var(--color-primary);

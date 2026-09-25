@@ -78,6 +78,13 @@ export const IDEE: EntiteDeclaree = {
 						"L'état se pose ensuite depuis la carte, et c'est le conseil syndical qui " +
 						"l'arbitre — pas l'auteur.",
 				},
+				//  Déclaré présent en édition, jamais rendu par `FormulaireIdee` (#1329).
+				edition: {
+					motif: 'geste',
+					explication:
+						"L'état d'une idée se pose depuis sa CARTE, par le conseil syndical ; " +
+						"l'auteur qui corrige son idée n'en décide pas.",
+				},
 			},
 			pliee: true,
 		},

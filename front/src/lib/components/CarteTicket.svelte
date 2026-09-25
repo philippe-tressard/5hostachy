@@ -37,6 +37,7 @@
   pour l'affichage.
 -->
 <script lang="ts">
+	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import { SUITE } from '$lib/gestes';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { contexteCommentaire } from '$lib/assistant';
@@ -74,7 +75,7 @@
 		STATUT_TICKET_OPTIONS,
 		categorieTicketEmoji,
 	} from '$lib/tickets';
-	import { fmtDate, isNouveau } from '$lib/date';
+	import { fmtDate } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { nomCopie, nomProprietaire } from '$lib/saisi-pour';
 	import { equipLabel, intervenantAffiche } from '$lib/prestataires';
@@ -177,9 +178,7 @@
 		on:toggle={() => dispatch('basculer')}
 	>
 		<svelte:fragment slot="titre-suffixe">
-			{#if isNouveau(ticket.cree_le)}
-				<span class="badge badge-gray tk-neuf">NEW</span>
-			{/if}
+			<BadgeNouveau le={ticket.cree_le} />
 		</svelte:fragment>
 		<!--  🔴 L'EN-TÊTE PORTE LE PÉRIMÈTRE ET LE NUMÉRO (18/08/2026, signalé à
 		      l'écran) : *« le périmètre devrait s'afficher dans l'état sous le titre
@@ -442,12 +441,6 @@
 	}
 	.tk-auteur {
 		color: var(--color-text-muted);
-	}
-	.tk-neuf {
-		margin-left: 0.5em;
-		font-size: 0.82em;
-		font-weight: 500;
-		vertical-align: middle;
 	}
 
 	.tk-body {

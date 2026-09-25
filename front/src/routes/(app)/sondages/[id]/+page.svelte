@@ -9,11 +9,8 @@
 	import { currentUser, isAdmin, isCS, isGestionnaire } from '$lib/stores/auth';
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FilAriane from '$lib/components/FilAriane.svelte';
-	import ChampsEditionSondage, {
-		type EditionSondage,
-	} from '$lib/components/ChampsEditionSondage.svelte';
+	import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { fmtDateShort } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -29,19 +26,11 @@
 	$: optionSelectionnee = sondage?.options?.find((o: any) => o.id === selectedOption);
 	$: champLibreActif = !!optionSelectionnee?.champ_libre;
 
-	// Édition
-	let showEditModal = false,
-		editAssisteIA = false;
-	//  La forme de la correction, et pourquoi elle ne porte que des libellés :
-	//  `ChampsEditionSondage` (#467).
-	let editForm: EditionSondage = {
-		question: '',
-		description: '',
-		cloture_le: '',
-		resultats_publics: true,
-		options: [],
-	};
-	let saving = false;
+	//  🔴 La correction passe par `FormulaireSondage`, le SEUL formulaire du
+	//  sondage (#1329). Cette fiche en avait un second (`ChampsEditionSondage`),
+	//  rendu en bas de page, dans un autre ordre : deux rendus d'un même objet.
+	//  La règle des libellés seuls (#467) vit dans `FormulaireSondage.corriger`.
+	let edition = false;
 	let deleting = false;
 
 	$: sondageId = Number($page.params.id);
@@ -136,33 +125,9 @@
 		if (!publie) throw new Error('Commentaire non publié');
 	}
 
-	function openEdit() {
-		editAssisteIA = false;
-		editForm = {
-			question: sondage.question,
-			description: sondage.description ?? '',
-			cloture_le: sondage.cloture_le ? sondage.cloture_le.replace('Z', '').slice(0, 16) : '',
-			resultats_publics: sondage.resultats_publics,
-			options: (sondage.options ?? []).map((o: any) => ({ id: o.id, libelle: o.libelle })),
-		};
-		showEditModal = true;
-	}
-
-	async function saveEdit() {
-		saving = true;
-		await tenter(async () => {
-			await sondagesApi.modifier(sondageId, {
-				question: editForm.question,
-				description: editForm.description || null,
-				cloture_le: editForm.cloture_le ? new Date(editForm.cloture_le).toISOString() : null,
-				resultats_publics: editForm.resultats_publics,
-				options: editForm.options,
-				assiste_ia: editAssisteIA || undefined,
-			});
-			sondage = await sondagesApi.get(sondageId);
-			showEditModal = false;
-		}, 'Sondage mis à jour');
-		saving = false;
+	async function corrige() {
+		sondage = await sondagesApi.get(sondageId);
+		edition = false;
 	}
 
 	async function stopperSondage() {
@@ -205,7 +170,10 @@
 {#if loading}
 	<EtatListe chargement />
 {:else if !sondage}
-	<p style="color:var(--color-danger)">Sondage introuvable.</p>
+	<EtatListe
+		erreur="Ce sondage n’existe pas, ou vous n’y avez pas accès."
+		titreErreur="Sondage introuvable"
+	/>
 {:else}
 	<div style="margin-top:1.25rem">
 		<div style="display:flex;gap:.75rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap">
@@ -225,8 +193,9 @@
 						<button
 							class="btn-icon-edit"
 							aria-label="Modifier ce sondage"
+							aria-pressed={edition}
 							title="Modifier"
-							on:click={openEdit}>&#x270F;&#xFE0F;</button
+							on:click={() => (edition = !edition)}>&#x270F;&#xFE0F;</button
 						>
 						<button
 							class="btn btn-outline btn-sm"
@@ -244,6 +213,11 @@
 			{/if}
 		</div>
 
+		<!--  La correction s'ouvre SOUS l'en-tête, près du ✏️ qui l'ouvre — elle
+		      était rendue en bas de page, après les résultats et les commentaires. -->
+		{#if edition}
+			<FormulaireSondage {sondage} on:modifie={corrige} on:annule={() => (edition = false)} />
+		{/if}
 		<h1 style="font-size:1.3rem;font-weight:700;margin-bottom:.5rem">{sondage.question}</h1>
 		{#if sondage.description}
 			<div class="rich-content" style="color:var(--color-text-muted);margin-bottom:.75rem">
@@ -387,23 +361,6 @@
 			/>
 		</div>
 	</div>
-{/if}
-
-<!-- Modal édition sondage -->
-{#if showEditModal}
-	<FormulaireCreation titre="Modifier le sondage" cle="edition">
-		<form on:submit|preventDefault={saveEdit}>
-			<ChampsEditionSondage bind:form={editForm} bind:assisteIA={editAssisteIA} />
-			<div style="display:flex;gap:.5rem;justify-content:flex-end">
-				<button type="button" class="btn btn-outline" on:click={() => (showEditModal = false)}
-					>Annuler</button
-				>
-				<button type="submit" class="btn btn-primary" disabled={saving}
-					>{saving ? 'Enregistrement…' : 'Enregistrer'}</button
-				>
-			</div>
-		</form>
-	</FormulaireCreation>
 {/if}
 
 <style>

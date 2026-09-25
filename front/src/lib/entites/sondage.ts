@@ -73,7 +73,10 @@ export const SONDAGE: EntiteDeclaree = {
 						'commentaire ne rouvre pas le vote et ne rajoute pas une option.',
 				},
 			},
-			pliee: true,
+			//  🔴 OBLIGATOIRE, donc dépliée (#1329) : un sondage ne se crée pas sans
+			//  deux réponses. Elle était déclarée `pliee` sans `requis`, et le
+			//  formulaire ignorait les deux — l'écran ouvrait ce que la table pliait.
+			requis: true,
 		},
 		{
 			id: 'equipement',
@@ -113,6 +116,14 @@ export const SONDAGE: EntiteDeclaree = {
 						"On n'ouvre pas un sondage en le clôturant : la clôture est un acte posé " +
 						'plus tard, ou atteint par la date. Seule la DATE de clôture se saisit à la ' +
 						'création, et elle est en section 2.',
+				},
+				//  Déclaré présent en édition, jamais rendu par `FormulaireSondage` (#1329).
+				edition: {
+					motif: 'geste',
+					explication:
+						'La clôture est un GESTE de la fiche (« ⏹ Stopper »), pas un champ que ' +
+						"l'on corrige : clore rend les résultats visibles, ce qu'une faute de frappe " +
+						'ne doit pas déclencher.',
 				},
 			},
 			pliee: true,

@@ -104,7 +104,12 @@
 	}
 </script>
 
-<CadreFormulaire edition={modeEdition} titre={modeEdition ? 'Modifier l’idée' : 'Nouvelle idée'}>
+<!--  Sans cadre en correction : elle s'ouvre DANS la carte (#1329, §14 ter). -->
+<CadreFormulaire
+	edition={modeEdition}
+	encadre={!modeEdition}
+	titre={modeEdition ? IDEE.libelleModifier : IDEE.libelleNouveau}
+>
 	<form on:submit|preventDefault={enregistrer}>
 		<!--  1. Le titre, par `SectionTitre` comme les six autres formulaires : il
 		      était écrit ici en libellé de champ, « Titre * » en noir, au lieu de la

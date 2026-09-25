@@ -82,3 +82,15 @@ def test_la_suite_d_une_actualite_suit_la_declaration_de_l_affaire():
         if re.search(r"entite=\{PUBLICATION\}", f.read_text(encoding="utf-8"))
     ]
     assert not fautes, "Une Suite gouvernée par PUBLICATION : " + ", ".join(fautes)
+
+
+def test_le_badge_nouveau_ne_s_ecrit_qu_une_fois():
+    """Le badge « Nouveau » d'une carte était écrit CINQ fois, avec deux mots
+    (« NEW », « New ») et deux marges (#1329). `BadgeNouveau` le porte seul :
+    aucun autre écran n'appelle `isNouveau(` pour le rendre."""
+    fautes = [
+        str(f.relative_to(_FRONT))
+        for f in _FRONT.rglob("*.svelte")
+        if f.name != "BadgeNouveau.svelte" and "isNouveau(" in f.read_text(encoding="utf-8")
+    ]
+    assert not fautes, "Badge « Nouveau » réécrit : " + ", ".join(fautes)
