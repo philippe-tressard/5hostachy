@@ -26,7 +26,7 @@ from app.models.core import Utilisateur
 #  alias qui délègue au helper partagé masque son origine (socle 02 §6).
 from app.utils.perimetres import parse_json_perimetres, parse_perimetres
 from app.utils.noms import nom_affiche
-from app.utils.categories_ticket import ticket_urgent
+from app.utils.categories_ticket import libelle_categorie, ticket_urgent
 from app.utils.fichiers import est_image
 from app.utils.photos import parse_photos
 
@@ -111,7 +111,10 @@ def badges_ticket(ticket) -> list[str]:
     lit ce badge (`estUrgent`, `flux.ts`) pour teinter la carte ; il lisait
     jusqu'ici la catégorie « urgence », qui n'existe plus (migration 0177).
     """
-    badges = [f"#{ticket.numero}", ticket.categorie]
+    #  Le LIBELLÉ, jamais la valeur de l'énumération : le fil affichait
+    #  `acces_accueil` (#1310). `badgeClass` compare en minuscules, « Panne » y
+    #  garde sa teinte. 🔒 `test_flux_badges_categorie.py`.
+    badges = [f"#{ticket.numero}", libelle_categorie(ticket.categorie)]
     if ticket_urgent(ticket):
         badges.append("urgent")
     return badges
