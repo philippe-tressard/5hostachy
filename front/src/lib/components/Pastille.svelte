@@ -147,7 +147,7 @@
 		{#if icone}<Icon name={icone} size={15} />{/if}
 		<span class="pastille-corps">
 			<span class="pastille-libelle"><slot /></span>
-			{#if $$slots.detail}<span class="pastille-detail"><slot name="detail" /></span>{/if}
+			{#if $$slots.detail}<span class="pastille-detail clamp-3"><slot name="detail" /></span>{/if}
 		</span>
 	</label>
 {:else}
@@ -165,7 +165,7 @@
 		{#if icone}<Icon name={icone} size={15} />{/if}
 		<span class="pastille-corps">
 			<span class="pastille-libelle"><slot /></span>
-			{#if $$slots.detail}<span class="pastille-detail"><slot name="detail" /></span>{/if}
+			{#if $$slots.detail}<span class="pastille-detail clamp-3"><slot name="detail" /></span>{/if}
 		</span>
 		{#if chevron}<span class="pastille-chevron" aria-hidden="true">›</span>{/if}
 		{#if marquee && marqueAide}<span class="sr-only"> — {marqueAide}</span>{/if}

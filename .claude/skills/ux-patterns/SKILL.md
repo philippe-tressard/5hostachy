@@ -985,12 +985,14 @@ Pages implémentées : `tickets` (filtre de nature, 23/09/2026) — le calendrie
 | Classe | Où | Depuis |
 |---|---|---|
 | `.clamp-3` | l'aperçu d'une **carte de liste** (`ApercuCarte`) | 18/09/2026 |
+| `.clamp-3` | le **sous-texte** d'une pastille (`Pastille`, vignette de catégorie) | 25/09/2026 |
 | `.clamp-5` | un bloc expansible qui **n'est pas** une carte | 15/08/2026 |
 | `.clamp-2` | un **titre** de carte | 18/08/2026 |
 
 Les trois vivent dans `styles/normes.css`, et nulle part ailleurs.
 🔒 `npm run lint:clamp` refuse une troncature écrite ailleurs, et `.clamp-5`
-dans un fichier qui rend une `.carte-liste`.
+dans un fichier qui rend une `.carte-liste`, et un sous-texte déclaré dans
+`SOUS_TEXTES` qui ne porte pas `.clamp-3` (#1310).
 
 ⚠️ `.clamp-3` **existait déjà**, écrit à la main dans `FluxCard` : le fil
 d'activité tronquait à trois lignes depuis toujours, et c'est lui qui a servi de

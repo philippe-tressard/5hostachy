@@ -21,6 +21,10 @@
  *      c'est une quatrième classe de troncature qui naît ;
  *   2. `clamp-5` dans un fichier qui rend une `.carte-liste` — l'aperçu d'une
  *      carte fait trois lignes, validé à l'écran (densité « F1 », §3).
+ *   3. un SOUS-TEXTE déclaré dans `SOUS_TEXTES` qui ne porte pas `.clamp-3`,
+ *      ou qui a disparu. Le sous-libellé d'une vignette de catégorie faisait
+ *      quatre lignes (#1310, 25/09/2026) : raccourcir le texte ne suffit pas,
+ *      la retouche suivante l'aurait rallongé.
  *
  *  ⚠️ Il ne vérifie pas qu'un bloc HORS carte emploie `clamp-5` plutôt que
  *  rien : « ce texte est un aperçu » ne se lit pas dans le balisage.
@@ -46,6 +50,21 @@ export function verdictFichier(rel, source) {
 	if (rel !== SOURCE && PROPRIETE.test(code)) return 'propriete-recopiee';
 	if (CARTE.test(code) && CINQ_LIGNES.test(code)) return 'carte-a-cinq-lignes';
 	return 'ok';
+}
+
+/**  Les sous-textes qui se coupent à trois lignes : fichier → classe. Une entrée
+ *   dont la classe a disparu fait échouer — elle ne garderait plus rien. */
+const SOUS_TEXTES = { 'lib/components/Pastille.svelte': 'pastille-detail' };
+
+/**  Chaque `class="<classe> …"` du fichier porte-t-il `clamp-3` ? PUR.
+ *   @returns {'ok'|'non-tronque'|'absent'} */
+export function verdictSousTexte(source, classe) {
+	const code = neutraliserCommentaires(source);
+	const attributs = [...code.matchAll(/class="([^"]*)"/g)]
+		.map((m) => m[1].split(/\s+/))
+		.filter((c) => c.includes(classe));
+	if (!attributs.length) return 'absent';
+	return attributs.every((c) => c.includes('clamp-3')) ? 'ok' : 'non-tronque';
 }
 
 if (process.argv.includes('--selftest')) {
@@ -77,6 +96,23 @@ if (process.argv.includes('--selftest')) {
 		'<div class="idee"><p class="clamp-5">x</p>',
 	);
 	t('commentaire ignoré', 'ok', 'k.svelte', '<style>/* -webkit-line-clamp: 3 */</style>');
+	const u = (libelle, attendu, src) => {
+		const r = verdictSousTexte(src, 'pastille-detail');
+		if (r === attendu) console.log(`PASS  ${libelle} → ${r}`);
+		else {
+			console.error(`FAIL  ${libelle}  attendu=${attendu} obtenu=${r}`);
+			ko = 1;
+		}
+	};
+	u('sous-texte tronqué', 'ok', '<span class="pastille-detail clamp-3">x</span>');
+	//  🔴 L'état d'avant #1310 : la vignette « Sinistre » tenait sur quatre lignes.
+	u('sous-texte libre', 'non-tronque', '<span class="pastille-detail">x</span>');
+	u(
+		'un sur deux tronqué',
+		'non-tronque',
+		'<span class="pastille-detail clamp-3">a</span><span class="pastille-detail">b</span>',
+	);
+	u('classe disparue', 'absent', '<span class="autre">x</span>');
 	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
 	process.exit(ko);
 }
@@ -113,6 +149,20 @@ for (const f of fichiers(RACINE)) {
 }
 
 let echec = false;
+for (const [rel, classe] of Object.entries(SOUS_TEXTES)) {
+	const v = verdictSousTexte(readFileSync(join(RACINE, rel), 'utf8'), classe);
+	if (v === 'ok') continue;
+	echec = true;
+	console.error(
+		v === 'absent'
+			? `
+✗ \`${rel}\` ne rend plus \`.${classe}\` : retirer l’entrée de \`SOUS_TEXTES\`.
+`
+			: `
+✗ \`${rel}\` : \`.${classe}\` sans \`.clamp-3\` — un sous-texte se coupe à trois lignes (#1310).
+`,
+	);
+}
 if (fautes['propriete-recopiee'].length) {
 	echec = true;
 	console.error('\n✗ Troncature écrite hors de `styles/normes.css` :\n');
@@ -132,4 +182,7 @@ if (fautes['carte-a-cinq-lignes'].length) {
 	);
 }
 if (echec) process.exit(1);
-console.log('✓ Troncature : écrite dans `normes.css` seul, aucune carte à cinq lignes.');
+console.log(
+	'✓ Troncature : écrite dans `normes.css` seul, aucune carte à cinq lignes, ' +
+		`${Object.keys(SOUS_TEXTES).length} sous-texte(s) à trois lignes.`,
+);
