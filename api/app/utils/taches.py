@@ -51,7 +51,7 @@ TACHES_PERMANENTES: dict[str, str] = {
     "telemetry_aggregation": "l'agrégation de la télémétrie à 02:00 ; sans elle, "
     "la table brute gonfle et les écrans de mesure se vident",
     "manuel_pdf_prechauffage": "le rendu du manuel 20 s après le démarrage — sans "
-    "lui, le premier lecteur d'après chaque déploiement attend 21 s",
+    "lui, le premier lecteur d'après un manuel modifié attend 21 s",
     "manuel_pdf_quotidien": "le même rendu à 00:05, parce que la clé du cache porte "
     "la date : sans lui, le premier lecteur du jour repaie l'attente",
     "courriel_reponses": "la relève IMAP toutes les 10 minutes — les réponses du "

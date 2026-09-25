@@ -61,6 +61,11 @@ ECRITURES_NON_TELEVERSEMENT = {
     ): "écrit le PDF d'affiche que l'application vient de PRODUIRE (WeasyPrint) "
     "— rien n'est reçu du client, il n'y a donc ni type à vérifier ni "
     "signature à confronter",
+    (
+        "utils/manuel_pdf_cache.py",
+        "write_bytes",
+    ): "garde sur disque le manuel PDF que l'application vient de RENDRE (#1071) "
+    "— rien n'est reçu, et le dossier est hors du volume `uploads` servi en statique",
 }
 
 #: Un plafond de taille en mégaoctets, écrit en clair.

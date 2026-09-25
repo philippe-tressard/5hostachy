@@ -214,10 +214,10 @@ async def lifespan(app: FastAPI):
 
     #  🔴 PRÉCHAUFFAGE DU MANUEL EN PDF (18/09/2026, demandé par Philippe).
     #
-    #  Son cache vit dans le process, donc il repart vide à chaque déploiement —
-    #  et le premier lecteur d'après payait le rendu complet : **21,1 s mesurées
-    #  en production**, contre 0,15 s ensuite. Personne n'a à attendre cela pour
-    #  ouvrir un manuel.
+    #  Un déploiement qui MODIFIE le manuel change la clé du cache — mémoire et
+    #  disque (#1071) — et le premier lecteur d'après payait le rendu complet :
+    #  **21,1 s mesurées en production**, contre 0,15 s ensuite. Personne n'a à
+    #  attendre cela pour ouvrir un manuel.
     #
     #  Deux déclenchements, et le second n'est pas un luxe : la clé du cache
     #  porte la DATE d'édition, donc le premier lecteur de chaque jour repaierait
