@@ -49,11 +49,26 @@
 	export let premiere = false;
 	/** Rangée en lecture seule — confort d'interface, jamais un droit. */
 	export let lecture = false;
+	/**  Le motif d'une section éteinte (`inactivePour`) — relayé tel quel.
+	 *   Il manquait : l'affaire écrivait donc son Suivi à la main (#1329). */
+	export let inactive = '';
 </script>
 
-<SectionFormulaire {premiere} titre={SECTIONS_LIBELLE.suivi} {pliable} {requis} {badge} {idTitre}>
+<!--  `rempli` : l'étoile s'éteint dès qu'un état est choisi — elle restait
+      rouge à vie sur l'affaire, qui ne le transmettait pas (#1329). -->
+<SectionFormulaire
+	{premiere}
+	titre={SECTIONS_LIBELLE.suivi}
+	{pliable}
+	{requis}
+	rempli={!!valeur}
+	{badge}
+	{idTitre}
+	{inactive}
+>
 	<div class="field champ-large">
 		<WorkflowPastilles {options} {valeur} {lecture} {idTitre} on:choisir />
-		<slot />
 	</div>
+	<!--  Ce que l'hôte ajoute au Suivi (l'aide, le kanban d'une affaire). -->
+	<slot />
 </SectionFormulaire>

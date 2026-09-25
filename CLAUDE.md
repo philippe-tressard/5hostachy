@@ -354,7 +354,9 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       `exceptionPliage` (`npm run lint:etats` refuse dans les deux sens). Un
       composant qui **porte** une section au lieu de l'écrire dans la page la
       **transmet** : sans prop `pliable`, la table a beau dire `pliee`, la
-      section s'ouvre — il y en avait **trois** (`npm run lint:pliage-transmis`)
+      section s'ouvre — il y en avait **trois** (`npm run lint:pliage-transmis`).
+      Et l'**appelant** la passe, lue par `pliageDe` : jamais absente ni `pliable`
+      nu — la Suite d'une affaire ouvrait ce que l'Édition pliait (#1329)
 - [ ] Libellé qui NOMME un objet — bouton, titre de boîte, toast, confirmation :
       le mot vient de `$lib/entites/<entité>` (`libelle`, `libelleNouveau`,
       `libelleModifier`), **jamais** réécrit dans un écran. « Publication » et

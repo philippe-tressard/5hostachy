@@ -39,7 +39,6 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
  *   ⚠️ `avecPhotos` et `avecDocuments` visent la même section depuis la fusion
  *   du 21/09/2026 : une seule « Pièces jointes ». */
 const SECTION_DE_LA_PROP = {
-	avecWorkflow: 'suivi',
 	avecQuand: 'quand',
 	avecPerimetre: 'perimetre',
 	avecDescription: 'description',

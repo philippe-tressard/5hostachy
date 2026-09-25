@@ -34,6 +34,18 @@
  * ⚠️ Ce contrôle ne dit pas si l'APPELANT passe la bonne valeur — cela, c'est
  * `lint:etats` qui le gouverne depuis la table. Il dit que le chemin existe :
  * sans lui, la valeur juste n'arrive nulle part.
+ *
+ * ## 🔴 …et l'appelant l'EMPRUNTE (#1329, 25/09/2026)
+ *
+ * Le chemin existait, et la Suite d'une affaire ne l'empruntait pas : `EvolForm`
+ * rendait Pièces jointes et Diffusion sans `pliable`, les créneaux du conseil
+ * l'écrivaient en dur (`pliable` nu). Même section, pliée en Édition, ouverte
+ * en Suite — relevé par l'audit, jamais vu par ce contrôle, qui ne regardait
+ * que le porteur.
+ *
+ * Tout appel d'un PORTEUR (un composant qui accepte `pliable` et rend une
+ * section du cadre) doit donc passer `pliable={…}` — une valeur LUE, jamais
+ * absente, jamais `pliable` nu ni `{true}`/`{false}`.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -112,7 +124,50 @@ export function requisParDefaut(source) {
 	);
 }
 
+/**  Les écrans HORS cadre, déclarés avec leur raison : ils rendent un porteur
+ *   sans déclaration d'entité, donc sans pliage à lire. Le contrôle échoue si
+ *   l'une ne sert plus. */
+const HORS_CADRE = {
+	'lib/components/FormulaireAnnonceHall.svelte':
+		"l'affiche de hall n'a pas de déclaration d'entité (`check-intitules-section`, HORS_CADRE)",
+};
+
+/**  Les appels d'un porteur qui n'empruntent pas le chemin. PURE. */
+export function appelantsSansPliage(source, porteurs) {
+	const fautes = [];
+	for (const p of porteurs) {
+		for (const b of balisesOuvrantes(source, p)) {
+			const t = b.balise;
+			let quoi = null;
+			if (!/[^A-Za-z]pliable[^A-Za-z]/.test(t)) quoi = 'absent';
+			else if (/[^A-Za-z{]pliable(?=[\s/>])/.test(t) || /pliable=\{(true|false)\}/.test(t))
+				quoi = 'en dur';
+			if (quoi) fautes.push({ ligne: ligneDe(source, b.index), porteur: p, quoi });
+		}
+	}
+	return fautes;
+}
+
 if (process.argv.includes('--selftest')) {
+	//  L'appelant (#1329) : les trois formes vues le 25/09, et les deux justes.
+	const casAppel = [
+		['<SectionsPiecesJointes {idPrefixe} avecPhotos={x} />', 1],
+		['<SectionQuand idPrefixe="s" pliable bind:debut={d} />', 1],
+		['<SectionQuand idPrefixe="s" pliable={true} />', 1],
+		['<SectionQuand idPrefixe="s" pliable={pliageDe(TICKET, \'quand\')} />', 0],
+		['<SectionDiffusion {pliable} avecCanaux />', 0],
+	];
+	for (const [src, attendu] of casAppel) {
+		const n = appelantsSansPliage(src, [
+			'SectionsPiecesJointes',
+			'SectionQuand',
+			'SectionDiffusion',
+		]).length;
+		if (n !== attendu) {
+			console.error(`  ✗ appel « ${src} » → ${n}, attendu ${attendu}`);
+			process.exitCode = 1;
+		}
+	}
 	const cas = [
 		//  🔴 Le cas réel du 22/09 : la section du cadre, rendue sans pliage.
 		['<SectionFormulaire titre={SECTIONS_LIBELLE.pieces_jointes}>', 1],
@@ -171,13 +226,53 @@ if (process.argv.includes('--selftest')) {
 		process.exit(1);
 	}
 	console.log(
-		`✓ Auto-test : ${cas.length + casDefaut.length} cas — le pliage manquant est vu, le reste passe.`,
+		`✓ Auto-test : ${cas.length + casDefaut.length + casAppel.length} cas — le pliage manquant est vu, chez le porteur comme chez l'appelant.`,
 	);
-	process.exit(0);
+	process.exit(process.exitCode ?? 0);
 }
 
 const fautifs = [];
 let porteurs = 0;
+//  Les PORTEURS : ils acceptent `pliable` et rendent une section du cadre.
+const nomsPorteurs = [];
+for (const chemin of svelte(RACINE)) {
+	const source = readFileSync(chemin, 'utf8');
+	if (/export\s+let\s+pliable\b/.test(source) && source.includes('<SectionFormulaire'))
+		nomsPorteurs.push(
+			chemin
+				.split(sep)
+				.pop()
+				.replace(/\.svelte$/, ''),
+		);
+}
+const horsCadreServis = new Set();
+let appels = 0;
+for (const chemin of svelte(RACINE)) {
+	const source = readFileSync(chemin, 'utf8');
+	const relatif = relative(RACINE, chemin).split(sep).join('/');
+	const fautes = appelantsSansPliage(source, nomsPorteurs);
+	appels += nomsPorteurs.reduce((n, p) => n + balisesOuvrantes(source, p).length, 0);
+	if (fautes.length && HORS_CADRE[relatif]) {
+		horsCadreServis.add(relatif);
+		continue;
+	}
+	for (const f of fautes)
+		fautifs.push(
+			`src/${relatif}:${f.ligne}  <${f.porteur}> ` +
+				(f.quoi === 'absent'
+					? "appelé sans `pliable` — le pliage de la déclaration n'arrive pas"
+					: '`pliable` écrit en dur — lire `pliageDe(<entité>, …)`'),
+		);
+}
+for (const f of Object.keys(HORS_CADRE))
+	if (!horsCadreServis.has(f))
+		fautifs.push(`src/${f}  exception HORS_CADRE qui ne sert plus — la retirer`);
+if (nomsPorteurs.length === 0 || appels === 0) {
+	console.error(
+		'\n✗ Cas zéro : aucun porteur ou aucun appel trouvé — le contrôle ne mesure rien.\n',
+	);
+	process.exit(1);
+}
 for (const chemin of svelte(RACINE)) {
 	const source = readFileSync(chemin, 'utf8');
 	if (!source.includes('SECTIONS_LIBELLE.')) continue;
@@ -222,5 +317,6 @@ if (fautifs.length > 0) {
 }
 
 console.log(
-	`✓ Pliage : ${porteurs} composant(s) portent une section du cadre, tous en transmettent le pliage.`,
+	`✓ Pliage : ${porteurs} composant(s) portent une section du cadre, tous en transmettent le pliage ; ` +
+		`${appels} appel(s) de ${nomsPorteurs.length} porteur(s), tous le reçoivent de la déclaration.`,
 );

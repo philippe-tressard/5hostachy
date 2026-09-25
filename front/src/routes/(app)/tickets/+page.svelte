@@ -15,6 +15,7 @@
 	import { optionsRapides } from '$lib/options-rapides';
 	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
 	import type { GestesTicket } from '$lib/tickets';
+	import { TICKET } from '$lib/entites/ticket';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -405,7 +406,7 @@
 	      afficher « ✕ Annuler » jusqu'à ce que l'utilisateur le signale. -->
 	<BoutonNouveau
 		ouvert={showForm}
-		libelle="Nouvelle affaire"
+		libelle={TICKET.libelleNouveau}
 		on:basculer={() => (showForm = true)}
 	/>
 </EntetePage>

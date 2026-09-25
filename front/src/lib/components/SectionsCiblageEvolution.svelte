@@ -31,8 +31,12 @@
 -->
 <script lang="ts">
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
+	import type { EntiteDeclaree } from '$lib/entites/types';
 
 	export let idPrefixe: string;
+	/**  L'entité porteuse : c'est elle qui dit le PLIAGE, comme en édition.
+	 *   Sans elle, Périmètre et Destinataires s'ouvraient toujours (#1329). */
+	export let entite: EntiteDeclaree | null = null;
 
 	/** La section 4 est-elle ouverte pour cette entité, à l'état `evolution` ? */
 	export let avecPerimetre = false;
@@ -52,6 +56,7 @@
 {#if avecPerimetre || avecDestinataires}
 	<ChampsCommuns
 		{idPrefixe}
+		{entite}
 		{premiere}
 		{avecPerimetre}
 		bind:perimetre

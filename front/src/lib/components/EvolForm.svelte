@@ -80,6 +80,8 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionsCiblageEvolution from '$lib/components/SectionsCiblageEvolution.svelte';
 	import type { ConditionInactive, EntiteDeclaree } from '$lib/entites/types';
+	import { pliageDe } from '$lib/pliage';
+	import { SUITE } from '$lib/gestes';
 	import type { ApercuDiffusion } from '$lib/api';
 	import { perimetreEntree } from '$lib/perimetres';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
@@ -99,7 +101,7 @@
 	 *   secondes plus tôt — signalé à l'écran : *« on ne sait pas si on est en
 	 *   mode édition, en mode suivi »*. R1 dit que le squelette porte
 	 *   *en-tête · corps · pied* : un formulaire sans nom viole le cadre. */
-	export let titre = 'Commenter';
+	export let titre = SUITE.libelle;
 	/** Options affichées dans le select "Nouvel état" */
 	export let statutOptions: { value: string; label: string }[] = [];
 	/** Map value→label pour afficher le statut actuel */
@@ -378,13 +380,11 @@
 	{/if}
 
 	{#if sectionWorkflow}
-		<!--  Suivi : des PASTILLES, jamais un `<select>` nu (R3, #423). L'état
-		      COURANT est actif à l'ouverture ; le laisser tel quel fait de l'entrée
-		      un simple commentaire — UN point d'entrée sur la carte. Section à un
-		      champ : le titre EST le libellé, l'état actuel en badge
-		      (`ux-patterns` §9 septies et quater). -->
+		<!--  Suivi : l'état COURANT actif à l'ouverture ; le garder tel quel fait
+		      de l'entrée un simple commentaire (R3, #423 · §9 septies et quater). -->
 		<SectionWorkflow
 			premiere={!sectionAvantSuivi}
+			pliable={pliageDe(entite, 'suivi')}
 			idTitre="{idPrefixe}-workflow-titre"
 			options={statutOptions}
 			valeur={nouveauStatut || currentStatut}
@@ -401,6 +401,7 @@
 	<!--  Périmètre — les Destinataires viennent APRÈS les pièces jointes (#1326). -->
 	<SectionsCiblageEvolution
 		{idPrefixe}
+		{entite}
 		premiere={!sectionWorkflow && !sectionSpecifiques && !sectionAvantSuivi}
 		avecPerimetre={sectionPerimetre}
 		bind:perimetre
@@ -408,14 +409,13 @@
 		{aidePerimetre}
 	/>
 
-	<!--  Description — `SectionDescription`, commun à `ChampsCommuns` (01/09/2026). -->
 	<SectionDescription
 		{idPrefixe}
 		idChamp="contenu"
+		pliable={pliageDe(entite, 'description')}
 		premiere={!sectionWorkflow && !sectionSpecifiques && !sectionAvantSuivi && !sectionPerimetre}
 		titre={titreContenu}
 		requis={contenuRequis}
-		hauteur="90px"
 		placeholder={editMode
 			? 'Modifier le commentaire…'
 			: evolType === 'etat'
@@ -432,6 +432,7 @@
 	      passage à « Résolu ». -->
 	<SectionsPiecesJointes
 		{idPrefixe}
+		pliable={pliageDe(entite, 'pieces_jointes')}
 		avecPhotos={sectionPhotos}
 		bind:photos
 		avecDocuments={sectionDocuments}
@@ -443,6 +444,7 @@
 	      le met en avant » (#1096), dans l'ordre de l'édition (#1326). -->
 	<SectionsCiblageEvolution
 		{idPrefixe}
+		{entite}
 		avecDestinataires={sectionDestinataires}
 		bind:destinataires
 	/>
@@ -451,13 +453,13 @@
 		<slot name="mise_en_avant" premiere={false} {partage} />
 	{/if}
 
-	<!--  Diffusion — un OBJET du site, rendu partout pareil (#498, 19/08/2026). -->
 	<SectionDiffusion
 		bind:this={refDiffusion}
 		demanderApercu={demanderApercu ? brouillonApercu : null}
 		envoiEnCours={saving}
 		on:envoyer={handleSubmit}
 		{idPrefixe}
+		pliable={pliageDe(entite, 'diffusion')}
 		avecCanaux={sectionDiffusion}
 		bind:whatsapp={partagerWhatsapp}
 		bind:syndic={envoyerSyndic}

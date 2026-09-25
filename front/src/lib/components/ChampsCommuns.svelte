@@ -160,11 +160,9 @@
 	/** 🔒 Motif pour lequel l'épinglage est impossible — relayé tel quel. */
 	export let epingleInterdit = '';
 
-	//  ── 4. Workflow ───────────────────────────────────────────────────────────
-	//  ⚠️ Le CONTENU vient du `slot` : ce composant impose le rang, le titre et le
-	//  filet, pas les états. `idTitre` est relayé pour que le groupe de pastilles
-	//  s'y rattache (`aria-labelledby`).
-	export let avecWorkflow = false;
+	//  ── 4. Suivi ──────────────────────────────────────────────────────────────
+	//  🔴 Plus rendu ici (#1329) : le créneau `workflow` n'avait AUCUN appelant ;
+	//  le Suivi est `SectionWorkflow`, rendu par l'hôte avant ce composant.
 
 	//  ── 5. Périmètre ──────────────────────────────────────────────────────────
 	export let avecPerimetre = false;
@@ -316,22 +314,9 @@
 	//  appartient à la première section RENDUE, et elle passe avant les options.
 	//  L'oublier redonnerait le « double trait » du 05/09.
 	$: premiereWorkflow = premiere && !avecSaisiPour && !avecOptions;
-	$: premiereQuand = premiereWorkflow && !avecWorkflow;
+	$: premiereQuand = premiereWorkflow;
 	$: premierePerimetre = premiereQuand && !avecQuand;
 </script>
-
-{#if avecWorkflow}
-	<!--  4. Workflow — OÙ EN EST l'objet. À distinguer de la Diffusion, qui dit
-	      qui le voit et où (section 10). Le contenu vient de l'écran. -->
-	<SectionFormulaire
-		titre={SECTIONS_LIBELLE.suivi}
-		pliable={plie('suivi')}
-		premiere={premiereWorkflow}
-		idTitre="{idPrefixe}-workflow"
-	>
-		<slot name="workflow" />
-	</SectionFormulaire>
-{/if}
 
 {#if avecQuand}
 	<!--  5. Quand — QUAND ÇA SE PASSE, et pour quand c'est attendu. Placée
@@ -383,6 +368,7 @@
 {#if avecDescription}
 	<SectionDescription
 		{idPrefixe}
+		pliable={plie('description')}
 		titre={descriptionTitre}
 		requis={descriptionRequise}
 		placeholder={descriptionPlaceholder}
