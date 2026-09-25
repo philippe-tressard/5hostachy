@@ -41,6 +41,15 @@ export const TYPES_ANNONCE = [
 	{ val: 'recherche', label: '\u{1F50D} Recherche' },
 ];
 
+/**  Les ordres de la liste des annonces. Un TRI, pas un filtre : il n'a pas
+ *   d'entrée vide et échappe au seuil des listes courtes (`PastilleDeroulante`,
+ *   prop `tri`). La première est l'ordre par défaut. */
+export const TRIS_ANNONCE = [
+	{ val: 'recent', label: 'Plus récentes' },
+	{ val: 'prix_asc', label: 'Prix croissant' },
+	{ val: 'prix_desc', label: 'Prix décroissant' },
+];
+
 export const CATEGORIES_ANNONCE = [
 	{ val: 'appartement', label: '\u{1F3E0} Appartement' },
 	{ val: 'parking_cave', label: '\u{1F17F}️ Parking / Cave' },

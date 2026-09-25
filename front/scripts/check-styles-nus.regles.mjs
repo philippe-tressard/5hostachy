@@ -158,6 +158,13 @@ export const TOLERANCES = {
 	//  extrayant le reporting (#453) — même dette, autre fichier.
 	'lib/components/reporting/VueRelanceSyndic.svelte::controle-saisie':
 		'champ de motif re-peint à la main (l. ~150)',
+	//  ⚠️ Pas une dette : une exception VOULUE (24/09/2026). Le `<select>` de
+	//  `PastilleDeroulante` n'est pas un champ de formulaire mais le cœur d'une
+	//  PASTILLE — transparent, sans bordure, arrondi par la pastille qui
+	//  l'enveloppe. Le placer dans un `.field` lui rendrait la peau carrée que ce
+	//  composant existe pour retirer (« son UX dénote à côté du filtre »).
+	'lib/components/PastilleDeroulante.svelte::style:controle-saisie':
+		'<select> habillé en pastille, jamais un champ de formulaire (l. ~87)',
 	//  ✅ Tolérance TOMBÉE le 11/09/2026 — troisième fois qu'une dette de peinture
 	//  part sans qu'un lot de style s'en occupe. Le `<select>` et l'`<input>` de
 	//  l'onglet Consommations ont suivi le balisage dans `OngletConsommations`,

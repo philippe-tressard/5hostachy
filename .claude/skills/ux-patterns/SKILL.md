@@ -306,9 +306,25 @@ d'annonce). Le seuil de 6 est conservé avec sa justification d'origine ; le not
 moins que le fait qu'il soit **écrit une fois**.
 
 ⚠️ **Deux formes voisines sur une même barre ne sont pas une incohérence** : les
-annonces portent des pastilles (3 types) à côté d'un `<select>` (9 catégories).
+annonces portent des pastilles (3 types) à côté d'une liste (9 catégories).
 C'est la **cardinalité** qui choisit, pas l'écran — sinon la question se repose à
 chaque barre, et c'est ainsi qu'on a obtenu trois formes pour la même intention.
+
+🔴 **Mais au-delà du seuil, la liste a l'ALLURE d'une pastille** (24/09/2026,
+arbitré avec l'utilisateur) : `PastilleDeroulante.svelte`, jamais un `<select>`
+natif dans une barre de filtres. Le `<select>` d'origine — coins carrés, fond
+gris, autre police, autre hauteur — « dénotait à côté du filtre ». Le composant
+garde la liste NATIVE sous la pastille (roue du téléphone, clavier, lecteur
+d'écran) ; un **filtre** se remplit en bleu dès qu'il filtre, comme une pastille
+retenue ; un **tri** (prop `tri`) porte ⇅ et se cale à droite. `.filter-select`
+n'existe plus.
+
+⚠️ **Le tri est la seule exception au seuil** : trois valeurs, mais un ORDRE et
+non un filtre — trois pastilles de tri à côté des pastilles de type se liraient
+comme un seul filtre. Elle est **déclarée** par la prop `tri`, que
+`lint:seuil-listes` lit : le contrôle mesure aussi `<PastilleDeroulante
+options={CONSTANTE}>`, sans quoi il serait devenu aveugle le jour où le `{#each}`
+est parti dans le composant.
 
 ⚠️ **Le seuil décide d'une CONVERSION, il n'impose pas de revenir en arrière.**
 Les douze filtres d'équipement de `prestataires` restent des pastilles : ils

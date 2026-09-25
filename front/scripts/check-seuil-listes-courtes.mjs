@@ -26,6 +26,14 @@
  * d'options tient sous le seuil. La cardinalité se lit sur la constante que le
  * `{#each}` parcourt, dans `src/lib/*.ts`.
  *
+ * 🔴 Et toute `<PastilleDeroulante options={CONSTANTE}>` (24/09/2026) : depuis
+ * qu'une liste de filtre se rend par ce composant, le `{#each}` vit chez lui et
+ * ne nomme plus la constante — sans cette seconde lecture, le contrôle serait
+ * devenu vert par cécité le jour même où il devenait nécessaire.
+ * **Une exception, déclarée par la prop `tri`** : un TRI est un ordre, pas un
+ * filtre — trois pastilles de tri à côté des pastilles de type se liraient
+ * comme un seul filtre (arbitré par l'utilisateur, Petites annonces).
+ *
  * ⚠️ Il ne mesure PAS les `<select>` de formulaire — un champ de saisie n'est
  * pas un filtre, et `ux-patterns` réserve la conversion aux listes « qui font
  * choisir » dans une barre. Le seuil s'applique aussi aux champs (le type de
@@ -84,6 +92,19 @@ export function selectsFautifs(source, tailles, seuil = SEUIL) {
 			fautifs.push({ constante: each[1], valeurs: n });
 		}
 	}
+	//  La pastille déroulante : la constante est dans `options={…}`. Un tri
+	//  (prop `tri`) est l'exception déclarée — voir l'en-tête.
+	const pd = /<PastilleDeroulante\b([^>]*)>/g;
+	while ((m = pd.exec(source))) {
+		const attrs = m[1];
+		if (/(^|\s)tri(\s|=|\/|$)/.test(attrs)) continue;
+		const opt = attrs.match(/options=\{([A-Z_][A-Z0-9_]*)\}/);
+		if (!opt) continue; // liste construite à la volée : cardinalité non déclarée
+		const n = tailles.get(opt[1]);
+		if (n !== undefined && n <= seuil) {
+			fautifs.push({ constante: opt[1], valeurs: n });
+		}
+	}
 	return fautifs;
 }
 
@@ -120,6 +141,37 @@ function selftest() {
 	const ok = selectsFautifs(sansConstante, new Map()).length === 0;
 	echecs += ok ? 0 : 1;
 	console.log(`${ok ? 'PASS' : 'ÉCHEC'}  cardinalité inconnue → on ne conclut pas`);
+	//  La pastille déroulante : même seuil, et le tri seul y échappe.
+	const lib3 = "export const L3 = [{ val: 'a' }, { val: 'b' }, { val: 'c' }];";
+	const lib9 = `export const L9 = [${Array.from({ length: 9 }, (_, i) => `{ val: '${i}' }`).join(',')}];`;
+	const t = cardinalites([lib3, lib9]);
+	for (const [nom, vue, attendu] of [
+		[
+			'pastille déroulante, 3 valeurs → refusé',
+			'<PastilleDeroulante options={L3} bind:valeur={x} />',
+			1,
+		],
+		[
+			'pastille déroulante, 9 valeurs → accepté',
+			'<PastilleDeroulante options={L9} bind:valeur={x} />',
+			0,
+		],
+		[
+			'pastille déroulante de TRI, 3 valeurs → accepté',
+			'<PastilleDeroulante\n\toptions={L3}\n\ttri\n/>',
+			0,
+		],
+		[
+			"« tri » dans un autre attribut n'exempte pas",
+			'<PastilleDeroulante options={L3} libelle="tri" />',
+			1,
+		],
+	]) {
+		const obtenu = selectsFautifs(vue, t).length;
+		const okp = obtenu === attendu;
+		echecs += okp ? 0 : 1;
+		console.log(`${okp ? 'PASS' : 'ÉCHEC'}  ${nom} → ${obtenu} signalement(s)`);
+	}
 	//  Et le contrôle doit savoir COMPTER, sinon tout passerait pour long.
 	const compte = cardinalites(["export const L = [{ val: 'a' }, { val: 'b' }];"]).get('L');
 	const ok2 = compte === 2;
@@ -144,7 +196,7 @@ const ecarts = [];
 let selectsLus = 0;
 for (const chemin of fichiers(SOURCE, '.svelte')) {
 	const src = readFileSync(chemin, 'utf8');
-	if (!src.includes('filter-select')) continue;
+	if (!src.includes('filter-select') && !src.includes('<PastilleDeroulante')) continue;
 	selectsLus++;
 	for (const f of selectsFautifs(src, tailles)) {
 		ecarts.push(
@@ -154,7 +206,7 @@ for (const chemin of fichiers(SOURCE, '.svelte')) {
 }
 
 if (ecarts.length) {
-	console.error(`✗ ${ecarts.length} liste(s) courte(s) rendue(s) en <select> :\n`);
+	console.error(`✗ ${ecarts.length} liste(s) courte(s) rendue(s) en liste déroulante :\n`);
 	console.error(ecarts.join('\n'));
 	console.error(
 		`\n  Seuil : ${SEUIL} entrées ou moins → pastilles (\`ChoixPastilles\`),` +
