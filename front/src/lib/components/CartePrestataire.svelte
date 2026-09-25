@@ -23,6 +23,7 @@
 <script lang="ts">
 	import { fmtDateShort } from '$lib/date';
 	import { equipLabel } from '$lib/prestataires';
+	import { safeDescription } from '$lib/sanitize';
 	import { nomAffiche } from '$lib/noms';
 	import BoutonLien from './BoutonLien.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
@@ -178,6 +179,9 @@
 					</div>
 				{/if}
 				{#if p.email}<div><span class="detail-label">Email</span>✉️ {p.email}</div>{/if}
+				{#if p.adresse}<div>
+						<span class="detail-label">Adresse</span><span class="adresse">📮 {p.adresse}</span>
+					</div>{/if}
 				<div><span class="detail-label">Contrats</span>{cs.length}</div>
 				{#if nextVisit}<div>
 						<span class="detail-label">Prochaine visite</span><span
@@ -185,6 +189,10 @@
 						>
 					</div>{/if}
 			</div>
+			<!--  La description (#1327), assainie comme partout. -->
+			{#if p.description}<div class="prest-description">
+					{@html safeDescription(p.description)}
+				</div>{/if}
 			<!--  Les avis, enfin visibles un par un (#807). L'écran n'en montrait
 			      que la MOYENNE, dans un badge : impossible de savoir qui avait
 			      noté quoi, et donc impossible de retirer une note posée par
@@ -195,6 +203,13 @@
 </div>
 
 <style>
+	/*  L'adresse s'écrit sur plusieurs lignes, comme sur une enveloppe. */
+	.adresse {
+		white-space: pre-line;
+	}
+	.prest-description {
+		margin-top: 0.6rem;
+	}
 	/*  🔴 Cinq règles ont disparu avec l'en-tête écrit à la main (12/09/2026) :
 	    `.prest-header`, `.prest-main`, `.prest-nom`, `.prest-meta` et leur point
 	    de rupture à 600 px. Elles décrivaient une disposition que `EnteteCarte`

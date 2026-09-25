@@ -16,7 +16,7 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import { prestataires as prestatairesApi } from '$lib/api';
-	import { EQUIPEMENTS, contactJoignable } from '$lib/prestataires';
+	import { EQUIPEMENTS, contactRenseigne } from '$lib/prestataires';
 	import { tenter } from '$lib/erreurs';
 
 	/** L'identifiant du prestataire retenu, ou `null`. */
@@ -48,12 +48,13 @@
 	}
 	async function creer() {
 		const nom = nouveauNom.trim();
-		if (!nom || !nouvelEquipement || !contactJoignable(contact)) return;
+		if (!nom || !nouvelEquipement) return;
 		await tenter(async () => {
 			const cree = await prestatairesApi.create({
 				nom,
 				specialite: nouvelEquipement,
-				contacts: [contact],
+				//  Facultatif depuis #1327 : un contact vide ne part pas.
+				contacts: contactRenseigne(contact) ? [contact] : [],
 			});
 			prestataires = [...prestataires, cree].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 			prestataireId = cree.id;
@@ -109,7 +110,6 @@
 				<label class="field">Téléphone<input bind:value={contact.telephone} /></label>
 				<label class="field">E-mail<input type="email" bind:value={contact.email} /></label>
 			</div>
-			<p class="aide">Un contact : son nom, et un téléphone ou un e-mail.</p>
 			<div class="actions-creation">
 				<button type="button" class="btn btn-sm btn-outline" on:click={() => (creation = false)}
 					>Annuler</button
@@ -117,7 +117,7 @@
 				<button
 					type="button"
 					class="btn btn-sm btn-primary"
-					disabled={!nouveauNom.trim() || !nouvelEquipement || !contactJoignable(contact)}
+					disabled={!nouveauNom.trim() || !nouvelEquipement}
 					on:click={creer}>Créer</button
 				>
 			</div>

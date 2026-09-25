@@ -7,6 +7,10 @@
  *
  * ## Ce que la déclaration a fait apparaître
  *
+ * ⚠️ Depuis le 25/09/2026 (#1327), la fiche porte une DESCRIPTION — demandée à
+ * l'écran (« un champ commentaire aussi à l'entreprise ») — et l'adresse de
+ * l'entreprise, dans les Contacts. Le paragraphe ci-dessous dit l'état d'avant.
+ *
  * 🔴 **Six sections sur neuf sont sans objet.** Un prestataire n'est pas un
  * événement de la copropriété : c'est une entrée de carnet d'adresses. Rien à
  * situer, rien à diffuser, rien à dater — et c'est exactement pour cela que la
@@ -69,14 +73,16 @@ export const PRESTATAIRE: EntiteDeclaree = {
 			sansObjet: "un prestataire est une fiche d'annuaire, pas un fait daté",
 		},
 		{
-			//  Les personnes à joindre, et le courriel de l'entreprise : une fiche
-			//  d'annuaire se lit par eux. 🔴 OBLIGATOIRE, donc dépliée, depuis le
-			//  24/09/2026 (#1229) : un contact avec un nom, et un téléphone ou un
-			//  e-mail — exigé à la CRÉATION par le serveur (`prestataires_schemas`).
+			//  Les personnes à joindre, le courriel et l'adresse de l'entreprise.
+			//  🔴 FACULTATIVE depuis le 25/09/2026 (#1327), arbitré à l'écran : « le
+			//  contact ne doit pas être obligatoire ». #1229 l'exigeait la veille.
 			id: 'intervenant',
-			objet: 'Courriel · contacts (prénom, nom, fonction · téléphone, courriel)',
+			objet: 'Courriel · adresse · contacts (prénom, nom, fonction · téléphone, courriel)',
 			titreEcran: ['Contacts'],
-			requis: true,
+			exceptionPliage:
+				"Facultative mais DÉPLIÉE (arbitré le 25/09/2026, #1327) : une fiche d'annuaire " +
+				"se lit par ses contacts, et c'est le premier geste après le nom — la plier " +
+				'cacherait ce que la fiche sert à trouver.',
 		},
 		{
 			id: 'perimetre',
@@ -87,12 +93,14 @@ export const PRESTATAIRE: EntiteDeclaree = {
 				'où le lire, donc deux occasions de les désaccorder.',
 		},
 		{
+			//  🔴 ROUVERTE le 25/09/2026 (#1327) — « un champ commentaire aussi à
+			//  l'entreprise ». Elle était déclarée sans objet : le type et
+			//  l'équipement devaient suffire. Ce que l'écran a montré, c'est ce qu'ils
+			//  ne disent pas (horaires, modalités, particularités). La NOTE garde le
+			//  jugement ; la description dit ce qu'il faut savoir. Avec l'assistant ✨.
 			id: 'description',
-			sansObjet:
-				"Ce qu'il y a à dire d'une entreprise tient dans son type et sa spécialité, " +
-				"tous deux choisis dans des listes — donc comparables d'un prestataire à " +
-				"l'autre. Un texte libre ne le serait pas, et c'est la NOTE (1 à 5, avec " +
-				'commentaire) qui porte le jugement, depuis la carte de son contrat.',
+			objet: 'RichEditor — ce qu’il faut savoir de l’entreprise',
+			pliee: true,
 		},
 		{
 			id: 'pieces_jointes',

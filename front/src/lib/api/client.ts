@@ -8,6 +8,7 @@
  */
 
 import { urlDeConnexion } from '$lib/redirection';
+import { detailLisible } from '$lib/detail-erreur';
 
 export const BASE = '/api';
 
@@ -156,12 +157,9 @@ async function echecApi(
 ): Promise<ApiError> {
 	let rawDetail = repli;
 	try {
-		const err = await res.json();
-		if (typeof err.detail === 'string') {
-			rawDetail = err.detail;
-		} else if (err.detail) {
-			rawDetail = JSON.stringify(err.detail);
-		}
+		//  🔴 Une LISTE de validation (422) s'affichait en JSON brut dans le toast
+		//  (#1327) : `detailLisible` en garde les messages.
+		rawDetail = detailLisible((await res.json()).detail, repli);
 	} catch {
 		/* le corps n'est pas du JSON : on garde le libellé par défaut */
 	}

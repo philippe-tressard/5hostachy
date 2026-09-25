@@ -28,6 +28,8 @@ from typing import TYPE_CHECKING, List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.utils.assiste_ia import AssisteIAMixin
+
 if TYPE_CHECKING:  # pragma: no cover — uniquement pour les annotations
     from app.models.copropriete import Copropriete
 
@@ -79,7 +81,9 @@ class TypeEquipement(str, Enum):
 # ──────────────────────────────────────────────
 
 
-class Prestataire(SQLModel, table=True):
+#  La marque de l'assistant par le MIXIN (#1327) : la fiche porte désormais une
+#  section Description, et toute entité qui en porte une porte la marque.
+class Prestataire(AssisteIAMixin, table=True):
     __tablename__ = "prestataire"
     id: Optional[int] = Field(default=None, primary_key=True)
     nom: str
@@ -88,6 +92,10 @@ class Prestataire(SQLModel, table=True):
     telephone: Optional[str] = None
     email: Optional[str] = None
     contacts_json: Optional[str] = None  # JSON: [{prenom, nom, fonction, email, telephone}]
+    #: Facultatifs (#1327, 25/09/2026) : l'adresse de l'entreprise, texte libre sur
+    #: plusieurs lignes, et sa description (HTML riche, section Description).
+    adresse: Optional[str] = None
+    description: Optional[str] = None
     actif: bool = True
     cree_le: datetime = Field(default_factory=horloge.maintenant)
 

@@ -1,5 +1,5 @@
 <!--
-  Les CHAMPS d'un prestataire — nom, type, spécialité, contacts.
+  Les CHAMPS d'un prestataire — nom, type, spécialité, contacts, description.
 
   Extraits de `prestataires/+page.svelte` le 11/09/2026, pour la même raison que
   `ChampsContrat` avant eux : le formulaire doit pouvoir s'ouvrir à DEUX endroits
@@ -23,7 +23,9 @@
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import { PRESTATAIRE } from '$lib/entites/prestataire';
-	import { contactJoignable } from '$lib/prestataires';
+	import SectionDescription from '$lib/components/SectionDescription.svelte';
+	import { contexteAssistant } from '$lib/assistant';
+	import { contactRenseigne } from '$lib/prestataires';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
 	export let prestForm: any;
@@ -103,15 +105,21 @@
 		titre="Contacts"
 		pliable={pliageDe(PRESTATAIRE, 'intervenant')}
 		requis={requisDe(PRESTATAIRE, 'intervenant')}
-		rempli={prestContacts.some(contactJoignable)}
-		valeurModifiee={!!prestForm.email || prestContacts.some((c) => c.telephone?.trim())}
-		resume={prestContacts.filter(contactJoignable).length
-			? `${prestContacts.filter(contactJoignable).length} contact(s)`
+		rempli={prestContacts.some(contactRenseigne)}
+		valeurModifiee={!!prestForm.email ||
+			!!prestForm.adresse?.trim() ||
+			prestContacts.some(contactRenseigne)}
+		resume={prestContacts.filter(contactRenseigne).length
+			? `${prestContacts.filter(contactRenseigne).length} contact(s)`
 			: 'aucun'}
 	>
-		<p class="aide">Au moins un contact : son nom, et un téléphone ou un e-mail.</p>
 		<label class="field"
 			>E-mail de l’entreprise<input type="email" bind:value={prestForm.email} /></label
+		>
+		<!--  L'adresse de l'entreprise, facultative (#1327) : plusieurs lignes, comme
+		      on l'écrit sur une enveloppe. -->
+		<label class="field"
+			>Adresse de l’entreprise<textarea rows="2" bind:value={prestForm.adresse}></textarea></label
 		>
 		{#each prestContacts as _contact, i (_contact)}
 			<div class="contact">
@@ -149,6 +157,24 @@
 				])}>+ Nouveau contact</button
 		>
 	</SectionFormulaire>
+{/if}
+
+<!--  ══ 8. DESCRIPTION ══ Rouverte le 25/09/2026 (#1327) : ce qu'il faut savoir de
+      l'entreprise, avec l'assistant ✨ comme sur les autres fiches. Facultative,
+      donc pliée — et rouverte d'office dès qu'elle porte un texte. -->
+{#if sectionPresente(PRESTATAIRE, etat, 'description')}
+	<SectionDescription
+		idPrefixe={idNom}
+		pliable={pliageDe(PRESTATAIRE, 'description')}
+		placeholder="Horaires, modalités d’intervention, particularités…"
+		bind:valeur={prestForm.description}
+		assistant={contexteAssistant('prestataire', {
+			Catégorie: prestForm.type_prestataire,
+			Équipement: prestForm.specialite,
+		})}
+		bind:titreObjet={prestForm.nom}
+		bind:assisteIA={prestForm.assiste_ia}
+	/>
 {/if}
 
 <style>

@@ -36,6 +36,7 @@ from app.models.core import (
 
 from app.utils.echeance_contrat import poser_echeance
 from app.utils.noms import nom_affiche
+from app.utils.assiste_ia import marquer
 from app.utils.recuperer import ou_404
 from app.routers.prestataires_schemas import (
     PrestataireCreate,
@@ -99,7 +100,9 @@ def update_prestataire(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     p = ou_404(session, Prestataire, p_id, "Prestataire")
-    data = body.model_dump(exclude_unset=True, exclude={"contacts"})
+    #  `assiste_ia` à part : `marquer` ne l'écrit que dans un sens (#1327).
+    data = body.model_dump(exclude_unset=True, exclude={"contacts", "assiste_ia"})
+    marquer(p, body)
     if "contacts" in body.model_fields_set:
         data["contacts_json"] = json.dumps(
             [c.model_dump() for c in (body.contacts or [])], ensure_ascii=False
