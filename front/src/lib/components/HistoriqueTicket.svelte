@@ -45,6 +45,7 @@
 	import { STATUT_TICKET_LABELS, STATUT_TICKET_OPTIONS, optionsVersTicket } from '$lib/tickets';
 	import { evolutionIcone } from '$lib/evolutions';
 	import { TICKET } from '$lib/entites/ticket';
+	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
 
 	export let ticketId: number;
 	/** L'affaire : la Suite du conseil en lit la catégorie et les valeurs (#1207). */
@@ -238,6 +239,7 @@
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}
 					entite={TICKET}
+					conditions={conditionsDeLaSuite(ticket)}
 					{assistant}
 					peutPreciserPerimetre={$isCS}
 					{perimetreCourant}

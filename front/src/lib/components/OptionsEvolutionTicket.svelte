@@ -31,6 +31,8 @@
 	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
 	import { OPTIONS_TICKET } from '$lib/tickets';
 	import { isCS } from '$lib/stores/auth';
+	import { TICKET } from '$lib/entites/ticket';
+	import { pliageDe } from '$lib/pliage';
 
 	/** Vrai pour la première section rendue du formulaire : pas de filet au-dessus. */
 	export let premiere = false;
@@ -43,6 +45,7 @@
 {#if $isCS}
 	<SectionOptionsPublication
 		{premiere}
+		pliable={pliageDe(TICKET, 'mise_en_avant')}
 		objet="ticket"
 		options={OPTIONS_TICKET}
 		bind:epingle={options.epingle}

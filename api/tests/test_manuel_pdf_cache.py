@@ -112,8 +112,9 @@ def test_le_dossier_vit_a_cote_de_la_base_et_HORS_des_uploads(monkeypatch):
     monkeypatch.setattr(reglages, "database_url", "sqlite:////app/data/app.db")
     monkeypatch.setattr(reglages, "uploads_dir", "/app/uploads")
     dossier = cache.dossier_par_defaut()
-    assert str(dossier) == "/app/data/cache-manuel-pdf"
-    assert not str(dossier).startswith(reglages.uploads_dir)
+    # `as_posix` : sur un poste Windows, `str` rend « \app\data\… » (rejeu local).
+    assert dossier.as_posix() == "/app/data/cache-manuel-pdf"
+    assert not dossier.as_posix().startswith(reglages.uploads_dir)
 
     monkeypatch.setattr(reglages, "database_url", "sqlite:///:memory:")
     assert cache.dossier_par_defaut() is None

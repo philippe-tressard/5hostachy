@@ -1,5 +1,12 @@
 import { separerFichiers } from '$lib/fichiers';
 import { perimetreHerite } from '$lib/perimetres';
+import {
+	motifInactif,
+	sectionPresente,
+	type ConditionInactive,
+	type EntiteDeclaree,
+	type IdSection,
+} from '$lib/entites/types';
 /**
  * Le vocabulaire d'un **fil d'évolution** — écrit une fois pour les trois entités
  * qui en portent un : tickets, actualités, événements de calendrier.
@@ -199,4 +206,105 @@ export function etatInitialEntree(
 	const destinataires = initialDestinataires.length ? [...initialDestinataires] : ['résidents'];
 	const tries = separerFichiers(editMode ? initialFichiers.map((f) => f.url) : []);
 	return { perimetre, destinataires, photos: tries.photos, documents: tries.documents };
+}
+
+/**
+ * Les sections que porte le créneau `specifiques` d'`EvolForm` — la Catégorie,
+ * et ce qu'une Suite d'affaire y pose : Équipement · Quand · Intervenant pour le
+ * conseil (`SectionsSuiteConseil`, #1207), et la Mise en avant
+ * (`OptionsEvolutionTicket`).
+ *
+ * 🔴 Le créneau ne s'ouvrait que sur `nature` (25/09/2026). L'affaire la déclare
+ * `hérité` en évolution : sa Suite ne rendait donc AUCUNE de ces sections, et une
+ * affaire ne pouvait pas devenir urgente en cours de suivi — le serveur,
+ * lui, appliquait bien ce qu'on lui envoyait (`appliquer_options`).
+ */
+const SECTIONS_DU_CRENEAU: readonly IdSection[] = [
+	'nature',
+	'equipement',
+	'quand',
+	'intervenant',
+	'mise_en_avant',
+];
+
+/** Le créneau s'ouvre dès que l'une de ses sections est déclarée en évolution. */
+function creneauSpecifiquesPresent(entite: EntiteDeclaree): boolean {
+	return SECTIONS_DU_CRENEAU.some((id) => sectionPresente(entite, 'evolution', id));
+}
+
+/**
+ * Une section du CIBLAGE est-elle offerte dans la Suite, pour cet objet-là ?
+ *
+ * Présente dans l'état `evolution` ET non éteinte par ce que l'objet EST
+ * (`conditions` — la nature d'une affaire, `natureDe`). Une section éteinte
+ * ne se rend pas du tout dans une Suite : dans le formulaire, elle reste grisée
+ * pour montrer ce qu'un changement de catégorie rallumerait ; une Suite ne
+ * change pas la catégorie, il n'y a donc rien à rallumer.
+ *
+ * 🔴 Les Destinataires d'une affaire SUIVIE ne s'offrent pas dans la Suite
+ * (25/09/2026) — voir `sectionsDeLaSuite`.
+ */
+function sectionDeLaSuite(
+	entite: EntiteDeclaree,
+	id: IdSection,
+	conditions: readonly ConditionInactive[],
+): boolean {
+	return (
+		sectionPresente(entite, 'evolution', id) && !motifInactif(entite, 'evolution', id, conditions)
+	);
+}
+
+/** Les sections qu'une Suite offre — `EvolForm` n'en décide plus lui-même. */
+export interface SectionsDeLaSuite {
+	perimetre: boolean;
+	destinataires: boolean;
+	specifiques: boolean;
+	piecesJointes: boolean;
+	diffusion: boolean;
+}
+
+/**
+ * Ce qu'une Suite (ou la correction d'une entrée) offre, pour CET objet et CE
+ * lecteur. Chaque ligne combine ce qui EXISTE (la déclaration de l'entité) et
+ * ce que cet utilisateur-ci PEUT (le droit, passé par l'appelant) — jamais l'un
+ * à la place de l'autre (#463). Extrait d'`EvolForm` le 25/09/2026 : la règle
+ * est pure, et le composant dépassait 500 lignes.
+ *
+ * 🔴 LE PÉRIMÈTRE SE CORRIGE AUSSI (01/09/2026, à l'écran) :
+ *
+ * > *« L'édition peut modifier le périmètre (correction d'erreur
+ * > d'affectation d'un périmètre) »*
+ *
+ * La ligne valait `avecPerimetre && !editMode`, au motif que « préciser est un
+ * geste de SUIVI, qui raturerait un fait daté en réécrivant une entrée passée »
+ * — et le serveur refusait le champ en PATCH, ce qui fermait la question. Le
+ * motif vaut pour un RESSERREMENT, pas pour une faute de clic. Et la faute coûte
+ * cher : le périmètre d'une entrée écrase celui du ticket, donc une erreur
+ * d'affectation reclasse tout le ticket.
+ *
+ * ⚠️ Côté serveur, la correction ne se propage à l'objet que si l'entrée
+ * corrigée est la dernière à avoir précisé quelque chose
+ * (`app/utils/perimetre_fil.py`) : corriger une vieille entrée ne défait pas une
+ * précision récente.
+ */
+export function sectionsDeLaSuite(
+	entite: EntiteDeclaree,
+	conditions: readonly ConditionInactive[],
+	droits: { perimetre: boolean; piecesJointes: boolean; diffusion: boolean; creneau: boolean },
+): SectionsDeLaSuite {
+	//  🔴 Pas de Destinataires dans la Suite d'une affaire SUIVIE (25/09/2026).
+	//  Le formulaire les lui ouvre depuis la v2.50.0 (#1296), mais pour une seule
+	//  chose : la case « Confidentielle » — « pas de profils à choisir pour une
+	//  affaire suivie » (`SectionDestinataires`). La Suite ne porte pas cette case,
+	//  et elle proposait les profils : pour le conseil, le serveur les ÉCRIVAIT
+	//  sur l'affaire, valeur qu'aucun écran ne montre et que la correction efface
+	//  (`chargeUtileAffaire`). Il ne l'écrit plus (`add_evolution`).
+	const affaireSuivie = conditions.includes('suivie');
+	return {
+		perimetre: droits.perimetre && sectionPresente(entite, 'evolution', 'perimetre'),
+		destinataires: sectionDeLaSuite(entite, 'destinataires', conditions) && !affaireSuivie,
+		specifiques: droits.creneau && creneauSpecifiquesPresent(entite),
+		piecesJointes: droits.piecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes'),
+		diffusion: droits.diffusion && sectionPresente(entite, 'evolution', 'diffusion'),
+	};
 }

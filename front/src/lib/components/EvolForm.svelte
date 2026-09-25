@@ -42,8 +42,9 @@
   (`separatePhotosAndDocs`) a disparu le 18/08/2026 avec son dernier appelant.
 
   ✅ **Gouverné par la déclaration d'entité** (02/09/2026, #463) : il REÇOIT
-  l'entité et lit `sectionPresente(…, 'evolution', …)` lui-même. Les cinq écrans
-  ne décident plus des sections — seulement des DROITS de leur lecteur.
+  l'entité, et la règle qui en tire les sections vit dans `$lib/evolutions`
+  (`sectionsDeLaSuite`, 25/09/2026). Les cinq écrans ne décident plus des
+  sections — seulement des DROITS de leur lecteur, et de ce que l'objet EST.
 
   ✅ **L'écart d'intitulé est levé (02/09/2026)** — arbitré : *« oui, unifier à
   commentaire »*. La description basculait « Commentaire » / « Contenu » selon le
@@ -71,12 +72,13 @@
 		typeDeLEntree,
 		entreeEnregistrable,
 		etatInitialEntree,
+		sectionsDeLaSuite,
 		type ChargeUtileEvolution,
 	} from '$lib/evolutions';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionsCiblageEvolution from '$lib/components/SectionsCiblageEvolution.svelte';
-	import { sectionPresente, type EntiteDeclaree } from '$lib/entites/types';
+	import type { ConditionInactive, EntiteDeclaree } from '$lib/entites/types';
 	import type { ApercuDiffusion } from '$lib/api';
 	import { perimetreEntree } from '$lib/perimetres';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
@@ -114,6 +116,8 @@
 	 *   l'appelant, seul à connaître le lecteur. Les mêler aurait fait décider d'un
 	 *   droit par une déclaration de forme. */
 	export let entite: EntiteDeclaree;
+	/**  Ce que l'objet EST et qui éteint une section — `sectionDeLaSuite`. */
+	export let conditions: ConditionInactive[] = [];
 	/**  Un DROIT, pas une section : `$isCS` sur la fiche, l'auteur sur sa carte. */
 	export let peutDiffuser = true;
 	/**  Même nature : préciser le périmètre change qui verra l'objet. */
@@ -231,33 +235,19 @@
 	//  un choix. Elle ne porte plus la NATURE de l'entrée — c'est l'appelant qui
 	//  la décide (#426).
 	$: sectionWorkflow = !editMode && statutOptions.length > 0;
-	//  🔴 LE PÉRIMÈTRE SE CORRIGE AUSSI (01/09/2026, à l'écran) :
-	//
-	//  > *« L'édition peut modifier le périmètre (correction d'erreur
-	//  > d'affectation d'un périmètre) »*
-	//
-	//  Cette ligne valait `avecPerimetre && !editMode`, au motif que « préciser
-	//  est un geste de SUIVI, qui raturerait un fait daté en réécrivant une
-	//  entrée passée » — et le serveur refusait le champ en PATCH, ce qui
-	//  fermait la question.
-	//
-	//  Le motif vaut pour un RESSERREMENT, pas pour une faute de clic. Et la
-	//  faute coûte cher : le périmètre d'une entrée écrase celui du ticket,
-	//  donc une erreur d'affectation reclasse tout le ticket.
-	//
-	//  ⚠️ Côté serveur, la correction ne se propage à l'objet que si l'entrée
-	//  corrigée est la dernière à avoir précisé quelque chose
-	//  (`app/utils/perimetre_fil.py`) : corriger une vieille entrée ne défait
-	//  pas une précision récente.
-	//  🔴 Chaque ligne combine ce qui EXISTE (la déclaration) et ce que cet
-	//  utilisateur-ci PEUT (le droit) — jamais l'un à la place de l'autre (#463).
-	$: sectionPerimetre = peutPreciserPerimetre && sectionPresente(entite, 'evolution', 'perimetre');
-	//  Ouvertes par la DÉCLARATION de l'entité — voir `SectionsCiblageEvolution`.
-	$: sectionDestinataires = sectionPresente(entite, 'evolution', 'destinataires');
-	$: sectionSpecifiques = sectionPresente(entite, 'evolution', 'nature');
-	$: sectionPhotos = avecPiecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes');
-	$: sectionDocuments = avecPiecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes');
-	$: sectionDiffusion = peutDiffuser && sectionPresente(entite, 'evolution', 'diffusion');
+	//  Ce que la Suite offre — la déclaration ET le droit : `$lib/evolutions`.
+	$: sections = sectionsDeLaSuite(entite, conditions, {
+		perimetre: peutPreciserPerimetre,
+		piecesJointes: avecPiecesJointes,
+		diffusion: peutDiffuser,
+		creneau: !!$$slots.specifiques,
+	});
+	$: sectionPerimetre = sections.perimetre;
+	$: sectionDestinataires = sections.destinataires;
+	$: sectionSpecifiques = sections.specifiques;
+	$: sectionPhotos = sections.piecesJointes;
+	$: sectionDocuments = sections.piecesJointes;
+	$: sectionDiffusion = sections.diffusion;
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
 	//  sous lui (`ux-patterns` §9 quater) — c'est la forme qu'a déjà la carte du
