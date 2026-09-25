@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
-	import { DESTINATAIRES, TOUS_LES_RESIDENTS, concerneTousLesResidents } from '$lib/destinataires';
+	import {
+		DESTINATAIRES,
+		LIBELLE_TOUS,
+		TOUS_LES_RESIDENTS,
+		concerneTousLesResidents,
+	} from '$lib/destinataires';
 
 	/** Valeurs sélectionnées — tableau de strings. Ex: ['résidents'] ou ['copropriétaires','locataires'] */
 	export let value: string[] = ['résidents'];
@@ -47,16 +52,16 @@
 </script>
 
 {#if titre}
-	<!--  Badge d'état : « Tous les résidents » se lit sans dépiler les pastilles.
+	<!--  Badge d'état : « Tous » se lit sans dépiler les pastilles.
 	      Même règle que le périmètre (skill `ux-patterns` §9 quater). -->
 	<div class="destinataire-titre">
 		{titre}{#if requis}
 			*{/if}
-		{#if isTous}<span class="badge badge-green destinataire-badge">Tous les résidents</span>{/if}
+		{#if isTous}<span class="badge badge-green destinataire-badge">{LIBELLE_TOUS}</span>{/if}
 	</div>
 {/if}
 <div class="destinataire-pills">
-	<Pastille active={isTous} icone="users-round" on:click={selectTous}>Tous les résidents</Pastille>
+	<Pastille active={isTous} icone="users-round" on:click={selectTous}>{LIBELLE_TOUS}</Pastille>
 	{#each DESTINATAIRES as o (o.code)}
 		<Pastille
 			active={!isTous && selected.has(o.code)}
