@@ -35,6 +35,7 @@ from __future__ import annotations
 import pytest
 
 from app.seed.emails import (
+    EXPEDITEUR_AFFAIRE,
     EXPEDITEUR_MUET,
     EXPEDITEUR_REPONSE,
     INTENTIONS_PAR_MODELE,
@@ -85,7 +86,7 @@ def test_sans_intention_servie_le_CODE_reprend_la_main(servie):
 
 
 def test_le_JETON_de_reponse_prime_sur_TOUT():
-    """`Reply-To: tickets+<jeton>@` dit « répondez » — `noreply@` le contredirait.
+    """Un envoi d'affaire dit « répondez » — `noreply@` le contredirait.
 
     Cette règle existait avant (#703, #754) et ne doit pas être perdue en
     ajoutant l'intention servie : elle passe AVANT les deux.
@@ -94,7 +95,7 @@ def test_le_JETON_de_reponse_prime_sur_TOUT():
         expediteur_du_modele(
             "compte_active", jeton_reponse="abc123", intention_servie="information"
         )
-        == EXPEDITEUR_REPONSE
+        == EXPEDITEUR_AFFAIRE
     ), (
         "un envoi portant une adresse de réponse de ticket partirait de "
         "`noreply@` : le message se contredirait lui-même."

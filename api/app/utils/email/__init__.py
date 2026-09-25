@@ -249,19 +249,22 @@ def _reply_to(smtp_cfg: dict, jeton_reponse: str | None) -> dict[str, str]:
     partent tous deux vers le syndic sur un ticket, et deux constructions de la
     même adresse divergeraient au premier changement de domaine.
 
-    Rend un dictionnaire vide quand il n'y a pas de jeton ou pas de domaine
-    exploitable : mieux vaut aucune adresse de réponse qu'une adresse fabriquée
-    sur un domaine inventé, dont les réponses partiraient dans le vide sans que
-    personne ne le sache.
+    Rend un dictionnaire vide quand il n'y a pas de jeton (l'envoi n'est pas une
+    affaire) ou pas d'adresse exploitable.
+
+    🔴 **L'adresse des affaires, plus l'adresse à jeton** (#1314, 25/09/2026).
+    `tickets+<jeton>@` rattachait la réponse par le jeton — mais OVH n'achemine
+    pas le sous-adressage, et la réponse du syndic partait dans le vide (#754
+    l'avait constaté le 05/09 et ajouté le repli par le sujet, sans changer
+    l'adresse). La réponse revient désormais à l'adresse d'où l'affaire part,
+    et se rattache par « Affaire #TK-… » dans le sujet.
     """
     if not jeton_reponse:
         return {}
-    from app.utils.courriel_entrant import adresse_de_reponse, domaine_de
+    from app.seed.emails import EXPEDITEUR_AFFAIRE
 
-    domaine = domaine_de(smtp_cfg.get("smtp_from") or get_settings().mail_from)
-    if not domaine:
-        return {}
-    return {"Reply-To": adresse_de_reponse(jeton_reponse, domaine)}
+    adresse = adresse_expedition(smtp_cfg, EXPEDITEUR_AFFAIRE)
+    return {"Reply-To": adresse} if adresse else {}
 
 
 async def _envoyer_modele(

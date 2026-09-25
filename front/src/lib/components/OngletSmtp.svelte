@@ -35,6 +35,7 @@
 		port: 587,
 		from: '',
 		from_reponse: '',
+		from_affaires: '',
 		from_name: '',
 		username: '',
 		password: '',
@@ -75,6 +76,7 @@
 		smtpConfig.port = parseInt(lues['smtp_port'] ?? '587') || 587;
 		smtpConfig.from = lues['smtp_from'] ?? '';
 		smtpConfig.from_reponse = lues['smtp_from_reponse'] ?? '';
+		smtpConfig.from_affaires = lues['smtp_from_affaires'] ?? '';
 		smtpConfig.from_name = lues['smtp_from_name'] ?? '';
 		smtpConfig.username = lues['smtp_username'] ?? '';
 		smtpConfig.starttls = lues['smtp_starttls'] !== '0';
@@ -115,6 +117,7 @@
 				smtp_port: String(smtpConfig.port),
 				smtp_from: smtpConfig.from,
 				smtp_from_reponse: smtpConfig.from_reponse,
+				smtp_from_affaires: smtpConfig.from_affaires,
 				smtp_from_name: smtpConfig.from_name,
 				smtp_username: smtpConfig.username,
 				smtp_starttls: smtpConfig.starttls ? '1' : '0',
@@ -194,6 +197,21 @@
 					demande d'accès, annonce de hall. Une adresse qui s'annonce « ne répondez pas » décourage
 					la réponse qu'on sollicite. <strong>Vide</strong> : tout part de l'adresse ci-dessus, comme
 					avant.</span
+				>
+			</label>
+			<label class="field">
+				Adresse des affaires — expédition ET réponses
+				<input
+					type="email"
+					bind:value={smtpConfig.from_affaires}
+					placeholder="affaire@example.com"
+				/>
+				<span class="aide"
+					>Un courriel d'affaire (au syndic, au conseil) part de cette adresse, et la réponse y
+					revient : elle se rattache à l'affaire par son numéro « Affaire #TK-… » dans l'objet. La
+					boîte qui la reçoit doit être celle de la <strong>Réception des réponses</strong>
+					ci-dessous (un alias qui y aboutit convient). <strong>Vide</strong> : l'adresse des messages
+					qui appellent une réponse.</span
 				>
 			</label>
 			<label class="field">

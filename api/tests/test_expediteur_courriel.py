@@ -19,6 +19,7 @@ qu'un seul appel — `connexion_smtp(..., expediteur=…)`.
 from __future__ import annotations
 
 from app.seed.emails import (
+    EXPEDITEUR_AFFAIRE,
     EXPEDITEUR_MUET,
     EXPEDITEUR_PAR_INTENTION,
     EXPEDITEUR_REPONSE,
@@ -47,13 +48,14 @@ def test_un_envoi_qui_informe_seulement_part_de_noreply():
 def test_une_adresse_de_reponse_de_ticket_rend_l_envoi_parlant():
     """🔴 Un message ne peut pas dire deux choses contraires.
 
-    `Reply-To: tickets+<jeton>@` dit « répondez à ce message », et le site sait
-    rattacher cette réponse au dossier. L'expédier depuis `noreply@` se
-    contredirait dans le même en-tête — quelle que soit l'intention déclarée.
+    Un envoi d'affaire porte un `Reply-To` qui dit « répondez à ce message »,
+    et le site sait rattacher cette réponse au dossier. L'expédier depuis
+    `noreply@` se contredirait dans le même en-tête — quelle que soit
+    l'intention déclarée. Depuis #1314, il part de l'adresse des AFFAIRES.
     """
     assert expediteur_du_modele("ticket_nouveau_message") == EXPEDITEUR_MUET
     assert (
-        expediteur_du_modele("ticket_nouveau_message", jeton_reponse="a" * 32) == EXPEDITEUR_REPONSE
+        expediteur_du_modele("ticket_nouveau_message", jeton_reponse="a" * 32) == EXPEDITEUR_AFFAIRE
     )
 
 
