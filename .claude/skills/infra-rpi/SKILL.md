@@ -423,6 +423,25 @@ scp /tmp/app_sync.db ptressard@<PEER_IP>:/tmp/app_sync.db
 docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db alpine sh -c 'cp /tmp/app_sync.db /data/app.db && rm -f /data/app.db-wal /data/app.db-shm'
 ```
 
+## Éprouver l'installation d'un volume — `banc-volumes.sh`
+
+`bascule.sh` installe les volumes sur le peer par `lib-volumes.sh`. Son
+`--selftest` (job CI `test-scripts`) vérifie la **forme** de la commande — pas de
+`sudo`, source en lecture seule, purge avant copie — mais ne peut rien dire de
+son **effet** : il n'a ni Docker ni volume (`standards/04` §11).
+
+`scripts/exploitation/banc-volumes.sh` comble l'écart : il crée des volumes
+jetables `banc_miroir_*`, y installe un contenu par la commande réellement
+produite, compare, puis les détruit — même après un échec. **Sur le STANDBY
+uniquement** : il refuse de démarrer si des conteneurs `hostachy` tournent.
+
+    scp scripts/exploitation/banc-volumes.sh scripts/lib/lib-volumes.sh \
+        ptressard@<standby>:/tmp/ && ssh ptressard@<standby> 'cd /tmp && bash banc-volumes.sh'
+
+À rejouer après toute modification de `lib-volumes.sh`. Il n'était cité nulle
+part jusqu'au #1050 : un banc qu'on ne retrouve pas ne se rejoue pas, et on le
+réécrit de mémoire — ce qui est arrivé deux jours après le premier (28/08/2026).
+
 ## Crontabs et unité systemd — **source versionnée : `infra/points-entree/`**
 
 Depuis le 15/08/2026, les six points d'entrée (4 crons root, 1 cron utilisateur,

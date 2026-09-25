@@ -18,6 +18,7 @@
 -->
 <script lang="ts">
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
 	/** Les formulaires ouverts — liés à l'en-tête, qui porte les boutons. */
 	export let showForm = false;
@@ -49,14 +50,14 @@
 			<div class="modal-body">
 				<div class="form-grid">
 					<label class="field">
-						Type d'accès *
+						<span>Type d'accès<EtoileRequis vide={!formType} /></span>
 						<select bind:value={formType}>
 							<option value="vigik">Badge Vigik</option>
 							<option value="telecommande">Télécommande parking</option>
 						</select>
 					</label>
 					<label class="field">
-						Lot concerné *
+						<span>Lot concerné<EtoileRequis vide={!formLotId} /></span>
 						<select bind:value={formLotId} required>
 							<option value="">— Sélectionner —</option>
 							{#each mesLots as lot (lot.id)}
@@ -65,7 +66,7 @@
 						</select>
 					</label>
 					<label class="field">
-						Quantité *
+						<span>Quantité<EtoileRequis vide={!formQuantite} /></span>
 						<input type="number" bind:value={formQuantite} min="1" max="5" />
 					</label>
 					<label class="field">
@@ -93,14 +94,14 @@
 			<div class="modal-body">
 				<div class="form-grid">
 					<label class="field"
-						>Type d'accès *
+						><span>Type d'accès<EtoileRequis vide={!declareType} /></span>
 						<select bind:value={declareType}>
 							<option value="telecommande">Télécommande parking</option>
 							<option value="vigik">Badge Vigik</option>
 						</select>
 					</label>
 					<label class="field"
-						>Code / référence *
+						><span>Code / référence<EtoileRequis vide={!declareCode.trim()} /></span>
 						<input
 							type="text"
 							bind:value={declareCode}

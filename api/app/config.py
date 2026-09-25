@@ -1,5 +1,4 @@
 from functools import lru_cache
-from typing import Literal
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
@@ -64,9 +63,7 @@ class Settings(BaseSettings):
     #: par `bascule.sh`, ni sauvegardé par `backup.py`. Il est perdu à la
     #: première bascule, sans aucun signal.
     uploads_dir: str = "/app/uploads"
-    backup_frequency: Literal["daily", "weekly", "monthly"] = "daily"
     backup_hour: int = 3
-    backup_day_of_week: int = 6  # 0=lun … 6=dim
     backup_keep_versions: int = 7
 
     # Maintenance cron — clé partagée pour l'endpoint /admin/maintenance/rapport
@@ -81,10 +78,6 @@ class Settings(BaseSettings):
     #  celle de compose. Deux nombres écrits séparément divergeraient, et c'est
     #  ce qui a coûté un message le 19/09/2026 (#1057).
     wa_photo_budget_ko: int = 400
-
-    # OAuth
-    google_client_id: str = ""
-    google_client_secret: str = ""
 
     class Config:
         env_file = ".env"

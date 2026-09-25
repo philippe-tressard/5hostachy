@@ -15,6 +15,7 @@ au milieu d'endpoints protégés par `require_admin`.
 
 import json
 from datetime import datetime, timedelta
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header
@@ -104,7 +105,7 @@ def maintenance_dernier_rapport(
         cle = ligne.noeud or "inconnu"
         if cle not in par_noeud:  # la première vue est la plus récente
             par_noeud[cle] = ligne.cree_le
-    return {"tache": tache, "noeuds": par_noeud, "genere_le": datetime.utcnow()}
+    return {"tache": tache, "noeuds": par_noeud, "genere_le": horloge.maintenant()}
 
 
 @router.post("/maintenance/rapport", status_code=201)
@@ -127,7 +128,7 @@ def maintenance_rapport(
         duree_secondes=body.duree_secondes,
         details=json.dumps(body.details, ensure_ascii=False) if body.details else None,
         erreur=body.erreur,
-        cree_le=body.cree_le or datetime.utcnow(),
+        cree_le=body.cree_le or horloge.maintenant(),
         terminee_le=body.terminee_le,
     )
     session.add(entry)
@@ -184,7 +185,7 @@ def emails_echecs_recents(
     #  Borné : une valeur aberrante passée par un script ne doit pas balayer toute
     #  la table, que la purge garde à 90 jours.
     jours = max(1, min(int(jours), 90))
-    depuis = datetime.utcnow() - timedelta(days=jours)
+    depuis = horloge.maintenant() - timedelta(days=jours)
 
     lignes = session.exec(
         select(HistoriqueEmail).where(
@@ -201,7 +202,7 @@ def emails_echecs_recents(
         "total": len(lignes),
         "par_code": par_code,
         "dernier": max((ligne.cree_le for ligne in lignes), default=None),
-        "genere_le": datetime.utcnow(),
+        "genere_le": horloge.maintenant(),
     }
 
 

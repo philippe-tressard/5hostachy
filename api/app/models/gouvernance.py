@@ -31,6 +31,7 @@ le rôle » et « le syndic principal » sont deux questions distinctes.
 """
 
 from datetime import date, datetime
+from app.utils import horloge
 from enum import Enum
 from typing import Optional
 
@@ -70,7 +71,7 @@ class MembreCS(SQLModel, table=True):
     est_president: bool = False
     ordre: int = 0
     user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
 
 
 class SyndicInfo(SQLModel, table=True):
@@ -97,4 +98,4 @@ class MembreSyndic(SQLModel, table=True):
     est_principal: bool = False
     ordre: int = 0
     user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)

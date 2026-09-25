@@ -17,7 +17,7 @@ et pas seulement une taille de fichier.
 dit la docstring du paquet.
 """
 
-from datetime import datetime
+from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session
@@ -193,7 +193,7 @@ def update_ticket(
         if body.statut is not None:
             ticket.statut = body.statut
             if body.statut in STATUTS_TICKET_CLOS:
-                ticket.ferme_le = datetime.utcnow()
+                ticket.ferme_le = horloge.maintenant()
             apres_cloture(ticket, session)  # la prochaine visite d'un contrat (#1092)
         if body.priorite is not None:
             ticket.priorite = body.priorite
@@ -277,7 +277,7 @@ def update_ticket(
             raise HTTPException(403, "Seul le CS ou un administrateur peut modifier ces champs")
         changes += _appliquer_relations(body, ticket)
 
-    ticket.mis_a_jour_le = datetime.utcnow()
+    ticket.mis_a_jour_le = horloge.maintenant()
 
     #  🔴 UNE ÉDITION ÉCRIT UNE CORRECTION, PAS UNE TRANSITION (cadre #430, #431)
     #
@@ -338,7 +338,7 @@ def update_ticket(
                 contenu=(PREFIXE_CORRECTION if is_cs_admin else PREFIXE_CORRECTION_AUTEUR)
                 + SEPARATEUR_CORRECTION.join(changes),
                 auteur_id=user.id,
-                cree_le=datetime.utcnow(),
+                cree_le=horloge.maintenant(),
             )
         )
 

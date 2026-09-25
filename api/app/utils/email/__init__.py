@@ -15,7 +15,7 @@ modules en dépendent, plus les tests.
 """
 
 import logging
-from datetime import datetime
+from app.utils import horloge
 from typing import Any
 
 from jinja2.sandbox import SandboxedEnvironment
@@ -143,7 +143,7 @@ def _contexte_rendu(session: Session, context: dict) -> tuple[dict, str, str, st
     reference = (lignes.get("reference_copro") or "").strip()
 
     ctx = {
-        "annee": datetime.utcnow().year,
+        "annee": horloge.maintenant().year,
         "app": {"url": site_url.rstrip("/")},
         "residence": {"nom": site_nom},
         **context,

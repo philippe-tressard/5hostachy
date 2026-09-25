@@ -19,6 +19,7 @@ message — c'est écrit dans l'en-tête de `__init__.py`, et ça vaut ici.
 """
 
 from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
@@ -31,8 +32,8 @@ class WhatsAppScheduled(SQLModel, table=True):
     message: str  # texte du message
     cron_rule: str  # ex. "3eme_samedi" ou "4eme_samedi"
     enabled: bool = True
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: datetime = Field(default_factory=horloge.maintenant)
 
 
 class WhatsAppLog(SQLModel, table=True):
@@ -43,4 +44,4 @@ class WhatsAppLog(SQLModel, table=True):
     message: str
     statut: str = "envoyé"  # envoyé | échec
     erreur: Optional[str] = None
-    envoye_le: datetime = Field(default_factory=datetime.utcnow)
+    envoye_le: datetime = Field(default_factory=horloge.maintenant)

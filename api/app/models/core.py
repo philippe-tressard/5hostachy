@@ -4,6 +4,7 @@ Correspond au modèle de données défini dans specs/architecture/modele-donnees
 """
 
 from datetime import date, datetime
+from app.utils import horloge
 from enum import Enum
 from typing import List, Optional
 
@@ -93,8 +94,8 @@ class FaqItem(SQLModel, table=True):
     reponse: str
     ordre: int = 0  # ordre d'affichage dans la catégorie
     actif: bool = True
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: datetime = Field(default_factory=horloge.maintenant)
 
 
 # ──────────────────────────────────────────────
@@ -154,7 +155,7 @@ class Utilisateur(SQLModel, table=True):
     nom_aide: Optional[str] = None  # pour aidant/mandataire : nom du copropriétaire aidé
     prenom_aide: Optional[str] = None  # pour aidant/mandataire : prénom du copropriétaire aidé
     last_seen_actualites: Optional[datetime] = None
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     derniere_connexion: Optional[datetime] = None
 
     user_lots: List["UserLot"] = Relationship(back_populates="utilisateur")
@@ -284,8 +285,8 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     fin: Optional[datetime] = None
     #  Intervenant, récurrence et équipement : `IntervenantMixin` (#1097).
     non_relancable_motif: Optional[str] = None
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: datetime = Field(default_factory=horloge.maintenant)
     ferme_le: Optional[datetime] = None
     #  Adresse `tickets+<jeton>@…` (#703) : tirée au sort, jamais dérivée de l'id.
     jeton_courriel: Optional[str] = Field(default=None, index=True)
@@ -317,7 +318,7 @@ class MessageTicket(SQLModel, table=True):
     ticket_id: int = Field(foreign_key="ticket.id")
     auteur_id: int = Field(foreign_key="utilisateur.id")
     contenu: str
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     interne: bool = False  # True = visible CS seulement
     fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
 
@@ -356,7 +357,7 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     epingle: bool = False
     urgente: bool = False
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     publiee_le: Optional[datetime] = None
     #  -- Section « Quand » (#1092) ----------------------------------
     #  Une actualité datée — « Coupure d'eau jeudi 9h-12h » — paraît au
@@ -411,7 +412,7 @@ class RegleResidence(SQLModel, table=True):
     contenu: str = ""
     ordre: int = Field(default=0)
     cree_par_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     modifie_le: Optional[datetime] = None
 
 
@@ -430,7 +431,7 @@ class Delegation(SQLModel, table=True):
     date_debut: date = Field(default_factory=date.today)
     date_fin: Optional[date] = None  # null = pas de limite
     cree_par_id: int = Field(foreign_key="utilisateur.id")  # CS/admin qui a créé
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     revoque_le: Optional[datetime] = None
     revoque_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
 
@@ -484,7 +485,7 @@ class Notification(SQLModel, table=True):
     lien: Optional[str] = None
     lue: bool = False
     urgente: bool = False
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
 
 
 # ──────────────────────────────────────────────
@@ -532,7 +533,7 @@ class LotImport(SQLModel, table=True):
     utilisateurs_json: str = Field(default="[]")
 
     notes_admin: Optional[str] = None
-    importe_le: datetime = Field(default_factory=datetime.utcnow)
+    importe_le: datetime = Field(default_factory=horloge.maintenant)
     resolu_le: Optional[datetime] = None
 
 
@@ -625,7 +626,7 @@ class DiagnosticRapport(SQLModel, table=True):
     mime_type: str = "application/octet-stream"
     synthese: Optional[str] = None  # synthèse des conclusions du rapport
     publie_par_id: int = Field(foreign_key="utilisateur.id")
-    publie_le: datetime = Field(default_factory=datetime.utcnow)
+    publie_le: datetime = Field(default_factory=horloge.maintenant)
 
     type_diagnostic: Optional[DiagnosticType] = Relationship(back_populates="rapports")
 
@@ -685,8 +686,8 @@ class LocationBail(SQLModel, table=True):
     statut: StatutBail = StatutBail.actif
     notes: Optional[str] = None
 
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: datetime = Field(default_factory=horloge.maintenant)
 
     objets: List["RemiseObjet"] = Relationship(back_populates="bail")
 
@@ -706,7 +707,7 @@ class RemiseObjet(SQLModel, table=True):
     remis_le: Optional[date] = None
     rendu_le: Optional[date] = None
     notes: Optional[str] = None
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
 
     bail: Optional[LocationBail] = Relationship(back_populates="objets")
 

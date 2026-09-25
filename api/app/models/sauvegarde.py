@@ -17,6 +17,7 @@ chemin concerné, c'est-à-dire ici la nuit, pendant la sauvegarde.
 """
 
 from datetime import datetime
+from app.utils import horloge
 from enum import Enum
 from typing import Optional
 
@@ -64,5 +65,5 @@ class HistoriqueSauvegarde(SQLModel, table=True):
     fichier_chemin: Optional[str] = None
     taille_octets: Optional[int] = None
     message_erreur: Optional[str] = None
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    cree_le: datetime = Field(default_factory=horloge.maintenant)
     terminee_le: Optional[datetime] = None

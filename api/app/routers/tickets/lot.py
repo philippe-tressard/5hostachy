@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from app.utils import horloge
 from html import escape
 from typing import Optional
 
@@ -78,7 +79,7 @@ def creer_visites_en_lot(
         raise HTTPException(422, "Aucune visite à créer.")
     if len(body.affaires) > LOT_MAX:
         raise HTTPException(422, f"Lot trop grand : {len(body.affaires)} > {LOT_MAX}.")
-    maintenant = datetime.utcnow()
+    maintenant = horloge.maintenant()
     for i, v in enumerate(body.affaires, start=1):
         if not v.titre.strip():
             raise HTTPException(422, f"Visite {i} : titre vide.")

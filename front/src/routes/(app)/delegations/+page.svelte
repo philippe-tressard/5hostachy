@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmer } from '$lib/confirmation';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import { nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
@@ -109,7 +110,7 @@
 	}
 
 	async function revoquer(id: number) {
-		if (!confirm('Révoquer cette délégation ?')) return;
+		if (!(await confirmer('Révoquer cette délégation ?'))) return;
 		try {
 			const updated = await delegationsApi.revoquer(id);
 			delegations = delegations.map((d) => (d.id === id ? updated : d));

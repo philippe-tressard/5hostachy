@@ -20,7 +20,7 @@ from app.models.core import (
     UserLot,
     Utilisateur,
 )
-from datetime import datetime
+from app.utils import horloge
 from typing import Any
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
@@ -92,7 +92,7 @@ def traiter_commande(
 
     cmd.statut = StatutCommande.acceptee if body.action == "accepter" else StatutCommande.refusee
     cmd.traite_par_id = admin.id
-    cmd.traite_le = datetime.utcnow()
+    cmd.traite_le = horloge.maintenant()
     cmd.motif_refus = body.motif_refus
     if cmd.statut == StatutCommande.acceptee:
         _poser_les_badges(session, cmd, body.codes)

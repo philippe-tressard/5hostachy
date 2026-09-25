@@ -16,19 +16,21 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from app.utils.nature_affaire import est_actualite
+from app.utils.nature_affaire import est_actualite, natures
 from app.models.core import (
     Evenement,
     Idee,
     PetiteAnnonce,
     RoleUtilisateur,
     Sondage,
+    StatutTicket,
     StatutUtilisateur,
     Ticket,
     TypeEvenement,
     Utilisateur,
 )
 from app.utils.perimetres import parse_perimetres
+from app.utils.valeurs import valeur
 
 #  ⚠️ `_codes_json_pour_acces` est privé au paquet, pas au fichier : c'est le
 #  parseur commun des listes de codes (« qui est visé »), et deux fragments le
@@ -296,8 +298,27 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     #  centralisé, pas de règles perdues dans une page »* — et c'est aussi ce qui
     #  fait que la liste et la fiche ne peuvent pas diverger, puisque les deux
     #  passent par cette fonction.
+    #  🔴 …SAUF CE QUE LE CALENDRIER LUI MONTRAIT (#1092, 25/09/2026).
+    #
+    #  La règle ci-dessous date du 05/09 et visait les affaires SUIVIES. Le
+    #  23/09, les événements du calendrier sont devenus des affaires (migration
+    #  0212) — et ils en ont hérité, ce que personne n'avait décidé : un
+    #  locataire du bâtiment 1 ne voyait plus les travaux de son immeuble
+    #  (TK-E00066, signalé par l'utilisateur). Avant la migration,
+    #  `evenement_visible` les lui montrait selon le périmètre.
+    #
+    #  Rouvert, donc, en lecture seule, pour une affaire DATÉE — c'est ce qui la
+    #  fait paraître au calendrier (`natures`) — et selon les mêmes filets que
+    #  pour un copropriétaire : `confidentiel`, puis le périmètre, plus bas.
+    #
+    #  ⚠️ Sauf `en_ag` : `evenement_visible` cachait les AG aux locataires, et
+    #  une AG suivie est devenue une affaire à l'état `en_ag` (0212). Rouvrir
+    #  sans ce filet aurait montré au locataire ce que le calendrier lui taisait.
     if user.statut == StatutUtilisateur.locataire:
-        return False
+        if "calendrier" not in natures(ticket):
+            return False
+        if valeur(ticket.statut) == StatutTicket.en_ag.value:
+            return False
 
     if ticket.confidentiel:
         return False

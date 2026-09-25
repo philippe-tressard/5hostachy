@@ -24,7 +24,7 @@ le préserver évite d'avoir à le redémontrer au prochain ajout.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -327,7 +327,7 @@ def resoudre_import(
     session.flush()
 
     imp.statut = StatutLotImport.resolu
-    imp.resolu_le = datetime.utcnow()
+    imp.resolu_le = horloge.maintenant()
     session.add(imp)
     session.commit()
     return {"ok": True, "lot_id": lot.id, "nb_liens": len(_parse_users(imp.utilisateurs_json))}

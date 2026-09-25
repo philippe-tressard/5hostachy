@@ -5,7 +5,7 @@ préfixe `/sondages` est posé par le paquet, qui monte ce module avant `crud`
 pour que `/{sondage_id}/voter` soit reconnu avant `/{sondage_id}`.
 """
 
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -50,7 +50,7 @@ def voter(
     s = ou_404(session, Sondage, sondage_id, "Sondage")
     if not sondage_accessible(s, user):
         raise HTTPException(403, "Vous n'êtes pas autorisé à participer à ce sondage")
-    if sondage_clos(s, datetime.utcnow()):
+    if sondage_clos(s, horloge.maintenant()):
         raise HTTPException(400, "Ce sondage est clôturé")
 
     existant = session.exec(

@@ -2,6 +2,7 @@
 
 import os
 from datetime import datetime, timedelta, timezone
+from app.utils import horloge
 
 from sqlalchemy import text
 from sqlmodel import Session, select
@@ -121,7 +122,7 @@ def run_maintenance(history_id: int | None = None) -> None:
     les mêmes purges à l'API (`POST /admin/maintenance/purges`) puis compacte
     la base API arrêtée — aucun planificateur n'appelle cette fonction.
     """
-    start = datetime.utcnow()
+    start = horloge.maintenant()
 
     with Session(engine) as session:
         entry: HistoriqueMaintenance | None = None
@@ -160,7 +161,7 @@ def run_maintenance(history_id: int | None = None) -> None:
         except Exception:
             pass
 
-        end = datetime.utcnow()
+        end = horloge.maintenant()
         entry.statut = "erreur" if erreurs else "succes"
         entry.tokens_supprimes = tokens_supprimes
         entry.taille_db_octets = taille_db

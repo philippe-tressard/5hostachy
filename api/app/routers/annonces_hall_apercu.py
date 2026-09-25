@@ -30,7 +30,7 @@ mentir l'aperçu sur deux valeurs que le gabarit cite en toutes lettres.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -94,7 +94,7 @@ def _annonce_previsionnelle(b: BrouillonAnnonceHall, auteur: Utilisateur) -> Ann
     <fichier> ») : les laisser vides aurait fait mentir l'aperçu sur ce que le
     destinataire lira.
     """
-    cree_le = datetime.utcnow()
+    cree_le = horloge.maintenant()
     images = photos_internes(b.images)
     fmt = choisir_format(b.message, b.format_demande, titre=b.titre, avec_photos=bool(images))
     return AnnonceHall(

@@ -8,7 +8,8 @@ quatre modules partagent. Les redéclarer donnerait deux formes de la même
 réponse, libres de diverger au premier champ ajouté.
 """
 
-from datetime import date, datetime
+from datetime import date
+from app.utils import horloge
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -97,7 +98,7 @@ def creer_bail_multi(
         raise HTTPException(status_code=422, detail="Au moins un lot est requis")
 
     created: List[LocationBail] = []
-    now = datetime.utcnow()
+    now = horloge.maintenant()
     for lot_id in data.lot_ids:
         lot = session.get(Lot, lot_id)
         if not lot:
@@ -155,7 +156,7 @@ def update_bail(
     bail = exiger_bail_du_bailleur(session, bail_id, user)
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(bail, k, v)
-    bail.mis_a_jour_le = datetime.utcnow()
+    bail.mis_a_jour_le = horloge.maintenant()
     session.add(bail)
     session.commit()
     session.refresh(bail)
@@ -174,7 +175,7 @@ def terminer_bail(
     rendre_au_bailleur(session, bail)
     bail.statut = StatutBail.termine
     bail.date_sortie_reelle = data.date_sortie_reelle or date.today()
-    bail.mis_a_jour_le = datetime.utcnow()
+    bail.mis_a_jour_le = horloge.maintenant()
     session.add(bail)
     session.commit()
     session.refresh(bail)

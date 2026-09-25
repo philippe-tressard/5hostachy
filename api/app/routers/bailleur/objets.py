@@ -15,7 +15,8 @@ sans date.
 quoi que ce soit dans cet inventaire. L'écran manquait, pas le serveur (#806).
 """
 
-from datetime import date, datetime
+from datetime import date
+from app.utils import horloge
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -65,7 +66,7 @@ def ajouter_objet(
         statut=StatutObjet.en_possession,
         remis_le=data.remis_le,
         notes=data.notes,
-        cree_le=datetime.utcnow(),
+        cree_le=horloge.maintenant(),
     )
     session.add(objet)
     session.commit()

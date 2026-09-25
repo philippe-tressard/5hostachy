@@ -143,7 +143,9 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   `app/models/` doit être chargé par `import app.models.core`.
 - `__tablename__` = snake_case français
 - Champs en français snake_case : `statut_validation`, `date_debut`
-- Timestamps : suffixe `_le` → `cree_le`, `mis_a_jour_le`
+- Timestamps : suffixe `_le` → `cree_le`, `mis_a_jour_le` ; la valeur par
+  `horloge.maintenant()` (UTC **naïf**, comme la base), jamais `datetime.utcnow()`
+  — déprécié en 3.12, refusé par Ruff `DTZ003` (#1047)
 - FK : `{modele}_id = Field(default=None, foreign_key="table.id")`
 - Enums : `class MonEnum(str, Enum)` → slugs français lowercase
 - **Archiver, pas une colonne `actif` par réflexe.** Les objets qui quittent les
@@ -394,6 +396,9 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       `test_routes_masquees.py` le tient pour `acces`
 - [ ] Lecture d'un objet par `ou_404`, pas `session.get` + 404
 - [ ] Client TypeScript ajouté dans le paquet `front/src/lib/api/` — dans le module de son domaine (`acces`, `patrimoine`, `communaute`…), jamais dans un `api.ts` ressuscité à la racine
+- [ ] …et il **rend le type** de ce que le serveur renvoie, déclaré à côté de lui —
+      jamais `any` qu'un écran retype. Un type d'entité (champ `id`) déclaré dans un
+      écran est refusé (`npm run lint:types-locaux`, #1044 ; l'existant y est déclaré)
 - [ ] `cd api && ruff format .` — la CI refuse un fichier non formaté depuis le
       24/09/2026 (#1048 ; Ruff **épinglé** dans `ci.yml`, largeur 100, migrations
       exclues par `api/ruff.toml`). ⚠️ Une ligne coupée emporte son `# noqa` sur

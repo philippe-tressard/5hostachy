@@ -48,6 +48,7 @@ les statuts de ticket sont les seuls accentués de tout le site (`résolu`,
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from app.utils import horloge
 from typing import Any, Optional
 from app.utils.nature_affaire import est_actualite
 from app.utils.valeurs import valeur
@@ -281,7 +282,7 @@ def est_perime(
     echeance = perime_le(objet, type_objet)
     if echeance is None:
         return False
-    maintenant = maintenant or datetime.utcnow()
+    maintenant = maintenant or horloge.maintenant()
     return maintenant.date() > echeance
 
 
@@ -347,7 +348,7 @@ def est_archivable(
         #  serait une absence affirmée sans avoir été constatée.
         return False
 
-    maintenant = maintenant or datetime.utcnow()
+    maintenant = maintenant or horloge.maintenant()
     return (maintenant - reference) >= timedelta(days=seuil_jours)
 
 

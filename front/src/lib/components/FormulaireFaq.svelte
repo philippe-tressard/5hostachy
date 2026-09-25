@@ -23,6 +23,7 @@
 	import { createEventDispatcher } from 'svelte';
 
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
@@ -85,7 +86,7 @@
 >
 	<div class="form-grid" class:modal-body={modeEdition}>
 		<label class="field"
-			>Catégorie *
+			><span>Catégorie<EtoileRequis vide={!categorie} /></span>
 			<select bind:value={categorie} on:change={surChangementCategorie}>
 				<option value="" disabled>— Choisir une catégorie —</option>
 				{#each categories as cat (cat)}
@@ -96,7 +97,8 @@
 		</label>
 		{#if estNouvelleCategorie}
 			<label class="field"
-				>Nom de la nouvelle catégorie *<input
+				><span>Nom de la nouvelle catégorie<EtoileRequis vide={!nouvelleCategorie.trim()} /></span
+				><input
 					type="text"
 					bind:value={nouvelleCategorie}
 					placeholder="Ex : 🗑️ Tri des déchets"
@@ -105,7 +107,11 @@
 		{/if}
 
 		<label class="field"
-			>Question *<input type="text" bind:value={question} placeholder="La question…" /></label
+			><span>Question<EtoileRequis vide={!question.trim()} /></span><input
+				type="text"
+				bind:value={question}
+				placeholder="La question…"
+			/></label
 		>
 
 		<div class="field">

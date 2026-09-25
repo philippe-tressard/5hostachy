@@ -26,7 +26,7 @@ un code déjà connu se rattache donc à l'objet existant au lieu d'en créer un
 
 from __future__ import annotations
 
-from datetime import datetime
+from app.utils import horloge
 
 from fastapi import HTTPException
 from sqlmodel import Session, select
@@ -102,7 +102,7 @@ def rattacher(type_acces, imp, session: Session):
 
     imp.statut = StatutImport.resolu
     setattr(imp, type_acces.colonne_import, objet.id)
-    imp.resolu_le = datetime.utcnow()
+    imp.resolu_le = horloge.maintenant()
     session.add(imp)
     return objet
 
@@ -145,7 +145,7 @@ def synchroniser_import(session: Session, type_acces, objet) -> None:
         ligne.chez_locataire = objet.chez_locataire
         if ligne.statut != StatutImport.resolu:
             ligne.statut = StatutImport.resolu
-            ligne.resolu_le = datetime.utcnow()
+            ligne.resolu_le = horloge.maintenant()
         session.add(ligne)
 
 
