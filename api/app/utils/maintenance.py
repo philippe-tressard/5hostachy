@@ -1,13 +1,14 @@
 """Tâches de maintenance exécutables directement depuis l'API."""
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from app.utils import horloge
 
 from sqlalchemy import text
 from sqlmodel import Session, select
 
 from app.utils.noeud import noeud_courant
+from app.utils.requete_liee import requete_liee
 from app.utils.declenchement import AUTOMATIQUE
 from app.database import engine
 from app.models.core import (
@@ -23,9 +24,11 @@ CONSERVATION_COURRIELS_JOURS = 90
 
 
 def _supprimer(sql: str, **params) -> int:
-    """Un DELETE lié, dans sa propre connexion ; rend le nombre de lignes ôtées."""
+    """Un DELETE lié, dans sa propre connexion ; rend le nombre de lignes ôtées.
+
+    Les dates passent par `requete_liee`, jamais en chaîne (#1298)."""
     with engine.connect() as conn:
-        n = conn.execute(text(sql), params).rowcount
+        n = conn.execute(requete_liee(sql, **params)).rowcount
         conn.commit()
     return n
 
@@ -40,8 +43,10 @@ def purger() -> tuple[dict[str, int], list[str]]:
     interdit. Une étape en échec n'arrête pas les suivantes : elle s'inscrit
     dans `erreurs`, et le compte de ce qui a réussi reste juste.
     """
-    maintenant = datetime.now(timezone.utc)
-    il_y_a_90_j = (maintenant - timedelta(days=90)).isoformat()
+    #  UTC NAÏF, la forme des dates en base — et des `datetime`, jamais leur
+    #  `isoformat()` : comparées en chaînes, elles se trompaient d'un jour (#1298).
+    maintenant = horloge.maintenant()
+    il_y_a_90_j = maintenant - timedelta(days=90)
     comptes = dict.fromkeys(
         ("tokens", "prt", "notifications", "historique", "emails", "whatsapp", "evolutions"), 0
     )
@@ -52,13 +57,13 @@ def purger() -> tuple[dict[str, int], list[str]]:
             "tokens",
             "purge tokens",
             "DELETE FROM refresh_token WHERE expires_at < :now OR revoked = 1",
-            {"now": maintenant.isoformat()},
+            {"now": maintenant},
         ),
         (
             "prt",
             "purge password reset tokens",
             "DELETE FROM password_reset_token WHERE expires_at < :now OR used = 1",
-            {"now": maintenant.isoformat()},
+            {"now": maintenant},
         ),
         (
             "notifications",
@@ -70,13 +75,13 @@ def purger() -> tuple[dict[str, int], list[str]]:
             "historique",
             "purge historique",
             "DELETE FROM historique_maintenance WHERE cree_le < :cutoff",
-            {"cutoff": (maintenant - timedelta(days=365)).isoformat()},
+            {"cutoff": maintenant - timedelta(days=365)},
         ),
         (
             "emails",
             "purge historique emails",
             "DELETE FROM historique_email WHERE cree_le < :cutoff",
-            {"cutoff": (maintenant - timedelta(days=CONSERVATION_COURRIELS_JOURS)).isoformat()},
+            {"cutoff": maintenant - timedelta(days=CONSERVATION_COURRIELS_JOURS)},
         ),
     )
     for cle, libelle, sql, params in etapes:

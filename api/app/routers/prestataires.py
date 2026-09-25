@@ -11,7 +11,7 @@ modularité (rang 1) refusant que ce fichier grossisse encore.
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 import json
 
 from pydantic import BaseModel, field_validator
@@ -24,6 +24,7 @@ from sqlmodel import Session, select
 #  rôle CS ou admin — la page qu'ils servent leur est réservée (#603).
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
+from app.utils.limiter import LIMITE_APPEL_FACTURE, limiter
 from app.utils.perimetres.arbre import batiments_cibles, parse_json_perimetres
 from app.models.core import (
     ContratEntretien,
@@ -232,7 +233,9 @@ def list_contrats(
 
 
 @router.post("/contrats/{c_id}/synthese", summary="Proposer la synthèse d'un contrat (CS/Admin)")
+@limiter.limit(LIMITE_APPEL_FACTURE)
 async def proposer_synthese(
+    request: Request,
     c_id: int,
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),

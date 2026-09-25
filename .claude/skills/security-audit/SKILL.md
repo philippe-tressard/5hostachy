@@ -176,6 +176,10 @@ celui de la route (au-dessus, il n'a aucun effet, en silence) et que la fonction
 reçoive une `request` (sans elle, slowapi lève au premier visiteur, pas au
 démarrage).
 
+🔒 **Un appel qui se FACTURE** (fournisseur d'IA, `utils.llm.demander`) porte
+`LIMITE_APPEL_FACTURE` : `api/tests/test_limite_appel_facture.py` relève dans le
+code les routes qui l'atteignent. Aucune ne l'avait avant le 25/09/2026 (#1299).
+
 **Ce qu'il reste à faire à la main** : juger si le plafond d'une route est *bien
 réglé*. Le contrôle vérifie qu'il existe et qu'il est nommé, jamais qu'il est
 prudent.

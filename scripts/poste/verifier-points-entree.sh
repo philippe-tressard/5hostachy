@@ -35,7 +35,13 @@ if [ "${1:-}" = "--selftest" ]; then points_entree_selftest; exit $?; fi
 
 sur() { timeout 25 ssh -o BatchMode=yes -o ConnectTimeout=8 "$1" "$2" 2>/dev/null; }
 
-global=0
+#  Chaque mesure devient une ligne `VERDICT|nœud point`, et UNE fonction pure
+#  en tire le verdict global : `agreger_points_entree`, celle de C22. Ce script
+#  décidait lui-même par `global=`, et la dernière affectation l'emportait — un
+#  écart sur rpi1 suivi d'un INCONNU sur rpi2 était rendu INCONNU, et un état
+#  de service illisible, ÉCART (#1302). Deux écritures de la même décision.
+verdicts=""
+note() { verdicts+="$1|$2"$'\n'; }
 for noeud in ${*:-$NOEUDS_DEFAUT}; do
   echo "═══ $noeud ═══"
 
@@ -48,24 +54,33 @@ for noeud in ${*:-$NOEUDS_DEFAUT}; do
     ins=$(sur "$noeud" "$commande" | normaliser_cron)
     v=$(verdict_conformite "$att" "$ins")
     printf "  %-26s %s\n" "$fichier" "$v"
-    [ "$v" = "ECART" ] && { diff <(printf '%s\n' "$att") <(printf '%s\n' "$ins") | sed 's/^/      /'; global=1; }
-    [ "$v" = "INCONNU" ] && global=2
+    [ "$v" = "ECART" ] && diff <(printf '%s\n' "$att") <(printf '%s\n' "$ins") | sed 's/^/      /'
+    note "$v" "$noeud $fichier"
   done
 
   att=$(normaliser_unit < "$ATTENDU/hostachy-role-guard.service")
   ins=$(sur "$noeud" 'cat /etc/systemd/system/hostachy-role-guard.service' | normaliser_unit)
   v=$(verdict_conformite "$att" "$ins")
   printf "  %-26s %s\n" "hostachy-role-guard.service" "$v"
-  [ "$v" = "ECART" ] && { diff <(printf '%s\n' "$att") <(printf '%s\n' "$ins") | sed 's/^/      /'; global=1; }
-  [ "$v" = "INCONNU" ] && global=2
+  [ "$v" = "ECART" ] && diff <(printf '%s\n' "$att") <(printf '%s\n' "$ins") | sed 's/^/      /'
+  note "$v" "$noeud hostachy-role-guard.service"
 
   #  Le fichier peut être conforme et le service désactivé : la conformité du
   #  texte ne dit rien de l'état. Ni l'un ni l'autre ne prouve qu'il FONCTIONNE —
   #  cela ne s'observe qu'au démarrage (redémarrer le standby, qui ne sert rien).
   etat=$(sur "$noeud" 'systemctl is-enabled hostachy-role-guard.service')
-  printf "  %-26s %s\n" "  → service activé" "${etat:-INCONNU}"
-  [ "$etat" = "enabled" ] || global=1
+  v=$(verdict_etat_service "$etat")
+  printf "  %-26s %s\n" "  → service activé" "${etat:-INCONNU} ($v)"
+  note "$v" "$noeud service activé"
 done
+
+bilan=$(printf '%s' "$verdicts" | agreger_points_entree)
+case "${bilan%%|*}" in
+  OK)      global=0 ;;
+  INCONNU) global=2 ;;
+  *)       global=1 ;;
+esac
+[ -n "${bilan#*|}" ] && echo && echo "  → ${bilan#*|}"
 
 case "$global" in
   0) echo; echo "✓ Points d'entrée conformes au dépôt." ;;
