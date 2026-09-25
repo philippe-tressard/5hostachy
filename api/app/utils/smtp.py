@@ -63,6 +63,28 @@ def adresse_expedition(smtp_cfg: dict, genre: str) -> str:
     return reponse
 
 
+def entete_reponse(smtp_cfg: dict, jeton_reponse: str | None) -> dict[str, str]:
+    """L'en-tête `Reply-To` d'un envoi d'affaire (#703), écrit ICI et nulle part
+    ailleurs — à côté de l'adresse d'expédition dont il est le pendant.
+
+    Rend un dictionnaire vide quand il n'y a pas de jeton (l'envoi n'est pas une
+    affaire) ou pas d'adresse exploitable.
+
+    🔴 **L'adresse des affaires, plus l'adresse à jeton** (#1314, 25/09/2026).
+    `tickets+<jeton>@` rattachait la réponse par le jeton — mais OVH n'achemine
+    pas le sous-adressage, et la réponse du syndic partait dans le vide (#754
+    l'avait constaté le 05/09 et ajouté le repli par le sujet, sans changer
+    l'adresse). La réponse revient désormais à l'adresse d'où l'affaire part,
+    et se rattache par « Affaire #TK-… » dans le sujet.
+    """
+    if not jeton_reponse:
+        return {}
+    from app.seed.emails import EXPEDITEUR_AFFAIRE
+
+    adresse = adresse_expedition(smtp_cfg, EXPEDITEUR_AFFAIRE)
+    return {"Reply-To": adresse} if adresse else {}
+
+
 def adresses_a_tester(smtp_cfg: dict) -> list[str]:
     """Les adresses d'expédition distinctes, dans l'ordre où on les éprouve.
 

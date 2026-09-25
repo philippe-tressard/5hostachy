@@ -36,6 +36,7 @@ from app.utils.smtp import (  # noqa: F401  (ré-export : config.py l'importe d'
     _get_smtp_config,
     adresse_expedition,
     connexion_smtp,
+    entete_reponse,
 )
 
 from .gabarit import INTENTIONS, _wrap_email  # noqa: F401  (ré-export : admin/communications l'importe d'ici)
@@ -242,31 +243,6 @@ def composer_email(
     return _sujet_sur_une_ligne(_render(template.sujet, ctx)), html
 
 
-def _reply_to(smtp_cfg: dict, jeton_reponse: str | None) -> dict[str, str]:
-    """L'en-tete `Reply-To` d'un envoi lié à un ticket (#703).
-
-    Écrit ICI et nulle part ailleurs : `send_email` et `send_email_group`
-    partent tous deux vers le syndic sur un ticket, et deux constructions de la
-    même adresse divergeraient au premier changement de domaine.
-
-    Rend un dictionnaire vide quand il n'y a pas de jeton (l'envoi n'est pas une
-    affaire) ou pas d'adresse exploitable.
-
-    🔴 **L'adresse des affaires, plus l'adresse à jeton** (#1314, 25/09/2026).
-    `tickets+<jeton>@` rattachait la réponse par le jeton — mais OVH n'achemine
-    pas le sous-adressage, et la réponse du syndic partait dans le vide (#754
-    l'avait constaté le 05/09 et ajouté le repli par le sujet, sans changer
-    l'adresse). La réponse revient désormais à l'adresse d'où l'affaire part,
-    et se rattache par « Affaire #TK-… » dans le sujet.
-    """
-    if not jeton_reponse:
-        return {}
-    from app.seed.emails import EXPEDITEUR_AFFAIRE
-
-    adresse = adresse_expedition(smtp_cfg, EXPEDITEUR_AFFAIRE)
-    return {"Reply-To": adresse} if adresse else {}
-
-
 async def _envoyer_modele(
     code: str,
     context: dict[str, Any],
@@ -337,7 +313,7 @@ async def _envoyer_modele(
             recipients=to if to else (cc or []),
             body=full_html,
             subtype="html",
-            headers=_reply_to(smtp_cfg, jeton_reponse) or None,
+            headers=entete_reponse(smtp_cfg, jeton_reponse) or None,
         )
         if to and cc:
             msg_kwargs["cc"] = cc

@@ -16,7 +16,7 @@ dans le sujet, qui marche déjà.
 from __future__ import annotations
 
 from app.seed.emails import expediteur_du_modele
-from app.utils.email import _reply_to
+from app.utils.smtp import entete_reponse as _reply_to
 from app.utils.smtp import adresse_expedition, adresses_a_tester
 
 _CFG = {
