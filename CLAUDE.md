@@ -594,8 +594,24 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
   post-check. Ne jamais conclure sur le seul `git log` du nœud.
   Reprise en main : `scripts/exploitation/MaJ-Hostachy.sh` sur le **RPi actif**
   uniquement (le script bloque sur le standby)
-- **Session cloud** (claude.ai/code) : aucun SSH vers les RPi, donc le lot s'arrête
-  à une PR vers `dev` — pré-check, fusion vers `main` et MEP se font du poste.
+- **Session cloud** (claude.ai/code) : aucun SSH vers les RPi, et le site public
+  est hors de la politique réseau de la session. 🔴 **La MEP s'y enchaîne SANS
+  validation intermédiaire** (arbitré le 25/09/2026) : PR du lot vers `dev` →
+  fusion dès les 5 checks verts → bump de version en **dernier commit** du lot →
+  PR `dev → main` → fusion dès ses 5 checks verts → **recréer `dev` depuis `main`**
+  (la fusion la supprime ; par l'API GitHub, le hook `pre-push` refusant un push
+  sans trace de pré-check). Une seule demande de l'utilisateur couvre toute la
+  chaîne, et le compte rendu arrive **après** — version et fonctionnalités, comme
+  au poste.
+  Ce qui ne s'improvise pas : le **pré-check** est INCONNU et la PR le dit ; le
+  **post-check** P1–P9 reste au poste (SSH), et le compte rendu le demande. Les
+  tickets du lot se ferment à la fusion dans `main`, avec un commentaire qui dit
+  que l'observation en production reste à faire (P7, P11).
+  ⚠️ Cette ligne disait « le lot s'arrête à une PR vers `dev` » — relayée par la
+  bannière de démarrage (`.claude/env-report.sh`) et par `.claude/cloud/LISEZMOI.md`.
+  Le 25/09/2026, l'utilisateur a donc dû valider **une à une** la fusion vers
+  `dev`, la PR `dev → main`, sa fusion puis la clôture de chaque ticket, deux MEP
+  de suite. Les deux relais renvoient désormais ici au lieu de recopier la règle.
   Environnement, setup et ce qui y manque : `.claude/cloud/LISEZMOI.md`.
 - `.env` non versionné · `SECRET_KEY` ≥ 32 caractères · `ENABLE_API_DOCS=false` en prod
 - Bascule manuelle (test) : `sudo bash /opt/5hostachy/scripts/exploitation/bascule.sh` depuis le RPi actif
