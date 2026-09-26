@@ -43,6 +43,7 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "ticket_nouveau_cs": {"ticket", "auteur", "urgent"},
     "ticket_statut_change": {"destinataire", "ticket"},
     "ticket_nouveau_message": {"ticket", "auteur_action", "message"},
+    "ticket_partage": {"ticket", "auteur_action"},
     "reponse_communaute": {"reponse"},
     "idee_statut": {"idee"},
     "relance_syndic": {
@@ -136,6 +137,7 @@ SUJETS_QUI_NOMMENT_L_OBJET: dict[str, str] = {
     "ticket_syndic": "{{ ticket.titre }}",
     "ticket_statut_change": "{{ ticket.titre }}",
     "ticket_nouveau_message": "{{ ticket.titre }}",
+    "ticket_partage": "{{ ticket.titre }}",
     "ticket_bug_admin": "{{ ticket.titre }}",
     "ticket_externe": "{{ ticket.titre }}",
     "publication_syndic": "{{ publication.titre }}",

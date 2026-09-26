@@ -12,12 +12,17 @@
   fil. Un résident qui voulait montrer une annonce à un voisin ne pouvait envoyer
   que l'adresse de la page, à charge pour l'autre de chercher.
 
-  ## Ce que ce composant N'EST PAS
+  ## Ce que ce composant N'EST PAS — et la nuance de #1357
 
-  Ce n'est pas un bouton de partage : il ne s'ouvre sur rien, ne propose ni
-  WhatsApp ni e-mail, et ne demande aucune permission. Il copie une chaîne. La
-  diffusion vers l'extérieur existe déjà, et c'est une **décision** de l'auteur
-  (section 9 du cadre #430) — pas un geste de lecture.
+  Il ne s'ouvre sur rien, ne propose pas WhatsApp et ne demande aucune
+  permission : le clic COPIE une chaîne, comme avant. La diffusion vers
+  l'extérieur reste une **décision** de l'auteur (section 9 du cadre #430).
+
+  🔴 Une nuance depuis le 26/09/2026 (#1357, option E des maquettes) : pour une
+  AFFAIRE (`partage`), le message « Lien copié » propose ensuite « L'envoyer par
+  courriel » (`PartageCourriel`). Le copier reste à un clic ; l'envoi est un
+  second geste, choisi. Cette phrase disait « ni WhatsApp ni e-mail » : elle est
+  réécrite dans le lot qui change la décision.
 
   ## Le droit
 
@@ -35,6 +40,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { toast } from '$lib/components/Toast.svelte';
+	import PartageCourriel from '$lib/components/PartageCourriel.svelte';
 
 	/**  L'ancre de l'élément, sans le `#` — `annonce-42`. C'est l'`id` que la carte
 	 *   pose déjà sur son conteneur pour les liens profonds : les deux ne peuvent
@@ -46,6 +52,20 @@
 	export let chemin: string | null = null;
 	/** Ce dont on copie le lien, pour l'annonce vocale : « Copier le lien de … ». */
 	export let quoi = 'la publication';
+	/**  L'affaire dont le lien peut aussi partir par courriel (#1357) — son `id` ;
+	 *   `null` : on copie, rien de plus. */
+	export let partage: number | null = null;
+	let bouton: HTMLButtonElement;
+
+	/** « Lien copié », et pour une affaire la proposition de l'envoyer. */
+	function annoncerCopie(copie: boolean) {
+		if (!copie) return toast('error', 'Copie impossible');
+		if (partage === null) return toast('success', 'Lien copié');
+		toast('success', 'Lien copié', 8000, {
+			composant: PartageCourriel,
+			props: { ticketId: partage, retour: bouton },
+		});
+	}
 
 	$: base = chemin ?? $page.url.pathname;
 	$: lien = ancre ? `${base}#${ancre}` : base;
@@ -55,7 +75,7 @@
 		const url = new URL(lien, window.location.origin).href;
 		try {
 			await navigator.clipboard.writeText(url);
-			toast('success', 'Lien copié');
+			annoncerCopie(true);
 		} catch {
 			//  Le presse-papiers est refusé hors contexte sécurisé et par certains
 			//  navigateurs embarqués (celui d'une application de messagerie, par
@@ -70,12 +90,13 @@
 			zone.select();
 			const copie = document.execCommand('copy');
 			document.body.removeChild(zone);
-			toast(copie ? 'success' : 'error', copie ? 'Lien copié' : 'Copie impossible');
+			annoncerCopie(copie);
 		}
 	}
 </script>
 
 <button
+	bind:this={bouton}
 	class="btn-icon"
 	type="button"
 	title="Copier le lien"

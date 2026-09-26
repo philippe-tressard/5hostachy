@@ -47,8 +47,8 @@ from app.seed import EMAIL_TEMPLATES
 #: la production en enverrait une autre, ce que ce test existe pour empêcher.
 #: ⬇️ Mise à jour le 23/09/2026 : le bouton de `publication_syndic` suit le lien
 #: fourni par l'appelant (`publication.lien`) — migration **0208**.
-EMPREINTE = "834f6704e550ae9edb538da8a6ab86d984f8cedbca9b975067e585b4f12b75fc"
-NOMBRE_ATTENDU = 27
+EMPREINTE = "120cf4a34a457d7fa0531c1eb67d1c2a89c7e04f6cf104b8d2747bacff67affe"
+NOMBRE_ATTENDU = 28  # + ticket_partage (#1357), posé par le seed
 
 
 def _empreinte() -> str:

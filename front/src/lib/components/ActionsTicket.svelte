@@ -51,7 +51,7 @@
 <!--  Un ticket a sa PAGE : c'est elle qu'on envoie, pas l'ancre d'une carte
 	      dans une liste que le destinataire n'a peut-être pas le droit de voir
 	      en entier. Même adresse que `lien_ticket()` côté API. -->
-<BoutonLien chemin="/tickets/{ticket.id}" quoi="l'affaire" />
+<BoutonLien chemin="/tickets/{ticket.id}" quoi="l'affaire" partage={ticket.id} />
 {#if peutSuivre}
 	<button
 		class="btn-icon"
