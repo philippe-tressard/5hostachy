@@ -31,6 +31,8 @@ voisins.
 Plusieurs PARKINGS, en revanche, ne bloquent plus (arbitré le 23/09/2026 :
 « si plusieurs parkings, prendre le 1er ») : les porteurs sont les mêmes —
 ceux du copropriétaire —, seul le numéro affiché change, et il se corrige.
+Ni plusieurs NUMÉROS DE COMPTE sous un nom complet identique (#1338) : c'est le
+même ménage, et ses parkings se mettent en commun.
 """
 
 from __future__ import annotations
@@ -103,12 +105,14 @@ def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int
     lots_de: dict[str, set[int]] = defaultdict(set)
     mots_de: dict[str, set[str]] = {}
     famille_de: dict[str, str] = {}
+    nom_de: dict[str, str] = {}
     for li in session.exec(select(LotImport).where(LotImport.lot_id != None)).all():  # noqa: E711
         copro = li.no_coproprietaire or li.nom_coproprietaire
         if not copro:
             continue
         mots_de.setdefault(copro, _mots(li.nom_coproprietaire))
         famille_de.setdefault(copro, _famille(li.nom_coproprietaire))
+        nom_de.setdefault(copro, _cle_de_nom(li.nom_coproprietaire))
         lots_de[copro].add(li.lot_id)
 
     def premier(lots: set[int]) -> int | None:
@@ -131,8 +135,12 @@ def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int
         )
         for garder in paliers:
             candidats = [c for c in mots_de if garder(c)]
-            if len(candidats) == 1:
-                return premier(lots_de[candidats[0]])
+            #  🔴 Un même nom COMPLET sous plusieurs numéros de compte est UN
+            #  copropriétaire (#1338, 26/09/2026) : « FERMONT MARC ; CATHERINE »
+            #  sous 408944 et 408946 se lisait comme deux personnes, et rien ne se
+            #  rattachait. Des homonymes aux prénoms différents restent ambigus.
+            if candidats and len({nom_de[c] for c in candidats}) == 1:
+                return premier(set().union(*(lots_de[c] for c in candidats)))
             if candidats:
                 return None
         return None

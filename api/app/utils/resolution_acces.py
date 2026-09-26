@@ -166,11 +166,52 @@ def rattacher_les_reconnues(type_acces, session: Session) -> dict:
     return {"rattachees": rattachees, "restantes": len(lignes) - rattachees}
 
 
+def reprendre_resolues_sans_lot(type_acces, session: Session) -> int:
+    """Rend au rapprochement les lignes « résolues » SANS lot (#1338). Sans `commit`.
+
+    Résolues sous l'ancien modèle (par personne, avant #1194), elles échappaient
+    à tout ce qui cherche un lot — le rapprochement ne lit que les lignes en
+    attente. Signalé le 26/09/2026 sur « GARCIA » : dix télécommandes, deux
+    parkings connus du fichier des lots, aucune rattachée.
+
+    - leur badge a un lot au parc → la ligne le RECOPIE, et reste résolue ;
+    - il n'en a pas → elle repasse à rattacher : la règle du nom propose son lot,
+      et « Rattacher » reste le geste de l'administration. Le lien au badge est
+      gardé, et le rattachement réemploie ce badge (par son code) au lieu d'en
+      créer un second.
+
+    Rend le nombre de lignes rendues au rapprochement.
+    """
+    modele = type_acces.modele_import
+    lignes = session.exec(
+        select(modele).where(
+            modele.statut == StatutImport.resolu,
+            modele.lot_id == None,  # noqa: E711
+        )
+    ).all()
+    reprises = 0
+    for ligne in lignes:
+        objet_id = getattr(ligne, type_acces.colonne_import)
+        objet = session.get(type_acces.modele, objet_id) if objet_id else None
+        if objet is not None and objet.lot_id:
+            ligne.lot_id = objet.lot_id
+        elif not en_stock(ligne):  # un badge de réserve est légitimement sans lot
+            ligne.statut = (
+                StatutImport.proprietaire_lie
+                if ligne.user_proprietaire_id
+                else StatutImport.en_attente
+            )
+            reprises += 1
+        session.add(ligne)
+    return reprises
+
+
 __all__ = [
     "en_stock",
     "exiger_code_libre",
     "peut_se_rattacher",
     "rattacher",
     "rattacher_les_reconnues",
+    "reprendre_resolues_sans_lot",
     "synchroniser_import",
 ]
