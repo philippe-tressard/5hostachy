@@ -119,7 +119,7 @@
 		min-width: 44px;
 		min-height: 44px;
 		color: var(--color-border);
-		transition: color 0.15s;
+		transition: color var(--duree-geste);
 	}
 	/*  ⚠️ La MÊME teinte que `note-ok` : les couleurs de la note vivent dans ce
 	    fichier, et une étoile choisie ne peut pas être d'un autre orange que

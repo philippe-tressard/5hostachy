@@ -479,8 +479,8 @@
 		background: var(--color-surface);
 		opacity: 0.8;
 		transition:
-			opacity 0.15s,
-			border-left-color 0.15s;
+			opacity var(--duree-geste),
+			border-left-color var(--duree-geste);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.history-item:hover {
@@ -497,7 +497,7 @@
 		}
 	}
 	.history-item :global(.ec-titre) {
-		transition: color 0.12s ease;
+		transition: color var(--duree-geste);
 	}
 	.history-item.expanded {
 		opacity: 1;

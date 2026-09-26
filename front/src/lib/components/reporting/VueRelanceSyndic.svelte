@@ -308,7 +308,7 @@
 		border-left: 4px solid var(--color-primary);
 		border-radius: var(--radius);
 		padding: 0.65rem 0.9rem;
-		transition: opacity 0.15s;
+		transition: opacity var(--duree-geste);
 	}
 	.relance-item-unselected {
 		opacity: 0.5;

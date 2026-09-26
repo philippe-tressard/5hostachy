@@ -139,8 +139,8 @@
 		align-items: center;
 		justify-content: center;
 		transition:
-			background 0.15s,
-			border-color 0.15s;
+			background var(--duree-geste),
+			border-color var(--duree-geste);
 		padding: 0;
 	}
 	.btn-icon:disabled {

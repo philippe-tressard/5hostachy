@@ -77,9 +77,9 @@
 		color: var(--color-text-muted);
 		font-size: 0.82rem;
 		transition:
-			color 0.12s,
-			background-color 0.12s,
-			border-color 0.12s,
+			color var(--duree-geste),
+			background-color var(--duree-geste),
+			border-color var(--duree-geste),
 			transform var(--duree-geste) var(--ease-out);
 	}
 	/*  Le `<select>` occupe TOUTE la pastille : la cible est la pastille entière,

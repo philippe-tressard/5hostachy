@@ -188,10 +188,10 @@
 		    règle voisine change sans le vouloir (largeur, rembourrage), et la
 		    rangée se déforme pendant 120 ms. `transform` y figure pour l'appui. */
 		transition:
-			color 0.12s,
-			background-color 0.12s,
-			border-color 0.12s,
-			box-shadow 0.12s,
+			color var(--duree-geste),
+			background-color var(--duree-geste),
+			border-color var(--duree-geste),
+			box-shadow var(--duree-geste),
 			transform var(--duree-geste) var(--ease-out);
 		white-space: nowrap;
 	}

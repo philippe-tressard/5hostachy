@@ -292,7 +292,7 @@
 		cursor: pointer;
 		background: var(--color-bg);
 		border-bottom: 1px solid var(--color-border);
-		transition: background 0.1s;
+		transition: background var(--duree-geste);
 	}
 	.lot-check-item:last-child {
 		border-bottom: none;

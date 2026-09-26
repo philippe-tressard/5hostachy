@@ -34,8 +34,8 @@
 		color: #92400e;
 		text-decoration: none;
 		transition:
-			background 0.15s,
-			border-color 0.15s;
+			background var(--duree-geste),
+			border-color var(--duree-geste);
 		margin-bottom: 0.5rem;
 	}
 	@media (hover: hover) and (pointer: fine) {

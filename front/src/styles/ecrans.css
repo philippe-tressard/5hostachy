@@ -260,8 +260,8 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	align-items: center;
 	gap: 0.4rem;
 	transition:
-		color 0.15s,
-		border-color 0.15s;
+		color var(--duree-geste),
+		border-color var(--duree-geste);
 	white-space: nowrap;
 	text-decoration: none;
 }

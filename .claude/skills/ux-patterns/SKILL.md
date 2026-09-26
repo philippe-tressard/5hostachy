@@ -2370,7 +2370,7 @@ demande de l'utilisateur. Une seule écriture chacun, dans la charte :
 
 | Quoi | Règle | Où |
 |---|---|---|
-| jetons | `--ease-out` (courbe de sortie marquée), `--duree-geste` 120 ms, `--duree-apparition` 200 ms | `styles/socle.css` |
+| jetons | `--ease-out` (courbe de sortie marquée), `--duree-geste` 120 ms, `--duree-apparition` 200 ms. **Aucune durée écrite** : un survol, un appui, un changement de couleur → `var(--duree-geste)` (courbe par défaut ; `--ease-out` si `transform`) ; ce qui ENTRE → `var(--duree-apparition) var(--ease-out)`, cascade par `var(--delay, 0s)` posée dans la page. Une dimension animée (largeur, hauteur) se déclare. 🔒 `npm run lint:mouvement` (27/09/2026 : 64 transitions sur 74 écrivaient la leur) | `styles/socle.css` |
 | corps déplié | **entre** en 200 ms (fondu + 4 px), **sort** sans délai ; jamais la hauteur animée. Le corps porte **`.carte-corps`** | `composants.css` (`.carte-liste .carte-corps`) |
 | appui | `scale(0.97)` sur `:active`, `transform` seul ; pas sur une icône `aria-pressed` (déjà à 115 %) | `composants.css` (`.btn`, `.btn-icon*`, `.signaler-inline`) · `Pastille.svelte` |
 | animation sans fin | réservée à une ATTENTE (spinner, squelette, assistant qui travaille) — jamais décorative : ce qu'on voit plusieurs fois par jour ne s'anime pas. 🔒 `npm run lint:animations-infinies` (exceptions déclarées) | `composants.css` (`spin`) · `BadgeNouveau` (fixe) |
@@ -2378,7 +2378,7 @@ demande de l'utilisateur. Une seule écriture chacun, dans la charte :
 | message | **deux régimes** (arbitré le 26/09/2026, `emil-design-eng`) : un message SIMPLE — enregistré, erreur — va au coin fixe (`Toast` : bas à droite, bas au centre sous 767 px), une place prévisible ; la SUITE d'un geste sur un élément naît de l'élément — bulle ancrée, origine au déclencheur, 200 ms `--ease-out`, fermée au clic dehors, à Échap, au défilement | `Toast.svelte` · `BoutonLien` (« Lien copié · L'envoyer par courriel ») |
 | survol | ce qui ne sert qu'à la souris passe sous `@media (hover: hover) and (pointer: fine)` — au doigt, `:hover` reste collé. 🔒 `npm run lint:survol` (26/09/2026) : les feuilles communes sont rangées, les composants sous **plafond décroissant** | `normes.css` (`.carte-liste`, `.ec-titre`) · `.attenue` des cartes · toute `src/styles/` |
 | transitions | les propriétés **nommées**, jamais `all` | partout |
-| mouvement réduit | coupe les glissements ; garde l'appui (3 % sur place = retour d'état) | `composants.css` |
+| mouvement réduit | coupe les glissements ; garde le fondu et l'appui (3 % sur place = retour d'état) | `composants.css` · accueil (`tableau-de-bord`, `RaccourcisRapides`) |
 
 ⚠️ **Une carte neuve** : son corps déplié porte `class="carte-corps …"`, sinon il
 apparaît sec, sans que rien ne le signale. Les quatre cartes à corps de lecture

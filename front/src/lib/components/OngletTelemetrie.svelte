@@ -402,7 +402,7 @@
 		border-radius: 3px 3px 0 0;
 		width: 100%;
 		min-height: 4px;
-		transition: height 0.3s;
+		transition: height var(--duree-apparition) var(--ease-out);
 	}
 	.tl-bar-month {
 		background: var(--color-primary-light, #93c5fd);

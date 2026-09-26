@@ -132,7 +132,7 @@
 		margin-bottom: 0.5rem;
 		text-decoration: none;
 		color: var(--color-text);
-		transition: border-color 0.12s;
+		transition: border-color var(--duree-geste);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.sondage-card:hover {

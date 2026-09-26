@@ -66,7 +66,8 @@ body {
 	    l'écran paraît en retard sur le doigt. Deux durées, pas davantage :
 	    `geste` pour ce qui répond à un appui, `apparition` pour ce qui entre.
 	    Essayées sur les Petites annonces (v2.44.0), généralisées le même jour :
-	    l'appui et l'entrée du corps de carte vivent dans `composants.css`. */
+	    l'appui et l'entrée du corps de carte vivent dans `composants.css`.
+	    🔒 Aucune durée écrite ailleurs : `npm run lint:mouvement` (27/09/2026). */
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 	--duree-geste: 120ms;
 	--duree-apparition: 200ms;

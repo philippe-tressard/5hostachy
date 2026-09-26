@@ -71,12 +71,19 @@
 		opacity: 0;
 		transform: translateY(8px);
 		transition:
-			opacity 0.3s ease 0.08s,
-			transform 0.3s ease 0.08s;
+			opacity var(--duree-apparition) var(--ease-out) var(--delay, 0s),
+			transform var(--duree-apparition) var(--ease-out) var(--delay, 0s);
 	}
 	.quick-nav.section-visible {
 		opacity: 1;
 		transform: translateY(0);
+	}
+	/*  Le délai vient de la page (`--delay`), comme les autres sections de
+	    l'accueil : la cascade se lit à un seul endroit. */
+	@media (prefers-reduced-motion: reduce) {
+		.quick-nav {
+			transform: none;
+		}
 	}
 	.quick-pill {
 		position: relative;
@@ -92,9 +99,9 @@
 		color: var(--color-text);
 		text-decoration: none;
 		transition:
-			border-color 0.15s,
-			box-shadow 0.15s,
-			background 0.15s;
+			border-color var(--duree-geste),
+			box-shadow var(--duree-geste),
+			background var(--duree-geste);
 		white-space: nowrap;
 	}
 	@media (hover: hover) and (pointer: fine) {

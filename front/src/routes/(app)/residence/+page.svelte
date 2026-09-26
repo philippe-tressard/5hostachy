@@ -806,7 +806,7 @@
 		font-size: 0.8rem;
 		cursor: pointer;
 		backdrop-filter: blur(4px);
-		transition: background 0.15s;
+		transition: background var(--duree-geste);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.photo-change-btn:hover {

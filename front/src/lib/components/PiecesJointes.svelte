@@ -326,7 +326,7 @@
 			line-height: 1;
 			cursor: pointer;
 			opacity: 0;
-			transition: opacity 0.15s;
+			transition: opacity var(--duree-geste);
 		}
 		.pj-galerie-bloc:hover .pj-fleche,
 		.pj-fleche:focus-visible {
@@ -359,7 +359,7 @@
 		height: 6px;
 		border-radius: 50%;
 		background: var(--color-border);
-		transition: background 0.15s;
+		transition: background var(--duree-geste);
 	}
 	.pj-point-actif {
 		background: var(--color-primary);

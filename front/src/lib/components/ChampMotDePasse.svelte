@@ -132,7 +132,7 @@
 		cursor: pointer;
 		color: var(--color-text-muted);
 		border-radius: var(--radius);
-		transition: color 0.15s;
+		transition: color var(--duree-geste);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.oeil:hover {
