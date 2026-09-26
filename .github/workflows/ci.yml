@@ -1687,6 +1687,13 @@ jobs:
         working-directory: front
         run: npm run lint:chargement
 
+      # 🔴 La Suite d'un Bogue offrait Périmètre et Diffusion, que la déclaration
+      # dit inactifs et que la création éteint : `sectionsDeLaSuite` les lisait
+      # sans leurs motifs (#1321, 26/09/2026).
+      - name: La Suite éteint ce que la création éteint
+        working-directory: front
+        run: npm run lint:suite-eteignable
+
       # 🔴 L'infobulle de catégorie disait « etude_travaux » sur la liste des
       # affaires (26/09/2026, signalé à l'écran) ; deux reportings rendaient la
       # même valeur brute. Le libellé existait, rien n'obligeait à le prendre.

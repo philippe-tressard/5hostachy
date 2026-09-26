@@ -338,13 +338,13 @@ export function sectionsDeLaSuite(
 	//  rien ne les lise — ce n'est plus vrai. L'hôte donne ceux de sa nature
 	//  (`destinatairesParDefautDuTicket`), présélectionnés.
 	return {
-		perimetre: droits.perimetre && sectionPresente(entite, 'evolution', 'perimetre'),
+		perimetre: droits.perimetre && sectionDeLaSuite(entite, 'perimetre', conditions),
 		destinataires: sectionDeLaSuite(entite, 'destinataires', conditions),
 		avantSuivi: droits.creneaux.avant_suivi && creneauPresent(entite, 'avant_suivi'),
 		specifiques: droits.creneaux.specifiques && creneauPresent(entite, 'specifiques'),
 		miseEnAvant: droits.creneaux.mise_en_avant && creneauPresent(entite, 'mise_en_avant'),
 		piecesJointes: droits.piecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes'),
 		affairesLiees: droits.affairesLiees && sectionPresente(entite, 'evolution', 'affaires_liees'),
-		diffusion: droits.diffusion && sectionPresente(entite, 'evolution', 'diffusion'),
+		diffusion: droits.diffusion && sectionDeLaSuite(entite, 'diffusion', conditions),
 	};
 }

@@ -337,6 +337,7 @@
 						affaireLiable={ticket.id}
 						initialDestinataires={ticket.public_cible ?? []}
 						destinatairesParDefaut={destinatairesParDefautDuTicket(ticket)}
+						bind:confidentiel={optionsEvol.brouillon}
 						conditions={conditionsDeLaSuite(ticket)}
 						assistant={contexteCommentaire(
 							ticket,

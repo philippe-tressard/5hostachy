@@ -90,6 +90,7 @@
 		"lint:infobulles": "node scripts/check-infobulles.mjs",
 		"lint:etat-liste": "node scripts/check-etat-liste.mjs",
 		"lint:categorie-brute": "node scripts/check-categorie-brute.mjs --selftest && node scripts/check-categorie-brute.mjs",
+		"lint:suite-eteignable": "node scripts/check-suite-eteignable.mjs --selftest && node scripts/check-suite-eteignable.mjs",
 		"lint:chargement": "node scripts/check-chargement.mjs --selftest && node scripts/check-chargement.mjs",
 		"lint:etage-libelle": "node scripts/check-etage-libelle.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",

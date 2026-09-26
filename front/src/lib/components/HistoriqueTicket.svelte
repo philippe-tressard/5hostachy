@@ -245,6 +245,7 @@
 					affaireLiable={ticketId}
 					initialDestinataires={ticket?.public_cible ?? []}
 					destinatairesParDefaut={ticket ? destinatairesParDefautDuTicket(ticket) : null}
+					bind:confidentiel={options.brouillon}
 					conditions={conditionsDeLaSuite(ticket)}
 					{assistant}
 					peutPreciserPerimetre={$isCS}

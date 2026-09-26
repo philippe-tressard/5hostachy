@@ -135,7 +135,9 @@
 			<DestinatairePicker
 				value={destinataires.length ? destinataires : defaut}
 				titre=""
-				concerne={lecture ? `Résident concerné${concerne ? ` : ${concerne}` : ''}` : null}
+				concerne={lecture || parDefaut
+					? `Résident concerné${concerne ? ` : ${concerne}` : ''}`
+					: null}
 				concerneActif={confidentiel}
 				on:change={choisir}
 				on:concerne={(e) => (confidentiel = e.detail)}
