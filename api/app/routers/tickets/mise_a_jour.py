@@ -361,7 +361,9 @@ def update_ticket(
             destinataire_id=ticket.auteur_id,
             type="ticket_update",
             titre=f"Ticket #{ticket.numero} mis à jour",
-            corps=" ; ".join(changes) if changes else f"Nouveau statut : {ticket.statut}",
+            corps=" ; ".join(changes)
+            if changes
+            else f"Nouveau statut : {STATUT_LABELS.get(valeur(ticket.statut), valeur(ticket.statut))}",
             lien=lien_ticket(ticket.id),
         )
     if est_actualite(ticket):

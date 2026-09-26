@@ -166,7 +166,8 @@ def accepter_delegation(
     d = ou_404(session, Delegation, delegation_id, "Délégation")
     exiger_aidant_de_la_delegation(d, user)
     if d.statut != StatutDelegation.en_attente:
-        raise HTTPException(400, f"Impossible d'accepter (statut actuel : {d.statut})")
+        #  Une phrase, pas la valeur de l'énumération (« StatutDelegation.active »), #1350.
+        raise HTTPException(400, "Impossible d'accepter : cette délégation n'est plus en attente.")
     d.statut = StatutDelegation.active
     session.add(d)
     session.commit()
