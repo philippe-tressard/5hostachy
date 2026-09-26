@@ -18,7 +18,18 @@
 	/** Astérisque des champs requis. */
 	export let requis = true;
 
-	const dispatch = createEventDispatcher<{ change: string[] }>();
+	/**  La pastille « Résident concerné » d'une AFFAIRE (#1343) — son libellé, ou
+	 *   `null` : absente. Rendue entre Locataires et Conseil syndical ; elle ne
+	 *   s'ajoute pas à `value` (elle écrit `confidentiel`), d'où son événement. */
+	export let concerne: string | null = null;
+	export let concerneActif = false;
+
+	const dispatch = createEventDispatcher<{ change: string[]; concerne: boolean }>();
+
+	/** Un profil choisi éteint « Résident concerné » : les deux ne se cumulent pas. */
+	function quitterConcerne() {
+		if (concerneActif) dispatch('concerne', false);
+	}
 
 	//  ⚠️ La table des profils n'est PLUS ici : elle vit dans `$lib/destinataires.ts`.
 	//  Écrite dans le sélecteur, elle n'était disponible que pour SÉLECTIONNER —
@@ -38,11 +49,13 @@
 	$: selected = new Set(value);
 
 	function selectTous() {
+		quitterConcerne();
 		value = [TOUS_LES_RESIDENTS];
 		dispatch('change', value);
 	}
 
 	function toggleItem(val: string) {
+		quitterConcerne();
 		const s = new Set(value.filter((v) => v !== TOUS_LES_RESIDENTS));
 		if (s.has(val)) s.delete(val);
 		else s.add(val);
@@ -61,10 +74,19 @@
 	</div>
 {/if}
 <div class="destinataire-pills">
-	<Pastille active={isTous} icone="users-round" on:click={selectTous}>{LIBELLE_TOUS}</Pastille>
+	<Pastille active={!concerneActif && isTous} icone="users-round" on:click={selectTous}
+		>{LIBELLE_TOUS}</Pastille
+	>
 	{#each DESTINATAIRES as o (o.code)}
+		{#if concerne !== null && o.code === 'conseil_syndical'}
+			<Pastille
+				active={concerneActif}
+				icone="lock"
+				on:click={() => dispatch('concerne', !concerneActif)}>{concerne}</Pastille
+			>
+		{/if}
 		<Pastille
-			active={!isTous && selected.has(o.code)}
+			active={!concerneActif && !isTous && selected.has(o.code)}
 			icone={o.icone}
 			on:click={() => toggleItem(o.code)}>{o.libelle}</Pastille
 		>
