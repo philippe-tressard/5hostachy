@@ -724,24 +724,14 @@
 	/* Les styles de la rangée de raccourcis sont partis avec leur balisage dans
 	   `RaccourcisRapides.svelte` — Svelte scope les styles au composant. */
 
-	/* ═══ ANIMATIONS SECTIONS ═══════════════════════════════════════════ */
-	.section-reveal {
-		opacity: 0;
-		transform: translateY(12px);
-		transition:
-			opacity var(--duree-apparition) var(--ease-out) var(--delay, 0s),
-			transform var(--duree-apparition) var(--ease-out) var(--delay, 0s);
-	}
-	.section-reveal.section-visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
+	/* ═══ ANIMATIONS SECTIONS ═══════════════════════════════════════════
+	   `.section-reveal` vit dans `styles/socle.css` : les raccourcis la
+	   recopiaient (27/09/2026). */
 	/*  Mouvement réduit : l'accueil apparaît en fondu, sans glisser. C'est l'écran
 	    le plus vu — il ne doit pas bouger pour qui a demandé qu'on ne bouge pas
 	    (`emil-design-eng` : garder l'opacité, retirer le déplacement). */
 	@media (prefers-reduced-motion: reduce) {
 		.hero,
-		.section-reveal,
 		.consignes-card {
 			transform: none;
 		}

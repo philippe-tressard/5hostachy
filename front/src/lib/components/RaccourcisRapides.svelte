@@ -26,7 +26,7 @@
       `::after` étendu — le motif dit « lien étiré » —, et un compteur qui porte
       une adresse passe au-dessus (`z-index`). Rien ne bouge à l'œil ; ce qui
       change est la cible sous le doigt. -->
-<nav class="quick-nav" class:section-visible={ready} aria-label="Raccourcis">
+<nav class="quick-nav section-reveal" class:section-visible={ready} aria-label="Raccourcis">
 	{#each visibles as r (r.id)}
 		<div
 			class="quick-pill"
@@ -68,23 +68,9 @@
 		flex-wrap: wrap;
 		margin: 0.75rem 0;
 		padding: 0;
-		opacity: 0;
-		transform: translateY(8px);
-		transition:
-			opacity var(--duree-apparition) var(--ease-out) var(--delay, 0s),
-			transform var(--duree-apparition) var(--ease-out) var(--delay, 0s);
 	}
-	.quick-nav.section-visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	/*  Le délai vient de la page (`--delay`), comme les autres sections de
-	    l'accueil : la cascade se lit à un seul endroit. */
-	@media (prefers-reduced-motion: reduce) {
-		.quick-nav {
-			transform: none;
-		}
-	}
+	/*  L'apparition (fondu, 8 px, 200 ms) est `.section-reveal`, dans
+	    `styles/socle.css` ; le délai vient de la page (`--delay`). */
 	.quick-pill {
 		position: relative;
 		display: inline-flex;
