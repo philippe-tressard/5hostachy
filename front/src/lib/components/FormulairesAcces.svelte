@@ -17,6 +17,8 @@
   second état chez l'hôte finirait par se désaccorder de celui-ci.
 -->
 <script lang="ts">
+	import { TYPES_ACCES } from '$lib/types-acces';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
@@ -49,13 +51,16 @@
 		<form on:submit|preventDefault={soumettreCommande}>
 			<div class="modal-body">
 				<div class="form-grid">
-					<label class="field">
-						<span>Type d'accès<EtoileRequis vide={!formType} /></span>
-						<select bind:value={formType}>
-							<option value="vigik">Badge Vigik</option>
-							<option value="telecommande">Télécommande parking</option>
-						</select>
-					</label>
+					<ChoixPastilles
+						options={TYPES_ACCES}
+						bind:valeur={formType}
+						tous={false}
+						libelle="Type d'accès"
+						libelleVisible
+						requis
+						radio="commande-type"
+						defilante={false}
+					/>
 					<label class="field">
 						<span>Lot concerné<EtoileRequis vide={!formLotId} /></span>
 						<select bind:value={formLotId} required>
@@ -93,13 +98,16 @@
 		<form on:submit|preventDefault={declarerBadge}>
 			<div class="modal-body">
 				<div class="form-grid">
-					<label class="field"
-						><span>Type d'accès<EtoileRequis vide={!declareType} /></span>
-						<select bind:value={declareType}>
-							<option value="telecommande">Télécommande parking</option>
-							<option value="vigik">Badge Vigik</option>
-						</select>
-					</label>
+					<ChoixPastilles
+						options={TYPES_ACCES}
+						bind:valeur={declareType}
+						tous={false}
+						libelle="Type d'accès"
+						libelleVisible
+						requis
+						radio="declare-type"
+						defilante={false}
+					/>
 					<label class="field"
 						><span>Code / référence<EtoileRequis vide={!declareCode.trim()} /></span>
 						<input

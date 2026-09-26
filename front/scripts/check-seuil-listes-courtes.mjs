@@ -34,11 +34,13 @@
  * filtre — trois pastilles de tri à côté des pastilles de type se liraient
  * comme un seul filtre (arbitré par l'utilisateur, Petites annonces).
  *
- * ⚠️ Il ne mesure PAS les `<select>` de formulaire — un champ de saisie n'est
- * pas un filtre, et `ux-patterns` réserve la conversion aux listes « qui font
- * choisir » dans une barre. Le seuil s'applique aussi aux champs (le type de
- * prestataire l'a montré), mais leur conversion se décide à l'écran : ce
- * contrôle-ci garde le cas net.
+ * 🔴 Il mesure AUSSI les `<select>` de formulaire depuis le 26/09/2026 (#1329) :
+ * l'utilisateur a tranché, capture à l'appui — « toutes en pastilles ». Le Type
+ * d'une annonce (3 valeurs) était une liste déroulante juste sous le filtre qui
+ * propose les mêmes trois valeurs en pastilles. Une liste de saisie se compte
+ * par ses `<option>` écrites et par les constantes qu'elle parcourt ; une liste
+ * construite à la volée (lots, résidents) n'est pas jugée — sa taille ne se lit
+ * pas dans le code.
  *
  * Usage :  node scripts/check-seuil-listes-courtes.mjs [--selftest]
  */
@@ -139,6 +141,32 @@ export function selectsDeFiltre(source) {
 	return [...source.matchAll(re)].map((m) => m[1].trim());
 }
 
+/**
+ * Un `<select>` de SAISIE de six choix ou moins (#1329). PURE.
+ * L'option vide (`value=""`, `value={null}`) ne compte pas : c'est l'absence de
+ * choix, qu'une pastille « Aucune » ou « Tous » porte. Rend les tailles fautives.
+ */
+export function selectsCourtsDeSaisie(source, tailles, seuil = SEUIL) {
+	const fautes = [];
+	for (const m of source.matchAll(/<select\b[^>]*>([\s\S]*?)<\/select>/g)) {
+		const corps = m[1];
+		//  Une liste construite à la volée : sa taille ne se lit pas ici.
+		if (/\{#each\s+(?![A-Z_][A-Z0-9_]*\b)/.test(corps)) continue;
+		const constantes = [...corps.matchAll(/\{#each\s+([A-Z_][A-Z0-9_]*)\b/g)].map((x) =>
+			tailles.get(x[1]),
+		);
+		if (constantes.some((t) => t === undefined)) continue;
+		const ecrites = [
+			...corps
+				.replace(/\{#each[\s\S]*?\{\/each\}/g, '')
+				.matchAll(/<option\b(?![^>]*value="")(?![^>]*value=\{null\})/g),
+		].length;
+		const n = ecrites + constantes.reduce((a, t) => a + t, 0);
+		if (n > 0 && n <= seuil) fautes.push(n);
+	}
+	return fautes;
+}
+
 function selftest() {
 	let echecs = 0;
 	for (const [nom, n, attendu] of CAS) {
@@ -192,6 +220,27 @@ function selftest() {
 	echecs += ok2 ? 0 : 1;
 	console.log(`${ok2 ? 'PASS' : 'ÉCHEC'}  comptage d'une liste → ${compte}`);
 
+	//  Le <select> de SAISIE court (#1329) : écrit, par constante, et à la volée.
+	const t3 = cardinalites(["export const L3 = [{ val: 'a' }, { val: 'b' }, { val: 'c' }];"]);
+	for (const [nom, vue, attendu] of [
+		[
+			'saisie, 2 options écrites + vide → refusé',
+			'<select><option value="">—</option><option>a</option><option>b</option></select>',
+			1,
+		],
+		['saisie, constante de 3 → refusé', '<select>{#each L3 as o}<option/>{/each}</select>', 1],
+		[
+			'saisie construite à la volée → pas jugée',
+			'<select>{#each lots as l}<option/>{/each}</select>',
+			0,
+		],
+	]) {
+		const obtenu = selectsCourtsDeSaisie(vue, t3).length;
+		const oks = obtenu === attendu;
+		echecs += oks ? 0 : 1;
+		console.log(`${oks ? 'PASS' : 'ÉCHEC'}  ${nom} → ${obtenu} signalement(s)`);
+	}
+
 	//  Le <select> natif lié à un filtre (#1329), quelle que soit sa classe.
 	for (const [nom, vue, attendu] of [
 		[
@@ -226,6 +275,11 @@ const ecarts = [];
 let selectsLus = 0;
 for (const chemin of fichiers(SOURCE, '.svelte')) {
 	const src = readFileSync(chemin, 'utf8');
+	for (const n of selectsCourtsDeSaisie(src, tailles)) {
+		ecarts.push(
+			`  ${relative(SOURCE, chemin).split(sep).join('/')} — <select> de saisie à ${n} choix : ChoixPastilles`,
+		);
+	}
 	for (const v of selectsDeFiltre(src)) {
 		ecarts.push(
 			`  ${relative(SOURCE, chemin).split(sep).join('/')} — <select> natif lié au filtre « ${v} » : PastilleDeroulante ou ChoixPastilles`,

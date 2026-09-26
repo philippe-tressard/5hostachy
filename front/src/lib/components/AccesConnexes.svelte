@@ -44,6 +44,7 @@
   répété.
 -->
 <script lang="ts">
+	import { typeAccesLabel } from '$lib/types-acces';
 	import { isLocataire } from '$lib/stores/auth';
 
 	/** Les accès confiés par le bailleur — locataires seulement. */
@@ -75,7 +76,7 @@
 					{#each accesRecus as a (a.id)}
 						<tr>
 							<td style="font-family:monospace">{a.code}</td>
-							<td>{a.type === 'vigik' ? '\u{1F3F7}️ Vigik' : '\u{1F4E1} Télécommande'}</td>
+							<td>{typeAccesLabel(a.type)}</td>
 							<td><span class="badge {statutClass(a.statut)}">{a.statut}</span></td>
 						</tr>
 					{/each}

@@ -2,7 +2,8 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import { clesHeritees, DEFAUTS_NOTIFS } from '$lib/preferences';
-	import { badgesDeRoles, LIBELLES_STATUT } from '$lib/roles';
+	import { badgesDeRoles, LIBELLES_STATUT, STATUTS_DEMANDABLES } from '$lib/roles';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
@@ -434,17 +435,16 @@
 					Les modifications du profil d'utilisateur et du bâtiment sont soumises à validation du
 					conseil syndical.
 				</p>
-				<div class="field">
-					<label for="dm-statut">Nouveau profil d'utilisateur</label>
-					<select id="dm-statut" bind:value={demandeStatut}>
-						<option value="">— Inchangé —</option>
-						<option value="copropriétaire_résident">Copropriétaire résident</option>
-						<option value="copropriétaire_bailleur">Copropriétaire bailleur</option>
-						<option value="locataire">Locataire</option>
-						<option value="mandataire">Mandataire</option>
-						<option value="syndic">Syndic</option>
-					</select>
-				</div>
+				<!--  Des pastilles, libellés lus dans `$lib/roles` (#1329) : ils étaient
+				      recopiés ici. -->
+				<ChoixPastilles
+					options={STATUTS_DEMANDABLES.map((v) => ({ val: v, label: LIBELLES_STATUT[v] }))}
+					bind:valeur={demandeStatut}
+					tous="Inchangé"
+					libelle="Nouveau profil d'utilisateur"
+					libelleVisible
+					defilante={false}
+				/>
 				<div class="field">
 					<label for="dm-bat">Bâtiment souhaité</label>
 					<select id="dm-bat" bind:value={demandeBatimentId}>
