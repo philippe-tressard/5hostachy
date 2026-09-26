@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- *  La catégorie d'une affaire s'affiche par son LIBELLÉ — jamais sa valeur
- *  brute (26/09/2026, signalé à l'écran).
+ *  Une catégorie ou un statut s'affiche par son LIBELLÉ — jamais sa valeur
+ *  brute (26/09/2026, signalé à l'écran ; étendu aux statuts par #1345 : cinq
+ *  écrans d'accès rendaient « actif », « perdu » tels quels).
  *
  *  ## Pourquoi ce contrôle
  *
@@ -18,7 +19,8 @@
  *    title={ticket.categorie}          aria-label={t.categorie}
  *    <td>{row.categorie}</td>          <span>{t.categorie}</span>
  *
- *  La forme conforme : `categorieTicketLabel(x.categorie)`.
+ *  La forme conforme : `categorieTicketLabel(x.categorie)`, et pour un statut
+ *  le libellé de SA table — `statutTicketLabel`, `statutAccesLabel`…
  *
  *  ⚠️ Il ne regarde pas une catégorie passée à une fonction, comparée ou
  *  servant de clé — c'est son usage normal. Seul l'AFFICHAGE est en cause.
@@ -30,9 +32,9 @@ import { join, sep } from 'node:path';
 import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = 'src';
-const ATTRIBUT = /\b(?:title|aria-label|alt)=\{[\w.?$]+\.categorie\}/g;
-const TEXTE = />\s*\{[\w.?$]+\.categorie\}\s*</g;
-const EMPLOI = /categorieTicketLabel\(/;
+const ATTRIBUT = /\b(?:title|aria-label|alt)=\{[\w.?$]+\.(?:categorie|statut)\}/g;
+const TEXTE = />\s*\{[\w.?$]+\.(?:categorie|statut)\}\s*</g;
+const EMPLOI = /(?:categorieTicketLabel|statut\w*Label)\(/;
 
 /**  Les catégories rendues brutes dans une source. PURE. */
 export function categoriesBrutes(source) {
@@ -52,6 +54,9 @@ if (process.argv.includes('--selftest')) {
 	t('cellule brute', 1, '<tr><td>{row.categorie}</td><td>{row.total}</td></tr>');
 	t('badge brut', 1, '<span class="badge badge-gray">{t.categorie}</span>');
 	t('nom accessible brut', 1, '<span aria-label={t.categorie}>🏗️</span>');
+	//  🔴 #1345 : le statut d'un accès, rendu brut dans un badge.
+	t('statut brut', 1, '<span class="badge">{a.statut}</span>');
+	t('statut conforme', 0, '<span class="badge">{statutAccesLabel(a.statut)}</span>');
 	t('libellé conforme', 0, '<span title={categorieTicketLabel(ticket.categorie)}>🏗️</span>');
 	t('texte conforme', 0, '<td>{categorieTicketLabel(row.categorie)}</td>');
 	t(
@@ -90,15 +95,19 @@ for (const f of fichiers(RACINE)) {
 //  c'est que la règle a changé de forme — le contrôle ne mesure plus rien.
 if (emplois === 0) {
 	console.error(
-		'\n✗ INCONNU : aucun écran n’appelle `categorieTicketLabel` — mettre le contrôle à jour.\n',
+		'\n✗ INCONNU : aucun écran n’appelle un libellé de catégorie ou de statut — mettre le contrôle à jour.\n',
 	);
 	process.exit(2);
 }
 
 if (fautifs.length) {
-	console.error(`\n✗ ${fautifs.length} fichier(s) affichent une catégorie brute :\n`);
+	console.error(`\n✗ ${fautifs.length} fichier(s) affichent une catégorie ou un statut bruts :\n`);
 	for (const f of fautifs) console.error(`  ${f}`);
-	console.error('\n  → `categorieTicketLabel(x.categorie)` (`$lib/tickets-categories`).\n');
+	console.error(
+		'\n  → le libellé de sa table : `categorieTicketLabel`, `statutTicketLabel`, `statutAccesLabel`…\n',
+	);
 	process.exit(1);
 }
-console.log(`✓ Catégories : ${emplois} écran(s) les affichent par leur libellé, aucune brute.`);
+console.log(
+	`✓ Catégories et statuts : ${emplois} écran(s) les affichent par leur libellé, aucun brut.`,
+);

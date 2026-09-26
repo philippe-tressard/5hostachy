@@ -52,6 +52,7 @@
 -->
 <script lang="ts">
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
+	import { statutAccesBadge, statutAccesLabel } from '$lib/types-acces';
 
 	/** « Badges d'accès (Vigik) » ou « Télécommandes de parking ». */
 	export let titre: string;
@@ -63,8 +64,6 @@
 		statut: string;
 		perimetre_cible?: string[];
 	}[] = [];
-	/** Comment un statut se traduit en classe de badge — fourni par l'écran. */
-	export let classeStatut: (s: string) => string;
 
 	export let onSignalerPerdu: (id: number) => void;
 </script>
@@ -88,7 +87,11 @@
 					{#each items as item (item.id)}
 						<tr>
 							<td class="mes-acces-code">{item.code}</td>
-							<td><span class="badge {classeStatut(item.statut)}">{item.statut}</span></td>
+							<td
+								><span class="badge {statutAccesBadge(item.statut)}"
+									>{statutAccesLabel(item.statut)}</span
+								></td
+							>
 							<!--  🔹 Le MÊME composant que l'écran du conseil syndical : ce que
 							      le badge ouvre se lit d'une seule façon sur tout le site. -->
 							<td>

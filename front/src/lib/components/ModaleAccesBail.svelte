@@ -24,6 +24,7 @@
   commentaire, et qui se serait produit à cette extraction-ci.
 -->
 <script lang="ts">
+	import { statutAccesLabel } from '$lib/types-acces';
 	import { confirmer } from '$lib/confirmation';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { bailleur as bailApi, type AccesBail } from '$lib/api';
@@ -308,7 +309,7 @@
 										class:badge-green={acces.statut === 'actif'}
 										class:badge-gray={acces.statut !== 'actif'}
 									>
-										{acces.statut}
+										{statutAccesLabel(acces.statut)}
 									</span>
 								</td>
 								<td>

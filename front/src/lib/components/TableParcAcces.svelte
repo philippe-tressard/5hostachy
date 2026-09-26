@@ -22,6 +22,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
+	import { statutAccesBadge, statutAccesLabel } from '$lib/types-acces';
 	import type { AccesAdmin } from '$lib/api';
 
 	type Ligne = AccesAdmin & { type: string };
@@ -34,7 +35,6 @@
 
 	export let lignes: Ligne[] = [];
 	export let labelType: Record<string, string> = {};
-	export let badgeStatut: Record<string, string> = {};
 	export let triCol = 'porteur';
 	export let triAsc = true;
 	/** La ligne dont la correction est ouverte — `type-id`, ou `null`. */
@@ -91,7 +91,7 @@
 						</BadgePerimetre>
 					</td>
 					<td>
-						<span class="badge {badgeStatut[a.statut] ?? 'badge-gray'}">{a.statut}</span>
+						<span class="badge {statutAccesBadge(a.statut)}">{statutAccesLabel(a.statut)}</span>
 					</td>
 					<!--  ✏️ puis 🗑️, l'ordre arrêté par la carte de ticket. La
 					      corbeille n'apparaît que pour l'admin : l'écran dit alors

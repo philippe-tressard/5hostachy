@@ -44,13 +44,11 @@
   répété.
 -->
 <script lang="ts">
-	import { typeAccesLabel } from '$lib/types-acces';
+	import { statutAccesBadge, statutAccesLabel, typeAccesLabel } from '$lib/types-acces';
 	import { isLocataire } from '$lib/stores/auth';
 
 	/** Les accès confiés par le bailleur — locataires seulement. */
 	export let accesRecus: any[] = [];
-	/** La classe de badge d'un statut, portée par l'hôte. */
-	export let statutClass: (s: string) => string;
 </script>
 
 <!-- Accès reçus du bailleur (locataires uniquement) -->
@@ -77,7 +75,10 @@
 						<tr>
 							<td style="font-family:monospace">{a.code}</td>
 							<td>{typeAccesLabel(a.type)}</td>
-							<td><span class="badge {statutClass(a.statut)}">{a.statut}</span></td>
+							<td
+								><span class="badge {statutAccesBadge(a.statut)}">{statutAccesLabel(a.statut)}</span
+								></td
+							>
 						</tr>
 					{/each}
 				</tbody>
