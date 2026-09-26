@@ -38,7 +38,6 @@
 	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import CaseConfidentielle from '$lib/components/CaseConfidentielle.svelte';
-	import Pastille from '$lib/components/Pastille.svelte';
 	import { LIBELLE_TOUS, concerneTousLesResidents } from '$lib/destinataires';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import { destinatairesParDefaut, lectureDe, titreLecture } from '$lib/lecture';
@@ -123,23 +122,23 @@
 >
 	{#if lecture?.actualite}
 		<CaseConfidentielle bind:coche={confidentiel} />
-	{:else if lecture}
-		<div class="concerne">
-			<Pastille active={confidentiel} icone="lock" on:click={() => (confidentiel = !confidentiel)}
-				>Résident concerné{concerne ? ` : ${concerne}` : ''}</Pastille
-			>
-		</div>
 	{/if}
 	{#if defaut}
+		<!--  « Résident concerné » est UNE PASTILLE DE LA RANGÉE, entre Locataires
+		      et Conseil syndical (arbitré à l'écran le 26/09/2026) — pas une ligne
+		      à part : c'est un destinataire comme les autres, le plus restreint
+		      avant le conseil seul. Choisie, elle éteint les autres. -->
 		<fieldset
 			class="field champ-large destinataires-groupe"
-			disabled={confidentiel}
 			aria-labelledby="{idPrefixe}-destinataires-titre"
 		>
 			<DestinatairePicker
 				value={destinataires.length ? destinataires : defaut}
 				titre=""
+				concerne={lecture ? `Résident concerné${concerne ? ` : ${concerne}` : ''}` : null}
+				concerneActif={confidentiel}
 				on:change={choisir}
+				on:concerne={(e) => (confidentiel = e.detail)}
 			/>
 		</fieldset>
 	{:else}
@@ -174,9 +173,6 @@
 	}
 	.destinataires-groupe:disabled {
 		opacity: 0.45;
-	}
-	.concerne {
-		margin-bottom: 0.5rem;
 	}
 	.avertissement {
 		color: var(--color-warning, #b07d1e);
