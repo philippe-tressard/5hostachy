@@ -143,9 +143,14 @@
 					</li>
 				{/each}
 			</ul>
-		{:else if terme && choix !== null}
+		{:else if deroulee && choix !== null}
+			<!--  Rien à proposer n'empêche jamais de chercher : on le dit. -->
 			<p class="aide">
-				{echec ? 'La liste des affaires n’a pas pu être chargée.' : 'Aucune affaire ne correspond.'}
+				{echec
+					? 'La liste des affaires n’a pas pu être chargée.'
+					: terme
+						? 'Aucune affaire ne correspond.'
+						: 'Aucune affaire ouverte récente : tapez un numéro ou un mot du titre pour chercher parmi toutes.'}
 			</p>
 		{/if}
 	</div>
