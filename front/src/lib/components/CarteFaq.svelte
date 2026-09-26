@@ -16,10 +16,19 @@
   ⚠️ La rangée d'actions n'est plus conditionnée au droit d'édition : elle porte
   désormais l'icône de lien, que **tout le monde** doit voir. Seuls les trois
   gestes d'édition restent réservés.
+  ## Le modèle commun des cartes (26/09/2026, #1329)
+
+  Elle était la seule carte dépliable du site hors de `.carte-liste` et
+  d'`EnteteCarte` : conteneur `role="button"` (le geste symétrique abandonné le
+  18/08 — la carte dépliée se refermait au moindre clic dans la réponse),
+  chevron AVANT les actions, survol qui repeignait le fond au lieu du titre.
+  Et la correction s'ouvrait en bas de page, loin de la question : elle s'ouvre
+  désormais DANS la carte (créneau `formulaire`), comme partout ailleurs.
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
+	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import { safeHtml } from '$lib/sanitize';
 
 	/** La question, telle que l'API la rend. */
@@ -31,6 +40,8 @@
 	/**  Cette question mène-t-elle à la demande d'accès ? La reconnaissance vit dans
 	 *   la page, qui sait ce qu'est « la question du prix d'un badge ». */
 	export let avecCta = false;
+	/** La question est-elle en cours de correction ? Le formulaire vient du créneau. */
+	export let enEdition = false;
 
 	const dispatch = createEventDispatcher<{
 		basculer: void;
@@ -40,27 +51,26 @@
 	}>();
 </script>
 
+<!--  Repliée, toute la carte ouvre ; dépliée, seul le titre referme (`ux-patterns` §3). -->
 <div
 	id="faq-{item.id}"
-	class="faq-item card"
+	class="carte-liste"
+	class:expanded={ouvert || enEdition}
 	class:item-inactive={!item.actif}
-	role="button"
-	tabindex="0"
-	on:click={() => dispatch('basculer')}
-	on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && dispatch('basculer')}
+	role="presentation"
+	on:click={() => {
+		if (!ouvert && !enEdition) dispatch('basculer');
+	}}
 >
-	<div class="faq-header">
-		<button class="faq-q" tabindex="-1" aria-expanded={ouvert}>
-			<span>{item.question}</span>
-			<span class="chevron" class:open={ouvert}>›</span>
-		</button>
-		<div class="faq-actions">
+	<EnteteCarte titre={item.question} basculable on:toggle={() => dispatch('basculer')}>
+		<svelte:fragment slot="actions">
 			<BoutonLien ancre="faq-{item.id}" quoi="la question" />
 			{#if canEdit}
 				<button
 					class="btn-icon-edit"
 					aria-label="Modifier"
 					title="Modifier"
+					aria-pressed={enEdition}
 					on:click|stopPropagation={() => dispatch('modifier')}>✏️</button
 				>
 				<button
@@ -78,11 +88,21 @@
 					on:click|stopPropagation={() => dispatch('supprimer')}>&#x1F5D1;️</button
 				>
 			{/if}
+		</svelte:fragment>
+	</EnteteCarte>
+	{#if enEdition}
+		<!--  Le formulaire ne referme pas la carte qu'on corrige. -->
+		<div
+			class="carte-corps"
+			role="presentation"
+			on:click|stopPropagation
+			on:keydown|stopPropagation
+		>
+			<slot name="formulaire" />
 		</div>
-	</div>
-	{#if ouvert}
+	{:else if ouvert}
 		<!--  Le corps ne referme pas la carte : on lit, on sélectionne, on copie. -->
-		<div class="faq-a rich-content" role="presentation" on:click|stopPropagation>
+		<div class="carte-corps faq-a rich-content" role="presentation" on:click|stopPropagation>
 			{@html safeHtml(item.reponse)}
 			{#if avecCta}
 				<!--  🔴 L'ancre `#nouvelle-demande` a disparu avec la refonte (#928) : la
@@ -102,49 +122,13 @@
 </div>
 
 <style>
-	.faq-item {
-		cursor: pointer;
-		margin-bottom: 0.35rem;
-		overflow: visible;
-		padding: 0;
-	}
 	.item-inactive {
 		opacity: 0.55;
 	}
-	.faq-header {
-		display: flex;
-		align-items: center;
-	}
-	.faq-q {
-		user-select: none;
-		flex: 1;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 0.875rem 1rem;
-		background: none;
-		border: none;
-		cursor: pointer;
-		font-size: 0.925rem;
-		font-weight: 500;
-		text-align: left;
-		gap: 1rem;
-		color: var(--color-text);
-	}
-	.faq-q:hover {
-		background: var(--color-bg-subtle);
-	}
-	/*  Écart assumé : il HÉRITE la couleur de sa question, et vit dans un flex. */
-	.chevron {
-		color: inherit;
-		flex-shrink: 0;
-	}
 	.faq-a {
-		padding: 0.5rem 1rem 0.9rem;
 		font-size: 0.875rem;
 		color: var(--color-text-muted);
 		line-height: 1.55;
-		border-top: 1px solid var(--color-border);
 	}
 	.faq-cta-row {
 		display: flex;
@@ -153,10 +137,5 @@
 		margin-top: 0.8rem;
 		padding-top: 0.75rem;
 		border-top: 1px dashed var(--color-border);
-	}
-	.faq-actions {
-		display: flex;
-		gap: 0.15rem;
-		padding-right: 0.5rem;
 	}
 </style>

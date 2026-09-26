@@ -12,8 +12,19 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import { categoriesPourStatut, grouperParCategorie, normalizeCategorieLabel } from '$lib/faq';
+	import {
+		categoriesPourStatut,
+		categorieSaisie,
+		estQuestionPrixBadge,
+		grouperParCategorie,
+		normalizeCategorieLabel,
+		saisieFaqDepuis,
+		saisieFaqVide,
+		type SaisieFaq,
+	} from '$lib/faq';
+	import { richEmpty } from '$lib/publications';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 
 	$: _pc = getPageConfig($configStore, 'faq', defautsDePage('faq'));
 	$: _siteNom = $siteNomStore;
@@ -21,15 +32,13 @@
 	let open: Record<number, boolean> = {};
 	let items: any[] = [];
 	let loading = true;
+	//  Un échec de chargement se DIT (#1329) : il s'affichait « Aucune question ».
+	let erreur = '';
 
 	// ---- edition ----
 	let showForm = false;
 	let editingItem: any | null = null;
-	let formCategorie = '';
-	let formNewCategorie = '';
-	let formIsNewCategorie = false;
-	let formQuestion = '';
-	let formReponse = '';
+	let form: SaisieFaq = saisieFaqVide();
 	let saving = false;
 	let existingCategories: string[] = [];
 
@@ -60,7 +69,7 @@
 		// depuis /acces-securite — il vise la question par son libellé, pas par son
 		// id, qui varie d'une instance à l'autre.
 		if (typeof window !== 'undefined' && window.location.hash === '#badge-prix') {
-			const badgeItem = items.find((i) => isBadgePrixQuestion(i.question));
+			const badgeItem = items.find((i) => estQuestionPrixBadge(i.question));
 			if (badgeItem) {
 				open = { [badgeItem.id]: true };
 				revelerCible(`faq-${badgeItem.id}`);
@@ -70,10 +79,12 @@
 
 	async function loadFaq() {
 		loading = true;
+		erreur = '';
 		try {
 			items = canEdit ? await faqApi.listAll() : await faqApi.list();
-		} catch {
+		} catch (e) {
 			items = [];
+			erreur = messageErreur(e);
 		} finally {
 			loading = false;
 		}
@@ -84,55 +95,35 @@
 		open = { [id]: !wasOpen };
 	}
 
-	async function openNew() {
-		editingItem = null;
-		formCategorie = '';
-		formNewCategorie = '';
-		formIsNewCategorie = false;
-		formQuestion = '';
-		formReponse = '';
+	//  Les catégories en service, relues à chaque ouverture — écrit deux fois avant #1329.
+	async function chargerCategories() {
 		try {
 			existingCategories = await faqApi.categories();
 		} catch {
 			/* conserve le cache précédent */
 		}
+	}
+
+	async function openNew() {
+		editingItem = null;
+		form = saisieFaqVide();
+		await chargerCategories();
 		showForm = true;
 	}
 
 	async function openEdit(it: any) {
 		editingItem = it;
-		formQuestion = it.question;
-		formReponse = it.reponse;
-		try {
-			existingCategories = await faqApi.categories();
-		} catch {
-			/* conserve le cache précédent */
-		}
-		if (existingCategories.includes(it.categorie ?? '')) {
-			formCategorie = it.categorie ?? '';
-			formIsNewCategorie = false;
-			formNewCategorie = '';
-		} else {
-			formCategorie = '__new__';
-			formIsNewCategorie = true;
-			formNewCategorie = it.categorie ?? '';
-		}
+		await chargerCategories();
+		form = saisieFaqDepuis(it, existingCategories);
 		showForm = true;
 	}
 
-	function isBadgePrixQuestion(question: string | null | undefined) {
-		if (!question) return false;
-		return /quel\s+prix.*badge|prix.*badge|badge.*prix/i.test(question);
-	}
-
-	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
-
 	async function saveItem() {
-		if (!formQuestion.trim() || richEmpty(formReponse)) {
+		if (!form.question.trim() || richEmpty(form.reponse)) {
 			toast('error', 'Question et réponse sont obligatoires.');
 			return;
 		}
-		const categorie = formIsNewCategorie ? formNewCategorie.trim() : formCategorie.trim();
+		const categorie = categorieSaisie(form);
 		if (!categorie) {
 			toast('error', 'La catégorie est obligatoire.');
 			return;
@@ -148,8 +139,8 @@
 
 			const payload = {
 				categorie,
-				question: formQuestion.trim(),
-				reponse: formReponse.trim(),
+				question: form.question.trim(),
+				reponse: form.reponse.trim(),
 				ordre,
 				actif: true,
 			};
@@ -341,19 +332,38 @@
 				><Icon name="move" size={15} /> Réorganiser</button
 			>
 		{/if}
-		<button class="btn btn-primary page-header-btn" on:click={openNew} disabled={reorderMode}
-			>+ Nouvelle question</button
-		>
+		{#if !reorderMode}
+			<BoutonNouveau
+				ouvert={showForm && !editingItem}
+				libelle="Nouvelle question"
+				on:basculer={openNew}
+			/>
+		{/if}
 	{/if}
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
-{#if loading}
-	<EtatListe chargement />
-{:else if items.length === 0}
-	<div class="card" style="padding:2rem;text-align:center;color:var(--color-text-muted)">
-		Aucune question pour l'instant.
-	</div>
+<!--  La CRÉATION s'ouvre en tête de la liste ; la correction, dans la carte de
+      la question (#1329) — les deux s'ouvraient en bas de page, après l'aide. -->
+{#if showForm && !editingItem}
+	<FormulaireFaq
+		cle="creation"
+		bind:form
+		categories={existingCategories}
+		enregistrement={saving}
+		onEnregistrer={saveItem}
+		on:annule={() => (showForm = false)}
+	/>
+{/if}
+
+{#if loading || erreur || items.length === 0}
+	<EtatListe
+		chargement={loading}
+		{erreur}
+		vide={items.length === 0}
+		titreErreur="Impossible d’afficher la FAQ"
+		titreVide="Aucune question pour l'instant"
+	/>
 {:else if reorderMode}
 	<div class="reorder-bar">
 		<span style="font-size:.875rem;color:var(--color-text-muted)"
@@ -448,12 +458,24 @@
 				{item}
 				ouvert={!!open[item.id]}
 				{canEdit}
-				avecCta={isBadgePrixQuestion(item.question)}
+				avecCta={estQuestionPrixBadge(item.question)}
+				enEdition={showForm && editingItem?.id === item.id}
 				on:basculer={() => toggle(item.id)}
-				on:modifier={() => openEdit(item)}
+				on:modifier={() => (editingItem?.id === item.id ? (showForm = false) : openEdit(item))}
 				on:basculerActif={() => toggleActif(item)}
 				on:supprimer={() => deleteItem(item)}
-			/>
+			>
+				<FormulaireFaq
+					slot="formulaire"
+					modeEdition
+					cle={item.id}
+					bind:form
+					categories={existingCategories}
+					enregistrement={saving}
+					onEnregistrer={saveItem}
+					on:annule={() => (showForm = false)}
+				/>
+			</CarteFaq>
 		{/each}
 	{/each}
 {/if}
@@ -472,25 +494,6 @@
 		<a href="/api/manuel/pdf" target="_blank" rel="noopener">en PDF</a>.
 	</p>
 </div>
-
-<!--  Le formulaire est un COMPOSANT, comme pour les six autres entités du site.
-      Il porte son cadre : boîte pour créer, modale pour corriger (`ux-patterns`
-      §14 bis). Cet écran ouvrait une modale pour les DEUX — voir le composant. -->
-{#if showForm}
-	<FormulaireFaq
-		modeEdition={editingItem !== null}
-		cle={editingItem?.id ?? 'creation'}
-		bind:categorie={formCategorie}
-		bind:nouvelleCategorie={formNewCategorie}
-		bind:estNouvelleCategorie={formIsNewCategorie}
-		bind:question={formQuestion}
-		bind:reponse={formReponse}
-		categories={existingCategories}
-		enregistrement={saving}
-		onEnregistrer={saveItem}
-		on:annule={() => (showForm = false)}
-	/>
-{/if}
 
 <style>
 	.categorie-title {
