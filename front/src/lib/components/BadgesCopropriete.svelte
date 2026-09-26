@@ -304,11 +304,6 @@
 			return ordre * cle(x).localeCompare(cle(y), 'fr', { sensitivity: 'base' });
 		});
 
-	const badgeStatut: Record<string, string> = {
-		actif: 'badge-green',
-		perdu: 'badge-red',
-		desactive: 'badge-gray',
-	};
 	const labelType: Record<string, string> = Object.fromEntries(TYPES.map((t) => [t.val, t.label]));
 </script>
 
@@ -407,7 +402,6 @@
 			<TableParcAcces
 				lignes={filtrees}
 				{labelType}
-				{badgeStatut}
 				{triCol}
 				{triAsc}
 				{editId}

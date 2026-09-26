@@ -33,6 +33,7 @@
   `ouvrirDeclaration`, que l'écran hôte lie à ses boutons.
 -->
 <script lang="ts">
+	import { statutAccesBadge, statutAccesLabel } from '$lib/types-acces';
 	import { nomAffiche } from '$lib/noms';
 	import FormulairesAcces from '$lib/components/FormulairesAcces.svelte';
 	import { onMount } from 'svelte';
@@ -160,12 +161,6 @@
 		declaring = false;
 	}
 
-	function statutClass(s: string) {
-		return (
-			{ actif: 'badge-green', suspendu: 'badge-orange', perdu: 'badge-red' }[s] ?? 'badge-gray'
-		);
-	}
-
 	// ── Bailleur : vue par locataire ─────────────────────────────────────────
 	// Regroupement des vigiks/TCs confiés (chez_locataire) par locataire (email/nom)
 	$: locatairesAcces = (() => {
@@ -239,7 +234,6 @@
 			titre="Badges d'accès (Vigik)"
 			messageVide="Aucun badge enregistré."
 			items={vigiks}
-			classeStatut={statutClass}
 			onSignalerPerdu={(id) => signalerPerdu(id, 'vigik')}
 		/>
 	{/if}
@@ -249,7 +243,6 @@
 			titre="Télécommandes de parking"
 			messageVide="Aucune télécommande enregistrée."
 			items={telecommandes}
-			classeStatut={statutClass}
 			onSignalerPerdu={(id) => signalerPerdu(id, 'tc')}
 		/>
 	{/if}
@@ -330,8 +323,8 @@
 										>
 											{item.typeAcces === 'vigik' ? '🏷️ Vigik' : '📡 TC'}
 										</span>
-										<span class="badge {statutClass(item.statut)}" style="font-size:.68rem"
-											>{item.statut}</span
+										<span class="badge {statutAccesBadge(item.statut)}" style="font-size:.68rem"
+											>{statutAccesLabel(item.statut)}</span
 										>
 									</div>
 								{/each}
@@ -351,7 +344,7 @@
 	      ⚠️ Réservée à `$isCS`, comme l'endpoint (`require_cs_or_admin`) : l'écran
 	      dit ce que le serveur fait, ni plus ni moins (`ux-patterns` §15). -->
 
-	<AccesConnexes {accesRecus} {statutClass} />
+	<AccesConnexes {accesRecus} />
 {/if}
 
 <style>

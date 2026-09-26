@@ -16,7 +16,7 @@
 <script lang="ts">
 	import { fmtDatetimeShort } from '$lib/date';
 	import { typeVoirLabel } from '$lib/flux';
-	import { STATUT_TICKET_BADGE } from '$lib/tickets';
+	import { STATUT_TICKET_BADGE, statutTicketLabel } from '$lib/tickets';
 	import { safeHtml } from '$lib/sanitize';
 	import PiecesJointes from './PiecesJointes.svelte';
 
@@ -64,7 +64,7 @@
 	{#if item.meta?.statut}
 		<p class="flux-meta-line">
 			État :
-			<span class="badge {classeStatut}">{item.meta.statut}</span>
+			<span class="badge {classeStatut}">{statutTicketLabel(String(item.meta.statut))}</span>
 		</p>
 	{/if}
 	<!--  🔴 LA DERNIÈRE MISE À JOUR D'ABORD, le texte d'origine ensuite

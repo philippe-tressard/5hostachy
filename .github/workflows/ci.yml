@@ -1690,7 +1690,9 @@ jobs:
       # 🔴 L'infobulle de catégorie disait « etude_travaux » sur la liste des
       # affaires (26/09/2026, signalé à l'écran) ; deux reportings rendaient la
       # même valeur brute. Le libellé existait, rien n'obligeait à le prendre.
-      - name: Une catégorie s'affiche par son libellé
+      # Étendu aux STATUTS le 26/09/2026 (#1345) : cinq écrans d'accès rendaient
+      # « actif » ou « perdu » tels quels, et deux tables de badges avaient divergé.
+      - name: Une catégorie ou un statut s'affiche par son libellé
         working-directory: front
         run: npm run lint:categorie-brute
 
