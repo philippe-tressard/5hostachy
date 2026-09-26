@@ -37,7 +37,8 @@ const RACINE = 'src';
 const SOURCE = 'lib/components/CarteMembre.svelte';
 
 /**  Le marqueur d'une fiche d'identité : le libellé du premier champ. */
-const IDENTITE = /(^|>|\s)Civilité(\s|<|$)/m;
+//  `"` compte (#1329) : la civilité est un champ en pastilles, `libelle="Civilité"`.
+const IDENTITE = /(^|>|\s|")Civilité(\s|<|$|")/m;
 /**  L'emploi du composant — par l'IMPORT, qu'une portée locale ne peut pas feindre. */
 const EMPLOI = /import\s+CarteMembre(\s*,\s*\{[^}]*\})?\s+from/;
 
