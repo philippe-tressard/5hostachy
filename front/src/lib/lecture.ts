@@ -172,6 +172,9 @@ export interface EntreeLecture {
 	datee?: boolean;
 	/** Le suivi est « En AG » — ce qui la retire aux locataires. */
 	enAg?: boolean;
+	/** La catégorie d'une affaire, et son périmètre dans des bâtiments (#1343). */
+	categorie?: string;
+	dansBatiments?: boolean;
 }
 
 export interface Lecture extends Vocable {
@@ -207,10 +210,19 @@ export function destinatairesParDefaut(n: {
 	actualite?: boolean;
 	datee?: boolean;
 	enAg?: boolean;
+	/** La catégorie d'une affaire — une Panne a sa propre règle. */
+	categorie?: string;
+	/** Chaque code du périmètre descend-il d'un bâtiment ? Tranché par l'appelant. */
+	dansBatiments?: boolean;
 }): string[] {
-	return n.actualite || (n.datee && !n.enAg)
-		? [TOUS_LES_RESIDENTS]
-		: ['copropriétaires_occupants', 'bailleurs'];
+	if (n.actualite) return [TOUS_LES_RESIDENTS];
+	//  Arbitré à l'écran le 26/09/2026 : une Panne concerne ceux qui VIVENT
+	//  dans le bâtiment — occupants et locataires, pas les bailleurs ; hors
+	//  bâtiment (parking, espaces verts…), tout le monde. Miroir de
+	//  `destinataires_par_defaut` (`utils/visibility/objets.py`).
+	if (n.categorie === 'panne')
+		return n.dansBatiments ? ['copropriétaires_occupants', 'locataires'] : [TOUS_LES_RESIDENTS];
+	return n.datee && !n.enAg ? [TOUS_LES_RESIDENTS] : ['copropriétaires_occupants', 'bailleurs'];
 }
 
 export function lectureDe(e: EntreeLecture): Lecture {

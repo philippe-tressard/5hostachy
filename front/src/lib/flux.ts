@@ -13,6 +13,7 @@
  */
 import type { FluxItem } from '$lib/api';
 import { estTicketClos } from '$lib/tickets';
+import { equipLabel } from '$lib/prestataires';
 import { parAttribut } from '$lib/table-statuts';
 
 // ── Apparence par type d'élément ──────────────────────────────────────────
@@ -292,4 +293,14 @@ export const PLAFOND_EPINGLES = 5;
 export function avertissementEpinglage(totalApresEpinglage: number): string | null {
 	if (totalApresEpinglage <= PLAFOND_EPINGLES) return null;
 	return `Cela porterait à ${totalApresEpinglage} le nombre d'éléments épinglés. Au-delà de ${PLAFOND_EPINGLES}, le bandeau « Épinglé » cesse d'attirer l'œil : épingler dix éléments revient à n'en épingler aucun.`;
+}
+
+/**
+ * Les pastilles d'une entrée du fil. Le serveur rend l'équipement d'un
+ * prestataire en VALEUR (`meta.specialite`) : il se traduit ici, par la table
+ * unique (`equipLabel`) — il s'affichait « interphone_digicode » (26/09/2026).
+ */
+export function badgesDuFlux(item: FluxItem): string[] {
+	const equipement = item.type === 'prestataire' ? item.meta?.specialite : null;
+	return equipement ? [equipLabel(String(equipement))] : item.badges;
 }

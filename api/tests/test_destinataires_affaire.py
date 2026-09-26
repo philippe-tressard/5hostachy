@@ -56,7 +56,9 @@ def contexte(batiments):
         session.commit()
         crees: list[Ticket] = []
 
-        def affaire(categorie="panne", public=None) -> Ticket:
+        def affaire(
+            categorie="nuisance", public=None
+        ) -> Ticket:  # pas « panne » : sa lecture par défaut lui est propre (#1343)
             t = Ticket(
                 numero=f"T-{uuid.uuid4().hex[:6]}",
                 titre="Fuite au 3e",
@@ -123,7 +125,7 @@ def test_une_actualite_promue_perd_son_public_vise(contexte):
     session, cs, locataire, affaire = contexte
     t = affaire(categorie="actualite", public=["locataires"])
     update_ticket(
-        t.id, TicketUpdate(categorie="panne"), BackgroundTasks(), session=session, user=cs
+        t.id, TicketUpdate(categorie="nuisance"), BackgroundTasks(), session=session, user=cs
     )
     session.refresh(t)
     assert t.public_cible is None
@@ -135,7 +137,7 @@ def test_promue_avec_ses_destinataires_renvoyes_elle_les_garde(contexte):
     t = affaire(categorie="actualite", public=["locataires"])
     update_ticket(
         t.id,
-        TicketUpdate(categorie="panne", public_cible=["locataires"]),
+        TicketUpdate(categorie="nuisance", public_cible=["locataires"]),
         BackgroundTasks(),
         session=session,
         user=cs,

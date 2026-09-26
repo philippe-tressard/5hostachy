@@ -155,7 +155,9 @@ def test_un_locataire_lit_une_actualite_mais_pas_une_affaire(session):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
     locataire = _compte(session, statut=StatutUtilisateur.locataire)
     actu = session.get(Ticket, _creer(session, cs, categorie="actualite").id)
-    affaire = session.get(Ticket, _creer(session, cs, categorie="panne").id)
+    affaire = session.get(
+        Ticket, _creer(session, cs, categorie="nuisance").id
+    )  # pas « panne » : sa lecture par défaut lui est propre (#1343)
     assert ticket_visible(actu, locataire), "une actualité s'adresse à la copropriété"
     assert not ticket_visible(affaire, locataire), "la règle des affaires ne bouge pas"
 

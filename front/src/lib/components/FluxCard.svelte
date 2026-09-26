@@ -30,6 +30,7 @@
 	import { relire } from '$lib/utils';
 	import {
 		badgeClass,
+		badgesDuFlux,
 		estTicketUrgent,
 		isNew,
 		typeCouleur,
@@ -169,7 +170,7 @@
 				/>
 			{/if}
 		</div>
-		{#if item.badges.length > 0 || aPerimetre || item.meta?.auteur}
+		{#if badgesDuFlux(item).length > 0 || aPerimetre || item.meta?.auteur}
 			<div class="flux-badges">
 				<!--  « 🗓️ prévu le … » était propre à l'événement, parti le 23/09/2026 :
 				      c'est une affaire (#1092). -->
@@ -181,7 +182,7 @@
 				      Il ne rend RIEN quand le périmètre vaut le défaut — d'où l'absence
 				      de `{#if}` ici. -->
 				<BadgePerimetre perimetre={perimetreCodes} />
-				{#each item.badges as b (b)}
+				{#each badgesDuFlux(item) as b (b)}
 					<span class="badge {badgeClass(item.type, b)}">{b}</span>
 				{/each}
 				<!--  🔴 L'auteur EN DERNIER de cette rangée (11/09/2026, signalé à

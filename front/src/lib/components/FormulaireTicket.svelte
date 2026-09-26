@@ -50,6 +50,7 @@
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import RepriseAnnonceHall from '$lib/components/RepriseAnnonceHall.svelte';
+	import { natureLue } from '$lib/lecture-ticket';
 	import SectionAffairesLiees from '$lib/components/SectionAffairesLiees.svelte';
 	import SectionIntervenant from '$lib/components/SectionIntervenant.svelte';
 	import ChampFrequence from '$lib/components/ChampFrequence.svelte';
@@ -427,7 +428,7 @@
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecReservePerimetre={$isCS}
-			lecture={$isCS ? { actualite, datee: !!debut, enAg: statut === 'en_ag' } : null}
+			lecture={$isCS ? natureLue({ categorie, debut, statut, perimetre: perimetreCible }) : null}
 			bind:reservePerimetre
 			avecDestinataires={$isCS && sectionPresente(TICKET, etat, 'destinataires')}
 			bind:destinataires={publicCible}
