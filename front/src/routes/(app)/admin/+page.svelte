@@ -8,6 +8,7 @@
 	import { badgeRole, badgeStatut, badgesDeRoles, libelleRole } from '$lib/roles';
 	import { LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import FiltresUtilisateurs from '$lib/components/FiltresUtilisateurs.svelte';
+	import { ETIQUETTES_COMPTE } from '$lib/comptes';
 	import { essayer } from '$lib/chargement';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -780,19 +781,17 @@
 											🏠 Bailleur : {u.nom_proprietaire}
 										</div>
 									{/if}
+									<!--  Trois états, dont « sans objet » en gris (26/09/2026) : l'état
+									      vient du serveur, les mots de `$lib/comptes`. -->
 									<div class="user-tags">
-										{#if u.has_lots}<span class="utag utag-ok">Loti</span>{:else}<span
-												class="utag utag-ko">Loti</span
-											>{/if}
-										{#if u.has_tc}<span class="utag utag-ok">TC</span>{:else}<span
-												class="utag utag-ko">TC</span
-											>{/if}
-										{#if u.has_vigik}<span class="utag utag-ok">Vigik</span>{:else}<span
-												class="utag utag-ko">Vigik</span
-											>{/if}
-										{#if u.has_bail}<span class="utag utag-ok">Bail</span>{:else}<span
-												class="utag utag-ko">Bail</span
-											>{/if}
+										{#each ETIQUETTES_COMPTE as t (t.cle)}
+											{@const e = u.etiquettes?.[t.cle] ?? 'manque'}
+											<span
+												class="utag utag-{e}"
+												title={e === 'ok' ? t.ok : e === 'manque' ? t.manque : t.sansObjet}
+												>{t.libelle}</span
+											>
+										{/each}
 									</div>
 								</td>
 								<td style="color:var(--color-text-muted);font-size:.85rem">{u.email}</td>
@@ -1258,8 +1257,12 @@
 		background: #d4edda;
 		color: #155724;
 	}
-	.utag-ko {
+	.utag-manque {
 		background: #f8d7da;
 		color: #721c24;
+	}
+	.utag-sans_objet {
+		background: var(--color-bg-subtle, #f3f4f6);
+		color: var(--color-text-muted);
 	}
 </style>

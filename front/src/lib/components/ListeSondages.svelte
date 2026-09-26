@@ -43,7 +43,13 @@
 </script>
 
 {#each sondages as s (s.id)}
-	<a href="/sondages/{s.id}" class="sondage-card card">
+	<!--  🔴 Un BLOC, et un lien qui en couvre la surface (#1329) : la carte était
+	      un `<a>` qui contenait des boutons — HTML invalide, et un lecteur
+	      d'écran y annonçait un lien géant. Le lien s'étire sous le contenu, les
+	      boutons passent au-dessus. -->
+	<div class="sondage-card card">
+		<a class="lien-sondage" href="/sondages/{s.id}" aria-label="Ouvrir le sondage : {s.question}"
+		></a>
 		<!--  L'EN-TÊTE DU SITE (#794). Cette carte était la SIXIÈME et dernière à
 		      composer le sien à la main : titre en `<strong>`, date en
 		      `<small style="…">`, badge « New » avec quatre propriétés CSS écrites
@@ -55,8 +61,8 @@
 		      sondage l'était aussi. Une correction posée sur l'écran qui l'a
 		      révélée, sans passer les voisins en revue.
 
-		      `basculable` reste faux : la carte entière est un lien vers la fiche,
-		      et un `<button>` dans un `<a>` serait invalide. -->
+		      `basculable` reste faux : la carte mène à la fiche par son lien
+		      étiré ; un bouton de dépliage n'y aurait rien à déplier. -->
 		<EnteteCarte titre={s.question} date={fmtDateShort(s.cree_le)}>
 			<svelte:fragment slot="titre-suffixe">
 				<MarqueIA assiste={s.assiste_ia} />
@@ -112,11 +118,12 @@
 		{#if s.description}
 			<div class="sondage-desc rich-content clamp-3">{@html safeHtml(s.description)}</div>
 		{/if}
-	</a>
+	</div>
 {/each}
 
 <style>
 	.sondage-card {
+		position: relative;
 		/*  Plus de `display: flex` à deux colonnes : les actions vivaient dans une
 		    COLONNE à droite, qui prenait sa largeur au titre. `EnteteCarte` les
 		    place sur la ligne des tags, comme les cinq autres cartes (#794). */
@@ -129,6 +136,16 @@
 	}
 	.sondage-card:hover {
 		border-color: var(--color-primary);
+	}
+	.lien-sondage {
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+	}
+	/*  Les gestes au-dessus du lien étiré : sinon il prendrait leurs clics. */
+	.sondage-card :global(button) {
+		position: relative;
+		z-index: 1;
 	}
 	.sondage-desc {
 		font-size: 0.85rem;

@@ -132,3 +132,29 @@ def test_un_meme_nom_sous_deux_numeros_de_compte_est_un_seul_coproprietaire(sess
     auto_match(TELECOMMANDE, session)
     session.refresh(ligne)
     assert ligne.lot_id == p7.id, "le premier parking des deux comptes, « 7 » avant « 12 »"
+
+
+def test_le_parc_prime_sur_le_nom(session):
+    """26/09/2026 : « appuie-toi aussi sur la vue Espace CS / Vigiks & Télécommandes,
+    des ajustements manuels ont pu être faits ». Le code est déjà au parc, posé
+    à la main sur le parking 60 : c'est ce lot qui fait foi, pas celui que le
+    nom désignerait (le 50)."""
+    p50, p60 = _lot(session, TELECOMMANDE, "50"), _lot(session, TELECOMMANDE, "60")
+    _copro_du_fichier(session, "MOREL Paul", p50)
+    _badge(session, TELECOMMANDE, code="T60", lot=p60)
+    ligne = _ligne(session, TELECOMMANDE, nom="MOREL", code="T60")
+
+    auto_match(TELECOMMANDE, session)
+    session.refresh(ligne)
+    assert ligne.lot_id == p60.id
+
+
+def test_cas_zero_un_code_au_parc_SANS_lot_laisse_parler_le_nom(session):
+    p50 = _lot(session, TELECOMMANDE, "50")
+    _copro_du_fichier(session, "MOREL Paul", p50)
+    _badge(session, TELECOMMANDE, code="T61")
+    ligne = _ligne(session, TELECOMMANDE, nom="MOREL", code="T61")
+
+    auto_match(TELECOMMANDE, session)
+    session.refresh(ligne)
+    assert ligne.lot_id == p50.id

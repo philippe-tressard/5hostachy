@@ -87,9 +87,9 @@
 	let editSondage: any = null;
 
 	function modifierSondage(s: any, e: Event) {
-		//  ⚠️ La carte EST un lien vers la fiche du sondage : sans ce
-		//  `preventDefault`, le clic ouvre la page au lieu de la fenêtre. C'est ce
-		//  que font déjà « Stopper » et « Supprimer », juste à côté.
+		//  Le `preventDefault` date du temps où la carte ÉTAIT un lien : il ne sert
+		//  plus (#1329, lien étiré sous des boutons qui ne sont plus dedans), et il
+		//  est sans effet sur un bouton.
 		e.preventDefault();
 		editSondage = editSondage?.id === s.id ? null : s;
 	}
