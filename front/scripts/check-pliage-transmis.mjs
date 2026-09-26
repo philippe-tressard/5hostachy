@@ -130,6 +130,9 @@ export function requisParDefaut(source) {
 const HORS_CADRE = {
 	'lib/components/FormulaireAnnonceHall.svelte':
 		"l'affiche de hall n'a pas de déclaration d'entité (`check-intitules-section`, HORS_CADRE)",
+	'lib/components/PanneauOptionsPublication.svelte':
+		"le panneau n'a qu'une section, ouverte par son propre geste sur la carte : la plier " +
+		'imposerait un second clic pour atteindre ce qu’on vient de demander (#1329)',
 	'lib/components/FormulaireFaq.svelte':
 		"la FAQ n'a pas de déclaration d'entité : sa Réponse, obligatoire, reste dépliée (#1329)",
 };

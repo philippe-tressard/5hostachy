@@ -18,7 +18,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
+	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import type { CleOptionPublication } from '$lib/options-publication';
 
@@ -53,16 +53,19 @@
 	const dispatch = createEventDispatcher<{ enregistrer: void; annuler: void }>();
 </script>
 
-<!--  ── Options de publication ──
+<!--  ── Mise en avant ──
       LE MÊME composant qu'à la création et à l'édition
-      (`OptionsPublication`, section 2 du cadre #430) : ni copie, ni
+      (`SectionOptionsPublication`, section « Mise en avant » du cadre #430) : ni copie, ni
       variante. Il porte déjà la règle « Confidentiel exige un
       périmètre restreint », qu'un panneau réécrit n'aurait pas eue.
       `role="presentation"` : ce conteneur n'est qu'un relais, il
       arrête la propagation pour que cocher ne referme pas la carte. -->
 <div class="options-form" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
-	<h4 class="options-titre">Options de publication</h4>
-	<OptionsPublication
+	<!--  🔴 La SECTION « Mise en avant » (#1329), et non un titre écrit ici sous
+	      l'ancien nom « Options de publication » : même objet, même intitulé
+	      que dans le formulaire. Première section rendue : pas de filet. -->
+	<SectionOptionsPublication
+		premiere
 		{objet}
 		options={optionsRendues}
 		{perimetreCible}
@@ -95,11 +98,6 @@
 <style>
 	.options-form {
 		padding: 0.5rem 0;
-	}
-	.options-titre {
-		margin: 0 0 0.6rem;
-		font-size: 0.9rem;
-		font-weight: 600;
 	}
 	/*  ⚠️ `.options-actions` et sa règle mobile sont MONTÉES dans `.form-actions`
 	    (`styles/normes.css`, 12/09/2026) : elles ne servaient qu'ici, ce qui
