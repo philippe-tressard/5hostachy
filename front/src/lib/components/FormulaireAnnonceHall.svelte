@@ -38,7 +38,6 @@
 	import Pastille from '$lib/components/Pastille.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionPerimetre from '$lib/components/SectionPerimetre.svelte';
-	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import { fmtDateShort } from '$lib/date';
 	import type { SourceAffiche } from '$lib/api';
@@ -200,13 +199,7 @@
 <!--  1. Titre. `SectionFormulaire` porte le filet discret qui sépare les
       sections — celui de Tickets, demandé à l'écran le 18/08/2026. La section
       n'ayant qu'UN champ, son titre EST le libellé du champ (R3). -->
-<SectionFormulaire
-	premiere
-	titre={SECTIONS_LIBELLE.titre}
-	requis
-	rempli={!!titre?.trim()}
-	pour="ah-titre"
->
+<SectionFormulaire premiere titre="Titre" requis rempli={!!titre?.trim()} pour="ah-titre">
 	<div class="field champ-large">
 		<input
 			id="ah-titre"
@@ -280,8 +273,10 @@
 />
 
 <!--  « Pièces jointes », le nom de la section 8 depuis #1095 (#1329) : l'affiche
-      n'accepte que des photos, et l'aide le dit. -->
-<SectionFormulaire titre={SECTIONS_LIBELLE.pieces_jointes} pour="ah-photos">
+      n'accepte que des photos, et l'aide le dit. Écrit en clair, et non lu dans
+      `SECTIONS_LIBELLE` : l'affiche est HORS cadre (`lint:intitules-section`),
+      et lire la table la ferait juger comme une entité déclarée. -->
+<SectionFormulaire titre="Pièces jointes" pour="ah-photos">
 	<!--  7. Photos. Le champ n'écrit PAS son intitulé : la section le porte déjà,
 	     et `FichiersUpload` en pose un par défaut (« Photos ») — on lisait donc le
 	     mot deux fois, en deux typographies. C'est la règle que `SectionFormulaire`
