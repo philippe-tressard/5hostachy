@@ -68,7 +68,7 @@ from sqlmodel import Session, select
 from app.models.core import StatutImport, Utilisateur
 from app.utils.acces_possession import chez_le_locataire, possesseur
 from app.utils.lot_des_imports import trouveur_de_lot
-from app.utils.resolution_acces import rattacher
+from app.utils.resolution_acces import rattacher, reprendre_resolues_sans_lot
 from app.utils.types_acces import TypeAcces
 from app.utils.auto_match_service import (
     _matches_user,
@@ -114,6 +114,9 @@ def auto_match(type_import: TypeAcces, session: Session) -> dict:
     qu'à dire qui a le badge en main.
     """
     modele = type_import.modele_import
+    #  Les lignes résolues SANS lot d'abord (#1338) : sautées jusqu'ici, elles
+    #  n'avaient aucune chance de retrouver leur lot par le nom.
+    reprises = reprendre_resolues_sans_lot(type_import, session)
     imports = session.exec(
         select(modele).where(
             modele.statut.in_([StatutImport.en_attente, StatutImport.proprietaire_lie])
@@ -162,7 +165,7 @@ def auto_match(type_import: TypeAcces, session: Session) -> dict:
             apparies += 1
 
     session.commit()
-    return {"matches": apparies, "total": len(imports)}
+    return {"matches": apparies, "total": len(imports), "reprises": reprises}
 
 
 def _charger(type_import: TypeAcces, import_id: int, session: Session):

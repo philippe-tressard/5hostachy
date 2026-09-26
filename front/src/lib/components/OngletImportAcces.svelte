@@ -73,7 +73,14 @@
 			(r) => `Import : ${r.importes} ajoutés, ${r.doublons} doublons, ${r.ignores} ignorés`,
 		);
 
-	const rechercher = () => geste(modele.api.autoMatch, (r) => `${r.matches} ligne(s) complétée(s)`);
+	//  `reprises` : des lignes « résolues » sans lot, rendues au rapprochement (#1338).
+	const rechercher = () =>
+		geste(
+			modele.api.autoMatch,
+			(r) =>
+				`${r.matches} ligne(s) complétée(s)` +
+				(r.reprises ? ` — dont ${r.reprises} résolue(s) sans lot, reprise(s)` : ''),
+		);
 
 	async function rattacherTout() {
 		const n = stats?.a_rattacher ?? 0;
