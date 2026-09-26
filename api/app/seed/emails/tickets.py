@@ -294,6 +294,23 @@ MODELES = [
         + SIGNATURE_CS,
         False,
     ),
+    #  🔗 Une affaire TRANSMISE par un résident à une adresse qu'il saisit
+    #  (#1357, option E des maquettes du 26/09/2026). Titre, numéro et lien —
+    #  jamais la description ni les pièces : le destinataire se connecte, et ne
+    #  lit l'affaire que s'il en a le droit.
+    (
+        "ticket_partage",
+        "Affaire transmise par un résident",
+        "{{ auteur_action.affiche }} vous transmet l’affaire #{{ ticket.numero }} — {{ ticket.titre }}",
+        titre("🔗 Une affaire vous est transmise")
+        + '<p style="margin:0 0 16px">{{ auteur_action.affiche }} vous transmet l’affaire '
+        "<strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> de la résidence "
+        "{{ residence.nom }}.</p>"
+        + f'<p style="margin:0 0 20px;font-size:13px;color:{GRIS}">Le lien demande de vous '
+        "connecter : vous ne verrez l’affaire que si votre compte peut la lire.</p>"
+        + _bouton_ticket("Voir l’affaire"),
+        True,
+    ),
 ]
 
 #  `GRIS_CLAIR` est importé pour `entree_historique`, qui s'en sert : le laisser

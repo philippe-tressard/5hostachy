@@ -5,20 +5,53 @@
 		id: number;
 		type: 'success' | 'error' | 'info' | 'warning';
 		message: string;
+		/**  Un GESTE qui prolonge le message (#1357) : « Lien copié », puis
+		 *   « L'envoyer par courriel ». Le composant est rendu sous le texte ; le
+		 *   toast reste tant qu'on s'en sert (survol ou focus), et `fermer` le retire. */
+		suite?: { composant: any; props?: Record<string, unknown> };
 	}
 
 	export const toasts = writable<ToastMessage[]>([]);
 
 	let counter = 0;
+	const minuteries = new Map<number, ReturnType<typeof setTimeout>>();
 
-	export function toast(type: ToastMessage['type'], message: string, duration = 4000) {
+	function programmer(id: number, duree: number) {
+		clearTimeout(minuteries.get(id));
+		minuteries.set(
+			id,
+			setTimeout(() => dismiss(id), duree),
+		);
+	}
+
+	export function toast(
+		type: ToastMessage['type'],
+		message: string,
+		duration = 4000,
+		suite?: ToastMessage['suite'],
+	) {
 		const id = ++counter;
-		toasts.update((t) => [...t, { id, type, message }]);
-		setTimeout(() => dismiss(id), duration);
+		toasts.update((t) => [...t, { id, type, message, suite }]);
+		programmer(id, suite ? Math.max(duration, 8000) : duration);
 	}
 
 	function dismiss(id: number) {
+		clearTimeout(minuteries.get(id));
+		minuteries.delete(id);
 		toasts.update((t) => t.filter((x) => x.id !== id));
+	}
+</script>
+
+<script lang="ts">
+	/**  On s'en sert : le message ne part pas sous le doigt. On le quitte : il
+	 *   repart, sans relancer ses huit secondes. */
+	function suspendre(t: ToastMessage) {
+		if (t.suite) clearTimeout(minuteries.get(t.id));
+	}
+	function reprendre(t: ToastMessage, e?: FocusEvent) {
+		const cible = e?.currentTarget as HTMLElement | undefined;
+		if (!t.suite || cible?.contains(e?.relatedTarget as Node | null)) return;
+		programmer(t.id, 4000);
 	}
 </script>
 
@@ -44,8 +77,19 @@
 			class:toast-warning={t.type === 'warning'}
 			class:toast-info={t.type === 'info'}
 			role="alert"
+			on:pointerenter={() => suspendre(t)}
+			on:pointerleave={() => reprendre(t)}
+			on:focusin={() => suspendre(t)}
+			on:focusout={(e) => reprendre(t, e)}
 		>
 			<span>{t.message}</span>
+			{#if t.suite}
+				<svelte:component
+					this={t.suite.composant}
+					{...t.suite.props ?? {}}
+					on:fermer={() => dismiss(t.id)}
+				/>
+			{/if}
 		</div>
 	{/each}
 </div>

@@ -45,6 +45,11 @@ LIMITE_SECRET_EPROUVE = "5/minute"
 #: la réputation du domaine qui paie.
 LIMITE_COURRIEL_DECLENCHE = "3/minute"
 
+#: Un courriel qu'un RÉSIDENT fait partir vers une adresse qu'il saisit — la
+#: transmission d'une affaire (#1357). La limite ci-dessus, plus un plafond à
+#: l'heure : trois par minute tenus une heure feraient 180 envois.
+LIMITE_PARTAGE_COURRIEL = "3/minute;20/hour"
+
 #: Une requête qui manipule une **session** sans éprouver de secret : rotation de
 #: jeton, déconnexion.
 LIMITE_SESSION = "10/minute"

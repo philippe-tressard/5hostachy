@@ -19,6 +19,11 @@
  * divergence dans ce fichier sans que personne l'ait décidé.
  */
 export const EXCEPTIONS = {
+	//  🔴 Transmettre une affaire par courriel (#1357) : rien n'est ENREGISTRÉ,
+	//  un courriel PART. « Enregistrer » y mentirait sur le geste — même raison
+	//  que les confirmations ci-dessous, qui nomment ce qu'elles font.
+	'lib/components/PartageCourriel.svelte':
+		'le bouton envoie un courriel et n’enregistre rien : « Envoyer » nomme le geste',
 	//  🔴 `PiedFormulaire` rend `{enCours ? libelleEnCours : libelle}` — des
 	//  VARIABLES, pas des chaînes. Le contrôle B lit le balisage : il ne peut rien
 	//  y voir, et il l'a dit honnêtement (« aucun libellé lisible — contrôle
