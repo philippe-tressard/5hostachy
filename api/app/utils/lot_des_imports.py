@@ -165,10 +165,23 @@ def trouveur_de_lot(type_acces, session: Session) -> Callable[[object], bool]:
     else:
         trouver = _par_coproprietaire(session, type_acces.types_lot[0])
 
+    #  🔴 LE PARC D'ABORD (#1338, 26/09/2026) : « appuie-toi aussi sur la vue
+    #  Espace CS / Vigiks & Télécommandes, des ajustements manuels ont pu être
+    #  faits ». Un code déjà au parc avec un lot garde CE lot — le conseil l'a
+    #  posé, le fichier du syndic ne le défait pas. Le nom ne parle qu'ensuite.
+    modele = type_acces.modele
+    lot_au_parc = {
+        code: lot_id
+        for code, lot_id in session.exec(
+            select(modele.code, modele.lot_id).where(modele.lot_id != None)  # noqa: E711
+        ).all()
+    }
+    code_de = type_acces.colonne_code_import
+
     def etape(imp) -> bool:
         if imp.lot_id:
             return False
-        lot_id = trouver(imp)
+        lot_id = lot_au_parc.get(getattr(imp, code_de)) or trouver(imp)
         if lot_id:
             imp.lot_id = lot_id
         return bool(lot_id)
