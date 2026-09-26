@@ -17,6 +17,7 @@
   second état chez l'hôte finirait par se désaccorder de celui-ci.
 -->
 <script lang="ts">
+	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { TYPES_ACCES } from '$lib/types-acces';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -48,8 +49,11 @@
 
 {#if showForm}
 	<FormulaireCreation titre="Nouvelle demande d'accès">
+		<!--  Le pied STANDARD (#1329) : ces deux formulaires ont quitté leur fenêtre
+		      le 06/09 et en gardaient le corps et le pied (`.modal-body`,
+		      `.modal-footer`), écrits à la main. -->
 		<form on:submit|preventDefault={soumettreCommande}>
-			<div class="modal-body">
+			<div>
 				<div class="form-grid">
 					<ChoixPastilles
 						options={TYPES_ACCES}
@@ -81,14 +85,7 @@
 					</label>
 				</div>
 			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn btn-outline" on:click={() => (showForm = false)}
-					>Annuler</button
-				>
-				<button class="btn btn-primary" disabled={submitting}>
-					{submitting ? 'Enregistrement…' : 'Enregistrer'}
-				</button>
-			</div>
+			<PiedFormulaire enCours={submitting} on:annule={() => (showForm = false)} />
 		</form>
 	</FormulaireCreation>
 {/if}
@@ -96,7 +93,7 @@
 {#if showDeclareForm}
 	<FormulaireCreation titre="Déclarer un accès existant">
 		<form on:submit|preventDefault={declarerBadge}>
-			<div class="modal-body">
+			<div>
 				<div class="form-grid">
 					<ChoixPastilles
 						options={TYPES_ACCES}
@@ -123,14 +120,7 @@
 					Si ce code figure dans nos imports, l'entrée sera automatiquement liée à votre compte.
 				</p>
 			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn btn-outline" on:click={() => (showDeclareForm = false)}
-					>Annuler</button
-				>
-				<button class="btn btn-primary" disabled={declaring}
-					>{declaring ? 'Enregistrement…' : 'Enregistrer cet accès'}</button
-				>
-			</div>
+			<PiedFormulaire enCours={declaring} on:annule={() => (showDeclareForm = false)} />
 		</form>
 	</FormulaireCreation>
 {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { ETAGE_MAX, ETAGE_MIN } from '$lib/utils';
 
 	/**
@@ -85,8 +86,6 @@
 			Compte actif
 		</label>
 	</div>
-	<div class="modal-footer">
-		<button type="button" class="btn btn-outline" on:click={onAnnuler}>Annuler</button>
-		<button type="submit" class="btn btn-primary">Enregistrer</button>
-	</div>
+	<!--  Le pied STANDARD (#1329), et non plus celui de la fenêtre quittée le 06/09. -->
+	<PiedFormulaire on:annule={onAnnuler} />
 </form>

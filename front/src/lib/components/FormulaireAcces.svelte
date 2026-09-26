@@ -130,37 +130,49 @@
 		</SectionFormulaire>
 	{/if}
 
-	<label class="field champ-large">
-		<span>Code<EtoileRequis vide={!saisie.code.trim()} /></span>
-		<input type="text" bind:value={saisie.code} placeholder="4521, 417D5927…" />
-		<span class="aide">La référence gravée sur l'objet, telle qu'elle s'y lit.</span>
-	</label>
+	<!--  🔴 CHAQUE champ dans sa section (#1329) : Code, Lot, En main et Affaire
+	      liée étaient posés à plat entre les sections — ils se lisaient comme
+	      une partie de la section d'au-dessus. -->
+	<SectionFormulaire
+		titre="Code"
+		requis
+		rempli={!!saisie.code.trim()}
+		pour="acces-code"
+		premiere={modeEdition}
+	>
+		<div class="field champ-large">
+			<input id="acces-code" type="text" bind:value={saisie.code} placeholder="4521, 417D5927…" />
+			<span class="aide">La référence gravée sur l'objet, telle qu'elle s'y lit.</span>
+		</div>
+	</SectionFormulaire>
 
-	<label class="field champ-large">
-		<span>Lot<EtoileRequis vide={!saisie.lot_id && !saisie.porteur_id} /></span>
-		<select bind:value={saisie.lot_id}>
-			<option value={null}>— aucun lot —</option>
-			{#each lotsTries as l (l.id)}
-				<option value={l.id}>{libelleLotPourBadge(l)}</option>
-			{/each}
-		</select>
-		<span class="aide">
-			Le badge appartient au lot : tous ses copropriétaires en sont porteurs, conjoint compris.
-		</span>
-	</label>
+	<SectionFormulaire titre="Lot et porteur">
+		<label class="field champ-large">
+			<span>Lot<EtoileRequis vide={!saisie.lot_id && !saisie.porteur_id} /></span>
+			<select bind:value={saisie.lot_id}>
+				<option value={null}>— aucun lot —</option>
+				{#each lotsTries as l (l.id)}
+					<option value={l.id}>{libelleLotPourBadge(l)}</option>
+				{/each}
+			</select>
+			<span class="aide">
+				Le badge appartient au lot : tous ses copropriétaires en sont porteurs, conjoint compris.
+			</span>
+		</label>
 
-	<label class="field champ-large">
-		En main
-		<select bind:value={saisie.porteur_id}>
-			<option value={null}>— personne de connu —</option>
-			{#each porteurs as p (p.id)}
-				<option value={p.id}>{p.affiche}</option>
-			{/each}
-		</select>
-		<span class="aide">
-			Qui a l'objet en main, s'il est connu. Il en est prévenu dans l'application.
-		</span>
-	</label>
+		<label class="field champ-large">
+			En main
+			<select bind:value={saisie.porteur_id}>
+				<option value={null}>— personne de connu —</option>
+				{#each porteurs as p (p.id)}
+					<option value={p.id}>{p.affiche}</option>
+				{/each}
+			</select>
+			<span class="aide">
+				Qui a l'objet en main, s'il est connu. Il en est prévenu dans l'application.
+			</span>
+		</label>
+	</SectionFormulaire>
 
 	<!--  🔹 L'accès EST un périmètre, et se saisit donc comme tous les autres. -->
 	<SectionFormulaire titre="Accès" idTitre="acces-perimetre-titre">
@@ -191,14 +203,21 @@
 		</p>
 	</SectionFormulaire>
 
-	<label class="field champ-large">
-		Affaire liée
-		<input type="text" bind:value={saisie.ticket_numero} placeholder="TK-241422" />
-		<span class="aide">
-			Facultatif. Le geste s'inscrit alors dans le fil de cette affaire. Un numéro inconnu refuse
-			l'enregistrement plutôt que de perdre le lien en silence.
-		</span>
-	</label>
+	<!--  Sans « Facultatif. » : l'absence d'étoile le dit (cadre R3). -->
+	<SectionFormulaire titre="Affaire liée" pour="acces-affaire">
+		<div class="field champ-large">
+			<input
+				id="acces-affaire"
+				type="text"
+				bind:value={saisie.ticket_numero}
+				placeholder="TK-241422"
+			/>
+			<span class="aide">
+				Le geste s'inscrit alors dans le fil de cette affaire. Un numéro inconnu refuse
+				l'enregistrement plutôt que de perdre le lien en silence.
+			</span>
+		</div>
+	</SectionFormulaire>
 
 	<PiedFormulaire
 		enCours={enregistrement}

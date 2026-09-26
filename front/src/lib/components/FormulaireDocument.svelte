@@ -48,11 +48,11 @@
 </script>
 
 <script lang="ts">
-	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import SectionPerimetre from '$lib/components/SectionPerimetre.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	/** L'intitulé du formulaire — en-tête de la boîte, ou titre de la modale. */
@@ -103,13 +103,20 @@
 </script>
 
 <CadreFormulaire {edition} titre={intitule} on:fermer={() => dispatch('annuler')}>
-	<label class="field" for="{uid}-titre">
-		<span
-			>{libelleTitre}{#if titreRequis}<EtoileRequis vide={!titre.trim()} />{/if}</span
-		>
-		<input id="{uid}-titre" type="text" bind:value={titre} placeholder={placeholderTitre} />
-		{#if aideTitre}<span class="aide">{aideTitre}</span>{/if}
-	</label>
+	<!--  🔴 Les SECTIONS du cadre (#1329) : titre, périmètre, fichier étaient des
+	      champs à plat, le périmètre dans un `.field` qui réécrivait sa section. -->
+	<SectionFormulaire
+		titre={libelleTitre}
+		requis={titreRequis}
+		rempli={!!titre.trim()}
+		pour="{uid}-titre"
+		premiere
+	>
+		<div class="field">
+			<input id="{uid}-titre" type="text" bind:value={titre} placeholder={placeholderTitre} />
+			{#if aideTitre}<span class="aide">{aideTitre}</span>{/if}
+		</div>
+	</SectionFormulaire>
 
 	<slot name="specifiques" />
 
@@ -117,29 +124,28 @@
 		<!--  🔴 `PerimetrePicker`, l'objet du site — plus un sélecteur écrit à la
 		      main (#470). `requis={false}` : un document qui concerne toute la
 		      copropriété ne cible rien, et l'absence est ici une réponse valide. -->
-		<div class="field">
-			<PerimetrePicker bind:value={perimetre} titre="Périmètre" requis={false} />
-		</div>
+		<SectionPerimetre idPrefixe={uid} bind:perimetre />
 	{/if}
 
 	<slot name="description" />
 
 	{#if avecFichier}
-		<label class="field" for="{uid}-fichier">
-			<span>{libelleFichier}<EtoileRequis vide={!choisis.length} /></span>
-			<input
-				id="{uid}-fichier"
-				type="file"
-				{multiple}
-				{accept}
-				on:change={(e) => (fichiers = (e.target as HTMLInputElement).files)}
-			/>
-			{#if choisis.length === 1}
-				<span class="aide">{choisis[0].name}</span>
-			{:else if choisis.length > 1}
-				<span class="aide">{choisis.length} fichiers sélectionnés</span>
-			{/if}
-		</label>
+		<SectionFormulaire titre={libelleFichier} requis rempli={!!choisis.length} pour="{uid}-fichier">
+			<div class="field">
+				<input
+					id="{uid}-fichier"
+					type="file"
+					{multiple}
+					{accept}
+					on:change={(e) => (fichiers = (e.target as HTMLInputElement).files)}
+				/>
+				{#if choisis.length === 1}
+					<span class="aide">{choisis[0].name}</span>
+				{:else if choisis.length > 1}
+					<span class="aide">{choisis.length} fichiers sélectionnés</span>
+				{/if}
+			</div>
+		</SectionFormulaire>
 	{/if}
 
 	<!--  ⚠️ `soumission={false}` : pas de `<form>` ici non plus. -->

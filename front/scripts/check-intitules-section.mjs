@@ -64,8 +64,8 @@ function svelte(dir) {
 const HORS_CADRE = {
 	'components/FormulaireAnnonceHall.svelte':
 		'une affiche de hall est un DOCUMENT imprimé, pas une entité du cadre : ' +
-		'« Format », « Message » et « Photos » lui sont propres et ne figurent dans ' +
-		'aucune autre déclaration.',
+		'« Format » lui est propre et ne figure dans aucune déclaration (Titre, Périmètre ' +
+		'et Pièces jointes y portent le nom commun depuis #1329).',
 };
 
 const LIBELLES_CADRE = new Set(Object.values(LIBELLES));

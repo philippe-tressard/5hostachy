@@ -37,7 +37,7 @@
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import SectionPerimetre from '$lib/components/SectionPerimetre.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import { fmtDateShort } from '$lib/date';
 	import type { SourceAffiche } from '$lib/api';
@@ -241,9 +241,10 @@
 	</p>
 </SectionFormulaire>
 
-<SectionFormulaire>
-	<!--  4. Périmètre. -->
-	<PerimetrePicker titre="Périmètre d'affichage" bind:value={perimetre} />
+<!--  4. Périmètre — `SectionPerimetre`, la section de toutes les entités (#1329) :
+      c'était une section SANS titre, et un sélecteur titré « Périmètre
+      d'affichage » à la main. -->
+<SectionPerimetre idPrefixe="ah" bind:perimetre>
 	<!--  ⚠️ CETTE AIDE A MENTI DEUX FOIS EN UN JOUR, dans les deux sens, et c'est
 	      instructif : elle annonçait d'abord un envoi automatique (vrai jusqu'au matin
 	      du 18/08), puis « aucun message n'est envoyé » — écrit quand l'envoi a été
@@ -254,8 +255,8 @@
 	      que ce champ bouge, sans que rien ne le signale. Elle ne dit donc plus que ce
 	      dont elle répond : à quoi sert le périmètre. L'envoi se lit là où il se
 	      décide — dans la section Diffusion, qui porte sa propre aide. -->
-	<p class="aide">Imprimé sur l'affiche : il dit où elle doit être posée.</p>
-</SectionFormulaire>
+	<p class="aide" slot="aidePerimetre">Imprimé sur l'affiche : il dit où elle doit être posée.</p>
+</SectionPerimetre>
 
 <!--  6. Description — le texte affiché sur l'affiche (#1089, arbitré le 20/09/2026).
       Elle s'appelait « Message » et montait un éditeur à la main : c'était le seul
@@ -271,7 +272,11 @@
 	bind:assisteIA
 />
 
-<SectionFormulaire titre="Photos" pour="ah-photos">
+<!--  « Pièces jointes », le nom de la section 8 depuis #1095 (#1329) : l'affiche
+      n'accepte que des photos, et l'aide le dit. Écrit en clair, et non lu dans
+      `SECTIONS_LIBELLE` : l'affiche est HORS cadre (`lint:intitules-section`),
+      et lire la table la ferait juger comme une entité déclarée. -->
+<SectionFormulaire titre="Pièces jointes" pour="ah-photos">
 	<!--  7. Photos. Le champ n'écrit PAS son intitulé : la section le porte déjà,
 	     et `FichiersUpload` en pose un par défaut (« Photos ») — on lisait donc le
 	     mot deux fois, en deux typographies. C'est la règle que `SectionFormulaire`
@@ -287,7 +292,7 @@
 		on:change={onPhotosChange}
 	/>
 	<p class="aide">
-		Facultatives, {maxPhotos} au maximum, placées en pied d'affiche : le texte de l'annonce reste l'élément
+		Des photos, {maxPhotos} au maximum, placées en pied d'affiche : le texte de l'annonce reste l'élément
 		central. Une affiche avec photo ne descend jamais sous l'{formatMinPhotos}.
 	</p>
 </SectionFormulaire>
@@ -326,9 +331,9 @@
 	on:envoyer={() => onCreer()}
 />
 <p class="aide">
-	Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique.
-	Le conseil syndical reçoit le PDF en pièce jointe, pour impression — et seuls les conseillers du
-	périmètre visé sont prévenus.
+	L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique. Le conseil
+	syndical reçoit le PDF en pièce jointe, pour impression — et seuls les conseillers du périmètre
+	visé sont prévenus.
 </p>
 
 <div class="form-actions">

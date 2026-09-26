@@ -198,52 +198,54 @@
      aucun, seulement des `.field`. -->
 {#if showForm}
 	<FormulaireCreation titre="Nouvelle délégation aidant">
-		<div class="field">
-			<label for="d-mandant">Personne aidée (mandant)<EtoileRequis vide={!formMandantId} /></label>
-			<select id="d-mandant" bind:value={formMandantId}>
-				<option value={0} disabled>Choisir…</option>
-				{#each users.filter((u) => u.actif) as u (u.id)}
-					<option value={u.id}>{nomAffiche(u)} ({u.email})</option>
-				{/each}
-			</select>
-		</div>
-		<div class="field">
-			<label for="d-aidant">Proche aidant<EtoileRequis vide={!formAidantId} /></label>
-			<select id="d-aidant" bind:value={formAidantId}>
-				<option value={0} disabled>Choisir…</option>
-				{#each users.filter((u) => u.actif && u.id !== formMandantId) as u (u.id)}
-					<option value={u.id}>{nomAffiche(u)} ({u.email})</option>
-				{/each}
-			</select>
-		</div>
-		<div class="field">
-			<label for="d-motif">Motif</label>
-			<input
-				id="d-motif"
-				type="text"
-				bind:value={formMotif}
-				placeholder="Ex : Assistance personne âgée"
-			/>
-		</div>
-		<div class="field">
-			<label for="d-fin">Date de fin</label>
-			<input id="d-fin" type="date" bind:value={formDateFin} />
-			<!--  Pas de « (optionnel) » : le requis se marque par `*` et rien d'autre
+		<!--  Un vrai `<form>` (#1329) : la touche Entrée ne soumettait pas. -->
+		<form on:submit|preventDefault={creer}>
+			<div class="field">
+				<label for="d-mandant">Personne aidée (mandant)<EtoileRequis vide={!formMandantId} /></label
+				>
+				<select id="d-mandant" bind:value={formMandantId}>
+					<option value={0} disabled>Choisir…</option>
+					{#each users.filter((u) => u.actif) as u (u.id)}
+						<option value={u.id}>{nomAffiche(u)} ({u.email})</option>
+					{/each}
+				</select>
+			</div>
+			<div class="field">
+				<label for="d-aidant">Proche aidant<EtoileRequis vide={!formAidantId} /></label>
+				<select id="d-aidant" bind:value={formAidantId}>
+					<option value={0} disabled>Choisir…</option>
+					{#each users.filter((u) => u.actif && u.id !== formMandantId) as u (u.id)}
+						<option value={u.id}>{nomAffiche(u)} ({u.email})</option>
+					{/each}
+				</select>
+			</div>
+			<div class="field">
+				<label for="d-motif">Motif</label>
+				<input
+					id="d-motif"
+					type="text"
+					bind:value={formMotif}
+					placeholder="Ex : Assistance personne âgée"
+				/>
+			</div>
+			<div class="field">
+				<label for="d-fin">Date de fin</label>
+				<input id="d-fin" type="date" bind:value={formDateFin} />
+				<!--  Pas de « (optionnel) » : le requis se marque par `*` et rien d'autre
 			      (cadre R3). Ce qu'il fallait dire, c'est ce qui se passe sans date. -->
-			<span class="aide">Sans date, la délégation reste valable sans limite.</span>
-		</div>
-		<p class="avertissement">
-			&#x26A0;&#xFE0F; L'aidant devra accepter la délégation. L'accès aidant ne constitue pas une
-			procuration d'AG.
-		</p>
+				<span class="aide">Sans date, la délégation reste valable sans limite.</span>
+			</div>
+			<p class="avertissement">
+				&#x26A0;&#xFE0F; L'aidant devra accepter la délégation. L'accès aidant ne constitue pas une
+				procuration d'AG.
+			</p>
 
-		<PiedFormulaire
-			enCours={saving}
-			desactive={!formMandantId || !formAidantId || formMandantId === formAidantId}
-			soumission={false}
-			on:annule={() => (showForm = false)}
-			on:enregistre={creer}
-		/>
+			<PiedFormulaire
+				enCours={saving}
+				desactive={!formMandantId || !formAidantId || formMandantId === formAidantId}
+				on:annule={() => (showForm = false)}
+			/>
+		</form>
 	</FormulaireCreation>
 {/if}
 
