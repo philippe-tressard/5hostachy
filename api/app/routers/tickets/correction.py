@@ -19,6 +19,7 @@ import json
 
 from app.models.core import Ticket
 from app.schemas import TicketUpdate
+from app.utils.categories_ticket import libelle_categorie
 from app.utils.photos import photos_internes, photos_json
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.saisi_pour import corriger as corriger_saisi_pour
@@ -73,7 +74,10 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
     #  pas : ce n'est pas une correction, c'est la provenance de celle-ci.
     marquer_assiste_ia(ticket, body)
     if body.categorie is not None and body.categorie != ticket.categorie:
-        changes.append(f"Catégorie : {ticket.categorie} → {body.categorie}")
+        #  Les LIBELLÉS, pas les valeurs : l'historique se lit (#1350).
+        changes.append(
+            f"Catégorie : {libelle_categorie(ticket.categorie)} → {libelle_categorie(body.categorie)}"
+        )
         ticket.categorie = body.categorie
     if body.perimetre_cible is not None:
         #  Comparaison sur des ENSEMBLES : le périmètre est une cible, pas une
