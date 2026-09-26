@@ -47,6 +47,9 @@ export const DESTINATAIRES: Destinataire[] = [
 	//  mot seul désignera celui qui loue PAR DÉLÉGATION d'un copropriétaire. Le
 	//  code reste `bailleurs` — stocké, lu par le serveur.
 	{ code: 'bailleurs', libelle: 'Copropriétaires bailleurs', icone: 'building-2' },
+	//  « Bailleurs » : qui loue PAR DÉLÉGATION — agence, gestionnaire (statut
+	//  `mandataire`, #1301). Code `mandataires` : `bailleurs` est déjà stocké.
+	{ code: 'mandataires', libelle: 'Bailleurs', icone: 'heart-handshake' },
 	{ code: 'locataires', libelle: 'Locataires', icone: 'user' },
 	{ code: 'conseil_syndical', libelle: 'Conseil syndical', icone: 'shield-check' },
 ];

@@ -580,7 +580,7 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
 | **Tous** | aucune restriction de profil | tous | ✅ `LIBELLE_TOUS`, code `résidents` |
 | **Copropriétaires occupants** | copropriétaires qui habitent leur lot | `copropriétaire_résident` | ✅ |
 | **Copropriétaires bailleurs** | copropriétaires qui louent leur lot | `copropriétaire_bailleur` | ✅ libellé, code `bailleurs` |
-| **Bailleurs** | louent **par délégation** d'un copropriétaire — ils ne lisent **pas** les affaires suivies (#1311) | `mandataire` (confirmé ; les **aidants** n'en sont pas, ils héritent du droit du copropriétaire qu'ils aident) | ⏳ maquette — nouveau code serveur |
+| **Bailleurs** | louent **par délégation** d'un copropriétaire — ils ne lisent **pas** les affaires suivies (#1311) | `mandataire` (confirmé ; les **aidants** n'en sont pas, ils héritent du droit du copropriétaire qu'ils aident) | ✅ code `mandataires` (#1301, 26/09/2026) — `bailleurs` était déjà pris par le copropriétaire bailleur, et stocké |
 | **Locataires** | locataires | `locataire` | ✅ |
 | **CS** | le conseil syndical seul (confidentialité) | rôle `conseil_syndical` | ✅ pastille « CS » (lot 1) |
 
@@ -619,8 +619,10 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
   - ✅ la pastille « Copropriétaires » a quitté le sélecteur (#1301, migration
     0221 : ses données portent désormais les deux codes). Le serveur et la
     pastille de lecture LISENT encore l'ancien code, aucun écran ne l'offre.
-  - ⏳ **lot 2** : le code serveur des « Bailleurs » (mandataires) dans
-    Destinataires.
+  - ✅ **lot 2** (26/09/2026) : « Bailleurs » (mandataires) est une pastille
+    de Destinataires, code `mandataires`. La pastille « Conseil syndical »
+    RESTE, arbitré à l'écran le même jour : « Résident concerné » se place
+    entre Locataires et elle — trois degrés de restriction, pas un doublon.
 
 🔒 **Tenue depuis le 26/09/2026 (#1305) : `api/tests/test_libelle_tous.py`.** Il
 refuse « tous les résidents » dans tout texte SERVI — littéraux Python hors
