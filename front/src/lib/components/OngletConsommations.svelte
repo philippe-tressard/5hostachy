@@ -18,7 +18,6 @@
 <script lang="ts">
 	import { prestataires as prestApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
-	import { slug } from '$lib/texte';
 	import { isCS } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
@@ -26,6 +25,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+	import CategoriesCompteur from '$lib/components/CategoriesCompteur.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	/** L'annuaire des prestataires — la page le charge déjà, on ne le recharge pas. */
@@ -56,12 +56,6 @@
 	//  zéro. `FichiersUpload` se vide en vidant sa liste.
 	$: relevePhotoFile = relevePhotoFichiers[0] ?? null;
 	let releveSaving = false;
-
-	let editCompteurId: number | null = null;
-	let editCompteurPrestId = '';
-	let showAddCompteur = false;
-	let newCompteurLabel = '';
-	let addCompteurSaving = false;
 
 	$: currentCompteur = compteurConfigs.find((c) => c.type_compteur === typeCompteur) ?? null;
 	$: libelleBouton = currentCompteur
@@ -178,150 +172,15 @@
 		});
 	}
 
-	function startEditCompteur(cfg: any) {
-		editCompteurId = cfg.id;
-		editCompteurPrestId = cfg.prestataire_id ? String(cfg.prestataire_id) : '';
-	}
-
-	async function saveCompteurPrestataire(cfg: any) {
-		try {
-			const updated = await prestApi.updateCompteurConfig(cfg.id, {
-				prestataire_id: editCompteurPrestId ? Number(editCompteurPrestId) : null,
-			});
-			compteurConfigs = compteurConfigs.map((c) => (c.id === cfg.id ? updated : c));
-			editCompteurId = null;
-			toast('success', 'Fournisseur mis à jour');
-		} catch (e: any) {
-			toast('error', messageErreur(e));
-		}
-	}
-
-	async function addCompteurConfig() {
-		if (!newCompteurLabel.trim()) return;
-		addCompteurSaving = true;
-		const code = slug(newCompteurLabel, '_');
-		try {
-			const created = await prestApi.createCompteurConfig({
-				type_compteur: code,
-				label: newCompteurLabel.trim(),
-				ordre: compteurConfigs.length,
-			});
-			compteurConfigs = [...compteurConfigs, created];
-			newCompteurLabel = '';
-			showAddCompteur = false;
-			typeCompteur = created.type_compteur;
-			toast('success', 'Catégorie ajoutée');
-		} catch (e: any) {
-			toast('error', messageErreur(e));
-		} finally {
-			addCompteurSaving = false;
-		}
-	}
-
-	async function deleteCompteurConfig(cfg: any) {
-		await confirmerPuis(
-			SUPPRESSION(`La catégorie « ${cfg.label} »`),
-			'Catégorie supprimée',
-			async () => {
-				await prestApi.deleteCompteurConfig(cfg.id);
-				compteurConfigs = compteurConfigs.filter((c) => c.id !== cfg.id);
-				if (typeCompteur === cfg.type_compteur)
-					typeCompteur = compteurConfigs[0]?.type_compteur ?? '';
-			},
-		);
-	}
-
 	function fmtReleve(r: any) {
 		return fmtDayMonth(r.date_releve);
 	}
 </script>
 
-<div style="margin-bottom:1.25rem">
-	<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-		{#each compteurConfigs as cfg (cfg.type_compteur)}
-			<button
-				class="btn btn-sm"
-				class:btn-primary={typeCompteur === cfg.type_compteur}
-				on:click={() => {
-					typeCompteur = cfg.type_compteur;
-				}}
-			>
-				{cfg.label}
-			</button>
-		{/each}
-		{#if $isCS}
-			<button
-				class="btn btn-sm btn-outline"
-				on:click={() => {
-					showAddCompteur = !showAddCompteur;
-					newCompteurLabel = '';
-				}}
-				title="Ajouter une catégorie">+ Catégorie</button
-			>
-		{/if}
-	</div>
-
-	{#if currentCompteur && $isCS}
-		<div class="compteur-config-row" style="margin-top:.6rem">
-			{#if editCompteurId === currentCompteur.id}
-				<span style="font-size:.82rem;color:var(--color-text-muted)">Fournisseur :</span>
-				<select bind:value={editCompteurPrestId} class="input-sm">
-					<option value="">— Aucun —</option>
-					{#each prestataires as p (p.id)}<option value={String(p.id)}>{p.nom}</option>{/each}
-				</select>
-				<button class="btn btn-sm btn-outline" on:click={() => (editCompteurId = null)}
-					>Annuler</button
-				>
-				<button
-					class="btn btn-sm btn-primary"
-					on:click={() => saveCompteurPrestataire(currentCompteur)}>Enregistrer</button
-				>
-				{#if compteurConfigs.length > 1}
-					<button
-						class="btn btn-sm btn-outline"
-						style="color:var(--color-danger);border-color:var(--color-danger);margin-left:auto"
-						on:click={() => deleteCompteurConfig(currentCompteur)}>🗑️</button
-					>
-				{/if}
-			{:else}
-				{@const prest = currentCompteur.prestataire_id
-					? prestataires.find((p) => p.id === currentCompteur.prestataire_id)
-					: null}
-				{#if prest}
-					<span class="badge badge-blue" style="font-size:.78rem">🔧 {prest.nom}</span>
-				{:else}
-					<span style="font-size:.78rem;color:var(--color-text-muted)">Aucun fournisseur</span>
-				{/if}
-				<button
-					class="btn-icon-edit"
-					aria-label="Modifier le fournisseur"
-					title="Modifier le fournisseur"
-					on:click={() => startEditCompteur(currentCompteur)}>✏️</button
-				>
-			{/if}
-		</div>
-	{/if}
-
-	{#if showAddCompteur && $isCS}
-		<div style="display:flex;gap:.5rem;align-items:center;margin-top:.5rem;flex-wrap:wrap">
-			<input
-				type="text"
-				bind:value={newCompteurLabel}
-				placeholder="Ex. EDF Parking privé"
-				class="input-sm"
-				style="flex:1"
-			/>
-			<button
-				class="btn btn-sm btn-primary"
-				disabled={addCompteurSaving || !newCompteurLabel.trim()}
-				on:click={addCompteurConfig}>{addCompteurSaving ? '…' : 'Ajouter'}</button
-			>
-			<button class="btn btn-sm btn-outline" on:click={() => (showAddCompteur = false)}
-				>Annuler</button
-			>
-		</div>
-	{/if}
-</div>
+<!--  Les catégories de compteur et leur fournisseur — `CategoriesCompteur`,
+      sorti le 26/09/2026 (#1329) quand ses deux petits formulaires ont reçu le
+      pied commun : le fichier passait 500 lignes. -->
+<CategoriesCompteur bind:compteurConfigs bind:typeCompteur {prestataires} />
 
 {#if showReleveForm && $isCS}
 	<FormulaireCreation
@@ -429,13 +288,6 @@
 
 <style>
 	/* ── Configuration des compteurs ── */
-	.compteur-config-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		font-size: 0.82rem;
-	}
 
 	/* Relevés compteurs */
 	.releve-year {
