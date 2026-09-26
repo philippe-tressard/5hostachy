@@ -47,6 +47,7 @@ from .objets import (
     sondage_accessible,
     sondage_clos,
     reservee_au_conseil,
+    destinataires_par_defaut,
     ticket_visible,
 )
 from .documents import document_visible
@@ -73,6 +74,7 @@ __all__ = [
     "evenement_visible",
     "can_see_ag",
     "ticket_visible",
+    "destinataires_par_defaut",
     "reservee_au_conseil",
     "hors_du_hall",
     "document_visible",

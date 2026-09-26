@@ -14,6 +14,7 @@ d'accès.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
 from app.utils.nature_affaire import est_actualite, natures
@@ -29,7 +30,7 @@ from app.models.core import (
     TypeEvenement,
     Utilisateur,
 )
-from app.utils.perimetres import parse_perimetres
+from app.utils.perimetres import batiments_cibles, parse_perimetres
 from app.utils.valeurs import valeur
 
 #  ⚠️ `_codes_json_pour_acces` est privé au paquet, pas au fichier : c'est le
@@ -217,6 +218,36 @@ def can_see_ag(user: Utilisateur) -> bool:
 _LECTURE_RESTREINTE = (StatutUtilisateur.locataire, StatutUtilisateur.mandataire)
 
 
+#: Ce que lit une Panne sans choix du conseil, dans un bâtiment : ceux qui Y
+#: VIVENT — occupants et locataires —, pas les bailleurs (#1343).
+_DESTINATAIRES_PANNE_BATIMENT = ["copropriétaires_occupants", "locataires"]
+
+
+def destinataires_par_defaut(ticket: Ticket) -> list[str] | None:
+    """Les Destinataires qu'une affaire a SANS choix du conseil, quand sa
+    catégorie en décide (#1343, 26/09/2026) — `None` : la règle historique
+    (les copropriétaires, plus le calendrier), écrite dans `ticket_visible`.
+
+    Arbitré à l'écran : *« pour une catégorie Panne, tout le périmètre (sauf
+    bailleurs) concernés, si le périmètre est un bâtiment ; hors bâtiments =
+    tout le monde »*. Une panne d'ascenseur concerne qui prend l'ascenseur.
+
+    « Dans un bâtiment » : CHAQUE code du périmètre descend d'un bâtiment
+    (`batiments_cibles`) ; un seul espace commun — parking, espaces verts, la
+    copropriété entière — et la panne concerne tout le monde.
+
+    ⚠️ Miroir : `destinatairesParDefaut` (`front/src/lib/lecture.ts`), tenus
+    d'accord par `tests/donnees/lecture_pastille.json`.
+    """
+    if valeur(ticket.categorie) != "panne":
+        return None
+    #  Illisible : `cible_visible` refusera de toute façon, la valeur importe peu.
+    codes = _codes_json_pour_acces(ticket.perimetre_cible) or []
+    if codes and all(batiments_cibles([c]) for c in codes):
+        return _DESTINATAIRES_PANNE_BATIMENT
+    return ["résidents"]
+
+
 def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     """Qui peut LIRE ce ticket — jamais qui peut y écrire.
 
@@ -308,6 +339,10 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     #  des deux : une donnée abîmée ne peut que restreindre (#789).
     if _parse_json_list(ticket.public_cible, []):
         return cible_visible(ticket.perimetre_cible, ticket.public_cible, user)
+    #  Sans choix, la catégorie peut en décider — une Panne (#1343).
+    defaut = destinataires_par_defaut(ticket)
+    if defaut is not None:
+        return cible_visible(ticket.perimetre_cible, json.dumps(defaut, ensure_ascii=False), user)
 
     #  🔴 UN LOCATAIRE NE VOIT QUE LES SIENS (05/09/2026), demandé à l'écran :
     #  *« les locataires ne voient pas les tickets »*.

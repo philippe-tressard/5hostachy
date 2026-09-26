@@ -53,6 +53,8 @@ for (const c of cas) {
 		reservePerimetre: c.reserve_perimetre,
 		datee: c.datee === true,
 		enAg: c.en_ag === true,
+		categorie: c.categorie,
+		dansBatiments: c.perimetre === 'batiment',
 	});
 	const lecteurs = l.profils.map((p) => STATUT[p]);
 	if (JSON.stringify(lecteurs) !== JSON.stringify(c.lecteurs)) {

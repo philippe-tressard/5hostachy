@@ -95,7 +95,7 @@ def _ticket(cas: dict, batiment: int, auteur_id: int) -> Ticket:
         numero=f"L-{uuid.uuid4().hex[:6]}",
         titre="Lecture",
         description="…",
-        categorie="actualite" if cas["actualite"] else "panne",
+        categorie="actualite" if cas["actualite"] else cas["categorie"],
         auteur_id=auteur_id,
         perimetre_cible=json.dumps(perimetre, ensure_ascii=False),
         public_cible=json.dumps(cas["public_cible"], ensure_ascii=False),
