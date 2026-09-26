@@ -111,7 +111,8 @@
 		border-radius: var(--radius);
 		font-size: 0.875rem;
 		box-shadow: var(--shadow);
-		animation: slide-in 0.2s ease;
+		/*  Jetons du site : 200 ms, courbe « ease-out » forte (`emil-design-eng`). */
+		animation: slide-in var(--duree-apparition) var(--ease-out);
 	}
 
 	.toast-success {

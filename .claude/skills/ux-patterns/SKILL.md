@@ -2369,7 +2369,7 @@ demande de l'utilisateur. Une seule écriture chacun, dans la charte :
 | jetons | `--ease-out` (courbe de sortie marquée), `--duree-geste` 120 ms, `--duree-apparition` 200 ms | `styles/socle.css` |
 | corps déplié | **entre** en 200 ms (fondu + 4 px), **sort** sans délai ; jamais la hauteur animée. Le corps porte **`.carte-corps`** | `composants.css` (`.carte-liste .carte-corps`) |
 | appui | `scale(0.97)` sur `:active`, `transform` seul ; pas sur une icône `aria-pressed` (déjà à 115 %) | `composants.css` (`.btn`, `.btn-icon*`, `.signaler-inline`) · `Pastille.svelte` |
-| survol | ce qui ne sert qu'à la souris passe sous `@media (hover: hover) and (pointer: fine)` — au doigt, `:hover` reste collé | `normes.css` (`.carte-liste`, `.ec-titre`) · `.attenue` des cartes |
+| survol | ce qui ne sert qu'à la souris passe sous `@media (hover: hover) and (pointer: fine)` — au doigt, `:hover` reste collé. 🔒 `npm run lint:survol` (26/09/2026) : les feuilles communes sont rangées, les composants sous **plafond décroissant** | `normes.css` (`.carte-liste`, `.ec-titre`) · `.attenue` des cartes · toute `src/styles/` |
 | transitions | les propriétés **nommées**, jamais `all` | partout |
 | mouvement réduit | coupe les glissements ; garde l'appui (3 % sur place = retour d'état) | `composants.css` |
 

@@ -388,8 +388,10 @@ label.field.case {
 	text-align: center;
 }
 
-.editeur-barre button:hover {
-	background: var(--color-border);
+@media (hover: hover) and (pointer: fine) {
+	.editeur-barre button:hover {
+		background: var(--color-border);
+	}
 }
 
 .editeur-barre button.active {

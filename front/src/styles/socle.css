@@ -130,8 +130,10 @@ a {
 	text-decoration: none;
 }
 
-a:hover {
-	text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+	a:hover {
+		text-decoration: underline;
+	}
 }
 
 /*  Un lien STYLÉ EN BOUTON ne se souligne pas au survol. `.btn` pose bien
@@ -140,8 +142,10 @@ a:hover {
     qu'aucun `<button class="btn">` ne fait — deux rendus pour un même objet
     visuel, selon la balise sous-jacente. Signalé sur « + Nouveau ticket »
     (16/08/2026) ; corrigé ici, sur la classe, et non sur l'occurrence. */
-a.btn:hover {
-	text-decoration: none;
+@media (hover: hover) and (pointer: fine) {
+	a.btn:hover {
+		text-decoration: none;
+	}
 }
 
 /* ── Layout ── */

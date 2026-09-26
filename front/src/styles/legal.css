@@ -59,8 +59,10 @@
 	text-decoration: none;
 	margin-bottom: 1.5rem;
 }
-.back-link:hover {
-	text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+	.back-link:hover {
+		text-decoration: underline;
+	}
 }
 
 /*  Le contenu administré, saisi dans l'éditeur riche : le balisage n'existe pas
@@ -121,6 +123,8 @@
 .legal-footer a {
 	color: var(--color-text-muted);
 }
-.legal-footer a:hover {
-	color: var(--color-primary);
+@media (hover: hover) and (pointer: fine) {
+	.legal-footer a:hover {
+		color: var(--color-primary);
+	}
 }

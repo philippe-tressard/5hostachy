@@ -91,6 +91,8 @@
 		"lint:etat-liste": "node scripts/check-etat-liste.mjs",
 		"lint:categorie-brute": "node scripts/check-categorie-brute.mjs --selftest && node scripts/check-categorie-brute.mjs",
 		"lint:suite-eteignable": "node scripts/check-suite-eteignable.mjs --selftest && node scripts/check-suite-eteignable.mjs",
+		"lint:survol": "node scripts/check-survol.mjs --selftest && node scripts/check-survol.mjs",
+		"lint:badge-nouveau": "node scripts/check-badge-nouveau.mjs --selftest && node scripts/check-badge-nouveau.mjs",
 		"lint:chargement": "node scripts/check-chargement.mjs --selftest && node scripts/check-chargement.mjs",
 		"lint:etage-libelle": "node scripts/check-etage-libelle.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",
