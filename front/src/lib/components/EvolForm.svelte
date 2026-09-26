@@ -168,6 +168,7 @@
 	/** Le ciblage en vigueur et son aide — voir `SectionsCiblageEvolution`. */
 	export let initialDestinataires: string[] = [];
 	export let destinatairesParDefaut: string[] | null = null; // une affaire (#1343)
+	export let confidentiel = false; // « Résident concerné », lié à l'hôte (#1321)
 	export let aidePerimetre = '';
 	/**  Le périmètre de l’objet, et l’historique déjà écrit : ensemble ils donnent
 	 *   celui dont cette entrée HÉRITE (`perimetreHerite`) — badge et point de
@@ -312,16 +313,15 @@
 	export let whatsappInterdit = '';
 
 	let refDiffusion: SectionDiffusion;
-	const brouillonApercu = () => {
-		if (!demanderApercu) throw new Error('Aperçu non disponible sur cet écran.');
-		return demanderApercu({
+	//  Transmise seulement si `demanderApercu` existe ; le refus vit dans `SectionDiffusion`.
+	const brouillonApercu = () =>
+		demanderApercu!({
 			contenu,
 			fichiers_urls: allFichiersUrls,
 			whatsapp: partagerWhatsapp,
 			syndic: envoyerSyndic,
 			cs: envoyerCs,
 		});
-	};
 
 	// ── Submit ────────────────────────────────────────────────────────────────
 	function soumettre() {
@@ -446,6 +446,7 @@
 		avecDestinataires={sections.destinataires}
 		bind:destinataires
 		{destinatairesParDefaut}
+		bind:confidentiel
 	/>
 	{#if sections.miseEnAvant}
 		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->

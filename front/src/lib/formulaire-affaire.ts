@@ -39,7 +39,9 @@ export function natureDe(categorie: string): NatureAffaire {
 
 /** Ce que l'affaire EST, pour sa Suite 🔄 — sa nature (`sectionDeLaSuite`). */
 export function conditionsDeLaSuite(ticket: { categorie: string } | null): ConditionInactive[] {
-	return ticket ? [natureDe(ticket.categorie)] : [];
+	//  Les MÊMES que la création (#1321) : la Suite d'un bogue éteignait ni son
+	//  Périmètre ni sa Diffusion, que la déclaration dit inactifs.
+	return ticket ? conditionsDe(ticket.categorie) : [];
 }
 
 /** Les sections que la nature éteint — celles qui ont un motif déclaré. */
@@ -66,18 +68,25 @@ export const CATEGORIE_BUG = 'bug';
 /** La catégorie de la récurrence : un Entretien seul se répète (#1092). */
 export const CATEGORIE_ENTRETIEN = 'entretien';
 
-/** Le motif de chaque section inactive, pour cet état, cette catégorie et ce rôle. */
-export function sectionsInactives(
-	etat: Etat,
-	categorie: string,
-	estCS = true,
-): Partial<Record<IdSection, string>> {
+/**  Ce qui éteint des sections, pour cette catégorie et ce rôle — la création,
+ *   la correction ET la Suite (#1321). */
+export function conditionsDe(categorie: string, estCS = true): ConditionInactive[] {
 	//  Dans l'ordre : la nature, puis le rôle, puis la catégorie (`motifInactif`).
 	const conditions: ConditionInactive[] = [natureDe(categorie)];
 	//  Le bogue d'abord : son motif dit mieux pourquoi que celui du rôle (#1191).
 	if (categorie === CATEGORIE_BUG) conditions.push('bug');
 	if (!estCS) conditions.push('resident');
 	if (categorie && !estBati(categorie)) conditions.push('horsBati');
+	return conditions;
+}
+
+/** Le motif de chaque section inactive, pour cet état, cette catégorie et ce rôle. */
+export function sectionsInactives(
+	etat: Etat,
+	categorie: string,
+	estCS = true,
+): Partial<Record<IdSection, string>> {
+	const conditions = conditionsDe(categorie, estCS);
 	const inactives: Partial<Record<IdSection, string>> = {};
 	for (const id of SECTIONS_ETEIGNABLES) {
 		const motif = motifInactif(TICKET, etat, id, conditions);
