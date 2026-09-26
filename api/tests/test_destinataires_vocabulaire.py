@@ -36,6 +36,7 @@ _FRONT = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "destin
 _TEMOIN = {
     "copropriétaires_occupants": (StatutUtilisateur.copropriétaire_résident, "résident"),
     "bailleurs": (StatutUtilisateur.copropriétaire_bailleur, "résident"),
+    "mandataires": (StatutUtilisateur.mandataire, "résident"),
     "locataires": (StatutUtilisateur.locataire, "résident"),
     "conseil_syndical": (StatutUtilisateur.copropriétaire_résident, "conseil_syndical"),
 }

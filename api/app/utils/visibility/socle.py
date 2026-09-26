@@ -213,6 +213,7 @@ def perimetre_visible(
 CODES_PUBLIC_CIBLE: tuple[str, ...] = (
     "copropriétaires_occupants",
     "bailleurs",
+    "mandataires",
     "locataires",
     "conseil_syndical",
 )
@@ -289,6 +290,12 @@ def public_cible_visible(raw: Optional[str], user: Utilisateur) -> bool:
     if "bailleurs" in public and statut == "copropriétaire_bailleur":
         return True
     if "copropriétaires_occupants" in public and statut == "copropriétaire_résident":
+        return True
+    #  « Bailleurs » à l'écran (#1301, 26/09/2026) : celui qui loue PAR
+    #  DÉLÉGATION d'un copropriétaire — agence, gestionnaire. Le code
+    #  `bailleurs` ci-dessus était déjà pris par le copropriétaire bailleur, et
+    #  il est stocké : le nouveau se nomme par le statut qu'il vise.
+    if "mandataires" in public and statut == "mandataire":
         return True
     #  Le SEUL code du catalogue qui se décide sur le rôle et non sur le statut.
     #

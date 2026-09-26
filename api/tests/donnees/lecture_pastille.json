@@ -354,6 +354,37 @@
 				"copropriétaire_résident"
 			],
 			"hors_perimetre": false
+		},
+		{
+			"nom": "actualité aux « Bailleurs » (mandataires) seuls (#1301)",
+			"actualite": true,
+			"confidentiel": false,
+			"public_cible": [
+				"mandataires"
+			],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"mandataire"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "affaire : destinataires choisis — les « Bailleurs » (mandataires) et les locataires (#1301)",
+			"actualite": false,
+			"categorie": "nuisance",
+			"confidentiel": false,
+			"public_cible": [
+				"mandataires",
+				"locataires"
+			],
+			"perimetre": "batiment",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": false
 		}
 	]
 }

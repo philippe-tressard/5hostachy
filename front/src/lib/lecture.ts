@@ -96,6 +96,7 @@ const PROFILS_DU_CODE: Record<string, Profil[]> = {
 	copropriétaires: ['occupants', 'copro_bailleurs'],
 	copropriétaires_occupants: ['occupants'],
 	bailleurs: ['copro_bailleurs'],
+	mandataires: ['bailleurs'],
 	locataires: ['locataires'],
 };
 
