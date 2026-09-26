@@ -29,7 +29,7 @@ effacé ailleurs), plus une liste blanche : `assurance` et `syndic` classent des
 **contrats**, pas un équipement sur lequel on intervient.
 
 C'est lui qui RANGE une affaire résolue au carnet d'entretien
-(`carnet_entretien._entrees_incidents`) ; sans lui, elle y figure sous « Sans
+(`carnet_entretien._entrees_affaires`) ; sans lui, elle y figure sous « Sans
 équipement rattaché » — et non plus exclue, arbitré à l'écran le 24/09/2026.
 
 Création (`crud.py`) et correction (`mise_a_jour.py`) l'appellent : deux

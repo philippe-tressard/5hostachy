@@ -68,6 +68,17 @@ def nom_en_majuscules(v: Optional[str]) -> Optional[str]:
 NomMajuscules = Annotated[Optional[str], BeforeValidator(nom_en_majuscules)]
 
 
+class AffaireLieeLue(BaseModel):
+    """Une affaire liée, telle qu'un lecteur la voit (#1342) : de quoi la
+    reconnaître — numéro, titre, statut. Rendue seulement si le lecteur peut
+    la lire (`utils/affaires_liees`)."""
+
+    id: int
+    numero: str
+    titre: str
+    statut: str
+
+
 class ChampsIntervenant(BaseModel):
     """Intervenant, récurrence et équipement d'une affaire — conseil seul.
 

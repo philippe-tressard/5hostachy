@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.56.0",
+	"version": "2.57.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -89,6 +89,7 @@
 		"lint:client-appele": "node scripts/check-client-appele.mjs",
 		"lint:infobulles": "node scripts/check-infobulles.mjs",
 		"lint:etat-liste": "node scripts/check-etat-liste.mjs",
+		"lint:categorie-brute": "node scripts/check-categorie-brute.mjs --selftest && node scripts/check-categorie-brute.mjs",
 		"lint:chargement": "node scripts/check-chargement.mjs --selftest && node scripts/check-chargement.mjs",
 		"lint:etage-libelle": "node scripts/check-etage-libelle.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",

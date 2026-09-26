@@ -22,6 +22,7 @@ from typing import Optional
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.utils.affaires_liees import liees_lisibles
 from app.utils.nature_affaire import natures
 from app.utils.batiments import libelle_batiment_ou
 from app.models.core import (
@@ -31,7 +32,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.models.prestataires import Prestataire
-from app.schemas import TicketEvolutionRead, TicketRead
+from app.schemas import AffaireLieeLue, TicketEvolutionRead, TicketRead
 from app.utils.archivage import est_archivable, perime_le, seuil_archivage_jours
 from app.utils.photos import parse_photos
 
@@ -212,7 +213,17 @@ def apercu_pieces(ticket: Ticket, session: Session) -> list[str]:
     return []
 
 
-def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
+def ticket_read(
+    ticket: Ticket,
+    session: Session,
+    lecteur: Utilisateur | None = None,
+    *,
+    index: dict | None = None,
+    tickets: dict | None = None,
+) -> TicketRead:
+    """`lecteur` : à qui l'on répond. Sans lui, aucune affaire liée n'est rendue
+    — un lien ne doit rien révéler à qui on ne sait pas (#1342). `index` et
+    `tickets` évitent une requête par affaire dans une liste."""
     auteur = session.get(Utilisateur, ticket.auteur_id)
     #  🔴 LE BÂTIMENT DU DEMANDEUR, ET RIEN D'AUTRE (#653, 30/08/2026).
     #
@@ -261,6 +272,10 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
             auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else None,
             auteur_batiment_nom=libelle_batiment_ou(batiment, None),
             apercu_pieces=apercu_pieces(ticket, session),
+            affaires_liees=[
+                AffaireLieeLue(**lue)
+                for lue in liees_lisibles(session, ticket.id, lecteur, index=index, tickets=tickets)
+            ],
             saisi_pour_affichage=saisi_pour_affichage,
             proprietaire_nom=proprietaire_nom,
             #  ⚠️ `seuil_archivage_jours` interroge la configuration, et l'on est ici

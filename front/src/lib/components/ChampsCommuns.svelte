@@ -397,6 +397,9 @@
 	<svelte:fragment slot="documents"><slot name="documents" /></svelte:fragment>
 </SectionsPiecesJointes>
 
+<!--  Affaires liées (#1342) : un créneau, à son rang — seule l'affaire en porte. -->
+<slot name="affairesLiees" />
+
 {#if avecSaisiPour}
 	<!--  2. Au nom de QUI l'entrée est ouverte. Le composant est celui des
 	      tickets (`ChampSaisiPour`) : il portait déjà la saisie, il ne lui

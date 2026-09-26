@@ -11,6 +11,7 @@ from app.models.tickets import CategorieTicket
 #  19/08/2026 : `schemas_tickets` en a besoin et ne peut pas importer ce
 #  fichier-ci, qui l’importe. Ré-exportés, donc rien à changer ailleurs.
 from app.schemas_communs import (  # noqa: F401
+    AffaireLieeLue,
     ChampsIntervenant,
     nom_en_majuscules,
     ListeJson as ListeJson,
@@ -143,6 +144,10 @@ class TokenResponse(BaseModel):
 
 
 class TicketCreate(SaisiPourEntree, AssisteIAEntree, ChampsIntervenant):
+    #  Section « Affaires liées » (#1342) : les affaires à lier. En création et
+    #  en correction, la liste REMPLACE les liens que l'auteur voit ; en Suite,
+    #  elle les complète (`utils/affaires_liees`). Absente : rien ne change.
+    affaires_liees: Optional[List[int]] = None
     #  Section « Quand » (#1092) : quand ça se passe — le calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
@@ -234,6 +239,8 @@ class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
     #  `routers/tickets/commun.py::apercu_pieces` (#464) : les répéter ici en
     #  ferait deux écritures libres de diverger.
     apercu_pieces: ListeJson = []
+    #  Les affaires liées que CE lecteur peut lire (#1342) — dérivé, jamais saisi.
+    affaires_liees: List[AffaireLieeLue] = []
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     envoyer_auteur: bool = False
@@ -297,6 +304,10 @@ class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
 
 
 class TicketUpdate(SaisiPourEntree, AssisteIACorrection, ChampsIntervenant):
+    #  Section « Affaires liées » (#1342) : les affaires à lier. En création et
+    #  en correction, la liste REMPLACE les liens que l'auteur voit ; en Suite,
+    #  elle les complète (`utils/affaires_liees`). Absente : rien ne change.
+    affaires_liees: Optional[List[int]] = None
     #  Section « Quand » (#1092) : quand ça se passe — le calendrier.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None

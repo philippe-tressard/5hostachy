@@ -241,6 +241,7 @@
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}
 					entite={TICKET}
+					affaireLiable={ticketId}
 					conditions={conditionsDeLaSuite(ticket)}
 					{assistant}
 					peutPreciserPerimetre={$isCS}

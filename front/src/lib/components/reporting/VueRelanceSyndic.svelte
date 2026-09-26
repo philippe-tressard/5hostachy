@@ -12,6 +12,7 @@
 	import { confirmer } from '$lib/confirmation';
 	import { onMount } from 'svelte';
 	import { TICKET } from '$lib/entites/ticket';
+	import { categorieTicketLabel } from '$lib/tickets';
 	import { tickets as ticketsApi, type Ticket, type ReponseRelance } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { apiMessage } from '$lib/utils';
@@ -229,7 +230,7 @@
 						<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}"
 							>{TK_STATUT_LABELS[t.statut] ?? t.statut}</span
 						>
-						<span class="badge badge-gray">{t.categorie}</span>
+						<span class="badge badge-gray">{categorieTicketLabel(t.categorie)}</span>
 						{#if t.non_relancable}
 							<span class="badge badge-red"
 								>🚫 Non relançable{t.non_relancable_motif

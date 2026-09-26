@@ -819,3 +819,4 @@ from app.models.exploitation import (  # noqa: E402
     PorteeExecution as PorteeExecution,
     TachePlanifiee as TachePlanifiee,
 )
+from app.models.affaires_liees import AffaireLiee as AffaireLiee  # noqa: E402,F401

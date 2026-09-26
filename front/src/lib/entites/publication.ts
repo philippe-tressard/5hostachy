@@ -195,6 +195,13 @@ export const PUBLICATION: EntiteDeclaree = {
 			pliee: true,
 		},
 		{
+			//  Une actualité EST une affaire de catégorie Actualité (#1091) : elle
+			//  se lie comme elle, dans le même formulaire (#1342).
+			id: 'affaires_liees',
+			objet: 'SectionAffairesLiees — comme une affaire, dont elle est une catégorie',
+			pliee: true,
+		},
+		{
 			//  L'actualité porte « Saisi pour » depuis le 15/09/2026, comme l'affaire
 			//  et l'événement — c'est le mixin `SaisiPourMixin` côté serveur.
 			//  🔴 Obligatoire, donc DEPLIEE — et plus d'exception (22/09/2026).

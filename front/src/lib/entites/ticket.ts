@@ -195,6 +195,17 @@ export const TICKET: EntiteDeclaree = {
 			pliee: true,
 		},
 		{
+			//  🆕 26/09/2026 (#1342) : les affaires qui parlent de la même chose —
+			//  une fuite et la tache qu'elle a faite au plafond du dessous. Le lien
+			//  est RÉCIPROQUE et ne révèle rien : une affaire que le lecteur ne peut
+			//  pas lire n'apparaît pas pour lui (`api/app/utils/affaires_liees.py`).
+			//  Facultative, donc pliée. Ouverte à l'évolution : une Suite AJOUTE un
+			//  lien, elle n'en retire aucun — le serveur le tient.
+			id: 'affaires_liees',
+			objet: 'SectionAffairesLiees — numéro et titre de chaque affaire liée',
+			pliee: true,
+		},
+		{
 			//  ✅ OUVERT à l'édition depuis le 18/08/2026. Il en était absent parce
 			//  que `TicketUpdate` ne savait pas EFFACER les `saisi_pour_*` — un
 			//  `None` y était indistinguable d'un champ non envoyé, et « En mon

@@ -108,6 +108,8 @@ export interface ChargeUtileEvolution {
 	contenu?: string;
 	nouveau_statut?: string;
 	fichiers_urls?: string[];
+	/** Les affaires à LIER — une Suite ajoute, elle ne retire rien (#1342). */
+	affaires_liees?: number[];
 	email_externe?: string;
 	partager_whatsapp?: boolean;
 	envoyer_syndic?: boolean;
@@ -285,6 +287,7 @@ export interface SectionsDeLaSuite {
 	specifiques: boolean;
 	miseEnAvant: boolean;
 	piecesJointes: boolean;
+	affairesLiees: boolean;
 	diffusion: boolean;
 }
 
@@ -318,6 +321,8 @@ export function sectionsDeLaSuite(
 	droits: {
 		perimetre: boolean;
 		piecesJointes: boolean;
+		/** L'hôte offre de lier l'affaire à d'autres (#1342). */
+		affairesLiees: boolean;
 		diffusion: boolean;
 		/** Les créneaux que l'écran hôte REMPLIT (`$$slots`). */
 		creneaux: Record<Creneau, boolean>;
@@ -338,6 +343,7 @@ export function sectionsDeLaSuite(
 		specifiques: droits.creneaux.specifiques && creneauPresent(entite, 'specifiques'),
 		miseEnAvant: droits.creneaux.mise_en_avant && creneauPresent(entite, 'mise_en_avant'),
 		piecesJointes: droits.piecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes'),
+		affairesLiees: droits.affairesLiees && sectionPresente(entite, 'evolution', 'affaires_liees'),
 		diffusion: droits.diffusion && sectionPresente(entite, 'evolution', 'diffusion'),
 	};
 }

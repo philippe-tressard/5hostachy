@@ -7,6 +7,7 @@ import json
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
+from app.utils.affaires_liees import index_des_liens, poser_liens, supprimer_liens_de
 from app.utils.intervenant import appliquer_intervenant
 from app.utils.nature_affaire import (
     PERIMETRE_BUG,
@@ -93,7 +94,14 @@ def list_tickets(
     #  Le tri suit l'ACTIVITÉ, pas la date de dépôt (05/09/2026) : la règle et sa
     #  raison vivent dans `commun.py`, avec les autres décisions partagées.
     tickets = trier_par_activite(session, tickets)
-    return [ticket_read(ticket, session) for ticket in tickets if ticket_visible(ticket, user)]
+    #  Les liens de TOUTES les affaires en une requête (#1342), et la lecture
+    #  filtrée par ce lecteur — un lien ne révèle rien.
+    index, par_id = index_des_liens(session), {t.id: t for t in tickets}
+    return [
+        ticket_read(ticket, session, user, index=index, tickets=par_id)
+        for ticket in tickets
+        if ticket_visible(ticket, user)
+    ]
 
 
 @router.post("", response_model=TicketRead, status_code=201)
@@ -180,6 +188,9 @@ def create_ticket(
     )
     session.add(ticket)
     session.flush()
+    #  Ses affaires liées (#1342) : l'identifiant existe depuis le `flush`.
+    if body.affaires_liees:
+        poser_liens(session, ticket, body.affaires_liees, user)
     #  🔴 LES OPTIONS DE PUBLICATION — une écriture, trois chemins (05/09/2026).
     #  `appliquer_options` porte la table et le contrôle de droit ; ce routeur
     #  ne réécrit ni l'une ni l'autre (`commun.OPTIONS_TICKET`).
@@ -212,7 +223,7 @@ def create_ticket(
             externe=body.email_externe,
             affiche=bool(body.annonce_hall),
         )
-        return ticket_read(ticket, session)
+        return ticket_read(ticket, session, user)
 
     #  ⚠️ APRÈS `appliquer_options` : c'est elle qui pose `priorite`.
     #
@@ -283,7 +294,7 @@ def create_ticket(
             fichiers_urls=parse_photos(ticket.fichiers_urls),
         )
 
-    return ticket_read(ticket, session)
+    return ticket_read(ticket, session, user)
 
 
 @router.get("/{ticket_id}", response_model=TicketRead)
@@ -295,7 +306,7 @@ def get_ticket(
     ticket = ou_404(session, Ticket, ticket_id, "Ticket")
     if not ticket_visible(ticket, user):
         raise HTTPException(403, "Accès refusé")
-    return ticket_read(ticket, session)
+    return ticket_read(ticket, session, user)
 
 
 @router.delete("/{ticket_id}", status_code=204)
@@ -309,6 +320,7 @@ def delete_ticket(
     #  manquaient (#546) : un document joint n'a plus d'objet sans son porteur.
     #  Le `flush()` ordonne les DELETE — pourquoi : `utils/suppression_liee.py`.
     enfants = supprimer_lignes_liees(session, ticket.evolutions, ticket.messages)
+    supprimer_liens_de(session, ticket_id)  # ses affaires liées (#1342)
     docs = supprimer_documents_de(session, "ticket_id", ticket_id)
     flush_si_necessaire(session, enfants, docs)
     session.delete(ticket)

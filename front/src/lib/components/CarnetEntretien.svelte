@@ -29,6 +29,7 @@
 	import ChoixPastilles from './ChoixPastilles.svelte';
 	import { anneesDuCarnet, entreesDeLAnnee } from '$lib/carnet';
 	import { fmtDate } from '$lib/date';
+	import { categorieTicketLabel } from '$lib/tickets';
 	import { essayer } from '$lib/chargement';
 	import EtatListe from './EtatListe.svelte';
 
@@ -98,7 +99,7 @@
 	const ORIGINES: Record<string, string> = {
 		contrat: 'Contrat',
 		intervention: 'Intervention',
-		incident: 'Incident',
+		affaire: 'Affaire',
 	};
 </script>
 
@@ -161,7 +162,13 @@
 										<span class="alerte">⚠️ {entree.alerte}</span>
 									{/if}
 								</span>
-								<span class="badge badge-gray origine">{ORIGINES[entree.origine]}</span>
+								<!--  Une affaire se dit par sa CATÉGORIE : « Incident » qualifiait
+								      toutes, une étude de travaux comprise (26/09/2026). -->
+								<span class="badge badge-gray origine"
+									>{entree.categorie
+										? categorieTicketLabel(entree.categorie)
+										: ORIGINES[entree.origine]}</span
+								>
 							</li>
 						{/each}
 					</ol>

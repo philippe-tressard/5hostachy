@@ -50,6 +50,7 @@
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import RepriseAnnonceHall from '$lib/components/RepriseAnnonceHall.svelte';
+	import SectionAffairesLiees from '$lib/components/SectionAffairesLiees.svelte';
 	import SectionIntervenant from '$lib/components/SectionIntervenant.svelte';
 	import ChampFrequence from '$lib/components/ChampFrequence.svelte';
 	import { essayer } from '$lib/chargement';
@@ -138,6 +139,7 @@
 	//  `PATCH` remplace la liste entière.
 	let photosUrls: string[] = [...(ticket?.photos_urls ?? [])];
 	let fichiersUrls: string[] = [...(ticket?.fichiers_urls ?? [])];
+	let affairesLiees = [...(ticket?.affaires_liees ?? [])];
 	let error = '';
 	let loading = false;
 	//  « Au nom de » (CS/admin) — la saisie vit dans `ChampSaisiPour`.
@@ -224,6 +226,7 @@
 		fin,
 		photosUrls,
 		fichiersUrls,
+		affairesLiees,
 		destinataireSyndic,
 		destinataireCs,
 		partagerWhatsapp,
@@ -238,7 +241,6 @@
 
 	//  ── L'aperçu avant diffusion (#498) — il compose avec le gabarit de la
 	//  NATURE (le serveur choisit `publication_syndic` pour une actualité).
-	$: aUneDiffusion = destinataireSyndic || destinataireCs || partagerWhatsapp;
 	let refDiffusion: any = null;
 	const brouillonApercu = () =>
 		ticketsApi.apercuDiffusion({
@@ -300,7 +302,7 @@
 	 *   reste l'unique chemin d'enregistrement. */
 	function soumettre() {
 		if (!saisieValide()) return;
-		if (!modeEdition && refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
+		if (!modeEdition && refDiffusion?.ouvrirSiDiffusion()) return;
 		void submit();
 	}
 
@@ -474,6 +476,12 @@
 					/>
 				{/if}
 			</svelte:fragment>
+			<SectionAffairesLiees
+				slot="affairesLiees"
+				bind:liees={affairesLiees}
+				exclure={ticket?.id ?? null}
+				pliable={pliageDe(TICKET, 'affaires_liees')}
+			/>
 			<svelte:fragment slot="quand">
 				{#if $isCS && categorie === CATEGORIE_ENTRETIEN}
 					<ChampFrequence idPrefixe="ticket-frequence" bind:frequenceType bind:frequenceValeur />

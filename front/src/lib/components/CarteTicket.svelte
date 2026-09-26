@@ -74,6 +74,7 @@
 		STATUT_TICKET_LABELS,
 		STATUT_TICKET_OPTIONS,
 		categorieTicketEmoji,
+		categorieTicketLabel,
 	} from '$lib/tickets';
 	import { fmtDate } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
@@ -199,7 +200,9 @@
 		      Le NUMÉRO monte aussi : il n'était lisible qu'une fois la carte dépliée,
 		      dans son pied, alors que c'est la référence qu'on cite au syndic. -->
 		<svelte:fragment slot="tags">
-			<span class="tk-cat" title={ticket.categorie}>{categorieTicketEmoji(ticket.categorie)}</span>
+			<span class="tk-cat" title={categorieTicketLabel(ticket.categorie)}
+				>{categorieTicketEmoji(ticket.categorie)}</span
+			>
 			<span class="badge {STATUT_TICKET_BADGE[ticket.statut] ?? 'badge-gray'}">
 				{STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut}
 			</span>
@@ -330,6 +333,7 @@
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
 						entite={TICKET}
+						affaireLiable={ticket.id}
 						conditions={conditionsDeLaSuite(ticket)}
 						assistant={contexteCommentaire(
 							ticket,
@@ -368,6 +372,7 @@
 					equipement={ticket.equipement ? equipLabel(ticket.equipement) : ''}
 					photos={ticket.photos_urls ?? []}
 					documents={ticket.fichiers_urls ?? []}
+					affairesLiees={ticket.affaires_liees}
 				>
 					<svelte:fragment slot="pied">
 						<!--  Le NUMÉRO est dans l'en-tête : pas deux fois le même fait. -->
