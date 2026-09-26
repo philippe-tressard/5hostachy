@@ -826,7 +826,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	width: 100%;
 	max-height: 90vh;
 	overflow-y: auto;
-	animation: slideUp 0.2s ease;
+	animation: modale-entree var(--duree-apparition) var(--ease-out);
 }
 .modal-sm {
 	max-width: 420px;
@@ -909,14 +909,23 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 		opacity: 1;
 	}
 }
-@keyframes slideUp {
+/*  L'entrée d'une boîte de dialogue (26/09/2026, `emil-design-eng`) : depuis le
+    CENTRE — une modale n'est ancrée à rien —, de 96 % à 100 % avec un fondu,
+    200 ms, courbe « ease-out » du site. Elle montait de 20 px en `ease` ; et
+    `.modal-box`, l'autre forme de la même boîte, n'avait aucune entrée. */
+@keyframes modale-entree {
 	from {
 		opacity: 0;
-		transform: translateY(20px);
+		transform: scale(0.96);
 	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
+}
+.modal-box {
+	animation: modale-entree var(--duree-apparition) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+	.modal,
+	.modal-box {
+		animation-name: fadeIn;
 	}
 }
 
@@ -1083,21 +1092,11 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	height: 18px;
 	border-radius: 50%;
 	background: rgba(239, 68, 68, 0.15);
-	animation: new-dot-pulse 2s ease-in-out infinite;
+	/*  Fixe (26/09/2026) : un battement sans fin sur chaque entrée nouvelle du fil
+	    fatigue sans rien apprendre — le badge NEW l'a quitté le même jour. */
+	opacity: 0.6;
 	z-index: 0;
 }
-@keyframes new-dot-pulse {
-	0%,
-	100% {
-		transform: scale(1);
-		opacity: 0.6;
-	}
-	50% {
-		transform: scale(1.6);
-		opacity: 0;
-	}
-}
-
 /*  ── L'AIDE SOUS UN BLOC ────────────────────────────────────────────────────
     La phrase qui explique ce qu'on attend, sous un sélecteur ou un groupe —
     « À renseigner seulement pour préciser le périmètre… ».

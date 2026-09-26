@@ -1707,6 +1707,12 @@ jobs:
         working-directory: front
         run: npm run lint:badge-nouveau
 
+      # Trois pulsations décoratives tournaient sans fin sur les écrans les plus
+      # vus (26/09/2026). Une animation sans fin ne dit plus qu'une ATTENTE.
+      - name: Une animation sans fin ne dit qu'une attente
+        working-directory: front
+        run: npm run lint:animations-infinies
+
       # 🔴 L'infobulle de catégorie disait « etude_travaux » sur la liste des
       # affaires (26/09/2026, signalé à l'écran) ; deux reportings rendaient la
       # même valeur brute. Le libellé existait, rien n'obligeait à le prendre.

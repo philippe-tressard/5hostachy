@@ -688,16 +688,7 @@
 		background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
 		border-color: #f59e0b;
 		border-left-color: #f59e0b;
-		animation: consignes-pulse 3s ease-in-out infinite;
-	}
-	@keyframes consignes-pulse {
-		0%,
-		100% {
-			box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
-		}
-		50% {
-			box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15);
-		}
+		/*  Mise en avant FIXE (26/09/2026) : elle pulsait à chaque visite, sans fin. */
 	}
 	.consignes-icon {
 		font-size: 1.5rem;
