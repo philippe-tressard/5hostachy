@@ -1,5 +1,5 @@
 {
-	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ».",
+	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ». Depuis #1343 (26/09/2026), une affaire suivie lit ses Destinataires quand le conseil en a choisi : vides, la règle par défaut ; un résidu d'actualité promue est effacé (migration 0228, et à la promotion).",
 	"cas": [
 		{
 			"nom": "actualité à tous, copropriété entière",
@@ -185,7 +185,7 @@
 			"hors_perimetre": false
 		},
 		{
-			"nom": "affaire : un public visé resté d'une actualité ne compte pas",
+			"nom": "affaire : destinataires choisis par le conseil — les locataires (#1343)",
 			"actualite": false,
 			"confidentiel": false,
 			"public_cible": [
@@ -194,10 +194,52 @@
 			"perimetre": "global",
 			"reserve_perimetre": false,
 			"lecteurs": [
-				"copropriétaire_résident",
-				"copropriétaire_bailleur"
+				"locataire"
 			],
 			"hors_perimetre": null
+		},
+		{
+			"nom": "affaire : destinataires « Tous » choisis par le conseil (#1343)",
+			"actualite": false,
+			"confidentiel": false,
+			"public_cible": [
+				"résidents"
+			],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "affaire : destinataires « Conseil syndical » seul (#1343)",
+			"actualite": false,
+			"confidentiel": false,
+			"public_cible": [
+				"conseil_syndical"
+			],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "affaire : locataires choisis, bâtiment — le périmètre restreint toujours (#1343)",
+			"actualite": false,
+			"confidentiel": false,
+			"public_cible": [
+				"locataires"
+			],
+			"perimetre": "batiment",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"locataire"
+			],
+			"hors_perimetre": false
 		},
 		{
 			"nom": "affaire confidentielle",

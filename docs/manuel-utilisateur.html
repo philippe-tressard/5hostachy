@@ -1028,7 +1028,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 1.85 · Septembre 2026</span>
+      <span class="topbar-badge">Version 1.86 · Septembre 2026</span>
     </div>
   </header>
 
@@ -1335,7 +1335,7 @@
           <span class="ecran-acces ecran-acces-tous">Tous</span>
           <ul class="ecran-profils">
             <li><span class="profil">Copropriétaire · bailleur</span> ses affaires, celles de son périmètre (sauf 🛡️ confidentielles) et les actualités.</li>
-            <li><span class="profil">Locataire</span> ses propres affaires, les actualités qui lui sont adressées, et — en lecture seule — les affaires <strong>datées</strong> de son périmètre, celles qui paraissent au calendrier (travaux, entretien), sauf 🛡️ confidentielles et dossiers soumis à l’AG.</li>
+            <li><span class="profil">Locataire</span> ses propres affaires, les actualités et les affaires qui lui sont adressées, et — en lecture seule — les affaires <strong>datées</strong> de son périmètre, celles qui paraissent au calendrier (travaux, entretien), sauf 🛡️ confidentielles et dossiers soumis à l’AG.</li>
             <li><span class="profil">Conseil syndical</span> tout — c’est lui qui fait avancer le suivi.</li>
           </ul>
         </div>
@@ -1549,13 +1549,13 @@
         <table class="affaire-table">
           <thead><tr><th>Pastille</th><th>Ce qu’elle veut dire</th></tr></thead>
           <tbody>
-            <tr><td>Copropriétaires</td><td>Une affaire suivie&nbsp;: les copropriétaires, occupants et bailleurs, la lisent. Un locataire ou un bailleur (mandataire) ne lit que celles qu’il a déposées — et, dans son périmètre, les affaires <strong>datées</strong> (au calendrier), sauf en AG&nbsp;: la pastille dit alors «&nbsp;Tous&nbsp;».</td></tr>
-            <tr><td>Occupants, Copro-bailleurs, Locataires…</td><td>Une actualité adressée à ceux-là seulement. <em>Résidents</em>&nbsp;= occupants et locataires&nbsp;; <em>Copropriétaires</em>&nbsp;= occupants et copropriétaires bailleurs.</td></tr>
+            <tr><td>Copropriétaires</td><td>Une affaire suivie&nbsp;: les copropriétaires, occupants et bailleurs, la lisent. Un locataire ou un bailleur (mandataire) ne lit que celles qu’il a déposées — et, dans son périmètre, les affaires <strong>datées</strong> (au calendrier), sauf en AG&nbsp;: la pastille dit alors «&nbsp;Tous&nbsp;». Le conseil syndical peut en choisir d’autres dans la section Destinataires&nbsp;: la pastille dit alors ceux-là.</td></tr>
+            <tr><td>Occupants, Copro-bailleurs, Locataires…</td><td>Une actualité, ou une affaire, adressée à ceux-là seulement. <em>Résidents</em>&nbsp;= occupants et locataires&nbsp;; <em>Copropriétaires</em>&nbsp;= occupants et copropriétaires bailleurs.</td></tr>
             <tr><td>… avec un cadenas</td><td>Réservée au périmètre&nbsp;: seuls ceux du bâtiment (ou de l’espace) indiqué par le 🔹 la lisent.</td></tr>
-            <tr><td>CS</td><td>Confidentielle&nbsp;: le conseil syndical seulement, en plus de son auteur.</td></tr>
+            <tr><td>CS</td><td>Confidentielle&nbsp;: le conseil syndical seulement, en plus de son auteur — sur une affaire, la pastille <em>Résident concerné</em>&nbsp;: son auteur, ou la personne pour qui elle a été saisie.</td></tr>
           </tbody>
         </table>
-        <p class="ecran-note">Pour le conseil syndical, dans le formulaire&nbsp;: la case <strong>Réservé au périmètre sélectionné</strong> ouvre la section Périmètre (cochée d’office pour une affaire suivie), la case <strong>Confidentielle&nbsp;: le conseil syndical seulement</strong> ouvre la section Destinataires, pour une affaire comme pour une actualité. Cochée, elle passe outre le périmètre et les destinataires, et rien ne sort&nbsp;: ni groupe WhatsApp, ni affiche. La section Destinataires porte la même pastille que la carte.</p>
+        <p class="ecran-note">Pour le conseil syndical, dans le formulaire&nbsp;: la case <strong>Réservé au périmètre sélectionné</strong> ouvre la section Périmètre (cochée d’office pour une affaire suivie), la section Destinataires montre <strong>toujours</strong> ses pastilles, présélectionnées selon la catégorie (les copropriétaires pour une affaire suivie, «&nbsp;Tous&nbsp;» pour une affaire datée ou une actualité)&nbsp;: le conseil les change à la création, en correction ou depuis une suite. Elle s’ouvre par <strong>Confidentielle&nbsp;: le conseil syndical seulement</strong> pour une actualité, par la pastille <strong>Résident concerné</strong> pour une affaire. Choisie, elle passe outre le périmètre et les destinataires, et rien ne sort&nbsp;: ni groupe WhatsApp, ni affiche. La section Destinataires porte la même pastille que la carte.</p>
       </div>
 
       <div class="card">
@@ -1575,7 +1575,7 @@
             <tr data-section-affaire="pieces_jointes" data-resident="facultatif"><td>9</td><td>Pièces jointes</td><td><span class="pour-vous pour-vous-facultatif">Facultatif</span></td><td>Photos et documents — la photo du dégât vaut mieux qu’un long texte.</td></tr>
             <tr data-section-affaire="affaires_liees" data-resident="facultatif"><td>10</td><td>Affaires liées</td><td><span class="pour-vous pour-vous-facultatif">Facultatif</span></td><td>D’autres affaires qui parlent de la même chose — la fuite et la tache au plafond du dessous. Le champ propose d’emblée les affaires encore ouvertes les plus récentes&nbsp;; tapez un numéro ou quelques mots du titre pour chercher parmi toutes, puis choisissez&nbsp;: chaque affaire se reconnaît à son titre. Le lien vaut dans les deux sens, et une affaire que vous ne pouvez pas lire n’apparaît pas.</td></tr>
             <tr data-section-affaire="au_nom_de" data-resident="conseil"><td>11</td><td>Au nom de</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>Vous signalez en votre nom&nbsp;; le conseil peut saisir pour quelqu’un.</td></tr>
-            <tr data-section-affaire="destinataires" data-resident="conseil"><td>12</td><td>Destinataires</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>Qui la lit&nbsp;: le conseil peut la rendre confidentielle.</td></tr>
+            <tr data-section-affaire="destinataires" data-resident="conseil"><td>12</td><td>Destinataires</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>Qui la lit&nbsp;: présélectionnés selon la catégorie, le conseil les change à tout moment — ou la réserve au résident concerné.</td></tr>
             <tr data-section-affaire="mise_en_avant" data-resident="facultatif"><td>13</td><td>Mise en avant</td><td><span class="pour-vous pour-vous-facultatif">Facultatif</span></td><td>Pour vous, la case 🚨 <em>Urgente</em>.</td></tr>
             <tr data-section-affaire="diffusion" data-resident="conseil"><td>14</td><td>Diffusion</td><td><span class="pour-vous pour-vous-conseil">Conseil syndical</span></td><td>WhatsApp, syndic, conseil&nbsp;: le conseil choisit qui prévenir.</td></tr>
           </tbody>
@@ -1680,7 +1680,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v1.85
+    <span>© 2026 5Hostachy — Manuel utilisateur v1.86
 </span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>

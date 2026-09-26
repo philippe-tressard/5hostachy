@@ -33,7 +33,12 @@
  * (`perimetreRestreint`) — l'arbre des périmètres est un état chargé à
  * l'exécution, que le contrôle n'a pas.
  */
-import { codesDestinataires, concerneTousLesResidents, reserveAuConseil } from '$lib/destinataires';
+import {
+	TOUS_LES_RESIDENTS,
+	codesDestinataires,
+	concerneTousLesResidents,
+	reserveAuConseil,
+} from '$lib/destinataires';
 
 /**
  * Les PROFILS de lecteurs, au pluriel — la nomenclature arbitrée le 25/09/2026
@@ -157,7 +162,7 @@ export interface EntreeLecture {
 	actualite: boolean;
 	/** 🛡️ Le conseil syndical seul (`ticket.confidentiel`). */
 	confidentiel: boolean;
-	/** Destinataires — lus pour une actualité seulement. */
+	/** Destinataires — une affaire ne les lit que s'ils ont été choisis (#1343). */
 	publicCible: string[] | string | null | undefined;
 	/** Le périmètre vise-t-il MOINS que la copropriété ? Tranché par l'appelant. */
 	perimetreRestreint: boolean;
@@ -189,13 +194,34 @@ export function titreLecture(l: Lecture): string {
 	return l.long + (l.perimetreReserve ? ' · du périmètre seulement' : '');
 }
 
+/**
+ * Les Destinataires qu'une affaire a SANS choix du conseil (#1343) — ce que
+ * sa nature décide, et que les pastilles présélectionnent : les
+ * copropriétaires (occupants et bailleurs) ; « Tous » pour une affaire datée
+ * hors AG, que le calendrier montre aux locataires. Une actualité : « Tous ».
+ *
+ * La règle vit au serveur (`ticket_visible`) ; `lecture_pastille.json` tient
+ * les deux écritures d'accord.
+ */
+export function destinatairesParDefaut(n: {
+	actualite?: boolean;
+	datee?: boolean;
+	enAg?: boolean;
+}): string[] {
+	return n.actualite || (n.datee && !n.enAg)
+		? [TOUS_LES_RESIDENTS]
+		: ['copropriétaires_occupants', 'bailleurs'];
+}
+
 export function lectureDe(e: EntreeLecture): Lecture {
-	const codes = codesDestinataires(e.publicCible);
-	const csSeul = e.confidentiel || (e.actualite && reserveAuConseil(codes));
+	//  Une affaire lit ses Destinataires quand le conseil en a CHOISI (#1343) ;
+	//  vides, ceux de sa nature — comme `ticket_visible`.
+	const explicites = codesDestinataires(e.publicCible);
+	const codes = e.actualite || explicites.length ? explicites : destinatairesParDefaut(e);
+	const csSeul = e.confidentiel || reserveAuConseil(codes);
 	let profils: Profil[] = [];
 	if (!csSeul) {
-		if (!e.actualite) profils = e.datee && !e.enAg ? TOUS_PROFILS : PROFILS_AFFAIRE;
-		else if (concerneTousLesResidents(codes)) profils = TOUS_PROFILS;
+		if (concerneTousLesResidents(codes)) profils = TOUS_PROFILS;
 		else {
 			const vises = new Set(codes.flatMap((c) => PROFILS_DU_CODE[c] ?? []));
 			profils = TOUS_PROFILS.filter((p) => vises.has(p));

@@ -38,6 +38,7 @@ from app.utils.valeurs import valeur
 #  sont tombés d'un coup sur un `NameError`, ce qui est la bonne façon d'échouer.
 from .socle import (
     _codes_json_pour_acces,
+    _parse_json_list,
     cible_visible,
     perimetre_visible,
     reserve_au_conseil,
@@ -288,6 +289,26 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
             return False
         return actualite_visible(ticket, user)
 
+    if ticket.confidentiel:
+        return False
+
+    #  🔴 LE CONSEIL A CHOISI À QUI ELLE S'ADRESSE (#1343, 26/09/2026).
+    #
+    #  Demandé à l'écran : *« il n'est toujours pas possible de choisir son
+    #  destinataire ! c'est urgent »*. Une affaire porte désormais ses
+    #  Destinataires, présélectionnés selon la règle de sa nature et modifiables
+    #  par le conseil à tout moment — création, correction, Suite.
+    #
+    #  Vides, rien ne change : la règle par défaut ci-dessous décide. Choisis,
+    #  ils décident À SA PLACE, par la MÊME fonction que l'actualité
+    #  (`cible_visible`) — mais sans l'ouverture à la copropriété : le
+    #  périmètre d'une affaire dit qui elle regarde.
+    #
+    #  ⚠️ Une liste illisible retombe sur la règle par défaut, la plus fermée
+    #  des deux : une donnée abîmée ne peut que restreindre (#789).
+    if _parse_json_list(ticket.public_cible, []):
+        return cible_visible(ticket.perimetre_cible, ticket.public_cible, user)
+
     #  🔴 UN LOCATAIRE NE VOIT QUE LES SIENS (05/09/2026), demandé à l'écran :
     #  *« les locataires ne voient pas les tickets »*.
     #
@@ -330,9 +351,6 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
             return False
         if valeur(ticket.statut) == StatutTicket.en_ag.value:
             return False
-
-    if ticket.confidentiel:
-        return False
 
     perims = _codes_json_pour_acces(ticket.perimetre_cible)
     if perims is None:

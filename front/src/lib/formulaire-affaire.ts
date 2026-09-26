@@ -186,13 +186,14 @@ export function chargeUtileAffaire(
 			annonce_hall: s.annonceHall,
 		});
 	} else {
-		//  Une affaire suivie : son état et ses options ; le public visé et
-		//  l'Accès d'une actualité sont effacés s'ils en venaient.
+		//  Une affaire suivie : son état, ses options et ses Destinataires — vides
+		//  quand le conseil n'a rien changé à ceux de sa nature (#1343) ; l'Accès
+		//  d'une actualité est effacé s'il en venait.
 		//  ⚠️ Une actualité repassée en suivi porte encore `publie`, que le
 		//  serveur refuse à une affaire suivie (422) : elle repart « Ouvert ».
 		Object.assign(charge, optionsVersTicket(s.options), {
 			statut: s.statut === 'publie' ? 'ouvert' : s.statut,
-			public_cible: [],
+			public_cible: s.publicCible,
 			reserve_perimetre: false,
 		});
 	}
@@ -213,8 +214,9 @@ export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[
 	if (avant.frequence_type && apres.categorie !== CATEGORIE_ENTRETIEN) pertes.push('la récurrence');
 	const etait = natureDe(avant.categorie);
 	if (etait === natureDe(apres.categorie)) return pertes;
+	//  Le public visé n'est plus perdu (#1343) : une affaire a ses Destinataires,
+	//  et ceux que l'écran montre sont ceux qui partent.
 	if (etait === 'actualite') {
-		if (!concerneTousLesResidents(avant.public_cible ?? [])) pertes.push('le public visé');
 		if (avant.reserve_perimetre) pertes.push('la réserve au périmètre (🔒)');
 	} else {
 		pertes.push('l’état de suivi');

@@ -245,10 +245,16 @@ export const TICKET: EntiteDeclaree = {
 			//
 			//  🔴 RALLUMÉE pour l'affaire le 25/09/2026 (lot 1 de la pastille de
 			//  lecture) : elle répond à « qui d'autre la lit ? » pour les deux
-			//  natures, et s'ouvre par « Confidentielle ». L'affaire n'y choisit pas
-			//  de profils — la règle y est écrite à leur place.
+			//  natures, et s'ouvre par « Confidentielle ».
+			//
+			//  🔴 L'AFFAIRE Y CHOISIT SES PROFILS depuis le 26/09/2026 (#1343) —
+			//  *« il n'est toujours pas possible de choisir son destinataire ! c'est
+			//  urgent »*. Présélectionnés par sa nature, changés par le conseil à
+			//  tout moment, appliqués par `ticket_visible` ; « Résident concerné »
+			//  remplace la case pour une affaire.
 			requis: true,
-			objet: 'Qui la lit — Confidentielle, puis DestinatairePicker (actualité)',
+			objet:
+				'Qui la lit — Confidentielle (actualité) ou Résident concerné (affaire), puis DestinatairePicker, présélectionné par la nature (#1343)',
 			inactivePour: {
 				resident:
 					'Le conseil syndical décide qui la lit. Sur la carte, la pastille de lecture le dit à tous.',

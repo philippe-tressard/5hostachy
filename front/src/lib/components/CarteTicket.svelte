@@ -77,6 +77,7 @@
 		categorieTicketLabel,
 	} from '$lib/tickets';
 	import { fmtDate } from '$lib/date';
+	import { destinatairesParDefautDuTicket } from '$lib/lecture-ticket';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { nomCopie, nomProprietaire } from '$lib/saisi-pour';
 	import { equipLabel, intervenantAffiche } from '$lib/prestataires';
@@ -334,6 +335,8 @@
 						currentStatut={ticket.statut}
 						entite={TICKET}
 						affaireLiable={ticket.id}
+						initialDestinataires={ticket.public_cible ?? []}
+						destinatairesParDefaut={destinatairesParDefautDuTicket(ticket)}
 						conditions={conditionsDeLaSuite(ticket)}
 						assistant={contexteCommentaire(
 							ticket,

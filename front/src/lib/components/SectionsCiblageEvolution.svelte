@@ -49,6 +49,8 @@
 	/** La section 5. */
 	export let avecDestinataires = false;
 	export let destinataires: string[] = [];
+	/** Ceux d'une affaire sans choix du conseil (#1343) — `null` : une actualité. */
+	export let destinatairesParDefaut: string[] | null = null;
 	/** Ce bloc ouvre-t-il le formulaire ? (pas de filet au-dessus) */
 	export let premiere = false;
 </script>
@@ -63,6 +65,7 @@
 		{perimetreBadge}
 		{avecDestinataires}
 		bind:destinataires
+		{destinatairesParDefaut}
 	>
 		<!--  `svelte:fragment` et non un `{#if}` autour du `<p slot>` : un élément
 		      porteur de `slot=` doit être enfant DIRECT du composant. -->

@@ -201,12 +201,16 @@ export function etatInitialEntree(
 	entrees: { perimetre_cible?: string[] | null }[],
 	initialDestinataires: string[],
 	initialFichiers: { url: string }[],
+	/**  Une AFFAIRE : vides, ses Destinataires sont ceux de sa nature (#1343) —
+	 *   « Tous » posé d'office l'ouvrirait aux locataires sans que personne l'ait choisi. */
+	destinatairesVides = false,
 ): { perimetre: string[]; destinataires: string[]; photos: string[]; documents: string[] } {
 	const perimetre =
 		editMode && initialPerimetre.length
 			? [...initialPerimetre]
 			: perimetreHerite(perimetreCourant, entrees);
-	const destinataires = initialDestinataires.length ? [...initialDestinataires] : ['résidents'];
+	const destinataires =
+		initialDestinataires.length || destinatairesVides ? [...initialDestinataires] : ['résidents'];
 	const tries = separerFichiers(editMode ? initialFichiers.map((f) => f.url) : []);
 	return { perimetre, destinataires, photos: tries.photos, documents: tries.documents };
 }
@@ -328,17 +332,14 @@ export function sectionsDeLaSuite(
 		creneaux: Record<Creneau, boolean>;
 	},
 ): SectionsDeLaSuite {
-	//  🔴 Pas de Destinataires dans la Suite d'une affaire SUIVIE (25/09/2026).
-	//  Le formulaire les lui ouvre depuis la v2.50.0 (#1296), mais pour une seule
-	//  chose : la case « Confidentielle » — « pas de profils à choisir pour une
-	//  affaire suivie » (`SectionDestinataires`). La Suite ne porte pas cette case,
-	//  et elle proposait les profils : pour le conseil, le serveur les ÉCRIVAIT
-	//  sur l'affaire, valeur qu'aucun écran ne montre et que la correction efface
-	//  (`chargeUtileAffaire`). Il ne l'écrit plus (`add_evolution`).
-	const affaireSuivie = conditions.includes('suivie');
+	//  🔴 Les Destinataires d'une affaire SUIVIE rouvrent dans la Suite (#1343,
+	//  26/09/2026) : elle en a désormais, que `ticket_visible` honore. Ils en
+	//  avaient été retirés le 25/09 parce que le serveur les écrivait sans que
+	//  rien ne les lise — ce n'est plus vrai. L'hôte donne ceux de sa nature
+	//  (`destinatairesParDefautDuTicket`), présélectionnés.
 	return {
 		perimetre: droits.perimetre && sectionPresente(entite, 'evolution', 'perimetre'),
-		destinataires: sectionDeLaSuite(entite, 'destinataires', conditions) && !affaireSuivie,
+		destinataires: sectionDeLaSuite(entite, 'destinataires', conditions),
 		avantSuivi: droits.creneaux.avant_suivi && creneauPresent(entite, 'avant_suivi'),
 		specifiques: droits.creneaux.specifiques && creneauPresent(entite, 'specifiques'),
 		miseEnAvant: droits.creneaux.mise_en_avant && creneauPresent(entite, 'mise_en_avant'),
