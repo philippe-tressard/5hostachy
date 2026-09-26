@@ -294,7 +294,7 @@ def _build_message_restreint(
 
     avertissement = (
         "🔒 Cette publication est réservée à un public ciblé.\n"
-        "Elle n'est pas accessible à tous les résidents.\n"
+        "Elle n'est pas accessible à tous.\n"
         "Si vous êtes concerné(e), connectez-vous sur 5Hostachy pour la consulter :"
     )
     #  🔴 Le lien FOURNI (#1091) : l'actualité est devenue une affaire, son

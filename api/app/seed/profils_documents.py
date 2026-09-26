@@ -7,10 +7,16 @@ les lit à chaque consultation — les modifier change des droits, pas un affich
 
 import json
 
+#: Le libellé du profil sans restriction, et celui qu'il remplace (#1305) :
+#: « Tous », comme partout (`LIBELLE_TOUS`) — un bailleur ou le syndic n'est pas
+#: un résident. La migration 0226 les lit ici, jamais recopiés.
+LIBELLE_TOUS = "Tous"
+LIBELLE_TOUS_ANCIEN = "Tous les résidents"
+
 PROFILS = [
     {
         "code": "résidence_tous",
-        "libelle": "Tous les résidents",
+        "libelle": LIBELLE_TOUS,
         "description": "Copropriétaires, bailleurs, locataires, syndic",
         #  ⚠️ `syndic` est un STATUT, pas un rôle — et c'est voulu :
         #  `document_visible` compare `roles ∪ {statut}` à cette liste, et le
