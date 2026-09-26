@@ -91,7 +91,11 @@ export function pieds(source) {
 	for (let i = 0; i < lignes.length; i++) {
 		//  `form-actions`, ou toute classe d'actions écrite pour l'occasion
 		//  (`options-actions`, `carte-actions`…). Le nom ne fait pas le pied.
-		if (!/class="[^"]*\b[\w-]*actions\b[^"]*"/.test(lignes[i])) continue;
+		//  🔴 Et `.modal-footer` (#1329, 26/09/2026) : deux formulaires — demande
+		//  d'accès, fiche d'un utilisateur — sortis de leur fenêtre le 06/09 en
+		//  gardaient le pied, écrit à la main sous ce nom. Il ne finit pas par
+		//  `-actions`, donc il passait.
+		if (!/class="[^"]*\b([\w-]*actions|modal-footer)\b[^"]*"/.test(lignes[i])) continue;
 		const fenetre = lignes.slice(i, i + 15).join('\n');
 		const fin = fenetre.indexOf('</div>');
 		const rangee = fin === -1 ? fenetre : fenetre.slice(0, fin);
@@ -112,6 +116,11 @@ function selftest() {
 		['<div class="form-actions">\n<button class="btn">Fermer</button>\n</div>', 0],
 		//  « Annuler » seul, sans enregistrement en face — un panneau qu'on referme.
 		['<div class="form-actions">\n<button class="btn">Annuler</button>\n</div>', 0],
+		//  🔴 Le pied resté sous le nom de la fenêtre qu'il a quittée (#1329).
+		[
+			'<div class="modal-footer">\n<button type="button" class="btn btn-outline">Annuler</button>\n<button class="btn btn-primary">Enregistrer</button>\n</div>',
+			1,
+		],
 		//  L'appel au composant passe, évidemment.
 		['<PiedFormulaire enCours={saving} on:annule />', 0],
 		//  🔴 Le contrôle ne doit pas se déclencher sur sa PROPRE prose.
