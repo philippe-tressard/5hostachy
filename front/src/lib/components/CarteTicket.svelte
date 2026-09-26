@@ -44,7 +44,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import ApercuTicket from './ApercuTicket.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
-	import { motifWhatsappInterdit, optionsActives } from '$lib/options-publication';
+	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import ActionsTicket from './ActionsTicket.svelte';
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import FicheLecture from './FicheLecture.svelte';
@@ -65,6 +65,7 @@
 	import {
 		OPTIONS_TICKET,
 		optionsDuTicket,
+		optionsEnBadge,
 		optionsVersTicket,
 		ticketUrgent,
 		attributsNature,
@@ -220,9 +221,10 @@
 			      ticket porte les mêmes options qu'une actualité, il doit les
 			      montrer pareil. Glyphe et mot viennent de la TABLE — deux
 			      écritures divergeraient au premier changement de libellé.
-			      Le pont clé d'écran ⇄ champ du ticket vit dans `$lib/tickets` :
-			      `urgente` s'y lit sur la priorité, `brouillon` sur `confidentiel`. -->
-			{#each optionsActives(optionsDuTicket(ticket)).filter((o) => o.cle !== 'brouillon') as opt (opt.cle)}
+			      Sauf celles qu'un badge dédié dit déjà — la priorité, la pastille
+			      de lecture : `optionsEnBadge` les retire (27/09/2026, deux
+			      « Urgente » sur la même carte). -->
+			{#each optionsEnBadge(ticket) as opt (opt.cle)}
 				<span class="badge badge-gray" title={opt.aide}>{opt.glyphe} {opt.etat}</span>
 			{/each}
 			<span>#{ticket.numero}</span>
