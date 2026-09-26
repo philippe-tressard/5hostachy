@@ -794,6 +794,10 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
 - Border-left, urgence, espacement et ombre : **portés par `.carte-liste`** (voir
   ci-dessus). Ne pas les redéfinir dans une page.
 - Urgence : bord gauche rouge — **pas de badge texte 🚨**
+  Une **affaire** en priorité haute porte en plus son badge de priorité, « ⚡ Urgente »
+  (`PRIORITE_BREVE`), **une fois** : la rangée des options passe par `optionsEnBadge`
+  (`$lib/tickets`), qui retire ce qu'un badge dédié dit déjà — urgence et
+  confidentialité. Elle les répétait (27/09/2026, #1364). 🔒 `npm run lint:options-en-double`
 - **Le corps déplié ne referme pas la carte** : `on:click|stopPropagation` dessus.
   On referme par l'en-tête. Sans cela, impossible de sélectionner du texte, et un
   clic sur une photo ou un formulaire referme ce qu'on lisait. Le fil des

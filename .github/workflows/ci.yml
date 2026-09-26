@@ -1713,6 +1713,13 @@ jobs:
         working-directory: front
         run: npm run lint:animations-infinies
 
+      # 🔴 Une affaire urgente portait DEUX badges « Urgente » sur sa carte
+      # (27/09/2026, signalé à l'écran) : le badge de priorité et la rangée des
+      # options, qui ne retirait que la confidentialité. Exécute `optionsEnBadge`.
+      - name: Une option n'a qu'un badge sur une carte
+        working-directory: front
+        run: npm run lint:options-en-double
+
       # 🔴 L'infobulle de catégorie disait « etude_travaux » sur la liste des
       # affaires (26/09/2026, signalé à l'écran) ; deux reportings rendaient la
       # même valeur brute. Le libellé existait, rien n'obligeait à le prendre.

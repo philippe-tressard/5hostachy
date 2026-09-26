@@ -15,7 +15,11 @@
 //  La contrepartie serveur est `StatutTicket` (`api/app/models/core.py`), et
 //  `api/tests/test_statuts_tickets.py` échoue si les deux divergent.
 
-import type { CleOptionPublication } from '$lib/options-publication';
+import {
+	optionsActives,
+	type CleOptionPublication,
+	type OptionPublication,
+} from '$lib/options-publication';
 import type { Ticket } from '$lib/api';
 import { parAttribut } from '$lib/table-statuts';
 
@@ -314,6 +318,29 @@ export function optionsDuTicket(ticket: Ticket | null | undefined): {
 		//  un champ (#833, et le défaut du 31/08 sur cinq écrans).
 		suiviKanban: ticket?.suivi_kanban ?? false,
 	};
+}
+
+/**
+ * Les options qu'une carte dit DÉJÀ par un badge dédié — et la raison.
+ *
+ * 🔴 Une affaire urgente portait DEUX badges sur sa carte (signalé à l'écran le
+ * 27/09/2026, #TK-109008) : « ⚡ Urgente », le badge de priorité, et
+ * « 🚨 Urgente », la rangée des options actives — un badge texte 🚨 que
+ * `ux-patterns` §3 exclut (« bord gauche rouge, pas de badge texte 🚨 »). La
+ * rangée filtrait `brouillon` en ligne, pour lui seul ; la seconde option
+ * rendue ailleurs n'y est jamais entrée. 🔒 `npm run lint:options-en-double` exige qu'un badge dédié de la
+ * carte figure ici.
+ */
+export const OPTIONS_RENDUES_AILLEURS: Partial<Record<CleOptionPublication, string>> = {
+	brouillon: '`PastilleLecture` : « CS » le dit, avec les autres lecteurs',
+	urgente: 'le badge de priorité (`PRIORITE_BREVE`), orange',
+};
+
+/** Les options actives qu'une carte rend en badge : sans celles qu'un badge dédié dit. */
+export function optionsEnBadge(ticket: Ticket | null | undefined): OptionPublication[] {
+	return optionsActives(optionsDuTicket(ticket)).filter(
+		(o) => !(o.cle in OPTIONS_RENDUES_AILLEURS),
+	);
 }
 
 /** Ce qu'on ENVOIE — l'autre sens du même pont. */
