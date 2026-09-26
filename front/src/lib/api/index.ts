@@ -74,8 +74,6 @@ export const tickets = {
 	get: (id: number) => api.get<Ticket>(`/tickets/${id}`),
 	/** Les affaires que je peux lier : numéro, titre, statut (#1342). */
 	choix: () => api.get<AffaireLiee[]>('/tickets/choix'),
-	/** Transmettre le lien par courriel — titre, numéro et lien seulement (#1357). */
-	partager: (id: number, email: string) => api.post<void>(`/tickets/${id}/partager`, { email }),
 	//  Le miroir du pré-remplissage des affiches (#832) : le CS compose souvent
 	//  l'affiche du hall d'abord, puis veut la même information en ligne. Une
 	//  actualité étant une affaire (#1091), la route vit chez les affaires.
@@ -297,4 +295,10 @@ export const annoncesHall = {
 	renvoyerEmail: (id: number) => api.post(`/annonces-hall/${id}/renvoyer-email`, {}),
 	delete: (id: number) => api.delete(`/annonces-hall/${id}`),
 	pdfUrl: (id: number) => `${BASE}/annonces-hall/${id}/pdf`,
+};
+
+/** 🔗 → courriel : transmettre le lien d'un objet (#1357). L'affaire part avec son titre. */
+export const partage = {
+	envoyer: (objet: string, id: number, email: string) =>
+		api.post<void>('/partage', { objet, id, email }),
 };

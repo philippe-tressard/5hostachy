@@ -119,7 +119,7 @@
 			<MarqueIA assiste={pub.assiste_ia} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
-			<BoutonLien chemin={lienTicket(pub.id)} quoi="l'actualité" partage={pub.id} />
+			<BoutonLien chemin={lienTicket(pub.id)} quoi="l'actualité" />
 			<slot name="actions" />
 		</svelte:fragment>
 		<!--  🔴 L'aperçu passe par l'EN-TÊTE (18/09/2026) : c'est ce qui permet aux

@@ -81,6 +81,7 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
     "ticket_statut_change": "information",
     "ticket_nouveau_message": "information",
     "ticket_partage": "information",
+    "lien_partage": "information",
     "reponse_communaute": "information",
     "idee_statut": "information",
     "vigik_accepte": "information",

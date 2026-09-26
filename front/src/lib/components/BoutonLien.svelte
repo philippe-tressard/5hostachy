@@ -18,11 +18,13 @@
   permission : le clic COPIE une chaîne, comme avant. La diffusion vers
   l'extérieur reste une **décision** de l'auteur (section 9 du cadre #430).
 
-  🔴 Une nuance depuis le 26/09/2026 (#1357, option E des maquettes) : pour une
-  AFFAIRE (`partage`), le message « Lien copié » propose ensuite « L'envoyer par
-  courriel » (`PartageCourriel`). Le copier reste à un clic ; l'envoi est un
-  second geste, choisi. Cette phrase disait « ni WhatsApp ni e-mail » : elle est
-  réécrite dans le lot qui change la décision.
+  🔴 Une nuance depuis le 26/09/2026 (#1357, option E des maquettes) : le
+  message « Lien copié » propose ensuite « L'envoyer par courriel »
+  (`PartageCourriel`) — d'abord pour une affaire, puis pour TOUT objet qui porte
+  un 🔗 (*« dans tous les cas, si celui-ci n'a pas les droits, il ne verra
+  rien »*). Ce que le lien désigne se DÉDUIT du lien (`cibleDuLien`). Le copier
+  reste à un clic ; l'envoi est un second geste, choisi. Cette phrase disait
+  « ni WhatsApp ni e-mail » : elle est réécrite dans le lot qui change la décision.
 
   ## Le droit
 
@@ -41,6 +43,7 @@
 	import { page } from '$app/stores';
 	import { toast } from '$lib/components/Toast.svelte';
 	import PartageCourriel from '$lib/components/PartageCourriel.svelte';
+	import { cibleDuLien } from '$lib/partage';
 
 	/**  L'ancre de l'élément, sans le `#` — `annonce-42`. C'est l'`id` que la carte
 	 *   pose déjà sur son conteneur pour les liens profonds : les deux ne peuvent
@@ -52,18 +55,18 @@
 	export let chemin: string | null = null;
 	/** Ce dont on copie le lien, pour l'annonce vocale : « Copier le lien de … ». */
 	export let quoi = 'la publication';
-	/**  L'affaire dont le lien peut aussi partir par courriel (#1357) — son `id` ;
-	 *   `null` : on copie, rien de plus. */
-	export let partage: number | null = null;
+	/**  Ce que le lien désigne, s'il peut aussi partir par courriel (#1357) :
+	 *   déduit du lien lui-même — aucun appelant n'a à le dire. */
+	$: cible = cibleDuLien(chemin, ancre);
 	let bouton: HTMLButtonElement;
 
 	/** « Lien copié », et pour une affaire la proposition de l'envoyer. */
 	function annoncerCopie(copie: boolean) {
 		if (!copie) return toast('error', 'Copie impossible');
-		if (partage === null) return toast('success', 'Lien copié');
+		if (!cible) return toast('success', 'Lien copié');
 		toast('success', 'Lien copié', 8000, {
 			composant: PartageCourriel,
-			props: { ticketId: partage, retour: bouton },
+			props: { cible, retour: bouton },
 		});
 	}
 

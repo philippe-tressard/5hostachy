@@ -44,6 +44,7 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "ticket_statut_change": {"destinataire", "ticket"},
     "ticket_nouveau_message": {"ticket", "auteur_action", "message"},
     "ticket_partage": {"ticket", "auteur_action"},
+    "lien_partage": {"objet", "auteur_action"},
     "reponse_communaute": {"reponse"},
     "idee_statut": {"idee"},
     "relance_syndic": {

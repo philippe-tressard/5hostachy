@@ -125,6 +125,7 @@ from app.routers import (
 )
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
 from app.routers import manuel
+from app.routers import partage
 from app.routers import csp
 from app.routers import assistant, config_llm
 from app.config import get_settings
@@ -396,6 +397,7 @@ app.include_router(auth_profil.router)
 app.include_router(auth_telemetrie.router)
 app.include_router(lots.router)
 app.include_router(tickets.router)
+app.include_router(partage.router)  # 🔗 → courriel (#1357)
 app.include_router(publications.router)
 app.include_router(documents.router)
 app.include_router(admin.router)
