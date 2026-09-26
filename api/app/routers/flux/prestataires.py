@@ -47,9 +47,13 @@ def _collecter_fiches(ctx: ContexteFlux) -> list[FluxItem]:
             date=pr.cree_le,
             cree_le=pr.cree_le,
             titre=pr.nom,
-            detail=pr.specialite or "Nouveau prestataire",
+            #  L'équipement part en VALEUR (`meta`) et l'écran le traduit : il
+            #  s'affichait « interphone_digicode », deux fois (26/09/2026). Les
+            #  libellés vivent côté front (`$lib/prestataires`, `EQUIPEMENTS`),
+            #  comparés au serveur par `test_types_equipement.py`.
+            detail="Nouveau prestataire",
             icon="🛠️",
-            badges=[pr.specialite] if pr.specialite else [],
+            badges=[],
             lien=lien_element("presta", pr.id),
             meta={"prestataire_id": pr.id, "specialite": pr.specialite},
         )
