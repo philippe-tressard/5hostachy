@@ -53,9 +53,13 @@ function svelte(dir) {
 export function formulairesAvantFiltre(source) {
 	//  Le balisage seul : un commentaire qui NOMME un formulaire n'en rend pas.
 	const debut = source.lastIndexOf('</script>');
-	const balisage = (debut >= 0 ? source.slice(debut) : source).replace(/<!--[\s\S]*?-->/g, (c) =>
-		c.replace(/[^\n]/g, ' '),
-	);
+	//  🔴 Une rangée de pastilles LIBELLÉE (`libelleVisible`) est un CHAMP de
+	//  formulaire, pas un filtre (#1329) : les listes courtes des formulaires
+	//  sont passées en pastilles le 26/09/2026, et le contrôle les prenait pour
+	//  des filtres rendus après leur boîte. Neutralisées à longueur égale.
+	const balisage = (debut >= 0 ? source.slice(debut) : source)
+		.replace(/<!--[\s\S]*?-->/g, (c) => c.replace(/[^\n]/g, ' '))
+		.replace(/<ChoixPastilles\b[^>]*\blibelleVisible\b[^>]*>/g, (c) => c.replace(/[^\n]/g, ' '));
 	const decalage = debut >= 0 ? source.slice(0, debut).split('\n').length - 1 : 0;
 	const coupes = [
 		0,
@@ -95,6 +99,11 @@ if (process.argv.includes('--selftest')) {
 		],
 		//  Un commentaire qui nomme un formulaire n'en rend pas.
 		['</script><!-- <FormulaireIdee /> --><ChoixPastilles />', 0],
+		//  Un CHAMP en pastilles dans la boîte n'est pas un filtre (#1329).
+		[
+			'</script><FormulaireCreation><ChoixPastilles libelleVisible radio="t" /></FormulaireCreation>',
+			0,
+		],
 		//  Pas de filtre : rien à ordonner.
 		['</script>{#if showForm}<FormulaireIdee />{/if}<Liste />', 0],
 	];

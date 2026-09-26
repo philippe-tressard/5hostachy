@@ -99,6 +99,16 @@ const STATUT = parAttribut({
 
 export const LIBELLES_STATUT: Record<string, string> = STATUT.libelle;
 
+/**  Les profils qu'un utilisateur peut DEMANDER depuis son profil — ni aidant
+ *   (une délégation), ni compte technique. */
+export const STATUTS_DEMANDABLES = [
+	'copropriétaire_résident',
+	'copropriétaire_bailleur',
+	'locataire',
+	'mandataire',
+	'syndic',
+] as const;
+
 /**
  *  Les statuts, ABRÉGÉS — pour un tableau dense (#828).
  *

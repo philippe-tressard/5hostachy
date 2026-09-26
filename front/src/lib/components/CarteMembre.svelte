@@ -60,6 +60,7 @@
   ailleurs (`npm run lint:noms` le refuse).
 -->
 <script context="module" lang="ts">
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	/**
 	 *  Ce que TOUT membre d'annuaire porte, quel que soit son côté.
 	 *
@@ -94,6 +95,9 @@
 
 	/** Le membre édité — lié par `bind:membre` pour que la saisie remonte. */
 	export let membre: MembreBase;
+	//  Le nom du groupe radio de la civilité, propre à CETTE carte : plusieurs
+	//  cartes peuvent être en édition à la fois.
+	const idCivilite = `membre-civilite-${Math.random().toString(36).slice(2, 8)}`;
 	/** La carte est dépliée. */
 	export let ouvert = false;
 	/** La carte est dépliée ET en édition : le formulaire remplace le détail. */
@@ -170,14 +174,15 @@
 		<div class="carte-corps carte-membre-corps">
 			{#if edite}
 				<div class="form-grid">
-					<label class="field">
-						Civilité
-						<select bind:value={membre.genre}>
-							{#each CIVILITES as c (c)}
-								<option value={c}>{c}</option>
-							{/each}
-						</select>
-					</label>
+					<ChoixPastilles
+						options={CIVILITES.map((c) => ({ val: c, label: c }))}
+						bind:valeur={membre.genre}
+						tous={false}
+						libelle="Civilité"
+						libelleVisible
+						radio={idCivilite}
+						defilante={false}
+					/>
 					<label class="field">
 						Prénom
 						<input type="text" bind:value={membre.prenom} placeholder="Prénom" />

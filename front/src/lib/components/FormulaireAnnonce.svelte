@@ -41,6 +41,7 @@
   donnerait deux chemins concurrents vers la même liste.
 -->
 <script lang="ts">
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
@@ -239,12 +240,16 @@
 				rempli={!!typeAnnonce && !!categorie}
 			>
 				<div class="form-grid">
-					<div class="field">
-						<label for="annonce-type-{annonce?.id ?? 'new'}">Type</label>
-						<select id="annonce-type-{annonce?.id ?? 'new'}" bind:value={typeAnnonce}>
-							{#each TYPES_ANNONCE as t (t.val)}<option value={t.val}>{t.label}</option>{/each}
-						</select>
-					</div>
+					<!--  Trois valeurs : des pastilles, comme le filtre au-dessus (#1329). -->
+					<ChoixPastilles
+						options={TYPES_ANNONCE}
+						bind:valeur={typeAnnonce}
+						tous={false}
+						libelle="Type"
+						libelleVisible
+						radio="annonce-type-{annonce?.id ?? 'new'}"
+						defilante={false}
+					/>
 					<div class="field">
 						<label for="annonce-categorie-{annonce?.id ?? 'new'}">Catégorie</label>
 						<select id="annonce-categorie-{annonce?.id ?? 'new'}" bind:value={categorie}>

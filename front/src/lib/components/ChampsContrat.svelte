@@ -39,6 +39,7 @@
   téléversement — un autre lot, et il est nommé dans #390.
 -->
 <script context="module" lang="ts">
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { pliageDe, requisDe } from '$lib/pliage';
 	let compteur = 0;
 </script>
@@ -69,6 +70,10 @@
 	//  et deux `id` identiques feraient pointer les deux `aria-labelledby` sur le
 	//  premier — un défaut qui ne se voit qu'au lecteur d'écran.
 	const idNotes = `contrat-notes-${++compteur}`;
+	const UNITES_DUREE = [
+		{ val: 'mois', label: 'mois' },
+		{ val: 'ans', label: 'ans' },
+	];
 </script>
 
 <!--  ══ 1. TITRE ══ Le titre SEUL (§0, arbitré le 18/08/2026 : ce qui qualifie
@@ -139,21 +144,28 @@
 					required
 				/></label
 			>
-			<label class="field"
-				>Durée initiale
+			<!--  Un `<div>` et non un `<label>` : l'unité est un groupe de pastilles,
+			      et des boutons dans un label lui voleraient son clic (#1329). -->
+			<div class="field">
+				<label for="{idNotes}-duree">Durée initiale</label>
 				<div class="duo">
 					<input
+						id="{idNotes}-duree"
 						type="number"
 						min="1"
 						placeholder="Ex. 12"
 						bind:value={contratForm.duree_initiale_valeur}
 					/>
-					<select bind:value={contratForm.duree_initiale_unite}>
-						<option value="mois">mois</option>
-						<option value="ans">ans</option>
-					</select>
+					<ChoixPastilles
+						options={UNITES_DUREE}
+						bind:valeur={contratForm.duree_initiale_unite}
+						tous={false}
+						libelle="Unité de la durée"
+						radio="{idNotes}-unite"
+						defilante={false}
+					/>
 				</div>
-			</label>
+			</div>
 			<label class="field"
 				>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label
 			>
@@ -231,8 +243,5 @@
 	}
 	.duo input {
 		flex: 1;
-	}
-	.duo select {
-		width: auto;
 	}
 </style>

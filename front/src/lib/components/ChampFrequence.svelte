@@ -17,24 +17,30 @@
   serveur reçoive toujours une paire complète.
 -->
 <script lang="ts">
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { FREQUENCES } from '$lib/prestataires';
 
 	export let frequenceType: string | null | undefined = '';
 	export let frequenceValeur: number | string | null | undefined = null;
 	export let idPrefixe = 'frequence';
 
+	//  « Aucune » est la valeur vide : `null` (fiche jamais réglée) s'y ramène.
+	let choix = frequenceType ?? '';
+	$: frequenceType = choix;
 	$: unite = FREQUENCES.find((f) => f.val === frequenceType);
 	$: if (unite && !unite.nombre) frequenceValeur = 1;
 </script>
 
 <div class="form-grid form-grid-2 frequence">
-	<div class="field">
-		<label for="{idPrefixe}-type">Fréquence</label>
-		<select id="{idPrefixe}-type" bind:value={frequenceType}>
-			<option value="">— Aucune —</option>
-			{#each FREQUENCES as f (f.val)}<option value={f.val}>{f.label}</option>{/each}
-		</select>
-	</div>
+	<!--  Cinq valeurs : des pastilles (#1329), « Aucune » pour la valeur vide. -->
+	<ChoixPastilles
+		options={FREQUENCES}
+		bind:valeur={choix}
+		tous="Aucune"
+		libelle="Fréquence"
+		libelleVisible
+		defilante={false}
+	/>
 	{#if unite?.nombre}
 		<div class="field">
 			<label for="{idPrefixe}-valeur">{unite.nombre}</label>

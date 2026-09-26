@@ -291,6 +291,14 @@ CONSOMME.**
 Une liste de **6 entrées ou moins** qui fait CHOISIR se rend en pastilles
 (`Pastille.svelte`). Au-delà, elle reste ce qu'elle est.
 
+🔴 **Filtres ET champs de formulaire** (arbitré le 26/09/2026, #1329, capture à
+l'appui : « toutes en pastilles »). Le Type d'une annonce était une liste
+déroulante de trois valeurs juste sous le filtre qui propose les mêmes trois
+valeurs en pastilles. Dans un formulaire : `ChoixPastilles` avec `libelleVisible`,
+`radio` pour un choix obligatoire, `tous="Aucune"` (ou « Inchangé ») pour
+l'option vide, `defilante={false}`. Une liste construite à la volée (lots,
+résidents) garde sa liste déroulante : sa taille ne se lit pas dans le code.
+
 Le chiffre n'est pas arbitraire : les usages existants allaient de 2 à 6, et deux
 cas se posaient juste au-dessus — `CATEGORIES_ANNONCE` (9) et les statuts
 utilisateur (7). Le seuil les exclut, et il est **écrit ici pour que la question

@@ -55,6 +55,7 @@
   rendu passe en statut, parce qu'il a existé et qu'il circule.
 -->
 <script lang="ts">
+	import { TYPES_ACCES } from '$lib/types-acces';
 	import { onMount } from 'svelte';
 	import { acces as accesApi, admin as adminApi, type AccesAdmin, type ChoixAcces } from '$lib/api';
 	import { isAdmin } from '$lib/stores/auth';
@@ -77,10 +78,8 @@
 
 	//  Deux types, donc deux pastilles plus « Tous » : sous le seuil des listes
 	//  courtes, `ChoixPastilles` s'impose (`ux-patterns`).
-	const TYPES = [
-		{ val: 'vigik', label: '\u{1F3F7}\u{FE0F} Vigik' },
-		{ val: 'telecommande', label: '\u{1F4E1} Télécommande' },
-	] as const;
+	//  La liste vit dans `$lib/types-acces` : elle était écrite trois fois (#1329).
+	const TYPES = TYPES_ACCES;
 	let filtreType = '';
 	let recherche = '';
 
