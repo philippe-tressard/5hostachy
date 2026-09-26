@@ -55,9 +55,16 @@ rapport_payload() { # tache noeud portee statut duree details erreur debut fin [
     local tache="${1:-}" noeud="${2:-}" portee="${3:-applicative}" statut="${4:-succes}"
     local duree="${5:-0}" details="${6:-null}" erreur="${7:-}" debut="${8:-}" fin="${9:-}"
     local tokens="${10:-0}" taille="${11:-null}"
-    printf '{"tache":"%s","noeud":"%s","portee":"%s","statut":"%s","tokens_supprimes":%s,"taille_db_octets":%s,"duree_secondes":%s,"details":%s,"erreur":"%s","cree_le":"%s","terminee_le":"%s"}' \
+    #  🔴 Une date VIDE s'écrit `null`, jamais `""` (#1367, 27/09/2026). Le
+    #  battement de début (`maintenance.sh`, #488) n'a pas de fin : `""` était
+    #  refusé par le schéma (« input is too short »), 422 chaque dimanche depuis
+    #  le 23/08, sur les deux nœuds, sans que rien ne le dise hors du journal.
+    local cree="null" terminee="null"
+    [ -n "$debut" ] && cree="\"$debut\""
+    [ -n "$fin" ] && terminee="\"$fin\""
+    printf '{"tache":"%s","noeud":"%s","portee":"%s","statut":"%s","tokens_supprimes":%s,"taille_db_octets":%s,"duree_secondes":%s,"details":%s,"erreur":"%s","cree_le":%s,"terminee_le":%s}' \
         "$tache" "$noeud" "$portee" "$statut" "$tokens" "$taille" "$duree" \
-        "${details:-null}" "$(rapport_echapper "$erreur")" "$debut" "$fin"
+        "${details:-null}" "$(rapport_echapper "$erreur")" "$cree" "$terminee"
 }
 
 # ── Lecture de la clé partagée ───────────────────────────────────────────────
@@ -182,8 +189,13 @@ ligne2')"
         "$(rapport_payload bascule rpi1 applicative succes 42 '{"vers":"rpi2"}' '' D F)"
 
     check "details omis → null" \
-        '{"tache":"t","noeud":"","portee":"applicative","statut":"succes","tokens_supprimes":0,"taille_db_octets":null,"duree_secondes":0,"details":null,"erreur":"","cree_le":"","terminee_le":""}' \
+        '{"tache":"t","noeud":"","portee":"applicative","statut":"succes","tokens_supprimes":0,"taille_db_octets":null,"duree_secondes":0,"details":null,"erreur":"","cree_le":null,"terminee_le":null}' \
         "$(rapport_payload t)"
+
+    #  Le battement de début (#1367) : une fin vide part en null.
+    check "battement : fin vide → null" \
+        '{"tache":"maintenance","noeud":"rpi1","portee":"hygiene_locale","statut":"en_cours","tokens_supprimes":0,"taille_db_octets":null,"duree_secondes":0,"details":null,"erreur":"","cree_le":"D","terminee_le":null}' \
+        "$(rapport_payload maintenance rpi1 hygiene_locale en_cours 0 null '' D '')"
 
     # Le JSON produit doit être *analysable*, pas seulement ressemblant : c'est
     # la seule vérification qui aurait attrapé le défaut d'échappement d'origine.

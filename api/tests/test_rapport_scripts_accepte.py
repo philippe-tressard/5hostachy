@@ -37,7 +37,6 @@ import shutil
 import subprocess
 
 import pytest
-from pydantic import ValidationError
 
 from app.routers.admin.rapports_scripts import RapportMaintenance
 
@@ -132,22 +131,39 @@ def test_une_ERREUR_multiligne_ne_casse_pas_la_charge():
     assert "\n" not in (lu.erreur or ""), "un saut de ligne a survécu à l'échappement"
 
 
-def test_une_DATE_VIDE_est_refusee_et_c_est_su():
-    """⚠️ Fragilité LATENTE du contrat, nommée plutôt que subie.
+def test_le_BATTEMENT_de_debut_est_accepte():
+    """🔴 Le défaut RÉEL du 23/08 au 27/09/2026 (#1367) : cinq dimanches, deux nœuds.
 
-    `rapport_payload` interpole ses dates sans les tester : appelée avec des
-    dates vides, elle produit `"cree_le":""`, et Pydantic répond **422** —
+    `battement_debut` (`maintenance.sh`, #488) envoie un rapport SANS fin — la
+    maintenance commence. Les arguments ci-dessous sont ceux de son appel
+    exact : `rapport_payload maintenance "$SELF" "$portee" en_cours 0 null ""
+    "$MAINTE_DEBUT" ""`. La fin vide partait en `"terminee_le":""`, que
+    Pydantic refuse (« input is too short ») : **422 à chaque fois**, sur les
+    deux nœuds, et la seconde sonde de #488 n'a jamais rien enregistré.
 
-        Input should be a valid datetime or date, input is too short
-
-    Les trois appelants (`maintenance.sh`, `bascule.sh`, `export-hors-site.sh`)
-    renseignent tous leurs dates : le cas n'est **pas atteignable aujourd'hui**,
-    vérifié. Ce test existe pour que le jour où un quatrième appelant apparaît,
-    le contrat soit déjà écrit — et non découvert par un rapport perdu.
-
-    Même famille que le document sans profil d'accès (#547) : un invariant tenu
-    à un endroit et supposé à un autre, sans rien qui relie les deux.
+    Ce fichier affirmait ici, en toutes lettres, que « le cas n'est pas
+    atteignable aujourd'hui, vérifié » — et verrouillait le refus. La
+    vérification avait compté les appelants de `rapport_payload`, pas les
+    arguments qu'ils passent.
     """
+    charge = _payload(
+        "maintenance",
+        "rpi1",
+        "hygiene_locale",
+        "en_cours",
+        "0",
+        "null",
+        "",
+        "2026-09-27T03:00:01",
+        "",
+    )
+    assert charge["terminee_le"] is None, "une fin vide doit partir en null, pas en chaîne vide"
+    lu = RapportMaintenance(**charge)
+    assert lu.terminee_le is None and lu.statut == "en_cours"
+
+
+def test_une_DATE_VIDE_part_en_null():
+    """Le contrat, pour tout appelant : une date vide s'écrit `null`, jamais `""`."""
     charge = _payload("maintenance", "rpi1", "applicative", "succes", "1", "null", "", "", "")
-    with pytest.raises(ValidationError):
-        RapportMaintenance(**charge)
+    assert charge["cree_le"] is None and charge["terminee_le"] is None
+    RapportMaintenance(**charge)
