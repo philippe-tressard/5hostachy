@@ -20,13 +20,15 @@
   éditeur riche. Le contrôle compte les champs depuis ce lot.
 -->
 <script lang="ts">
-	import { richEmpty } from '$lib/publications';
 	import { createEventDispatcher } from 'svelte';
 
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import SectionTitre from '$lib/components/SectionTitre.svelte';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import SectionDescription from '$lib/components/SectionDescription.svelte';
+	import { categorieSaisie, NOUVELLE_CATEGORIE, type SaisieFaq } from '$lib/faq';
 
 	const dispatch = createEventDispatcher<{ annule: void }>();
 
@@ -46,11 +48,7 @@
 	 *   silence. `check-geste-edition` règle F le refuse désormais (13/09/2026). */
 	export let cle: unknown = undefined;
 	/** Les champs, liés dans les deux sens : la page porte leur cycle de vie. */
-	export let categorie = '';
-	export let nouvelleCategorie = '';
-	export let estNouvelleCategorie = false;
-	export let question = '';
-	export let reponse = '';
+	export let form: SaisieFaq;
 	/** Les catégories déjà en service, proposées avant d'en inventer une. */
 	export let categories: string[] = [];
 	export let enregistrement = false;
@@ -64,8 +62,8 @@
 	//  L'inverse paraît symétrique et ne l'est pas : il effacerait le nom qu'on
 	//  vient de taper au premier aller-retour dans la liste.
 	function surChangementCategorie() {
-		estNouvelleCategorie = categorie === '__new__';
-		if (estNouvelleCategorie) nouvelleCategorie = '';
+		form.estNouvelleCategorie = form.categorie === NOUVELLE_CATEGORIE;
+		if (form.estNouvelleCategorie) form.nouvelleCategorie = '';
 	}
 </script>
 
@@ -79,53 +77,50 @@
 	`lint:formulaires` l'exige, et c'est lui qui distingue « créer » de
 	« corriger », ce que rien dans le balisage ne permettrait de deviner.
 -->
+<!--  🔴 Les SECTIONS du cadre (#1329), dans l'ordre de toutes les entités :
+      la question (le titre), sa catégorie, la réponse. C'était une grille de
+      champs à plat, catégorie d'abord, avec une grille locale qui surchargeait
+      la charte et un reste de `.modal-body`. En correction, la carte est déjà
+      le cadre (`encadre`). -->
 <CadreFormulaire
 	edition={modeEdition}
+	encadre={!modeEdition}
 	titre={titreCadre}
 	{cle}
 	on:fermer={() => dispatch('annule')}
 >
-	<div class="form-grid" class:modal-body={modeEdition}>
-		<label class="field"
-			><span>Catégorie<EtoileRequis vide={!categorie} /></span>
-			<select bind:value={categorie} on:change={surChangementCategorie}>
+	<SectionTitre id="faq-question" libelle="Question" bind:valeur={form.question} />
+
+	<SectionFormulaire titre="Catégorie" requis rempli={!!categorieSaisie(form)} pour="faq-categorie">
+		<div class="field">
+			<select id="faq-categorie" bind:value={form.categorie} on:change={surChangementCategorie}>
 				<option value="" disabled>— Choisir une catégorie —</option>
 				{#each categories as cat (cat)}
 					<option value={cat}>{cat}</option>
 				{/each}
-				<option value="__new__">➕ Nouvelle catégorie…</option>
+				<option value={NOUVELLE_CATEGORIE}>➕ Nouvelle catégorie…</option>
 			</select>
-		</label>
-		{#if estNouvelleCategorie}
+		</div>
+		{#if form.estNouvelleCategorie}
 			<label class="field"
-				><span>Nom de la nouvelle catégorie<EtoileRequis vide={!nouvelleCategorie.trim()} /></span
+				><span
+					>Nom de la nouvelle catégorie<EtoileRequis vide={!form.nouvelleCategorie.trim()} /></span
 				><input
 					type="text"
-					bind:value={nouvelleCategorie}
+					bind:value={form.nouvelleCategorie}
 					placeholder="Ex : 🗑️ Tri des déchets"
 				/></label
 			>
 		{/if}
+	</SectionFormulaire>
 
-		<label class="field"
-			><span>Question<EtoileRequis vide={!question.trim()} /></span><input
-				type="text"
-				bind:value={question}
-				placeholder="La question…"
-			/></label
-		>
-
-		<div class="field">
-			<label for="faq-reponse">Réponse<EtoileRequis vide={richEmpty(reponse)} /></label
-			><!-- RichEditor : pas labelable, donc pas d'enveloppement -->
-			<RichEditor
-				id="faq-reponse"
-				bind:value={reponse}
-				placeholder="La réponse…"
-				minHeight="120px"
-			/>
-		</div>
-	</div>
+	<SectionDescription
+		idPrefixe="faq"
+		titre="Réponse"
+		requis
+		placeholder="La réponse…"
+		bind:valeur={form.reponse}
+	/>
 	<!--  `.form-actions` d'`app.css` : Annuler en `btn-outline` PUIS la soumission
 	      en `btn-primary`. Un ordre qui change d'un écran à l'autre fait cliquer
 	      de travers par mémoire du geste (`lint:soumission`). -->
@@ -139,19 +134,3 @@
 		on:enregistre={onEnregistrer}
 	/>
 </CadreFormulaire>
-
-<style>
-	/*  🔴 SURCHARGE ASSUMÉE de `.form-grid` (`composants.css`), qui est une grille
-	    en `auto-fit` à deux colonnes dès 440 px. Dans une modale de 500 px, deux
-	    colonnes écraseraient la question et l'éditeur : ici c'est une colonne.
-
-	    Elle voyage AVEC le balisage, et c'est la leçon de #344 — reproduite le
-	    15/08/2026 sur `FormulaireEvenement` : une règle laissée dans la page que
-	    le balisage vient de quitter ne s'applique plus à rien, Svelte scopant les
-	    styles. Le formulaire s'affichait alors en une colonne écrasée. */
-	.form-grid {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-</style>

@@ -130,6 +130,8 @@ export function requisParDefaut(source) {
 const HORS_CADRE = {
 	'lib/components/FormulaireAnnonceHall.svelte':
 		"l'affiche de hall n'a pas de déclaration d'entité (`check-intitules-section`, HORS_CADRE)",
+	'lib/components/FormulaireFaq.svelte':
+		"la FAQ n'a pas de déclaration d'entité : sa Réponse, obligatoire, reste dépliée (#1329)",
 };
 
 /**  Les appels d'un porteur qui n'empruntent pas le chemin. PURE. */

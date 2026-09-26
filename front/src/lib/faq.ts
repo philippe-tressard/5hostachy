@@ -101,3 +101,59 @@ export function categoriesPourStatut<T>(
 	}
 	return out;
 }
+
+/**
+ * La SAISIE d'une question, en un objet (#1329).
+ *
+ * Cinq champs liés un par un, à deux endroits — la création en tête de liste,
+ * la correction dans la carte : chaque montage aurait recopié ses cinq
+ * liaisons. Un objet se lie d'un geste, et ses deux constructions s'écrivent ici.
+ */
+export interface SaisieFaq {
+	categorie: string;
+	nouvelleCategorie: string;
+	estNouvelleCategorie: boolean;
+	question: string;
+	reponse: string;
+}
+
+/** La valeur sentinelle du choix « ➕ Nouvelle catégorie… ». */
+export const NOUVELLE_CATEGORIE = '__new__';
+
+export function saisieFaqVide(): SaisieFaq {
+	return {
+		categorie: '',
+		nouvelleCategorie: '',
+		estNouvelleCategorie: false,
+		question: '',
+		reponse: '',
+	};
+}
+
+/**  La saisie d'une question existante : sa catégorie est choisie si elle est
+ *   en service, sinon elle se présente comme une nouvelle catégorie à nommer. */
+export function saisieFaqDepuis(
+	it: { question: string; reponse: string; categorie?: string | null },
+	categories: readonly string[],
+): SaisieFaq {
+	const cat = it.categorie ?? '';
+	const connue = categories.includes(cat);
+	return {
+		categorie: connue ? cat : NOUVELLE_CATEGORIE,
+		nouvelleCategorie: connue ? '' : cat,
+		estNouvelleCategorie: !connue,
+		question: it.question,
+		reponse: it.reponse,
+	};
+}
+
+/** La catégorie qui part au serveur. */
+export function categorieSaisie(f: SaisieFaq): string {
+	return (f.estNouvelleCategorie ? f.nouvelleCategorie : f.categorie).trim();
+}
+
+/**  La question qui mène à la demande d'accès (le prix d'un badge) : sa carte
+ *   porte les boutons « Faire une demande », et `#badge-prix` l'ouvre. */
+export function estQuestionPrixBadge(question: string | null | undefined): boolean {
+	return !!question && /quel\s+prix.*badge|prix.*badge|badge.*prix/i.test(question);
+}

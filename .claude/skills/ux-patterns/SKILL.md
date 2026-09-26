@@ -622,10 +622,12 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
   - ⏳ **lot 2** : le code serveur des « Bailleurs » (mandataires) dans
     Destinataires.
 
-⚠️ **Aucun contrôle ne tient encore cette règle.** Restes connus, à relire
-avec elle : le profil de document « Tous les résidents » (`seed/profils_documents.py`),
-les descriptions « Concerne tous les résidents » du seed patrimoine, la carte
-Communauté « Résidents » du manuel.
+🔒 **Tenue depuis le 26/09/2026 (#1305) : `api/tests/test_libelle_tous.py`.** Il
+refuse « tous les résidents » dans tout texte SERVI — littéraux Python hors
+docstrings, balisage Svelte hors commentaires. Il a trouvé une cinquième
+description (espaces verts) que le relevé à la main avait manquée. Les textes
+déjà en base ont été remplacés par la migration 0226, à l'identique seulement.
+Un périmètre à portée globale se dit « Visible de tous ».
 
 ## 3. Carte expansible (Expand Card)
 

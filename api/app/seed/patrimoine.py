@@ -169,7 +169,7 @@ def _racines() -> list[dict]:
             "libelle": "Copropriété entière",
             "libelle_court": "Copropriété",
             "description": "Toute la copropriété. C'est le périmètre le plus large : le contenu "
-            "est visible de tous les résidents et notifie l'ensemble du conseil "
+            "est visible de tous et notifie l'ensemble du conseil "
             "syndical. C'est aussi le périmètre retenu par défaut quand aucun "
             "autre n'est précisé.",
             "portee_globale": True,
@@ -191,8 +191,8 @@ def _racines() -> list[dict]:
             "libelle": "Parking",
             "libelle_court": "Parking",
             "description": "Le parking privé de la copropriété, au niveau −2. On y accède par le "
-            "portail depuis le parking public de l'AFUL, au niveau −1. Concerne "
-            "tous les résidents.",
+            "portail depuis le parking public de l'AFUL, au niveau −1. Visible de "
+            "tous.",
             "portee_globale": True,
             "selectionnable": True,
             "ordre": 20,
@@ -237,7 +237,7 @@ def _racines() -> list[dict]:
             "description": "Le parking public géré par l'association foncière urbaine libre, au "
             "niveau −1 : celui que l'on traverse pour rejoindre le parking de la "
             "copropriété. Il n'appartient pas à la copropriété, mais celle-ci "
-            "participe à son assemblée générale. Concerne tous les résidents.",
+            "participe à son assemblée générale. Visible de tous.",
             "portee_globale": True,
             #  🔴 Elle concerne tous les résidents (qui VOIT) mais n'appartient pas
             #  à la copropriété (ce qui la COUVRE) : deux questions, deux drapeaux.
@@ -251,8 +251,7 @@ def _racines() -> list[dict]:
             "code": "espaces-verts",
             "libelle": "Espaces verts",
             "libelle_court": "Espaces verts",
-            "description": "Les espaces verts communs de la copropriété. Concerne tous les "
-            "résidents.",
+            "description": "Les espaces verts communs de la copropriété. Visible de tous.",
             "portee_globale": True,
             "selectionnable": True,
             "ordre": 50,
@@ -268,7 +267,7 @@ def _racines() -> list[dict]:
             "libelle": "Cheminements",
             "libelle_court": "Cheminements",
             "description": "Les circulations extérieures de la copropriété, hors bâtiment et hors "
-            "parking. Concerne tous les résidents.",
+            "parking. Visible de tous.",
             "portee_globale": True,
             "selectionnable": True,
             "ordre": 60,
@@ -477,3 +476,12 @@ def _poser_les_batiments(session: Session, connus: dict[str, int]) -> None:
                 },
                 bat_id,
             )
+
+
+#: Les passages « tous les résidents » des descriptions semées, et ce qui les
+#: remplace (#1305) : un périmètre à portée globale est visible de TOUS — un
+#: bailleur ou le syndic n'est pas un résident. Lus par la migration 0226.
+PASSAGES_TOUS_LES_RESIDENTS = (
+    ("est visible de tous les résidents et notifie", "est visible de tous et notifie"),
+    ("Concerne tous les résidents.", "Visible de tous."),
+)

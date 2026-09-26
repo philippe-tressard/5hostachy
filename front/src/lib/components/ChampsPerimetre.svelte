@@ -129,17 +129,17 @@
 
 <label class="field-check danger">
 	<input type="checkbox" bind:checked={form.portee_globale} />
-	Concerne tous les résidents
+	Visible de tous
 	{#if concerneTousHerite && !form.portee_globale}
 		<span class="aide herite">
-			ℹ️ Ce périmètre concerne <strong>déjà</strong> tous les résidents, par héritage de son parent —
-			la case ci-dessus est décochée, et c’est normal. La cocher n’ajouterait rien ; la laisser décochée
-			ne retire rien. Pour changer cela, il faut décocher la case du périmètre parent.
+			ℹ️ Ce périmètre est <strong>déjà</strong> visible de tous, par héritage de son parent — la case
+			ci-dessus est décochée, et c’est normal. La cocher n’ajouterait rien ; la laisser décochée ne retire
+			rien. Pour changer cela, il faut décocher la case du périmètre parent.
 		</span>
 	{/if}
 	<span class="aide">
 		⚠️ Un contenu ciblé sur ce périmètre — ou sur l’un de ses sous-périmètres — sera visible de <strong
-			>tous les résidents</strong
+			>tous</strong
 		>
 		et notifiera
 		<strong>l’ensemble du conseil syndical</strong>, quel que soit leur bâtiment.

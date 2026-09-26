@@ -71,17 +71,9 @@ export const TOLERANCES = {
 		'deux colonnes fixes : cet écran de configuration apparie des libellés et des valeurs',
 	'routes/(app)/espace-cs/+page.svelte::form-grid':
 		'colonnes de 150 px et gap resserré — la fiche d’un membre du CS tient des champs très courts',
-	//  ⚠️ Celui-ci n'est PAS une répartition : c'est une pile. Le nom ment sur ce
-	//  que fait la règle, et c'est la vraie dette de la liste.
-	//  ⚠️ La clé a suivi le BALISAGE le 31/08/2026 : le formulaire de la FAQ est
-	//  devenu `FormulaireFaq.svelte`, et sa règle est partie avec lui (#344 —
-	//  une règle laissée dans la page que le balisage vient de quitter ne
-	//  s'applique plus à rien). La dette, elle, n'a pas bougé d'un pouce : la
-	//  retirer parce que le fichier a changé de nom l'aurait fait disparaître
-	//  des relevés sans que rien ne soit corrigé.
-	'lib/components/FormulaireFaq.svelte::form-grid':
-		'⚠️ DETTE — `display: flex` en colonne : ce n’est plus une grille, c’est une pile. ' +
-		'La classe ment sur ce qu’elle fait ; à renommer plutôt qu’à aligner',
+	//  ✅ La « pile » de `FormulaireFaq` (la dette nommée ici depuis le 31/08) est
+	//  RÉSORBÉE le 26/09/2026 (#1329) : le formulaire passe par les sections du
+	//  cadre, et la grille locale est partie avec la grille de champs à plat.
 
 	//  ── Écrans d'authentification ────────────────────────────────────────────
 	'routes/auth/inscription/+page.svelte::auth-page':
@@ -128,8 +120,6 @@ export const TOLERANCES = {
 		'une photo quelconque',
 	'lib/components/TachesPlanifiees.svelte::chevron':
 		'chevron plus petit et en couleur primaire : il annonce une action, pas un dépliage neutre',
-	'lib/components/CarteFaq.svelte::chevron':
-		'`color: inherit` — le chevron suit la couleur de la question, qui change au survol',
 	'lib/components/AccesConnexes.svelte::table':
 		'tableau plus lisible : ses cellules portent des codes et des dates',
 	'routes/(app)/notifications/+page.svelte::section-title':
