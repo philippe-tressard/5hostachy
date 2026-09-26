@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.utils import horloge
 
 import httpx
@@ -24,11 +24,27 @@ from app.models.core import (
     WhatsAppLog,
 )
 
+from app.utils.verdict_whatsapp import verdict_whatsapp
+
 logger = logging.getLogger(__name__)
 
 #  Âge au-delà duquel l'archive locale la plus récente est anormale : le cron
 #  de sauvegarde tourne à 03:00 et ce contrôle à 06:00, sur le même nœud.
 _AGE_MAX_ARCHIVE_LOCALE_H = 25
+
+
+def _heures_depuis(horodatage: str | None) -> float | None:
+    """Les heures écoulées depuis un horodatage ISO du bridge ; `None` s'il manque."""
+    if not horodatage:
+        return None
+    try:
+        debut = datetime.fromisoformat(horodatage.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    #  UTC NAÏF, comme `horloge.maintenant()` : le bridge écrit un ISO en « Z ».
+    if debut.tzinfo is not None:
+        debut = debut.astimezone(timezone.utc).replace(tzinfo=None)
+    return (horloge.maintenant() - debut).total_seconds() / 3600
 
 
 def _check_whatsapp(session: Session) -> list[str]:
@@ -53,11 +69,15 @@ def _check_whatsapp(session: Session) -> list[str]:
     try:
         with httpx.Client(timeout=5) as client:
             resp = client.get(f"{api_url.rstrip('/')}/status", headers={"x-api-key": api_key})
-            state = resp.json().get("state", "unknown")
-        if state != "open":
-            issues.append(
-                f"Bridge WhatsApp déconnecté (état : {state}). Reconnexion requise via Admin → WhatsApp → Statut."
-            )
+            statut = resp.json()
+        #  Coupure ordinaire ou blocage possible : `utils/verdict_whatsapp` (#1061).
+        probleme = verdict_whatsapp(
+            statut.get("state", "unknown"),
+            _heures_depuis(statut.get("hors_ligne_depuis")),
+            statut.get("dernier_code"),
+        )
+        if probleme:
+            issues.append(probleme)
     except Exception as exc:
         issues.append(f"Bridge WhatsApp injoignable : {exc}")
         return issues

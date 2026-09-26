@@ -68,6 +68,16 @@ app.use((err, req, res, next) => {
 let sock = null;
 let qrCode = null;       // latest QR string (null when connected)
 let connectionState = "disconnected"; // disconnected | connecting | open
+// Depuis QUAND le bridge est hors ligne, et le DERNIER code de fermeture (#1061).
+// Une coupure ordinaire (428) se rétablit en minutes ; un 401 ou un 403 venus de
+// WhatsApp disent un compte déconnecté d'office — possiblement bloqué. L'API
+// (`utils/verdict_whatsapp`) lit les deux pour ne pas confondre les pannes.
+let horsLigneDepuis = new Date().toISOString();
+let dernierCode = null;
+function marquerHorsLigne() {
+  connectionState = "disconnected";
+  if (horsLigneDepuis === null) horsLigneDepuis = new Date().toISOString();
+}
 
 // ── Reconnect supervision ────────────────────────────────────────────
 // Incident 2026-07-24 : après une bascule, le bridge est resté bloqué
@@ -154,6 +164,7 @@ async function startBaileysInner() {
   }
 
   connectionState = "connecting";
+  if (horsLigneDepuis === null) horsLigneDepuis = new Date().toISOString();
   qrCode = null;
 
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
@@ -197,15 +208,17 @@ async function startBaileysInner() {
 
     if (connection === "open") {
       connectionState = "open";
+      horsLigneDepuis = null;
       qrCode = null;
       reconnectAttempt = 0; // reset du backoff après une connexion réussie
       logger.warn("WhatsApp connected ✓");
     }
 
     if (connection === "close") {
-      connectionState = "disconnected";
+      marquerHorsLigne();
       rejectAllPendingAcks("Connection closed");
       const statusCode = lastDisconnect?.error?.output?.statusCode;
+      dernierCode = statusCode ?? null;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
       logger.warn({ statusCode, shouldReconnect }, "Connection closed");
       if (shouldReconnect) {
@@ -230,7 +243,12 @@ setInterval(() => {
 
 // ── Routes ──────────────────────────────────────────────────────────
 app.get("/status", (_req, res) => {
-  res.json({ state: connectionState, hasQR: !!qrCode });
+  res.json({
+    state: connectionState,
+    hasQR: !!qrCode,
+    hors_ligne_depuis: horsLigneDepuis,
+    dernier_code: dernierCode,
+  });
 });
 
 app.get("/qr", async (req, res) => {
@@ -305,7 +323,7 @@ app.post("/send", async (req, res) => {
       } catch (errAck) {
         logger.warn({ err: errAck, msgId }, "Message émis, accusé non observé — reconnexion");
         try { if (sock) sock.end(); } catch (_) {}
-        connectionState = "disconnected";
+        marquerHorsLigne();
         reconnectAttempt = 0;
         scheduleReconnect();
         return res.status(202).json({
@@ -329,7 +347,7 @@ app.post("/send", async (req, res) => {
     if (err.message.includes("ghost session") || err.message.includes("ACK timeout")) {
       logger.warn("Ghost session detected — triggering reconnect");
       try { if (sock) sock.end(); } catch (_) {}
-      connectionState = "disconnected";
+      marquerHorsLigne();
       reconnectAttempt = 0;
       scheduleReconnect();
     }
@@ -359,7 +377,7 @@ app.post("/restart", async (_req, res) => {
   try {
     if (sock) sock.end();
   } catch (_) {}
-  connectionState = "disconnected";
+  marquerHorsLigne();
   reconnectAttempt = 0;
   scheduleReconnect();
   res.json({ ok: true, message: "Restarting..." });
