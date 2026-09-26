@@ -307,7 +307,7 @@
 		border-radius: var(--radius);
 		background: var(--color-surface);
 		margin-bottom: 0.3rem;
-		transition: border-color 0.12s;
+		transition: border-color var(--duree-geste);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.releve-row:hover {

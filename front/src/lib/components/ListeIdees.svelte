@@ -215,7 +215,7 @@
 		border-radius: var(--radius);
 		padding: 0.5rem 0.6rem;
 		cursor: pointer;
-		transition: border-color 0.12s;
+		transition: border-color var(--duree-geste);
 		min-width: 3.5rem;
 	}
 	@media (hover: hover) and (pointer: fine) {

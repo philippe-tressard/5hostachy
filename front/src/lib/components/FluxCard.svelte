@@ -224,9 +224,9 @@
 		flex: 1;
 		padding: 0.7rem 0.9rem;
 		transition:
-			box-shadow 0.15s,
-			border-left-color 0.15s,
-			background 0.12s;
+			box-shadow var(--duree-geste),
+			border-left-color var(--duree-geste),
+			background var(--duree-geste);
 		border-left: 4px solid var(--color-border);
 		cursor: pointer;
 	}
@@ -264,7 +264,7 @@
 		}
 	}
 	.flux-titre {
-		transition: color 0.12s ease;
+		transition: color var(--duree-geste);
 	}
 	.flux-item.flux-urgent .flux-card {
 		border-left-color: var(--color-danger) !important;

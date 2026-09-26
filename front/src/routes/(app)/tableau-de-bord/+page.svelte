@@ -352,7 +352,7 @@
 	<!-- Qui voit quelle pastille, et d'où vient chaque nombre : `$lib/raccourcis.ts`,
 	     et nulle part ailleurs. La page recomposait ici la règle d'accès à
 	     l'Espace CS, que le serveur écrivait déjà de son côté (#399). -->
-	<RaccourcisRapides sante={data.sante} {ready} />
+	<RaccourcisRapides sante={data.sante} {ready} --delay=".08s" />
 
 	<!-- ═══ ALERTES URGENTES ══════════════════════════════════════════════ -->
 	{#if $isCS && (data.sante.tickets_relance_syndic ?? 0) > 0}
@@ -556,8 +556,8 @@
 		opacity: 0;
 		transform: translateY(-10px);
 		transition:
-			opacity 0.35s ease,
-			transform 0.35s ease;
+			opacity var(--duree-apparition) var(--ease-out),
+			transform var(--duree-apparition) var(--ease-out);
 	}
 	.hero.hero-visible {
 		opacity: 1;
@@ -602,8 +602,8 @@
 		background: rgba(255, 255, 255, 0.3);
 		text-decoration: none;
 		transition:
-			background 0.2s ease,
-			transform 0.2s ease;
+			background var(--duree-geste),
+			transform var(--duree-geste) var(--ease-out);
 		--avatar-size: 2.6rem;
 		--avatar-bg: rgba(255, 255, 255, 0.18);
 		--avatar-color: #fff;
@@ -664,15 +664,12 @@
 		border-left: 4px solid var(--color-primary);
 		text-decoration: none;
 		color: inherit;
-		transition:
-			box-shadow 0.15s,
-			transform 0.1s;
 		opacity: 0;
 		transform: translateY(8px);
 		transition:
-			opacity 0.3s ease var(--delay, 0s),
-			transform 0.3s ease var(--delay, 0s),
-			box-shadow 0.15s;
+			opacity var(--duree-apparition) var(--ease-out) var(--delay, 0s),
+			transform var(--duree-apparition) var(--ease-out) var(--delay, 0s),
+			box-shadow var(--duree-geste);
 	}
 	.consignes-card.section-visible {
 		opacity: 1;
@@ -727,17 +724,17 @@
 	/* Les styles de la rangée de raccourcis sont partis avec leur balisage dans
 	   `RaccourcisRapides.svelte` — Svelte scope les styles au composant. */
 
-	/* ═══ ANIMATIONS SECTIONS ═══════════════════════════════════════════ */
-	.section-reveal {
-		opacity: 0;
-		transform: translateY(12px);
-		transition:
-			opacity 0.35s ease var(--delay, 0s),
-			transform 0.35s ease var(--delay, 0s);
-	}
-	.section-reveal.section-visible {
-		opacity: 1;
-		transform: translateY(0);
+	/* ═══ ANIMATIONS SECTIONS ═══════════════════════════════════════════
+	   `.section-reveal` vit dans `styles/socle.css` : les raccourcis la
+	   recopiaient (27/09/2026). */
+	/*  Mouvement réduit : l'accueil apparaît en fondu, sans glisser. C'est l'écran
+	    le plus vu — il ne doit pas bouger pour qui a demandé qu'on ne bouge pas
+	    (`emil-design-eng` : garder l'opacité, retirer le déplacement). */
+	@media (prefers-reduced-motion: reduce) {
+		.hero,
+		.consignes-card {
+			transform: none;
+		}
 	}
 
 	/* ═══ ALERTES URGENTES ═════════════════════════════════════════════ */
@@ -750,8 +747,8 @@
 		position: relative;
 		cursor: pointer;
 		transition:
-			box-shadow 0.15s,
-			background 0.12s;
+			box-shadow var(--duree-geste),
+			background var(--duree-geste);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.urgence-fieldset:hover {
@@ -828,7 +825,7 @@
 		height: 100%;
 		border-radius: 3px;
 		background: var(--color-text-muted);
-		transition: width 0.4s ease;
+		transition: width var(--duree-apparition) var(--ease-out);
 	}
 	.urgence-progress-bar.urgence-active {
 		background: #dc2626;

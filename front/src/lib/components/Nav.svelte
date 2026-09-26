@@ -275,7 +275,7 @@
 		color: var(--color-text);
 		font-size: 0.9rem;
 		text-decoration: none;
-		transition: background 0.12s;
+		transition: background var(--duree-geste);
 		border: none;
 		background: transparent;
 		width: 100%;
@@ -409,8 +409,8 @@
 		background: var(--color-text);
 		border-radius: 2px;
 		transition:
-			transform 0.2s,
-			opacity 0.2s;
+			transform var(--duree-apparition) var(--ease-out),
+			opacity var(--duree-apparition) var(--ease-out);
 	}
 
 	.hb-close-1 {

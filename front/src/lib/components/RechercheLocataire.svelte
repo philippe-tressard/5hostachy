@@ -257,7 +257,7 @@
 		align-items: center;
 		gap: 0.75rem;
 		flex-wrap: wrap;
-		transition: background 0.1s;
+		transition: background var(--duree-geste);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.locataire-resultat-btn:hover {

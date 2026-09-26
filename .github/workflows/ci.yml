@@ -1720,6 +1720,13 @@ jobs:
         working-directory: front
         run: npm run lint:options-en-double
 
+      # Les jetons de mouvement existaient depuis le 24/09/2026 ; trois jours plus
+      # tard, 64 transitions sur 74 écrivaient leur durée (huit valeurs, 0,1 à
+      # 0,4 s), et l'accueil entrait en 350 ms `ease` (27/09/2026, #1329).
+      - name: Une durée de mouvement vient de la charte
+        working-directory: front
+        run: npm run lint:mouvement
+
       # 🔴 L'infobulle de catégorie disait « etude_travaux » sur la liste des
       # affaires (26/09/2026, signalé à l'écran) ; deux reportings rendaient la
       # même valeur brute. Le libellé existait, rien n'obligeait à le prendre.

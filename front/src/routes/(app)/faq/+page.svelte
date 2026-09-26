@@ -507,7 +507,7 @@
 	.btn-edit-cat {
 		opacity: 0.4;
 		font-size: 0.75rem;
-		transition: opacity 0.15s;
+		transition: opacity var(--duree-geste);
 		margin-top: 0.75rem;
 	}
 	@media (hover: hover) and (pointer: fine) {

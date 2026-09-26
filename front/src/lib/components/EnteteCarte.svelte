@@ -302,7 +302,7 @@
 	    Le soulignement est écarté sur demande : le titre n'est pas un lien, c'est
 	    une zone cliquable. */
 	.ec-titre-btn {
-		transition: color 0.12s ease;
+		transition: color var(--duree-geste);
 	}
 	.ec-titre-btn:focus-visible {
 		outline: 2px solid var(--color-primary);

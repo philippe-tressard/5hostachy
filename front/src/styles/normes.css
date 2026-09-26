@@ -137,8 +137,8 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	background: var(--color-surface);
 	box-shadow: var(--shadow-sm);
 	transition:
-		box-shadow 0.15s ease,
-		border-left-color 0.15s ease;
+		box-shadow var(--duree-geste),
+		border-left-color var(--duree-geste);
 }
 .carte-liste.expanded {
 	border-left-color: var(--color-primary);
@@ -284,7 +284,7 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 }
 .event-titre,
 .tk-row-titre {
-	transition: color 0.12s ease;
+	transition: color var(--duree-geste);
 }
 .carte-liste.urgent {
 	border-left-color: var(--color-danger);
@@ -552,7 +552,7 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 .rich-content summary::before {
 	content: '›';
 	color: var(--color-text-muted);
-	transition: transform 0.15s;
+	transition: transform var(--duree-geste) var(--ease-out);
 }
 .rich-content details[open] > summary::before {
 	transform: rotate(90deg);

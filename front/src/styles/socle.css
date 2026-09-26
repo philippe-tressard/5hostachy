@@ -66,7 +66,8 @@ body {
 	    l'écran paraît en retard sur le doigt. Deux durées, pas davantage :
 	    `geste` pour ce qui répond à un appui, `apparition` pour ce qui entre.
 	    Essayées sur les Petites annonces (v2.44.0), généralisées le même jour :
-	    l'appui et l'entrée du corps de carte vivent dans `composants.css`. */
+	    l'appui et l'entrée du corps de carte vivent dans `composants.css`.
+	    🔒 Aucune durée écrite ailleurs : `npm run lint:mouvement` (27/09/2026). */
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 	--duree-geste: 120ms;
 	--duree-apparition: 200ms;
@@ -246,4 +247,27 @@ a {
 	padding-left: 0.8em;
 	border-left: 3px solid var(--color-border);
 	color: var(--color-text-muted);
+}
+
+/*  ── Apparition en cascade (27/09/2026) ───────────────────────────────────
+    Une section de l'accueil entre en fondu + 8 px, 200 ms `--ease-out`, avec
+    le délai que la page pose (`style="--delay:.1s"`). Elle était écrite deux
+    fois — la page et ses raccourcis —, en 350 et 300 ms `ease`.
+    `emil-design-eng` : l'écran le plus vu entre vite, et ne glisse pas pour
+    qui a demandé un mouvement réduit (le fondu reste). */
+.section-reveal {
+	opacity: 0;
+	transform: translateY(8px);
+	transition:
+		opacity var(--duree-apparition) var(--ease-out) var(--delay, 0s),
+		transform var(--duree-apparition) var(--ease-out) var(--delay, 0s);
+}
+.section-reveal.section-visible {
+	opacity: 1;
+	transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+	.section-reveal {
+		transform: none;
+	}
 }

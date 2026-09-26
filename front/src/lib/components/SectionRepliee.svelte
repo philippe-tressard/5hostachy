@@ -104,9 +104,9 @@
 		color: var(--color-text);
 		text-align: left;
 		transition:
-			background 0.15s,
-			border-color 0.15s,
-			color 0.15s;
+			background var(--duree-geste),
+			border-color var(--duree-geste),
+			color var(--duree-geste);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.sr-entete:hover {
@@ -134,7 +134,7 @@
 		font-size: 0.8rem;
 		color: var(--color-text-muted);
 		flex-shrink: 0;
-		transition: transform 0.2s;
+		transition: transform var(--duree-geste) var(--ease-out);
 	}
 	.sr-entete[aria-expanded='true'] .sr-chevron {
 		transform: scaleY(-1);

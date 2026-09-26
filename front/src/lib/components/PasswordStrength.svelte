@@ -86,9 +86,9 @@
 		margin-top: 0;
 		opacity: 0;
 		transition:
-			grid-template-rows 0.18s ease,
-			opacity 0.18s ease,
-			margin-top 0.18s ease;
+			grid-template-rows var(--duree-apparition) var(--ease-out),
+			opacity var(--duree-apparition) var(--ease-out),
+			margin-top var(--duree-apparition) var(--ease-out);
 	}
 	.pwd-strength.ouvert {
 		grid-template-rows: 1fr;
@@ -124,14 +124,14 @@
 		height: 4px;
 		border-radius: 2px;
 		background: var(--color-border, #e5e7eb);
-		transition: background 0.2s ease;
+		transition: background var(--duree-geste);
 	}
 	.gauge-label {
 		font-size: 0.75rem;
 		font-weight: 600;
 		min-width: 3rem;
 		text-align: right;
-		transition: color 0.2s ease;
+		transition: color var(--duree-geste);
 	}
 
 	.criteria-list {
@@ -148,7 +148,7 @@
 		gap: 0.35rem;
 		font-size: 0.8rem;
 		color: var(--color-text-muted, #6b7280);
-		transition: color 0.15s ease;
+		transition: color var(--duree-geste);
 	}
 	.criteria-list li.ok {
 		color: #15803d;

@@ -105,8 +105,8 @@
 	gap: 0.15rem;
 	cursor: pointer;
 	transition:
-		box-shadow 0.15s,
-		opacity 0.15s;
+		box-shadow var(--duree-geste),
+		opacity var(--duree-geste);
 }
 @media (hover: hover) and (pointer: fine) {
 	.kanban-card:hover {
@@ -224,7 +224,7 @@
 	border: 1px solid var(--color-border);
 	border-radius: var(--radius);
 	overflow: hidden;
-	transition: opacity 0.15s;
+	transition: opacity var(--duree-geste);
 }
 /*  Une colonne qui PORTE des dossiers ne bascule rien : son en-tête reste un
     bouton dans le balisage (une seule écriture), mais il ne se propose pas. */
@@ -307,7 +307,7 @@
 	padding: 0.45rem 0.6rem;
 	border-top: 1px solid var(--color-border);
 	cursor: pointer;
-	transition: background 0.12s;
+	transition: background var(--duree-geste);
 }
 .kb-item:first-of-type {
 	border-top: none;
@@ -391,8 +391,8 @@
 	align-items: center;
 	justify-content: center;
 	transition:
-		background 0.12s,
-		border-color 0.12s;
+		background var(--duree-geste),
+		border-color var(--duree-geste);
 	line-height: 1;
 }
 @media (hover: hover) and (pointer: fine) {
@@ -441,7 +441,7 @@
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
 	border-radius: var(--radius);
-	transition: background 0.12s;
+	transition: background var(--duree-geste);
 }
 @media (hover: hover) and (pointer: fine) {
 	.kb-mobile-lien:hover {

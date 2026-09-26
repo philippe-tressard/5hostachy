@@ -36,8 +36,8 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	font-weight: 500;
 	cursor: pointer;
 	transition:
-		opacity 0.15s,
-		background 0.15s;
+		opacity var(--duree-geste),
+		background var(--duree-geste);
 	text-decoration: none;
 }
 
@@ -221,7 +221,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .chevron {
 	font-size: 1.1rem;
 	color: var(--color-text-muted);
-	transition: transform 0.15s var(--ease-out);
+	transition: transform var(--duree-geste) var(--ease-out);
 	display: inline-block;
 	line-height: 1;
 }
@@ -271,9 +271,9 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .btn-icon-success,
 .signaler-inline {
 	transition:
-		opacity 0.15s,
-		background 0.15s,
-		color 0.15s,
+		opacity var(--duree-geste),
+		background var(--duree-geste),
+		color var(--duree-geste),
 		transform var(--duree-geste) var(--ease-out);
 }
 :is(
@@ -816,7 +816,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	justify-content: center;
 	z-index: 200;
 	padding: 1rem;
-	animation: fadeIn 0.15s ease;
+	animation: fadeIn var(--duree-apparition) var(--ease-out);
 }
 .modal {
 	background: var(--color-surface);
@@ -1197,7 +1197,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     différents sur le même objet — c'est l'écart, il reste où il se décide. */
 .attenue {
 	opacity: 0.8;
-	transition: opacity 0.15s;
+	transition: opacity var(--duree-geste);
 	margin-bottom: 0.3rem;
 }
 

@@ -101,7 +101,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transition: border-color 0.2s;
+		transition: border-color var(--duree-geste);
 	}
 
 	@media (hover: hover) and (pointer: fine) {
@@ -135,7 +135,7 @@
 		align-items: center;
 		justify-content: center;
 		opacity: 0;
-		transition: opacity 0.2s;
+		transition: opacity var(--duree-apparition) var(--ease-out);
 	}
 
 	@media (hover: hover) and (pointer: fine) {

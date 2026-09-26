@@ -320,7 +320,7 @@
 	.bloc-usage-resume::before {
 		content: '›';
 		display: inline-block;
-		transition: transform 0.15s;
+		transition: transform var(--duree-geste) var(--ease-out);
 		color: var(--color-text-muted);
 	}
 	.bloc-usage[open] > .bloc-usage-resume::before {

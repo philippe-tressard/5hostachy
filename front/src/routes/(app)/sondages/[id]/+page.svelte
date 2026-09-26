@@ -377,7 +377,7 @@
 		border-radius: var(--radius);
 		margin-bottom: 0.5rem;
 		cursor: pointer;
-		transition: border-color 0.12s;
+		transition: border-color var(--duree-geste);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.option-label:hover {
@@ -413,7 +413,7 @@
 		height: 100%;
 		background: var(--color-primary);
 		border-radius: 99px;
-		transition: width 0.3s;
+		transition: width var(--duree-apparition) var(--ease-out);
 	}
 	.result-pct {
 		min-width: 3rem;
