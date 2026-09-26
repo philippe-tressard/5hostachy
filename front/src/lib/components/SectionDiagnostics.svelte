@@ -422,8 +422,10 @@
 		font-weight: 500;
 		user-select: none;
 	}
-	.diag-non-applicable-section > summary:hover {
-		color: var(--color-text);
+	@media (hover: hover) and (pointer: fine) {
+		.diag-non-applicable-section > summary:hover {
+			color: var(--color-text);
+		}
 	}
 
 	/* ── Synthèse rapport diagnostique ────────────────────── */
@@ -444,8 +446,10 @@
 		white-space: nowrap;
 		flex-shrink: 0;
 	}
-	.synthese-toggle:hover {
-		background: var(--color-bg);
+	@media (hover: hover) and (pointer: fine) {
+		.synthese-toggle:hover {
+			background: var(--color-bg);
+		}
 	}
 	.synthese-body {
 		padding: 0.5rem 1rem 0.75rem;

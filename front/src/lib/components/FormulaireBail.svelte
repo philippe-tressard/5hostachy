@@ -297,8 +297,10 @@
 	.lot-check-item:last-child {
 		border-bottom: none;
 	}
-	.lot-check-item:hover:not(.disabled) {
-		background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg));
+	@media (hover: hover) and (pointer: fine) {
+		.lot-check-item:hover:not(.disabled) {
+			background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg));
+		}
 	}
 	.lot-check-item.disabled {
 		opacity: 0.55;

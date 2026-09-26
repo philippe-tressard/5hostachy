@@ -171,9 +171,11 @@
 		color: var(--color-text-muted);
 		font-size: 0.8rem;
 	}
-	.icone:hover {
-		border-color: var(--color-primary);
-		color: var(--color-text);
+	@media (hover: hover) and (pointer: fine) {
+		.icone:hover {
+			border-color: var(--color-primary);
+			color: var(--color-text);
+		}
 	}
 	.icone-active {
 		background: var(--color-primary);

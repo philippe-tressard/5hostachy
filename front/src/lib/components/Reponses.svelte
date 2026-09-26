@@ -131,8 +131,10 @@
 		cursor: pointer;
 		padding: 0.1rem 0;
 	}
-	.reponses-toggle:hover {
-		text-decoration: underline;
+	@media (hover: hover) and (pointer: fine) {
+		.reponses-toggle:hover {
+			text-decoration: underline;
+		}
 	}
 	.reponses-liste {
 		margin-top: 0.5rem;
@@ -181,8 +183,10 @@
 		opacity: 0.55;
 		padding: 0;
 	}
-	.reponse-signaler:hover {
-		opacity: 1;
+	@media (hover: hover) and (pointer: fine) {
+		.reponse-signaler:hover {
+			opacity: 1;
+		}
 	}
 	.reponse-contenu {
 		font-size: 0.85rem;

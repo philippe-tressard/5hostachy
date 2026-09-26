@@ -1226,9 +1226,11 @@
 		font-size: 0.8rem;
 		padding: 0.3rem 0.7rem;
 	}
-	.btn-outline:hover {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.btn-outline:hover {
+			border-color: var(--color-primary);
+			color: var(--color-primary);
+		}
 	}
 	/*  🔴 `.badge-orange` et `.badge-purple` retirees le 28/08/2026 (#607) :
     la charte les porte, et cet ecran en donnait une TROISIEME teinte —

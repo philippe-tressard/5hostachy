@@ -134,8 +134,10 @@
 		border-radius: var(--radius);
 		transition: color 0.15s;
 	}
-	.oeil:hover {
-		color: var(--color-text);
+	@media (hover: hover) and (pointer: fine) {
+		.oeil:hover {
+			color: var(--color-text);
+		}
 	}
 	/* Le survol ne suffit pas : au doigt comme au clavier, il n'existe pas. */
 	.oeil:focus-visible {

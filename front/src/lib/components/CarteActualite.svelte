@@ -229,8 +229,10 @@
 		color: var(--color-primary);
 		text-decoration: none;
 	}
-	.pub-attachment-link:hover {
-		background: var(--color-border);
+	@media (hover: hover) and (pointer: fine) {
+		.pub-attachment-link:hover {
+			background: var(--color-border);
+		}
 	}
 
 	/*  Archives : la carte s'efface tant qu'on ne la vise pas — `.attenue` vient de

@@ -5,13 +5,17 @@
  *  states »). Au doigt, `:hover` RESTE COLLÉ après un appui : le bouton garde sa
  *  couleur de survol jusqu'au prochain tap ailleurs.
  *
- *  ## La dette, et son plafond (26/09/2026, #1329)
+ *  ## La dette — résorbée le jour même (26/09/2026, #1329)
  *
- *  Relevé : 90 règles `:hover` hors de ce média — 27 dans les feuilles
- *  communes (`src/styles/`, rangées le jour même), 63 dans les composants. Elles ne se corrigent pas
- *  d'un coup : ce contrôle pose un PLAFOND DÉCROISSANT. Il refuse qu'il monte,
- *  et refuse aussi qu'il reste plus haut que le compte réel — une correction
- *  qui ne l'abaisse pas laisserait de la place au suivant.
+ *  Relevé : 90 règles `:hover` hors de ce média. Les 27 des feuilles communes
+ *  puis les 62 des composants y ont été rangées (même ordre, même spécificité :
+ *  un `@media` ne change ni l'un ni l'autre). Le plafond est à ZÉRO, et le reste.
+ *
+ *  ⚠️ Deux pièges trouvés en le faisant :
+ *   • un `:focus-visible` groupé avec un `:hover` ne se range PAS avec lui — le
+ *     clavier n'est pas la souris (trois cas, ressortis) ;
+ *   • un survol qui RÉVÈLE un contrôle ne doit pas le cacher pour toujours au
+ *     doigt : le montrer là où il n'y a pas de survol (`ImageUpload`, spinner).
  *
  *  Lancer : node scripts/check-survol.mjs [--selftest]
  */
@@ -19,7 +23,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
 
 //  Ce qui reste, et ne doit que baisser.
-const PLAFOND = 63;
+const PLAFOND = 0;
 
 /** Les sélecteurs `:hover` hors d'un `@media (hover: hover)`. PURE. */
 export function survolsNus(css) {

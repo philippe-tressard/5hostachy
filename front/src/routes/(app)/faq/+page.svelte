@@ -510,8 +510,10 @@
 		transition: opacity 0.15s;
 		margin-top: 0.75rem;
 	}
-	.btn-edit-cat:hover {
-		opacity: 1;
+	@media (hover: hover) and (pointer: fine) {
+		.btn-edit-cat:hover {
+			opacity: 1;
+		}
 	}
 	.categorie-edit {
 		display: flex;

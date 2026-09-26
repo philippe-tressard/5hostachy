@@ -147,35 +147,43 @@
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
-	.btn-icon-save:hover:not(:disabled) {
-		background: #dbeafe;
-		border-color: #3b82f6;
+	@media (hover: hover) and (pointer: fine) {
+		.btn-icon-save:hover:not(:disabled) {
+			background: #dbeafe;
+			border-color: #3b82f6;
+		}
 	}
 	/*  Le crayon est en couleur primaire — il est l'action principale de la rangée. */
 	.btn-icon-edit {
 		border-color: var(--color-primary);
 		color: var(--color-primary);
 	}
-	.btn-icon-edit:hover {
-		background: var(--color-primary);
-		color: #fff;
+	@media (hover: hover) and (pointer: fine) {
+		.btn-icon-edit:hover {
+			background: var(--color-primary);
+			color: #fff;
+		}
 	}
 	.btn-icon-remove {
 		border-color: var(--color-danger);
 		color: var(--color-danger);
 	}
-	.btn-icon-remove:hover {
-		background: var(--color-danger);
-		color: #fff;
+	@media (hover: hover) and (pointer: fine) {
+		.btn-icon-remove:hover {
+			background: var(--color-danger);
+			color: #fff;
+		}
 	}
 	.btn-icon-move {
 		border-color: var(--color-border);
 		color: var(--color-text-muted);
 		font-size: 0.85rem;
 	}
-	.btn-icon-move:hover:not(:disabled) {
-		background: var(--color-bg-secondary, #f8f9fa);
-		color: var(--color-text);
+	@media (hover: hover) and (pointer: fine) {
+		.btn-icon-move:hover:not(:disabled) {
+			background: var(--color-bg-secondary, #f8f9fa);
+			color: var(--color-text);
+		}
 	}
 	.btn-icon-move:disabled {
 		opacity: 0.25;
@@ -186,8 +194,10 @@
 		color: var(--color-accent, #c9983a);
 		font-size: 0.875rem;
 	}
-	.btn-icon-star:hover {
-		background: var(--color-accent, #c9983a);
-		color: #fff;
+	@media (hover: hover) and (pointer: fine) {
+		.btn-icon-star:hover {
+			background: var(--color-accent, #c9983a);
+			color: #fff;
+		}
 	}
 </style>

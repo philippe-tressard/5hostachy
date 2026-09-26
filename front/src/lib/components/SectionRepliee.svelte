@@ -108,10 +108,12 @@
 			border-color 0.15s,
 			color 0.15s;
 	}
-	.sr-entete:hover {
-		background: var(--color-bg);
-		border-color: var(--color-primary);
-		color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.sr-entete:hover {
+			background: var(--color-bg);
+			border-color: var(--color-primary);
+			color: var(--color-primary);
+		}
 	}
 	.sr-titre {
 		flex: 1;

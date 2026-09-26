@@ -119,8 +119,10 @@
 		text-align: left;
 		gap: 0.5rem;
 	}
-	.urgence-disclaimer-toggle:hover {
-		background: #fed7aa44;
+	@media (hover: hover) and (pointer: fine) {
+		.urgence-disclaimer-toggle:hover {
+			background: #fed7aa44;
+		}
 	}
 	.urgence-disclaimer-title {
 		font-weight: 700;

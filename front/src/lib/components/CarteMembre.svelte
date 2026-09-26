@@ -318,8 +318,10 @@
 		text-decoration: underline;
 		padding: 0;
 	}
-	.btn-unlink:hover {
-		color: var(--color-danger);
+	@media (hover: hover) and (pointer: fine) {
+		.btn-unlink:hover {
+			color: var(--color-danger);
+		}
 	}
 
 	/*  Le repli du détail sur le résumé, carte DÉPLIÉE et non éditée. Repliée, le

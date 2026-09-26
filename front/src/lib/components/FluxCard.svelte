@@ -253,11 +253,15 @@
 
 	    ⚠️ Pas de soulignement : le titre n'est pas un lien, c'est une zone
 	    cliquable — le souligner le ferait passer pour une navigation. */
-	.flux-item:hover .flux-card {
-		box-shadow: var(--shadow);
+	@media (hover: hover) and (pointer: fine) {
+		.flux-item:hover .flux-card {
+			box-shadow: var(--shadow);
+		}
 	}
-	.flux-item:hover .flux-titre {
-		color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.flux-item:hover .flux-titre {
+			color: var(--color-primary);
+		}
 	}
 	.flux-titre {
 		transition: color 0.12s ease;
@@ -351,8 +355,10 @@
 	}
 
 	/* ═══ CORPS DÉPLIÉ ══════════════════════════════════════════════════ */
-	.flux-link:hover {
-		text-decoration: underline;
+	@media (hover: hover) and (pointer: fine) {
+		.flux-link:hover {
+			text-decoration: underline;
+		}
 	}
 
 	/* Galerie dépliée — les styles étaient écrits en `style=` sur chaque balise,

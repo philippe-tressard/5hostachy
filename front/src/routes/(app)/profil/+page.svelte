@@ -596,8 +596,10 @@
 		background: var(--color-success);
 		color: #fff;
 	}
-	.btn-arrivant-deja:hover:not(:disabled) {
-		background: #256f47;
+	@media (hover: hover) and (pointer: fine) {
+		.btn-arrivant-deja:hover:not(:disabled) {
+			background: #256f47;
+		}
 	}
 	.demande-form {
 		background: var(--color-bg-subtle, #f9fafb);

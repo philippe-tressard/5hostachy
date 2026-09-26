@@ -265,8 +265,10 @@
 		gap: 0.4rem;
 		padding: 0.4rem 0.5rem 0.4rem 0.75rem;
 	}
-	.page-row:hover {
-		background: var(--color-bg);
+	@media (hover: hover) and (pointer: fine) {
+		.page-row:hover {
+			background: var(--color-bg);
+		}
 	}
 	.page-row-btn {
 		flex: 1;
@@ -341,10 +343,12 @@
 		line-height: 1.5;
 		color: var(--color-text-muted);
 	}
-	.btn-order:hover:not(:disabled) {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
-		background: var(--color-bg);
+	@media (hover: hover) and (pointer: fine) {
+		.btn-order:hover:not(:disabled) {
+			border-color: var(--color-primary);
+			color: var(--color-primary);
+			background: var(--color-bg);
+		}
 	}
 	.btn-order:disabled {
 		opacity: 0.3;

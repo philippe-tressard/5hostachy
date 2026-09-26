@@ -233,7 +233,9 @@
 		color: var(--color-text-muted);
 		margin-bottom: 0.75rem;
 	}
-	.back-link:hover {
-		color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.back-link:hover {
+			color: var(--color-primary);
+		}
 	}
 </style>

@@ -218,8 +218,10 @@
 		transition: border-color 0.12s;
 		min-width: 3.5rem;
 	}
-	.vote-btn:hover {
-		border-color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.vote-btn:hover {
+			border-color: var(--color-primary);
+		}
 	}
 	.vote-btn.voted {
 		border-color: var(--color-primary);

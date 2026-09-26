@@ -393,8 +393,10 @@
 		cursor: pointer;
 		user-select: none;
 	}
-	.contrat-section-title.clickable:hover {
-		color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.contrat-section-title.clickable:hover {
+			color: var(--color-primary);
+		}
 	}
 	/*  🔴 Six règles sont parties avec la rangée écrite à la main (12/09/2026) :
 	    `.contrat-row` et son survol, `.contrat-body-inner`, `.contrat-titre`,

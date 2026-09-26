@@ -82,7 +82,13 @@
 		text-decoration: none;
 		flex-shrink: 0; /*  les rubriques ne se compriment jamais */
 	}
-	.fil-lien:hover,
+	@media (hover: hover) and (pointer: fine) {
+		.fil-lien:hover {
+			color: var(--color-primary);
+			text-decoration: underline;
+		}
+	}
+	/*  Le focus au clavier n'est pas un survol : il reste hors du média souris. */
 	.fil-lien:focus-visible {
 		color: var(--color-primary);
 		text-decoration: underline;

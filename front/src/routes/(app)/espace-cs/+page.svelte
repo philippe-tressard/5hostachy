@@ -1178,14 +1178,18 @@
 		color: #fff;
 		border: none;
 	}
-	.btn-success:hover:not(:disabled) {
-		background: #16a34a;
+	@media (hover: hover) and (pointer: fine) {
+		.btn-success:hover:not(:disabled) {
+			background: #16a34a;
+		}
 	}
 	.btn-danger {
 		border: none;
 	} /* fond et couleur : charte (#607) */
-	.btn-danger:hover:not(:disabled) {
-		background: #b91c1c;
+	@media (hover: hover) and (pointer: fine) {
+		.btn-danger:hover:not(:disabled) {
+			background: #b91c1c;
+		}
 	}
 
 	/*  Les téléphones d'un membre du syndic — le seul champ qui ne tient pas dans

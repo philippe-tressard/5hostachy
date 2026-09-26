@@ -379,8 +379,10 @@
 		cursor: pointer;
 		transition: border-color 0.12s;
 	}
-	.option-label:hover {
-		border-color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.option-label:hover {
+			border-color: var(--color-primary);
+		}
 	}
 	.option-label.selected {
 		border-color: var(--color-primary);

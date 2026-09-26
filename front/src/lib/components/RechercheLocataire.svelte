@@ -259,8 +259,10 @@
 		flex-wrap: wrap;
 		transition: background 0.1s;
 	}
-	.locataire-resultat-btn:hover {
-		background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg));
+	@media (hover: hover) and (pointer: fine) {
+		.locataire-resultat-btn:hover {
+			background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg));
+		}
 	}
 	.lr-name {
 		font-weight: 600;

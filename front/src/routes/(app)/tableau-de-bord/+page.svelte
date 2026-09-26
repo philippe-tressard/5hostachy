@@ -4,7 +4,7 @@
 	import KanbanTableauBord from '$lib/components/KanbanTableauBord.svelte';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
-	import { HREF_RELANCE_SYNDIC } from '$lib/raccourcis';
+	import AlerteRelanceSyndic from '$lib/components/AlerteRelanceSyndic.svelte';
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
 	import { goto } from '$app/navigation';
 	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
@@ -357,19 +357,7 @@
 	<!-- ═══ ALERTES URGENTES ══════════════════════════════════════════════ -->
 	{#if $isCS && (data.sante.tickets_relance_syndic ?? 0) > 0}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.08s">
-			<a href={HREF_RELANCE_SYNDIC} class="relance-alerte-card">
-				<span class="relance-alerte-icon">🔔</span>
-				<div class="relance-alerte-text">
-					<strong
-						>{data.sante.tickets_relance_syndic} affaire{(data.sante.tickets_relance_syndic ?? 0) >
-						1
-							? 's'
-							: ''} syndic à relancer</strong
-					>
-					<span>Sans avancée depuis plus d'1 mois — cliquez pour voir et envoyer la relance</span>
-				</div>
-				<span class="relance-alerte-arrow">→</span>
-			</a>
+			<AlerteRelanceSyndic nombre={data.sante.tickets_relance_syndic ?? 0} />
 		</div>
 	{/if}
 	{#if urgentItems.length > 0}
@@ -620,9 +608,11 @@
 		--avatar-bg: rgba(255, 255, 255, 0.18);
 		--avatar-color: #fff;
 	}
-	.hero-avatar:hover {
-		background: rgba(255, 255, 255, 0.6);
-		transform: scale(1.04);
+	@media (hover: hover) and (pointer: fine) {
+		.hero-avatar:hover {
+			background: rgba(255, 255, 255, 0.6);
+			transform: scale(1.04);
+		}
 	}
 	.hero-avatar:focus-visible {
 		outline: 2px solid var(--color-accent, #c9983a);
@@ -688,9 +678,11 @@
 		opacity: 1;
 		transform: translateY(0);
 	}
-	.consignes-card:hover {
-		box-shadow: var(--shadow);
-		transform: translateY(-1px);
+	@media (hover: hover) and (pointer: fine) {
+		.consignes-card:hover {
+			box-shadow: var(--shadow);
+			transform: translateY(-1px);
+		}
 	}
 	.consignes-card.consignes-prominent {
 		background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
@@ -744,49 +736,6 @@
 	/* Les styles de la rangée de raccourcis sont partis avec leur balisage dans
 	   `RaccourcisRapides.svelte` — Svelte scope les styles au composant. */
 
-	/* ═══ ALERTE RELANCE SYNDIC ══════════════════════════════════════════ */
-	.relance-alerte-card {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.75rem 1rem;
-		border-radius: var(--radius);
-		background: #fff7ed;
-		border: 1.5px solid #f59e0b;
-		color: #92400e;
-		text-decoration: none;
-		transition:
-			background 0.15s,
-			border-color 0.15s;
-		margin-bottom: 0.5rem;
-	}
-	.relance-alerte-card:hover {
-		background: #fef3c7;
-		border-color: #d97706;
-	}
-	.relance-alerte-icon {
-		font-size: 1.3rem;
-		flex-shrink: 0;
-	}
-	.relance-alerte-text {
-		display: flex;
-		flex-direction: column;
-		gap: 0.1rem;
-		flex: 1;
-	}
-	.relance-alerte-text strong {
-		font-size: 0.9rem;
-	}
-	.relance-alerte-text span {
-		font-size: 0.78rem;
-		color: #b45309;
-	}
-	.relance-alerte-arrow {
-		font-size: 1.1rem;
-		flex-shrink: 0;
-		opacity: 0.7;
-	}
-
 	/* ═══ ANIMATIONS SECTIONS ═══════════════════════════════════════════ */
 	.section-reveal {
 		opacity: 0;
@@ -813,9 +762,11 @@
 			box-shadow 0.15s,
 			background 0.12s;
 	}
-	.urgence-fieldset:hover {
-		background: #fee2e2;
-		box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+	@media (hover: hover) and (pointer: fine) {
+		.urgence-fieldset:hover {
+			background: #fee2e2;
+			box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+		}
 	}
 	.urgence-fieldset:focus-visible {
 		outline: 2px solid #dc2626;
@@ -953,13 +904,6 @@
 		}
 		.consignes-icon {
 			font-size: 1.2rem;
-		}
-		.relance-alerte-card {
-			padding: 0.55rem 0.75rem;
-			gap: 0.5rem;
-		}
-		.relance-alerte-text strong {
-			font-size: 0.82rem;
 		}
 	}
 </style>

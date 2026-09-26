@@ -473,7 +473,9 @@
 		cursor: pointer;
 		color: var(--color-text-muted);
 	}
-	.section-replier:hover {
-		color: var(--color-text);
+	@media (hover: hover) and (pointer: fine) {
+		.section-replier:hover {
+			color: var(--color-text);
+		}
 	}
 </style>

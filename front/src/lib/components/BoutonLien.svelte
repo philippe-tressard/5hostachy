@@ -44,6 +44,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import PartageCourriel from '$lib/components/PartageCourriel.svelte';
 	import { cibleDuLien } from '$lib/partage';
+	import { portail } from '$lib/portail';
 
 	/**  L'ancre de l'élément, sans le `#` — `annonce-42`. C'est l'`id` que la carte
 	 *   pose déjà sur son conteneur pour les liens profonds : les deux ne peuvent
@@ -141,6 +142,7 @@
 {#if bulle && cible}
 	<div
 		bind:this={zone}
+		use:portail
 		class="bulle-lien"
 		role="dialog"
 		tabindex="-1"

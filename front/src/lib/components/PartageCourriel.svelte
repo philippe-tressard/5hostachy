@@ -66,8 +66,11 @@
 	{#if envoye}
 		<p class="envoye" role="status">✓ {envoye}</p>
 	{:else if !ouvert}
-		<button type="button" class="lien-suite" on:click={ouvrir} on:keydown={clavier}
-			>✉️ L’envoyer par courriel</button
+		<button
+			type="button"
+			class="btn btn-outline btn-sm envoyer"
+			on:click={ouvrir}
+			on:keydown={clavier}>✉️ L’envoyer par courriel</button
 		>
 	{:else}
 		<form class="formulaire" on:submit|preventDefault={envoyer} novalidate>
@@ -97,17 +100,12 @@
 	.partage {
 		margin-top: 0.4rem;
 	}
-	.lien-suite {
-		border: 0;
-		background: none;
-		padding: 0.35rem 0;
-		min-height: 36px;
-		font: inherit;
-		font-weight: 700;
-		color: inherit;
-		text-decoration: underline;
-		text-underline-offset: 3px;
-		cursor: pointer;
+	/*  Un vrai bouton du site, sur UNE ligne : la bulle le rend hors de la carte
+	    (`use:portail`), rien ne le comprime plus. La pression (0,97) vient de
+	    `.btn` (`composants.css`). */
+	.envoyer {
+		width: 100%;
+		white-space: nowrap;
 	}
 	.formulaire {
 		display: flex;
@@ -125,15 +123,5 @@
 	.envoye {
 		margin: 0.2rem 0 0;
 		font-weight: 600;
-	}
-	/*  Presser répond tout de suite (`emil-design-eng`) — sans bouger au doigt
-	    ni animer quand l'appareil le demande. */
-	.lien-suite:active {
-		transform: scale(0.97);
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.lien-suite:active {
-			transform: none;
-		}
 	}
 </style>
