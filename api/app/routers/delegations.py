@@ -1,6 +1,7 @@
 """Router délégations aidant — gestion des accès délégués pour les proches."""
 
 from datetime import date
+from app.utils.statuts_lus import invalider_cache as invalider_statuts_lus
 from app.utils import horloge
 from typing import Optional
 
@@ -171,6 +172,7 @@ def accepter_delegation(
     d.statut = StatutDelegation.active
     session.add(d)
     session.commit()
+    invalider_statuts_lus(d.aidant_id)  # il lit désormais au titre de l'aidé (#1303)
     session.refresh(d)
     return _to_read(d, session)
 
@@ -200,6 +202,7 @@ def revoquer_delegation(
     d.revoque_par_id = user.id
     session.add(d)
     session.commit()
+    invalider_statuts_lus(d.aidant_id)  # l'héritage cesse avec elle (#1303)
     session.refresh(d)
     return _to_read(d, session)
 

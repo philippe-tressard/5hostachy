@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 from typing import Optional
 
+from app.utils.statuts_lus import statuts_lus
 from app.models.core import (
     Utilisateur,
 )
@@ -276,26 +277,28 @@ def public_cible_visible(raw: Optional[str], user: Utilisateur) -> bool:
 
     if "résidents" in public:
         return True
-    statut = user.statut.value if user.statut is not None else ""
+    #  Les statuts au titre desquels il LIT : le sien, et pour un aidant ceux
+    #  des personnes qu'il aide par une délégation active (#1303).
+    statuts = statuts_lus(user)
     #  Héritage : plus proposé depuis #1301 (migration 0221), toujours lu.
-    if "copropriétaires" in public and statut.startswith("copropriétaire_"):
+    if "copropriétaires" in public and any(s.startswith("copropriétaire_") for s in statuts):
         return True
-    if "locataires" in public and statut == "locataire":
+    if "locataires" in public and "locataire" in statuts:
         return True
     #  « Bailleurs » vise les copropriétaires qui LOUENT leur lot, et eux seuls ;
     #  « copropriétaires occupants » est son exact symétrique. `copropriétaires`
     #  ci-dessus couvre les deux statuts — mais rien ne permettait de s'adresser à
     #  l'un SANS l'autre, alors que des pans entiers du produit leur sont propres
     #  (baux et remise d'objets d'un côté, vie quotidienne de l'autre).
-    if "bailleurs" in public and statut == "copropriétaire_bailleur":
+    if "bailleurs" in public and "copropriétaire_bailleur" in statuts:
         return True
-    if "copropriétaires_occupants" in public and statut == "copropriétaire_résident":
+    if "copropriétaires_occupants" in public and "copropriétaire_résident" in statuts:
         return True
     #  « Bailleurs » à l'écran (#1301, 26/09/2026) : celui qui loue PAR
     #  DÉLÉGATION d'un copropriétaire — agence, gestionnaire. Le code
     #  `bailleurs` ci-dessus était déjà pris par le copropriétaire bailleur, et
     #  il est stocké : le nouveau se nomme par le statut qu'il vise.
-    if "mandataires" in public and statut == "mandataire":
+    if "mandataires" in public and "mandataire" in statuts:
         return True
     #  Le SEUL code du catalogue qui se décide sur le rôle et non sur le statut.
     #

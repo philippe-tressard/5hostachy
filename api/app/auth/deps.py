@@ -1,15 +1,13 @@
 from fastapi import Depends, HTTPException, Cookie, Header, status
-from datetime import date
-from sqlmodel import Session, select, or_
+from sqlmodel import Session
 
+from app.utils.delegations_actives import delegations_de_l_aidant
 from app.auth.jwt import decode_token, empreinte_secret
 from app.database import get_session
 from app.utils.nature_affaire import est_actualite
 from app.models.core import (
-    Delegation,
     Notification,
     RoleUtilisateur,
-    StatutDelegation,
     Utilisateur,
 )
 
@@ -63,16 +61,8 @@ def get_acting_user(
     if x_acting_as is None or x_acting_as == user.id:
         return user
 
-    today = date.today()
-    delegation = session.exec(
-        select(Delegation).where(
-            Delegation.aidant_id == user.id,
-            Delegation.mandant_id == x_acting_as,
-            Delegation.statut == StatutDelegation.active,
-            Delegation.date_debut <= today,
-            or_(Delegation.date_fin.is_(None), Delegation.date_fin >= today),  # type: ignore[arg-type]
-        )
-    ).first()
+    #  La condition « active » vit dans `utils/delegations_actives` (#1303).
+    delegation = next(iter(delegations_de_l_aidant(session, user.id, mandant_id=x_acting_as)), None)
 
     if not delegation:
         raise HTTPException(
