@@ -66,7 +66,6 @@ from . import (
     lot,
     messages,
     mise_a_jour,
-    partage,
     relance,
 )
 
@@ -85,7 +84,6 @@ for _sous_router in (
     messages.router,
     evolutions.router,
     lot.router,
-    partage.router,  # `/{id}/partager` : envoyer le lien par courriel (#1357)
 ):
     _a_prefixer.include_router(_sous_router)
 

@@ -5,17 +5,19 @@
   est copié), et le message de confirmation propose l'envoi. Le lien d'abord,
   le champ ensuite : qui ne veut que copier ne voit rien de plus.
 
-  Ce qui part, et à qui, est décidé par le serveur (`routers/tickets/partage`) :
-  titre, numéro et lien, à qui peut LIRE l'affaire, sous plafond. L'écran ne
+  Ce qui part est décidé par le serveur (`routers/partage`) : pour une affaire,
+  son titre et son lien ; pour tout autre objet, ce qu'il est et son lien — le
+  destinataire sans droits ne verra rien. Sous plafond. L'écran ne
   valide l'adresse que pour dire tout de suite ce qui manque.
 -->
 <script lang="ts">
 	import { createEventDispatcher, tick } from 'svelte';
-	import { tickets as ticketsApi } from '$lib/api';
+	import { partage as partageApi } from '$lib/api';
+	import type { CiblePartage } from '$lib/partage';
 	import { messageErreur } from '$lib/erreurs';
 
-	/** L'affaire transmise. */
-	export let ticketId: number;
+	/** Ce qui est transmis — l'affaire, l'annonce, le sondage… (`cibleDuLien`). */
+	export let cible: CiblePartage;
 	/** Le bouton 🔗 qui a ouvert le message : Échap lui rend le focus. */
 	export let retour: HTMLElement | null = null;
 
@@ -44,7 +46,7 @@
 		enCours = true;
 		erreur = '';
 		try {
-			await ticketsApi.partager(ticketId, email.trim());
+			await partageApi.envoyer(cible.objet, cible.id, email.trim());
 			envoye = `Envoyé à ${email.trim()}`;
 		} catch (e) {
 			erreur = messageErreur(e, 'L’envoi n’a pas abouti.');

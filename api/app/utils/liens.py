@@ -210,3 +210,32 @@ def lien_ticket(ticket_id: int, message_id: int | None = None) -> str:
     """
     base = f"/tickets/{ticket_id}"
     return f"{base}#msg-{message_id}" if message_id else base
+
+
+#: Ce qu'un résident peut TRANSMETTRE par courriel depuis son 🔗 (#1357) — le
+#: préfixe d'ancre, et ce qu'il désigne, écrit pour une phrase (« X vous
+#: transmet une petite annonce »). Le lien se RECONSTRUIT ici à partir du type
+#: et de l'identifiant : l'écran n'envoie jamais un chemin ni un texte libre, si
+#: bien que le courriel ne peut mener qu'à une page de ce site.
+#:
+#: ⚠️ Le TITRE n'y figure pas : le donner supposerait de vérifier que
+#: l'expéditeur peut lire l'objet, et tous les types n'ont pas de règle de
+#: lecture écrite. Le destinataire se connecte ; sans droits, il ne voit rien.
+#: L'affaire, elle, a la sienne (`ticket_visible`) : son titre part.
+OBJETS_TRANSMISSIBLES: dict[str, str] = {
+    "annonce": "une petite annonce",
+    "idee": "une idée",
+    "faq": "une question de la FAQ",
+    "sondage": "un sondage",
+    "doc": "un document",
+    "diag": "un rapport de diagnostic",
+    "contrat": "un contrat",
+    "presta": "une fiche prestataire",
+}
+
+
+def lien_transmissible(objet: str, identifiant: int) -> str:
+    """Le lien d'un objet de `OBJETS_TRANSMISSIBLES` — `KeyError` sinon."""
+    if objet not in OBJETS_TRANSMISSIBLES:
+        raise KeyError(objet)
+    return lien_sondage(identifiant) if objet == "sondage" else lien_element(objet, identifiant)

@@ -311,6 +311,20 @@ MODELES = [
         + _bouton_ticket("Voir l’affaire"),
         True,
     ),
+    #  🔗 Tout AUTRE objet transmis (#1357) : ce qu'il est et le lien, sans titre
+    #  — voir `utils/liens.OBJETS_TRANSMISSIBLES`.
+    (
+        "lien_partage",
+        "Lien transmis par un résident",
+        "{{ auteur_action.affiche }} vous transmet {{ objet.quoi }} — {{ residence.nom }}",
+        titre("🔗 Un lien vous est transmis")
+        + '<p style="margin:0 0 16px">{{ auteur_action.affiche }} vous transmet '
+        "{{ objet.quoi }} de la résidence {{ residence.nom }}.</p>"
+        + f'<p style="margin:0 0 20px;font-size:13px;color:{GRIS}">Le lien demande de vous '
+        "connecter : vous ne verrez la page que si votre compte peut la lire.</p>"
+        + bouton("{{ app.url }}{{ objet.lien }}", "Ouvrir"),
+        True,
+    ),
 ]
 
 #  `GRIS_CLAIR` est importé pour `entree_historique`, qui s'en sert : le laisser
