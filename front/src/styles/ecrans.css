@@ -235,9 +235,11 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	margin-bottom: -2px;
 	border-radius: var(--radius) var(--radius) 0 0;
 }
-.tabs button:hover {
-	color: var(--color-text);
-	background: var(--color-bg);
+@media (hover: hover) and (pointer: fine) {
+	.tabs button:hover {
+		color: var(--color-text);
+		background: var(--color-bg);
+	}
 }
 .tabs button.active {
 	color: var(--color-primary);
@@ -270,9 +272,11 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
     `.tab-btn:hover` ne déclarait que la couleur, si bien que la moitié d'une même
     rangée se soulignait au survol et l'autre non. Invisible sur une capture,
     visible à la souris. */
-.tab-btn:hover {
-	color: var(--color-text);
-	text-decoration: none;
+@media (hover: hover) and (pointer: fine) {
+	.tab-btn:hover {
+		color: var(--color-text);
+		text-decoration: none;
+	}
 }
 /*  Les TROIS marques de l'onglet actif (`ux-patterns` §4 bis) : liseré, couleur
     et GRAISSE. La graisse manquait ici — `.tabs button.active` la portait, pas

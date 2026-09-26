@@ -17,6 +17,7 @@
   épinglé et chronologie. Une carte se rend de la même façon partout.
 -->
 <script lang="ts">
+	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	import { isAdmin } from '$lib/stores/auth';
@@ -122,7 +123,7 @@
 				<span class="flux-type-chip" style="background:{typeFond(item.type)};color:{typeColor}"
 					>{typeLibelle(item.type)}</span
 				>
-				{#if nouveau}<span class="new-badge">NEW</span>{/if}
+				<BadgeNouveau si={nouveau} />
 			</div>
 			<div class="flux-card-top-right">
 				<span class="flux-heure">{fmtDatetimeShort(item.date)}</span>
@@ -339,28 +340,7 @@
 		margin-top: 0.35rem;
 	}
 
-	/* ═══ NEW BADGE ═════════════════════════════════════════════════════ */
-	@keyframes new-pulse {
-		0%,
-		100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.7;
-		}
-	}
-	.new-badge {
-		font-size: 0.55rem;
-		font-weight: 700;
-		letter-spacing: 0.06em;
-		background: #ef4444;
-		color: #fff;
-		padding: 0.1rem 0.35rem;
-		border-radius: 0.2rem;
-		animation: new-pulse 2s ease-in-out infinite;
-		flex-shrink: 0;
-		text-transform: uppercase;
-	}
+	/*  Le badge NEW vit dans `BadgeNouveau`, le même sur tout le site (26/09/2026). */
 
 	/* ═══ CHEVRON ═══════════════════════════════════════════════════════ */
 	/*  Écart assumé : chevron en gras, non sélectionnable, dans un flex. */

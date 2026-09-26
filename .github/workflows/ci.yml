@@ -1694,6 +1694,19 @@ jobs:
         working-directory: front
         run: npm run lint:suite-eteignable
 
+      # Au doigt, `:hover` reste COLLÉ après un appui. 90 survols hors de
+      # `@media (hover: hover)` le 26/09/2026 ; les 27 des feuilles communes
+      # rangés le jour même. Plafond décroissant pour les 63 des composants.
+      - name: Un survol ne sert qu'à la souris (plafond décroissant)
+        working-directory: front
+        run: npm run lint:survol
+
+      # « NEW » rouge sur le fil, « Nouveau » gris ailleurs : deux badges pour une
+      # notion (signalé à l'écran le 26/09/2026). Un seul, `BadgeNouveau`.
+      - name: Le badge NEW se rend par son composant
+        working-directory: front
+        run: npm run lint:badge-nouveau
+
       # 🔴 L'infobulle de catégorie disait « etude_travaux » sur la liste des
       # affaires (26/09/2026, signalé à l'écran) ; deux reportings rendaient la
       # même valeur brute. Le libellé existait, rien n'obligeait à le prendre.

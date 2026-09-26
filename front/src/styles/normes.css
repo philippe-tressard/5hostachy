@@ -276,9 +276,11 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
     troisième et une quatrième copie, libres de diverger — exactement ce que
     `.carte-liste` a été créé pour supprimer. Elles disparaîtront avec les
     balisages qu'elles servent. */
-.event-row:hover .event-titre,
-.tk-row:hover .tk-row-titre {
-	color: var(--color-primary);
+@media (hover: hover) and (pointer: fine) {
+	.event-row:hover .event-titre,
+	.tk-row:hover .tk-row-titre {
+		color: var(--color-primary);
+	}
 }
 .event-titre,
 .tk-row-titre {

@@ -108,8 +108,10 @@
 		box-shadow 0.15s,
 		opacity 0.15s;
 }
-.kanban-card:hover {
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+@media (hover: hover) and (pointer: fine) {
+	.kanban-card:hover {
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
 }
 /*  `min-height` réserve la place de la rangée de tags : sans elle, deux cartes
     voisines dont l'une n'a aucun tag ne s'alignent pas. */
@@ -191,8 +193,10 @@
 	text-decoration: none;
 	white-space: nowrap;
 }
-.kb-voir-lien:hover {
-	text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+	.kb-voir-lien:hover {
+		text-decoration: underline;
+	}
 }
 .kb-vide {
 	font-size: 0.85rem;
@@ -308,8 +312,10 @@
 .kb-item:first-of-type {
 	border-top: none;
 }
-.kb-item:hover {
-	background: var(--color-bg);
+@media (hover: hover) and (pointer: fine) {
+	.kb-item:hover {
+		background: var(--color-bg);
+	}
 }
 .kb-item:focus-visible {
 	outline: 2px solid var(--color-primary);
@@ -389,9 +395,11 @@
 		border-color 0.12s;
 	line-height: 1;
 }
-.kb-nav-btn:hover:not(:disabled) {
-	background: var(--color-bg);
-	border-color: var(--color-primary);
+@media (hover: hover) and (pointer: fine) {
+	.kb-nav-btn:hover:not(:disabled) {
+		background: var(--color-bg);
+		border-color: var(--color-primary);
+	}
 }
 .kb-nav-btn:disabled {
 	opacity: 0.3;
@@ -416,8 +424,10 @@
 	text-decoration: none;
 	font-weight: 500;
 }
-.kb-mobile-plus-lien:hover {
-	text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+	.kb-mobile-plus-lien:hover {
+		text-decoration: underline;
+	}
 }
 .kb-mobile-lien {
 	display: block;
@@ -433,6 +443,8 @@
 	border-radius: var(--radius);
 	transition: background 0.12s;
 }
-.kb-mobile-lien:hover {
-	background: var(--color-primary-light);
+@media (hover: hover) and (pointer: fine) {
+	.kb-mobile-lien:hover {
+		background: var(--color-primary-light);
+	}
 }
