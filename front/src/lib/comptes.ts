@@ -175,3 +175,50 @@ export function formulaireCompte(u?: Record<string, any> | null): FormulaireComp
 		nom_proprietaire: u?.nom_proprietaire ?? '',
 	};
 }
+
+/**
+ * Les ÉTIQUETTES d'un compte dans la liste des utilisateurs — Loti, TC, Vigik,
+ * Bail —, avec ce que chacune dit dans ses trois états (26/09/2026).
+ *
+ * L'ÉTAT vient du serveur (`utils/etiquettes_compte`) : lui seul connaît les
+ * types de lots du compte. Ici, les mots. Les quatre blocs étaient recopiés
+ * dans la page, sans info-bulle : un rouge ne disait pas de quoi il manquait.
+ */
+export type EtatEtiquette = 'ok' | 'manque' | 'sans_objet';
+
+export const ETIQUETTES_COMPTE: readonly {
+	cle: 'loti' | 'tc' | 'vigik' | 'bail';
+	libelle: string;
+	ok: string;
+	manque: string;
+	sansObjet: string;
+}[] = [
+	{
+		cle: 'loti',
+		libelle: 'Loti',
+		ok: 'Rattaché à au moins un lot',
+		manque: 'Aucun lot rattaché',
+		sansObjet: '',
+	},
+	{
+		cle: 'tc',
+		libelle: 'TC',
+		ok: 'Porte une télécommande',
+		manque: 'Un parking, mais aucune télécommande',
+		sansObjet: 'Sans objet : aucun parking',
+	},
+	{
+		cle: 'vigik',
+		libelle: 'Vigik',
+		ok: 'Porte un badge Vigik',
+		manque: 'Un appartement, mais aucun Vigik',
+		sansObjet: 'Sans objet : aucun appartement',
+	},
+	{
+		cle: 'bail',
+		libelle: 'Bail',
+		ok: 'Un bail enregistré',
+		manque: 'Bailleur ou locataire, mais aucun bail enregistré',
+		sansObjet: 'Sans objet : ni bailleur, ni locataire',
+	},
+];

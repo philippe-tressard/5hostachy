@@ -37,6 +37,9 @@ from app.models.core import (
 from app.schemas import UserRead
 from app.utils.comptes import marquer_decide
 from app.utils.porteurs_acces import ids_detenteurs
+from app.utils.etiquettes_compte import etiquettes
+from app.models.copropriete import Lot
+from app.utils.valeurs import valeur
 from app.utils.purge_referentielle import purger
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, VIGIK
 from app.utils.roles_libelles import libelle_role
@@ -80,6 +83,15 @@ def list_utilisateurs(
         ).all()
     )
     lie_ids = bail_bailleur_ids | bail_locataire_ids
+    #  Les TYPES de lot de chaque compte : ce qui rend une étiquette « sans objet »
+    #  (`utils/etiquettes_compte`) — pas de parking, pas de télécommande à porter.
+    types_lots: dict[int, set[str]] = {}
+    for user_id, type_lot in session.exec(
+        select(UserLot.user_id, Lot.type)
+        .join(Lot, Lot.id == UserLot.lot_id)
+        .where(UserLot.actif == True)  # noqa: E712
+    ).all():
+        types_lots.setdefault(user_id, set()).add(valeur(type_lot))
 
     result = []
     for u in users:
@@ -88,6 +100,16 @@ def list_utilisateurs(
         d["has_tc"] = u.id in tc_ids
         d["has_vigik"] = u.id in vigik_ids
         d["has_bail"] = u.id in lie_ids
+        d["etiquettes"] = etiquettes(
+            a_lot=d["has_lots"],
+            a_tc=d["has_tc"],
+            a_vigik=d["has_vigik"],
+            a_bail=d["has_bail"],
+            types_lots=types_lots.get(u.id, set()),
+            statut=valeur(u.statut),
+            types_tc=TELECOMMANDE.types_lot,
+            types_vigik=VIGIK.types_lot,
+        )
         result.append(d)
     return result
 
