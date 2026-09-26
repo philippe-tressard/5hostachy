@@ -36,8 +36,10 @@ export type ContratCandidat = {
 export interface EntreeCarnet {
 	date: string;
 	libelle: string;
-	origine: 'contrat' | 'intervention' | 'incident';
+	origine: 'contrat' | 'intervention' | 'affaire';
 	detail: string;
+	/**  La VALEUR de la catégorie d'une affaire — l'écran rend son libellé. */
+	categorie?: string | null;
 	equipement: string | null;
 	/**  Les codes de périmètre de la ligne — rendus par `perimetreLabel`, comme
 	 *   partout ailleurs. Remplace `batiment_id` : un contrat sur « Parking » n'a

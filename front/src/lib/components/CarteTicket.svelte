@@ -74,6 +74,7 @@
 		STATUT_TICKET_LABELS,
 		STATUT_TICKET_OPTIONS,
 		categorieTicketEmoji,
+		categorieTicketLabel,
 	} from '$lib/tickets';
 	import { fmtDate } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
@@ -199,7 +200,9 @@
 		      Le NUMÉRO monte aussi : il n'était lisible qu'une fois la carte dépliée,
 		      dans son pied, alors que c'est la référence qu'on cite au syndic. -->
 		<svelte:fragment slot="tags">
-			<span class="tk-cat" title={ticket.categorie}>{categorieTicketEmoji(ticket.categorie)}</span>
+			<span class="tk-cat" title={categorieTicketLabel(ticket.categorie)}
+				>{categorieTicketEmoji(ticket.categorie)}</span
+			>
 			<span class="badge {STATUT_TICKET_BADGE[ticket.statut] ?? 'badge-gray'}">
 				{STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut}
 			</span>

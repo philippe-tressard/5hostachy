@@ -80,3 +80,54 @@ def test_les_liens_du_carnet_sont_declares(prefixe):
     from app.utils.liens import EMPLACEMENTS
 
     assert prefixe in EMPLACEMENTS
+
+
+def test_une_affaire_se_dit_par_sa_categorie_jamais_incident():
+    """« Réflexion sur le remplacement des pelouses » paraissait sous le badge
+    « Incident », avec « etude_travaux » en clair (26/09/2026, signalé à
+    l'écran). L'entrée porte désormais la VALEUR de sa catégorie, que l'écran
+    rend par son libellé, et son détail ne recopie plus rien de brut."""
+    import uuid
+    from datetime import datetime
+
+    from sqlmodel import Session, SQLModel
+
+    from app.database import engine
+    from app.models.core import StatutTicket, Ticket, Utilisateur
+    from app.utils.carnet_entretien import construire_carnet
+    from tests.purge_test import purger_ligne
+
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        auteur = Utilisateur(
+            email=f"carnet-{uuid.uuid4().hex[:8]}@exemple.test",
+            mot_de_passe_hash="x",
+            prenom="Camille",
+            nom="Sorel",
+            roles_json="conseil_syndical",
+            actif=True,
+        )
+        session.add(auteur)
+        session.commit()
+        ticket = Ticket(
+            numero=f"T-{uuid.uuid4().hex[:6]}",
+            titre="Réflexion sur le remplacement des pelouses",
+            description="…",
+            categorie="etude_travaux",
+            auteur_id=auteur.id,
+            statut=StatutTicket.résolu,
+            ferme_le=datetime(2026, 9, 25, 10, 0),
+        )
+        session.add(ticket)
+        session.commit()
+        try:
+            lignes = [e for e in construire_carnet(session) if e["lien"].endswith(f"/{ticket.id}")]
+            assert len(lignes) == 1
+            ligne = lignes[0]
+            assert ligne["origine"] == "affaire"
+            assert ligne["categorie"] == "etude_travaux"
+            assert "etude_travaux" not in ligne["detail"]
+        finally:
+            purger_ligne(session, Ticket, ticket.id)
+            purger_ligne(session, Utilisateur, auteur.id)
+            session.commit()

@@ -8,7 +8,7 @@
 <script lang="ts">
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { daysSince } from '$lib/date';
-	import { estTicketActif, ticketScope, ticketUrgent } from '$lib/tickets';
+	import { categorieTicketLabel, estTicketActif, ticketScope, ticketUrgent } from '$lib/tickets';
 	import type { Ticket } from '$lib/api';
 
 	export let tickets: Ticket[] = [];
@@ -79,7 +79,11 @@
 				<thead><tr><th>Catégorie</th><th>Total</th><th>Ouverts / en cours</th></tr></thead>
 				<tbody>
 					{#each reportTicketCategories as row (row.categorie)}
-						<tr><td>{row.categorie}</td><td>{row.total}</td><td>{row.ouverts}</td></tr>
+						<tr
+							><td>{categorieTicketLabel(row.categorie)}</td><td>{row.total}</td><td
+								>{row.ouverts}</td
+							></tr
+						>
 					{/each}
 				</tbody>
 			</table>

@@ -28,9 +28,9 @@ if (typeof anneesDuCarnet !== 'function' || typeof entreesDeLAnnee !== 'function
 
 const E = [
 	{ date: '2019-03-01', origine: 'contrat' },
-	{ date: '2026-09-17', origine: 'incident' },
+	{ date: '2026-09-17', origine: 'affaire' },
 	{ date: '2025-06-02', origine: 'intervention' },
-	{ date: '2025-01-10', origine: 'incident' },
+	{ date: '2025-01-10', origine: 'affaire' },
 ];
 const echecs = [];
 const egal = (a, b) => JSON.stringify(a) === JSON.stringify(b);

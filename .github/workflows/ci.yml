@@ -1687,6 +1687,13 @@ jobs:
         working-directory: front
         run: npm run lint:chargement
 
+      # 🔴 L'infobulle de catégorie disait « etude_travaux » sur la liste des
+      # affaires (26/09/2026, signalé à l'écran) ; deux reportings rendaient la
+      # même valeur brute. Le libellé existait, rien n'obligeait à le prendre.
+      - name: Une catégorie s'affiche par son libellé
+        working-directory: front
+        run: npm run lint:categorie-brute
+
       # 🔴 Le libellé d'un étage était écrit SEPT fois, en QUATRE rendus : un
       # lot au premier sous-sol s'affichait « -1 » sur `mon-lot`, « SS 1 » sur le
       # profil, et « Ét. -1 » dans une troisième forme de la même page.

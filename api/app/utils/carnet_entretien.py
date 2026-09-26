@@ -16,7 +16,7 @@ bâtiment ? »* :
 | `ContratEntretien` | l'équipement suivi, son prestataire, sa périodicité | `actif` |
 | `Ticket` Entretien | l'intervention réellement faite | résolue (#1092 : les événements
   du calendrier sont devenus des affaires Entretien le 23/09/2026) |
-| `Ticket` du bâti | l'incident résolu | `ferme_le` + catégorie du bâti, hors Entretien — |
+| `Ticket` du bâti | l'affaire résolue, sous sa catégorie | `ferme_le` + catégorie du bâti, hors Entretien — |
 |  |  | rangé sous l'équipement désigné par le conseil, s'il l'a été (#1097) |
 
 Créer une table `carnet` aurait produit une **quatrième** version de faits déjà
@@ -53,6 +53,7 @@ from app.models.prestataires import ContratEntretien, Prestataire
 from app.models.tickets import CategorieTicket, StatutTicket
 from app.utils.liens import lien_element, lien_ticket
 from app.utils.perimetres import couvre, parse_json_perimetres
+from app.utils.valeurs import valeur
 
 #: Les catégories de ticket qui parlent du **bâti**. Les autres — une question,
 #: un signalement de bug, une nuisance de voisinage, une demande d'accès — sont
@@ -81,8 +82,12 @@ class EntreeCarnet:
 
     date_fait: date
     libelle: str
-    origine: str  # contrat | intervention | incident
+    origine: str  # contrat | intervention | affaire
     detail: str = ""
+    #: La VALEUR de la catégorie d'une affaire (`etude_travaux`) — l'écran la
+    #: rend par son libellé. Le badge disait « Incident » pour TOUTE affaire du
+    #: bâti, une étude de remplacement des pelouses comprise (26/09/2026).
+    categorie: Optional[str] = None
     equipement: Optional[str] = None
     #: Les codes de périmètre de la ligne — l'écran les rend par `perimetreLabel`,
     #: comme partout ailleurs. Remplace `batiment_id` (10/09/2026) : un contrat
@@ -99,6 +104,7 @@ class EntreeCarnet:
             "libelle": self.libelle,
             "origine": self.origine,
             "detail": self.detail,
+            "categorie": self.categorie,
             "equipement": self.equipement,
             "perimetre": self.perimetre,
             "lien": self.lien,
@@ -262,7 +268,7 @@ def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[E
     return entrees
 
 
-def _entrees_incidents(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
+def _entrees_affaires(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
     """Un incident résolu sur le bâti — ce que le carnet appelle un sinistre.
 
     L'équipement posé par le conseil (#1097) le RANGE ; son absence ne
@@ -288,15 +294,15 @@ def _entrees_incidents(session: Session, perimetre: Optional[str]) -> list[Entre
         quand = _jour(ticket.ferme_le)
         if quand is None:
             continue
-        categorie = (
-            ticket.categorie.value if hasattr(ticket.categorie, "value") else str(ticket.categorie)
-        )
         entrees.append(
             EntreeCarnet(
                 date_fait=quand,
                 libelle=ticket.titre,
-                origine="incident",
-                detail=f"ticket {ticket.numero} · {categorie}",
+                #  Une AFFAIRE, et sa catégorie dit laquelle : « incident » la
+                #  qualifiait toutes, une étude ou des travaux compris.
+                origine="affaire",
+                categorie=valeur(ticket.categorie),
+                detail=ticket.numero,
                 equipement=ticket.equipement,
                 perimetre=_codes_de(ticket.perimetre_cible),
                 lien=lien_ticket(ticket.id),
@@ -316,7 +322,7 @@ def construire_carnet(session: Session, *, perimetre: Optional[str] = None) -> l
     entrees = (
         _entrees_contrats(session, perimetre)
         + _entrees_interventions(session, perimetre)
-        + _entrees_incidents(session, perimetre)
+        + _entrees_affaires(session, perimetre)
     )
     entrees.sort(key=lambda e: e.date_fait, reverse=True)
     return [entree.en_dict() for entree in entrees]
