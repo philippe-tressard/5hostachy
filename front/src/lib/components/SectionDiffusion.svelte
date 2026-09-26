@@ -132,9 +132,14 @@
 	 *
 	 *   ⚠️ L'aperçu s'intercale dans la SOUMISSION, il n'est pas un bouton à part :
 	 *   c'est ce qui garantit qu'on ne peut pas diffuser sans avoir vu. Le geste
-	 *   reste donc déclenché par le formulaire, l'objet ne fait que le porter. */
-	export function ouvrirSiDiffusion(diffusionCochee: boolean): boolean {
-		if (!demanderApercu || !diffusionCochee) return false;
+	 *   reste donc déclenché par le formulaire, l'objet ne fait que le porter.
+	 *
+	 *   Il ne s'interpose QUE si un canal est coché : sans canal il n'y a rien à
+	 *   montrer, et une modale de plus serait une étape gratuite. « Un canal
+	 *   est-il coché ? » se lit ICI, sur les cases que ce composant porte — les
+	 *   trois formulaires hôtes le recalculaient chacun (26/09/2026, #1342). */
+	export function ouvrirSiDiffusion(): boolean {
+		if (!demanderApercu || !(avecCanaux && (whatsapp || syndic || cs))) return false;
 		void apercu.ouvrir();
 		return true;
 	}

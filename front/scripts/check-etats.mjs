@@ -126,7 +126,8 @@ for (const fonction of ['sectionPresente', 'sectionsDe']) {
 
 const ORDRE = extraire(srcTypes, 'SECTIONS_ORDRE', relative(RACINE, TYPES), { echec });
 const LIBELLES = extraire(srcTypes, 'SECTIONS_LIBELLE', relative(RACINE, TYPES), { echec });
-//  🔴 TREIZE depuis le 21/09/2026 (#1095) : l'ancienne section « Champs
+//  🔴 QUATORZE depuis le 26/09/2026 : « Affaires liées » (#1342), après les
+//  Pièces jointes. TREIZE depuis le 21/09/2026 (#1095) : l'ancienne section « Champs
 //  spécifiques » est scindée en Nature · Au nom de · Mise en avant, et
 //  l'Équipement, l'Intervenant et le Suivi la rejoignent. Elles étaient neuf le
 //  matin même (Photos + Documents fusionnées), dix la veille (#1092).
@@ -140,8 +141,8 @@ const LIBELLES = extraire(srcTypes, 'SECTIONS_LIBELLE', relative(RACINE, TYPES),
 //  sans que personne le décide. Le remplacer par `ORDRE.length > 0` rendrait ce
 //  cas zéro aveugle à une table tronquée, ce qu'il existe précisément pour
 //  attraper. C'est bien ce qui vient de se passer : la fusion a dû passer ici.
-if (!Array.isArray(ORDRE) || ORDRE.length !== 13) {
-	casZero(`SECTIONS_ORDRE devrait porter les TREIZE sections (${ORDRE?.length ?? 0} lue(s)).`);
+if (!Array.isArray(ORDRE) || ORDRE.length !== 14) {
+	casZero(`SECTIONS_ORDRE devrait porter les QUATORZE sections (${ORDRE?.length ?? 0} lue(s)).`);
 }
 if (!LIBELLES || ORDRE.some((id) => !LIBELLES[id])) {
 	casZero('SECTIONS_LIBELLE ne nomme pas les dix sections.');

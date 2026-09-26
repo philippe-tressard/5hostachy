@@ -26,6 +26,7 @@
   et « PDF: contrat.pdf » allonge la pastille pour ne rien apprendre.
 -->
 <script lang="ts">
+	import PastilleRetirable from '$lib/components/PastilleRetirable.svelte';
 	import { typeFichier, nomSansExtension } from '$lib/fichiers';
 
 	/**  Le nom du fichier, ou son URL — `typeFichier` accepte les deux. */
@@ -39,62 +40,12 @@
 	$: affiche = libelle?.trim() || nomSansExtension(nom);
 </script>
 
-<span class="fichier-chip">
-	<span class="fichier-type">{type}</span>
-	<span class="fichier-nom">{affiche}</span>
-	{#if !readonly}
-		<button
-			type="button"
-			class="fichier-retirer"
-			title="Retirer ce document"
-			aria-label="Retirer {affiche}"
-			on:click
-		>
-			×
-		</button>
-	{/if}
-</span>
-
-<style>
-	/*  🔴 Ces règles voyagent AVEC le balisage. Les laisser chez l'appelant
-	    rendrait la pastille nue dans l'autre — c'est la régression des pastilles
-	    de la v2.67.11, et elle s'est reproduite trois fois le 19/08/2026. */
-	.fichier-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		max-width: 100%;
-		padding: 0.2rem 0.45rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: var(--color-bg-alt, #f5f5f5);
-		font-size: 0.8rem;
-	}
-	/*  Le type en tête, gris et compact : il se lit d'un coup d'œil sans voler la
-	    place au nom, qui est ce qu'on cherche ensuite. */
-	.fichier-type {
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.02em;
-		color: var(--color-text-muted);
-		flex-shrink: 0;
-	}
-	.fichier-type::after {
-		content: ':';
-	}
-	.fichier-nom {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.fichier-retirer {
-		border: none;
-		background: none;
-		color: var(--color-danger);
-		cursor: pointer;
-		font-size: 1rem;
-		line-height: 1;
-		padding: 0;
-		flex-shrink: 0;
-	}
-</style>
+<!--  La forme vit dans `PastilleRetirable` (#1342) : la section « Affaires
+      liées » porte la même. Ici ne reste que ce qui est propre à un FICHIER. -->
+<PastilleRetirable
+	prefixe={type}
+	nom={affiche}
+	{readonly}
+	aideRetirer="Retirer ce document"
+	on:click
+/>

@@ -124,7 +124,6 @@
 	//  soumission. Le 31/08, l'oubli du second a fait partir une actualité que
 	//  personne n'a pu annuler — `npm run lint:apercu` le refuse depuis.
 	let refDiffusion: any = null;
-	$: aUneDiffusion = envoyerCs || envoyerSyndic || partagerWhatsapp;
 
 	const brouillonApercu = () =>
 		annoncesHallApi.apercuDiffusion({
@@ -147,7 +146,7 @@
 	 *   `onCreer` reste l'unique chemin d'écriture. */
 	function soumettre() {
 		if (!valide) return;
-		if (refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
+		if (refDiffusion?.ouvrirSiDiffusion()) return;
 		refDiffusion?.fermerApercu();
 		onCreer();
 	}

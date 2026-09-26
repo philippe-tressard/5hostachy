@@ -211,6 +211,12 @@ export const ANNONCE: EntiteDeclaree = {
 			pliee: true,
 		},
 		{
+			id: 'affaires_liees',
+			sansObjet:
+				'Une petite annonce se passe entre résidents ; elle ne renvoie à aucune ' +
+				'affaire, et `Annonce` ne porte aucun lien (#1342).',
+		},
+		{
 			id: 'au_nom_de',
 			sansObjet:
 				'Une annonce est déposée par celui qui la publie, jamais pour un tiers — c’est son bien.',

@@ -330,6 +330,7 @@
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
 						entite={TICKET}
+						affaireLiable={ticket.id}
 						conditions={conditionsDeLaSuite(ticket)}
 						assistant={contexteCommentaire(
 							ticket,
@@ -368,6 +369,7 @@
 					equipement={ticket.equipement ? equipLabel(ticket.equipement) : ''}
 					photos={ticket.photos_urls ?? []}
 					documents={ticket.fichiers_urls ?? []}
+					affairesLiees={ticket.affaires_liees}
 				>
 					<svelte:fragment slot="pied">
 						<!--  Le NUMÉRO est dans l'en-tête : pas deux fois le même fait. -->

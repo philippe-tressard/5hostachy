@@ -231,6 +231,7 @@
 			intervenant={intervenantAffiche(ticket)}
 			photos={ticket.photos_urls ?? []}
 			documents={ticket.fichiers_urls ?? []}
+			affairesLiees={ticket.affaires_liees}
 		>
 			<svelte:fragment slot="titre">
 				<div class="ticket-meta">

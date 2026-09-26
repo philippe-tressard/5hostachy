@@ -77,12 +77,13 @@
 		type ChargeUtileEvolution,
 	} from '$lib/evolutions';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
+	import SectionAffairesLiees from '$lib/components/SectionAffairesLiees.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionsCiblageEvolution from '$lib/components/SectionsCiblageEvolution.svelte';
 	import type { ConditionInactive, EntiteDeclaree } from '$lib/entites/types';
 	import { pliageDe } from '$lib/pliage';
 	import { SUITE } from '$lib/gestes';
-	import type { ApercuDiffusion } from '$lib/api';
+	import type { AffaireLiee, ApercuDiffusion } from '$lib/api';
 	import { perimetreEntree } from '$lib/perimetres';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { avecNouvelEtat, type ContexteAssistant } from '$lib/assistant';
@@ -128,6 +129,7 @@
 	/**  Une variante du GESTE, pas de la section — R4 ne sait pas la déclarer
 	 *   (#436) : faux sur une note interne, ligne de suivi et non signalement. */
 	export let avecPiecesJointes = true;
+	export let affaireLiable: number | null = null; // l'affaire à LIER depuis une Suite (#1342)
 	/**  L'hôte a-t-il quelque chose à poser AVANT le Suivi (l'Équipement, #1326) ?
 	 *   Un créneau déclaré mais vide ôterait au Suivi son rang de première section. */
 	export let avantSuivi = true;
@@ -217,6 +219,7 @@
 	let envoyerCs = defaultEnvoyerCs;
 	let envoyerAuteur = false;
 	let emailExterne = '';
+	let affairesLiees: AffaireLiee[] = [];
 	//  L'état INITIAL d'une entrée (périmètre, destinataires, pièces) : `$lib/evolutions` (17/09/2026).
 	let {
 		perimetre,
@@ -248,6 +251,7 @@
 	$: sections = sectionsDeLaSuite(entite, conditions, {
 		perimetre: peutPreciserPerimetre,
 		piecesJointes: avecPiecesJointes,
+		affairesLiees: affaireLiable !== null && !editMode,
 		diffusion: peutDiffuser,
 		creneaux: {
 			avant_suivi: !!$$slots.avant_suivi && avantSuivi,
@@ -255,14 +259,7 @@
 			mise_en_avant: !!$$slots.mise_en_avant,
 		},
 	});
-	$: sectionPerimetre = sections.perimetre;
-	$: sectionDestinataires = sections.destinataires;
-	$: sectionSpecifiques = sections.specifiques;
-	$: sectionAvantSuivi = sections.avantSuivi;
-	$: sectionMiseEnAvant = sections.miseEnAvant;
-	$: sectionPhotos = sections.piecesJointes;
-	$: sectionDocuments = sections.piecesJointes;
-	$: sectionDiffusion = sections.diffusion;
+	$: avantPerimetre = sectionWorkflow || sections.specifiques || sections.avantSuivi;
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
 	//  sous lui (`ux-patterns` §9 quater) — c'est la forme qu'a déjà la carte du
@@ -280,7 +277,7 @@
 	//  ⚠️ Des affectations plutôt qu'une déstructuration réactive : ESLint 10
 	//  plante sur `$: ({a, b} = f())` (@typescript-eslint/no-unused-vars). Le
 	//  contournement est ici, pas dans une règle désactivée.
-	$: entreePerimetre = perimetreEntree(perimetreCourant, entrees, perimetre, sectionPerimetre);
+	$: entreePerimetre = perimetreEntree(perimetreCourant, entrees, perimetre, sections.perimetre);
 	$: perimetreDeclare = entreePerimetre.declare;
 	$: libellePerimetreActuel = entreePerimetre.libelleActuel;
 
@@ -304,23 +301,16 @@
 	// liste alimentée.
 
 	// ── Aperçu avant diffusion (#498) ─────────────────────────────────────────
-	//  Il ne s'interpose QUE si l'appelant sait le composer ET qu'un canal est
-	//  coché : sans canal il n'y a rien à montrer, et une modale de plus serait
-	//  une étape gratuite entre l'utilisateur et son commentaire.
-	$: aUneDiffusion = sectionDiffusion && (partagerWhatsapp || envoyerSyndic || envoyerCs);
 	//  🔴 La saisie est PASSÉE à l'appelant, elle n'est pas lue depuis l'extérieur.
 	//  Ce formulaire tient son état ; une fermeture posée chez l'appelant lirait
 	//  des valeurs vides — première tentative, corrigée avant d'être livrée.
 	//  L'état et la modale vivent dans `SectionDiffusion` depuis le 20/08/2026 :
 	//  l'aperçu appartient à l'objet Diffusion, pas à ses appelants (#498). Ne
 	//  reste ici que la SAISIE à transmettre — ce formulaire seul la connaît.
-	/**  Motif interdisant le groupe WhatsApp — relayé tel quel jusqu'à
-	 *   `CanauxNotification`, où la règle vit. L'hôte le calcule avec
-	 *   `motifWhatsappInterdit()` : c'est lui qui tient l'objet.
-	 *
-	 *   ⚠️ Il vaut aussi pour un COMMENTAIRE, pas seulement à la création : un
-	 *   ticket réservé au conseil le reste quand on le commente, et laisser la
-	 *   case cochable ferait promettre un envoi que le serveur refuse. */
+	/**  Motif interdisant le groupe WhatsApp, relayé à `SectionDiffusion` — il
+	 *   vaut aussi pour une Suite : un ticket réservé au conseil le reste quand on
+	 *   le commente. 🔴 Il était REÇU sans être relayé jusqu'au 26/09/2026 : la
+	 *   case restait cochable, et promettait un envoi que le serveur refuse. */
 	export let whatsappInterdit = '';
 
 	let refDiffusion: SectionDiffusion;
@@ -338,7 +328,7 @@
 	// ── Submit ────────────────────────────────────────────────────────────────
 	function soumettre() {
 		if (!canSubmit) return;
-		if (refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
+		if (refDiffusion?.ouvrirSiDiffusion()) return;
 		handleSubmit();
 	}
 
@@ -350,14 +340,15 @@
 			contenu,
 			nouveau_statut: !editMode && evolType === 'etat' ? nouveauStatut : undefined,
 			fichiers_urls: allFichiersUrls,
-			partager_whatsapp: sectionDiffusion ? partagerWhatsapp : undefined,
-			envoyer_syndic: sectionDiffusion ? envoyerSyndic : undefined,
-			envoyer_cs: sectionDiffusion ? envoyerCs : undefined,
-			envoyer_auteur: sectionDiffusion ? envoyerAuteur : undefined,
+			affaires_liees: affairesLiees.length ? affairesLiees.map((a) => a.id) : undefined,
+			partager_whatsapp: sections.diffusion ? partagerWhatsapp : undefined,
+			envoyer_syndic: sections.diffusion ? envoyerSyndic : undefined,
+			envoyer_cs: sections.diffusion ? envoyerCs : undefined,
+			envoyer_auteur: sections.diffusion ? envoyerAuteur : undefined,
 			email_externe: showEmail ? emailExterne.trim() || undefined : undefined,
 			interne: avecInterne ? interne : undefined,
 			perimetre_cible: perimetreDeclare,
-			public_cible: sectionDestinataires ? destinataires : undefined, // affichée, donc émise (#1091)
+			public_cible: sections.destinataires ? destinataires : undefined, // affichée, donc émise (#1091)
 			assiste_ia: assisteIA || undefined, // seulement quand c'est vrai : « je n'en dis rien » sinon
 		});
 	}
@@ -374,7 +365,7 @@
 	      les trois créneaux de l'hôte se rendent à LEUR rang (`creneauDe`,
 	      `$lib/evolutions`) — Équipement avant le Suivi, Quand et Intervenant
 	      après, Mise en avant après les Destinataires. -->
-	{#if sectionAvantSuivi}
+	{#if sections.avantSuivi}
 		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
 		<slot name="avant_suivi" premiere={true} {partage} />
 	{/if}
@@ -383,7 +374,7 @@
 		<!--  Suivi : l'état COURANT actif à l'ouverture ; le garder tel quel fait
 		      de l'entrée un simple commentaire (R3, #423 · §9 septies et quater). -->
 		<SectionWorkflow
-			premiere={!sectionAvantSuivi}
+			premiere={!sections.avantSuivi}
 			pliable={pliageDe(entite, 'suivi')}
 			idTitre="{idPrefixe}-workflow-titre"
 			options={statutOptions}
@@ -393,17 +384,17 @@
 		/>
 	{/if}
 
-	{#if sectionSpecifiques}
+	{#if sections.specifiques}
 		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
-		<slot name="specifiques" premiere={!sectionWorkflow && !sectionAvantSuivi} {partage} />
+		<slot name="specifiques" premiere={!sectionWorkflow && !sections.avantSuivi} {partage} />
 	{/if}
 
 	<!--  Périmètre — les Destinataires viennent APRÈS les pièces jointes (#1326). -->
 	<SectionsCiblageEvolution
 		{idPrefixe}
 		{entite}
-		premiere={!sectionWorkflow && !sectionSpecifiques && !sectionAvantSuivi}
-		avecPerimetre={sectionPerimetre}
+		premiere={!avantPerimetre}
+		avecPerimetre={sections.perimetre}
 		bind:perimetre
 		perimetreBadge={libellePerimetreActuel}
 		{aidePerimetre}
@@ -413,7 +404,7 @@
 		{idPrefixe}
 		idChamp="contenu"
 		pliable={pliageDe(entite, 'description')}
-		premiere={!sectionWorkflow && !sectionSpecifiques && !sectionAvantSuivi && !sectionPerimetre}
+		premiere={!avantPerimetre && !sections.perimetre}
 		titre={titreContenu}
 		requis={contenuRequis}
 		placeholder={editMode
@@ -433,22 +424,31 @@
 	<SectionsPiecesJointes
 		{idPrefixe}
 		pliable={pliageDe(entite, 'pieces_jointes')}
-		avecPhotos={sectionPhotos}
+		avecPhotos={sections.piecesJointes}
 		bind:photos
-		avecDocuments={sectionDocuments}
+		avecDocuments={sections.piecesJointes}
 		bind:documents={docs}
 		idDocuments="docs"
 	/>
+
+	{#if sections.affairesLiees}
+		<SectionAffairesLiees
+			{idPrefixe}
+			bind:liees={affairesLiees}
+			exclure={affaireLiable}
+			pliable={pliageDe(entite, 'affaires_liees')}
+		/>
+	{/if}
 
 	<!--  Destinataires, puis Mise en avant — « à qui l'on parle, puis comment on
 	      le met en avant » (#1096), dans l'ordre de l'édition (#1326). -->
 	<SectionsCiblageEvolution
 		{idPrefixe}
 		{entite}
-		avecDestinataires={sectionDestinataires}
+		avecDestinataires={sections.destinataires}
 		bind:destinataires
 	/>
-	{#if sectionMiseEnAvant}
+	{#if sections.miseEnAvant}
 		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
 		<slot name="mise_en_avant" premiere={false} {partage} />
 	{/if}
@@ -460,8 +460,9 @@
 		on:envoyer={handleSubmit}
 		{idPrefixe}
 		pliable={pliageDe(entite, 'diffusion')}
-		avecCanaux={sectionDiffusion}
+		avecCanaux={sections.diffusion}
 		bind:whatsapp={partagerWhatsapp}
+		{whatsappInterdit}
 		bind:syndic={envoyerSyndic}
 		bind:cs={envoyerCs}
 		bind:auteur={envoyerAuteur}

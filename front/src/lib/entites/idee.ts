@@ -141,6 +141,12 @@ export const IDEE: EntiteDeclaree = {
 				"relèvent du ticket ou de l'événement qui suivra, si l'idée est retenue.",
 		},
 		{
+			id: 'affaires_liees',
+			sansObjet:
+				'Une idée porte sur ce qui n’existe pas encore : elle devient une affaire ' +
+				'si elle est retenue, et c’est là que les liens se posent (#1342).',
+		},
+		{
 			id: 'au_nom_de',
 			sansObjet: 'Une idée se dépose en son nom — c’est la sienne qu’on soumet au vote.',
 		},

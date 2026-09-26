@@ -72,6 +72,15 @@ export interface PorteSaisiPourLu {
 	saisi_pour_affichage?: string | null;
 }
 
+/**  Une affaire liée, telle que CE lecteur la voit (#1342) : de quoi la
+ *   reconnaître. Le serveur ne rend que celles qu'il peut lire. */
+export interface AffaireLiee {
+	id: number;
+	numero: string;
+	titre: string;
+	statut: string;
+}
+
 export interface Ticket extends PorteSaisiPourLu {
 	id: number;
 	/** « Rédigé avec l'assistant IA » (#985). */
@@ -107,6 +116,8 @@ export interface Ticket extends PorteSaisiPourLu {
 	     celles de l'entrée d'Historique la plus récente qui en porte. Calculé par
 	     le serveur (#464) — le front ne rejoue pas la règle. */
 	apercu_pieces?: string[];
+	/**  Les affaires liées, dans les deux sens — celles que le lecteur peut lire (#1342). */
+	affaires_liees?: AffaireLiee[];
 	/**  Le ticket a-t-il quitté la liste active pour les Archives ? Calculé par la
 	     règle du SITE (`app/utils/archivage.py`, #515) : 30 jours après « Résolu »,
 	     immédiat sur « Annulé », le délai étant réglable en administration.

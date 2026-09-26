@@ -17,6 +17,7 @@ et pas seulement une taille de fichier.
 dit la docstring du paquet.
 """
 
+from app.utils.affaires_liees import poser_liens
 from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -141,6 +142,10 @@ def update_ticket(
             "Le conseil syndical peut commenter et faire avancer le suivi, "
             "mais seul l'auteur (ou un administrateur) modifie le contenu",
         )
+    #  Les affaires liées (#1342) : l'auteur ET le conseil les corrigent — relier
+    #  deux dossiers est un geste de suivi autant que de contenu.
+    if "affaires_liees" in body.model_fields_set:
+        poser_liens(session, ticket, body.affaires_liees, user)
 
     ancien_statut = ticket.statut
     #  L'etat des CANAUX avant modification. La Diffusion est rouverte a
@@ -389,7 +394,7 @@ def update_ticket(
             auteur=bool(getattr(body, "envoyer_auteur", False)),
             affiche=bool(body.annonce_hall),
         )
-        return ticket_read(ticket, session)
+        return ticket_read(ticket, session, user)
 
     #  L'ENVOI, et seulement sur la transition decoche -> coche (voir plus haut).
     #  Apres le commit : un courriel qui part sur une transaction annulee annonce
@@ -419,4 +424,4 @@ def update_ticket(
             pieces_jointes=chemins_locaux(pieces_du_ticket(ticket)),
         )
 
-    return ticket_read(ticket, session)
+    return ticket_read(ticket, session, user)

@@ -101,6 +101,8 @@ export interface SaisieAffaire {
 	fin: string;
 	photosUrls: string[];
 	fichiersUrls: string[];
+	/** Les affaires liées retenues (#1342) — seuls leurs `id` partent. */
+	affairesLiees: { id: number }[];
 	destinataireSyndic: boolean;
 	destinataireCs: boolean;
 	partagerWhatsapp: boolean;
@@ -139,6 +141,8 @@ export function chargeUtileAffaire(
 		perimetre_cible: s.perimetreCible,
 		photos_urls: s.photosUrls,
 		fichiers_urls: s.fichiersUrls,
+		//  Pour tous : le serveur ne remplace que les liens que l'auteur VOIT (#1342).
+		affaires_liees: s.affairesLiees.map((a) => a.id),
 		urgente: s.options.urgente,
 		//  « Je n'en dis rien » en correction : la marque ne s'efface pas.
 		assiste_ia: contexte.creation ? s.assisteIA : s.assisteIA || undefined,

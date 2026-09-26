@@ -36,10 +36,10 @@
  *
  * `npm run lint:etats` refuse une divergence sans motif, un motif `api` sans
  * ticket, une section rendue hors déclaration et un ordre qui s'écarte de
- * `SECTIONS_ORDRE` — **treize** depuis #1095 : « Champs spécifiques » scindée
+ * `SECTIONS_ORDRE` — **quatorze** depuis #1342 (treize depuis #1095 : « Champs spécifiques » scindée
  * en Nature, Au nom de et Mise en avant, trois sections ajoutées (Équipement,
  * Intervenant, Quand), et Photos et
- * Documents n'en font plus qu'une, « Pièces jointes ».
+ * Documents n'en font plus qu'une, « Pièces jointes »).
  *
  * ## Ce fichier ne se recopie pas
  *
@@ -49,7 +49,7 @@
  * aux statuts de ticket (#415) et aux pages (#401).
  */
 
-/**  Les TREIZE sections. L'identifiant est technique ; le libellé est à l'écran.
+/**  Les QUATORZE sections (« Affaires liées » entrée le 26/09/2026, #1342). L'identifiant est technique ; le libellé est à l'écran.
  *
  *   ⚠️ Ce nombre a dit « neuf » jusqu'au 21/09/2026 alors que la liste en
  *   portait treize — dans le fichier qui EST la source de l'ordre (#1124). Un
@@ -71,6 +71,7 @@ export type IdSection =
 	| 'perimetre'
 	| 'description'
 	| 'pieces_jointes'
+	| 'affaires_liees'
 	| 'au_nom_de'
 	| 'mise_en_avant'
 	| 'destinataires'
@@ -109,6 +110,10 @@ export const SECTIONS_ORDRE: readonly IdSection[] = [
 	'perimetre',
 	'description',
 	'pieces_jointes',
+	//  Affaires liées après les Pièces jointes (26/09/2026, #1342) : ce qui
+	//  accompagne l'objet — un fichier, une autre affaire —, avant de dire
+	//  pour qui et à qui.
+	'affaires_liees',
 	'au_nom_de',
 	//  Destinataires AVANT Mise en avant (23/09/2026, #1096) : « elles sont
 	//  complémentaires » — à qui l'on parle, puis comment on le met en avant.
@@ -135,6 +140,7 @@ export const SECTIONS_LIBELLE: Readonly<Record<IdSection, string>> = {
 	perimetre: 'Périmètre',
 	description: 'Description',
 	pieces_jointes: 'Pièces jointes',
+	affaires_liees: 'Affaires liées',
 	au_nom_de: 'Au nom de',
 	mise_en_avant: 'Mise en avant',
 	destinataires: 'Destinataires',

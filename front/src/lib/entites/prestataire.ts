@@ -110,6 +110,12 @@ export const PRESTATAIRE: EntiteDeclaree = {
 				"rattacher à l'entreprise les détacherait de ce qu'ils engagent.",
 		},
 		{
+			id: 'affaires_liees',
+			sansObjet:
+				'Un carnet d’adresses ne se lie pas à une affaire : c’est l’affaire qui ' +
+				'désigne son intervenant (#1342).',
+		},
+		{
 			id: 'au_nom_de',
 			sansObjet: 'Un carnet d’adresses se tient, il ne se saisit pas pour un tiers.',
 		},

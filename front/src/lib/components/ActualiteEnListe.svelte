@@ -169,6 +169,7 @@
 				<!--  AUCUNE option d'état : une actualité n'a pas de suivi (#1091). -->
 				<EvolForm
 					idPrefixe="actu-evol-{ticket.id}"
+					affaireLiable={ticket.id}
 					auteurNom={nomCopie(ticket)}
 					titre={SUITE.libelle}
 					statutOptions={[]}

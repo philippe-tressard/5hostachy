@@ -134,6 +134,12 @@ export const CONTRAT: EntiteDeclaree = {
 			pliee: true,
 		},
 		{
+			id: 'affaires_liees',
+			sansObjet:
+				'Un contrat se rattache à son prestataire et à ses interventions ; les ' +
+				'affaires qu’il engage le citent, pas l’inverse (#1342).',
+		},
+		{
 			id: 'au_nom_de',
 			sansObjet:
 				'Un contrat est signé par la copropriété : il ne se saisit pas au nom de ' + "quelqu'un.",

@@ -35,19 +35,17 @@ from app.utils.fichiers import chemins_locaux
 from app.utils.liens import base_site, lien_ticket
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_internes, photos_json
-from app.utils.noms import contexte_personne
 from app.utils.recuperer import ou_404
 from app.utils.prochaine_visite import apres_cloture
 
 from .commun import (
     STATUT_LABELS,
     appliquer_options,
-    config_site,
-    contexte_site,
     evol_read,
 )
 from .courriels import envoyer_email_externe, envoyer_email_syndic_cs
-from app.utils.cloche import sonner
+from .notifier_auteur import _notifier_auteur
+from app.utils.affaires_liees import ajouter_liens
 
 router = APIRouter()
 
@@ -190,70 +188,6 @@ def delete_evolution(
         parent_id=ticket_id,
     )
     return None
-
-
-def _notifier_auteur(
-    session: Session,
-    background_tasks: BackgroundTasks,
-    *,
-    ticket: Ticket,
-    user: Utilisateur,
-    body: TicketEvolutionCreate,
-    ancien_statut: str | None,
-) -> None:
-    """E-mail et notification in-app à l'auteur du ticket, s'il n'agit pas lui-même."""
-    from app.utils.email import send_email
-
-    cfg = config_site(session)
-    auteur = session.get(Utilisateur, ticket.auteur_id)
-    base_ticket = {"id": ticket.id, "numero": ticket.numero, "titre": ticket.titre}
-
-    if auteur and auteur.email:
-        if body.type == "etat":
-            background_tasks.add_task(
-                send_email,
-                code="ticket_statut_change",
-                to=auteur.email,
-                context={
-                    "ticket": {
-                        **base_ticket,
-                        "statut": STATUT_LABELS.get(body.nouveau_statut, body.nouveau_statut),
-                        "ancien_statut": STATUT_LABELS.get(ancien_statut or "", "Aucun"),
-                    },
-                    "destinataire": {"prenom": auteur.prenom, "nom": auteur.nom},
-                    "auteur_action": contexte_personne(user),
-                    **contexte_site(cfg),
-                },
-                destinataire_id=ticket.auteur_id,
-            )
-        elif body.type == "commentaire" and body.contenu:
-            background_tasks.add_task(
-                send_email,
-                code="ticket_nouveau_message",
-                to=auteur.email,
-                context={
-                    "ticket": base_ticket,
-                    "message": {"contenu": body.contenu[:300]},
-                    "auteur_action": contexte_personne(user),
-                    **contexte_site(cfg),
-                },
-                destinataire_id=ticket.auteur_id,
-            )
-
-    titre_notif = (
-        f"Ticket #{ticket.numero} — statut : "
-        f"{STATUT_LABELS.get(body.nouveau_statut, body.nouveau_statut)}"
-        if body.type == "etat"
-        else f"Nouveau commentaire sur le ticket #{ticket.numero}"
-    )
-    sonner(
-        session,
-        destinataire_id=ticket.auteur_id,
-        type="ticket_update",
-        titre=titre_notif,
-        corps=(body.contenu or "")[:200],
-        lien=lien_ticket(ticket.id),
-    )
 
 
 def _message_pour_le_groupe(
@@ -409,6 +343,9 @@ def add_evolution(
             ancien_statut=ancien_statut,
         )
 
+    #  Une Suite AJOUTE des affaires liées, elle n'en retire aucune (#1342).
+    if body.affaires_liees:
+        ajouter_liens(session, ticket, body.affaires_liees, user)
     session.commit()
     session.refresh(evol)
 

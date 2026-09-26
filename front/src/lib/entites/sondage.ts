@@ -174,6 +174,12 @@ export const SONDAGE: EntiteDeclaree = {
 				'jamais proposé.',
 		},
 		{
+			id: 'affaires_liees',
+			sansObjet:
+				'Un sondage pose une question ; il ne suit aucune affaire, et `Sondage` ' +
+				'ne porte aucun lien (#1342).',
+		},
+		{
 			id: 'au_nom_de',
 			sansObjet: 'Un sondage est ouvert par celui qui le pose.',
 		},

@@ -39,6 +39,7 @@
   la résidence. Un objet se rend toujours de la même façon (R3).
 -->
 <script lang="ts">
+	import type { AffaireLiee } from '$lib/api';
 	import type { EntiteDeclaree } from '$lib/entites/types';
 	import { sectionsDe } from '$lib/entites/types';
 	import PiecesJointes from './PiecesJointes.svelte';
@@ -64,6 +65,8 @@
 	export let documents: string[] | null | undefined = [];
 	/** `grand` = on vient regarder la photo du dégât ; `vignette` = on la survole. */
 	export let formatPieces: 'vignette' | 'grand' = 'grand';
+	/** Les affaires liées que le serveur a jugées lisibles pour ce lecteur (#1342). */
+	export let affairesLiees: AffaireLiee[] | null | undefined = [];
 
 	$: sections = sectionsDe(entite, 'affichage');
 	//  🔴 `$perimetresStore` n'est pas lu : il dit à Svelte que ce calcul dépend
@@ -113,6 +116,16 @@
 		{#if documents?.length}
 			<div class="fiche-pieces"><PiecesJointes urls={documents} format={formatPieces} /></div>
 		{/if}
+	{:else if s.id === 'affaires_liees'}
+		<!--  Chaque affaire se reconnaît à son TITRE, pas à son seul numéro (#1342). -->
+		{#if affairesLiees?.length}
+			<p class="fiche-intervenant fiche-liees">
+				Affaires liées :
+				{#each affairesLiees as a, i (a.id)}{i ? ' · ' : ''}<a href="/tickets/{a.id}"
+						><strong>{a.numero}</strong> {a.titre}</a
+					>{/each}
+			</p>
+		{/if}
 	{/if}
 {/each}
 
@@ -149,5 +162,8 @@
 	}
 	.fiche-pieces {
 		margin-bottom: 0.5rem;
+	}
+	.fiche-liees a {
+		color: inherit;
 	}
 </style>

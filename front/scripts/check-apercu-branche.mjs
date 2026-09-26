@@ -129,8 +129,7 @@ for (const chemin of tous) {
 		fautifs.push({
 			rel,
 			quoi: "fournit `demanderApercu` mais n'appelle jamais `ouvrirSiDiffusion`",
-			remede:
-				'dans le geste de soumission : `if (refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;`',
+			remede: 'dans le geste de soumission : `if (refDiffusion?.ouvrirSiDiffusion()) return;`',
 		});
 	}
 	if (ouvre && !fournit) {

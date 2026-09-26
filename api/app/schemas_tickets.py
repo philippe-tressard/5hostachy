@@ -30,6 +30,8 @@ class TicketEvolutionCreate(AssisteIAEntree, ChampsIntervenant):
     #  chose, au même endroit. `_STATUTS_ADMIS` — la liste écrite à la main qui
     #  refusait `annulé` depuis toujours — a disparu du routeur (#415).
     nouveau_statut: Optional[StatutTicket] = None
+    #  Une Suite AJOUTE des affaires liées, elle n'en retire aucune (#1342).
+    affaires_liees: Optional[list[int]] = None
     #  Ce que le CONSEIL pose dans une Suite (#1207, 24/09/2026) : « Quand », et
     #  par `ChampsIntervenant` l'intervenant et l'équipement. Ignorés pour tout
     #  autre auteur ; mêmes règles que la correction.
