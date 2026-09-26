@@ -59,15 +59,44 @@
 	 *   déduit du lien lui-même — aucun appelant n'a à le dire. */
 	$: cible = cibleDuLien(chemin, ancre);
 	let bouton: HTMLButtonElement;
+	let zone: HTMLDivElement;
 
-	/** « Lien copié », et pour une affaire la proposition de l'envoyer. */
+	//  🔴 DEUX RÉGIMES (arbitré le 26/09/2026, `emil-design-eng`) : un message
+	//  simple va au coin fixe (`Toast`) — il a une place prévisible ; la SUITE
+	//  d'un geste sur cet élément naît de lui. « Lien copié · L'envoyer par
+	//  courriel » s'affichait en bas à droite, loin de l'icône : la main
+	//  traversait l'écran pour atteindre un champ lié au 🔗.
+	/** La position de la bulle, sous le 🔗 — `null` : fermée. */
+	let bulle: { haut: number; droite: number } | null = null;
+	let minuterie: ReturnType<typeof setTimeout> | undefined;
+
+	function ouvrirBulle() {
+		const r = bouton.getBoundingClientRect();
+		bulle = { haut: r.bottom + 6, droite: Math.max(8, window.innerWidth - r.right) };
+		relancer();
+	}
+	function fermer() {
+		clearTimeout(minuterie);
+		bulle = null;
+	}
+	/** Elle part seule si l'on ne s'en sert pas — et reste tant qu'on s'en sert. */
+	function relancer() {
+		clearTimeout(minuterie);
+		minuterie = setTimeout(fermer, 6000);
+	}
+	function suspendre() {
+		clearTimeout(minuterie);
+	}
+	function clicDehors(e: MouseEvent) {
+		const cible = e.target as Node;
+		if (bulle && !zone?.contains(cible) && !bouton.contains(cible)) fermer();
+	}
+
+	/** « Lien copié » — et, pour ce qui se transmet, la proposition de l'envoyer. */
 	function annoncerCopie(copie: boolean) {
 		if (!copie) return toast('error', 'Copie impossible');
 		if (!cible) return toast('success', 'Lien copié');
-		toast('success', 'Lien copié', 8000, {
-			composant: PartageCourriel,
-			props: { cible, retour: bouton },
-		});
+		ouvrirBulle();
 	}
 
 	$: base = chemin ?? $page.url.pathname;
@@ -98,11 +127,66 @@
 	}
 </script>
 
+<svelte:window on:click={clicDehors} on:scroll={fermer} on:resize={fermer} />
+
 <button
 	bind:this={bouton}
 	class="btn-icon"
 	type="button"
 	title="Copier le lien"
 	aria-label="Copier le lien de {quoi}"
+	aria-expanded={bulle !== null}
 	on:click|stopPropagation={copier}>&#x1F517;</button
 >
+{#if bulle && cible}
+	<div
+		bind:this={zone}
+		class="bulle-lien"
+		role="dialog"
+		tabindex="-1"
+		aria-label="Lien copié"
+		style:top="{bulle.haut}px"
+		style:right="{bulle.droite}px"
+		on:pointerenter={suspendre}
+		on:pointerleave={relancer}
+		on:focusin={suspendre}
+	>
+		<p class="copie">✓ Lien copié</p>
+		<PartageCourriel {cible} retour={bouton} on:fermer={fermer} />
+	</div>
+{/if}
+
+<style>
+	/*  Elle naît du 🔗 : origine en haut à droite, sous l'icône. 180 ms, courbe
+	    « ease-out » du site ; de 96 % à 100 %, jamais de zéro (`emil-design-eng`). */
+	.bulle-lien {
+		position: fixed;
+		z-index: 60;
+		width: min(320px, calc(100vw - 16px));
+		padding: 0.6rem 0.75rem;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-left: 4px solid var(--color-success);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow);
+		font-size: 0.875rem;
+		transform-origin: 100% 0;
+		animation: bulle-entree var(--duree-apparition) var(--ease-out);
+	}
+	.copie {
+		margin: 0;
+		font-weight: 600;
+		color: var(--color-success);
+	}
+	@keyframes bulle-entree {
+		from {
+			opacity: 0;
+			transform: scale(0.96) translateY(-4px);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.bulle-lien {
+			animation: none;
+		}
+	}
+</style>
