@@ -546,6 +546,44 @@ alerte quand sa fenêtre de rattrapage s'épuise sans envoi réussi.
   ```
 - `bascule.sh` ne propage jamais un `creds.json` vide vers le peer
 
+#### 🔴 Blocage du compte WhatsApp — la panne qui ne se répare pas (#1061, 26/09/2026)
+
+Le bridge repose sur **Baileys**, un client non officiel de WhatsApp Web : c'est
+le seul moyen de publier dans un groupe, et c'est un choix assumé. Son prix :
+WhatsApp peut **déconnecter d'office**, voire **bloquer le numéro** appairé. Un
+blocage n'est pas un incident technique — ni un redémarrage, ni une bascule, ni
+un nouveau QR ne le lèvent.
+
+**Deux pannes qui se ressemblent** (« déconnecté ») et que tout oppose :
+
+| Signe (`GET /status` du bridge) | Lecture | Conduite |
+|---|---|---|
+| `dernier_code` 428, hors ligne quelques minutes | la boucle ordinaire (~4 h 45) | rien : il se rétablit seul |
+| `dernier_code` **401** ou **403** | WhatsApp a fermé la session : appairage perdu, ou **numéro bloqué** | ci-dessous |
+| hors ligne depuis **≥ 6 h** (`hors_ligne_depuis`) | au-delà de toute coupure ordinaire | ci-dessous |
+
+Le contrôle de 06:00 (`utils/health_monitor` → `utils/verdict_whatsapp`) porte
+ce verdict distinct dans l'alerte e-mail — le seul canal qui reste quand
+WhatsApp tombe (`standards/07` §2).
+
+**Conduite à tenir :**
+
+1. **Ne pas ré-appairer en boucle.** Un QR rescanné sur un numéro bloqué ne sert
+   à rien, et des appairages répétés sont précisément ce que WhatsApp surveille.
+   Un seul essai, depuis Admin → WhatsApp → Statut.
+2. **Regarder le téléphone du numéro appairé** : WhatsApp y affiche le blocage
+   (« Ce compte n'est pas autorisé… ») et, le cas échéant, le formulaire de
+   recours.
+3. **Prévenir les résidents par courriel** — il touche les mêmes personnes :
+   une actualité dont la Diffusion coche le courriel, qui dit que le groupe est
+   momentanément muet.
+4. **Blocage durable** : décider du repli — second canal (#1060, rendre le canal
+   remplaçable) ou courriel seul.
+
+⚠️ **Le numéro appairé et son détenteur ne s'écrivent PAS ici** : c'est une
+donnée personnelle, et un dépôt git la conserve (`standards/14`). Ils se lisent
+sur le téléphone lui-même et chez le gestionnaire du site.
+
 #### Lire l’historique des envois — trois verdicts, pas deux (19/08/2026)
 
 `Admin → WhatsApp → Historique des envois` ne dit **pas** « parti / pas parti » :
