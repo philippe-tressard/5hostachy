@@ -241,7 +241,13 @@
 		color: var(--color-text);
 		text-decoration: none;
 	}
-	.quoi a:hover,
+	@media (hover: hover) and (pointer: fine) {
+		.quoi a:hover {
+			color: var(--color-primary);
+			text-decoration: underline;
+		}
+	}
+	/*  Le focus au clavier n'est pas un survol : il reste hors du média souris. */
 	.quoi a:focus-visible {
 		color: var(--color-primary);
 		text-decoration: underline;

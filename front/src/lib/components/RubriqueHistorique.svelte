@@ -486,7 +486,9 @@
 		cursor: pointer;
 		text-align: center;
 	}
-	.evol-more:hover {
-		background: var(--color-bg);
+	@media (hover: hover) and (pointer: fine) {
+		.evol-more:hover {
+			background: var(--color-bg);
+		}
 	}
 </style>

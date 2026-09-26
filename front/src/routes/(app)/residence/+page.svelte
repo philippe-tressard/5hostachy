@@ -808,8 +808,10 @@
 		backdrop-filter: blur(4px);
 		transition: background 0.15s;
 	}
-	.photo-change-btn:hover {
-		background: rgba(0, 0, 0, 0.75);
+	@media (hover: hover) and (pointer: fine) {
+		.photo-change-btn:hover {
+			background: rgba(0, 0, 0, 0.75);
+		}
 	}
 	.photo-change-btn.uploading {
 		opacity: 0.6;

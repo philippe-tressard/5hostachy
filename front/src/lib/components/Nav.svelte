@@ -242,8 +242,10 @@
 		text-decoration: none;
 		color: inherit;
 	}
-	.brand-link:hover {
-		opacity: 0.8;
+	@media (hover: hover) and (pointer: fine) {
+		.brand-link:hover {
+			opacity: 0.8;
+		}
 	}
 
 	.brand-icon {
@@ -283,8 +285,10 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.nav-item:hover {
-		background: var(--color-bg);
+	@media (hover: hover) and (pointer: fine) {
+		.nav-item:hover {
+			background: var(--color-bg);
+		}
 	}
 	.nav-item.active {
 		background: var(--color-primary-light);
@@ -301,9 +305,11 @@
 	.nav-logout {
 		color: var(--color-text-muted);
 	}
-	.nav-logout:hover {
-		color: var(--color-danger);
-		background: #fdedec;
+	@media (hover: hover) and (pointer: fine) {
+		.nav-logout:hover {
+			color: var(--color-danger);
+			background: #fdedec;
+		}
 	}
 	/* ── Mobile topbar ─────────────────────────────────────────────────────── */
 	.mobile-topbar {
@@ -359,8 +365,10 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.overlay-item:hover {
-		background: var(--color-bg);
+	@media (hover: hover) and (pointer: fine) {
+		.overlay-item:hover {
+			background: var(--color-bg);
+		}
 	}
 	.overlay-item.active {
 		background: var(--color-primary-light);
@@ -388,8 +396,10 @@
 		border-radius: var(--radius);
 	}
 
-	.hamburger:hover {
-		background: var(--color-bg);
+	@media (hover: hover) and (pointer: fine) {
+		.hamburger:hover {
+			background: var(--color-bg);
+		}
 	}
 
 	.hb-line {

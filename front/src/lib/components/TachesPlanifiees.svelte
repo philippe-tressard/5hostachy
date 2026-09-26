@@ -452,8 +452,10 @@
 	tr.cliquable {
 		cursor: pointer;
 	}
-	tr.cliquable:hover {
-		background: var(--color-bg);
+	@media (hover: hover) and (pointer: fine) {
+		tr.cliquable:hover {
+			background: var(--color-bg);
+		}
 	}
 	tr.cliquable:focus-visible {
 		outline: 2px solid var(--color-primary);

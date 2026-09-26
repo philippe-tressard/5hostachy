@@ -309,8 +309,10 @@
 		margin-bottom: 0.3rem;
 		transition: border-color 0.12s;
 	}
-	.releve-row:hover {
-		border-left-color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.releve-row:hover {
+			border-left-color: var(--color-primary);
+		}
 	}
 	.releve-main {
 		display: flex;

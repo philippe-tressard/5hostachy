@@ -417,8 +417,10 @@
 	.pj-doc-compact {
 		font-size: 0.75rem;
 	}
-	.pj-doc:hover {
-		border-color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.pj-doc:hover {
+			border-color: var(--color-primary);
+		}
 	}
 	/* Un nom long ne doit pas pousser la carte hors de l'écran sur mobile. */
 	.pj-doc-nom {

@@ -264,9 +264,11 @@
 		border-style: dashed;
 		border-color: #fff;
 	}
-	.pastille:hover {
-		border-color: var(--color-primary);
-		color: var(--color-text);
+	@media (hover: hover) and (pointer: fine) {
+		.pastille:hover {
+			border-color: var(--color-primary);
+			color: var(--color-text);
+		}
 	}
 	.active {
 		background: var(--color-primary);

@@ -480,15 +480,19 @@
 			opacity 0.15s,
 			border-left-color 0.15s;
 	}
-	.history-item:hover {
-		opacity: 1;
+	@media (hover: hover) and (pointer: fine) {
+		.history-item:hover {
+			opacity: 1;
+		}
 	}
 	/*  ⚠️ Un ticket ARCHIVÉ porte `.history-item` et NON `.carte-liste` : la règle
 	    globale de survol ne l'atteint pas. Sans ces deux lignes, son titre serait
 	    le seul du site à ne pas répondre au survol — un écart invisible tant
 	    qu'on ne déroule pas les archives. */
-	.history-item:hover :global(.ec-titre) {
-		color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.history-item:hover :global(.ec-titre) {
+			color: var(--color-primary);
+		}
 	}
 	.history-item :global(.ec-titre) {
 		transition: color 0.12s ease;

@@ -186,9 +186,11 @@
 	.lb-suiv {
 		right: 0.75rem;
 	}
-	.lb-fermer:hover,
-	.lb-nav:hover {
-		background: rgba(0, 0, 0, 0.75);
+	@media (hover: hover) and (pointer: fine) {
+		.lb-fermer:hover,
+		.lb-nav:hover {
+			background: rgba(0, 0, 0, 0.75);
+		}
 	}
 	.lb-compteur {
 		position: absolute;

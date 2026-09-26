@@ -134,8 +134,10 @@
 		color: var(--color-text);
 		transition: border-color 0.12s;
 	}
-	.sondage-card:hover {
-		border-color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.sondage-card:hover {
+			border-color: var(--color-primary);
+		}
 	}
 	.lien-sondage {
 		position: absolute;

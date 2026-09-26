@@ -97,10 +97,12 @@
 			background 0.15s;
 		white-space: nowrap;
 	}
-	.quick-pill:hover {
-		border-color: var(--color-primary);
-		box-shadow: var(--shadow-sm);
-		background: var(--color-primary-light);
+	@media (hover: hover) and (pointer: fine) {
+		.quick-pill:hover {
+			border-color: var(--color-primary);
+			box-shadow: var(--shadow-sm);
+			background: var(--color-primary-light);
+		}
 	}
 	/*  Le lien étiré : toute la pastille reste cliquable pour la destination
 	    principale, sans imbriquer d'ancres. */
@@ -138,18 +140,22 @@
 	.quick-pill-cs {
 		border-color: #f59e0b;
 	}
-	.quick-pill-cs:hover {
-		border-color: #d97706;
-		background: #fffbeb;
+	@media (hover: hover) and (pointer: fine) {
+		.quick-pill-cs:hover {
+			border-color: #d97706;
+			background: #fffbeb;
+		}
 	}
 	/*  L'Admin se distingue du CS : deux pastilles orange côte à côte se liraient
 	    comme une seule zone, alors que ce sont deux destinations différentes. */
 	.quick-pill-admin {
 		border-color: #7c3aed;
 	}
-	.quick-pill-admin:hover {
-		border-color: #6d28d9;
-		background: #f5f3ff;
+	@media (hover: hover) and (pointer: fine) {
+		.quick-pill-admin:hover {
+			border-color: #6d28d9;
+			background: #f5f3ff;
+		}
 	}
 	.quick-count-urgent {
 		background: #dc2626;

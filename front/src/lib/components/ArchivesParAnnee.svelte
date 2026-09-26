@@ -190,9 +190,11 @@
 		color: var(--color-text);
 		margin-bottom: 0.3rem;
 	}
-	.archives-annee-entete:hover {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
+	@media (hover: hover) and (pointer: fine) {
+		.archives-annee-entete:hover {
+			border-color: var(--color-primary);
+			color: var(--color-primary);
+		}
 	}
 	.archives-annee-libelle {
 		flex: 1;

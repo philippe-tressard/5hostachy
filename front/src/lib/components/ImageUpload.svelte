@@ -56,7 +56,9 @@
 			<span class="placeholder">{placeholder}</span>
 		{/if}
 
-		<div class="overlay">
+		<!--  Visible PENDANT l'envoi, survol ou non : le spinner y vit, et au doigt
+		      il n'y a pas de survol pour le montrer (26/09/2026). -->
+		<div class="overlay" class:en-cours={uploading}>
 			{#if uploading}
 				<span class="spinner"></span>
 			{:else}
@@ -102,8 +104,10 @@
 		transition: border-color 0.2s;
 	}
 
-	.preview:hover {
-		border-color: var(--color-primary, #2563eb);
+	@media (hover: hover) and (pointer: fine) {
+		.preview:hover {
+			border-color: var(--color-primary, #2563eb);
+		}
 	}
 	.preview.circle {
 		border-radius: 50%;
@@ -134,7 +138,13 @@
 		transition: opacity 0.2s;
 	}
 
-	.preview:hover .overlay,
+	@media (hover: hover) and (pointer: fine) {
+		.preview:hover .overlay {
+			opacity: 1;
+		}
+	}
+	/*  Le focus au clavier n'est pas un survol : il reste hors du média souris. */
+	.overlay.en-cours,
 	.preview:focus-visible .overlay {
 		opacity: 1;
 	}

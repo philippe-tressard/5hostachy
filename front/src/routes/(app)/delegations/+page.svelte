@@ -333,8 +333,10 @@
 	.btn-danger {
 		border-color: var(--color-danger);
 	}
-	.btn-danger:hover {
-		background: #b91c1c;
+	@media (hover: hover) and (pointer: fine) {
+		.btn-danger:hover {
+			background: #b91c1c;
+		}
 	}
 
 	/*  🔴 L'EN-TÊTE d'une modale ne s'écrit plus ici : `Modale.svelte` le rend, et

@@ -403,8 +403,10 @@
 		padding: 0.55rem 0.8rem;
 		cursor: pointer;
 	}
-	.ref-tete:hover {
-		background: var(--color-bg);
+	@media (hover: hover) and (pointer: fine) {
+		.ref-tete:hover {
+			background: var(--color-bg);
+		}
 	}
 	.ref-titre {
 		font-size: 0.9rem;

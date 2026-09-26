@@ -326,8 +326,10 @@
 		text-decoration: none;
 		margin-top: 0.1rem;
 	}
-	.contact-email:hover {
-		text-decoration: underline;
+	@media (hover: hover) and (pointer: fine) {
+		.contact-email:hover {
+			text-decoration: underline;
+		}
 	}
 
 	.url-block {
