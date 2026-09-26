@@ -13,9 +13,8 @@ ajouté à `UserRead`, comme pour `EvolutionRead` dans les publications (#294).
 
 from __future__ import annotations
 
-from datetime import date
 
-from sqlmodel import Session, or_, select
+from sqlmodel import Session
 
 from app.models.core import Batiment, Utilisateur
 from app.schemas import UserRead
@@ -24,7 +23,7 @@ from app.utils.noms import nom_affiche
 
 
 def construire_user_read(user: Utilisateur, session: Session) -> UserRead:
-    from app.models.core import Delegation, StatutDelegation
+    from app.utils.delegations_actives import delegations_de_l_aidant
 
     batiment_nom = None
     if user.batiment_id:
@@ -32,15 +31,7 @@ def construire_user_read(user: Utilisateur, session: Session) -> UserRead:
         if bat:
             batiment_nom = libelle_batiment(bat)
     # Charger les délégations actives où l'utilisateur est aidant
-    today = date.today()
-    deleg_rows = session.exec(
-        select(Delegation).where(
-            Delegation.aidant_id == user.id,
-            Delegation.statut == StatutDelegation.active,
-            Delegation.date_debut <= today,
-            or_(Delegation.date_fin.is_(None), Delegation.date_fin >= today),
-        )
-    ).all()
+    deleg_rows = delegations_de_l_aidant(session, user.id)
     delegations_aidant = []
     for d in deleg_rows:
         mandant = session.get(Utilisateur, d.mandant_id)
