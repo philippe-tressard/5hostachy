@@ -227,18 +227,21 @@ def _affaire_suivie(session: Session, auteur_id: int) -> Ticket:
     return t
 
 
-def test_une_affaire_suivie_ne_prend_pas_de_public_vise_par_sa_suite(cs):
-    """🔴 Le public visé est celui d'une ACTUALITÉ (#1091) — 25/09/2026.
+def test_une_affaire_suivie_prend_ses_destinataires_par_sa_suite(cs):
+    """🔴 RENVERSÉ le 26/09/2026 (#1343) — ce test affirmait l'inverse la veille.
 
-    Une affaire suivie est vue de son auteur, du périmètre et du conseil ; elle
-    ne s'adresse à personne d'autre (`entites/ticket.ts`, `inactivePour.suivie`).
-    La Suite de l'écran l'offrait pourtant, et ce qu'on y choisissait s'ÉCRIVAIT
-    sur l'affaire : une valeur qu'aucun écran ne montre, et que la correction
-    efface (`chargeUtileAffaire`). L'écran ne l'offre plus ; le serveur ne
-    l'écrit plus — un onglet PWA en cache peut encore l'envoyer.
+    Le 25/09, une affaire suivie « ne s'adressait à personne » : la Suite
+    écrivait un public visé qu'aucun écran ne montrait ni ne lisait, et le
+    serveur avait cessé de l'écrire. Le lendemain, l'utilisateur : *« il n'est
+    toujours pas possible de choisir son destinataire ! c'est urgent »*. Une
+    affaire porte désormais ses Destinataires, que `ticket_visible` honore :
+    ce que la Suite choisit s'écrit, et se lit (`test_destinataires_affaire.py`).
 
-    La même Suite peut, elle, rendre l'affaire URGENTE : c'est la Mise en avant,
-    rouverte dans la Suite par le même lot.
+    ⚠️ Un client resté en cache d'AVANT le 25/09 envoyait « Tous » d'office ;
+    ceux du 25/09 au 26/09 n'envoient rien pour une affaire suivie. Le bandeau
+    de mise à jour de la PWA (`test_pwa_maj.py`) referme cette fenêtre.
+
+    La même Suite peut rendre l'affaire URGENTE : c'est la Mise en avant.
     """
     with Session(engine) as session:
         t = _affaire_suivie(session, cs.id)
@@ -251,7 +254,7 @@ def test_une_affaire_suivie_ne_prend_pas_de_public_vise_par_sa_suite(cs):
                 public_cible=["locataires"],
                 urgente=True,
             )
-            assert relue.public_cible is None
+            assert json.loads(relue.public_cible) == ["locataires"]
             assert relue.priorite == "haute"
         finally:
             _nettoyer(session, t.id)

@@ -122,9 +122,9 @@
 	//  Copies défensives : les tableaux viennent de la carte affichée, et une
 	//  sélection abandonnée y resterait visible sans avoir été enregistrée.
 	let perimetreCible: string[] = [...(ticket?.perimetre_cible ?? perimetreDefautListe())];
-	//  Ce qu'une ACTUALITÉ ajoute (#1091, #1096) : à qui l'on parle, l'Accès 🔒
-	//  sous le Périmètre, l'affiche de hall.
-	let publicCible: string[] = [...(ticket?.public_cible ?? ['résidents'])];
+	//  À qui l'on parle — une actualité (#1091, #1096) comme une affaire (#1343) :
+	//  vide, la règle de sa nature. Puis l'Accès 🔒 et l'affiche, d'une actualité.
+	let publicCible: string[] = [...(ticket?.public_cible ?? [])];
 	let reservePerimetre = ticket?.reserve_perimetre ?? false;
 	let annonceHall = false;
 	//  La DIFFUSION reprend les valeurs enregistrées ; seule la transition
@@ -164,7 +164,7 @@
 	$: inactives = sectionsInactives(etat, categorie, $isCS);
 	//  Réservée au conseil : « Confidentielle » (`brouillon` → `confidentiel`),
 	//  pour les deux natures depuis le 25/09/2026, ou Destinataires = CS seul.
-	$: reserveeAuConseil = options.brouillon || (actualite && reserveAuConseil(publicCible));
+	$: reserveeAuConseil = options.brouillon || reserveAuConseil(publicCible);
 	//  Une actualité réservée — au périmètre ou au conseil — n'a pas d'affiche.
 	$: if ((reservePerimetre || reserveeAuConseil) && annonceHall) annonceHall = false;
 	$: assistant = contexteAssistant(actualite ? 'actualité' : 'ticket', {
@@ -249,7 +249,7 @@
 			description,
 			categorie,
 			urgente: options.urgente,
-			public_cible: actualite ? publicCible : undefined,
+			public_cible: publicCible,
 			perimetre_cible: perimetreCible,
 			photos_urls: photosUrls,
 			fichiers_urls: fichiersUrls,

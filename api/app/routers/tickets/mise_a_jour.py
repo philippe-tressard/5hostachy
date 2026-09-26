@@ -247,6 +247,11 @@ def update_ticket(
             ticket.perimetre_cible = PERIMETRE_BUG
         if nature_changee:
             ticket.statut = statut_pour(ticket.categorie)
+            #  Le public visé d'une actualité ne suit pas l'affaire qu'elle
+            #  devient (#1343) : il déciderait qui la lit sans que personne l'ait
+            #  choisi pour elle. Envoyé dans la même correction, il est retenu.
+            if not est_actualite(ticket) and "public_cible" not in body.model_fields_set:
+                ticket.public_cible = None
     #  APRÈS le contenu : la récurrence dépend de la catégorie FINALE.
     changes += appliquer_intervenant(ticket, body, session, est_cs=is_cs_admin)
     #  « Quand » : planifié par le conseil seul — ignoré pour un autre, comme

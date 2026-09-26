@@ -20,17 +20,28 @@
 
   Quand l'écran dit la NATURE (`lecture`), la section répond à « qui d'autre
   la lit ? » : la pastille est son badge d'état — et son résumé, pliée —, la
-  case « Confidentielle » l'ouvre, et la phrase entière se lit dessous. Une
-  affaire n'a pas de profils à choisir : la règle est écrite à leur place.
+  case « Confidentielle » l'ouvre, et la phrase entière se lit dessous.
   Sans `lecture`, la section reste celle d'avant (sondages, événements).
+
+  ## Une affaire choisit ses destinataires (#1343, 26/09/2026)
+
+  *« il n'est toujours pas possible de choisir son destinataire ! c'est
+  urgent »* — dans toute édition. Les pastilles sont TOUJOURS là, présélection
+  faite par la nature (`destinatairesParDefaut`) ; le conseil les change à tout
+  moment. Ce qu'il laisse tel quel reste VIDE — la règle de la nature, qui
+  suivra l'affaire si elle se date —, ce qu'il change est retenu, et le
+  serveur l'applique (`ticket_visible`). « Résident concerné » y remplace la
+  case Confidentielle : l'auteur, ou la personne pour qui elle a été saisie,
+  et le conseil — c'est ce que le drapeau a toujours voulu dire sur une affaire.
 -->
 <script lang="ts">
 	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import CaseConfidentielle from '$lib/components/CaseConfidentielle.svelte';
+	import Pastille from '$lib/components/Pastille.svelte';
 	import { LIBELLE_TOUS, concerneTousLesResidents } from '$lib/destinataires';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
-	import { lectureDe, titreLecture } from '$lib/lecture';
+	import { destinatairesParDefaut, lectureDe, titreLecture } from '$lib/lecture';
 	import { perimetreRestreint, type NatureLue } from '$lib/lecture-ticket';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { relire } from '$lib/utils';
@@ -71,6 +82,17 @@
 	export let confidentiel = false;
 	export let perimetre: string[] = [];
 	export let reservePerimetre = false;
+	/**  Les destinataires d'une affaire sans choix — donnés par une Suite, qui
+	 *   n'a pas de `lecture` ; déduits de la nature sinon. `null` : aucun. */
+	export let parDefaut: string[] | null = null;
+	/** Le « Résident concerné » — l'auteur, ou pour qui elle a été saisie. */
+	export let concerne = '';
+	$: defaut = lecture && !lecture.actualite ? destinatairesParDefaut(lecture) : parDefaut;
+	const cle = (c: string[]) => [...c].sort().join();
+	/**  Vide = la règle de la nature : ce qui revient au défaut n'est pas un choix. */
+	function choisir(e: CustomEvent<string[]>) {
+		destinataires = defaut && cle(e.detail) === cle(defaut) ? [] : e.detail;
+	}
 	$: lue = relire($perimetresStore, () =>
 		lectureDe({
 			actualite: !!lecture?.actualite,
@@ -83,7 +105,7 @@
 		}),
 	);
 	$: modifiee =
-		confidentiel || ((!lecture || lecture.actualite) && !concerneTousLesResidents(destinataires));
+		confidentiel || (defaut ? destinataires.length > 0 : !concerneTousLesResidents(destinataires));
 </script>
 
 <SectionFormulaire
@@ -95,18 +117,31 @@
 	titre={SECTIONS_LIBELLE.destinataires}
 	{inactive}
 	{requis}
-	rempli={destinataires.length > 0}
+	rempli={destinataires.length > 0 || !!defaut}
 	valeurModifiee={modifiee}
 	idTitre="{idPrefixe}-destinataires-titre"
 >
-	{#if lecture}
+	{#if lecture?.actualite}
 		<CaseConfidentielle bind:coche={confidentiel} />
+	{:else if lecture}
+		<div class="concerne">
+			<Pastille active={confidentiel} icone="lock" on:click={() => (confidentiel = !confidentiel)}
+				>Résident concerné{concerne ? ` : ${concerne}` : ''}</Pastille
+			>
+		</div>
 	{/if}
-	{#if lecture && !lecture.actualite}
-		<p class="aide">
-			Pas de profils à choisir pour une affaire suivie : la règle des affaires décide, et la phrase
-			ci-dessous la dit.
-		</p>
+	{#if defaut}
+		<fieldset
+			class="field champ-large destinataires-groupe"
+			disabled={confidentiel}
+			aria-labelledby="{idPrefixe}-destinataires-titre"
+		>
+			<DestinatairePicker
+				value={destinataires.length ? destinataires : defaut}
+				titre=""
+				on:change={choisir}
+			/>
+		</fieldset>
 	{:else}
 		<!--  Les pastilles ne sont pas un contrôle labelable — `for` n'y associerait
 		      rien —, d'où le couple `id` sur le titre / `aria-labelledby` sur le
@@ -139,6 +174,9 @@
 	}
 	.destinataires-groupe:disabled {
 		opacity: 0.45;
+	}
+	.concerne {
+		margin-bottom: 0.5rem;
 	}
 	.avertissement {
 		color: var(--color-warning, #b07d1e);

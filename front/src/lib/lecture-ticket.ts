@@ -7,7 +7,7 @@
  * là-bas ; ici, on ne fait que lui fournir ses entrées.
  */
 import { concerneTous } from '$lib/perimetres';
-import { lectureDe, type Lecture } from '$lib/lecture';
+import { destinatairesParDefaut, lectureDe, type Lecture } from '$lib/lecture';
 import { estActualite } from '$lib/tickets';
 import type { Ticket } from '$lib/api';
 
@@ -24,14 +24,23 @@ export function perimetreRestreint(perimetre: string[] | null | undefined): bool
 }
 
 /** Qui lit cette affaire, telle qu'elle est enregistrée. */
+/** Ce qui décide de la lecture d'une affaire, hors de ses choix. */
+export function natureDuTicket(t: Ticket): NatureLue {
+	return { actualite: estActualite(t), datee: !!t.debut, enAg: t.statut === 'en_ag' };
+}
+
+/**  Les Destinataires qu'une Suite présélectionne sur une AFFAIRE sans choix
+ *   du conseil (#1343) — `null` pour une actualité, qui a les siens. */
+export function destinatairesParDefautDuTicket(t: Ticket): string[] | null {
+	return estActualite(t) ? null : destinatairesParDefaut(natureDuTicket(t));
+}
+
 export function lectureDuTicket(t: Ticket): Lecture {
 	return lectureDe({
-		actualite: estActualite(t),
+		...natureDuTicket(t),
 		confidentiel: t.confidentiel === true,
 		publicCible: t.public_cible,
 		perimetreRestreint: perimetreRestreint(t.perimetre_cible),
 		reservePerimetre: t.reserve_perimetre === true,
-		datee: !!t.debut,
-		enAg: t.statut === 'en_ag',
 	});
 }

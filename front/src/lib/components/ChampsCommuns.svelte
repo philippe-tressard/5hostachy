@@ -204,6 +204,8 @@
 	 *   « double trait » signalé à l'écran le 05/09/2026. */
 	export let premiere = false;
 	export let destinataires: string[] = ['résidents'];
+	/** Ceux d'une affaire sans choix, quand l'écran n'a pas de `lecture` — une Suite (#1343). */
+	export let destinatairesParDefaut: string[] | null = null;
 
 	//  ── 7. Description ────────────────────────────────────────────────────────
 	export let avecDescription = false;
@@ -428,6 +430,8 @@
 		bind:confidentiel={brouillon}
 		{perimetre}
 		{reservePerimetre}
+		parDefaut={destinatairesParDefaut}
+		concerne={nomDeLaCopie}
 	/>
 {/if}
 

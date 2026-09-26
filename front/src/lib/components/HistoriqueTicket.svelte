@@ -46,6 +46,7 @@
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { STATUT_TICKET_LABELS, STATUT_TICKET_OPTIONS, optionsVersTicket } from '$lib/tickets';
 	import { evolutionIcone } from '$lib/evolutions';
+	import { destinatairesParDefautDuTicket } from '$lib/lecture-ticket';
 	import { TICKET } from '$lib/entites/ticket';
 	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
 
@@ -242,6 +243,8 @@
 					currentStatut={statutCourant}
 					entite={TICKET}
 					affaireLiable={ticketId}
+					initialDestinataires={ticket?.public_cible ?? []}
+					destinatairesParDefaut={ticket ? destinatairesParDefautDuTicket(ticket) : null}
 					conditions={conditionsDeLaSuite(ticket)}
 					{assistant}
 					peutPreciserPerimetre={$isCS}

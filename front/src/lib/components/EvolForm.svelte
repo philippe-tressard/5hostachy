@@ -167,6 +167,7 @@
 	export let initialPerimetre: string[] = [];
 	/** Le ciblage en vigueur et son aide — voir `SectionsCiblageEvolution`. */
 	export let initialDestinataires: string[] = [];
+	export let destinatairesParDefaut: string[] | null = null; // une affaire (#1343)
 	export let aidePerimetre = '';
 	/**  Le périmètre de l’objet, et l’historique déjà écrit : ensemble ils donnent
 	 *   celui dont cette entrée HÉRITE (`perimetreHerite`) — badge et point de
@@ -233,6 +234,7 @@
 		entrees,
 		initialDestinataires,
 		initialFichiers,
+		destinatairesParDefaut !== null,
 	);
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
@@ -295,10 +297,6 @@
 	//  Le NOUVEL état complète le contexte de l'assistant — seul ce formulaire le connaît (#985).
 	$: assistantEffectif = avecNouvelEtat(assistant, evolType, nouveauStatut, statutLabels);
 	$: canSubmit = !saving && entreeEnregistrable(evolType, contenu, allFichiersUrls.length);
-
-	// Le téléversement lui-même vit dans `FichiersUpload` : trois copies de la
-	// même fonction (photo, document, fichier unifié) ne différaient que par la
-	// liste alimentée.
 
 	// ── Aperçu avant diffusion (#498) ─────────────────────────────────────────
 	//  🔴 La saisie est PASSÉE à l'appelant, elle n'est pas lue depuis l'extérieur.
@@ -447,6 +445,7 @@
 		{entite}
 		avecDestinataires={sections.destinataires}
 		bind:destinataires
+		{destinatairesParDefaut}
 	/>
 	{#if sections.miseEnAvant}
 		<!-- eslint-disable-next-line svelte/require-store-reactive-access -- le MAGASIN, pas sa valeur : les créneaux l'écrivent -->
