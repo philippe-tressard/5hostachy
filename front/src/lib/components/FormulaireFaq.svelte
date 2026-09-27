@@ -29,6 +29,7 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import { categorieSaisie, NOUVELLE_CATEGORIE, type SaisieFaq } from '$lib/faq';
+	import { FAQ } from '$lib/entites/faq';
 
 	const dispatch = createEventDispatcher<{ annule: void }>();
 
@@ -55,7 +56,8 @@
 	/** Appelé à la soumission. La page garde la décision d'enregistrer. */
 	export let onEnregistrer: () => void;
 
-	$: titreCadre = modeEdition ? 'Modifier la question' : 'Nouvelle question';
+	//  Les mots de l'entité viennent de sa déclaration (#1329) — jamais réécrits ici.
+	$: titreCadre = modeEdition ? FAQ.libelleModifier : FAQ.libelleNouveau;
 
 	//  ⚠️ Le champ se vide quand on CHOISIT « nouvelle catégorie », pour repartir
 	//  d'une saisie propre — et non quand on revient à une catégorie existante.

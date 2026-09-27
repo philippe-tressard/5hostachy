@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
+	import { FAQ } from '$lib/entites/faq';
 	import { messageErreur } from '$lib/erreurs';
 	import FormulaireFaq from '$lib/components/FormulaireFaq.svelte';
 	import CarteFaq from '$lib/components/CarteFaq.svelte';
@@ -334,7 +335,7 @@
 		{#if !reorderMode}
 			<BoutonNouveau
 				ouvert={showForm && !editingItem}
-				libelle="Nouvelle question"
+				libelle={FAQ.libelleNouveau}
 				on:basculer={openNew}
 			/>
 		{/if}
