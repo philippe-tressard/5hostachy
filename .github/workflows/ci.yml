@@ -655,6 +655,19 @@ jobs:
         # l'image — la CI doit installer exactement comme elle.
         run: npm ci --legacy-peer-deps
 
+      # Contrat HTTP du bridge WhatsApp, Baileys simulé (27/09/2026). Aucun job
+      # ne touchait `whatsapp-bridge/` : une montée d'express ou de pino y était
+      # verte par construction. Celle d'express 4 → 5 (#1289) passait un
+      # `POST /send` sans corps JSON de 400 à 500 — le banc qui l'a vu est
+      # devenu ce test. Placé ici parce que Node y est déjà installé, dans la
+      # version de l'image du bridge. `--ignore-scripts` : Baileys est simulé,
+      # aucun script d'installation n'a à s'exécuter sur le runner.
+      - name: Contrat HTTP du bridge WhatsApp (Baileys simulé)
+        working-directory: whatsapp-bridge
+        run: |
+          npm ci --omit=dev --ignore-scripts
+          npm test
+
       # Vulnérabilités connues des dépendances. Le 17/08/2026, `npm audit` en local
       # en relevait QUATRE dont une haute, quand le bandeau GitHub n'en annonçait
       # qu'une basse : Dependabot suit ses propres avis sur la branche par défaut,

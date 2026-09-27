@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test \"tests/*.test.js\""
   },
   "dependencies": {
     "baileys": "^6.7.16",
-    "express": "^4.21.0",
+    "express": "^5.2.1",
     "pino": "^9.0.0",
     "qrcode": "^1.5.4"
   }

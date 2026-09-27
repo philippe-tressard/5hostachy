@@ -271,7 +271,9 @@ app.post("/send", async (req, res) => {
   if (connectionState !== "open") {
     return res.status(503).json({ error: "WhatsApp not connected", state: connectionState });
   }
-  const { number, text, imageUrl, imageBase64 } = req.body;
+  // Express 5 (27/09/2026) : sans corps JSON, `req.body` vaut `undefined` et non
+  // plus `{}` — la déstructuration levait, et la requête rendait 500 au lieu de 400.
+  const { number, text, imageUrl, imageBase64 } = req.body ?? {};
   if (!number || !text) {
     return res.status(400).json({ error: "number and text are required" });
   }

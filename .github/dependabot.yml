@@ -58,6 +58,20 @@ updates:
         update-types: [minor, patch]
     # Les majeures ne figurent dans aucun groupe : Dependabot leur ouvre donc
     # une PR chacune, ce qui est exactement le but. Rien à déclarer pour ça.
+    ignore:
+      #  ── SQLModel 0.0.45 : les dates deviennent « aware » (27/09/2026) ──────
+      #  0.0.45 type toute colonne `datetime` en `DateTime(timezone=True)` et
+      #  REFUSE une valeur naïve : « Datetime values must have timezone
+      #  information ». Or tout le projet écrit de l'UTC NAÏF, comme la base
+      #  (`horloge.maintenant()`, CLAUDE.md). La PR #1292 était rouge pour ça
+      #  seul — le groupe mineur a été repris sans lui, sqlmodel plafonné à
+      #  0.0.44. Ce n'est pas une montée de version, c'est une décision de
+      #  modèle : annoter chaque champ `NaiveDatetime`, ou passer la base en
+      #  dates « aware ». Un « mineur » en 0.0.x n'a jamais rien promis.
+      #  LEVÉE : quand `pytest` passe avec la dernière sqlmodel sur une branche
+      #  d'essai — donc une fois l'un des deux chantiers fait.
+      - dependency-name: "sqlmodel"
+        versions: [">= 0.0.45"]
 
   # ── Frontend npm ───────────────────────────────────────────────────────────
   - package-ecosystem: npm
@@ -167,6 +181,19 @@ updates:
       bridge-securite:
         applies-to: security-updates
         update-types: [minor, patch]
+    #  Le contrat HTTP du bridge (clé, plafond du corps, codes de réponse) est
+    #  testé en CI depuis le 27/09/2026, Baileys simulé
+    #  (`whatsapp-bridge/tests/`) : une montée d'express ou de pino se juge sur
+    #  lui. Une montée de Baileys, toujours sur un envoi réel.
+    ignore:
+      #  ── Pino 10 : pas tant que Baileys exige ^9 (27/09/2026, #1287) ──────
+      #  `baileys@6.7` déclare `pino: ^9.6` et reçoit NOTRE instance de journal.
+      #  Monter pino seul installe deux pino, et fait tenir à Baileys un objet
+      #  d'une majeure qu'il ne déclare pas — pour un gain nul : pino 10 ne fait
+      #  que retirer Node 18, que personne ici n'utilise.
+      #  LEVÉE : quand `npm view baileys@latest dependencies.pino` admet ^10.
+      - dependency-name: "pino"
+        update-types: ["version-update:semver-major"]
 
   # ── Images de base Docker — ajouté le 25/09/2026 (#1050) ──────────────────
   # Les quatre images (`api`, `front`, `whatsapp-bridge`, Caddy à la racine)
@@ -180,6 +207,20 @@ updates:
       interval: monthly
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      #  ── Node 26 : pas avant qu'il soit LTS (27/09/2026, #1286 et #1290) ──
+      #  Node 26 est en phase « Current » jusqu'à son passage en LTS active,
+      #  annoncé pour la fin octobre 2026 ; Node recommande une LTS en
+      #  production. Node 22 est maintenu jusqu'au 30/04/2027 : rien ne presse.
+      #  Refermer la PR ne suffisait pas — Dependabot la rouvrirait le mois
+      #  suivant, et une PR qu'on referme chaque mois cesse d'être lue.
+      #  LEVÉE : quand `curl -s https://nodejs.org/dist/index.json | jq -r
+      #  '[.[] | select(.version | startswith("v26."))][0].lts'` ne rend plus
+      #  `false`. Alors retirer cette règle : le front et le bridge montent
+      #  ENSEMBLE (une seule image de base à rafraîchir), et la CI avec eux
+      #  (`node-version` de `ci.yml`).
+      - dependency-name: "node"
+        versions: [">= 26"]
 
   # ── Actions GitHub ─────────────────────────────────────────────────────────
   # Une action figée sur une version vulnérable a accès au dépôt et aux
