@@ -103,6 +103,11 @@
 			reservePerimetre,
 		}),
 	);
+	/*  « Rempli » (l'étoile noire) — une valeur par défaut ACTIVE en est une :
+	    la liste vide vaut « Tous », et la pastille l'affiche sélectionnée.
+	    L'étoile était rouge sur ce « Tous » (27/09/2026, signalé à l'écran :
+	    « * rouge, c'est uniquement s'il n'y a aucune valeur »).
+	    🔒 `e2e/etoile-valeur-defaut.spec.ts`. */
 	$: modifiee =
 		confidentiel || (defaut ? destinataires.length > 0 : !concerneTousLesResidents(destinataires));
 </script>
@@ -116,7 +121,7 @@
 	titre={SECTIONS_LIBELLE.destinataires}
 	{inactive}
 	{requis}
-	rempli={destinataires.length > 0 || !!defaut}
+	rempli={destinataires.length > 0 || !!defaut || concerneTousLesResidents(destinataires)}
 	valeurModifiee={modifiee}
 	idTitre="{idPrefixe}-destinataires-titre"
 >

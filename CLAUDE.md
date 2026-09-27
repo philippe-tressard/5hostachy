@@ -378,7 +378,9 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       actualités) ; le titre des archives vient d'une constante (`lint:archives`)
 - [ ] Champs requis : `<EtoileRequis vide={!champ} />` — jamais une astérisque
       tapée. Elle est **collée** au libellé et **rouge tant que le champ est
-      vide** : c'est son état, pas une décoration (#1121, 22/09/2026) — un
+      vide** : c'est son état, pas une décoration (#1121, 22/09/2026). Une
+      **valeur par défaut active** le remplit — « Tous », « aucune
+      restriction » : étoile noire (27/09/2026, `e2e/etoile-valeur-defaut`) — un
       GROUPE de champs aussi : `<LibelleGroupe titre="…" requis vide={…}>`,
       jamais `titre="… *"` (#1329, 27/09/2026). Les
       libellés de champ sont en MAJUSCULES par le style (`champs.css`), comme

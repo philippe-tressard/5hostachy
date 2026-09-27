@@ -55,6 +55,9 @@
 	);
 	/** Le motif d'extinction de la section, ou `''` (`inactivePour`, #1191). */
 	export let inactive = '';
+	/*  « Rempli » compte le défaut ACTIF (27/09/2026) : la liste vide vaut
+	    « aucune restriction », et le sélecteur l'affiche comme choisie — même
+	    règle que Destinataires. 🔒 `e2e/etoile-valeur-defaut.spec.ts`. */
 </script>
 
 <SectionFormulaire
@@ -63,7 +66,7 @@
 	titre={SECTIONS_LIBELLE.perimetre}
 	{inactive}
 	{requis}
-	rempli={perimetre.length > 0}
+	rempli={perimetre.length > 0 || estPerimetreParDefaut(perimetre)}
 	badge={badgeImpose ?? badgeCalcule}
 	valeurModifiee={!estPerimetreParDefaut(perimetre)}
 	idTitre="{idPrefixe}-perimetre-titre"

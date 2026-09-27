@@ -1164,6 +1164,15 @@ calendrier reste à 640 px, délibérément).
   cesse d'être une décoration : c'est l'**état** du champ, lisible d'un coup
   d'œil sur un formulaire de treize sections.
 
+  🔴 **Une valeur par défaut ACTIVE est une valeur** (27/09/2026, signalé à
+  l'écran : « * rouge, c'est uniquement s'il n'y a aucune valeur »). Destinataires
+  et Périmètre rangent leur défaut en liste VIDE — « Tous », « aucune
+  restriction » — que le sélecteur affiche comme choisi ; leur `rempli` le
+  compte (`concerneTousLesResidents`, `estPerimetreParDefaut`). Une section qui
+  stocke son défaut autrement que par sa valeur doit faire de même.
+  🔒 `e2e/etoile-valeur-defaut.spec.ts` (affaire et actualité, et le Titre vide
+  reste rouge — la preuve que le test voit le rouge).
+
   Un caractère ne sait pas si le champ est vide : c'est pour cela qu'il y a un
   composant. Il était écrit **trente-cinq fois** — vingt-six `<label>Titre *`
   en clair et cinq composants qui calculaient `{requis ? ' *' : ''}` —, et
