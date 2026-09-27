@@ -285,6 +285,22 @@ def peut_commenter(objet, user: Utilisateur) -> bool:
     return peut_editer(objet, user) or user.has_role(RoleUtilisateur.conseil_syndical)
 
 
+def lit_les_suites(ticket, user: Utilisateur) -> bool:
+    """Lire le fil de suivi d'une affaire : ceux qui peuvent y écrire.
+
+    Plus étroit que `ticket_visible` — un voisin qui lit l'affaire de son
+    bâtiment n'en lit pas le fil. Nommé le 27/09/2026 parce que la recherche
+    libre le pose aussi : écrit deux fois, un élargissement de l'écran aurait
+    laissé la recherche en arrière, ou l'inverse (`test_recherche_affaires.py`).
+    """
+    return peut_commenter(ticket, user)
+
+
+def lit_les_notes_internes(user: Utilisateur) -> bool:
+    """Les messages `interne` d'une affaire : le conseil syndical et l'admin."""
+    return est_moderateur(user)
+
+
 def ma_notification(
     notif_id: int,
     session: Session = Depends(get_session),

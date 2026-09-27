@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 from app.auth.deps import (
     est_moderateur,
     get_current_user,
+    lit_les_suites,
     peut_commenter,
     require_admin,
     require_cs_or_admin,
@@ -67,7 +68,7 @@ def get_evolutions(
     #  🔴 `peut_commenter` ÉLARGIT au « saisi pour » — et c'est une correction :
     #  un résident pour qui le CS a déposé un ticket ne pouvait pas lire
     #  l'historique de sa propre demande. C'est la raison d'être du champ.
-    if not peut_commenter(ticket, user):
+    if not lit_les_suites(ticket, user):
         raise HTTPException(403, "Accès refusé")
     evols = session.exec(
         select(TicketEvolution)

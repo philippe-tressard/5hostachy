@@ -149,6 +149,8 @@ _TICKETS = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "ti
 _CONTROLES = (
     "ticket_visible",
     "peut_commenter",
+    #  Le nom de `peut_commenter` quand il décide de la LECTURE du fil (27/09/2026).
+    "lit_les_suites",
     "peut_editer",
     "est_rattache_au_lot",
     "require_cs_or_admin",
