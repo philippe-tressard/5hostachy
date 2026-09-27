@@ -203,7 +203,15 @@ le contrôleur mort. Le passage qui n'a rien de neuf envoie désormais un
 « constats depuis ». Et chaque nœud contrôlant les deux, tout s'affichait deux fois :
 `portee_constat` range chaque ligne — celle qui ne nomme que ce nœud sous lui, celle
 qui ne nomme que le pair est laissée au pair, les communes sont dites par l'**actif**
-seul (`porte_communs`). Pair muet → ce nœud porte tout. Le **courriel** garde tout.
+seul (`porte_communs`). Pair muet → ce nœud porte tout. Le **courriel** garde tout
+— et part donc deux fois quand les deux nœuds voient le même fait (#1402).
+
+🔴 **Un constat propre à un nœud reste sous ce nœud** (arbitrage de Philippe, #1401).
+La règle ne tient que si le message **nomme** son nœud : un constat qui n'en nomme
+aucun est lu comme commun et n'est dit que par l'actif — écrit « Disque à 81 % »
+au lieu de « Disque $n à 81 % », il disparaîtrait de la carte du standby.
+🔒 `api/tests/test_constats_nomment_leur_noeud.py` exige `$n` dans chaque `warn`/`fail`
+des boucles qui parcourent les deux nœuds.
 
 🔴 **Pourquoi le digest existe.** L’alerte ne partait que sur `FAILS > 0`. Or **cinq**
 contrôles rendent WARN par choix assumé — C16 (cache de build), C17 (maintenance en
