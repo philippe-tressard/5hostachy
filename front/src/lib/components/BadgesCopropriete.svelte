@@ -67,6 +67,7 @@
 	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import { ACCES } from '$lib/entites/acces';
 
 	let vigiks: AccesAdmin[] = [];
 	let telecommandes: AccesAdmin[] = [];
@@ -358,7 +359,7 @@
 	<div class="bc-actions">
 		<BoutonNouveau
 			ouvert={formOuvert}
-			libelle="Enregistrer un accès"
+			libelle={ACCES.libelleNouveau}
 			on:basculer={ouvrirCreation}
 		/>
 		<!--  🔴 UN export PAR TYPE depuis le 15/09/2026, sur demande. La liste
