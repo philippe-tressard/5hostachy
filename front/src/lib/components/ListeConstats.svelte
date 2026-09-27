@@ -43,7 +43,7 @@
 		margin: 0.6rem 0 0;
 		padding: 0;
 		list-style: none;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 	/*  Le badge ne rétrécit pas : c'est le texte, souvent long, qui passe à la ligne. */
 	.constats li {

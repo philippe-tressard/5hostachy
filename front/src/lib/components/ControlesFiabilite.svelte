@@ -142,6 +142,6 @@
 		gap: 0.4rem 0.6rem;
 	}
 	.date {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 </style>
