@@ -38,7 +38,11 @@ export function etoilesEnLigne(brut) {
 				/ \*<\/(label|span)\b/.test(ligne) ||
 				/ \*<(input|select|textarea)\b/.test(ligne) ||
 				/\{\w+ \? ' \*' : ''\}/.test(ligne) ||
-				/>\s*\*\s*<\/span>/.test(ligne)
+				/>\s*\*\s*<\/span>/.test(ligne) ||
+				//  (27/09/2026, #1329) l'astérisque dans la PROP d'un composant qui
+				//  rend le libellé — `<LibelleGroupe titre="Lot(s) concerné(s) *">`,
+				//  que le composant affichait tel quel, en noir, à jamais.
+				/\b(titre|libelle)="[^"]* \*"/.test(ligne)
 			) {
 				fautes.push({ ligne: i + 1, texte: ligne.trim().slice(0, 70) });
 			}
@@ -102,6 +106,9 @@ export const CAS_ETOILES = [
 		1,
 	],
 	['seule dans un <span> stylé', 'Précisez <span style="color:red">*</span>', 1],
+	//  La prop d'un composant qui rend le libellé (27/09/2026, #1329).
+	['dans la prop titre', '<LibelleGroupe titre="Lot(s) concerné(s) *" id="x">', 1],
+	['prop requise, sans astérisque', '<LibelleGroupe titre="Lots" requis vide={!n} id="x">', 0],
 ];
 
 /** Toutes les formes refusées, pour une source. */

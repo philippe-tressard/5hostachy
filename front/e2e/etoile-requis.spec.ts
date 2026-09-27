@@ -134,3 +134,32 @@ test.describe('L’étoile dans un libellé qui ENVELOPPE son champ (#1230)', ()
 		expect(await ecart(page, 'DébutETOILE')).toBeGreaterThan(8);
 	});
 });
+
+test.describe('L’étoile d’un GROUPE de champs (#1329)', () => {
+	//  `LibelleGroupe` affichait son titre tel quel : « Copropriétaire aidé * »,
+	//  une étoile tapée, noire, qui ne savait pas si le groupe était rempli.
+	//  Depuis le 27/09/2026 elle passe par sa prop `requis`, donc par
+	//  `EtoileRequis` — et elle suit l'état des DEUX champs du groupe.
+	test('elle est portée par EtoileRequis, et rouge tant qu’un champ du groupe est vide', async ({
+		page,
+	}) => {
+		await page.goto('/auth/inscription');
+		await attendreHydratation(page);
+		await page.selectOption('#statut', 'aidant');
+
+		const titre = page.locator('#coproprietaire-aide-titre');
+		await expect(titre, 'le groupe « Copropriétaire aidé » n’est pas rendu').toBeVisible();
+		//  Une expression, pas une chaîne : Playwright normalise les espaces de
+		//  l'attendu, et ' *' deviendrait '*' — l'étoile collée, justement.
+		await expect(titre).not.toHaveText(/\s\*/);
+		const etoile = titre.locator('span[class*="requis"]');
+		await expect(etoile).toHaveCount(1);
+		const couleur = () => etoile.evaluate((n) => getComputedStyle(n).color);
+
+		const vide = await couleur();
+		await page.fill('#prenom-aide', 'Jeanne');
+		expect(await couleur(), 'un seul champ rempli : le groupe reste incomplet').toBe(vide);
+		await page.fill('#nom-aide', 'MARTIN');
+		expect(await couleur(), 'le groupe rempli : l’étoile change').not.toBe(vide);
+	});
+});

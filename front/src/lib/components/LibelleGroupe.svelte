@@ -24,14 +24,25 @@
 
   Usage :
 
-      <LibelleGroupe titre="Périmètre *" id="crag-perimetre" classe="perimetre-pills">
+      <LibelleGroupe titre="Périmètre" requis vide={!perimetre.length} id="crag-perimetre" classe="perimetre-pills">
         <Pastille active={…}>…</Pastille>
         <Pastille active={…}>…</Pastille>
       </LibelleGroupe>
 -->
 <script lang="ts">
-	/** L'intitulé affiché. Le `*` du requis s'écrit dedans, comme sur un `.field`. */
+	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+
+	/**  L'intitulé affiché — SANS astérisque : le requis passe par `requis`.
+	 *
+	 *   ⚠️ Cette ligne disait le contraire jusqu'au 27/09/2026 (« le `*` du requis
+	 *   s'écrit dedans »), cinq jours après que l'étoile est devenue un ÉTAT —
+	 *   collée et rouge tant que le groupe est vide (#1121). Les deux appelants qui
+	 *   la suivaient affichaient une étoile noire, à jamais (#1329). */
 	export let titre: string;
+	/** Le groupe est obligatoire : l'étoile `EtoileRequis` suit le titre. */
+	export let requis = false;
+	/** …et rien n'y est encore choisi : l'étoile est rouge. */
+	export let vide = false;
 	/** Racine des identifiants — le titre porte `<id>-titre`. Doit être unique. */
 	export let id: string;
 	/**  Classes du conteneur, quand le groupe a une mise en page à lui.
@@ -60,5 +71,7 @@
 	export let style = '';
 </script>
 
-<span class="libelle-groupe" id="{id}-titre">{titre}</span>
+<span class="libelle-groupe" id="{id}-titre"
+	>{titre}{#if requis}<EtoileRequis {vide} />{/if}</span
+>
 <div class={classe} role="group" aria-labelledby="{id}-titre" {style}><slot /></div>

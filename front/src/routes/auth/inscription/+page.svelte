@@ -204,7 +204,9 @@
 					      toujours (trouvé le 01/09/2026 en extrayant `FormulaireBail`). -->
 					<div class="grille-champs">
 						<LibelleGroupe
-							titre="Copropriétaire aidé *"
+							titre="Copropriétaire aidé"
+							requis
+							vide={!prenom_aide.trim() || !nom_aide.trim()}
 							id="coproprietaire-aide"
 							classe="field-row"
 						>
