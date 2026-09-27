@@ -1,5 +1,6 @@
 """Tâches de maintenance exécutables directement depuis l'API."""
 
+import json
 import os
 from datetime import timedelta
 from app.utils import horloge
@@ -169,6 +170,10 @@ def run_maintenance(history_id: int | None = None) -> None:
         end = horloge.maintenant()
         entry.statut = "erreur" if erreurs else "succes"
         entry.tokens_supprimes = tokens_supprimes
+        #  🔴 Les COMPTES, comme le rapport du script (27/09/2026, signalé à
+        #  l'écran) : l'exécution manuelle n'écrivait aucun détail, et
+        #  l'historique montrait « — » là où la hebdomadaire dit ce qu'elle a purgé.
+        entry.details = json.dumps(comptes, ensure_ascii=False)
         entry.taille_db_octets = taille_db
         entry.duree_secondes = max(1, int((end - start).total_seconds()))
         entry.erreur = " | ".join(erreurs) if erreurs else None

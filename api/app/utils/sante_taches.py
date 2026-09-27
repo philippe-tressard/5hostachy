@@ -96,6 +96,26 @@ _TOLERANCE_H = 6  # marge avant de déclarer un retard
 #: devient lisible en base.
 STATUT_EN_COURS = "en_cours"
 
+
+def sans_battements_remplaces(lignes) -> list:
+    """Les lignes d'historique, sans les battements qu'un rapport de fin remplace.
+
+    Un battement et son rapport partagent tâche, nœud, portée et heure de début.
+    Depuis le 27/09/2026 (#1367), le rapport REPREND la ligne du battement
+    (`rapports_scripts.enregistrer_rapport`) ; ce filtre sert les lignes écrites
+    avant, pour que l'historique n'affiche pas d'exécution vide en double.
+    """
+    lignes = list(lignes)
+
+    def cle(ligne):
+        return (ligne.tache, ligne.noeud, getattr(ligne, "portee", None), ligne.cree_le)
+
+    fins = {cle(ligne) for ligne in lignes if ligne.statut != STATUT_EN_COURS}
+    return [
+        ligne for ligne in lignes if not (ligne.statut == STATUT_EN_COURS and cle(ligne) in fins)
+    ]
+
+
 #: ⚠️ Au-delà de ce délai, un battement sans fin de course n'est plus « en
 #: cours » : c'est un rapport PERDU. La maintenance la plus longue tient en
 #: quelques minutes — deux heures sont larges, et le fait qu'elles soient larges
