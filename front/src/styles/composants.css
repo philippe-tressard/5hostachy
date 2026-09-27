@@ -407,10 +407,12 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 }
 /*  Les badges d'état lisent la charte (#1055). Le texte de `.badge-orange`
     prend `--color-warning-texte` : `--color-warning` y faisait 3,29 sur son
-    propre fond, sous le 4,5 d'un texte. */
+    propre fond, sous le 4,5 d'un texte ; celui de `.badge-green`
+    `--color-success-texte` (4,44 → 5,73, #1410). 🔒 lint:charte-valeurs mesure
+    le contraste de chaque badge. */
 .badge-green {
 	background: var(--color-success-fond);
-	color: var(--color-success);
+	color: var(--color-success-texte);
 }
 .badge-orange {
 	background: var(--color-warning-fond);
