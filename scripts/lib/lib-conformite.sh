@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  lib-conformite.sh — les contrôles de CONFORMITÉ de `check-reliability.sh`
-#                      (C20 à C25)
+#                      (C20 à C25, C30)
 #
 #  Extrait le 20/08/2026, au fil de l'eau : `check-reliability.sh` a dépassé son
 #  plafond en recevant C23 (les en-têtes de sécurité réellement servis), et le
@@ -15,6 +15,7 @@
 #    C22  les points d'entrée du nœud sont-ils ceux du dépôt ?
 #    C23  les en-têtes de sécurité sont-ils réellement servis ?
 #    C25  un script TIERS est-il servi dans la page publique ?
+#    C30  le nœud reçoit-il ses correctifs système ? (`lib-mises-a-jour.sh`)
 #
 #  Les contrôles restés dans `check-reliability.sh` posent l'autre question :
 #  *le service fonctionne-t-il ?* — la base, le rôle actif, le tunnel, la
@@ -190,4 +191,9 @@ conformite_verdicts() {
                  warn "Script TIERS servi à chaque résident : ${V25#TIERS:} — il n'est dans aucun fichier du dépôt, donc il vient d'un réglage d'arête (Cloudflare). Le couper, ou l'écrire dans les pages légales (#701)" ;;
     *)           warn "Scripts tiers non mesurables (page publique non reçue) — ni vert ni rouge" ;;
   esac
+
+  # ── C30. Ce nœud reçoit-il ses correctifs ? (#1378) ──────────────────────────
+  #  rpi2 n'en recevait plus depuis cinq mois, et aucun des contrôles ci-dessus ne
+  #  pouvait le voir (#1377). Collecte, décisions et messages : `lib-mises-a-jour.sh`.
+  mises_a_jour_verdicts
 }

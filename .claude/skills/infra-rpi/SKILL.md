@@ -185,6 +185,16 @@ en coupant le canal :
 La décision est **pure** (`verdict_notification`, `lib-verdicts.sh`, couverte par
 `--selftest`) ; l’envoi vit dans `lib-notification.sh`.
 
+**Troisième destinataire depuis le 27/09/2026 : l'écran.** Chaque nœud rend compte
+de ses constats à **Admin › Maintenance** (tâche `reliability`, carte « Contrôles de
+fiabilité ») — seulement quand l'ensemble des constats **change**, et au moins une
+fois par 23 h : ce battement est ce qui fait dire « Exécution manquante » d'un
+contrôleur mort. WARN seuls → statut `avertissement`, lu **« Points de vigilance »**.
+Décision pure `decision_rapport_ecran` (`lib-notification.sh --selftest`) ; le
+plafond est exigé par `test_taches_planifiees.py`. Et le contrôle de 06:00 reprend
+les tâches manquantes ou en échec, sauf ce qu'un autre canal signale déjà
+(`DEJA_SIGNALE`, `sante_taches.py`).
+
 🔴 **Pourquoi le digest existe.** L’alerte ne partait que sur `FAILS > 0`. Or **cinq**
 contrôles rendent WARN par choix assumé — C16 (cache de build), C17 (maintenance en
 retard), C19 (journal ⇆ base), C20 (sudo), C22 (points d’entrée), et depuis le

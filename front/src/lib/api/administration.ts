@@ -255,6 +255,17 @@ export const admin = {
 	},
 
 	/**
+	 *  Les derniers comptes rendus de `check-reliability.sh` (C1 à C30), tous
+	 *  nœuds confondus — lus par `ControlesFiabilite`. Même route que
+	 *  `historiqueTache`, mais TYPÉE : l'écran lit `details.constats`, et un
+	 *  `any` retypé dans l'écran est ce que `lint:types-locaux` refuse.
+	 */
+	controlesFiabilite: () =>
+		api.get<RapportFiabilite[]>(
+			`/admin/maintenance/historique${buildQuery({ tache: 'reliability', limite: '20' })}`,
+		),
+
+	/**
 	 *  Lance une tâche planifiée à la demande. Rend un 202 : c'est la PRISE EN
 	 *  COMPTE qui est confirmée, pas l'exécution.
 	 *
@@ -391,4 +402,20 @@ export interface CspReleve {
 	cles_distinctes: number;
 	plafond_atteint: boolean;
 	violations: { directive: string; bloque: string; compte: number }[];
+}
+
+/**
+ *  Un compte rendu des contrôles de fiabilité (`check-reliability.sh`).
+ *
+ *  Il n'arrive que quand l'ensemble des constats CHANGE, et au moins une fois
+ *  par jour (`lib-notification.sh`) : le plus récent d'un nœud est donc son
+ *  état courant, pas un instantané d'il y a un quart d'heure.
+ */
+export interface RapportFiabilite {
+	id: number;
+	noeud: string | null;
+	/** `succes` · `avertissement` (des WARN) · `erreur` (au moins un FAIL). */
+	statut: string;
+	cree_le: string;
+	details: { fail: number; warn: number; constats: string[] } | null;
 }

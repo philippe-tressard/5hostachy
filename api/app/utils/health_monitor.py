@@ -358,6 +358,7 @@ def _check_reference_copro(session: Session) -> list[str]:
 
 
 from app.utils.sante_modeles_email import controler as controler_modeles_email
+from app.utils.etat_taches import problemes_taches
 from app.utils.liens import base_site, nom_site
 
 
@@ -451,6 +452,10 @@ def collecter_problemes(session: Session) -> list[str]:
     problemes += _check_export_hors_site(session)
     problemes += _check_disk()
     problemes += _check_reference_copro(session)
+    #  Ce que l'écran « Santé des tâches planifiées » montre en rouge, et que
+    #  personne ne recevait (27/09/2026). Sauf ce qu'un autre canal signale déjà :
+    #  la table `DEJA_SIGNALE` de `sante_taches.py` le déclare.
+    problemes += problemes_taches(session)
     #  Ce que l'installation SERT diffère-t-il de ce que le code dit ?
     #  Une migration dont la clause WHERE ne correspond à rien réussit
     #  en ayant modifié zéro ligne, sans erreur ni trace — et le code

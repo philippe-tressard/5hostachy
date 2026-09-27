@@ -9,6 +9,7 @@
 -->
 <script lang="ts">
 	import ControleSante from '$lib/components/ControleSante.svelte';
+	import ControlesFiabilite from '$lib/components/ControlesFiabilite.svelte';
 	import IntegriteReferentielle from '$lib/components/IntegriteReferentielle.svelte';
 	import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
 </script>
@@ -16,7 +17,7 @@
 <p class="muted" style="margin-bottom:1.25rem">
 	Exécution des tâches planifiées sur les <strong>deux</strong> Raspberry&nbsp;Pi. Le nœud actif assure
 	la maintenance applicative (purges, VACUUM) ; le nœud en veille fait son hygiène locale (cache de build,
-	rotation des logs) et transmet son rapport au nœud actif.
+	rotation des logs, images de base) et transmet son rapport au nœud actif.
 </p>
 
 <!--  Les deux cartes « Sauvegarde quotidienne — historique » et « Agrégation
@@ -29,5 +30,6 @@
       profondeur d'historique y passe de 4 à 10 : retirer les cartes sans
       compenser aurait réduit en silence ce qu'un administrateur peut voir. -->
 <TachesPlanifiees />
+<ControlesFiabilite />
 <IntegriteReferentielle />
 <ControleSante />

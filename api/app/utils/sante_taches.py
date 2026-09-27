@@ -45,6 +45,11 @@ _PERIODICITE_ATTENDUE_H = {
     #  c'est ainsi qu'un contrôle meurt (standards/07 §5). Une semaine est le
     #  rythme réellement tenable ; au-delà, l'absence redevient un signal.
     "export_hors_site": 7 * 24,
+    #  Les contrôles de fiabilité (`check-reliability.sh`, */15, les deux
+    #  nœuds) ne rendent compte que quand leurs constats CHANGENT, et au moins
+    #  une fois par jour (`lib-notification.sh`, 27/09/2026) : 24 h est donc
+    #  leur battement, et son absence dit un contrôleur mort.
+    "reliability": 24,
 }
 #
 #  Même principe pour l'agrégation de TÉLÉMÉTRIE : sa propre table
@@ -96,6 +101,11 @@ _TOLERANCE_H = 6  # marge avant de déclarer un retard
 #: devient lisible en base.
 STATUT_EN_COURS = "en_cours"
 
+#: Un rapport qui a tourné et relève des POINTS DE VIGILANCE, sans échec
+#: (`check-reliability.sh` : des WARN, aucun FAIL). Ni « À jour », qui les
+#: tairait, ni « En échec », qui crierait sur un défaut de confort.
+STATUT_AVERTISSEMENT = "avertissement"
+
 
 def sans_battements_remplaces(lignes) -> list:
     """Les lignes d'historique, sans les battements qu'un rapport de fin remplace.
@@ -132,10 +142,11 @@ _DELAI_FIN_DE_COURSE_H = 2
 _GRAVITE = {
     "ok": 0,
     "en_cours": 0,
-    "erreur": 1,
-    "rapport_perdu": 2,
-    "manquante": 3,
-    "aucune_execution": 4,
+    "vigilance": 1,
+    "erreur": 2,
+    "rapport_perdu": 3,
+    "manquante": 4,
+    "aucune_execution": 5,
 }
 
 
@@ -229,6 +240,8 @@ def _sante_par_noeud(
             statut = "manquante"
         elif ligne.statut == statut_erreur:
             statut = "erreur"
+        elif ligne.statut == STATUT_AVERTISSEMENT:
+            statut = "vigilance"
         else:
             statut = "ok"
         return statut, round(age_h, 1)
@@ -365,3 +378,58 @@ def _etat_tache_a_table_propre(
         periode_h,
         _sante_par_noeud(tache, lignes_historique, periode_h, statut_erreur, maintenant),
     )
+
+
+# ── Ce que le contrôle de 06:00 signale par courriel (27/09/2026) ──────────────
+#
+#  L'écran montrait une tâche « Exécution manquante » ou « En échec », et
+#  personne n'en était prévenu : le courriel de 06:00 ne regardait que la
+#  sauvegarde et la copie hors site. Une maintenance hebdomadaire en erreur
+#  attendait donc qu'on ouvre l'écran.
+#
+#  🔴 Mais JAMAIS deux fois le même fait : plusieurs tâches ont déjà leur canal,
+#  et les répéter ici enverrait deux courriels pour un seul défaut. Ce qui est
+#  couvert ailleurs se DÉCLARE ici, avec le canal qui le couvre — une exclusion
+#  non écrite serait un oubli qui ressemble à une décision.
+#  🔒 `test_sante_taches_alerte.py` exige que chaque tâche nommée existe.
+
+#: Les états qui méritent un courriel. `vigilance` n'y est pas : c'est un point
+#: de confort, et le digest quotidien de `check-reliability` le porte déjà.
+ETATS_SIGNALES = frozenset({"erreur", "rapport_perdu", "manquante", "aucune_execution"})
+
+#: tâche → (états déjà signalés ailleurs, par quel canal). `"noeud"` couvre le
+#: retard d'UN nœud quand l'autre rend compte.
+DEJA_SIGNALE: dict[str, tuple[frozenset, str]] = {
+    "backup": (ETATS_SIGNALES | {"noeud"}, "_check_backups, dans le même courriel"),
+    "export_hors_site": (
+        ETATS_SIGNALES | {"noeud"},
+        "_check_export_hors_site, dans le même courriel",
+    ),
+    "bascule": (frozenset({"erreur"}), "bascule.sh envoie sa propre alerte à l'échec"),
+    "reliability": (
+        frozenset({"erreur", "noeud"}),
+        "check-reliability alerte de ses FAIL, et C15 de l'arrêt du contrôleur voisin",
+    ),
+}
+
+
+def anomalies_a_signaler(taches: list[dict]) -> list[str]:
+    """PURE. Les entrées de la synthèse → les lignes du courriel de 06:00.
+
+    Le nom de la tâche est son identifiant, et l'état sa clé : leurs libellés
+    vivent dans le front (`$lib/taches.ts`), et les recopier ici ferait deux
+    sources. La dernière ligne envoie à l'écran, qui les nomme.
+    """
+    lignes = []
+    for t in taches:
+        couverts = DEJA_SIGNALE.get(t["tache"], (frozenset(), ""))[0]
+        if t["statut"] in ETATS_SIGNALES and t["statut"] not in couverts:
+            lignes.append(f"Tâche planifiée « {t['tache']} » : {t['statut']}")
+        elif t.get("statut_en_retard") in ETATS_SIGNALES and "noeud" not in couverts:
+            lignes.append(
+                f"Tâche planifiée « {t['tache']} » : {t['statut_en_retard']} "
+                f"sur {t.get('noeud_en_retard') or '?'}"
+            )
+    if lignes:
+        lignes.append("Détail : Administration › Maintenance › Santé des tâches planifiées")
+    return lignes

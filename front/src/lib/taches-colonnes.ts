@@ -124,7 +124,9 @@ export const COLONNES: {
 		valeur: (l) =>
 			l.details
 				? Object.entries(l.details)
-						.map(([k, v]) => `${k}: ${v}`)
+						//  Une LISTE se compte ici : les constats des contrôles de
+						//  fiabilité se lisent en entier dans leur propre carte.
+						.map(([k, v]) => `${k}: ${Array.isArray(v) ? v.length : v}`)
 						.join(' · ')
 				: '—',
 		style: 'font-size:.72rem;color:var(--color-text-muted)',
