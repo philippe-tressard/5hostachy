@@ -171,7 +171,7 @@
 		border-left: 4px solid var(--color-success);
 		border-radius: var(--radius);
 		box-shadow: var(--shadow);
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		transform-origin: 100% 0;
 		animation: bulle-entree var(--duree-apparition) var(--ease-out);
 	}

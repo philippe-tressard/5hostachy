@@ -286,7 +286,7 @@
 		gap: 0.1rem;
 	}
 	.deleg-label {
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		color: var(--color-text-muted);
@@ -307,7 +307,7 @@
 		margin-bottom: 0.25rem;
 	}
 	.deleg-date {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 	}
 	.deleg-motif {
@@ -331,7 +331,7 @@
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.btn-danger:hover {
-			background: #b91c1c;
+			background: var(--color-danger);
 		}
 	}
 

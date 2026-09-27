@@ -200,8 +200,12 @@
 	tuiles={stats
 		? [
 				{ valeur: stats.total, libelle: 'Total' },
-				{ valeur: stats.a_rattacher, libelle: 'Lot reconnu', couleur: '#16a34a' },
-				{ valeur: stats.lot_a_preciser, libelle: 'Lot à préciser', couleur: '#d97706' },
+				{ valeur: stats.a_rattacher, libelle: 'Lot reconnu', couleur: 'var(--color-success)' },
+				{
+					valeur: stats.lot_a_preciser,
+					libelle: 'Lot à préciser',
+					couleur: 'var(--color-warning-texte)',
+				},
 				{ valeur: stats.resolu, libelle: 'Rattachés', couleur: '#2563eb' },
 				{ valeur: stats.ignore, libelle: 'Ignorés', couleur: '#6b7280' },
 			]

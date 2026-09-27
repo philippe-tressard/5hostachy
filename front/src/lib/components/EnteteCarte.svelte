@@ -351,7 +351,7 @@
 		flex-shrink: 0;
 	}
 	.ec-date {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		white-space: nowrap;
 	}

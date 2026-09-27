@@ -126,7 +126,7 @@
 		background: none;
 		border: none;
 		color: var(--color-primary);
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		font-weight: 600;
 		cursor: pointer;
 		padding: 0.1rem 0;
@@ -162,7 +162,7 @@
 	}
 	.reponse-auteur {
 		font-weight: 600;
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 	}
 	.reponse-poids {
 		font-size: var(--fs-sm);

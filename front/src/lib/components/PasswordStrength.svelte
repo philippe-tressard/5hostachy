@@ -21,16 +21,29 @@
 
 	$: score = [hasLength, hasUpper, hasDigit, hasSpecial].filter(Boolean).length;
 
-	/* Deux teintes par niveau, et ce n'est pas un oubli de factorisation : un
-	   aplat de 4 px ne se lit pas comme du texte de 12 px. Les barres gardent la
-	   couleur vive, le libellé prend la variante foncée qui atteint le rapport
-	   de contraste AA de 4,5:1 (`standards/11` §13.2) — #16a34a et #d97706 y
-	   échouaient sur fond clair. */
+	/* Deux teintes pour le niveau moyen, et ce n'est pas un oubli de
+	   factorisation : un aplat de 4 px ne se lit pas comme du texte de 12 px.
+	   La barre prend le jeton d'état, le libellé ce qui atteint le rapport AA de
+	   4,5:1 (`standards/11` §13.2) — le jeton lui-même pour le succès et le
+	   danger, `--color-warning-texte` pour l'avertissement (#1055 : la charte
+	   remplace les nuances de Tailwind ; #16a34a et #d97706 échouaient). */
 	$: jaugeCouleur =
-		score === 4 ? '#16a34a' : score === 3 ? '#d97706' : score >= 1 ? '#dc2626' : 'transparent';
+		score === 4
+			? 'var(--color-success)'
+			: score === 3
+				? 'var(--color-warning)'
+				: score >= 1
+					? 'var(--color-danger)'
+					: 'transparent';
 
 	$: libelleCouleur =
-		score === 4 ? '#15803d' : score === 3 ? '#b45309' : score >= 1 ? '#b91c1c' : 'inherit';
+		score === 4
+			? 'var(--color-success)'
+			: score === 3
+				? 'var(--color-warning-texte)'
+				: score >= 1
+					? 'var(--color-danger)'
+					: 'inherit';
 
 	$: gaugeLabel = score === 4 ? 'Fort' : score === 3 ? 'Moyen' : score >= 1 ? 'Faible' : '';
 
@@ -151,7 +164,7 @@
 		transition: color var(--duree-geste);
 	}
 	.criteria-list li.ok {
-		color: #15803d;
+		color: var(--color-success);
 	}
 	.check-icon {
 		width: 1rem;

@@ -139,7 +139,7 @@
 		font-size: var(--fs-md);
 		padding: 0.6rem 0.8rem;
 		margin: 0 0 1rem;
-		border-left: 3px solid var(--color-warning, #d97706);
+		border-left: 3px solid var(--color-warning);
 		background: var(--color-bg);
 		border-radius: var(--radius);
 	}
@@ -164,11 +164,11 @@
 		font-weight: 600;
 	}
 	.csp-libelle {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 	.csp-vigilance {
-		border-color: var(--color-warning, #d97706);
+		border-color: var(--color-warning);
 	}
 	.csp-bloque {
 		font-size: var(--fs-sm);

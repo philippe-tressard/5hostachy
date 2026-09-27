@@ -284,7 +284,7 @@
 						Description {notesOuvertes ? '▲' : '▼'}
 					</div>
 					{#if notesOuvertes}
-						<div class="rich-content" style="font-size:.875rem">
+						<div class="rich-content" style="font-size:var(--fs-base)">
 							{@html safeHtml(contrat.notes)}
 						</div>
 					{/if}
@@ -366,7 +366,7 @@
 		color: var(--color-danger);
 	}
 	.contrat-noter {
-		color: #f59e0b;
+		color: var(--color-warning-texte);
 	}
 	.contrat-detail-body {
 		padding: 0.75rem 1rem 1rem;

@@ -116,7 +116,7 @@
 						/>
 					</label>
 				</div>
-				<p style="font-size:.82rem;color:var(--color-text-muted);margin:.5rem 0 0">
+				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin:.5rem 0 0">
 					Si ce code figure dans nos imports, l'entrée sera automatiquement liée à votre compte.
 				</p>
 			</div>

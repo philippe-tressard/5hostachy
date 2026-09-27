@@ -200,13 +200,13 @@
 						>
 						<button
 							class="btn btn-outline btn-sm"
-							style="color:#d97706;border-color:#d97706"
+							style="color:var(--color-warning-texte);border-color:var(--color-warning)"
 							on:click={stopperSondage}>⏹ Stopper</button
 						>
 					{/if}
 					<button
 						class="btn btn-outline btn-sm"
-						style="color:#dc2626;border-color:#dc2626"
+						style="color:var(--color-danger);border-color:var(--color-danger)"
 						disabled={deleting}
 						on:click={supprimerSondage}>&#x1F5D1; Supprimer</button
 					>
@@ -428,7 +428,7 @@
 		color: var(--color-text-muted);
 	}
 	.resultats-masques {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 		background: var(--color-bg);
 		border-radius: var(--radius);
@@ -436,7 +436,7 @@
 		margin: 0;
 	}
 	.winner .result-bar {
-		background: var(--color-success, #22c55e);
+		background: var(--color-success);
 	}
 
 	/* Charte de respect */
@@ -449,7 +449,7 @@
 		background: #fdf3e0;
 		border: 1px solid #e8c87a;
 		border-radius: var(--radius);
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: #7a5a1a;
 		cursor: pointer;
 		line-height: 1.45;
@@ -481,7 +481,7 @@
 		margin: 0.25rem 0;
 		padding: 0.3rem 0.6rem;
 		border-left: 3px solid var(--color-primary);
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		font-style: italic;
 	}

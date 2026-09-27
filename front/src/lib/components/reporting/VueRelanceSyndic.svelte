@@ -346,7 +346,7 @@
 		white-space: nowrap;
 	}
 	.relance-titre {
-		font-size: 0.88rem;
+		font-size: var(--fs-base);
 		font-weight: 600;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -367,7 +367,7 @@
 		white-space: nowrap;
 	}
 	.relance-date-overdue {
-		color: #b45309;
+		color: var(--color-warning-texte);
 		font-weight: 600;
 	}
 
@@ -375,7 +375,7 @@
 		margin-bottom: 0.35rem;
 	}
 	.rep-aide {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin-bottom: 0.75rem;
 	}
@@ -397,10 +397,10 @@
 	}
 	.rep-de {
 		font-weight: 600;
-		font-size: 0.88rem;
+		font-size: var(--fs-base);
 	}
 	.rep-quand {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 	.rep-tickets {
@@ -412,7 +412,7 @@
 	    et les écraser collerait des paragraphes que le syndic a séparés. */
 	.rep-texte {
 		white-space: pre-wrap;
-		font-size: 0.88rem;
+		font-size: var(--fs-base);
 		margin: 0;
 	}
 </style>

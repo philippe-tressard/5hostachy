@@ -217,7 +217,7 @@
 		/>
 	{:else}
 		<div class="card" style="overflow:auto;margin-top:1rem">
-			<table class="table" style="font-size:.82rem">
+			<table class="table" style="font-size:var(--fs-md)">
 				<thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernier rapport</th></tr></thead>
 				<tbody>
 					{#each sante.taches as t (t.tache)}
@@ -355,7 +355,7 @@
 										/>
 									{:else}
 										<div class="table-wrap">
-											<table class="table" style="font-size:.78rem;margin:.25rem 0">
+											<table class="table" style="font-size:var(--fs-sm);margin:.25rem 0">
 												<thead>
 													<tr>
 														{#each colonnesVisibles(lignes) as c (c.titre)}

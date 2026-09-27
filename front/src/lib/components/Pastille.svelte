@@ -181,7 +181,7 @@
 		border: 1px solid var(--color-border);
 		border-radius: 999px;
 		background: var(--color-surface);
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		cursor: pointer;
 		color: var(--color-text-muted);
 		/*  Les propriétés NOMMÉES, jamais `all` : `all` anime aussi ce qu'une
@@ -276,7 +276,7 @@
 		border-color: var(--color-primary);
 	}
 	.petite {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		padding: 0.28rem 0.6rem;
 	}
 	.pastille-chevron {

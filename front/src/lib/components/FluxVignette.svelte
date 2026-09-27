@@ -93,7 +93,7 @@
 		border-radius: 6px;
 		background: rgba(0, 0, 0, 0.62);
 		color: #fff;
-		font-size: 0.68rem;
+		font-size: var(--fs-2xs);
 		font-weight: 600;
 		line-height: 1.35;
 	}

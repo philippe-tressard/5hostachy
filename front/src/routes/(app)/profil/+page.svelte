@@ -520,7 +520,7 @@
 				/>
 			</div>
 			<label
-				style="display:flex;align-items:center;gap:.5rem;margin-top:-.35rem;margin-bottom:.7rem;font-size:.88rem;color:var(--color-text-muted)"
+				style="display:flex;align-items:center;gap:.5rem;margin-top:-.35rem;margin-bottom:.7rem;font-size:var(--fs-base);color:var(--color-text-muted)"
 			>
 				<input type="checkbox" bind:checked={arrivantAncienResidentInconnu} />
 				Je ne sais pas
@@ -562,7 +562,7 @@
 	} /* le reste vient de la charte (#607) */
 
 	.hint {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 
@@ -570,7 +570,7 @@
 		display: grid;
 		grid-template-columns: auto 1fr;
 		gap: 0.4rem 0.75rem;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		margin-bottom: 0.25rem;
 	}
 	.info-grid dt {
@@ -587,8 +587,8 @@
 		font-size: var(--fs-md);
 	}
 	.info-yellow {
-		background: #fffbeb;
-		border: 1px solid #fde68a;
+		background: var(--color-warning-fond);
+		border: 1px solid var(--color-warning-bordure);
 	}
 	.btn-arrivant-deja {
 		background: var(--color-success);

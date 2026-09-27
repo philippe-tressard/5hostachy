@@ -83,7 +83,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	display: flex;
 	align-items: center;
 	gap: 0.4rem;
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 }
 
 .imp-toolbar {
@@ -128,7 +128,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	display: flex;
 	align-items: center;
 	gap: 0.4rem;
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 }
 
 @media (max-width: 900px) {
@@ -260,7 +260,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	border: none;
 	background: none;
 	cursor: pointer;
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 	color: var(--color-text-muted);
 	border-bottom: 2px solid transparent;
 	margin-bottom: -2px;
@@ -332,7 +332,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 }
 .kpi-card.kpi-alert {
 	border-color: var(--color-warning);
-	background: #fffbeb;
+	background: var(--color-warning-fond);
 }
 .kpi-value {
 	font-size: 2rem;
@@ -467,7 +467,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 		margin: 0 0 0.15rem;
 	}
 	.reporting-print-header p {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: #666;
 		margin: 0;
 	}
@@ -498,14 +498,14 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 		print-color-adjust: exact;
 	}
 	.kpi-card.kpi-alert {
-		border-color: #d97706 !important;
-		background: #fffbeb !important;
+		border-color: var(--color-warning) !important;
+		background: var(--color-warning-fond) !important;
 	}
 	.kpi-value {
 		color: #1e3a5f !important;
 	}
 	.kpi-card.kpi-alert .kpi-value {
-		color: #d97706 !important;
+		color: var(--color-warning-texte) !important;
 	}
 	.frise-bar-track {
 		-webkit-print-color-adjust: exact;
@@ -557,13 +557,13 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 		print-color-adjust: exact;
 	}
 	.frise-stars-bad {
-		color: #dc2626 !important;
+		color: var(--color-danger) !important;
 	}
 	.frise-stars-ok {
-		color: #f59e0b !important;
+		color: var(--color-warning-texte) !important;
 	}
 	.frise-stars-good {
-		color: #16a34a !important;
+		color: var(--color-success) !important;
 	}
 	.badge {
 		-webkit-print-color-adjust: exact;
@@ -575,7 +575,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	}
 	.report-intro {
 		color: #666 !important;
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		margin: 0 0 0.4rem !important;
 	}
 	.kpi-row {
@@ -589,16 +589,16 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 		font-size: 1.5rem !important;
 	}
 	.kpi-label {
-		font-size: 0.7rem !important;
+		font-size: var(--fs-2xs) !important;
 	}
 	.frise-row-v2 {
 		padding: 0.3rem 0 0.8rem !important;
 	}
 	.frise-row-title {
-		font-size: 0.78rem !important;
+		font-size: var(--fs-sm) !important;
 	}
 	.frise-row-dates {
-		font-size: 0.68rem !important;
+		font-size: var(--fs-2xs) !important;
 	}
 	.frise-bar-track {
 		height: 22px !important;

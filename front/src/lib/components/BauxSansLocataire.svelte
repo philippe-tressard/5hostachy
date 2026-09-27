@@ -167,7 +167,7 @@
 		margin: 0 0 1rem;
 	}
 	.bsl-titre-groupe {
-		font-size: 0.88rem;
+		font-size: var(--fs-base);
 		margin: 1rem 0 0.5rem;
 	}
 	/*  Le groupe « normal » est atténué : il ne demande aucune action, et le

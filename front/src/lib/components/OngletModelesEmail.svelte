@@ -246,8 +246,8 @@
 			<tbody>
 				{#each emailTemplates as tpl (tpl.code)}
 					<tr>
-						<td><code style="font-size:.78rem">{tpl.code}</code></td>
-						<td style="font-size:.875rem">{tpl.libelle ?? tpl.nom ?? '—'}</td>
+						<td><code style="font-size:var(--fs-sm)">{tpl.code}</code></td>
+						<td style="font-size:var(--fs-base)">{tpl.libelle ?? tpl.nom ?? '—'}</td>
 						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)">{tpl.sujet}</td>
 						<td>
 							{#if tpl.intention}<span class="badge badge-blue"
@@ -405,7 +405,7 @@
 	/>
 {:else}
 	<div class="card" style="overflow:auto;max-height:420px">
-		<table class="table" style="font-size:.82rem">
+		<table class="table" style="font-size:var(--fs-md)">
 			<thead class="sticky-head"
 				><tr><th>Date</th><th>Template</th><th>Destinataire</th><th>Sujet</th><th>Statut</th></tr
 				></thead

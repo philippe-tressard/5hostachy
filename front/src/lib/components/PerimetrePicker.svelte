@@ -435,7 +435,7 @@
 	    quatre écrans emploient la classe. La charte a été dédoublonnée dans le
 	    même lot ; sans cela, aucune des deux ne s'imposait comme LA définition. */
 	.perimetre-titre {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		font-weight: 500;
 		color: var(--color-text);
 		margin-bottom: 0.3rem;

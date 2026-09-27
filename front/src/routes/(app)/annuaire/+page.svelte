@@ -261,7 +261,7 @@
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
 	.contact-loc {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin-top: 0.1rem;
 	}

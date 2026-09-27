@@ -235,7 +235,7 @@
 			<p class="etat-erreur-acces">{erreurAcces}</p>
 		{:else if typeLot === 'parking' || typeLot === 'cave'}
 			<p
-				style="font-size:var(--fs-md);color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:.5rem .65rem;margin-bottom:.7rem"
+				style="font-size:var(--fs-md);color:var(--color-warning-texte);background:var(--color-warning-fond);border:1px solid var(--color-warning-bordure);border-radius:8px;padding:.5rem .65rem;margin-bottom:.7rem"
 			>
 				Ce bail concerne un {typeLot}. <strong>TC uniquement</strong> : les Vigik ne sont pas autorisés.
 			</p>
@@ -256,7 +256,9 @@
 			</div>
 			{#if lotsSourcesAcces.length > 1}
 				<div class="acces-filters">
-					<span style="font-size:.78rem;color:var(--color-text-muted)">Filtrer lots source :</span>
+					<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
+						>Filtrer lots source :</span
+					>
 					{#each lotsSourcesAcces as ls (ls.id)}
 						<Pastille active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}
 							>{ls.label}</Pastille
@@ -365,7 +367,7 @@
 	/*  🔴 L'échec ne ressemble PAS au vide — même teinte d'alerte que `EtatListe`
 	    en mode compact, d'où cette règle est reprise. */
 	.etat-erreur-acces {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-warning);
 		font-weight: 500;
 		padding: 0.5rem 0;

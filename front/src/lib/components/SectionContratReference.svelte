@@ -135,7 +135,7 @@
 		grid-template-columns: auto 1fr;
 		gap: 0.3rem 0.75rem;
 		margin: 0.75rem 0 0;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 	}
 	.ref-lecture dt {
 		color: var(--color-text-muted);
@@ -170,17 +170,17 @@
 		margin-top: 0.9rem;
 	}
 	.ref-renvoi {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0.6rem 0 0;
 		line-height: 1.5;
 	}
 	.ref-alerte {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		line-height: 1.5;
 		margin: 0.6rem 0 0;
 		padding: 0.5rem 0.7rem;
-		border-left: 3px solid var(--color-warning, #d97706);
+		border-left: 3px solid var(--color-warning);
 		background: var(--color-bg);
 	}
 </style>

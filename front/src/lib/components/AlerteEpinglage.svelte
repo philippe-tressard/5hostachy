@@ -56,6 +56,6 @@
 		margin: 0.3rem 0 0 1.6rem;
 		font-size: var(--fs-sm);
 		line-height: 1.4;
-		color: #92400e;
+		color: var(--color-warning-texte);
 	}
 </style>

@@ -86,7 +86,7 @@
 	.toast {
 		padding: 0.75rem 1rem;
 		border-radius: var(--radius);
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		box-shadow: var(--shadow);
 		/*  Jetons du site : 200 ms, courbe « ease-out » forte (`emil-design-eng`). */
 		animation: slide-in var(--duree-apparition) var(--ease-out);

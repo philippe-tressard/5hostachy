@@ -95,14 +95,14 @@
 	    vide y était déjà rendu ainsi, et le convertir aurait changé l'aspect de
 	    cinq sections pour un lot qui ne parle pas d'aspect. */
 	.etat-vide {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 		padding: 0.5rem 0;
 	}
 	/*  🔴 L'échec ne ressemble PAS au vide, même en compact. Couleur d'alerte du
 	    site — la même que `.alert-warning`, sans le cadre qui ferait un bloc. */
 	.etat-erreur {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-warning);
 		padding: 0.5rem 0;
 		font-weight: 500;

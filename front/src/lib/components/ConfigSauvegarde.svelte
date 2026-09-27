@@ -153,11 +153,11 @@
 		margin: 0.7rem 0 0;
 	}
 	.avertissement {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		line-height: 1.5;
 		margin: 0.7rem 0 0;
 		padding: 0.6rem 0.7rem;
-		border-left: 3px solid var(--color-warning, #d97706);
+		border-left: 3px solid var(--color-warning);
 		background: var(--color-bg);
 	}
 	.grille {

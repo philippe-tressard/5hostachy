@@ -148,7 +148,10 @@
 				<slot name="formulaire" />
 			{:else}
 				<!--  Texte AVANT les photos : une image en tête poussait le premier mot sous la ligne de flottaison. -->
-				<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">
+				<div
+					class="rich-content"
+					style="font-size:var(--fs-base);line-height:1.6;margin-bottom:.5rem"
+				>
 					{@html safeHtml(pub.description)}
 				</div>
 				{#if pieces.length}
@@ -171,7 +174,7 @@
 						{/each}
 					</div>
 				{/if}
-				<small style="color:var(--color-text-muted);font-size:.78rem">
+				<small style="color:var(--color-text-muted);font-size:var(--fs-sm)">
 					{#if pub.mis_a_jour_le}Mise à jour le {fmtDateLong(pub.mis_a_jour_le)}{:else}Publié le {fmtDateLong(
 							pub.cree_le,
 						)}{/if}{#if proprietaireNom}
@@ -194,7 +197,7 @@
 		align-items: center;
 		background: var(--color-primary);
 		color: #fff;
-		font-size: 0.65rem;
+		font-size: var(--fs-2xs);
 		padding: 0.1rem 0.35rem;
 		border-radius: 8px;
 		line-height: 1.6;
@@ -219,7 +222,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.3rem;
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		padding: 0.25rem 0.55rem;
 		background: var(--color-bg);
 		border: 1px solid var(--color-border);

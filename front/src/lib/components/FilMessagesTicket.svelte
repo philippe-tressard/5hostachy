@@ -149,7 +149,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		margin-bottom: 0.3rem;
 		flex-wrap: wrap;
 	}
@@ -157,14 +157,14 @@
 		font-size: var(--fs-md);
 	}
 	.msg-badge {
-		font-size: 0.65rem;
+		font-size: var(--fs-2xs);
 	}
 	.msg-time {
 		color: var(--color-text-muted);
 		margin-left: auto;
 	}
 	.msg-body {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		line-height: 1.55;
 		margin: 0;
 	}

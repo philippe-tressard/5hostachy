@@ -231,10 +231,10 @@
 	.assistant-precision {
 		flex: 1 1 14rem;
 		margin: 0;
-		font-size: 0.68rem;
+		font-size: var(--fs-2xs);
 	}
 	.assistant-precision input {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 	}
 	/*  La proposition se lit comme un encart : fond de surface, bordure fine,
 	    jamais le fond de saisie — ce n'est pas un champ, on ne l'édite pas ici. */
@@ -259,7 +259,7 @@
 		font-weight: 600;
 	}
 	.assistant-texte {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		line-height: 1.6;
 	}
 	.assistant-actions {

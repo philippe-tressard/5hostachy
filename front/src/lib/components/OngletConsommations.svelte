@@ -324,12 +324,12 @@
 		font-weight: 600;
 	}
 	.releve-note {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		font-style: italic;
 	}
 	.releve-index {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 	}
 	.releve-actions {
 		display: flex;

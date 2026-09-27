@@ -23,7 +23,10 @@
 </script>
 
 <!-- ── RGPD ─────────────────────────────────────────────────────────────── -->
-<section class="card" style="border-color:#fde68a;background:#fffbeb">
+<section
+	class="card"
+	style="border-color:var(--color-warning-bordure);background:var(--color-warning-fond)"
+>
 	<h2 style="font-size:var(--fs-lg);font-weight:600;margin-bottom:.5rem">Vos droits (RGPD)</h2>
 	<p style="font-size:var(--fs-sm);line-height:1.55;color:var(--color-text-muted)">
 		Conformément au RGPD, vous pouvez exercer vos droits d'accès, rectification, portabilité et

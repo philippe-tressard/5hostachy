@@ -201,10 +201,10 @@
 	.etage-divergence {
 		margin-top: 0.4rem;
 		padding: 0.45rem 0.7rem;
-		background: #fffbeb;
-		border: 1px solid #fcd34d;
+		background: var(--color-warning-fond);
+		border: 1px solid var(--color-warning-bordure);
 		border-radius: var(--radius);
-		color: #92400e;
+		color: var(--color-warning-texte);
 		font-size: var(--fs-sm);
 		line-height: 1.4;
 	}

@@ -403,7 +403,7 @@
 		flex-wrap: wrap;
 	}
 	.verdict {
-		font-size: 0.88rem;
+		font-size: var(--fs-base);
 	}
 	.verdict.ok {
 		color: var(--color-success);

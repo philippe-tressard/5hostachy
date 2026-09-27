@@ -41,7 +41,7 @@
 			<tbody>
 				{#each pages as p (p.page)}
 					<tr>
-						<td><code style="font-size:.82rem">{p.page}</code></td>
+						<td><code style="font-size:var(--fs-md)">{p.page}</code></td>
 						<td style="text-align:right;font-weight:600">{p.total}</td>
 						<td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
 						<td style="text-align:right;color:var(--color-text-muted)">
@@ -81,7 +81,7 @@
 				tableau « Utilisateurs les plus actifs ».
 			</p>
 		{/if}
-		<p class="muted" style="font-size:.78rem;margin:.5rem 0 0">
+		<p class="muted" style="font-size:var(--fs-sm);margin:.5rem 0 0">
 			Les pourcentages se rapportent aux vues des pages listées ci-dessus, pas au total du site.
 		</p>
 	</div>

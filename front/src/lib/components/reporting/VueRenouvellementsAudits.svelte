@@ -182,7 +182,7 @@
 		gap: 0.5rem;
 	}
 	.audit-year-current {
-		border-left: 3px solid #f59e0b;
+		border-left: 3px solid var(--color-warning);
 		padding-left: 0.75rem;
 	}
 

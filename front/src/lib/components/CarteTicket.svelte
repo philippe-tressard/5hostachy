@@ -410,7 +410,7 @@
 	}
 	.tk-meta {
 		color: var(--color-text-muted);
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 	}
 	/*  La marge haute du fil appartient à son hôte : la rubrique ne sait pas ce
 	    qu'elle suit. C'est cette marge que la fiche du ticket avait perdue. */

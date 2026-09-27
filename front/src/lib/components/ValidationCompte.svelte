@@ -129,7 +129,7 @@
 		font-size: var(--fs-base);
 	}
 	.vc-choix p {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0.25rem 0 0;
 	}

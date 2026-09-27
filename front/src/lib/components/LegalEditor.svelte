@@ -203,14 +203,14 @@
 	}
 
 	.field-label-text {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		font-weight: 500;
 		color: var(--color-text);
 	}
 
 	.source-btn {
 		font-family: monospace;
-		font-size: 0.78rem !important;
+		font-size: var(--fs-sm) !important;
 		letter-spacing: -0.02em;
 	}
 

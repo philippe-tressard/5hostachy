@@ -306,7 +306,7 @@
 		min-width: 0;
 	}
 	.flux-titre {
-		font-size: 0.88rem;
+		font-size: var(--fs-base);
 		font-weight: 500;
 		line-height: 1.35;
 		display: block;

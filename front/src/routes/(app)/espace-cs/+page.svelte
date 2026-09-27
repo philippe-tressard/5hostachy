@@ -1172,13 +1172,13 @@
 		flex-shrink: 0;
 	}
 	.btn-success {
-		background: #22c55e;
+		background: var(--color-success);
 		color: #fff;
 		border: none;
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.btn-success:hover:not(:disabled) {
-			background: #16a34a;
+			background: var(--color-success);
 		}
 	}
 	.btn-danger {
@@ -1186,7 +1186,7 @@
 	} /* fond et couleur : charte (#607) */
 	@media (hover: hover) and (pointer: fine) {
 		.btn-danger:hover:not(:disabled) {
-			background: #b91c1c;
+			background: var(--color-danger);
 		}
 	}
 
@@ -1303,11 +1303,11 @@
 		display: inline-flex;
 		align-items: center;
 		font-size: var(--fs-xs);
-		color: #16a34a;
-		background: #f0fdf4;
+		color: var(--color-success);
+		background: var(--color-success-fond);
 		border-radius: var(--radius);
 		padding: 0.15rem 0.45rem;
-		border: 1px solid #bbf7d0;
+		border: 1px solid var(--color-success-bordure);
 	}
 	.summary-loc {
 		font-size: var(--fs-sm);
@@ -1329,8 +1329,8 @@
 	}
 	.summary-role-badge-president {
 		color: #7c2d12;
-		background: #fffbeb;
-		border-color: #fcd34d;
+		background: var(--color-warning-fond);
+		border-color: var(--color-warning-bordure);
 	}
 	.summary-role-badge-principal {
 		color: #7a5a1a;

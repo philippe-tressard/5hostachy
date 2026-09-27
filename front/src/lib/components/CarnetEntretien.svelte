@@ -187,11 +187,11 @@
 	.retard {
 		margin: 0;
 		padding: 0.55rem 0.8rem;
-		background: #fffbeb;
-		border: 1px solid #fcd34d;
+		background: var(--color-warning-fond);
+		border: 1px solid var(--color-warning-bordure);
 		border-radius: var(--radius);
-		color: #92400e;
-		font-size: 0.88rem;
+		color: var(--color-warning-texte);
+		font-size: var(--fs-base);
 	}
 	.groupes {
 		display: flex;
@@ -255,7 +255,7 @@
 	.detail,
 	.alerte {
 		display: block;
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		line-height: 1.45;
 	}

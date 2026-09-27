@@ -188,7 +188,7 @@
 		margin-bottom: 0.8rem;
 	}
 	.field-check.danger {
-		border-left: 3px solid var(--color-warning, #d97706);
+		border-left: 3px solid var(--color-warning);
 		padding-left: 0.6rem;
 	}
 	.herite {

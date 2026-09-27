@@ -850,7 +850,7 @@
 											{:else}
 												<button
 													class="btn btn-outline btn-sm"
-													style="color:#dc2626;border-color:#dc2626"
+													style="color:var(--color-danger);border-color:var(--color-danger)"
 													on:click={() => demanderRole(u, 'conseil_syndical', 'retirer')}
 												>
 													– CS
@@ -870,7 +870,7 @@
 											{:else}
 												<button
 													class="btn btn-outline btn-sm"
-													style="color:#dc2626;border-color:#dc2626"
+													style="color:var(--color-danger);border-color:var(--color-danger)"
 													on:click={() => demanderRole(u, 'admin', 'retirer')}
 												>
 													– Admin
@@ -950,7 +950,7 @@
 			classeBoite="modal-box card modal-sm"
 			on:fermer={() => (roleEnCours = null)}
 		>
-			<p style="font-size:.875rem;margin-bottom:1rem">
+			<p style="font-size:var(--fs-base);margin-bottom:1rem">
 				{roleEnCours.action === 'ajouter' ? 'Ajouter' : 'Retirer'} le rôle
 				<strong>{libelleRole(roleEnCours.role)}</strong>
 				{roleEnCours.action === 'ajouter' ? 'à' : 'de'}
@@ -996,7 +996,7 @@
 			<p style="font-size:var(--fs-md);margin-bottom:.1rem">
 				<strong>{nomAffiche(accueilModal.user)}</strong>
 			</p>
-			<p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:.75rem">
+			<p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-bottom:.75rem">
 				Déclenche : bienvenue, consignes de copropriété, demande d'étiquette BAL (syndic), demande
 				d'interphone (CS), avec copie des démarches au résident.
 			</p>
@@ -1025,7 +1025,7 @@
 			classeBoite="modal-box card modal-sm"
 			on:fermer={() => (deleteConfirm = null)}
 		>
-			<p style="font-size:.875rem;margin-bottom:1rem">
+			<p style="font-size:var(--fs-base);margin-bottom:1rem">
 				Vous êtes sur le point de supprimer définitivement le compte de
 				<strong>{nomAffiche(deleteConfirm)}</strong> ({deleteConfirm.email}).
 				<br /><span style="color:var(--color-danger);font-size:var(--fs-sm)"
@@ -1068,30 +1068,30 @@
 								</div>
 							</td>
 							<td
-								><span style="font-size:.82rem"
+								><span style="font-size:var(--fs-md)"
 									>{LIBELLES_STATUT_ABREGE[d.statut_actuel] ?? d.statut_actuel ?? '—'}</span
 								></td
 							>
-							<td><span style="font-size:.82rem">{d.batiment_actuel ?? '—'}</span></td>
+							<td><span style="font-size:var(--fs-md)">{d.batiment_actuel ?? '—'}</span></td>
 							<td>
 								{#if d.statut_souhaite}
-									<div style="font-size:.82rem">
+									<div style="font-size:var(--fs-md)">
 										Type : <strong
 											>{LIBELLES_STATUT_ABREGE[d.statut_souhaite] ?? d.statut_souhaite}</strong
 										>
 									</div>
 								{/if}
 								{#if d.batiment_nom_souhaite}
-									<div style="font-size:.82rem">
+									<div style="font-size:var(--fs-md)">
 										Bât. : <strong>{d.batiment_nom_souhaite}</strong>
 									</div>
 								{/if}
 							</td>
 							<td
-								style="font-size:.82rem;color:var(--color-text-muted);max-width:140px;white-space:pre-wrap"
+								style="font-size:var(--fs-md);color:var(--color-text-muted);max-width:140px;white-space:pre-wrap"
 								>{d.motif ?? '—'}</td
 							>
-							<td style="font-size:.82rem;color:var(--color-text-muted)">{fmt(d.cree_le)}</td>
+							<td style="font-size:var(--fs-md);color:var(--color-text-muted)">{fmt(d.cree_le)}</td>
 							<td>
 								<div class="action-row">
 									<AccepterRefuser

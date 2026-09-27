@@ -40,7 +40,7 @@
 </script>
 
 <!-- Télémétrie opt-out -->
-<div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid #fde68a">
+<div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--color-warning-bordure)">
 	<label class="checkbox-field" style="margin-bottom:.4rem">
 		<input
 			type="checkbox"
@@ -68,7 +68,9 @@
 		/>
 		Refuser la collecte de statistiques de navigation
 	</label>
-	<p style="font-size:.78rem;color:var(--color-text-muted);margin:0 0 .75rem;padding-left:1.55rem">
+	<p
+		style="font-size:var(--fs-sm);color:var(--color-text-muted);margin:0 0 .75rem;padding-left:1.55rem"
+	>
 		Ces statistiques anonymisées permettent au gestionnaire d'identifier les fonctionnalités les
 		plus utilisées, de détecter d'éventuels problèmes de navigation et d'orienter les améliorations
 		futures vers ce qui vous est réellement utile au quotidien. Elles ne contiennent aucune donnée
@@ -119,7 +121,7 @@
 				<button
 					type="button"
 					class="btn btn-sm btn-danger"
-					style="font-size:.78rem"
+					style="font-size:var(--fs-sm)"
 					disabled={deletingTelemetrie}
 					on:click={async () => {
 						deletingTelemetrie = true;
@@ -138,7 +140,7 @@
 				<button
 					type="button"
 					class="btn btn-sm"
-					style="font-size:.78rem"
+					style="font-size:var(--fs-sm)"
 					on:click={() => (confirmDeleteTelemetrie = false)}
 				>
 					Annuler

@@ -126,7 +126,7 @@
 		opacity: 0.55;
 	}
 	.faq-a {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 		line-height: 1.55;
 	}

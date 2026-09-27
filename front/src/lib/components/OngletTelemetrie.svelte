@@ -280,7 +280,7 @@
 								>
 								<td style="text-align:right;font-weight:600">{u.total}</td>
 								<td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
-								<td style="text-align:right;font-size:.82rem;color:var(--color-text-muted)"
+								<td style="text-align:right;font-size:var(--fs-md);color:var(--color-text-muted)"
 									>{u.derniere_connexion ? fmt(u.derniere_connexion) : '—'}</td
 								>
 							</tr>
@@ -330,7 +330,7 @@
 		line-height: 1.1;
 	}
 	.tl-kpi-label {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin-top: 0.3rem;
 	}

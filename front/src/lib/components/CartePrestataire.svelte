@@ -233,7 +233,7 @@
 		gap: 0.4rem 0.75rem;
 	}
 	.prest-contact {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 	}
 	.prest-body {

@@ -192,7 +192,7 @@
 	.btn-icon-star {
 		border-color: var(--color-accent);
 		color: var(--color-accent);
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.btn-icon-star:hover {

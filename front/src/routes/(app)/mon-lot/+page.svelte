@@ -517,9 +517,9 @@
 					<div class="lpc-header">
 						<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
 						{#if lot.bail}
-							<span class="badge badge-green" style="font-size:.7rem">Occupé</span>
+							<span class="badge badge-green" style="font-size:var(--fs-2xs)">Occupé</span>
 						{:else}
-							<span class="badge badge-gray" style="font-size:.7rem">Vacant</span>
+							<span class="badge badge-gray" style="font-size:var(--fs-2xs)">Vacant</span>
 						{/if}
 					</div>
 					<div class="lpc-details">
@@ -528,10 +528,11 @@
 								? ` – ${lot.type_appartement}`
 								: ''}</span
 						>
-						{#if lot.etage !== null}<span style="font-size:.78rem;color:var(--color-text-muted)"
+						{#if lot.etage !== null}<span
+								style="font-size:var(--fs-sm);color:var(--color-text-muted)"
 								>{etageLabel(lot.etage, { suffixe: true })}</span
 							>{/if}
-						{#if lot.superficie}<span style="font-size:.78rem;color:var(--color-text-muted)"
+						{#if lot.superficie}<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
 								>{lot.superficie} m²</span
 							>{/if}
 					</div>
@@ -570,11 +571,11 @@
 						<div class="loc-contact">
 							{#if premierBail.locataire_email}<a
 									href="mailto:{premierBail.locataire_email}"
-									style="color:var(--color-primary);font-size:.82rem"
+									style="color:var(--color-primary);font-size:var(--fs-md)"
 									>📬 {premierBail.locataire_email}</a
 								>{/if}
 							{#if premierBail.locataire_telephone}<span
-									style="font-size:.82rem;color:var(--color-text-muted)"
+									style="font-size:var(--fs-md);color:var(--color-text-muted)"
 									>📞 {premierBail.locataire_telephone}</span
 								>{/if}
 						</div>
@@ -585,12 +586,14 @@
 							{#if lot}
 								<div class="loc-lot-row">
 									<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
-									<span class="badge badge-gray" style="font-size:.7rem;text-transform:capitalize"
+									<span
+										class="badge badge-gray"
+										style="font-size:var(--fs-2xs);text-transform:capitalize"
 										>{lot.type.replace('_', ' ')}{lot.type_appartement
 											? ` – ${lot.type_appartement}`
 											: ''}</span
 									>
-									<span style="font-size:.78rem;color:var(--color-text-muted)"
+									<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
 										>Depuis le {fmt(bail.date_entree)}{bail.date_sortie_prevue
 											? ` · Sortie prévue ${fmt(bail.date_sortie_prevue)}`
 											: ''}</span
@@ -761,7 +764,7 @@
 	    duplication à retirer — l'écran partirait nu. */
 	.lbc-lot-badge {
 		font-weight: 700;
-		font-size: 0.92rem;
+		font-size: var(--fs-lg);
 	}
 	/* Lot tabs (multi-lot selector) */
 	.lot-tabs {
@@ -776,7 +779,7 @@
 		background: var(--color-bg);
 		border-radius: var(--radius);
 		cursor: pointer;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text);
 	}
 	.lot-tabs button.active {
@@ -790,7 +793,7 @@
 		display: grid;
 		grid-template-columns: auto 1fr;
 		gap: 0.4rem 0.8rem;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 	}
 	.details-grid dt {
 		font-weight: 500;
@@ -801,7 +804,7 @@
 	}
 	/* Bailleur lot cards */
 	.lots-section-label {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
@@ -851,7 +854,7 @@
 		gap: 0.35rem;
 	}
 	.lot-possede-card.lot-occupe {
-		border-left: 3px solid var(--color-success, #22c55e);
+		border-left: 3px solid var(--color-success);
 	}
 	.lot-possede-card.lot-vacant {
 		border-left: 3px dashed var(--color-border);
@@ -870,7 +873,7 @@
 		align-items: center;
 	}
 	.lpc-occupant {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 	}
 

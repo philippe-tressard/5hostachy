@@ -411,7 +411,7 @@
 		border-radius: var(--radius);
 		background: var(--color-bg-alt, #f5f5f5);
 		color: var(--color-primary);
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		text-decoration: none;
 	}
 	.pj-doc-compact {

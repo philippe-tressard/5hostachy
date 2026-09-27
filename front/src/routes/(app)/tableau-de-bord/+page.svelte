@@ -682,9 +682,9 @@
 		}
 	}
 	.consignes-card.consignes-prominent {
-		background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-		border-color: #f59e0b;
-		border-left-color: #f59e0b;
+		background: var(--color-warning-fond);
+		border-color: var(--color-warning);
+		border-left-color: var(--color-warning);
 		/*  Mise en avant FIXE (26/09/2026) : elle pulsait à chaque visite, sans fin. */
 	}
 	.consignes-icon {
@@ -696,29 +696,20 @@
 		min-width: 0;
 	}
 	.consignes-titre {
-		font-size: 0.88rem;
+		font-size: var(--fs-base);
 		font-weight: 600;
 		color: var(--color-primary);
 		display: block;
-	}
-	.consignes-prominent .consignes-titre {
-		color: #92400e;
 	}
 	.consignes-sub {
 		font-size: var(--fs-xs);
 		color: var(--color-text-muted);
 		line-height: 1.3;
 	}
-	.consignes-prominent .consignes-sub {
-		color: #78350f;
-	}
 	.consignes-arrow {
 		flex-shrink: 0;
 		color: var(--color-primary);
 		opacity: 0.6;
-	}
-	.consignes-prominent .consignes-arrow {
-		color: #92400e;
 	}
 
 	/* Les styles de la rangée de raccourcis sont partis avec leur balisage dans
@@ -739,11 +730,11 @@
 
 	/* ═══ ALERTES URGENTES ═════════════════════════════════════════════ */
 	.urgence-fieldset {
-		border: 2px solid var(--color-danger, #dc2626);
+		border: 2px solid var(--color-danger);
 		border-radius: var(--radius);
 		padding: 1rem 1.15rem 0.9rem;
 		margin-bottom: 1rem;
-		background: #fef2f2;
+		background: var(--color-danger-fond);
 		position: relative;
 		cursor: pointer;
 		transition:
@@ -752,20 +743,22 @@
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.urgence-fieldset:hover {
-			background: #fee2e2;
-			box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+			/*  Un cran plus soutenu que le fond : les deux nuances de Tailwind
+			    (#fef2f2, #fee2e2) sont devenues le même jeton (#1055). */
+			background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+			box-shadow: 0 2px 8px color-mix(in srgb, var(--color-danger) 15%, transparent);
 		}
 	}
 	.urgence-fieldset:focus-visible {
-		outline: 2px solid #dc2626;
+		outline: 2px solid var(--color-danger);
 		outline-offset: 2px;
 	}
 	.urgence-legend {
 		font-size: var(--fs-2xs);
 		font-weight: 700;
 		letter-spacing: 0.06em;
-		color: #dc2626;
-		background: #fef2f2;
+		color: var(--color-danger);
+		background: var(--color-danger-fond);
 		padding: 0 0.5rem;
 		text-transform: uppercase;
 	}
@@ -790,20 +783,20 @@
 		flex-wrap: wrap;
 	}
 	.urgence-titre {
-		font-size: 0.92rem;
+		font-size: var(--fs-lg);
 		color: var(--color-text);
 	}
 	.urgence-perimetre {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 	}
 	.urgence-horaire {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0;
 	}
 	.urgence-concerne {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-primary);
 		font-weight: 500;
 		margin: 0;
@@ -828,7 +821,7 @@
 		transition: width var(--duree-apparition) var(--ease-out);
 	}
 	.urgence-progress-bar.urgence-active {
-		background: #dc2626;
+		background: var(--color-danger);
 	}
 	.urgence-progress-label {
 		font-size: var(--fs-xs);

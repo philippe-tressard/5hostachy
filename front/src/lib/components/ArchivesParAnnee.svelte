@@ -152,7 +152,7 @@
 <style>
 	.archives-vide {
 		color: var(--color-text-muted);
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		margin: 0.5rem 0 0;
 	}
 	.archives-compte {
@@ -161,7 +161,7 @@
 		justify-content: center;
 		background: var(--color-primary);
 		color: white;
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		font-weight: 700;
 		padding: 0.15rem 0.5rem;
 		border-radius: 12px;
