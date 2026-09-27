@@ -71,7 +71,7 @@
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
 	import { PUBLICATION } from '$lib/entites/publication';
-	import { motifWhatsappInterdit } from '$lib/options-publication';
+	import { GLYPHE_URGENCE, motifWhatsappInterdit } from '$lib/options-publication';
 	import { reserveAuConseil } from '$lib/destinataires';
 	import { confirmer } from '$lib/confirmation';
 	import {
@@ -358,7 +358,7 @@
       `priorite = haute` — pour le résident aussi, désormais. -->
 {#if !modeEdition && !actualite && options.urgente}
 	<div class="alert alert-error largeur-saisie" style="margin-bottom:1rem">
-		&#x1F6A8; <strong>Urgent</strong> — Le conseil syndical et le syndic seront notifiés
+		{GLYPHE_URGENCE} <strong>Urgent</strong> — Le conseil syndical et le syndic seront notifiés
 		immédiatement. En cas de danger immédiat, composez le
 		<strong>15 (SAMU), 17 (Police) ou 18 (Pompiers)</strong>.
 	</div>

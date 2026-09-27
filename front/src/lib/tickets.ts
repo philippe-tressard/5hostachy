@@ -16,6 +16,7 @@
 //  `api/tests/test_statuts_tickets.py` échoue si les deux divergent.
 
 import {
+	GLYPHE_URGENCE,
 	optionsActives,
 	type CleOptionPublication,
 	type OptionPublication,
@@ -400,7 +401,8 @@ export function optionsVersTicket(options: {
 const PRIORITE = parAttribut({
 	basse: { libelle: 'Priorité basse', bref: '', badge: 'badge-gray' },
 	normale: { libelle: 'Priorité normale', bref: '', badge: 'badge-gray' },
-	haute: { libelle: 'Priorité haute', bref: '⚡ Urgente', badge: 'badge-orange' },
+	//  Le glyphe est LU dans la table des options : il n'y est écrit qu'une fois.
+	haute: { libelle: 'Priorité haute', bref: `${GLYPHE_URGENCE} Urgente`, badge: 'badge-orange' },
 });
 
 /** « Priorité haute » — la forme longue, pour une fiche. */

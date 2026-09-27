@@ -42,6 +42,7 @@
   non-responsabilité — est inchangé **au mot près**. Seul l'objet nommé change.
 -->
 <script lang="ts">
+	import { GLYPHE_URGENCE } from '$lib/options-publication';
 	//  Replié par défaut : l'avertissement doit être accessible en permanence sans
 	//  occuper l'écran de quelqu'un qui vient consulter ses affaires.
 	let disclaimerOpen = false;
@@ -53,13 +54,15 @@
 		on:click={() => (disclaimerOpen = !disclaimerOpen)}
 		aria-expanded={disclaimerOpen}
 	>
-		<span class="urgence-disclaimer-title">&#x1F6A8; Affaires urgentes — Avertissement légal</span>
+		<span class="urgence-disclaimer-title"
+			>{GLYPHE_URGENCE} Affaires urgentes — Avertissement légal</span
+		>
 		<span class="urgence-disclaimer-chevron">{disclaimerOpen ? '▲' : '▼'}</span>
 	</button>
 	{#if disclaimerOpen}
 		<p>
-			Le dépôt d'une affaire marquée <strong>🚨 Urgent</strong> dans cette application a pour seul
-			objet la
+			Le dépôt d'une affaire marquée <strong>{GLYPHE_URGENCE} Urgent</strong> dans cette application
+			a pour seul objet la
 			<strong>traçabilité de votre signalement</strong>. Il ne constitue ni un moyen d'alerte des
 			secours, ni un engagement de prise en charge dans un délai déterminé, ni une garantie de
 			résultat de la part du conseil syndical ou du syndicat des copropriétaires.

@@ -196,7 +196,7 @@
 										on:click={() => affecterAuto(bail)}
 										title="Affecter automatiquement les accès recommandés"
 									>
-										⚡ Auto
+										🪄 Auto
 									</button>
 									<!--  Le MODE se lit sur le bouton qui l'a ouvert
 									      (`aria-pressed`, `ux-patterns` §13 bis). -->
