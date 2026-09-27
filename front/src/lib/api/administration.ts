@@ -444,6 +444,18 @@ export interface RapportFiabilite {
 	noeud: string | null;
 	/** `succes` · `avertissement` (des WARN) · `erreur` (au moins un FAIL). */
 	statut: string;
+	/** Depuis quand ces constats tiennent : l'heure du dernier CHANGEMENT. */
 	cree_le: string;
-	details: { fail: number; warn: number; constats: string[] } | null;
+	/** Le dernier passage du contrôleur — prolongé à chaque quart d'heure (#1396). */
+	terminee_le: string | null;
+	details: {
+		fail: number;
+		warn: number;
+		/** Les constats qui ne nomment que CE nœud (depuis #1396 ; tous, avant). */
+		constats: string[];
+		/** Ceux qui portent sur les deux nœuds — dits par l'actif seul. */
+		communs?: string[];
+		/** Ce nœud porte-t-il les communs ? Absent d'un rapport d'avant #1396. */
+		porte_communs?: boolean;
+	} | null;
 }

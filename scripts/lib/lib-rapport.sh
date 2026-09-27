@@ -136,6 +136,20 @@ except Exception as e:
 # API en marche : un process tiers qui ouvre `app.db`, la règle d'or enfreinte
 # chaque dimanche. Il les DEMANDE désormais à l'API, qui les fait dans son
 # process et rend les comptes.
+#  « J'ai tourné, et rien n'a changé » : prolonge le dernier rapport du nœud sans
+#  créer de ligne (#1396). Le code HTTP reste lisible dans RAPPORT_HTTP — un 404
+#  dit qu'il n'y a rien à prolonger, et l'appelant renverra un rapport complet.
+rapport_battement() { # $1=url_base $2=clé $3=tâche $4=nœud
+    RAPPORT_HTTP=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
+        -X POST "${1:-}/api/admin/maintenance/battement" \
+        -H "Content-Type: application/json" \
+        -H "x-maintenance-key: ${2:-}" \
+        -d "$(printf '{"tache":"%s","noeud":"%s"}' "$(rapport_echapper "${3:-}")" "$(rapport_echapper "${4:-}")")" \
+        2>/dev/null) || RAPPORT_HTTP="000"
+    [ "$RAPPORT_HTTP" = "200" ] || log "  ⚠ Battement ${3:-} non enregistré sur ${1:-} (HTTP $RAPPORT_HTTP)"
+    return 0
+}
+
 rapport_purges() { # $1=url_base $2=clé → corps JSON sur stdout, code 1 si ≠ 200
     local base="${1:-}" cle="${2:-}" corps http
     [ -n "$base" ] && [ -n "$cle" ] || return 1

@@ -195,6 +195,16 @@ plafond est exigé par `test_taches_planifiees.py`. Et le contrôle de 06:00 rep
 les tâches manquantes ou en échec, sauf ce qu'un autre canal signale déjà
 (`DEJA_SIGNALE`, `sante_taches.py`).
 
+**Deux heures, et chaque constat une fois** (#1396, 27/09/2026). L'écran affichait
+l'heure du dernier **changement**, et « rapport de 17:06 » lu à 17:29 a fait croire
+le contrôleur mort. Le passage qui n'a rien de neuf envoie désormais un
+**battement** (`POST /admin/maintenance/battement`) : il avance `terminee_le`
+(« dernier contrôle ») de la ligne existante, sans en créer — `cree_le` reste
+« constats depuis ». Et chaque nœud contrôlant les deux, tout s'affichait deux fois :
+`portee_constat` range chaque ligne — celle qui ne nomme que ce nœud sous lui, celle
+qui ne nomme que le pair est laissée au pair, les communes sont dites par l'**actif**
+seul (`porte_communs`). Pair muet → ce nœud porte tout. Le **courriel** garde tout.
+
 🔴 **Pourquoi le digest existe.** L’alerte ne partait que sur `FAILS > 0`. Or **cinq**
 contrôles rendent WARN par choix assumé — C16 (cache de build), C17 (maintenance en
 retard), C19 (journal ⇆ base), C20 (sudo), C22 (points d’entrée), et depuis le
