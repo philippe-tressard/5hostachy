@@ -48,7 +48,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 1 | **Le geste de dépliage est asymétrique** — carte repliée : clic n'importe où ; carte dépliée : **seul le titre** replie | §3 |
 | 2 | **Le survol colore le TITRE**, jamais le fond du bloc, et **sans soulignement** | §3 |
 | 3 | **Le liseré gauche** de `.carte-liste` qui passe au bleu est **la référence** — sauf sur le fil, où il porte déjà la couleur du type | §3 |
-| 4 | **L'en-tête de carte** : titre sur sa ligne, puis tags à gauche / date + actions + chevron à droite, **sur une seule ligne** | §3 |
+| 4 | **L'en-tête de carte** : titre sur sa ligne, puis tags à gauche / date + actions + chevron à droite, **sur une seule ligne** — sauf au téléphone quand elle déborde : elle passe à la ligne, la date sur la dernière (27/09/2026, l'auteur s'y lisait « ✍️ Jear ») | §3 |
 | 5 | **Ordre des icônes : 🔗 🔄 ✏️ 🗑️**, dans l'en-tête et jamais dans le corps — le 🔗 en tête parce qu'il est le seul que tout le monde a | §3 |
 | 6 | **Le mode se lit sur l'icône** qui a ouvert le formulaire (`aria-pressed`), jamais sur un titre au-dessus | §13 bis |
 | 7 | **Section 1 = le titre SEUL** ; ce qui qualifie l'objet est en section 2 | §0 |
@@ -668,7 +668,10 @@ de quoi elle parlait.
   puis coupé) ;
 - puis l'**aperçu**, **trois** lignes (`.clamp-3`) ;
 - **en dernier** : tags à gauche (workflow, périmètre, confidentiel, auteur),
-  **date à droite**.
+  **date à droite**. Au bureau la ligne défile si elle déborde ; **au téléphone
+  (≤ 767 px) elle passe à la ligne**, date alignée sur la dernière — la barre de
+  défilement masquée cachait l'auteur (27/09/2026, arbitré à l'écran ;
+  🔒 `e2e/ligne-pastilles.spec.ts`).
   🔒 **Toute la ligne est à UNE taille**, celle d'un `.badge` (0,75 rem), posée
   sur `.ec-tags` et héritée : état, périmètre, pastille de lecture, numéro,
   auteur. Ils en avaient quatre (#1308). `lint:entete-carte` refuse une autre

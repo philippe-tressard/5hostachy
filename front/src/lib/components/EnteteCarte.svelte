@@ -256,7 +256,16 @@
 
 	    Les tags DÉFILENT horizontalement plutôt que de se replier : rien n'est
 	    perdu, la date et les actions restent ancrées à droite, et la carte garde
-	    sa hauteur. Même parti que la barre de filtres de /prestataires. */
+	    sa hauteur. Même parti que la barre de filtres de /prestataires.
+
+	    🔴 SAUF AU TÉLÉPHONE, quand la ligne déborde (27/09/2026, arbitré à
+	    l'écran). « Rien n'est perdu » n'était vrai qu'en théorie : la barre de
+	    défilement est masquée, et le dernier élément de la ligne — l'AUTEUR,
+	    depuis que `PastillesAffaire` fait la norme — se lisait « ✍️ Jear ». Sur
+	    une carte chargée (état, périmètre, lecteurs, ⚡, numéro, auteur, date),
+	    aucune largeur de téléphone ne suffit. La ligne y passe donc à la ligne,
+	    et seulement quand il le faut ; la date s'aligne sur la dernière.
+	    🔒 `e2e/ligne-pastilles.spec.ts` : rien ne sort de la ligne. */
 	.ec-meta {
 		margin-top: 0.22rem;
 		display: flex;
@@ -345,6 +354,17 @@
 		font-size: 0.78rem;
 		color: var(--color-text-muted);
 		white-space: nowrap;
+	}
+	/*  Au téléphone, la ligne se replie au lieu de défiler — voir `.ec-meta`. */
+	@media (max-width: 767px) {
+		.ec-meta {
+			align-items: flex-end;
+		}
+		.ec-tags {
+			flex-wrap: wrap;
+			row-gap: 0.25rem;
+			overflow-x: visible;
+		}
 	}
 
 	/*  Cible tactile sur les actions (socle 11 §10) : sous 480 px, les icônes
