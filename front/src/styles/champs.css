@@ -48,7 +48,8 @@
     ⚠️ `:not(.pastille)` (23/09/2026) : une pastille RADIO est un `<label>`, et
     la règle la passait en capitales — « EN MON NOM » dans « Au nom de »,
     signalé à l'écran. Une pastille est une valeur, pas un libellé de champ. */
-.field label:not(.pastille) {
+.field label:not(.pastille),
+.libelle-groupe {
 	font-size: 0.875rem;
 	font-weight: 500;
 	color: var(--color-text);
@@ -67,12 +68,16 @@
     — c'est le même objet à l'écran, seule l'attache change.
 
     ⚠️ Elle vit ICI et non dans les six pages qui l'emploient : une notion
-    partagée écrite dans une page est nue partout ailleurs (#562). */
+    partagée écrite dans une page est nue partout ailleurs (#562).
+
+    🔴 « Même rendu » était une affirmation, pas un fait, jusqu'au 27/09/2026 :
+    cette règle RECOPIAIT celle de `.field label` sans ses capitales ni son
+    espacement — « Copropriétaire aidé » en minuscules entre « PROFIL
+    D'UTILISATEUR » et « MOT DE PASSE », relevé en production (#1329). Elle
+    partage désormais la déclaration ci-dessus ; ne reste ici que ce qui lui
+    est propre. */
 .libelle-groupe {
 	display: block;
-	font-size: 0.875rem;
-	font-weight: 500;
-	color: var(--color-text);
 }
 /*  🔴 DANS UNE SECTION, un libellé de champ se lit UN CRAN SOUS le titre de
     sa section (23/09/2026, arbitré à l'écran). Il était PLUS GRAND que lui —
