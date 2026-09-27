@@ -82,6 +82,16 @@ const { libelle, aide, classe } = parAttribut({
 			'clé de maintenance ou du format de la charge utile, pas du côté de la tâche.',
 		classe: 'badge-orange',
 	},
+	//  Les contrôles de fiabilité ont tourné et relèvent des WARN, sans FAIL
+	//  (27/09/2026). Orange : ni « À jour », qui les tairait, ni rouge, qui
+	//  crierait sur un point de confort. Leur liste est dans la carte voisine.
+	vigilance: {
+		libelle: 'Points de vigilance',
+		aide:
+			'Le dernier rapport relève des points à surveiller, sans échec. ' +
+			'Leur liste est dans « Contrôles de fiabilité », plus bas.',
+		classe: 'badge-orange',
+	},
 	manquante: {
 		libelle: 'Exécution manquante',
 		aide: 'Aucun rapport depuis plus longtemps que la périodicité de la tâche.',

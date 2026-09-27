@@ -36,9 +36,12 @@
 - **Administration** — Paramétrage site, comptes, sauvegardes, SMTP, WhatsApp, **assistant IA** (un bloc commun — fournisseur, clé, adresse, délai — et un bloc par usage — modèle, prompt modifiable, plafond, activation, test — : synthèse de contrat, rédaction d'une description, et **mise en forme automatique des réponses du syndic reçues par courriel**, le texte reçu restant consultable ; la clé n'est jamais renvoyée par l'API)
 - **Périmètres** — arborescence de la copropriété (bâtiments et leurs espaces, parking, AFUL, espaces verts, cheminements, locaux techniques) servant à localiser affaires, actualités, **sondages** et annonces. Sa **pastille prend la couleur de son bâtiment** : « Ascenseur » du bâtiment 1 porte la teinte du bâtiment 1, partout où elle s'affiche — on lit *où ça se passe* sans lire le libellé. Sur une affaire, il n'est pas figé à l'ouverture : une entrée du fil de suivi peut le **préciser** à mesure qu'on cherche, et l'historique garde la trace du resserrement. Entièrement éditable depuis l'administration, sans déploiement. Le périmètre dit *de quoi* il s'agit, pas *qui peut lire* — sauf sur une actualité **🔒 Réservée au périmètre sélectionné**, où il redevient restrictif (lecture réservée au périmètre visé, affiche de hall alors impossible) — et sur une affaire suivie, qui l'est d'office
 - **WhatsApp** — Notifications automatiques programmées vers le groupe de la résidence. ⚠️ Le pont passe par un client non officiel (Baileys) : WhatsApp peut déconnecter ou **bloquer le numéro** appairé ; le contrôle quotidien distingue ce cas d'une coupure ordinaire, et le courriel reste le canal de repli (conduite à tenir : `.claude/skills/infra-rpi`)
-- **Maintenance** — Tâches automatiques (purge tokens, archivage, logs) + déclenchement manuel,
+- **Maintenance** — Tâches automatiques (purge tokens, archivage, logs, **images de base des
+  conteneurs re-tirées chaque semaine**) + déclenchement manuel ; les **contrôles de fiabilité**
+  des deux nœuds (C1 à C30, dont les **mises à jour système**) avec leurs constats en cours ;
   et le **contrôle de santé quotidien** (base, WhatsApp, sauvegardes, copie hors site, disque,
-  modèles d'e-mail) relançable à la demande depuis l'écran
+  modèles d'e-mail, **tâches planifiées manquantes ou en échec**) relançable à la demande depuis
+  l'écran
 - **Liens partageables** — Chaque onglet et sous-onglet a son **adresse propre** (`/annonces`, `/idees`, `/tickets/kanban`, `/mon-lot/location/archives`…) : l'adresse du navigateur suit ce qu'on regarde, elle se copie et s'envoie. Chaque publication porte une icône 🔗 qui copie **son** lien — annonce, actualité, affaire, idée, sondage, question de FAQ, document, rapport de diagnostic, contrat, prestataire. Le lien n'ouvre aucun droit : le destinataire doit être connecté et ne voit que ce qui le concerne. Les anciennes adresses (`?onglet=…`) restent servies, en redirection permanente
 
 ## Captures d'écran

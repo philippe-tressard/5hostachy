@@ -119,6 +119,10 @@ except Exception as e:
         -H "Content-Type: application/json" \
         -H "x-maintenance-key: $cle" \
         -d "$charge" 2>/dev/null) || http="000"
+    #  Le code reste LISIBLE par l'appelant qui en a besoin (`rapporter_verdicts`
+    #  ne mémorise un envoi que s'il a abouti). Pas par le code de retour : cette
+    #  fonction rend 0 exprès, et `maintenance.sh` tourne sous `set -e`.
+    RAPPORT_HTTP="$http"
     if [ "$http" = "201" ]; then
         log "  → $libelle enregistré sur $base (HTTP $http)"
     else

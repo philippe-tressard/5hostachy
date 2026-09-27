@@ -512,6 +512,7 @@ jobs:
           bash scripts/lib/lib-rapport.sh           --selftest
           bash scripts/lib/lib-rotation.sh          --selftest
           bash scripts/lib/lib-mises-a-jour.sh      --selftest
+          bash scripts/lib/lib-notification.sh      --selftest
           bash scripts/poste/precheck-mep.sh      --selftest
           bash scripts/exploitation/maintenance.sh       --selftest
           bash scripts/poste/rejouer-ci.sh        --selftest

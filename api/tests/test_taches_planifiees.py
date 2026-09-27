@@ -130,13 +130,27 @@ def test_periodicite_exclut_les_crons_a_haute_frequence():
     chaque tick produirait des milliers de lignes par jour dans la table la plus
     écrite de la base. C'est ce profil d'écriture qui a corrompu `telemetry_event`
     deux fois en juin 2026 — ils n'enregistrent que leurs anomalies et actions.
+
+    ⚠️ `reliability` est ATTENDU depuis le 27/09/2026 — et c'est ce test qui dit
+    à quelle condition : il ne rend compte que quand ses constats changent, et
+    au moins une fois par jour (`lib-notification.sh`). Sans ce plafond, il
+    écrirait 192 lignes par jour ; avec, quelques-unes. Le plafond est donc
+    exigé ICI, là où l'interdit était écrit : le retirer ferait échouer ce test.
     """
     from app.routers.admin import _PERIODICITE_ATTENDUE_H
 
     assert "health_watch" not in _PERIODICITE_ATTENDUE_H
-    assert "reliability" not in _PERIODICITE_ATTENDUE_H
     assert "auto_deploy" not in _PERIODICITE_ATTENDUE_H
     assert _PERIODICITE_ATTENDUE_H["maintenance"] == 7 * 24
+
+    assert _PERIODICITE_ATTENDUE_H["reliability"] == 24
+    notif = next(p for p in scripts_shell_versionnes() if p.name == "lib-notification.sh")
+    src = notif.read_text(encoding="utf-8")
+    assert "rapport_payload reliability " in src
+    assert 'decision_rapport_ecran "$sig"' in src, (
+        "check-reliability rend compte sans passer par sa décision de plafond : "
+        "chaque passage (*/15, deux nœuds) écrirait une ligne"
+    )
 
 
 def test_sauvegarde_nest_pas_dupliquee_dans_la_table_maintenance():
