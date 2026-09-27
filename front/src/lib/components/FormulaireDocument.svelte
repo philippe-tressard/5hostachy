@@ -54,6 +54,8 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionPerimetre from '$lib/components/SectionPerimetre.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
+	import { MAX_FICHIERS } from '$lib/fichiers';
 
 	/** L'intitulé du formulaire — en-tête de la boîte, ou titre de la modale. */
 	export let intitule: string;
@@ -77,9 +79,14 @@
 	/** Section 8 — un fichier, ou plusieurs. */
 	export let avecFichier = true;
 	export let multiple = false;
-	export let fichiers: FileList | null = null;
+	/**  Les `File` retenus : `FichiersUpload` en mode DIFFÉRÉ — le document
+	 *   n'existe pas encore, l'appelant les envoie à l'enregistrement. */
+	export let fichiers: File[] = [];
 	export let libelleFichier = 'Fichier';
-	export let accept = '.pdf,.jpg,.jpeg,.png,.webp';
+	//  ⚠️ Plus de liste `accept` écrite ici (27/09/2026) : elle disait « PDF et
+	//  images » quand le serveur accepte aussi Word, Excel et texte (famille
+	//  `document_prive`). Le mode `mixte` lit `ACCEPT_FICHIERS` dans `$lib/fichiers`,
+	//  comme les documents des contrats et des affaires — même route serveur.
 
 	/** L'enregistrement est-il en cours, et peut-on l'engager ? */
 	export let enregistrement = false;
@@ -96,10 +103,6 @@
 	//  doivent produire le MÊME identifiant, sinon l'hydratation se plaint et
 	//  remplace le nœud — un champ en cours de saisie y perdrait son contenu.
 	const uid = `fd-${++compteur}`;
-
-	//  Le nom du ou des fichiers retenus : sans ce retour, on ne sait pas ce
-	//  qu'on s'apprête à envoyer.
-	$: choisis = fichiers ? Array.from(fichiers) : [];
 </script>
 
 <CadreFormulaire {edition} titre={intitule} on:fermer={() => dispatch('annuler')}>
@@ -130,20 +133,26 @@
 	<slot name="description" />
 
 	{#if avecFichier}
-		<SectionFormulaire titre={libelleFichier} requis rempli={!!choisis.length} pour="{uid}-fichier">
+		<SectionFormulaire
+			titre={libelleFichier}
+			requis
+			rempli={fichiers.length > 0}
+			pour="{uid}-fichier"
+		>
+			<!--  🔴 `FichiersUpload`, le sélecteur du site (27/09/2026, #1329) : c'était
+			      le dernier `<input type="file">` nu — « Parcourir… » du navigateur à
+			      côté du bouton 📎 et des pastilles de tous les autres dépôts. Le mode
+			      DIFFÉRÉ retient les fichiers ; le nom choisi s'affiche en pastille, et
+			      se retire d'un clic. 🔒 `npm run lint:fichiers`. -->
 			<div class="field">
-				<input
+				<FichiersUpload
 					id="{uid}-fichier"
-					type="file"
-					{multiple}
-					{accept}
-					on:change={(e) => (fichiers = (e.target as HTMLInputElement).files)}
+					titre=""
+					mode="mixte"
+					differe
+					max={multiple ? MAX_FICHIERS : 1}
+					bind:fichiers
 				/>
-				{#if choisis.length === 1}
-					<span class="aide">{choisis[0].name}</span>
-				{:else if choisis.length > 1}
-					<span class="aide">{choisis.length} fichiers sélectionnés</span>
-				{/if}
 			</div>
 		</SectionFormulaire>
 	{/if}

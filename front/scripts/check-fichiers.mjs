@@ -28,6 +28,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -118,6 +119,26 @@ function galerieConditionneeALIdentite(texte) {
 	return trouves;
 }
 
+/**
+ *  🔴 Le SÉLECTEUR de fichiers est `FichiersUpload`, et il n'y en a pas d'autre
+ *  (27/09/2026, #1329). `FormulaireDocument` — plans, règlement, CR d'AG,
+ *  diagnostics — gardait un `<input type="file">` nu : le bouton du navigateur,
+ *  « Parcourir… aucun fichier sélectionné », à côté du bouton 📎 et des
+ *  pastilles de tous les autres dépôts. Deux rendus pour une notion.
+ *
+ *  Les exceptions sont des GESTES différents, déclarés avec leur raison ; une
+ *  exception qui ne sert plus fait échouer le contrôle.
+ */
+const SELECTEURS_NATIFS = {
+	'src/lib/components/FichiersUpload.svelte': 'le composant lui-même',
+	'src/lib/components/ImageUpload.svelte': 'une image unique, remplacée sur place (avatar, logo)',
+	'src/lib/components/BarreImport.svelte': "l'import d'un tableur, qui n'est pas une pièce jointe",
+	'src/routes/(app)/residence/+page.svelte':
+		'« Changer la photo » posé SUR la bannière : la photo se remplace là où on la voit',
+};
+const SELECTEUR_NATIF = /type\s*=\s*["']file["']/;
+const servis = new Set();
+
 const cibles = collecter(join(RACINE, 'src'));
 const fautifs = [];
 
@@ -125,6 +146,8 @@ for (const p of cibles) {
 	const rel = relative(RACINE, p).replace(/\\/g, '/');
 	if (EXEMPTS.has(rel)) continue;
 	const contenu = readFileSync(p, 'utf-8');
+	//  Longueurs conservées : la ligne i du texte neutralisé est la ligne i du fichier.
+	const neutre = neutraliserCommentaires(contenu).split('\n');
 
 	for (const { ligne, condition } of galerieConditionneeALIdentite(contenu)) {
 		fautifs.push(
@@ -135,11 +158,22 @@ for (const p of cibles) {
 
 	contenu.split('\n').forEach((ligne, i) => {
 		if (estCommentaire(ligne)) return;
+		if (rel.endsWith('.svelte') && SELECTEUR_NATIF.test(neutre[i] ?? '')) {
+			if (SELECTEURS_NATIFS[rel]) servis.add(rel);
+			else
+				fautifs.push(
+					`  ${rel}:${i + 1} — sélecteur de fichiers natif : employer FichiersUpload (\`differe\` si l'objet n'existe pas encore)\n      ${ligne.trim()}`,
+				);
+		}
 		for (const { regex, message } of MOTIFS) {
 			if (regex.test(ligne)) fautifs.push(`  ${rel}:${i + 1} — ${message}\n      ${ligne.trim()}`);
 		}
 	});
 }
+
+for (const f of Object.keys(SELECTEURS_NATIFS))
+	if (!servis.has(f))
+		fautifs.push(`  ${f} — exception de sélecteur natif qui ne sert plus : la retirer`);
 
 if (fautifs.length > 0) {
 	console.error(

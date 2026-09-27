@@ -488,6 +488,11 @@
 		font-size: 0.72rem;
 		color: var(--color-text-muted);
 	}
-	@media (max-width: 480px) {
+	/*  Au doigt, 44 px comme `.btn-icon` : il en mesurait 22 (#1329). La souris
+	    garde sa densité. 🔒 `e2e/depot-fichier.spec.ts`. */
+	@media (pointer: coarse) {
+		.fichiers-ajout {
+			min-height: 44px;
+		}
 	}
 </style>
