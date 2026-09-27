@@ -26,6 +26,7 @@ from app.utils.declenchement import normaliser
 from app.auth.cle_maintenance import exiger_cle_maintenance
 from app.database import get_session
 from app.models.core import HistoriqueEmail, HistoriqueMaintenance
+from app.utils.sante_taches import STATUT_EN_COURS
 
 from .exploitation import _purger_anciens_rapports
 from app.utils.maintenance import purger
@@ -108,6 +109,54 @@ def maintenance_dernier_rapport(
     return {"tache": tache, "noeuds": par_noeud, "genere_le": horloge.maintenant()}
 
 
+def enregistrer_rapport(session: Session, body: RapportMaintenance) -> HistoriqueMaintenance:
+    """Une EXÉCUTION, une ligne : le rapport de fin reprend celle de son battement.
+
+    🔴 27/09/2026 (#1367, signalé à l'écran) : depuis que le battement de début
+    est enregistré, chaque maintenance laissait DEUX lignes — le battement, vide
+    (« en_cours », 0 s, aucun détail), puis le rapport. L'historique montrait des
+    lignes sans rien d'écrit, et elles mangeaient la moitié du quota de
+    `_purger_anciens_rapports` : dix lignes ne couvraient plus que cinq semaines.
+
+    Le battement et le rapport d'une même exécution partagent la tâche, le nœud,
+    la portée et l'heure de DÉBUT (`$MAINTE_DEBUT`) : c'est la clé. Un rapport de
+    fin qui trouve son battement le COMPLÈTE ; sinon, il crée sa ligne — le cas
+    d'une tâche sans battement (bascule, export) et celui d'un battement perdu.
+    🔒 `test_rapport_remplace_battement.py`.
+    """
+    entry = None
+    if body.statut != STATUT_EN_COURS and body.cree_le:
+        entry = session.exec(
+            select(HistoriqueMaintenance).where(
+                HistoriqueMaintenance.tache == body.tache,
+                HistoriqueMaintenance.noeud == body.noeud,
+                HistoriqueMaintenance.portee == body.portee,
+                HistoriqueMaintenance.statut == STATUT_EN_COURS,
+                HistoriqueMaintenance.cree_le == body.cree_le,
+            )
+        ).first()
+    if entry is None:
+        entry = HistoriqueMaintenance()
+    entry.tache = body.tache
+    entry.noeud = body.noeud
+    entry.portee = body.portee
+    #  Normalisé à la FRONTIÈRE : un script déployé continue d'envoyer
+    #  « cron », et la colonne que l'utilisateur lit garde un seul mot.
+    entry.declenchee_par = normaliser(body.declenchee_par)
+    entry.statut = body.statut
+    entry.tokens_supprimes = body.tokens_supprimes
+    entry.taille_db_octets = body.taille_db_octets
+    entry.duree_secondes = body.duree_secondes
+    entry.details = json.dumps(body.details, ensure_ascii=False) if body.details else None
+    entry.erreur = body.erreur
+    entry.cree_le = body.cree_le or horloge.maintenant()
+    entry.terminee_le = body.terminee_le
+    session.add(entry)
+    session.commit()
+    session.refresh(entry)
+    return entry
+
+
 @router.post("/maintenance/rapport", status_code=201)
 def maintenance_rapport(
     body: RapportMaintenance,
@@ -115,25 +164,7 @@ def maintenance_rapport(
     session: Session = Depends(get_session),
 ):
     exiger_cle_maintenance(x_maintenance_key)
-    entry = HistoriqueMaintenance(
-        tache=body.tache,
-        noeud=body.noeud,
-        portee=body.portee,
-        #  Normalisé à la FRONTIÈRE : un script déployé continue d'envoyer
-        #  « cron », et la colonne que l'utilisateur lit garde un seul mot.
-        declenchee_par=normaliser(body.declenchee_par),
-        statut=body.statut,
-        tokens_supprimes=body.tokens_supprimes,
-        taille_db_octets=body.taille_db_octets,
-        duree_secondes=body.duree_secondes,
-        details=json.dumps(body.details, ensure_ascii=False) if body.details else None,
-        erreur=body.erreur,
-        cree_le=body.cree_le or horloge.maintenant(),
-        terminee_le=body.terminee_le,
-    )
-    session.add(entry)
-    session.commit()
-    session.refresh(entry)
+    entry = enregistrer_rapport(session, body)
     _purger_anciens_rapports(session)
     return entry
 
