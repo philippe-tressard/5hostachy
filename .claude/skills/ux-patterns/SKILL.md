@@ -217,8 +217,8 @@ données pour celles inappropriées »*. Une actualité est une affaire de caté
   l'**efface**, après une confirmation qui dit quoi (`pertesAuChangement`).
 - La pastille qui ouvre l'autre chemin (« 📰 Actualité — Information, sans
   suivi ») est **en tête**, pleine ligne, bord « information » sur fond blanc (un fond bleu la faisait croire cochée), suivie d'un filet
-  (`enTete` dans `CATEGORIES_TICKET`, variante A). Elle est absente des filtres
-  par catégorie : elle se filtre par sa **nature**.
+  (`enTete` dans `CATEGORIES_TICKET`, variante A). Il n'y a plus de filtre
+  par catégorie (§5 bis) : elle se filtre par sa **nature**.
 
 ### Un champ n'est pas un geste — d'où la seule différence création/édition
 
@@ -1061,6 +1061,26 @@ explicite du lien, pas un défaut.
 - Sélection multiple : toggle + reset auto vers défaut si aucun actif
 
 Pages implémentées : `tickets` (filtre de nature, 23/09/2026) — le calendrier y est un filtre depuis #1092
+
+## 5 bis. La RECHERCHE libre — Affaires (27/09/2026)
+
+Le filtre « Catégorie » de la page Affaires a cédé la place à une recherche libre
+(maquette A, avec l'extrait et les Archives de la C, arbitrée à l'écran) :
+https://claude.ai/artifact/BRYAWNn4EZAx1EBTHHNMQu
+
+- **La règle est au SERVEUR** (`app/utils/recherche_affaires.py`, `--selftest`) :
+  tous les mots, partout, sans accents ni casse — n°, titre, description,
+  catégorie, lieu, personnes, prestataire, équipement, suites, messages, pièces
+  jointes. L'écran n'en a pas de seconde : `$lib/recherche-affaires` demande
+  (après la frappe, dernière réponse seule) et filtre.
+- 🔴 **Elle ne lit que ce que l'écran montre** : `ticket_visible`, `lit_les_suites`,
+  `lit_les_notes_internes`, `document_visible` — les prédicats des routes qui
+  montrent le même texte, jamais réécrits (`test_recherche_affaires.py`). Un
+  compte de résultats est une information.
+- La carte dit **où** : « Trouvé dans une suite », et le passage en segments
+  surlignés (`ExtraitRecherche`) — du TEXTE, jamais du HTML, donc pas de `{@html}`.
+- Les **Archives** ne s'y mêlent que sur demande (case, ou « Les inclure » quand
+  le bilan en signale).
 
 ## 6. Ligne de publication
 
