@@ -26,6 +26,7 @@ from datetime import datetime
 
 from sqlmodel import Session, SQLModel, select
 
+from app.auth.empreinte_jeton import empreinte
 from app.database import engine
 from app.models.core import EmailVerificationToken, Utilisateur
 from app.routers.auth import VALIDITE_VERIFICATION_EMAIL, emettre_verification_email
@@ -117,7 +118,9 @@ def test_le_lien_porte_le_jeton_reellement_pose():
         jeton = _jeton(session, user.id)
     contexte = taches.taches[0][2]["context"]
 
-    assert contexte["token"] == jeton.token
-    assert f"token={jeton.token}" in contexte["lien"], (
+    #  La base garde l'EMPREINTE du jeton (#1389) ; le courriel porte le brut.
+    assert empreinte(contexte["token"]) == jeton.token
+    assert contexte["token"] != jeton.token, "le jeton est stocké en clair"
+    assert f"token={contexte['token']}" in contexte["lien"], (
         f"le lien ne porte pas le jeton posé : {contexte['lien']}"
     )

@@ -52,6 +52,7 @@ from typing import Optional
 
 from sqlmodel import Session, and_, delete, or_, select
 
+from app.auth.empreinte_jeton import empreinte
 from app.models.jetons import RefreshToken
 
 #: Au-delà, un jeton échangé qui revient est un jeton rejoué, pas un appel
@@ -79,6 +80,9 @@ def est_rejoue(jeton: RefreshToken, maintenant: datetime) -> bool:
 def revoquer_sessions(session: Session, user_id: int, sauf: Optional[str] = None) -> int:
     """Révoque les jetons encore actifs du compte, sauf `sauf`. Rend le nombre révoqué.
 
+    `sauf` est le jeton BRUT de la session appelante (son cookie) : la base ne
+    garde que les empreintes (#1389), on compare donc la sienne.
+
     Ne valide pas la transaction : c'est l'appelant qui décide quand elle se termine.
     """
     actifs = session.exec(
@@ -88,8 +92,9 @@ def revoquer_sessions(session: Session, user_id: int, sauf: Optional[str] = None
         )
     ).all()
     revoques = 0
+    garde = empreinte(sauf) if sauf is not None else None
     for jeton in actifs:
-        if sauf is not None and jeton.token == sauf:
+        if garde is not None and jeton.token == garde:
             continue
         jeton.revoked = True
         session.add(jeton)

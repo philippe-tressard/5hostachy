@@ -32,6 +32,7 @@ import pytest
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
+from app.auth.empreinte_jeton import empreinte
 from app.auth.jwt import verify_password
 from app.database import engine
 from app.models.core import (
@@ -57,16 +58,27 @@ _Requete = requete_de_test
 VALIDE = "Nouveau-Mdp1"
 
 
+#: Le jeton BRUT de chaque objet posé par ce fichier : la base n'en garde que
+#: l'empreinte (#1389), le brut est ce que le lien du courriel ou le cookie porte.
+BRUTS: dict[int, str] = {}
+
+
+def _brut(objet) -> str:
+    return BRUTS[id(objet)]
+
+
 def _jeton(session: Session, user_id: int, **surcharges) -> PasswordResetToken:
+    brut = surcharges.pop("token", uuid.uuid4().hex)
     prt = PasswordResetToken(
         user_id=user_id,
-        token=surcharges.pop("token", uuid.uuid4().hex),
+        token=empreinte(brut),
         expires_at=surcharges.pop("expires_at", datetime.utcnow() + timedelta(hours=1)),
         **surcharges,
     )
     session.add(prt)
     session.commit()
     session.refresh(prt)
+    BRUTS[id(prt)] = brut
     return prt
 
 
@@ -141,12 +153,12 @@ def test_un_jeton_ne_sert_QU_UNE_fois(utilisateur):
     with Session(engine) as session:
         prt = _jeton(session, utilisateur.id)
         reset_password(
-            _Requete(), PasswordResetConfirm(token=prt.token, nouveau_mot_de_passe=VALIDE), session
+            _Requete(), PasswordResetConfirm(token=_brut(prt), nouveau_mot_de_passe=VALIDE), session
         )
         with pytest.raises(HTTPException) as levee:
             reset_password(
                 _Requete(),
-                PasswordResetConfirm(token=prt.token, nouveau_mot_de_passe="Autre-Mdp2"),
+                PasswordResetConfirm(token=_brut(prt), nouveau_mot_de_passe="Autre-Mdp2"),
                 session,
             )
         assert levee.value.status_code == 400
@@ -159,7 +171,7 @@ def test_un_jeton_EXPIRE_est_refuse(utilisateur):
         with pytest.raises(HTTPException) as levee:
             reset_password(
                 _Requete(),
-                PasswordResetConfirm(token=prt.token, nouveau_mot_de_passe=VALIDE),
+                PasswordResetConfirm(token=_brut(prt), nouveau_mot_de_passe=VALIDE),
                 session,
             )
         assert levee.value.status_code == 400
@@ -188,7 +200,7 @@ def test_un_compte_DESACTIVE_ne_se_reinitialise_pas(utilisateur):
             with pytest.raises(HTTPException):
                 reset_password(
                     _Requete(),
-                    PasswordResetConfirm(token=prt.token, nouveau_mot_de_passe=VALIDE),
+                    PasswordResetConfirm(token=_brut(prt), nouveau_mot_de_passe=VALIDE),
                     session,
                 )
         finally:
@@ -204,7 +216,7 @@ def test_le_mot_de_passe_change_et_l_ancien_ne_vaut_plus(utilisateur):
     with Session(engine) as session:
         prt = _jeton(session, utilisateur.id)
         reset_password(
-            _Requete(), PasswordResetConfirm(token=prt.token, nouveau_mot_de_passe=VALIDE), session
+            _Requete(), PasswordResetConfirm(token=_brut(prt), nouveau_mot_de_passe=VALIDE), session
         )
         u = session.get(Utilisateur, utilisateur.id)
         session.refresh(u)
@@ -242,7 +254,7 @@ def test_TOUTES_les_sessions_actives_sont_REVOQUEES(utilisateur):
         session.commit()
 
         reset_password(
-            _Requete(), PasswordResetConfirm(token=prt.token, nouveau_mot_de_passe=VALIDE), session
+            _Requete(), PasswordResetConfirm(token=_brut(prt), nouveau_mot_de_passe=VALIDE), session
         )
 
         restantes = session.exec(
@@ -265,7 +277,7 @@ def test_un_mot_de_passe_FAIBLE_est_refuse_AVANT_de_consommer_le_jeton(utilisate
         with pytest.raises(HTTPException):
             reset_password(
                 _Requete(),
-                PasswordResetConfirm(token=prt.token, nouveau_mot_de_passe="faible"),
+                PasswordResetConfirm(token=_brut(prt), nouveau_mot_de_passe="faible"),
                 session,
             )
         session.refresh(prt)
@@ -287,14 +299,16 @@ def test_un_mot_de_passe_FAIBLE_est_refuse_AVANT_de_consommer_le_jeton(utilisate
 
 
 def _session_ouverte(session: Session, user_id: int, jeton: str | None = None) -> RefreshToken:
+    brut = jeton or uuid.uuid4().hex
     rt = RefreshToken(
         user_id=user_id,
-        token=jeton or uuid.uuid4().hex,
+        token=empreinte(brut),
         expires_at=datetime.utcnow() + timedelta(days=7),
     )
     session.add(rt)
     session.commit()
     session.refresh(rt)
+    BRUTS[id(rt)] = brut
     return rt
 
 
@@ -329,7 +343,7 @@ def test_la_session_COURANTE_survit_au_changement(utilisateur):
         courante = _session_ouverte(session, u.id)
         ailleurs = _session_ouverte(session, u.id)
 
-        change_password(_Requete(), _corps(), session, u, refresh_token=courante.token)
+        change_password(_Requete(), _corps(), session, u, refresh_token=_brut(courante))
 
         session.refresh(courante)
         session.refresh(ailleurs)

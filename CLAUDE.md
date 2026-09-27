@@ -288,6 +288,12 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - JWT HS256 en cookies `httponly=True`, `secure=settings.cookie_secure`, `samesite="strict"`
 - CORS : allowlist explicite, jamais `["*"]` avec `credentials=True`
 - Rate limiting slowapi sur `/auth/*`
+- **Un jeton se stocke par son empreinte, jamais en clair** — rafraîchissement,
+  mot de passe oublié, vérification d'adresse : `auth/empreinte_jeton.empreinte`
+  (HMAC avec `SECRET_KEY`) à l'écriture ET à la recherche ; le brut ne vit que
+  dans le cookie ou le lien. Une copie de la base donnait des jetons
+  utilisables (#1389). Changer `SECRET_KEY` ferme donc toutes les sessions et
+  invalide les liens en attente — voulu. 🔒 `test_jetons_empreinte.py`.
 - **Journal de sécurité : une seule porte.** Un geste sensible — connexion
   refusée, mot de passe changé ou réinitialisé, rôle ajouté ou retiré,
   bannissement, jeton de rafraîchissement rejoué — appelle `utils/journal_securite.journaliser_securite`, et
