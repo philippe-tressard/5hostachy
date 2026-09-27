@@ -93,13 +93,20 @@
 	      ⚠️ Les SEUILS restent au-dessus, dans `teinte` : ce sont eux la règle.
 	      Les remettre ici, dans trois `class:`, les recopierait — c'est
 	      exactement ce que ce composant retire. -->
-	<span
-		class="note-etoiles"
-		class:note-bad={teinte === 'bad'}
-		class:note-ok={teinte === 'ok'}
-		class:note-good={teinte === 'good'}
-		title={nbAvis != null ? `${note}/5 (${nbAvis} avis)` : undefined}
-		>{starsDisplay(note)} {note}{surCinq ? '/5' : ''}</span
+	<!--  🔴 Proposition B, arbitrée sur maquette le 27/09/2026 (#1055) parmi cinq :
+	      les ÉTOILES portent le jugement — un graphisme, où le jeton d'état tient
+	      le contraste de 3:1 —, le CHIFFRE reste dans la couleur du texte. Teinter
+	      le tout mettait l'orange en texte (3,62, sous 4,5) ; l'or de la charte
+	      (2,61) ne tenait même pas le 3:1 d'un graphisme. -->
+	<span class="note-etoiles" title={nbAvis != null ? `${note}/5 (${nbAvis} avis)` : undefined}
+		><span
+			class="note-glyphes"
+			class:note-bad={teinte === 'bad'}
+			class:note-ok={teinte === 'ok'}
+			class:note-good={teinte === 'good'}
+			aria-hidden="true">{starsDisplay(note)}</span
+		>
+		<span class="note-chiffre">{note}{surCinq ? '/5' : ''}</span></span
 	>
 {/if}
 
@@ -125,7 +132,7 @@
 	    fichier, et une étoile choisie ne peut pas être d'un autre orange que
 	    celui qu'on relira ensuite. */
 	.note-etoile-pleine {
-		color: #f59e0b;
+		color: var(--color-warning);
 	}
 	.note-choisie {
 		margin: 0.25rem 0 0;
@@ -134,19 +141,26 @@
 	}
 	/*  Taille et césure reprises de `.frise-stars`, d'où ce composant est né. */
 	.note-etoiles {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		white-space: nowrap;
+	}
+	.note-glyphes {
+		font-size: 1.1em;
 		letter-spacing: -0.02em;
+	}
+	.note-chiffre {
+		color: var(--color-text);
+		font-variant-numeric: tabular-nums;
 	}
 	/*  Les trois teintes viennent de `VueRenouvellementsContrats`, seul des trois
 	    rendus à les porter — les deux autres l'ont donc GAGNÉE, et c'est le but. */
 	.note-bad {
-		color: #dc2626;
+		color: var(--color-danger);
 	}
 	.note-ok {
-		color: #f59e0b;
+		color: var(--color-warning);
 	}
 	.note-good {
-		color: #16a34a;
+		color: var(--color-success);
 	}
 </style>
