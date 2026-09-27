@@ -26,11 +26,12 @@
 	import { nomProprietaire } from '$lib/saisi-pour';
 	import { createEventDispatcher } from 'svelte';
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
+	import ExtraitRecherche from '$lib/components/ExtraitRecherche.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import PastillesAffaire from '$lib/components/PastillesAffaire.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
-	import { documents as docsApi, type Ticket } from '$lib/api';
+	import { documents as docsApi, type CorrespondanceAffaire, type Ticket } from '$lib/api';
 	import { safeHtml } from '$lib/sanitize';
 	import { attributsNature, lienTicket, ticketUrgent } from '$lib/tickets';
 	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
@@ -60,6 +61,8 @@
 	 *   ajout d'évolution). Explicite, et non déduit de `$$slots` : un slot
 	 *   fourni mais vide masquerait le corps en permanence. */
 	export let formulaireOuvert = false;
+	/** Ce qui l'a fait trouver, quand la liste est une recherche (27/09/2026). */
+	export let correspondance: CorrespondanceAffaire | null = null;
 
 	const dispatch = createEventDispatcher<{ toggle: void }>();
 	const basculer = () => dispatch('toggle');
@@ -124,6 +127,9 @@
 		<svelte:fragment slot="apercu">
 			{#if !expanded && apercu}
 				<ApercuCarte contenu={pub.description} photos={pub.photos_urls ?? []} dansLigne />
+			{/if}
+			{#if !expanded && correspondance}
+				<ExtraitRecherche {correspondance} archivee={pub.archivee} />
 			{/if}
 		</svelte:fragment>
 	</EnteteCarte>

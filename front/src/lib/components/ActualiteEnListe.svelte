@@ -25,7 +25,12 @@
   | 🗑️ Supprimer (admin) | `gestes.supprimer` |
 -->
 <script lang="ts">
-	import { documents as docsApi, type Ticket, type TicketEvolution } from '$lib/api';
+	import {
+		documents as docsApi,
+		type CorrespondanceAffaire,
+		type Ticket,
+		type TicketEvolution,
+	} from '$lib/api';
 	import { contexteCommentaire } from '$lib/assistant';
 	//  🔴 L'actualité est une AFFAIRE de catégorie Actualité (v2.0.0) : sa Suite
 	//  suit `TICKET`, comme son édition (`FormulaireTicket`). Elle suivait
@@ -64,6 +69,7 @@
 	export let evolCorrectionEnCours = false;
 	export let peutAdministrer = false;
 	export let gestes: GestesTicket;
+	export let correspondance: CorrespondanceAffaire | null = null;
 
 	//  Mise en avant d'une actualité : épinglage et urgence (#1096). Copie de
 	//  travail — on n'écrit dans l'affaire qu'après la réponse du serveur.
@@ -113,6 +119,7 @@
 	{documents}
 	onRetirerDocument={$isCS && !archive ? retirerDocument : null}
 	formulaireOuvert={mode === 'evolution' || mode === 'options' || mode === 'edition'}
+	{correspondance}
 	on:toggle={() => gestes.basculer(ticket)}
 >
 	<svelte:fragment slot="actions">

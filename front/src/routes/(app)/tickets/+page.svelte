@@ -23,12 +23,13 @@
 	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
+	import { OPTIONS_FILTRE_NATURE, estActualite, statutsPresents } from '$lib/tickets';
 	import {
-		OPTIONS_FILTRE_NATURE,
-		estActualite,
-		statutsPresents,
-		suiviCorrespond,
-	} from '$lib/tickets';
+		archiveesTrouvees,
+		estArchive,
+		filtrerAffaires,
+		rechercheAffaires,
+	} from '$lib/recherche-affaires';
 
 	$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
@@ -38,7 +39,12 @@
 	/** Message d'une panne de chargement, ou vide (#796). */
 	let erreur = '';
 	let filterStatut = '';
-	let filterCat = '';
+	//  La recherche libre a remplacé le filtre Catégorie (27/09/2026) : la
+	//  règle est au serveur, `$lib/recherche-affaires` demande et filtre.
+	let recherche = '';
+	let inclureArchives = false;
+	const moteur = rechercheAffaires();
+	$: moteur.chercher(recherche);
 	//  Actualité · Calendrier · Activité (#1092) — `?nature=` le pose depuis un
 	//  lien, notamment les anciennes adresses `/actualites` et `/calendrier`.
 	let filterNature = '';
@@ -120,22 +126,8 @@
 		}
 	});
 
-	//  🔴 LA RÈGLE D'ARCHIVAGE A QUITTÉ CET ÉCRAN (#515, 02/09/2026).
-	//
-	//  Elle s'écrivait ici, en dur, et disait **7 jours** — là où la règle du site
-	//  en annonce **30**, réglables depuis l'administration. Deux règles pour la
-	//  même notion, et celle que l'exploitant croyait tenir n'était appliquée nulle
-	//  part sur cet écran.
-	//
-	//  Elle lisait aussi `mis_a_jour_le`, donc une simple correction de faute de
-	//  frappe sur un ticket résolu repoussait son archivage d'une semaine. La règle
-	//  du site prend `ferme_le` en priorité, précisément pour ça.
-	//
-	//  ⚠️ `t.archivee` est calculé côté SERVEUR et transporté. Le recalculer ici en
-	//  ferait une seconde règle, et la liste et les Archives trancheraient
-	//  séparément — un ticket visible dans l'une et pas dans l'autre, qui est le
-	//  bug du 17/07/2026 sur les actualités.
-	const estArchive = (t: { archivee?: boolean }): boolean => t.archivee === true;
+	//  La règle d'archivage n'est PAS ici : `estArchive` lit le champ calculé par
+	//  le serveur (#515) — `$lib/recherche-affaires`, avec le filtre de la liste.
 
 	//  Ce que la liste principale peut montrer, AVANT le filtre d'état : c'est
 	//  cet ensemble-là qui donne les boutons du filtre. Le calculer après
@@ -147,12 +139,14 @@
 	//  ET plus aucun bouton pour en sortir. On retombe alors sur « Tous ».
 	$: if (filterStatut && !optionsStatut.some((o) => o.value === filterStatut)) filterStatut = '';
 
-	$: filtered = affichables.filter((t) => {
-		if (filterStatut && !suiviCorrespond(optionsStatut, filterStatut, t.statut)) return false;
-		if (filterCat && t.categorie !== filterCat) return false;
-		if (filterNature && !(t.natures ?? []).includes(filterNature)) return false;
-		return true;
+	$: filtered = filtrerAffaires(ticketList, {
+		resultats: $moteur.resultats,
+		inclureArchives,
+		statut: filterStatut,
+		nature: filterNature,
+		optionsStatut,
 	});
+	$: correspondances = new Map(($moteur.resultats ?? []).map((r) => [r.ticket_id, r]));
 
 	// Historique : tickets clôturés depuis plus de 7 jours, limité à 3 ans, groupés par année décroissante
 	const THREE_YEARS_AGO = new Date();
@@ -427,7 +421,11 @@
 		{optionsStatut}
 		bind:nature={filterNature}
 		bind:statut={filterStatut}
-		bind:categorie={filterCat}
+		bind:recherche
+		bind:inclureArchives
+		etat={$moteur}
+		affichees={filtered.length}
+		archivees={archiveesTrouvees(ticketList, $moteur.resultats)}
 	/>
 {/if}
 
@@ -455,10 +453,12 @@
 		{erreur}
 		vide={filtered.length === 0}
 		titreErreur="Impossible d'afficher les demandes"
-		titreVide="Aucune demande"
-		messageVide="Signalez un problème ou posez une question au conseil syndical."
+		titreVide={$moteur.terme ? 'Aucune affaire trouvée' : 'Aucune demande'}
+		messageVide={$moteur.terme
+			? 'Essayez un autre mot, ou incluez les Archives.'
+			: 'Signalez un problème ou posez une question au conseil syndical.'}
 	>
-		<ListeTickets tickets={filtered} {...etatListe} {gestes} />
+		<ListeTickets tickets={filtered} {correspondances} {...etatListe} {gestes} />
 	</EtatListe>
 {/if}
 

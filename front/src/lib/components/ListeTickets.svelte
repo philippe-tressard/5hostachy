@@ -35,7 +35,7 @@
 <script lang="ts">
 	import ActualiteEnListe from './ActualiteEnListe.svelte';
 	import CarteTicket from './CarteTicket.svelte';
-	import type { Ticket, TicketEvolution } from '$lib/api';
+	import type { CorrespondanceAffaire, Ticket, TicketEvolution } from '$lib/api';
 	import { estActualite, type GestesTicket } from '$lib/tickets';
 
 	/**  Tout ce que la page fait quand la liste bouge — le type vit dans
@@ -60,6 +60,8 @@
 	export let evolEnEdition: number | null = null;
 	export let evolCorrectionEnCours = false;
 	export let peutAdministrer = false;
+	/** Quand la liste est une recherche : ce qui a fait trouver chaque affaire. */
+	export let correspondances: Map<number, CorrespondanceAffaire> = new Map();
 
 	/**  Ce que la page a ouvert sur UNE carte — écrit une fois pour les deux
 	 *   cartes, qui le lisent de la même façon. ⚠️ `$:` et non `const` : le
@@ -92,6 +94,7 @@
 			{evolEnEdition}
 			{evolCorrectionEnCours}
 			{gestes}
+			correspondance={correspondances.get(t.id) ?? null}
 		/>
 	{:else}
 		<!--  ⚠️ CHAQUE événement de la carte doit être RELAYÉ ici, et un oubli ne se voit
@@ -105,6 +108,7 @@
 		<CarteTicket
 			ticket={t}
 			evolutions={evolsMap[t.id] ?? []}
+			correspondance={correspondances.get(t.id) ?? null}
 			expanded={expandedIds.has(t.id)}
 			{archive}
 			{evolutionEnCours}

@@ -273,13 +273,9 @@ export function optionsCategorie(estCS: boolean) {
 	return OPTIONS_CATEGORIE.filter((o) => estCS || !reservees.has(o.val));
 }
 
-/**  La rangée de FILTRES par catégorie — celles d'en tête exceptées : elles se
- *   filtrent par leur NATURE (`OPTIONS_FILTRE_NATURE`), et deux pastilles
- *   « Actualité » sur la même page se liraient comme deux choses. */
-export const OPTIONS_FILTRE_CATEGORIE = CATEGORIES_TICKET.filter((c) => !c.enTete).map((c) => ({
-	val: c.value,
-	label: `${c.emoji} ${c.label}`,
-}));
+//  La rangée de filtres par catégorie n'existe plus (27/09/2026) : la page
+//  Affaires cherche un mot, et le serveur cherche aussi le libellé de la
+//  catégorie (`app/utils/recherche_affaires.py`).
 
 export const OPTIONS_CATEGORIE: readonly {
 	val: string;
