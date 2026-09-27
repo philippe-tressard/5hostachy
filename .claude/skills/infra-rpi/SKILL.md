@@ -531,6 +531,38 @@ Si le build du standby échoue, une alerte part (cooldown 6 h) : c'est l'état l
 plus trompeur, la parité **git** devenant verte alors que les **images** sont
 restées vieilles — distinction que le point 10 ne sait pas faire.
 
+## Le noyau du standby se met à jour seul (#1395 — 27/09/2026)
+
+Le 27/09/2026, rpi1 tournait en 6.12.62 et rpi2 en 6.12.75 : `unattended-upgrades`
+ne pose pas le noyau (le dépôt `archive.raspberrypi.com` n'est pas dans ses
+origines), et personne ne redémarrait (#1393).
+
+**Ce qui se passe désormais** : à la fin de chaque bascule réussie, le nœud qui
+vient de devenir standby lance `scripts/exploitation/noyau-standby.sh`. Il tourne
+en root, sans sudo, et :
+
+1. s'abstient s'il n'est pas standby, si un conteneur quelconque y tourne, ou si
+   l'actif ne répond pas 200 sur `/api/health` en LAN ;
+2. pose la dernière **révision** de sa série (6.18.50 → 6.18.5x), avec le
+   micrologiciel : `NOYAU_PAQUETS` dans `lib-mises-a-jour.sh`, la seule liste ;
+3. redémarre s'il tourne sur un noyau plus ancien que l'installé, après avoir
+   attendu qu'`auto-deploy` relâche son verrou.
+
+Les rôles alternent : chaque nœud suit en 48 h au plus, toujours comme standby, et
+il est mis à l'épreuve comme actif la nuit suivante pendant que l'autre reste en
+repli.
+
+| Situation | Ce qui se passe |
+|---|---|
+| nouvelle **série** (6.18 → 6.x) | rien d'automatique : C30 rend WARN « Nouvelle SÉRIE », avec la commande manuelle, le standby d'abord |
+| pendant le redémarrage | le standby a posé `.redemarrage-noyau` sur l'actif : check-reliability y lit un pair injoignable en **WARN** pendant 10 min |
+| le pair ne revient pas | au-delà de 10 min, **FAIL** « il ne repart pas » → alerte. Le Pi n'a pas de menu de démarrage : accès physique |
+| redémarré, mais toujours sur l'ancien noyau | pas de nouvelle tentative (`/var/lib/hostachy/noyau-tente`) : alerte. Supprimer ce fichier pour retenter |
+| installation en échec | pas de redémarrage, alerte avec la fin de la sortie d'apt |
+
+Journal : `/var/log/hostachy-bascule.log`, lignes `[noyau]`. Banc sans effet :
+`noyau-standby.sh --dry-run` (avec `REPO=` pour une copie dans `/tmp`).
+
 ## Monitoring APScheduler (tourne dans le conteneur API)
 
 🔴 **La liste des jobs se lit dans `api/app/main.py`** (`scheduler.add_job`), pas

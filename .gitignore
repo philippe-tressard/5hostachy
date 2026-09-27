@@ -23,6 +23,8 @@ env/
 .env.*.local
 secrets/
 .active
+# Marque posée sur l'actif par le standby qui redémarre pour son noyau (#1395)
+.redemarrage-noyau
 *.bak
 
 # Node / frontend

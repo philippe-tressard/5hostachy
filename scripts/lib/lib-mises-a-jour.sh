@@ -14,12 +14,19 @@
 #     re-télécharge jamais une image déjà présente, et Dependabot ne change que
 #     l'étiquette : les correctifs publiés sous `python:3.12-slim` n'entraient
 #     dans aucun conteneur.
+#  3. le NOYAU (#1395). `unattended-upgrades` ne le pose pas (le dépôt Raspberry
+#     n'est pas dans ses origines), et personne ne redémarre. Le 27/09/2026,
+#     rpi1 tournait en 6.12.62 et rpi2 en 6.12.75 (#1393). Désormais, le nœud
+#     qui vient de devenir standby pose la dernière RÉVISION de sa série puis
+#     redémarre (`noyau-standby.sh`, appelé par la bascule). Un changement de
+#     SÉRIE reste un geste humain : C30 le signale, avec la commande.
 #
-#  Ce module porte les deux, parce qu'ils répondent à la même question — « ce
-#  nœud reçoit-il ses correctifs ? » — et qu'aucun des deux n'a d'autre maison.
+#  Ce module porte les trois, parce qu'ils répondent à la même question — « ce
+#  nœud reçoit-il ses correctifs ? » — et qu'aucun n'a d'autre maison.
 #
 #  Il est SOURCÉ (mode 100644) par `lib-collecte.sh` (le snippet `COLLECT_MAJ`),
-#  `lib-conformite.sh` (les verdicts de C30) et `maintenance.sh` (les images).
+#  `lib-conformite.sh` (les verdicts de C30), `check-reliability.sh` (le pair
+#  injoignable), `maintenance.sh` (les images) et `noyau-standby.sh` (le noyau).
 #  Autotest : bash scripts/lib/lib-mises-a-jour.sh --selftest
 # =============================================================================
 
@@ -42,6 +49,8 @@ APT_LISTES_MAX_J=${APT_LISTES_MAX_J:-7}
 #   - noyau_actif / noyau_installe : le noyau qui tourne, et le plus récent
 #     installé de la MÊME saveur (`+rpt-rpi-2712`) — lu dans /lib/modules, donc
 #     sans dépendre du nom du paquet, qui change d une image Raspberry à l autre.
+#   - noyau_candidat : la version que le dépôt propose pour le méta-paquet de
+#     cette saveur (`linux-image-rpi-2712`) — ce qui dit RÉVISION ou SÉRIE.
 COLLECT_MAJ='
 echo "apt_erreurs=$(command -v apt-config >/dev/null 2>&1 && apt-config dump 2>&1 >/dev/null | grep -c "^E:")"
 _t=$(find /var/lib/apt/lists -maxdepth 1 -name "*InRelease" -printf "%T@\n" 2>/dev/null | sort -n | tail -1)
@@ -50,6 +59,7 @@ echo "apt_secu=$(command -v apt >/dev/null 2>&1 && apt list --upgradable 2>/dev/
 _k=$(uname -r)
 echo "noyau_actif=$_k"
 echo "noyau_installe=$(ls -1 /lib/modules 2>/dev/null | grep -F -- "+${_k#*+}" | sort -V | tail -1)"
+echo "noyau_candidat=$(apt-cache policy "linux-image-${_k#*+rpt-}" 2>/dev/null | awk "/Candidate:/{print \$2}")"
 '
 
 # ── Décisions PURES (aucun effet de bord) ────────────────────────────────────
@@ -88,6 +98,81 @@ verdict_noyaux_parite() {
     [ "${1%%+*}" = "${2%%+*}" ] && echo OK || echo DIVERGENCE
 }
 
+# ── Le noyau du standby (#1395) ──────────────────────────────────────────────
+
+#: Les paquets d'une montée de noyau : le méta-paquet des deux saveurs, leurs
+#: en-têtes, et le micrologiciel qui copie le noyau dans /boot/firmware. Une
+#: seule liste, pour le geste automatique ET pour la commande que C30 affiche.
+NOYAU_PAQUETS="linux-image-rpi-2712 linux-image-rpi-v8 linux-headers-rpi-2712 linux-headers-rpi-v8 raspi-firmware"
+
+#: La marque que le standby pose sur l'ACTIF juste avant de redémarrer
+#: (« <epoch> <noyau visé> »). Tant qu'elle a moins de REDEMARRAGE_PAIR_MAX_S,
+#: un pair injoignable est un redémarrage prévu ; au-delà, un noyau qui ne
+#: repart pas — donc un FAIL. Un Pi 5 redémarre en 1 à 2 min.
+MARQUE_REDEMARRAGE="${MARQUE_REDEMARRAGE:-/opt/5hostachy/.redemarrage-noyau}"
+REDEMARRAGE_PAIR_MAX_S=${REDEMARRAGE_PAIR_MAX_S:-600}
+
+#  « 6.18.50+rpt-rpi-2712 » (uname -r) ou « 1:6.18.50-1+rpt1 » (dpkg) → 6.18.50
+version_noyau() { local v=${1#*:}; v=${v%%+*}; echo "${v%%-*}"; }
+
+#  La commande de montée MANUELLE, pour un nœud — celle de #1393.
+commande_montee_noyau() {
+    echo "ssh -t ptressard@$1 'sudo apt-get update && sudo apt-get install --only-upgrade $NOYAU_PAQUETS && sudo reboot'"
+}
+
+#  $1 noyau qui tourne · $2 version candidate du méta-paquet
+#  → RIEN | REVISION | SERIE | INCONNU
+#  RÉVISION = même série majeur.mineur, plus récente : elle se pose seule sur le
+#  standby. SÉRIE = autre série : geste humain (un pilote ou Docker peuvent
+#  casser, on regarde le standby avant de lui confier la production).
+decision_noyau_candidat() {
+    local a c re='^[0-9]+\.[0-9]+\.[0-9]+$'
+    a=$(version_noyau "$1"); c=$(version_noyau "$2")
+    [[ $a =~ $re && $c =~ $re ]] || { echo INCONNU; return; }
+    [ "$(printf '%s\n%s\n' "$a" "$c" | sort -V | tail -1)" = "$a" ] && { echo RIEN; return; }
+    [ "${a%.*}" = "${c%.*}" ] && echo REVISION || echo SERIE
+}
+
+#  $1 noyau qui tourne · $2 plus récent installé · $3 noyau déjà tenté (vide sinon)
+#  → RIEN | REDEMARRER | DEJA_TENTE | SERIE | INCONNU
+#  DEJA_TENTE : on a redémarré pour ce noyau et il ne tourne toujours pas — le
+#  firmware est revenu sur l'ancien, ou il ne démarre pas. On ne boucle pas : on
+#  alerte. SERIE : une autre série installée à la main se redémarre à la main.
+decision_redemarrage_standby() {
+    case "$(verdict_noyau "$1" "$2")" in
+        OK) echo RIEN ;;
+        REDEMARRAGE)
+            if [ "$(decision_noyau_candidat "$1" "$2")" = SERIE ]; then echo SERIE
+            elif [ "$3" = "$2" ]; then echo DEJA_TENTE
+            else echo REDEMARRER; fi ;;
+        *) echo INCONNU ;;
+    esac
+}
+
+#  $1 âge (s) de la marque de redémarrage, vide si aucune
+#  → REDEMARRAGE | NE_REPART_PAS | INJOIGNABLE
+#  Au-delà de six heures, la marque ne dit plus rien de la panne du moment : un
+#  pair injoignable trois jours après un redémarrage réussi a une autre cause.
+verdict_pair_injoignable() {
+    case "$1" in ''|*[!0-9]*) echo INJOIGNABLE; return ;; esac
+    if   [ "$1" -le "$REDEMARRAGE_PAIR_MAX_S" ]; then echo REDEMARRAGE
+    elif [ "$1" -le 21600 ]; then echo NE_REPART_PAS
+    else echo INJOIGNABLE; fi
+}
+
+#  Émis par check-reliability quand le pair ne répond pas en SSH. Dépend de
+#  l'appelant : warn/fail, PEER, PEER_IP.
+pair_injoignable_emettre() {
+    local m age='' cible=''
+    m=$(cat "$MARQUE_REDEMARRAGE" 2>/dev/null)
+    case "${m%% *}" in ''|*[!0-9]*) ;; *) age=$(( $(date +%s) - ${m%% *} )); cible=${m#* } ;; esac
+    case "$(verdict_pair_injoignable "$age")" in
+        REDEMARRAGE)   warn "Peer $PEER ($PEER_IP) en redémarrage prévu depuis ${age} s (noyau $cible, #1395) — revérifié au prochain passage" ;;
+        NE_REPART_PAS) fail "Peer $PEER ($PEER_IP) injoignable $(( age / 60 )) min après avoir redémarré pour le noyau $cible — il ne repart pas (accès physique : le Pi n'a pas de menu de démarrage)" ;;
+        *)             fail "Peer $PEER ($PEER_IP) injoignable en SSH — impossible d'auditer les 2 nœuds." ;;
+    esac
+}
+
 #  Les images de base nommées par des Dockerfile, une par ligne, sans doublon.
 #  Un `FROM` qui désigne une ÉTAPE du même fichier (`FROM builder`) n'est pas une
 #  image à télécharger, ni `scratch`. Lues dans les fichiers, jamais recopiées :
@@ -118,9 +203,9 @@ mises_a_jour_verdicts() {
     local n p v
     for n in "$SELF" "$PEER"; do
         if [ "$n" = "$SELF" ]; then p=S; else [ "$PEER_OK" -eq 0 ] || continue; p=P; fi
-        local err age secu actif inst
+        local err age secu actif inst cand
         eval "err=\${${p}_apt_erreurs:-} age=\${${p}_apt_listes_j:-} secu=\${${p}_apt_secu:-}"
-        eval "actif=\${${p}_noyau_actif:-} inst=\${${p}_noyau_installe:-}"
+        eval "actif=\${${p}_noyau_actif:-} inst=\${${p}_noyau_installe:-} cand=\${${p}_noyau_candidat:-}"
         v=$(verdict_apt "$err" "$age" "$secu")
         case "$v" in
             OK)        ok   "Mises à jour système sur $n : listes apt de ${age} j, aucun correctif de sécurité en attente" ;;
@@ -134,11 +219,17 @@ mises_a_jour_verdicts() {
             REDEMARRAGE) warn "Redémarrage requis sur $n : tourne en $actif, $inst est installé — redémarrer le STANDBY d'abord, l'actif après une bascule" ;;
             *)           warn "Noyau de $n INCONNU (tourne='${actif:-vide}' installé='${inst:-vide}') — ni vert ni rouge" ;;
         esac
+        case "$(decision_noyau_candidat "$actif" "$cand")" in
+            RIEN)     ok   "Aucun noyau plus récent pour $n dans le dépôt" ;;
+            REVISION) ok   "Révision de noyau $(version_noyau "$cand") disponible pour $n — posée seule quand il sera standby, après la bascule (#1395)" ;;
+            SERIE)    warn "Nouvelle SÉRIE de noyau pour $n : $(version_noyau "$actif") → $(version_noyau "$cand"). Elle ne se pose pas seule — le STANDBY d'abord, l'actif après une bascule : $(commande_montee_noyau "$(role_ip "$n")")" ;;
+            *)        warn "Noyau candidat de $n INCONNU (tourne='${actif:-vide}' dépôt='${cand:-vide}') — ni vert ni rouge" ;;
+        esac
     done
     [ "$PEER_OK" -eq 0 ] || return 0
     case "$(verdict_noyaux_parite "${S_noyau_actif:-}" "${P_noyau_actif:-}")" in
         OK)         ok   "Même noyau sur les 2 nœuds (${S_noyau_actif%%+*})" ;;
-        DIVERGENCE) warn "Noyaux DIVERGENTS — $SELF en ${S_noyau_actif%%+*}, $PEER en ${P_noyau_actif%%+*} : les deux nœuds se relaient chaque nuit et ne se comportent pas pareil. Le dépôt archive.raspberrypi.com n'est pas dans les origines d'unattended-upgrades : le noyau ne se met à jour qu'à la main" ;;
+        DIVERGENCE) warn "Noyaux DIVERGENTS — $SELF en ${S_noyau_actif%%+*}, $PEER en ${P_noyau_actif%%+*} : les deux nœuds se relaient chaque nuit et ne se comportent pas pareil. Une révision se résorbe seule en 48 h (le standby la pose après la bascule) ; un écart de SÉRIE se résorbe à la main (voir « Nouvelle SÉRIE »)" ;;
         *)          warn "Parité des noyaux INCONNUE ($SELF='${S_noyau_actif:-vide}' $PEER='${P_noyau_actif:-vide}')" ;;
     esac
 }
@@ -166,6 +257,45 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "noyaux identiques"       OK          verdict_noyaux_parite 6.12.75+rpt-rpi-2712 6.12.75+rpt-rpi-2712
     t "rpi1 / rpi2 le 27/09"    DIVERGENCE  verdict_noyaux_parite 6.12.62+rpt-rpi-2712 6.12.75+rpt-rpi-2712
     t "peer muet"               INCONNU     verdict_noyaux_parite 6.12.62+rpt-rpi-2712 ""
+
+    #  #1395 — le noyau du standby. Les formes RÉELLES : uname -r et dpkg.
+    t "version : uname -r"      6.18.50     version_noyau 6.18.50+rpt-rpi-2712
+    t "version : dpkg (époque)" 6.18.50     version_noyau 1:6.18.50-1+rpt1
+    t "candidat = en service"   RIEN        decision_noyau_candidat 6.18.50+rpt-rpi-2712 1:6.18.50-1+rpt1
+    t "révision de la série"    REVISION    decision_noyau_candidat 6.18.50+rpt-rpi-2712 1:6.18.52-1+rpt1
+    t "rpi1 le 27/09 : série"   SERIE       decision_noyau_candidat 6.12.62+rpt-rpi-2712 1:6.18.50-1+rpt1
+    t "tri NUMÉRIQUE (6.18.9 < 6.18.10)" REVISION decision_noyau_candidat 6.18.9+rpt-rpi-2712 1:6.18.10-1+rpt1
+    t "dépôt plus ancien → rien" RIEN       decision_noyau_candidat 6.12.75+rpt-rpi-2712 1:6.12.62-1+rpt1
+    t "candidat illisible"      INCONNU     decision_noyau_candidat 6.18.50+rpt-rpi-2712 ""
+    t "candidat (none) d'apt"   INCONNU     decision_noyau_candidat 6.18.50+rpt-rpi-2712 "(none)"
+
+    t "à jour → rien"           RIEN        decision_redemarrage_standby 6.18.50+rpt-rpi-2712 6.18.50+rpt-rpi-2712 ""
+    t "révision posée → redémarrer" REDEMARRER decision_redemarrage_standby 6.18.50+rpt-rpi-2712 6.18.52+rpt-rpi-2712 ""
+    t "déjà tentée → on ne boucle pas" DEJA_TENTE decision_redemarrage_standby 6.18.50+rpt-rpi-2712 6.18.52+rpt-rpi-2712 6.18.52+rpt-rpi-2712
+    t "tentative d'une AUTRE révision" REDEMARRER decision_redemarrage_standby 6.18.50+rpt-rpi-2712 6.18.53+rpt-rpi-2712 6.18.52+rpt-rpi-2712
+    t "série posée à la main → main" SERIE  decision_redemarrage_standby 6.12.62+rpt-rpi-2712 6.18.50+rpt-rpi-2712 ""
+    t "installé illisible"      INCONNU     decision_redemarrage_standby 6.18.50+rpt-rpi-2712 "" ""
+
+    t "pas de marque → injoignable"   INJOIGNABLE   verdict_pair_injoignable ""
+    t "marque de 90 s → redémarrage"  REDEMARRAGE   verdict_pair_injoignable 90
+    t "marque à la limite (600 s)"    REDEMARRAGE   verdict_pair_injoignable 600
+    t "marque de 11 min → ne repart pas" NE_REPART_PAS verdict_pair_injoignable 660
+    t "marque de 3 jours → autre cause"  INJOIGNABLE verdict_pair_injoignable 259200
+    t "marque illisible → injoignable"   INJOIGNABLE verdict_pair_injoignable "abc"
+
+    #  L'émission : jamais un vert, et le bon canal pour chaque cas.
+    tmpm=$(mktemp); PEER=rpi2; PEER_IP=192.168.1.223
+    warn() { echo "WARN $*"; }; fail() { echo "FAIL $*"; }
+    MARQUE_REDEMARRAGE=$tmpm
+    echo "$(( $(date +%s) - 60 )) 6.18.52+rpt-rpi-2712" > "$tmpm"
+    t "marque fraîche → WARN" WARN eval 'pair_injoignable_emettre | cut -d" " -f1'
+    echo "$(( $(date +%s) - 1200 )) 6.18.52+rpt-rpi-2712" > "$tmpm"
+    t "marque de 20 min → FAIL" FAIL eval 'pair_injoignable_emettre | cut -d" " -f1'
+    rm -f "$tmpm"
+    t "sans marque → FAIL" FAIL eval 'pair_injoignable_emettre | cut -d" " -f1'
+    t "commande manuelle : les paquets de la liste" \
+      "ssh -t ptressard@192.168.1.223 'sudo apt-get update && sudo apt-get install --only-upgrade $NOYAU_PAQUETS && sudo reboot'" \
+      commande_montee_noyau 192.168.1.223
 
     tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
     printf 'FROM node:22-alpine AS builder\nRUN x\nFROM node:22-alpine AS runner\nCOPY --from=builder /a /b\n' > "$tmp/front"
