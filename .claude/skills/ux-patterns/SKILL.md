@@ -403,6 +403,14 @@ verticale avec un 🗑️ par ligne, les contrats une rangée composée sur plac
 leur propre champ « Titre ». *Le même objet ne peut pas avoir trois formes selon
 l'écran qui le montre* — c'est R3 appliqué à la pièce jointe.
 
+🔒 **Un seul sélecteur de fichiers : `FichiersUpload`** (27/09/2026, #1329). Le dernier
+`<input type="file">` nu — `FormulaireDocument` : plans, règlement, CR d'AG,
+diagnostics — est passé en mode `differe`. `npm run lint:fichiers` refuse le suivant ;
+les gestes réellement différents (image unique remplacée sur place, import de
+tableur, photo de la bannière) sont **déclarés** dans `SELECTEURS_NATIFS`, avec leur
+raison. Au doigt, le bouton 📎 fait **44 px** (`pointer: coarse`) — il en faisait 22 ;
+`e2e/depot-fichier.spec.ts` le mesure sur l'écran réel, API simulée.
+
 ### La forme, dans cet ordre exact
 
 | # | Élément | Détail |

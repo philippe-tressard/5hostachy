@@ -91,13 +91,13 @@
 	//  donc rien pour le plan, et pré-remplissait en douce le formulaire d'AG.
 	//  Il a désormais le sien, et les deux formulaires sont le même objet.
 	let newPlanPerimetre: string[] = [];
-	let newPlanFichiers: FileList | null = null;
+	let newPlanFichiers: File[] = [];
 	let savingPlan = false;
 
 	let showReglementForm = false;
 	let newReglementTitre = '';
 	let newReglementDescription = '';
-	let newReglementFichiers: FileList | null = null;
+	let newReglementFichiers: File[] = [];
 	let savingReglement = false;
 
 	let showCrAgForm = false;
@@ -114,7 +114,7 @@
 	//  copropriétaires quel que soit le bâtiment dont elle parle (#617). C'est
 	//  cet arbitrage qui a rendu la migration possible sans toucher aux accès.
 	let newCrAgPerimetre: string[] = [];
-	let newCrAgFichiers: FileList | null = null;
+	let newCrAgFichiers: File[] = [];
 	let savingCrAg = false;
 
 	// Édition document (plans, règlements, CR d'AG)
@@ -286,7 +286,7 @@
 			newPlanTitre = '';
 			newPlanDescription = '';
 			newPlanPerimetre = [];
-			newPlanFichiers = null;
+			newPlanFichiers = [];
 		}, 'Plan ajouté');
 		savingPlan = false;
 	}
@@ -317,7 +317,7 @@
 			showReglementForm = false;
 			newReglementTitre = '';
 			newReglementDescription = '';
-			newReglementFichiers = null;
+			newReglementFichiers = [];
 		}, 'Règlement ajouté');
 		savingReglement = false;
 	}
@@ -360,7 +360,7 @@
 			newCrAgAnnee = '';
 			newCrAgDateAg = '';
 			newCrAgPerimetre = [];
-			newCrAgFichiers = null;
+			newCrAgFichiers = [];
 		}, "CR d'AG ajouté");
 		savingCrAg = false;
 	}

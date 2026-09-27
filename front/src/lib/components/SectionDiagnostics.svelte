@@ -55,7 +55,7 @@
 	let showDiagForm: number | null = null;
 	let newDiagTitre = '';
 	let newDiagDate = '';
-	let newDiagFichiers: FileList | null = null;
+	let newDiagFichiers: File[] = [];
 	let savingDiag = false;
 
 	let editingRapportId: number | null = null;
@@ -74,7 +74,7 @@
 		showDiagForm = typeId;
 		newDiagTitre = '';
 		newDiagDate = '';
-		newDiagFichiers = null;
+		newDiagFichiers = [];
 	}
 
 	async function addRapport() {
