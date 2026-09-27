@@ -26,7 +26,6 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import SectionRegles from '$lib/components/SectionRegles.svelte';
@@ -422,7 +421,7 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'building-2'} />
+<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'building-2'} />
 
 <!--  Cette page n'avait pas d'onglets avant le carnet d'entretien (10/09/2026).
       La rangée passe par `BarreOnglets`, qui lit la liste, l'ordre, les libellés
@@ -438,7 +437,6 @@
 	erreur={eReference}
 	consequence="Les numéros de bâtiment et les listes de documents peuvent être incomplets ou absents."
 />
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!--  Le carnet est une VUE de la résidence, pas un écran à part : il partage
       l'en-tête, la barre d'onglets et l'adresse de cette page. -->

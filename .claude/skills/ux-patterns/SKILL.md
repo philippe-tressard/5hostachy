@@ -969,7 +969,8 @@ contrôle avait raison sur le fond — un écran de cette taille doit être déc
 mais pas au prix d'un refus de toute réorganisation d'URL. `reroute` ne touche à
 aucun écran.
 
-- Descriptif par onglet : rendu par `BarreOnglets`, plus par l'écran
+- Descriptif par onglet : rendu par `BarreOnglets`, plus par l'écran — et tu s'il
+  répète celui de la page (§13, #1369)
 - Un onglet fermé à un profil se **masque** **et** se **redirige** — masquer répond
   à ce qui s'AFFICHE, rediriger à ce qui s'ATTEINT, et `BarreOnglets` fait les deux.
   Deux façons de le lui dire, qui ne se confondent pas :
@@ -1839,10 +1840,20 @@ de l'utilisateur. *Une consigne fausse fait lire l'écart comme une décision.*
 | `titre` | obligatoire |
 | `icone` | nom Lucide du catalogue `$lib/icones-svg.json` |
 | `retour` | href — affiche `← Retour` **à gauche du titre** |
+| `descriptif` | le descriptif **de la page** (`_pc.descriptif`), rendu sous l'en-tête et **au-dessus** des onglets |
 | ~~`marge`~~ | **retirée le 17/08/2026** — voir ci-dessous |
 | slot par défaut | les actions, **à droite** |
 
 **Disposition, la même partout** : `[retour] titre` à gauche · actions à droite.
+
+🔴 **Le descriptif de page est une prop, pas une ligne de l'écran** (#1369, 27/09/2026).
+Douze écrans écrivaient `<div class="page-subtitle">` à la main ; Résidence le posait
+**sous** ses onglets, juste au-dessus du descriptif de l'onglet « Fiche », qui portait le
+même texte — la phrase se lisait deux fois. Délégations l'écrivait **en dur** : le texte
+administrable ne s'y affichait pas. Une phrase par niveau : la page dit ce qu'elle est
+(`EntetePage`), l'onglet ce qu'il montre (`BarreOnglets`), et l'onglet **se tait** quand
+il répète mot pour mot la page — comparé sans balisage, les deux étant administrables.
+🔒 `lint:entetes` (motif 4, composants compris) · `e2e/descriptif-page.spec.ts`.
 
 ⚠️ **Vérifier que l'icône existe** dans `$lib/icones-svg.json` : `Icon` retombe
 **silencieusement** sur `help-circle` pour un nom inconnu. `message-square-plus`

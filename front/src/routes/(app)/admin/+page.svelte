@@ -39,7 +39,6 @@
 	import OngletTelemetrie from '$lib/components/OngletTelemetrie.svelte';
 	import OngletCsp from '$lib/components/OngletCsp.svelte';
 	import OngletModelesEmail from '$lib/components/OngletModelesEmail.svelte';
-	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort as fmt } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 
@@ -514,8 +513,11 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'sliders-horizontal'} />
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
+<EntetePage
+	titre={_pc.titre}
+	descriptif={_pc.descriptif}
+	icone={_pc.icone || 'sliders-horizontal'}
+/>
 
 <!--  Tous les onglets passent par `Onglet` — ceux qui basculent un panneau comme
       ceux qui mènent ailleurs. C'est ce qui garantit qu'ils se ressemblent :

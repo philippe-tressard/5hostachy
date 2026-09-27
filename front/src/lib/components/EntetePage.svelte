@@ -23,6 +23,7 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import { safeHtml } from '$lib/sanitize';
 
 	export let titre: string;
 	/** Nom d'icône Lucide. Toute page en porte une — sauf à ne pas savoir laquelle. */
@@ -52,6 +53,13 @@
 	 *   Réservé à ce cas : hors saisie, la liste occupe toute la largeur et
 	 *   contraindre l'en-tête décalerait le bouton par rapport à ce qu'il domine. */
 	export let alignerSaisie = false;
+	/**  Le descriptif de la PAGE — la phrase grise sous le titre, administrable
+	 *   (`_pc.descriptif`). Il était écrit à la main dans DOUZE écrans, et l'un
+	 *   d'eux (Résidence) le posait SOUS les onglets, juste au-dessus du descriptif
+	 *   de l'onglet « Fiche », qui portait le même texte : la phrase se lisait deux
+	 *   fois (#1369). Rendu ici, il a une place et une seule : sous l'en-tête,
+	 *   au-dessus des onglets. Ce que dit l'onglet, `BarreOnglets` le rend. */
+	export let descriptif: string | null = null;
 </script>
 
 <div class="page-header" class:largeur-saisie={alignerSaisie}>
@@ -67,6 +75,11 @@
 		<div class="entete-actions"><slot /></div>
 	{/if}
 </div>
+<!--  HORS du conteneur : sous 640 px, `.page-header` devient collant, et la
+      phrase ne doit pas rester à l'écran pendant le défilement. -->
+{#if descriptif}
+	<div class="page-subtitle">{@html safeHtml(descriptif)}</div>
+{/if}
 
 <style>
 	/*  Retour et titre forment UN bloc : sans ce groupe, `space-between` les

@@ -12,7 +12,6 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmtDate, fmtDatetimeShort as fmtDatetime } from '$lib/date';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import HistoriqueDemandes from '$lib/components/HistoriqueDemandes.svelte';
@@ -278,13 +277,12 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'user'} />
+<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'user'} />
 
 <ChargementPartiel
 	erreur={erreurChargement}
 	consequence="Vos lots, la liste des bâtiments et l'historique de vos demandes peuvent être absents de cet écran."
 />
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <div class="largeur-saisie">
 	<!-- ── Avatar + Infos personnelles ──────────────────────────────────────── -->

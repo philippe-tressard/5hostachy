@@ -123,16 +123,12 @@
 
 <svelte:head><title>Délégations aidant — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'heart-handshake'} />
+<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'heart-handshake'} />
 
 <ChargementPartiel
 	erreur={erreurUtilisateurs}
 	consequence="Les menus « mandant » et « aidant » du formulaire de délégation sont vides : ce n'est pas qu'aucun résident n'est éligible."
 />
-<p class="page-subtitle" style="margin-bottom:1.5rem;color:var(--color-text-muted);font-size:.9rem">
-	Gestion des accès délégués pour les proches aidants.
-	<br /><em style="font-size:.82rem">L'accès aidant ne constitue pas une procuration d'AG.</em>
-</p>
 
 {#if loading}
 	<EtatListe chargement />

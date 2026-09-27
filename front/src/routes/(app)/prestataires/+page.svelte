@@ -18,7 +18,6 @@
 	import { isCS } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
 	//  🔴 Le vocabulaire des prestataires vit dans `$lib/prestataires.ts`, pas
 	//  ici. La table des équipements écrite dans cet écran recopiait
 	//  `TypeEquipement` et en OUBLIAIT deux valeurs — `assurance` et `syndic`,
@@ -481,6 +480,7 @@
       en-tête) ; `alignerSaisie` cale le bouton sur la boîte de 720 px. -->
 <EntetePage
 	titre={_pc.titre}
+	descriptif={_pc.descriptif}
 	icone={_pc.icone || 'hard-hat'}
 	alignerSaisie={showPrestForm || contratFormOuvert || showReleveForm}
 >
@@ -515,7 +515,6 @@
 		{/if}
 	{/if}
 </EntetePage>
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <BarreOnglets pageId="prestataires" actif={onglet} />
 

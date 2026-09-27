@@ -28,26 +28,29 @@ Conventions et patterns pour créer des pages et composants SvelteKit dans le pr
 
 ### Page Config (titre dynamique via admin)
 
+Les valeurs par défaut vivent dans `$lib/pages.ts` et **nulle part ailleurs** :
+`defautsDePage('page-id')`, jamais un objet recopié dans l'écran (#420). Titre,
+icône et descriptif passent par `EntetePage` — jamais un `<h1>` ni un
+`page-subtitle` écrits à la main (`npm run lint:entetes`, #1369).
+
 ```svelte
 <script lang="ts">
-	$: _pc = getPageConfig($configStore, 'page-id', {
-		titre: 'Titre par défaut',
-		navLabel: 'Label nav',
-		icone: 'nom-icone-lucide',
-		descriptif: 'Description par défaut de la page.'
-	});
+	import EntetePage from '$lib/components/EntetePage.svelte';
+	import { configStore, getPageConfig, defautsDePage, siteNomStore } from '$lib/stores/pageConfig';
+
+	$: _pc = getPageConfig($configStore, 'page-id', defautsDePage('page-id'));
 	$: _siteNom = $siteNomStore;
 </script>
 
 <svelte:head>
-	<title>{_pc.titre} · {_siteNom}</title>
+	<title>{_pc.titre} — {_siteNom}</title>
 </svelte:head>
 
-<h1><Icon name={_pc.icone} size="28" /> {_pc.titre}</h1>
-{#if _pc.descriptif}
-	<p class="page-desc">{_pc.descriptif}</p>
-{/if}
+<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'nom-icone'} />
 ```
+
+Le descriptif d'**onglet** est rendu par `BarreOnglets`, sous la rangée ; il se
+tait quand il répète mot pour mot celui de la page (`ux-patterns` §13).
 
 ### Chargement des données
 

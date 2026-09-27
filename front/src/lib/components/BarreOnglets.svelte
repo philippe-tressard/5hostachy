@@ -33,6 +33,7 @@
 	import { configStore, getPageConfig, defautsDePage } from '$lib/stores/pageConfig';
 	import { PAGES } from '$lib/pages';
 	import { safeHtml } from '$lib/sanitize';
+	import { stripHtml } from '$lib/utils';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { isProprioOuCS, isLocataire, authResolue } from '$lib/stores/auth';
@@ -61,7 +62,17 @@
 	$: onglets = (PAGES.find((p) => p.id === pageId)?.onglets ?? []).filter(
 		(o) => !masques.includes(o.id) && visible(o),
 	);
-	$: descriptif = _pc.onglets?.[actif]?.descriptif ?? defauts.onglets?.[actif]?.descriptif ?? '';
+	$: descriptifOnglet =
+		_pc.onglets?.[actif]?.descriptif ?? defauts.onglets?.[actif]?.descriptif ?? '';
+	//  Une phrase ne se lit pas deux fois (#1369) : quand l'onglet dit mot pour mot
+	//  ce que la page dit déjà au-dessus (`EntetePage`), sa ligne se tait. C'est le
+	//  cas de l'onglet ouvert par défaut, qui porte souvent le nom de l'écran —
+	//  « Fiche » de Résidence l'affichait sous la même phrase. Comparé SANS le
+	//  balisage : les deux textes sont administrables, et l'éditeur riche enveloppe
+	//  l'un d'un <p> quand l'autre, resté celui de la table, n'en a pas.
+	$: descriptif =
+		texteSeul(descriptifOnglet) === texteSeul(_pc.descriptif ?? '') ? '' : descriptifOnglet;
+	const texteSeul = (html: string) => stripHtml(html).replace(/\s+/g, ' ');
 
 	//  🔴 Masquer ne suffit pas : un onglet EST une adresse, et un favori ou un
 	//  lien reçu y mène quand même. Le masquage répond à ce qui s'AFFICHE, cette
