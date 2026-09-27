@@ -31,6 +31,7 @@ from app.auth.jwt import (
     verify_and_rehash,
 )
 from app.auth.deps import get_current_user
+from app.auth.empreinte_jeton import empreinte
 from app.auth.jetons_rafraichissement import est_rejoue, remplacer, revoquer_sessions
 from app.config import get_settings
 from app.database import get_session
@@ -102,7 +103,7 @@ def emettre_verification_email(
     session.add(
         EmailVerificationToken(
             user_id=user.id,
-            token=raw_token,
+            token=empreinte(raw_token),
             expires_at=horloge.maintenant() + VALIDITE_VERIFICATION_EMAIL,
         )
     )
@@ -299,7 +300,7 @@ def login(
     refresh = create_refresh_token({"sub": str(user.id)})
     rt = RefreshToken(
         user_id=user.id,
-        token=refresh,
+        token=empreinte(refresh),
         expires_at=horloge.maintenant() + timedelta(days=settings.refresh_token_expire_days),
     )
     session.add(rt)
@@ -328,7 +329,9 @@ def refresh(
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(401, "Refresh token invalide.")
 
-    stored = session.exec(select(RefreshToken).where(RefreshToken.token == refresh_token)).first()
+    stored = session.exec(
+        select(RefreshToken).where(RefreshToken.token == empreinte(refresh_token))
+    ).first()
     maintenant = horloge.maintenant()
     if stored and est_rejoue(stored, maintenant):
         #  Un jeton déjà échangé qui revient : le porteur légitime ou un voleur,
@@ -353,7 +356,7 @@ def refresh(
     new_refresh = create_refresh_token({"sub": str(user.id)})
     rt = RefreshToken(
         user_id=user.id,
-        token=new_refresh,
+        token=empreinte(new_refresh),
         expires_at=horloge.maintenant() + timedelta(days=settings.refresh_token_expire_days),
     )
     session.add(rt)
@@ -382,7 +385,7 @@ def logout(
 ):
     if refresh_token:
         stored = session.exec(
-            select(RefreshToken).where(RefreshToken.token == refresh_token)
+            select(RefreshToken).where(RefreshToken.token == empreinte(refresh_token))
         ).first()
         if stored:
             stored.revoked = True
@@ -426,7 +429,7 @@ def verify_email(request: Request, token: str, session: Session = Depends(get_se
     jetons étaient énumérables au rythme que le réseau permettait.
     """
     evt = session.exec(
-        select(EmailVerificationToken).where(EmailVerificationToken.token == token)
+        select(EmailVerificationToken).where(EmailVerificationToken.token == empreinte(token))
     ).first()
 
     if not evt or evt.used or evt.expires_at < horloge.maintenant():

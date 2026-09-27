@@ -202,6 +202,11 @@ prudent.
    `app/auth/jetons_rafraichissement.py` — 🔒 `test_jeton_rejoue.py` éprouve les
    trois révocations et refuse une purge ou un échange écrits ailleurs.
 
+5. **Le jeton en base est une EMPREINTE** (`auth/empreinte_jeton`, #1389) : le
+   cookie porte le brut, `refresh_token.token` son HMAC. Vaut aussi pour les
+   jetons de mot de passe oublié et de vérification d'adresse. 🔒
+   `test_jetons_empreinte.py` refuse une écriture ou une recherche en clair.
+
 Une **clé partagée** (`MAINTENANCE_KEY`) se compare par `hmac.compare_digest`, en
 octets — jamais `==` : 🔒 `test_cle_maintenance.py` refuse un réglage secret
 comparé par égalité.

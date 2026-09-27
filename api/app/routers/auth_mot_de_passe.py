@@ -25,6 +25,7 @@ from sqlmodel import Session, select
 from app.utils.config_site import config_site
 from app.utils.journal_securite import journaliser_securite
 from app.auth.deps import get_current_user
+from app.auth.empreinte_jeton import empreinte
 from app.auth.jwt import verify_password
 from app.database import get_session
 from app.models.core import PasswordResetToken, Utilisateur
@@ -105,7 +106,7 @@ def request_password_reset(
         raw_token = secrets.token_urlsafe(32)
         prt = PasswordResetToken(
             user_id=user.id,
-            token=raw_token,
+            token=empreinte(raw_token),
             expires_at=horloge.maintenant() + timedelta(hours=1),
         )
         session.add(prt)
@@ -149,7 +150,7 @@ def reset_password(
     _check_password_strength(body.nouveau_mot_de_passe)
 
     prt = session.exec(
-        select(PasswordResetToken).where(PasswordResetToken.token == body.token)
+        select(PasswordResetToken).where(PasswordResetToken.token == empreinte(body.token))
     ).first()
 
     if not prt or prt.used or prt.expires_at < horloge.maintenant():

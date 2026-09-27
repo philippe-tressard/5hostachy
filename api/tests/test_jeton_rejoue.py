@@ -28,6 +28,7 @@ import pytest
 from fastapi import HTTPException, Response
 from sqlmodel import Session, select
 
+from app.auth.empreinte_jeton import empreinte
 from app.auth.jetons_rafraichissement import DELAI_GRACE_ROTATION, purger
 from app.auth.jwt import create_refresh_token
 from app.database import engine
@@ -46,7 +47,9 @@ def _ouvrir(session: Session, user_id: int) -> str:
     jeton = create_refresh_token({"sub": str(user_id)})
     session.add(
         RefreshToken(
-            user_id=user_id, token=jeton, expires_at=horloge.maintenant() + timedelta(days=7)
+            user_id=user_id,
+            token=empreinte(jeton),
+            expires_at=horloge.maintenant() + timedelta(days=7),
         )
     )
     session.commit()
@@ -74,7 +77,7 @@ def _actifs(session: Session, user_id: int) -> set[str]:
 
 def _vieillir_l_echange(session: Session, jeton: str, de: timedelta) -> None:
     """Recule l'échange de `jeton` : c'est l'horloge qu'on simule, pas la règle."""
-    stocke = session.exec(select(RefreshToken).where(RefreshToken.token == jeton)).one()
+    stocke = session.exec(select(RefreshToken).where(RefreshToken.token == empreinte(jeton))).one()
     assert stocke.remplace_le is not None, "l'échange n'a pas marqué le jeton remplacé"
     stocke.remplace_le -= de
     session.add(stocke)
@@ -130,7 +133,7 @@ def test_un_jeton_ferme_par_deconnexion_ne_ferme_rien_d_autre(utilisateur):
 
         _refuse(session, deconnecte)
 
-        assert _actifs(session, utilisateur.id) == {autre_appareil}
+        assert _actifs(session, utilisateur.id) == {empreinte(autre_appareil)}
 
 
 def test_un_mot_de_passe_pose_ne_fait_pas_passer_l_autre_appareil_pour_un_voleur(utilisateur):
@@ -144,7 +147,7 @@ def test_un_mot_de_passe_pose_ne_fait_pas_passer_l_autre_appareil_pour_un_voleur
 
         _refuse(session, ancien)
 
-        assert _actifs(session, utilisateur.id) == {courant}, (
+        assert _actifs(session, utilisateur.id) == {empreinte(courant)}, (
             "Changer son mot de passe puis rouvrir l'autre appareil a fermé la "
             "session qu'on venait de garder."
         )
