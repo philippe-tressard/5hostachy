@@ -27,7 +27,8 @@ from sqlmodel.pool import StaticPool
 from app.config import get_settings
 from app.main import app
 from app.models.core import RoleUtilisateur, Utilisateur
-from app.models.jetons import RefreshToken
+from app.models.core import PublicationEvolution
+from app.models.jetons import EmailVerificationToken, RefreshToken
 
 CLE = "cle-de-test-des-purges"
 ROUTE = "/admin/maintenance/purges"
@@ -94,11 +95,52 @@ def test_avec_la_cle_les_purges_ont_lieu_et_rendent_leurs_comptes(moteur):
     assert set(corps["comptes"]) == {
         "tokens",
         "prt",
+        "verifications",
         "notifications",
         "historique",
         "emails",
         "ia",
         "whatsapp",
-        "evolutions",
     }
     assert _restants(moteur) == {"valide"}
+
+
+def test_les_jetons_de_verification_perimes_ou_utilises_sont_purges(moteur):
+    """La seule famille de jetons qu'aucune purge ne touchait (#1382)."""
+    _jetons(moteur)
+    maintenant = datetime.now(timezone.utc)
+    with Session(moteur) as s:
+        for jeton, expire, utilise in (
+            ("perime", maintenant - timedelta(days=1), False),
+            ("utilise", maintenant + timedelta(days=1), True),
+            ("en-attente", maintenant + timedelta(days=1), False),
+        ):
+            s.add(EmailVerificationToken(user_id=1, token=jeton, expires_at=expire, used=utilise))
+        s.commit()
+    corps = TestClient(app).post(ROUTE, headers={"x-maintenance-key": CLE}).json()
+    assert corps["comptes"]["verifications"] == 2
+    with Session(moteur) as s:
+        restants = {t.token for t in s.exec(select(EmailVerificationToken)).all()}
+    #  Un lien de vérification encore valide, dans une boîte de réception,
+    #  doit continuer de marcher.
+    assert restants == {"en-attente"}
+
+
+def test_la_copie_gelee_des_evolutions_d_actualite_n_est_plus_purgee(moteur):
+    """#1381 : `publication_evolution` n'est plus lue depuis 0210 ; la purge
+    effaçait la copie que la migration garde par prudence."""
+    _jetons(moteur)
+    with Session(moteur) as s:
+        s.add(
+            PublicationEvolution(
+                publication_id=1,
+                type="commentaire",
+                contenu="ancien",
+                auteur_id=1,
+                cree_le=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=400),
+            )
+        )
+        s.commit()
+    TestClient(app).post(ROUTE, headers={"x-maintenance-key": CLE})
+    with Session(moteur) as s:
+        assert len(s.exec(select(PublicationEvolution)).all()) == 1
