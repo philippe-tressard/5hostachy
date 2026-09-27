@@ -39,6 +39,7 @@
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
+import { titresDeLaSource, titresParEntite } from './lib-titres-entites.mjs';
 
 const RACINE = 'src';
 
@@ -230,7 +231,7 @@ function finBaliseOuvrante(src, debut) {
 /**  Les sections d'une source, dans l'ordre du fichier, avec leur rang.
  *
  *   PURE : c'est ce qui la rend éprouvable par `--selftest`, sans arborescence. */
-export function sectionsDe(source) {
+export function sectionsDe(source, titresEntite = {}) {
 	const trouvees = [];
 	//  L'élément `<ChampsCommuns …>` : on lit ses props, on saute son contenu.
 	const zonesIgnorees = [];
@@ -297,10 +298,12 @@ export function sectionsDe(source) {
 			trouvees.push({ position: m.index, rang: rangT, quoi: LIBELLES[m[1]] ?? m[1] });
 		}
 	}
-	//  Les autres se reconnaissent à leur intitulé, écrit en clair.
+	//  Les autres se reconnaissent à leur intitulé, écrit en clair — celui de la
+	//  table, ou celui que l'ENTITÉ importée déclare (`titreEcran`, #1329) :
+	//  « Code » est le Titre d'un accès, « Type » sa Nature.
 	const reTitre = /titre="([^"]+)"/g;
 	while ((m = reTitre.exec(source))) {
-		const rang = RANGS[m[1]];
+		const rang = RANGS[m[1]] ?? RANGS_PAR_ID[titresEntite[m[1]]];
 		if (rang && !ignoree(m.index)) {
 			trouvees.push({ position: m.index, rang, quoi: m[1] });
 		}
@@ -376,6 +379,21 @@ if (process.argv.includes('--selftest')) {
 		console.error('  ✗ une source vide rend des sections');
 		ko++;
 	}
+	//  Les intitulés d'une ENTITÉ (#1329) : l'ancien ordre du formulaire d'accès
+	//  — Type avant Code, État après Accès — est un désordre ; sans la
+	//  correspondance, ces intitulés restent inconnus et rien n'est vu.
+	const accesAncien =
+		'<SectionFormulaire titre="Type" /><SectionFormulaire titre="Code" />' +
+		'<SectionFormulaire titre="Accès" /><SectionFormulaire titre="État" />';
+	const titresAcces = { Code: 'titre', Type: 'nature', État: 'suivi', Accès: 'perimetre' };
+	if (desordres(sectionsDe(accesAncien, titresAcces)).length !== 2) {
+		console.error('  ✗ intitulés d’entité : l’ancien ordre de l’accès n’est pas vu');
+		ko++;
+	}
+	if (desordres(sectionsDe(accesAncien)).length !== 0) {
+		console.error('  ✗ intitulés d’entité : classés sans la correspondance de l’entité');
+		ko++;
+	}
 	if (ko) {
 		console.error(`\n✗ Auto-test : ${ko} cas en échec.\n`);
 		process.exit(1);
@@ -395,8 +413,19 @@ function fichiers(dir, acc = []) {
 const tous = fichiers(RACINE);
 const fautifs = [];
 let sectionsLues = 0;
+const PAR_ENTITE = await titresParEntite(join(RACINE, 'lib', 'entites'), (msg) => {
+	console.error(`✗ Cas zéro : ${msg}`);
+	process.exit(1);
+});
+//  Cas zéro : l'accès déclare « Code », « Type »… — si plus rien n'est lu, la
+//  correspondance est morte et les formulaires d'objet redeviennent invisibles.
+if (!Object.keys(PAR_ENTITE.ACCES ?? {}).includes('Code')) {
+	console.error('✗ Cas zéro : les intitulés des entités (`titreEcran`) ne se lisent plus.');
+	process.exit(1);
+}
 for (const p of tous) {
-	const sections = sectionsDe(readFileSync(p, 'utf8'));
+	const source = readFileSync(p, 'utf8');
+	const sections = sectionsDe(source, titresDeLaSource(source, PAR_ENTITE));
 	sectionsLues += sections.length;
 	for (const e of desordres(sections)) {
 		fautifs.push(
