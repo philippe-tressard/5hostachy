@@ -28,6 +28,7 @@ une route de ce genre rendrait une adresse, un sujet de courriel ou un
 identifiant de ligne, elle devrait passer par une session d'administrateur.
 """
 
+import hmac
 from typing import Optional
 
 from fastapi import HTTPException
@@ -54,5 +55,12 @@ def exiger_cle_maintenance(cle_recue: Optional[str]) -> None:
             status_code=503,
             detail="Maintenance reporting non configuré (MAINTENANCE_KEY vide)",
         )
-    if cle_recue != settings.maintenance_key:
+    #  Comparaison à TEMPS CONSTANT (27/09/2026) : `!=` s'arrête au premier octet
+    #  qui diffère, et la durée de la réponse dit alors combien d'octets étaient
+    #  justes. En octets, pas en `str` : `compare_digest` lève sur un caractère non
+    #  ASCII, et une clé exotique rendrait 500 au lieu de 403.
+    #  🔒 `test_cle_maintenance.py` refuse un secret comparé par `==` ou `!=`.
+    if not hmac.compare_digest(
+        (cle_recue or "").encode("utf-8"), settings.maintenance_key.encode("utf-8")
+    ):
         raise HTTPException(status_code=403, detail="Clé maintenance invalide")

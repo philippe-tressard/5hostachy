@@ -53,6 +53,8 @@ GESTES_SENSIBLES = {
     "le geste qui donne des droits, et rien ne nommait l'admin qui l'a fait",
     ("routers/admin/utilisateurs.py", "retirer_role"): "un retrait de rôle",
     ("routers/admin/utilisateurs.py", "ban_communaute"): "un bannissement",
+    ("routers/auth.py", "refresh"): "un jeton de rafraîchissement rejoué — le seul "
+    "signal d'un vol de session, et toutes les sessions du compte viennent de fermer",
 }
 
 

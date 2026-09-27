@@ -290,7 +290,7 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - Rate limiting slowapi sur `/auth/*`
 - **Journal de sécurité : une seule porte.** Un geste sensible — connexion
   refusée, mot de passe changé ou réinitialisé, rôle ajouté ou retiré,
-  bannissement — appelle `utils/journal_securite.journaliser_securite`, et
+  bannissement, jeton de rafraîchissement rejoué — appelle `utils/journal_securite.journaliser_securite`, et
   **aucun** n'écrit dans un `logger` local. Rien n'était journalisé avant le
   20/09/2026 : un compte compromis ou une élévation de rôle ne laissait aucune
   trace exploitable (#1040).

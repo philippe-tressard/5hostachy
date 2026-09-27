@@ -62,28 +62,13 @@ def poser_mot_de_passe(
     zéro. La fermer entièrement demanderait une liste de révocation par `jti` —
     un autre chantier, et il est nommé dans #1063 plutôt que laissé à deviner.
     """
-    from sqlmodel import select
-
+    from app.auth.jetons_rafraichissement import revoquer_sessions
     from app.auth.jwt import hash_password
-    from app.models.core import RefreshToken
 
     verifier_robustesse(nouveau)
     utilisateur.hashed_password = hash_password(nouveau)
-
-    a_revoquer = session.exec(
-        select(RefreshToken).where(
-            RefreshToken.user_id == utilisateur.id,
-            RefreshToken.revoked == False,  # noqa: E712
-        )
-    ).all()
-
-    revoquees = 0
-    for jeton in a_revoquer:
-        if jeton_courant is not None and jeton.token == jeton_courant:
-            continue
-        jeton.revoked = True
-        session.add(jeton)
-        revoquees += 1
-
+    #  Une révocation SANS `remplace_le` : l'ancien jeton de l'autre appareil,
+    #  s'il revient, est une session fermée, pas un vol (27/09/2026).
+    revoquees = revoquer_sessions(session, utilisateur.id, sauf=jeton_courant)
     session.add(utilisateur)
     return revoquees

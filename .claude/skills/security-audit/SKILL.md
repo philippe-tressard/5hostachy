@@ -195,6 +195,16 @@ prudent.
 1. Invalide l'ancien refresh token (`revoked=True`)
 2. Crée un nouveau refresh token
 3. Retourne le nouveau token en cookie
+4. **Ferme toutes les sessions du compte** quand un jeton déjà **échangé** revient
+   après le délai de grâce : c'est le seul signal d'un vol de session (27/09/2026).
+   Un jeton fermé par une déconnexion ou un mot de passe posé ne déclenche rien.
+   La règle, la purge qui garde les jetons échangés et le délai vivent dans
+   `app/auth/jetons_rafraichissement.py` — 🔒 `test_jeton_rejoue.py` éprouve les
+   trois révocations et refuse une purge ou un échange écrits ailleurs.
+
+Une **clé partagée** (`MAINTENANCE_KEY`) se compare par `hmac.compare_digest`, en
+octets — jamais `==` : 🔒 `test_cle_maintenance.py` refuse un réglage secret
+comparé par égalité.
 
 ### 8. Secrets & Configuration (A02:2021)
 

@@ -141,16 +141,13 @@ async def lifespan(app: FastAPI):
     _run_migrations()
     seed()
 
-    # Purge des refresh tokens expirés ou révoqués
-    from sqlmodel import Session, delete
-    from app.models.core import RefreshToken
+    # Purge des refresh tokens — les échangés restent jusqu'à leur expiration,
+    # c'est par eux qu'un jeton rejoué se reconnaît (`auth/jetons_rafraichissement`).
+    from sqlmodel import Session
+    from app.auth.jetons_rafraichissement import purger as purger_jetons
 
     with Session(engine) as _s:
-        _s.exec(
-            delete(RefreshToken).where(
-                (RefreshToken.revoked == True) | (RefreshToken.expires_at < horloge.maintenant())  # noqa: E712
-            )
-        )
+        purger_jetons(_s, horloge.maintenant())
         _s.commit()
 
     # Nettoyage des sauvegardes orphelines restées "en_cours" suite à un
