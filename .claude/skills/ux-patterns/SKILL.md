@@ -1078,7 +1078,8 @@ https://claude.ai/artifact/BRYAWNn4EZAx1EBTHHNMQu
   montrent le même texte, jamais réécrits (`test_recherche_affaires.py`). Un
   compte de résultats est une information.
 - La carte dit **où** : « Trouvé dans une suite », et le passage en segments
-  surlignés (`ExtraitRecherche`) — du TEXTE, jamais du HTML, donc pas de `{@html}`.
+  surlignés (`ExtraitRecherche`) — du TEXTE, jamais du HTML : le `<mark>` est
+  posé par le gabarit, il n'y a rien à assainir.
 - Les **Archives** ne s'y mêlent que sur demande (case, ou « Les inclure » quand
   le bilan en signale).
 

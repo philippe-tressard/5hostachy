@@ -18,6 +18,12 @@
 	export let archivee = false;
 
 	$: source = SOURCE_DATEE[correspondance.ou];
+	//  La clé d'un segment est sa POSITION dans le passage : deux segments peuvent
+	//  porter le même texte, jamais commencer au même caractère.
+	$: morceaux = correspondance.extrait.map((segment, i, tous) => ({
+		...segment,
+		debut: tous.slice(0, i).reduce((n, s) => n + s.texte.length, 0),
+	}));
 	$: origine = source
 		? [`${source} du ${fmtDate(correspondance.date)}`, correspondance.auteur]
 				.filter(Boolean)
@@ -33,7 +39,7 @@
 	{#if correspondance.extrait.length}
 		<p class="passage">
 			{#if origine}<span class="origine">{origine}</span>{/if}
-			{#each correspondance.extrait as segment}{#if segment.surligne}<mark>{segment.texte}</mark
+			{#each morceaux as segment (segment.debut)}{#if segment.surligne}<mark>{segment.texte}</mark
 					>{:else}{segment.texte}{/if}{/each}
 		</p>
 	{/if}
