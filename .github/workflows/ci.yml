@@ -1734,6 +1734,12 @@ jobs:
         working-directory: front
         run: npm run lint:pastilles
 
+      # Le manuel montre les VRAIES pastilles « qui la lit », avec leur phrase au
+      # survol (27/09/2026) : recalculées par `$lib/lecture`, jamais recopiées.
+      - name: Les pastilles du manuel disent ce que le site dit
+        working-directory: front
+        run: npm run lint:manuel-pastilles
+
       # 🔴 L'infobulle de catégorie disait « etude_travaux » sur la liste des
       # affaires (26/09/2026, signalé à l'écran) ; deux reportings rendaient la
       # même valeur brute. Le libellé existait, rien n'obligeait à le prendre.
