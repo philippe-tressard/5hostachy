@@ -99,7 +99,7 @@
 		padding: 0.3rem 0.5rem;
 		border: 1px solid var(--color-border);
 		border-radius: 6px;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		background: var(--color-surface);
 		width: 100%;
 		cursor: pointer;

@@ -126,7 +126,7 @@
 	}
 	.mes-acces-vide {
 		color: var(--color-text-muted);
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.mes-acces-code {
 		font-family: monospace;

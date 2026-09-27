@@ -56,7 +56,7 @@
 	.cp-consequence {
 		display: block;
 		margin-top: 0.25rem;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		opacity: 0.9;
 	}
 </style>

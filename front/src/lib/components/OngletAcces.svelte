@@ -269,17 +269,14 @@
 
 	<!-- Vue par locataire (bailleurs uniquement) -->
 	{#if $isBailleur && mesBaux.length > 0}
-		<section
-			class="section card"
-			style="margin-top:1rem;border-left:3px solid var(--color-accent,#C9983A)"
-		>
+		<section class="section card" style="margin-top:1rem;border-left:3px solid var(--color-accent)">
 			<div class="section-header">
 				<h2 class="section-title">👥 Vue par locataire</h2>
 			</div>
 			{#if mesBaux.filter(bailEnCours).length === 0}
-				<p style="font-size:.85rem;color:var(--color-text-muted)">Aucun bail actif.</p>
+				<p style="font-size:var(--fs-md);color:var(--color-text-muted)">Aucun bail actif.</p>
 			{:else}
-				<p style="font-size:.85rem;color:var(--color-text-muted);margin-bottom:.9rem">
+				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:.9rem">
 					Résumé des accès (Vigik / télécommandes) confiés à vos locataires.
 				</p>
 				{#each locatairesAcces as { baux, items } (baux[0]?.id ?? baux)}
@@ -293,13 +290,13 @@
 								>
 								{#if premierBail.locataire_email}<a
 										href="mailto:{premierBail.locataire_email}"
-										style="font-size:.8rem;color:var(--color-primary)"
+										style="font-size:var(--fs-sm);color:var(--color-primary)"
 										>{premierBail.locataire_email}</a
 									>{/if}
 							</div>
 							<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
 								{#if items.length > 0}
-									<span class="badge badge-yellow" style="font-size:.72rem"
+									<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
 										>{items.length} accès confié{items.length > 1 ? 's' : ''}</span
 									>
 									<button
@@ -308,7 +305,9 @@
 										>↩ Tout récupérer</button
 									>
 								{:else}
-									<span class="badge badge-gray" style="font-size:.72rem">Aucun accès confié</span>
+									<span class="badge badge-gray" style="font-size:var(--fs-2xs)"
+										>Aucun accès confié</span
+									>
 								{/if}
 							</div>
 						</div>
@@ -316,7 +315,7 @@
 							<div class="lar-items">
 								{#each items as item (item.id ?? item.code)}
 									<div class="lar-item">
-										<span style="font-family:monospace;font-size:.85rem">{item.code}</span>
+										<span style="font-family:monospace;font-size:var(--fs-md)">{item.code}</span>
 										<span
 											class="badge {item.typeAcces === 'vigik' ? 'badge-blue' : 'badge-purple'}"
 											style="font-size:.68rem"

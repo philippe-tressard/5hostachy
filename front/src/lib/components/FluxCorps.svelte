@@ -136,13 +136,13 @@
 		margin: 0.6rem 0 0.3rem;
 		padding: 0.5rem 0.75rem;
 		border-radius: 6px;
-		background: #eef2f7;
+		background: var(--color-primary-light);
 		border-left: 3px solid var(--color-primary);
 		font-size: 0.82rem;
 	}
 	.flux-reaction-icon {
 		flex-shrink: 0;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		margin-top: 0.1rem;
 	}
 	.flux-reaction-body {
@@ -152,7 +152,7 @@
 		min-width: 0;
 	}
 	.flux-reaction-auteur {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		font-weight: 600;
 		color: var(--color-primary);
 	}
@@ -162,7 +162,7 @@
 		line-height: 1.45;
 	}
 	.flux-full-content {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		line-height: 1.55;
 		margin: 0.5rem 0;
 	}

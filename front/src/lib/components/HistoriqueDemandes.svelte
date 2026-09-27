@@ -74,7 +74,7 @@
 	}
 	.hd-resume {
 		cursor: pointer;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 	}
 	.hd-table {

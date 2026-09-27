@@ -58,11 +58,11 @@
 			<h2 class="section-title">&#x1F3E0; Accès confiés par votre bailleur</h2>
 		</div>
 		{#if accesRecus.length === 0}
-			<p style="font-size:.85rem;color:var(--color-text-muted)">
+			<p style="font-size:var(--fs-md);color:var(--color-text-muted)">
 				Aucun accès ne vous a encore été confié par votre propriétaire.
 			</p>
 		{:else}
-			<p style="font-size:.85rem;color:var(--color-text-muted);margin-bottom:.75rem">
+			<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:.75rem">
 				Ces accès vous ont été confiés par votre propriétaire pour la durée de votre bail.
 			</p>
 			<table class="table" style="table-layout:fixed;width:100%">
@@ -95,13 +95,13 @@
 	    l'exécution, il rend simplement le balisage NU. */
 	/*  Seule la taille differe de `.table` (#607, 28/08/2026). */
 	.table {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	/*  Ne garde que l'écart — la raison est déclarée dans
 	    `check-charte-recomposee.regles.mjs` (30/08/2026). */
 	.table th {
 		padding: 0.4rem 0.5rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 	.table td {
 		padding: 0.5rem;

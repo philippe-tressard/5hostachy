@@ -129,7 +129,7 @@
 	}
 	.note-choisie {
 		margin: 0.25rem 0 0;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 	}
 	/*  Taille et césure reprises de `.frise-stars`, d'où ce composant est né. */

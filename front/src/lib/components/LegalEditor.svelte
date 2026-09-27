@@ -216,7 +216,7 @@
 
 	.legal-content-editable {
 		padding: 0.7rem 0.9rem;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		line-height: 1.7;
 		color: var(--color-text);
 		outline: none;
@@ -230,7 +230,7 @@
 		box-sizing: border-box;
 		padding: 0.7rem 0.9rem;
 		font-family: monospace;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		line-height: 1.6;
 		color: var(--color-text);
 		background: var(--color-bg-subtle, #f9fafb);

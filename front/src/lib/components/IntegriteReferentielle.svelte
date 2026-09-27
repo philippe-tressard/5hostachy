@@ -153,7 +153,7 @@
 	    l'identique, est exactement ce que `lint:charte` refuse. On ne pose que
 	    l'écart propre à cet écran. */
 	.intro {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		margin-bottom: 0.75rem;
 	}
 	/*  PAS `.form-actions` : cette classe dit « ce formulaire se soumet », et
@@ -174,7 +174,7 @@
 		flex-wrap: wrap;
 	}
 	.etat {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		margin-top: 0.75rem;
 	}
 	.etat-sain {
@@ -185,7 +185,7 @@
 		color: var(--color-danger);
 	}
 	.liste-relations {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		margin: 0.4rem 0 0 1.1rem;
 		line-height: 1.7;
 	}

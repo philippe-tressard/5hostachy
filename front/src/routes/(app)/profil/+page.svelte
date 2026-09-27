@@ -584,7 +584,7 @@
 	.info-banner {
 		padding: 0.6rem 0.9rem;
 		border-radius: var(--radius);
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 	.info-yellow {
 		background: #fffbeb;

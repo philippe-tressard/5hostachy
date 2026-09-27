@@ -148,7 +148,7 @@
 
 <style>
 	.modal-code {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: -0.4rem 0 1rem;
 	}
@@ -169,7 +169,7 @@
 		background: var(--color-surface);
 		cursor: pointer;
 		color: var(--color-text-muted);
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.icone:hover {
@@ -184,7 +184,7 @@
 	}
 	.field-check {
 		display: block;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		margin-bottom: 0.8rem;
 	}
 	.field-check.danger {

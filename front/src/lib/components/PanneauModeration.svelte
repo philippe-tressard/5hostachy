@@ -87,7 +87,7 @@
 		border: none;
 		padding: 0.7rem 1rem;
 		font-weight: 600;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		cursor: pointer;
 		color: var(--color-text);
 		display: flex;
@@ -96,7 +96,7 @@
 	}
 	.moderation-chevron {
 		margin-left: auto;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 	}
 	.moderation-liste {
 		padding: 0 1rem 1rem;
@@ -115,7 +115,7 @@
 		flex-wrap: wrap;
 		gap: 0.4rem;
 		align-items: center;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		margin-bottom: 0.25rem;
 	}
 	.moderation-motif {
@@ -128,7 +128,7 @@
 		flex-wrap: wrap;
 	}
 	.moderation-aide {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		color: var(--color-text-muted);
 		margin-top: 0.3rem;
 	}

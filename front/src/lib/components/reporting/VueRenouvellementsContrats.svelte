@@ -174,7 +174,7 @@
 					><span class="frise-legend-dot" style="background:#8b5cf6"></span> Reconduit tacitement</span
 				>
 				<span class="frise-legend-hatch">▧ Zone de préavis</span>
-				<span style="font-size:.75rem;color:var(--color-text-muted)"
+				<span style="font-size:var(--fs-xs);color:var(--color-text-muted)"
 					>→ Fin en {ANNEE_COURANTE + 1}</span
 				>
 			</div>
@@ -184,7 +184,9 @@
 	<!-- Contrats futurs (hors exercice courant) -->
 	{#if contratsFuturs.length > 0}
 		<div style="margin-top:1.2rem">
-			<h4 style="font-size:.9rem;font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)">
+			<h4
+				style="font-size:var(--fs-base);font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)"
+			>
 				📅 Échéances futures ({contratsFuturs.length})
 			</h4>
 			<div class="frise-compact-list">
@@ -210,7 +212,9 @@
 	<!-- Contrats sans dates -->
 	{#if contratsInconnus.length > 0}
 		<div style="margin-top:1.2rem">
-			<h4 style="font-size:.9rem;font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)">
+			<h4
+				style="font-size:var(--fs-base);font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)"
+			>
 				⚠️ Dates manquantes ({contratsInconnus.length})
 			</h4>
 			<div class="frise-compact-list">
@@ -279,7 +283,7 @@
 		flex-wrap: wrap;
 	}
 	.frise-row-dates {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 		white-space: nowrap;
 	}
@@ -324,7 +328,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		color: var(--color-text-muted);
 		flex-wrap: wrap;
 	}

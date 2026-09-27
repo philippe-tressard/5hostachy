@@ -90,6 +90,6 @@
 		background: #1e40af;
 	}
 	.medaillon-gestionnaire-principal {
-		background: var(--color-accent, #c9983a);
+		background: var(--color-accent);
 	}
 </style>

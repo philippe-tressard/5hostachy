@@ -114,7 +114,7 @@
 	.entete p {
 		margin: 0;
 		max-width: 60ch;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 	/*  44 px : une cible tactile est une taille PHYSIQUE, celle d'un pouce (#839). */
 	.entete button {
@@ -122,7 +122,7 @@
 	}
 	.resultat {
 		margin: 1rem 0 0;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.resultat-ok {
 		color: var(--color-success);
@@ -135,7 +135,7 @@
 	.liste {
 		margin: 0.5rem 0 0;
 		padding-left: 1.2rem;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.liste li {
 		margin-bottom: 0.75rem;
@@ -144,6 +144,6 @@
 		display: block;
 		font-weight: 400;
 		color: var(--color-text-muted);
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 </style>

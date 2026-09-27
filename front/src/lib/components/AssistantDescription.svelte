@@ -251,7 +251,7 @@
 		gap: 0.4rem;
 		flex-wrap: wrap;
 		margin: 0 0 0.5rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		font-weight: 700;
 	}
 	.assistant-titre-propose {

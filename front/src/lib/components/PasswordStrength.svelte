@@ -127,7 +127,7 @@
 		transition: background var(--duree-geste);
 	}
 	.gauge-label {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		font-weight: 600;
 		min-width: 3rem;
 		text-align: right;
@@ -146,7 +146,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted, #6b7280);
 		transition: color var(--duree-geste);
 	}
@@ -156,7 +156,7 @@
 	.check-icon {
 		width: 1rem;
 		text-align: center;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		flex-shrink: 0;
 	}
 </style>

@@ -228,7 +228,7 @@
 		min-width: 22px;
 		min-height: 22px;
 		padding: 0;
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		line-height: 1;
 	}
 
@@ -241,7 +241,7 @@
 	    `.ec-titre-btn` juste en dessous l'écrasant (voir son commentaire). Le
 	    poids voulu n'a donc jamais été servi sur une carte basculable. */
 	.ec-titre {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		font-weight: 600;
 		line-height: 1.35;
 	}
@@ -324,7 +324,7 @@
 	    Un élément de la ligne l'HÉRITE — `lint:entete-carte` refuse une autre
 	    taille posée sur lui, et le raccourci `font:` qui la réinitialise. */
 	.ec-tags {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;
@@ -398,7 +398,7 @@
 		.ec-droite :global(button) {
 			min-height: 32px;
 			min-width: 32px;
-			font-size: 0.9rem;
+			font-size: var(--fs-base);
 		}
 	}
 </style>

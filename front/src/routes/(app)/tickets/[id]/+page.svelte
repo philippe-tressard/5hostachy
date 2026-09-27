@@ -384,12 +384,12 @@
 		color: var(--color-text-muted);
 	}
 	.ticket-envoi {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin-top: 0.5rem;
 	}
 	.ticket-saisi-pour {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0.5rem 0;
 		padding: 0.5rem 0.75rem;
@@ -402,7 +402,7 @@
 		border-top: 1px solid var(--color-border);
 	}
 	.status-label {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		font-weight: 500;
 		color: var(--color-text-muted);
 	}

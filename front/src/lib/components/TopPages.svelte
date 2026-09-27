@@ -89,7 +89,7 @@
 
 <style>
 	.tl-note {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		line-height: 1.5;
 		margin: 0.6rem 0 0;
@@ -104,7 +104,7 @@
 	    ne l'a jamais reçue — un composant enfant n'hérite pas d'un style scopé
 	    (#495). Renommé pour ne pas laisser croire qu'il partage une définition. */
 	.titre-panneau {
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 		font-weight: 600;
 		margin: 0 0 0.75rem;
 		padding: 0.75rem 1rem 0;

@@ -67,7 +67,7 @@
 	<h2 class="config-section-title">
 		<Icon name="bar-chart-3" size={17} />Télémétrie — Utilisation de l'application
 	</h2>
-	<p class="muted" style="font-size:.85rem">
+	<p class="muted" style="font-size:var(--fs-md)">
 		Statistiques d'utilisation : qui utilise quoi et quand.
 	</p>
 
@@ -271,9 +271,11 @@
 					<tbody>
 						{#each telemetryData.top_users as u (u.nom)}
 							<tr>
-								<td style="font-size:.85rem">{u.nom}</td>
-								<td style="font-size:.8rem;color:var(--color-text-muted)">{u.statut ?? '—'}</td>
-								<td style="font-size:.8rem;color:var(--color-text-muted)"
+								<td style="font-size:var(--fs-md)">{u.nom}</td>
+								<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
+									>{u.statut ?? '—'}</td
+								>
+								<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
 									>{u.batiment_id ? `Bât. ${u.batiment_id}` : '—'}</td
 								>
 								<td style="text-align:right;font-weight:600">{u.total}</td>
@@ -315,7 +317,7 @@
 		margin-top: 1.25rem;
 	}
 	.tl-kpi {
-		background: var(--color-surface, #fff);
+		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius, 8px);
 		padding: 1.25rem 1rem;
@@ -333,7 +335,7 @@
 		margin-top: 0.3rem;
 	}
 	.tl-section-title {
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 		font-weight: 600;
 		margin: 0 0 0.75rem;
 		padding: 0.75rem 1rem 0;

@@ -162,7 +162,7 @@
 		margin-top: 1.5rem;
 	}
 	.bsl-aide {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0 0 1rem;
 	}
@@ -177,10 +177,10 @@
 		color: var(--color-text-muted);
 	}
 	.bsl-table {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 	.bsl-mail {
 		color: var(--color-text-muted);
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 </style>

@@ -875,7 +875,7 @@
 				href="/api/admin/fiche-arrivant"
 				target="_blank"
 				class="btn btn-outline"
-				style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem"
+				style="display:inline-flex;align-items:center;gap:0.4rem;font-size:var(--fs-md)"
 			>
 				📄 Consignes de copropriété
 			</a>
@@ -1200,7 +1200,7 @@
 		margin-top: 0.65rem;
 	}
 	.syndic-telephones-titre {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		font-weight: 600;
 		margin-bottom: 0.35rem;
 	}
@@ -1254,7 +1254,7 @@
 
 	/* Localisation auto */
 	.localisation-info {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-primary);
 		margin: 0.35rem 0 0.5rem;
 		padding: 0.25rem 0.5rem;
@@ -1287,7 +1287,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.45rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text);
 	}
 	.cs-role-flag input {
@@ -1302,7 +1302,7 @@
 	.summary-lien {
 		display: inline-flex;
 		align-items: center;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		color: #16a34a;
 		background: #f0fdf4;
 		border-radius: var(--radius);
@@ -1310,11 +1310,11 @@
 		border: 1px solid #bbf7d0;
 	}
 	.summary-loc {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 	.summary-fonction {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		font-weight: 600;
 		color: var(--color-text);
 	}

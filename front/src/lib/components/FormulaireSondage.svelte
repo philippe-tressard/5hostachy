@@ -376,7 +376,7 @@
 		padding: 0.45rem 0.6rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		background: var(--color-bg);
 	}
 	.option-supprimer {
@@ -391,7 +391,7 @@
 	    deux écrans. `npm run lint:styles` le refuse désormais. */
 	.case-secondaire {
 		padding-left: 1.6rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 </style>

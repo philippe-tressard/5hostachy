@@ -146,7 +146,8 @@
 					<div class="doc-info" style="flex-direction:column;align-items:flex-start;gap:.25rem">
 						<span class="doc-titre">{regle.titre}</span>
 						{#if regle.contenu}
-							<span style="font-size:.85rem;color:var(--color-text-muted);white-space:pre-wrap"
+							<span
+								style="font-size:var(--fs-md);color:var(--color-text-muted);white-space:pre-wrap"
 								>{regle.contenu}</span
 							>
 						{/if}

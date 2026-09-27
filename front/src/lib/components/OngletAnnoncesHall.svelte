@@ -320,7 +320,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 		font-weight: 600;
 		margin-bottom: 0.75rem;
 	}
@@ -328,7 +328,7 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		overflow: hidden;
-		background: #fff;
+		background: var(--color-surface);
 	}
 	.ah-apercu-frame {
 		width: 100%;

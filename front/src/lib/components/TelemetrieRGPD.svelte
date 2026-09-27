@@ -80,7 +80,7 @@
 		<button
 			type="button"
 			class="btn btn-sm"
-			style="font-size:.8rem"
+			style="font-size:var(--fs-sm)"
 			disabled={exportingTelemetrie}
 			on:click={async () => {
 				exportingTelemetrie = true;
@@ -108,13 +108,13 @@
 			<button
 				type="button"
 				class="btn btn-sm btn-danger"
-				style="font-size:.8rem"
+				style="font-size:var(--fs-sm)"
 				on:click={() => (confirmDeleteTelemetrie = true)}
 			>
 				🗑️ Effacer mes données de navigation
 			</button>
 		{:else}
-			<span style="display:inline-flex;gap:.35rem;align-items:center;font-size:.8rem">
+			<span style="display:inline-flex;gap:.35rem;align-items:center;font-size:var(--fs-sm)">
 				<strong style="color:var(--color-danger)">Confirmer ?</strong>
 				<button
 					type="button"

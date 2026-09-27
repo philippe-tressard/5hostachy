@@ -371,7 +371,7 @@
 		margin: 0;
 	}
 	.hist-vide {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 	}
 
@@ -398,7 +398,7 @@
 	}
 	.evol-icon {
 		flex-shrink: 0;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		margin-top: 0.1rem;
 	}
 	.evol-body {
@@ -422,7 +422,7 @@
 		flex-shrink: 0;
 	}
 	.evol-meta {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		color: var(--color-text-muted);
 	}
 	.evol-text {
@@ -439,7 +439,7 @@
 		margin-top: 0.2rem;
 		color: var(--color-text);
 		line-height: 1.6;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 	.evol-content :global(p) {
 		margin: 0 0 0.3em;
@@ -460,7 +460,7 @@
 		color: var(--color-text);
 		cursor: pointer;
 		padding: 0.15rem 0.4rem;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		flex-shrink: 0;
 		border-radius: 5px;
 		line-height: 1.4;
@@ -481,7 +481,7 @@
 		background: none;
 		border: none;
 		padding: 0.45rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-primary);
 		cursor: pointer;
 		text-align: center;

@@ -51,6 +51,6 @@
 	    balisage vient de quitter ne s'applique plus à rien (#344). */
 	.nav-guide {
 		color: var(--color-text-muted);
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 </style>

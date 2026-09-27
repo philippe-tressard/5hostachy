@@ -384,6 +384,10 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       libellés de champ sont en MAJUSCULES par le style (`champs.css`), comme
       les intitulés de section — jamais tapées (`npm run lint:champs`)
 - [ ] Libellés et nommage en français
+- [ ] Couleur et taille de texte : `var(--color-…)`, `var(--fs-…)` (`socle.css`),
+      jamais une valeur en dur — `npm run lint:charte-valeurs`, plafond qui ne
+      fait que baisser (#1055). Une taille hors échelle ne s'y range qu'après
+      avoir été vue à l'écran : c'est un changement visuel
 - [ ] Attente d'un écran : `<EtatListe chargement />`, jamais un « Chargement… »
       écrit à la main — il y en avait **23** avant #1045 (`npm run lint:chargement`)
 - [ ] En-tête de page : `<EntetePage>`, jamais `<div class="page-header">`

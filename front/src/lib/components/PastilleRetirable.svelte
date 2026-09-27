@@ -46,12 +46,12 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		background: var(--color-bg-alt, #f5f5f5);
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 	/*  Le préfixe en tête, gris et compact : il se lit d'un coup d'œil sans voler
 	    la place au nom, qui est ce qu'on cherche ensuite. */
 	.pastille-prefixe {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		font-weight: 700;
 		letter-spacing: 0.02em;
 		color: var(--color-text-muted);

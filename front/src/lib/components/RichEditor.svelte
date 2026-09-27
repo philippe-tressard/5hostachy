@@ -194,7 +194,7 @@
 
 	.rich-content-editable {
 		padding: 0.55rem 0.75rem;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		line-height: 1.6;
 		color: var(--color-text);
 		outline: none;

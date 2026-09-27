@@ -114,7 +114,7 @@
 		border-radius: var(--radius);
 		padding: 0;
 		margin-bottom: 0.5rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		line-height: 1.5;
 		color: #431407;
 		overflow: hidden;
@@ -144,7 +144,7 @@
 	}
 	.urgence-disclaimer-title {
 		font-weight: 700;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: #9a3412;
 	}
 	.urgence-disclaimer-chevron {

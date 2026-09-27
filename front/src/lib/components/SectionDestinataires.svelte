@@ -177,6 +177,6 @@
 		opacity: 0.45;
 	}
 	.avertissement {
-		color: var(--color-warning, #b07d1e);
+		color: var(--color-warning);
 	}
 </style>

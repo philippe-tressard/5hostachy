@@ -120,7 +120,7 @@
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
 	.section-aide {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin-bottom: 1rem;
 		line-height: 1.4;

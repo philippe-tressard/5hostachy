@@ -140,7 +140,7 @@
 	    pastilles nues en production (v2.67.11). */
 	.fiche-perimetre,
 	.fiche-intervenant {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0.25rem 0 0.5rem;
 	}

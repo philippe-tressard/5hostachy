@@ -110,7 +110,7 @@
 		padding: 0.5rem 0.65rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
-		background: var(--color-surface, #fff);
+		background: var(--color-surface);
 		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 		font-size: 0.78rem;
 		line-height: 1.4;

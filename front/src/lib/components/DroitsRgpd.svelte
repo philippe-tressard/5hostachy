@@ -24,8 +24,8 @@
 
 <!-- ── RGPD ─────────────────────────────────────────────────────────────── -->
 <section class="card" style="border-color:#fde68a;background:#fffbeb">
-	<h2 style="font-size:.95rem;font-weight:600;margin-bottom:.5rem">Vos droits (RGPD)</h2>
-	<p style="font-size:.8rem;line-height:1.55;color:var(--color-text-muted)">
+	<h2 style="font-size:var(--fs-lg);font-weight:600;margin-bottom:.5rem">Vos droits (RGPD)</h2>
+	<p style="font-size:var(--fs-sm);line-height:1.55;color:var(--color-text-muted)">
 		Conformément au RGPD, vous pouvez exercer vos droits d'accès, rectification, portabilité et
 		effacement en contactant le responsable de traitement à l'adresse indiquée dans la
 		<a href="/politique-de-confidentialite" style="color:var(--color-primary)"

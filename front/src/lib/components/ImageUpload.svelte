@@ -168,7 +168,7 @@
 		background: none;
 		border: none;
 		color: var(--color-primary, #2563eb);
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		cursor: pointer;
 		padding: 0;
 		text-decoration: underline;

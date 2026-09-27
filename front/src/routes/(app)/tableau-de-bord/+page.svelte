@@ -615,7 +615,7 @@
 		}
 	}
 	.hero-avatar:focus-visible {
-		outline: 2px solid var(--color-accent, #c9983a);
+		outline: 2px solid var(--color-accent);
 		outline-offset: 3px;
 	}
 	.hero-avatar-badge {
@@ -625,7 +625,7 @@
 		width: 1.05rem;
 		height: 1.05rem;
 		border-radius: 50%;
-		background: var(--color-accent, #c9983a);
+		background: var(--color-accent);
 		color: #fff;
 		display: flex;
 		align-items: center;
@@ -640,12 +640,12 @@
 		line-height: 1.3;
 	}
 	.hero-lot-inline {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		font-weight: 400;
 		color: rgba(255, 255, 255, 0.75);
 	}
 	.hero-role-inline {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		font-weight: 400;
 		color: rgba(255, 255, 255, 0.55);
 		letter-spacing: 0.02em;
@@ -705,7 +705,7 @@
 		color: #92400e;
 	}
 	.consignes-sub {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		color: var(--color-text-muted);
 		line-height: 1.3;
 	}
@@ -761,7 +761,7 @@
 		outline-offset: 2px;
 	}
 	.urgence-legend {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		font-weight: 700;
 		letter-spacing: 0.06em;
 		color: #dc2626;
@@ -831,7 +831,7 @@
 		background: #dc2626;
 	}
 	.urgence-progress-label {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		color: var(--color-text-muted);
 		white-space: nowrap;
 	}
@@ -861,7 +861,7 @@
 		margin-bottom: 1rem;
 	}
 	.epingle-titre {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;

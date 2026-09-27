@@ -239,7 +239,7 @@
 			<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
 				<button
 					class="btn btn-outline"
-					style="font-size:.75rem;padding:.15rem .5rem"
+					style="font-size:var(--fs-xs);padding:.15rem .5rem"
 					on:click={checkWaStatus}
 					disabled={waStatusLoading}
 				>
@@ -247,7 +247,8 @@
 				</button>
 				{#if waStatus}
 					<span
-						style="font-size:.8rem;padding:.1rem .5rem;border-radius:4px;{waStatus.state === 'open'
+						style="font-size:var(--fs-sm);padding:.1rem .5rem;border-radius:4px;{waStatus.state ===
+						'open'
 							? 'background:#d1fae5;color:#065f46'
 							: 'background:#fee2e2;color:#991b1b'}"
 					>
@@ -263,7 +264,7 @@
 				<div
 					style="margin-top:.75rem;padding:.75rem;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;max-width:360px"
 				>
-					<p style="margin:0 0 .5rem;font-size:.85rem;font-weight:600;color:#92400e">
+					<p style="margin:0 0 .5rem;font-size:var(--fs-md);font-weight:600;color:#92400e">
 						&#x26A0;&#xFE0F; Bridge déconnecté — scannez ce QR code avec WhatsApp
 					</p>
 					<p style="margin:0 0 .75rem;font-size:.78rem;color:#92400e">
@@ -277,7 +278,7 @@
 					<div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center">
 						<button
 							class="btn btn-outline"
-							style="font-size:.75rem;padding:.15rem .5rem"
+							style="font-size:var(--fs-xs);padding:.15rem .5rem"
 							type="button"
 							on:click={refreshWaQr}
 						>
@@ -285,7 +286,7 @@
 						</button>
 						<button
 							class="btn btn-outline"
-							style="font-size:.75rem;padding:.15rem .5rem"
+							style="font-size:var(--fs-xs);padding:.15rem .5rem"
 							type="button"
 							on:click={checkWaStatus}
 						>
@@ -311,7 +312,7 @@
 					{waTesting ? 'Envoi...' : '\u{1F4E8} Envoyer le test'}
 				</button>
 			</div>
-			<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.3rem">
+			<p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:.3rem">
 				Envoie le message ci-dessus sur le groupe WhatsApp configuré.
 			</p>
 		</div>
@@ -325,7 +326,7 @@
 				Sauts de ligne (Enter)
 			</p>
 			{#if waScheduled.length === 0}
-				<p style="font-size:.8rem;color:var(--color-text-muted)">Aucun message planifié.</p>
+				<p style="font-size:var(--fs-sm);color:var(--color-text-muted)">Aucun message planifié.</p>
 			{/if}
 			{#each waScheduled as item (item.id)}
 				<div
@@ -342,7 +343,7 @@
 							/>
 						</div>
 						<span
-							style="font-size:.75rem;padding:.1rem .4rem;border-radius:4px;background:#dbeafe;color:#1e40af"
+							style="font-size:var(--fs-xs);padding:.1rem .4rem;border-radius:4px;background:#dbeafe;color:#1e40af"
 						>
 							{item.cron_rule === '3eme_samedi'
 								? 'Vendredi avant le 3ᵉ samedi'
@@ -355,7 +356,7 @@
 						<textarea
 							bind:value={item.message}
 							rows="4"
-							style="resize:vertical;font-size:.85rem;font-family:monospace"
+							style="resize:vertical;font-size:var(--fs-md);font-family:monospace"
 							placeholder="Contenu du message (markdown WhatsApp autorisé)"></textarea>
 					</div>
 					<div
@@ -385,7 +386,8 @@
 					bind:value={footer}
 					rows="2"
 					placeholder="— Le Conseil Syndical"
-					style="width:100%;resize:vertical;font-size:.85rem;font-family:monospace"></textarea>
+					style="width:100%;resize:vertical;font-size:var(--fs-md);font-family:monospace"
+				></textarea>
 				<span class="aide"
 					>Texte qui finalise chaque message (markdown WhatsApp autorisé : *gras*, _italique_,
 					~barré~).</span
@@ -412,12 +414,12 @@
 				>
 			</div>
 			{#if waLogs.length === 0}
-				<p style="font-size:.8rem;color:var(--color-text-muted)">Aucun message envoyé.</p>
+				<p style="font-size:var(--fs-sm);color:var(--color-text-muted)">Aucun message envoyé.</p>
 			{:else}
 				<div style="display:flex;flex-direction:column;gap:.4rem">
 					{#each waLogs as log (log.id)}
 						<div
-							style="border:1px solid var(--color-border);border-radius:6px;padding:.5rem .75rem;font-size:.8rem;background:var(--color-surface)"
+							style="border:1px solid var(--color-border);border-radius:6px;padding:.5rem .75rem;font-size:var(--fs-sm);background:var(--color-surface)"
 						>
 							<div
 								style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem"
@@ -432,7 +434,7 @@
 										{waStatutIcone(log.statut)}
 										{log.statut}
 									</span>
-									<span style="color:var(--color-text-muted);font-size:.75rem"
+									<span style="color:var(--color-text-muted);font-size:var(--fs-xs)"
 										>{log.envoye_le ? fmtDatetimeShort(log.envoye_le) : ''}</span
 									>
 								</div>
@@ -445,7 +447,7 @@
 									: log.message}
 							</p>
 							{#if log.erreur}
-								<p style="margin:.2rem 0 0;color:#991b1b;font-size:.75rem">
+								<p style="margin:.2rem 0 0;color:#991b1b;font-size:var(--fs-xs)">
 									&#x26A0;&#xFE0F; {log.erreur}
 								</p>
 							{/if}

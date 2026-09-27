@@ -162,7 +162,7 @@
 			gap: 0.35rem;
 		}
 		.quick-pill {
-			font-size: 0.72rem;
+			font-size: var(--fs-2xs);
 			padding: 0.35rem 0.65rem;
 		}
 	}

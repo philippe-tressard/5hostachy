@@ -265,7 +265,7 @@
 		</p>
 	{:else}
 		<div class="table-wrap">
-			<table class="table" style="font-size:0.85rem">
+			<table class="table" style="font-size:var(--fs-md)">
 				<thead>
 					<tr>
 						<th>Type</th>
@@ -420,7 +420,7 @@
 	}
 	.inv-titre {
 		font-weight: 600;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.inv-vide {
 		font-size: 0.83rem;
@@ -437,6 +437,6 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 </style>

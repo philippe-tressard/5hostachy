@@ -194,7 +194,7 @@
 	<h2 class="config-section-title">
 		<Icon name="clipboard-list" size={17} />Santé des tâches planifiées
 	</h2>
-	<p class="muted" style="font-size:.85rem">
+	<p class="muted" style="font-size:var(--fs-md)">
 		Synthèse : <strong>une ligne par tâche</strong>, portant la
 		<strong>dernière exécution réelle</strong>
 		— quel que soit le nœud qui l'a faite. En dessous,
@@ -417,7 +417,7 @@
 											{/if}
 											<button
 												class="btn btn-primary"
-												style="font-size:.8rem;padding:.3rem .7rem"
+												style="font-size:var(--fs-sm);padding:.3rem .7rem"
 												on:click|stopPropagation={() => declencher(t.tache)}
 												disabled={enCours === t.tache}
 												title={t.tache === 'maintenance'
@@ -436,7 +436,7 @@
 			</table>
 		</div>
 		{#if sante.anomalies_recentes.length > 0}
-			<p class="muted" style="margin-top:.75rem;font-size:.85rem">
+			<p class="muted" style="margin-top:.75rem;font-size:var(--fs-md)">
 				<strong>{sante.anomalies_recentes.length}</strong> exécution(s) en échec récemment.
 			</p>
 		{/if}
@@ -479,7 +479,7 @@
 	/*  Le chevron d'une tache est plus petit et de la couleur primaire : il annonce
 	    une action, pas un depliage neutre (#607, 28/08/2026). */
 	.chevron {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		color: var(--color-primary);
 		margin-right: 0.4rem;
 	}
@@ -494,7 +494,7 @@
 		padding: 0 0.75rem;
 	}
 	.note-lancement {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		margin-right: auto;
 	}
 </style>

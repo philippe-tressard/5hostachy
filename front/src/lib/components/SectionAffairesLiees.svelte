@@ -184,7 +184,7 @@
 		min-height: 44px;
 		padding: 0.5rem 0.75rem;
 		border: none;
-		background: var(--color-surface, #fff);
+		background: var(--color-surface);
 		text-align: left;
 		cursor: pointer;
 		font: inherit;
@@ -200,7 +200,7 @@
 	}
 	.numero {
 		flex-shrink: 0;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		font-weight: 700;
 		color: var(--color-text-muted);
 	}

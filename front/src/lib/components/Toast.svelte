@@ -94,18 +94,18 @@
 
 	.toast-success {
 		background: #e6f4ee;
-		color: #2e7d52;
-		border-left: 4px solid #2e7d52;
+		color: var(--color-success);
+		border-left: 4px solid var(--color-success);
 	}
 	.toast-error {
 		background: #fdedec;
-		color: #c0392b;
-		border-left: 4px solid #c0392b;
+		color: var(--color-danger);
+		border-left: 4px solid var(--color-danger);
 	}
 	.toast-warning {
 		background: #fdf3e0;
-		color: #b07d1e;
-		border-left: 4px solid #b07d1e;
+		color: var(--color-warning);
+		border-left: 4px solid var(--color-warning);
 	}
 	.toast-info {
 		background: var(--color-primary-light);

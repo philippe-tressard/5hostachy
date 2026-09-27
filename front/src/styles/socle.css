@@ -71,6 +71,18 @@ body {
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 	--duree-geste: 120ms;
 	--duree-apparition: 200ms;
+	/*  L'échelle du TEXTE (#1055, 27/09/2026). Six paliers, chacun à la valeur
+	    déjà la plus employée par les écrans : les y ranger ne change aucun
+	    rendu. Les tailles hors échelle (0,78 · 0,82 · 0,875…) restent sous le
+	    plafond de `lint:charte-valeurs` jusqu'à ce qu'un regroupement soit
+	    constaté à l'écran — c'est un changement visuel, il ne se fait pas en
+	    silence. 🔒 `npm run lint:charte-valeurs`. */
+	--fs-2xs: 0.72rem;
+	--fs-xs: 0.75rem;
+	--fs-sm: 0.8rem;
+	--fs-md: 0.85rem;
+	--fs-base: 0.9rem;
+	--fs-lg: 0.95rem;
 	font-family:
 		'Segoe UI',
 		-apple-system,

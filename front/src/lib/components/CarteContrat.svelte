@@ -380,7 +380,7 @@
 		margin-bottom: 0;
 	}
 	.contrat-section-title {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
@@ -416,7 +416,7 @@
 	    depuis le 18/09/2026, où les quatre composants qui posent la classe le
 	    reçoivent enfin. */
 	.rich-content {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text);
 		margin-bottom: 0.5rem;
 	}

@@ -168,7 +168,7 @@
 		min-width: 1.5rem;
 	}
 	.archives-chevron {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		flex-shrink: 0;
 	}
@@ -185,7 +185,7 @@
 		border-radius: var(--radius);
 		padding: 0.5rem 0.75rem;
 		cursor: pointer;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		font-weight: 600;
 		color: var(--color-text);
 		margin-bottom: 0.3rem;

@@ -148,7 +148,7 @@
 
 	.message {
 		margin-top: 0.4rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		line-height: 1.4;
 	}
 	.erreur {

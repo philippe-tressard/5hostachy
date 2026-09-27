@@ -165,11 +165,11 @@
 		font-size: 0.82rem;
 	}
 	.reponse-poids {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 	.reponse-date {
 		color: var(--color-text-muted);
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 	}
 	.reponse-suppr {
 		margin-left: auto;
@@ -179,7 +179,7 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		opacity: 0.55;
 		padding: 0;
 	}
@@ -189,7 +189,7 @@
 		}
 	}
 	.reponse-contenu {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		white-space: pre-wrap;
 		word-break: break-word;
 	}

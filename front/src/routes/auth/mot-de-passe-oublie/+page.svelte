@@ -57,7 +57,7 @@
 					</button>
 				</div>
 			</form>
-			<p style="text-align:center;font-size:.8rem;margin-top:1rem">
+			<p style="text-align:center;font-size:var(--fs-sm);margin-top:1rem">
 				<a href="/auth/connexion" style="color:var(--color-primary)">Retour à la connexion</a>
 			</p>
 		{/if}

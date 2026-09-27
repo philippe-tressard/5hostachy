@@ -138,7 +138,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 	.not-etoiles {
 		color: #f59e0b;
@@ -149,14 +149,14 @@
 	}
 	.not-date {
 		color: var(--color-text-muted);
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		/*  Pousse le bouton à droite sans le coller à la date sur un écran étroit,
 		    où la ligne se replie. */
 		margin-right: auto;
 	}
 	.not-commentaire {
 		margin: 0.2rem 0 0;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		/*  Le commentaire vient d'un humain : les retours à la ligne comptent, et
 		    il n'est PAS rendu en HTML — donc rien à assainir. */

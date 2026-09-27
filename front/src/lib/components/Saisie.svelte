@@ -92,7 +92,7 @@
 <style>
 	.saisie-message {
 		margin: 0 0 1rem;
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 		line-height: 1.5;
 		white-space: pre-line;
 	}

@@ -103,7 +103,7 @@
 	    site — la même que `.alert-warning`, sans le cadre qui ferait un bloc. */
 	.etat-erreur {
 		font-size: 0.875rem;
-		color: #b07d1e;
+		color: var(--color-warning);
 		padding: 0.5rem 0;
 		font-weight: 500;
 	}

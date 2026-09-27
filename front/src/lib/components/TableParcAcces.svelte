@@ -47,7 +47,7 @@
 </script>
 
 <div class="table-wrap">
-	<table class="table" style="font-size:0.85rem">
+	<table class="table" style="font-size:var(--fs-md)">
 		<thead>
 			<!--  🔴 De vrais `<button>` dans les `<th>` : un `<th>` cliquable sans
 			      bouton n'est ni atteignable au clavier ni annoncé comme

@@ -106,7 +106,7 @@
 	    Le fil d'activité rend 0,8 — l'aperçu d'une carte descend d'un cran parce
 	    qu'il vit sous un titre en gras, ce que le fil n'a pas. */
 	.carte-preview {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		line-height: 1.25;
 		color: var(--color-text-muted);
 		position: relative;

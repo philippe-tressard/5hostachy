@@ -230,7 +230,7 @@
 		font-size: 1.1rem;
 	}
 	.vote-count {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		font-weight: 700;
 		color: var(--color-primary);
 	}
@@ -238,7 +238,7 @@
 		flex: 1;
 	}
 	.idee-desc {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0.2rem 0 0.3rem;
 	}

@@ -117,7 +117,7 @@
 
 <svelte:head><title>Audit associations lots — {_siteNom}</title></svelte:head>
 
-<p style="color:var(--color-text-muted);font-size:.9rem;margin:0 0 1rem">
+<p style="color:var(--color-text-muted);font-size:var(--fs-base);margin:0 0 1rem">
 	Liste toutes les associations utilisateur ↔ lot actives. Permet de repérer et supprimer les
 	affectations erronées (faux positifs de l'auto-match).
 </p>
@@ -126,7 +126,7 @@
 	<div class="field champ-en-ligne" style="max-width:320px">
 		<input type="text" placeholder="Filtrer par nom, lot ou bâtiment…" bind:value={filtre} />
 	</div>
-	<span style="color:var(--color-text-muted);font-size:.85rem"
+	<span style="color:var(--color-text-muted);font-size:var(--fs-md)"
 		>{filtered.length} association{filtered.length > 1 ? 's' : ''} — {grouped.length} utilisateur{grouped.length >
 		1
 			? 's'
@@ -143,8 +143,8 @@
 		<div class="card" style="margin-bottom:.75rem;padding:.75rem 1rem">
 			<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
 				<strong>{g.user_nom}</strong>
-				<span class="badge badge-gray" style="font-size:.75rem">{g.user_statut}</span>
-				<span style="color:var(--color-text-muted);font-size:.8rem"
+				<span class="badge badge-gray" style="font-size:var(--fs-xs)">{g.user_statut}</span>
+				<span style="color:var(--color-text-muted);font-size:var(--fs-sm)"
 					>— {g.lots.length} lot{g.lots.length > 1 ? 's' : ''}</span
 				>
 				<button

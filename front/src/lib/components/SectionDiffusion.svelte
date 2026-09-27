@@ -263,7 +263,7 @@
 		align-items: center;
 		gap: 0.4rem;
 		cursor: pointer;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		margin: 0 0 0.6rem;
 	}
 	.case-interne input[type='checkbox'] {

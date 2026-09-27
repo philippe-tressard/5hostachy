@@ -137,7 +137,7 @@
 		align-items: baseline;
 		gap: 0.25rem 0.6rem;
 		margin: 0 0 0.4rem;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	/*  « septembre 2026 » → « Septembre 2026 » en tête de mois seulement : un
 	    `capitalize` sur le titre mettait une capitale à chaque mot. */
@@ -149,7 +149,7 @@
 	}
 	.total {
 		font-weight: 400;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 	.mois + .mois,
 	.plafonds + .mois {
@@ -162,7 +162,7 @@
 		margin: 0;
 		padding: 0;
 		list-style: none;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 	.plafonds li,
 	.lignes li {

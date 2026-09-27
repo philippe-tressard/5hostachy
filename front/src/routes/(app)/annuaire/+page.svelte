@@ -158,7 +158,9 @@
 			</div>
 		{/if}
 		{#if data.cs.membres.length === 0}
-			<p style="color:var(--color-text-muted);font-size:.9rem">Aucun membre CS enregistré.</p>
+			<p style="color:var(--color-text-muted);font-size:var(--fs-base)">
+				Aucun membre CS enregistré.
+			</p>
 		{:else if batimentsCS.length > 1}
 			{#each batimentsCS as groupe (groupe.batiment ?? '')}
 				<div class="batiment-section">
@@ -222,7 +224,9 @@
 			{/if}
 		{/if}
 		{#if data.syndic.membres.length === 0}
-			<p style="color:var(--color-text-muted);font-size:.9rem">Aucun contact syndic enregistré.</p>
+			<p style="color:var(--color-text-muted);font-size:var(--fs-base)">
+				Aucun contact syndic enregistré.
+			</p>
 		{:else}
 			<div class="contact-grid">
 				{#each data.syndic.membres as m (m.id)}
@@ -247,7 +251,7 @@
 			href="/api/admin/fiche-arrivant"
 			target="_blank"
 			class="btn btn-outline"
-			style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem"
+			style="display:inline-flex;align-items:center;gap:0.4rem;font-size:var(--fs-md)"
 		>
 			📄 Consignes de copropriété
 		</a>
@@ -262,7 +266,7 @@
 		margin-top: 0.1rem;
 	}
 	.ag-info {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 	#syndic {
@@ -279,7 +283,7 @@
 		margin-bottom: 1.5rem;
 	}
 	.batiment-label {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.07em;
@@ -306,20 +310,20 @@
 	    suivent leur balisage — Svelte scope le style au composant qui rend. */
 
 	.contact-societe {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		font-style: italic;
 		color: var(--color-text-muted);
 		margin: 0.1rem 0;
 		display: block;
 	}
 	.contact-role {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0.1rem 0;
 	}
 	.contact-email {
 		display: block;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-primary);
 		text-decoration: none;
 		margin-top: 0.1rem;
@@ -342,7 +346,7 @@
 		max-width: 520px;
 	}
 	.url-block strong {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		display: block;
 	}
 	.url-block .contact-societe {

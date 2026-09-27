@@ -228,7 +228,7 @@
 
 		<div style="margin-top:1.5rem">
 			{#if totalVotes > 0}
-				<p style="font-size:.85rem;color:var(--color-text-muted);margin-bottom:1rem">
+				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:1rem">
 					{totalVotes} vote{totalVotes > 1 ? 's' : ''}
 				</p>
 			{/if}
@@ -251,7 +251,7 @@
 									title="Cette réponse inclut un champ de précision">✏️</span
 								>{/if}
 							{#if voirResultats}
-								<span style="margin-left:auto;font-size:.8rem;color:var(--color-text-muted)"
+								<span style="margin-left:auto;font-size:var(--fs-sm);color:var(--color-text-muted)"
 									>{opt.nb_votes} vote{opt.nb_votes !== 1 ? 's' : ''}</span
 								>
 							{/if}
@@ -399,7 +399,7 @@
 	}
 	.result-label {
 		min-width: 10rem;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.result-bar-wrap {
 		flex: 1;
@@ -418,13 +418,13 @@
 	.result-pct {
 		min-width: 3rem;
 		text-align: right;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		font-weight: 600;
 	}
 	.result-votes {
 		min-width: 3rem;
 		text-align: right;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 	.resultats-masques {
@@ -462,7 +462,7 @@
 
 	/* Champ libre */
 	.champ-libre-badge {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		margin-left: 0.35rem;
 	}
 	.champ-libre-box {

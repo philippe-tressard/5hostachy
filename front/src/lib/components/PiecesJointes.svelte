@@ -347,7 +347,7 @@
 		margin-top: 0.35rem;
 	}
 	.pj-compteur {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		color: var(--color-text-muted);
 	}
 	.pj-points {
@@ -415,7 +415,7 @@
 		text-decoration: none;
 	}
 	.pj-doc-compact {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.pj-doc:hover {
