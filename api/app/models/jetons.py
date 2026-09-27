@@ -30,6 +30,11 @@ class RefreshToken(SQLModel, table=True):
     token: str = Field(unique=True, index=True)
     expires_at: datetime
     revoked: bool = False
+    #: Quand ce jeton a été ÉCHANGÉ contre un autre par `/auth/refresh` — `None`
+    #: s'il a été révoqué autrement (déconnexion, mot de passe posé). C'est ce qui
+    #: distingue un jeton volé rejoué d'une session fermée : voir
+    #: `auth/jetons_rafraichissement.py`.
+    remplace_le: Optional[datetime] = None
 
 
 class PasswordResetToken(SQLModel, table=True):

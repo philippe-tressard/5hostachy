@@ -30,14 +30,13 @@ from datetime import datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, select
 
-from app.auth.jwt import hash_password, verify_password
+from app.auth.jwt import verify_password
 from app.database import engine
 from app.models.core import (
     PasswordResetToken,
     RefreshToken,
-    RoleUtilisateur,
     Utilisateur,
 )
 from app.routers.auth_mot_de_passe import (
@@ -48,7 +47,6 @@ from app.routers.auth_mot_de_passe import (
 )
 from app.utils.mots_de_passe import verifier_robustesse
 from tests.conftest import requete_de_test
-from tests.purge_test import purger_ligne
 
 #: Une requête réelle, fabriquée par `tests/conftest.py` : la fabrique vivait
 #: ici, et un second fichier de tests en a eu besoin le 19/09/2026 (#1027).
@@ -57,36 +55,6 @@ _Requete = requete_de_test
 
 #: Un mot de passe qui satisfait les quatre critères de `verifier_robustesse`.
 VALIDE = "Nouveau-Mdp1"
-
-
-@pytest.fixture()
-def utilisateur():
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        u = Utilisateur(
-            email=f"reinit-{uuid.uuid4().hex[:8]}@exemple.test",
-            hashed_password=hash_password("Ancien-Mdp1"),
-            prenom="Reine",
-            nom="Ito",
-            role=RoleUtilisateur.propriétaire,
-            #  `actif` vaut False par défaut : un compte attend sa validation
-            #  par le conseil syndical. Un compte de test doit donc l'activer
-            #  explicitement, sinon il éprouve le refus, pas la règle.
-            actif=True,
-        )
-        session.add(u)
-        session.commit()
-        session.refresh(u)
-        yield u
-        for jeton in session.exec(
-            select(PasswordResetToken).where(PasswordResetToken.user_id == u.id)
-        ).all():
-            session.delete(jeton)
-        for rt in session.exec(select(RefreshToken).where(RefreshToken.user_id == u.id)).all():
-            session.delete(rt)
-        session.commit()
-        purger_ligne(session, Utilisateur, u.id)
-        session.commit()
 
 
 def _jeton(session: Session, user_id: int, **surcharges) -> PasswordResetToken:

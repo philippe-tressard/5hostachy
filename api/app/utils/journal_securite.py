@@ -55,6 +55,9 @@ _NIVEAUX: dict[str, int] = {
     "ban_communaute": logging.WARNING,
     "mot_de_passe_change": logging.INFO,
     "mot_de_passe_reinitialise": logging.WARNING,
+    #  Un jeton de rafraîchissement déjà échangé qui revient : un vol probable,
+    #  toutes les sessions du compte ont été fermées (27/09/2026).
+    "jeton_rejoue": logging.WARNING,
     #  Un locataire lié à un lot par le seul nom (#1136) : il en porte les badges.
     "rattachement_auto": logging.WARNING,
 }

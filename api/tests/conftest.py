@@ -252,3 +252,47 @@ def requete_de_test(chemin: str = "/", methode: str = "POST"):
             "client": (f"10.0.0.{next(_compteur_client) % 250 + 1}", 51234),
         }
     )
+
+
+@pytest.fixture()
+def utilisateur():
+    """Un propriétaire ACTIF, de courriel unique, et ce qu'il laisse derrière lui purgé.
+
+    Elle vivait dans `test_reinitialisation_mot_de_passe.py` ; un second fichier
+    en a eu besoin le 27/09/2026 (`test_jeton_rejoue.py`) : elle s'écrit ici une fois.
+    """
+    import uuid
+
+    from sqlmodel import Session, SQLModel, select
+
+    from app.auth.jwt import hash_password
+    from app.database import engine
+    from app.models.core import PasswordResetToken, RefreshToken, RoleUtilisateur, Utilisateur
+    from tests.purge_test import purger_ligne
+
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        u = Utilisateur(
+            email=f"reinit-{uuid.uuid4().hex[:8]}@exemple.test",
+            hashed_password=hash_password("Ancien-Mdp1"),
+            prenom="Reine",
+            nom="Ito",
+            role=RoleUtilisateur.propriétaire,
+            #  `actif` vaut False par défaut : un compte attend sa validation
+            #  par le conseil syndical. Un compte de test doit donc l'activer
+            #  explicitement, sinon il éprouve le refus, pas la règle.
+            actif=True,
+        )
+        session.add(u)
+        session.commit()
+        session.refresh(u)
+        yield u
+        for jeton in session.exec(
+            select(PasswordResetToken).where(PasswordResetToken.user_id == u.id)
+        ).all():
+            session.delete(jeton)
+        for rt in session.exec(select(RefreshToken).where(RefreshToken.user_id == u.id)).all():
+            session.delete(rt)
+        session.commit()
+        purger_ligne(session, Utilisateur, u.id)
+        session.commit()
