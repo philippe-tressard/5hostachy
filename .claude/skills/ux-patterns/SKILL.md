@@ -57,6 +57,10 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 10 | **Deux droits** : éditer = auteur · saisi_pour · admin ; commenter = les mêmes **+ CS** | §15 |
 | 11 | **L'écran dit ce que le serveur fait**, ni plus ni moins | §15 |
 | 12 | **L'objet DOCUMENTS a UNE forme** — pastilles « TYPE: nom », bouton puis champ de libellé, sans exception | §0 bis |
+| 13 | **La dernière ligne d'une carte est UNE** (27/09/2026) — celle de l'affaire fait la norme : catégorie · état · 🔹 · qui la lit · ⚡ Urgente · marqueurs · #numéro · **✍️ auteur** · ✨ ; le fil la rend à l'identique **sans 📌** | §3 |
+| 14 | **L'urgence se dit ⚡**, orange, partout — 🚨 est banni, manuel compris | §3 |
+| 15 | **Un seul sélecteur de fichiers** (`FichiersUpload`), 44 px au doigt | §0 bis |
+| 16 | **Le manuel montre la VRAIE pastille**, phrase au survol recalculée par le site — jamais une couleur propre au manuel | skill `user-manual` |
 
 ### ⚠️ Les trois pièges que ces onze arbitrages ont révélés
 
