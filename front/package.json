@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.65.9",
+	"version": "2.66.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -96,6 +96,7 @@
 		"lint:animations-infinies": "node scripts/check-animations-infinies.mjs --selftest && node scripts/check-animations-infinies.mjs",
 		"lint:options-en-double": "node scripts/check-options-en-double.mjs --selftest && node scripts/check-options-en-double.mjs",
 		"lint:mouvement": "node scripts/check-mouvement.mjs --selftest && node scripts/check-mouvement.mjs",
+		"lint:pastilles": "node scripts/check-pastilles.mjs --selftest && node scripts/check-pastilles.mjs",
 		"lint:chargement": "node scripts/check-chargement.mjs --selftest && node scripts/check-chargement.mjs",
 		"lint:etage-libelle": "node scripts/check-etage-libelle.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",

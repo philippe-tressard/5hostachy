@@ -1727,6 +1727,13 @@ jobs:
         working-directory: front
         run: npm run lint:mouvement
 
+      # La dernière ligne d'une carte différait sur neuf points entre la carte
+      # d'affaire, celle d'actualité et le fil (27/09/2026, arbitré à l'écran).
+      # Une ligne : `PastillesAffaire` ; un auteur : `AuteurCarte` (✍️).
+      - name: La dernière ligne d'une carte est la même partout
+        working-directory: front
+        run: npm run lint:pastilles
+
       # 🔴 L'infobulle de catégorie disait « etude_travaux » sur la liste des
       # affaires (26/09/2026, signalé à l'écran) ; deux reportings rendaient la
       # même valeur brute. Le libellé existait, rien n'obligeait à le prendre.

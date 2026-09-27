@@ -30,6 +30,7 @@ from .commun import (
     ContexteFlux,
     auteur_nom,
     badges_ticket,
+    pastilles_affaire,
     perimetres_de,
     pieces_de_evolution,
     strip_html,
@@ -85,6 +86,8 @@ def _meta_ticket(ctx: ContexteFlux, tk) -> dict:
         #  copie, pour que le nom lu et le destinataire servi soient la même
         #  personne.
         "auteur": proprietaire(ctx.session, tk)[0],
+        #  La ligne de pastilles de la carte d'affaire, rendue telle quelle (27/09).
+        "affaire": pastilles_affaire(tk),
     }
 
 

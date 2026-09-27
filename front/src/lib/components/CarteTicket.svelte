@@ -39,18 +39,16 @@
 <script lang="ts">
 	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import { SUITE } from '$lib/gestes';
-	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { contexteCommentaire } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import ApercuTicket from './ApercuTicket.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
+	import PastillesAffaire from './PastillesAffaire.svelte';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import ActionsTicket from './ActionsTicket.svelte';
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
-	import PastilleLecture from '$lib/components/PastilleLecture.svelte';
-	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { peutCommenter as peutCommenterCe, peutEditer } from '$lib/droits';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
@@ -65,17 +63,11 @@
 	import {
 		OPTIONS_TICKET,
 		optionsDuTicket,
-		optionsEnBadge,
 		optionsVersTicket,
 		ticketUrgent,
 		attributsNature,
-		BADGE_PRIORITE,
-		PRIORITE_BREVE,
-		STATUT_TICKET_BADGE,
 		STATUT_TICKET_LABELS,
 		STATUT_TICKET_OPTIONS,
-		categorieTicketEmoji,
-		categorieTicketLabel,
 	} from '$lib/tickets';
 	import { fmtDate } from '$lib/date';
 	import { destinatairesParDefautDuTicket } from '$lib/lecture-ticket';
@@ -202,58 +194,9 @@
 		      Le NUMÉRO monte aussi : il n'était lisible qu'une fois la carte dépliée,
 		      dans son pied, alors que c'est la référence qu'on cite au syndic. -->
 		<svelte:fragment slot="tags">
-			<span class="tk-cat" title={categorieTicketLabel(ticket.categorie)}
-				>{categorieTicketEmoji(ticket.categorie)}</span
-			>
-			<span class="badge {STATUT_TICKET_BADGE[ticket.statut] ?? 'badge-gray'}">
-				{STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut}
-			</span>
-			<BadgePerimetre perimetre={ticket.perimetre_cible} />
-			<!--  Qui la lit (lot 1, 25/09/2026) — elle remplace le badge 🛡️, filtré
-			      ci-dessous : « CS » le dit, avec le reste des lecteurs. -->
-			<PastilleLecture {ticket} />
-			{#if ticketUrgent(ticket)}
-				<span class="badge {BADGE_PRIORITE[ticket.priorite] ?? 'badge-gray'}"
-					>{PRIORITE_BREVE[ticket.priorite]}</span
-				>
-			{/if}
-			<!--  🔴 TOUTES LES OPTIONS ACTIVES, pas seulement 🛡️ (05/09/2026) : un
-			      ticket porte les mêmes options qu'une actualité, il doit les
-			      montrer pareil. Glyphe et mot viennent de la TABLE — deux
-			      écritures divergeraient au premier changement de libellé.
-			      Sauf celles qu'un badge dédié dit déjà — la priorité, la pastille
-			      de lecture : `optionsEnBadge` les retire (27/09/2026, deux
-			      « Urgente » sur la même carte). -->
-			{#each optionsEnBadge(ticket) as opt (opt.cle)}
-				<span class="badge badge-gray" title={opt.aide}>{opt.glyphe} {opt.etat}</span>
-			{/each}
-			<span>#{ticket.numero}</span>
-			<!--  🔴 PAS DE BADGE 📍 DU DEMANDEUR — arbitré à l'écran le 30/08/2026
-			      (#653) : *« se restreindre uniquement au périmètre »*.
-
-			      Il a existé du 28/08 au 30/08. Ajouté par #603 pour ne pas perdre
-			      une capacité de l'onglet « Tickets résidence » qui venait d'être
-			      retiré, il disait le bâtiment de rattachement du COMPTE — donc où
-			      habite la personne, pas où est le problème. La carte porte déjà
-			      🔹 le périmètre visé, qui répond à la seule question que se pose
-			      un lecteur de liste.
-
-			      ⚠️ Deux tentatives de le sauver ont échoué, et c'est ce qui a
-			      tranché : le rendre exact (il affichait le bâtiment du TICKET), puis
-			      le masquer quand il coïncidait avec le périmètre. Restait le cas où
-			      il diffère — « Philippe (Bât. 4) signale un problème aux bâtiments
-			      1-2-3 » — et là encore il n'apprend rien d'utile : le CS agit sur le
-			      lieu du problème.
-
-			      📖 Ce qui manquait vraiment est plus fin qu'un bâtiment : le LOT
-			      (`Lot` = bâtiment + numéro + étage). `Ticket.lot_id` existe et
-			      l'API l'accepte déjà — seul l'écran ne le propose pas. Suivi
-			      dans #653 ; ne pas remettre un badge de bâtiment en attendant. -->
-			<!--  🔴 Le PROPRIÉTAIRE, pas le rédacteur (#1104) : une affaire saisie
-			      pour un tiers appartient à ce tiers (arbitrage du 12/09/2026). La
-			      même carte annonçait déjà le bon nom dans la case de copie. -->
-			{#if proprietaireNom}<span class="tk-auteur">{proprietaireNom}</span>{/if}
-			<MarqueIA assiste={ticket.assiste_ia} />
+			<!--  La dernière ligne vit dans `PastillesAffaire` (27/09/2026) : c'est la
+			      norme, que le fil et l'actualité rendent à l'identique. -->
+			<PastillesAffaire affaire={ticket} auteur={proprietaireNom} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<ActionsTicket
@@ -446,13 +389,6 @@
 	    qu'elle ne faisait rien. */
 	/*  L'en-tête vit dans `EnteteCarte` — titre, tags, date, actions et leur repli.
 	    Ne reste ici que ce qui est propre à un ticket. */
-	.tk-cat {
-		flex-shrink: 0;
-		font-size: 0.95rem;
-	}
-	.tk-auteur {
-		color: var(--color-text-muted);
-	}
 
 	.tk-body {
 		padding: 0.75rem 1rem 1rem;

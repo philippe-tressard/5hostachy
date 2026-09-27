@@ -24,16 +24,14 @@
 <script lang="ts">
 	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import { nomProprietaire } from '$lib/saisi-pour';
-	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
+	import PastillesAffaire from '$lib/components/PastillesAffaire.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { documents as docsApi, type Ticket } from '$lib/api';
 	import { safeHtml } from '$lib/sanitize';
-	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
-	import PastilleLecture from '$lib/components/PastilleLecture.svelte';
 	import { attributsNature, lienTicket, ticketUrgent } from '$lib/tickets';
 	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
 	//  écrits ici ET dans les cases du formulaire, et avaient divergé.
@@ -110,13 +108,10 @@
 			<BadgeNouveau le={pub.cree_le} si={estFil} />
 		</svelte:fragment>
 		<svelte:fragment slot="tags">
-			<BadgePerimetre perimetre={pub.perimetre_cible} />
-			<!--  🔴 La PASTILLE DE LECTURE remplace les badges 🛡️ « Conseil syndical »
-			      et 🔒 « Confidentielle » (lot 1, 25/09/2026) : « CS » dit l'un, le
-			      cadenas l'autre, et elle dit en plus à QUI l'actualité s'adresse. -->
-			<PastilleLecture ticket={pub} />
-			{#if proprietaireNom}<span class="pub-auteur">{proprietaireNom}</span>{/if}
-			<MarqueIA assiste={pub.assiste_ia} />
+			<!--  La MÊME ligne que la carte d'affaire (27/09/2026) : une actualité est
+			      une affaire. La pastille de lecture y remplace toujours les badges
+			      🛡️ et 🔒 (lot 1, 25/09/2026). -->
+			<PastillesAffaire affaire={pub} auteur={proprietaireNom} />
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<BoutonLien chemin={lienTicket(pub.id)} quoi="l'actualité" />
@@ -203,9 +198,6 @@
 
 	/*  L'en-tête vit dans `EnteteCarte` — titre, tags, date, actions et leur repli.
 	    Ne reste ici que ce qui est propre à une publication. */
-	.pub-auteur {
-		color: var(--color-text-muted);
-	}
 
 	.pub-body {
 		padding: 0.75rem 1rem 1rem;

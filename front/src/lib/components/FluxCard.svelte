@@ -21,11 +21,14 @@
 	import { createEventDispatcher } from 'svelte';
 
 	import { isAdmin } from '$lib/stores/auth';
-	import type { FluxItem } from '$lib/api';
+	import type { FluxItem, Ticket } from '$lib/api';
 	import { fmtDatetimeShort } from '$lib/date';
 	import FluxVignette from '$lib/components/FluxVignette.svelte';
 	import FluxCorps from '$lib/components/FluxCorps.svelte';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
+	import PastillesAffaire from '$lib/components/PastillesAffaire.svelte';
+	import AuteurCarte from '$lib/components/AuteurCarte.svelte';
+	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { estPerimetreParDefaut } from '$lib/perimetres';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { relire } from '$lib/utils';
@@ -81,6 +84,11 @@
 		return libelle.includes(extrait) || extrait.includes(libelle) ? '' : extrait;
 	})();
 
+	/**  La ligne de pastilles d'une affaire, telle que le serveur la rend
+	 *   (`flux/commun.pastilles_affaire`) — absente sur les autres cartes. */
+	$: affaire = item.meta?.affaire as Ticket | undefined;
+	$: auteur = item.meta?.auteur as string | undefined;
+	$: assisteIA = item.meta?.assiste_ia === true;
 	$: photos = (item.meta?.photos_urls as string[] | undefined) ?? [];
 	$: fichiers = (item.meta?.fichiers_urls as string[] | undefined) ?? [];
 
@@ -171,38 +179,26 @@
 				/>
 			{/if}
 		</div>
-		{#if badgesDuFlux(item).length > 0 || aPerimetre || item.meta?.auteur}
+		<!--  🔴 LA DERNIÈRE LIGNE (27/09/2026, arbitré à l'écran) : une affaire ou une
+		      actualité y porte la ligne de sa carte, À L'IDENTIQUE — `PastillesAffaire`,
+		      sans 📌 (le fil a son bandeau « Épinglé »). Elle différait sur neuf
+		      points : catégorie en texte, état absent, « urgent » rouge, numéro en
+		      badge, lecteurs et ✨ absents…
+		      Les autres cartes suivent le même ORDRE : état, 🔹 périmètre, ✍️ auteur,
+		      ✨ IA. 🔒 `npm run lint:pastilles`. -->
+		{#if affaire}
 			<div class="flux-badges">
-				<!--  « 🗓️ prévu le … » était propre à l'événement, parti le 23/09/2026 :
-				      c'est une affaire (#1092). -->
-				<!--  🔴 `BadgePerimetre` — le composant qui rend ce badge partout ailleurs
-				      (annonce, actualité, ticket, sondage, document…). Le fil le composait
-				      à la main : même glyphe, même classe, mais sa propre décision de
-				      l'afficher ou non. Un objet se rend toujours pareil (R3), et la
-				      décision est justement ce qui divergeait.
-				      Il ne rend RIEN quand le périmètre vaut le défaut — d'où l'absence
-				      de `{#if}` ici. -->
-				<BadgePerimetre perimetre={perimetreCodes} />
+				<PastillesAffaire {affaire} {auteur} dansLeFil />
+			</div>
+		{:else if badgesDuFlux(item).length > 0 || aPerimetre || auteur || assisteIA}
+			<div class="flux-badges">
 				{#each badgesDuFlux(item) as b (b)}
 					<span class="badge {badgeClass(item.type, b)}">{b}</span>
 				{/each}
-				<!--  🔴 L'auteur EN DERNIER de cette rangée (11/09/2026, signalé à
-				      l'écran). L'ordre est celui qu'a arrêté `CarteTicket` le 18/08 en
-				      le reprenant de l'actualité : « état, puis 🔹 périmètre, puis les
-				      marqueurs, puis l'auteur ». Le fil était le seul écran à ne pas
-				      le suivre — et c'est celui qu'on regarde en premier.
-
-				      ⚠️ Ici plutôt que dans la rangée du HAUT : celle-là porte la
-				      classification (type, « nouveau ») et partage déjà sa ligne avec
-				      la date. Une personne n'est pas une classification, et cette
-				      rangée-ci est `flex-wrap` — responsive sans rien ajouter.
-
-				      Et ce n'est PAS un badge : un nom n'est pas une étiquette de
-				      catégorie. `CarteTicket` le rend en texte discret (`.tk-auteur`),
-				      on fait de même — deux rendus d'une notion se répondent. -->
-				{#if item.meta?.auteur}
-					<span class="flux-auteur">✍️ {item.meta.auteur}</span>
-				{/if}
+				<!--  `BadgePerimetre` ne rend RIEN quand le périmètre vaut le défaut. -->
+				<BadgePerimetre perimetre={perimetreCodes} />
+				<AuteurCarte nom={auteur} />
+				<MarqueIA assiste={assisteIA} />
 			</div>
 		{/if}
 		{#if expanded}
@@ -332,15 +328,16 @@
 	    s'applique ici sans rien d'autre à faire. */
 	/*  Le nom en texte discret, jamais en badge : même taille et même teinte que
 	    `.tk-auteur` sur la carte du ticket, à dessein. */
-	.flux-auteur {
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
-		align-self: center;
-	}
+	/*  La MÊME ligne que celle d'une carte (`.ec-tags` d'`EnteteCarte`) : même
+	    taille de texte, même alignement, même espacement (27/09/2026) — sans quoi
+	    le numéro et l'auteur y paraissaient plus gros que les pastilles. Seul le
+	    retour à la ligne diffère : le fil n'a pas d'actions à côté. */
 	.flux-badges {
 		display: flex;
-		gap: 0.3rem;
+		align-items: center;
+		gap: 0.35rem;
 		flex-wrap: wrap;
+		font-size: 0.75rem;
 		margin-top: 0.35rem;
 	}
 
