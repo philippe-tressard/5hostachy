@@ -46,7 +46,8 @@
 	import { fmtDate2d as fmtDate } from '$lib/date';
 	import { fmtMontant } from '$lib/utils';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
-	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
+	import PastilleLecture from '$lib/components/PastilleLecture.svelte';
+	import AuteurCarte from '$lib/components/AuteurCarte.svelte';
 	import {
 		MAX_PHOTOS_ANNONCE,
 		OPTIONS_STATUT_ANNONCE,
@@ -118,7 +119,6 @@
 		on:toggle={onToggle}
 	>
 		<svelte:fragment slot="titre-suffixe">
-			<MarqueIA assiste={annonce.assiste_ia} />
 			<BadgeNouveau le={annonce.cree_le} si={!annonce.archivee} />
 		</svelte:fragment>
 
@@ -130,17 +130,11 @@
 				>{statutAnnonceLabel(annonce.statut)}</span
 			>
 			<span class="badge badge-gray">{categorieAnnonceLabel(annonce.categorie)}</span>
-			<!--  🔹 = périmètre LOGIQUE, jamais affiché quand il vaut « résidence ».
-			      📍 resterait réservé à un lieu physique. -->
-			<!--  Le PUBLIC visé, à côté du lieu (#782). Affiché seulement quand il
-			      restreint quelque chose : un badge « Tous les résidents » sur chaque
-			      carte serait du bruit, et le bruit finit par masquer le signal.
-			      Même lecture et même libellé que la liste des sondages —
-			      `destinatairesLabel` est la seule écriture de ce vocabulaire. -->
-			{#if !concerneTousLesResidents(annonce.public_cible)}<span class="badge badge-orange"
-					>{destinatairesLabel(annonce.public_cible)}</span
-				>{/if}
+			<!--  🔹 puis QUI LA LIT — l'ordre de la carte d'affaire (#1373). La
+			      pastille bleue a remplacé le badge orange des destinataires, arbitré
+			      par l'utilisateur le 27/09/2026 ; elle se tait quand tout le monde lit. -->
 			<BadgePerimetre perimetre={annonce.perimetre_cible} />
+			<PastilleLecture cible={annonce} />
 			{#if annonce.prix !== null && annonce.prix !== undefined}
 				<span class="annonce-prix"
 					>{fmtMontant(annonce.prix)}{#if annonce.negotiable}&nbsp;<span
@@ -150,6 +144,10 @@
 			{:else if annonce.type_annonce === 'don'}
 				<span class="annonce-prix annonce-gratuit">Gratuit</span>
 			{/if}
+			<!--  ✍️ puis ✨ en fin de ligne, comme partout. Le nom est celui que
+			      l'API sert déjà à tout lecteur (le contact, lui, reste au corps). -->
+			<AuteurCarte nom={nomAffiche(annonce.auteur_prenom, annonce.auteur_nom)} />
+			<MarqueIA assiste={annonce.assiste_ia} />
 		</svelte:fragment>
 
 		<!--  ✏️ AVANT 🗑️ — l'ordre des icônes est celui des tickets, qui sert de

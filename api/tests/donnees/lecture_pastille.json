@@ -1,5 +1,5 @@
 {
-	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ». Depuis #1343 (26/09/2026), une affaire suivie lit ses Destinataires quand le conseil en a choisi : vides, la règle par défaut ; un résidu d'actualité promue est effacé (migration 0228, et à la promotion). `categorie` (affaires) : une Panne sans choix du conseil se lit par les résidents de son bâtiment (occupants et locataires), par tous hors bâtiment.",
+	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ». Depuis #1343 (26/09/2026), une affaire suivie lit ses Destinataires quand le conseil en a choisi : vides, la règle par défaut ; un résidu d'actualité promue est effacé (migration 0228, et à la promotion). `categorie` (affaires) : une Panne sans choix du conseil se lit par les résidents de son bâtiment (occupants et locataires), par tous hors bâtiment. `objet` (#1373, 27/09/2026) : une petite ANNONCE, une IDÉE ou un SONDAGE — la règle `cible_visible` sans ouverture à la copropriété : le périmètre restreint toujours, et des Destinataires vides valent « Tous ». Absent : une affaire ou une actualité (`actualite`).",
 	"cas": [
 		{
 			"nom": "actualité à tous, copropriété entière",
@@ -381,6 +381,92 @@
 			"perimetre": "batiment",
 			"reserve_perimetre": false,
 			"lecteurs": [
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "annonce à tous, copropriété entière (#1373)",
+			"objet": "annonce",
+			"public_cible": [],
+			"perimetre": "global",
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "annonce aux locataires d'un bâtiment : le périmètre restreint toujours (#1373)",
+			"objet": "annonce",
+			"public_cible": [
+				"locataires"
+			],
+			"perimetre": "batiment",
+			"lecteurs": [
+				"locataire"
+			],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "idée à tous sur un bâtiment : ceux d'ailleurs ne la lisent pas (#1373)",
+			"objet": "idee",
+			"public_cible": [],
+			"perimetre": "batiment",
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
+				"mandataire",
+				"locataire"
+			],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "idée aux copropriétaires occupants (#1373)",
+			"objet": "idee",
+			"public_cible": [
+				"copropriétaires_occupants"
+			],
+			"perimetre": "global",
+			"lecteurs": [
+				"copropriétaire_résident"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "sondage aux copropriétaires, les deux statuts (#1373)",
+			"objet": "sondage",
+			"public_cible": [
+				"copropriétaires"
+			],
+			"perimetre": "global",
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "sondage au seul conseil syndical (#1373)",
+			"objet": "sondage",
+			"public_cible": [
+				"conseil_syndical"
+			],
+			"perimetre": "global",
+			"lecteurs": [],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "sondage à tous sur un bâtiment : on ne vote pas pour le voisin (#1373)",
+			"objet": "sondage",
+			"public_cible": [],
+			"perimetre": "batiment",
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur",
 				"mandataire",
 				"locataire"
 			],

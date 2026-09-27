@@ -176,6 +176,8 @@ export interface EntreeLecture {
 	/** La catégorie d'une affaire, et son périmètre dans des bâtiments (#1343). */
 	categorie?: string;
 	dansBatiments?: boolean;
+	/** L'objet est masculin (un sondage) : « Lu par… », « ne le lit ». */
+	masculin?: boolean;
 }
 
 export interface Lecture extends Vocable {
@@ -248,13 +250,14 @@ export function lectureDe(e: EntreeLecture): Lecture {
 
 	let phrase: string;
 	const pas: string[] = [];
+	const lue = e.masculin ? 'Lu' : 'Lue';
 	if (!profils.length) {
-		phrase = 'Personne d’autre que le conseil syndical ne la lit, à part son auteur.';
+		phrase = `Personne d’autre que le conseil syndical ne ${e.masculin ? 'le' : 'la'} lit, à part son auteur.`;
 	} else {
 		const ou = perimetreReserve ? ', dans le périmètre seulement.' : '.';
 		phrase = tous
-			? `Lue par tous${ou}`
-			: `Lue par ${v.qui ?? 'les ' + minuscule(v.long)}${perimetreReserve ? ou : ', dans toute la copropriété.'}`;
+			? `${lue} par tous${ou}`
+			: `${lue} par ${v.qui ?? 'les ' + minuscule(v.long)}${perimetreReserve ? ou : ', dans toute la copropriété.'}`;
 		for (const p of PROFILS) if (!profils.includes(p.code)) pas.push('les ' + minuscule(p.long));
 		if (perimetreReserve) pas.push('les personnes hors du périmètre');
 	}
@@ -270,4 +273,22 @@ export function lectureDe(e: EntreeLecture): Lecture {
 				? 'Le périmètre est choisi mais pas réservé : toute la copropriété la lira.'
 				: '',
 	};
+}
+
+/**
+ * Qui lit un objet CIBLÉ — petite annonce, idée, sondage (#1373, 27/09/2026).
+ *
+ * Miroir de `cible_visible` SANS ouverture à la copropriété : le périmètre
+ * restreint toujours — on ne propose pas un lave-linge au voisin qu'on a
+ * écarté, on ne fait pas voter celui d'un autre bâtiment —, et des
+ * Destinataires vides valent « Tous ». C'est exactement la mécanique d'une
+ * actualité RÉSERVÉE à son périmètre : on la réemploie, on ne la recopie pas.
+ * Tenu contre le serveur par les cas `objet` de `lecture_pastille.json`.
+ */
+export function lectureCiblee(e: {
+	publicCible: EntreeLecture['publicCible'];
+	perimetreRestreint: boolean;
+	masculin?: boolean;
+}): Lecture {
+	return lectureDe({ ...e, actualite: true, confidentiel: false, reservePerimetre: true });
 }

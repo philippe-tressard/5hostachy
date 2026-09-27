@@ -38,7 +38,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort } from '$lib/date';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
-	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
+	import PastilleLecture from '$lib/components/PastilleLecture.svelte';
 	import { STATUTS_IDEE, STATUT_IDEE_LABELS } from '$lib/idees';
 
 	/** Les idées à rendre, déjà filtrées et triées par l'appelant. */
@@ -93,20 +93,19 @@
 				      idée ne se déplie pas, elle montre tout. -->
 			<EnteteCarte titre={idee.titre} date={fmtDateShort(idee.cree_le)}>
 				<svelte:fragment slot="titre-suffixe">
-					<MarqueIA assiste={idee.assiste_ia} />
 					<BadgeNouveau le={idee.cree_le} />
 				</svelte:fragment>
 				<svelte:fragment slot="tags">
 					<span class="badge {statutClass(idee.statut)}"
 						>{STATUT_IDEE_LABELS[idee.statut] ?? idee.statut}</span
 					>
-					<!--  Le PUBLIC visé, à côté du lieu (#782). Affiché seulement quand il
-					      restreint : « Tous les résidents » sur chaque carte serait du bruit.
-					      Même libellé que les sondages et les annonces. -->
-					{#if !concerneTousLesResidents(idee.public_cible)}<span class="badge badge-orange"
-							>{destinatairesLabel(idee.public_cible)}</span
-						>{/if}
+					<!--  État · 🔹 · qui la lit · ✨ — l'ordre de la carte d'affaire (#1373).
+					      🔴 PAS D'AUTEUR : arbitré le 27/09/2026, une idée reste anonyme
+					      pour ses lecteurs — aucune API ne l'expose, et l'exposer serait
+					      une décision de données personnelles. `lint:pastilles` le tient. -->
 					<BadgePerimetre perimetre={idee.perimetre_cible} />
+					<PastilleLecture cible={idee} />
+					<MarqueIA assiste={idee.assiste_ia} />
 				</svelte:fragment>
 				<!--  Dans l'en-tête, PAS dans `.idee-actions` : cette rangée-là n'existe
 				      que pour le conseil syndical, et copier un lien n'est pas un droit. -->

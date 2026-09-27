@@ -600,7 +600,7 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
   Un copropriétaire bailleur, un bailleur **ne sont pas** des résidents.
 - Le choix sans restriction s'écrit **« Tous »**, jamais « Tous les résidents » :
   `LIBELLE_TOUS` (`$lib/destinataires`), lu par le sélecteur, le badge d'état de
-  la section et `destinatairesLabel`. Le **code** reste `résidents` — stocké en
+  la section et la pastille de lecture. Le **code** reste `résidents` — stocké en
   base, lu par `public_cible_visible` ; le renommer serait une migration.
 - Le manuel suit (cartes d'écran « Tous »).
 - La **pastille de lecture** — livrée au lot 1 (25/09/2026), maquette :
@@ -797,12 +797,20 @@ auteur sans ✍️, lecteurs et ✨ absents du fil…).
 Les **autres** cartes du fil (annonce, sondage, idée…) suivent le **même ordre** avec ce
 qu'elles ont : état, 🔹, ✍️ auteur, ✨. Même **typographie** que `.ec-tags` (0,75 rem).
 
-⚠️ L'auteur d'une **idée** ou d'un **sondage** n'est pas affiché : leurs API ne l'exposent
-nulle part. L'ajouter serait une décision de données personnelles, pas une
-standardisation.
+**Leurs cartes de liste** — `AnnonceCard`, `ListeIdees`, `ListeSondages` — aussi (#1373,
+arbitré le 27/09/2026) : état · 🔹 (jamais teinté) · **qui la lit** · leurs pastilles
+propres (prix, votants…) · ✍️ · ✨ en fin de ligne, plus à côté du titre.
+- La **pastille de lecture** remplace le badge orange des destinataires :
+  `<PastilleLecture cible={objet} />` (`masculin` pour un sondage). Leur règle est
+  `cible_visible` — le périmètre restreint **toujours**, d'où le cadenas —, résumée par
+  `lectureCiblee` et tenue par les cas `objet` de `lecture_pastille.json`.
+- 🔴 L'auteur d'une **idée** ou d'un **sondage** n'est **jamais** affiché (arbitré le
+  27/09/2026) : leurs API ne l'exposent pas, et l'exposer serait une décision de données
+  personnelles. La petite annonce nomme le sien — le nom que l'API sert déjà.
 
 🔒 `npm run lint:pastilles` (les trois cartes passent par `PastillesAffaire`, ✍️ ne
-s'écrit que dans `AuteurCarte`) · `e2e/ligne-pastilles.spec.ts` (le fil et la carte,
+s'écrit que dans `AuteurCarte` ; les cartes de la communauté rendent `PastilleLecture`, sans 🔹
+teinté ni ✨ avant elle, et l'idée comme le sondage sans auteur) · `e2e/ligne-pastilles.spec.ts` (le fil et la carte,
 rendus avec la même affaire, lisent la même ligne) · `test_flux_pastilles.py` (le
 serveur envoie la ligne au fil, et ✨ sur chaque carte de la communauté).
 

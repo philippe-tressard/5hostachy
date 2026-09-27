@@ -19,6 +19,10 @@ l'autre ne peut changer sans que le fichier change — et alors l'autre tombe.
 ⚠️ Il a déjà servi : #1269, fusionné pendant ce lot, ouvre les affaires DATÉES
 (nature calendrier) aux locataires de leur périmètre, hors « En AG ». La
 pastille l'a appris dans le même lot, et les trois cas datés sont ici.
+
+Depuis #1373 (27/09/2026), la pastille paraît aussi sur les cartes de petite
+annonce, d'idée et de sondage : leurs cas portent `objet`, et c'est leur propre
+règle qui les juge (`annonce_visible`, `idee_visible`, `sondage_accessible`).
 """
 
 from __future__ import annotations
@@ -32,10 +36,12 @@ import pytest
 from sqlmodel import Session, SQLModel
 
 from app.database import engine
+from app.models.communaute import Idee, PetiteAnnonce, Sondage
 from app.models.core import StatutTicket, StatutUtilisateur, Ticket, Utilisateur
 from app.utils import mes_batiments
 from app.utils import perimetres as P
 from app.utils.visibility import ticket_visible
+from app.utils.visibility.objets import annonce_visible, idee_visible, sondage_accessible
 from tests.purge_test import purger_ligne
 
 CAS = json.loads(
@@ -106,19 +112,58 @@ def _ticket(cas: dict, batiment: int, auteur_id: int) -> Ticket:
     )
 
 
+#  Un objet CIBLÉ (#1373) : sa fabrique et SA règle — jamais `ticket_visible`,
+#  qui ne dit rien de lui.
+CIBLES = {
+    "annonce": (
+        lambda per, pub, a: PetiteAnnonce(
+            titre="L", description="…", auteur_id=a, perimetre_cible=per, public_cible=pub
+        ),
+        annonce_visible,
+    ),
+    "idee": (
+        lambda per, pub, a: Idee(
+            titre="L", description="…", auteur_id=a, perimetre_cible=per, public_cible=pub
+        ),
+        idee_visible,
+    ),
+    "sondage": (
+        lambda per, pub, a: Sondage(
+            question="L", auteur_id=a, perimetre_cible=per, public_cible=pub
+        ),
+        sondage_accessible,
+    ),
+}
+
+
+def _objet_et_regle(cas: dict, batiment: int):
+    """L'objet du cas et la règle du serveur qui en décide."""
+    if "objet" not in cas:
+        return _ticket(cas, batiment, auteur_id=-1), ticket_visible
+    fabrique, regle = CIBLES[cas["objet"]]
+    perimetre = ["résidence"] if cas["perimetre"] == "global" else [f"bat:{batiment}"]
+    objet = fabrique(
+        json.dumps(perimetre, ensure_ascii=False),
+        json.dumps(cas["public_cible"], ensure_ascii=False),
+        -1,
+    )
+    return objet, regle
+
+
 def test_le_fichier_d_attentes_n_est_pas_vide():
     """Cas zéro : un fichier vide ferait passer le test paramétré sans rien mesurer."""
     assert len(CAS) >= 10
-    assert {c["actualite"] for c in CAS} == {True, False}
+    assert {c["actualite"] for c in CAS if "objet" not in c} == {True, False}
+    assert {c["objet"] for c in CAS if "objet" in c} == set(CIBLES)
 
 
 @pytest.mark.parametrize("cas", CAS, ids=[c["nom"] for c in CAS])
 def test_la_regle_du_serveur_dit_ce_que_la_pastille_resume(lecteurs, cas):
     _session, batiment, comptes = lecteurs
     #  Un auteur hors du jeu : l'auteur lit toujours, et fausserait le relevé.
-    ticket = _ticket(cas, batiment, auteur_id=-1)
+    objet, regle = _objet_et_regle(cas, batiment)
 
-    lisent = [s.value for s in STATUTS if ticket_visible(ticket, comptes[(s.value, "dedans")])]
+    lisent = [s.value for s in STATUTS if regle(objet, comptes[(s.value, "dedans")])]
     assert lisent == cas["lecteurs"], (
         f"« {cas['nom']} » : le serveur fait lire {lisent}, la pastille annonce "
         f"{cas['lecteurs']}. Corriger l'une ET l'autre, puis ce fichier d'attentes."
@@ -126,7 +171,7 @@ def test_la_regle_du_serveur_dit_ce_que_la_pastille_resume(lecteurs, cas):
 
     if cas["hors_perimetre"] is None:
         return
-    dehors = [s.value for s in STATUTS if ticket_visible(ticket, comptes[(s.value, "dehors")])]
+    dehors = [s.value for s in STATUTS if regle(objet, comptes[(s.value, "dehors")])]
     attendu_dehors = cas["lecteurs"] if cas["hors_perimetre"] else []
     assert dehors == attendu_dehors, (
         f"« {cas['nom']} » : hors du périmètre, le serveur fait lire {dehors}, "
