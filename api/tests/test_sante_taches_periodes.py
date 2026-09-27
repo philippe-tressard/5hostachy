@@ -41,6 +41,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 
+import pytest
+
 from app.utils.sante_taches import (
     _PERIODICITE_PAR_NOEUD_H,
     _PERIODICITE_SAUVEGARDE_H,
@@ -264,6 +266,24 @@ def test_un_rapport_de_FIN_efface_le_battement():
         ]
     )
     assert res["detail"][0]["statut"] == "ok"
+
+
+@pytest.mark.parametrize("ordre", ["battement_d_abord", "fin_d_abord"])
+def test_le_rapport_de_FIN_l_emporte_a_DATE_EGALE(ordre):
+    """🔴 Le cas RÉEL (#1367, 27/09/2026, signalé à l'écran) : même `cree_le`.
+
+    `maintenance.sh` envoie son battement et son rapport de fin avec la MÊME
+    heure de début (`$MAINTE_DEBUT`). Le test ci-dessus les séparait d'une heure
+    — une valeur supposée, pas celle que le script envoie. À égalité, l'ordre de
+    la base décidait, et c'était le battement : « Rapport non reçu » sur les
+    deux nœuds, au premier dimanche où le battement a enfin été enregistré.
+    """
+    battement = ligne("rpi1", 0, statut="en_cours", heure=3)
+    fin = ligne("rpi1", 0, statut="succes", heure=3)
+    lignes = [battement, fin] if ordre == "battement_d_abord" else [fin, battement]
+    res = _grouper(lignes, tache="maintenance", periode_h=168)
+    assert res["detail"][0]["statut"] == "ok"
+    assert res["synthese"]["statut"] == "ok"
 
 
 def test_le_rapport_perdu_est_PLUS_GRAVE_qu_une_erreur():
