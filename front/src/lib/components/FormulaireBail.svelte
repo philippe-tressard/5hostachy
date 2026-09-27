@@ -158,7 +158,13 @@
 	      Le `:global()` est borné par `.bail-lots` : il ne peut pas fuir vers une
 	      autre page (mémoire `project_css_route_fuite_globale`). -->
 		<div class="field bail-lots">
-			<LibelleGroupe titre="Lot(s) concerné(s) *" id="{uid}-lots" classe="lot-checklist">
+			<LibelleGroupe
+				titre="Lot(s) concerné(s)"
+				requis
+				vide={lotIds.size === 0}
+				id="{uid}-lots"
+				classe="lot-checklist"
+			>
 				{#each lots as lot (lot.id)}
 					<label
 						class="lot-check-item"

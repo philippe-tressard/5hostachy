@@ -280,7 +280,7 @@ CONSOMME.**
 
 | Quoi | Où | À faire avant d'écrire un écran |
 |---|---|---|
-| Les 10 sections, leur ordre, leurs libellés, les 4 états, les 3 motifs | `front/src/lib/entites/types.ts` | ne jamais recopier cette table |
+| Les sections, leur ordre, leurs libellés, les états, les motifs | `front/src/lib/entites/types.ts` | ne jamais recopier cette table — ni son **compte** : cette ligne a dit « 10 » jusqu'au 27/09/2026, pour quatorze |
 | La déclaration d'une entité et **ses divergences motivées** | `front/src/lib/entites/<entite>.ts` | la lire ; si elle n'existe pas, l'écrire |
 | Le squelette de **lecture** (R1 pour l'affichage) | `FicheLecture.svelte` | l'affichage passe par lui, il tient l'ordre |
 | Le squelette de **saisie** | `FormulaireCreation.svelte` + `ChampsCommuns.svelte` | sections 4→9, jamais réécrites |
@@ -288,7 +288,7 @@ CONSOMME.**
 | L'**en-tête d'une carte de liste** | `EnteteCarte.svelte` | titre / tags · date · actions — voir §3 |
 | La rangée d'**états en pastilles** | `WorkflowPastilles.svelte` | jamais un `<select>` nu (R3) |
 | **Toute** pastille de sélection | `Pastille.svelte` | jamais un `<button class="pill">` — voir le seuil ci-dessous |
-| Le garde-fou R4 | `npm run lint:etats` | il refuse une divergence sans motif, un motif `api` sans ticket, et **une section rendue hors déclaration** |
+| Le garde-fou R4 | `npm run lint:etats` | il refuse une divergence sans motif, un motif `api` sans ticket, **une section rendue hors déclaration**, et un intitulé absent de la déclaration — `SectionTitre` et `SectionDescription` compris depuis le 27/09/2026 (la FAQ, déclarée ce jour-là, l'a révélé) |
 
 ### Le seuil des listes courtes : **6** (arbitré le 29/08/2026, #491)
 
