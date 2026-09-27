@@ -16,6 +16,7 @@
   donnerait deux vérités sur la configuration du site.
 -->
 <script lang="ts">
+	import { GLYPHE_URGENCE } from '$lib/options-publication';
 	import { nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
 
@@ -113,8 +114,8 @@
 			</span>
 			<span class="aide"
 				>Envoie un e-mail au gestionnaire du site sélectionné (ou à l'adresse administrateur de
-				secours) uniquement pour les affaires de catégorie « Bug ». Une affaire marquée 🚨 Urgent ne
-				déclenche pas cette notification — l'urgence est une case, pas une catégorie.</span
+				secours) uniquement pour les affaires de catégorie « Bug ». Une affaire marquée {GLYPHE_URGENCE}
+				Urgent ne déclenche pas cette notification — l'urgence est une case, pas une catégorie.</span
 			>
 		</label>
 		<label class="field" style="grid-column:span 2">

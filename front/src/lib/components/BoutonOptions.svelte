@@ -20,7 +20,7 @@
   ## Ce que ce bouton dit, et pourquoi il disparaît
 
   Il rend les **glyphes des options actives**, pris dans la table
-  (`$lib/options-publication`) : 📌 🚨 📝 🔒. Il n'apparaît pas quand aucune n'est
+  (`$lib/options-publication`) : 📌 ⚡ 📝 🔒. Il n'apparaît pas quand aucune n'est
   active — un bouton « Options » vide n'annonce rien, et la création d'une option
   se fait dans le formulaire, où la section est complète.
 

@@ -48,6 +48,23 @@ const RACINE = 'src';
 /**  Le glyphe sous ses trois écritures : littérale, entité HTML, échappement JS. */
 export const LOSANGE_BLEU = /🔹|&#x1F539;|\\u\{1F539\}/gi;
 export const PUNAISE = /📍|&#x1F4CD;|\\u\{1F4CD\}/gi;
+/**  L'URGENCE a un glyphe, ⚡, écrit UNE fois (27/09/2026, arbitré à l'écran) :
+ *   la carte disait « ⚡ Urgente » quand la case, le bouton d'options et le
+ *   manuel disaient 🚨. La sirène ne s'emploie plus nulle part — ni dans le site,
+ *   ni dans le manuel —, et l'éclair ne s'écrit qu'à sa source, la table des
+ *   options, d'où tout le reste le LIT. */
+export const SIRENE = /🚨|&#x1F6A8;|\\u\{1F6A8\}/gi;
+export const ECLAIR = /⚡|&#x26A1;|\\u\{26A1\}/gi;
+const SOURCE_ECLAIR = 'lib/options-publication.ts';
+/**  ⚡ dans un AUTRE sens, déclaré : il ne paraît jamais sur une affaire. */
+const ECLAIRS_AUTRES = {
+	'lib/prestataires.ts': {
+		occurrences: 1,
+		motif:
+			'le corps de métier « Électricité » — le sens propre du glyphe, dans la liste des équipements',
+	},
+};
+const MANUEL = '../docs/manuel-utilisateur.html';
 
 /**  Le seul composant qui rend le badge de périmètre. */
 const SOURCE_BADGE = 'lib/components/BadgePerimetre.svelte';
@@ -114,6 +131,8 @@ if (process.argv.includes('--selftest')) {
 	//  🔴 Le faux positif que trois contrôles de ce dépôt ont déjà connu : le
 	//  fichier qui explique la règle la cite.
 	t('commentaire ignoré', compter('<!-- jamais 📍 ici -->\n<p>x</p>', PUNAISE) === 0);
+	t('sirène en entité comptée', compter('<p>&#x1F6A8; Urgent</p>', SIRENE) === 1);
+	t('éclair en échappement compté', compter("const g = '\\u{26A1}';", ECLAIR) === 1);
 	const permis = { 'a.svelte': { occurrences: 1, motif: 'm' } };
 	//  🔴 LE cas qui donne sa raison d'être au contrôle : « 📍 Dépannage ».
 	t('emploi non déclaré refusé', verdict({ 'b.ts': 1 }, permis).fautifs.length === 1);
@@ -135,6 +154,8 @@ function fichiers(dir, acc = []) {
 
 const losanges = {};
 const punaises = {};
+const sirenes = {};
+const eclairs = {};
 for (const f of fichiers(RACINE)) {
 	const rel = f
 		.split(sep)
@@ -145,6 +166,10 @@ for (const f of fichiers(RACINE)) {
 	const np = compter(source, PUNAISE);
 	if (nl) losanges[rel] = nl;
 	if (np) punaises[rel] = np;
+	const ns = compter(source, SIRENE);
+	const ne = compter(source, ECLAIR);
+	if (ns) sirenes[rel] = ns;
+	if (ne) eclairs[rel] = ne;
 }
 
 //  🔴 LE CAS ZÉRO (`standards/04` §2) : si le badge lui-même ne porte plus 🔹,
@@ -184,7 +209,25 @@ if (p.fautifs.length) {
 			'  se dit 🔹 (CLAUDE.md, règle 4). Un vrai lieu se déclare dans `LIEUX`.\n',
 	);
 }
-const perimees = [...l.perimees, ...p.perimees];
+const sirenesManuel = compter(readFileSync(MANUEL, 'utf8'), SIRENE);
+if (sirenesManuel) sirenes['docs/manuel-utilisateur.html'] = sirenesManuel;
+if (Object.keys(sirenes).length) {
+	echec = true;
+	console.error('\n✗ 🚨 employé — l’urgence se dit ⚡, lu dans la table des options :\n');
+	for (const [f, n] of Object.entries(sirenes)) console.error(`  ${f} (${n})`);
+}
+if (!eclairs[SOURCE_ECLAIR]) {
+	console.error(`\n✗ INCONNU : aucun ⚡ dans \`${SOURCE_ECLAIR}\` — la source a bougé.\n`);
+	process.exit(2);
+}
+delete eclairs[SOURCE_ECLAIR];
+const e = verdict(eclairs, ECLAIRS_AUTRES);
+if (e.fautifs.length) {
+	echec = true;
+	console.error('\n✗ ⚡ écrit hors de sa source — le lire dans `OPTIONS_PUBLICATION` :\n');
+	for (const f of e.fautifs) console.error(`  ${f}`);
+}
+const perimees = [...l.perimees, ...p.perimees, ...e.perimees];
 if (perimees.length) {
 	echec = true;
 	console.error('\n✗ Ces déclarations ne servent plus (ou plus autant) — les ajuster :\n');

@@ -801,7 +801,10 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
 - Prévisualisation `.clamp-5` (5 lignes max)
 - Border-left, urgence, espacement et ombre : **portés par `.carte-liste`** (voir
   ci-dessus). Ne pas les redéfinir dans une page.
-- Urgence : bord gauche rouge — **pas de badge texte 🚨**
+- Urgence : bord gauche rouge, et **un seul glyphe, ⚡** (27/09/2026, arbitré à l'écran) —
+  la case, le bouton d'options, le bandeau, l'avertissement et le manuel disaient 🚨,
+  la carte ⚡. Il s'écrit dans `OPTIONS_PUBLICATION` et se LIT ailleurs
+  (`GLYPHE_URGENCE`) ; 🔒 `npm run lint:pictogrammes` refuse 🚨 partout, manuel compris.
   Une **affaire** en priorité haute porte en plus son badge de priorité, « ⚡ Urgente »
   (`PRIORITE_BREVE`), **une fois** : la rangée des options passe par `optionsEnBadge`
   (`$lib/tickets`), qui retire ce qu'un badge dédié dit déjà — urgence et

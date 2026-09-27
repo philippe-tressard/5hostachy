@@ -57,7 +57,9 @@ export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 	},
 	{
 		cle: 'urgente',
-		glyphe: '\u{1F6A8}',
+		//  ⚡ et non plus la sirène (27/09/2026, arbitré à l'écran) : la carte
+		//  disait déjà « ⚡ Urgente ». Un seul glyphe pour l'urgence, écrit ICI.
+		glyphe: '\u{26A1}',
 		action: 'Marquer urgente',
 		etat: 'Urgente',
 		//  L'urgence se rend par un BORD ROUGE sur la carte, jamais par un badge
@@ -128,6 +130,10 @@ export function actionOption(option: OptionPublication, objet: string): string {
 export function optionPublication(cle: CleOptionPublication): OptionPublication | undefined {
 	return OPTIONS_PUBLICATION.find((o) => o.cle === cle);
 }
+
+/** Le glyphe de l'URGENCE, lu dans la table — case, badge, bandeau, avertissement.
+ *  🔒 `npm run lint:pictogrammes` refuse l'éclair écrit ailleurs, et la sirène partout. */
+export const GLYPHE_URGENCE = optionPublication('urgente')?.glyphe ?? '';
 
 /**
  * Les options ACTIVES d'une publication, dans l'ordre de la table.
