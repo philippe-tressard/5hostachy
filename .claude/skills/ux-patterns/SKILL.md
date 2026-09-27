@@ -48,7 +48,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 1 | **Le geste de dépliage est asymétrique** — carte repliée : clic n'importe où ; carte dépliée : **seul le titre** replie | §3 |
 | 2 | **Le survol colore le TITRE**, jamais le fond du bloc, et **sans soulignement** | §3 |
 | 3 | **Le liseré gauche** de `.carte-liste` qui passe au bleu est **la référence** — sauf sur le fil, où il porte déjà la couleur du type | §3 |
-| 4 | **L'en-tête de carte** : titre sur sa ligne, puis tags à gauche / date + actions + chevron à droite, **sur une seule ligne** | §3 |
+| 4 | **L'en-tête de carte** : titre sur sa ligne, puis tags à gauche / date + actions + chevron à droite, **sur une seule ligne** — sauf au téléphone quand elle déborde : elle passe à la ligne, la date sur la dernière (27/09/2026, l'auteur s'y lisait « ✍️ Jear ») | §3 |
 | 5 | **Ordre des icônes : 🔗 🔄 ✏️ 🗑️**, dans l'en-tête et jamais dans le corps — le 🔗 en tête parce qu'il est le seul que tout le monde a | §3 |
 | 6 | **Le mode se lit sur l'icône** qui a ouvert le formulaire (`aria-pressed`), jamais sur un titre au-dessus | §13 bis |
 | 7 | **Section 1 = le titre SEUL** ; ce qui qualifie l'objet est en section 2 | §0 |
@@ -217,8 +217,8 @@ données pour celles inappropriées »*. Une actualité est une affaire de caté
   l'**efface**, après une confirmation qui dit quoi (`pertesAuChangement`).
 - La pastille qui ouvre l'autre chemin (« 📰 Actualité — Information, sans
   suivi ») est **en tête**, pleine ligne, bord « information » sur fond blanc (un fond bleu la faisait croire cochée), suivie d'un filet
-  (`enTete` dans `CATEGORIES_TICKET`, variante A). Elle est absente des filtres
-  par catégorie : elle se filtre par sa **nature**.
+  (`enTete` dans `CATEGORIES_TICKET`, variante A). Il n'y a plus de filtre
+  par catégorie (§5 bis) : elle se filtre par sa **nature**.
 
 ### Un champ n'est pas un geste — d'où la seule différence création/édition
 
@@ -668,7 +668,10 @@ de quoi elle parlait.
   puis coupé) ;
 - puis l'**aperçu**, **trois** lignes (`.clamp-3`) ;
 - **en dernier** : tags à gauche (workflow, périmètre, confidentiel, auteur),
-  **date à droite**.
+  **date à droite**. Au bureau la ligne défile si elle déborde ; **au téléphone
+  (≤ 767 px) elle passe à la ligne**, date alignée sur la dernière — la barre de
+  défilement masquée cachait l'auteur (27/09/2026, arbitré à l'écran ;
+  🔒 `e2e/ligne-pastilles.spec.ts`).
   🔒 **Toute la ligne est à UNE taille**, celle d'un `.badge` (0,75 rem), posée
   sur `.ec-tags` et héritée : état, périmètre, pastille de lecture, numéro,
   auteur. Ils en avaient quatre (#1308). `lint:entete-carte` refuse une autre
@@ -1061,6 +1064,27 @@ explicite du lien, pas un défaut.
 - Sélection multiple : toggle + reset auto vers défaut si aucun actif
 
 Pages implémentées : `tickets` (filtre de nature, 23/09/2026) — le calendrier y est un filtre depuis #1092
+
+## 5 bis. La RECHERCHE libre — Affaires (27/09/2026)
+
+Le filtre « Catégorie » de la page Affaires a cédé la place à une recherche libre
+(maquette A, avec l'extrait et les Archives de la C, arbitrée à l'écran) :
+https://claude.ai/artifact/BRYAWNn4EZAx1EBTHHNMQu
+
+- **La règle est au SERVEUR** (`app/utils/recherche_affaires.py`, `--selftest`) :
+  tous les mots, partout, sans accents ni casse — n°, titre, description,
+  catégorie, lieu, personnes, prestataire, équipement, suites, messages, pièces
+  jointes. L'écran n'en a pas de seconde : `$lib/recherche-affaires` demande
+  (après la frappe, dernière réponse seule) et filtre.
+- 🔴 **Elle ne lit que ce que l'écran montre** : `ticket_visible`, `lit_les_suites`,
+  `lit_les_notes_internes`, `document_visible` — les prédicats des routes qui
+  montrent le même texte, jamais réécrits (`test_recherche_affaires.py`). Un
+  compte de résultats est une information.
+- La carte dit **où** : « Trouvé dans une suite », et le passage en segments
+  surlignés (`ExtraitRecherche`) — du TEXTE, jamais du HTML : le `<mark>` est
+  posé par le gabarit, il n'y a rien à assainir.
+- Les **Archives** ne s'y mêlent que sur demande (case, ou « Les inclure » quand
+  le bilan en signale).
 
 ## 6. Ligne de publication
 

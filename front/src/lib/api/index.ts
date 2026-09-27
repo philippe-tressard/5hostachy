@@ -6,6 +6,7 @@ import type {
 	AffaireLiee,
 	AnnonceHallPrefill,
 	ApercuDiffusion,
+	CorrespondanceAffaire,
 	EpinglesCompte,
 	FluxResponse,
 	Notification,
@@ -72,6 +73,9 @@ export const auth = {
 export const tickets = {
 	list: () => api.get<Ticket[]>('/tickets'),
 	get: (id: number) => api.get<Ticket>(`/tickets/${id}`),
+	/** La recherche libre : TOUS les mots, partout où le lecteur peut lire (27/09/2026). */
+	rechercher: (q: string) =>
+		api.get<CorrespondanceAffaire[]>(`/tickets/recherche?q=${encodeURIComponent(q)}`),
 	/** Les affaires que je peux lier : numéro, titre, statut (#1342). */
 	choix: () => api.get<AffaireLiee[]>('/tickets/choix'),
 	//  Le miroir du pré-remplissage des affiches (#832) : le CS compose souvent

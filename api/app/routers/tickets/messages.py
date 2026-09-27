@@ -8,7 +8,7 @@ from app.utils import horloge
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import est_moderateur, get_current_user
+from app.auth.deps import est_moderateur, get_current_user, lit_les_notes_internes
 from app.database import get_session
 from app.models.core import (
     MessageTicket,
@@ -42,7 +42,7 @@ def get_messages(
         raise HTTPException(403, "Accès refusé")
     stmt = select(MessageTicket).where(MessageTicket.ticket_id == ticket_id)
     # Messages internes réservés CS/admin
-    if not est_moderateur(user):
+    if not lit_les_notes_internes(user):
         stmt = stmt.where(MessageTicket.interne == False)  # noqa: E712
     return session.exec(stmt.order_by(MessageTicket.cree_le)).all()
 

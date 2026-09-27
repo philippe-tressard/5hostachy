@@ -81,6 +81,28 @@ export interface AffaireLiee {
 	statut: string;
 }
 
+/**  Une affaire trouvée par la recherche libre (27/09/2026) : OÙ le texte a été
+ *   trouvé, et le passage découpé en segments — jamais du HTML, donc rien à
+ *   assainir. Rendu par `GET /tickets/recherche`, dans l'ordre de pertinence. */
+export interface CorrespondanceAffaire {
+	ticket_id: number;
+	ou:
+		| 'numero'
+		| 'titre'
+		| 'categorie'
+		| 'lieu'
+		| 'personne'
+		| 'prestataire'
+		| 'equipement'
+		| 'description'
+		| 'suite'
+		| 'message'
+		| 'piece_jointe';
+	extrait: { texte: string; surligne: boolean }[];
+	date?: string | null;
+	auteur?: string | null;
+}
+
 export interface Ticket extends PorteSaisiPourLu {
 	id: number;
 	/** « Rédigé avec l'assistant IA » (#985). */

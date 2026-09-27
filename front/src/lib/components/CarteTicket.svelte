@@ -42,6 +42,7 @@
 	import { contexteCommentaire } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import ApercuTicket from './ApercuTicket.svelte';
+	import ExtraitRecherche from './ExtraitRecherche.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
 	import PastillesAffaire from './PastillesAffaire.svelte';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
@@ -71,7 +72,12 @@
 	} from '$lib/tickets';
 	import { fmtDate } from '$lib/date';
 	import { destinatairesParDefautDuTicket } from '$lib/lecture-ticket';
-	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
+	import {
+		tickets as ticketsApi,
+		type CorrespondanceAffaire,
+		type Ticket,
+		type TicketEvolution,
+	} from '$lib/api';
 	import { nomCopie, nomProprietaire } from '$lib/saisi-pour';
 	import { equipLabel, intervenantAffiche } from '$lib/prestataires';
 
@@ -80,6 +86,8 @@
 	//  sinon. Réactif : la carte se rafraîchit quand le ticket change.
 	$: proprietaireNom = nomProprietaire(ticket);
 	export let evolutions: TicketEvolution[] = [];
+	/** Ce qui l'a fait trouver, quand la liste est une recherche (27/09/2026). */
+	export let correspondance: CorrespondanceAffaire | null = null;
 	export let expanded = false;
 	/** Allure d'archive : le ticket est clos depuis plus du délai de grâce. */
 	export let archive = false;
@@ -220,6 +228,9 @@
 		<svelte:fragment slot="apercu">
 			{#if !expanded}
 				<ApercuTicket {ticket} dansLigne />
+				{#if correspondance}
+					<ExtraitRecherche {correspondance} archivee={ticket.archivee} />
+				{/if}
 			{/if}
 		</svelte:fragment>
 	</EnteteCarte>

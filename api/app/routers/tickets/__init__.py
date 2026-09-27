@@ -20,6 +20,7 @@ ayant sa propre raison de changer.
 | `relance` | relance groupée du syndic, avec civilité et ancienneté |
 | `courriels` | composition et envoi des e-mails d'un ticket |
 | `commun` | destinataires, configuration, libellés, sérialisation |
+| `recherche` | recherche libre : ce que le lecteur peut lire, et rien d'autre |
 
 ## Ce qui a été factorisé au passage
 
@@ -66,6 +67,7 @@ from . import (
     lot,
     messages,
     mise_a_jour,
+    recherche,
     relance,
 )
 
@@ -79,6 +81,7 @@ _a_prefixer = APIRouter(prefix="/tickets", tags=["tickets"])
 for _sous_router in (
     apercu.router,
     liees.router,  # `/choix` : littéral, avant `crud` (#1342)
+    recherche.router,  # `/recherche` : littéral, avant `crud` — sinon 422
     depuis_annonce.router,
     relance.router,
     messages.router,

@@ -86,6 +86,25 @@ test('le fil rend la ligne de la carte d’affaire, sans 📌', async ({ page })
 });
 
 /*
+ *  **Rien ne sort de la ligne, au téléphone compris** (27/09/2026, arbitré à
+ *  l'écran) : la ligne défilait sans barre visible, et l'auteur — son dernier
+ *  élément — se lisait « ✍️ Jear ». Au téléphone elle passe désormais à la ligne
+ *  (`EnteteCarte`). Mesuré sur la carte la plus chargée du fichier : urgente,
+ *  épinglée, périmètre, IA, et un nom d'auteur long.
+ */
+test('l’auteur se lit en entier sur la dernière ligne', async ({ page }) => {
+	await simuler(page);
+	await page.goto('/tickets');
+	const tags = page.locator('.carte-liste .ec-tags').first();
+	await expect(tags).toContainText(`✍️ ${AUTEUR}`);
+	const debord = await tags.evaluate((el) => el.scrollWidth - el.clientWidth);
+	expect(debord, 'la ligne déborde : ce qui dépasse ne se voit pas').toBeLessThanOrEqual(1);
+	const carte = await page.locator('.carte-liste').first().boundingBox();
+	const auteur = await tags.getByText(`✍️ ${AUTEUR}`).boundingBox();
+	expect(auteur!.x + auteur!.width).toBeLessThanOrEqual(carte!.x + carte!.width);
+});
+
+/*
  *  **Les cartes de la communauté disent qui les lit** (#1373, arbitré le
  *  27/09/2026) : la pastille de lecture bleue a remplacé le badge orange des
  *  destinataires, ✨ ferme la ligne, et l'idée comme le sondage ne nomment pas
