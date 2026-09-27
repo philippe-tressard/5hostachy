@@ -470,10 +470,12 @@ les checks requis restaient verts si l'un d'eux cassait. C'est la même famille 
 #409, #410 et #411 — des contrôles qui existent et ne s'exécutent pas. Écrire un
 test et le **brancher** sont deux gestes, et le second ne manque à personne.
 
-⚠️ Ces tests s'arrêtent aux écrans **publics** : tout le reste est derrière une
-connexion. Ce qui doit être vérifié sur un écran authentifié se mesure autrement —
-voir `e2e/cible-tactile.spec.ts`, qui pose son propre témoin dans la page plutôt
-que de sauter faute d'en trouver un.
+Un écran **authentifié** se rend avec l'**API simulée** (compte témoin, listes
+nécessaires) — `e2e/depot-fichier.spec.ts`, `e2e/ligne-pastilles.spec.ts`. ⚠️ Le
+motif d'interception vise le chemin `/api/` du serveur seulement : sinon il attrape
+les modules source `/src/lib/api/…` et la page tombe en 500 (`standards/05` §13).
+Cette ligne disait jusqu'au 27/09/2026 que ces tests « s'arrêtent aux écrans
+publics » : c'était vrai, et ce n'est plus une limite.
 
 Lancer en local : `cd front && npm run e2e`.
 

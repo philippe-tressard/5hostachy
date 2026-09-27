@@ -8,7 +8,6 @@
 	import { annuaire as annuaireApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateLong as formatDate } from '$lib/date';
 	import { revelerCible } from '$lib/deepLink';
 	import { etageLabel, telephonesDe } from '$lib/utils';
@@ -131,8 +130,7 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'users'} />
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
+<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'users'} />
 
 {#if loading}
 	<EtatListe chargement />

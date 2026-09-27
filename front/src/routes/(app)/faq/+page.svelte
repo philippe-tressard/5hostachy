@@ -11,7 +11,6 @@
 	import { isCS, currentUser } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
 	import {
 		categoriesPourStatut,
 		categorieSaisie,
@@ -325,7 +324,7 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'help-circle'}>
+<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'help-circle'}>
 	{#if canEdit}
 		{#if !reorderMode}
 			<button class="btn btn-outline page-header-btn" on:click={enterReorderMode}
@@ -341,7 +340,6 @@
 		{/if}
 	{/if}
 </EntetePage>
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!--  La CRÉATION s'ouvre en tête de la liste ; la correction, dans la carte de
       la question (#1329) — les deux s'ouvraient en bas de page, après l'aide. -->

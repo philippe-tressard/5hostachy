@@ -30,7 +30,6 @@
 	import { currentUser, isAdmin, isCS, isGestionnaire } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import { signaler as signalerContenu } from '$lib/signalements';
@@ -313,7 +312,7 @@
 
 <!--  L'en-tête n'OUVRE plus : l'annulation vit à côté d'« Enregistrer » (norme du
       18/08/2026). Deux commandes pour un formulaire, c'est #367. -->
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'users-round'}>
+<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'users-round'}>
 	{#if onglet === 'sondages' && $isCS && !showFormSondage}
 		<button class="btn btn-primary page-header-btn" on:click={() => (showFormSondage = true)}>
 			+ Nouveau sondage
@@ -328,7 +327,6 @@
 		</button>
 	{/if}
 </EntetePage>
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if banMessage}
 	<div

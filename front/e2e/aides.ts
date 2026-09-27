@@ -22,3 +22,54 @@ import type { Page } from '@playwright/test';
 export async function attendreHydratation(page: Page): Promise<void> {
 	await page.locator('html[data-images-surveillees="oui"]').waitFor({ timeout: 10000 });
 }
+
+/**
+ * Un membre du conseil syndical — le compte simulé des écrans authentifiés.
+ *
+ * Le CS voit tout : un test qui le prend ne saute aucun onglet réservé.
+ */
+export const MEMBRE_CS = {
+	id: 1,
+	nom: 'Témoin',
+	prenom: 'CS',
+	email: 'temoin@exemple.test',
+	statut: 'copropriétaire_résident',
+	role: 'conseil_syndical',
+	roles: ['conseil_syndical'],
+	actif: true,
+};
+
+/**
+ * **Rendre un écran authentifié avec l'API simulée.**
+ *
+ * Tout est derrière une connexion : un test qui chercherait l'écran sans compte
+ * serait sauté, donc faux vert (`cible-tactile.spec.ts`). On rend le VRAI écran,
+ * avec `MEMBRE_CS` pour `/api/auth/me`, un objet vide pour la configuration, et
+ * une liste vide pour le reste — sauf ce que `reponses` rend pour un chemin.
+ *
+ * ⚠️ Le CHEMIN doit commencer par `/api/` : un motif `/api/` n'importe où
+ * intercepte aussi le module source `/src/lib/api/…`, et la page tombe en 500.
+ * Écrit ici une fois : trois tests le recopiaient, avec son piège.
+ */
+export async function simulerApi(
+	page: Page,
+	reponses: (chemin: string) => unknown = () => undefined,
+): Promise<void> {
+	await page.route(
+		(url) => url.pathname.startsWith('/api/'),
+		(route) => {
+			const chemin = new URL(route.request().url()).pathname;
+			let corps = reponses(chemin);
+			if (corps === undefined) {
+				if (chemin === '/api/auth/me') corps = MEMBRE_CS;
+				else if (/config|pages|parametres|sante|epingles/.test(chemin)) corps = {};
+				else corps = [];
+			}
+			return route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify(corps),
+			});
+		},
+	);
+}

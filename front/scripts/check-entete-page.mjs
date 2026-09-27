@@ -23,7 +23,14 @@
  *
  *   1. rendre `class="page-header"` à la main — passer par `<EntetePage>` ;
  *   2. redéfinir `.page-header` en CSS local — la règle vit dans `app.css` ;
- *   3. un `<h1>` qui porte `font-size` en ligne — le composant le porte.
+ *   3. un `<h1>` qui porte `font-size` en ligne — le composant le porte ;
+ *   4. rendre `class="page-subtitle"` à la main — le descriptif de page est la
+ *      prop `descriptif` d'`EntetePage` (#1369, 27/09/2026). Il était écrit dans
+ *      DOUZE écrans ; Résidence le posait sous ses onglets, au-dessus d'un
+ *      descriptif d'onglet identique, et la phrase se lisait deux fois. Un
+ *      treizième (Délégations) l'écrivait EN DUR : le texte administrable ne
+ *      s'y affichait pas. Ce motif-là se cherche aussi dans `lib/components`,
+ *      où vivent des pages entières (`PageCommunaute`).
  *
  * Le contrôle s'auto-contrôle : si le composant disparaît, change de props ou
  * n'est plus employé, il ÉCHOUE au lieu de conclure au vert
@@ -36,7 +43,8 @@ import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ROUTES = join(RACINE, 'routes');
-const COMPOSANT = join(RACINE, 'lib', 'components', 'EntetePage.svelte');
+const COMPOSANTS = join(RACINE, 'lib', 'components');
+const COMPOSANT = join(COMPOSANTS, 'EntetePage.svelte');
 //  `.page-header` a suivi le découpage d'`app.css` (#453) : on cherche dans
 //  TOUS les fragments de style, pas dans le fichier qui les importe.
 
@@ -83,12 +91,19 @@ const composant = readFileSync(COMPOSANT, 'utf8');
 //  (0, .5rem, .75rem, 1rem contre 1.5rem), d'où le saut du titre en passant d'une
 //  page à l'autre (#372). Elle sort donc de ce contrôle — c'est ce que son propre
 //  message de cas zéro demandait de faire quand le contrat change.
-const props = ['titre', 'icone', 'retour'];
+const props = ['titre', 'icone', 'retour', 'descriptif'];
 const absentes = props.filter((p) => !new RegExp(`export let ${p}\\b`).test(composant));
 if (absentes.length > 0) {
 	console.error(
 		`✗ Cas zéro : EntetePage n'expose plus ${absentes.join(', ')}. Le contrat a changé — ` +
 			'mettre ce contrôle à jour, sinon il laisse passer les en-têtes écrits à la main.',
+	);
+	process.exit(1);
+}
+if (!/class="page-subtitle"/.test(composant)) {
+	console.error(
+		"✗ Cas zéro : EntetePage ne rend plus `.page-subtitle`. Interdire de l'écrire " +
+			'ailleurs laisserait les pages sans descriptif — mettre ce contrôle à jour.',
 	);
 	process.exit(1);
 }
@@ -101,6 +116,9 @@ if (!/^\.page-header\s*\{/m.test(cssGlobal(RACINE))) {
 }
 
 const tous = fichiers(ROUTES);
+//  Les composants ne sont lus que pour le descriptif (motif 4) : les trois autres
+//  motifs visent des PAGES, et un composant n'a pas d'en-tête à lui.
+const composants = fichiers(COMPOSANTS).filter((f) => f !== COMPOSANT);
 if (tous.length === 0) {
 	console.error("✗ Cas zéro : aucune page analysée — l'arborescence a changé.");
 	process.exit(1);
@@ -126,19 +144,29 @@ const MOTIFS = [
 		quoi: 'le style du titre est écrit en ligne',
 		remede: 'le composant porte la taille et la graisse du titre',
 	},
+	{
+		regex: /class="[^"]*\bpage-subtitle(?![-\w])/g,
+		quoi: 'le descriptif de page est rendu à la main',
+		remede: '<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} …>',
+		composants: true,
+	},
 ];
 
 const fautifs = [];
 const exceptionsUtiles = new Set();
 let pagesAvecEntete = 0;
 
-for (const f of tous) {
-	const rel = relative(ROUTES, f).split(sep).join('/');
+for (const f of [...tous, ...composants]) {
+	const estComposant = f.startsWith(COMPOSANTS);
+	const rel = estComposant
+		? 'lib/components/' + relative(COMPOSANTS, f).split(sep).join('/')
+		: relative(ROUTES, f).split(sep).join('/');
 	const brut = readFileSync(f, 'utf8');
 	if (brut.includes('<EntetePage')) pagesAvecEntete++;
 	const contenu = sansCommentaires(brut);
 	const trouves = [];
 	for (const motif of MOTIFS) {
+		if (estComposant && !motif.composants) continue;
 		const m = contenu.match(motif.regex);
 		if (m) trouves.push({ ...motif, exemples: [...new Set(m.map((s) => s.trim()))].slice(0, 2) });
 	}

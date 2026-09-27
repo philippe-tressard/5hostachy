@@ -17,7 +17,6 @@
 	import type { GestesTicket } from '$lib/tickets';
 	import { TICKET } from '$lib/entites/ticket';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import ListeTickets from '$lib/components/ListeTickets.svelte';
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
@@ -393,7 +392,11 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'message-square-text'}>
+<EntetePage
+	titre={_pc.titre}
+	descriptif={_pc.descriptif}
+	icone={_pc.icone || 'message-square-text'}
+>
 	<!--  L'en-tête n'OUVRE que le formulaire : l'annulation vit à côté
 	      d'« Enregistrer », dans le formulaire (18/08/2026). Le bouton s'efface
 	      pendant la saisie — le laisser en « ✕ Annuler » ferait deux commandes
@@ -410,7 +413,6 @@
 		on:basculer={() => (showForm = true)}
 	/>
 </EntetePage>
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!--  Liste · Kanban · Archives (#1092) — masquage et refus d'une route réservée :
       `BarreOnglets`, d'après `pages.ts`. -->

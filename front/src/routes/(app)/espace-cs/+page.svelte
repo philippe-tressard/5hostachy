@@ -26,7 +26,6 @@
 	import { admin as adminApi, annuaireAdmin, auth as authApi, lots as lotsApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort } from '$lib/date';
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
@@ -732,13 +731,12 @@
 
 <svelte:head><title>{_pc.titre} · {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'shield-half'} />
+<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'shield-half'} />
 
 <ChargementPartiel
 	erreur={erreurReference}
 	consequence="Les numéros de bâtiment peuvent s'afficher « Bât. ? », et le rapprochement automatique des lots ne trouvera rien — faute d'avoir pu chercher."
 />
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!-- Onglets -->
 <BarreOnglets

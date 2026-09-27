@@ -11,7 +11,7 @@
 	import { notifications as notifApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml, safeRichContent } from '$lib/sanitize';
+	import { safeRichContent } from '$lib/sanitize';
 	import { fmtTime, fmtDateShort } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'notifications', defautsDePage('notifications'));
@@ -108,7 +108,7 @@
 
 <a href="/tableau-de-bord" class="back-link">← Tableau de bord</a>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'bell'}>
+<EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'bell'}>
 	{#if unread > 0}
 		<span style="font-size:.85rem;color:var(--color-text-muted)"
 			>{unread} non lue{unread > 1 ? 's' : ''}</span
@@ -116,7 +116,6 @@
 		<button class="btn btn-outline btn-sm" on:click={markAll}>Tout marquer lu</button>
 	{/if}
 </EntetePage>
-<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if loading || erreur || items.length === 0}
 	<EtatListe
