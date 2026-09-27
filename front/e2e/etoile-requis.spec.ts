@@ -152,6 +152,13 @@ test.describe('L’étoile d’un GROUPE de champs (#1329)', () => {
 		//  Une expression, pas une chaîne : Playwright normalise les espaces de
 		//  l'attendu, et ' *' deviendrait '*' — l'étoile collée, justement.
 		await expect(titre).not.toHaveText(/\s\*/);
+		//  Le titre du groupe se lit comme le libellé du champ voisin — mêmes
+		//  capitales, même espacement (#1329 : il restait en minuscules).
+		const allure = (sel: string) =>
+			page
+				.locator(sel)
+				.evaluate((n) => [getComputedStyle(n).textTransform, getComputedStyle(n).letterSpacing]);
+		expect(await allure('#coproprietaire-aide-titre')).toEqual(await allure('label[for="statut"]'));
 		const etoile = titre.locator('span[class*="requis"]');
 		await expect(etoile).toHaveCount(1);
 		const couleur = () => etoile.evaluate((n) => getComputedStyle(n).color);

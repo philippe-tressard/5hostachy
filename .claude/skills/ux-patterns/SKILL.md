@@ -1398,6 +1398,11 @@ bonne volonté :
   après une supérieure, dans **tout** `.svelte` du dépôt. Vérifié échouant sur
   le défaut, et son lecteur de balise l'est aussi : un `=>` dans les props
   coupait la lecture, et le contrôle passait au vert sur ce qu'il devait refuser.
+  Depuis le 27/09/2026 (#1329), il classe aussi les intitulés **propres à un
+  objet** (« Code », « Type », « État ») : ils se lisent dans le `titreEcran`
+  de l'entité que le fichier importe. Un formulaire qui n'importe pas sa
+  déclaration reste donc à moitié invisible — **déclarer l'entité, c'est ce qui
+  la fait contrôler**.
 * 🔒 `npm run lint:pliage-transmis` (22/09/2026) tient l'autre bout du même
   fil : un composant qui **porte** une section du cadre — `SectionsPiecesJointes`,
   `ChampSaisiPour`, `SectionWorkflow` — doit **transmettre** son pliage. Sans

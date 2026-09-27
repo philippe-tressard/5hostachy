@@ -31,6 +31,9 @@
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { libelleLotPourBadge, lotsPourBadge, type LotPourBadge } from '$lib/imports-acces';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import { ACCES } from '$lib/entites/acces';
+	import { sectionPresente, type Etat } from '$lib/entites/types';
+	import { pliageDe, requisDe } from '$lib/pliage';
 	import type { ChoixAcces } from '$lib/api/acces';
 
 	const dispatch = createEventDispatcher<{ annule: void; enregistre: void }>();
@@ -71,6 +74,8 @@
 
 	/** `true` quand on corrige : le TYPE ne se change plus, il identifie l'objet. */
 	export let modeEdition = false;
+	//  L'état du cadre, dérivé du geste : c'est lui que lit la déclaration.
+	$: etat = (modeEdition ? 'edition' : 'creation') as Etat;
 	export let enregistrement = false;
 	/**  Ce qui identifie l'objet corrigé — relayé à `FormulaireCreation`, qui
 	 *   ramène le formulaire à l'écran s'il en est sorti. Inutile en édition
@@ -112,17 +117,40 @@
       copies divergeraient au premier champ ajouté. -->
 <CadreFormulaire
 	edition={modeEdition}
-	titre={modeEdition ? "Corriger l'accès" : 'Enregistrer un accès'}
+	titre={modeEdition ? ACCES.libelleModifier : ACCES.libelleNouveau}
 	{encadre}
 	{cle}
 	on:fermer={() => dispatch('annule')}
 >
-	<!--  ⚠️ L'ordre suit `ux-patterns` §9 sexies : ce qui IDENTIFIE l'objet d'abord
-	      (type, code, porteur), le périmètre ensuite, le reste après. Le ticket lié
-	      vient en dernier parce qu'il ne décrit pas le badge — il dit pourquoi on
-	      l'enregistre. -->
-	{#if !modeEdition}
-		<SectionFormulaire titre="Type" premiere>
+	<!--  🔴 L'ORDRE DU CADRE (arbitré le 27/09/2026, #1329) — Code (titre) · Type
+	      (nature) · État (suivi) · Accès (périmètre) · Affaire liée · Lot et
+	      porteur (au nom de). Il suivait jusque-là un ordre propre à l'écran
+	      (« ce qui identifie l'objet d'abord ») : la déclaration `ACCES` dit
+	      désormais les correspondances, et `lint:etats` / `lint:ordre-sections`
+	      tiennent l'ordre. Les champs ne changent pas, seulement leur rang. -->
+	{#if sectionPresente(ACCES, etat, 'titre')}
+		<SectionFormulaire
+			titre="Code"
+			requis={requisDe(ACCES, 'titre')}
+			pliable={pliageDe(ACCES, 'titre')}
+			rempli={!!saisie.code.trim()}
+			pour="acces-code"
+			premiere
+		>
+			<div class="field champ-large">
+				<input id="acces-code" type="text" bind:value={saisie.code} placeholder="4521, 417D5927…" />
+				<span class="aide">La référence gravée sur l'objet, telle qu'elle s'y lit.</span>
+			</div>
+		</SectionFormulaire>
+	{/if}
+
+	{#if sectionPresente(ACCES, etat, 'nature')}
+		<SectionFormulaire
+			titre="Type"
+			requis={requisDe(ACCES, 'nature')}
+			pliable={pliageDe(ACCES, 'nature')}
+			rempli={!!saisie.type}
+		>
 			<!--  ⚠️ `tous={false}` : `ChoixPastilles` propose « Tous » par défaut, ce
 			      qui a du sens pour un FILTRE et aucun pour une saisie — un accès est
 			      d'un type ou de l'autre. La prop existe justement pour cela. -->
@@ -130,94 +158,118 @@
 		</SectionFormulaire>
 	{/if}
 
+	{#if sectionPresente(ACCES, etat, 'suivi')}
+		<SectionFormulaire
+			titre="État"
+			requis={requisDe(ACCES, 'suivi')}
+			pliable={pliageDe(ACCES, 'suivi')}
+			rempli={!!saisie.statut}
+		>
+			<ChoixPastilles options={STATUTS} bind:valeur={saisie.statut} tous={false} />
+			<p class="aide">
+				Un badge perdu ou suspendu reste dans le parc&nbsp;: c'est ce qui permet de savoir qu'il
+				circule. Seul un administrateur peut retirer une ligne saisie par erreur.
+			</p>
+		</SectionFormulaire>
+	{/if}
+
+	<!--  🔹 L'accès EST un périmètre, et se saisit donc comme tous les autres.
+	      Facultatif (déduit du lot) : plié, et rouvert d'office s'il porte déjà
+	      une valeur. -->
+	{#if sectionPresente(ACCES, etat, 'perimetre')}
+		<SectionFormulaire
+			titre="Accès"
+			idTitre="acces-perimetre-titre"
+			pliable={pliageDe(ACCES, 'perimetre')}
+			valeurModifiee={saisie.perimetre_cible.length > 0}
+			resume={saisie.perimetre_cible.length
+				? `${saisie.perimetre_cible.length} lieu(x)`
+				: accesSuitLeLot
+					? 'déduit du lot'
+					: 'les portails de la résidence'}
+		>
+			<PerimetrePicker
+				bind:value={saisie.perimetre_cible}
+				titre=""
+				requis={false}
+				codesAutorises={accesAutorises}
+			/>
+			<!--  🔒 Les choix sont RESTREINTS par type (15/09/2026) : un badge ne
+			      commande pas un local à poubelles. La liste vient du serveur, qui
+			      l'oppose aussi à la requête — l'écran propose, il ne protège pas. -->
+			<p class="aide">
+				{#if accesSuitLeLot}
+					Ce que le badge ouvre. Laissé vide à la création, il est déduit&nbsp;: le bâtiment du lot,
+					ou celui du porteur si tous ses lots sont dans le même.
+				{:else}
+					Ce que la télécommande ouvre. Laissé vide, elle reçoit les portails d'accès de la
+					résidence.
+				{/if}
+			</p>
+		</SectionFormulaire>
+	{/if}
+
+	<!--  Sans « Facultatif. » : l'absence d'étoile le dit (cadre R3). -->
+	{#if sectionPresente(ACCES, etat, 'affaires_liees')}
+		<SectionFormulaire
+			titre="Affaire liée"
+			pour="acces-affaire"
+			pliable={pliageDe(ACCES, 'affaires_liees')}
+			valeurModifiee={!!saisie.ticket_numero.trim()}
+			resume={saisie.ticket_numero.trim() || 'aucune'}
+		>
+			<div class="field champ-large">
+				<input
+					id="acces-affaire"
+					type="text"
+					bind:value={saisie.ticket_numero}
+					placeholder="TK-241422"
+				/>
+				<span class="aide">
+					Le geste s'inscrit alors dans le fil de cette affaire. Un numéro inconnu refuse
+					l'enregistrement plutôt que de perdre le lien en silence.
+				</span>
+			</div>
+		</SectionFormulaire>
+	{/if}
+
 	<!--  🔴 CHAQUE champ dans sa section (#1329) : Code, Lot, En main et Affaire
 	      liée étaient posés à plat entre les sections — ils se lisaient comme
 	      une partie de la section d'au-dessus. -->
-	<SectionFormulaire
-		titre="Code"
-		requis
-		rempli={!!saisie.code.trim()}
-		pour="acces-code"
-		premiere={modeEdition}
-	>
-		<div class="field champ-large">
-			<input id="acces-code" type="text" bind:value={saisie.code} placeholder="4521, 417D5927…" />
-			<span class="aide">La référence gravée sur l'objet, telle qu'elle s'y lit.</span>
-		</div>
-	</SectionFormulaire>
+	{#if sectionPresente(ACCES, etat, 'au_nom_de')}
+		<SectionFormulaire
+			titre="Lot et porteur"
+			requis={requisDe(ACCES, 'au_nom_de')}
+			pliable={pliageDe(ACCES, 'au_nom_de')}
+			rempli={!!saisie.lot_id || !!saisie.porteur_id}
+		>
+			<label class="field champ-large">
+				<span>Lot<EtoileRequis vide={!saisie.lot_id && !saisie.porteur_id} /></span>
+				<select bind:value={saisie.lot_id}>
+					<option value={null}>— aucun lot —</option>
+					{#each lotsTries as l (l.id)}
+						<option value={l.id}>{libelleLotPourBadge(l)}</option>
+					{/each}
+				</select>
+				<span class="aide">
+					Le badge appartient au lot : tous ses copropriétaires en sont porteurs, conjoint compris.
+				</span>
+			</label>
 
-	<SectionFormulaire titre="Lot et porteur">
-		<label class="field champ-large">
-			<span>Lot<EtoileRequis vide={!saisie.lot_id && !saisie.porteur_id} /></span>
-			<select bind:value={saisie.lot_id}>
-				<option value={null}>— aucun lot —</option>
-				{#each lotsTries as l (l.id)}
-					<option value={l.id}>{libelleLotPourBadge(l)}</option>
-				{/each}
-			</select>
-			<span class="aide">
-				Le badge appartient au lot : tous ses copropriétaires en sont porteurs, conjoint compris.
-			</span>
-		</label>
-
-		<label class="field champ-large">
-			En main
-			<select bind:value={saisie.porteur_id}>
-				<option value={null}>— personne de connu —</option>
-				{#each porteurs as p (p.id)}
-					<option value={p.id}>{p.affiche}</option>
-				{/each}
-			</select>
-			<span class="aide">
-				Qui a l'objet en main, s'il est connu. Il en est prévenu dans l'application.
-			</span>
-		</label>
-	</SectionFormulaire>
-
-	<!--  🔹 L'accès EST un périmètre, et se saisit donc comme tous les autres. -->
-	<SectionFormulaire titre="Accès" idTitre="acces-perimetre-titre">
-		<PerimetrePicker
-			bind:value={saisie.perimetre_cible}
-			titre=""
-			requis={false}
-			codesAutorises={accesAutorises}
-		/>
-		<!--  🔒 Les choix sont RESTREINTS par type (15/09/2026) : un badge ne
-		      commande pas un local à poubelles. La liste vient du serveur, qui
-		      l'oppose aussi à la requête — l'écran propose, il ne protège pas. -->
-		<p class="aide">
-			{#if accesSuitLeLot}
-				Ce que le badge ouvre. Laissé vide à la création, il est déduit&nbsp;: le bâtiment du lot,
-				ou celui du porteur si tous ses lots sont dans le même.
-			{:else}
-				Ce que la télécommande ouvre. Laissé vide, elle reçoit les portails d'accès de la résidence.
-			{/if}
-		</p>
-	</SectionFormulaire>
-
-	<SectionFormulaire titre="État">
-		<ChoixPastilles options={STATUTS} bind:valeur={saisie.statut} tous={false} />
-		<p class="aide">
-			Un badge perdu ou suspendu reste dans le parc&nbsp;: c'est ce qui permet de savoir qu'il
-			circule. Seul un administrateur peut retirer une ligne saisie par erreur.
-		</p>
-	</SectionFormulaire>
-
-	<!--  Sans « Facultatif. » : l'absence d'étoile le dit (cadre R3). -->
-	<SectionFormulaire titre="Affaire liée" pour="acces-affaire">
-		<div class="field champ-large">
-			<input
-				id="acces-affaire"
-				type="text"
-				bind:value={saisie.ticket_numero}
-				placeholder="TK-241422"
-			/>
-			<span class="aide">
-				Le geste s'inscrit alors dans le fil de cette affaire. Un numéro inconnu refuse
-				l'enregistrement plutôt que de perdre le lien en silence.
-			</span>
-		</div>
-	</SectionFormulaire>
+			<label class="field champ-large">
+				En main
+				<select bind:value={saisie.porteur_id}>
+					<option value={null}>— personne de connu —</option>
+					{#each porteurs as p (p.id)}
+						<option value={p.id}>{p.affiche}</option>
+					{/each}
+				</select>
+				<span class="aide">
+					Qui a l'objet en main, s'il est connu. Il en est prévenu dans l'application.
+				</span>
+			</label>
+		</SectionFormulaire>
+	{/if}
 
 	<PiedFormulaire
 		enCours={enregistrement}
