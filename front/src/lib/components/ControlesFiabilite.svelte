@@ -61,7 +61,7 @@
 
 <section class="card config-section">
 	<SectionFormulaire titre={LIBELLE_TACHE.reliability} icone="shield-check" />
-	<p class="muted intro">
+	<p class="muted config-section-intro">
 		Les vérifications de <strong>check-reliability</strong>, toutes les 15&nbsp;minutes sur chaque
 		Raspberry&nbsp;Pi&nbsp;: site public, split-brain, tunnel, parité du code, disque, rotation des
 		journaux, droits sudo, en-têtes de sécurité, <strong>mises à jour système</strong>… Un échec est
@@ -114,11 +114,6 @@
 </section>
 
 <style>
-	.intro {
-		margin: 0 0 1rem;
-		max-width: 70ch;
-		font-size: 0.85rem;
-	}
 	.noeud + .noeud {
 		margin-top: 1rem;
 		padding-top: 1rem;

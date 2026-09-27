@@ -83,6 +83,13 @@
 	$: copieDeLOrigine = !promptOrigine && memePrompt(prompt, usage.prompt_defaut);
 	$: promptDivergent = !promptOrigine && !copieDeLOrigine;
 	$: maxJetons = Number(valeurs[cles.max_jetons]) || usage.max_jetons_defaut;
+	//  Le coût (#1383). Le plafond est en jetons par mois, 0 = aucun. Les prix se
+	//  SAISISSENT en euros par million de jetons — l'unité des grilles tarifaires —
+	//  et se STOCKENT en centimes entiers : un montant ne se garde pas en flottant.
+	$: plafondMois = Number(valeurs[cles.plafond_mois]) || 0;
+	$: prixEntree = (Number(valeurs[cles.prix_entree]) || 0) / 100;
+	$: prixSortie = (Number(valeurs[cles.prix_sortie]) || 0) / 100;
+	const enCentimes = (euros: string) => String(Math.max(0, Math.round(Number(euros) * 100)) || 0);
 
 	//  Le modèle enregistré reste proposé même s'il n'est plus au catalogue :
 	//  sinon la liste le remplacerait en silence par son premier élément, et un
@@ -218,7 +225,56 @@
 					En jetons, et c’est un plafond de <strong>coût</strong> autant que de longueur : seuls les
 					jetons réellement produits sont facturés. Un modèle récent raisonne avant d’écrire, et ce
 					raisonnement compte dans le plafond — une réponse coupée vient de ce champ, pas du modèle.
-					Valeur d’origine : {usage.max_jetons_defaut.toLocaleString()}.
+					Valeur d’origine : {usage.max_jetons_defaut.toLocaleString('fr-FR')}.
+				</span>
+			</label>
+		</div>
+	</SectionFormulaire>
+
+	<SectionFormulaire titre="Coût et plafond">
+		<div class="form-grid">
+			<label class="field">
+				Plafond mensuel
+				<input
+					type="number"
+					value={plafondMois || ''}
+					min="0"
+					step="10000"
+					placeholder="Aucun"
+					on:input={(e) => poser(cles.plafond_mois, e.currentTarget.value)}
+				/>
+				<span class="aide">
+					En jetons (question et réponse), du premier au dernier jour du mois. Atteint, l’usage est
+					refusé avant tout envoi — l’automatique s’arrête — et le contrôle de 6&nbsp;h le signale.
+					Vide&nbsp;: aucun plafond.
+				</span>
+			</label>
+			<label class="field">
+				Prix des jetons envoyés
+				<input
+					type="number"
+					value={prixEntree || ''}
+					min="0"
+					step="0.01"
+					placeholder="Non renseigné"
+					on:input={(e) => poser(cles.prix_entree, enCentimes(e.currentTarget.value))}
+				/>
+				<span class="aide"
+					>En euros par million de jetons, selon la grille de votre fournisseur.</span
+				>
+			</label>
+			<label class="field">
+				Prix des jetons produits
+				<input
+					type="number"
+					value={prixSortie || ''}
+					min="0"
+					step="0.01"
+					placeholder="Non renseigné"
+					on:input={(e) => poser(cles.prix_sortie, enCentimes(e.currentTarget.value))}
+				/>
+				<span class="aide">
+					Idem, pour la réponse. Sans prix, la consommation (Maintenance) s’affiche en jetons seuls.
 				</span>
 			</label>
 		</div>

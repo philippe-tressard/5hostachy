@@ -62,6 +62,7 @@ from app.utils.llm_fournisseurs import (
     FournisseurAzure,
     PieceJointe,
 )
+from app.utils import llm_journal
 from app.utils.llm_usages import USAGES, Usage
 
 #: 🔴 Ce module reste **la porte d'entrée unique**, même depuis que les
@@ -114,6 +115,9 @@ class Reponse:
 
     texte: str
     documents_joints: int
+    #: Ce que le fournisseur dit avoir compté — `None` s'il ne le dit pas.
+    jetons_entree: Optional[int] = None
+    jetons_sortie: Optional[int] = None
 
     def __str__(self) -> str:  # pragma: no cover - confort d'écriture
         return self.texte
@@ -290,21 +294,62 @@ async def demander(
     Lève `ErreurLLM` — jamais autre chose : l'appelant est un écran, il doit
     pouvoir dire « ça n'a pas marché » sans distinguer un délai dépassé d'un
     502 du fournisseur.
-    """
-    import httpx
 
+    🔴 Chaque appel parti se JOURNALISE — jetons, durée, statut —, et un usage
+    dont le plafond mensuel est atteint est refusé AVANT l'envoi (#1383,
+    `llm_journal`). C'est ici, point d'appel unique, que le compte ne peut pas
+    être oublié : un appelant ne peut ni l'omettre, ni le faire deux fois.
+    """
     cfg = config_llm(session, usage)
     cfg.verifier(exiger_actif=exiger_actif)
-    f = cfg.fournisseur
-    if consigne is None:
-        consigne = cfg.prompt
+    trace = {"usage": usage, "fournisseur": cfg.fournisseur.code, "modele": cfg.modele}
+    refus = llm_journal.plafond_atteint(session, usage)
+    if refus:
+        llm_journal.journaliser(session, **trace, statut=llm_journal.STATUT_PLAFOND)
+        raise ErreurLLM(refus)
+    debut = time.monotonic()
+    try:
+        rep = await _appeler(
+            cfg,
+            cfg.prompt if consigne is None else consigne,
+            message,
+            max_jetons or cfg.max_jetons,
+            fichiers,
+        )
+    except ErreurLLM:
+        duree_ms = int((time.monotonic() - debut) * 1000)
+        llm_journal.journaliser(
+            session, **trace, statut=llm_journal.STATUT_ERREUR, duree_ms=duree_ms
+        )
+        raise
+    llm_journal.journaliser(
+        session,
+        **trace,
+        statut=llm_journal.STATUT_SUCCES,
+        duree_ms=int((time.monotonic() - debut) * 1000),
+        jetons_entree=rep.jetons_entree,
+        jetons_sortie=rep.jetons_sortie,
+    )
+    return rep
 
+
+async def _appeler(
+    cfg: ConfigLLM,
+    consigne: str,
+    message: str,
+    max_jetons: int,
+    fichiers: tuple[PieceJointe, ...],
+) -> Reponse:
+    """L'échange avec le fournisseur, reprises comprises — sans journal ni plafond."""
+    import httpx
+
+    f = cfg.fournisseur
     debut = time.monotonic()
     try:
         #  C'est ici, et nulle part ailleurs, que le format de message du
         #  fournisseur rencontre les fichiers du métier.
         joints = tuple(f.bloc_document(j.nom, j.mime, j.donnees_b64) for j in fichiers)
-        corps = f.corps(cfg.modele, consigne, message, max_jetons or cfg.max_jetons, joints)
+        corps = f.corps(cfg.modele, consigne, message, max_jetons, joints)
         #  Vrai tant qu'on n'a pas dû renoncer aux pièces jointes.
         avec_documents = bool(joints)
         async with httpx.AsyncClient(timeout=cfg.delai_s) as client:
@@ -345,7 +390,7 @@ async def demander(
                     #  paramètres déjà obtenues (un plafond renommé, une
                     #  température retirée) doivent survivre, sinon on les repaie
                     #  en tours de boucle et on épuise le budget avant d'aboutir.
-                    sans = f.corps(cfg.modele, consigne, message, max_jetons or cfg.max_jetons, ())
+                    sans = f.corps(cfg.modele, consigne, message, max_jetons, ())
                     corps = {**corps, "messages": sans["messages"]}
                     continue
                 break
@@ -376,7 +421,8 @@ async def demander(
         precision = f" — réglage refusé : « {param} »" if param else ""
         raise ErreurLLM(f"Le fournisseur a répondu {reponse.status_code}{precision}.")
 
-    texte = f.lire(reponse.json())
+    charge = reponse.json()
+    texte = f.lire(charge)
     if not texte:
         raise ErreurLLM("Le modèle a répondu sans contenu.")
     logger.info(
@@ -387,74 +433,11 @@ async def demander(
         duree,
         len(fichiers) if avec_documents else 0,
     )
-    return Reponse(texte=texte, documents_joints=len(fichiers) if avec_documents else 0)
-
-
-async def modeles_disponibles(session: Session) -> dict[str, Any]:
-    """Ce que la clé enregistrée peut RÉELLEMENT appeler, demandé au fournisseur.
-
-    🔴 Le fait, pas le catalogue. Le champ « Modèle » était libre et adossé à
-    trois exemples écrits en dur, avec le commentaire « le catalogue bouge
-    vite » — ce qui est l'aveu même du défaut : un repère recopié propose des
-    modèles que la clé ne peut pas appeler et cache ceux qui sont sortis depuis.
-    Le gestionnaire découvrait l'écart au test de connexion, une saisie plus
-    tard.
-
-    Rend toujours une réponse LISIBLE, jamais une exception :
-
-    | `listable` | Ce que l'écran en fait |
-    |---|---|
-    | `True` | une liste déroulante, avec le modèle en place toujours proposé |
-    | `False` | la saisie libre, et le `motif` dit pourquoi |
-
-    ⚠️ `False` couvre trois cas qu'il ne faut PAS confondre avec une panne :
-    Azure (pas d'inventaire par cette porte), une clé restreinte en lecture, et
-    un service injoignable. Aucun n'empêche de configurer l'assistant à la main —
-    c'est pourquoi l'absence de liste n'est pas une erreur.
-    """
-    import httpx
-
-    #  Le catalogue est COMMUN — il dépend de la clé, pas de l'usage : le même
-    #  inventaire sert à choisir le modèle de chaque bloc de l'écran.
-    cfg = config_llm(session)
-    cfg.verifier(exiger_actif=False, exiger_modele=False)
-    url = cfg.fournisseur.url_modeles(cfg.base_url, cfg.version_api)
-    if url is None:
-        return {
-            "listable": False,
-            "motif": f"{cfg.fournisseur.libelle} n'expose pas la liste de ses déploiements.",
-            "modeles": [],
-        }
-    try:
-        async with httpx.AsyncClient(timeout=cfg.delai_s) as client:
-            reponse = await client.get(url, headers=cfg.fournisseur.entetes(cfg.cle))
-    except httpx.HTTPError:
-        return {"listable": False, "motif": "Le service n'a pas pu être joint.", "modeles": []}
-    if reponse.status_code in (401, 403):
-        #  Le cas le plus fréquent : une clé créée en écriture seule, ou
-        #  restreinte à `/chat/completions`. Elle SYNTHÉTISE très bien et ne
-        #  peut pas s'inventorier — le dire évite de la croire invalide.
-        return {
-            "listable": False,
-            "motif": "Cette clé n'a pas le droit de lister les modèles (permission « models »).",
-            "modeles": [],
-        }
-    if reponse.status_code >= 400:
-        logger.warning("Liste des modèles %s → %s", cfg.fournisseur.code, reponse.status_code)
-        return {
-            "listable": False,
-            "motif": f"Le fournisseur a répondu {reponse.status_code}.",
-            "modeles": [],
-        }
-    try:
-        modeles = cfg.fournisseur.lire_modeles(reponse.json())
-    except (ValueError, KeyError, TypeError):
-        return {"listable": False, "motif": "Liste illisible — format inattendu.", "modeles": []}
-    #  Une liste VIDE n'est pas une liste : la rendre ferait choisir dans un
-    #  menu sans entrée (`standards/04` §2 — le cas zéro).
-    if not modeles:
-        return {"listable": False, "motif": "Aucun modèle de conversation proposé.", "modeles": []}
-    return {"listable": True, "motif": "", "modeles": modeles}
+    return Reponse(
+        texte,
+        len(fichiers) if avec_documents else 0,
+        *llm_journal.jetons_de(charge),
+    )
 
 
 async def tester(session: Session, usage: str) -> dict[str, Any]:
@@ -495,3 +478,9 @@ async def tester(session: Session, usage: str) -> dict[str, Any]:
         "reponse": reponse.texte[:80],
         "duree_ms": int((time.monotonic() - debut) * 1000),
     }
+
+
+#  Le catalogue des modèles vit dans `llm_modeles.py` depuis le 27/09/2026 : ce
+#  module franchissait 500 lignes en recevant le journal des appels (#1383). Il
+#  reste exporté d'ici — la porte d'entrée ne change pas (voir `__all__`).
+from app.utils.llm_modeles import modeles_disponibles  # noqa: E402

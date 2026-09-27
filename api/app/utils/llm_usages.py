@@ -60,7 +60,18 @@ class Usage:
 
 
 #: Les réglages qu'un usage porte, dans l'ordre de l'écran.
-CHAMPS_USAGE = ("actif", "modele", "prompt", "max_jetons")
+#: `plafond_mois` (jetons par mois, 0 = aucun) et les deux PRIX (centimes
+#: d'euro par million de jetons, en entier — un montant ne se stocke jamais en
+#: flottant) sont lus par `llm_journal` : le suivi de ce que coûte l'usage (#1383).
+CHAMPS_USAGE = (
+    "actif",
+    "modele",
+    "prompt",
+    "max_jetons",
+    "plafond_mois",
+    "prix_entree",
+    "prix_sortie",
+)
 
 USAGE_SYNTHESE_CONTRAT = "synthese_contrat"
 USAGE_DESCRIPTION = "description"

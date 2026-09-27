@@ -87,3 +87,19 @@ async def llm_modeles(
         return await modeles_disponibles(session)
     except ErreurLLM as exc:
         raise HTTPException(400, str(exc))
+
+
+@router.get("/llm-consommation")
+def llm_consommation(
+    user: Utilisateur = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    """Ce que l'assistant a consommé, par mois, usage et modèle (#1383).
+
+    Jetons, appels, échecs et refus au plafond — et le coût estimé au tarif que
+    l'administrateur a saisi pour chaque usage, `None` sans tarif. Des compteurs
+    seulement : aucune question ni réponse n'est conservée (`models/ia.py`).
+    """
+    from app.utils.llm_journal import consommation
+
+    return consommation(session)

@@ -97,6 +97,7 @@ def test_avec_la_cle_les_purges_ont_lieu_et_rendent_leurs_comptes(moteur):
         "notifications",
         "historique",
         "emails",
+        "ia",
         "whatsapp",
         "evolutions",
     }
