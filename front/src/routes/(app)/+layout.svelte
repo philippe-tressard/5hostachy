@@ -117,7 +117,7 @@
 	.app-footer {
 		text-align: center;
 		padding: 0.75rem 1rem;
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 		border-top: 1px solid var(--color-border);
 		letter-spacing: 0.02em;

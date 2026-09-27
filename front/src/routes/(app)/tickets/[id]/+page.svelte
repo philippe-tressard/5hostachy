@@ -380,7 +380,7 @@
 		margin: 0.6rem 0 0.3rem;
 	}
 	.ticket-dates {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 	}
 	.ticket-envoi {

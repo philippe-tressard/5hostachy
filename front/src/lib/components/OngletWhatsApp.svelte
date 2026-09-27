@@ -96,9 +96,11 @@
 		return '❌';
 	}
 	function waStatutStyle(statut: string): string {
-		if (statut === 'envoyé') return 'background:#d1fae5;color:#065f46';
-		if (statut === 'incertain' || statut === 'en cours') return 'background:#fef3c7;color:#92400e';
-		return 'background:#fee2e2;color:#991b1b';
+		if (statut === 'envoyé')
+			return 'background:var(--color-success-fond);color:var(--color-success)';
+		if (statut === 'incertain' || statut === 'en cours')
+			return 'background:var(--color-warning-fond);color:var(--color-warning-texte)';
+		return 'background:var(--color-danger-fond);color:var(--color-danger)';
 	}
 
 	async function saveWaScheduledItem(item: (typeof waScheduled)[0]) {
@@ -249,8 +251,8 @@
 					<span
 						style="font-size:var(--fs-sm);padding:.1rem .5rem;border-radius:4px;{waStatus.state ===
 						'open'
-							? 'background:#d1fae5;color:#065f46'
-							: 'background:#fee2e2;color:#991b1b'}"
+							? 'background:var(--color-success-fond);color:var(--color-success)'
+							: 'background:var(--color-danger-fond);color:var(--color-danger)'}"
 					>
 						{waStatus.state === 'open'
 							? '✅ Connecté'
@@ -262,18 +264,20 @@
 			</div>
 			{#if waStatus?.state === 'waiting_qr'}
 				<div
-					style="margin-top:.75rem;padding:.75rem;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;max-width:360px"
+					style="margin-top:.75rem;padding:.75rem;border:2px solid var(--color-warning);border-radius:8px;background:var(--color-warning-fond);max-width:360px"
 				>
-					<p style="margin:0 0 .5rem;font-size:var(--fs-md);font-weight:600;color:#92400e">
+					<p
+						style="margin:0 0 .5rem;font-size:var(--fs-md);font-weight:600;color:var(--color-warning-texte)"
+					>
 						&#x26A0;&#xFE0F; Bridge déconnecté — scannez ce QR code avec WhatsApp
 					</p>
-					<p style="margin:0 0 .75rem;font-size:.78rem;color:#92400e">
+					<p style="margin:0 0 .75rem;font-size:var(--fs-sm);color:var(--color-warning-texte)">
 						WhatsApp → Appareils connectés → Connecter un appareil
 					</p>
 					<img
 						src="/api/config/whatsapp-qr?t={waQrTimestamp}"
 						alt="QR code WhatsApp"
-						style="display:block;width:220px;height:220px;border-radius:4px;border:1px solid #f59e0b"
+						style="display:block;width:220px;height:220px;border-radius:4px;border:1px solid var(--color-warning)"
 					/>
 					<div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center">
 						<button
@@ -321,7 +325,9 @@
 	<!-- Messages planifiés -->
 	<SectionFormulaire icone="calendar-days" titre="Messages planifiés (envoi automatique)">
 		<div class="largeur-saisie">
-			<p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:1rem;line-height:1.5">
+			<p
+				style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-bottom:1rem;line-height:1.5"
+			>
 				&#x1F4A1; Markdown WhatsApp : <strong>*gras*</strong> | <em>_italique_</em> | <s>~barré~</s> |
 				Sauts de ligne (Enter)
 			</p>
@@ -360,7 +366,7 @@
 							placeholder="Contenu du message (markdown WhatsApp autorisé)"></textarea>
 					</div>
 					<div
-						style="margin-top:.4rem;padding:.5rem;background:var(--color-bg);border-left:3px solid var(--color-border);border-radius:4px;font-size:.78rem;color:var(--color-text-muted);line-height:1.6;white-space:pre-wrap;word-wrap:break-word"
+						style="margin-top:.4rem;padding:.5rem;background:var(--color-bg);border-left:3px solid var(--color-border);border-radius:4px;font-size:var(--fs-sm);color:var(--color-text-muted);line-height:1.6;white-space:pre-wrap;word-wrap:break-word"
 					>
 						{item.message || '— Aperçu du message'}
 					</div>
@@ -408,7 +414,7 @@
 			<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
 				<button
 					class="btn btn-outline"
-					style="font-size:.7rem;padding:.1rem .4rem"
+					style="font-size:var(--fs-2xs);padding:.1rem .4rem"
 					on:click={loadWaLogs}
 					aria-label="Rafraîchir l'historique">&#x1F504;</button
 				>
@@ -427,7 +433,7 @@
 								<span style="font-weight:600">{log.label}</span>
 								<div style="display:flex;align-items:center;gap:.4rem">
 									<span
-										style="padding:.1rem .3rem;border-radius:4px;font-size:.7rem;{waStatutStyle(
+										style="padding:.1rem .3rem;border-radius:4px;font-size:var(--fs-2xs);{waStatutStyle(
 											log.statut,
 										)}"
 									>
@@ -440,14 +446,14 @@
 								</div>
 							</div>
 							<p
-								style="margin:0;white-space:pre-wrap;color:var(--color-text-muted);font-size:.78rem"
+								style="margin:0;white-space:pre-wrap;color:var(--color-text-muted);font-size:var(--fs-sm)"
 							>
 								{log.message.length > MAX_APERCU_MESSAGE
 									? log.message.slice(0, MAX_APERCU_MESSAGE) + '…'
 									: log.message}
 							</p>
 							{#if log.erreur}
-								<p style="margin:.2rem 0 0;color:#991b1b;font-size:var(--fs-xs)">
+								<p style="margin:.2rem 0 0;color:var(--color-danger);font-size:var(--fs-xs)">
 									&#x26A0;&#xFE0F; {log.erreur}
 								</p>
 							{/if}

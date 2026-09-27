@@ -223,7 +223,7 @@
 	/*  Un mandat échu n'est pas une information de plus : c'est une décision en
 	    attente. La couleur d'alerte le sort de la lecture ordinaire. */
 	.mandat-echu {
-		color: var(--color-danger, #dc2626);
+		color: var(--color-danger);
 		font-weight: 600;
 	}
 
@@ -231,7 +231,7 @@
 	.batiment-table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		margin-top: 0.25rem;
 	}
 	.batiment-table th {

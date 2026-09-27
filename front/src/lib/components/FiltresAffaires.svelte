@@ -154,7 +154,7 @@
 		gap: 0.35rem;
 		align-items: baseline;
 		margin: -0.5rem 0 1rem;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 	}
 	.bilan-recherche strong {

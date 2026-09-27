@@ -182,7 +182,7 @@
 	    page hôte ne serait pas atteinte (panne des pastilles nues, v2.67.11), et
 	    `npm run lint:classes-nues` le refuse. */
 	.apercu-intro {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 		margin: 0 0 1rem;
 	}
@@ -225,7 +225,7 @@
 	}
 	.apercu-destinataires,
 	.apercu-sujet {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0 0 0.4rem;
 		overflow-wrap: anywhere;
@@ -248,7 +248,7 @@
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		line-height: 1.5;
 		background: var(--color-bg);
 		border: 1px solid var(--color-border);
@@ -257,7 +257,7 @@
 		margin: 0;
 	}
 	.apercu-avertissement {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		line-height: 1.5;
 		margin: 0 0 0.5rem;
 		padding: 0.5rem 0.6rem;
@@ -266,7 +266,7 @@
 		color: #9a3412;
 	}
 	.apercu-note {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0.4rem 0 0;
 	}

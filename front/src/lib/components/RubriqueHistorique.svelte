@@ -394,7 +394,7 @@
 		display: flex;
 		gap: 0.5rem;
 		padding: 0.5rem 0.75rem;
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 	}
 	.evol-icon {
 		flex-shrink: 0;
@@ -470,7 +470,7 @@
 		background: #f0f9ff;
 	}
 	.evol-reponse {
-		background: #f0fdf4;
+		background: var(--color-success-fond);
 	}
 	.evol-commentaire {
 		background: #fafafa;

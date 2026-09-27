@@ -80,7 +80,7 @@
 		border-radius: 2rem;
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		font-weight: 500;
 		color: var(--color-text);
 		text-decoration: none;
@@ -122,7 +122,7 @@
 	.quick-count {
 		background: var(--color-primary);
 		color: #fff;
-		font-size: 0.65rem;
+		font-size: var(--fs-2xs);
 		font-weight: 700;
 		padding: 0.05rem 0.4rem;
 		border-radius: 1rem;
@@ -131,12 +131,12 @@
 		text-align: center;
 	}
 	.quick-pill-cs {
-		border-color: #f59e0b;
+		border-color: var(--color-warning);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.quick-pill-cs:hover {
-			border-color: #d97706;
-			background: #fffbeb;
+			border-color: var(--color-warning);
+			background: var(--color-warning-fond);
 		}
 	}
 	/*  L'Admin se distingue du CS : deux pastilles orange côte à côte se liraient
@@ -151,10 +151,10 @@
 		}
 	}
 	.quick-count-urgent {
-		background: #dc2626;
+		background: var(--color-danger);
 	}
 	.quick-count-orange {
-		background: #d97706;
+		background: var(--color-warning);
 	}
 
 	@media (max-width: 767px) {

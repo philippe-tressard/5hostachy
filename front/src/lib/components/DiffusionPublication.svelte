@@ -95,7 +95,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		cursor: pointer;
 	}
 	/*  Une case grisée doit se VOIR grisée, pas seulement refuser le clic. */

@@ -761,7 +761,7 @@
 		font-weight: 700;
 	}
 	.type-section-desc {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		font-style: italic;
 	}
@@ -788,7 +788,7 @@
 
 	/*  Les trois décomptes d'échéance, repris de l'onglet « Visites » retiré. */
 	.echeance-badge {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 	}
 	.echeance-badge--retard {
 		color: var(--color-danger);

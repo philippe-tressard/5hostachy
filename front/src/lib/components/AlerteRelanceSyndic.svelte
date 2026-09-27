@@ -30,8 +30,8 @@
 		padding: 0.75rem 1rem;
 		border-radius: var(--radius);
 		background: #fff7ed;
-		border: 1.5px solid #f59e0b;
-		color: #92400e;
+		border: 1.5px solid var(--color-warning);
+		color: var(--color-warning-texte);
 		text-decoration: none;
 		transition:
 			background var(--duree-geste),
@@ -40,8 +40,8 @@
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.relance-alerte-card:hover {
-			background: #fef3c7;
-			border-color: #d97706;
+			background: var(--color-warning-fond);
+			border-color: var(--color-warning);
 		}
 	}
 	.relance-alerte-icon {
@@ -58,8 +58,8 @@
 		font-size: var(--fs-base);
 	}
 	.relance-alerte-text span {
-		font-size: 0.78rem;
-		color: #b45309;
+		font-size: var(--fs-sm);
+		color: var(--color-warning-texte);
 	}
 	.relance-alerte-arrow {
 		font-size: 1.1rem;
@@ -73,7 +73,7 @@
 			gap: 0.5rem;
 		}
 		.relance-alerte-text strong {
-			font-size: 0.82rem;
+			font-size: var(--fs-md);
 		}
 	}
 </style>

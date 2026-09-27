@@ -388,8 +388,11 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
 - [ ] Libellés et nommage en français
 - [ ] Couleur et taille de texte : `var(--color-…)`, `var(--fs-…)` (`socle.css`),
       jamais une valeur en dur — `npm run lint:charte-valeurs`, plafond qui ne
-      fait que baisser (#1055). Une taille hors échelle ne s'y range qu'après
-      avoir été vue à l'écran : c'est un changement visuel
+      fait que baisser (#1055). Arbitré sur maquette le 27/09/2026 : une taille
+      hors échelle se range au cran **supérieur**, un état (danger, succès,
+      avertissement) prend son jeton et ses dérivés `-fond`, `-bordure`, et
+      `--color-warning` ne sert jamais au texte (`--color-warning-texte`). Ces
+      valeurs-là sont **refusées**, sans plafond (`ux-patterns` §18)
 - [ ] Attente d'un écran : `<EtatListe chargement />`, jamais un « Chargement… »
       écrit à la main — il y en avait **23** avant #1045 (`npm run lint:chargement`)
 - [ ] En-tête de page : `<EntetePage>`, jamais `<div class="page-header">`

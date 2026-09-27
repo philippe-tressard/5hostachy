@@ -177,7 +177,7 @@
 		border-left: 4px solid var(--color-primary);
 		border-radius: var(--radius);
 		box-shadow: var(--shadow);
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text);
 	}
 

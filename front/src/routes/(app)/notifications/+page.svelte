@@ -143,7 +143,7 @@
 							<strong style="font-size:var(--fs-lg)">{n.titre}</strong>
 							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
 						</div>
-						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">
+						<p style="font-size:var(--fs-base);color:var(--color-text-muted);margin:0">
 							{@html safeRichContent(n.corps)}
 						</p>
 						<small style="color:var(--color-text-muted);font-size:var(--fs-xs)"

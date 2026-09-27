@@ -73,7 +73,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 
 .btn-sm {
 	padding: 0.25rem 0.6rem;
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 }
 
 /*  ── Le champ de saisie COMPACT — une ligne de liste, pas un formulaire ─────
@@ -178,7 +178,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 @media (hover: hover) and (pointer: fine) {
 	.btn-icon-danger:hover {
 		color: var(--color-danger);
-		background: #fee2e2;
+		background: var(--color-danger-fond);
 	}
 }
 
@@ -309,12 +309,12 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	font-size: 0.9rem;
 	padding: 0.25rem;
 	border-radius: var(--radius);
-	color: #d97706;
+	color: var(--color-warning-texte);
 	line-height: 1;
 }
 @media (hover: hover) and (pointer: fine) {
 	.btn-icon-warn:hover {
-		background: #fef3c7;
+		background: var(--color-warning-fond);
 	}
 }
 .btn-icon-success {
@@ -405,17 +405,20 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	background: var(--color-primary-light);
 	color: var(--color-primary);
 }
+/*  Les badges d'état lisent la charte (#1055). Le texte de `.badge-orange`
+    prend `--color-warning-texte` : `--color-warning` y faisait 3,29 sur son
+    propre fond, sous le 4,5 d'un texte. */
 .badge-green {
-	background: #e6f4ee;
-	color: #2e7d52;
+	background: var(--color-success-fond);
+	color: var(--color-success);
 }
 .badge-orange {
-	background: #fdf3e0;
-	color: #b07d1e;
+	background: var(--color-warning-fond);
+	color: var(--color-warning-texte);
 }
 .badge-red {
-	background: #fdedec;
-	color: #c0392b;
+	background: var(--color-danger-fond);
+	color: var(--color-danger);
 }
 .badge-gray {
 	background: #eaedf1;
@@ -543,7 +546,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	background: none;
 	border: none;
 	cursor: pointer;
-	font-size: 0.78rem;
+	font-size: var(--fs-sm);
 	color: var(--color-text-muted);
 	opacity: 0.7;
 	padding: 0 0 0 0.5rem;
@@ -563,7 +566,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
    urgences du tableau de bord — deux composants, donc deux portées Svelte
    distinctes, pour une seule et même pastille. */
 .flux-type-chip {
-	font-size: 0.65rem;
+	font-size: var(--fs-2xs);
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
@@ -575,7 +578,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .table {
 	width: 100%;
 	border-collapse: collapse;
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 }
 .table th {
 	padding: 0.5rem 0.75rem;
@@ -602,7 +605,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	padding: 0.75rem 1rem;
 	border-radius: var(--radius);
 	margin-bottom: 1rem;
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 }
 .alert-error {
 	background: #fdedec;
@@ -707,7 +710,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	align-items: center;
 	gap: 0.5rem;
 	cursor: pointer;
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 }
 .case input[type='checkbox'],
 .checkbox-field input[type='checkbox'] {
@@ -969,7 +972,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	font-size: 0.9rem;
 }
 .doc-date {
-	font-size: 0.78rem;
+	font-size: var(--fs-sm);
 	color: var(--color-text-muted);
 	margin-left: auto;
 	white-space: nowrap;
@@ -1009,7 +1012,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	align-items: center;
 	gap: 0.5rem;
 	flex-wrap: wrap;
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 	color: var(--color-text-muted);
 	margin-bottom: 1rem;
 	padding: 0.4rem 0;
@@ -1091,7 +1094,7 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	width: 18px;
 	height: 18px;
 	border-radius: 50%;
-	background: rgba(239, 68, 68, 0.15);
+	background: color-mix(in srgb, var(--color-danger) 15%, transparent);
 	/*  Fixe (26/09/2026) : un battement sans fin sur chaque entrée nouvelle du fil
 	    fatigue sans rien apprendre — le badge NEW l'a quitté le même jour. */
 	opacity: 0.6;

@@ -20,7 +20,7 @@
 <style>
 	.message-origine {
 		margin-top: 0.25rem;
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		white-space: pre-wrap;
 	}

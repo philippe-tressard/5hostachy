@@ -59,7 +59,7 @@
 		position: absolute;
 		bottom: 2px;
 		right: 4px;
-		font-size: 0.68rem;
+		font-size: var(--fs-2xs);
 		background: rgba(0, 0, 0, 0.55);
 		color: #fff;
 		border-radius: 4px;

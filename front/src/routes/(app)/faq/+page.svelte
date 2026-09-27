@@ -365,7 +365,7 @@
 	/>
 {:else if reorderMode}
 	<div class="reorder-bar">
-		<span style="font-size:.875rem;color:var(--color-text-muted)"
+		<span style="font-size:var(--fs-base);color:var(--color-text-muted)"
 			>Glissez les questions pour les réorganiser, ou utilisez les flèches ↑↓</span
 		>
 		<div style="display:flex;gap:.5rem">
@@ -532,7 +532,7 @@
 	}
 	.still-need-help p {
 		margin: 0.5rem 0 0;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 	}
 	/*  Ne sert plus qu'au renommage de catégorie EN LIGNE. Fond explicite : son absence rendait les champs blancs (#413). */
@@ -540,7 +540,7 @@
 		padding: 0.45rem 0.65rem;
 		border: 1px solid var(--color-border);
 		border-radius: 6px;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		font-family: inherit;
 		width: 100%;
 		box-sizing: border-box;

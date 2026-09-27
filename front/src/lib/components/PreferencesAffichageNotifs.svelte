@@ -95,7 +95,7 @@
 	    une réussite. */
 	.herite {
 		margin-left: 0.4rem;
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 		white-space: nowrap;
 	}

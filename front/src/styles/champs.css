@@ -50,7 +50,7 @@
     signalé à l'écran. Une pastille est une valeur, pas un libellé de champ. */
 .field label:not(.pastille),
 .libelle-groupe {
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 	font-weight: 500;
 	color: var(--color-text);
 	text-transform: uppercase;
@@ -183,7 +183,7 @@
     (patrimoine et inscription) ; `admin` disait `.75rem`, seule. */
 .aide {
 	display: block;
-	font-size: 0.78rem;
+	font-size: var(--fs-sm);
 	color: var(--color-text-muted);
 	line-height: 1.45;
 	margin: 0.25rem 0 0;
@@ -251,7 +251,7 @@
     label du champ avait produit 39 avertissements « a form label must be
     associated with a control » — l'inverse du but recherché. */
 label.field {
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 	font-weight: 500;
 	color: var(--color-text);
 	text-transform: uppercase;

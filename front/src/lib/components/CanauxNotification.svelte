@@ -169,7 +169,7 @@
 	.canaux.compact {
 		gap: 0.75rem;
 		margin-bottom: 0.6rem;
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 	}
 	/*  `:global` parce que `.checkbox-field` est une classe partagée du thème :
 	    la styler localement seule laisserait Svelte la considérer inutilisée. */

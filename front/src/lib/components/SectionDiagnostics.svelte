@@ -389,7 +389,7 @@
 		font-size: 0.975rem;
 	}
 	.diag-texte {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		line-height: 1.5;
 		margin: 0;
@@ -439,7 +439,7 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-primary);
 		padding: 0.1rem 0.3rem;
 		border-radius: var(--radius);
@@ -453,7 +453,7 @@
 	}
 	.synthese-body {
 		padding: 0.5rem 1rem 0.75rem;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		background: var(--color-bg);
 		border-left: 3px solid var(--color-primary);
 		margin: 0 0.5rem 0.35rem;

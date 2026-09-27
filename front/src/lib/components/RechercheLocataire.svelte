@@ -152,7 +152,7 @@
 						<button class="locataire-resultat-btn" on:click={() => selectionner(sug)}>
 							<span class="lr-name">{nomAffiche(sug)}</span>
 							<span class="lr-email">{sug.email}</span>
-							{#if !sug.actif}<span class="badge badge-yellow" style="font-size:.68rem"
+							{#if !sug.actif}<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
 									>En attente</span
 								>{/if}
 						</button>
@@ -185,7 +185,7 @@
 						<button class="locataire-resultat-btn" on:click={() => selectionner(r)}>
 							<span class="lr-name">{nomAffiche(r)}</span>
 							<span class="lr-email">{r.email}</span>
-							{#if !r.actif}<span class="badge badge-yellow" style="font-size:.68rem"
+							{#if !r.actif}<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
 									>En attente</span
 								>{/if}
 						</button>
@@ -209,7 +209,7 @@
 		color: var(--color-text-muted);
 	}
 	.search-locataire-box legend {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		font-weight: 600;
 		padding: 0 0.3rem;
 		color: var(--color-text);
@@ -225,7 +225,7 @@
 	/*  Les deux intitulés des suggestions. Ils étaient en `style=` en ligne dans la
 	    page : nommés ici, ils cessent d'être à réécrire à chaque reprise. */
 	.suggestion-intro {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0.4rem 0 0.35rem;
 	}
@@ -233,8 +233,8 @@
 		margin-bottom: 0.65rem;
 	}
 	.search-no-result {
-		font-size: 0.82rem;
-		color: var(--color-danger, #dc2626);
+		font-size: var(--fs-md);
+		color: var(--color-danger);
 		margin-top: 0.45rem;
 	}
 	.locataire-resultats {
@@ -268,7 +268,7 @@
 	}
 	.lr-name {
 		font-weight: 600;
-		font-size: 0.88rem;
+		font-size: var(--fs-base);
 	}
 	.lr-email {
 		font-size: var(--fs-sm);
@@ -282,8 +282,8 @@
 		flex-wrap: wrap;
 		margin-top: 0.4rem;
 		padding: 0.45rem 0.6rem;
-		background: color-mix(in srgb, var(--color-success, #16a34a) 8%, var(--color-bg));
-		border: 1px solid color-mix(in srgb, var(--color-success, #16a34a) 35%, transparent);
+		background: color-mix(in srgb, var(--color-success) 8%, var(--color-bg));
+		border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
 		border-radius: var(--radius);
 	}
 	.locataire-selected-info {
@@ -293,10 +293,10 @@
 	}
 	.locataire-selected-name {
 		font-weight: 600;
-		font-size: 0.88rem;
+		font-size: var(--fs-base);
 	}
 	.locataire-selected-email {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 </style>

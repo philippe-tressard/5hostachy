@@ -204,7 +204,7 @@
 		margin: 0.5rem 0;
 	}
 	.btn-retirer {
-		color: var(--color-danger, #dc2626);
+		color: var(--color-danger);
 		border-color: currentColor;
 		margin-top: 0.4rem;
 	}

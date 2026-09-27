@@ -112,7 +112,7 @@
 		border-radius: var(--radius);
 		background: var(--color-surface);
 		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		line-height: 1.4;
 		color: var(--color-text);
 		white-space: normal;

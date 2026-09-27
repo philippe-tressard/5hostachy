@@ -269,7 +269,7 @@
 		border-left-width: 3px;
 	}
 	.carte-membre--president {
-		border-left-color: #fbbf24;
+		border-left-color: var(--color-warning);
 	}
 	.carte-membre--principal {
 		border-left-color: var(--color-accent);
@@ -294,7 +294,7 @@
 		margin-top: 0.5rem;
 	}
 	.user-no-match {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		font-style: italic;
 	}
@@ -303,11 +303,11 @@
 		align-items: center;
 		gap: 0.6rem;
 		font-size: var(--fs-sm);
-		color: #16a34a;
-		background: #f0fdf4;
+		color: var(--color-success);
+		background: var(--color-success-fond);
 		border-radius: var(--radius);
 		padding: 0.3rem 0.6rem;
-		border: 1px solid #bbf7d0;
+		border: 1px solid var(--color-success-bordure);
 	}
 	.btn-unlink {
 		font-size: var(--fs-xs);

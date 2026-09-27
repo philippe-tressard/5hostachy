@@ -165,10 +165,11 @@
 			{/each}
 			<div class="frise-legend">
 				<span
-					><span class="frise-legend-dot" style="background:#dc2626"></span> Préavis en cours</span
+					><span class="frise-legend-dot" style="background:var(--color-danger)"></span> Préavis en cours</span
 				>
 				<span
-					><span class="frise-legend-dot" style="background:#f59e0b"></span> Expire cette année</span
+					><span class="frise-legend-dot" style="background:var(--color-warning)"></span> Expire cette
+					année</span
 				>
 				<span
 					><span class="frise-legend-dot" style="background:#8b5cf6"></span> Reconduit tacitement</span
@@ -247,7 +248,7 @@
 	.frise-months {
 		display: grid;
 		grid-template-columns: repeat(12, 1fr);
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 		text-transform: uppercase;
 		letter-spacing: 0.03em;
@@ -272,7 +273,7 @@
 		display: flex;
 		align-items: baseline;
 		gap: 0.4rem;
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		min-width: 0;
 		flex-wrap: wrap;
 	}
@@ -313,7 +314,7 @@
 		gap: 0.5rem;
 		padding: 0.4rem 0.6rem;
 		border-radius: 6px;
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		background: color-mix(in srgb, var(--color-bg-card) 90%, var(--color-border));
 		flex-wrap: wrap;
 	}
@@ -348,10 +349,10 @@
 		);
 	}
 	.frise-preavis-zone.frise-urgence-preavis {
-		color: #dc2626;
+		color: var(--color-danger);
 	}
 	.frise-preavis-zone.frise-urgence-annee {
-		color: #f59e0b;
+		color: var(--color-warning-texte);
 	}
 	.frise-preavis-zone.frise-urgence-futur {
 		color: #3b82f6;
@@ -383,10 +384,10 @@
 		border-radius: 2px;
 	}
 	.frise-marker-preavis {
-		background: #dc2626;
+		background: var(--color-danger);
 	}
 	.frise-marker-annee {
-		background: #f59e0b;
+		background: var(--color-warning);
 	}
 	.frise-marker-futur {
 		background: #3b82f6;
@@ -404,14 +405,14 @@
 		bottom: -16px;
 		left: 50%;
 		transform: translateX(-50%);
-		font-size: 0.65rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 		white-space: nowrap;
 	}
 	.frise-legend {
 		display: flex;
 		gap: 1.2rem;
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin-top: 1.2rem;
 		flex-wrap: wrap;

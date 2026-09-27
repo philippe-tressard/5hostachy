@@ -63,7 +63,7 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	padding-left: 1.25rem;
 }
 .tab-descriptif {
-	font-size: 0.82rem;
+	font-size: var(--fs-md);
 	color: var(--color-text-muted);
 	margin: -0.75rem 0 1.5rem;
 	padding-left: 1.25rem;

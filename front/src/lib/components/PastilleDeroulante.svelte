@@ -75,7 +75,7 @@
 		border-radius: 999px;
 		background: var(--color-surface);
 		color: var(--color-text-muted);
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		transition:
 			color var(--duree-geste),
 			background-color var(--duree-geste),

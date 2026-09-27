@@ -279,7 +279,7 @@
 		border: none;
 		cursor: pointer;
 		text-align: left;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		padding: 0.25rem 0.25rem;
 		min-width: 0;
 	}
@@ -294,7 +294,7 @@
 		min-width: 80px;
 		max-width: 180px;
 		font-weight: 600;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -310,7 +310,7 @@
 		gap: 0.5rem;
 	}
 	.pages-form-section-title {
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.07em;
@@ -320,7 +320,7 @@
 		margin-bottom: 0.1rem;
 	}
 	.ref-desc {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		flex: 1;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -357,7 +357,7 @@
 	.hors-menu {
 		color: var(--color-text-muted);
 		opacity: 0.4;
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		line-height: 1.5;
 		cursor: help;
 	}

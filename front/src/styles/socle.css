@@ -49,6 +49,21 @@ body {
 	--color-warning: #b07d1e;
 	--color-danger: #c0392b;
 	--color-info: #2563a6;
+	/*  Les DÉRIVÉS des trois états (#1055, arbitré le 27/09/2026 sur maquette).
+	    Un fond d'état se teinte DEPUIS son jeton, jamais depuis une nuance de
+	    Tailwind : `-fond` reprend les teintes que `.badge-green/orange/red`
+	    portaient déjà, `-bordure` le jeton à 40 % sur blanc.
+	    `--color-warning-texte` existe parce que `--color-warning` fait 3,62 sur
+	    blanc — il ne sert pas au texte : le texte d'un avertissement prend ce
+	    brun (le jeton à 70 % sur noir : 6,46 sur blanc, 5,87 sur son fond).
+	    🔒 `npm run lint:charte-valeurs` refuse la palette qu'ils remplacent. */
+	--color-danger-fond: #fdedec;
+	--color-danger-bordure: #e6b0aa;
+	--color-success-fond: #e6f4ee;
+	--color-success-bordure: #abcbba;
+	--color-warning-fond: #fdf3e0;
+	--color-warning-bordure: #dfcba5;
+	--color-warning-texte: #7b5815;
 	/* Texte */
 	--color-text: #1a1a2e;
 	--color-text-muted: #5a6070;
@@ -72,11 +87,10 @@ body {
 	--duree-geste: 120ms;
 	--duree-apparition: 200ms;
 	/*  L'échelle du TEXTE (#1055, 27/09/2026). Six paliers, chacun à la valeur
-	    déjà la plus employée par les écrans : les y ranger ne change aucun
-	    rendu. Les tailles hors échelle (0,78 · 0,82 · 0,875…) restent sous le
-	    plafond de `lint:charte-valeurs` jusqu'à ce qu'un regroupement soit
-	    constaté à l'écran — c'est un changement visuel, il ne se fait pas en
-	    silence. 🔒 `npm run lint:charte-valeurs`. */
+	    déjà la plus employée par les écrans. Une taille hors échelle se range
+	    au cran SUPÉRIEUR — aucun texte ne rétrécit en se normalisant —, arbitré
+	    sur maquette le 27/09/2026 : 0,78 → sm · 0,82 → md · 0,875 → base…
+	    🔒 `npm run lint:charte-valeurs` (la table de rangement y vit). */
 	--fs-2xs: 0.72rem;
 	--fs-xs: 0.75rem;
 	--fs-sm: 0.8rem;

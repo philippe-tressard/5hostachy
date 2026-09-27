@@ -103,9 +103,9 @@
 	//  ⚠️ La teinte est ici un CODE COULEUR, pas une classe de badge : ces liens
 	//  se rendent en pastille pleine, et la charte ne porte pas ces quatre-là.
 	const { libelle: TYPE_LIEN_LABEL, couleur: TYPE_LIEN_BADGE } = parAttribut({
-		propriétaire: { libelle: 'Propriétaire', couleur: '#16a34a' },
+		propriétaire: { libelle: 'Propriétaire', couleur: 'var(--color-success)' },
 		bailleur: { libelle: 'Bailleur', couleur: '#2563eb' },
-		locataire: { libelle: 'Locataire', couleur: '#d97706' },
+		locataire: { libelle: 'Locataire', couleur: 'var(--color-warning-texte)' },
 		mandataire: { libelle: 'Mandataire', couleur: '#7c3aed' },
 	});
 
@@ -221,10 +221,10 @@
 	tuiles={stats
 		? [
 				{ valeur: stats.total, libelle: 'Total' },
-				{ valeur: stats.en_attente, libelle: 'En attente', couleur: '#d97706' },
+				{ valeur: stats.en_attente, libelle: 'En attente', couleur: 'var(--color-warning-texte)' },
 				{ valeur: stats.utilisateur_lie ?? 0, libelle: 'Occupant lié', couleur: '#7c3aed' },
 				{ valeur: stats.lot_lie, libelle: 'Lot lié', couleur: '#2563eb' },
-				{ valeur: stats.resolu, libelle: 'Résolus', couleur: '#16a34a' },
+				{ valeur: stats.resolu, libelle: 'Résolus', couleur: 'var(--color-success)' },
 				{ valeur: stats.ignore, libelle: 'Ignorés', couleur: '#6b7280' },
 				{ valeur: stats.avec_user, libelle: 'Copro lié' },
 			]
@@ -299,15 +299,16 @@
 												>{TYPE_LIEN_LABEL[occ.type_lien] ?? occ.type_lien}</span
 											>
 											{#if occ.utilisateur}
-												<span style="color:#16a34a">{nomAffiche(occ.utilisateur)}</span>
+												<span style="color:var(--color-success)">{nomAffiche(occ.utilisateur)}</span
+												>
 											{:else}
-												<span style="color:#d97706">Non lié</span>
+												<span style="color:var(--color-warning-texte)">Non lié</span>
 											{/if}
 										</div>
 									{/each}
 								</div>
 							{:else if imp.nom_coproprietaire}
-								<span style="color:#d97706">Non lié</span>
+								<span style="color:var(--color-warning-texte)">Non lié</span>
 							{:else}—{/if}
 						</td>
 						<td

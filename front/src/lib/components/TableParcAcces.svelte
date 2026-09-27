@@ -165,7 +165,7 @@
 		font-family: monospace;
 	}
 	.bc-chez {
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		margin-left: 0.35rem;
 	}
 </style>

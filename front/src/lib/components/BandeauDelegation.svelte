@@ -89,7 +89,7 @@
 		padding: 0.5rem 0.75rem;
 	}
 	.aidant-switcher-label {
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		color: var(--color-text-muted);
@@ -110,10 +110,10 @@
 		gap: 0.35rem;
 		padding: 0.3rem 0.75rem;
 		margin: 0 0.5rem 0.25rem;
-		background: #fef3c7;
-		color: #92400e;
+		background: var(--color-warning-fond);
+		color: var(--color-warning-texte);
 		border-radius: var(--radius);
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		line-height: 1.3;
 	}
 	.aidant-banner.compact {

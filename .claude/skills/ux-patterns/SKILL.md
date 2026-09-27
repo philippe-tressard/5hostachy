@@ -2495,6 +2495,28 @@ d'une carte dépliée — « Gérer les photos », une section repliée dans le 
 d'une affaire — paraissait ouvert avant tout clic. Trouvé en mesurant l'essai
 dans un navigateur, pas en le relisant.
 
+## 18. LA CHARTE — tailles de texte et couleurs d'état (arbitré le 27/09/2026, #1055)
+
+Arbitré sur maquette, et posé par l'utilisateur comme règle **de tout le
+projet** : https://claude.ai/artifact/5EUqnbiH4HSF8wJe4khAgP
+
+| Quoi | Règle | Où elle se lit |
+|---|---|---|
+| taille de texte | un jeton `--fs-*` ; une valeur hors échelle se range au cran **supérieur** — aucun texte ne rétrécit | `styles/socle.css` · la table de rangement dans `scripts/check-charte-valeurs.mjs` (`TAILLES_HORS_ECHELLE`) |
+| couleur d'état | `--color-danger`, `--color-success`, `--color-warning` ; un fond **se teinte depuis le jeton** (`-fond`), un filet clair aussi (`-bordure`) — jamais le rouge, le vert ou l'ambre de Tailwind | `styles/socle.css` · `COULEURS_ETAT_ETRANGERES` dans le même contrôle |
+| texte d'avertissement | `--color-warning-texte` : `--color-warning` fait 3,62 sur blanc, il sert au cadre, à l'icône, à l'aplat — **jamais au texte** | `styles/socle.css` |
+| note par étoiles | proposition **B** : les étoiles portent la teinte d'état, le chiffre reste en couleur de texte ; en saisie, étoiles pleines en `--color-warning` | `NoteEtoiles.svelte` |
+
+⚠️ **Les palettes de CATÉGORIES ne sont pas des états** et restent hors de la
+règle : la teinte d'un type du fil (`$lib/flux`), d'un périmètre, d'une colonne
+de kanban, d'une nature (`--nature-fort`), l'orange de l'urgence, `.badge-yellow`
+(#495). Les confondre ferait perdre ce qui les distingue.
+
+🔒 `npm run lint:charte-valeurs` refuse ces valeurs **sans plafond** — dans les
+composants ET dans `src/styles/`, en style comme dans une chaîne JavaScript —
+et donne le jeton de remplacement. Le reste des valeurs en dur reste sous son
+plafond décroissant.
+
 ## Checklist UX (à vérifier avant commit)
 
 **Une seule liste : `CLAUDE.md` → « Checklist avant commit » → Frontend.** Elle est

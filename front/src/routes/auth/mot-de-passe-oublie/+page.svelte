@@ -42,7 +42,7 @@
 				<a href="/auth/connexion" class="btn btn-primary">Retour à la connexion</a>
 			</div>
 		{:else}
-			<p style="font-size:.875rem;color:var(--color-text-muted);margin-bottom:1.5rem">
+			<p style="font-size:var(--fs-base);color:var(--color-text-muted);margin-bottom:1.5rem">
 				Saisissez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot
 				de passe.
 			</p>

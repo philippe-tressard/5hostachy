@@ -75,7 +75,7 @@
 		background: var(--color-danger);
 		color: #fff;
 		border-radius: 999px;
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 		padding: 0.1rem 0.45rem;
 		font-weight: 700;
 	}

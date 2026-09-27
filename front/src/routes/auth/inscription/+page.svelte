@@ -387,7 +387,7 @@
 	}
 
 	.rgpd-info {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin-bottom: 0.5rem;
 		line-height: 1.5;
@@ -403,7 +403,7 @@
 	.auth-links {
 		text-align: center;
 		margin-top: 1rem;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 	}
 

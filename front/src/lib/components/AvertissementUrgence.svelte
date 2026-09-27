@@ -177,7 +177,7 @@
 		margin-top: 0.45rem !important;
 	}
 	.urgence-disclaimer-legal {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: #7c2d12;
 		font-style: italic;
 		margin-top: 0.3rem !important;

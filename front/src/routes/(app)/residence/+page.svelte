@@ -761,7 +761,7 @@
 		text-align: center;
 	}
 	.photo-caption {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		color: var(--color-text-muted);
 		padding: 0.35rem 0;
 		font-style: italic;

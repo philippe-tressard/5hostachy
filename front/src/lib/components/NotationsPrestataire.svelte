@@ -121,7 +121,7 @@
 <style>
 	.not-badge {
 		margin-left: 0.25rem;
-		color: #f59e0b;
+		color: var(--color-warning-texte);
 	}
 	.not-liste {
 		display: flex;
@@ -141,7 +141,7 @@
 		font-size: var(--fs-md);
 	}
 	.not-etoiles {
-		color: #f59e0b;
+		color: var(--color-warning-texte);
 		letter-spacing: 0.05em;
 	}
 	.not-auteur {

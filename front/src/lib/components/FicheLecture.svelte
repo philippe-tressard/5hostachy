@@ -145,7 +145,7 @@
 		margin: 0.25rem 0 0.5rem;
 	}
 	.fiche-description {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		line-height: 1.6;
 		margin-bottom: 0.5rem;
 	}

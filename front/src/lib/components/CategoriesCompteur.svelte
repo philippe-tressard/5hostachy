@@ -146,9 +146,10 @@
 					? prestataires.find((p) => p.id === currentCompteur.prestataire_id)
 					: null}
 				{#if prest}
-					<span class="badge badge-blue" style="font-size:.78rem">🔧 {prest.nom}</span>
+					<span class="badge badge-blue" style="font-size:var(--fs-sm)">🔧 {prest.nom}</span>
 				{:else}
-					<span style="font-size:.78rem;color:var(--color-text-muted)">Aucun fournisseur</span>
+					<span style="font-size:var(--fs-sm);color:var(--color-text-muted)">Aucun fournisseur</span
+					>
 				{/if}
 				<button
 					class="btn-icon-edit"
@@ -187,7 +188,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 	}
 	.compteur-edition {
 		flex: 1 1 100%;

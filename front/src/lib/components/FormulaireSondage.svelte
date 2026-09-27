@@ -365,7 +365,7 @@
 		align-items: center;
 	}
 	.option-rang {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		min-width: 1.1rem;
 		text-align: right;
@@ -380,7 +380,7 @@
 		background: var(--color-bg);
 	}
 	.option-supprimer {
-		color: var(--color-danger, #dc2626);
+		color: var(--color-danger);
 	}
 
 	/*  ⚠️ Une case et son libellé, NOMMÉS. La page portait un `input, textarea {

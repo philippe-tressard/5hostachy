@@ -125,7 +125,7 @@
 		margin-top: 0.5rem;
 	}
 	.flux-meta-line {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0.15rem 0;
 	}
@@ -138,7 +138,7 @@
 		border-radius: 6px;
 		background: var(--color-primary-light);
 		border-left: 3px solid var(--color-primary);
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 	}
 	.flux-reaction-icon {
 		flex-shrink: 0;
@@ -167,7 +167,7 @@
 		margin: 0.5rem 0;
 	}
 	.flux-link {
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		color: var(--color-primary);
 		font-weight: 500;
 		text-decoration: none;

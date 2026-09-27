@@ -61,7 +61,7 @@
 }
 .auth-header p {
 	color: var(--color-text-muted);
-	font-size: 0.875rem;
+	font-size: var(--fs-base);
 }
 /*  `gap` retenu de la version la plus disante (réinitialisation) : il ne se voit
     pas avec un seul bouton, et il évite de le réintroduire au deuxième. */

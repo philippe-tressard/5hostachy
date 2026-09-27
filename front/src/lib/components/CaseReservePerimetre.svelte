@@ -146,7 +146,7 @@
 	    pas d'un groupe — là où `.aide` explique un réglage. */
 	.avert-diffusion {
 		border-left: 3px solid var(--color-warning);
-		background: var(--color-warning-light, #fffbeb);
+		background: var(--color-warning-fond);
 		border-radius: var(--radius);
 		padding: 0.6rem 0.8rem;
 		margin: 0.25rem 0 1rem;
@@ -159,7 +159,7 @@
 	.avert-liste {
 		margin: 0;
 		padding-left: 1.1rem;
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 		line-height: 1.5;
 		color: var(--color-text);
 	}

@@ -179,7 +179,7 @@
 						/>
 						<span class="lot-check-label">
 							<span class="lot-check-name">{lot.libelle}</span>
-							{#if lot.occupe}<span class="badge badge-yellow" style="font-size:.68rem"
+							{#if lot.occupe}<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
 									>Bail actif</span
 								>{/if}
 						</span>

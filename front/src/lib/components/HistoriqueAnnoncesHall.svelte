@@ -277,7 +277,7 @@
 
 			{#if ahExpandedId === annonce.id}
 				<div class="ah-card-details">
-					<div class="rich-content" style="font-size:.88rem">
+					<div class="rich-content" style="font-size:var(--fs-base)">
 						{@html safeHtml(annonce.message)}
 					</div>
 					{#if annonce.images?.length}
@@ -302,7 +302,7 @@
 	    l'hôte n'atteint pas un enfant (Svelte scope au composant, v2.67.11). */
 
 	.ah-card-apercu {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin-top: 0.35rem;
 	}
@@ -317,7 +317,7 @@
 	}
 	.ah-card-meta {
 		color: var(--color-text-muted);
-		font-size: 0.78rem;
+		font-size: var(--fs-sm);
 	}
 	.ah-card-top {
 		display: flex;

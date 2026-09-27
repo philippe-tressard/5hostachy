@@ -138,12 +138,12 @@
 						<div>
 							<div style="font-weight:700;font-size:1rem">{nomLocataire(premierBail)}</div>
 							{#if premierBail.locataire_email}
-								<div style="font-size:0.82rem;color:var(--color-text-muted)">
+								<div style="font-size:var(--fs-md);color:var(--color-text-muted)">
 									{premierBail.locataire_email}
 								</div>
 							{/if}
 							{#if premierBail.locataire_telephone}
-								<div style="font-size:0.82rem;color:var(--color-text-muted)">
+								<div style="font-size:var(--fs-md);color:var(--color-text-muted)">
 									{premierBail.locataire_telephone}
 								</div>
 							{/if}
@@ -280,6 +280,6 @@
 	}
 	.lbc-lot-badge {
 		font-weight: 700;
-		font-size: 0.92rem;
+		font-size: var(--fs-lg);
 	}
 </style>

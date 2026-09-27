@@ -76,7 +76,7 @@
 	.moderation-panel {
 		border: 1px solid var(--color-warning);
 		border-radius: var(--radius);
-		background: #fffbeb;
+		background: var(--color-warning-fond);
 		margin-bottom: 1.25rem;
 		overflow: hidden;
 	}
@@ -119,7 +119,7 @@
 		margin-bottom: 0.25rem;
 	}
 	.moderation-motif {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		margin-bottom: 0.4rem;
 	}
 	.moderation-actions {

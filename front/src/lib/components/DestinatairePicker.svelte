@@ -100,7 +100,7 @@
 		gap: 0.4rem;
 	}
 	.destinataire-titre {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		font-weight: 500;
 		color: var(--color-text);
 		margin-bottom: 0.3rem;

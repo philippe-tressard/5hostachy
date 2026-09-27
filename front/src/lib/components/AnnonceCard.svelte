@@ -319,7 +319,7 @@
 		white-space: nowrap;
 	}
 	.annonce-gratuit {
-		color: var(--color-success, #16a34a);
+		color: var(--color-success);
 	}
 	.annonce-nego {
 		font-weight: 500;
@@ -337,7 +337,7 @@
 		color: inherit;
 	}
 	.annonce-texte {
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		line-height: 1.6;
 		margin-bottom: 0.5rem;
 	}

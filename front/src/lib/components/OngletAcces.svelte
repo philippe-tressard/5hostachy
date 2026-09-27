@@ -318,12 +318,13 @@
 										<span style="font-family:monospace;font-size:var(--fs-md)">{item.code}</span>
 										<span
 											class="badge {item.typeAcces === 'vigik' ? 'badge-blue' : 'badge-purple'}"
-											style="font-size:.68rem"
+											style="font-size:var(--fs-2xs)"
 										>
 											{item.typeAcces === 'vigik' ? '🏷️ Vigik' : '📡 TC'}
 										</span>
-										<span class="badge {statutAccesBadge(item.statut)}" style="font-size:.68rem"
-											>{statutAccesLabel(item.statut)}</span
+										<span
+											class="badge {statutAccesBadge(item.statut)}"
+											style="font-size:var(--fs-2xs)">{statutAccesLabel(item.statut)}</span
 										>
 									</div>
 								{/each}
@@ -395,6 +396,6 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		padding: 0.2rem 0.55rem;
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 	}
 </style>

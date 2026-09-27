@@ -83,7 +83,7 @@
 		color: inherit;
 	}
 	.docs-vide {
-		font-size: 0.82rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0;
 	}

@@ -36,6 +36,6 @@
 
 <style>
 	.compact {
-		font-size: 0.7rem;
+		font-size: var(--fs-2xs);
 	}
 </style>
