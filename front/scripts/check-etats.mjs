@@ -333,7 +333,15 @@ for (const chemin of tousSvelte) {
 	}
 
 	// 6. les intitulés de section
-	for (const m of texte.matchAll(/<Section(?:Formulaire|Lecture)\b[^>]*?\btitre="([^"]*)"/g)) {
+	//  ⚠️ `SectionDescription` (prop `titre`) et `SectionTitre` (prop `libelle`)
+	//  n'étaient PAS lus jusqu'au 27/09/2026 : en déclarant la FAQ, un intitulé
+	//  « Réponse » falsifié passait au vert (#1329). Les deux composants portent
+	//  pourtant une section du cadre, et leur intitulé est aussi libre qu'ailleurs.
+	const intitules = [
+		...texte.matchAll(/<Section(?:Formulaire|Lecture|Description)\b[^>]*?\btitre="([^"]*)"/g),
+		...texte.matchAll(/<SectionTitre\b[^>]*?\blibelle="([^"]*)"/g),
+	];
+	for (const m of intitules) {
 		const titre = m[1].trim();
 		if (titre && !titresAdmis.has(titre)) {
 			echec(
