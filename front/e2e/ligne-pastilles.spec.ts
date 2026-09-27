@@ -11,6 +11,7 @@
  *  affaire (API simulée, compte CS) et leurs lignes comparées.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { simulerApi } from './aides';
 
 const LIGNE = {
 	numero: 'TK-109008',
@@ -54,36 +55,11 @@ const FLUX = {
 	sante: {},
 };
 
-async function simuler(page: Page) {
-	//  ⚠️ Le CHEMIN commence par `/api/` : un motif `/api/` n'importe où intercepte
-	//  aussi le module source `/src/lib/api/…`, et la page tombe en 500.
-	await page.route(
-		(url) => url.pathname.startsWith('/api/'),
-		(route) => {
-			const chemin = new URL(route.request().url()).pathname;
-			let corps: unknown = [];
-			if (chemin === '/api/auth/me')
-				corps = {
-					id: 1,
-					nom: 'Témoin',
-					prenom: 'CS',
-					email: 'temoin@exemple.test',
-					statut: 'copropriétaire_résident',
-					role: 'conseil_syndical',
-					roles: ['conseil_syndical'],
-					actif: true,
-				};
-			else if (chemin === '/api/flux') corps = FLUX;
-			else if (chemin === '/api/tickets') corps = [AFFAIRE];
-			else if (/config|pages|parametres|sante|epingles/.test(chemin)) corps = {};
-			return route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(corps),
-			});
-		},
-	);
-}
+const simuler = (page: Page) =>
+	simulerApi(page, (chemin) => {
+		if (chemin === '/api/flux') return FLUX;
+		if (chemin === '/api/tickets') return [AFFAIRE];
+	});
 
 /** Le texte d'une ligne, espaces normalisés. */
 const texte = async (page: Page, selecteur: string) =>

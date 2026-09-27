@@ -22,39 +22,15 @@
  *  `cible-tactile.spec.ts` : 44 px au doigt, et rien de changé à la souris.
  */
 import { expect, test, type Page } from '@playwright/test';
-
-const MEMBRE_CS = {
-	id: 1,
-	nom: 'Témoin',
-	prenom: 'CS',
-	email: 'temoin@exemple.test',
-	statut: 'copropriétaire_résident',
-	role: 'conseil_syndical',
-	roles: ['conseil_syndical'],
-	actif: true,
-};
+import { simulerApi } from './aides';
 
 /** Rend l'écran Résidence et ouvre « Ajouter un plan ». */
 async function ouvrirAjoutPlan(page: Page) {
-	//  ⚠️ Le CHEMIN commence par `/api/` : un motif `/api/` n'importe où intercepte
-	//  aussi le module source `/src/lib/api/…`, et la page tombe en 500.
-	await page.route(
-		(url) => url.pathname.startsWith('/api/'),
-		(route) => {
-			const u = route.request().url();
-			let corps: unknown = [];
-			if (/\/auth\/me/.test(u)) corps = MEMBRE_CS;
-			else if (/\/documents\/categories/.test(u))
-				corps = [{ id: 1, code: 'plan_residence', nom: 'Plans' }];
-			else if (/\/copropriete(\?|$)/.test(u)) corps = { id: 1, nom: 'Résidence témoin' };
-			else if (/config|pages|parametres|sante/.test(u)) corps = {};
-			return route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(corps),
-			});
-		},
-	);
+	await simulerApi(page, (chemin) => {
+		if (chemin === '/api/documents/categories')
+			return [{ id: 1, code: 'plan_residence', nom: 'Plans' }];
+		if (chemin === '/api/copropriete') return { id: 1, nom: 'Résidence témoin' };
+	});
 	await page.goto('/residence');
 	const plans = page
 		.locator('section, div')
