@@ -162,6 +162,52 @@ export function interditsDe(source) {
  */
 const EXCEPTIONS = {};
 
+/**
+ *  ## Le texte d'un badge se LIT (#1410, 27/09/2026)
+ *
+ *  Chaque `.badge-<teinte>` de `styles/composants.css` pose un texte de
+ *  0,75 rem sur un fond : il lui faut 4,5:1 (standards/11 §2). Le vert de la
+ *  charte faisait 4,44 sur son propre fond — un écart que personne ne voit à
+ *  l'œil, et que la règle « un état prend son jeton » a répandu partout.
+ *  Le contrôle résout les `var(--…)` dans `socle.css` et MESURE le rapport ;
+ *  une valeur qu'il ne sait pas résoudre le fait échouer (INCONNU, jamais OK).
+ */
+export function contraste(a, b) {
+	const lum = (h) => {
+		const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+		const [r, g, v] = c.map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
+		return 0.2126 * r + 0.7152 * g + 0.0722 * v;
+	};
+	const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+	return (x + 0.05) / (y + 0.05);
+}
+
+/** `var(--x)` → la valeur hexadécimale de `--x` dans les jetons, ou null. */
+export function resoudre(valeur, jetons, profondeur = 0) {
+	const v = valeur.trim().toLowerCase();
+	if (/^#[0-9a-f]{6}$/.test(v)) return v;
+	const m = v.match(/^var\(\s*(--[a-z0-9-]+)\s*\)$/);
+	if (!m || profondeur > 5 || !(m[1] in jetons)) return null;
+	return resoudre(jetons[m[1]], jetons, profondeur + 1);
+}
+
+/** Les badges et leur rapport de contraste ; `null` quand une valeur échappe. */
+export function contrastesBadges(composants, socle) {
+	const jetons = Object.fromEntries(
+		[...socle.matchAll(/^\s*(--[a-z0-9-]+)\s*:\s*([^;]+);/gm)].map((m) => [m[1], m[2]]),
+	);
+	return [...composants.matchAll(/^\.badge-([a-z]+)\s*\{([^}]*)\}/gm)]
+		.map(([, nom, corps]) => {
+			const fond = corps.match(/background\s*:\s*([^;]+);/);
+			const texte = corps.match(/(?:^|[\s;])color\s*:\s*([^;]+);/);
+			if (!fond || !texte) return null;
+			const f = resoudre(fond[1], jetons);
+			const t = resoudre(texte[1], jetons);
+			return { nom, rapport: f && t ? contraste(t, f) : null };
+		})
+		.filter(Boolean);
+}
+
 if (process.argv.includes('--selftest')) {
 	let ko = 0;
 	const cas = (libelle, obtenu, attendu) => {
@@ -212,6 +258,22 @@ if (process.argv.includes('--selftest')) {
 		'un commentaire garde l’historique, une couleur de charte passe',
 		interditsDe('<!-- #f59e0b --><style>/* #dc2626 */ .a{color:#c0392b} // #16a34a\n</style>'),
 		[],
+	);
+	cas(
+		'contraste du vert de la charte sur son fond',
+		contraste('#2e7d52', '#e6f4ee').toFixed(2),
+		'4.44',
+	);
+	cas(
+		'un badge se résout par les jetons, et une valeur inconnue rend null',
+		contrastesBadges(
+			'.badge-a {\n\tbackground: var(--f);\n\tcolor: var(--t);\n}\n.badge-b {\n\tbackground: var(--absent);\n\tcolor: #000000;\n}',
+			':root {\n\t--f: #ffffff;\n\t--t: #000000;\n}',
+		).map((b) => [b.nom, b.rapport && Math.round(b.rapport)]),
+		[
+			['a', 21],
+			['b', null],
+		],
 	);
 	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
 	process.exit(ko);
@@ -275,6 +337,28 @@ if (interdits.length) {
 	);
 	interdits.slice(0, 40).forEach((l) => console.error(l));
 	if (interdits.length > 40) console.error(`   … et ${interdits.length - 40} de plus`);
+}
+const badges = contrastesBadges(
+	readFileSync(join(STYLES, 'composants.css'), 'utf8'),
+	readFileSync(join(STYLES, 'socle.css'), 'utf8'),
+);
+if (!badges.length) {
+	echec = 1;
+	console.error(
+		'\n✗ Aucun badge lu dans composants.css : contrôle de contraste inopérant (INCONNU).',
+	);
+}
+for (const { nom, rapport } of badges) {
+	if (rapport == null) {
+		echec = 1;
+		console.error(`\n✗ .badge-${nom} : couleur non résolue — contraste INCONNU.`);
+	} else if (rapport < 4.5) {
+		echec = 1;
+		console.error(
+			`\n✗ .badge-${nom} : texte à ${rapport.toFixed(2)}:1 sur son fond, sous 4,5 ` +
+				'— un dérivé `-texte` (socle.css), comme --color-warning-texte.',
+		);
+	}
 }
 for (const rel of Object.keys(EXCEPTIONS)) {
 	if (!exceptionsServies.has(rel)) {

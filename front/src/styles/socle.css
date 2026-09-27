@@ -61,6 +61,9 @@ body {
 	--color-danger-bordure: #e6b0aa;
 	--color-success-fond: #e6f4ee;
 	--color-success-bordure: #abcbba;
+	/*  #1410, option 1 arbitrée sur maquette : le jeton à 85 % sur noir. Le
+	    vert de la charte faisait 4,44 sur son fond, sous le 4,5 d'un texte. */
+	--color-success-texte: #276a46;
 	--color-warning-fond: #fdf3e0;
 	--color-warning-bordure: #dfcba5;
 	--color-warning-texte: #7b5815;
