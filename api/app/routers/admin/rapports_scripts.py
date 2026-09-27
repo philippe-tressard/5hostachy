@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from app.utils import horloge
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -167,6 +167,50 @@ def maintenance_rapport(
     entry = enregistrer_rapport(session, body)
     _purger_anciens_rapports(session)
     return entry
+
+
+class BattementTache(BaseModel):
+    tache: str
+    noeud: str
+
+
+@router.post("/maintenance/battement")
+def maintenance_battement(
+    body: BattementTache,
+    x_maintenance_key: Optional[str] = Header(default=None, alias="x-maintenance-key"),
+    session: Session = Depends(get_session),
+):
+    """« J'ai tourné, et rien n'a changé » — sans créer de ligne (#1396).
+
+    `check-reliability.sh` ne rend un rapport que quand l'ensemble de ses
+    constats CHANGE : la table n'en garde que vingt par tâche, et un rapport par
+    passage (96 par jour et par nœud) aurait chassé tout le reste. L'écran
+    affichait donc l'heure du dernier CHANGEMENT, et le 27/09/2026 on a cru que
+    les contrôles ne tournaient plus — « rapport de 17:06 » lu à 17:29.
+
+    Le passage qui n'a rien de neuf prolonge la ligne de son dernier rapport :
+    `cree_le` reste « constats depuis », `terminee_le` devient « dernier
+    contrôle ». Un UPDATE d'une ligne par quart d'heure et par nœud, dans le
+    process de l'API — jamais une ouverture de la base par un tiers.
+
+    404 quand il n'y a rien à prolonger : le script efface alors sa mémoire, et
+    le passage suivant envoie un rapport complet.
+    """
+    exiger_cle_maintenance(x_maintenance_key)
+    ligne = session.exec(
+        select(HistoriqueMaintenance)
+        .where(
+            HistoriqueMaintenance.tache == body.tache,
+            HistoriqueMaintenance.noeud == body.noeud,
+        )
+        .order_by(HistoriqueMaintenance.cree_le.desc())
+    ).first()
+    if ligne is None:
+        raise HTTPException(status_code=404, detail="Aucun rapport à prolonger pour ce nœud")
+    ligne.terminee_le = horloge.maintenant()
+    session.add(ligne)
+    session.commit()
+    return {"tache": ligne.tache, "noeud": ligne.noeud, "terminee_le": ligne.terminee_le}
 
 
 @router.post("/maintenance/purges")

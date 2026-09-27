@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
  *  même lot, en convertissant les seules valeurs ÉGALES à un jeton (aucun rendu
  *  changé ; un repli redondant `var(--x, #valeur-de-x)` compte parmi elles).
  */
-const PLAFOND = { couleurs: 235, tailles: 258 };
+const PLAFOND = { couleurs: 235, tailles: 256 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

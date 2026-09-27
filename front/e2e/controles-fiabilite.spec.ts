@@ -119,3 +119,70 @@ test('Maintenance : les constats de check-reliability, nœud par nœud', async (
 		path: `test-results/controles-fiabilite-${test.info().project.name}.png`,
 	});
 });
+
+/*
+ *  #1396 — le 27/09/2026, « rapport de 17:06 » lu à 17:29 a fait croire le
+ *  contrôleur mort, et chaque constat s'affichait deux fois, sous RPI1 et RPI2.
+ *  Désormais : « dernier contrôle » (le battement) à côté de « constats depuis »,
+ *  chaque constat UNE fois — sous le nœud qu'il nomme seul, ou sous « Les deux
+ *  nœuds », dits par l'actif.
+ */
+const NOYAUX = '[WARN] Noyaux DIVERGENTS — rpi1 en 6.18.50, rpi2 en 6.12.75';
+const APT = '[WARN] Listes apt périmées sur rpi2 : 162 j (seuil 7 j)';
+const RAPPORTS_1396 = [
+	{
+		id: 5,
+		noeud: 'rpi1',
+		statut: 'avertissement',
+		cree_le: '2026-09-27T15:06:00Z',
+		terminee_le: '2026-09-27T15:36:00Z',
+		details: { fail: 0, warn: 1, constats: [], communs: [NOYAUX], porte_communs: true },
+	},
+	{
+		id: 4,
+		noeud: 'rpi2',
+		statut: 'avertissement',
+		cree_le: '2026-09-27T15:06:30Z',
+		terminee_le: '2026-09-27T15:36:30Z',
+		details: { fail: 0, warn: 1, constats: [APT], communs: [], porte_communs: false },
+	},
+];
+
+test('Maintenance : dernier contrôle, et chaque constat une seule fois (#1396)', async ({
+	page,
+}) => {
+	await simulerApi(page, (chemin) => {
+		if (chemin === '/api/auth/me') return ADMIN;
+		if (chemin === '/api/admin/maintenance/sante') return SANTE;
+		if (chemin === '/api/admin/maintenance/historique') return RAPPORTS_1396;
+		return undefined;
+	});
+	await page.goto('/admin?onglet=maintenance');
+	const carte = page.locator('section.config-section', {
+		has: page.getByText('Contrôles de fiabilité', { exact: true }),
+	});
+	await expect(carte).toBeVisible();
+
+	//  Une fois chacun — c'était deux.
+	await expect(carte.getByText(/Noyaux DIVERGENTS/)).toHaveCount(1);
+	await expect(carte.getByText(/Listes apt périmées sur rpi2/)).toHaveCount(1);
+	//  Le commun sous « Les deux nœuds », vu par l'actif.
+	const communs = carte.locator('.noeud', { hasText: 'Les deux nœuds' });
+	await expect(communs.getByText(/Noyaux DIVERGENTS/)).toBeVisible();
+	await expect(communs.getByText(/vu par RPI1/)).toBeVisible();
+	//  RPI1 n'a rien en propre : il est vert, le commun ne compte pas sous lui.
+	await expect(
+		carte.locator('.noeud', { hasText: 'RPI1' }).first().getByText('Tout est vert'),
+	).toBeVisible();
+
+	//  Les deux heures, et elles diffèrent : le battement n'a pas créé de rapport.
+	const entete = carte.locator('.noeud-entete', { hasText: 'RPI2' });
+	await expect(entete).toContainText('dernier contrôle');
+	await expect(entete).toContainText('constats depuis');
+	await expect(entete).toContainText('17:36');
+	await expect(entete).toContainText('17:06');
+
+	await carte.screenshot({
+		path: `test-results/controles-fiabilite-1396-${test.info().project.name}.png`,
+	});
+});

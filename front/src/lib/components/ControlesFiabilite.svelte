@@ -10,19 +10,26 @@
   que rpi2 est resté cinq mois sans correctif de sécurité (#1377) : rien, ici, ne
   regardait ce qui se met à jour.
 
-  ⚠️ La carte montre le DERNIER compte rendu de chaque nœud. Le script n'en
-  envoie un que quand l'ensemble des constats change, et au moins une fois par
-  jour : c'est donc l'état courant, pas un instantané. Si le contrôleur se tait,
-  c'est la synthèse des tâches, juste au-dessus, qui le dit (« Exécution
-  manquante »).
+  ⚠️ Deux heures par nœud, et elles ne disent pas la même chose (#1396). Le script
+  n'envoie un RAPPORT que quand l'ensemble des constats change (la table n'en garde
+  que vingt par tâche) : `cree_le` est donc « constats depuis ». Entre deux, chaque
+  passage envoie un BATTEMENT qui avance `terminee_le` : « dernier contrôle ». On
+  n'affichait que la première, et le 27/09 on a cru le contrôleur mort — « rapport
+  de 17:06 » lu à 17:29.
+
+  Chaque constat ne s'affiche qu'une fois (#1396) : sous le nœud qu'il nomme seul,
+  ou sous « Les deux nœuds » quand il porte sur les deux — ceux-là, c'est l'actif
+  qui les dit (`porte_communs`). Un rapport d'avant #1396 n'a pas ce champ : ses
+  constats restent tous sous son nœud, comme avant.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import EtatListe from './EtatListe.svelte';
+	import ListeConstats from './ListeConstats.svelte';
 	import { admin as adminApi, type RapportFiabilite } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
-	import { fmtDatetime } from '$lib/date';
+	import { fmtDate, fmtDatetime, fmtTime } from '$lib/date';
 	//  Le titre est le NOM de la tâche dans la synthèse : une seule écriture,
 	//  sinon la ligne de la synthèse cesse de renvoyer à cette carte.
 	import { LIBELLE_TACHE } from '$lib/taches';
@@ -37,16 +44,23 @@
 		[],
 	);
 
-	//  « [WARN] Disque rpi1 à 81 % » → le niveau et le texte. Le préfixe est celui
-	//  que `check-reliability.sh` écrit (`warn()`, `fail()`) ; un constat sans
-	//  préfixe reste lisible, en vigilance.
-	function lire(constat: string): { niveau: 'fail' | 'warn'; texte: string } {
-		const m = /^\[(FAIL|WARN)\]\s*/.exec(constat);
-		return {
-			niveau: m?.[1] === 'FAIL' ? 'fail' : 'warn',
-			texte: m ? constat.slice(m[0].length) : constat,
-		};
-	}
+	//  Le dernier passage connu : le battement s'il y en a eu un, sinon le rapport.
+	const vuLe = (r: RapportFiabilite) => r.terminee_le ?? r.cree_le;
+
+	//  Les constats communs viennent du nœud qui les porte — l'actif. Si les deux
+	//  les portent (pair muet, rôle illisible), le plus récent fait foi.
+	$: porteur = parNoeud
+		.filter((r) => r.details?.porte_communs)
+		.sort((a, b) => vuLe(b).localeCompare(vuLe(a)))[0];
+
+	//  Les badges comptent ce qui s'affiche SOUS le nœud, pas les communs.
+	const compte = (constats: string[], niveau: string) =>
+		constats.filter((c) => c.startsWith(`[${niveau}]`)).length;
+
+	//  « 17:36 » aujourd'hui, la date complète sinon — un contrôleur arrêté depuis
+	//  la veille ne doit pas se lire comme un passage de l'après-midi.
+	const heure = (d: string) =>
+		fmtDate(d) === fmtDate(new Date().toISOString()) ? fmtTime(d) : fmtDatetime(d);
 
 	onMount(async () => {
 		try {
@@ -66,7 +80,7 @@
 		Raspberry&nbsp;Pi&nbsp;: site public, split-brain, tunnel, parité du code, disque, rotation des
 		journaux, droits sudo, en-têtes de sécurité, <strong>mises à jour système</strong>… Un échec est
 		envoyé par courriel dans l’heure, les points de vigilance en un résumé quotidien. Ci-dessous,
-		les constats <strong>en cours</strong> de chaque nœud.
+		les constats <strong>en cours</strong> de chaque nœud, puis ceux qui portent sur les deux.
 	</p>
 
 	<EtatListe
@@ -78,38 +92,40 @@
 		messageVide="Les nœuds rendent compte au premier passage de check-reliability (15 min au plus) après leur mise à jour."
 	>
 		{#each parNoeud as r (r.noeud)}
-			{@const constats = (r.details?.constats ?? []).map(lire)}
+			{@const constats = r.details?.constats ?? []}
+			{@const nFail = compte(constats, 'FAIL')}
+			{@const nWarn = compte(constats, 'WARN')}
 			<div class="noeud">
 				<div class="noeud-entete">
 					<strong>{r.noeud?.toUpperCase()}</strong>
-					{#if r.details?.fail}
-						<span class="badge badge-red">{r.details.fail} en échec</span>
+					{#if nFail}
+						<span class="badge badge-red">{nFail} en échec</span>
 					{/if}
-					{#if r.details?.warn}
-						<span class="badge badge-orange">{r.details.warn} en vigilance</span>
+					{#if nWarn}
+						<span class="badge badge-orange">{nWarn} en vigilance</span>
 					{/if}
-					{#if !r.details?.fail && !r.details?.warn}
+					{#if !nFail && !nWarn}
 						<span class="badge badge-green">Tout est vert</span>
 					{/if}
-					<span class="muted date">rapport du {fmtDatetime(r.cree_le)}</span>
+					<span class="muted date"
+						>dernier contrôle {heure(vuLe(r))} · constats depuis {fmtDatetime(r.cree_le)}</span
+					>
 				</div>
-				{#if constats.length}
-					<ul class="constats">
-						{#each constats as c, i (i)}
-							<li>
-								<span
-									class="badge"
-									class:badge-red={c.niveau === 'fail'}
-									class:badge-orange={c.niveau === 'warn'}
-									>{c.niveau === 'fail' ? 'Échec' : 'Vigilance'}</span
-								>
-								<span>{c.texte}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
+				<ListeConstats {constats} />
 			</div>
 		{/each}
+
+		{#if porteur?.details?.communs?.length}
+			<div class="noeud">
+				<div class="noeud-entete">
+					<strong>Les deux nœuds</strong>
+					<span class="muted date"
+						>vu par {porteur.noeud?.toUpperCase()} · dernier contrôle {heure(vuLe(porteur))}</span
+					>
+				</div>
+				<ListeConstats constats={porteur.details.communs} />
+			</div>
+		{/if}
 	</EtatListe>
 </section>
 
@@ -126,23 +142,6 @@
 		gap: 0.4rem 0.6rem;
 	}
 	.date {
-		font-size: 0.8rem;
-	}
-	.constats {
-		margin: 0.6rem 0 0;
-		padding: 0;
-		list-style: none;
-		font-size: 0.85rem;
-	}
-	/*  Le badge ne rétrécit pas : c'est le texte, souvent long, qui passe à la ligne. */
-	.constats li {
-		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
-		margin-bottom: 0.45rem;
-		overflow-wrap: anywhere;
-	}
-	.constats .badge {
-		flex-shrink: 0;
+		font-size: var(--fs-sm);
 	}
 </style>

@@ -16,6 +16,7 @@ from app.database import get_session
 from app.models.core import ConfigSite, Utilisateur
 from app.seed import DEFAULT_LEGAL
 from app.utils.liens import base_site
+from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/config", tags=["config"])
 
@@ -192,9 +193,7 @@ def update_whatsapp_scheduled(
     """Met à jour un message WhatsApp planifié."""
     from app.models.core import WhatsAppScheduled
 
-    item = session.get(WhatsAppScheduled, item_id)
-    if not item:
-        raise HTTPException(404, "Message planifié introuvable.")
+    item = ou_404(session, WhatsAppScheduled, item_id, "Message planifié")
     if data.label is not None:
         item.label = data.label
     if data.message is not None:

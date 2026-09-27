@@ -195,6 +195,35 @@ plafond est exigé par `test_taches_planifiees.py`. Et le contrôle de 06:00 rep
 les tâches manquantes ou en échec, sauf ce qu'un autre canal signale déjà
 (`DEJA_SIGNALE`, `sante_taches.py`).
 
+**Deux heures, et chaque constat une fois** (#1396, 27/09/2026). L'écran affichait
+l'heure du dernier **changement**, et « rapport de 17:06 » lu à 17:29 a fait croire
+le contrôleur mort. Le passage qui n'a rien de neuf envoie désormais un
+**battement** (`POST /admin/maintenance/battement`) : il avance `terminee_le`
+(« dernier contrôle ») de la ligne existante, sans en créer — `cree_le` reste
+« constats depuis ». Et chaque nœud contrôlant les deux, tout s'affichait deux fois :
+`portee_constat` range chaque ligne — celle qui ne nomme que ce nœud sous lui, celle
+qui ne nomme que le pair est laissée au pair, les communes sont dites par l'**actif**
+seul (`porte_communs`). Pair muet → ce nœud porte tout.
+
+**Le courriel suit la même répartition** (#1402, 27/09/2026). Il gardait tout, et
+un fait vu par les deux nœuds partait deux fois — rpi1 et rpi2 ont envoyé la même
+alerte à 16:36:06. `repartir_constats` calcule une fois ce que CE nœud dit, et
+l'écran comme le courriel le lisent : un fait, un envoi, par le nœud qu'il concerne
+(ou l'actif, s'il concerne les deux). Ce qui garde la promesse « un nœud mort a
+toujours quelqu'un pour parler de lui », c'est le **pair muet** : le survivant
+porte alors tout. Un nœud vivant dont le contrôleur s'est tu se voit par
+« Exécution manquante », par nœud, et au courriel de 06:00. Deux courriels peuvent
+encore partir le même jour — les constats propres de chaque nœud —, mais plus
+jamais pour le même fait. `lib-notification.sh --selftest` éprouve la réunion des
+deux nœuds, et la faute injectée (le pair repris alors qu'il répond) y est vue.
+
+🔴 **Un constat propre à un nœud reste sous ce nœud** (arbitrage de Philippe, #1401).
+La règle ne tient que si le message **nomme** son nœud : un constat qui n'en nomme
+aucun est lu comme commun et n'est dit que par l'actif — écrit « Disque à 81 % »
+au lieu de « Disque $n à 81 % », il disparaîtrait de la carte du standby.
+🔒 `api/tests/test_constats_nomment_leur_noeud.py` exige `$n` dans chaque `warn`/`fail`
+des boucles qui parcourent les deux nœuds.
+
 🔴 **Pourquoi le digest existe.** L’alerte ne partait que sur `FAILS > 0`. Or **cinq**
 contrôles rendent WARN par choix assumé — C16 (cache de build), C17 (maintenance en
 retard), C19 (journal ⇆ base), C20 (sudo), C22 (points d’entrée), et depuis le

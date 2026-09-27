@@ -38,7 +38,8 @@
 - **WhatsApp** — Notifications automatiques programmées vers le groupe de la résidence. ⚠️ Le pont passe par un client non officiel (Baileys) : WhatsApp peut déconnecter ou **bloquer le numéro** appairé ; le contrôle quotidien distingue ce cas d'une coupure ordinaire, et le courriel reste le canal de repli (conduite à tenir : `.claude/skills/infra-rpi`)
 - **Maintenance** — Tâches automatiques (purge tokens, archivage, logs, **images de base des
   conteneurs re-tirées chaque semaine**) + déclenchement manuel ; les **contrôles de fiabilité**
-  des deux nœuds (C1 à C30, dont les **mises à jour système**) avec leurs constats en cours ; la
+  des deux nœuds (C1 à C30, dont les **mises à jour système**) avec leurs constats en cours — chacun
+  une fois, sous le nœud qu'il concerne — et l'heure du dernier contrôle ; la
   **consommation de l'assistant IA** (jetons, appels, coût estimé, jauge des plafonds) ;
   et le **contrôle de santé quotidien** (base, WhatsApp, sauvegardes, copie hors site, disque,
   modèles d'e-mail, **tâches planifiées manquantes ou en échec**) relançable à la demande depuis
