@@ -16,7 +16,6 @@ from app.utils.llm_journal import limite_conservation
 from app.database import engine
 from app.models.core import (
     HistoriqueMaintenance,
-    PublicationEvolution,
     WhatsAppLog,
 )
 
@@ -51,7 +50,16 @@ def purger() -> tuple[dict[str, int], list[str]]:
     maintenant = horloge.maintenant()
     il_y_a_90_j = maintenant - timedelta(days=90)
     comptes = dict.fromkeys(
-        ("tokens", "prt", "notifications", "historique", "emails", "ia", "whatsapp", "evolutions"),
+        (
+            "tokens",
+            "prt",
+            "verifications",
+            "notifications",
+            "historique",
+            "emails",
+            "ia",
+            "whatsapp",
+        ),
         0,
     )
     erreurs: list[str] = []
@@ -70,6 +78,14 @@ def purger() -> tuple[dict[str, int], list[str]]:
             "prt",
             "purge password reset tokens",
             "DELETE FROM password_reset_token WHERE expires_at < :now OR used = 1",
+            {"now": maintenant},
+        ),
+        #  Les jetons de VÉRIFICATION d'e-mail : la seule famille qu'aucune purge
+        #  ne touchait (#1382) — un par inscription, gardé à jamais.
+        (
+            "verifications",
+            "purge email verification tokens",
+            "DELETE FROM email_verification_token WHERE expires_at < :now OR used = 1",
             {"now": maintenant},
         ),
         (
@@ -115,20 +131,13 @@ def purger() -> tuple[dict[str, int], list[str]]:
     except Exception as exc:
         erreurs.append(f"logs WhatsApp: {exc}")
 
-    # Évolutions archivées de plus de 90 jours.
-    try:
-        with Session(engine) as s:
-            anciennes = s.exec(
-                select(PublicationEvolution).where(
-                    PublicationEvolution.cree_le < maintenant - timedelta(days=90)
-                )
-            ).all()
-            for evol in anciennes:
-                s.delete(evol)
-            s.commit()
-            comptes["evolutions"] = len(anciennes)
-    except Exception as exc:
-        erreurs.append(f"évolutions: {exc}")
+    #  🔴 Plus de purge des « évolutions archivées » (#1381, 27/09/2026). Elle
+    #  supprimait les lignes de `publication_evolution` de plus de 90 jours —
+    #  archivées ou non, malgré son nom —, et depuis la migration 0210 cette
+    #  table n'est plus lue : les évolutions des actualités vivent dans
+    #  `ticket_evolution`, l'historique des affaires, qu'aucune purge ne touche.
+    #  La purge effaçait donc la copie gelée que 0210 garde par prudence. Sa
+    #  suppression, avec celle de `publication`, est une décision à part.
 
     return comptes, erreurs
 
