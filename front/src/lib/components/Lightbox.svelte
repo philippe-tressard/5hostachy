@@ -199,7 +199,7 @@
 		transform: translateX(-50%);
 		margin: 0;
 		color: #fff;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		background: rgba(0, 0, 0, 0.45);
 		padding: 0.2rem 0.7rem;
 		border-radius: 999px;

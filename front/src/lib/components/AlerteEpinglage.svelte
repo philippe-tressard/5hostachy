@@ -54,7 +54,7 @@
 <style>
 	.alerte-epinglage {
 		margin: 0.3rem 0 0 1.6rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		line-height: 1.4;
 		color: #92400e;
 	}

@@ -272,7 +272,7 @@
 		border-left-color: #fbbf24;
 	}
 	.carte-membre--principal {
-		border-left-color: var(--color-accent, #c9983a);
+		border-left-color: var(--color-accent);
 	}
 
 	/*  Le corps a son propre retrait : `EnteteCarte` porte le sien, et deux
@@ -302,7 +302,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.6rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: #16a34a;
 		background: #f0fdf4;
 		border-radius: var(--radius);
@@ -310,7 +310,7 @@
 		border: 1px solid #bbf7d0;
 	}
 	.btn-unlink {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		background: none;
 		border: none;
 		cursor: pointer;

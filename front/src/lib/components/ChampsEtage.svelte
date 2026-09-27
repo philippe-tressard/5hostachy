@@ -205,7 +205,7 @@
 		border: 1px solid #fcd34d;
 		border-radius: var(--radius);
 		color: #92400e;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		line-height: 1.4;
 	}
 
@@ -229,7 +229,7 @@
 		color: var(--color-text-muted);
 	}
 	.etage-lot-type {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 	/*  44 px : une cible tactile est une taille PHYSIQUE, celle d'un pouce — elle

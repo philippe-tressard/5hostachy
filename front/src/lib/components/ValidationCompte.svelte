@@ -99,7 +99,7 @@
 
 <style>
 	.vc-precision {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0 0 1rem;
 	}
@@ -126,7 +126,7 @@
 		flex-shrink: 0;
 	}
 	.vc-choix strong {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.vc-choix p {
 		font-size: 0.78rem;

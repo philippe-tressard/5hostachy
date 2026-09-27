@@ -99,7 +99,7 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		cursor: pointer;
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 		font-weight: 600;
 		color: var(--color-text);
 		text-align: left;
@@ -124,14 +124,14 @@
 		justify-content: center;
 		background: var(--color-primary);
 		color: #fff;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		font-weight: 700;
 		padding: 0.15rem 0.5rem;
 		border-radius: 12px;
 		min-width: 1.5rem;
 	}
 	.sr-chevron {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		flex-shrink: 0;
 		transition: transform var(--duree-geste) var(--ease-out);

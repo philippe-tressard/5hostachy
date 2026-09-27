@@ -248,12 +248,12 @@
 					<tr>
 						<td><code style="font-size:.78rem">{tpl.code}</code></td>
 						<td style="font-size:.875rem">{tpl.libelle ?? tpl.nom ?? '—'}</td>
-						<td style="font-size:.8rem;color:var(--color-text-muted)">{tpl.sujet}</td>
+						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)">{tpl.sujet}</td>
 						<td>
 							{#if tpl.intention}<span class="badge badge-blue"
 									>{labelIntention(tpl.intention)}</span
 								>
-							{:else}<span class="muted" style="font-size:.8rem">—</span>{/if}
+							{:else}<span class="muted" style="font-size:var(--fs-sm)">—</span>{/if}
 						</td>
 						<td>
 							{#if tpl.actif}<span class="badge badge-green">Oui</span>
@@ -391,7 +391,7 @@
 <!-- Historique des emails envoyés -->
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 <h3 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">📬 Historique des envois</h3>
-<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">
+<p class="muted" style="font-size:var(--fs-md);margin-bottom:.75rem">
 	10 derniers emails envoyés (ou tentatives). Purgé automatiquement après 90 jours.
 </p>
 {#if emailHistoryLoading || erreurHistorique || emailHistory.length === 0}
@@ -414,7 +414,7 @@
 				{#each emailHistory as h (h.id)}
 					<tr>
 						<td style="white-space:nowrap">{fmt(h.cree_le)}</td>
-						<td><code style="font-size:.75rem">{h.code}</code></td>
+						<td><code style="font-size:var(--fs-xs)">{h.code}</code></td>
 						<td
 							style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
 							title={h.destinataire}>{h.destinataire}</td
@@ -456,12 +456,12 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		padding: 0.75rem;
-		background: #fff;
+		background: var(--color-surface);
 		max-height: 340px;
 		overflow: auto;
 	}
 	.variables-modele {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0.25rem 0 0;
 		line-height: 1.8;

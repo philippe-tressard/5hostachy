@@ -252,15 +252,17 @@
 						class:imp-row-ignore={imp.statut === 'ignore'}
 					>
 						{#each modele.colonnes as c (c.cle)}
-							<td style="font-size:.8rem">{imp[c.cle] ?? '—'}</td>
+							<td style="font-size:var(--fs-sm)">{imp[c.cle] ?? '—'}</td>
 						{/each}
 						<td>
 							<span style="font-weight:500">{imp.nom_proprietaire}</span>
 							{#if imp.nom_locataire}
-								<span class="muted" style="font-size:.8rem"> · loc. {imp.nom_locataire}</span>
+								<span class="muted" style="font-size:var(--fs-sm)">
+									· loc. {imp.nom_locataire}</span
+								>
 							{/if}
 						</td>
-						<td><code style="font-size:.8rem">{imp[modele.colonneCle.cle] ?? '—'}</code></td>
+						<td><code style="font-size:var(--fs-sm)">{imp[modele.colonneCle.cle] ?? '—'}</code></td>
 						<td>
 							{#if imp.lot_label}
 								<span class="badge badge-green">{imp.lot_label} · {porteurs(imp.lot_porteurs)}</span

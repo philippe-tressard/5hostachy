@@ -124,7 +124,7 @@
 	}
 	.quand-aide {
 		margin: 0.55rem 0 0;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		line-height: 1.45;
 	}

@@ -69,7 +69,7 @@
 		align-items: center;
 		gap: 0.35rem;
 		margin-bottom: 0.75rem;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		/*  Une seule ligne, toujours : un repère qui se plie sur trois lignes
 		    n'est plus un repère. */

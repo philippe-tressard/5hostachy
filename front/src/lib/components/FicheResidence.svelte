@@ -206,14 +206,14 @@
 		}
 	}
 	.info-label {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		font-weight: 600;
 	}
 	.info-value {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		font-weight: 500;
 	}
 	.info-highlight {
@@ -237,7 +237,7 @@
 	.batiment-table th {
 		text-align: left;
 		padding: 0.4rem 0.75rem;
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		color: var(--color-text-muted);

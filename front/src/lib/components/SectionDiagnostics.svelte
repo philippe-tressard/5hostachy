@@ -417,7 +417,7 @@
 	}
 	.diag-non-applicable-section > summary {
 		cursor: pointer;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		font-weight: 500;
 		user-select: none;

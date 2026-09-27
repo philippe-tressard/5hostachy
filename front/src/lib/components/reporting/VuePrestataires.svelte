@@ -123,7 +123,9 @@
 			</div>
 		</div>
 		{#if reportPrestSynth.notations && reportPrestSynth.notations.length > 0}
-			<h4 style="font-size:.9rem;font-weight:600;margin:1rem 0 .5rem">Historique des notations</h4>
+			<h4 style="font-size:var(--fs-base);font-weight:600;margin:1rem 0 .5rem">
+				Historique des notations
+			</h4>
 			<div class="report-table-wrap">
 				<table class="report-table compact">
 					<thead><tr><th>Date</th><th>Note</th><th>Commentaire</th><th>Par</th></tr></thead>
@@ -144,7 +146,7 @@
 			</div>
 		{/if}
 		{#if reportPrestSynth.contrats && reportPrestSynth.contrats.length > 0}
-			<h4 style="font-size:.9rem;font-weight:600;margin:1rem 0 .5rem">Contrats</h4>
+			<h4 style="font-size:var(--fs-base);font-weight:600;margin:1rem 0 .5rem">Contrats</h4>
 			<div class="report-table-wrap">
 				<table class="report-table compact">
 					<thead

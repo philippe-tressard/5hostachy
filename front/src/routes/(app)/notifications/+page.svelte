@@ -110,7 +110,7 @@
 
 <EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'bell'}>
 	{#if unread > 0}
-		<span style="font-size:.85rem;color:var(--color-text-muted)"
+		<span style="font-size:var(--fs-md);color:var(--color-text-muted)"
 			>{unread} non lue{unread > 1 ? 's' : ''}</span
 		>
 		<button class="btn btn-outline btn-sm" on:click={markAll}>Tout marquer lu</button>
@@ -140,13 +140,13 @@
 					{#if !n.lue}<div class="unread-dot"></div>{/if}
 					<div class="notif-content">
 						<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
-							<strong style="font-size:.95rem">{n.titre}</strong>
+							<strong style="font-size:var(--fs-lg)">{n.titre}</strong>
 							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
 						</div>
 						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">
 							{@html safeRichContent(n.corps)}
 						</p>
-						<small style="color:var(--color-text-muted);font-size:.75rem"
+						<small style="color:var(--color-text-muted);font-size:var(--fs-xs)"
 							>{section.format(n.cree_le)}</small
 						>
 					</div>
@@ -228,7 +228,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.3rem;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin-bottom: 0.75rem;
 	}

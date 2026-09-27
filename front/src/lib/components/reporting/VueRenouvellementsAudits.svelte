@@ -174,7 +174,7 @@
 		margin-bottom: 0;
 	}
 	.audit-year-title {
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 		font-weight: 700;
 		margin: 0 0 0.5rem;
 		display: flex;

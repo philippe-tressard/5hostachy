@@ -154,7 +154,7 @@
 		flex-wrap: wrap;
 	}
 	.msg-header strong {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 	.msg-badge {
 		font-size: 0.65rem;

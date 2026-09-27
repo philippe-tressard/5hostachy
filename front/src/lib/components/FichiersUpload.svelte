@@ -464,7 +464,7 @@
 		border-radius: 50%;
 		width: 18px;
 		height: 18px;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		cursor: pointer;
 		line-height: 1;
 		display: flex;
@@ -485,7 +485,7 @@
 		display: none;
 	}
 	.fichiers-compte {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 	}
 	/*  Au doigt, 44 px comme `.btn-icon` : il en mesurait 22 (#1329). La souris

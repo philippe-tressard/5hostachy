@@ -69,11 +69,11 @@
 				{errorMessage}
 			</div>
 			<div style="margin-top:1.5rem">
-				<p style="font-size:.9rem; color:var(--color-text-muted); margin-bottom:.75rem">
+				<p style="font-size:var(--fs-base); color:var(--color-text-muted); margin-bottom:.75rem">
 					Vous pouvez demander un nouveau lien de vérification :
 				</p>
 				{#if resendDone}
-					<div class="alert alert-success" style="font-size:.9rem">
+					<div class="alert alert-success" style="font-size:var(--fs-base)">
 						Si un compte non vérifié existe pour cette adresse, un nouveau lien vous a été envoyé.
 					</div>
 				{:else}
@@ -88,7 +88,7 @@
 				{/if}
 			</div>
 			<div style="text-align:center; margin-top:1rem">
-				<a href="/auth/connexion" style="font-size:.85rem; color:var(--color-text-muted)"
+				<a href="/auth/connexion" style="font-size:var(--fs-md); color:var(--color-text-muted)"
 					>Retour à la connexion</a
 				>
 			</div>

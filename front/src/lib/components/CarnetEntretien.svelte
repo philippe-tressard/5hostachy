@@ -200,7 +200,7 @@
 	}
 	.groupe-titre {
 		margin: 0 0 0.5rem;
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 		color: var(--color-primary);
 		border-bottom: 1px solid var(--color-border);
 		padding-bottom: 0.35rem;
@@ -230,7 +230,7 @@
 		box-shadow: inset 3px 0 0 var(--color-warning);
 	}
 	.quand {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		font-variant-numeric: tabular-nums;
 	}

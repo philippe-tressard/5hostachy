@@ -199,7 +199,7 @@
 	.motif-interdit {
 		flex-basis: 100%;
 		margin: 0;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 	/*  Sous 480 px, trois cases côte à côte deviennent illisibles : elles

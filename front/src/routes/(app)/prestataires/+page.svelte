@@ -782,7 +782,7 @@
 		flex-wrap: wrap;
 	}
 	.contrats-summary-count {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 	}
 

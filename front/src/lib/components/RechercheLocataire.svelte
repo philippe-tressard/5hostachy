@@ -134,7 +134,9 @@
 				<span class="locataire-selected-name">✓ {nomAffiche(trouve)}</span>
 				<span class="locataire-selected-email">{trouve.email}</span>
 				{#if !trouve.actif}
-					<span class="badge badge-yellow" style="font-size:.72rem">En attente d'activation</span>
+					<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
+						>En attente d'activation</span
+					>
 				{/if}
 			</div>
 			<button class="btn btn-xs btn-outline" on:click={reinitialiser} title="Changer de locataire"
@@ -269,7 +271,7 @@
 		font-size: 0.88rem;
 	}
 	.lr-email {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 	}
 	.locataire-selected {

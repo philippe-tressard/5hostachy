@@ -55,7 +55,7 @@
 		flex: 1;
 	}
 	.relance-alerte-text strong {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.relance-alerte-text span {
 		font-size: 0.78rem;

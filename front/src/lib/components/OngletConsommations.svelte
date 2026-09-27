@@ -320,7 +320,7 @@
 		gap: 0.2rem;
 	}
 	.releve-date {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		font-weight: 600;
 	}
 	.releve-note {

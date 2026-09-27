@@ -59,7 +59,7 @@
 		align-items: center;
 	}
 	.pastille-trouve {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		padding: 0.1rem 0.55rem;
 		border-radius: 999px;
 		background: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
@@ -68,7 +68,7 @@
 	}
 	.passage {
 		margin: 0;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		line-height: 1.35;
 		color: var(--color-text-muted);
 		padding: 0.3rem 0.55rem;

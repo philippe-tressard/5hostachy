@@ -356,7 +356,7 @@
 	}
 	.annonce-workflow-titre {
 		display: block;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		font-weight: 600;
 		color: var(--color-text-muted);
 		margin-bottom: 0.35rem;

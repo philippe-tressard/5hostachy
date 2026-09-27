@@ -235,16 +235,16 @@
 			<p class="etat-erreur-acces">{erreurAcces}</p>
 		{:else if typeLot === 'parking' || typeLot === 'cave'}
 			<p
-				style="font-size:0.85rem;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:.5rem .65rem;margin-bottom:.7rem"
+				style="font-size:var(--fs-md);color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:.5rem .65rem;margin-bottom:.7rem"
 			>
 				Ce bail concerne un {typeLot}. <strong>TC uniquement</strong> : les Vigik ne sont pas autorisés.
 			</p>
 		{:else if accesListe.length === 0}
-			<p style="color:var(--color-text-muted);font-size:0.9rem">
+			<p style="color:var(--color-text-muted);font-size:var(--fs-base)">
 				Aucun Vigik ni télécommande rattaché à ce lot.
 			</p>
 		{:else}
-			<p style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:0.6rem">
+			<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:0.6rem">
 				Sélection intelligente : utilisez un préréglage puis ajustez manuellement. Les règles de
 				cohérence sont appliquées automatiquement (ex. pas de Vigik pour un bail parking seul).
 			</p>
@@ -265,7 +265,7 @@
 				</div>
 			{/if}
 			<div class="table-wrap">
-				<table class="table" style="font-size:0.85rem">
+				<table class="table" style="font-size:var(--fs-md)">
 					<thead>
 						<tr>
 							<th style="width:2rem"></th>
@@ -366,7 +366,7 @@
 	    en mode compact, d'où cette règle est reprise. */
 	.etat-erreur-acces {
 		font-size: 0.875rem;
-		color: #b07d1e;
+		color: var(--color-warning);
 		font-weight: 500;
 		padding: 0.5rem 0;
 	}

@@ -364,7 +364,7 @@
 		max-width: 11rem;
 	}
 	.pastille-detail {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		opacity: 0.75;
 		font-weight: 400;
 	}

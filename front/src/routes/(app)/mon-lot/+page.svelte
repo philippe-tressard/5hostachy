@@ -395,12 +395,12 @@
 			<h3>Aucun lot associé</h3>
 			<p>Votre compte n'est pas encore lié à un lot.</p>
 			{#if $isLocataire}
-				<p style="font-size:.85rem;color:var(--color-text-muted);margin-top:.5rem">
+				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-top:.5rem">
 					Votre propriétaire doit vous rattacher depuis la section <strong>Gestion locative</strong> de
 					son espace.
 				</p>
 			{:else}
-				<p style="font-size:.85rem;color:var(--color-text-muted);margin-top:.5rem">
+				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-top:.5rem">
 					Si votre compte vient d'être validé, la liaison se fait automatiquement.<br />
 					Si aucun lot n'apparaît, contactez le gestionnaire du site ou
 					<a href="/tickets?nouveau=1" style="color:var(--color-primary)"
@@ -418,7 +418,7 @@
 					<span class="lbc-lot-badge"
 						>{monBailData.lot_batiment_nom ?? '—'} / {monBailData.lot_numero ?? '—'}</span
 					>
-					<span class="badge badge-green" style="font-size:.72rem"
+					<span class="badge badge-green" style="font-size:var(--fs-2xs)"
 						>{monBailData.statut === 'actif'
 							? 'Bail actif'
 							: monBailData.statut.replace('_', ' ')}</span
@@ -443,7 +443,7 @@
 						<dd>{fmt(monBailData.date_sortie_prevue)}</dd>{/if}
 				</dl>
 				{#if monBailData.bailleur_nom || monBailData.bailleur_prenom}
-					<div style="margin-top:.75rem;font-size:.85rem;color:var(--color-text-muted)">
+					<div style="margin-top:.75rem;font-size:var(--fs-md);color:var(--color-text-muted)">
 						🏢 Propriétaire : <strong
 							>{nomAffiche(monBailData.bailleur_prenom, monBailData.bailleur_nom)}</strong
 						>
@@ -523,7 +523,7 @@
 						{/if}
 					</div>
 					<div class="lpc-details">
-						<span class="badge badge-gray" style="font-size:.72rem;text-transform:capitalize"
+						<span class="badge badge-gray" style="font-size:var(--fs-2xs);text-transform:capitalize"
 							>{lot.type.replace('_', ' ')}{lot.type_appartement
 								? ` – ${lot.type_appartement}`
 								: ''}</span
@@ -622,7 +622,7 @@
 			<div class="lots-section-label" style="margin-top:1.8rem">
 				🔓 Lots vacants ({lotsVacants.length})
 			</div>
-			<p style="font-size:.85rem;color:var(--color-text-muted);margin:0 0 .6rem">
+			<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin:0 0 .6rem">
 				Ces lots n'ont pas de bail actif. Créez un bail depuis la fiche du lot ci-dessus ou l'onglet <strong
 					>Gestion locative</strong
 				>.
@@ -713,7 +713,7 @@
 				Supprimer définitivement le bail de <strong>{nomLocataire(bailASupprimer)}</strong> et tous ses
 				objets associés ?
 			</p>
-			<p style="color:var(--color-danger);font-size:0.85rem;margin-top:0.5rem">
+			<p style="color:var(--color-danger);font-size:var(--fs-md);margin-top:0.5rem">
 				Cette action est irréversible.
 			</p>
 		</div>
@@ -890,7 +890,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 	}
 	.loc-contact {
 		display: flex;

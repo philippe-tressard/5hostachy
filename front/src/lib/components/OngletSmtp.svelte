@@ -280,7 +280,7 @@
 					{smtpTesting ? 'Envoi...' : '📨 Envoyer un e-mail de test'}
 				</button>
 			</div>
-			<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.3rem">
+			<p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:.3rem">
 				Envoie un e-mail de test avec la configuration SMTP actuellement enregistrée en base,
 				<strong>depuis chacune des deux adresses d'expédition</strong> — celle qui n'attend pas de
 				réponse et celle qui en attend une. Un serveur peut accepter l'une et refuser l'autre,
@@ -304,7 +304,8 @@
 					bind:value={emailFooter}
 					rows="2"
 					placeholder="— Envoyé depuis 5hostachy.fr"
-					style="width:100%;resize:vertical;font-size:.85rem;font-family:monospace"></textarea>
+					style="width:100%;resize:vertical;font-size:var(--fs-md);font-family:monospace"
+				></textarea>
 				<span class="aide"
 					>Texte ajouté automatiquement en bas de chaque e-mail envoyé par la plateforme.</span
 				>

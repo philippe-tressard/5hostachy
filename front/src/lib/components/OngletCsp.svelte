@@ -133,10 +133,10 @@
 	}
 	.empty {
 		color: var(--color-text-muted);
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.csp-alerte {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		padding: 0.6rem 0.8rem;
 		margin: 0 0 1rem;
 		border-left: 3px solid var(--color-warning, #d97706);
@@ -171,7 +171,7 @@
 		border-color: var(--color-warning, #d97706);
 	}
 	.csp-bloque {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		word-break: break-all;
 	}
 </style>

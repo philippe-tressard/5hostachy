@@ -317,14 +317,14 @@
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		line-height: 1.3;
 	}
 	.lot-check-name {
 		flex: 1;
 	}
 	.lot-selection-hint {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-primary);
 		margin-top: 0.35rem;
 	}

@@ -87,7 +87,7 @@
 		position: relative;
 	}
 	.card-principal {
-		border-left: 3px solid var(--color-accent, #c9983a);
-		--avatar-bg: var(--color-accent, #c9983a);
+		border-left: 3px solid var(--color-accent);
+		--avatar-bg: var(--color-accent);
 	}
 </style>

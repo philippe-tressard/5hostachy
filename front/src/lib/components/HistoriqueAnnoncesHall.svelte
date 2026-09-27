@@ -268,7 +268,7 @@
 								? 's'
 								: ''}
 						{:else}
-							<span style="color:var(--color-warning,#B07D1E)">non envoyée</span>
+							<span style="color:var(--color-warning)">non envoyée</span>
 						{/if}
 					</small>
 					<p class="ah-card-apercu clamp-5">{annonce.apercu}</p>
@@ -329,7 +329,7 @@
 		margin-bottom: 0.5rem;
 	}
 	.ah-poids {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 	}
 </style>

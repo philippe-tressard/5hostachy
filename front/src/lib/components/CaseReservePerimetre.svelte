@@ -145,7 +145,7 @@
 	    Il annonce une conséquence IRRÉVERSIBLE — un message parti ne se retire
 	    pas d'un groupe — là où `.aide` explique un réglage. */
 	.avert-diffusion {
-		border-left: 3px solid var(--color-warning, #b07d1e);
+		border-left: 3px solid var(--color-warning);
 		background: var(--color-warning-light, #fffbeb);
 		border-radius: var(--radius);
 		padding: 0.6rem 0.8rem;
@@ -153,7 +153,7 @@
 	}
 	.avert-titre {
 		margin: 0 0 0.35rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		font-weight: 600;
 	}
 	.avert-liste {

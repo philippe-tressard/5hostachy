@@ -790,7 +790,7 @@
 		gap: 0.5rem;
 		color: var(--color-text-muted);
 		background: var(--color-bg);
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.photo-change-btn {
 		position: absolute;
@@ -801,7 +801,7 @@
 		border: none;
 		border-radius: var(--radius);
 		padding: 0.35rem 0.75rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		cursor: pointer;
 		backdrop-filter: blur(4px);
 		transition: background var(--duree-geste);

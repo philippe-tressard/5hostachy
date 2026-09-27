@@ -249,7 +249,7 @@
 	/*  L'avertissement juridique du formulaire : il était écrit en `style=` sur
 	    la balise, ce que `lint:charte` ne peut pas relire. */
 	.avertissement {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0;
 		padding: 0.25rem 0.5rem;
@@ -294,7 +294,7 @@
 	}
 	.deleg-name {
 		font-weight: 600;
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 	}
 	.deleg-arrow {
 		color: var(--color-text-muted);
@@ -311,7 +311,7 @@
 		color: var(--color-text-muted);
 	}
 	.deleg-motif {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0.25rem 0 0;
 		font-style: italic;

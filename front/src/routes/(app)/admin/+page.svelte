@@ -627,26 +627,30 @@
 							<td style="font-weight:500"
 								>{nomAffiche(u)}
 								{#if u.statut === 'locataire' && u.nom_proprietaire}
-									<div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">
+									<div
+										style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:.15rem"
+									>
 										&#x1F464; Prop. : {u.nom_proprietaire}
 									</div>
 								{/if}
 								{#if (u.statut === 'aidant' || u.statut === 'mandataire') && u.nom_aide}
-									<div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">
+									<div
+										style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:.15rem"
+									>
 										&#x1F464; Aidé : {u.prenom_aide}
 										{u.nom_aide}
 									</div>
 								{/if}
 							</td>
 							<td
-								><span class="badge {badgeStatut(u.statut)}" style="font-size:.75rem"
+								><span class="badge {badgeStatut(u.statut)}" style="font-size:var(--fs-xs)"
 									>{LIBELLES_STATUT_ABREGE[u.statut] ?? u.statut}</span
 								></td
 							>
 							<td>
 								<div style="display:flex;gap:.25rem;flex-wrap:wrap">
 									{#each u.roles?.length ? u.roles : [u.role] as r (r)}
-										<span class="badge {badgeRole(r)}" style="font-size:.75rem"
+										<span class="badge {badgeRole(r)}" style="font-size:var(--fs-xs)"
 											>{libelleRole(r)}</span
 										>
 									{/each}
@@ -668,7 +672,7 @@
 									<span style="color:var(--color-text-muted)">—</span>
 								{/if}
 							</td>
-							<td style="color:var(--color-text-muted);font-size:.8rem">{fmt(u.cree_le)}</td>
+							<td style="color:var(--color-text-muted);font-size:var(--fs-sm)">{fmt(u.cree_le)}</td>
 							<td>
 								<div class="action-row">
 									<AccepterRefuser
@@ -732,7 +736,9 @@
 							<td style="font-weight:500">#{cmd.user_id}</td>
 							<td><span class="badge badge-blue">{cmd.type}</span></td>
 							<td style="color:var(--color-text-muted)">{cmd.lot_id ?? ''}</td>
-							<td style="color:var(--color-text-muted);font-size:.8rem">{fmt(cmd.cree_le)}</td>
+							<td style="color:var(--color-text-muted);font-size:var(--fs-sm)"
+								>{fmt(cmd.cree_le)}</td
+							>
 							<td>
 								<div class="action-row">
 									<AccepterRefuser
@@ -779,7 +785,9 @@
 								<td style="font-weight:500">
 									{nomAffiche(u)}
 									{#if u.statut === 'locataire' && u.nom_proprietaire}
-										<div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">
+										<div
+											style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:.15rem"
+										>
 											🏠 Bailleur : {u.nom_proprietaire}
 										</div>
 									{/if}
@@ -796,9 +804,9 @@
 										{/each}
 									</div>
 								</td>
-								<td style="color:var(--color-text-muted);font-size:.85rem">{u.email}</td>
+								<td style="color:var(--color-text-muted);font-size:var(--fs-md)">{u.email}</td>
 								<td>
-									<span class="badge {badgeStatut(u.statut)}" style="font-size:.75rem">
+									<span class="badge {badgeStatut(u.statut)}" style="font-size:var(--fs-xs)">
 										{LIBELLES_STATUT_ABREGE[u.statut] ?? u.statut ?? '—'}
 									</span>
 								</td>
@@ -825,7 +833,7 @@
 								</td>
 								<td>
 									{#if !u.actif}
-										<span class="muted" style="font-size:.8rem">Compte inactif</span>
+										<span class="muted" style="font-size:var(--fs-sm)">Compte inactif</span>
 									{:else}
 										<div class="action-row">
 											<!-- Ajouter CS si pas déjà — réservé aux propriétaires -->
@@ -948,7 +956,7 @@
 				{roleEnCours.action === 'ajouter' ? 'à' : 'de'}
 				<strong>{nomAffiche(roleEnCours.user)}</strong> ?
 				<br />
-				<span style="font-size:.8rem;color:var(--color-text-muted)">
+				<span style="font-size:var(--fs-sm);color:var(--color-text-muted)">
 					Cette personne recevra une notification.
 				</span>
 			</p>
@@ -985,7 +993,7 @@
 			styleBoite="max-width:480px"
 			on:fermer={() => (accueilModal = null)}
 		>
-			<p style="font-size:.85rem;margin-bottom:.1rem">
+			<p style="font-size:var(--fs-md);margin-bottom:.1rem">
 				<strong>{nomAffiche(accueilModal.user)}</strong>
 			</p>
 			<p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:.75rem">
@@ -1020,7 +1028,7 @@
 			<p style="font-size:.875rem;margin-bottom:1rem">
 				Vous êtes sur le point de supprimer définitivement le compte de
 				<strong>{nomAffiche(deleteConfirm)}</strong> ({deleteConfirm.email}).
-				<br /><span style="color:var(--color-danger);font-size:.8rem"
+				<br /><span style="color:var(--color-danger);font-size:var(--fs-sm)"
 					>Cette action est irréversible.</span
 				>
 			</p>
@@ -1055,7 +1063,7 @@
 						<tr>
 							<td>
 								<div style="font-weight:600">{d.utilisateur_nom}</div>
-								<div style="font-size:.8rem;color:var(--color-text-muted)">
+								<div style="font-size:var(--fs-sm);color:var(--color-text-muted)">
 									{d.utilisateur_email}
 								</div>
 							</td>
@@ -1183,7 +1191,7 @@
 		margin-bottom: 0;
 	}
 	.tabs-group-label {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
@@ -1203,7 +1211,7 @@
 	}
 	.btn-sm {
 		padding: 0.3rem 0.7rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 	/*  🔴 `.refus-inline` est partie le 07/09/2026 avec le balisage qu'elle
 	    habillait : `AccepterRefuser.svelte` porte le geste « accepter · refuser
@@ -1225,7 +1233,7 @@
 	/*  La charte porte fond, bordure, rayon, curseur et couleur ;
     seuls la taille et le remplissage sont propres a cet ecran (#607, 28/08/2026). */
 	.btn-outline {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		padding: 0.3rem 0.7rem;
 	}
 	@media (hover: hover) and (pointer: fine) {
@@ -1241,7 +1249,7 @@
 		grid-template-columns: 1fr 1fr;
 	}
 	.ref-meta {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		white-space: nowrap;
 	}
 	.user-tags {

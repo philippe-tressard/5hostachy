@@ -496,7 +496,7 @@
 
 <style>
 	.categorie-title {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
@@ -505,7 +505,7 @@
 	}
 	.btn-edit-cat {
 		opacity: 0.4;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		transition: opacity var(--duree-geste);
 		margin-top: 0.75rem;
 	}
@@ -521,7 +521,7 @@
 		margin: 1.25rem 0 0.35rem;
 	}
 	.categorie-input {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		font-weight: 700;
 		padding: 0.3rem 0.5rem;
 		max-width: 300px;
@@ -586,7 +586,7 @@
 	}
 	.reorder-question {
 		flex: 1;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.reorder-arrows {
 		display: flex;

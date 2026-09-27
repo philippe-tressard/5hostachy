@@ -274,15 +274,21 @@
 						class:imp-row-ignore={imp.statut === 'ignore'}
 					>
 						<td style="font-weight:600">{imp.nom_coproprietaire ?? '—'}</td>
-						<td style="font-size:.8rem;color:var(--color-text-muted)"
+						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
 							>{imp.no_coproprietaire ?? '—'}</td
 						>
-						<td style="font-size:.8rem;font-weight:600">{imp.batiment_nom ?? imp.batiment_id}</td>
+						<td style="font-size:var(--fs-sm);font-weight:600"
+							>{imp.batiment_nom ?? imp.batiment_id}</td
+						>
 						<td style="font-weight:500">{imp.numero}</td>
 						<td><span class="badge badge-type">{imp.type_raw}</span></td>
-						<td style="font-size:.8rem;color:var(--color-text-muted)">{imp.etage_raw ?? '—'}</td>
-						<td style="font-size:.8rem;color:var(--color-text-muted)">{imp.lot_label ?? '—'}</td>
-						<td style="font-size:.8rem">
+						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
+							>{imp.etage_raw ?? '—'}</td
+						>
+						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
+							>{imp.lot_label ?? '—'}</td
+						>
+						<td style="font-size:var(--fs-sm)">
 							{#if imp.utilisateurs?.length}
 								<div class="occupants-list">
 									{#each imp.utilisateurs as occ (occ.user_id ?? occ.type_lien)}
@@ -332,7 +338,8 @@
 								</div>
 							{:else if imp.statut === 'resolu'}
 								<div class="action-row">
-									<span class="badge badge-green" style="font-size:.75rem">✓ Lot #{imp.lot_id}</span
+									<span class="badge badge-green" style="font-size:var(--fs-xs)"
+										>✓ Lot #{imp.lot_id}</span
 									>
 									<button
 										class="btn-icon-edit"
@@ -350,7 +357,7 @@
 						<tr class="imp-edit-row">
 							<td colspan="10">
 								<div class="imp-edit-form card" style="margin:.5rem 0">
-									<h3 style="font-size:.9rem;font-weight:700;margin-bottom:.75rem">
+									<h3 style="font-size:var(--fs-base);font-weight:700;margin-bottom:.75rem">
 										Lier : <em
 											>{imp.nom_coproprietaire ?? '—'} — Bât. {imp.batiment_nom ?? imp.batiment_id} n°{imp.numero}
 											({imp.type_raw})</em
@@ -371,7 +378,7 @@
 									<!-- Occupants -->
 									<div class="occupants-editor">
 										<div class="occupants-header">
-											<span style="font-size:.85rem;font-weight:600">Occupants du lot</span>
+											<span style="font-size:var(--fs-md);font-weight:600">Occupants du lot</span>
 											<button
 												type="button"
 												class="btn btn-sm btn-outline"
@@ -431,7 +438,7 @@
 	.badge-type {
 		background: #f0f4ff;
 		color: #1e40af;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		padding: 0.1rem 0.4rem;
 		border-radius: 4px;
 		font-weight: 600;
@@ -473,11 +480,11 @@
 		display: flex;
 		gap: 0.35rem;
 		align-items: baseline;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 	.occ-role {
 		font-weight: 600;
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 	}
 
 	@media (max-width: 767px) {

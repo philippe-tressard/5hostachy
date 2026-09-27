@@ -269,7 +269,7 @@
 									placeholder="Motif"
 									aria-label="Motif de la mise hors relance"
 									bind:value={relanceMotifTemp}
-									style="font-size:.8rem;padding:2px 6px;border:1px solid var(--color-border);border-radius:4px;width:180px"
+									style="font-size:var(--fs-sm);padding:2px 6px;border:1px solid var(--color-border);border-radius:4px;width:180px"
 								/>
 								<button
 									class="btn btn-sm btn-primary"
@@ -335,12 +335,12 @@
      coupait entre « Non » et « relançable », et la seconde ligne chevauchait le
      badge voisin — à l'écran comme à l'impression. */
 	.relance-tag-action {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		padding: 1px 6px;
 		white-space: nowrap;
 	}
 	.relance-numero {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		font-weight: 700;
 		color: var(--color-primary);
 		white-space: nowrap;
@@ -362,7 +362,7 @@
 		flex-shrink: 0;
 	}
 	.relance-date {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		color: var(--color-text-muted);
 		white-space: nowrap;
 	}
@@ -404,7 +404,7 @@
 		color: var(--color-text-muted);
 	}
 	.rep-tickets {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin-bottom: 0.4rem;
 	}

@@ -345,7 +345,7 @@
 		gap: 0.4rem;
 		flex-wrap: wrap;
 		margin: 0 0 0.6rem;
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
@@ -405,7 +405,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		text-transform: none;
 		letter-spacing: normal;
 		font-weight: 600;
@@ -429,7 +429,7 @@
 		flex-basis: 100%;
 		min-width: 0;
 		padding-left: 1.4rem;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		line-height: 1.35;
 	}
 	.section-chev {
@@ -439,7 +439,7 @@
 	/*  Le badge ne suit PAS les petites capitales du titre : c'est une valeur,
 	    pas un intitulé — la lire en majuscules espacées la rendrait illisible. */
 	.section-badge {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		text-transform: none;
 		letter-spacing: normal;
 		font-weight: 600;

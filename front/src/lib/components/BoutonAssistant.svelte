@@ -65,7 +65,7 @@
 	    Seul ce qui le DISTINGUE est écrit ici. */
 	.etincelle {
 		display: inline-block;
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		line-height: 1;
 	}
 	/*  L'attente se voit : sans cela, un appel de trois secondes ne se distingue

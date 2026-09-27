@@ -409,10 +409,10 @@
 		}
 	}
 	.ref-titre {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	.ref-code {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 		margin-left: auto;
 	}

@@ -286,7 +286,7 @@
 		gap: 0.5rem;
 	}
 	.flux-heure {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
 		white-space: nowrap;
 	}
@@ -312,7 +312,7 @@
 		display: block;
 	}
 	.flux-detail {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0.15rem 0 0;
 		line-height: 1.4;
@@ -337,7 +337,7 @@
 		align-items: center;
 		gap: 0.35rem;
 		flex-wrap: wrap;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		margin-top: 0.35rem;
 	}
 

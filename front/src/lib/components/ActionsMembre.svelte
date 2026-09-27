@@ -177,7 +177,7 @@
 	.btn-icon-move {
 		border-color: var(--color-border);
 		color: var(--color-text-muted);
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.btn-icon-move:hover:not(:disabled) {
@@ -190,13 +190,13 @@
 		cursor: not-allowed;
 	}
 	.btn-icon-star {
-		border-color: var(--color-accent, #c9983a);
-		color: var(--color-accent, #c9983a);
+		border-color: var(--color-accent);
+		color: var(--color-accent);
 		font-size: 0.875rem;
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.btn-icon-star:hover {
-			background: var(--color-accent, #c9983a);
+			background: var(--color-accent);
 			color: #fff;
 		}
 	}

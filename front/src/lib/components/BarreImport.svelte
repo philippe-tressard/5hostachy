@@ -84,7 +84,7 @@
 
 <div class="card imp-upload-section">
 	<h2 class="section-title">Importer un fichier Excel</h2>
-	<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">
+	<p class="muted" style="font-size:var(--fs-md);margin-bottom:.75rem">
 		Colonnes attendues : <code>{colonnesAttendues}</code>
 	</p>
 	<div class="imp-upload-row">
@@ -101,7 +101,7 @@
 
 <div class="imp-toolbar">
 	<div class="imp-filtres">
-		<span class="muted" style="font-size:.85rem">Filtrer :</span>
+		<span class="muted" style="font-size:var(--fs-md)">Filtrer :</span>
 		{#each statuts as s (s)}
 			<button
 				class="btn btn-sm {filtre === s ? 'btn-primary' : 'btn-outline'}"

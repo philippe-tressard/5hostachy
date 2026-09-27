@@ -207,7 +207,7 @@
 		background: var(--color-bg);
 		border-left: 3px solid var(--color-primary);
 		border-radius: 0 var(--radius) var(--radius) 0;
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		white-space: pre-wrap;
 	}
 </style>

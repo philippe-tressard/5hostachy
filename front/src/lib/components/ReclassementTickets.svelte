@@ -138,7 +138,7 @@
 	    Seul reste ici ce qui n'existe nulle part ailleurs : le titre de groupe,
 	    qui porte un compteur à côté de son libellé. */
 	.sous-titre {
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		font-weight: 600;
 		margin: 1.25rem 0 0.5rem;
 		display: flex;

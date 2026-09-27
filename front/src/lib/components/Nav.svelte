@@ -223,7 +223,7 @@
 		left: 0;
 		width: 185px;
 		height: 100vh;
-		background: #fff;
+		background: var(--color-surface);
 		border-right: 1px solid var(--color-border);
 		display: flex;
 		flex-direction: column;
@@ -273,7 +273,7 @@
 		padding: 0.55rem 0.75rem;
 		border-radius: var(--radius);
 		color: var(--color-text);
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 		text-decoration: none;
 		transition: background var(--duree-geste);
 		border: none;
@@ -335,7 +335,7 @@
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background: #fff;
+		background: var(--color-surface);
 		z-index: 200;
 		flex-direction: column;
 		overflow-y: auto;
@@ -436,7 +436,7 @@
 			left: 0;
 			right: 0;
 			height: 3.25rem;
-			background: #fff;
+			background: var(--color-surface);
 			border-bottom: 1px solid var(--color-border);
 			padding: 0 1rem;
 			z-index: 100;

@@ -180,7 +180,7 @@
 										<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
 										<span
 											class="badge badge-gray"
-											style="font-size:.72rem;text-transform:capitalize"
+											style="font-size:var(--fs-2xs);text-transform:capitalize"
 											>{lot.type.replace('_', ' ')}{lot.type_appartement
 												? ` – ${lot.type_appartement}`
 												: ''}</span
@@ -240,7 +240,7 @@
 							{/if}
 
 							<div
-								style="display:flex;gap:2rem;font-size:0.85rem;margin-bottom:.75rem;flex-wrap:wrap"
+								style="display:flex;gap:2rem;font-size:var(--fs-md);margin-bottom:.75rem;flex-wrap:wrap"
 							>
 								<span><strong>Entrée :</strong> {fmt(bail.date_entree)}</span>
 								<span><strong>Sortie prévue :</strong> {fmt(bail.date_sortie_prevue)}</span>
@@ -252,7 +252,7 @@
 							{#if bail.notes}
 								<div
 									class="rich-content"
-									style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:.75rem;font-style:italic"
+									style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:.75rem;font-style:italic"
 								>
 									{@html safeHtml(bail.notes)}
 								</div>

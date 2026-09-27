@@ -1729,6 +1729,13 @@ jobs:
         working-directory: front
         run: npm run lint:mouvement
 
+      # 266 couleurs et 569 tailles de texte en dur dans les écrans, pour une
+      # charte qui les nomme (#1055, 27/09/2026). Plafond décroissant : il
+      # refuse d'en ajouter, et d'oublier de le baisser quand on en retire.
+      - name: Couleurs et tailles de texte viennent de la charte
+        working-directory: front
+        run: npm run lint:charte-valeurs
+
       # La dernière ligne d'une carte différait sur neuf points entre la carte
       # d'affaire, celle d'actualité et le fil (27/09/2026, arbitré à l'écran).
       # Une ligne : `PastillesAffaire` ; un auteur : `AuteurCarte` (✍️).

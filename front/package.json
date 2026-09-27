@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.72.1",
+	"version": "2.73.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -96,6 +96,7 @@
 		"lint:animations-infinies": "node scripts/check-animations-infinies.mjs --selftest && node scripts/check-animations-infinies.mjs",
 		"lint:options-en-double": "node scripts/check-options-en-double.mjs --selftest && node scripts/check-options-en-double.mjs",
 		"lint:mouvement": "node scripts/check-mouvement.mjs --selftest && node scripts/check-mouvement.mjs",
+		"lint:charte-valeurs": "node scripts/check-charte-valeurs.mjs --selftest && node scripts/check-charte-valeurs.mjs",
 		"lint:pastilles": "node scripts/check-pastilles.mjs --selftest && node scripts/check-pastilles.mjs",
 		"lint:manuel-pastilles": "node scripts/check-manuel-pastilles.mjs",
 		"lint:chargement": "node scripts/check-chargement.mjs --selftest && node scripts/check-chargement.mjs",

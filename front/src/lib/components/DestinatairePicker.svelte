@@ -106,7 +106,7 @@
 		margin-bottom: 0.3rem;
 	}
 	.destinataire-badge {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		margin-left: 0.4rem;
 	}
 </style>

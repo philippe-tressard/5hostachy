@@ -441,7 +441,7 @@
 		margin-bottom: 0.3rem;
 	}
 	.perimetre-badge {
-		font-size: 0.72rem;
+		font-size: var(--fs-2xs);
 		margin-left: 0.4rem;
 	}
 	/*  Le résumé d'une pastille contractée : légèrement en retrait pour qu'on lise
@@ -457,7 +457,7 @@
 		padding-left: 0.1rem;
 	}
 	.perimetre-precision {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0 0 0.35rem;
 	}

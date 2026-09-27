@@ -78,6 +78,6 @@
 <style>
 	.pa-cat {
 		flex-shrink: 0;
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 	}
 </style>

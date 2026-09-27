@@ -188,7 +188,7 @@
 	}
 	.apercu-attente {
 		color: var(--color-text-muted);
-		font-size: 0.9rem;
+		font-size: var(--fs-base);
 	}
 	/*  L'émoji d'en-tête d'un canal, aligné sur l'icône SVG du canal voisin.
 	    Défini ICI : `.ico` n'est pas une classe d'`app.css`, et chaque composant
@@ -214,12 +214,12 @@
 		align-items: center;
 		gap: 0.45rem;
 		flex-wrap: wrap;
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 		font-weight: 600;
 		margin: 0 0 0.6rem;
 	}
 	.apercu-motif {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-danger);
 		margin: 0;
 	}
@@ -240,7 +240,7 @@
 		display: block;
 		border: 1px solid var(--color-border);
 		border-radius: 6px;
-		background: #fff;
+		background: var(--color-surface);
 	}
 	/*  Le message WhatsApp se lit en chasse fixe et EN CONSERVANT ses sauts de
 	    ligne : c'est exactement ce que le groupe verra, retours compris. */
