@@ -98,15 +98,24 @@
 	/*  Ces règles suivent le balisage : Svelte scope les styles au composant, et
 	    les laisser dans la page en aurait fait des sélecteurs orphelins — c'est
 	    exactement la régression #344 (balisage parti, règles restées derrière). */
+	/*  🔴 REPLIÉ, IL NE TIENT QU'UNE LIGNE SERRÉE (27/09/2026).
+	    Signalé à l'écran : *« Affaires urgentes prend trop de place, divise par
+	    2 ou 3 l'espace en hauteur »*. Replié, le bandeau faisait ~70 px (padding
+	    0,7 rem, titre 0,95 rem en interligne 1,6, marge basse 1,25 rem) — plus
+	    que la première carte d'affaire. Il en fait ~30 à la souris.
+	    ⚠️ Seul l'ENCOMBREMENT change : le texte juridique est intact, et au
+	    doigt la ligne garde ses 44 px (`standards/11` §10, même règle que
+	    `.section-pliee`) — sans quoi l'avertissement ne s'ouvrirait plus au
+	    pouce, et rien ne le dirait. */
 	.urgence-disclaimer {
 		background: #fff7ed;
-		border: 1.5px solid #fed7aa;
-		border-left: 5px solid #ea580c;
+		border: 1px solid #fed7aa;
+		border-left: 3px solid #ea580c;
 		border-radius: var(--radius);
 		padding: 0;
-		margin-bottom: 1.25rem;
-		font-size: 0.85rem;
-		line-height: 1.6;
+		margin-bottom: 0.5rem;
+		font-size: 0.8rem;
+		line-height: 1.5;
 		color: #431407;
 		overflow: hidden;
 	}
@@ -117,10 +126,16 @@
 		width: 100%;
 		background: none;
 		border: none;
-		padding: 0.7rem 1.1rem;
+		padding: 0.2rem 0.75rem;
 		cursor: pointer;
 		text-align: left;
 		gap: 0.5rem;
+		line-height: 1.3;
+	}
+	@media (pointer: coarse) {
+		.urgence-disclaimer-toggle {
+			min-height: 44px;
+		}
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.urgence-disclaimer-toggle:hover {
@@ -129,24 +144,24 @@
 	}
 	.urgence-disclaimer-title {
 		font-weight: 700;
-		font-size: 0.95rem;
+		font-size: 0.8rem;
 		color: #9a3412;
 	}
 	.urgence-disclaimer-chevron {
-		font-size: 0.7rem;
+		font-size: 0.6rem;
 		color: #9a3412;
 		flex-shrink: 0;
 	}
 	.urgence-disclaimer p {
 		margin: 0 0 0.45rem;
-		padding: 0 1.1rem;
+		padding: 0 0.75rem;
 	}
 	.urgence-disclaimer p:first-of-type {
 		padding-top: 0.2rem;
 	}
 	.urgence-disclaimer ul {
-		margin: 0.3rem 0 0.45rem 1.1rem;
-		padding: 0 1.1rem 0 0;
+		margin: 0.3rem 0 0.45rem 0.75rem;
+		padding: 0 0.75rem 0 0;
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;
@@ -167,6 +182,6 @@
 		font-style: italic;
 		margin-top: 0.3rem !important;
 		border-top: 1px solid #fed7aa;
-		padding: 0.45rem 1.1rem 0.85rem !important;
+		padding: 0.45rem 0.75rem 0.6rem !important;
 	}
 </style>
