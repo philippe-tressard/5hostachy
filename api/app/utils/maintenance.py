@@ -12,6 +12,7 @@ from app.auth.jetons_rafraichissement import purger as purger_jetons
 from app.utils.noeud import noeud_courant
 from app.utils.requete_liee import requete_liee
 from app.utils.declenchement import AUTOMATIQUE
+from app.utils.llm_journal import limite_conservation
 from app.database import engine
 from app.models.core import (
     HistoriqueMaintenance,
@@ -50,7 +51,8 @@ def purger() -> tuple[dict[str, int], list[str]]:
     maintenant = horloge.maintenant()
     il_y_a_90_j = maintenant - timedelta(days=90)
     comptes = dict.fromkeys(
-        ("tokens", "prt", "notifications", "historique", "emails", "whatsapp", "evolutions"), 0
+        ("tokens", "prt", "notifications", "historique", "emails", "ia", "whatsapp", "evolutions"),
+        0,
     )
     erreurs: list[str] = []
 
@@ -87,6 +89,13 @@ def purger() -> tuple[dict[str, int], list[str]]:
             "purge historique emails",
             "DELETE FROM historique_email WHERE cree_le < :cutoff",
             {"cutoff": maintenant - timedelta(days=CONSERVATION_COURRIELS_JOURS)},
+        ),
+        #  Le journal de l'assistant IA : treize mois de détail (#1383).
+        (
+            "ia",
+            "purge journal IA",
+            "DELETE FROM appel_ia WHERE cree_le < :cutoff",
+            {"cutoff": limite_conservation(maintenant)},
         ),
     )
     for cle, libelle, sql, params in etapes:

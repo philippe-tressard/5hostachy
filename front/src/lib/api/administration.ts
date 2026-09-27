@@ -303,6 +303,28 @@ const ROUTES_LANCEMENT: Record<string, string> = {
 	telemetrie: '/admin/telemetry/agreger',
 };
 
+/**  Une ligne de consommation : un usage, un modèle, un mois. */
+export interface LigneConsommationIA {
+	usage: string;
+	libelle: string;
+	modele: string;
+	appels: number;
+	erreurs: number;
+	/** Appels refusés AVANT l'envoi : plafond mensuel atteint. */
+	refus: number;
+	jetons_entree: number;
+	jetons_sortie: number;
+	/** Au tarif saisi pour l'usage ; `null` sans tarif — jamais 0, qui dirait « gratuit ». */
+	cout_centimes: number | null;
+}
+
+/**  La consommation de l'assistant IA (`GET /config/llm-consommation`). */
+export interface ConsommationIA {
+	mois: { mois: string; usages: LigneConsommationIA[] }[];
+	plafonds: { usage: string; libelle: string; plafond: number; consommes: number }[];
+	mois_courant: string;
+}
+
 /** Un usage de l'assistant IA, tel que `GET /config/llm-usages` le décrit. */
 export interface UsageIA {
 	code: string;
@@ -311,7 +333,10 @@ export interface UsageIA {
 	prompt_defaut: string;
 	max_jetons_defaut: number;
 	/** Les clés `ConfigSite` de ses réglages : `actif`, `modele`, `prompt`, `max_jetons`. */
-	cles: Record<'actif' | 'modele' | 'prompt' | 'max_jetons', string>;
+	cles: Record<
+		'actif' | 'modele' | 'prompt' | 'max_jetons' | 'plafond_mois' | 'prix_entree' | 'prix_sortie',
+		string
+	>;
 }
 
 export const config = {
@@ -355,6 +380,9 @@ export const config = {
 	/**  Les USAGES de l'assistant — la SEULE liste (#984) : l'écran rend un bloc
 	 *   par entrée. Les valeurs courantes, elles, viennent de `admin()`. */
 	llmUsages: () => api.get<UsageIA[]>('/config/llm-usages'),
+	/**  Ce que l'assistant a consommé, par mois, usage et modèle — lu par
+	 *   `ConsommationIA`, dans l'onglet Maintenance (#1383). */
+	llmConsommation: () => api.get<ConsommationIA>('/config/llm-consommation'),
 	/**  Les modèles que la clé enregistrée peut RÉELLEMENT appeler, demandés au
 	 *   fournisseur. `listable: false` n'est pas une erreur : Azure n'expose pas
 	 *   ses déploiements, et une clé peut synthétiser sans avoir le droit de

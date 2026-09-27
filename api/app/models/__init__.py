@@ -27,3 +27,4 @@ from app.models.gouvernance import MembreSyndic as MembreSyndic
 from app.models.gouvernance import SyndicInfo as SyndicInfo
 from app.models.evenement import EvenementEvolution as EvenementEvolution
 from app.models.affaires_liees import AffaireLiee as AffaireLiee
+from app.models.ia import AppelIA as AppelIA

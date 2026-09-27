@@ -10,6 +10,7 @@
 <script lang="ts">
 	import ControleSante from '$lib/components/ControleSante.svelte';
 	import ControlesFiabilite from '$lib/components/ControlesFiabilite.svelte';
+	import ConsommationIA from '$lib/components/ConsommationIA.svelte';
 	import IntegriteReferentielle from '$lib/components/IntegriteReferentielle.svelte';
 	import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
 </script>
@@ -31,5 +32,6 @@
       compenser aurait réduit en silence ce qu'un administrateur peut voir. -->
 <TachesPlanifiees />
 <ControlesFiabilite />
+<ConsommationIA />
 <IntegriteReferentielle />
 <ControleSante />

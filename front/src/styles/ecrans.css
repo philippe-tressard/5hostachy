@@ -180,6 +180,15 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	font-weight: 700;
 	margin-bottom: 0.75rem;
 }
+/* La phrase qui dit, sous son titre, ce qu'un bloc d'administration montre.
+   Remontée ici le 27/09/2026 : les cartes « Contrôles de fiabilité » et
+   « Consommation de l'assistant IA » l'écrivaient chacune à l'identique — et
+   `lint:css-duplique` l'a refusé à la seconde. */
+.config-section-intro {
+	margin: 0 0 1rem;
+	max-width: 70ch;
+	font-size: 0.85rem;
+}
 .muted {
 	color: var(--color-text-muted);
 }
