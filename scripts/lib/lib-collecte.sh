@@ -222,3 +222,9 @@ else
 fi
 echo "sudosurface=$(printf "%s" "$SURF" | sed -n "s/.*NOPASSWD:[[:space:]]*//p" | sed "s/[[:space:]]*$//" | sort -u | tr "\\n" "|")"
 '
+
+# C30 (#1378) : ce que le noeud sait de ses mises a jour systeme. La collecte
+# vit avec ses verdicts, dans `lib-mises-a-jour.sh` ; elle rejoint ici la chaine
+# executee sur les deux noeuds, et donc le `bash -n` de `verdicts_selftest`.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-mises-a-jour.sh"
+COLLECT="$COLLECT$COLLECT_MAJ"

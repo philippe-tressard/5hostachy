@@ -514,9 +514,9 @@ drapeau `Secure`. C'est le « gap .env du 15/07/2026 ». La règle vit dans
 | Cron root (identique sur les 2 nœuds) | Rôle |
 |---|---|
 | `0 2 * * *` `bascule.sh` | bascule active/standby |
-| `0 3 * * 0` `maintenance.sh` | purges **demandées à l'API** (`POST /admin/maintenance/purges` — jamais `docker exec … python`, #1232), VACUUM API arrêtée, rotation des logs |
+| `0 3 * * 0` `maintenance.sh` | purges **demandées à l'API** (`POST /admin/maintenance/purges` — jamais `docker exec … python`, #1232), VACUUM API arrêtée ; sur les **deux** nœuds, images de base re-tirées (#1379) et rotation des logs |
 | `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS |
-| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C29** (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN`. ⚠️ La moitié vit dans les modules de `scripts/lib/`, et greper « C25 » dans le script ne le trouve pas. **Où vit chacun** : `grep -rn "── C[0-9]" scripts/` — cette ligne en tenait la liste, et elle plaçait C27 dans le mauvais module (23/09/2026) |
+| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C30** (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN`. ⚠️ La moitié vit dans les modules de `scripts/lib/`, et greper « C25 » dans le script ne le trouve pas. **Où vit chacun** : `grep -rn "── C[0-9]" scripts/` — cette ligne en tenait la liste, et elle plaçait C27 dans le mauvais module (23/09/2026) |
 
 **Les tâches de l'API**, elles, tournent **dans le process** et se déclarent dans
 `app/utils/taches.TACHES_PERMANENTES` — avec, pour chacune, **ce qu'on perd** si
