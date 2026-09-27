@@ -23,7 +23,7 @@ from app.utils.nature_affaire import ACTUALITE
 from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
 
-from .commun import ContexteFlux, badges_marqueurs, perimetres_de, strip_html
+from .commun import ContexteFlux, badges_marqueurs, pastilles_affaire, perimetres_de, strip_html
 from .schemas import FluxItem
 
 
@@ -82,6 +82,8 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                     "auteur": auteur,
                     "photos_urls": parse_photos(t.photos_urls),
                     "perimetre_codes": perimetres_de(t),
+                    #  La même ligne que la carte d'affaire (27/09/2026).
+                    "affaire": pastilles_affaire(t),
                 },
             )
         )

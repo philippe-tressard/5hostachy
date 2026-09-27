@@ -31,7 +31,7 @@ import { neutraliserCommentaires } from './lib-commentaires.mjs';
 import { chargerModule } from './lib/charger-module.mjs';
 
 const TICKETS = 'src/lib/tickets.ts';
-const CARTE = 'src/lib/components/CarteTicket.svelte';
+const CARTE = 'src/lib/components/PastillesAffaire.svelte';
 
 /** Le rendu dédié → l'option qu'il dit déjà. */
 const RENDUS_DEDIES = {

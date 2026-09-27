@@ -73,7 +73,12 @@ def _collecter_sondages(ctx: ContexteFlux) -> list[FluxItem]:
                     icon="📊",
                     badges=["En cours"],
                     lien=lien_sondage(s.id),
-                    meta={"sondage_id": s.id, "nb_votants": nb_votants, "full_html": s.description},
+                    meta={
+                        "sondage_id": s.id,
+                        "nb_votants": nb_votants,
+                        "full_html": s.description,
+                        "assiste_ia": s.assiste_ia,
+                    },
                 )
             )
             continue
@@ -104,6 +109,7 @@ def _collecter_sondages(ctx: ContexteFlux) -> list[FluxItem]:
                     "nb_votants": nb_votants,
                     "gagnant": gagnant,
                     "full_html": s.description,
+                    "assiste_ia": s.assiste_ia,
                 },
             )
         )
@@ -154,6 +160,7 @@ def _collecter_annonces(ctx: ContexteFlux) -> list[FluxItem]:
                     "statut": a.statut,
                     "prix": a.prix,
                     "auteur": auteur_nom(ctx.session, a.auteur_id) if a.contact_visible else None,
+                    "assiste_ia": a.assiste_ia,
                     "resume": strip_html(a.description),
                     #  Même clé que partout ailleurs : la vignette du fil (FluxVignette)
                     #  ne connaît que `photos_urls` et `image_url`. Une rubrique qui
@@ -190,6 +197,7 @@ def _collecter_idees(ctx: ContexteFlux) -> list[FluxItem]:
                 meta={
                     "idee_id": idee.id,
                     "statut": idee.statut,
+                    "assiste_ia": idee.assiste_ia,
                     "nb_votes": nb_votes,
                     "resume": strip_html(idee.description),
                 },

@@ -770,6 +770,38 @@ la rangée du conseil syndical) — elles ont été ouvertes, l'édition restant
 réservée. L'adresse ne donne aucun accès : la page vérifie les droits de qui
 l'ouvre, pas de qui l'a envoyée.
 
+### 🔴 La DERNIÈRE LIGNE d'une carte — `PastillesAffaire` (arbitré à l'écran le 27/09/2026)
+
+La ligne de la carte d'**affaire** fait la norme. La carte d'**actualité** et le **fil
+d'activité** la rendent **à l'identique** — mêmes pastilles, même couleur, même nom,
+même place. Elles différaient sur neuf points (catégorie en texte, état absent du fil,
+périmètre en tête, « urgent » rouge contre « ⚡ Urgente » orange, numéro en badge,
+auteur sans ✍️, lecteurs et ✨ absents du fil…).
+
+| # | Pastille | Forme |
+|---|---|---|
+| 1 | catégorie | **emoji seul**, libellé au survol |
+| 2 | état | badge coloré — **absent sur une actualité** (pas de suivi) |
+| 3 | périmètre | `BadgePerimetre` (🔹, tu quand il vaut le défaut) |
+| 4 | qui la lit | `PastilleLecture` (bleue, tue quand tout le monde lit) |
+| 5 | urgence | « ⚡ Urgente », **orange** — le glyphe vient de `GLYPHE_URGENCE` |
+| 6 | marqueurs | 📌 Épinglée… (`optionsEnBadge`) — **pas de 📌 dans le fil**, qui a son bandeau |
+| 7 | numéro | `#TK-…` en texte simple, pas en badge |
+| 8 | auteur | **« ✍️ Nom »**, texte discret — `AuteurCarte`, la seule écriture |
+| 9 | IA | ✨ `MarqueIA`, juste après l'auteur |
+
+Les **autres** cartes du fil (annonce, sondage, idée…) suivent le **même ordre** avec ce
+qu'elles ont : état, 🔹, ✍️ auteur, ✨. Même **typographie** que `.ec-tags` (0,75 rem).
+
+⚠️ L'auteur d'une **idée** ou d'un **sondage** n'est pas affiché : leurs API ne l'exposent
+nulle part. L'ajouter serait une décision de données personnelles, pas une
+standardisation.
+
+🔒 `npm run lint:pastilles` (les trois cartes passent par `PastillesAffaire`, ✍️ ne
+s'écrit que dans `AuteurCarte`) · `e2e/ligne-pastilles.spec.ts` (le fil et la carte,
+rendus avec la même affaire, lisent la même ligne) · `test_flux_pastilles.py` (le
+serveur envoie la ligne au fil, et ✨ sur chaque carte de la communauté).
+
 ### La source unique : `.carte-liste` (`styles/composants.css`) — depuis le 15/08/2026
 
 Le conteneur, son espacement, son survol et son état d'urgence vivent **une seule

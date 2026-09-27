@@ -19,6 +19,7 @@ from typing import Optional
 from sqlmodel import Session
 
 from app.models.core import Utilisateur
+from app.schemas import TicketRead
 
 #  Les périmètres vivent dans `app/utils/perimetres.py` : la table et l'analyse
 #  étaient écrites ici ET dans la relance syndic des tickets, avec deux résultats
@@ -96,6 +97,36 @@ def strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
     if len(clean) > max_len:
         clean = clean[:max_len].rsplit(" ", 1)[0] + "…"
     return clean
+
+
+#: Ce que lit la ligne de pastilles d'une affaire (`PastillesAffaire`, côté
+#: front) : catégorie, état, périmètre, lecteurs, urgence, marqueurs, numéro, IA.
+CHAMPS_PASTILLES = (
+    "numero",
+    "categorie",
+    "statut",
+    "priorite",
+    "debut",
+    "perimetre_cible",
+    "public_cible",
+    "reserve_perimetre",
+    "confidentiel",
+    "epingle",
+    "assiste_ia",
+)
+
+
+def pastilles_affaire(ticket) -> dict:
+    """La ligne de pastilles d'une affaire, pour le fil (27/09/2026).
+
+    Arbitré à l'écran : la carte d'une affaire fait la norme, et le fil rend la
+    même ligne. Il ne recevait que le numéro, le périmètre et l'auteur.
+
+    ⚠️ Par `TicketRead`, pas par une recopie colonne à colonne : ses validateurs
+    décodent `perimetre_cible` et `public_cible`, et une copie en oublierait un
+    (CLAUDE.md, « lire un objet pour le RENDRE »). 🔒 `test_flux_pastilles.py`.
+    """
+    return TicketRead.model_validate(ticket).model_dump(mode="json", include=set(CHAMPS_PASTILLES))
 
 
 def badges_ticket(ticket) -> list[str]:

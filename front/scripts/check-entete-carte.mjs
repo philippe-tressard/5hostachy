@@ -100,7 +100,7 @@ export function verdictCarte(source) {
 /**  Les classes de la ligne de méta qui gardent LEUR taille, avec la raison.
  *   Une entrée qui ne sert plus fait échouer. */
 const TAILLE_LIBRE = {
-	'tk-cat': 'pictogramme de catégorie en tête de ligne — un émoji, pas du texte',
+	'pa-cat': 'pictogramme de catégorie en tête de ligne (PastillesAffaire) — un émoji, pas du texte',
 	'pastille-lecture-bulle': 'la bulle ouverte au toucher, posée SOUS la ligne',
 	//  `NotationsPrestataire` a deux modes : `resume` (le badge ★, dans la ligne)
 	//  et la liste des avis, rendue dans le CORPS de la carte. Le contrôle lit le
@@ -274,10 +274,21 @@ for (const f of tous) {
 		.join('/')
 		.replace(/^src\//, '');
 	const cibles = [[rel, source, classesDe(frag)]];
-	for (const nom of composantsDe(frag)) {
+	//  🔴 TRANSITIF (27/09/2026) : la ligne des affaires est passée dans
+	//  `PastillesAffaire`, qui rend `PastilleLecture`. Lu sur un seul niveau, le
+	//  contrôle a cessé de voir cette pastille — sans un mot, sinon par
+	//  l'exception devenue « inutile ». Un composant rendu par un composant de la
+	//  ligne est dans la ligne.
+	const aLire = [...composantsDe(frag)];
+	const lus = new Set();
+	while (aLire.length) {
+		const nom = aLire.shift();
+		if (lus.has(nom)) continue;
+		lus.add(nom);
 		try {
 			const src = readFileSync(join(RACINE, 'lib/components', `${nom}.svelte`), 'utf8');
 			cibles.push([`lib/components/${nom}.svelte`, src, classesDe(src)]);
+			aLire.push(...composantsDe(src));
 		} catch {
 			/* composant d'ailleurs (icône, bibliothèque) : hors de la ligne */
 		}

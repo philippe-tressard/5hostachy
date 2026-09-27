@@ -333,6 +333,9 @@ rendent des `Utilisateur` — autre décision, autre destinataire.
       entrer (fondu 200 ms) ; sans elle il apparaît sec, sans un mot. Un survol
       qui ne sert qu'à la souris vit sous `@media (hover: hover) and (pointer:
       fine)` — au doigt, `:hover` reste collé (`ux-patterns` §17)
+- [ ] Dernière ligne d'une carte d'affaire, d'actualité ou du fil : `PastillesAffaire`,
+      l'auteur par `AuteurCarte` (« ✍️ Nom ») — jamais recomposée ; ordre et
+      exceptions dans `ux-patterns` §3 (`npm run lint:pastilles`)
 - [ ] `.clamp-3` sur l'aperçu d'une carte (`.clamp-5` seulement hors carte) ;
       aucune troncature écrite hors de `normes.css` (`npm run lint:clamp`)
 - [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — jamais un helper
