@@ -13,6 +13,9 @@
  * `test_lecture_pastille.py` l'exécute contre la règle du serveur, ce contrôle
  * contre le résumé de l'écran. Même montage que `lint:libelle-perimetre`.
  *
+ * Depuis #1373 (27/09/2026), un cas qui porte `objet` (annonce, idée, sondage)
+ * se juge par `lectureCiblee` — ce que rend la pastille de leurs cartes.
+ *
  * Cas zéro : attente absente ou vide, module qui ne se charge pas ou ne rend
  * plus `lectureDe` → le contrôle ÉCHOUE, il ne conclut pas au vert.
  */
@@ -34,28 +37,36 @@ if (!existsSync(ATTENTES)) echouer(`Cas zéro : ${ATTENTES} est introuvable — 
 const cas = JSON.parse(readFileSync(ATTENTES, 'utf8')).cas ?? [];
 if (cas.length < 10) echouer(`Cas zéro : ${cas.length} cas seulement dans ${ATTENTES}.`);
 
-const { lectureDe, PROFILS } = await chargerModule(SOURCE, echouer);
-if (typeof lectureDe !== 'function' || !Array.isArray(PROFILS)) {
+const { lectureDe, lectureCiblee, PROFILS } = await chargerModule(SOURCE, echouer);
+if (
+	typeof lectureDe !== 'function' ||
+	typeof lectureCiblee !== 'function' ||
+	!Array.isArray(PROFILS)
+) {
 	echouer(
-		"Cas zéro : lib/lecture.ts n'exporte plus lectureDe/PROFILS — mettre ce contrôle à jour.",
+		"Cas zéro : lib/lecture.ts n'exporte plus lectureDe/lectureCiblee/PROFILS — mettre ce contrôle à jour.",
 	);
 }
+if (!cas.some((c) => c.objet))
+	echouer('Cas zéro : aucun cas d’objet ciblé (annonce, idée, sondage).');
 const STATUT = Object.fromEntries(PROFILS.map((p) => [p.code, p.statut]));
 
 const echecs = [];
 for (const c of cas) {
 	const restreint = c.perimetre !== 'global';
-	const l = lectureDe({
-		actualite: c.actualite,
-		confidentiel: c.confidentiel,
-		publicCible: c.public_cible,
-		perimetreRestreint: restreint,
-		reservePerimetre: c.reserve_perimetre,
-		datee: c.datee === true,
-		enAg: c.en_ag === true,
-		categorie: c.categorie,
-		dansBatiments: c.perimetre === 'batiment',
-	});
+	const l = c.objet
+		? lectureCiblee({ publicCible: c.public_cible, perimetreRestreint: restreint })
+		: lectureDe({
+				actualite: c.actualite,
+				confidentiel: c.confidentiel,
+				publicCible: c.public_cible,
+				perimetreRestreint: restreint,
+				reservePerimetre: c.reserve_perimetre,
+				datee: c.datee === true,
+				enAg: c.en_ag === true,
+				categorie: c.categorie,
+				dansBatiments: c.perimetre === 'batiment',
+			});
 	const lecteurs = l.profils.map((p) => STATUT[p]);
 	if (JSON.stringify(lecteurs) !== JSON.stringify(c.lecteurs)) {
 		echecs.push(

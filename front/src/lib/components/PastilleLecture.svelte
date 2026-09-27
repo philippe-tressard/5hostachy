@@ -14,22 +14,34 @@
     le cadenas s'ajoute à droite quand le périmètre est réservé, et « CS » dit
     le reste. Le 🔹 reste à côté : c'est LUI qui dit lequel.
 
+  Deux sortes d'objets (#1373, 27/09/2026) : une AFFAIRE (`ticket`), et un
+  objet CIBLÉ — petite annonce, idée, sondage (`cible`) —, qui a sa propre
+  règle au serveur. La pastille est la même : elle a remplacé sur leurs cartes
+  le badge orange des destinataires, arbitré par l'utilisateur.
+
   Le calcul vit dans `$lib/lecture` — tenu contre la règle du serveur par
   `lint:lecture` et `test_lecture_pastille.py`. Ici, seulement le rendu.
 -->
 <script lang="ts">
 	import ContenuBadge from '$lib/components/ContenuBadge.svelte';
-	import { lectureDuTicket } from '$lib/lecture-ticket';
+	import { lectureDuCiblage, lectureDuTicket, type ObjetCible } from '$lib/lecture-ticket';
 	import { titreLecture } from '$lib/lecture';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { relire } from '$lib/utils';
 	import type { Ticket } from '$lib/api';
 
-	export let ticket: Ticket;
+	/** Une affaire… */
+	export let ticket: Ticket | null = null;
+	/** … ou un objet ciblé : annonce, idée, sondage. */
+	export let cible: ObjetCible | null = null;
+	/** Un sondage : « Qui le lit », « Lu par… ». */
+	export let masculin = false;
 
 	//  `$perimetresStore` : l'arbre dit si le périmètre est restreint, et il
 	//  arrive après la carte (#947, voir `BadgePerimetre`).
-	$: lecture = relire($perimetresStore, () => lectureDuTicket(ticket));
+	$: lecture = relire($perimetresStore, () =>
+		ticket ? lectureDuTicket(ticket) : lectureDuCiblage(cible ?? {}, masculin),
+	);
 	$: titre = titreLecture(lecture);
 	let ouverte = false;
 	const idBulle = `lecture-${Math.random().toString(36).slice(2, 8)}`;
@@ -50,7 +62,7 @@
 			class="badge badge-blue pastille-lecture-bouton"
 			aria-expanded={ouverte}
 			aria-controls={idBulle}
-			aria-label="Qui la lit : {titre}. {lecture.phrase}"
+			aria-label="Qui {masculin ? 'le' : 'la'} lit : {titre}. {lecture.phrase}"
 			title="{titre} — {lecture.phrase} {lecture.exclus}"
 			on:click|stopPropagation={() => (ouverte = !ouverte)}
 			on:keydown|stopPropagation

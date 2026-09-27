@@ -16,7 +16,14 @@
  *  1. Une des trois cartes qui ne rend pas `<PastillesAffaire` ;
  *  2. ✍️ écrit ailleurs que dans `AuteurCarte` — l'auteur a UNE forme ;
  *  3. une pastille de la ligne recomposée hors de `PastillesAffaire` : la forme
- *     brève de la priorité, l'emoji de catégorie.
+ *     brève de la priorité, l'emoji de catégorie ;
+ *  4. (#1373) une carte de liste de la COMMUNAUTÉ — annonce, idée, sondage —
+ *     sans `PastilleLecture` (elle a remplacé le badge orange des
+ *     destinataires), avec un 🔹 teinté, ou un ✨ placé avant la pastille de
+ *     lecture (il ferme la ligne, il n'accompagne pas le titre) ;
+ *  5. un AUTEUR sur la carte d'une idée ou d'un sondage — arbitré le
+ *     27/09/2026 : ils restent anonymes pour leurs lecteurs, aucune API ne
+ *     l'expose, et l'afficher serait une décision de données personnelles.
  *
  *  Lancer : node scripts/check-pastilles.mjs [--selftest]
  */
@@ -29,6 +36,17 @@ const CARTES = [
 	'lib/components/CarteActualite.svelte',
 	'lib/components/FluxCard.svelte',
 ];
+/** Les cartes de liste de la communauté (#1373) : même ordre, leurs pastilles. */
+const CARTES_CIBLEES = [
+	'lib/components/AnnonceCard.svelte',
+	'lib/components/ListeIdees.svelte',
+	'lib/components/ListeSondages.svelte',
+];
+/** …dont celles qui ne nomment PAS leur auteur — déclaré, avec sa raison. */
+const SANS_AUTEUR = {
+	'lib/components/ListeIdees.svelte': 'une idée reste anonyme pour ses lecteurs (27/09/2026)',
+	'lib/components/ListeSondages.svelte': 'un sondage reste anonyme pour ses lecteurs (27/09/2026)',
+};
 const SOURCE_LIGNE = 'lib/components/PastillesAffaire.svelte';
 const SOURCE_AUTEUR = 'lib/components/AuteurCarte.svelte';
 
@@ -43,6 +61,16 @@ export function ecarts(rel, source) {
 		sortie.push('ne rend pas <PastillesAffaire> : sa dernière ligne diverge');
 	if (rel !== SOURCE_AUTEUR && /✍️|✍/.test(s))
 		sortie.push('✍️ écrit hors de AuteurCarte : l’auteur a une forme');
+	if (CARTES_CIBLEES.includes(rel)) {
+		const lecture = s.search(/<PastilleLecture\b/);
+		if (lecture < 0) sortie.push('ne rend pas <PastilleLecture> : qui la lit ne se dit pas');
+		if (/<BadgePerimetre\b[^>]*\bton=/.test(s)) sortie.push('🔹 teinté : il a une couleur');
+		const ia = s.search(/<MarqueIA\b/);
+		if (ia >= 0 && lecture >= 0 && ia < lecture)
+			sortie.push('✨ avant la pastille de lecture : il ferme la ligne');
+	}
+	if (rel in SANS_AUTEUR && /<AuteurCarte\b/.test(s))
+		sortie.push(`nomme son auteur — ${SANS_AUTEUR[rel]}`);
 	if (rel.endsWith('.svelte') && rel !== SOURCE_LIGNE)
 		for (const motif of RENDUS_DE_LA_LIGNE)
 			if (motif.test(s)) sortie.push(`${motif.source} hors de PastillesAffaire`);
@@ -63,6 +91,23 @@ if (process.argv.includes('--selftest')) {
 	t('✍️ recopié', 1, ecarts('lib/components/X.svelte', '<span>✍️ {nom}</span>').length);
 	t('✍️ en commentaire ignoré', 0, ecarts('lib/components/X.svelte', '<!-- ✍️ -->').length);
 	t('priorité recomposée', 1, ecarts('lib/components/X.svelte', '{PRIORITE_BREVE[p]}').length);
+	const I = 'lib/components/ListeIdees.svelte';
+	const ligne = '<BadgePerimetre perimetre={p} /><PastilleLecture cible={i} /><MarqueIA />';
+	t('idée conforme', 0, ecarts(I, ligne).length);
+	//  🔴 La forme d'avant #1373 : badge orange, ✨ à côté du titre.
+	t(
+		'idée sans pastille de lecture',
+		1,
+		ecarts(I, '<MarqueIA /><span class="badge-orange">').length,
+	);
+	t('✨ avant la lecture', 1, ecarts(I, '<MarqueIA /><PastilleLecture cible={i} />').length);
+	t('🔹 teinté', 1, ecarts(I, ligne.replace('perimetre={p}', 'perimetre={p} ton="blue"')).length);
+	t('auteur d’une idée', 1, ecarts(I, ligne + '<AuteurCarte nom={n} />').length);
+	t(
+		'auteur d’une annonce admis',
+		0,
+		ecarts('lib/components/AnnonceCard.svelte', ligne + '<AuteurCarte nom={n} />').length,
+	);
 	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
 	process.exit(ko);
 }
@@ -86,7 +131,9 @@ for (const f of fichiers('src')) {
 	lus.add(rel);
 	for (const e of ecarts(rel, readFileSync(f, 'utf8'))) fautifs.push(`${rel} — ${e}`);
 }
-const absents = [...CARTES, SOURCE_LIGNE, SOURCE_AUTEUR].filter((f) => !lus.has(f));
+const absents = [...CARTES, ...CARTES_CIBLEES, SOURCE_LIGNE, SOURCE_AUTEUR].filter(
+	(f) => !lus.has(f),
+);
 if (absents.length) {
 	console.error(`\n✗ INCONNU : introuvable(s) — ${absents.join(', ')}.\n`);
 	process.exit(2);
@@ -95,4 +142,7 @@ if (fautifs.length) {
 	console.error(`\n✗ Dernière ligne de carte hors de la norme :\n\n  ${fautifs.join('\n  ')}\n`);
 	process.exit(1);
 }
-console.log(`✓ Pastilles : ${CARTES.length} cartes rendent la même ligne, ✍️ a une forme.`);
+console.log(
+	`✓ Pastilles : ${CARTES.length} cartes rendent la même ligne, ${CARTES_CIBLEES.length} cartes ` +
+		`de la communauté disent qui les lit, ${Object.keys(SANS_AUTEUR).length} restent anonymes, ✍️ a une forme.`,
+);

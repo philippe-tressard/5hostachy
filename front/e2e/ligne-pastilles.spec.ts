@@ -84,3 +84,81 @@ test('le fil rend la ligne de la carte d’affaire, sans 📌', async ({ page })
 			.trim(),
 	);
 });
+
+/*
+ *  **Les cartes de la communauté disent qui les lit** (#1373, arbitré le
+ *  27/09/2026) : la pastille de lecture bleue a remplacé le badge orange des
+ *  destinataires, ✨ ferme la ligne, et l'idée comme le sondage ne nomment pas
+ *  leur auteur. Les valeurs sont celles que l'API rend (`_enrich` des annonces,
+ *  listes de codes) — pas des formes inventées pour le test.
+ */
+const CIBLAGE = { perimetre_cible: [], public_cible: ['locataires'], assiste_ia: true };
+const COMMUNAUTE: Record<string, unknown> = {
+	'/api/annonces': [
+		{
+			...CIBLAGE,
+			id: 3,
+			titre: 'Vélo enfant',
+			description: 'Bon état',
+			type_annonce: 'don',
+			statut: 'en_cours',
+			categorie: 'divers',
+			prix: null,
+			negotiable: false,
+			photos: [],
+			auteur_prenom: 'Jeanne',
+			auteur_nom: 'MARTIN',
+			auteur_email: null,
+			est_auteur: false,
+			archivee: false,
+			cree_le: '2026-09-26T10:00:00',
+		},
+	],
+	'/api/idees': [
+		{
+			...CIBLAGE,
+			id: 4,
+			titre: 'Un composteur',
+			description: 'Dans la cour',
+			statut: 'ouverte',
+			nb_votes: 2,
+			mon_vote: false,
+			auteur_id: 9,
+			cree_le: '2026-09-26T10:00:00',
+		},
+	],
+	'/api/sondages': [
+		{
+			...CIBLAGE,
+			id: 5,
+			question: 'Repeindre le hall ?',
+			cloture: false,
+			cloture_le: null,
+			nb_votants: 3,
+			auteur_id: 9,
+			cree_le: '2026-09-26T10:00:00',
+		},
+	],
+};
+
+for (const [route, carte, auteur] of [
+	['/annonces', '.carte-liste', '✍️ Jeanne MARTIN'],
+	['/idees', '.idee-card', null],
+	['/sondages', '.sondage-card', null],
+] as const) {
+	test(`${route} : pastille de lecture, ✨ en fin de ligne, auteur ${auteur ? 'nommé' : 'tu'}`, async ({
+		page,
+	}) => {
+		await simulerApi(page, (chemin) => COMMUNAUTE[chemin]);
+		await page.goto(route);
+		const tags = page.locator(`${carte} .ec-tags`).first();
+		//  Cas zéro : la carte est rendue, avec sa ligne.
+		await expect(tags).toBeVisible();
+		await expect(tags.locator('.pastille-lecture')).toContainText('Locataires');
+		await expect(tags.locator('.badge-orange')).toHaveCount(0);
+		const ligne = (await tags.innerText()).replace(/\s+/g, ' ').trim();
+		expect(ligne.endsWith('✨'), `✨ ferme la ligne : « ${ligne} »`).toBe(true);
+		if (auteur) expect(ligne).toContain(auteur);
+		else expect(ligne).not.toContain('✍️');
+	});
+}

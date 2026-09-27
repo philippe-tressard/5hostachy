@@ -1,5 +1,6 @@
 /**
- * La pastille de lecture d'une AFFAIRE — `$lib/lecture` appliqué à l'objet.
+ * La pastille de lecture d'un objet ENREGISTRÉ — une affaire, et depuis #1373
+ * une petite annonce, une idée ou un sondage — `$lib/lecture` appliqué à lui.
  *
  * Séparé de `$lib/lecture` pour une seule raison : trancher « le périmètre
  * est-il restreint ? » demande l'ARBRE des périmètres, un état chargé à
@@ -7,7 +8,7 @@
  * là-bas ; ici, on ne fait que lui fournir ses entrées.
  */
 import { batimentsCibles, concerneTous } from '$lib/perimetres';
-import { destinatairesParDefaut, lectureDe, type Lecture } from '$lib/lecture';
+import { destinatairesParDefaut, lectureCiblee, lectureDe, type Lecture } from '$lib/lecture';
 import { estActualite } from '$lib/tickets';
 import type { Ticket } from '$lib/api';
 
@@ -70,5 +71,21 @@ export function lectureDuTicket(t: Ticket): Lecture {
 		publicCible: t.public_cible,
 		perimetreRestreint: perimetreRestreint(t.perimetre_cible),
 		reservePerimetre: t.reserve_perimetre === true,
+	});
+}
+
+/** Ce qu'une annonce, une idée ou un sondage dit de ses lecteurs. */
+export type ObjetCible = {
+	public_cible?: string[] | string | null;
+	perimetre_cible?: string[] | null;
+};
+
+/**  Qui lit cet objet ciblé (#1373) — la règle `cible_visible`, qui restreint
+ *   toujours au périmètre. */
+export function lectureDuCiblage(o: ObjetCible, masculin = false): Lecture {
+	return lectureCiblee({
+		publicCible: o.public_cible,
+		perimetreRestreint: perimetreRestreint(o.perimetre_cible),
+		masculin,
 	});
 }

@@ -29,7 +29,7 @@
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
-	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
+	import PastilleLecture from '$lib/components/PastilleLecture.svelte';
 	import { currentUser, isAdmin } from '$lib/stores/auth';
 
 	/** Les sondages à rendre, déjà filtrés par l'appelant. */
@@ -65,26 +65,25 @@
 		      étiré ; un bouton de dépliage n'y aurait rien à déplier. -->
 		<EnteteCarte titre={s.question} date={fmtDateShort(s.cree_le)}>
 			<svelte:fragment slot="titre-suffixe">
-				<MarqueIA assiste={s.assiste_ia} />
 				<BadgeNouveau le={s.cree_le} />
 			</svelte:fragment>
 			<svelte:fragment slot="tags">
 				<span class="badge {s.cloture ? 'badge-gray' : 'badge-green'}"
 					>{s.cloture ? '🔒 Clôturé' : 'Ouvert'}</span
 				>
+				<!--  État · 🔹 · qui le lit — l'ordre de la carte d'affaire (#1373) : le 🔹
+				      n'est plus teinté en bleu, et la pastille de lecture a remplacé le
+				      badge orange des destinataires. 🔴 PAS D'AUTEUR : un sondage reste
+				      anonyme pour ses lecteurs (arbitré le 27/09/2026, `lint:pastilles`). -->
+				<BadgePerimetre perimetre={s.perimetre_cible} />
+				<PastilleLecture cible={s} masculin />
 				{#if s.cloture_le && !s.cloture}
 					<span class="badge badge-gray">Clôture le {fmtDateShort(s.cloture_le)}</span>
 				{/if}
 				<span class="badge badge-gray"
 					>{s.nb_votants ?? 0} votant{(s.nb_votants ?? 0) !== 1 ? 's' : ''}</span
 				>
-				<!--  Ciblage affiché comme PARTOUT ailleurs : 🔹 pour le périmètre
-				      logique (jamais 📍, réservé au lieu physique), et rien du tout
-				      quand le ciblage est le défaut — le redire n'apprend rien. -->
-				<BadgePerimetre perimetre={s.perimetre_cible} ton="blue" />
-				{#if !concerneTousLesResidents(s.public_cible)}
-					<span class="badge badge-orange">{destinatairesLabel(s.public_cible)}</span>
-				{/if}
+				<MarqueIA assiste={s.assiste_ia} />
 			</svelte:fragment>
 			<svelte:fragment slot="actions">
 				<!--  🔗 EN PREMIER : la seule action que TOUT le monde a. Sa position ne

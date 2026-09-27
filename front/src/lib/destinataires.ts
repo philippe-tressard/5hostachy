@@ -54,8 +54,6 @@ export const DESTINATAIRES: Destinataire[] = [
 	{ code: 'conseil_syndical', libelle: 'Conseil syndical', icone: 'shield-check' },
 ];
 
-const PAR_CODE = new Map(DESTINATAIRES.map((d) => [d.code, d]));
-
 /** Le ciblage vise-t-il tout le monde ? Vide ou `résidents` = oui. */
 export function concerneTousLesResidents(codes: string[] | null | undefined): boolean {
 	if (!codes || codes.length === 0) return true;
@@ -75,27 +73,11 @@ export function reserveAuConseil(codes: string[] | null | undefined): boolean {
 }
 
 /**
- * Libellé affichable d'un public cible.
- *
- * Accepte un tableau OU une chaîne JSON — c'est ce que rend l'API, et faire la
- * conversion chez chaque appelant est exactement la recopie qu'on évite ici.
- * Une valeur inconnue est rendue telle quelle : mieux vaut un code brut qu'un
- * badge vide, qui laisserait croire à « tout le monde ».
- *
- * Séparateur ` · `, le même que `perimetreLabel` — deux ciblages voisins doivent
- * se lire de la même façon.
- */
-export function destinatairesLabel(valeur: string[] | string | null | undefined): string {
-	const codes = codesDestinataires(valeur);
-	if (concerneTousLesResidents(codes)) return LIBELLE_TOUS;
-	return codes.map((c) => PAR_CODE.get(c)?.libelle ?? c).join(' · ');
-}
-
-/**
  * Les CODES d'un public cible, qu'il arrive en tableau ou en chaîne JSON — ce
- * que rend l'API. Écrite une fois : le libellé ci-dessus et la pastille de
- * lecture (`$lib/lecture`) lisent la même donnée, et deux lectures d'une
- * chaîne abîmée divergeraient sur le cas limite.
+ * que rend l'API. Écrite une fois : la pastille de lecture (`$lib/lecture`) la
+ * lit, et deux lectures d'une chaîne abîmée divergeraient sur le cas limite.
+ * (Le libellé `destinatairesLabel` qui la lisait aussi est parti avec le badge
+ * orange des cartes de la communauté, #1373.)
  */
 export function codesDestinataires(valeur: string[] | string | null | undefined): string[] {
 	if (Array.isArray(valeur)) return valeur;
