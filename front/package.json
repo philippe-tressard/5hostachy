@@ -97,6 +97,7 @@
 		"lint:options-en-double": "node scripts/check-options-en-double.mjs --selftest && node scripts/check-options-en-double.mjs",
 		"lint:mouvement": "node scripts/check-mouvement.mjs --selftest && node scripts/check-mouvement.mjs",
 		"lint:pastilles": "node scripts/check-pastilles.mjs --selftest && node scripts/check-pastilles.mjs",
+		"lint:manuel-pastilles": "node scripts/check-manuel-pastilles.mjs",
 		"lint:chargement": "node scripts/check-chargement.mjs --selftest && node scripts/check-chargement.mjs",
 		"lint:etage-libelle": "node scripts/check-etage-libelle.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",
