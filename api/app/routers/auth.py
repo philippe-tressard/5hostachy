@@ -31,6 +31,7 @@ from app.auth.jwt import (
     verify_and_rehash,
 )
 from app.auth.deps import get_current_user
+from app.auth.jetons_rafraichissement import est_rejoue, remplacer, revoquer_sessions
 from app.config import get_settings
 from app.database import get_session
 from app.models.core import (
@@ -328,7 +329,18 @@ def refresh(
         raise HTTPException(401, "Refresh token invalide.")
 
     stored = session.exec(select(RefreshToken).where(RefreshToken.token == refresh_token)).first()
-    if not stored or stored.revoked or stored.expires_at < horloge.maintenant():
+    maintenant = horloge.maintenant()
+    if stored and est_rejoue(stored, maintenant):
+        #  Un jeton déjà échangé qui revient : le porteur légitime ou un voleur,
+        #  on ne sait pas lequel — toutes les sessions ferment. Même réponse
+        #  qu'une session expirée : le voleur n'apprend pas qu'il est repéré.
+        revoquees = revoquer_sessions(session, stored.user_id)
+        session.commit()
+        journaliser_securite(
+            "jeton_rejoue", cible_id=stored.user_id, detail=f"sessions_fermees={revoquees}"
+        )
+        raise HTTPException(401, "Session expirée. Reconnectez-vous.")
+    if not stored or stored.revoked or stored.expires_at < maintenant:
         raise HTTPException(401, "Session expirée. Reconnectez-vous.")
 
     user = session.get(Utilisateur, stored.user_id)
@@ -336,8 +348,7 @@ def refresh(
         raise HTTPException(401, "Utilisateur invalide.")
 
     # Rotation : révoquer l'ancien token, émettre un nouveau
-    stored.revoked = True
-    session.add(stored)
+    remplacer(session, stored, maintenant)
 
     new_refresh = create_refresh_token({"sub": str(user.id)})
     rt = RefreshToken(

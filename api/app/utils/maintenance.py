@@ -8,6 +8,7 @@ from app.utils import horloge
 from sqlalchemy import text
 from sqlmodel import Session, select
 
+from app.auth.jetons_rafraichissement import purger as purger_jetons
 from app.utils.noeud import noeud_courant
 from app.utils.requete_liee import requete_liee
 from app.utils.declenchement import AUTOMATIQUE
@@ -53,13 +54,16 @@ def purger() -> tuple[dict[str, int], list[str]]:
     )
     erreurs: list[str] = []
 
+    #  Les jetons de rafraîchissement ont leur propre règle — un jeton échangé
+    #  reste jusqu'à son expiration — écrite une fois, pour les deux purges.
+    try:
+        with Session(engine) as s:
+            comptes["tokens"] = purger_jetons(s, maintenant)
+            s.commit()
+    except Exception as exc:
+        erreurs.append(f"purge tokens: {exc}")
+
     etapes = (
-        (
-            "tokens",
-            "purge tokens",
-            "DELETE FROM refresh_token WHERE expires_at < :now OR revoked = 1",
-            {"now": maintenant},
-        ),
         (
             "prt",
             "purge password reset tokens",
