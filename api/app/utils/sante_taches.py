@@ -174,7 +174,16 @@ def _sante_par_noeud(
     la date de `recente` : retenir le pire ÉTAT est juste, lui emprunter sa DATE
     fait mentir la colonne « Dernier rapport » (#331, 13/08/2026).
     """
-    lignes = list(lignes)
+    #  🔴 À DATE ÉGALE, LE RAPPORT DE FIN L'EMPORTE SUR LE BATTEMENT (#1367).
+    #  `maintenance.sh` envoie les deux avec la même heure de début : départagées
+    #  par `cree_le` seul, c'est l'ordre de la base qui décidait — et il donnait
+    #  le battement, donc « Rapport non reçu » sur une maintenance réussie. Le tri
+    #  ICI, et non chez l'appelant : la règle ne doit dépendre d'aucune requête.
+    lignes = sorted(
+        lignes,
+        key=lambda ligne: (ligne.cree_le, ligne.statut != STATUT_EN_COURS),
+        reverse=True,
+    )
     if not lignes:
         return {}
 
@@ -227,7 +236,8 @@ def _sante_par_noeud(
 
     #  La SYNTHÈSE porte la dernière exécution réelle, nœud enregistré ou non,
     #  et se juge sur la période de la TÂCHE.
-    plus_recente = max(lignes, key=lambda ligne: ligne.cree_le)
+    #  La première de la liste triée : `max(cree_le)` rouvrirait l'égalité.
+    plus_recente = lignes[0]
     statut_s, retard_s = _etat(plus_recente, periode_h)
     synthese = {
         "noeud": getattr(plus_recente, "noeud", None),
