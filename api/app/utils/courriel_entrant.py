@@ -62,7 +62,6 @@ from __future__ import annotations
 
 import re
 import secrets
-from email.utils import parseaddr
 
 #: La boîte locale qui reçoit les réponses. Le sous-adressage `+<jeton>` est la
 #: partie qui identifie le ticket ; ce préfixe-ci ne change jamais.
@@ -91,28 +90,14 @@ def nouveau_jeton() -> str:
     return secrets.token_hex(LONGUEUR_JETON // 2)
 
 
-def adresse_de_reponse(jeton: str, domaine: str) -> str:
-    """L'adresse à poser en `Reply-To` — « tickets+<jeton>@<domaine> »."""
-    return f"{PREFIXE_BOITE}+{jeton}@{domaine}"
-
-
-def domaine_de(adresse: str) -> str:
-    """Le domaine d'une adresse d'expédition, pour composer le `Reply-To`.
-
-    Une adresse vide ou sans `@` rend une chaîne vide, et l'appelant renonce à
-    poser un `Reply-To` : mieux vaut pas de réponse possible qu'une adresse
-    fabriquée sur un domaine inventé, qui partirait dans le vide.
-
-    ⚠️ `parseaddr` et non un découpage sur `@` : `smtp_from` peut valoir
-    « Ma Résidence <noreply@5hostachy.fr> ». Le découpage naïf rendait alors
-    « 5hostachy.fr> », chevron compris, et le `Reply-To` fabriqué dessus était
-    invalide — aucune réponse ne serait jamais arrivée, sans le moindre signal.
-    Attrapé par le test, pas par la relecture.
-    """
-    brute = parseaddr(adresse or "")[1] or ""
-    if "@" not in brute:
-        return ""
-    return brute.rsplit("@", 1)[1].strip().lower()
+#  🔴 `adresse_de_reponse` et `domaine_de` ONT ÉTÉ RETIRÉES (28/09/2026) : elles
+#  composaient le `Reply-To: tickets+<jeton>@`, qu'OVH n'achemine pas (#1314).
+#  Plus rien ne les appelait depuis v2.51.2 — le `Reply-To` d'une affaire est
+#  l'adresse des affaires, posé par `utils/smtp.entete_reponse` et nulle part
+#  ailleurs. Les garder, c'était laisser la porte ouverte à un rebranchement.
+#  La LECTURE du jeton (`jeton_dans`) reste : d'anciens courriels le portent.
+#  Le domaine d'une adresse se lit désormais par `courriel_authenticite.domaine_de`
+#  (vérification DKIM, v2.76.1) — une seule fonction pour cette question.
 
 
 #: Le numéro de ticket tel que NOS sujets l'écrivent : « Ticket #TK-123456 — … ».
