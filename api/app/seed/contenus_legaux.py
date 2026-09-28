@@ -23,6 +23,9 @@ se rend, elle a l'air finie, et personne ne la lit jusqu'à ce que quelqu'un
 cherche qui contacter. La nôtre a vécu ainsi jusqu'à ce qu'un lecteur le voie.
 """
 
+from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
+
+
 #: La conservation de l'historique des envois (#1073, 24/09/2026). Il disait
 #: « aucune purge automatique n'est en place à ce jour » — c'était FAUX : la
 #: purge à 90 jours existait (maintenance hebdomadaire), le relevé qui avait
@@ -33,6 +36,19 @@ CONSERVATION_COURRIELS = (
     "<li>Historique des envois de courriels\xa0: conservé <strong>90\xa0jours</strong> "
     "pour le suivi des notifications, puis <strong>supprimé automatiquement</strong>. "
     "L'effacement anticipé s'obtient sur demande à l'adresse du point\xa01."
+)
+
+#: Le journal des messages relevés dans la boîte des réponses (#1447, 28/09/2026) :
+#: il garde l'adresse de l'expéditeur. Écrite une fois — le gabarit, les ajouts
+#: de #1034 et la migration 0234, qui l'insère dans le texte servi, la lisent ici.
+#: La durée vient de la purge elle-même : la recopier la ferait mentir au premier
+#: changement.
+CONSERVATION_RELEVES = (
+    "<li>Journal des réponses reçues par courriel : adresse de l'expéditeur, objet, date "
+    "et suite donnée — ajoutée à l'affaire, refusée ou écartée —, <strong>jamais le texte du "
+    f"message</strong>. Conservé <strong>{CONSERVATION_RELEVES_JOURS} jours</strong> pour "
+    "vérifier qu'une réponse a bien été reçue, puis <strong>supprimé automatiquement</strong>."
+    "</li>"
 )
 
 #: La phrase de la politique sur ce que l'assistant transmet SANS geste (#1322).
@@ -135,7 +151,9 @@ DEFAULT_LEGAL = {
         "<strong>30\xa0jours</strong>, puis agrégats sans détail — par jour pendant 12\xa0mois, par mois "
         "pendant 10\xa0ans. L'effacement demandé depuis votre profil est immédiat.</li>"
         + CONSERVATION_COURRIELS
-        + "</li></ul><h2>6. Vos droits</h2><p>Conformément au RGPD vous disposez "
+        + "</li>"
+        + CONSERVATION_RELEVES
+        + "</ul><h2>6. Vos droits</h2><p>Conformément au RGPD vous disposez "
         "des droits d'accès (art.\xa015), rectification (art.\xa016), effacement (art.\xa017), portabilité "
         "(art.\xa020), opposition (art.\xa021) et retrait du consentement (art.\xa07-3). Pour les exercer, "
         "écrivez à l'adresse indiquée au point 1 — cette voie doit rester ouverte même sans compte, y"
@@ -208,7 +226,11 @@ AJOUTS_1034 = [
         "<h2>6. Vos droits</h2>",
         "<ul><li>Mesure d'audience\xa0: événements détaillés <strong>30\xa0jours</strong>, puis "
         "agrégats sans détail — par jour pendant 12\xa0mois, par mois pendant 10\xa0ans. L'effacement "
-        "demandé depuis votre profil est immédiat.</li>" + CONSERVATION_COURRIELS + "</li></ul>",
+        "demandé depuis votre profil est immédiat.</li>"
+        + CONSERVATION_COURRIELS
+        + "</li>"
+        + CONSERVATION_RELEVES
+        + "</ul>",
     ),
     (
         "<p><strong>Hébergement et acheminement.</strong>",

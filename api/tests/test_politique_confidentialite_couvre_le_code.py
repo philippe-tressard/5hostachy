@@ -106,6 +106,12 @@ EXIGENCES = [
         ("models/exploitation.py", "class HistoriqueEmail"),
         ("historique des envois", "journal des envois", "courriels envoyés"),
     ),
+    (
+        #  #1447 : l'adresse de l'expéditeur de chaque message relevé.
+        "le journal des réponses reçues par courriel",
+        ("models/courriel.py", "class CourrielReleve"),
+        ("journal des réponses reçues",),
+    ),
 ]
 
 

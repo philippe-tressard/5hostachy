@@ -87,3 +87,37 @@ class ReponseRelance(SQLModel, table=True):
     #: recopierait tout l'échange.
     contenu: str = ""
     recue_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+
+
+class CourrielReleve(SQLModel, table=True):
+    """Un message relevé dans la boîte des réponses, et ce qu'on en a fait (#1447).
+
+    🔴 Le 28/09/2026, un message a été IGNORÉ sans qu'on puisse dire pourquoi :
+    la relève ne gardait que des totaux, dans un journal de conteneur que deux
+    MEP le même jour avaient effacé. Chaque verdict de `courriel_boite.traiter`
+    laisse désormais sa ligne, écrite dans la MÊME transaction que lui — un
+    message acquitté (`\Seen`) a donc toujours la sienne.
+
+    ⚠️ Jamais le corps du message : accepté, il vit dans le fil de l'affaire ;
+    refusé ou ignoré, il reste dans la boîte. L'adresse de l'expéditeur est une
+    donnée personnelle : la ligne se purge (`courriel_journal`), et la politique
+    de confidentialité le dit.
+    """
+
+    __tablename__ = "courriel_releve"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    releve_le: NaiveDatetime = Field(default_factory=horloge.maintenant, index=True)
+    #: La date d'ENVOI déclarée par le message (`Date:`), quand elle se lit.
+    envoye_le: Optional[NaiveDatetime] = None
+    #: Le `From:` tel quel — le nom affiché fait partie de ce qu'on reconnaît.
+    expediteur: str = ""
+    objet: str = ""
+    #: `accepte` · `relance` · `refuse` · `ignore` (`courriel_ingestion`).
+    decision: str
+    #: Pourquoi — écrit pour un humain, jamais vide.
+    motif: str
+    #: L'affaire visée, sans clé étrangère : la ligne doit survivre à une
+    #: affaire supprimée, et SQLite ne s'en passerait pas proprement (0117).
+    ticket_id: Optional[int] = Field(default=None, index=True)
+    affaire: Optional[str] = None

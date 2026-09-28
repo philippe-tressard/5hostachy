@@ -13,6 +13,7 @@ from app.utils.noeud import noeud_courant
 from app.utils.requete_liee import requete_liee
 from app.utils.declenchement import AUTOMATIQUE
 from app.utils.llm_journal import limite_conservation
+from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
 from app.database import engine
 from app.models.core import (
     HistoriqueMaintenance,
@@ -59,6 +60,7 @@ def purger() -> tuple[dict[str, int], list[str]]:
             "emails",
             "ia",
             "whatsapp",
+            "releves",
         ),
         0,
     )
@@ -112,6 +114,13 @@ def purger() -> tuple[dict[str, int], list[str]]:
             "purge journal IA",
             "DELETE FROM appel_ia WHERE cree_le < :cutoff",
             {"cutoff": limite_conservation(maintenant)},
+        ),
+        #  Le journal des messages relevés porte l'adresse de l'expéditeur (#1447).
+        (
+            "releves",
+            "purge journal des relèves",
+            "DELETE FROM courriel_releve WHERE releve_le < :cutoff",
+            {"cutoff": maintenant - timedelta(days=CONSERVATION_RELEVES_JOURS)},
         ),
     )
     for cle, libelle, sql, params in etapes:
