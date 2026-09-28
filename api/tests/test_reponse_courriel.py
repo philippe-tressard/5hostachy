@@ -140,7 +140,7 @@ def test_la_suite_porte_la_mise_en_forme_et_le_texte_recu(scene, monkeypatch):  
     assert evol.contenu_origine == _RECU
 
 
-# ── La ligne « Réponse de … le … », écrite par le code (arbitré le 25/09/2026) ─
+# ── La ligne « Mail reçu de … le … », écrite par le code (25/09, libellé du 28/09) ─
 
 
 def test_la_suite_s_ouvre_sur_qui_a_repondu_et_quand(scene):  # noqa: F811
@@ -155,9 +155,9 @@ def test_la_suite_s_ouvre_sur_qui_a_repondu_et_quand(scene):  # noqa: F811
         authentification=_AUTH_OK,
     )
     (evol,) = _evolutions(session, ticket)
-    assert evol.contenu.startswith("<p><em>Réponse de G S le 25 septembre 2026 à 18:00</em></p>"), (
-        evol.contenu
-    )
+    assert evol.contenu.startswith(
+        "<p><em>Mail reçu de G S le 25 septembre 2026 à 18:00</em></p>"
+    ), evol.contenu
 
 
 def test_le_nom_affiche_du_courriel_prime_et_le_texte_recu_est_echappe():
@@ -170,7 +170,7 @@ def test_le_nom_affiche_du_courriel_prime_et_le_texte_recu_est_echappe():
         "Ligne 1\nLigne <2>\n\nParagraphe & fin",
     )
     assert html == (
-        "<p><em>Réponse de Jean Martin le 25 septembre 2026 à 18:00</em></p>"
+        "<p><em>Mail reçu de Jean Martin le 25 septembre 2026 à 18:00</em></p>"
         "<p>Ligne 1<br>Ligne &lt;2&gt;</p><p>Paragraphe &amp; fin</p>"
     )
 

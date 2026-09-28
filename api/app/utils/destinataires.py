@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from sqlalchemy import func
 from sqlmodel import Session, or_, select
 
 from app.models.core import ConfigSite, GenreCivilite, MembreCS, MembreSyndic, Utilisateur
@@ -177,6 +178,20 @@ def syndic_principal(session: Session) -> Optional[MembreSyndic]:
     return session.exec(
         select(MembreSyndic).where(MembreSyndic.est_principal == True)  # noqa: E712
     ).first()
+
+
+def est_adresse_syndic(session: Session, adresse: str) -> bool:
+    """Cette adresse est-elle celle d'un membre du cabinet syndic ?
+
+    Le syndic se reconnaît à son ADRESSE dans la fiche du cabinet, pas à un rôle :
+    `RoleUtilisateur` n'en a pas, et le gestionnaire n'a souvent pas de compte.
+    """
+    adresse = (adresse or "").strip().lower()
+    if not adresse:
+        return False
+    return bool(
+        session.exec(select(MembreSyndic).where(func.lower(MembreSyndic.email) == adresse)).first()
+    )
 
 
 def membres_cs_avec_email(session: Session) -> list[tuple[int, str]]:
