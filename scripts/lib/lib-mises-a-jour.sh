@@ -23,6 +23,8 @@
 #
 #  Ce module porte les trois, parce qu'ils répondent à la même question — « ce
 #  nœud reçoit-il ses correctifs ? » — et qu'aucun n'a d'autre maison.
+#  La couche apt (1.) a sa collecte et sa décision dans `lib-apt.sh` depuis le
+#  28/09/2026 (#1441) ; ses messages restent ici, dans la boucle par nœud.
 #
 #  Il est SOURCÉ (mode 100644) par `lib-collecte.sh` (le snippet `COLLECT_MAJ`),
 #  `lib-conformite.sh` (les verdicts de C30), `check-reliability.sh` (le pair
@@ -30,32 +32,21 @@
 #  Autotest : bash scripts/lib/lib-mises-a-jour.sh --selftest
 # =============================================================================
 
-#: Au-delà, les listes apt sont périmées : `unattended-upgrades` ne voit plus
-#: rien, et « aucune mise à jour en attente » ne veut plus rien dire. Le dépôt
-#: `*-updates` de Debian est republié presque chaque jour ; sept jours sans
-#: listes neuves, c'est une semaine où le nœud n'a rien pu apprendre.
-APT_LISTES_MAX_J=${APT_LISTES_MAX_J:-7}
+#  La couche apt (listes, configuration, correctifs de sécurité) : ses
+#  collectes et sa décision, que les messages de C30 ci-dessous emploient.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-apt.sh"
 
 # ── La collecte, exécutée sur CHAQUE nœud (ajoutée à COLLECT) ────────────────
 #  Même contrainte que `lib-collecte.sh` : chaîne entre guillemets SIMPLES, donc
 #  AUCUNE apostrophe en dessous, même en commentaire. Tout ce qui s'explique
 #  s'explique ici :
-#   - apt_erreurs : lignes `E:` de `apt-config dump` — la configuration est-elle
-#     seulement lisible ? (#1377). Vide si apt-config manque : INCONNU.
-#   - apt_listes_j : âge en jours de la liste la PLUS RÉCENTE. On mesure la
-#     chose (les listes), pas son enregistrement (un tampon de tentative, que
-#     `apt-daily` pose même quand il échoue) — `standards/04` §14.
-#   - apt_secu : paquets en attente venant d un dépôt `*-security`.
+#   - apt_* : `COLLECT_APT`, dans `lib-apt.sh`.
 #   - noyau_actif / noyau_installe : le noyau qui tourne, et le plus récent
 #     installé de la MÊME saveur (`+rpt-rpi-2712`) — lu dans /lib/modules, donc
 #     sans dépendre du nom du paquet, qui change d une image Raspberry à l autre.
 #   - noyau_candidat : la version que le dépôt propose pour le méta-paquet de
 #     cette saveur (`linux-image-rpi-2712`) — ce qui dit RÉVISION ou SÉRIE.
-COLLECT_MAJ='
-echo "apt_erreurs=$(command -v apt-config >/dev/null 2>&1 && apt-config dump 2>&1 >/dev/null | grep -c "^E:")"
-_t=$(find /var/lib/apt/lists -maxdepth 1 -name "*InRelease" -printf "%T@\n" 2>/dev/null | sort -n | tail -1)
-echo "apt_listes_j=$([ -n "$_t" ] && echo $(( ( $(date +%s) - ${_t%.*} ) / 86400 )))"
-echo "apt_secu=$(command -v apt >/dev/null 2>&1 && apt list --upgradable 2>/dev/null | grep -c -- "-security")"
+COLLECT_MAJ="$COLLECT_APT"'
 _k=$(uname -r)
 echo "noyau_actif=$_k"
 echo "noyau_installe=$(ls -1 /lib/modules 2>/dev/null | grep -F -- "+${_k#*+}" | sort -V | tail -1)"
@@ -98,22 +89,6 @@ fi
 COLLECT_MAJ="$COLLECT_MAJ$(collecte_etrangers "$CONTENEURS_ETRANGERS")"
 
 # ── Décisions PURES (aucun effet de bord) ────────────────────────────────────
-
-#  $1 erreurs de configuration · $2 âge des listes (j) · $3 paquets de sécurité
-#  → OK | ILLISIBLE | PERIMEES | SECURITE | INCONNU
-#  L'ordre compte : une configuration illisible rend les listes périmées, et des
-#  listes périmées rendent le compte de sécurité faux (il vaut 0 sur rpi2).
-#  Annoncer le symptôme le plus profond, c'est dire quoi réparer.
-verdict_apt() {
-    local err=$1 age=$2 secu=$3
-    case "$err" in ''|*[!0-9]*) echo INCONNU; return ;; esac
-    [ "$err" -gt 0 ] && { echo ILLISIBLE; return; }
-    case "$age" in ''|*[!0-9]*) echo INCONNU; return ;; esac
-    [ "$age" -gt "$APT_LISTES_MAX_J" ] && { echo PERIMEES; return; }
-    case "$secu" in ''|*[!0-9]*) echo INCONNU; return ;; esac
-    [ "$secu" -gt 0 ] && { echo SECURITE; return; }
-    echo OK
-}
 
 #  $1 noyau qui tourne · $2 plus récent installé de la même saveur
 #  → OK | REDEMARRAGE | INCONNU
@@ -259,16 +234,19 @@ mises_a_jour_verdicts() {
     local n p v
     for n in "$SELF" "$PEER"; do
         if [ "$n" = "$SELF" ]; then p=S; else [ "$PEER_OK" -eq 0 ] || continue; p=P; fi
-        local err age secu actif inst cand
+        local err age secu vu pas proch actif inst cand
         eval "err=\${${p}_apt_erreurs:-} age=\${${p}_apt_listes_j:-} secu=\${${p}_apt_secu:-}"
+        eval "vu=\${${p}_apt_secu_vu_s:-} pas=\${${p}_apt_passage_s:-} proch=\${${p}_apt_prochain:-}"
         eval "actif=\${${p}_noyau_actif:-} inst=\${${p}_noyau_installe:-} cand=\${${p}_noyau_candidat:-}"
-        v=$(verdict_apt "$err" "$age" "$secu")
+        v=$(verdict_apt "$err" "$age" "$secu" "$vu" "$pas")
         case "$v" in
             OK)        ok   "Mises à jour système sur $n : listes apt de ${age} j, aucun correctif de sécurité en attente" ;;
+            ATTENTE)   ok   "Mises à jour système sur $n : $secu correctif(s) de sécurité publié(s) depuis le dernier passage d'installation, posé(s) au prochain (${proch:-heure illisible})" ;;
             ILLISIBLE) warn "Configuration apt ILLISIBLE sur $n ($err erreur(s)) — apt-daily échoue chaque jour en silence, AUCUNE mise à jour n'arrive (#1377) : 'apt-config dump' pour voir la ligne fautive" ;;
             PERIMEES)  warn "Listes apt périmées sur $n : ${age} j (seuil ${APT_LISTES_MAX_J} j) — le nœud ne voit plus les correctifs ; vérifier 'systemctl status apt-daily' et /etc/apt/apt.conf.d/20auto-upgrades" ;;
-            SECURITE)  warn "$secu correctif(s) de sécurité en attente sur $n — unattended-upgrades ne les a pas posés : 'sudo unattended-upgrade -v'" ;;
-            *)         warn "Mises à jour système INCONNUES sur $n (erreurs='${err:-vide}' âge='${age:-vide}' sécurité='${secu:-vide}') — ni vert ni rouge" ;;
+            SECURITE)  warn "$secu correctif(s) de sécurité en attente sur $n, vus par le passage d'installation d'il y a $(( pas / 3600 )) h sans être posés — 'sudo unattended-upgrade -v' dit pourquoi (fichier de configuration modifié, paquet retenu)" ;;
+            SANS_PASSAGE) warn "$secu correctif(s) de sécurité en attente sur $n depuis $(( vu / 3600 )) h, au-delà des 25 h entre deux passages d'installation — 'systemctl status apt-daily-upgrade.timer', puis 'sudo unattended-upgrade -v'" ;;
+            *)         warn "Mises à jour système INCONNUES sur $n (erreurs='${err:-vide}' âge='${age:-vide}' sécurité='${secu:-vide}' attente='${vu:-vide}' s passage='${pas:-vide}' s) — ni vert ni rouge" ;;
         esac
         case "$(verdict_noyau "$actif" "$inst")" in
             OK)          ok   "Noyau de $n à jour ($actif)" ;;
@@ -303,17 +281,6 @@ mises_a_jour_verdicts() {
 if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     st=0
     t() { local r; r=$("${@:3}"); [ "$r" = "$2" ] && echo "PASS  $1 → $r" || { echo "FAIL  $1  attendu=$2 obtenu=$r"; st=1; }; }
-
-    t "nœud sain"                                      OK         verdict_apt 0 1 0
-    t "rpi2 le 27/09 : configuration illisible"        ILLISIBLE  verdict_apt 1 162 0
-    t "illisible l'emporte sur périmé"                 ILLISIBLE  verdict_apt 2 0 5
-    t "listes vieilles de 8 j"                         PERIMEES   verdict_apt 0 8 0
-    t "listes à 7 j : encore bon"                      OK         verdict_apt 0 7 0
-    t "périmé l'emporte sur « 0 correctif »"           PERIMEES   verdict_apt 0 162 0
-    t "correctifs de sécurité en attente"              SECURITE   verdict_apt 0 1 3
-    t "apt-config absent → INCONNU, jamais OK"         INCONNU    verdict_apt "" 1 0
-    t "âge illisible → INCONNU"                        INCONNU    verdict_apt 0 "" 0
-    t "compte de sécurité illisible → INCONNU"         INCONNU    verdict_apt 0 1 ""
 
     t "noyau à jour"            OK          verdict_noyau 6.12.75+rpt-rpi-2712 6.12.75+rpt-rpi-2712
     t "noyau en attente"        REDEMARRAGE verdict_noyau 6.12.62+rpt-rpi-2712 6.12.75+rpt-rpi-2712
@@ -374,6 +341,7 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
       eval 'eval "$(collecte_etrangers "$tmpe")" | grep -E "^etrangers_(lu|manquants)="'
     unset -f docker; rm -f "$tmpe"
     t "collecte : pas de relevé → rien" "" eval 'eval "$(collecte_etrangers "$tmpe")"'
+
 
     #  L'émission : jamais un vert, et le bon canal pour chaque cas.
     tmpm=$(mktemp); PEER=rpi2; PEER_IP=192.168.1.223
