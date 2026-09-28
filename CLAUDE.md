@@ -287,6 +287,16 @@ sujet disait que le problème n'existait pas.
 laisse passer les notifications **in-app**, qui visent « CS **ou** admin » et
 rendent des `Utilisateur` — autre décision, autre destinataire.
 
+### Prévenir le groupe de la résidence
+
+On **diffuse sur le canal de la résidence**, on n'« envoie pas un WhatsApp » :
+`utils/diffusion` — `config_diffusion(session)` (la configuration du canal, ou
+`None` s'il est éteint) puis `diffuser(background_tasks, config, titre, contenu,
+…)`. Le registre `CANAUX` n'a qu'un canal, WhatsApp, dont le bridge est
+l'adaptateur ; les clés `whatsapp_*` et la table `whatsapp_log` gardent leur nom
+jusqu'au second (#1060). 🔒 `test_diffusion_canal.py` refuse qu'un appelant
+importe les gestes du transport.
+
 ### Sécurité
 - JWT HS256 en cookies `httponly=True`, `secure=settings.cookie_secure`, `samesite="strict"`
 - CORS : allowlist explicite, jamais `["*"]` avec `credentials=True`

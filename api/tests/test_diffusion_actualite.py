@@ -15,7 +15,7 @@ from sqlmodel import Session
 import app.routers.annonces_hall as annonces_hall
 import app.routers.tickets.crud as crud
 import app.routers.tickets.mise_a_jour as mise_a_jour
-import app.utils.whatsapp as whatsapp
+import app.utils.diffusion as diffusion
 from app.database import engine
 from app.models.core import RoleUtilisateur, Utilisateur
 from app.schemas import TicketCreate, TicketUpdate
@@ -25,10 +25,10 @@ from app.utils.perimetres import arbre
 @pytest.fixture()
 def contexte(monkeypatch, batiments):
     affiches: list[int] = []
+    #  Le canal de la résidence, allumé : la couture est le registre (#1060).
     monkeypatch.setattr(
-        whatsapp, "config_whatsapp", lambda s, *a: {"site_url": "https://5hostachy.fr"}
+        diffusion, "config_diffusion", lambda s, *a: {"site_url": "https://5hostachy.fr"}
     )
-    monkeypatch.setattr(whatsapp, "whatsapp_actif", lambda c: True)
     monkeypatch.setattr(
         "app.utils.destinataires.destinataires_syndic_cs",
         lambda session, syndic, cs: [("Syndic", "syndic@exemple.fr")] if (syndic or cs) else [],

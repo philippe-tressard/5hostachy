@@ -187,10 +187,10 @@ def _partager_sur_le_groupe(
     *,
     commentaire: Optional[str] = None,
 ) -> None:
-    from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
+    from app.utils.diffusion import config_diffusion, diffuser
 
-    config = config_whatsapp(session)
-    if not whatsapp_actif(config):
+    config = config_diffusion(session)
+    if config is None:
         return
     #  L'adresse du site lue dans la configuration du CANAL, comme le partage
     #  d'une affaire suivie (`courriels._partager_sur_le_groupe`).
@@ -209,16 +209,16 @@ def _partager_sur_le_groupe(
                 f"\n\n📜 Cet échange comporte {precedents} message(s) précédent(s).\n"
                 f"Consultez l'historique complet sur l'application :\n👉 {lien}"
             )
-    background_tasks.add_task(
-        envoyer_whatsapp_avec_log,
+    diffuser(
+        background_tasks,
+        config,
         titre,
         contenu,
-        ticket.priorite == "haute",
-        ticket.perimetre_cible,
-        photo,
-        config,
-        ticket.public_cible,
-        ticket.reserve_perimetre,
+        urgente=ticket.priorite == "haute",
+        perimetre_cible=ticket.perimetre_cible,
+        image_url=photo,
+        public_cible=ticket.public_cible,
+        confidentiel=ticket.reserve_perimetre,
         lien=lien,
     )
 
