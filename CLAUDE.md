@@ -505,6 +505,14 @@ Sa trace (`.git/rejeu-ci.ok`) est lue par le **point 16** du pré-check.
 Un seul job : `bash scripts/poste/rejouer-ci.sh build-frontend` — mais alors aucune trace n'est
 écrite, et le point 16 reste INCONNU.
 
+🔒 **Depuis le 28/09/2026 (#1417), deux choses le rendent INCONNU au lieu d'un faux
+vert** : un poste dont les dépendances installées ne sont pas celles que le lot
+épingle — la ligne `ENV … dépendances` donne l'écart et la commande qui aligne
+(`scripts/poste/verifier-dependances-poste.py`) —, et un second rejeu lancé
+pendant qu'un autre tourne : un verrou dans le répertoire git commun le refuse,
+worktrees compris. Le rejeu de #1415 avait rendu « pytest OK » sur sqlmodel
+0.0.39 pour un lot qui posait 0.0.44.
+
 ---
 
 ## Infrastructure — l'essentiel
