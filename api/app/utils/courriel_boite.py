@@ -39,7 +39,6 @@ from __future__ import annotations
 
 import email
 import imaplib
-import json
 import logging
 from datetime import datetime
 from app.utils import horloge
@@ -52,9 +51,10 @@ from app.auth.deps import peut_commenter
 from app.models.core import ConfigSite, Ticket, Utilisateur
 from app.models.tickets import STATUTS_TICKET_CLOS
 from app.utils.destinataires import est_adresse_syndic
-from app.models.courriel import RelanceCourriel, ReponseRelance
 from app.utils.courriel_authenticite import VerificationReportee, verifier_expediteur
-from app.utils.courriel_decodage import _corps_lisible, _sans_citation, _texte
+from app.utils.courriel_decodage import _corps_lisible, _texte
+from app.utils.courriel_journal import journaliser_releve
+from app.utils.courriel_relance import reponse_a_une_relance, relance_de
 from app.utils.echecs_repetes import CompteurEchecs
 from app.utils.courriel_ingestion import (
     ACCEPTE,
@@ -134,81 +134,6 @@ def correspondant_du_ticket(session: Session, ticket: Ticket, auteur: Utilisateu
     return peut_commenter(ticket, auteur) or est_adresse_syndic(session, auteur.email)
 
 
-def _relance_de(session: Session, verdict) -> RelanceCourriel | None:
-    """La relance groupée visée, s'il ne s'agit pas d'un ticket (#703)."""
-    if not verdict.jeton:
-        return None
-    return session.exec(
-        select(RelanceCourriel).where(RelanceCourriel.jeton == verdict.jeton)
-    ).first()
-
-
-def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict, corps: str) -> str:
-    """Ce qu'on fait d'une réponse à un envoi GROUPÉ.
-
-    🔴 ELLE N'EST PAS VENTILÉE DANS LES FILS, et c'est la décision de fond.
-
-    Le syndic écrit « pour le TK-123 on intervient jeudi, le TK-456 est clos ».
-    Recopier ce texte dans quatre fils le rendrait faux dans trois d'entre eux.
-    Aucune machine ne peut décider quelle phrase concerne quel dossier ; le faire
-    serait faire semblant de savoir.
-
-    Le conseil syndical la reçoit donc en entier, avec la liste des dossiers
-    concernés, et la reporte là où c'est juste. Il est déjà en copie de la
-    relance : c'est le bon récepteur, pas un pis-aller.
-    """
-    from app.utils.destinataires import membres_cs_ou_admin
-
-    ids = []
-    try:
-        ids = [int(i) for i in json.loads(relance.tickets_json or "[]")]
-    except (ValueError, TypeError):
-        pass
-    numeros = (
-        [t.numero for t in session.exec(select(Ticket).where(Ticket.id.in_(ids))).all()]
-        if ids
-        else []
-    )
-    liste = ", ".join(f"#{n}" for n in numeros) or "aucun ticket retrouvé"
-
-    texte = _sans_citation(corps)
-
-    #  🔴 CONSERVÉE AVANT D'ÊTRE NOTIFIÉE (04/09/2026). La notification prévient ;
-    #  elle ne conserve pas. Sans cette ligne, la réponse n'existait que dans un
-    #  champ `corps` qu'on ne relit jamais — le défaut que ce chantier corrige,
-    #  déplacé de la boîte aux lettres vers une table de notifications.
-    session.add(
-        ReponseRelance(
-            relance_id=relance.id,
-            expediteur=verdict.expediteur,
-            contenu=texte,
-            recue_le=horloge.maintenant(),
-        )
-    )
-
-    for membre in membres_cs_ou_admin(session):
-        sonner_systeme(
-            session,
-            "tache_du_conseil",
-            destinataire_id=membre.id,
-            type="ticket_update",
-            titre="Réponse du syndic à la relance groupée",
-            corps=(
-                f"« {verdict.expediteur} » a répondu à la relance portant sur "
-                f"{liste}.\n\n{texte or '(message sans texte lisible)'}\n\n"
-                "Cette réponse n'a été ajoutée à aucun fil : elle parle de "
-                "plusieurs dossiers à la fois. À reporter là où elle s'applique."
-            ),
-            #  Vers l'écran qui la CONSERVE, pas vers la liste des tickets : la
-            #  notification se perd, la page se rouvre.
-            lien="/espace-cs/reporting",
-        )
-    session.commit()
-    #  RELANCE et non REFUSE : la réponse est reçue, conservée et notifiée. Rien
-    #  n'a été refusé — seulement pas ventilé, ce qui est la décision voulue.
-    return RELANCE
-
-
 def _prevenir_le_cs(session: Session, ticket: Ticket | None, verdict) -> None:
     """Une notification par membre du conseil syndical — jamais un silence."""
     #  🔴 `membres_cs_ou_admin` et non `membres_cs_avec_email` : c'est une
@@ -245,24 +170,48 @@ def traiter(
 
     Séparée de la connexion IMAP pour être éprouvable : un test lui passe des
     en-têtes et vérifie ce qui est écrit en base, sans boîte aux lettres.
+
+    🔴 Chaque verdict laisse sa ligne au journal des relèves (#1447), validée
+    dans la MÊME transaction que lui : un IGNORE n'est plus muet, et un message
+    acquitté a toujours la sienne.
     """
+    decision, motif, ticket = _decider(session, entetes, corps, recu_le, plancher, authentification)
+    journaliser_releve(session, entetes, recu_le, decision, motif, ticket)
+    session.commit()
+    return decision
+
+
+def _refus(verdict, motif: str, *, jeton=None, numero=None):
+    """Le verdict d'un refus décidé ICI, après l'examen — avec son propre motif."""
+    return verdict.__class__(
+        decision=REFUSE,
+        jeton=jeton,
+        reference=verdict.reference,
+        numero=numero,
+        expediteur=verdict.expediteur,
+        motif=motif,
+    )
+
+
+def _decider(session, entetes, corps, recu_le, plancher, authentification):
+    """`(décision, motif, affaire)` — écrit ce que le verdict demande, sans valider."""
     verdict = examiner(
         entetes, recu_le=recu_le, plancher=plancher, authentification=authentification
     )
     if verdict.decision == IGNORE:
-        return IGNORE
+        return IGNORE, verdict.motif, None
 
     ticket = _ticket_de(session, verdict)
     if ticket is None:
         #  Pas un ticket : peut-être une RELANCE GROUPÉE (#703). Un envoi qui
         #  porte N dossiers n'a pas de jeton de ticket, et n'en aura jamais.
-        relance = _relance_de(session, verdict)
+        relance = relance_de(session, verdict)
         if relance is not None:
             if verdict.decision == REFUSE:
                 _prevenir_le_cs(session, None, verdict)
-                session.commit()
-                return REFUSE
-            return _reponse_a_une_relance(session, relance, verdict, corps)
+                return REFUSE, verdict.motif, None
+            reponse_a_une_relance(session, relance, verdict, corps)
+            return RELANCE, "réponse à une relance groupée, transmise au conseil syndical", None
 
         #  Ni ticket ni relance. Deux situations très différentes :
         if verdict.decision == ACCEPTE and verdict.reference:
@@ -271,32 +220,24 @@ def traiter(
             #  qu'on a sollicitée — le défaut même que le jeton de relance vient
             #  corriger, et il en resterait d'autres formes (un fil transféré,
             #  un client qui réécrit le destinataire).
-            _prevenir_le_cs(
-                session,
-                None,
-                verdict.__class__(
-                    decision=REFUSE,
-                    jeton=verdict.jeton,
-                    reference=verdict.reference,
-                    expediteur=verdict.expediteur,
-                    motif="ce message répond à un envoi du site, mais rien ne permet "
-                    "de dire à quel ticket",
-                ),
+            refus = _refus(
+                verdict,
+                "ce message répond à un envoi du site, mais rien ne permet de dire à quel ticket",
+                jeton=verdict.jeton,
             )
-            session.commit()
-            return REFUSE
+            _prevenir_le_cs(session, None, refus)
+            return REFUSE, refus.motif, None
 
         #  Jeton forgé, ou message sans rapport : rien à écrire, et personne de
         #  légitime à prévenir — prévenir ici ferait du bruit sur des tentatives.
-        return IGNORE
+        return IGNORE, "aucune affaire ni relance ne correspond à ce message", None
 
     #  Une affaire close ne reçoit plus rien, pas même une alerte (28/09/2026).
     if valeur(ticket.statut) in STATUTS_TICKET_CLOS:
-        return IGNORE
+        return IGNORE, f"l'affaire #{ticket.numero} est close : elle ne reçoit plus rien", ticket
     if verdict.decision == REFUSE:
         _prevenir_le_cs(session, ticket, verdict)
-        session.commit()
-        return REFUSE
+        return REFUSE, verdict.motif, ticket
 
     auteur = session.exec(
         select(Utilisateur).where(
@@ -306,55 +247,47 @@ def traiter(
     ).first()
     if auteur is None:
         #  Voir l'en-tête : pas de compte, pas d'écriture — mais on le DIT.
-        _prevenir_le_cs(
-            session,
-            ticket,
-            verdict.__class__(
-                decision=REFUSE,
-                jeton=verdict.jeton,
-                reference=verdict.reference,
-                expediteur=verdict.expediteur,
-                motif="cet expéditeur, pourtant authentifié, n'a pas de compte sur le site",
-            ),
+        refus = _refus(
+            verdict,
+            "cet expéditeur, pourtant authentifié, n'a pas de compte sur le site",
+            jeton=verdict.jeton,
         )
-        session.commit()
-        return REFUSE
+        _prevenir_le_cs(session, ticket, refus)
+        return REFUSE, refus.motif, ticket
 
     #  🔴 LE PRIX DU REPLI PAR LE SUJET (05/09/2026). Le jeton prouvait que
     #  l'expéditeur avait reçu un message du site sur CE ticket ; un numéro écrit
     #  dans un sujet ne prouve rien. On exige donc, sur ce chemin seulement, que
     #  la personne soit quelqu'un à qui le site écrit à propos de ce dossier.
     if verdict.jeton is None and not correspondant_du_ticket(session, ticket, auteur):
-        _prevenir_le_cs(
-            session,
-            ticket,
-            verdict.__class__(
-                decision=REFUSE,
-                jeton=None,
-                reference=verdict.reference,
-                numero=verdict.numero,
-                expediteur=verdict.expediteur,
-                motif="ce message désigne un ticket par son numéro dans le sujet, mais "
-                "son expéditeur n'est ni l'auteur du ticket, ni le conseil "
-                "syndical, ni le syndic",
-            ),
+        refus = _refus(
+            verdict,
+            "ce message désigne un ticket par son numéro dans le sujet, mais son "
+            "expéditeur n'est ni l'auteur du ticket, ni le conseil syndical, ni le syndic",
+            numero=verdict.numero,
         )
-        session.commit()
-        return REFUSE
+        _prevenir_le_cs(session, ticket, refus)
+        return REFUSE, refus.motif, ticket
 
     #  Texte nettoyé, mis en forme par l'assistant si l'usage est prêt, et daté
     #  de l'envoi — `utils/reponse_courriel` (#1322).
     sujet = {k.lower(): v for k, v in entetes.items()}.get("subject", "")
     suite = suite_de_reponse(session, ticket, auteur, verdict.expediteur, sujet, corps, recu_le)
     if suite is None:
-        return IGNORE
+        return IGNORE, _RIEN_A_AJOUTER, ticket
     session.add(suite)
     if suite.nouveau_statut:  # le syndic a répondu : l'affaire est chez lui
         ticket.statut = suite.nouveau_statut
     ticket.mis_a_jour_le = horloge.maintenant()
     session.add(ticket)
-    session.commit()
-    return ACCEPTE
+    return ACCEPTE, f"ajouté au fil de l'affaire — {verdict.motif}", ticket
+
+
+#: `suite_de_reponse` rend None dans deux cas, qu'elle ne distingue pas.
+_RIEN_A_AJOUTER = (
+    "rien à ajouter au fil : le message est vide une fois la citation retirée, ou "
+    "l'assistant n'y a rien trouvé d'utile (message du conseil)"
+)
 
 
 def relever() -> dict[str, int]:

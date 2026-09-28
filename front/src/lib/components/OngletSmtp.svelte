@@ -22,6 +22,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionReceptionReponses from '$lib/components/SectionReceptionReponses.svelte';
+	import JournalReleves from '$lib/components/JournalReleves.svelte';
 	import ChampSecret from '$lib/components/ChampSecret.svelte';
 
 	/** Signature ajoutée en bas de chaque e-mail — appartient à `siteConfig`. */
@@ -296,6 +297,11 @@
 		identifiantSmtp={smtpConfig.username || smtpConfig.from}
 		on:enregistre={relire}
 	/>
+
+	<!--  Ce que la relève a fait de chaque message, et pourquoi (#1447). -->
+	<SectionFormulaire icone="clipboard-list" titre="Messages relevés (50 derniers)">
+		<JournalReleves />
+	</SectionFormulaire>
 
 	<SectionFormulaire icone="message-square-text" titre="Signature des e-mails">
 		<div class="largeur-saisie">
