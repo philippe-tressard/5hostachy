@@ -112,7 +112,7 @@ _PUBLICS_ASSUMES = {
     ("config.py", "get_legal_config"),
     # Télémétrie par `sendBeacon`, visiteurs anonymes inclus : rate-limité
     # (60/min), plafonné à 50 événements, champs tronqués, opt-out RGPD honoré.
-    ("telemetry.py", "collect"),
+    ("telemetry_collecte.py", "collect"),
     #  Rapport de violation CSP : le NAVIGATEUR le poste, sans cookie ni en-tête
     #  d'authentification — c'est la spécification, pas un choix. Ce point n'existe
     #  que pour MESURER avant de poser une CSP bloquante (#536).

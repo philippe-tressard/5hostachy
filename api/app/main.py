@@ -121,6 +121,7 @@ from app.routers import (
     regles_residence,
     delegations,
     telemetry,
+    telemetry_collecte,
     flux,
 )
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
@@ -429,6 +430,7 @@ app.include_router(diagnostics.router)
 app.include_router(regles_residence.router)
 app.include_router(delegations.router)
 app.include_router(telemetry.router)
+app.include_router(telemetry_collecte.router)
 app.include_router(flux.router)
 app.include_router(signalements.router)
 app.include_router(patrimoine.router)
