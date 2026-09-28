@@ -66,10 +66,9 @@
 	import { BAIL } from '$lib/entites/bail';
 	import { SECTIONS_LIBELLE, sectionPresente, type Etat } from '$lib/entites/types';
 	import { pliageDe, requisDe } from '$lib/pliage';
-	import { stripHtml } from '$lib/utils';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import RechercheLocataire from '$lib/components/RechercheLocataire.svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
+	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
@@ -231,20 +230,16 @@
 	{/if}
 
 	{#if sectionPresente(BAIL, etat, 'description')}
-		<SectionFormulaire
-			titre={SECTIONS_LIBELLE.description}
-			idTitre="{uid}-notes-titre"
+		<!--  Par `SectionDescription`, comme toute Description (`lint:description-unique`) :
+		      sans assistant — des notes de bail n'appellent pas de rédaction assistée. -->
+		<SectionDescription
+			idPrefixe={uid}
+			idChamp="notes"
+			bind:valeur={bail.notes}
+			placeholder="Notes sur le bail…"
+			hauteur="80px"
 			pliable={pliageDe(BAIL, 'description')}
-			valeurModifiee={!!stripHtml(bail.notes)}
-			resume={stripHtml(bail.notes) ? 'renseignée' : 'aucune'}
-		>
-			<RichEditor
-				bind:value={bail.notes}
-				ariaLabelledby="{uid}-notes-titre"
-				placeholder="Notes sur le bail…"
-				minHeight="80px"
-			/>
-		</SectionFormulaire>
+		/>
 	{/if}
 
 	{#if sectionPresente(BAIL, etat, 'au_nom_de')}
