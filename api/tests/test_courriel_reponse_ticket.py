@@ -37,14 +37,13 @@ from app.utils.courriel_entrant import (
 )
 from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, examiner
 
-_AUTH_OK = "mx.ovh.net; spf=pass smtp.mailfrom=syndic.fr; dkim=pass; dmarc=pass"
+#: Le verdict d'authenticité, tel que la relève le calcule sur les octets reçus
+#: (`courriel_authenticite.verifier_expediteur`) — jamais un en-tête du message.
+_AUTH_OK = (True, "signé par syndic.fr")
 
 
-def _entetes(jeton: str, *, de: str = "gestion@syndic.fr", auth: str | None = _AUTH_OK) -> dict:
-    entetes = {"From": de, "To": adresse_de_reponse(jeton, "5hostachy.fr"), "Subject": "Re: ticket"}
-    if auth is not None:
-        entetes["Authentication-Results"] = auth
-    return entetes
+def _entetes(jeton: str, *, de: str = "gestion@syndic.fr") -> dict:
+    return {"From": de, "To": adresse_de_reponse(jeton, "5hostachy.fr"), "Subject": "Re: ticket"}
 
 
 # ── Le jeton ──────────────────────────────────────────────────────────────────
@@ -83,31 +82,51 @@ def test_le_domaine_vient_de_l_adresse_d_envoi_ou_de_rien():
 
 
 def test_un_message_authentifie_est_accepte():
-    v = examiner(_entetes(nouveau_jeton()), recu_le=datetime(2026, 9, 3))
+    v = examiner(_entetes(nouveau_jeton()), recu_le=datetime(2026, 9, 3), authentification=_AUTH_OK)
     assert v.decision == ACCEPTE
 
 
 @pytest.mark.parametrize(
-    "auth, ce_qui_manque",
+    "authentification, cas",
     [
-        (None, "aucun en-tête de vérification"),
-        ("mx.ovh.net; spf=pass; dkim=fail; dmarc=fail", "DKIM et DMARC"),
-        ("mx.ovh.net; spf=softfail; dkim=pass; dmarc=pass", "SPF"),
-        ("mx.ovh.net; dmarc=pass", "SPF et DKIM"),
-        ("", "en-tête vide"),
+        (None, "aucune vérification"),
+        ((False, "le message ne porte aucune signature DKIM"), "non signé"),
+        ((False, "le message est signé par autre.test, et non par syndic.fr"), "non aligné"),
     ],
 )
-def test_un_message_NON_authentifie_est_refuse(auth, ce_qui_manque):
-    """🔴 Le cœur du fichier — cinq façons d'usurper, cinq refus.
+def test_un_message_NON_authentifie_est_refuse(authentification, cas):
+    """🔴 Le cœur du fichier — un message non authentifié ne s'écrit jamais.
 
-    Le cas `None` est le plus important et le moins évident : un message sans
-    `Authentication-Results` n'a pas *échoué*, il n'a **pas été vérifié**. Le
-    traiter comme un succès reviendrait à faire confiance à tout message dont
-    l'attaquant aurait simplement omis l'en-tête.
+    Le cas `None` est le plus important et le moins évident : un message qu'on
+    n'a pas vérifié n'a pas *échoué*, il est **invérifié**. Le traiter comme un
+    succès reviendrait à faire confiance à tout message dont la vérification
+    n'aurait simplement pas eu lieu.
     """
-    v = examiner(_entetes(nouveau_jeton(), auth=auth), recu_le=datetime(2026, 9, 3))
-    assert v.decision == REFUSE, f"accepté alors que manque {ce_qui_manque}"
+    v = examiner(
+        _entetes(nouveau_jeton()), recu_le=datetime(2026, 9, 3), authentification=authentification
+    )
+    assert v.decision == REFUSE, f"accepté alors que {cas}"
     assert v.motif, "un refus sans motif est un silence"
+
+
+@pytest.mark.parametrize(
+    "entete",
+    [
+        "mx.ovh.net; spf=pass smtp.mailfrom=syndic.fr; dkim=pass; dmarc=pass",
+        "5hostachy.fr; spf=pass; dkim=pass; dmarc=pass",
+    ],
+)
+def test_un_Authentication_Results_ECRIT_PAR_L_EXPEDITEUR_ne_prouve_rien(entete):
+    """🔴 Le trou fermé le 28/09/2026.
+
+    Le contrôle lisait `Authentication-Results` dans le message. OVH ne pose pas
+    cet en-tête : celui qu'on trouvait, c'est l'expéditeur qui l'avait écrit — et
+    un usurpateur n'avait qu'à écrire « pass » trois fois. Aucun en-tête, quel
+    qu'il soit, ne tient lieu de vérification.
+    """
+    entetes = {**_entetes(nouveau_jeton()), "Authentication-Results": entete}
+    v = examiner(entetes, recu_le=datetime(2026, 9, 3))
+    assert v.decision == REFUSE, "un en-tête écrit par l'expéditeur a été cru"
 
 
 def test_un_message_sans_rapport_est_IGNORE_et_non_refuse():
@@ -141,9 +160,9 @@ def test_le_sujet_rattache_en_REPLI_quand_le_jeton_manque():
             "From": "gestion@syndic.fr",
             "To": "noreply@5hostachy.fr",
             "Subject": "Re: Ticket #TK-482910 — Fuite au 3e",
-            "Authentication-Results": _AUTH_OK,
         },
         recu_le=datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     assert v.decision == ACCEPTE
     assert v.numero == "TK-482910"
@@ -162,9 +181,9 @@ def test_le_jeton_PRIME_toujours_sur_le_sujet():
             "From": "gestion@syndic.fr",
             "To": f"tickets+{jeton}@5hostachy.fr",
             "Subject": "Re: Ticket #TK-000001 — un AUTRE dossier",
-            "Authentication-Results": _AUTH_OK,
         },
         recu_le=datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     assert v.jeton == jeton
     assert v.numero is None, "le sujet ne doit même pas être lu quand le jeton est là"
@@ -179,9 +198,9 @@ def test_un_numero_sans_le_mot_ticket_ne_rattache_rien():
             "From": "quelquun@ailleurs.fr",
             "To": "noreply@5hostachy.fr",
             "Subject": "Re: votre facture TK-482910",
-            "Authentication-Results": _AUTH_OK,
         },
         recu_le=datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     assert v.decision == IGNORE
 
@@ -193,9 +212,13 @@ def test_les_messages_anterieurs_au_2_septembre_sont_ignores():
     """Arbitrage du 02/09/2026 : sans plancher, la première relève déverserait
     des mois d'archives dans les tickets.
     """
-    v = examiner(_entetes(nouveau_jeton()), recu_le=datetime(2026, 8, 31))
+    v = examiner(
+        _entetes(nouveau_jeton()), recu_le=datetime(2026, 8, 31), authentification=_AUTH_OK
+    )
     assert v.decision == IGNORE
-    v = examiner(_entetes(nouveau_jeton()), recu_le=datetime(2026, 9, 2, 0, 1))
+    v = examiner(
+        _entetes(nouveau_jeton()), recu_le=datetime(2026, 9, 2, 0, 1), authentification=_AUTH_OK
+    )
     assert v.decision == ACCEPTE
 
 
@@ -206,7 +229,7 @@ def test_la_date_est_examinee_AVANT_le_reste():
     produirait une notification par ancien message douteux — un réveil brutal
     pour une fonction qu'on vient d'activer.
     """
-    v = examiner(_entetes(nouveau_jeton(), auth=None), recu_le=datetime(2026, 1, 1))
+    v = examiner(_entetes(nouveau_jeton()), recu_le=datetime(2026, 1, 1))
     assert v.decision == IGNORE
 
 

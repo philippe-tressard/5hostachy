@@ -21,7 +21,7 @@ from tests.purge_test import purger_ligne
 #  La scène (ticket + comptes + fiche syndic) vit avec les tests qui ÉCRIVENT :
 #  elle a suivi le découpage du 05/09/2026. `_entetes`, qui ne fabrique qu'un
 #  dictionnaire, est resté du côté des décisions pures.
-from tests.test_courriel_reponse_ticket import _entetes  # noqa: F401
+from tests.test_courriel_reponse_ticket import _AUTH_OK, _entetes  # noqa: F401
 from tests.test_courriel_reponse_ticket_bout_en_bout import (  # noqa: F401
     _evolutions,
     scene,
@@ -61,6 +61,7 @@ def test_une_reponse_a_une_relance_est_conservee_pour_etre_RELUE(scene):
         _entetes(relance.jeton, de=syndic.email),
         "Le TK-1 est traité, le TK-2 attend le devis.",
         datetime(2026, 9, 4),
+        authentification=_AUTH_OK,
     )
     #  RELANCE et non ACCEPTE : reçue et conservée, mais volontairement pas
     #  ventilée dans les fils. Le verdict dit ce qui a été FAIT.
@@ -100,7 +101,13 @@ def test_plusieurs_reponses_s_AJOUTENT_sans_ecraser(scene):
     session.refresh(relance)
 
     for texte in ("Premier point.", "Précision du lendemain."):
-        traiter(session, _entetes(relance.jeton, de=syndic.email), texte, datetime(2026, 9, 4))
+        traiter(
+            session,
+            _entetes(relance.jeton, de=syndic.email),
+            texte,
+            datetime(2026, 9, 4),
+            authentification=_AUTH_OK,
+        )
 
     conservees = session.exec(
         select(ReponseRelance).where(ReponseRelance.relance_id == relance.id)

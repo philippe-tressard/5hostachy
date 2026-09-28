@@ -56,6 +56,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.models.courriel import RelanceCourriel, ReponseRelance
+from app.utils.courriel_authenticite import VerificationReportee, verifier_expediteur
 from app.utils.courriel_decodage import _corps_lisible, _sans_citation, _texte
 from app.utils.echecs_repetes import CompteurEchecs
 from app.utils.courriel_ingestion import (
@@ -247,13 +248,16 @@ def traiter(
     corps: str,
     recu_le: datetime | None,
     plancher: datetime | None = None,
+    authentification: tuple[bool, str] | None = None,
 ) -> str:
     """Applique le verdict d'UN message. Rend la décision prise, pour le journal.
 
     Séparée de la connexion IMAP pour être éprouvable : un test lui passe des
     en-têtes et vérifie ce qui est écrit en base, sans boîte aux lettres.
     """
-    verdict = examiner(entetes, recu_le=recu_le, plancher=plancher)
+    verdict = examiner(
+        entetes, recu_le=recu_le, plancher=plancher, authentification=authentification
+    )
     if verdict.decision == IGNORE:
         return IGNORE
 
@@ -373,22 +377,11 @@ def relever() -> dict[str, int]:
     try:
         cfg = config_imap(session)
         if (cfg.get("imap_enabled") or "").lower() not in ("1", "true", "oui"):
-            #  🔴 UNE TRACE MÊME QUAND ON NE FAIT RIEN (04/09/2026).
-            #
-            #  La relève ne journalisait que si elle traitait un message. Silence
-            #  = « désactivée » ou « activée, boîte vide » — deux états qu'on ne
-            #  pouvait pas distinguer, y compris en lisant les journaux. À la
-            #  question « est-ce que ça tourne ? », il n'y avait pas de réponse.
-            #
-            #  C'est le CONTRAT DE BATTEMENT déjà posé pour `auto-deploy.sh` (C14,
-            #  31/07/2026) : aucun chemin ne doit être muet, surtout celui qui ne
-            #  fait rien. `debug` et non `info` : c'est une trace de diagnostic,
-            #  pas un événement.
-            #  🔴 `info` ET NON `debug` (05/09/2026). La trace existait depuis le
-            #  04/09 — mais en `debug`, un niveau que la production n'émet pas :
-            #  personne ne pouvait la lire, et la question « est-ce que ça tourne ? »
-            #  restait sans réponse, exactement comme avant qu'on l'écrive. Un
-            #  battement qu'on ne peut pas entendre n'est pas un battement.
+            #  🔴 UNE TRACE MÊME QUAND ON NE FAIT RIEN (04/09/2026) : sans elle,
+            #  « désactivée » et « boîte vide » rendaient le même silence — le
+            #  CONTRAT DE BATTEMENT d'`auto-deploy.sh` (C14). En `info` et non en
+            #  `debug` (05/09) : la production n'émet pas `debug`, et un battement
+            #  qu'on ne peut pas entendre n'est pas un battement.
             logger.info("Réponses par courriel : relève DÉSACTIVÉE (imap_enabled≠1)")
             return comptes
 
@@ -425,7 +418,16 @@ def relever() -> dict[str, int]:
                 entetes = {cle: _texte(val) for cle, val in message.items()}
                 recu_le = date_d_envoi(message.get("Date"))  # UTC, fuseau converti (#1322)
                 try:
-                    decision = traiter(session, entetes, _corps_lisible(message), recu_le, plancher)
+                    #  DKIM vérifié ICI, sur les octets reçus (28/09/2026) — jamais lu
+                    #  dans un en-tête que l'expéditeur aurait pu écrire.
+                    auth = verifier_expediteur(brut[0][1], entetes.get("From", ""))
+                    decision = traiter(
+                        session, entetes, _corps_lisible(message), recu_le, plancher, auth
+                    )
+                except VerificationReportee as exc:
+                    #  INCONNU, pas un refus : le message reste non lu, repris ensuite.
+                    logger.warning("Réponse par courriel : vérification reportée (%s)", exc)
+                    continue
                 except Exception as exc:
                     #  Le message reste NON LU : il sera repris dans dix minutes. Et
                     #  l'échec est journalisé en ERROR, donc visible du point 6 du

@@ -5,3 +5,6 @@
 #  tests changeait donc d'un run à l'autre sans que le dépôt bouge.
 -r requirements.txt
 pytest==9.1.1
+#  Tire des clés RSA pour signer de vrais messages dans `test_courriel_authenticite`.
+#  Déjà dans l'image par `fastapi-mail` ; épinglé ici parce que les tests l'importent.
+cryptography==50.0.1

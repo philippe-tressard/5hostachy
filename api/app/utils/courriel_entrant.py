@@ -54,7 +54,7 @@ création, jamais dérivé.
 
 ⚠️ **Et il ne suffit pas.** Connaître le jeton prouve seulement qu'on a reçu un
 message du site ; l'authentification de l'expéditeur est une décision **séparée**
-(`courriel_ingestion.expediteur_authentifie`). Les confondre reviendrait à faire
+(`courriel_authenticite.verifier_expediteur`). Les confondre reviendrait à faire
 d'un jeton lisible dans un carnet d'adresses un droit d'écriture signé du syndic.
 """
 

@@ -19,11 +19,16 @@ deviendrait un **commentaire officiel sur un ticket, visible des résidents, sig
 du syndic**.
 
 Notre DMARC en `p=reject` protège *notre* domaine contre l'usurpation — **pas
-celui du syndic**. La preuve doit donc être cherchée là où elle est produite : les
-en-têtes `Authentication-Results` que le serveur de réception a posés en
-constatant SPF, DKIM et DMARC. Un message qui n'en porte pas n'est pas « probablement
-bon » : il est **invérifiable**, et invérifiable n'est jamais OK
+celui du syndic**. La preuve est une signature DKIM alignée sur le `From:`,
+vérifiée par nous-mêmes à la relève (`courriel_authenticite`) et passée à
+`examiner` en paramètre. Un message qu'on n'a pas pu vérifier n'est pas
+« probablement bon » : il est **invérifiable**, et invérifiable n'est jamais OK
 (`standards/04`).
+
+🔴 Jusqu'au 28/09/2026, la preuve était lue dans l'en-tête `Authentication-Results`
+du message. OVH ne le pose pas : aucune réponse authentique n'est jamais passée,
+et un expéditeur qui l'écrivait lui-même était cru. Le verdict d'authenticité
+n'est donc plus un en-tête — rien de ce que l'expéditeur écrit ne peut le fournir.
 
 ## Que fait-on d'un message qui ne passe pas ?
 
@@ -52,7 +57,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from email.utils import parseaddr
 
 from app.utils.courriel_entrant import jeton_dans, numero_dans_sujet
 
@@ -90,47 +94,8 @@ class Verdict:
     motif: str = ""
 
 
-#: Un `Authentication-Results` qui CONSTATE un succès. On exige les trois
-#: mécanismes séparément plutôt qu'un `dmarc=pass` seul : un DMARC en `p=none`
-#: sur un domaine mal configuré peut passer sans qu'aucune signature ne tienne.
-_SPF = re.compile(r"\bspf=pass\b", re.IGNORECASE)
-_DKIM = re.compile(r"\bdkim=pass\b", re.IGNORECASE)
-_DMARC = re.compile(r"\bdmarc=pass\b", re.IGNORECASE)
-
 #: Les `Message-ID` cités par une réponse, dans l'ordre où on les préfère.
 _REFERENCE = re.compile(r"<([^<>@\s]+@[^<>\s]+)>")
-
-
-def expediteur_authentifie(authentication_results: str | None, from_: str) -> tuple[bool, str]:
-    """Le serveur de réception a-t-il CONSTATÉ l'authenticité de l'expéditeur ?
-
-    Rend `(vrai, motif)`. Le motif est écrit pour être lu par un membre du
-    conseil syndical dans une notification, pas par un administrateur système :
-    il dit ce qui manque, jamais « échec de la validation ».
-
-    ⚠️ Trois conditions, et l'absence d'en-tête en est une. Un message sans
-    `Authentication-Results` n'a pas échoué : **il n'a pas été vérifié**, ce qui
-    est pire, parce que rien ne le distingue d'un message forgé.
-    """
-    if not authentication_results:
-        return False, (
-            "aucune trace de vérification d'authenticité : ce message n'a pas pu "
-            "être attribué avec certitude à son expéditeur apparent"
-        )
-    manquants = [
-        nom
-        for nom, motif in (("SPF", _SPF), ("DKIM", _DKIM), ("DMARC", _DMARC))
-        if not motif.search(authentication_results)
-    ]
-    if manquants:
-        return False, (
-            "l'expéditeur n'est pas authentifié — contrôle(s) non passé(s) : "
-            + ", ".join(manquants)
-        )
-    domaine_from = (parseaddr(from_)[1] or "").rsplit("@", 1)[-1].lower()
-    if not domaine_from:
-        return False, "l'expéditeur du message est illisible"
-    return True, f"authentifié pour {domaine_from}"
 
 
 def reference_citee(in_reply_to: str | None, references: str | None) -> str | None:
@@ -155,6 +120,7 @@ def examiner(
     *,
     recu_le: datetime | None = None,
     plancher: datetime | None = None,
+    authentification: tuple[bool, str] | None = None,
 ) -> Verdict:
     """Le verdict, à partir des seuls en-têtes. Aucun accès réseau ni base.
 
@@ -167,6 +133,9 @@ def examiner(
        veut *parler*. L'inverser ferait notifier le conseil syndical pour chaque
        message non authentifié de la boîte, ticket ou pas : le filtre deviendrait
        lui-même la nuisance, et on finirait par ne plus le lire.
+
+    `authentification` est le verdict de `courriel_authenticite.verifier_expediteur`
+    — `(vrai, motif)`. Absent, le message est **invérifié**, donc refusé.
     """
     lire = {k.lower(): v for k, v in entetes.items()}
     plancher = plancher or PLANCHER_PAR_DEFAUT
@@ -186,7 +155,11 @@ def examiner(
     if not jeton and not reference and not numero:
         return Verdict(IGNORE, expediteur=from_, motif="ne répond à aucun ticket")
 
-    ok, motif = expediteur_authentifie(lire.get("authentication-results"), from_)
+    ok, motif = authentification or (
+        False,
+        "aucune vérification d'authenticité : ce message n'a pas pu être attribué "
+        "avec certitude à son expéditeur apparent",
+    )
     decision = ACCEPTE if ok else REFUSE
     return Verdict(
         decision, jeton=jeton, reference=reference, numero=numero, expediteur=from_, motif=motif
