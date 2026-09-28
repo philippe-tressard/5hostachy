@@ -49,12 +49,9 @@ from sqlmodel import Session, select
 
 from app.utils.liens import lien_ticket
 from app.auth.deps import peut_commenter
-from app.models.core import (
-    ConfigSite,
-    MembreSyndic,
-    Ticket,
-    Utilisateur,
-)
+from app.models.core import ConfigSite, Ticket, Utilisateur
+from app.models.tickets import STATUTS_TICKET_CLOS
+from app.utils.destinataires import est_adresse_syndic
 from app.models.courriel import RelanceCourriel, ReponseRelance
 from app.utils.courriel_authenticite import VerificationReportee, verifier_expediteur
 from app.utils.courriel_decodage import _corps_lisible, _sans_citation, _texte
@@ -69,6 +66,7 @@ from app.utils.courriel_ingestion import (
 )
 from app.utils.cloche import sonner_systeme
 from app.utils.reponse_courriel import date_d_envoi, suite_de_reponse
+from app.utils.valeurs import valeur
 
 logger = logging.getLogger(__name__)
 
@@ -133,14 +131,7 @@ def correspondant_du_ticket(session: Session, ticket: Ticket, auteur: Utilisateu
     ⚠️ Le syndic est cherché par l'ADRESSE, pas par un rôle : `RoleUtilisateur`
     n'en a pas, et le gestionnaire vit dans `MembreSyndic`.
     """
-    if peut_commenter(ticket, auteur):
-        return True
-    adresse = (auteur.email or "").strip().lower()
-    if not adresse:
-        return False
-    return bool(
-        session.exec(select(MembreSyndic).where(func.lower(MembreSyndic.email) == adresse)).first()
-    )
+    return peut_commenter(ticket, auteur) or est_adresse_syndic(session, auteur.email)
 
 
 def _relance_de(session: Session, verdict) -> RelanceCourriel | None:
@@ -299,6 +290,9 @@ def traiter(
         #  légitime à prévenir — prévenir ici ferait du bruit sur des tentatives.
         return IGNORE
 
+    #  Une affaire close ne reçoit plus rien, pas même une alerte (28/09/2026).
+    if valeur(ticket.statut) in STATUTS_TICKET_CLOS:
+        return IGNORE
     if verdict.decision == REFUSE:
         _prevenir_le_cs(session, ticket, verdict)
         session.commit()
@@ -350,10 +344,13 @@ def traiter(
 
     #  Texte nettoyé, mis en forme par l'assistant si l'usage est prêt, et daté
     #  de l'envoi — `utils/reponse_courriel` (#1322).
-    suite = suite_de_reponse(session, ticket.id, auteur, verdict.expediteur, corps, recu_le)
+    sujet = {k.lower(): v for k, v in entetes.items()}.get("subject", "")
+    suite = suite_de_reponse(session, ticket, auteur, verdict.expediteur, sujet, corps, recu_le)
     if suite is None:
         return IGNORE
     session.add(suite)
+    if suite.nouveau_statut:  # le syndic a répondu : l'affaire est chez lui
+        ticket.statut = suite.nouveau_statut
     ticket.mis_a_jour_le = horloge.maintenant()
     session.add(ticket)
     session.commit()

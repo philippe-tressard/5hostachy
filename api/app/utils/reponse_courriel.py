@@ -99,6 +99,9 @@ class Texte:
     #: Le texte reçu, quand l'assistant l'a mis en forme ; None sinon.
     origine: str | None
     assiste: bool
+    #: L'assistant a jugé qu'il ne restait RIEN d'utile. Le texte nettoyé entre
+    #: quand même par défaut — sauf pour qui peut être écarté (`suite_de_reponse`).
+    vide_selon_assistant: bool = False
 
 
 def mettre_en_forme(session: Session, nettoye: str, recu: str) -> Texte:
@@ -126,8 +129,10 @@ def mettre_en_forme(session: Session, nettoye: str, recu: str) -> Texte:
         logger.warning("Réponse par courriel : mise en forme en échec (%s)", type(exc).__name__)
         return repli
     propre = (reponse.texte or "").strip()
-    if not propre or len(propre) > len(nettoye) + max(40, len(nettoye) // 10):
-        #  Vide, ou plus long que ce qu'on lui a donné : il a ajouté quelque chose.
+    if not propre:
+        return Texte(contenu=nettoye, origine=None, assiste=False, vide_selon_assistant=True)
+    if len(propre) > len(nettoye) + max(40, len(nettoye) // 10):
+        #  Plus long que ce qu'on lui a donné : il a ajouté quelque chose.
         logger.warning(
             "Réponse par courriel : mise en forme écartée (%d caractères pour %d)",
             len(propre),
@@ -138,9 +143,16 @@ def mettre_en_forme(session: Session, nettoye: str, recu: str) -> Texte:
 
 
 def contenu_de_la_suite(
-    expediteur: str, nom_du_compte: str, envoye_le: datetime, texte: str
+    expediteur: str,
+    nom_du_compte: str,
+    envoye_le: datetime,
+    texte: str,
+    transfere_par: str | None = None,
 ) -> str:
-    """Le HTML de la Suite : « Réponse de … le … » en italique, puis le texte.
+    """Le HTML de la Suite : « Mail reçu de … le … » en italique, puis le texte.
+
+    Libellé demandé le 28/09/2026 (« Réponse de » jusque-là). Un message du syndic
+    TRANSFÉRÉ par un membre du conseil nomme le syndic, puis qui l'a transféré.
 
     La ligne d'en-tête est écrite par le CODE, jamais par le modèle (arbitré le
     25/09/2026) : un nom et une date lus dans l'en-tête ne s'inventent pas. Le nom
@@ -155,7 +167,11 @@ def contenu_de_la_suite(
     from app.utils.dates_fr import datetime_longue_paris
 
     nom = parseaddr(expediteur or "")[0].strip() or nom_du_compte
-    entete = f"<p><em>Réponse de {escape(nom, quote=False)} le {datetime_longue_paris(envoye_le)}</em></p>"
+    par = f", transféré par {escape(transfere_par, quote=False)}" if transfere_par else ""
+    entete = (
+        f"<p><em>Mail reçu de {escape(nom, quote=False)} le "
+        f"{datetime_longue_paris(envoye_le)}{par}</em></p>"
+    )
     paragraphes = [p.strip() for p in re.split(r"\n\s*\n", texte) if p.strip()]
     corps = "".join(
         "<p>" + "<br>".join(escape(ligne.strip(), quote=False) for ligne in p.splitlines()) + "</p>"
@@ -165,23 +181,57 @@ def contenu_de_la_suite(
 
 
 def suite_de_reponse(
-    session: Session, ticket_id: int, auteur, expediteur: str, corps: str, envoye_le
+    session: Session, ticket, auteur, expediteur: str, sujet: str, corps: str, envoye_le
 ):
-    """La Suite à ajouter au fil, ou None si le message n'a rien d'utile."""
-    from app.models.core import TicketEvolution
-    from app.utils.courriel_decodage import _sans_citation
-    from app.utils.noms import nom_affiche
+    """La Suite à ajouter au fil, ou None si le message n'a rien à y apporter.
 
-    texte = mettre_en_forme(session, _sans_citation(corps), corps)
+    Trois règles demandées le 28/09/2026 :
+
+    - **le syndic fait avancer le dossier** : un message du syndic — écrit par lui,
+      ou transféré par un membre du conseil depuis une adresse de la fiche du
+      cabinet — fait passer une affaire encore « Ouvert » à « Chez le syndic »
+      (`en_cours`). La Suite est alors une entrée d'ÉTAT, comme au formulaire ;
+    - **un transfert du syndic porte le message du syndic**, pas la note de qui
+      transfère : c'est lui que le fil doit garder ;
+    - **un simple merci du conseil n'entre pas** : quand l'assistant ne trouve
+      rien d'utile dans le message d'un membre du conseil, rien n'est écrit. Un
+      message du syndic ou d'un résident entre toujours — l'assistant n'a pas à
+      décider qu'une réponse sollicitée ne comptait pas.
+    """
+    from app.auth.deps import est_moderateur
+    from app.models.core import TicketEvolution
+    from app.models.tickets import StatutTicket
+    from app.utils.courriel_decodage import _sans_citation, transfert_dans
+    from app.utils.destinataires import est_adresse_syndic
+    from app.utils.nature_affaire import est_actualite
+    from app.utils.noms import nom_affiche
+    from app.utils.valeurs import valeur
+
+    compte = nom_affiche(auteur.prenom, auteur.nom)
+    transfert = transfert_dans(sujet, corps)
+    syndic_transfere = transfert is not None and est_adresse_syndic(session, transfert.adresse)
+    syndic = syndic_transfere or est_adresse_syndic(session, parseaddr(expediteur or "")[1])
+
+    source = transfert.corps if syndic_transfere else corps
+    texte = mettre_en_forme(session, _sans_citation(source), corps)
     if not texte.contenu:
         return None
+    if texte.vide_selon_assistant and est_moderateur(auteur) and not syndic:
+        return None
     quand = moment_de_la_suite(envoye_le)
+    contenu = (
+        contenu_de_la_suite(transfert.de, transfert.adresse, quand, texte.contenu, compte)
+        if syndic_transfere
+        else contenu_de_la_suite(expediteur, compte, quand, texte.contenu)
+    )
+    etat = valeur(ticket.statut)
+    avance = syndic and etat == StatutTicket.ouvert.value and not est_actualite(ticket)
     return TicketEvolution(
-        ticket_id=ticket_id,
-        type="commentaire",
-        contenu=contenu_de_la_suite(
-            expediteur, nom_affiche(auteur.prenom, auteur.nom), quand, texte.contenu
-        ),
+        ticket_id=ticket.id,
+        type="etat" if avance else "commentaire",
+        ancien_statut=etat if avance else None,
+        nouveau_statut=StatutTicket.en_cours.value if avance else None,
+        contenu=contenu,
         contenu_origine=texte.origine,
         assiste_ia=texte.assiste,
         auteur_id=auteur.id,
