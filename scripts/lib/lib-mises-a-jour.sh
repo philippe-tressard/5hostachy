@@ -62,6 +62,41 @@ echo "noyau_installe=$(ls -1 /lib/modules 2>/dev/null | grep -F -- "+${_k#*+}" |
 echo "noyau_candidat=$(apt-cache policy "linux-image-${_k#*+rpt-}" 2>/dev/null | awk "/Candidate:/{print \$2}")"
 '
 
+#: Les conteneurs d'un AUTRE projet que le redémarrage du standby va arrêter
+#: (List-dons vit sur rpi2). `noyau-standby.sh` les relève juste avant de
+#: redémarrer — l'epoch en première ligne, un nom par ligne ensuite — et C30
+#: vérifie qu'ils tournent de nouveau. Hors du dépôt, comme `noyau-tente` : le
+#: relevé doit survivre au redémarrage (28/09/2026, arbitrage de Philippe :
+#: « tu peux arrêter List-dons, mais vérifie qu'il redémarre »).
+CONTENEURS_ETRANGERS="${CONTENEURS_ETRANGERS:-/var/lib/hostachy/conteneurs-etrangers}"
+
+#  La collecte du retour, pour un relevé donné (paramétrée pour l'autotest).
+#  Même contrainte que COLLECT_MAJ : aucune apostrophe dans la chaîne.
+#   - etrangers_age / etrangers_attendus : l'âge du relevé, et ce qu'il nomme —
+#     émis seulement si un relevé existe ;
+#   - etrangers_lu / etrangers_manquants : émis seulement si `docker ps` a
+#     répondu. Est REVENU un conteneur qui tourne et que son healthcheck ne dit
+#     ni malade ni en cours de démarrage : on mesure le service, pas le process.
+collecte_etrangers() {
+    printf '%s' '
+_f='"$1"'
+if [ -r "$_f" ]; then
+_e=$(head -1 "$_f")
+case "$_e" in ""|*[!0-9]*) echo "etrangers_age=illisible" ;; *) echo "etrangers_age=$(( $(date +%s) - _e ))" ;; esac
+echo "etrangers_attendus=$(tail -n +2 "$_f" | paste -sd, -)"
+if _v=$(docker ps --format "{{.Names}} {{.Status}}" 2>/dev/null); then
+echo "etrangers_lu=1"
+_m=""
+for _c in $(tail -n +2 "$_f"); do
+printf "%s\n" "$_v" | grep -v -e "unhealthy" -e "health: starting" | grep -q "^$_c " || _m="$_m${_m:+,}$_c"
+done
+echo "etrangers_manquants=$_m"
+fi
+fi
+'
+}
+COLLECT_MAJ="$COLLECT_MAJ$(collecte_etrangers "$CONTENEURS_ETRANGERS")"
+
 # ── Décisions PURES (aucun effet de bord) ────────────────────────────────────
 
 #  $1 erreurs de configuration · $2 âge des listes (j) · $3 paquets de sécurité
@@ -111,6 +146,9 @@ NOYAU_PAQUETS="linux-image-rpi-2712 linux-image-rpi-v8 linux-headers-rpi-2712 li
 #: repart pas — donc un FAIL. Un Pi 5 redémarre en 1 à 2 min.
 MARQUE_REDEMARRAGE="${MARQUE_REDEMARRAGE:-/opt/5hostachy/.redemarrage-noyau}"
 REDEMARRAGE_PAIR_MAX_S=${REDEMARRAGE_PAIR_MAX_S:-600}
+#: Au-delà, une marque ou un relevé ne dit plus rien du moment : ce qui arrive
+#: trois jours après un redémarrage réussi a une autre cause.
+REDEMARRAGE_PERTINENT_S=${REDEMARRAGE_PERTINENT_S:-21600}
 
 #  « 6.18.50+rpt-rpi-2712 » (uname -r) ou « 1:6.18.50-1+rpt1 » (dpkg) → 6.18.50
 version_noyau() { local v=${1#*:}; v=${v%%+*}; echo "${v%%-*}"; }
@@ -151,13 +189,29 @@ decision_redemarrage_standby() {
 
 #  $1 âge (s) de la marque de redémarrage, vide si aucune
 #  → REDEMARRAGE | NE_REPART_PAS | INJOIGNABLE
-#  Au-delà de six heures, la marque ne dit plus rien de la panne du moment : un
-#  pair injoignable trois jours après un redémarrage réussi a une autre cause.
+#  Au-delà de REDEMARRAGE_PERTINENT_S, la marque ne dit plus rien de la panne
+#  du moment.
 verdict_pair_injoignable() {
     case "$1" in ''|*[!0-9]*) echo INJOIGNABLE; return ;; esac
     if   [ "$1" -le "$REDEMARRAGE_PAIR_MAX_S" ]; then echo REDEMARRAGE
-    elif [ "$1" -le 21600 ]; then echo NE_REPART_PAS
+    elif [ "$1" -le "$REDEMARRAGE_PERTINENT_S" ]; then echo NE_REPART_PAS
     else echo INJOIGNABLE; fi
+}
+
+#  $1 âge (s) du relevé des conteneurs étrangers, vide si aucun · $2 ceux qu'il
+#  nomme · $3 ceux qui ne sont pas revenus · $4 « 1 » si `docker ps` a répondu
+#  → SANS_OBJET | REVENUS | EN_COURS | ABSENTS | INCONNU
+#  Même fenêtre que le pair injoignable : un Pi 5 et ses conteneurs repartent
+#  en deux minutes ; au-delà de dix, un autre projet est à l'arrêt.
+verdict_etrangers_revenus() {
+    local age=$1 attendus=$2 manquants=$3 lu=$4
+    [ -n "$age" ] || { echo SANS_OBJET; return; }
+    case "$age" in *[!0-9]*) echo INCONNU; return ;; esac
+    [ "$age" -le "$REDEMARRAGE_PERTINENT_S" ] && [ -n "$attendus" ] || { echo SANS_OBJET; return; }
+    [ "$lu" = 1 ] || { echo INCONNU; return; }
+    if   [ -z "$manquants" ]; then echo REVENUS
+    elif [ "$age" -le "$REDEMARRAGE_PAIR_MAX_S" ]; then echo EN_COURS
+    else echo ABSENTS; fi
 }
 
 #  Émis par check-reliability quand le pair ne répond pas en SSH. Dépend de
@@ -194,11 +248,13 @@ images_de_base() {
 }
 
 # ── Les verdicts de C30, émis par check-reliability (via lib-conformite) ─────
-#  Dépend de l'appelant : ok/warn, SELF/PEER/PEER_OK et les champs S_*/P_*.
+#  Dépend de l'appelant : ok/warn/fail, SELF/PEER/PEER_OK et les champs S_*/P_*.
 #  Tout sort en WARN, donc au digest quotidien : aucune de ces situations
 #  n'arrête le site, et un redémarrage reste un geste manuel, le standby
 #  d'abord. Un FAIL à */15 serait une alerte par heure qu'on apprendrait à
-#  ignorer.
+#  ignorer. UNE exception : un autre projet que notre redémarrage a arrêté et
+#  qui ne revient pas — c'est une panne, que nous avons causée, et elle ne
+#  dure que la fenêtre du relevé (REDEMARRAGE_PERTINENT_S).
 mises_a_jour_verdicts() {
     local n p v
     for n in "$SELF" "$PEER"; do
@@ -218,6 +274,15 @@ mises_a_jour_verdicts() {
             OK)          ok   "Noyau de $n à jour ($actif)" ;;
             REDEMARRAGE) warn "Redémarrage requis sur $n : tourne en $actif, $inst est installé — redémarrer le STANDBY d'abord, l'actif après une bascule" ;;
             *)           warn "Noyau de $n INCONNU (tourne='${actif:-vide}' installé='${inst:-vide}') — ni vert ni rouge" ;;
+        esac
+        local e_age e_att e_man e_lu
+        eval "e_age=\${${p}_etrangers_age:-} e_att=\${${p}_etrangers_attendus:-} e_man=\${${p}_etrangers_manquants:-} e_lu=\${${p}_etrangers_lu:-}"
+        case "$(verdict_etrangers_revenus "$e_age" "$e_att" "$e_man" "$e_lu")" in
+            SANS_OBJET) ;;
+            REVENUS)  ok   "Conteneurs hors 5Hostachy revenus sur $n après son redémarrage de noyau : ${e_att//,/, }" ;;
+            EN_COURS) warn "Redémarrage de noyau de $n il y a ${e_age} s : ${e_man//,/, } pas encore revenu(s) — revérifié au prochain passage (#1395)" ;;
+            ABSENTS)  fail "Conteneur(s) ${e_man//,/, } NON revenu(s) sur $n, $(( e_age / 60 )) min après son redémarrage de noyau (#1395) — un autre projet est à l'arrêt : 'docker ps -a' sur $n, puis 'docker compose up -d' dans son répertoire" ;;
+            *)        warn "Retour des conteneurs hors 5Hostachy sur $n INCONNU (relevé de '${e_age:-vide}' s, docker lu='${e_lu:-non}') — ni vert ni rouge" ;;
         esac
         case "$(decision_noyau_candidat "$actif" "$cand")" in
             RIEN)     ok   "Aucun noyau plus récent pour $n dans le dépôt" ;;
@@ -282,6 +347,33 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "marque de 11 min → ne repart pas" NE_REPART_PAS verdict_pair_injoignable 660
     t "marque de 3 jours → autre cause"  INJOIGNABLE verdict_pair_injoignable 259200
     t "marque illisible → injoignable"   INJOIGNABLE verdict_pair_injoignable "abc"
+
+    #  Les conteneurs d'un AUTRE projet arrêtés par le redémarrage (28/09/2026) :
+    #  rpi2 porte List-dons, et redémarrer ne vaut que si on constate son retour.
+    t "aucun relevé → sans objet"          SANS_OBJET verdict_etrangers_revenus "" "" "" ""
+    t "relevé sans conteneur → sans objet" SANS_OBJET verdict_etrangers_revenus 90 "" "" 1
+    t "tous revenus"                       REVENUS    verdict_etrangers_revenus 90 listdons_app "" 1
+    t "absent à 2 min → en cours"          EN_COURS   verdict_etrangers_revenus 120 listdons_app listdons_app 1
+    t "absent à 11 min → ABSENTS"          ABSENTS    verdict_etrangers_revenus 660 listdons_app listdons_app 1
+    t "relevé de 3 jours → sans objet"     SANS_OBJET verdict_etrangers_revenus 259200 listdons_app listdons_app 1
+    t "docker illisible → INCONNU, jamais REVENUS" INCONNU verdict_etrangers_revenus 660 listdons_app "" ""
+    t "horodatage illisible → INCONNU"     INCONNU    verdict_etrangers_revenus illisible listdons_app "" 1
+
+    #  La collecte elle-même, sur un relevé et un `docker ps` simulés : c'est
+    #  elle qui dit « revenu » — un conteneur en route ou malade ne l'est pas.
+    tmpe=$(mktemp)
+    printf '%s\nlistdons_app\nautre_app\n' "$(( $(date +%s) - 700 ))" > "$tmpe"
+    docker() { printf 'listdons_app Up 2 minutes (healthy)\nautre_app Up 1 minute (health: starting)\nhostachy_api Up 3 hours\n'; }
+    t "collecte : sain revenu, « starting » manquant" "autre_app" \
+      eval 'eval "$(collecte_etrangers "$tmpe")" | sed -n "s/^etrangers_manquants=//p"'
+    docker() { printf 'listdons_app Up 2 minutes (unhealthy)\n'; }
+    t "collecte : « unhealthy » n'est pas revenu" "listdons_app,autre_app" \
+      eval 'eval "$(collecte_etrangers "$tmpe")" | sed -n "s/^etrangers_manquants=//p"'
+    docker() { return 1; }
+    t "collecte : docker en échec → aucun verdict de retour" "" \
+      eval 'eval "$(collecte_etrangers "$tmpe")" | grep -E "^etrangers_(lu|manquants)="'
+    unset -f docker; rm -f "$tmpe"
+    t "collecte : pas de relevé → rien" "" eval 'eval "$(collecte_etrangers "$tmpe")"'
 
     #  L'émission : jamais un vert, et le bon canal pour chaque cas.
     tmpm=$(mktemp); PEER=rpi2; PEER_IP=192.168.1.223
