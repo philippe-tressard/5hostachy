@@ -318,6 +318,26 @@ export interface LigneConsommationIA {
 	cout_centimes: number | null;
 }
 
+/**  Un message WhatsApp planifié (`GET /config/whatsapp-scheduled`). */
+export interface MessagePlanifieWhatsApp {
+	id: number;
+	label: string;
+	message: string;
+	cron_rule: string;
+	enabled: boolean;
+	mis_a_jour_le: string | null;
+}
+
+/**  Un envoi WhatsApp journalisé (`GET /config/whatsapp-logs`). */
+export interface JournalEnvoiWhatsApp {
+	id: number;
+	label: string;
+	message: string;
+	statut: string;
+	erreur: string | null;
+	envoye_le: string | null;
+}
+
 /**  La consommation de l'assistant IA (`GET /config/llm-consommation`). */
 export interface ConsommationIA {
 	mois: { mois: string; usages: LigneConsommationIA[] }[];
@@ -396,8 +416,8 @@ export const config = {
 		}>('/config/llm-modeles'),
 
 	whatsappStatut: () => api.get<any>('/config/whatsapp-status'),
-	whatsappJournaux: () => api.get<any>('/config/whatsapp-logs'),
-	whatsappPlanifies: () => api.get<any>('/config/whatsapp-scheduled'),
+	whatsappJournaux: () => api.get<JournalEnvoiWhatsApp[]>('/config/whatsapp-logs'),
+	whatsappPlanifies: () => api.get<MessagePlanifieWhatsApp[]>('/config/whatsapp-scheduled'),
 	modifierWhatsappPlanifie: (id: number, data: unknown) =>
 		api.put<any>(`/config/whatsapp-scheduled/${id}`, data),
 	testerWhatsapp: (message: string) => api.post<any>('/config/whatsapp-test', { message }),
