@@ -10,6 +10,13 @@
   (maquette A, avec l'extrait et les Archives de la C) : on cherche un mot, pas
   une case — et la catégorie reste trouvable, le serveur cherche aussi son
   libellé (`app/utils/recherche_affaires.py`).
+
+  🔴 La case « Inclure les Archives » a disparu le 28/09/2026 (demande de
+  l'utilisateur) : elle doublait « Les inclure » du bilan, qui ne s'offre que
+  quand des archivées correspondent — la seule fois où la question se pose.
+  Sans case, l'état ne se voit plus que dans le bilan (« dont N aux
+  Archives ») ; il retombe donc à faux quand la recherche s'efface, sinon la
+  recherche suivante inclurait les Archives sans que rien ne le dise.
 -->
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
@@ -30,6 +37,8 @@
 	export let archivees = 0;
 
 	const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+
+	$: if (!recherche.trim()) inclureArchives = false;
 </script>
 
 <!--  🔴 DEUX rangées écrites à la main, soit la deuxième et la troisième
@@ -66,12 +75,7 @@
 		bind:valeur={recherche}
 		placeholder="Un mot, un nom, un n° d'affaire…"
 		aide="Cherche partout : n°, titre, description, catégorie, lieu, auteur, prestataire, équipement, suites, messages et pièces jointes — sans tenir compte des accents ni des majuscules."
-	>
-		<label class="case">
-			<input type="checkbox" bind:checked={inclureArchives} />
-			Inclure les Archives
-		</label>
-	</ChampRecherche>
+	/>
 </div>
 
 {#if etat.terme || etat.enCours || etat.erreur}
@@ -82,7 +86,9 @@
 			Recherche…
 		{:else}
 			<strong>{pluriel(affichees, 'affaire')}</strong> pour « {etat.terme} »
-			{#if archivees && !inclureArchives}
+			{#if archivees && inclureArchives}
+				· dont {archivees} aux Archives
+			{:else if archivees}
 				· {pluriel(archivees, 'autre')} aux Archives
 				<button
 					type="button"

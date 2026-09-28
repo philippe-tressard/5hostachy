@@ -13,7 +13,8 @@
 
   - `aide` : la phrase grise sous le champ — facultative, un annuaire dont la
     règle tient dans le placeholder n'en a pas besoin.
-  - le slot par défaut se pose à droite de la saisie (« Inclure les Archives »).
+  - le slot par défaut se pose à droite de la saisie — une option de la
+    recherche (la case « Inclure les Archives » l'a occupé jusqu'au 28/09/2026).
 -->
 <script lang="ts">
 	/** Unique sur la page : relie le libellé et l'aide à la saisie. */
