@@ -1751,6 +1751,13 @@ jobs:
         working-directory: front
         run: npm run lint:charte-valeurs
 
+      # 495 attributs `style="…"` statiques dans les écrans, dont quarante dans
+      # un seul onglet sans aucune feuille (#1329, 28/09/2026). Plafond
+      # décroissant : il refuse d'en ajouter, et d'oublier de le baisser.
+      - name: Aucun style en ligne de plus
+        working-directory: front
+        run: npm run lint:styles-en-ligne
+
       # La dernière ligne d'une carte différait sur neuf points entre la carte
       # d'affaire, celle d'actualité et le fil (27/09/2026, arbitré à l'écran).
       # Une ligne : `PastillesAffaire` ; un auteur : `AuteurCarte` (✍️).
