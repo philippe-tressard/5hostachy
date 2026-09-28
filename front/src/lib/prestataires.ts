@@ -154,10 +154,34 @@ export const FILTRES_CONTRAT: readonly { val: string; label: string }[] = [
 	{ val: 'sans_contrat', label: 'Sans contrat' },
 ];
 
-/**  Le prestataire passe-t-il le filtre « sous contrat » ? `filtre` vide : tous. */
-export function passeFiltreContrat(filtre: string, nbContrats: number): boolean {
-	if (!filtre) return true;
-	return (filtre === 'sous_contrat') === nbContrats > 0;
+/**  Les trois filtres de l'annuaire — une chaîne vide : pas de filtre. */
+export interface FiltresPrestataires {
+	type: string;
+	contrat: string;
+	equipement: string;
+}
+
+export function filtresVides(): FiltresPrestataires {
+	return { type: '', contrat: '', equipement: '' };
+}
+
+/**  Un filtre au moins est-il posé ? — « Aucun prestataire pour ces critères ». */
+export function filtresActifs(f: FiltresPrestataires): boolean {
+	return !!(f.type || f.contrat || f.equipement);
+}
+
+/**  Les prestataires qui passent les filtres. « Sous contrat » se lit sur les
+ *   CONTRATS (actifs : l'API n'en sert pas d'autres), jamais sur la fiche. */
+export function filtrerPrestataires<
+	P extends { id: number; specialite?: string; type_prestataire?: string },
+>(prestataires: P[], contrats: { prestataire_id: number }[], f: FiltresPrestataires): P[] {
+	const sousContrat = new Set(contrats.map((c) => c.prestataire_id));
+	return prestataires.filter(
+		(p) =>
+			(!f.equipement || p.specialite === f.equipement) &&
+			(!f.type || p.type_prestataire === f.type) &&
+			(!f.contrat || (f.contrat === 'sous_contrat') === sousContrat.has(p.id)),
+	);
 }
 
 /**  Les unités de fréquence — celles du contrat, qui fixe le rythme d'un

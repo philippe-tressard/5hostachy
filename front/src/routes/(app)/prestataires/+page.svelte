@@ -2,7 +2,7 @@
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { confirmerPuis } from '$lib/confirmation';
 	import { supprimerDocument } from '$lib/gestes-document';
-	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import FiltresPrestataires from '$lib/components/FiltresPrestataires.svelte';
 	import CarteContrat from '$lib/components/CarteContrat.svelte';
 	import ChampsPrestataire from '$lib/components/ChampsPrestataire.svelte';
 	import CartePrestataire from '$lib/components/CartePrestataire.svelte';
@@ -27,8 +27,9 @@
 	import {
 		EQUIPEMENTS as equipements,
 		TYPES_PRESTATAIRE as typesPrestataire,
-		FILTRES_CONTRAT,
-		passeFiltreContrat,
+		filtresVides,
+		filtresActifs,
+		filtrerPrestataires,
 		contactsAEnvoyer,
 		prestataireDepuis,
 		contratDepuis,
@@ -153,16 +154,8 @@
 	//  choisir un fichier dans le formulaire d'édition le faisait apparaître dans
 	//  la carte dépliée. Chaque `DocumentsContrat` porte désormais le sien.
 
-	let filtreEquipement = '';
-	let filtreType = '';
-	let filtreContrat = '';
-
-	$: filteredPrests = prestataires.filter(
-		(p) =>
-			(!filtreEquipement || p.specialite === filtreEquipement) &&
-			(!filtreType || p.type_prestataire === filtreType) &&
-			passeFiltreContrat(filtreContrat, contratsForPrest(p.id).length),
-	);
+	let filtres = filtresVides();
+	$: filteredPrests = filtrerPrestataires(prestataires, contrats, filtres);
 	$: compactPrests = filteredPrests.length > 7;
 
 	// ── Échéances des contrats ────────────────────────────────────
@@ -197,12 +190,9 @@
 	//  vivaient dans le bloc « Consommations » par accident de rangement, et
 	//  l'extraction les a fait remonter. Une fonction se range avec ce qu'elle
 	//  sert, pas avec ce qui l'entoure.
-	//  RÉACTIVE (#1444) : le filtre « sous contrat » l'appelle depuis une
-	//  déclaration réactive, et Svelte ne suit pas `contrats` à l'intérieur
-	//  d'une fonction ordinaire — le filtre ne se serait pas recalculé à
-	//  l'ajout ou à l'archivage d'un contrat.
-	$: contratsForPrest = (prestId: number): any[] =>
-		contrats.filter((c) => c.prestataire_id === prestId);
+	function contratsForPrest(prestId: number): any[] {
+		return contrats.filter((c) => c.prestataire_id === prestId);
+	}
 
 	//  L'onglet Consommations possède son formulaire ; la page n'en garde que
 	//  l'ouverture et le libellé, pour le bouton de l'en-tête (R1).
@@ -641,32 +631,7 @@
 	<!-- ONGLET 4 : PRESTATAIRES (annuaire)                           -->
 	<!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'prestataires'}
-	<!--  Deux rangées et le champ « Type » du formulaire ci-dessous : UN motif,
-	      porté par `ChoixPastilles` (#491). Il était écrit deux fois ici, à trois
-	      mots près — la duplication la plus discrète, celle qu'aucun contrôle
-	      inter-fichiers ne voit — et le composant qui l'a absorbée annonçait
-	      lui-même qu'une troisième copie viendrait. Elle est venue le lendemain,
-	      dans le formulaire : c'est ce qui a fait généraliser le composant.
-	      `avecDetail` sur les types seuls : leur description vivait dans un `title`,
-	      donc invisible au tactile. Les douze équipements n'en portent pas. -->
-	<ChoixPastilles
-		options={typesPrestataire}
-		bind:valeur={filtreType}
-		avecDetail
-		libelle="Filtrer par type de prestataire"
-	/>
-	<!--  Le CADRE, séparé du métier (#1444) : il se lit sur les contrats actifs. -->
-	<ChoixPastilles
-		options={FILTRES_CONTRAT}
-		bind:valeur={filtreContrat}
-		libelle="Filtrer par contrat"
-	/>
-	<ChoixPastilles
-		options={equipements}
-		bind:valeur={filtreEquipement}
-		tous="Tous équipements"
-		libelle="Filtrer par équipement"
-	/>
+	<FiltresPrestataires bind:filtres />
 
 	<!--  🔴 La CRÉATION seulement. Corriger un prestataire ouvre le formulaire DANS
 	      sa carte, à la place de son corps — le motif des tickets, appliqué aux
@@ -696,15 +661,11 @@
 
 	{#if filteredPrests.length === 0}
 		<div class="empty-state card">
-			<h3>
-				Aucun prestataire{filtreEquipement || filtreType || filtreContrat
-					? ' pour ces critères'
-					: ''}
-			</h3>
+			<h3>Aucun prestataire{filtresActifs(filtres) ? ' pour ces critères' : ''}</h3>
 		</div>
 	{:else}
 		{#each typesPrestataire.filter( (t) => filteredPrests.some((p) => p.type_prestataire === t.val) ) as typeGroup (typeGroup.val)}
-			{#if !filtreType}
+			{#if !filtres.type}
 				<div class="type-section-header">
 					<span class="type-section-label">{typeGroup.label}</span>
 					<span class="type-section-desc">{typeGroup.desc}</span>
