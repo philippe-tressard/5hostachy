@@ -33,9 +33,15 @@ class NouvelleEntite(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nom: str                                           # français, snake_case
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    mis_a_jour_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: Optional[NaiveDatetime] = None
 ```
+
+⚠️ **Une date de modèle s'annote `NaiveDatetime`** (`from pydantic import
+NaiveDatetime`), jamais `datetime` : depuis sqlmodel 0.0.45, `datetime` donne
+une colonne consciente du fuseau qui REFUSE à l'écriture la date naïve de
+`horloge.maintenant()` (#1412). 🔒 `test_horloge.py` refuse une telle colonne.
+Un schéma pydantic (`EntiteRead`) garde `datetime` : il n'écrit rien en base.
 
 ⚠️ **L'heure s'écrit `horloge.maintenant()`** (`from app.utils import horloge`),
 jamais `datetime.utcnow()` : déprécié depuis Python 3.12, et refusé par Ruff
