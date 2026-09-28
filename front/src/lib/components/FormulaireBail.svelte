@@ -62,7 +62,11 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
-	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import { BAIL } from '$lib/entites/bail';
+	import { SECTIONS_LIBELLE, sectionPresente, type Etat } from '$lib/entites/types';
+	import { pliageDe, requisDe } from '$lib/pliage';
+	import { stripHtml } from '$lib/utils';
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import RechercheLocataire from '$lib/components/RechercheLocataire.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -86,8 +90,12 @@
 	 *   ⚠️ Un bail existant ne change ni de lot ni de date d'entrée : le premier est
 	 *   sa raison d'être, la seconde un fait passé. Les masquer n'est pas un détail
 	 *   d'affichage — c'est ce qui distingue les deux gestes. */
-	export let avecLots = !edition;
 	export let avecDateEntree = !edition;
+	/**  Les états du cadre : un bail se CRÉE (boîte dans la page) ou se CORRIGE. */
+	$: etat = (edition ? 'edition' : 'creation') as Etat;
+	/**  Les lots ne se choisissent qu'à la création — la déclaration `BAIL` le dit
+	 *   (`perimetre` absent en édition, motif `geste`). */
+	$: avecLots = sectionPresente(BAIL, etat, 'perimetre');
 
 	/** Les lots retenus — lié, pour que la page sache ce qui partira. */
 	export let lotIds: Set<number> = new Set();
@@ -147,125 +155,156 @@
 </script>
 
 <CadreFormulaire {edition} titre={intitule} on:fermer={() => dispatch('annuler')}>
-	{#if avecLots}
-		<!-- Section 2 — ce qui qualifie le bail : les lots qu'il couvre. -->
-		<!--  🔴 `.bail-lots` enveloppe, et le style de la liste est `:global()` IMBRIQUÉ.
-	      La classe passée en prop `classe=` est appliquée par `LibelleGroupe` sur SON
-	      balisage : elle y reçoit le scope de `LibelleGroupe`, jamais celui d'ici.
-	      `.lot-checklist { … }` écrit à plat produit donc `.lot-checklist.svelte-xxxx`,
-	      qui ne correspond à rien — la liste partait NUE, sans bordure ni colonne, et
-	      ce depuis toujours. Même famille que la panne des pastilles (v2.67.11).
-	      Le `:global()` est borné par `.bail-lots` : il ne peut pas fuir vers une
-	      autre page (mémoire `project_css_route_fuite_globale`). -->
-		<div class="field bail-lots">
-			<LibelleGroupe
-				titre="Lot(s) concerné(s)"
-				requis
-				vide={lotIds.size === 0}
-				id="{uid}-lots"
-				classe="lot-checklist"
-			>
-				{#each lots as lot (lot.id)}
-					<label
-						class="lot-check-item"
-						class:disabled={lot.occupe}
-						title={lot.occupe ? 'Ce lot a déjà un bail actif' : undefined}
-					>
-						<input
-							type="checkbox"
-							checked={lotIds.has(lot.id)}
-							disabled={lot.occupe}
-							on:change={() => basculerLot(lot.id)}
-						/>
-						<span class="lot-check-label">
-							<span class="lot-check-name">{lot.libelle}</span>
-							{#if lot.occupe}<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
-									>Bail actif</span
-								>{/if}
-						</span>
-					</label>
-				{/each}
-			</LibelleGroupe>
-			{#if lotIds.size > 0}
-				<p class="lot-selection-hint">
-					{lotIds.size} lot{lotIds.size > 1 ? 's' : ''} sélectionné{lotIds.size > 1 ? 's' : ''} — un bail
-					sera créé pour chacun
-				</p>
-			{/if}
-		</div>
+	<!--  🔴 L'ORDRE DU CADRE (arbitré le 28/09/2026 sur maquette, option A, #1329) —
+	      Quand · Périmètre (les lots) · Description (les notes) · Au nom de (le
+	      locataire). Les champs étaient posés à plat, sans section : rien n'était
+	      déclaré, donc rien n'était contrôlé. `BAIL` dit les correspondances ;
+	      `lint:etats` et `lint:ordre-sections` tiennent l'ordre. -->
+	{#if sectionPresente(BAIL, etat, 'quand')}
+		<SectionFormulaire
+			titre={SECTIONS_LIBELLE.quand}
+			requis={requisDe(BAIL, 'quand')}
+			pliable={pliageDe(BAIL, 'quand')}
+			rempli={!avecDateEntree || !!bail.date_entree}
+			premiere
+		>
+			<div class="form-grid form-grid-2">
+				{#if avecDateEntree}
+					<div class="field">
+						<label for="{uid}-entree">Date d'entrée<EtoileRequis vide={!bail.date_entree} /></label>
+						<input id="{uid}-entree" type="date" bind:value={bail.date_entree} />
+					</div>
+				{/if}
+				<div class="field">
+					<label for="{uid}-sortie">Sortie prévue</label>
+					<input id="{uid}-sortie" type="date" bind:value={bail.date_sortie_prevue} />
+				</div>
+			</div>
+		</SectionFormulaire>
 	{/if}
 
-	<!--  Qui est le locataire — recherche, suggestions, dissociation. C'est une
-	      question autonome, et elle vit dans son composant : elle ne parle ni de
-	      lots, ni de dates, ni de notes. Elle était écrite DEUX fois avant ce lot,
-	      une par formulaire, et les deux copies avaient déjà divergé (#672). -->
-	<RechercheLocataire
-		{uid}
-		bind:locataireId
-		bind:nom={bail.locataire_nom}
-		bind:prenom={bail.locataire_prenom}
-		bind:email={bail.locataire_email}
-		bind:associe={compteAssocie}
-	/>
-
-	<!-- Informations du locataire — pré-remplies et verrouillées si un compte est associé. -->
-	<div class="form-grid form-grid-2">
-		<div class="field">
-			<label for="{uid}-prenom">Prénom</label>
-			<input
-				id="{uid}-prenom"
-				type="text"
-				bind:value={bail.locataire_prenom}
-				placeholder="Prénom"
-				readonly={compteAssocie}
-			/>
-		</div>
-		<div class="field">
-			<label for="{uid}-nom">Nom</label>
-			<input
-				id="{uid}-nom"
-				type="text"
-				bind:value={bail.locataire_nom}
-				placeholder="Nom"
-				readonly={compteAssocie}
-			/>
-		</div>
-		<div class="field">
-			<label for="{uid}-email">E-mail</label>
-			<input
-				id="{uid}-email"
-				type="email"
-				bind:value={bail.locataire_email}
-				placeholder="email@exemple.fr"
-				readonly={compteAssocie}
-			/>
-		</div>
-		<div class="field">
-			<label for="{uid}-tel">Téléphone</label>
-			<input id="{uid}-tel" type="text" bind:value={bail.locataire_telephone} placeholder="06 …" />
-		</div>
-		{#if avecDateEntree}
-			<div class="field">
-				<label for="{uid}-entree">Date d'entrée<EtoileRequis vide={!bail.date_entree} /></label>
-				<input id="{uid}-entree" type="date" bind:value={bail.date_entree} />
+	{#if sectionPresente(BAIL, etat, 'perimetre')}
+		<!--  🔴 `.bail-lots` enveloppe, et le style de la liste est `:global()` IMBRIQUÉ.
+		      La classe passée en prop `classe=` est appliquée par `LibelleGroupe` sur SON
+		      balisage : elle y reçoit le scope de `LibelleGroupe`, jamais celui d'ici.
+		      `.lot-checklist { … }` écrit à plat produit donc `.lot-checklist.svelte-xxxx`,
+		      qui ne correspond à rien — la liste partait NUE, sans bordure ni colonne, et
+		      ce depuis toujours. Même famille que la panne des pastilles (v2.67.11).
+		      Le `:global()` est borné par `.bail-lots` : il ne peut pas fuir vers une
+		      autre page (mémoire `project_css_route_fuite_globale`). -->
+		<SectionFormulaire
+			titre="Lot(s) concerné(s)"
+			idTitre="{uid}-lots-titre"
+			requis={requisDe(BAIL, 'perimetre')}
+			pliable={pliageDe(BAIL, 'perimetre')}
+			rempli={lotIds.size > 0}
+		>
+			<div class="field bail-lots">
+				<div class="lot-checklist" role="group" aria-labelledby="{uid}-lots-titre">
+					{#each lots as lot (lot.id)}
+						<label
+							class="lot-check-item"
+							class:disabled={lot.occupe}
+							title={lot.occupe ? 'Ce lot a déjà un bail actif' : undefined}
+						>
+							<input
+								type="checkbox"
+								checked={lotIds.has(lot.id)}
+								disabled={lot.occupe}
+								on:change={() => basculerLot(lot.id)}
+							/>
+							<span class="lot-check-label">
+								<span class="lot-check-name">{lot.libelle}</span>
+								{#if lot.occupe}<span class="badge badge-yellow bail-actif">Bail actif</span>{/if}
+							</span>
+						</label>
+					{/each}
+				</div>
+				{#if lotIds.size > 0}
+					<p class="lot-selection-hint">
+						{lotIds.size} lot{lotIds.size > 1 ? 's' : ''} sélectionné{lotIds.size > 1 ? 's' : ''} — un
+						bail sera créé pour chacun
+					</p>
+				{/if}
 			</div>
-		{/if}
-		<div class="field">
-			<label for="{uid}-sortie">Sortie prévue</label>
-			<input id="{uid}-sortie" type="date" bind:value={bail.date_sortie_prevue} />
-		</div>
-	</div>
+		</SectionFormulaire>
+	{/if}
 
-	<div class="field">
-		<span class="libelle-groupe" id="{uid}-notes-titre">Notes</span>
-		<RichEditor
-			bind:value={bail.notes}
-			ariaLabelledby="{uid}-notes-titre"
-			placeholder="Notes sur le bail…"
-			minHeight="80px"
-		/>
-	</div>
+	{#if sectionPresente(BAIL, etat, 'description')}
+		<SectionFormulaire
+			titre={SECTIONS_LIBELLE.description}
+			idTitre="{uid}-notes-titre"
+			pliable={pliageDe(BAIL, 'description')}
+			valeurModifiee={!!stripHtml(bail.notes)}
+			resume={stripHtml(bail.notes) ? 'renseignée' : 'aucune'}
+		>
+			<RichEditor
+				bind:value={bail.notes}
+				ariaLabelledby="{uid}-notes-titre"
+				placeholder="Notes sur le bail…"
+				minHeight="80px"
+			/>
+		</SectionFormulaire>
+	{/if}
 
+	{#if sectionPresente(BAIL, etat, 'au_nom_de')}
+		<SectionFormulaire titre={SECTIONS_LIBELLE.au_nom_de} pliable={pliageDe(BAIL, 'au_nom_de')}>
+			<!--  Qui est le locataire — recherche, suggestions, dissociation. C'est une
+			      question autonome, et elle vit dans son composant : elle ne parle ni de
+			      lots, ni de dates, ni de notes. Elle était écrite DEUX fois avant ce lot,
+			      une par formulaire, et les deux copies avaient déjà divergé (#672). -->
+			<RechercheLocataire
+				{uid}
+				bind:locataireId
+				bind:nom={bail.locataire_nom}
+				bind:prenom={bail.locataire_prenom}
+				bind:email={bail.locataire_email}
+				bind:associe={compteAssocie}
+			/>
+			<!-- Pré-remplies et verrouillées si un compte est associé. -->
+			<div class="form-grid form-grid-2">
+				<div class="field">
+					<label for="{uid}-prenom">Prénom</label>
+					<input
+						id="{uid}-prenom"
+						type="text"
+						bind:value={bail.locataire_prenom}
+						placeholder="Prénom"
+						readonly={compteAssocie}
+					/>
+				</div>
+				<div class="field">
+					<label for="{uid}-nom">Nom</label>
+					<input
+						id="{uid}-nom"
+						type="text"
+						bind:value={bail.locataire_nom}
+						placeholder="Nom"
+						readonly={compteAssocie}
+					/>
+				</div>
+				<div class="field">
+					<label for="{uid}-email">E-mail</label>
+					<input
+						id="{uid}-email"
+						type="email"
+						bind:value={bail.locataire_email}
+						placeholder="email@exemple.fr"
+						readonly={compteAssocie}
+					/>
+				</div>
+				<div class="field">
+					<label for="{uid}-tel">Téléphone</label>
+					<input
+						id="{uid}-tel"
+						type="text"
+						bind:value={bail.locataire_telephone}
+						placeholder="06 …"
+					/>
+				</div>
+			</div>
+		</SectionFormulaire>
+	{/if}
 	<!--  ⚠️ `soumission={false}` : ce formulaire n'a pas de `<form>` — c'est écrit
 	      en toutes lettres dans son en-tête, et `lint:formulaires` le sait. -->
 	<PiedFormulaire
@@ -282,6 +321,9 @@
 	    page ne serait pas atteinte (panne des pastilles nues, v2.67.11). Ces
 	    vingt-quatre règles vivaient dans `mon-lot/+page.svelte` et n'habillaient
 	    que ce formulaire. */
+	.bail-actif {
+		font-size: var(--fs-2xs);
+	}
 	.bail-lots :global(.lot-checklist) {
 		display: flex;
 		flex-direction: column;
