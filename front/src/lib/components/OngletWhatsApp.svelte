@@ -1,8 +1,4 @@
 <script lang="ts">
-	//  Un seuil employé pour couper ET pour comparer se nomme : écrit deux fois,
-	//  il donne un aperçu tronqué à une longueur et une décision prise à une autre
-	//  le jour où l'un des deux bouge (#1076).
-	const MAX_APERCU_MESSAGE = 120;
 	//  Onglet « WhatsApp » de l'administration — extrait de `admin/+page.svelte`
 	//  le 14/08/2026 : la page dépassait 2 200 lignes et la règle de modularité
 	//  impose de découper le fichier quand on y touche. L'onglet est autonome
@@ -10,12 +6,17 @@
 	//  parent, parce qu'il vit dans la configuration du site partagée avec
 	//  l'onglet « Paramétrage site ».
 	import { onMount } from 'svelte';
-	import { config as configApi } from '$lib/api';
+	import {
+		config as configApi,
+		type JournalEnvoiWhatsApp,
+		type MessagePlanifieWhatsApp,
+	} from '$lib/api';
 	import { configStore } from '$lib/stores/pageConfig';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { fmtDatetimeShort } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import MessagesPlanifiesWhatsApp from '$lib/components/MessagesPlanifiesWhatsApp.svelte';
+	import HistoriqueEnvoisWhatsApp from '$lib/components/HistoriqueEnvoisWhatsApp.svelte';
 
 	/** Configuration publique déjà chargée par la page (préremplit le formulaire). */
 	export let cfgPublique: Record<string, string> = {};
@@ -35,23 +36,9 @@
 	let waStatus: { state: string; hasQR: boolean } | null = null;
 	let waStatusLoading = false;
 	let waQrTimestamp = Date.now();
-	let waScheduled: {
-		id: number;
-		label: string;
-		message: string;
-		cron_rule: string;
-		enabled: boolean;
-		mis_a_jour_le: string | null;
-	}[] = [];
+	let waScheduled: MessagePlanifieWhatsApp[] = [];
 	let waScheduledSaving: Record<number, boolean> = {};
-	let waLogs: {
-		id: number;
-		label: string;
-		message: string;
-		statut: string;
-		erreur: string | null;
-		envoye_le: string | null;
-	}[] = [];
+	let waLogs: JournalEnvoiWhatsApp[] = [];
 
 	//  La page charge sa configuration en asynchrone : l'onglet peut être monté
 	//  avant qu'elle arrive. On recopie dès qu'elle est là, une seule fois, pour
@@ -85,25 +72,7 @@
 		}
 	}
 
-	//  Un envoi a trois issues, pas deux : réussi, échoué, ou sans réponse du
-	//  bridge. Ce dernier cas s'affichait « ❌ échec » alors que le message était
-	//  le plus souvent bien arrivé dans le groupe — c'est cette lecture qui a
-	//  fait renvoyer trois fois le message des encombrants le 14/08/2026.
-	function waStatutIcone(statut: string): string {
-		if (statut === 'envoyé') return '✅';
-		if (statut === 'incertain') return '⚠️';
-		if (statut === 'en cours') return '⏳';
-		return '❌';
-	}
-	function waStatutStyle(statut: string): string {
-		if (statut === 'envoyé')
-			return 'background:var(--color-success-fond);color:var(--color-success)';
-		if (statut === 'incertain' || statut === 'en cours')
-			return 'background:var(--color-warning-fond);color:var(--color-warning-texte)';
-		return 'background:var(--color-danger-fond);color:var(--color-danger)';
-	}
-
-	async function saveWaScheduledItem(item: (typeof waScheduled)[0]) {
+	async function saveWaScheduledItem(item: MessagePlanifieWhatsApp) {
 		waScheduledSaving = { ...waScheduledSaving, [item.id]: true };
 		try {
 			await configApi.modifierWhatsappPlanifie(item.id, {
@@ -324,64 +293,11 @@
 
 	<!-- Messages planifiés -->
 	<SectionFormulaire icone="calendar-days" titre="Messages planifiés (envoi automatique)">
-		<div class="largeur-saisie">
-			<p
-				style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-bottom:1rem;line-height:1.5"
-			>
-				&#x1F4A1; Markdown WhatsApp : <strong>*gras*</strong> | <em>_italique_</em> | <s>~barré~</s> |
-				Sauts de ligne (Enter)
-			</p>
-			{#if waScheduled.length === 0}
-				<p style="font-size:var(--fs-sm);color:var(--color-text-muted)">Aucun message planifié.</p>
-			{/if}
-			{#each waScheduled as item (item.id)}
-				<div
-					style="border:1px solid var(--color-border);border-radius:8px;padding:.75rem;margin-bottom:.75rem;background:var(--color-surface)"
-				>
-					<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
-						<input type="checkbox" bind:checked={item.enabled} style="width:1rem;height:1rem" />
-						<div class="field champ-en-ligne" style="flex:1">
-							<input
-								type="text"
-								bind:value={item.label}
-								style="font-weight:600"
-								placeholder="Titre du message"
-							/>
-						</div>
-						<span
-							style="font-size:var(--fs-xs);padding:.1rem .4rem;border-radius:4px;background:#dbeafe;color:#1e40af"
-						>
-							{item.cron_rule === '3eme_samedi'
-								? 'Vendredi avant le 3ᵉ samedi'
-								: item.cron_rule === '4eme_samedi'
-									? 'Vendredi avant le 4ᵉ samedi'
-									: item.cron_rule}
-						</span>
-					</div>
-					<div class="field champ-en-ligne">
-						<textarea
-							bind:value={item.message}
-							rows="4"
-							style="resize:vertical;font-size:var(--fs-md);font-family:monospace"
-							placeholder="Contenu du message (markdown WhatsApp autorisé)"></textarea>
-					</div>
-					<div
-						style="margin-top:.4rem;padding:.5rem;background:var(--color-bg);border-left:3px solid var(--color-border);border-radius:4px;font-size:var(--fs-sm);color:var(--color-text-muted);line-height:1.6;white-space:pre-wrap;word-wrap:break-word"
-					>
-						{item.message || '— Aperçu du message'}
-					</div>
-					<div class="form-actions">
-						<button
-							class="btn btn-primary"
-							on:click={() => saveWaScheduledItem(item)}
-							disabled={waScheduledSaving[item.id]}
-						>
-							{waScheduledSaving[item.id] ? 'Enregistrement…' : 'Enregistrer'}
-						</button>
-					</div>
-				</div>
-			{/each}
-		</div>
+		<MessagesPlanifiesWhatsApp
+			messages={waScheduled}
+			enregistrement={waScheduledSaving}
+			enregistrer={saveWaScheduledItem}
+		/>
 	</SectionFormulaire>
 
 	<!-- Footer des messages -->
@@ -410,57 +326,6 @@
 
 	<!-- Historique des envois -->
 	<SectionFormulaire icone="clipboard-list" titre="Historique des envois (6 derniers)">
-		<div class="largeur-saisie">
-			<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
-				<button
-					class="btn btn-outline"
-					style="font-size:var(--fs-2xs);padding:.1rem .4rem"
-					on:click={loadWaLogs}
-					aria-label="Rafraîchir l'historique">&#x1F504;</button
-				>
-			</div>
-			{#if waLogs.length === 0}
-				<p style="font-size:var(--fs-sm);color:var(--color-text-muted)">Aucun message envoyé.</p>
-			{:else}
-				<div style="display:flex;flex-direction:column;gap:.4rem">
-					{#each waLogs as log (log.id)}
-						<div
-							style="border:1px solid var(--color-border);border-radius:6px;padding:.5rem .75rem;font-size:var(--fs-sm);background:var(--color-surface)"
-						>
-							<div
-								style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem"
-							>
-								<span style="font-weight:600">{log.label}</span>
-								<div style="display:flex;align-items:center;gap:.4rem">
-									<span
-										style="padding:.1rem .3rem;border-radius:4px;font-size:var(--fs-2xs);{waStatutStyle(
-											log.statut,
-										)}"
-									>
-										{waStatutIcone(log.statut)}
-										{log.statut}
-									</span>
-									<span style="color:var(--color-text-muted);font-size:var(--fs-xs)"
-										>{log.envoye_le ? fmtDatetimeShort(log.envoye_le) : ''}</span
-									>
-								</div>
-							</div>
-							<p
-								style="margin:0;white-space:pre-wrap;color:var(--color-text-muted);font-size:var(--fs-sm)"
-							>
-								{log.message.length > MAX_APERCU_MESSAGE
-									? log.message.slice(0, MAX_APERCU_MESSAGE) + '…'
-									: log.message}
-							</p>
-							{#if log.erreur}
-								<p style="margin:.2rem 0 0;color:var(--color-danger);font-size:var(--fs-xs)">
-									&#x26A0;&#xFE0F; {log.erreur}
-								</p>
-							{/if}
-						</div>
-					{/each}
-				</div>
-			{/if}
-		</div>
+		<HistoriqueEnvoisWhatsApp journaux={waLogs} recharger={loadWaLogs} />
 	</SectionFormulaire>
 </section>

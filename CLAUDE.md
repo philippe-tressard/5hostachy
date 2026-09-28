@@ -406,6 +406,9 @@ importe les gestes du transport.
       avertissement) prend son jeton et ses dérivés `-fond`, `-bordure`, et
       `--color-warning` ne sert jamais au texte (`--color-warning-texte`). Ces
       valeurs-là sont **refusées**, sans plafond (`ux-patterns` §18)
+- [ ] Un style s'écrit dans le `<style>` du composant ou dans `src/styles/`, jamais
+      en attribut `style="…"` — sauf une valeur tirée des données (`width:{pct}%`).
+      Plafond décroissant : `npm run lint:styles-en-ligne` (#1329)
 - [ ] Attente d'un écran : `<EtatListe chargement />`, jamais un « Chargement… »
       écrit à la main — il y en avait **23** avant #1045 (`npm run lint:chargement`)
 - [ ] En-tête de page : `<EntetePage>`, jamais `<div class="page-header">`
