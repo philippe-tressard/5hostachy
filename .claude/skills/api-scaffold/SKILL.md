@@ -24,8 +24,9 @@ Génère un endpoint complet (backend + frontend client) en respectant toutes le
 
 Le modèle va dans le module de **son domaine** (`acces`, `communaute`,
 `prestataires`, `gouvernance`, `tickets`…). Un domaine neuf reçoit son propre
-module. **Jamais `core.py`** : il dépasse 500 lignes, et le garde-fou de
-modularité refuse qu'il grossisse.
+module. **Jamais `core.py`** : `test_core_sans_modele_neuf.py` y refuse toute
+classe de plus (#779 l'a ramené sous 500 lignes, où le contrôle de modularité ne
+le tient plus).
 
 ```python
 class NouvelleEntite(SQLModel, table=True):

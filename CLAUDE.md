@@ -131,8 +131,10 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 
 ### Modèle SQLModel
 - Un modèle vit dans le module de **son domaine** sous `app/models/` (`acces`,
-  `communaute`, `prestataires`, `gouvernance`…) — **jamais dans `core.py`**, qui
-  dépasse 500 lignes et que le garde-fou de modularité refuse de voir grossir.
+  `communaute`, `prestataires`, `gouvernance`…) — **jamais dans `core.py`**.
+  Repassé sous 500 lignes le 28/09/2026 (#779), il n'est plus tenu par le
+  contrôle de modularité : 🔒 `test_core_sans_modele_neuf.py` refuse une classe
+  de plus, et sa liste ne fait que baisser.
   Un module neuf s'**importe dans `models/__init__.py`** : c'est ce qui enregistre
   la table auprès de SQLModel — oublié, elle manque à `create_all` sans un mot.
 - `core.py` **ré-exporte** les modèles extraits (imports `# noqa: E402` en milieu
