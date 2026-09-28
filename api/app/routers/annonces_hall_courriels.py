@@ -40,11 +40,7 @@ from app.utils.email import send_email_group
 from app.utils.liens import lien_ticket
 from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
 from app.utils.noms import contexte_personne
-from app.utils.whatsapp import (
-    config_whatsapp,
-    envoyer_whatsapp_avec_log,
-    whatsapp_actif,
-)
+from app.utils.diffusion import config_diffusion, diffuser
 
 
 def lien_affiche(annonce: AnnonceHall) -> str | None:
@@ -180,18 +176,16 @@ def _partager_sur_le_groupe(
     Rend `True` si l'envoi a été programmé — le WhatsApp peut être éteint, et le
     dire évite d'inscrire dans l'historique une diffusion qui n'a pas eu lieu.
     """
-    cfg = config_whatsapp(session)
-    if not whatsapp_actif(cfg):
+    cfg = config_diffusion(session)
+    if cfg is None:
         return False
     perimetres = parse_json_perimetres(annonce.perimetre_cible)
-    background_tasks.add_task(
-        envoyer_whatsapp_avec_log,
+    diffuser(
+        background_tasks,
+        cfg,
         annonce.titre,
         texte_brut(annonce.message),
-        False,
-        ",".join(perimetres) if perimetres else None,
-        None,
-        cfg,
+        perimetre_cible=",".join(perimetres) if perimetres else None,
         lien=lien_affiche(annonce),
     )
     return True

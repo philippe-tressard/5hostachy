@@ -24,7 +24,8 @@ from app.schemas import liste_depuis_json
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.reponses import enrich_reponse, tri_reponses
 from app.utils.visibility import resultats_sondage_visibles, sondage_accessible, sondage_clos
-from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
+from app.utils.config_site import config_site
+from app.utils.diffusion import config_diffusion, diffuser
 
 from .commun import (
     SondageCreate,
@@ -220,19 +221,19 @@ def create_sondage(
 
     # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
     if body.partager_whatsapp or body.envoyer_syndic or body.envoyer_cs:
-        cfg_map = config_whatsapp(session, "reference_copro", "site_nom")
-
+        #  Deux lectures, deux notions (#1060) : la configuration du CANAL pour
+        #  diffuser, celle du SITE pour les courriels — une seule variable les
+        #  confondait, si bien que les courriels lisaient la configuration WhatsApp.
         if body.partager_whatsapp:
-            if whatsapp_actif(cfg_map):
-                background_tasks.add_task(
-                    envoyer_whatsapp_avec_log,
+            cfg_canal = config_diffusion(session, "reference_copro", "site_nom")
+            if cfg_canal is not None:
+                diffuser(
+                    background_tasks,
+                    cfg_canal,
                     f"📊 Nouveau sondage : {s.question}",
                     s.description or "",
-                    False,
-                    None,
-                    None,
-                    cfg_map,
                 )
+        cfg_map = config_site(session, "reference_copro")
 
         if body.envoyer_syndic or body.envoyer_cs:
             from app.utils.email import send_email_group

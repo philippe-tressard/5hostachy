@@ -88,7 +88,10 @@ def _condition_resolue(fonction: ast.AST, test: ast.AST) -> str:
 
 #: Les appels qui font PARTIR un message sur le groupe. C'est eux qui désignent
 #: un point de partage — pas le nom du champ.
-_ENVOIS = ("_partager_sur_le_groupe", "envoyer_whatsapp")
+#  `diffuser(` : le geste du registre des canaux depuis #1060 (28/09/2026). Ce
+#  contrôle l'a signalé tout seul le jour du renommage — « le contrôle a perdu
+#  sa portée » —, au lieu de passer au vert sur des envois qu'il ne voyait plus.
+_ENVOIS = ("_partager_sur_le_groupe", "envoyer_whatsapp", "diffuser(")
 
 
 def _gardes_des_envois(fonction: ast.AST) -> list[str]:

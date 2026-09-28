@@ -365,23 +365,23 @@ def _partager_sur_le_groupe(
     résidents, il n'est pas ouvert à l'auteur d'un ticket quelconque.
     """
     from app.utils.fichiers import est_image
-    from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
+    from app.utils.diffusion import config_diffusion, diffuser
 
-    wa_config = config_whatsapp(session)
-    if not whatsapp_actif(wa_config):
+    wa_config = config_diffusion(session)
+    if wa_config is None:
         return
     #  La première photo accompagne le message, comme l'image d'une actualité :
     #  sur une fuite ou une dégradation, c'est elle qui porte l'information. Les
     #  documents joints ne partent pas — le bridge n'envoie qu'une image.
     premiere_photo = next((u for u in parse_photos(ticket.photos_urls) if est_image(u)), None)
-    background_tasks.add_task(
-        envoyer_whatsapp_avec_log,
+    diffuser(
+        background_tasks,
+        wa_config,
         f"🎫 {ticket.titre}",
         ticket.description,
-        ticket_urgent(ticket),
-        ticket.perimetre_cible,
-        premiere_photo,
-        wa_config,
+        urgente=ticket_urgent(ticket),
+        perimetre_cible=ticket.perimetre_cible,
+        image_url=premiere_photo,
     )
 
 

@@ -397,16 +397,13 @@ def add_evolution(
         #  décide de l'envoi, le précédent pouvant être franchi par le syndic
         #  ou le CS seuls.
         if partage_whatsapp:
-            from app.utils.whatsapp import (
-                config_whatsapp,
-                envoyer_whatsapp_avec_log,
-                whatsapp_actif,
-            )
+            from app.utils.diffusion import config_diffusion, diffuser
 
-            wa_config = config_whatsapp(session)
-            if whatsapp_actif(wa_config):
-                background_tasks.add_task(
-                    envoyer_whatsapp_avec_log,
+            wa_config = config_diffusion(session)
+            if wa_config is not None:
+                diffuser(
+                    background_tasks,
+                    wa_config,
                     f"🔧 {ticket.titre}",
                     _message_pour_le_groupe(
                         ticket,
@@ -414,10 +411,7 @@ def add_evolution(
                         nb_precedents=sum(1 for ev in evols_hist if ev.contenu),
                         site_url=base_site(wa_config.get("site_url")),
                     ),
-                    False,
-                    ticket.perimetre_cible,
-                    None,
-                    wa_config,
+                    perimetre_cible=ticket.perimetre_cible,
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:

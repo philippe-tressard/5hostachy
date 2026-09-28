@@ -26,7 +26,7 @@ from sqlmodel import Session, SQLModel, create_engine
 import app.routers.tickets.crud as crud
 import app.routers.tickets.evolutions as evolutions
 import app.routers.tickets.messages as messages
-import app.utils.whatsapp as whatsapp
+import app.utils.diffusion as diffusion
 from app.models.core import RoleUtilisateur, Ticket, Utilisateur
 from app.schemas import MessageCreate, TicketCreate
 from app.schemas_tickets import TicketEvolutionCreate
@@ -73,8 +73,8 @@ def envois(monkeypatch):
     externe = lambda ticket, user, adresse, *a, **k: parti["externe"].append(adresse)  # noqa: E731
     monkeypatch.setattr(evolutions, "envoyer_email_externe", externe)
     monkeypatch.setattr(messages, "envoyer_email_externe", externe)
-    monkeypatch.setattr(whatsapp, "config_whatsapp", lambda s: {"site_url": "https://x"})
-    monkeypatch.setattr(whatsapp, "whatsapp_actif", lambda c: True)
+    #  Le canal de la résidence, allumé : la couture est le registre (#1060).
+    monkeypatch.setattr(diffusion, "config_diffusion", lambda s, *a: {"site_url": "https://x"})
     return parti
 
 

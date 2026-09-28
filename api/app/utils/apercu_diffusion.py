@@ -173,12 +173,8 @@ def apercu_whatsapp(
     le bridge échoue, le message reçoit en plus « 📷 Photos à voir sur le site ».
     Cela se décide à l'envoi. La nuance est petite et réelle.
     """
-    from app.utils.whatsapp import (
-        config_whatsapp,
-        construire_message,
-        message_sans_contenu,
-        whatsapp_actif,
-    )
+    from app.utils.diffusion import config_diffusion
+    from app.utils.whatsapp import construire_message, message_sans_contenu
 
     if not auteur.has_role(*roles_diffusion()):
         return ApercuCanal(
@@ -186,8 +182,8 @@ def apercu_whatsapp(
             actif=False,
             inactif_motif="Le partage sur le groupe est réservé au conseil syndical.",
         )
-    cfg = config_whatsapp(session)
-    if not whatsapp_actif(cfg):
+    cfg = config_diffusion(session)
+    if cfg is None:
         return ApercuCanal(
             canal="whatsapp",
             actif=False,
