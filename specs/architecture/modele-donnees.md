@@ -265,7 +265,7 @@ Les deux axes restent distincts.
 | copropriete_id | FK Copropriété | Toujours renseigné |
 | batiment_id | FK Bâtiment | Nullable — si le contrat est spécifique à un bâtiment |
 | prestataire_id | FK Prestataire | Prestataire titulaire du contrat |
-| type_equipement | enum | `ascenseur` \| `chauffage_collectif` \| `vmc` \| `porte_parking` \| `extincteurs` \| `interphone_digicode` \| `espaces_verts` \| `nettoyage` \| `autre` |
+| type_equipement | enum | `TypeEquipement` (`api/app/models/prestataires.py`) — la liste des valeurs vit là et nulle part ailleurs ; les libellés de l'écran dans `front/src/lib/prestataires.ts` |
 | libelle | string | Intitulé lisible ex. « Ascenseur bât. 1 », « Chaudière bât. 2-3 » |
 | numero_contrat | string | Numéro de référence du contrat |
 | date_debut | date | Date d'entrée en vigueur |

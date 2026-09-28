@@ -596,6 +596,25 @@ repli.
 Journal : `/var/log/hostachy-bascule.log`, lignes `[noyau]`. Banc sans effet :
 `noyau-standby.sh --dry-run` (avec `REPO=` pour une copie dans `/tmp`).
 
+## Correctifs de sécurité en attente — lire C30 (#1441, 28/09/2026)
+
+Un correctif en attente n'est pas un défaut : `apt-daily-upgrade` passe une fois
+par jour (06:00 + 60 min aléatoires), donc un correctif publié après le passage
+attend jusqu'à 25 h. C30 criait « unattended-upgrades ne les a pas posés » dès la
+publication — le 28/09, pour un libheif paru quatre heures après le passage.
+
+Chaque nœud relève désormais, **par paquet**, depuis quand il attend
+(`/var/lib/hostachy/apt-secu-vu`, écrit par sa collecte root) :
+
+| C30 dit | Ce qui a été mesuré | Conduite |
+|---|---|---|
+| OK « posé(s) au prochain (HH:MM) » | publié après le début du dernier passage | rien |
+| WARN « vus par le passage … sans être posés » | un passage les a eus sous les yeux | `sudo unattended-upgrade -v` dit pourquoi — souvent un fichier de configuration modifié (`initramfs-tools-core` sur rpi2) |
+| WARN « … au-delà des 25 h » | attente plus longue qu'un passage, aucun ne les a vus | `systemctl status apt-daily-upgrade.timer` |
+
+Collecte et décision : `scripts/lib/lib-apt.sh` (`--selftest`). Messages : la
+boucle par nœud de `lib-mises-a-jour.sh`.
+
 ## Monitoring APScheduler (tourne dans le conteneur API)
 
 🔴 **La liste des jobs se lit dans `api/app/main.py`** (`scheduler.add_job`), pas

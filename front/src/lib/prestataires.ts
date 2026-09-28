@@ -36,7 +36,7 @@
  *   des humains. */
 export type TypeEquipementOption = { val: string; label: string };
 
-/**  Les 17 types d'équipement, dans l'ordre de l'énumération serveur.
+/**  Les 18 types d'équipement, dans l'ordre de l'énumération serveur.
  *
  *   🔴 `assurance` et `syndic` ne sont pas des « équipements », et le nom de
  *   l'énumération est donc un peu court. Ce qu'elle classe réellement, c'est
@@ -51,6 +51,7 @@ export const EQUIPEMENTS: readonly TypeEquipementOption[] = [
 	{ val: 'espaces_verts', label: '\u{1F33F} Espaces verts' },
 	{ val: 'extincteurs', label: '\u{1F9EF} Extincteurs' },
 	{ val: 'interphone_digicode', label: '\u{1F4DE} Interphone/Digicode' },
+	{ val: 'menuiseries', label: '\u{1FA9F} Menuiseries' },
 	{ val: 'nettoyage', label: '\u{1F9F9} Nettoyage' },
 	{ val: 'plomberie', label: '\u{1F6BF} Plomberie' },
 	{ val: 'pompe', label: '⚙️ Pompe' },

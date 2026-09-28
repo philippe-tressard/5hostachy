@@ -52,6 +52,7 @@ class TypeEquipement(str, Enum):
     espaces_verts = "espaces_verts"
     extincteurs = "extincteurs"
     interphone_digicode = "interphone_digicode"
+    menuiseries = "menuiseries"
     nettoyage = "nettoyage"
     plomberie = "plomberie"
     pompe = "pompe"
