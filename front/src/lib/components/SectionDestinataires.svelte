@@ -92,8 +92,13 @@
 	function choisir(e: CustomEvent<string[]>) {
 		destinataires = defaut && cle(e.detail) === cle(defaut) ? [] : e.detail;
 	}
+	/*  La vignette lit la MÊME nature que les pastilles — catégorie et bâtiments
+	    compris. Elle ne recevait que `actualite` : sur une Panne, « Tous » était
+	    coché et la vignette disait « Copropriétaires » (#1434, signalé à l'écran
+	    le 28/09/2026). 🔒 `e2e/destinataires-panne.spec.ts`. */
 	$: lue = relire($perimetresStore, () =>
 		lectureDe({
+			...lecture,
 			actualite: !!lecture?.actualite,
 			confidentiel,
 			publicCible: destinataires,
