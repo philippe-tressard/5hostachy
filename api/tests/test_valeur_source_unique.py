@@ -3,6 +3,11 @@
 Neuf copies de `getattr(x, "value", x)` jusqu'au 23/09/2026, et le défaut
 qu'elles prévenaient est revenu par la dixième écriture, qui ne l'avait pas :
 `str(categorie)` dans `kanban_tickets` (#1092). Voir `app/utils/valeurs.py`.
+
+⚠️ L'idiome a DEUX écritures, et ce test n'en voyait qu'une jusqu'au 28/09/2026 :
+`x.value if hasattr(x, "value") else str(x)` vivait encore dix fois — quatre
+dans `Utilisateur` lui-même, relevées en découpant `core.py` (#779). Un relevé
+qui ne connaît qu'une forme d'une règle en laisse passer l'autre sans un mot.
 """
 
 from __future__ import annotations
@@ -11,7 +16,10 @@ import pathlib
 import re
 
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
-_MOTIF = re.compile(r"""getattr\([^,()]+,\s*["']value["']""")
+_MOTIF = re.compile(
+    r"""getattr\([^,()]+,\s*["']value["']"""  # getattr(x, "value", x)
+    r"""|\.value\s+if\s+hasattr\([^,()]+,\s*["']value["']\)"""  # x.value if hasattr(x, "value")
+)
 _SOURCE = "utils/valeurs.py"
 
 

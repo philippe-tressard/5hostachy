@@ -53,6 +53,7 @@ libellé manquant doit se voir, pas disparaître.
 """
 
 from app.models.core import RoleUtilisateur, StatutUtilisateur
+from app.utils.valeurs import valeur
 
 #  Les RÔLES — ce qu'un compte a le droit de faire.
 LIBELLES_ROLE: dict[str, str] = {
@@ -101,7 +102,7 @@ LIBELLES_STATUT_COURT: dict[str, str] = {
 
 def libelle_statut_court(statut) -> str:
     """La signature d'un auteur dans un fil — voir `LIBELLES_STATUT_COURT`."""
-    cle = statut.value if hasattr(statut, "value") else str(statut)
+    cle = str(valeur(statut))
     return LIBELLES_STATUT_COURT.get(cle, cle)
 
 
@@ -111,11 +112,11 @@ def libelle_role(role) -> str:
     Accepte l'enum ou la chaîne. Une clé inconnue est rendue **telle quelle** :
     un libellé manquant doit se voir dans l'interface, pas s'effacer.
     """
-    cle = role.value if hasattr(role, "value") else str(role)
+    cle = str(valeur(role))
     return LIBELLES_ROLE.get(cle, cle)
 
 
 def libelle_statut(statut) -> str:
     """« copropriétaire_résident » → « Copropriétaire résident »."""
-    cle = statut.value if hasattr(statut, "value") else str(statut)
+    cle = str(valeur(statut))
     return LIBELLES_STATUT.get(cle, cle)

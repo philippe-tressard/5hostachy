@@ -36,6 +36,7 @@ badges de périmètre de toute la copropriété, sans que personne l'ait demand�
 from __future__ import annotations
 
 from typing import Optional
+from app.utils.valeurs import valeur
 
 
 def libelle_batiment(batiment) -> str:
@@ -81,7 +82,7 @@ def libelle_lot(lot) -> Optional[str]:
     garde était la fautive :
 
         acces/resident.py   f"{lot.type} {lot.numero}"          ← « TypeLot.appartement 314 »
-        admin/acces.py ×2   lot.type.value if hasattr(…) else …
+        admin/acces.py ×2   `.value` sous une garde `hasattr(…)`, sinon `str(…)`
         bailleur/acces.py   idem
 
     🔴 `f"{enum}"` rend `TypeLot.appartement`, pas `appartement` : la
@@ -101,5 +102,5 @@ def libelle_lot(lot) -> Optional[str]:
         return None
     #  `.value` quand c'est un enum, la chaîne sinon — une base migrée peut
     #  rendre l'un ou l'autre selon le chemin de lecture.
-    type_lot = lot.type.value if hasattr(lot.type, "value") else str(lot.type or "")
+    type_lot = str(valeur(lot.type) or "")
     return f"{type_lot.capitalize()} {lot.numero}".strip()

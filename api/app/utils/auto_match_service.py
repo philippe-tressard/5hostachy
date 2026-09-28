@@ -20,6 +20,7 @@ from app.utils.liens import nom_site
 from app.utils.noms import contexte_personne
 from app.models.core import StatutImport
 from app.utils.types_acces import TELECOMMANDE, TypeAcces, VIGIK
+from app.utils.valeurs import valeur
 from app.utils.rapprochement_noms import (
     _cle_de_nom,
     _matches_user,
@@ -36,7 +37,7 @@ def _statut_to_type_lien(statut) -> str:
         "mandataire": "mandataire",
         "locataire": "locataire",
     }
-    val = statut.value if hasattr(statut, "value") else str(statut)
+    val = str(valeur(statut))
     return _MAP.get(val, "propriétaire")
 
 
@@ -267,7 +268,7 @@ def _auto_match_lots(user, session: Session) -> int:
 def _is_coproprietaire(user) -> bool:
     """True si ce user est copropriétaire/bailleur/mandataire (doit être résolu automatiquement)."""
     TYPES = {"copropriétaire_résident", "copropriétaire_bailleur", "mandataire"}
-    val = user.statut.value if hasattr(user.statut, "value") else str(user.statut)
+    val = str(valeur(user.statut))
     return val in TYPES
 
 
@@ -343,7 +344,7 @@ def auto_match_pour_utilisateur(user, session: Session) -> dict:
     lots_resolus = resoudre_pour_utilisateur(user, session)
     session.flush()
 
-    user_statut = user.statut.value if hasattr(user.statut, "value") else str(user.statut)
+    user_statut = str(valeur(user.statut))
     is_coproprietaire = user_statut in {
         StatutUtilisateur.copropriétaire_résident.value,
         StatutUtilisateur.copropriétaire_bailleur.value,
@@ -391,7 +392,7 @@ def _auto_match_baux_locataire(user, session: Session) -> int:
     from app.models.core import LocationBail, StatutBail, StatutUtilisateur
 
     # Uniquement pour les locataires
-    val = user.statut.value if hasattr(user.statut, "value") else str(user.statut)
+    val = str(valeur(user.statut))
     if val != StatutUtilisateur.locataire.value:
         return 0
 
@@ -445,7 +446,7 @@ def notifier_gestionnaire_appariement(
     if not destinataire:
         return
 
-    statut = user.statut.value if hasattr(user.statut, "value") else str(user.statut)
+    statut = str(valeur(user.statut))
     total = tc + vigik
     background_tasks.add_task(
         send_email,

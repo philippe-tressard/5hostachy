@@ -38,7 +38,7 @@ pour voir et corriger, `require_admin` pour supprimer définitivement.
 import csv
 import io
 import json
-from app.utils import horloge
+from app.utils import horloge, valeurs
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -443,7 +443,7 @@ def _csv_du_parc(session: Session, type_acces: TypeAcces) -> str:
                 fiche.porteur_nom,
                 fiche.lot_libelle or "",
                 perimetre_label(fiche.perimetre_cible) if fiche.perimetre_cible else "",
-                fiche.statut.value if hasattr(fiche.statut, "value") else str(fiche.statut),
+                str(valeurs.valeur(fiche.statut)),
                 date_courte(fiche.cree_le),
             ]
         )
