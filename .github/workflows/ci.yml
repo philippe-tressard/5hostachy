@@ -518,6 +518,8 @@ jobs:
           bash scripts/poste/rejouer-ci.sh        --selftest
           python scripts/poste/verifier-fins-de-ligne.py --selftest
           python scripts/poste/verifier-variables-shell.py --selftest
+          # Le poste a-t-il ce que le lot épingle ? Sinon le rejeu rend INCONNU (#1417).
+          python scripts/poste/verifier-dependances-poste.py --selftest
           bash scripts/poste/verifier-points-entree.sh --selftest
           # 🔒 Le résultat NORMAL de ce diagnostic est ZÉRO orphelin : sans
           # self-test, un script qui confondrait « aucun » et « je n'ai pas pu

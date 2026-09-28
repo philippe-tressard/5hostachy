@@ -54,6 +54,25 @@ RACINE=$(git rev-parse --show-toplevel 2>/dev/null) || RACINE=$(pwd)
 cd "$RACINE" || exit 2
 [ -f "$CI" ] || { echo "✗ $CI introuvable — lancer depuis la racine du dépôt."; exit 2; }
 
+#  ── Un seul rejeu à la fois (#1417) — la règle : `ci_verrou_etat` ──────────
+VERROU_REJEU="$(cd "$(git rev-parse --git-common-dir 2>/dev/null || echo .git)" && pwd)/rejeu-ci.verrou"
+pid_verrou=$(cat "$VERROU_REJEU/pid" 2>/dev/null || true)
+vivant=non
+[ -n "$pid_verrou" ] && kill -0 "$pid_verrou" 2>/dev/null && vivant=oui
+case "$(ci_verrou_etat "$pid_verrou" "$vivant")" in
+  occupe)
+    echo "✗ Un autre rejeu tourne déjà (pid $pid_verrou) : deux rejeux simultanés se sabotent."
+    echo "  Attendre sa fin — rien n'a été rejoué, ce n'est pas un succès."
+    exit 2 ;;
+  orphelin) rm -rf "$VERROU_REJEU" ;;
+esac
+if ! mkdir "$VERROU_REJEU" 2>/dev/null; then
+  echo "✗ Le verrou du rejeu vient d'être pris par un autre rejeu : attendre sa fin."
+  exit 2
+fi
+echo $$ > "$VERROU_REJEU/pid"
+trap 'rm -rf "$VERROU_REJEU"' EXIT
+
 #  ─────────────────────────────────────────────────────────────────────────────
 #  Le fichier de CI se CHARGE-t-il ? (17/09/2026)
 #
@@ -141,7 +160,7 @@ if [ "${ECRIT:-0}" -eq 0 ] || [ "$ECRIT" != "$EXTRAIT" ]; then
 fi
 
 TMP=$(mktemp -d) || exit 2
-trap 'rm -rf "$TMP" ${SCRIPTS_PY_EXPOSES:+"$SCRIPTS_PY_EXPOSES"}' EXIT
+trap 'rm -rf "$TMP" "$VERROU_REJEU" ${SCRIPTS_PY_EXPOSES:+"$SCRIPTS_PY_EXPOSES"}' EXIT
 ci_extraire < "$CI" > "$TMP/flux"
 
 NB_OK=0; NB_FAIL=0; NB_INCONNU=0; NB_PREP=0
@@ -179,6 +198,21 @@ version_locale() {         # $1 = uses — ce que la CI ÉPINGLE, ce que le post
   esac
 }
 
+#  Les contrôles d'un job ne mesurent le lot que si le poste a installé ce que
+#  ses étapes d'installation épinglent (#1417). Sinon ils rendent INCONNU, et
+#  la ligne ENV dit l'écart et la commande qui aligne le poste.
+verifier_dependances() {   # $1 = job, $2 = rép, $3 = corps de l'installation
+  local verdict motif
+  verdict=$(printf '%s\n' "$3" \
+    | python "$RACINE/scripts/poste/verifier-dependances-poste.py" --rep "$RACINE${2:+/$2}" 2>/dev/null \
+    | tail -1)
+  motif=$(ci_dependances_etat "$verdict")
+  [ -z "$motif" ] && return
+  printf '%s\n' "$motif" > "$TMP/deps-$1"
+  rapporter "ENV" "$1" "dépendances" \
+    "$motif · aligner : (cd ${2:-.} && $(printf '%s' "$3" | grep -v '^[[:space:]]*#' | tr '\n' ' ' | sed 's/ *$//'))"
+}
+
 executer() {               # $1 = job, $2 = étape, $3 = rép, corps dans $TMP/corps
   local corps genre sortie code duree t0
   corps=$(ci_substituer "$SHA_COURT" < "$TMP/corps")
@@ -187,11 +221,16 @@ executer() {               # $1 = job, $2 = étape, $3 = rép, corps dans $TMP/c
   case "$genre" in
     PREPARATION)
       rapporter "PRÉP" "$1" "$2" "installation — non exécutée sur le poste"
+      verifier_dependances "$1" "$3" "$corps"
       return ;;
     INCONNU*)
       rapporter INCONNU "$1" "$2" "${genre#INCONNU }"
       return ;;
   esac
+  if [ -s "$TMP/deps-$1" ]; then
+    rapporter INCONNU "$1" "$2" "ne mesure pas le lot : dépendances du poste (ligne ENV)"
+    return
+  fi
 
   printf '%s\n' "$corps" > "$TMP/etape.sh"
   t0=$(date +%s)

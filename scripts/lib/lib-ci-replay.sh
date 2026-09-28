@@ -209,6 +209,32 @@ ci_requalifier() {         # $1 = code de sortie, sortie de l'étape sur stdin
   esac
 }
 
+# ── Un seul rejeu à la fois (#1417, 28/09/2026) ─────────────────────────────
+#  Deux rejeux simultanés se sabotent — serveurs e2e sur la même machine,
+#  délais d'hydratation dépassés sous la charge — et chacun rend alors des
+#  échecs qui ne parlent pas de son lot. C'est arrivé deux fois le 27/09, entre
+#  deux sessions : la consigne « un seul rejeu à la fois » ne suffisait pas.
+#  Le verrou vit dans le répertoire git COMMUN : les worktrees le partagent.
+ci_verrou_etat() {         # $1 = pid lu dans le verrou · $2 = vivant oui|non → libre|occupe|orphelin (PURE)
+  [ -z "${1:-}" ] && { echo libre; return; }
+  [ "${2:-non}" = oui ] && echo occupe || echo orphelin
+}
+
+# ── Les dépendances du poste sont-elles celles du lot ? (#1417) ──────────────
+#  Une installation n'est jamais exécutée ici ; les contrôles qui la suivent
+#  tournent donc sur ce que le poste a DÉJÀ. Le rejeu de #1415 a rendu « pytest
+#  OK » avec sqlmodel 0.0.39 pour un lot qui posait 0.0.44 : un vert qui ne
+#  mesurait pas le lot. Le verdict vient de `verifier-dependances-poste.py` ;
+#  cette fonction dit seulement ce qu'il vaut pour le rejeu. (PURE)
+ci_dependances_etat() {    # $1 = verdict du vérificateur → "" (mesurable) | motif d'INCONNU
+  case "${1:-}" in
+    ALIGNE)   echo "" ;;
+    ECART*)   echo "dépendances du poste ≠ lot : ${1#ECART }" ;;
+    INCONNU*) echo "dépendances du poste non vérifiables : ${1#INCONNU }" ;;
+    *)        echo "dépendances du poste non vérifiables : vérificateur muet" ;;
+  esac
+}
+
 # ── Self-test ────────────────────────────────────────────────────────────────
 ci_replay_selftest() {
   local st=0 got
@@ -290,6 +316,16 @@ YAML
   #  s'élargir sans qu'on s'en aperçoive.
   t "requalification — le mot seul ne suffit pas" \
     "$(printf 'le point 9 reste INCONNU par construction\n' | ci_requalifier 1)" "FAIL"
+
+  t "verrou — absent : libre"              "$(ci_verrou_etat "" non)" "libre"
+  t "verrou — pid vivant : occupé"          "$(ci_verrou_etat 4242 oui)" "occupe"
+  t "verrou — pid mort : orphelin, repris"  "$(ci_verrou_etat 4242 non)" "orphelin"
+  t "dépendances — alignées : mesurable"    "$(ci_dependances_etat ALIGNE)" ""
+  t "dépendances — écart : INCONNU nommé" \
+    "$(ci_dependances_etat 'ECART pypdf 6.19.0→6.14.2')" "dépendances du poste ≠ lot : pypdf 6.19.0→6.14.2"
+  #  🔴 Le cas zéro : un vérificateur qui n'a rien dit ne vaut pas un « aligné ».
+  t "dépendances — muet : jamais mesurable" \
+    "$(ci_dependances_etat '')" "dépendances du poste non vérifiables : vérificateur muet"
 
   #  Éprouvé sur le VRAI fichier quand il est là : c'est le seul contrôle qui
   #  verrait un `ci.yml` réécrit dans une forme que le parseur ne sait plus lire.
