@@ -38,9 +38,10 @@ import { fileURLToPath } from 'node:url';
  *  a rendu 21 des siens en extrayant ses messages planifiés et son historique,
  *  rendu identique au pixel près (bureau et mobile). Puis 458 : la page d'un
  *  sondage, ses résultats extraits en composant et ses styles passés en
- *  classes, rendu identique (quatre états, bureau et mobile).
+ *  classes, rendu identique (quatre états, bureau et mobile). Puis 457 : le
+ *  badge « Bail actif » du formulaire de bail, passé dans sa feuille (#1329).
  */
-const PLAFOND = 458;
+const PLAFOND = 457;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
