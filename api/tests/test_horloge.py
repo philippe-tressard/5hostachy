@@ -52,3 +52,32 @@ def test_aucune_reference_a_utcnow_dans_app():
         "`datetime.utcnow` est déprécié (Python 3.12) — `horloge.maintenant` :\n"
         + "\n".join(f"  {f}" for f in fautes)
     )
+
+
+def test_toute_colonne_de_date_est_naive():
+    """Chaque colonne de date d'une table est `DateTime(timezone=False)` (#1412).
+
+    Depuis sqlmodel 0.0.45, un champ annoté `datetime` devient une colonne
+    CONSCIENTE du fuseau, qui REFUSE à l'écriture la date naïve que rend
+    `horloge.maintenant()` — « Datetime values must have timezone information ».
+    Un champ oublié ne se verrait qu'au premier enregistrement, en production.
+    La date d'un modèle s'annote donc `NaiveDatetime` (pydantic).
+    """
+    import app.models.core  # noqa: F401 — enregistre toutes les tables
+    from sqlalchemy import DateTime
+    from sqlmodel import SQLModel
+
+    conscientes = [
+        f"{table.name}.{colonne.name}"
+        for table in SQLModel.metadata.tables.values()
+        for colonne in table.columns
+        if isinstance(colonne.type, DateTime) and colonne.type.timezone
+    ]
+    dates = [
+        colonne
+        for table in SQLModel.metadata.tables.values()
+        for colonne in table.columns
+        if isinstance(colonne.type, DateTime)
+    ]
+    assert dates, "aucune colonne de date lue : le contrôle ne mesure rien"
+    assert not conscientes, f"colonnes de date conscientes du fuseau : {conscientes}"
