@@ -570,8 +570,11 @@ origines), et personne ne redémarrait (#1393).
 vient de devenir standby lance `scripts/exploitation/noyau-standby.sh`. Il tourne
 en root, sans sudo, et :
 
-1. s'abstient s'il n'est pas standby, si un conteneur quelconque y tourne, ou si
-   l'actif ne répond pas 200 sur `/api/health` en LAN ;
+1. s'abstient s'il n'est pas standby, si un conteneur **5Hostachy** y tourne, ou
+   si l'actif ne répond pas 200 sur `/api/health` en LAN. Les conteneurs d'un
+   **autre projet** (List-dons vit sur rpi2) ne l'arrêtent pas : arbitrage du
+   28/09/2026 — « tu peux arrêter List-dons, mais vérifie qu'il redémarre ». Le
+   premier passage réel s'était abstenu pour lui, et l'aurait fait une nuit sur deux ;
 2. pose la dernière **révision** de sa série (6.18.50 → 6.18.5x), avec le
    micrologiciel : `NOYAU_PAQUETS` dans `lib-mises-a-jour.sh`, la seule liste ;
 3. redémarre s'il tourne sur un noyau plus ancien que l'installé, après avoir
@@ -588,6 +591,7 @@ repli.
 | le pair ne revient pas | au-delà de 10 min, **FAIL** « il ne repart pas » → alerte. Le Pi n'a pas de menu de démarrage : accès physique |
 | redémarré, mais toujours sur l'ancien noyau | pas de nouvelle tentative (`/var/lib/hostachy/noyau-tente`) : alerte. Supprimer ce fichier pour retenter |
 | installation en échec | pas de redémarrage, alerte avec la fin de la sortie d'apt |
+| un autre projet tournait sur le standby | relevé avant le redémarrage (`CONTENEURS_ETRANGERS`, `lib-mises-a-jour.sh`) ; C30 dit **OK** quand chacun tourne de nouveau et que son healthcheck n'est ni `unhealthy` ni `starting`, **WARN** jusqu'à 10 min, **FAIL** au-delà → alerte. Le relevé cesse de compter après 6 h |
 
 Journal : `/var/log/hostachy-bascule.log`, lignes `[noyau]`. Banc sans effet :
 `noyau-standby.sh --dry-run` (avec `REPO=` pour une copie dans `/tmp`).
