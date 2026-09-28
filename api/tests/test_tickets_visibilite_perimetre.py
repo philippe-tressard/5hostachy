@@ -80,7 +80,7 @@ def _ticket(session, auteur_id, perimetre, *, confidentiel=False) -> Ticket:
         numero=f"T-{uuid.uuid4().hex[:6]}",
         titre="Fuite",
         description="…",
-        categorie="nuisance",  # pas « panne » : sa lecture par défaut lui est propre (#1343)
+        categorie="etude_travaux",  # la règle des copropriétaires : Panne (#1343) et Nuisance (#1436) ont la leur
         auteur_id=auteur_id,
         statut=StatutTicket.ouvert,
         perimetre_cible=json.dumps(perimetre, ensure_ascii=False),

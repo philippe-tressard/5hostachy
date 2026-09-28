@@ -207,10 +207,17 @@ def test_un_ticket_reserve_au_conseil_ne_part_JAMAIS_sur_le_groupe():
     (`standards/03-securite.md` §1 — l'interface est un confort, le serveur
     est le contrôle).
 
-    Le contrôle porte sur les **deux** modules d'envoi, et il exige la
+    Le contrôle porte sur les **trois** modules d'envoi, et il exige la
     condition là où l'envoi se décide : c'est le FAIT, pas le symptôme.
+
+    🔴 Depuis #1436 (28/09/2026), la condition est `reservee_au_conseil(ticket)`
+    et non plus le seul drapeau : une nuisance, une question, un sinistre sont
+    fermés au voisinage PAR LEUR CATÉGORIE, sans que rien soit coché — et le
+    drapeau seul les laissait partir. La règle unique le contient ; exiger le
+    drapeau aurait exigé l'ancienne règle, celle qui fuyait. Le contrôle
+    couvrait deux modules sur trois : `mise_a_jour.py` n'y était pas.
     """
-    modules = ("crud.py", "evolutions.py")
+    modules = ("crud.py", "evolutions.py", "mise_a_jour.py")
     for nom in modules:
         source = (_APP / "routers" / "tickets" / nom).read_text(encoding="utf-8")
         conditions = _conditions_de_partage(ast.parse(source))
@@ -220,10 +227,11 @@ def test_un_ticket_reserve_au_conseil_ne_part_JAMAIS_sur_le_groupe():
             "portée — dans les deux cas, ne pas lire ce test comme vert."
         )
         for condition in conditions:
-            assert "confidentiel" in condition, (
+            assert "not reservee_au_conseil(ticket)" in condition, (
                 f"tickets/{nom} : un ticket réservé au conseil syndical peut partir "
                 "sur le groupe WhatsApp de tous les résidents. La condition doit "
-                f"porter `not ticket.confidentiel`. Condition trouvée : {condition}"
+                "porter `not reservee_au_conseil(ticket)` — la règle unique, qui "
+                f"contient le drapeau ET le défaut de la catégorie. Trouvée : {condition}"
             )
 
 

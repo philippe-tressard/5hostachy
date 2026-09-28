@@ -641,6 +641,13 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
     de Destinataires, code `mandataires`. La pastille « Conseil syndical »
     RESTE, arbitré à l'écran le même jour : « Résident concerné » se place
     entre Locataires et elle — trois degrés de restriction, pas un doublon.
+  - ✅ **#1436** (28/09/2026) : CHAQUE catégorie d'affaire a ses Destinataires
+    par défaut — la table vit au serveur (`DEFAUT_PAR_CATEGORIE`,
+    `utils/visibility/defauts_affaire.py`), son miroir dans `$lib/lecture`, et
+    `lecture_pastille.json` en tient un cas par catégorie. « Résident concerné »
+    y est un DÉFAUT : la pastille est cochée sans poser le drapeau, et la
+    vignette dit « Concerné ». Fermée ainsi, une affaire ne sort pas plus (groupe,
+    hall) que cochée : une seule règle, `reservee_au_conseil`.
 
 🔒 **Tenue depuis le 26/09/2026 (#1305) : `api/tests/test_libelle_tous.py`.** Il
 refuse « tous les résidents » dans tout texte SERVI — littéraux Python hors

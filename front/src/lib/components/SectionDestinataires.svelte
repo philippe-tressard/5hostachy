@@ -40,7 +40,7 @@
 	import CaseConfidentielle from '$lib/components/CaseConfidentielle.svelte';
 	import { LIBELLE_TOUS, concerneTousLesResidents } from '$lib/destinataires';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
-	import { destinatairesParDefaut, lectureDe, titreLecture } from '$lib/lecture';
+	import { destinatairesParDefaut, estConcerne, lectureDe, titreLecture } from '$lib/lecture';
 	import { perimetreRestreint, type NatureLue } from '$lib/lecture-ticket';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { relire } from '$lib/utils';
@@ -87,6 +87,16 @@
 	/** Le « Résident concerné » — l'auteur, ou pour qui elle a été saisie. */
 	export let concerne = '';
 	$: defaut = lecture && !lecture.actualite ? destinatairesParDefaut(lecture) : parDefaut;
+	/**  Le défaut de la catégorie est « Résident concerné » (#1436) : la pastille
+	 *   est cochée tant que le conseil ne choisit rien — sans poser le drapeau. */
+	$: defautConcerne = estConcerne(defaut);
+	$: concerneActif = confidentiel || (defautConcerne && !destinataires.length);
+	/**  Cocher « Résident concerné » quand c'est le défaut, c'est y REVENIR ; le
+	 *   décocher n'a pas de sens — on le quitte en choisissant un autre profil. */
+	function basculerConcerne(actif: boolean) {
+		if (!defautConcerne) confidentiel = actif;
+		else if (actif) [destinataires, confidentiel] = [[], false];
+	}
 	const cle = (c: string[]) => [...c].sort().join();
 	/**  Vide = la règle de la nature : ce qui revient au défaut n'est pas un choix. */
 	function choisir(e: CustomEvent<string[]>) {
@@ -141,14 +151,14 @@
 			aria-labelledby="{idPrefixe}-destinataires-titre"
 		>
 			<DestinatairePicker
-				value={destinataires.length ? destinataires : defaut}
+				value={destinataires.length ? destinataires : defautConcerne ? [] : defaut}
 				titre=""
 				concerne={lecture || parDefaut
 					? `Résident concerné${concerne ? ` : ${concerne}` : ''}`
 					: null}
-				concerneActif={confidentiel}
+				{concerneActif}
 				on:change={choisir}
-				on:concerne={(e) => (confidentiel = e.detail)}
+				on:concerne={(e) => basculerConcerne(e.detail)}
 			/>
 		</fieldset>
 	{:else}

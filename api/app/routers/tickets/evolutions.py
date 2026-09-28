@@ -37,6 +37,7 @@ from app.utils.liens import base_site, lien_ticket
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_internes, photos_json
 from app.utils.recuperer import ou_404
+from app.utils.visibility import reservee_au_conseil
 from app.utils.prochaine_visite import apres_cloture
 
 from .commun import (
@@ -380,7 +381,7 @@ def add_evolution(
     #  conseil, comme à la création (`crud.py`). L'auteur d'une affaire ouvre une
     #  Suite sur la sienne — il ne publie pas au nom du site (#1164, 23/09/2026).
     est_cs = est_moderateur(user)
-    partage_whatsapp = body.partager_whatsapp and est_cs and not ticket.confidentiel
+    partage_whatsapp = body.partager_whatsapp and est_cs and not reservee_au_conseil(ticket)
     if partage_whatsapp or body.envoyer_syndic or body.envoyer_cs:
         # Évolutions précédentes (hors celle qui vient d'être créée) — le même
         # historique alimente le message WhatsApp et le tableau de l'e-mail.

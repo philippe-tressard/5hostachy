@@ -415,7 +415,7 @@ def update_ticket(
     #  portant `partager_whatsapp` sans rôle. Une garde qu'un contrôle ne peut pas
     #  voir ne le protège pas de la refonte qui déplacera l'appel.
     #  Même règle qu'à la création : réservé au conseil ⇒ pas de groupe WhatsApp.
-    if body.partager_whatsapp and is_cs_admin and not ticket.confidentiel:
+    if body.partager_whatsapp and is_cs_admin and not reservee_au_conseil(ticket):
         _partager_sur_le_groupe(session, ticket, background_tasks)
 
     if (ticket.destinataire_syndic and not syndic_avant) or (

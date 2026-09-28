@@ -29,8 +29,7 @@ from app.models.core import (
     TypeEvenement,
     Utilisateur,
 )
-from app.utils.perimetres import batiments_cibles, parse_perimetres
-from app.utils.valeurs import valeur
+from app.utils.perimetres import parse_perimetres
 
 #  ⚠️ `_codes_json_pour_acces` est privé au paquet, pas au fichier : c'est le
 #  parseur commun des listes de codes (« qui est visé »), et deux fragments le
@@ -44,6 +43,8 @@ from .socle import (
     reserve_au_conseil,
 )
 from app.auth.deps import est_moderateur
+
+from .defauts_affaire import _DEFAUTS_FERMES, CONCERNE, destinataires_par_defaut
 #  ⚠️ `public_cible_visible` n'est plus importé ici depuis le 06/09/2026 : aucune
 #  règle de ce fichier ne l'appelle en direct — elles passent toutes par
 #  `cible_visible`, qui pose les deux axes. Une factorisation se termine par la
@@ -217,36 +218,6 @@ def can_see_ag(user: Utilisateur) -> bool:
 _LECTURE_RESTREINTE = (StatutUtilisateur.locataire, StatutUtilisateur.mandataire)
 
 
-#: Ce que lit une Panne sans choix du conseil, dans un bâtiment : ceux qui Y
-#: VIVENT — occupants et locataires —, pas les bailleurs (#1343).
-_DESTINATAIRES_PANNE_BATIMENT = ["copropriétaires_occupants", "locataires"]
-
-
-def destinataires_par_defaut(ticket: Ticket) -> list[str] | None:
-    """Les Destinataires qu'une affaire a SANS choix du conseil, quand sa
-    catégorie en décide (#1343, 26/09/2026) — `None` : la règle historique
-    (les copropriétaires), écrite dans `ticket_visible`.
-
-    Arbitré à l'écran : *« pour une catégorie Panne, tout le périmètre (sauf
-    bailleurs) concernés, si le périmètre est un bâtiment ; hors bâtiments =
-    tout le monde »*. Une panne d'ascenseur concerne qui prend l'ascenseur.
-
-    « Dans un bâtiment » : CHAQUE code du périmètre descend d'un bâtiment
-    (`batiments_cibles`) ; un seul espace commun — parking, espaces verts, la
-    copropriété entière — et la panne concerne tout le monde.
-
-    ⚠️ Miroir : `destinatairesParDefaut` (`front/src/lib/lecture.ts`), tenus
-    d'accord par `tests/donnees/lecture_pastille.json`.
-    """
-    if valeur(ticket.categorie) != "panne":
-        return None
-    #  Illisible : `cible_visible` refusera de toute façon, la valeur importe peu.
-    codes = _codes_json_pour_acces(ticket.perimetre_cible) or []
-    if codes and all(batiments_cibles([c]) for c in codes):
-        return _DESTINATAIRES_PANNE_BATIMENT
-    return ["résidents"]
-
-
 def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     """Qui peut LIRE ce ticket — jamais qui peut y écrire.
 
@@ -338,8 +309,11 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     #  des deux : une donnée abîmée ne peut que restreindre (#789).
     if _parse_json_list(ticket.public_cible, []):
         return cible_visible(ticket.perimetre_cible, ticket.public_cible, user)
-    #  Sans choix, la catégorie peut en décider — une Panne (#1343).
+    #  Sans choix, la catégorie en décide (#1343, #1436).
     defaut = destinataires_par_defaut(ticket)
+    if defaut == [CONCERNE]:
+        #  L'auteur, le « saisi pour » et le conseil sont sortis plus haut.
+        return False
     if defaut is not None:
         return cible_visible(ticket.perimetre_cible, json.dumps(defaut, ensure_ascii=False), user)
 
@@ -390,7 +364,14 @@ def reservee_au_conseil(ticket: Ticket) -> bool:
     conseil » des actualités migrées) et Destinataires = « Conseil syndical »
     SEUL, qui en tient lieu depuis l'arbitrage #1096 (23/09/2026).
     """
-    return bool(ticket.confidentiel) or reserve_au_conseil(ticket.public_cible)
+    if ticket.confidentiel or reserve_au_conseil(ticket.public_cible):
+        return True
+    #  🔴 …OU SANS CHOIX, SA CATÉGORIE LA FERME (#1436) : une nuisance au défaut
+    #  « Résident concerné » ne part pas plus sur le groupe ni au hall qu'une
+    #  affaire cochée. Un choix du conseil prime, comme dans `ticket_visible`.
+    if _parse_json_list(ticket.public_cible, []):
+        return False
+    return destinataires_par_defaut(ticket) in _DEFAUTS_FERMES
 
 
 def hors_du_hall(ticket: Ticket) -> bool:

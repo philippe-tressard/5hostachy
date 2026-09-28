@@ -39,7 +39,7 @@ from app.utils.suppression_liee import (
 )
 from app.utils.photos import parse_photos, photos_json
 from app.utils.courriel_entrant import nouveau_jeton
-from app.utils.visibility import ticket_visible
+from app.utils.visibility import reservee_au_conseil, ticket_visible
 
 from app.utils.kanban_tickets import suivi_par_defaut
 from .commun import (
@@ -261,7 +261,8 @@ def create_ticket(
     #  ticket, non — un ticket fermé au voisinage pouvait partir en entier sur le
     #  groupe des résidents. La garde est ici plutôt que dans l'écran : une case
     #  masquée ne protège rien, le champ peut être posté directement.
-    if body.partager_whatsapp and est_cs and not ticket.confidentiel and not bug:
+    #  Réservée : cochée, ou fermée par sa catégorie sans choix du conseil (#1436).
+    if body.partager_whatsapp and est_cs and not reservee_au_conseil(ticket) and not bug:
         _partager_sur_le_groupe(session, ticket, background_tasks)
 
     if ticket.destinataire_syndic or ticket.destinataire_cs:

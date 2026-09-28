@@ -27,6 +27,7 @@
 	import { TICKET } from '$lib/entites/ticket';
 	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
+	import { ticketLuDuSeulConseil } from '$lib/lecture-ticket';
 	import type { Ticket, TicketMessage, TicketEvolution } from '$lib/api';
 	import { nomCopie } from '$lib/saisi-pour';
 
@@ -99,7 +100,10 @@
 					conditions={conditionsDeLaSuite(ticket)}
 					assistant={contexteCommentaire(ticket)}
 					avecPiecesJointes={!newInterne}
-					whatsappInterdit={motifWhatsappInterdit(ticket?.confidentiel ?? false, 'ticket')}
+					whatsappInterdit={motifWhatsappInterdit(
+						!!ticket && ticketLuDuSeulConseil(ticket),
+						'ticket',
+					)}
 					showEmail={$isCS && !newInterne}
 					avecInterne={$isCS}
 					bind:interne={newInterne}

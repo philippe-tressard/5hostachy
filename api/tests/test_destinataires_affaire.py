@@ -25,7 +25,7 @@ from app.models.core import StatutTicket, StatutUtilisateur, Ticket, Utilisateur
 from app.routers.tickets.evolutions import add_evolution
 from app.routers.tickets.mise_a_jour import update_ticket
 from app.schemas import TicketEvolutionCreate, TicketUpdate
-from app.utils.visibility import ticket_visible
+from app.utils.visibility import hors_du_hall, reservee_au_conseil, ticket_visible
 from tests.purge_test import purger_ligne
 
 
@@ -145,3 +145,44 @@ def test_promue_avec_ses_destinataires_renvoyes_elle_les_garde(contexte):
     session.refresh(t)
     assert json.loads(t.public_cible) == ["locataires"]
     assert ticket_visible(t, locataire)
+
+
+#  ── Rien ne sort d'une affaire fermée par sa catégorie (#1436) ───────────────
+#
+#  « Résident concerné » ou « Conseil syndical seul » PAR DÉFAUT ferment
+#  l'affaire au voisinage comme la case cochée : ni groupe WhatsApp, ni hall.
+#  Un choix du conseil prime — il rouvre ce que la catégorie fermait.
+
+
+def _nue(categorie: str, public=None, confidentiel=False) -> Ticket:
+    """L'objet tel que la règle le lit — jamais enregistré."""
+    return Ticket(
+        numero="T-1436",
+        titre="Défaut",
+        description="…",
+        categorie=categorie,
+        auteur_id=1,
+        perimetre_cible='["résidence"]',
+        public_cible=json.dumps(public, ensure_ascii=False) if public else None,
+        confidentiel=confidentiel,
+    )
+
+
+@pytest.mark.parametrize(
+    "categorie", ["nuisance", "acces_accueil", "sinistre", "question", "bug", "entretien"]
+)
+def test_une_affaire_fermee_par_sa_categorie_ne_sort_pas(categorie):
+    assert reservee_au_conseil(_nue(categorie))
+    assert hors_du_hall(_nue(categorie))
+
+
+@pytest.mark.parametrize("categorie", ["espaces_verts", "etude_travaux", "panne"])
+def test_une_affaire_ouverte_par_sa_categorie_peut_sortir(categorie):
+    assert not reservee_au_conseil(_nue(categorie))
+    assert not hors_du_hall(_nue(categorie))
+
+
+def test_un_choix_du_conseil_rouvre_ce_que_la_categorie_fermait():
+    assert not reservee_au_conseil(_nue("nuisance", public=["locataires"]))
+    assert reservee_au_conseil(_nue("etude_travaux", public=["conseil_syndical"]))
+    assert reservee_au_conseil(_nue("espaces_verts", confidentiel=True))

@@ -71,7 +71,7 @@
 		STATUT_TICKET_OPTIONS,
 	} from '$lib/tickets';
 	import { fmtDate } from '$lib/date';
-	import { destinatairesParDefautDuTicket } from '$lib/lecture-ticket';
+	import { destinatairesParDefautDuTicket, ticketLuDuSeulConseil } from '$lib/lecture-ticket';
 	import {
 		tickets as ticketsApi,
 		type CorrespondanceAffaire,
@@ -302,7 +302,7 @@
 						peutPreciserPerimetre={peutSuivreCeTicket}
 						perimetreCourant={ticket.perimetre_cible ?? []}
 						entrees={evolutions}
-						whatsappInterdit={motifWhatsappInterdit(ticket.confidentiel ?? false, 'ticket')}
+						whatsappInterdit={motifWhatsappInterdit(ticketLuDuSeulConseil(ticket), 'ticket')}
 						peutDiffuser={$isCS}
 						saving={evolutionEnCours}
 						avantSuivi={equipementDansLaSuite(ticket, $isCS)}
