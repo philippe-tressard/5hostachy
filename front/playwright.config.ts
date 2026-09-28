@@ -114,5 +114,11 @@ export default defineConfig({
 		url: BASE,
 		reuseExistingServer: false,
 		timeout: 120_000,
+		//  La sortie du serveur est LUE (#1421) : c'est là que Vite annonce qu'il
+		//  recharge la page en plein test (« optimized dependencies changed.
+		//  reloading »). L'étape de CI la cherche et échoue en nommant la
+		//  dépendance — sans cela, le rechargement ne se voyait que par des tests
+		//  qui tombaient au hasard.
+		stdout: 'pipe',
 	},
 });

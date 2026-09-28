@@ -2167,4 +2167,19 @@ jobs:
 
       - name: Tests de navigateur (bureau et mobile)
         working-directory: front
-        run: npm run e2e
+        # 🔒 Aucun rechargement de Vite pendant les tests (#1421, 28/09/2026). À
+        # cache froid, une dépendance chargée par un `import()` dynamique n'est
+        # découverte qu'au premier écran qui l'appelle : Vite l'optimise, puis
+        # RECHARGE toutes les pages ouvertes, et les tests en vol échouent au
+        # hasard (« Execution context was destroyed »). Quatre rejeux complets sur
+        # six l'avaient subi. La dépendance nommée va dans `optimizeDeps.include`.
+        run: |
+          set +e
+          npm run e2e 2>&1 | tee e2e-sortie.log
+          code=${PIPESTATUS[0]}
+          if grep -q "optimized dependencies changed" e2e-sortie.log; then
+            grep "new dependencies optimized" e2e-sortie.log
+            echo "✗ Vite a rechargé la page pendant les tests : ajouter la dépendance ci-dessus à optimizeDeps.include (vite.config.ts)."
+            exit 1
+          fi
+          exit $code

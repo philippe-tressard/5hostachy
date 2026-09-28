@@ -496,6 +496,13 @@ publics » : c'était vrai, et ce n'est plus une limite.
 
 Lancer en local : `cd front && npm run e2e`.
 
+🔒 **Aucun rechargement de Vite pendant les tests** (#1421, 28/09/2026). Une
+dépendance chargée par un `import()` dynamique (`dompurify`, l'éditeur `@tiptap`)
+n'est optimisée qu'au premier écran qui l'appelle, et Vite recharge alors toutes
+les pages ouvertes : des e2e tombaient au hasard, quatre rejeux complets sur six.
+Elle se déclare dans `optimizeDeps.include` (`vite.config.ts`) ; l'étape de CI
+échoue en la nommant si une nouvelle venue recharge une page.
+
 ### Rejouer la CI en local — `bash scripts/poste/rejouer-ci.sh` (depuis le 13/08/2026)
 Les **cinq** jobs ci-dessus se rejouent en une à deux minutes sur le poste, sans rien
 recopier : le script **extrait** les commandes de `.github/workflows/ci.yml`. Une

@@ -135,6 +135,21 @@ export default defineConfig({
 			},
 		}),
 	],
+	//  Les dépendances chargées par un `import()` DYNAMIQUE (#1421, 28/09/2026).
+	//  Le pré-scan de Vite ne les suit pas : à cache froid, il les découvre au
+	//  premier écran qui les appelle, les optimise, puis RECHARGE toutes les pages
+	//  ouvertes. En développement c'est un clignement ; en e2e, des tests qui
+	//  tombent au hasard (« Execution context was destroyed »). Les déclarer ici
+	//  les fait optimiser au démarrage. La CI nomme toute nouvelle venue : l'étape
+	//  « Tests de navigateur » échoue quand Vite recharge une page en plein test.
+	optimizeDeps: {
+		include: [
+			'dompurify', // $lib/sanitize.ts, chargé côté navigateur seulement
+			'@tiptap/core', // l'éditeur riche, chargé à la demande
+			'@tiptap/starter-kit',
+			'@tiptap/extension-placeholder',
+		],
+	},
 	server: {
 		proxy: {
 			'/api': {
