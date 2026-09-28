@@ -23,6 +23,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from app.utils.courriel_authenticite import (
+    MOTIFS_ECART,
     VerificationReportee,
     aligne,
     domaine_de,
@@ -140,7 +141,74 @@ def test_une_cle_ABSENTE_du_DNS_refuse(cle):
     brut = _signer(_message("gestion@syndic.fr"), "syndic.fr", cle[0])
     ok, motif = verifier_expediteur(brut, "gestion@syndic.fr", dnsfunc=_dns({}))
     assert not ok
-    assert "invalide" in motif
+    assert motif == MOTIFS_ECART["cle_introuvable"]
+
+
+# ── Un motif par cas (#1448) ─────────────────────────────────────────────────
+#
+# « La signature DKIM du message est invalide » recouvrait quatre situations,
+# dont trois signatures VALIDES écartées par choix. Le 28/09/2026, ce motif
+# unique a fait soupçonner notre vérification quand c'était la redirection qui
+# abîmait le corps. Chaque cas a désormais le sien.
+
+
+class _TupleLeurre(tuple):
+    """Un tuple qui prétend contenir `from` au seul contrôle de `dkimpy.sign`
+    (« The From header field MUST be signed ») : c'est ce qui permet de
+    fabriquer ici une signature VALIDE qui ne couvre pas `From:`, comme en
+    poserait un signataire moins scrupuleux. Il s'itère sur ses vrais éléments,
+    donc `h=` et le calcul ne portent que `to:subject`.
+
+    ⚠️ Posé le temps de SIGNER seulement : actif pendant la vérification, il
+    ferait croire à notre contrôle que `From:` est signé.
+    """
+
+    def __contains__(self, element):
+        return element == b"from" or tuple.__contains__(self, element)
+
+
+def _signer_sans_from(message: bytes, pem: bytes) -> bytes:
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(dkim, "tuple", _TupleLeurre, raising=False)
+        return _signer(message, "syndic.fr", pem, include_headers=[b"to", b"subject"])
+
+
+def _cas(nom: str, cle) -> tuple[bytes, object]:
+    message = _message("gestion@syndic.fr")
+    dns = _dns_pour("syndic.fr", cle)
+    if nom == "modifiee":
+        return _signer(message, "syndic.fr", cle[0]).replace(b"jeudi", b"jamais"), dns
+    if nom == "cle_introuvable":
+        return _signer(message, "syndic.fr", cle[0]), _dns({})
+    if nom == "partielle":
+        return _signer(message, "syndic.fr", cle[0], length=True), dns
+    if nom == "algorithme":
+        return _signer(message, "syndic.fr", cle[0], signature_algorithm=b"rsa-sha1"), dns
+    if nom == "sans_from":
+        return _signer_sans_from(message, cle[0]), dns
+    raise AssertionError(nom)
+
+
+@pytest.mark.parametrize("cas", sorted(MOTIFS_ECART))
+def test_chaque_ecart_rend_SON_motif(cas, cle):
+    brut, dns = _cas(cas, cle)
+    ok, motif = verifier_expediteur(brut, "gestion@syndic.fr", dnsfunc=dns)
+    assert not ok
+    assert motif == MOTIFS_ECART[cas]
+
+
+def test_les_signatures_ecartees_sont_bien_VALIDES(cle):
+    """Sans quoi le test ci-dessus prouverait « signature cassée » trois fois."""
+    for cas in ("partielle", "algorithme", "sans_from"):
+        brut, dns = _cas(cas, cle)
+        signature = dkim.DKIM(brut)
+        assert signature.verify(dnsfunc=dns), cas
+        assert (b"from" in signature.include_headers) == (cas != "sans_from"), cas
+
+
+def test_les_motifs_sont_DISTINCTS_et_ne_disent_pas_invalide():
+    assert len(set(MOTIFS_ECART.values())) == len(MOTIFS_ECART)
+    assert not any("invalide" in m for m in MOTIFS_ECART.values())
 
 
 # ── INCONNU n'est pas REFUSÉ ──────────────────────────────────────────────────
@@ -228,7 +296,7 @@ def test_la_redirection_CASSE_la_signature_directe(cle):
     abime = brut.replace(b"\r\n.", b"\r\n..")
     ok, motif = verifier_expediteur(abime, "gestion@syndic.fr", dnsfunc=_dns_redirection(cle))
     assert not ok
-    assert "invalide" in motif
+    assert motif == MOTIFS_ECART["modifiee"]
 
 
 def test_le_constat_SCELLE_par_le_serveur_de_reception_fait_foi(cle):

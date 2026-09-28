@@ -234,6 +234,52 @@ def verifier_expediteur(brut: bytes, from_: str, *, dnsfunc=_txt) -> tuple[bool,
     return False, motif
 
 
+#: Pourquoi aucune signature n'a suffi — un motif par cas (#1448). Ils étaient
+#: tous « la signature DKIM du message est invalide », et trois d'entre eux
+#: désignent des signatures VALIDES écartées par choix : le 28/09/2026, ce motif
+#: unique a fait soupçonner notre vérification quand c'était la redirection qui
+#: abîmait le corps. Chacun est écrit pour un membre du conseil syndical.
+MOTIFS_ECART = {
+    "sans_from": (
+        "la signature ne couvre pas l'adresse de l'expéditeur, qui a pu être changée après coup"
+    ),
+    "partielle": (
+        "la signature ne couvre qu'une partie du message : la suite a pu être ajoutée après coup"
+    ),
+    "algorithme": (
+        "la signature utilise un algorithme trop ancien (rsa-sha1) pour prouver l'expéditeur"
+    ),
+    "cle_introuvable": (
+        "la clé publique du signataire est introuvable : la signature ne peut pas être vérifiée"
+    ),
+    "modifiee": (
+        "la signature ne correspond plus au message : il a sans doute été modifié "
+        "après avoir été signé"
+    ),
+}
+
+#: Quand plusieurs signatures échouent pour des raisons différentes, on dit la
+#: plus instructive : une signature valide écartée en dit plus qu'une cassée.
+_ORDRE_ECARTS = tuple(MOTIFS_ECART)
+
+
+def _ecart(champs: dict, entetes_signes, cle_absente: bool, valide: bool) -> str | None:
+    """Pourquoi cette signature ne prouve rien, ou None si elle prouve."""
+    if not valide:
+        return "cle_introuvable" if cle_absente else "modifiee"
+    #  RFC 6376 impose de signer `From` ; on ne s'en remet pas au signataire.
+    if b"from" not in entetes_signes:
+        return "sans_from"
+    #  `l=` borne la longueur du corps signé : ce qui suit peut être AJOUTÉ
+    #  sans casser la signature. Une réponse dont la fin est libre ne prouve
+    #  rien de ce qu'elle dit.
+    if b"l" in champs:
+        return "partielle"
+    if champs.get(b"a") not in _ALGORITHMES:
+        return "algorithme"
+    return None
+
+
 def _signature_directe(brut: bytes, expediteur: str, dnsfunc) -> tuple[bool, str]:
     """La signature DKIM lue sur les octets reçus, sans intermédiaire."""
     message = dkim.DKIM(brut, logger=_journal_dkim)
@@ -244,26 +290,35 @@ def _signature_directe(brut: bytes, expediteur: str, dnsfunc) -> tuple[bool, str
             "avec certitude à son expéditeur apparent"
         )
 
+    #  `dkimpy` rend False pour une clé absente comme pour un corps modifié : on
+    #  note ce que le DNS a répondu pour les distinguer.
+    cles_absentes: list[bytes] = []
+
+    def dns_note(nom, *args, **kwargs):
+        cle = dnsfunc(nom, *args, **kwargs)
+        if cle is None:
+            cles_absentes.append(nom)
+        return cle
+
     signataires: list[str] = []
+    ecarts: set[str] = set()
     for idx in range(nombre):
+        cles_absentes.clear()
         try:
-            valide = message.verify(idx=idx, dnsfunc=dnsfunc)
+            valide = message.verify(idx=idx, dnsfunc=dns_note)
         except VerificationReportee:
             raise
         except Exception:  # noqa: BLE001 — une signature mal formée ne vaut rien
+            ecarts.add("modifiee")
             continue
         champs = getattr(message, "signature_fields", {}) or {}
+        ecart = _ecart(
+            champs, getattr(message, "include_headers", ()), bool(cles_absentes), bool(valide)
+        )
+        if ecart:
+            ecarts.add(ecart)
+            continue
         signataire = (champs.get(b"d") or b"").decode("ascii", "replace").lower()
-        if not valide:
-            continue
-        #  `l=` borne la longueur du corps signé : ce qui suit peut être AJOUTÉ
-        #  sans casser la signature. Une réponse dont la fin est libre ne prouve
-        #  rien de ce qu'elle dit.
-        if b"l" in champs or champs.get(b"a") not in _ALGORITHMES:
-            continue
-        #  RFC 6376 impose de signer `From` ; on ne s'en remet pas au signataire.
-        if b"from" not in getattr(message, "include_headers", ()):
-            continue
         signataires.append(signataire)
         if aligne(signataire, expediteur):
             return True, f"signé par {signataire}"
@@ -273,4 +328,4 @@ def _signature_directe(brut: bytes, expediteur: str, dnsfunc) -> tuple[bool, str
             f"le message est signé par {', '.join(sorted(set(signataires)))}, "
             f"et non par le domaine de l'expéditeur ({expediteur})"
         )
-    return False, "la signature DKIM du message est invalide"
+    return False, MOTIFS_ECART[min(ecarts, key=_ORDRE_ECARTS.index)]
