@@ -85,12 +85,19 @@ test('la liste ne garde que ce que le serveur a trouvé, et dit où', async ({ p
 	await bilan.getByRole('button', { name: 'Les inclure' }).click();
 	await expect(page.locator('.carte-liste')).toHaveCount(2);
 	await expect(page.locator('.carte-liste').nth(1).locator('.badge')).toContainText(['Archivée']);
-	await expect(page.getByLabel('Inclure les Archives')).toBeChecked();
+	//  Plus de case : l'inclusion se lit dans le bilan (28/09/2026).
+	await expect(bilan).toContainText('2 affaires');
+	await expect(bilan).toContainText('dont 1 aux Archives');
+	await expect(bilan.getByRole('button', { name: 'Les inclure' })).toHaveCount(0);
+	await expect(page.getByRole('checkbox')).toHaveCount(0);
 
-	//  Effacer rend la liste d'avant.
+	//  Effacer rend la liste d'avant — et retire les Archives de la suivante.
 	await bilan.getByRole('button', { name: 'Effacer la recherche' }).click();
 	await expect(page.locator('.carte-liste')).toHaveCount(2);
 	await expect(page.locator('.pastille-trouve')).toHaveCount(0);
+	await page.getByLabel('Recherche', { exact: true }).fill('fuite');
+	await expect(bilan).toContainText('1 autre aux Archives');
+	await expect(page.locator('.carte-liste')).toHaveCount(1);
 });
 
 test('la ligne Catégorie a disparu', async ({ page }) => {

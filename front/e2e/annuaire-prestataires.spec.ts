@@ -1,5 +1,8 @@
 /*
- *  **« Sous contrat » se LIT sur les contrats, il ne se saisit pas (#1444).**
+ *  **La barre de l'annuaire des prestataires** : le filtre de contrat, la
+ *  recherche libre, et sa disposition en DEUX lignes sur ordinateur.
+ *
+ *  ## « Sous contrat » se LIT sur les contrats, il ne se saisit pas (#1444).**
  *
  *  « 🔄 Contrat récurrent » et « Dépannage » étaient des CATÉGORIES de
  *  prestataire. Elles disaient le cadre d'une intervention, pas le métier de
@@ -27,6 +30,7 @@ const PLOMBIER = {
 	nom: 'Plomberie Martin',
 	specialite: 'plomberie',
 	type_prestataire: 'maintenance_depannage',
+	contacts: [{ prenom: 'Hélène', nom: 'Dupré', fonction: 'Gérante' }],
 	actif: true,
 };
 const CONTRAT_OTIS = {
@@ -79,4 +83,59 @@ test('le filtre sépare les prestataires sous contrat des autres', async ({ page
 	await filtre.getByRole('button', { name: 'Sans contrat' }).click();
 	await expect(page.locator('#presta-2')).toBeVisible();
 	await expect(page.locator('#presta-1')).toHaveCount(0);
+});
+
+/*
+ *  ## La recherche remplace le filtre par équipement (28/09/2026)
+ *
+ *  Demandé à l'écran : la rangée des douze équipements défilait sous les deux
+ *  autres. La recherche doit donc retrouver un prestataire PAR son équipement
+ *  — sinon on aurait retiré une capacité — et, comme celle des affaires, sans
+ *  accents ni majuscules, tous les mots exigés.
+ */
+test('la recherche retrouve un prestataire par son équipement, ses contacts, sans accents', async ({
+	page,
+	baseURL,
+}) => {
+	await ouvrirAnnuaire(page, baseURL);
+	await expect(page.getByRole('group', { name: 'Filtrer par équipement' })).toHaveCount(0);
+	const recherche = page.getByRole('searchbox', { name: 'Recherche' });
+	//  Le champ tient dans l'écran — au téléphone, il en sortait (422 px pour 363).
+	const boite = (await recherche.boundingBox())!;
+	expect(boite.x + boite.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+
+	await recherche.fill('ASCENSEUR');
+	await expect(page.locator('#presta-1')).toBeVisible();
+	await expect(page.locator('#presta-2')).toHaveCount(0);
+
+	await recherche.fill('helene gerante');
+	await expect(page.locator('#presta-2')).toBeVisible();
+	await expect(page.locator('#presta-1')).toHaveCount(0);
+
+	await recherche.fill('helene otis');
+	await expect(page.getByText('Aucun prestataire pour ces critères')).toBeVisible();
+
+	await recherche.fill('');
+	await expect(page.locator('#presta-1')).toBeVisible();
+	await expect(page.locator('#presta-2')).toBeVisible();
+});
+
+test('sur ordinateur, la barre tient en deux lignes', async ({ page, baseURL }, info) => {
+	test.skip(info.project.name !== 'bureau', 'la règle des deux lignes vaut pour un ordinateur');
+	await ouvrirAnnuaire(page, baseURL);
+	const haut = async (nom: string) => (await page.getByRole('group', { name: nom }).boundingBox())!;
+	const type = await haut('Filtrer par type de prestataire');
+	const contrat = await haut('Filtrer par contrat');
+	const recherche = (await page.getByRole('searchbox', { name: 'Recherche' }).boundingBox())!;
+
+	//  Le métier seul sur la première ligne ; le cadre et la recherche sur la
+	//  seconde, centrés sur la même hauteur.
+	expect(contrat.y).toBeGreaterThan(type.y + type.height - 1);
+	const milieu = (b: { y: number; height: number }) => b.y + b.height / 2;
+	expect(Math.abs(milieu(recherche) - milieu(contrat))).toBeLessThan(8);
+	//  Et rien ne déborde de la page.
+	const deborde = await page.evaluate(
+		() => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+	);
+	expect(deborde).toBe(false);
 });

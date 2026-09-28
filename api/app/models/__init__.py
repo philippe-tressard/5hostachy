@@ -1,9 +1,9 @@
 """Modèles SQLModel.
 
 `Perimetre`, et depuis le 13/08/2026 `Copropriete`/`Batiment`/`Lot`,
-vivent dans leur propre module — `core.py` dépasse 1 500 lignes et la
-règle de modularité (rang 1) refuse qu'un fichier au-delà de 500 lignes grossisse
-pour une nouvelle fonctionnalité. Le pré-check MEP l'a refusé, à juste titre.
+vivent dans leur propre module, comme tout modèle qui a un domaine :
+`core.py` a dépassé 1 500 lignes, et n'est repassé sous 500 que le 28/09/2026
+(#779). Il ne reçoit plus de classe (`test_core_sans_modele_neuf.py`).
 
 L'import ci-dessous n'est pas décoratif : c'est lui qui enregistre la table
 auprès de SQLModel avant `create_all`. Un modèle défini dans un module que
@@ -32,3 +32,6 @@ from app.models.ia import AppelIA as AppelIA
 from app.models.diagnostics import DiagnosticRapport as DiagnosticRapport
 from app.models.diagnostics import DiagnosticType as DiagnosticType
 from app.models.lot_import import LotImport as LotImport
+from app.models.publications import Publication as Publication  # extraites de core (#779)
+from app.models.bailleur import LocationBail as LocationBail
+from app.models.delegations import Delegation as Delegation

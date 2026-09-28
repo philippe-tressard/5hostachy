@@ -43,21 +43,12 @@ from app.models.acces import (
     Vigik as Vigik,
     VigikImport as VigikImport,
 )
-from app.utils.assiste_ia import AssisteIAMixin
-from app.utils.saisi_pour import SaisiPourMixin
-from app.models.evolution import EvolutionMixin
+from app.utils.valeurs import valeur
 
 
 # ──────────────────────────────────────────────
 #  Enums
 # ──────────────────────────────────────────────
-
-
-class StatutDelegation(str, Enum):
-    en_attente = "en_attente"  # créée par le CS, en attente d'acceptation
-    active = "active"  # acceptée par l'aidant
-    revoquee = "revoquee"  # révoquée par le mandant ou le CS
-    expiree = "expiree"  # date de fin dépassée
 
 
 class TypeLien(str, Enum):
@@ -67,18 +58,20 @@ class TypeLien(str, Enum):
     mandataire = "mandataire"  # mandataire de gestion (se substitue au bailleur)
 
 
-#  Le vocabulaire du ticket — états, catégories, priorités — vit dans
-#  `tickets.py` depuis le 17/08/2026 (modularité, rang 1) : `core.py` ne
-#  pouvait plus grossir pour recevoir #415. Ré-exporté ici, donc aucun des
-#  dix-huit appelants ne change, et les valeurs restent connues de SQLModel.
+#  Le ticket — son vocabulaire (17/08/2026, #415) et ses trois tables
+#  (28/09/2026, #779) — vit dans `tickets.py`. Ré-exporté ici, donc aucun des
+#  appelants ne change, et les tables restent enregistrées auprès de SQLModel.
 from app.models.tickets import (  # noqa: E402
     STATUTS_TICKET_ACTIFS as STATUTS_TICKET_ACTIFS,
     STATUTS_TICKET_CLOS as STATUTS_TICKET_CLOS,
     STATUTS_TICKET_HISTORIQUES as STATUTS_TICKET_HISTORIQUES,
     CategorieTicket as CategorieTicket,
     IntervenantMixin as IntervenantMixin,
+    MessageTicket as MessageTicket,
     PrioriteTicket as PrioriteTicket,
     StatutTicket as StatutTicket,
+    Ticket as Ticket,
+    TicketEvolution as TicketEvolution,
 )
 
 
@@ -167,7 +160,7 @@ class Utilisateur(SQLModel, table=True):
     def roles(self) -> list[str]:
         """Liste des rôles de cet utilisateur (depuis roles_json, fallback sur role)."""
         if not self.roles_json:
-            v = self.role.value if hasattr(self.role, "value") else str(self.role)
+            v = str(valeur(self.role))
             return [v]
         return [r.strip() for r in self.roles_json.split(",") if r.strip()]
 
@@ -175,14 +168,14 @@ class Utilisateur(SQLModel, table=True):
         """Retourne True si l'utilisateur possède au moins un des rôles donnés."""
         user_roles = self.roles
         for r in roles:
-            rv = r.value if hasattr(r, "value") else str(r)
+            rv = str(valeur(r))
             if rv in user_roles:
                 return True
         return False
 
     def ajouter_role(self, role: "RoleUtilisateur") -> None:
         """Ajoute un rôle sans doublon. Met aussi à jour `role` (rôle principal)."""
-        rv = role.value if hasattr(role, "value") else str(role)
+        rv = str(valeur(role))
         current = self.roles
         if rv not in current:
             current.append(rv)
@@ -191,7 +184,7 @@ class Utilisateur(SQLModel, table=True):
 
     def retirer_role(self, role: "RoleUtilisateur") -> None:
         """Retire un rôle. Garde au minimum 'résident'."""
-        rv = role.value if hasattr(role, "value") else str(role)
+        rv = str(valeur(role))
         current = [r for r in self.roles if r != rv]
         if not current:
             current = [RoleUtilisateur.résident.value]
@@ -243,167 +236,17 @@ from app.models.validations import (  # noqa: E402,F401
 )
 
 
-# ──────────────────────────────────────────────
-#  Tickets
-# ──────────────────────────────────────────────
-
-
-class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
-    __tablename__ = "ticket"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    numero: str = Field(unique=True, index=True)
-    #  D'où vient cette affaire : une publication (0210) ou un événement (0212),
-    #  recopiés en affaires. Sans `foreign_key` ; la redirection des anciens liens
-    #  lit ces colonnes (`routers/publications`, #1091 ; `#ev-N`, #1092).
-    promu_depuis_publication_id: Optional[int] = Field(default=None, index=True)
-    promu_depuis_evenement_id: Optional[int] = Field(default=None, index=True)
-    titre: str
-    description: str
-    categorie: CategorieTicket = CategorieTicket.panne
-    statut: StatutTicket = StatutTicket.ouvert
-    priorite: PrioriteTicket = PrioriteTicket.normale
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
-    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    perimetre_cible: Optional[str] = Field(
-        default='["résidence"]'
-    )  # JSON: résidence|bat:{id}|parking|cave
-    photos_urls: Optional[str] = None  # JSON array of photo URLs
-    # Pièces jointes non-images (PDF, bureautique). Même convention que
-    # TicketEvolution.fichiers_urls : un seul nom pour la notion « fichier joint ».
-    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
-    destinataire_syndic: bool = False
-    destinataire_cs: bool = False
-    #  🔴 FK redéclarée : le mixin ne la porte pas (cf. `utils/saisi_pour`).
-    saisi_pour_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    non_relancable: bool = False
-    #  -- Section « Quand » (#1092) ----------------------------------
-    #  `debut`/`fin` disent QUAND ÇA SE PASSE et alimentent le calendrier.
-    #  `echeance` (« avant quand c'est attendu ») a été RETIRÉE le 23/09/2026
-    #  (migration 0206) : ôtée du formulaire le 21/09 — la relance mensuelle
-    #  couvre le besoin —, elle n'était plus ni saisie ni lue.
-    debut: Optional[NaiveDatetime] = None
-    fin: Optional[NaiveDatetime] = None
-    #  Intervenant, récurrence et équipement : `IntervenantMixin` (#1097).
-    non_relancable_motif: Optional[str] = None
-    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-    mis_a_jour_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-    ferme_le: Optional[NaiveDatetime] = None
-    #  Adresse `tickets+<jeton>@…` (#703) : tirée au sort, jamais dérivée de l'id.
-    jeton_courriel: Optional[str] = Field(default=None, index=True)
-    confidentiel: bool = False  # 🛡️ son auteur et le CS (#710, migration 0166)
-    #  📌 Épinglé (05/09/2026) ; ce que chaque option écrit : migration 0175.
-    epingle: bool = False
-    #  Paraît-il au kanban ? SI, jamais OÙ — `utils/kanban_tickets.py` (#833).
-    suivi_kanban: bool = False
-    #  Rapatriées de `Publication` (#1091, migration 0207) : le public visé
-    #  (JSON), l'Accès « Réservé au périmètre » (#1096), l'archivage manuel.
-    public_cible: Optional[str] = None
-    reserve_perimetre: bool = False
-    archive_manuel: bool = False
-
-    auteur: Optional[Utilisateur] = Relationship(
-        back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"}
-    )
-    saisi_pour: Optional[Utilisateur] = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[Ticket.saisi_pour_user_id]"}
-    )
-    lot: Optional[Lot] = Relationship(back_populates="tickets")
-    messages: List["MessageTicket"] = Relationship(back_populates="ticket")
-    evolutions: List["TicketEvolution"] = Relationship(back_populates="ticket")
-
-
-class MessageTicket(SQLModel, table=True):
-    __tablename__ = "message_ticket"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    ticket_id: int = Field(foreign_key="ticket.id")
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    contenu: str
-    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-    interne: bool = False  # True = visible CS seulement
-    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
-
-    ticket: Optional[Ticket] = Relationship(back_populates="messages")
-
-
-class TicketEvolution(EvolutionMixin, table=True):
-    __tablename__ = "ticket_evolution"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    ticket_id: int = Field(foreign_key="ticket.id")
-    # type : commentaire | etat | reponse
-    #  Les sept champs communs — `type`, `contenu`, les deux statuts,
-    #  l'auteur, la date et les pièces jointes — viennent d'`EvolutionMixin`.
-    #  Le périmètre que CETTE entrée déclare — `None` quand elle n'en parle pas,
-    #  ce qui est le cas de l'immense majorité des commentaires : une évolution
-    #  n'a pas de périmètre, elle en déclare un (migration 0154, #497).
-    #  Même forme JSON que partout ailleurs : `["résidence"]`, `["bat:1","cave"]`.
-    perimetre_cible: Optional[str] = None
-
-    ticket: Optional[Ticket] = Relationship(back_populates="evolutions")
-    auteur: Optional[Utilisateur] = Relationship()
+#  Les publications — copie gelée des actualités d'avant 0210 — vivent dans
+#  `publications.py` depuis le 28/09/2026 (#779) ; leur suppression est #1177.
+from app.models.publications import (  # noqa: E402,F401
+    Publication as Publication,
+    PublicationEvolution as PublicationEvolution,
+)
 
 
 # ──────────────────────────────────────────────
-#  Publications / Actualités
+#  Règles & recommandations de la résidence
 # ──────────────────────────────────────────────
-
-
-class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
-    __tablename__ = "publication"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    titre: str
-    contenu: str
-    perimetre: str = "résidence"  # résidence | bâtiment
-    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    epingle: bool = False
-    urgente: bool = False
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-    publiee_le: Optional[NaiveDatetime] = None
-    #  -- Section « Quand » (#1092) ----------------------------------
-    #  Une actualité datée — « Coupure d'eau jeudi 9h-12h » — paraît au
-    #  calendrier sans qu'il faille en faire un troisième objet. Pas
-    #  d'échéance ici : une actualité ne se suit pas, et une colonne que rien
-    #  ne consomme ouvrirait un champ d'écran sans effet (cadre #430).
-    debut: Optional[NaiveDatetime] = None
-    fin: Optional[NaiveDatetime] = None
-    mis_a_jour_le: Optional[NaiveDatetime] = None
-    photos_urls: Optional[str] = None  # JSON array — même convention que Ticket/Evenement
-    perimetre_cible: Optional[str] = Field(
-        default='["résidence"]'
-    )  # JSON: résidence|bat:{id}|parking|cave|résidents
-    public_cible: Optional[str] = Field(
-        default='["résidents"]'
-    )  # JSON: résidents|locataires|copropriétaires
-    # statut : publie (défaut, hors workflow) | en_cours | resolu | annule
-    statut: Optional[str] = "publie"
-    statut_change_le: Optional[NaiveDatetime] = None
-    brouillon: bool = False
-    archivee: bool = False
-    partager_whatsapp: bool = False
-    envoyer_syndic: bool = False
-    envoyer_cs: bool = False
-    annonce_hall: bool = False  # génère une affiche de hall à la publication
-    #  Confidentiel : le périmètre redevient RESTRICTIF pour cette publication-là.
-    #  Depuis #339, une actualité ciblée sur un bâtiment reste lisible de toute la
-    #  copropriété ; ce drapeau rend la lecture au seul périmètre visé. Il ne fait
-    #  que restreindre — il se combine en ET avec `public_cible` (cf. #347).
-    confidentiel: bool = False
-
-    auteur: Optional[Utilisateur] = Relationship(back_populates="publications")
-    evolutions: List["PublicationEvolution"] = Relationship(back_populates="publication")
-
-
-class PublicationEvolution(EvolutionMixin, table=True):
-    __tablename__ = "publication_evolution"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    publication_id: int = Field(foreign_key="publication.id")
-    # type : commentaire | etat — une correction est un `commentaire` préfixé « Correction : » (#433)
-    #  Les sept champs communs — `type`, `contenu`, les deux statuts,
-    #  l'auteur, la date et les pièces jointes — viennent d'`EvolutionMixin`.
-
-    publication: Optional[Publication] = Relationship(back_populates="evolutions")
-    auteur: Optional[Utilisateur] = Relationship()
 
 
 class RegleResidence(SQLModel, table=True):
@@ -417,24 +260,11 @@ class RegleResidence(SQLModel, table=True):
     modifie_le: Optional[NaiveDatetime] = None
 
 
-# ──────────────────────────────────────────────
-#  Délégations aidant
-# ──────────────────────────────────────────────
-
-
-class Delegation(SQLModel, table=True):
-    __tablename__ = "delegation"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    mandant_id: int = Field(foreign_key="utilisateur.id")  # la personne aidée
-    aidant_id: int = Field(foreign_key="utilisateur.id")  # le proche aidant
-    statut: StatutDelegation = StatutDelegation.en_attente
-    motif: str = ""  # raison de la délégation
-    date_debut: date = Field(default_factory=date.today)
-    date_fin: Optional[date] = None  # null = pas de limite
-    cree_par_id: int = Field(foreign_key="utilisateur.id")  # CS/admin qui a créé
-    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-    revoque_le: Optional[NaiveDatetime] = None
-    revoque_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
+#  La délégation aidant vit dans `delegations.py` depuis le 28/09/2026 (#779).
+from app.models.delegations import (  # noqa: E402,F401
+    Delegation as Delegation,
+    StatutDelegation as StatutDelegation,
+)
 
 
 # ──────────────────────────────────────────────
@@ -451,8 +281,6 @@ from app.models.prestataires import (  # noqa: E402,F401
     TypePrestataire as TypePrestataire,
 )
 
-# ──────────────────────────────────────────────
-#  Relevés compteurs
 # ──────────────────────────────────────────────
 #  Compteurs — relevés et configuration
 # ──────────────────────────────────────────────
@@ -472,7 +300,7 @@ from app.models.compteurs import (  # noqa: E402,F401
 
 
 # ──────────────────────────────────────────────
-#  Templates email
+#  Notifications
 # ──────────────────────────────────────────────
 
 
@@ -490,11 +318,6 @@ class Notification(SQLModel, table=True):
 
 
 # ──────────────────────────────────────────────
-#  Vigik / Télécommandes (objets physiques)
-# ──────────────────────────────────────────────
-
-
-# ──────────────────────────────────────────────
 #  Import lots (staging depuis Excel)
 # ──────────────────────────────────────────────
 
@@ -503,10 +326,6 @@ class Notification(SQLModel, table=True):
 #  #779). Ré-exportées ici : les imports existants ne bougent pas.
 from app.models.lot_import import LotImport, StatutLotImport  # noqa: E402,F401
 
-
-# ──────────────────────────────────────────────
-#  Calendrier de la résidence
-# ──────────────────────────────────────────────
 
 # ──────────────────────────────────────────────
 #  Calendrier
@@ -580,77 +399,15 @@ from app.models.diagnostics import DiagnosticRapport, DiagnosticType  # noqa: E4
 from app.models.annonce_hall import AnnonceHall  # noqa: E402,F401
 
 
-# ──────────────────────────────────────────────
-#  Location (gestion bailleur → locataire)
-# ──────────────────────────────────────────────
-
-
-class StatutBail(str, Enum):
-    actif = "actif"  # locataire en place
-    termine = "termine"  # locataire parti
-    en_cours_sortie = "en_cours_sortie"  # préavis en cours
-
-
-class StatutObjet(str, Enum):
-    en_possession = "en_possession"  # remis, pas encore rendu
-    rendu = "rendu"  # rendu à la sortie
-    perdu = "perdu"  # déclaré perdu
-    non_remis = "non_remis"  # prévu mais pas encore remis
-
-
-class TypeObjet(str, Enum):
-    cle = "cle"
-    telecommande = "telecommande"
-    vigik = "vigik"
-    autre = "autre"
-
-
-class LocationBail(SQLModel, table=True):
-    """Contrat locatif : lie un bailleur, un locataire (compte ou coordonnées libres) et un lot."""
-
-    __tablename__ = "location_bail"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    lot_id: int = Field(foreign_key="lot.id", index=True)
-    bailleur_id: int = Field(foreign_key="utilisateur.id", index=True)
-
-    # Locataire — soit un compte enregistré, soit des coordonnées libres
-    locataire_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    locataire_nom: Optional[str] = None
-    locataire_prenom: Optional[str] = None
-    locataire_email: Optional[str] = None
-    locataire_telephone: Optional[str] = None
-
-    date_entree: date
-    date_sortie_prevue: Optional[date] = None
-    date_sortie_reelle: Optional[date] = None
-    statut: StatutBail = StatutBail.actif
-    notes: Optional[str] = None
-
-    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-    mis_a_jour_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-
-    objets: List["RemiseObjet"] = Relationship(back_populates="bail")
-
-
-class RemiseObjet(SQLModel, table=True):
-    """Objet physique remis (ou à remettre) au locataire dans le cadre d'un bail."""
-
-    __tablename__ = "remise_objet"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    bail_id: int = Field(foreign_key="location_bail.id", index=True)
-    type: TypeObjet = TypeObjet.autre
-    libelle: str  # ex. "Clé Porte palière", "Télécommande Parking"
-    quantite: int = 1
-    reference: Optional[str] = None  # ex. "TC-042", "VGK-007"
-    statut: StatutObjet = StatutObjet.en_possession
-    remis_le: Optional[date] = None
-    rendu_le: Optional[date] = None
-    notes: Optional[str] = None
-    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-
-    bail: Optional[LocationBail] = Relationship(back_populates="objets")
+#  Le bail et les objets remis au locataire vivent dans `bailleur.py` depuis le
+#  28/09/2026 (#779) — le domaine du paquet `routers/bailleur/`.
+from app.models.bailleur import (  # noqa: E402,F401
+    LocationBail as LocationBail,
+    RemiseObjet as RemiseObjet,
+    StatutBail as StatutBail,
+    StatutObjet as StatutObjet,
+    TypeObjet as TypeObjet,
+)
 
 
 #  `StatutDemandeProfil` et `DemandeModificationProfil` sont montés plus haut,
@@ -692,20 +449,7 @@ from app.models.documents import (  # noqa: E402
 )
 
 
-# ──────────────────────────────────────────────
-#  Règles & Recommandations de la résidence
-# ──────────────────────────────────────────────
-
-# ──────────────────────────────────────────────
-
-#  Sauvegardes
-
-# ──────────────────────────────────────────────
-
-#  Les deux tables vivent dans `models/sauvegarde.py` depuis le 14/08/2026
-
-#  (modularité). Ré-exportées ici : les imports existants ne bougent pas.
-
+#  Sauvegardes — `models/sauvegarde.py` depuis le 14/08/2026 (modularité).
 from app.models.sauvegarde import (  # noqa: E402,F401
     ConfigSauvegarde,
     FrequenceSauvegarde,
@@ -713,34 +457,17 @@ from app.models.sauvegarde import (  # noqa: E402,F401
     StatutSauvegarde,
 )
 
-# ──────────────────────────────────────────────────────────────────────────
-
-#  Jetons d'authentification — extraits dans `models/jetons.py` (#833).
-
-#
-
-#  ⚠️ Réimportés ici pour la même raison que la télémétrie : c'est CET import
-
-#  qui enregistre les tables dans les métadonnées SQLModel.
-
-# ──────────────────────────────────────────────────────────────────────────
-
+#  Jetons d'authentification — `models/jetons.py` (#833). ⚠️ C'est CET import,
+#  comme pour la télémétrie, qui enregistre les tables auprès de SQLModel.
 from app.models.jetons import (  # noqa: E402,F401
     EmailVerificationToken,
     PasswordResetToken,
     RefreshToken,
 )
 
-# ──────────────────────────────────────────────────────────────────────────
-
-#  Télémétrie — extraite dans `models/telemetrie.py` (plafond de modularité).
-
-#  Réimportée ici : `from app.models.core import TelemetryEvent` reste valide,
-
-#  et c'est cet import qui enregistre les tables dans les métadonnées SQLModel.
-
-# ──────────────────────────────────────────────────────────────────────────
-
+#  Télémétrie — `models/telemetrie.py` (plafond de modularité). Réimportée ici :
+#  `from app.models.core import TelemetryEvent` reste valide, et c'est cet
+#  import qui enregistre les tables auprès de SQLModel.
 from app.models.telemetrie import (  # noqa: E402,F401
     TelemetryEvent,
     TelemetryDaily,

@@ -6,6 +6,7 @@ fichiers de mille lignes que le plafond de modularité refuse ensuite.
 """
 
 from __future__ import annotations
+from app.utils.valeurs import valeur
 
 #: Les bornes d'un étage saisi. Au-delà, ce n'est pas une donnée, c'est une faute
 #: de frappe : un `4` devenu `44`, un signe en trop.
@@ -88,7 +89,7 @@ def type_de_lot(lot) -> str:
     clair, et c'est la deuxième écriture qui aurait figé la première.
     """
     brut = getattr(lot, "type", None)
-    return brut.value if hasattr(brut, "value") else str(brut or "")
+    return str(valeur(brut) or "")
 
 
 def logement_de_reference(lots) -> object | None:

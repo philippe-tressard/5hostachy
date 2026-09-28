@@ -183,7 +183,7 @@ def type_equipement_resolu(contrat, specialite_prestataire: Optional[str]) -> Op
     catégorie réelle, elle, n'est jamais remplacée.
     """
     brut = getattr(contrat, "type_equipement", None)
-    propre = brut.value if hasattr(brut, "value") else (str(brut) if brut else None)
+    propre = str(valeur(brut)) if brut else None
     if propre and propre != "autre":
         return propre
     return specialite_prestataire or propre or "autre"

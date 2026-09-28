@@ -46,6 +46,7 @@ from app.models.core import (
 from app.utils.import_xlsx import etage_de_lot, type_de_lot
 from app.utils.resolution_lots import rapprocher_imports, resoudre_imports
 from app.utils.recuperer import ou_404
+from app.utils.valeurs import valeur
 from app.utils.fichiers import verifier_fichier_recu
 
 router = APIRouter()
@@ -145,7 +146,7 @@ def _imp_row(imp: LotImport, session: Session) -> dict:
         "etage_raw": imp.etage_raw,
         "no_coproprietaire": imp.no_coproprietaire,
         "nom_coproprietaire": imp.nom_coproprietaire,
-        "statut": imp.statut.value if hasattr(imp.statut, "value") else imp.statut,
+        "statut": valeur(imp.statut),
         "lot_id": imp.lot_id,
         "lot_label": (
             f"{libelle_batiment(lot.batiment)} — {lot.numero} ({lot.type.value})"

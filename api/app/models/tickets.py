@@ -12,12 +12,13 @@ réponses aux deux questions qu'on lui pose partout — « demande-t-il encore d
 suivi ? », « est-il clos ? ». C'est précisément ce que #415 a trouvé recopié
 dans neuf endroits, divergent dans les deux sens.
 
-Il ne porte **pas** les tables (`Ticket`, `MessageTicket`, `TicketEvolution`),
-qui restent dans `core.py` : leurs `Relationship` croisent `Utilisateur` et
-`Lot`, et les déplacer imposerait un cycle d'import entre les deux modules —
-avec, à la clé, un ordre de chargement qui décide si l'application démarre. Ce
-découpage-là se fera quand on touchera aux tables elles-mêmes, et il demandera
-sa propre vérification.
+Il porte aussi les **tables** (`Ticket`, `MessageTicket`, `TicketEvolution`)
+depuis le 28/09/2026 (#779). Elles étaient restées dans `core.py` de peur d'un
+cycle d'import — leurs `Relationship` croisent `Utilisateur` et `Lot`. Le cycle
+ne se forme pas : ces deux noms ne sont importés que sous `TYPE_CHECKING`, et
+SQLAlchemy les résout par son registre de classes, comme `copropriete.py` le
+fait depuis le 13/08. La vérification que ce paragraphe demandait est celle de
+tout ré-export : `test_modeles_enregistres.py`, et la suite qui charge l'API.
 
 Les noms restent **ré-exportés par `core.py`** : aucun des dix-huit modules
 appelants n'a une ligne à changer, comme pour `copropriete.py` (13/08),
@@ -25,9 +26,21 @@ appelants n'a une ligne à changer, comme pour `copropriete.py` (13/08),
 """
 
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlmodel import SQLModel
+from pydantic import NaiveDatetime
+from sqlmodel import Field, Relationship, SQLModel
+
+from app.models.evolution import EvolutionMixin
+from app.utils import horloge
+from app.utils.assiste_ia import AssisteIAMixin
+from app.utils.saisi_pour import SaisiPourMixin
+
+#  Références différées vers `core.py` et `copropriete.py` : `core` importe CE
+#  module (ré-export), un import réciproque réel formerait un cycle.
+if TYPE_CHECKING:  # pragma: no cover
+    from app.models.copropriete import Lot
+    from app.models.core import Utilisateur
 
 
 class StatutTicket(str, Enum):
@@ -243,3 +256,98 @@ class IntervenantMixin(SQLModel):
     frequence_type: Optional[str] = None  # « semaines » · « mois » · « fois_par_an »
     frequence_valeur: Optional[int] = None
     equipement: Optional[str] = None
+
+
+class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
+    __tablename__ = "ticket"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    numero: str = Field(unique=True, index=True)
+    #  D'où vient cette affaire : une publication (0210) ou un événement (0212),
+    #  recopiés en affaires. Sans `foreign_key` ; la redirection des anciens liens
+    #  lit ces colonnes (`routers/publications`, #1091 ; `#ev-N`, #1092).
+    promu_depuis_publication_id: Optional[int] = Field(default=None, index=True)
+    promu_depuis_evenement_id: Optional[int] = Field(default=None, index=True)
+    titre: str
+    description: str
+    categorie: CategorieTicket = CategorieTicket.panne
+    statut: StatutTicket = StatutTicket.ouvert
+    priorite: PrioriteTicket = PrioriteTicket.normale
+    auteur_id: int = Field(foreign_key="utilisateur.id")
+    lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
+    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
+    perimetre_cible: Optional[str] = Field(
+        default='["résidence"]'
+    )  # JSON: résidence|bat:{id}|parking|cave
+    photos_urls: Optional[str] = None  # JSON array of photo URLs
+    # Pièces jointes non-images (PDF, bureautique). Même convention que
+    # TicketEvolution.fichiers_urls : un seul nom pour la notion « fichier joint ».
+    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
+    destinataire_syndic: bool = False
+    destinataire_cs: bool = False
+    #  🔴 FK redéclarée : le mixin ne la porte pas (cf. `utils/saisi_pour`).
+    saisi_pour_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
+    non_relancable: bool = False
+    #  -- Section « Quand » (#1092) ----------------------------------
+    #  `debut`/`fin` disent QUAND ÇA SE PASSE et alimentent le calendrier.
+    #  `echeance` (« avant quand c'est attendu ») a été RETIRÉE le 23/09/2026
+    #  (migration 0206) : ôtée du formulaire le 21/09 — la relance mensuelle
+    #  couvre le besoin —, elle n'était plus ni saisie ni lue.
+    debut: Optional[NaiveDatetime] = None
+    fin: Optional[NaiveDatetime] = None
+    #  Intervenant, récurrence et équipement : `IntervenantMixin` (#1097).
+    non_relancable_motif: Optional[str] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    ferme_le: Optional[NaiveDatetime] = None
+    #  Adresse `tickets+<jeton>@…` (#703) : tirée au sort, jamais dérivée de l'id.
+    jeton_courriel: Optional[str] = Field(default=None, index=True)
+    confidentiel: bool = False  # 🛡️ son auteur et le CS (#710, migration 0166)
+    #  📌 Épinglé (05/09/2026) ; ce que chaque option écrit : migration 0175.
+    epingle: bool = False
+    #  Paraît-il au kanban ? SI, jamais OÙ — `utils/kanban_tickets.py` (#833).
+    suivi_kanban: bool = False
+    #  Rapatriées de `Publication` (#1091, migration 0207) : le public visé
+    #  (JSON), l'Accès « Réservé au périmètre » (#1096), l'archivage manuel.
+    public_cible: Optional[str] = None
+    reserve_perimetre: bool = False
+    archive_manuel: bool = False
+
+    auteur: Optional["Utilisateur"] = Relationship(
+        back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"}
+    )
+    saisi_pour: Optional["Utilisateur"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[Ticket.saisi_pour_user_id]"}
+    )
+    lot: Optional["Lot"] = Relationship(back_populates="tickets")
+    messages: List["MessageTicket"] = Relationship(back_populates="ticket")
+    evolutions: List["TicketEvolution"] = Relationship(back_populates="ticket")
+
+
+class MessageTicket(SQLModel, table=True):
+    __tablename__ = "message_ticket"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    ticket_id: int = Field(foreign_key="ticket.id")
+    auteur_id: int = Field(foreign_key="utilisateur.id")
+    contenu: str
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    interne: bool = False  # True = visible CS seulement
+    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
+
+    ticket: Optional[Ticket] = Relationship(back_populates="messages")
+
+
+class TicketEvolution(EvolutionMixin, table=True):
+    __tablename__ = "ticket_evolution"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    ticket_id: int = Field(foreign_key="ticket.id")
+    # type : commentaire | etat | reponse
+    #  Les sept champs communs — `type`, `contenu`, les deux statuts,
+    #  l'auteur, la date et les pièces jointes — viennent d'`EvolutionMixin`.
+    #  Le périmètre que CETTE entrée déclare — `None` quand elle n'en parle pas,
+    #  ce qui est le cas de l'immense majorité des commentaires : une évolution
+    #  n'a pas de périmètre, elle en déclare un (migration 0154, #497).
+    #  Même forme JSON que partout ailleurs : `["résidence"]`, `["bat:1","cave"]`.
+    perimetre_cible: Optional[str] = None
+
+    ticket: Optional[Ticket] = Relationship(back_populates="evolutions")
+    auteur: Optional["Utilisateur"] = Relationship()
