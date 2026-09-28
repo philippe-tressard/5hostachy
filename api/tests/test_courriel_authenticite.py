@@ -180,3 +180,106 @@ def test_alignement(signataire, expediteur, attendu):
 def test_domaine_de():
     assert domaine_de("Céline MARIETTE <C.Mariette@IFF-Gestion.fr>") == "iff-gestion.fr"
     assert domaine_de("") == ""
+
+
+# ── 🔴 La redirection casse la signature : le constat scellé (28/09/2026) ─────
+#
+# `affaire@` → `noreply@` double le point des lignes qui en commencent une : la
+# signature d'iCloud ou d'Orange, valide à l'arrivée, ne l'est plus dans la
+# boîte. OVH scelle (ARC) ce qu'il a constaté avant de rediriger. Ici le sceau
+# est posé pour de bon par `dkimpy`, avec une clé tirée pour le test.
+
+_SELECTEUR_ARC = b"arc1"
+_CORPS_POINTE = "Nous intervenons jeudi.\r\n.fr\r\n"
+#: La forme exacte de l'`ARC-Authentication-Results` qu'OVH a scellé le 28/09/2026
+#: sur une réponse d'Orange — commentaires et `arc=none` compris.
+_CONSTAT_OVH = (
+    "arc=none (no signatures found); "
+    "dkim=pass (2048-bit rsa key sha256) header.d=syndic.fr header.i=@syndic.fr "
+    "header.b=VCjE1XXA header.a=rsa-sha256 header.s=s1; "
+    "dmarc=pass policy.published-domain-policy=quarantine (p=quarantine,sp=none) "
+    "policy.policy-from=p header.from=syndic.fr; "
+    "spf=pass smtp.mailfrom=gestion@syndic.fr smtp.helo=smtp.syndic.fr"
+)
+
+
+def _rediriger(brut: bytes, cle, *, scelleur="mail.ovh.net", constat=_CONSTAT_OVH) -> bytes:
+    """Ce que fait la redirection : abîmer le corps, puis sceller son constat."""
+    abime = brut.replace(b"\r\n.", b"\r\n..")
+    avec_constat = f"Authentication-Results: mx.{scelleur}; {constat}\r\n".encode() + abime
+    jeu = dkim.arc_sign(
+        avec_constat, _SELECTEUR_ARC, scelleur.encode(), cle[0], f"mx.{scelleur}".encode()
+    )
+    return b"".join(jeu) + avec_constat
+
+
+def _dns_redirection(cle, scelleur="mail.ovh.net"):
+    return _dns(
+        {
+            _SELECTEUR + b"._domainkey.syndic.fr.": cle[1],
+            _SELECTEUR_ARC + b"._domainkey." + scelleur.encode() + b".": cle[1],
+        }
+    )
+
+
+def test_la_redirection_CASSE_la_signature_directe(cle):
+    """Le constat de départ : sans sceau, le message abîmé est refusé."""
+    brut = _signer(_message("gestion@syndic.fr", _CORPS_POINTE), "syndic.fr", cle[0])
+    abime = brut.replace(b"\r\n.", b"\r\n..")
+    ok, motif = verifier_expediteur(abime, "gestion@syndic.fr", dnsfunc=_dns_redirection(cle))
+    assert not ok
+    assert "invalide" in motif
+
+
+def test_le_constat_SCELLE_par_le_serveur_de_reception_fait_foi(cle):
+    brut = _signer(_message("gestion@syndic.fr", _CORPS_POINTE), "syndic.fr", cle[0])
+    ok, motif = verifier_expediteur(
+        _rediriger(brut, cle), "gestion@syndic.fr", dnsfunc=_dns_redirection(cle)
+    )
+    assert ok, motif
+    assert "mail.ovh.net" in motif and "syndic.fr" in motif
+
+
+def test_un_sceau_d_un_AUTRE_serveur_ne_prouve_rien(cle):
+    """N'importe qui peut sceller pour son propre domaine un constat « pass »."""
+    brut = _message("gestion@syndic.fr", _CORPS_POINTE)
+    redirige = _rediriger(brut, cle, scelleur="pirate.test")
+    ok, _ = verifier_expediteur(
+        redirige, "gestion@syndic.fr", dnsfunc=_dns_redirection(cle, "pirate.test")
+    )
+    assert not ok
+
+
+def test_un_constat_d_ECHEC_reste_un_echec(cle):
+    brut = _message("gestion@syndic.fr", _CORPS_POINTE)
+    redirige = _rediriger(brut, cle, constat="dkim=fail header.d=syndic.fr")
+    ok, _ = verifier_expediteur(redirige, "gestion@syndic.fr", dnsfunc=_dns_redirection(cle))
+    assert not ok
+
+
+def test_un_constat_pour_un_AUTRE_domaine_n_est_pas_aligne(cle):
+    """OVH a vu une signature valide — de `pirate.test`, pas du syndic."""
+    brut = _message("gestion@syndic.fr", _CORPS_POINTE)
+    redirige = _rediriger(brut, cle, constat="dkim=pass header.d=pirate.test")
+    ok, _ = verifier_expediteur(redirige, "gestion@syndic.fr", dnsfunc=_dns_redirection(cle))
+    assert not ok
+
+
+def test_un_From_REECRIT_apres_le_sceau_est_refuse(cle):
+    brut = _signer(_message("gestion@syndic.fr", _CORPS_POINTE), "syndic.fr", cle[0])
+    redirige = _rediriger(brut, cle).replace(
+        b"From: gestion@syndic.fr", b"From: president@syndic.fr"
+    )
+    ok, _ = verifier_expediteur(redirige, "president@syndic.fr", dnsfunc=_dns_redirection(cle))
+    assert not ok
+
+
+def test_un_DNS_injoignable_sur_le_sceau_REPORTE(cle):
+    """Le message n'est pas signé en direct : c'est le sceau qui interroge le DNS."""
+    redirige = _rediriger(_message("gestion@syndic.fr", _CORPS_POINTE), cle)
+
+    def dns_en_panne(nom, timeout=5):
+        raise VerificationReportee("DNS injoignable (Timeout)")
+
+    with pytest.raises(VerificationReportee):
+        verifier_expediteur(redirige, "gestion@syndic.fr", dnsfunc=dns_en_panne)

@@ -31,6 +31,28 @@ DKIM, elle, voyage dans le message et survit à la redirection.
 son nom. Son message est refusé, et le conseil est prévenu avec le motif — le
 refus n'est jamais silencieux (`courriel_boite._prevenir_le_cs`).
 
+## 🔴 La redirection ABÎME la signature — le constat scellé d'OVH (28/09/2026)
+
+Premier passage réel, le soir même : les réponses signées par iCloud et Orange
+étaient refusées pour « signature invalide ». OVH le dit lui-même dans l'en-tête
+qu'il pose à la livraison : `dkim=fail (body has been altered)`. La redirection
+`affaire@` → `noreply@` double le point des lignes qui en commencent une
+(`..fr`), et le corps reçu n'est plus celui qui a été signé. Microsoft, qui
+encode autrement, y survivait — c'est ce qui a fait croire au début que la
+vérification marchait.
+
+La redirection, elle, **scelle** ce qu'elle a constaté à l'arrivée : un jeu ARC
+(RFC 8617) signé par `mail.ovh.net`, dont l'`ARC-Authentication-Results` dit
+`dkim=pass header.d=orange.fr`. On en fait un **repli**, jamais la voie
+principale, et à trois conditions — sans quoi le sceau ne prouverait rien :
+
+- la chaîne ARC se vérifie **chez nous**, sur les octets reçus (`dkimpy`) ;
+- l'instance la plus récente est scellée par un domaine de
+  `SCELLEURS_DE_CONFIANCE` — le serveur de réception de la boîte, et lui seul :
+  n'importe qui peut sceller pour son propre domaine un constat « pass » ;
+- le domaine qu'elle déclare signataire est **aligné** sur le `From:`, comme
+  pour une signature lue directement.
+
 ## INCONNU n'est pas REFUSÉ
 
 Un DNS injoignable ne dit rien de l'expéditeur. `VerificationReportee` laisse
@@ -43,6 +65,7 @@ rend INCONNU, jamais un verdict).
 from __future__ import annotations
 
 import logging
+import re
 from email.utils import parseaddr
 
 import dkim
@@ -73,6 +96,17 @@ _ALGORITHMES = (b"rsa-sha256", b"ed25519-sha256")
 
 #: Délai d'une requête DNS, en secondes.
 _DELAI_DNS = 5
+
+#: Les scelleurs ARC dont on croit le constat : le serveur qui reçoit
+#: `affaire@` et le redirige vers la boîte relevée. Un scelleur de plus est un
+#: tiers de plus à qui l'on confie l'authenticité des réponses — il s'ajoute ici,
+#: avec sa raison, et nulle part ailleurs.
+SCELLEURS_DE_CONFIANCE = frozenset({"mail.ovh.net"})
+
+#: `dkim=pass … header.d=<domaine>` dans un segment d'`Authentication-Results`.
+_DKIM_PASS = re.compile(r"^\s*dkim\s*=\s*pass\b.*?\bheader\.d\s*=\s*([a-z0-9.-]+)", re.I)
+_INSTANCE = re.compile(rb"(?:^|;)\s*i\s*=\s*(\d+)\s*(?:;|$)")
+_ENTETES_SIGNES = re.compile(rb"(?:^|;)\s*h\s*=\s*([^;]*)")
 
 
 class VerificationReportee(Exception):
@@ -120,6 +154,59 @@ def aligne(domaine_signataire: str, domaine_expediteur: str) -> bool:
     return e == s or e.endswith("." + s)
 
 
+def _ams_signe_from(arc: dkim.ARC, instance: int) -> bool:
+    """L'`ARC-Message-Signature` de cette instance couvre-t-elle `From:` ?
+
+    Sans elle, le `From:` pourrait changer après le sceau : le constat dirait
+    vrai d'un autre expéditeur. `dkimpy` l'exige d'une signature DKIM, pas d'un
+    jeu ARC.
+    """
+    for nom, valeur in arc.headers:
+        if nom.lower() != b"arc-message-signature":
+            continue
+        valeur = re.sub(rb"\s+", b"", valeur)
+        i = _INSTANCE.search(valeur)
+        if not i or int(i.group(1)) != instance:
+            continue
+        h = _ENTETES_SIGNES.search(valeur)
+        return bool(h) and b"from" in h.group(1).lower().split(b":")
+    return False
+
+
+def constat_de_redirection(brut: bytes, *, dnsfunc=_txt) -> tuple[str, list[str]] | None:
+    """Ce que le serveur de réception a constaté AVANT de rediriger le message :
+    `(scelleur, domaines dont la signature DKIM était valide)`, ou None si aucun
+    constat digne de foi n'accompagne le message.
+
+    Lève `VerificationReportee` si le DNS ne répond pas.
+    """
+    arc = dkim.ARC(brut, logger=_journal_dkim)
+    try:
+        cv, resultats, _raison = arc.verify(dnsfunc=dnsfunc)
+    except dkim.DKIMException:
+        return None
+    if cv != dkim.CV_Pass or not resultats:
+        return None
+    #  L'instance la plus récente, et elle seule : c'est celle du dernier saut,
+    #  celui qui a livré dans la boîte. Une instance plus ancienne a pu être
+    #  scellée par n'importe qui avant d'arriver chez nous.
+    dernier = resultats[0]
+    scelleur = dernier.get("as-domain", b"").decode("ascii", "replace").lower()
+    if scelleur not in SCELLEURS_DE_CONFIANCE:
+        return None
+    if dernier.get("ams-domain", b"").decode("ascii", "replace").lower() != scelleur:
+        return None
+    if not _ams_signe_from(arc, dernier["instance"]):
+        return None
+    constat = dernier.get("aar-value", b"").decode("utf-8", "replace")
+    domaines = []
+    for segment in constat.split(";"):
+        trouve = _DKIM_PASS.match(segment)
+        if trouve:
+            domaines.append(trouve.group(1).lower().rstrip("."))
+    return scelleur, domaines
+
+
 def verifier_expediteur(brut: bytes, from_: str, *, dnsfunc=_txt) -> tuple[bool, str]:
     """Rend `(vrai, motif)` : le message porte-t-il une signature DKIM valide et
     alignée sur son `From:` ?
@@ -133,6 +220,22 @@ def verifier_expediteur(brut: bytes, from_: str, *, dnsfunc=_txt) -> tuple[bool,
     if not expediteur:
         return False, "l'expéditeur du message est illisible"
 
+    ok, motif = _signature_directe(brut, expediteur, dnsfunc)
+    if ok:
+        return ok, motif
+    #  Le repli : la signature a pu être valide à l'arrivée et cassée par la
+    #  redirection. Seul le constat scellé par le serveur de réception le dit.
+    constat = constat_de_redirection(brut, dnsfunc=dnsfunc)
+    if constat:
+        scelleur, domaines = constat
+        for signataire in domaines:
+            if aligne(signataire, expediteur):
+                return True, f"signé par {signataire}, constaté par {scelleur} avant la redirection"
+    return False, motif
+
+
+def _signature_directe(brut: bytes, expediteur: str, dnsfunc) -> tuple[bool, str]:
+    """La signature DKIM lue sur les octets reçus, sans intermédiaire."""
     message = dkim.DKIM(brut, logger=_journal_dkim)
     nombre = sum(1 for nom, _ in message.headers if nom.lower() == b"dkim-signature")
     if not nombre:
