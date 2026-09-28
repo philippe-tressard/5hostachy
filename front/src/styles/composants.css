@@ -753,6 +753,39 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .filters--egalisee {
 	align-items: stretch;
 }
+/*  Une barre à PLUSIEURS GROUPES (nature, suivi, recherche…) : `.filtre-saut`
+    force un retour de ligne, `.filter-sep` pose un filet entre deux groupes.
+    Sous 768 px, un groupe par ligne — un filet en bout de ligne ne séparerait
+    plus rien.
+
+    Écrite ici le 28/09/2026 : Affaires la portait seule, et l'annuaire des
+    prestataires en aurait fait la copie. ⚠️ `nowrap` au téléphone n'est pas un
+    détail : une colonne qui PEUT passer à la ligne prend pour largeur de ligne
+    celle de son groupe le plus large — la rangée de pastilles qui défile —, et
+    le champ de recherche, étiré sur elle, sortait de l'écran (422 px pour 363). */
+.filters--groupes {
+	row-gap: 0.6rem;
+}
+.filters--groupes > .filtre-saut {
+	flex-basis: 100%;
+}
+.filters--groupes > .filter-sep {
+	width: 1px;
+	height: 1.6rem;
+	background: var(--color-border);
+	margin: 0 0.75rem;
+}
+@media (max-width: 767px) {
+	.filters--groupes {
+		flex-direction: column;
+		flex-wrap: nowrap;
+		align-items: stretch;
+	}
+	.filters--groupes > .filtre-saut,
+	.filters--groupes > .filter-sep {
+		display: none;
+	}
+}
 /*  ── Rangée en GRILLE — pour un choix qu'on doit embrasser d'un coup d'œil ──
     Arbitré à l'écran le 07/09/2026 : *« la lisibilité globale des vignettes en
     une seule fois est importante pour sélectionner la bonne catégorie — tri,

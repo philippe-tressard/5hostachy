@@ -1,5 +1,5 @@
 <!--
-  La barre de FILTRES de l'annuaire des prestataires — métier, cadre, équipement.
+  La barre de FILTRES de l'annuaire des prestataires — métier, cadre, recherche.
 
   Extraite de `prestataires/+page.svelte` le 28/09/2026 (#1444) : le filtre
   « sous contrat » l'aurait fait grossir, et la page dépasse déjà 500 lignes
@@ -7,39 +7,49 @@
   vit dans `$lib/prestataires` (`filtrerPrestataires`) — le composant ne fait
   que la saisir.
 
-  Trois rangées et le champ « Catégorie » du formulaire : UN motif, porté par
-  `ChoixPastilles` (#491). Il était écrit deux fois dans la page, à trois mots
-  près — la duplication la plus discrète, celle qu'aucun contrôle inter-fichiers
-  ne voit. `avecDetail` sur les catégories seules : leur description vivait dans
-  un `title`, donc invisible au tactile. Les équipements n'en portent pas.
+  Les rangées et le champ « Catégorie » du formulaire : UN motif, porté par
+  `ChoixPastilles` (#491). `avecDetail` sur les catégories : leur description
+  vivait dans un `title`, donc invisible au tactile.
+
+  🔴 **Deux lignes sur ordinateur** (28/09/2026, demandé à l'écran) : le métier
+  sur la première, le cadre et la RECHERCHE sur la seconde. La rangée des douze
+  équipements, qui défilait sous les deux autres, a cédé la place à la
+  recherche — `ChampRecherche`, le même champ que la page Affaires ; un
+  équipement se retrouve en le tapant.
 -->
 <script lang="ts">
 	import ChoixPastilles from './ChoixPastilles.svelte';
-	import {
-		EQUIPEMENTS,
-		FILTRES_CONTRAT,
-		TYPES_PRESTATAIRE,
-		type FiltresPrestataires,
-	} from '$lib/prestataires';
+	import ChampRecherche from './ChampRecherche.svelte';
+	import { FILTRES_CONTRAT, TYPES_PRESTATAIRE, type FiltresPrestataires } from '$lib/prestataires';
 
 	export let filtres: FiltresPrestataires;
 </script>
 
-<ChoixPastilles
-	options={TYPES_PRESTATAIRE}
-	bind:valeur={filtres.type}
-	avecDetail
-	libelle="Filtrer par type de prestataire"
-/>
-<!--  Le CADRE, séparé du métier (#1444) : il se lit sur les contrats actifs. -->
-<ChoixPastilles
-	options={FILTRES_CONTRAT}
-	bind:valeur={filtres.contrat}
-	libelle="Filtrer par contrat"
-/>
-<ChoixPastilles
-	options={EQUIPEMENTS}
-	bind:valeur={filtres.equipement}
-	tous="Tous équipements"
-	libelle="Filtrer par équipement"
-/>
+<div class="filters filters--groupes filtres-prestataires">
+	<ChoixPastilles
+		options={TYPES_PRESTATAIRE}
+		bind:valeur={filtres.type}
+		avecDetail
+		libelle="Filtrer par type de prestataire"
+	/>
+	<span class="filtre-saut"></span>
+	<!--  Le CADRE, séparé du métier (#1444) : il se lit sur les contrats actifs. -->
+	<ChoixPastilles
+		options={FILTRES_CONTRAT}
+		bind:valeur={filtres.contrat}
+		libelle="Filtrer par contrat"
+	/>
+	<ChampRecherche
+		id="recherche-prestataires"
+		bind:valeur={filtres.recherche}
+		placeholder="Nom, métier, équipement, contact, téléphone…"
+	/>
+</div>
+
+<style>
+	/*  `.filters--groupes` vient de la feuille commune : le saut force le métier
+	    seul sur sa ligne, le cadre et la recherche partagent la seconde. */
+	.filtres-prestataires {
+		column-gap: 1rem;
+	}
+</style>

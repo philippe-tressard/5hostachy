@@ -13,6 +13,7 @@
 -->
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import ChampRecherche from '$lib/components/ChampRecherche.svelte';
 	import { OPTIONS_FILTRE_NATURE } from '$lib/tickets';
 	import type { EtatRecherche } from '$lib/recherche-affaires';
 
@@ -43,7 +44,7 @@
       se perdait à chaque recopie.
       Chaque rangée porte son libellé DEVANT (23/09/2026, variante A arbitrée à
       l'écran) : « Nature » et « Suivi » se confondaient ; la recherche a sa ligne. -->
-<div class="filters filtres-affaires">
+<div class="filters filters--groupes">
 	<ChoixPastilles
 		options={OPTIONS_FILTRE_NATURE}
 		bind:valeur={nature}
@@ -60,26 +61,17 @@
 		libelleDevant
 	/>
 	<span class="filtre-saut"></span>
-	<div class="field champ-en-ligne recherche-affaires">
-		<label class="libelle-groupe libelle-devant" for="recherche-affaires">Recherche</label>
-		<div class="recherche-saisie">
-			<input
-				id="recherche-affaires"
-				type="search"
-				placeholder="Un mot, un nom, un n° d'affaire…"
-				aria-describedby="recherche-affaires-aide"
-				bind:value={recherche}
-			/>
-			<label class="case">
-				<input type="checkbox" bind:checked={inclureArchives} />
-				Inclure les Archives
-			</label>
-		</div>
-		<p class="aide" id="recherche-affaires-aide">
-			Cherche partout : n°, titre, description, catégorie, lieu, auteur, prestataire, équipement,
-			suites, messages et pièces jointes — sans tenir compte des accents ni des majuscules.
-		</p>
-	</div>
+	<ChampRecherche
+		id="recherche-affaires"
+		bind:valeur={recherche}
+		placeholder="Un mot, un nom, un n° d'affaire…"
+		aide="Cherche partout : n°, titre, description, catégorie, lieu, auteur, prestataire, équipement, suites, messages et pièces jointes — sans tenir compte des accents ni des majuscules."
+	>
+		<label class="case">
+			<input type="checkbox" bind:checked={inclureArchives} />
+			Inclure les Archives
+		</label>
+	</ChampRecherche>
 </div>
 
 {#if etat.terme || etat.enCours || etat.erreur}
@@ -106,48 +98,6 @@
 {/if}
 
 <style>
-	/*  `.filters` vient de la feuille commune (#446) ; ici, le filet entre
-	    Nature et Suivi et le saut avant la recherche (variante A, 23/09/2026).
-	    Sur téléphone, un groupe par ligne : un filet en bout de ligne ne
-	    séparerait plus rien. */
-	.filtres-affaires {
-		row-gap: 0.6rem;
-	}
-	.filter-sep {
-		width: 1px;
-		height: 1.6rem;
-		background: var(--color-border);
-		margin: 0 0.75rem;
-	}
-	.filtre-saut {
-		flex-basis: 100%;
-	}
-	/*  Le libellé DEVANT, comme « Nature » et « Suivi » : `.field` est une
-	    colonne, la recherche est une ligne. L'aide passe dessous, alignée sur le
-	    champ. */
-	.recherche-affaires {
-		flex: 1;
-		display: grid;
-		grid-template-columns: auto minmax(0, 1fr);
-		column-gap: 0.5rem;
-		row-gap: 0.25rem;
-		align-items: center;
-		max-width: 52rem;
-	}
-	.recherche-saisie {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem 1rem;
-		align-items: center;
-	}
-	.recherche-saisie input[type='search'] {
-		flex: 1;
-		min-width: 12rem;
-	}
-	.recherche-affaires .aide {
-		grid-column: 2;
-		margin: 0;
-	}
 	.bilan-recherche {
 		display: flex;
 		flex-wrap: wrap;
@@ -162,21 +112,5 @@
 	}
 	.effacer {
 		margin-left: auto;
-	}
-	@media (max-width: 767px) {
-		.filtres-affaires {
-			flex-direction: column;
-			align-items: stretch;
-		}
-		.filter-sep,
-		.filtre-saut {
-			display: none;
-		}
-		.recherche-affaires {
-			grid-template-columns: minmax(0, 1fr);
-		}
-		.recherche-affaires .aide {
-			grid-column: 1;
-		}
 	}
 </style>

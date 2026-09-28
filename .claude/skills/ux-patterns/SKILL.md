@@ -346,8 +346,10 @@ options={CONSTANTE}>`, sans quoi il serait devenu aveugle le jour où le `{#each
 est parti dans le composant.
 
 ⚠️ **Le seuil décide d'une CONVERSION, il n'impose pas de revenir en arrière.**
-Les douze filtres d'équipement de `prestataires` restent des pastilles : ils
-l'étaient déjà en substance, et les défaire n'apporterait rien.
+Les douze filtres d'équipement de `prestataires` restaient des pastilles — ils
+ont cédé la place à une **recherche libre** le 28/09/2026 (demandé à l'écran),
+le même `ChampRecherche` que la page Affaires ; un équipement se retrouve en le
+tapant. Une barre à plusieurs groupes passe par `.filters--groupes`.
 
 **Une pastille peut porter un SOUS-TEXTE** (`<span slot="detail">`), et c'est ce
 qui a débloqué la conversion des listes qui portaient une description. Sans lui,

@@ -28,6 +28,8 @@
  * est **l'unique arbitre**. Même forme que `test_statuts_tickets.py` (#415), née
  * du même défaut — cinq listes, chacune cohérente avec elle-même, aucune juste.
  */
+import { replier } from '$lib/texte';
+import { stripHtml } from '$lib/utils';
 
 /**  Un type d'équipement, tel que l'écran le nomme.
  *
@@ -154,33 +156,87 @@ export const FILTRES_CONTRAT: readonly { val: string; label: string }[] = [
 	{ val: 'sans_contrat', label: 'Sans contrat' },
 ];
 
-/**  Les trois filtres de l'annuaire — une chaîne vide : pas de filtre. */
+/**  Les filtres de l'annuaire — une chaîne vide : pas de filtre.
+ *
+ *   🔴 Le filtre par ÉQUIPEMENT a cédé la place à la recherche libre le
+ *   28/09/2026 (demandé à l'écran) : douze pastilles sur une rangée qui défilait,
+ *   pour une information que la recherche trouve aussi — « ascenseur » retrouve
+ *   le prestataire dont c'est l'équipement (`texteCherchable`). */
 export interface FiltresPrestataires {
 	type: string;
 	contrat: string;
-	equipement: string;
+	recherche: string;
 }
 
 export function filtresVides(): FiltresPrestataires {
-	return { type: '', contrat: '', equipement: '' };
+	return { type: '', contrat: '', recherche: '' };
 }
 
 /**  Un filtre au moins est-il posé ? — « Aucun prestataire pour ces critères ». */
 export function filtresActifs(f: FiltresPrestataires): boolean {
-	return !!(f.type || f.contrat || f.equipement);
+	return !!(f.type || f.contrat || f.recherche.trim());
+}
+
+/**  Ce qu'on cherche d'un prestataire : tout ce que sa carte montre — nom,
+ *   catégorie, équipement, coordonnées, contacts, description —, déplié par
+ *   `replier` (sans accents ni casse).
+ *
+ *   ⚠️ La règle vit ICI et non au serveur, à la différence des affaires :
+ *   l'annuaire est chargé en entier et n'a ni suites ni messages à lire. Elle
+ *   ne cherche donc que dans ce que l'écran a déjà reçu. */
+export interface PrestataireCherchable {
+	nom?: string | null;
+	specialite?: string | null;
+	type_prestataire?: string | null;
+	telephone?: string | null;
+	email?: string | null;
+	adresse?: string | null;
+	description?: string | null;
+	contacts?:
+		| {
+				prenom?: string | null;
+				nom?: string | null;
+				fonction?: string | null;
+				telephone?: string | null;
+				email?: string | null;
+		  }[]
+		| null;
+}
+
+export function texteCherchable(p: PrestataireCherchable): string {
+	const morceaux = [
+		p.nom,
+		p.specialite ? equipLabel(p.specialite) : '',
+		p.type_prestataire ? typePrestataireLabel(p.type_prestataire) : '',
+		p.telephone,
+		p.email,
+		p.adresse,
+		p.description ? stripHtml(p.description) : '',
+		...(p.contacts ?? []).flatMap((c) => [c.prenom, c.nom, c.fonction, c.telephone, c.email]),
+	];
+	return replier(morceaux.filter(Boolean).join(' '));
+}
+
+/**  Tous les mots, n'importe où — la règle des affaires (`recherche_affaires.py`),
+ *   appliquée à une fiche. Une recherche vide laisse tout passer. */
+export function correspondRecherche(p: PrestataireCherchable, recherche: string): boolean {
+	const mots = replier(recherche).split(/\s+/).filter(Boolean);
+	if (!mots.length) return true;
+	const texte = texteCherchable(p);
+	return mots.every((m) => texte.includes(m));
 }
 
 /**  Les prestataires qui passent les filtres. « Sous contrat » se lit sur les
  *   CONTRATS (actifs : l'API n'en sert pas d'autres), jamais sur la fiche. */
 export function filtrerPrestataires<
-	P extends { id: number; specialite?: string; type_prestataire?: string },
+	P extends PrestataireCherchable & { id: number; type_prestataire?: string | null },
 >(prestataires: P[], contrats: { prestataire_id: number }[], f: FiltresPrestataires): P[] {
 	const sousContrat = new Set(contrats.map((c) => c.prestataire_id));
 	return prestataires.filter(
 		(p) =>
-			(!f.equipement || p.specialite === f.equipement) &&
 			(!f.type || p.type_prestataire === f.type) &&
-			(!f.contrat || (f.contrat === 'sous_contrat') === sousContrat.has(p.id)),
+			(!f.contrat || (f.contrat === 'sous_contrat') === sousContrat.has(p.id)) &&
+			correspondRecherche(p, f.recherche),
 	);
 }
 
