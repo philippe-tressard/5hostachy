@@ -26,8 +26,6 @@ import { chargerModule } from './lib/charger-module.mjs';
 const MANUEL = '../docs/manuel-utilisateur.html';
 const NATURE = {
 	actualite: false,
-	datee: false,
-	enAg: false,
 	categorie: 'nuisance',
 	dansBatiments: false,
 	confidentiel: false,

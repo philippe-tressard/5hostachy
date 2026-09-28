@@ -177,6 +177,11 @@ export const PAGES: PageDef[] = [
 			{
 				id: 'kanban',
 				route: '/tickets/kanban',
+				//  Pas aux locataires (arbitré le 28/09/2026, #1428) : le suivi des
+				//  dossiers est l'affaire des copropriétaires et du conseil. Un
+				//  masque d'ERGONOMIE : ce qu'il montrerait est déjà filtré par
+				//  `ticket_visible`, aucune route ne le refuse au serveur.
+				reserve: 'nonLocataire',
 				label: '\u{1F5C3}️ Kanban',
 				descriptif: 'Les affaires suivies, par état.',
 			},

@@ -15,8 +15,6 @@ import type { Ticket } from '$lib/api';
 /** Ce que le FORMULAIRE sait de la nature — la pastille de sa section. */
 export type NatureLue = {
 	actualite: boolean;
-	datee: boolean;
-	enAg: boolean;
 	categorie?: string;
 	dansBatiments?: boolean;
 };
@@ -41,14 +39,10 @@ export function perimetreRestreint(perimetre: string[] | null | undefined): bool
  *   enregistré comme d'une saisie en cours (`FormulaireTicket`). */
 export function natureLue(s: {
 	categorie?: string | null;
-	debut?: string | null;
-	statut?: string | null;
 	perimetre?: string[] | null;
 }): NatureLue {
 	return {
 		actualite: estActualite(s),
-		datee: !!s.debut,
-		enAg: s.statut === 'en_ag',
 		categorie: s.categorie ?? undefined,
 		dansBatiments: dansDesBatiments(s.perimetre),
 	};

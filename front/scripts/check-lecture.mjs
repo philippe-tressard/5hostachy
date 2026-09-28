@@ -62,8 +62,6 @@ for (const c of cas) {
 				publicCible: c.public_cible,
 				perimetreRestreint: restreint,
 				reservePerimetre: c.reserve_perimetre,
-				datee: c.datee === true,
-				enAg: c.en_ag === true,
 				categorie: c.categorie,
 				dansBatiments: c.perimetre === 'batiment',
 			});

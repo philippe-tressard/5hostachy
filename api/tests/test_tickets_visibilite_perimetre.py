@@ -277,7 +277,7 @@ def test_un_LOCATAIRE_voit_TOUJOURS_ses_propres_tickets(scene):
         session.commit()
 
 
-# ── 4. …sauf ce que le calendrier lui montrait (#1092, 25/09/2026) ───────────
+# ── 4. …et la date n'y change rien (#1428, 28/09/2026) ───────────────────────
 
 
 def _datee(session, ticket: Ticket, **champs) -> Ticket:
@@ -293,21 +293,32 @@ def _datee(session, ticket: Ticket, **champs) -> Ticket:
     return ticket
 
 
-def test_un_LOCATAIRE_voit_une_affaire_DATEE_de_son_batiment(scene, batiments):
-    """🔴 Le cas signalé : TK-E00066, ancien événement du calendrier (migration 0212).
+def test_un_LOCATAIRE_ne_lit_une_affaire_DATEE_que_si_le_conseil_l_y_adresse(scene, batiments):
+    """🔴 Du 25/09 au 28/09 (#1092), une affaire DATÉE se rouvrait aux locataires
+    de son périmètre — pour TK-E00066, les travaux de son immeuble. Elle leur a
+    montré aussi ce que le calendrier leur taisait : contrats de maintenance,
+    résiliations, sujets d'AG, trouvés par un locataire dans la recherche (#1428).
 
-    Avant la migration, `evenement_visible` montrait l'événement au locataire du
-    bâtiment concerné ; devenu une affaire, il avait hérité de la règle des
-    affaires suivies — et disparu de son écran, sans que personne l'ait décidé.
-
-    Chacun des filets est éprouvé, parce qu'une réouverture qui en perdrait un
-    ne se verrait pas à l'écran : on ne remarque pas ce qu'on voit en trop.
+    Arbitré : ce qui concerne les résidents leur parvient par une actualité, ou
+    par des Destinataires que le conseil choisit — et cette porte-là, elle, doit
+    rester ouverte, avec ses filets.
     """
     session, _tickets, auteur, _voisin, _cs = scene
     b1 = batiments[0]
     locataire = _utilisateur(session, "résident", StatutUtilisateur.locataire, b1)
     affaires = {
         "datee_chez_moi": _datee(session, _ticket(session, auteur.id, [f"bat:{b1}"])),
+        #  Le conseil l'adresse aux locataires : il la lit, dans son périmètre.
+        "adressee_aux_locataires": _datee(
+            session,
+            _ticket(session, auteur.id, [f"bat:{b1}"]),
+            public_cible='["locataires"]',
+        ),
+        "adressee_aux_locataires_du_voisin": _datee(
+            session,
+            _ticket(session, auteur.id, [f"bat:{batiments[1]}"]),
+            public_cible='["locataires"]',
+        ),
         "datee_residence": _datee(session, _ticket(session, auteur.id, ["résidence"])),
         "datee_chez_le_voisin": _datee(
             session, _ticket(session, auteur.id, [f"bat:{batiments[1]}"])
@@ -320,14 +331,16 @@ def test_un_LOCATAIRE_voit_une_affaire_DATEE_de_son_batiment(scene, batiments):
         "datee_en_ag": _datee(
             session, _ticket(session, auteur.id, ["résidence"]), statut=StatutTicket.en_ag
         ),
-        #  La règle du 05/09 reste entière pour une affaire SANS date.
+        #  La règle du 05/09, pour une affaire SANS date.
         "non_datee_chez_moi": _ticket(session, auteur.id, [f"bat:{b1}"]),
     }
     mes_batiments.invalider_cache()
     try:
         attendu = {
-            "datee_chez_moi": True,
-            "datee_residence": True,
+            "datee_chez_moi": False,
+            "adressee_aux_locataires": True,
+            "adressee_aux_locataires_du_voisin": False,
+            "datee_residence": False,
             "datee_chez_le_voisin": False,
             "datee_confidentielle": False,
             "datee_en_ag": False,
@@ -342,8 +355,8 @@ def test_un_LOCATAIRE_voit_une_affaire_DATEE_de_son_batiment(scene, batiments):
         for nom, t in affaires.items():
             assert (t.id in visibles) == attendu[nom], nom
 
-        #  🔴 Lecture SEULE : rouvrir la lecture ne donne aucun droit d'écrire.
-        lue = affaires["datee_chez_moi"]
+        #  🔴 Lecture SEULE : être destinataire ne donne aucun droit d'écrire.
+        lue = affaires["adressee_aux_locataires"]
         assert not peut_editer(lue, locataire)
         assert not peut_commenter(lue, locataire)
     finally:

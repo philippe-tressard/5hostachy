@@ -17,14 +17,13 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from app.utils.nature_affaire import est_actualite, natures
+from app.utils.nature_affaire import est_actualite
 from app.models.core import (
     Evenement,
     Idee,
     PetiteAnnonce,
     RoleUtilisateur,
     Sondage,
-    StatutTicket,
     StatutUtilisateur,
     Ticket,
     TypeEvenement,
@@ -226,7 +225,7 @@ _DESTINATAIRES_PANNE_BATIMENT = ["copropriétaires_occupants", "locataires"]
 def destinataires_par_defaut(ticket: Ticket) -> list[str] | None:
     """Les Destinataires qu'une affaire a SANS choix du conseil, quand sa
     catégorie en décide (#1343, 26/09/2026) — `None` : la règle historique
-    (les copropriétaires, plus le calendrier), écrite dans `ticket_visible`.
+    (les copropriétaires), écrite dans `ticket_visible`.
 
     Arbitré à l'écran : *« pour une catégorie Panne, tout le périmètre (sauf
     bailleurs) concernés, si le périmètre est un bâtiment ; hors bâtiments =
@@ -358,34 +357,23 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     #  centralisé, pas de règles perdues dans une page »* — et c'est aussi ce qui
     #  fait que la liste et la fiche ne peuvent pas diverger, puisque les deux
     #  passent par cette fonction.
-    #  🔴 …SAUF CE QUE LE CALENDRIER LUI MONTRAIT (#1092, 25/09/2026).
     #
-    #  La règle ci-dessous date du 05/09 et visait les affaires SUIVIES. Le
-    #  23/09, les événements du calendrier sont devenus des affaires (migration
-    #  0212) — et ils en ont hérité, ce que personne n'avait décidé : un
-    #  locataire du bâtiment 1 ne voyait plus les travaux de son immeuble
-    #  (TK-E00066, signalé par l'utilisateur). Avant la migration,
-    #  `evenement_visible` les lui montrait selon le périmètre.
-    #
-    #  Rouvert, donc, en lecture seule, pour une affaire DATÉE — c'est ce qui la
-    #  fait paraître au calendrier (`natures`) — et selon les mêmes filets que
-    #  pour un copropriétaire : `confidentiel`, puis le périmètre, plus bas.
-    #
-    #  ⚠️ Sauf `en_ag` : `evenement_visible` cachait les AG aux locataires, et
-    #  une AG suivie est devenue une affaire à l'état `en_ag` (0212). Rouvrir
-    #  sans ce filet aurait montré au locataire ce que le calendrier lui taisait.
+    #  🔴 …ET LA DATE N'Y CHANGE RIEN (#1428, 28/09/2026). Elle y changeait
+    #  quelque chose du 25/09 au 28/09 (#1092) : une affaire DATÉE — au
+    #  calendrier — se rouvrait aux locataires de son périmètre, pour rendre au
+    #  locataire du bâtiment 1 les travaux de son immeuble (TK-E00066). Elle a
+    #  ouvert aussi ce que le calendrier leur taisait : contrats de maintenance,
+    #  résiliations, sujets d'AG — trouvés par un locataire dans la recherche.
+    #  Arbitré à l'écran : ce qui concerne les résidents leur parvient par une
+    #  ACTUALITÉ, ou par des Destinataires que le conseil choisit (plus haut) ;
+    #  une affaire suivie reste l'affaire des copropriétaires.
     #
     #  🔴 …ET LE MANDATAIRE, COMME LE LOCATAIRE (#1311, 25/09/2026). Arbitré à
     #  l'écran : une affaire suivie se lit par les COPROPRIÉTAIRES — occupants
     #  et bailleurs —, pas par l'agence ou le gestionnaire qui loue pour eux.
-    #  Mêmes filets que le locataire : ce qu'il a déposé ou qu'on a saisi pour
-    #  lui (plus haut), et l'affaire datée hors AG, que la pastille dit « Tous ».
     #  La pastille (`$lib/lecture`) le dit aussi : `lecture_pastille.json`.
     if user.statut in _LECTURE_RESTREINTE:
-        if "calendrier" not in natures(ticket):
-            return False
-        if valeur(ticket.statut) == StatutTicket.en_ag.value:
-            return False
+        return False
 
     perims = _codes_json_pour_acces(ticket.perimetre_cible)
     if perims is None:
