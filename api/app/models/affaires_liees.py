@@ -12,12 +12,12 @@ Les règles — lecture filtrée par la visibilité, ajout, retrait — vivent d
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Optional
 
 from sqlmodel import Field, SQLModel, UniqueConstraint
 
 from app.utils import horloge
+from pydantic import NaiveDatetime
 
 
 class AffaireLiee(SQLModel, table=True):
@@ -28,5 +28,5 @@ class AffaireLiee(SQLModel, table=True):
     #: La plus petite des deux références, puis la plus grande.
     affaire_id: int = Field(foreign_key="ticket.id", index=True)
     liee_id: int = Field(foreign_key="ticket.id", index=True)
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     cree_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")

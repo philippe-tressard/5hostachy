@@ -13,11 +13,12 @@ import existant ne bouge.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+from pydantic import NaiveDatetime
 
 
 class ReleveCompteur(SQLModel, table=True):
@@ -29,7 +30,7 @@ class ReleveCompteur(SQLModel, table=True):
     note: Optional[str] = None  # ex : "Changement compteur"
     photo_url: Optional[str] = None
     prestataire_id: Optional[int] = Field(default=None, foreign_key="prestataire.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     cree_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
 
 

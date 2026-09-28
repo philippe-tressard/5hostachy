@@ -15,13 +15,13 @@ les seuls liens sont deux clés étrangères déclarées par nom de table.
 import qui enregistre la table dans les métadonnées SQLModel.
 """
 
-from datetime import datetime
 from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Field
 
 from app.utils.assiste_ia import AssisteIAMixin
+from pydantic import NaiveDatetime
 
 
 class AnnonceHall(AssisteIAMixin, table=True):
@@ -44,7 +44,7 @@ class AnnonceHall(AssisteIAMixin, table=True):
     pdf_nom: str = ""  # nom proposé au téléchargement
     taille_octets: Optional[int] = None
     destinataires: str = "[]"  # JSON: emails notifiés
-    envoye_le: Optional[datetime] = None
+    envoye_le: Optional[NaiveDatetime] = None
     archivee: bool = False
     # Publication d'origine si l'annonce a été générée depuis une actualité
     #  ⚠️ PAS de `foreign_key=` : la migration 0117 a tenté de poser la contrainte
@@ -57,4 +57,4 @@ class AnnonceHall(AssisteIAMixin, table=True):
     #  pas de clé étrangère. `publication_id` reste lu par les liens anciens.
     ticket_id: Optional[int] = Field(default=None)
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)

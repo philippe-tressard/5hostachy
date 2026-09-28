@@ -40,7 +40,6 @@ obligé à lui ajouter une variante, et *une variante ajoutée pour accueillir u
 écart existant ne factorise pas : elle entérine*.
 """
 
-from datetime import datetime
 from app.utils import horloge
 from enum import Enum
 from typing import Optional
@@ -49,6 +48,7 @@ from sqlmodel import Field
 from app.utils.assiste_ia import AssisteIAMixin
 from app.utils.saisi_pour import SaisiPourMixin
 from app.models.evolution import EvolutionMixin
+from pydantic import NaiveDatetime
 
 
 class TypeEvenement(str, Enum):
@@ -76,13 +76,13 @@ class Evenement(SaisiPourMixin, AssisteIAMixin, table=True):
     description: Optional[str] = None
     type: TypeEvenement = TypeEvenement.autre
     lieu: Optional[str] = None
-    debut: datetime
-    fin: Optional[datetime] = None
+    debut: NaiveDatetime
+    fin: Optional[NaiveDatetime] = None
     perimetre: str = "résidence"  # résidence | bâtiment
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    mis_a_jour_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: Optional[NaiveDatetime] = None
     archivee: bool = False
     statut_kanban: Optional[str] = Field(default=None)  # ag|cs|syndic|fournisseur|termine|annule
     prestataire_id: Optional[int] = Field(default=None, foreign_key="prestataire.id")
@@ -139,6 +139,6 @@ class EvenementEvolution(EvolutionMixin, table=True):
     ancien_statut: Optional[str] = None
     nouveau_statut: Optional[str] = None
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     #  Tableau JSON d'URLs internes — même convention que `Ticket.photos_urls`.
     fichiers_urls: str = "[]"

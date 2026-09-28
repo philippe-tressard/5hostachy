@@ -28,3 +28,5 @@ from app.models.gouvernance import SyndicInfo as SyndicInfo
 from app.models.evenement import EvenementEvolution as EvenementEvolution
 from app.models.affaires_liees import AffaireLiee as AffaireLiee
 from app.models.ia import AppelIA as AppelIA
+from app.models.diagnostics import DiagnosticRapport as DiagnosticRapport
+from app.models.diagnostics import DiagnosticType as DiagnosticType

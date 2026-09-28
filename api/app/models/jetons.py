@@ -17,10 +17,10 @@ SQLModel. Le retirer ferait disparaître trois tables d'une base neuve — sans
 erreur, jusqu'à la première écriture.
 """
 
-from datetime import datetime
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+from pydantic import NaiveDatetime
 
 
 class RefreshToken(SQLModel, table=True):
@@ -28,13 +28,13 @@ class RefreshToken(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="utilisateur.id")
     token: str = Field(unique=True, index=True)
-    expires_at: datetime
+    expires_at: NaiveDatetime
     revoked: bool = False
     #: Quand ce jeton a été ÉCHANGÉ contre un autre par `/auth/refresh` — `None`
     #: s'il a été révoqué autrement (déconnexion, mot de passe posé). C'est ce qui
     #: distingue un jeton volé rejoué d'une session fermée : voir
     #: `auth/jetons_rafraichissement.py`.
-    remplace_le: Optional[datetime] = None
+    remplace_le: Optional[NaiveDatetime] = None
 
 
 class PasswordResetToken(SQLModel, table=True):
@@ -42,7 +42,7 @@ class PasswordResetToken(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="utilisateur.id")
     token: str = Field(unique=True, index=True)
-    expires_at: datetime
+    expires_at: NaiveDatetime
     used: bool = False
 
 
@@ -51,5 +51,5 @@ class EmailVerificationToken(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="utilisateur.id")
     token: str = Field(unique=True, index=True)
-    expires_at: datetime
+    expires_at: NaiveDatetime
     used: bool = False

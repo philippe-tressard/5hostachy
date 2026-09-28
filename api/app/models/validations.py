@@ -24,12 +24,12 @@ SQLModel — un modèle défini dans un module que personne n'importe n'existe p
 pour `create_all`, ni pour Alembic.
 """
 
-from datetime import datetime
 from app.utils import horloge
 from enum import Enum
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+from pydantic import NaiveDatetime
 
 # ──────────────────────────────────────────────
 #  Accès (Vigik / Télécommandes)
@@ -53,8 +53,8 @@ class CommandeAcces(SQLModel, table=True):
     statut: StatutCommande = StatutCommande.en_attente
     traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     motif_refus: Optional[str] = None
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    traite_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    traite_le: Optional[NaiveDatetime] = None
 
 
 # ──────────────────────────────────────────────
@@ -81,5 +81,5 @@ class DemandeModificationProfil(SQLModel, table=True):
     statut_demande: StatutDemandeProfil = StatutDemandeProfil.en_attente
     motif_refus: Optional[str] = None
     traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    traite_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    traite_le: Optional[NaiveDatetime] = None

@@ -145,7 +145,10 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - Champs en français snake_case : `statut_validation`, `date_debut`
 - Timestamps : suffixe `_le` → `cree_le`, `mis_a_jour_le` ; la valeur par
   `horloge.maintenant()` (UTC **naïf**, comme la base), jamais `datetime.utcnow()`
-  — déprécié en 3.12, refusé par Ruff `DTZ003` (#1047)
+  — déprécié en 3.12, refusé par Ruff `DTZ003` (#1047). Le champ s'annote
+  **`NaiveDatetime`** (pydantic), jamais `datetime` : depuis sqlmodel 0.0.45 ce
+  dernier devient une colonne consciente du fuseau qui refuse la date naïve à
+  l'écriture (#1412). 🔒 `test_horloge.py`
 - FK : `{modele}_id = Field(default=None, foreign_key="table.id")`
 - Enums : `class MonEnum(str, Enum)` → slugs français lowercase
 - **Archiver, pas une colonne `actif` par réflexe.** Les objets qui quittent les

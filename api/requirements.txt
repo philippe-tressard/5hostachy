@@ -1,7 +1,7 @@
 fastapi==0.141.1
 uvicorn[standard]==0.53.0
 slowapi==0.1.10
-sqlmodel==0.0.44
+sqlmodel==0.0.46
 #  Importés DIRECTEMENT par le code — pydantic ~50 fois, sqlalchemy ~250 fois,
 #  pydantic_settings par `config.py` — mais qui n'arrivaient ici que par
 #  transitivité (fastapi, sqlmodel, fastapi-mail). Une montée de l'un de ceux-là
