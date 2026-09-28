@@ -23,7 +23,7 @@ de règle qui doit être conscient.
 
 import pytest
 
-from app.utils.auto_match_service import (
+from app.utils.rapprochement_noms import (
     _matches_user,
     _cle_de_nom,
     _split_name_candidates,

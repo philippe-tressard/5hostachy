@@ -70,11 +70,8 @@ from app.utils.acces_possession import chez_le_locataire, possesseur
 from app.utils.lot_des_imports import trouveur_de_lot
 from app.utils.resolution_acces import rattacher, reprendre_resolues_sans_lot
 from app.utils.types_acces import TypeAcces
-from app.utils.auto_match_service import (
-    _matches_user,
-    _user_keys,
-    rattacher_lot_unique,
-)
+from app.utils.auto_match_service import rattacher_lot_unique
+from app.utils.rapprochement_noms import _matches_user, _user_keys
 
 
 class PatchImportBody(BaseModel):

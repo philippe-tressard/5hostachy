@@ -44,7 +44,7 @@ from sqlmodel import Session, select
 
 from app.models.copropriete import Lot
 from app.models.core import LotImport
-from app.utils.auto_match_service import _cle_de_nom
+from app.utils.rapprochement_noms import _cle_de_nom
 from app.utils.import_xlsx import normaliser
 from app.utils.valeurs import valeur
 
