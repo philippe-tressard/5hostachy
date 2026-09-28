@@ -1,10 +1,13 @@
-"""Router telemetry — collecte (beacon) + dashboard admin."""
+"""Router telemetry — le tableau de bord de l'administrateur.
+
+La COLLECTE (`POST /telemetry/collect`, publique) vit dans `telemetry_collecte.py`
+depuis le 28/09/2026 (#779) : écrire et lire sont deux notions, et ce fichier
+dépassait 500 lignes.
+"""
 
 from datetime import datetime, timedelta
-from app.utils import horloge
 
-from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 import sqlalchemy as sa
 from sqlmodel import Session, select
@@ -18,7 +21,6 @@ from app.models.core import (
     TelemetryMonthly,
     Utilisateur,
 )
-from app.utils.limiter import LIMITE_JOURNAL, limiter
 from app.utils.telemetrie_calculs import (
     _palmares,
     _cumul_par_page,
@@ -27,59 +29,6 @@ from app.utils.telemetrie_calculs import (
 )
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
-
-
-# ── Collecte (fire-and-forget depuis sendBeacon) ─────────────────────────────
-
-
-class TelemetryBatch(BaseModel):
-    events: list[dict]  # [{page, action?, detail?}, ...]
-
-
-@router.post("/collect", status_code=204)
-@limiter.limit(LIMITE_JOURNAL)
-def collect(
-    body: TelemetryBatch,
-    request: Request,
-    session: Session = Depends(get_session),
-):
-    """Endpoint de collecte appelé par sendBeacon.
-    Authentification via cookie (credentials: include) — silencieux si non connecté."""
-    user_id: int | None = None
-    try:
-        from app.auth.jwt import decode_token
-
-        token = request.cookies.get("access_token")
-        if token:
-            payload = decode_token(token)
-            if payload and payload.get("type") == "access":
-                user_id = int(payload["sub"])
-                # RGPD opt-out : l'utilisateur a désactivé la télémétrie
-                u = session.get(Utilisateur, user_id)
-                if u and u.opt_out_telemetrie:
-                    return
-    except Exception:
-        pass  # Visiteur non connecté — on enregistre quand même avec user_id=None
-
-    now = horloge.maintenant()
-    for ev in body.events[:50]:  # Max 50 événements par batch (sécurité)
-        page = str(ev.get("page", ""))[:200]
-        action = str(ev.get("action", "view"))[:50]
-        detail = ev.get("detail")
-        if detail is not None:
-            detail = str(detail)[:500]
-        if not page:
-            continue
-        session.add(
-            TelemetryEvent(
-                user_id=user_id,
-                page=page,
-                action=action,
-                detail=detail,
-                cree_le=now,
-            )
-        )
-    session.commit()
 
 
 # ── Dashboard admin ───────────────────────────────────────────────────────────
