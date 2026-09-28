@@ -122,7 +122,7 @@ def _poser_liens(session: Session, imp, lot, occupants: list[dict]) -> None:
     correspond plus est **supprimé**, pas seulement ignoré.
     """
     from app.models.core import UserLot, Utilisateur
-    from app.utils.auto_match_service import _matches_user, _split_name_candidates, _user_keys
+    from app.utils.rapprochement_noms import _matches_user, _split_name_candidates, _user_keys
 
     noms_du_classeur = _split_name_candidates(imp.nom_coproprietaire or "")
     for occupant in occupants:
@@ -222,7 +222,7 @@ def rapprocher_imports(session: Session) -> int:
     ⚠️ Elle ne committe pas, pour la même raison que `resoudre_imports`.
     """
     from app.models.core import Lot, LotImport, StatutLotImport, Utilisateur
-    from app.utils.auto_match_service import _matches_user, _split_name_candidates, _user_keys
+    from app.utils.rapprochement_noms import _matches_user, _split_name_candidates, _user_keys
 
     lots = session.exec(select(Lot)).all()
     comptes = session.exec(select(Utilisateur)).all()

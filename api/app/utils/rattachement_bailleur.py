@@ -40,7 +40,7 @@ from app.models.core import (
     UserLot,
     Utilisateur,
 )
-from app.utils.auto_match_service import _matches_user, _user_keys
+from app.utils.rapprochement_noms import _matches_user, _user_keys
 from app.utils.cloche import sonner_systeme
 from app.utils.destinataires import site_manager_user_id
 from app.utils.journal_securite import journaliser_securite

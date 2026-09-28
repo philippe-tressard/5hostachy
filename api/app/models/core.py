@@ -499,43 +499,9 @@ class Notification(SQLModel, table=True):
 # ──────────────────────────────────────────────
 
 
-class StatutLotImport(str, Enum):
-    en_attente = "en_attente"  # importé, rien de lié
-    utilisateur_lie = "utilisateur_lie"  # occupant(s) identifié(s), lot pas encore trouvé
-    lot_lie = "lot_lie"  # lot_id trouvé/confirmé en base
-    resolu = "resolu"  # UserLot créé (lot + occupants confirmés)
-    ignore = "ignore"
-
-
-class LotImport(SQLModel, table=True):
-    """Staging des lots importés depuis l'Excel,
-    en attente de liaison avec les utilisateurs de l'application."""
-
-    __tablename__ = "lot_import"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    # ── Données brutes de l'Excel ─────────────────────────────────────────
-    batiment_id: Optional[int] = None  # col A — None pour les parkings
-    numero: str  # col B
-    type_raw: str  # col C (AP, ST, T2, CA, PS…)
-    etage_raw: Optional[str] = None  # col D
-    no_coproprietaire: Optional[str] = None  # col F
-    nom_coproprietaire: Optional[str] = None  # col G
-
-    # ── Résolution par l'admin ────────────────────────────────────────────
-    statut: StatutLotImport = StatutLotImport.en_attente
-
-    lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
-
-    # JSON array de {user_id, type_lien} — plusieurs occupants possibles
-    # ex. [{"user_id": 12, "type_lien": "propriétaire"},
-    #       {"user_id": 15, "type_lien": "locataire"}]
-    utilisateurs_json: str = Field(default="[]")
-
-    notes_admin: Optional[str] = None
-    importe_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-    resolu_le: Optional[NaiveDatetime] = None
+#  Les deux vivent dans `models/lot_import.py` depuis le 28/09/2026 (modularité,
+#  #779). Ré-exportées ici : les imports existants ne bougent pas.
+from app.models.lot_import import LotImport, StatutLotImport  # noqa: E402,F401
 
 
 # ──────────────────────────────────────────────

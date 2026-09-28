@@ -56,7 +56,7 @@ def en_stock(imp) -> bool:
     existe, dans un tiroir : il entre au parc SANS lot, et le conseil syndical
     l'affecte le jour où il le remet.
     """
-    from app.utils.auto_match_service import _cle_de_nom
+    from app.utils.rapprochement_noms import _cle_de_nom
 
     return _cle_de_nom(imp.nom_proprietaire) == "stock"
 

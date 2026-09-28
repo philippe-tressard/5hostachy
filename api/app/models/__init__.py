@@ -30,3 +30,4 @@ from app.models.affaires_liees import AffaireLiee as AffaireLiee
 from app.models.ia import AppelIA as AppelIA
 from app.models.diagnostics import DiagnosticRapport as DiagnosticRapport
 from app.models.diagnostics import DiagnosticType as DiagnosticType
+from app.models.lot_import import LotImport as LotImport
