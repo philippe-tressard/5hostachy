@@ -33,7 +33,6 @@ from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.evolutions import TYPES_SAISIS, evolution_modifiable, supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
-from app.utils.liens import base_site, lien_ticket
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_internes, photos_json
 from app.utils.recuperer import ou_404
@@ -47,6 +46,8 @@ from .commun import (
 )
 from .courriels import envoyer_email_externe, envoyer_email_syndic_cs
 from .notifier_auteur import _notifier_auteur
+from .suite_groupe import message_suite
+from app.utils.liens import base_site
 from app.utils.affaires_liees import ajouter_liens
 
 router = APIRouter()
@@ -192,23 +193,19 @@ def delete_evolution(
     return None
 
 
-def _message_pour_le_groupe(
-    ticket: Ticket, body: TicketEvolutionCreate, nb_precedents: int, site_url: str
-) -> str:
-    """Texte WhatsApp d'une évolution, renvoi vers l'historique si besoin."""
-    msg = body.contenu or (
-        f"Ticket #{ticket.numero} — {ticket.titre} : statut → "
-        f"{STATUT_LABELS.get(body.nouveau_statut or '', body.nouveau_statut or '')}"
-        if body.type == "etat"
-        else ticket.titre
-    )
-    if msg and nb_precedents:
-        msg += (
-            f"\n\n📜 Cet échange comporte {nb_precedents} commentaire(s) précédent(s).\n"
-            f"Consultez l'historique complet sur l'application :\n"
-            f"👉 {site_url.rstrip('/')}{lien_ticket(ticket.id)}"
+def _parole_pour_le_groupe(ticket: Ticket, body: TicketEvolutionCreate) -> str:
+    """Ce que la Suite dit — son texte, ou le changement d'état qu'elle porte.
+
+    Le rappel de l'historique et le lien s'y ajoutent dans `message_suite`.
+    """
+    if body.contenu:
+        return body.contenu
+    if body.type == "etat":
+        return (
+            f"Ticket #{ticket.numero} — {ticket.titre} : statut → "
+            f"{STATUT_LABELS.get(body.nouveau_statut or '', body.nouveau_statut or '')}"
         )
-    return msg
+    return ""
 
 
 @router.post("/{ticket_id}/evolutions", response_model=TicketEvolutionRead, status_code=201)
@@ -402,17 +399,23 @@ def add_evolution(
 
             wa_config = config_diffusion(session)
             if wa_config is not None:
+                #  Le message de CETTE Suite, et le lien de la fiche pour le reste
+                #  du fil — jamais le message initial (28/09/2026).
+                suite = message_suite(
+                    session,
+                    ticket,
+                    _parole_pour_le_groupe(ticket, body),
+                    site_url=base_site(wa_config.get("site_url")),
+                    suite_enregistree=True,
+                )
                 diffuser(
                     background_tasks,
                     wa_config,
-                    f"🔧 {ticket.titre}",
-                    _message_pour_le_groupe(
-                        ticket,
-                        body,
-                        nb_precedents=sum(1 for ev in evols_hist if ev.contenu),
-                        site_url=base_site(wa_config.get("site_url")),
-                    ),
+                    suite.titre,
+                    suite.contenu,
+                    urgente=suite.urgente,
                     perimetre_cible=ticket.perimetre_cible,
+                    lien=suite.lien,
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:

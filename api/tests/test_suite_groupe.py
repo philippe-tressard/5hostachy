@@ -1,0 +1,123 @@
+"""Une Suite part sur le groupe avec SON message, et le lien de l'historique.
+
+## Le défaut du 28/09/2026
+
+Signalé par l'utilisateur : sur la Suite d'une affaire partagée sur WhatsApp,
+c'était le message initial qui s'affichait. L'aperçu de diffusion montrait la
+description de l'affaire au lieu de la Suite saisie ; la première Suite d'une
+affaire partait sans lien ; celle d'une actualité portait le lien deux fois.
+
+On poste de vraies Suites et l'on compose le message comme le canal le fera
+(`construire_message`) : c'est le texte reçu qu'on regarde, pas ses morceaux.
+"""
+
+from __future__ import annotations
+
+import pytest
+from fastapi import BackgroundTasks
+from sqlmodel import Session, SQLModel, create_engine
+
+import app.routers.tickets.apercu as apercu
+import app.routers.tickets.evolutions as evolutions
+import app.utils.diffusion as diffusion
+from app.models.core import RoleUtilisateur, Ticket, Utilisateur
+from app.schemas_tickets import TicketEvolutionCreate
+from app.utils import horloge
+from app.utils.whatsapp_message import construire_message
+
+SITE = "https://5hostachy.fr"
+INITIAL = "Elle ne ferme plus."
+
+
+@pytest.fixture()
+def session(monkeypatch):
+    #  Le canal de la résidence, allumé : la couture est le registre (#1060).
+    monkeypatch.setattr(diffusion, "config_diffusion", lambda s, *a: {"site_url": SITE})
+    moteur = create_engine("sqlite://")
+    SQLModel.metadata.create_all(moteur)
+    with Session(moteur) as s:
+        yield s
+
+
+@pytest.fixture()
+def cs(session):
+    u = Utilisateur(
+        email="cs@exemple.test",
+        mot_de_passe_hash="x",
+        prenom="C",
+        nom="S",
+        roles_json=RoleUtilisateur.conseil_syndical.value,
+    )
+    session.add(u)
+    session.commit()
+    session.refresh(u)
+    return u
+
+
+def _affaire(session, auteur, categorie="panne"):
+    t = Ticket(
+        numero=f"TK-{categorie}",
+        titre="Porte du hall",
+        description=INITIAL,
+        categorie=categorie,
+        auteur_id=auteur.id,
+        cree_le=horloge.maintenant(),
+        mis_a_jour_le=horloge.maintenant(),
+    )
+    session.add(t)
+    session.commit()
+    session.refresh(t)
+    return t
+
+
+def _suite(session, ticket, user, contenu):
+    """Poste une Suite partagée sur le groupe ; rend le texte que le groupe reçoit."""
+    taches = BackgroundTasks()
+    corps = TicketEvolutionCreate(type="commentaire", contenu=contenu, partager_whatsapp=True)
+    evolutions.add_evolution(ticket.id, corps, taches, session=session, user=user)
+    envois = [t for t in taches.tasks if t.func.__name__ == "envoyer_whatsapp_avec_log"]
+    assert len(envois) == 1, "la Suite du conseil doit partir sur le groupe"
+    titre, texte, urgente, perimetre, _image, config, public, confidentiel = envois[0].args
+    return construire_message(
+        titre,
+        texte,
+        urgente,
+        perimetre,
+        config,
+        public,
+        confidentiel,
+        lien=envois[0].kwargs["lien"],
+    )
+
+
+@pytest.mark.parametrize("categorie", ["panne", "actualite"])
+def test_la_premiere_suite_part_avec_son_message_et_le_lien(session, cs, categorie):
+    ticket = _affaire(session, cs, categorie)
+    recu = _suite(session, ticket, cs, "Le serrurier passe jeudi.")
+    assert "Le serrurier passe jeudi." in recu
+    assert INITIAL not in recu, "c'est la Suite qui part, pas le message initial"
+    lien = f"{SITE}/tickets/{ticket.id}"
+    assert recu.count(lien) == 1, "le lien de l'historique, une fois — ni absent, ni doublé"
+
+
+def test_la_suite_suivante_compte_le_fil(session, cs):
+    ticket = _affaire(session, cs)
+    _suite(session, ticket, cs, "Premier passage.")
+    recu = _suite(session, ticket, cs, "Réparée.")
+    assert "Réparée." in recu and "Premier passage." not in recu
+    assert "Déjà 2 message(s)" in recu, "le message initial et la Suite précédente"
+
+
+def test_l_apercu_d_une_suite_montre_la_suite(session, cs):
+    ticket = _affaire(session, cs)
+    brouillon = apercu.BrouillonTicket(
+        ticket_id=ticket.id, commentaire="Le serrurier passe jeudi.", partager_whatsapp=True
+    )
+    rendu = apercu.apercu_diffusion(brouillon, session=session, user=cs)
+    (wa,) = [c for c in rendu.canaux if c.canal == "whatsapp"]
+    assert wa.actif
+    assert "Le serrurier passe jeudi." in wa.texte
+    assert INITIAL not in wa.texte, "l'aperçu montrait le message initial"
+    assert f"{SITE}/tickets/{ticket.id}" in wa.texte
+    #  L'aperçu et l'envoi disent la même chose, au mot près.
+    assert wa.texte == _suite(session, ticket, cs, "Le serrurier passe jeudi.")

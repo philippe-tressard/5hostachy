@@ -48,6 +48,8 @@ from app.utils.perimetres import a_portee_globale, batiments_cibles, parse_json_
 from app.utils.photos import parse_photos, premiere_photo
 from app.utils.visibility import hors_du_hall, reservee_au_conseil
 
+from .suite_groupe import message_suite
+
 logger = logging.getLogger("hostachy.actualite")
 
 
@@ -194,7 +196,8 @@ def _partager_sur_le_groupe(
         return
     #  L'adresse du site lue dans la configuration du CANAL, comme le partage
     #  d'une affaire suivie (`courriels._partager_sur_le_groupe`).
-    lien = base_site(config.get("site_url")) + lien_ticket(ticket.id)
+    site = base_site(config.get("site_url"))
+    lien = site + lien_ticket(ticket.id)
     titre, contenu, photo = (
         ticket.titre,
         ticket.description or "",
@@ -202,13 +205,16 @@ def _partager_sur_le_groupe(
     )
     if commentaire is not None:
         #  Une Suite part seule : le fil qui la précède se lit dans l'application.
-        precedents = len(_historique(session, ticket, sauf_derniere=True))
-        titre, contenu, photo = f"{ticket.titre} (suite)", commentaire, None
-        if precedents:
-            contenu += (
-                f"\n\n📜 Cet échange comporte {precedents} message(s) précédent(s).\n"
-                f"Consultez l'historique complet sur l'application :\n👉 {lien}"
-            )
+        #  Le rappel et le lien viennent de `message_suite` : le canal place le
+        #  lien après le texte — l'écrire aussi dans le texte le doublait.
+        suite = message_suite(
+            session,
+            ticket,
+            commentaire,
+            site_url=site,
+            suite_enregistree=True,
+        )
+        titre, contenu, photo, lien = suite.titre, suite.contenu, None, suite.lien
     diffuser(
         background_tasks,
         config,
