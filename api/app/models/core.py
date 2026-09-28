@@ -601,35 +601,9 @@ from app.models.gouvernance import (  # noqa: E402
 # ──────────────────────────────────────────────
 
 
-class DiagnosticType(SQLModel, table=True):
-    __tablename__ = "diagnostic_type"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    code: str = Field(unique=True)
-    nom: str
-    texte_legislatif: str
-    frequence: Optional[str] = None  # ex: "10 ans", "3 ans", "Permanent", None
-    ordre: int = 0
-    actif: bool = True
-    non_applicable: bool = False
-
-    rapports: List["DiagnosticRapport"] = Relationship(back_populates="type_diagnostic")
-
-
-class DiagnosticRapport(SQLModel, table=True):
-    __tablename__ = "diagnostic_rapport"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    diagnostic_type_id: int = Field(foreign_key="diagnostic_type.id")
-    titre: str
-    date_rapport: Optional[date] = None
-    fichier_nom: str
-    fichier_chemin: str
-    taille_octets: Optional[int] = None
-    mime_type: str = "application/octet-stream"
-    synthese: Optional[str] = None  # synthèse des conclusions du rapport
-    publie_par_id: int = Field(foreign_key="utilisateur.id")
-    publie_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
-
-    type_diagnostic: Optional[DiagnosticType] = Relationship(back_populates="rapports")
+#  Les deux tables vivent dans `models/diagnostics.py` depuis le 28/09/2026
+#  (modularité, #1412). Ré-exportées ici : les imports existants ne bougent pas.
+from app.models.diagnostics import DiagnosticRapport, DiagnosticType  # noqa: E402,F401
 
 
 # ──────────────────────────────────────────────
@@ -745,7 +719,7 @@ from app.models.whatsapp import (  # noqa: E402,F401
 #  27/08/2026 (modularité, rang 1). Ces trois classes restent importables ici —
 #  une vingtaine de modules écrivent `from app.models.core import Document`, et un
 #  découpage qui casse ses importateurs n'est pas un découpage.
-from app.models.documents import (
+from app.models.documents import (  # noqa: E402
     CategorieDocument as CategorieDocument,
     Document as Document,
     ProfilAccesDocument as ProfilAccesDocument,
