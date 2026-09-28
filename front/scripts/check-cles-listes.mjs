@@ -305,7 +305,7 @@ for (const [collection, raison] of Object.entries(PAS_DU_FIL)) {
 //  saisie ramènerait l'écran figé.
 const LISTES_A_CLE_COMPOSITE = [
 	{
-		fichier: 'src/routes/(app)/sondages/[id]/+page.svelte',
+		fichier: 'src/lib/components/ResultatsSondage.svelte',
 		collection: 'opt.reponses_libres',
 		raison: 'deux résidents peuvent écrire la même réponse libre',
 	},

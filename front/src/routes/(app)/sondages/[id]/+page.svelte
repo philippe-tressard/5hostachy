@@ -15,6 +15,7 @@
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { fmtDateShort } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import ResultatsSondage from '$lib/components/ResultatsSondage.svelte';
 
 	let sondage: any = null;
 	let loading = true;
@@ -66,11 +67,6 @@
 	//  repli la somme vaudrait NaN et les pourcentages aussi.
 	$: totalVotes =
 		sondage?.options?.reduce((sum: number, o: any) => sum + (o.nb_votes ?? 0), 0) ?? 0;
-
-	function pct(nb: number) {
-		if (totalVotes === 0) return 0;
-		return Math.round((nb / totalVotes) * 100);
-	}
 
 	async function voter() {
 		if (!selectedOption) {
@@ -176,15 +172,15 @@
 		titreErreur="Sondage introuvable"
 	/>
 {:else}
-	<div style="margin-top:1.25rem">
-		<div style="display:flex;gap:.75rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap">
+	<div class="sondage-page">
+		<div class="sondage-entete">
 			{#if sondage.cloture}
 				<span class="badge badge-gray">Clôturé</span>
 			{:else}
 				<span class="badge badge-green">Ouvert</span>
 			{/if}
 			{#if sondage.cloture_le}
-				<small style="color:var(--color-text-muted)">
+				<small class="muted">
 					{sondage.cloture ? 'Clôturé' : 'Clôture'} le {fmtDateShort(sondage.cloture_le)}
 				</small>
 			{/if}
@@ -198,15 +194,12 @@
 							title="Modifier"
 							on:click={() => (edition = !edition)}>&#x270F;&#xFE0F;</button
 						>
-						<button
-							class="btn btn-outline btn-sm"
-							style="color:var(--color-warning-texte);border-color:var(--color-warning)"
-							on:click={stopperSondage}>⏹ Stopper</button
+						<button class="btn btn-outline btn-sm btn-stopper" on:click={stopperSondage}
+							>⏹ Stopper</button
 						>
 					{/if}
 					<button
-						class="btn btn-outline btn-sm"
-						style="color:var(--color-danger);border-color:var(--color-danger)"
+						class="btn btn-outline btn-sm btn-supprimer"
 						disabled={deleting}
 						on:click={supprimerSondage}>&#x1F5D1; Supprimer</button
 					>
@@ -219,16 +212,16 @@
 		{#if edition}
 			<FormulaireSondage {sondage} on:modifie={corrige} on:annule={() => (edition = false)} />
 		{/if}
-		<h1 style="font-size:1.3rem;font-weight:700;margin-bottom:.5rem">{sondage.question}</h1>
+		<h1 class="sondage-question">{sondage.question}</h1>
 		{#if sondage.description}
-			<div class="rich-content" style="color:var(--color-text-muted);margin-bottom:.75rem">
+			<div class="rich-content sondage-description">
 				{@html safeHtml(sondage.description)}
 			</div>
 		{/if}
 
-		<div style="margin-top:1.5rem">
+		<div class="sondage-corps">
 			{#if totalVotes > 0}
-				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:1rem">
+				<p class="sondage-total">
 					{totalVotes} vote{totalVotes > 1 ? 's' : ''}
 				</p>
 			{/if}
@@ -251,9 +244,7 @@
 									title="Cette réponse inclut un champ de précision">✏️</span
 								>{/if}
 							{#if voirResultats}
-								<span style="margin-left:auto;font-size:var(--fs-sm);color:var(--color-text-muted)"
-									>{opt.nb_votes} vote{opt.nb_votes !== 1 ? 's' : ''}</span
-								>
+								<span class="option-votes">{opt.nb_votes} vote{opt.nb_votes !== 1 ? 's' : ''}</span>
 							{/if}
 						</label>
 					{/each}
@@ -263,7 +254,7 @@
 						<!--  `.field` exigé par `lint:champs` dès le libellé associé (#561). -->
 						<div class="champ-libre-box">
 							<div class="field">
-								<label for="sondage-reponse-libre" style="font-weight:600">
+								<label for="sondage-reponse-libre" class="champ-libre-libelle">
 									Précisez votre réponse<EtoileRequis vide={!reponseLibre.trim()} />
 								</label>
 								<textarea
@@ -271,20 +262,20 @@
 									bind:value={reponseLibre}
 									placeholder="Décrivez votre réponse…"
 									rows="3"
-									style="border-color:var(--color-primary);resize:vertical"></textarea>
+									class="champ-libre-texte"></textarea>
 							</div>
 						</div>
 					{/if}
 
 					<!-- Commentaire optionnel -->
-					<div class="field" style="margin-top:1rem">
+					<div class="field sondage-commentaire">
 						<label for="sondage-commentaire-vote">Commentaire</label>
 						<textarea
 							id="sondage-commentaire-vote"
 							bind:value={commentaireVote}
 							placeholder="Partagez votre point de vue…"
 							rows="3"
-							style="resize:vertical"></textarea>
+							class="redimensionnable"></textarea>
 					</div>
 
 					<!-- Charte de respect -->
@@ -298,8 +289,7 @@
 					</label>
 
 					<button
-						class="btn btn-primary"
-						style="margin-top:1rem"
+						class="btn btn-primary sondage-voter"
 						disabled={voting ||
 							!selectedOption ||
 							!respectEngagement ||
@@ -308,42 +298,13 @@
 						{voting ? 'Envoi…' : 'Voter'}
 					</button>
 				</form>
-			{:else if !voirResultats}
-				<!--  A voté (ou ne peut plus voter) mais les résultats sont masqués
-				      jusqu'à la clôture. Le dire, plutôt que d'afficher des barres
-				      vides : l'API n'envoie pas les décomptes dans ce cas, et un
-				      « 0 vote » se lirait comme « personne n'a voté ». -->
-				<p class="resultats-masques">
-					Les résultats de ce sondage ne seront visibles qu'après sa clôture.
-				</p>
 			{:else}
-				<!-- Mode résultats -->
-				{#each sondage.options as opt (opt.id)}
-					<div class="result-row" class:winner={opt.id === sondage.mon_vote}>
-						<div class="result-label">
-							{opt.libelle}
-							{#if opt.champ_libre}<span class="champ-libre-badge" title="Champ de précision"
-									>✏️</span
-								>{/if}
-							{#if opt.id === sondage.mon_vote}<span
-									class="badge badge-blue"
-									style="margin-left:.5rem">Mon vote ✓</span
-								>{/if}
-						</div>
-						<div class="result-bar-wrap">
-							<div class="result-bar" style="width:{pct(opt.nb_votes)}%"></div>
-						</div>
-						<div class="result-pct">{pct(opt.nb_votes)} %</div>
-						<div class="result-votes">{opt.nb_votes}</div>
-					</div>
-					{#if opt.champ_libre && opt.reponses_libres?.length > 0}
-						<div class="reponses-libres-list">
-							{#each opt.reponses_libres as rep, ri (`${ri}|${rep}`)}
-								<blockquote class="reponse-libre-item">«&nbsp;{rep}&nbsp;»</blockquote>
-							{/each}
-						</div>
-					{/if}
-				{/each}
+				<ResultatsSondage
+					options={sondage.options}
+					monVote={sondage.mon_vote}
+					total={totalVotes}
+					visibles={voirResultats}
+				/>
 			{/if}
 		</div>
 
@@ -391,53 +352,6 @@
 	.option-label input {
 		accent-color: var(--color-primary);
 	}
-	.result-row {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 0.6rem;
-	}
-	.result-label {
-		min-width: 10rem;
-		font-size: var(--fs-base);
-	}
-	.result-bar-wrap {
-		flex: 1;
-		height: 0.7rem;
-		background: var(--color-bg);
-		border-radius: 99px;
-		overflow: hidden;
-		border: 1px solid var(--color-border);
-	}
-	.result-bar {
-		height: 100%;
-		background: var(--color-primary);
-		border-radius: 99px;
-		transition: width var(--duree-apparition) var(--ease-out);
-	}
-	.result-pct {
-		min-width: 3rem;
-		text-align: right;
-		font-size: var(--fs-md);
-		font-weight: 600;
-	}
-	.result-votes {
-		min-width: 3rem;
-		text-align: right;
-		font-size: var(--fs-sm);
-		color: var(--color-text-muted);
-	}
-	.resultats-masques {
-		font-size: var(--fs-base);
-		color: var(--color-text-muted);
-		background: var(--color-bg);
-		border-radius: var(--radius);
-		padding: 0.75rem 1rem;
-		margin: 0;
-	}
-	.winner .result-bar {
-		background: var(--color-success);
-	}
 
 	/* Charte de respect */
 	.respect-pledge {
@@ -461,10 +375,6 @@
 	}
 
 	/* Champ libre */
-	.champ-libre-badge {
-		font-size: var(--fs-sm);
-		margin-left: 0.35rem;
-	}
 	.champ-libre-box {
 		margin-top: 0.75rem;
 		padding: 0.75rem 1rem;
@@ -473,17 +383,62 @@
 		background: var(--color-primary-light, #eff6ff);
 	}
 
-	/* Réponses libres dans les résultats */
-	.reponses-libres-list {
-		padding: 0.35rem 0 0.6rem 1rem;
+	/* Les styles en ligne de la page, rendus à la feuille (#1329, 28/09/2026). */
+	.sondage-page {
+		margin-top: 1.25rem;
 	}
-	.reponse-libre-item {
-		margin: 0.25rem 0;
-		padding: 0.3rem 0.6rem;
-		border-left: 3px solid var(--color-primary);
+	.sondage-entete {
+		display: flex;
+		gap: 0.75rem;
+		align-items: center;
+		margin-bottom: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.btn-stopper {
+		color: var(--color-warning-texte);
+		border-color: var(--color-warning);
+	}
+	.btn-supprimer {
+		color: var(--color-danger);
+		border-color: var(--color-danger);
+	}
+	.sondage-question {
+		font-size: 1.3rem;
+		font-weight: 700;
+		margin-bottom: 0.5rem;
+	}
+	.sondage-description {
+		color: var(--color-text-muted);
+		margin-bottom: 0.75rem;
+	}
+	.sondage-corps {
+		margin-top: 1.5rem;
+	}
+	.sondage-total {
 		font-size: var(--fs-md);
 		color: var(--color-text-muted);
-		font-style: italic;
+		margin-bottom: 1rem;
+	}
+	.option-votes {
+		margin-left: auto;
+		font-size: var(--fs-sm);
+		color: var(--color-text-muted);
+	}
+	.champ-libre-libelle {
+		font-weight: 600;
+	}
+	.champ-libre-texte {
+		border-color: var(--color-primary);
+		resize: vertical;
+	}
+	.sondage-commentaire {
+		margin-top: 1rem;
+	}
+	.redimensionnable {
+		resize: vertical;
+	}
+	.sondage-voter {
+		margin-top: 1rem;
 	}
 
 	/* Commentaires (rendu par le composant partagé Reponses.svelte) */

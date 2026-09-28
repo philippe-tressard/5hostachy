@@ -65,8 +65,8 @@ const EXCEPTIONS = {
 	//  `FicheLecture` et son titre passé en classe. Le contrôle l'a REFUSÉE dès
 	//  qu'elle est devenue inutile — c'est ce qu'on attend d'une liste de
 	//  tolérances, et c'est ce qui empêche qu'elle devienne un dépotoir.
-	'(app)/sondages/[id]/+page.svelte':
-		'même cas : le `<h1>` porte la question du sondage, dans sa carte — instruit dans #365',
+	//  ⚠️ Celle de `(app)/sondages/[id]` est tombée de même le 28/09/2026 (#1329) :
+	//  les styles en ligne de la page sont passés en classes, `<h1>` compris.
 };
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne doit pas l'enfreindre. */
