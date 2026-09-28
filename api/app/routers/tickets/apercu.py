@@ -66,6 +66,8 @@ from app.utils.photos import photos_internes, photos_json
 
 from .actualite import contexte_actualite
 from .courriels import contexte_ticket_syndic, destinataires_syndic_cs
+from .suite_groupe import message_suite
+from app.utils.liens import base_site
 from app.utils.categories_ticket import ticket_urgent
 from app.utils.nature_affaire import est_actualite, statut_pour
 from app.utils.recuperer import ou_404
@@ -246,17 +248,34 @@ def apercu_diffusion(
 
     # ── Groupe WhatsApp ─────────────────────────────────────────────────────
     if brouillon.partager_whatsapp:
+        #  🔴 Une Suite montre SON message, pas la description de l'affaire : il
+        #  part seul, avec le lien de la fiche pour le reste du fil — composé
+        #  par la fonction même de l'envoi (28/09/2026).
+        if brouillon.ticket_id is not None:
+            from app.utils.diffusion import config_diffusion
+
+            suite = message_suite(
+                session,
+                ticket,
+                brouillon.commentaire,
+                site_url=base_site((config_diffusion(session) or {}).get("site_url")),
+                suite_enregistree=False,
+            )
+            titre, contenu, photo, lien = suite.titre, suite.contenu, None, suite.lien
+        else:
+            titre = ticket.titre if actualite else f"🎫 {ticket.titre}"
+            contenu, lien = ticket.description, None
+            photo = next((u for u in photos_internes(brouillon.photos_urls) if est_image(u)), None)
         canaux.append(
             apercu_whatsapp(
                 session,
                 user,
-                titre=ticket.titre if actualite else f"🎫 {ticket.titre}",
-                contenu=ticket.description,
+                titre=titre,
+                contenu=contenu,
                 urgent=ticket_urgent(ticket),
                 perimetre=ticket.perimetre_cible,
-                photo=next(
-                    (u for u in photos_internes(brouillon.photos_urls) if est_image(u)), None
-                ),
+                photo=photo,
+                lien=lien,
             )
         )
 
