@@ -25,7 +25,7 @@ from app.utils.reponse_courriel import (
     mettre_en_forme,
     moment_de_la_suite,
 )
-from tests.test_courriel_reponse_ticket import _entetes
+from tests.test_courriel_reponse_ticket import _AUTH_OK, _entetes
 from tests.test_courriel_reponse_ticket_bout_en_bout import _evolutions, scene  # noqa: F401
 
 _BOITE = pathlib.Path(__file__).resolve().parents[1] / "app" / "utils" / "courriel_boite.py"
@@ -111,9 +111,13 @@ def test_la_suite_est_datee_de_l_envoi_sans_assistant(scene):  # noqa: F811
     """🔴 Cas zéro : la Suite était datée de la relève."""
     session, ticket, syndic, _cs = scene
     envoi = datetime(2026, 9, 25, 16, 0)
-    assert traiter(session, _entetes(ticket.jeton_courriel, de=syndic.email), _RECU, envoi) == (
-        ACCEPTE
-    )
+    assert traiter(
+        session,
+        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _RECU,
+        envoi,
+        authentification=_AUTH_OK,
+    ) == (ACCEPTE)
     (evol,) = _evolutions(session, ticket)
     assert evol.cree_le == envoi
     assert evol.assiste_ia is False and evol.contenu_origine is None
@@ -123,7 +127,13 @@ def test_la_suite_est_datee_de_l_envoi_sans_assistant(scene):  # noqa: F811
 def test_la_suite_porte_la_mise_en_forme_et_le_texte_recu(scene, monkeypatch):  # noqa: F811
     session, ticket, syndic, _cs = scene
     monkeypatch.setattr(llm, "demander", _modele("Nous intervenons jeudi 2 octobre à 9 h."))
-    traiter(session, _entetes(ticket.jeton_courriel, de=syndic.email), _RECU, datetime(2026, 9, 25))
+    traiter(
+        session,
+        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _RECU,
+        datetime(2026, 9, 25),
+        authentification=_AUTH_OK,
+    )
     (evol,) = _evolutions(session, ticket)
     assert evol.contenu.endswith("<p>Nous intervenons jeudi 2 octobre à 9 h.</p>")
     assert evol.assiste_ia is True
@@ -142,6 +152,7 @@ def test_la_suite_s_ouvre_sur_qui_a_repondu_et_quand(scene):  # noqa: F811
         _entetes(ticket.jeton_courriel, de=syndic.email),
         "Nous intervenons jeudi.",
         datetime(2026, 9, 25, 16, 0),
+        authentification=_AUTH_OK,
     )
     (evol,) = _evolutions(session, ticket)
     assert evol.contenu.startswith("<p><em>Réponse de G S le 25 septembre 2026 à 18:00</em></p>"), (

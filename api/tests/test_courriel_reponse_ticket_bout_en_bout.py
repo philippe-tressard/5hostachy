@@ -118,6 +118,7 @@ def test_une_reponse_authentifiee_rejoint_le_fil(scene):
         _entetes(ticket.jeton_courriel, de=syndic.email),
         "Nous intervenons jeudi.",
         datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     assert decision == ACCEPTE
     evols = _evolutions(session, ticket)
@@ -140,10 +141,10 @@ def test_le_syndic_repond_SANS_jeton_et_sa_reponse_rejoint_le_fil(scene):
             "From": syndic.email,
             "To": "noreply@5hostachy.fr",
             "Subject": f"Re: Ticket #{ticket.numero} — Fuite — Les Hostachys",
-            "Authentication-Results": _AUTH_OK,
         },
         "Le plombier passe jeudi.",
         datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     assert decision == ACCEPTE
     evols = _evolutions(session, ticket)
@@ -181,10 +182,10 @@ def test_un_TIERS_ne_commente_pas_un_ticket_en_ecrivant_son_numero(scene):
                 "From": tiers.email,
                 "To": "noreply@5hostachy.fr",
                 "Subject": f"Re: Ticket #{ticket.numero} — Fuite",
-                "Authentication-Results": _AUTH_OK,
             },
             "Je confirme que c'est réglé.",
             datetime(2026, 9, 3),
+            authentification=_AUTH_OK,
         )
         assert decision == REFUSE
         assert _evolutions(session, ticket) == []
@@ -205,7 +206,7 @@ def test_un_message_USURPE_n_ecrit_RIEN_et_previent_le_conseil(scene):
     session, ticket, syndic, cs = scene
     decision = traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=syndic.email, auth=None),
+        _entetes(ticket.jeton_courriel, de=syndic.email),
         "Le problème est réglé, fermez le ticket.",
         datetime(2026, 9, 3),
     )
@@ -233,6 +234,7 @@ def test_un_expediteur_authentifie_SANS_COMPTE_ne_signe_rien(scene):
         _entetes(ticket.jeton_courriel, de="inconnu@syndic.fr"),
         "Bonjour, c'est noté.",
         datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     assert decision == REFUSE
     assert _evolutions(session, ticket) == []
@@ -247,6 +249,7 @@ def test_un_jeton_FORGE_ne_touche_a_aucun_ticket(scene):
         _entetes(nouveau_jeton(), de=syndic.email),
         "Fermez ce ticket.",
         datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     assert decision == IGNORE
     assert _evolutions(session, ticket) == []
@@ -261,6 +264,7 @@ def test_la_citation_du_message_precedent_n_entre_pas_dans_le_fil(scene):
         _entetes(ticket.jeton_courriel, de=syndic.email),
         "C'est noté.\n\nLe 2 septembre, Conseil syndical a écrit :\n> Bonjour,\n> merci de…",
         datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     evols = _evolutions(session, ticket)
     assert len(evols) == 1
@@ -316,6 +320,7 @@ def test_une_reponse_a_une_relance_groupee_va_au_CONSEIL_et_dans_aucun_fil(scene
         _entetes(relance.jeton, de=syndic.email),
         "Pour le premier on intervient jeudi ; le second est clos.",
         datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     try:
         #  RELANCE et non REFUSE (04/09/2026) : rien n'a été refusé — la
@@ -361,9 +366,10 @@ def test_un_message_authentifie_qui_repond_SANS_jeton_ne_se_perd_plus(scene):
         "From": syndic.email,
         "To": "noreply@5hostachy.fr",
         "In-Reply-To": "<TK-000000.abc@5hostachy.fr>",
-        "Authentication-Results": _AUTH_OK,
     }
-    decision = traiter(session, entetes, "C'est noté.", datetime(2026, 9, 3))
+    decision = traiter(
+        session, entetes, "C'est noté.", datetime(2026, 9, 3), authentification=_AUTH_OK
+    )
     assert decision == REFUSE
     notifs = _notifs(session, cs)
     assert notifs, "une réponse authentifiée non rattachable disparaît encore"
@@ -383,10 +389,10 @@ def test_un_prospectus_ne_reveille_toujours_personne(scene):
         {
             "From": "pub@ailleurs.fr",
             "To": "noreply@5hostachy.fr",
-            "Authentication-Results": _AUTH_OK,
         },
         "Profitez de nos offres !",
         datetime(2026, 9, 3),
+        authentification=_AUTH_OK,
     )
     assert decision == IGNORE
     assert _notifs(session, cs) == []
@@ -418,6 +424,7 @@ def test_le_syndic_peut_repondre_PLUSIEURS_FOIS_a_la_meme_relance(scene):
                     _entetes(relance.jeton, de=syndic.email),
                     texte,
                     datetime(2026, 9, 3),
+                    authentification=_AUTH_OK,
                 )
                 == RELANCE
             )
