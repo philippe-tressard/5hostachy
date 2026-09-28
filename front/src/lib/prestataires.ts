@@ -112,16 +112,21 @@ export function equipLabel(val: string | null | undefined): string {
 
 /**  Les catégories de prestataire, telles que l'écran les propose.
  *
- *   ⚠️ Même contrainte que ci-dessus : `val` correspond à `TypePrestataire`. */
+ *   ⚠️ Même contrainte que ci-dessus : `val` correspond à `TypePrestataire`.
+ *
+ *   🔴 Une catégorie dit le MÉTIER de l'entreprise, jamais le cadre d'une
+ *   intervention (#1444, 28/09/2026). « Contrat récurrent » et « Dépannage »
+ *   en étaient deux, et Otis — qui entretient sous contrat ET dépanne hors
+ *   contrat — ne tenait dans aucune. « Sous contrat » se DÉDUIT des contrats de
+ *   la fiche (`FILTRES_CONTRAT`, pastille de `CartePrestataire`). */
 export const TYPES_PRESTATAIRE: readonly { val: string; label: string; desc: string }[] = [
-	{
-		val: 'contrat_recurrent',
-		label: '\u{1F504} Contrat récurrent',
-		desc: 'Entretien, maintenance',
-	},
 	//  🔧 et non 📍 (#1045) : 📍 désigne un LIEU physique (CLAUDE.md, règle 4), et
 	//  un dépannage n'en est pas un. `lint:pictogrammes` le refuse désormais.
-	{ val: 'ponctuel', label: '\u{1F527} Dépannage', desc: 'Interventions ponctuelles' },
+	{
+		val: 'maintenance_depannage',
+		label: '\u{1F527} Maintenance & dépannage',
+		desc: 'Entretien, réparations',
+	},
 	{ val: 'travaux', label: '\u{1F3D7}\u{FE0F} Travaux', desc: 'Interventions importantes' },
 	{ val: 'reglementaire', label: '\u{1F4CB} Réglementaire', desc: 'Contrôles obligatoires' },
 	{
@@ -131,6 +136,53 @@ export const TYPES_PRESTATAIRE: readonly { val: string; label: string; desc: str
 	},
 	{ val: 'gestion', label: '\u{1F3E2} Gestion', desc: 'Syndic, gestion locative' },
 ];
+
+/**  Le libellé d'une catégorie de prestataire — la valeur brute en repli, pour
+ *   la même raison qu'`equipLabel` : une valeur inconnue signale une divergence
+ *   avec le serveur. Le reporting affichait la valeur brute en toute occasion
+ *   (`contrat_recurrent`), et la page en avait sa propre copie (#1444). */
+export function typePrestataireLabel(val: string | null | undefined): string {
+	if (!val) return '—';
+	return TYPES_PRESTATAIRE.find((t) => t.val === val)?.label ?? val;
+}
+
+/**  Le filtre « sous contrat » de l'annuaire. Il ne se SAISIT pas : il se lit
+ *   sur les contrats actifs de la fiche (#1444) — le cadre d'une intervention
+ *   n'est pas une catégorie de l'entreprise. */
+export const FILTRES_CONTRAT: readonly { val: string; label: string }[] = [
+	{ val: 'sous_contrat', label: '\u{1F4C4} Sous contrat' },
+	{ val: 'sans_contrat', label: 'Sans contrat' },
+];
+
+/**  Les trois filtres de l'annuaire — une chaîne vide : pas de filtre. */
+export interface FiltresPrestataires {
+	type: string;
+	contrat: string;
+	equipement: string;
+}
+
+export function filtresVides(): FiltresPrestataires {
+	return { type: '', contrat: '', equipement: '' };
+}
+
+/**  Un filtre au moins est-il posé ? — « Aucun prestataire pour ces critères ». */
+export function filtresActifs(f: FiltresPrestataires): boolean {
+	return !!(f.type || f.contrat || f.equipement);
+}
+
+/**  Les prestataires qui passent les filtres. « Sous contrat » se lit sur les
+ *   CONTRATS (actifs : l'API n'en sert pas d'autres), jamais sur la fiche. */
+export function filtrerPrestataires<
+	P extends { id: number; specialite?: string; type_prestataire?: string },
+>(prestataires: P[], contrats: { prestataire_id: number }[], f: FiltresPrestataires): P[] {
+	const sousContrat = new Set(contrats.map((c) => c.prestataire_id));
+	return prestataires.filter(
+		(p) =>
+			(!f.equipement || p.specialite === f.equipement) &&
+			(!f.type || p.type_prestataire === f.type) &&
+			(!f.contrat || (f.contrat === 'sous_contrat') === sousContrat.has(p.id)),
+	);
+}
 
 /**  Les unités de fréquence — celles du contrat, qui fixe le rythme d'un
  *   prestataire (#1092, 23/09/2026). `nombre` : le libellé du nombre à saisir,
@@ -276,7 +328,7 @@ export function prestataireDepuis(p: Record<string, any> = {}) {
 	return {
 		nom: p.nom ?? '',
 		specialite: p.specialite ?? '',
-		type_prestataire: p.type_prestataire ?? 'ponctuel',
+		type_prestataire: p.type_prestataire ?? 'maintenance_depannage',
 		email: p.email ?? '',
 		adresse: p.adresse ?? '',
 		description: p.description ?? '',

@@ -2,7 +2,7 @@
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { confirmerPuis } from '$lib/confirmation';
 	import { supprimerDocument } from '$lib/gestes-document';
-	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import FiltresPrestataires from '$lib/components/FiltresPrestataires.svelte';
 	import CarteContrat from '$lib/components/CarteContrat.svelte';
 	import ChampsPrestataire from '$lib/components/ChampsPrestataire.svelte';
 	import CartePrestataire from '$lib/components/CartePrestataire.svelte';
@@ -27,6 +27,9 @@
 	import {
 		EQUIPEMENTS as equipements,
 		TYPES_PRESTATAIRE as typesPrestataire,
+		filtresVides,
+		filtresActifs,
+		filtrerPrestataires,
 		contactsAEnvoyer,
 		prestataireDepuis,
 		contratDepuis,
@@ -151,14 +154,8 @@
 	//  choisir un fichier dans le formulaire d'édition le faisait apparaître dans
 	//  la carte dépliée. Chaque `DocumentsContrat` porte désormais le sien.
 
-	let filtreEquipement = '';
-	let filtreType = '';
-
-	$: filteredPrests = prestataires.filter(
-		(p) =>
-			(!filtreEquipement || p.specialite === filtreEquipement) &&
-			(!filtreType || p.type_prestataire === filtreType),
-	);
+	let filtres = filtresVides();
+	$: filteredPrests = filtrerPrestataires(prestataires, contrats, filtres);
 	$: compactPrests = filteredPrests.length > 7;
 
 	// ── Échéances des contrats ────────────────────────────────────
@@ -195,10 +192,6 @@
 	//  sert, pas avec ce qui l'entoure.
 	function contratsForPrest(prestId: number): any[] {
 		return contrats.filter((c) => c.prestataire_id === prestId);
-	}
-
-	function typeLabel(v: string) {
-		return typesPrestataire.find((t) => t.val === v)?.label ?? v;
 	}
 
 	//  L'onglet Consommations possède son formulaire ; la page n'en garde que
@@ -638,26 +631,7 @@
 	<!-- ONGLET 4 : PRESTATAIRES (annuaire)                           -->
 	<!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'prestataires'}
-	<!--  Deux rangées et le champ « Type » du formulaire ci-dessous : UN motif,
-	      porté par `ChoixPastilles` (#491). Il était écrit deux fois ici, à trois
-	      mots près — la duplication la plus discrète, celle qu'aucun contrôle
-	      inter-fichiers ne voit — et le composant qui l'a absorbée annonçait
-	      lui-même qu'une troisième copie viendrait. Elle est venue le lendemain,
-	      dans le formulaire : c'est ce qui a fait généraliser le composant.
-	      `avecDetail` sur les types seuls : leur description vivait dans un `title`,
-	      donc invisible au tactile. Les douze équipements n'en portent pas. -->
-	<ChoixPastilles
-		options={typesPrestataire}
-		bind:valeur={filtreType}
-		avecDetail
-		libelle="Filtrer par type de prestataire"
-	/>
-	<ChoixPastilles
-		options={equipements}
-		bind:valeur={filtreEquipement}
-		tous="Tous équipements"
-		libelle="Filtrer par équipement"
-	/>
+	<FiltresPrestataires bind:filtres />
 
 	<!--  🔴 La CRÉATION seulement. Corriger un prestataire ouvre le formulaire DANS
 	      sa carte, à la place de son corps — le motif des tickets, appliqué aux
@@ -687,11 +661,11 @@
 
 	{#if filteredPrests.length === 0}
 		<div class="empty-state card">
-			<h3>Aucun prestataire{filtreEquipement || filtreType ? ' pour ces critères' : ''}</h3>
+			<h3>Aucun prestataire{filtresActifs(filtres) ? ' pour ces critères' : ''}</h3>
 		</div>
 	{:else}
 		{#each typesPrestataire.filter( (t) => filteredPrests.some((p) => p.type_prestataire === t.val) ) as typeGroup (typeGroup.val)}
-			{#if !filtreType}
+			{#if !filtres.type}
 				<div class="type-section-header">
 					<span class="type-section-label">{typeGroup.label}</span>
 					<span class="type-section-desc">{typeGroup.desc}</span>
@@ -710,7 +684,6 @@
 					{compactPrests}
 					peutModifier={$isCS}
 					{telephonesDe}
-					{typeLabel}
 					{editPrestId}
 					bind:prestForm
 					bind:prestContacts

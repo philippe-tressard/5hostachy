@@ -22,7 +22,7 @@
 -->
 <script lang="ts">
 	import { fmtDateShort } from '$lib/date';
-	import { equipLabel } from '$lib/prestataires';
+	import { equipLabel, typePrestataireLabel } from '$lib/prestataires';
 	import { safeDescription } from '$lib/sanitize';
 	import { nomAffiche } from '$lib/noms';
 	import BoutonLien from './BoutonLien.svelte';
@@ -40,8 +40,6 @@
 	export let compactPrests = false;
 	export let peutModifier = false;
 	export let telephonesDe: (t: string) => string[] = () => [];
-	/**  Le libellé d'un type — la table vit dans la page, qui l'administre. */
-	export let typeLabel: (v: string) => string = (v) => v;
 
 	/**  Le prestataire en cours de correction — la carte cède sa place au
 	 *   formulaire quand c'est le sien. */
@@ -94,11 +92,15 @@
 		on:toggle={() => onBasculer(p.id)}
 	>
 		<svelte:fragment slot="tags">
-			<span class="badge badge-type">{typeLabel(p.type_prestataire)}</span>
+			<span class="badge badge-type">{typePrestataireLabel(p.type_prestataire)}</span>
 			<span class="badge badge-blue">{equipLabel(p.specialite)}</span>
 			<NotationsPrestataire resume {notations} />
-			{#if !compactPrests || expanded}
-				<span class="badge badge-gray">{cs.length} contrat{cs.length !== 1 ? 's' : ''}</span>
+			<!--  « Sous contrat » se LIT sur les contrats actifs, il ne se saisit pas
+			      (#1444) : c'était une catégorie, et une entreprise qui entretient
+			      sous contrat et dépanne hors contrat n'y tenait pas. Rien quand il
+			      n'y en a aucun — « 0 contrat » n'apprenait rien. -->
+			{#if cs.length}
+				<span class="badge badge-gray">&#x1F4C4; Sous contrat ({cs.length})</span>
 			{/if}
 		</svelte:fragment>
 

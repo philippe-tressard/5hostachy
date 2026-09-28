@@ -261,6 +261,15 @@ def test_la_migration_0156_emploie_la_valeur_REELLE_de_l_enumeration():
     assert "'contrat_recurrent'" in chemin.read_text(encoding="utf-8"), (
         "le type de prestataire inséré doit être une valeur réelle de TypePrestataire"
     )
+    #  `contrat_recurrent` a quitté l'énumération (#1444) : la valeur reste juste
+    #  parce que la 0233, appliquée après, la convertit — en une valeur réelle.
+    from app.models.prestataires import TypePrestataire
+
+    chemin_0233 = chemin.parent / "0233_categorie_prestataire_metier.py"
+    spec = importlib.util.spec_from_file_location("migration_0233", chemin_0233)
+    m0233 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m0233)
+    assert TypePrestataire(m0233.CORRESPONDANCE["contrat_recurrent"])
 
 
 def test_les_deux_decomptes_de_lots_sont_independants(copro):
