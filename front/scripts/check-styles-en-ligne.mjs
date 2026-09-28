@@ -36,9 +36,11 @@ import { fileURLToPath } from 'node:url';
  *  Le compte autorisé, et son historique.
  *  28/09/2026 (#1329) : 495 relevés ; 474 le même jour — l'onglet WhatsApp
  *  a rendu 21 des siens en extrayant ses messages planifiés et son historique,
- *  rendu identique au pixel près (bureau et mobile).
+ *  rendu identique au pixel près (bureau et mobile). Puis 458 : la page d'un
+ *  sondage, ses résultats extraits en composant et ses styles passés en
+ *  classes, rendu identique (quatre états, bureau et mobile).
  */
-const PLAFOND = 474;
+const PLAFOND = 458;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
