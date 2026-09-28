@@ -27,6 +27,8 @@
 	import {
 		EQUIPEMENTS as equipements,
 		TYPES_PRESTATAIRE as typesPrestataire,
+		FILTRES_CONTRAT,
+		passeFiltreContrat,
 		contactsAEnvoyer,
 		prestataireDepuis,
 		contratDepuis,
@@ -153,11 +155,13 @@
 
 	let filtreEquipement = '';
 	let filtreType = '';
+	let filtreContrat = '';
 
 	$: filteredPrests = prestataires.filter(
 		(p) =>
 			(!filtreEquipement || p.specialite === filtreEquipement) &&
-			(!filtreType || p.type_prestataire === filtreType),
+			(!filtreType || p.type_prestataire === filtreType) &&
+			passeFiltreContrat(filtreContrat, contratsForPrest(p.id).length),
 	);
 	$: compactPrests = filteredPrests.length > 7;
 
@@ -193,13 +197,12 @@
 	//  vivaient dans le bloc « Consommations » par accident de rangement, et
 	//  l'extraction les a fait remonter. Une fonction se range avec ce qu'elle
 	//  sert, pas avec ce qui l'entoure.
-	function contratsForPrest(prestId: number): any[] {
-		return contrats.filter((c) => c.prestataire_id === prestId);
-	}
-
-	function typeLabel(v: string) {
-		return typesPrestataire.find((t) => t.val === v)?.label ?? v;
-	}
+	//  RÉACTIVE (#1444) : le filtre « sous contrat » l'appelle depuis une
+	//  déclaration réactive, et Svelte ne suit pas `contrats` à l'intérieur
+	//  d'une fonction ordinaire — le filtre ne se serait pas recalculé à
+	//  l'ajout ou à l'archivage d'un contrat.
+	$: contratsForPrest = (prestId: number): any[] =>
+		contrats.filter((c) => c.prestataire_id === prestId);
 
 	//  L'onglet Consommations possède son formulaire ; la page n'en garde que
 	//  l'ouverture et le libellé, pour le bouton de l'en-tête (R1).
@@ -652,6 +655,12 @@
 		avecDetail
 		libelle="Filtrer par type de prestataire"
 	/>
+	<!--  Le CADRE, séparé du métier (#1444) : il se lit sur les contrats actifs. -->
+	<ChoixPastilles
+		options={FILTRES_CONTRAT}
+		bind:valeur={filtreContrat}
+		libelle="Filtrer par contrat"
+	/>
 	<ChoixPastilles
 		options={equipements}
 		bind:valeur={filtreEquipement}
@@ -687,7 +696,11 @@
 
 	{#if filteredPrests.length === 0}
 		<div class="empty-state card">
-			<h3>Aucun prestataire{filtreEquipement || filtreType ? ' pour ces critères' : ''}</h3>
+			<h3>
+				Aucun prestataire{filtreEquipement || filtreType || filtreContrat
+					? ' pour ces critères'
+					: ''}
+			</h3>
 		</div>
 	{:else}
 		{#each typesPrestataire.filter( (t) => filteredPrests.some((p) => p.type_prestataire === t.val) ) as typeGroup (typeGroup.val)}
@@ -710,7 +723,6 @@
 					{compactPrests}
 					peutModifier={$isCS}
 					{telephonesDe}
-					{typeLabel}
 					{editPrestId}
 					bind:prestForm
 					bind:prestContacts

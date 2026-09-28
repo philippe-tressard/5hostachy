@@ -25,7 +25,7 @@ class PrestataireContact(BaseModel):
 class PrestataireCreate(AssisteIAEntree):
     nom: str
     specialite: str
-    type_prestataire: TypePrestataire = TypePrestataire.ponctuel
+    type_prestataire: TypePrestataire = TypePrestataire.maintenance_depannage
     telephone: Optional[str] = None
     email: Optional[str] = None
     #  🔴 FACULTATIFS depuis le 25/09/2026 (#1327) — revirement arbitré à l'écran :
@@ -51,7 +51,7 @@ class PrestataireRead(AssisteIASortie):
     id: int
     nom: str
     specialite: str
-    type_prestataire: TypePrestataire = TypePrestataire.ponctuel
+    type_prestataire: TypePrestataire = TypePrestataire.maintenance_depannage
     telephone: Optional[str] = None
     email: Optional[str] = None
     contacts: list[PrestataireContact] = []

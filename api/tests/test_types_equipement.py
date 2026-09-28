@@ -98,7 +98,7 @@ def test_l_ecran_ne_nomme_RIEN_que_le_serveur_refuse():
 def test_les_categories_de_prestataire_concordent_aussi():
     """La même table vit à côté, et elle a le même risque.
 
-    Elle est juste aujourd'hui — six valeurs des deux côtés. Ce test existe pour
+    Elle est juste aujourd'hui — cinq valeurs des deux côtés depuis #1444. Ce test existe pour
     que cela reste vrai : c'est la recopie qui fabrique la divergence, pas la
     faute d'inattention qui la suit.
     """

@@ -36,8 +36,17 @@ if TYPE_CHECKING:  # pragma: no cover — uniquement pour les annotations
 
 
 class TypePrestataire(str, Enum):
-    contrat_recurrent = "contrat_recurrent"
-    ponctuel = "ponctuel"
+    """Ce que FAIT l'entreprise — son métier, jamais le cadre d'une intervention.
+
+    🔴 « Contrat récurrent » et « Dépannage » en étaient deux valeurs jusqu'au
+    28/09/2026 (#1444) : elles disaient le CADRE, qui appartient à chaque
+    intervention et non à l'entreprise. Otis entretient l'ascenseur sous contrat
+    et le dépanne hors contrat — aucune des deux ne lui allait. Elles sont
+    fondues en `maintenance_depannage` (migration 0233) ; « sous contrat » se
+    DÉDUIT des contrats actifs de la fiche, il ne se saisit plus.
+    """
+
+    maintenance_depannage = "maintenance_depannage"
     travaux = "travaux"
     reglementaire = "reglementaire"
     etudes_expertise = "etudes_expertise"
@@ -90,7 +99,7 @@ class Prestataire(AssisteIAMixin, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nom: str
     specialite: str
-    type_prestataire: TypePrestataire = TypePrestataire.ponctuel
+    type_prestataire: TypePrestataire = TypePrestataire.maintenance_depannage
     telephone: Optional[str] = None
     email: Optional[str] = None
     contacts_json: Optional[str] = None  # JSON: [{prenom, nom, fonction, email, telephone}]

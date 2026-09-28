@@ -11,7 +11,7 @@
 	//  ⚠️ Cet écran affichait la valeur BRUTE — `chauffage_collectif` — parce que
 	//  la table des libellés vivait dans `prestataires/+page.svelte` et qu'il n'y
 	//  avait pas accès. Une table qui vit dans UN écran, les autres s'en passent.
-	import { equipLabel } from '$lib/prestataires';
+	import { equipLabel, typePrestataireLabel } from '$lib/prestataires';
 	import { prestataires as prestApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate } from '$lib/date';
@@ -50,7 +50,7 @@
 			<tr>
 				<th>Prestataire</th>
 				<th>Équipement</th>
-				<th>Type</th>
+				<th>Catégorie</th>
 				<th>Actions</th>
 			</tr>
 		</thead>
@@ -59,7 +59,7 @@
 				<tr>
 					<td><strong>{p.nom}</strong></td>
 					<td>{equipLabel(p.specialite)}</td>
-					<td>{p.type_prestataire ?? '—'}</td>
+					<td>{typePrestataireLabel(p.type_prestataire)}</td>
 					<td
 						><button class="btn btn-sm btn-outline" on:click={() => loadPrestSynthese(p.id)}
 							>Fiche synthèse</button
@@ -85,7 +85,10 @@
 		<div class="report-grid-2" style="margin-bottom:1rem">
 			<div>
 				<p><strong>Équipement :</strong> {equipLabel(reportPrestSynth.specialite)}</p>
-				<p><strong>Type :</strong> {reportPrestSynth.type_prestataire}</p>
+				<p>
+					<strong>Catégorie :</strong>
+					{typePrestataireLabel(reportPrestSynth.type_prestataire)}
+				</p>
 				{#if reportPrestSynth.email}<p><strong>Email :</strong> {reportPrestSynth.email}</p>{/if}
 				{#if reportPrestSynth.contacts && reportPrestSynth.contacts.length > 0}
 					<p><strong>Contacts :</strong></p>
