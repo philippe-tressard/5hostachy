@@ -712,3 +712,10 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	color: var(--color-text-muted);
 	padding: 0.4rem 0;
 }
+
+/*  La pastille ✏️ d'une réponse de sondage à champ libre — au vote (la page) et
+    aux résultats (`ResultatsSondage`) : une règle, deux composants (#1329). */
+.champ-libre-badge {
+	font-size: var(--fs-sm);
+	margin-left: 0.35rem;
+}
