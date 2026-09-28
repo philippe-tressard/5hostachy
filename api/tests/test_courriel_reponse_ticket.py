@@ -29,12 +29,7 @@ from datetime import datetime
 
 import pytest
 
-from app.utils.courriel_entrant import (
-    adresse_de_reponse,
-    domaine_de,
-    jeton_dans,
-    nouveau_jeton,
-)
+from app.utils.courriel_entrant import jeton_dans, nouveau_jeton
 from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, examiner
 
 #: Le verdict d'authenticité, tel que la relève le calcule sur les octets reçus
@@ -42,8 +37,14 @@ from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, examiner
 _AUTH_OK = (True, "signé par syndic.fr")
 
 
+def _adresse_a_jeton(jeton: str) -> str:
+    """L'adresse d'un ANCIEN courriel (avant #1314) : le site ne la pose plus,
+    mais une réponse à un message archivé peut encore la citer."""
+    return f"tickets+{jeton}@5hostachy.fr"
+
+
 def _entetes(jeton: str, *, de: str = "gestion@syndic.fr") -> dict:
-    return {"From": de, "To": adresse_de_reponse(jeton, "5hostachy.fr"), "Subject": "Re: ticket"}
+    return {"From": de, "To": _adresse_a_jeton(jeton), "Subject": "Re: ticket"}
 
 
 # ── Le jeton ──────────────────────────────────────────────────────────────────
@@ -63,19 +64,12 @@ def test_deux_jetons_ne_se_ressemblent_pas():
 
 def test_le_jeton_se_relit_dans_les_en_tetes_qui_le_portent():
     jeton = nouveau_jeton()
-    adresse = adresse_de_reponse(jeton, "5hostachy.fr")
+    adresse = _adresse_a_jeton(jeton)
     assert jeton_dans(adresse) == jeton
     assert jeton_dans(f"Conseil syndical <{adresse.upper()}>") == jeton
     assert jeton_dans(None, "", "autre@ailleurs.fr") is None
     #  Une adresse trop courte n'est pas un jeton tronqué acceptable.
     assert jeton_dans("tickets+abc@5hostachy.fr") is None
-
-
-def test_le_domaine_vient_de_l_adresse_d_envoi_ou_de_rien():
-    assert domaine_de("noreply@5hostachy.fr") == "5hostachy.fr"
-    assert domaine_de("Nom <NOREPLY@5Hostachy.FR>") == "5hostachy.fr"
-    assert domaine_de("") == "", "sans domaine, on ne fabrique pas d'adresse"
-    assert domaine_de("adresse-sans-arobase") == ""
 
 
 # ── 🔴 L'authentification ─────────────────────────────────────────────────────
