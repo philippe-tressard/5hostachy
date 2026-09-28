@@ -46,9 +46,9 @@
 			<div class="result-pct">{pct(opt.nb_votes ?? 0)} %</div>
 			<div class="result-votes">{opt.nb_votes}</div>
 		</div>
-		{#if opt.champ_libre && (opt.reponses_libres?.length ?? 0) > 0}
+		{#if opt.champ_libre && opt.reponses_libres?.length}
 			<div class="reponses-libres-list">
-				{#each opt.reponses_libres ?? [] as rep, ri (`${ri}|${rep}`)}
+				{#each opt.reponses_libres as rep, ri (`${ri}|${rep}`)}
 					<blockquote class="reponse-libre-item">«&nbsp;{rep}&nbsp;»</blockquote>
 				{/each}
 			</div>
