@@ -50,7 +50,7 @@
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import RepriseAnnonceHall from '$lib/components/RepriseAnnonceHall.svelte';
-	import { natureLue } from '$lib/lecture-ticket';
+	import { lueDuSeulConseil, natureLue } from '$lib/lecture-ticket';
 	import SectionAffairesLiees from '$lib/components/SectionAffairesLiees.svelte';
 	import SectionIntervenant from '$lib/components/SectionIntervenant.svelte';
 	import ChampFrequence from '$lib/components/ChampFrequence.svelte';
@@ -72,7 +72,6 @@
 	import { TICKET } from '$lib/entites/ticket';
 	import { PUBLICATION } from '$lib/entites/publication';
 	import { GLYPHE_URGENCE, motifWhatsappInterdit } from '$lib/options-publication';
-	import { reserveAuConseil } from '$lib/destinataires';
 	import { confirmer } from '$lib/confirmation';
 	import {
 		CATEGORIE_ENTRETIEN,
@@ -163,11 +162,10 @@
 	$: nature = natureDe(categorie);
 	$: actualite = nature === 'actualite';
 	$: inactives = sectionsInactives(etat, categorie, $isCS);
-	//  Réservée au conseil : « Confidentielle » (`brouillon` → `confidentiel`),
-	//  pour les deux natures depuis le 25/09/2026, ou Destinataires = CS seul.
-	$: reserveeAuConseil = options.brouillon || reserveAuConseil(publicCible);
+	//  Réservée au conseil : « Confidentielle », Destinataires = CS seul, ou sa catégorie (#1436).
+	$: reservee = lueDuSeulConseil(categorie, perimetreCible, options.brouillon, publicCible);
 	//  Une actualité réservée — au périmètre ou au conseil — n'a pas d'affiche.
-	$: if ((reservePerimetre || reserveeAuConseil) && annonceHall) annonceHall = false;
+	$: if ((reservePerimetre || reservee) && annonceHall) annonceHall = false;
 	$: assistant = contexteAssistant(actualite ? 'actualité' : 'ticket', {
 		Catégorie: OPTIONS_CATEGORIE.find((o) => o.val === categorie)?.label ?? categorie,
 		Périmètre: perimetreContexte(perimetreCible),
@@ -455,10 +453,7 @@
 			aideWhatsapp={actualite && reservePerimetre
 				? 'Le groupe est commun à toute la copropriété : le message portera le titre et le périmètre, avec un lien vers l’application — jamais le contenu.'
 				: 'Le message est publié sur le groupe WhatsApp ; les photos jointes partent avec.'}
-			whatsappInterdit={motifWhatsappInterdit(
-				reserveeAuConseil,
-				actualite ? 'actualité' : 'ticket',
-			)}
+			whatsappInterdit={motifWhatsappInterdit(reservee, actualite ? 'actualité' : 'ticket')}
 		>
 			<!--  L'affiche de hall n'est pas un canal : c'est l'option d'une ACTUALITÉ,
 			      rendue dans le créneau de la Diffusion (#498). -->
@@ -490,7 +485,7 @@
 			</svelte:fragment>
 			<svelte:fragment slot="diffusion">
 				{#if actualite}
-					<DiffusionPublication reservee={reservePerimetre || reserveeAuConseil} bind:annonceHall />
+					<DiffusionPublication reservee={reservePerimetre || reservee} bind:annonceHall />
 				{/if}
 			</svelte:fragment>
 		</ChampsCommuns>

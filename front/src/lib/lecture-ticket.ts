@@ -8,7 +8,13 @@
  * là-bas ; ici, on ne fait que lui fournir ses entrées.
  */
 import { batimentsCibles, concerneTous } from '$lib/perimetres';
-import { destinatairesParDefaut, lectureCiblee, lectureDe, type Lecture } from '$lib/lecture';
+import {
+	destinatairesParDefaut,
+	lectureCiblee,
+	lectureDe,
+	type EntreeLecture,
+	type Lecture,
+} from '$lib/lecture';
 import { estActualite } from '$lib/tickets';
 import type { Ticket } from '$lib/api';
 
@@ -56,6 +62,32 @@ export function natureDuTicket(t: Ticket): NatureLue {
  *   du conseil (#1343) — `null` pour une actualité, qui a les siens. */
 export function destinatairesParDefautDuTicket(t: Ticket): string[] | null {
 	return estActualite(t) ? null : destinatairesParDefaut(natureDuTicket(t));
+}
+
+/**  Personne d'autre que le conseil — et l'auteur — ne la lit : rien ne sort,
+ *   ni sur le groupe ni au hall. Cochée « Confidentielle », Destinataires =
+ *   Conseil syndical seul, ou fermée par sa catégorie sans choix du conseil
+ *   (#1436). Miroir de `reservee_au_conseil`, qui seul décide. */
+export function lueDuSeulConseil(
+	categorie: string | null | undefined,
+	perimetre: string[] | null | undefined,
+	confidentiel: boolean,
+	publicCible: EntreeLecture['publicCible'],
+): boolean {
+	const nature = natureLue({ categorie, perimetre });
+	return (
+		lectureDe({
+			...nature,
+			confidentiel,
+			publicCible,
+			perimetreRestreint: false,
+			reservePerimetre: false,
+		}).profils.length === 0
+	);
+}
+
+export function ticketLuDuSeulConseil(t: Ticket): boolean {
+	return lectureDuTicket(t).profils.length === 0;
 }
 
 export function lectureDuTicket(t: Ticket): Lecture {

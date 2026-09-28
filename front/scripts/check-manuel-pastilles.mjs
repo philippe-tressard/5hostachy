@@ -26,7 +26,7 @@ import { chargerModule } from './lib/charger-module.mjs';
 const MANUEL = '../docs/manuel-utilisateur.html';
 const NATURE = {
 	actualite: false,
-	categorie: 'nuisance',
+	categorie: 'etude_travaux',
 	dansBatiments: false,
 	confidentiel: false,
 	publicCible: null,
@@ -51,7 +51,9 @@ const CAS = {
 		perimetreRestreint: true,
 		reservePerimetre: true,
 	},
-	cs: { ...NATURE, categorie: 'panne', confidentiel: true },
+	cs: { ...NATURE, categorie: 'entretien' },
+	//  Une Nuisance sans choix du conseil : « Résident concerné » (#1436).
+	concerne: { ...NATURE, categorie: 'nuisance' },
 };
 
 const echouer = (m) => {

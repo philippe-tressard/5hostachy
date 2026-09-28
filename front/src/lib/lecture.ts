@@ -141,6 +141,45 @@ const CS: Vocable = {
 	long: 'Conseil syndical seul',
 };
 
+/**  « Résident concerné » — la vignette dit ce que la pastille cochée dit
+ *   (#1436, même leçon que #1434) : une affaire confidentielle ou fermée par sa
+ *   catégorie. Les mêmes lecteurs que « CS », et l'auteur que ce mot nomme. */
+const VOCABLE_CONCERNE: Vocable = {
+	cle: 'concerne',
+	icones: ['lock'],
+	court: 'Concerné',
+	long: 'Résident concerné',
+};
+
+/**
+ * « Résident concerné » : l'auteur, la personne pour qui l'affaire a été
+ * saisie, et le conseil. Un DÉFAUT, jamais un code envoyé : le conseil qui le
+ * choisit coche `confidentiel`. Miroir de `CONCERNE` au serveur.
+ */
+export const CONCERNE = 'concerné';
+
+/**
+ * Les Destinataires d'une affaire SANS choix du conseil, par catégorie (#1436,
+ * arbitré le 28/09/2026). Absente : les copropriétaires — Étude & travaux. La
+ * Panne a sa règle, qui dépend du bâtiment.
+ *
+ * ⚠️ Miroir de `DEFAUT_PAR_CATEGORIE` (`utils/visibility/defauts_affaire.py`), tenus
+ * d'accord par `lecture_pastille.json` : un cas par catégorie.
+ */
+export const DEFAUT_PAR_CATEGORIE: Record<string, string[]> = {
+	nuisance: [CONCERNE],
+	acces_accueil: [CONCERNE],
+	espaces_verts: [TOUS_LES_RESIDENTS],
+	sinistre: [CONCERNE],
+	entretien: ['conseil_syndical'],
+	question: [CONCERNE],
+	bug: [CONCERNE],
+};
+
+/** Le défaut est-il « Résident concerné » ? */
+export const estConcerne = (codes: string[] | null | undefined): boolean =>
+	!!codes && codes.length === 1 && codes[0] === CONCERNE;
+
 const minuscule = (t: string) => t.charAt(0).toLocaleLowerCase('fr') + t.slice(1);
 
 function vocableDe(profils: Profil[]): Vocable {
@@ -198,9 +237,10 @@ export function titreLecture(l: Lecture): string {
 
 /**
  * Les Destinataires qu'une affaire a SANS choix du conseil (#1343) — ce que
- * sa nature décide, et que les pastilles présélectionnent : les
- * copropriétaires (occupants et bailleurs), datée ou non (#1428) ; une
- * Panne, les siens. Une actualité : « Tous ».
+ * sa nature décide, et que les pastilles présélectionnent : selon la
+ * catégorie (`DEFAUT_PAR_CATEGORIE`, #1436), les copropriétaires sinon
+ * (occupants et bailleurs), datée ou non (#1428) ; une Panne, les siens. Une
+ * actualité : « Tous ».
  *
  * La règle vit au serveur (`ticket_visible`) ; `lecture_pastille.json` tient
  * les deux écritures d'accord.
@@ -216,10 +256,12 @@ export function destinatairesParDefaut(n: {
 	//  Arbitré à l'écran le 26/09/2026 : une Panne concerne ceux qui VIVENT
 	//  dans le bâtiment — occupants et locataires, pas les bailleurs ; hors
 	//  bâtiment (parking, espaces verts…), tout le monde. Miroir de
-	//  `destinataires_par_defaut` (`utils/visibility/objets.py`).
+	//  `destinataires_par_defaut` (`utils/visibility/defauts_affaire.py`).
 	if (n.categorie === 'panne')
 		return n.dansBatiments ? ['copropriétaires_occupants', 'locataires'] : [TOUS_LES_RESIDENTS];
-	return ['copropriétaires_occupants', 'bailleurs'];
+	return (
+		(n.categorie && DEFAUT_PAR_CATEGORIE[n.categorie]) || ['copropriétaires_occupants', 'bailleurs']
+	);
 }
 
 export function lectureDe(e: EntreeLecture): Lecture {
@@ -239,13 +281,17 @@ export function lectureDe(e: EntreeLecture): Lecture {
 	//  Une actualité s'ouvre à la copropriété sauf réserve ; une affaire, jamais.
 	const perimetreReserve =
 		profils.length > 0 && e.perimetreRestreint && (e.actualite ? e.reservePerimetre : true);
-	const v = profils.length ? vocableDe(profils) : CS;
+	const concerne = !e.actualite && (e.confidentiel || estConcerne(codes));
+	const v = profils.length ? vocableDe(profils) : concerne ? VOCABLE_CONCERNE : CS;
 	const tous = v.cle === 'tous';
 
 	let phrase: string;
 	const pas: string[] = [];
 	const lue = e.masculin ? 'Lu' : 'Lue';
-	if (!profils.length) {
+	if (concerne) {
+		phrase =
+			'Lue par la personne concernée — son auteur, ou celle pour qui elle a été saisie — et par le conseil syndical, personne d’autre.';
+	} else if (!profils.length) {
 		phrase = `Personne d’autre que le conseil syndical ne ${e.masculin ? 'le' : 'la'} lit, à part son auteur.`;
 	} else {
 		const ou = perimetreReserve ? ', dans le périmètre seulement.' : '.';

@@ -22,6 +22,7 @@
 	import FilAriane from '$lib/components/FilAriane.svelte';
 	import { fmtDateLong, fmtDateShort } from '$lib/date';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
+	import { ticketLuDuSeulConseil } from '$lib/lecture-ticket';
 	import { optionsDuTicket } from '$lib/tickets';
 	import { intervenantAffiche } from '$lib/prestataires';
 	import {
@@ -328,7 +329,7 @@
 			? contexteCommentaire(ticket, STATUT_LABELS[ticket.statut] ?? ticket.statut)
 			: null}
 		perimetreCourant={ticket?.perimetre_cible ?? []}
-		whatsappInterdit={motifWhatsappInterdit(ticket?.confidentiel ?? false, 'ticket')}
+		whatsappInterdit={motifWhatsappInterdit(!!ticket && ticketLuDuSeulConseil(ticket), 'ticket')}
 		optionsInitiales={optionsDuTicket(ticket)}
 		{evolutions}
 		on:change={loadEvolutions}

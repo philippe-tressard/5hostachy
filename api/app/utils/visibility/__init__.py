@@ -47,10 +47,10 @@ from .objets import (
     sondage_accessible,
     sondage_clos,
     reservee_au_conseil,
-    destinataires_par_defaut,
     ticket_visible,
 )
 from .documents import document_visible
+from .defauts_affaire import CONCERNE, DEFAUT_PAR_CATEGORIE, destinataires_par_defaut
 
 #  ⚠️ Cette liste ne se tient pas à la main : `test_visibilite_surface.py` la
 #  compare aux noms publics RÉELLEMENT définis par les trois fragments, et échoue
@@ -74,6 +74,8 @@ __all__ = [
     "evenement_visible",
     "can_see_ag",
     "ticket_visible",
+    "CONCERNE",
+    "DEFAUT_PAR_CATEGORIE",
     "destinataires_par_defaut",
     "reservee_au_conseil",
     "hors_du_hall",
