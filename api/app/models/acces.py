@@ -23,12 +23,12 @@ déclaration ne doit pas obliger à relire dix-huit fichiers pour un gain de
 rangement.
 """
 
-from datetime import datetime
 from app.utils import horloge
 from enum import Enum
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+from pydantic import NaiveDatetime
 
 
 class StatutAcces(str, Enum):
@@ -63,7 +63,7 @@ class Vigik(SQLModel, table=True):
     #: migration `0190`. Le raisonnement n'est pas recopié ici — il l'était
     #: quatre fois le jour où ce champ est né (#953).
     perimetre_cible: Optional[str] = Field(default=None)
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
 
 class Telecommande(SQLModel, table=True):
@@ -92,7 +92,7 @@ class Telecommande(SQLModel, table=True):
     #: migration `0190`. Le raisonnement n'est pas recopié ici — il l'était
     #: quatre fois le jour où ce champ est né (#953).
     perimetre_cible: Optional[str] = Field(default=None)
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
 
 #  🔴 `UserVigik` et `UserTelecommande` ont été RETIRÉS le 23/09/2026 (#1194) :
@@ -141,8 +141,8 @@ class TelecommandeImport(SQLModel, table=True):
 
     # ── Métadonnées ───────────────────────────────────────────────────────
     notes_admin: Optional[str] = None
-    importe_le: datetime = Field(default_factory=horloge.maintenant)
-    resolu_le: Optional[datetime] = None
+    importe_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    resolu_le: Optional[NaiveDatetime] = None
 
 
 # ──────────────────────────────────────────────
@@ -181,5 +181,5 @@ class VigikImport(SQLModel, table=True):
 
     # ── Métadonnées ───────────────────────────────────────────────────────
     notes_admin: Optional[str] = None
-    importe_le: datetime = Field(default_factory=horloge.maintenant)
-    resolu_le: Optional[datetime] = None
+    importe_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    resolu_le: Optional[NaiveDatetime] = None

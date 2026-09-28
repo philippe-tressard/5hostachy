@@ -58,20 +58,10 @@ updates:
         update-types: [minor, patch]
     # Les majeures ne figurent dans aucun groupe : Dependabot leur ouvre donc
     # une PR chacune, ce qui est exactement le but. Rien à déclarer pour ça.
-    ignore:
-      #  ── SQLModel 0.0.45 : les dates deviennent « aware » (27/09/2026) ──────
-      #  0.0.45 type toute colonne `datetime` en `DateTime(timezone=True)` et
-      #  REFUSE une valeur naïve : « Datetime values must have timezone
-      #  information ». Or tout le projet écrit de l'UTC NAÏF, comme la base
-      #  (`horloge.maintenant()`, CLAUDE.md). La PR #1292 était rouge pour ça
-      #  seul — le groupe mineur a été repris sans lui, sqlmodel plafonné à
-      #  0.0.44. Ce n'est pas une montée de version, c'est une décision de
-      #  modèle : annoter chaque champ `NaiveDatetime`, ou passer la base en
-      #  dates « aware ». Un « mineur » en 0.0.x n'a jamais rien promis.
-      #  LEVÉE : quand `pytest` passe avec la dernière sqlmodel sur une branche
-      #  d'essai — donc une fois l'un des deux chantiers fait.
-      - dependency-name: "sqlmodel"
-        versions: [">= 0.0.45"]
+    #
+    #  SQLModel 0.0.45+ n'est plus ignoré (#1412, 28/09/2026) : les dates des
+    #  modèles sont annotées `NaiveDatetime`, et `test_horloge.py` refuse toute
+    #  colonne de date consciente du fuseau.
 
   # ── Frontend npm ───────────────────────────────────────────────────────────
   - package-ecosystem: npm

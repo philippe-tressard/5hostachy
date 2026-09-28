@@ -17,7 +17,6 @@ tables restent enregistrées dans les métadonnées SQLModel — un modèle déf
 un module que personne n'importe n'existe pas pour Alembic.
 """
 
-from datetime import datetime
 from app.utils import horloge
 from enum import Enum
 from typing import List, Optional
@@ -25,6 +24,7 @@ from typing import List, Optional
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.utils.assiste_ia import AssisteIAMixin
+from pydantic import NaiveDatetime
 
 # ──────────────────────────────────────────────
 #  Sondages
@@ -36,10 +36,10 @@ class Sondage(AssisteIAMixin, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     question: str
     description: Optional[str] = None
-    cloture_le: Optional[datetime] = None
+    cloture_le: Optional[NaiveDatetime] = None
     resultats_publics: bool = True  # visibles avant clôture
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     #  Ciblage : None/vide = tous. MÊMES deux champs que `Publication`, et c'est
     #  le point — le sondage avait les siens (`batiments_ids`, `profils_autorises`),
     #  seul de tout le site, si bien qu'on ne pouvait cibler ni le parking, ni
@@ -73,7 +73,7 @@ class VoteSondage(SQLModel, table=True):
     sondage_id: int = Field(foreign_key="sondage.id")
     option_id: int = Field(foreign_key="option_sondage.id")
     user_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     reponse_libre: Optional[str] = Field(default=None)
 
     sondage: Optional[Sondage] = Relationship(back_populates="votes")
@@ -168,11 +168,11 @@ class PetiteAnnonce(AssisteIAMixin, table=True):
     #  corriger une faute de frappe sur une annonce vendue repousserait son
     #  archivage d'un mois, indéfiniment, à chaque retouche. `Publication` porte
     #  le même champ (`statut_change_le`) pour exactement cette raison.
-    statut_change_le: Optional[datetime] = None
+    statut_change_le: Optional[NaiveDatetime] = None
     contact_visible: bool = True  # autoriser affichage email/prénom-nom
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    mis_a_jour_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: Optional[NaiveDatetime] = None
 
 
 class CommentaireSondage(SQLModel, table=True):
@@ -181,7 +181,7 @@ class CommentaireSondage(SQLModel, table=True):
     sondage_id: int = Field(foreign_key="sondage.id")
     auteur_id: int = Field(foreign_key="utilisateur.id")
     contenu: str
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
 
 # ──────────────────────────────────────────────
@@ -196,7 +196,7 @@ class Idee(AssisteIAMixin, table=True):
     description: str
     auteur_id: int = Field(foreign_key="utilisateur.id")
     statut: str = "ouverte"  # ouverte | retenue | rejetee | realisee
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     #  Quand la décision a été prise — pas quand l'idée a été déposée. C'est
     #  cette date, et elle seule, qui déclenche l'archivage automatique
     #  (`app/utils/archivage.py`) : une idée retenue en janvier ne doit pas
@@ -204,7 +204,7 @@ class Idee(AssisteIAMixin, table=True):
     #  `Publication` portent le même champ, sous le même nom, pour la même
     #  raison. Ajoutée par la migration 0155 ; six objets sur sept l'avaient
     #  déjà, et c'est le test de concordance qui a montré le manque.
-    statut_change_le: Optional[datetime] = None
+    statut_change_le: Optional[NaiveDatetime] = None
     #  ⚠️ MÊME forme que `Publication.perimetre_cible`, `PetiteAnnonce` et
     #  `Sondage` : du JSON de codes. Une quatrième forme diverge — c'est ce que le
     #  sondage avait fait (`batiments_ids`), et il a fallu une migration pour l'en
@@ -223,7 +223,7 @@ class VoteIdee(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     idee_id: int = Field(foreign_key="idee.id")
     user_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
     idee: Optional[Idee] = Relationship(back_populates="votes")
 
@@ -243,7 +243,7 @@ class ReponseCommunaute(SQLModel, table=True):
     cible_id: int = Field(index=True)  # id de l'idée / annonce (polymorphe)
     auteur_id: int = Field(foreign_key="utilisateur.id")
     contenu: str
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
 
 class Signalement(SQLModel, table=True):
@@ -262,9 +262,9 @@ class Signalement(SQLModel, table=True):
     signale_par_id: int = Field(foreign_key="utilisateur.id")
     motif: str
     statut: str = Field(default="en_attente")  # en_attente | traite | rejete
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    traite_le: Optional[datetime] = None
+    traite_le: Optional[NaiveDatetime] = None
 
 
 class FluxMasque(SQLModel, table=True):
@@ -311,4 +311,4 @@ class FluxMasque(SQLModel, table=True):
     #  masquage. La leçon du 31/08/2026, où une purge a effacé un membre du
     #  conseil syndical pour réparer une référence cassée.
     masque_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    masque_le: datetime = Field(default_factory=horloge.maintenant)
+    masque_le: NaiveDatetime = Field(default_factory=horloge.maintenant)

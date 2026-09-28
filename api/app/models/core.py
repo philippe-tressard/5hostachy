@@ -3,12 +3,13 @@ Modèles SQLModel — version 0.1
 Correspond au modèle de données défini dans specs/architecture/modele-donnees.md
 """
 
-from datetime import date, datetime
+from datetime import date
 from app.utils import horloge
 from enum import Enum
 from typing import List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
+from pydantic import NaiveDatetime
 
 #  Réexportation : `Copropriete`, `Batiment`, `Lot` et `TypeLot` vivent dans
 #  `copropriete.py` depuis le 13/08/2026 (modularité, rang 1). Ils restent
@@ -94,8 +95,8 @@ class FaqItem(SQLModel, table=True):
     reponse: str
     ordre: int = 0  # ordre d'affichage dans la catégorie
     actif: bool = True
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    mis_a_jour_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
 
 # ──────────────────────────────────────────────
@@ -124,7 +125,7 @@ class Utilisateur(SQLModel, table=True):
     #  (#399). Le refus ne changeait d'ailleurs AUCUN état — le compte refusé
     #  revenait à chaque chargement de l'écran. Ne jamais lire ce champ à la
     #  main : `app/utils/comptes.py` porte la question et la réponse.
-    decision_compte_le: Optional[datetime] = Field(default=None)
+    decision_compte_le: Optional[NaiveDatetime] = Field(default=None)
     email_verifie: bool = Field(default=False)  # False = email non confirmé
     onboarding_complete: bool = False
     onboarding_etape: int = 0  # 0-4
@@ -139,7 +140,7 @@ class Utilisateur(SQLModel, table=True):
     opt_out_telemetrie: bool = Field(default=False)
     communaute_interdit: bool = Field(default=False)  # ban permanent (2e infraction)
     communaute_ban_count: int = Field(default=0)  # 0=jamais banni, 1=1er ban, 2+=permanent
-    communaute_ban_jusqu_au: Optional[datetime] = Field(default=None)  # fin du ban temporaire
+    communaute_ban_jusqu_au: Optional[NaiveDatetime] = Field(default=None)  # fin du ban temporaire
     #  Deux clés depuis le 14/08/2026 (#339) — `utils/preferences_mail.py` fait foi
     #  et réapplique ces défauts à la lecture, quel que soit l'état du champ.
     preferences_notifications: str = Field(
@@ -154,9 +155,9 @@ class Utilisateur(SQLModel, table=True):
     nom_proprietaire: Optional[str] = None  # pour les locataires : nom du propriétaire bailleur
     nom_aide: Optional[str] = None  # pour aidant/mandataire : nom du copropriétaire aidé
     prenom_aide: Optional[str] = None  # pour aidant/mandataire : prénom du copropriétaire aidé
-    last_seen_actualites: Optional[datetime] = None
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    derniere_connexion: Optional[datetime] = None
+    last_seen_actualites: Optional[NaiveDatetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    derniere_connexion: Optional[NaiveDatetime] = None
 
     user_lots: List["UserLot"] = Relationship(back_populates="utilisateur")
 
@@ -281,13 +282,13 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     #  `echeance` (« avant quand c'est attendu ») a été RETIRÉE le 23/09/2026
     #  (migration 0206) : ôtée du formulaire le 21/09 — la relance mensuelle
     #  couvre le besoin —, elle n'était plus ni saisie ni lue.
-    debut: Optional[datetime] = None
-    fin: Optional[datetime] = None
+    debut: Optional[NaiveDatetime] = None
+    fin: Optional[NaiveDatetime] = None
     #  Intervenant, récurrence et équipement : `IntervenantMixin` (#1097).
     non_relancable_motif: Optional[str] = None
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    mis_a_jour_le: datetime = Field(default_factory=horloge.maintenant)
-    ferme_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    ferme_le: Optional[NaiveDatetime] = None
     #  Adresse `tickets+<jeton>@…` (#703) : tirée au sort, jamais dérivée de l'id.
     jeton_courriel: Optional[str] = Field(default=None, index=True)
     confidentiel: bool = False  # 🛡️ son auteur et le CS (#710, migration 0166)
@@ -318,7 +319,7 @@ class MessageTicket(SQLModel, table=True):
     ticket_id: int = Field(foreign_key="ticket.id")
     auteur_id: int = Field(foreign_key="utilisateur.id")
     contenu: str
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     interne: bool = False  # True = visible CS seulement
     fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
 
@@ -357,16 +358,16 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     epingle: bool = False
     urgente: bool = False
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    publiee_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    publiee_le: Optional[NaiveDatetime] = None
     #  -- Section « Quand » (#1092) ----------------------------------
     #  Une actualité datée — « Coupure d'eau jeudi 9h-12h » — paraît au
     #  calendrier sans qu'il faille en faire un troisième objet. Pas
     #  d'échéance ici : une actualité ne se suit pas, et une colonne que rien
     #  ne consomme ouvrirait un champ d'écran sans effet (cadre #430).
-    debut: Optional[datetime] = None
-    fin: Optional[datetime] = None
-    mis_a_jour_le: Optional[datetime] = None
+    debut: Optional[NaiveDatetime] = None
+    fin: Optional[NaiveDatetime] = None
+    mis_a_jour_le: Optional[NaiveDatetime] = None
     photos_urls: Optional[str] = None  # JSON array — même convention que Ticket/Evenement
     perimetre_cible: Optional[str] = Field(
         default='["résidence"]'
@@ -376,7 +377,7 @@ class Publication(SaisiPourMixin, AssisteIAMixin, table=True):
     )  # JSON: résidents|locataires|copropriétaires
     # statut : publie (défaut, hors workflow) | en_cours | resolu | annule
     statut: Optional[str] = "publie"
-    statut_change_le: Optional[datetime] = None
+    statut_change_le: Optional[NaiveDatetime] = None
     brouillon: bool = False
     archivee: bool = False
     partager_whatsapp: bool = False
@@ -412,8 +413,8 @@ class RegleResidence(SQLModel, table=True):
     contenu: str = ""
     ordre: int = Field(default=0)
     cree_par_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    modifie_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    modifie_le: Optional[NaiveDatetime] = None
 
 
 # ──────────────────────────────────────────────
@@ -431,8 +432,8 @@ class Delegation(SQLModel, table=True):
     date_debut: date = Field(default_factory=date.today)
     date_fin: Optional[date] = None  # null = pas de limite
     cree_par_id: int = Field(foreign_key="utilisateur.id")  # CS/admin qui a créé
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    revoque_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    revoque_le: Optional[NaiveDatetime] = None
     revoque_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
 
 
@@ -485,7 +486,7 @@ class Notification(SQLModel, table=True):
     lien: Optional[str] = None
     lue: bool = False
     urgente: bool = False
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
 
 # ──────────────────────────────────────────────
@@ -533,8 +534,8 @@ class LotImport(SQLModel, table=True):
     utilisateurs_json: str = Field(default="[]")
 
     notes_admin: Optional[str] = None
-    importe_le: datetime = Field(default_factory=horloge.maintenant)
-    resolu_le: Optional[datetime] = None
+    importe_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    resolu_le: Optional[NaiveDatetime] = None
 
 
 # ──────────────────────────────────────────────
@@ -626,7 +627,7 @@ class DiagnosticRapport(SQLModel, table=True):
     mime_type: str = "application/octet-stream"
     synthese: Optional[str] = None  # synthèse des conclusions du rapport
     publie_par_id: int = Field(foreign_key="utilisateur.id")
-    publie_le: datetime = Field(default_factory=horloge.maintenant)
+    publie_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
     type_diagnostic: Optional[DiagnosticType] = Relationship(back_populates="rapports")
 
@@ -686,8 +687,8 @@ class LocationBail(SQLModel, table=True):
     statut: StatutBail = StatutBail.actif
     notes: Optional[str] = None
 
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    mis_a_jour_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    mis_a_jour_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
     objets: List["RemiseObjet"] = Relationship(back_populates="bail")
 
@@ -707,7 +708,7 @@ class RemiseObjet(SQLModel, table=True):
     remis_le: Optional[date] = None
     rendu_le: Optional[date] = None
     notes: Optional[str] = None
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
     bail: Optional[LocationBail] = Relationship(back_populates="objets")
 

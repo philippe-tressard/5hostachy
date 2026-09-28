@@ -21,7 +21,7 @@ table manquerait, sans le moindre message. C'est la raison écrite dans
 `models/__init__.py`, et elle vaut ici mot pour mot.
 """
 
-from datetime import date, datetime
+from datetime import date
 from app.utils import horloge
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, List, Optional
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.utils.assiste_ia import AssisteIAMixin
+from pydantic import NaiveDatetime
 
 if TYPE_CHECKING:  # pragma: no cover — uniquement pour les annotations
     from app.models.copropriete import Copropriete
@@ -97,7 +98,7 @@ class Prestataire(AssisteIAMixin, table=True):
     adresse: Optional[str] = None
     description: Optional[str] = None
     actif: bool = True
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
     contrats: List["ContratEntretien"] = Relationship(back_populates="prestataire")
 
@@ -170,4 +171,4 @@ class NotationPrestataire(SQLModel, table=True):
     #  arrière du code le retrouve. On cesse de la lire ; on n'efface rien.
     contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
     auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)

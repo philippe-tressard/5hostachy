@@ -11,11 +11,11 @@ domaine à part — `utils/courriel_entrant`, `utils/courriel_ingestion`,
 sa décision.
 """
 
-from datetime import datetime
 from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+from pydantic import NaiveDatetime
 
 
 class RelanceCourriel(SQLModel, table=True):
@@ -48,7 +48,7 @@ class RelanceCourriel(SQLModel, table=True):
     #: Les tickets relancés, en JSON. Figée à l'envoi : elle dit ce que le
     #: message CONTENAIT, pas ce que les tickets sont devenus.
     tickets_json: str = "[]"
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
 
 class ReponseRelance(SQLModel, table=True):
@@ -86,4 +86,4 @@ class ReponseRelance(SQLModel, table=True):
     #: Le texte SANS la citation du message précédent : sans quoi chaque échange
     #: recopierait tout l'échange.
     contenu: str = ""
-    recue_le: datetime = Field(default_factory=horloge.maintenant)
+    recue_le: NaiveDatetime = Field(default_factory=horloge.maintenant)

@@ -16,19 +16,19 @@ L'écriture et la lecture vivent dans `utils/llm_journal.py`.
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
 
 from app.utils import horloge
+from pydantic import NaiveDatetime
 
 
 class AppelIA(SQLModel, table=True):
     __tablename__ = "appel_ia"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    cree_le: datetime = Field(default_factory=horloge.maintenant, index=True)
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant, index=True)
     #: Le code de l'usage (`llm_usages.USAGES`).
     usage: str = Field(index=True)
     fournisseur: str

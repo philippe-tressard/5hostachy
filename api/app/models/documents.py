@@ -16,11 +16,12 @@ l'importe. Les clés étrangères sont déclarées par CHAÎNE (`foreign_key="ti
 ce qui n'exige aucun import — c'est ce qui rend le découpage possible sans cycle.
 """
 
-from datetime import date, datetime
+from datetime import date
 from app.utils import horloge
 from typing import List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
+from pydantic import NaiveDatetime
 
 
 # ──────────────────────────────────────────────
@@ -78,7 +79,7 @@ class Document(SQLModel, table=True):
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
     publie_par_id: int = Field(foreign_key="utilisateur.id")
-    publie_le: datetime = Field(default_factory=horloge.maintenant)
+    publie_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     #  🔴 La DESCRIPTION, ajoutée le 08/09/2026 (#852). Demandée à l'écran :
     #  *« ajouter aussi un champ descriptif »*.
     #

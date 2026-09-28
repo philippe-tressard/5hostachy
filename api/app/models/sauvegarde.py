@@ -16,12 +16,12 @@ risque d'en oublier un — un import manquant ne se voit qu'à l'exécution du
 chemin concerné, c'est-à-dire ici la nuit, pendant la sauvegarde.
 """
 
-from datetime import datetime
 from app.utils import horloge
 from enum import Enum
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+from pydantic import NaiveDatetime
 
 
 class StatutSauvegarde(str, Enum):
@@ -46,7 +46,7 @@ class ConfigSauvegarde(SQLModel, table=True):
     jour_mois: int = 1  # 1-28
     nb_versions_conservees: int = 7
     modifie_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    modifie_le: Optional[datetime] = None
+    modifie_le: Optional[NaiveDatetime] = None
 
 
 class HistoriqueSauvegarde(SQLModel, table=True):
@@ -65,5 +65,5 @@ class HistoriqueSauvegarde(SQLModel, table=True):
     fichier_chemin: Optional[str] = None
     taille_octets: Optional[int] = None
     message_erreur: Optional[str] = None
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    terminee_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    terminee_le: Optional[NaiveDatetime] = None

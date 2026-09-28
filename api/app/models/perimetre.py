@@ -11,11 +11,11 @@ et surtout que la table reste enregistrée auprès de SQLModel au moment du
 `create_all`, ce qu'un module jamais importé ne garantirait pas.
 """
 
-from datetime import datetime
 from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+from pydantic import NaiveDatetime
 
 
 class Perimetre(SQLModel, table=True):
@@ -109,6 +109,6 @@ class Perimetre(SQLModel, table=True):
     ordre: int = Field(default=0)
     actif: bool = Field(default=True)
 
-    cree_le: datetime = Field(default_factory=horloge.maintenant)
-    modifie_le: Optional[datetime] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    modifie_le: Optional[NaiveDatetime] = None
     modifie_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
