@@ -1,5 +1,5 @@
 {
-	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ». Depuis #1343 (26/09/2026), une affaire suivie lit ses Destinataires quand le conseil en a choisi : vides, la règle par défaut ; un résidu d'actualité promue est effacé (migration 0228, et à la promotion). `categorie` (affaires) : une Panne sans choix du conseil se lit par les résidents de son bâtiment (occupants et locataires), par tous hors bâtiment. `objet` (#1373, 27/09/2026) : une petite ANNONCE, une IDÉE ou un SONDAGE — la règle `cible_visible` sans ouverture à la copropriété : le périmètre restreint toujours, et des Destinataires vides valent « Tous ». Absent : une affaire ou une actualité (`actualite`).",
+	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ». Depuis #1428 (28/09/2026), la date n'ouvre plus une affaire aux locataires ni aux mandataires : seuls des Destinataires choisis par le conseil le font. Depuis #1343 (26/09/2026), une affaire suivie lit ses Destinataires quand le conseil en a choisi : vides, la règle par défaut ; un résidu d'actualité promue est effacé (migration 0228, et à la promotion). `categorie` (affaires) : une Panne sans choix du conseil se lit par les résidents de son bâtiment (occupants et locataires), par tous hors bâtiment. `objet` (#1373, 27/09/2026) : une petite ANNONCE, une IDÉE ou un SONDAGE — la règle `cible_visible` sans ouverture à la copropriété : le périmètre restreint toujours, et des Destinataires vides valent « Tous ». Absent : une affaire ou une actualité (`actualite`).",
 	"cas": [
 		{
 			"nom": "actualité à tous, copropriété entière",
@@ -259,7 +259,7 @@
 			"categorie": "nuisance"
 		},
 		{
-			"nom": "affaire datée, copropriété entière : les locataires la lisent (#1269)",
+			"nom": "affaire datée, copropriété entière : les copropriétaires seuls — la date n'ouvre plus rien aux locataires (#1428)",
 			"actualite": false,
 			"confidentiel": false,
 			"public_cible": [],
@@ -269,15 +269,13 @@
 			"en_ag": false,
 			"lecteurs": [
 				"copropriétaire_résident",
-				"copropriétaire_bailleur",
-				"mandataire",
-				"locataire"
+				"copropriétaire_bailleur"
 			],
 			"hors_perimetre": null,
 			"categorie": "nuisance"
 		},
 		{
-			"nom": "affaire datée sur un bâtiment : ses locataires la lisent, pas ceux d'ailleurs",
+			"nom": "affaire datée sur un bâtiment : ses copropriétaires, pas ses locataires (#1428)",
 			"actualite": false,
 			"confidentiel": false,
 			"public_cible": [],
@@ -287,15 +285,13 @@
 			"en_ag": false,
 			"lecteurs": [
 				"copropriétaire_résident",
-				"copropriétaire_bailleur",
-				"mandataire",
-				"locataire"
+				"copropriétaire_bailleur"
 			],
 			"hors_perimetre": false,
 			"categorie": "nuisance"
 		},
 		{
-			"nom": "affaire datée en AG : retirée aux locataires",
+			"nom": "affaire datée en AG : les copropriétaires",
 			"actualite": false,
 			"confidentiel": false,
 			"public_cible": [],
@@ -354,6 +350,39 @@
 				"copropriétaire_résident"
 			],
 			"hors_perimetre": false
+		},
+		{
+			"nom": "affaire Entretien datée — un contrat de maintenance — : les copropriétaires (#1428)",
+			"actualite": false,
+			"categorie": "entretien",
+			"confidentiel": false,
+			"public_cible": [],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"datee": true,
+			"en_ag": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "affaire datée, « Locataires » choisis par le conseil : eux seuls la lisent (#1428)",
+			"actualite": false,
+			"categorie": "entretien",
+			"confidentiel": false,
+			"public_cible": [
+				"locataires"
+			],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"datee": true,
+			"en_ag": false,
+			"lecteurs": [
+				"locataire"
+			],
+			"hors_perimetre": null
 		},
 		{
 			"nom": "actualité aux « Bailleurs » (mandataires) seuls (#1301)",

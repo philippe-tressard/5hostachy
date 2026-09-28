@@ -102,9 +102,9 @@ const PROFILS_DU_CODE: Record<string, Profil[]> = {
 
 /**
  * Une affaire suivie : les COPROPRIÉTAIRES seuls, occupants et bailleurs
- * (`ticket_visible`) — ni locataires, ni mandataires depuis #1311 (25/09/2026) —,
- * sauf une affaire DATÉE (au calendrier), que tous ceux de son périmètre
- * lisent, hors « En AG » (#1269).
+ * (`ticket_visible`) — ni locataires, ni mandataires depuis #1311 (25/09/2026).
+ * Datée ou non : la date les rouvrait aux locataires du 25/09 au 28/09 (#1269),
+ * et leur montrait les contrats de maintenance (#1428).
  */
 const PROFILS_AFFAIRE: Profil[] = ['occupants', 'copro_bailleurs'];
 
@@ -169,10 +169,6 @@ export interface EntreeLecture {
 	perimetreRestreint: boolean;
 	/** 🔒 « Réservé au périmètre sélectionné » — le choix d'une actualité. */
 	reservePerimetre: boolean;
-	/** Une date de début : l'affaire paraît au calendrier (`natures`). */
-	datee?: boolean;
-	/** Le suivi est « En AG » — ce qui la retire aux locataires. */
-	enAg?: boolean;
 	/** La catégorie d'une affaire, et son périmètre dans des bâtiments (#1343). */
 	categorie?: string;
 	dansBatiments?: boolean;
@@ -203,16 +199,14 @@ export function titreLecture(l: Lecture): string {
 /**
  * Les Destinataires qu'une affaire a SANS choix du conseil (#1343) — ce que
  * sa nature décide, et que les pastilles présélectionnent : les
- * copropriétaires (occupants et bailleurs) ; « Tous » pour une affaire datée
- * hors AG, que le calendrier montre aux locataires. Une actualité : « Tous ».
+ * copropriétaires (occupants et bailleurs), datée ou non (#1428) ; une
+ * Panne, les siens. Une actualité : « Tous ».
  *
  * La règle vit au serveur (`ticket_visible`) ; `lecture_pastille.json` tient
  * les deux écritures d'accord.
  */
 export function destinatairesParDefaut(n: {
 	actualite?: boolean;
-	datee?: boolean;
-	enAg?: boolean;
 	/** La catégorie d'une affaire — une Panne a sa propre règle. */
 	categorie?: string;
 	/** Chaque code du périmètre descend-il d'un bâtiment ? Tranché par l'appelant. */
@@ -225,7 +219,7 @@ export function destinatairesParDefaut(n: {
 	//  `destinataires_par_defaut` (`utils/visibility/objets.py`).
 	if (n.categorie === 'panne')
 		return n.dansBatiments ? ['copropriétaires_occupants', 'locataires'] : [TOUS_LES_RESIDENTS];
-	return n.datee && !n.enAg ? [TOUS_LES_RESIDENTS] : ['copropriétaires_occupants', 'bailleurs'];
+	return ['copropriétaires_occupants', 'bailleurs'];
 }
 
 export function lectureDe(e: EntreeLecture): Lecture {

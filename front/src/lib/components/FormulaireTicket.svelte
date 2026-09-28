@@ -428,7 +428,7 @@
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecReservePerimetre={$isCS}
-			lecture={$isCS ? natureLue({ categorie, debut, statut, perimetre: perimetreCible }) : null}
+			lecture={$isCS ? natureLue({ categorie, perimetre: perimetreCible }) : null}
 			bind:reservePerimetre
 			avecDestinataires={$isCS && sectionPresente(TICKET, etat, 'destinataires')}
 			bind:destinataires={publicCible}

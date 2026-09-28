@@ -71,9 +71,15 @@ const RESERVES = [
 			'des références de contrats qui ne regardent pas un locataire',
 	},
 	//  Les onglets Kanban et Archives du Calendrier sont partis avec lui le
-	//  23/09/2026 (#1092). Ceux d'Affaires ne sont PAS réservés : ils montrent
-	//  des affaires que le serveur filtre déjà (`ticket_visible`) — un masque
-	//  sans refus serveur passerait pour une protection qu'il n'est pas.
+	//  23/09/2026 (#1092). Ceux d'Affaires montrent des affaires que le serveur
+	//  filtre déjà (`ticket_visible`) : ils n'ont pas de place dans cette table,
+	//  qui n'admet qu'un onglet dont la route REFUSE.
+	//
+	//  ⚠️ Le Kanban d'Affaires porte pourtant `reserve: 'nonLocataire'` depuis
+	//  le 28/09/2026 (#1428) — arbitré à l'écran : un locataire ne suit pas les
+	//  dossiers. C'est un masque d'ERGONOMIE, pas une protection : ce qu'il
+	//  cacherait, `ticket_visible` le refuse déjà affaire par affaire. Ne pas
+	//  l'inscrire ici avec une dépendance inventée.
 ];
 
 const pages = readFileSync(join(FRONT, 'src/lib/pages.ts'), 'utf8');

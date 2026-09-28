@@ -95,8 +95,6 @@
 	$: lue = relire($perimetresStore, () =>
 		lectureDe({
 			actualite: !!lecture?.actualite,
-			datee: lecture?.datee,
-			enAg: lecture?.enAg,
 			confidentiel,
 			publicCible: destinataires,
 			perimetreRestreint: perimetreRestreint(perimetre),
