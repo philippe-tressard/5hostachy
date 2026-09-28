@@ -46,6 +46,9 @@ _APERCU = _RACINE / "api" / "app" / "routers" / "tickets" / "apercu.py"
 _ASSEMBLEUR = _RACINE / "api" / "app" / "utils" / "apercu_diffusion.py"
 _COURRIELS = _RACINE / "api" / "app" / "routers" / "tickets" / "courriels.py"
 _WHATSAPP = _RACINE / "api" / "app" / "utils" / "whatsapp.py"
+#  La COMPOSITION du message vit à part depuis le 28/09/2026 (#779) : c'est là
+#  que l'aperçu prend ses deux fonctions, et là qu'on vérifie qu'elles existent.
+_MESSAGE = _RACINE / "api" / "app" / "utils" / "whatsapp_message.py"
 
 
 def test_le_routeur_ne_compose_RIEN_lui_meme():
@@ -127,10 +130,10 @@ def test_l_apercu_whatsapp_ne_reecrit_pas_le_message():
         "message complet alors que le groupe recevra un message amputé."
     )
     #  Les deux fonctions existent bien là où l'aperçu les prend.
-    whatsapp = _WHATSAPP.read_text(encoding="utf-8")
+    whatsapp = _MESSAGE.read_text(encoding="utf-8")
     for nom in ("construire_message", "message_sans_contenu"):
         assert re.search(rf"^def {nom}\(", whatsapp, re.MULTILINE), (
-            f"`{nom}` a disparu de `whatsapp.py` : l'aperçu importe une fonction "
+            f"`{nom}` a disparu de `whatsapp_message.py` : l'aperçu importe une fonction "
             "qui n'existe plus, et l'erreur ne se verrait qu'à l'exécution."
         )
 

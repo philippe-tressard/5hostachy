@@ -174,7 +174,7 @@ def apercu_whatsapp(
     Cela se décide à l'envoi. La nuance est petite et réelle.
     """
     from app.utils.diffusion import config_diffusion
-    from app.utils.whatsapp import construire_message, message_sans_contenu
+    from app.utils.whatsapp_message import construire_message, message_sans_contenu
 
     if not auteur.has_role(*roles_diffusion()):
         return ApercuCanal(
