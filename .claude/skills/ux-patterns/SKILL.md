@@ -611,6 +611,12 @@ n'est pas résident. »* Les libellés sont **au pluriel**.
     rien sur la carte quand personne n'est exclu ; cadenas `lock` quand le
     périmètre est réservé ; « CS » remplace tout quand elle est confidentielle.
     Elle **remplace** les badges 🔒 et 🛡️ des cartes ; le 🔹 reste.
+  - 🔴 le badge de la section lit la **même nature** que ses pastilles —
+    catégorie et bâtiments compris (`...lecture`). Il ne recevait que
+    `actualite` : sur une **Panne**, « Tous » était coché et le badge disait
+    « Copropriétaires » (#1434, 28/09/2026). La règle pure était juste et
+    éprouvée ; c'est son APPEL qui oubliait un argument —
+    🔒 `e2e/destinataires-panne.spec.ts` compare le badge à la pastille cochée.
   - combinaisons nommées : **Résidents** (occupants + locataires),
     **Copropriétaires** (occupants + copropriétaires bailleurs) — c'est aussi
     la règle des affaires suivies, **montrée** (arbitré), depuis que les
