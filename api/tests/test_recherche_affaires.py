@@ -11,7 +11,7 @@ montre le même texte :
 | Ce qu'on cherche | La règle, partagée avec |
 |---|---|
 | l'affaire | `ticket_visible` — la liste |
-| une suite | `lit_les_suites` — `GET /{id}/evolutions` |
+| une suite | `ticket_visible` — `GET /{id}/evolutions` (29/09/2026) |
 | une note interne | `lit_les_notes_internes` — `GET /{id}/messages` |
 
 La règle de correspondance elle-même (accents, casse, tous les mots, extrait)
@@ -76,8 +76,8 @@ def _ids(session, user, q) -> list[int]:
 def scene(batiments):
     """Une affaire de toute la résidence, avec un fil, deux messages et un voisin.
 
-    Le voisin LIT l'affaire (portée résidence) sans pouvoir y écrire : c'est lui
-    qui départage « lisible » et « lisible avec son fil ».
+    Le voisin LIT l'affaire (portée résidence) sans pouvoir y écrire. Depuis le
+    29/09/2026, il en lit aussi le fil : les droits sont ceux de l'affaire.
     """
     SQLModel.metadata.create_all(engine)
     mes_batiments.invalider_cache()
@@ -138,13 +138,23 @@ def scene(batiments):
         mes_batiments.invalider_cache()
 
 
-def test_le_voisin_lit_l_affaire_sans_en_lire_le_fil(scene):
-    """Le préalable : sans lui, les tests du voisin ne départagent rien."""
-    session, affaire, _c, _a, voisin, _cs, _m = scene
+def test_le_voisin_lit_l_affaire_ET_son_fil(scene):
+    """🔴 TK-124285 (29/09/2026) : des copropriétaires lisaient l'affaire et en
+    voyaient les suites VIDES — la règle du fil était celle de l'écriture."""
+    session, affaire, _c, _a, voisin, _cs, mots = scene
     assert ticket_visible(affaire, voisin) is True
+    lus = get_evolutions(affaire.id, session=session, user=voisin)
+    assert any(mots["suite"] in (e.contenu or "") for e in lus)
+
+
+def test_qui_ne_lit_pas_l_affaire_ne_lit_pas_son_fil(scene):
+    """Le fil se ferme avec l'affaire : une confidentielle reste close au voisin."""
+    session, _a, confidentielle, auteur, voisin, _cs, _m = scene
+    assert ticket_visible(confidentielle, voisin) is False
     with pytest.raises(HTTPException) as refus:
-        get_evolutions(affaire.id, session=session, user=voisin)
+        get_evolutions(confidentielle.id, session=session, user=voisin)
     assert refus.value.status_code == 403
+    assert get_evolutions(confidentielle.id, session=session, user=auteur) == []
 
 
 def test_accents_et_majuscules_ne_comptent_pas(scene):
@@ -161,11 +171,11 @@ def test_une_suite_se_trouve_avec_son_extrait(scene):
     assert r.auteur == nom_affiche("Camille", "Sorel")
 
 
-def test_le_fil_ne_se_trouve_pas_par_qui_ne_le_lit_pas(scene):
-    """🔴 La règle de `GET /evolutions`, et pas celle de la liste."""
-    session, _a, _c, _au, voisin, cs, mots = scene
-    assert _ids(session, voisin, mots["suite"]) == []
-    assert _ids(session, cs, mots["suite"]) != []
+def test_le_fil_se_trouve_par_qui_lit_l_affaire(scene):
+    """La recherche dit ce que `GET /evolutions` montre : le voisin lit le fil."""
+    session, affaire, _c, _au, voisin, cs, mots = scene
+    assert _ids(session, voisin, mots["suite"]) == [affaire.id]
+    assert _ids(session, cs, mots["suite"]) == [affaire.id]
 
 
 def test_une_note_interne_ne_se_trouve_que_par_le_conseil(scene):
