@@ -139,6 +139,16 @@ def test_un_fil_sans_repere_cree_une_affaire_du_conseil_au_nom_du_premier_auteur
     assert "créée" in notif.titre and "2 suite(s) ajoutée(s)" in notif.corps
 
 
+def test_une_affaire_nee_d_un_message_du_SYNDIC_est_chez_le_syndic(monde):
+    """Demandé le 29/09/2026 : le syndic a répondu, l'affaire est chez lui."""
+    session, _ticket, syndic, cs, objet = monde
+    seul = _fil(syndic.email, objet).split("De : Jean Dupont", 1)[0]
+    assert _transferer(session, cs, objet, seul) == ACCEPTE
+    (affaire,) = _affaires(session, objet)
+    assert affaire.statut == StatutTicket.en_cours
+    assert _evolutions(session, affaire) == []
+
+
 def test_l_auteur_qui_a_un_compte_est_saisi_POUR_lui(monde):
     session, _ticket, syndic, cs, objet = monde
     jean = Utilisateur(
@@ -279,6 +289,14 @@ def test_un_fil_illisible_est_refuse_en_entier(monde):
     assert _transferer(session, cs, objet, corps) == REFUSE
     assert _affaires(session, objet) == []
     assert any("ne se découpe pas" in n.corps for n in _notifs(session, cs))
+
+
+def test_un_transfert_NON_RECONNU_le_dit_au_conseil(monde):
+    """🔴 29/09/2026 : faute de reconnaître le transfert, la relève ordinaire
+    répondait « rien ne permet de dire à quel ticket » — sans rapport."""
+    session, _ticket, _syndic, cs, objet = monde
+    assert _transferer(session, cs, objet, "Voir plus bas.\n\nMerci") == REFUSE
+    assert any("message transféré n'a pas été trouvé" in n.corps for n in _notifs(session, cs))
 
 
 def test_un_RESIDENT_qui_transfere_sans_repere_ne_cree_rien(monde):

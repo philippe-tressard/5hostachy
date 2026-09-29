@@ -58,7 +58,12 @@ from app.models.tickets import STATUTS_TICKET_CLOS, CategorieTicket
 from app.utils import horloge
 from app.utils.cloche import sonner_systeme
 from app.utils.courriel_authenticite import domaine_de
-from app.utils.courriel_decodage import Transfert, _html_en_texte, transfert_dans
+from app.utils.courriel_decodage import (
+    Transfert,
+    _html_en_texte,
+    est_objet_de_transfert,
+    transfert_dans,
+)
 from app.utils.courriel_fil import (
     FilIllisible,
     MessageDuFil,
@@ -93,6 +98,12 @@ CATEGORIE_PAR_DEFAUT = CategorieTicket.etude_travaux
 PUBLIC_CONSEIL_SEUL = '["conseil_syndical"]'
 #: Un titre d'affaire reste lisible dans une liste.
 LONGUEUR_TITRE = 200
+#: Ce que dit la notification quand l'objet annonce un transfert que le corps ne
+#: porte pas : c'est la forme du message qui manque, pas l'affaire.
+_TRANSFERT_NON_RECONNU = (
+    "l'objet annonce un transfert, mais le message transféré n'a pas été trouvé : "
+    "aucun bloc « De : … » avec une adresse, suivi d'une date, dans le corps du courriel"
+)
 #: Un message plus court ne se cherche pas dans le fil : « Merci » y est partout.
 _LONGUEUR_COMPARABLE = 40
 #: Le début d'un message suffit à le reconnaître ; sa fin (la signature) est
@@ -132,12 +143,21 @@ def decider_transfert(session, entetes, corps, recu_le, plancher, authentificati
 
     lire = {k.lower(): v for k, v in entetes.items()}
     sujet = lire.get("subject", "")
-    transfert = transfert_dans(sujet, corps)
-    if transfert is None or (recu_le is not None and recu_le < (plancher or PLANCHER_PAR_DEFAUT)):
+    if not est_objet_de_transfert(sujet) or (
+        recu_le is not None and recu_le < (plancher or PLANCHER_PAR_DEFAUT)
+    ):
         return None
     qui = compte_a_l_adresse(session, lire.get("from"))
     if qui is None:
         return None  # la relève ordinaire le refuse, et le dit
+    transfert = transfert_dans(sujet, corps)
+    if transfert is None:
+        #  🔴 29/09/2026 : un transfert de Mail pour Windows, non reconnu, est
+        #  retombé dans la relève ordinaire, qui a répondu « rien ne permet de
+        #  dire à quel ticket » — vrai, et sans rapport avec ce qui manquait.
+        if est_moderateur(qui):
+            return _refuser(session, qui, None, _TRANSFERT_NON_RECONNU)
+        return None
     verdict = examiner(
         entetes, recu_le=recu_le, plancher=plancher, authentification=authentification
     )
@@ -329,9 +349,14 @@ def _creer_affaire(session: Session, qui: Utilisateur, m: MessageDuFil, titre: s
     from app.routers.tickets.commun import generer_numero
     from app.utils.courriel_entrant import nouveau_jeton
     from app.utils.kanban_tickets import suivi_par_defaut
+    from app.models.tickets import StatutTicket
+    from app.utils.destinataires import est_adresse_syndic
     from app.utils.nature_affaire import statut_pour
 
     mis = mettre_en_forme(session, m.texte, m.brut)
+    #  Le syndic a déjà écrit : l'affaire naît chez lui (demandé le 29/09/2026,
+    #  même règle que pour une Suite — `suite_d_un_message`).
+    demande = StatutTicket.en_cours.value if est_adresse_syndic(session, m.adresse) else None
     quand = moment_de_la_suite(m.envoye_le)
     auteur = compte_a_l_adresse(session, m.adresse)
     if auteur is not None:
@@ -347,7 +372,7 @@ def _creer_affaire(session: Session, qui: Utilisateur, m: MessageDuFil, titre: s
             m.expediteur, m.nom, quand, mis.contenu or m.texte, _transfere_par(qui, m)
         ),
         categorie=CATEGORIE_PAR_DEFAUT,
-        statut=statut_pour(CATEGORIE_PAR_DEFAUT, est_cs=True),
+        statut=statut_pour(CATEGORIE_PAR_DEFAUT, demande, est_cs=True),
         priorite="normale",
         auteur_id=qui.id,
         public_cible=PUBLIC_CONSEIL_SEUL,
