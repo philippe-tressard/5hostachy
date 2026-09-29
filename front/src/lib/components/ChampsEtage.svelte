@@ -32,6 +32,7 @@
 -->
 <script lang="ts">
 	import { auth as authApi, lots as lotsApi } from '$lib/api';
+	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 	import { currentUser } from '$lib/stores/auth';
 	import { ETAGE_MAX, ETAGE_MIN, etageDuLot, etageLabel, lotTypeLabel } from '$lib/utils';
 
@@ -147,12 +148,12 @@
 	      limites. Un exemple en dit autant qu'une règle et ne heurte personne. -->
 		<p class="aide">0 = rez-de-chaussée, 2 = 2ème étage.</p>
 		{#if divergence}
-			<p class="etage-divergence" id="p-etage-divergence" role="status">
+			<EncartAvertissement compact id="p-etage-divergence" role="status">
 				⚠️ Votre logement est enregistré au <strong
 					>{etageLabel(etageLot, { suffixe: true })}</strong
 				>. C'est cette valeur qui s'affiche dans l'annuaire. Votre saisie est conservée et le
 				gestionnaire du site est prévenu pour vérifier.
-			</p>
+			</EncartAvertissement>
 		{/if}
 	</div>
 {/if}
@@ -194,21 +195,6 @@
 {/if}
 
 <style>
-	/*  L'avertissement de divergence : la teinte d'attention du site, jamais celle
-	    du danger — rien n'est cassé, il y a deux versions d'un fait et quelqu'un va
-	    trancher. Les valeurs sont celles du bloc « Verr. Maj. » de
-	    `ChampMotDePasse`, seul autre avertissement non bloquant du produit. */
-	.etage-divergence {
-		margin-top: 0.4rem;
-		padding: 0.45rem 0.7rem;
-		background: var(--color-warning-fond);
-		border: 1px solid var(--color-warning-bordure);
-		border-radius: var(--radius);
-		color: var(--color-warning-texte);
-		font-size: var(--fs-sm);
-		line-height: 1.4;
-	}
-
 	/*  Un logement par ligne : son identité à gauche, son étage à droite. La
 	    grille tient sur un téléphone parce que la colonne du champ est FIXE et
 	    celle du libellé élastique — l'inverse aurait écrasé le libellé sur les

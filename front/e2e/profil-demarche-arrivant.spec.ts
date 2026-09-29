@@ -101,6 +101,8 @@ test('une demande en attente s’affiche dans l’encart d’avertissement', asy
 	});
 	const encart = page.locator('.encart-avertissement', { hasText: 'Demande en attente' });
 	await expect(encart).toContainText('déménagement vers Bât. 3');
-	//  Le fond vient de la teinte d'avertissement, pas d'un blanc par défaut.
-	await expect(encart).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+	//  La charte d'avertissement : son fond, et son texte (#1455) — jamais le
+	//  blanc par défaut ni la couleur de texte ordinaire.
+	await expect(encart).toHaveCSS('background-color', 'rgb(253, 243, 224)');
+	await expect(encart).toHaveCSS('color', 'rgb(123, 88, 21)');
 });

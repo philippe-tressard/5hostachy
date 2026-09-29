@@ -31,6 +31,7 @@
 	import { messageErreur } from '$lib/erreurs';
 	import { lotTypeLabel } from '$lib/utils';
 	import { toast } from '$lib/components/Toast.svelte';
+	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -234,11 +235,9 @@
 			      accès » mènent à des décisions opposées. -->
 			<p class="etat-erreur-acces">{erreurAcces}</p>
 		{:else if typeLot === 'parking' || typeLot === 'cave'}
-			<p
-				style="font-size:var(--fs-md);color:var(--color-warning-texte);background:var(--color-warning-fond);border:1px solid var(--color-warning-bordure);border-radius:8px;padding:.5rem .65rem;margin-bottom:.7rem"
-			>
+			<EncartAvertissement>
 				Ce bail concerne un {typeLot}. <strong>TC uniquement</strong> : les Vigik ne sont pas autorisés.
-			</p>
+			</EncartAvertissement>
 		{:else if accesListe.length === 0}
 			<p style="color:var(--color-text-muted);font-size:var(--fs-base)">
 				Aucun Vigik ni télécommande rattaché à ce lot.

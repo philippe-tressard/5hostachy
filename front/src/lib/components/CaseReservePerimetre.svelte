@@ -41,6 +41,7 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 	import { concerneTous } from '$lib/utils';
 	import { optionPublication } from '$lib/options-publication';
 
@@ -111,23 +112,25 @@
 	<!--  🔴 CE QUI SORT, canal par canal (#623, 29/08/2026). Il n'est PAS le même
 	      partout : le titre part sur WhatsApp, tout part par e-mail. Il s'affiche
 	      dès la case cochée : c'est en écrivant le TITRE qu'il faut le savoir. -->
-	<div class="avert-diffusion" role="note">
-		<p class="avert-titre">&#x26A0;&#xFE0F; Ce qui sortira de l'application</p>
-		<ul class="avert-liste">
-			<li>
-				<strong>Groupe WhatsApp</strong> — le <strong>titre</strong> et le périmètre partent, avec
-				un lien vers l'application. Le contenu, lui, ne sort pas.
-				<span class="avert-consigne"
-					>Le groupe est commun à toute la copropriété : n'écrivez rien de confidentiel dans le
-					titre.</span
-				>
-			</li>
-			<li>
-				<strong>Syndic et conseil syndical</strong> — l'e-mail part
-				<strong>en entier</strong>, titre et contenu, sans restriction.
-			</li>
-			<li><strong>Affiche de hall</strong> — aucune : un hall se lit sans connexion.</li>
-		</ul>
+	<div class="avert-diffusion">
+		<EncartAvertissement role="note">
+			<p class="avert-titre">&#x26A0;&#xFE0F; Ce qui sortira de l'application</p>
+			<ul class="avert-liste">
+				<li>
+					<strong>Groupe WhatsApp</strong> — le <strong>titre</strong> et le périmètre partent, avec
+					un lien vers l'application. Le contenu, lui, ne sort pas.
+					<span class="avert-consigne"
+						>Le groupe est commun à toute la copropriété : n'écrivez rien de confidentiel dans le
+						titre.</span
+					>
+				</li>
+				<li>
+					<strong>Syndic et conseil syndical</strong> — l'e-mail part
+					<strong>en entier</strong>, titre et contenu, sans restriction.
+				</li>
+				<li><strong>Affiche de hall</strong> — aucune : un hall se lit sans connexion.</li>
+			</ul>
+		</EncartAvertissement>
 	</div>
 {/if}
 
@@ -141,14 +144,11 @@
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
-	/*  L'avertissement de diffusion : encadré, pas un simple paragraphe d'aide.
+	/*  L'avertissement de diffusion : un ENCART, pas un simple paragraphe d'aide.
 	    Il annonce une conséquence IRRÉVERSIBLE — un message parti ne se retire
-	    pas d'un groupe — là où `.aide` explique un réglage. */
+	    pas d'un groupe — là où `.aide` explique un réglage. Seule sa place vit
+	    ici ; son allure est celle d'`EncartAvertissement` (#1455). */
 	.avert-diffusion {
-		border-left: 3px solid var(--color-warning);
-		background: var(--color-warning-fond);
-		border-radius: var(--radius);
-		padding: 0.6rem 0.8rem;
 		margin: 0.25rem 0 1rem;
 	}
 	.avert-titre {

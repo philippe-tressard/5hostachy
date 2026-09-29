@@ -42,8 +42,10 @@ import { fileURLToPath } from 'node:url';
  *  badge « Bail actif » du formulaire de bail, passé dans sa feuille (#1329).
  *  Puis 455 : la barre de réorganisation de la FAQ, extraite en composant (#779).
  *  Puis 451 : la démarche « Nouvel arrivant » du profil, idem (#779).
+ *  Puis 449 : le bail parking/cave et le QR WhatsApp, passés par
+ *  `EncartAvertissement` (#1455).
  */
-const PLAFOND = 451;
+const PLAFOND = 449;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

@@ -29,6 +29,7 @@
   d'une page longue est lu après ce qu'il devait qualifier.
 -->
 <script lang="ts">
+	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 	/** Non vide = au moins une donnée de référence n'a pas pu être chargée. */
 	export let erreur = '';
 	/**  Ce que le lecteur risque de mal interpréter s'il l'ignore. Obligatoire
@@ -39,17 +40,18 @@
 </script>
 
 {#if erreur}
-	<div class="alert alert-warning chargement-partiel" role="status">
-		<strong>Affichage incomplet.</strong>
-		{erreur}
-		{#if consequence}<span class="cp-consequence">{consequence}</span>{/if}
+	<div class="chargement-partiel">
+		<EncartAvertissement role="status">
+			<strong>Affichage incomplet.</strong>
+			{erreur}
+			{#if consequence}<span class="cp-consequence">{consequence}</span>{/if}
+		</EncartAvertissement>
 	</div>
 {/if}
 
 <style>
-	/*  `.alert` et `.alert-warning` viennent d'`app.css` : le bandeau emprunte le
-	    style d'alerte du site plutôt que d'en inventer un. Seul l'espacement
-	    propre à ce composant vit ici. */
+	/*  L'allure est celle d'`EncartAvertissement` (#1455) — elle venait de
+	    `.alert-warning`, aux couleurs en dur. Seul l'espacement vit ici. */
 	.chargement-partiel {
 		margin-bottom: 1rem;
 	}
