@@ -29,6 +29,7 @@
 	import { essayer } from '$lib/chargement';
 	import { depuisChampLocal } from '$lib/date';
 	import { intervenantPropose } from '$lib/formulaire-affaire';
+	import type { ContratEnCours } from '$lib/prestataires';
 	import { isCS } from '$lib/stores/auth';
 	import { conseilDansLaSuite, equipementDansLaSuite, etatSuite } from '$lib/suite-conseil';
 	import SectionIntervenant from './SectionIntervenant.svelte';
@@ -56,11 +57,7 @@
 	$: bati = equipementDansLaSuite(ticket, $isCS);
 
 	let prestataires: { id: number; nom: string; actif?: boolean; specialite?: string | null }[] = [];
-	let contrats: {
-		actif?: boolean;
-		type_equipement?: string | null;
-		prestataire_id?: number | null;
-	}[] = [];
+	let contrats: ContratEnCours[] = [];
 	let erreur = '';
 
 	onMount(async () => {
@@ -73,8 +70,14 @@
 	let equipementVu = $etat.equipement;
 	$: if ($etat.equipement !== equipementVu) {
 		equipementVu = $etat.equipement;
-		if ($etat.prestataireId === null)
-			$etat.prestataireId = intervenantPropose($etat.equipement, contrats, prestataires);
+		const propose = intervenantPropose(
+			$etat.equipement,
+			contrats,
+			prestataires,
+			$etat.prestataireId,
+		);
+		if (propose)
+			[$etat.prestataireId, $etat.contratId] = [propose.prestataireId, propose.contratId];
 	}
 
 	$: options.planification = !conseil
@@ -83,7 +86,11 @@
 				debut: depuisChampLocal($etat.debut),
 				fin: depuisChampLocal($etat.fin),
 				...(bati
-					? { equipement: $etat.equipement || null, prestataire_id: $etat.prestataireId }
+					? {
+							equipement: $etat.equipement || null,
+							prestataire_id: $etat.prestataireId,
+							contrat_id: $etat.contratId,
+						}
 					: {}),
 			};
 </script>
@@ -104,6 +111,8 @@
 			{erreur}
 			bind:prestataires
 			bind:prestataireId={$etat.prestataireId}
+			{contrats}
+			bind:contratId={$etat.contratId}
 		/>
 	{/if}
 {/if}

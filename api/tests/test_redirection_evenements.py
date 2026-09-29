@@ -175,7 +175,8 @@ def test_la_date_suit_la_frequence_du_contrat(unite, nombre, attendu):
     assert date_prochaine_visite(contrat, date(2026, 9, 23)) == attendu
 
 
-def test_un_entretien_recurrent_resolu_avance_la_visite_du_contrat(session: Session, client):
+def test_un_entretien_sous_contrat_resolu_avance_la_visite_du_contrat(session: Session, client):
+    """Le contrat est celui que l'affaire DÉSIGNE (#1445), plus un rapprochement par le titre."""
     _, lecteur = client
     p = Prestataire(nom="Otis", specialite="ascenseur")
     session.add(p)
@@ -192,16 +193,17 @@ def test_un_entretien_recurrent_resolu_avance_la_visite_du_contrat(session: Sess
         actif=True,
     )
     session.add(contrat)
+    session.commit()
+    session.refresh(contrat)
     t = Ticket(
         numero="TK-1",
-        titre="Otis — Ascenseur (1/4)",
+        titre="Visite trimestrielle",
         description="x",
         categorie="entretien",
         statut="résolu",
         auteur_id=lecteur.id,
         prestataire_id=p.id,
-        frequence_type="mois",
-        frequence_valeur=3,
+        contrat_id=contrat.id,
         debut=datetime(2026, 9, 23, 10, 0),
     )
     session.add(t)
@@ -210,7 +212,10 @@ def test_un_entretien_recurrent_resolu_avance_la_visite_du_contrat(session: Sess
     assert contrat.prochaine_visite == date(2026, 12, 23)
 
 
-def test_une_affaire_non_recurrente_ne_touche_pas_au_contrat(session: Session, client):
+def test_une_intervention_hors_contrat_ne_touche_pas_au_contrat(session: Session, client):
+    """🔴 Le cas que le rapprochement par le titre ratait (#1445) : un dépannage
+    hors contrat, dont le titre cite le libellé du contrat et qui porte une
+    fréquence, avançait la visite d'entretien."""
     _, lecteur = client
     p = Prestataire(nom="Sicli", specialite="incendie")
     session.add(p)
@@ -229,12 +234,14 @@ def test_une_affaire_non_recurrente_ne_touche_pas_au_contrat(session: Session, c
     session.add(contrat)
     t = Ticket(
         numero="TK-2",
-        titre="Extincteurs",
+        titre="Extincteurs — remplacement",
         description="x",
         categorie="entretien",
         statut="résolu",
         auteur_id=lecteur.id,
         prestataire_id=p.id,
+        frequence_type="ans",
+        frequence_valeur=1,
     )
     session.add(t)
     session.commit()

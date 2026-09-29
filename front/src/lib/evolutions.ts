@@ -1,5 +1,6 @@
 import { separerFichiers } from '$lib/fichiers';
 import { perimetreHerite } from '$lib/perimetres';
+import { richEmpty } from '$lib/publications';
 import {
 	motifInactif,
 	SECTIONS_ORDRE,
@@ -146,10 +147,10 @@ export interface ChargeUtileEvolution {
  * Sorti d'`EvolForm` le 05/09/2026 avec les deux règles qui suivent : ce sont
  * des règles **du fil**, pas de l'affichage — elles répondent à « cette entrée
  * dit-elle quelque chose ? », question qui se pose pareil quel que soit l'écran.
+ * La RÈGLE, elle, est celle de toute saisie riche : `richEmpty`, dont elle était
+ * une copie (le formulaire d'affaire en portait une troisième).
  */
-export function contenuRicheVide(html: string): boolean {
-	return !html || html.replace(/<[^>]+>/g, '').trim() === '';
-}
+export const contenuRicheVide = richEmpty;
 
 /**
  * 🔴 LE GESTE EST DÉDUIT, il ne se déclare pas.

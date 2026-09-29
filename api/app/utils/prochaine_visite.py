@@ -8,14 +8,18 @@ sont devenus des affaires Entretien : la règle suit l'affaire, et elle est
 écrite ICI, une fois, pour les deux chemins qui résolvent une affaire — la
 Suite d'état (`evolutions.py`) et la correction (`mise_a_jour.py`).
 
-## La règle, inchangée
+## La règle (révisée le 28/09/2026, #1445)
 
-- une affaire **Entretien**, **récurrente** (elle porte une fréquence), avec un
-  **intervenant** ;
-- le contrat actif de ce prestataire — rapproché par son libellé dans le titre
-  (« Otis — Ascenseur »), ou le seul qu'il ait ;
+- une affaire **Entretien** résolue, **sous contrat** (`contrat_id`) ;
+- CE contrat, s'il est toujours en cours et toujours celui de l'intervenant ;
 - sa `prochaine_visite` part de la date de l'intervention (`debut`, à défaut
   aujourd'hui), selon la fréquence du CONTRAT.
+
+🔴 Le contrat était DEVINÉ jusque-là : son libellé cherché dans le titre de
+l'affaire (« Otis — Ascenseur »), à défaut le seul contrat actif du
+prestataire. Une affaire ne disait pas si l'intervention était sous contrat —
+un dépannage hors contrat d'Otis avançait la visite d'entretien. Elle le dit
+désormais, et la règle le lit.
 """
 
 from __future__ import annotations
@@ -23,7 +27,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.models.prestataires import ContratEntretien
 from app.models.tickets import CategorieTicket, StatutTicket
@@ -57,19 +61,10 @@ def apres_cloture(ticket, session: Session) -> None:
         return
     if valeur(ticket.statut) != StatutTicket.résolu.value:
         return
-    if not ticket.frequence_type or not ticket.prestataire_id:
-        return
-    contrats = session.exec(
-        select(ContratEntretien).where(
-            ContratEntretien.prestataire_id == ticket.prestataire_id,
-            ContratEntretien.actif == True,  # noqa: E712 — colonne SQL, pas un booléen Python
-        )
-    ).all()
-    retenu = next(
-        (c for c in contrats if c.libelle and c.libelle.lower() in ticket.titre.lower()),
-        contrats[0] if len(contrats) == 1 else None,
-    )
-    if retenu is None:
+    if not ticket.contrat_id:
+        return  # hors contrat : aucune visite de contrat n'a eu lieu
+    retenu = session.get(ContratEntretien, ticket.contrat_id)
+    if retenu is None or not retenu.actif or retenu.prestataire_id != ticket.prestataire_id:
         return
     depuis = (
         ticket.debut.date()

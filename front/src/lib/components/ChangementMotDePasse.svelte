@@ -140,7 +140,6 @@
     `align-items` et `flex-wrap` sont propres a cette rangee (#607, 28/08/2026). */
 	.form-actions {
 		align-items: center;
-		flex-wrap: wrap;
 	}
 	/*  Seul le placement reste ici : l'aide partage sa ligne avec le bouton et le
 	    pousse à droite. La typographie vient de la charte depuis le 09/09/2026 —

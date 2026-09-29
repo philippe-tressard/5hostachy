@@ -20,11 +20,11 @@ import uuid
 
 import pytest
 from fastapi import BackgroundTasks, HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.database import engine
 from app.models.core import RoleUtilisateur, StatutUtilisateur, Ticket, Utilisateur
-from app.models.prestataires import Prestataire
+from app.models.prestataires import ContratEntretien, Prestataire
 from app.models.tickets import StatutTicket
 from app.routers.tickets import crud, mise_a_jour
 from app.schemas import TicketCreate, TicketUpdate
@@ -38,6 +38,12 @@ def session(monkeypatch, batiments):
     arbre()
     with Session(engine) as s:
         yield s
+        #  Les contrats partent AVANT le patrimoine : la fixture `batiments`
+        #  supprime la copropriété, et SQLAlchemy dénouerait alors leur
+        #  `copropriete_id` (NOT NULL) — le test suivant tombait au montage.
+        for c in s.exec(select(ContratEntretien)).all():
+            s.delete(c)
+        s.commit()
 
 
 def _compte(session, *, role=None):
@@ -268,3 +274,114 @@ def test_cas_zero_la_correction_d_un_resident_laisse_la_date(session):
     lu = _corriger(session, resident, t.id, titre="Fuite au 2e", debut=None)
     assert lu.titre == "Fuite au 2e"
     assert lu.debut == datetime(2026, 10, 1, 9, 0), "un résident a effacé la date planifiée"
+
+
+# ── Sous contrat ou hors contrat (#1445) ────────────────────────────────────
+
+
+def _contrat(session, p: Prestataire, **champs) -> ContratEntretien:
+    defaut = dict(
+        copropriete_id=1,
+        prestataire_id=p.id,
+        libelle="Ascenseur",
+        numero_contrat="C-42",
+        type_equipement="ascenseur",
+        frequence_type="mois",
+        frequence_valeur=3,
+        actif=True,
+    )
+    c = ContratEntretien(**{**defaut, **champs})
+    session.add(c)
+    session.commit()
+    session.refresh(c)
+    return c
+
+
+def test_sous_contrat_le_rythme_est_celui_du_contrat(session):
+    """La fréquence envoyée est ignorée : elle se lit sur le contrat."""
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    p = _prestataire(session)
+    c = _contrat(session, p)
+    lu = _creer(
+        session,
+        cs,
+        categorie="entretien",
+        prestataire_id=p.id,
+        contrat_id=c.id,
+        frequence_type="semaines",
+        frequence_valeur=2,
+    )
+    assert lu.contrat_id == c.id
+    assert (lu.frequence_type, lu.frequence_valeur) == (None, None)
+    assert (lu.contrat.frequence_type, lu.contrat.frequence_valeur) == ("mois", 3)
+
+
+@pytest.mark.parametrize(
+    "cas",
+    ["autre_prestataire", "archive", "assurance"],
+)
+def test_un_contrat_qui_ne_cadre_pas_l_intervention_est_refuse(session, cas):
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    p = _prestataire(session)
+    if cas == "autre_prestataire":
+        c = _contrat(session, _prestataire(session))
+    elif cas == "archive":
+        c = _contrat(session, p, actif=False)
+    else:
+        c = _contrat(session, p, type_equipement="assurance")
+    with pytest.raises(HTTPException) as refus:
+        _creer(session, cs, categorie="entretien", prestataire_id=p.id, contrat_id=c.id)
+    assert refus.value.status_code == 422
+
+
+def test_changer_d_intervenant_efface_le_contrat(session):
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    p = _prestataire(session)
+    c = _contrat(session, p)
+    t = _creer(session, cs, categorie="entretien", prestataire_id=p.id, contrat_id=c.id)
+    lu = _corriger(session, cs, t.id, prestataire_id=_prestataire(session).id)
+    assert lu.contrat_id is None, "un contrat d'un autre prestataire cadrait encore l'intervention"
+
+
+def test_hors_du_bati_le_contrat_est_efface(session):
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    p = _prestataire(session)
+    c = _contrat(session, p)
+    t = _creer(session, cs, categorie="panne", prestataire_id=p.id, contrat_id=c.id)
+    assert t.contrat_id == c.id
+    lu = _corriger(session, cs, t.id, categorie="question")
+    assert (lu.prestataire_id, lu.contrat_id) == (None, None)
+
+
+def test_le_resident_lit_le_rythme_pas_le_contrat(session):
+    """Le libellé et le numéro restent au conseil, comme la liste des contrats."""
+    from app.routers.tickets.commun import contrat_de_l_affaire
+
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    resident = _compte(session)
+    c = _contrat(session, _prestataire(session))
+    pour_cs = contrat_de_l_affaire(session, c.id, cs)
+    pour_resident = contrat_de_l_affaire(session, c.id, resident)
+    assert (pour_cs.libelle, pour_cs.numero_contrat) == ("Ascenseur", "C-42")
+    assert (pour_resident.libelle, pour_resident.numero_contrat) == (None, None)
+    assert pour_resident.frequence_type == "mois"
+
+
+def test_poser_le_contrat_et_resoudre_d_un_geste_avance_ce_contrat(session):
+    """🔴 `apres_cloture` passait AVANT l'intervenant : le contrat posé dans la
+    même correction que « Résolu » n'était pas encore sur l'affaire."""
+    from datetime import date, datetime
+
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    p = _prestataire(session)
+    c = _contrat(session, p)
+    t = _creer(
+        session,
+        cs,
+        categorie="entretien",
+        prestataire_id=p.id,
+        debut=datetime(2026, 9, 23, 10, 0),
+    )
+    _corriger(session, cs, t.id, contrat_id=c.id, statut=StatutTicket.résolu)
+    session.refresh(c)
+    assert c.prochaine_visite == date(2026, 12, 23)

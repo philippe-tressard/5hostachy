@@ -31,6 +31,7 @@ import { depuisChampLocal } from '$lib/date';
 import { lotDepuisSaisie, type SaisieSaisiPour } from '$lib/saisi-pour';
 import { CATEGORIES_TICKET, estActualite, optionsVersTicket } from '$lib/tickets';
 import { typeEquipementDuContrat } from '$lib/reporting';
+import type { ContratEnCours } from '$lib/prestataires';
 
 /** La nature d'une catégorie : Actualité informe, toute autre se suit. */
 export function natureDe(categorie: string): NatureAffaire {
@@ -119,6 +120,8 @@ export interface SaisieAffaire {
 	annonceHall: boolean;
 	saisiPour: SaisieSaisiPour;
 	prestataireId: number | null;
+	/** Le contrat qui cadre l'intervention, `null` hors contrat (#1445). */
+	contratId: number | null;
 	/** La valeur de `TypeEquipement`, ou `''` — posée par le conseil (#1097). */
 	equipement: string;
 	frequenceType: string;
@@ -174,9 +177,11 @@ export function chargeUtileAffaire(
 	Object.assign(charge, { debut: depuisChampLocal(s.debut), fin: depuisChampLocal(s.fin) });
 	//  Intervenant et récurrence : envoyés à vide hors de leur catégorie — le
 	//  serveur les efface de toute façon (`utils/intervenant`), l'écran le dit.
-	const entretien = s.categorie === CATEGORIE_ENTRETIEN;
+	//  Sous contrat, le rythme est celui du contrat (#1445) : il ne part pas.
+	const entretien = s.categorie === CATEGORIE_ENTRETIEN && s.contratId === null;
 	Object.assign(charge, {
 		prestataire_id: estBati(s.categorie) ? s.prestataireId : null,
+		contrat_id: estBati(s.categorie) ? s.contratId : null,
 		equipement: estBati(s.categorie) ? s.equipement || null : null,
 		frequence_type: entretien && s.frequenceType ? s.frequenceType : null,
 		frequence_valeur: entretien && s.frequenceType ? Number(s.frequenceValeur) || null : null,
@@ -220,6 +225,7 @@ export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[
 	const pertes: string[] = [];
 	if (avant.prestataire_id && !estBati(apres.categorie)) pertes.push('l’intervenant');
 	if (avant.equipement && !estBati(apres.categorie)) pertes.push('l’équipement');
+	if (avant.contrat_id && !estBati(apres.categorie)) pertes.push('le contrat');
 	if (avant.frequence_type && apres.categorie !== CATEGORIE_ENTRETIEN) pertes.push('la récurrence');
 	const etait = natureDe(avant.categorie);
 	if (etait === natureDe(apres.categorie)) return pertes;
@@ -237,7 +243,8 @@ export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[
 /**
  * L'intervenant que l'équipement PROPOSE (#1097) : le prestataire d'un contrat
  * actif qui couvre cet équipement — « Toiture » propose le couvreur sous
- * contrat. `null` sans contrat : on ne devine pas.
+ * contrat. `null` sans contrat : on ne devine pas. Le contrat est proposé avec
+ * lui (#1445) : c'est lui qui a fait proposer le prestataire.
  *
  * ⚠️ Une proposition, jamais une décision : l'écran ne l'applique que si aucun
  * intervenant n'est déjà désigné, et le conseil la change d'un geste.
@@ -246,12 +253,15 @@ export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[
  */
 export function intervenantPropose(
 	equipement: string,
-	contrats: { actif?: boolean; type_equipement?: string | null; prestataire_id?: number | null }[],
+	contrats: ContratEnCours[],
 	prestataires: { id: number; specialite?: string | null }[],
-): number | null {
-	if (!equipement) return null;
+	//  Déjà désigné : rien n'est proposé — la règle que les deux appelants
+	//  recopiaient chacun devant l'appel.
+	designe: number | null = null,
+): { prestataireId: number; contratId: number } | null {
+	if (!equipement || designe !== null) return null;
 	const contrat = contrats.find(
 		(c) => c.actif !== false && typeEquipementDuContrat(c, prestataires) === equipement,
 	);
-	return contrat?.prestataire_id ?? null;
+	return contrat ? { prestataireId: contrat.prestataire_id, contratId: contrat.id } : null;
 }

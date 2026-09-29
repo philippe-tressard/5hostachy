@@ -22,6 +22,7 @@ from typing import Optional
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.auth.deps import est_moderateur
 from app.utils.affaires_liees import liees_lisibles
 from app.utils.nature_affaire import natures
 from app.utils.batiments import libelle_batiment_ou
@@ -31,8 +32,8 @@ from app.models.core import (
     TicketEvolution,
     Utilisateur,
 )
-from app.models.prestataires import Prestataire
-from app.schemas import AffaireLieeLue, TicketEvolutionRead, TicketRead
+from app.models.prestataires import ContratEntretien, Prestataire
+from app.schemas import AffaireLieeLue, ContratDeLAffaire, TicketEvolutionRead, TicketRead
 from app.utils.archivage import est_archivable, perime_le, seuil_archivage_jours
 from app.utils.photos import parse_photos
 
@@ -289,7 +290,30 @@ def ticket_read(
             natures=natures(ticket),
             perime_le=perime_le(ticket, "ticket"),
             prestataire_nom=nom_prestataire(session, ticket.prestataire_id),
+            contrat=contrat_de_l_affaire(session, ticket.contrat_id, lecteur),
         )
+    )
+
+
+def contrat_de_l_affaire(
+    session: Session, contrat_id: Optional[int], lecteur: Utilisateur | None
+) -> Optional[ContratDeLAffaire]:
+    """Le contrat qui cadre l'intervention (#1445) — lu même archivé, pour que
+    l'histoire d'une affaire ne change pas quand le contrat s'arrête.
+
+    Le rythme pour tous ; le libellé et le numéro pour le conseil seul, comme la
+    liste des contrats.
+    """
+    c = session.get(ContratEntretien, contrat_id) if contrat_id else None
+    if c is None:
+        return None
+    conseil = lecteur is not None and est_moderateur(lecteur)
+    return ContratDeLAffaire(
+        id=c.id,
+        libelle=c.libelle if conseil else None,
+        numero_contrat=c.numero_contrat if conseil else None,
+        frequence_type=c.frequence_type,
+        frequence_valeur=c.frequence_valeur,
     )
 
 

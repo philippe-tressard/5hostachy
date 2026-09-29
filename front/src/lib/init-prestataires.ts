@@ -5,9 +5,14 @@
  * le prestataire » (`POST /tickets/lot`) : les événements du calendrier sont
  * devenus des affaires au lot 5b2 de #1092, et le bouton avait disparu avec eux.
  * Les sources sont les contrats et les affaires Entretien récurrentes ; la clé
- * anti-doublon lit les TITRES des affaires de l'exercice — une affaire ne porte
- * pas de contrat, la clé par source (`contrat:N#i`) n'a plus rien à relire et
- * a été retirée avec elle.
+ * anti-doublon lit les TITRES des affaires de l'exercice.
+ *
+ * 🆕 Depuis le 28/09/2026 (#1445), la visite d'un contrat PART AVEC SON
+ * CONTRAT (`contrat_id`) : l'affaire dit qu'elle est sous contrat, et le
+ * serveur lit alors le rythme sur lui. Elle ne porte donc plus de fréquence
+ * propre — et ne redevient pas une source l'année suivante
+ * (`sourcesDesAffaires` ne retient que les affaires récurrentes), ce qui
+ * évitait déjà le double compte par le titre.
  *
  * Extrait de `calendrier/+page.svelte` le 28/08/2026 (#605), pour trois raisons
  * qui vont ensemble :
@@ -79,6 +84,7 @@ export function versAffaire(v: VisitePlanifiee) {
 		debut: v.debut,
 		perimetre_cible: v.perimetre ? [v.perimetre] : [],
 		prestataire_id: v.prestataire_id,
+		contrat_id: v.contrat_id,
 		frequence_type: v.frequence_type,
 		frequence_valeur: v.frequence_valeur,
 	};

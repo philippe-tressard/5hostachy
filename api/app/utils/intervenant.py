@@ -43,7 +43,7 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.models.prestataires import Prestataire, TypeEquipement
+from app.models.prestataires import ContratEntretien, Prestataire, TypeEquipement
 from app.models.tickets import CategorieTicket
 from app.utils.carnet_entretien import CATEGORIES_BATI
 from app.utils.recuperer import ou_404
@@ -54,7 +54,13 @@ from app.utils.valeurs import valeur
 #: « mois » vaut « mensuelle » : sans nombre saisi, il vaut 1.
 FREQUENCES: tuple[str, ...] = ("semaines", "mois", "fois_par_an", "ans")
 
-CHAMPS: tuple[str, ...] = ("prestataire_id", "frequence_type", "frequence_valeur", "equipement")
+CHAMPS: tuple[str, ...] = (
+    "prestataire_id",
+    "contrat_id",
+    "frequence_type",
+    "frequence_valeur",
+    "equipement",
+)
 
 #: Ce qu'une affaire peut désigner comme équipement : `TypeEquipement`, moins
 #: ce qui classe un CONTRAT sans être un équipement. Même liste côté écran :
@@ -65,6 +71,26 @@ HORS_EQUIPEMENT: frozenset[str] = frozenset(
 EQUIPEMENTS_AFFAIRE: tuple[str, ...] = tuple(
     e.value for e in TypeEquipement if e.value not in HORS_EQUIPEMENT
 )
+
+
+def contrat_valide(
+    session: Session, contrat_id: int, prestataire_id: int | None
+) -> ContratEntretien:
+    """Le contrat dans le cadre duquel le prestataire intervient (#1445).
+
+    Il doit exister (404), être EN COURS, appartenir au prestataire désigné, et
+    porter sur un équipement — une assurance ou un mandat de syndic ne cadrent
+    pas une intervention (`HORS_EQUIPEMENT`). Écrit une fois : la création en
+    lot (`routers/tickets/lot.py`) ne passe pas par `appliquer_intervenant`.
+    """
+    contrat = ou_404(session, ContratEntretien, contrat_id, "Contrat")
+    if not contrat.actif:
+        raise HTTPException(422, "Ce contrat n'est plus en cours")
+    if prestataire_id is None or contrat.prestataire_id != prestataire_id:
+        raise HTTPException(422, "Ce contrat n'est pas celui de l'intervenant désigné")
+    if valeur(contrat.type_equipement) in HORS_EQUIPEMENT:
+        raise HTTPException(422, "Ce contrat ne cadre pas une intervention")
+    return contrat
 
 
 def _envoye(body: Any, champ: str) -> bool:
@@ -80,8 +106,11 @@ def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: b
             changes.append("Intervenant effacé")
         if ticket.equipement is not None:
             changes.append("Équipement effacé")
+        if ticket.contrat_id is not None:
+            changes.append("Contrat effacé")
         ticket.prestataire_id = None
         ticket.equipement = None
+        ticket.contrat_id = None
     else:
         if (
             est_cs
@@ -92,6 +121,21 @@ def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: b
                 ou_404(session, Prestataire, body.prestataire_id, "Prestataire")
             ticket.prestataire_id = body.prestataire_id
             changes.append("Intervenant")
+        #  Le CADRE de l'intervention (#1445) : sous contrat — lequel —, ou hors
+        #  contrat (`None`). APRÈS l'intervenant, qu'il doit suivre.
+        if est_cs and _envoye(body, "contrat_id") and body.contrat_id != ticket.contrat_id:
+            if body.contrat_id is not None:
+                contrat_valide(session, body.contrat_id, ticket.prestataire_id)
+            ticket.contrat_id = body.contrat_id
+            changes.append("Contrat" if body.contrat_id is not None else "Hors contrat")
+        #  Un contrat qui n'est plus celui de l'intervenant — il a changé, ou le
+        #  contrat a été réattribué — ne se garde pas : il dirait « sous contrat »
+        #  d'une intervention qu'aucun contrat ne cadre.
+        if ticket.contrat_id is not None:
+            contrat = session.get(ContratEntretien, ticket.contrat_id)
+            if contrat is None or contrat.prestataire_id != ticket.prestataire_id:
+                ticket.contrat_id = None
+                changes.append("Contrat effacé")
         if (
             est_cs
             and _envoye(body, "equipement")
@@ -106,6 +150,15 @@ def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: b
         #  Hors Entretien : rien ne se garde, quel que soit l'auteur du geste.
         if ticket.frequence_type or ticket.frequence_valeur:
             changes.append("Récurrence effacée")
+        ticket.frequence_type = None
+        ticket.frequence_valeur = None
+        return changes
+
+    #  🔴 SOUS CONTRAT, le rythme est celui du contrat (#1445) — il se lit, il
+    #  ne se saisit pas : deux rythmes pour une même visite divergeraient.
+    if ticket.contrat_id is not None:
+        if ticket.frequence_type or ticket.frequence_valeur:
+            changes.append("Récurrence : celle du contrat")
         ticket.frequence_type = None
         ticket.frequence_valeur = None
         return changes

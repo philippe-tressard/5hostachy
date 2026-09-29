@@ -469,6 +469,7 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 .form-actions {
 	display: flex;
 	justify-content: flex-end;
+	flex-wrap: wrap;
 	gap: 0.5rem;
 	margin-top: 0.75rem;
 }

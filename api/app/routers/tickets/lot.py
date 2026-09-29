@@ -38,7 +38,7 @@ from app.models.core import Ticket, Utilisateur
 from app.models.prestataires import Prestataire
 from app.models.tickets import CategorieTicket, StatutTicket
 from app.utils.courriel_entrant import nouveau_jeton
-from app.utils.intervenant import FREQUENCES
+from app.utils.intervenant import FREQUENCES, contrat_valide
 
 from .commun import generer_numero
 
@@ -58,6 +58,8 @@ class VisiteDuLot(BaseModel):
     debut: datetime
     perimetre_cible: list[str] = []
     prestataire_id: Optional[int] = None
+    #: La visite d'un CONTRAT (#1445) : sa fréquence se lit sur lui.
+    contrat_id: Optional[int] = None
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None
 
@@ -87,6 +89,13 @@ def creer_visites_en_lot(
             raise HTTPException(422, f"Visite {i} : fréquence inconnue.")
         if v.prestataire_id is not None and session.get(Prestataire, v.prestataire_id) is None:
             raise HTTPException(422, f"Visite {i} : prestataire introuvable.")
+        if v.contrat_id is not None:
+            try:
+                contrat_valide(session, v.contrat_id, v.prestataire_id)
+            except HTTPException as refus:
+                raise HTTPException(422, f"Visite {i} : {refus.detail}.") from refus
+        #  Sous contrat, le rythme est celui du contrat — la règle d'`appliquer_intervenant`.
+        rythme = (None, None) if v.contrat_id else (v.frequence_type, v.frequence_valeur)
         session.add(
             Ticket(
                 numero=generer_numero(),
@@ -103,8 +112,9 @@ def creer_visites_en_lot(
                 perimetre_cible=json.dumps(v.perimetre_cible or ["résidence"], ensure_ascii=False),
                 debut=v.debut,
                 prestataire_id=v.prestataire_id,
-                frequence_type=v.frequence_type,
-                frequence_valeur=v.frequence_valeur if v.frequence_type else None,
+                contrat_id=v.contrat_id,
+                frequence_type=rythme[0],
+                frequence_valeur=rythme[1] if rythme[0] else None,
                 cree_le=maintenant,
                 mis_a_jour_le=maintenant,
             )

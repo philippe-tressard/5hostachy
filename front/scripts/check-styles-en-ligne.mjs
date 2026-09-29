@@ -41,8 +41,9 @@ import { fileURLToPath } from 'node:url';
  *  classes, rendu identique (quatre états, bureau et mobile). Puis 457 : le
  *  badge « Bail actif » du formulaire de bail, passé dans sa feuille (#1329).
  *  Puis 455 : la barre de réorganisation de la FAQ, extraite en composant (#779).
+ *  Puis 451 : la démarche « Nouvel arrivant » du profil, idem (#779).
  */
-const PLAFOND = 455;
+const PLAFOND = 451;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

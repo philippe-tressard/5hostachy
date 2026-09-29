@@ -253,6 +253,10 @@ class IntervenantMixin(SQLModel):
     """
 
     prestataire_id: Optional[int] = None
+    #: Le CADRE de l'intervention (#1445, migration 0235) : le contrat sous
+    #: lequel le prestataire intervient, `None` hors contrat. Sans clé étrangère,
+    #: comme ses voisins — `utils/intervenant.contrat_valide` en tient la règle.
+    contrat_id: Optional[int] = None
     frequence_type: Optional[str] = None  # « semaines » · « mois » · « fois_par_an »
     frequence_valeur: Optional[int] = None
     equipement: Optional[str] = None

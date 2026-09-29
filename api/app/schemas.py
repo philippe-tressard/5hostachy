@@ -13,6 +13,7 @@ from app.models.tickets import CategorieTicket
 from app.schemas_communs import (  # noqa: F401
     AffaireLieeLue,
     ChampsIntervenant,
+    ContratDeLAffaire,
     nom_en_majuscules,
     ListeJson as ListeJson,
     liste_depuis_json as liste_depuis_json,
@@ -276,6 +277,9 @@ class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
     #  elle ne périme pas, elle se clôt.
     perime_le: Optional[date] = None
     prestataire_nom: Optional[str] = None  # dérivé, pour la fiche et la carte
+    #  Le contrat qui cadre l'intervention (#1445), dérivé — le rythme pour
+    #  tous, le libellé et le numéro pour le conseil seul (`contrat_de_l_affaire`).
+    contrat: Optional[ContratDeLAffaire] = None
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
