@@ -23,6 +23,7 @@ from app.models.core import (
 )
 from app.utils.mes_batiments import batiments_de_l_utilisateur
 from app.utils.perimetres import a_portee_globale, batiments_cibles
+from app.utils.roles_libelles import libelle_role
 from app.auth.deps import est_moderateur
 
 # ── Parseurs internes ─────────────────────────────────────────────────────────
@@ -211,13 +212,19 @@ def perimetre_visible(
 #: double emploi avec les deux suivants, et la migration 0221 a converti les
 #: données. La règle ci-dessous le LIT encore — un client resté en cache peut
 #: l'envoyer — mais aucun écran ne le propose.
-CODES_PUBLIC_CIBLE: tuple[str, ...] = (
-    "copropriétaires_occupants",
-    "bailleurs",
-    "mandataires",
-    "locataires",
-    "conseil_syndical",
-)
+#:
+#: Les LIBELLÉS sont ceux de l'écran (`DESTINATAIRES`, même fichier front), et
+#: le même test les tient d'accord : le serveur les écrit dans la Suite qui
+#: change les Destinataires d'une affaire (`utils/trace_droits.py`, 29/09/2026).
+LIBELLES_PUBLIC_CIBLE: dict[str, str] = {
+    "copropriétaires_occupants": "Copropriétaires occupants",
+    "bailleurs": "Copropriétaires bailleurs",
+    "mandataires": "Bailleurs",
+    "locataires": "Locataires",
+    #  Un RÔLE : son libellé a sa source unique (`test_roles_libelles.py`).
+    "conseil_syndical": libelle_role("conseil_syndical"),
+}
+CODES_PUBLIC_CIBLE: tuple[str, ...] = tuple(LIBELLES_PUBLIC_CIBLE)
 
 
 def reserve_au_conseil(raw: Optional[str]) -> bool:

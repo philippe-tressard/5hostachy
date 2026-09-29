@@ -169,20 +169,45 @@ def _nue(categorie: str, public=None, confidentiel=False) -> Ticket:
 
 
 @pytest.mark.parametrize(
-    "categorie", ["nuisance", "acces_accueil", "sinistre", "question", "bug", "entretien"]
+    "categorie",
+    ["nuisance", "acces_accueil", "sinistre", "question", "bug", "entretien", "etude_travaux"],
 )
 def test_une_affaire_fermee_par_sa_categorie_ne_sort_pas(categorie):
     assert reservee_au_conseil(_nue(categorie))
     assert hors_du_hall(_nue(categorie))
 
 
-@pytest.mark.parametrize("categorie", ["espaces_verts", "etude_travaux", "panne"])
+@pytest.mark.parametrize("categorie", ["espaces_verts", "panne"])
 def test_une_affaire_ouverte_par_sa_categorie_peut_sortir(categorie):
     assert not reservee_au_conseil(_nue(categorie))
     assert not hors_du_hall(_nue(categorie))
 
 
+def test_chaque_categorie_a_son_defaut():
+    """Aucune catégorie ne retombe sur `DEFAUT_INCONNU` (29/09/2026).
+
+    La règle historique — les copropriétaires, sans choix du conseil — a quitté
+    `ticket_visible` avec sa dernière catégorie, Étude & travaux. Une catégorie
+    ajoutée sans entrée dans la table serait lue du conseil seul, en silence :
+    fermé, donc sûr, mais pas décidé. La Panne a sa règle, l'Actualité la sienne.
+    """
+    from app.models.tickets import CategorieTicket
+    from app.utils.visibility import DEFAUT_PAR_CATEGORIE
+
+    #  L'énumération porte aussi les anciennes priorités (basse, normale, haute).
+    categories = {c.value for c in CategorieTicket} - {"basse", "normale", "haute"}
+    assert categories - {"panne", "actualite"} == set(DEFAUT_PAR_CATEGORIE)
+
+
+def test_etude_travaux_est_lue_du_seul_conseil_sans_choix():
+    """Arbitré le 29/09/2026 : une étude est le dossier du conseil."""
+    from app.utils.visibility import destinataires_par_defaut
+
+    assert destinataires_par_defaut(_nue("etude_travaux")) == ["conseil_syndical"]
+
+
 def test_un_choix_du_conseil_rouvre_ce_que_la_categorie_fermait():
     assert not reservee_au_conseil(_nue("nuisance", public=["locataires"]))
+    assert not reservee_au_conseil(_nue("etude_travaux", public=["copropriétaires_occupants"]))
     assert reservee_au_conseil(_nue("etude_travaux", public=["conseil_syndical"]))
     assert reservee_au_conseil(_nue("espaces_verts", confidentiel=True))

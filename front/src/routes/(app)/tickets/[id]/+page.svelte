@@ -42,6 +42,7 @@
 	let ticket: any = null;
 	let messages: TicketMessage[] = [];
 	let evolutions: TicketEvolution[] = [];
+	let erreurSuivi = '';
 	let loading = true;
 	/**  Non vide = on n'a PAS pu lire le ticket. Distinct de « il n'existe pas ». */
 	let erreur = '';
@@ -97,8 +98,10 @@
 	async function loadEvolutions() {
 		try {
 			evolutions = await ticketsApi.evolutions(ticketId);
-		} catch {
-			/* silencieux */
+			erreurSuivi = '';
+		} catch (e) {
+			//  Dit, jamais avalé (29/09/2026) : avalé, un 403 rendait un fil VIDE (TK-124285).
+			erreurSuivi = messageErreur(e);
 		}
 	}
 
@@ -332,6 +335,7 @@
 		whatsappInterdit={motifWhatsappInterdit(!!ticket && ticketLuDuSeulConseil(ticket), 'ticket')}
 		optionsInitiales={optionsDuTicket(ticket)}
 		{evolutions}
+		{erreurSuivi}
 		on:change={loadEvolutions}
 	/>
 

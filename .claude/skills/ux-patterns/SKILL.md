@@ -1091,8 +1091,8 @@ https://claude.ai/artifact/BRYAWNn4EZAx1EBTHHNMQu
   catégorie, lieu, personnes, prestataire, équipement, suites, messages, pièces
   jointes. L'écran n'en a pas de seconde : `$lib/recherche-affaires` demande
   (après la frappe, dernière réponse seule) et filtre.
-- 🔴 **Elle ne lit que ce que l'écran montre** : `ticket_visible`, `lit_les_suites`,
-  `lit_les_notes_internes`, `document_visible` — les prédicats des routes qui
+- 🔴 **Elle ne lit que ce que l'écran montre** : `ticket_visible` (l'affaire et son
+  fil, depuis le 29/09/2026), `lit_les_notes_internes`, `document_visible` — les prédicats des routes qui
   montrent le même texte, jamais réécrits (`test_recherche_affaires.py`). Un
   compte de résultats est une information.
 - La carte dit **où** : « Trouvé dans une suite », et le passage en segments

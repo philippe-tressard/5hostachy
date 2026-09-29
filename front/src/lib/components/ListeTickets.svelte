@@ -47,6 +47,8 @@
 	export let archive = false;
 	export let expandedIds: Set<number> = new Set();
 	export let evolsMap: Record<number, TicketEvolution[]> = {};
+	/** Le fil qu'on n'a pas pu charger, par affaire — dit par la carte. */
+	export let evolsErreurs: Record<number, string> = {};
 	/** Le ticket ouvert en correction, s'il y en a un. */
 	export let ticketEnEdition: number | null = null;
 	/** Le ticket ouvert en nouvelle entrée d'Historique, s'il y en a un. */
@@ -85,6 +87,7 @@
 		<ActualiteEnListe
 			ticket={t}
 			evolutions={evolsMap[t.id] ?? []}
+			erreurSuivi={evolsErreurs[t.id] ?? ''}
 			expanded={expandedIds.has(t.id)}
 			{archive}
 			mode={modeDe(t.id)}
@@ -108,6 +111,7 @@
 		<CarteTicket
 			ticket={t}
 			evolutions={evolsMap[t.id] ?? []}
+			erreurSuivi={evolsErreurs[t.id] ?? ''}
 			correspondance={correspondances.get(t.id) ?? null}
 			expanded={expandedIds.has(t.id)}
 			{archive}

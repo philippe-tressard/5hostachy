@@ -54,10 +54,13 @@
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import EtatListe from './EtatListe.svelte';
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
 
 	export let ticket: Ticket;
 	export let evolutions: TicketEvolution[] = [];
+	/** Le fil n'a pas pu être chargé : on le DIT, au lieu d'un fil vide. */
+	export let erreurSuivi = '';
 	export let expanded = false;
 	/** Allure d'archive — atténuée, sans épingle ni « New ». */
 	export let archive = false;
@@ -219,6 +222,7 @@
 	</svelte:fragment>
 
 	<svelte:fragment slot="apres-corps">
+		<EtatListe compact erreur={erreurSuivi} />
 		{#if evolutions.length}
 			<div class="actu-fil">
 				<RubriqueHistorique

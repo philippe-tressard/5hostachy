@@ -159,10 +159,13 @@
 			"hors_perimetre": false
 		},
 		{
-			"nom": "affaire, copropriété entière",
+			"nom": "affaire aux copropriétaires choisis, copropriété entière",
 			"actualite": false,
 			"confidentiel": false,
-			"public_cible": [],
+			"public_cible": [
+				"copropriétaires_occupants",
+				"bailleurs"
+			],
 			"perimetre": "global",
 			"reserve_perimetre": false,
 			"lecteurs": [
@@ -173,10 +176,13 @@
 			"categorie": "etude_travaux"
 		},
 		{
-			"nom": "affaire sur un bâtiment : réservée d'office",
+			"nom": "affaire aux copropriétaires choisis sur un bâtiment : réservée d'office",
 			"actualite": false,
 			"confidentiel": false,
-			"public_cible": [],
+			"public_cible": [
+				"copropriétaires_occupants",
+				"bailleurs"
+			],
 			"perimetre": "batiment",
 			"reserve_perimetre": false,
 			"lecteurs": [
@@ -259,10 +265,13 @@
 			"categorie": "nuisance"
 		},
 		{
-			"nom": "affaire datée, copropriété entière : les copropriétaires seuls — la date n'ouvre plus rien aux locataires (#1428)",
+			"nom": "affaire aux copropriétaires choisis datée, copropriété entière : les copropriétaires seuls — la date n'ouvre plus rien aux locataires (#1428)",
 			"actualite": false,
 			"confidentiel": false,
-			"public_cible": [],
+			"public_cible": [
+				"copropriétaires_occupants",
+				"bailleurs"
+			],
 			"reserve_perimetre": false,
 			"perimetre": "global",
 			"datee": true,
@@ -275,10 +284,13 @@
 			"categorie": "etude_travaux"
 		},
 		{
-			"nom": "affaire datée sur un bâtiment : ses copropriétaires, pas ses locataires (#1428)",
+			"nom": "affaire aux copropriétaires choisis datée sur un bâtiment : ses copropriétaires, pas ses locataires (#1428)",
 			"actualite": false,
 			"confidentiel": false,
-			"public_cible": [],
+			"public_cible": [
+				"copropriétaires_occupants",
+				"bailleurs"
+			],
 			"reserve_perimetre": false,
 			"perimetre": "batiment",
 			"datee": true,
@@ -291,10 +303,13 @@
 			"categorie": "etude_travaux"
 		},
 		{
-			"nom": "affaire datée en AG : les copropriétaires",
+			"nom": "affaire aux copropriétaires choisis datée en AG : les copropriétaires",
 			"actualite": false,
 			"confidentiel": false,
-			"public_cible": [],
+			"public_cible": [
+				"copropriétaires_occupants",
+				"bailleurs"
+			],
 			"reserve_perimetre": false,
 			"perimetre": "global",
 			"datee": true,
@@ -597,17 +612,14 @@
 			"hors_perimetre": null
 		},
 		{
-			"nom": "affaire Étude & travaux sans choix : les copropriétaires, inchangé (#1436)",
+			"nom": "affaire Étude & travaux sans choix : le conseil seul (29/09/2026)",
 			"actualite": false,
 			"categorie": "etude_travaux",
 			"confidentiel": false,
 			"public_cible": [],
 			"perimetre": "global",
 			"reserve_perimetre": false,
-			"lecteurs": [
-				"copropriétaire_résident",
-				"copropriétaire_bailleur"
-			],
+			"lecteurs": [],
 			"hors_perimetre": null
 		}
 	]

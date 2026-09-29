@@ -158,10 +158,14 @@ const VOCABLE_CONCERNE: Vocable = {
  */
 export const CONCERNE = 'concerné';
 
+/** Une catégorie que la table ne connaît pas : le conseil seul. Miroir serveur. */
+export const DEFAUT_INCONNU = ['conseil_syndical'];
+
 /**
  * Les Destinataires d'une affaire SANS choix du conseil, par catégorie (#1436,
- * arbitré le 28/09/2026). Absente : les copropriétaires — Étude & travaux. La
- * Panne a sa règle, qui dépend du bâtiment.
+ * arbitré le 28/09/2026 ; Étude & travaux au conseil seul le 29/09/2026). La
+ * Panne a sa règle, qui dépend du bâtiment ; une catégorie absente, le conseil
+ * seul (`DEFAUT_INCONNU`).
  *
  * ⚠️ Miroir de `DEFAUT_PAR_CATEGORIE` (`utils/visibility/defauts_affaire.py`), tenus
  * d'accord par `lecture_pastille.json` : un cas par catégorie.
@@ -171,6 +175,7 @@ export const DEFAUT_PAR_CATEGORIE: Record<string, string[]> = {
 	acces_accueil: [CONCERNE],
 	espaces_verts: [TOUS_LES_RESIDENTS],
 	sinistre: [CONCERNE],
+	etude_travaux: ['conseil_syndical'],
 	entretien: ['conseil_syndical'],
 	question: [CONCERNE],
 	bug: [CONCERNE],
@@ -238,8 +243,8 @@ export function titreLecture(l: Lecture): string {
 /**
  * Les Destinataires qu'une affaire a SANS choix du conseil (#1343) — ce que
  * sa nature décide, et que les pastilles présélectionnent : selon la
- * catégorie (`DEFAUT_PAR_CATEGORIE`, #1436), les copropriétaires sinon
- * (occupants et bailleurs), datée ou non (#1428) ; une Panne, les siens. Une
+ * catégorie (`DEFAUT_PAR_CATEGORIE`, #1436), le conseil seul sinon
+ * (`DEFAUT_INCONNU`), datée ou non (#1428) ; une Panne, les siens. Une
  * actualité : « Tous ».
  *
  * La règle vit au serveur (`ticket_visible`) ; `lecture_pastille.json` tient
@@ -259,9 +264,7 @@ export function destinatairesParDefaut(n: {
 	//  `destinataires_par_defaut` (`utils/visibility/defauts_affaire.py`).
 	if (n.categorie === 'panne')
 		return n.dansBatiments ? ['copropriétaires_occupants', 'locataires'] : [TOUS_LES_RESIDENTS];
-	return (
-		(n.categorie && DEFAUT_PAR_CATEGORIE[n.categorie]) || ['copropriétaires_occupants', 'bailleurs']
-	);
+	return (n.categorie && DEFAUT_PAR_CATEGORIE[n.categorie]) || DEFAUT_INCONNU;
 }
 
 export function lectureDe(e: EntreeLecture): Lecture {

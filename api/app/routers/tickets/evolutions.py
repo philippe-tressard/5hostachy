@@ -12,7 +12,6 @@ from sqlmodel import Session, select
 from app.auth.deps import (
     est_moderateur,
     get_current_user,
-    lit_les_suites,
     peut_commenter,
     require_admin,
     require_cs_or_admin,
@@ -36,7 +35,7 @@ from app.utils.fichiers import chemins_locaux
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_internes, photos_json
 from app.utils.recuperer import ou_404
-from app.utils.visibility import reservee_au_conseil
+from app.utils.visibility import reservee_au_conseil, ticket_visible, trace_droits
 from app.utils.prochaine_visite import apres_cloture
 
 from .commun import (
@@ -67,10 +66,14 @@ def get_evolutions(
     user: Utilisateur = Depends(get_current_user),
 ):
     ticket = ou_404(session, Ticket, ticket_id, "Ticket")
-    #  🔴 `peut_commenter` ÉLARGIT au « saisi pour » — et c'est une correction :
-    #  un résident pour qui le CS a déposé un ticket ne pouvait pas lire
-    #  l'historique de sa propre demande. C'est la raison d'être du champ.
-    if not lit_les_suites(ticket, user):
+    #  🔴 LE FIL SE LIT PAR QUI LIT L'AFFAIRE (29/09/2026), arbitré à l'écran
+    #  après TK-124285 : des copropriétaires lisaient l'affaire de leur
+    #  bâtiment et en voyaient les suites VIDES — la règle était celle de
+    #  l'écriture (`peut_commenter`), et l'écran avalait le 403. Les droits
+    #  appartiennent à l'affaire, jamais à une Suite : celle qui les change
+    #  les change pour tout le fil, et le dit (`visibility/trace_droits.py`).
+    #  C'est la règle des messages (`messages.py`), et celle de la recherche.
+    if not ticket_visible(ticket, user):
         raise HTTPException(403, "Accès refusé")
     evols = session.exec(
         select(TicketEvolution)
@@ -310,12 +313,24 @@ def add_evolution(
     if est_moderateur(user) and (
         body.public_cible is not None or body.reserve_perimetre is not None
     ):
+        avant = ticket.public_cible
+        reserve_avant = bool(ticket.reserve_perimetre)
         if body.public_cible is not None:
             ticket.public_cible = (
                 json.dumps(body.public_cible, ensure_ascii=False) if body.public_cible else None
             )
         if body.reserve_perimetre is not None:
             ticket.reserve_perimetre = body.reserve_perimetre
+        #  🔒 Les droits valent pour TOUT le fil, et la Suite le dit (29/09/2026).
+        droits = trace_droits(
+            avant,
+            ticket.public_cible,
+            reserve_avant,
+            bool(ticket.reserve_perimetre),
+            vide="Tous" if est_actualite(ticket) else "par défaut de la catégorie",
+        )
+        if droits:
+            evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(droits)}</em></p>"
         ticket.mis_a_jour_le = horloge.maintenant()
         session.add(ticket)
     if est_actualite(ticket):

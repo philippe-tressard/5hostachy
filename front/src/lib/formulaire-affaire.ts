@@ -27,6 +27,8 @@ import type { ConditionInactive, Etat, IdSection, NatureAffaire } from '$lib/ent
 import { motifInactif } from '$lib/entites/types';
 import { TICKET } from '$lib/entites/ticket';
 import { concerneTousLesResidents } from '$lib/destinataires';
+import { lectureDe, titreLecture } from '$lib/lecture';
+import { lectureDuTicket, natureLue, perimetreRestreint } from '$lib/lecture-ticket';
 import { depuisChampLocal } from '$lib/date';
 import { lotDepuisSaisie, type SaisieSaisiPour } from '$lib/saisi-pour';
 import { CATEGORIES_TICKET, estActualite, optionsVersTicket } from '$lib/tickets';
@@ -238,6 +240,63 @@ export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[
 		if (avant.suivi_kanban) pertes.push('l’inscription au kanban');
 	}
 	return pertes;
+}
+
+/**
+ * Qui lira l'affaire APRÈS la correction, s'il change — `null` sinon.
+ *
+ * 🔴 Arbitré le 29/09/2026 : *« en édition, toutes les sections éditables à la
+ * création sont modifiables, et l'application est rétroactive sur tout le fil,
+ * avec une alerte »*. Les droits sont ceux de l'AFFAIRE (TK-124285) : changer
+ * ses Destinataires, sa confidentialité, son périmètre ou sa catégorie change
+ * qui lit l'affaire ET toutes ses suites, déjà écrites comprises. La Suite
+ * l'écrit dans le fil (`visibility/trace_droits.py`) ; la correction le dit
+ * AVANT d'enregistrer. Comparé sur la pastille de lecture — la même phrase
+ * que la carte —, jamais sur les champs : une catégorie changée peut changer
+ * les lecteurs sans qu'un seul Destinataire ait bougé.
+ */
+export function changementDeLecture(avant: Ticket, apres: SaisieAffaire): string | null {
+	const actualite = natureDe(apres.categorie) === 'actualite';
+	const ancienne = titreLecture(lectureDuTicket(avant));
+	const nouvelle = titreLecture(
+		lectureDe({
+			...natureLue({ categorie: apres.categorie, perimetre: apres.perimetreCible }),
+			confidentiel: apres.options.brouillon,
+			publicCible: apres.publicCible,
+			perimetreRestreint: perimetreRestreint(apres.perimetreCible),
+			reservePerimetre: actualite && apres.reservePerimetre,
+		}),
+	);
+	return ancienne === nouvelle ? null : `« ${ancienne} » → « ${nouvelle} »`;
+}
+
+/**
+ * L'alerte d'une correction : ce qu'elle efface (`pertesAuChangement`) et qui
+ * lira désormais (`changementDeLecture`) — une seule boîte, `null` si rien.
+ */
+export function alerteCorrection(
+	avant: Ticket,
+	apres: SaisieAffaire,
+): { titre: string; message: string } | null {
+	const pertes = pertesAuChangement(avant, apres);
+	const lecture = changementDeLecture(avant, apres);
+	if (!pertes.length && !lecture) return null;
+	const phrases: string[] = [];
+	if (pertes.length) phrases.push(`Ce changement de catégorie efface ${pertes.join(', ')}.`);
+	if (lecture)
+		phrases.push(
+			`Qui la lit change : ${lecture}. Cela vaut pour toute l’affaire et tout son fil, ` +
+				'suites déjà écrites comprises.',
+		);
+	const nature = natureDe(apres.categorie) === natureDe(avant.categorie);
+	return {
+		titre: nature
+			? 'Changer qui la lit'
+			: natureDe(apres.categorie) === 'actualite'
+				? 'En faire une actualité'
+				: 'En faire une affaire suivie',
+		message: phrases.join(' '),
+	};
 }
 
 /**

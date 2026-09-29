@@ -4,7 +4,8 @@ La règle de correspondance vit dans `app/utils/recherche_affaires.py` ; ce modu
 ne fait que rassembler, pour CE lecteur, les textes qu'il pourrait lire à l'écran :
 
 - les affaires : `ticket_visible`, la règle de la liste ;
-- leur fil de suivi : `lit_les_suites`, la règle de `GET /{id}/evolutions` ;
+- leur fil de suivi : la même règle que l'affaire — `GET /{id}/evolutions`
+  applique `ticket_visible` depuis le 29/09/2026 ;
 - leurs messages : les notes internes selon `lit_les_notes_internes`, la règle de
   `GET /{id}/messages` ;
 - leurs documents : `document_visible`, la règle du téléchargement.
@@ -25,7 +26,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlmodel import Session, col, select
 
-from app.auth.deps import get_current_user, lit_les_notes_internes, lit_les_suites
+from app.auth.deps import get_current_user, lit_les_notes_internes
 from app.database import get_session
 from app.models.core import MessageTicket, Ticket, TicketEvolution, Utilisateur
 from app.models.documents import Document
@@ -131,17 +132,16 @@ def rechercher(
             Texte("description", texte_brut(t.description)),
             *_pieces(parse_photos(t.photos_urls) + parse_photos(t.fichiers_urls)),
         ]
-        if lit_les_suites(t, user):
-            for e in suites.get(t.id, []):
-                textes.append(
-                    Texte(
-                        "suite",
-                        texte_brut(e.contenu or ""),
-                        date=e.cree_le,
-                        auteur=nom(e.auteur_id),
-                    )
+        for e in suites.get(t.id, []):
+            textes.append(
+                Texte(
+                    "suite",
+                    texte_brut(e.contenu or ""),
+                    date=e.cree_le,
+                    auteur=nom(e.auteur_id),
                 )
-                textes += _pieces(parse_photos(e.fichiers_urls), e.cree_le)
+            )
+            textes += _pieces(parse_photos(e.fichiers_urls), e.cree_le)
         for m in messages.get(t.id, []):
             textes.append(
                 Texte("message", texte_brut(m.contenu), date=m.cree_le, auteur=nom(m.auteur_id))

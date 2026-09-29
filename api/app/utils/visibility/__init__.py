@@ -31,6 +31,7 @@ Règles métier appliquées :
 #  n'est pas un découpage, c'est un déménagement à leurs frais.
 from .socle import (
     CODES_PUBLIC_CIBLE,
+    LIBELLES_PUBLIC_CIBLE,
     cible_visible,
     perimetre_visible,
     public_cible_visible,
@@ -50,7 +51,13 @@ from .objets import (
     ticket_visible,
 )
 from .documents import document_visible
-from .defauts_affaire import CONCERNE, DEFAUT_PAR_CATEGORIE, destinataires_par_defaut
+from .trace_droits import trace_droits
+from .defauts_affaire import (
+    CONCERNE,
+    DEFAUT_INCONNU,
+    DEFAUT_PAR_CATEGORIE,
+    destinataires_par_defaut,
+)
 
 #  ⚠️ Cette liste ne se tient pas à la main : `test_visibilite_surface.py` la
 #  compare aux noms publics RÉELLEMENT définis par les trois fragments, et échoue
@@ -63,6 +70,7 @@ __all__ = [
     #  primitive de plus : c'est leur écriture UNIQUE, depuis le 06/09 (#782).
     "cible_visible",
     "CODES_PUBLIC_CIBLE",
+    "LIBELLES_PUBLIC_CIBLE",
     "public_cible_visible",
     "reserve_au_conseil",
     "annonce_visible",
@@ -75,9 +83,11 @@ __all__ = [
     "can_see_ag",
     "ticket_visible",
     "CONCERNE",
+    "DEFAUT_INCONNU",
     "DEFAUT_PAR_CATEGORIE",
     "destinataires_par_defaut",
     "reservee_au_conseil",
     "hors_du_hall",
     "document_visible",
+    "trace_droits",
 ]

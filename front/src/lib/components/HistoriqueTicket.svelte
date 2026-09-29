@@ -32,6 +32,7 @@
 	import type { ContexteAssistant } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import EtatListe from './EtatListe.svelte';
 	import { TITRE_HISTORIQUE } from '$lib/archives';
 	import EvolForm from './EvolForm.svelte';
 	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
@@ -87,6 +88,8 @@
 	let options = { ...optionsInitiales };
 	$: if (ouvert) options = { ...optionsInitiales };
 	export let evolutions: TicketEvolution[] = [];
+	/** Le fil n'a pas pu être chargé : on le DIT, au lieu d'un fil vide. */
+	export let erreurSuivi = '';
 
 	/** Émis après toute écriture — la page recharge ce qu'elle affiche. */
 	const dispatch = createEventDispatcher<{ change: void }>();
@@ -181,6 +184,7 @@
 </script>
 
 <div class="bloc-historique">
+	<EtatListe compact erreur={erreurSuivi} />
 	<RubriqueHistorique
 		avecFiltre
 		{evolutions}

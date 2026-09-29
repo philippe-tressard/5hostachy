@@ -44,6 +44,7 @@
 	import ApercuTicket from './ApercuTicket.svelte';
 	import ExtraitRecherche from './ExtraitRecherche.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
+	import EtatListe from './EtatListe.svelte';
 	import PastillesAffaire from './PastillesAffaire.svelte';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import ActionsTicket from './ActionsTicket.svelte';
@@ -86,6 +87,8 @@
 	//  sinon. Réactif : la carte se rafraîchit quand le ticket change.
 	$: proprietaireNom = nomProprietaire(ticket);
 	export let evolutions: TicketEvolution[] = [];
+	/** Le fil n'a pas pu être chargé : on le DIT, au lieu d'un fil vide. */
+	export let erreurSuivi = '';
 	/** Ce qui l'a fait trouver, quand la liste est une recherche (27/09/2026). */
 	export let correspondance: CorrespondanceAffaire | null = null;
 	export let expanded = false;
@@ -340,6 +343,7 @@
 					</svelte:fragment>
 				</FicheLecture>
 
+				<EtatListe compact erreur={erreurSuivi} />
 				{#if evolutions.length > 0}
 					<div class="tk-fil">
 						<!--  Le crayon par entrée : il existait dans la rubrique depuis #431,

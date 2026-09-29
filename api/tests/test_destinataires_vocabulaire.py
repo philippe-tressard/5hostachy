@@ -27,7 +27,7 @@ from pathlib import Path
 import pytest
 
 from app.models.core import RoleUtilisateur, StatutUtilisateur, Utilisateur
-from app.utils.visibility import CODES_PUBLIC_CIBLE, public_cible_visible
+from app.utils.visibility import CODES_PUBLIC_CIBLE, LIBELLES_PUBLIC_CIBLE, public_cible_visible
 
 _FRONT = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "destinataires.ts"
 
@@ -42,15 +42,25 @@ _TEMOIN = {
 }
 
 
-def _codes_du_front() -> list[str]:
-    """Les `code:` de la table `DESTINATAIRES`, dans leur ordre d'affichage."""
+def _table_du_front() -> str:
+    """Le corps de la table `DESTINATAIRES` du sélecteur."""
     source = _FRONT.read_text(encoding="utf-8")
     bloc = re.search(r"DESTINATAIRES\s*:\s*Destinataire\[\]\s*=\s*\[(.*?)\n\];", source, re.S)
     assert bloc, (
         f"table DESTINATAIRES introuvable dans {_FRONT} : le contrôle ne peut pas "
         "s'exécuter, il ne doit donc pas passer au vert (standards/04 §2)"
     )
-    return re.findall(r"code:\s*'([^']+)'", bloc.group(1))
+    return bloc.group(1)
+
+
+def _codes_du_front() -> list[str]:
+    """Les `code:` de la table `DESTINATAIRES`, dans leur ordre d'affichage."""
+    return re.findall(r"code:\s*'([^']+)'", _table_du_front())
+
+
+def _libelles_du_front() -> dict[str, str]:
+    """`code` → `libelle` de la table `DESTINATAIRES`, tels que l'écran les montre."""
+    return dict(re.findall(r"code:\s*'([^']+)',\s*libelle:\s*'([^']+)'", _table_du_front()))
 
 
 def test_le_front_est_lisible():
@@ -89,6 +99,14 @@ def test_chaque_code_annonce_est_reellement_honore(code):
     assert public_cible_visible(f'["{code}"]', temoin) is True, (
         f"« {code} » est annoncé au catalogue mais la règle ne l'honore pour personne."
     )
+
+
+def test_memes_libelles_des_deux_cotes():
+    """Le serveur écrit ces libellés dans la Suite qui change les Destinataires
+    (`visibility/trace_droits.py`, 29/09/2026) : ils doivent être ceux que le
+    conseil a cochés à l'écran, sinon la trace nomme un public qu'il n'a pas vu."""
+    assert len(_libelles_du_front()) == len(_codes_du_front()), "libellé illisible au front"
+    assert _libelles_du_front() == LIBELLES_PUBLIC_CIBLE
 
 
 def test_un_temoin_par_code():

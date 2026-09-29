@@ -24,19 +24,13 @@ from app.models.core import (
     PetiteAnnonce,
     RoleUtilisateur,
     Sondage,
-    StatutUtilisateur,
     Ticket,
     TypeEvenement,
     Utilisateur,
 )
 from app.utils.perimetres import parse_perimetres
 
-#  ⚠️ `_codes_json_pour_acces` est privé au paquet, pas au fichier : c'est le
-#  parseur commun des listes de codes (« qui est visé »), et deux fragments le
-#  composent. Le découpage a coupé cette dépendance au premier essai — 56 tests
-#  sont tombés d'un coup sur un `NameError`, ce qui est la bonne façon d'échouer.
 from .socle import (
-    _codes_json_pour_acces,
     _parse_json_list,
     cible_visible,
     perimetre_visible,
@@ -214,10 +208,6 @@ def can_see_ag(user: Utilisateur) -> bool:
 
 
 # ── Règles ticket ─────────────────────────────────────────────────────────────
-#: Ceux qui ne lisent d'une affaire suivie que ce qui les concerne (#1311).
-_LECTURE_RESTREINTE = (StatutUtilisateur.locataire, StatutUtilisateur.mandataire)
-
-
 def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     """Qui peut LIRE ce ticket — jamais qui peut y écrire.
 
@@ -309,52 +299,19 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     #  des deux : une donnée abîmée ne peut que restreindre (#789).
     if _parse_json_list(ticket.public_cible, []):
         return cible_visible(ticket.perimetre_cible, ticket.public_cible, user)
-    #  Sans choix, la catégorie en décide (#1343, #1436).
+    #  Sans choix, la catégorie en décide (#1343, #1436) — et TOUTES en
+    #  décident depuis le 29/09/2026. La règle historique « les copropriétaires
+    #  du périmètre, jamais les locataires ni les mandataires » (#710, #1311,
+    #  #1428) valait sans choix du conseil ; Étude & travaux, sa dernière
+    #  catégorie, est passée au conseil seul, et la règle est partie avec elle
+    #  plutôt que de rester écrite sans servir. Ce qu'elle protégeait tient par
+    #  la table : aucun défaut n'ouvre aux locataires, hors « Tous » (Espaces
+    #  verts) et la Panne de leur bâtiment, arbitrés tous deux.
     defaut = destinataires_par_defaut(ticket)
     if defaut == [CONCERNE]:
         #  L'auteur, le « saisi pour » et le conseil sont sortis plus haut.
         return False
-    if defaut is not None:
-        return cible_visible(ticket.perimetre_cible, json.dumps(defaut, ensure_ascii=False), user)
-
-    #  🔴 UN LOCATAIRE NE VOIT QUE LES SIENS (05/09/2026), demandé à l'écran :
-    #  *« les locataires ne voient pas les tickets »*.
-    #
-    #  C'est un retrait partiel de l'ouverture du 02/09 (#710), qui visait « les
-    #  copropriétaires et locataires ». Ce qu'un locataire a déposé — ou ce qu'on
-    #  a saisi pour lui — lui reste visible : ces deux cas sont traités AVANT, et
-    #  cette règle ne les touche pas. Il peut donc toujours signaler, et suivre sa
-    #  propre demande ; il ne lit simplement plus les affaires de l'immeuble.
-    #
-    #  ⚠️ La règle est ICI, avec les autres, et nulle part ailleurs : ni dans un
-    #  écran, ni dans un `where` de liste. *« pour la sécurité tout doit être
-    #  centralisé, pas de règles perdues dans une page »* — et c'est aussi ce qui
-    #  fait que la liste et la fiche ne peuvent pas diverger, puisque les deux
-    #  passent par cette fonction.
-    #
-    #  🔴 …ET LA DATE N'Y CHANGE RIEN (#1428, 28/09/2026). Elle y changeait
-    #  quelque chose du 25/09 au 28/09 (#1092) : une affaire DATÉE — au
-    #  calendrier — se rouvrait aux locataires de son périmètre, pour rendre au
-    #  locataire du bâtiment 1 les travaux de son immeuble (TK-E00066). Elle a
-    #  ouvert aussi ce que le calendrier leur taisait : contrats de maintenance,
-    #  résiliations, sujets d'AG — trouvés par un locataire dans la recherche.
-    #  Arbitré à l'écran : ce qui concerne les résidents leur parvient par une
-    #  ACTUALITÉ, ou par des Destinataires que le conseil choisit (plus haut) ;
-    #  une affaire suivie reste l'affaire des copropriétaires.
-    #
-    #  🔴 …ET LE MANDATAIRE, COMME LE LOCATAIRE (#1311, 25/09/2026). Arbitré à
-    #  l'écran : une affaire suivie se lit par les COPROPRIÉTAIRES — occupants
-    #  et bailleurs —, pas par l'agence ou le gestionnaire qui loue pour eux.
-    #  La pastille (`$lib/lecture`) le dit aussi : `lecture_pastille.json`.
-    if user.statut in _LECTURE_RESTREINTE:
-        return False
-
-    perims = _codes_json_pour_acces(ticket.perimetre_cible)
-    if perims is None:
-        #  Ciblage illisible : on refuse. Le CS, l'admin et l'auteur sont déjà
-        #  sortis plus haut — personne ne perd l'accès nécessaire pour corriger.
-        return False
-    return perimetre_visible(perims, user)
+    return cible_visible(ticket.perimetre_cible, json.dumps(defaut, ensure_ascii=False), user)
 
 
 def reservee_au_conseil(ticket: Ticket) -> bool:

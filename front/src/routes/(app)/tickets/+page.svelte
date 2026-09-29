@@ -74,6 +74,7 @@
 	// Évolutions par ticket (chargées à la demande)
 	let evolsMap: Record<number, TicketEvolution[]> = {};
 	let evolsLoaded = new Set<number>();
+	let evolsErreurs: Record<number, string> = {};
 	let showEvolForm: number | null = null;
 	let editingTicket: number | null = null;
 	let evolSaving = false;
@@ -191,8 +192,10 @@
 			evolsMap[id] = await ticketsApi.evolutions(id);
 			evolsLoaded = new Set([...evolsLoaded, id]);
 			evolsMap = { ...evolsMap };
-		} catch {
-			/* silencieux */
+			evolsErreurs = { ...evolsErreurs, [id]: '' };
+		} catch (e) {
+			//  Dit, jamais avalé (29/09/2026) : avalé, un 403 rendait un fil VIDE (TK-124285).
+			evolsErreurs = { ...evolsErreurs, [id]: messageErreur(e) };
 		}
 	}
 
@@ -241,6 +244,7 @@
 	$: etatListe = {
 		expandedIds: expandedTickets,
 		evolsMap,
+		evolsErreurs,
 		ticketEnEdition: editingTicket,
 		ticketEnOptions: $optionsTicketId,
 		optionsRapidesEnCours: $optionsTicketEnCours,

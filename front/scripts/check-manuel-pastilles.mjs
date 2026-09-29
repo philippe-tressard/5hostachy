@@ -35,7 +35,9 @@ const NATURE = {
 };
 /** Le cas du manuel → la nature d'objet qui produit sa pastille. */
 const CAS = {
-	copro: { ...NATURE },
+	//  Une Étude & travaux dont le conseil a CHOISI les copropriétaires : sans
+	//  choix, elle est au conseil seul depuis le 29/09/2026 — le cas `cs` le dit.
+	copro: { ...NATURE, publicCible: ['copropriétaires_occupants', 'bailleurs'] },
 	occ: {
 		...NATURE,
 		actualite: true,
