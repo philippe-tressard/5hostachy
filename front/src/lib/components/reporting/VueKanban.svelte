@@ -88,7 +88,7 @@
 								</td>
 								<td>
 									<div>{ev.type}</div>
-									{#if ev.prestataire_nom}<div class="text-muted-sm">{ev.prestataire_nom}</div>{/if}
+									{#if ev.intervenant}<div class="text-muted-sm">{ev.intervenant}</div>{/if}
 									<div class="text-muted-sm">
 										{ev.perimetre}{#if ev.batiment_id}
 											· Bât. {ev.batiment_id}{/if}

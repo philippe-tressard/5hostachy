@@ -79,6 +79,22 @@ class AffaireLieeLue(BaseModel):
     statut: str
 
 
+class ContratDeLAffaire(BaseModel):
+    """Le contrat sous lequel intervient le prestataire d'une affaire (#1445).
+
+    DÉRIVÉ à la lecture (`routers/tickets/commun.contrat_de_l_affaire`). Le
+    rythme se lit par tous — il était déjà affiché sur l'affaire ; le libellé et
+    le numéro par le conseil seul, comme la liste des contrats
+    (`GET /prestataires/contrats`, réservée au conseil).
+    """
+
+    id: int
+    libelle: Optional[str] = None
+    numero_contrat: Optional[str] = None
+    frequence_type: Optional[str] = None
+    frequence_valeur: Optional[int] = None
+
+
 class ChampsIntervenant(BaseModel):
     """Intervenant, récurrence et équipement d'une affaire — conseil seul.
 
@@ -88,6 +104,7 @@ class ChampsIntervenant(BaseModel):
     """
 
     prestataire_id: Optional[int] = None
+    contrat_id: Optional[int] = None  # sous contrat ; `None` hors contrat (#1445)
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None
     equipement: Optional[str] = None

@@ -53,6 +53,8 @@
 	import { lueDuSeulConseil, natureLue } from '$lib/lecture-ticket';
 	import SectionAffairesLiees from '$lib/components/SectionAffairesLiees.svelte';
 	import SectionIntervenant from '$lib/components/SectionIntervenant.svelte';
+	import { contratDeLaSaisie, type ContratEnCours } from '$lib/prestataires';
+	import { richEmpty } from '$lib/publications';
 	import ChampFrequence from '$lib/components/ChampFrequence.svelte';
 	import { essayer } from '$lib/chargement';
 	import { pliageDe } from '$lib/pliage';
@@ -147,12 +149,10 @@
 	let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
 	//  Section « Intervenant » et récurrence d'un Entretien (#1092, lot 5).
 	let prestataireId: number | null = ticket?.prestataire_id ?? null;
+	let contratId: number | null = ticket?.contrat_id ?? null; // le cadre (#1445)
+	$: duContrat = contratDeLaSaisie(contrats, contratId, ticket?.contrat); // son rythme fait foi
 	let equipement = ticket?.equipement ?? '';
-	let contrats: {
-		actif?: boolean;
-		type_equipement?: string | null;
-		prestataire_id?: number | null;
-	}[] = [];
+	let contrats: ContratEnCours[] = [];
 	let frequenceType = ticket?.frequence_type ?? '';
 	let frequenceValeur: number | string | null = ticket?.frequence_valeur ?? null;
 	let prestataires: { id: number; nom: string; actif?: boolean }[] = [];
@@ -172,14 +172,13 @@
 		...(actualite ? {} : { État: STATUT_TICKET_LABELS[statut] ?? statut }),
 	});
 
-	//  L'équipement PROPOSE l'intervenant sous contrat (#1097) — seulement quand
-	//  il vient de changer et qu'aucun n'est désigné : une proposition, jamais
-	//  un remplacement.
+	//  L'équipement PROPOSE l'intervenant sous contrat, et ce contrat (#1097, #1445),
+	//  quand il vient de changer et qu'aucun n'est désigné — jamais un remplacement.
 	let equipementVu = equipement;
 	$: if (equipement !== equipementVu) {
 		equipementVu = equipement;
-		if (prestataireId === null)
-			prestataireId = intervenantPropose(equipement, contrats, prestataires);
+		const propose = intervenantPropose(equipement, contrats, prestataires, prestataireId);
+		if (propose) ({ prestataireId, contratId } = propose);
 	}
 
 	onMount(async () => {
@@ -208,8 +207,6 @@
 		categorie = CATEGORIE_ACTUALITE;
 	}
 
-	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
-
 	/** Tout ce qui a été saisi — la charge utile en est dérivée (`$lib/formulaire-affaire`). */
 	$: saisie = {
 		titre,
@@ -233,6 +230,7 @@
 		annonceHall,
 		saisiPour,
 		prestataireId,
+		contratId,
 		equipement,
 		frequenceType,
 		frequenceValeur,
@@ -422,7 +420,7 @@
 			avecQuand={sectionPresente(TICKET, etat, 'quand')}
 			bind:debut
 			bind:fin
-			quandAutreValeur={!!frequenceType}
+			quandAutreValeur={!!(frequenceType || duContrat?.frequence_type)}
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecReservePerimetre={$isCS}
@@ -469,6 +467,8 @@
 						erreur={erreurPrestataires}
 						pliable={pliageDe(TICKET, 'intervenant')}
 						bind:prestataireId
+						{contrats}
+						bind:contratId
 					/>
 				{/if}
 			</svelte:fragment>
@@ -480,7 +480,12 @@
 			/>
 			<svelte:fragment slot="quand">
 				{#if $isCS && categorie === CATEGORIE_ENTRETIEN}
-					<ChampFrequence idPrefixe="ticket-frequence" bind:frequenceType bind:frequenceValeur />
+					<ChampFrequence
+						idPrefixe="ticket-frequence"
+						{duContrat}
+						bind:frequenceType
+						bind:frequenceValeur
+					/>
 				{/if}
 			</svelte:fragment>
 			<svelte:fragment slot="diffusion">

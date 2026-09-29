@@ -148,6 +148,43 @@ export function typePrestataireLabel(val: string | null | undefined): string {
 	return TYPES_PRESTATAIRE.find((t) => t.val === val)?.label ?? val;
 }
 
+/**  Les contrats sous lesquels un prestataire peut intervenir (#1445) : les
+ *   siens, en cours, et qui portent sur un ÉQUIPEMENT — une assurance ou un
+ *   mandat de syndic ne cadrent pas une intervention. Même règle au serveur :
+ *   `utils/intervenant.contrat_valide`. */
+export function contratsDuPrestataire<
+	C extends { prestataire_id?: number | null; type_equipement?: string | null },
+>(contrats: C[], prestataireId: number | null): C[] {
+	if (prestataireId === null) return [];
+	return contrats.filter(
+		(c) => c.prestataire_id === prestataireId && !HORS_EQUIPEMENT.includes(c.type_equipement ?? ''),
+	);
+}
+
+/**  Un contrat tel que les formulaires d'affaire le chargent — pour proposer
+ *   l'intervenant (#1097) et le cadre de son intervention (#1445). */
+export interface ContratEnCours {
+	id: number;
+	prestataire_id: number;
+	libelle: string;
+	actif?: boolean;
+	type_equipement?: string | null;
+	frequence_type?: string | null;
+	frequence_valeur?: number | null;
+}
+
+/**  Le contrat dont un formulaire d'affaire lit le rythme (#1445) : celui de
+ *   la liste chargée, à défaut celui que le serveur a joint à l'affaire —
+ *   un contrat archivé depuis n'est plus dans la liste. `null` hors contrat. */
+export function contratDeLaSaisie<C>(
+	contrats: (C & { id: number })[],
+	contratId: number | null,
+	joint: C | null | undefined,
+): C | null {
+	if (contratId === null) return null;
+	return contrats.find((c) => c.id === contratId) ?? joint ?? null;
+}
+
 /**  Le filtre « sous contrat » de l'annuaire. Il ne se SAISIT pas : il se lit
  *   sur les contrats actifs de la fiche (#1444) — le cadre d'une intervention
  *   n'est pas une catégorie de l'entreprise. */
@@ -252,15 +289,37 @@ export const FREQUENCES: readonly { val: string; label: string; nombre?: string 
 ];
 
 /**  L'intervenant d'une affaire, tel que la fiche l'affiche : « Otis · ↺ Mensuel ».
- *   Vide sans intervenant — la ligne ne s'affiche pas (#1092, lot 5). */
+ *   Vide sans intervenant — la ligne ne s'affiche pas (#1092, lot 5).
+ *
+ *   Sous contrat (#1445), le rythme est celui du contrat, et le cadre se dit :
+ *   « Otis · ↺ Mensuel · sous contrat n° C-42 » — le numéro pour le conseil
+ *   seul, que le serveur ne sert qu'à lui. */
 export function intervenantAffiche(t: {
 	prestataire_nom?: string | null;
 	frequence_type?: string | null;
 	frequence_valeur?: number | null;
+	contrat?:
+		| ({ numero_contrat?: string | null; libelle?: string | null } & Parameters<
+				typeof frequenceLabel
+		  >[0])
+		| null;
 }): string {
 	if (!t.prestataire_nom) return '';
-	const rythme = frequenceLabel(t);
-	return rythme ? `${t.prestataire_nom} · ${rythme}` : t.prestataire_nom;
+	const rythme = frequenceLabel(t.contrat ?? t);
+	return [t.prestataire_nom, rythme, t.contrat ? cadreSousContrat(t.contrat) : '']
+		.filter(Boolean)
+		.join(' · ');
+}
+
+/**  « sous contrat n° C-42 », « sous contrat « Ascenseur » », ou « sous contrat »
+ *   quand le lecteur n'a ni l'un ni l'autre. Même forme qu'au carnet
+ *   (`carnet_entretien.cadre_intervention`). */
+export function cadreSousContrat(c: {
+	numero_contrat?: string | null;
+	libelle?: string | null;
+}): string {
+	if (c.numero_contrat) return `sous contrat n° ${c.numero_contrat}`;
+	return c.libelle ? `sous contrat « ${c.libelle} »` : 'sous contrat';
 }
 
 /**  La fréquence d'un contrat, en une expression courte.

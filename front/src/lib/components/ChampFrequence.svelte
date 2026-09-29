@@ -15,14 +15,22 @@
 
   « Mensuelle » ne demande pas de nombre : il vaut 1, posé ici pour que le
   serveur reçoive toujours une paire complète.
+
+  🆕 `duContrat` (#1445) : sous contrat, le rythme est CELUI DU CONTRAT — il se
+  lit, il ne se saisit pas. Deux rythmes pour une même visite divergeraient.
 -->
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
-	import { FREQUENCES } from '$lib/prestataires';
+	import { FREQUENCES, frequenceLabel } from '$lib/prestataires';
 
 	export let frequenceType: string | null | undefined = '';
 	export let frequenceValeur: number | string | null | undefined = null;
 	export let idPrefixe = 'frequence';
+	/** Le contrat qui cadre l'intervention : son rythme s'affiche, rien ne se saisit. */
+	export let duContrat: {
+		frequence_type?: string | null;
+		frequence_valeur?: number | null;
+	} | null = null;
 
 	//  « Aucune » est la valeur vide : `null` (fiche jamais réglée) s'y ramène.
 	let choix = frequenceType ?? '';
@@ -31,23 +39,29 @@
 	$: if (unite && !unite.nombre) frequenceValeur = 1;
 </script>
 
-<div class="form-grid form-grid-2 frequence">
-	<!--  Cinq valeurs : des pastilles (#1329), « Aucune » pour la valeur vide. -->
-	<ChoixPastilles
-		options={FREQUENCES}
-		bind:valeur={choix}
-		tous="Aucune"
-		libelle="Fréquence"
-		libelleVisible
-		defilante={false}
-	/>
-	{#if unite?.nombre}
-		<div class="field">
-			<label for="{idPrefixe}-valeur">{unite.nombre}</label>
-			<input id="{idPrefixe}-valeur" type="number" min="1" bind:value={frequenceValeur} />
-		</div>
-	{/if}
-</div>
+{#if duContrat}
+	<p class="aide frequence">
+		Fréquence : {frequenceLabel(duContrat) || 'aucune'} — celle du contrat.
+	</p>
+{:else}
+	<div class="form-grid form-grid-2 frequence">
+		<!--  Cinq valeurs : des pastilles (#1329), « Aucune » pour la valeur vide. -->
+		<ChoixPastilles
+			options={FREQUENCES}
+			bind:valeur={choix}
+			tous="Aucune"
+			libelle="Fréquence"
+			libelleVisible
+			defilante={false}
+		/>
+		{#if unite?.nombre}
+			<div class="field">
+				<label for="{idPrefixe}-valeur">{unite.nombre}</label>
+				<input id="{idPrefixe}-valeur" type="number" min="1" bind:value={frequenceValeur} />
+			</div>
+		{/if}
+	</div>
+{/if}
 
 <style>
 	/*  Seul l'écart : la disposition vient de `.form-grid-2` (`champs.css`). */

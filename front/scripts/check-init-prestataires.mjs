@@ -217,6 +217,7 @@ verifier(
 	'versAffaire : les seuls champs du lot, le périmètre en liste',
 	Object.keys(versAffaire(planNeuf.aCreer[0])).sort(),
 	[
+		'contrat_id',
 		'debut',
 		'description',
 		'frequence_type',

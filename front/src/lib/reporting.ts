@@ -15,6 +15,7 @@
 import { KANBAN_COLS, colonneDuTicket } from '$lib/kanban';
 import { categorieTicketLabel } from '$lib/tickets';
 import type { Ticket } from '$lib/api/types';
+import { intervenantAffiche } from '$lib/prestataires';
 
 //  Un DOSSIER suivi : une affaire au kanban (#1092, 23/09/2026 — c'était un événement).
 export interface ReportDossier {
@@ -30,7 +31,9 @@ export interface ReportDossier {
 	cree_le: string;
 	mis_a_jour_le?: string | null;
 	statut_kanban?: string | null;
-	prestataire_nom?: string | null;
+	/**  « Otis · ↺ Mensuel · sous contrat n° C-42 » — `intervenantAffiche`, la
+	 *   forme de la fiche (#1445) ; il ne portait que le nom. */
+	intervenant?: string | null;
 }
 
 /**  Les dossiers du reporting : les affaires SUIVIES et non archivées, chacune
@@ -52,7 +55,7 @@ export function dossiersSuivis(tickets: Ticket[]): ReportDossier[] {
 			cree_le: t.cree_le,
 			mis_a_jour_le: t.mis_a_jour_le ?? null,
 			statut_kanban: colonneDuTicket(t.statut),
-			prestataire_nom: t.prestataire_nom ?? null,
+			intervenant: intervenantAffiche(t) || null,
 		}));
 }
 export interface ReportPrestataire {

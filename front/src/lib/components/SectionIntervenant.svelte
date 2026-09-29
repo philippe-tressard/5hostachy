@@ -10,13 +10,19 @@
   bâti : ailleurs, la section est rendue INACTIVE par la déclaration `TICKET`
   (`inactivePour`), pas par cette page. Les règles serveur vivent dans
   `api/app/utils/intervenant.py`.
+
+  🆕 Le CADRE de l'intervention (#1445, 28/09/2026) : un prestataire intervient
+  sous contrat ou hors contrat. Le choix ne s'offre que s'il a des contrats en
+  cours — « hors contrat » n'apprendrait rien d'un prestataire qui n'en a aucun
+  (arbitré). Liste construite à la volée : un `<select>`, comme le prestataire
+  (`ux-patterns` §0, seuil des listes courtes).
 -->
 <script lang="ts">
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import { prestataires as prestatairesApi } from '$lib/api';
-	import { EQUIPEMENTS, contactRenseigne } from '$lib/prestataires';
+	import { EQUIPEMENTS, contactRenseigne, contratsDuPrestataire } from '$lib/prestataires';
 	import { tenter } from '$lib/erreurs';
 
 	/** L'identifiant du prestataire retenu, ou `null`. */
@@ -30,6 +36,10 @@
 	export let pliable = false;
 	/** L'équipement de l'affaire : il pré-remplit celui d'un prestataire créé ici. */
 	export let equipement = '';
+	/** Le contrat sous lequel il intervient, `null` hors contrat (#1445). */
+	export let contratId: number | null = null;
+	/** Les contrats en cours — chargés par l'appelant, comme les prestataires. */
+	export let contrats: { id: number; prestataire_id: number; libelle: string }[] = [];
 
 	//  ＋ CRÉER celui qui manque, sans quitter le formulaire (#1145, demandé à
 	//  l'écran le 22/09/2026). Ce que le serveur exige, et rien de plus : nom,
@@ -70,14 +80,25 @@
 	//  l'écrasait aussitôt par le choix affiché.
 	let choix = '';
 	$: choix = prestataireId === null ? '' : String(prestataireId);
-	const choisir = () => (prestataireId = choix === '' ? null : Number(choix));
+	const choisir = () => {
+		prestataireId = choix === '' ? null : Number(choix);
+		//  Un autre intervenant n'a pas ce contrat : le serveur l'effacerait.
+		if (!contratsDuPrestataire(contrats, prestataireId).some((c) => c.id === contratId))
+			contratId = null;
+	};
 	$: retenu = prestataires.find((p) => p.id === prestataireId);
+
+	$: siens = contratsDuPrestataire(contrats, prestataireId);
+	let choixContrat = '';
+	$: choixContrat = contratId === null ? '' : String(contratId);
+	const choisirContrat = () => (contratId = choixContrat === '' ? null : Number(choixContrat));
+	$: cadre = contratId !== null ? 'sous contrat' : siens.length ? 'hors contrat' : '';
 </script>
 
 <SectionFormulaire
 	titre={SECTIONS_LIBELLE.intervenant}
 	{pliable}
-	resume={retenu?.nom ?? 'aucun'}
+	resume={retenu ? [retenu.nom, cadre].filter(Boolean).join(' · ') : 'aucun'}
 	valeurModifiee={prestataireId !== null}
 	pour="{idPrefixe}-prestataire"
 >
@@ -93,6 +114,17 @@
 			{/each}
 		</select>
 	</div>
+	{#if siens.length}
+		<div class="field">
+			<label for="{idPrefixe}-contrat">Cadre de l'intervention</label>
+			<select id="{idPrefixe}-contrat" bind:value={choixContrat} on:change={choisirContrat}>
+				<option value="">Hors contrat</option>
+				{#each siens as c (c.id)}
+					<option value={String(c.id)}>Sous contrat : {c.libelle}</option>
+				{/each}
+			</select>
+		</div>
+	{/if}
 	{#if creation}
 		<!--  Pas de `<form>` : on est DANS celui de l'affaire, et un formulaire
 		      imbriqué soumettrait l'affaire. Les boutons sont `type="button"`. -->

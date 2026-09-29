@@ -199,7 +199,6 @@ def update_ticket(
             ticket.statut = body.statut
             if body.statut in STATUTS_TICKET_CLOS:
                 ticket.ferme_le = horloge.maintenant()
-            apres_cloture(ticket, session)  # la prochaine visite d'un contrat (#1092)
         if body.priorite is not None:
             ticket.priorite = body.priorite
 
@@ -254,6 +253,11 @@ def update_ticket(
                 ticket.public_cible = None
     #  APRÈS le contenu : la récurrence dépend de la catégorie FINALE.
     changes += appliquer_intervenant(ticket, body, session, est_cs=is_cs_admin)
+    #  La prochaine visite d'un contrat (#1092) — APRÈS l'intervenant (#1445) :
+    #  une même correction qui pose le contrat et « Résolu » avance CE contrat.
+    #  Elle était appelée avec le statut, donc sur le contrat d'avant.
+    if body.statut is not None:
+        apres_cloture(ticket, session)
     #  « Quand » : planifié par le conseil seul — ignoré pour un autre, comme
     #  l'intervenant (l'écran ne lui ouvre pas la section).
     if is_cs_admin:

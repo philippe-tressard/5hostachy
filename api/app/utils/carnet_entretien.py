@@ -230,6 +230,18 @@ def _entrees_contrats(session: Session, perimetre: Optional[str]) -> list[Entree
     return entrees
 
 
+def cadre_intervention(contrat: Optional[ContratEntretien], avec_prestataire: bool) -> str:
+    """« sous contrat n° 1234 », « hors contrat », ou rien sans intervenant (#1445).
+
+    Le numéro d'un contrat est facultatif : son libellé le remplace alors.
+    """
+    if contrat is not None:
+        if contrat.numero_contrat:
+            return f"sous contrat n° {contrat.numero_contrat}"
+        return f"sous contrat « {contrat.libelle} »"
+    return "hors contrat" if avec_prestataire else ""
+
+
 def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
     """Ce qui a été FAIT — une affaire Entretien résolue, avec son intervenant.
 
@@ -252,12 +264,15 @@ def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[E
         prestataire = (
             session.get(Prestataire, ticket.prestataire_id) if ticket.prestataire_id else None
         )
+        contrat = session.get(ContratEntretien, ticket.contrat_id) if ticket.contrat_id else None
+        cadre = cadre_intervention(contrat, prestataire is not None)
         entrees.append(
             EntreeCarnet(
                 date_fait=quand,
                 libelle=ticket.titre,
                 origine="intervention",
-                detail=prestataire.nom if prestataire else "",
+                #  « Otis · sous contrat n° 1234 » / « Otis · hors contrat » (#1445).
+                detail=" · ".join(x for x in (prestataire.nom if prestataire else "", cadre) if x),
                 #  Celui que le conseil a désigné, sinon la spécialité de
                 #  l'intervenant — la règle des contrats, jamais une déduction du titre.
                 equipement=ticket.equipement or (prestataire.specialite if prestataire else None),

@@ -19,6 +19,7 @@ import { estBati, natureDe } from '$lib/formulaire-affaire';
 export interface EtatSuiteConseil {
 	equipement: string;
 	prestataireId: number | null;
+	contratId: number | null;
 	debut: string;
 	fin: string;
 	pret?: boolean;
@@ -50,6 +51,7 @@ export function etatSuite(
 					pret: true,
 					equipement: ticket.equipement ?? '',
 					prestataireId: ticket.prestataire_id ?? null,
+					contratId: ticket.contrat_id ?? null,
 					debut: pourChampLocal(ticket.debut),
 					fin: pourChampLocal(ticket.fin),
 				},

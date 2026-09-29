@@ -70,3 +70,54 @@ def test_toutes_ou_aucune(session):
         )
     session.rollback()
     assert session.exec(select(Ticket)).first() is None
+
+
+def test_la_visite_d_un_contrat_part_sous_ce_contrat(session):
+    """#1445 : l'affaire dit qu'elle est sous contrat, et le rythme se lit sur lui."""
+    from app.models.prestataires import ContratEntretien, Prestataire
+
+    cs = _compte(session, "Cs")
+    p = Prestataire(nom="Otis", specialite="ascenseur")
+    session.add(p)
+    session.commit()
+    session.refresh(p)
+    c = ContratEntretien(
+        copropriete_id=1, prestataire_id=p.id, libelle="Ascenseur", type_equipement="ascenseur"
+    )
+    session.add(c)
+    session.commit()
+    session.refresh(c)
+    creer_visites_en_lot(
+        LotDeVisites(affaires=[_visite(prestataire_id=p.id, contrat_id=c.id)]),
+        session=session,
+        user=cs,
+    )
+    t = session.exec(select(Ticket)).one()
+    assert (t.contrat_id, t.frequence_type) == (c.id, None)
+
+
+def test_un_contrat_d_un_autre_prestataire_refuse_le_lot(session):
+    from app.models.prestataires import ContratEntretien, Prestataire
+
+    cs = _compte(session, "Cs")
+    otis, sicli = (
+        Prestataire(nom="Otis", specialite="ascenseur"),
+        Prestataire(nom="Sicli", specialite="extincteurs"),
+    )
+    session.add_all([otis, sicli])
+    session.commit()
+    c = ContratEntretien(
+        copropriete_id=1,
+        prestataire_id=sicli.id,
+        libelle="Extincteurs",
+        type_equipement="extincteurs",
+    )
+    session.add(c)
+    session.commit()
+    with pytest.raises(HTTPException) as refus:
+        creer_visites_en_lot(
+            LotDeVisites(affaires=[_visite(prestataire_id=otis.id, contrat_id=c.id)]),
+            session=session,
+            user=cs,
+        )
+    assert refus.value.status_code == 422 and "Visite 1" in refus.value.detail
