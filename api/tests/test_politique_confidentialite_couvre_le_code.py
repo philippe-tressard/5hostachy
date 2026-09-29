@@ -112,6 +112,13 @@ EXIGENCES = [
         ("models/courriel.py", "class CourrielReleve"),
         ("journal des réponses reçues",),
     ),
+    (
+        #  29/09/2026 : un fil transféré par le conseil devient une affaire, avec
+        #  le nom, l'adresse et le texte de personnes qui n'ont rien envoyé au site.
+        "le versement des courriels transférés par le conseil",
+        ("utils/courriel_transfert.py", "def verser"),
+        ("courriels transférés",),
+    ),
 ]
 
 

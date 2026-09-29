@@ -121,3 +121,40 @@ class CourrielReleve(SQLModel, table=True):
     #: affaire supprimée, et SQLite ne s'en passerait pas proprement (0117).
     ticket_id: Optional[int] = Field(default=None, index=True)
     affaire: Optional[str] = None
+
+
+class FilCourriel(SQLModel, table=True):
+    """Un fil de courriels transféré par le conseil, et l'affaire où il se verse.
+
+    Demandé le 29/09/2026 : après le premier transfert — repère `TK-…` écrit, ou
+    affaire créée —, les suivants du même fil y vont sans repère. Le fil se
+    reconnaît à son objet d'origine, normalisé (`courriel_fil.cle_du_fil`).
+
+    ⚠️ Le lien ne vaut que tant que l'affaire est OUVERTE : deux fils sans rapport
+    peuvent porter le même objet, et une affaire close ne reçoit plus rien.
+    `ticket_id` sans clé étrangère, comme `CourrielReleve` : une affaire supprimée
+    laisse un lien mort, que la relève lit comme « pas de lien ».
+    """
+
+    __tablename__ = "fil_courriel"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cle: str = Field(index=True, unique=True)
+    ticket_id: int = Field(index=True)
+    mis_a_jour_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+
+
+class MessageVerse(SQLModel, table=True):
+    """Un message d'un fil transféré, déjà versé dans une affaire (29/09/2026).
+
+    *« Si par erreur je renvoie une extraction ayant déjà été faite, alors elle
+    n'est pas doublée »* : chaque message versé laisse son EMPREINTE
+    (`courriel_fil.empreinte` — auteur et texte normalisé, jamais le texte).
+    """
+
+    __tablename__ = "message_verse"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    ticket_id: int = Field(index=True)
+    empreinte: str = Field(index=True)
+    verse_le: NaiveDatetime = Field(default_factory=horloge.maintenant)

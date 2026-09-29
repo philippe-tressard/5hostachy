@@ -163,6 +163,22 @@ _MARQUE_TRANSFERT = re.compile(
     re.I,
 )
 _ADRESSE = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
+#: L'objet d'un message cité : « Objet : … », « Subject: … ».
+_OBJET_CITE = re.compile(r"^\*?(Objet|Subject)\s*:\*?", re.I)
+#: Les chevrons d'une citation en texte brut (« > > texte »).
+_CHEVRONS = re.compile(r"^(\s*>)+ ?")
+
+
+def sans_chevrons(ligne: str) -> str:
+    """La ligne sans ses chevrons de citation — un transfert lu depuis le HTML
+    (`_TexteDuHtml`) préfixe de « > » tout ce qui était dans un `<blockquote>`,
+    marque de transfert comprise."""
+    return _CHEVRONS.sub("", ligne)
+
+
+def valeur_d_entete(ligne: str) -> str:
+    """« *Envoyé :* mardi … » → « mardi … » : la valeur d'une ligne d'en-tête citée."""
+    return ligne.split(":", 1)[1].strip().strip("*").strip() if ":" in ligne else ""
 
 
 @dataclass(frozen=True)
@@ -174,6 +190,9 @@ class Transfert:
     de: str
     adresse: str
     corps: str
+    #: Sa date et son objet, tels qu'écrits — lus par `courriel_fil` (29/09/2026).
+    date: str = ""
+    objet: str = ""
 
 
 def transfert_dans(sujet: str, texte: str) -> Transfert | None:
@@ -184,11 +203,11 @@ def transfert_dans(sujet: str, texte: str) -> Transfert | None:
     """
     if not _OBJET_TRANSFERT.match(sujet or ""):
         return None
-    lignes = texte.splitlines()
+    lignes = [sans_chevrons(ligne) for ligne in texte.splitlines()]
     for n, ligne in enumerate(lignes):
         if not _MARQUE_TRANSFERT.match(ligne.strip().strip("*")):
             continue
-        de, fin = "", n + 1
+        de, date, objet, fin = "", "", "", n + 1
         #  Le bloc d'en-têtes du message d'origine, jusqu'à la première ligne vide
         #  qui le suit.
         while fin < len(lignes) and (not lignes[fin].strip() or ":" in lignes[fin]):
@@ -196,7 +215,11 @@ def transfert_dans(sujet: str, texte: str) -> Transfert | None:
             if not nue and de:
                 break
             if _DE.match(nue):
-                de = nue.split(":", 1)[1].strip().strip("*").strip()
+                de = valeur_d_entete(nue)
+            elif _DATE_CITEE.match(nue):
+                date = valeur_d_entete(nue)
+            elif _OBJET_CITE.match(nue):
+                objet = valeur_d_entete(nue)
             fin += 1
         adresse = _ADRESSE.search(de)
         if not adresse:
@@ -206,5 +229,7 @@ def transfert_dans(sujet: str, texte: str) -> Transfert | None:
             de=de,
             adresse=adresse.group(0).lower(),
             corps="\n".join(lignes[fin:]).strip(),
+            date=date,
+            objet=objet,
         )
     return None
