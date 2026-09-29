@@ -2532,7 +2532,9 @@ de kanban, d'une nature (`--nature-fort`), l'orange de l'urgence, `.badge-yellow
 🔒 `npm run lint:charte-valeurs` refuse ces valeurs **sans plafond** — dans les
 composants ET dans `src/styles/`, en style comme dans une chaîne JavaScript —
 et donne le jeton de remplacement. Le reste des valeurs en dur reste sous son
-plafond décroissant.
+plafond décroissant, qui compte les composants **et** les feuilles de
+`src/styles/` hors `socle.css` (#1460) : remonter une valeur dans une feuille est
+un déménagement, pas une dette soldée — le plafond ne bouge pas.
 
 ## Checklist UX (à vérifier avant commit)
 
