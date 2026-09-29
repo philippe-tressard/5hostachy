@@ -27,13 +27,14 @@
 		annonces as annoncesApi,
 		signalements as signalementsApi,
 	} from '$lib/api';
-	import { currentUser, isAdmin, isCS, isGestionnaire } from '$lib/stores/auth';
+	import { authResolue, currentUser, isAdmin, isCS, isGestionnaire } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import { signaler as signalerContenu } from '$lib/signalements';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { essayer } from '$lib/chargement';
 	import ListeSondages from '$lib/components/ListeSondages.svelte';
 	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 	import OngletIdees from '$lib/components/OngletIdees.svelte';
@@ -197,13 +198,20 @@
 	//  affaire, pas celle de l'écran.
 	let signalements: any[] = [];
 
+	//  🔴 Un échec se dit au modérateur : taire la file lui fait croire qu'elle
+	//  est vide (#1459).
+	let erreurSignalements = '';
+	//  🔴 Pas depuis `onMount` : il précède celui du layout, qui charge
+	//  l'utilisateur. Sur un chargement direct, `$isCS` y était encore faux, et la
+	//  file n'était JAMAIS demandée — le CS ne la voyait qu'après une navigation.
+	let signalementsDemandes = false;
+	$: if ($authResolue && $isCS && !signalementsDemandes) {
+		signalementsDemandes = true;
+		chargerSignalements();
+	}
 	async function chargerSignalements() {
 		if (!$isCS) return;
-		try {
-			signalements = await signalementsApi.liste('en_attente');
-		} catch {
-			/* silencieux */
-		}
+		[signalements, erreurSignalements] = await essayer(signalementsApi.liste('en_attente'), []);
 	}
 
 	//  Le geste lui-même vit dans `$lib/signalements` : il était écrit à
@@ -279,7 +287,6 @@
 		sondagesLoading = false;
 		ideesLoading = false;
 		annoncesLoading = false;
-		chargerSignalements();
 
 		// ── Lien profond ────────────────────────────────────────────────────────────
 		//  L'ancre désigne un élément qui vit dans UNE rubrique précise. Sur la bonne
@@ -338,7 +345,9 @@
 {:else}
 	<BarreOnglets pageId="communaute" actif={onglet} />
 
-	{#if $isCS && signalements.length > 0}
+	{#if $isCS && erreurSignalements}
+		<EtatListe compact erreur={erreurSignalements} />
+	{:else if $isCS && signalements.length > 0}
 		<PanneauModeration
 			{signalements}
 			on:resoudre={(e) => resoudreSignalement(e.detail.id, e.detail.decision)}

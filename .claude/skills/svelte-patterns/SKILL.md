@@ -99,7 +99,10 @@ formulent le même échec autrement apprennent deux choses différentes à
 l'utilisateur pour un seul fait.
 
 🔒 `npm run lint:message-erreur` refuse la formulation locale, et
-`npm run lint:catch-vide` refuse un `catch` qui avale l'erreur sans rien dire.
+`npm run lint:catch-vide` refuse un échec rendu comme une absence : le repli
+`.catch(() => [])`, et le `catch` muet d'un `try` qui affecte une variable
+après son `await` (#1459) — l'écran lirait sa valeur initiale comme une réponse.
+Un silence légitime se déclare dans `MUETS_DECLARES`, avec sa raison.
 
 ⚠️ **L'API de `toast` est `toast('error', message)`**, jamais `toast.error(…)` :
 cette section enseignait la seconde forme, qui n'existe nulle part

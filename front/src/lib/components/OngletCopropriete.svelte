@@ -12,6 +12,7 @@
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { fmtDateShort as fmtDate } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { estAbsent, messageErreur } from '$lib/erreurs';
 
 	$: _siteNom = $siteNomStore;
 
@@ -50,6 +51,7 @@
 	 *   façons de lire la même réponse. */
 	let fiche: any = {};
 	let loading = true;
+	let erreur = '';
 	let saving = false;
 
 	onMount(async () => {
@@ -64,8 +66,11 @@
 				form.assurance_contrat_id = data.assurance_contrat_id ?? null;
 				form.syndic_contrat_id = data.syndic_contrat_id ?? null;
 			}
-		} catch {
-			/* first time — empty form */
+		} catch (e) {
+			//  Seul un 404 dit « pas encore de fiche » : le formulaire vide est alors
+			//  juste. Tout autre échec n'a rien lu, et un formulaire vide enregistré
+			//  écraserait la fiche (#1459) — on ne l'affiche donc pas.
+			if (!estAbsent(e)) erreur = messageErreur(e);
 		} finally {
 			loading = false;
 		}
@@ -104,8 +109,8 @@
 
 <svelte:head><title>Admin — Fiche copropriété — {_siteNom}</title></svelte:head>
 
-{#if loading}
-	<EtatListe chargement />
+{#if loading || erreur}
+	<EtatListe chargement={loading} {erreur} titreErreur="Impossible d’afficher la fiche" />
 {:else}
 	<section class="card config-section">
 		<h2 class="config-section-title">

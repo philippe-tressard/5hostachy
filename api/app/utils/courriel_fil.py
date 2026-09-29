@@ -45,6 +45,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from app.utils.courriel_decodage import (
+    CLE_ENTETE,
+    MESSAGE_DU,
     _ADRESSE,
     _MARQUE_TRANSFERT,
     _SEPARATEUR,
@@ -101,10 +103,12 @@ _MOIS = {
 #: Plusieurs points tolérés : la redirection d'OVH DOUBLE le point d'une ligne
 #: qui en commence une, et « sept. » coupé en fin de ligne devient « sept.. ».
 _JOUR_MOIS_AN = re.compile(r"\b(\d{1,2})(?:er)?\s+([^\W\d_]{3,10})\.*,?\s+(\d{4})\b")
-#: « September 29, 2026 » (Outlook en anglais).
-_MOIS_JOUR_AN = re.compile(r"\b([^\W\d_]{3,10})\.*\s+(\d{1,2}),?\s+(\d{4})\b")
-#: « 26/09/2026 », « 26/09/26 ».
-_NUMERIQUE = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{2,4})\b")
+#: « September 29, 2026 » (Outlook en anglais), « September 29th, 2026 » (Proton).
+_MOIS_JOUR_AN = re.compile(r"\b([^\W\d_]{3,10})\.*\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b", re.I)
+#: « 2026-09-29 » (ISO).
+_ISO = re.compile(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b")
+#: « 26/09/2026 », « 26/09/26 », « 29.09.2026 ».
+_NUMERIQUE = re.compile(r"\b(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})\b")
 #: « 08:43 », « 10:12:34 », « 15 h 47 », « 8:43 AM ».
 _HEURE = re.compile(r"\b(\d{1,2})\s*(?:h|:)\s*(\d{2})(?::(\d{2}))?(?:\s*([ap]m)\b)?", re.I)
 #: « UTC+2 », « GMT+02:00 », « +0200 ». Sans fuseau : l'heure de Paris.
@@ -117,9 +121,11 @@ def _sans_accent(texte: str) -> str:
 
 def _jour_mois_an(texte: str) -> tuple[int, int, int, int] | None:
     """(jour, mois, année, position de fin) de la première date lisible."""
-    for motif in (_JOUR_MOIS_AN, _MOIS_JOUR_AN, _NUMERIQUE):
+    for motif in (_JOUR_MOIS_AN, _MOIS_JOUR_AN, _ISO, _NUMERIQUE):
         for m in motif.finditer(texte):
-            if motif is _NUMERIQUE:
+            if motif is _ISO:
+                an, mois, jour = int(m[1]), int(m[2]), int(m[3])
+            elif motif is _NUMERIQUE:
                 jour, mois, an = int(m[1]), int(m[2]), int(m[3])
                 an += 2000 if an < 100 else 0
             elif motif is _JOUR_MOIS_AN:
@@ -166,17 +172,12 @@ def date_citee(texte: str) -> datetime | None:
 
 # ── Les en-têtes de messages cités ────────────────────────────────────────────
 
-#: Une ligne d'en-tête d'un bloc « De : / Envoyé : / Objet : ».
-_CLE = re.compile(
-    r"^(De|From|Envoyé|Sent|Date|À|A|To|Cc|Cci|Bcc|Objet|Subject|Importance"
-    r"|Répondre à|Reply-To)\s*:",
-    re.I,
-)
+#: Les clés d'un bloc d'en-tête : `courriel_decodage.CLE_ENTETE`, la seule liste.
 _CLES_DE = {"de", "from"}
-_CLES_DATE = {"envoyé", "sent", "date"}
-_CLES_OBJET = {"objet", "subject"}
+_CLES_DATE = {"envoyé", "envoyé le", "sent", "date", "date d'envoi"}
+_CLES_OBJET = {"objet", "subject", "sujet"}
 #: Une liste d'adresses peut continuer sur la ligne suivante.
-_CLES_LISTE = {"à", "a", "to", "cc", "cci", "bcc"}
+_CLES_LISTE = {"à", "a", "to", "pour", "cc", "cci", "bcc", "copie à"}
 #: « Le … a écrit : » (une à trois lignes : Gmail coupe la sienne).
 _A_ECRIT_DEBUT = re.compile(r"^(Le|On)\s+\S", re.I)
 _A_ECRIT_FIN = re.compile(r"\s*(a\s+écrit|wrote)\s*:\s*$", re.I)
@@ -187,17 +188,23 @@ def _nue(ligne: str) -> str:
 
 
 def _cle(ligne: str) -> str | None:
-    m = _CLE.match(_nue(ligne))
-    return m[1].lower() if m else None
+    m = CLE_ENTETE.match(_nue(ligne))
+    return re.sub(r"\s+", " ", m[1]).lower() if m else None
 
 
 def _bloc_de(lignes: list[str], i: int) -> tuple[dict, int] | None:
-    """Un bloc « De : … / Envoyé : … » commençant à la ligne `i`, et sa fin."""
-    if _cle(lignes[i]) not in _CLES_DE:
+    """Un bloc d'en-tête commençant à la ligne `i`, et sa fin — ou None.
+
+    Il commence par N'IMPORTE quelle clé (Thunderbird écrit « Sujet : » et
+    « Date : » avant « De : ») ou par « Message du … » (Orange), et n'en est
+    un que s'il porte un auteur ET une date : une ligne « Objet : devis » du
+    corps n'ouvre rien (#1471).
+    """
+    date_du = MESSAGE_DU.match(_nue(lignes[i]))
+    if not date_du and _cle(lignes[i]) is None:
         return None
-    if not any(_cle(lg) in _CLES_DATE for lg in lignes[i + 1 : i + 6]):
-        return None
-    entete, derniere, fin = {}, None, i
+    entete = {"date": date_du.group(1)} if date_du else {}
+    derniere, fin = None, i + 1 if date_du else i
     while fin < len(lignes) and _nue(lignes[fin]):
         cle = _cle(lignes[fin])
         if cle is None:
@@ -213,7 +220,7 @@ def _bloc_de(lignes: list[str], i: int) -> tuple[dict, int] | None:
             elif cle in _CLES_OBJET:
                 entete.setdefault("objet", valeur)
         fin += 1
-    return entete, fin
+    return (entete, fin) if entete.get("de") and entete.get("date") else None
 
 
 def _a_ecrit(lignes: list[str], i: int) -> tuple[dict, int] | None:
@@ -236,7 +243,8 @@ def _a_ecrit(lignes: list[str], i: int) -> tuple[dict, int] | None:
     h = _HEURE.search(phrase, trouve[3]) if trouve else None
     if h is None:
         return None
-    reste = phrase[h.end() :]
+    #  « … 08:43:12 UTC+2, Nom a écrit » (Yahoo) : le fuseau n'est pas le nom.
+    reste = phrase[h.end() :].lstrip()
     f = _FUSEAU.match(reste)
     qui = (reste[f.end() :] if f else reste).strip(" ,")
     return {"de": qui, "date": phrase[: h.end()] + (f[0] if f else "")}, fin + 1

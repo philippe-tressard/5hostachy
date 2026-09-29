@@ -114,3 +114,15 @@ export async function tenter(
 		return false;
 	}
 }
+
+/**
+ * Vrai quand l'échec CONSTATE une absence : le serveur a répondu 404.
+ *
+ * 🔴 « Introuvable » et « illisible » ne sont pas la même chose (#816). Un 500,
+ * une session expirée ou une coupure réseau n'ont rien constaté : les rendre
+ * comme une absence affiche un écran vide — et un formulaire vide, enregistré,
+ * écrase ce qu'il n'a pas pu lire (fiche de la copropriété, #1459).
+ */
+export function estAbsent(e: unknown): boolean {
+	return e instanceof ApiError && e.status === 404;
+}

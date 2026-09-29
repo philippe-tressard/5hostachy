@@ -2,7 +2,7 @@
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import { nomCopie } from '$lib/saisi-pour';
 	import { contexteCommentaire } from '$lib/assistant';
-	import { messageErreur } from '$lib/erreurs';
+	import { estAbsent, messageErreur } from '$lib/erreurs';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { isCS, isAdmin } from '$lib/stores/auth';
@@ -129,8 +129,7 @@
 			//  Ce `catch` disait « Ticket introuvable » à un 500, à une session
 			//  expirée et à une coupure réseau — et l'écran affirmait ensuite une
 			//  absence qu'il n'avait pas constatée. Seul un 404 la constate.
-			const absent = err instanceof ApiError && err.status === 404;
-			if (absent) toast('error', `${TICKET.libelle} introuvable`);
+			if (estAbsent(err)) toast('error', `${TICKET.libelle} introuvable`);
 			else if (err instanceof ApiError) erreur = err.message;
 			else erreur = 'Ticket illisible pour le moment — réessayez dans un instant.';
 		} finally {

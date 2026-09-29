@@ -130,6 +130,7 @@
 		nom: string;
 		email: string;
 	}[] = [];
+	export let erreurResidents = '';
 	export let saisiPour: SaisieSaisiPour = saisieDepuis(null);
 
 	//  ── 3. Options de publication ─────────────────────────────────────────────
@@ -415,6 +416,7 @@
 		bind:nom={saisiPour.nom}
 		bind:email={saisiPour.email}
 		residents={residentsSaisiPour}
+		{erreurResidents}
 	/>
 {/if}
 

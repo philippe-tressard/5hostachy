@@ -23,9 +23,20 @@
  * >   fautifs. Un contrôle qui les refuserait tous serait désarmé dans la
  * >   semaine. »
  *
- * Il ne vise donc **qu'une** forme : celle qui substitue une **collection vide**
- * à un échec, parce que c'est la seule qui se rend à l'écran comme une absence.
- * `.catch(() => {})` (on ignore, aucune valeur n'est lue) n'est pas concerné.
+ * Il ne vise donc que **deux** formes, celles qui se rendent à l'écran comme une
+ * absence :
+ *   1. `.catch(() => [])` — une **collection vide** substituée à l'échec ;
+ *   2. `try { x = await … } catch { }` — la même faute écrite autrement (#1459) :
+ *      le `catch` est vide ou ne contient qu'un commentaire, et le `try`
+ *      **affecte**, après son premier `await`, une variable qu'il n'a pas
+ *      déclarée. L'écran lit alors cette variable à sa valeur initiale —
+ *      souvent `[]` ou `''` — comme si le serveur l'avait rendue.
+ *      Elle a vidé les suites d'une affaire chez tous les copropriétaires
+ *      (TK-124285, 29/09/2026), et elle comptait **quatorze** occurrences que la
+ *      forme 1 ne voyait pas — dont trois formulaires d'administration qui,
+ *      affichés vides, auraient écrasé la configuration à l'enregistrement.
+ * `.catch(() => {})` et un `catch` vide qui n'affecte rien (on ignore, aucune
+ * valeur n'est lue) ne sont pas concernés.
  *
  * ## Le remède, quand il échoue
  *
@@ -41,6 +52,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { neutraliserCommentaires } from './lib-commentaires.mjs';
+import { litteralApres } from './lib-lecture-source.mjs';
 
 const RACINE = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const SRC = join(RACINE, 'src');
@@ -68,6 +80,43 @@ const MOTIF = /\.catch\(\s*\(\s*\)\s*=>\s*(\[\s*\]|\(\s*\{\s*\}\s*\))\s*\)/g;
  */
 const EXCEPTIONS = [];
 
+/**
+ * Les `catch` muets DÉCLARÉS de la forme 2 : un fichier, la variable affectée,
+ * et la raison pour laquelle sa valeur initiale ne ment pas. Relevé du
+ * 30/09/2026 (#1459). Même règle que `EXCEPTIONS` : une entrée qui ne sert plus
+ * fait échouer.
+ */
+const MUETS_DECLARES = [
+	{
+		fichier: 'src/lib/api/client.ts',
+		affecte: 'rawDetail',
+		raison: 'lit le corps d’une réponse DÉJÀ en échec ; le repli est le libellé par défaut',
+	},
+	{
+		fichier: 'src/lib/components/Reponses.svelte',
+		affecte: 'content',
+		raison:
+			'vide le champ APRÈS un envoi réussi ; en échec le parent affiche l’erreur et le texte reste',
+	},
+	{
+		fichier: 'src/lib/components/OngletSmtp.svelte',
+		affecte: 'valeurs',
+		raison: 'relecture après un enregistrement RÉUSSI : les champs portent déjà ce qui a été saisi',
+	},
+	{
+		fichier: 'src/lib/components/PageLegale.svelte',
+		affecte: 'customHtml',
+		raison:
+			'la page a son texte légal par défaut ; un incident affiché sur une page légale serait pire',
+	},
+	{
+		fichier: 'src/lib/stores/perimetres.ts',
+		affecte: 'charge',
+		raison:
+			'drapeau de cache laissé faux pour RÉESSAYER ; les écrans retombent sur le libellé brut',
+	},
+];
+
 function fichiers(dossier) {
 	const out = [];
 	for (const e of readdirSync(dossier)) {
@@ -88,6 +137,57 @@ function fichiers(dossier) {
  */
 export function occurrences(contenu) {
 	return [...neutraliserCommentaires(contenu).matchAll(MOTIF)].map((m) => m[0]);
+}
+
+/** Les noms qu'un motif de déclaration introduit : `x`, `{ a, b: c }`, `[d, e]`. */
+function nomsDeclares(bloc) {
+	const noms = new Set();
+	for (const d of bloc.matchAll(/\b(?:const|let|var)\s+(\{[^}]*\}|\[[^\]]*\]|[\w$]+)/g)) {
+		for (const n of d[1].matchAll(/[A-Za-z_$][\w$]*(?=\s*[,}\]=]|\s*$)/g)) noms.add(n[0]);
+	}
+	return noms;
+}
+
+/**
+ * Forme 2 — les `try` dont le `catch` est muet et qui affectent, après leur
+ * premier `await`, une variable déclarée ailleurs. **Pure**.
+ *
+ * ⚠️ Lu sur la source NEUTRALISÉE : un `catch` qui ne contient qu'un
+ * commentaire y est vide, et c'est voulu — un commentaire explique le silence,
+ * il ne le rompt pas.
+ *
+ * @returns {{ ligne: number, affecte: string[] }[]}
+ */
+export function catchMuets(contenu) {
+	const src = neutraliserCommentaires(contenu);
+	const trouves = [];
+	for (const m of src.matchAll(/\btry\s*\{/g)) {
+		const bloc = litteralApres(src, m.index);
+		if (!bloc) continue;
+		const finTry = src.indexOf(bloc, m.index) + bloc.length;
+		if (!/^\s*catch\s*(\([^)]*\))?\s*\{/.test(src.slice(finTry))) continue;
+		const corpsCatch = litteralApres(src, finTry);
+		if (!corpsCatch || corpsCatch.slice(1, -1).trim() !== '') continue;
+		const premierAwait = bloc.search(/\bawait\b/);
+		if (premierAwait < 0) continue;
+		const declares = nomsDeclares(bloc);
+		const affecte = new Set();
+		//  Depuis le début de l'INSTRUCTION qui porte le premier `await` : dans
+		//  `x = await f()`, l'affectation précède le mot-clé.
+		const debut = Math.max(...[';', '{', '}', '\n'].map((c) => bloc.lastIndexOf(c, premierAwait)));
+		const apres = bloc.slice(debut);
+		const motif =
+			/(?:^|[;{}()\n])\s*(\[[^\]=]*\]|[A-Za-z_$][\w$]*)(?:\.[\w$]+|\[[^\]]*\])*\s*=(?![=>])/g;
+		for (const a of apres.matchAll(motif)) {
+			for (const n of a[1].matchAll(/[A-Za-z_$][\w$]*/g)) {
+				if (!declares.has(n[0])) affecte.add(n[0]);
+			}
+		}
+		if (affecte.size) {
+			trouves.push({ ligne: src.slice(0, m.index).split('\n').length, affecte: [...affecte] });
+		}
+	}
+	return trouves;
 }
 
 function selftest() {
@@ -122,6 +222,58 @@ function selftest() {
 		"const u = 'https://x.fr'; api.list().catch(() => []);",
 	);
 
+	//  ── Forme 2 (#1459) ──
+	const m = (libelle, attendu, contenu) => {
+		const obtenu = catchMuets(contenu)
+			.flatMap((x) => x.affecte)
+			.join(',');
+		if (obtenu === attendu) console.log(`PASS  ${libelle}`);
+		else {
+			console.log(`FAIL  ${libelle} — attendu « ${attendu} », obtenu « ${obtenu} »`);
+			ko = 1;
+		}
+	};
+	m(
+		'le cas de TK-124285 : suites avalées',
+		'evolutions',
+		'try { evolutions = await api.evolutions(id); } catch { /* silencieux */ }',
+	);
+	m('catch vide sans commentaire', 'liste', 'try { liste = await f(); } catch {}');
+	m('catch (e) vide', 'liste', 'try { liste = await f(); } catch (e) {\n}');
+	m('valeur tirée entre parenthèses', 'html', "try { html = (await f())[cle] ?? ''; } catch {}");
+	m('déstructuration', 'a,b', 'try { [a, b] = await Promise.all([f(), g()]); } catch {}');
+	m(
+		'dérivée d’une constante attendue',
+		'actifs',
+		'try { const tous = await f(); actifs = tous.filter((u) => u.actif); } catch {}',
+	);
+	m(
+		'champ d’un formulaire rempli dans une boucle',
+		'form',
+		'try { const d = await f(); Object.keys(form).forEach((k) => { if (d[k]) form[k] = d[k]; }); } catch {}',
+	);
+	m('sur plusieurs lignes', 'x', 'try {\n\tx = await f();\n} catch {\n\t// rien\n}');
+	//  🔴 Ce qu'il ne doit PAS refuser.
+	m(
+		'catch qui traite l’échec',
+		'',
+		'try { x = await f(); } catch (e) { erreur = messageErreur(e); }',
+	);
+	m('rien n’est affecté', '', 'try { await marquerLu(id); } catch {}');
+	m(
+		'seules des variables locales',
+		'',
+		'try { const r = await f(); let n = r.length; n = 2; } catch {}',
+	);
+	m('affectation AVANT l’await', '', 'try { enCours = true; await f(); } catch {}');
+	m(
+		'comparaison, pas affectation',
+		'',
+		'try { const r = await f(); if (r.a === 1) g(); } catch {}',
+	);
+	m('pas de await : synchrone', '', 'try { base = decodeURIComponent(base); } catch {}');
+	m('accolade dans une chaîne du try', 'x', "try { x = await f('}'); } catch { }");
+
 	console.log(
 		ko === 0
 			? '\n✓ Autotest : la forme fautive est refusée, les catch légitimes passent.'
@@ -134,10 +286,21 @@ function main() {
 	if (process.argv.includes('--selftest')) return selftest();
 
 	const coupables = [];
+	const muets = [];
 	const exceptionsVues = new Set();
+	const muetsVus = new Set();
 	for (const f of fichiers(SRC)) {
 		const rel = relative(RACINE, f).replace(/\\/g, '/');
-		const trouve = occurrences(readFileSync(f, 'utf8'));
+		const contenu = readFileSync(f, 'utf8');
+		for (const { ligne, affecte } of catchMuets(contenu)) {
+			const nonDeclares = affecte.filter((v) => {
+				const d = MUETS_DECLARES.find((x) => x.fichier === rel && x.affecte === v);
+				if (d) muetsVus.add(d);
+				return !d;
+			});
+			if (nonDeclares.length) muets.push(`${rel}:${ligne}  (${nonDeclares.join(', ')})`);
+		}
+		const trouve = occurrences(contenu);
 		if (!trouve.length) continue;
 		if (EXCEPTIONS.includes(rel)) {
 			exceptionsVues.add(rel);
@@ -149,14 +312,31 @@ function main() {
 	//  Une exception qui ne sert plus doit FAIRE ÉCHOUER : sinon la liste des
 	//  tolérances grossit sans que personne ne la relise, et le contrôle finit
 	//  par autoriser plus que ce qu'on croit. Même règle que `check-html.mjs`.
-	const mortes = EXCEPTIONS.filter((e) => !exceptionsVues.has(e));
+	const mortes = [
+		...EXCEPTIONS.filter((e) => !exceptionsVues.has(e)),
+		...MUETS_DECLARES.filter((d) => !muetsVus.has(d)).map((d) => `${d.fichier} (${d.affecte})`),
+	];
 	if (mortes.length) {
 		console.error('✗ Exception(s) déclarée(s) qui ne servent plus — les retirer :');
 		for (const m of mortes) console.error(`    ${m}`);
 		return 1;
 	}
 
+	if (muets.length) {
+		console.error('');
+		console.error(
+			'✗ Un `catch` muet laisse l’écran lire une valeur que le serveur n’a pas rendue :',
+		);
+		console.error('');
+		for (const x of muets) console.error(`    ${x}`);
+		console.error('');
+		console.error('  Remède : `essayer()` de `$lib/chargement` et son erreur rendue à l’écran —');
+		console.error('  ou, si la valeur initiale ne ment pas, une entrée dans MUETS_DECLARES,');
+		console.error('  avec sa raison.');
+		console.error('');
+	}
 	if (!coupables.length) {
+		if (muets.length) return 1;
 		console.log('✓ Aucun appel dont l’échec se rendrait comme une absence.');
 		return 0;
 	}

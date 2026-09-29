@@ -14,10 +14,17 @@
  *
  *  ## Ce qu'il mesure
  *
- *  Dans les fichiers `.svelte` (les feuilles de `src/styles/` sont la charte,
- *  elles sont hors relevé) : les couleurs hexadécimales et les `font-size` en
- *  `rem`, dans les blocs `<style>` et les attributs `style="…"`, commentaires
- *  retirés.
+ *  Les couleurs hexadécimales et les `font-size` en `rem`, commentaires
+ *  retirés : dans les fichiers `.svelte` (blocs `<style>` et attributs
+ *  `style="…"`) **et** dans les feuilles de `src/styles/` — sauf `socle.css`,
+ *  qui DÉFINIT les jetons et n'a donc que des valeurs.
+ *
+ *  🔴 Les feuilles étaient hors relevé jusqu'au 30/09/2026 (#1460), comme « la
+ *  charte ». Remonter une règle d'un composant vers `src/styles/` faisait alors
+ *  BAISSER le plafond sans rien solder : #779 l'a fait pour huit couleurs, et
+ *  l'historique le disait en toutes lettres pendant que le compteur, lui, ne
+ *  le distinguait pas. Un seul plafond pour les deux lieux : un déménagement
+ *  est neutre, seule une valeur remplacée par un jeton le fait descendre.
  *
  *  ## Un PLAFOND, et il ne fait que baisser
  *
@@ -46,8 +53,12 @@ import { fileURLToPath } from 'node:url';
  *  interlocuteur principal, gestionnaire) et leur taille ont quitté `espace-cs` pour
  *  `styles/composants.css`, où elles sont écrites une fois pour les deux
  *  composants de l'annuaire. Elles restent des valeurs en dur, dans la charte.
+ *  30/09/2026 (#1460) : les feuilles de `src/styles/` (hors `socle.css`) entrent
+ *  dans le relevé : 172 couleurs (+56) et 129 tailles (+68). Le plafond MONTE
+ *  d’autant sans une valeur ajoutée
+ *  — c’est la dette qu’elles portaient déjà, désormais comptée.
  */
-const PLAFOND = { couleurs: 116, tailles: 61 };
+const PLAFOND = { couleurs: 172, tailles: 129 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
@@ -58,6 +69,18 @@ export function stylesDe(source) {
 	const attributs = [...sans.matchAll(/\bstyle="([^"]*)"/g)].map((m) => m[1]);
 	return [...blocs, ...attributs].join('\n').replace(/\/\*[\s\S]*?\*\//g, '');
 }
+
+/** Le CSS d'une feuille : tout le fichier, commentaires retirés. */
+export function stylesDeFeuille(source) {
+	return source.replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+/**
+ *  La feuille qui DÉFINIT les jetons : hors relevé des valeurs.
+ *  ⚠️ `app.css` n'a que des `@import` (#453) ; s'il reprenait des règles, il
+ *  faudrait le relever aussi — le contrôle ne le devinerait pas.
+ */
+export const FEUILLE_DES_JETONS = 'socle.css';
 
 /** Couleurs hexadécimales et tailles de texte en `rem` écrites en dur. */
 export function valeursEnDur(css) {
@@ -265,6 +288,19 @@ if (process.argv.includes('--selftest')) {
 		[],
 	);
 	cas(
+		'une feuille : tout compte, sauf les commentaires',
+		valeursEnDur(stylesDeFeuille('/* #abcdef */\n.a { color: #123; font-size: 0.8rem; }')),
+		{ couleurs: ['#123'], tailles: ['0.8'] },
+	);
+	cas(
+		'déplacer une règle d’un composant vers une feuille ne change pas le compte',
+		[
+			valeursEnDur(stylesDe('<style>.p{color:#8e44ad;font-size:.9rem}</style>')),
+			valeursEnDur(stylesDeFeuille('.p{color:#8e44ad;font-size:.9rem}')),
+		].map((v) => v.couleurs.length + v.tailles.length),
+		[2, 2],
+	);
+	cas(
 		'contraste du vert de la charte sur son fond',
 		contraste('#2e7d52', '#e6f4ee').toFixed(2),
 		'4.44',
@@ -296,9 +332,20 @@ function fichiers(dir, acc = []) {
 const total = { couleurs: 0, tailles: 0 };
 const parFichier = [];
 let blocsLus = 0;
-for (const chemin of fichiers(RACINE)) {
-	const css = stylesDe(readFileSync(chemin, 'utf8'));
-	if (css.trim()) blocsLus++;
+let feuillesLues = 0;
+const STYLES = join(RACINE, 'styles');
+const feuilles = readdirSync(STYLES)
+	.filter((n) => n.endsWith('.css'))
+	.map((n) => join(STYLES, n));
+const releves = [
+	...fichiers(RACINE).map((chemin) => [chemin, stylesDe(readFileSync(chemin, 'utf8'))]),
+	...feuilles
+		.filter((chemin) => !chemin.endsWith(sep + FEUILLE_DES_JETONS))
+		.map((chemin) => [chemin, stylesDeFeuille(readFileSync(chemin, 'utf8'))]),
+];
+for (const [chemin, css] of releves) {
+	if (css.trim() && chemin.endsWith('.css')) feuillesLues++;
+	else if (css.trim()) blocsLus++;
 	const v = valeursEnDur(css);
 	total.couleurs += v.couleurs.length;
 	total.tailles += v.tailles.length;
@@ -306,22 +353,18 @@ for (const chemin of fichiers(RACINE)) {
 	if (n) parFichier.push([relative(RACINE, chemin).split(sep).join('/'), n]);
 }
 
-if (!blocsLus) {
-	console.error('\n✗ Aucun style lu : contrôle inopérant (INCONNU).\n');
+if (!blocsLus || !feuillesLues) {
+	console.error(
+		`\n✗ ${blocsLus} composant(s) et ${feuillesLues} feuille(s) lus : contrôle inopérant (INCONNU).\n`,
+	);
 	process.exit(2);
 }
 
 let echec = 0;
 
-//  Les interdits se cherchent aussi dans `src/styles/` : la charte elle-même ne
-//  doit pas les porter.
-const STYLES = join(RACINE, 'styles');
-const sources = [
-	...fichiers(RACINE),
-	...readdirSync(STYLES)
-		.filter((n) => n.endsWith('.css'))
-		.map((n) => join(STYLES, n)),
-];
+//  Les interdits se cherchent aussi dans `src/styles/`, `socle.css` compris : la
+//  charte elle-même ne doit pas les porter.
+const sources = [...fichiers(RACINE), ...feuilles];
 const exceptionsServies = new Set();
 const interdits = [];
 for (const chemin of sources) {

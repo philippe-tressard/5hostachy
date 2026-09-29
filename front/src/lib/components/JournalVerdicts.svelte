@@ -33,8 +33,11 @@
 
 <script lang="ts">
 	import { fmtDatetimeShort } from '$lib/date';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	export let entrees: EntreeJournal[] = [];
+	/** Non vide = le journal n'a pas pu être lu : il ne se dit pas « vide » (#1459). */
+	export let erreur = '';
 	export let vide = 'Rien à afficher.';
 	export let recharger: () => unknown = () => {};
 	/** Ce que le bouton de rafraîchissement annonce aux lecteurs d'écran. */
@@ -47,7 +50,9 @@
 			>&#x1F504;</button
 		>
 	</div>
-	{#if entrees.length === 0}
+	{#if erreur}
+		<EtatListe compact {erreur} />
+	{:else if entrees.length === 0}
 		<p class="jv-vide">{vide}</p>
 	{:else}
 		<ul class="jv-liste">

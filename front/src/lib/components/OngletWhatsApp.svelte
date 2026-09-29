@@ -13,6 +13,7 @@
 	} from '$lib/api';
 	import { configStore } from '$lib/stores/pageConfig';
 	import { toast } from '$lib/components/Toast.svelte';
+	import { essayer } from '$lib/chargement';
 	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -58,19 +59,14 @@
 		loadWaLogs();
 	});
 
+	//  Un échec se DIT à la place de la liste : « aucun message » serait faux (#1459).
+	let erreurPlanifies = '';
+	let erreurJournaux = '';
 	async function loadWaScheduled() {
-		try {
-			waScheduled = await configApi.whatsappPlanifies();
-		} catch {
-			/**/
-		}
+		[waScheduled, erreurPlanifies] = await essayer(configApi.whatsappPlanifies(), []);
 	}
 	async function loadWaLogs() {
-		try {
-			waLogs = await configApi.whatsappJournaux();
-		} catch {
-			/**/
-		}
+		[waLogs, erreurJournaux] = await essayer(configApi.whatsappJournaux(), []);
 	}
 
 	async function saveWaScheduledItem(item: MessagePlanifieWhatsApp) {
@@ -294,6 +290,7 @@
 	<SectionFormulaire icone="calendar-days" titre="Messages planifiés (envoi automatique)">
 		<MessagesPlanifiesWhatsApp
 			messages={waScheduled}
+			erreur={erreurPlanifies}
 			enregistrement={waScheduledSaving}
 			enregistrer={saveWaScheduledItem}
 		/>
@@ -325,7 +322,7 @@
 
 	<!-- Historique des envois -->
 	<SectionFormulaire icone="clipboard-list" titre="Historique des envois (6 derniers)">
-		<HistoriqueEnvoisWhatsApp journaux={waLogs} recharger={loadWaLogs} />
+		<HistoriqueEnvoisWhatsApp journaux={waLogs} erreur={erreurJournaux} recharger={loadWaLogs} />
 	</SectionFormulaire>
 </section>
 

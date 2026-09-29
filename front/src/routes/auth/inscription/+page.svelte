@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { auth as authApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
+	import { essayer } from '$lib/chargement';
+	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import { getSiteNom } from '$lib/stores/pageConfig';
 	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
@@ -48,12 +50,10 @@
 	$: isLocataire = statut === 'locataire';
 	$: showBatiment = batiments.length > 0 && !isProfessional && !isAidant;
 
+	//  🔴 Un échec taisait le champ Bâtiment, et le compte naissait sans (#1459).
+	let erreurBatiments = '';
 	onMount(async () => {
-		try {
-			batiments = await authApi.batiments();
-		} catch {
-			// pas bloquant
-		}
+		[batiments, erreurBatiments] = await essayer(authApi.batiments(), []);
 	});
 
 	async function submit() {
@@ -118,6 +118,10 @@
 				<div class="alert alert-error">{error}</div>
 			{/if}
 
+			<ChargementPartiel
+				erreur={erreurBatiments}
+				consequence="Le choix du bâtiment manque : rechargez la page avant de créer le compte."
+			/>
 			<form on:submit|preventDefault={submit}>
 				<div class="field-row">
 					<div class="field">

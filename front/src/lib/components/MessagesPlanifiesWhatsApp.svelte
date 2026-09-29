@@ -12,8 +12,11 @@
 -->
 <script lang="ts">
 	import type { MessagePlanifieWhatsApp } from '$lib/api';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	export let messages: MessagePlanifieWhatsApp[] = [];
+	/** Non vide = la liste n'a pas pu être lue : elle ne se dit pas « vide » (#1459). */
+	export let erreur = '';
 	/** Enregistrement en cours, par identifiant de message. */
 	export let enregistrement: Record<number, boolean> = {};
 	export let enregistrer: (m: MessagePlanifieWhatsApp) => unknown = () => {};
@@ -29,7 +32,9 @@
 		&#x1F4A1; Markdown WhatsApp : <strong>*gras*</strong> | <em>_italique_</em> | <s>~barré~</s> | Sauts
 		de ligne (Enter)
 	</p>
-	{#if messages.length === 0}
+	{#if erreur}
+		<EtatListe compact {erreur} />
+	{:else if messages.length === 0}
 		<p class="wa-vide">Aucun message planifié.</p>
 	{/if}
 	{#each messages as item (item.id)}

@@ -19,6 +19,7 @@
 	//  `fmtDatetime` vient de $lib/date — jamais un format réimplémenté ici.
 	import { daysSince, fmtDatetime } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { essayer } from '$lib/chargement';
 	import {
 		STATUT_TICKET_BADGE as TK_STATUT_BADGE,
 		STATUT_TICKET_LABELS as TK_STATUT_LABELS,
@@ -109,13 +110,12 @@
 	//  serait faux dans trois. Le conseil reporte là où c'est juste.
 	let reponses: ReponseRelance[] = [];
 
+	//  Une ligne discrète, pas un second bandeau : l'écran principal reste juste
+	//  sans cet historique, mais ne doit pas le dire vide (#1459).
+	let erreurReponses = '';
 	async function loadReponses() {
-		try {
-			reponses = (await ticketsApi.relanceReponses()).reponses;
-		} catch {
-			//  Muet : l'écran principal reste utilisable sans cet historique, et
-			//  un second message d'erreur ferait douter du reste de la page.
-		}
+		const [r, e] = await essayer(ticketsApi.relanceReponses(), { reponses: [] });
+		[reponses, erreurReponses] = [r.reponses, e];
 	}
 
 	/** Rechargement demandé par la barre d'outils du parent. */
@@ -130,7 +130,9 @@
 	});
 </script>
 
-{#if reponses.length}
+{#if erreurReponses}
+	<EtatListe compact erreur={erreurReponses} />
+{:else if reponses.length}
 	<section class="report-card" style="margin-bottom:1.5rem">
 		<h3 class="rep-titre">&#x1F4E8; Réponses du syndic aux relances</h3>
 		<p class="rep-aide">

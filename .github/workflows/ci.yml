@@ -1043,9 +1043,10 @@ jobs:
       # avait pas — et le 19/08/2026 l'utilisateur a cru ses données détruites et
       # en a demandé la restauration. Elles étaient intactes.
       #
-      # Le contrôle est ÉTROIT à dessein : il ne vise que le repli sur une
-      # COLLECTION vide, la seule forme qui se rende comme une absence. Les
-      # cinquante `catch` silencieux légitimes du dépôt (marquage de lecture,
+      # Le contrôle est ÉTROIT à dessein : il ne vise que les deux formes qui se
+      # rendent comme une absence — le repli sur une COLLECTION vide, et le
+      # `catch` muet dont le `try` affecte une variable après un `await` (#1459).
+      # Les `catch` silencieux qui n'affectent rien (marquage de lecture,
       # télémétrie, révocation de jeton) ne sont pas concernés — les refuser
       # aurait fait désarmer le contrôle dans la semaine.
       - name: Aucun échec d'appel rendu comme une absence

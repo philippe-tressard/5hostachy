@@ -55,6 +55,7 @@
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import EtatListe from './EtatListe.svelte';
+	import { essayer, messagePartiel } from '$lib/chargement';
 	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
 
 	export let ticket: Ticket;
@@ -91,14 +92,12 @@
 	//  Une actualité récente n'en a aucun : ses pièces sont en URLs.
 	let documents: any[] = [];
 	let documentsCharges = false;
+	//  La carte se lit sans eux, mais ne les dit pas absents s'ils n'ont pas été lus (#1459).
+	let erreurDocuments = '';
 	$: if (expanded && !documentsCharges) chargerDocuments();
 	async function chargerDocuments() {
 		documentsCharges = true;
-		try {
-			documents = await docsApi.listByTicket(ticket.id);
-		} catch {
-			/* la carte se lit sans eux */
-		}
+		[documents, erreurDocuments] = await essayer(docsApi.listByTicket(ticket.id), []);
 	}
 
 	//  🔴 Les retirer (#1178) : ils ne passent pas par le formulaire, qui ne
@@ -222,7 +221,7 @@
 	</svelte:fragment>
 
 	<svelte:fragment slot="apres-corps">
-		<EtatListe compact erreur={erreurSuivi} />
+		<EtatListe compact erreur={messagePartiel(erreurSuivi, erreurDocuments)} />
 		{#if evolutions.length}
 			<div class="actu-fil">
 				<RubriqueHistorique
