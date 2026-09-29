@@ -320,3 +320,48 @@ def test_un_RESIDENT_qui_transfere_sans_repere_ne_cree_rien(monde):
             purger_ligne(session, Notification, n.id)
         purger_ligne(session, Utilisateur, resident.id)
         session.commit()
+
+
+# ── Le journal de l'assistant s'écrit pendant un transfert (#1469) ────────────
+
+
+def test_chaque_appel_a_l_assistant_d_un_transfert_est_JOURNALISE(monde, monkeypatch):
+    """🔴 30/09/2026 : « Journal IA non écrit — database is locked ». Le versement
+    tenait une écriture en cours pendant qu'il appelait l'assistant, dont le
+    journal s'écrit dans sa propre transaction : la consommation n'était pas
+    comptée. Ce faux modèle écrit le VRAI journal, comme `llm.demander`."""
+    from types import SimpleNamespace
+
+    from app.models.ia import AppelIA
+    from app.utils import llm, llm_journal
+
+    session, _ticket, syndic, cs, objet = monde
+    marque = f"essai-{uuid.uuid4().hex[:8]}"
+    ecriture_en_cours: list[bool] = []
+
+    async def faux(session, *, usage, message, **_):
+        #  La base de test est en mémoire, sur UNE connexion : le verrou ne s'y
+        #  produit pas. On vérifie donc sa cause — une écriture en attente, ou
+        #  émise et non validée (`in_transaction` du pilote sqlite3).
+        brut = session.connection().connection.dbapi_connection
+        ecriture_en_cours.append(
+            bool(session.new or session.dirty or session.deleted or brut.in_transaction)
+        )
+        llm_journal.journaliser(
+            session, usage=usage, fournisseur="essai", modele=marque, statut="succes"
+        )
+        return SimpleNamespace(texte=message)
+
+    monkeypatch.setattr(llm, "demander", faux)
+    assert _transferer(session, cs, objet, _fil(syndic.email, objet)) == ACCEPTE
+    journal = session.exec(select(AppelIA).where(AppelIA.modele == marque)).all()
+    try:
+        assert ecriture_en_cours == [False, False, False], (
+            "l'assistant a été appelé pendant une écriture : son journal aurait "
+            "trouvé la base verrouillée"
+        )
+        assert len(journal) == 3, "trois messages mis en forme, trois lignes de journal"
+    finally:
+        for ligne in journal:
+            purger_ligne(session, AppelIA, ligne.id)
+        session.commit()

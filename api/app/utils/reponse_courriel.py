@@ -234,6 +234,39 @@ def suite_d_un_message(
       rien n'est écrit. Un message du syndic ou d'un résident entre toujours —
       l'assistant n'a pas à décider qu'une réponse sollicitée ne comptait pas.
     """
+    return suite_mise_en_forme(
+        session,
+        ticket,
+        signataire,
+        mettre_en_forme(session, texte, recu),
+        expediteur=expediteur,
+        nom=nom,
+        envoye_le=envoye_le,
+        transfere_par=transfere_par,
+        ecartable=ecartable,
+    )
+
+
+def suite_mise_en_forme(
+    session: Session,
+    ticket,
+    signataire,
+    mis: Texte,
+    *,
+    expediteur: str,
+    nom: str,
+    envoye_le,
+    transfere_par: str | None = None,
+    ecartable: bool = False,
+):
+    """`suite_d_un_message`, le texte déjà mis en forme — sans appel à l'assistant.
+
+    🔴 Séparée le 30/09/2026 (#1469) : un fil transféré met en forme TOUS ses
+    messages avant la première écriture. L'appel à l'assistant écrit son journal
+    dans sa propre transaction (`llm_journal.journaliser`), et une écriture en
+    cours dans celle de la relève le verrouillait : « database is locked », et la
+    consommation n'était pas comptée.
+    """
     from app.models.core import TicketEvolution
     from app.models.tickets import StatutTicket
     from app.utils.destinataires import est_adresse_syndic
@@ -241,7 +274,6 @@ def suite_d_un_message(
     from app.utils.valeurs import valeur
 
     syndic = est_adresse_syndic(session, parseaddr(expediteur or "")[1])
-    mis = mettre_en_forme(session, texte, recu)
     if not mis.contenu:
         return None
     if mis.vide_selon_assistant and ecartable and not syndic:
