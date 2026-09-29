@@ -102,7 +102,8 @@ def _charge(partie) -> str:
 def _corps_lisible(message) -> str:
     """Le texte de la réponse, en clair.
 
-    On préfère la partie `text/plain` : elle existe presque toujours. À défaut, le
+    On préfère la partie `text/plain` : elle existe presque toujours. À défaut —
+    ou quand elle est APLATIE (`_aplati`) —, le
     `text/html` est réduit à son TEXTE — jamais conservé comme balisage : un fil
     de ticket qui accepterait du HTML venu d'un courriel ouvrirait une porte que
     `lint:html` ne surveille pas.
@@ -112,13 +113,29 @@ def _corps_lisible(message) -> str:
     conseil a été ignorée sans un mot.
     """
     parties = list(message.walk()) if message.is_multipart() else [message]
-    for partie in parties:
-        if partie.get_content_type() == "text/plain":
-            return _charge(partie)
-    for partie in parties:
-        if partie.get_content_type() == "text/html":
-            return _html_en_texte(_charge(partie))
-    return ""
+    brut = next((_charge(p) for p in parties if p.get_content_type() == "text/plain"), None)
+    html = next((p for p in parties if p.get_content_type() == "text/html"), None)
+    if html is None:
+        return brut or ""
+    if brut is None or _aplati(brut):
+        return _html_en_texte(_charge(html))
+    return brut
+
+
+#: Au-delà, une ligne n'est plus une ligne : c'est un corps dont on a ôté les sauts.
+_LIGNE_APLATIE = 300
+
+
+def _aplati(texte: str) -> bool:
+    """La partie texte a-t-elle perdu ses sauts de ligne ?
+
+    🔴 Le webmail iCloud (29/09/2026) envoie un transfert dont la partie
+    `text/plain` tient sur UNE ligne — « Début du message réexpédié : De : …
+    Objet : … » bout à bout. Aucun en-tête ne s'y repère, et le premier
+    transfert réel a été refusé ; sa partie HTML, elle, était intacte.
+    """
+    lignes = [ligne for ligne in texte.splitlines() if ligne.strip()]
+    return len(lignes) <= 2 and any(len(ligne) > _LIGNE_APLATIE for ligne in lignes)
 
 
 #: Un séparateur de réponse : une ligne faite de tirets ou de soulignés seuls
