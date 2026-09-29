@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 	import { currentUser, isCS, isAdmin, hasResidentRole, isAdminOnly } from '$lib/stores/auth';
 	import { locale, NAV_LABELS } from '$lib/stores/locale';
 	import { auth as authApi } from '$lib/api';
-	import { setUser } from '$lib/stores/auth';
 	import { CHEMIN_CONNEXION } from '$lib/redirection';
 	import { configStore, siteNomStore, getPageConfig } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
@@ -44,12 +42,33 @@
 		menuOpen = false;
 	}
 
-	function logout() {
-		setUser(null);
-		//  Rien à conserver : on vient de se déconnecter volontairement. Mais
-		//  l'adresse vient de `lib/redirection`, comme les cinq autres portes.
-		goto(CHEMIN_CONNEXION);
-		authApi.logout().catch(() => {}); // révocation token en arrière-plan
+	/** Au-delà, on part sans attendre la révocation : les cookies sont `HttpOnly`,
+	 *  le navigateur ne peut pas les effacer lui-même, et rester bloqué sur un
+	 *  réseau perdu serait pire qu'une session qui expirera d'elle-même. */
+	const ATTENTE_REVOCATION_MS = 3000;
+	let deconnexionEnCours = false;
+
+	//  🔴 Révoquer D'ABORD, puis quitter par une navigation COMPLÈTE (29/09/2026).
+	//
+	//  L'ancien geste vidait l'utilisateur (`setUser(null)`) puis appelait `goto` :
+	//  pendant que la mire se chargeait, le tableau de bord se re-rendait SANS
+	//  utilisateur — « Bonsoir » sans prénom, menu vide, kanban et fil toujours
+	//  affichés. Sur un réseau lent, c'est ce qu'on voyait en se déconnectant.
+	//
+	//  La navigation complète vide aussi tout ce que l'onglet tenait de la
+	//  session : utilisateur, délégation en cours (`X-Acting-As`), listes
+	//  chargées. Une navigation interne les laissait en mémoire.
+	//
+	//  Rien à conserver : on se déconnecte volontairement, d'où `CHEMIN_CONNEXION`
+	//  et non `urlDeConnexion()`.
+	async function logout() {
+		if (deconnexionEnCours) return;
+		deconnexionEnCours = true;
+		await Promise.race([
+			authApi.logout().catch(() => {}),
+			new Promise((fin) => setTimeout(fin, ATTENTE_REVOCATION_MS)),
+		]);
+		window.location.assign(CHEMIN_CONNEXION);
 	}
 
 	$: t = NAV_LABELS[$locale];
