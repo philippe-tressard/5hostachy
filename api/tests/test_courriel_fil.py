@@ -170,3 +170,64 @@ def test_l_empreinte_reconnait_un_message_cite_autrement():
     )
     assert empreinte(_messages(autre)[2]) == empreinte(premier)
     assert empreinte(_messages()[1]) != empreinte(premier)
+
+
+# ── Mail pour Windows (Outlook) : pas de « Début du message réexpédié » ───────
+
+#: 🔴 Le premier transfert RÉEL (29/09/2026) venait de Mail pour Windows : une
+#: ligne de soulignés, puis le bloc « De : / Envoyé : » — ou le bloc seul, quand
+#: le HTML est réduit en texte. Il a été lu comme une simple réponse.
+_TETE_WINDOWS = (
+    "De : Gestion Syndic <gestion@syndic.test<mailto:gestion@syndic.test>>\n"
+    "Envoyé : mardi 29 septembre 2026 10:12\n"
+    "À : Jean Dupont <jean.dupont@exemple.test>\n"
+    "Cc : Membre Conseil <conseil@exemple.test>\n"
+    "Objet : RE: Demande d'intervention urgente\n"
+)
+
+
+def _fil_windows(separateur: str) -> str:
+    corps_syndic = FIL.split("Cc: Membre Conseil <conseil@exemple.test>\n", 1)[1]
+    return f"TK-109008\n\n{separateur}{_TETE_WINDOWS}{corps_syndic}"
+
+
+@pytest.mark.parametrize(
+    "separateur",
+    ["________________________________\n", "-----Original Message-----\n", ""],
+    ids=["souligne", "original-message", "sans-marque"],
+)
+def test_un_transfert_de_Mail_pour_Windows_se_decoupe(separateur):
+    transfert = transfert_dans(SUJET, _fil_windows(separateur))
+    assert transfert is not None
+    assert (transfert.note, transfert.adresse) == ("TK-109008", "gestion@syndic.test")
+    syndic, jean, premier = messages_du_fil(transfert)
+    assert syndic.nom == "Gestion Syndic" and "ordre de service" in syndic.texte
+    assert syndic.envoye_le == datetime(2026, 9, 29, 8, 12)
+    assert (jean.nom, premier.nom) == ("Jean Dupont", "Jean Dupont")
+
+
+def test_un_transfert_de_Mail_pour_Windows_en_HTML_seul_se_decoupe():
+    from email.message import EmailMessage
+
+    from app.utils.courriel_decodage import _corps_lisible
+
+    html = (
+        "<div>TK-109008</div><hr>"
+        "<div><b>De&nbsp;:</b> Gestion Syndic &lt;gestion@syndic.test&gt;<br>"
+        "<b>Envoyé&nbsp;:</b> mardi 29 septembre 2026 10:12<br>"
+        "<b>Objet&nbsp;:</b> RE: Demande d'intervention urgente</div>"
+        "<div>Bonjour Monsieur Dupont,</div><div>Nous lançons un ordre de service.</div>"
+    )
+    message = EmailMessage()
+    message.set_content(html, subtype="html")
+    transfert = transfert_dans(SUJET, _corps_lisible(message))
+    (syndic,) = messages_du_fil(transfert)
+    assert syndic.adresse == "gestion@syndic.test"
+    assert "ordre de service" in syndic.texte
+
+
+def test_une_signature_soulignee_n_est_pas_un_transfert():
+    """Une ligne de soulignés sans « De : » derrière est une signature."""
+    texte = "Bonjour\n________________\nPhilippe\n\n" + _TETE_WINDOWS + "\nTexte du syndic.\n"
+    transfert = transfert_dans(SUJET, texte)
+    assert transfert.note.startswith("Bonjour") and transfert.adresse == "gestion@syndic.test"

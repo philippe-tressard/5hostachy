@@ -195,19 +195,46 @@ class Transfert:
     objet: str = ""
 
 
+def est_objet_de_transfert(sujet: str | None) -> bool:
+    """L'objet annonce-t-il un transfert (« TR : », « Fwd: ») ?"""
+    return bool(_OBJET_TRANSFERT.match(sujet or ""))
+
+
+def _debut_d_entete(lignes: list[str], n: int) -> int | None:
+    """La ligne où commence l'en-tête du message transféré, s'il commence à `n`.
+
+    Trois formes (29/09/2026) :
+
+    - une MARQUE (« Début du message réexpédié : », « ---- Message transféré ---- »)
+      ou une ligne de SOULIGNÉS (Outlook, Mail pour Windows), suivie de « De : » ;
+    - un bloc « De : … / Envoyé : … » SANS marque : Mail pour Windows l'écrit
+      ainsi quand le HTML est réduit en texte, la ligne de soulignés étant un
+      `<hr>` qui ne laisse rien. 🔴 Le premier transfert réel de Mail pour
+      Windows a été lu comme une simple réponse, faute de cette forme.
+    """
+    nue = lignes[n].strip().strip("*")
+    if _MARQUE_TRANSFERT.match(nue) or _SEPARATEUR.match(nue):
+        suivantes = [lg.strip().strip("*") for lg in lignes[n + 1 : n + 4] if lg.strip()]
+        return n + 1 if suivantes and _DE.match(suivantes[0]) else None
+    if _DE.match(nue) and any(_DATE_CITEE.match(lg.strip()) for lg in lignes[n + 1 : n + 6]):
+        return n
+    return None
+
+
 def transfert_dans(sujet: str, texte: str) -> Transfert | None:
     """Le message transféré, si ce courriel en est un — sinon None.
 
     L'objet décide d'abord : une RÉPONSE à un transfert (« RE: TR : … ») cite la
     marque de transfert dans son historique, et n'est pas un transfert.
     """
-    if not _OBJET_TRANSFERT.match(sujet or ""):
+    if not est_objet_de_transfert(sujet):
         return None
     lignes = [sans_chevrons(ligne) for ligne in texte.splitlines()]
-    for n, ligne in enumerate(lignes):
-        if not _MARQUE_TRANSFERT.match(ligne.strip().strip("*")):
+    for n in range(len(lignes)):
+        debut = _debut_d_entete(lignes, n)
+        if debut is None:
             continue
-        de, date, objet, fin = "", "", "", n + 1
+        de, date, objet, fin = "", "", "", debut
         #  Le bloc d'en-têtes du message d'origine, jusqu'à la première ligne vide
         #  qui le suit.
         while fin < len(lignes) and (not lignes[fin].strip() or ":" in lignes[fin]):
@@ -215,11 +242,11 @@ def transfert_dans(sujet: str, texte: str) -> Transfert | None:
             if not nue and de:
                 break
             if _DE.match(nue):
-                de = valeur_d_entete(nue)
+                de = de or valeur_d_entete(nue)
             elif _DATE_CITEE.match(nue):
-                date = valeur_d_entete(nue)
+                date = date or valeur_d_entete(nue)
             elif _OBJET_CITE.match(nue):
-                objet = valeur_d_entete(nue)
+                objet = objet or valeur_d_entete(nue)
             fin += 1
         adresse = _ADRESSE.search(de)
         if not adresse:
