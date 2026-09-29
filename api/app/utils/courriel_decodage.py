@@ -99,6 +99,28 @@ def _charge(partie) -> str:
     return brut.decode(partie.get_content_charset() or "utf-8", "replace")
 
 
+def _parties(message) -> tuple[list, list]:
+    """Les parties du message LUI-MÊME, et à part les messages qu'il JOINT.
+
+    `message.walk()` descend dans un `message/rfc822` : le texte d'un message
+    joint aurait pu passer pour celui du message, selon l'ordre des parties.
+    """
+    propres, joints = [], []
+
+    def parcourir(partie) -> None:
+        if partie.get_content_type() == "message/rfc822":
+            charge = partie.get_payload()
+            joints.extend(charge if isinstance(charge, list) else [charge])
+        elif partie.is_multipart():
+            for sous in partie.get_payload():
+                parcourir(sous)
+        else:
+            propres.append(partie)
+
+    parcourir(message)
+    return propres, joints
+
+
 def _corps_lisible(message) -> str:
     """Le texte de la réponse, en clair.
 
@@ -111,15 +133,31 @@ def _corps_lisible(message) -> str:
     🔴 **Ce repli manquait jusqu'au 28/09/2026.** L'application Mail d'Orange
     n'envoie QUE du HTML : son corps était lu vide, et la réponse d'un membre du
     conseil a été ignorée sans un mot.
+
+    Un message JOINT (« transférer en tant que pièce jointe » d'Outlook ou de
+    Thunderbird, #1471) suit le texte, précédé de l'en-tête qu'un transfert en
+    ligne aurait écrit : le découpage le lit alors comme tout autre transfert.
     """
-    parties = list(message.walk()) if message.is_multipart() else [message]
-    brut = next((_charge(p) for p in parties if p.get_content_type() == "text/plain"), None)
-    html = next((p for p in parties if p.get_content_type() == "text/html"), None)
-    if html is None:
-        return brut or ""
-    if brut is None or _aplati(brut):
-        return _html_en_texte(_charge(html))
-    return brut
+    propres, joints = _parties(message)
+    brut = next((_charge(p) for p in propres if p.get_content_type() == "text/plain"), None)
+    html = next((p for p in propres if p.get_content_type() == "text/html"), None)
+    if html is not None and (brut is None or _aplati(brut)):
+        texte = _html_en_texte(_charge(html))
+    else:
+        texte = brut or ""
+    for joint in joints:
+        texte += "\n\n" + _en_tete_du_joint(joint) + _corps_lisible(joint)
+    return texte
+
+
+def _en_tete_du_joint(joint) -> str:
+    """L'en-tête d'un transfert en ligne, écrit d'après celui du message joint."""
+    return (
+        "-------- Message transféré --------\n"
+        f"De : {_texte(joint.get('From'))}\n"
+        f"Date : {_texte(joint.get('Date'))}\n"
+        f"Objet : {_texte(joint.get('Subject'))}\n\n"
+    )
 
 
 #: Au-delà, une ligne n'est plus une ligne : c'est un corps dont on a ôté les sauts.
@@ -144,7 +182,36 @@ _SEPARATEUR = re.compile(r"^[-_]{8,}$")
 #: L'en-tête d'un message cité à la manière d'Outlook : « De : … <adresse> »
 #: suivi, dans les lignes qui viennent, d'« Envoyé : » ou « Date : ».
 _DE = re.compile(r"^\*?(De|From)\s*:\*?\s*.*@", re.I)
-_DATE_CITEE = re.compile(r"^\*?(Envoyé|Sent|Date)\s*:", re.I)
+#: « Envoyé le : » est celui de Courrier pour Windows 10 (#1471).
+_DATE_CITEE = re.compile(r"^\*?(Envoyé(\s+le)?|Sent|Date(\s+d'envoi)?)\s*:", re.I)
+#: TOUTES les clés d'un bloc d'en-tête cité, quel que soit le client — la seule
+#: liste : `courriel_fil` la lit ici (#1471). « Pour » et « Sujet » sont de
+#: Thunderbird, « Copie à » d'Orange, « Envoyé le » de Courrier pour Windows.
+CLE_ENTETE = re.compile(
+    r"^\*?(De|From|Envoyé(?:\s+le)?|Sent|Date(?:\s+d'envoi)?|À|A|To|Pour|Cc|Cci|Bcc"
+    r"|Copie à|Objet|Subject|Sujet|Importance|Répondre à|Reply-To)\s*:",
+    re.I,
+)
+#: « Message du 29/09/26 08:43 » : Orange annonce ainsi le message cité, sans
+#: ligne « Date : » dans le bloc qui suit (#1471).
+MESSAGE_DU = re.compile(r"^Message du\s+(.*\d{1,2}\s*[:h]\s*\d{2}.*)$", re.I)
+#: La ligne qui ouvre le message transféré, selon le client (#1471) : Apple
+#: (français, anglais), Gmail, Outlook, Thunderbird, Yahoo, Samsung, Proton,
+#: Free (« Mail transféré »), La Poste et SFR (« Message original »).
+_MARQUE_TRANSFERT = re.compile(
+    r"^(D[ée]but du message r[ée]exp[ée]di[ée]\s*:?|Begin forwarded message\s*:?"
+    r"|-{2,}\s*(Message transf[ée]r[ée]|Forwarded message|Original Message|Message d'origine"
+    r"|Message original|Mail transf[ée]r[ée]|Mail original)\s*-*)$",
+    re.I,
+)
+#: La signature qu'ajoute l'APPAREIL ou l'application — pas un mot de l'auteur
+#: (#1471). Bornée en longueur : « Envoyé depuis hier, le devis… » est du texte.
+_SIGNATURE_APPAREIL = re.compile(
+    r"^(Envoy[ée] (de|depuis) mon |Envoy[ée] à partir de |Sent from (my )?"
+    r"|Obtenir Outlook pour |Get Outlook for )",
+    re.I,
+)
+_SIGNATURE_LONGUEUR = 70
 
 
 def _sans_citation(texte: str) -> str:
@@ -160,6 +227,10 @@ def _sans_citation(texte: str) -> str:
         nue = ligne.strip()
         if nue.startswith(">") or nue.startswith("-- ") or _SEPARATEUR.match(nue):
             break
+        if _MARQUE_TRANSFERT.match(nue.strip("*")) or MESSAGE_DU.match(nue):
+            break
+        if len(nue) <= _SIGNATURE_LONGUEUR and _SIGNATURE_APPAREIL.match(nue):
+            break
         if nue.startswith("Le ") and nue.endswith("écrit :"):
             break
         if _DE.match(nue) and any(_DATE_CITEE.match(s.strip()) for s in source[n + 1 : n + 4]):
@@ -172,16 +243,9 @@ def _sans_citation(texte: str) -> str:
 
 #: « TR : », « Fwd: », « Fw: » en tête de l'objet.
 _OBJET_TRANSFERT = re.compile(r"^\s*(tr|fwd?|transf\.?)\s*:", re.I)
-#: La ligne qui ouvre le message transféré (Apple, Gmail, Outlook, Orange).
-_MARQUE_TRANSFERT = re.compile(
-    r"^(D[ée]but du message r[ée]exp[ée]di[ée]\s*:?"
-    r"|-{2,}\s*(Message transf[ée]r[ée]|Forwarded message|Original Message|Message d'origine)"
-    r"\s*-*)$",
-    re.I,
-)
 _ADRESSE = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
 #: L'objet d'un message cité : « Objet : … », « Subject: … ».
-_OBJET_CITE = re.compile(r"^\*?(Objet|Subject)\s*:\*?", re.I)
+_OBJET_CITE = re.compile(r"^\*?(Objet|Subject|Sujet)\s*:\*?", re.I)
 #: Les chevrons d'une citation en texte brut (« > > texte »).
 _CHEVRONS = re.compile(r"^(\s*>)+ ?")
 
@@ -230,9 +294,15 @@ def _debut_d_entete(lignes: list[str], n: int) -> int | None:
       Windows a été lu comme une simple réponse, faute de cette forme.
     """
     nue = lignes[n].strip().strip("*")
-    if _MARQUE_TRANSFERT.match(nue) or _SEPARATEUR.match(nue):
+    if _MARQUE_TRANSFERT.match(nue):
+        #  Thunderbird écrit « Sujet : » et « Date : » AVANT « De : » (#1471).
+        proches = [lg.strip().strip("*") for lg in lignes[n + 1 : n + 9]]
+        return n + 1 if any(_DE.match(lg) for lg in proches) else None
+    if _SEPARATEUR.match(nue):
         suivantes = [lg.strip().strip("*") for lg in lignes[n + 1 : n + 4] if lg.strip()]
         return n + 1 if suivantes and _DE.match(suivantes[0]) else None
+    if MESSAGE_DU.match(nue):
+        return n if any(_DE.match(lg.strip()) for lg in lignes[n + 1 : n + 4]) else None
     if _DE.match(nue) and any(_DATE_CITEE.match(lg.strip()) for lg in lignes[n + 1 : n + 6]):
         return n
     return None
@@ -258,7 +328,10 @@ def transfert_dans(sujet: str, texte: str) -> Transfert | None:
             nue = lignes[fin].strip().strip("*")
             if not nue and de:
                 break
-            if _DE.match(nue):
+            date_du = MESSAGE_DU.match(nue)
+            if date_du:
+                date = date or date_du.group(1)
+            elif _DE.match(nue):
                 de = de or valeur_d_entete(nue)
             elif _DATE_CITEE.match(nue):
                 date = date or valeur_d_entete(nue)
