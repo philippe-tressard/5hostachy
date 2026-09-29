@@ -67,6 +67,19 @@ ASSISTANT_SANS_GESTE = (
     "les lignes vides\xa0; le texte reçu reste conservé tel quel dans l'affaire."
 )
 
+
+#: Les courriels TRANSFÉRÉS par un membre du conseil à l'adresse des affaires
+#: (29/09/2026) : ils deviennent une affaire réservée au conseil, avec le nom,
+#: l'adresse et le texte de personnes qui n'ont rien envoyé au site elles-mêmes,
+#: et chaque message passe par la mise en forme automatique. Écrite une fois :
+#: le gabarit et la migration 0237, qui l'insère dans le texte servi, la lisent ici.
+COURRIELS_TRANSFERES = (
+    " Il en va de même des <strong>courriels transférés</strong> par un membre du "
+    "conseil syndical à l'adresse des affaires : chaque message du fil y est "
+    "transmis séparément, puis versé avec le nom, l'adresse et la date de son auteur "
+    "dans une affaire réservée au conseil syndical."
+)
+
 DEFAULT_LEGAL = {
     "mentions_legales": (
         "<h2>Éditeur du service</h2>"
@@ -142,6 +155,7 @@ DEFAULT_LEGAL = {
         "documents joints</strong> — est transmis au service de modèle de langage configuré. "
         "<strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il opère. "
         + ASSISTANT_SANS_GESTE
+        + COURRIELS_TRANSFERES
         + "</li><li><strong>Acheminement des courriels</strong> — les notifications "
         "partent par un service d'envoi de courriels, qui traite donc l'adresse du destinataire et le"
         " contenu du message. <strong>À RENSEIGNER</strong>\xa0: lequel.</li></ul><h2>5. Durée de "
@@ -218,6 +232,7 @@ AJOUTS_1034 = [
         " langage configuré. <strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il "
         "opère. "
         + ASSISTANT_SANS_GESTE
+        + COURRIELS_TRANSFERES
         + "</li><li><strong>Acheminement des courriels</strong> — les notifications "
         "partent par un service d'envoi de courriels, qui traite donc l'adresse du destinataire "
         "et le contenu du message. <strong>À RENSEIGNER</strong>\xa0: lequel.</li></ul>",

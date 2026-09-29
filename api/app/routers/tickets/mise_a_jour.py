@@ -38,6 +38,7 @@ from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
 from app.utils.intervenant import appliquer_intervenant
 from app.utils.prochaine_visite import apres_cloture
 from app.utils.nature_affaire import (
+    ACTUALITE,
     PERIMETRE_BUG,
     categorie_reservee,
     change_de_nature,
@@ -182,8 +183,13 @@ def update_ticket(
     )
     if vers_reservee and categorie_reservee(body.categorie) and not is_cs_admin:
         raise HTTPException(403, "Cette catégorie est réservée au conseil syndical")
+    #  🔴 Jugé sur la catégorie FINALE, jamais sur celle d'avant : l'écran qui
+    #  fait d'une actualité une Étude & travaux envoie « Ouvert » avec la
+    #  nouvelle catégorie, et ce PATCH légitime répondait 422 (29/09/2026,
+    #  TK-A00017). À l'inverse, un état demandé avec « Actualité » est refusé.
+    categorie_finale = body.categorie if body.categorie is not None else ticket.categorie
     if body.statut is not None and (
-        body.statut in STATUTS_TICKET_SANS_CYCLE or est_actualite(ticket)
+        body.statut in STATUTS_TICKET_SANS_CYCLE or valeur(categorie_finale) == ACTUALITE
     ):
         raise HTTPException(
             422, "Une actualité n'a pas d'état de suivi : c'est sa catégorie qui en décide"
@@ -245,7 +251,11 @@ def update_ticket(
         if est_bug(ticket.categorie):  # le périmètre d'un bogue est verrouillé (#1191)
             ticket.perimetre_cible = PERIMETRE_BUG
         if nature_changee:
-            ticket.statut = statut_pour(ticket.categorie)
+            #  L'état que le conseil a demandé dans la même correction est
+            #  retenu (la liste blanche est celle de `statut_pour`) : il avait
+            #  été posé plus haut, et ce bloc l'écrasait en « Ouvert ».
+            demande = valeur(body.statut) if body.statut is not None else None
+            ticket.statut = statut_pour(ticket.categorie, demande, est_cs=is_cs_admin)
             #  Le public visé d'une actualité ne suit pas l'affaire qu'elle
             #  devient (#1343) : il déciderait qui la lit sans que personne l'ait
             #  choisi pour elle. Envoyé dans la même correction, il est retenu.

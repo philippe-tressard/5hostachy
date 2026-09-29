@@ -35,9 +35,11 @@ const EMPRUNTS = {
 		1,
 		'un PANNEAU dépliable (en-tête bouton, réponses), pas un texte',
 	],
-	'routes/(app)/espace-cs/+page.svelte': [1, 'le BADGE de rôle « président »'],
 	'routes/(app)/tableau-de-bord/+page.svelte': [1, 'la CARTE des consignes mise en avant'],
-	'styles/composants.css': [2, 'le SURVOL de `.btn-icon-warn` et le badge `.badge-orange`'],
+	'styles/composants.css': [
+		3,
+		'le SURVOL de `.btn-icon-warn`, le badge `.badge-orange` et le badge « président » d’une fiche de membre',
+	],
 	'styles/ecrans.css': [2, 'la carte KPI en alerte, à l’écran et à l’impression'],
 };
 

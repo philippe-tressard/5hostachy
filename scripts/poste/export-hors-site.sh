@@ -373,7 +373,7 @@ fi
 #  un contrôle qui crie sur du légitime finit désarmé (leçon de C16).
 MANQUANTS=$(ls "$EXPORT_DEST" 2>/dev/null | jours_manquants "$EXPORT_KEEP")
 if [ -n "$MANQUANTS" ]; then
-  log "  ⚠️  Jours absents de la copie hors site (14 derniers) : $MANQUANTS"
+  log "  ⚠️  Jours absents de la copie hors site ($EXPORT_KEEP derniers) : $MANQUANTS"
 fi
 
 # ── 7. Rapport à l'API (canal cron existant) ─────────────────────────────────

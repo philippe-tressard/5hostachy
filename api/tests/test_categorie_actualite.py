@@ -228,6 +228,44 @@ def test_une_actualite_promue_en_affaire_s_ouvre(session):
     assert (lu.categorie, lu.statut) == ("actualite", "publie")
 
 
+def test_l_ecran_corrige_une_actualite_en_etude_avec_son_etat(session):
+    """29/09/2026, TK-A00017 : ✏️ Modifier → « Étude & travaux » répondait 422.
+
+    L'écran envoie, pour toute affaire suivie, son état — « Ouvert » pour une
+    actualité qui en devient une (`chargeUtileAffaire`). Le refus jugeait la
+    catégorie d'AVANT la correction ; il juge désormais la catégorie finale.
+    """
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    actu = _creer(session, cs, categorie="actualite")
+    corps = TicketUpdate(categorie="etude_travaux", statut="ouvert")
+    lu = mise_a_jour.update_ticket(actu.id, corps, BackgroundTasks(), session=session, user=cs)
+    assert (lu.categorie, lu.statut) == ("etude_travaux", "ouvert")
+
+
+def test_l_etat_demande_avec_la_promotion_est_retenu(session):
+    #  Un administrateur : le conseil ne corrige le contenu que d'une affaire
+    #  « Ouvert » (règle distincte, `update_ticket`), et la catégorie en est.
+    admin = _compte(session, role=RoleUtilisateur.admin)
+    actu = _creer(session, admin, categorie="actualite")
+    corps = TicketUpdate(categorie="question", statut="en_cours")
+    lu = mise_a_jour.update_ticket(actu.id, corps, BackgroundTasks(), session=session, user=admin)
+    assert (lu.categorie, lu.statut) == ("question", "en_cours")
+
+
+def test_un_etat_demande_avec_la_categorie_actualite_est_refuse(session):
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+    affaire = _creer(session, cs, categorie="panne")
+    with pytest.raises(HTTPException) as refus:
+        mise_a_jour.update_ticket(
+            affaire.id,
+            TicketUpdate(categorie="actualite", statut="en_cours"),
+            BackgroundTasks(),
+            session=session,
+            user=cs,
+        )
+    assert refus.value.status_code == 422
+
+
 def test_un_resident_ne_fait_pas_de_son_affaire_une_actualite(session):
     resident = _compte(session)
     affaire = _creer(session, resident, categorie="panne")

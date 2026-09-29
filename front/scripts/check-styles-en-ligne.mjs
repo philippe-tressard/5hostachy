@@ -44,8 +44,9 @@ import { fileURLToPath } from 'node:url';
  *  Puis 451 : la démarche « Nouvel arrivant » du profil, idem (#779).
  *  Puis 449 : le bail parking/cave et le QR WhatsApp, passés par
  *  `EncartAvertissement` (#1455).
+ *  Puis 445 : l'annuaire de l'espace CS, extrait en deux composants (#779).
  */
-const PLAFOND = 449;
+const PLAFOND = 445;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

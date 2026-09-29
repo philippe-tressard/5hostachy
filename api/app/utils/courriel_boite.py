@@ -54,6 +54,7 @@ from app.utils.destinataires import est_adresse_syndic
 from app.utils.courriel_authenticite import VerificationReportee, verifier_expediteur
 from app.utils.courriel_decodage import _corps_lisible, _texte
 from app.utils.courriel_journal import journaliser_releve
+from app.utils.courriel_transfert import compte_a_l_adresse, decider_transfert
 from app.utils.courriel_relance import reponse_a_une_relance, relance_de
 from app.utils.echecs_repetes import CompteurEchecs
 from app.utils.courriel_ingestion import (
@@ -195,6 +196,11 @@ def _refus(verdict, motif: str, *, jeton=None, numero=None):
 
 def _decider(session, entetes, corps, recu_le, plancher, authentification):
     """`(décision, motif, affaire)` — écrit ce que le verdict demande, sans valider."""
+    #  Un fil TRANSFÉRÉ (29/09/2026) : découpé et versé par `courriel_transfert`,
+    #  qui rend None quand le message n'est pas pour lui.
+    issue = decider_transfert(session, entetes, corps, recu_le, plancher, authentification)
+    if issue is not None:
+        return issue
     verdict = examiner(
         entetes, recu_le=recu_le, plancher=plancher, authentification=authentification
     )
@@ -239,12 +245,7 @@ def _decider(session, entetes, corps, recu_le, plancher, authentification):
         _prevenir_le_cs(session, ticket, verdict)
         return REFUSE, verdict.motif, ticket
 
-    auteur = session.exec(
-        select(Utilisateur).where(
-            Utilisateur.email == verdict.expediteur.split("<")[-1].strip(">").strip(),
-            Utilisateur.actif == True,  # noqa: E712
-        )
-    ).first()
+    auteur = compte_a_l_adresse(session, verdict.expediteur)
     if auteur is None:
         #  Voir l'en-tête : pas de compte, pas d'écriture — mais on le DIT.
         refus = _refus(
@@ -271,8 +272,7 @@ def _decider(session, entetes, corps, recu_le, plancher, authentification):
 
     #  Texte nettoyé, mis en forme par l'assistant si l'usage est prêt, et daté
     #  de l'envoi — `utils/reponse_courriel` (#1322).
-    sujet = {k.lower(): v for k, v in entetes.items()}.get("subject", "")
-    suite = suite_de_reponse(session, ticket, auteur, verdict.expediteur, sujet, corps, recu_le)
+    suite = suite_de_reponse(session, ticket, auteur, verdict.expediteur, corps, recu_le)
     if suite is None:
         return IGNORE, _RIEN_A_AJOUTER, ticket
     session.add(suite)

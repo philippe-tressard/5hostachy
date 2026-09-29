@@ -7,7 +7,7 @@
 - une affaire CLOSE ne reçoit plus rien, pas même une alerte ;
 - un courriel en HTML SEUL se lit (l'application Mail d'Orange) : il était ignoré.
 
-Les règles vivent dans `utils/reponse_courriel.suite_de_reponse` et
+Les règles vivent dans `utils/reponse_courriel.suite_d_un_message` et
 `utils/courriel_decodage` ; la relève (`courriel_boite.traiter`) les applique.
 """
 
@@ -17,8 +17,10 @@ from datetime import datetime
 from email.message import EmailMessage
 from types import SimpleNamespace
 
+import pytest
+
 from app.models.tickets import StatutTicket
-from app.utils import llm
+from app.utils import courriel_transfert, llm
 from app.utils.courriel_boite import traiter
 from app.utils.courriel_decodage import _corps_lisible, _sans_citation, transfert_dans
 from app.utils.courriel_ingestion import ACCEPTE, IGNORE
@@ -30,6 +32,13 @@ from tests.test_courriel_reponse_ticket_bout_en_bout import (  # noqa: F401
 )
 
 _ENVOI = datetime(2026, 9, 28, 14, 37)
+
+
+@pytest.fixture(autouse=True)
+def _domaine_du_site(monkeypatch):
+    """Le domaine d'où le site écrit, comme en production : le message du site
+    cité au bas d'un transfert n'entre pas dans le fil."""
+    monkeypatch.setattr(courriel_transfert, "domaines_du_site", lambda _session: {"5hostachy.fr"})
 
 
 def _modele(texte):
@@ -119,8 +128,10 @@ def test_un_TRANSFERT_du_syndic_par_le_conseil_porte_le_message_du_syndic(scene)
     entetes["Subject"] = f"TR : Affaire #{ticket.numero} — Fuite"
     traiter(session, entetes, _transfert_du_syndic(syndic.email), _ENVOI, authentification=_AUTH_OK)
     (evol,) = _evolutions(session, ticket)
+    #  Daté du message du SYNDIC (15 h 47), pas du transfert (16:37) : depuis le
+    #  29/09/2026 chaque message d'un fil transféré porte sa propre date.
     assert evol.contenu.startswith(
-        "<p><em>Mail reçu de G S le 28 septembre 2026 à 16:37, transféré par C S</em></p>"
+        "<p><em>Mail reçu de G S le 28 septembre 2026 à 15:47, transféré par C S</em></p>"
     ), evol.contenu
     assert "Artur Services passera ce soir" in evol.contenu
     assert "Lyon" not in evol.contenu, "la note de qui transfère n'est pas le suivi"
@@ -129,7 +140,10 @@ def test_un_TRANSFERT_du_syndic_par_le_conseil_porte_le_message_du_syndic(scene)
     assert (evol.type, evol.nouveau_statut) == ("etat", "en_cours")
 
 
-def test_le_transfert_d_un_message_d_un_TIERS_reste_une_note_du_conseil(scene):  # noqa: F811
+def test_le_transfert_d_un_message_d_un_TIERS_verse_le_message_du_tiers(scene):  # noqa: F811
+    """🔴 Changé le 29/09/2026 : c'était la NOTE du conseil qui entrait. Le conseil
+    transfère désormais les échanges reçus dans sa boîte pour qu'ils rejoignent
+    l'affaire — c'est le message du tiers que le fil doit garder."""
     session, ticket, _syndic, cs = scene
     entetes = dict(_entetes(ticket.jeton_courriel, de=cs.email))
     entetes["Subject"] = f"TR : Affaire #{ticket.numero}"
@@ -142,7 +156,8 @@ def test_le_transfert_d_un_message_d_un_TIERS_reste_une_note_du_conseil(scene): 
     )
     (evol,) = _evolutions(session, ticket)
     assert evol.type == "commentaire"
-    assert evol.contenu.startswith("<p><em>Mail reçu de C S le ")
+    assert evol.contenu.startswith("<p><em>Mail reçu de G S le 28 septembre 2026 à 15:47, ")
+    assert "Artur Services" in evol.contenu and "Lyon" not in evol.contenu
 
 
 def test_une_REPONSE_a_un_transfert_n_est_pas_un_transfert():

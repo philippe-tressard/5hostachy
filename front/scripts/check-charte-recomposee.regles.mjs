@@ -69,7 +69,7 @@ export const TOLERANCES = {
 		'`auto-fill` et non `auto-fit` — les champs ne s’étirent pas quand il en manque',
 	'routes/(app)/admin/+page.svelte::form-grid':
 		'deux colonnes fixes : cet écran de configuration apparie des libellés et des valeurs',
-	'routes/(app)/espace-cs/+page.svelte::form-grid':
+	'lib/components/AnnuaireConseil.svelte::form-grid':
 		'colonnes de 150 px et gap resserré — la fiche d’un membre du CS tient des champs très courts',
 	//  ✅ La « pile » de `FormulaireFaq` (la dette nommée ici depuis le 31/08) est
 	//  RÉSORBÉE le 26/09/2026 (#1329) : le formulaire passe par les sections du

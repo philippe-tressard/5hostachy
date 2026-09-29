@@ -180,50 +180,74 @@ def contenu_de_la_suite(
     return entete + corps
 
 
-def suite_de_reponse(
-    session: Session, ticket, auteur, expediteur: str, sujet: str, corps: str, envoye_le
-):
-    """La Suite à ajouter au fil, ou None si le message n'a rien à y apporter.
+def suite_de_reponse(session: Session, ticket, auteur, expediteur: str, corps: str, envoye_le):
+    """La Suite d'une réponse DIRECTE, ou None si elle n'a rien à apporter au fil.
 
-    Trois règles demandées le 28/09/2026 :
-
-    - **le syndic fait avancer le dossier** : un message du syndic — écrit par lui,
-      ou transféré par un membre du conseil depuis une adresse de la fiche du
-      cabinet — fait passer une affaire encore « Ouvert » à « Chez le syndic »
-      (`en_cours`). La Suite est alors une entrée d'ÉTAT, comme au formulaire ;
-    - **un transfert du syndic porte le message du syndic**, pas la note de qui
-      transfère : c'est lui que le fil doit garder ;
-    - **un simple merci du conseil n'entre pas** : quand l'assistant ne trouve
-      rien d'utile dans le message d'un membre du conseil, rien n'est écrit. Un
-      message du syndic ou d'un résident entre toujours — l'assistant n'a pas à
-      décider qu'une réponse sollicitée ne comptait pas.
+    Le message d'un fil TRANSFÉRÉ ne passe plus par ici depuis le 29/09/2026 :
+    `courriel_transfert` le découpe et appelle `suite_d_un_message` pour chacun.
     """
     from app.auth.deps import est_moderateur
+    from app.utils.courriel_decodage import _sans_citation
+    from app.utils.noms import nom_affiche
+
+    return suite_d_un_message(
+        session,
+        ticket,
+        auteur,
+        expediteur=expediteur,
+        nom=nom_affiche(auteur.prenom, auteur.nom),
+        texte=_sans_citation(corps),
+        recu=corps,
+        envoye_le=envoye_le,
+        ecartable=est_moderateur(auteur),
+    )
+
+
+def suite_d_un_message(
+    session: Session,
+    ticket,
+    signataire,
+    *,
+    expediteur: str,
+    nom: str,
+    texte: str,
+    recu: str,
+    envoye_le,
+    transfere_par: str | None = None,
+    ecartable: bool = False,
+):
+    """La Suite d'UN message — réponse directe ou message d'un fil transféré —,
+    ou None s'il n'a rien à apporter au fil.
+
+    `signataire` est le compte qui signe la Suite (qui a répondu, ou qui a
+    transféré) ; `expediteur` et `nom` disent qui a ÉCRIT le message, et c'est
+    lui que la ligne d'en-tête nomme. `texte` est déjà sans citation.
+
+    Deux règles demandées le 28/09/2026 :
+
+    - **le syndic fait avancer le dossier** : un message du syndic — reconnu à
+      son adresse dans la fiche du cabinet — fait passer une affaire encore
+      « Ouvert » à « Chez le syndic » (`en_cours`). La Suite est alors une entrée
+      d'ÉTAT, comme au formulaire ;
+    - **un simple merci du conseil n'entre pas** (`ecartable`) : quand
+      l'assistant ne trouve rien d'utile dans le message d'un membre du conseil,
+      rien n'est écrit. Un message du syndic ou d'un résident entre toujours —
+      l'assistant n'a pas à décider qu'une réponse sollicitée ne comptait pas.
+    """
     from app.models.core import TicketEvolution
     from app.models.tickets import StatutTicket
-    from app.utils.courriel_decodage import _sans_citation, transfert_dans
     from app.utils.destinataires import est_adresse_syndic
     from app.utils.nature_affaire import est_actualite
-    from app.utils.noms import nom_affiche
     from app.utils.valeurs import valeur
 
-    compte = nom_affiche(auteur.prenom, auteur.nom)
-    transfert = transfert_dans(sujet, corps)
-    syndic_transfere = transfert is not None and est_adresse_syndic(session, transfert.adresse)
-    syndic = syndic_transfere or est_adresse_syndic(session, parseaddr(expediteur or "")[1])
-
-    source = transfert.corps if syndic_transfere else corps
-    texte = mettre_en_forme(session, _sans_citation(source), corps)
-    if not texte.contenu:
+    syndic = est_adresse_syndic(session, parseaddr(expediteur or "")[1])
+    mis = mettre_en_forme(session, texte, recu)
+    if not mis.contenu:
         return None
-    if texte.vide_selon_assistant and est_moderateur(auteur) and not syndic:
+    if mis.vide_selon_assistant and ecartable and not syndic:
         return None
     quand = moment_de_la_suite(envoye_le)
-    contenu = (
-        contenu_de_la_suite(transfert.de, transfert.adresse, quand, texte.contenu, compte)
-        if syndic_transfere
-        else contenu_de_la_suite(expediteur, compte, quand, texte.contenu)
-    )
+    contenu = contenu_de_la_suite(expediteur, nom, quand, mis.contenu, transfere_par)
     etat = valeur(ticket.statut)
     avance = syndic and etat == StatutTicket.ouvert.value and not est_actualite(ticket)
     return TicketEvolution(
@@ -232,8 +256,8 @@ def suite_de_reponse(
         ancien_statut=etat if avance else None,
         nouveau_statut=StatutTicket.en_cours.value if avance else None,
         contenu=contenu,
-        contenu_origine=texte.origine,
-        assiste_ia=texte.assiste,
-        auteur_id=auteur.id,
+        contenu_origine=mis.origine,
+        assiste_ia=mis.assiste,
+        auteur_id=signataire.id,
         cree_le=quand,
     )
