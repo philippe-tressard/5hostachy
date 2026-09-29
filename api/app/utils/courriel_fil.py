@@ -98,9 +98,11 @@ _MOIS = {
     **dict.fromkeys(("dec", "decembre", "december"), 12),
 }
 #: « 29 septembre 2026 », « 26 sept. 2026 », « 1er octobre 2026 », « 29 Sep 2026 ».
-_JOUR_MOIS_AN = re.compile(r"\b(\d{1,2})(?:er)?\s+([^\W\d_]{3,10})\.?,?\s+(\d{4})\b")
+#: Plusieurs points tolérés : la redirection d'OVH DOUBLE le point d'une ligne
+#: qui en commence une, et « sept. » coupé en fin de ligne devient « sept.. ».
+_JOUR_MOIS_AN = re.compile(r"\b(\d{1,2})(?:er)?\s+([^\W\d_]{3,10})\.*,?\s+(\d{4})\b")
 #: « September 29, 2026 » (Outlook en anglais).
-_MOIS_JOUR_AN = re.compile(r"\b([^\W\d_]{3,10})\.?\s+(\d{1,2}),?\s+(\d{4})\b")
+_MOIS_JOUR_AN = re.compile(r"\b([^\W\d_]{3,10})\.*\s+(\d{1,2}),?\s+(\d{4})\b")
 #: « 26/09/2026 », « 26/09/26 ».
 _NUMERIQUE = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{2,4})\b")
 #: « 08:43 », « 10:12:34 », « 15 h 47 », « 8:43 AM ».
