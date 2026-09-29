@@ -47,6 +47,12 @@
   check "liste vide → tous"  "20260904 20260903" "$(printf '' | jours_manquants 2 20260905)"
   # L'archive du jour même n'est pas exigée : elle n'existe qu'après 02:00.
   check "le jour même n'est pas exigé" "" "$(printf '%s' "$SERIE_OK" | jours_manquants 1 20260905)"
+  # 🔴 Le faux « jour absent » du 29/09/2026 : export après 02:00, la rotation a
+  # gardé J et J-1. Réclamer J-2 signalait chaque jour un trou qui n'en est pas un.
+  SERIE_AVEC_JOUR=$'hostachy_backup_20260929_020000.tar.gz\nhostachy_backup_20260928_020000.tar.gz'
+  check "le jour même présent → fenêtre J..J-1" "" "$(printf '%s' "$SERIE_AVEC_JOUR" | jours_manquants 2 20260929)"
+  # …et un vrai trou dans cette fenêtre-là se voit toujours.
+  check "jour présent, veille absente" "20260928" "$(printf '%s' 'hostachy_backup_20260929_020000.tar.gz' | jours_manquants 2 20260929)"
 
   # Le faux négatif du 04/08/2026 : `tar | grep -q` sous pipefail rendait
   # « absent » sur une archive contenant app.db. Le listing est désormais

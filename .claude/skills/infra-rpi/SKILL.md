@@ -147,7 +147,11 @@ emportent base + uploads + toutes les sauvegardes d'un coup
 
 - **Lancement : MANUEL depuis le poste** — double-clic sur `scripts/poste/export-hors-site.cmd`, ou
   `bash /c/Dev/5hostachy/scripts/poste/export-hors-site.sh`. Destination par défaut : `C:\Backup`
-  (`EXPORT_DEST`), 14 versions (`EXPORT_KEEP`).
+  (`EXPORT_DEST`), **2 versions** (`EXPORT_KEEP`) — réduit de 14 à 2 le 12/09/2026 : on ne
+  restaure que la dernière ou l'avant-dernière, et quatorze archives de ~100 Mo pesaient
+  1,4 Go. La rotation efface donc les plus anciennes **à chaque export** ; le rattrapage
+  sur l'autre nœud et le relevé des jours manquants suivent la même valeur. La valeur
+  fait foi dans le script (commentaire de `EXPORT_KEEP`), pas ici.
 - Le script choisit sa source par **comportement** (qui répond sur `/api/health` en
   LAN), pas en lisant `.active` — et **s'abstient** en cas de split-brain : deux nœuds
   qui servent = deux bases divergentes, en copier une au hasard puis faire tourner la
