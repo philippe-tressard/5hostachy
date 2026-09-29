@@ -41,8 +41,13 @@ import { fileURLToPath } from 'node:url';
  *  27/09/2026, même jour, après arbitrage sur maquette : 124 et 62 — les
  *  tailles hors échelle rangées au cran supérieur, les couleurs d'état de
  *  Tailwind remplacées par la charte (voir « Ce qui est INTERDIT »).
+ *  29/09/2026 (#779) : 116 couleurs et 61 tailles. ⚠️ Pas une dette SOLDÉE — un DÉPLACEMENT :
+ *  les huit teintes des pastilles de rôle d'une fiche de membre (président,
+ *  interlocuteur principal, gestionnaire) et leur taille ont quitté `espace-cs` pour
+ *  `styles/composants.css`, où elles sont écrites une fois pour les deux
+ *  composants de l'annuaire. Elles restent des valeurs en dur, dans la charte.
  */
-const PLAFOND = { couleurs: 124, tailles: 62 };
+const PLAFOND = { couleurs: 116, tailles: 61 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

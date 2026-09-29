@@ -1,19 +1,9 @@
 <script lang="ts">
-	import { confirmer } from '$lib/confirmation';
 	import { page } from '$app/stores';
-	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
-	import { comparerParNom, nomAffiche } from '$lib/noms';
-	import {
-		REPLIE,
-		ajouter,
-		basculer,
-		editer,
-		retirer,
-		type EtatDepliable,
-	} from '$lib/listeDepliable';
-	import EnteteSyndic from '$lib/components/EnteteSyndic.svelte';
-	import ActionsMembre, { type Geste } from '$lib/components/ActionsMembre.svelte';
-	import CarteMembre, { type MembreBase } from '$lib/components/CarteMembre.svelte';
+	import { nomAffiche } from '$lib/noms';
+	import AnnuaireConseil from '$lib/components/AnnuaireConseil.svelte';
+	import AnnuaireSyndic from '$lib/components/AnnuaireSyndic.svelte';
+	import type { Inscrit, LigneImport, LotRapproche } from '$lib/annuaire-rapprochement';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
 	import { validerCompte } from '$lib/comptes';
@@ -23,7 +13,7 @@
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import { isCS, authResolue } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, annuaireAdmin, auth as authApi, lots as lotsApi } from '$lib/api';
+	import { admin as adminApi, auth as authApi, lots as lotsApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateShort } from '$lib/date';
@@ -31,8 +21,6 @@
 	import { trackTabView } from '$lib/telemetry';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import BadgesCopropriete from '$lib/components/BadgesCopropriete.svelte';
-	import { localisationMembre } from '$lib/utils';
-	import { replier, sansAccents } from '$lib/texte';
 	import { agitPourAutrui } from '$lib/roles';
 	import { accepterCommandeAcces, refuserCommandeAcces } from '$lib/commandes-acces';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -58,41 +46,6 @@
 		quantite: number;
 		cree_le: string;
 	}
-	//  🔴 Les deux formes DÉRIVENT de `MembreBase` (civilité, prénom, NOM, inscrit
-	//  lié), qui vit dans `CarteMembre` — le composant qui les rend. Elles la
-	//  recopiaient toutes les deux : quatre champs écrits trois fois, libres de
-	//  diverger au premier ajout. Un champ ajouté à la base arrive désormais dans
-	//  les deux, et le composant sait déjà le saisir.
-	interface MembreCSForm extends MembreBase {
-		batiment_id: number | null;
-		batiment_nom: string | null;
-		etage: number | null;
-		est_gestionnaire_site: boolean;
-		est_president: boolean;
-	}
-	interface MembreSyndicForm extends MembreBase {
-		fonction: string;
-		email: string;
-		telephones: string[];
-		est_principal: boolean;
-	}
-	interface SimpleUser {
-		id: number;
-		prenom: string;
-		nom: string;
-		email: string;
-		telephone: string | null;
-		batiment_id: number | null;
-	}
-	interface LotRow {
-		id: number;
-		numero: string;
-		type: string;
-		etage: number | null;
-		batiment_id: number | null;
-		batiment_nom: string | null;
-	}
-
 	// -- Onglet -------------------------------------------------------------
 	//  🔴 UNE SEULE LISTE, et elle est dans la TABLE (`$lib/pages.ts`, 05/09/2026).
 	//  Elle a d'abord été écrite deux fois dans ce fichier (04/09), puis une fois
@@ -123,134 +76,16 @@
 	//  20/08/2026 : ils ne servaient qu'à cet onglet, et l'onglet s'amorce seul.
 
 	// -- Annuaire -----------------------------------------------------------
+	//  L'onglet vit dans `AnnuaireConseil` et `AnnuaireSyndic` (#779, 29/09/2026),
+	//  qui s'amorcent seuls. La page ne garde que les données de RÉFÉRENCE qu'elle
+	//  charge de toute façon : elles servent aux deux à rapprocher un nom saisi
+	//  d'un inscrit et d'un logement (`$lib/annuaire-rapprochement`).
 	/** Non vide = une donnée de référence manque : l'écran est faux, pas vide. */
 	let erreurReference = '';
-	let allUsers: SimpleUser[] = [];
-	let allLots: LotRow[] = [];
-	let annuaireLoading = false;
-
-	// CS
-	let agAnnee: number | null = null;
-	let agDate = '';
-	let membresCS: MembreCSForm[] = [];
-	let savingCS = false;
-	let savingCSIdx: number | null = null;
-	//  🔴 UNE seule mécanique pour les deux listes (#640). Elle vivait ici en deux
-	//  exemplaires — `csOpenIdx`/`csEditIdx` et `syndicOpenIdx`/`syndicEditIdx` —
-	//  avec deux fonctions de retrait LITTÉRALEMENT identiques. Deux entités
-	//  différentes, mais le même comportement : déplier, éditer, ajouter, retirer
-	//  en décalant les index. `$lib/listeDepliable` la porte, et son `--selftest`
-	//  l'éprouve — le décalage d'index est la partie qu'on recopie sans la relire.
-	let cs: EtatDepliable = REPLIE;
-
-	// Syndic
-	let nomSyndic = '';
-	/** D'où vient le nom affiché — le contrat fait foi (#535, `utils/syndic.py`). */
-	let nomSyndicSource: 'contrat' | 'saisie' | 'aucune' = 'aucune';
-	let adresseSyndic = '';
-	let siteWebSyndic = '';
-	let membresSyndic: MembreSyndicForm[] = [];
-	let savingSyndic = false;
-	let savingSyndicIdx: number | null = null;
-	let syndic: EtatDepliable = REPLIE;
-
-	// WhatsApp
-	let whatsappUrl = '';
-
-	// -- Header inline-edit flags -----------------------------------------
-	let csHeaderEditing = false;
-	let syndicHeaderEditing = false;
-
-	// -- Liaison inscrit via NOM ------------------------------------------
-	function findUserByNom(nom: string): SimpleUser | null {
-		if (!nom || nom.length < 2) return null;
-		const q = replier(nom);
-		return allUsers.find((u) => replier(u.nom) === q) ?? null;
-	}
-
-	// Cherche dans les LotImport (via lots.listImports) pour trouver bâtiment/étage
-	let lotImports: any[] = [];
-	// Conversion etage_raw brut → entier (même logique que le backend)
-	function etageFromRaw(raw: string | null | undefined): number | null {
-		if (raw == null) return null;
-		//  La CASSE porte le sens ici (« 1ER », « RDC ») : `sansAccents` et non
-		//  `replier`, qui rendrait la forme comparable en minuscules.
-		const s = sansAccents(raw).trim().toUpperCase().replace(/\s+/g, ' ');
-		const map: Record<string, number> = {
-			RDC: 0,
-			'0': 0,
-			'1ER': 1,
-			'1': 1,
-			'2EME': 2,
-			'2': 2,
-			'3EME': 3,
-			'3': 3,
-			'4EME': 4,
-			'4': 4,
-			'5EME': 5,
-			'5': 5,
-			'6EME': 6,
-			'6': 6,
-			'7EME': 7,
-			'7': 7,
-			'1SS': -1,
-			'-1': -1,
-			'2SS': -2,
-			'-2': -2,
-		};
-		return map[s] ?? null;
-	}
-
-	function findImportForNom(
-		nom: string,
-	): { batiment_id: number | null; batiment_nom: string | null; etage: number | null } | null {
-		if (!nom || nom.length < 2) return null;
-		const q = replier(nom);
-		// Préférer le lot de type appartement pour la localisation (pas le parking ni la cave)
-		const hits = lotImports.filter(
-			(imp) => imp.nom_coproprietaire && replier(imp.nom_coproprietaire).includes(q),
-		);
-		if (!hits.length) return null;
-		// Exclure CA (cave) et PS (parking) via type_raw — fiable même si lot_id non résolu
-		const hitsAppt = hits.filter((imp) => {
-			const raw = (imp.type_raw ?? '').toUpperCase().trim();
-			if (raw.startsWith('CA') || raw.startsWith('PS')) return false;
-			if (imp.lot_id) {
-				const lot = allLots.find((l) => l.id === imp.lot_id);
-				if (lot && lot.type !== 'appartement') return false;
-			}
-			return true;
-		});
-		// Priorité : appartement résolu > non résolu > rien (parking/cave écarté)
-		const hit =
-			hitsAppt.find(
-				(imp) => imp.lot_id && allLots.find((l) => l.id === imp.lot_id)?.type === 'appartement',
-			) ??
-			hitsAppt.find((imp) => imp.lot_id) ??
-			hitsAppt[0] ??
-			null;
-		if (!hit) return null;
-		// Étage : source primaire = etage_raw de la ligne import (colonne Etage)
-		const etage: number | null = etageFromRaw(hit.etage_raw);
-		// Bâtiment : allLots (si lot résolu) puis batimentsMap, sinon batiment_id de la ligne import
-		let batiment_id: number | null = null;
-		let batiment_nom: string | null = null;
-		if (hit.lot_id) {
-			const lot = allLots.find((l) => l.id === hit.lot_id);
-			if (lot) {
-				batiment_id = lot.batiment_id;
-				const mapName = lot.batiment_id ? (batimentsMap[lot.batiment_id] ?? null) : null;
-				batiment_nom = mapName
-					? mapName.replace(/^Bât\. /i, '')
-					: lot.batiment_nom
-						? lot.batiment_nom.replace(/^Bât\. /i, '')
-						: null;
-			}
-		}
-		if (!batiment_id) batiment_id = hit.batiment_id ?? null;
-		if (!batiment_nom && hit.batiment_nom) batiment_nom = hit.batiment_nom.replace(/^Bât\. /i, '');
-		return { batiment_id, batiment_nom, etage };
-	}
+	let allUsers: Inscrit[] = [];
+	let allLots: LotRapproche[] = [];
+	let lotImports: LigneImport[] = [];
+	$: sources = { inscrits: allUsers, lots: allLots, imports: lotImports, batiments: batimentsMap };
 	//  🔴 Refuser sur un « non » AVÉRÉ, jamais sur un « pas encore » : le pourquoi est dans `check-gardes-auth.mjs`.
 	$: if ($authResolue && !$isCS) goto('/tableau-de-bord');
 	let _charge = false;
@@ -292,378 +127,13 @@
 				telephone: u.telephone,
 				batiment_id: u.batiment_id,
 			}));
-			allLots = lotsData as LotRow[];
+			allLots = lotsData as LotRapproche[];
 			lotImports = importsData as any[];
 		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
 			loading = false;
 		}
-		loadAnnuaire();
-	}
-
-	async function loadAnnuaire() {
-		annuaireLoading = true;
-		try {
-			const [csData, syndicData] = await Promise.all([
-				annuaireAdmin.getCS(),
-				annuaireAdmin.getSyndic(),
-			]);
-			agAnnee = csData.ag_annee ?? null;
-			agDate = csData.ag_date ?? '';
-			whatsappUrl = csData.whatsapp_url ?? '';
-			membresCS = (csData.membres ?? []).map((m: any): MembreCSForm => ({
-				genre: m.genre ?? 'Mme',
-				prenom: m.prenom ?? '',
-				nom: m.nom ?? '',
-				batiment_id: m.batiment_id ?? null,
-				batiment_nom: m.batiment_nom ?? null,
-				etage: m.etage ?? null,
-				user_id: m.user_id ?? null,
-				est_gestionnaire_site: m.est_gestionnaire_site ?? false,
-				est_president: m.est_president ?? false,
-			}));
-			membresCS.sort((a, b) => {
-				const bat = (a.batiment_nom ?? 'zzz').localeCompare(b.batiment_nom ?? 'zzz', 'fr');
-				if (bat !== 0) return bat;
-				//  Puis la règle commune — nom, puis prénom (`$lib/noms`).
-				return comparerParNom(a, b);
-			});
-			membresCS = [...membresCS];
-			cs = REPLIE;
-			csHeaderEditing = false;
-			nomSyndic = syndicData.nom_syndic ?? '';
-			nomSyndicSource = syndicData.nom_syndic_source ?? 'aucune';
-			adresseSyndic = syndicData.adresse ?? '';
-			siteWebSyndic = syndicData.site_web ?? '';
-			membresSyndic = (syndicData.membres ?? []).map((m: any): MembreSyndicForm => ({
-				genre: m.genre ?? 'Mme',
-				prenom: m.prenom ?? '',
-				nom: m.nom ?? '',
-				fonction: m.fonction ?? '',
-				email: m.email ?? '',
-				telephones: m.telephone
-					? m.telephone
-							.split(',')
-							.map((t: string) => t.trim())
-							.filter(Boolean)
-					: [''],
-				est_principal: m.est_principal ?? false,
-				user_id: m.user_id ?? null,
-			}));
-			syndic = REPLIE;
-			syndicHeaderEditing = false;
-		} catch {
-			toast('error', 'Erreur chargement annuaire');
-		} finally {
-			annuaireLoading = false;
-		}
-	}
-
-	// -- CS handlers --------------------------------------------------------
-	/**
-	 *  Envoyer, annoncer, rendre la main — le geste d'enregistrement, écrit une fois.
-	 *
-	 *  Les QUATRE enregistrements de cet écran (le conseil syndical et l'un de ses
-	 *  membres, le syndic et l'un des siens) reprenaient les mêmes neuf lignes :
-	 *  poser le drapeau, appeler, annoncer, rattraper par `messageErreur`, retirer
-	 *  le drapeau dans un `finally`. Quatre copies, et rien qui les tienne
-	 *  ensemble — celle qui aurait oublié le `finally` aurait laissé un bouton en
-	 *  « Enregistrement… » pour toujours, sur la seule branche qu'on ne teste pas.
-	 *
-	 *  @param pendant reçoit `true` puis `false` : c'est l'appelant qui sait QUEL
-	 *  drapeau il pose — un booléen pour la liste entière, un index pour un membre.
-	 *  @param apres ne s'exécute QUE si l'envoi a réussi : refermer une fiche dont
-	 *  l'enregistrement a échoué ferait disparaître la saisie qu'on vient de perdre.
-	 */
-	async function enregistrer(
-		envoi: () => Promise<unknown>,
-		message: string,
-		pendant: (encours: boolean) => void,
-		apres?: () => void,
-	): Promise<void> {
-		pendant(true);
-		try {
-			await envoi();
-			apres?.();
-			toast('success', message);
-		} catch (e: any) {
-			toast('error', messageErreur(e));
-		} finally {
-			pendant(false);
-		}
-	}
-
-	function addMembreCS() {
-		membresCS = [
-			...membresCS,
-			{
-				genre: 'Mme',
-				prenom: '',
-				nom: '',
-				batiment_id: null,
-				batiment_nom: null,
-				etage: null,
-				user_id: null,
-				est_gestionnaire_site: false,
-				est_president: false,
-			},
-		];
-		cs = ajouter(membresCS.length);
-	}
-	function removeMembreCS(i: number) {
-		membresCS = membresCS.filter((_, j) => j !== i);
-		cs = retirer(cs, i);
-	}
-
-	function onCSNomInput(i: number) {
-		const nom = membresCS[i].nom;
-		const imp = findImportForNom(nom);
-		if (imp) {
-			membresCS[i] = {
-				...membresCS[i],
-				batiment_id: imp.batiment_id,
-				batiment_nom: imp.batiment_nom,
-				etage: imp.etage,
-			};
-		}
-		if (!membresCS[i].user_id) {
-			const matchedUser = findUserByNom(nom);
-			if (matchedUser) membresCS[i] = { ...membresCS[i], user_id: matchedUser.id };
-		}
-		membresCS = [...membresCS];
-	}
-
-	function clearUserCS(i: number) {
-		membresCS[i] = { ...membresCS[i], user_id: null };
-		membresCS = [...membresCS];
-	}
-
-	async function onPresidentChange(i: number) {
-		// Si on décoche, c'est OK
-		if (!membresCS[i].est_president) {
-			membresCS[i] = { ...membresCS[i], est_president: false };
-			membresCS = [...membresCS];
-			return;
-		}
-
-		// Si on coche, vérifier s'il y a déjà un président
-		const currentPresident = membresCS.findIndex(
-			(m) => m.est_president && membresCS.indexOf(m) !== i,
-		);
-		if (currentPresident !== -1) {
-			// Demander confirmation
-			const oldName = nomAffiche(membresCS[currentPresident]);
-			const newName = nomAffiche(membresCS[i]);
-			const confirmed = await confirmer({
-				titre: 'Remplacer le président',
-				message: `Un président existe déjà (${oldName}).\n\nVoulez-vous remplacer par ${newName} ?`,
-				libelleConfirmer: 'Remplacer',
-			});
-
-			if (confirmed) {
-				// Désélectionner l'ancien
-				membresCS[currentPresident] = { ...membresCS[currentPresident], est_president: false };
-				// Sélectionner le nouveau
-				membresCS[i] = { ...membresCS[i], est_president: true };
-				membresCS = [...membresCS];
-				toast('info', `${newName} est maintenant président du CS`);
-			} else {
-				// Annuler la sélection
-				membresCS[i] = { ...membresCS[i], est_president: false };
-				membresCS = [...membresCS];
-			}
-		} else {
-			// Aucun président existant, on peut le cocher
-			membresCS[i] = { ...membresCS[i], est_president: true };
-			membresCS = [...membresCS];
-			toast('info', `${nomAffiche(membresCS[i])} est maintenant président du CS`);
-		}
-	}
-
-	/**
-	 *  La charge utile de `putCS`, écrite UNE fois.
-	 *
-	 *  🔴 Elle l'était DEUX fois — dans `saveCS` et dans `saveMembreCS` — alors
-	 *  que le côté syndic avait déjà son `chargeUtileSyndic` avec ce commentaire.
-	 *  Le fichier portait donc la règle et son exception, à quarante lignes
-	 *  d'écart. Un champ ajouté à l'une des deux copies serait parti selon le
-	 *  bouton employé, et rien n'aurait levé : le serveur accepte les deux formes.
-	 */
-	function chargeUtileCS() {
-		return {
-			ag_annee: agAnnee,
-			ag_date: agDate || null,
-			whatsapp_url: whatsappUrl || null,
-			membres: membresCS,
-		};
-	}
-
-	async function saveCS() {
-		await enregistrer(
-			() => annuaireAdmin.putCS(chargeUtileCS()),
-			'Conseil Syndical enregistré',
-			(v) => (savingCS = v),
-			() => (csHeaderEditing = false),
-		);
-	}
-
-	async function saveMembreCS(i: number) {
-		await enregistrer(
-			() => annuaireAdmin.putCS(chargeUtileCS()),
-			`${nomAffiche(membresCS[i])} enregistré`,
-			(v) => (savingCSIdx = v ? i : null),
-			() => (cs = REPLIE),
-		);
-	}
-
-	// -- Syndic handlers ----------------------------------------------------
-	function addMembreSyndic() {
-		membresSyndic = [
-			...membresSyndic,
-			{
-				genre: 'Mme',
-				prenom: '',
-				nom: '',
-				fonction: '',
-				email: '',
-				telephones: [''],
-				est_principal: false,
-				user_id: null,
-			},
-		];
-		syndic = ajouter(membresSyndic.length);
-	}
-	function removeMembreSyndic(i: number) {
-		membresSyndic = membresSyndic.filter((_, j) => j !== i);
-		syndic = retirer(syndic, i);
-	}
-
-	function clearUserSyndic(i: number) {
-		membresSyndic[i] = { ...membresSyndic[i], user_id: null };
-		membresSyndic = [...membresSyndic];
-	}
-
-	function onSyndicNomInput(i: number) {
-		if (!membresSyndic[i].user_id) {
-			const matchedUser = findUserByNom(membresSyndic[i].nom);
-			if (matchedUser) {
-				membresSyndic[i] = { ...membresSyndic[i], user_id: matchedUser.id };
-				membresSyndic = [...membresSyndic];
-			}
-		}
-	}
-
-	function setPrincipal(i: number) {
-		membresSyndic = membresSyndic.map((m, j) => ({ ...m, est_principal: j === i }));
-	}
-
-	/**
-	 * La charge utile de `putSyndic`, écrite UNE fois.
-	 *
-	 * Elle l'était **trois** — réordonnancement d'un membre, enregistrement de
-	 * l'en-tête, enregistrement d'un membre — à l'identique au caractère près.
-	 * Trois copies d'une charge utile, c'est trois endroits où un champ ajouté au
-	 * modèle peut manquer : `check-charge-utile` existe précisément pour ce défaut,
-	 * et il ne voit pas une recopie interne à un fichier.
-	 */
-	function chargeUtileSyndic() {
-		return {
-			nom_syndic: nomSyndic,
-			adresse: adresseSyndic,
-			site_web: siteWebSyndic || null,
-			membres: membresSyndic.map((m) => ({
-				genre: m.genre,
-				prenom: m.prenom,
-				nom: m.nom,
-				fonction: m.fonction || null,
-				email: m.email || null,
-				telephone:
-					m.telephones
-						.map((t) => t.trim())
-						.filter(Boolean)
-						.join(',') || null,
-				est_principal: m.est_principal,
-				user_id: m.user_id,
-			})),
-		};
-	}
-
-	async function moveMembreSyndic(i: number, dir: -1 | 1) {
-		const j = i + dir;
-		if (j < 0 || j >= membresSyndic.length) return;
-		const arr = [...membresSyndic];
-		[arr[i], arr[j]] = [arr[j], arr[i]];
-		membresSyndic = arr;
-		syndic = REPLIE;
-		// Sauvegarde silencieuse de l'ordre
-		try {
-			await annuaireAdmin.putSyndic(chargeUtileSyndic());
-		} catch {
-			/* silencieux */
-		}
-	}
-
-	/*
-	 *  Les trois gestes que la liste du syndic a de plus que celle du CS :
-	 *  l'ordre d'affichage compte (c'est lui que voit un arrivant), et l'un des
-	 *  membres est l'interlocuteur principal.
-	 *
-	 *  Ils sont passés en DONNÉES à `ActionsMembre` : le style de ces boutons vit
-	 *  dans le composant, une seule fois, et non des deux côtés d'un slot.
-	 */
-	function gestesOrdreSyndic(i: number, estPrincipal: boolean) {
-		const gestes: Geste[] = [];
-		if (i > 0)
-			gestes.push({
-				variante: 'deplacer',
-				libelle: 'Monter',
-				glyphe: '↑',
-				onClic: () => moveMembreSyndic(i, -1),
-			});
-		gestes.push({
-			variante: 'deplacer',
-			libelle: 'Descendre',
-			glyphe: '↓',
-			desactive: i === membresSyndic.length - 1,
-			onClic: () => moveMembreSyndic(i, 1),
-		});
-		if (!estPrincipal)
-			gestes.push({
-				variante: 'designer',
-				libelle: 'Définir interlocuteur principal',
-				glyphe: '★',
-				onClic: () => setPrincipal(i),
-			});
-		return gestes;
-	}
-
-	async function saveSyndic() {
-		for (const m of membresSyndic) {
-			if (!m.telephones.some((t) => t.trim())) {
-				toast('error', `Au moins un téléphone requis pour ${nomAffiche(m) || '…'}`);
-				return;
-			}
-		}
-		await enregistrer(
-			() => annuaireAdmin.putSyndic(chargeUtileSyndic()),
-			'Syndic enregistré',
-			(v) => (savingSyndic = v),
-			() => (syndicHeaderEditing = false),
-		);
-	}
-
-	async function saveMembreSyndic(i: number) {
-		if (!membresSyndic[i].telephones.some((t) => t.trim())) {
-			toast('error', 'Au moins un téléphone requis');
-			return;
-		}
-		await enregistrer(
-			() => annuaireAdmin.putSyndic(chargeUtileSyndic()),
-			`${nomAffiche(membresSyndic[i])} enregistré`,
-			(v) => (savingSyndicIdx = v ? i : null),
-			() => (syndic = REPLIE),
-		);
 	}
 
 	// -- Validations handlers -----------------------------------------------
@@ -866,273 +336,31 @@
 	<!-- Aucune prop de plafond : l'affiche a la sienne (`$lib/annonces`, #651). -->
 	<OngletAnnoncesHall />
 {:else if onglet === 'annuaire'}
-	{#if annuaireLoading}
-		<EtatListe chargement />
-	{:else}
-		<!-- ── Lien consignes de copropriété ─────────────────────────────────── -->
-		<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">
-			<a
-				href="/api/admin/fiche-arrivant"
-				target="_blank"
-				class="btn btn-outline"
-				style="display:inline-flex;align-items:center;gap:0.4rem;font-size:var(--fs-md)"
-			>
-				📄 Consignes de copropriété
-			</a>
+	<!-- ── Lien consignes de copropriété ─────────────────────────────────── -->
+	<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">
+		<a
+			href="/api/admin/fiche-arrivant"
+			target="_blank"
+			class="btn btn-outline"
+			style="display:inline-flex;align-items:center;gap:0.4rem;font-size:var(--fs-md)"
+		>
+			📄 Consignes de copropriété
+		</a>
+	</div>
+
+	<section class="annuaire-section">
+		<div class="annuaire-section-header">
+			<h2 class="section-title">Conseil Syndical</h2>
 		</div>
+		<AnnuaireConseil {sources} />
+	</section>
 
-		<!-- ── Section Conseil Syndical ──────────────────────────────────────── -->
-		<section class="annuaire-section">
-			<div class="annuaire-section-header">
-				<h2 class="section-title">Conseil Syndical</h2>
-			</div>
-
-			{#if csHeaderEditing}
-				<div class="form-grid largeur-saisie" style="margin-bottom:1rem">
-					<label class="field">
-						Voté en AG
-						<input
-							type="number"
-							min="2000"
-							max="2099"
-							placeholder="ex. 2024"
-							bind:value={agAnnee}
-						/>
-					</label>
-					<label class="field">
-						Date de l'AG
-						<input type="date" bind:value={agDate} />
-					</label>
-					<label class="field">
-						URL communauté WhatsApp
-						<input
-							type="url"
-							placeholder="https://chat.whatsapp.com/..."
-							bind:value={whatsappUrl}
-						/>
-					</label>
-					<!--  🔴 `PiedFormulaire` (12/09/2026) — cf. `EnteteSyndic` : cette rangée
-					      était une copie du pied commun sous une autre classe, divergente
-					      sur l'ordre des boutons et sur les libellés. -->
-					<PiedFormulaire
-						enCours={savingCS}
-						soumission={false}
-						petit
-						on:enregistre={saveCS}
-						on:annule={() => (csHeaderEditing = false)}
-					/>
-				</div>
-			{:else}
-				<div class="header-summary">
-					<span
-						>{agAnnee ? `AG ${agAnnee}` : 'Année AG non renseignée'}{agDate
-							? ` · ${fmtDateShort(agDate)}`
-							: ''}</span
-					>
-					{#if whatsappUrl}<span style="margin-left:.5rem"
-							>· <a href={whatsappUrl} target="_blank" rel="noopener">WhatsApp</a></span
-						>{/if}
-					<ActionsMembre barre={false} onModifier={() => (csHeaderEditing = true)} />
-				</div>
-			{/if}
-
-			{#each membresCS as m, i (m)}
-				<CarteMembre
-					bind:membre={membresCS[i]}
-					ouvert={cs.ouvert === i}
-					edite={cs.edite === i}
-					enregistrement={savingCSIdx === i}
-					accent={m.est_president ? 'president' : null}
-					on:basculer={() => (cs = basculer(cs, i))}
-					on:editer={() => (cs = editer(i))}
-					on:supprimer={() => removeMembreCS(i)}
-					on:enregistrer={() => saveMembreCS(i)}
-					on:annuler={() => (cs = REPLIE)}
-					on:nom={() => onCSNomInput(i)}
-					on:delier={() => clearUserCS(i)}
-				>
-					<svelte:fragment slot="badge">
-						<!--  Les rôles se disent par UNE pastille, celle de « Gestionnaire du
-						      Site » (23/09/2026, signalé à l'écran) — et une seule fois : le
-						      Président paraissait deux fois, ici et dans le résumé. -->
-						{#if m.est_gestionnaire_site}
-							<span class="summary-role-badge" title="Gestionnaire du Site">
-								&#x1F3E2; Gestionnaire du Site
-							</span>
-						{/if}
-						{#if m.est_president}
-							<span
-								class="summary-role-badge summary-role-badge-president"
-								title="Président du Conseil Syndical">&#x1F451; Président</span
-							>
-						{/if}
-					</svelte:fragment>
-
-					<svelte:fragment slot="edition">
-						{#if m.batiment_nom || m.etage != null}
-							<div class="localisation-info">&#x1F4CD; {localisationMembre(m)}</div>
-						{/if}
-						<div class="cs-role-flags">
-							<label class="cs-role-flag">
-								<input
-									type="checkbox"
-									checked={membresCS[i].est_president}
-									on:change={() => onPresidentChange(i)}
-								/>
-								<span>Président du Conseil Syndical</span>
-							</label>
-						</div>
-					</svelte:fragment>
-
-					<svelte:fragment slot="detail">
-						{#if m.batiment_nom || m.etage != null}
-							<div class="localisation-info">&#x1F4CD; {localisationMembre(m)}</div>
-						{/if}
-					</svelte:fragment>
-
-					<svelte:fragment slot="resume">
-						{#if m.batiment_nom || m.etage != null}
-							<span class="summary-loc">&#x1F4CD; {localisationMembre(m)}</span>
-						{/if}
-						{#if m.user_id}
-							<span class="summary-lien">&#x1F517; Inscrit lié</span>
-						{/if}
-					</svelte:fragment>
-				</CarteMembre>
-			{/each}
-
-			<button
-				type="button"
-				class="btn btn-sm btn-outline"
-				style="margin-top:.5rem"
-				on:click={addMembreCS}
-			>
-				+ Nouveau membre CS
-			</button>
-		</section>
-
-		<!-- ── Section Syndic ────────────────────────────────────────────────── -->
-		<section class="annuaire-section">
-			<div class="annuaire-section-header">
-				<h2 class="section-title">Syndic</h2>
-			</div>
-
-			<!--  L'en-tête vit dans son composant (#535) : c'est lui qui porte la
-			      règle « le contrat fait foi », et le champ désactivé qui la montre. -->
-			<EnteteSyndic
-				bind:nom={nomSyndic}
-				bind:adresse={adresseSyndic}
-				bind:siteWeb={siteWebSyndic}
-				bind:edition={syndicHeaderEditing}
-				source={nomSyndicSource}
-				enregistrement={savingSyndic}
-				onEnregistrer={saveSyndic}
-			/>
-
-			{#each membresSyndic as m, i (m)}
-				<CarteMembre
-					bind:membre={membresSyndic[i]}
-					ouvert={syndic.ouvert === i}
-					edite={syndic.edite === i}
-					enregistrement={savingSyndicIdx === i}
-					accent={m.est_principal ? 'principal' : null}
-					gestes={gestesOrdreSyndic(i, m.est_principal)}
-					on:basculer={() => (syndic = basculer(syndic, i))}
-					on:editer={() => (syndic = editer(i))}
-					on:supprimer={() => removeMembreSyndic(i)}
-					on:enregistrer={() => saveMembreSyndic(i)}
-					on:annuler={() => (syndic = REPLIE)}
-					on:nom={() => onSyndicNomInput(i)}
-					on:delier={() => clearUserSyndic(i)}
-				>
-					<svelte:fragment slot="badge">
-						{#if m.est_principal}
-							<span
-								class="summary-role-badge summary-role-badge-principal"
-								title="Interlocuteur principal du syndic">&#x2B50; Interlocuteur principal</span
-							>
-						{/if}
-					</svelte:fragment>
-
-					<svelte:fragment slot="champs">
-						<label class="field">
-							Fonction
-							<input
-								type="text"
-								bind:value={membresSyndic[i].fonction}
-								placeholder="ex. Directeur de gérance"
-							/>
-						</label>
-						<label class="field">
-							Email
-							<input type="email" bind:value={membresSyndic[i].email} placeholder="Email" />
-						</label>
-					</svelte:fragment>
-
-					<svelte:fragment slot="edition">
-						<div class="syndic-telephones">
-							<div class="syndic-telephones-titre">
-								Téléphone{m.telephones.length > 1 ? 's' : ''}
-							</div>
-							{#each m.telephones as _tel, ti}
-								<div class="syndic-telephone">
-									<input
-										bind:value={membresSyndic[i].telephones[ti]}
-										placeholder="ex. 01 23 45 67 89"
-									/>
-									{#if m.telephones.length > 1}
-										<button
-											type="button"
-											class="btn btn-sm btn-outline btn-retirer-tel"
-											aria-label="Retirer ce numéro"
-											on:click={() => {
-												membresSyndic[i].telephones = membresSyndic[i].telephones.filter(
-													(_, j) => j !== ti,
-												);
-												membresSyndic = [...membresSyndic];
-											}}
-										>
-											-
-										</button>
-									{/if}
-								</div>
-							{/each}
-							<button
-								type="button"
-								class="btn btn-sm btn-outline"
-								on:click={() => {
-									membresSyndic[i].telephones = [...membresSyndic[i].telephones, ''];
-									membresSyndic = [...membresSyndic];
-								}}
-							>
-								+ N° de téléphone
-							</button>
-						</div>
-					</svelte:fragment>
-
-					<svelte:fragment slot="resume">
-						{#if m.fonction}<span class="summary-fonction">{m.fonction}</span>{/if}
-						{#if m.email}<span class="summary-loc">{m.email}</span>{/if}
-						{#if m.telephones[0]}
-							<span class="summary-loc">{m.telephones.filter((t) => t.trim()).join(' · ')}</span>
-						{/if}
-						{#if m.user_id}
-							<span class="summary-lien">&#x1F517; Inscrit lié</span>
-						{/if}
-					</svelte:fragment>
-				</CarteMembre>
-			{/each}
-
-			<button
-				type="button"
-				class="btn btn-sm btn-outline"
-				style="margin-top:.5rem"
-				on:click={addMembreSyndic}
-			>
-				+ Nouveau membre Syndic
-			</button>
-		</section>
-	{/if}
+	<section class="annuaire-section">
+		<div class="annuaire-section-header">
+			<h2 class="section-title">Syndic</h2>
+		</div>
+		<AnnuaireSyndic {sources} />
+	</section>
 {/if}
 
 <style>
@@ -1190,33 +418,9 @@
 		}
 	}
 
-	/*  Les téléphones d'un membre du syndic — le seul champ qui ne tient pas dans
-	    la grille d'identité, parce qu'il en faut plusieurs.
-
-	    ⚠️ Ces quatre règles remplacent quatre styles en ligne (`npm run lint:styles`
-	    les refuse désormais) : le rouge du bouton de retrait était écrit en dur
-	    (#dc2626) alors que la charte porte `--color-danger`. */
-	.syndic-telephones {
-		margin-top: 0.65rem;
-	}
-	.syndic-telephones-titre {
-		font-size: var(--fs-md);
-		font-weight: 600;
-		margin-bottom: 0.35rem;
-	}
-	.syndic-telephone {
-		display: flex;
-		gap: 0.4rem;
-		margin-bottom: 0.35rem;
-	}
-	.syndic-telephone input {
-		flex: 1;
-	}
-	.btn-retirer-tel {
-		color: var(--color-danger);
-		border-color: var(--color-danger);
-	}
-
+	/*  L'annuaire porte son style avec son balisage — `AnnuaireConseil`,
+	    `AnnuaireSyndic`, et `CarteMembre` pour ce qui s'écrit dans ses
+	    emplacements (#779, 29/09/2026). Ne restent ici que ses deux sections. */
 	/* Annuaire sections */
 	.annuaire-section {
 		margin-bottom: 2.5rem;
@@ -1231,113 +435,6 @@
 	.section-title {
 		margin: 0;
 	} /* la charte pose `margin-bottom` (#607) */
-
-	/*  Seuls la répartition et l'espacement : la peau des contrôles est partie
-	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
-	.form-grid {
-		grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
-		gap: 0.65rem;
-	}
-	/*  🔴 Les douze règles de la fiche d'un membre sont parties le 18/09/2026
-	    avec le balisage qu'elles habillaient : `CarteMembre.svelte` porte la
-	    carte, son en-tête, l'identité et le lien vers un inscrit — pour le CS
-	    comme pour le syndic. Elles étaient écrites ici parce que le balisage
-	    l'était ; il ne l'est plus. */
-	/*  🔴 Les huit règles de boutons-icônes sont parties le 07/09/2026 avec le
-	    balisage qu'elles habillaient : `ActionsMembre.svelte` porte la barre
-	    d'actions d'un membre — CS, syndic, et le crayon seul du bandeau. Elles
-	    étaient écrites ici parce que le balisage l'était ; il ne l'est plus. */
-
-	/*  `.badge-principal` et `.badge-president` sont partis le 23/09/2026 : en
-	    capitales, gras, sur fond plein, ils disaient un rôle autrement que
-	    `.summary-role-badge` juste en dessous. Une notion, une pastille. */
-
-	/* Localisation auto */
-	.localisation-info {
-		font-size: var(--fs-sm);
-		color: var(--color-primary);
-		margin: 0.35rem 0 0.5rem;
-		padding: 0.25rem 0.5rem;
-		background: #eff6ff;
-		border-radius: var(--radius);
-		display: inline-block;
-	}
-
-	/*  🔴 Six sélecteurs morts retirés le 28/08/2026 — `.user-search-wrap`,
-	    `.user-search-label`, `.user-search-input`, `.user-suggestions`,
-	    `.sugg-bat`, `.user-no-result`. Ils l'étaient DEPUIS LONGTEMPS, et
-	    `lint:css-orphelin` ne les voyait pas.
-
-	    ⚠️ Pourquoi il ne les voyait pas, parce que ça vaut pour tout le dépôt :
-	    ce contrôle lit les avertissements de `svelte-check`, et Svelte ne peut
-	    élaguer un sélecteur de classe nue que s'il prouve qu'AUCUN élément du
-	    composant ne peut le porter. Deux `class="… {expression}"` suffisaient à
-	    lui ôter cette preuve — pour le fichier entier. Les deux vivaient dans
-	    l'onglet « Tickets résidence » ; il part, et six règles mortes
-	    apparaissent d'un coup. Le garde-fou n'était donc pas vert ici : il était
-	    AVEUGLE, et un seul attribut de classe dynamique suffit à aveugler un
-	    écran entier. */
-	.cs-role-flags {
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-		margin-top: 0.65rem;
-	}
-	.cs-role-flag {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.45rem;
-		font-size: var(--fs-sm);
-		color: var(--color-text);
-	}
-	.cs-role-flag input {
-		accent-color: var(--color-primary);
-	}
-	/* Header inline-edit */
-
-	/*  La pastille « Inscrit lié » d'un RÉSUMÉ : plus petite que celle du
-	    formulaire, qui vit dans `CarteMembre` avec son bouton « Délier ». Les deux
-	    disaient la même chose avec le même balisage et un style en ligne pour
-	    rapetisser l'une — c'est la différence qui se déclare, pas la copie. */
-	.summary-lien {
-		display: inline-flex;
-		align-items: center;
-		font-size: var(--fs-xs);
-		color: var(--color-success);
-		background: var(--color-success-fond);
-		border-radius: var(--radius);
-		padding: 0.15rem 0.45rem;
-		border: 1px solid var(--color-success-bordure);
-	}
-	.summary-loc {
-		font-size: var(--fs-sm);
-		color: var(--color-text-muted);
-	}
-	.summary-fonction {
-		font-size: var(--fs-sm);
-		font-weight: 600;
-		color: var(--color-text);
-	}
-	.summary-role-badge {
-		font-size: 0.74rem;
-		font-weight: 600;
-		color: #0f766e;
-		background: #ecfeff;
-		border: 1px solid #99f6e4;
-		border-radius: 999px;
-		padding: 0.12rem 0.48rem;
-	}
-	.summary-role-badge-president {
-		color: #7c2d12;
-		background: var(--color-warning-fond);
-		border-color: var(--color-warning-bordure);
-	}
-	.summary-role-badge-principal {
-		color: #7a5a1a;
-		background: #fdf6e7;
-		border-color: #e8cf95;
-	}
-
 	/*  🔴 Les vingt-huit règles de l'onglet « Tickets résidence » sont parties
 	    avec lui le 28/08/2026 : `.tk-*`, `.context-chip`, `.rich-content`,
 	    `.evol-form` et `.history-item` n'habillaient que ce balisage-là. Cette

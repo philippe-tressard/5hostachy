@@ -47,10 +47,8 @@ const DETTE = {
 	'lib/components/RubriqueHistorique.svelte::Entree': '#1044',
 	'routes/(app)/annuaire/+page.svelte::MembreCS': '#1044',
 	'routes/(app)/annuaire/+page.svelte::MembreSyndic': '#1044',
-	'routes/(app)/espace-cs/+page.svelte::LotRow': '#1044',
 	'routes/(app)/espace-cs/+page.svelte::PendingAcces': '#1044',
 	'routes/(app)/espace-cs/+page.svelte::PendingUser': '#1044',
-	'routes/(app)/espace-cs/+page.svelte::SimpleUser': '#1044',
 	'routes/(app)/mon-lot/+page.svelte::LotDetail': '#1044',
 };
 

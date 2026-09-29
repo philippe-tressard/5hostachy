@@ -177,7 +177,11 @@ const aveugles = tous.filter((f) =>
 //  pour un découpage qui n'ajoute aucune interpolation nouvelle. Le jour où il
 //  monte parce qu'on a écrit une classe interpolée de plus, la bonne réponse est
 //  de ne pas l'écrire.
-const PLAFOND_NON_MESURES = 29;
+//
+//  ✅ 28 depuis le 29/09/2026 : l'annuaire a quitté `espace-cs` (#779), et la
+//  page redevient mesurable — la classe interpolée qui l'aveuglait est partie
+//  avec lui dans des composants qui n'en portent pas.
+const PLAFOND_NON_MESURES = 28;
 
 const mesures = tous.length - aveugles.length;
 

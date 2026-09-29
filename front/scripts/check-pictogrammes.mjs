@@ -93,7 +93,7 @@ const LIEUX = {
 		occurrences: 1,
 		motif: 'le lieu d’un événement (`meta.lieu`), saisi comme une adresse',
 	},
-	'routes/(app)/espace-cs/+page.svelte': {
+	'lib/components/AnnuaireConseil.svelte': {
 		occurrences: 3,
 		motif: 'la localisation d’un membre du conseil — bâtiment et étage de son lot',
 	},

@@ -1037,6 +1037,67 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 
     Deux fichiers les emploient : les recopier aurait donné deux sources pour la
     même règle, qui divergent au premier ajustement. */
+/*  🔴 Ce que les appelants de `CarteMembre` écrivent DANS ses emplacements
+    `badge`, `resume`, `edition` et `detail` — pastilles de rôle, localisation,
+    « Inscrit lié ». Svelte scope un style au fichier qui ÉCRIT le balisage :
+    ces règles vivaient dans `espace-cs`, seul appelant. Quand le conseil et le
+    syndic sont devenus deux composants (#779, 29/09/2026), les laisser chez
+    l'un aurait rendu l'autre NU, et les recopier les aurait dupliquées. Bornées
+    à `.carte-membre` : elles sont le vocabulaire de la fiche, pas du site. */
+.carte-membre .localisation-info {
+	font-size: var(--fs-sm);
+	color: var(--color-primary);
+	margin: 0.35rem 0 0.5rem;
+	padding: 0.25rem 0.5rem;
+	background: #eff6ff;
+	border-radius: var(--radius);
+	display: inline-block;
+}
+/*  La pastille « Inscrit lié » d'un RÉSUMÉ : plus petite que celle du
+    formulaire, qui vit plus haut avec son bouton « Délier ». */
+.carte-membre .summary-lien {
+	display: inline-flex;
+	align-items: center;
+	font-size: var(--fs-xs);
+	color: var(--color-success);
+	background: var(--color-success-fond);
+	border-radius: var(--radius);
+	padding: 0.15rem 0.45rem;
+	border: 1px solid var(--color-success-bordure);
+}
+.carte-membre .summary-loc {
+	font-size: var(--fs-sm);
+	color: var(--color-text-muted);
+}
+.carte-membre .summary-fonction {
+	font-size: var(--fs-sm);
+	font-weight: 600;
+	color: var(--color-text);
+}
+.carte-membre .summary-role-badge {
+	font-size: 0.74rem;
+	font-weight: 600;
+	color: #0f766e;
+	background: #ecfeff;
+	border: 1px solid #99f6e4;
+	border-radius: 999px;
+	padding: 0.12rem 0.48rem;
+}
+.carte-membre .summary-role-badge-president {
+	color: #7c2d12;
+	background: var(--color-warning-fond);
+	border-color: var(--color-warning-bordure);
+}
+.carte-membre .summary-role-badge-principal {
+	color: #7a5a1a;
+	background: #fdf6e7;
+	border-color: #e8cf95;
+}
+/*  Le bouton « + Nouveau membre » sous une liste de fiches de l'annuaire —
+    conseil syndical et syndic (#779, 29/09/2026) : deux composants, un geste. */
+.ajout-membre {
+	margin-top: 0.5rem;
+}
 .header-summary {
 	display: flex;
 	align-items: center;
