@@ -84,10 +84,7 @@
 
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
-	/*  Seul `flex-wrap` differe de la charte (#607, 28/08/2026). */
-	.form-actions {
-		flex-wrap: wrap;
-	}
+	/*  `.form-actions` : `flex-wrap` est passé dans la charte (normes.css, #779). */
 
 	/*  Une étiquette, pas un badge d'état : elle dit d'où vient la valeur, ce qui
 	    est une information de second plan. Plus petite que le libellé, en gris de

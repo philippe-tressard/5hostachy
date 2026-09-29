@@ -19,6 +19,13 @@
  * divergence dans ce fichier sans que personne l'ait décidé.
  */
 export const EXCEPTIONS = {
+	//  🔴 Deux DÉCLARATIONS au choix, pas un formulaire (29/09/2026, #779) : le
+	//  résident dit « je suis un nouvel arrivant » ou « je suis déjà résident ».
+	//  Chaque bouton EST la réponse ; « Enregistrer » ne dirait plus laquelle.
+	//  Le bloc vivait dans `profil/+page.svelte`, hors de la portée du contrôle :
+	//  c'est son extraction en composant qui l'y a fait entrer.
+	'lib/components/DemarcheArrivant.svelte':
+		'deux boutons qui sont chacun une réponse (« nouvel arrivant » / « déjà résident ») : le verbe générique effacerait le choix',
 	//  🔴 Transmettre une affaire par courriel (#1357) : rien n'est ENREGISTRÉ,
 	//  un courriel PART. « Enregistrer » y mentirait sur le geste — même raison
 	//  que les confirmations ci-dessous, qui nomment ce qu'elles font.

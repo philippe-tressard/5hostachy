@@ -21,6 +21,8 @@
 	import { etageLabel, lotTypeLabel } from '$lib/utils';
 	import ChampsEtage from '$lib/components/ChampsEtage.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+	import DemarcheArrivant from '$lib/components/DemarcheArrivant.svelte';
+	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 
 	$: _pc = getPageConfig($configStore, 'profil', defautsDePage('profil'));
 	$: _siteNom = $siteNomStore;
@@ -62,11 +64,6 @@
 	let demandeBatimentId: number | null = null;
 	let demandeMotif = '';
 	let savingDemande = false;
-	let arrivantBatimentNumero = '';
-	let arrivantAncienResident = '';
-	let arrivantAncienResidentInconnu = false;
-	let savingArrivant = false;
-	let arrivantChoix: '' | 'nouvel_arrivant' | 'deja_resident' = '';
 
 	$: demandePending = demandes.find((d) => d.statut_demande === 'en_attente') ?? null;
 
@@ -95,48 +92,29 @@
 	}
 
 	function initialiserDepuis(u: any) {
-		{
-			// bloc nu : le corps n'a pas changé, seul son déclencheur
+		prenom = u.prenom ?? '';
+		nom = u.nom ?? '';
+		telephone = (u as any).telephone ?? '';
+		societe = u.societe ?? '';
+		fonction = (u as any).fonction ?? '';
+		email = u.email ?? '';
+		//  La démarche « Nouvel arrivant » s'initialise dans `DemarcheArrivant`.
 
-			prenom = u.prenom ?? '';
-			nom = u.nom ?? '';
-			telephone = (u as any).telephone ?? '';
-			societe = u.societe ?? '';
-			fonction = (u as any).fonction ?? '';
-			email = u.email ?? '';
-			arrivantBatimentNumero = (u as any).batiment_nom?.replace(/[^0-9]/g, '') ?? '';
-
-			// Démarche arrivant : lire depuis la base (fallback localStorage pour migration)
-			if (u.demarche_arrivant === 'nouvel_arrivant' || u.demarche_arrivant === 'deja_resident') {
-				arrivantChoix = u.demarche_arrivant;
-			} else {
-				const savedChoix = localStorage.getItem(`profil_arrivant_choix_${u.id}`);
-				if (savedChoix === 'nouvel_arrivant' || savedChoix === 'deja_resident') {
-					arrivantChoix = savedChoix;
-					// Migrer vers la base
-					authApi
-						.updateMe({ demarche_arrivant: savedChoix })
-						.then((updated) => setUser(updated))
-						.catch(() => {});
-				}
+		//  Préférences d'e-mail. L'ancien format (huit clés `*_app` / `*_mail`) est
+		//  converti par la migration 0145 ; le repli sur les défauts couvre les
+		//  comptes qu'elle n'aurait pas atteints — un compte créé entre le
+		//  déploiement de l'API et celui du front, par exemple.
+		heritees = clesHeritees(u.preferences_notifications);
+		try {
+			const lues = JSON.parse(u.preferences_notifications || '{}');
+			for (const cle of Object.keys(DEFAUTS_NOTIFS)) {
+				valeursNotifs[cle] = typeof lues?.[cle] === 'boolean' ? lues[cle] : DEFAUTS_NOTIFS[cle];
 			}
-
-			//  Préférences d'e-mail. L'ancien format (huit clés `*_app` / `*_mail`) est
-			//  converti par la migration 0145 ; le repli sur les défauts couvre les
-			//  comptes qu'elle n'aurait pas atteints — un compte créé entre le
-			//  déploiement de l'API et celui du front, par exemple.
-			heritees = clesHeritees(u.preferences_notifications);
-			try {
-				const lues = JSON.parse(u.preferences_notifications || '{}');
-				for (const cle of Object.keys(DEFAUTS_NOTIFS)) {
-					valeursNotifs[cle] = typeof lues?.[cle] === 'boolean' ? lues[cle] : DEFAUTS_NOTIFS[cle];
-				}
-			} catch {
-				valeursNotifs = { ...DEFAUTS_NOTIFS };
-			}
-			valeursNotifs = valeursNotifs; // Svelte 4 : réassigner pour propager
-			restreindreAMesBatiments = u.restreindre_a_mes_batiments ?? false;
+		} catch {
+			valeursNotifs = { ...DEFAUTS_NOTIFS };
 		}
+		valeursNotifs = valeursNotifs; // Svelte 4 : réassigner pour propager
+		restreindreAMesBatiments = u.restreindre_a_mes_batiments ?? false;
 	}
 
 	onMount(async () => {
@@ -237,41 +215,6 @@
 			demandeMotif = '';
 		}, 'Demande envoyée au conseil syndical');
 		savingDemande = false;
-	}
-
-	async function declarerNouvelArrivant() {
-		if (!arrivantAncienResidentInconnu && !arrivantAncienResident.trim()) {
-			toast('error', "Indiquez l'ancien résident ou cochez 'Je ne sais pas'.");
-			return;
-		}
-		savingArrivant = true;
-		await tenter(async () => {
-			const batimentFinal = arrivantBatimentNumero
-				? `Bât. ${arrivantBatimentNumero}`
-				: ($currentUser?.batiment_nom || '').trim() || null;
-			await authApi.declarerNouvelArrivant({
-				batiment: batimentFinal,
-				ancien_resident: arrivantAncienResidentInconnu
-					? null
-					: arrivantAncienResident.trim() || null,
-				ancien_resident_inconnu: arrivantAncienResidentInconnu,
-			});
-			arrivantChoix = 'nouvel_arrivant';
-			// Rafraîchir le user en store (la base a été mise à jour côté serveur)
-			authApi
-				.me()
-				.then((u) => setUser(u))
-				.catch(() => {});
-		}, 'Déclaration Nouvel Arrivant envoyée');
-		savingArrivant = false;
-	}
-
-	async function declarerDejaResident() {
-		await tenter(async () => {
-			const updated = await authApi.updateMe({ demarche_arrivant: 'deja_resident' });
-			setUser(updated);
-			arrivantChoix = 'deja_resident';
-		}, 'Choix enregistré : déjà résident (aucune démarche nouvel arrivant).');
 	}
 </script>
 
@@ -400,22 +343,24 @@
 
 		<!-- Demande de modification -->
 		{#if demandePending}
-			<div class="info-banner info-yellow" style="margin-top:1rem">
-				<strong>Demande en attente</strong> :
-				{#if demandePending.statut_souhaite}
-					changement de type vers «&nbsp;{LIBELLES_STATUT[demandePending.statut_souhaite] ??
-						demandePending.statut_souhaite}&nbsp;»
-				{/if}
-				{#if demandePending.statut_souhaite && demandePending.batiment_nom_souhaite}&nbsp;+&nbsp;{/if}
-				{#if demandePending.batiment_nom_souhaite}
-					déménagement vers {demandePending.batiment_nom_souhaite}
-				{/if}
-				<span
-					class="badge {STATUT_DEMANDE_BADGE[demandePending.statut_demande]}"
-					style="margin-left:.5rem"
-				>
-					{STATUT_DEMANDE_LABEL[demandePending.statut_demande]}
-				</span>
+			<div style="margin-top:1rem">
+				<EncartAvertissement>
+					<strong>Demande en attente</strong> :
+					{#if demandePending.statut_souhaite}
+						changement de type vers «&nbsp;{LIBELLES_STATUT[demandePending.statut_souhaite] ??
+							demandePending.statut_souhaite}&nbsp;»
+					{/if}
+					{#if demandePending.statut_souhaite && demandePending.batiment_nom_souhaite}&nbsp;+&nbsp;{/if}
+					{#if demandePending.batiment_nom_souhaite}
+						déménagement vers {demandePending.batiment_nom_souhaite}
+					{/if}
+					<span
+						class="badge {STATUT_DEMANDE_BADGE[demandePending.statut_demande]}"
+						style="margin-left:.5rem"
+					>
+						{STATUT_DEMANDE_LABEL[demandePending.statut_demande]}
+					</span>
+				</EncartAvertissement>
 			</div>
 		{:else}
 			<button
@@ -429,7 +374,7 @@
 
 		{#if showDemandeForm && !demandePending}
 			<div class="demande-form" style="margin-top:1rem">
-				<p class="hint" style="margin-bottom:.75rem">
+				<p class="aide" style="margin-bottom:.75rem">
 					Les modifications du profil d'utilisateur et du bâtiment sont soumises à validation du
 					conseil syndical.
 				</p>
@@ -476,70 +421,7 @@
 		<HistoriqueDemandes {demandes} chargement={demandesLoading} statutLabels={LIBELLES_STATUT} />
 	</section>
 
-	{#if !arrivantChoix}
-		<section class="card" style="margin-bottom:1.5rem">
-			<h2 class="section-title">Démarche Nouvel Arrivant</h2>
-			<p class="hint" style="margin-bottom:.6rem">
-				Ce choix vous appartient : vous êtes la meilleure personne pour savoir si vous venez
-				d'arriver dans la résidence.
-			</p>
-			<div class="info-banner info-yellow" style="margin-bottom:.8rem">
-				Vous venez de créer un compte sur la plateforme.
-				<br />
-				<strong>Nouvel arrivant</strong> : vous emménagez réellement dans la résidence (Démarches
-				nouvel arrivant : interphone, BAL, ...)
-				<br />
-				<strong>Déjà résident</strong> : vous venez de créer un compte mais vous étiez déjà résident (donc
-				pas de démarche nouvel arrivant)
-			</div>
-
-			<div class="field">
-				<label for="arr-bat">Bâtiment concerné</label>
-				<select id="arr-bat" bind:value={arrivantBatimentNumero}>
-					<option value="">— Sélectionner —</option>
-					{#if batiments.length > 0}
-						{#each batiments as bat (bat.numero)}
-							<option value={String(bat.numero)}>{`Bât. ${bat.numero}`}</option>
-						{/each}
-					{:else}
-						<option value="1">Bât. 1</option>
-						<option value="2">Bât. 2</option>
-						<option value="3">Bât. 3</option>
-						<option value="4">Bât. 4</option>
-					{/if}
-				</select>
-			</div>
-			<div class="field">
-				<label for="arr-ancien">Nom de l'ancien résident</label>
-				<input
-					id="arr-ancien"
-					type="text"
-					bind:value={arrivantAncienResident}
-					disabled={arrivantAncienResidentInconnu}
-					placeholder="Ex : Mme Dupont"
-				/>
-			</div>
-			<label
-				style="display:flex;align-items:center;gap:.5rem;margin-top:-.35rem;margin-bottom:.7rem;font-size:var(--fs-base);color:var(--color-text-muted)"
-			>
-				<input type="checkbox" bind:checked={arrivantAncienResidentInconnu} />
-				Je ne sais pas
-			</label>
-			<div class="form-actions">
-				<button class="btn btn-primary" on:click={declarerNouvelArrivant} disabled={savingArrivant}>
-					{savingArrivant ? 'Envoi…' : 'Je suis un nouvel arrivant'}
-				</button>
-				<button
-					class="btn btn-arrivant-deja"
-					type="button"
-					on:click={declarerDejaResident}
-					disabled={savingArrivant}
-				>
-					Je suis déjà résident
-				</button>
-			</div>
-		</section>
-	{/if}
+	<DemarcheArrivant {batiments} />
 
 	<ChangementMotDePasse />
 
@@ -557,15 +439,6 @@
 
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
-	.form-actions {
-		flex-wrap: wrap;
-	} /* le reste vient de la charte (#607) */
-
-	.hint {
-		font-size: var(--fs-sm);
-		color: var(--color-text-muted);
-	}
-
 	.info-grid {
 		display: grid;
 		grid-template-columns: auto 1fr;
@@ -580,24 +453,6 @@
 	}
 	.info-grid dd {
 		margin: 0;
-	}
-	.info-banner {
-		padding: 0.6rem 0.9rem;
-		border-radius: var(--radius);
-		font-size: var(--fs-md);
-	}
-	.info-yellow {
-		background: var(--color-warning-fond);
-		border: 1px solid var(--color-warning-bordure);
-	}
-	.btn-arrivant-deja {
-		background: var(--color-success);
-		color: #fff;
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.btn-arrivant-deja:hover:not(:disabled) {
-			background: #256f47;
-		}
 	}
 	.demande-form {
 		background: var(--color-bg-subtle, #f9fafb);
