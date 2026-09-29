@@ -87,7 +87,7 @@ from app.utils.reponse_courriel import (
     contenu_de_la_suite,
     mettre_en_forme,
     moment_de_la_suite,
-    suite_d_un_message,
+    suite_mise_en_forme,
 )
 from app.utils.valeurs import valeur
 
@@ -219,11 +219,18 @@ def verser(
         ticket = None  # le fil suivait une affaire close : il en ouvre une autre
 
     creee = ticket is None
+    #  🔴 DEUX TEMPS (#1469, 30/09/2026) : lire et mettre en forme d'abord, écrire
+    #  ensuite. Chaque appel à l'assistant écrit son journal dans SA transaction
+    #  (`llm_journal.journaliser`) ; une écriture déjà en cours ici tenait le
+    #  verrou de SQLite, et le journal tombait en « database is locked » — la
+    #  consommation n'était pas comptée, et chaque appel attendait le délai.
+    nouveaux, deja = _a_verser(session, ticket, messages)
+    prets = [(m, mettre_en_forme(session, m.texte, m.brut)) for m in nouveaux]
     if creee:
-        ticket = _creer_affaire(session, qui, messages[0], titre_du_fil(objet))
-        _marquer(session, ticket, messages[0])
-        messages = messages[1:]
-    ajoutees, deja = _verser_les_suites(session, ticket, qui, messages)
+        (premier, mis), prets = prets[0], prets[1:]
+        ticket = _creer_affaire(session, qui, premier, mis, titre_du_fil(objet))
+        _marquer(session, ticket, premier)
+    ajoutees = _ecrire_les_suites(session, ticket, qui, prets)
     if creer and cle:
         _retenir_le_fil(session, cle, ticket)
 
@@ -239,22 +246,36 @@ def verser(
     return ACCEPTE, motif, ticket
 
 
-def _verser_les_suites(session, ticket, qui, messages: list[MessageDuFil]) -> tuple[int, int]:
-    """Une Suite par message nouveau. Rend `(ajoutées, déjà présentes)`."""
-    fil = _texte_du_fil(session, ticket)
-    ajoutees = deja = 0
+def _a_verser(session, ticket, messages: list[MessageDuFil]):
+    """Les messages qui ne sont pas encore dans l'affaire, et combien le sont.
+
+    Lecture seule : c'est le premier des deux temps de `verser`. Deux fois le
+    même message dans un même transfert ne compte qu'une fois.
+    """
+    fil = _texte_du_fil(session, ticket) if ticket is not None else ""
+    vus: set[str] = set()
+    nouveaux, deja = [], 0
     for m in messages:
-        if _deja_verse(session, ticket, m, fil):
+        e = empreinte(m)
+        if e in vus or (ticket is not None and _deja_verse(session, ticket, m, fil)):
             deja += 1
             continue
-        suite = suite_d_un_message(
+        vus.add(e)
+        nouveaux.append(m)
+    return nouveaux, deja
+
+
+def _ecrire_les_suites(session, ticket, qui, prets) -> int:
+    """Une Suite par message déjà mis en forme. Rend le nombre ajouté."""
+    ajoutees = 0
+    for m, mis in prets:
+        suite = suite_mise_en_forme(
             session,
             ticket,
             qui,
+            mis,
             expediteur=m.expediteur,
             nom=m.nom,
-            texte=m.texte,
-            recu=m.brut,
             envoye_le=m.envoye_le,
             transfere_par=_transfere_par(qui, m),
             ecartable=_du_conseil(session, m),
@@ -267,7 +288,7 @@ def _verser_les_suites(session, ticket, qui, messages: list[MessageDuFil]) -> tu
         ajoutees += 1
         if suite.nouveau_statut:  # le syndic a répondu : l'affaire est chez lui
             ticket.statut = suite.nouveau_statut
-    return ajoutees, deja
+    return ajoutees
 
 
 def _bilan(creee: bool, ajoutees: int, deja: int) -> str:
@@ -344,7 +365,7 @@ def _deja_verse(session: Session, ticket: Ticket, m: MessageDuFil, fil: str) -> 
     return len(norme) >= _LONGUEUR_COMPARABLE and norme[:_DEBUT_COMPARE] in fil
 
 
-def _creer_affaire(session: Session, qui: Utilisateur, m: MessageDuFil, titre: str) -> Ticket:
+def _creer_affaire(session: Session, qui: Utilisateur, m: MessageDuFil, mis, titre: str) -> Ticket:
     """L'affaire neuve : décrite par le plus ancien message, au nom de son auteur."""
     from app.routers.tickets.commun import generer_numero
     from app.utils.courriel_entrant import nouveau_jeton
@@ -353,7 +374,6 @@ def _creer_affaire(session: Session, qui: Utilisateur, m: MessageDuFil, titre: s
     from app.utils.destinataires import est_adresse_syndic
     from app.utils.nature_affaire import statut_pour
 
-    mis = mettre_en_forme(session, m.texte, m.brut)
     #  Le syndic a déjà écrit : l'affaire naît chez lui (demandé le 29/09/2026,
     #  même règle que pour une Suite — `suite_d_un_message`).
     demande = StatutTicket.en_cours.value if est_adresse_syndic(session, m.adresse) else None
