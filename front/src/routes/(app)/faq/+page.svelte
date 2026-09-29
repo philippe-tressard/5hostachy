@@ -4,6 +4,7 @@
 	import { messageErreur } from '$lib/erreurs';
 	import FormulaireFaq from '$lib/components/FormulaireFaq.svelte';
 	import CarteFaq from '$lib/components/CarteFaq.svelte';
+	import ReorganisationFaq from '$lib/components/ReorganisationFaq.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
@@ -42,13 +43,8 @@
 	let saving = false;
 	let existingCategories: string[] = [];
 
-	// ---- reorder mode ----
+	//  Le mode « Réorganiser » vit dans `ReorganisationFaq` (#779).
 	let reorderMode = false;
-	let reorderItems: any[] = [];
-	let dragItem: any | null = null;
-	let dragOverItem: any | null = null;
-	let dragCategory: string | null = null;
-	let reorderSaving = false;
 
 	$: canEdit = $isCS;
 
@@ -155,7 +151,7 @@
 			}
 			showForm = false;
 		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			saving = false;
 		}
@@ -177,111 +173,7 @@
 			const updated = await faqApi.update(it.id, { actif: !it.actif });
 			items = items.map((i) => (i.id === it.id ? updated : i));
 		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
-	// ---- reorder ----
-	function enterReorderMode() {
-		reorderItems = items.map((i) => ({ ...i }));
-		reorderMode = true;
-	}
-
-	function cancelReorder() {
-		reorderMode = false;
-		reorderItems = [];
-		dragItem = null;
-		dragOverItem = null;
-		dragCategory = null;
-	}
-
-	$: reorderGrouped = reorderItems.reduce((acc: Record<string, any[]>, it) => {
-		const cat = normalizeCategorieLabel(it.categorie ?? 'Général');
-		if (!acc[cat]) acc[cat] = [];
-		acc[cat].push(it);
-		return acc;
-	}, {});
-
-	function handleDragStart(item: any, category: string) {
-		dragItem = item;
-		dragCategory = category;
-	}
-
-	function handleDragOver(e: DragEvent, item: any, category: string) {
-		if (dragCategory !== category) return;
-		e.preventDefault();
-		dragOverItem = item;
-	}
-
-	function handleDrop(e: DragEvent, category: string) {
-		e.preventDefault();
-		if (!dragItem || !dragOverItem || dragCategory !== category) return;
-		const catItems = reorderGrouped[category];
-		if (!catItems) return;
-		const fromIndex = catItems.findIndex((i: any) => i.id === dragItem.id);
-		const toIndex = catItems.findIndex((i: any) => i.id === dragOverItem.id);
-		if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
-		// Reorder within category
-		const newCatItems = [...catItems];
-		const [moved] = newCatItems.splice(fromIndex, 1);
-		newCatItems.splice(toIndex, 0, moved);
-		// Update ordre values
-		newCatItems.forEach((it, idx) => {
-			it.ordre = idx;
-		});
-		// Replace in reorderItems
-		const otherItems = reorderItems.filter(
-			(i) => normalizeCategorieLabel(i.categorie ?? 'Général') !== category,
-		);
-		reorderItems = [...otherItems, ...newCatItems];
-		dragItem = null;
-		dragOverItem = null;
-		dragCategory = null;
-	}
-
-	function handleDragEnd() {
-		dragItem = null;
-		dragOverItem = null;
-		dragCategory = null;
-	}
-
-	function moveItem(category: string, item: any, direction: -1 | 1) {
-		const catItems = reorderGrouped[category];
-		if (!catItems) return;
-		const idx = catItems.findIndex((i: any) => i.id === item.id);
-		const targetIdx = idx + direction;
-		if (targetIdx < 0 || targetIdx >= catItems.length) return;
-		const newCatItems = [...catItems];
-		[newCatItems[idx], newCatItems[targetIdx]] = [newCatItems[targetIdx], newCatItems[idx]];
-		newCatItems.forEach((it, i) => {
-			it.ordre = i;
-		});
-		const otherItems = reorderItems.filter(
-			(i) => normalizeCategorieLabel(i.categorie ?? 'Général') !== category,
-		);
-		reorderItems = [...otherItems, ...newCatItems];
-	}
-
-	async function saveReorder() {
-		reorderSaving = true;
-		try {
-			const changes = reorderItems
-				.filter((ri) => {
-					const orig = items.find((i) => i.id === ri.id);
-					return orig && orig.ordre !== ri.ordre;
-				})
-				.map((ri) => ({ id: ri.id, ordre: ri.ordre }));
-			if (changes.length) {
-				await faqApi.reorder(changes);
-				items = reorderItems.map((i) => ({ ...i }));
-				toast('success', 'Ordre mis à jour.');
-			}
-			reorderMode = false;
-			reorderItems = [];
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		} finally {
-			reorderSaving = false;
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -316,7 +208,7 @@
 			toast('success', 'Catégorie renommée.');
 			cancelEditCategory();
 		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+			toast('error', messageErreur(e));
 		} finally {
 			savingCategory = false;
 		}
@@ -328,11 +220,9 @@
 <EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'help-circle'}>
 	{#if canEdit}
 		{#if !reorderMode}
-			<button class="btn btn-outline page-header-btn" on:click={enterReorderMode}
+			<button class="btn btn-outline page-header-btn" on:click={() => (reorderMode = true)}
 				><Icon name="move" size={15} /> Réorganiser</button
 			>
-		{/if}
-		{#if !reorderMode}
 			<BoutonNouveau
 				ouvert={showForm && !editingItem}
 				libelle={FAQ.libelleNouveau}
@@ -364,53 +254,15 @@
 		titreVide="Aucune question pour l'instant"
 	/>
 {:else if reorderMode}
-	<div class="reorder-bar">
-		<span style="font-size:var(--fs-base);color:var(--color-text-muted)"
-			>Glissez les questions pour les réorganiser, ou utilisez les flèches ↑↓</span
-		>
-		<div style="display:flex;gap:.5rem">
-			<button class="btn btn-outline" on:click={cancelReorder} disabled={reorderSaving}
-				>Annuler</button
-			>
-			<button class="btn btn-primary" on:click={saveReorder} disabled={reorderSaving}>
-				{reorderSaving ? 'Enregistrement…' : "Sauvegarder l'ordre"}
-			</button>
-		</div>
-	</div>
-	{#each Object.entries(reorderGrouped) as [categorie, catItems] (categorie)}
-		<h2 class="categorie-title">{categorie}</h2>
-		{#each catItems as item, idx (item.id)}
-			<div
-				class="card reorder-item"
-				class:drag-over={dragOverItem?.id === item.id}
-				draggable="true"
-				on:dragstart={() => handleDragStart(item, categorie)}
-				on:dragover={(e) => handleDragOver(e, item, categorie)}
-				on:drop={(e) => handleDrop(e, categorie)}
-				on:dragend={handleDragEnd}
-				role="listitem"
-			>
-				<div class="reorder-handle" title="Glisser pour réorganiser">⠿</div>
-				<span class="reorder-question">{item.question}</span>
-				<div class="reorder-arrows">
-					<button
-						class="btn-icon-edit"
-						disabled={idx === 0}
-						on:click={() => moveItem(categorie, item, -1)}
-						title="Monter"
-						aria-label="Monter">↑</button
-					>
-					<button
-						class="btn-icon-edit"
-						disabled={idx === catItems.length - 1}
-						on:click={() => moveItem(categorie, item, 1)}
-						title="Descendre"
-						aria-label="Descendre">↓</button
-					>
-				</div>
-			</div>
-		{/each}
-	{/each}
+	<ReorganisationFaq
+		{items}
+		on:fermer={(e) => {
+			if (e.detail) items = e.detail;
+			reorderMode = false;
+		}}
+	>
+		<h2 slot="titre" class="categorie-title" let:categorie>{categorie}</h2>
+	</ReorganisationFaq>
 {:else}
 	{#each Object.entries(filteredGrouped) as [categorie, catItems] (categorie)}
 		<div style="display:flex;justify-content:space-between;align-items:center">
@@ -551,51 +403,4 @@
 	.btn-outline {
 		padding: 0.4rem 0.9rem;
 	} /* le reste vient de la charte (#607) */
-	.reorder-bar {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		padding: 0.75rem 1rem;
-		margin-bottom: 0.5rem;
-		background: var(--color-bg-subtle);
-		border-radius: var(--radius);
-		border: 1px dashed var(--color-border);
-	}
-	.reorder-item {
-		/*  L'espacement venait de `.faq-item`, partie avec la carte dans
-		    `CarteFaq.svelte` : une ligne de réorganisation n'est pas une carte de
-		    question, elle n'a que son interligne en commun. */
-		margin-bottom: 0.35rem;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 0.75rem;
-		cursor: grab;
-		user-select: none;
-	}
-	.reorder-item:active {
-		cursor: grabbing;
-	}
-	.reorder-handle {
-		font-size: 1.2rem;
-		color: var(--color-text-muted);
-		cursor: grab;
-		flex-shrink: 0;
-	}
-	.reorder-question {
-		flex: 1;
-		font-size: var(--fs-base);
-	}
-	.reorder-arrows {
-		display: flex;
-		gap: 0.15rem;
-		flex-shrink: 0;
-	}
-	.drag-over {
-		outline: 2px dashed var(--color-primary);
-		outline-offset: -2px;
-		background: var(--color-bg-subtle);
-	}
 </style>

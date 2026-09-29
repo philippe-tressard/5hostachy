@@ -40,8 +40,9 @@ import { fileURLToPath } from 'node:url';
  *  sondage, ses résultats extraits en composant et ses styles passés en
  *  classes, rendu identique (quatre états, bureau et mobile). Puis 457 : le
  *  badge « Bail actif » du formulaire de bail, passé dans sa feuille (#1329).
+ *  Puis 455 : la barre de réorganisation de la FAQ, extraite en composant (#779).
  */
-const PLAFOND = 457;
+const PLAFOND = 455;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
