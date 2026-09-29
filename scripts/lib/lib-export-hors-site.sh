@@ -156,11 +156,18 @@ jours_manquants() { # $1=jours_a_couvrir $2=date_du_jour(AAAAMMJJ) puis noms sur
   local fenetre="${1:-14}" aujourdhui="${2:-}" noms manquants=""
   noms=$(cat)
   [ -n "$aujourdhui" ] || aujourdhui=$(date +%Y%m%d)
-  local i jour
+  local i jour debut=1
   # On remonte le temps jour par jour, en partant de la VEILLE : l'archive du
   # jour même n'existe qu'après 02:00, et l'exiger ferait crier le contrôle
   # chaque matin pour un fait normal.
-  for ((i = 1; i <= fenetre; i++)); do
+  # 🔴 …SAUF si elle est déjà là (29/09/2026, relevé à l'écran). La rotation
+  # garde les `keep` archives les PLUS RÉCENTES, celle du jour comprise : avec
+  # deux copies, un export lancé après 02:00 détient J et J-1. Une fenêtre fixée
+  # à J-1..J-keep réclamait alors J-2 — que la rotation venait d'effacer — et
+  # signalait chaque jour un « jour absent » qui n'en était pas un. La fenêtre
+  # commence au jour le plus récent qu'on puisse détenir.
+  case "$noms" in *"hostachy_backup_${aujourdhui}_"*) debut=0 ;; esac
+  for ((i = debut; i < debut + fenetre; i++)); do
     jour=$(date -d "$aujourdhui -$i day" +%Y%m%d 2>/dev/null) || return 0
     case "$noms" in
       *"hostachy_backup_${jour}_"*) ;;
