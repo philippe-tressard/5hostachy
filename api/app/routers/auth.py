@@ -427,16 +427,25 @@ def verify_email(request: Request, token: str, session: Session = Depends(get_se
     🔴 Cette route **éprouve un secret** — un jeton passé en clair dans l'URL —
     et n'avait aucune limitation de débit jusqu'au 19/09/2026 (#1027) : les
     jetons étaient énumérables au rythme que le réseau permettait.
+
+    🔴 Un lien DÉJÀ SERVI, pour une adresse vérifiée, répond « déjà vérifiée »
+    — et non « invalide » (29/09/2026). Les messageries analysent les liens
+    reçus dans un vrai navigateur, qui exécute la page : le 29/09, le scanner
+    de Microsoft avait consommé le jeton une minute avant que le destinataire
+    clique, et celui-ci lisait en rouge l'échec d'une vérification réussie.
+    Répondre ainsi ne livre rien : seul le porteur du lien connaît le jeton.
     """
     evt = session.exec(
         select(EmailVerificationToken).where(EmailVerificationToken.token == empreinte(token))
     ).first()
-
-    if not evt or evt.used or evt.expires_at < horloge.maintenant():
+    user = session.get(Utilisateur, evt.user_id) if evt else None
+    if not user:
         raise HTTPException(400, "Lien de vérification invalide ou expiré.")
 
-    user = session.get(Utilisateur, evt.user_id)
-    if not user:
+    if user.email_verifie:
+        return {"message": "Adresse e-mail déjà vérifiée."}
+
+    if evt.used or evt.expires_at < horloge.maintenant():
         raise HTTPException(400, "Lien de vérification invalide ou expiré.")
 
     user.email_verifie = True
