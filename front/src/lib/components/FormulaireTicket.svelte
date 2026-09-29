@@ -157,6 +157,7 @@
 	let frequenceValeur: number | string | null = ticket?.frequence_valeur ?? null;
 	let prestataires: { id: number; nom: string; actif?: boolean }[] = [];
 	let erreurPrestataires = '';
+	let erreurResidents = '';
 
 	//  ── Ce que la NATURE décide (formulaire unique, 23/09/2026) ─────────────
 	$: nature = natureDe(categorie);
@@ -188,12 +189,9 @@
 			[contrats] = await essayer(prestatairesApi.contrats(), []);
 		}
 		if ($isCS && sectionPresente(TICKET, etat, 'au_nom_de')) {
-			try {
-				const all = await adminApi.utilisateurs();
-				usersActifs = all.filter((u: any) => u.actif).sort(comparerParNom);
-			} catch {
-				/* ignore */
-			}
+			const [tous, e] = await essayer(adminApi.utilisateurs(), []);
+			usersActifs = tous.filter((u: any) => u.actif).sort(comparerParNom);
+			erreurResidents = e;
 		}
 	});
 
@@ -398,6 +396,7 @@
 			idPrefixe="ticket"
 			avecSaisiPour={$isCS && sectionPresente(TICKET, etat, 'au_nom_de')}
 			residentsSaisiPour={usersActifs}
+			{erreurResidents}
 			bind:saisiPour
 			avecOptions={sectionPresente(TICKET, etat, 'mise_en_avant')}
 			objet={actualite ? 'actualité' : 'ticket'}

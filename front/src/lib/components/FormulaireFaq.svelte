@@ -24,6 +24,7 @@
 
 	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -52,6 +53,8 @@
 	export let form: SaisieFaq;
 	/** Les catégories déjà en service, proposées avant d'en inventer une. */
 	export let categories: string[] = [];
+	/** Non vide = les catégories n'ont pas pu être lues : sans ce mot, on en recrée une (#1459). */
+	export let erreurCategories = '';
 	export let enregistrement = false;
 	/** Appelé à la soumission. La page garde la décision d'enregistrer. */
 	export let onEnregistrer: () => void;
@@ -102,6 +105,7 @@
 				{/each}
 				<option value={NOUVELLE_CATEGORIE}>➕ Nouvelle catégorie…</option>
 			</select>
+			<EtatListe compact erreur={erreurCategories} />
 		</div>
 		{#if form.estNouvelleCategorie}
 			<label class="field"

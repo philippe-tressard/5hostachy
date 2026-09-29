@@ -140,8 +140,9 @@
 		if ($isLocataire) {
 			try {
 				monBailData = await bailApi.monBail();
-			} catch {
-				/* pas de bail */
+			} catch (e: any) {
+				//  « Pas de bail » est une réponse `null`, jamais une erreur (#1459).
+				toast('error', messageErreur(e, 'Impossible de charger votre bail'));
 			}
 		}
 		if ($isCoproprietaire) {

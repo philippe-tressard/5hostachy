@@ -24,6 +24,7 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 	import type { ModeSaisiPour } from '$lib/saisi-pour';
 
 	/** Lié par l'appelant : lui seul sait ce que ces valeurs deviennent. */
@@ -64,6 +65,8 @@
 	export let email = '';
 	/** Résidents proposables — chargés par l'appelant, qui connaît ses droits. */
 	export let residents: { id: number; prenom: string; nom: string; email: string }[] = [];
+	/** Non vide = la liste n'a pas pu être lue : un menu vide ne doit pas le taire (#1459). */
+	export let erreurResidents = '';
 	/** Le motif d'extinction de la section, ou `''` (`inactivePour`, #1191). */
 	export let inactive = '';
 </script>
@@ -103,6 +106,7 @@
 					<option value={u.id}>{nomAffiche(u)}{u.email ? ` (${u.email})` : ''}</option>
 				{/each}
 			</select>
+			<EtatListe compact erreur={erreurResidents} />
 		{:else if mode === 'exterieur'}
 			<!--  🔴 `.form-grid-2` — la classe EXISTAIT (13/09/2026, #938). Ces deux
 			      champs courts s'empilaient sur deux lignes pleine largeur, alors que

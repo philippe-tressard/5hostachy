@@ -14,6 +14,7 @@
 	} from '$lib/components/JournalVerdicts.svelte';
 
 	export let journaux: JournalEnvoiWhatsApp[] = [];
+	export let erreur = '';
 	export let recharger: () => unknown = () => {};
 
 	//  Un seuil employé pour couper ET pour comparer se nomme : écrit deux fois,
@@ -53,6 +54,7 @@
 
 <JournalVerdicts
 	{entrees}
+	{erreur}
 	{recharger}
 	vide="Aucun message envoyé."
 	libelleRecharger="Rafraîchir l'historique"

@@ -43,6 +43,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { stripHtml, perimetreDefautListe } from '$lib/utils';
 	import { fichiersApi } from '$lib/api';
+	import { essayer } from '$lib/chargement';
 
 	//  L'onglet s'amorce SEUL. Avant, la page appelait `loadAnnoncesHall()` et
 	//  `loadAhPublications()` à deux endroits (au montage et au clic d'onglet) :
@@ -116,14 +117,13 @@
 	 *   archivé, confidentiel — vivent avec la liste, côté serveur : un écran
 	 *   qui montrerait un élément confidentiel inviterait à le reprendre, et le
 	 *   pré-remplissage passerait quand même par l'API. */
+	//  Non bloquant — la saisie libre reste possible —, mais DIT : sans lui, la
+	//  liste des sources disparaît comme s'il n'y en avait aucune (#1459).
+	let erreurPubs = '';
 	async function loadAhPublications() {
 		if (ahPubsLoaded) return;
-		try {
-			ahPubs = await annoncesHallApi.sources();
-			ahPubsLoaded = true;
-		} catch {
-			/* non bloquant : la saisie manuelle reste possible */
-		}
+		[ahPubs, erreurPubs] = await essayer(annoncesHallApi.sources(), []);
+		ahPubsLoaded = !erreurPubs;
 	}
 
 	async function ahPrefillDepuisPublication(cle: string) {
@@ -246,6 +246,7 @@
 					bind:format={ahFormat}
 					bind:photos={ahPhotos}
 					pubs={ahPubs}
+					{erreurPubs}
 					sourceId={ahSourceId}
 					formats={AH_FORMATS}
 					maxPhotos={MAX_PHOTOS_AFFICHE}

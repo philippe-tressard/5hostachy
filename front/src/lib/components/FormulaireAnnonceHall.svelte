@@ -41,6 +41,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import { fmtDateShort } from '$lib/date';
 	import type { SourceAffiche } from '$lib/api';
+	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	type AhFormat = 'auto' | 'a4' | 'a5' | 'a6' | 'a7';
 
@@ -56,6 +57,7 @@
 	/**  Éléments du fil proposés au pré-remplissage — actualités, tickets ET
 	 *   événements (10/09/2026). Vide : le bloc ne s'affiche pas. */
 	export let pubs: SourceAffiche[] = [];
+	export let erreurPubs = '';
 	/** La CLÉ de la source (`ticket:12`), pas son id : trois familles, trois numérotations. */
 	export let sourceId = '';
 	export let formats: { val: AhFormat; label: string }[] = [];
@@ -164,7 +166,9 @@
 </script>
 
 <!--  L'EXCEPTION : le pré-remplissage vient avant le titre. Voir l'en-tête. -->
-{#if pubs.length}
+{#if erreurPubs}
+	<EtatListe compact erreur={erreurPubs} />
+{:else if pubs.length}
 	<div class="field">
 		<label for="ah-source">Pré-remplir depuis le fil d'actualité</label>
 		<select

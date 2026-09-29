@@ -9,7 +9,20 @@
 	import { LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import FiltresUtilisateurs from '$lib/components/FiltresUtilisateurs.svelte';
 	import { ETIQUETTES_COMPTE } from '$lib/comptes';
-	import { essayer } from '$lib/chargement';
+	import { essayer, messagePartiel } from '$lib/chargement';
+	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
+	//  Les onglets qui ENREGISTRENT ce que `/config/admin` et `/config/legal` ont lu.
+	//  Si la lecture a échoué, leur formulaire serait vide — et enregistré, il
+	//  effacerait la configuration (#1459) : ils montrent l'échec à la place.
+	const ONGLETS_DU_PARAMETRAGE = [
+		'site',
+		'pages',
+		'legal',
+		'whatsapp',
+		'smtp',
+		'ia',
+		'copropriete',
+	];
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -80,17 +93,10 @@
 
 	//  Bâtiments (pour affichage)
 	let batimentsMap: Record<number, string> = {};
+	let erreurBatiments = '';
 	async function loadBatiments() {
-		try {
-			const list = await authApi.batiments();
-			batimentsMap = Object.fromEntries(
-				list.map((b: { id: number; numero: string }) => [b.id, `Bât. ${b.numero}`]),
-			);
-
-			batimentsList = list;
-		} catch {
-			/* non bloquant */
-		}
+		[batimentsList, erreurBatiments] = await essayer(authApi.batiments(), []);
+		batimentsMap = Object.fromEntries(batimentsList.map((b) => [b.id, `Bât. ${b.numero}`]));
 	}
 
 	//  Comptes en attente
@@ -426,41 +432,23 @@
 		// liste blanche et n'expose plus que les clés de la coquille d'interface. Les
 		// champs édités ici (SMTP, WhatsApp, référence de copropriété, gestionnaire du
 		// site…) ne sont accessibles qu'à l'admin, ce qui est précisément le rôle requis
-		// pour afficher cet écran. Repli sur le store si l'appel échoue, pour ne pas
-		// bloquer le reste de la page.
-		let cfg = get(configStore) as Record<string, string>;
-		try {
-			cfg = { ...cfg, ...(await configApi.admin()) };
-		} catch {
-			toast('error', 'Impossible de charger le paramétrage complet (droits admin requis).');
-		}
-		// Les clés légales sont exclues de /api/config (perf) — route dédiée
-		let sMentions = '';
-		let sPolitique = '';
-		try {
-			const legal = await configApi.legal();
-			sMentions = legal['mentions_legales'] ?? '';
-			sPolitique = legal['politique_confidentialite'] ?? '';
-		} catch {
-			//  Silencieux : les deux champs restent vides et l'écran d'administration
-			//  affiche le formulaire, qui reste saisissable.
-		}
+		// pour afficher cet écran. Les clés légales en sont exclues (perf) : route dédiée.
+		//  🔴 Lu UNE fois (il l'était deux) et jamais en silence (#1459) : un échec
+		//  laissait les textes légaux vides, et « Enregistrer » les effaçait.
+		const [adminCfg, eAdmin] = await essayer(configApi.admin(), {} as Record<string, string>);
+		const [legal, eLegal] = await essayer(configApi.legal(), {} as Record<string, string>);
+		erreurParametrage = messagePartiel(eAdmin, eLegal);
+		const cfg = { ...(get(configStore) as Record<string, string>), ...adminCfg };
 		siteConfig = lireConfigSite(cfg, {
-			mentions_legales: sMentions,
-			politique_confidentialite: sPolitique,
+			mentions_legales: legal['mentions_legales'] ?? '',
+			politique_confidentialite: legal['politique_confidentialite'] ?? '',
 		});
 		//  La configuration des pages est préparée par `OngletDescriptifPages`, qui
 		//  la reçoit dans `valeurs` : la page n'a plus à connaître sa forme.
 		// WhatsApp : la configuration part telle quelle vers l'onglet dédié.
 		waCfgPublique = cfg;
-		try {
-			const adminCfg = await configApi.admin();
-			waApiKeySet = !!adminCfg['whatsapp_api_key'];
-			// SMTP config
-			smtpValeurs = adminCfg;
-		} catch {
-			/**/
-		}
+		waApiKeySet = !!adminCfg['whatsapp_api_key'];
+		smtpValeurs = adminCfg;
 		loadBatiments();
 		loadComptes();
 		loadCommandes();
@@ -475,6 +463,7 @@
 		onglet = 'site';
 		if (utilisateurs.length === 0) loadUtilisateurs();
 	}
+	let erreurParametrage = '';
 	async function saveSiteConfig() {
 		siteSaving = true;
 		try {
@@ -517,6 +506,12 @@
 	titre={_pc.titre}
 	descriptif={_pc.descriptif}
 	icone={_pc.icone || 'sliders-horizontal'}
+/>
+<ChargementPartiel
+	erreur={messagePartiel(erreurParametrage, erreurBatiments)}
+	consequence={erreurParametrage
+		? 'Les onglets de paramétrage restent fermés : enregistrés vides, ils effaceraient la configuration.'
+		: 'Les numéros de bâtiment peuvent manquer dans les listes.'}
 />
 
 <!--  Tous les onglets passent par `Onglet` — ceux qui basculent un panneau comme
@@ -1112,6 +1107,11 @@
 	<OngletMaintenance />
 {:else if onglet === 'emails'}
 	<OngletModelesEmail />
+{:else if erreurParametrage && ONGLETS_DU_PARAMETRAGE.includes(onglet)}
+	<EtatListe
+		erreur={erreurParametrage}
+		titreErreur="Paramétrage illisible — rien n’a été modifié"
+	/>
 {:else if onglet === 'site'}
 	<OngletSite bind:siteConfig {siteSaving} {siteManagerUsers} {saveSiteConfig} />
 {:else if onglet === 'pages'}

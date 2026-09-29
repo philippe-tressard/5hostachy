@@ -25,6 +25,7 @@
 	} from '$lib/faq';
 	import { richEmpty } from '$lib/publications';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { essayer } from '$lib/chargement';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 
 	$: _pc = getPageConfig($configStore, 'faq', defautsDePage('faq'));
@@ -42,6 +43,7 @@
 	let form: SaisieFaq = saisieFaqVide();
 	let saving = false;
 	let existingCategories: string[] = [];
+	let erreurCategories = '';
 
 	//  Le mode « Réorganiser » vit dans `ReorganisationFaq` (#779).
 	let reorderMode = false;
@@ -93,11 +95,8 @@
 
 	//  Les catégories en service, relues à chaque ouverture — écrit deux fois avant #1329.
 	async function chargerCategories() {
-		try {
-			existingCategories = await faqApi.categories();
-		} catch {
-			/* conserve le cache précédent */
-		}
+		//  En échec, le cache précédent reste — et l'échec se dit (#1459).
+		[existingCategories, erreurCategories] = await essayer(faqApi.categories(), existingCategories);
 	}
 
 	async function openNew() {
@@ -239,6 +238,7 @@
 		cle="creation"
 		bind:form
 		categories={existingCategories}
+		{erreurCategories}
 		enregistrement={saving}
 		onEnregistrer={saveItem}
 		on:annule={() => (showForm = false)}
@@ -322,6 +322,7 @@
 					cle={item.id}
 					bind:form
 					categories={existingCategories}
+					{erreurCategories}
 					enregistrement={saving}
 					onEnregistrer={saveItem}
 					on:annule={() => (showForm = false)}
