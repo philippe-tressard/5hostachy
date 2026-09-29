@@ -12,9 +12,9 @@
  *  était juste et éprouvée (`lint:lecture`) : c'est son APPEL qui oubliait un
  *  argument — seul un test de l'écran pouvait le voir.
  *
- *  L'autre sens est éprouvé aussi : une Étude & travaux reste lue par les
- *  copropriétaires seuls, sa vignette le dit — sans quoi un test qui ne verrait
- *  jamais « Copropriétaires » passerait sur une vignette figée à « Tous ».
+ *  L'autre sens est éprouvé aussi : une Étude & travaux est lue du conseil
+ *  seul (29/09/2026), sa vignette le dit — sans quoi un test qui ne verrait
+ *  jamais que « Tous » passerait sur une vignette figée.
  *
  *  Depuis #1436 (28/09/2026), CHAQUE catégorie a son défaut : une Nuisance
  *  présélectionne « Résident concerné », un Entretien « Conseil syndical ». La
@@ -53,13 +53,16 @@ test('Nouvelle affaire, Panne : la vignette dit « Tous », comme la pastille co
 	);
 });
 
-test('Nouvelle affaire, Étude & travaux : la vignette dit « Copropriétaires », comme les pastilles', async ({
+test('Nouvelle affaire, Étude & travaux : « Conseil syndical » est cochée (29/09/2026)', async ({
 	page,
 }) => {
 	await nouvelleAffaire(page, /Diagnostic, sondage, devis/);
 	const s = section(page);
-	await expect(s.locator('button.active', { hasText: /^\s*Tous\s*$/ })).toHaveCount(0);
-	await expect(s.locator('.section-badge, .section-resume').first()).toHaveText(/Copropriétaires/);
+	await expect(s.locator('button.active', { hasText: /Conseil syndical/ })).toHaveCount(1);
+	await expect(s.locator('button.active')).toHaveCount(1);
+	await expect(s.locator('.section-badge, .section-resume').first()).toHaveText(
+		/Conseil syndical seul/,
+	);
 });
 
 test('Nouvelle affaire, Nuisance : « Résident concerné » est cochée, et la vignette le dit (#1436)', async ({

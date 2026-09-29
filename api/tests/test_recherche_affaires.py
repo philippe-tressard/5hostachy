@@ -91,9 +91,11 @@ def scene(batiments):
             numero=f"T-{uuid.uuid4().hex[:6]}",
             titre=f"Dégât des eaux {mots['titre']}",
             description="Une flaque au pied de l'escalier.",
-            #  La règle des copropriétaires du périmètre : une Nuisance est au
-            #  « Résident concerné » depuis #1436, Étude & travaux la garde.
+            #  Lue par les copropriétaires parce que le conseil les a CHOISIS :
+            #  sans choix, une Nuisance est au « Résident concerné » (#1436) et
+            #  Étude & travaux au conseil seul (29/09/2026).
             categorie="etude_travaux",
+            public_cible=json.dumps(["copropriétaires_occupants", "bailleurs"], ensure_ascii=False),
             auteur_id=auteur.id,
             statut=StatutTicket.ouvert,
             perimetre_cible=json.dumps(["résidence"]),

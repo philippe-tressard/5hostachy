@@ -80,7 +80,11 @@ def _ticket(session, auteur_id, perimetre, *, confidentiel=False) -> Ticket:
         numero=f"T-{uuid.uuid4().hex[:6]}",
         titre="Fuite",
         description="…",
-        categorie="etude_travaux",  # la règle des copropriétaires : Panne (#1343) et Nuisance (#1436) ont la leur
+        categorie="etude_travaux",
+        #  Les copropriétaires CHOISIS par le conseil : sans choix, plus aucune
+        #  catégorie ne les vise (Étude & travaux au conseil seul, 29/09/2026),
+        #  et c'est le périmètre d'un choix que ce fichier éprouve.
+        public_cible=json.dumps(["copropriétaires_occupants", "bailleurs"], ensure_ascii=False),
         auteur_id=auteur_id,
         statut=StatutTicket.ouvert,
         perimetre_cible=json.dumps(perimetre, ensure_ascii=False),

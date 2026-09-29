@@ -80,7 +80,7 @@
 		chargeUtileAffaire,
 		intervenantPropose,
 		natureDe,
-		pertesAuChangement,
+		alerteCorrection,
 		sectionsInactives,
 		type SaisieAffaire,
 	} from '$lib/formulaire-affaire';
@@ -307,20 +307,10 @@
 		if (!saisieValide()) return;
 		refDiffusion?.fermerApercu();
 		const contexte = { creation: !modeEdition, estCS: $isCS };
-		if (ticket) {
-			//  🔴 Changer de nature EFFACE ce que les sections éteintes portaient :
-			//  on le dit avant, et rien ne part sans accord (arbitré le 23/09/2026).
-			const pertes = pertesAuChangement(ticket, saisie);
-			if (
-				pertes.length &&
-				!(await confirmer({
-					titre: actualite ? 'En faire une actualité' : 'En faire une affaire suivie',
-					message: `Ce changement de catégorie efface ${pertes.join(', ')}.`,
-					libelleConfirmer: 'Enregistrer',
-				}))
-			)
-				return;
-		}
+		//  🔴 Ce qu'une correction EFFACE (23/09/2026) et QUI LIRA l'affaire et tout
+		//  son fil (29/09/2026) : dit avant, rien ne part sans accord.
+		const alerte = ticket && alerteCorrection(ticket, saisie);
+		if (alerte && !(await confirmer({ ...alerte, libelleConfirmer: 'Enregistrer' }))) return;
 		loading = true;
 		try {
 			const charge = chargeUtileAffaire(saisie, contexte);

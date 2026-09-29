@@ -11,6 +11,7 @@ d'accord — un cas par catégorie.
 from __future__ import annotations
 
 from app.models.core import Ticket
+from app.utils.nature_affaire import est_actualite
 from app.utils.perimetres import batiments_cibles
 from app.utils.valeurs import valeur
 
@@ -29,8 +30,14 @@ _DESTINATAIRES_PANNE_BATIMENT = ["copropriétaires_occupants", "locataires"]
 CONCERNE = "concerné"
 
 #: Ce qu'une affaire lit SANS choix du conseil, selon sa catégorie (#1436,
-#: arbitré le 28/09/2026). Absente : les copropriétaires, la règle historique
-#: de `ticket_visible` — Étude & travaux. La Panne a sa règle (le bâtiment).
+#: arbitré le 28/09/2026). La Panne a sa règle (le bâtiment).
+#:
+#: 🔴 ÉTUDE & TRAVAUX : LE CONSEIL SEUL (arbitré le 29/09/2026). Elle gardait
+#: la règle historique — les copropriétaires du périmètre — et en était la
+#: dernière. Une étude est le dossier du conseil (devis, diagnostics,
+#: arbitrages en cours) : il l'ouvre en choisissant ses Destinataires. La
+#: règle historique n'ayant plus de catégorie, elle a quitté `ticket_visible` ;
+#: une catégorie absente de cette table retombe sur `DEFAUT_INCONNU`, fermé.
 #:
 #: Une nuisance nomme souvent un voisin, un sinistre touche un lot, une
 #: question est personnelle : les lire à tout un bâtiment exposait des données
@@ -44,19 +51,25 @@ DEFAUT_PAR_CATEGORIE: dict[str, list[str]] = {
     "acces_accueil": [CONCERNE],
     "espaces_verts": ["résidents"],
     "sinistre": [CONCERNE],
+    "etude_travaux": ["conseil_syndical"],
     "entretien": ["conseil_syndical"],
     "question": [CONCERNE],
     "bug": [CONCERNE],
 }
 
+#: Une catégorie que la table ne connaît pas : le conseil seul. Une donnée
+#: inattendue ne peut que restreindre (#789) — `test_destinataires_affaire`
+#: exige que chaque catégorie y figure, pour que ce repli ne serve jamais.
+DEFAUT_INCONNU = ["conseil_syndical"]
+
 #: Les défauts qui ne laissent lire que le conseil — et l'auteur : rien ne sort.
 _DEFAUTS_FERMES = ([CONCERNE], ["conseil_syndical"])
 
 
-def destinataires_par_defaut(ticket: Ticket) -> list[str] | None:
-    """Les Destinataires qu'une affaire a SANS choix du conseil, quand sa
-    catégorie en décide (#1343, 26/09/2026 ; toutes depuis #1436) — `None` :
-    la règle historique (les copropriétaires), écrite dans `ticket_visible`.
+def destinataires_par_defaut(ticket: Ticket) -> list[str]:
+    """Les Destinataires qu'une affaire a SANS choix du conseil : ceux de sa
+    catégorie (#1343, 26/09/2026 ; toutes depuis #1436, Étude & travaux au
+    conseil seul depuis le 29/09/2026).
 
     Arbitré à l'écran : *« pour une catégorie Panne, tout le périmètre (sauf
     bailleurs) concernés, si le périmètre est un bâtiment ; hors bâtiments =
@@ -69,9 +82,14 @@ def destinataires_par_defaut(ticket: Ticket) -> list[str] | None:
     ⚠️ Miroir : `destinatairesParDefaut` (`front/src/lib/lecture.ts`), tenus
     d'accord par `tests/donnees/lecture_pastille.json`.
     """
+    #  Une actualité s'adresse à tous (`actualite_visible` en décide, pas
+    #  cette table) — miroir de l'écran. Sans ce cas, elle tomberait sur
+    #  `DEFAUT_INCONNU` et `reservee_au_conseil` la retiendrait du hall.
+    if est_actualite(ticket):
+        return ["résidents"]
     categorie = valeur(ticket.categorie)
     if categorie != "panne":
-        return DEFAUT_PAR_CATEGORIE.get(categorie)
+        return DEFAUT_PAR_CATEGORIE.get(categorie, DEFAUT_INCONNU)
     #  Illisible : `cible_visible` refusera de toute façon, la valeur importe peu.
     codes = _codes_json_pour_acces(ticket.perimetre_cible) or []
     if codes and all(batiments_cibles([c]) for c in codes):

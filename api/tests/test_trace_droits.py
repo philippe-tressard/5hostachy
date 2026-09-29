@@ -74,9 +74,9 @@ def test_un_code_inconnu_ne_rejoint_pas_le_html_tel_quel():
 
 
 def test_la_suite_du_conseil_qui_change_les_destinataires_le_dit(session):
-    #  Étude & travaux : ouverte par le conseil, lue par les copropriétaires.
+    #  Espaces verts : lue de tous sans choix — la Suite la referme au conseil.
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
-    t = _creer(session, cs, categorie="etude_travaux")
+    t = _creer(session, cs, categorie="espaces_verts")
     _suite(session, cs, t.id, public_cible=["conseil_syndical"])
     assert json.loads(session.get(Ticket, t.id).public_cible) == ["conseil_syndical"]
     assert "🔒 Destinataires : par défaut de la catégorie → Conseil syndical" in (

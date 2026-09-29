@@ -52,7 +52,12 @@ from .objets import (
 )
 from .documents import document_visible
 from .trace_droits import trace_droits
-from .defauts_affaire import CONCERNE, DEFAUT_PAR_CATEGORIE, destinataires_par_defaut
+from .defauts_affaire import (
+    CONCERNE,
+    DEFAUT_INCONNU,
+    DEFAUT_PAR_CATEGORIE,
+    destinataires_par_defaut,
+)
 
 #  ⚠️ Cette liste ne se tient pas à la main : `test_visibilite_surface.py` la
 #  compare aux noms publics RÉELLEMENT définis par les trois fragments, et échoue
@@ -78,6 +83,7 @@ __all__ = [
     "can_see_ag",
     "ticket_visible",
     "CONCERNE",
+    "DEFAUT_INCONNU",
     "DEFAUT_PAR_CATEGORIE",
     "destinataires_par_defaut",
     "reservee_au_conseil",
