@@ -619,11 +619,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	color: #2e7d52;
 	border: 1px solid #9dcfb3;
 }
-.alert-warning {
-	background: #fdf3e0;
-	color: #b07d1e;
-	border: 1px solid #e8c87a;
-}
 .alert-info {
 	background: var(--color-primary-light);
 	color: var(--color-primary-dark);

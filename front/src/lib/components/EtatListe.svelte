@@ -99,11 +99,12 @@
 		color: var(--color-text-muted);
 		padding: 0.5rem 0;
 	}
-	/*  🔴 L'échec ne ressemble PAS au vide, même en compact. Couleur d'alerte du
-	    site — la même que `.alert-warning`, sans le cadre qui ferait un bloc. */
+	/*  🔴 L'échec ne ressemble PAS au vide, même en compact. La couleur du texte
+	    d'avertissement — celle d'`EncartAvertissement`, sans le cadre qui ferait
+	    un bloc ; `--color-warning` ne sert jamais au texte (charte, #1455). */
 	.etat-erreur {
 		font-size: var(--fs-base);
-		color: var(--color-warning);
+		color: var(--color-warning-texte);
 		padding: 0.5rem 0;
 		font-weight: 500;
 	}

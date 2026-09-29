@@ -20,6 +20,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 	import { carnet as carnetApi, type Carnet, type EntreeCarnet } from '$lib/api';
 	import { EQUIPEMENTS } from '$lib/prestataires';
 	import { perimetreLabel } from '$lib/perimetres';
@@ -130,12 +131,12 @@
 		<!--  L'alerte est en TÊTE parce que c'est ce que le carnet apprend et que
 		      rien d'autre ne dit. La date de prochaine visite existe en base depuis
 		      toujours ; aucun écran ne la comparait à aujourd'hui. -->
-		<p class="retard" role="status">
+		<EncartAvertissement role="status">
 			⚠️ <strong
 				>{enRetard} visite{enRetard > 1 ? 's' : ''} attendue{enRetard > 1 ? 's' : ''}</strong
 			>
 			dont l'échéance est dépassée.
-		</p>
+		</EncartAvertissement>
 	{/if}
 
 	<EtatListe
@@ -183,15 +184,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-	}
-	.retard {
-		margin: 0;
-		padding: 0.55rem 0.8rem;
-		background: var(--color-warning-fond);
-		border: 1px solid var(--color-warning-bordure);
-		border-radius: var(--radius);
-		color: var(--color-warning-texte);
-		font-size: var(--fs-base);
 	}
 	.groupes {
 		display: flex;

@@ -2522,6 +2522,7 @@ projet** : https://claude.ai/artifact/5EUqnbiH4HSF8wJe4khAgP
 | texte d'avertissement | `--color-warning-texte` : `--color-warning` fait 3,62 sur blanc, il sert au cadre, à l'icône, à l'aplat — **jamais au texte** | `styles/socle.css` |
 | texte d'un badge | ≥ 4,5 sur son fond, **mesuré** par le contrôle pour chaque `.badge-*` ; sinon un dérivé `-texte` (`--color-success-texte`, #1410) | `styles/composants.css` |
 | note par étoiles | proposition **B** : les étoiles portent la teinte d'état, le chiffre reste en couleur de texte ; en saisie, étoiles pleines en `--color-warning` | `NoteEtoiles.svelte` |
+| encart d'avertissement | `EncartAvertissement`, et lui seul — `compact` sous un champ, la marge chez l'appelant ; un fond d'avertissement ailleurs est un **emprunt de teinte** (survol, badge, carte mise en avant) et se déclare dans le contrôle, avec son nombre (#1455) | 🔒 `npm run lint:encart-avertissement` |
 
 ⚠️ **Les palettes de CATÉGORIES ne sont pas des états** et restent hors de la
 règle : la teinte d'un type du fil (`$lib/flux`), d'un périmètre, d'une colonne

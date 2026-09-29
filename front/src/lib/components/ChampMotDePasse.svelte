@@ -17,6 +17,7 @@
 -->
 <script lang="ts">
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 	import Icon from './Icon.svelte';
 	import PasswordStrength from './PasswordStrength.svelte';
 	import { capsLockActif } from '$lib/utils';
@@ -93,9 +94,9 @@
 	{/if}
 
 	{#if alerteVerrouMaj}
-		<p class="message verrou-maj" role="alert">
+		<EncartAvertissement compact role="alert">
 			⚠️ <strong>Verr. Maj. activée</strong> — votre mot de passe pourrait être incorrect.
-		</p>
+		</EncartAvertissement>
 	{/if}
 </div>
 
@@ -153,12 +154,5 @@
 	}
 	.erreur {
 		color: var(--color-danger);
-	}
-	.verrou-maj {
-		padding: 0.45rem 0.7rem;
-		background: var(--color-warning-fond);
-		border: 1px solid var(--color-warning-bordure);
-		border-radius: var(--radius);
-		color: var(--color-warning-texte);
 	}
 </style>

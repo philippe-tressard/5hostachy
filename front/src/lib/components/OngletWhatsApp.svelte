@@ -13,6 +13,7 @@
 	} from '$lib/api';
 	import { configStore } from '$lib/stores/pageConfig';
 	import { toast } from '$lib/components/Toast.svelte';
+	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import MessagesPlanifiesWhatsApp from '$lib/components/MessagesPlanifiesWhatsApp.svelte';
@@ -232,40 +233,38 @@
 				{/if}
 			</div>
 			{#if waStatus?.state === 'waiting_qr'}
-				<div
-					style="margin-top:.75rem;padding:.75rem;border:2px solid var(--color-warning);border-radius:8px;background:var(--color-warning-fond);max-width:360px"
-				>
-					<p
-						style="margin:0 0 .5rem;font-size:var(--fs-md);font-weight:600;color:var(--color-warning-texte)"
-					>
-						&#x26A0;&#xFE0F; Bridge déconnecté — scannez ce QR code avec WhatsApp
-					</p>
-					<p style="margin:0 0 .75rem;font-size:var(--fs-sm);color:var(--color-warning-texte)">
-						WhatsApp → Appareils connectés → Connecter un appareil
-					</p>
-					<img
-						src="/api/config/whatsapp-qr?t={waQrTimestamp}"
-						alt="QR code WhatsApp"
-						style="display:block;width:220px;height:220px;border-radius:4px;border:1px solid var(--color-warning)"
-					/>
-					<div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center">
-						<button
-							class="btn btn-outline"
-							style="font-size:var(--fs-xs);padding:.15rem .5rem"
-							type="button"
-							on:click={refreshWaQr}
-						>
-							&#x1F504; Rafraîchir le QR
-						</button>
-						<button
-							class="btn btn-outline"
-							style="font-size:var(--fs-xs);padding:.15rem .5rem"
-							type="button"
-							on:click={checkWaStatus}
-						>
-							&#x2705; Vérifier la connexion
-						</button>
-					</div>
+				<div class="qr-attente">
+					<EncartAvertissement>
+						<p style="margin:0 0 .5rem;font-weight:600">
+							&#x26A0;&#xFE0F; Bridge déconnecté — scannez ce QR code avec WhatsApp
+						</p>
+						<p style="margin:0 0 .75rem;font-size:var(--fs-sm)">
+							WhatsApp → Appareils connectés → Connecter un appareil
+						</p>
+						<img
+							src="/api/config/whatsapp-qr?t={waQrTimestamp}"
+							alt="QR code WhatsApp"
+							style="display:block;width:220px;height:220px;border-radius:4px;border:1px solid var(--color-warning)"
+						/>
+						<div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center">
+							<button
+								class="btn btn-outline"
+								style="font-size:var(--fs-xs);padding:.15rem .5rem"
+								type="button"
+								on:click={refreshWaQr}
+							>
+								&#x1F504; Rafraîchir le QR
+							</button>
+							<button
+								class="btn btn-outline"
+								style="font-size:var(--fs-xs);padding:.15rem .5rem"
+								type="button"
+								on:click={checkWaStatus}
+							>
+								&#x2705; Vérifier la connexion
+							</button>
+						</div>
+					</EncartAvertissement>
 				</div>
 			{/if}
 			<div style="display:flex;gap:.5rem;align-items:start;flex-wrap:wrap">
@@ -329,3 +328,12 @@
 		<HistoriqueEnvoisWhatsApp journaux={waLogs} recharger={loadWaLogs} />
 	</SectionFormulaire>
 </section>
+
+<style>
+	/*  Le QR en attente : un encart (#1455), étroit pour que le QR et ses deux
+	    lignes se lisent d'un bloc. */
+	.qr-attente {
+		margin-top: 0.75rem;
+		max-width: 360px;
+	}
+</style>
