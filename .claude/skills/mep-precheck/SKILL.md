@@ -181,8 +181,10 @@ SKIP_PRECHECK=1 git push -u origin dev   # recrée `dev` distante (piège 2)
 25/09/2026). Il ne lance pas les points du LOT (0a à 0g, 15, 16), qui échouent
 par construction une fois le lot fusionné — version inchangée, brief d'un commit
 déjà parti, trace d'un autre commit — et il ajoute **P1** (la ligne `Déployé:` de
-l'actif porte le commit de `origin/main`) et **P3** (la version servie est celle
-de `origin/main`). Il conclut « MEP VÉRIFIÉE » ou « MEP NON VÉRIFIÉE », et
+l'actif porte le commit de `origin/main` — ou, pour un actif démarré par la
+bascule, qui n'écrit pas cette ligne : son marqueur d'images porte le commit et
+son conteneur a été créé après ce build, #1474) et **P3** (la version servie est
+celle de `origin/main`). Il conclut « MEP VÉRIFIÉE » ou « MEP NON VÉRIFIÉE », et
 n'écrit **jamais** la trace qui autorise un push.
 ⚠️ Cette ligne disait « lire les points 1 à 18 » : lancé sans option après la
 fusion, le script concluait « MEP NON AUTORISÉE » sur une MEP réussie, et il
@@ -370,7 +372,7 @@ Attendre le tick, puis :
 
 | # | Vérification | Commande | Attendu |
 |---|---|---|---|
-| P1 | Le déploiement a eu lieu **et est terminé** | `grep 'Déployé' /var/log/hostachy-deploy.log \| tail -2` sur l'actif | Ligne `Déployé: <hash>` avec le hash attendu |
+| P1 | Le déploiement a eu lieu **et est terminé** | `precheck-mep.sh --post-mep` (lit l'actif) | Ligne `Déployé: <hash>` avec le hash attendu — ou, actif issu d'une bascule, marqueur d'images = hash et conteneur créé après (#1474) |
 | P2 | Site debout | `curl -s -o /dev/null -w '%{http_code}' https://5hostachy.fr/api/health` | 200 |
 | P3 | Version servie = version bumpée | Voir « P3 » ci-dessous — l'ancienne commande ne pouvait **pas** fonctionner | La version de `front/package.json`, ou `INCONNU` (jamais vide) |
 | P4 | Image du service touché reconstruite | Point 12, restreint aux services modifiés par le lot | Image postérieure au commit |
