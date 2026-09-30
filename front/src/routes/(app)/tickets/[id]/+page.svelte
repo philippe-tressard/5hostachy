@@ -16,6 +16,7 @@
 	import FicheLecture from '$lib/components/FicheLecture.svelte';
 	import HistoriqueTicket from '$lib/components/HistoriqueTicket.svelte';
 	import FilMessagesTicket from '$lib/components/FilMessagesTicket.svelte';
+	import TransfertsVerses from '$lib/components/TransfertsVerses.svelte';
 	import { TICKET } from '$lib/entites/ticket';
 	import { HREF_VERS_PAGE } from '$lib/pages';
 	import { siteNomStore } from '$lib/stores/pageConfig';
@@ -189,6 +190,16 @@
 		}
 	}
 
+	/** Un transfert annulé change la fiche ET son fil : les deux se relisent. */
+	async function recharger() {
+		try {
+			ticket = await ticketsApi.get(ticketId);
+		} catch (e) {
+			toast('error', messageErreur(e));
+		}
+		await loadEvolutions();
+	}
+
 	async function deleteTicket() {
 		if (!(await confirmer(SUPPRESSION(`${TICKET.libelle} #${ticket.numero}`)))) return;
 		try {
@@ -317,6 +328,11 @@
 			on:envoyer={(e) => sendMessage(e)}
 		/>
 	{/if}
+
+	<!--  Les transferts de courriel versés ici, et ce qui les défait (#1482) :
+	      rendu par qui peut les défaire seulement, et au-dessus de l'Historique
+	      dont ils ont écrit les Suites. Un geste recharge la fiche. -->
+	<TransfertsVerses {ticketId} on:change={recharger} />
 
 	<!--  L'HISTORIQUE — le fil, avec ses gestes. Extrait le 18/08/2026 dans
 	      `HistoriqueTicket` : la liste et cette fiche le rendaient chacune de

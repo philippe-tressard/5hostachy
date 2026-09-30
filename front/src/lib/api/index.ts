@@ -4,6 +4,7 @@ import type {
 	AnnonceHallInput,
 	ActualitePrefill,
 	AffaireLiee,
+	AffaireVisee,
 	AnnonceHallPrefill,
 	ApercuDiffusion,
 	CorrespondanceAffaire,
@@ -17,6 +18,7 @@ import type {
 	TicketEvolution,
 	TicketMessage,
 	User,
+	TransfertVerse,
 } from './types';
 //  Le type des périmètres vit dans `$lib/perimetres` et non dans `./types` : ce
 //  module-là ne doit dépendre de rien pour rester importable depuis `lib/utils.ts`
@@ -176,6 +178,16 @@ export const tickets = {
 	//  d'autres ont pu lire n'est pas corriger son propre texte.
 	deleteEvolution: (id: number, evolId: number) =>
 		api.delete<void>(`/tickets/${id}/evolutions/${evolId}`),
+	//  Défaire un transfert de courriel versé par erreur (#1482) : la liste ne
+	//  rend que ceux que le lecteur peut défaire. `ticket_id` absent = une
+	//  affaire neuve, décrite par le premier message.
+	transferts: (id: number) => api.get<TransfertVerse[]>(`/tickets/${id}/transferts`),
+	annulerTransfert: (id: number, transfertId: number) =>
+		api.post<AffaireVisee>(`/tickets/${id}/transferts/${transfertId}/annuler`, {}),
+	deplacerTransfert: (id: number, transfertId: number, versId: number | null) =>
+		api.post<AffaireVisee>(`/tickets/${id}/transferts/${transfertId}/deplacer`, {
+			ticket_id: versId,
+		}),
 	relanceSyndicList: () => api.get<RelanceSyndicResponse>('/tickets/relance-syndic'),
 	//  Les réponses du syndic aux relances groupées : conservées et relues ici,
 	//  parce qu'une notification se lit une fois puis descend dans la pile.

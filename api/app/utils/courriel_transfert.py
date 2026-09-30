@@ -38,6 +38,12 @@ Un message déjà versé dans CETTE affaire est sauté : par son empreinte
 Chaque issue est notifiée à qui a transféré (`sa_demande`) : c'est lui qui
 attend de voir son fil dans l'affaire, et lui seul sait s'il manque quelque chose.
 
+## Ce qui se défait (#1482)
+
+Chaque versement laisse sa trace (`VersementCourriel`) et chaque Suite la
+sienne (`versement_id`) : le transfert s'annule, se réaffecte ou devient une
+affaire neuve d'un geste, depuis l'affaire (`utils/versement_transfert`).
+
 ## Qui peut s'en servir
 
 Un **membre du conseil** (ou un administrateur), authentifié — DKIM ou ARC,
@@ -90,6 +96,7 @@ from app.utils.reponse_courriel import (
     suite_mise_en_forme,
 )
 from app.utils.valeurs import valeur
+from app.utils.versement_transfert import etat_avant, ouvrir_versement
 
 #: La catégorie d'une affaire créée par transfert — le conseil la corrige ensuite.
 CATEGORIE_PAR_DEFAUT = CategorieTicket.etude_travaux
@@ -104,11 +111,13 @@ _TRANSFERT_NON_RECONNU = (
     "l'objet annonce un transfert, mais le message transféré n'a pas été trouvé : "
     "aucun bloc « De : … » avec une adresse, suivi d'une date, dans le corps du courriel"
 )
+#: Ce que dit la notification d'un versement réussi : le geste qui le défait.
+_SI_ERREUR = "Une erreur ? Le transfert s'annule ou se déplace depuis l'affaire."
 #: Un message plus court ne se cherche pas dans le fil : « Merci » y est partout.
-_LONGUEUR_COMPARABLE = 40
+LONGUEUR_COMPARABLE = 40
 #: Le début d'un message suffit à le reconnaître ; sa fin (la signature) est
 #: justement ce que l'assistant retire.
-_DEBUT_COMPARE = 200
+DEBUT_COMPARE = 200
 
 
 def compte_a_l_adresse(session: Session, adresse: str | None) -> Utilisateur | None:
@@ -219,6 +228,7 @@ def verser(
         ticket = None  # le fil suivait une affaire close : il en ouvre une autre
 
     creee = ticket is None
+    avant = etat_avant(session, ticket, cle if creer else None)
     #  🔴 DEUX TEMPS (#1469, 30/09/2026) : lire et mettre en forme d'abord, écrire
     #  ensuite. Chaque appel à l'assistant écrit son journal dans SA transaction
     #  (`llm_journal.journaliser`) ; une écriture déjà en cours ici tenait le
@@ -229,8 +239,14 @@ def verser(
     if creee:
         (premier, mis), prets = prets[0], prets[1:]
         ticket = _creer_affaire(session, qui, premier, mis, titre_du_fil(objet))
-        _marquer(session, ticket, premier)
-    ajoutees = _ecrire_les_suites(session, ticket, qui, prets)
+    versement = (
+        ouvrir_versement(session, qui, ticket, avant, objet, creee=creee)
+        if prets or creee
+        else None
+    )
+    if creee:
+        _marquer(session, ticket, premier, versement)
+    ajoutees = _ecrire_les_suites(session, ticket, qui, prets, versement)
     if creer and cle:
         _retenir_le_fil(session, cle, ticket)
 
@@ -242,7 +258,7 @@ def verser(
     session.add(ticket)
     motif = _bilan(creee, ajoutees, deja)
     titre = f"Affaire #{ticket.numero} créée" if creee else f"Transfert versé — #{ticket.numero}"
-    _prevenir(session, qui, ticket, titre, motif)
+    _prevenir(session, qui, ticket, titre, f"{motif}. {_SI_ERREUR}")
     return ACCEPTE, motif, ticket
 
 
@@ -252,7 +268,7 @@ def _a_verser(session, ticket, messages: list[MessageDuFil]):
     Lecture seule : c'est le premier des deux temps de `verser`. Deux fois le
     même message dans un même transfert ne compte qu'une fois.
     """
-    fil = _texte_du_fil(session, ticket) if ticket is not None else ""
+    fil = texte_du_fil(session, ticket) if ticket is not None else ""
     vus: set[str] = set()
     nouveaux, deja = [], 0
     for m in messages:
@@ -265,7 +281,7 @@ def _a_verser(session, ticket, messages: list[MessageDuFil]):
     return nouveaux, deja
 
 
-def _ecrire_les_suites(session, ticket, qui, prets) -> int:
+def _ecrire_les_suites(session, ticket, qui, prets, versement) -> int:
     """Une Suite par message déjà mis en forme. Rend le nombre ajouté."""
     ajoutees = 0
     for m, mis in prets:
@@ -280,12 +296,15 @@ def _ecrire_les_suites(session, ticket, qui, prets) -> int:
             transfere_par=_transfere_par(qui, m),
             ecartable=_du_conseil(session, m),
         )
+        if suite is not None:
+            suite.versement_id = versement.id
+            session.add(suite)
+            session.flush()
+            ajoutees += 1
         #  Marqué même écarté (un merci du conseil) : renvoyé, il le serait encore.
-        _marquer(session, ticket, m)
+        _marquer(session, ticket, m, versement, suite)
         if suite is None:
             continue
-        session.add(suite)
-        ajoutees += 1
         if suite.nouveau_statut:  # le syndic a répondu : l'affaire est chez lui
             ticket.statut = suite.nouveau_statut
     return ajoutees
@@ -339,11 +358,23 @@ def _retenir_le_fil(session: Session, cle: str, ticket: Ticket) -> None:
     session.add(lien)
 
 
-def _marquer(session: Session, ticket: Ticket, m: MessageDuFil) -> None:
-    session.add(MessageVerse(ticket_id=ticket.id, empreinte=empreinte(m)))
+def _marquer(session: Session, ticket: Ticket, m: MessageDuFil, versement, suite=None) -> None:
+    session.add(
+        MessageVerse(
+            ticket_id=ticket.id,
+            empreinte=empreinte(m),
+            versement_id=versement.id,
+            evolution_id=suite.id if suite is not None else None,
+        )
+    )
+    #  L'auteur du premier message écrit : « Au nom de » d'une affaire qu'on en
+    #  détacherait (`versement_transfert.detacher`).
+    if (suite is not None or versement.affaire_creee) and versement.premier_nom is None:
+        versement.premier_nom, versement.premier_adresse = m.nom, m.adresse
+        session.add(versement)
 
 
-def _texte_du_fil(session: Session, ticket: Ticket) -> str:
+def texte_du_fil(session: Session, ticket: Ticket) -> str:
     """Tout ce que l'affaire dit déjà, normalisé — description et Suites."""
     evolutions = session.exec(
         select(TicketEvolution).where(TicketEvolution.ticket_id == ticket.id)
@@ -362,11 +393,39 @@ def _deja_verse(session: Session, ticket: Ticket, m: MessageDuFil, fil: str) -> 
     ).first():
         return True
     norme = texte_normalise(m.texte)
-    return len(norme) >= _LONGUEUR_COMPARABLE and norme[:_DEBUT_COMPARE] in fil
+    return len(norme) >= LONGUEUR_COMPARABLE and norme[:DEBUT_COMPARE] in fil
 
 
 def _creer_affaire(session: Session, qui: Utilisateur, m: MessageDuFil, mis, titre: str) -> Ticket:
     """L'affaire neuve : décrite par le plus ancien message, au nom de son auteur."""
+    quand = moment_de_la_suite(m.envoye_le)
+    return creer_affaire_du_fil(
+        session,
+        qui,
+        nom=m.nom,
+        adresse=m.adresse,
+        description=contenu_de_la_suite(
+            m.expediteur, m.nom, quand, mis.contenu or m.texte, _transfere_par(qui, m)
+        ),
+        quand=quand,
+        assiste=mis.assiste,
+        titre=titre or f"Courriel de {m.nom}",
+    )
+
+
+def creer_affaire_du_fil(
+    session: Session,
+    qui: Utilisateur,
+    *,
+    nom: str,
+    adresse: str | None,
+    description: str,
+    quand,
+    assiste: bool,
+    titre: str,
+) -> Ticket:
+    """Une affaire du conseil, au nom de l'auteur du message qui la décrit —
+    celle d'un transfert, ou celle qu'on en détache (`versement_transfert`)."""
     from app.routers.tickets.commun import generer_numero
     from app.utils.courriel_entrant import nouveau_jeton
     from app.utils.kanban_tickets import suivi_par_defaut
@@ -376,28 +435,25 @@ def _creer_affaire(session: Session, qui: Utilisateur, m: MessageDuFil, mis, tit
 
     #  Le syndic a déjà écrit : l'affaire naît chez lui (demandé le 29/09/2026,
     #  même règle que pour une Suite — `suite_d_un_message`).
-    demande = StatutTicket.en_cours.value if est_adresse_syndic(session, m.adresse) else None
-    quand = moment_de_la_suite(m.envoye_le)
-    auteur = compte_a_l_adresse(session, m.adresse)
+    demande = StatutTicket.en_cours.value if est_adresse_syndic(session, adresse) else None
+    auteur = compte_a_l_adresse(session, adresse)
     if auteur is not None:
         #  « Au nom de » soi-même, c'est « en mon nom » : rien à poser.
         pour = {"saisi_pour_user_id": auteur.id} if auteur.id != qui.id else {}
     else:
-        pour = {"saisi_pour_nom": m.nom, "saisi_pour_email": m.adresse or None}
+        pour = {"saisi_pour_nom": nom, "saisi_pour_email": adresse or None}
     ticket = Ticket(
         numero=generer_numero(),
         jeton_courriel=nouveau_jeton(),
-        titre=(titre or f"Courriel de {m.nom}")[:LONGUEUR_TITRE],
-        description=contenu_de_la_suite(
-            m.expediteur, m.nom, quand, mis.contenu or m.texte, _transfere_par(qui, m)
-        ),
+        titre=titre[:LONGUEUR_TITRE],
+        description=description,
         categorie=CATEGORIE_PAR_DEFAUT,
         statut=statut_pour(CATEGORIE_PAR_DEFAUT, demande, est_cs=True),
         priorite="normale",
         auteur_id=qui.id,
         public_cible=PUBLIC_CONSEIL_SEUL,
         suivi_kanban=suivi_par_defaut(CATEGORIE_PAR_DEFAUT),
-        assiste_ia=mis.assiste,
+        assiste_ia=assiste,
         #  Datée du courriel : ses Suites le sont aussi, et le fil doit se lire
         #  dans l'ordre où les choses ont été écrites.
         cree_le=quand,
@@ -430,7 +486,9 @@ __all__ = [
     "CATEGORIE_PAR_DEFAUT",
     "PUBLIC_CONSEIL_SEUL",
     "compte_a_l_adresse",
+    "creer_affaire_du_fil",
     "decider_transfert",
     "domaines_du_site",
+    "texte_du_fil",
     "verser",
 ]

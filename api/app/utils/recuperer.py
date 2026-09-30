@@ -42,20 +42,26 @@ from sqlmodel import Session, select
 T = TypeVar("T")
 
 
-def ou_404(session: Session, modele: Type[T], identifiant, libelle: str) -> T:
+def ou_404(
+    session: Session, modele: Type[T], identifiant, libelle: str, *, sous: Optional[dict] = None
+) -> T:
     """L'objet, ou un **404** qui le nomme.
 
     :param libelle: le nom de l'entité *au singulier*, sans le mot
         « introuvable » — il est composé ici. C'est ce qui garantit que les
         quatre-vingt-dix messages du produit disent la même chose de la même
         façon.
+    :param sous: les champs que l'objet doit porter — son PARENT, le plus
+        souvent (`{"ticket_id": 7}`) : un objet d'une autre affaire que celle
+        de l'adresse se lit comme absent, sinon l'identifiant valide d'un autre
+        parent passerait le contrôle d'accès de l'URL (#1482).
 
     ⚠️ `identifiant` peut valoir `None` — un chemin d'API le donne parfois ainsi.
     `session.get(Modele, None)` rend `None` sans lever : le 404 est alors la
     bonne réponse, et c'est ce qui se passe.
     """
     objet: Optional[T] = session.get(modele, identifiant)
-    if not objet:
+    if not objet or any(getattr(objet, k, None) != v for k, v in (sous or {}).items()):
         raise HTTPException(404, f"{libelle} introuvable")
     return objet
 

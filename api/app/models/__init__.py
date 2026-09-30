@@ -21,6 +21,7 @@ from app.models.courriel import RelanceCourriel as RelanceCourriel
 from app.models.courriel import ReponseRelance as ReponseRelance
 from app.models.courriel import FilCourriel as FilCourriel
 from app.models.courriel import MessageVerse as MessageVerse
+from app.models.courriel import VersementCourriel as VersementCourriel
 from app.models.perimetre import Perimetre as Perimetre
 from app.models.whatsapp import WhatsAppLog as WhatsAppLog
 from app.models.whatsapp import WhatsAppScheduled as WhatsAppScheduled

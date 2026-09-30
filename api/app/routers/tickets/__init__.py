@@ -69,6 +69,7 @@ from . import (
     mise_a_jour,
     recherche,
     relance,
+    transferts,
 )
 
 #  Les sous-modules à chemins nus reçoivent le préfixe ici. Ce littéral est aussi
@@ -86,6 +87,7 @@ for _sous_router in (
     relance.router,
     messages.router,
     evolutions.router,
+    transferts.router,  # défaire un transfert de courriel (#1482)
     lot.router,
 ):
     _a_prefixer.include_router(_sous_router)

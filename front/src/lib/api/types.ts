@@ -81,6 +81,28 @@ export interface AffaireLiee {
 	statut: string;
 }
 
+/**  Un transfert de courriel versé dans une affaire (#1482), tel que le voit qui
+ *   peut le défaire — celui qui a transféré, ou l'administrateur. */
+export interface TransfertVerse {
+	id: number;
+	cree_le: string;
+	transfere_par_nom: string;
+	/** Les Suites qu'il a écrites dans l'affaire. */
+	suites: number;
+	/** Il a créé l'affaire : l'annuler l'archive. */
+	affaire_creee: boolean;
+	/** Pourquoi il ne se défait plus — absent s'il se défait. */
+	bloque?: string | null;
+	/** Réaffecter ou détacher : il faut aussi modérer. */
+	peut_deplacer: boolean;
+}
+
+/** L'affaire où un transfert est désormais — l'écran y conduit. */
+export interface AffaireVisee {
+	ticket_id: number;
+	numero: string;
+}
+
 /**  Une affaire trouvée par la recherche libre (27/09/2026) : OÙ le texte a été
  *   trouvé, et le passage découpé en segments — jamais du HTML, donc rien à
  *   assainir. Rendu par `GET /tickets/recherche`, dans l'ordre de pertinence. */

@@ -158,3 +158,50 @@ class MessageVerse(SQLModel, table=True):
     ticket_id: int = Field(index=True)
     empreinte: str = Field(index=True)
     verse_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    #: Le transfert qui l'a versé, et la Suite qu'il est devenu (#1482) —
+    #: `None` pour un message écarté, et pour celui qui DÉCRIT l'affaire créée.
+    #: Colonnes simples, sans clé étrangère : 0239.
+    versement_id: Optional[int] = Field(default=None, index=True)
+    evolution_id: Optional[int] = None
+
+
+class VersementCourriel(SQLModel, table=True):
+    """Un transfert VERSÉ dans une affaire — et ce qu'il faut pour le défaire (#1482).
+
+    *« En cas d'erreur, annuler ces ajouts en une fois, les réaffecter à une
+    autre affaire, ou en créer une nouvelle ? »* (30/09/2026). Rien ne le
+    permettait : une Suite ne savait pas de quel transfert elle venait, et le
+    texte du courriel n'est pas conservé. Chaque Suite versée porte donc
+    `versement_id`, et cette ligne garde ce que le versement a CHANGÉ autour
+    d'elles — le statut d'avant, le lien du fil d'avant.
+
+    Les gestes vivent dans `utils/versement_transfert`, leurs droits dans
+    `auth/appartenance.exiger_auteur_du_versement`.
+    """
+
+    __tablename__ = "versement_courriel"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    #: L'affaire où ses Suites sont AUJOURD'HUI — elle suit une réaffectation.
+    ticket_id: int = Field(index=True)
+    transfere_par_id: int
+    #: Le versement a créé l'affaire : l'annuler l'archive.
+    affaire_creee: bool = False
+    #: Le statut de l'affaire avant le versement — une réponse du syndic la
+    #: fait passer « En cours ». `None` pour une affaire créée.
+    statut_avant: Optional[str] = None
+    #: La clé du fil (`FilCourriel.cle`) et l'affaire qu'il désignait AVANT —
+    #: `None` : aucun lien. L'annulation le rend tel qu'il était.
+    cle_fil: Optional[str] = None
+    fil_avant_id: Optional[int] = None
+    #: La plus haute Suite du site au moment du versement : une Suite d'un
+    #: AUTRE au-delà, et le geste n'est plus proposé (arbitré le 30/09/2026).
+    seuil_evolution_id: int = 0
+    #: L'objet d'origine — le titre d'une affaire qu'on en détache.
+    objet: str = ""
+    #: L'auteur du premier message versé : « Au nom de » d'une affaire qu'on
+    #: en détache, comme à la création (`courriel_transfert._creer_affaire`).
+    premier_nom: Optional[str] = None
+    premier_adresse: Optional[str] = None
+    cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    annule_le: Optional[NaiveDatetime] = None
