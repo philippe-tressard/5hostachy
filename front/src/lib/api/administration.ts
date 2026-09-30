@@ -9,6 +9,7 @@
 //  ⚠️ La surface publique NE BOUGE PAS : `index.ts` réexporte tout, et les
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
 import { api, buildQuery } from './client';
+import type { ConsommationIA, UsageIA } from './assistant';
 
 export const annuaireAdmin = {
 	getCS: () => api.get<any>('/admin/annuaire/cs'),
@@ -303,21 +304,6 @@ const ROUTES_LANCEMENT: Record<string, string> = {
 	telemetrie: '/admin/telemetry/agreger',
 };
 
-/**  Une ligne de consommation : un usage, un modèle, un mois. */
-export interface LigneConsommationIA {
-	usage: string;
-	libelle: string;
-	modele: string;
-	appels: number;
-	erreurs: number;
-	/** Appels refusés AVANT l'envoi : plafond mensuel atteint. */
-	refus: number;
-	jetons_entree: number;
-	jetons_sortie: number;
-	/** Au tarif saisi pour l'usage ; `null` sans tarif — jamais 0, qui dirait « gratuit ». */
-	cout_centimes: number | null;
-}
-
 /**  Un message WhatsApp planifié (`GET /config/whatsapp-scheduled`). */
 export interface MessagePlanifieWhatsApp {
 	id: number;
@@ -350,27 +336,6 @@ export interface JournalEnvoiWhatsApp {
 	statut: string;
 	erreur: string | null;
 	envoye_le: string | null;
-}
-
-/**  La consommation de l'assistant IA (`GET /config/llm-consommation`). */
-export interface ConsommationIA {
-	mois: { mois: string; usages: LigneConsommationIA[] }[];
-	plafonds: { usage: string; libelle: string; plafond: number; consommes: number }[];
-	mois_courant: string;
-}
-
-/** Un usage de l'assistant IA, tel que `GET /config/llm-usages` le décrit. */
-export interface UsageIA {
-	code: string;
-	libelle: string;
-	description: string;
-	prompt_defaut: string;
-	max_jetons_defaut: number;
-	/** Les clés `ConfigSite` de ses réglages : `actif`, `modele`, `prompt`, `max_jetons`. */
-	cles: Record<
-		'actif' | 'modele' | 'prompt' | 'max_jetons' | 'plafond_mois' | 'prix_entree' | 'prix_sortie',
-		string
-	>;
 }
 
 export const config = {

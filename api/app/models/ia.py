@@ -37,6 +37,9 @@ class AppelIA(SQLModel, table=True):
     #: jamais 0, qui se lirait « gratuit ».
     jetons_entree: Optional[int] = None
     jetons_sortie: Optional[int] = None
+    #: La part de `jetons_entree` lue dans le cache du fournisseur (30/09/2026) —
+    #: facturée à son propre prix, souvent dix fois moindre.
+    jetons_cache: Optional[int] = None
     duree_ms: int = 0
     #: `succes` · `erreur` (le fournisseur a répondu en échec) · `plafond`
     #: (refusé AVANT l'envoi : le plafond mensuel de l'usage est atteint).

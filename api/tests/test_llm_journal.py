@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import pathlib
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 import pytest
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -27,10 +28,11 @@ from app.models.ia import AppelIA
 from app.utils import horloge, llm_journal
 from app.utils.llm import ErreurLLM, demander
 from app.utils.llm_journal import (
-    _cout_centimes,
+    _cout_usd,
     consommation,
     jetons_de,
     limite_conservation,
+    prix_par_million,
     problemes_ia,
 )
 
@@ -98,7 +100,11 @@ OK = _Reponse(
     200,
     {
         "choices": [{"message": {"content": "Synthèse."}}],
-        "usage": {"prompt_tokens": 1200, "completion_tokens": 300},
+        "usage": {
+            "prompt_tokens": 1200,
+            "completion_tokens": 300,
+            "prompt_tokens_details": {"cached_tokens": 1024},
+        },
     },
 )
 
@@ -107,14 +113,44 @@ OK = _Reponse(
 
 
 def test_les_jetons_se_lisent_chez_openai_et_chez_anthropic():
-    assert jetons_de({"usage": {"prompt_tokens": 10, "completion_tokens": 3}}) == (10, 3)
-    assert jetons_de({"usage": {"input_tokens": 7, "output_tokens": 2}}) == (7, 2)
+    assert jetons_de({"usage": {"prompt_tokens": 10, "completion_tokens": 3}}) == (10, 3, None)
+    assert jetons_de({"usage": {"input_tokens": 7, "output_tokens": 2}}) == (7, 2, None)
+
+
+def test_la_part_en_cache_se_lit_et_l_entree_reste_le_TOTAL():
+    """OpenAI compte le cache DANS l'entrée, Anthropic À CÔTÉ : l'entrée rendue
+    est le total dans les deux cas — c'est ce que le plafond additionne."""
+    openai = {
+        "usage": {
+            "prompt_tokens": 2000,
+            "completion_tokens": 50,
+            "prompt_tokens_details": {"cached_tokens": 1536},
+        }
+    }
+    assert jetons_de(openai) == (2000, 50, 1536)
+    reponses = {
+        "usage": {
+            "input_tokens": 900,
+            "output_tokens": 5,
+            "input_tokens_details": {"cached_tokens": 512},
+        }
+    }
+    assert jetons_de(reponses) == (900, 5, 512)
+    anthropic = {
+        "usage": {
+            "input_tokens": 100,
+            "output_tokens": 20,
+            "cache_read_input_tokens": 3000,
+            "cache_creation_input_tokens": 0,
+        }
+    }
+    assert jetons_de(anthropic) == (3100, 20, 3000)
 
 
 def test_sans_compteur_les_jetons_sont_INCONNUS_pas_nuls():
-    assert jetons_de({}) == (None, None)
-    assert jetons_de({"usage": {"prompt_tokens": True}}) == (None, None)
-    assert jetons_de("pas un dict") == (None, None)
+    assert jetons_de({}) == (None, None, None)
+    assert jetons_de({"usage": {"prompt_tokens": True}}) == (None, None, None)
+    assert jetons_de("pas un dict") == (None, None, None)
 
 
 #  ── 1. Chaque appel parti se journalise ─────────────────────────────────────
@@ -126,7 +162,7 @@ def test_un_appel_reussi_est_journalise_avec_ses_jetons(monkeypatch, session_ia)
     assert rep.texte == "Synthèse."
     (appel,) = _appels(session_ia)
     assert (appel.usage, appel.modele, appel.statut) == (USAGE, "gpt-4o-mini", "succes")
-    assert (appel.jetons_entree, appel.jetons_sortie) == (1200, 300)
+    assert (appel.jetons_entree, appel.jetons_sortie, appel.jetons_cache) == (1200, 300, 1024)
 
 
 def test_un_echec_du_fournisseur_est_journalise_aussi(monkeypatch, session_ia):
@@ -195,14 +231,40 @@ def test_sans_plafond_rien_n_est_refuse(monkeypatch, session_ia):
 #  ── 3. Le coût, et son silence ──────────────────────────────────────────────
 
 
+D = Decimal
+
+
 def test_le_cout_se_calcule_sur_le_total_du_mois():
-    #  3 000 jetons à 3 € le million : 0,9 centime — arrondi par appel, il
-    #  disparaîtrait ; sur le total de dix appels, il compte.
-    assert _cout_centimes(30_000, 0, 300, 0) == 9
+    #  30 000 jetons à 3 $ le million : 0,09 $ — arrondi par appel, il
+    #  disparaîtrait ; sur le total du mois, il compte.
+    assert _cout_usd(30_000, 0, 0, D(3), None, None) == "0.0900"
+
+
+def test_la_part_en_cache_se_facture_au_prix_du_cache():
+    #  1 M d'entrée dont 800 000 en cache : 200 000 × 0,20 $ + 800 000 × 0,02 $
+    #  = 0,056 $ ; sortie 100 000 × 1,20 $ = 0,12 $.
+    assert _cout_usd(1_000_000, 100_000, 800_000, D("0.2"), D("1.2"), D("0.02")) == "0.1760"
+    #  Sans prix de cache, la part en cache reste au prix d'entrée : jamais oubliée.
+    assert _cout_usd(1_000_000, 0, 800_000, D("0.2"), None, None) == "0.2000"
 
 
 def test_sans_tarif_le_cout_est_absent_jamais_nul():
-    assert _cout_centimes(30_000, 5_000, 0, 0) is None
+    assert _cout_usd(30_000, 5_000, 0, None, None, D("0.1")) is None
+
+
+@pytest.mark.parametrize(
+    ("saisi", "lu"),
+    [
+        ("0.075", D("0.075")),
+        ("0,2", D("0.2")),
+        ("", None),
+        ("abc", None),
+        ("0", None),
+        ("-1", None),
+    ],
+)
+def test_un_prix_saisi_se_lit_en_decimal(saisi, lu):
+    assert prix_par_million(saisi) == lu
 
 
 def test_la_consommation_regroupe_par_mois_usage_et_modele(session_ia):
@@ -217,16 +279,16 @@ def test_la_consommation_regroupe_par_mois_usage_et_modele(session_ia):
                 jetons_sortie=500 if statut == "succes" else None,
             )
         )
-    session_ia.add(ConfigSite(cle=f"llm_{USAGE}_prix_entree", valeur="1500"))
-    session_ia.add(ConfigSite(cle=f"llm_{USAGE}_prix_sortie", valeur="6000"))
+    session_ia.add(ConfigSite(cle=f"llm_{USAGE}_prix_entree", valeur="15"))
+    session_ia.add(ConfigSite(cle=f"llm_{USAGE}_prix_sortie", valeur="60"))
     session_ia.commit()
     donnees = consommation(session_ia)
     (mois,) = donnees["mois"]
     (ligne,) = mois["usages"]
     assert (ligne["appels"], ligne["erreurs"], ligne["refus"]) == (4, 1, 1)
     assert (ligne["jetons_entree"], ligne["jetons_sortie"]) == (2000, 1000)
-    #  2 000 × 15 € + 1 000 × 60 € par million = 0,09 € → 9 centimes.
-    assert ligne["cout_centimes"] == 9
+    #  2 000 × 15 $ + 1 000 × 60 $ par million = 0,09 $.
+    assert ligne["cout_usd"] == "0.0900"
 
 
 #  ── Le courriel de 06:00 et la conservation ─────────────────────────────────

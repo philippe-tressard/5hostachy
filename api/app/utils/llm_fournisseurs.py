@@ -68,6 +68,10 @@ class Fournisseur:
     #: Vrai quand le service réclame autre chose que l'URL et la clé — Azure
     #: exige un point d'accès propre au client, il n'a pas d'URL publique.
     base_url_obligatoire: bool = False
+    #: La grille tarifaire PUBLIQUE du fournisseur, en Markdown — lue par
+    #: l'usage « Tarif d'un modèle » (`tarif_sources.lire_grille`). Une adresse
+    #: fixe, jamais une saisie : le serveur ne va chercher que ce que le code nomme.
+    page_tarifs: str = ""
 
     def url(self, modele: str, base: str, version_api: str) -> str:
         return f"{base.rstrip('/')}/chat/completions"
@@ -361,18 +365,23 @@ FOURNISSEURS: dict[str, Fournisseur] = {
         libelle="OpenAI",
         base_url="https://api.openai.com/v1",
         modele_defaut="gpt-4o-mini",
+        page_tarifs="https://platform.openai.com/docs/pricing.md",
     ),
     "anthropic": FournisseurAnthropic(
         code="anthropic",
         libelle="Claude (Anthropic)",
         base_url="https://api.anthropic.com",
         modele_defaut="claude-haiku-4-5-20251001",
+        page_tarifs="https://docs.claude.com/en/docs/about-claude/pricing.md",
     ),
     "azure_openai": FournisseurAzure(
         code="azure_openai",
         libelle="Azure OpenAI",
         base_url="",
         modele_defaut="",
+        #  ⚠️ Azure n'a pas de grille par modèle lisible sans compte : on lit
+        #  celle d'OpenAI, dont Azure reprend les modèles — la remarque le dit.
+        page_tarifs="https://platform.openai.com/docs/pricing.md",
     ),
 }
 

@@ -61,7 +61,13 @@ def _poser(session, **valeurs):
 
 def test_les_usages_sont_declares_et_chacun_a_un_prompt_d_origine():
     #  Trois depuis #1322 (25/09/2026) : la mise en forme des réponses par courriel.
-    assert set(USAGES) == {USAGE_SYNTHESE_CONTRAT, USAGE_DESCRIPTION, "reponse_courriel"}
+    #  Quatre depuis le 30/09/2026 : le tarif d'un modèle.
+    assert set(USAGES) == {
+        USAGE_SYNTHESE_CONTRAT,
+        USAGE_DESCRIPTION,
+        "reponse_courriel",
+        "tarif_modele",
+    }
     for u in USAGES.values():
         assert u.prompt_defaut.strip()
         assert u.max_jetons_defaut > 0

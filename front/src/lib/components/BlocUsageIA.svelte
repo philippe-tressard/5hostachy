@@ -26,13 +26,25 @@
     constaté à l'écran le 17/09/2026) : c'est l'onglet qui tient l'accordéon,
     ce bloc reçoit `ouvert` et signale `basculer`. À l'arrivée sur l'écran,
     **tous** sont repliés — la page ne choisit pas ce qu'on vient lire.
+  - Le ✨ à côté du modèle (30/09/2026) cherche le prix du modèle ENREGISTRÉ
+    de cet usage dans la grille de son fournisseur, le convertit au taux BCE
+    et l'ENREGISTRE — c'est l'exception au « un seul Enregistrer » ci-dessus,
+    demandée telle quelle. Les trois prix de « Coût et plafond » reprennent
+    alors ce que le serveur a écrit. Il ne s'affiche que si l'onglet dit l'usage
+    « Tarif d'un modèle » prêt (`tarifDisponible`) — un usage coupé ne montre
+    pas d'icône ✨, c'est la règle de tout le produit.
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
-	import { config as configApi, type UsageIA } from '$lib/api';
+	import {
+		assistant as assistantApi,
+		config as configApi,
+		type PrixIA,
+		type UsageIA,
+	} from '$lib/api';
 	import { memePrompt } from '$lib/promptOrigine';
 
 	export let usage: UsageIA;
@@ -56,6 +68,9 @@
 	 *   (#987) : un seul usage déplié à la fois, et un bloc ne connaît pas ses
 	 *   voisins. Le bloc annonce seulement qu'on l'a ouvert ou fermé (`basculer`). */
 	export let ouvert = false;
+	/**  L'usage « Tarif d'un modèle » est-il prêt ? Décidé par l'ONGLET, qui voit
+	 *   le commun et tous les usages : sans lui, pas de ✨ à côté du modèle. */
+	export let tarifDisponible = false;
 
 	const dispatch = createEventDispatcher<{ basculer: boolean }>();
 
@@ -83,13 +98,30 @@
 	$: copieDeLOrigine = !promptOrigine && memePrompt(prompt, usage.prompt_defaut);
 	$: promptDivergent = !promptOrigine && !copieDeLOrigine;
 	$: maxJetons = Number(valeurs[cles.max_jetons]) || usage.max_jetons_defaut;
-	//  Le coût (#1383). Le plafond est en jetons par mois, 0 = aucun. Les prix se
-	//  SAISISSENT en euros par million de jetons — l'unité des grilles tarifaires —
-	//  et se STOCKENT en centimes entiers : un montant ne se garde pas en flottant.
+	//  Le coût (#1383). Le plafond est en jetons par mois, 0 = aucun.
 	$: plafondMois = Number(valeurs[cles.plafond_mois]) || 0;
-	$: prixEntree = (Number(valeurs[cles.prix_entree]) || 0) / 100;
-	$: prixSortie = (Number(valeurs[cles.prix_sortie]) || 0) / 100;
-	const enCentimes = (euros: string) => String(Math.max(0, Math.round(Number(euros) * 100)) || 0);
+	//  🔴 Les prix, en DOLLARS par million de jetons (30/09/2026, arbitré :
+	//  « comme les grilles »), et TROIS — l'entrée lue en cache a le sien chez
+	//  OpenAI. Stockés tels que saisis, en texte décimal (« 0.075 ») : jamais
+	//  un flottant, et plus des centimes, où 0,075 $ ne tenait pas. Un champ
+	//  par prix, écrit UNE fois : les trois ne diffèrent que par leurs mots.
+	const PRIX: { champ: PrixIA; libelle: string; aide: string }[] = [
+		{
+			champ: 'prix_entree',
+			libelle: 'Prix des jetons envoyés',
+			aide: 'Comme la grille de votre fournisseur.',
+		},
+		{
+			champ: 'prix_sortie',
+			libelle: 'Prix des jetons produits',
+			aide: 'La réponse, raisonnement compris. Sans prix, la consommation (Maintenance) s’affiche en jetons seuls.',
+		},
+		{
+			champ: 'prix_cache',
+			libelle: 'Prix des jetons en cache',
+			aide: 'L’entrée déjà vue, que le fournisseur relit en cache et facture moins cher (« cached input »). Vide : elle compte au prix des jetons envoyés.',
+		},
+	];
 
 	//  Le modèle enregistré reste proposé même s'il n'est plus au catalogue :
 	//  sinon la liste le remplacerait en silence par son premier élément, et un
@@ -105,6 +137,29 @@
 
 	function retablirPrompt() {
 		poser(cles.prompt, '');
+	}
+
+	//  Le ✨ du tarif. Les prix reviennent ENREGISTRÉS, en dollars comme la
+	//  grille : ils s'écrivent tels quels dans `valeurs` — un « Enregistrer »
+	//  ultérieur renverra la même chose. Un prix que la grille ne donne pas
+	//  (`null`) laisse le champ comme il était.
+	let tarif: { etat: 'aucun' | 'encours' | 'ok' | 'ko'; message: string } = {
+		etat: 'aucun',
+		message: '',
+	};
+
+	async function demanderTarif() {
+		tarif = { etat: 'encours', message: '' };
+		try {
+			const r = await assistantApi.tarif(usage.code, modele);
+			for (const { champ } of PRIX) {
+				const prix = r[champ];
+				if (prix !== null) poser(cles[champ], prix);
+			}
+			tarif = { etat: 'ok', message: r.remarque };
+		} catch (e: any) {
+			tarif = { etat: 'ko', message: e?.message ?? 'La recherche du tarif a échoué' };
+		}
 	}
 
 	let test: { etat: 'aucun' | 'encours' | 'ok' | 'ko'; message: string } = {
@@ -164,20 +219,38 @@
 		<div class="form-grid">
 			<label class="field">
 				<span>Modèle<EtoileRequis vide={!modele} /></span>
-				{#if catalogue.etat === 'pret'}
-					<select value={modele} on:change={(e) => poser(cles.modele, e.currentTarget.value)}>
-						<option value="">— choisir un modèle —</option>
-						{#each choixModeles as m (m.id)}
-							<option value={m.id}>{m.libelle}</option>
-						{/each}
-					</select>
-				{:else}
-					<input
-						type="text"
-						value={modele}
-						placeholder={modeleRepere}
-						on:input={(e) => poser(cles.modele, e.currentTarget.value.trim())}
-					/>
+				<div class="ligne-choix">
+					{#if catalogue.etat === 'pret'}
+						<select value={modele} on:change={(e) => poser(cles.modele, e.currentTarget.value)}>
+							<option value="">— choisir un modèle —</option>
+							{#each choixModeles as m (m.id)}
+								<option value={m.id}>{m.libelle}</option>
+							{/each}
+						</select>
+					{:else}
+						<input
+							type="text"
+							value={modele}
+							placeholder={modeleRepere}
+							on:input={(e) => poser(cles.modele, e.currentTarget.value.trim())}
+						/>
+					{/if}
+					{#if tarifDisponible}
+						<button
+							class="btn-icon"
+							type="button"
+							aria-label="Chercher et enregistrer le tarif de ce modèle"
+							title="Chercher et enregistrer le tarif de ce modèle"
+							aria-busy={tarif.etat === 'encours'}
+							disabled={!modele || tarif.etat === 'encours'}
+							on:click={demanderTarif}>{tarif.etat === 'encours' ? '⏳' : '✨'}</button
+						>
+					{/if}
+				</div>
+				{#if tarif.etat === 'ko'}
+					<!--  `aide` : dans le libellé du champ, un texte sans elle hériterait
+					      de ses capitales (`champs.css`, #1315). -->
+					<span class="aide verdict ko">⚠️ {tarif.message}</span>
 				{/if}
 				<div class="ligne-modele">
 					{#if !azure}
@@ -249,35 +322,25 @@
 					Vide&nbsp;: aucun plafond.
 				</span>
 			</label>
-			<label class="field">
-				Prix des jetons envoyés
-				<input
-					type="number"
-					value={prixEntree || ''}
-					min="0"
-					step="0.01"
-					placeholder="Non renseigné"
-					on:input={(e) => poser(cles.prix_entree, enCentimes(e.currentTarget.value))}
-				/>
-				<span class="aide"
-					>En euros par million de jetons, selon la grille de votre fournisseur.</span
-				>
-			</label>
-			<label class="field">
-				Prix des jetons produits
-				<input
-					type="number"
-					value={prixSortie || ''}
-					min="0"
-					step="0.01"
-					placeholder="Non renseigné"
-					on:input={(e) => poser(cles.prix_sortie, enCentimes(e.currentTarget.value))}
-				/>
-				<span class="aide">
-					Idem, pour la réponse. Sans prix, la consommation (Maintenance) s’affiche en jetons seuls.
-				</span>
-			</label>
+			{#each PRIX as p (p.champ)}
+				<label class="field">
+					{p.libelle} ($ / million)
+					<input
+						type="number"
+						value={valeurs[cles[p.champ]] ?? ''}
+						min="0"
+						step="any"
+						inputmode="decimal"
+						placeholder="Non renseigné"
+						on:input={(e) => poser(cles[p.champ], e.currentTarget.value)}
+					/>
+					<span class="aide">{p.aide}</span>
+				</label>
+			{/each}
 		</div>
+		{#if tarif.etat === 'ok'}
+			<p class="aide">✅ Tarif enregistré — {tarif.message}</p>
+		{/if}
 	</SectionFormulaire>
 
 	<SectionFormulaire titre="Prompt">
@@ -395,6 +458,23 @@
 		align-items: center;
 		gap: 0.6rem;
 		margin-top: 0.35rem;
+	}
+	/*  Le modèle et son ✨ sur une ligne : le champ prend la place, l'icône se
+	    tient à sa droite. */
+	.ligne-choix {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.ligne-choix > :is(select, input) {
+		flex: 1;
+		min-width: 0;
+	}
+	/*  44 px au doigt (`standards/11` §10) : l'icône seule en ferait 24. */
+	.ligne-choix > .btn-icon {
+		min-width: 2.75rem;
+		min-height: 2.75rem;
+		font-size: var(--fs-base);
 	}
 	.ligne-test {
 		display: flex;

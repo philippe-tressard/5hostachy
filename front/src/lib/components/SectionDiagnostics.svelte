@@ -44,6 +44,7 @@
 	//  ⚠️ `fmtDateShort`, comme la page — jamais un format réécrit ici
 	//  (`CLAUDE.md`, règle des dates : `lint:dates` échoue dessus).
 	import { fmtDateShort as fmt } from '$lib/date';
+	import { basculer } from '$lib/accordeon';
 
 	/** Les types de diagnostic et leurs rapports — chargés par la page. */
 	export let types: any[] = [];
@@ -66,7 +67,12 @@
 	let savingRapport = false;
 
 	let togglingNonApplicableId: number | null = null;
-	let expandedSynths = new Set<number>();
+	//  UN bloc déplié à la fois dans la section (accordéon, 30/09/2026 —
+	//  `$lib/accordeon`) : la synthèse d'un rapport (son id) ou le bloc des
+	//  diagnostics non applicables (`NON_APPLICABLES`). C'était un `Set` de
+	//  synthèses, et le `<details>` vivait à côté sans rien savoir d'elles.
+	const NON_APPLICABLES = 'non-applicables';
+	let deplie: number | typeof NON_APPLICABLES | null = null;
 
 	$: actifs = types.filter((t) => !t.non_applicable);
 	$: nonApplicables = types.filter((t) => t.non_applicable);
@@ -159,12 +165,6 @@
 			value ? 'Diagnostic masqué (non applicable)' : 'Diagnostic réactivé',
 		);
 		togglingNonApplicableId = null;
-	}
-
-	function basculerSynthese(id: number) {
-		if (expandedSynths.has(id)) expandedSynths.delete(id);
-		else expandedSynths.add(id);
-		expandedSynths = expandedSynths;
 	}
 </script>
 
@@ -269,8 +269,8 @@
 												<button
 													class="synthese-toggle"
 													aria-label="Afficher la synthèse"
-													on:click={() => basculerSynthese(rapport.id)}
-													>&#x1F4A1; Synthèse {expandedSynths.has(rapport.id) ? '▲' : '▼'}</button
+													on:click={() => (deplie = basculer(deplie, rapport.id))}
+													>&#x1F4A1; Synthèse {deplie === rapport.id ? '▲' : '▼'}</button
 												>
 											{/if}
 										</div>
@@ -300,7 +300,7 @@
 											{/if}
 										</div>
 									</div>
-									{#if rapport.synthese && expandedSynths.has(rapport.id)}
+									{#if rapport.synthese && deplie === rapport.id}
 										<!--  `safeHtml` — la synthèse est du HTML riche saisi par le
 										      conseil (`CLAUDE.md`, règle XSS). -->
 										<div class="synthese-body rich-content">
@@ -324,7 +324,14 @@
 		</div>
 
 		{#if peutModifier && nonApplicables.length > 0}
-			<details class="diag-non-applicable-section">
+			<details
+				class="diag-non-applicable-section"
+				open={deplie === NON_APPLICABLES}
+				on:toggle={(e) => {
+					if (e.currentTarget.open) deplie = NON_APPLICABLES;
+					else if (deplie === NON_APPLICABLES) deplie = null;
+				}}
+			>
 				<summary>Diagnostics non applicables ({nonApplicables.length})</summary>
 				<div class="diag-list" style="margin-top:.75rem">
 					{#each nonApplicables as dtype (dtype.id)}

@@ -50,7 +50,9 @@
       contrôles labelables : `for` n'y produirait aucune association, en silence.
 -->
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import Icon from './Icon.svelte';
+	import { membre } from '$lib/accordeon';
 	import EtoileRequis from './EtoileRequis.svelte';
 	import ContenuBadge from './ContenuBadge.svelte';
 
@@ -164,6 +166,19 @@
 	export let inactive = '';
 
 	let ouverteParLUtilisateur = false;
+
+	//  🔴 L'ACCORDÉON (30/09/2026, arbitré : « partout, formulaires compris »).
+	//  Déplier une section replie celles que l'utilisateur avait dépliées. Celles
+	//  dont la valeur a changé restent ouvertes quoi qu'il arrive — `ouverte`
+	//  ci-dessous l'impose, et c'est l'exception arbitrée : on ne cache jamais une
+	//  saisie. Les sections non pliables n'entrent pas dans le groupe.
+	const accordeon = membre('sections-formulaire', () => (ouverteParLUtilisateur = false));
+	onDestroy(accordeon.liberer);
+	let section: HTMLElement;
+	function deplier() {
+		ouverteParLUtilisateur = true;
+		accordeon.prendre(section);
+	}
 	/**  Se replier est possible — tant que la valeur est celle du défaut.
 	 *
 	 *   ⚠️ Arbitré à l'écran le 22/09/2026 : *« pour une section pliée qui est
@@ -175,6 +190,7 @@
 </script>
 
 <section
+	bind:this={section}
 	class="section-formulaire"
 	class:premiere
 	class:repliee={(pliable && !ouverte) || !!inactive}
@@ -201,7 +217,7 @@
 			class="section-pliee"
 			aria-expanded="false"
 			aria-controls={idContenu}
-			on:click={() => (ouverteParLUtilisateur = true)}
+			on:click={deplier}
 		>
 			<!--  `idTitre` AUSSI sur le titre plié (#1329) : le contenu reste dans la
 			      page, et ce qui s'y rattache (`aria-labelledby`) pointait sur un

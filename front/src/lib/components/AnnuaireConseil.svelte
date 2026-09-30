@@ -10,7 +10,8 @@
   (`$lib/annuaire-rapprochement`). Son pendant : `AnnuaireSyndic`.
 -->
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
+	import { listeMembre } from '$lib/accordeon';
 	import { confirmer } from '$lib/confirmation';
 	import { annuaireAdmin } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -59,6 +60,14 @@
 	let enregistrementIdx: number | null = null;
 	//  La mécanique déplier/éditer/ajouter/retirer : `$lib/listeDepliable` (#640).
 	let cs: EtatDepliable = REPLIE;
+	//  L'accordéon (30/09/2026) : conseil et syndic n'ont qu'une carte ouverte À
+	//  EUX DEUX (`listeMembre`).
+	const liste = listeMembre(
+		'annuaires',
+		() => cs,
+		(etat) => (cs = etat),
+	);
+	onDestroy(liste.liberer);
 
 	onMount(async () => {
 		try {
@@ -104,7 +113,7 @@
 				est_president: false,
 			},
 		];
-		cs = ajouter(membresCS.length);
+		liste.ouvrir(ajouter(membresCS.length));
 	}
 	function retirerMembre(i: number) {
 		membresCS = membresCS.filter((_, j) => j !== i);
@@ -232,8 +241,8 @@
 			edite={cs.edite === i}
 			enregistrement={enregistrementIdx === i}
 			accent={m.est_president ? 'president' : null}
-			on:basculer={() => (cs = basculer(cs, i))}
-			on:editer={() => (cs = editer(i))}
+			on:basculer={() => liste.ouvrir(basculer(cs, i))}
+			on:editer={() => liste.ouvrir(editer(i))}
 			on:supprimer={() => retirerMembre(i)}
 			on:enregistrer={() => enregistrerMembre(i)}
 			on:annuler={() => (cs = REPLIE)}

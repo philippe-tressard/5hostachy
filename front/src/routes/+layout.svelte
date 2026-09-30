@@ -5,6 +5,7 @@
 	import { configStore } from '$lib/stores/pageConfig';
 	import { onMount } from 'svelte';
 	import { surveillerImagesProtegees } from '$lib/imagesProtegees';
+	import { unSeulDetailsOuvert } from '$lib/accordeon';
 
 	export let data;
 
@@ -22,6 +23,11 @@
 	//  (`standards/11` §12), et la règle ne se recopie pas dans les composants
 	//  qui affichent des photos. `onMount` rend la fonction de retrait.
 	onMount(surveillerImagesProtegees);
+
+	//  L'accordéon des `<details>` natifs (30/09/2026) : en ouvrir un referme les
+	//  autres, partout. Ici pour la même raison — un écouteur global, posé une
+	//  fois ; les composants n'ont rien à écrire (`$lib/accordeon`).
+	onMount(unSeulDetailsOuvert);
 </script>
 
 <slot />

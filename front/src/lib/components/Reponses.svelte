@@ -12,6 +12,8 @@
 
 	import { peutCommenter } from '$lib/droits';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
+	import { onDestroy } from 'svelte';
+	import { membre } from '$lib/accordeon';
 
 	export let reponses: any[] = [];
 	export let currentUserId: number | undefined = undefined;
@@ -22,6 +24,17 @@
 	export let onDelete: (repId: number) => Promise<void> | void;
 	export let onReport: ((repId: number) => Promise<void> | void) | null = null;
 	export let expanded = false;
+
+	//  L'accordéon (30/09/2026) : ouvrir les réponses d'une idée replie celles
+	//  d'une autre (`$lib/accordeon`). Le champ en cours de saisie n'est pas
+	//  perdu — `content` vit dans le composant, seul l'affichage se replie.
+	const accordeon = membre('reponses', () => (expanded = false));
+	onDestroy(accordeon.liberer);
+	let zone: HTMLElement;
+	function basculerReponses() {
+		expanded = !expanded;
+		if (expanded) accordeon.prendre(zone);
+	}
 
 	let content = '';
 	let submitting = false;
@@ -50,11 +63,11 @@
 	}
 </script>
 
-<div class="reponses-zone">
+<div class="reponses-zone" bind:this={zone}>
 	<button
 		type="button"
 		class="reponses-toggle"
-		on:click={() => (expanded = !expanded)}
+		on:click={basculerReponses}
 		aria-expanded={expanded}
 		aria-label={expanded ? 'Masquer les réponses' : 'Voir les réponses'}
 	>

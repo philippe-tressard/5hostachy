@@ -1151,6 +1151,10 @@ jobs:
           # relire : une erreur d'un cran ouvre la carte du voisin, et cela ne se
           # voit qu'en supprimant un membre du MILIEU de la liste.
           npm run lint:liste-depliable
+          # Un seul bloc déplié à la fois, partout (30/09/2026) : l'autotest de
+          # `$lib/accordeon` (groupes, correction qui reste ouverte, main rendue à
+          # la destruction) et le refus d'un nouvel état d'ouverture en `Set`.
+          npm run lint:accordeon
           # Retrouver l'inscrit et le logement d'un membre de l'annuaire par son
           # NOM (#779) : ces règles vivaient dans une page, sans aucun test. Un
           # parking ou une cave ne localise pas ; le lot résolu l'emporte.

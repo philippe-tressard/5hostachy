@@ -43,6 +43,7 @@
 <script lang="ts" generics="T">
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import { TITRE_ARCHIVES } from '$lib/archives';
+	import { basculer } from '$lib/accordeon';
 
 	/** Les objets archivés. Vide tant que rien n'est chargé. */
 	export let items: T[] = [];
@@ -61,13 +62,10 @@
 	/** Affiche le message de vide : l'appelant sait s'il a fini de charger. */
 	export let charge = false;
 
-	let anneesOuvertes = new Set<number>();
-
-	function basculer(annee: number) {
-		if (anneesOuvertes.has(annee)) anneesOuvertes.delete(annee);
-		else anneesOuvertes.add(annee);
-		anneesOuvertes = anneesOuvertes;
-	}
+	//  UNE année dépliée à la fois (accordéon, 30/09/2026 — `$lib/accordeon`).
+	//  C'était un `Set` : dix années ouvertes l'une après l'autre faisaient une
+	//  page sans fin.
+	let anneeDepliee: number | null = null;
 
 	//  Groupement générique : le composant ne connaît aucun type d'objet, c'est
 	//  l'appelant qui dit où lire la date. Une version par entité redonnerait la
@@ -104,7 +102,8 @@
 			anneeOuverte !== null && parAnnee.some(([a]) => a === anneeOuverte)
 				? anneeOuverte
 				: parAnnee[0][0];
-		anneesOuvertes = new Set([visee]);
+		anneeDepliee = visee;
+		derniereVisee = anneeOuverte;
 		premierDepliage = false;
 	}
 
@@ -112,13 +111,19 @@
 	//  rechargement de la page) doit s'ouvrir aussi — sinon le lien mène à une
 	//  section ouverte sur une AUTRE année, ce qui se lit « l'objet n'existe
 	//  plus ».
+	//
+	//  ⚠️ Sur un CHANGEMENT de l'année désignée seulement (`derniereVisee`) :
+	//  comparer à l'année dépliée rouvrirait la désignée dès qu'on en déplie
+	//  une autre — l'accordéon interdirait alors toute autre année.
+	let derniereVisee: number | null = null;
 	$: if (
 		!premierDepliage &&
 		anneeOuverte !== null &&
-		!anneesOuvertes.has(anneeOuverte) &&
+		anneeOuverte !== derniereVisee &&
 		parAnnee.some(([a]) => a === anneeOuverte)
 	) {
-		anneesOuvertes = new Set([...anneesOuvertes, anneeOuverte]);
+		anneeDepliee = anneeOuverte;
+		derniereVisee = anneeOuverte;
 	}
 </script>
 
@@ -131,14 +136,14 @@
 				<div class="archives-annee">
 					<button
 						class="archives-annee-entete"
-						on:click|stopPropagation={() => basculer(annee)}
-						aria-expanded={anneesOuvertes.has(annee)}
+						on:click|stopPropagation={() => (anneeDepliee = basculer(anneeDepliee, annee))}
+						aria-expanded={anneeDepliee === annee}
 					>
 						<span class="archives-annee-libelle">{annee}</span>
 						<span class="archives-compte">{objets.length}</span>
-						<span class="archives-chevron">{anneesOuvertes.has(annee) ? '▲' : '▼'}</span>
+						<span class="archives-chevron">{anneeDepliee === annee ? '▲' : '▼'}</span>
 					</button>
-					{#if anneesOuvertes.has(annee)}
+					{#if anneeDepliee === annee}
 						{#each objets as objet (dateDe(objet))}
 							<slot {objet} />
 						{/each}

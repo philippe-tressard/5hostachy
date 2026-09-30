@@ -118,6 +118,8 @@ class Reponse:
     #: Ce que le fournisseur dit avoir compté — `None` s'il ne le dit pas.
     jetons_entree: Optional[int] = None
     jetons_sortie: Optional[int] = None
+    #: La part de l'entrée lue en cache — facturée à son propre prix.
+    jetons_cache: Optional[int] = None
 
     def __str__(self) -> str:  # pragma: no cover - confort d'écriture
         return self.texte
@@ -329,6 +331,7 @@ async def demander(
         duree_ms=int((time.monotonic() - debut) * 1000),
         jetons_entree=rep.jetons_entree,
         jetons_sortie=rep.jetons_sortie,
+        jetons_cache=rep.jetons_cache,
     )
     return rep
 

@@ -571,6 +571,17 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	font-style: italic;
 }
 
+/* ── Où s'arrête le défilement vers un bloc déplié (30/09/2026) ──
+   `amenerEnVue` (`$lib/accordeon`) ramène le haut du bloc qu'on vient d'ouvrir
+   quand le repli d'un voisin l'a fait sortir de la fenêtre. Il s'arrête à cette
+   marge, et la LIT pour savoir si le bloc est déjà visible : sur téléphone,
+   l'en-tête fixe (3,25 rem) couvrirait sinon le titre qu'on vient de toucher. */
+details,
+.section-formulaire,
+.reponses-zone {
+	scroll-margin-top: 4rem;
+}
+
 /* ── Cible d'un lien profond (fil d'activité, notification, e-mail) ──
    Posée en JS par `$lib/deepLink.ts` → doit rester GLOBALE : une classe ajoutée
    hors du rendu Svelte n'est pas touchée par le scoping des styles de composant.

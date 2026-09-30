@@ -29,6 +29,7 @@
 	 */
 	import ItemKanban from '$lib/components/ItemKanban.svelte';
 	import { routeOnglet } from '$lib/routes-onglets';
+	import { basculer } from '$lib/accordeon';
 	import type { Ticket } from '$lib/api';
 	import {
 		KANBAN_COLS_ACCUEIL,
@@ -49,19 +50,12 @@
 
 	let mobileKanbanIdx = 0;
 
-	/**  Les colonnes vides qu'on a dépliées d'un clic.
+	/**  La colonne vide qu'on a dépliée d'un clic — UNE à la fois.
 	 *
-	 *   Un `Set` et non un identifiant unique : deux étapes vides peuvent être
-	 *   ouvertes en même temps, et rien ne justifie qu'ouvrir l'une referme
-	 *   l'autre — ce n'est pas un accordéon, c'est un tableau. */
-	let videsDepliees = new Set<string>();
-
-	function basculerVide(colId: string) {
-		//  Réaffectation et non mutation : Svelte ne voit pas un `Set` changer.
-		const suivant = new Set(videsDepliees);
-		if (!suivant.delete(colId)) suivant.add(colId);
-		videsDepliees = suivant;
-	}
+	 *   🔴 Révisé le 30/09/2026. C'était un `Set`, écrit exprès (« ce n'est pas
+	 *   un accordéon, c'est un tableau ») ; arbitré depuis : l'accordéon vaut
+	 *   partout, sans exception, et le kanban y entre (`$lib/accordeon`). */
+	let videDepliee: string | null = null;
 
 	const lienKanban = routeOnglet('mes-demandes', 'kanban');
 
@@ -127,7 +121,7 @@
 		<div class="kb-grid">
 			{#each dashKanbanCols as col (col.id)}
 				{@const vide = col.items.length === 0}
-				{@const repliee = vide && !videsDepliees.has(col.id)}
+				{@const repliee = vide && videDepliee !== col.id}
 				<!--  🔴 Une colonne VIDE se replie sur son titre, à la verticale, et se
 				      DÉPLIE d'un clic (19/09/2026, demandé à l'écran). Elle reste donc
 				      visible et consultable — savoir qu'une étape est vide fait partie
@@ -146,7 +140,7 @@
 						style="border-top-color:{col.color}"
 						aria-expanded={vide ? !repliee : undefined}
 						title={vide ? (repliee ? 'Déplier cette étape' : 'Replier cette étape') : undefined}
-						on:click={() => vide && basculerVide(col.id)}
+						on:click={() => vide && (videDepliee = basculer(videDepliee, col.id))}
 					>
 						<span class="kb-col-label" style="color:{col.color}">{col.label}</span>
 						<!--  🔴 Le mot est lisible DANS le pli (20/09/2026, demandé à

@@ -36,6 +36,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { amenerEnVue } from '$lib/accordeon';
 
 	export let titre: string;
 	/**  Le cadre visible — une carte blanche avec sa bordure.
@@ -110,15 +111,10 @@
 	//  s'exécuterait une première fois côté serveur, où `cadre` n'existe pas.
 	$: if (monte && cle !== undefined) ramener(cle);
 
+	//  La règle — le HAUT dans la fenêtre, sous l'en-tête fixe — vit dans
+	//  `$lib/accordeon` depuis que l'accordéon en a eu besoin (30/09/2026).
 	function ramener(_cle: unknown) {
-		if (!cadre || typeof window === 'undefined') return;
-		const r = cadre.getBoundingClientRect();
-		//  « Visible » = le HAUT du formulaire est dans la fenêtre. Exiger qu'il
-		//  tienne en entier ferait défiler sur tout formulaire long, y compris
-		//  celui qu'on regarde déjà.
-		if (r.top >= 0 && r.top <= window.innerHeight - 80) return;
-		const doux = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-		cadre.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+		amenerEnVue(cadre);
 	}
 
 	onMount(() => {

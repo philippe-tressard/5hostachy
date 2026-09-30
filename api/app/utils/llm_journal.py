@@ -22,6 +22,13 @@ usage se choisit dans l'administration : une grille codée en dur se périmerait
 comme la liste de modèles retirée le 11/09. Sans tarif saisi, le coût est
 `None` — jamais 0, qui se lirait « gratuit ».
 
+🔴 **Les prix sont en DOLLARS par million de jetons** (30/09/2026, arbitré :
+« comme les grilles »). Les grilles des fournisseurs sont en dollars ; les
+recopier sans conversion est ce qui les rend vérifiables d'un coup d'œil. Ils
+se stockent en TEXTE décimal (« 0.075 ») et se lisent en `Decimal` — jamais en
+flottant, et plus en centimes : un prix de cache à 0,075 $ ne tient pas dans un
+entier de centimes.
+
 ⚠️ Des COMPTEURS, jamais du contenu (`app/models/ia.py`).
 """
 
@@ -29,6 +36,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
 
 from sqlalchemy import func
@@ -52,26 +60,52 @@ STATUT_PLAFOND = "plafond"
 CONSERVATION_MOIS = 13
 
 
-def jetons_de(charge: Any) -> tuple[Optional[int], Optional[int]]:
-    """PURE. Les jetons (entrée, sortie) d'une réponse de fournisseur.
+def jetons_de(charge: Any) -> tuple[Optional[int], Optional[int], Optional[int]]:
+    """PURE. Les jetons (entrée, sortie, dont cache) d'une réponse de fournisseur.
 
     Deux vocabulaires existent, et les trois fournisseurs les emploient tous
     deux selon l'API : `input_tokens`/`output_tokens` (Anthropic, OpenAI
     Responses) et `prompt_tokens`/`completion_tokens` (OpenAI et Azure Chat).
     Une réponse sans compteur rend `None` — l'écran dira « non communiqué ».
+
+    🔴 **Le cache, troisième prix** (30/09/2026). OpenAI met en cache, sans
+    qu'on le demande, tout début de prompt de plus de 1 024 jetons déjà vu —
+    nos consignes les dépassent — et le facture environ dix fois moins cher.
+    L'entrée rendue ici est TOUJOURS le total, cache compris, et le troisième
+    nombre en dit la part lue en cache :
+
+    | Fournisseur | total d'entrée | dont cache |
+    |---|---|---|
+    | OpenAI, Azure | `prompt_tokens` (le contient déjà) | `prompt_tokens_details.cached_tokens` |
+    | OpenAI Responses | `input_tokens` (idem) | `input_tokens_details.cached_tokens` |
+    | Anthropic | `input_tokens` + `cache_read_input_tokens` + `cache_creation_input_tokens` | `cache_read_input_tokens` |
+
+    ⚠️ Anthropic compte le cache À CÔTÉ de l'entrée : l'additionner est ce qui
+    garde le plafond mensuel juste. L'écriture de cache (+25 %) n'a pas de prix
+    à elle : on n'active pas le cache chez Anthropic, elle vaut 0 aujourd'hui.
     """
     usage = charge.get("usage") if isinstance(charge, dict) else None
     if not isinstance(usage, dict):
-        return None, None
+        return None, None, None
 
-    def entier(*cles: str) -> Optional[int]:
+    def entier(source: Any, *cles: str) -> Optional[int]:
+        if not isinstance(source, dict):
+            return None
         for cle in cles:
-            v = usage.get(cle)
+            v = source.get(cle)
             if isinstance(v, int) and not isinstance(v, bool):
                 return v
         return None
 
-    return entier("input_tokens", "prompt_tokens"), entier("output_tokens", "completion_tokens")
+    entree = entier(usage, "input_tokens", "prompt_tokens")
+    sortie = entier(usage, "output_tokens", "completion_tokens")
+    lu = entier(usage, "cache_read_input_tokens")
+    if lu is not None:
+        if entree is not None:
+            entree += lu + (entier(usage, "cache_creation_input_tokens") or 0)
+        return entree, sortie, lu
+    details = usage.get("prompt_tokens_details") or usage.get("input_tokens_details")
+    return entree, sortie, entier(details, "cached_tokens")
 
 
 def debut_du_mois(maintenant: datetime) -> datetime:
@@ -85,6 +119,19 @@ def _reglage(session: Session, cle: str) -> int:
         return max(0, int((ligne.valeur if ligne else "") or 0))
     except (TypeError, ValueError):
         return 0
+
+
+def prix_par_million(valeur: Optional[str]) -> Optional[Decimal]:
+    """PURE. Un prix saisi — en dollars par million de jetons —, ou `None`.
+
+    Tolère la virgule française. Illisible, négatif ou nul : `None` — un prix
+    qu'on ne sait pas lire ne vaut pas « gratuit ».
+    """
+    try:
+        prix = Decimal(str(valeur or "").strip().replace(",", "."))
+    except InvalidOperation:
+        return None
+    return prix if prix.is_finite() and prix > 0 else None
 
 
 def plafond_mensuel(session: Session, usage: str) -> int:
@@ -132,6 +179,7 @@ def journaliser(
     duree_ms: int = 0,
     jetons_entree: Optional[int] = None,
     jetons_sortie: Optional[int] = None,
+    jetons_cache: Optional[int] = None,
 ) -> None:
     """Écrit une ligne du journal, dans SA propre transaction.
 
@@ -150,6 +198,7 @@ def journaliser(
                     duree_ms=max(0, int(duree_ms)),
                     jetons_entree=jetons_entree,
                     jetons_sortie=jetons_sortie,
+                    jetons_cache=jetons_cache,
                 )
             )
             s.commit()
@@ -157,15 +206,31 @@ def journaliser(
         logger.warning("Journal IA non écrit (%s) : %s", usage, exc)
 
 
-def _cout_centimes(entree: int, sortie: int, prix_entree: int, prix_sortie: int) -> Optional[int]:
-    """PURE. Le coût en centimes, au tarif saisi (centimes par million de jetons).
+def _cout_usd(
+    entree: int,
+    sortie: int,
+    cache: int,
+    prix_entree: Optional[Decimal],
+    prix_sortie: Optional[Decimal],
+    prix_cache: Optional[Decimal],
+) -> Optional[str]:
+    """PURE. Le coût en dollars, au tarif saisi (dollars par million de jetons),
+    en texte décimal à quatre décimales — `None` sans aucun prix.
 
     Calculé sur le TOTAL du mois, arrondi une fois : arrondir chaque appel perdait
     tout, un appel de 3 000 jetons coûtant moins d'un centime.
+
+    `entree` comprend le `cache` (`jetons_de`) : la part en cache se facture au
+    prix du cache, le reste au prix d'entrée. Sans prix de cache saisi, elle
+    reste au prix d'entrée — une estimation haute plutôt qu'un coût oublié.
     """
-    if not prix_entree and not prix_sortie:
+    if prix_entree is None and prix_sortie is None:
         return None
-    return round((entree * prix_entree + sortie * prix_sortie) / 1_000_000)
+    zero = Decimal(0)
+    cache = min(max(cache, 0), entree)
+    pe, ps = prix_entree or zero, prix_sortie or zero
+    total = (entree - cache) * pe + cache * (prix_cache or pe) + sortie * ps
+    return str((total / 1_000_000).quantize(Decimal("0.0001")))
 
 
 def consommation(session: Session, maintenant: Optional[datetime] = None) -> dict:
@@ -182,17 +247,22 @@ def consommation(session: Session, maintenant: Optional[datetime] = None) -> dic
             func.sum(AppelIA.statut == STATUT_PLAFOND),
             func.coalesce(func.sum(AppelIA.jetons_entree), 0),
             func.coalesce(func.sum(AppelIA.jetons_sortie), 0),
+            func.coalesce(func.sum(AppelIA.jetons_cache), 0),
         )
         .group_by(mois, AppelIA.usage, AppelIA.modele)
         .order_by(mois.desc(), AppelIA.usage)
     ).all()
+    reglages = {r.cle: r.valeur for r in session.exec(select(ConfigSite)).all()}
     tarifs = {
-        code: (_reglage(session, u.cle("prix_entree")), _reglage(session, u.cle("prix_sortie")))
+        code: tuple(
+            prix_par_million(reglages.get(u.cle(c)))
+            for c in ("prix_entree", "prix_sortie", "prix_cache")
+        )
         for code, u in USAGES.items()
     }
     resultat: dict[str, list[dict]] = {}
-    for m, usage, modele, appels, erreurs, refus, entree, sortie in lignes:
-        prix = tarifs.get(usage, (0, 0))
+    for m, usage, modele, appels, erreurs, refus, entree, sortie, cache in lignes:
+        prix = tarifs.get(usage, (None, None, None))
         resultat.setdefault(m, []).append(
             {
                 "usage": usage,
@@ -203,7 +273,8 @@ def consommation(session: Session, maintenant: Optional[datetime] = None) -> dic
                 "refus": int(refus or 0),
                 "jetons_entree": int(entree),
                 "jetons_sortie": int(sortie),
-                "cout_centimes": _cout_centimes(int(entree), int(sortie), *prix),
+                "jetons_cache": int(cache),
+                "cout_usd": _cout_usd(int(entree), int(sortie), int(cache), *prix),
             }
         )
     mois_courant = maintenant.strftime("%Y-%m")

@@ -38,6 +38,8 @@ from app.utils.description_format import CONSIGNE_DEFAUT as CONSIGNE_DESCRIPTION
 from app.utils.reponse_courriel import CONSIGNE as CONSIGNE_REPONSE_COURRIEL
 from app.utils.reponse_courriel import USAGE_REPONSE_COURRIEL
 from app.utils.synthese_format import CONSIGNE as CONSIGNE_SYNTHESE
+from app.utils.tarif_modele import CONSIGNE as CONSIGNE_TARIF
+from app.utils.tarif_modele import USAGE_TARIF_MODELE
 
 
 @dataclass(frozen=True)
@@ -60,9 +62,10 @@ class Usage:
 
 
 #: Les réglages qu'un usage porte, dans l'ordre de l'écran.
-#: `plafond_mois` (jetons par mois, 0 = aucun) et les deux PRIX (centimes
-#: d'euro par million de jetons, en entier — un montant ne se stocke jamais en
-#: flottant) sont lus par `llm_journal` : le suivi de ce que coûte l'usage (#1383).
+#: `plafond_mois` (jetons par mois, 0 = aucun) et les trois PRIX sont lus par
+#: `llm_journal` : le suivi de ce que coûte l'usage (#1383). Les prix sont en
+#: DOLLARS par million de jetons, en texte décimal — comme les grilles des
+#: fournisseurs (30/09/2026) ; `prix_cache` est celui de l'entrée lue en cache.
 CHAMPS_USAGE = (
     "actif",
     "modele",
@@ -71,6 +74,7 @@ CHAMPS_USAGE = (
     "plafond_mois",
     "prix_entree",
     "prix_sortie",
+    "prix_cache",
 )
 
 USAGE_SYNTHESE_CONTRAT = "synthese_contrat"
@@ -113,6 +117,25 @@ USAGES: dict[str, Usage] = {
         prompt_defaut=CONSIGNE_REPONSE_COURRIEL,
         max_jetons_defaut=2_000,
     ),
+    #  Un usage au service des AUTRES (30/09/2026) : son ✨ se tient à côté du
+    #  modèle de chaque bloc, et remplit les deux prix de « Coût et plafond ».
+    USAGE_TARIF_MODELE: Usage(
+        code=USAGE_TARIF_MODELE,
+        libelle="Tarif d'un modèle",
+        description=(
+            "L'icône ✨ à côté du modèle de chaque usage lit la grille tarifaire "
+            "publiée par le fournisseur, y fait trouver ce modèle par l'assistant et "
+            "enregistre ses trois prix, en dollars comme la grille : jetons envoyés, "
+            "produits et lus en cache. Seuls le fournisseur, le nom du modèle et la "
+            "grille publique sont transmis."
+        ),
+        prompt_defaut=CONSIGNE_TARIF,
+        #  La réponse fait cinq champs, mais un modèle qui raisonne dépense ses
+        #  jetons avant d'écrire : 2 000 laisse la place au JSON après la
+        #  réflexion (le piège du test de connexion à 16 jetons, `llm.tester`).
+        #  La grille, elle, est en ENTRÉE : ce plafond ne la borne pas.
+        max_jetons_defaut=2_000,
+    ),
 }
 
 
@@ -143,6 +166,7 @@ __all__ = [
     "USAGES",
     "USAGE_DESCRIPTION",
     "USAGE_SYNTHESE_CONTRAT",
+    "USAGE_TARIF_MODELE",
     "Usage",
     "decrire",
     "usage",

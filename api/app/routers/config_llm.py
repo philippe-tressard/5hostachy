@@ -1,4 +1,4 @@
-"""L'assistant IA dans l'administration — les trois points d'accès de l'onglet.
+"""L'assistant IA dans l'administration — les points d'accès de l'onglet.
 
 Sortis de `config.py` le 17/09/2026 (modularité, rang 1) : le fichier franchissait
 500 lignes en recevant la liste des usages (#984). Même préfixe `/config` : FastAPI
@@ -9,7 +9,10 @@ Tout est réservé à l'administrateur, comme l'onglet. Rien de la clé ne sort 
 elle s'emploie côté serveur, et `config.py` la masque à la lecture (`_SECRETS`).
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from app.auth.deps import require_admin
@@ -65,6 +68,44 @@ async def llm_test(
         return await tester(session, usage)
     except ErreurLLM as exc:
         raise HTTPException(400, str(exc))
+
+
+class DemandeTarif(BaseModel):
+    #: L'usage dont on cherche le tarif du modèle.
+    usage: str = Field(min_length=1, max_length=80)
+    #: Le modèle AFFICHÉ par le bloc : refusé s'il n'est pas celui enregistré.
+    modele: str = Field(min_length=1, max_length=200)
+
+
+class TarifEnregistre(BaseModel):
+    #: En DOLLARS par million de jetons, texte décimal — l'unité stockée ;
+    #: `None` = la grille ne le donne pas, et le champ n'a pas été touché.
+    prix_entree: Optional[str] = None
+    prix_sortie: Optional[str] = None
+    prix_cache: Optional[str] = None
+    remarque: str = ""
+
+
+@router.post("/llm-tarif", response_model=TarifEnregistre)
+@limiter.limit(LIMITE_APPEL_FACTURE)
+async def llm_tarif(
+    request: Request,
+    body: DemandeTarif,
+    user: Utilisateur = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    """Cherche le tarif du modèle de `usage` chez son fournisseur et l'ENREGISTRE
+    (30/09/2026) — grille publique, ligne trouvée par l'usage « Tarif d'un
+    modèle », en dollars comme la grille (`utils/tarif_modele`).
+    """
+    from app.utils.llm import ErreurLLM
+    from app.utils.tarif_modele import chercher_et_enregistrer
+
+    try:
+        tarif, remarque = await chercher_et_enregistrer(session, body.usage, body.modele)
+    except ErreurLLM as exc:
+        raise HTTPException(400, str(exc))
+    return TarifEnregistre(**tarif.prix(), remarque=remarque)
 
 
 @router.get("/llm-modeles")
