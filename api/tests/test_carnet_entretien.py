@@ -121,7 +121,11 @@ def test_une_affaire_se_dit_par_sa_categorie_jamais_incident():
         session.add(ticket)
         session.commit()
         try:
-            lignes = [e for e in construire_carnet(session) if e["lien"].endswith(f"/{ticket.id}")]
+            lignes = [
+                e
+                for e in construire_carnet(session, lecteur=auteur)
+                if e["lien"].endswith(f"/{ticket.id}")
+            ]
             assert len(lignes) == 1
             ligne = lignes[0]
             assert ligne["origine"] == "affaire"

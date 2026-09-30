@@ -167,7 +167,7 @@
 	export let initialPerimetre: string[] = [];
 	/** Le ciblage en vigueur et son aide — voir `SectionsCiblageEvolution`. */
 	export let initialDestinataires: string[] = [];
-	export let destinatairesParDefaut: string[] | null = null; // une affaire (#1343)
+	export let destinatairesParDefaut: ((statut: string) => string[]) | null = null; // selon l'état (#1343)
 	export let confidentiel = false; // « Résident concerné », lié à l'hôte (#1321)
 	export let aidePerimetre = '';
 	/**  Le périmètre de l’objet, et l’historique déjà écrit : ensemble ils donnent
@@ -445,7 +445,7 @@
 		{entite}
 		avecDestinataires={sections.destinataires}
 		bind:destinataires
-		{destinatairesParDefaut}
+		destinatairesParDefaut={destinatairesParDefaut?.(nouveauStatut || currentStatut) ?? null}
 		bind:confidentiel
 	/>
 	{#if sections.miseEnAvant}

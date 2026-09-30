@@ -78,7 +78,7 @@ def test_l_equipement_range_l_affaire_et_son_absence_ne_l_exclut_pas(session):
     cs = _cs(session)
     _resolue(session, cs, "Infiltration hall B — sans équipement")
     _resolue(session, cs, "Infiltration hall B — toiture", equipement="toiture")
-    carnet = {e["libelle"]: e for e in construire_carnet(session)}
+    carnet = {e["libelle"]: e for e in construire_carnet(session, lecteur=cs)}
     assert carnet["Infiltration hall B — toiture"]["equipement"] == "toiture"
     assert carnet["Infiltration hall B — sans équipement"]["equipement"] is None, (
         "une affaire résolue sans équipement a disparu du carnet"

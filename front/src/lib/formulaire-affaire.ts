@@ -263,7 +263,7 @@ export function changementDeLecture(avant: Ticket, apres: SaisieAffaire): string
 	const ancienne = titreLecture(lectureDuTicket(avant));
 	const nouvelle = titreLecture(
 		lectureDe({
-			...natureLue({ categorie: apres.categorie, perimetre: apres.perimetreCible }),
+			...natureLue({ categorie: apres.categorie, statut: apres.statut }),
 			confidentiel: apres.options.brouillon,
 			publicCible: apres.publicCible,
 			perimetreRestreint: perimetreRestreint(apres.perimetreCible),

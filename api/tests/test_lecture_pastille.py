@@ -108,7 +108,11 @@ def _ticket(cas: dict, batiment: int, auteur_id: int) -> Ticket:
         reserve_perimetre=cas["reserve_perimetre"],
         confidentiel=cas["confidentiel"],
         debut=datetime(2026, 10, 1, 9, 0) if cas.get("datee") else None,
-        statut=StatutTicket.en_ag if cas.get("en_ag") else StatutTicket.ouvert,
+        statut=StatutTicket(cas["statut"])
+        if cas.get("statut")
+        else StatutTicket.en_ag
+        if cas.get("en_ag")
+        else StatutTicket.ouvert,
     )
 
 
@@ -172,7 +176,12 @@ def test_la_regle_du_serveur_dit_ce_que_la_pastille_resume(lecteurs, cas):
     if cas["hors_perimetre"] is None:
         return
     dehors = [s.value for s in STATUTS if regle(objet, comptes[(s.value, "dehors")])]
-    attendu_dehors = cas["lecteurs"] if cas["hors_perimetre"] else []
+    #  Une LISTE : seuls ces statuts lisent hors du périmètre — les copropriétaires
+    #  d'une Panne au défaut, pas ses locataires (standard du 30/09/2026).
+    if isinstance(cas["hors_perimetre"], list):
+        attendu_dehors = cas["hors_perimetre"]
+    else:
+        attendu_dehors = cas["lecteurs"] if cas["hors_perimetre"] else []
     assert dehors == attendu_dehors, (
         f"« {cas['nom']} » : hors du périmètre, le serveur fait lire {dehors}, "
         f"la pastille annonce {attendu_dehors}."

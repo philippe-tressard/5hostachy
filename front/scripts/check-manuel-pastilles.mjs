@@ -27,7 +27,6 @@ const MANUEL = '../docs/manuel-utilisateur.html';
 const NATURE = {
 	actualite: false,
 	categorie: 'etude_travaux',
-	dansBatiments: false,
 	confidentiel: false,
 	publicCible: null,
 	perimetreRestreint: false,
@@ -48,7 +47,6 @@ const CAS = {
 		...NATURE,
 		actualite: true,
 		categorie: 'actualite',
-		dansBatiments: true,
 		publicCible: ['résidents'],
 		perimetreRestreint: true,
 		reservePerimetre: true,
@@ -58,6 +56,9 @@ const CAS = {
 	cs: { ...NATURE, categorie: 'etude_travaux' },
 	//  Une Nuisance sans choix du conseil : « Résident concerné » (#1436).
 	concerne: { ...NATURE, categorie: 'nuisance' },
+	//  Une Panne sans choix, sur un bâtiment : les copropriétaires partout, les
+	//  locataires du périmètre (standard du 30/09/2026).
+	panne: { ...NATURE, categorie: 'panne', perimetreRestreint: true },
 };
 
 const echouer = (m) => {

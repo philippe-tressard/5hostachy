@@ -7,7 +7,7 @@
  * l'exécution que le contrôle `lint:lecture` n'a pas. Le calcul reste pur
  * là-bas ; ici, on ne fait que lui fournir ses entrées.
  */
-import { batimentsCibles, concerneTous } from '$lib/perimetres';
+import { concerneTous } from '$lib/perimetres';
 import {
 	destinatairesParDefaut,
 	lectureCiblee,
@@ -22,14 +22,9 @@ import type { Ticket } from '$lib/api';
 export type NatureLue = {
 	actualite: boolean;
 	categorie?: string;
-	dansBatiments?: boolean;
+	/** Une Étude & travaux sort du conseil en AG (standard du 30/09/2026). */
+	statut?: string;
 };
-
-/**  Chaque code du périmètre descend-il d'un bâtiment ? Miroir du test de
- *   `destinataires_par_defaut` au serveur (#1343). Vide : non. */
-export function dansDesBatiments(perimetre: string[] | null | undefined): boolean {
-	return !!perimetre?.length && perimetre.every((c) => batimentsCibles([c]).length > 0);
-}
 
 /**
  * Le périmètre vise-t-il MOINS que la copropriété ? Miroir de
@@ -43,25 +38,26 @@ export function perimetreRestreint(perimetre: string[] | null | undefined): bool
 /** Qui lit cette affaire, telle qu'elle est enregistrée. */
 /**  Ce qui décide de la lecture d'une affaire, hors de ses choix — d'un objet
  *   enregistré comme d'une saisie en cours (`FormulaireTicket`). */
-export function natureLue(s: {
-	categorie?: string | null;
-	perimetre?: string[] | null;
-}): NatureLue {
+export function natureLue(s: { categorie?: string | null; statut?: string | null }): NatureLue {
 	return {
 		actualite: estActualite(s),
 		categorie: s.categorie ?? undefined,
-		dansBatiments: dansDesBatiments(s.perimetre),
+		statut: s.statut ?? undefined,
 	};
 }
 
 export function natureDuTicket(t: Ticket): NatureLue {
-	return natureLue({ ...t, perimetre: t.perimetre_cible });
+	return natureLue(t);
 }
 
 /**  Les Destinataires qu'une Suite présélectionne sur une AFFAIRE sans choix
- *   du conseil (#1343) — `null` pour une actualité, qui a les siens. */
-export function destinatairesParDefautDuTicket(t: Ticket): string[] | null {
-	return estActualite(t) ? null : destinatairesParDefaut(natureDuTicket(t));
+ *   du conseil (#1343), selon l'état qu'elle lui donne — une Étude & travaux
+ *   mise en AG s'ouvre aux copropriétaires (standard du 30/09/2026) ; `null`
+ *   pour une actualité, qui a les siens. */
+export function destinatairesParDefautDuTicket(t: Ticket): ((statut: string) => string[]) | null {
+	return estActualite(t)
+		? null
+		: (statut) => destinatairesParDefaut(natureLue({ ...t, statut: statut || t.statut }));
 }
 
 /**  Personne d'autre que le conseil — et l'auteur — ne la lit : rien ne sort,
@@ -70,11 +66,11 @@ export function destinatairesParDefautDuTicket(t: Ticket): string[] | null {
  *   (#1436). Miroir de `reservee_au_conseil`, qui seul décide. */
 export function lueDuSeulConseil(
 	categorie: string | null | undefined,
-	perimetre: string[] | null | undefined,
+	statut: string | null | undefined,
 	confidentiel: boolean,
 	publicCible: EntreeLecture['publicCible'],
 ): boolean {
-	const nature = natureLue({ categorie, perimetre });
+	const nature = natureLue({ categorie, statut });
 	return (
 		lectureDe({
 			...nature,

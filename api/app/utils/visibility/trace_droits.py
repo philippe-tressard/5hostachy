@@ -29,6 +29,9 @@ from __future__ import annotations
 from html import escape
 from typing import Optional
 
+from app.models.core import Ticket
+
+from .defauts_affaire import destinataires_par_defaut
 from .socle import LIBELLES_PUBLIC_CIBLE, _parse_json_list
 
 #: Les codes que la règle LIT sans que le sélecteur les propose : `résidents`
@@ -72,3 +75,28 @@ def trace_droits(
         )
     #  Un code inconnu vient du client : il ne rejoint pas le HTML tel quel.
     return [escape(ligne, quote=False) for ligne in lignes]
+
+
+def trace_lecture_par_defaut(ticket: Ticket, avant: list[str]) -> list[str]:
+    """La ligne d'une Suite dont l'ÉTAT change qui lit l'affaire — ou aucune.
+
+    Standard du 30/09/2026 : une Étude & travaux sans choix du conseil passe
+    du conseil seul aux copropriétaires en AG, chez le prestataire, résolue ou
+    annulée (`defauts_affaire.STATUTS_ETUDE_OUVERTE`). Aucun Destinataire n'a
+    bougé, et pourtant tout le fil s'ouvre : la Suite le dit, comme elle dit un
+    changement de Destinataires.
+
+    `avant` : `destinataires_par_defaut(ticket)` lu AVANT le changement d'état.
+    Rien si le conseil a choisi (ses Destinataires décident, pas l'état) ou si
+    l'affaire est confidentielle.
+    """
+    if ticket.confidentiel or _parse_json_list(ticket.public_cible, []):
+        return []
+    apres = destinataires_par_defaut(ticket)
+    if set(avant) == set(apres):
+        return []
+    ligne = (
+        f"🔒 Lue par défaut : {_libelle(avant, '—')} → {_libelle(apres, '—')}"
+        " — toute l'affaire et tout son fil"
+    )
+    return [escape(ligne, quote=False)]

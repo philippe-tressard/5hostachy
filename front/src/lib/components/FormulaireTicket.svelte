@@ -164,7 +164,7 @@
 	$: actualite = nature === 'actualite';
 	$: inactives = sectionsInactives(etat, categorie, $isCS);
 	//  Réservée au conseil : « Confidentielle », Destinataires = CS seul, ou sa catégorie (#1436).
-	$: reservee = lueDuSeulConseil(categorie, perimetreCible, options.brouillon, publicCible);
+	$: reservee = lueDuSeulConseil(categorie, statut, options.brouillon, publicCible);
 	//  Une actualité réservée — au périmètre ou au conseil — n'a pas d'affiche.
 	$: if ((reservePerimetre || reservee) && annonceHall) annonceHall = false;
 	$: assistant = contexteAssistant(actualite ? 'actualité' : 'ticket', {
@@ -414,7 +414,7 @@
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
 			bind:perimetre={perimetreCible}
 			avecReservePerimetre={$isCS}
-			lecture={$isCS ? natureLue({ categorie, perimetre: perimetreCible }) : null}
+			lecture={$isCS ? natureLue({ categorie, statut }) : null}
 			bind:reservePerimetre
 			avecDestinataires={$isCS && sectionPresente(TICKET, etat, 'destinataires')}
 			bind:destinataires={publicCible}

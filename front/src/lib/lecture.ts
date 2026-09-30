@@ -132,6 +132,14 @@ const NOMMEES: (Vocable & { profils: Profil[] })[] = [
 		court: 'Copropriétaires',
 		long: 'Copropriétaires (occupants et bailleurs)',
 	},
+	//  Une Panne sans choix du conseil (standard du 30/09/2026).
+	{
+		cle: 'copro_locataires',
+		profils: [...PROFILS_AFFAIRE, 'locataires'],
+		icones: ['key-round', 'user'],
+		court: 'Copropriétaires + locataires',
+		long: 'Copropriétaires et locataires',
+	},
 ];
 
 const CS: Vocable = {
@@ -161,12 +169,31 @@ export const CONCERNE = 'concerné';
 /** Une catégorie que la table ne connaît pas : le conseil seul. Miroir serveur. */
 export const DEFAUT_INCONNU = ['conseil_syndical'];
 
+/**  « Tous les copropriétaires » — occupants et bailleurs. Dans un défaut, ils
+ *   lisent l'affaire dans TOUTE la résidence (standard du 30/09/2026, Carnet =
+ *   Affaires = Kanban) ; un locataire, dans le périmètre. Miroir de
+ *   `lus_dans_toute_la_residence` au serveur. */
+const CODES_COPROPRIETAIRES = ['copropriétaires_occupants', 'bailleurs'];
+
+/** Une Panne sans choix : tous les copropriétaires et les locataires du périmètre. */
+export const DEFAUT_PANNE = [...CODES_COPROPRIETAIRES, 'locataires'];
+
+/**  Les états où une Étude & travaux sort du conseil : en AG (les copropriétaires
+ *   votent), chez le prestataire, résolue, annulée. Miroir serveur. */
+export const STATUTS_ETUDE_OUVERTE: readonly string[] = [
+	'en_ag',
+	'chez_prestataire',
+	'résolu',
+	'annulé',
+];
+
 /**
  * Les Destinataires d'une affaire SANS choix du conseil, par catégorie (#1436,
  * arbitré le 28/09/2026 ; Étude & travaux au conseil seul le 29/09/2026 ;
  * Entretien aux copropriétaires, occupants et bailleurs, le 30/09/2026). La
- * Panne a sa règle, qui dépend du bâtiment ; une catégorie absente, le conseil
- * seul (`DEFAUT_INCONNU`).
+ * Panne a sa règle (`DEFAUT_PANNE`), l'Étude & travaux son état
+ * (`STATUTS_ETUDE_OUVERTE`) ; une catégorie absente, le conseil seul
+ * (`DEFAUT_INCONNU`).
  *
  * ⚠️ Miroir de `DEFAUT_PAR_CATEGORIE` (`utils/visibility/defauts_affaire.py`), tenus
  * d'accord par `lecture_pastille.json` : un cas par catégorie.
@@ -176,8 +203,8 @@ export const DEFAUT_PAR_CATEGORIE: Record<string, string[]> = {
 	acces_accueil: [CONCERNE],
 	espaces_verts: [TOUS_LES_RESIDENTS],
 	sinistre: [CONCERNE],
-	etude_travaux: ['conseil_syndical'],
-	entretien: ['copropriétaires_occupants', 'bailleurs'],
+	etude_travaux: ['conseil_syndical'], // puis les copropriétaires : STATUTS_ETUDE_OUVERTE
+	entretien: CODES_COPROPRIETAIRES,
 	question: [CONCERNE],
 	bug: [CONCERNE],
 };
@@ -214,9 +241,9 @@ export interface EntreeLecture {
 	perimetreRestreint: boolean;
 	/** 🔒 « Réservé au périmètre sélectionné » — le choix d'une actualité. */
 	reservePerimetre: boolean;
-	/** La catégorie d'une affaire, et son périmètre dans des bâtiments (#1343). */
+	/** La catégorie d'une affaire, et son état — une Étude & travaux s'ouvre en AG. */
 	categorie?: string;
-	dansBatiments?: boolean;
+	statut?: string;
 	/** L'objet est masculin (un sondage) : « Lu par… », « ne le lit ». */
 	masculin?: boolean;
 }
@@ -226,6 +253,11 @@ export interface Lecture extends Vocable {
 	profils: Profil[];
 	/** Le cadenas : seuls ceux du périmètre lisent. */
 	perimetreReserve: boolean;
+	/**  Ceux qui lisent HORS du périmètre — tous sans périmètre restreint, aucun
+	 *   sous le cadenas, les copropriétaires seuls d'une Panne au défaut. */
+	horsPerimetre: Profil[];
+	/** Ceux qui ne lisent que dans le périmètre, quand d'autres lisent partout. */
+	duPerimetre: string;
 	/** La phrase de l'infobulle : « Lue par… ». */
 	phrase: string;
 	/** Ceux qui ne lisent pas : « Pas les locataires, ni… ». */
@@ -238,7 +270,8 @@ export interface Lecture extends Vocable {
 
 /** Le titre de la pastille longue : son libellé, et le cadenas en toutes lettres. */
 export function titreLecture(l: Lecture): string {
-	return l.long + (l.perimetreReserve ? ' · du périmètre seulement' : '');
+	if (l.perimetreReserve) return l.long + ' · du périmètre seulement';
+	return l.long + (l.duPerimetre ? ` · ${l.duPerimetre} du périmètre seulement` : '');
 }
 
 /**
@@ -255,18 +288,23 @@ export function destinatairesParDefaut(n: {
 	actualite?: boolean;
 	/** La catégorie d'une affaire — une Panne a sa propre règle. */
 	categorie?: string;
-	/** Chaque code du périmètre descend-il d'un bâtiment ? Tranché par l'appelant. */
-	dansBatiments?: boolean;
+	/** L'état du suivi — une Étude & travaux sort du conseil en AG. */
+	statut?: string;
 }): string[] {
 	if (n.actualite) return [TOUS_LES_RESIDENTS];
-	//  Arbitré à l'écran le 26/09/2026 : une Panne concerne ceux qui VIVENT
-	//  dans le bâtiment — occupants et locataires, pas les bailleurs ; hors
-	//  bâtiment (parking, espaces verts…), tout le monde. Miroir de
+	//  Standard du 30/09/2026 (Carnet = Affaires = Kanban). Miroir de
 	//  `destinataires_par_defaut` (`utils/visibility/defauts_affaire.py`).
-	if (n.categorie === 'panne')
-		return n.dansBatiments ? ['copropriétaires_occupants', 'locataires'] : [TOUS_LES_RESIDENTS];
+	if (n.categorie === 'panne') return DEFAUT_PANNE;
+	if (n.categorie === 'etude_travaux' && STATUTS_ETUDE_OUVERTE.includes(n.statut ?? ''))
+		return CODES_COPROPRIETAIRES;
 	return (n.categorie && DEFAUT_PAR_CATEGORIE[n.categorie]) || DEFAUT_INCONNU;
 }
+
+/** « les copropriétaires (occupants et bailleurs) », « les locataires »… */
+const quiDe = (ps: Profil[]) => {
+	const v = vocableDe(ps);
+	return v.qui ?? 'les ' + minuscule(v.long);
+};
 
 export function lectureDe(e: EntreeLecture): Lecture {
 	//  Une affaire lit ses Destinataires quand le conseil en a CHOISI (#1343) ;
@@ -282,9 +320,22 @@ export function lectureDe(e: EntreeLecture): Lecture {
 			profils = TOUS_PROFILS.filter((p) => vises.has(p));
 		}
 	}
-	//  Une actualité s'ouvre à la copropriété sauf réserve ; une affaire, jamais.
-	const perimetreReserve =
-		profils.length > 0 && e.perimetreRestreint && (e.actualite ? e.reservePerimetre : true);
+	//  Qui lit HORS du périmètre : une actualité, sauf réserve ; une affaire au
+	//  défaut, ses copropriétaires (standard du 30/09/2026) ; un choix, personne.
+	const auDefaut = !e.actualite && !explicites.length;
+	const partout = !e.perimetreRestreint
+		? profils
+		: e.actualite
+			? e.reservePerimetre
+				? []
+				: profils
+			: auDefaut
+				? profils.filter((p) =>
+						codes.some((c) => CODES_COPROPRIETAIRES.includes(c) && PROFILS_DU_CODE[c]?.includes(p)),
+					)
+				: [];
+	const perimetreReserve = profils.length > 0 && e.perimetreRestreint && !partout.length;
+	const seulsDuPerimetre = partout.length ? profils.filter((p) => !partout.includes(p)) : [];
 	const concerne = !e.actualite && (e.confidentiel || estConcerne(codes));
 	const v = profils.length ? vocableDe(profils) : concerne ? VOCABLE_CONCERNE : CS;
 	const tous = v.cle === 'tous';
@@ -299,16 +350,23 @@ export function lectureDe(e: EntreeLecture): Lecture {
 		phrase = `Personne d’autre que le conseil syndical ne ${e.masculin ? 'le' : 'la'} lit, à part son auteur.`;
 	} else {
 		const ou = perimetreReserve ? ', dans le périmètre seulement.' : '.';
-		phrase = tous
-			? `${lue} par tous${ou}`
-			: `${lue} par ${v.qui ?? 'les ' + minuscule(v.long)}${perimetreReserve ? ou : ', dans toute la copropriété.'}`;
+		phrase = seulsDuPerimetre.length
+			? `${lue} par ${quiDe(partout)} dans toute la copropriété, et par ${quiDe(seulsDuPerimetre)} du périmètre seulement.`
+			: tous
+				? `${lue} par tous${ou}`
+				: `${lue} par ${quiDe(profils)}${perimetreReserve ? ou : ', dans toute la copropriété.'}`;
 		for (const p of PROFILS) if (!profils.includes(p.code)) pas.push('les ' + minuscule(p.long));
 		if (perimetreReserve) pas.push('les personnes hors du périmètre');
+		if (seulsDuPerimetre.length) pas.push(`${quiDe(seulsDuPerimetre)} hors du périmètre`);
 	}
 	return {
 		...v,
 		profils,
 		perimetreReserve,
+		horsPerimetre: partout,
+		duPerimetre: seulsDuPerimetre.length
+			? minuscule(vocableDe(seulsDuPerimetre).court)
+			: '',
 		phrase,
 		exclus: pas.length ? `Pas ${pas.join(', ni ')}.` : '',
 		parDefaut: tous && !perimetreReserve,

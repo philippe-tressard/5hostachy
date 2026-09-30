@@ -36,7 +36,7 @@ router = APIRouter(prefix="/carnet-entretien", tags=["carnet-entretien"])
 def lire_carnet(
     perimetre: Optional[str] = Query(default=None),
     session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_proprietaire),
+    user: Utilisateur = Depends(require_proprietaire),
 ):
     """Le carnet, éventuellement restreint à un PÉRIMÈTRE.
 
@@ -49,7 +49,9 @@ def lire_carnet(
     répond à « cette ligne entre-t-elle dans ce que l'utilisateur regarde ? », et
     c'est la même question sur toutes les pages qui filtrent.
     """
-    entrees = construire_carnet(session, perimetre=perimetre)
+    #  Le carnet de CE lecteur : une affaire qu'il ne lit pas n'y paraît pas
+    #  (Carnet = Affaires = Kanban, standard du 30/09/2026).
+    entrees = construire_carnet(session, lecteur=user, perimetre=perimetre)
     return {
         "entrees": entrees,
         #  Le compte est rendu par le SERVEUR plutôt que déduit de la longueur du

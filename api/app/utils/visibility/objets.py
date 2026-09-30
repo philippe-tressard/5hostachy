@@ -34,15 +34,21 @@ from .socle import (
     _parse_json_list,
     cible_visible,
     perimetre_visible,
+    public_cible_visible,
     reserve_au_conseil,
 )
 from app.auth.deps import est_moderateur
 
-from .defauts_affaire import _DEFAUTS_FERMES, CONCERNE, destinataires_par_defaut
-#  ⚠️ `public_cible_visible` n'est plus importé ici depuis le 06/09/2026 : aucune
-#  règle de ce fichier ne l'appelle en direct — elles passent toutes par
-#  `cible_visible`, qui pose les deux axes. Une factorisation se termine par la
-#  suppression de ce qu'elle a remplacé, et c'est Ruff (F401) qui l'a rappelé.
+from .defauts_affaire import (
+    _DEFAUTS_FERMES,
+    CONCERNE,
+    destinataires_par_defaut,
+    lus_dans_toute_la_residence,
+)
+#  ⚠️ `public_cible_visible` en direct : une seule règle l'appelle sans
+#  `cible_visible`, et c'est voulu — « tous les copropriétaires » d'une affaire
+#  au défaut ne consulte PAS le périmètre (standard du 30/09/2026). Toutes les
+#  autres passent par `cible_visible`, qui pose les deux axes.
 
 # ── Règles actualité ────────────────────────────────────────────────────────
 
@@ -311,6 +317,13 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     if defaut == [CONCERNE]:
         #  L'auteur, le « saisi pour » et le conseil sont sortis plus haut.
         return False
+    #  🔴 « TOUS LES COPROPRIÉTAIRES » (standard du 30/09/2026) : le copropriétaire
+    #  que le défaut vise lit l'affaire dans toute la résidence — ce que le carnet
+    #  d'entretien lui montre, les affaires et le kanban le lui montrent aussi.
+    #  Le périmètre n'est pas consulté : il ne peut donc rien ouvrir de plus.
+    partout = lus_dans_toute_la_residence(ticket)
+    if partout and public_cible_visible(json.dumps(partout, ensure_ascii=False), user):
+        return True
     return cible_visible(ticket.perimetre_cible, json.dumps(defaut, ensure_ascii=False), user)
 
 
