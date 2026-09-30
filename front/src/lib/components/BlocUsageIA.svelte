@@ -248,7 +248,9 @@
 					{/if}
 				</div>
 				{#if tarif.etat === 'ko'}
-					<span class="verdict ko">⚠️ {tarif.message}</span>
+					<!--  `aide` : dans le libellé du champ, un texte sans elle hériterait
+					      de ses capitales (`champs.css`, #1315). -->
+					<span class="aide verdict ko">⚠️ {tarif.message}</span>
 				{/if}
 				<div class="ligne-modele">
 					{#if !azure}
