@@ -12,8 +12,17 @@ d'appel, et le même modèle sert souvent plusieurs audiences.
 
 import pathlib
 import re
+from collections.abc import Iterable
 
 import pytest
+
+from tests.aides_liens_email import (
+    BASE,
+    LienModele,
+    extraire_liens,
+    liens_des_modeles_email,
+)
+from tests.aides_routes_front import _page_du_lien
 
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
@@ -34,8 +43,6 @@ _ROUTES = _RACINE / "front" / "src" / "routes"
 # précisément ce qu'un e-mail ne peut pas savoir : il part à une liste, la garde
 # s'applique à chacun.
 
-_MOTIF_HREF_MODELE = re.compile(r"""href=["']\{\{ app\.url \}\}(/[^"'{]*)""")
-
 #: Routes que le front REFUSE à qui n'a pas le rôle, en redirigeant ailleurs.
 #: Détectées, pas recopiées — une liste tenue à la main se périmerait à la
 #: première garde ajoutée, et c'est le lien nouvellement mort qu'on cherche.
@@ -49,21 +56,33 @@ _MOTIF_HREF_MODELE = re.compile(r"""href=["']\{\{ app\.url \}\}(/[^"'{]*)""")
 _MOTIF_GARDE = re.compile(r"if\s*\([^)]*!\$is[A-Za-z]+\)\s*\{?\s*(?:\r?\n\s*)?goto\(")
 
 
-def _routes_gardees() -> set[str]:
-    """{'/espace-cs', …} — les pages qui redirigent qui n'a pas le rôle."""
-    gardees: set[str] = set()
-    for page in _ROUTES.rglob("+page.svelte"):
-        if not _MOTIF_GARDE.search(page.read_text(encoding="utf-8-sig")):
-            continue
-        # `(app)/espace-cs/+page.svelte` → `/espace-cs` : les groupes SvelteKit
-        # sont transparents dans l'URL, comme dans `_resoudre` plus haut.
-        segments = [
-            s
-            for s in page.relative_to(_ROUTES).parent.parts
-            if not (s.startswith("(") and s.endswith(")"))
-        ]
-        gardees.add("/" + "/".join(segments))
-    return gardees
+def _pages_gardees() -> set[pathlib.Path]:
+    """Les `+page.svelte` qui redirigent qui n'a pas le rôle.
+
+    Des PAGES et non des adresses depuis #1496 : un onglet a son URL
+    (`/espace-cs/annonces-hall`) sans avoir de dossier, et la comparer à
+    `/espace-cs` la laissait passer. Le lien est résolu vers la page qui le rend
+    (`aides_routes_front._page_du_lien`, `reroute` compris), puis confronté ici.
+    """
+    return {
+        page
+        for page in _ROUTES.rglob("+page.svelte")
+        if _MOTIF_GARDE.search(page.read_text(encoding="utf-8-sig"))
+    }
+
+
+def _vers_une_page_reservee(
+    liens: Iterable[LienModele], gardees: set[pathlib.Path]
+) -> dict[LienModele, pathlib.Path]:
+    """{lien: page gardée} — les liens que le front refuse à qui n'a pas le rôle."""
+    fautifs = {}
+    for lien in liens:
+        if lien.chemin is None:
+            continue  # mailto:, racine, chemin fourni par une variable (EMPLACEMENTS)
+        page = _page_du_lien(lien.chemin)
+        if page in gardees:
+            fautifs[lien] = page
+    return fautifs
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
@@ -80,21 +99,64 @@ def test_aucun_modele_email_ne_vise_une_route_reservee():
     tout le monde ; un lien vers un écran d'administration ne vaut que pour ses
     administrateurs.
     """
-    gardees = _routes_gardees()
+    gardees = _pages_gardees()
     assert gardees, (
         "aucune garde de rôle détectée dans front/src/routes — le motif a dû "
         "changer de forme, et ce test ne mesure plus rien (INCONNU, pas OK)"
     )
-
-    fautifs: list[str] = []
-    dossier = _API_DIR / "app" / "seed" / "emails"
-    for chemin in sorted(dossier.glob("*.py")):
-        for lien in _MOTIF_HREF_MODELE.findall(chemin.read_text(encoding="utf-8-sig")):
-            base = lien.split("?")[0].split("#")[0].rstrip("/")
-            if base in gardees:
-                fautifs.append(f"{chemin.relative_to(_RACINE)} → {lien}")
-
+    fautifs = [
+        f"modèle « {lien.modele} » → {lien.adresse}  (gardée : {page.relative_to(_ROUTES)})"
+        for lien, page in _vers_une_page_reservee(liens_des_modeles_email(), gardees).items()
+    ]
     assert not fautifs, (
         "modèle(s) d'e-mail visant une page que le front réserve à un rôle — "
         "leurs destinataires sans ce rôle seront redirigés :\n  " + "\n  ".join(fautifs)
+    )
+
+
+# ── Il lisait les sources, et ne voyait plus aucun bouton (#1496) ─────────────
+#
+# POURQUOI (30/09/2026) : ce contrôle cherchait `href="{{ app.url }}/…"` dans
+# `app/seed/emails/*.py`. Depuis la factorisation #959, un bouton s'écrit
+# `bouton("{{ app.url }}/calendrier", …)` : plus aucun `href=` dans la source.
+# Il ne relevait que quatre liens, tous vers `/admin` — ni `/calendrier`, ni un
+# seul lien de `tickets.py` ou de `vie_collective.py`. Vert, et aveugle.
+#
+# Il lit désormais les modèles COMPOSÉS (`aides_liens_email`), et les deux tests
+# ci-dessous tiennent ce qu'il doit voir et ce qu'il doit refuser.
+
+#: Des liens posés par `fragments.bouton()` — un par fichier de modèles que le
+#: contrôle ne voyait pas. S'ils disparaissent de l'extraction, c'est qu'elle ne
+#: lit plus les boutons, pas qu'ils ont cessé d'exister.
+_TEMOINS_BOUTONS = {
+    ("calendrier_evenement_cree", "/calendrier"),
+    ("ticket_nouveau_cs", "/tickets/{{ ticket.id }}"),
+}
+
+
+def test_le_controle_lit_les_liens_des_boutons():
+    """Cas zéro (`standards/04` §2) : l'extraction rend des liens, boutons compris."""
+    lus = {(lien.modele, lien.chemin) for lien in liens_des_modeles_email() if lien.chemin}
+    assert lus, "aucun chemin lu dans les modèles d'e-mail — ce contrôle ne mesure rien"
+    manquants = sorted(_TEMOINS_BOUTONS - lus)
+    assert not manquants, (
+        f"lien(s) de bouton non relevés : {manquants} — l'extraction ne voit plus "
+        "les ancres composées par `fragments.bouton()`"
+    )
+
+
+@pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
+def test_le_controle_refuse_un_bouton_vers_une_page_reservee():
+    """Un modèle FORGÉ, composé par le vrai `bouton()`, qui rejoue #480."""
+    from app.seed.emails.fragments import bouton
+
+    forges = [
+        ("forge_onglet", "", bouton(f"{BASE}/espace-cs/annonces-hall", "Voir")),
+        ("forge_parametre", "", bouton(f"{BASE}/espace-cs?onglet=annonces-hall", "Voir")),
+        ("forge_ouvert", "", bouton(f"{BASE}/calendrier", "Voir")),
+    ]
+    fautifs = _vers_une_page_reservee(extraire_liens(forges), _pages_gardees())
+    refuses = {lien.modele for lien in fautifs}
+    assert refuses == {"forge_onglet", "forge_parametre"}, (
+        f"attendu : les deux boutons vers /espace-cs refusés, /calendrier admis — obtenu {fautifs}"
     )

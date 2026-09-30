@@ -87,6 +87,21 @@ def test_insensible_a_la_locale_du_process():
         _locale.setlocale(_locale.LC_TIME, precedente)
 
 
+#: Le seul module autorisé à écrire `%B` : il documente l'interdiction en prose.
+_EXCEPTION_LOCALE = "utils/dates_fr.py"
+
+
+def _lignes(motif: re.Pattern, modules, exclus=frozenset()) -> list[str]:
+    """Les lignes de `modules` où `motif` mord, hors des modules `exclus`."""
+    return [
+        f"app/{m.rel}:{num}: {ligne.strip()}"
+        for m in modules
+        if m.rel not in exclus
+        for num, ligne in enumerate(m.lignes, start=1)
+        if motif.search(ligne)
+    ]
+
+
 def test_aucune_directive_strftime_localisee_dans_app():
     """Interdit `%B`/`%A`… dans `app/` : en locale C ils sortent en anglais.
 
@@ -94,17 +109,7 @@ def test_aucune_directive_strftime_localisee_dans_app():
     `datetime_longue()` — ne pas générer une locale fr_FR dans l'image (correctif
     fragile, cf. docstring de `app/utils/dates_fr.py`).
     """
-    fautifs: list[str] = []
-    for module in modules_app():
-        if module.chemin.name == "dates_fr.py":
-            continue  # documente l'interdiction : cite `%B` en prose
-        for num, ligne in enumerate(module.lignes, start=1):
-            if "strftime" not in ligne and "%" not in ligne:
-                continue
-            if _DIRECTIVES_LOCALISEES.search(ligne):
-                rel = f"app/{module.rel}"
-                fautifs.append(f"{rel}:{num}: {ligne.strip()}")
-
+    fautifs = _lignes(_DIRECTIVES_LOCALISEES, modules_app(), exclus={_EXCEPTION_LOCALE})
     assert not fautifs, (
         "Format de date dépendant de la locale (mois/jour en anglais en prod) :\n"
         + "\n".join(fautifs)
@@ -164,6 +169,12 @@ def test_duree_jhm_distingue_le_zero_de_l_incoherence():
     assert duree_jhm(timedelta(days=-3)) is None
 
 
+#: La conversion en heures décimales — permise pour une STATISTIQUE…
+_EN_HEURES = r"\([^)]*\)\.total_seconds\(\)\s*/\s*3600"
+#: …refusée quand elle est arrondie pour être AFFICHÉE (« Résolu en 23.9h »).
+_DUREE_DECIMALE = re.compile(r"round\(\s*" + _EN_HEURES)
+
+
 def test_aucune_duree_en_heures_decimales_dans_app():
     """Une durée AFFICHÉE se formate par `duree_jhm`, jamais à la main.
 
@@ -176,16 +187,31 @@ def test_aucune_duree_en_heures_decimales_dans_app():
     dit, plutôt que d'interdire `total_seconds()` en bloc, ce qui l'aurait fait
     désarmer au premier usage légitime.
     """
-    import re
-
-    motif = re.compile(r"round\(\s*\([^)]*\)\.total_seconds\(\)\s*/\s*3600")
-    fautifs: list[str] = []
-    for module in modules_app():
-        for num, ligne in enumerate(module.lignes, start=1):
-            if motif.search(ligne):
-                fautifs.append(f"app/{module.rel}:{num}: {ligne.strip()}")
-
+    fautifs = _lignes(_DUREE_DECIMALE, modules_app())
     assert not fautifs, (
         "Durée arrondie en heures décimales — c'est la forme qui affichait "
         "« Résolu en 23.9h ». Passer par `dates_fr.duree_jhm()` :\n" + "\n".join(fautifs)
     )
+
+
+def test_les_deux_balayages_VOIENT_leur_motif():
+    """Cas zéro (#1496) : un motif qui ne mord plus rend les deux contrôles
+    ci-dessus verts sur tout `app/`.
+
+    - `%B` : sur le CODE, l'exception déclarée le cite bien (sinon elle est
+      morte) ; sur un extrait FORGÉ, l'appel du 26/07/2026 est refusé ;
+    - durée : sur le CODE, la conversion PERMISE (`flux/sante.py`, une moyenne)
+      est vue sans être refusée ; sur un extrait FORGÉ, l'arrondi est refusé.
+    """
+    from types import SimpleNamespace as Faux
+
+    exception = [m for m in modules_app() if m.rel == _EXCEPTION_LOCALE]
+    assert _lignes(_DIRECTIVES_LOCALISEES, exception), f"{_EXCEPTION_LOCALE} : exception morte"
+    forge = Faux(rel="forge.py", lignes=["d.strftime('%d %B %Y')", "d.strftime('%-d/%m')"])
+    assert _lignes(_DIRECTIVES_LOCALISEES, [forge]) == ["app/forge.py:1: d.strftime('%d %B %Y')"]
+
+    assert _lignes(re.compile(_EN_HEURES), modules_app("routers/flux")), (
+        "la conversion en heures n'est plus vue nulle part : le motif ne mord plus"
+    )
+    forge = Faux(rel="forge.py", lignes=["h = round((fin - debut).total_seconds() / 3600, 1)"])
+    assert _lignes(_DUREE_DECIMALE, [forge])

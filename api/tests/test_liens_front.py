@@ -31,6 +31,7 @@ import types
 
 import pytest
 
+from tests.aides_liens_email import liens_des_modeles_email
 from tests.aides_routes_front import (
     _onglet_de_la_route,
     _page_du_lien,
@@ -105,17 +106,18 @@ def _liens_des_modeles_email() -> dict[str, list[str]]:
     est hors de l'outil, souvent sur son téléphone, et un 404 ne lui laisse
     aucun moyen de retrouver ce qu'on lui annonçait.
 
-    Les portions `{{ … }}` restantes (`{{ document.lien }}`) sont fournies au
-    rendu et proviennent de `EMPLACEMENTS`, déjà couvert ligne par ligne : elles
-    sont écartées ici plutôt que devinées.
-    """
-    from app.seed import EMAIL_TEMPLATES
+    Un chemin fourni ENTIER par une variable (`{{ app.url }}{{ document.lien }}`)
+    provient de `EMPLACEMENTS`, déjà couvert ligne par ligne : il est écarté ici
+    plutôt que deviné. Un SEGMENT variable, lui, est gardé depuis #1496 :
+    `/tickets/{{ ticket.id }}` se résout comme `/tickets/[id]`. L'ancien motif
+    exigeait un chemin sans aucun `{` et ne vérifiait donc aucun lien de ticket.
 
-    motif = re.compile(r'href="\{\{\s*app\.url\s*\}\}(/[^"{]*)"')
+    L'extraction vit dans `aides_liens_email` : elle était écrite trois fois.
+    """
     trouves: dict[str, list[str]] = {}
-    for code, _libelle, sujet, corps, _desactivable in EMAIL_TEMPLATES:
-        for lien in motif.findall(f"{sujet or ''} {corps or ''}"):
-            trouves.setdefault(lien, []).append(f"modèle « {code} »")
+    for lien in liens_des_modeles_email():
+        if lien.chemin is not None:
+            trouves.setdefault(lien.chemin, []).append(f"modèle « {lien.modele} »")
     return trouves
 
 

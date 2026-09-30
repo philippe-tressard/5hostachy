@@ -195,7 +195,11 @@ def test_un_releve_ILLISIBLE_ne_bloque_pas_le_demarrage():
         csp._charge = False
         csp.charger(session)  # ne doit pas lever
 
-    assert csp._violations == {} or True  # le contrat est « ne lève pas »
+    #  « Repart de zéro » : ni violation, ni compteur restaurés depuis la valeur
+    #  abîmée. Cette ligne finissait par `or True` jusqu'au 30/09/2026 (#1496) —
+    #  une assertion qui ne pouvait pas échouer, quel que soit le relevé laissé.
+    assert csp._violations == {}, f"relevé restauré depuis une valeur illisible : {csp._violations}"
+    assert (csp._recus, csp._ignores) == (0, 0), "compteurs restaurés depuis une valeur illisible"
 
 
 def test_QUAND_le_releve_est_ecrit_en_base():

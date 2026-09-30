@@ -34,7 +34,7 @@ from app.models.core import (
 )
 from app.routers.tickets.commun import STATUT_LABELS
 from app.schemas import TicketEvolutionCreate, TicketUpdate
-from tests.aides_sources import modules_app
+from tests.aides_sources import module_app, modules_app
 
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
@@ -214,30 +214,51 @@ def test_les_exceptions_declarees_servent_encore():
         )
 
 
+#: Le routeur autorisé à écrire les états en toutes lettres : la table des
+#: libellés, vérifiée par `test_tout_etat_affichable_a_un_libelle…`.
+_AUTORISES_API = {"routers/tickets/commun.py"}
+
+
+def _code_python(src: str) -> str:
+    """Même précaution que `_sans_commentaires` : les docstrings en DOTALL, les
+    commentaires `#` ligne à ligne."""
+    return re.sub(r"#.*", "", re.sub(r'""".*?"""', "", src, flags=re.S))
+
+
 def test_aucun_routeur_ne_reecrit_une_liste_detats():
     """Côté serveur, la liste blanche `_STATUTS_ADMIS` ne doit pas repousser.
 
     Elle a survécu à trois découpages de `tickets.py` sans que personne la
     relise : c'est le propre d'une constante qui a l'air d'une évidence.
     """
-    autorises = {
-        #  La table des libellés : les seuls états écrits en toutes lettres, et
-        #  ils y sont vérifiés par `test_tout_etat_affichable_a_un_libelle…`.
-        "app/routers/tickets/commun.py",
-    }
     coupables = []
     for m in modules_app("routers"):
         rel = f"app/{m.rel}"
-        if rel in autorises:
+        if m.rel in _AUTORISES_API:
             continue
-        #  Même précaution qu'au-dessus : les docstrings en DOTALL, les
-        #  commentaires `#` ligne à ligne.
-        code = m.source
-        code = re.sub(r"\"\"\".*?\"\"\"", "", code, flags=re.S)
-        code = re.sub(r"#.*", "", code)
-        for etats in _listes_detats(code):
+        for etats in _listes_detats(_code_python(m.source)):
             coupables.append(f"{rel} → {etats}")
     assert not coupables, (
         "ces routeurs réécrivent une liste d'états au lieu d'utiliser "
         f"StatutTicket / STATUTS_TICKET_CLOS : {coupables}"
     )
+
+
+def test_les_deux_balayages_VOIENT_une_liste():
+    """Cas zéro (#1496) : `_EXCEPTIONS_FRONT` est vide, donc rien ne prouvait que
+    le balayage front lise quoi que ce soit — un `front/src` déplacé ou un motif
+    muet le laissaient vert.
+
+    - la PORTÉE lit : le front compte des centaines de fichiers ;
+    - sur le CODE : les deux sources légitimes portent bien des listes, et le
+      contrôle les reconnaît (`$lib/tickets.ts`, la table des libellés de l'API) ;
+    - sur un extrait FORGÉ : une sixième liste est reconnue.
+    """
+    assert len(list(_fichiers_front())) > 100, f"{_FRONT_SRC} ne rend presque rien"
+    front = _sans_commentaires(_MODULE_FRONT.read_text(encoding="utf-8"))
+    assert _listes_detats(front), f"aucune liste d'états reconnue dans {_MODULE_FRONT.name}"
+    for rel in _AUTORISES_API:
+        assert _listes_detats(_code_python(module_app(rel).source)), (
+            f"app/{rel} n'écrit plus de liste d'états : retirer son autorisation"
+        )
+    assert _listes_detats("const a = ['ouvert', 'en_cours'];") == [["en_cours", "ouvert"]]
