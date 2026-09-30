@@ -17,6 +17,11 @@
  *  bâtiment — et 240 clics aléatoires sur six catégories n'ont rien figé. La
  *  cause tient donc à une donnée de l'affaire réelle que la simulation n'a pas :
  *  #1463. Il reste le garde-fou du geste signalé.
+ *
+ *  30/09/2026 : la donnée réelle a été obtenue (`GET /api/tickets/50`) et
+ *  rejouée telle quelle — sur `main` (v2.84.7) comme sur v2.83.1, depuis la
+ *  liste (la fiche n'offre pas « Modifier ») : aucun gel, 3 à 9 ms par clic.
+ *  Sa FORME est reprise ci-dessous, anonymisée.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { attendreHydratation, simulerApi } from './aides';
@@ -25,14 +30,23 @@ const QUESTION = {
 	id: 50,
 	numero: 'TK-A00017',
 	titre: 'Réfection de la cage d’escalier',
-	description: 'Où en est le projet ?',
+	//  La FORME de l'affaire réelle (#1463, relevée le 30/09/2026), anonymisée :
+	//  un long compte rendu en HTML riche — espaces insécables, gras, souligné —,
+	//  et `public_cible` à `null`, pas `[]`. Le gel n'a été reproduit ni avec
+	//  elle ni sans ; elle reste pour que le garde-fou exerce le vrai cas.
+	description: Array.from(
+		{ length: 16 },
+		(_, i) =>
+			`<p>${i + 1}.&nbsp;&nbsp;&nbsp; <strong>Point ${i + 1}&nbsp;</strong>: Décision – ` +
+			`à <u>relancer</u> avant l’AG&nbsp;; «&nbsp;suite&nbsp;» =&gt; syndic.</p>`,
+	).join(''),
 	categorie: 'question',
 	statut: 'ouvert',
 	priorite: 'normale',
 	auteur_id: 1,
 	auteur_nom: 'CS Témoin',
 	perimetre_cible: ['résidence'],
-	public_cible: [],
+	public_cible: null,
 	photos_urls: [],
 	fichiers_urls: [],
 	archivee: false,
