@@ -76,29 +76,27 @@ def _404_bruts() -> list[str]:
     return trouves
 
 
-def test_le_plafond_de_404_bruts_ne_monte_pas():
-    """Un 404 de plus est une copie de plus — le helper existe."""
-    bruts = _404_bruts()
-    assert len(bruts) <= PLAFOND_404_BRUTS, (
-        f"{len(bruts)} `HTTPException(404)` écrits à la main, plafond {PLAFOND_404_BRUTS} :\n"
-        + "\n".join(f"  {b}" for b in bruts)
-        + "\n\nAller chercher un objet par son identifiant passe par "
-        "`utils/recuperer.ou_404` — le libellé y est composé, donc les messages du "
-        "produit disent tous la même chose de la même façon."
-    )
-
-
 def test_le_plafond_est_a_jour():
-    """Un plafond qui ne colle plus au réel cesse de mesurer.
+    """Un 404 de plus est une copie de plus — le helper existe. Et un plafond
+    qui ne colle plus au réel cesse de mesurer.
 
-    S'il reste plus haut que le compte réel, il autorise silencieusement de
-    nouvelles copies jusqu'à ce niveau : le contrôle serait vert pendant qu'on
-    rouvre la duplication.
+    L'égalité tient les deux sens : au-dessus, une copie a été ajoutée ; en
+    dessous, le plafond autoriserait silencieusement de nouvelles copies jusqu'à
+    son niveau — le contrôle serait vert pendant qu'on rouvre la duplication.
     """
-    reels = len(_404_bruts())
+    bruts = _404_bruts()
+    reels = len(bruts)
     assert reels == PLAFOND_404_BRUTS, (
-        f"Le plafond dit {PLAFOND_404_BRUTS}, le dépôt en porte {reels} : "
-        f"{'descendre le plafond' if reels < PLAFOND_404_BRUTS else 'corriger les écritures'}."
+        f"Le plafond dit {PLAFOND_404_BRUTS}, le dépôt porte {reels} "
+        "`HTTPException(404)` écrits à la main :\n"
+        + "\n".join(f"  {b}" for b in bruts)
+        + (
+            "\n\nDescendre le plafond."
+            if reels < PLAFOND_404_BRUTS
+            else "\n\nAller chercher un objet par son identifiant passe par "
+            "`utils/recuperer.ou_404` — le libellé y est composé, donc les messages du "
+            "produit disent tous la même chose de la même façon."
+        )
     )
 
 

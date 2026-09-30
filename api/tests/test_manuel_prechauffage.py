@@ -13,8 +13,10 @@ d'édition, donc sans lui le premier lecteur de chaque jour repaierait l'attente
 
 ⚠️ Ce test ne rend AUCUN PDF : WeasyPrint n'est pas installé sur un poste, et
 exiger un rendu ici rendrait le contrôle INCONNU plutôt que vert. Il vérifie ce
-qui peut l'être partout : que le préchauffage existe, qu'il ne lève jamais, et
-qu'il est bien PLANIFIÉ — écrire une fonction et la brancher sont deux gestes.
+qui peut l'être partout : que le préchauffage existe et qu'il est bien PLANIFIÉ
+— écrire une fonction et la brancher sont deux gestes. Qu'il ne lève jamais (un
+manuel indisponible n'empêche pas l'application de démarrer) est vérifié par
+`test_manuel_pdf_cache.py::test_un_MOTEUR_en_panne_ne_se_reessaie_pas`.
 """
 
 from __future__ import annotations
@@ -22,41 +24,18 @@ from __future__ import annotations
 import inspect
 
 
-def test_le_prechauffage_ne_leve_jamais():
-    """🔴 Un manuel indisponible ne doit pas empêcher l'application de démarrer.
-
-    On lui donne une source qui casse : il doit rendre False, pas propager.
-    """
-    from app.utils import manuel_pdf
-
-    origine = manuel_pdf.generer_manuel_pdf
-    try:
-
-        def _casse(*_a, **_k):
-            raise RuntimeError("moteur indisponible")
-
-        manuel_pdf.generer_manuel_pdf = _casse
-        assert manuel_pdf.prechauffer("5Hostachy", "https://exemple.fr") is False
-    finally:
-        manuel_pdf.generer_manuel_pdf = origine
-
-
-def test_le_prechauffage_garnit_le_cache():
+def test_le_prechauffage_garnit_le_cache(monkeypatch):
     """Le fait, pas l'intention : après l'appel, le rendu a bien eu lieu."""
     from app.utils import manuel_pdf
 
     appels = []
-    origine = manuel_pdf.generer_manuel_pdf
-    try:
 
-        def _compte(nom, url, **_k):
-            appels.append((nom, url))
-            return b"%PDF-1.7 factice"
+    def _compte(nom, url, **_k):
+        appels.append((nom, url))
+        return b"%PDF-1.7 factice"
 
-        manuel_pdf.generer_manuel_pdf = _compte
-        assert manuel_pdf.prechauffer("5Hostachy", "https://exemple.fr") is True
-    finally:
-        manuel_pdf.generer_manuel_pdf = origine
+    monkeypatch.setattr(manuel_pdf, "generer_manuel_pdf", _compte)
+    assert manuel_pdf.prechauffer("5Hostachy", "https://exemple.fr") is True
 
     assert appels == [("5Hostachy", "https://exemple.fr")]
 

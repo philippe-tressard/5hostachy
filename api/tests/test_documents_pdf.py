@@ -29,7 +29,11 @@ from tests.aides_pdf import besoin_weasyprint, exiger_weasyprint_en_ci
 
 
 def test_weasyprint_present_en_ci():
-    """Sans lui, tous les tests de ce fichier s'abstiendraient — donc ne diraient rien.
+    """Sans lui, tous les tests de rendu PDF s'abstiendraient — donc ne diraient rien.
+
+    Il est le SEUL test de portée : il vaut pour ce fichier et pour tous ceux
+    qui portent `besoin_weasyprint` (`test_pdf_hors_process.py`,
+    `test_annonce_hall_filet.py`…) — voir `tests/aides_pdf.py`.
 
     C'est la portée du contrôle qui est vérifiée ici : sur un poste de développement
     Windows, l'abstention est légitime ; en intégration continue, elle signifierait

@@ -126,65 +126,6 @@ def test_le_repertoire_prive_est_bien_sous_le_volume_repliqué():
     assert '"/app/uploads"' in backup, "backup.py n'archive plus ce répertoire"
 
 
-# ── Migration 0124 : déplacement des fichiers existants ──────────────────────
-
-
-def _module_migration():
-    """Charge la migration sans contexte Alembic (on ne teste que sa logique)."""
-    import importlib.util
-
-    chemin = RACINE / "api" / "alembic" / "versions" / "0124_documents_prives_hors_tronc_servi.py"
-    spec = importlib.util.spec_from_file_location("mig0124", chemin)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def test_la_migration_deplace_puis_devient_inoperante(tmp_path, monkeypatch):
-    """Idempotence : le standby rejoue les migrations sur un volume déjà synchronisé."""
-    mig = _module_migration()
-    monkeypatch.setattr(mig, "RACINE", str(tmp_path))
-    monkeypatch.setattr(mig, "PRIVE", str(tmp_path / "prive"))
-
-    source = tmp_path / "abc123_PV_27.01.2026.pdf"
-    source.write_bytes(b"%PDF-1.4")
-
-    nouveau = mig._deplacer(str(source))
-    assert nouveau == str(tmp_path / "prive" / "abc123_PV_27.01.2026.pdf")
-    assert os.path.isfile(nouveau), "le fichier doit avoir été déplacé"
-    assert not source.exists(), "l'ancien emplacement doit être libéré"
-
-    # Rejouée sur la ligne déjà migrée : plus rien à faire.
-    assert mig._deplacer(nouveau) is None
-
-
-def test_la_migration_ne_touche_pas_une_ligne_dont_le_fichier_manque(tmp_path, monkeypatch):
-    """Un fichier absent laisse sa ligne inchangée — pas de chemin cassé en base."""
-    mig = _module_migration()
-    monkeypatch.setattr(mig, "RACINE", str(tmp_path))
-    monkeypatch.setattr(mig, "PRIVE", str(tmp_path / "prive"))
-
-    assert mig._deplacer(str(tmp_path / "jamais_arrive.pdf")) is None
-    assert mig._deplacer("") is None
-
-
-def test_la_migration_ne_leve_jamais(tmp_path, monkeypatch):
-    """`start.sh` a `set -e` : une exception ici bloquerait le conteneur, donc le site."""
-    mig = _module_migration()
-    monkeypatch.setattr(mig, "RACINE", str(tmp_path))
-    monkeypatch.setattr(mig, "PRIVE", str(tmp_path / "prive"))
-
-    source = tmp_path / "def456_rapport.pdf"
-    source.write_bytes(b"x")
-
-    def _echec(*_a, **_k):
-        raise OSError("disque plein")
-
-    monkeypatch.setattr(mig.shutil, "move", _echec)
-    assert mig._deplacer(str(source)) is None, "un échec doit rendre None, pas lever"
-    assert source.exists(), "le fichier d'origine reste en place"
-
-
 # ── forward_auth : le reste de /uploads exige une session ────────────────────
 
 

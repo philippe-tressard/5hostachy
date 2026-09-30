@@ -11,23 +11,16 @@ Pire, une absence de ligne confondait trois causes très différentes : pas exé
 échouée, ou exécutée sans avoir pu s'enregistrer. C'est le « battement manquant »
 de standards/04-fiabilite-des-controles.md §4, appliqué à l'interface.
 
-Ces tests verrouillent le contrat : les nouveaux champs existent, ils ont des
-défauts rétrocompatibles, et une exécution attendue mais absente est signalée
-`manquante` au lieu de passer pour un silence normal.
+Ces tests verrouillent le contrat : les nouveaux champs existent, avec des
+défauts rétrocompatibles, et chaque tâche attendue a une périodicité tenable et
+un producteur. La règle qui déclare une exécution `manquante` se teste, elle, là
+où elle vit (`utils/sante_taches.py`) : `test_sante_taches_periodes.py`.
 """
 
 import pytest
-from datetime import datetime, timedelta
 
 from app.models.core import HistoriqueMaintenance, PorteeExecution, TachePlanifiee
 from tests.conftest import scripts_shell_versionnes
-
-
-def test_champs_nouveaux_presents():
-    """Le modèle porte de quoi distinguer la tâche, le nœud et la portée."""
-    champs = HistoriqueMaintenance.model_fields
-    for attendu in ("tache", "noeud", "portee", "details"):
-        assert attendu in champs, f"champ {attendu} absent du modèle"
 
 
 def test_defauts_retrocompatibles():
@@ -120,7 +113,13 @@ def test_export_hors_site_est_attendu_avec_une_cadence_tenable():
     """
     from app.routers.admin import _PERIODICITE_ATTENDUE_H
 
-    assert _PERIODICITE_ATTENDUE_H["export_hors_site"] == 7 * 24
+    #  La clé se lit dans l'énumération, jamais recopiée : un renommage de
+    #  `TachePlanifiee.export_hors_site` qui oublierait ce tableau rendrait la
+    #  copie hors site invisible — et le mail d'alerte contredirait l'écran.
+    cle = TachePlanifiee.export_hors_site.value
+    assert _PERIODICITE_ATTENDUE_H.get(cle) == 7 * 24, (
+        f"« {cle} » attendue toutes les {_PERIODICITE_ATTENDUE_H.get(cle)} h, pas 7 × 24"
+    )
 
 
 def test_periodicite_exclut_les_crons_a_haute_frequence():
@@ -228,29 +227,6 @@ def test_retention_bornee_et_purgee_in_process():
     assert "_purger_anciens_rapports" in source, (
         "la rétention doit être appliquée à chaque rapport reçu"
     )
-
-
-def test_retard_declenche_le_statut_manquante():
-    """Une exécution plus vieille que sa période + tolérance est en retard.
-
-    C'est le cœur du besoin : le 26/07/2026, la maintenance avait bien tourné sur
-    les deux nœuds sans qu'aucune ligne n'apparaisse — un trou qu'aucun contrôle
-    ne signalait. Reproduit ici la règle de décision, sans base.
-    """
-    from app.routers.admin import _PERIODICITE_ATTENDUE_H, _TOLERANCE_H
-
-    periode = _PERIODICITE_ATTENDUE_H["maintenance"]
-    maintenant = datetime(2026, 8, 2, 12, 0, 0)
-
-    a_lheure = (maintenant - timedelta(hours=periode - 1)).timestamp()
-    en_retard = (maintenant - timedelta(hours=periode + _TOLERANCE_H + 1)).timestamp()
-
-    def est_manquante(horodatage: float) -> bool:
-        age_h = (maintenant.timestamp() - horodatage) / 3600
-        return age_h > periode + _TOLERANCE_H
-
-    assert not est_manquante(a_lheure), "une exécution récente ne doit pas être manquante"
-    assert est_manquante(en_retard), "une exécution trop ancienne doit être signalée"
 
 
 # ── Deux faux positifs constatés à l'écran le 09/08/2026 ────────────────────

@@ -44,7 +44,7 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
-from app.utils.archivage import est_archivable, perime_le
+from app.utils.archivage import REGLES, est_archivable, perime_le
 
 
 class _Pub:
@@ -115,12 +115,6 @@ def test_un_debut_sans_fin_perime_au_debut():
     assert perime_le(_Pub(debut=datetime(2026, 9, 24, 18))) == date(2026, 9, 24)
 
 
-def test_la_derivation_ne_lit_QUE_l_objet():
-    """Pure : pas de base, pas d'horloge. C'est ce qui la rend éprouvable."""
-    pub = _Pub(fin=datetime(2026, 9, 30, 12))
-    assert perime_le(pub) == perime_le(pub)
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  L'effet : elle quitte les listes actives
 # ══════════════════════════════════════════════════════════════════════════════
@@ -163,7 +157,20 @@ def test_l_archivage_manuel_prime_toujours():
     assert est_archivable("ticket", pub, maintenant=AUJOURDHUI) is True
 
 
-@pytest.mark.parametrize("type_objet", ["ticket", "evenement", "annonce"])
+#: Tous les types déclarés, sauf celui qui périme. Lu dans `REGLES` et non
+#: recopié : la liste écrite à la main nommait `evenement`, parti le 23/09/2026
+#: (#1092), et ce cas-là sautait à chaque exécution sans que rien le dise.
+_TYPES_QUI_NE_PERIMENT_PAS = sorted(t for t in REGLES if t != "actualite")
+
+
+def test_la_liste_des_autres_types_n_est_pas_vide():
+    """Cas zéro : un paramétrage vide rendrait le test ci-dessous vert sans rien lire."""
+    assert "actualite" in REGLES, "la règle « actualite » a disparu de REGLES"
+    assert "ticket" in _TYPES_QUI_NE_PERIMENT_PAS
+    assert len(_TYPES_QUI_NE_PERIMENT_PAS) >= 5, _TYPES_QUI_NE_PERIMENT_PAS
+
+
+@pytest.mark.parametrize("type_objet", _TYPES_QUI_NE_PERIMENT_PAS)
 def test_les_autres_objets_ne_periment_pas(type_objet):
     """🔴 Une AFFAIRE ne périme jamais — elle se clôt.
 
@@ -175,12 +182,7 @@ def test_les_autres_objets_ne_periment_pas(type_objet):
     Ce test vérifie que la règle de péremption ne s'est pas répandue aux autres
     types par un `getattr` trop large.
     """
-    from app.utils.archivage import REGLES
-
-    regle = REGLES.get(type_objet)
-    if regle is None:
-        pytest.skip(f"{type_objet} n'est pas déclaré")
-    assert regle.champs_peremption == (), (
+    assert REGLES[type_objet].champs_peremption == (), (
         f"{type_objet} périmerait tout seul : seule une ACTUALITÉ le fait."
     )
 
@@ -226,12 +228,6 @@ def test_la_derivation_traverse_le_schema_de_lecture():
     lu = _lu(categorie="actualite", debut=datetime(2026, 9, 30, 18), fin=datetime(2026, 9, 30, 21))
     assert lu.fin == datetime(2026, 9, 30, 21)
     assert lu.perime_le == date(2026, 9, 30)
-
-
-def test_une_actualite_datee_rend_sa_peremption_sans_rien_saisir():
-    """La deuxième famille : `debut`/`fin` suffisent, l'auteur n'ajoute rien."""
-    lu = _lu(categorie="actualite", debut=datetime(2026, 9, 24, 9), fin=datetime(2026, 9, 24, 12))
-    assert lu.perime_le == date(2026, 9, 24)
 
 
 def test_une_affaire_suivie_datee_ne_perime_pas():

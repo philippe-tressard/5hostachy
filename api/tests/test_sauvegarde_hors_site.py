@@ -34,7 +34,7 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import HistoriqueMaintenance, TachePlanifiee
-from app.utils import health_monitor
+from app.utils import health_monitor, horloge
 from app.utils.backup import PREFIXE_ARCHIVE, horodatage_archive
 
 RACINE = Path(__file__).resolve().parents[2]
@@ -90,7 +90,7 @@ def test_horodatage_illisible_rend_none_sans_lever():
 
 
 def test_archive_fraiche_ne_signale_rien(repertoire_sauvegardes):
-    fichier = repertoire_sauvegardes / nom_archive(datetime.utcnow() - timedelta(hours=3))
+    fichier = repertoire_sauvegardes / nom_archive(horloge.maintenant() - timedelta(hours=3))
     fichier.write_bytes(b"contenu")
     assert health_monitor._check_archive_locale() == []
 
@@ -104,14 +104,14 @@ def test_absence_de_fichier_est_signalee(repertoire_sauvegardes):
 
 
 def test_archive_vide_est_signalee(repertoire_sauvegardes):
-    (repertoire_sauvegardes / nom_archive(datetime.utcnow())).write_bytes(b"")
+    (repertoire_sauvegardes / nom_archive(horloge.maintenant())).write_bytes(b"")
     anomalies = health_monitor._check_archive_locale()
     assert len(anomalies) == 1
     assert "VIDE" in anomalies[0]
 
 
 def test_archive_perimee_est_signalee(repertoire_sauvegardes):
-    vieille = datetime.utcnow() - timedelta(hours=50)
+    vieille = horloge.maintenant() - timedelta(hours=50)
     (repertoire_sauvegardes / nom_archive(vieille)).write_bytes(b"contenu")
     anomalies = health_monitor._check_archive_locale()
     assert len(anomalies) == 1
@@ -132,8 +132,8 @@ def test_nom_non_datable_vaut_anomalie_pas_ok(repertoire_sauvegardes):
 def enregistrer_export(
     session, *, quand=None, archive_quand=None, statut="succes", integrite="ok", erreur=None
 ):
-    quand = quand or datetime.utcnow()
-    archive_quand = archive_quand or datetime.utcnow()
+    quand = quand or horloge.maintenant()
+    archive_quand = archive_quand or horloge.maintenant()
     ligne = HistoriqueMaintenance(
         tache=TachePlanifiee.export_hors_site.value,
         noeud="rpi1",
@@ -167,8 +167,8 @@ def test_export_recent_et_archive_fraiche_ne_signale_rien(session):
 def test_export_ancien_est_signale(session):
     enregistrer_export(
         session,
-        quand=datetime.utcnow() - timedelta(days=20),
-        archive_quand=datetime.utcnow() - timedelta(days=20),
+        quand=horloge.maintenant() - timedelta(days=20),
+        archive_quand=horloge.maintenant() - timedelta(days=20),
     )
     anomalies = health_monitor._check_export_hors_site(session)
     assert any("Aucun export hors site depuis" in a for a in anomalies)
@@ -182,7 +182,7 @@ def test_export_fidele_mais_archive_perimee(session):
     seulement que « l'export a tourné » déclarerait la situation saine.
     """
     enregistrer_export(
-        session, quand=datetime.utcnow(), archive_quand=datetime.utcnow() - timedelta(days=21)
+        session, quand=horloge.maintenant(), archive_quand=horloge.maintenant() - timedelta(days=21)
     )
     anomalies = health_monitor._check_export_hors_site(session)
     assert any("recopie une archive périmée" in a for a in anomalies)
@@ -206,21 +206,6 @@ def test_integrite_non_verifiee_est_signalee(session):
     enregistrer_export(session, integrite="inconnue")
     anomalies = health_monitor._check_export_hors_site(session)
     assert any("intégrité" in a for a in anomalies)
-
-
-# ── Pas de seuil dupliqué ────────────────────────────────────────────────────
-
-
-def test_seuil_partage_avec_ecran_de_sante():
-    """Le mail d'alerte et l'écran Admin doivent parler du même délai.
-
-    Deux constantes séparées divergeraient au premier ajustement, et l'e-mail
-    contredirait alors l'écran sans que rien ne le signale.
-    """
-    from app.routers.admin import _PERIODICITE_ATTENDUE_H
-
-    assert TachePlanifiee.export_hors_site.value in _PERIODICITE_ATTENDUE_H
-    assert _PERIODICITE_ATTENDUE_H[TachePlanifiee.export_hors_site.value] == 7 * 24
 
 
 # ── Couplage implicite script shell ⇄ contrôle Python ────────────────────────

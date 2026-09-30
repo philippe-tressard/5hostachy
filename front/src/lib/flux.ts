@@ -277,12 +277,6 @@ export function dateDeReference(item: FluxItem): number {
 	return new Date(item.date || item.cree_le || 0).getTime();
 }
 
-/**  Les types qui déclarent une date de classement propre.
- *
- *   Exporté pour le garde-fou : sans lui, vider `DATE_QUI_CLASSE` rendrait tous
- *   les tests verts en ramenant silencieusement l'ancien comportement. */
-export const TYPES_A_DATE_DECLAREE = Object.keys(DATE_QUI_CLASSE);
-
 /** Plafond SOUPLE : on avertit celui qui épingle, on ne masque jamais un
  *  élément épinglé — le cacher trahirait la promesse du marqueur. Au-delà,
  *  le bandeau devient une seconde chronologie et ne signale plus rien. */

@@ -69,6 +69,11 @@ def test_il_DETECTE_une_migration_restee_sans_effet():
     La ligne porte le texte de mars 2026 ; le code, celui de septembre. Le
     contrôle doit nommer les trois variables perdues — sans quoi l'arrivant et le
     conseil recevraient la version du syndic, et personne ne le saurait.
+
+    C'est aussi l'autre moitié de `test_il_SE_TAIT_sur_une_simple_reformulation` :
+    quand une PARTIE des variables est là, c'est bien une migration restée sans
+    effet — et le message doit le dire, pas crier au bouchon. Sans ce cas, on
+    aurait remplacé une cause affirmée par une autre.
     """
     ancien = (
         "{{ prefixe_copro }}Nouvel arrivant",
@@ -80,6 +85,8 @@ def test_il_DETECTE_une_migration_restee_sans_effet():
     for perdue in ("role_destinataire", "lien_consignes", "destinataire"):
         assert perdue in ecarts[0], f"`{perdue}` n'est pas nommée dans l'alerte"
     assert "WHERE" in ecarts[0], "l'alerte ne dit pas où chercher la cause"
+    assert "migration" in ecarts[0].lower(), "une dérive PARTIELLE doit accuser la migration"
+    assert "BOUCHON" not in ecarts[0], "une dérive partielle n'est pas un bouchon"
 
 
 def test_il_DETECTE_une_variable_que_personne_ne_fournit():
@@ -225,22 +232,6 @@ def test_il_NOMME_le_modele_BOUCHON_au_lieu_d_accuser_une_migration():
         "l'alerte ne montre pas ce qui est SERVI : il faut encore ouvrir l'écran."
     )
     assert "Par défaut" in ecarts[0], "l'alerte ne dit pas comment réparer"
-
-
-def test_une_dérive_PARTIELLE_accuse_toujours_la_migration():
-    """L'autre moitié : quand une partie des variables est là, c'est bien une
-    migration restée sans effet — et le message doit le dire.
-
-    Sans ce cas, on aurait remplacé une cause affirmée par une autre.
-    """
-    ancien = (
-        "{{ prefixe_copro }}Nouvel arrivant",
-        "<p>{{ nom_complet }} — {{ batiment }} — {{ ancien_resident }}</p>",
-    )
-    ecarts = controler(_Session([_Ligne("nouvel_arrivant_bal", *ancien)]))
-    assert len(ecarts) == 1
-    assert "migration" in ecarts[0].lower()
-    assert "BOUCHON" not in ecarts[0]
 
 
 def test_il_NOMME_le_jinja_invalide_au_lieu_d_inventer_une_migration():

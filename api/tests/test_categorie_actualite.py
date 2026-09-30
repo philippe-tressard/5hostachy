@@ -75,10 +75,6 @@ def _creer(session, user, **champs):
 # ── La catégorie, et qui la pose ────────────────────────────────────────────
 
 
-def test_la_categorie_existe():
-    assert CategorieTicket("actualite") is CategorieTicket.actualite
-
-
 def test_un_resident_ne_publie_pas_d_actualite(session):
     resident = _compte(session)
     with pytest.raises(HTTPException) as refus:

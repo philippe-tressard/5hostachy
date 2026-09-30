@@ -1,23 +1,24 @@
 """Le drapeau `confidentiel` d'un ticket — qui peut le poser, et où il arrive.
 
-## 🔴 Pourquoi (#710, étape 1)
+## 🔴 Pourquoi (#710)
 
-L'ouverture des tickets aux résidents de leur périmètre est décidée. Elle rendrait
-lisibles de tout un bâtiment des affaires qui parlent de personnes.
+L'ouverture des tickets aux résidents de leur périmètre rendait lisibles de tout
+un bâtiment des affaires qui parlent de personnes.
 
 > **Ouvrir la lecture sans pouvoir refermer un cas particulier est un choix
 > irréversible sur des données qui parlent de personnes.**
 
-D'où l'ordre retenu : le drapeau d'abord, l'ouverture ensuite.
+D'où l'ordre retenu : le drapeau d'abord, l'ouverture ensuite. Il est désormais
+LU par `ticket_visible()` : un ticket confidentiel se referme pour le voisin, pas
+pour son auteur ni pour le conseil (`test_tickets_visibilite_perimetre.py`).
 
-⚠️ **À ce stade il ne referme RIEN.** `ticket_visible()` est encore binaire —
-auteur, personne pour qui le ticket a été saisi, CS, admin — et personne de neuf
-ne voit rien de plus. La règle qui LIT le drapeau viendra avec l'ouverture, dans
-le même lot qu'elle : une règle posée d'avance serait inerte, et une règle inerte
-est indistinguable d'une règle absente.
+Ce que ce fichier éprouve : **le défaut** (ouvert) et **qui a le droit de poser
+le drapeau** — le conseil, jamais l'auteur. Qu'il arrive jusqu'à l'API est tenu,
+pour toutes les colonnes à la fois, par
+`test_ticket_read_rend_le_modele.py::test_chaque_colonne_partagee_revient_telle_quelle`.
 
-Ce qui est vérifiable dès maintenant, et que ce fichier éprouve : **qui a le droit
-de poser le drapeau**, et **qu'il arrive bien jusqu'à l'API**.
+⚠️ `Publication.confidentiel` (#347) a disparu avec l'objet le 30/09/2026 (#1177) :
+une actualité est un ticket, et porte donc ce drapeau-ci.
 """
 
 from __future__ import annotations
@@ -30,7 +31,6 @@ from sqlmodel import Session, SQLModel
 
 from app.database import engine
 from app.models.core import StatutTicket, Ticket, Utilisateur
-from app.routers.tickets.commun import ticket_read
 from app.routers.tickets.mise_a_jour import update_ticket
 from app.schemas import TicketUpdate
 from tests.purge_test import purger_ligne
@@ -77,7 +77,7 @@ def contexte():
 
 
 def test_un_ticket_nest_pas_confidentiel_par_defaut(contexte):
-    """Même choix que `Publication.confidentiel` (#347) — une seule réponse."""
+    """Ouvert par défaut : refermer est une décision du conseil, pas un état initial."""
     _session, ticket, _auteur, _cs = contexte
     assert ticket.confidentiel is False
 
@@ -111,25 +111,3 @@ def test_lauteur_ne_peut_PAS_refermer_son_propre_ticket(contexte):
     assert e.value.status_code == 403
     session.refresh(ticket)
     assert ticket.confidentiel is False, "un refus n'écrit rien"
-
-
-def test_le_drapeau_arrive_jusqua_lapi(contexte):
-    """⚠️ Le défaut SYMÉTRIQUE de celui du 02/09/2026.
-
-    Un champ passé à un schéma qui ne le déclare pas est ignoré par Pydantic —
-    `test_schemas_champs.py` l'attrape. Un champ DÉCLARÉ et jamais rempli, lui,
-    prend sa valeur par défaut : ici `False`, c'est-à-dire « aucun ticket n'est
-    confidentiel », sur une API qui a l'air de répondre.
-
-    Ce test-ci est le seul qui puisse le voir.
-    """
-    session, ticket, _auteur, cs = contexte
-    assert ticket_read(ticket, session).confidentiel is False
-    update_ticket(
-        ticket.id, TicketUpdate(confidentiel=True), BackgroundTasks(), session=session, user=cs
-    )
-    session.refresh(ticket)
-    assert ticket_read(ticket, session).confidentiel is True, (
-        "le drapeau ne sort pas de `ticket_read` — il est déclaré au schéma mais "
-        "jamais rempli, donc figé à False pour tout le monde"
-    )

@@ -712,7 +712,10 @@ messages **remis** (double coche) y figuraient en « incertain — réponse 500 
 bridge ». Le bridge rend désormais **`202 Accepted`** avec `envoye: true` quand
 le message est parti sans accusé, et l’API le traduit en clair. Verrouillé par
 `api/tests/test_whatsapp_verdict_envoi.py`, qui éprouve les trois verdicts côte
-à côté — un test qui ne vérifierait qu’un seul ne prouverait pas qu’il distingue.
+à côte — un test qui ne vérifierait qu’un seul ne prouverait pas qu’il distingue —,
+et par la table `test_classification_des_reponses_du_bridge`
+(`api/tests/test_whatsapp_scheduler.py`), qui exige que la raison d’un 202 dise
+« émis » et jamais « 500 ».
 
 #### Incident du 24/07/2026 — bridge bloqué 2h23, message mensuel manqué
 Le message WhatsApp planifié du 4ᵉ samedi (18h00) a échoué : le bridge était en

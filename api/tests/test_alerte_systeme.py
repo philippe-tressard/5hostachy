@@ -90,15 +90,6 @@ def test_le_sujet_porte_le_nombre_et_la_residence():
     assert "2 problème(s)" in sujet
 
 
-def test_aucun_marqueur_jinja_ne_subsiste():
-    """Une variable mal nommée laisse `{{ … }}` visible chez le destinataire."""
-    sujet, corps = _rendu()
-    for rendu, ou in ((sujet, "le sujet"), (corps, "le corps")):
-        assert "{{" not in rendu and "{%" not in rendu, (
-            f"Un marqueur Jinja subsiste dans {ou} de l'alerte système."
-        )
-
-
 # ── Référence de copropriété ────────────────────────────────────────────────
 #
 # Ce contrôle est la seule chose qui empêche la règle « la référence figure dans

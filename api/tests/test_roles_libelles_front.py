@@ -17,6 +17,12 @@ pouvaient pas la voir : celle des libellés serveur cherche les chaînes
 **canoniques**, et les copies fautives écrivaient des **abrégés**. Une copie qui
 paraphrase devient invisible à un contrôle qui cherche le texte. D'où un contrôle
 qui regarde la **forme** — les clés — et pas les valeurs.
+
+Les trois questions tiennent en DEUX balayages pilotés par table (30/09/2026) :
+`COLONNES` pour la première — chaque colonne de `roles.ts` couvre tous les
+états —, `TABLES_INTERDITES` pour les deux autres — aucune table indexée par des
+rôles ou des statuts hors de `roles.ts`. Chacun nomme tous ses écarts d'un coup ;
+les deux auto-tests « refuse bien » restent à part, un par forme de valeur.
 """
 
 from __future__ import annotations
@@ -49,65 +55,6 @@ from tests.roles_libelles_lecture import (
 #  Les fichiers du front autorisés à écrire `badge-<teinte>` en face d'une clé
 #  de rôle ou de statut. Un seul, et c'est le sujet.
 SOURCE_BADGES = "src/lib/roles.ts"
-
-
-def test_chaque_libelle_de_role_ou_statut_a_une_TEINTE():
-    """Un rôle libellé mais sans teinte s'affiche en gris — ce qui se lit comme
-    une décision, alors que c'est un oubli.
-
-    C'est exactement ce qui était arrivé à `/profil` : deux rôles absents de sa
-    copie, rendus gris par le repli, sans que rien ne le dise.
-    """
-    ts = ROLES_TS.read_text(encoding="utf-8")
-    libelles_role = table_ts(ts, "ROLE", "libelle")
-    libelles_statut = table_ts(ts, "STATUT", "libelle")
-    badges_role = table_ts(ts, "ROLE", "badge")
-    badges_statut = table_ts(ts, "STATUT", "badge")
-
-    #  Cas zéro : un extracteur qui ne trouve plus rien conclurait au vert sur
-    #  zéro comparaison (`standards/04` §2).
-    assert len(libelles_role) >= 5 and len(badges_role) >= 5, "extraction des rôles cassée"
-    assert len(libelles_statut) >= 7 and len(badges_statut) >= 7, "extraction des statuts cassée"
-
-    assert set(badges_role) == set(libelles_role), (
-        "BADGE_ROLE et LIBELLES_ROLE ne couvrent pas les mêmes rôles : "
-        f"{set(libelles_role) ^ set(badges_role)}"
-    )
-    assert set(badges_statut) == set(libelles_statut), (
-        "BADGE_STATUT et LIBELLES_STATUT ne couvrent pas les mêmes statuts : "
-        f"{set(libelles_statut) ^ set(badges_statut)}"
-    )
-
-
-def test_aucune_TEINTE_de_role_n_est_REECRITE_dans_un_ecran():
-    """Le garde-fou contre la troisième table de badges.
-
-    ⚠️ La portée fait partie du contrôle, comme au-dessus : ce test ne cherche
-    pas « badge- » en général — la classe est employée partout, légitimement. Il
-    cherche une TABLE qui associe plusieurs clés de rôle ou de statut à une
-    teinte, c'est-à-dire la forme exacte d'une copie :
-
-        copropriétaire_bailleur: 'badge-purple',
-        locataire: 'badge-gray',
-
-    Une clé qui reçoit un badge dans un ternaire (`x === 'actif' ? 'badge-green'
-    : …`) n'est pas visée : c'est une condition sur une valeur, pas une table.
-    """
-    ts = ROLES_TS.read_text(encoding="utf-8")
-    cles = set(table_ts(ts, "ROLE", "libelle")) | set(table_ts(ts, "STATUT", "libelle"))
-    assert len(cles) >= 12, "extraction des clés cassée — le contrôle ne mesurerait rien"
-
-    fautifs = []
-    for relatif, source in fichiers_du_front(sauf=SOURCE_BADGES):
-        for ligne, entrees in tables_par_cle(source, cles, VALEUR_TEINTE):
-            fautifs.append(f"{relatif}:{ligne} — {len(entrees)} clés : {entrees[0]}…")
-
-    assert not fautifs, (
-        "une table de teintes de rôle ou de statut est réécrite hors de "
-        "`$lib/roles.ts` :\n  "
-        + "\n  ".join(fautifs)
-        + "\n  → employer `badgeRole()` / `badgeStatut()`."
-    )
 
 
 def test_le_garde_fou_des_TEINTES_refuse_bien_une_reecriture():
@@ -200,44 +147,6 @@ SOURCE_LIBELLES = "src/lib/roles.ts"
 _CLES_PARTAGEES_AVEC_TYPE_LIEN = {"locataire", "mandataire"}
 
 
-def test_la_table_ABREGEE_couvre_tout_ce_que_la_table_complete_couvre():
-    """Une clé absente s'imprime en brut — c'est le défaut exact de #828.
-
-    Même contrat que `BADGE_ROLE` et `BADGE_STATUT` : une clé par entrée de
-    `LIBELLES_STATUT`, sans exception.
-    """
-    ts = ROLES_TS.read_text(encoding="utf-8")
-    complets = table_ts(ts, "STATUT", "libelle")
-    abreges = table_ts(ts, "STATUT", "abrege")
-
-    #  Cas zéro : un extracteur cassé conclurait au vert sur zéro comparaison.
-    assert len(complets) >= 7 and len(abreges) >= 7, "extraction cassée"
-
-    assert set(abreges) == set(complets), (
-        "LIBELLES_STATUT_ABREGE et LIBELLES_STATUT ne couvrent pas les mêmes "
-        f"statuts : {set(complets) ^ set(abreges)}. Une clé manquante n'est pas "
-        "rendue vide — elle s'affiche en brut (`admin_technique`)."
-    )
-
-
-def test_aucun_LIBELLE_de_statut_n_est_REECRIT_dans_un_ecran():
-    """Le garde-fou contre la quatrième table de libellés de statut."""
-    ts = ROLES_TS.read_text(encoding="utf-8")
-    cles = set(table_ts(ts, "STATUT", "libelle")) - _CLES_PARTAGEES_AVEC_TYPE_LIEN
-    assert len(cles) >= 5, "extraction des clés cassée — le contrôle ne mesurerait rien"
-
-    fautifs = []
-    for relatif, source in fichiers_du_front(sauf=SOURCE_LIBELLES):
-        for ligne, entrees in tables_par_cle(source, cles, VALEUR_CHAINE):
-            fautifs.append(f"{relatif}:{ligne} — {len(entrees)} clés : {entrees[0]}…")
-
-    assert not fautifs, (
-        "une table indexée par des statuts est réécrite hors de `$lib/roles.ts` :\n  "
-        + "\n  ".join(fautifs)
-        + "\n  → employer `libelleStatut()` ou `LIBELLES_STATUT_ABREGE`."
-    )
-
-
 def test_le_garde_fou_des_LIBELLES_ABREGES_refuse_bien_une_reecriture():
     """Cas zéro, dans les deux sens — dont la PARAPHRASE, que rien d'autre ne voit.
 
@@ -280,4 +189,111 @@ def test_le_garde_fou_des_LIBELLES_ABREGES_refuse_bien_une_reecriture():
     assert len(tables_par_cle(homonymie, cles, VALEUR_CHAINE)) == 0, (
         "une table de `TypeLien` n'est pas une table de statuts — les deux mots "
         "communs ne doivent pas suffire à la condamner."
+    )
+
+
+#  ══════════════════════════════════════════════════════════════════════════
+#  LES DEUX BALAYAGES — une table chacun, tous les écarts nommés d'un coup
+#  ══════════════════════════════════════════════════════════════════════════
+
+#: Chaque colonne de `roles.ts` couvre tous les états de sa colonne de
+#: référence : (table, colonne de référence, colonne, minimum d'entrées).
+#:
+#: - une **teinte** manquante s'affiche en gris — ce qui se lit comme une
+#:   décision, alors que c'est un oubli : c'est exactement ce qui était arrivé à
+#:   `/profil`, deux rôles absents de sa copie, rendus gris par le repli (#819) ;
+#: - un **abrégé** manquant n'est pas rendu vide — il s'imprime en brut
+#:   (`admin_technique`) : le défaut exact de #828.
+#:
+#: Le minimum est le cas zéro de chaque ligne : un extracteur qui ne trouve plus
+#: rien conclurait au vert sur zéro comparaison (`standards/04` §2).
+COLONNES = (
+    ("ROLE", "libelle", "badge", 5),
+    ("STATUT", "libelle", "badge", 7),
+    ("STATUT", "libelle", "abrege", 7),
+)
+
+
+def test_chaque_colonne_de_roles_ts_couvre_tous_les_etats():
+    ts = ROLES_TS.read_text(encoding="utf-8")
+    ecarts = []
+    for ancre, reference, colonne, minimum in COLONNES:
+        attendus = table_ts(ts, ancre, reference)
+        trouves = table_ts(ts, ancre, colonne)
+        if len(attendus) < minimum or len(trouves) < minimum:
+            ecarts.append(
+                f"  {ancre}.{colonne} : extraction cassée ({len(attendus)} « {reference} », "
+                f"{len(trouves)} « {colonne} », {minimum} attendus au moins)"
+            )
+        elif set(trouves) != set(attendus):
+            ecarts.append(
+                f"  {ancre}.{colonne} ne couvre pas les mêmes états que {ancre}.{reference} : "
+                f"{sorted(set(attendus) ^ set(trouves))}"
+            )
+    assert not ecarts, (
+        "Une colonne de `roles.ts` ne couvre pas tous les états — une teinte "
+        "manquante rend un badge gris, un abrégé manquant s'imprime en brut :\n" + "\n".join(ecarts)
+    )
+
+
+def _cles_roles_et_statuts(ts: str) -> set[str]:
+    return set(table_ts(ts, "ROLE", "libelle")) | set(table_ts(ts, "STATUT", "libelle"))
+
+
+def _cles_statuts_sans_type_lien(ts: str) -> set[str]:
+    return set(table_ts(ts, "STATUT", "libelle")) - _CLES_PARTAGEES_AVEC_TYPE_LIEN
+
+
+#: Les tables qu'aucun écran ne réécrit : (ce que la table porte, seul fichier
+#: autorisé, clés cherchées, forme de la valeur, minimum de clés, remède).
+#:
+#: ⚠️ La portée fait partie du contrôle : il ne cherche pas « badge- » ni une
+#: chaîne en général — employées partout, légitimement —, mais une TABLE qui
+#: associe plusieurs clés de rôle ou de statut à une valeur, c'est-à-dire la
+#: forme exacte d'une copie. Une clé qui reçoit un badge dans un ternaire
+#: (`x === 'actif' ? 'badge-green' : …`) n'est pas visée : c'est une condition
+#: sur une valeur, pas une table.
+TABLES_INTERDITES = (
+    (
+        "teintes de rôle ou de statut",
+        SOURCE_BADGES,
+        _cles_roles_et_statuts,
+        VALEUR_TEINTE,
+        12,
+        "`badgeRole()` / `badgeStatut()`",
+    ),
+    (
+        "libellés de statut",
+        SOURCE_LIBELLES,
+        _cles_statuts_sans_type_lien,
+        VALEUR_CHAINE,
+        5,
+        "`libelleStatut()` ou `LIBELLES_STATUT_ABREGE`",
+    ),
+)
+
+
+def test_aucune_table_de_role_ou_statut_n_est_REECRITE_dans_un_ecran():
+    """Le garde-fou contre la troisième table de badges (#819) et la quatrième
+    table de libellés de statut (#828) — un seul balayage du front."""
+    ts = ROLES_TS.read_text(encoding="utf-8")
+    fautifs = []
+    for nature, source_unique, cles_de, valeur, minimum, remede in TABLES_INTERDITES:
+        cles = cles_de(ts)
+        if len(cles) < minimum:
+            fautifs.append(
+                f"  {nature} : extraction des clés cassée ({len(cles)} < {minimum}) — "
+                "le contrôle ne mesurerait rien"
+            )
+            continue
+        for relatif, source in fichiers_du_front(sauf=source_unique):
+            for ligne, entrees in tables_par_cle(source, cles, valeur):
+                fautifs.append(
+                    f"  {nature} — {relatif}:{ligne} — {len(entrees)} clés : "
+                    f"{entrees[0]}… → employer {remede}"
+                )
+
+    assert not fautifs, (
+        "Une table indexée par des rôles ou des statuts est réécrite hors de "
+        "`$lib/roles.ts` :\n" + "\n".join(fautifs)
     )

@@ -130,7 +130,9 @@ class _Faux:
         (_Faux(), True),
         (_Faux(interdit=True), False),
         (_Faux(ban=datetime.utcnow() + timedelta(days=10)), False),
-        (_Faux(ban=datetime.utcnow() - timedelta(days=10)), True),  # ban expiré
+        #  Le bord : un ban échu depuis une seconde rouvre l'accès — la suspension
+        #  probatoire a un terme, et il doit compter.
+        (_Faux(ban=datetime.utcnow() - timedelta(seconds=1)), True),  # ban expiré
     ],
 )
 def test_les_deux_formes_disent_la_meme_chose(utilisateur, attendu_ouvert):
@@ -146,14 +148,6 @@ def test_les_deux_formes_disent_la_meme_chose(utilisateur, attendu_ouvert):
         assert excinfo.value.status_code == 403
         # Le message levé EST le motif : pas de reformulation en chemin.
         assert excinfo.value.detail == motif_de_refus(utilisateur)
-
-
-def test_le_ban_expire_rouvre_l_acces():
-    """Le cas zéro de la suspension probatoire : elle a un terme, il doit compter."""
-    from app.utils.communaute import acces_ouvert
-
-    hier = datetime.utcnow() - timedelta(seconds=1)
-    assert acces_ouvert(_Faux(ban=hier)) is True
 
 
 # ---------------------------------------------------------------------------

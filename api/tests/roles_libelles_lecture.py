@@ -59,11 +59,12 @@ def table_ts(source: str, ancre: str, attribut: str) -> dict[str, str]:
     15/09/2026 (`$lib/table-statuts`) : une entrée par état, tous ses attributs
     ensemble, et le compilateur TypeScript refuse l'entrée incomplète.
 
-    ⚠️ Les trois contrôles qui comparaient ces tables entre elles vérifient
-    donc désormais une propriété que la STRUCTURE porte. Ils ne sont pas
-    devenus inutiles : ils échoueraient le jour où quelqu'un défait la fonte —
-    et c'est exactement ce qu'ils ont fait pendant celle-ci, en annonçant une
-    extraction incomplète plutôt qu'un vert sur zéro comparaison.
+    ⚠️ Les trois comparaisons de ces tables entre elles — réunies depuis le
+    30/09/2026 dans la table `COLONNES` de `test_roles_libelles_front.py` —
+    vérifient donc désormais une propriété que la STRUCTURE porte. Elles ne
+    sont pas devenues inutiles : elles échoueraient le jour où quelqu'un défait
+    la fonte — et c'est exactement ce qu'elles ont fait pendant celle-ci, en
+    annonçant une extraction incomplète plutôt qu'un vert sur zéro comparaison.
     """
     debut = source.index(f"const {ancre} = parAttribut({{")
     corps = source[debut : source.index("});", debut)]

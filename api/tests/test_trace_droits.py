@@ -16,7 +16,7 @@ from app.models.core import RoleUtilisateur, Ticket, TicketEvolution
 from app.routers.tickets import evolutions
 from app.schemas_tickets import TicketEvolutionCreate
 from app.utils.visibility import trace_droits
-from tests.test_intervenant_affaire import _compte, _creer, session  # noqa: F401
+from tests.aides_affaire import _compte, _creer, session  # noqa: F401
 
 _VIDE = "par défaut de la catégorie"
 
