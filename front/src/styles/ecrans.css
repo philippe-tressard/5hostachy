@@ -719,3 +719,14 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	font-size: var(--fs-sm);
 	margin-left: 0.35rem;
 }
+
+/*  Une rangée d'actions : boutons alignés, qui passent à la ligne si besoin.
+    Sa règle de base était écrite DANS `admin/+page.svelte`, donc scopée à la
+    page : les onglets d'import et de modèles d'e-mail l'employaient sans elle
+    (#779, 30/09/2026). La variante mobile vit dans `normes.css`. */
+.action-row {
+	display: flex;
+	gap: 0.4rem;
+	flex-wrap: wrap;
+	align-items: center;
+}

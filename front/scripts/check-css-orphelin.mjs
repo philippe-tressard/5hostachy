@@ -181,7 +181,15 @@ const aveugles = tous.filter((f) =>
 //  ✅ 28 depuis le 29/09/2026 : l'annuaire a quitté `espace-cs` (#779), et la
 //  page redevient mesurable — la classe interpolée qui l'aveuglait est partie
 //  avec lui dans des composants qui n'en portent pas.
-const PLAFOND_NON_MESURES = 28;
+//
+//  🔴 29 depuis le 30/09/2026 — même raison qu'au 11 et au 12/09 : l'onglet
+//  Utilisateurs a été EXTRAIT de `admin/+page.svelte` (#779) avec ses deux classes
+//  tirées d'une TABLE (`badge {badgeStatut(…)}`, `badge {d.cls}`), qui ne se
+//  convertissent pas en `class:` sans recopier la table. La page reste aveugle
+//  pour les siennes (onglet Comptes) : aucune interpolation nouvelle, une dette
+//  répartie sur deux fichiers. La classe LOCALE `utag-{e}` du même bloc, elle, a
+//  été convertie en `class:`.
+const PLAFOND_NON_MESURES = 29;
 
 const mesures = tous.length - aveugles.length;
 

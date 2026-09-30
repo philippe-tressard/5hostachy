@@ -169,7 +169,8 @@ _FRONT_SRC = pathlib.Path(__file__).resolve().parents[2] / "front" / "src"
 
 _EXCEPTIONS_FRONT = {
     "lib/api/types.ts": "déclaration des champs — ne décide de rien",
-    "routes/(app)/admin/+page.svelte": "écran d'administration : pose et lève les bans",
+    #  Suivie du balisage le 30/09/2026 (#779) : l'onglet Utilisateurs a quitté la page.
+    "lib/components/OngletUtilisateurs.svelte": "écran d'administration : pose et lève les bans",
 }
 
 

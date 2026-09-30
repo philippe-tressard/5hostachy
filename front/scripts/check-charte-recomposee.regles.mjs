@@ -67,8 +67,6 @@ export const TOLERANCES = {
 		'colonnes de 180 px et gap resserré, même raison',
 	'lib/components/OngletCopropriete.svelte::form-grid':
 		'`auto-fill` et non `auto-fit` — les champs ne s’étirent pas quand il en manque',
-	'routes/(app)/admin/+page.svelte::form-grid':
-		'deux colonnes fixes : cet écran de configuration apparie des libellés et des valeurs',
 	'lib/components/AnnuaireConseil.svelte::form-grid':
 		'colonnes de 150 px et gap resserré — la fiche d’un membre du CS tient des champs très courts',
 	//  ✅ La « pile » de `FormulaireFaq` (la dette nommée ici depuis le 31/08) est
@@ -100,7 +98,9 @@ export const TOLERANCES = {
 		'même raison — la cellule suit l’en-tête, sinon la colonne se décale',
 
 	//  ── Boutons ──────────────────────────────────────────────────────────────
-	'routes/(app)/admin/+page.svelte::btn-sm':
+	//  Suivie du balisage le 30/09/2026 (#779) : l'onglet Utilisateurs a quitté
+	//  la page d'administration pour `OngletUtilisateurs`.
+	'lib/components/OngletUtilisateurs.svelte::btn-sm':
 		'boutons plus denses dans les tableaux de configuration',
 	//  ⚠️ La clé a suivi le BALISAGE le 07/09/2026 : la barre d'actions d'un membre
 	//  est devenue `ActionsMembre.svelte` (le trio « enregistrer · modifier ·

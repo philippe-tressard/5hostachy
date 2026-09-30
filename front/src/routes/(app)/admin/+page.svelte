@@ -1,14 +1,12 @@
 <script lang="ts">
-	import { comparerParNom, nomAffiche } from '$lib/noms';
-	import { aRole } from '$lib/stores/auth';
+	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import OngletMaintenance from '$lib/components/OngletMaintenance.svelte';
 	import { admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
-	import { badgeRole, badgeStatut, badgesDeRoles, libelleRole } from '$lib/roles';
+	import { badgeRole, badgeStatut, libelleRole } from '$lib/roles';
 	import { LIBELLES_STATUT_ABREGE } from '$lib/roles';
-	import FiltresUtilisateurs from '$lib/components/FiltresUtilisateurs.svelte';
-	import { ETIQUETTES_COMPTE } from '$lib/comptes';
+	import OngletUtilisateurs from '$lib/components/OngletUtilisateurs.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	//  Les onglets qui ENREGISTRENT ce que `/config/admin` et `/config/legal` ont lu.
@@ -28,9 +26,6 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { defautsDePage } from '$lib/pages';
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import Modale from '$lib/components/Modale.svelte';
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import FormulaireUtilisateur from '$lib/components/FormulaireUtilisateur.svelte';
 	import { CONFIG_SITE_DEFAUT, ecrireConfigSite, lireConfigSite } from '$lib/configSite';
 	import LegalEditor from '$lib/components/LegalEditor.svelte';
 	import OngletCopropriete from '$lib/components/OngletCopropriete.svelte';
@@ -43,7 +38,7 @@
 	import Onglet from '$lib/components/Onglet.svelte';
 	import AccepterRefuser from '$lib/components/AccepterRefuser.svelte';
 	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
-	import { formulaireCompte, validerCompte } from '$lib/comptes';
+	import { validerCompte } from '$lib/comptes';
 	import { messageErreur } from '$lib/erreurs';
 	import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 	import OngletSmtp from '$lib/components/OngletSmtp.svelte';
@@ -125,21 +120,6 @@
 		}
 	}
 
-	async function relancerAutoMatch(userId: number, userNom: string) {
-		try {
-			const res = await adminApi.autoMatchUtilisateur(userId);
-			const lots = res?.auto_match?.lots_resolus ?? 0;
-			const lotsM = res?.auto_match?.lots ?? 0;
-			if (lots > 0) toast('success', `${userNom} — ${lots} lot(s) résolu(s) automatiquement.`);
-			else if (lotsM > 0)
-				toast('success', `${userNom} — ${lotsM} lot(s) matché(s) (en attente de résolution).`);
-			else toast('info', `${userNom} — Aucun import trouvé pour ce nom.`);
-			await loadUtilisateurs();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur auto-match');
-		}
-	}
-
 	//  Commandes d'acces
 	let commandes: any[] = [];
 	let commandesLoading = true;
@@ -182,13 +162,6 @@
 	//  Utilisateurs & rôles
 	let utilisateurs: any[] = [];
 	let utilisateursLoading = true;
-	let userSearch = '';
-	let userStatutFilter = '';
-	let userCompteFilter = '';
-	let roleEnCours: { user: any; role: string; action: 'ajouter' | 'retirer' } | null = null;
-	let editUser: any | null = null;
-	let editForm = formulaireCompte();
-	let deleteConfirm: any | null = null;
 	let batimentsList: { id: number; numero: string }[] = [];
 
 	// Validation modal (comptes en attente + Nouvel Arrivant)
@@ -230,138 +203,15 @@
 		}
 	}
 
-	// Accueil arrivant (utilisateur existant)
-	let accueilModal: { user: any } | null = null;
-	let accueilBatiment = '';
-	let accueilAncienResident = '';
-	let accueilSubmitting = false;
-
-	function openAccueilModal(u: any) {
-		accueilModal = { user: u };
-		accueilBatiment = u.batiment_id ? (batimentsMap[u.batiment_id] ?? '') : '';
-		accueilAncienResident = '';
-	}
-
-	async function confirmerAccueil() {
-		if (!accueilModal) return;
-		const u = accueilModal.user;
-		accueilSubmitting = true;
-		try {
-			await adminApi.accueilArrivant(u.id, {
-				batiment: accueilBatiment || null,
-				ancien_resident: accueilAncienResident || null,
-			});
-			toast('success', `Actions d'accueil envoyées pour ${nomAffiche(u)}.`);
-			accueilModal = null;
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		} finally {
-			accueilSubmitting = false;
-		}
-	}
-
+	//  🔴 L'échec se DIT (#1459) : ce chargement était un `try/finally` sans
+	//  `catch` — un refus laissait la liste vide, sans un mot, et `lint:catch-vide`
+	//  ne pouvait pas le voir faute de `catch`.
+	let erreurUtilisateurs = '';
 	async function loadUtilisateurs() {
 		utilisateursLoading = true;
-		try {
-			utilisateurs = await adminApi.utilisateurs();
-		} finally {
-			utilisateursLoading = false;
-		}
+		[utilisateurs, erreurUtilisateurs] = await essayer(adminApi.utilisateurs(), []);
+		utilisateursLoading = false;
 	}
-
-	function demanderRole(u: any, role: string, action: 'ajouter' | 'retirer') {
-		roleEnCours = { user: u, role, action };
-	}
-
-	async function confirmerRole() {
-		if (!roleEnCours) return;
-		const { user, role, action } = roleEnCours;
-		try {
-			//  🔴 Les deux méthodes EXISTAIENT dans le client et n'étaient appelées
-			//  nulle part (#801) : l'écran construisait l'URL dans un ternaire, ce
-			//  qui la rendait invisible à toute recherche par route. C'est la forme
-			//  la plus tenace du contournement — la chaîne recopiée ne ressemble
-			//  même plus à une route.
-			const updated = await (action === 'ajouter'
-				? adminApi.ajouterRole(user.id, role)
-				: adminApi.retirerRole(user.id, role));
-			toast(
-				'success',
-				`Rôle ${libelleRole(role)} ${action === 'ajouter' ? 'ajouté à' : 'retiré de'} ${nomAffiche(user)}.`,
-			);
-			utilisateurs = utilisateurs.map((u) => (u.id === user.id ? { ...u, ...updated } : u));
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		} finally {
-			roleEnCours = null;
-		}
-	}
-
-	function openEdit(u: any) {
-		editForm = formulaireCompte(u);
-		editUser = u;
-	}
-
-	async function saveEdit() {
-		if (!editUser) return;
-		try {
-			const updated = await adminApi.modifierUtilisateur(editUser.id, editForm);
-			utilisateurs = utilisateurs.map((u) => (u.id === editUser!.id ? { ...u, ...updated } : u));
-			toast('success', 'Utilisateur mis à jour.');
-			editUser = null;
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
-	async function confirmerDelete() {
-		if (!deleteConfirm) return;
-		const target = deleteConfirm;
-		deleteConfirm = null;
-		try {
-			await adminApi.supprimerUtilisateur(target.id);
-			utilisateurs = utilisateurs.filter((u) => u.id !== target.id);
-			toast('success', `${nomAffiche(target)} supprimé.`);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
-	async function toggleBanCommunaute(u: any) {
-		const isBanned =
-			u.communaute_interdit ||
-			(u.communaute_ban_jusqu_au && new Date(u.communaute_ban_jusqu_au) > new Date());
-		const interdit = !isBanned;
-		try {
-			const updated = await adminApi.banCommunaute(u.id, { interdit });
-			utilisateurs = utilisateurs.map((x) => (x.id === u.id ? { ...x, ...updated } : x));
-			if (interdit) {
-				const msg = updated.communaute_interdit
-					? `${nomAffiche(u)} banni définitivement de la communauté.`
-					: `${nomAffiche(u)} banni de la communauté pour 1 mois (probatoire).`;
-				toast('success', msg);
-			} else {
-				toast('success', `${nomAffiche(u)} réautorisé à la communauté.`);
-			}
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
-	$: nbCS = utilisateurs.filter((u) => (u.roles ?? [u.role]).includes('conseil_syndical')).length;
-
-	$: filteredUsers = utilisateurs
-		.filter((u) => {
-			if (userStatutFilter && u.statut !== userStatutFilter) return false;
-			if (userCompteFilter === 'actif' && !u.actif) return false;
-			if (userCompteFilter === 'inactif' && u.actif) return false;
-			if (!userSearch.trim()) return true;
-			const q = userSearch.toLowerCase();
-			return (
-				(u.prenom + ' ' + u.nom).toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-			);
-		})
-		.sort(comparerParNom);
 
 	//  🔴 La table des libellés vit dans `$lib/roles` depuis le 06/09/2026 (#801).
 	//  Elle était écrite SIX fois — trois ici côté front, trois côté serveur — et
@@ -369,14 +219,6 @@
 	//  « Copropriétaire résident » dans le troisième ; « Conseil syndical » ici,
 	//  « Membre du Conseil Syndical » dans la notification que le serveur envoie.
 	//  Chacune était cohérente avec elle-même : aucun contrôle ne pouvait le voir.
-
-	// Rôles actifs : affiche les rôles réels (P·R·E·CS·A) depuis u.roles
-	function userBatimentLabel(u: any): string {
-		if (u.batiment_id && batimentsMap[u.batiment_id]) return batimentsMap[u.batiment_id];
-		if (u.batiment_nom) return u.batiment_nom;
-		if (u.batiment_id) return `Bât. ${u.batiment_id}`;
-		return '—';
-	}
 
 	//  Demandes de modification de profil
 	let demandesProfil: any[] = [];
@@ -749,290 +591,14 @@
 		</div>
 	{/if}
 {:else if onglet === 'utilisateurs'}
-	{#if utilisateursLoading}
-		<EtatListe chargement />
-	{:else}
-		<!--  Recherche, filtres en pastilles, compteurs (#1329). -->
-		<FiltresUtilisateurs
-			bind:recherche={userSearch}
-			bind:statut={userStatutFilter}
-			bind:compte={userCompteFilter}
-			affiches={filteredUsers.length}
-			total={utilisateurs.length}
-			{nbCS}
-		/>
-
-		{#if filteredUsers.length === 0}
-			<div class="empty-state"><h3>Aucun résultat</h3></div>
-		{:else}
-			<div class="card" style="overflow:hidden">
-				<table class="table">
-					<thead>
-						<tr
-							><th>Nom</th><th>E-mail</th><th>Type</th><th>Bâtiment</th><th>Compte</th><th
-								>Rôles actifs</th
-							><th>Ajouter / Retirer un rôle</th><th>Actions</th></tr
-						>
-					</thead>
-					<tbody>
-						{#each filteredUsers as u (u.id)}
-							<tr class:row-cs={aRole(u, 'conseil_syndical')} class:row-inactive={!u.actif}>
-								<td style="font-weight:500">
-									{nomAffiche(u)}
-									{#if u.statut === 'locataire' && u.nom_proprietaire}
-										<div
-											style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:.15rem"
-										>
-											🏠 Bailleur : {u.nom_proprietaire}
-										</div>
-									{/if}
-									<!--  Trois états, dont « sans objet » en gris (26/09/2026) : l'état
-									      vient du serveur, les mots de `$lib/comptes`. -->
-									<div class="user-tags">
-										{#each ETIQUETTES_COMPTE as t (t.cle)}
-											{@const e = u.etiquettes?.[t.cle] ?? 'manque'}
-											<span
-												class="utag utag-{e}"
-												title={e === 'ok' ? t.ok : e === 'manque' ? t.manque : t.sansObjet}
-												>{t.libelle}</span
-											>
-										{/each}
-									</div>
-								</td>
-								<td style="color:var(--color-text-muted);font-size:var(--fs-md)">{u.email}</td>
-								<td>
-									<span class="badge {badgeStatut(u.statut)}" style="font-size:var(--fs-xs)">
-										{LIBELLES_STATUT_ABREGE[u.statut] ?? u.statut ?? '—'}
-									</span>
-								</td>
-								<td>
-									<span class="badge badge-gray">{userBatimentLabel(u)}</span>
-								</td>
-								<td>
-									{#if u.actif}
-										<span class="badge badge-green">Actif</span>
-									{:else if u.email_verifie === false}
-										<span class="badge badge-orange" title="Email non vérifié"
-											>Email non vérifié</span
-										>
-									{:else}
-										<span class="badge badge-gray">En attente</span>
-									{/if}
-								</td>
-								<td>
-									<div style="display:flex;gap:.3rem;flex-wrap:wrap">
-										{#each badgesDeRoles(u.roles?.length ? u.roles : [u.role]) as d (d.label)}
-											<span class="badge {d.cls}">{d.label}</span>
-										{/each}
-									</div>
-								</td>
-								<td>
-									{#if !u.actif}
-										<span class="muted" style="font-size:var(--fs-sm)">Compte inactif</span>
-									{:else}
-										<div class="action-row">
-											<!-- Ajouter CS si pas déjà — réservé aux propriétaires -->
-											{#if !aRole(u, 'conseil_syndical')}
-												{#if u.statut?.startsWith('copropriétaire')}
-													<button
-														class="btn btn-outline btn-sm"
-														style="color:#1d4ed8;border-color:#1d4ed8"
-														on:click={() => demanderRole(u, 'conseil_syndical', 'ajouter')}
-													>
-														+ CS
-													</button>
-												{/if}
-											{:else}
-												<button
-													class="btn btn-outline btn-sm"
-													style="color:var(--color-danger);border-color:var(--color-danger)"
-													on:click={() => demanderRole(u, 'conseil_syndical', 'retirer')}
-												>
-													– CS
-												</button>
-											{/if}
-											<!-- Ajouter Admin si pas déjà — réservé aux propriétaires -->
-											{#if !aRole(u, 'admin')}
-												{#if u.statut?.startsWith('copropriétaire')}
-													<button
-														class="btn btn-outline btn-sm"
-														style="color:#c2410c;border-color:#c2410c"
-														on:click={() => demanderRole(u, 'admin', 'ajouter')}
-													>
-														+ Admin
-													</button>
-												{/if}
-											{:else}
-												<button
-													class="btn btn-outline btn-sm"
-													style="color:var(--color-danger);border-color:var(--color-danger)"
-													on:click={() => demanderRole(u, 'admin', 'retirer')}
-												>
-													– Admin
-												</button>
-											{/if}
-										</div>
-									{/if}
-								</td>
-								<td>
-									<div class="action-row">
-										<button
-											class="btn-icon-edit"
-											aria-label="Modifier"
-											title="Modifier"
-											on:click={() => openEdit(u)}>✏️</button
-										>
-										<button
-											class="btn-icon"
-											aria-label="Accueil nouvel arrivant"
-											title="Accueil nouvel arrivant"
-											on:click={() => openAccueilModal(u)}>&#x1F3E0;</button
-										>
-										{#if u.actif && !u.has_lots}
-											<button
-												class="btn-icon"
-												aria-label="Rejouer auto-match lots"
-												title="Rejouer auto-match lots"
-												on:click={() => relancerAutoMatch(u.id, nomAffiche(u))}>🔄</button
-											>
-										{/if}
-										<button
-											class={u.communaute_interdit ||
-											(u.communaute_ban_jusqu_au &&
-												new Date(u.communaute_ban_jusqu_au) > new Date())
-												? 'btn-icon-success'
-												: 'btn-icon-warn'}
-											aria-label={u.communaute_interdit ||
-											(u.communaute_ban_jusqu_au &&
-												new Date(u.communaute_ban_jusqu_au) > new Date())
-												? 'Autoriser la communauté'
-												: 'Interdire la communauté'}
-											title={u.communaute_interdit
-												? 'Banni définitivement — cliquer pour débannir'
-												: u.communaute_ban_jusqu_au &&
-													  new Date(u.communaute_ban_jusqu_au) > new Date()
-													? 'Banni 1 mois (probatoire) — cliquer pour débannir'
-													: 'Interdire la communauté'}
-											on:click={() => toggleBanCommunaute(u)}
-										>
-											{u.communaute_interdit
-												? '⛔'
-												: u.communaute_ban_jusqu_au &&
-													  new Date(u.communaute_ban_jusqu_au) > new Date()
-													? '🔓'
-													: '🔒'}
-										</button>
-										<button
-											class="btn-icon-danger"
-											aria-label="Supprimer"
-											title="Supprimer"
-											on:click={() => (deleteConfirm = u)}>&#x1F5D1;️</button
-										>
-									</div>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-	{/if}
-
-	<!-- Modal de confirmation rôle -->
-	{#if roleEnCours}
-		<Modale
-			titre="Confirmer"
-			classeBoite="modal-box card modal-sm"
-			on:fermer={() => (roleEnCours = null)}
-		>
-			<p style="font-size:var(--fs-base);margin-bottom:1rem">
-				{roleEnCours.action === 'ajouter' ? 'Ajouter' : 'Retirer'} le rôle
-				<strong>{libelleRole(roleEnCours.role)}</strong>
-				{roleEnCours.action === 'ajouter' ? 'à' : 'de'}
-				<strong>{nomAffiche(roleEnCours.user)}</strong> ?
-				<br />
-				<span style="font-size:var(--fs-sm);color:var(--color-text-muted)">
-					Cette personne recevra une notification.
-				</span>
-			</p>
-			<div class="modal-footer">
-				<button class="btn btn-outline" on:click={() => (roleEnCours = null)}>Annuler</button>
-				<button class="btn btn-primary" on:click={confirmerRole}>Confirmer</button>
-			</div>
-		</Modale>
-	{/if}
-
-	<!-- Modal édition utilisateur -->
-	<!-- Éditer un objet existant → la modale, qui déclare son geste (§14 bis, #640). -->
-	{#if editUser}
-		<!--  La CORRECTION d'un utilisateur — la même boîte que partout depuis le
-		      06/09/2026 (`ux-patterns` §14 bis). `cle` fait remonter le formulaire
-		      quand on passe d'un utilisateur à un autre : la liste est longue, et
-		      sans elle le second clic serait muet. -->
-		<FormulaireCreation titre="Modifier l'utilisateur" cle={editUser}>
-			<FormulaireUtilisateur
-				bind:editForm
-				statutLabels={LIBELLES_STATUT_ABREGE}
-				{batimentsList}
-				onAnnuler={() => (editUser = null)}
-				onEnregistrer={saveEdit}
-			/>
-		</FormulaireCreation>
-	{/if}
-
-	{#if accueilModal}
-		<Modale
-			edition
-			titre="🏠 Accueil nouvel arrivant"
-			classeBoite="modal-box card"
-			styleBoite="max-width:480px"
-			on:fermer={() => (accueilModal = null)}
-		>
-			<p style="font-size:var(--fs-md);margin-bottom:.1rem">
-				<strong>{nomAffiche(accueilModal.user)}</strong>
-			</p>
-			<p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-bottom:.75rem">
-				Déclenche : bienvenue, consignes de copropriété, demande d'étiquette BAL (syndic), demande
-				d'interphone (CS), avec copie des démarches au résident.
-			</p>
-			<div class="form-grid" style="margin-bottom:.75rem">
-				<label class="field"
-					>Bâtiment / logement
-					<input bind:value={accueilBatiment} placeholder="Ex: Bât. A, Apt. 12…" />
-				</label>
-				<label class="field"
-					>Ancien résident
-					<input bind:value={accueilAncienResident} placeholder="Nom de l'ancien occupant…" />
-				</label>
-			</div>
-			<div class="modal-footer">
-				<button class="btn btn-outline" on:click={() => (accueilModal = null)}>Annuler</button>
-				<button class="btn btn-primary" disabled={accueilSubmitting} on:click={confirmerAccueil}>
-					{accueilSubmitting ? 'En cours…' : "Lancer les actions d'accueil"}
-				</button>
-			</div>
-		</Modale>
-	{/if}
-
-	{#if deleteConfirm}
-		<Modale
-			titre="Supprimer l'utilisateur ?"
-			classeBoite="modal-box card modal-sm"
-			on:fermer={() => (deleteConfirm = null)}
-		>
-			<p style="font-size:var(--fs-base);margin-bottom:1rem">
-				Vous êtes sur le point de supprimer définitivement le compte de
-				<strong>{nomAffiche(deleteConfirm)}</strong> ({deleteConfirm.email}).
-				<br /><span style="color:var(--color-danger);font-size:var(--fs-sm)"
-					>Cette action est irréversible.</span
-				>
-			</p>
-			<div class="modal-footer">
-				<button class="btn btn-outline" on:click={() => (deleteConfirm = null)}>Annuler</button>
-				<button class="btn btn-danger" on:click={confirmerDelete}>Supprimer définitivement</button>
-			</div>
-		</Modale>
-	{/if}
+	<OngletUtilisateurs
+		bind:utilisateurs
+		chargement={utilisateursLoading}
+		erreur={erreurUtilisateurs}
+		{batimentsList}
+		{batimentsMap}
+		recharger={loadUtilisateurs}
+	/>
 {:else if onglet === 'demandes_profil'}
 	{#if demandesProfilLoading || erreurDemandesProfil || demandesProfil.length === 0}
 		<EtatListe
@@ -1203,16 +769,6 @@
 	/*  `.badge-count` est parti avec le balisage, dans `Onglet.svelte` : une règle
     laissée ici ne s'appliquerait plus (Svelte scope au fichier) et tromperait le
     prochain lecteur — c'est la régression du 14/08, deux fois répétée. */
-	.action-row {
-		display: flex;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-		align-items: center;
-	}
-	.btn-sm {
-		padding: 0.3rem 0.7rem;
-		font-size: var(--fs-sm);
-	}
 	/*  🔴 `.refus-inline` est partie le 07/09/2026 avec le balisage qu'elle
 	    habillait : `AccepterRefuser.svelte` porte le geste « accepter · refuser
 	    avec motif », qui était écrit TROIS fois ici. `.input-sm` est montée dans
@@ -1224,57 +780,11 @@
 		border-radius: 0.25rem;
 		font-size: 0.85em;
 	}
-	.row-cs td {
-		background: #eff6ff;
-	}
-	.row-inactive td {
-		opacity: 0.6;
-	}
-	/*  La charte porte fond, bordure, rayon, curseur et couleur ;
-    seuls la taille et le remplissage sont propres a cet ecran (#607, 28/08/2026). */
-	.btn-outline {
-		font-size: var(--fs-sm);
-		padding: 0.3rem 0.7rem;
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.btn-outline:hover {
-			border-color: var(--color-primary);
-			color: var(--color-primary);
-		}
-	}
 	/*  🔴 `.badge-orange` et `.badge-purple` retirees le 28/08/2026 (#607) :
     la charte les porte, et cet ecran en donnait une TROISIEME teinte —
     `delegations` en avait une deuxieme. Meme notion, trois couleurs. */
-	.form-grid {
-		grid-template-columns: 1fr 1fr;
-	}
 	.ref-meta {
 		font-size: var(--fs-sm);
 		white-space: nowrap;
-	}
-	.user-tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.2rem;
-		margin-top: 0.15rem;
-	}
-	.utag {
-		font-size: 0.6rem;
-		font-weight: 600;
-		padding: 0.05rem 0.35rem;
-		border-radius: 4px;
-		line-height: 1.3;
-	}
-	.utag-ok {
-		background: #d4edda;
-		color: #155724;
-	}
-	.utag-manque {
-		background: #f8d7da;
-		color: #721c24;
-	}
-	.utag-sans_objet {
-		background: var(--color-bg-subtle, #f3f4f6);
-		color: var(--color-text-muted);
 	}
 </style>
