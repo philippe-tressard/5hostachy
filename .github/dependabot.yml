@@ -62,6 +62,17 @@ updates:
     #  SQLModel 0.0.45+ n'est plus ignoré (#1412, 28/09/2026) : les dates des
     #  modèles sont annotées `NaiveDatetime`, et `test_horloge.py` refuse toute
     #  colonne de date consciente du fuseau.
+    ignore:
+      #  ── SQLAlchemy 2.1 : IMPOSSIBLE tant que sqlmodel l'exclut (#1480) ──
+      #  Mesuré le 30/09/2026 : sqlmodel 0.0.47 exige « SQLAlchemy<2.1.0 ».
+      #  #1429 proposait 2.1.1 à côté de lui — une paire que pip refuse de
+      #  résoudre. Condition de levée, par commande et non par date :
+      #    pip download --no-deps -d /tmp/s sqlmodel
+      #    unzip -p /tmp/s/sqlmodel-*.whl '*/METADATA' | grep SQLAlchemy
+      #  → dès que la borne haute admet 2.1, retirer cette règle et monter les
+      #  deux ensemble (relire alors les notes de passage de SQLAlchemy 2.1).
+      - dependency-name: sqlalchemy
+        versions: [">=2.1.0"]
 
   # ── Frontend npm ───────────────────────────────────────────────────────────
   - package-ecosystem: npm
