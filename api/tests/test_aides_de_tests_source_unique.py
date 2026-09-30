@@ -116,9 +116,7 @@ def _textes():
 def test_aucune_aide_n_est_recopiee():
     textes = _textes()
     fautes = [
-        f"• {m.nom} — {', '.join(e)}\n    → {m.remede}"
-        for m in MOTIFS
-        if (e := _ecarts(m, textes))
+        f"• {m.nom} — {', '.join(e)}\n    → {m.remede}" for m in MOTIFS if (e := _ecarts(m, textes))
     ]
     assert not fautes, "Aides de test recopiées hors de leur module :\n" + "\n".join(fautes)
 
@@ -127,9 +125,7 @@ def test_le_controle_voit_ses_motifs():
     """Cas zéro : chaque aide porte bien son propre motif, et la portée lit des fichiers."""
     textes = dict(_textes())
     assert len(textes) > 200, "la portée ne lit presque rien : le dossier des tests a bougé"
-    muets = [
-        m.nom for m in MOTIFS if m.aide and not m.regex.search(textes.get(m.aide, ""))
-    ]
+    muets = [m.nom for m in MOTIFS if m.aide and not m.regex.search(textes.get(m.aide, ""))]
     assert not muets, f"motif(s) qui ne reconnaissent plus leur propre aide : {muets}"
 
 
