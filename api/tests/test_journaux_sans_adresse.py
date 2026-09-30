@@ -73,17 +73,17 @@ def test_la_partie_locale_ne_survit_pas_au_masquage(adresse):
     assert masquee.startswith(locale[0])  # une seule lettre, pour reconnaître
 
 
-def test_le_point_d_appel_masque_vraiment():
-    """🔴 La fonction ne protège que si le `logger.error` l'emploie.
+#: Les noms sous lesquels l'adresse voyage : la passer NUE à un journal est le
+#: défaut de #777.
+_NOMS_D_ADRESSE = {"trace", "to", "destinataire", "email"}
 
-    Analyse du code, pas de la chaîne : on cherche l'appel `logger.error(...)`
-    qui journalise une erreur d'envoi et on exige que l'argument portant
-    l'adresse passe par `_masquer`. Un `grep` sur « _masquer » aurait été vert
-    même si l'appel avait gardé `trace` à côté.
-    """
-    arbre = ast.parse(SOURCE)
+
+def _appels_logger_error(source: str) -> tuple[list[int], int, int]:
+    """Dans `source` : les lignes des `logger.error` qui reçoivent une adresse nue,
+    le nombre d'appels `logger.error` vus, et celui des arguments `_masquer(...)`."""
     fautifs: list[int] = []
-    for noeud in ast.walk(arbre):
+    vus = masques = 0
+    for noeud in ast.walk(ast.parse(source)):
         if not isinstance(noeud, ast.Call):
             continue
         cible = noeud.func
@@ -94,19 +94,44 @@ def test_le_point_d_appel_masque_vraiment():
             and cible.value.id == "logger"
         ):
             continue
+        vus += 1
         for argument in noeud.args:
-            # L'adresse voyage sous le nom `trace` (ou `to`/`destinataire`) :
-            # la passer NUE à un journal est le défaut de #777.
-            if isinstance(argument, ast.Name) and argument.id in {
-                "trace",
-                "to",
-                "destinataire",
-                "email",
-            }:
+            if isinstance(argument, ast.Name) and argument.id in _NOMS_D_ADRESSE:
                 fautifs.append(noeud.lineno)
+            if (
+                isinstance(argument, ast.Call)
+                and isinstance(argument.func, ast.Name)
+                and argument.func.id == "_masquer"
+            ):
+                masques += 1
+    return fautifs, vus, masques
+
+
+def test_le_point_d_appel_masque_vraiment():
+    """🔴 La fonction ne protège que si le `logger.error` l'emploie.
+
+    Analyse du code, pas de la chaîne : on cherche l'appel `logger.error(...)`
+    qui journalise une erreur d'envoi et on exige que l'argument portant
+    l'adresse passe par `_masquer`. Un `grep` sur « _masquer » aurait été vert
+    même si l'appel avait gardé `trace` à côté.
+    """
+    fautifs, vus, masques = _appels_logger_error(SOURCE)
+    #  Cas zéro (#1496) : sans appel vu, « aucun fautif » ne prouvait rien — un
+    #  journal renommé (`log.error`, `logger.exception`) rendait ce test vert.
+    assert vus and masques, (
+        f"{vus} appel(s) `logger.error` et {masques} `_masquer(...)` vus dans "
+        f"{Path(inspect.getfile(_masquer)).name} : le point d'appel a changé de "
+        "forme, et ce contrôle ne le regarde plus."
+    )
     assert not fautifs, (
         "`logger.error` reçoit une adresse non masquée aux lignes "
         f"{fautifs} de {Path(inspect.getfile(_masquer)).name} — #777. "
         "Envelopper l'argument dans `_masquer(...)` : ces lignes partent dans "
         "les alertes du monitoring."
     )
+
+
+def test_le_controle_refuse_l_adresse_nue():
+    """Cas zéro du MOTIF : le défaut de #777, forgé, doit être vu."""
+    forge = 'logger.error("Erreur envoi %s", trace)\nlogger.error("ok %s", _masquer(trace))\n'
+    assert _appels_logger_error(forge) == ([1], 2, 1)

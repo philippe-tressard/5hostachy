@@ -58,8 +58,10 @@ EXCEPTIONS: dict[str, str] = {
 #: `cfg.get("site_url")`, et `utils/reponses.py` y écrivait son propre `rstrip`.
 #: Un contrôle qui ne connaît qu'une écriture de la notion laisse passer l'autre
 #: (`standards/04` §40 — viser la NOTION, pas la forme déjà rencontrée).
+#: ⚠️ Et quel que soit le nom de la session : `session\.get` laissait passer
+#: `s.get(ConfigSite, "site_url")` — trouvé par l'extrait forgé du cas zéro (#1496).
 LECTURE = re.compile(
-    r"""(?:\.get\(|\[)\s*["']site_url["']|session\.get\(\s*ConfigSite\s*,\s*["']site_url["']"""
+    r"""(?:\.get\(|\[)\s*["']site_url["']|\.get\(\s*ConfigSite\s*,\s*["']site_url["']"""
 )
 
 
@@ -75,13 +77,13 @@ def _portees(src: str):
             yield n.name, ("\n").join(lignes[n.lineno - 1 : n.end_lineno]), n.lineno
 
 
-def test_aucune_lecture_de_site_url_hors_de_base_site():
-    fautifs = []
-    for module in modules_app():
-        rel = module.rel
+def _lectures(sources) -> tuple[list[str], list[str]]:
+    """Les lectures de `site_url` dans `sources` (`(rel, texte)`), en deux listes :
+    celles qui ne passent pas par `base_site` (fautives), et toutes celles vues."""
+    fautifs, vues = [], []
+    for rel, src in sources:
         if rel in EXCEPTIONS:
             continue
-        src = module.source
         #  Les commentaires ne sont pas du code : ce fichier-ci en parle
         #  abondamment, et un contrôle qui lit son propre récit se déclenche sur
         #  lui-même (`standards/04` §39).
@@ -100,12 +102,40 @@ def test_aucune_lecture_de_site_url_hors_de_base_site():
             )
             if not LECTURE.search(code_utile):
                 continue
-            if "base_site(" in code_utile:
-                continue
-            fautifs.append(f"{rel}:{debut}  fonction `{nom}`")
+            vues.append(rel)
+            if "base_site(" not in code_utile:
+                fautifs.append(f"{rel}:{debut}  fonction `{nom}`")
+    return fautifs, vues
+
+
+def test_aucune_lecture_de_site_url_hors_de_base_site():
+    fautifs, _vues = _lectures((m.rel, m.source) for m in modules_app())
     assert not fautifs, (
         "site_url lu sans passer par `base_site` — la barre finale repassera :\n  "
         + ("\n  ").join(fautifs)
+    )
+
+
+def test_le_controle_VOIT_les_lectures():
+    """Cas zéro (#1496) : sans lui, un `LECTURE` qui ne reconnaîtrait plus rien
+    rendrait le contrôle ci-dessus vert sur tout `app/`.
+
+    - sur le CODE : les deux formes de la notion sont vues là où elles vivent —
+      `cfg.get("site_url")` dans `utils/config_site.py`, `session.get(ConfigSite,
+      "site_url")` dans `utils/reponses.py` ;
+    - sur un extrait FORGÉ : chacune des deux formes, sans `base_site`, est refusée.
+    """
+    _fautifs, vues = _lectures((m.rel, m.source) for m in modules_app())
+    manquantes = {"utils/config_site.py", "utils/reponses.py"} - set(vues)
+    assert not manquantes, f"le contrôle ne voit plus les lectures de {sorted(manquantes)}"
+    forges = [
+        ("forge_a.py", 'def f(cfg):\n    return cfg.get("site_url").rstrip("/")\n'),
+        ("forge_b.py", 'def f(s):\n    return s.get(ConfigSite, "site_url").valeur\n'),
+        ("forge_c.py", "def f(s):\n    return session.get(ConfigSite, 'site_url').valeur\n"),
+    ]
+    fautifs, _vues = _lectures(forges)
+    assert [f.split(":")[0] for f in fautifs] == [r for r, _ in forges], (
+        f"lectures forgées non refusées — seules celles-ci l'ont été : {fautifs}"
     )
 
 

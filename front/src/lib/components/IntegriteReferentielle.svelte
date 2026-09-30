@@ -4,8 +4,8 @@
 	 *
 	 * ## Pourquoi cet écran (#546)
 	 *
-	 * SQLite tourne ici à `foreign_keys=OFF` : aucune clé étrangère n'est
-	 * vérifiée. Des suppressions incomplètes ont donc laissé des lignes
+	 * SQLite a tourné à `foreign_keys=OFF` jusqu'au 30/08/2026 (activées depuis,
+	 * `app/database.py`). Des suppressions incomplètes ont donc laissé des lignes
 	 * orphelines — **50** au relevé du 30/08/2026. Activer les clés ne les
 	 * efface pas ; il faut les compter, puis décider.
 	 *

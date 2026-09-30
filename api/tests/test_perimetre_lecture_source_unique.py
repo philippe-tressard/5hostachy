@@ -53,18 +53,17 @@ from tests.aides_sources import modules_app
 RACINE = Path(__file__).resolve().parents[1] / "app"
 
 #  Les exceptions sont NOMMÉES avec leur raison, et le dernier test vérifie
-#  qu'elles servent encore.
-EXCEPTIONS = {
-    "utils/perimetres/arbre.py": "la source unique elle-même",
-    "utils/visibility/socle.py": (
-        "la lecture pour DÉCIDER d'un accès : elle refuse sur un JSON illisible "
-        "là où l'affichage retombe sur le défaut"
-    ),
-    "routers/tickets/commun.py": (
-        "`None` = « cette entrée ne parle pas du périmètre », distinct de "
-        "« plus aucun périmètre » (#497)"
-    ),
-}
+#  qu'elles écrivent encore le MOTIF refusé — une exception qui ne l'écrit plus
+#  n'excuse rien et masquerait la copie suivante dans le même fichier.
+#
+#  🔴 VIDE depuis le 30/09/2026 (#1496). Trois exceptions y vivaient (la source
+#  `perimetres/arbre.py`, `visibility/socle.py`, `tickets/commun.py`), et aucune
+#  n'écrivait plus le motif : le test qui devait le dire ne vérifiait que la
+#  présence du mot « perimetre », et ne pouvait donc pas échouer. Les deux
+#  lectures légitimes décrites plus haut ne l'écrivent pas non plus — elles n'ont
+#  pas besoin d'exception. Si l'une en demande une, elle s'écrit ici AVEC sa
+#  raison.
+EXCEPTIONS: dict[str, str] = {}
 
 #  La forme que prenaient les quatre copies : un `json.loads` dont le repli est la
 #  chaîne « résidence » écrite dans le code.
@@ -77,14 +76,15 @@ def _sans_commentaires(source: str) -> str:
     return "\n".join(ligne for ligne in source.splitlines() if not ligne.lstrip().startswith("#"))
 
 
+def _coupables(modules) -> list[str]:
+    """Les modules dont le CODE écrit le motif, hors exceptions."""
+    return [
+        m.rel for m in modules if m.rel not in EXCEPTIONS and MOTIF in _sans_commentaires(m.source)
+    ]
+
+
 def test_le_defaut_du_perimetre_n_est_pas_ecrit_en_dur():
-    coupables = []
-    for m in modules_app():
-        rel = m.rel
-        if rel in EXCEPTIONS:
-            continue
-        if MOTIF in _sans_commentaires(m.source):
-            coupables.append(rel)
+    coupables = _coupables(modules_app())
     assert not coupables, (
         f"{coupables} écrivent le périmètre par défaut EN DUR. Employer "
         "`parse_json_perimetres` : le défaut est une donnée (`code_par_defaut()`), "
@@ -118,16 +118,28 @@ def test_les_quatre_sites_delegent_encore():
     )
 
 
+def test_le_controle_refuse_la_copie_forgee():
+    """Cas zéro du MOTIF (#1496) : le motif n'apparaît plus nulle part dans
+    `app/`, donc seul un extrait forgé prouve qu'il reconnaîtrait la copie — et
+    qu'il ignore le commentaire qui la raconte."""
+    from types import SimpleNamespace as Faux
+
+    copie = "perimetres = json.loads(x.perimetre_cible or '[\"résidence\"]')"
+    forges = [Faux(rel="forge.py", source=copie), Faux(rel="recit.py", source=f"# {copie}")]
+    assert _coupables(forges) == ["forge.py"]
+
+
 def test_chaque_exception_sert_encore():
+    """Une exception sert tant que son CODE écrit le motif refusé — pas tant
+    qu'il parle de périmètre, ce que tout fichier du domaine fait."""
     inutiles = []
     for rel, raison in EXCEPTIONS.items():
         chemin = RACINE / rel
         if not chemin.is_file():
             inutiles.append(f"{rel} (fichier absent) — {raison}")
             continue
-        source = chemin.read_text(encoding="utf-8")
-        if "perimetre_cible" not in source and "perimetre" not in source:
-            inutiles.append(f"{rel} (ne lit plus de périmètre) — {raison}")
+        if MOTIF not in _sans_commentaires(chemin.read_text(encoding="utf-8")):
+            inutiles.append(f"{rel} (n'écrit plus le motif) — {raison}")
     assert not inutiles, (
         f"Exceptions devenues inutiles : {inutiles}. Les retirer — une tolérance "
         "qui ne sert plus finit par en couvrir une qui compte."

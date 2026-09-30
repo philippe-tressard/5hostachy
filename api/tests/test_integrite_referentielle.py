@@ -1,25 +1,16 @@
-"""Intégrité référentielle — ce qui est DÉJÀ vrai, verrouillé (#546).
+"""Intégrité référentielle — les clés étrangères, vérifiées par la base (#546).
 
-## Pourquoi ces tests existent avant que le chantier soit fini
+Les clés sont ACTIVES en production depuis le 30/08/2026 : la règle vit dans
+`app/database.py` (`activer_cles_etrangeres`, appelée avant le bloc
+d'amorçage), et la suite tourne sur ce même moteur, sans copie de la règle.
 
-SQLite tourne avec `foreign_keys=OFF` — c'est son défaut, et l'application ne le
-pose nulle part. **Aucune** des clés étrangères déclarées dans les modèles n'est
-donc vérifiée par la base : l'intégrité repose entièrement sur le code applicatif.
+Ce fichier tient trois choses :
 
-L'étape 2 de #546 — rendre les fixtures référentiellement valides — est un lot à
-part entière : avec les clés actives, la suite passe de **798 verts** à **39
-erreurs et 6 échecs**, toutes des fixtures qui construisent des lignes orphelines.
-Tant qu'elle n'est pas finie, activer les clés partout rendrait le job rouge en
-permanence, donc désarmé (#419).
-
-🔴 **Mais une correction qu'aucun test ne garde ne survit pas.** Ces tests
-verrouillent ce qui est **déjà** réparé, en activant les clés sur leur propre
-moteur — sans attendre que tout le soit. C'est la seule façon de faire avancer un
-chantier par petits lots sans que le premier régresse pendant le second.
-
-Pour rejouer la mesure complète :
-
-    HOSTACHY_FK_STRICTES=1 pytest tests/ -q
+1. **le moteur de l'application** pose `foreign_keys = 1` — dans la suite et
+   dans un processus neuf, sans conftest (les deux derniers tests) ;
+2. **un moteur strict jetable** fait réellement mordre la contrainte ;
+3. **la purge des fixtures** (`vider_patrimoine`, `delier_references`) respecte
+   les clés — auto-référence, cycles, colonnes NOT NULL.
 """
 
 import os
@@ -44,9 +35,9 @@ from tests.conftest import delier_references, vider_patrimoine  # noqa: E402
 def moteur_strict():
     """Un moteur JETABLE avec `foreign_keys=ON`, isolé de celui de la suite.
 
-    ⚠️ On ne touche pas au moteur partagé : l'activer là rendrait rouges les 39
-    montages que l'étape 2 doit encore réparer, et ces tests-ci ne pourraient plus
-    rien affirmer — un test noyé dans 39 erreurs voisines ne se lit pas.
+    Il vient de `moteur_memoire(cles_etrangeres=True)`, qui branche la règle de
+    l'application : ces tests créent et purgent un patrimoine sans rien laisser
+    sur le moteur partagé.
     """
     moteur = moteur_memoire(cles_etrangeres=True)
     yield moteur
@@ -205,9 +196,9 @@ def test_delier_ne_touche_PAS_les_colonnes_non_nullables(moteur_strict):
 def test_la_suite_TOURNE_avec_les_cles_actives():
     """🔴 Sans ce test, tout le chantier peut redevenir inutile en silence.
 
-    Les clés sont posées par un écouteur `connect` que `pytest_configure`
-    enregistre sur le moteur de la suite. Si cet écouteur cesse d'être branché —
-    une variable renommée, un `engine.dispose()` retiré, un import réordonné — la
+    Les clés sont posées par l'écouteur `connect` que `app/database.py`
+    enregistre sur son moteur — celui de la suite. S'il cesse d'être branché —
+    un appel déplacé après l'amorçage, un import réordonné — la
     suite **reste verte** : elle se remet simplement à ne rien vérifier, comme
     avant les quatre lots.
 
@@ -217,38 +208,32 @@ def test_la_suite_TOURNE_avec_les_cles_actives():
 
     ⚠️ Il porte sur le moteur DE LA SUITE, pas sur un moteur jetable : les autres
     tests de ce fichier montent le leur, ce qui prouve la purge mais ne prouve
-    rien du régime dans lequel les 870 autres tournent.
+    rien du régime dans lequel les autres tournent.
 
-    ⚠️ Il tolère la porte de diagnostic `HOSTACHY_FK_STRICTES=0`, et seulement
-    elle. Un lot qui a besoin de la fermer pour passer a un défaut à corriger.
+    🔒 Sans condition : la porte `HOSTACHY_FK_STRICTES=0` qu'il tolérait a
+    disparu avec l'écouteur du conftest (#1496). Elle ne désactivait plus rien
+    depuis que l'application pose les clés elle-même.
     """
-    import os
-
     from sqlmodel import Session, text
 
     from app.database import engine
 
-    if os.environ.get("HOSTACHY_FK_STRICTES") == "0":
-        pytest.skip("porte de diagnostic ouverte explicitement — régime non nominal")
-
     with Session(engine) as session:
         actif = session.exec(text("PRAGMA foreign_keys")).one()[0]
     assert actif == 1, (
-        "les clés étrangères ne sont PAS actives sur le moteur de la suite : "
-        "les 873 tests tournent sans vérifier une seule des 119 clés déclarées, "
-        "et rien d'autre ne le dirait (#546)."
+        "les clés étrangères ne sont PAS actives sur le moteur de l'application : "
+        "la suite tourne sans vérifier une seule clé déclarée, et rien d'autre ne "
+        "le dirait. La règle vit dans `app/database.py` (#546, #1496)."
     )
 
 
 def test_le_moteur_DE_L_APPLICATION_active_les_cles(tmp_path):
-    """🔴 Le test précédent ne prouve PAS celui-ci, et c'est tout l'enjeu.
+    """🔴 Le moteur de la production, mesuré hors de la suite.
 
-    `test_la_suite_TOURNE_avec_les_cles_actives` mesure le moteur de la SUITE,
-    dont les clés sont posées par `conftest.pytest_configure`. Il resterait vert
-    si `app/database.py` cessait de les activer : la production tournerait sans
-    clés, et rien ne le dirait.
-
-    Ce test-ci importe `app.database` dans un **sous-processus sans conftest**,
+    `test_la_suite_TOURNE_avec_les_cles_actives` lit le même moteur, mais après
+    que la suite l'a importé et utilisé. Ce test-ci importe `app.database` dans
+    un **sous-processus sans conftest**, sur un FICHIER (le pool de production,
+    pas celui de `:memory:`),
     et lit le PRAGMA sur une connexion réelle. C'est le seul montage qui mesure
     ce que fait le module pour de vrai.
 

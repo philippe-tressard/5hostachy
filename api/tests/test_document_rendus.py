@@ -89,6 +89,25 @@ def test_le_MODELE_de_courriel_rend_les_champs_du_document():
         )
 
 
+#: Le seul module qui calcule le lien d'un document (`lien_document`).
+_SOURCE_DU_LIEN = "utils/documents.py"
+
+
+def _liens_de_document(modules) -> list[str]:
+    """Les modules qui appellent `lien_element("doc", …)`."""
+    return [
+        f"app/{m.rel}"
+        for m in modules
+        for n in ast.walk(m.arbre)
+        if isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Name)
+        and n.func.id == "lien_element"
+        and n.args
+        and isinstance(n.args[0], ast.Constant)
+        and n.args[0].value == "doc"
+    ]
+
+
 def test_le_LIEN_du_document_n_est_calcule_qu_a_UN_endroit():
     """🔴 Il l'était à deux, et les deux ne disaient pas la même chose.
 
@@ -98,24 +117,22 @@ def test_le_LIEN_du_document_n_est_calcule_qu_a_UN_endroit():
     le courriel écrivaient `lien_element("doc", doc.id)` sans condition : la page
     bonne, l'élément invisible.
     """
-    fautifs = []
-    for module in modules_app():
-        if module.chemin.name == "documents.py" and module.chemin.parent.name == "utils":
-            continue  # la source
-        for n in ast.walk(module.arbre):
-            if (
-                isinstance(n, ast.Call)
-                and isinstance(n.func, ast.Name)
-                and n.func.id == "lien_element"
-                and n.args
-                and isinstance(n.args[0], ast.Constant)
-                and n.args[0].value == "doc"
-            ):
-                fautifs.append(f"app/{module.rel}")
-
+    fautifs = _liens_de_document(m for m in modules_app() if m.rel != _SOURCE_DU_LIEN)
     assert not fautifs, (
         "Ces fichiers fabriquent eux-mêmes le lien d'un document : "
         + ", ".join(sorted(set(fautifs)))
         + ". Employer `lien_document` de `app.utils.documents` — il sait où le "
         "document est RÉELLEMENT affiché, et pour qui."
     )
+
+
+def test_le_controle_VOIT_le_calcul_du_lien():
+    """Cas zéro (#1496) : la source calcule le lien par `lien_element("doc", …)`
+    — le contrôle doit l'y voir, sinon il ne verrait pas non plus une copie. Et
+    un appel forgé ailleurs est refusé."""
+    from types import SimpleNamespace as Faux
+
+    source = _liens_de_document(m for m in modules_app() if m.rel == _SOURCE_DU_LIEN)
+    assert source, f"le contrôle ne voit plus le calcul du lien dans app/{_SOURCE_DU_LIEN}"
+    forge = Faux(rel="forge.py", arbre=ast.parse('url = lien_element("doc", doc.id)'))
+    assert _liens_de_document([forge]) == ["app/forge.py"]
