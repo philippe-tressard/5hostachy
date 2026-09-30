@@ -1,0 +1,203 @@
+<!--
+  **Une rubrique de documents de la résidence** — plans, règlement, comptes-rendus
+  d'AG : la liste, son dépôt, sa correction et sa suppression, écrits UNE fois.
+
+  ## Pourquoi (#779, 30/09/2026)
+
+  `residence/+page.svelte` portait ces trois rubriques en trois exemplaires :
+  trois fonctions d'ajout, six ou sept variables d'état chacune, la même garde
+  recopiée, le même bloc de correction monté trois fois. Le rendu était déjà
+  commun (`SectionDocuments`, `FormulaireDocument`, #522) ; la LOGIQUE ne
+  l'était pas — et elle a déjà divergé : le sélecteur de périmètre du plan était
+  lié à la variable du CR d'AG (#470), si bien que choisir un périmètre sur un
+  plan pré-remplissait en douce le formulaire d'AG.
+
+  Ce qui distingue les rubriques se déclare par props : `avecPerimetre` (plan,
+  AG), le `mode` `ag` qui ajoute année et date d'assemblée, le tri, les badges
+  (slot). La correction reste l'objet `CorrectionDocument` de
+  `FormulaireEditionDocument`, désormais propre à chaque rubrique : elle met à
+  jour SA liste, sans aiguillage par mode.
+-->
+<script lang="ts">
+	import { documents as documentsApi } from '$lib/api';
+	import { tenter } from '$lib/erreurs';
+	import { supprimerDocument } from '$lib/gestes-document';
+	import ChampsCrAg from '$lib/components/ChampsCrAg.svelte';
+	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
+	import FormulaireEditionDocument, {
+		correctionVide,
+		type CorrectionDocument,
+		type ModeDocument,
+	} from '$lib/components/FormulaireEditionDocument.svelte';
+	import SectionDocuments from '$lib/components/SectionDocuments.svelte';
+
+	export let mode: ModeDocument;
+	export let titre: string;
+	/** La catégorie de dépôt ; `null` tant qu'elle n'est pas lue — rien ne part. */
+	export let categorieId: number | null;
+	export let documents: any[] = [];
+	export let erreur = '';
+	export let messageVide: string;
+	export let peutModifier = false;
+	/** L'ordre d'affichage ; la liste elle-même garde l'ordre d'arrivée. */
+	export let trier: (docs: any[]) => any[] = (docs) => docs;
+	export let dateDe: ((doc: any) => string) | undefined = undefined;
+	/** Le formulaire de dépôt. */
+	export let intitule: string;
+	export let placeholderTitre: string;
+	export let placeholderDescription: string;
+	/**  Le périmètre DÉCRIT de quoi parle le document ; il ne restreint jamais sa
+	 *   lecture (migration 0159, #617) : les droits restent à `résidence`. */
+	export let avecPerimetre = false;
+	/** « Ce plan », « Ce règlement »… — la confirmation de suppression le nomme. */
+	export let quoi: string;
+	export let messageAjout: string;
+
+	const avecAg = mode === 'ag';
+
+	function saisieVide() {
+		return {
+			titre: '',
+			description: '',
+			perimetre: [] as string[],
+			fichiers: [] as File[],
+			annee: '' as string | number,
+			dateAg: '',
+		};
+	}
+
+	let ouvert = false;
+	let saisie = saisieVide();
+	let enregistrement = false;
+	let correction: CorrectionDocument = correctionVide();
+	let enregistrementCorrection = false;
+
+	$: affiches = trier(documents);
+	$: complet =
+		!!saisie.titre.trim() &&
+		!!saisie.fichiers?.length &&
+		(!avecAg || (!!saisie.annee && !!saisie.dateAg));
+
+	async function ajouter() {
+		const fichier = saisie.fichiers?.[0];
+		if (!categorieId || !complet || !fichier) return;
+		//  Capturés AVANT le rappel : TypeScript ne conserve pas dans une closure
+		//  le fait que la garde ci-dessus a écarté `null`.
+		const categorie = categorieId;
+		const s = saisie;
+		enregistrement = true;
+		await tenter(async () => {
+			const doc = await documentsApi.upload({
+				titre: s.titre.trim(),
+				categorieId: categorie,
+				file: fichier,
+				description: s.description.trim(),
+				//  🔴 UN PV D'AG — ni un plan — N'EST JAMAIS RESTREINT PAR SON
+				//  PÉRIMÈTRE : il dit de quoi il parle, pas qui peut le lire. Il part
+				//  en `résidence` côté DROITS, les périmètres dans `perimetre_cible`.
+				...(avecPerimetre ? { perimetreCible: s.perimetre } : {}),
+				...(avecAg
+					? { annee: s.annee ? Number(s.annee) : undefined, dateAg: s.dateAg || undefined }
+					: {}),
+			});
+			documents = [doc, ...documents];
+			ouvert = false;
+			saisie = saisieVide();
+		}, messageAjout);
+		enregistrement = false;
+	}
+
+	function corriger(doc: any) {
+		correction = {
+			...correctionVide(),
+			id: doc.id,
+			mode,
+			titre: doc.titre ?? '',
+			annee: doc.annee ?? '',
+			dateAg: doc.date_ag ? String(doc.date_ag).substring(0, 10) : '',
+			description: doc.description ?? '',
+			//  ⚠️ `perimetre_cible` sort du serveur en LISTE, jamais en JSON brut
+			//  (`schemas.DocumentRead`). Le re-parser ici serait une seconde façon de
+			//  lire la même chose, et elles divergeraient au premier format ajouté.
+			perimetre: Array.isArray(doc.perimetre_cible) ? [...doc.perimetre_cible] : [],
+		};
+	}
+
+	async function enregistrerCorrection() {
+		if (!correction.id) return;
+		const docId = correction.id;
+		enregistrementCorrection = true;
+		await tenter(async () => {
+			const corrige = await documentsApi.update(docId, {
+				titre: correction.titre.trim() || undefined,
+				//  🔴 Les deux champs que la correction n'envoyait pas (#852) —
+				//  et que le serveur n'acceptait pas non plus.
+				description: correction.description,
+				perimetre_cible: correction.perimetre,
+				annee: correction.annee ? Number(correction.annee) : null,
+				date_ag: correction.dateAg || null,
+			});
+			documents = documents.map((d) => (d.id === docId ? corrige : d));
+			correction = correctionVide();
+		}, 'Document mis à jour');
+		enregistrementCorrection = false;
+	}
+
+	const supprimer = (id: number) =>
+		supprimerDocument(id, quoi, (i) => (documents = documents.filter((d) => d.id !== i)));
+</script>
+
+<SectionDocuments
+	{titre}
+	documents={affiches}
+	{erreur}
+	{messageVide}
+	{peutModifier}
+	urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
+	{dateDe}
+	onAjouter={() => (ouvert = true)}
+	onModifier={corriger}
+	onSupprimer={supprimer}
+>
+	<svelte:fragment slot="formulaire">
+		{#if ouvert}
+			<FormulaireDocument
+				{intitule}
+				bind:titre={saisie.titre}
+				{placeholderTitre}
+				{avecPerimetre}
+				bind:perimetre={saisie.perimetre}
+				bind:fichiers={saisie.fichiers}
+				{enregistrement}
+				{complet}
+				on:annuler={() => (ouvert = false)}
+				on:enregistrer={ajouter}
+			>
+				<svelte:fragment slot="specifiques">
+					{#if avecAg}
+						<ChampsCrAg requis bind:annee={saisie.annee} bind:dateAg={saisie.dateAg} />
+					{/if}
+				</svelte:fragment>
+				<label class="field" for="{mode}-description" slot="description">
+					Description
+					<textarea
+						id="{mode}-description"
+						bind:value={saisie.description}
+						placeholder={placeholderDescription}
+						rows="3"></textarea>
+				</label>
+			</FormulaireDocument>
+		{/if}
+		{#if correction.id !== null}
+			<FormulaireEditionDocument
+				bind:correction
+				enregistrement={enregistrementCorrection}
+				on:annuler={() => (correction = correctionVide())}
+				on:enregistrer={enregistrerCorrection}
+			/>
+		{/if}
+	</svelte:fragment>
+	<svelte:fragment slot="badges" let:doc>
+		<slot name="badges" {doc} />
+	</svelte:fragment>
+</SectionDocuments>
