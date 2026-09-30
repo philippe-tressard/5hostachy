@@ -32,7 +32,7 @@ CONCERNE = "concerné"
 #: « Copropriétaires » : occupants et bailleurs — les deux codes que proposent
 #: les pastilles (`copropriétaires` ne l'est plus depuis #1301), et que l'écran
 #: nomme d'un mot. Ni locataires, ni mandataires.
-COPROPRIETAIRES = ["copropriétaires_occupants", "bailleurs"]
+_COPROPRIETAIRES = ["copropriétaires_occupants", "bailleurs"]
 
 #: Ce qu'une affaire lit SANS choix du conseil, selon sa catégorie (#1436,
 #: arbitré le 28/09/2026). La Panne a sa règle (le bâtiment).
@@ -63,7 +63,7 @@ DEFAUT_PAR_CATEGORIE: dict[str, list[str]] = {
     "espaces_verts": ["résidents"],
     "sinistre": [CONCERNE],
     "etude_travaux": ["conseil_syndical"],
-    "entretien": COPROPRIETAIRES,
+    "entretien": _COPROPRIETAIRES,
     "question": [CONCERNE],
     "bug": [CONCERNE],
 }
