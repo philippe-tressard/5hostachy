@@ -706,6 +706,10 @@ sur la liste des contrôles :
 Instanciation 5Hostachy :
 - Le fichier est **`front/package.json`** ; la version s'affiche dans le **pied de
   page** du site — c'est ce que contrôle **P3** du post-check.
+- …et la version **du projet** dans `front/package-lock.json`, en tête et à la
+  racine (`packages[""]`) : deux lignes, jamais une dépendance. `npm run lint:lock`
+  refuse l'écart en CI — cette ligne ne nommait que `package.json`, et un bump
+  l'a suivie à la lettre le 30/09/2026 (rattrapé au rejeu, pas avant).
 - Bump **avant** le push final sur `dev`, commit dédié `chore(version): bump vX.Y.Z`.
 - ⚠️ Un onglet PWA resté ouvert peut servir une version en cache : le bandeau de mise
   à jour (v2.24.0) existe pour ça, et `api/tests/test_pwa_maj.py` le verrouille.
