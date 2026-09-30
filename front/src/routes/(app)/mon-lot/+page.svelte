@@ -29,7 +29,6 @@
 	import { routeOnglet, routeSousOnglet } from '$lib/routes-onglets';
 	import { bailEnCours, bailVierge, champsLocataire, nomLocataire } from '$lib/bail';
 	import LotsBailleur from '$lib/components/LotsBailleur.svelte';
-	import BadgeStatutBail from '$lib/components/BadgeStatutBail.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _pc = getPageConfig($configStore, 'mon-lot', defautsDePage('mon-lot'));
