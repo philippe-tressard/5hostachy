@@ -26,7 +26,7 @@ from sqlmodel.pool import StaticPool
 
 from app.database import get_session
 from app.main import app
-from app.models.core import Publication, RoleUtilisateur, Ticket, Utilisateur
+from app.models.core import RoleUtilisateur, Ticket, Utilisateur
 
 
 @pytest.fixture(name="session")
@@ -61,10 +61,9 @@ def client_fixture(session: Session):
 
 def test_une_publication_migree_rend_410_avec_son_affaire(session: Session, client):
     http, lecteur = client
-    pub = Publication(titre="Coupure", contenu="x", auteur_id=lecteur.id)
-    session.add(pub)
-    session.commit()
-    session.refresh(pub)
+    #  L'ancien numéro ne vit plus que sur l'affaire : la table `publication`
+    #  est supprimée (#1177). C'est précisément ce que la redirection doit tenir.
+    ancien_numero = 4242
     affaire = Ticket(
         numero="TK-A00001",
         titre="Coupure",
@@ -72,12 +71,12 @@ def test_une_publication_migree_rend_410_avec_son_affaire(session: Session, clie
         categorie="actualite",
         statut="publie",
         auteur_id=lecteur.id,
-        promu_depuis_publication_id=pub.id,
+        promu_depuis_publication_id=ancien_numero,
     )
     session.add(affaire)
     session.commit()
 
-    r = http.get(f"/publications/{pub.id}")
+    r = http.get(f"/publications/{ancien_numero}")
     assert r.status_code == 410, r.text
     assert r.json()["detail"]["promu_en_affaire"] == affaire.id
 

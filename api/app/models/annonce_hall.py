@@ -46,15 +46,12 @@ class AnnonceHall(AssisteIAMixin, table=True):
     destinataires: str = "[]"  # JSON: emails notifiés
     envoye_le: Optional[NaiveDatetime] = None
     archivee: bool = False
-    # Publication d'origine si l'annonce a été générée depuis une actualité
-    #  ⚠️ PAS de `foreign_key=` : la migration 0117 a tenté de poser la contrainte
-    #  et a crashé (SQLite refuse d'altérer les contraintes d'une table existante).
-    #  La colonne existe partout SANS elle. La déclarer ici ferait porter à une
-    #  base neuve (`create_all`) un schéma que les bases migrées n'ont pas —
-    #  divergence qui n'apparaîtrait qu'un jour, sur une machine.
-    publication_id: Optional[int] = Field(default=None)
-    #  L'affaire « Actualité » d'origine (#1091, migration 0209) — même raison,
-    #  pas de clé étrangère. `publication_id` reste lu par les liens anciens.
+    #  L'affaire « Actualité » d'origine (#1091, migration 0209). ⚠️ PAS de
+    #  `foreign_key=` : la migration 0117 a tenté d'en poser une sur la colonne
+    #  voisine et a crashé (SQLite refuse d'altérer les contraintes d'une table
+    #  existante). La déclarer ferait porter à une base neuve (`create_all`) un
+    #  schéma que les bases migrées n'ont pas. (`publication_id` : retirée par
+    #  la 0238, #1177.)
     ticket_id: Optional[int] = Field(default=None)
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)

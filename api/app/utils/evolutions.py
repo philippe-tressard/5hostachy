@@ -2,8 +2,9 @@
 
 ## Pourquoi ce module
 
-Trois objets du site portent un fil d'évolutions : le **ticket**
-(`TicketEvolution`), l'**actualité** (`PublicationEvolution`) et l'**événement**
+Trois objets du site portaient un fil d'évolutions : le **ticket**
+(`TicketEvolution`), l'**actualité** (`PublicationEvolution`, supprimée avec sa
+table le 30/09/2026 — une actualité EST une affaire, #1177) et l'**événement**
 (`EvenementEvolution`). Le geste de suppression n'existait que pour le premier.
 
 Le recopier deux fois aurait été le réflexe évident — et exactement la faute que

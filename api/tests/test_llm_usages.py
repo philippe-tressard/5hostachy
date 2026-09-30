@@ -34,6 +34,7 @@ from app.utils.llm_usages import (
     decrire,
 )
 from app.utils.synthese_format import CONSIGNE
+from tests.tables_supprimees import tables_supprimees
 
 
 @pytest.fixture()
@@ -244,7 +245,8 @@ def test_la_migration_couvre_TOUTES_les_tables_qui_portent_la_marque():
         spec.loader.exec_module(tardive)
         assert tardive.COLONNE == "assiste_ia", chemin.name
         posees.add(tardive.TABLE)
-    assert posees == attendues
+    #  Une table supprimée depuis (#1177) reste dans la liste de la 0194, appliquée.
+    assert posees - tables_supprimees() == attendues
 
 
 def test_la_migration_deplace_les_anciennes_cles_et_ne_les_laisse_pas(session):

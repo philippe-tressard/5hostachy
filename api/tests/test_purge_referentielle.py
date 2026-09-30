@@ -31,7 +31,8 @@ from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from app.database import activer_cles_etrangeres
-from app.models.core import Publication, Utilisateur
+from app.models.communaute import Idee
+from app.models.core import Utilisateur
 from app.utils.purge_referentielle import purger, references_entrantes
 
 
@@ -67,29 +68,32 @@ def test_les_references_sont_lues_dans_les_metadonnees_pas_recitees():
     )
     obligatoires = [r for r in refs if r[2]]
     assert len(obligatoires) > 30
-    #  La table qui a révélé le défaut doit en faire partie.
-    assert any(t.name == "publication" and c.name == "auteur_id" for t, c, _ in refs)
+    #  Une table à auteur OBLIGATOIRE doit en faire partie. C'était `publication`,
+    #  qui a révélé le défaut ; elle est supprimée depuis le 30/09/2026 (#1177).
+    assert any(t.name == "idee" and c.name == "auteur_id" for t, c, _ in refs)
 
 
 def test_supprimer_un_compte_emporte_son_contenu_et_ne_laisse_aucun_orphelin(base_stricte):
-    """Le cas qui échouait : un compte avec une publication.
+    """Le cas qui échouait : un compte avec un contenu à auteur OBLIGATOIRE.
 
     Sans purge, `DELETE FROM utilisateur` faisait tenter à l'ORM un
     `UPDATE publication SET auteur_id = NULL` — refusé, la colonne est NOT NULL.
+    La table `publication` n'existe plus (#1177) ; `idee` porte la même
+    contrainte, et c'est elle qui tient le cas.
     """
     auteur = Utilisateur(email="auteur@test", hashed_password="x", prenom="A", nom="B")
     base_stricte.add(auteur)
     base_stricte.commit()
     base_stricte.refresh(auteur)
-    base_stricte.add(Publication(titre="Une actualité", contenu="…", auteur_id=auteur.id))
+    base_stricte.add(Idee(titre="Une idée", description="…", auteur_id=auteur.id))
     base_stricte.commit()
 
     comptes = purger(base_stricte, "utilisateur", auteur.id)
     base_stricte.commit()
 
-    assert base_stricte.exec(select(Publication)).all() == []
+    assert base_stricte.exec(select(Idee)).all() == []
     assert base_stricte.exec(select(Utilisateur)).all() == []
-    assert comptes.get("publication") == 1
+    assert comptes.get("idee") == 1
     assert _compte_violations(base_stricte) == 0
 
 

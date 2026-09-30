@@ -28,14 +28,12 @@ from app.utils.assiste_ia import (
 
 def _modeles():
     from app.models.communaute import Idee, PetiteAnnonce, Sondage
-    from app.models.core import Publication, PublicationEvolution, Ticket, TicketEvolution
+    from app.models.core import Ticket, TicketEvolution
     from app.models.prestataires import Prestataire
 
     return [
         Ticket,
-        Publication,
         TicketEvolution,
-        PublicationEvolution,
         Sondage,
         Idee,
         PetiteAnnonce,

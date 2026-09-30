@@ -2355,8 +2355,8 @@ lectures héritent, et les trois routeurs le posent par `noms_derives` :
 `api/tests/test_proprietaire_expose.py`.
 ### 🔴 Un libellé NOMME l'objet, et le nom vient de sa déclaration (21/09/2026, #1107)
 
-Le modèle s'appelle `Ticket`, l'écran dit **« Affaire »** ; le modèle dit
-`Publication`, l'écran **« Actualité »**. Même distinction que `TicketEvolution`
+Le modèle s'appelle `Ticket`, l'écran dit **« Affaire »** — et **« Actualité »** pour
+sa catégorie (le modèle `Publication` a été supprimé le 30/09/2026, #1177). Même distinction que `TicketEvolution`
 / « Suite » : le modèle garde son nom, l'écran parle français.
 
 | Ce qu'on écrit | Où le mot se lit |
@@ -2420,7 +2420,7 @@ ci-dessous continue de s'appliquer ; le geste s'y ajoute, il ne le remplace pas.
 
 ⚠️ `mis_a_jour_le` paraît équivalent et ne l'est pas : corriger une faute de
 frappe sur un objet conclu **repousserait son archivage d'un mois**, à chaque
-retouche. `Publication` porte `statut_change_le` pour exactement cette raison,
+retouche. `Publication` portait `statut_change_le` pour exactement cette raison,
 et les tickets mesuraient encore sur `mis_a_jour_le` au 18/08.
 
 ⚠️ Un bouton d'archivage crée **deux notions pour la même chose** — celle qu'on

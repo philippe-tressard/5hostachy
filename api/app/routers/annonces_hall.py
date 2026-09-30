@@ -149,7 +149,6 @@ def _to_read(annonce: AnnonceHall, session: Session) -> dict:
             "annonce_hall", annonce, seuil_jours=seuil_archivage_jours(session)
         ),
         "archivee_manuellement": annonce.archivee,
-        "publication_id": annonce.publication_id,
         "ticket_id": annonce.ticket_id,
         "cree_le": annonce.cree_le.isoformat(),
         "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "",

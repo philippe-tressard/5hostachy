@@ -34,6 +34,5 @@ from app.models.ia import AppelIA as AppelIA
 from app.models.diagnostics import DiagnosticRapport as DiagnosticRapport
 from app.models.diagnostics import DiagnosticType as DiagnosticType
 from app.models.lot_import import LotImport as LotImport
-from app.models.publications import Publication as Publication  # extraites de core (#779)
 from app.models.bailleur import LocationBail as LocationBail
 from app.models.delegations import Delegation as Delegation
