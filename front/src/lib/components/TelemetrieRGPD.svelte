@@ -18,11 +18,9 @@
   valeur que le serveur détient déjà.
 -->
 <script lang="ts">
-	import { onMount } from 'svelte';
-
 	import { auth as authApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { currentUser, setUser } from '$lib/stores/auth';
+	import { currentUser, quandAuthResolue, setUser } from '$lib/stores/auth';
 	import { setTelemetryOptOut } from '$lib/telemetry';
 
 	let optOutTelemetrie = false;
@@ -34,7 +32,8 @@
 	//  ⚠️ Lu à l'ouverture ET non lié en deux sens au store : la case reflète ce
 	//  que le serveur a enregistré, et c'est l'appel qui fait foi. Un `$:` sur le
 	//  store la remettrait à la valeur d'avant pendant l'enregistrement.
-	onMount(() => {
+	//  Pas `onMount` : il précède le layout qui charge l'utilisateur (#1486).
+	quandAuthResolue(() => {
 		optOutTelemetrie = $currentUser?.opt_out_telemetrie ?? false;
 	});
 </script>

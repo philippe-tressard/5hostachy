@@ -43,32 +43,45 @@ import { neutraliserCommentaires } from './lib-commentaires.mjs';
 const ICI = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ICI, '..', 'src');
 
-/** Les stores qui disent un RÔLE — ceux dont la valeur est vide avant résolution. */
+/**
+ * Les stores qui disent un RÔLE — ceux dont la valeur est vide avant résolution.
+ *
+ * 🔴 LUS dans `stores/auth.ts` : l'utilisateur, et toute dérivée de lui. La liste
+ * était recopiée ici et en avait perdu six, dont `isGestionnaire` — celui de la
+ * garde de `sondages/[id]`, qui décidait avant de savoir sans que ce contrôle le
+ * voie (#1486, 30/09/2026).
+ */
+const SOURCE_AUTH = readFileSync(join(SRC, 'lib', 'stores', 'auth.ts'), 'utf8');
 const STORES_DE_ROLE = [
-	'isAdmin',
-	'isCS',
-	'isProprio',
-	'isProprioOuCS',
-	'isLocataire',
-	'isBailleur',
+	'currentUser',
+	...[...SOURCE_AUTH.matchAll(/export const (\w+) = derived\(\s*currentUser\b/g)].map((m) => m[1]),
 ];
+if (STORES_DE_ROLE.length < 5) {
+	console.error(
+		`✗ ${STORES_DE_ROLE.length - 1} dérivée(s) de currentUser lue(s) dans stores/auth.ts — ` +
+			`la forme a changé, ce contrôle ne mesurerait plus rien.`,
+	);
+	process.exit(2);
+}
 
 /** Ce qui prouve qu'on a attendu de savoir. */
 const TEMOIN = 'authResolue';
 
 /**
- * Aucune exception, et ce n'est pas un oubli.
+ * Une seule exception, valable pour les deux volets : le fichier qui CHARGE
+ * l'utilisateur. Il lit `$currentUser` pour savoir s'il doit appeler
+ * `authApi.me()`, et renvoie vers la mire quand la réponse est « personne » —
+ * il ne peut pas attendre `authResolue`, puisque c'est lui qui le pose. Elle est
+ * apparue le 30/09/2026 (#1486), quand `currentUser` est entré dans la liste.
  *
- * J'en avais déclaré une — `lib/stores/auth.ts`, le fichier qui définit
- * `authResolue` — et le contrôle l'a refusée **à sa première exécution** : il ne
- * lit que les `.svelte`, donc cette exception ne couvrait rien. C'est exactement
- * ce qu'une liste d'exceptions doit faire quand une entrée cesse de servir
- * (`standards/04` §40), et elle l'a fait contre celui qui l'écrivait.
- *
- * Si une exception devient nécessaire, elle s'écrit ici **avec sa raison et sa
- * date** — et le bloc ci-dessous la refusera dès qu'elle cessera de servir.
+ * J'avais d'abord déclaré `lib/stores/auth.ts`, et le contrôle l'a refusée **à
+ * sa première exécution** : il ne lit que les `.svelte`, donc elle ne couvrait
+ * rien (`standards/04` §40). Toute nouvelle exception s'écrit ici **avec sa
+ * raison et sa date**, et le contrôle la refuse dès qu'elle cesse de servir.
  */
-const EXCEPTIONS = {};
+const EXCEPTIONS = {
+	'routes/(app)/+layout.svelte': 'charge l’utilisateur et pose `authResolue`',
+};
 
 /**
  * Ce rôle GOUVERNE-t-il une redirection, ou vit-il ailleurs dans le fichier ?
@@ -125,15 +138,6 @@ if (candidats.length === 0) {
 }
 console.log(`✓ Cas zéro : ${candidats.length} écran(s) combinent une redirection et un rôle.`);
 
-const perimees = Object.keys(EXCEPTIONS).filter((f) => !exceptionsVues.has(f));
-if (perimees.length > 0) {
-	console.error(
-		`✗ Exception(s) qui ne servent plus : ${perimees.join(', ')} — les retirer, ` +
-			`sinon elles couvriront un homonyme réintroduit plus tard.`,
-	);
-	process.exit(1);
-}
-
 if (fautes.length > 0) {
 	console.error(`\n✗ ${fautes.length} garde(s) qui décident avant de savoir :\n`);
 	for (const f of fautes) {
@@ -147,6 +151,114 @@ if (fautes.length > 0) {
 	);
 	process.exit(1);
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  AUCUN RÔLE LU DANS UN `onMount` (#1486, 30/09/2026)
+// ════════════════════════════════════════════════════════════════════════════
+//
+//  La même confusion que ci-dessus, mais pour CHARGER au lieu de rediriger.
+//  Svelte monte la page avant le layout : l'`onMount` d'un écran précède celui
+//  qui charge l'utilisateur, et y lit donc `false` / `null` sur un chargement
+//  direct. Deux récidives le même jour, trouvées par des e2e et non par un
+//  contrôle : la file de modération jamais demandée (v2.84.5) et un bailleur qui
+//  voyait tous ses lots « Vacant » (#779). Le relevé en a trouvé six autres.
+//
+//  Portée : le corps de l'`onMount` — fonction écrite en ligne ou nommée — et les
+//  fonctions LOCALES qu'il appelle, sur un niveau. Au-delà (un module importé),
+//  le contrôle ne voit rien, et il ne prétend pas le contraire.
+
+//  L'exception est la même qu'au premier volet (`EXCEPTIONS`) : le chargeur.
+
+/** Le texte entre la parenthèse ouvrante `debut` et sa fermante. */
+function jusquaFermante(source, debut) {
+	let profondeur = 0;
+	for (let i = debut; i < source.length; i++) {
+		if (source[i] === '(' || source[i] === '{') profondeur++;
+		else if (source[i] === ')' || source[i] === '}') {
+			profondeur--;
+			if (profondeur === 0) return source.slice(debut, i + 1);
+		}
+	}
+	return source.slice(debut);
+}
+
+/** Les fonctions déclarées dans le script, par nom → leur corps. */
+function fonctionsLocales(script) {
+	const corps = new Map();
+	const motif =
+		/(?:function\s+(\w+)\s*\(|(?:const|let)\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>)/g;
+	for (const m of script.matchAll(motif)) {
+		const accolade = script.indexOf('{', m.index + m[0].length - 1);
+		if (accolade >= 0) corps.set(m[1] ?? m[2], jusquaFermante(script, accolade));
+	}
+	return corps;
+}
+
+function rolesLus(texte) {
+	return STORES_DE_ROLE.filter((r) => new RegExp(`\\$${r}\\b|get\\(\\s*${r}\\s*\\)`).test(texte));
+}
+
+/** Ce que lisent les `onMount` d'un script : leur corps et leurs appels locaux. */
+function rolesLusAuMontage(script) {
+	const locales = fonctionsLocales(script);
+	const lus = new Set();
+	for (const m of script.matchAll(/onMount\s*\(/g)) {
+		const argument = jusquaFermante(script, m.index + m[0].length - 1);
+		const nomme = argument.match(/^\(\s*(\w+)\s*\)$/)?.[1];
+		const corps = nomme ? (locales.get(nomme) ?? '') : argument;
+		const appels = [...corps.matchAll(/\b(\w+)\s*\(/g)].map((a) => locales.get(a[1]) ?? '');
+		for (const texte of [corps, ...appels]) for (const r of rolesLus(texte)) lus.add(r);
+	}
+	return [...lus];
+}
+
+const auMontage = [];
+let onMountLus = 0;
+for (const relatif of globSync('**/*.svelte', { cwd: SRC }).map((p) => p.split(sep).join('/'))) {
+	const source = neutraliserCommentaires(readFileSync(join(SRC, relatif), 'utf8'));
+	const script = source.match(/<script[^>]*>([\s\S]*?)<\/script>/)?.[1] ?? '';
+	if (!/onMount\s*\(/.test(script)) continue;
+	onMountLus++;
+	const roles = rolesLusAuMontage(script);
+	if (roles.length === 0) continue;
+	if (EXCEPTIONS[relatif]) {
+		exceptionsVues.add(relatif);
+		continue;
+	}
+	auMontage.push({ relatif, roles });
+}
+
+//  Cas zéro : aucun `onMount` lu = le motif de recherche est cassé, pas un vert.
+if (onMountLus === 0) {
+	console.error('✗ Cas zéro : aucun `onMount` trouvé — ce contrôle ne mesure plus rien.');
+	process.exit(2);
+}
+if (auMontage.length > 0) {
+	console.error(
+		`\n✗ ${auMontage.length} onMount qui lisent l'utilisateur avant qu'il soit chargé :\n`,
+	);
+	for (const f of auMontage) {
+		console.error(`  src/${f.relatif}  — ${f.roles.map((r) => `$${r}`).join(', ')}`);
+	}
+	console.error(
+		`\n  L'onMount d'un écran précède celui du layout qui charge l'utilisateur : sur un\n` +
+			`  chargement direct ou un rechargement, ces stores y valent encore false / null.\n` +
+			`\n  → \`quandAuthResolue(() => …)\` (\`$lib/stores/auth\`) à la place de l'onMount.\n`,
+	);
+	process.exit(1);
+}
+//  Après les DEUX volets : une exception vue par l'un ou l'autre sert encore.
+const perimees = Object.keys(EXCEPTIONS).filter((f) => !exceptionsVues.has(f));
+if (perimees.length > 0) {
+	console.error(
+		`✗ Exception(s) qui ne servent plus : ${perimees.join(', ')} — les retirer, ` +
+			`sinon elles couvriront un homonyme réintroduit plus tard.`,
+	);
+	process.exit(1);
+}
+console.log(
+	`✓ ${onMountLus} fichier(s) à onMount : aucun ne lit l'utilisateur avant de le connaître.`,
+);
 
 // ════════════════════════════════════════════════════════════════════════════
 //  UNE SEULE PORTE VERS LA MIRE (#1083, point 2)

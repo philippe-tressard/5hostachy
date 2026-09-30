@@ -91,6 +91,21 @@ d'information ne se rend pas comme une information d'absence. `EtatListe`
 (24 écrans) porte les trois états, et `messageErreur` (`$lib/erreurs.ts`, 45
 fichiers) porte le texte.
 
+#### Ce qui dépend du rôle : `quandAuthResolue`, jamais `onMount`
+
+🔴 Svelte monte la **page avant le layout** : l'`onMount` d'un écran précède
+celui de `(app)/+layout.svelte`, qui charge l'utilisateur. Sur un chargement
+direct ou un rechargement, `$isCS`, `$isLocataire`, `$currentUser`… y valent
+encore `false` / `null` — seule une navigation interne rend l'écran juste, et
+c'est la seule qu'on essaie à la main (#1486 : huit écrans, dont un bailleur qui
+voyait tous ses lots « Vacant »).
+
+Un chargement qui lit un rôle — même par une fonction locale qu'il appelle —
+passe par `quandAuthResolue(action)` (`$lib/stores/auth`), qui l'exécute une
+fois, quand l'utilisateur est connu. L'`onMount` reste pour ce qui ne dépend de
+personne. 🔒 `npm run lint:gardes-auth` refuse un rôle lu dans un `onMount`, et
+son e2e type est `e2e/role-au-chargement-direct.spec.ts`.
+
 ### Gestion d'erreurs API
 
 Un message d'erreur ne se rédige pas dans un écran : il vient de

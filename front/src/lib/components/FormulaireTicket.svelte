@@ -34,7 +34,7 @@
 <script lang="ts">
 	import { pourChampLocal } from '$lib/date';
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import {
 		tickets as ticketsApi,
@@ -59,7 +59,7 @@
 	import { essayer } from '$lib/chargement';
 	import { pliageDe } from '$lib/pliage';
 	import type { PrefillActualite } from '$lib/actualite-prefill';
-	import { isCS } from '$lib/stores/auth';
+	import { isCS, quandAuthResolue } from '$lib/stores/auth';
 	import {
 		CATEGORIE_ACTUALITE,
 		OPTIONS_CATEGORIE,
@@ -182,7 +182,8 @@
 		if (propose) ({ prestataireId, contratId } = propose);
 	}
 
-	onMount(async () => {
+	//  Pas `onMount` : il précède le layout qui charge l'utilisateur (#1486).
+	quandAuthResolue(async () => {
 		if ($isCS && sectionPresente(TICKET, etat, 'intervenant')) {
 			[prestataires, erreurPrestataires] = await essayer(prestatairesApi.list(), []);
 			//  Pour PROPOSER l'intervenant sous contrat (#1097) — sans eux, rien n'est proposé.

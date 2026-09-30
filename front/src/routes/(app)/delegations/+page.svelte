@@ -4,8 +4,7 @@
 	import { nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import { onMount } from 'svelte';
-	import { currentUser, isCS } from '$lib/stores/auth';
+	import { currentUser, isCS, quandAuthResolue } from '$lib/stores/auth';
 	import { delegations as delegationsApi, admin as adminApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -38,7 +37,8 @@
 	let formDateFin = '';
 	let saving = false;
 
-	onMount(async () => {
+	//  Pas `onMount` : il précède le layout qui charge l'utilisateur (#1486).
+	quandAuthResolue(async () => {
 		try {
 			delegations = await delegationsApi.list();
 			if ($isCS) {
