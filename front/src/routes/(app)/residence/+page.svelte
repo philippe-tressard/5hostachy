@@ -1,17 +1,9 @@
 <script lang="ts">
-	import { supprimerDocument } from '$lib/gestes-document';
 	import { tenter, messageErreur } from '$lib/erreurs';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import ChampsCrAg from '$lib/components/ChampsCrAg.svelte';
-	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
 	import SectionDiagnostics from '$lib/components/SectionDiagnostics.svelte';
-	import FormulaireEditionDocument, {
-		correctionVide,
-		type CorrectionDocument,
-		type ModeDocument,
-	} from '$lib/components/FormulaireEditionDocument.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
@@ -31,7 +23,7 @@
 	import SectionRegles from '$lib/components/SectionRegles.svelte';
 	import CarnetEntretien from '$lib/components/CarnetEntretien.svelte';
 	import FicheResidence from '$lib/components/FicheResidence.svelte';
-	import SectionDocuments from '$lib/components/SectionDocuments.svelte';
+	import RubriqueDocuments from '$lib/components/RubriqueDocuments.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -81,49 +73,9 @@
 	// Photo bannière
 	let uploadingPhoto = false;
 
-	// Formulaires documents
-	let showPlanForm = false;
-	let newPlanTitre = '';
-	let newPlanDescription = '';
-	//  🔴 Le plan liait son sélecteur à `newCrAgPerimetre` — la variable du CR
-	//  d'AG (copie du 27/08, #470). Choisir un périmètre sur un plan ne faisait
-	//  donc rien pour le plan, et pré-remplissait en douce le formulaire d'AG.
-	//  Il a désormais le sien, et les deux formulaires sont le même objet.
-	let newPlanPerimetre: string[] = [];
-	let newPlanFichiers: File[] = [];
-	let savingPlan = false;
-
-	let showReglementForm = false;
-	let newReglementTitre = '';
-	let newReglementDescription = '';
-	let newReglementFichiers: File[] = [];
-	let savingReglement = false;
-
-	let showCrAgForm = false;
-	let newCrAgTitre = '';
-	let newCrAgDescription = '';
-	let newCrAgAnnee: string | number = '';
-	let newCrAgDateAg = '';
-	//  🔴 Des CODES de périmètre, plus des identifiants de bâtiments (#470).
-	//  L'écran parlait `number[]`, c'est-à-dire en clés primaires : il ne pouvait
-	//  cibler ni le parking, ni les caves, ni l'AFUL, ni un espace de bâtiment —
-	//  toute l'arborescence administrée lui était inaccessible.
-	//
-	//  ⚠️ Descriptif, jamais un droit : une AG est visible de TOUS les
-	//  copropriétaires quel que soit le bâtiment dont elle parle (#617). C'est
-	//  cet arbitrage qui a rendu la migration possible sans toucher aux accès.
-	let newCrAgPerimetre: string[] = [];
-	let newCrAgFichiers: File[] = [];
-	let savingCrAg = false;
-
-	// Édition document (plans, règlements, CR d'AG)
-	//  🔴 UN OBJET, pas sept variables. Elles l'étaient — `editingDocId`,
-	//  `…Mode`, `…Titre`, `…Annee`, `…Date`, `…Perimetre`, `…Description` — et
-	//  les TROIS montages du formulaire les reliaient une à une : douze lignes
-	//  recopiées trois fois. Un champ ajouté au formulaire, c'était trois
-	//  `bind:` de plus à ne pas oublier, et rien pour le rappeler.
-	let correction: CorrectionDocument = correctionVide();
-	let savingDoc = false;
+	//  Plans, règlement, CR d'AG : leur dépôt, leur correction et leur
+	//  suppression vivent dans `RubriqueDocuments` (#779) — ils y étaient écrits
+	//  trois fois, et la copie du plan liait son périmètre à celle de l'AG (#470).
 
 	// Diagnostics réglementaires
 	let diagnosticTypes: any[] = [];
@@ -135,21 +87,24 @@
 	// ── Derived ────────────────────────────────────────────────────────────────
 	// Composition depuis les champs stockés sur Batiment et Copropriete
 
-	$: sortedPlans = [...plans].sort((a, b) => {
-		if (!a.batiment_id && b.batiment_id) return -1;
-		if (a.batiment_id && !b.batiment_id) return 1;
-		const bA = batiments.find((x) => x.id === a.batiment_id);
-		const bB = batiments.find((x) => x.id === b.batiment_id);
-		return (bA?.numero ?? '').localeCompare(bB?.numero ?? '');
-	});
-	$: sortedCrAg = [...crAg].sort((a, b) => {
-		const anneeB = (b.annee as number) ?? 0;
-		const anneeA = (a.annee as number) ?? 0;
-		if (anneeB !== anneeA) return anneeB - anneeA;
-		const dateB = (b.date_ag ?? b.publie_le ?? '') as string;
-		const dateA = (a.date_ag ?? a.publie_le ?? '') as string;
-		return dateB.localeCompare(dateA);
-	});
+	//  Réactif : le tri des plans lit `batiments`, qui arrive après eux.
+	$: trierPlans = (docs: any[]) =>
+		[...docs].sort((a, b) => {
+			if (!a.batiment_id && b.batiment_id) return -1;
+			if (a.batiment_id && !b.batiment_id) return 1;
+			const bA = batiments.find((x) => x.id === a.batiment_id);
+			const bB = batiments.find((x) => x.id === b.batiment_id);
+			return (bA?.numero ?? '').localeCompare(bB?.numero ?? '');
+		});
+	const trierCrAg = (docs: any[]) =>
+		[...docs].sort((a, b) => {
+			const anneeB = (b.annee as number) ?? 0;
+			const anneeA = (a.annee as number) ?? 0;
+			if (anneeB !== anneeA) return anneeB - anneeA;
+			const dateB = (b.date_ag ?? b.publie_le ?? '') as string;
+			const dateA = (a.date_ag ?? a.publie_le ?? '') as string;
+			return dateB.localeCompare(dateA);
+		});
 
 	function batimentLabel(id: number | null | undefined): string {
 		if (!id) return 'Résidence';
@@ -259,163 +214,6 @@
 		);
 		uploadingPhoto = false;
 		(e.target as HTMLInputElement).value = '';
-	}
-
-	// ── Plans ──────────────────────────────────────────────────────────────────
-	async function addPlan() {
-		const fichier = newPlanFichiers?.[0];
-		if (!catIdPlan || !newPlanTitre.trim() || !fichier) return;
-		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure
-		//  le fait que la garde ci-dessus a écarté `null`.
-		const categorieId = catIdPlan;
-		savingPlan = true;
-		await tenter(async () => {
-			//  Le périmètre décrit DE QUOI parle le plan ; il ne restreint pas sa
-			//  lecture — même règle que le CR d'AG ci-dessous, et même raison
-			//  (migration 0159). Les droits restent à `résidence`.
-			const doc = await documentsApi.upload({
-				titre: newPlanTitre.trim(),
-				categorieId,
-				file: fichier,
-				description: newPlanDescription.trim(),
-				perimetreCible: newPlanPerimetre,
-			});
-			plans = [doc, ...plans];
-			showPlanForm = false;
-			newPlanTitre = '';
-			newPlanDescription = '';
-			newPlanPerimetre = [];
-			newPlanFichiers = [];
-		}, 'Plan ajouté');
-		savingPlan = false;
-	}
-
-	//  Supprimer un document de l'une des trois sections : `supprimerDocument`
-	//  (`$lib/gestes-document`), paramétré par la liste d'où le retirer.
-
-	async function deletePlan(id: number) {
-		await supprimerDocument(id, 'Ce plan', (i) => (plans = plans.filter((d) => d.id !== i)));
-	}
-
-	// ── Règlement ──────────────────────────────────────────────────────────────
-	async function addReglement() {
-		const fichier = newReglementFichiers?.[0];
-		if (!catIdReglement || !newReglementTitre.trim() || !fichier) return;
-		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure
-		//  le fait que la garde ci-dessus a écarté `null`.
-		const categorieId = catIdReglement;
-		savingReglement = true;
-		await tenter(async () => {
-			const doc = await documentsApi.upload({
-				titre: newReglementTitre.trim(),
-				categorieId,
-				file: fichier,
-				description: newReglementDescription.trim(),
-			});
-			reglements = [doc, ...reglements];
-			showReglementForm = false;
-			newReglementTitre = '';
-			newReglementDescription = '';
-			newReglementFichiers = [];
-		}, 'Règlement ajouté');
-		savingReglement = false;
-	}
-
-	async function deleteReglement(id: number) {
-		await supprimerDocument(
-			id,
-			'Ce règlement',
-			(i) => (reglements = reglements.filter((d) => d.id !== i)),
-		);
-	}
-
-	// ── CR d'AG ────────────────────────────────────────────────────────────────
-	async function addCrAg() {
-		const fichier = newCrAgFichiers?.[0];
-		if (!catIdCrAg || !newCrAgTitre.trim() || !fichier) return;
-		if (!newCrAgAnnee || !newCrAgDateAg) return;
-		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure
-		//  le fait que la garde ci-dessus a écarté `null`.
-		const categorieId = catIdCrAg;
-		savingCrAg = true;
-		await tenter(async () => {
-			//  🔴 UN PV D'AG N'EST JAMAIS RESTREINT PAR SON PÉRIMÈTRE : le ciblage
-			//  dit de quoi il parle, pas qui peut le lire. Il part donc toujours en
-			//  `résidence` côté DROITS, les périmètres dans `perimetre_cible`.
-			//  Le pourquoi : migration 0159.
-			const doc = await documentsApi.upload({
-				titre: newCrAgTitre.trim(),
-				categorieId,
-				file: fichier,
-				description: newCrAgDescription.trim(),
-				annee: newCrAgAnnee ? Number(newCrAgAnnee) : undefined,
-				dateAg: newCrAgDateAg || undefined,
-				perimetreCible: newCrAgPerimetre,
-			});
-			crAg = [doc, ...crAg];
-			showCrAgForm = false;
-			newCrAgTitre = '';
-			newCrAgDescription = '';
-			newCrAgAnnee = '';
-			newCrAgDateAg = '';
-			newCrAgPerimetre = [];
-			newCrAgFichiers = [];
-		}, "CR d'AG ajouté");
-		savingCrAg = false;
-	}
-
-	async function deleteCrAg(id: number) {
-		await supprimerDocument(
-			id,
-			"Ce compte-rendu d'AG",
-			(i) => (crAg = crAg.filter((d) => d.id !== i)),
-		);
-	}
-
-	// ── Édition document ───────────────────────────────────────────────────────────────────
-	function startEditDoc(doc: any, mode: ModeDocument) {
-		correction = {
-			...correctionVide(),
-			id: doc.id,
-			mode,
-			titre: doc.titre ?? '',
-			annee: doc.annee ?? '',
-			dateAg: doc.date_ag ? String(doc.date_ag).substring(0, 10) : '',
-			description: doc.description ?? '',
-			//  ⚠️ `perimetre_cible` sort du serveur en LISTE, jamais en JSON brut
-			//  (`schemas.DocumentRead`). Le re-parser ici serait une seconde façon de
-			//  lire la même chose, et elles divergeraient au premier format ajouté.
-			perimetre: Array.isArray(doc.perimetre_cible) ? [...doc.perimetre_cible] : [],
-		};
-	}
-
-	async function saveEditDoc() {
-		if (!correction.id) return;
-		//  Capturé AVANT le rappel : TypeScript ne conserve pas dans une closure
-		//  le fait que la garde ci-dessus a écarté `null`.
-		const docId = correction.id;
-		savingDoc = true;
-		await tenter(async () => {
-			const updated = await documentsApi.update(docId, {
-				titre: correction.titre.trim() || undefined,
-				//  🔴 Les deux champs que la correction n'envoyait pas (#852) —
-				//  et que le serveur n'acceptait pas non plus. Les ouvrir d'un
-				//  seul côté aurait donné des champs qui ne font rien.
-				description: correction.description,
-				perimetre_cible: correction.perimetre,
-				annee: correction.annee ? Number(correction.annee) : null,
-				date_ag: correction.dateAg || null,
-			});
-			if (correction.mode === 'plan') {
-				plans = plans.map((d) => (d.id === docId ? updated : d));
-			} else if (correction.mode === 'reglement') {
-				reglements = reglements.map((d) => (d.id === docId ? updated : d));
-			} else {
-				crAg = crAg.map((d) => (d.id === docId ? updated : d));
-			}
-			correction = correctionVide();
-		}, 'Document mis à jour');
-		savingDoc = false;
 	}
 </script>
 
@@ -556,169 +354,64 @@
 
 	<SectionRegles />
 
-	<!-- ── Section : Plans ───────────────────────────────────────────────── -->
-	<SectionDocuments
+	<!-- ── Plans · Règlement · Comptes-rendus d'AG : une rubrique, trois usages ── -->
+	<RubriqueDocuments
+		mode="plan"
 		titre="&#x1F5FA;️ Plans"
-		documents={sortedPlans}
+		categorieId={catIdPlan}
+		bind:documents={plans}
 		erreur={ePlans}
+		trier={trierPlans}
 		messageVide="Aucun plan ajouté."
 		peutModifier={$isCS}
-		urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
 		dateDe={(d) => fmt(d.publie_le)}
-		onAjouter={() => (showPlanForm = true)}
-		onModifier={(d) => startEditDoc(d, 'plan')}
-		onSupprimer={deletePlan}
+		intitule="Ajouter un plan"
+		placeholderTitre="ex : Plan de masse résidence"
+		placeholderDescription="Ce que ce plan montre, à quelle date il a été relevé…"
+		avecPerimetre
+		quoi="Ce plan"
+		messageAjout="Plan ajouté"
 	>
-		<svelte:fragment slot="formulaire">
-			{#if showPlanForm}
-				<FormulaireDocument
-					intitule="Ajouter un plan"
-					bind:titre={newPlanTitre}
-					placeholderTitre="ex : Plan de masse résidence"
-					avecPerimetre
-					bind:perimetre={newPlanPerimetre}
-					bind:fichiers={newPlanFichiers}
-					enregistrement={savingPlan}
-					complet={!!newPlanTitre.trim() && !!newPlanFichiers?.length}
-					on:annuler={() => (showPlanForm = false)}
-					on:enregistrer={addPlan}
-				>
-					<label class="field" for="plan-description" slot="description">
-						Description
-						<textarea
-							id="plan-description"
-							bind:value={newPlanDescription}
-							placeholder="Ce que ce plan montre, à quelle date il a été relevé…"
-							rows="3"></textarea>
-					</label>
-				</FormulaireDocument>
-			{/if}
-			<!--  L'ÉDITION est un OBJET, monté par les trois sections sous condition
-			      de leur mode. La recopier ici l'aurait fait diverger au premier
-			      champ ajouté — trois en sont ajoutés dans ce même lot. -->
-			{#if correction.id !== null && correction.mode === 'plan'}
-				<FormulaireEditionDocument
-					bind:correction
-					enregistrement={savingDoc}
-					on:annuler={() => (correction = correctionVide())}
-					on:enregistrer={saveEditDoc}
-				/>
-			{/if}
-		</svelte:fragment>
 		<svelte:fragment slot="badges" let:doc>
 			<span class="badge badge-blue"
 				>{doc.batiment_id ? batimentLabel(doc.batiment_id) : 'Copropriété'}</span
 			>
 		</svelte:fragment>
-	</SectionDocuments>
+	</RubriqueDocuments>
 
-	<!-- ── Section : Règlement de copropriété ────────────────────────────── -->
-	<SectionDocuments
+	<RubriqueDocuments
+		mode="reglement"
 		titre="&#x1F4D6; Règlement de copropriété"
-		documents={reglements}
+		categorieId={catIdReglement}
+		bind:documents={reglements}
 		erreur={eReglements}
 		messageVide="Aucun règlement ajouté."
 		peutModifier={$isCS}
-		urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
 		dateDe={(d) => fmt(d.publie_le)}
-		onAjouter={() => (showReglementForm = true)}
-		onModifier={(d) => startEditDoc(d, 'reglement')}
-		onSupprimer={deleteReglement}
-	>
-		<svelte:fragment slot="formulaire">
-			{#if showReglementForm}
-				<FormulaireDocument
-					intitule="Ajouter un règlement"
-					bind:titre={newReglementTitre}
-					placeholderTitre="ex : Règlement de copropriété 2024"
-					bind:fichiers={newReglementFichiers}
-					enregistrement={savingReglement}
-					complet={!!newReglementTitre.trim() && !!newReglementFichiers?.length}
-					on:annuler={() => (showReglementForm = false)}
-					on:enregistrer={addReglement}
-				>
-					<label class="field" for="reglement-description" slot="description">
-						Description
-						<textarea
-							id="reglement-description"
-							bind:value={newReglementDescription}
-							placeholder="Ce qu'il remplace, ce qu'il ne couvre pas, où sont les annexes…"
-							rows="3"></textarea>
-					</label>
-				</FormulaireDocument>
-			{/if}
-			<!--  L'ÉDITION est un OBJET, monté par les trois sections sous condition
-			      de leur mode. La recopier ici l'aurait fait diverger au premier
-			      champ ajouté — trois en sont ajoutés dans ce même lot. -->
-			{#if correction.id !== null && correction.mode === 'reglement'}
-				<FormulaireEditionDocument
-					bind:correction
-					enregistrement={savingDoc}
-					on:annuler={() => (correction = correctionVide())}
-					on:enregistrer={saveEditDoc}
-				/>
-			{/if}
-		</svelte:fragment>
-	</SectionDocuments>
+		intitule="Ajouter un règlement"
+		placeholderTitre="ex : Règlement de copropriété 2024"
+		placeholderDescription="Ce qu'il remplace, ce qu'il ne couvre pas, où sont les annexes…"
+		quoi="Ce règlement"
+		messageAjout="Règlement ajouté"
+	/>
 
-	<!-- ── Section : Comptes-rendus d'AG ─────────────────────────────────── -->
 	{#if !$isLocataire}
-		<SectionDocuments
+		<RubriqueDocuments
+			mode="ag"
 			titre="&#x1F4CB; Comptes-rendus d'AG"
-			documents={sortedCrAg}
+			categorieId={catIdCrAg}
+			bind:documents={crAg}
 			erreur={eCrAg}
+			trier={trierCrAg}
 			messageVide="Aucun compte-rendu ajouté."
 			peutModifier={$isCS}
-			urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
-			onAjouter={() => (showCrAgForm = true)}
-			onModifier={(d) => startEditDoc(d, 'ag')}
-			onSupprimer={deleteCrAg}
+			intitule="Ajouter un CR d'AG"
+			placeholderTitre="ex : PV AG ordinaire 2025"
+			placeholderDescription="Les points saillants, les résolutions votées, ce qui reste en suspens…"
+			avecPerimetre
+			quoi="Ce compte-rendu d'AG"
+			messageAjout="CR d'AG ajouté"
 		>
-			<svelte:fragment slot="formulaire">
-				{#if showCrAgForm}
-					<FormulaireDocument
-						intitule="Ajouter un CR d'AG"
-						bind:titre={newCrAgTitre}
-						placeholderTitre="ex : PV AG ordinaire 2025"
-						avecPerimetre
-						bind:perimetre={newCrAgPerimetre}
-						bind:fichiers={newCrAgFichiers}
-						enregistrement={savingCrAg}
-						complet={!!newCrAgAnnee &&
-							!!newCrAgDateAg &&
-							!!newCrAgTitre.trim() &&
-							!!newCrAgFichiers?.length}
-						on:annuler={() => (showCrAgForm = false)}
-						on:enregistrer={addCrAg}
-					>
-						<ChampsCrAg
-							slot="specifiques"
-							requis
-							bind:annee={newCrAgAnnee}
-							bind:dateAg={newCrAgDateAg}
-						/>
-						<label class="field" for="ag-description" slot="description">
-							Description
-							<textarea
-								id="ag-description"
-								bind:value={newCrAgDescription}
-								placeholder="Les points saillants, les résolutions votées, ce qui reste en suspens…"
-								rows="3"></textarea>
-						</label>
-					</FormulaireDocument>
-				{/if}
-				<!--  L'ÉDITION est un OBJET, monté par les trois sections sous condition
-				      de leur mode. La recopier ici l'aurait fait diverger au premier
-				      champ ajouté — trois en sont ajoutés dans ce même lot. -->
-				{#if correction.id !== null && correction.mode === 'ag'}
-					<FormulaireEditionDocument
-						bind:correction
-						enregistrement={savingDoc}
-						on:annuler={() => (correction = correctionVide())}
-						on:enregistrer={saveEditDoc}
-					/>
-				{/if}
-			</svelte:fragment>
 			<svelte:fragment slot="badges" let:doc>
 				{#if doc.annee}<span class="badge badge-gray" style="font-variant-numeric:tabular-nums"
 						>{doc.annee}</span
@@ -734,7 +427,7 @@
 					<span class="badge badge-green">Copropriété</span>
 				</BadgePerimetre>
 			</svelte:fragment>
-		</SectionDocuments>
+		</RubriqueDocuments>
 	{/if}
 
 	<!-- ── Section : Diagnostics et Contrôles Réglementaires ────────────── -->
