@@ -352,6 +352,9 @@ class TicketEvolution(EvolutionMixin, table=True):
     #  n'a pas de périmètre, elle en déclare un (migration 0154, #497).
     #  Même forme JSON que partout ailleurs : `["résidence"]`, `["bat:1","cave"]`.
     perimetre_cible: Optional[str] = None
+    #  Le transfert de courriel qui l'a versée (#1482) — ce qui permet de
+    #  défaire ce transfert d'un geste. Colonne simple (0239).
+    versement_id: Optional[int] = Field(default=None, index=True)
 
     ticket: Optional[Ticket] = Relationship(back_populates="evolutions")
     auteur: Optional["Utilisateur"] = Relationship()

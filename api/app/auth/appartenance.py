@@ -141,3 +141,31 @@ def exiger_cible_visible(
     if not cible or not visible_de(cible, user):
         raise HTTPException(404, f"{libelle} introuvable")
     return cible
+
+
+def exiger_auteur_du_versement(
+    session: Session, ticket_id: int, versement_id: int, user: Utilisateur, *, deplacer: bool
+):
+    """Le transfert versé dans CETTE affaire, s'il est celui de qui le défait — **403** sinon.
+
+    Cinquième combinaison (#1482, arbitré le 30/09/2026) : celui qui a transféré,
+    et l'administrateur — pas le conseil syndical en tant que tel. Défaire un
+    transfert retire des Suites que d'autres n'ont pas écrites ; c'est le geste
+    de celui qui s'est trompé, ou de l'arbitre.
+
+    ⚠️ DÉPLACER exige en plus de modérer : un correspondant de l'affaire (son
+    auteur, le syndic) peut transférer dans l'affaire que le courriel désigne,
+    mais il ne choisit pas l'affaire où verser — ce serait écrire dans une
+    affaire qu'il ne lit peut-être pas. Il peut annuler.
+
+    404 pour un transfert d'une AUTRE affaire : l'adresse dit laquelle, et la
+    lecture de l'affaire a déjà été vérifiée par le routeur.
+    """
+    from app.models.core import RoleUtilisateur
+    from app.models.courriel import VersementCourriel
+
+    v = ou_404(session, VersementCourriel, versement_id, "Transfert", sous={"ticket_id": ticket_id})
+    admin = user.has_role(RoleUtilisateur.admin)
+    if not admin and (v.transfere_par_id != user.id or (deplacer and not est_moderateur(user))):
+        raise HTTPException(403, "Seul celui qui a transféré, ou l'administrateur, peut le défaire")
+    return v

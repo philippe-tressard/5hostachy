@@ -1,0 +1,210 @@
+<!--
+  TransfertsVerses.svelte — les transferts de courriel versés dans cette
+  affaire, et les gestes qui les défont (#1482, 30/09/2026).
+
+  Un fil transféré à l'adresse des affaires y entre en autant de Suites que de
+  messages. Versé au mauvais endroit, il s'ANNULE, se DÉPLACE vers une autre
+  affaire, ou devient une AFFAIRE NEUVE — en un geste. La règle est au serveur
+  (`api/app/utils/versement_transfert.py`) ; cet écran ne rejoue rien :
+
+  - la liste ne contient que les transferts que le lecteur peut défaire —
+    celui qui a transféré, ou l'administrateur ; vide, le bloc ne se rend pas ;
+  - `bloque` dit pourquoi un transfert ne se défait plus (une suite d'un autre
+    depuis), et les boutons disparaissent : on ne propose pas un geste refusé ;
+  - `peut_deplacer` : déplacer exige de modérer.
+
+  ⚠️ Rendu sur la FICHE de l'affaire seulement, pas dans la carte de la liste :
+  c'est là que mène la notification « Transfert versé », et un geste de
+  réparation n'a pas à peser sur chaque carte dépliée.
+-->
+<script lang="ts">
+	import { createEventDispatcher, onMount } from 'svelte';
+	import { tickets as ticketsApi } from '$lib/api';
+	import type { AffaireLiee, AffaireVisee, TransfertVerse } from '$lib/api/types';
+	import ChoixAffaire from '$lib/components/ChoixAffaire.svelte';
+	import Icon from '$lib/components/Icon.svelte';
+	import { toast } from '$lib/components/Toast.svelte';
+	import { confirmer } from '$lib/confirmation';
+	import { fmtDatetime } from '$lib/date';
+	import { TICKET } from '$lib/entites/ticket';
+	import { messageErreur } from '$lib/erreurs';
+
+	export let ticketId: number;
+
+	/** L'affaire a changé sous les yeux : la page recharge ce qu'elle montre. */
+	const dispatch = createEventDispatcher<{ change: void }>();
+
+	let transferts: TransfertVerse[] = [];
+	/** Le transfert dont on choisit l'affaire de destination. */
+	let deplace: number | null = null;
+	let enCours = false;
+
+	async function charger() {
+		try {
+			transferts = await ticketsApi.transferts(ticketId);
+		} catch (e) {
+			//  Dit, jamais avalé : sans la liste, on ne saurait pas qu'un geste existe.
+			toast('error', messageErreur(e));
+		}
+	}
+
+	onMount(charger);
+
+	const suites = (t: TransfertVerse) => `${t.suites} suite${t.suites > 1 ? 's' : ''}`;
+
+	/** Ce qui arrive à l'affaire ouverte, dit avant le geste. */
+	function ceQuiReste(t: TransfertVerse): string {
+		return t.affaire_creee
+			? `Cette ${TICKET.libelle.toLowerCase()}, créée par le transfert, sera archivée.`
+			: `Les ${suites(t)} versées par ce transfert quitteront cette ${TICKET.libelle.toLowerCase()}.`;
+	}
+
+	async function geste(appel: () => Promise<AffaireVisee>, fait: string) {
+		enCours = true;
+		try {
+			const visee = await appel();
+			toast('success', fait);
+			deplace = null;
+			if (visee.ticket_id !== ticketId) {
+				//  Une navigation complète : la fiche charge au montage, et SvelteKit
+				//  garderait ce composant pour un autre identifiant.
+				window.location.href = `/tickets/${visee.ticket_id}`;
+				return;
+			}
+			await charger();
+			dispatch('change');
+		} catch (e) {
+			toast('error', messageErreur(e));
+		} finally {
+			enCours = false;
+		}
+	}
+
+	async function annuler(t: TransfertVerse) {
+		const ok = await confirmer({
+			titre: 'Annuler le transfert',
+			message: `${ceQuiReste(t)} Le fil pourra être transféré de nouveau.`,
+			libelleConfirmer: 'Annuler le transfert',
+			libelleAnnuler: 'Garder',
+			danger: true,
+		});
+		if (ok) await geste(() => ticketsApi.annulerTransfert(ticketId, t.id), 'Transfert annulé');
+	}
+
+	async function versAffaire(t: TransfertVerse, a: AffaireLiee) {
+		const ok = await confirmer({
+			titre: 'Déplacer le transfert',
+			message: `${ceQuiReste(t)} Elles rejoindront ${a.numero} — ${a.titre}, sans doubler ce qui y est déjà.`,
+			libelleConfirmer: 'Déplacer',
+		});
+		if (ok)
+			await geste(
+				() => ticketsApi.deplacerTransfert(ticketId, t.id, a.id),
+				`Transfert déplacé vers ${a.numero}`,
+			);
+	}
+
+	async function versNouvelle(t: TransfertVerse) {
+		const ok = await confirmer({
+			titre: TICKET.libelleNouveau,
+			message: `${ceQuiReste(t)} Une ${TICKET.libelle.toLowerCase()} neuve les reçoit, décrite par le premier message, au nom de son auteur.`,
+			libelleConfirmer: 'Créer',
+		});
+		if (ok)
+			await geste(
+				() => ticketsApi.deplacerTransfert(ticketId, t.id, null),
+				`${TICKET.libelle} créée`,
+			);
+	}
+</script>
+
+{#if transferts.length > 0}
+	<section class="card transferts" aria-labelledby="transferts-titre">
+		<h2 id="transferts-titre" class="transferts-titre">
+			<Icon name="inbox" size={16} /> Transferts de courriel
+		</h2>
+		{#each transferts as t (t.id)}
+			<div class="transfert">
+				<p class="transfert-quoi">
+					{fmtDatetime(t.cree_le)} — transféré par {t.transfere_par_nom} ·
+					{suites(t)}{t.affaire_creee ? ` · ${TICKET.libelle.toLowerCase()} créée` : ''}
+				</p>
+				{#if t.bloque}
+					<p class="aide">Ne peut plus être défait : {t.bloque}.</p>
+				{:else}
+					<div class="transfert-gestes">
+						<button
+							type="button"
+							class="btn btn-outline btn-sm"
+							disabled={enCours}
+							on:click={() => annuler(t)}>Annuler le transfert</button
+						>
+						{#if t.peut_deplacer}
+							<button
+								type="button"
+								class="btn btn-outline btn-sm"
+								aria-expanded={deplace === t.id}
+								disabled={enCours}
+								on:click={() => (deplace = deplace === t.id ? null : t.id)}
+								>Déplacer vers une autre {TICKET.libelle.toLowerCase()}</button
+							>
+							{#if !t.affaire_creee}
+								<button
+									type="button"
+									class="btn btn-outline btn-sm"
+									disabled={enCours}
+									on:click={() => versNouvelle(t)}
+									>En faire une nouvelle {TICKET.libelle.toLowerCase()}</button
+								>
+							{/if}
+						{/if}
+					</div>
+					{#if deplace === t.id}
+						<div class="transfert-cible">
+							<ChoixAffaire
+								id="transfert-{t.id}-cible"
+								libelle="Vers l’{TICKET.libelle.toLowerCase()}"
+								exclure={[ticketId]}
+								sansCloses
+								on:choisir={(e) => versAffaire(t, e.detail)}
+							/>
+						</div>
+					{/if}
+				{/if}
+			</div>
+		{/each}
+	</section>
+{/if}
+
+<style>
+	.transferts {
+		max-width: 720px;
+		margin-bottom: 1rem;
+	}
+	.transferts-titre {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: var(--fs-lg);
+		font-weight: 600;
+		margin: 0 0 0.5rem;
+	}
+	.transfert + .transfert {
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--color-border);
+	}
+	.transfert-quoi {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		margin: 0 0 0.4rem;
+	}
+	.transfert-gestes {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+	.transfert-cible {
+		margin-top: 0.6rem;
+	}
+</style>
