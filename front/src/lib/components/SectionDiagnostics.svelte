@@ -38,6 +38,7 @@
 	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
 	import { diagnostics as diagnosticsApi } from '$lib/api';
 	import { tenter } from '$lib/erreurs';
+	import { titreOuNomDuFichier } from '$lib/fichiers';
 	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import { safeHtml } from '$lib/sanitize';
 	//  ⚠️ `fmtDateShort`, comme la page — jamais un format réécrit ici
@@ -90,7 +91,7 @@
 				for (const file of files) {
 					//  Sans titre saisi, chaque fichier prend le sien — c'est ce que dit
 					//  l'aide du champ, et c'est ici que ça se décide.
-					const titre = newDiagTitre.trim() || file.name.replace(/\.[^.]+$/, '');
+					const titre = titreOuNomDuFichier(newDiagTitre, file);
 					const rapport = await diagnosticsApi.uploadRapport(
 						typeId,
 						titre,

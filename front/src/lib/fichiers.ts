@@ -86,6 +86,15 @@ export const LIBELLE_TYPES: Readonly<Record<'photos' | 'documents' | 'mixte', st
  */
 export const MAX_FICHIERS = 10;
 
+/**
+ *  Le titre d'un document déposé : celui qu'on a saisi, sinon le nom de son
+ *  fichier sans extension. C'est la règle de « Sans titre, chaque fichier prend
+ *  le sien » — Diagnostics et les rubriques de la Résidence (#1479) la partagent.
+ */
+export function titreOuNomDuFichier(saisi: string, fichier: File): string {
+	return saisi.trim() || fichier.name.replace(/\.[^.]+$/, '');
+}
+
 /** Extensions produites par nos propres endpoints d'upload d'image. */
 const EXTENSIONS_IMAGE = /\.(jpe?g|png|webp|gif)$/i;
 
