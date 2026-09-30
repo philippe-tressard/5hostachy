@@ -38,6 +38,7 @@ from sqlmodel import Session, select
 from app.database import engine
 from app.models.core import Batiment, Ticket, Utilisateur
 from app.routers.tickets.commun import ticket_read
+from tests.aides_base import compte
 
 EMAIL = "demandeur-653@test.fr"
 
@@ -71,16 +72,9 @@ def contexte(batiments: list[int]):
         _purger(session)
         bat_auteur, bat_ticket = batiments[0], batiments[1]
         assert bat_auteur != bat_ticket
-        auteur = Utilisateur(
-            email=EMAIL,
-            mot_de_passe_hash="x",
-            prenom="Alex",
-            nom="Demandeur",
-            batiment_id=bat_auteur,
+        auteur = compte(
+            session, email=EMAIL, prenom="Alex", nom="Demandeur", batiment_id=bat_auteur
         )
-        session.add(auteur)
-        session.commit()
-        session.refresh(auteur)
         yield session, auteur, bat_auteur, bat_ticket
         _purger(session)
 

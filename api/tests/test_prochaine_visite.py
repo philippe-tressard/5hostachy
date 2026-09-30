@@ -15,34 +15,19 @@ from __future__ import annotations
 from datetime import date, datetime
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session
 
 from app.models.core import RoleUtilisateur, Ticket, Utilisateur
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.utils.prochaine_visite import apres_cloture, date_prochaine_visite
-
-
-@pytest.fixture(name="session")
-def session_fixture():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as session:
-        yield session
+from tests.aides_base import compte
 
 
 @pytest.fixture(name="lecteur")
 def lecteur_fixture(session: Session) -> Utilisateur:
-    lecteur = Utilisateur(
-        email="r@test.fr",
-        hashed_password="x",
-        nom="R",
-        prenom="R",
-        roles_json=RoleUtilisateur.résident.value,
+    return compte(
+        session, prefixe="r", nom="R", prenom="R", roles_json=RoleUtilisateur.résident.value
     )
-    session.add(lecteur)
-    session.commit()
-    session.refresh(lecteur)
-    return lecteur
 
 
 @pytest.mark.parametrize(

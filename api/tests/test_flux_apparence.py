@@ -19,8 +19,9 @@ Ajouter une rubrique au fil sans son apparence échoue désormais en CI.
 import pathlib
 import re
 
+from tests.aides_sources import modules_app
+
 _RACINE = pathlib.Path(__file__).resolve().parents[2]
-_FLUX_API = _RACINE / "api" / "app" / "routers" / "flux"
 _FLUX_TS = _RACINE / "front" / "src" / "lib" / "flux.ts"
 
 #: `type="…"` dans la construction d'un FluxItem — c'est la seule façon dont une
@@ -30,14 +31,9 @@ _TYPE_EMIS = re.compile(r'type="([a-z_]+)"')
 
 def _types_emis() -> set[str]:
     """Les types que le backend produit réellement — la PORTÉE du contrôle."""
-    fichiers = [f for f in sorted(_FLUX_API.rglob("*.py")) if "__pycache__" not in f.parts]
-    assert len(fichiers) >= 10, (
-        f"Seulement {len(fichiers)} module(s) sous {_FLUX_API} — la portée du "
-        "contrôle est cassée, ne pas lire ce test comme vert."
-    )
     types = set()
-    for f in fichiers:
-        types |= set(_TYPE_EMIS.findall(f.read_text(encoding="utf-8")))
+    for module in modules_app("routers/flux", minimum=10):
+        types |= set(_TYPE_EMIS.findall(module.source))
     #  Plancher : un motif cassé rendrait un ensemble vide, et toutes les
     #  inclusions ci-dessous seraient vraies à vide (`standards/04` §2, cas zéro).
     assert len(types) >= 12, (

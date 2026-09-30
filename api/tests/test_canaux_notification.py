@@ -18,35 +18,23 @@ tous deux invisibles à la relecture d'un diff :
 import ast
 import pathlib
 
+from tests.aides_sources import modules_app
+
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 #: Les clés qui composent la configuration du canal.
 _MARQUEURS = ("whatsapp_api_url", "whatsapp_group_jid", "whatsapp_enabled")
 
 
-def _sources() -> list[tuple[pathlib.Path, str]]:
-    """Tous les modules de l'application. C'est la PORTÉE, donc une partie du contrôle."""
-    fichiers = [
-        (f, f.read_text(encoding="utf-8"))
-        for f in sorted(_APP.rglob("*.py"))
-        if "__pycache__" not in f.parts
-    ]
-    assert len(fichiers) >= 40, (
-        f"Seulement {len(fichiers)} module(s) trouvé(s) sous {_APP} — la portée du "
-        "contrôle est cassée, ne pas lire ces tests comme verts."
-    )
-    return fichiers
-
-
 def test_les_cles_de_configuration_whatsapp_ne_sont_ecrites_qu_une_fois():
     """Un seul module a le droit d'énumérer les clés du canal WhatsApp."""
     porteurs = {
-        f.relative_to(_APP).as_posix()
-        for f, src in _sources()
+        module.rel
+        for module in modules_app()
         #  Deux marqueurs au moins : une mention isolée (un log, un commentaire,
         #  une lecture ciblée comme celle du moniteur de santé) n'est pas une
         #  redéfinition de l'ensemble.
-        if sum(m in src for m in _MARQUEURS) >= 2
+        if sum(m in module.source for m in _MARQUEURS) >= 2
     }
     assert porteurs == {"utils/whatsapp.py"}, (
         "Les clés de configuration WhatsApp doivent vivre dans `app/utils/whatsapp.py` "

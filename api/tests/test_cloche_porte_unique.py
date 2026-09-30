@@ -16,17 +16,17 @@ import ast
 import pathlib
 
 from app.utils.cloche import MOTIFS_SYSTEME
+from tests.aides_sources import modules_app
 
 RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
 PORTE = RACINE / "utils" / "cloche.py"
 
 
 def _appels(nom: str):
-    for fichier in RACINE.rglob("*.py"):
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
-        for n in ast.walk(arbre):
+    for module in modules_app():
+        for n in ast.walk(module.arbre):
             if isinstance(n, ast.Call) and getattr(n.func, "id", None) == nom:
-                yield fichier, n
+                yield module.chemin, n
 
 
 def test_aucune_notification_construite_hors_de_la_porte():

@@ -34,11 +34,11 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
-from app.models.core import Utilisateur
 from app.schemas import TicketRead
 from app.utils.saisi_pour import SaisiPourSortie, noms_derives
+from tests.aides_saisi_pour import ObjetSaisiPour as _Objet
+from tests.aides_saisi_pour import alice_et_bruno
 
 RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
 
@@ -51,47 +51,11 @@ LECTURES = [
 ]
 
 
-class _Objet:
-    """Un porteur des seuls champs que la règle regarde — pas le modèle.
-
-    Volontairement nu : il montre exactement de quoi `noms_derives` dépend, et
-    il échouerait si elle se mettait à lire autre chose.
-    """
-
-    def __init__(self, auteur_id=None, sp_user=None, sp_nom=None, sp_email=None):
-        self.auteur_id = auteur_id
-        self.saisi_pour_user_id = sp_user
-        self.saisi_pour_nom = sp_nom
-        self.saisi_pour_email = sp_email
-
-
 @pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        s.add(
-            Utilisateur(
-                id=1,
-                prenom="Alice",
-                nom="Martin",
-                email="alice@x.fr",
-                mot_de_passe_hash="x",
-                role="conseil_syndical",
-            )
-        )
-        s.add(
-            Utilisateur(
-                id=2,
-                prenom="Bruno",
-                nom="Dupont",
-                email="bruno@x.fr",
-                mot_de_passe_hash="x",
-                role="propriétaire",
-            )
-        )
-        s.commit()
-        yield s
+def session(session):
+    """La base du conftest, portant Alice et Bruno."""
+    alice_et_bruno(session)
+    return session
 
 
 @pytest.mark.parametrize("lecture,_routeur", LECTURES, ids=lambda v: getattr(v, "__name__", v))

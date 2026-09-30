@@ -31,11 +31,12 @@ os.environ.setdefault("ENABLE_API_DOCS", "false")
 os.environ.setdefault("UPLOADS_DIR", os.path.join(tempfile.gettempdir(), "hostachy-tests-uploads"))
 
 import pytest  # noqa: E402
-from sqlalchemy import event, text  # noqa: E402
-from sqlmodel import Session, SQLModel, create_engine, select  # noqa: E402
+from sqlalchemy import text  # noqa: E402
+from sqlmodel import Session, select  # noqa: E402
 
 from app.models.core import Batiment, Copropriete, Utilisateur  # noqa: E402
 from app.models.perimetre import Perimetre  # noqa: E402
+from tests.aides_base import compte, moteur_memoire  # noqa: E402
 from tests.conftest import delier_references, vider_patrimoine  # noqa: E402
 
 
@@ -47,15 +48,7 @@ def moteur_strict():
     montages que l'étape 2 doit encore réparer, et ces tests-ci ne pourraient plus
     rien affirmer — un test noyé dans 39 erreurs voisines ne se lit pas.
     """
-    moteur = create_engine("sqlite://", connect_args={"check_same_thread": False})
-
-    @event.listens_for(moteur, "connect")
-    def _pragma(dbapi_connection, _record):
-        curseur = dbapi_connection.cursor()
-        curseur.execute("PRAGMA foreign_keys=ON")
-        curseur.close()
-
-    SQLModel.metadata.create_all(moteur)
+    moteur = moteur_memoire(cles_etrangeres=True)
     yield moteur
     moteur.dispose()
 
@@ -168,16 +161,7 @@ def test_la_purge_delie_les_references_au_batiment(moteur_strict):
         bat = Batiment(copropriete_id=copro.id, numero="1")
         session.add(bat)
         session.flush()
-        session.add(
-            Utilisateur(
-                email="resident@test.fr",
-                mot_de_passe_hash="x",
-                nom="Résident",
-                prenom="Test",
-                batiment_id=bat.id,
-            )
-        )
-        session.commit()
+        compte(session, prefixe="resident", nom="Résident", prenom="Test", batiment_id=bat.id)
 
         vider_patrimoine(session)
 

@@ -33,6 +33,7 @@ import pytest
 #  serveur ACCEPTE, en lisant la source à son nouvel endroit.
 from app.utils.fichiers import FAMILLES
 from tests.aides_ast import corps_de
+from tests.aides_sources import modules_app
 from app.utils.fichiers import extension_assainie, nom_stocke, radical_assaini
 from app.utils.photos import photos_internes, photos_json
 
@@ -388,10 +389,8 @@ def test_aucun_nom_de_fichier_fabrique_hors_de_nom_stocke():
     Un commentaire ne suffisait pas ; ce test échoue si la seconde implémentation
     revient.
     """
-    import pathlib
     import re
 
-    racine = pathlib.Path(__file__).resolve().parents[1] / "app"
     #  Un nom de fichier bâti à partir d'un UUID et d'une extension, hors du module
     #  qui a le droit de le faire.
     motif = re.compile(r"""uuid4\(\)\.hex\}?["']?\s*\+?\s*["']?\.[a-z0-9]{2,5}""", re.IGNORECASE)
@@ -402,18 +401,18 @@ def test_aucun_nom_de_fichier_fabrique_hors_de_nom_stocke():
     generes = {"routers/annonces_hall.py"}  # affiche de hall produite par WeasyPrint
 
     fautifs, vus = [], set()
-    for f in sorted(racine.rglob("*.py")):
-        if f.name == "fichiers.py" and f.parent.name == "utils":
+    for m in modules_app():
+        if m.chemin.name == "fichiers.py" and m.chemin.parent.name == "utils":
             continue  # la source unique, seule autorisée
-        rel = f.relative_to(racine).as_posix()
-        for num, ligne in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+        rel = m.rel
+        for num, ligne in enumerate(m.lignes, 1):
             if ligne.lstrip().startswith("#"):
                 continue
             if motif.search(ligne):
                 if rel in generes:
                     vus.add(rel)
                     continue
-                fautifs.append(f"  {f.relative_to(racine.parent)}:{num}: {ligne.strip()}")
+                fautifs.append(f"  app/{rel}:{num}: {ligne.strip()}")
 
     obsoletes = sorted(generes - vus)
     assert not obsoletes, (
@@ -480,13 +479,11 @@ def test_aucun_sous_dossier_d_upload_colle_a_la_main():
     l'URL réelle du fichier. Le jour où le dossier change, le chemin devient faux
     et le fichier « n'existe pas » — sans erreur, donc sans que personne ne le voie.
     """
-    racine = RACINE / "api" / "app"
     motif = re.compile(r"os\.path\.join\(\s*[\"']/app/uploads[\"']\s*,\s*[\"']")
     fautifs = [
-        f"{f.relative_to(racine).as_posix()}:{n}"
-        for f in sorted(racine.rglob("*.py"))
-        if "__pycache__" not in f.parts
-        for n, ligne in enumerate(f.read_text(encoding="utf-8").splitlines(), 1)
+        f"{m.rel}:{n}"
+        for m in modules_app()
+        for n, ligne in enumerate(m.lignes, 1)
         if motif.search(ligne)
     ]
     assert not fautifs, (

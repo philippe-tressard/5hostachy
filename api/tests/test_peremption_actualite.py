@@ -194,15 +194,14 @@ def test_les_autres_objets_ne_periment_pas(type_objet):
 
 def _lu(**champs):
     """L'affaire telle que l'écran la reçoit : `ticket_read`, sur une base jetable."""
-    from sqlmodel import Session, SQLModel, create_engine
+    from sqlmodel import Session
 
-    from app.models.core import Ticket, Utilisateur
+    from app.models.core import Ticket
     from app.routers.tickets.commun import ticket_read
+    from tests.aides_base import compte, moteur_memoire
 
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        s.add(Utilisateur(id=1, prenom="A", nom="B", email="a@x.fr", mot_de_passe_hash="x"))
+    with Session(moteur_memoire()) as s:
+        compte(s, prefixe="a", id=1, prenom="A", nom="B")
         t = Ticket(
             id=1,
             numero="TK-A1",

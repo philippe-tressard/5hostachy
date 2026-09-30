@@ -44,6 +44,8 @@ fait passer une réécriture sémantique pour un remplacement mécanique.
 import ast
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 RACINE = Path(__file__).resolve().parents[1] / "app"
 
 #: Le module qui porte la question « existe-t-il ? ».
@@ -60,11 +62,11 @@ PLAFOND_404_BRUTS = 31
 def _404_bruts() -> list[str]:
     """Tout `HTTPException(404…)` du code applicatif, hors le helper lui-même."""
     trouves = []
-    for fichier in sorted(RACINE.rglob("*.py")):
-        chemin = fichier.relative_to(RACINE).as_posix()
+    for m in modules_app():
+        chemin = m.rel
         if chemin == SOURCE:
             continue
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
+        arbre = m.arbre
         for noeud in ast.walk(arbre):
             if not (isinstance(noeud, ast.Call) and isinstance(noeud.func, ast.Name)):
                 continue
@@ -108,11 +110,11 @@ def test_aucun_helper_local_ne_double_le_helper_partage():
     faire en toutes lettres.
     """
     fautes = []
-    for fichier in sorted(RACINE.rglob("*.py")):
-        chemin = fichier.relative_to(RACINE).as_posix()
+    for m in modules_app():
+        chemin = m.rel
         if chemin == SOURCE:
             continue
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
+        arbre = m.arbre
         for noeud in ast.walk(arbre):
             if not isinstance(noeud, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue

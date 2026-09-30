@@ -24,8 +24,9 @@ from app.utils import courriel_transfert, llm
 from app.utils.courriel_boite import traiter
 from app.utils.courriel_decodage import _corps_lisible, _sans_citation, transfert_dans
 from app.utils.courriel_ingestion import ACCEPTE, IGNORE
-from tests.test_courriel_reponse_ticket import _AUTH_OK, _entetes
-from tests.test_courriel_reponse_ticket_bout_en_bout import (  # noqa: F401
+from tests.aides_courriel import (  # noqa: F401 — `scene` est une fixture
+    _AUTH_OK,
+    _entetes_reponse,
     _evolutions,
     _notifs,
     scene,
@@ -72,7 +73,7 @@ def test_une_reponse_du_SYNDIC_passe_l_affaire_ouverte_chez_le_syndic(scene):  #
     assert (
         traiter(
             session,
-            _entetes(ticket.jeton_courriel, de=syndic.email),
+            _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
             "Nous intervenons jeudi.",
             _ENVOI,
             authentification=_AUTH_OK,
@@ -93,7 +94,7 @@ def test_une_affaire_deja_AVANCEE_ne_change_pas_d_etat(scene):  # noqa: F811
     session.commit()
     traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
         "Nous intervenons jeudi.",
         _ENVOI,
         authentification=_AUTH_OK,
@@ -108,7 +109,7 @@ def test_une_reponse_du_CONSEIL_ne_change_pas_l_etat(scene):  # noqa: F811
     session, ticket, _syndic, cs = scene
     traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=cs.email),
+        _entetes_reponse(ticket.jeton_courriel, de=cs.email),
         "J'ai relancé le prestataire.",
         _ENVOI,
         authentification=_AUTH_OK,
@@ -124,7 +125,7 @@ def test_une_reponse_du_CONSEIL_ne_change_pas_l_etat(scene):  # noqa: F811
 
 def test_un_TRANSFERT_du_syndic_par_le_conseil_porte_le_message_du_syndic(scene):  # noqa: F811
     session, ticket, syndic, cs = scene
-    entetes = dict(_entetes(ticket.jeton_courriel, de=cs.email))
+    entetes = dict(_entetes_reponse(ticket.jeton_courriel, de=cs.email))
     entetes["Subject"] = f"TR : Affaire #{ticket.numero} — Fuite"
     traiter(session, entetes, _transfert_du_syndic(syndic.email), _ENVOI, authentification=_AUTH_OK)
     (evol,) = _evolutions(session, ticket)
@@ -145,7 +146,7 @@ def test_le_transfert_d_un_message_d_un_TIERS_verse_le_message_du_tiers(scene): 
     transfère désormais les échanges reçus dans sa boîte pour qu'ils rejoignent
     l'affaire — c'est le message du tiers que le fil doit garder."""
     session, ticket, _syndic, cs = scene
-    entetes = dict(_entetes(ticket.jeton_courriel, de=cs.email))
+    entetes = dict(_entetes_reponse(ticket.jeton_courriel, de=cs.email))
     entetes["Subject"] = f"TR : Affaire #{ticket.numero}"
     traiter(
         session,
@@ -175,7 +176,7 @@ def test_un_simple_MERCI_du_conseil_n_entre_pas(scene, monkeypatch):  # noqa: F8
     assert (
         traiter(
             session,
-            _entetes(ticket.jeton_courriel, de=cs.email),
+            _entetes_reponse(ticket.jeton_courriel, de=cs.email),
             "Merci beaucoup !",
             _ENVOI,
             authentification=_AUTH_OK,
@@ -191,7 +192,7 @@ def test_le_SYNDIC_entre_meme_quand_l_assistant_le_juge_vide(scene, monkeypatch)
     monkeypatch.setattr(llm, "demander", _modele(""))
     traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
         "Bien reçu.",
         _ENVOI,
         authentification=_AUTH_OK,
@@ -211,7 +212,7 @@ def test_une_affaire_CLOSE_ne_recoit_plus_rien_ni_alerte(scene):  # noqa: F811
         assert (
             traiter(
                 session,
-                _entetes(ticket.jeton_courriel, de=syndic.email),
+                _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
                 "Facture jointe.",
                 _ENVOI,
                 authentification=auth,

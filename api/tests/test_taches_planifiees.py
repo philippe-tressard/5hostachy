@@ -17,8 +17,6 @@ un producteur. La règle qui déclare une exécution `manquante` se teste, elle,
 où elle vit (`utils/sante_taches.py`) : `test_sante_taches_periodes.py`.
 """
 
-import pytest
-
 from app.models.core import HistoriqueMaintenance, PorteeExecution, TachePlanifiee
 from tests.conftest import scripts_shell_versionnes
 
@@ -232,17 +230,6 @@ def test_retention_bornee_et_purgee_in_process():
 # ── Deux faux positifs constatés à l'écran le 09/08/2026 ────────────────────
 
 
-@pytest.fixture()
-def session_memoire():
-    """Base en mémoire, isolée. Aucun `app.db` n'est approché (règle d'or)."""
-    from sqlmodel import Session, SQLModel, create_engine
-
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
-
-
 def test_la_bascule_est_attendue_toutes_les_48h_car_le_role_alterne():
     """Un nœud n'agit qu'une nuit sur deux : l'attendre chaque jour est un faux rouge.
 
@@ -280,7 +267,7 @@ def test_le_script_de_bascule_s_abstient_sur_le_standby():
     )
 
 
-def test_une_tache_hebdomadaire_survit_aux_quotidiennes(session_memoire):
+def test_une_tache_hebdomadaire_survit_aux_quotidiennes(session):
     """La rétention ne doit pas effacer la preuve que le contrôle cherche.
 
     Constaté à l'écran le 09/08/2026 : « Maintenance hebdomadaire : jamais
@@ -296,12 +283,12 @@ def test_une_tache_hebdomadaire_survit_aux_quotidiennes(session_memoire):
     from app.routers.admin import _purger_anciens_rapports
 
     base = datetime(2026, 8, 2, 1, 0)
-    session_memoire.add(
+    session.add(
         HistoriqueMaintenance(tache="maintenance", noeud="rpi1", statut="succes", cree_le=base)
     )
     #  Trente exécutions quotidiennes postérieures : bien plus que le quota.
     for j in range(30):
-        session_memoire.add(
+        session.add(
             HistoriqueMaintenance(
                 tache="bascule",
                 noeud="rpi1" if j % 2 else "rpi2",
@@ -309,20 +296,20 @@ def test_une_tache_hebdomadaire_survit_aux_quotidiennes(session_memoire):
                 cree_le=base + timedelta(days=j + 1),
             )
         )
-    session_memoire.commit()
+    session.commit()
 
-    _purger_anciens_rapports(session_memoire)
+    _purger_anciens_rapports(session)
 
     from sqlmodel import select
 
-    restantes = session_memoire.exec(
+    restantes = session.exec(
         select(HistoriqueMaintenance).where(HistoriqueMaintenance.tache == "maintenance")
     ).all()
     assert len(restantes) == 1, (
         "La ligne hebdomadaire a été chassée par les quotidiennes : l'écran "
         "affichera « jamais exécutée » pour une tâche qui tourne."
     )
-    bascules = session_memoire.exec(
+    bascules = session.exec(
         select(HistoriqueMaintenance).where(HistoriqueMaintenance.tache == "bascule")
     ).all()
     #  Le quota se LIT, il ne se recopie pas — même raison que ci-dessus.

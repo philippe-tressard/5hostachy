@@ -26,6 +26,7 @@ from pathlib import Path
 from app.models.core import Ticket
 from app.utils import horloge
 from app.utils.archivage import est_archivable
+from tests.aides_sources import modules_app
 
 _FLUX = Path(__file__).resolve().parents[1] / "app" / "routers" / "flux"
 
@@ -113,16 +114,6 @@ def test_actualite_recente_reste_visible():
 _DATATION_SUR_MISE_A_JOUR_ADMISE: dict[str, str] = {}
 
 
-def _modules_du_flux() -> list[Path]:
-    """La PORTÉE du contrôle, donc une partie du contrôle (`standards/05` §9)."""
-    fichiers = [f for f in sorted(_FLUX.rglob("*.py")) if "__pycache__" not in f.parts]
-    assert len(fichiers) >= 10, (
-        f"Seulement {len(fichiers)} module(s) trouvé(s) sous {_FLUX} — la portée du "
-        "contrôle est cassée, ne pas lire ce test comme vert."
-    )
-    return fichiers
-
-
 def _dates_des_cartes(arbre: ast.AST) -> list[tuple[int, ast.AST]]:
     """(ligne, expression) de chaque `FluxItem(date=…)`, indirection résolue.
 
@@ -164,8 +155,9 @@ def test_le_fil_ne_date_aucune_ligne_sur_mis_a_jour_le():
     exemptions_utilisees: set[str] = set()
     total_cartes = 0
 
-    for chemin in _modules_du_flux():
-        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
+    #  La PORTÉE du contrôle, donc une partie du contrôle (`standards/05` §9).
+    for module in modules_app("routers/flux", minimum=10):
+        chemin, arbre = module.chemin, module.arbre
         dates = _dates_des_cartes(arbre)
         total_cartes += len(dates)
         for ligne, expression in dates:

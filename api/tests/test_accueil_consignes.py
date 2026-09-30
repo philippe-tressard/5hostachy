@@ -193,11 +193,12 @@ def test_toutes_les_variables_du_modele_sont_au_contrat():
     Jinja évalue un indéfini à faux **en silence** — un `role_destinataire`
     manquant enverrait à tout le monde la version du syndic, sans erreur.
     """
-    from tests.test_email_templates import BASE_CTX_VARS, EXPECTED_VARS
+    from app.utils.email.variables import VARIABLES_DU_GABARIT
+    from tests.contrats_email import EXPECTED_VARS
 
     _, sujet, corps, _ = _modele()
     env = SandboxedEnvironment(loader=BaseLoader())
-    reelles = meta.find_undeclared_variables(env.parse(sujet + corps)) - BASE_CTX_VARS
+    reelles = meta.find_undeclared_variables(env.parse(sujet + corps)) - VARIABLES_DU_GABARIT
     assert reelles == EXPECTED_VARS[CODE], (
         f"le contrat et le modèle divergent : modèle={sorted(reelles)} "
         f"contrat={sorted(EXPECTED_VARS[CODE])}"

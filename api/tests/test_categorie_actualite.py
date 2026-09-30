@@ -12,8 +12,6 @@ spécification (conception dans #1091).
 from __future__ import annotations
 
 import ast
-import pathlib
-import uuid
 from datetime import datetime, timedelta
 
 import pytest
@@ -27,19 +25,19 @@ from app.models.core import (
     RoleUtilisateur,
     StatutUtilisateur,
     Ticket,
-    Utilisateur,
 )
 from app.models.tickets import CategorieTicket, StatutTicket
 from app.routers.tickets import crud, mise_a_jour
 from app.routers.tickets.commun import ticket_read
 from app.schemas import TicketCreate, TicketUpdate
 from app.utils.archivage import est_archivable
+from app.utils.horloge import maintenant
 from app.utils.kanban_tickets import colonne_du_ticket
 from app.utils.nature_affaire import natures
 from app.utils.perimetres import arbre
 from app.utils.visibility import ticket_visible
-
-_APP = pathlib.Path(__file__).resolve().parents[1] / "app"
+from tests.aides_base import compte
+from tests.aides_sources import modules_app
 
 
 @pytest.fixture()
@@ -52,19 +50,14 @@ def session(monkeypatch, batiments):
 
 
 def _compte(session, *, role=None, statut=StatutUtilisateur.copropriétaire_résident):
-    u = Utilisateur(
-        email=f"act-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
+    return compte(
+        session,
+        prefixe="act",
         prenom="P",
         nom="N",
-        actif=True,
         statut=statut,
         roles_json=role.value if role else "résident",
     )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 def _creer(session, user, **champs):
@@ -109,17 +102,15 @@ def test_personne_ne_selectionne_plus_par_non_clos():
     actualités comprises. Ce qui demande un suivi se sélectionne par
     `STATUTS_TICKET_ACTIFS`, qui l'énumère."""
     fautes = []
-    for p in _APP.rglob("*.py"):
-        if "__pycache__" in p.parts:
-            continue
-        for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
+    for module in modules_app():
+        for n in ast.walk(module.arbre):
             if (
                 isinstance(n, ast.Call)
                 and isinstance(n.func, ast.Attribute)
                 and n.func.attr == "notin_"
                 and "STATUTS_TICKET_CLOS" in ast.unparse(n)
             ):
-                fautes.append(f"{p.relative_to(_APP)}:{n.lineno}")
+                fautes.append(f"{module.rel}:{n.lineno}")
     assert not fautes, f"Sélection « non clos » — employer STATUTS_TICKET_ACTIFS : {fautes}"
 
 
@@ -280,25 +271,25 @@ def test_un_resident_ne_fait_pas_de_son_affaire_une_actualite(session):
 
 
 def test_une_actualite_datee_perimee_s_archive_meme_epinglee():
-    passee = datetime.utcnow() - timedelta(days=3)
+    passee = maintenant() - timedelta(days=3)
     actu = _t("actualite", passee)
     actu.statut, actu.fin, actu.epingle = "publie", passee, True
-    actu.cree_le = actu.mis_a_jour_le = datetime.utcnow()
+    actu.cree_le = actu.mis_a_jour_le = maintenant()
     assert est_archivable("ticket", actu, seuil_jours=30)
 
 
 def test_une_actualite_permanente_epinglee_reste():
     actu = _t("actualite")
     actu.statut, actu.epingle = "publie", True
-    actu.cree_le = actu.mis_a_jour_le = datetime.utcnow() - timedelta(days=90)
+    actu.cree_le = actu.mis_a_jour_le = maintenant() - timedelta(days=90)
     assert not est_archivable("ticket", actu, seuil_jours=30)
 
 
 def test_une_affaire_ouverte_ne_perime_jamais():
-    passee = datetime.utcnow() - timedelta(days=3)
+    passee = maintenant() - timedelta(days=3)
     affaire = _t("panne", passee)
     affaire.statut, affaire.fin = "ouvert", passee
-    affaire.cree_le = affaire.mis_a_jour_le = datetime.utcnow()
+    affaire.cree_le = affaire.mis_a_jour_le = maintenant()
     assert not est_archivable("ticket", affaire, seuil_jours=30)
 
 

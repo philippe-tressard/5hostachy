@@ -48,6 +48,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 RACINE = Path(__file__).resolve().parents[1] / "app"
 
 #  Les exceptions sont NOMMÉES avec leur raison, et le dernier test vérifie
@@ -69,10 +71,6 @@ EXCEPTIONS = {
 MOTIF = "or '[\"résidence\"]'"
 
 
-def _fichiers_python() -> list[Path]:
-    return sorted(p for p in RACINE.rglob("*.py") if "__pycache__" not in p.parts)
-
-
 def _sans_commentaires(source: str) -> str:
     """Expliquer la règle ne doit pas la violer — les commentaires posés le
     06/09 dans les deux fichiers exemptés citent le motif qu'ils décrivent."""
@@ -81,11 +79,11 @@ def _sans_commentaires(source: str) -> str:
 
 def test_le_defaut_du_perimetre_n_est_pas_ecrit_en_dur():
     coupables = []
-    for fichier in _fichiers_python():
-        rel = fichier.relative_to(RACINE).as_posix()
+    for m in modules_app():
+        rel = m.rel
         if rel in EXCEPTIONS:
             continue
-        if MOTIF in _sans_commentaires(fichier.read_text(encoding="utf-8")):
+        if MOTIF in _sans_commentaires(m.source):
             coupables.append(rel)
     assert not coupables, (
         f"{coupables} écrivent le périmètre par défaut EN DUR. Employer "

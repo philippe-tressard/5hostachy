@@ -16,7 +16,7 @@ vides, doublons, noms exclus, accents, et la transaction validée.
 import io
 
 import pytest
-from sqlmodel import Session, SQLModel, select, create_engine
+from sqlmodel import select
 
 from app.models.core import LotImport, TelecommandeImport, VigikImport
 from app.utils import import_lots, import_telecommandes, import_vigiks
@@ -41,15 +41,6 @@ def _classeur(lignes: list[list]) -> bytes:
     tampon = io.BytesIO()
     wb.save(tampon)
     return tampon.getvalue()
-
-
-@pytest.fixture()
-def session():
-    """Base en mémoire, isolée par test. Aucun `app.db` n'est approché."""
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
 
 
 # ── normaliser : la fonction que les trois modules partagent ─────────────────

@@ -45,6 +45,8 @@ import ast
 import pathlib
 import re
 
+from tests.aides_sources import modules_app
+
 ROUTERS = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers"
 DEPS = pathlib.Path(__file__).resolve().parents[1] / "app" / "auth" / "deps.py"
 
@@ -64,10 +66,6 @@ EXCEPTIONS = {
     "tickets/evolutions.py": "décide d'une NOTIFICATION à l'auteur, pas d'un droit",
     "tickets/messages.py": "décide d'une NOTIFICATION à l'auteur, pas d'un droit",
 }
-
-
-def _fichiers():
-    return sorted(p for p in ROUTERS.rglob("*.py") if "__pycache__" not in p.parts)
 
 
 def test_les_trois_regimes_existent_et_sont_publics():
@@ -93,13 +91,13 @@ def test_les_trois_regimes_existent_et_sont_publics():
 
 def test_aucun_router_ne_reecrit_la_regle_de_l_auteur():
     coupables = {}
-    for chemin in _fichiers():
-        rel = chemin.relative_to(ROUTERS).as_posix()
+    for m in modules_app("routers"):
+        rel = m.rel.removeprefix("routers/")
         if rel in EXCEPTIONS:
             continue
         trouves = [
             f"{rel}:{i}"
-            for i, ligne in enumerate(chemin.read_text(encoding="utf-8").split("\n"), 1)
+            for i, ligne in enumerate(m.lignes, 1)
             if _MOTIF.search(ligne) and not ligne.strip().startswith("#")
         ]
         if trouves:
@@ -135,10 +133,10 @@ def test_aucun_controle_de_role_par_chaine():
     """
     coupables = []
     motif = re.compile(r"""has_role\(\s*['"]""")
-    for chemin in _fichiers():
-        for i, ligne in enumerate(chemin.read_text(encoding="utf-8").split("\n"), 1):
+    for m in modules_app("routers"):
+        for i, ligne in enumerate(m.lignes, 1):
             if motif.search(ligne):
-                coupables.append(f"{chemin.relative_to(ROUTERS).as_posix()}:{i}")
+                coupables.append(f"{m.rel.removeprefix('routers/')}:{i}")
     assert not coupables, (
         f"Rôle comparé par CHAÎNE au lieu de l'enum : {coupables}. "
         "Utiliser `RoleUtilisateur.<nom>` — une chaîne survit à un renommage "
@@ -150,10 +148,10 @@ def test_aucune_comparaison_directe_de_role_ou_de_statut():
     """`user.role == 'admin'` contourne `has_role`, qui gère les rôles multiples."""
     coupables = []
     motif = re.compile(r"""(user|current_user)\.(role|statut)\s*[!=]=\s*['"]""")
-    for chemin in _fichiers():
-        for i, ligne in enumerate(chemin.read_text(encoding="utf-8").split("\n"), 1):
+    for m in modules_app("routers"):
+        for i, ligne in enumerate(m.lignes, 1):
             if motif.search(ligne) and not ligne.strip().startswith("#"):
-                coupables.append(f"{chemin.relative_to(ROUTERS).as_posix()}:{i}")
+                coupables.append(f"{m.rel.removeprefix('routers/')}:{i}")
     assert not coupables, (
         f"Rôle ou statut comparé directement : {coupables}. "
         "`has_role` sait qu'un utilisateur en porte plusieurs ; `==` non."

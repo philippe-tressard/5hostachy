@@ -25,8 +25,12 @@ from app.utils.reponse_courriel import (
     mettre_en_forme,
     moment_de_la_suite,
 )
-from tests.test_courriel_reponse_ticket import _AUTH_OK, _entetes
-from tests.test_courriel_reponse_ticket_bout_en_bout import _evolutions, scene  # noqa: F401
+from tests.aides_courriel import (  # noqa: F401 — `scene` est une fixture
+    _AUTH_OK,
+    _entetes_reponse,
+    _evolutions,
+    scene,
+)
 
 _BOITE = pathlib.Path(__file__).resolve().parents[1] / "app" / "utils" / "courriel_boite.py"
 
@@ -113,7 +117,7 @@ def test_la_suite_est_datee_de_l_envoi_sans_assistant(scene):  # noqa: F811
     envoi = datetime(2026, 9, 25, 16, 0)
     assert traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
         _RECU,
         envoi,
         authentification=_AUTH_OK,
@@ -129,7 +133,7 @@ def test_la_suite_porte_la_mise_en_forme_et_le_texte_recu(scene, monkeypatch):  
     monkeypatch.setattr(llm, "demander", _modele("Nous intervenons jeudi 2 octobre à 9 h."))
     traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
         _RECU,
         datetime(2026, 9, 25),
         authentification=_AUTH_OK,
@@ -149,7 +153,7 @@ def test_la_suite_s_ouvre_sur_qui_a_repondu_et_quand(scene):  # noqa: F811
     session, ticket, syndic, _cs = scene
     traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
         "Nous intervenons jeudi.",
         datetime(2026, 9, 25, 16, 0),
         authentification=_AUTH_OK,

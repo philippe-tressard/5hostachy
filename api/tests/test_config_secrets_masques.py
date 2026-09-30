@@ -32,8 +32,9 @@ import pytest
 from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
-from app.models.core import ConfigSite, Utilisateur
+from app.models.core import ConfigSite
 from app.routers.config import MARQUEUR_SECRET, _SECRETS, get_config, get_config_admin
+from tests.aides_base import compte
 
 
 _SECRET_EN_CLAIR = "s3cr3t-de-la-boite-" + uuid.uuid4().hex[:8]
@@ -54,17 +55,7 @@ def base():
                 ligne.valeur = _SECRET_EN_CLAIR
                 session.add(ligne)
         session.commit()
-        admin = Utilisateur(
-            email=f"admin-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="A",
-            nom="D",
-            roles_json="admin",
-            actif=True,
-        )
-        session.add(admin)
-        session.commit()
-        session.refresh(admin)
+        admin = compte(session, prefixe="admin", prenom="A", nom="D", roles_json="admin")
         yield session, admin
         #  `ConfigSite` a `cle` pour clé primaire, pas `id` : `purger_ligne` ne
         #  sait pas la supprimer. La ligne part par son propre identifiant.

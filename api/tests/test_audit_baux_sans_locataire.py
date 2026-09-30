@@ -36,8 +36,7 @@ from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
+from sqlmodel import Session
 
 from app.database import get_session
 from app.main import app
@@ -51,14 +50,12 @@ from app.models.core import (
     StatutUtilisateur,
     Utilisateur,
 )
+from tests.aides_base import moteur_memoire
 
 
 @pytest.fixture(name="session")
 def session_fixture():
-    moteur = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(moteur)
+    moteur = moteur_memoire(partage=True)
     with Session(moteur) as session:
         yield session
 

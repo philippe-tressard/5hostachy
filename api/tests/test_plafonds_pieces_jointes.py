@@ -39,6 +39,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.aides_sources import modules_app
+
 _RACINE = Path(__file__).resolve().parents[2]
 _LIB_FRONT = _RACINE / "front" / "src" / "lib"
 
@@ -118,11 +120,9 @@ def test_le_plafond_commun_n_est_borne_par_aucun_routeur():
     ci-dessus et supprimer ce test — sans quoi le contrôle qui vient d'être gagné
     ne serait surveillé par personne.
     """
-    routeurs = (_RACINE / "api" / "app" / "routers").rglob("*.py")
+    routeurs = modules_app("routers")
     motif = re.compile(r"len\((?:body\.)?(?:photos_urls|fichiers_urls)\)\s*[><]")
-    bornes = [
-        str(c.relative_to(_RACINE)) for c in routeurs if motif.search(c.read_text(encoding="utf-8"))
-    ]
+    bornes = [str(m.chemin.relative_to(_RACINE)) for m in routeurs if motif.search(m.source)]
     assert not bornes, (
         "Un routeur borne désormais le nombre de pièces jointes : "
         + ", ".join(bornes)

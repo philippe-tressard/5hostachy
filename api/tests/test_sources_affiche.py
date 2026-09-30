@@ -24,21 +24,12 @@ C'est une règle de sécurité, donc elle se teste, et elle se teste sur le
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import Ticket
+from app.utils import horloge
 from app.utils.sources_affiche import FENETRE_JOURS, prefill_source, sources_disponibles
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
 
 
 _numero = [0]
@@ -152,7 +143,7 @@ def test_les_EPINGLES_viennent_en_tête(session):
     affiche au hall. Trier par date seule le noyait."""
     _actualite(session, "Récente")
     ancienne = _actualite(session, "Ancienne épinglée", epingle=True)
-    ancienne.cree_le = datetime.utcnow() - timedelta(days=180)
+    ancienne.cree_le = horloge.maintenant() - timedelta(days=180)
     session.add(ancienne)
     session.commit()
 
@@ -161,7 +152,7 @@ def test_les_EPINGLES_viennent_en_tête(session):
 
 def test_hors_fenêtre_du_fil_un_ticket_disparaît(session):
     vieux = _ticket(session, "Vieux ticket")
-    vieux.cree_le = datetime.utcnow() - timedelta(days=FENETRE_JOURS + 5)
+    vieux.cree_le = horloge.maintenant() - timedelta(days=FENETRE_JOURS + 5)
     session.add(vieux)
     session.commit()
 

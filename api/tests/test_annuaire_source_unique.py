@@ -32,17 +32,13 @@ les deux formes, et ne les tolère que dans la source.
 from __future__ import annotations
 
 import ast
-import pathlib
 
-RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import module_app, modules_app
+
 SOURCE = "utils/annuaire.py"
 
 #: La sentinelle du tri : « pas de bâtiment » se range après tous les bâtiments.
 SENTINELLE = 9999
-
-
-def _fichiers():
-    return [p for p in RACINE.rglob("*.py") if "__pycache__" not in p.parts]
 
 
 def _emploie_la_sentinelle(source: str) -> bool:
@@ -138,11 +134,11 @@ def test_aucun_module_ne_recopie_la_composition_du_conseil():
     (`standards/04` §40).
     """
     fautifs = {}
-    for p in _fichiers():
-        rel = p.relative_to(RACINE).as_posix()
+    for m in modules_app():
+        rel = m.rel
         if rel == SOURCE:
             continue
-        formes = _formes_recopiees(p.read_text(encoding="utf-8"))
+        formes = _formes_recopiees(m.source)
         if formes:
             fautifs[rel] = formes
 
@@ -164,10 +160,10 @@ def test_cas_zero_la_source_porte_bien_les_formes_cherchees():
     C'est le cas zéro de `standards/04` §2 : un contrôle dont le motif ne
     correspond plus à rien ne refuse plus rien, et il ne le dit pas.
     """
-    formes = _formes_recopiees((RACINE / SOURCE).read_text(encoding="utf-8"))
+    formes = _formes_recopiees(module_app(SOURCE).source)
     attendues = [FORME_TRI] + sorted(_forme_dictionnaire(nom) for nom, _ in MARQUEURS)
     assert formes == attendues, (
         f"`{SOURCE}` ne porte plus toutes les formes reconnues ({formes}) : ce "
         "contrôle laisserait passer une copie sans le dire."
     )
-    assert len(_fichiers()) > 50, "le parcours ne décrit plus `app/`."
+    assert len(modules_app()) > 50, "le parcours ne décrit plus `app/`."

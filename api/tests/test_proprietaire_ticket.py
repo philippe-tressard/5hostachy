@@ -33,54 +33,17 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
-from app.models.core import Utilisateur
 from app.utils.copie_auteur import copie_demandee, proprietaire
-
-
-class _Ticket:
-    """Un porteur des seuls champs que `proprietaire` regarde.
-
-    ⚠️ Volontairement PAS le modèle SQLModel : ce test porte sur la règle, pas
-    sur la table. Un objet nu montre exactement de quoi la fonction dépend — et
-    il échouerait si elle se mettait à lire autre chose.
-    """
-
-    def __init__(self, auteur_id=None, sp_user=None, sp_nom=None, sp_email=None):
-        self.auteur_id = auteur_id
-        self.saisi_pour_user_id = sp_user
-        self.saisi_pour_nom = sp_nom
-        self.saisi_pour_email = sp_email
+from tests.aides_saisi_pour import ObjetSaisiPour as _Ticket
+from tests.aides_saisi_pour import alice_et_bruno
 
 
 @pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        s.add(
-            Utilisateur(
-                id=1,
-                prenom="Alice",
-                nom="Martin",
-                email="alice@x.fr",
-                mot_de_passe_hash="x",
-                role="conseil_syndical",
-            )
-        )
-        s.add(
-            Utilisateur(
-                id=2,
-                prenom="Bruno",
-                nom="Dupont",
-                email="bruno@x.fr",
-                mot_de_passe_hash="x",
-                role="propriétaire",
-            )
-        )
-        s.commit()
-        yield s
+def session(session):
+    """La base du conftest, portant Alice et Bruno."""
+    alice_et_bruno(session)
+    return session
 
 
 def test_sans_saisi_pour_le_proprietaire_est_l_AUTEUR(session):

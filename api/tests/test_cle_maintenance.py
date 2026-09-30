@@ -20,7 +20,6 @@ concerné : la comparaison a lieu dans SQLite, derrière une recherche par index
 from __future__ import annotations
 
 import ast
-import pathlib
 import re
 
 import pytest
@@ -28,9 +27,9 @@ from fastapi import HTTPException
 
 from app.auth.cle_maintenance import exiger_cle_maintenance
 from app.config import get_settings
+from tests.aides_sources import modules_app
 
 CLE = "cle-de-test-du-temps-constant"
-RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
 SECRET = re.compile(r"(key|secret|password|token)$", re.IGNORECASE)
 REGLAGES = {"settings", "_settings"}
 
@@ -89,12 +88,10 @@ def test_le_controle_voit_ce_qu_il_doit_refuser():
 
 
 def test_aucun_secret_ne_se_compare_par_egalite():
-    fichiers = [f for f in RACINE.rglob("*.py") if "__pycache__" not in f.parts]
-    assert len(fichiers) > 100, "le contrôle ne voit presque rien : sa portée a changé"
+    modules = modules_app()
+    assert len(modules) > 100, "le contrôle ne voit presque rien : sa portée a changé"
     ecarts = [
-        f"app/{f.relative_to(RACINE).as_posix()}:{ligne}"
-        for f in fichiers
-        for ligne in _comparaisons_de_secret(f.read_text(encoding="utf-8"))
+        f"app/{m.rel}:{ligne}" for m in modules for ligne in _comparaisons_de_secret(m.source)
     ]
     assert not ecarts, (
         "Un secret comparé par `==` ou `!=` : la durée de la réponse trahit combien "

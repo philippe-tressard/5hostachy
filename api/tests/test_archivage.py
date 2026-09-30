@@ -45,7 +45,7 @@ from app.utils.archivage import (
 )
 
 #  Une horloge FIXE : sans elle, un test qui passe à 23 h 59 échoue à 0 h 01, et
-#  personne ne comprend pourquoi. `datetime.utcnow()` n'apparaît nulle part ici.
+#  personne ne comprend pourquoi. L'horloge dépréciée de `datetime` n'apparaît nulle part ici.
 MAINTENANT = datetime(2026, 8, 20, 12, 0, 0)
 VIEUX = MAINTENANT - timedelta(days=ARCHIVAGE_DELAI_JOURS + 1)
 RECENT = MAINTENANT - timedelta(days=1)

@@ -33,8 +33,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
+from sqlmodel import Session, select
 
 from app.auth.jwt import creer_jeton_acces
 from app.database import get_session
@@ -48,14 +47,12 @@ from app.models.core import (
 )
 from app.models.telemetrie import TelemetryEvent
 from app.utils.limiter import limiter
+from tests.aides_base import compte, moteur_memoire
 
 
 @pytest.fixture(name="moteur")
 def moteur_fixture():
-    moteur = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(moteur)
+    moteur = moteur_memoire(partage=True)
 
     def _session():
         with Session(moteur) as s:
@@ -76,20 +73,11 @@ def _client(moteur, role: RoleUtilisateur | None) -> tuple[TestClient, int | Non
     if role is None:
         return http, None
     with Session(moteur) as s:
-        compte = Utilisateur(
-            email=f"{role.value}@test.fr",
-            hashed_password="x",
-            nom=role.value,
-            prenom="Test",
-            roles_json=role.value,
-            #  Un compte naît INACTIF (en attente de validation) : sans ceci, le
-            #  jeton serait refusé et chaque test lirait un 401 de plus.
-            actif=True,
-        )
-        s.add(compte)
-        s.commit()
-        s.refresh(compte)
-        ident = compte.id
+        #  Un compte naît INACTIF (en attente de validation) : `compte` l'active,
+        #  sans quoi le jeton serait refusé et chaque test lirait un 401 de plus.
+        ident = compte(
+            s, prefixe=role.value, nom=role.value, prenom="Test", roles_json=role.value
+        ).id
     http.cookies.set("access_token", creer_jeton_acces(ident, "x"))
     return http, ident
 
@@ -161,17 +149,13 @@ def test_telemetrie_chacun_n_exporte_et_n_efface_que_la_sienne(moteur):
     `where` oublié exporterait, ou effacerait, celles de tout le monde."""
     http, moi = _client(moteur, RoleUtilisateur.résident)
     with Session(moteur) as s:
-        autre = Utilisateur(
-            email="autre@test.fr",
-            hashed_password="x",
+        autre_id = compte(
+            s,
+            prefixe="autre",
             nom="A",
             prenom="A",
             roles_json=RoleUtilisateur.résident.value,
-        )
-        s.add(autre)
-        s.commit()
-        s.refresh(autre)
-        autre_id = autre.id
+        ).id
         s.add(TelemetryEvent(user_id=moi, page="/actualites"))
         s.add(TelemetryEvent(user_id=autre_id, page="/tickets"))
         s.commit()

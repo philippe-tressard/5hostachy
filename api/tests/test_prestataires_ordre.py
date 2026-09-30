@@ -11,7 +11,7 @@ import uuid
 
 from app.models.prestataires import Prestataire
 from app.routers.prestataires import list_prestataires
-from tests.aides_badges import _compte, session  # noqa: F401 — `session` est une fixture
+from tests.aides_badges import _compte
 
 
 def test_la_liste_est_alphabetique_sans_tenir_compte_de_la_casse(session):

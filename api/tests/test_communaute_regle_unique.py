@@ -26,10 +26,13 @@ avait survécu à une consolidation précédente (`perimetre_libelle`, 27/08/202
 
 import ast
 import pathlib
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from fastapi import HTTPException
+
+from app.utils.horloge import maintenant
+from tests.aides_sources import modules_app
 
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 _SOURCE_UNIQUE = _APP / "utils" / "communaute.py"
@@ -48,10 +51,6 @@ _EXCEPTIONS = {
 }
 
 
-def _modules_python() -> list[pathlib.Path]:
-    return sorted(p for p in _APP.rglob("*.py") if "__pycache__" not in p.parts)
-
-
 def _lit_un_champ_de_ban(source: str) -> set[str]:
     """Les champs de ban LUS par ce source (`user.communaute_interdit` en lecture)."""
     arbre = ast.parse(source)
@@ -66,11 +65,11 @@ def _lit_un_champ_de_ban(source: str) -> set[str]:
 def test_un_seul_module_decide_du_refus():
     """Aucun autre module ne relit les champs de ban pour en déduire un refus."""
     coupables = {}
-    for chemin in _modules_python():
-        relatif = chemin.relative_to(_APP).as_posix()
-        if chemin == _SOURCE_UNIQUE or relatif in _EXCEPTIONS:
+    for module in modules_app():
+        relatif = module.rel
+        if module.chemin == _SOURCE_UNIQUE or relatif in _EXCEPTIONS:
             continue
-        lus = _lit_un_champ_de_ban(chemin.read_text(encoding="utf-8"))
+        lus = _lit_un_champ_de_ban(module.source)
         if lus:
             coupables[relatif] = sorted(lus)
 
@@ -105,13 +104,13 @@ def test_le_vocabulaire_du_refus_n_est_ecrit_qu_une_fois():
         "période probatoire",
     ]
     ailleurs = {}
-    for chemin in _modules_python():
-        if chemin == _SOURCE_UNIQUE:
+    for module in modules_app():
+        if module.chemin == _SOURCE_UNIQUE:
             continue
-        texte = chemin.read_text(encoding="utf-8")
+        texte = module.source
         trouves = [f for f in fragments if f in texte]
         if trouves:
-            ailleurs[chemin.relative_to(_APP).as_posix()] = trouves
+            ailleurs[module.rel] = trouves
     assert not ailleurs, f"Messages de refus Communauté recopiés hors du module source : {ailleurs}"
 
 
@@ -129,10 +128,10 @@ class _Faux:
     [
         (_Faux(), True),
         (_Faux(interdit=True), False),
-        (_Faux(ban=datetime.utcnow() + timedelta(days=10)), False),
+        (_Faux(ban=maintenant() + timedelta(days=10)), False),
         #  Le bord : un ban échu depuis une seconde rouvre l'accès — la suspension
         #  probatoire a un terme, et il doit compter.
-        (_Faux(ban=datetime.utcnow() - timedelta(seconds=1)), True),  # ban expiré
+        (_Faux(ban=maintenant() - timedelta(seconds=1)), True),  # ban expiré
     ],
 )
 def test_les_deux_formes_disent_la_meme_chose(utilisateur, attendu_ouvert):

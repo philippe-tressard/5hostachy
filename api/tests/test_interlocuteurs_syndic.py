@@ -11,23 +11,11 @@ changement de personnel chez le syndic — ce qui arrive plus souvent qu'une
 relecture du code.
 """
 
-import pathlib
-
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import GenreCivilite, MembreSyndic
 from app.utils.destinataires import formule_appel, interlocuteurs_syndic
-
-_APP = pathlib.Path(__file__).resolve().parents[1] / "app"
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
+from tests.aides_sources import modules_app
 
 
 def _membre(nom, fonction, *, prenom="X", genre=GenreCivilite.mme, ordre=0, principal=False):
@@ -141,19 +129,14 @@ def test_aucun_nom_de_personne_n_est_ecrit_en_dur_dans_le_code():
     Un nom en dur ne casse rien le jour où il est écrit — il devient faux
     silencieusement, des mois plus tard, dans un e-mail déjà parti.
     """
-    fichiers = [f for f in sorted(_APP.rglob("*.py")) if "__pycache__" not in f.parts]
+    fichiers = modules_app()
     assert len(fichiers) >= 40, (
         f"Seulement {len(fichiers)} module(s) analysé(s) — portée du contrôle cassée."
     )
     #: Les personnes actuellement à l'annuaire. Ce test ne prétend pas détecter
     #: tout nom propre : il verrouille le cas concret qui a motivé la règle.
     interdits = ("Mariette", "Thauvin", "Belyn")
-    fautifs = [
-        f"{f.relative_to(_APP).as_posix()} → {nom}"
-        for f in fichiers
-        for nom in interdits
-        if nom in f.read_text(encoding="utf-8")
-    ]
+    fautifs = [f"{m.rel} → {nom}" for m in fichiers for nom in interdits if nom in m.source]
     assert not fautifs, (
         "Des noms de personnes du syndic sont écrits en dur dans le code : "
         f"{fautifs}. Les lire dans l'annuaire par leur FONCTION "

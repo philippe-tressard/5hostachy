@@ -39,6 +39,8 @@ from __future__ import annotations
 import io
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 RACINE = Path(__file__).resolve().parents[1] / "app"
 SOURCE = RACINE / "utils" / "destinataires.py"
 
@@ -75,10 +77,6 @@ MOTIFS = {
 #  L'exemption était le symptôme d'une règle qui n'existait pas encore.
 
 
-def _fichiers_python() -> list[Path]:
-    return sorted(p for p in RACINE.rglob("*.py") if "__pycache__" not in p.parts)
-
-
 def _sans_commentaires(source: str) -> str:
     """Retire les lignes de commentaire : expliquer la règle ne doit pas la violer.
 
@@ -89,7 +87,7 @@ def _sans_commentaires(source: str) -> str:
 
 
 def test_la_regle_des_destinataires_ne_s_ecrit_qu_a_un_endroit():
-    fichiers = _fichiers_python()
+    fichiers = modules_app()
     #  Cas zéro : un relevé légitimement vide ne peut pas se relire lui-même
     #  (`standards/04` §27). Le témoin est le nombre de fichiers LUS.
     assert len(fichiers) > 60, (
@@ -100,9 +98,9 @@ def test_la_regle_des_destinataires_ne_s_ecrit_qu_a_un_endroit():
     fautifs: list[str] = []
     exceptions_utiles: set[str] = set()
 
-    for chemin in fichiers:
-        rel = chemin.relative_to(RACINE).as_posix()
-        source = _sans_commentaires(io.open(chemin, encoding="utf-8").read())
+    for module in fichiers:
+        rel = module.rel
+        source = _sans_commentaires(module.source)
         for motif, remede in MOTIFS.items():
             if motif not in source:
                 continue

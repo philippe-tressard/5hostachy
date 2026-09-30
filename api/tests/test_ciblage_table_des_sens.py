@@ -60,7 +60,6 @@ def _resident(statut: StatutUtilisateur) -> Utilisateur:
     """
     return Utilisateur(
         email="x@exemple.test",
-        mot_de_passe_hash="x",
         prenom="Test",
         nom="Aulnay",
         role=RoleUtilisateur.résident,

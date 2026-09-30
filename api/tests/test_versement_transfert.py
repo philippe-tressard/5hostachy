@@ -5,9 +5,9 @@ une autre affaire, et/ou créer une nouvelle affaire »*. Arbitré le même jour
 celui qui a transféré et l'administrateur ; aucun délai, mais plus dès qu'un
 autre a écrit une Suite après le transfert.
 
-Les scènes sont celles de `test_courriel_transfert.py` : le fil du portillon
-(Jean le 26/09, Jean le 29/09, puis le syndic), transféré par un membre du
-conseil.
+Les scènes sont celles de `test_courriel_transfert.py`, écrites dans
+`aides_courriel.py` : le fil du portillon (Jean le 26/09, Jean le 29/09, puis
+le syndic), transféré par un membre du conseil.
 """
 
 from __future__ import annotations
@@ -23,9 +23,16 @@ from app.models.core import StatutTicket, Ticket, TicketEvolution, Utilisateur
 from app.models.courriel import FilCourriel, MessageVerse, VersementCourriel
 from app.utils import versement_transfert as versements
 from app.utils.courriel_ingestion import ACCEPTE
+from tests.aides_base import compte
+from tests.aides_courriel import (  # noqa: F401 — `monde` et `scene` sont des fixtures
+    _affaires,
+    _evolutions,
+    _fil,
+    _transferer,
+    monde,
+    scene,
+)
 from tests.purge_test import purger_ligne
-from tests.test_courriel_reponse_ticket_bout_en_bout import _evolutions, scene  # noqa: F401
-from tests.test_courriel_transfert import _affaires, _fil, _transferer, monde  # noqa: F401
 
 
 @pytest.fixture()
@@ -76,17 +83,7 @@ def _autre_affaire(session, cs, *, statut=StatutTicket.ouvert) -> Ticket:
 
 
 def _compte(session, comptes, roles: str) -> Utilisateur:
-    u = Utilisateur(
-        email=f"u-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="U",
-        nom="T",
-        roles_json=roles,
-        actif=True,
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
+    u = compte(session, prefixe="u", prenom="U", nom="T", roles_json=roles)
     comptes.append(u)
     return u
 

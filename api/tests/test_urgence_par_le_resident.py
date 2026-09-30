@@ -51,6 +51,7 @@ from app.database import engine
 from app.models.core import RoleUtilisateur, Ticket, Utilisateur
 from app.routers.tickets.commun import OPTIONS_RESERVEES_AU_CS, OPTIONS_TICKET, appliquer_options
 from app.utils.categories_ticket import ticket_urgent
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
 
 
@@ -66,16 +67,13 @@ class _Corps:
 def ticket() -> Ticket:
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        auteur = Utilisateur(
-            email=f"resident-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        auteur = compte(
+            session,
+            prefixe="resident",
             prenom="Renée",
             nom="Sidente",
             role=RoleUtilisateur.résident,
         )
-        session.add(auteur)
-        session.commit()
-        session.refresh(auteur)
         tk = Ticket(
             numero=f"T-{uuid.uuid4().hex[:6]}",
             titre="Inondation dans le hall",

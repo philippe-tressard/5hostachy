@@ -27,7 +27,7 @@ l'une doit filtrer en base — le jour où l'une bougera sans l'autre, c'est ici
 ça tombera.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from sqlmodel import Session, SQLModel, select
@@ -50,6 +50,7 @@ from app.routers.flux.sante import calculer
 from app.routers.sondages.crud import list_sondages
 from app.routers.tickets.crud import list_tickets
 from app.utils import perimetres as P
+from app.utils.horloge import maintenant
 from app.seed.patrimoine import poser_arborescence
 from tests.conftest import vider_patrimoine
 
@@ -95,7 +96,7 @@ def _utilisateur(session: Session, email: str, roles: str, batiment_id=None) -> 
         roles_json=roles,
         actif=True,
         batiment_id=batiment_id,
-        decision_compte_le=datetime.utcnow(),
+        decision_compte_le=maintenant(),
     )
     session.add(u)
     session.commit()
@@ -104,7 +105,7 @@ def _utilisateur(session: Session, email: str, roles: str, batiment_id=None) -> 
 
 
 def _contexte(session: Session, user: Utilisateur) -> ContexteFlux:
-    now = datetime.utcnow()
+    now = maintenant()
     return ContexteFlux(session=session, user=user, now=now, since=now - timedelta(days=377))
 
 
@@ -143,7 +144,7 @@ def test_le_compteur_sondages_egale_ce_que_l_ecran_montre(base):
 
     _sondage(base, cs.id)  # ouvert, sans ciblage → visible de tous
     _sondage(base, cs.id, perimetre_cible=f'["bat:{bat2}"]')  # autre bâtiment
-    _sondage(base, cs.id, cloture_le=datetime.utcnow() - timedelta(days=1))  # échéance passée
+    _sondage(base, cs.id, cloture_le=maintenant() - timedelta(days=1))  # échéance passée
     _sondage(base, cs.id, cloture_forcee=True)  # clos à la main
 
     for user in (resident, cs):
@@ -168,7 +169,7 @@ def test_un_sondage_cible_ailleurs_ne_gonfle_pas_la_pastille_du_resident(base):
 def test_une_echeance_passee_clot_le_sondage_pour_le_compteur(base):
     """(c) — `~cloture_forcee` n'excluait que la clôture manuelle."""
     cs = _utilisateur(base, "cs@test.fr", "conseil_syndical")
-    _sondage(base, cs.id, cloture_le=datetime.utcnow() - timedelta(minutes=1))
+    _sondage(base, cs.id, cloture_le=maintenant() - timedelta(minutes=1))
 
     assert calculer(_contexte(base, cs)).sondages_actifs == 0
 
@@ -237,7 +238,7 @@ def _compte_inactif(session: Session, email: str, decide: bool) -> Utilisateur:
         prenom="P",
         email=email,
         actif=False,
-        decision_compte_le=datetime.utcnow() if decide else None,
+        decision_compte_le=maintenant() if decide else None,
     )
     session.add(u)
     session.commit()

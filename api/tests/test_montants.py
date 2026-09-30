@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from app.utils.montants import montant_fr
+from tests.aides_sources import modules_app
 
 _APP_DIR = Path(__file__).resolve().parents[1] / "app"
 
@@ -51,7 +52,7 @@ def test_separateur_insecable():
 
 def test_aucun_montant_formate_a_la_main_dans_app():
     fautifs = []
-    fichiers = sorted(_APP_DIR.rglob("*.py"))
+    fichiers = modules_app()
     #  🔴 CAS ZÉRO DE LA PORTÉE (`standards/04` §2 et §40). Sans cette ligne, un
     #  `_APP_DIR` devenu faux — répertoire déplacé, arborescence réorganisée —
     #  produirait « 0 montant fautif sur 0 fichier lu », c'est-à-dire un vert
@@ -64,12 +65,10 @@ def test_aucun_montant_formate_a_la_main_dans_app():
         f"{len(fichiers)} fichier(s) Python lu(s) sous {_APP_DIR} — la portée du "
         "relevé est cassée, et son vert ne veut rien dire (INCONNU, pas OK)."
     )
-    for chemin in fichiers:
-        for n, ligne in enumerate(chemin.read_text(encoding="utf-8").splitlines(), 1):
+    for m in fichiers:
+        for n, ligne in enumerate(m.lignes, 1):
             if _MONTANT_A_LA_MAIN.search(ligne):
-                fautifs.append(
-                    f"{chemin.relative_to(_APP_DIR).as_posix()}:{n}: {ligne.strip()[:90]}"
-                )
+                fautifs.append(f"{m.rel}:{n}: {ligne.strip()[:90]}")
     assert not fautifs, (
         "Montant formaté à la main — utiliser `app.utils.montants.montant_fr()`, "
         "sous peine de voir le même champ rendu différemment selon l'écran :\n" + "\n".join(fautifs)

@@ -14,19 +14,16 @@ from __future__ import annotations
 
 import pytest
 from fastapi import BackgroundTasks
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
+from sqlmodel import Session
 
 from app.models.core import RoleUtilisateur, Utilisateur
 from app.routers import annonces_hall
+from tests.aides_base import moteur_memoire
 
 
 @pytest.fixture(name="contexte")
 def contexte_fixture(monkeypatch, tmp_path):
-    moteur = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(moteur)
+    moteur = moteur_memoire(partage=True)
     monkeypatch.setattr(annonces_hall, "generer_pdf", lambda **_: b"%PDF-test")
     monkeypatch.setattr(annonces_hall, "PDF_DIR", tmp_path)
     with Session(moteur) as session:

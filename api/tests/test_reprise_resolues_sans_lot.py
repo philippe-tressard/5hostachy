@@ -27,12 +27,11 @@ from app.models.core import StatutImport
 from app.routers.acces.socle_imports import auto_match
 from app.utils.resolution_acces import rattacher_les_reconnues
 from app.utils.types_acces import TELECOMMANDE
-from tests.aides_badges import (  # noqa: F401 — `session` est une fixture
+from tests.aides_badges import (
     _badge,
     _copro_du_fichier,
     _ligne,
     _lot,
-    session,
 )
 
 

@@ -26,31 +26,18 @@ from app.routers.tickets.evolutions import add_evolution
 from app.routers.tickets.mise_a_jour import update_ticket
 from app.schemas import TicketEvolutionCreate, TicketUpdate
 from app.utils.visibility import hors_du_hall, reservee_au_conseil, ticket_visible
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
-
-
-def _compte(session, roles: str, statut=None) -> Utilisateur:
-    u = Utilisateur(
-        email=f"dest-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="Camille",
-        nom="Sorel",
-        roles_json=roles,
-        statut=statut,
-        actif=True,
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 @pytest.fixture()
 def contexte(batiments):
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        cs = _compte(session, "conseil_syndical")
-        locataire = _compte(session, "résident", StatutUtilisateur.locataire)
+        cs = compte(session, prefixe="dest", roles_json="conseil_syndical", statut=None)
+        locataire = compte(
+            session, prefixe="dest", roles_json="résident", statut=StatutUtilisateur.locataire
+        )
         locataire.batiment_id = batiments[0]
         session.add(locataire)
         session.commit()

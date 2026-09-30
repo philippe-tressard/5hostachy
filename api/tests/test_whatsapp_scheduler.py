@@ -38,7 +38,7 @@ PARIS = ZoneInfo("Europe/Paris")
 
 
 class _HorlogeFigee(datetime):
-    """`datetime` dont `now()` et `utcnow()` rendent un instant choisi."""
+    """`datetime` dont `now()` rend un instant choisi — et `maintenant()` le même, en UTC naïf."""
 
     instant = VENDREDI_INCIDENT
 
@@ -47,7 +47,7 @@ class _HorlogeFigee(datetime):
         return cls.instant if tz else cls.instant.replace(tzinfo=None)
 
     @classmethod
-    def utcnow(cls):
+    def maintenant(cls):
         return cls.instant.astimezone(timezone.utc).replace(tzinfo=None)
 
 
@@ -148,7 +148,7 @@ def planifie(monkeypatch):
     monkeypatch.setattr(S, "datetime", _HorlogeFigee)
     #  L'heure UTC du module passe par `horloge` depuis #1047 : c'est elle qu'on
     #  fige, et dans CE module seulement — comme `datetime` juste au-dessus.
-    monkeypatch.setattr(S, "horloge", SimpleNamespace(maintenant=_HorlogeFigee.utcnow))
+    monkeypatch.setattr(S, "horloge", SimpleNamespace(maintenant=_HorlogeFigee.maintenant))
 
     alertes: list[list[str]] = []
     import app.utils.health_monitor as HM
@@ -245,7 +245,7 @@ def test_une_tentative_interrompue_bloque_le_rejeu(planifie, monkeypatch):
                 label=sched.label,
                 message="…",
                 statut=W.STATUT_EN_COURS,
-                envoye_le=_HorlogeFigee.utcnow(),
+                envoye_le=_HorlogeFigee.maintenant(),
             )
         )
         session.commit()
@@ -327,7 +327,7 @@ def test_la_purge_epargne_le_verrou_du_jour(planifie):
     `_prune_logs` ne garde que les 6 derniers logs, tous messages confondus. Le
     log d'un message planifié n'est pas de l'historique : c'est la déduplication.
     """
-    maintenant = _HorlogeFigee.utcnow()
+    maintenant = _HorlogeFigee.maintenant()
     with Session(engine) as session:
         sched = session.exec(select(WhatsAppScheduled)).one()
         session.add(

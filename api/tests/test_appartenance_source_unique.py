@@ -32,6 +32,8 @@ faire sans se tromper (`standards/04` §12).
 import ast
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 RACINE = Path(__file__).resolve().parents[1] / "app"
 
 #: Le seul endroit où une règle d'appartenance peut s'écrire.
@@ -41,14 +43,13 @@ SOURCE = "auth/appartenance.py"
 def _regles_hors_source() -> list[str]:
     """Les levées gouvernées par une comparaison à `user.id`, hors `auth/`."""
     fautes = []
-    for fichier in sorted(RACINE.rglob("*.py")):
-        chemin = fichier.relative_to(RACINE).as_posix()
+    for module in modules_app():
+        chemin = module.rel
         if chemin.startswith("auth/"):
             continue
-        source = fichier.read_text(encoding="utf-8")
-        if "user.id" not in source:
+        if "user.id" not in module.source:
             continue
-        arbre = ast.parse(source)
+        arbre = module.arbre
         for noeud in ast.walk(arbre):
             if not isinstance(noeud, ast.If):
                 continue

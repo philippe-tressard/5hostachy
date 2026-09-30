@@ -17,7 +17,7 @@ from sqlmodel import select
 from app.models.core import Ticket
 from app.models.tickets import CategorieTicket, StatutTicket
 from app.routers.tickets.lot import LotDeVisites, creer_visites_en_lot
-from tests.aides_badges import _compte, session  # noqa: F401 — `session` est une fixture
+from tests.aides_badges import _compte
 
 
 def _visite(**extra):

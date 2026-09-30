@@ -19,17 +19,16 @@ un contexte incomplet échoue.
 """
 
 import ast
-from pathlib import Path
 
 import pytest
 from app.seed import EMAIL_TEMPLATES
+from app.utils.email.variables import VARIABLES_DU_GABARIT
+from tests.aides_sources import modules_app
 
 #  L'analyse du GABARIT vit à part depuis le 31/08/2026 : ce fichier-ci n'analyse
 #  que le POINT D'APPEL. Deux analyses de natures différentes, deux modules.
 from tests.lib_variables_jinja import _variables_qui_font_echouer
-from tests.test_email_templates import BASE_CTX_VARS
 
-_APP_DIR = Path(__file__).resolve().parents[1] / "app"
 _FONCTIONS_ENVOI = {"send_email", "send_email_group"}
 
 _VARS_CRITIQUES: dict[str, set[str]] = {
@@ -260,9 +259,8 @@ def _dict_rendu_par(nom_fonction: str) -> ast.Dict | None:
     Cherche dans tout `app/` : la fonction de contexte et l'envoi vivent souvent
     dans le même module, mais rien ne l'impose.
     """
-    for chemin in sorted(_APP_DIR.rglob("*.py")):
-        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
-        for n in ast.walk(arbre):
+    for module in modules_app():
+        for n in ast.walk(module.arbre):
             if not isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             if n.name != nom_fonction:
@@ -304,9 +302,8 @@ def _collecter() -> tuple[
     analysables: list[tuple[str, str, set[str]]] = []
     opaques: list[tuple[str, str]] = []
     lignes_atteintes: set[tuple[str, int]] = set()
-    for chemin in sorted(_APP_DIR.rglob("*.py")):
-        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
-        relatif = chemin.relative_to(_APP_DIR).as_posix()
+    for module in modules_app():
+        arbre, relatif = module.arbre, module.rel
         vus: set[tuple[str, int]] = set()
         # Des portées imbriquées voient le même appel : on retient la plus
         # étroite, c'est-à-dire celle qui déclare le moins de `ctx` candidats.
@@ -339,15 +336,13 @@ def _envois_par_signature() -> set[tuple[str, int]]:
     contrôle ne contrôle rien — cf. `standards/04-fiabilite-des-controles.md`.
     """
     reperes: set[tuple[str, int]] = set()
-    for chemin in sorted(_APP_DIR.rglob("*.py")):
-        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
-        relatif = chemin.relative_to(_APP_DIR).as_posix()
-        for n in ast.walk(arbre):
+    for module in modules_app():
+        for n in ast.walk(module.arbre):
             if not isinstance(n, ast.Call):
                 continue
             mots_cles = {kw.arg for kw in n.keywords if kw.arg}
             if {"code", "context"} <= mots_cles:
-                reperes.add((relatif, n.lineno))
+                reperes.add((module.rel, n.lineno))
     return reperes
 
 
@@ -425,7 +420,7 @@ def test_le_contexte_fournit_les_variables_du_template(code, fichier, cles):
         "donc l'ajout est sans effet sur les bases existantes)."
     )
     # `annee`, `app` et `residence` sont injectées d'office par send_email.
-    manquantes = attendues - cles - BASE_CTX_VARS
+    manquantes = attendues - cles - VARIABLES_DU_GABARIT
     assert not manquantes, (
         f"{fichier} envoie `{code}` sans fournir {sorted(manquantes)} dans son "
         f"`context` (clés présentes : {sorted(cles)}).\n"

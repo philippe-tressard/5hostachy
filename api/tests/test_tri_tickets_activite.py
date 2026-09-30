@@ -27,37 +27,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta
 
-import pytest
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session
 
 from app.database import engine
 from app.models.core import (
-    RoleUtilisateur,
     Ticket,
     TicketEvolution,
-    Utilisateur,
 )
 from app.routers.tickets.crud import list_tickets
-from tests.purge_test import purger_ligne
-
-
-@pytest.fixture()
-def cs() -> Utilisateur:
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        membre = Utilisateur(
-            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="Camille",
-            nom="Sorel",
-            role=RoleUtilisateur.conseil_syndical,
-        )
-        session.add(membre)
-        session.commit()
-        session.refresh(membre)
-        yield membre
-        purger_ligne(session, Utilisateur, membre.id)
-        session.commit()
+from app.utils import horloge
+from tests.aides_fil import cs, nettoyer_affaires  # noqa: F401
 
 
 def _ticket(session: Session, auteur_id: int, titre: str, cree_le: datetime) -> Ticket:
@@ -77,23 +56,13 @@ def _ticket(session: Session, auteur_id: int, titre: str, cree_le: datetime) -> 
     return t
 
 
-def _nettoyer(session: Session, *ids: int) -> None:
-    for tid in ids:
-        for e in session.exec(
-            select(TicketEvolution).where(TicketEvolution.ticket_id == tid)
-        ).all():
-            session.delete(e)
-        purger_ligne(session, Ticket, tid)
-    session.commit()
-
-
 def _rang(liste, numero: str) -> int:
     return [t.numero for t in liste].index(numero)
 
 
 def test_un_ticket_commente_remonte_au_dessus_d_un_ticket_plus_recent(cs):
     """Le besoin, dans sa forme la plus nue."""
-    now = datetime.utcnow()
+    now = horloge.maintenant()
     with Session(engine) as session:
         vieux = _ticket(session, cs.id, "Fuite ancienne", now - timedelta(days=90))
         recent = _ticket(session, cs.id, "Demande récente", now - timedelta(days=1))
@@ -114,7 +83,7 @@ def test_un_ticket_commente_remonte_au_dessus_d_un_ticket_plus_recent(cs):
                 "un ticket commenté ce matin doit passer devant un ticket déposé hier"
             )
         finally:
-            _nettoyer(session, vieux.id, recent.id)
+            nettoyer_affaires(session, vieux.id, recent.id)
 
 
 def test_une_correction_ne_fait_RIEN_remonter(cs):
@@ -123,7 +92,7 @@ def test_une_correction_ne_fait_RIEN_remonter(cs):
     Corriger une faute de frappe touche `mis_a_jour_le` sans rien apporter au
     dossier. Le ticket doit rester où il est.
     """
-    now = datetime.utcnow()
+    now = horloge.maintenant()
     with Session(engine) as session:
         vieux = _ticket(session, cs.id, "Fuite ancienne", now - timedelta(days=90))
         recent = _ticket(session, cs.id, "Demande récente", now - timedelta(days=1))
@@ -141,7 +110,7 @@ def test_une_correction_ne_fait_RIEN_remonter(cs):
                 "sur le dossier, seul son libellé a changé"
             )
         finally:
-            _nettoyer(session, vieux.id, recent.id)
+            nettoyer_affaires(session, vieux.id, recent.id)
 
 
 def test_relire_une_entree_ne_reordonne_pas_le_fil(cs):
@@ -150,7 +119,7 @@ def test_relire_une_entree_ne_reordonne_pas_le_fil(cs):
     Sans cela, se relire ferait remonter le dossier, et la liste raconterait
     l'activité de celui qui corrige plutôt que celle du dossier.
     """
-    now = datetime.utcnow()
+    now = horloge.maintenant()
     with Session(engine) as session:
         vieux = _ticket(session, cs.id, "Fuite ancienne", now - timedelta(days=90))
         recent = _ticket(session, cs.id, "Demande récente", now - timedelta(days=1))
@@ -178,4 +147,4 @@ def test_relire_une_entree_ne_reordonne_pas_le_fil(cs):
                 "relire une entrée vieille de deux mois ne la rend pas récente"
             )
         finally:
-            _nettoyer(session, vieux.id, recent.id)
+            nettoyer_affaires(session, vieux.id, recent.id)

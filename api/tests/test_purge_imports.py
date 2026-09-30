@@ -29,7 +29,7 @@ recopié la décision au lieu de la constater (`standards/04` §14).
 import io
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import select
 
 from app.models.core import (
     LotImport,
@@ -54,15 +54,6 @@ def _classeur(lignes: list[list]) -> bytes:
     tampon = io.BytesIO()
     wb.save(tampon)
     return tampon.getvalue()
-
-
-@pytest.fixture()
-def session():
-    """Base en mémoire, isolée par test. Aucun `app.db` n'est approché."""
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
 
 
 #:  Les trois imports, avec de quoi les exercer : (nom, module, modèle,

@@ -36,6 +36,7 @@ from app.models.core import RefreshToken, Utilisateur
 from app.routers.auth import logout, refresh
 from app.utils import horloge
 from app.utils.mots_de_passe import poser_mot_de_passe
+from tests.aides_sources import modules_app
 from tests.conftest import requete_de_test
 
 RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
@@ -224,13 +225,10 @@ def test_le_controle_voit_ce_qu_il_doit_refuser():
 
 
 def test_purge_et_echange_ne_s_ecrivent_que_dans_le_module_de_la_regle():
-    fichiers = [f for f in RACINE.rglob("*.py") if "__pycache__" not in f.parts]
+    fichiers = modules_app()
     assert len(fichiers) > 100, "le contrôle ne voit presque rien : sa portée a changé"
     ecarts = [
-        f"app/{f.relative_to(RACINE).as_posix()} — {e}"
-        for f in fichiers
-        if f != MODULE
-        for e in _ecarts(f.read_text(encoding="utf-8"))
+        f"app/{m.rel} — {e}" for m in fichiers if m.chemin != MODULE for e in _ecarts(m.source)
     ]
     assert not ecarts, (
         "Les jetons de rafraîchissement se purgent et s'échangent par "

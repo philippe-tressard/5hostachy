@@ -26,7 +26,7 @@ les autres garde-fous d'autorisation.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -46,6 +46,7 @@ from app.routers.auth_mot_de_passe import (
     change_password,
     reset_password,
 )
+from app.utils import horloge
 from app.utils.mots_de_passe import verifier_robustesse
 from tests.conftest import requete_de_test
 
@@ -72,7 +73,7 @@ def _jeton(session: Session, user_id: int, **surcharges) -> PasswordResetToken:
     prt = PasswordResetToken(
         user_id=user_id,
         token=empreinte(brut),
-        expires_at=surcharges.pop("expires_at", datetime.utcnow() + timedelta(hours=1)),
+        expires_at=surcharges.pop("expires_at", horloge.maintenant() + timedelta(hours=1)),
         **surcharges,
     )
     session.add(prt)
@@ -167,7 +168,9 @@ def test_un_jeton_ne_sert_QU_UNE_fois(utilisateur):
 def test_un_jeton_EXPIRE_est_refuse(utilisateur):
     """L'expiration est une promesse : « ce lien vaut une heure »."""
     with Session(engine) as session:
-        prt = _jeton(session, utilisateur.id, expires_at=datetime.utcnow() - timedelta(minutes=1))
+        prt = _jeton(
+            session, utilisateur.id, expires_at=horloge.maintenant() - timedelta(minutes=1)
+        )
         with pytest.raises(HTTPException) as levee:
             reset_password(
                 _Requete(),
@@ -240,12 +243,12 @@ def test_TOUTES_les_sessions_actives_sont_REVOQUEES(utilisateur):
         vivante = RefreshToken(
             user_id=utilisateur.id,
             token=uuid.uuid4().hex,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=horloge.maintenant() + timedelta(days=7),
         )
         deja_revoquee = RefreshToken(
             user_id=utilisateur.id,
             token=uuid.uuid4().hex,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=horloge.maintenant() + timedelta(days=7),
             revoked=True,
         )
         session.add(vivante)
@@ -303,7 +306,7 @@ def _session_ouverte(session: Session, user_id: int, jeton: str | None = None) -
     rt = RefreshToken(
         user_id=user_id,
         token=empreinte(brut),
-        expires_at=datetime.utcnow() + timedelta(days=7),
+        expires_at=horloge.maintenant() + timedelta(days=7),
     )
     session.add(rt)
     session.commit()

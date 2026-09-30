@@ -9,20 +9,15 @@ conseil tient.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 
-_MIGRATION = (
-    Path(__file__).resolve().parents[1]
-    / "alembic"
-    / "versions"
-    / "0243_entretien_aux_coproprietaires.py"
-)
+from tests.aides_base import moteur_memoire
+from tests.aides_migrations import charger_migration
+
+_MIGRATION = "0243_entretien_aux_coproprietaires.py"
 
 CS = '["conseil_syndical"]'
 #: L'événement 1 est une maintenance récurrente, le 2 une AG.
@@ -58,10 +53,7 @@ CAS = [
 
 
 def _module():
-    spec = importlib.util.spec_from_file_location("mig0243", _MIGRATION)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return charger_migration(_MIGRATION)
 
 
 def _jouer(moteur) -> None:
@@ -72,7 +64,7 @@ def _jouer(moteur) -> None:
 
 @pytest.fixture()
 def moteur():
-    m = create_engine("sqlite://")
+    m = moteur_memoire(schema=False)
     with m.begin() as conn:
         conn.execute(text("CREATE TABLE evenement (id INTEGER PRIMARY KEY, type TEXT)"))
         conn.execute(
@@ -120,10 +112,7 @@ def test_les_noms_sont_ceux_du_modele():
 
 def test_la_0232_est_bien_celle_que_l_on_defait():
     """Le type et la liste sont ceux que la 0232 a écrits — pas une recopie approximative."""
-    chemin = _MIGRATION.with_name("0232_destinataires_evenements_migres.py")
-    spec = importlib.util.spec_from_file_location("mig0232", chemin)
-    m0232 = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m0232)
+    m0232 = charger_migration("0232_destinataires_evenements_migres.py")
     assert m0232.DESTINATAIRES == {_module().TYPE_EVENEMENT: _module().CONSEIL_SEUL}
 
 

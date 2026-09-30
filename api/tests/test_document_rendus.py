@@ -29,6 +29,8 @@ import ast
 import inspect
 import pathlib
 
+from tests.aides_sources import modules_app
+
 RACINE = pathlib.Path(__file__).resolve().parents[1]
 
 #: Les champs d'un document qui doivent PARAÎTRE partout où le document paraît.
@@ -97,13 +99,10 @@ def test_le_LIEN_du_document_n_est_calcule_qu_a_UN_endroit():
     bonne, l'élément invisible.
     """
     fautifs = []
-    for chemin in (RACINE / "app").rglob("*.py"):
-        if "__pycache__" in chemin.parts:
-            continue
-        if chemin.name == "documents.py" and chemin.parent.name == "utils":
+    for module in modules_app():
+        if module.chemin.name == "documents.py" and module.chemin.parent.name == "utils":
             continue  # la source
-        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
-        for n in ast.walk(arbre):
+        for n in ast.walk(module.arbre):
             if (
                 isinstance(n, ast.Call)
                 and isinstance(n.func, ast.Name)
@@ -112,7 +111,7 @@ def test_le_LIEN_du_document_n_est_calcule_qu_a_UN_endroit():
                 and isinstance(n.args[0], ast.Constant)
                 and n.args[0].value == "doc"
             ):
-                fautifs.append(chemin.relative_to(RACINE).as_posix())
+                fautifs.append(f"app/{module.rel}")
 
     assert not fautifs, (
         "Ces fichiers fabriquent eux-mêmes le lien d'un document : "

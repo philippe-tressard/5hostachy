@@ -32,9 +32,8 @@ une exception sans date de revue devient une porte qu'on croit fermée.
 from __future__ import annotations
 
 import ast
-import pathlib
 
-RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
 
 #: Les arguments qui reconstruisent un fetcher par défaut, d'après l'avis.
 ARGUMENTS_A_RISQUE = {"url_fetcher", "stylesheets", "xmp_metadata"}
@@ -42,11 +41,8 @@ ARGUMENTS_A_RISQUE = {"url_fetcher", "stylesheets", "xmp_metadata"}
 
 def _appels_weasyprint():
     """Chaque appel à `HTML(...)` ou `.write_pdf(...)`, avec ses mots-clés."""
-    for chemin in RACINE.rglob("*.py"):
-        if "__pycache__" in chemin.parts:
-            continue
-        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
-        for n in ast.walk(arbre):
+    for m in modules_app():
+        for n in ast.walk(m.arbre):
             if not isinstance(n, ast.Call):
                 continue
             nom = (
@@ -58,7 +54,7 @@ def _appels_weasyprint():
             )
             if nom in ("HTML", "write_pdf"):
                 yield (
-                    chemin.relative_to(RACINE).as_posix(),
+                    m.rel,
                     nom,
                     {k.arg for k in n.keywords if k.arg},
                 )

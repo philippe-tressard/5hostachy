@@ -29,7 +29,6 @@ from __future__ import annotations
 
 
 import json
-import uuid
 
 import pytest
 from sqlmodel import Session, SQLModel
@@ -37,6 +36,7 @@ from sqlmodel import Session, SQLModel
 from app.database import engine
 from app.models.core import PetiteAnnonce, RoleUtilisateur, Utilisateur
 from app.routers.annonces import AnnonceCreate, AnnonceUpdate, create_annonce, update_annonce
+from tests.aides_base import compte
 
 #  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
 #  qui la référence est ce que les clés étrangères refusent (#546).
@@ -47,16 +47,13 @@ from tests.purge_test import purger_ligne
 def resident() -> Utilisateur:
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        u = Utilisateur(
-            email=f"resident-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        u = compte(
+            session,
+            prefixe="resident",
             prenom="Robin",
             nom="Aulnay",
             role=RoleUtilisateur.résident,
         )
-        session.add(u)
-        session.commit()
-        session.refresh(u)
         yield u
         purger_ligne(session, Utilisateur, u.id)
         session.commit()

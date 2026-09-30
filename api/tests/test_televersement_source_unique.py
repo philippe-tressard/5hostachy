@@ -43,6 +43,8 @@ import ast
 import pathlib
 import re
 
+from tests.aides_sources import modules_app
+
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 #: Le module qui porte le geste — et le seul autorisé à écrire un fichier reçu.
@@ -118,14 +120,13 @@ def _ecritures_de(source: str) -> list[tuple[int, str]]:
 
 def _ecritures_disque():
     """(fichier, ligne, appel) pour chaque écriture d'octets sur disque."""
-    for fichier in sorted(_APP.rglob("*.py")):
-        source = fichier.read_text(encoding="utf-8")
+    for m in modules_app():
         try:
-            ecritures = _ecritures_de(source)
+            ecritures = _ecritures_de(m.source)
         except SyntaxError:  # pragma: no cover
             continue
         for ligne, nom in ecritures:
-            yield fichier.relative_to(_APP).as_posix(), ligne, nom
+            yield m.rel, ligne, nom
 
 
 def test_le_controle_voit_bien_des_ecritures():
@@ -211,9 +212,9 @@ def test_aucun_routeur_ne_redeclare_un_plafond_ou_une_liste_de_types():
     dictionnaire** dont les entrées sont des types MIME.
     """
     fautes = []
-    for fichier in sorted((_APP / "routers").rglob("*.py")):
-        source = fichier.read_text(encoding="utf-8")
-        nom = fichier.relative_to(_APP).as_posix()
+    for m in modules_app("routers"):
+        source = m.source
+        nom = m.rel
         try:
             arbre = ast.parse(source)
         except SyntaxError:  # pragma: no cover

@@ -22,19 +22,15 @@ passer par le thème une décision qui n'appartient qu'à ce document-là.
 
 from __future__ import annotations
 
-import pathlib
 import re
 
-RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
+
 SOURCE = "utils/pdf_theme.py"
 
 #: `@page` SANS nom : c'est celui-là qui porte le format du document.
 #: `@page garde {` ne correspond pas — le nom précède l'accolade.
 PAGE_ANONYME = re.compile(r"@page\s*\{")
-
-
-def _fichiers() -> list[pathlib.Path]:
-    return [p for p in RACINE.rglob("*.py") if "__pycache__" not in p.parts]
 
 
 def test_la_regle_de_page_existe_et_rend_de_l_A4():
@@ -66,11 +62,11 @@ def test_aucun_module_ne_REECRIT_la_regle_de_page():
     document imprimable doit appeler `regle_page()`, pas recopier le bloc.
     """
     fautifs = {}
-    for chemin in _fichiers():
-        rel = chemin.relative_to(RACINE).as_posix()
+    for module in modules_app():
+        rel = module.rel
         if rel == SOURCE:
             continue
-        source = chemin.read_text(encoding="utf-8")
+        source = module.source
         #  Les lignes de PROSE citent la règle — on ne lit que le code.
         lignes = [
             n + 1
@@ -93,7 +89,7 @@ def test_cas_zero_le_motif_reconnait_bien_un_bloc_page():
     assert PAGE_ANONYME.search("@page{size:A5}")
     #  Une page NOMMÉE n'est pas visée : elle ne porte pas le format.
     assert not PAGE_ANONYME.search("@page garde { margin: 0; }")
-    assert len(_fichiers()) > 50, "le parcours ne décrit plus `app/`"
+    assert len(modules_app()) > 50, "le parcours ne décrit plus `app/`"
 
 
 def test_les_trois_documents_passent_par_le_theme():

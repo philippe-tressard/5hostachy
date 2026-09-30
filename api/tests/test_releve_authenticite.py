@@ -17,7 +17,7 @@ import pytest
 
 from app.utils import courriel_boite
 from app.utils.courriel_authenticite import VerificationReportee
-from tests.test_releve_echec_nest_pas_vide import imap_actif, journal  # noqa: F401
+from tests.aides_courriel import imap_actif, journal  # noqa: F401 — fixtures
 
 _BRUT = (
     b"From: gestion@syndic.fr\r\n"

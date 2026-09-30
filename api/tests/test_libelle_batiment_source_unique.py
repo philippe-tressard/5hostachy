@@ -31,6 +31,8 @@ from __future__ import annotations
 import ast
 import pathlib
 
+from tests.aides_sources import modules_app
+
 RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 #: Ce qui est cherché : une **f-string** qui écrit « Bât. » juste avant une
@@ -67,10 +69,6 @@ EXCEPTIONS = {
 }
 
 
-def _fichiers():
-    return [p for p in RACINE.rglob("*.py") if "__pycache__" not in p.parts]
-
-
 def compose_le_libelle(source: str) -> bool:
     """Une f-string écrit-elle « Bât. » juste avant une interpolation ?
 
@@ -94,12 +92,11 @@ def compose_le_libelle(source: str) -> bool:
 
 def test_le_libelle_n_est_ecrit_qu_une_fois():
     fautifs = []
-    for p in _fichiers():
-        rel = p.relative_to(RACINE).as_posix()
-        if rel in EXCEPTIONS:
+    for m in modules_app():
+        if m.rel in EXCEPTIONS:
             continue
-        if compose_le_libelle(p.read_text(encoding="utf-8")):
-            fautifs.append(rel)
+        if compose_le_libelle(m.source):
+            fautifs.append(m.rel)
 
     assert not fautifs, (
         "Ces fichiers composent « Bât. … » eux-mêmes : "
@@ -129,7 +126,7 @@ def test_chaque_EXCEPTION_sert_encore():
 
 def test_cas_zero_le_balayage_regarde_bien_quelque_chose():
     """Si l'arborescence ou la forme changent, le contrôle ne mesure plus rien."""
-    assert len(_fichiers()) > 50, "le parcours ne décrit plus `app/`."
+    assert len(modules_app()) > 50, "le parcours ne décrit plus `app/`."
     assert compose_le_libelle('x = f"Bât. {bat.numero}"'), "la forme fautive n'est plus reconnue."
     assert not compose_le_libelle("x = libelle_batiment(bat)"), (
         "le contrôle crie sur la forme voulue."

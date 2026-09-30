@@ -21,32 +21,21 @@ une ligne — et c'est ce qui empêchera la prochaine divergence.
 from datetime import datetime
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import select
 
 from app.models.core import (
     StatutAcces,
     StatutImport,
-    Utilisateur,
     VigikImport,
 )
-from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, VIGIK
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
+from app.utils.types_acces import TYPES_ACCES
+from tests.aides_badges import TYPES, _lier, _lot
+from tests.aides_base import compte
 
 
 @pytest.fixture()
 def porteur(session):
-    u = Utilisateur(email="porteur@exemple.fr", hashed_password="x", prenom="A", nom="B")
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
+    return compte(session, prefixe="porteur", prenom="A", nom="B")
 
 
 def _ligne_import(type_acces, code: str, lot_id):
@@ -75,18 +64,12 @@ def test_les_deux_types_sont_declares():
 
 def _lot_du_porteur(session, porteur, type_acces) -> int:
     """Un lot de la nature du badge, auquel le porteur est rattaché."""
-    from app.models.copropriete import Lot
-    from app.models.core import UserLot
-
-    lot = Lot(numero="7", type=type_acces.types_lot[0])
-    session.add(lot)
-    session.flush()
-    session.add(UserLot(user_id=porteur.id, lot_id=lot.id, type_lien="propriétaire", actif=True))
-    session.commit()
+    lot = _lot(session, type_acces, numero="7")
+    _lier(session, porteur, lot)
     return lot.id
 
 
-@pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
+@pytest.mark.parametrize("type_acces", TYPES)
 def test_le_lot_de_l_import_est_repris_sur_l_objet(session, porteur, type_acces):
     """🔴 LE CAS QUI ÉTAIT FAUX POUR LA TÉLÉCOMMANDE."""
     from app.routers.acces.resident import _declarer_acces
@@ -110,7 +93,7 @@ def test_le_lot_de_l_import_est_repris_sur_l_objet(session, porteur, type_acces)
     assert isinstance(ligne.resolu_le, datetime)
 
 
-@pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
+@pytest.mark.parametrize("type_acces", TYPES)
 def test_la_ligne_d_un_AUTRE_lot_n_est_pas_capturee(session, porteur, type_acces):
     """🔴 #1194 : taper le code d'un voisin ne rattache plus sa ligne à soi.
 
@@ -119,12 +102,9 @@ def test_la_ligne_d_un_AUTRE_lot_n_est_pas_capturee(session, porteur, type_acces
     """
     from fastapi import HTTPException
 
-    from app.models.copropriete import Lot
     from app.routers.acces.resident import _declarer_acces
 
-    voisin = Lot(numero="8", type=type_acces.types_lot[0])
-    session.add(voisin)
-    session.commit()
+    voisin = _lot(session, type_acces, numero="8")
     session.add(_ligne_import(type_acces, "B-7", lot_id=voisin.id))
     session.commit()
 
@@ -134,7 +114,7 @@ def test_la_ligne_d_un_AUTRE_lot_n_est_pas_capturee(session, porteur, type_acces
     assert session.exec(select(type_acces.modele)).first() is None
 
 
-@pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
+@pytest.mark.parametrize("type_acces", TYPES)
 def test_sans_lot_connu_le_badge_prend_le_lot_unique_du_porteur(session, porteur, type_acces):
     from app.routers.acces.resident import _declarer_acces
 
@@ -144,7 +124,7 @@ def test_sans_lot_connu_le_badge_prend_le_lot_unique_du_porteur(session, porteur
     assert session.get(type_acces.modele, resultat["id"]).lot_id == lot_id
 
 
-@pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
+@pytest.mark.parametrize("type_acces", TYPES)
 def test_sans_ligne_d_import_l_objet_existe_quand_meme(session, porteur, type_acces):
     """Déclarer un accès que l'import ne connaît pas reste un geste valide."""
     from app.routers.acces.resident import _declarer_acces
@@ -157,7 +137,7 @@ def test_sans_ligne_d_import_l_objet_existe_quand_meme(session, porteur, type_ac
     assert objet.lot_id is None
 
 
-@pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
+@pytest.mark.parametrize("type_acces", TYPES)
 def test_le_meme_code_deux_fois_est_refuse(session, porteur, type_acces):
     from fastapi import HTTPException
 
@@ -169,7 +149,7 @@ def test_le_meme_code_deux_fois_est_refuse(session, porteur, type_acces):
     assert erreur.value.status_code == 400
 
 
-@pytest.mark.parametrize("type_acces", [VIGIK, TELECOMMANDE], ids=lambda t: t.cle)
+@pytest.mark.parametrize("type_acces", TYPES)
 def test_un_acces_qui_n_est_pas_le_sien_est_introuvable(session, porteur, type_acces):
     """🔒 404 et non 403 : « interdit » confirmerait que le badge existe."""
     from fastapi import HTTPException
@@ -181,10 +161,7 @@ def test_un_acces_qui_n_est_pas_le_sien_est_introuvable(session, porteur, type_a
 
     resultat = _declarer_acces(session, type_acces, "D-1", porteur)
 
-    autre = Utilisateur(email="autre@exemple.fr", hashed_password="x", prenom="C", nom="D")
-    session.add(autre)
-    session.commit()
-    session.refresh(autre)
+    autre = compte(session, prefixe="autre", prenom="C", nom="D")
 
     with pytest.raises(HTTPException) as erreur:
         exiger_acces_du_porteur(session, type_acces, resultat["id"], autre)

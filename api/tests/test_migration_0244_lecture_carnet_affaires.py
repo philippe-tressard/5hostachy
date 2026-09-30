@@ -8,17 +8,13 @@ d'hier écrit en dur, et lui seul — un choix du conseil tient.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 
-_MIGRATION = (
-    Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0244_lecture_carnet_affaires.py"
-)
+from tests.aides_base import moteur_memoire
+from tests.aides_migrations import charger_migration
 
 PANNE_HIER = '["copropriétaires_occupants", "locataires"]'
 COPROS = '["copropriétaires_occupants", "bailleurs"]'
@@ -52,10 +48,7 @@ CAS = [
 
 
 def _module():
-    spec = importlib.util.spec_from_file_location("mig0244", _MIGRATION)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return charger_migration("0244_lecture_carnet_affaires")
 
 
 def _jouer(moteur) -> None:
@@ -66,7 +59,7 @@ def _jouer(moteur) -> None:
 
 @pytest.fixture()
 def moteur():
-    m = create_engine("sqlite://")
+    m = moteur_memoire(schema=False)
     with m.begin() as conn:
         conn.execute(
             text(

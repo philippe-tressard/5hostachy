@@ -178,12 +178,7 @@ def test_une_relance_qui_LEVE_est_journalisee_et_avalee():
 def test_la_regle_n_est_ECRITE_QU_UNE_FOIS():
     """Une seconde copie de `rattrapage_necessaire` divergerait au premier
     ajustement du bord des 24 h — et c'est le bord qui décide chaque matin."""
-    import pathlib
+    from tests.aides_sources import modules_app
 
-    racine = pathlib.Path(__file__).resolve().parents[1] / "app"
-    porteurs = [
-        f.relative_to(racine).as_posix()
-        for f in racine.rglob("*.py")
-        if "def rattrapage_necessaire" in f.read_text(encoding="utf-8")
-    ]
+    porteurs = [m.rel for m in modules_app() if "def rattrapage_necessaire" in m.source]
     assert porteurs == ["utils/rattrapage.py"], porteurs

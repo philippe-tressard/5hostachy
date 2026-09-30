@@ -13,19 +13,18 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, select
 
 from app.models.core import HistoriqueMaintenance
 from app.routers.admin.rapports_scripts import RapportMaintenance, enregistrer_rapport
 from app.utils.sante_taches import sans_battements_remplaces
+from tests.aides_base import moteur_memoire
 
 DEBUT = datetime(2026, 9, 27, 3, 0, 1)
 
 
 def _session() -> Session:
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    return Session(moteur)
+    return Session(moteur_memoire())
 
 
 def _rapport(**kwargs) -> RapportMaintenance:

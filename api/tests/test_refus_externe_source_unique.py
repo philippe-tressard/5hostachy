@@ -41,6 +41,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 RACINE = Path(__file__).resolve().parents[1] / "app"
 
 #  🔴 Les exceptions sont NOMMÉES, avec leur raison — une tolérance sans raison
@@ -63,10 +65,6 @@ EXCEPTIONS = {
 }
 
 
-def _fichiers_python() -> list[Path]:
-    return sorted(p for p in RACINE.rglob("*.py") if "__pycache__" not in p.parts)
-
-
 def _sans_commentaires(source: str) -> str:
     """Retire les commentaires : expliquer la règle ne doit pas la violer.
 
@@ -78,11 +76,11 @@ def _sans_commentaires(source: str) -> str:
 
 def test_le_refus_des_comptes_externes_ne_se_recopie_pas():
     coupables = []
-    for fichier in _fichiers_python():
-        rel = fichier.relative_to(RACINE).as_posix()
+    for m in modules_app():
+        rel = m.rel
         if rel in EXCEPTIONS:
             continue
-        source = _sans_commentaires(fichier.read_text(encoding="utf-8"))
+        source = _sans_commentaires(m.source)
         #  La condition complète, pas la simple mention du rôle : c'est la
         #  DÉCISION qu'on interdit de recopier, pas le vocabulaire.
         if "RoleUtilisateur.externe" in source and "has_role" in source:

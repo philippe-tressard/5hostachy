@@ -27,13 +27,14 @@ tests rapides — et un test rapide est un test qu'on garde.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 
 from app.models.core import PetiteAnnonce, StatutAnnonce
 from app.routers.annonces import est_archivee
 from app.utils.archivage import ARCHIVAGE_DELAI_JOURS, REGLES
+from app.utils.horloge import maintenant
 
 #  ⚠️ Les deux noms importés d'`annonces` ont disparu avec la règle unique
 #  (#515) : le délai est celui du site, et la liste des états terminaux vit dans
@@ -49,7 +50,7 @@ STATUTS_TERMINAUX = REGLES["annonce"].statuts_terminaux
 
 def _annonce(statut: StatutAnnonce, jours: float | None, **kw) -> PetiteAnnonce:
     """Une annonce dans cet état depuis `jours` jours. `None` = pas d'horodatage."""
-    quand = None if jours is None else datetime.utcnow() - timedelta(days=jours)
+    quand = None if jours is None else maintenant() - timedelta(days=jours)
     return PetiteAnnonce(
         titre="Vélo",
         description="<p>Peu servi.</p>",
@@ -110,7 +111,7 @@ def test_une_correction_recente_ne_repousse_PAS_l_archivage():
     annonce vendue en juin traînerait encore en décembre.
     """
     annonce = _annonce(StatutAnnonce.vendu, 60)
-    annonce.mis_a_jour_le = datetime.utcnow()
+    annonce.mis_a_jour_le = maintenant()
     assert est_archivee(annonce) is True, (
         "l'archivage suit `mis_a_jour_le` au lieu de `statut_change_le` : "
         "corriger une faute de frappe repousse l'archivage d'un mois."
@@ -125,7 +126,7 @@ def test_sans_horodatage_le_repli_ne_bloque_pas_l_archivage():
     éternellement en tête de liste — le cas zéro appliqué à une donnée manquante.
     """
     annonce = _annonce(StatutAnnonce.vendu, None)
-    annonce.mis_a_jour_le = datetime.utcnow() - timedelta(days=ARCHIVAGE_JOURS + 5)
+    annonce.mis_a_jour_le = maintenant() - timedelta(days=ARCHIVAGE_JOURS + 5)
     assert est_archivee(annonce) is True
 
 

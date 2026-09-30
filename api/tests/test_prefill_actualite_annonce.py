@@ -34,8 +34,9 @@ from sqlmodel import Session, SQLModel
 
 from app.database import engine
 from app.models.annonce_hall import AnnonceHall
-from app.models.core import Ticket, Utilisateur
+from app.models.core import Ticket
 from app.routers.tickets.depuis_annonce import prefill_depuis_annonce_hall
+from tests.aides_base import compte
 
 
 @pytest.fixture()
@@ -56,16 +57,9 @@ def scene(batiments):
         #  ⚠️ `auteur_id` est NOT NULL et porte une clé étrangère : le `conftest`
         #  active `foreign_keys=ON` (#546), donc un auteur inventé ferait échouer
         #  l'insertion — pas le test, ce qui est plus difficile à lire.
-        auteur = Utilisateur(
-            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="C",
-            nom="CONSEIL",
-            roles_json="conseil_syndical",
-            actif=True,
+        auteur = compte(
+            session, prefixe="cs", prenom="C", nom="CONSEIL", roles_json="conseil_syndical"
         )
-        session.add(auteur)
-        session.flush()
         annonce = AnnonceHall(
             auteur_id=auteur.id,
             titre="Coupure d'eau mardi",

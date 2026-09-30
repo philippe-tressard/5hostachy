@@ -43,6 +43,7 @@ from sqlmodel import Session, SQLModel, select
 from app.database import engine
 from app.models.core import GenreCivilite, MembreCS
 from app.routers.admin.annuaire import CompositionCSIn, put_composition_cs
+from app.utils.horloge import maintenant
 
 
 @pytest.fixture()
@@ -167,7 +168,7 @@ def test_un_membre_VRAIMENT_nouveau_est_bien_cree(session):
     assert len(apres) == 4
     venu = next(m for m in apres if m.nom == "VENU")
     #  Son entrée date d'aujourd'hui : le fil a RAISON de l'annoncer.
-    assert venu.cree_le > datetime.utcnow() - timedelta(minutes=5)
+    assert venu.cree_le > maintenant() - timedelta(minutes=5)
 
 
 def test_un_membre_retire_de_la_liste_quitte_le_conseil(session):

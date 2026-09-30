@@ -33,24 +33,20 @@ from app.utils import mes_batiments
 from app.utils import perimetres as P
 from app.utils.carnet_entretien import construire_carnet
 from app.utils.visibility import reservee_au_conseil, ticket_visible
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
 
 
 def _compte(session, roles: str, statut=None, batiment_id=None) -> Utilisateur:
-    u = Utilisateur(
-        email=f"carnet-lu-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
+    return compte(
+        session,
+        prefixe="carnet-lu",
         prenom="Camille",
         nom="Sorel",
         roles_json=roles,
         statut=statut,
         batiment_id=batiment_id,
-        actif=True,
     )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 @pytest.fixture()

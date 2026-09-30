@@ -36,6 +36,8 @@ from app.models.core import Utilisateur
 from app.models.jetons import PasswordResetToken, RefreshToken
 from app.utils import horloge
 from app.utils.maintenance import purger
+from tests import aides_base
+from tests.aides_sources import modules_app
 from tests.purge_test import purger_ligne
 
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
@@ -45,17 +47,7 @@ _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 def compte():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        u = Utilisateur(
-            nom="P",
-            prenom="J",
-            email=f"purge-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
-            roles_json="résident",
-            actif=True,
-        )
-        session.add(u)
-        session.commit()
-        session.refresh(u)
+        u = aides_base.compte(session, prefixe="purge", nom="P", prenom="J", roles_json="résident")
         yield session, u
         purger_ligne(session, Utilisateur, u.id)
         session.commit()
@@ -136,12 +128,10 @@ def isoformat_lies(source: str) -> list[int]:
 
 
 def test_aucune_date_passee_en_chaine_iso_a_une_requete():
-    fichiers = sorted(_APP.rglob("*.py"))
+    fichiers = modules_app()
     assert fichiers, f"aucun module sous {_APP} — le contrôle ne mesure rien"
     fautifs = [
-        f"{f.relative_to(_APP)}:{n}"
-        for f in fichiers
-        for n in isoformat_lies(f.read_text(encoding="utf-8"))
+        f"{m.chemin.relative_to(_APP)}:{n}" for m in fichiers for n in isoformat_lies(m.source)
     ]
     assert not fautifs, (
         "`.isoformat()` passé comme valeur à une requête SQL : SQLite compare alors "

@@ -36,8 +36,7 @@ pas un code HTTP.
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from sqlmodel import Session, SQLModel
@@ -47,6 +46,8 @@ from app.models.communaute import Idee, Sondage
 from app.models.core import RoleUtilisateur, Utilisateur
 from app.routers.idees import list_idees
 from app.routers.sondages.crud import list_sondages
+from app.utils.horloge import maintenant
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
 
 #: Bien au-delà du délai du site (30 jours), pour que le test ne dépende pas du
@@ -58,16 +59,13 @@ VIEUX = timedelta(days=400)
 def auteur():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        u = Utilisateur(
-            email=f"arch-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        u = compte(
+            session,
+            prefixe="arch",
             prenom="Alix",
             nom="Renard",
             role=RoleUtilisateur.conseil_syndical,
         )
-        session.add(u)
-        session.commit()
-        session.refresh(u)
         yield u
         purger_ligne(session, Utilisateur, u.id)
         session.commit()
@@ -86,14 +84,14 @@ def test_une_idee_decidee_il_y_a_longtemps_ressort_archivee(auteur):
             description="…",
             auteur_id=auteur.id,
             statut="retenue",
-            statut_change_le=datetime.utcnow() - VIEUX,
+            statut_change_le=maintenant() - VIEUX,
         )
         recente = Idee(
             titre="Local à vélos",
             description="…",
             auteur_id=auteur.id,
             statut="retenue",
-            statut_change_le=datetime.utcnow(),
+            statut_change_le=maintenant(),
         )
         #  Une idée OUVERTE ne s'archive pas, quelle que soit son ancienneté : elle
         #  n'a pas de décision à dater. C'est ce qui distingue « rien à archiver »
@@ -103,7 +101,7 @@ def test_une_idee_decidee_il_y_a_longtemps_ressort_archivee(auteur):
             description="…",
             auteur_id=auteur.id,
             statut="ouverte",
-            cree_le=datetime.utcnow() - VIEUX,
+            cree_le=maintenant() - VIEUX,
         )
         session.add_all([vieille, recente, ouverte])
         session.commit()
@@ -135,12 +133,12 @@ def test_un_sondage_clos_il_y_a_longtemps_ressort_archive(auteur):
         vieux = Sondage(
             question="Couleur du hall ?",
             auteur_id=auteur.id,
-            cloture_le=datetime.utcnow() - VIEUX,
+            cloture_le=maintenant() - VIEUX,
         )
         recent = Sondage(
             question="Horaires du local ?",
             auteur_id=auteur.id,
-            cloture_le=datetime.utcnow(),
+            cloture_le=maintenant(),
         )
         #  Sans date de clôture, on ne sait pas dater : on n'archive pas.
         sans_date = Sondage(question="Idées pour la fête ?", auteur_id=auteur.id)

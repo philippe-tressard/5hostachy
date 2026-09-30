@@ -18,11 +18,7 @@
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import ConfigSite
 from app.utils.llm import ErreurLLM, config_llm
@@ -34,15 +30,8 @@ from app.utils.llm_usages import (
     decrire,
 )
 from app.utils.synthese_format import CONSIGNE
+from tests.aides_migrations import charger_migration, chemin_migration
 from tests.tables_supprimees import tables_supprimees
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
 
 
 def _poser(session, **valeurs):
@@ -201,16 +190,11 @@ def test_le_catalogue_des_modeles_n_exige_pas_de_modele(session):
 
 # ── 4. Les migrations et la marque `assiste_ia` ─────────────────────────────
 
-_MIGRATION = (
-    Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0194_assistant_ia_par_usage.py"
-)
+_MIGRATION = "0194_assistant_ia_par_usage.py"
 
 
 def _module():
-    spec = importlib.util.spec_from_file_location("mig0194", _MIGRATION)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return charger_migration(_MIGRATION)
 
 
 #: Migrations qui posent `assiste_ia` sur UNE table, après la 0194.
@@ -245,10 +229,8 @@ def test_la_migration_couvre_TOUTES_les_tables_qui_portent_la_marque():
     assert len(attendues) >= 9, attendues
     posees = set(_module().TABLES_ASSISTE_IA)
     for motif in _MIGRATIONS_TARDIVES:
-        chemin = next(_MIGRATION.parent.glob(motif))
-        spec = importlib.util.spec_from_file_location(chemin.stem, chemin)
-        tardive = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(tardive)
+        chemin = chemin_migration(motif)
+        tardive = charger_migration(motif)
         assert tardive.COLONNE == "assiste_ia", chemin.name
         posees.add(tardive.TABLE)
     #  Une table supprimée depuis (#1177) reste dans la liste de la 0194, appliquée.

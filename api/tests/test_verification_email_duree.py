@@ -21,15 +21,14 @@ contexte. Une réécriture qui redéclarerait un littéral échouerait ici, quel
 soit la façon dont elle s'y prend.
 """
 
-import uuid
-from datetime import datetime
-
 from sqlmodel import Session, SQLModel, select
 
 from app.auth.empreinte_jeton import empreinte
 from app.database import engine
-from app.models.core import EmailVerificationToken, Utilisateur
+from app.models.core import EmailVerificationToken
 from app.routers.auth import VALIDITE_VERIFICATION_EMAIL, emettre_verification_email
+from app.utils import horloge
+from tests.aides_base import compte
 
 
 class _TachesDeFond:
@@ -44,18 +43,10 @@ class _TachesDeFond:
 
 def _emettre(session):
     """Un compte neuf, puis l'émission réelle du lien de vérification."""
-    user = Utilisateur(
-        email=f"verif-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="Test",
-        nom="Durée",
-    )
-    session.add(user)
-    session.commit()
-    session.refresh(user)
+    user = compte(session, prefixe="verif", prenom="Test", nom="Durée", actif=False)
 
     taches = _TachesDeFond()
-    avant = datetime.utcnow()
+    avant = horloge.maintenant()
     emettre_verification_email(session, user, taches)
     return user, taches, avant
 

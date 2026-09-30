@@ -13,7 +13,7 @@ from sqlmodel import select
 from app.models.core import ConfigSite, Notification, RoleUtilisateur
 from app.routers.tickets import crud
 from app.schemas import TicketCreate
-from tests.aides_badges import _compte, session  # noqa: F401 — `session` est une fixture
+from tests.aides_badges import _compte
 
 
 def _creer(session, auteur, **champs):

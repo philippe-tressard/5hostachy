@@ -23,7 +23,7 @@ Ce que ce fichier vérifie, et que rien ne vérifiait :
      clôture — l'échéance passée et la clôture forcée ;
   2. la **liste** et la **fiche** ne se contredisent jamais, sondage par sondage ;
   3. la liste ne se contredit pas **elle-même** : un seul instant sert à dater
-     toute la page, jamais un `utcnow()` par sondage.
+     toute la page, jamais une lecture de l'horloge par sondage.
 
 ⚠️ Ce test ne réécrit **pas** la règle de clôture. La comparer à une copie
 reviendrait à comparer une fonction à elle-même — c'est la leçon de #415, déjà
@@ -31,53 +31,16 @@ reviendrait à comparer une fonction à elle-même — c'est la leçon de #415, 
 qui doivent dire la même chose.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from types import SimpleNamespace
 
-import pytest
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session
 
-from app.database import engine
-from app.models.core import Batiment, Copropriete, Lot, Sondage, Utilisateur
+from app.models.core import Sondage
 from app.routers.sondages.crud import get_sondage, list_sondages
-from app.seed.patrimoine import poser_arborescence
-from app.utils import perimetres as P
-from tests.conftest import vider_patrimoine
-
-MODELES_ECRITS = (Sondage, Lot, Utilisateur)
-
-
-@pytest.fixture()
-def base():
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        vider_patrimoine(session, MODELES_ECRITS)
-        copro = Copropriete(nom="Test clôture", adresse="1 rue Test")
-        session.add(copro)
-        session.flush()
-        session.add(Batiment(copropriete_id=copro.id, numero="1"))
-        session.commit()
-        poser_arborescence(session)
-        session.commit()
-        P.invalider_cache()
-        yield session
-        vider_patrimoine(session, MODELES_ECRITS)
-    P.invalider_cache()
-
-
-def _cs(session: Session) -> Utilisateur:
-    u = Utilisateur(
-        nom="N",
-        prenom="cs",
-        email="cs@test.fr",
-        roles_json="conseil_syndical",
-        actif=True,
-        decision_compte_le=datetime.utcnow(),
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
+from app.utils import horloge
+from tests.aides_base import compte
+from tests.aides_sondage import base  # noqa: F401
 
 
 def _sondage(session: Session, auteur_id: int, question: str, **kw) -> Sondage:
@@ -90,10 +53,10 @@ def _sondage(session: Session, auteur_id: int, question: str, **kw) -> Sondage:
 
 def test_la_liste_transporte_la_cloture_sur_les_deux_voies(base):
     """Échéance passée ET clôture forcée : la liste le DIT, elle ne le suggère pas."""
-    cs = _cs(base)
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
     _sondage(base, cs.id, "ouvert")
-    _sondage(base, cs.id, "echeance-passee", cloture_le=datetime.utcnow() - timedelta(days=1))
-    _sondage(base, cs.id, "echeance-future", cloture_le=datetime.utcnow() + timedelta(days=7))
+    _sondage(base, cs.id, "echeance-passee", cloture_le=horloge.maintenant() - timedelta(days=1))
+    _sondage(base, cs.id, "echeance-future", cloture_le=horloge.maintenant() + timedelta(days=7))
     _sondage(base, cs.id, "force", cloture_forcee=True)
 
     par_question = {s.question: s for s in list_sondages(session=base, user=cs)}
@@ -110,9 +73,9 @@ def test_la_liste_transporte_la_cloture_sur_les_deux_voies(base):
 
 def test_la_liste_et_la_fiche_ne_se_contredisent_jamais(base):
     """Le défaut du 17/07/2026, en germe : visible dans une vue, absent de l'autre."""
-    cs = _cs(base)
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
     _sondage(base, cs.id, "ouvert")
-    _sondage(base, cs.id, "echeance-passee", cloture_le=datetime.utcnow() - timedelta(days=1))
+    _sondage(base, cs.id, "echeance-passee", cloture_le=horloge.maintenant() - timedelta(days=1))
     _sondage(base, cs.id, "force", cloture_forcee=True)
 
     for lu in list_sondages(session=base, user=cs):
@@ -125,7 +88,7 @@ def test_la_liste_et_la_fiche_ne_se_contredisent_jamais(base):
 
 
 def test_un_seul_instant_date_toute_la_liste(base):
-    """Douze sondages, douze `utcnow()` : la page se contredirait elle-même.
+    """Douze sondages, douze lectures de l'horloge : la page se contredirait elle-même.
 
     Le cas est étroit mais réel — une échéance qui tombe PENDANT la construction
     de la réponse serait close pour les sondages évalués après, ouverte pour ceux
@@ -135,9 +98,9 @@ def test_un_seul_instant_date_toute_la_liste(base):
     """
     import app.routers.sondages.crud as crud
 
-    cs = _cs(base)
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
     for i in range(5):
-        _sondage(base, cs.id, f"s{i}", cloture_le=datetime.utcnow() + timedelta(days=1))
+        _sondage(base, cs.id, f"s{i}", cloture_le=horloge.maintenant() + timedelta(days=1))
 
     appels = {"n": 0}
     vraie_horloge = crud.horloge
@@ -155,6 +118,6 @@ def test_un_seul_instant_date_toute_la_liste(base):
         crud.horloge = vraie_horloge
 
     assert appels["n"] == 1, (
-        f"{appels['n']} appels à utcnow() pour une seule liste — un par sondage "
+        f"{appels['n']} appels à l'horloge pour une seule liste — un par sondage "
         "signifie que la page ne date pas ses clôtures au même instant"
     )

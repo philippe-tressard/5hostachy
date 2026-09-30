@@ -55,24 +55,8 @@ from app.routers.tickets.crud import list_tickets
 from app.utils import mes_batiments
 from app.utils import perimetres as P
 from app.utils.visibility import ticket_visible
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
-
-
-def _utilisateur(session, roles, statut, batiment_id) -> Utilisateur:
-    u = Utilisateur(
-        nom="X",
-        prenom="Y",
-        email=f"tk-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        roles_json=roles,
-        statut=statut,
-        batiment_id=batiment_id,
-        actif=True,
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 def _ticket(session, auteur_id, perimetre, *, confidentiel=False) -> Ticket:
@@ -115,10 +99,26 @@ def scene(batiments):
         #  voient pas les tickets »*. Les éprouver ici sur des locataires ferait
         #  passer ces tests pour la mauvaise raison : tout serait refusé, et le
         #  filtre par périmètre ne serait plus mesuré du tout.
-        auteur = _utilisateur(session, "résident", StatutUtilisateur.copropriétaire_résident, b1)
-        voisin = _utilisateur(session, "résident", StatutUtilisateur.copropriétaire_résident, b2)
-        cs = _utilisateur(
-            session, "conseil_syndical", StatutUtilisateur.copropriétaire_résident, b2
+        auteur = compte(
+            session,
+            prefixe="tk",
+            roles_json="résident",
+            statut=StatutUtilisateur.copropriétaire_résident,
+            batiment_id=b1,
+        )
+        voisin = compte(
+            session,
+            prefixe="tk",
+            roles_json="résident",
+            statut=StatutUtilisateur.copropriétaire_résident,
+            batiment_id=b2,
+        )
+        cs = compte(
+            session,
+            prefixe="tk",
+            roles_json="conseil_syndical",
+            statut=StatutUtilisateur.copropriétaire_résident,
+            batiment_id=b2,
         )
         tickets = {
             "chez_moi": _ticket(session, auteur.id, [f"bat:{b1}"]),
@@ -202,7 +202,9 @@ MATRICE_DE_LECTURE = {
 
 def test_matrice_de_lecture(scene):
     session, tickets, auteur, voisin, cs = scene
-    locataire = _utilisateur(session, "résident", StatutUtilisateur.locataire, None)
+    locataire = compte(
+        session, prefixe="tk", roles_json="résident", statut=StatutUtilisateur.locataire
+    )
     profils = {"auteur": auteur, "voisin": voisin, "cs": cs, "locataire": locataire}
     try:
         #  Cas zéro de la table : un profil ou un ticket oublié ne se mesurerait pas.
@@ -286,7 +288,9 @@ def test_un_LOCATAIRE_voit_TOUJOURS_ses_propres_tickets(scene):
     les touche pas.
     """
     session, _tickets, _auteur, _voisin, _cs = scene
-    locataire = _utilisateur(session, "résident", StatutUtilisateur.locataire, None)
+    locataire = compte(
+        session, prefixe="tk", roles_json="résident", statut=StatutUtilisateur.locataire
+    )
     sien = _ticket(session, locataire.id, ["résidence"])
     try:
         assert ticket_visible(sien, locataire) is True
@@ -324,7 +328,13 @@ def test_un_LOCATAIRE_ne_lit_une_affaire_DATEE_que_si_le_conseil_l_y_adresse(sce
     """
     session, _tickets, auteur, _voisin, _cs = scene
     b1 = batiments[0]
-    locataire = _utilisateur(session, "résident", StatutUtilisateur.locataire, b1)
+    locataire = compte(
+        session,
+        prefixe="tk",
+        roles_json="résident",
+        statut=StatutUtilisateur.locataire,
+        batiment_id=b1,
+    )
     affaires = {
         "datee_chez_moi": _datee(session, _ticket(session, auteur.id, [f"bat:{b1}"])),
         #  Le conseil l'adresse aux locataires : il la lit, dans son périmètre.

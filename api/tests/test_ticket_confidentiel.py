@@ -33,22 +33,8 @@ from app.database import engine
 from app.models.core import StatutTicket, Ticket, Utilisateur
 from app.routers.tickets.mise_a_jour import update_ticket
 from app.schemas import TicketUpdate
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
-
-
-def _utilisateur(session, roles: str) -> Utilisateur:
-    u = Utilisateur(
-        email=f"{roles}-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="Camille",
-        nom="Sorel",
-        roles_json=roles,
-        actif=True,
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 @pytest.fixture()
@@ -56,8 +42,8 @@ def contexte():
     """Un ticket, son auteur (résident) et un membre du conseil syndical."""
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        auteur = _utilisateur(session, "résident")
-        cs = _utilisateur(session, "conseil_syndical")
+        auteur = compte(session, prefixe="résident", roles_json="résident")
+        cs = compte(session, prefixe="conseil_syndical", roles_json="conseil_syndical")
         ticket = Ticket(
             numero=f"T-{uuid.uuid4().hex[:6]}",
             titre="Fuite au 3e",
