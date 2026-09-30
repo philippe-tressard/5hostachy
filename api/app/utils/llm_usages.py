@@ -75,7 +75,32 @@ CHAMPS_USAGE = (
     "prix_entree",
     "prix_sortie",
     "prix_cache",
+    "effort",
 )
+
+#: 🔴 L'EFFORT DE RAISONNEMENT (30/09/2026, demandé : « gpt-5.6-luna +
+#: reasoning.effort=low = choix par défaut ? faut-il le paramétrer ? »). Un
+#: modèle qui raisonne pense avant d'écrire, et ces jetons se paient comme la
+#: réponse. Chaque usage règle le sien : mettre en forme un courriel n'a pas
+#: besoin de la réflexion qu'exige la synthèse d'un contrat.
+#:
+#: (code stocké, libellé, valeur envoyée) — la même valeur chez OpenAI, Azure
+#: (`reasoning_effort`) et Anthropic (`output_config.effort`). Une clé VIDE
+#: n'envoie rien : le modèle prend son propre défaut. Un modèle qui ne connaît
+#: pas le réglage le refuse, et l'appel repart sans lui (`Fournisseur.adapter`).
+#: C'est la SEULE liste : l'écran la reçoit par `decrire()`.
+EFFORTS: tuple[tuple[str, str, str], ...] = (
+    ("faible", "Faible", "low"),
+    ("moyen", "Moyen", "medium"),
+    ("eleve", "Élevé", "high"),
+)
+
+
+def valeur_effort(code: str | None) -> str:
+    """PURE. La valeur d'API d'un effort stocké — vide s'il est vide ou inconnu :
+    un réglage illisible laisse le modèle à son défaut, il n'empêche pas l'appel."""
+    return next((api for c, _, api in EFFORTS if c == (code or "").strip()), "")
+
 
 USAGE_SYNTHESE_CONTRAT = "synthese_contrat"
 USAGE_DESCRIPTION = "description"
@@ -156,6 +181,7 @@ def decrire() -> list[dict]:
             "prompt_defaut": u.prompt_defaut,
             "max_jetons_defaut": u.max_jetons_defaut,
             "cles": {champ: u.cle(champ) for champ in CHAMPS_USAGE},
+            "efforts": [{"val": c, "label": libelle} for c, libelle, _ in EFFORTS],
         }
         for u in USAGES.values()
     ]
@@ -163,6 +189,7 @@ def decrire() -> list[dict]:
 
 __all__ = [
     "CHAMPS_USAGE",
+    "EFFORTS",
     "USAGES",
     "USAGE_DESCRIPTION",
     "USAGE_SYNTHESE_CONTRAT",
@@ -170,4 +197,5 @@ __all__ = [
     "Usage",
     "decrire",
     "usage",
+    "valeur_effort",
 ]

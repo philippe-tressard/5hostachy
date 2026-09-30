@@ -388,7 +388,8 @@ def test_on_n_adapte_PAS_ce_qu_on_ne_comprend_pas(corps, param, code):
 
 def test_anthropic_ne_nomme_aucun_parametre_donc_n_adapte_rien():
     """Son erreur est `{"type":"error","error":{"type":…,"message":…}}` — pas de
-    `param`. Le repli par défaut est donc déjà le bon, sans rien redéfinir."""
+    `param`. Un message qui ne nomme aucun paramètre FACULTATIF n'adapte rien ;
+    ceux qui en nomment un sont éprouvés dans `test_effort_raisonnement.py`."""
     charge = {"type": "error", "error": {"type": "invalid_request_error", "message": "…"}}
     param, code = FOURNISSEURS["anthropic"].lire_erreur(charge)
     assert param == ""

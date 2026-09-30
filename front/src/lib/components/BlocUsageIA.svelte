@@ -38,13 +38,10 @@
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import CoutUsageIA, { PRIX } from '$lib/components/CoutUsageIA.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
-	import {
-		assistant as assistantApi,
-		config as configApi,
-		type PrixIA,
-		type UsageIA,
-	} from '$lib/api';
+	import { assistant as assistantApi, config as configApi, type UsageIA } from '$lib/api';
 	import { memePrompt } from '$lib/promptOrigine';
 
 	export let usage: UsageIA;
@@ -98,31 +95,6 @@
 	$: copieDeLOrigine = !promptOrigine && memePrompt(prompt, usage.prompt_defaut);
 	$: promptDivergent = !promptOrigine && !copieDeLOrigine;
 	$: maxJetons = Number(valeurs[cles.max_jetons]) || usage.max_jetons_defaut;
-	//  Le coût (#1383). Le plafond est en jetons par mois, 0 = aucun.
-	$: plafondMois = Number(valeurs[cles.plafond_mois]) || 0;
-	//  🔴 Les prix, en DOLLARS par million de jetons (30/09/2026, arbitré :
-	//  « comme les grilles »), et TROIS — l'entrée lue en cache a le sien chez
-	//  OpenAI. Stockés tels que saisis, en texte décimal (« 0.075 ») : jamais
-	//  un flottant, et plus des centimes, où 0,075 $ ne tenait pas. Un champ
-	//  par prix, écrit UNE fois : les trois ne diffèrent que par leurs mots.
-	const PRIX: { champ: PrixIA; libelle: string; aide: string }[] = [
-		{
-			champ: 'prix_entree',
-			libelle: 'Prix des jetons envoyés',
-			aide: 'Comme la grille de votre fournisseur.',
-		},
-		{
-			champ: 'prix_sortie',
-			libelle: 'Prix des jetons produits',
-			aide: 'La réponse, raisonnement compris. Sans prix, la consommation (Maintenance) s’affiche en jetons seuls.',
-		},
-		{
-			champ: 'prix_cache',
-			libelle: 'Prix des jetons en cache',
-			aide: 'L’entrée déjà vue, que le fournisseur relit en cache et facture moins cher (« cached input »). Vide : elle compte au prix des jetons envoyés.',
-		},
-	];
-
 	//  Le modèle enregistré reste proposé même s'il n'est plus au catalogue :
 	//  sinon la liste le remplacerait en silence par son premier élément, et un
 	//  simple Enregistrer changerait le modèle sans que personne l'ait demandé.
@@ -284,6 +256,24 @@
 					{/if}
 				</span>
 			</label>
+			<!--  L'effort de raisonnement (30/09/2026). Lié à la valeur de CET usage :
+			      l'onglet l'enregistre avec le reste. Les niveaux viennent du serveur
+			      (`usage.efforts`) ; « Par défaut du modèle » n'envoie rien. -->
+			<div class="field">
+				<ChoixPastilles
+					options={usage.efforts}
+					bind:valeur={valeurs[cles.effort]}
+					tous="Par défaut du modèle"
+					libelle="Effort de raisonnement"
+					libelleVisible
+					defilante={false}
+				/>
+				<span class="aide">
+					Un modèle qui raisonne pense avant d’écrire, et ces jetons se paient comme la réponse.
+					Faible suffit pour mettre en forme ou reformuler ; moyen ou élevé pour lire et résumer un
+					document. Un modèle qui ne raisonne pas ignore ce réglage.
+				</span>
+			</div>
 			<label class="field">
 				Longueur maximale de la réponse
 				<input
@@ -304,44 +294,10 @@
 		</div>
 	</SectionFormulaire>
 
-	<SectionFormulaire titre="Coût et plafond">
-		<div class="form-grid">
-			<label class="field">
-				Plafond mensuel
-				<input
-					type="number"
-					value={plafondMois || ''}
-					min="0"
-					step="10000"
-					placeholder="Aucun"
-					on:input={(e) => poser(cles.plafond_mois, e.currentTarget.value)}
-				/>
-				<span class="aide">
-					En jetons (question et réponse), du premier au dernier jour du mois. Atteint, l’usage est
-					refusé avant tout envoi — l’automatique s’arrête — et le contrôle de 6&nbsp;h le signale.
-					Vide&nbsp;: aucun plafond.
-				</span>
-			</label>
-			{#each PRIX as p (p.champ)}
-				<label class="field">
-					{p.libelle} ($ / million)
-					<input
-						type="number"
-						value={valeurs[cles[p.champ]] ?? ''}
-						min="0"
-						step="any"
-						inputmode="decimal"
-						placeholder="Non renseigné"
-						on:input={(e) => poser(cles[p.champ], e.currentTarget.value)}
-					/>
-					<span class="aide">{p.aide}</span>
-				</label>
-			{/each}
-		</div>
-		{#if tarif.etat === 'ok'}
-			<p class="aide">✅ Tarif enregistré — {tarif.message}</p>
-		{/if}
-	</SectionFormulaire>
+	<!--  Plafond et prix : `CoutUsageIA` (30/09/2026) — ce bloc franchissait 500
+	      lignes en recevant l'effort de raisonnement. Le ✨ du tarif reste ICI,
+	      à côté du modèle : il n'en passe que le compte rendu. -->
+	<CoutUsageIA bind:valeurs {cles} tarifEnregistre={tarif.etat === 'ok' ? tarif.message : ''} />
 
 	<SectionFormulaire titre="Prompt">
 		<div class="field champ-large">
