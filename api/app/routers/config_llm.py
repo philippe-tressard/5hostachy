@@ -78,10 +78,11 @@ class DemandeTarif(BaseModel):
 
 
 class TarifEnregistre(BaseModel):
-    #: En centimes d'euro par million de jetons — l'unité stockée ; `None` = la
-    #: grille ne le donne pas, et le champ n'a pas été touché.
-    prix_entree: Optional[int] = None
-    prix_sortie: Optional[int] = None
+    #: En DOLLARS par million de jetons, texte décimal — l'unité stockée ;
+    #: `None` = la grille ne le donne pas, et le champ n'a pas été touché.
+    prix_entree: Optional[str] = None
+    prix_sortie: Optional[str] = None
+    prix_cache: Optional[str] = None
     remarque: str = ""
 
 
@@ -95,18 +96,16 @@ async def llm_tarif(
 ):
     """Cherche le tarif du modèle de `usage` chez son fournisseur et l'ENREGISTRE
     (30/09/2026) — grille publique, ligne trouvée par l'usage « Tarif d'un
-    modèle », conversion au taux BCE (`utils/tarif_modele`).
+    modèle », en dollars comme la grille (`utils/tarif_modele`).
     """
     from app.utils.llm import ErreurLLM
     from app.utils.tarif_modele import chercher_et_enregistrer
 
     try:
-        t = await chercher_et_enregistrer(session, body.usage, body.modele)
+        tarif, remarque = await chercher_et_enregistrer(session, body.usage, body.modele)
     except ErreurLLM as exc:
         raise HTTPException(400, str(exc))
-    return TarifEnregistre(
-        prix_entree=t.prix_entree, prix_sortie=t.prix_sortie, remarque=t.remarque
-    )
+    return TarifEnregistre(**tarif.prix(), remarque=remarque)
 
 
 @router.get("/llm-modeles")

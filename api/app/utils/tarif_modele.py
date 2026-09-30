@@ -1,7 +1,7 @@
 """Chercher le TARIF du modèle d'un usage et l'enregistrer — l'usage `tarif_modele`
 (30/09/2026).
 
-## Demandé le 30/09/2026, en deux temps
+## Demandé le 30/09/2026, en trois temps
 
 > « créer un nouveau use case IA pour demander la tarification de l'IA
 >   concernée. Ajouter l'icône IA à côté du modèle de tous les use case IA.
@@ -9,10 +9,13 @@
 >
 > « l'appel à l'IA de ce use case recherche le prix sur l'opérateur concerné du
 >   modèle du use case concerné, remplit les prix et enregistre »
+>
+> « en interrogeant OpenAI, il y a 3 paramètres de coût et non 2 » — et les
+>   prix en dollars, comme les grilles.
 
-Les deux valeurs sont les prix de la section « Coût et plafond » d'un usage —
-jetons envoyés, jetons produits, en centimes d'euro par million — que lit
-`llm_journal` pour chiffrer la consommation (#1383).
+Les trois valeurs sont les prix de la section « Coût et plafond » d'un usage —
+jetons envoyés, jetons produits, jetons d'entrée lus en cache — en DOLLARS par
+million de jetons, que lit `llm_journal` pour chiffrer la consommation (#1383).
 
 ## Qui fait quoi
 
@@ -20,8 +23,9 @@ jetons envoyés, jetons produits, en centimes d'euro par million — que lit
 |---|---|---|
 | lire la grille du fournisseur | le serveur (`tarif_sources`) | une adresse fixe, pas une recherche au hasard |
 | trouver la ligne du modèle | l'assistant | « claude-haiku-4-5-20251001 » s'écrit « Claude Haiku 4.5 » dans la grille |
-| convertir en euros | le serveur, au taux BCE du jour | le modèle inventerait un taux |
 | enregistrer | le serveur | demandé : le geste finit le travail |
+
+Rien à convertir : la grille est en dollars, les prix aussi.
 
 ## 🔴 Le modèle cherché est celui ENREGISTRÉ pour l'usage
 
@@ -49,6 +53,9 @@ logger = logging.getLogger("hostachy.assistant")
 
 USAGE_TARIF_MODELE = "tarif_modele"
 
+#: Les trois prix, dans l'ordre de l'écran — les clés de `llm_usages.CHAMPS_USAGE`.
+CHAMPS_PRIX = ("prix_entree", "prix_sortie", "prix_cache")
+
 #: Le prompt d'origine de l'usage — modifiable depuis l'administration.
 CONSIGNE = (
     "Tu lis la grille tarifaire publique d'un fournisseur de modèles d'IA et tu "
@@ -57,48 +64,46 @@ CONSIGNE = (
     "pas (« claude-haiku-4-5-20251001 » est « Claude Haiku 4.5 ») : retiens la "
     "ligne du même modèle, jamais celle d'un modèle voisin.\n"
     "- Retiens le tarif standard d'un appel par API : ni traitement par lots, "
-    "ni cache, ni priorité, ni contexte long s'il existe un palier ordinaire.\n"
-    "- Donne le prix des jetons envoyés (entrée) et des jetons produits "
-    "(sortie), par million de jetons, dans la devise de la grille.\n"
+    "ni priorité, ni contexte long s'il existe un palier ordinaire.\n"
+    "- Donne trois prix par million de jetons, en dollars : les jetons envoyés "
+    "(entrée), les jetons produits (sortie, raisonnement compris), et les jetons "
+    "d'entrée lus en cache (« cached input » chez OpenAI, « cache hits » ou "
+    "« cache reads » chez Anthropic — jamais l'écriture en cache).\n"
     "- Sur Azure, l'identifiant est un nom de déploiement : retiens le modèle "
     "qu'il désigne si son nom le laisse reconnaître.\n"
-    "- Si la grille ne porte pas ce modèle, ne devine pas : réponds null."
+    "- Un prix que la grille ne donne pas pour ce modèle vaut null ; si elle ne "
+    "porte pas ce modèle, les trois valent null. Ne devine jamais."
 )
 
 #: La forme de la réponse — tenue par le code, ajoutée APRÈS le prompt.
 FORMAT_REPONSE = (
     "Réponds UNIQUEMENT par un objet JSON, sans texte autour :\n"
     '{"ligne": "<le nom du modèle tel que la grille l\'écrit, ou null>", '
-    '"devise": "USD" ou "EUR", '
-    '"prix_entree": <nombre ou null>, "prix_sortie": <nombre ou null>}\n'
-    "Les prix sont par million de jetons, en nombre décimal avec un point."
+    '"devise": "USD", '
+    '"prix_entree": <nombre ou null>, "prix_sortie": <nombre ou null>, '
+    '"prix_cache": <nombre ou null>}\n'
+    "Les prix sont en dollars par million de jetons, en nombre décimal avec un point."
 )
 
 #: Au-delà, ce n'est plus un tarif mais une erreur d'unité (un prix par millier
 #: pris pour un prix par million) : le modèle le plus cher reste très en deçà.
-MAX_PAR_MILLION = 1_000
+MAX_PAR_MILLION = Decimal(1_000)
 MAX_CARACTERES_LIGNE = 120
 
 
 @dataclass(frozen=True)
-class Lecture:
-    """Ce que l'assistant a lu dans la grille, dans la devise de la grille."""
+class Tarif:
+    """Ce que l'assistant a lu dans la grille — et donc ce qui est ENREGISTRÉ :
+    des dollars par million de jetons, en texte décimal (l'unité des champs) ;
+    `None` pour un prix que la grille ne donne pas, et qui n'est pas touché."""
 
     ligne: str
-    devise: str
-    prix_entree: Optional[float]
-    prix_sortie: Optional[float]
+    prix_entree: Optional[str]
+    prix_sortie: Optional[str]
+    prix_cache: Optional[str]
 
-
-@dataclass(frozen=True)
-class Tarif:
-    """Ce qui a été ENREGISTRÉ — en centimes d'euro par million, l'unité des
-    champs (`llm_usages.CHAMPS_USAGE`) ; `None` pour un prix que la grille ne
-    donne pas, et qui n'a donc pas été touché."""
-
-    prix_entree: Optional[int]
-    prix_sortie: Optional[int]
-    remarque: str
+    def prix(self) -> dict[str, Optional[str]]:
+        return {c: getattr(self, c) for c in CHAMPS_PRIX}
 
 
 def construire_message(fournisseur: str, modele: str, grille: str) -> str:
@@ -108,60 +113,55 @@ def construire_message(fournisseur: str, modele: str, grille: str) -> str:
     )
 
 
-def _prix(valeur: object, champ: str) -> Optional[float]:
+def _prix(valeur: object, champ: str) -> Optional[str]:
+    """Un prix du JSON, rendu en texte décimal — lu par `str`, jamais par un
+    flottant : 0.075 reste « 0.075 »."""
     if valeur is None:
         return None
     #  `True` est un `int` pour Python : un booléen n'est pas un prix.
     if isinstance(valeur, bool) or not isinstance(valeur, (int, float)):
         raise ReponseIllisible(f"« {champ} » n'est pas un nombre.")
-    if not 0 <= valeur <= MAX_PAR_MILLION:
+    prix = Decimal(str(valeur))
+    if not 0 <= prix <= MAX_PAR_MILLION:
         raise ReponseIllisible(f"« {champ} » hors bornes : {valeur}.")
-    return float(valeur)
+    return format(prix.normalize(), "f")
 
 
-def lire_tarif(texte: str) -> Lecture:
+def lire_tarif(texte: str) -> Tarif:
     """PURE. La ligne retenue par l'assistant, relue et bornée.
 
-    Deux `null` ne sont PAS illisibles : l'assistant dit que la grille ne porte
-    pas ce modèle, et c'est à l'appelant de le dire.
+    Trois `null` ne sont PAS illisibles : l'assistant dit que la grille ne porte
+    pas ce modèle, et c'est à l'appelant de le dire. Une grille qui ne serait
+    pas en dollars est refusée : rien ne convertit plus.
     """
     charge = lire_objet(texte)
     devise = str(charge.get("devise") or "USD").strip().upper()
-    if devise not in ("USD", "EUR"):
-        raise ReponseIllisible(f"Devise inattendue : « {devise} ».")
+    if devise != "USD":
+        raise ReponseIllisible(f"Grille en « {devise} » : seuls les dollars sont pris en charge.")
     ligne = charge.get("ligne")
-    return Lecture(
+    return Tarif(
         ligne=(ligne.strip() if isinstance(ligne, str) else "")[:MAX_CARACTERES_LIGNE],
-        devise=devise,
-        prix_entree=_prix(charge.get("prix_entree"), "prix_entree"),
-        prix_sortie=_prix(charge.get("prix_sortie"), "prix_sortie"),
+        **{c: _prix(charge.get(c), c) for c in CHAMPS_PRIX},
     )
 
 
-def _nombre(x: float | Decimal, decimales: int = 2) -> str:
-    return f"{x:.{decimales}f}".replace(".", ",")
-
-
-def remarque(lecture: Lecture, url: str, taux_usd: Optional[Decimal], date_taux: str) -> str:
+def remarque(tarif: Tarif, url: str) -> str:
     """PURE. D'où vient le chiffre — écrite par le CODE, jamais par le modèle :
     c'est la phrase qui permet de vérifier ce qui a été enregistré."""
-    symbole = "$" if lecture.devise == "USD" else "€"
-    prix = " et ".join(
-        f"{_nombre(p)} {symbole}"
-        for p in (lecture.prix_entree, lecture.prix_sortie)
-        if p is not None
+    libelles = {"prix_entree": "envoyés", "prix_sortie": "produits", "prix_cache": "en cache"}
+    prix = ", ".join(
+        f"{libelles[c]} {p.replace('.', ',')} $" for c, p in tarif.prix().items() if p is not None
     )
     source = url.removeprefix("https://").removesuffix(".md")
-    texte = f"Grille {source}, ligne « {lecture.ligne or '?'} » : {prix} par million"
-    if taux_usd is not None:
-        jour = "/".join(reversed(date_taux.split("-")))
-        texte += f", au taux BCE du {jour} (1 € = {_nombre(taux_usd, 4)} $)"
-    return texte + "."
+    return f"Grille {source}, ligne « {tarif.ligne or '?'} » : {prix} par million."
 
 
-async def chercher_et_enregistrer(session: Session, usage: str, modele_affiche: str) -> Tarif:
-    """Lit la grille du fournisseur, y fait trouver le modèle de `usage`, convertit
-    au taux BCE et ENREGISTRE les deux prix. Lève `ErreurLLM` — jamais autre chose.
+async def chercher_et_enregistrer(
+    session: Session, usage: str, modele_affiche: str
+) -> tuple[Tarif, str]:
+    """Lit la grille du fournisseur, y fait trouver le modèle de `usage` et
+    ENREGISTRE les prix trouvés. Rend le tarif et sa remarque. Lève `ErreurLLM`
+    — jamais autre chose.
     """
     #  Import différé : `llm` lit `llm_usages`, qui lit la CONSIGNE ici — le
     #  geste de `reponse_courriel`.
@@ -198,53 +198,34 @@ async def chercher_et_enregistrer(session: Session, usage: str, modele_affiche: 
         message=construire_message(cible.fournisseur.libelle, modele, grille),
     )
     try:
-        lecture = lire_tarif(reponse.texte)
+        tarif = lire_tarif(reponse.texte)
     except ReponseIllisible as exc:
         logger.warning("Assistant tarif : %s — %s", exc, reponse.texte[:300])
         raise ErreurLLM("Le modèle n'a pas répondu dans le format attendu — réessayez.") from exc
-    if lecture.prix_entree is None and lecture.prix_sortie is None:
+    if all(p is None for p in tarif.prix().values()):
         raise ErreurLLM(
             f"La grille de {cible.fournisseur.libelle} ne donne pas le tarif de « {modele} » : "
             "saisissez-le à la main."
         )
 
-    taux = None
-    if lecture.devise == "USD":
-        try:
-            taux = await tarif_sources.lire_taux()
-        except tarif_sources.SourceIndisponible as exc:
-            raise ErreurLLM(f"Conversion en euros impossible : {exc}") from exc
-    centimes: dict[str, Optional[int]] = {}
-    for champ, prix in (("prix_entree", lecture.prix_entree), ("prix_sortie", lecture.prix_sortie)):
-        centimes[champ] = (
-            None if prix is None else tarif_sources.en_centimes_euro(prix, lecture.devise, taux)
-        )
-
     #  🔴 L'enregistrement : seulement les prix TROUVÉS. Un prix absent de la
     #  grille laisse celui que l'administrateur avait saisi.
     u = USAGES[usage]
-    for champ, valeur in centimes.items():
+    for champ, valeur in tarif.prix().items():
         if valeur is None:
             continue
         cle = u.cle(champ)
         ligne = session.get(ConfigSite, cle) or ConfigSite(cle=cle, valeur="")
-        ligne.valeur = str(valeur)
+        ligne.valeur = valeur
         session.add(ligne)
     session.commit()
-
-    return Tarif(
-        prix_entree=centimes["prix_entree"],
-        prix_sortie=centimes["prix_sortie"],
-        remarque=remarque(
-            lecture, url, taux.usd_par_eur if taux else None, taux.date if taux else ""
-        ),
-    )
+    return tarif, remarque(tarif, url)
 
 
 __all__ = [
+    "CHAMPS_PRIX",
     "CONSIGNE",
     "FORMAT_REPONSE",
-    "Lecture",
     "Tarif",
     "USAGE_TARIF_MODELE",
     "chercher_et_enregistrer",

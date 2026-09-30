@@ -38,11 +38,15 @@ export function htmlPreview(html: string, maxLength = 150): string {
  * devis — et masqués sur un montant entier. Le `—` pour une valeur absente suit la
  * convention de `lib/date.ts`.
  */
-export function fmtMontant(v: number | null | undefined): string {
+export function fmtMontant(
+	v: number | null | undefined,
+	/** « USD » pour ce que facture un fournisseur d'IA : ses grilles sont en dollars. */
+	devise: 'EUR' | 'USD' = 'EUR',
+): string {
 	if (v == null) return '—';
 	return new Intl.NumberFormat('fr-FR', {
 		style: 'currency',
-		currency: 'EUR',
+		currency: devise,
 		minimumFractionDigits: 0,
 		maximumFractionDigits: 2,
 	}).format(v);

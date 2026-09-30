@@ -29,8 +29,8 @@ const CONSOMMATION = {
 		{ usage: 'description', libelle: 'Rédaction d’une description', plafond: 0, consommes: 0 },
 	],
 	mois: [
-		{ mois: '2026-09', usages: [{ ...LIGNE, cout_centimes: 22 }] },
-		{ mois: '2026-08', usages: [{ ...LIGNE, cout_centimes: null }] },
+		{ mois: '2026-09', usages: [{ ...LIGNE, jetons_cache: 512000, cout_usd: '0.2200' }] },
+		{ mois: '2026-08', usages: [{ ...LIGNE, jetons_cache: 0, cout_usd: null }] },
 	],
 };
 
@@ -53,7 +53,9 @@ test('Maintenance : la consommation de l’assistant, son plafond et son coût',
 	await expect(carte.locator('.jauge-alerte')).toHaveCount(1);
 
 	//  Le coût : estimé quand il y a un tarif, TU quand il n'y en a pas.
-	await expect(carte.getByText(/0,22\s€ estimés/)).toBeVisible();
+	await expect(carte.getByText(/0,22\s\$US estimés/)).toBeVisible();
+	//  La part lue en cache se dit, quand il y en a une.
+	await expect(carte.getByText(/dont 512\s000 en cache/)).toBeVisible();
 	await expect(carte.getByText('coût non renseigné')).toHaveCount(1);
 	await expect(carte.getByText('3 en échec').first()).toBeVisible();
 

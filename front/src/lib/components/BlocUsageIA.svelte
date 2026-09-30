@@ -29,7 +29,7 @@
   - Le ✨ à côté du modèle (30/09/2026) cherche le prix du modèle ENREGISTRÉ
     de cet usage dans la grille de son fournisseur, le convertit au taux BCE
     et l'ENREGISTRE — c'est l'exception au « un seul Enregistrer » ci-dessus,
-    demandée telle quelle. Les deux champs de « Coût et plafond » reprennent
+    demandée telle quelle. Les trois prix de « Coût et plafond » reprennent
     alors ce que le serveur a écrit. Il ne s'affiche que si l'onglet dit l'usage
     « Tarif d'un modèle » prêt (`tarifDisponible`) — un usage coupé ne montre
     pas d'icône ✨, c'est la règle de tout le produit.
@@ -39,7 +39,12 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
-	import { assistant as assistantApi, config as configApi, type UsageIA } from '$lib/api';
+	import {
+		assistant as assistantApi,
+		config as configApi,
+		type PrixIA,
+		type UsageIA,
+	} from '$lib/api';
 	import { memePrompt } from '$lib/promptOrigine';
 
 	export let usage: UsageIA;
@@ -93,13 +98,30 @@
 	$: copieDeLOrigine = !promptOrigine && memePrompt(prompt, usage.prompt_defaut);
 	$: promptDivergent = !promptOrigine && !copieDeLOrigine;
 	$: maxJetons = Number(valeurs[cles.max_jetons]) || usage.max_jetons_defaut;
-	//  Le coût (#1383). Le plafond est en jetons par mois, 0 = aucun. Les prix se
-	//  SAISISSENT en euros par million de jetons — l'unité des grilles tarifaires —
-	//  et se STOCKENT en centimes entiers : un montant ne se garde pas en flottant.
+	//  Le coût (#1383). Le plafond est en jetons par mois, 0 = aucun.
 	$: plafondMois = Number(valeurs[cles.plafond_mois]) || 0;
-	$: prixEntree = (Number(valeurs[cles.prix_entree]) || 0) / 100;
-	$: prixSortie = (Number(valeurs[cles.prix_sortie]) || 0) / 100;
-	const enCentimes = (euros: string) => String(Math.max(0, Math.round(Number(euros) * 100)) || 0);
+	//  🔴 Les prix, en DOLLARS par million de jetons (30/09/2026, arbitré :
+	//  « comme les grilles »), et TROIS — l'entrée lue en cache a le sien chez
+	//  OpenAI. Stockés tels que saisis, en texte décimal (« 0.075 ») : jamais
+	//  un flottant, et plus des centimes, où 0,075 $ ne tenait pas. Un champ
+	//  par prix, écrit UNE fois : les trois ne diffèrent que par leurs mots.
+	const PRIX: { champ: PrixIA; libelle: string; aide: string }[] = [
+		{
+			champ: 'prix_entree',
+			libelle: 'Prix des jetons envoyés',
+			aide: 'Comme la grille de votre fournisseur.',
+		},
+		{
+			champ: 'prix_sortie',
+			libelle: 'Prix des jetons produits',
+			aide: 'La réponse, raisonnement compris. Sans prix, la consommation (Maintenance) s’affiche en jetons seuls.',
+		},
+		{
+			champ: 'prix_cache',
+			libelle: 'Prix des jetons en cache',
+			aide: 'L’entrée déjà vue, que le fournisseur relit en cache et facture moins cher (« cached input »). Vide : elle compte au prix des jetons envoyés.',
+		},
+	];
 
 	//  Le modèle enregistré reste proposé même s'il n'est plus au catalogue :
 	//  sinon la liste le remplacerait en silence par son premier élément, et un
@@ -117,10 +139,10 @@
 		poser(cles.prompt, '');
 	}
 
-	//  Le ✨ du tarif. Les prix reviennent ENREGISTRÉS, en centimes : ils
-	//  s'écrivent tels quels dans `valeurs` — un « Enregistrer » ultérieur
-	//  renverra la même chose — et les champs les affichent en euros. Un prix
-	//  que la grille ne donne pas (`null`) laisse le champ comme il était.
+	//  Le ✨ du tarif. Les prix reviennent ENREGISTRÉS, en dollars comme la
+	//  grille : ils s'écrivent tels quels dans `valeurs` — un « Enregistrer »
+	//  ultérieur renverra la même chose. Un prix que la grille ne donne pas
+	//  (`null`) laisse le champ comme il était.
 	let tarif: { etat: 'aucun' | 'encours' | 'ok' | 'ko'; message: string } = {
 		etat: 'aucun',
 		message: '',
@@ -130,8 +152,10 @@
 		tarif = { etat: 'encours', message: '' };
 		try {
 			const r = await assistantApi.tarif(usage.code, modele);
-			if (r.prix_entree !== null) poser(cles.prix_entree, String(r.prix_entree));
-			if (r.prix_sortie !== null) poser(cles.prix_sortie, String(r.prix_sortie));
+			for (const { champ } of PRIX) {
+				const prix = r[champ];
+				if (prix !== null) poser(cles[champ], prix);
+			}
 			tarif = { etat: 'ok', message: r.remarque };
 		} catch (e: any) {
 			tarif = { etat: 'ko', message: e?.message ?? 'La recherche du tarif a échoué' };
@@ -296,34 +320,21 @@
 					Vide&nbsp;: aucun plafond.
 				</span>
 			</label>
-			<label class="field">
-				Prix des jetons envoyés
-				<input
-					type="number"
-					value={prixEntree || ''}
-					min="0"
-					step="0.01"
-					placeholder="Non renseigné"
-					on:input={(e) => poser(cles.prix_entree, enCentimes(e.currentTarget.value))}
-				/>
-				<span class="aide"
-					>En euros par million de jetons, selon la grille de votre fournisseur.</span
-				>
-			</label>
-			<label class="field">
-				Prix des jetons produits
-				<input
-					type="number"
-					value={prixSortie || ''}
-					min="0"
-					step="0.01"
-					placeholder="Non renseigné"
-					on:input={(e) => poser(cles.prix_sortie, enCentimes(e.currentTarget.value))}
-				/>
-				<span class="aide">
-					Idem, pour la réponse. Sans prix, la consommation (Maintenance) s’affiche en jetons seuls.
-				</span>
-			</label>
+			{#each PRIX as p (p.champ)}
+				<label class="field">
+					{p.libelle} ($ / million)
+					<input
+						type="number"
+						value={valeurs[cles[p.champ]] ?? ''}
+						min="0"
+						step="any"
+						inputmode="decimal"
+						placeholder="Non renseigné"
+						on:input={(e) => poser(cles[p.champ], e.currentTarget.value)}
+					/>
+					<span class="aide">{p.aide}</span>
+				</label>
+			{/each}
 		</div>
 		{#if tarif.etat === 'ok'}
 			<p class="aide">✅ Tarif enregistré — {tarif.message}</p>

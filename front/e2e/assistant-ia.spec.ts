@@ -4,11 +4,11 @@
  *  Demandé : « l'icône IA à côté du modèle de tous les use case […] recherche
  *  le prix sur l'opérateur du modèle du use case, remplit les prix et
  *  enregistre ». Ce test rend le VRAI onglet, API simulée, et vérifie ce que
- *  l'administrateur voit : l'icône dans chaque bloc, les prix en EUROS alors que
- *  le serveur rend des CENTIMES, la source du chiffre — et que la demande porte
+ *  l'administrateur voit : l'icône dans chaque bloc, les TROIS prix en dollars,
+ *  la source du chiffre — et que la demande porte
  *  sur l'usage du bloc et son modèle, pas sur l'usage « Tarif ».
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { MEMBRE_CS, simulerApi } from './aides';
 
 const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
@@ -20,9 +20,16 @@ const usage = (code: string, libelle: string) => ({
 	prompt_defaut: 'Consigne.',
 	max_jetons_defaut: 2000,
 	cles: Object.fromEntries(
-		['actif', 'modele', 'prompt', 'max_jetons', 'plafond_mois', 'prix_entree', 'prix_sortie'].map(
-			(c) => [c, `llm_${code}_${c}`],
-		),
+		[
+			'actif',
+			'modele',
+			'prompt',
+			'max_jetons',
+			'plafond_mois',
+			'prix_entree',
+			'prix_sortie',
+			'prix_cache',
+		].map((c) => [c, `llm_${code}_${c}`]),
 	),
 });
 
@@ -41,6 +48,11 @@ const CONFIG = {
 	llm_tarif_modele_modele: 'modele-du-tarif',
 };
 
+/** Le champ d'un prix — par le DÉBUT de son nom : l'aide, dans le même
+ *  `<label>`, nomme parfois un autre prix (« …au prix des jetons envoyés »). */
+const prix = (bloc: Locator, nom: string) =>
+	bloc.getByRole('spinbutton', { name: new RegExp(`^Prix des jetons ${nom} \\(\\$`) });
+
 test('Assistant IA : le ✨ du modèle enregistre les prix des jetons', async ({ page }) => {
 	let demande: unknown = null;
 	await simulerApi(page, (chemin) => {
@@ -58,10 +70,11 @@ test('Assistant IA : le ✨ du modèle enregistre les prix des jetons', async ({
 				status: 200,
 				contentType: 'application/json',
 				body: JSON.stringify({
-					prix_entree: 20,
-					prix_sortie: 120,
+					prix_entree: '0.2',
+					prix_sortie: '1.2',
+					prix_cache: '0.02',
 					remarque:
-						'Grille platform.openai.com/docs/pricing, ligne « gpt-5.6-luna » : 0,20 $ et 1,20 $ par million.',
+						'Grille platform.openai.com/docs/pricing, ligne « gpt-5.6-luna » : envoyés 0,2 $, produits 1,2 $, en cache 0,02 $ par million.',
 				}),
 			});
 		},
@@ -78,8 +91,11 @@ test('Assistant IA : le ✨ du modèle enregistre les prix des jetons', async ({
 	await bloc.locator('summary').click();
 	await bloc.getByRole('button', { name: 'Chercher et enregistrer le tarif de ce modèle' }).click();
 
-	await expect(bloc.getByLabel('Prix des jetons envoyés')).toHaveValue('0.2');
-	await expect(bloc.getByLabel('Prix des jetons produits')).toHaveValue('1.2');
+	await expect(prix(bloc, 'envoyés')).toHaveValue('0.2');
+	await expect(prix(bloc, 'produits')).toHaveValue('1.2');
+	await expect(prix(bloc, 'en cache')).toHaveValue('0.02');
+	//  L'unité se lit sur le libellé : des dollars, comme la grille.
+	await expect(bloc.getByText('Prix des jetons envoyés ($ / million)')).toBeVisible();
 	await expect(bloc.getByText(/Tarif enregistré — Grille platform\.openai\.com/)).toBeVisible();
 	expect(demande).toEqual({ usage: 'description', modele: 'modele-de-la-description' });
 

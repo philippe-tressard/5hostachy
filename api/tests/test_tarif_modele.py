@@ -2,21 +2,20 @@
 
 Ce que ce test protège :
 
-1. **Le prix enregistré est un prix en centimes d'EURO entiers**, converti au
-   taux de la BCE par le serveur — jamais par le modèle, qui inventerait un taux.
+1. **Le prix enregistré est celui de la grille, en DOLLARS**, en texte décimal
+   (« 0.075 » reste « 0.075 ») — trois prix : envoyés, produits, lus en cache.
 2. **Un prix absurde est refusé**, pas enregistré : un booléen, une chaîne, un
-   négatif, un prix par millier pris pour un prix par million, une devise inconnue.
+   négatif, un prix par millier pris pour un prix par million, une grille hors dollars.
 3. **C'est le modèle ENREGISTRÉ qui est cherché** : un modèle affiché mais pas
    enregistré est refusé, pour ne jamais poser sur l'un le prix de l'autre.
 4. **Seul ce qui est trouvé s'enregistre** : un prix absent de la grille laisse
-   celui de l'administrateur ; deux absents se disent, rien n'est écrit.
+   celui de l'administrateur ; tous absents se disent, rien n'est écrit.
 5. **Ce qui part** : le fournisseur, l'identifiant du modèle et la grille publique.
 """
 
 from __future__ import annotations
 
 import asyncio
-from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -27,10 +26,8 @@ from app.utils import llm, tarif_sources
 from app.utils.description_format import ReponseIllisible
 from app.utils.llm import ErreurLLM
 from app.utils.tarif_modele import USAGE_TARIF_MODELE, chercher_et_enregistrer, lire_tarif
-from app.utils.tarif_sources import Taux, en_centimes_euro, lire_taux_bce
 
 GRILLE = "| Model | Input | Output |\n| Claude Haiku 4.5 | $1 / MTok | $5 / MTok |"
-TAUX = Taux(usd_par_eur=Decimal("1.25"), date="2026-09-30")
 
 
 @pytest.fixture()
@@ -45,7 +42,7 @@ def session():
             f"llm_{USAGE_TARIF_MODELE}_actif": "1",
             f"llm_{USAGE_TARIF_MODELE}_modele": "modele-qui-lit",
             "llm_description_modele": "claude-haiku-4-5-20251001",
-            "llm_description_prix_sortie": "999",
+            "llm_description_prix_sortie": "9.99",
         }.items():
             s.add(ConfigSite(cle=cle, valeur=valeur))
         s.commit()
@@ -61,11 +58,7 @@ def sources(monkeypatch):
         lues.append(url)
         return GRILLE
 
-    async def taux():
-        return TAUX
-
     monkeypatch.setattr(tarif_sources, "lire_grille", grille)
-    monkeypatch.setattr(tarif_sources, "lire_taux", taux)
     return lues
 
 
@@ -86,36 +79,16 @@ def _valeur(session, cle):
 # ── 1. Les pièces pures ────────────────────────────────────────────────────
 
 
-def test_le_taux_se_lit_dans_le_fichier_de_la_bce():
-    xml = (
-        "<Cube><Cube time='2026-09-30'><Cube currency='USD' rate='1.0812'/>"
-        "<Cube currency='JPY' rate='161.2'/></Cube></Cube>"
-    )
-    assert lire_taux_bce(xml) == Taux(usd_par_eur=Decimal("1.0812"), date="2026-09-30")
-
-
-@pytest.mark.parametrize("xml", ["", "<Cube time='2026-09-30'/>", "currency='USD' rate='42'"])
-def test_un_taux_absent_ou_invraisemblable_est_refuse(xml):
-    with pytest.raises(tarif_sources.SourceIndisponible):
-        lire_taux_bce(xml)
-
-
-def test_la_conversion_arrondit_au_centime_en_decimal():
-    assert en_centimes_euro(1, "USD", TAUX) == 80
-    #  0,20 $ / 1,08 = 0,18518… € : 18,5 centimes arrondis à 19, pas à 18.
-    assert en_centimes_euro(0.2, "USD", Taux(Decimal("1.08"), "")) == 19
-    assert en_centimes_euro(0.2, "EUR", None) == 20
-
-
-def test_un_prix_decimal_se_relit_dans_sa_devise():
+def test_trois_prix_se_relisent_en_dollars_sans_flottant():
     lu = lire_tarif(
-        '```json\n{"ligne": "gpt-5.6-luna", "devise": "USD", "prix_entree": 0.2, "prix_sortie": 1.2}\n```'
+        '```json\n{"ligne": "gpt-5.4-mini", "devise": "USD", '
+        '"prix_entree": 0.75, "prix_sortie": 4.5, "prix_cache": 0.075}\n```'
     )
-    assert (lu.ligne, lu.devise, lu.prix_entree, lu.prix_sortie) == (
-        "gpt-5.6-luna",
-        "USD",
-        0.2,
-        1.2,
+    assert (lu.ligne, lu.prix_entree, lu.prix_sortie, lu.prix_cache) == (
+        "gpt-5.4-mini",
+        "0.75",
+        "4.5",
+        "0.075",
     )
 
 
@@ -128,9 +101,10 @@ def test_un_prix_qui_n_en_est_pas_un_est_refuse(valeur):
         lire_tarif(f'{{"ligne": "x", "prix_entree": {valeur}, "prix_sortie": 1}}')
 
 
-def test_une_devise_inconnue_est_refusee():
+@pytest.mark.parametrize("devise", ["EUR", "GBP"])
+def test_une_grille_hors_dollars_est_refusee(devise):
     with pytest.raises(ReponseIllisible):
-        lire_tarif('{"ligne": "x", "devise": "GBP", "prix_entree": 1, "prix_sortie": 1}')
+        lire_tarif(f'{{"ligne": "x", "devise": "{devise}", "prix_entree": 1, "prix_sortie": 1}}')
 
 
 # ── 3 à 5. Le geste complet ────────────────────────────────────────────────
@@ -138,16 +112,24 @@ def test_une_devise_inconnue_est_refusee():
 
 def test_le_tarif_trouve_est_converti_et_enregistre(session, sources, monkeypatch):
     recus: list = []
-    reponse = '{"ligne": "Claude Haiku 4.5", "devise": "USD", "prix_entree": 1, "prix_sortie": 5}'
+    reponse = (
+        '{"ligne": "Claude Haiku 4.5", "devise": "USD", '
+        '"prix_entree": 1, "prix_sortie": 5, "prix_cache": 0.1}'
+    )
     monkeypatch.setattr(llm, "demander", _modele(reponse, recus))
 
-    t = asyncio.run(chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001"))
+    t, remarque = asyncio.run(
+        chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001")
+    )
 
-    assert (t.prix_entree, t.prix_sortie) == (80, 400)
-    assert _valeur(session, "llm_description_prix_entree") == "80"
-    assert _valeur(session, "llm_description_prix_sortie") == "400"
-    assert "ligne « Claude Haiku 4.5 »" in t.remarque
-    assert "taux BCE du 30/09/2026 (1 € = 1,2500 $)" in t.remarque
+    assert t.prix() == {"prix_entree": "1", "prix_sortie": "5", "prix_cache": "0.1"}
+    assert _valeur(session, "llm_description_prix_entree") == "1"
+    assert _valeur(session, "llm_description_prix_sortie") == "5"
+    assert _valeur(session, "llm_description_prix_cache") == "0.1"
+    assert remarque == (
+        "Grille docs.claude.com/en/docs/about-claude/pricing, ligne « Claude Haiku 4.5 » : "
+        "envoyés 1 $, produits 5 $, en cache 0,1 $ par million."
+    )
     #  La grille lue est celle du fournisseur, et c'est tout ce qui part avec le modèle.
     assert sources == ["https://docs.claude.com/en/docs/about-claude/pricing.md"]
     ((usage, message),) = recus
@@ -167,16 +149,17 @@ def test_un_modele_affiche_mais_pas_enregistre_est_refuse(session, sources, monk
 
 
 def test_seul_le_prix_trouve_s_enregistre(session, sources, monkeypatch):
-    reponse = '{"ligne": "x", "devise": "EUR", "prix_entree": 0.5, "prix_sortie": null}'
+    reponse = '{"ligne": "x", "prix_entree": 0.5, "prix_sortie": null, "prix_cache": null}'
     monkeypatch.setattr(llm, "demander", _modele(reponse))
-    t = asyncio.run(chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001"))
-    assert (t.prix_entree, t.prix_sortie) == (50, None)
-    #  Celui de l'administrateur reste.
-    assert _valeur(session, "llm_description_prix_sortie") == "999"
+    t, _ = asyncio.run(chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001"))
+    assert (t.prix_entree, t.prix_sortie, t.prix_cache) == ("0.5", None, None)
+    #  Celui de l'administrateur reste, et aucun prix de cache n'est inventé.
+    assert _valeur(session, "llm_description_prix_sortie") == "9.99"
+    assert _valeur(session, "llm_description_prix_cache") is None
 
 
 def test_un_modele_absent_de_la_grille_se_dit_et_rien_n_est_ecrit(session, sources, monkeypatch):
-    reponse = '{"ligne": null, "devise": "USD", "prix_entree": null, "prix_sortie": null}'
+    reponse = '{"ligne": null, "prix_entree": null, "prix_sortie": null, "prix_cache": null}'
     monkeypatch.setattr(llm, "demander", _modele(reponse))
     with pytest.raises(ErreurLLM, match="ne donne pas le tarif"):
         asyncio.run(chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001"))

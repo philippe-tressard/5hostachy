@@ -62,9 +62,10 @@ class Usage:
 
 
 #: Les réglages qu'un usage porte, dans l'ordre de l'écran.
-#: `plafond_mois` (jetons par mois, 0 = aucun) et les deux PRIX (centimes
-#: d'euro par million de jetons, en entier — un montant ne se stocke jamais en
-#: flottant) sont lus par `llm_journal` : le suivi de ce que coûte l'usage (#1383).
+#: `plafond_mois` (jetons par mois, 0 = aucun) et les trois PRIX sont lus par
+#: `llm_journal` : le suivi de ce que coûte l'usage (#1383). Les prix sont en
+#: DOLLARS par million de jetons, en texte décimal — comme les grilles des
+#: fournisseurs (30/09/2026) ; `prix_cache` est celui de l'entrée lue en cache.
 CHAMPS_USAGE = (
     "actif",
     "modele",
@@ -73,6 +74,7 @@ CHAMPS_USAGE = (
     "plafond_mois",
     "prix_entree",
     "prix_sortie",
+    "prix_cache",
 )
 
 USAGE_SYNTHESE_CONTRAT = "synthese_contrat"
@@ -122,13 +124,13 @@ USAGES: dict[str, Usage] = {
         libelle="Tarif d'un modèle",
         description=(
             "L'icône ✨ à côté du modèle de chaque usage lit la grille tarifaire "
-            "publiée par le fournisseur, y fait trouver ce modèle par l'assistant, "
-            "convertit en euros au taux BCE du jour et enregistre les prix des jetons "
-            "envoyés et produits. Seuls le fournisseur, le nom du modèle et la grille "
-            "publique sont transmis."
+            "publiée par le fournisseur, y fait trouver ce modèle par l'assistant et "
+            "enregistre ses trois prix, en dollars comme la grille : jetons envoyés, "
+            "produits et lus en cache. Seuls le fournisseur, le nom du modèle et la "
+            "grille publique sont transmis."
         ),
         prompt_defaut=CONSIGNE_TARIF,
-        #  La réponse fait quatre champs, mais un modèle qui raisonne dépense ses
+        #  La réponse fait cinq champs, mais un modèle qui raisonne dépense ses
         #  jetons avant d'écrire : 2 000 laisse la place au JSON après la
         #  réflexion (le piège du test de connexion à 16 jetons, `llm.tester`).
         #  La grille, elle, est en ENTRÉE : ce plafond ne la borne pas.

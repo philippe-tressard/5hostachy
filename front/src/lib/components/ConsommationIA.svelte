@@ -7,7 +7,8 @@
   boucle aurait facturé en silence jusqu'à la facture du fournisseur.
 
   ⚠️ Le coût est une ESTIMATION au tarif saisi dans Administration › Assistant IA,
-  et il se tait sans tarif — un « 0 € » se lirait « gratuit ». Les réglages
+  en DOLLARS comme les grilles des fournisseurs (30/09/2026), et il se tait sans
+  tarif — un « 0 $ » se lirait « gratuit ». Les réglages
   (prix, plafond) restent dans l'onglet de l'assistant ; cette carte ne fait que
   montrer, là où l'on vient surveiller.
 -->
@@ -29,9 +30,10 @@
 	//  Le coût d'un mois n'existe que si CHAQUE ligne en a un : additionner les
 	//  lignes chiffrées en taisant les autres afficherait un total faux.
 	function coutDuMois(lignes: LigneConsommationIA[]): number | null {
-		if (!lignes.length || lignes.some((l) => l.cout_centimes === null)) return null;
-		return lignes.reduce((s, l) => s + (l.cout_centimes ?? 0), 0);
+		if (!lignes.length || lignes.some((l) => l.cout_usd === null)) return null;
+		return lignes.reduce((s, l) => s + Number(l.cout_usd), 0);
 	}
+	const dollars = (v: number) => fmtMontant(v, 'USD');
 	const part = (consommes: number, plafond: number) =>
 		Math.min(100, Math.round((consommes / plafond) * 100));
 
@@ -102,7 +104,7 @@
 					<h4 class="sous-titre">
 						<span class="mois-libelle">{fmtMonthYear(m.mois)}</span>
 						<span class="muted total"
-							>{cout === null ? 'coût non renseigné' : `${fmtMontant(cout / 100)} estimés`}</span
+							>{cout === null ? 'coût non renseigné' : `${dollars(cout)} estimés`}</span
 						>
 					</h4>
 					<ul class="lignes">
@@ -113,9 +115,11 @@
 								<span>
 									{nombre(l.appels)} appel{l.appels > 1 ? 's' : ''} · {nombre(jetons(l))} jetons
 									<span class="muted"
-										>({nombre(l.jetons_entree)} envoyés, {nombre(l.jetons_sortie)} produits)</span
+										>({nombre(l.jetons_entree)} envoyés{l.jetons_cache
+											? ` dont ${nombre(l.jetons_cache)} en cache`
+											: ''}, {nombre(l.jetons_sortie)} produits)</span
 									>
-									{#if l.cout_centimes !== null}· {fmtMontant(l.cout_centimes / 100)}{/if}
+									{#if l.cout_usd !== null}· {dollars(Number(l.cout_usd))}{/if}
 								</span>
 								{#if l.erreurs}<span class="badge badge-red">{l.erreurs} en échec</span>{/if}
 								{#if l.refus}<span class="badge badge-orange"
