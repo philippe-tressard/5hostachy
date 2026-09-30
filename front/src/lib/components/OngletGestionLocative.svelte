@@ -277,8 +277,5 @@
 	.sous-onglets {
 		margin-bottom: 1.5rem;
 	}
-	.lbc-lot-badge {
-		font-weight: 700;
-		font-size: var(--fs-lg);
-	}
+	/*  `.lbc-lot-badge` est dans la charte depuis le 30/09/2026 (#779). */
 </style>

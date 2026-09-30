@@ -34,7 +34,6 @@
 -->
 <script lang="ts">
 	import { statutAccesBadge, statutAccesLabel } from '$lib/types-acces';
-	import { nomAffiche } from '$lib/noms';
 	import FormulairesAcces from '$lib/components/FormulairesAcces.svelte';
 	import { onMount } from 'svelte';
 	import { acces as accesApi, lots as lotsApi, bailleur as bailApi } from '$lib/api';
@@ -49,7 +48,7 @@
 	import { isBailleur, isLocataire } from '$lib/stores/auth';
 	import MesAcces from '$lib/components/MesAcces.svelte';
 	import AccesConnexes from '$lib/components/AccesConnexes.svelte';
-	import { bailEnCours } from '$lib/bail';
+	import { bailEnCours, nomLocataire } from '$lib/bail';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let vigiks: any[] = [];
@@ -284,10 +283,7 @@
 					<div class="locataire-acces-row">
 						<div class="lar-header">
 							<div class="lar-tenant">
-								<strong
-									>{nomAffiche(premierBail.locataire_prenom, premierBail.locataire_nom) ||
-										'Locataire non renseigné'}</strong
-								>
+								<strong>{nomLocataire(premierBail)}</strong>
 								{#if premierBail.locataire_email}<a
 										href="mailto:{premierBail.locataire_email}"
 										style="font-size:var(--fs-sm);color:var(--color-primary)"

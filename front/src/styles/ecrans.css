@@ -730,3 +730,21 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	flex-wrap: wrap;
 	align-items: center;
 }
+
+/*  Le repère d'un lot (« Bât. 2 / 14 ») et l'intitulé d'une section de lots.
+    Ils étaient écrits en style SCOPÉ dans `mon-lot` et `OngletGestionLocative`,
+    avec un commentaire qui l'assumait faute de mieux (« l'écran partirait nu ») ;
+    l'extraction de `LotsBailleur` en aurait fait une troisième copie (#779,
+    30/09/2026). */
+.lbc-lot-badge {
+	font-weight: 700;
+	font-size: var(--fs-lg);
+}
+.lots-section-label {
+	font-size: var(--fs-sm);
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--color-text-muted);
+	margin-bottom: 0.6rem;
+}

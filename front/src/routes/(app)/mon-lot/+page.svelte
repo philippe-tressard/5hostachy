@@ -9,7 +9,14 @@
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, bailleur as bailApi, type Bail, type ObjetRemis } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { isBailleur, isCS, isCoproprietaire, isLocataire, isResident } from '$lib/stores/auth';
+	import {
+		authResolue,
+		isBailleur,
+		isCS,
+		isCoproprietaire,
+		isLocataire,
+		isResident,
+	} from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateShort as fmt } from '$lib/date';
 	import { browser } from '$app/environment';
@@ -20,7 +27,8 @@
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { routeOnglet, routeSousOnglet } from '$lib/routes-onglets';
-	import { bailEnCours, bailVierge, champsLocataire } from '$lib/bail';
+	import { bailEnCours, bailVierge, champsLocataire, nomLocataire } from '$lib/bail';
+	import LotsBailleur from '$lib/components/LotsBailleur.svelte';
 	import BadgeStatutBail from '$lib/components/BadgeStatutBail.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
@@ -137,6 +145,29 @@
 		} finally {
 			loading = false;
 		}
+	});
+
+	/**  Les baux que CE compte gère : les siens (copropriétaire), tous (conseil),
+	 *   aucun sinon. Écrit une fois — le chargement et l'affectation automatique
+	 *   des accès le recopiaient (#779). */
+	function lireBaux(): Promise<Bail[]> | null {
+		if ($isCoproprietaire) return bailApi.mesBaux();
+		if ($isCS) return bailApi.tousBaux();
+		return null;
+	}
+
+	//  🔴 Ce qui dépend du RÔLE attend que le rôle soit connu (#779, 30/09/2026).
+	//  C'était dans `onMount`, qui précède celui du layout qui charge l'utilisateur :
+	//  sur un chargement direct ou un rechargement de la page, `$isCoproprietaire`
+	//  et `$isLocataire` y valaient encore `false`. Un bailleur voyait alors TOUS
+	//  ses lots « Vacant », avec « + Créer un bail » sur un lot loué ; un locataire
+	//  ne voyait pas son bail. Seule une navigation interne rendait l'écran juste.
+	let chargeSelonRole = false;
+	$: if ($authResolue && !chargeSelonRole) {
+		chargeSelonRole = true;
+		chargerSelonRole();
+	}
+	async function chargerSelonRole() {
 		if ($isLocataire) {
 			try {
 				monBailData = await bailApi.monBail();
@@ -145,26 +176,16 @@
 				toast('error', messageErreur(e, 'Impossible de charger votre bail'));
 			}
 		}
-		if ($isCoproprietaire) {
+		const lecture = lireBaux();
+		if (lecture) {
 			try {
-				baux = await bailApi.mesBaux();
+				baux = await lecture;
 			} catch (e: any) {
 				toast('error', messageErreur(e, 'Erreur de chargement des baux'));
-			} finally {
-				bauxLoading = false;
 			}
-		} else if ($isCS) {
-			try {
-				baux = await bailApi.tousBaux();
-			} catch (e: any) {
-				toast('error', messageErreur(e, 'Erreur de chargement des baux'));
-			} finally {
-				bauxLoading = false;
-			}
-		} else {
-			bauxLoading = false;
 		}
-	});
+		bauxLoading = false;
+	}
 
 	// ── Actions bail ───────────────────────────────────────────────────────────
 	async function creerBail() {
@@ -282,11 +303,8 @@
 			await bailApi.transfererAcces(bail.id, { vigik_ids: vigikIds, tc_ids: tcIds });
 			const n = vigikIds.length + tcIds.length;
 			toast('success', `${n} accès affecté${n > 1 ? 's' : ''} automatiquement`);
-			if ($isCoproprietaire) {
-				baux = await bailApi.mesBaux();
-			} else if ($isCS) {
-				baux = await bailApi.tousBaux();
-			}
+			const lecture = lireBaux();
+			if (lecture) baux = await lecture;
 		} catch (e: any) {
 			toast('error', messageErreur(e, "Erreur lors de l'affectation automatique"));
 		}
@@ -302,13 +320,6 @@
 	//  `OngletGestionLocative`, qui recomposait la TEINTE du même état en
 	//  ternaire. Le libellé et la couleur d'un état sont deux attributs d'une
 	//  même chose : ils se déclarent ensemble, dans `$lib/bail`.
-
-	function nomLocataire(bail: Bail): string {
-		if (bail.locataire_prenom || bail.locataire_nom) {
-			return nomAffiche(bail.locataire_prenom, bail.locataire_nom);
-		}
-		return 'Locataire non renseigné';
-	}
 
 	//  Les lots tels que `FormulaireBail` les attend : un libellé et un état.
 	//  🔴 La préparation vit ICI, pas dans le composant : `lotLabel` s'appuie sur
@@ -489,143 +500,18 @@
 		{/if}
 	{:else if $isBailleur}
 		<!-- ── Vue bailleur : lots possédés + locataires ── -->
-		{@const lotsAvecBail = lots.map((l) => ({
-			...l,
-			bail: bauxActifs.find((b) => b.lot_id === l.id) ?? null,
-		}))}
-		{@const locatairesMap = (() => {
-			const map = new Map();
-			for (const b of bauxActifs) {
-				const key = b.locataire_id ?? `ext_${b.id}`;
-				if (!map.has(key)) map.set(key, { bail: b, baux: [] });
-				map.get(key).baux.push(b);
-			}
-			return [...map.values()];
-		})()}
-		{@const lotsVacants = lots.filter((l) => !bauxActifs.find((b) => b.lot_id === l.id))}
-
-		<!-- Section 1 : Tous les lots possédés -->
-		<div class="lots-section-label">🏢 Lots possédés ({lots.length})</div>
-		<div class="lots-possedes-grid">
-			{#each lotsAvecBail as lot (lot.id)}
-				<div
-					class="lot-possede-card card"
-					class:lot-occupe={!!lot.bail}
-					class:lot-vacant={!lot.bail}
-				>
-					<div class="lpc-header">
-						<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
-						{#if lot.bail}
-							<span class="badge badge-green" style="font-size:var(--fs-2xs)">Occupé</span>
-						{:else}
-							<span class="badge badge-gray" style="font-size:var(--fs-2xs)">Vacant</span>
-						{/if}
-					</div>
-					<div class="lpc-details">
-						<span class="badge badge-gray" style="font-size:var(--fs-2xs);text-transform:capitalize"
-							>{lotTypeComplet(lot.type, lot.type_appartement)}</span
-						>
-						{#if lot.etage !== null}<span
-								style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-								>{etageLabel(lot.etage, { suffixe: true })}</span
-							>{/if}
-						{#if lot.superficie}<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-								>{lot.superficie} m²</span
-							>{/if}
-					</div>
-					{#if lot.bail}
-						<div class="lpc-occupant">👤 {nomLocataire(lot.bail)}</div>
-					{:else}
-						<button
-							class="btn btn-sm btn-primary"
-							style="margin-top:.4rem"
-							on:click={() => {
-								newBailLotIds = new Set([lot.id]);
-								showNewBail = true;
-								goto(ROUTE_BAUX_ACTIFS);
-							}}
-						>
-							+ Créer un bail
-						</button>
-					{/if}
-				</div>
-			{/each}
-		</div>
-
-		<!-- Section 2 : Locataires (lots regroupés par locataire) -->
-		{#if locatairesMap.length > 0}
-			<div class="lots-section-label" style="margin-top:1.8rem">
-				👥 Locataires ({locatairesMap.length})
-			</div>
-			{#each locatairesMap as loc (loc.bail.locataire_id ?? `ext_${loc.bail.id}`)}
-				{@const premierBail = loc.bail}
-				<div class="locataire-card card">
-					<div class="loc-header">
-						<div class="loc-name">
-							👤 <strong>{nomLocataire(premierBail)}</strong>
-							<BadgeStatutBail statut={premierBail.statut} compact />
-						</div>
-						<div class="loc-contact">
-							{#if premierBail.locataire_email}<a
-									href="mailto:{premierBail.locataire_email}"
-									style="color:var(--color-primary);font-size:var(--fs-md)"
-									>📬 {premierBail.locataire_email}</a
-								>{/if}
-							{#if premierBail.locataire_telephone}<span
-									style="font-size:var(--fs-md);color:var(--color-text-muted)"
-									>📞 {premierBail.locataire_telephone}</span
-								>{/if}
-						</div>
-					</div>
-					<div class="loc-lots">
-						{#each loc.baux as bail (bail.id)}
-							{@const lot = lots.find((l) => l.id === bail.lot_id)}
-							{#if lot}
-								<div class="loc-lot-row">
-									<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
-									<span
-										class="badge badge-gray"
-										style="font-size:var(--fs-2xs);text-transform:capitalize"
-										>{lotTypeComplet(lot.type, lot.type_appartement)}</span
-									>
-									<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-										>Depuis le {fmt(bail.date_entree)}{bail.date_sortie_prevue
-											? ` · Sortie prévue ${fmt(bail.date_sortie_prevue)}`
-											: ''}</span
-									>
-								</div>
-							{/if}
-						{/each}
-					</div>
-					<div class="lbc-actions">
-						<button class="btn btn-sm btn-outline" on:click={() => goto(ROUTE_BAUX_ACTIFS)}
-							>📋 Gestion locative</button
-						>
-						<button class="btn btn-sm btn-outline" on:click={() => ouvrirAccesBail(premierBail)}
-							>🔑 Accès</button
-						>
-						<button
-							class="btn-icon-edit"
-							aria-label="Modifier le locataire"
-							title="Modifier"
-							on:click={() => ouvrirEditionLocataire(premierBail)}>&#x270F;&#xFE0F;</button
-						>
-					</div>
-				</div>
-			{/each}
-		{/if}
-
-		<!-- Lots vacants (rappel rapide) -->
-		{#if lotsVacants.length > 0}
-			<div class="lots-section-label" style="margin-top:1.8rem">
-				🔓 Lots vacants ({lotsVacants.length})
-			</div>
-			<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin:0 0 .6rem">
-				Ces lots n'ont pas de bail actif. Créez un bail depuis la fiche du lot ci-dessus ou l'onglet <strong
-					>Gestion locative</strong
-				>.
-			</p>
-		{/if}
+		<LotsBailleur
+			{lots}
+			{bauxActifs}
+			routeGestion={ROUTE_BAUX_ACTIFS}
+			onCreerBail={(lotId) => {
+				newBailLotIds = new Set([lotId]);
+				showNewBail = true;
+				goto(ROUTE_BAUX_ACTIFS);
+			}}
+			onAcces={ouvrirAccesBail}
+			onModifierLocataire={ouvrirEditionLocataire}
+		/>
 	{:else}
 		<!-- ── Vue standard (non bailleur) : sélecteur lot + carte ── -->
 		{#if lots.length > 1}
@@ -752,13 +638,6 @@
      le tableau qui l'ouvre est ailleurs aurait coupé un geste en deux fichiers. -->
 
 <style>
-	/*  ⚠️ Définie ICI **et** dans `OngletGestionLocative` : Svelte scope ses
-	    styles au FICHIER, et la classe sert dans les deux. Ce n'est pas une
-	    duplication à retirer — l'écran partirait nu. */
-	.lbc-lot-badge {
-		font-weight: 700;
-		font-size: var(--fs-lg);
-	}
 	/* Lot tabs (multi-lot selector) */
 	.lot-tabs {
 		display: flex;
@@ -795,15 +674,6 @@
 	.details-grid dd {
 		margin: 0;
 	}
-	/* Bailleur lot cards */
-	.lots-section-label {
-		font-size: var(--fs-sm);
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--color-text-muted);
-		margin-bottom: 0.6rem;
-	}
 	/*  🔴 DIX règles orphelines ont été retirées d'ici le 06/09/2026 (#806), et la
 	    façon dont elles sont apparues vaut d'être écrite.
 
@@ -822,95 +692,6 @@
 	    les dix restes sont devenus visibles. Un contrôle vert peut ne rien mesurer
 	    (`standards/04`) : ici il ne le disait pas — il annonçait « 0 orphelin »,
 	    pas « je n'ai pas pu regarder ». */
-	.lot-vacant {
-		opacity: 0.8;
-		border-style: dashed;
-	}
-	.lbc-actions {
-		display: flex;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-		margin-top: 0.3rem;
-	}
-
-	/* Lots possédés grid */
-	.lots-possedes-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
-		gap: 0.6rem;
-		margin-bottom: 0.6rem;
-	}
-	.lot-possede-card {
-		padding: 0.85rem 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-	}
-	.lot-possede-card.lot-occupe {
-		border-left: 3px solid var(--color-success);
-	}
-	.lot-possede-card.lot-vacant {
-		border-left: 3px dashed var(--color-border);
-		opacity: 0.8;
-	}
-	.lpc-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 0.4rem;
-	}
-	.lpc-details {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		align-items: center;
-	}
-	.lpc-occupant {
-		font-size: var(--fs-md);
-		color: var(--color-text-muted);
-	}
-
-	/* Locataire cards */
-	.locataire-card {
-		padding: 1rem 1.2rem;
-		margin-bottom: 0.6rem;
-	}
-	.loc-header {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		margin-bottom: 0.6rem;
-	}
-	.loc-name {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		font-size: var(--fs-lg);
-	}
-	.loc-contact {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.6rem;
-		align-items: center;
-	}
-	.loc-lots {
-		border-top: 1px solid var(--color-border);
-		padding-top: 0.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-		margin-bottom: 0.5rem;
-	}
-	.loc-lot-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		padding: 0.3rem 0.5rem;
-		background: var(--color-bg-alt, #f8fafc);
-		border-radius: var(--radius);
-	}
 
 	/* Main tabs (like communauté) */
 	/*  `.tabs` est partie avec les sous-onglets de la gestion locative

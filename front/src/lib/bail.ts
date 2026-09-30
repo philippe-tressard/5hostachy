@@ -24,6 +24,7 @@
  */
 
 import { parAttribut } from '$lib/table-statuts';
+import { nomAffiche } from '$lib/noms';
 
 /** Ce qui identifie et joint un locataire — commun aux deux gestes. */
 export interface ChampsLocataire {
@@ -108,4 +109,20 @@ export const BADGE_STATUT_BAIL: Record<string, string> = ETAT.badge;
  */
 export function bailEnCours(bail: { statut?: string | null } | null | undefined): boolean {
 	return bail?.statut === 'actif' || bail?.statut === 'en_cours_sortie';
+}
+
+/**
+ *  Le nom du locataire d'un bail — ou « Locataire non renseigné ».
+ *
+ *  Écrit une fois le 30/09/2026 (#779) : `mon-lot` le portait en fonction
+ *  locale, `OngletAcces` en expression recopiée dans son balisage.
+ */
+export function nomLocataire(bail: {
+	locataire_prenom?: string | null;
+	locataire_nom?: string | null;
+}): string {
+	if (bail.locataire_prenom || bail.locataire_nom) {
+		return nomAffiche(bail.locataire_prenom, bail.locataire_nom);
+	}
+	return 'Locataire non renseigné';
 }
