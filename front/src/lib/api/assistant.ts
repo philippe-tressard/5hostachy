@@ -59,7 +59,8 @@ export interface ConsommationIA {
 	mois_courant: string;
 }
 
-type ChampUsageIA = 'actif' | 'modele' | 'prompt' | 'max_jetons' | 'plafond_mois' | PrixIA;
+type ChampUsageIA =
+	'actif' | 'modele' | 'prompt' | 'max_jetons' | 'plafond_mois' | 'effort' | PrixIA;
 /** Les trois prix d'un usage, dans l'ordre de l'écran (`llm_usages.CHAMPS_USAGE`). */
 export type PrixIA = 'prix_entree' | 'prix_sortie' | 'prix_cache';
 
@@ -72,6 +73,9 @@ export interface UsageIA {
 	max_jetons_defaut: number;
 	/** Les clés `ConfigSite` de ses réglages — prix en DOLLARS par million. */
 	cles: Record<ChampUsageIA, string>;
+	/** Les niveaux d'effort de raisonnement — la table de `llm_usages.EFFORTS`,
+	 *  jamais recopiée ici. Vide = le défaut du modèle, rien n'est envoyé. */
+	efforts: { val: string; label: string }[];
 }
 
 /** Le tarif ENREGISTRÉ du modèle d'un usage — en DOLLARS par million de

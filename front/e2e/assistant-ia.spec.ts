@@ -29,8 +29,14 @@ const usage = (code: string, libelle: string) => ({
 			'prix_entree',
 			'prix_sortie',
 			'prix_cache',
+			'effort',
 		].map((c) => [c, `llm_${code}_${c}`]),
 	),
+	efforts: [
+		{ val: 'faible', label: 'Faible' },
+		{ val: 'moyen', label: 'Moyen' },
+		{ val: 'eleve', label: 'Élevé' },
+	],
 });
 
 const USAGES = [
@@ -157,4 +163,35 @@ test('Assistant IA : ouvrir un usage plus bas montre son DÉBUT, pas sa fin', as
 			{ message: 'le haut du bloc ouvert n’est pas dans la moitié haute de la fenêtre' },
 		)
 		.toBe(true);
+});
+
+test('Assistant IA : l’effort de raisonnement se choisit par usage et s’enregistre', async ({
+	page,
+}) => {
+	let enregistre: Record<string, string> | null = null;
+	await simulerApi(page, (chemin) => {
+		if (chemin === '/api/auth/me') return ADMIN;
+		if (chemin === '/api/config/admin') return CONFIG;
+		if (chemin === '/api/config/llm-usages') return USAGES;
+		return undefined;
+	});
+	//  Posé APRÈS `simulerApi` : Playwright essaie la dernière route en premier.
+	await page.route(
+		(url) => url.pathname === '/api/config',
+		async (route) => {
+			if (route.request().method() === 'PUT') enregistre = route.request().postDataJSON();
+			await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+		},
+	);
+	await page.goto('/admin?onglet=ia');
+	const bloc = page.locator('details.bloc-usage', { hasText: 'Rédaction d’une description' });
+	await bloc.locator('summary').click();
+
+	await expect(bloc.getByText('Effort de raisonnement')).toBeVisible();
+	await bloc.getByText('Faible', { exact: true }).click();
+	await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+
+	await expect.poll(() => enregistre?.llm_description_effort).toBe('faible');
+	//  L'autre usage n'a rien reçu : chacun a le sien.
+	expect(enregistre!.llm_tarif_modele_effort ?? '').toBe('');
 });

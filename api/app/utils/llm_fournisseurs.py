@@ -128,6 +128,14 @@ class Fournisseur:
             ],
         }
 
+    def avec_effort(self, corps: dict[str, Any], effort: str) -> dict[str, Any]:
+        """Le corps, avec l'effort de raisonnement s'il est réglé — sinon tel quel.
+
+        OpenAI et Azure : `reasoning_effort`, au premier niveau. Un modèle qui ne
+        raisonne pas le refuse (`unsupported_parameter`) et `adapter` le retire.
+        """
+        return {**corps, "reasoning_effort": effort} if effort else corps
+
     def lire(self, reponse: dict[str, Any]) -> str:
         try:
             return reponse["choices"][0]["message"]["content"].strip()
@@ -333,6 +341,28 @@ class FournisseurAnthropic(Fournisseur):
             "messages": [{"role": "user", "content": contenu}],
         }
 
+    def avec_effort(self, corps: dict[str, Any], effort: str) -> dict[str, Any]:
+        """Chez Anthropic, l'effort vit dans `output_config` — refusé par les
+        modèles qui ne le connaissent pas (Haiku 4.5), et alors retiré."""
+        return {**corps, "output_config": {"effort": effort}} if effort else corps
+
+    #: Les paramètres FACULTATIFS du corps, et ce qui les nomme dans un refus.
+    #: Anthropic ne rend ni `param` ni `code` (`{"type": "invalid_request_error",
+    #: "message": …}`) : sans cette table, `adapter` ne se déclenchait jamais chez
+    #: lui — un Claude récent refuse `temperature`, et l'appel échouait.
+    #: ⚠️ Le message est lu pour être CLASSÉ, jamais recopié (voir `lire_erreur`).
+    FACULTATIFS: ClassVar[tuple[tuple[str, tuple[str, ...]], ...]] = (
+        ("temperature", ("temperature",)),
+        ("output_config", ("output_config", "effort")),
+    )
+
+    def lire_erreur(self, charge: dict[str, Any]) -> tuple[str, str]:
+        message = str(((charge or {}).get("error") or {}).get("message") or "").lower()
+        for param, motifs in self.FACULTATIFS:
+            if any(m in message for m in motifs):
+                return param, "unsupported_parameter"
+        return "", ""
+
     def url_modeles(self, base: str, version_api: str) -> str | None:
         return f"{base.rstrip('/')}/v1/models"
 
@@ -350,8 +380,14 @@ class FournisseurAnthropic(Fournisseur):
         ]
 
     def lire(self, reponse: dict[str, Any]) -> str:
+        #  🔴 TOUS les blocs de texte, pas le premier bloc : un Claude récent
+        #  réfléchit par défaut, et son premier bloc est alors `thinking` — sans
+        #  `text`. La réponse se lisait « illisible » sur un appel réussi.
         try:
-            return reponse["content"][0]["text"].strip()
+            textes = [b["text"] for b in reponse["content"] if b.get("type") == "text"]
+            if not textes:
+                raise KeyError("text")
+            return "".join(textes).strip()
         except (KeyError, IndexError, TypeError, AttributeError) as exc:
             raise ErreurLLM("Réponse du modèle illisible — format inattendu.") from exc
 

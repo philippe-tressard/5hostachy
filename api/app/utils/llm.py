@@ -63,7 +63,7 @@ from app.utils.llm_fournisseurs import (
     PieceJointe,
 )
 from app.utils import llm_journal
-from app.utils.llm_usages import USAGES, Usage
+from app.utils.llm_usages import USAGES, Usage, valeur_effort
 
 #: 🔴 Ce module reste **la porte d'entrée unique**, même depuis que les
 #: fournisseurs vivent à côté (11/09/2026). Les appelants — routers, synthèse de
@@ -184,6 +184,9 @@ class ConfigLLM:
     modele: str = ""
     prompt: str = ""
     max_jetons: int = 0
+    #: La valeur d'API de l'effort de raisonnement (« low »…), ou vide : rien
+    #: n'est envoyé et le modèle garde son défaut (`llm_usages.EFFORTS`).
+    effort: str = ""
 
     def verifier(self, *, exiger_actif: bool = True, exiger_modele: bool = True) -> None:
         """Lève `ErreurLLM` si l'appel ne peut pas aboutir — avant de le tenter.
@@ -273,6 +276,7 @@ def config_llm(session: Session, usage: Optional[str] = None) -> ConfigLLM:
     #  pas envoyer un modèle sans consigne — et « Rétablir » vide justement la clé.
     commun.prompt = (cfg.get(u.cle("prompt")) or "").strip() or u.prompt_defaut
     commun.max_jetons = _entier(cfg, u.cle("max_jetons"), u.max_jetons_defaut)
+    commun.effort = valeur_effort(cfg.get(u.cle("effort")))
     return commun
 
 
@@ -352,7 +356,9 @@ async def _appeler(
         #  C'est ici, et nulle part ailleurs, que le format de message du
         #  fournisseur rencontre les fichiers du métier.
         joints = tuple(f.bloc_document(j.nom, j.mime, j.donnees_b64) for j in fichiers)
-        corps = f.corps(cfg.modele, consigne, message, max_jetons, joints)
+        corps = f.avec_effort(
+            f.corps(cfg.modele, consigne, message, max_jetons, joints), cfg.effort
+        )
         #  Vrai tant qu'on n'a pas dû renoncer aux pièces jointes.
         avec_documents = bool(joints)
         async with httpx.AsyncClient(timeout=cfg.delai_s) as client:
