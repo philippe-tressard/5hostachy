@@ -81,7 +81,7 @@ const LOSANGE = {
 		occurrences: 1,
 		motif: 'la phrase « Périmètre précisé : 🔹 … » d’une entrée d’Historique',
 	},
-	'routes/(app)/tableau-de-bord/+page.svelte': {
+	'lib/components/UrgencesAccueil.svelte': {
 		occurrences: 1,
 		motif: '« 🔹 Concerne votre bâtiment » : l’urgence VISE ce bâtiment',
 	},

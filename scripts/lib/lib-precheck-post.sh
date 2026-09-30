@@ -25,13 +25,26 @@
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-parite.sh"   # memes_hachages
 
 verdict_deploye() {         # $1 = sha de origin/main, $2 = dernier sha « Déployé: » de l'actif
+                            # $3 = marqueur d'images de l'actif, $4 = conteneur API créé après lui (oui/non/"")
   #  La ligne n'est écrite qu'APRÈS un build réussi (`auto-deploy.sh`) : la voir
-  #  est la seule preuve que l'image sert le commit. Le `git log` du nœud passe au
-  #  vert avant le build (skill `mep-precheck`, piège 3).
+  #  est la preuve ordinaire que l'image sert le commit. Le `git log` du nœud
+  #  passe au vert avant le build (skill `mep-precheck`, piège 3).
   case "$(memes_hachages "$1" "$2")" in
+    oui) echo OK; return ;;
+    non) ;;
+    *)   echo INCONNU; return ;;   # journal illisible, SSH muet : rien de prouvé
+  esac
+  #  🔴 Un nœud devenu actif par la BASCULE n'écrit pas `Déployé:` (#1474) : il
+  #  a écrit `Aligné:` en standby, puis la bascule l'a démarré. Sa dernière ligne
+  #  date alors de la dernière fois qu'il était actif. La preuve de rechange :
+  #  ses images portent le commit (marqueur écrit après un build RÉUSSI), et le
+  #  conteneur en service a été créé APRÈS ce build — sinon il tournerait encore
+  #  sur les anciennes.
+  [ "$(memes_hachages "$1" "$3")" = oui ] || { echo FAIL; return; }
+  case "${4:-}" in
     oui) echo OK ;;
-    non) echo FAIL ;;      # pas encore déployé, ou build en échec
-    *)   echo INCONNU ;;   # journal illisible, SSH muet : rien de prouvé
+    non) echo FAIL ;;
+    *)   echo INCONNU ;;
   esac
 }
 
@@ -52,8 +65,13 @@ precheck_points_post() {
   attendu=$(git rev-parse origin/main 2>/dev/null)
   deploye=$(sur "$ACTIF" "grep -o 'Déployé: [0-9a-f]*' /var/log/hostachy-deploy.log 2>/dev/null | tail -1")
   deploye=${deploye#Déployé: }
-  rapporter P1 "$(verdict_deploye "$attendu" "$deploye")" "Déploiement terminé sur l'actif" \
-            "origin/main=${attendu:0:8} dernier « Déployé: »=${deploye:-absent}"
+  local marqueur recree
+  marqueur=$(sur "$ACTIF" "tr -d ' \t\r\n' < /opt/5hostachy/.images-construites 2>/dev/null")
+  #  « oui » si le conteneur API a été créé après l'écriture du marqueur, « non »
+  #  sinon, rien si l'une des deux dates manque — jamais un vert par défaut.
+  recree=$(sur "$ACTIF" 'm=$(stat -c %Y /opt/5hostachy/.images-construites 2>/dev/null); c=$(docker inspect hostachy_api --format "{{.Created}}" 2>/dev/null); c=$(date -d "$c" +%s 2>/dev/null); [ -n "$m" ] && [ -n "$c" ] && { [ "$c" -ge "$m" ] && echo oui || echo non; }')
+  rapporter P1 "$(verdict_deploye "$attendu" "$deploye" "$marqueur" "$recree")" "Déploiement terminé sur l'actif" \
+            "origin/main=${attendu:0:8} dernier « Déployé: »=${deploye:-absent} images=${marqueur:-absent} conteneur après build=${recree:-?}"
 
   version=$(git show origin/main:front/package.json 2>/dev/null | grep -m1 '"version"' | cut -d'"' -f4)
   if command -v node >/dev/null 2>&1; then
@@ -80,6 +98,14 @@ if [ "${1:-}" = "--selftest" ]; then
   #  🔴 Le cas zéro : aucune ligne `Déployé:` lue ne doit PAS rendre OK.
   t "journal illisible ou SSH muet"              INCONNU verdict_deploye 6ff171ea1ae1090e ""
   t "origin/main introuvable"                    INCONNU verdict_deploye "" 6ff171e
+  #  🔴 Le 30/09/2026 (#1474) : MEP à 01:58, bascule à 02:05. L'actif est devenu
+  #  actif par la BASCULE — sa dernière ligne `Déployé:` date de la veille, mais
+  #  ses images portent le commit et son conteneur a été créé après ce build.
+  t "actif par la bascule, images et conteneur à jour" OK  verdict_deploye 33f58335849 b6a0f63e 33f58335 oui
+  t "images à jour, conteneur antérieur au build"  FAIL    verdict_deploye 33f58335849 b6a0f63e 33f58335 non
+  t "images d'un autre commit"                     FAIL    verdict_deploye 33f58335849 b6a0f63e b6a0f63e oui
+  #  La seconde preuve illisible ne vaut ni OK ni FAIL : on n'a rien vu.
+  t "images à jour, date du conteneur illisible"   INCONNU verdict_deploye 33f58335849 b6a0f63e 33f58335 ""
   t "version servie = origin/main"               OK      verdict_version_servie 2.49.2 2.49.2
   t "une autre version servie"                   FAIL    verdict_version_servie 2.49.2 2.49.1
   #  Le 25/09/2026 : la 403 du proxy cloud. Nommée par l'extracteur (#1283),

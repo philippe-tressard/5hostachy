@@ -41,7 +41,7 @@ const EXCEPTIONS = {
 const MISES_EN_PAGE = {
 	'lib/components/OngletTelemetrie.svelte': ['height', 'barre de données, remplie une fois'],
 	'lib/components/ResultatsSondage.svelte': ['width', 'barre de résultat, remplie une fois'],
-	'routes/(app)/tableau-de-bord/+page.svelte': ['width', 'barre de progression, remplie une fois'],
+	'lib/components/UrgencesAccueil.svelte': ['width', 'barre de progression, remplie une fois'],
 	'lib/components/PasswordStrength.svelte': [
 		'grid-template-rows margin-top',
 		'la seule façon d’ouvrir une hauteur inconnue sans la mesurer',

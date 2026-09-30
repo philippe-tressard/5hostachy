@@ -76,16 +76,6 @@ const EXCEPTIONS = {
 			'Tombe quand `Modale` posera elle-même le focus initial. Était tu par un ' +
 			'`svelte-ignore` jusqu’à #1045.',
 	},
-	'src/routes/(app)/tableau-de-bord/+page.svelte::a11y_no_noninteractive_element_to_interactive_role':
-		{
-			depuis: '28/08/2026',
-			raison:
-				'la carte d’urgence est un `<fieldset>` porteur de `role="link"` — un élément non ' +
-				'interactif ne peut pas prendre un rôle interactif. Le remède n’est PAS un attribut : ' +
-				'il faut remplacer `<fieldset>`/`<legend>` par un `<div>` et une étiquette positionnée, ' +
-				'car la légende chevauche la bordure, ce que seul `<legend>` fait nativement. Le rendu ' +
-				'se REFAIT, donc se constate à l’écran (#561).',
-		},
 };
 
 /**
