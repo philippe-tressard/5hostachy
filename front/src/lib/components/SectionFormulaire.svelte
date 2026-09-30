@@ -174,9 +174,10 @@
 	//  saisie. Les sections non pliables n'entrent pas dans le groupe.
 	const accordeon = membre('sections-formulaire', () => (ouverteParLUtilisateur = false));
 	onDestroy(accordeon.liberer);
+	let section: HTMLElement;
 	function deplier() {
 		ouverteParLUtilisateur = true;
-		accordeon.prendre();
+		accordeon.prendre(section);
 	}
 	/**  Se replier est possible — tant que la valeur est celle du défaut.
 	 *
@@ -189,6 +190,7 @@
 </script>
 
 <section
+	bind:this={section}
 	class="section-formulaire"
 	class:premiere
 	class:repliee={(pliable && !ouverte) || !!inactive}

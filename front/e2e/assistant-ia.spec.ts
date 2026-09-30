@@ -88,7 +88,7 @@ test('Assistant IA : le ✨ du modèle enregistre les prix des jetons', async ({
 	);
 	expect(deborde, 'défilement horizontal dans l’onglet Assistant IA').toBe(false);
 
-	await bloc.screenshot({ path: `test-results/tarif-modele-ia-${test.info().project.name}.png` });
+	await bloc.screenshot({ path: `test-results/assistant-ia-${test.info().project.name}.png` });
 });
 
 test('Assistant IA : sans l’usage « Tarif » activé, aucune icône ✨ à côté du modèle', async ({
@@ -103,4 +103,42 @@ test('Assistant IA : sans l’usage « Tarif » activé, aucune icône ✨ à c�
 	await page.goto('/admin?onglet=ia');
 	await expect(page.locator('details.bloc-usage')).toHaveCount(USAGES.length);
 	await expect(page.locator('details.bloc-usage .ligne-choix > .btn-icon')).toHaveCount(0);
+});
+
+test('Assistant IA : ouvrir un usage plus bas montre son DÉBUT, pas sa fin', async ({ page }) => {
+	//  Signalé le 30/09/2026 : « quand tu ouvres une section, tu te trouves à la
+	//  fin de la section ouverte ». Le bloc ouvert au-dessus se replie et remonte
+	//  tout ce qui suit ; sans `amenerEnVue`, la fenêtre tombe dans le bas du
+	//  bloc qu'on vient d'ouvrir.
+	await simulerApi(page, (chemin) => {
+		if (chemin === '/api/auth/me') return ADMIN;
+		if (chemin === '/api/config/admin') return CONFIG;
+		if (chemin === '/api/config/llm-usages') return USAGES;
+		return undefined;
+	});
+	await page.goto('/admin?onglet=ia');
+	const blocs = page.locator('details.bloc-usage');
+	await expect(blocs).toHaveCount(USAGES.length);
+
+	await blocs.nth(0).locator('summary').click();
+	await expect(blocs.nth(0)).toHaveAttribute('open', '');
+	//  Descendre jusqu'au second usage, sous le premier déplié.
+	await blocs.nth(1).locator('summary').scrollIntoViewIfNeeded();
+	await blocs.nth(1).locator('summary').click();
+
+	await expect(blocs.nth(0)).not.toHaveAttribute('open', '');
+	await expect(blocs.nth(1)).toHaveAttribute('open', '');
+	//  Le titre du bloc ouvert est dans la fenêtre, sous l'en-tête fixe.
+	await expect
+		.poll(
+			async () => {
+				const haut = await blocs
+					.nth(1)
+					.locator('summary')
+					.evaluate((e) => e.getBoundingClientRect().top);
+				return haut >= 0 && haut < page.viewportSize()!.height / 2;
+			},
+			{ message: 'le haut du bloc ouvert n’est pas dans la moitié haute de la fenêtre' },
+		)
+		.toBe(true);
 });

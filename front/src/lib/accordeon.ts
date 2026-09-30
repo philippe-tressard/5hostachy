@@ -32,10 +32,34 @@
  *   (prestataires, contrats, FAQ, périmètres, annuaires) : replier abandonnerait
  *   la saisie.
  */
+import { tick } from 'svelte';
 import { writable, type Writable } from 'svelte/store';
 //  ⚠️ `import type` seulement : l'autotest charge ce module sous Node, sans
 //  l'alias `$lib` (`scripts/check-accordeon.mjs`).
 import type { EtatDepliable } from '$lib/listeDepliable';
+
+/**
+ * Ramène le HAUT d'un bloc à l'écran s'il n'y est plus.
+ *
+ * 🔴 Le complément obligé de l'accordéon (30/09/2026, signalé dans Admin › IA :
+ * « quand tu ouvres une section, tu te trouves à la fin de la section ouverte »).
+ * Replier le bloc ouvert AU-DESSUS remonte tout ce qui suit de sa hauteur : la
+ * fenêtre, restée où elle était, tombe dans le bas de celui qu'on vient d'ouvrir.
+ *
+ * « Visible » = le haut est dans la fenêtre, sous l'en-tête fixe du téléphone —
+ * la marge est celle que le CSS pose (`scroll-margin-top`, `normes.css`), pour
+ * qu'une seule valeur dise où s'arrête le défilement. Exiger que le bloc tienne
+ * en entier ferait défiler sur tout bloc long, y compris celui qu'on regarde.
+ * Écrit d'abord pour `FormulaireCreation` (10/09/2026), qui l'emploie aussi.
+ */
+export function amenerEnVue(el: Element | null | undefined): void {
+	if (!el || typeof window === 'undefined') return;
+	const r = el.getBoundingClientRect();
+	const marge = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+	if (r.top >= marge && r.top <= window.innerHeight - 80) return;
+	const doux = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+	el.scrollIntoView({ behavior: doux ? 'smooth' : 'auto', block: 'start' });
+}
 
 /** PURE. Le bloc ouvert après un clic sur `id` : lui, ou plus rien s'il l'était. */
 export function basculer<T>(ouvert: T | null, id: T): T | null {
@@ -62,8 +86,9 @@ function groupe(nom: string): Writable<object | null> {
 export type NomGroupe = 'sections-formulaire' | 'reponses' | 'annuaires';
 
 export interface Membre {
-	/** À l'ouverture de CE bloc : les autres membres se replient. */
-	prendre(): void;
+	/** À l'ouverture de CE bloc : les autres membres se replient, et `el` —
+	 *  le bloc ouvert — est ramené à l'écran une fois le rendu fait. */
+	prendre(el?: Element | null): void;
 	/** À sa destruction (`onDestroy`) : il cesse d'écouter et rend la main. */
 	liberer(): void;
 }
@@ -80,7 +105,10 @@ export function membre(nom: NomGroupe, replier: () => void): Membre {
 		if (ouvert !== null && ouvert !== moi) replier();
 	});
 	return {
-		prendre: () => g.set(moi),
+		prendre: (el) => {
+			g.set(moi);
+			if (el) tick().then(() => amenerEnVue(el));
+		},
 		liberer: () => {
 			desabonner();
 			g.update((ouvert) => (ouvert === moi ? null : ouvert));
@@ -102,9 +130,14 @@ export function unSeulDetailsOuvert(): () => void {
 	function surBascule(e: Event) {
 		const ouvert = e.target;
 		if (!(ouvert instanceof HTMLDetailsElement) || !ouvert.open) return;
+		let replie = false;
 		for (const autre of document.querySelectorAll('details[open]')) {
-			if (autre !== ouvert && !autre.contains(ouvert)) (autre as HTMLDetailsElement).open = false;
+			if (autre !== ouvert && !autre.contains(ouvert)) {
+				(autre as HTMLDetailsElement).open = false;
+				replie = true;
+			}
 		}
+		if (replie) amenerEnVue(ouvert);
 	}
 	document.addEventListener('toggle', surBascule, true);
 	return () => document.removeEventListener('toggle', surBascule, true);
