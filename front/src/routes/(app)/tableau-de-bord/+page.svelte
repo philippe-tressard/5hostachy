@@ -2,11 +2,11 @@
 	import { onMount } from 'svelte';
 	import { libelleLogement, relire } from '$lib/utils';
 	import KanbanTableauBord from '$lib/components/KanbanTableauBord.svelte';
+	import UrgencesAccueil from '$lib/components/UrgencesAccueil.svelte';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
 	import AlerteRelanceSyndic from '$lib/components/AlerteRelanceSyndic.svelte';
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
-	import { goto } from '$app/navigation';
 	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
 	import { currentUser, isAdmin, isCS, isLocataire, isProprioOuCS } from '$lib/stores/auth';
 	import {
@@ -18,7 +18,7 @@
 		type Ticket,
 	} from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { fmtDateLong, fmtTime } from '$lib/date';
+	import { fmtDateLong } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';
@@ -26,17 +26,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	// Toutes les règles du fil (apparence, liens, appartenance aux trois
 	// registres) vivent dans ce module — cf. `$lib/flux.ts`.
-	import {
-		cleFluxItem,
-		dateDeReference,
-		estEpingle,
-		estNonResolu,
-		estUrgent,
-		typeCouleur,
-		typeFond,
-		typeLibelle,
-		typeLink,
-	} from '$lib/flux';
+	import { cleFluxItem, dateDeReference, estEpingle, estNonResolu, estUrgent } from '$lib/flux';
 
 	$: _pc = getPageConfig($configStore, 'tableau-de-bord', defautsDePage('tableau-de-bord'));
 	$: _siteNom = $siteNomStore;
@@ -236,30 +226,6 @@
 	//  les filtres de l'utilisateur — la seule de la rangée à bouger avec eux,
 	//  sans que rien à l'écran ne le laisse deviner. Le nombre vient désormais du
 	//  serveur, comme ses voisines (#399).
-
-	// ── Helpers ────────────────────────────────────────────────────────────
-	function ouvrir(item: FluxItem) {
-		const lien = typeLink(item);
-		if (lien) goto(lien);
-	}
-
-	function urgencyProgress(item: FluxItem): { pct: number; label: string; active: boolean } | null {
-		const debut = item.meta?.debut as string | undefined;
-		const fin = item.meta?.fin as string | undefined;
-		if (!debut || !fin) return null;
-		const dStart = new Date(debut).getTime();
-		const dEnd = new Date(fin).getTime();
-		const now = Date.now();
-		if (now < dStart) return { pct: 0, label: 'À venir', active: false };
-		if (now > dEnd) return { pct: 100, label: 'Terminé', active: false };
-		const pct = Math.round(((now - dStart) / (dEnd - dStart)) * 100);
-		// `fmtTime` épingle Europe/Paris ; les `toLocaleTimeString` qui étaient ici
-		// n'indiquaient aucun fuseau et suivaient donc celui du navigateur — juste
-		// par coïncidence pour un résident en France, faux en déplacement.
-		const hStart = fmtTime(debut);
-		const hEnd = fmtTime(fin);
-		return { pct, label: `En cours (${hStart}–${hEnd})`, active: true };
-	}
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
@@ -362,60 +328,7 @@
 	{/if}
 	{#if urgentItems.length > 0}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.1s">
-			{#each urgentItems.slice(0, 3) as u (cleFluxItem(u))}
-				{@const progress = urgencyProgress(u)}
-				<fieldset
-					class="urgence-fieldset"
-					role="link"
-					tabindex="0"
-					on:click={() => ouvrir(u)}
-					on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && ouvrir(u)}
-				>
-					<legend class="urgence-legend"
-						>🔴 URGENCE
-						<span
-							class="flux-type-chip"
-							style="background:{typeFond(u.type)};color:{typeCouleur(u.type)}"
-						>
-							{typeLibelle(u.type)}
-						</span>
-					</legend>
-					<div class="urgence-content">
-						<div class="urgence-title-row">
-							<span class="urgence-icon">{u.icon}</span>
-							<div class="urgence-title-col">
-								<strong class="urgence-titre">{u.titre}</strong>
-								{#if u.meta?.perimetre}<span class="urgence-perimetre">— {u.meta.perimetre}</span
-									>{/if}
-							</div>
-						</div>
-						{#if u.meta?.debut && u.meta?.fin}
-							<p class="urgence-horaire">
-								Aujourd'hui {fmtTime(String(u.meta.debut))} → {fmtTime(String(u.meta.fin))}
-								{#if u.meta?.prestataire}
-									· {u.meta.prestataire}{/if}
-							</p>
-						{:else if u.detail}
-							<p class="urgence-horaire">{u.detail}</p>
-						{/if}
-						{#if u.meta?.concerne_mon_batiment}
-							<p class="urgence-concerne">🔹 Concerne votre bâtiment</p>
-						{/if}
-						{#if progress}
-							<div class="urgence-progress-wrap">
-								<div class="urgence-progress-track">
-									<div
-										class="urgence-progress-bar"
-										class:urgence-active={progress.active}
-										style="width:{progress.pct}%"
-									></div>
-								</div>
-								<span class="urgence-progress-label">{progress.label}</span>
-							</div>
-						{/if}
-					</div>
-				</fieldset>
-			{/each}
+			<UrgencesAccueil items={urgentItems.slice(0, 3)} />
 		</div>
 	{/if}
 
@@ -726,107 +639,6 @@
 		.consignes-card {
 			transform: none;
 		}
-	}
-
-	/* ═══ ALERTES URGENTES ═════════════════════════════════════════════ */
-	.urgence-fieldset {
-		border: 2px solid var(--color-danger);
-		border-radius: var(--radius);
-		padding: 1rem 1.15rem 0.9rem;
-		margin-bottom: 1rem;
-		background: var(--color-danger-fond);
-		position: relative;
-		cursor: pointer;
-		transition:
-			box-shadow var(--duree-geste),
-			background var(--duree-geste);
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.urgence-fieldset:hover {
-			/*  Un cran plus soutenu que le fond : les deux nuances de Tailwind
-			    (#fef2f2, #fee2e2) sont devenues le même jeton (#1055). */
-			background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
-			box-shadow: 0 2px 8px color-mix(in srgb, var(--color-danger) 15%, transparent);
-		}
-	}
-	.urgence-fieldset:focus-visible {
-		outline: 2px solid var(--color-danger);
-		outline-offset: 2px;
-	}
-	.urgence-legend {
-		font-size: var(--fs-2xs);
-		font-weight: 700;
-		letter-spacing: 0.06em;
-		color: var(--color-danger);
-		background: var(--color-danger-fond);
-		padding: 0 0.5rem;
-		text-transform: uppercase;
-	}
-	.urgence-content {
-		display: flex;
-		flex-direction: column;
-		gap: 0.45rem;
-	}
-	.urgence-title-row {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-	}
-	.urgence-icon {
-		font-size: 1.15rem;
-		flex-shrink: 0;
-	}
-	.urgence-title-col {
-		display: flex;
-		align-items: baseline;
-		gap: 0.35rem;
-		flex-wrap: wrap;
-	}
-	.urgence-titre {
-		font-size: var(--fs-lg);
-		color: var(--color-text);
-	}
-	.urgence-perimetre {
-		font-size: var(--fs-md);
-		color: var(--color-text-muted);
-	}
-	.urgence-horaire {
-		font-size: var(--fs-md);
-		color: var(--color-text-muted);
-		margin: 0;
-	}
-	.urgence-concerne {
-		font-size: var(--fs-md);
-		color: var(--color-primary);
-		font-weight: 500;
-		margin: 0;
-	}
-	.urgence-progress-wrap {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		margin-top: 0.15rem;
-	}
-	.urgence-progress-track {
-		flex: 1;
-		height: 6px;
-		border-radius: 3px;
-		background: var(--color-border);
-		overflow: hidden;
-	}
-	.urgence-progress-bar {
-		height: 100%;
-		border-radius: 3px;
-		background: var(--color-text-muted);
-		transition: width var(--duree-apparition) var(--ease-out);
-	}
-	.urgence-progress-bar.urgence-active {
-		background: var(--color-danger);
-	}
-	.urgence-progress-label {
-		font-size: var(--fs-xs);
-		color: var(--color-text-muted);
-		white-space: nowrap;
 	}
 
 	/* ═══ KPI CARDS ═════════════════════════════════════════════════════ */

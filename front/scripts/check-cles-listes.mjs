@@ -236,6 +236,8 @@ const FICHIERS_DU_FIL = [
 	//  Le widget kanban de l'accueil, extrait de la page le 18/09/2026 : ses
 	//  listes sont les mêmes, elles ont seulement changé de fichier.
 	'src/lib/components/KanbanTableauBord.svelte',
+	//  Les urgences de l'accueil, extraites le 30/09/2026 (#779).
+	'src/lib/components/UrgencesAccueil.svelte',
 ];
 
 /**
