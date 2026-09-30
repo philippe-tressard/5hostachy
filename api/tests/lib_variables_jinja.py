@@ -7,7 +7,8 @@ confort : il portait **deux analyses de natures différentes** —
   * celle du **gabarit** (Jinja) : ce que le template exige ;
   * celle du **point d'appel** (AST Python) : ce que l'envoi fournit.
 
-La première est ici. Elle ne connaît rien de `app/`, et se relit seule.
+La première est ici. Elle ne lit rien du code de `app/` — seulement la liste
+du gabarit, à sa source —, et se relit seule.
 
 ⚠️ Le critère est étroit à dessein : `send_email` emploie un `Undefined`
 permissif, donc un `{{ x }}` seul rend une chaîne vide et ne casse rien. Seuls
@@ -19,7 +20,7 @@ ignorer les alertes ne protège plus rien.
 from jinja2 import BaseLoader, nodes
 from jinja2.sandbox import SandboxedEnvironment
 
-from tests.test_email_templates import BASE_CTX_VARS
+from app.utils.email.variables import VARIABLES_DU_GABARIT
 
 _env_jinja = SandboxedEnvironment(loader=BaseLoader())
 
@@ -96,7 +97,7 @@ def _risquees_dans(source: str) -> set[str]:
     for n in arbre.find_all(nodes.If):
         gardees.update(x.name for x in _tous_les_noms(n.test))
 
-    return risquees - BASE_CTX_VARS - locales - gardees
+    return risquees - VARIABLES_DU_GABARIT - locales - gardees
 
 
 def _tous_les_noms(node):

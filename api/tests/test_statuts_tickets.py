@@ -34,6 +34,7 @@ from app.models.core import (
 )
 from app.routers.tickets.commun import STATUT_LABELS
 from app.schemas import TicketEvolutionCreate, TicketUpdate
+from tests.aides_sources import modules_app
 
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
@@ -225,13 +226,13 @@ def test_aucun_routeur_ne_reecrit_une_liste_detats():
         "app/routers/tickets/commun.py",
     }
     coupables = []
-    for chemin in (_API_DIR / "app" / "routers").rglob("*.py"):
-        rel = chemin.relative_to(_API_DIR).as_posix()
+    for m in modules_app("routers"):
+        rel = f"app/{m.rel}"
         if rel in autorises:
             continue
         #  Même précaution qu'au-dessus : les docstrings en DOTALL, les
         #  commentaires `#` ligne à ligne.
-        code = chemin.read_text(encoding="utf-8")
+        code = m.source
         code = re.sub(r"\"\"\".*?\"\"\"", "", code, flags=re.S)
         code = re.sub(r"#.*", "", code)
         for etats in _listes_detats(code):

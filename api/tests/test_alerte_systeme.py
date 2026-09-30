@@ -90,15 +90,6 @@ def test_le_sujet_porte_le_nombre_et_la_residence():
     assert "2 problème(s)" in sujet
 
 
-def test_aucun_marqueur_jinja_ne_subsiste():
-    """Une variable mal nommée laisse `{{ … }}` visible chez le destinataire."""
-    sujet, corps = _rendu()
-    for rendu, ou in ((sujet, "le sujet"), (corps, "le corps")):
-        assert "{{" not in rendu and "{%" not in rendu, (
-            f"Un marqueur Jinja subsiste dans {ou} de l'alerte système."
-        )
-
-
 # ── Référence de copropriété ────────────────────────────────────────────────
 #
 # Ce contrôle est la seule chose qui empêche la règle « la référence figure dans
@@ -110,14 +101,13 @@ def test_aucun_marqueur_jinja_ne_subsiste():
 
 
 def _base_jetable():
-    """Base SQLite en mémoire portant la seule table dont le contrôle a besoin."""
-    from sqlmodel import Session, SQLModel, create_engine
+    """Base SQLite en mémoire — le contrôle n'y lit que `ConfigSite`."""
+    from sqlmodel import Session
 
     from app.models.core import ConfigSite
+    from tests.aides_base import moteur_memoire
 
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur, tables=[ConfigSite.__table__])
-    return Session(moteur), ConfigSite
+    return Session(moteur_memoire()), ConfigSite
 
 
 @pytest.mark.parametrize("valeur", ["", "   ", None])

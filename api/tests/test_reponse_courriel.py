@@ -25,8 +25,12 @@ from app.utils.reponse_courriel import (
     mettre_en_forme,
     moment_de_la_suite,
 )
-from tests.test_courriel_reponse_ticket import _AUTH_OK, _entetes
-from tests.test_courriel_reponse_ticket_bout_en_bout import _evolutions, scene  # noqa: F401
+from tests.aides_courriel import (  # noqa: F401 — `scene` est une fixture
+    _AUTH_OK,
+    _entetes_reponse,
+    _evolutions,
+    scene,
+)
 
 _BOITE = pathlib.Path(__file__).resolve().parents[1] / "app" / "utils" / "courriel_boite.py"
 
@@ -113,7 +117,7 @@ def test_la_suite_est_datee_de_l_envoi_sans_assistant(scene):  # noqa: F811
     envoi = datetime(2026, 9, 25, 16, 0)
     assert traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
         _RECU,
         envoi,
         authentification=_AUTH_OK,
@@ -129,7 +133,7 @@ def test_la_suite_porte_la_mise_en_forme_et_le_texte_recu(scene, monkeypatch):  
     monkeypatch.setattr(llm, "demander", _modele("Nous intervenons jeudi 2 octobre à 9 h."))
     traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
         _RECU,
         datetime(2026, 9, 25),
         authentification=_AUTH_OK,
@@ -149,7 +153,7 @@ def test_la_suite_s_ouvre_sur_qui_a_repondu_et_quand(scene):  # noqa: F811
     session, ticket, syndic, _cs = scene
     traiter(
         session,
-        _entetes(ticket.jeton_courriel, de=syndic.email),
+        _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
         "Nous intervenons jeudi.",
         datetime(2026, 9, 25, 16, 0),
         authentification=_AUTH_OK,
@@ -173,44 +177,3 @@ def test_le_nom_affiche_du_courriel_prime_et_le_texte_recu_est_echappe():
         "<p><em>Mail reçu de Jean Martin le 25 septembre 2026 à 18:00</em></p>"
         "<p>Ligne 1<br>Ligne &lt;2&gt;</p><p>Paragraphe &amp; fin</p>"
     )
-
-
-# ── Le texte SERVI de la politique ────────────────────────────────────────────
-
-
-def test_la_migration_0223_corrige_la_politique_servie():
-    """Exécutée par Alembic sur une base en mémoire : l'ancienne phrase servie est
-    remplacée, une politique réécrite à la main n'est pas touchée."""
-    import importlib.util
-
-    from alembic.migration import MigrationContext
-    from alembic.operations import Operations
-    from sqlalchemy import create_engine, text
-
-    from app.seed.contenus_legaux import ASSISTANT_SANS_GESTE, ASSISTANT_SANS_GESTE_ANCIEN
-
-    chemin = next(
-        (pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions").glob("0223_*.py")
-    )
-    assert "ASSISTANT_SANS_GESTE" in chemin.read_text(encoding="utf-8")
-    spec = importlib.util.spec_from_file_location("mig0223", chemin)
-    mig = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mig)
-
-    for valeur, attendu in (
-        (
-            f"<p>Début. {ASSISTANT_SANS_GESTE_ANCIEN} Fin.</p>",
-            f"<p>Début. {ASSISTANT_SANS_GESTE} Fin.</p>",
-        ),
-        ("<p>Réécrite depuis l'administration.</p>", "<p>Réécrite depuis l'administration.</p>"),
-    ):
-        moteur = create_engine("sqlite://")
-        with moteur.begin() as conn:
-            conn.execute(text("CREATE TABLE config_site (cle TEXT PRIMARY KEY, valeur TEXT)"))
-            conn.execute(
-                text("INSERT INTO config_site VALUES ('politique_confidentialite', :v)"),
-                {"v": valeur},
-            )
-            with Operations.context(MigrationContext.configure(conn)):
-                mig.upgrade()
-            assert conn.execute(text("SELECT valeur FROM config_site")).scalar() == attendu

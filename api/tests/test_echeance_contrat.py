@@ -113,33 +113,9 @@ def test_une_duree_inconnue_vaut_annuelle():
     assert e.date == date(2027, 3, 15)
 
 
-def test_les_deux_sections_de_la_fiche_recoivent_LE_MEME_enrichissement():
-    """🔴 L'invariant du fichier : assurance et syndic sont LE MÊME GESTE.
-
-    `_echeance_lue` sert les deux. Le jour où quelqu'un donne un enrichissement
-    à l'une sans le donner à l'autre, ce test le dit — c'est `standards/02` §2
-    rendu exécutoire, comme le fait déjà `test_contrats_de_reference`.
-    """
-    import ast
-    import pathlib
-
-    source = pathlib.Path(__file__).parent.parent / "app" / "routers" / "copropriete.py"
-    arbre = ast.parse(source.read_text(encoding="utf-8"))
-    appels = {
-        fn.name: [
-            n.args[0].value
-            for n in ast.walk(fn)
-            if isinstance(n, ast.Call)
-            and isinstance(n.func, ast.Name)
-            and n.func.id == "_echeance_lue"
-            and n.args
-            and isinstance(n.args[0], ast.Constant)
-        ]
-        for fn in ast.walk(arbre)
-        if isinstance(fn, ast.FunctionDef) and fn.name.endswith("_du_contrat")
-    }
-    assert appels.get("assurance_du_contrat") == ["assurance"], appels
-    assert appels.get("syndic_du_contrat") == ["syndic"], appels
+#  Que l'assurance et le syndic reçoivent LE MÊME enrichissement d'échéance
+#  (`_echeance_lue`) se vérifie avec le reste de l'invariant « même geste »,
+#  dans `test_contrats_de_reference.py`.
 
 
 # ── Ce qui NE se reconduit pas : le mandat de syndic (#628) ──────────────────

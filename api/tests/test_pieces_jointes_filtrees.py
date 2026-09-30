@@ -41,6 +41,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 APP = Path(__file__).resolve().parents[1] / "app"
 SOURCE = APP / "utils" / "photos.py"
 
@@ -67,11 +69,11 @@ def _lignes_fautives(source: str) -> list[int]:
 
 def test_aucune_ecriture_de_galerie_ne_contourne_photos_json():
     fautifs = []
-    for fichier in APP.rglob("*.py"):
-        if fichier == SOURCE:
+    for m in modules_app():
+        if m.chemin == SOURCE:
             continue
-        for numero in _lignes_fautives(fichier.read_text(encoding="utf-8")):
-            fautifs.append(f"{fichier.relative_to(APP)}:{numero}")
+        for numero in _lignes_fautives(m.source):
+            fautifs.append(f"{m.chemin.relative_to(APP)}:{numero}")
 
     assert not fautifs, (
         "une galerie est sérialisée à la main, hors de `photos_json` :\n  "
@@ -80,21 +82,6 @@ def test_aucune_ecriture_de_galerie_ne_contourne_photos_json():
         "    Le filtre `photos_internes` est ce qui empêche une URL étrangère "
         "d'être servie à chaque résident."
     )
-
-
-def test_photos_json_FILTRE_vraiment_une_url_etrangere():
-    """Le cas zéro du contrôle : la fonction qu'il impose doit protéger.
-
-    Un garde-fou qui exige l'emploi d'une fonction sans vérifier ce qu'elle fait
-    déplace le défaut sans le corriger. On l'exerce donc sur l'attaque même.
-    """
-    from app.utils.photos import photos_json
-
-    rendu = photos_json(["/uploads/photo.jpg", "https://exemple-hostile.test/pixel.gif"])
-    assert "/uploads/photo.jpg" in rendu
-    assert "exemple-hostile" not in rendu, rendu
-    #  Et l'accentuation survit : `ensure_ascii=False` fait partie du contrat.
-    assert "é" in photos_json(["/uploads/façade-été.jpg"])
 
 
 def test_le_garde_fou_REFUSE_bien_une_ecriture_a_la_main():

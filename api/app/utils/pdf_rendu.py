@@ -186,8 +186,8 @@ def _rejouer(journal: list[tuple[str, int, str]]) -> None:
     et `test_documents_pdf.py` conclurait « WeasyPrint ne s'est pas plaint » sur
     un `caplog` vide — le faux vert exact que ce transfert existe pour empêcher.
 
-    Le dépôt avait déjà payé ce prix : `tests/test_releve_echec_nest_pas_vide.py`
-    le décrit, et deux garde-fous y rendaient un verdict dépendant de l'ordre des
+    Le dépôt avait déjà payé ce prix : la fixture `journal` de
+    `tests/aides_courriel.py` le décrit, et deux garde-fous y rendaient un verdict dépendant de l'ordre des
     tests. Ne pas relire ce qu'un voisin a appris, c'est refaire son défaut.
 
     On lève donc l'extinction le temps d'émettre, puis on la restaure : l'état du

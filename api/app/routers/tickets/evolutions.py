@@ -35,7 +35,13 @@ from app.utils.fichiers import chemins_locaux
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_internes, photos_json
 from app.utils.recuperer import ou_404
-from app.utils.visibility import reservee_au_conseil, ticket_visible, trace_droits
+from app.utils.visibility import (
+    destinataires_par_defaut,
+    reservee_au_conseil,
+    ticket_visible,
+    trace_droits,
+    trace_lecture_par_defaut,
+)
 from app.utils.prochaine_visite import apres_cloture
 
 from .commun import (
@@ -337,7 +343,12 @@ def add_evolution(
         appliquer_acces(ticket, session)
 
     if body.type == "etat":
+        lue_avant = destinataires_par_defaut(ticket)
         ticket.statut = body.nouveau_statut
+        #  🔒 Une Étude & travaux qui passe en AG s'ouvre aux copropriétaires
+        #  (standard du 30/09/2026) : tout le fil avec elle, et la Suite le dit.
+        if ouverture := trace_lecture_par_defaut(ticket, lue_avant):
+            evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(ouverture)}</em></p>"
         #  `("résolu", "fermé")` ici contre `(résolu, annulé, fermé)` dans le
         #  PATCH : les deux chemins ne dataient pas la même clôture, et annuler
         #  un ticket depuis le fil ne posait aucun `ferme_le`. Une seule liste,

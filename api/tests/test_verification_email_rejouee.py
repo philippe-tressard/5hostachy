@@ -29,22 +29,15 @@ from sqlmodel import Session, SQLModel, select
 
 from app.auth.empreinte_jeton import empreinte
 from app.database import engine
-from app.models.core import EmailVerificationToken, Utilisateur
+from app.models.core import EmailVerificationToken
 from app.routers.auth import verify_email
 from app.utils import horloge
+from tests.aides_base import compte
 from tests.conftest import requete_de_test
 
 
 def _compte_et_lien(session, *, expire_dans=timedelta(hours=24)):
-    user = Utilisateur(
-        email=f"rejeu-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="Test",
-        nom="Rejeu",
-    )
-    session.add(user)
-    session.commit()
-    session.refresh(user)
+    user = compte(session, prefixe="rejeu", prenom="Test", nom="Rejeu", actif=False)
     brut = uuid.uuid4().hex
     session.add(
         EmailVerificationToken(

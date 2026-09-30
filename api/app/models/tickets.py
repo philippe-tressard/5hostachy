@@ -86,6 +86,14 @@ class StatutTicket(str, Enum):
 #: elles avaient divergé (`annulé` manquait à deux d'entre elles).
 STATUTS_TICKET_CLOS: tuple[str, ...] = (StatutTicket.résolu.value, StatutTicket.annulé.value)
 
+#: Les états où une Étude & travaux sans choix du conseil sort du conseil pour
+#: tous les copropriétaires (standard du 30/09/2026, `visibility/defauts_affaire`) :
+#: à l'AG, où ils la votent, chez le prestataire, et close. Miroir à l'écran :
+#: `STATUTS_ETUDE_OUVERTE` (`$lib/tickets`).
+STATUTS_ETUDE_OUVERTE: frozenset[str] = frozenset(
+    {StatutTicket.en_ag.value, StatutTicket.chez_prestataire.value, *STATUTS_TICKET_CLOS}
+)
+
 #: Le complément : un ticket qui demande encore du suivi. Écrit `("ouvert",
 #: "en_cours")` à la main dans deux modules de `flux/`, où il aurait fallu penser
 #: à l'ajouter le jour où un cinquième état serait apparu.

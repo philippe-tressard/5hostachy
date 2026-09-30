@@ -89,14 +89,6 @@ def test_un_ANCETRE_du_demande_passe():
     assert couvre(["bat:3"], "bat:3:toit") is True
 
 
-def test_une_PORTEE_GLOBALE_passe_partout():
-    """🔴 Le défaut du 10/09/2026 : un contrat de nettoyage qui couvre toute la
-    résidence entretient AUSSI le parking. L'exclure d'un filtre « Parking »
-    vidait le carnet."""
-    assert couvre(["résidence"], "parking") is True
-    assert couvre(["résidence"], "bat:3") is True
-
-
 def test_une_portee_ETROITE_ne_passe_PAS():
     """🔴 Le sens qui doit rester fermé.
 
@@ -155,7 +147,11 @@ def test_ce_qui_est_MARQUE_aful_entre_toujours_dans_le_filtre_aful():
 
 def test_la_regle_ne_deborde_PAS_sur_les_autres_filtres():
     """La portée globale continue de couvrir tout le reste : c'est elle qui fait
-    qu'un contrat de nettoyage de la résidence apparaît sous « Parking »."""
+    qu'un contrat de nettoyage de la résidence apparaît sous « Parking ».
+
+    🔴 Le défaut du 10/09/2026 : un contrat qui couvre toute la résidence
+    entretient AUSSI le parking. L'exclure d'un filtre « Parking » vidait le
+    carnet."""
     assert couvre(["résidence"], "parking") is True
     assert couvre(["résidence"], "bat:3") is True
     assert couvre(["résidence"], "caves") is True

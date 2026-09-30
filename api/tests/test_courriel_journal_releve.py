@@ -29,9 +29,9 @@ from app.utils.courriel_boite import traiter
 from app.utils.courriel_entrant import nouveau_jeton
 from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, RELANCE
 from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
+from tests.aides_base import moteur_memoire
+from tests.aides_courriel import _AUTH_OK, _entetes_reponse, scene  # noqa: F401 — fixture
 from tests.purge_test import purger_ligne
-from tests.test_courriel_reponse_ticket import _AUTH_OK, _entetes
-from tests.test_courriel_reponse_ticket_bout_en_bout import scene  # noqa: F401 — fixture
 
 _RECU = datetime(2026, 9, 3)
 
@@ -57,20 +57,22 @@ def test_chacun_des_QUATRE_verdicts_laisse_sa_ligne(scene):  # noqa: F811
         rendus = [
             traiter(
                 session,
-                _entetes(ticket.jeton_courriel, de=syndic.email),
+                _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
                 "Jeudi.",
                 _RECU,
                 authentification=_AUTH_OK,
             ),
             traiter(
                 session,
-                _entetes(relance.jeton, de=syndic.email),
+                _entetes_reponse(relance.jeton, de=syndic.email),
                 "Pour le lot : jeudi.",
                 _RECU,
                 authentification=_AUTH_OK,
             ),
             #  Non authentifié : refusé.
-            traiter(session, _entetes(ticket.jeton_courriel, de=syndic.email), "Fermez.", _RECU),
+            traiter(
+                session, _entetes_reponse(ticket.jeton_courriel, de=syndic.email), "Fermez.", _RECU
+            ),
             #  Ni jeton, ni référence, ni numéro : ignoré.
             traiter(
                 session,
@@ -107,7 +109,7 @@ def test_les_IGNORE_disent_POURQUOI_et_pas_tous_la_meme_chose(scene):  # noqa: F
         )
         inconnu = traiter(
             session,
-            _entetes(nouveau_jeton(), de=syndic.email),
+            _entetes_reponse(nouveau_jeton(), de=syndic.email),
             "…",
             _RECU,
             authentification=_AUTH_OK,
@@ -117,7 +119,7 @@ def test_les_IGNORE_disent_POURQUOI_et_pas_tous_la_meme_chose(scene):  # noqa: F
         session.commit()
         close = traiter(
             session,
-            _entetes(ticket.jeton_courriel, de=syndic.email),
+            _entetes_reponse(ticket.jeton_courriel, de=syndic.email),
             "Merci.",
             _RECU,
             authentification=_AUTH_OK,
@@ -181,17 +183,12 @@ def test_le_journal_se_PURGE_a_duree_bornee():
 
 def test_l_administration_lit_le_journal_le_plus_recent_d_abord():
     from fastapi.testclient import TestClient
-    from sqlalchemy.pool import StaticPool
-    from sqlmodel import SQLModel, create_engine
 
     from app.auth.deps import require_admin
     from app.database import get_session
     from app.main import app
 
-    moteur = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(moteur)
+    moteur = moteur_memoire(partage=True)
     maintenant = horloge.maintenant()
     with Session(moteur) as session:
         for age, decision in ((2, ACCEPTE), (1, IGNORE)):

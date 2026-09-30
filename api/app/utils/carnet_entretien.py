@@ -33,6 +33,17 @@ la date existe en base, aucun écran ne la compare à aujourd'hui.
 elle veut dire quelque chose. Un contrôle réglementaire non fait depuis deux ans
 ne se voit dans aucune liste triée par date de création.
 
+## 🔴 Ce qu'un lecteur y voit : ce que les affaires lui montrent
+
+Standard du 30/09/2026, arbitré par l'utilisateur : **Carnet = Affaires =
+Kanban**. Une affaire n'entre au carnet d'un lecteur que s'il peut la LIRE
+(`ticket_visible`, la règle de la liste et de la fiche) ; sinon elle en
+disparaît — pas de ligne neutre. Le carnet montrait jusque-là à tout
+copropriétaire le titre, le numéro et le lien de toute affaire résolue du bâti,
+confidentielle ou adressée au seul conseil comprise, et la fiche refusait
+ensuite de s'ouvrir. Les contrats, eux, ne sont pas des affaires : le droit du
+carnet (`require_proprietaire`) les couvre.
+
 ## Ce qui n'est PAS ici
 
 Les montants. Ils vivent dans les documents et les devis, et les faire remonter
@@ -48,12 +59,13 @@ from typing import Optional
 
 from sqlmodel import Session, select
 
-from app.models.core import Ticket
+from app.models.core import Ticket, Utilisateur
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.models.tickets import CategorieTicket, StatutTicket
 from app.utils.liens import lien_element, lien_ticket
 from app.utils.perimetres import couvre, parse_json_perimetres
 from app.utils.valeurs import valeur
+from app.utils.visibility import ticket_visible
 
 #: Les catégories de ticket qui parlent du **bâti**. Les autres — une question,
 #: un signalement de bug, une nuisance de voisinage, une demande d'accès — sont
@@ -242,7 +254,9 @@ def cadre_intervention(contrat: Optional[ContratEntretien], avec_prestataire: bo
     return "hors contrat" if avec_prestataire else ""
 
 
-def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
+def _entrees_interventions(
+    session: Session, perimetre: Optional[str], lecteur: Utilisateur
+) -> list[EntreeCarnet]:
     """Ce qui a été FAIT — une affaire Entretien résolue, avec son intervenant.
 
     Elle lisait les événements « Terminé » du calendrier jusqu'au 23/09/2026 :
@@ -255,6 +269,8 @@ def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[E
     )
     entrees: list[EntreeCarnet] = []
     for ticket in session.exec(requete).all():
+        if not ticket_visible(ticket, lecteur):
+            continue
         quand = _jour(ticket.debut) or _jour(ticket.ferme_le)
         if quand is None:
             continue
@@ -283,7 +299,9 @@ def _entrees_interventions(session: Session, perimetre: Optional[str]) -> list[E
     return entrees
 
 
-def _entrees_affaires(session: Session, perimetre: Optional[str]) -> list[EntreeCarnet]:
+def _entrees_affaires(
+    session: Session, perimetre: Optional[str], lecteur: Utilisateur
+) -> list[EntreeCarnet]:
     """Un incident résolu sur le bâti — ce que le carnet appelle un sinistre.
 
     L'équipement posé par le conseil (#1097) le RANGE ; son absence ne
@@ -306,6 +324,8 @@ def _entrees_affaires(session: Session, perimetre: Optional[str]) -> list[Entree
             continue
         if not couvre(_codes_de(ticket.perimetre_cible), perimetre):
             continue
+        if not ticket_visible(ticket, lecteur):
+            continue
         quand = _jour(ticket.ferme_le)
         if quand is None:
             continue
@@ -326,8 +346,14 @@ def _entrees_affaires(session: Session, perimetre: Optional[str]) -> list[Entree
     return entrees
 
 
-def construire_carnet(session: Session, *, perimetre: Optional[str] = None) -> list[dict]:
-    """Le carnet complet, du fait le plus récent au plus ancien.
+def construire_carnet(
+    session: Session, *, lecteur: Utilisateur, perimetre: Optional[str] = None
+) -> list[dict]:
+    """Le carnet de CE lecteur, du fait le plus récent au plus ancien.
+
+    `lecteur` est obligatoire, et sans valeur par défaut : un carnet construit
+    « pour personne » serait celui de tout le monde — le défaut qu'il a porté
+    jusqu'au 30/09/2026.
 
     ⚠️ Le tri est **décroissant sur la date du fait**, pas sur la date de saisie :
     un contrat signé en 2019 et enregistré hier appartient à 2019. C'est la
@@ -336,8 +362,8 @@ def construire_carnet(session: Session, *, perimetre: Optional[str] = None) -> l
     """
     entrees = (
         _entrees_contrats(session, perimetre)
-        + _entrees_interventions(session, perimetre)
-        + _entrees_affaires(session, perimetre)
+        + _entrees_interventions(session, perimetre, lecteur)
+        + _entrees_affaires(session, perimetre, lecteur)
     )
     entrees.sort(key=lambda e: e.date_fait, reverse=True)
     return [entree.en_dict() for entree in entrees]

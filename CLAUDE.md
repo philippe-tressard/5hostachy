@@ -477,12 +477,18 @@ importe les gestes du transport.
 
 Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
 - **`test_email_templates.py`** — verrouille les variables Jinja2 de chaque template
-  (`EXPECTED_VARS`). Complète le **point 9** (réactif) côté template.
+  (`EXPECTED_VARS`, déclaré dans `tests/contrats_email.py`). Complète le **point 9** (réactif) côté template.
   ⚠️ Si tu modifies les variables d'un template (`seed.EMAIL_TEMPLATES`), **mets à jour
   `EXPECTED_VARS`** ET vérifie que le `send_email(code=...)` correspondant fournit ces
   variables — sinon échec silencieux à l'envoi (cf. bug `'destinataire' is undefined`).
 - **`test_migrations.py`** — chaîne Alembic : head unique, base unique, révisions uniques
   (attrape un `down_revision` erroné qui bloquerait `alembic upgrade head` au démarrage).
+- **Le code de test ne se recopie pas non plus** (#1495) : la liste des aides et
+  de ce qu'elles remplacent se lit dans `MOTIFS` de
+  🔒 `test_aides_de_tests_source_unique.py` — balayage de `app/`, base en mémoire
+  (la fixture `session` vient du conftest), comptes, migrations, horloge, scripts
+  shell. Une aide partagée vit dans un `tests/aides_*.py`, **jamais** dans un
+  fichier de tests qu'un autre importerait. Il y en avait 162 copies.
 - Lancer en local (deps requises) : `cd api && pytest tests/ -q`.
 
 ### Scripts d'infra — job CI `test-scripts` (depuis le 30/07/2026)

@@ -3,36 +3,30 @@
 `test_porteurs_acces.py` a dépassé 500 lignes au troisième lot (23/09/2026) :
 découpé en deux — la RÈGLE (qui porte, le rattachement) et les GESTES (bail,
 commande, parc, suppression) —, les aides vivent ici plutôt que d'être
-recopiées dans chacun. `session` est une fixture : un fichier de tests
-l'IMPORTE pour que pytest la trouve.
+recopiées dans chacun. La base vient de la fixture `session` du conftest, et
+le compte de `aides_base.compte` (#1495).
 """
 
 from __future__ import annotations
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.copropriete import Lot
 from app.models.core import LotImport, StatutAcces, StatutImport, UserLot, Utilisateur
 from app.utils.types_acces import TELECOMMANDE, VIGIK
+from tests.aides_base import compte
 
 TYPES = [pytest.param(TELECOMMANDE, id="telecommande"), pytest.param(VIGIK, id="vigik")]
 
 
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
-
-
 def _compte(session, nom: str) -> Utilisateur:
-    u = Utilisateur(email=f"{nom.lower()}@exemple.fr", hashed_password="x", prenom="P", nom=nom)
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
+    """Un compte NON activé, nommé : c'est ce que ces cas éprouvent.
+
+    Les porteurs se lisent au lot, pas à l'activation du compte — un compte
+    actif par défaut ôterait leur sens aux cas qui le disent (« aucun compte
+    n'est activé ici »).
+    """
+    return compte(session, prefixe=nom.lower(), nom=nom, actif=False)
 
 
 def _lot(session, type_acces, numero="12", batiment_id=None) -> Lot:

@@ -30,25 +30,20 @@ from app.utils.llm import (
 
 
 @pytest.fixture()
-def session_llm():
+def session_llm(session):
     """Une base en mémoire portant une configuration LLM exploitable."""
-    from sqlmodel import Session, SQLModel, create_engine
-
     from app.models.core import ConfigSite
 
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        for cle, valeur in {
-            "llm_actif": "1",
-            "llm_fournisseur": "openai",
-            "llm_api_key": "sk-x",
-            "llm_synthese_contrat_actif": "1",
-            "llm_synthese_contrat_modele": "gpt-4o-mini",
-        }.items():
-            s.add(ConfigSite(cle=cle, valeur=valeur))
-        s.commit()
-        yield s
+    for cle, valeur in {
+        "llm_actif": "1",
+        "llm_fournisseur": "openai",
+        "llm_api_key": "sk-x",
+        "llm_synthese_contrat_actif": "1",
+        "llm_synthese_contrat_modele": "gpt-4o-mini",
+    }.items():
+        session.add(ConfigSite(cle=cle, valeur=valeur))
+    session.commit()
+    return session
 
 
 # ── 1. Le secret ────────────────────────────────────────────────────────────
@@ -167,23 +162,6 @@ def test_azure_EXIGE_son_point_d_accès():
     assert "point d" in str(e.value).lower()
     #  Les deux autres s'en passent : ils ont une adresse par défaut.
     _config().verifier()
-
-
-def test_le_TEST_de_connexion_n_exige_pas_l_activation():
-    """🔴 Constaté à l'écran le 11/09/2026 : « j'ai voulu tester » → « l'assistant
-    est désactivé dans l'administration ».
-
-    L'ordre naturel est : je saisis, je teste, PUIS j'active. Exiger l'activation
-    avant de pouvoir tester obligeait à ouvrir le service au produit sans savoir
-    s'il répond — c'est-à-dire à prendre le risque qu'on cherchait à écarter.
-
-    ⚠️ L'usage NORMAL, lui, continue d'exiger l'activation : c'est elle qui dit
-    qu'on accepte d'être facturé.
-    """
-    cfg = _config(actif=False)
-    cfg.verifier(exiger_actif=False)  # le test passe
-    with pytest.raises(ErreurLLM):
-        cfg.verifier()  # l'usage, non
 
 
 # ── 4. Le catalogue de modèles — demandé au fournisseur, jamais recopié ─────

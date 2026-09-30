@@ -38,8 +38,7 @@ import pathlib
 import pytest
 
 from app.auth.jwt import create_access_token, decode_token, empreinte_secret, hash_password
-
-_API = pathlib.Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
 
 
 def test_le_jeton_porte_l_empreinte():
@@ -77,11 +76,10 @@ def test_la_meme_entree_donne_la_meme_empreinte():
 def _appels(nom: str) -> list[pathlib.Path]:
     """Les fichiers qui appellent `nom`, hors du module qui le définit."""
     trouves = []
-    for fichier in _API.rglob("*.py"):
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
-        for noeud in ast.walk(arbre):
+    for module in modules_app():
+        for noeud in ast.walk(module.arbre):
             if isinstance(noeud, ast.Call) and getattr(noeud.func, "id", None) == nom:
-                trouves.append(fichier)
+                trouves.append(module.chemin)
                 break
     return trouves
 
@@ -101,16 +99,6 @@ def test_une_seule_porte_emet_un_jeton_d_acces():
     )
 
 
-@pytest.mark.parametrize("fichier", ["auth/deps.py"])
-def test_la_verification_lit_l_empreinte(fichier):
-    """Le contrôle ne vaut que s'il est branché : `_get_current_user` doit
-    comparer l'empreinte du jeton à celle du compte qu'il vient de charger."""
-    source = (_API / fichier).read_text(encoding="utf-8")
-    assert "empreinte_secret" in source, (
-        f"{fichier} ne compare aucune empreinte — le jeton reste irrévocable."
-    )
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  LE COMPORTEMENT, et non sa structure
 # ══════════════════════════════════════════════════════════════════════════════
@@ -118,7 +106,9 @@ def test_la_verification_lit_l_empreinte(fichier):
 #  🔴 Les tests ci-dessus lisent le code ; celui-ci exerce la dépendance
 #  réelle. Sans lui, une empreinte posée et jamais comparée passerait tous les
 #  contrôles précédents — c'est la différence entre « le contrôle existe » et
-#  « le contrôle mord » (`standards/04`).
+#  « le contrôle mord » (`standards/04`). C'est aussi lui qui prouve que
+#  `auth/deps.py` compare l'empreinte : y chercher la chaîne `empreinte_secret`
+#  ne le prouvait pas (un import inutilisé suffisait).
 
 
 class _SessionFactice:

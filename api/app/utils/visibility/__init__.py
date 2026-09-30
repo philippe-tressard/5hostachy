@@ -51,12 +51,13 @@ from .objets import (
     ticket_visible,
 )
 from .documents import document_visible
-from .trace_droits import trace_droits
+from .trace_droits import trace_droits, trace_lecture_par_defaut
 from .defauts_affaire import (
     CONCERNE,
     DEFAUT_INCONNU,
     DEFAUT_PAR_CATEGORIE,
     destinataires_par_defaut,
+    lus_dans_toute_la_residence,
 )
 
 #  ⚠️ Cette liste ne se tient pas à la main : `test_visibilite_surface.py` la
@@ -86,8 +87,10 @@ __all__ = [
     "DEFAUT_INCONNU",
     "DEFAUT_PAR_CATEGORIE",
     "destinataires_par_defaut",
+    "lus_dans_toute_la_residence",
     "reservee_au_conseil",
     "hors_du_hall",
     "document_visible",
     "trace_droits",
+    "trace_lecture_par_defaut",
 ]

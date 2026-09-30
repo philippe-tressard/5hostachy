@@ -40,11 +40,9 @@ et un contrôle qui crie sur du légitime finit désarmé.
 from __future__ import annotations
 
 import ast
-from pathlib import Path
 
 import app.schemas as schemas
-
-RACINE = Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
 
 
 def _schemas_connus() -> dict[str, set[str]]:
@@ -60,9 +58,8 @@ def _schemas_connus() -> dict[str, set[str]]:
 
 def _appels_fautifs(connus: dict[str, set[str]]) -> list[str]:
     fautifs = []
-    for fichier in RACINE.rglob("*.py"):
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
-        for noeud in ast.walk(arbre):
+    for m in modules_app():
+        for noeud in ast.walk(m.arbre):
             if not isinstance(noeud, ast.Call) or not isinstance(noeud.func, ast.Name):
                 continue
             champs = connus.get(noeud.func.id)
@@ -75,7 +72,7 @@ def _appels_fautifs(connus: dict[str, set[str]]) -> list[str]:
                     continue
                 if kw.arg not in champs:
                     fautifs.append(
-                        f"{fichier.relative_to(RACINE)}:{noeud.lineno} — "
+                        f"{m.rel}:{noeud.lineno} — "
                         f"{noeud.func.id}({kw.arg}=…) : ce champ n'existe pas dans le schéma"
                     )
     return fautifs

@@ -26,9 +26,8 @@ on regarde s'ils portent l'argument qui déclenche la préférence.
 from __future__ import annotations
 
 import ast
-from pathlib import Path
 
-APP = Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
 
 #: Les codes dont la remise conditionne l'ACCÈS au compte. Un e-mail que
 #: l'utilisateur ne peut pas remplacer par un autre chemin.
@@ -49,14 +48,13 @@ def _appels_avec_code(arbre: ast.AST):
 def test_aucun_envoi_transactionnel_ne_passe_de_destinataire_id():
     fautes = []
     vus = set()
-    for f in APP.rglob("*.py"):
-        arbre = ast.parse(f.read_text(encoding="utf-8"))
-        for code, mots in _appels_avec_code(arbre):
+    for m in modules_app():
+        for code, mots in _appels_avec_code(m.arbre):
             if code not in TRANSACTIONNELS:
                 continue
             vus.add(code)
             if "destinataire_id" in mots:
-                fautes.append(f"{f.relative_to(APP)} — code={code!r}")
+                fautes.append(f"{m.rel} — code={code!r}")
 
     assert not fautes, (
         "Envoi transactionnel soumis aux préférences du destinataire :\n  "

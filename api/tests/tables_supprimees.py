@@ -11,10 +11,7 @@ migrations de suppression. Une suppression future s'ajoute à `MIGRATIONS`.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
-_VERSIONS = Path(__file__).resolve().parents[1] / "alembic" / "versions"
+from tests.aides_migrations import charger_migration
 
 #: Les migrations qui suppriment des tables, et leur constante `TABLES`.
 MIGRATIONS = ("0238_*.py",)  # `publication`, `publication_evolution` (#1177)
@@ -23,9 +20,5 @@ MIGRATIONS = ("0238_*.py",)  # `publication`, `publication_evolution` (#1177)
 def tables_supprimees() -> set[str]:
     tables: set[str] = set()
     for motif in MIGRATIONS:
-        chemin = next(_VERSIONS.glob(motif))
-        spec = importlib.util.spec_from_file_location(chemin.stem, chemin)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        tables |= set(module.TABLES)
+        tables |= set(charger_migration(motif).TABLES)
     return tables

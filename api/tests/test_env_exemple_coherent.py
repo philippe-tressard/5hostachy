@@ -49,6 +49,9 @@ couvrir (`standards/05` §2).
 import re
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+from tests.conftest import scripts_shell_versionnes
+
 RACINE = Path(__file__).resolve().parents[2]
 EXEMPLE = RACINE / ".env.example"
 COMPOSE_TXT = (RACINE / "docker-compose.yml").read_text(encoding="utf-8")
@@ -90,10 +93,7 @@ def _champs_de_settings() -> set[str]:
 
 
 def _sources_python() -> str:
-    return " ".join(
-        p.read_text(encoding="utf-8", errors="ignore")
-        for p in (RACINE / "api" / "app").rglob("*.py")
-    )
+    return " ".join(m.source for m in modules_app())
 
 
 def test_les_variables_obligatoires_de_compose_sont_dans_le_gabarit():
@@ -166,11 +166,7 @@ def test_tout_champ_de_settings_est_lu_par_le_code():
     exploitant qui réglait la fréquence des sauvegardes croyait la changer — la
     sauvegarde tourne chaque jour, à l'heure de la configuration du site.
     """
-    sources = " ".join(
-        p.read_text(encoding="utf-8", errors="ignore")
-        for p in (RACINE / "api" / "app").rglob("*.py")
-        if p.name != "config.py"
-    )
+    sources = " ".join(m.source for m in modules_app() if m.chemin.name != "config.py")
     jamais_lus = sorted(c for c in _champs_de_settings() if not re.search(rf"\.{c}\b", sources))
     assert not jamais_lus, (
         f"`Settings` déclare {jamais_lus}, qu'aucune ligne de api/app/ ne lit : "
@@ -239,7 +235,7 @@ def test_les_reglages_de_role_ne_s_ecrivent_qu_une_fois():
     """
     module = "lib-env-role.sh"
     fautes = []
-    for script in sorted((RACINE / "scripts").rglob("*.sh")):
+    for script in scripts_shell_versionnes():
         if script.name == module:
             continue
         for numero, ligne in enumerate(
@@ -298,7 +294,7 @@ def test_aucun_script_ne_regenere_env_ni_caddyfile():
     """
     fautes = []
     restants = dict(AJUSTEMENTS_DECLARES)
-    for script in sorted((RACINE / "scripts").rglob("*.sh")):
+    for script in scripts_shell_versionnes():
         for numero, ligne in enumerate(
             script.read_text(encoding="utf-8", errors="ignore").splitlines(), 1
         ):

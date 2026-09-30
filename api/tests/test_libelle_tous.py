@@ -18,8 +18,9 @@ import ast
 import pathlib
 import re
 
+from tests.aides_sources import modules_app
+
 _RACINE = pathlib.Path(__file__).resolve().parents[2]
-_API = _RACINE / "api" / "app"
 _FRONT = _RACINE / "front" / "src"
 MOTIF = re.compile(r"tous\s+les\s+résidents", re.IGNORECASE)
 
@@ -88,11 +89,11 @@ def test_le_controle_voit_les_formes_d_avant():
 def test_aucun_texte_servi_ne_dit_tous_les_residents():
     fautes = []
     servies = set()
-    for f in _API.rglob("*.py"):
-        source = f.read_text(encoding="utf-8")
+    for m in modules_app():
+        source = m.source
         servies |= {e for e in EXCEPTIONS if re.search(rf"^{e}\s*=", source, re.M)}
         for ligne in fautes_python(source):
-            fautes.append(f"{f.relative_to(_RACINE)}:{ligne}")
+            fautes.append(f"{m.chemin.relative_to(_RACINE)}:{ligne}")
     for f in _FRONT.rglob("*.svelte"):
         if fautes_svelte(f.read_text(encoding="utf-8")):
             fautes.append(str(f.relative_to(_RACINE)))

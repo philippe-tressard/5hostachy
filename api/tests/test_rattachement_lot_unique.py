@@ -36,8 +36,10 @@ import pytest
 from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
-from app.models.core import Batiment, Copropriete, Lot, UserLot, Utilisateur
+from app.models.core import Batiment, Copropriete, Lot, UserLot
 from app.utils.auto_match_service import rattacher_lot_unique
+from tests.aides_base import compte
+from tests.aides_sources import modules_app
 
 _APP = Path(__file__).resolve().parents[1] / "app"
 
@@ -74,15 +76,7 @@ def scene():
         lots = [Lot(batiment_id=bat.id, numero=f"L{i}") for i in (1, 2)]
         for lot in lots:
             session.add(lot)
-        user = Utilisateur(
-            email=f"p-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="P",
-            nom="T",
-            roles_json="propriétaire",
-            actif=True,
-        )
-        session.add(user)
+        user = compte(session, prefixe="p", prenom="P", nom="T", roles_json="propriétaire")
         session.commit()
         for o in (*lots, user, bat, copro):
             session.refresh(o)
@@ -161,13 +155,11 @@ def test_aucune_CINQUIEME_copie_de_la_regle():
     côté : ils éprouvent la fonction, pas son unicité.
     """
     fautifs = []
-    for f in _APP.rglob("*.py"):
-        if "__pycache__" in f.parts:
-            continue
-        court = f.relative_to(_APP).as_posix()
+    for m in modules_app():
+        court = m.rel
         if court == _SOURCE:
             continue
-        if _COPIE.search(f.read_text(encoding="utf-8", errors="replace")):
+        if _COPIE.search(m.source):
             fautifs.append(court)
     assert not fautifs, (
         "la règle des lots d'un utilisateur est réécrite hors de sa source :\n  "

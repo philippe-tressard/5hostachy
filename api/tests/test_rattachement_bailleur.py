@@ -11,28 +11,9 @@ from datetime import date
 from sqlmodel import select
 
 from app.models.copropriete import TypeLot
-from app.models.core import LocationBail, Lot, StatutUtilisateur, TypeLien, UserLot, Utilisateur
+from app.models.core import LocationBail, Lot, StatutUtilisateur, TypeLien, UserLot
 from app.utils.rattachement_bailleur import rattacher_au_bailleur
-from tests.aides_badges import session  # noqa: F401 — `session` est une fixture
-
-_N = [0]
-
-
-def _user(session, nom, statut, **champs):
-    _N[0] += 1
-    u = Utilisateur(
-        email=f"r{_N[0]}-{nom.lower()}@exemple.fr",
-        hashed_password="x",
-        prenom="P",
-        nom=nom,
-        statut=statut,
-        actif=True,
-        **champs,
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
+from tests.aides_base import compte
 
 
 def _logement(session, proprio, numero="12", type_=TypeLot.appartement):
@@ -46,7 +27,9 @@ def _logement(session, proprio, numero="12", type_=TypeLot.appartement):
 
 
 def _locataire(session, nom_proprietaire="Durandal"):
-    return _user(session, "Loc", StatutUtilisateur.locataire, nom_proprietaire=nom_proprietaire)
+    return compte(
+        session, nom="Loc", statut=StatutUtilisateur.locataire, nom_proprietaire=nom_proprietaire
+    )
 
 
 def _liens(session, user):
@@ -54,7 +37,7 @@ def _liens(session, user):
 
 
 def test_le_locataire_est_rattache_au_logement_de_son_bailleur(session):
-    b = _user(session, "DURANDAL", StatutUtilisateur.copropriétaire_bailleur)
+    b = compte(session, nom="DURANDAL", statut=StatutUtilisateur.copropriétaire_bailleur)
     lot = _logement(session, b)
     _logement(session, b, numero="C3", type_=TypeLot.cave)  # une cave ne compte pas
     loc = _locataire(session)
@@ -66,7 +49,7 @@ def test_le_locataire_est_rattache_au_logement_de_son_bailleur(session):
 
 
 def test_un_bail_libre_passe_avant_le_logement(session):
-    b = _user(session, "DURANDAL", StatutUtilisateur.copropriétaire_bailleur)
+    b = compte(session, nom="DURANDAL", statut=StatutUtilisateur.copropriétaire_bailleur)
     lot = _logement(session, b)
     bail = LocationBail(lot_id=lot.id, bailleur_id=b.id, date_entree=date(2026, 9, 1))
     session.add(bail)
@@ -80,22 +63,25 @@ def test_un_bail_libre_passe_avant_le_logement(session):
 
 def test_deux_bailleurs_homonymes_et_rien_n_est_fait(session):
     for _ in range(2):
-        _logement(session, _user(session, "DURANDAL", StatutUtilisateur.copropriétaire_bailleur))
+        _logement(
+            session,
+            compte(session, nom="DURANDAL", statut=StatutUtilisateur.copropriétaire_bailleur),
+        )
     assert rattacher_au_bailleur(_locataire(session), session) == 0
 
 
 def test_deux_logements_et_rien_n_est_fait(session):
-    b = _user(session, "DURANDAL", StatutUtilisateur.copropriétaire_bailleur)
+    b = compte(session, nom="DURANDAL", statut=StatutUtilisateur.copropriétaire_bailleur)
     _logement(session, b, "12")
     _logement(session, b, "14")
     assert rattacher_au_bailleur(_locataire(session), session) == 0
 
 
 def test_un_lien_deja_pose_n_est_pas_touche(session):
-    b = _user(session, "DURANDAL", StatutUtilisateur.copropriétaire_bailleur)
+    b = compte(session, nom="DURANDAL", statut=StatutUtilisateur.copropriétaire_bailleur)
     _logement(session, b)
     autre = _logement(
-        session, _user(session, "MARTINEAU", StatutUtilisateur.copropriétaire_bailleur)
+        session, compte(session, nom="MARTINEAU", statut=StatutUtilisateur.copropriétaire_bailleur)
     )
     loc = _locataire(session)
     session.add(UserLot(user_id=loc.id, lot_id=autre.id, type_lien=TypeLien.locataire, actif=True))
@@ -104,9 +90,14 @@ def test_un_lien_deja_pose_n_est_pas_touche(session):
 
 
 def test_seul_un_locataire_est_rattache(session):
-    _logement(session, _user(session, "DURANDAL", StatutUtilisateur.copropriétaire_bailleur))
-    proprio = _user(
-        session, "Autre", StatutUtilisateur.copropriétaire_résident, nom_proprietaire="Durandal"
+    _logement(
+        session, compte(session, nom="DURANDAL", statut=StatutUtilisateur.copropriétaire_bailleur)
+    )
+    proprio = compte(
+        session,
+        nom="Autre",
+        statut=StatutUtilisateur.copropriétaire_résident,
+        nom_proprietaire="Durandal",
     )
     assert rattacher_au_bailleur(proprio, session) == 0
 
@@ -115,6 +106,8 @@ def test_le_rapprochement_d_un_compte_rattache_le_locataire(session):
     """Par la porte d'entrée réelle : la validation du compte appelle ce rapprochement."""
     from app.utils.auto_match_service import auto_match_pour_utilisateur
 
-    _logement(session, _user(session, "DURANDAL", StatutUtilisateur.copropriétaire_bailleur))
+    _logement(
+        session, compte(session, nom="DURANDAL", statut=StatutUtilisateur.copropriétaire_bailleur)
+    )
     loc = _locataire(session)
     assert auto_match_pour_utilisateur(loc, session)["rattache"] == 1

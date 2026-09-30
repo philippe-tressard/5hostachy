@@ -16,21 +16,16 @@ reste unique.
 
 from __future__ import annotations
 
-import pathlib
 import re
 
 from app.utils.declenchement import AUTOMATIQUE, MANUELLE, normaliser
+from tests.aides_sources import modules_app
 
-RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
 SOURCE = "utils/declenchement.py"
 
 #: Une affectation littérale du champ : `declenchee_par="cron"`. C'est la forme
 #: qui a produit les trois vocabulaires.
 LITTERAL = re.compile(r"""declenchee_par\s*=\s*["'][^"']+["']""")
-
-
-def _fichiers() -> list[pathlib.Path]:
-    return [p for p in RACINE.rglob("*.py") if "__pycache__" not in p.parts]
 
 
 def test_le_vocabulaire_tient_en_deux_mots():
@@ -66,13 +61,13 @@ def test_aucun_module_n_ecrit_le_champ_EN_DUR():
     écrit, et personne ne les voyait ensemble.
     """
     fautifs = {}
-    for chemin in _fichiers():
-        rel = chemin.relative_to(RACINE).as_posix()
+    for module in modules_app():
+        rel = module.rel
         if rel == SOURCE:
             continue
         lignes = [
             n + 1
-            for n, ligne in enumerate(chemin.read_text(encoding="utf-8").split(chr(10)))
+            for n, ligne in enumerate(module.source.split(chr(10)))
             if LITTERAL.search(ligne) and not ligne.lstrip().startswith(("#", "*"))
         ]
         if lignes:
@@ -92,7 +87,7 @@ def test_cas_zero_le_motif_reconnait_bien_une_affectation():
     #  Une affectation depuis une CONSTANTE n'est pas visée : c'est la bonne forme.
     assert not LITTERAL.search("declenchee_par=AUTOMATIQUE")
     assert not LITTERAL.search("declenchee_par=normaliser(body.declenchee_par)")
-    assert len(_fichiers()) > 50, "le parcours ne décrit plus `app/`"
+    assert len(modules_app()) > 50, "le parcours ne décrit plus `app/`"
 
 
 def test_le_lancement_manuel_passe_par_le_geste_commun():

@@ -19,7 +19,6 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import ConfigSite
 from app.utils.llm import config_llm, demander
@@ -27,14 +26,6 @@ from app.utils.llm_fournisseurs import FOURNISSEURS
 from app.utils.llm_usages import EFFORTS, decrire, valeur_effort
 
 USAGE = "description"
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
 
 
 def _poser(session, **valeurs):

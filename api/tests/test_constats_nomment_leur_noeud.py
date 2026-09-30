@@ -22,14 +22,11 @@ chaque `fail` cite la variable du nœud. Il n'a rien à dire des constats hors
 boucle : ceux-là portent sur les deux nœuds, ou nomment le leur explicitement.
 """
 
-import pathlib
 import re
 
-RACINE = pathlib.Path(__file__).resolve().parents[2] / "scripts"
-FICHIERS = [
-    RACINE / "exploitation" / "check-reliability.sh",
-    *sorted((RACINE / "lib").glob("*.sh")),
-]
+from tests.conftest import scripts_shell_versionnes
+
+FICHIERS = scripts_shell_versionnes()
 
 _BOUCLE_NOEUDS = re.compile(r'^\s*for\s+(\w+)\s+in\s+"\$SELF[":].*"\$PEER[":]')
 _EXTRAIT_NOEUD = re.compile(r"(\w+)=\$\{(\w+)%%?:\*\}")

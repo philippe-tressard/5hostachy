@@ -22,6 +22,8 @@ défauts.
 import ast
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 RACINE_API = Path(__file__).resolve().parents[1]
 
 
@@ -56,8 +58,8 @@ def test_aucune_liste_de_perimetres_ne_subsiste_dans_le_code():
     """
     interdits = {"SCOPES_RESIDENCE", "_PERIMETRES_GLOBAUX", "PERIMETRE_LABELS"}
     fautifs = []
-    for fichier in (RACINE_API / "app").rglob("*.py"):
-        for noeud in ast.walk(ast.parse(fichier.read_text(encoding="utf-8"))):
+    for m in modules_app():
+        for noeud in ast.walk(m.arbre):
             cibles = []
             if isinstance(noeud, ast.Assign):
                 cibles = noeud.targets
@@ -65,7 +67,7 @@ def test_aucune_liste_de_perimetres_ne_subsiste_dans_le_code():
                 cibles = [noeud.target]
             for cible in cibles:
                 if isinstance(cible, ast.Name) and cible.id in interdits:
-                    fautifs.append(f"{fichier.relative_to(RACINE_API)} → {cible.id}")
+                    fautifs.append(f"{m.chemin.relative_to(RACINE_API)} → {cible.id}")
     assert not fautifs, "liste de périmètres réapparue : " + ", ".join(fautifs)
 
 

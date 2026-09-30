@@ -169,42 +169,69 @@ def test_les_deux_lectures_rendent_les_MEMES_champs_communs():
     )
 
 
-def test_une_seule_fonction_lit_le_contrat_de_reference():
+def _appels(fonction: ast.FunctionDef, nom: str) -> list[ast.Call]:
+    return [
+        n
+        for n in ast.walk(fonction)
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == nom
+    ]
+
+
+def test_chaque_section_lit_son_contrat_par_la_MEME_fonction():
     """⚠️ La factorisation se vérifie, elle ne se raconte pas.
 
     Deux copies de « lire le contrat, lire son prestataire, composer un
     préfixe » divergeraient au premier enrichissement. Ce test lit l'ARBRE du
-    module : les deux lectures doivent appeler `contrat_de_reference`, et aucune
-    ne doit refaire la requête elle-même.
+    module, pour chaque section de `SECTIONS_CONTRAT` :
+
+    * sa lecture `<section>_du_contrat` appelle `contrat_de_reference` ;
+    * elle reçoit l'échéance par `_echeance_lue("<section>")`, et par elle seule
+      (29/08/2026) — le jour où quelqu'un donne un enrichissement à l'une sans
+      le donner à l'autre, ce test le dit ;
+    * elle ne refait pas la requête sur `ContratEntretien`.
+
+    ⚠️ Interdire TOUT `select` était trop large : `syndic_du_contrat` lit
+    légitimement `MembreSyndic`, une autre table. Ce qu'aucune des deux ne doit
+    refaire, c'est la requête sur le CONTRAT — c'est elle qui porte la règle de
+    sélection, et deux copies en feraient deux vérités.
     """
-    arbre = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    for nom in ("assurance_du_contrat", "syndic_du_contrat"):
-        fonction = next(n for n in arbre.body if isinstance(n, ast.FunctionDef) and n.name == nom)
-        appels = {
-            n.func.id
-            for n in ast.walk(fonction)
-            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
-        }
-        assert "contrat_de_reference" in appels, (
-            f"{nom} ne passe pas par `contrat_de_reference` : la lecture du "
-            "contrat est de nouveau recopiée."
-        )
-        #  ⚠️ Interdire TOUT `select` était trop large : `syndic_du_contrat` lit
-        #  légitimement `MembreSyndic`, une autre table. Ce qu'aucune des deux ne
-        #  doit refaire, c'est la requête sur le CONTRAT — c'est elle qui porte la
-        #  règle de sélection, et deux copies en feraient deux vérités.
-        selects_contrat = [
-            n
-            for n in ast.walk(fonction)
-            if isinstance(n, ast.Call)
-            and isinstance(n.func, ast.Name)
-            and n.func.id == "select"
-            and any(isinstance(a, ast.Name) and a.id == "ContratEntretien" for a in n.args)
+    fonctions = {
+        n.name: n
+        for n in ast.walk(ast.parse(SOURCE.read_text(encoding="utf-8")))
+        if isinstance(n, ast.FunctionDef)
+    }
+    fautes = []
+    for section in SECTIONS_CONTRAT:
+        nom = f"{section}_du_contrat"
+        fonction = fonctions.get(nom)
+        if fonction is None:
+            fautes.append(f"  {nom} est introuvable dans copropriete.py")
+            continue
+        if not _appels(fonction, "contrat_de_reference"):
+            fautes.append(
+                f"  {nom} ne passe pas par `contrat_de_reference` : la lecture du "
+                "contrat est de nouveau recopiée"
+            )
+        echeances = [
+            a.args[0].value
+            for a in _appels(fonction, "_echeance_lue")
+            if a.args and isinstance(a.args[0], ast.Constant)
         ]
-        assert not selects_contrat, (
-            f"{nom} refait sa propre requête sur ContratEntretien au lieu de "
-            "passer par `contrat_de_reference` — deux règles de sélection."
-        )
+        if echeances != [section]:
+            fautes.append(
+                f"  {nom} appelle `_echeance_lue` avec {echeances} au lieu de "
+                f"[{section!r}] : les deux sections ne reçoivent plus le même enrichissement"
+            )
+        if any(
+            isinstance(a, ast.Name) and a.id == "ContratEntretien"
+            for appel in _appels(fonction, "select")
+            for a in appel.args
+        ):
+            fautes.append(
+                f"  {nom} refait sa propre requête sur ContratEntretien au lieu de "
+                "passer par `contrat_de_reference` — deux règles de sélection"
+            )
+    assert not fautes, "Assurance et syndic ne sont plus le même geste :\n" + "\n".join(fautes)
 
 
 def test_le_syndic_rend_son_interlocuteur_meme_SANS_contrat():

@@ -1,4 +1,4 @@
-"""Un fichier téléversé doit ÊTRE ce qu'il prétend être — aux quatre points.
+"""Un fichier téléversé doit ÊTRE ce qu'il prétend être — à chaque point de réception.
 
 ## Le défaut (#773, audit du 05/09/2026)
 
@@ -14,16 +14,21 @@ lignes d'écart.
 
 ## Pourquoi ce test regarde AUSSI la portée
 
-La règle ne vaut que si les **quatre** points de téléversement l'appellent —
-`uploads`, `compteurs`, `diagnostics`, `documents`. Une règle centralisée qu'un
-seul appelant emploie ne protège qu'un seul chemin, et donne l'illusion des
-quatre (`standards/03` §1).
+La règle ne vaut que si **chaque** point de réception l'appelle — les
+quatre qui écrivent (`uploads`, `compteurs`, `diagnostics`, `documents`) et les
+trois imports de tableur (`_POINTS`, sept en tout). Une règle centralisée qu'un
+seul appelant emploie ne protège qu'un seul chemin, et donne l'illusion de tous
+(`standards/03` §1).
+
+Qu'aucun routeur n'écrive un fichier reçu hors de `utils/fichiers.py` est tenu
+par `test_televersement_source_unique.py`, seul détecteur des écritures sur
+disque : ce fichier-ci en portait un second, dont le motif ne trouvait plus rien
+depuis la factorisation (#1026) — un vert à vide, retiré le 30/09/2026.
 """
 
 from __future__ import annotations
 
 import pathlib
-import re
 
 from app.utils.fichiers import signature_incoherente
 
@@ -131,7 +136,7 @@ _APPELS_ADMIS = (
 )
 
 
-def test_les_QUATRE_points_de_televersement_appellent_la_regle():
+def test_chaque_point_de_televersement_appelle_la_regle():
     """🔴 La portée fait partie du contrôle.
 
     Une règle centralisée qu'un seul appelant emploie ne protège qu'un chemin —
@@ -202,35 +207,3 @@ def test_le_geste_factorise_REFUSE_un_fichier_deguise():
         enregistrer_televersement(faux, "innocent.pdf")
     assert capture.value.status_code == 400
     assert ".pdf" in str(capture.value.detail)
-
-
-def test_aucun_nouveau_point_de_televersement_hors_du_relevé():
-    """Un cinquième point apparaîtrait sans que rien ne le signale.
-
-    Le relevé `_POINTS` est écrit à la main : ce test le confronte au code, pour
-    qu'un routeur qui se met à écrire un fichier téléversé soit ajouté ici — et
-    donc examiné — plutôt que découvert au prochain audit.
-    """
-    routeurs = list(_ROUTERS.rglob("*.py"))
-    #  🔴 CAS ZÉRO DE LA PORTÉE. `ecrivains <= set(_POINTS)` est VRAI quand
-    #  `ecrivains` est vide : un `_ROUTERS` devenu faux rendrait donc un vert
-    #  parfait, sur zéro fichier lu. C'est `standards/04` §40 appliqué au test
-    #  que j'ai écrit ce matin même — sa promesse est « aucun cinquième point de
-    #  téléversement », sa portée était « ce que le glob veut bien trouver ».
-    assert len(routeurs) > 20, (
-        f"{len(routeurs)} routeur(s) lu(s) sous {_ROUTERS} — la portée du relevé "
-        "est cassée, et son vert ne veut rien dire (INCONNU, pas OK)."
-    )
-    ecrivains = {
-        f.name
-        for f in routeurs
-        if re.search(
-            r"shutil\.copyfileobj\(file\.file|\(dest_dir / filename\)\.write_bytes",
-            f.read_text(encoding="utf-8"),
-        )
-    }
-    assert ecrivains <= set(_POINTS), (
-        "point(s) de téléversement hors du relevé : "
-        f"{sorted(ecrivains - set(_POINTS))}. Les ajouter à `_POINTS` après avoir "
-        "vérifié qu'ils valident la signature."
-    )

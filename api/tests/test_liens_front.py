@@ -40,6 +40,7 @@ from tests.aides_routes_front import (
     _segments_par_onglet,
     contenu_deplie,
 )
+from tests.aides_sources import modules_app
 
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
@@ -63,9 +64,9 @@ def _liens_de_la_table() -> dict[str, list[str]]:
 def _liens_de_l_api() -> dict[str, list[str]]:
     """{lien: [fichiers qui l'émettent]} — table centrale + littéraux restants."""
     trouves: dict[str, list[str]] = {k: list(v) for k, v in _liens_de_la_table().items()}
-    for chemin in sorted((_API_DIR / "app").rglob("*.py")):
-        for lien in _MOTIF_LIEN.findall(chemin.read_text(encoding="utf-8-sig")):
-            trouves.setdefault(lien, []).append(str(chemin.relative_to(_RACINE)))
+    for m in modules_app():
+        for lien in _MOTIF_LIEN.findall(m.source):
+            trouves.setdefault(lien, []).append(str(m.chemin.relative_to(_RACINE)))
     return trouves
 
 

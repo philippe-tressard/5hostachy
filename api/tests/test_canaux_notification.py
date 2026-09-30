@@ -18,35 +18,23 @@ tous deux invisibles à la relecture d'un diff :
 import ast
 import pathlib
 
+from tests.aides_sources import modules_app
+
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 #: Les clés qui composent la configuration du canal.
 _MARQUEURS = ("whatsapp_api_url", "whatsapp_group_jid", "whatsapp_enabled")
 
 
-def _sources() -> list[tuple[pathlib.Path, str]]:
-    """Tous les modules de l'application. C'est la PORTÉE, donc une partie du contrôle."""
-    fichiers = [
-        (f, f.read_text(encoding="utf-8"))
-        for f in sorted(_APP.rglob("*.py"))
-        if "__pycache__" not in f.parts
-    ]
-    assert len(fichiers) >= 40, (
-        f"Seulement {len(fichiers)} module(s) trouvé(s) sous {_APP} — la portée du "
-        "contrôle est cassée, ne pas lire ces tests comme verts."
-    )
-    return fichiers
-
-
 def test_les_cles_de_configuration_whatsapp_ne_sont_ecrites_qu_une_fois():
     """Un seul module a le droit d'énumérer les clés du canal WhatsApp."""
     porteurs = {
-        f.relative_to(_APP).as_posix()
-        for f, src in _sources()
+        module.rel
+        for module in modules_app()
         #  Deux marqueurs au moins : une mention isolée (un log, un commentaire,
         #  une lecture ciblée comme celle du moniteur de santé) n'est pas une
         #  redéfinition de l'ensemble.
-        if sum(m in src for m in _MARQUEURS) >= 2
+        if sum(m in module.source for m in _MARQUEURS) >= 2
     }
     assert porteurs == {"utils/whatsapp.py"}, (
         "Les clés de configuration WhatsApp doivent vivre dans `app/utils/whatsapp.py` "
@@ -144,47 +132,6 @@ def _conditions_de_partage(arbre: ast.AST) -> list[str]:
     return trouvees
 
 
-def test_le_partage_whatsapp_d_un_ticket_est_reserve_au_cs():
-    """`partager_whatsapp` à la création d'un ticket doit être gardé par un rôle.
-
-    Vérifie le FAIT (la condition qui entoure l'envoi), pas le symptôme : une
-    case masquée dans l'interface ne protège rien, le client peut poster le
-    champ directement.
-    """
-    source = (_APP / "routers" / "tickets" / "crud.py").read_text(encoding="utf-8")
-    conditions = _conditions_de_partage(ast.parse(source))
-
-    assert conditions, (
-        "Aucune condition portant `partager_whatsapp` dans tickets/crud.py : le "
-        "partage sur le groupe WhatsApp n'est plus gardé du tout."
-    )
-    #  Deux formes valables du MÊME contrôle :
-    #    • `has_role(conseil_syndical, admin)` écrit sur place ;
-    #    • `est_moderateur(user)`, le prédicat central d'`auth/deps.py`
-    #      (`peut_commander` jusqu'au 20/09/2026 — renommé, cf. #1028).
-    #  La seconde est arrivée le 16/08/2026 : la règle « ces champs sont réservés
-    #  au CS » était recopiée à côté de CHAQUE champ — cinq fois — et une règle
-    #  d'autorisation recopiée ne se durcit pas, on en corrige quatre sur six.
-    #  Ce test vérifiait la FORME (« le mot has_role est là ») et non le FAIT
-    #  (« un contrôle de rôle a lieu ») : il tombait donc sur une centralisation
-    #  qui renforce la garde au lieu de l'affaiblir. Il connaît maintenant les
-    #  deux formes — et reste rouge si AUCUNE n'est présente.
-    for condition in conditions:
-        centralise = "est_moderateur" in condition
-        assert centralise or "has_role" in condition, (
-            "Le partage sur le groupe WhatsApp n'est plus réservé au CS/admin — "
-            f"condition sans contrôle de rôle : {condition}"
-        )
-        #  La forme écrite sur place doit nommer les deux rôles ; la forme
-        #  centralisée les porte dans `est_moderateur`, dont le contenu est
-        #  vérifié par `test_le_predicat_moderateur_est_reserve_au_cs` ci-dessous.
-        if not centralise:
-            for attendu in ("conseil_syndical", "admin"):
-                assert attendu in condition, (
-                    f"Le garde du partage WhatsApp ne mentionne pas `{attendu}` : {condition}"
-                )
-
-
 def test_un_ticket_reserve_au_conseil_ne_part_JAMAIS_sur_le_groupe():
     """🔴 « Visibilité au seul conseil syndical » ⇒ aucune diffusion WhatsApp.
 
@@ -235,33 +182,6 @@ def test_un_ticket_reserve_au_conseil_ne_part_JAMAIS_sur_le_groupe():
             )
 
 
-def test_le_predicat_moderateur_est_reserve_au_cs():
-    """Le prédicat central contrôle bien les deux rôles, et rien d'autre.
-
-    Sans ce test, centraliser la règle la rendrait invérifiable : le test
-    ci-dessus accepterait `est_moderateur` sans jamais regarder ce qu'il fait.
-
-    ⚠️ Il nommait `peut_commander`, et il a donc échoué au renommage du 20/09/2026
-    (#1028) — un échec FRANC, qui est le bon comportement : un test qui suit un
-    nom doit rougir quand le nom change, pas se taire.
-    """
-    source = (_APP / "auth" / "deps.py").read_text(encoding="utf-8")
-    arbre = ast.parse(source)
-    fn = next(
-        (
-            n
-            for n in ast.walk(arbre)
-            if isinstance(n, ast.FunctionDef) and n.name == "est_moderateur"
-        ),
-        None,
-    )
-    assert fn is not None, "`est_moderateur` a disparu d'auth/deps.py"
-    corps = ast.unparse(fn)
-    assert "has_role" in corps, "`est_moderateur` ne contrôle plus aucun rôle"
-    for attendu in ("conseil_syndical", "admin"):
-        assert attendu in corps, f"`est_moderateur` ne mentionne plus `{attendu}`"
-
-
 def test_le_schema_de_creation_de_ticket_porte_le_canal_whatsapp():
     """Le champ doit exister — c'est lui qui manquait, et rien ne le signalait."""
     source = (_APP / "schemas.py").read_text(encoding="utf-8")
@@ -284,8 +204,8 @@ def test_le_schema_de_creation_de_ticket_porte_le_canal_whatsapp():
 # ── #1164 : TOUTES les portes d'envoi d'une affaire, pas seulement la création ──
 #
 #  🔴 Le 23/09/2026 : la création réservait WhatsApp et le courriel externe au
-#  conseil — et ce test ne regardait QUE `crud.py`. Une Suite (`evolutions.py`)
-#  et un message (`messages.py`) laissaient l'auteur, ou n'importe quel résident
+#  conseil — et le contrôle de la création ne regardait QUE `crud.py`. Une
+#  Suite (`evolutions.py`) et un message (`messages.py`) laissaient l'auteur, ou n'importe quel résident
 #  qui voit l'affaire, publier sur le groupe des résidents et écrire à une
 #  adresse quelconque depuis celle du site. Un contrôle limité à une porte
 #  garde cette porte-là.
@@ -327,6 +247,11 @@ def _envois_et_gardes(fonction: ast.AST, noms: tuple[str, ...]) -> list[tuple[in
 
 
 def _garde_de_role(condition: str) -> bool:
+    """Deux formes valables du MÊME contrôle : `est_moderateur(user)`, le prédicat
+    central (depuis le 16/08/2026 — la règle était recopiée à côté de chaque
+    champ), ou `has_role(conseil_syndical, admin)` écrit sur place. Ce que
+    `est_moderateur` contient est vérifié par
+    `test_moderateur_source_unique.py::test_la_source_existe_encore`."""
     return "est_moderateur" in condition or (
         "has_role" in condition and "conseil_syndical" in condition and "admin" in condition
     )

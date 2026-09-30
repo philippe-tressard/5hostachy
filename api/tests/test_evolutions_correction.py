@@ -26,10 +26,10 @@ import pathlib
 
 import pytest
 from fastapi import HTTPException
-from sqlmodel import Session, SQLModel, create_engine
 
-from app.models.core import TicketEvolution, Utilisateur
+from app.models.core import TicketEvolution
 from app.utils.evolutions import TYPES_EFFACABLES, evolution_modifiable
+from tests.aides_base import compte
 
 RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
 
@@ -40,22 +40,6 @@ FILS = [
 #  Le fil des publications est parti avec elles le 23/09/2026 (#1091) : la Suite
 #  d'une actualité est celle d'une affaire.
 IDS = ["tickets"]
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
-
-
-def _auteur(session, email="auteur@exemple.fr"):
-    u = Utilisateur(email=email, hashed_password="x", prenom="A", nom="B")
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 def _entree(session, modele, champ_parent, parent_id, auteur, type_="commentaire"):
@@ -72,7 +56,7 @@ def _entree(session, modele, champ_parent, parent_id, auteur, type_="commentaire
 
 @pytest.mark.parametrize("modele,champ,_", FILS, ids=IDS)
 def test_l_auteur_peut_corriger_son_entree(session, modele, champ, _):
-    auteur = _auteur(session)
+    auteur = compte(session, prefixe="auteur")
     evol = _entree(session, modele, champ, 1, auteur)
     assert (
         evolution_modifiable(
@@ -90,7 +74,7 @@ def test_une_entree_d_un_AUTRE_objet_est_introuvable(session, modele, champ, _):
     d'un autre objet que celui dont on a l'adresse — et le contrôle d'accès de
     l'URL ne servirait à rien. C'est le même raisonnement que la suppression.
     """
-    auteur = _auteur(session)
+    auteur = compte(session, prefixe="auteur")
     evol = _entree(session, modele, champ, 1, auteur)
     with pytest.raises(HTTPException) as erreur:
         evolution_modifiable(session, modele, evol.id, champ_parent=champ, parent_id=2, user=auteur)
@@ -100,7 +84,7 @@ def test_une_entree_d_un_AUTRE_objet_est_introuvable(session, modele, champ, _):
 @pytest.mark.parametrize("modele,champ,_", FILS, ids=IDS)
 def test_une_entree_tracee_automatiquement_ne_se_corrige_pas(session, modele, champ, _):
     """Une « Correction : … » posée par le serveur ne décrit le geste de personne."""
-    auteur = _auteur(session)
+    auteur = compte(session, prefixe="auteur")
     evol = _entree(session, modele, champ, 1, auteur, type_="correction")
     with pytest.raises(HTTPException) as erreur:
         evolution_modifiable(session, modele, evol.id, champ_parent=champ, parent_id=1, user=auteur)
@@ -115,8 +99,8 @@ def test_le_type_passe_AVANT_le_droit(session, modele, champ, _):
     refusé » là où la vraie raison est que l'objet ne se corrige pas — et
     laisserait croire qu'un droit supplémentaire y donnerait accès.
     """
-    auteur = _auteur(session)
-    tiers = _auteur(session, "tiers@exemple.fr")
+    auteur = compte(session, prefixe="auteur")
+    tiers = compte(session, prefixe="tiers")
     evol = _entree(session, modele, champ, 1, auteur, type_="correction")
     with pytest.raises(HTTPException) as erreur:
         evolution_modifiable(session, modele, evol.id, champ_parent=champ, parent_id=1, user=tiers)

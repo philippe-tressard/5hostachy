@@ -1,5 +1,5 @@
 {
-	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ». Depuis #1428 (28/09/2026), la date n'ouvre plus une affaire aux locataires ni aux mandataires : seuls des Destinataires choisis par le conseil le font. Depuis #1343 (26/09/2026), une affaire suivie lit ses Destinataires quand le conseil en a choisi : vides, la règle par défaut ; un résidu d'actualité promue est effacé (migration 0228, et à la promotion). `categorie` (affaires) : une Panne sans choix du conseil se lit par les résidents de son bâtiment (occupants et locataires), par tous hors bâtiment. `objet` (#1373, 27/09/2026) : une petite ANNONCE, une IDÉE ou un SONDAGE — la règle `cible_visible` sans ouverture à la copropriété : le périmètre restreint toujours, et des Destinataires vides valent « Tous ». Absent : une affaire ou une actualité (`actualite`). Depuis #1436 (28/09/2026), CHAQUE catégorie a son défaut sans choix du conseil : « Résident concerné » (nuisance, accès & accueil, sinistre, question, bug — l'auteur, le « saisi pour » et le conseil), « Tous » (espaces verts), le conseil seul (étude & travaux depuis le 29/09/2026), les copropriétaires — occupants et bailleurs — (entretien depuis le 30/09/2026 ; le conseil seul avant). Un cas par catégorie.",
+	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ». Depuis #1428 (28/09/2026), la date n'ouvre plus une affaire aux locataires ni aux mandataires : seuls des Destinataires choisis par le conseil le font. Depuis #1343 (26/09/2026), une affaire suivie lit ses Destinataires quand le conseil en a choisi : vides, la règle par défaut ; un résidu d'actualité promue est effacé (migration 0228, et à la promotion). `categorie` (affaires) : une Panne sans choix du conseil se lit par les résidents de son bâtiment (occupants et locataires), par tous hors bâtiment. `objet` (#1373, 27/09/2026) : une petite ANNONCE, une IDÉE ou un SONDAGE — la règle `cible_visible` sans ouverture à la copropriété : le périmètre restreint toujours, et des Destinataires vides valent « Tous ». Absent : une affaire ou une actualité (`actualite`). Depuis #1436 (28/09/2026), CHAQUE catégorie a son défaut sans choix du conseil : « Résident concerné » (nuisance, accès & accueil, sinistre, question, bug — l'auteur, le « saisi pour » et le conseil), « Tous » (espaces verts), le conseil seul (étude & travaux depuis le 29/09/2026), les copropriétaires — occupants et bailleurs — (entretien depuis le 30/09/2026 ; le conseil seul avant). Un cas par catégorie. Depuis le standard du 30/09/2026 (Carnet = Affaires = Kanban) : sans choix du conseil, un COPROPRIÉTAIRE que le défaut vise lit dans toute la résidence — `hors_perimetre` peut alors être la LISTE des statuts qui lisent hors du périmètre (les copropriétaires d'une Panne, pas ses locataires) ; Panne → tous les copropriétaires et les locataires du périmètre ; Entretien → tous les copropriétaires ; Étude & travaux → le conseil seul, puis tous les copropriétaires en AG, chez le prestataire, résolue ou annulée. `statut` : l'état du suivi (sinon « En AG » si `en_ag`, « Ouvert » sinon).",
 	"cas": [
 		{
 			"nom": "actualité à tous, copropriété entière",
@@ -322,7 +322,7 @@
 			"categorie": "etude_travaux"
 		},
 		{
-			"nom": "affaire Panne dans un bâtiment, sans choix : ses résidents, sans les bailleurs (#1343)",
+			"nom": "affaire Panne dans un bâtiment, sans choix : tous les copropriétaires, et les locataires du bâtiment (30/09/2026)",
 			"actualite": false,
 			"categorie": "panne",
 			"confidentiel": false,
@@ -331,12 +331,16 @@
 			"reserve_perimetre": false,
 			"lecteurs": [
 				"copropriétaire_résident",
+				"copropriétaire_bailleur",
 				"locataire"
 			],
-			"hors_perimetre": false
+			"hors_perimetre": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			]
 		},
 		{
-			"nom": "affaire Panne hors bâtiment, sans choix : tout le monde (#1343)",
+			"nom": "affaire Panne hors bâtiment, sans choix : les copropriétaires et les locataires, pas les mandataires (30/09/2026)",
 			"actualite": false,
 			"categorie": "panne",
 			"confidentiel": false,
@@ -346,7 +350,6 @@
 			"lecteurs": [
 				"copropriétaire_résident",
 				"copropriétaire_bailleur",
-				"mandataire",
 				"locataire"
 			],
 			"hors_perimetre": null
@@ -618,7 +621,7 @@
 			"hors_perimetre": null
 		},
 		{
-			"nom": "affaire Entretien sans choix sur un bâtiment : ses copropriétaires, ni ses locataires ni un autre bâtiment (30/09/2026)",
+			"nom": "affaire Entretien sans choix sur un bâtiment : tous les copropriétaires de la résidence, pas les locataires (30/09/2026)",
 			"actualite": false,
 			"categorie": "entretien",
 			"confidentiel": false,
@@ -629,7 +632,7 @@
 				"copropriétaire_résident",
 				"copropriétaire_bailleur"
 			],
-			"hors_perimetre": false
+			"hors_perimetre": true
 		},
 		{
 			"nom": "affaire Entretien, « Conseil syndical » choisi : le conseil seul — le choix prime sur la catégorie (30/09/2026)",
@@ -645,7 +648,7 @@
 			"hors_perimetre": null
 		},
 		{
-			"nom": "affaire Étude & travaux sans choix : le conseil seul (29/09/2026)",
+			"nom": "affaire Étude & travaux sans choix, ouverte : le conseil seul (29/09/2026)",
 			"actualite": false,
 			"categorie": "etude_travaux",
 			"confidentiel": false,
@@ -654,6 +657,104 @@
 			"reserve_perimetre": false,
 			"lecteurs": [],
 			"hors_perimetre": null
+		},
+		{
+			"actualite": false,
+			"categorie": "etude_travaux",
+			"confidentiel": false,
+			"public_cible": [],
+			"reserve_perimetre": false,
+			"nom": "affaire Étude & travaux sans choix, en cours, sur un bâtiment : le conseil seul (30/09/2026)",
+			"statut": "en_cours",
+			"perimetre": "batiment",
+			"lecteurs": [],
+			"hors_perimetre": false
+		},
+		{
+			"actualite": false,
+			"categorie": "etude_travaux",
+			"confidentiel": false,
+			"public_cible": [],
+			"reserve_perimetre": false,
+			"nom": "affaire Étude & travaux sans choix, en AG : tous les copropriétaires, qui la votent (30/09/2026)",
+			"statut": "en_ag",
+			"perimetre": "global",
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"actualite": false,
+			"categorie": "etude_travaux",
+			"confidentiel": false,
+			"public_cible": [],
+			"reserve_perimetre": false,
+			"nom": "affaire Étude & travaux sans choix, chez le prestataire, sur un bâtiment : tous les copropriétaires de la résidence (30/09/2026)",
+			"statut": "chez_prestataire",
+			"perimetre": "batiment",
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": true
+		},
+		{
+			"actualite": false,
+			"categorie": "etude_travaux",
+			"confidentiel": false,
+			"public_cible": [],
+			"reserve_perimetre": false,
+			"nom": "affaire Étude & travaux sans choix, résolue : tous les copropriétaires — le carnet la montre (30/09/2026)",
+			"statut": "résolu",
+			"perimetre": "batiment",
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": true
+		},
+		{
+			"actualite": false,
+			"categorie": "etude_travaux",
+			"confidentiel": false,
+			"public_cible": [],
+			"reserve_perimetre": false,
+			"nom": "affaire Étude & travaux sans choix, annulée : tous les copropriétaires (30/09/2026)",
+			"statut": "annulé",
+			"perimetre": "global",
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"actualite": false,
+			"categorie": "etude_travaux",
+			"confidentiel": false,
+			"public_cible": [
+				"conseil_syndical"
+			],
+			"reserve_perimetre": false,
+			"nom": "affaire Étude & travaux résolue, « Conseil syndical » choisi : le conseil seul — le choix prime sur l'état (30/09/2026)",
+			"statut": "résolu",
+			"perimetre": "global",
+			"lecteurs": [],
+			"hors_perimetre": null
+		},
+		{
+			"actualite": false,
+			"categorie": "etude_travaux",
+			"confidentiel": true,
+			"public_cible": [],
+			"reserve_perimetre": false,
+			"nom": "affaire Étude & travaux résolue, confidentielle : le conseil seul (30/09/2026)",
+			"statut": "résolu",
+			"perimetre": "batiment",
+			"lecteurs": [],
+			"hors_perimetre": false
 		}
 	]
 }

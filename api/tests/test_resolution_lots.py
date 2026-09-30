@@ -46,13 +46,13 @@ from app.models.core import (
     LotImport,
     StatutLotImport,
     UserLot,
-    Utilisateur,
 )
 from app.utils.resolution_lots import (
     rapprocher_imports,
     resoudre_imports,
     resoudre_pour_utilisateur,
 )
+from tests.aides_base import compte
 
 
 @pytest.fixture()
@@ -74,25 +74,12 @@ def scene():
         bat = Batiment(copropriete_id=copro.id, numero="1")
         session.add(bat)
         session.flush()
-        proprio = Utilisateur(
-            email=f"p-{marque}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="Alix",
-            nom="RIVANT",
-            roles_json="propriétaire",
-            actif=True,
+        proprio = compte(
+            session, prefixe=f"p-{marque}", prenom="Alix", nom="RIVANT", roles_json="propriétaire"
         )
-        locataire = Utilisateur(
-            email=f"l-{marque}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="Camille",
-            nom="BERNAERT",
-            roles_json="résident",
-            actif=True,
+        locataire = compte(
+            session, prefixe=f"l-{marque}", prenom="Camille", nom="BERNAERT", roles_json="résident"
         )
-        session.add(proprio)
-        session.add(locataire)
-        session.commit()
         for objet in (copro, bat, proprio, locataire):
             session.refresh(objet)
 

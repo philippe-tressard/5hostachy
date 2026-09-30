@@ -63,7 +63,7 @@ for (const c of cas) {
 				perimetreRestreint: restreint,
 				reservePerimetre: c.reserve_perimetre,
 				categorie: c.categorie,
-				dansBatiments: c.perimetre === 'batiment',
+				statut: c.statut ?? (c.en_ag ? 'en_ag' : undefined),
 			});
 	const lecteurs = l.profils.map((p) => STATUT[p]);
 	if (JSON.stringify(lecteurs) !== JSON.stringify(c.lecteurs)) {
@@ -71,10 +71,22 @@ for (const c of cas) {
 			`« ${c.nom} » : la pastille dit ${JSON.stringify(lecteurs)}, le serveur ${JSON.stringify(c.lecteurs)}`,
 		);
 	}
-	//  Le cadenas : « hors du périmètre, personne ne lit ». Il n'a de sens que
-	//  sur un périmètre restreint et quand quelqu'un lit.
+	//  Qui lit HORS du périmètre — tous, personne (le cadenas), ou une LISTE : les
+	//  copropriétaires d'une Panne au défaut, pas ses locataires (30/09/2026).
+	//  N'a de sens que sur un périmètre restreint et quand quelqu'un lit.
 	if (c.hors_perimetre !== null && c.lecteurs.length) {
-		const cadenas = !c.hors_perimetre;
+		const dehors = Array.isArray(c.hors_perimetre)
+			? c.hors_perimetre
+			: c.hors_perimetre
+				? c.lecteurs
+				: [];
+		const annonce = l.horsPerimetre.map((p) => STATUT[p]);
+		if (JSON.stringify(annonce) !== JSON.stringify(dehors)) {
+			echecs.push(
+				`« ${c.nom} » : hors du périmètre, la pastille dit ${JSON.stringify(annonce)}, le serveur ${JSON.stringify(dehors)}`,
+			);
+		}
+		const cadenas = dehors.length === 0;
 		if (l.perimetreReserve !== cadenas) {
 			echecs.push(`« ${c.nom} » : cadenas ${l.perimetreReserve}, attendu ${cadenas}`);
 		}

@@ -12,17 +12,13 @@
    prompt d'origine » vide la clé, et un modèle sans consigne serait pire.
 4. **L'activation se vérifie aux deux étages**, et le test de connexion n'en
    exige aucun.
-5. **La migration 0194** déplace les anciennes clés et pose les prompts UNE
-   fois, sans écraser ce qu'un administrateur a déjà réglé.
+5. **Les migrations posent la marque `assiste_ia` sur toutes les tables** qui
+   la portent dans le code — ni plus, ni moins.
 """
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import ConfigSite
 from app.utils.llm import ErreurLLM, config_llm
@@ -34,15 +30,8 @@ from app.utils.llm_usages import (
     decrire,
 )
 from app.utils.synthese_format import CONSIGNE
+from tests.aides_migrations import charger_migration, chemin_migration
 from tests.tables_supprimees import tables_supprimees
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
 
 
 def _poser(session, **valeurs):
@@ -199,18 +188,13 @@ def test_le_catalogue_des_modeles_n_exige_pas_de_modele(session):
     config_llm(session).verifier(exiger_actif=False, exiger_modele=False)
 
 
-# ── 4. La migration 0194 — déplacer sans écraser, poser une fois ───────────
+# ── 4. Les migrations et la marque `assiste_ia` ─────────────────────────────
 
-_MIGRATION = (
-    Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0194_assistant_ia_par_usage.py"
-)
+_MIGRATION = "0194_assistant_ia_par_usage.py"
 
 
 def _module():
-    spec = importlib.util.spec_from_file_location("mig0194", _MIGRATION)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return charger_migration(_MIGRATION)
 
 
 #: Migrations qui posent `assiste_ia` sur UNE table, après la 0194.
@@ -245,37 +229,9 @@ def test_la_migration_couvre_TOUTES_les_tables_qui_portent_la_marque():
     assert len(attendues) >= 9, attendues
     posees = set(_module().TABLES_ASSISTE_IA)
     for motif in _MIGRATIONS_TARDIVES:
-        chemin = next(_MIGRATION.parent.glob(motif))
-        spec = importlib.util.spec_from_file_location(chemin.stem, chemin)
-        tardive = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(tardive)
+        chemin = chemin_migration(motif)
+        tardive = charger_migration(motif)
         assert tardive.COLONNE == "assiste_ia", chemin.name
         posees.add(tardive.TABLE)
     #  Une table supprimée depuis (#1177) reste dans la liste de la 0194, appliquée.
     assert posees - tables_supprimees() == attendues
-
-
-def test_la_migration_deplace_les_anciennes_cles_et_ne_les_laisse_pas(session):
-    """Deux clés pour un réglage seraient deux vérités."""
-    _poser(session, llm_actif="1", llm_modele="gpt-4o", llm_max_jetons="8000")
-    m = _module()
-    conn = session.connection()
-    for ancienne, nouvelle in m.DEPLACEMENTS.items():
-        valeur = m._lire(conn, ancienne)
-        m._poser_si_absent(conn, nouvelle, valeur)
-        m._retirer(conn, ancienne)
-    assert m._lire(conn, "llm_synthese_contrat_modele") == "gpt-4o"
-    assert m._lire(conn, "llm_synthese_contrat_max_jetons") == "8000"
-    assert m._lire(conn, "llm_modele") is None
-
-
-def test_poser_si_absent_n_ecrase_JAMAIS_un_reglage_existant(session):
-    """Une migration se rejoue (`standards/06` §3) : un prompt que
-    l'administrateur a réécrit doit survivre au redémarrage suivant."""
-    _poser(session, llm_synthese_contrat_prompt="LE MIEN")
-    m = _module()
-    conn = session.connection()
-    m._poser_si_absent(conn, "llm_synthese_contrat_prompt", "ORIGINE")
-    assert m._lire(conn, "llm_synthese_contrat_prompt") == "LE MIEN"
-    m._poser_si_absent(conn, "llm_description_prompt", "ORIGINE 2")
-    assert m._lire(conn, "llm_description_prompt") == "ORIGINE 2"

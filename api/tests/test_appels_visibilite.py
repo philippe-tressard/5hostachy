@@ -17,6 +17,8 @@ from __future__ import annotations
 import ast
 import pathlib
 
+from tests.aides_sources import modules_app
+
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 
@@ -53,12 +55,10 @@ def test_chaque_appel_d_un_predicat_de_visibilite_respecte_sa_signature():
         f"Prédicats introuvables dans utils/visibility/ : {sorted(sigs)}"
     )
     fautes, appels = [], 0
-    for p in sorted(_APP.rglob("*.py")):
-        if "__pycache__" in p.parts:
-            continue
-        source = p.read_text(encoding="utf-8")
+    for module in modules_app():
+        source = module.source
         appels += sum(source.count(f"{nom}(") for nom in sigs)
-        fautes += _appels_faux(source, p.relative_to(_APP).as_posix(), sigs)
+        fautes += _appels_faux(source, module.rel, sigs)
     assert appels >= 20, f"Seulement {appels} appel(s) relevé(s) — portée cassée."
     assert not fautes, "Appel de prédicat de visibilité mal formé :\n  " + "\n  ".join(fautes)
 

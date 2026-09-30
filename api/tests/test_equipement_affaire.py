@@ -9,6 +9,10 @@ Et c'est lui qui RANGE une affaire résolue au carnet. Sans lui, elle y figure
 quand même, sous « Sans équipement rattaché » : la v2.31.0 l'excluait, et le
 carnet a perdu toutes les affaires résolues d'avant — arbitré à l'écran le
 24/09/2026 : « on a perdu les affaires, c'est dommage ».
+
+Ce que l'équipement partage avec l'intervenant et le contrat — ignoré venant
+d'un résident, effacé hors du bâti, effacé par le conseil — se vérifie champ par
+champ dans `test_intervenant_affaire.py` (`CHAMPS_DU_CONSEIL`).
 """
 
 from __future__ import annotations
@@ -23,7 +27,7 @@ from app.models.prestataires import TypeEquipement
 from app.models.tickets import StatutTicket
 from app.utils.carnet_entretien import construire_carnet
 from app.utils.intervenant import EQUIPEMENTS_AFFAIRE
-from tests.test_intervenant_affaire import _compte, _corriger, _creer, session  # noqa: F401
+from tests.aides_affaire import _compte, _corriger, _creer, session  # noqa: F401
 
 
 def _cs(session):
@@ -44,21 +48,6 @@ def test_le_conseil_le_designe_apres_coup_meme_une_fois_l_affaire_close(session)
     assert _corriger(session, cs, t.id, equipement="plomberie").equipement == "plomberie"
 
 
-def test_un_resident_ne_designe_pas_l_equipement(session):
-    """Ignoré, pas refusé : son signalement doit passer."""
-    assert (
-        _creer(session, _compte(session), categorie="panne", equipement="toiture").equipement
-        is None
-    )
-
-
-def test_l_equipement_ne_vaut_que_pour_le_bati(session):
-    cs = _cs(session)
-    assert _creer(session, cs, categorie="question", equipement="vmc").equipement is None
-    t = _creer(session, cs, categorie="panne", equipement="vmc")
-    assert _corriger(session, cs, t.id, categorie="question").equipement is None
-
-
 @pytest.mark.parametrize(
     "valeur", ["licorne", TypeEquipement.assurance.value, TypeEquipement.syndic.value]
 )
@@ -67,12 +56,6 @@ def test_ce_qui_n_est_pas_un_equipement_est_refuse(session, valeur):
     with pytest.raises(HTTPException) as refus:
         _creer(session, _cs(session), categorie="panne", equipement=valeur)
     assert refus.value.status_code == 422
-
-
-def test_le_conseil_efface_l_equipement(session):
-    cs = _cs(session)
-    t = _creer(session, cs, categorie="panne", equipement="ascenseur")
-    assert _corriger(session, cs, t.id, equipement=None).equipement is None
 
 
 def test_la_liste_blanche_n_est_pas_vide():
@@ -95,7 +78,7 @@ def test_l_equipement_range_l_affaire_et_son_absence_ne_l_exclut_pas(session):
     cs = _cs(session)
     _resolue(session, cs, "Infiltration hall B — sans équipement")
     _resolue(session, cs, "Infiltration hall B — toiture", equipement="toiture")
-    carnet = {e["libelle"]: e for e in construire_carnet(session)}
+    carnet = {e["libelle"]: e for e in construire_carnet(session, lecteur=cs)}
     assert carnet["Infiltration hall B — toiture"]["equipement"] == "toiture"
     assert carnet["Infiltration hall B — sans équipement"]["equipement"] is None, (
         "une affaire résolue sans équipement a disparu du carnet"

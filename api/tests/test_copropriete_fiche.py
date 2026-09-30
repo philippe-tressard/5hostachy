@@ -240,38 +240,6 @@ def test_le_contrat_le_plus_recent_gagne(copro):
     assert lu.assurance_compagnie == "Récent"
 
 
-def test_la_migration_0156_emploie_la_valeur_REELLE_de_l_enumeration():
-    """La migration écrit `type_equipement` en dur ; l'énumération le relit.
-
-    ⚠️ Une migration ne valide rien à l'insertion sous SQLite : une valeur
-    inventée passerait, et l'énumération la refuserait à la LECTURE — des
-    semaines plus tard, sur un écran qui n'a pas changé. C'est exactement ce qui
-    a failli arriver ici : la première version insérait un `type_prestataire`
-    « contrat » qui n'existe pas.
-    """
-    import importlib.util
-    import pathlib as _p
-
-    chemin = _p.Path(__file__).parent.parent / "alembic" / "versions" / "0156_assurance_contrat.py"
-    spec = importlib.util.spec_from_file_location("migration_0156", chemin)
-    migration = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(migration)
-
-    assert migration.TYPE_ASSURANCE == TypeEquipement.assurance.value
-    assert "'contrat_recurrent'" in chemin.read_text(encoding="utf-8"), (
-        "le type de prestataire inséré doit être une valeur réelle de TypePrestataire"
-    )
-    #  `contrat_recurrent` a quitté l'énumération (#1444) : la valeur reste juste
-    #  parce que la 0233, appliquée après, la convertit — en une valeur réelle.
-    from app.models.prestataires import TypePrestataire
-
-    chemin_0233 = chemin.parent / "0233_categorie_prestataire_metier.py"
-    spec = importlib.util.spec_from_file_location("migration_0233", chemin_0233)
-    m0233 = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m0233)
-    assert TypePrestataire(m0233.CORRESPONDANCE["contrat_recurrent"])
-
-
 def test_les_deux_decomptes_de_lots_sont_independants(copro):
     """Les deux chiffres de la fiche ANAH ne se déduisent pas l'un de l'autre.
 

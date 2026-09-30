@@ -45,7 +45,7 @@ from app.utils.archivage import (
 )
 
 #  Une horloge FIXE : sans elle, un test qui passe à 23 h 59 échoue à 0 h 01, et
-#  personne ne comprend pourquoi. `datetime.utcnow()` n'apparaît nulle part ici.
+#  personne ne comprend pourquoi. L'horloge dépréciée de `datetime` n'apparaît nulle part ici.
 MAINTENANT = datetime(2026, 8, 20, 12, 0, 0)
 VIEUX = MAINTENANT - timedelta(days=ARCHIVAGE_DELAI_JOURS + 1)
 RECENT = MAINTENANT - timedelta(days=1)
@@ -293,30 +293,6 @@ def test_chaque_regle_explique_son_declencheur(type_objet):
     qu'il manquera pour le type ajouté un soir de livraison.
     """
     assert REGLES[type_objet].declencheur.strip(), f"{type_objet} : déclencheur non documenté"
-
-
-def test_la_migration_0155_remplit_les_memes_statuts_que_la_regle():
-    """La migration recopie une liste qu'elle ne peut pas importer.
-
-    Une migration doit rester exécutable dix ans après, même si le module
-    applicatif a été déplacé — elle ne peut donc pas importer `REGLES`. La copie
-    est assumée ; ce qui ne l'est pas, c'est qu'elle diverge en silence.
-
-    Si les deux listes s'écartent, la migration remplit `statut_change_le` pour
-    des idées que la règle n'archivera pas, ou l'oublie pour celles qu'elle
-    archivera — et ces dernières s'archiveraient alors sur leur date de dépôt.
-    """
-    import importlib.util
-    import pathlib
-
-    chemin = (
-        pathlib.Path(__file__).parent.parent / "alembic" / "versions" / "0155_archivage_unifie.py"
-    )
-    spec = importlib.util.spec_from_file_location("migration_0155", chemin)
-    migration = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(migration)
-
-    assert set(migration.STATUTS_TERMINAUX_IDEE) == set(REGLES["idee"].statuts_terminaux)
 
 
 def test_un_statut_immediat_n_est_jamais_aussi_terminal():

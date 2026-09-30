@@ -439,6 +439,10 @@ def test_un_identifiant_sql_hors_norme_est_REFUSE():
     Mais une consigne ne se maintient pas seule. Un nom contenant un guillemet
     sortirait des `"…"` et ferait de ce module un point d'injection, quel que
     soit le soin mis à ne lui passer que du schéma.
+
+    ⚠️ Le refus LÈVE, avec son motif, plutôt que d'écarter en silence : un nom
+    non reconnu est un fait anormal du schéma, et l'écarter laisserait une
+    orpheline que le relevé suivant recompterait indéfiniment sans dire pourquoi.
     """
     from app.utils.diagnostic_cles import _sur
 
@@ -452,18 +456,5 @@ def test_un_identifiant_sql_hors_norme_est_REFUSE():
         "",
         "ticket;",
     ):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Identifiant SQL refusé"):
             _sur(hostile)
-
-
-def test_refuser_LEVE_plutot_que_d_ecarter_en_silence():
-    """⚠️ Un nom non reconnu est un fait anormal du schéma.
-
-    L'écarter silencieusement laisserait une orpheline que le relevé suivant
-    recompterait indéfiniment, sans jamais dire pourquoi — un contrôle qui ne
-    dit pas ce qu'il ignore ment par omission.
-    """
-    from app.utils.diagnostic_cles import _sur
-
-    with pytest.raises(ValueError, match="Identifiant SQL refusé"):
-        _sur('mauvais"nom')

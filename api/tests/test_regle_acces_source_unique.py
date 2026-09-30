@@ -38,6 +38,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 RACINE = Path(__file__).resolve().parents[1] / "app"
 SOURCE_BATIMENTS = RACINE / "utils" / "mes_batiments.py"
 SOURCE_ACCES = RACINE / "utils" / "visibility" / "socle.py"
@@ -90,10 +92,7 @@ SURVEILLES = ["routers", "utils"]
 
 
 def _fichiers_surveilles() -> list[Path]:
-    trouves = []
-    for coin in SURVEILLES:
-        trouves += sorted((RACINE / coin).rglob("*.py"))
-    return trouves
+    return [m.chemin for coin in SURVEILLES for m in modules_app(coin)]
 
 
 def _lit_le_batiment_dun_utilisateur(fichier: Path) -> bool:

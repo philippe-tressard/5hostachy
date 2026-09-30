@@ -38,6 +38,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
+from app.utils import horloge
 from app.utils.rattrapage import (
     rattrapage_necessaire,
     rattraper_si_manquee,
@@ -51,11 +52,6 @@ def test_aucune_trace_DECLENCHE_le_rattrapage():
     """Base neuve ou tâche jamais passée : les deux méritent une première
     exécution, et elle est inoffensive."""
     assert rattrapage_necessaire(None, MAINTENANT) is True
-
-
-def test_un_passage_RECENT_ne_declenche_rien():
-    """Le cas nominal — un redémarrage à 14 h ne relance pas l'agrégation."""
-    assert rattrapage_necessaire(MAINTENANT - timedelta(hours=2), MAINTENANT) is False
 
 
 def test_un_passage_MANQUE_declenche():
@@ -78,7 +74,8 @@ def test_le_bord_des_24_heures():
 
 @pytest.mark.parametrize("heures", [1, 6, 12, 23])
 def test_aucun_rattrapage_dans_la_journee(heures):
-    """Plusieurs déploiements dans la même journée ne rejouent pas la tâche.
+    """Plusieurs déploiements dans la même journée ne rejouent pas la tâche —
+    y compris le cas nominal : un redémarrage à 14 h ne relance pas l'agrégation.
 
     C'est le cas réel du 09/09/2026 : cinq mises en production en une nuit. Sans
     ce bord, chacune aurait relancé une agrégation complète.
@@ -121,7 +118,7 @@ def test_chaque_tache_a_un_identifiant_de_job_UNIQUE():
 
 
 def test_rien_a_rattraper_ne_relance_PAS():
-    """⚠️ La référence est `utcnow()`, PAS la constante `MAINTENANT`.
+    """⚠️ La référence est `horloge.maintenant()`, PAS la constante `MAINTENANT`.
 
     Écrit le 10/09/2026, ce test comparait `MAINTENANT - 2 h` — une date figée —
     à l'horloge réelle que `rattraper_si_manquee` interroge. Il est passé ce
@@ -136,7 +133,7 @@ def test_rien_a_rattraper_ne_relance_PAS():
     appels = []
     resultat = rattraper_si_manquee(
         "Tâche d'essai",
-        lambda: datetime.utcnow() - timedelta(hours=2),
+        lambda: horloge.maintenant() - timedelta(hours=2),
         lambda: appels.append("relance"),
     )
     assert appels == []
@@ -147,7 +144,7 @@ def test_un_passage_manque_RELANCE():
     appels = []
     rattraper_si_manquee(
         "Tâche d'essai",
-        lambda: datetime.utcnow() - timedelta(hours=30),
+        lambda: horloge.maintenant() - timedelta(hours=30),
         lambda: appels.append("relance"),
     )
     assert appels == ["relance"]
@@ -172,7 +169,7 @@ def test_une_relance_qui_LEVE_est_journalisee_et_avalee():
 
     assert (
         rattraper_si_manquee(
-            "Tâche d'essai", lambda: datetime.utcnow() - timedelta(hours=30), relance_cassee
+            "Tâche d'essai", lambda: horloge.maintenant() - timedelta(hours=30), relance_cassee
         )
         is None
     )
@@ -181,12 +178,7 @@ def test_une_relance_qui_LEVE_est_journalisee_et_avalee():
 def test_la_regle_n_est_ECRITE_QU_UNE_FOIS():
     """Une seconde copie de `rattrapage_necessaire` divergerait au premier
     ajustement du bord des 24 h — et c'est le bord qui décide chaque matin."""
-    import pathlib
+    from tests.aides_sources import modules_app
 
-    racine = pathlib.Path(__file__).resolve().parents[1] / "app"
-    porteurs = [
-        f.relative_to(racine).as_posix()
-        for f in racine.rglob("*.py")
-        if "def rattrapage_necessaire" in f.read_text(encoding="utf-8")
-    ]
+    porteurs = [m.rel for m in modules_app() if "def rattrapage_necessaire" in m.source]
     assert porteurs == ["utils/rattrapage.py"], porteurs

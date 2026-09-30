@@ -6,7 +6,8 @@
  *  bailleurs) » et « Pas les bailleurs (mandataires), ni les locataires ».
  *
  *  Une Panne a sa propre règle de lecture (`destinataires_par_defaut` au
- *  serveur) : hors d'un bâtiment, TOUS la lisent, locataires compris. Les
+ *  serveur) : tous les copropriétaires et les locataires du périmètre depuis le
+ *  30/09/2026 (hors d'un bâtiment, TOUS la lisaient alors). Les
  *  pastilles la connaissaient ; le calcul de la vignette ne recevait pas la
  *  catégorie et retombait sur le défaut d'une affaire ordinaire. La règle pure
  *  était juste et éprouvée (`lint:lecture`) : c'est son APPEL qui oubliait un
@@ -39,17 +40,22 @@ async function nouvelleAffaire(page: Page, description: RegExp) {
 	await page.getByText(description).first().click();
 }
 
-test('Nouvelle affaire, Panne : la vignette dit « Tous », comme la pastille cochée', async ({
+//  Standard du 30/09/2026 (Carnet = Affaires = Kanban) : une Panne sans choix
+//  se lit de tous les copropriétaires et des locataires de son périmètre — la
+//  vignette le dit, comme les pastilles cochées (#1434 : elles divergeaient).
+test('Nouvelle affaire, Panne : copropriétaires et locataires cochés, la vignette le dit', async ({
 	page,
 }) => {
 	await nouvelleAffaire(page, /Ascenseur, chauffage, éclairage/);
 	await expect(page.getByRole('radio', { name: /Panne/ })).toBeChecked();
 
 	const s = section(page);
-	await expect(s.locator('button.active', { hasText: /^\s*Tous\s*$/ })).toHaveCount(1);
-	await expect(s.locator('.section-badge, .section-resume').first()).toHaveText(/Tous/);
-	await expect(s.locator('.section-badge, .section-resume').first()).not.toHaveText(
-		/Copropriétaires/,
+	await expect(s.locator('button.active', { hasText: /Copropriétaires occupants/ })).toHaveCount(1);
+	await expect(s.locator('button.active', { hasText: /Copropriétaires bailleurs/ })).toHaveCount(1);
+	await expect(s.locator('button.active', { hasText: /^\s*Locataires\s*$/ })).toHaveCount(1);
+	await expect(s.locator('button.active')).toHaveCount(3);
+	await expect(s.locator('.section-badge, .section-resume').first()).toHaveText(
+		/Copropriétaires et locataires/,
 	);
 });
 
@@ -62,6 +68,25 @@ test('Nouvelle affaire, Étude & travaux : « Conseil syndical » est cochée (2
 	await expect(s.locator('button.active')).toHaveCount(1);
 	await expect(s.locator('.section-badge, .section-resume').first()).toHaveText(
 		/Conseil syndical seul/,
+	);
+});
+
+//  …et s'ouvre aux copropriétaires dès l'AG, où ils la votent (30/09/2026) : la
+//  présélection suit l'ÉTAT choisi, pas seulement la catégorie.
+test('Nouvelle affaire, Étude & travaux mise « À l’AG » : les copropriétaires sont cochés', async ({
+	page,
+}) => {
+	await nouvelleAffaire(page, /Diagnostic, sondage, devis/);
+	await page
+		.getByRole('button', { name: /À l’AG/ })
+		.first()
+		.click();
+	const s = section(page);
+	await expect(s.locator('button.active', { hasText: /Copropriétaires occupants/ })).toHaveCount(1);
+	await expect(s.locator('button.active', { hasText: /Copropriétaires bailleurs/ })).toHaveCount(1);
+	await expect(s.locator('button.active')).toHaveCount(2);
+	await expect(s.locator('.section-badge, .section-resume').first()).toHaveText(
+		/Copropriétaires \(occupants et bailleurs\)/,
 	);
 });
 

@@ -18,9 +18,9 @@ l'expression interpolée, mais son argument.
 from __future__ import annotations
 
 import ast
-import pathlib
 
-RACINE = pathlib.Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
+
 ATTRIBUTS = {"categorie", "statut"}
 
 
@@ -44,13 +44,7 @@ def test_le_controle_voit_ce_qu_il_doit_voir():
 
 
 def test_aucun_texte_serveur_ne_rend_une_valeur_brute():
-    fichiers = list(RACINE.rglob("*.py"))
-    assert len(fichiers) > 50, "cas zéro : le contrôle ne lit plus le code de l'API"
-    fautifs = [
-        f"{f.relative_to(RACINE)}:{n}"
-        for f in fichiers
-        for n in valeurs_brutes(f.read_text(encoding="utf-8"))
-    ]
+    fautifs = [f"{m.rel}:{n}" for m in modules_app() for n in valeurs_brutes(m.source)]
     assert not fautifs, (
         "Catégorie ou statut interpolés BRUTS dans un texte — passer par leur "
         "libellé (`libelle_categorie`, `STATUT_LABELS`) : " + ", ".join(fautifs)

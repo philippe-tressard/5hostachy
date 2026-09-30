@@ -38,6 +38,8 @@ import pytest
 RACINE = Path(__file__).resolve().parents[1] / "app"
 sys.path.insert(0, str(RACINE.parent))
 
+from tests.aides_sources import modules_app  # noqa: E402
+
 #: Le seul endroit où « faut-il une description ? » se décide.
 SOURCE = "utils/quand.py"
 
@@ -97,12 +99,11 @@ def test_aucune_autre_ecriture_de_la_regle():
     """
     fautes = []
     exceptions_servies = set()
-    for fichier in sorted(RACINE.rglob("*.py")):
-        rel = fichier.relative_to(RACINE).as_posix()
+    for module in modules_app():
+        rel = module.rel
         if rel == SOURCE:
             continue
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
-        for noeud in ast.walk(arbre):
+        for noeud in ast.walk(module.arbre):
             if not isinstance(noeud, ast.If):
                 continue
             condition = ast.unparse(noeud.test)

@@ -10,19 +10,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import BackgroundTasks
-
 from app.models.core import RoleUtilisateur, Ticket, TicketEvolution
 from app.routers.tickets import evolutions
-from app.schemas_tickets import TicketEvolutionCreate
-from tests.test_intervenant_affaire import _compte, _creer, session  # noqa: F401
-
-
-def _suite(session, user, ticket_id, **champs):
-    corps = TicketEvolutionCreate(
-        type="commentaire", contenu="<p>Pris en charge.</p>", notifier=False, **champs
-    )
-    return evolutions.add_evolution(ticket_id, corps, BackgroundTasks(), session=session, user=user)
+from tests.aides_affaire import _compte, _creer, _suite, session  # noqa: F401
 
 
 def test_le_conseil_planifie_l_affaire_d_un_resident_par_une_suite(session):

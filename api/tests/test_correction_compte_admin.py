@@ -14,7 +14,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.routers.admin.utilisateurs import AdminUserUpdate, modifier_utilisateur
-from tests.aides_badges import _compte, session  # noqa: F401 — `session` est une fixture
+from tests.aides_badges import _compte
 
 
 def _corriger(session, cible, **champs):

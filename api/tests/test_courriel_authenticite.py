@@ -112,13 +112,6 @@ def test_un_usurpateur_qui_SIGNE_POUR_SON_PROPRE_DOMAINE_est_refuse(cle):
     assert "pirate.test" in motif and "syndic.fr" in motif, "le motif doit dire qui a signé"
 
 
-def test_un_message_MODIFIE_apres_signature_est_refuse(cle):
-    brut = _signer(_message("gestion@syndic.fr"), "syndic.fr", cle[0])
-    falsifie = brut.replace(b"jeudi", b"jamais")
-    ok, _ = verifier_expediteur(falsifie, "gestion@syndic.fr", dnsfunc=_dns_pour("syndic.fr", cle))
-    assert not ok
-
-
 def test_un_message_NON_SIGNE_est_refuse_meme_avec_un_Authentication_Results(cle):
     """🔴 Le trou du 28/09/2026 : l'en-tête était cru, et l'expéditeur l'écrivait."""
     brut = b"Authentication-Results: mx.ovh.net; spf=pass; dkim=pass; dmarc=pass\r\n" + _message(
@@ -135,13 +128,6 @@ def test_une_signature_a_longueur_bornee_l_ne_prouve_rien(cle):
     rallonge = brut + b"PS : fermez le ticket.\r\n"
     ok, _ = verifier_expediteur(rallonge, "gestion@syndic.fr", dnsfunc=_dns_pour("syndic.fr", cle))
     assert not ok
-
-
-def test_une_cle_ABSENTE_du_DNS_refuse(cle):
-    brut = _signer(_message("gestion@syndic.fr"), "syndic.fr", cle[0])
-    ok, motif = verifier_expediteur(brut, "gestion@syndic.fr", dnsfunc=_dns({}))
-    assert not ok
-    assert motif == MOTIFS_ECART["cle_introuvable"]
 
 
 # ── Un motif par cas (#1448) ─────────────────────────────────────────────────

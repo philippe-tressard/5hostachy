@@ -28,7 +28,6 @@ pour autant. Deux questions différentes, deux mécanismes.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
 import pytest
 from sqlmodel import SQLModel, Session, delete
@@ -39,9 +38,10 @@ from app.models.core import (
     Evenement,
     RoleUtilisateur,
     Ticket,
-    Utilisateur,
 )
 from app.routers.documents import list_documents, upload_document
+from app.utils.horloge import maintenant
+from tests.aides_base import compte
 
 
 @pytest.fixture()
@@ -50,18 +50,14 @@ def bibliotheque():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         session.exec(delete(Document))
-        admin = Utilisateur(
-            email=f"admin-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        admin = compte(
+            session,
+            prefixe="admin",
             prenom="A",
             nom="D",
             role=RoleUtilisateur.admin,
             roles_json="admin",
-            actif=True,
         )
-        session.add(admin)
-        session.commit()
-        session.refresh(admin)
 
         #  🔴 Les PORTEURS sont montés, pas inventés. La fixture écrivait
         #  `ticket_id=11` et `evenement_id=22` — deux identifiants tirés au
@@ -86,7 +82,7 @@ def bibliotheque():
         )
         porteur_evenement = Evenement(
             titre="Visite de l'ascensoriste",
-            debut=datetime.utcnow(),
+            debut=maintenant(),
             auteur_id=admin.id,
         )
         session.add_all([porteur_ticket, porteur_evenement])

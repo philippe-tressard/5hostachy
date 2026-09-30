@@ -43,6 +43,8 @@ import ast
 import pathlib
 import re
 
+from tests.aides_sources import modules_app
+
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 #: Le module qui porte le geste — et le seul autorisé à écrire un fichier reçu.
@@ -75,27 +77,56 @@ _MOTIF_PLAFOND = re.compile(r"MAX_[A-Z_]*SIZE_MB|MAX_[A-Z_]*MO\b|1024\s*\*\s*102
 _MOTIF_MIME = re.compile(r"^(?:image|application|text)/[a-z0-9.+-]+$")
 
 
+def _mode_ecriture(mode: ast.AST | None) -> bool:
+    return isinstance(mode, ast.Constant) and isinstance(mode.value, str) and "w" in mode.value
+
+
+def _forme_d_ecriture(appel: ast.Call) -> str | None:
+    """Le nom de la forme d'écriture d'octets sur disque que porte cet appel.
+
+    🔴 **Quatre formes, et non deux** (30/09/2026). Le détecteur ne connaissait
+    que `write_bytes` et `open(…, "w…")` ; `test_signature_fichiers.py` gardait,
+    à côté, un relevé des routeurs qui faisaient `shutil.copyfileobj(file.file…`
+    — dont le motif ne trouvait plus rien depuis la factorisation (#1026), et
+    rendait donc un vert à vide. Les deux formes qu'il cherchait vivent ici
+    désormais, au seul détecteur des écritures.
+    """
+    cible = ast.unparse(appel.func)
+    mode_nomme = next((k.value for k in appel.keywords if k.arg == "mode"), None)
+    if cible.endswith("write_bytes"):
+        return "write_bytes"
+    if cible.endswith("copyfileobj"):
+        return "copyfileobj"
+    if cible == "open":
+        mode = appel.args[1] if len(appel.args) > 1 else mode_nomme
+        return "open(w)" if _mode_ecriture(mode) else None
+    #  `<chemin>.open("wb")` — un `Path` ouvert en écriture. Le mode y est le
+    #  PREMIER argument ; `tarfile.open(dest, "w:gz")` ou `Image.open(flux)`, dont
+    #  le premier argument n'est pas un mode, n'en sont pas.
+    if isinstance(appel.func, ast.Attribute) and appel.func.attr == "open":
+        mode = appel.args[0] if appel.args else mode_nomme
+        return ".open(w)" if _mode_ecriture(mode) else None
+    return None
+
+
+def _ecritures_de(source: str) -> list[tuple[int, str]]:
+    """(ligne, forme) pour chaque écriture d'octets sur disque de ce source."""
+    return [
+        (noeud.lineno, forme)
+        for noeud in ast.walk(ast.parse(source))
+        if isinstance(noeud, ast.Call) and (forme := _forme_d_ecriture(noeud))
+    ]
+
+
 def _ecritures_disque():
     """(fichier, ligne, appel) pour chaque écriture d'octets sur disque."""
-    for fichier in sorted(_APP.rglob("*.py")):
-        source = fichier.read_text(encoding="utf-8")
+    for m in modules_app():
         try:
-            arbre = ast.parse(source)
+            ecritures = _ecritures_de(m.source)
         except SyntaxError:  # pragma: no cover
             continue
-        for noeud in ast.walk(arbre):
-            if not isinstance(noeud, ast.Call):
-                continue
-            cible = ast.unparse(noeud.func)
-            nom = None
-            if cible.endswith("write_bytes"):
-                nom = "write_bytes"
-            elif cible == "open" and len(noeud.args) > 1:
-                mode = noeud.args[1]
-                if isinstance(mode, ast.Constant) and "w" in str(mode.value):
-                    nom = "open(w)"
-            if nom:
-                yield fichier.relative_to(_APP).as_posix(), noeud.lineno, nom
+        for ligne, nom in ecritures:
+            yield m.rel, ligne, nom
 
 
 def test_le_controle_voit_bien_des_ecritures():
@@ -106,6 +137,39 @@ def test_le_controle_voit_bien_des_ecritures():
         "portée et rendrait un vert parfait"
     )
     assert (_APP / SOURCE).exists(), f"{SOURCE} a disparu"
+
+
+def test_le_detecteur_voit_CHAQUE_forme_d_ecriture():
+    """Le contrôle sait REFUSER : un extrait forgé par forme, et deux lectures
+    qui ne doivent pas être prises pour des écritures.
+
+    Sans lui, une forme que le détecteur aurait cessé de reconnaître laisserait
+    le test ci-dessus vert — sur le code même qu'il doit refuser.
+    """
+    forge = "\n".join(
+        (
+            "chemin.write_bytes(donnees)",  # 1
+            "open(dest, 'wb')",  # 2
+            "shutil.copyfileobj(file.file, sortie)",  # 3
+            "chemin.open('wb')",  # 4
+            "open(dest, mode='w')",  # 5
+            "Image.open(io.BytesIO(donnees))",  # lecture
+            "open(dest)",  # lecture
+            "tarfile.open(dest, 'r:gz')",  # lecture
+        )
+    )
+    vues = _ecritures_de(forge)
+    attendues = [
+        (1, "write_bytes"),
+        (2, "open(w)"),
+        (3, "copyfileobj"),
+        (4, ".open(w)"),
+        (5, "open(w)"),
+    ]
+    assert vues == attendues, (
+        f"le détecteur a vu {vues}, il devait voir {attendues} : une forme "
+        "d'écriture lui échappe, ou une lecture passe pour une écriture"
+    )
 
 
 def test_un_fichier_recu_ne_s_ecrit_que_dans_la_source():
@@ -148,9 +212,9 @@ def test_aucun_routeur_ne_redeclare_un_plafond_ou_une_liste_de_types():
     dictionnaire** dont les entrées sont des types MIME.
     """
     fautes = []
-    for fichier in sorted((_APP / "routers").rglob("*.py")):
-        source = fichier.read_text(encoding="utf-8")
-        nom = fichier.relative_to(_APP).as_posix()
+    for m in modules_app("routers"):
+        source = m.source
+        nom = m.rel
         try:
             arbre = ast.parse(source)
         except SyntaxError:  # pragma: no cover

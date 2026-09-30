@@ -32,7 +32,6 @@ résultat**. Un jour, quelqu'un réécrira une des deux résolutions en ligne po
 
 from __future__ import annotations
 
-import pathlib
 import uuid
 
 import pytest
@@ -44,7 +43,6 @@ from app.models.core import (
     StatutImport,
     Telecommande,
     TelecommandeImport,
-    Utilisateur,
     Vigik,
     VigikImport,
 )
@@ -52,6 +50,8 @@ from app.routers.acces import socle_imports
 from app.routers.acces.imports_telecommandes import TELECOMMANDE
 from app.routers.acces.imports_vigik import VIGIK
 from app.routers.acces.socle_imports import PatchImportBody
+from tests.aides_base import compte
+from tests.aides_sources import modules_app
 
 #: Les deux chaînes, avec de quoi fabriquer un import de staging pour chacune.
 #: ⚠️ Le paramétrage porte le CHAMP de référence, pas une valeur codée en dur :
@@ -70,26 +70,8 @@ def deux_comptes():
     """Un propriétaire et un locataire, réels — les clés étrangères sont actives."""
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        jeton = uuid.uuid4().hex[:8]
-        proprio = Utilisateur(
-            email=f"proprio-{jeton}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="P",
-            nom="PROPRIO",
-            actif=True,
-        )
-        locataire = Utilisateur(
-            email=f"loc-{jeton}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="L",
-            nom="LOCATAIRE",
-            actif=True,
-        )
-        session.add(proprio)
-        session.add(locataire)
-        session.commit()
-        session.refresh(proprio)
-        session.refresh(locataire)
+        proprio = compte(session, prefixe="proprio", prenom="P", nom="PROPRIO")
+        locataire = compte(session, prefixe="loc", prenom="L", nom="LOCATAIRE")
         yield session, proprio, locataire
         session.delete(proprio)
         session.delete(locataire)
@@ -287,16 +269,11 @@ def test_UN_SEUL_objet_decrit_les_deux_types_d_acces():
     """
     import re
 
-    racine = pathlib.Path(__file__).resolve().parents[1] / "app"
     declarations: dict[str, list[str]] = {"VIGIK": [], "TELECOMMANDE": []}
-    fichiers = [p for p in racine.rglob("*.py") if "__pycache__" not in str(p)]
-    assert fichiers, "aucun module lu — le contrôle ne peut pas conclure"
-
-    for chemin in fichiers:
-        source = chemin.read_text(encoding="utf-8")
+    for m in modules_app():
         for nom in declarations:
-            if re.search(rf"^{nom} = ", source, re.MULTILINE):
-                declarations[nom].append(str(chemin.relative_to(racine)).replace("\\", "/"))
+            if re.search(rf"^{nom} = ", m.source, re.MULTILINE):
+                declarations[nom].append(m.rel)
 
     for nom, lieux in declarations.items():
         assert lieux == ["utils/types_acces.py"], (

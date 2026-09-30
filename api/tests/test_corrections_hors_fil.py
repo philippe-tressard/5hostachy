@@ -36,6 +36,7 @@ from app.utils.corrections import (
     contenu_correction,
     est_correction,
 )
+from tests.aides_sources import modules_app
 
 _APP = Path(__file__).resolve().parents[1] / "app"
 _FLUX = _APP / "routers" / "flux"
@@ -90,11 +91,8 @@ def test_un_vrai_commentaire_n_est_pas_ecarte():
 def _contenus_litteraux() -> list[tuple[str, int, str]]:
     """Les `contenu="…"` littéraux de `app/`, avec fichier et ligne."""
     trouves: list[tuple[str, int, str]] = []
-    for fichier in sorted(_APP.rglob("*.py")):
-        if "__pycache__" in fichier.parts:
-            continue
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
-        for noeud in ast.walk(arbre):
+    for module in modules_app():
+        for noeud in ast.walk(module.arbre):
             if not isinstance(noeud, ast.Call):
                 continue
             for kw in noeud.keywords:
@@ -104,7 +102,7 @@ def _contenus_litteraux() -> list[tuple[str, int, str]]:
                     if isinstance(n, ast.Constant) and isinstance(n.value, str):
                         trouves.append(
                             (
-                                fichier.relative_to(_APP).as_posix(),
+                                module.rel,
                                 noeud.lineno,
                                 n.value,
                             )

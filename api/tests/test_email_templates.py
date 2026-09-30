@@ -28,7 +28,8 @@ from jinja2.sandbox import SandboxedEnvironment
 
 from app.seed import EMAIL_TEMPLATES
 from tests.contrats_email import EXPECTED_VARS, SUJETS_QUI_NOMMENT_L_OBJET
-from app.utils.email.variables import VARIABLES_DU_GABARIT, variables_de
+from app.utils.email.variables import variables_de
+from tests.aides_migrations import VERSIONS, charger_migration
 
 # Variables injectées d'office par send_email/_group (`_contexte_rendu` dans email.py)
 #
@@ -40,9 +41,8 @@ from app.utils.email.variables import VARIABLES_DU_GABARIT, variables_de
 # omissibles ni surchargeables.
 #
 # 🔴 Cette liste était la QUATRIÈME copie (#852). Elle vit désormais dans
-# `utils/email/variables.py`, avec la lecture qui s'en sert. L'alias reste : il
-# est employé plus bas, et le renommer partout n'apprendrait rien.
-BASE_CTX_VARS = set(VARIABLES_DU_GABARIT)
+# `utils/email/variables.py` (`VARIABLES_DU_GABARIT`), avec la lecture qui s'en
+# sert — et c'est là que les autres tests la lisent (#1495).
 
 
 # Modèles dont un exemplaire au moins part vers le syndic.
@@ -339,10 +339,6 @@ def test_les_migrations_disent_la_meme_chose_que_le_seed():
     invalider le fragment de la première et faire échouer ce test : c'est voulu —
     la revue doit être consciente, pas automatique.
     """
-    import importlib.util
-    from pathlib import Path
-
-    versions = Path(__file__).resolve().parents[1] / "alembic" / "versions"
     #  Deux champs, un seul balayage : une migration déclare `REMPLACEMENTS` pour
     #  l'objet, `REMPLACEMENTS_CORPS` pour le corps. Les quatre propriétés sont
     #  les mêmes — les vérifier deux fois les ferait diverger (0184).
@@ -382,7 +378,7 @@ def test_les_migrations_disent_la_meme_chose_que_le_seed():
         ),
     }
 
-    for chemin in sorted(versions.glob("*.py")):
+    for chemin in sorted(VERSIONS.glob("*.py")):
         source = chemin.read_text(encoding="utf-8")
         if "REMPLACEMENTS" not in source:
             continue
@@ -400,9 +396,7 @@ def test_les_migrations_disent_la_meme_chose_que_le_seed():
         if chemin.name in SUPPLANTEES:
             supplantees_vues.add(chemin.name)
             continue
-        spec = importlib.util.spec_from_file_location(f"migration_{chemin.stem}", chemin)
-        migration = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(migration)
+        migration = charger_migration(chemin.name)
         for attribut, (quoi, textes) in CHAMPS.items():
             remplacements = getattr(migration, attribut, None)
             if not remplacements:

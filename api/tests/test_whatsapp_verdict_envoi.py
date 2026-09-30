@@ -24,128 +24,25 @@ rendues par une seule réponse : « rien n'est parti » et « c'est parti, je n'
 pas vu l'accusé ».
 
 Côté API, le verdict `incertain` était donc JUSTE (on ne savait pas), mais sa
-raison était fausse et inexploitable. C'est ce que ces tests verrouillent :
-**un 202 ne se lit pas comme un 500.**
+raison était fausse et inexploitable. Ce que verrouille désormais la table de
+`test_whatsapp_scheduler.py` : **un 202 ne se lit pas comme un 500.**
 
-## Ce qui est vérifié, et dans les deux sens
+## Ce qui est vérifié ici, et ce qui l'est ailleurs
 
 Un test qui ne vérifierait que « 202 → incertain » ne prouverait pas qu'il sait
-distinguer : les trois verdicts sont éprouvés côté à côté, plus le cas où l'on
-sait que rien n'est parti (`ConnectError`), qui doit rester REJOUABLE.
+distinguer : les trois verdicts de `verdict_envoi` sont éprouvés côte à côte, et
+la règle de rejeu qui en découle — un échec ÉTABLI reste rejouable, un doute
+jamais.
+
+La traduction d'une réponse du bridge en verdict (202, 4xx, 5xx, connexion
+impossible) vit dans les tables de `test_whatsapp_scheduler.py`
+(`test_classification_des_reponses_du_bridge`, `…_des_pannes_de_transport`) : une
+seule table par question, plutôt qu'un faux client recopié par cas.
 """
 
 import httpx
-import pytest
 
 from app.utils import whatsapp as wa
-
-
-def _reponse(code: int) -> httpx.Response:
-    requete = httpx.Request("POST", "http://bridge/send")
-    return httpx.Response(code, request=requete, json={"ok": code < 300})
-
-
-def test_202_est_incertain_et_dit_que_le_message_est_parti(monkeypatch):
-    """Le cas de l'incident : émis, accusé non observé."""
-
-    def faux_post(url, json=None, headers=None, timeout=None):
-        return _reponse(202)
-
-    class FauxClient:
-        def __init__(self, **_):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_):
-            return False
-
-        def post(self, url, json=None, headers=None):
-            return _reponse(202)
-
-    monkeypatch.setattr(wa.httpx, "Client", FauxClient)
-
-    with pytest.raises(wa.EnvoiIncertain) as exc:
-        wa._poster_au_bridge("http://bridge/send", {}, {})
-
-    message = str(exc.value)
-    assert "émis" in message, (
-        "La raison doit dire que le message est PARTI — c'est toute la "
-        "différence avec un échec, et c'est ce que l'historique affiche."
-    )
-    assert "500" not in message, (
-        "Le 202 ne doit plus être décrit comme une réponse 500 : c'est "
-        "précisément la confusion qui a fait afficher « incertain — réponse "
-        "500 du bridge » sur des messages remis."
-    )
-
-
-def test_500_reste_incertain_mais_pour_une_autre_raison(monkeypatch):
-    """Un vrai 500 : le bridge a échoué en route, sans dire de quel côté."""
-
-    class FauxClient:
-        def __init__(self, **_):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_):
-            return False
-
-        def post(self, url, json=None, headers=None):
-            return _reponse(500)
-
-    monkeypatch.setattr(wa.httpx, "Client", FauxClient)
-
-    with pytest.raises(wa.EnvoiIncertain) as exc:
-        wa._poster_au_bridge("http://bridge/send", {}, {})
-    assert "500" in str(exc.value)
-
-
-def test_4xx_est_un_echec_etabli_donc_rejouable(monkeypatch):
-    """400/401 : la requête a été refusée sans être traitée. Rien n'est parti."""
-
-    class FauxClient:
-        def __init__(self, **_):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_):
-            return False
-
-        def post(self, url, json=None, headers=None):
-            return _reponse(400)
-
-    monkeypatch.setattr(wa.httpx, "Client", FauxClient)
-
-    with pytest.raises(httpx.HTTPStatusError):
-        wa._poster_au_bridge("http://bridge/send", {}, {})
-
-
-def test_connexion_impossible_est_un_echec_etabli(monkeypatch):
-    """Aucune connexion : le groupe n'a rien reçu, rejouer est SÛR."""
-
-    class FauxClient:
-        def __init__(self, **_):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_):
-            return False
-
-        def post(self, url, json=None, headers=None):
-            raise httpx.ConnectError("connexion refusée")
-
-    monkeypatch.setattr(wa.httpx, "Client", FauxClient)
-
-    with pytest.raises(httpx.ConnectError):
-        wa._poster_au_bridge("http://bridge/send", {}, {})
 
 
 def test_les_trois_verdicts_se_distinguent():

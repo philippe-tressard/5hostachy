@@ -1,4 +1,4 @@
-"""`horloge.maintenant()` rend ce que rendait `utcnow()` — ni plus, ni moins (#1047).
+"""`horloge.maintenant()` rend ce que rendait `datetime.utcnow` — ni plus, ni moins (#1047).
 
 🔴 Le piège que ce test verrouille : `datetime.now(timezone.utc)`, le
 remplacement que suggère la documentation de Python, rend une date CONSCIENTE.
@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.models.core import Utilisateur
 from app.utils import horloge
+from tests.aides_sources import modules_app
 
 
 def test_maintenant_est_naif():
@@ -39,15 +40,12 @@ def test_aucune_reference_a_utcnow_dans_app():
     et refuse toute mention de l'attribut `utcnow`, appelé ou non.
     """
     import ast
-    from pathlib import Path
 
-    racine = Path(__file__).resolve().parents[1] / "app"
     fautes = []
-    for fichier in sorted(racine.rglob("*.py")):
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
-        for noeud in ast.walk(arbre):
+    for module in modules_app():
+        for noeud in ast.walk(module.arbre):
             if isinstance(noeud, ast.Attribute) and noeud.attr in ("utcnow", "utcfromtimestamp"):
-                fautes.append(f"app/{fichier.relative_to(racine).as_posix()}:{noeud.lineno}")
+                fautes.append(f"app/{module.rel}:{noeud.lineno}")
     assert not fautes, (
         "`datetime.utcnow` est déprécié (Python 3.12) — `horloge.maintenant` :\n"
         + "\n".join(f"  {f}" for f in fautes)

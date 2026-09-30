@@ -13,6 +13,7 @@ import pathlib
 import sqlalchemy as sa
 
 from app.utils.textes_livres import remplacer_passage, remplacer_si_intact
+from tests.aides_base import moteur_memoire
 
 _VERSIONS = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions"
 
@@ -52,7 +53,7 @@ def test_aucune_nouvelle_copie_de_remplacer():
 
 
 def test_seul_le_texte_intact_est_remplace():
-    moteur = sa.create_engine("sqlite://")
+    moteur = moteur_memoire(schema=False)
     with moteur.begin() as conn:
         conn.execute(sa.text("CREATE TABLE faq_item (question TEXT, reponse TEXT)"))
         conn.execute(
@@ -67,7 +68,7 @@ def test_seul_le_texte_intact_est_remplace():
 
 
 def test_un_passage_n_est_remplace_que_s_il_figure_tel_quel():
-    moteur = sa.create_engine("sqlite://")
+    moteur = moteur_memoire(schema=False)
     with moteur.begin() as conn:
         conn.execute(sa.text("CREATE TABLE config_site (cle TEXT, valeur TEXT)"))
         conn.execute(

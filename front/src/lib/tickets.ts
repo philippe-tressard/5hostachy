@@ -100,6 +100,15 @@ export const STATUT_TICKET_BADGE: Record<string, string> = {
 //: l'affichage d'un ticket ancien ne doit pas dépendre du succès d'une migration.
 export const STATUTS_TICKET_CLOS: readonly string[] = ['résolu', 'annulé', 'fermé'];
 
+/**  Les états où une Étude & travaux sans choix du conseil s'ouvre à tous les
+ *   copropriétaires (standard du 30/09/2026) : à l'AG, chez le prestataire, et
+ *   close. Miroir de `STATUTS_ETUDE_OUVERTE` (`api/app/models/tickets.py`). */
+export const STATUTS_ETUDE_OUVERTE: readonly string[] = [
+	'en_ag',
+	'chez_prestataire',
+	...STATUTS_TICKET_CLOS,
+];
+
 //: Le complément : un ticket qui demande encore du suivi. La question s'écrivait
 //: `t.statut === 'ouvert' || t.statut === 'en_cours'`, deux fois dans le même
 //: fichier — trouvée par le garde-fou, pas à la relecture.

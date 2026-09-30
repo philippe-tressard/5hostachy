@@ -16,12 +16,11 @@ module n'appelle un fournisseur sans passer par `demander`.
 from __future__ import annotations
 
 import asyncio
-import pathlib
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, select
 
 from app.models.core import ConfigSite
 from app.models.ia import AppelIA
@@ -35,26 +34,23 @@ from app.utils.llm_journal import (
     prix_par_million,
     problemes_ia,
 )
+from tests.aides_sources import modules_app
 
 USAGE = "synthese_contrat"
-APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 
 @pytest.fixture()
-def session_ia():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        for cle, valeur in {
-            "llm_actif": "1",
-            "llm_fournisseur": "openai",
-            "llm_api_key": "sk-x",
-            f"llm_{USAGE}_actif": "1",
-            f"llm_{USAGE}_modele": "gpt-4o-mini",
-        }.items():
-            s.add(ConfigSite(cle=cle, valeur=valeur))
-        s.commit()
-        yield s
+def session_ia(session):
+    for cle, valeur in {
+        "llm_actif": "1",
+        "llm_fournisseur": "openai",
+        "llm_api_key": "sk-x",
+        f"llm_{USAGE}_actif": "1",
+        f"llm_{USAGE}_modele": "gpt-4o-mini",
+    }.items():
+        session.add(ConfigSite(cle=cle, valeur=valeur))
+    session.commit()
+    return session
 
 
 class _Reponse:
@@ -324,23 +320,15 @@ def test_treize_mois_de_detail():
 #  ── Les garde-fous de forme ─────────────────────────────────────────────────
 
 
-def _sources():
-    return {p: p.read_text(encoding="utf-8") for p in APP.rglob("*.py")}
-
-
 def test_le_journal_ne_s_ecrit_qu_a_un_endroit():
     """`demander` journalise ; un second écrivain compterait deux fois."""
     ecrivains = sorted(
-        p.relative_to(APP).as_posix()
-        for p, src in _sources().items()
-        if "journaliser(" in src or "AppelIA(" in src
+        m.rel for m in modules_app() if "journaliser(" in m.source or "AppelIA(" in m.source
     )
     assert ecrivains == ["models/ia.py", "utils/llm.py", "utils/llm_journal.py"], ecrivains
 
 
 def test_aucun_module_n_appelle_un_fournisseur_sans_passer_par_demander():
     """Un appel qui contournerait `demander` ne serait ni compté ni plafonné."""
-    appelants = sorted(
-        p.relative_to(APP).as_posix() for p, src in _sources().items() if ".url(cfg.modele" in src
-    )
+    appelants = sorted(m.rel for m in modules_app() if ".url(cfg.modele" in m.source)
     assert appelants == ["utils/llm.py"], appelants

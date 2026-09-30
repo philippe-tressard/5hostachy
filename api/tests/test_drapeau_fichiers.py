@@ -17,7 +17,9 @@ import re
 
 import pytest
 
-from tests.test_pieces_jointes import RACINE
+from tests.conftest import racine_depot
+
+RACINE = racine_depot()
 
 #: Noms des variables qui contiennent des chemins RÉSOLUS (sortis de
 #: `chemins_locaux`), donc réellement joignables à un e-mail.

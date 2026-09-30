@@ -71,14 +71,6 @@ def test_TOUS_les_statuts_de_ticket_ont_une_colonne():
         )
 
 
-def test_les_colonnes_visees_EXISTENT_dans_le_kanban():
-    """Une colonne inventée range la carte nulle part."""
-    colonnes = _colonnes_du_front()
-    assert len(colonnes) >= 6, "extraction de `KANBAN_COLS` cassée — rien ne serait mesuré"
-    inconnues = set(COLONNE_PAR_STATUT.values()) - colonnes
-    assert not inconnues, f"colonnes inconnues du kanban : {sorted(inconnues)}"
-
-
 def test_TOUTES_les_colonnes_du_kanban_sont_atteignables():
     """Les six colonnes ont chacune un état d'affaire (#1092, lot 5, 23/09/2026).
 
@@ -87,8 +79,19 @@ def test_TOUTES_les_colonnes_du_kanban_sont_atteignables():
     tranchée : `en_ag` et `chez_prestataire` sont nés quand les événements du
     calendrier sont devenus des affaires. Une colonne sans état redeviendrait un
     endroit où une carte atterrit dans un état que le serveur ne connaît pas.
+
+    L'égalité tient les deux sens : une colonne visée qui n'existe pas au front
+    range la carte nulle part ; une colonne du front qu'aucun état ne vise reste
+    vide pour toujours.
     """
-    assert set(COLONNE_PAR_STATUT.values()) == set(_colonnes_du_front())
+    colonnes = set(_colonnes_du_front())
+    #  Cas zéro : une extraction cassée rendrait deux ensembles vides, et égaux.
+    assert len(colonnes) >= 6, "extraction de `KANBAN_COLS` cassée — rien ne serait mesuré"
+    visees = set(COLONNE_PAR_STATUT.values())
+    assert visees == colonnes, (
+        f"colonnes visées inconnues du kanban : {sorted(visees - colonnes)} ; "
+        f"colonnes du kanban qu'aucun état ne vise : {sorted(colonnes - visees)}"
+    )
 
 
 def test_le_FRONT_ecrit_EXACTEMENT_la_meme_table():

@@ -22,20 +22,19 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session
 
 from app.models.core import ConfigSite
 from app.models.documents import Document
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.utils.document_contrat import document_designe, id_document_designe
 from app.utils.synthese_contrat import construire_matiere, documents_du_contrat
+from tests.aides_base import moteur_memoire
 
 
 @pytest.fixture()
 def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
+    with Session(moteur_memoire()) as s:
         s.add(Prestataire(id=1, nom="5M Services", specialite="ascenseur"))
         for cle, valeur in {
             "llm_actif": "1",

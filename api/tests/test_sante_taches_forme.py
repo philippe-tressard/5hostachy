@@ -110,60 +110,62 @@ def test_le_champ_noeuds_est_assemble_a_UN_SEUL_endroit():
     )
 
 
-def test_aucune_branche_ne_rend_une_liste_de_chaines():
+def _listes(valeur: ast.AST) -> list[ast.AST]:
+    """Les listes qu'une valeur de « noeuds » peut rendre — les deux branches
+    d'un `[…] if noeud else []` comprises."""
+    if isinstance(valeur, ast.IfExp):
+        return _listes(valeur.body) + _listes(valeur.orelse)
+    if isinstance(valeur, (ast.List, ast.ListComp)):
+        return [valeur]
+    return []
+
+
+def _ecarts_de_forme(element: ast.AST, ligne: int) -> list[str]:
+    """Ce qui manque à un élément de `noeuds` pour être une entrée complète."""
+    if not isinstance(element, ast.Dict):
+        #  Un nom nu (`[n for n in …]`) ou une constante : la forme fautive.
+        return [f"  ligne {ligne} : un élément n'est pas un objet ({type(element).__name__})"]
+    cles = {c.value for c in element.keys if isinstance(c, ast.Constant)}
+    absentes = CLES_ATTENDUES - cles
+    if absentes:
+        return [f"  ligne {ligne} : entrée incomplète, il manque {sorted(absentes)}"]
+    return []
+
+
+def test_chaque_litteral_de_noeuds_est_une_liste_d_objets_complets():
     """🔴 Le défaut exact : `["rpi2"]` au lieu de `[{"noeud": "rpi2", …}]`.
 
     Une liste de chaînes est indiscernable d'une liste d'objets tant qu'on ne la
-    parcourt pas. C'est ce qui l'a rendue invisible pendant des semaines.
+    parcourt pas. C'est ce qui l'a rendue invisible pendant des semaines. Et un
+    objet qui oublie `statut` ou `derniere` rend une sous-ligne vide — moins
+    spectaculaire qu'une exception, et plus durable : la ligne s'affiche, sans
+    son état ni sa date, et se lit comme « rien à signaler ».
 
-    ⚠️ Ce test était `parametrize(range(10))` + `skip` quand l'indice dépassait
-    le nombre d'affectations trouvées. Depuis l'assemblage unique il n'en reste
-    que deux : **huit cas sautaient à chaque exécution**, et huit SKIP permanents
-    se lisent exactement comme « rien à signaler » (`standards/04` §18). Une
-    boucle dit la même chose sans rien taire.
-    """
-    for valeur in _litteraux_noeuds():
-        #  Une compréhension de liste dont l'élément est un nom nu
-        #  (`[n for n in …]`) produit des chaînes : la forme fautive.
-        if isinstance(valeur, ast.ListComp):
-            assert not isinstance(valeur.elt, ast.Name), (
-                "cette branche rend une liste de CHAÎNES ; l'écran attend des "
-                "objets portant au moins " + ", ".join(sorted(CLES_ATTENDUES))
-            )
-        #  Une liste littérale d'éléments non-dictionnaires, même défaut.
-        if isinstance(valeur, ast.List):
-            for element in valeur.elts:
-                assert isinstance(element, ast.Dict), (
-                    "cette branche rend une liste dont un élément n'est pas un objet"
-                )
+    Chaque littéral est donc lu jusqu'au bout — liste, compréhension de liste,
+    et les deux branches d'un `if … else` — et tous les écarts sont nommés.
 
+    ⚠️ Ce contrôle était `parametrize(range(10))` + `skip` quand l'indice
+    dépassait le nombre d'affectations trouvées. Depuis l'assemblage unique il
+    n'en reste que deux : **huit cas sautaient à chaque exécution**, et huit SKIP
+    permanents se lisent exactement comme « rien à signaler » (`standards/04`
+    §18). Une boucle dit la même chose sans rien taire.
 
-def test_toute_entree_litterale_porte_les_cles_attendues():
-    """Un objet qui oublie `statut` ou `derniere` rend une sous-ligne vide.
-
-    Moins spectaculaire qu'une exception, et plus durable : la ligne s'affiche,
-    sans son état ni sa date, et se lit comme « rien à signaler ».
-
-    ⚠️ **Ce test ne voit plus l'assemblage principal**, et c'est voulu : depuis
+    ⚠️ **Il ne voit plus l'assemblage principal**, et c'est voulu : depuis
     l'assemblage unique, `noeuds` reçoit un NOM (`detail`), pas un littéral —
     l'analyse statique n'a plus de dictionnaire à inspecter. Les clés sont
     désormais vérifiées **à l'exécution**, sur la fonction pure, par
     `test_sante_taches_periodes.py::test_chaque_sous_ligne_porte_les_cles_attendues`.
-    Il reste ici pour refuser qu'un littéral incomplet réapparaisse.
+    Il reste ici pour refuser qu'un littéral fautif réapparaisse.
     """
-    manques = []
+    ecarts = []
     for valeur in _litteraux_noeuds():
-        dicts = []
-        if isinstance(valeur, ast.List):
-            dicts = [e for e in valeur.elts if isinstance(e, ast.Dict)]
-        elif isinstance(valeur, ast.IfExp):
-            #  `[…] if noeud else []` — la branche qui porte la liste.
-            for branche in (valeur.body, valeur.orelse):
-                if isinstance(branche, ast.List):
-                    dicts += [e for e in branche.elts if isinstance(e, ast.Dict)]
-        for d in dicts:
-            cles = {c.value for c in d.keys if isinstance(c, ast.Constant)}
-            absentes = CLES_ATTENDUES - cles
-            if absentes:
-                manques.append(sorted(absentes))
-    assert not manques, f"entrée(s) de `noeuds` incomplète(s) : {manques}"
+        for liste in _listes(valeur):
+            elements = [liste.elt] if isinstance(liste, ast.ListComp) else liste.elts
+            for element in elements:
+                ecarts += _ecarts_de_forme(element, liste.lineno)
+    assert not ecarts, (
+        "« noeuds » doit être une liste d'objets portant au moins "
+        + ", ".join(sorted(CLES_ATTENDUES))
+        + " — l'écran les lit :\n"
+        + "\n".join(ecarts)
+    )

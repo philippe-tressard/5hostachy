@@ -9,22 +9,11 @@ porte le MODÈLE et les périodicités attendues, ce qui vient ici porte la
 SYNTHÈSE rendue à l'écran. Les deux changent pour des raisons différentes.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-import pytest
 
 from app.models.core import HistoriqueMaintenance
-
-
-@pytest.fixture()
-def session_memoire():
-    """Base en mémoire, isolée. Aucun `app.db` n'est approché (règle d'or)."""
-    from sqlmodel import Session, SQLModel, create_engine
-
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
+from app.utils import horloge
 
 
 #  ─────────────────────────────────────────────────────────────────────────────
@@ -42,16 +31,16 @@ def _sante(session):
     return maintenance_sante(session=session, _=None)
 
 
-def test_la_sante_rend_une_seule_ligne_par_tache(session_memoire):
+def test_la_sante_rend_une_seule_ligne_par_tache(session):
     """Une tâche exécutée sur les DEUX nœuds ne produit qu'une ligne.
 
     C'est ce qui rend le tableau lisible comme une synthèse : l'unité de ligne
     est la tâche, jamais le couple tâche+nœud. Le détail par nœud reste
     disponible dans `noeuds`, il n'est simplement plus une ligne.
     """
-    maintenant = datetime.utcnow()
+    maintenant = horloge.maintenant()
     for noeud in ("rpi1", "rpi2"):
-        session_memoire.add(
+        session.add(
             HistoriqueMaintenance(
                 tache="bascule",
                 noeud=noeud,
@@ -59,9 +48,9 @@ def test_la_sante_rend_une_seule_ligne_par_tache(session_memoire):
                 cree_le=maintenant - timedelta(hours=2),
             )
         )
-    session_memoire.commit()
+    session.commit()
 
-    lignes = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"]
+    lignes = [t for t in _sante(session)["taches"] if t["tache"] == "bascule"]
     assert len(lignes) == 1, (
         f"{len(lignes)} lignes pour la bascule — le tableau redevient un mélange "
         "de tâches et de couples tâche+nœud."
@@ -69,7 +58,7 @@ def test_la_sante_rend_une_seule_ligne_par_tache(session_memoire):
     assert len(lignes[0]["noeuds"]) == 2, "Le détail par nœud a été perdu au passage."
 
 
-def test_la_synthese_porte_la_derniere_execution_reelle(session_memoire):
+def test_la_synthese_porte_la_derniere_execution_reelle(session):
     """La date affichée est celle de la dernière exécution, pas celle du retardataire.
 
     ⚠️ Ce test REMPLACE `test_l_etat_affiche_est_celui_du_noeud_le_moins_a_jour`,
@@ -84,19 +73,19 @@ def test_la_synthese_porte_la_derniere_execution_reelle(session_memoire):
     toujours visible à l'écran. La propriété est conservée — elle a changé de
     porteur, ce que le test suivant vérifie.
     """
-    maintenant = datetime.utcnow()
+    maintenant = horloge.maintenant()
     recent = maintenant - timedelta(hours=2)
-    session_memoire.add(
+    session.add(
         HistoriqueMaintenance(tache="bascule", noeud="rpi2", statut="succes", cree_le=recent)
     )
-    session_memoire.add(
+    session.add(
         HistoriqueMaintenance(  # muet depuis 20 jours
             tache="bascule", noeud="rpi1", statut="succes", cree_le=maintenant - timedelta(days=20)
         )
     )
-    session_memoire.commit()
+    session.commit()
 
-    ligne = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"][0]
+    ligne = [t for t in _sante(session)["taches"] if t["tache"] == "bascule"][0]
     assert ligne["derniere"] == recent, (
         "La colonne « Dernier rapport » doit porter la dernière exécution RÉELLE "
         f"({recent}), pas celle du nœud le plus en retard ({ligne['derniere']})."
@@ -105,7 +94,7 @@ def test_la_synthese_porte_la_derniere_execution_reelle(session_memoire):
     assert ligne["noeud"] == "rpi2", "Le nœud nommé est celui qui a fait cette exécution."
 
 
-def test_un_noeud_muet_reste_signale_malgre_une_synthese_saine(session_memoire):
+def test_un_noeud_muet_reste_signale_malgre_une_synthese_saine(session):
     """La propriété de sûreté, sous son nouveau porteur.
 
     C'est la moitié du contrat qu'il ne faut PAS perdre en corrigeant la date :
@@ -113,20 +102,20 @@ def test_un_noeud_muet_reste_signale_malgre_une_synthese_saine(session_memoire):
     bien » (défaut du 31/07/2026 — `maintenance.sh` ne tournait que sur l'actif,
     et le standby dérivait sans que rien ne le dise).
     """
-    maintenant = datetime.utcnow()
-    session_memoire.add(
+    maintenant = horloge.maintenant()
+    session.add(
         HistoriqueMaintenance(
             tache="bascule", noeud="rpi2", statut="succes", cree_le=maintenant - timedelta(hours=2)
         )
     )
-    session_memoire.add(
+    session.add(
         HistoriqueMaintenance(
             tache="bascule", noeud="rpi1", statut="succes", cree_le=maintenant - timedelta(days=20)
         )
     )
-    session_memoire.commit()
+    session.commit()
 
-    ligne = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"][0]
+    ligne = [t for t in _sante(session)["taches"] if t["tache"] == "bascule"][0]
     assert ligne["noeud_en_retard"] == "rpi1", (
         "Le nœud muet doit être nommé : sans lui, la synthèse saine du nœud actif "
         "referme exactement l'angle mort que ce tableau existe pour ouvrir."
@@ -139,7 +128,7 @@ def test_un_noeud_muet_reste_signale_malgre_une_synthese_saine(session_memoire):
     )
 
 
-def test_aucun_noeud_en_retard_quand_les_deux_sont_a_jour(session_memoire):
+def test_aucun_noeud_en_retard_quand_les_deux_sont_a_jour(session):
     """Pas d'avertissement sur une infrastructure saine.
 
     Le cas qui décide si l'avertissement sera lu ou ignoré : s'il s'affichait dès
@@ -147,9 +136,9 @@ def test_aucun_noeud_en_retard_quand_les_deux_sont_a_jour(session_memoire):
     (`standards/04-fiabilite-des-controles.md` §18 — un seuil se règle sur le
     régime de ce qu'il surveille).
     """
-    maintenant = datetime.utcnow()
+    maintenant = horloge.maintenant()
     for noeud, heures in (("rpi1", 2), ("rpi2", 26)):
-        session_memoire.add(
+        session.add(
             HistoriqueMaintenance(
                 tache="bascule",
                 noeud=noeud,
@@ -157,9 +146,9 @@ def test_aucun_noeud_en_retard_quand_les_deux_sont_a_jour(session_memoire):
                 cree_le=maintenant - timedelta(hours=heures),
             )
         )
-    session_memoire.commit()
+    session.commit()
 
-    ligne = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"][0]
+    ligne = [t for t in _sante(session)["taches"] if t["tache"] == "bascule"][0]
     assert ligne["statut"] == "ok"
     assert ligne["noeud_en_retard"] is None, (
         "Un écart normal entre deux nœuds — le rôle alterne — ne doit pas produire "
@@ -167,7 +156,7 @@ def test_aucun_noeud_en_retard_quand_les_deux_sont_a_jour(session_memoire):
     )
 
 
-def test_une_execution_sans_noeud_enregistre_n_en_invente_pas(session_memoire):
+def test_une_execution_sans_noeud_enregistre_n_en_invente_pas(session):
     """Une ligne antérieure à la migration 0137 n'a pas de nœud — et on ne le comble pas.
 
     Jusqu'au 11/08/2026 on y mettait le nœud qui répondait à la requête, donc le
@@ -179,7 +168,7 @@ def test_une_execution_sans_noeud_enregistre_n_en_invente_pas(session_memoire):
     lignes déjà en base restent `NULL` — aucun rétro-remplissage, personne ne
     sachant sur quel nœud elles ont tourné. C'est ce cas-là que ce test garde.
     """
-    lignes = {t["tache"]: t for t in _sante(session_memoire)["taches"]}
+    lignes = {t["tache"]: t for t in _sante(session)["taches"]}
     for tache in ("backup", "telemetrie"):
         assert lignes[tache]["noeud"] is None, (
             f"« {tache} » annonce le nœud {lignes[tache]['noeud']} alors qu'aucune "
@@ -191,7 +180,7 @@ def test_une_execution_sans_noeud_enregistre_n_en_invente_pas(session_memoire):
         )
 
 
-def test_le_noeud_enregistre_est_restitue_tel_quel(session_memoire):
+def test_le_noeud_enregistre_est_restitue_tel_quel(session):
     """Le pendant du test précédent, et le seul qui prouve que #312 sert à quelque chose.
 
     Sans lui, retirer la colonne — ou cesser de la renseigner à l'écriture —
@@ -203,33 +192,31 @@ def test_le_noeud_enregistre_est_restitue_tel_quel(session_memoire):
     la lecture : c'est toute la différence entre « le nœud qui a exécuté » et
     « le nœud qui répond aujourd'hui ».
     """
-    from datetime import datetime
-
     from app.models.core import (
         HistoriqueSauvegarde,
         HistoriqueTelemetrie,
         StatutSauvegarde,
     )
 
-    session_memoire.add(
+    session.add(
         HistoriqueSauvegarde(
             declenchee_par="automatique",
             statut=StatutSauvegarde.reussie,
             noeud="rpi1",
-            cree_le=datetime.utcnow(),
+            cree_le=horloge.maintenant(),
         )
     )
-    session_memoire.add(
+    session.add(
         HistoriqueTelemetrie(
             declenchee_par="cron",
             statut="succes",
             noeud="rpi2",
-            cree_le=datetime.utcnow(),
+            cree_le=horloge.maintenant(),
         )
     )
-    session_memoire.commit()
+    session.commit()
 
-    lignes = {t["tache"]: t for t in _sante(session_memoire)["taches"]}
+    lignes = {t["tache"]: t for t in _sante(session)["taches"]}
     for tache, attendu in (("backup", "rpi1"), ("telemetrie", "rpi2")):
         assert lignes[tache]["noeud"] == attendu, (
             f"« {tache} » devait restituer le nœud enregistré ({attendu}), "
@@ -241,13 +228,13 @@ def test_le_noeud_enregistre_est_restitue_tel_quel(session_memoire):
         )
 
 
-def test_chaque_tache_attendue_apparait_exactement_une_fois(session_memoire):
+def test_chaque_tache_attendue_apparait_exactement_une_fois(session):
     """Cas zéro du tableau : aucune tâche ne doit disparaître de la synthèse.
 
     Sans cette borne, une refonte qui déduplique trop rendrait un tableau vide —
     et un tableau vide se lit comme « rien à signaler ».
     """
-    taches = [t["tache"] for t in _sante(session_memoire)["taches"]]
+    taches = [t["tache"] for t in _sante(session)["taches"]]
     assert len(taches) == len(set(taches)), f"doublons dans la synthèse : {taches}"
     for attendue in ("maintenance", "bascule", "export_hors_site", "backup", "telemetrie"):
         assert attendue in taches, f"« {attendue} » a disparu du tableau de santé"

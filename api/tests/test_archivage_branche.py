@@ -38,6 +38,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.utils.archivage import REGLES
+from tests.aides_sources import modules_app
 
 RACINE = Path(__file__).resolve().parents[1] / "app"
 SOURCE = RACINE / "utils" / "archivage.py"
@@ -64,13 +65,13 @@ CHOISIES_PAR_L_OBJET: dict[str, str] = {"actualite": "ticket"}
 def _appelants() -> dict[str, list[str]]:
     """Pour chaque clé de règle, les fichiers qui l'invoquent."""
     trouves: dict[str, list[str]] = {cle: [] for cle in REGLES}
-    for fichier in RACINE.rglob("*.py"):
-        if fichier == SOURCE:
+    for module in modules_app():
+        if module.chemin == SOURCE:
             continue
-        texte = fichier.read_text(encoding="utf-8")
+        texte = module.source
         for cle in REGLES:
             if f'est_archivable("{cle}"' in texte or f"est_archivable('{cle}'" in texte:
-                trouves[cle].append(str(fichier.relative_to(RACINE)))
+                trouves[cle].append(module.rel)
     return trouves
 
 

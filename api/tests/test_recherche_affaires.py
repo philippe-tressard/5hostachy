@@ -43,6 +43,7 @@ from app.utils import mes_batiments
 from app.utils import perimetres as P
 from app.utils.noms import nom_affiche
 from app.utils.visibility import ticket_visible
+from tests.aides_base import compte, moteur_memoire
 from tests.purge_test import purger_ligne
 
 
@@ -52,20 +53,15 @@ def _mot() -> str:
 
 
 def _utilisateur(session, roles, batiment_id) -> Utilisateur:
-    u = Utilisateur(
+    return compte(
+        session,
+        prefixe="rech",
         nom="Sorel",
         prenom="Camille",
-        email=f"rech-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
         roles_json=roles,
         statut=StatutUtilisateur.copropriétaire_résident,
         batiment_id=batiment_id,
-        actif=True,
     )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 def _ids(session, user, q) -> list[int]:
@@ -211,17 +207,12 @@ def test_la_route_n_est_pas_avalee_par_la_fiche():
     """
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    from sqlmodel import create_engine
-    from sqlmodel.pool import StaticPool
 
     from app.auth.deps import get_current_user
     from app.database import get_session
     from app.routers.tickets import router
 
-    moteur = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(moteur)
+    moteur = moteur_memoire(partage=True)
     mot = _mot()
     with Session(moteur) as session:
         auteur = _utilisateur(session, "résident", None)

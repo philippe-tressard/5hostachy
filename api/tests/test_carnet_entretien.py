@@ -95,20 +95,18 @@ def test_une_affaire_se_dit_par_sa_categorie_jamais_incident():
     from app.database import engine
     from app.models.core import StatutTicket, Ticket, Utilisateur
     from app.utils.carnet_entretien import construire_carnet
+    from tests.aides_base import compte
     from tests.purge_test import purger_ligne
 
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        auteur = Utilisateur(
-            email=f"carnet-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        auteur = compte(
+            session,
+            prefixe="carnet",
             prenom="Camille",
             nom="Sorel",
             roles_json="conseil_syndical",
-            actif=True,
         )
-        session.add(auteur)
-        session.commit()
         ticket = Ticket(
             numero=f"T-{uuid.uuid4().hex[:6]}",
             titre="Réflexion sur le remplacement des pelouses",
@@ -121,7 +119,11 @@ def test_une_affaire_se_dit_par_sa_categorie_jamais_incident():
         session.add(ticket)
         session.commit()
         try:
-            lignes = [e for e in construire_carnet(session) if e["lien"].endswith(f"/{ticket.id}")]
+            lignes = [
+                e
+                for e in construire_carnet(session, lecteur=auteur)
+                if e["lien"].endswith(f"/{ticket.id}")
+            ]
             assert len(lignes) == 1
             ligne = lignes[0]
             assert ligne["origine"] == "affaire"

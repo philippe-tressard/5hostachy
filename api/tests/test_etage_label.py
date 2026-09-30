@@ -37,6 +37,9 @@ _UTILS_TS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib
 @pytest.mark.parametrize(
     "etage,attendu",
     [
+        #  🔴 Le défaut exact de la fiche arrivant : `0` est un étage. Un test
+        #  de vérité le confond avec « pas de valeur », et l'information
+        #  disparaît là où elle est la plus simple.
         (0, "RDC"),
         (1, "1er"),
         (2, "2ème"),
@@ -47,16 +50,6 @@ _UTILS_TS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib
 )
 def test_les_libelles(etage, attendu):
     assert etage_label(etage) == attendu
-
-
-def test_le_RDC_n_est_PAS_traite_comme_une_absence():
-    """🔴 Le défaut exact de la fiche arrivant.
-
-    `0` est un étage. Un test de vérité le confond avec « pas de valeur », et
-    l'information disparaît là où elle est la plus simple.
-    """
-    assert etage_label(0) == "RDC"
-    assert etage_label(0), "le RDC rend une chaîne vide — il serait masqué"
 
 
 @pytest.mark.parametrize("brut,attendu", [("0", "RDC"), ("3", "3ème"), ("-1", "SS 1")])
