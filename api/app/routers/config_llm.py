@@ -1,4 +1,4 @@
-"""L'assistant IA dans l'administration — les trois points d'accès de l'onglet.
+"""L'assistant IA dans l'administration — les points d'accès de l'onglet.
 
 Sortis de `config.py` le 17/09/2026 (modularité, rang 1) : le fichier franchissait
 500 lignes en recevant la liste des usages (#984). Même préfixe `/config` : FastAPI
@@ -9,7 +9,10 @@ Tout est réservé à l'administrateur, comme l'onglet. Rien de la clé ne sort 
 elle s'emploie côté serveur, et `config.py` la masque à la lecture (`_SECRETS`).
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from app.auth.deps import require_admin
@@ -65,6 +68,42 @@ async def llm_test(
         return await tester(session, usage)
     except ErreurLLM as exc:
         raise HTTPException(400, str(exc))
+
+
+class DemandeTarif(BaseModel):
+    #: Le modèle AFFICHÉ par le bloc, peut-être pas encore enregistré.
+    modele: str = Field(min_length=1, max_length=200)
+
+
+class TarifPropose(BaseModel):
+    #: En centimes par million de jetons — l'unité stockée ; `None` = inconnu.
+    prix_entree: Optional[int] = None
+    prix_sortie: Optional[int] = None
+    remarque: str = ""
+
+
+@router.post("/llm-tarif", response_model=TarifPropose)
+@limiter.limit(LIMITE_APPEL_FACTURE)
+async def llm_tarif(
+    request: Request,
+    body: DemandeTarif,
+    user: Utilisateur = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    """Demande à l'usage « Tarif d'un modèle » le prix de `modele` (30/09/2026).
+
+    Une PROPOSITION : l'écran la pose dans les deux champs de prix, et c'est
+    « Enregistrer » qui écrit. Seuls le fournisseur et le nom du modèle partent
+    (`utils/tarif_modele`).
+    """
+    from app.utils.llm import ErreurLLM
+    from app.utils.tarif_modele import proposer_tarif
+
+    try:
+        t = await proposer_tarif(session, body.modele)
+    except ErreurLLM as exc:
+        raise HTTPException(400, str(exc))
+    return TarifPropose(prix_entree=t.prix_entree, prix_sortie=t.prix_sortie, remarque=t.remarque)
 
 
 @router.get("/llm-modeles")

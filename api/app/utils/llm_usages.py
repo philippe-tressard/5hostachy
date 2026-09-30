@@ -38,6 +38,8 @@ from app.utils.description_format import CONSIGNE_DEFAUT as CONSIGNE_DESCRIPTION
 from app.utils.reponse_courriel import CONSIGNE as CONSIGNE_REPONSE_COURRIEL
 from app.utils.reponse_courriel import USAGE_REPONSE_COURRIEL
 from app.utils.synthese_format import CONSIGNE as CONSIGNE_SYNTHESE
+from app.utils.tarif_modele import CONSIGNE as CONSIGNE_TARIF
+from app.utils.tarif_modele import USAGE_TARIF_MODELE
 
 
 @dataclass(frozen=True)
@@ -113,6 +115,24 @@ USAGES: dict[str, Usage] = {
         prompt_defaut=CONSIGNE_REPONSE_COURRIEL,
         max_jetons_defaut=2_000,
     ),
+    #  Un usage au service des AUTRES (30/09/2026) : son ✨ se tient à côté du
+    #  modèle de chaque bloc, et remplit les deux prix de « Coût et plafond ».
+    USAGE_TARIF_MODELE: Usage(
+        code=USAGE_TARIF_MODELE,
+        libelle="Tarif d'un modèle",
+        description=(
+            "L'icône ✨ à côté du modèle de chaque usage demande à l'assistant le "
+            "tarif de ce modèle, et remplit les prix des jetons envoyés et produits. "
+            "Une proposition, tirée des connaissances du modèle : vérifiez-la sur la "
+            "grille du fournisseur, puis enregistrez. Seuls le fournisseur et le nom "
+            "du modèle sont transmis."
+        ),
+        prompt_defaut=CONSIGNE_TARIF,
+        #  Un modèle qui raisonne dépense ses jetons avant d'écrire : 2 000 laisse
+        #  la place à trois lignes de JSON après la réflexion (le piège du test
+        #  de connexion à 16 jetons, `llm.tester`).
+        max_jetons_defaut=2_000,
+    ),
 }
 
 
@@ -143,6 +163,7 @@ __all__ = [
     "USAGES",
     "USAGE_DESCRIPTION",
     "USAGE_SYNTHESE_CONTRAT",
+    "USAGE_TARIF_MODELE",
     "Usage",
     "decrire",
     "usage",

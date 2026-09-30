@@ -32,6 +32,15 @@ export interface PropositionDescription {
 	description_modifiee: boolean;
 }
 
+/** Le tarif d'un modèle proposé par l'assistant — en CENTIMES par million de
+ *  jetons, l'unité stockée ; `null` quand le modèle ne le connaît pas. */
+export interface TarifPropose {
+	prix_entree: number | null;
+	prix_sortie: number | null;
+	/** Prix d'origine, devise, taux, date des connaissances — à montrer. */
+	remarque: string;
+}
+
 export const assistant = {
 	/** L'icône ✨ a-t-elle un sens ? — décidé par le serveur, rien de la
 	 *  configuration ne sort (ni fournisseur, ni modèle, ni prompt). */
@@ -40,4 +49,7 @@ export const assistant = {
 	 *  appel partant du texte COURANT du formulaire. */
 	description: (demande: DemandeDescription) =>
 		api.post<PropositionDescription>('/assistant/description', demande),
+	/** Le tarif de `modele`, demandé à l'usage « Tarif d'un modèle » (admin).
+	 *  Une PROPOSITION : l'écran remplit les deux prix, « Enregistrer » écrit. */
+	tarif: (modele: string) => api.post<TarifPropose>('/config/llm-tarif', { modele }),
 };

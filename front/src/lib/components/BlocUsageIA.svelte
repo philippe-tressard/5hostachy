@@ -26,13 +26,18 @@
     constaté à l'écran le 17/09/2026) : c'est l'onglet qui tient l'accordéon,
     ce bloc reçoit `ouvert` et signale `basculer`. À l'arrivée sur l'écran,
     **tous** sont repliés — la page ne choisit pas ce qu'on vient lire.
+  - Le ✨ à côté du modèle (30/09/2026) demande à l'usage « Tarif d'un
+    modèle » le prix de CE modèle, et remplit les deux prix de « Coût et
+    plafond ». Une proposition, comme le reste du bloc : « Enregistrer » écrit.
+    Il ne s'affiche que si l'onglet dit l'usage prêt (`tarifDisponible`) — un
+    usage coupé ne montre pas d'icône ✨, c'est la règle de tout le produit.
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
-	import { config as configApi, type UsageIA } from '$lib/api';
+	import { assistant as assistantApi, config as configApi, type UsageIA } from '$lib/api';
 	import { memePrompt } from '$lib/promptOrigine';
 
 	export let usage: UsageIA;
@@ -56,6 +61,9 @@
 	 *   (#987) : un seul usage déplié à la fois, et un bloc ne connaît pas ses
 	 *   voisins. Le bloc annonce seulement qu'on l'a ouvert ou fermé (`basculer`). */
 	export let ouvert = false;
+	/**  L'usage « Tarif d'un modèle » est-il prêt ? Décidé par l'ONGLET, qui voit
+	 *   le commun et tous les usages : sans lui, pas de ✨ à côté du modèle. */
+	export let tarifDisponible = false;
 
 	const dispatch = createEventDispatcher<{ basculer: boolean }>();
 
@@ -105,6 +113,26 @@
 
 	function retablirPrompt() {
 		poser(cles.prompt, '');
+	}
+
+	//  Le ✨ du tarif. Les prix reviennent en CENTIMES, l'unité stockée : ils
+	//  s'écrivent tels quels, et les champs les affichent en euros. Un prix que
+	//  le modèle ne connaît pas (`null`) laisse le champ comme il était.
+	let tarif: { etat: 'aucun' | 'encours' | 'ok' | 'ko'; message: string } = {
+		etat: 'aucun',
+		message: '',
+	};
+
+	async function demanderTarif() {
+		tarif = { etat: 'encours', message: '' };
+		try {
+			const r = await assistantApi.tarif(modele);
+			if (r.prix_entree !== null) poser(cles.prix_entree, String(r.prix_entree));
+			if (r.prix_sortie !== null) poser(cles.prix_sortie, String(r.prix_sortie));
+			tarif = { etat: 'ok', message: r.remarque };
+		} catch (e: any) {
+			tarif = { etat: 'ko', message: e?.message ?? 'La demande de tarif a échoué' };
+		}
 	}
 
 	let test: { etat: 'aucun' | 'encours' | 'ok' | 'ko'; message: string } = {
@@ -164,20 +192,36 @@
 		<div class="form-grid">
 			<label class="field">
 				<span>Modèle<EtoileRequis vide={!modele} /></span>
-				{#if catalogue.etat === 'pret'}
-					<select value={modele} on:change={(e) => poser(cles.modele, e.currentTarget.value)}>
-						<option value="">— choisir un modèle —</option>
-						{#each choixModeles as m (m.id)}
-							<option value={m.id}>{m.libelle}</option>
-						{/each}
-					</select>
-				{:else}
-					<input
-						type="text"
-						value={modele}
-						placeholder={modeleRepere}
-						on:input={(e) => poser(cles.modele, e.currentTarget.value.trim())}
-					/>
+				<div class="ligne-choix">
+					{#if catalogue.etat === 'pret'}
+						<select value={modele} on:change={(e) => poser(cles.modele, e.currentTarget.value)}>
+							<option value="">— choisir un modèle —</option>
+							{#each choixModeles as m (m.id)}
+								<option value={m.id}>{m.libelle}</option>
+							{/each}
+						</select>
+					{:else}
+						<input
+							type="text"
+							value={modele}
+							placeholder={modeleRepere}
+							on:input={(e) => poser(cles.modele, e.currentTarget.value.trim())}
+						/>
+					{/if}
+					{#if tarifDisponible}
+						<button
+							class="btn-icon"
+							type="button"
+							aria-label="Demander à l’assistant le tarif de ce modèle"
+							title="Demander à l’assistant le tarif de ce modèle"
+							aria-busy={tarif.etat === 'encours'}
+							disabled={!modele || tarif.etat === 'encours'}
+							on:click={demanderTarif}>{tarif.etat === 'encours' ? '⏳' : '✨'}</button
+						>
+					{/if}
+				</div>
+				{#if tarif.etat === 'ko'}
+					<span class="verdict ko">⚠️ {tarif.message}</span>
 				{/if}
 				<div class="ligne-modele">
 					{#if !azure}
@@ -278,6 +322,12 @@
 				</span>
 			</label>
 		</div>
+		{#if tarif.etat === 'ok'}
+			<p class="aide">
+				✨ Prix proposés par l’assistant{tarif.message ? ` — ${tarif.message}` : '.'} Il répond de mémoire
+				: vérifiez-les sur la grille du fournisseur, puis enregistrez.
+			</p>
+		{/if}
 	</SectionFormulaire>
 
 	<SectionFormulaire titre="Prompt">
@@ -395,6 +445,23 @@
 		align-items: center;
 		gap: 0.6rem;
 		margin-top: 0.35rem;
+	}
+	/*  Le modèle et son ✨ sur une ligne : le champ prend la place, l'icône se
+	    tient à sa droite. */
+	.ligne-choix {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.ligne-choix > :is(select, input) {
+		flex: 1;
+		min-width: 0;
+	}
+	/*  44 px au doigt (`standards/11` §10) : l'icône seule en ferait 24. */
+	.ligne-choix > .btn-icon {
+		min-width: 2.75rem;
+		min-height: 2.75rem;
+		font-size: var(--fs-base);
 	}
 	.ligne-test {
 		display: flex;

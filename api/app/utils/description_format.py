@@ -174,14 +174,13 @@ class ReponseIllisible(ValueError):
     """Le modèle n'a pas rendu le JSON attendu — l'appelant en fait une `ErreurLLM`."""
 
 
-def lire_reponse(texte: str) -> dict[str, str | None]:
-    """Le titre et la description, relus dans ce que le modèle a rendu.
+def lire_objet(texte: str) -> dict:
+    """L'objet JSON que le modèle a rendu — sans rien présumer de ses clés.
 
     Tolère un bloc de code autour du JSON — beaucoup de modèles en posent un
-    malgré la consigne — et du texte parasite avant ou après l'objet. Ne
-    tolère PAS un objet sans `description` : c'est la seule clé qui ne peut
-    pas manquer, et la remplacer par le texte brut ferait passer une réponse
-    en prose pour une proposition.
+    malgré la consigne — et du texte parasite avant ou après l'objet. Partagé
+    par tout usage qui demande du JSON (`tarif_modele`) : chacun vérifie
+    ensuite SES clés, la tolérance sur l'enveloppe ne s'écrit qu'ici.
     """
     brut = (texte or "").strip()
     m = _BLOC_CODE.match(brut)
@@ -194,7 +193,20 @@ def lire_reponse(texte: str) -> dict[str, str | None]:
         charge = json.loads(brut[debut : fin + 1])
     except ValueError as exc:
         raise ReponseIllisible("Réponse du modèle illisible — JSON invalide.") from exc
-    if not isinstance(charge, dict) or not isinstance(charge.get("description"), str):
+    if not isinstance(charge, dict):
+        raise ReponseIllisible("Réponse du modèle sans objet JSON.")
+    return charge
+
+
+def lire_reponse(texte: str) -> dict[str, str | None]:
+    """Le titre et la description, relus dans ce que le modèle a rendu.
+
+    Ne tolère PAS un objet sans `description` : c'est la seule clé qui ne peut
+    pas manquer, et la remplacer par le texte brut ferait passer une réponse
+    en prose pour une proposition.
+    """
+    charge = lire_objet(texte)
+    if not isinstance(charge.get("description"), str):
         raise ReponseIllisible("Réponse du modèle sans description.")
     titre = charge.get("titre")
     if titre is not None and not isinstance(titre, str):
@@ -224,5 +236,6 @@ __all__ = [
     "ReponseIllisible",
     "a_change",
     "construire_message",
+    "lire_objet",
     "lire_reponse",
 ]

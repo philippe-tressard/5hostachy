@@ -107,6 +107,19 @@
 
 	$: azure = cfg.fournisseur === 'azure_openai';
 
+	//  Le ✨ du tarif, à côté du modèle de CHAQUE bloc (30/09/2026) : il ne
+	//  s'affiche que si l'usage « Tarif d'un modèle » est prêt — le commun activé,
+	//  une clé, l'usage activé et doté d'un modèle. Lu sur l'écran, pas sur la
+	//  base : un réglage non enregistré fait apparaître l'icône, et c'est alors le
+	//  serveur qui dit ce qui manque (`ConfigLLM.verifier`).
+	$: usageTarif = usages.find((u) => u.code === 'tarif_modele');
+	$: tarifDisponible =
+		!!usageTarif &&
+		cfg.actif &&
+		clePosee &&
+		valeursSaisies[usageTarif.cles.actif] === '1' &&
+		!!(valeursSaisies[usageTarif.cles.modele] ?? '').trim();
+
 	$: if (valeurs && Object.keys(valeurs).length) hydrater(valeurs);
 
 	let hydrate = false;
@@ -274,6 +287,7 @@
 				{azure}
 				modeleRepere={MODELES_REPERE[cfg.fournisseur]}
 				{chargerModeles}
+				{tarifDisponible}
 				ouvert={usageOuvert === usage.code}
 				on:basculer={(e) => basculerUsage(usage.code, e.detail)}
 			>
