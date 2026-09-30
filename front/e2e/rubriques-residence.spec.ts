@@ -113,3 +113,28 @@ test('le CR d’AG exige année et date, et les envoie', async ({ page }) => {
 	expect(c.annee).toBe('2025');
 	expect(c.date_ag).toBe('2025-06-12');
 });
+
+test('plusieurs fichiers : un document chacun, nommé par son fichier si rien n’est saisi (#1479)', async ({
+	page,
+}) => {
+	const depots = await residence(page);
+	await page
+		.locator('div')
+		.filter({ has: page.getByRole('heading', { name: /Plans/ }) })
+		.last()
+		.getByRole('button', { name: /Ajouter/ })
+		.click();
+	const formulaire = page.getByRole('group', { name: 'Ajouter un plan' });
+	//  Comme Diagnostics : le titre est facultatif quand chaque fichier a le sien.
+	await formulaire
+		.locator('input[type=file]')
+		.first()
+		.setInputFiles([
+			{ name: 'plan-rdc.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') },
+			{ name: 'plan-etage.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') },
+		]);
+	await formulaire.getByRole('button', { name: /Enregistrer/ }).click();
+	await expect.poll(() => depots.length).toBe(2);
+	expect(depots.map((d) => champs(d).titre).sort()).toEqual(['plan-etage', 'plan-rdc']);
+	expect(depots.every((d) => champs(d).categorie_id === '11')).toBe(true);
+});

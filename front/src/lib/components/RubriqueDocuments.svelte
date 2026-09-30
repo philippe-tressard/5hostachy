@@ -22,6 +22,7 @@
 	import { documents as documentsApi } from '$lib/api';
 	import { tenter } from '$lib/erreurs';
 	import { supprimerDocument } from '$lib/gestes-document';
+	import { titreOuNomDuFichier } from '$lib/fichiers';
 	import ChampsCrAg from '$lib/components/ChampsCrAg.svelte';
 	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
 	import FormulaireEditionDocument, {
@@ -73,38 +74,46 @@
 	let enregistrementCorrection = false;
 
 	$: affiches = trier(documents);
-	$: complet =
-		!!saisie.titre.trim() &&
-		!!saisie.fichiers?.length &&
-		(!avecAg || (!!saisie.annee && !!saisie.dateAg));
+	//  Le titre est facultatif : sans lui, chaque fichier prend le sien (#1479).
+	$: complet = !!saisie.fichiers?.length && (!avecAg || (!!saisie.annee && !!saisie.dateAg));
 
+	/**  Plusieurs fichiers → un document chacun (#1479) : un document porte UN
+	 *   fichier. Même motif que Diagnostics, même règle du titre. */
 	async function ajouter() {
-		const fichier = saisie.fichiers?.[0];
-		if (!categorieId || !complet || !fichier) return;
+		if (!categorieId || !complet) return;
 		//  Capturés AVANT le rappel : TypeScript ne conserve pas dans une closure
 		//  le fait que la garde ci-dessus a écarté `null`.
 		const categorie = categorieId;
 		const s = saisie;
+		const fichiers = Array.from(s.fichiers);
 		enregistrement = true;
-		await tenter(async () => {
-			const doc = await documentsApi.upload({
-				titre: s.titre.trim(),
-				categorieId: categorie,
-				file: fichier,
-				description: s.description.trim(),
-				//  🔴 UN PV D'AG — ni un plan — N'EST JAMAIS RESTREINT PAR SON
-				//  PÉRIMÈTRE : il dit de quoi il parle, pas qui peut le lire. Il part
-				//  en `résidence` côté DROITS, les périmètres dans `perimetre_cible`.
-				...(avecPerimetre ? { perimetreCible: s.perimetre } : {}),
-				...(avecAg
-					? { annee: s.annee ? Number(s.annee) : undefined, dateAg: s.dateAg || undefined }
-					: {}),
-			});
-			documents = [doc, ...documents];
-			ouvert = false;
-			saisie = saisieVide();
-		}, messageAjout);
+		await tenter(
+			async () => {
+				const deposes: any[] = [];
+				for (const fichier of fichiers) deposes.push(await deposer(s, categorie, fichier));
+				documents = [...deposes, ...documents];
+				ouvert = false;
+				saisie = saisieVide();
+			},
+			fichiers.length > 1 ? `${fichiers.length} documents ajoutés` : messageAjout,
+		);
 		enregistrement = false;
+	}
+
+	function deposer(s: ReturnType<typeof saisieVide>, categorie: number, fichier: File) {
+		return documentsApi.upload({
+			titre: titreOuNomDuFichier(s.titre, fichier),
+			categorieId: categorie,
+			file: fichier,
+			description: s.description.trim(),
+			//  🔴 UN PV D'AG — ni un plan — N'EST JAMAIS RESTREINT PAR SON
+			//  PÉRIMÈTRE : il dit de quoi il parle, pas qui peut le lire. Il part
+			//  en `résidence` côté DROITS, les périmètres dans `perimetre_cible`.
+			...(avecPerimetre ? { perimetreCible: s.perimetre } : {}),
+			...(avecAg
+				? { annee: s.annee ? Number(s.annee) : undefined, dateAg: s.dateAg || undefined }
+				: {}),
+		});
 	}
 
 	function corriger(doc: any) {
@@ -165,6 +174,10 @@
 				{intitule}
 				bind:titre={saisie.titre}
 				{placeholderTitre}
+				titreRequis={false}
+				aideTitre="Sans titre, chaque fichier prend le sien."
+				multiple
+				libelleFichier="Fichier(s)"
 				{avecPerimetre}
 				bind:perimetre={saisie.perimetre}
 				bind:fichiers={saisie.fichiers}
