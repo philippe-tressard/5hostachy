@@ -30,6 +30,7 @@ toujours dans le périmètre.
 from __future__ import annotations
 
 from app.models.core import Ticket
+from app.models.tickets import STATUTS_ETUDE_OUVERTE
 from app.utils.nature_affaire import est_actualite
 from app.utils.valeurs import valeur
 
@@ -50,12 +51,12 @@ _COPROPRIETAIRES = ["copropriétaires_occupants", "bailleurs"]
 #: — occupants et locataires, pas les bailleurs — depuis #1343, et tous hors
 #: bâtiment : le carnet la montrait pourtant à tous les copropriétaires.
 #: Ni les mandataires, que « tous » comprenait hors bâtiment.
-DEFAUT_PANNE = [*_COPROPRIETAIRES, "locataires"]
+_DEFAUT_PANNE = [*_COPROPRIETAIRES, "locataires"]
 
-#: Les états où une Étude & travaux sort du conseil (30/09/2026) : en AG, les
-#: copropriétaires la votent ; chez le prestataire, résolue ou annulée, elle
-#: est un fait du bâti — celui que le carnet d'entretien consigne.
-STATUTS_ETUDE_OUVERTE = frozenset({"en_ag", "chez_prestataire", "résolu", "annulé"})
+#  Les états où une Étude & travaux sort du conseil — `STATUTS_ETUDE_OUVERTE`,
+#  déclarés avec les autres listes d'états (`models/tickets.py`) : en AG, les
+#  copropriétaires la votent ; chez le prestataire, résolue ou annulée, elle est
+#  un fait du bâti — celui que le carnet d'entretien consigne.
 
 #: Ce qu'une affaire lit SANS choix du conseil, selon sa catégorie (#1436,
 #: arbitré le 28/09/2026). La Panne a sa règle (le bâtiment).
@@ -117,7 +118,7 @@ def destinataires_par_defaut(ticket: Ticket) -> list[str]:
         return ["résidents"]
     categorie = valeur(ticket.categorie)
     if categorie == "panne":
-        return DEFAUT_PANNE
+        return _DEFAUT_PANNE
     if categorie == "etude_travaux" and valeur(ticket.statut) in STATUTS_ETUDE_OUVERTE:
         return _COPROPRIETAIRES
     return DEFAUT_PAR_CATEGORIE.get(categorie, DEFAUT_INCONNU)

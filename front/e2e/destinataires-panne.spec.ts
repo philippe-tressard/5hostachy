@@ -77,7 +77,10 @@ test('Nouvelle affaire, Étude & travaux mise « À l’AG » : les copropriéta
 	page,
 }) => {
 	await nouvelleAffaire(page, /Diagnostic, sondage, devis/);
-	await page.getByRole('button', { name: /À l’AG/ }).first().click();
+	await page
+		.getByRole('button', { name: /À l’AG/ })
+		.first()
+		.click();
 	const s = section(page);
 	await expect(s.locator('button.active', { hasText: /Copropriétaires occupants/ })).toHaveCount(1);
 	await expect(s.locator('button.active', { hasText: /Copropriétaires bailleurs/ })).toHaveCount(1);

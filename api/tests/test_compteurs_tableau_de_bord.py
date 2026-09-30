@@ -208,6 +208,10 @@ def test_le_compteur_tickets_egale_ce_que_l_ecran_montre(base):
                 numero=f"T{i}",
                 titre="T",
                 description="D",
+                #  Une catégorie que le périmètre RESTREINT : une Panne, lue de
+                #  tous les copropriétaires depuis le 30/09/2026, ne distinguerait
+                #  plus les deux bâtiments — le test resterait vert sans mesurer.
+                categorie="espaces_verts",
                 auteur_id=auteur.id,
                 perimetre_cible=perimetre,
             )

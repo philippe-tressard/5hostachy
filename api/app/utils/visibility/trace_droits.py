@@ -82,7 +82,7 @@ def trace_lecture_par_defaut(ticket: Ticket, avant: list[str]) -> list[str]:
 
     Standard du 30/09/2026 : une Étude & travaux sans choix du conseil passe
     du conseil seul aux copropriétaires en AG, chez le prestataire, résolue ou
-    annulée (`defauts_affaire.STATUTS_ETUDE_OUVERTE`). Aucun Destinataire n'a
+    annulée (`STATUTS_ETUDE_OUVERTE`, `models/tickets.py`). Aucun Destinataire n'a
     bougé, et pourtant tout le fil s'ouvre : la Suite le dit, comme elle dit un
     changement de Destinataires.
 
