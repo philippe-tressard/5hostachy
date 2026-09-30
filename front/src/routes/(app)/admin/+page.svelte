@@ -207,6 +207,15 @@
 	//  `catch` — un refus laissait la liste vide, sans un mot, et `lint:catch-vide`
 	//  ne pouvait pas le voir faute de `catch`.
 	let erreurUtilisateurs = '';
+	//  🔴 Chargée dès que l'onglet actif en a besoin — et non au CLIC sur
+	//  l'onglet, seul déclencheur jusqu'au 30/09/2026 : arrivé par un lien ou un
+	//  rechargement sur `?onglet=utilisateurs`, l'écran restait sur « Chargement… »
+	//  pour toujours, et l'onglet Site n'avait aucun gestionnaire à proposer.
+	let listeDemandee = false;
+	$: if ((onglet === 'utilisateurs' || onglet === 'site') && !listeDemandee) {
+		listeDemandee = true;
+		loadUtilisateurs();
+	}
 	async function loadUtilisateurs() {
 		utilisateursLoading = true;
 		[utilisateurs, erreurUtilisateurs] = await essayer(adminApi.utilisateurs(), []);
@@ -303,7 +312,6 @@
 	$: siteManagerUsers = utilisateurs.filter((u) => !!u.email);
 	function openSiteTab() {
 		onglet = 'site';
-		if (utilisateurs.length === 0) loadUtilisateurs();
 	}
 	let erreurParametrage = '';
 	async function saveSiteConfig() {
@@ -376,13 +384,7 @@
 		>
 			Commandes d'accès
 		</Onglet>
-		<Onglet
-			actif={onglet === 'utilisateurs'}
-			on:click={() => {
-				onglet = 'utilisateurs';
-				loadUtilisateurs();
-			}}
-		>
+		<Onglet actif={onglet === 'utilisateurs'} on:click={() => (onglet = 'utilisateurs')}>
 			Utilisateurs
 		</Onglet>
 		<Onglet

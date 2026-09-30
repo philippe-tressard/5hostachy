@@ -62,7 +62,7 @@ test('la liste s’affiche, et la recherche la filtre', async ({ page }) => {
 	await expect(lignes).toHaveCount(2);
 	await page.getByRole('searchbox').or(page.getByRole('textbox').first()).fill('Durand');
 	await expect(lignes).toHaveCount(1);
-	await expect(lignes.first()).toContainText('Durand');
+	await expect(lignes.first()).toContainText('Paul DURAND');
 });
 
 test('un chargement en échec le dit, au lieu d’une liste vide', async ({ page }) => {
