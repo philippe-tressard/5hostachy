@@ -201,9 +201,13 @@ export const TICKET: EntiteDeclaree = {
 			//  pas lire n'apparaît pas pour lui (`api/app/utils/affaires_liees.py`).
 			//  Facultative, donc pliée. Ouverte à l'évolution : une Suite AJOUTE un
 			//  lien, elle n'en retire aucun — le serveur le tient.
+			//  🔒 Le conseil et l'admin seuls relient (arbitré le 30/09/2026) : le
+			//  résident voit les liens sur la fiche, il ne les pose ni ne les défait
+			//  (`utils/affaires_liees.exiger_conseil`).
 			id: 'affaires_liees',
 			objet: 'SectionAffairesLiees — numéro et titre de chaque affaire liée',
 			pliee: true,
+			inactivePour: { resident: 'Le conseil syndical relie les affaires entre elles.' },
 		},
 		{
 			//  ✅ OUVERT à l'édition depuis le 18/08/2026. Il en était absent parce

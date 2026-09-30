@@ -293,7 +293,7 @@
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
 						entite={TICKET}
-						affaireLiable={ticket.id}
+						affaireLiable={$isCS ? ticket.id : null}
 						initialDestinataires={ticket.public_cible ?? []}
 						destinatairesParDefaut={destinatairesParDefautDuTicket(ticket)}
 						bind:confidentiel={optionsEvol.brouillon}

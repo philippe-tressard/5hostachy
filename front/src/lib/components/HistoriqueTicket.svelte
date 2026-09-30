@@ -246,7 +246,7 @@
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}
 					entite={TICKET}
-					affaireLiable={ticketId}
+					affaireLiable={$isCS ? ticketId : null}
 					initialDestinataires={ticket?.public_cible ?? []}
 					destinatairesParDefaut={ticket ? destinatairesParDefautDuTicket(ticket) : null}
 					bind:confidentiel={options.brouillon}

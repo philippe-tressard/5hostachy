@@ -467,6 +467,7 @@
 				bind:liees={affairesLiees}
 				exclure={ticket?.id ?? null}
 				pliable={pliageDe(TICKET, 'affaires_liees')}
+				inactive={inactives.affaires_liees ?? ''}
 			/>
 			<svelte:fragment slot="quand">
 				{#if $isCS && categorie === CATEGORIE_ENTRETIEN}
