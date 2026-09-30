@@ -7,8 +7,8 @@ Même geste que la 0224 pour le troisième usage : un prompt d'origine ne parvie
 - le modèle de l'usage « description », s'il est réglé ;
 - l'activation, **seulement si ce modèle a pu être repris**. À la différence
   de la 0224, rien ne part sans un clic de l'administrateur, et seuls le nom
-  du fournisseur et celui d'un modèle sont transmis : l'usage n'a aucune
-  raison d'attendre un second geste pour servir.
+  du fournisseur, celui d'un modèle et une grille publique sont transmis :
+  l'usage n'a aucune raison d'attendre un second geste pour servir.
 
 Rien n'est écrasé : une clé déjà présente reste telle quelle.
 

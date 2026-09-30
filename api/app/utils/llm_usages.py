@@ -121,16 +121,17 @@ USAGES: dict[str, Usage] = {
         code=USAGE_TARIF_MODELE,
         libelle="Tarif d'un modèle",
         description=(
-            "L'icône ✨ à côté du modèle de chaque usage demande à l'assistant le "
-            "tarif de ce modèle, et remplit les prix des jetons envoyés et produits. "
-            "Une proposition, tirée des connaissances du modèle : vérifiez-la sur la "
-            "grille du fournisseur, puis enregistrez. Seuls le fournisseur et le nom "
-            "du modèle sont transmis."
+            "L'icône ✨ à côté du modèle de chaque usage lit la grille tarifaire "
+            "publiée par le fournisseur, y fait trouver ce modèle par l'assistant, "
+            "convertit en euros au taux BCE du jour et enregistre les prix des jetons "
+            "envoyés et produits. Seuls le fournisseur, le nom du modèle et la grille "
+            "publique sont transmis."
         ),
         prompt_defaut=CONSIGNE_TARIF,
-        #  Un modèle qui raisonne dépense ses jetons avant d'écrire : 2 000 laisse
-        #  la place à trois lignes de JSON après la réflexion (le piège du test
-        #  de connexion à 16 jetons, `llm.tester`).
+        #  La réponse fait quatre champs, mais un modèle qui raisonne dépense ses
+        #  jetons avant d'écrire : 2 000 laisse la place au JSON après la
+        #  réflexion (le piège du test de connexion à 16 jetons, `llm.tester`).
+        #  La grille, elle, est en ENTRÉE : ce plafond ne la borne pas.
         max_jetons_defaut=2_000,
     ),
 }

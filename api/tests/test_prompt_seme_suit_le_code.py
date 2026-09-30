@@ -54,7 +54,7 @@ EMPREINTES_SEMEES = {
     "description": "a6bca9c941ff52c7b5f90108eccf8c0d0a1dbe2ced37f9ca41d621953b84528e",
     "synthese_contrat": "35d2cc4c13b269dbfa80bb197fec7ade1b27278dc7152b4c3acbf21b2036f097",
     "reponse_courriel": "43458295fafa66bddf159851d93c5854a26053b7a764aad682efd19dee6c51e2",
-    "tarif_modele": "18f8bb5dffca28df2b229ec454370efdda37733770e86167a27c4604dc5e2475",
+    "tarif_modele": "4e3378dd3e7f89f72792484d7c6d88f0c04455e61e66fb2b9722937d476403cc",
 }
 
 #: 🔴 Écart connu, tracé et non corrigé ici.

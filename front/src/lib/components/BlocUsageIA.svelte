@@ -26,11 +26,13 @@
     constaté à l'écran le 17/09/2026) : c'est l'onglet qui tient l'accordéon,
     ce bloc reçoit `ouvert` et signale `basculer`. À l'arrivée sur l'écran,
     **tous** sont repliés — la page ne choisit pas ce qu'on vient lire.
-  - Le ✨ à côté du modèle (30/09/2026) demande à l'usage « Tarif d'un
-    modèle » le prix de CE modèle, et remplit les deux prix de « Coût et
-    plafond ». Une proposition, comme le reste du bloc : « Enregistrer » écrit.
-    Il ne s'affiche que si l'onglet dit l'usage prêt (`tarifDisponible`) — un
-    usage coupé ne montre pas d'icône ✨, c'est la règle de tout le produit.
+  - Le ✨ à côté du modèle (30/09/2026) cherche le prix du modèle ENREGISTRÉ
+    de cet usage dans la grille de son fournisseur, le convertit au taux BCE
+    et l'ENREGISTRE — c'est l'exception au « un seul Enregistrer » ci-dessus,
+    demandée telle quelle. Les deux champs de « Coût et plafond » reprennent
+    alors ce que le serveur a écrit. Il ne s'affiche que si l'onglet dit l'usage
+    « Tarif d'un modèle » prêt (`tarifDisponible`) — un usage coupé ne montre
+    pas d'icône ✨, c'est la règle de tout le produit.
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
@@ -115,9 +117,10 @@
 		poser(cles.prompt, '');
 	}
 
-	//  Le ✨ du tarif. Les prix reviennent en CENTIMES, l'unité stockée : ils
-	//  s'écrivent tels quels, et les champs les affichent en euros. Un prix que
-	//  le modèle ne connaît pas (`null`) laisse le champ comme il était.
+	//  Le ✨ du tarif. Les prix reviennent ENREGISTRÉS, en centimes : ils
+	//  s'écrivent tels quels dans `valeurs` — un « Enregistrer » ultérieur
+	//  renverra la même chose — et les champs les affichent en euros. Un prix
+	//  que la grille ne donne pas (`null`) laisse le champ comme il était.
 	let tarif: { etat: 'aucun' | 'encours' | 'ok' | 'ko'; message: string } = {
 		etat: 'aucun',
 		message: '',
@@ -126,12 +129,12 @@
 	async function demanderTarif() {
 		tarif = { etat: 'encours', message: '' };
 		try {
-			const r = await assistantApi.tarif(modele);
+			const r = await assistantApi.tarif(usage.code, modele);
 			if (r.prix_entree !== null) poser(cles.prix_entree, String(r.prix_entree));
 			if (r.prix_sortie !== null) poser(cles.prix_sortie, String(r.prix_sortie));
 			tarif = { etat: 'ok', message: r.remarque };
 		} catch (e: any) {
-			tarif = { etat: 'ko', message: e?.message ?? 'La demande de tarif a échoué' };
+			tarif = { etat: 'ko', message: e?.message ?? 'La recherche du tarif a échoué' };
 		}
 	}
 
@@ -212,8 +215,8 @@
 						<button
 							class="btn-icon"
 							type="button"
-							aria-label="Demander à l’assistant le tarif de ce modèle"
-							title="Demander à l’assistant le tarif de ce modèle"
+							aria-label="Chercher et enregistrer le tarif de ce modèle"
+							title="Chercher et enregistrer le tarif de ce modèle"
 							aria-busy={tarif.etat === 'encours'}
 							disabled={!modele || tarif.etat === 'encours'}
 							on:click={demanderTarif}>{tarif.etat === 'encours' ? '⏳' : '✨'}</button
@@ -323,10 +326,7 @@
 			</label>
 		</div>
 		{#if tarif.etat === 'ok'}
-			<p class="aide">
-				✨ Prix proposés par l’assistant{tarif.message ? ` — ${tarif.message}` : '.'} Il répond de mémoire
-				: vérifiez-les sur la grille du fournisseur, puis enregistrez.
-			</p>
+			<p class="aide">✅ Tarif enregistré — {tarif.message}</p>
 		{/if}
 	</SectionFormulaire>
 

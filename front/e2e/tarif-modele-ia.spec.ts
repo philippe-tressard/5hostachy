@@ -1,12 +1,12 @@
 /*
- *  **Le ✨ à côté du modèle remplit les deux prix d'un usage (30/09/2026).**
+ *  **Le ✨ à côté du modèle cherche, remplit et enregistre les deux prix (30/09/2026).**
  *
- *  Demandé : « un use case IA pour demander la tarification de l'IA concernée,
- *  l'icône IA à côté du modèle de tous les use case, l'IA remplit ces 2
- *  valeurs ». Ce test rend le VRAI onglet, API simulée, et vérifie ce que
+ *  Demandé : « l'icône IA à côté du modèle de tous les use case […] recherche
+ *  le prix sur l'opérateur du modèle du use case, remplit les prix et
+ *  enregistre ». Ce test rend le VRAI onglet, API simulée, et vérifie ce que
  *  l'administrateur voit : l'icône dans chaque bloc, les prix en EUROS alors que
- *  le serveur rend des CENTIMES, la remarque de l'assistant — et que le modèle
- *  interrogé est celui du bloc, pas celui de l'usage « Tarif ».
+ *  le serveur rend des CENTIMES, la source du chiffre — et que la demande porte
+ *  sur l'usage du bloc et son modèle, pas sur l'usage « Tarif ».
  */
 import { expect, test } from '@playwright/test';
 import { MEMBRE_CS, simulerApi } from './aides';
@@ -41,7 +41,7 @@ const CONFIG = {
 	llm_tarif_modele_modele: 'modele-du-tarif',
 };
 
-test('Assistant IA : le ✨ du modèle remplit les prix des jetons', async ({ page }) => {
+test('Assistant IA : le ✨ du modèle enregistre les prix des jetons', async ({ page }) => {
 	let demande: unknown = null;
 	await simulerApi(page, (chemin) => {
 		if (chemin === '/api/auth/me') return ADMIN;
@@ -60,7 +60,8 @@ test('Assistant IA : le ✨ du modèle remplit les prix des jetons', async ({ pa
 				body: JSON.stringify({
 					prix_entree: 20,
 					prix_sortie: 120,
-					remarque: '0,22 $ et 1,30 $ au taux de 0,92.',
+					remarque:
+						'Grille platform.openai.com/docs/pricing, ligne « gpt-5.6-luna » : 0,20 $ et 1,20 $ par million.',
 				}),
 			});
 		},
@@ -75,12 +76,12 @@ test('Assistant IA : le ✨ du modèle remplit les prix des jetons', async ({ pa
 
 	const bloc = page.locator('details.bloc-usage', { hasText: 'Rédaction d’une description' });
 	await bloc.locator('summary').click();
-	await bloc.getByRole('button', { name: 'Demander à l’assistant le tarif de ce modèle' }).click();
+	await bloc.getByRole('button', { name: 'Chercher et enregistrer le tarif de ce modèle' }).click();
 
 	await expect(bloc.getByLabel('Prix des jetons envoyés')).toHaveValue('0.2');
 	await expect(bloc.getByLabel('Prix des jetons produits')).toHaveValue('1.2');
-	await expect(bloc.getByText(/Prix proposés par l’assistant — 0,22 \$/)).toBeVisible();
-	expect(demande).toEqual({ modele: 'modele-de-la-description' });
+	await expect(bloc.getByText(/Tarif enregistré — Grille platform\.openai\.com/)).toBeVisible();
+	expect(demande).toEqual({ usage: 'description', modele: 'modele-de-la-description' });
 
 	const deborde = await page.evaluate(
 		() => document.documentElement.scrollWidth > document.documentElement.clientWidth,

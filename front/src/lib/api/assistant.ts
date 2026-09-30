@@ -32,12 +32,13 @@ export interface PropositionDescription {
 	description_modifiee: boolean;
 }
 
-/** Le tarif d'un modèle proposé par l'assistant — en CENTIMES par million de
- *  jetons, l'unité stockée ; `null` quand le modèle ne le connaît pas. */
-export interface TarifPropose {
+/** Le tarif ENREGISTRÉ du modèle d'un usage — en CENTIMES d'euro par million
+ *  de jetons, l'unité stockée ; `null` quand la grille ne le donne pas (le
+ *  champ n'a alors pas été touché). */
+export interface TarifEnregistre {
 	prix_entree: number | null;
 	prix_sortie: number | null;
-	/** Prix d'origine, devise, taux, date des connaissances — à montrer. */
+	/** La grille lue, la ligne retenue, les prix d'origine et le taux BCE. */
 	remarque: string;
 }
 
@@ -49,7 +50,9 @@ export const assistant = {
 	 *  appel partant du texte COURANT du formulaire. */
 	description: (demande: DemandeDescription) =>
 		api.post<PropositionDescription>('/assistant/description', demande),
-	/** Le tarif de `modele`, demandé à l'usage « Tarif d'un modèle » (admin).
-	 *  Une PROPOSITION : l'écran remplit les deux prix, « Enregistrer » écrit. */
-	tarif: (modele: string) => api.post<TarifPropose>('/config/llm-tarif', { modele }),
+	/** Cherche le tarif du modèle ENREGISTRÉ de `usage` dans la grille de son
+	 *  fournisseur, le convertit au taux BCE et l'ENREGISTRE (admin). `modele`
+	 *  est celui qu'affiche l'écran : refusé s'il n'est pas l'enregistré. */
+	tarif: (usage: string, modele: string) =>
+		api.post<TarifEnregistre>('/config/llm-tarif', { usage, modele }),
 };

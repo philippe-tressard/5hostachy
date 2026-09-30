@@ -71,18 +71,21 @@ async def llm_test(
 
 
 class DemandeTarif(BaseModel):
-    #: Le modèle AFFICHÉ par le bloc, peut-être pas encore enregistré.
+    #: L'usage dont on cherche le tarif du modèle.
+    usage: str = Field(min_length=1, max_length=80)
+    #: Le modèle AFFICHÉ par le bloc : refusé s'il n'est pas celui enregistré.
     modele: str = Field(min_length=1, max_length=200)
 
 
-class TarifPropose(BaseModel):
-    #: En centimes par million de jetons — l'unité stockée ; `None` = inconnu.
+class TarifEnregistre(BaseModel):
+    #: En centimes d'euro par million de jetons — l'unité stockée ; `None` = la
+    #: grille ne le donne pas, et le champ n'a pas été touché.
     prix_entree: Optional[int] = None
     prix_sortie: Optional[int] = None
     remarque: str = ""
 
 
-@router.post("/llm-tarif", response_model=TarifPropose)
+@router.post("/llm-tarif", response_model=TarifEnregistre)
 @limiter.limit(LIMITE_APPEL_FACTURE)
 async def llm_tarif(
     request: Request,
@@ -90,20 +93,20 @@ async def llm_tarif(
     user: Utilisateur = Depends(require_admin),
     session: Session = Depends(get_session),
 ):
-    """Demande à l'usage « Tarif d'un modèle » le prix de `modele` (30/09/2026).
-
-    Une PROPOSITION : l'écran la pose dans les deux champs de prix, et c'est
-    « Enregistrer » qui écrit. Seuls le fournisseur et le nom du modèle partent
-    (`utils/tarif_modele`).
+    """Cherche le tarif du modèle de `usage` chez son fournisseur et l'ENREGISTRE
+    (30/09/2026) — grille publique, ligne trouvée par l'usage « Tarif d'un
+    modèle », conversion au taux BCE (`utils/tarif_modele`).
     """
     from app.utils.llm import ErreurLLM
-    from app.utils.tarif_modele import proposer_tarif
+    from app.utils.tarif_modele import chercher_et_enregistrer
 
     try:
-        t = await proposer_tarif(session, body.modele)
+        t = await chercher_et_enregistrer(session, body.usage, body.modele)
     except ErreurLLM as exc:
         raise HTTPException(400, str(exc))
-    return TarifPropose(prix_entree=t.prix_entree, prix_sortie=t.prix_sortie, remarque=t.remarque)
+    return TarifEnregistre(
+        prix_entree=t.prix_entree, prix_sortie=t.prix_sortie, remarque=t.remarque
+    )
 
 
 @router.get("/llm-modeles")
