@@ -41,6 +41,8 @@ une ligne ou sur trois) — un `grep` en aurait manqué la moitié.
 import ast
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 RACINE = Path(__file__).resolve().parents[1] / "app"
 
 #: Le seul endroit où la question a le droit d'être posée.
@@ -63,8 +65,8 @@ def _fonction_englobante(arbre: ast.Module, noeud: ast.AST) -> str | None:
 def _derivations() -> list[tuple[str, int, str | None]]:
     """Tout appel `…has_role(<CS>, <admin>)` du code applicatif."""
     trouves = []
-    for fichier in sorted(RACINE.rglob("*.py")):
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
+    for m in modules_app():
+        arbre = m.arbre
         for noeud in ast.walk(arbre):
             if not isinstance(noeud, ast.Call):
                 continue
@@ -78,7 +80,7 @@ def _derivations() -> list[tuple[str, int, str | None]]:
             }
             if roles != ROLES:
                 continue
-            chemin = fichier.relative_to(RACINE).as_posix()
+            chemin = m.rel
             trouves.append((chemin, noeud.lineno, _fonction_englobante(arbre, noeud)))
     return trouves
 

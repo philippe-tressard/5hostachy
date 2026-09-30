@@ -41,6 +41,7 @@ from app.models.core import (
 )
 from app.routers.admin.arrivants import AccueilArrivantBody, _declencher_accueil_arrivant
 from app.utils.ticket_arrivant import TITRE, corps_demarches
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
 
 
@@ -48,18 +49,14 @@ from tests.purge_test import purger_ligne
 def arrivant() -> Utilisateur:
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        u = Utilisateur(
-            email=f"arrivant-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        u = compte(
+            session,
+            prefixe="arrivant",
             prenom="Alix",
             nom="Rivant",
             role=RoleUtilisateur.résident,
             statut=StatutUtilisateur.locataire,
-            actif=True,
         )
-        session.add(u)
-        session.commit()
-        session.refresh(u)
         yield u
         session.rollback()
         for tk in session.exec(select(Ticket).where(Ticket.saisi_pour_user_id == u.id)).all():
@@ -141,17 +138,19 @@ def test_le_ticket_vise_les_destinataires_des_DEUX_demarches(arrivant):
         syndic = MembreSyndic(
             genre="mr", nom="Syndic", prenom="Le", email="syndic@exemple.test", est_principal=True
         )
-        membre_cs = Utilisateur(
-            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        session.add(syndic)
+        #  INACTIF, comme le compte que ce test créait avant #1495 : actif, il
+        #  deviendrait notifiable, les consignes partiraient au conseil ET au
+        #  résident, et le ticket ne viserait plus ni le syndic ni le conseil —
+        #  ce n'est pas ce cas-là que ce test éprouve.
+        membre_cs = compte(
+            session,
+            prefixe="cs",
             prenom="Camille",
             nom="Sorel",
             role=RoleUtilisateur.conseil_syndical,
+            actif=False,
         )
-        session.add(syndic)
-        session.add(membre_cs)
-        session.commit()
-        session.refresh(membre_cs)
         mc = MembreCS(
             user_id=membre_cs.id, genre="mme", nom="Sorel", prenom="Camille", batiment_id=bat.id
         )

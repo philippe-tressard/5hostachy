@@ -48,6 +48,8 @@ import ast
 import re
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 APP = Path(__file__).resolve().parents[1] / "app"
 MODELE = APP / "models" / "core.py"
 
@@ -127,11 +129,11 @@ def _noms_lus() -> set[str]:
        schéma de sortie est le chemin par lequel le front lit la donnée.
     """
     lus: set[str] = set()
-    for fichier in APP.rglob("*.py"):
-        if fichier == MODELE:
+    for module in modules_app():
+        if module.chemin == MODELE:
             continue
         try:
-            arbre = ast.parse(fichier.read_text(encoding="utf-8", errors="replace"))
+            arbre = module.arbre
         except SyntaxError:  # pragma: no cover — un fichier cassé se voit ailleurs
             continue
         transports = _transports(arbre)

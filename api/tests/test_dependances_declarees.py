@@ -27,6 +27,8 @@ import re
 import sys
 from importlib.metadata import packages_distributions
 
+from tests.aides_sources import modules_app
+
 RACINE = pathlib.Path(__file__).resolve().parents[1]
 REQUIREMENTS = RACINE / "requirements.txt"
 PORTEE = ("app", "alembic")
@@ -47,24 +49,33 @@ def _declarees() -> set[str]:
     return noms
 
 
+def _arbres():
+    """(chemin relatif à `api/`, arbre) de chaque module de `PORTEE`.
+
+    `app/` vient de l'aide partagée ; `alembic/` n'a pas d'aide, et se lit ici.
+    """
+    for module in modules_app():
+        yield f"app/{module.rel}", module.arbre
+    for chemin in (RACINE / "alembic").rglob("*.py"):
+        yield chemin.relative_to(RACINE).as_posix(), ast.parse(chemin.read_text(encoding="utf-8"))
+
+
 def _modules_tiers() -> dict[str, set[str]]:
     """Module de premier niveau → fichiers qui l'importent, hors stdlib et `app`."""
     trouves: dict[str, set[str]] = {}
-    for dossier in PORTEE:
-        for chemin in (RACINE / dossier).rglob("*.py"):
-            arbre = ast.parse(chemin.read_text(encoding="utf-8"))
-            for noeud in ast.walk(arbre):
-                if isinstance(noeud, ast.Import):
-                    noms = [a.name for a in noeud.names]
-                elif isinstance(noeud, ast.ImportFrom) and noeud.level == 0 and noeud.module:
-                    noms = [noeud.module]
-                else:
+    for rel, arbre in _arbres():
+        for noeud in ast.walk(arbre):
+            if isinstance(noeud, ast.Import):
+                noms = [a.name for a in noeud.names]
+            elif isinstance(noeud, ast.ImportFrom) and noeud.level == 0 and noeud.module:
+                noms = [noeud.module]
+            else:
+                continue
+            for nom in noms:
+                tete = nom.split(".")[0]
+                if tete in sys.stdlib_module_names or tete == "app":
                     continue
-                for nom in noms:
-                    tete = nom.split(".")[0]
-                    if tete in sys.stdlib_module_names or tete == "app":
-                        continue
-                    trouves.setdefault(tete, set()).add(chemin.relative_to(RACINE).as_posix())
+                trouves.setdefault(tete, set()).add(rel)
     return trouves
 
 

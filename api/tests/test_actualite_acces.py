@@ -34,6 +34,7 @@ from app.database import engine
 from app.models.core import AnnonceHall, Ticket, Utilisateur
 from app.routers.tickets.actualite import appliquer_acces
 from app.utils.whatsapp import TITRE_CONFIDENTIEL, construire_message
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
 
 VRAI_TITRE = "Dégât des eaux chez M. Durand"
@@ -51,16 +52,7 @@ CONFIG = {
 def scene():
     """Un auteur et une actualité RÉELS : l'affiche porte leur identifiant."""
     with Session(engine) as session:
-        auteur = Utilisateur(
-            email=f"affiche-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="A",
-            nom="H",
-            actif=True,
-        )
-        session.add(auteur)
-        session.commit()
-        session.refresh(auteur)
+        auteur = compte(session, prefixe="affiche", prenom="A", nom="H")
         actu = Ticket(
             numero=f"TK-A{uuid.uuid4().hex[:6]}",
             titre=VRAI_TITRE,

@@ -20,13 +20,10 @@ promettait jusqu'au 30/09/2026 sans qu'aucun test ne le fasse (#1496).
 from __future__ import annotations
 
 import ast
-import pathlib
-
 
 from app.auth.empreinte_jeton import empreinte, est_empreinte
+from tests.aides_sources import modules_app
 
-RACINE = pathlib.Path(__file__).resolve().parents[1]
-APP = RACINE / "app"
 MODELES = {"RefreshToken", "PasswordResetToken", "EmailVerificationToken"}
 
 
@@ -40,10 +37,9 @@ def _appel_empreinte(noeud: ast.AST) -> bool:
 
 def _ecarts() -> list[str]:
     ecarts = []
-    for chemin in APP.rglob("*.py"):
-        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
-        rel = chemin.relative_to(RACINE).as_posix()
-        for n in ast.walk(arbre):
+    for module in modules_app():
+        rel = f"app/{module.rel}"
+        for n in ast.walk(module.arbre):
             #  Modele(token=…)
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in MODELES:
                 for kw in n.keywords:
@@ -69,7 +65,7 @@ def test_aucun_jeton_ecrit_ni_cherche_en_clair():
 
 def test_le_controle_voit_bien_les_trois_familles():
     """Cas zéro : un contrôle qui ne trouverait aucun point d'usage serait vert à vide."""
-    sources = "\n".join(p.read_text(encoding="utf-8") for p in APP.rglob("*.py"))
+    sources = "\n".join(m.source for m in modules_app())
     for modele in MODELES:
         assert f"{modele}(" in sources, f"{modele} n'est plus construit nulle part"
 

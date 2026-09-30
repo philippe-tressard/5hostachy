@@ -19,7 +19,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session
 
 from app.models.documents import Document
 from app.models.prestataires import ContratEntretien, Prestataire
@@ -34,13 +34,12 @@ from app.utils.synthese_contrat import (
     exemples,
     synthese_disponible,
 )
+from tests.aides_base import moteur_memoire
 
 
 @pytest.fixture()
 def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
+    with Session(moteur_memoire()) as s:
         s.add(Prestataire(id=1, nom="5M Services", specialite="ascenseur"))
         s.commit()
         yield s

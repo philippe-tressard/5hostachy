@@ -27,6 +27,7 @@ import pathlib
 import re
 
 import pytest
+from tests.aides_sources import modules_app
 from tests.conftest import scripts_shell_versionnes
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
@@ -73,9 +74,8 @@ def _routes() -> list[tuple[str, str, str]]:
     message d'erreur qu'a produit ce test au moment du découpage.
     """
     trouvees: list[tuple[str, str, str]] = []
-    fichiers = [f for f in sorted(ROUTEURS.rglob("*.py")) if "__pycache__" not in f.parts]
-    for fichier in fichiers:
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
+    for module in modules_app("routers"):
+        fichier, arbre = module.chemin, module.arbre
         prefixe = _prefixe_declare(fichier)
         if not prefixe and fichier.parent != ROUTEURS:
             #  Sous-module d'un paquet : le préfixe est celui de son `__init__.py`.

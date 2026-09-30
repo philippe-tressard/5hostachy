@@ -38,8 +38,6 @@ journal — la panne la plus difficile à diagnostiquer, parce que rien ne casse
 
 from __future__ import annotations
 
-import uuid
-
 import pytest
 from fastapi import HTTPException
 from sqlmodel import Session, SQLModel
@@ -55,6 +53,7 @@ from app.models.core import (
 from app.routers.annonces import AnnonceCreate, create_annonce, list_annonces
 from app.routers.idees import IdeeCreate, create_idee, list_idees, voter
 from app.utils.visibility import annonce_visible, idee_visible
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
 
 
@@ -70,18 +69,14 @@ def _utilisateur(
     """
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        u = Utilisateur(
-            email=f"{prenom.lower()}-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        return compte(
+            session,
+            prefixe=prenom.lower(),
             prenom=prenom,
             nom="Aulnay",
             role=role,
             statut=statut,
         )
-        session.add(u)
-        session.commit()
-        session.refresh(u)
-        return u
 
 
 def _sans_perimetre(modele: type, ident: int) -> None:

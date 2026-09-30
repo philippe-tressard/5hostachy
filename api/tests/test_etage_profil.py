@@ -17,15 +17,13 @@ s'imprimerait dans l'annonce de bienvenue publiée à l'arrivée d'un résident.
 
 from __future__ import annotations
 
-import uuid
-
 import pytest
 from fastapi import BackgroundTasks, HTTPException
 from sqlmodel import Session, SQLModel
 
 from app.database import engine
-from app.models.core import Utilisateur
 from app.routers.auth_profil import MeUpdate, update_me
+from tests import aides_base
 from tests.conftest import requete_de_test
 
 
@@ -33,18 +31,9 @@ from tests.conftest import requete_de_test
 def compte():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        user = Utilisateur(
-            email=f"e-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="Alix",
-            nom="RIVANT",
-            roles_json="résident",
-            actif=True,
-            etage=2,
+        user = aides_base.compte(
+            session, prefixe="e", prenom="Alix", nom="RIVANT", roles_json="résident", etage=2
         )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
         yield session, user
         session.delete(user)
         session.commit()

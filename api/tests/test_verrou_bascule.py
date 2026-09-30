@@ -46,6 +46,8 @@ from __future__ import annotations
 import pathlib
 import re
 
+from tests.conftest import scripts_shell_versionnes
+
 RACINE = pathlib.Path(__file__).resolve().parents[2] / "scripts"
 BASCULE = RACINE / "exploitation" / "bascule.sh"
 VERROU = RACINE / "lib" / "lib-verrou.sh"
@@ -99,7 +101,7 @@ def test_le_verrou_du_PEER_ne_se_touche_que_dans_le_module():
     besoin réel. Confondre les deux gestes ferait crier ce contrôle sur du code
     sain — et un contrôle qui crie à tort finit désarmé."""
     fautifs = []
-    for f in sorted(RACINE.rglob("*.sh")):
+    for f in scripts_shell_versionnes():
         if f == VERROU:
             continue
         code = (chr(10)).join(
@@ -125,7 +127,7 @@ def test_tout_verrou_LOCAL_pose_est_relache_par_un_trap():
 
     Le verrou est désormais armé PAR la pose, dans le module."""
     sans_trap = []
-    for f in sorted(RACINE.rglob("*.sh")):
+    for f in scripts_shell_versionnes():
         src = f.read_text(encoding="utf-8")
         code = (chr(10)).join(
             ligne for ligne in src.splitlines() if not ligne.lstrip().startswith("#")
@@ -185,7 +187,7 @@ def test_le_seuil_de_peremption_n_est_ecrit_qu_une_fois():
 
     Une seule affectation est admise : `VERROU_STALE_S` dans le module."""
     recopies = []
-    for f in sorted(RACINE.rglob("*.sh")):
+    for f in scripts_shell_versionnes():
         for m in SEUIL_RECOPIE.finditer(f.read_text(encoding="utf-8")):
             recopies.append(f"{f.name} : {m.group(0).strip()}")
     assert not recopies, (

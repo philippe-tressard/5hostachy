@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import ConfigSite
 from app.utils.assistant_description import Demande, disponible, preparer
@@ -152,14 +151,6 @@ def test_le_contexte_est_borne_et_les_vides_ecartes():
 
 
 # ── 6. Disponible ? — le serveur décide ────────────────────────────────────
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
 
 
 def _poser(session, **valeurs):

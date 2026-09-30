@@ -42,6 +42,7 @@ from app.utils import mes_batiments
 from app.utils import perimetres as P
 from app.utils.visibility import ticket_visible
 from app.utils.visibility.objets import annonce_visible, idee_visible, sondage_accessible
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
 
 CAS = json.loads(
@@ -71,21 +72,15 @@ def lecteurs(batiments):
         comptes = {}
         for statut in STATUTS:
             for ou, bat in (("dedans", dedans), ("dehors", dehors)):
-                u = Utilisateur(
+                comptes[(statut.value, ou)] = compte(
+                    session,
+                    prefixe="lecture",
                     nom="L",
                     prenom="P",
-                    email=f"lecture-{uuid.uuid4().hex[:8]}@exemple.test",
-                    mot_de_passe_hash="x",
                     roles_json="résident",
                     statut=statut,
                     batiment_id=bat,
-                    actif=True,
                 )
-                session.add(u)
-                comptes[(statut.value, ou)] = u
-        session.commit()
-        for u in comptes.values():
-            session.refresh(u)
         mes_batiments.invalider_cache()
         yield session, dedans, comptes
         for u in comptes.values():

@@ -26,13 +26,15 @@ from __future__ import annotations
 import ast
 import pathlib
 
+from tests.aides_sources import modules_app
+
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 _CIBLE = "demander"
 _LIMITE = "LIMITE_APPEL_FACTURE"
 
 
 def _arbres() -> dict[pathlib.Path, ast.Module]:
-    return {f: ast.parse(f.read_text(encoding="utf-8")) for f in sorted(_APP.rglob("*.py"))}
+    return {m.chemin: m.arbre for m in modules_app()}
 
 
 def _appels(fonction: ast.AST) -> set[str]:

@@ -30,14 +30,14 @@ from pathlib import Path
 RACINE = Path(__file__).resolve().parents[1] / "app"
 
 from app.utils.taches import TACHES_PERMANENTES  # noqa: E402
+from tests.aides_sources import modules_app  # noqa: E402
 
 
 def _ids_enregistres() -> set[str]:
     """Les identifiants littéraux passés à un `scheduler.add_job(...)`."""
     ids = set()
-    for fichier in sorted(RACINE.rglob("*.py")):
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
-        for noeud in ast.walk(arbre):
+    for m in modules_app():
+        for noeud in ast.walk(m.arbre):
             if not (isinstance(noeud, ast.Call) and isinstance(noeud.func, ast.Attribute)):
                 continue
             if noeud.func.attr != "add_job":

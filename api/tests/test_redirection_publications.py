@@ -23,12 +23,12 @@ import importlib
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
+from sqlmodel import Session
 
 from app.database import get_session
 from app.main import app
-from app.models.core import RoleUtilisateur, Ticket, Utilisateur
+from app.models.core import RoleUtilisateur, Ticket
+from tests.aides_base import compte, moteur_memoire
 
 #: (préfixe d'URL, champ de l'affaire qui garde l'ancien numéro, module du routeur,
 #:  seule route qui doit y rester)
@@ -40,11 +40,7 @@ REDIRECTIONS = (
 
 @pytest.fixture(name="session")
 def session_fixture():
-    moteur = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as session:
+    with Session(moteur_memoire(partage=True)) as session:
         yield session
 
 
@@ -52,16 +48,9 @@ def session_fixture():
 def client_fixture(session: Session):
     from app.auth.deps import get_current_user
 
-    lecteur = Utilisateur(
-        email="r@test.fr",
-        hashed_password="x",
-        nom="R",
-        prenom="R",
-        roles_json=RoleUtilisateur.résident.value,
+    lecteur = compte(
+        session, prefixe="r", nom="R", prenom="R", roles_json=RoleUtilisateur.résident.value
     )
-    session.add(lecteur)
-    session.commit()
-    session.refresh(lecteur)
     app.dependency_overrides[get_session] = lambda: session
     app.dependency_overrides[get_current_user] = lambda: lecteur
     yield TestClient(app), lecteur

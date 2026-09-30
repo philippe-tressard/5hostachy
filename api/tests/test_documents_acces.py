@@ -52,7 +52,6 @@ class _SessionSansBase:
 def _utilisateur(role: str, statut: StatutUtilisateur, batiment_id=None) -> Utilisateur:
     return Utilisateur(
         email="x@example.test",
-        mot_de_passe_hash="",
         prenom="X",
         nom="Y",
         role=role,

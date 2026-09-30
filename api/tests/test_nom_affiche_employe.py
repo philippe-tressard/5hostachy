@@ -24,6 +24,8 @@ que deux implémentations concordent ne dit rien de ce qui les contourne — c'e
 import re
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 APP = Path(__file__).resolve().parents[1] / "app"
 
 #: Le motif d'une composition MANUELLE : un prénom et un nom interpolés à la
@@ -49,15 +51,6 @@ EXCEPTIONS = {
 }
 
 
-def _sources() -> list[Path]:
-    return [p for p in APP.rglob("*.py") if "__pycache__" not in p.parts]
-
-
-def test_cas_zero_le_releve_lit_quelque_chose():
-    """Un relevé vide annoncerait « aucune composition manuelle » sans rien lire."""
-    assert len(_sources()) > 100, "le relevé est cassé"
-
-
 def test_le_motif_reconnait_ce_quil_doit_reconnaitre():
     """🔴 Cas zéro du MOTIF : sans lui, le test passe en ne trouvant jamais rien.
 
@@ -74,11 +67,11 @@ def test_le_motif_reconnait_ce_quil_doit_reconnaitre():
 
 def test_aucune_composition_manuelle_du_nom():
     fautifs = []
-    for p in _sources():
-        rel = p.relative_to(APP).as_posix()
+    for m in modules_app():
+        rel = m.rel
         if rel == "utils/noms.py":
             continue  # c'est le module qui PORTE la règle
-        for numero, ligne in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+        for numero, ligne in enumerate(m.lignes, 1):
             nue = ligne.strip()
             #  Les commentaires et docstrings racontent l'incident : les compter
             #  interdirait de l'expliquer.
@@ -133,11 +126,11 @@ def test_lire_un_prenom_et_un_nom_oblige_a_employer_la_regle():
     l'incident qui l'a fait naître est un contrôle à compléter, pas à garder.
     """
     fautifs = []
-    for chemin in _sources():
-        rel = chemin.relative_to(APP).as_posix()
+    for m in modules_app():
+        rel = m.rel
         if rel == "utils/noms.py" or rel in EXCEPTIONS_LECTURE:
             continue
-        source = chemin.read_text(encoding="utf-8")
+        source = m.source
         if "Utilisateur.prenom" not in source:
             continue
         #  🔴 L'IMPORT, pas le mot : la première version cherchait

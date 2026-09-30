@@ -30,17 +30,17 @@ adressé au mauvais conseiller.
 from __future__ import annotations
 
 import json
-import uuid
 
 import pytest
 from sqlmodel import Session, select
 
 from app.database import engine
-from app.models.core import MembreCS, Notification, Utilisateur
+from app.models.core import MembreCS, Notification
 from app.routers.tickets.arrivee import (
     _envoyer_email_cs_creation,
     _notifier_cs_creation,
 )
+from tests.aides_base import compte
 
 
 class _Tampon:
@@ -83,32 +83,28 @@ def conseil(batiments):
     from app.utils.perimetres import perimetre_du_batiment
 
     with Session(engine) as session:
-        marque = uuid.uuid4().hex[:6]
         comptes, membres = [], []
         for suffixe, bat_id in (("a", batiments[0]), ("b", batiments[1])):
-            compte = Utilisateur(
-                email=f"cs-{suffixe}-{marque}@exemple.test",
-                mot_de_passe_hash="x",
+            u = compte(
+                session,
+                prefixe=f"cs-{suffixe}",
                 prenom=f"C{suffixe.upper()}",
                 nom="CONSEIL",
                 roles_json="conseil_syndical",
-                actif=True,
             )
-            session.add(compte)
-            session.flush()
             membre = MembreCS(
                 genre="mme",
-                prenom=compte.prenom,
-                nom=compte.nom,
+                prenom=u.prenom,
+                nom=u.nom,
                 batiment_id=bat_id,
-                user_id=compte.id,
+                user_id=u.id,
             )
             session.add(membre)
-            comptes.append(compte)
+            comptes.append(u)
             membres.append(membre)
         session.commit()
-        for compte in comptes:
-            session.refresh(compte)
+        for u in comptes:
+            session.refresh(u)
 
         noeud = perimetre_du_batiment(batiments[0])
         assert noeud is not None, "l'arbre ne connaît pas ce bâtiment — fixture cassée"
@@ -126,8 +122,8 @@ def conseil(batiments):
             )
         ).all():
             session.delete(notif)
-        for compte in comptes:
-            session.delete(compte)
+        for u in comptes:
+            session.delete(u)
         session.commit()
 
 

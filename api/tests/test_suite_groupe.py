@@ -15,15 +15,16 @@ from __future__ import annotations
 
 import pytest
 from fastapi import BackgroundTasks
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session
 
 import app.routers.tickets.apercu as apercu
 import app.routers.tickets.evolutions as evolutions
 import app.utils.diffusion as diffusion
-from app.models.core import RoleUtilisateur, Ticket, Utilisateur
+from app.models.core import RoleUtilisateur, Ticket
 from app.schemas_tickets import TicketEvolutionCreate
 from app.utils import horloge
 from app.utils.whatsapp_message import construire_message
+from tests.aides_base import compte, moteur_memoire
 
 SITE = "https://5hostachy.fr"
 INITIAL = "Elle ne ferme plus."
@@ -33,25 +34,19 @@ INITIAL = "Elle ne ferme plus."
 def session(monkeypatch):
     #  Le canal de la résidence, allumé : la couture est le registre (#1060).
     monkeypatch.setattr(diffusion, "config_diffusion", lambda s, *a: {"site_url": SITE})
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
+    with Session(moteur_memoire()) as s:
         yield s
 
 
 @pytest.fixture()
 def cs(session):
-    u = Utilisateur(
-        email="cs@exemple.test",
-        mot_de_passe_hash="x",
+    return compte(
+        session,
+        prefixe="cs",
         prenom="C",
         nom="S",
         roles_json=RoleUtilisateur.conseil_syndical.value,
     )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 def _affaire(session, auteur, categorie="panne"):

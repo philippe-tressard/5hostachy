@@ -45,6 +45,7 @@ from app.schemas import TicketEvolutionCreate, TicketEvolutionUpdate
 
 #  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
 #  qui la référence est ce que les clés étrangères refusent (#546).
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
 
 BAT_2 = ["bat:2"]
@@ -56,16 +57,13 @@ def cs() -> Utilisateur:
     """Un membre du conseil syndical — il suit les dossiers, donc il commente."""
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        membre = Utilisateur(
-            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        membre = compte(
+            session,
+            prefixe="cs",
             prenom="Camille",
             nom="Sorel",
             role=RoleUtilisateur.conseil_syndical,
         )
-        session.add(membre)
-        session.commit()
-        session.refresh(membre)
         yield membre
         purger_ligne(session, Utilisateur, membre.id)
         session.commit()

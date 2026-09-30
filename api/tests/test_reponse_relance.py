@@ -18,11 +18,12 @@ from app.utils.courriel_entrant import nouveau_jeton as _jeton
 from app.utils.courriel_ingestion import RELANCE
 from tests.purge_test import purger_ligne
 
-#  La scène (ticket + comptes + fiche syndic) vit avec les tests qui ÉCRIVENT :
-#  elle a suivi le découpage du 05/09/2026. `_entetes`, qui ne fabrique qu'un
-#  dictionnaire, est resté du côté des décisions pures.
-from tests.test_courriel_reponse_ticket import _AUTH_OK, _entetes  # noqa: F401
-from tests.test_courriel_reponse_ticket_bout_en_bout import (  # noqa: F401
+#  La scène (ticket + comptes + fiche syndic) et les en-têtes d'une réponse
+#  vivent dans `aides_courriel` (#1495) : plus aucun fichier de tests ne sert
+#  de bibliothèque à un autre.
+from tests.aides_courriel import (  # noqa: F401 — `scene` est une fixture
+    _AUTH_OK,
+    _entetes_reponse,
     _evolutions,
     scene,
 )
@@ -58,7 +59,7 @@ def test_une_reponse_a_une_relance_est_conservee_pour_etre_RELUE(scene):
 
     decision = traiter(
         session,
-        _entetes(relance.jeton, de=syndic.email),
+        _entetes_reponse(relance.jeton, de=syndic.email),
         "Le TK-1 est traité, le TK-2 attend le devis.",
         datetime(2026, 9, 4),
         authentification=_AUTH_OK,
@@ -103,7 +104,7 @@ def test_plusieurs_reponses_s_AJOUTENT_sans_ecraser(scene):
     for texte in ("Premier point.", "Précision du lendemain."):
         traiter(
             session,
-            _entetes(relance.jeton, de=syndic.email),
+            _entetes_reponse(relance.jeton, de=syndic.email),
             texte,
             datetime(2026, 9, 4),
             authentification=_AUTH_OK,

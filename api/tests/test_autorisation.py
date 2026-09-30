@@ -24,6 +24,8 @@ Aucune de ces dérives n'était détectable autrement qu'à la relecture. D'où 
 import ast
 import pathlib
 
+from tests.aides_sources import modules_app
+
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _ROUTERS = _API_DIR / "app" / "routers"
 
@@ -43,14 +45,9 @@ def _fichiers_routers() -> list[pathlib.Path]:
     d'exceptions est vérifiée dans les deux sens. Ce test-ci n'avait pas cette
     chance ; d'où le contrôle de couverture minimale ci-dessous.
     """
-    fichiers = [f for f in sorted(_ROUTERS.rglob("*.py")) if "__pycache__" not in f.parts]
     #  Garde-fou du garde-fou : un glob cassé rendrait une liste vide, et tous les
-    #  tests de ce fichier passeraient sans rien examiner.
-    assert len(fichiers) >= 25, (
-        f"Seulement {len(fichiers)} module(s) de router trouvé(s) sous {_ROUTERS} — "
-        "la portée du contrôle est cassée, ne pas lire les tests suivants comme verts."
-    )
-    return fichiers
+    #  tests de ce fichier passeraient sans rien examiner — `minimum=25` lève alors.
+    return [m.chemin for m in modules_app("routers", minimum=25)]
 
 
 # Dépendances d'autorisation — TOUTES définies dans app/auth/deps.py.

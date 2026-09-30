@@ -23,9 +23,8 @@ gestes du transport. Les exceptions sont NOMMÉES avec leur raison, et le test
 from __future__ import annotations
 
 import ast
-from pathlib import Path
 
-RACINE = Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
 
 GESTES_DU_TRANSPORT = {"config_whatsapp", "whatsapp_actif", "envoyer_whatsapp_avec_log"}
 
@@ -41,15 +40,12 @@ EXCEPTIONS = {
 def _importeurs() -> dict[str, set[str]]:
     """{module relatif: gestes du transport qu'il importe} — lu dans l'arbre."""
     trouves: dict[str, set[str]] = {}
-    for chemin in sorted(RACINE.rglob("*.py")):
-        if "__pycache__" in chemin.parts:
-            continue
-        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
-        for noeud in ast.walk(arbre):
+    for module in modules_app():
+        for noeud in ast.walk(module.arbre):
             if isinstance(noeud, ast.ImportFrom) and noeud.module == "app.utils.whatsapp":
                 noms = {a.name for a in noeud.names} & GESTES_DU_TRANSPORT
                 if noms:
-                    rel = chemin.relative_to(RACINE).as_posix()
+                    rel = module.rel
                     trouves.setdefault(rel, set()).update(noms)
     return trouves
 

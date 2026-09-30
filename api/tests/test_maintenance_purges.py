@@ -21,13 +21,13 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
+from sqlmodel import Session, select
 
 from app.config import get_settings
 from app.main import app
-from app.models.core import RoleUtilisateur, Utilisateur
+from app.models.core import RoleUtilisateur
 from app.models.jetons import EmailVerificationToken, RefreshToken
+from tests.aides_base import compte, moteur_memoire
 
 CLE = "cle-de-test-des-purges"
 ROUTE = "/admin/maintenance/purges"
@@ -35,10 +35,7 @@ ROUTE = "/admin/maintenance/purges"
 
 @pytest.fixture(name="moteur")
 def moteur_fixture(monkeypatch):
-    moteur = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(moteur)
+    moteur = moteur_memoire(partage=True)
     #  `purger` lit le moteur du module : c'est lui qu'on remplace, pas une
     #  dépendance FastAPI — la fonction sert aussi hors requête.
     monkeypatch.setattr("app.utils.maintenance.engine", moteur)
@@ -48,16 +45,9 @@ def moteur_fixture(monkeypatch):
 
 def _jetons(moteur) -> list[str]:
     with Session(moteur) as s:
-        user = Utilisateur(
-            email="m@test.fr",
-            hashed_password="x",
-            nom="M",
-            prenom="M",
-            roles_json=RoleUtilisateur.résident.value,
+        user = compte(
+            s, prefixe="m", nom="M", prenom="M", roles_json=RoleUtilisateur.résident.value
         )
-        s.add(user)
-        s.commit()
-        s.refresh(user)
         maintenant = datetime.now(timezone.utc)
         s.add(
             RefreshToken(user_id=user.id, token="expire", expires_at=maintenant - timedelta(days=1))

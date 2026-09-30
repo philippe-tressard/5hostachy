@@ -124,6 +124,22 @@ from tests.purge_test import delier_references, vider_patrimoine  # noqa: E402,F
 
 
 @pytest.fixture()
+def session():
+    """Une base SQLite en mémoire, schéma posé, propre à chaque test (#1495).
+
+    Elle était recopiée dans trente-quatre fichiers. Un test qui a besoin d'une
+    AUTRE session (la base de l'application, un `TestClient`) définit la sienne
+    sous le même nom : la définition locale prime.
+    """
+    from sqlmodel import Session
+
+    from tests.aides_base import moteur_memoire
+
+    with Session(moteur_memoire()) as s:
+        yield s
+
+
+@pytest.fixture()
 def batiments() -> list[int]:
     """Arbre semé sur quatre bâtiments réels. Renvoie leurs identifiants."""
     from sqlmodel import Session, SQLModel, select

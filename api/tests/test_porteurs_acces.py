@@ -32,16 +32,14 @@ from app.utils.lot_des_imports import trouveur_de_lot
 from app.utils.porteurs_acces import acces_de, ids_detenteurs, porteurs
 from app.utils.resolution_acces import exiger_code_libre, rattacher, rattacher_les_reconnues
 from app.utils.types_acces import TELECOMMANDE, VIGIK
-from tests.aides_badges import (  # noqa: F401 — `session` est une fixture
+from tests.aides_badges import (
     TYPES,
     _badge,
-    _bail,
     _compte,
     _copro_du_fichier,
     _ligne,
     _lier,
     _lot,
-    session,
 )
 
 

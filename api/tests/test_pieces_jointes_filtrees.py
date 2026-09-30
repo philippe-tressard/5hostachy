@@ -41,6 +41,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 APP = Path(__file__).resolve().parents[1] / "app"
 SOURCE = APP / "utils" / "photos.py"
 
@@ -67,11 +69,11 @@ def _lignes_fautives(source: str) -> list[int]:
 
 def test_aucune_ecriture_de_galerie_ne_contourne_photos_json():
     fautifs = []
-    for fichier in APP.rglob("*.py"):
-        if fichier == SOURCE:
+    for m in modules_app():
+        if m.chemin == SOURCE:
             continue
-        for numero in _lignes_fautives(fichier.read_text(encoding="utf-8")):
-            fautifs.append(f"{fichier.relative_to(APP)}:{numero}")
+        for numero in _lignes_fautives(m.source):
+            fautifs.append(f"{m.chemin.relative_to(APP)}:{numero}")
 
     assert not fautifs, (
         "une galerie est sérialisée à la main, hors de `photos_json` :\n  "

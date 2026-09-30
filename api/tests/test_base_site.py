@@ -32,6 +32,7 @@ from pathlib import Path
 import pytest
 
 from app.utils.liens import DEFAUT_SITE, base_site
+from tests.aides_sources import modules_app
 
 RACINE = Path(__file__).resolve().parents[1] / "app"
 
@@ -62,12 +63,6 @@ LECTURE = re.compile(
 )
 
 
-def _fichiers():
-    for f in sorted(RACINE.rglob("*.py")):
-        rel = f.relative_to(RACINE).as_posix()
-        yield rel, f
-
-
 def _portees(src: str):
     """Chaque fonction du module, avec son texte — la lecture et sa normalisation
     n'étant pas forcément sur la même LIGNE (`utils/reponses.py` lit la ligne de
@@ -82,10 +77,11 @@ def _portees(src: str):
 
 def test_aucune_lecture_de_site_url_hors_de_base_site():
     fautifs = []
-    for rel, f in _fichiers():
+    for module in modules_app():
+        rel = module.rel
         if rel in EXCEPTIONS:
             continue
-        src = f.read_text(encoding="utf-8")
+        src = module.source
         #  Les commentaires ne sont pas du code : ce fichier-ci en parle
         #  abondamment, et un contrôle qui lit son propre récit se déclenche sur
         #  lui-même (`standards/04` §39).

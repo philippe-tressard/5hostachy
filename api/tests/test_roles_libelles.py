@@ -36,7 +36,6 @@ zéro » de `standards/04` §2.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from app.models.core import RoleUtilisateur, StatutUtilisateur
 from app.utils.roles_libelles import (
@@ -51,6 +50,7 @@ from app.utils.roles_libelles import (
 #  recopiée ici : elle l'était — `_table_ts` et `roles_libelles_lecture.table_ts`
 #  étaient la même fonction —, dans le fichier même dont l'en-tête du module
 #  partagé dit qu'il est né parce que « la lecture était elle-même dupliquée ».
+from tests.aides_sources import modules_app
 from tests.roles_libelles_lecture import ROLES_TS, table_ts
 
 #  Les chaînes qui ne doivent apparaître QUE dans le module source. Écrites ici
@@ -143,22 +143,21 @@ def test_aucun_libelle_de_role_n_est_REECRIT_ailleurs():
     arrivant). Un contrôle qui crie sur de la prose finit désarmé, et il aurait
     fallu quatre dérogations pour zéro défaut réel.
     """
-    racine = Path(__file__).resolve().parents[1] / "app"
-    source_unique = racine / "utils" / "roles_libelles.py"
+    source_unique = "utils/roles_libelles.py"
     motifs = [_motif_valeur(c) for c in CHAINES_CANONIQUES]
 
     fautifs = []
-    for fichier in racine.rglob("*.py"):
-        if fichier == source_unique:
+    for m in modules_app():
+        if m.rel == source_unique:
             continue
-        for numero, ligne in enumerate(fichier.read_text(encoding="utf-8").splitlines(), 1):
+        for numero, ligne in enumerate(m.lignes, 1):
             nue = ligne.strip()
             #  Un commentaire ne pose pas de libellé — celui qui explique la
             #  suppression de `changer-role` cite justement l'ancienne chaîne.
             if nue.startswith("#") or nue.startswith('"""') or nue.startswith("*"):
                 continue
             if any(m.search(ligne) for m in motifs):
-                fautifs.append(f"{fichier.relative_to(racine)}:{numero} — {nue[:80]}")
+                fautifs.append(f"{m.rel}:{numero} — {nue[:80]}")
 
     assert not fautifs, (
         "un libellé de rôle est réécrit hors de `app/utils/roles_libelles.py` :\n  "

@@ -16,31 +16,19 @@ bruit.
 import ast
 import pathlib
 
+from tests.aides_sources import modules_app
+
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 #: Le seul module autorisé à instancier la connexion.
 _MODULE_AUTORISE = "utils/smtp.py"
 
 
-def _modules() -> list[tuple[str, str]]:
-    """(chemin relatif, source) de tous les modules — c'est la PORTÉE du contrôle."""
-    fichiers = [
-        (f.relative_to(_APP).as_posix(), f.read_text(encoding="utf-8"))
-        for f in sorted(_APP.rglob("*.py"))
-        if "__pycache__" not in f.parts
-    ]
-    assert len(fichiers) >= 40, (
-        f"Seulement {len(fichiers)} module(s) sous {_APP} — la portée du contrôle "
-        "est cassée, ne pas lire ce test comme vert."
-    )
-    return fichiers
-
-
 def test_la_connexion_smtp_n_est_construite_qu_a_un_endroit():
     porteurs = {
-        rel
-        for rel, src in _modules()
-        for n in ast.walk(ast.parse(src))
+        module.rel
+        for module in modules_app()
+        for n in ast.walk(module.arbre)
         if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "ConnectionConfig"
     }
     assert porteurs == {_MODULE_AUTORISE}, (
@@ -57,9 +45,9 @@ def test_les_envois_passent_par_le_helper_partage():
     resterait vert en ne surveillant rien — un ensemble vide est égal à lui-même
     seulement quand le helper existe et sert (`standards/04` §2)."""
     appelants = {
-        rel
-        for rel, src in _modules()
-        for n in ast.walk(ast.parse(src))
+        module.rel
+        for module in modules_app()
+        for n in ast.walk(module.arbre)
         if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "connexion_smtp"
     }
     assert len(appelants) >= 2, (

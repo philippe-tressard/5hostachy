@@ -12,10 +12,10 @@ qui ne connaît qu'une forme d'une règle en laisse passer l'autre sans un mot.
 
 from __future__ import annotations
 
-import pathlib
 import re
 
-_APP = pathlib.Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
+
 _MOTIF = re.compile(
     r"""getattr\([^,()]+,\s*["']value["']"""  # getattr(x, "value", x)
     r"""|\.value\s+if\s+hasattr\([^,()]+,\s*["']value["']\)"""  # x.value if hasattr(x, "value")
@@ -30,13 +30,7 @@ def _copies(texte: str) -> int:
 
 
 def test_aucune_copie_de_l_idiome_hors_de_sa_source():
-    fichiers = [p for p in _APP.rglob("*.py") if "__pycache__" not in p.parts]
-    assert len(fichiers) >= 40, "Portée cassée."
-    fautes = [
-        p.relative_to(_APP).as_posix()
-        for p in fichiers
-        if p.relative_to(_APP).as_posix() != _SOURCE and _copies(p.read_text(encoding="utf-8"))
-    ]
+    fautes = [m.rel for m in modules_app() if m.rel != _SOURCE and _copies(m.source)]
     assert not fautes, (
         f"Valeur d'énumération relue à la main — employer `app.utils.valeurs.valeur` : {fautes}"
     )

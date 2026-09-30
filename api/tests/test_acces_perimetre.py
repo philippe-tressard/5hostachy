@@ -20,7 +20,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, select
 
 #  ⚠️ L'import des modèles n'est pas décoratif : `SQLModel.metadata` ne connaît
 #  que les tables des modules CHARGÉS. Sans lui, `create_all` ne crée rien et le
@@ -28,6 +28,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from app.models.copropriete import Batiment, Copropriete, Lot
 from app.models.core import StatutAcces, UserLot, Utilisateur, Vigik
 from app.utils.acces_perimetre import acces_deduit, code_batiment
+from tests.aides_base import moteur_memoire
 
 #: Les bâtiments des lots d'une personne, par NUMÉRO — la table de cas, partagée
 #: par les deux écritures de la règle.
@@ -111,8 +112,7 @@ def test_la_MIGRATION_dit_la_meme_chose(batiments_voulus):
     serait la duplication ; l'exercer sur les mêmes cas que la fonction en fait un
     contrôle. Si l'une des deux change, ce test le dit.
     """
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
+    moteur = moteur_memoire()
     with Session(moteur) as s:
         #  ⚠️ Les fixtures passent par les MODÈLES : poser les lignes en SQL
         #  obligeait à connaître toutes les colonnes NOT NULL de quatre tables,

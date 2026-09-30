@@ -6,8 +6,6 @@ file : message sur le groupe, courriel au syndic / au CS, affiche.
 
 from __future__ import annotations
 
-import uuid
-
 import pytest
 from fastapi import BackgroundTasks
 from sqlmodel import Session
@@ -17,9 +15,10 @@ import app.routers.tickets.crud as crud
 import app.routers.tickets.mise_a_jour as mise_a_jour
 import app.utils.diffusion as diffusion
 from app.database import engine
-from app.models.core import RoleUtilisateur, Utilisateur
+from app.models.core import RoleUtilisateur
 from app.schemas import TicketCreate, TicketUpdate
 from app.utils.perimetres import arbre
+from tests.aides_base import compte
 
 
 @pytest.fixture()
@@ -38,17 +37,13 @@ def contexte(monkeypatch, batiments):
     )
     arbre()
     with Session(engine) as s:
-        cs = Utilisateur(
-            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
+        cs = compte(
+            s,
+            prefixe="cs",
             prenom="C",
             nom="S",
-            actif=True,
             roles_json=RoleUtilisateur.conseil_syndical.value,
         )
-        s.add(cs)
-        s.commit()
-        s.refresh(cs)
         yield s, cs, affiches, batiments
 
 

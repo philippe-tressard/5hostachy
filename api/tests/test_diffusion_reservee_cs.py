@@ -17,36 +17,19 @@ from __future__ import annotations
 
 import ast
 import pathlib
-from datetime import datetime
 
 import pytest
 from fastapi import BackgroundTasks, HTTPException
-from sqlmodel import Session, SQLModel, create_engine
 
 import app.routers.tickets.crud as crud
 import app.routers.tickets.evolutions as evolutions
 import app.routers.tickets.messages as messages
 import app.utils.diffusion as diffusion
-from app.models.core import RoleUtilisateur, Ticket, Utilisateur
+from app.models.core import RoleUtilisateur, Ticket
 from app.schemas import MessageCreate, TicketCreate
 from app.schemas_tickets import TicketEvolutionCreate
-
-
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
-
-
-def _personne(session, email, role=None):
-    kw = {"role": role} if role else {}
-    u = Utilisateur(email=email, mot_de_passe_hash="x", prenom="P", nom="N", **kw)
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
+from app.utils.horloge import maintenant
+from tests.aides_base import compte
 
 
 def _affaire(session, auteur, *, confidentiel=False):
@@ -57,8 +40,8 @@ def _affaire(session, auteur, *, confidentiel=False):
         categorie="panne",
         auteur_id=auteur.id,
         confidentiel=confidentiel,
-        cree_le=datetime.utcnow(),
-        mis_a_jour_le=datetime.utcnow(),
+        cree_le=maintenant(),
+        mis_a_jour_le=maintenant(),
     )
     session.add(t)
     session.commit()
@@ -91,7 +74,7 @@ def _suite(session, ticket, user):
 
 
 def test_une_suite_de_resident_ne_publie_ni_n_ecrit_au_dehors(session, envois):
-    resident = _personne(session, "r@exemple.fr")
+    resident = compte(session, prefixe="r")
     taches = _suite(session, _affaire(session, resident), resident)
     assert envois["externe"] == [], "un résident a fait partir un courriel vers une adresse libre"
     assert "envoyer_whatsapp_avec_log" not in taches, "un résident a publié sur le groupe"
@@ -99,15 +82,15 @@ def test_une_suite_de_resident_ne_publie_ni_n_ecrit_au_dehors(session, envois):
 
 def test_une_suite_du_conseil_publie_et_ecrit(session, envois):
     """Témoin : sans lui, le test précédent serait vert si plus RIEN ne partait."""
-    resident = _personne(session, "r@exemple.fr")
-    cs = _personne(session, "cs@exemple.fr", RoleUtilisateur.conseil_syndical)
+    resident = compte(session, prefixe="r")
+    cs = compte(session, prefixe="cs", role=RoleUtilisateur.conseil_syndical)
     taches = _suite(session, _affaire(session, resident), cs)
     assert envois["externe"] == ["quiconque@exemple.org"]
     assert "envoyer_whatsapp_avec_log" in taches
 
 
 def test_un_message_de_resident_n_ecrit_pas_au_dehors(session, envois):
-    resident = _personne(session, "r@exemple.fr")
+    resident = compte(session, prefixe="r")
     ticket = _affaire(session, resident)
     corps = MessageCreate(contenu="Relance.", email_externe="quiconque@exemple.org")
     messages.add_message(ticket.id, corps, BackgroundTasks(), session=session, user=resident)
@@ -115,8 +98,8 @@ def test_un_message_de_resident_n_ecrit_pas_au_dehors(session, envois):
 
 
 def test_un_message_du_conseil_ecrit_au_dehors(session, envois):
-    resident = _personne(session, "r@exemple.fr")
-    cs = _personne(session, "cs@exemple.fr", RoleUtilisateur.conseil_syndical)
+    resident = compte(session, prefixe="r")
+    cs = compte(session, prefixe="cs", role=RoleUtilisateur.conseil_syndical)
     ticket = _affaire(session, resident)
     corps = MessageCreate(contenu="Réponse.", email_externe="syndic@exemple.org")
     messages.add_message(ticket.id, corps, BackgroundTasks(), session=session, user=cs)
@@ -125,8 +108,8 @@ def test_un_message_du_conseil_ecrit_au_dehors(session, envois):
 
 def test_on_n_ecrit_pas_sur_une_affaire_qu_on_ne_voit_pas(session, envois):
     """Le `GET …/messages` refusait déjà ; le `POST` voisin, non."""
-    auteur = _personne(session, "auteur@exemple.fr")
-    voisin = _personne(session, "voisin@exemple.fr")
+    auteur = compte(session, prefixe="auteur")
+    voisin = compte(session, prefixe="voisin")
     ticket = _affaire(session, auteur, confidentiel=True)
     with pytest.raises(HTTPException) as refus:
         messages.add_message(
@@ -210,15 +193,15 @@ def _creer(session, user, **options):
 
 
 def test_reservee_au_conseil_a_la_creation_est_ecrit(session, creation):
-    cs = _personne(session, "cs@exemple.fr", RoleUtilisateur.conseil_syndical)
+    cs = compte(session, prefixe="cs", role=RoleUtilisateur.conseil_syndical)
     assert _creer(session, cs, confidentiel=True).confidentiel is True
 
 
 def test_un_resident_signale_l_urgence_a_la_creation(session, creation):
-    resident = _personne(session, "r@exemple.fr")
+    resident = compte(session, prefixe="r")
     assert _creer(session, resident, urgente=True).priorite == "haute"
 
 
 def test_un_resident_ne_restreint_pas_a_la_creation(session, creation):
-    resident = _personne(session, "r@exemple.fr")
+    resident = compte(session, prefixe="r")
     assert _creer(session, resident, confidentiel=True).confidentiel is False

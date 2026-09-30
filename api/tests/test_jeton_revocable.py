@@ -38,8 +38,7 @@ import pathlib
 import pytest
 
 from app.auth.jwt import create_access_token, decode_token, empreinte_secret, hash_password
-
-_API = pathlib.Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
 
 
 def test_le_jeton_porte_l_empreinte():
@@ -77,11 +76,10 @@ def test_la_meme_entree_donne_la_meme_empreinte():
 def _appels(nom: str) -> list[pathlib.Path]:
     """Les fichiers qui appellent `nom`, hors du module qui le définit."""
     trouves = []
-    for fichier in _API.rglob("*.py"):
-        arbre = ast.parse(fichier.read_text(encoding="utf-8"))
-        for noeud in ast.walk(arbre):
+    for module in modules_app():
+        for noeud in ast.walk(module.arbre):
             if isinstance(noeud, ast.Call) and getattr(noeud.func, "id", None) == nom:
-                trouves.append(fichier)
+                trouves.append(module.chemin)
                 break
     return trouves
 

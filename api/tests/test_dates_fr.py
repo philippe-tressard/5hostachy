@@ -15,7 +15,6 @@ Ce test verrouille les deux bouts :
 import locale as _locale
 import re
 from datetime import date, datetime
-from pathlib import Path
 
 from app.utils.dates_fr import (
     date_courte,
@@ -24,8 +23,7 @@ from app.utils.dates_fr import (
     datetime_longue_paris,
     jour_longue,
 )
-
-_APP_DIR = Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
 
 # Directives strftime traduites selon LC_TIME (mois et jours, longs et abrégés).
 _DIRECTIVES_LOCALISEES = re.compile(r"%[-#]?[BbAa]")
@@ -97,14 +95,14 @@ def test_aucune_directive_strftime_localisee_dans_app():
     fragile, cf. docstring de `app/utils/dates_fr.py`).
     """
     fautifs: list[str] = []
-    for chemin in sorted(_APP_DIR.rglob("*.py")):
-        if chemin.name == "dates_fr.py":
+    for module in modules_app():
+        if module.chemin.name == "dates_fr.py":
             continue  # documente l'interdiction : cite `%B` en prose
-        for num, ligne in enumerate(chemin.read_text(encoding="utf-8").splitlines(), start=1):
+        for num, ligne in enumerate(module.lignes, start=1):
             if "strftime" not in ligne and "%" not in ligne:
                 continue
             if _DIRECTIVES_LOCALISEES.search(ligne):
-                rel = chemin.relative_to(_APP_DIR.parent)
+                rel = f"app/{module.rel}"
                 fautifs.append(f"{rel}:{num}: {ligne.strip()}")
 
     assert not fautifs, (
@@ -182,10 +180,10 @@ def test_aucune_duree_en_heures_decimales_dans_app():
 
     motif = re.compile(r"round\(\s*\([^)]*\)\.total_seconds\(\)\s*/\s*3600")
     fautifs: list[str] = []
-    for chemin in sorted(_APP_DIR.rglob("*.py")):
-        for num, ligne in enumerate(chemin.read_text(encoding="utf-8").splitlines(), start=1):
+    for module in modules_app():
+        for num, ligne in enumerate(module.lignes, start=1):
             if motif.search(ligne):
-                fautifs.append(f"{chemin.relative_to(_APP_DIR.parent)}:{num}: {ligne.strip()}")
+                fautifs.append(f"app/{module.rel}:{num}: {ligne.strip()}")
 
     assert not fautifs, (
         "Durée arrondie en heures décimales — c'est la forme qui affichait "

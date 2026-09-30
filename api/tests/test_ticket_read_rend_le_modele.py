@@ -25,15 +25,13 @@ quelle. On pose sur chacune une valeur qui n'est pas son défaut, et on relit.
 
 from __future__ import annotations
 
-import uuid
 from datetime import date, datetime
 
-import pytest
-from sqlmodel import Session, SQLModel, create_engine
-
-from app.models.core import Ticket, Utilisateur
+from app.models.core import Ticket
 from app.routers.tickets.commun import ticket_read
 from app.schemas import TicketRead
+from app.utils import horloge
+from tests.aides_base import compte
 
 #: Les champs de lecture CALCULÉS à partir d'autre chose que la colonne du même
 #: nom. Déclarés un par un, avec leur raison ; le test échoue si l'un cesse
@@ -63,21 +61,8 @@ def _valeur_non_defaut(nom: str, type_col) -> object:
     return None
 
 
-@pytest.fixture()
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
-
-
 def test_chaque_colonne_partagee_revient_telle_quelle(session):
-    auteur = Utilisateur(
-        email=f"{uuid.uuid4().hex[:6]}@x.fr", mot_de_passe_hash="x", prenom="A", nom="B"
-    )
-    session.add(auteur)
-    session.commit()
-    session.refresh(auteur)
+    auteur = compte(session, prefixe="auteur", prenom="A", nom="B")
 
     ticket = Ticket(
         numero="TK-000001",
@@ -85,8 +70,8 @@ def test_chaque_colonne_partagee_revient_telle_quelle(session):
         description="D",
         categorie="panne",
         auteur_id=auteur.id,
-        cree_le=datetime.utcnow(),
-        mis_a_jour_le=datetime.utcnow(),
+        cree_le=horloge.maintenant(),
+        mis_a_jour_le=horloge.maintenant(),
     )
     colonnes = Ticket.__table__.columns
     champs_lus = set(TicketRead.model_fields)

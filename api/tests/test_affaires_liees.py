@@ -34,22 +34,8 @@ from app.utils.affaires_liees import (
     poser_liens,
     supprimer_liens_de,
 )
+from tests.aides_base import compte
 from tests.purge_test import purger_ligne
-
-
-def _utilisateur(session, roles: str) -> Utilisateur:
-    u = Utilisateur(
-        email=f"{roles}-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="Camille",
-        nom="Sorel",
-        roles_json=roles,
-        actif=True,
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 def _affaire(session, auteur, titre, confidentiel=False) -> Ticket:
@@ -73,9 +59,9 @@ def contexte():
     """Trois affaires d'un résident, et une confidentielle d'un autre."""
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        auteur = _utilisateur(session, "résident")
-        autre = _utilisateur(session, "résident")
-        cs = _utilisateur(session, "conseil_syndical")
+        auteur = compte(session, prefixe="résident", roles_json="résident")
+        autre = compte(session, prefixe="résident", roles_json="résident")
+        cs = compte(session, prefixe="conseil_syndical", roles_json="conseil_syndical")
         a = _affaire(session, auteur, "Fuite au 3e")
         b = _affaire(session, auteur, "Tache au plafond du 2e")
         c = _affaire(session, auteur, "Colonne d'eau")
@@ -174,7 +160,7 @@ def test_un_resident_ne_relie_ni_ne_delie(contexte, geste):
 
 def test_l_admin_relie_comme_le_conseil(contexte):
     session, (a, b, _c, _s), _auteur, _cs = contexte
-    admin = _utilisateur(session, "admin")
+    admin = compte(session, prefixe="admin", roles_json="admin")
     try:
         poser_liens(session, a, [b.id], admin)
         session.commit()

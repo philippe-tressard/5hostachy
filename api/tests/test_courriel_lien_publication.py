@@ -12,13 +12,13 @@ motif des autres gabarits (`document.lien`, `annonce.lien`).
 
 from __future__ import annotations
 
-import pathlib
 import re
 
 from jinja2 import ChainableUndefined, Environment
 
 from app.seed.emails import EMAIL_TEMPLATES
 from app.utils.liens import lien_sondage
+from tests.aides_sources import modules_app
 
 
 def _corps(code: str) -> str:
@@ -48,16 +48,15 @@ def test_le_lien_d_un_sondage_est_celui_de_sa_fiche():
 #  (`f"/sondages/{…}"` cinq fois, `f"/tickets/{…}"` une fois). C'est la
 #  neuvième occurrence de « le composant existait déjà ».
 
-_APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 _A_LA_MAIN = re.compile(r"""f["']/(sondages|tickets)/\{""")
 
 
 def test_aucune_url_de_sondage_ou_d_affaire_a_la_main():
     fautes = [
-        f"{p.relative_to(_APP).as_posix()}:{n}"
-        for p in _APP.rglob("*.py")
-        if "__pycache__" not in p.parts and p.name != "liens.py"
-        for n, ligne in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+        f"{m.rel}:{n}"
+        for m in modules_app()
+        if m.chemin.name != "liens.py"
+        for n, ligne in enumerate(m.lignes, 1)
         if _A_LA_MAIN.search(ligne) and not ligne.lstrip().startswith("#")
     ]
     assert not fautes, (

@@ -17,32 +17,31 @@ from app.database import engine
 from app.models.core import StatutTicket, StatutUtilisateur, Ticket, Utilisateur
 from app.routers.partage import PartageCourriel, partager_par_courriel
 from app.utils.limiter import LIMITE_PARTAGE_COURRIEL
+from tests.aides_base import compte
 from tests.conftest import requete_de_test
 from tests.purge_test import purger_ligne
-
-
-def _compte(session, statut, roles="résident") -> Utilisateur:
-    u = Utilisateur(
-        email=f"partage-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="Camille",
-        nom="Sorel",
-        roles_json=roles,
-        statut=statut,
-        actif=True,
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 @pytest.fixture()
 def monde(batiments):
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        auteur = _compte(session, StatutUtilisateur.copropriétaire_résident)
-        locataire = _compte(session, StatutUtilisateur.locataire)
+        auteur = compte(
+            session,
+            prefixe="partage",
+            prenom="Camille",
+            nom="Sorel",
+            roles_json="résident",
+            statut=StatutUtilisateur.copropriétaire_résident,
+        )
+        locataire = compte(
+            session,
+            prefixe="partage",
+            prenom="Camille",
+            nom="Sorel",
+            roles_json="résident",
+            statut=StatutUtilisateur.locataire,
+        )
         t = Ticket(
             numero=f"T-{uuid.uuid4().hex[:6]}",
             titre="Fuite au 3e",

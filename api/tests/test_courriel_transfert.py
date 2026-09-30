@@ -14,45 +14,22 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-import pytest
 from sqlmodel import select
 
-from app.models.core import Notification, StatutTicket, Ticket, TicketEvolution, Utilisateur
-from app.models.courriel import FilCourriel, MessageVerse
-from app.utils import courriel_transfert
-from app.utils.courriel_boite import traiter
+from app.models.core import Notification, StatutTicket, Utilisateur
+from app.models.courriel import FilCourriel
 from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE
+from tests.aides_base import compte
+from tests.aides_courriel import (  # noqa: F401 — `monde` et `scene` sont des fixtures
+    _affaires,
+    _evolutions,
+    _fil,
+    _notifs,
+    _transferer,
+    monde,
+    scene,
+)
 from tests.purge_test import purger_ligne
-from tests.test_courriel_reponse_ticket import _AUTH_OK
-from tests.test_courriel_reponse_ticket_bout_en_bout import _evolutions, _notifs, scene  # noqa: F401
-
-_RELEVE = datetime(2026, 9, 29, 12, 0)
-
-
-def _fil(syndic: str, objet: str, *, plus_recent: str = "") -> str:
-    """Le fil de l'exemple du 29/09/2026 — noms et adresses fictifs."""
-    return (
-        f"{plus_recent}"
-        "Début du message réexpédié :\n\n"
-        f"De: Gestion Syndic <{syndic}>\n"
-        f"Objet: RE: {objet}\n"
-        "Date: 29 septembre 2026 à 10:12:34 UTC+2\n"
-        "À: Jean Dupont <jean.dupont@exemple.test>\n\n"
-        "Bonjour Monsieur Dupont,\n\n"
-        "Nous nous chargeons de lancer un ordre de service à l'électricien.\n\n"
-        "Cordialement\n\n"
-        "De : Jean Dupont <jean.dupont@exemple.test>\n"
-        "Envoyé : mardi 29 septembre 2026 08:43\n"
-        f"À : Gestion Syndic <{syndic}>\n"
-        f"Objet : Re: {objet}\n\n"
-        "Bonjour Madame,\n\n"
-        "A ce jour l'entreprise ne répond pas à notre demande d'intervention urgente.\n\n"
-        "Le sam. 26 sept. 2026, 08:58, Jean Dupont <\n"
-        "jean.dupont@exemple.test> a écrit :\n\n"
-        "> Bonjour Monsieur,\n>\n"
-        "> Le portillon électrique ne fonctionne plus, les résidents ne peuvent plus rentrer.\n"
-    )
-
 
 #: Un transfert plus récent du même fil : Jean a répondu une fois de plus.
 _RELANCE_DE_JEAN = (
@@ -65,44 +42,6 @@ _RELANCE_DE_JEAN = (
     "Envoyé : mardi 29 septembre 2026 10:12\n"
     "Objet : RE: {objet}\n\n"
 )
-
-
-def _entetes(de: str, sujet: str) -> dict:
-    return {"From": de, "To": "affaire@5hostachy.fr", "Subject": sujet}
-
-
-@pytest.fixture()
-def monde(scene, monkeypatch):  # noqa: F811
-    """La scène des réponses par courriel, un objet de fil unique, et la purge
-    de tout ce que les transferts créent."""
-    session, ticket, syndic, cs = scene
-    monkeypatch.setattr(courriel_transfert, "domaines_du_site", lambda _session: {"5hostachy.fr"})
-    objet = f"Portillon bloqué {uuid.uuid4().hex[:8]}"
-    yield session, ticket, syndic, cs, objet
-    crees = session.exec(
-        select(Ticket).where(Ticket.auteur_id == cs.id, Ticket.id != ticket.id)
-    ).all()
-    for t in [*crees, ticket]:
-        for modele in (TicketEvolution, MessageVerse, FilCourriel):
-            for ligne in session.exec(select(modele).where(modele.ticket_id == t.id)).all():
-                purger_ligne(session, modele, ligne.id)
-    for t in crees:
-        purger_ligne(session, Ticket, t.id)
-    session.commit()
-
-
-def _affaires(session, objet):
-    return session.exec(select(Ticket).where(Ticket.titre == objet)).all()
-
-
-def _transferer(session, cs, objet, corps, *, sujet=None, auth=_AUTH_OK):
-    return traiter(
-        session,
-        _entetes(cs.email, sujet or f"TR: RE: {objet}"),
-        corps,
-        _RELEVE,
-        authentification=auth,
-    )
 
 
 # ── Une affaire neuve ─────────────────────────────────────────────────────────
@@ -151,16 +90,13 @@ def test_une_affaire_nee_d_un_message_du_SYNDIC_est_chez_le_syndic(monde):
 
 def test_l_auteur_qui_a_un_compte_est_saisi_POUR_lui(monde):
     session, _ticket, syndic, cs, objet = monde
-    jean = Utilisateur(
+    jean = compte(
+        session,
         email="jean.dupont@exemple.test",
-        mot_de_passe_hash="x",
         prenom="Jean",
         nom="Dupont",
         roles_json="résident",
-        actif=True,
     )
-    session.add(jean)
-    session.commit()
     try:
         _transferer(session, cs, objet, _fil(syndic.email, objet))
         (affaire,) = _affaires(session, objet)
@@ -302,16 +238,7 @@ def test_un_transfert_NON_RECONNU_le_dit_au_conseil(monde):
 def test_un_RESIDENT_qui_transfere_sans_repere_ne_cree_rien(monde):
     """Créer une affaire du conseil est un geste du conseil."""
     session, _ticket, syndic, _cs, objet = monde
-    resident = Utilisateur(
-        email=f"resident-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="R",
-        nom="R",
-        roles_json="résident",
-        actif=True,
-    )
-    session.add(resident)
-    session.commit()
+    resident = compte(session, prefixe="resident", prenom="R", nom="R", roles_json="résident")
     try:
         assert _transferer(session, resident, objet, _fil(syndic.email, objet)) == IGNORE
         assert _affaires(session, objet) == []

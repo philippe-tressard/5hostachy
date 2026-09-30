@@ -48,6 +48,8 @@ from __future__ import annotations
 import ast
 import pathlib
 
+from tests.aides_sources import modules_app
+
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 #: Où la question s'écrit, et le nom qu'elle porte.
@@ -84,16 +86,15 @@ EXCEPTIONS = {
 
 def _fonctions_decidant_sur_userlot():
     """(fichier, fonction) pour chaque fonction qui lit `UserLot` ET lève."""
-    for fichier in sorted(_APP.rglob("*.py")):
-        source = fichier.read_text(encoding="utf-8")
-        if "UserLot" not in source:
+    for module in modules_app():
+        if "UserLot" not in module.source:
             continue
-        for noeud in ast.walk(ast.parse(source)):
+        for noeud in ast.walk(module.arbre):
             if not isinstance(noeud, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             corps = ast.unparse(noeud)
             if "select(UserLot)" in corps and "HTTPException" in corps:
-                yield fichier.relative_to(_APP).as_posix(), noeud.name, corps
+                yield module.rel, noeud.name, corps
 
 
 def test_le_controle_voit_bien_quelque_chose():

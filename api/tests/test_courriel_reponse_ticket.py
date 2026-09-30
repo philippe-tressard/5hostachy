@@ -31,20 +31,7 @@ import pytest
 
 from app.utils.courriel_entrant import jeton_dans, nouveau_jeton
 from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, examiner
-
-#: Le verdict d'authenticité, tel que la relève le calcule sur les octets reçus
-#: (`courriel_authenticite.verifier_expediteur`) — jamais un en-tête du message.
-_AUTH_OK = (True, "signé par syndic.fr")
-
-
-def _adresse_a_jeton(jeton: str) -> str:
-    """L'adresse d'un ANCIEN courriel (avant #1314) : le site ne la pose plus,
-    mais une réponse à un message archivé peut encore la citer."""
-    return f"tickets+{jeton}@5hostachy.fr"
-
-
-def _entetes(jeton: str, *, de: str = "gestion@syndic.fr") -> dict:
-    return {"From": de, "To": _adresse_a_jeton(jeton), "Subject": "Re: ticket"}
+from tests.aides_courriel import _AUTH_OK, _adresse_a_jeton, _entetes_reponse
 
 
 # ── Le jeton ──────────────────────────────────────────────────────────────────
@@ -76,7 +63,9 @@ def test_le_jeton_se_relit_dans_les_en_tetes_qui_le_portent():
 
 
 def test_un_message_authentifie_est_accepte():
-    v = examiner(_entetes(nouveau_jeton()), recu_le=datetime(2026, 9, 3), authentification=_AUTH_OK)
+    v = examiner(
+        _entetes_reponse(nouveau_jeton()), recu_le=datetime(2026, 9, 3), authentification=_AUTH_OK
+    )
     assert v.decision == ACCEPTE
 
 
@@ -97,7 +86,9 @@ def test_un_message_NON_authentifie_est_refuse(authentification, cas):
     n'aurait simplement pas eu lieu.
     """
     v = examiner(
-        _entetes(nouveau_jeton()), recu_le=datetime(2026, 9, 3), authentification=authentification
+        _entetes_reponse(nouveau_jeton()),
+        recu_le=datetime(2026, 9, 3),
+        authentification=authentification,
     )
     assert v.decision == REFUSE, f"accepté alors que {cas}"
     assert v.motif, "un refus sans motif est un silence"
@@ -118,7 +109,7 @@ def test_un_Authentication_Results_ECRIT_PAR_L_EXPEDITEUR_ne_prouve_rien(entete)
     un usurpateur n'avait qu'à écrire « pass » trois fois. Aucun en-tête, quel
     qu'il soit, ne tient lieu de vérification.
     """
-    entetes = {**_entetes(nouveau_jeton()), "Authentication-Results": entete}
+    entetes = {**_entetes_reponse(nouveau_jeton()), "Authentication-Results": entete}
     v = examiner(entetes, recu_le=datetime(2026, 9, 3))
     assert v.decision == REFUSE, "un en-tête écrit par l'expéditeur a été cru"
 
@@ -207,11 +198,13 @@ def test_les_messages_anterieurs_au_2_septembre_sont_ignores():
     des mois d'archives dans les tickets.
     """
     v = examiner(
-        _entetes(nouveau_jeton()), recu_le=datetime(2026, 8, 31), authentification=_AUTH_OK
+        _entetes_reponse(nouveau_jeton()), recu_le=datetime(2026, 8, 31), authentification=_AUTH_OK
     )
     assert v.decision == IGNORE
     v = examiner(
-        _entetes(nouveau_jeton()), recu_le=datetime(2026, 9, 2, 0, 1), authentification=_AUTH_OK
+        _entetes_reponse(nouveau_jeton()),
+        recu_le=datetime(2026, 9, 2, 0, 1),
+        authentification=_AUTH_OK,
     )
     assert v.decision == ACCEPTE
 
@@ -223,7 +216,7 @@ def test_la_date_est_examinee_AVANT_le_reste():
     produirait une notification par ancien message douteux — un réveil brutal
     pour une fonction qu'on vient d'activer.
     """
-    v = examiner(_entetes(nouveau_jeton()), recu_le=datetime(2026, 1, 1))
+    v = examiner(_entetes_reponse(nouveau_jeton()), recu_le=datetime(2026, 1, 1))
     assert v.decision == IGNORE
 
 

@@ -8,7 +8,6 @@ d'un bailleur, et aidant dont la délégation n'est pas (ou plus) active.
 from __future__ import annotations
 
 import json
-import uuid
 from datetime import date, timedelta
 
 import pytest
@@ -18,27 +17,12 @@ from app.database import engine
 from app.models.core import Delegation, StatutDelegation, StatutUtilisateur, Utilisateur
 from app.utils import statuts_lus
 from app.utils.visibility.socle import public_cible_visible
+from tests import aides_base
 from tests.purge_test import purger_ligne
 
 OCCUPANTS = json.dumps(["copropriétaires_occupants"], ensure_ascii=False)
 BAILLEURS = json.dumps(["bailleurs"], ensure_ascii=False)
 CONSEIL = json.dumps(["conseil_syndical"], ensure_ascii=False)
-
-
-def _compte(session, statut, roles="résident") -> Utilisateur:
-    u = Utilisateur(
-        email=f"aidant-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="Camille",
-        nom="Sorel",
-        roles_json=roles,
-        statut=statut,
-        actif=True,
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
 
 
 @pytest.fixture()
@@ -48,7 +32,7 @@ def monde():
         crees: list = []
 
         def compte(statut, roles="résident"):
-            u = _compte(session, statut, roles)
+            u = aides_base.compte(session, prefixe="aidant", statut=statut, roles_json=roles)
             crees.append((Utilisateur, u.id))
             return u
 

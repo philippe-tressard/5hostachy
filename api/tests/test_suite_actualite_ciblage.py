@@ -34,36 +34,18 @@ from __future__ import annotations
 import json
 import uuid
 
-import pytest
 from fastapi import BackgroundTasks
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session
 
 from app.database import engine
-from app.models.core import RoleUtilisateur, Ticket, TicketEvolution, Utilisateur
+from app.models.core import RoleUtilisateur, Ticket, Utilisateur
 from app.routers.tickets.evolutions import add_evolution
 from app.schemas import TicketEvolutionCreate
+from tests.aides_base import compte
+from tests.aides_fil import cs, nettoyer_affaires  # noqa: F401
 from tests.purge_test import purger_ligne
 
 BAT_2 = ["bat:2"]
-
-
-@pytest.fixture()
-def cs() -> Utilisateur:
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        membre = Utilisateur(
-            email=f"cs-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="Camille",
-            nom="Sorel",
-            role=RoleUtilisateur.conseil_syndical,
-        )
-        session.add(membre)
-        session.commit()
-        session.refresh(membre)
-        yield membre
-        purger_ligne(session, Utilisateur, membre.id)
-        session.commit()
 
 
 def _actualite(session: Session, auteur_id: int) -> Ticket:
@@ -82,15 +64,6 @@ def _actualite(session: Session, auteur_id: int) -> Ticket:
     session.commit()
     session.refresh(t)
     return t
-
-
-def _nettoyer(session: Session, ticket_id: int) -> None:
-    for e in session.exec(
-        select(TicketEvolution).where(TicketEvolution.ticket_id == ticket_id)
-    ).all():
-        session.delete(e)
-    purger_ligne(session, Ticket, ticket_id)
-    session.commit()
 
 
 def _suite(session, cs, ticket_id, **champs):
@@ -120,7 +93,7 @@ def test_un_commentaire_ordinaire_n_efface_ni_le_ciblage_ni_les_options(cs):
             assert relue.epingle is False
             assert relue.reserve_perimetre is False
         finally:
-            _nettoyer(session, t.id)
+            nettoyer_affaires(session, t.id)
 
 
 def test_le_ciblage_enregistre_sur_la_suite_devient_celui_de_l_actualite(cs):
@@ -145,7 +118,7 @@ def test_le_ciblage_enregistre_sur_la_suite_devient_celui_de_l_actualite(cs):
             assert relue.epingle is True
             assert relue.priorite == "haute"
         finally:
-            _nettoyer(session, t.id)
+            nettoyer_affaires(session, t.id)
 
 
 def test_une_liste_vide_rend_l_actualite_a_tout_le_monde(cs):
@@ -156,7 +129,7 @@ def test_une_liste_vide_rend_l_actualite_a_tout_le_monde(cs):
             relue = _suite(session, cs, t.id, contenu="Finalement, pour tous.", public_cible=[])
             assert relue.public_cible is None
         finally:
-            _nettoyer(session, t.id)
+            nettoyer_affaires(session, t.id)
 
 
 def test_l_invariant_d_acces_est_bien_APPELE_sur_ce_chemin(cs, monkeypatch):
@@ -177,22 +150,13 @@ def test_l_invariant_d_acces_est_bien_APPELE_sur_ce_chemin(cs, monkeypatch):
             _suite(session, cs, t.id, contenu="Au seul bâtiment.", reserve_perimetre=True)
             assert appels == [t.id]
         finally:
-            _nettoyer(session, t.id)
+            nettoyer_affaires(session, t.id)
 
 
 def test_un_resident_ne_change_pas_a_qui_l_on_parle(cs):
     """À qui l'on parle et l'Accès appartiennent au conseil — jamais à l'auteur."""
     with Session(engine) as session:
-        resident = Utilisateur(
-            email=f"r-{uuid.uuid4().hex[:8]}@exemple.test",
-            mot_de_passe_hash="x",
-            prenom="R",
-            nom="S",
-            role=RoleUtilisateur.résident,
-        )
-        session.add(resident)
-        session.commit()
-        session.refresh(resident)
+        resident = compte(session, prefixe="r", prenom="R", nom="S", role=RoleUtilisateur.résident)
         t = _actualite(session, resident.id)
         try:
             relue = _suite(
@@ -206,7 +170,7 @@ def test_un_resident_ne_change_pas_a_qui_l_on_parle(cs):
             assert json.loads(relue.public_cible) == ["copropriétaires"]
             assert relue.reserve_perimetre is False
         finally:
-            _nettoyer(session, t.id)
+            nettoyer_affaires(session, t.id)
             purger_ligne(session, Utilisateur, resident.id)
             session.commit()
 
@@ -257,4 +221,4 @@ def test_une_affaire_suivie_prend_ses_destinataires_par_sa_suite(cs):
             assert json.loads(relue.public_cible) == ["locataires"]
             assert relue.priorite == "haute"
         finally:
-            _nettoyer(session, t.id)
+            nettoyer_affaires(session, t.id)

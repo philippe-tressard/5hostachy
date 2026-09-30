@@ -28,6 +28,9 @@ import ast
 import pathlib
 import types
 
+from tests.aides_base import moteur_memoire
+from tests.aides_sources import modules_app
+
 APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 SOURCE = APP / "utils" / "syndic.py"
 
@@ -132,13 +135,13 @@ def test_aucun_module_ne_lit_la_colonne_pour_afficher():
     exactement l'écart que ce lot ferme — et il serait vert partout ailleurs.
     """
     coupables = {}
-    for chemin in sorted(APP.rglob("*.py")):
-        if "__pycache__" in chemin.parts or chemin == SOURCE:
+    for m in modules_app():
+        if m.chemin == SOURCE:
             continue
-        rel = chemin.relative_to(APP).as_posix()
+        rel = m.rel
         if rel in EXCEPTIONS:
             continue
-        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
+        arbre = m.arbre
         lus = [
             n.lineno
             for n in ast.walk(arbre)
@@ -219,14 +222,12 @@ def _base_avec_copro(nom_saisi: str | None):
     d'abord, la saisie ensuite. Un double qui rend ce qu'on lui a préparé
     prouverait seulement qu'on sait préparer un double.
     """
-    from sqlmodel import Session, SQLModel, create_engine
+    from sqlmodel import Session
 
     from app.models.copropriete import Copropriete
     from app.models.core import SyndicInfo
 
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    session = Session(moteur)
+    session = Session(moteur_memoire())
     copro = Copropriete(nom="Résidence d'essai", adresse="1 rue d'essai")
     session.add(copro)
     if nom_saisi is not None:

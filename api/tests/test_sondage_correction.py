@@ -38,55 +38,19 @@ ne pas ouvrir un champ que le serveur ne consomme pas, ne pas laisser le serveur
 écrire ce que la règle interdit.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from fastapi import HTTPException
 from sqlmodel import Session, SQLModel
 
-from app.database import engine
 from app.models.communaute import OptionSondage, Sondage, VoteSondage
-from app.models.core import Batiment, Copropriete, Lot, Utilisateur
+from app.models.core import Utilisateur
 from app.routers.sondages.commun import SondageUpdate
 from app.routers.sondages.crud import modifier_sondage
-from app.seed.patrimoine import poser_arborescence
-from app.utils import perimetres as P
-from tests.conftest import vider_patrimoine
-
-MODELES_ECRITS = (VoteSondage, OptionSondage, Sondage, Lot, Utilisateur)
-
-
-@pytest.fixture()
-def base():
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        vider_patrimoine(session, MODELES_ECRITS)
-        copro = Copropriete(nom="Test correction", adresse="1 rue Test")
-        session.add(copro)
-        session.flush()
-        session.add(Batiment(copropriete_id=copro.id, numero="1"))
-        session.commit()
-        poser_arborescence(session)
-        session.commit()
-        P.invalider_cache()
-        yield session
-        vider_patrimoine(session, MODELES_ECRITS)
-    P.invalider_cache()
-
-
-def _user(session: Session, email: str, roles: str = "conseil_syndical") -> Utilisateur:
-    u = Utilisateur(
-        nom="N",
-        prenom=email.split("@")[0],
-        email=email,
-        roles_json=roles,
-        actif=True,
-        decision_compte_le=datetime.utcnow(),
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
+from app.utils import horloge
+from tests.aides_base import compte
+from tests.aides_sondage import base  # noqa: F401
 
 
 def _sondage(session: Session, auteur: Utilisateur, **kw) -> Sondage:
@@ -119,8 +83,8 @@ def _patch(session, sondage, user, **champs):
 
 def test_la_question_se_corrige_apres_un_vote(base):
     """Le cas d'usage même du ticket : une faute de frappe ne coûte plus les votes."""
-    cs = _user(base, "cs@test.fr")
-    votant = _user(base, "votant@test.fr", "résident")
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
+    votant = compte(base, prefixe="votant", roles_json="résident")
     s = _sondage(base, cs)
     _voter(base, s, votant)
 
@@ -133,8 +97,8 @@ def test_la_question_se_corrige_apres_un_vote(base):
 
 
 def test_le_libelle_d_une_option_se_corrige_apres_un_vote(base):
-    cs = _user(base, "cs@test.fr")
-    votant = _user(base, "votant@test.fr", "résident")
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
+    votant = compte(base, prefixe="votant", roles_json="résident")
     s = _sondage(base, cs)
     _voter(base, s, votant)
     option = sorted(s.options, key=lambda o: o.ordre)[0]
@@ -153,7 +117,7 @@ def test_le_libelle_d_une_option_se_corrige_apres_un_vote(base):
 
 def test_une_option_d_un_autre_sondage_ne_peut_pas_etre_renommee(base):
     """L'`id` doit appartenir à CE sondage — sinon on renomme le choix d'à côté."""
-    cs = _user(base, "cs@test.fr")
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
     mien = _sondage(base, cs)
     autre = _sondage(base, cs, question="Un autre sondage")
     option_voisine = sorted(autre.options, key=lambda o: o.ordre)[0]
@@ -168,7 +132,7 @@ def test_une_option_d_un_autre_sondage_ne_peut_pas_etre_renommee(base):
 
 def test_un_libelle_vide_est_refuse(base):
     """Une option sans texte est un choix qu'on ne peut plus désigner."""
-    cs = _user(base, "cs@test.fr")
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
     s = _sondage(base, cs)
     option = sorted(s.options, key=lambda o: o.ordre)[0]
 
@@ -179,9 +143,9 @@ def test_un_libelle_vide_est_refuse(base):
 
 def test_la_cloture_ne_peut_pas_etre_avancee_apres_un_vote(base):
     """Raccourcir prive de leur voix ceux qui n'ont pas encore voté."""
-    cs = _user(base, "cs@test.fr")
-    votant = _user(base, "votant@test.fr", "résident")
-    fin = datetime.utcnow() + timedelta(days=10)
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
+    votant = compte(base, prefixe="votant", roles_json="résident")
+    fin = horloge.maintenant() + timedelta(days=10)
     s = _sondage(base, cs, cloture_le=fin)
     _voter(base, s, votant)
 
@@ -199,13 +163,13 @@ def test_poser_une_echeance_sur_un_sondage_sans_fin_est_un_raccourcissement(base
     n'est pas « reculer », c'est introduire une échéance là où il n'y en avait
     aucune — donc raccourcir, quelle que soit la date choisie.
     """
-    cs = _user(base, "cs@test.fr")
-    votant = _user(base, "votant@test.fr", "résident")
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
+    votant = compte(base, prefixe="votant", roles_json="résident")
     s = _sondage(base, cs)  # aucune clôture
     _voter(base, s, votant)
 
     with pytest.raises(HTTPException) as err:
-        _patch(base, s, cs, cloture_le=datetime.utcnow() + timedelta(days=365))
+        _patch(base, s, cs, cloture_le=horloge.maintenant() + timedelta(days=365))
     assert err.value.status_code == 400
 
 
@@ -214,8 +178,8 @@ def test_poser_une_echeance_sur_un_sondage_sans_fin_est_un_raccourcissement(base
 
 def test_avant_tout_vote_la_cloture_se_deplace_librement(base):
     """Un sondage que personne n'a lu se corrige sans contrainte."""
-    cs = _user(base, "cs@test.fr")
-    fin = datetime.utcnow() + timedelta(days=10)
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
+    fin = horloge.maintenant() + timedelta(days=10)
     s = _sondage(base, cs, cloture_le=fin)
 
     _patch(base, s, cs, cloture_le=fin - timedelta(days=9))
@@ -226,9 +190,9 @@ def test_avant_tout_vote_la_cloture_se_deplace_librement(base):
 
 def test_reculer_la_cloture_reste_permis_apres_un_vote(base):
     """Prolonger n'invalide rien — c'est le sens autorisé."""
-    cs = _user(base, "cs@test.fr")
-    votant = _user(base, "votant@test.fr", "résident")
-    fin = datetime.utcnow() + timedelta(days=2)
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
+    votant = compte(base, prefixe="votant", roles_json="résident")
+    fin = horloge.maintenant() + timedelta(days=2)
     s = _sondage(base, cs, cloture_le=fin)
     _voter(base, s, votant)
 
@@ -240,9 +204,9 @@ def test_reculer_la_cloture_reste_permis_apres_un_vote(base):
 
 def test_retirer_l_echeance_est_permis_apres_un_vote(base):
     """Retirer la fin = prolonger indéfiniment, donc reculer."""
-    cs = _user(base, "cs@test.fr")
-    votant = _user(base, "votant@test.fr", "résident")
-    s = _sondage(base, cs, cloture_le=datetime.utcnow() + timedelta(days=2))
+    cs = compte(base, prefixe="cs", roles_json="conseil_syndical")
+    votant = compte(base, prefixe="votant", roles_json="résident")
+    s = _sondage(base, cs, cloture_le=horloge.maintenant() + timedelta(days=2))
     _voter(base, s, votant)
 
     _patch(base, s, cs, cloture_le=None)

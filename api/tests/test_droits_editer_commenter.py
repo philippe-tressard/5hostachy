@@ -42,6 +42,7 @@ from sqlmodel import Session, SQLModel
 from app.auth.deps import peut_commenter, peut_editer
 from app.database import engine
 from app.models.core import RoleUtilisateur, Ticket, Utilisateur
+from tests.aides_base import compte
 
 #  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
 #  qui la référence est ce que les clés étrangères refusent (#546).
@@ -49,10 +50,10 @@ from tests.purge_test import purger_ligne
 
 
 def _user(role: RoleUtilisateur) -> Utilisateur:
+    """Un compte JAMAIS écrit en base — `id` vaut None. Ceux du montage passent par `compte`."""
     return Utilisateur(
         id=None,
         email=f"{role.value}-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
         prenom="Test",
         nom=role.value,
         role=role,
@@ -64,16 +65,11 @@ def acteurs():
     """Quatre profils et un ticket, écrits en base pour avoir de vrais `id`."""
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        auteur = _user(RoleUtilisateur.résident)
-        beneficiaire = _user(RoleUtilisateur.résident)
-        cs = _user(RoleUtilisateur.conseil_syndical)
-        admin = _user(RoleUtilisateur.admin)
-        tiers = _user(RoleUtilisateur.résident)
-        for u in (auteur, beneficiaire, cs, admin, tiers):
-            session.add(u)
-        session.commit()
-        for u in (auteur, beneficiaire, cs, admin, tiers):
-            session.refresh(u)
+        auteur = compte(session, prefixe="resident", role=RoleUtilisateur.résident)
+        beneficiaire = compte(session, prefixe="resident", role=RoleUtilisateur.résident)
+        cs = compte(session, prefixe="cs", role=RoleUtilisateur.conseil_syndical)
+        admin = compte(session, prefixe="admin", role=RoleUtilisateur.admin)
+        tiers = compte(session, prefixe="resident", role=RoleUtilisateur.résident)
 
         ticket = Ticket(
             #  `numero` est NOT NULL et normalement posé par le routeur : le test

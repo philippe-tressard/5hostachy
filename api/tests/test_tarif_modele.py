@@ -19,22 +19,21 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session
 
 from app.models.core import ConfigSite
 from app.utils import llm, tarif_sources
 from app.utils.description_format import ReponseIllisible
 from app.utils.llm import ErreurLLM
 from app.utils.tarif_modele import USAGE_TARIF_MODELE, chercher_et_enregistrer, lire_tarif
+from tests.aides_base import moteur_memoire
 
 GRILLE = "| Model | Input | Output |\n| Claude Haiku 4.5 | $1 / MTok | $5 / MTok |"
 
 
 @pytest.fixture()
 def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
+    with Session(moteur_memoire()) as s:
         for cle, valeur in {
             "llm_actif": "1",
             "llm_fournisseur": "anthropic",

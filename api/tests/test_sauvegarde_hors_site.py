@@ -31,7 +31,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import HistoriqueMaintenance, TachePlanifiee
 from app.utils import health_monitor, horloge
@@ -43,14 +42,6 @@ SCRIPT = RACINE / "scripts" / "poste" / "export-hors-site.sh"
 
 def nom_archive(quand: datetime) -> str:
     return f"{PREFIXE_ARCHIVE}{quand.strftime('%Y%m%d_%H%M%S')}.tar.gz"
-
-
-@pytest.fixture
-def session():
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        yield s
 
 
 @pytest.fixture

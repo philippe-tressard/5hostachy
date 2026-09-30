@@ -30,25 +30,20 @@ from app.utils.llm import (
 
 
 @pytest.fixture()
-def session_llm():
+def session_llm(session):
     """Une base en mémoire portant une configuration LLM exploitable."""
-    from sqlmodel import Session, SQLModel, create_engine
-
     from app.models.core import ConfigSite
 
-    moteur = create_engine("sqlite://")
-    SQLModel.metadata.create_all(moteur)
-    with Session(moteur) as s:
-        for cle, valeur in {
-            "llm_actif": "1",
-            "llm_fournisseur": "openai",
-            "llm_api_key": "sk-x",
-            "llm_synthese_contrat_actif": "1",
-            "llm_synthese_contrat_modele": "gpt-4o-mini",
-        }.items():
-            s.add(ConfigSite(cle=cle, valeur=valeur))
-        s.commit()
-        yield s
+    for cle, valeur in {
+        "llm_actif": "1",
+        "llm_fournisseur": "openai",
+        "llm_api_key": "sk-x",
+        "llm_synthese_contrat_actif": "1",
+        "llm_synthese_contrat_modele": "gpt-4o-mini",
+    }.items():
+        session.add(ConfigSite(cle=cle, valeur=valeur))
+    session.commit()
+    return session
 
 
 # ── 1. Le secret ────────────────────────────────────────────────────────────
