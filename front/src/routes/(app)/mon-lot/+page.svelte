@@ -10,12 +10,12 @@
 	import { lots as lotsApi, bailleur as bailApi, type Bail, type ObjetRemis } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import {
-		authResolue,
 		isBailleur,
 		isCS,
 		isCoproprietaire,
 		isLocataire,
 		isResident,
+		quandAuthResolue,
 	} from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateShort as fmt } from '$lib/date';
@@ -162,11 +162,7 @@
 	//  et `$isLocataire` y valaient encore `false`. Un bailleur voyait alors TOUS
 	//  ses lots « Vacant », avec « + Créer un bail » sur un lot loué ; un locataire
 	//  ne voyait pas son bail. Seule une navigation interne rendait l'écran juste.
-	let chargeSelonRole = false;
-	$: if ($authResolue && !chargeSelonRole) {
-		chargeSelonRole = true;
-		chargerSelonRole();
-	}
+	quandAuthResolue(chargerSelonRole);
 	async function chargerSelonRole() {
 		if ($isLocataire) {
 			try {
