@@ -345,7 +345,7 @@ export function sectionsDeLaSuite(
 		specifiques: droits.creneaux.specifiques && creneauPresent(entite, 'specifiques'),
 		miseEnAvant: droits.creneaux.mise_en_avant && creneauPresent(entite, 'mise_en_avant'),
 		piecesJointes: droits.piecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes'),
-		affairesLiees: droits.affairesLiees && sectionPresente(entite, 'evolution', 'affaires_liees'),
+		affairesLiees: droits.affairesLiees && sectionDeLaSuite(entite, 'affaires_liees', conditions),
 		diffusion: droits.diffusion && sectionDeLaSuite(entite, 'diffusion', conditions),
 	};
 }

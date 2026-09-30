@@ -29,6 +29,11 @@ _DESTINATAIRES_PANNE_BATIMENT = ["copropriétaires_occupants", "locataires"]
 #: personne — mais `ticket_visible` le traite avant, en toutes lettres.
 CONCERNE = "concerné"
 
+#: « Copropriétaires » : occupants et bailleurs — les deux codes que proposent
+#: les pastilles (`copropriétaires` ne l'est plus depuis #1301), et que l'écran
+#: nomme d'un mot. Ni locataires, ni mandataires.
+_COPROPRIETAIRES = ["copropriétaires_occupants", "bailleurs"]
+
 #: Ce qu'une affaire lit SANS choix du conseil, selon sa catégorie (#1436,
 #: arbitré le 28/09/2026). La Panne a sa règle (le bâtiment).
 #:
@@ -39,10 +44,16 @@ CONCERNE = "concerné"
 #: règle historique n'ayant plus de catégorie, elle a quitté `ticket_visible` ;
 #: une catégorie absente de cette table retombe sur `DEFAUT_INCONNU`, fermé.
 #:
+#: 🔴 ENTRETIEN : LES COPROPRIÉTAIRES (arbitré le 30/09/2026). Il revenait au
+#: conseil seul depuis #1436 (« contrats, fournisseurs, pièces ») : occupants
+#: et bailleurs le lisent désormais, jamais les locataires ni les mandataires.
+#: Les maintenances que 0232 avait adressées au conseil reviennent à la règle
+#: (migration 0243). Le conseil garde la main : Destinataires ou
+#: « Confidentielle » le referment, affaire par affaire.
+#:
 #: Une nuisance nomme souvent un voisin, un sinistre touche un lot, une
 #: question est personnelle : les lire à tout un bâtiment exposait des données
-#: personnelles. Un Entretien — contrats, fournisseurs, pièces — revient au
-#: conseil, comme les maintenances migrées par 0232 (#1428).
+#: personnelles.
 #:
 #: ⚠️ Miroir : `DEFAUT_PAR_CATEGORIE` (`front/src/lib/lecture.ts`), tenus
 #: d'accord par `tests/donnees/lecture_pastille.json` — un cas par catégorie.
@@ -52,7 +63,7 @@ DEFAUT_PAR_CATEGORIE: dict[str, list[str]] = {
     "espaces_verts": ["résidents"],
     "sinistre": [CONCERNE],
     "etude_travaux": ["conseil_syndical"],
-    "entretien": ["conseil_syndical"],
+    "entretien": _COPROPRIETAIRES,
     "question": [CONCERNE],
     "bug": [CONCERNE],
 }
@@ -69,7 +80,8 @@ _DEFAUTS_FERMES = ([CONCERNE], ["conseil_syndical"])
 def destinataires_par_defaut(ticket: Ticket) -> list[str]:
     """Les Destinataires qu'une affaire a SANS choix du conseil : ceux de sa
     catégorie (#1343, 26/09/2026 ; toutes depuis #1436, Étude & travaux au
-    conseil seul depuis le 29/09/2026).
+    conseil seul depuis le 29/09/2026, Entretien aux copropriétaires depuis
+    le 30/09/2026).
 
     Arbitré à l'écran : *« pour une catégorie Panne, tout le périmètre (sauf
     bailleurs) concernés, si le périmètre est un bâtiment ; hors bâtiments =

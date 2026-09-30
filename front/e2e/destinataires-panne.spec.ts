@@ -86,12 +86,15 @@ test('Nouvelle affaire, Nuisance : « Résident concerné » est cochée, et la 
 	await expect(s.locator('button.active')).toHaveCount(1);
 });
 
-test('Nouvelle affaire, Entretien : « Conseil syndical » est cochée (#1436)', async ({ page }) => {
+//  Arbitré le 30/09/2026 : le conseil seul crée un Entretien, les
+//  copropriétaires — occupants et bailleurs — le lisent (conseil seul avant).
+test('Nouvelle affaire, Entretien : les copropriétaires sont cochés', async ({ page }) => {
 	await nouvelleAffaire(page, /Visite ou maintenance d’un prestataire/);
 	const s = section(page);
-	await expect(s.locator('button.active', { hasText: /Conseil syndical/ })).toHaveCount(1);
-	await expect(s.locator('button.active')).toHaveCount(1);
+	await expect(s.locator('button.active', { hasText: /Copropriétaires occupants/ })).toHaveCount(1);
+	await expect(s.locator('button.active', { hasText: /Copropriétaires bailleurs/ })).toHaveCount(1);
+	await expect(s.locator('button.active')).toHaveCount(2);
 	await expect(s.locator('.section-badge, .section-resume').first()).toHaveText(
-		/Conseil syndical seul/,
+		/Copropriétaires \(occupants et bailleurs\)/,
 	);
 });

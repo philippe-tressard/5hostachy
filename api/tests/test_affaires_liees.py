@@ -7,7 +7,10 @@ Ce que ce fichier éprouve, dans l'ordre de ce qui coûterait le plus cher :
    elle n'existait pas ;
 2. corriger ses liens ne défait pas ceux qu'on ne voit pas ;
 3. le lien est réciproque ; une Suite ajoute sans retirer ; une affaire
-   supprimée ne laisse aucun lien.
+   supprimée ne laisse aucun lien ;
+4. le conseil (ou l'admin) relie, et lui seul (30/09/2026) : l'auteur lit les
+   liens, il ne les pose ni ne les défait — mais renvoyer les liens tels quels
+   ne lui est pas refusé.
 """
 
 from __future__ import annotations
@@ -93,8 +96,8 @@ def _ids(lues):
 
 
 def test_le_lien_est_reciproque_et_rappelle_le_titre(contexte):
-    session, (a, b, _c, _s), auteur, _cs = contexte
-    poser_liens(session, a, [b.id], auteur)
+    session, (a, b, _c, _s), auteur, cs = contexte
+    poser_liens(session, a, [b.id], cs)
     session.commit()
     vue_de_b = ticket_read(b, session, auteur).affaires_liees
     assert _ids(vue_de_b) == [a.id]
@@ -104,8 +107,8 @@ def test_le_lien_est_reciproque_et_rappelle_le_titre(contexte):
 
 def test_sans_lecteur_aucun_lien_nest_rendu(contexte):
     """Le défaut sûr : une réponse qui ne sait pas à qui elle parle ne montre rien."""
-    session, (a, b, _c, _s), auteur, _cs = contexte
-    poser_liens(session, a, [b.id], auteur)
+    session, (a, b, _c, _s), _auteur, cs = contexte
+    poser_liens(session, a, [b.id], cs)
     session.commit()
     assert ticket_read(a, session).affaires_liees == []
 
@@ -142,17 +145,48 @@ def test_corriger_ne_defait_pas_ce_quon_ne_voit_pas(contexte):
     session, (a, b, _c, secrete), auteur, cs = contexte
     poser_liens(session, a, [b.id, secrete.id], cs)
     session.commit()
-    #  Le résident retire tout ce qu'il voit…
+    #  Le résident renvoie ce qu'il voit, tel quel : ce n'est pas un geste…
     update_ticket(
-        a.id, TicketUpdate(affaires_liees=[]), BackgroundTasks(), session=session, user=auteur
+        a.id, TicketUpdate(affaires_liees=[b.id]), BackgroundTasks(), session=session, user=auteur
     )
     #  … et le lien confidentiel posé par le conseil survit.
-    assert ids_lies(session, a.id) == {secrete.id}
+    assert ids_lies(session, a.id) == {b.id, secrete.id}
+
+
+@pytest.mark.parametrize("geste", ["retirer", "ajouter", "suite", "creation"])
+def test_un_resident_ne_relie_ni_ne_delie(contexte, geste):
+    """Arbitré le 30/09/2026 : le conseil ou l'admin seuls posent un lien."""
+    session, (a, b, c, _s), auteur, cs = contexte
+    poser_liens(session, a, [b.id], cs)
+    session.commit()
+    with pytest.raises(HTTPException) as refus:
+        if geste == "retirer":
+            poser_liens(session, a, [], auteur)
+        elif geste == "ajouter":
+            poser_liens(session, a, [b.id, c.id], auteur)
+        elif geste == "suite":
+            ajouter_liens(session, a, [c.id], auteur)
+        else:
+            poser_liens(session, c, [a.id], auteur)
+    assert refus.value.status_code == 403
+    assert ids_lies(session, a.id) == {b.id}
+
+
+def test_l_admin_relie_comme_le_conseil(contexte):
+    session, (a, b, _c, _s), _auteur, _cs = contexte
+    admin = _utilisateur(session, "admin")
+    try:
+        poser_liens(session, a, [b.id], admin)
+        session.commit()
+        assert ids_lies(session, a.id) == {b.id}
+    finally:
+        purger_ligne(session, Utilisateur, admin.id)
+        session.commit()
 
 
 def test_une_correction_sans_la_section_ne_touche_a_rien(contexte):
-    session, (a, b, _c, _s), auteur, _cs = contexte
-    poser_liens(session, a, [b.id], auteur)
+    session, (a, b, _c, _s), auteur, cs = contexte
+    poser_liens(session, a, [b.id], cs)
     session.commit()
     update_ticket(
         a.id,
@@ -165,25 +199,25 @@ def test_une_correction_sans_la_section_ne_touche_a_rien(contexte):
 
 
 def test_une_suite_ajoute_sans_retirer(contexte):
-    session, (a, b, c, _s), auteur, _cs = contexte
-    poser_liens(session, a, [b.id], auteur)
-    ajouter_liens(session, a, [c.id], auteur)
+    session, (a, b, c, _s), _auteur, cs = contexte
+    poser_liens(session, a, [b.id], cs)
+    ajouter_liens(session, a, [c.id], cs)
     session.commit()
     assert ids_lies(session, a.id) == {b.id, c.id}
 
 
 def test_se_lier_a_soi_meme_et_les_doublons_sont_ignores(contexte):
-    session, (a, b, _c, _s), auteur, _cs = contexte
-    poser_liens(session, a, [a.id, b.id, b.id], auteur)
-    ajouter_liens(session, b, [a.id], auteur)  # le même lien, vu de l'autre bout
+    session, (a, b, _c, _s), _auteur, cs = contexte
+    poser_liens(session, a, [a.id, b.id, b.id], cs)
+    ajouter_liens(session, b, [a.id], cs)  # le même lien, vu de l'autre bout
     session.commit()
     lignes = session.exec(select(AffaireLiee).where(AffaireLiee.affaire_id.in_([a.id, b.id]))).all()
     assert len(lignes) == 1
 
 
 def test_une_affaire_supprimee_ne_laisse_aucun_lien(contexte):
-    session, (a, b, c, _s), auteur, _cs = contexte
-    poser_liens(session, a, [b.id, c.id], auteur)
+    session, (a, b, c, _s), _auteur, cs = contexte
+    poser_liens(session, a, [b.id, c.id], cs)
     session.commit()
     supprimer_liens_de(session, a.id)
     session.commit()

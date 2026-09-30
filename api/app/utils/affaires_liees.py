@@ -12,6 +12,19 @@ Et ce qu'on ne voit pas, on ne le défait pas : poser les liens d'une affaire
 une affaire confidentielle, posé par le conseil, survit à la correction d'un
 résident qui ignore son existence.
 
+## 🔒 Le conseil relie, et lui seul (arbitré le 30/09/2026)
+
+Poser, retirer ou ajouter un lien est un geste du conseil syndical ou de
+l'administration (`est_moderateur`) — à la création, en correction comme
+depuis une Suite. L'auteur les lisait et les posait depuis #1342 ; il les
+LIT encore, sur la fiche. La règle s'écrit ICI, dans les deux fonctions qui
+écrivent un lien, et non chez les trois routeurs qui les appellent : un
+quatrième chemin l'hériterait sans y penser.
+
+⚠️ Elle refuse un CHANGEMENT, pas l'envoi : une correction qui renvoie les
+liens tels qu'ils sont — un client en cache, un formulaire qui les recopie —
+passe, et ne fait rien.
+
 ## Réciproque par construction
 
 Une ligne par paire, rangée (`models/affaires_liees`) : lire les liens d'une
@@ -23,6 +36,7 @@ from __future__ import annotations
 from fastapi import HTTPException
 from sqlmodel import Session, or_, select
 
+from app.auth.deps import est_moderateur
 from app.models.affaires_liees import AffaireLiee
 from app.models.core import Ticket, Utilisateur
 from app.utils.valeurs import valeur
@@ -104,6 +118,12 @@ def _cibles_lisibles(session: Session, ticket: Ticket, ids, lecteur: Utilisateur
     return cibles
 
 
+def _exiger_conseil(lecteur: Utilisateur) -> None:
+    """Relier des affaires est un geste du conseil ou de l'admin (lève 403 sinon)."""
+    if not est_moderateur(lecteur):
+        raise HTTPException(403, "Seul le conseil syndical relie des affaires entre elles")
+
+
 def poser_liens(session: Session, ticket: Ticket, ids, lecteur: Utilisateur) -> None:
     """Création, correction : les liens VISIBLES du lecteur deviennent `ids`. Sans `commit`."""
     cibles = _cibles_lisibles(session, ticket, ids, lecteur)
@@ -113,6 +133,8 @@ def poser_liens(session: Session, ticket: Ticket, ids, lecteur: Utilisateur) -> 
         for i in actuels
         if (t := session.get(Ticket, i)) is not None and ticket_visible(t, lecteur)
     }
+    if cibles - actuels or visibles - cibles:
+        _exiger_conseil(lecteur)
     for i in cibles - actuels:
         a, b = _paire(ticket.id, i)
         session.add(AffaireLiee(affaire_id=a, liee_id=b, cree_par_id=lecteur.id))
@@ -128,7 +150,10 @@ def poser_liens(session: Session, ticket: Ticket, ids, lecteur: Utilisateur) -> 
 def ajouter_liens(session: Session, ticket: Ticket, ids, lecteur: Utilisateur) -> None:
     """Une Suite : elle AJOUTE des liens, elle n'en retire aucun. Sans `commit`."""
     actuels = ids_lies(session, ticket.id)
-    for i in _cibles_lisibles(session, ticket, ids, lecteur) - actuels:
+    nouveaux = _cibles_lisibles(session, ticket, ids, lecteur) - actuels
+    if nouveaux:
+        _exiger_conseil(lecteur)
+    for i in nouveaux:
         a, b = _paire(ticket.id, i)
         session.add(AffaireLiee(affaire_id=a, liee_id=b, cree_par_id=lecteur.id))
 

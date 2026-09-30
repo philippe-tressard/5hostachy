@@ -143,8 +143,8 @@ def update_ticket(
             "Le conseil syndical peut commenter et faire avancer le suivi, "
             "mais seul l'auteur (ou un administrateur) modifie le contenu",
         )
-    #  Les affaires liées (#1342) : l'auteur ET le conseil les corrigent — relier
-    #  deux dossiers est un geste de suivi autant que de contenu.
+    #  Les affaires liées (#1342) : le conseil seul les corrige depuis le
+    #  30/09/2026 — la règle vit dans `utils/affaires_liees`, qui refuse.
     if "affaires_liees" in body.model_fields_set:
         poser_liens(session, ticket, body.affaires_liees, user)
 

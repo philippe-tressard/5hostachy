@@ -1,5 +1,5 @@
 {
-	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ». Depuis #1428 (28/09/2026), la date n'ouvre plus une affaire aux locataires ni aux mandataires : seuls des Destinataires choisis par le conseil le font. Depuis #1343 (26/09/2026), une affaire suivie lit ses Destinataires quand le conseil en a choisi : vides, la règle par défaut ; un résidu d'actualité promue est effacé (migration 0228, et à la promotion). `categorie` (affaires) : une Panne sans choix du conseil se lit par les résidents de son bâtiment (occupants et locataires), par tous hors bâtiment. `objet` (#1373, 27/09/2026) : une petite ANNONCE, une IDÉE ou un SONDAGE — la règle `cible_visible` sans ouverture à la copropriété : le périmètre restreint toujours, et des Destinataires vides valent « Tous ». Absent : une affaire ou une actualité (`actualite`). Depuis #1436 (28/09/2026), CHAQUE catégorie a son défaut sans choix du conseil : « Résident concerné » (nuisance, accès & accueil, sinistre, question, bug — l'auteur, le « saisi pour » et le conseil), « Tous » (espaces verts), le conseil seul (entretien), les copropriétaires (étude & travaux). Un cas par catégorie.",
+	"_lisez_moi": "Qui LIT une affaire ou une actualité : les cas que la pastille de lecture résume (lot 1, 25/09/2026). Une seule attente pour deux implémentations — la règle du serveur (`ticket_visible`, éprouvée par `api/tests/test_lecture_pastille.py`) et son résumé à l'écran (`front/src/lib/lecture.ts`, éprouvé par `npm run lint:lecture`). `lecteurs` : les statuts qui lisent DANS le périmètre, le conseil syndical et l'auteur mis à part — vide, c'est « CS ». `hors_perimetre` : un lecteur d'un AUTRE bâtiment lit-il ? `null` quand le périmètre est la copropriété entière. `datee` : l'affaire a une date de début (au calendrier) ; `en_ag` : son suivi est « En AG ». Depuis #1428 (28/09/2026), la date n'ouvre plus une affaire aux locataires ni aux mandataires : seuls des Destinataires choisis par le conseil le font. Depuis #1343 (26/09/2026), une affaire suivie lit ses Destinataires quand le conseil en a choisi : vides, la règle par défaut ; un résidu d'actualité promue est effacé (migration 0228, et à la promotion). `categorie` (affaires) : une Panne sans choix du conseil se lit par les résidents de son bâtiment (occupants et locataires), par tous hors bâtiment. `objet` (#1373, 27/09/2026) : une petite ANNONCE, une IDÉE ou un SONDAGE — la règle `cible_visible` sans ouverture à la copropriété : le périmètre restreint toujours, et des Destinataires vides valent « Tous ». Absent : une affaire ou une actualité (`actualite`). Depuis #1436 (28/09/2026), CHAQUE catégorie a son défaut sans choix du conseil : « Résident concerné » (nuisance, accès & accueil, sinistre, question, bug — l'auteur, le « saisi pour » et le conseil), « Tous » (espaces verts), le conseil seul (étude & travaux depuis le 29/09/2026), les copropriétaires — occupants et bailleurs — (entretien depuis le 30/09/2026 ; le conseil seul avant). Un cas par catégorie.",
 	"cas": [
 		{
 			"nom": "actualité à tous, copropriété entière",
@@ -367,7 +367,7 @@
 			"hors_perimetre": false
 		},
 		{
-			"nom": "affaire Entretien datée — un contrat de maintenance — sans choix : le conseil seul (#1436)",
+			"nom": "affaire Entretien datée — un contrat de maintenance — sans choix : les copropriétaires (30/09/2026)",
 			"actualite": false,
 			"categorie": "entretien",
 			"confidentiel": false,
@@ -376,7 +376,10 @@
 			"reserve_perimetre": false,
 			"datee": true,
 			"en_ag": false,
-			"lecteurs": [],
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
 			"hors_perimetre": null
 		},
 		{
@@ -601,11 +604,41 @@
 			"hors_perimetre": false
 		},
 		{
-			"nom": "affaire Entretien sans choix : le conseil syndical seul (#1436)",
+			"nom": "affaire Entretien sans choix : les copropriétaires, occupants et bailleurs (30/09/2026)",
 			"actualite": false,
 			"categorie": "entretien",
 			"confidentiel": false,
 			"public_cible": [],
+			"perimetre": "global",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": null
+		},
+		{
+			"nom": "affaire Entretien sans choix sur un bâtiment : ses copropriétaires, ni ses locataires ni un autre bâtiment (30/09/2026)",
+			"actualite": false,
+			"categorie": "entretien",
+			"confidentiel": false,
+			"public_cible": [],
+			"perimetre": "batiment",
+			"reserve_perimetre": false,
+			"lecteurs": [
+				"copropriétaire_résident",
+				"copropriétaire_bailleur"
+			],
+			"hors_perimetre": false
+		},
+		{
+			"nom": "affaire Entretien, « Conseil syndical » choisi : le conseil seul — le choix prime sur la catégorie (30/09/2026)",
+			"actualite": false,
+			"categorie": "entretien",
+			"confidentiel": false,
+			"public_cible": [
+				"conseil_syndical"
+			],
 			"perimetre": "global",
 			"reserve_perimetre": false,
 			"lecteurs": [],

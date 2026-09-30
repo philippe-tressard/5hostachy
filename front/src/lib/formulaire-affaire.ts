@@ -54,6 +54,7 @@ const SECTIONS_ETEIGNABLES: readonly IdSection[] = [
 	'quand',
 	'intervenant',
 	'perimetre',
+	'affaires_liees',
 	'au_nom_de',
 	'destinataires',
 	'mise_en_avant',
@@ -155,8 +156,6 @@ export function chargeUtileAffaire(
 		perimetre_cible: s.perimetreCible,
 		photos_urls: s.photosUrls,
 		fichiers_urls: s.fichiersUrls,
-		//  Pour tous : le serveur ne remplace que les liens que l'auteur VOIT (#1342).
-		affaires_liees: s.affairesLiees.map((a) => a.id),
 		urgente: s.options.urgente,
 		//  « Je n'en dis rien » en correction : la marque ne s'efface pas.
 		assiste_ia: contexte.creation ? s.assisteIA : s.assisteIA || undefined,
@@ -172,6 +171,10 @@ export function chargeUtileAffaire(
 	}
 	if (contexte.creation) charge.envoyer_auteur = s.envoyerAuteur;
 	if (!contexte.estCS) return charge;
+	//  Le conseil seul relie (30/09/2026) — le serveur refuse un lien posé par un
+	//  autre ; ne pas l'envoyer évite ce 403 sur une correction légitime. Il ne
+	//  remplace que les liens que le lecteur VOIT (#1342).
+	charge.affaires_liees = s.affairesLiees.map((a) => a.id);
 
 	Object.assign(charge, lotDepuisSaisie(s.saisiPour));
 	//  « Quand » se planifie par le conseil seul (23/09/2026) : un autre ne
