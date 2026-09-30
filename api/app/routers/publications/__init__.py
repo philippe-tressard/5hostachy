@@ -15,9 +15,10 @@ un lien mort. Le dépôt refuse de renommer les identifiants `TK-xxxx` pour la
 même raison.
 
 ⚠️ **410 et non 404**, et la nuance porte tout l'usage : 404 dit « ça n'a
-jamais existé » ; 410 dit « ça a existé, voici où c'est parti ». L'affaire est
-cherchée D'ABORD : les lignes de `publication` subsistent, lues par rien
-d'autre, et une publication encore présente n'en est pas moins partie.
+jamais existé » ; 410 dit « ça a existé, voici où c'est parti ». Seule
+l'affaire est lue : les tables `publication` et `publication_evolution` ont
+été supprimées le 30/09/2026 (#1177, migration 0238), et
+`ticket.promu_depuis_publication_id` suffit à retrouver l'ancien numéro.
 
 La visibilité n'est pas décidée ici : l'écran suit la redirection vers la fiche
 de l'affaire, qui applique `ticket_visible`. Le 410 ne révèle que le numéro,

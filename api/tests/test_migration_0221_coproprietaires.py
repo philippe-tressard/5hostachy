@@ -81,8 +81,11 @@ def test_les_cinq_tables_sont_celles_du_modele():
     import app.models.core  # noqa: F401 — enregistre toutes les tables
     from sqlmodel import SQLModel
 
+    from tests.tables_supprimees import tables_supprimees
+
     attendu = {t.name for t in SQLModel.metadata.sorted_tables if "public_cible" in t.c}
-    assert set(_module().TABLES) == attendu
+    #  Une table supprimée depuis (#1177) reste dans la liste de la 0221, appliquée.
+    assert set(_module().TABLES) - tables_supprimees() == attendu
 
 
 def test_le_code_est_remplace_par_les_deux_profils(moteur):

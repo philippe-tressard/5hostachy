@@ -383,9 +383,9 @@ importe les gestes du transport.
       nu — la Suite d'une affaire ouvrait ce que l'Édition pliait (#1329)
 - [ ] Libellé qui NOMME un objet — bouton, titre de boîte, toast, confirmation :
       le mot vient de `$lib/entites/<entité>` (`libelle`, `libelleNouveau`,
-      `libelleModifier`), **jamais** réécrit dans un écran. « Publication » et
-      « Ticket » sont des noms de modèle ; l'écran dit « Actualité » et
-      « Affaire ». Il y en avait **20** avant #1107 (`npm run lint:vocabulaire-ecran`)
+      `libelleModifier`), **jamais** réécrit dans un écran. « Ticket » est un
+      nom de modèle (« Publication » l'était, jusqu'à sa suppression le
+      30/09/2026, #1177) ; l'écran dit « Affaire » et « Actualité ». Il y en avait **20** avant #1107 (`npm run lint:vocabulaire-ecran`)
 - [ ] Périmètre : masqué s'il est celui par défaut — le badge passe par
       `BadgePerimetre`, qui le tait (`npm run lint:pictogrammes`)
 - [ ] Archiver (pas supprimer) sur la vue principale — la corbeille ne s'offre

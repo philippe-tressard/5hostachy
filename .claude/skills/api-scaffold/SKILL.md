@@ -70,8 +70,9 @@ ne charge pas.
   se déclare dans `utils/archivage.REGLES` — la règle unique, testée contre les
   modèles réels. Un booléen de plus ferait une seconde façon de disparaître.
 - Une relation (`Relationship`) empêche plus tard de DÉPLACER le modèle sans
-  cycle d'import : c'est pourquoi `Ticket` et `Publication` sont restés dans
-  `core.py`. Ne l'ajouter que si un `select` explicite ne suffit pas.
+  cycle d'import : `Publication` a été le dernier modèle retenu dans `core.py`
+  pour cette raison, jusqu'à sa suppression (#1177, 30/09/2026). Ne l'ajouter
+  que si un `select` explicite ne suffit pas.
 
 ### 2. Schémas Pydantic — là où ils servent
 

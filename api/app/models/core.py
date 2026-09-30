@@ -194,7 +194,6 @@ class Utilisateur(SQLModel, table=True):
     tickets: List["Ticket"] = Relationship(
         back_populates="auteur", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"}
     )
-    publications: List["Publication"] = Relationship(back_populates="auteur")
 
 
 class UserLot(SQLModel, table=True):
@@ -236,12 +235,10 @@ from app.models.validations import (  # noqa: E402,F401
 )
 
 
-#  Les publications — copie gelée des actualités d'avant 0210 — vivent dans
-#  `publications.py` depuis le 28/09/2026 (#779) ; leur suppression est #1177.
-from app.models.publications import (  # noqa: E402,F401
-    Publication as Publication,
-    PublicationEvolution as PublicationEvolution,
-)
+#  `Publication` et `PublicationEvolution` — copie gelée des actualités d'avant
+#  0210 — ont été supprimées avec leurs tables le 30/09/2026 (#1177, migration
+#  0238). Une actualité EST une affaire ; seul `Ticket.promu_depuis_publication_id`
+#  garde l'ancien numéro, pour la redirection des liens envoyés.
 
 
 # ──────────────────────────────────────────────

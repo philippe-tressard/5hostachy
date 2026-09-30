@@ -66,7 +66,6 @@ class Document(SQLModel, table=True):
     mime_type: str = "application/octet-stream"
     categorie_id: Optional[int] = Field(default=None, foreign_key="categorie_document.id")
     contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
-    publication_id: Optional[int] = Field(default=None, foreign_key="publication.id")
     #  Pièces jointes de ticket et d'événement (#390, migration 0158). Une pièce
     #  jointe déposée dans une ÉVOLUTION appartient à son PORTEUR — les trois
     #  tables d'évolution en ont chacune un —, jamais à l'évolution elle-même.

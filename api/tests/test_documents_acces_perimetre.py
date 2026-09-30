@@ -81,7 +81,6 @@ def _cr_ag(perimetre="résidence", batiment_id=None, batiments_ids_json=None):
         {
             "id": 99,
             "contrat_id": None,
-            "publication_id": None,
             "ticket_id": None,
             "evenement_id": None,
             "categorie_id": 1,
