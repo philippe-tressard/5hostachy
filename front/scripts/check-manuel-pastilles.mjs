@@ -53,7 +53,9 @@ const CAS = {
 		perimetreRestreint: true,
 		reservePerimetre: true,
 	},
-	cs: { ...NATURE, categorie: 'entretien' },
+	//  Une Étude & travaux sans choix : le conseil seul. Entretien l'illustrait
+	//  jusqu'au 30/09/2026, où il est passé aux copropriétaires.
+	cs: { ...NATURE, categorie: 'etude_travaux' },
 	//  Une Nuisance sans choix du conseil : « Résident concerné » (#1436).
 	concerne: { ...NATURE, categorie: 'nuisance' },
 };

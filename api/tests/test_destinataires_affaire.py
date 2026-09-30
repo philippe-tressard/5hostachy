@@ -170,14 +170,14 @@ def _nue(categorie: str, public=None, confidentiel=False) -> Ticket:
 
 @pytest.mark.parametrize(
     "categorie",
-    ["nuisance", "acces_accueil", "sinistre", "question", "bug", "entretien", "etude_travaux"],
+    ["nuisance", "acces_accueil", "sinistre", "question", "bug", "etude_travaux"],
 )
 def test_une_affaire_fermee_par_sa_categorie_ne_sort_pas(categorie):
     assert reservee_au_conseil(_nue(categorie))
     assert hors_du_hall(_nue(categorie))
 
 
-@pytest.mark.parametrize("categorie", ["espaces_verts", "panne"])
+@pytest.mark.parametrize("categorie", ["espaces_verts", "panne", "entretien"])
 def test_une_affaire_ouverte_par_sa_categorie_peut_sortir(categorie):
     assert not reservee_au_conseil(_nue(categorie))
     assert not hors_du_hall(_nue(categorie))
@@ -204,6 +204,22 @@ def test_etude_travaux_est_lue_du_seul_conseil_sans_choix():
     from app.utils.visibility import destinataires_par_defaut
 
     assert destinataires_par_defaut(_nue("etude_travaux")) == ["conseil_syndical"]
+
+
+def test_entretien_est_lu_des_coproprietaires_sans_choix():
+    """Arbitré le 30/09/2026 : occupants et bailleurs — ni locataires, ni mandataires.
+
+    Il était au conseil seul depuis #1436. Les codes sont ceux que proposent les
+    pastilles : `copropriétaires` n'en est plus un depuis #1301.
+    """
+    from app.utils.visibility import destinataires_par_defaut
+
+    assert destinataires_par_defaut(_nue("entretien")) == ["copropriétaires_occupants", "bailleurs"]
+
+
+def test_un_choix_du_conseil_referme_un_entretien():
+    assert reservee_au_conseil(_nue("entretien", public=["conseil_syndical"]))
+    assert reservee_au_conseil(_nue("entretien", confidentiel=True))
 
 
 def test_un_choix_du_conseil_rouvre_ce_que_la_categorie_fermait():

@@ -163,7 +163,8 @@ export const DEFAUT_INCONNU = ['conseil_syndical'];
 
 /**
  * Les Destinataires d'une affaire SANS choix du conseil, par catégorie (#1436,
- * arbitré le 28/09/2026 ; Étude & travaux au conseil seul le 29/09/2026). La
+ * arbitré le 28/09/2026 ; Étude & travaux au conseil seul le 29/09/2026 ;
+ * Entretien aux copropriétaires, occupants et bailleurs, le 30/09/2026). La
  * Panne a sa règle, qui dépend du bâtiment ; une catégorie absente, le conseil
  * seul (`DEFAUT_INCONNU`).
  *
@@ -176,7 +177,7 @@ export const DEFAUT_PAR_CATEGORIE: Record<string, string[]> = {
 	espaces_verts: [TOUS_LES_RESIDENTS],
 	sinistre: [CONCERNE],
 	etude_travaux: ['conseil_syndical'],
-	entretien: ['conseil_syndical'],
+	entretien: ['copropriétaires_occupants', 'bailleurs'],
 	question: [CONCERNE],
 	bug: [CONCERNE],
 };
