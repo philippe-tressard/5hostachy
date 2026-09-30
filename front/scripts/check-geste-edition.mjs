@@ -118,10 +118,12 @@ const EXCEPTIONS = {
  * trois tentatives de la journée sur les contrats.
  */
 const MODALES = {
+	//  Suivie du balisage le 30/09/2026 (#779) : elle était déclarée sur
+	//  `admin/+page.svelte` tant que l'onglet Utilisateurs y vivait.
+	'lib/components/ModaleAccueilArrivant.svelte':
+		'accueil du nouvel arrivant — un geste sur un utilisateur EXISTANT, déclenché depuis l’annuaire et non depuis une liste de comptes en attente. La validation, elle, est convertie (12/09/2026). #889',
 	'lib/components/ModaleAccesBail.svelte':
 		'ce n’est PAS la correction d’un objet de liste mais un sous-écran entier (accès Vigik et télécommandes d’un bail, plusieurs listes et plusieurs gestes). À trancher devant l’écran. #889',
-	'routes/(app)/admin/+page.svelte':
-		'accueil du nouvel arrivant — un geste sur un utilisateur EXISTANT, déclenché depuis l’annuaire et non depuis une liste de comptes en attente. La validation, elle, est convertie (12/09/2026). #889',
 };
 
 function fichiers(dir, acc = []) {
