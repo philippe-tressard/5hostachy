@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
-	import { etageLabel, lotTypeLabel } from '$lib/utils';
+	import { etageLabel, lotTypeComplet, lotTypeLabel } from '$lib/utils';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -430,9 +430,7 @@
 					<dd>{monBailData.lot_batiment_nom ?? '—'}</dd>
 					{#if monBailData.lot_type}<dt>Type</dt>
 						<dd style="text-transform:capitalize">
-							{monBailData.lot_type.replace('_', ' ')}{monBailData.lot_type_appartement
-								? ` – ${monBailData.lot_type_appartement}`
-								: ''}
+							{lotTypeComplet(monBailData.lot_type, monBailData.lot_type_appartement)}
 						</dd>{/if}
 					{#if monBailData.lot_etage !== null && monBailData.lot_etage !== undefined}<dt>Étage</dt>
 						<dd>{etageLabel(monBailData.lot_etage)}</dd>{/if}
@@ -479,7 +477,7 @@
 					<dl class="details-grid">
 						<dt>Type</dt>
 						<dd style="text-transform:capitalize">
-							{lot.type.replace('_', ' ')}{lot.type_appartement ? ` – ${lot.type_appartement}` : ''}
+							{lotTypeComplet(lot.type, lot.type_appartement)}
 						</dd>
 						{#if lot.etage !== null}<dt>Étage</dt>
 							<dd>{etageLabel(lot.etage)}</dd>{/if}
@@ -525,9 +523,7 @@
 					</div>
 					<div class="lpc-details">
 						<span class="badge badge-gray" style="font-size:var(--fs-2xs);text-transform:capitalize"
-							>{lot.type.replace('_', ' ')}{lot.type_appartement
-								? ` – ${lot.type_appartement}`
-								: ''}</span
+							>{lotTypeComplet(lot.type, lot.type_appartement)}</span
 						>
 						{#if lot.etage !== null}<span
 								style="font-size:var(--fs-sm);color:var(--color-text-muted)"
@@ -590,9 +586,7 @@
 									<span
 										class="badge badge-gray"
 										style="font-size:var(--fs-2xs);text-transform:capitalize"
-										>{lot.type.replace('_', ' ')}{lot.type_appartement
-											? ` – ${lot.type_appartement}`
-											: ''}</span
+										>{lotTypeComplet(lot.type, lot.type_appartement)}</span
 									>
 									<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
 										>Depuis le {fmt(bail.date_entree)}{bail.date_sortie_prevue
@@ -658,9 +652,7 @@
 					<dd>{selectedLot.batiment_nom ?? '—'}</dd>
 					<dt>Type</dt>
 					<dd style="text-transform:capitalize">
-						{selectedLot.type.replace('_', ' ')}{selectedLot.type_appartement
-							? ` – ${selectedLot.type_appartement}`
-							: ''}
+						{lotTypeComplet(selectedLot.type, selectedLot.type_appartement)}
 					</dd>
 					{#if selectedLot.etage !== null}<dt>Étage</dt>
 						<dd>{etageLabel(selectedLot.etage)}</dd>{/if}

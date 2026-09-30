@@ -1807,6 +1807,13 @@ jobs:
         working-directory: front
         run: npm run lint:etage-libelle
 
+      # Le libellé du TYPE d'un lot ne se recalcule pas dans un écran (#779,
+      # 30/09/2026) : `lotTypeLabel` existait et six copies à la main divergeaient
+      # d'elle (`local_commercial` brut, « T3 » tu). Même famille que l'étage.
+      - name: Libellé du type de lot non réécrit dans un écran
+        working-directory: front
+        run: npm run lint:type-lot
+
       # 🔴 La note d'un prestataire était rendue CINQ fois, et l'une d'elles
       # colorait TOUTE note en orange : un 1/5 y paraissait comme un 3,5. La
       # teinte dit d'un coup d'œil si l'on est content de quelqu'un — là, elle

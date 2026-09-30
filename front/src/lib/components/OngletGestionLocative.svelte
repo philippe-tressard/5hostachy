@@ -23,6 +23,7 @@
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
 	import InventaireBail from '$lib/components/InventaireBail.svelte';
 	import { fmtDateShort as fmt } from '$lib/date';
+	import { lotTypeComplet } from '$lib/utils';
 	import { safeHtml } from '$lib/sanitize';
 	import GesteEnPlace from '$lib/components/GesteEnPlace.svelte';
 	import Onglet from '$lib/components/Onglet.svelte';
@@ -181,9 +182,7 @@
 										<span
 											class="badge badge-gray"
 											style="font-size:var(--fs-2xs);text-transform:capitalize"
-											>{lot.type.replace('_', ' ')}{lot.type_appartement
-												? ` – ${lot.type_appartement}`
-												: ''}</span
+											>{lotTypeComplet(lot.type, lot.type_appartement)}</span
 										>
 									{/if}
 									{#if group.baux.length > 1}
