@@ -411,6 +411,10 @@ importe les gestes du transport.
 - [ ] Un style s'écrit dans le `<style>` du composant ou dans `src/styles/`, jamais
       en attribut `style="…"` — sauf une valeur tirée des données (`width:{pct}%`).
       Plafond décroissant : `npm run lint:styles-en-ligne` (#1329)
+- [ ] Bloc pliable (carte, section, année, `<details>`…) : **un seul déplié à la
+      fois**, par `$lib/accordeon` — jamais un `Set` d'ouverture. Exceptions
+      arbitrées : section modifiée, carte en correction (`npm run lint:accordeon`,
+      30/09/2026)
 - [ ] Attente d'un écran : `<EtatListe chargement />`, jamais un « Chargement… »
       écrit à la main — il y en avait **23** avant #1045 (`npm run lint:chargement`)
 - [ ] En-tête de page : `<EntetePage>`, jamais `<div class="page-header">`

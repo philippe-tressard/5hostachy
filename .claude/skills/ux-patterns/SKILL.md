@@ -61,6 +61,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 14 | **L'urgence se dit ⚡**, orange, partout — 🚨 est banni, manuel compris | §3 |
 | 15 | **Un seul sélecteur de fichiers** (`FichiersUpload`), 44 px au doigt | §0 bis |
 | 16 | **Le manuel montre la VRAIE pastille**, phrase au survol recalculée par le site — jamais une couleur propre au manuel | skill `user-manual` |
+| 17 | **Un seul bloc déplié à la fois, partout** (30/09/2026, « sans exception, formulaires compris ») — cartes, années d'archives, colonnes vides du kanban, sections de formulaire, réponses, `<details>`. Deux exceptions arbitrées : une section **modifiée** reste ouverte, une carte **en correction** aussi. Une seule mécanique : `$lib/accordeon` (`basculer`, `membre`, `listeMembre`, et l'écouteur des `<details>` posé par le layout) ; 🔒 `npm run lint:accordeon` refuse un état d'ouverture en `Set`, `e2e/accordeon` éprouve formulaire et `<details>` | `$lib/accordeon` |
 
 ### ⚠️ Les trois pièges que ces onze arbitrages ont révélés
 
@@ -858,7 +859,8 @@ n'existe pas — constaté à l'écran. Aucun sélecteur CSS ne sait dire « ce 
 déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
 
 ### Règles
-- **Une seule** carte ouverte à la fois
+- **Une seule** carte ouverte à la fois — et un seul bloc déplié, quel qu'il soit
+  (règle 17 du tableau de tête, `$lib/accordeon`)
 - Chargement lazy des détails au premier clic
 - Prévisualisation `.clamp-5` (5 lignes max)
 - Border-left, urgence, espacement et ombre : **portés par `.carte-liste`** (voir
@@ -1845,7 +1847,9 @@ tiennent :
   (`writing-mode: vertical-rl`) : 30 px au lieu de 200, rendus aux colonnes qui
   portent quelque chose. Elle reste **visible** — savoir qu'une étape est vide
   fait partie de la lecture d'un kanban ; c'est le tiret « — » qui ne disait
-  rien en occupant la place d'une colonne pleine.
+  rien en occupant la place d'une colonne pleine. **Une seule** colonne vide se
+  déplie à la fois (30/09/2026, règle 17 — c'était un `Set` « parce que ce n'est
+  pas un accordéon », arbitrage révisé) ;
 
   🔴 **Le mot « Aucune affaire » se lit DANS le pli** (20/09/2026, demandé à
   l'écran). Il n'apparaissait qu'une fois la colonne dépliée d'un clic : il
