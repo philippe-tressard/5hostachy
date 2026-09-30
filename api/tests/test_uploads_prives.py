@@ -143,26 +143,46 @@ def test_uploads_exige_une_session_authentifiee():
     )
 
 
-def test_les_images_dactualite_restent_publiques_pour_whatsapp():
-    """Le bridge reçoit une URL absolue et la récupère en anonyme.
+def _blocs_uploads(contenu: str) -> list[tuple[str, str]]:
+    """Chaque `handle /uploads…` du Caddyfile : (chemin, corps du bloc)."""
+    return [
+        (m.group(1), m.group(2))
+        for m in re.finditer(r"handle\s+(/uploads/\S*)\s*\{(.*?)\n    \}", contenu, re.S)
+    ]
 
-    `app/utils/whatsapp.py::_resolve_image_url` construit `https://<site>/uploads/…`
-    et le bridge va chercher l'image lui-même, sans cookie. Protéger ce dossier
-    casserait le partage sur le groupe — et son contenu est justement destiné à
-    être diffusé.
+
+def _servis_sans_session(blocs) -> list[str]:
+    return [
+        chemin for chemin, corps in blocs if "file_server" in corps and "forward_auth" not in corps
+    ]
+
+
+def test_aucun_fichier_televerse_n_est_servi_sans_session():
+    """Un bloc qui sert des fichiers téléversés passe par `forward_auth` — sans exception.
+
+    `/uploads/publications/*` a été servi en anonyme jusqu'au 30/09/2026 (#1494),
+    au motif que le bridge WhatsApp allait y chercher les images sans cookie. Ce
+    motif a disparu le 10/08/2026 (envoi en base64, `utils/whatsapp_media.py`) ;
+    l'exposition, elle, a survécu sept semaines — et un test la DÉFENDAIT, parce
+    qu'il vérifiait la conséquence d'une raison sans vérifier la raison.
+
+    Un bloc placé avant la règle commune ne peut donc que REFUSER (`respond`).
     """
-    contenu = _caddyfile()
-    publications = contenu.find("handle /uploads/publications/*")
-    protege = re.search(r"handle\s+/uploads/\*\s*\{", contenu)
+    fautes = _servis_sans_session(_blocs_uploads(_caddyfile()))
+    assert not fautes, (
+        f"Servi sans session : {fautes}. Un fichier téléversé se lit derrière "
+        "`forward_auth` (bloc /uploads/*) ; un bloc qui le précède ne sert qu'à refuser."
+    )
 
-    assert publications != -1, (
-        "Le dossier des images d'actualité n'est plus servi publiquement : "
-        "le partage WhatsApp d'une actualité avec photo va échouer."
+
+def test_le_controle_des_blocs_uploads_voit_et_refuse():
+    """Cas zéro : il lit bien les blocs du vrai Caddyfile, et il refuse un service anonyme."""
+    blocs = dict(_blocs_uploads(_caddyfile()))
+    assert "/uploads/*" in blocs and "forward_auth" in blocs["/uploads/*"], (
+        "le bloc protégé /uploads/* n'est plus lu : le contrôle ne mesure plus rien"
     )
-    assert protege and publications < protege.start(), (
-        "Le bloc publications est placé APRÈS le bloc protégé : Caddy applique le "
-        "premier `handle` qui correspond, les images passeraient sous forward_auth."
-    )
+    forge = "    handle /uploads/ouvert/* {\n        root * /srv\n        file_server\n    }"
+    assert _servis_sans_session(_blocs_uploads(forge)) == ["/uploads/ouvert/*"]
 
 
 def test_l_endpoint_de_verification_existe_et_reste_authentifie():
@@ -207,21 +227,6 @@ def test_les_fichiers_proteges_ne_sont_pas_mis_en_cache_par_le_cdn():
         f"Cache-Control « {directive.group(1)} » n'interdit pas le stockage par "
         "un cache partagé — une réponse qui dépend d'un cookie ne doit être "
         "conservée nulle part."
-    )
-
-
-def test_les_images_publiques_restent_cacheables():
-    """Le contraire du test précédent : ne pas dégrader ce qui doit être servi vite.
-
-    Les images d'actualité sont publiques par nécessité (WhatsApp) ; les priver
-    de cache ferait repartir chaque vignette jusqu'au Raspberry Pi.
-    """
-    contenu = _caddyfile()
-    bloc = re.search(r"handle\s+/uploads/publications/\*\s*\{(.*?)\n    \}", contenu, re.S)
-    assert bloc, "bloc /uploads/publications/* introuvable"
-    assert "no-store" not in bloc.group(1), (
-        "Les images d'actualité sont devenues non-cacheables : chaque affichage "
-        "repartira jusqu'au RPi."
     )
 
 

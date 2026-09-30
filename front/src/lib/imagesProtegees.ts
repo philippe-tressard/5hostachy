@@ -39,11 +39,11 @@ import { renouvelerSession } from '$lib/api/client';
 /**
  * Le préfixe des fichiers derrière `forward_auth` (Caddyfile).
  *
- * `/uploads/publications/` est public à dessein — le bridge WhatsApp va y
- * chercher les images en anonyme. Le distinguer ici serait une seconde
- * écriture de la règle du Caddyfile : une image publique ne rend jamais 401,
- * donc la sonde conclut « rien à faire » d'elle-même. Un contrôle qui se
- * trompe sans conséquence vaut mieux qu'une liste à tenir à jour.
+ * Tout `/uploads/` est derrière la session depuis le 30/09/2026 (#1494) :
+ * `/uploads/publications/`, public pour un bridge WhatsApp qui reçoit les
+ * images en base64 depuis le 10/08, suit la règle commune. Si un dossier
+ * redevenait public, rien ne serait à changer ici : une image publique ne rend
+ * jamais 401, et la sonde conclut « rien à faire » d'elle-même.
  */
 const PROTEGEES = '/uploads/';
 
