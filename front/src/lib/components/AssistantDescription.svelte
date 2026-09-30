@@ -36,8 +36,7 @@
     en `assiste_ia`, et ce que la carte rend ensuite par `MarqueIA`.
 -->
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { isCS } from '$lib/stores/auth';
+	import { isCS, quandAuthResolue } from '$lib/stores/auth';
 	import { assistantStore, chargerAssistant } from '$lib/stores/assistant';
 	import { assistant as assistantApi, type PropositionDescription } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
@@ -93,7 +92,8 @@
 	$: rienChange =
 		proposition !== null && !proposition.titre_modifie && !proposition.description_modifiee;
 
-	onMount(() => {
+	//  Pas `onMount` : il précède le layout qui charge l'utilisateur (#1486).
+	quandAuthResolue(() => {
 		if ($isCS && $assistantStore === null) void chargerAssistant();
 	});
 

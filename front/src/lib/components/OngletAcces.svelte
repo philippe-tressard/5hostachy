@@ -34,9 +34,7 @@
 -->
 <script lang="ts">
 	import { statutAccesBadge, statutAccesLabel } from '$lib/types-acces';
-	import { nomAffiche } from '$lib/noms';
 	import FormulairesAcces from '$lib/components/FormulairesAcces.svelte';
-	import { onMount } from 'svelte';
 	import { acces as accesApi, lots as lotsApi, bailleur as bailApi } from '$lib/api';
 	import { tenter, messageErreur } from '$lib/erreurs';
 	//  ⚠️ `confirmer` et `SUPPRESSION` sont partis avec la poubelle (15/09/2026) :
@@ -46,10 +44,10 @@
 	//  `isCS` n'est plus lu : il ne servait qu'à ouvrir la suppression au conseil
 	//  syndical sur CET écran — un geste qui vit désormais chez l'administrateur,
 	//  sur l'écran du parc.
-	import { isBailleur, isLocataire } from '$lib/stores/auth';
+	import { isBailleur, isLocataire, quandAuthResolue } from '$lib/stores/auth';
 	import MesAcces from '$lib/components/MesAcces.svelte';
 	import AccesConnexes from '$lib/components/AccesConnexes.svelte';
-	import { bailEnCours } from '$lib/bail';
+	import { bailEnCours, nomLocataire } from '$lib/bail';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let vigiks: any[] = [];
@@ -66,7 +64,8 @@
 	let formMotif = '';
 	let submitting = false;
 
-	onMount(async () => {
+	//  Pas `onMount` : il précède le layout qui charge l'utilisateur (#1486).
+	quandAuthResolue(async () => {
 		try {
 			//  ⚠️ `mesCommandes()` n'est plus appelée (12/09/2026) : la section
 			//  Archives a quitté ces onglets, et charger une liste que rien
@@ -284,10 +283,7 @@
 					<div class="locataire-acces-row">
 						<div class="lar-header">
 							<div class="lar-tenant">
-								<strong
-									>{nomAffiche(premierBail.locataire_prenom, premierBail.locataire_nom) ||
-										'Locataire non renseigné'}</strong
-								>
+								<strong>{nomLocataire(premierBail)}</strong>
 								{#if premierBail.locataire_email}<a
 										href="mailto:{premierBail.locataire_email}"
 										style="font-size:var(--fs-sm);color:var(--color-primary)"

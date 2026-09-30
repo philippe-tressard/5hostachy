@@ -145,8 +145,8 @@ def purger() -> tuple[dict[str, int], list[str]]:
     #  archivées ou non, malgré son nom —, et depuis la migration 0210 cette
     #  table n'est plus lue : les évolutions des actualités vivent dans
     #  `ticket_evolution`, l'historique des affaires, qu'aucune purge ne touche.
-    #  La purge effaçait donc la copie gelée que 0210 garde par prudence. Sa
-    #  suppression, avec celle de `publication`, est une décision à part.
+    #  La purge effaçait donc la copie gelée que 0210 gardait par prudence. La
+    #  table elle-même a été supprimée le 30/09/2026 (#1177, migration 0238).
 
     return comptes, erreurs
 

@@ -200,16 +200,31 @@ export function telephonesDe(champ: string | null | undefined): string[] {
  * exactement le geste que ce commentaire redoutait — d'où le passage ici,
  * plutôt qu'une copie de plus.
  *
- * ⚠️ Une valeur inconnue est rendue TELLE QUELLE, pas remplacée par « — » : un
- * type ajouté côté API doit s'afficher, fût-ce sans majuscule, plutôt que
- * disparaître derrière un tiret que personne ne saura interpréter.
+ * ⚠️ Une valeur inconnue n'est pas remplacée par « — » : un type ajouté côté API
+ * doit s'afficher plutôt que disparaître derrière un tiret que personne ne saura
+ * interpréter. Elle est seulement mise en forme — soulignés en espaces, initiale
+ * en majuscule (`local_commercial` → « Local commercial ») : c'est ce que les six
+ * copies recalculées à la main faisaient, et ce que cette fonction taisait
+ * jusqu'au 30/09/2026 (#779). 🔒 `npm run lint:type-lot`.
  */
 export function lotTypeLabel(t: string | null | undefined): string {
 	if (!t) return '—';
 	if (t === 'appartement') return 'Appartement';
 	if (t === 'parking') return 'Parking';
 	if (t === 'cave') return 'Cave';
-	return t;
+	const lisible = t.replace(/_/g, ' ');
+	return lisible.charAt(0).toUpperCase() + lisible.slice(1);
+}
+
+/**
+ * Le type d'un lot avec sa précision — « Appartement – T3 ». Six écrans la
+ * recomposaient à la main (#779) ; `lotTypeLabel` seul ne dit pas le « T3 ».
+ */
+export function lotTypeComplet(
+	type: string | null | undefined,
+	typeAppartement?: string | null,
+): string {
+	return `${lotTypeLabel(type)}${typeAppartement ? ` – ${typeAppartement}` : ''}`;
 }
 
 /**

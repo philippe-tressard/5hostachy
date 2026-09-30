@@ -1,13 +1,12 @@
 <script lang="ts">
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
-	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 	import { sondages as sondagesApi } from '$lib/api';
 	import { confirmer, confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import { tenter, messageErreur } from '$lib/erreurs';
 	import { signaler } from '$lib/signalements';
-	import { currentUser, isAdmin, isCS, isGestionnaire } from '$lib/stores/auth';
+	import { currentUser, isAdmin, isCS, isGestionnaire, quandAuthResolue } from '$lib/stores/auth';
+	import { refuserLaCommunaute } from '$lib/communaute';
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FilAriane from '$lib/components/FilAriane.svelte';
@@ -40,16 +39,12 @@
 	$: estAuteur = sondage && $currentUser?.id === sondage.auteur_id;
 	$: peutGerer = estAuteur || $isAdmin;
 
-	onMount(async () => {
+	//  Pas `onMount` : il précède le layout qui charge l'utilisateur (#1486).
+	quandAuthResolue(async () => {
 		if ($isGestionnaire) {
 			//  Le motif vient de l'API, le « qui » de `$isGestionnaire` : cet écran
 			//  ne réécrit plus la règle d'accès — ce qu'il affirmait à tort (15/09).
-			toast(
-				'error',
-				$currentUser?.communaute_motif_refus ??
-					"La rubrique Communauté n'est pas accessible à votre profil.",
-			);
-			goto('/tableau-de-bord', { replaceState: true });
+			refuserLaCommunaute($currentUser);
 			loading = false;
 			return;
 		}

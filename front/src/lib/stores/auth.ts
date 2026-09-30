@@ -1,3 +1,4 @@
+import { onMount } from 'svelte';
 import { writable, derived } from 'svelte/store';
 import type { User } from '$lib/api';
 import { setActingAs } from '$lib/api';
@@ -144,4 +145,30 @@ export function setUser(user: User | null) {
 /** L'authentification a répondu, sans utilisateur (visiteur non connecté). */
 export function marquerAuthResolue() {
 	authResolue.set(true);
+}
+
+/**
+ * Exécuter `action` UNE fois, quand l'utilisateur est connu — à appeler pendant
+ * l'initialisation d'un composant, à la place d'un `onMount` qui lirait un rôle.
+ *
+ * 🔴 Svelte monte la PAGE avant le LAYOUT : l'`onMount` d'un écran s'exécute avant
+ * celui de `(app)/+layout.svelte`, qui charge l'utilisateur. Sur un chargement
+ * direct ou un rechargement, `$isCS`, `$isLocataire`, `$currentUser`… y valent
+ * encore `false` / `null`, et seule une navigation interne rend l'écran juste.
+ * Deux récidives le même jour (#1486, 30/09/2026) : la file de modération jamais
+ * demandée, et un bailleur qui voyait tous ses lots « Vacant ».
+ *
+ * Le remède était recopié écran par écran (`let charge = false; $: if
+ * ($authResolue && !charge) { … }`) : il vit ici. 🔒 `npm run lint:gardes-auth`
+ * refuse un rôle lu dans un `onMount`.
+ */
+export function quandAuthResolue(action: () => unknown): void {
+	onMount(() => {
+		let fait = false;
+		return authResolue.subscribe((resolue) => {
+			if (!resolue || fait) return;
+			fait = true;
+			void action();
+		});
+	});
 }

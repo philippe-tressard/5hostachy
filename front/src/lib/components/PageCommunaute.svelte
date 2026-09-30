@@ -19,7 +19,6 @@
 	import { IDEE_BADGE } from '$lib/idees';
 	import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
 	import OngletAnnonces from '$lib/components/OngletAnnonces.svelte';
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import {
 		sondages as sondagesApi,
@@ -27,7 +26,8 @@
 		annonces as annoncesApi,
 		signalements as signalementsApi,
 	} from '$lib/api';
-	import { authResolue, currentUser, isAdmin, isCS, isGestionnaire } from '$lib/stores/auth';
+	import { currentUser, isAdmin, isCS, isGestionnaire, quandAuthResolue } from '$lib/stores/auth';
+	import { refuserLaCommunaute } from '$lib/communaute';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { messageErreur, tenter } from '$lib/erreurs';
@@ -204,11 +204,7 @@
 	//  🔴 Pas depuis `onMount` : il précède celui du layout, qui charge
 	//  l'utilisateur. Sur un chargement direct, `$isCS` y était encore faux, et la
 	//  file n'était JAMAIS demandée — le CS ne la voyait qu'après une navigation.
-	let signalementsDemandes = false;
-	$: if ($authResolue && $isCS && !signalementsDemandes) {
-		signalementsDemandes = true;
-		chargerSignalements();
-	}
+	quandAuthResolue(chargerSignalements);
 	async function chargerSignalements() {
 		if (!$isCS) return;
 		[signalements, erreurSignalements] = await essayer(signalementsApi.liste('en_attente'), []);
@@ -239,16 +235,10 @@
 	//  (29/08/2026). L'API décide et FORMULE ; l'écran choisit le GESTE.
 
 	// Garde réactive : redirige dès que le user est connu (garde contre la race condition async layout)
-	$: if ($currentUser && $isGestionnaire) {
-		toast(
-			'error',
-			$currentUser.communaute_motif_refus ??
-				"La rubrique Communauté n'est pas accessible à votre profil.",
-		);
-		goto('/tableau-de-bord', { replaceState: true });
-	}
+	$: if ($currentUser && $isGestionnaire) refuserLaCommunaute($currentUser);
 
-	onMount(async () => {
+	//  Pas `onMount` : il précède le layout qui charge l'utilisateur (#1486).
+	quandAuthResolue(async () => {
 		//  Un profil inadapté est déjà redirigé ci-dessus : ce qui reste ici est une
 		//  suspension, qui s'affiche en bandeau plutôt qu'en redirection.
 		if ($currentUser?.communaute_motif_refus) {
