@@ -41,7 +41,8 @@ est-il VISIBLE ? »**. C'est la question que l'utilisateur pose depuis le 18 ao�
 Le poste de développement n'a pas les bibliothèques natives de WeasyPrint (elles
 sont dans `api/Dockerfile`) : le contrôle y renvoie INCONNU (`skip`), jamais OK.
 La CI installe pango/cairo — c'est là qu'il fait barrage, et
-`test_weasyprint_present_en_ci` refuse qu'il s'y abstienne (`tests/aides_pdf.py`).
+`test_documents_pdf.py::test_weasyprint_present_en_ci` refuse qu'il s'y abstienne
+(`tests/aides_pdf.py`).
 
 Porté le 25/09/2026 depuis la branche `claude/pdf-orange-bars-affiche-yluuiq`
 (commit `64b88cd`, 15/09), jamais fusionnée (#1299). `pytest.importorskip` y
@@ -56,7 +57,7 @@ import re
 import pytest
 
 from app.utils.annonce_hall import FORMATS, construire_html
-from tests.aides_pdf import besoin_weasyprint, exiger_weasyprint_en_ci
+from tests.aides_pdf import besoin_weasyprint
 from app.utils.pdf_theme import PALETTE_CSS
 
 _ARGUMENTS = dict(
@@ -172,10 +173,6 @@ def _filets(format_effectif: str):
     )
     dore = _dore()
     return [r for r in peints if r[0] == dore and _chevauchent(r, bandeaux[0])]
-
-
-def test_weasyprint_present_en_ci():
-    exiger_weasyprint_en_ci()
 
 
 @besoin_weasyprint

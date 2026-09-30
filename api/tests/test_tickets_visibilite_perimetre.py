@@ -158,39 +158,71 @@ def test_la_liste_rend_exactement_ce_que_la_fiche_accepte(scene):
         )
 
 
-def test_le_voisin_voit_ce_qui_concerne_son_batiment(scene):
-    _session, tickets, _auteur, voisin, _cs = scene
-    assert ticket_visible(tickets["chez_le_voisin"], voisin) is True
-    assert ticket_visible(tickets["toute_la_residence"], voisin) is True
+#: Qui lit quoi : (profil, ticket) → attendu. Une seule table, comparée d'un
+#: bloc — chaque case fausse est nommée, au lieu d'un test qui s'arrête à la
+#: première.
+#:
+#: - **le voisin** (autre bâtiment) lit ce qui concerne son bâtiment et la
+#:   résidence, pas le bâtiment d'à côté — sans ce refus, l'ouverture ne serait
+#:   pas « par périmètre » mais totale ;
+#: - 🔴 **`confidentiel` referme pour le voisin, et pour lui seul** : l'auteur et
+#:   le CS gardent l'accès. Un drapeau qui refermerait aussi pour eux
+#:   transformerait « confidentiel » en « inaccessible », et le CS ne pourrait
+#:   plus traiter les dossiers les plus sensibles — exactement ceux qu'on marque ;
+#: - **le locataire** (05/09/2026, demandé à l'écran : *« les locataires ne
+#:   voient pas les tickets »*) ne lit aucune affaire d'un autre : il habite
+#:   l'immeuble sans en être copropriétaire. Ses propres tickets : plus bas.
+MATRICE_DE_LECTURE = {
+    "auteur": {
+        "chez_moi": True,
+        "chez_le_voisin": True,
+        "toute_la_residence": True,
+        "confidentiel": True,
+    },
+    "voisin": {
+        "chez_moi": False,
+        "chez_le_voisin": True,
+        "toute_la_residence": True,
+        "confidentiel": False,
+    },
+    "cs": {
+        "chez_moi": True,
+        "chez_le_voisin": True,
+        "toute_la_residence": True,
+        "confidentiel": True,
+    },
+    "locataire": {
+        "chez_moi": False,
+        "chez_le_voisin": False,
+        "toute_la_residence": False,
+        "confidentiel": False,
+    },
+}
 
 
-def test_le_voisin_ne_voit_PAS_un_ticket_d_un_autre_batiment(scene):
-    """Sans ce refus, l'ouverture ne serait pas « par périmètre » mais totale."""
-    _session, tickets, _auteur, voisin, _cs = scene
-    assert ticket_visible(tickets["chez_moi"], voisin) is False
+def test_matrice_de_lecture(scene):
+    session, tickets, auteur, voisin, cs = scene
+    locataire = _utilisateur(session, "résident", StatutUtilisateur.locataire, None)
+    profils = {"auteur": auteur, "voisin": voisin, "cs": cs, "locataire": locataire}
+    try:
+        #  Cas zéro de la table : un profil ou un ticket oublié ne se mesurerait pas.
+        assert set(MATRICE_DE_LECTURE) == set(profils)
+        for ligne in MATRICE_DE_LECTURE.values():
+            assert set(ligne) == set(tickets)
+
+        fausses = [
+            f"  {profil} × {nom} : attendu {attendu}, obtenu {not attendu}"
+            for profil, ligne in MATRICE_DE_LECTURE.items()
+            for nom, attendu in ligne.items()
+            if ticket_visible(tickets[nom], profils[profil]) is not attendu
+        ]
+        assert not fausses, "Cases fausses de la matrice de lecture :\n" + "\n".join(fausses)
+    finally:
+        purger_ligne(session, Utilisateur, locataire.id)
+        session.commit()
 
 
-# ── 2. Le drapeau referme, et rien de plus ────────────────────────────────────
-
-
-def test_confidentiel_referme_pour_le_voisin(scene):
-    _session, tickets, _auteur, voisin, _cs = scene
-    assert ticket_visible(tickets["confidentiel"], voisin) is False, (
-        "un ticket confidentiel à portée résidence reste lisible du voisin : "
-        "le drapeau ne referme pas l'ouverture qu'il doit refermer"
-    )
-
-
-def test_confidentiel_ne_referme_NI_pour_l_auteur_NI_pour_le_CS(scene):
-    """L'autre moitié, celle qu'on oublie de vérifier.
-
-    Un drapeau qui refermerait aussi pour l'auteur transformerait « confidentiel »
-    en « inaccessible », et le CS ne pourrait plus traiter les dossiers les plus
-    sensibles — exactement ceux qu'on marque.
-    """
-    _session, tickets, auteur, _voisin, cs = scene
-    assert ticket_visible(tickets["confidentiel"], auteur) is True
-    assert ticket_visible(tickets["confidentiel"], cs) is True
+# ── 2. Une donnée abîmée n'ouvre rien ─────────────────────────────────────────
 
 
 def test_un_ciblage_illisible_refuse(scene):
@@ -243,23 +275,6 @@ def test_le_batiment_du_voisin_est_bien_celui_qu_on_croit(scene, batiments):
 
 
 # ── 3. Le locataire : ses tickets, et rien d'autre (05/09/2026) ───────────────
-
-
-def test_un_LOCATAIRE_ne_voit_pas_le_ticket_d_un_voisin(scene):
-    """Demandé à l'écran : *« les locataires ne voient pas les tickets »*.
-
-    Retrait partiel de l'ouverture du 02/09, qui visait « les copropriétaires et
-    locataires ». Un locataire habite l'immeuble sans en être copropriétaire :
-    les affaires de la copropriété ne le regardent pas.
-    """
-    session, tickets, _auteur, _voisin, _cs = scene
-    locataire = _utilisateur(session, "résident", StatutUtilisateur.locataire, None)
-    try:
-        assert ticket_visible(tickets["toute_la_residence"], locataire) is False
-        assert ticket_visible(tickets["chez_moi"], locataire) is False
-    finally:
-        purger_ligne(session, Utilisateur, locataire.id)
-        session.commit()
 
 
 def test_un_LOCATAIRE_voit_TOUJOURS_ses_propres_tickets(scene):

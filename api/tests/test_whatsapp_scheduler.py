@@ -279,13 +279,43 @@ def test_classification_des_pannes_de_transport(monkeypatch, exc, incertain):
         W._poster_au_bridge("http://b/send", {}, {})
 
 
-@pytest.mark.parametrize("code, incertain", [(400, False), (401, False), (500, True), (503, True)])
-def test_classification_des_reponses_du_bridge(monkeypatch, code, incertain):
-    """4xx : la requête a été refusée sans être traitée. 5xx : on ignore où ça a cassé."""
+#: Ce que le bridge répond → ce que l'API en conclut, et ce que la RAISON doit
+#: dire (`contient`) ou taire (`tait`) : c'est elle que l'historique affiche.
+#:
+#: 🔴 202 et 500 ne se confondent plus (19/08/2026). Le bridge répondait 500 dans
+#: les deux cas — son `catch` était commun —, et l'historique affichait
+#: « incertain — réponse 500 du bridge » sur des messages que WhatsApp montrait
+#: remis, double coche à l'appui. Les deux restent incertains ; seule la raison
+#: les distingue, donc c'est elle qui s'éprouve.
+CLASSIFICATION_DES_REPONSES = [
+    # (code, exception attendue, la raison contient, la raison tait)
+    (400, httpx.HTTPStatusError, None, None),  # refusée sans être traitée : rejouable
+    (401, httpx.HTTPStatusError, None, None),
+    (202, W.EnvoiIncertain, "émis", "500"),  # parti, accusé non observé
+    (500, W.EnvoiIncertain, "500", None),  # cassé en route, on ne sait pas où
+    (503, W.EnvoiIncertain, None, None),
+]
+
+
+@pytest.mark.parametrize("code, attendue, contient, tait", CLASSIFICATION_DES_REPONSES)
+def test_classification_des_reponses_du_bridge(monkeypatch, code, attendue, contient, tait):
+    """4xx : la requête a été refusée sans être traitée. 202 : émis, accusé non
+    observé. 5xx : on ignore où ça a cassé."""
     reponse = httpx.Response(code, request=_requete())
     monkeypatch.setattr(W.httpx, "Client", lambda **kw: _ClientFactice(lambda *a, **k: reponse))
-    with pytest.raises(W.EnvoiIncertain if incertain else httpx.HTTPStatusError):
+    with pytest.raises(attendue) as exc:
         W._poster_au_bridge("http://b/send", {}, {})
+    raison = str(exc.value)
+    if contient:
+        assert contient in raison, (
+            f"Réponse {code} : la raison « {raison} » doit dire « {contient} » — "
+            "c'est ce que l'historique des envois affiche."
+        )
+    if tait:
+        assert tait not in raison, (
+            f"Réponse {code} : la raison « {raison} » ne doit pas dire « {tait} » — "
+            "un message parti ne se décrit pas comme une réponse 500."
+        )
 
 
 # ── La purge ne doit pas manger le verrou ─────────────────────────────────────

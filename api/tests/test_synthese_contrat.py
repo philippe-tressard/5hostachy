@@ -187,22 +187,6 @@ def test_un_document_DÉSIGNÉ_qui_n_est_PAS_du_contrat_est_ignoré(session):
 # ── 2. Ce qu'on envoie ──────────────────────────────────────────────────────
 
 
-def test_les_SEPT_sections_sont_imposées():
-    for n in range(1, 8):
-        assert f"{n}." in GABARIT
-    assert "Prestations non incluses" in GABARIT
-    assert "Points d'attention" in GABARIT
-    assert GABARIT in CONSIGNE
-
-
-def test_la_consigne_INTERDIT_d_inventer():
-    """🔴 Le point qui compte le plus. Un modèle comble volontiers une section
-    vide par une formule plausible — et une synthèse plausible mais fausse, dans
-    un document réglementaire, est le pire résultat possible."""
-    assert "n'invente jamais" in CONSIGNE
-    assert "non précisé dans les éléments fournis" in CONSIGNE
-
-
 def test_les_synthèses_existantes_servent_d_EXEMPLES(session):
     """Le format s'apprend des synthèses de la maison, il ne se décrit pas."""
     _contrat(
@@ -251,15 +235,6 @@ def test_les_champs_connus_de_la_base_partent_toujours(session):
     assert "3 ans" in message
 
 
-def test_la_consigne_impose_le_HTML_que_le_champ_de_notes_accepte(session):
-    """Les notes sont un champ ENRICHI : du texte brut avec des tirets y arrive
-    en un seul paragraphe. Les balises citées sont celles que `sanitize.ts`
-    laisse passer ET que Tiptap sait relire."""
-    for balise in ("<h3>", "<ul><li>", "<p>"):
-        assert balise in CONSIGNE
-    assert "Markdown" in CONSIGNE
-
-
 #  ── La source des faits est CE contrat, et rien d'autre ───────────────────
 #
 #  🔴 Demandé le 11/09/2026 après le premier essai. Le risque n'est pas
@@ -267,12 +242,8 @@ def test_la_consigne_impose_le_HTML_que_le_champ_de_notes_accepte(session):
 #  comme exemples de format, et un modèle qui les lit peut en reprendre un
 #  montant ou une durée. Rien, à la relecture, ne distinguerait alors un chiffre
 #  emprunté d'un chiffre lu — et la synthèse alimente le carnet d'entretien,
-#  qui est réglementaire (décret n° 2001-477).
-
-
-def test_la_consigne_interdit_toute_source_autre_que_le_contrat():
-    for exigence in ("CE contrat", "connaissance générale", "habituel"):
-        assert exigence in CONSIGNE
+#  qui est réglementaire (décret n° 2001-477). Ce que la consigne en dit est
+#  tenu par `EXIGENCES_CONSIGNE` (section 3) ; ce que le message en dit, ici.
 
 
 def test_les_exemples_s_annoncent_comme_UN_FORMAT_pas_comme_des_faits(session):
@@ -285,13 +256,6 @@ def test_les_exemples_s_annoncent_comme_UN_FORMAT_pas_comme_des_faits(session):
     message = construire_message(session, c, avec_document=False)
     assert "AUTRES" in message
     assert "n'en reprends AUCUN fait" in message
-
-
-def test_la_synthese_est_annoncee_comme_une_synthese_de_COPROPRIETE():
-    """Le domaine cadre la lecture : un contrat de copropriété ne se résume pas
-    comme un contrat commercial — ce qui compte est ce que la copropriété devra
-    surveiller."""
-    assert "COPROPRIÉTÉ" in CONSIGNE
 
 
 #  ── Un PDF sans couche de texte part TEL QUEL ─────────────────────────────
@@ -373,123 +337,145 @@ def test_un_fichier_TROP_LOURD_n_est_pas_joint(session, tmp_path, monkeypatch):
     assert m.ecartes == (("Plan", "illisible ou trop volumineux"),)
 
 
-#  ── La citation, ce qui rend la synthèse VÉRIFIABLE ───────────────────────
+# ── 3. Ce que la consigne EXIGE ────────────────────────────────────────────
 #
-#  🔴 11/09/2026, proposé par Philippe après le premier essai. Un montant sans
-#  la phrase qui le porte oblige à rouvrir le PDF pour le contrôler — c'est-à-
-#  dire à refaire le travail. Avec la citation, une erreur du modèle saute aux
-#  yeux : la citation ne dit pas ce que la puce affirme.
+#  Une phrase par exigence, et sa raison en une ligne. Seize tests ne faisaient
+#  que `assert "<phrase>" in CONSIGNE` : réunis ici, l'échec les nomme TOUTES,
+#  au lieu de s'arrêter à la première.
+
+EXIGENCES_CONSIGNE: dict[str, str] = {
+    #  ── Ne rien inventer, et rendre au format du champ de notes (#901) ──
+    "n'invente jamais": (
+        "🔴 le point qui compte le plus : une synthèse plausible mais fausse, dans un "
+        "document réglementaire, est le pire résultat possible (#901)"
+    ),
+    "non précisé dans les éléments fournis": (
+        "une section vide se dit vide, elle ne se comble pas d'une formule plausible (#901)"
+    ),
+    "<h3>": "les notes sont un champ ENRICHI : balise que `sanitize.ts` et Tiptap relisent (#901)",
+    "<ul><li>": "du texte brut à tirets arriverait en un seul paragraphe (#901)",
+    "<p>": "balise de paragraphe que le champ de notes accepte (#901)",
+    "Markdown": "le Markdown n'est pas rendu par le champ de notes : la consigne l'écarte (#901)",
+    #  ── La source des faits est CE contrat, et rien d'autre (#903) ──
+    "CE contrat": "les exemples d'AUTRES contrats ne sont pas une source de faits (#903)",
+    "connaissance générale": "un chiffre « habituel » n'est pas un chiffre lu (#903)",
+    "habituel": "un montant ou une durée d'usage ne se substitue pas au contrat (#903)",
+    "COPROPRIÉTÉ": (
+        "le domaine cadre la lecture : ce qui compte est ce que la copropriété devra "
+        "surveiller, pas un résumé commercial (#903)"
+    ),
+    #  ── La citation, ce qui rend la synthèse VÉRIFIABLE (#905) ──
+    #  🔴 11/09/2026, proposé par Philippe après le premier essai. Un montant sans
+    #  la phrase qui le porte oblige à rouvrir le PDF pour le contrôler — c'est-à-
+    #  dire à refaire le travail. Avec la citation, une erreur du modèle saute aux
+    #  yeux : la citation ne dit pas ce que la puce affirme.
+    "phrase EXACTE": "une citation sous chaque fait chiffré, mot pour mot (#905)",
+    "guillemets": "la citation se distingue de la reformulation (#905)",
+    "montant": "un montant est un fait chiffré qui exige sa citation (#905)",
+    "préavis": "un préavis est un fait chiffré qui exige sa citation (#905)",
+    "Si tu ne peux pas citer": (
+        "la citation rend constatable l'interdiction d'inventer : un fait qu'on ne peut "
+        "pas citer n'a pas été lu (#905)"
+    ),
+    "HT ou TTC": "« 390 € HT/an » n'est pas « environ 390 € » : l'unité EST l'information (#905)",
+    "en supplément": "une option chiffrée n'est pas une prestation incluse (#905)",
+    #  ── Les EXTRAITS des clauses citées (17/09/2026, #991) ──
+    #  🔴 Demandé après les premières synthèses réelles : la citation prouve UNE
+    #  ligne, l'extrait donne la clause ENTIÈRE (trente lignes au plus).
+    "8. Extraits des clauses citées": "une HUITIÈME section, d'extraits (#991)",
+    "Respecte EXACTEMENT ces sept sections": (
+        "la huitième s'ajoute APRÈS les sept, qui restent imposées mot pour mot (#991)"
+    ),
+    "ne remplace aucune des sept autres": "l'extrait s'ajoute, il ne remplace rien (#991)",
+    "TRENTE LIGNES AU PLUS": (
+        "sans borne, une clause recopiée mangerait le plafond de jetons de la synthèse (#991)"
+    ),
+    "coupe à la fin d'une phrase": "un extrait borné se coupe à la fin d'une phrase (#991)",
+    "milieu d'un montant": (
+        "une coupure au milieu d'un montant dirait autre chose que le contrat (#991)"
+    ),
+    "non reproduit dans les éléments fournis": (
+        "un RÉSUMÉ sous un titre d'article se lirait comme le texte du contrat (#991)"
+    ),
+    "ne le résume jamais": "un résumé ne tient pas lieu d'extrait (#991)",
+    "la section 8 est ABSENTE": (
+        "sans clause citée, pas de section : vide, elle se lirait comme une information "
+        "manquante (#991)"
+    ),
+    "L'extrait ne remplace pas la citation": (
+        "la citation prouve la ligne, l'extrait donne la clause : les confondre ferait "
+        "disparaître la plus vérifiable (#991)"
+    ),
+    CONSIGNE_CITATIONS: "l'exigence de citation sous chaque fait reste dans la consigne (#991)",
+    #  ── Extraits repliés, article nommé (17/09/2026, #992) ──
+    "« Non reproduit » est un aveu, pas un raccourci": (
+        "🔴 onze extraits, onze fois « non reproduit », alors que les mêmes articles "
+        "étaient cités : qui a pu citer peut recopier (#992)"
+    ),
+    "peux pas déclarer cet article non reproduit": (
+        "la porte de sortie se ferme par la cohérence avec les citations (#992)"
+    ),
+    "n'écris pas la section 8": (
+        "si RIEN ne peut être recopié, onze titres vides feraient croire à une lecture "
+        "qui n'a pas eu lieu (#992)"
+    ),
+    "SEULS": "🔴 la section 8 ne porte QUE les articles que la synthèse nomme (#992)",
+    "que la synthèse ne cite": "un article non cité n'a pas sa place dans les extraits (#992)",
+    "Ce n'est pas le sommaire du contrat": "le modèle avait déroulé le SOMMAIRE du contrat (#992)",
+    "TU NOMMES L'ARTICLE D'OÙ LE FAIT VIENT": (
+        "sans référence d'article, aucune puce n'en nommait et la section 8 ne se "
+        "déclenchait jamais (#992)"
+    ),
+    "<details><summary>": (
+        "onze extraits de trente lignes, dépliés, noieraient la synthèse — balises tenues "
+        "d'accord avec le front par `test_consigne_balises.py` (#992)"
+    ),
+    "bloc DÉPLIABLE, replié à l'ouverture": "l'extrait est replié à l'ouverture (#992)",
+    "n'écris JAMAIS l'attribut `open`": (
+        "`open` est de toute façon retiré par `$lib/sanitize` : consigne et rendu disent "
+        "la même chose, et c'est le rendu qui tranche (#992)"
+    ),
+}
 
 
-def test_la_consigne_exige_une_CITATION_sous_chaque_fait_chiffre():
-    for exigence in ("phrase EXACTE", "guillemets", "montant", "préavis"):
-        assert exigence in CONSIGNE
+def test_cas_zero_la_table_des_exigences_et_le_gabarit_sont_la():
+    """Une table vide ferait passer le contrôle suivant sans rien vérifier."""
+    assert EXIGENCES_CONSIGNE, "la table des exigences de la consigne est vide"
+    assert GABARIT in CONSIGNE, "le gabarit des sept sections n'est plus dans la consigne"
 
 
-def test_ne_pas_pouvoir_citer_vaut_ne_pas_avoir_LU():
-    """La citation ne remplace pas l'interdiction d'inventer : elle la rend
-    constatable. Un fait qu'on ne peut pas citer n'a pas été lu."""
-    assert "Si tu ne peux pas citer" in CONSIGNE
+def test_la_consigne_porte_chaque_exigence():
+    absentes = [
+        f"  « {phrase} » — {raison}"
+        for phrase, raison in EXIGENCES_CONSIGNE.items()
+        if phrase not in CONSIGNE
+    ]
+    assert not absentes, (
+        f"{len(absentes)} exigence(s) absente(s) de la consigne de synthèse :\n"
+        + "\n".join(absentes)
+    )
+
+
+#  Les sept sections, mot pour mot (#901), et ce que tout contrat renseigne (#905).
+SECTIONS_GABARIT = tuple(f"{n}." for n in range(1, 8)) + (
+    "Prestations non incluses",
+    "Points d'attention",
+)
+UNIVERSELS_GABARIT = ("SIRET", "préavis", "indexation", "option")
+SPECIFIQUES_INTERDITS = ("parking", "ascenseur", "contrôle d'accès", "porte")
 
 
 def test_le_gabarit_reste_GENERIQUE_a_tout_contrat_de_copropriete():
-    """⚠️ Un schéma détaillé par type de contrat (porte de parking, contrôle
+    """Le gabarit en SEPT sections est imposé, et il reste générique.
+
+    ⚠️ Un schéma détaillé par type de contrat (porte de parking, contrôle
     d'accès) aurait été exact une fois et faux au contrat suivant : une assurance
     n'a ni visites annuelles ni pièces détachées. Ce qui est imposé vaut pour
     TOUT contrat ; le détail vient du document."""
-    for specifique in ("parking", "ascenseur", "contrôle d'accès", "porte"):
-        assert specifique not in GABARIT.lower()
-    #  Ce qui, en revanche, vaut partout et doit être demandé :
-    for universel in ("SIRET", "préavis", "indexation", "option"):
-        assert universel.lower() in GABARIT.lower()
-
-
-#  ── Les EXTRAITS des clauses citées (17/09/2026) ──────────────────────────
-#
-#  🔴 Demandé après les premières synthèses réelles : *« quand il y a une
-#  référence à une clause ou article d'un §x, alors en fin de la synthèse tu
-#  joins les extraits (max 30 lignes par extrait) en précisant l'extrait en
-#  titre »*. La citation prouve UNE ligne, l'extrait donne la clause ENTIÈRE.
-
-
-def test_la_consigne_demande_une_HUITIÈME_section_d_extraits():
-    assert "8. Extraits des clauses citées" in CONSIGNE
-    #  Elle s'ajoute APRÈS les sept, elle n'en remplace aucune : les sept
-    #  restent imposées mot pour mot.
-    assert "Respecte EXACTEMENT ces sept sections" in CONSIGNE
-    assert "ne remplace aucune des sept autres" in CONSIGNE
-
-
-def test_l_extrait_est_BORNÉ_et_coupé_à_la_fin_d_une_phrase():
-    """Sans borne, une clause recopiée remplirait la réponse et mangerait le
-    plafond de jetons de la synthèse qu'elle éclaire."""
-    assert "TRENTE LIGNES AU PLUS" in CONSIGNE
-    assert "coupe à la fin d'une phrase" in CONSIGNE
-    #  Une coupure au milieu d'un montant dirait autre chose que le contrat.
-    assert "milieu d'un montant" in CONSIGNE
-
-
-def test_un_RÉSUMÉ_ne_tient_pas_lieu_d_extrait():
-    """Mis sous un titre d'article, il se lirait comme le texte du contrat."""
-    assert "non reproduit dans les éléments fournis" in CONSIGNE
-    assert "ne le résume jamais" in CONSIGNE
-
-
-def test_NON_REPRODUIT_est_un_aveu_et_pas_un_raccourci():
-    """🔴 17/09/2026, constaté à l'écran : ONZE extraits, onze fois « non
-    reproduit », alors que les mêmes articles étaient cités phrase par phrase
-    dans les sections précédentes. La consigne laissait la porte de sortie sans
-    la contredire — elle la ferme par la cohérence : qui a pu citer peut
-    recopier."""
-    assert "« Non reproduit » est un aveu, pas un raccourci" in CONSIGNE
-    assert "peux pas déclarer cet article non reproduit" in CONSIGNE
-    #  Et si RIEN ne peut être recopié, pas de section : onze titres vides font
-    #  croire à une lecture qui n'a pas eu lieu.
-    assert "n'écris pas la section 8" in CONSIGNE
-
-
-def test_la_section_8_ne_porte_QUE_les_articles_que_la_synthèse_nomme():
-    """🔴 Même constat du 17/09/2026 : le modèle avait déroulé le SOMMAIRE du
-    contrat. « Je n'ai pas demandé d'avoir tous les articles mais uniquement
-    ceux référencés dans la synthèse »."""
-    assert "SEULS" in CONSIGNE
-    assert "que la synthèse ne cite" in CONSIGNE
-    assert "Ce n'est pas le sommaire du contrat" in CONSIGNE
-    #  La référence d'article devient obligatoire : sans elle, la section 8 ne
-    #  se déclenchait jamais — aucune puce ne nommait d'article (constaté aussi).
-    assert "TU NOMMES L'ARTICLE D'OÙ LE FAIT VIENT" in CONSIGNE
-
-
-def test_sans_clause_citée_la_section_8_est_ABSENTE():
-    """Une section vide se lit comme une information manquante, alors qu'il n'y
-    avait rien à extraire."""
-    assert "la section 8 est ABSENTE" in CONSIGNE
-
-
-def test_l_extrait_ne_remplace_PAS_la_citation_sous_chaque_fait():
-    """Les deux coexistent : la citation prouve la ligne, l'extrait donne la
-    clause. Confondre les deux ferait disparaître la plus vérifiable."""
-    assert "L'extrait ne remplace pas la citation" in CONSIGNE
-    assert CONSIGNE_CITATIONS in CONSIGNE
-
-
-def test_l_extrait_est_un_bloc_DÉPLIABLE_replié():
-    """Onze extraits de trente lignes, dépliés, noieraient la synthèse qu'ils
-    éclairent (demandé à l'écran le 17/09/2026).
-
-    ⚠️ Le repli ne repose pas sur cette consigne seule : `open` n'est pas dans la
-    liste blanche de `$lib/sanitize`, donc l'attribut est retiré quoi que le
-    modèle écrive. La consigne et le rendu disent la même chose, et c'est le
-    rendu qui tranche. Les balises sont tenues d'accord avec le front par
-    `test_consigne_balises.py`.
-    """
-    assert "<details><summary>" in CONSIGNE
-    assert "bloc DÉPLIABLE, replié à l'ouverture" in CONSIGNE
-    assert "n'écris JAMAIS l'attribut `open`" in CONSIGNE
-
-
-def test_l_unite_d_un_montant_ne_se_perd_pas():
-    """« 390 € HT/an » n'est pas « environ 390 € » : l'unité EST l'information,
-    et une option chiffrée n'est pas une prestation incluse."""
-    assert "HT ou TTC" in CONSIGNE
-    assert "en supplément" in CONSIGNE
+    gabarit = GABARIT.lower()
+    ecarts = [f"  section absente : « {s} »" for s in SECTIONS_GABARIT if s not in GABARIT]
+    ecarts += [f"  spécifique à un type : « {s} »" for s in SPECIFIQUES_INTERDITS if s in gabarit]
+    ecarts += [
+        f"  universel non demandé : « {u} »" for u in UNIVERSELS_GABARIT if u.lower() not in gabarit
+    ]
+    assert not ecarts, "Le gabarit de synthèse s'écarte de la règle :\n" + "\n".join(ecarts)

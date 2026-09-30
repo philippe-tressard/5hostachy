@@ -9,9 +9,12 @@ divergeraient au premier changement d'image.
 ⚠️ `EN_INTEGRATION_CONTINUE` n'est pas une commodité : c'est ce qui empêche
 l'abstention d'être silencieuse. Sur un poste Windows, WeasyPrint n'a pas ses
 bibliothèques système (pango, cairo) et sauter est légitime ; en CI, sauter
-signifierait que le rendu n'est contrôlé **nulle part**. Chaque fichier qui se
-sert de `besoin_weasyprint` doit donc porter son test de portée — cf.
-`test_documents_pdf.py::test_weasyprint_present_en_ci` et son jumeau ici.
+signifierait que le rendu n'est contrôlé **nulle part**. Un seul test le
+vérifie, pour tous les fichiers qui se servent de `besoin_weasyprint` :
+`test_documents_pdf.py::test_weasyprint_present_en_ci`. `DISPONIBLE` est le même
+pour toute la session de tests, donc un second exemplaire ne pourrait échouer
+que là où le premier échoue déjà — il y en a eu trois, identiques, jusqu'au
+30/09/2026. La raison de saut de `besoin_weasyprint` renvoie à ce test.
 Un contrôle qui s'abstient partout est un contrôle absent
 (`standards/04-fiabilite-des-controles.md` §1).
 """
@@ -34,12 +37,15 @@ EN_INTEGRATION_CONTINUE = os.getenv("CI", "").lower() in ("1", "true", "yes")
 
 besoin_weasyprint = pytest.mark.skipif(
     not DISPONIBLE,
-    reason="WeasyPrint absent (bibliothèques système) — voir test_weasyprint_present_en_ci",
+    reason=(
+        "WeasyPrint absent (bibliothèques système) — voir "
+        "test_documents_pdf.py::test_weasyprint_present_en_ci"
+    ),
 )
 
 
 def exiger_weasyprint_en_ci() -> None:
-    """Le test de portée, écrit une fois et appelé par chaque fichier concerné."""
+    """Le test de portée, appelé par `test_documents_pdf.py` seul, pour tous."""
     if not EN_INTEGRATION_CONTINUE:
         pytest.skip("hors intégration continue — abstention légitime")
     assert DISPONIBLE, (

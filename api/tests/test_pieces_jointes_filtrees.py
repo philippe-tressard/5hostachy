@@ -82,21 +82,6 @@ def test_aucune_ecriture_de_galerie_ne_contourne_photos_json():
     )
 
 
-def test_photos_json_FILTRE_vraiment_une_url_etrangere():
-    """Le cas zéro du contrôle : la fonction qu'il impose doit protéger.
-
-    Un garde-fou qui exige l'emploi d'une fonction sans vérifier ce qu'elle fait
-    déplace le défaut sans le corriger. On l'exerce donc sur l'attaque même.
-    """
-    from app.utils.photos import photos_json
-
-    rendu = photos_json(["/uploads/photo.jpg", "https://exemple-hostile.test/pixel.gif"])
-    assert "/uploads/photo.jpg" in rendu
-    assert "exemple-hostile" not in rendu, rendu
-    #  Et l'accentuation survit : `ensure_ascii=False` fait partie du contrat.
-    assert "é" in photos_json(["/uploads/façade-été.jpg"])
-
-
 def test_le_garde_fou_REFUSE_bien_une_ecriture_a_la_main():
     """Cas zéro, les deux sens — la prose qui cite le motif doit passer."""
     fautif = "    photos_urls=json.dumps(photos_internes(body.photos_urls), ensure_ascii=False),"

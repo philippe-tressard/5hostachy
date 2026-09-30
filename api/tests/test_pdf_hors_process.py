@@ -37,15 +37,10 @@ import os
 
 import pytest
 
-from tests.aides_pdf import besoin_weasyprint, exiger_weasyprint_en_ci
+from tests.aides_pdf import besoin_weasyprint
 
 #: Un document minimal : ce qu'on mesure ici est l'isolation, pas la mise en page.
 HTML_MINIMAL = "<html><body><h1>Essai</h1><p>Contenu.</p></body></html>"
-
-
-def test_weasyprint_present_en_ci():
-    """La portée du fichier : s'abstenir partout serait n'avoir aucun contrôle."""
-    exiger_weasyprint_en_ci()
 
 
 @besoin_weasyprint

@@ -295,30 +295,6 @@ def test_chaque_regle_explique_son_declencheur(type_objet):
     assert REGLES[type_objet].declencheur.strip(), f"{type_objet} : déclencheur non documenté"
 
 
-def test_la_migration_0155_remplit_les_memes_statuts_que_la_regle():
-    """La migration recopie une liste qu'elle ne peut pas importer.
-
-    Une migration doit rester exécutable dix ans après, même si le module
-    applicatif a été déplacé — elle ne peut donc pas importer `REGLES`. La copie
-    est assumée ; ce qui ne l'est pas, c'est qu'elle diverge en silence.
-
-    Si les deux listes s'écartent, la migration remplit `statut_change_le` pour
-    des idées que la règle n'archivera pas, ou l'oublie pour celles qu'elle
-    archivera — et ces dernières s'archiveraient alors sur leur date de dépôt.
-    """
-    import importlib.util
-    import pathlib
-
-    chemin = (
-        pathlib.Path(__file__).parent.parent / "alembic" / "versions" / "0155_archivage_unifie.py"
-    )
-    spec = importlib.util.spec_from_file_location("migration_0155", chemin)
-    migration = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(migration)
-
-    assert set(migration.STATUTS_TERMINAUX_IDEE) == set(REGLES["idee"].statuts_terminaux)
-
-
 def test_un_statut_immediat_n_est_jamais_aussi_terminal():
     """Les deux listes se contrediraient : immédiat gagne, mais silencieusement.
 

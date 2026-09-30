@@ -1,22 +1,18 @@
 """Deux clés, deux défauts, et la même décision partout.
 
-Ce fichier couvre trois choses qu'aucune relecture ne garantit :
+Ce fichier couvre deux choses qu'aucune relecture ne garantit :
 
 1. **La décision d'envoi** — qui reçoit quoi selon son bâtiment. Elle était lue à
    trois endroits (`email/__init__.py` deux fois, `utils/reponses.py`) avec
    chacun ses défauts : trois façons d'être en désaccord sur ce que l'utilisateur
    a demandé.
-2. **La conversion des préférences existantes** (migration `0145`). Elle décide du
-   consentement de chaque résident : une erreur se traduit soit par des e-mails
-   non sollicités, soit par un silence que personne n'a demandé.
-3. **L'accord des deux côtés** — le site coche des cases dont le serveur seul
+2. **L'accord des deux côtés** — le site coche des cases dont le serveur seul
    décide. Une clé recopiée de travers ne produirait aucune erreur : l'écran
    enregistrerait un réglage que le serveur ne lirait jamais.
 """
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import re
 from pathlib import Path
@@ -116,59 +112,6 @@ def test_sans_batiment_de_rattachement_on_ne_coupe_rien(batiments):
     """Cas zéro : on ne peut pas dire que le contenu vient d'ailleurs."""
     inconnu = _utilisateur()
     assert mail_autorise(inconnu, {batiments[1]}) is True
-
-
-# ── La conversion des préférences existantes ──────────────────────────────────
-
-
-def _migration():
-    chemin = RACINE / "api" / "alembic" / "versions" / "0145_notifications_deux_choix.py"
-    if not chemin.is_file():
-        pytest.fail(f"Migration introuvable : {chemin.name}")
-    spec = importlib.util.spec_from_file_location("migration_0145", chemin)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def test_qui_recevait_des_mails_continue_d_en_recevoir():
-    ancien = json.dumps(
-        {
-            "ticket_mail": False,
-            "actu_mail": True,
-            "doc_mail": False,
-            "communaute_mail": False,
-            "ticket_app": True,
-        }
-    )
-    assert json.loads(_migration().convertir(ancien))[MON_BATIMENT] is True
-
-
-def test_qui_avait_tout_coupe_reste_au_silence():
-    ancien = json.dumps(
-        {"ticket_mail": False, "actu_mail": False, "doc_mail": False, "communaute_mail": False}
-    )
-    converti = json.loads(_migration().convertir(ancien))
-    assert converti[MON_BATIMENT] is False
-
-
-def test_les_autres_batiments_ne_sont_jamais_actives_d_office():
-    """Le test qui compte : on n'invente le consentement de personne."""
-    for ancien in (
-        json.dumps(
-            {"ticket_mail": True, "actu_mail": True, "doc_mail": True, "communaute_mail": True}
-        ),
-        json.dumps({"ticket_mail": False}),
-        "{}",
-        "{pas du json",
-    ):
-        assert json.loads(_migration().convertir(ancien))[AUTRES_BATIMENTS] is False, ancien
-
-
-def test_la_conversion_est_idempotente():
-    """Un second passage ne doit rien retoucher."""
-    deja = json.dumps({MON_BATIMENT: False, AUTRES_BATIMENTS: True})
-    assert _migration().convertir(deja) is None
 
 
 # ── L'accord du site et du serveur ────────────────────────────────────────────

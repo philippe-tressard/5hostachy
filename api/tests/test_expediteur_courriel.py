@@ -14,9 +14,27 @@ qu'on ne la lit pas.
 un jeton en entrée, un genre d'expéditeur en sortie), et c'est ce qui permet de
 l'éprouver modèle par modèle. Le tuyau, lui, est éprouvé par le fait qu'il n'y a
 qu'un seul appel — `connexion_smtp(..., expediteur=…)`.
+
+## L'intention SERVIE prime sur celle du code (#850, 08/09/2026)
+
+Une même notion se lisait à **deux** endroits : le **bandeau** vu par le lecteur
+dans la BASE (`template.intention`), l'**adresse d'expédition** dans le CODE
+(`INTENTIONS_PAR_MODELE`). 🔴 Et rien ne les resynchronise : `_poser_les_absents`
+ne touche jamais une ligne existante, et l'écran Admin → Emails permet de
+changer l'intention — ce qui ne changeait que le bandeau. Un message pouvait donc
+partir de `contact@` en affichant « rien n'est attendu de vous », ou de
+`noreply@` en affichant « Action requise ».
+
+**L'intention servie**, celle de la ligne, gagne : c'est celle que le lecteur
+voit, et celle qu'un administrateur a choisie. Le code reste le repli — jamais
+l'inverse, sinon l'écran d'administration mentirait sur ce qu'il permet. Ces
+tests vivaient dans `test_intention_source_unique.py`, réuni ici le 30/09/2026 :
+les deux fichiers éprouvaient la même table de décision.
 """
 
 from __future__ import annotations
+
+import inspect
 
 from app.seed.emails import (
     EXPEDITEUR_AFFAIRE,
@@ -31,40 +49,60 @@ from app.utils.smtp import adresse_expedition, adresses_a_tester
 _CFG = {"smtp_from": "noreply@5hostachy.fr", "smtp_from_reponse": "contact@5hostachy.fr"}
 
 
-def test_un_envoi_qui_attend_une_reponse_part_de_contact():
-    """Le cas qui a motivé la consigne : le ticket envoyé au syndic."""
-    assert expediteur_du_modele("ticket_syndic") == EXPEDITEUR_REPONSE
-    assert expediteur_du_modele("relance_syndic") == EXPEDITEUR_REPONSE
-    assert adresse_expedition(_CFG, EXPEDITEUR_REPONSE) == "contact@5hostachy.fr"
+#  La table de décision de `expediteur_du_modele` :
+#  (code du modèle, jeton de réponse, intention servie, expéditeur attendu).
+_JETON = "a" * 32
+CAS_EXPEDITEUR = [
+    #  Un envoi qui attend une réponse part de `contact@` — le cas qui a motivé
+    #  la consigne : le ticket envoyé au syndic (#756).
+    ("ticket_syndic", None, None, EXPEDITEUR_REPONSE),
+    ("relance_syndic", None, None, EXPEDITEUR_REPONSE),
+    #  Un envoi qui informe seulement part de `noreply@` : « réserver noreply@ »
+    #  — donc il sert, mais seulement là (#756).
+    ("compte_active", None, None, EXPEDITEUR_MUET),
+    ("document_publie", None, None, EXPEDITEUR_MUET),
+    #  🔴 Un message ne dit pas deux choses contraires : un envoi d'affaire porte
+    #  un `Reply-To` « répondez à ce message », que `noreply@` contredirait dans
+    #  le même en-tête, quelle que soit l'intention. Il part de l'adresse des
+    #  AFFAIRES depuis #1314.
+    ("ticket_nouveau_message", None, None, EXPEDITEUR_MUET),
+    ("ticket_nouveau_message", _JETON, None, EXPEDITEUR_AFFAIRE),
+    #  Un modèle sans intention déclarée laisse la porte ouverte : un modèle neuf
+    #  ne devient pas muet parce qu'on a oublié de l'inscrire dans la table (#756).
+    ("modele_qui_nexiste_pas", None, None, EXPEDITEUR_REPONSE),
+    #  🔴 Le défaut de #850 : `compte_active` passé à « Action requise » depuis
+    #  l'écran — l'adresse suit, sinon le bandeau dit « agissez » et l'adresse
+    #  « ne répondez pas ».
+    ("compte_active", None, "action_requise", EXPEDITEUR_REPONSE),
+    #  L'inverse aussi (#850) : sans lui, une implémentation qui ne saurait
+    #  qu'AJOUTER la possibilité de répondre passerait le cas précédent.
+    ("ticket_syndic", None, "information", EXPEDITEUR_MUET),
+    #  Sans intention servie, le CODE reprend la main (#850). ⚠️ La chaîne vide
+    #  est un repli, PAS une intention « aucun bandeau » : une ligne qui ne
+    #  déclare rien hérite du choix du code, elle ne devient pas muette.
+    ("compte_active", None, "", EXPEDITEUR_MUET),
+    ("compte_active", None, "   ", EXPEDITEUR_MUET),
+    ("ticket_syndic", None, "", EXPEDITEUR_REPONSE),
+    ("ticket_syndic", None, "   ", EXPEDITEUR_REPONSE),
+    #  Le JETON de réponse prime sur TOUT (#703, #754) : la règle passe AVANT
+    #  l'intention servie, et ne se perd pas en l'ajoutant (#850).
+    ("compte_active", "abc123", "information", EXPEDITEUR_AFFAIRE),
+]
 
 
-def test_un_envoi_qui_informe_seulement_part_de_noreply():
-    """« Réserver noreply@ » — donc il sert, mais seulement là."""
-    assert expediteur_du_modele("compte_active") == EXPEDITEUR_MUET
-    assert expediteur_du_modele("document_publie") == EXPEDITEUR_MUET
-    assert adresse_expedition(_CFG, EXPEDITEUR_MUET) == "noreply@5hostachy.fr"
-
-
-def test_une_adresse_de_reponse_de_ticket_rend_l_envoi_parlant():
-    """🔴 Un message ne peut pas dire deux choses contraires.
-
-    Un envoi d'affaire porte un `Reply-To` qui dit « répondez à ce message »,
-    et le site sait rattacher cette réponse au dossier. L'expédier depuis
-    `noreply@` se contredirait dans le même en-tête — quelle que soit
-    l'intention déclarée. Depuis #1314, il part de l'adresse des AFFAIRES.
-    """
-    assert expediteur_du_modele("ticket_nouveau_message") == EXPEDITEUR_MUET
-    assert (
-        expediteur_du_modele("ticket_nouveau_message", jeton_reponse="a" * 32) == EXPEDITEUR_AFFAIRE
+def test_la_table_de_decision_de_l_expediteur():
+    ecarts = []
+    for code, jeton, servie, attendu in CAS_EXPEDITEUR:
+        obtenu = expediteur_du_modele(code, jeton_reponse=jeton, intention_servie=servie)
+        if obtenu != attendu:
+            ecarts.append(
+                f"  {code!r} (jeton={jeton!r}, intention servie={servie!r}) : "
+                f"{obtenu!r} au lieu de {attendu!r}"
+            )
+    assert not ecarts, (
+        "L'expéditeur contredirait le message (bandeau, Reply-To ou intention) :\n"
+        + "\n".join(ecarts)
     )
-
-
-def test_un_modele_sans_intention_declaree_laisse_la_porte_ouverte():
-    """Entre laisser une réponse possible et l'interdire par omission, on choisit
-    la première : un modèle neuf ne doit pas devenir muet parce qu'on a oublié de
-    l'inscrire dans la table.
-    """
-    assert expediteur_du_modele("modele_qui_nexiste_pas") == EXPEDITEUR_REPONSE
 
 
 def test_sans_seconde_adresse_configuree_rien_ne_change():
@@ -74,6 +112,10 @@ def test_sans_seconde_adresse_configuree_rien_ne_change():
     exactement comme avant — jamais depuis une adresse vide, que le serveur
     refuserait pour un motif sans rapport avec le contenu.
     """
+    #  Avec les deux adresses, chaque genre prend la sienne.
+    assert adresse_expedition(_CFG, EXPEDITEUR_REPONSE) == "contact@5hostachy.fr"
+    assert adresse_expedition(_CFG, EXPEDITEUR_MUET) == "noreply@5hostachy.fr"
+    #  Sans la seconde, rien ne change.
     cfg = {"smtp_from": "noreply@5hostachy.fr"}
     assert adresse_expedition(cfg, EXPEDITEUR_REPONSE) == "noreply@5hostachy.fr"
     assert adresse_expedition({**cfg, "smtp_from_reponse": "   "}, EXPEDITEUR_REPONSE) == (
@@ -111,3 +153,30 @@ def test_une_seule_adresse_configuree_ne_fabrique_pas_un_second_envoi():
     """
     assert adresses_a_tester({"smtp_from": "a@x.fr"}) == ["a@x.fr"]
     assert adresses_a_tester({"smtp_from": "a@x.fr", "smtp_from_reponse": "a@x.fr"}) == ["a@x.fr"]
+
+
+def test_l_ENVOI_transmet_bien_l_intention_de_la_ligne():
+    """Le branchement, sans lequel la table de décision ne prouverait rien (#850).
+
+    ⚠️ Contrôle **statique** : reconstruire un envoi complet demanderait SMTP,
+    une session et un modèle en base. Ce qui doit être vrai — que le point
+    d'envoi passe `template.intention` — se lit dans le code.
+    """
+    from app.utils import email
+
+    source = inspect.getsource(email)
+    assert "intention_servie=template.intention" in source, (
+        "le point d'envoi ne transmet plus l'intention de la ligne : l'adresse "
+        "redeviendrait celle du code, et la seconde source reviendrait."
+    )
+
+
+def test_cas_zero_les_deux_expediteurs_sont_bien_DEUX():
+    """Sans cet écart, la table de décision passerait sans rien mesurer.
+
+    `standards/04` §40 : la portée d'un contrôle fait partie du contrôle.
+    """
+    assert EXPEDITEUR_REPONSE != EXPEDITEUR_MUET
+    #  Le cas « l'intention SERVIE prime » n'éprouve rien si le code déclarait
+    #  déjà `action_requise` pour ce modèle (#850).
+    assert INTENTIONS_PAR_MODELE["compte_active"] == "information"

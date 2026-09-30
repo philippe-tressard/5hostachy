@@ -1,23 +1,25 @@
-"""Les anciennes adresses d'actualité mènent à l'affaire (#1091, lot 4 ; #1094).
+"""Les anciennes adresses d'actualité et d'événement mènent à l'affaire (#1091, #1092, #1094).
 
 Chaque courriel et chaque message WhatsApp d'une actualité portait
-`/actualites#pub-N`, que l'écran résout par `GET /publications/{N}`. Depuis le
-23/09/2026, une actualité est une affaire : la 0210 les a recopiées, et
-`ticket.promu_depuis_publication_id` garde l'ancien numéro.
+`/actualites#pub-N`, que l'écran résout par `GET /publications/{N}` ; ceux d'un
+événement, `/calendrier#ev-N`, résolu par `GET /calendrier/{N}`. Depuis le
+23/09/2026, actualités et événements sont des affaires : l'ancien numéro ne vit
+plus que sur l'affaire, dans `ticket.promu_depuis_publication_id` ou
+`ticket.promu_depuis_evenement_id` — les tables d'origine ont été supprimées.
 
-Ce que ces tests verrouillent :
+Les deux routeurs tiennent le même contrat ; chaque test l'éprouve sur les deux
+(`REDIRECTIONS`) et liste TOUS les écarts, pas seulement le premier :
 
 1. **410 avec l'affaire** — « ça a existé, voici où c'est parti » ;
-2. **l'affaire est cherchée D'ABORD** : la ligne de `publication` subsiste
-   (la 0210 ne supprime rien), et sa présence ne doit pas faire croire qu'elle
-   se lit encore ici ;
-3. **404 pour un numéro jamais attribué** — sinon on annoncerait une affaire
+2. **404 pour un numéro jamais attribué** — sinon on annoncerait une affaire
    qui n'existe pas ;
-4. **plus rien d'autre** sous `/publications` : le paquet ne doit pas regrossir
-   en silence d'une seconde écriture de l'actualité.
+3. **plus rien d'autre** sous `/publications` ni sous `/calendrier` : aucun des
+   deux paquets ne doit regrossir en silence d'une seconde écriture.
 """
 
 from __future__ import annotations
+
+import importlib
 
 import pytest
 from fastapi.testclient import TestClient
@@ -27,6 +29,13 @@ from sqlmodel.pool import StaticPool
 from app.database import get_session
 from app.main import app
 from app.models.core import RoleUtilisateur, Ticket, Utilisateur
+
+#: (préfixe d'URL, champ de l'affaire qui garde l'ancien numéro, module du routeur,
+#:  seule route qui doit y rester)
+REDIRECTIONS = (
+    ("/publications", "promu_depuis_publication_id", "app.routers.publications", "{pub_id}"),
+    ("/calendrier", "promu_depuis_evenement_id", "app.routers.calendrier", "{ev_id}"),
+)
 
 
 @pytest.fixture(name="session")
@@ -59,37 +68,50 @@ def client_fixture(session: Session):
     app.dependency_overrides.clear()
 
 
-def test_une_publication_migree_rend_410_avec_son_affaire(session: Session, client):
+def test_un_objet_migre_rend_410_avec_son_affaire(session: Session, client):
     http, lecteur = client
-    #  L'ancien numéro ne vit plus que sur l'affaire : la table `publication`
-    #  est supprimée (#1177). C'est précisément ce que la redirection doit tenir.
-    ancien_numero = 4242
-    affaire = Ticket(
-        numero="TK-A00001",
-        titre="Coupure",
-        description="x",
-        categorie="actualite",
-        statut="publie",
-        auteur_id=lecteur.id,
-        promu_depuis_publication_id=ancien_numero,
-    )
-    session.add(affaire)
-    session.commit()
+    ecarts = []
+    for rang, (prefixe, champ, _module, _route) in enumerate(REDIRECTIONS, start=1):
+        ancien_numero = 4240 + rang
+        affaire = Ticket(
+            numero=f"TK-R{rang:05d}",
+            titre="Ancien objet",
+            description="x",
+            categorie="actualite",
+            statut="publie",
+            auteur_id=lecteur.id,
+            **{champ: ancien_numero},
+        )
+        session.add(affaire)
+        session.commit()
 
-    r = http.get(f"/publications/{ancien_numero}")
-    assert r.status_code == 410, r.text
-    assert r.json()["detail"]["promu_en_affaire"] == affaire.id
+        r = http.get(f"{prefixe}/{ancien_numero}")
+        if r.status_code != 410:
+            ecarts.append(f"{prefixe}/{ancien_numero} : {r.status_code} au lieu de 410 — {r.text}")
+        elif r.json()["detail"].get("promu_en_affaire") != affaire.id:
+            ecarts.append(f"{prefixe}/{ancien_numero} : n'annonce pas l'affaire {affaire.id}")
+    assert not ecarts, "\n".join(ecarts)
 
 
 def test_un_numero_jamais_attribue_rend_404(client):
     http, _ = client
-    assert http.get("/publications/999999").status_code == 404
+    ecarts = [
+        f"{prefixe}/999999 : {code}"
+        for prefixe, *_ in REDIRECTIONS
+        if (code := http.get(f"{prefixe}/999999").status_code) != 404
+    ]
+    assert not ecarts, "un numéro jamais attribué doit rendre 404 :\n" + "\n".join(ecarts)
 
 
 def test_il_ne_reste_que_la_redirection():
+    """Aucun des deux routeurs ne doit regrossir en silence d'une seconde écriture."""
     #  Le routeur du paquet, et non `app.routes` : cette version de FastAPI
     #  n'aplatit plus les routes incluses (`test_routeurs_montes.py`).
-    from app.routers.publications import router
-
-    chemins = sorted((sorted(r.methods), r.path) for r in router.routes)
-    assert chemins == [(["GET"], "/publications/{pub_id}")], chemins
+    ecarts = []
+    for prefixe, _champ, module, route in REDIRECTIONS:
+        routeur = importlib.import_module(module).router
+        routes = sorted((sorted(r.methods), r.path) for r in routeur.routes)
+        attendues = [(["GET"], f"{prefixe}/{route}")]
+        if routes != attendues:
+            ecarts.append(f"{module} : {routes} au lieu de {attendues}")
+    assert not ecarts, "\n".join(ecarts)

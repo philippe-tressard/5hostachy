@@ -33,7 +33,11 @@ un formulaire qui s'enregistre normalement. Seule l'information disparaît.
 
 `epingle` ordonne la liste du conseil ; `confidentiel` décide qui a le droit de
 lire (#710). Ni l'une ni l'autre n'est une description de la situation de
-l'auteur — elles restent au conseil, et ce fichier le vérifie aussi.
+l'auteur — elles restent au conseil : ce fichier en verrouille la TABLE
+(`OPTIONS_RESERVEES_AU_CS`), et le COMPORTEMENT — un résident ne peut ni
+épingler ni restreindre, le conseil pose tout — est vérifié par
+`test_options_ticket.py` (`test_un_non_CS_ne_peut_ni_EPINGLER_ni_RESTREINDRE`,
+`test_TOUTES_les_options_s_appliquent`).
 """
 
 from __future__ import annotations
@@ -104,27 +108,6 @@ def test_un_resident_peut_marquer_son_ticket_urgent(ticket):
         "le permettre aussi, sinon le retrait a supprimé une capacité."
     )
     assert ticket_urgent(ticket), ticket.priorite
-
-
-def test_un_resident_ne_peut_ni_epingler_ni_restreindre(ticket):
-    """Le cas zéro : sans lui, ce fichier passerait au vert en ouvrant TOUT.
-
-    Ouvrir `urgente` ne doit pas ouvrir les deux autres. `epingle` ordonne la
-    liste du conseil, `confidentiel` décide de l'audience — deux décisions qui ne
-    sont pas celles de l'auteur.
-    """
-    changees = appliquer_options(ticket, _Corps(epingle=True, confidentiel=True), est_cs=False)
-
-    assert changees == [], f"un résident a pu poser : {changees}"
-    assert not ticket.epingle
-    assert not ticket.confidentiel
-
-
-def test_le_conseil_garde_les_trois(ticket):
-    changees = appliquer_options(
-        ticket, _Corps(epingle=True, urgente=True, confidentiel=True), est_cs=True
-    )
-    assert set(changees) == {"epingle", "urgente", "confidentiel"}, changees
 
 
 def test_la_table_des_reservees_dit_ce_que_les_tests_verifient():

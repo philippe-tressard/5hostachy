@@ -141,27 +141,7 @@ def test_une_releve_REUSSIE_et_vide_le_dit_TOUJOURS(journal, imap_actif, monkeyp
 
     monkeypatch.setattr(courriel_boite.imaplib, "IMAP4_SSL", lambda *_a, **_k: _BoiteVide())
 
-    _r = courriel_boite.relever()
-    import logging as _lg
-
-    _l = courriel_boite.logger
-    print(
-        "DEBUG",
-        _r,
-        journal,
-        "nom=",
-        _l.name,
-        "disabled=",
-        _l.disabled,
-        "lvl=",
-        _l.level,
-        "handlers=",
-        _l.handlers,
-        "global_disable=",
-        _lg.root.manager.disable,
-        "meme_objet=",
-        _l is _lg.getLogger("app.utils.courriel_boite"),
-    )
+    courriel_boite.relever()
 
     messages = journal
     assert any(_RASSURANT in m for m in messages), (

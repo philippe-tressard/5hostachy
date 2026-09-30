@@ -20,46 +20,12 @@ import uuid
 
 import pytest
 from fastapi import BackgroundTasks, HTTPException
-from sqlmodel import Session, select
 
-from app.database import engine
-from app.models.core import RoleUtilisateur, StatutUtilisateur, Ticket, Utilisateur
+from app.models.core import RoleUtilisateur, Ticket
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.models.tickets import StatutTicket
-from app.routers.tickets import crud, mise_a_jour
-from app.schemas import TicketCreate, TicketUpdate
 from app.utils.kanban_tickets import colonne_du_ticket
-from app.utils.perimetres import arbre
-
-
-@pytest.fixture()
-def session(monkeypatch, batiments):
-    monkeypatch.setattr(crud, "_notifier_cs_creation", lambda *a, **k: None, raising=False)
-    arbre()
-    with Session(engine) as s:
-        yield s
-        #  Les contrats partent AVANT le patrimoine : la fixture `batiments`
-        #  supprime la copropriété, et SQLAlchemy dénouerait alors leur
-        #  `copropriete_id` (NOT NULL) — le test suivant tombait au montage.
-        for c in s.exec(select(ContratEntretien)).all():
-            s.delete(c)
-        s.commit()
-
-
-def _compte(session, *, role=None):
-    u = Utilisateur(
-        email=f"int-{uuid.uuid4().hex[:8]}@exemple.test",
-        mot_de_passe_hash="x",
-        prenom="P",
-        nom="N",
-        actif=True,
-        statut=StatutUtilisateur.copropriétaire_résident,
-        roles_json=role.value if role else "résident",
-    )
-    session.add(u)
-    session.commit()
-    session.refresh(u)
-    return u
+from tests.aides_affaire import _compte, _corriger, _creer, session  # noqa: F401
 
 
 def _prestataire(session) -> Prestataire:
@@ -68,21 +34,6 @@ def _prestataire(session) -> Prestataire:
     session.commit()
     session.refresh(p)
     return p
-
-
-def _creer(session, user, **champs):
-    corps = TicketCreate(titre="Visite ascenseur", description="Visite trimestrielle.", **champs)
-    return crud.create_ticket(corps, BackgroundTasks(), session=session, user=user)
-
-
-def _corriger(session, user, ticket_id, **champs):
-    return mise_a_jour.update_ticket(
-        ticket_id,
-        TicketUpdate(**champs),
-        BackgroundTasks(),
-        session=session,
-        user=user,
-    )
 
 
 # ── L'intervenant et la récurrence ──────────────────────────────────────────
@@ -103,27 +54,10 @@ def test_le_conseil_designe_l_intervenant_et_la_recurrence(session):
     assert (lu.frequence_type, lu.frequence_valeur) == ("mois", 3)
 
 
-def test_l_intervenant_ne_vaut_que_pour_le_bati(session):
-    """Une question n'a pas d'intervenant ; recatégorisée, l'affaire perd le sien."""
-    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
-    p = _prestataire(session)
-    assert _creer(session, cs, categorie="question", prestataire_id=p.id).prestataire_id is None
-    t = _creer(session, cs, categorie="panne", prestataire_id=p.id)
-    assert _corriger(session, cs, t.id, categorie="question").prestataire_id is None
-
-
 def test_mensuelle_n_attend_pas_de_nombre(session):
     cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
     lu = _creer(session, cs, categorie="entretien", frequence_type="mois")
     assert (lu.frequence_type, lu.frequence_valeur) == ("mois", 1)
-
-
-def test_un_resident_ne_designe_pas_l_intervenant(session):
-    """Ignoré, pas refusé : sa correction de texte doit passer."""
-    resident = _compte(session)
-    p = _prestataire(session)
-    lu = _creer(session, resident, categorie="panne", prestataire_id=p.id)
-    assert lu.prestataire_id is None
 
 
 def test_un_prestataire_inconnu_est_refuse(session):
@@ -151,14 +85,6 @@ def test_une_recurrence_inventee_est_refusee(session):
     with pytest.raises(HTTPException) as refus:
         _creer(session, cs, categorie="entretien", frequence_type="lunes", frequence_valeur=2)
     assert refus.value.status_code == 422
-
-
-def test_le_conseil_change_et_efface_l_intervenant(session):
-    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
-    p1, p2 = _prestataire(session), _prestataire(session)
-    t = _creer(session, cs, categorie="entretien", prestataire_id=p1.id)
-    assert _corriger(session, cs, t.id, prestataire_id=p2.id).prestataire_id == p2.id
-    assert _corriger(session, cs, t.id, prestataire_id=None).prestataire_id is None
 
 
 # ── Les catégories du conseil ───────────────────────────────────────────────
@@ -343,16 +269,6 @@ def test_changer_d_intervenant_efface_le_contrat(session):
     assert lu.contrat_id is None, "un contrat d'un autre prestataire cadrait encore l'intervention"
 
 
-def test_hors_du_bati_le_contrat_est_efface(session):
-    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
-    p = _prestataire(session)
-    c = _contrat(session, p)
-    t = _creer(session, cs, categorie="panne", prestataire_id=p.id, contrat_id=c.id)
-    assert t.contrat_id == c.id
-    lu = _corriger(session, cs, t.id, categorie="question")
-    assert (lu.prestataire_id, lu.contrat_id) == (None, None)
-
-
 def test_le_resident_lit_le_rythme_pas_le_contrat(session):
     """Le libellé et le numéro restent au conseil, comme la liste des contrats."""
     from app.routers.tickets.commun import contrat_de_l_affaire
@@ -385,3 +301,121 @@ def test_poser_le_contrat_et_resoudre_d_un_geste_avance_ce_contrat(session):
     _corriger(session, cs, t.id, contrat_id=c.id, statut=StatutTicket.résolu)
     session.refresh(c)
     assert c.prochaine_visite == date(2026, 12, 23)
+
+
+# ── Les champs du conseil : intervenant, contrat, équipement ────────────────
+#
+#  Trois champs, trois mêmes règles : ils ne valent que pour le BÂTI, un
+#  résident qui les envoie est IGNORÉ (pas refusé : son signalement doit
+#  passer), et le conseil les change et les efface. Ces règles s'écrivaient
+#  champ par champ, ici et dans `test_equipement_affaire.py` (#1097) ; une
+#  table les pose une fois, et l'échec nomme chaque champ en défaut.
+#
+#  Chaque fabrique rend les valeurs à envoyer, et le n-ième appel une valeur
+#  DIFFÉRENTE du précédent — sans quoi « le conseil change » ne changerait rien.
+
+
+def _intervenant(session, n):
+    return {"prestataire_id": _prestataire(session).id}
+
+
+def _contrat_pose(session, n):
+    #  Un contrat ne cadre que l'intervention de SON prestataire (#1445).
+    p = _prestataire(session)
+    return {"prestataire_id": p.id, "contrat_id": _contrat(session, p).id}
+
+
+def _equipement(session, n):
+    return {"equipement": ("toiture", "vmc")[n]}
+
+
+CHAMPS_DU_CONSEIL = {
+    "intervenant": _intervenant,
+    "contrat": _contrat_pose,
+    "équipement": _equipement,
+}
+
+
+def _verifier(cas):
+    """Joue `cas(champ, fabrique)` pour chaque champ ; rend la liste des écarts.
+
+    Un refus du serveur est un écart comme un autre : il ne doit pas masquer
+    les champs suivants.
+    """
+    ecarts = []
+    for champ, fabrique in CHAMPS_DU_CONSEIL.items():
+        try:
+            ecarts += [f"  {champ} : {e}" for e in cas(fabrique)]
+        except HTTPException as refus:
+            ecarts.append(f"  {champ} : refusé ({refus.status_code} {refus.detail})")
+    return ecarts
+
+
+def _differences(lu, attendu: dict) -> list[str]:
+    return [
+        f"{cle} = {getattr(lu, cle)!r} au lieu de {valeur!r}"
+        for cle, valeur in attendu.items()
+        if getattr(lu, cle) != valeur
+    ]
+
+
+def _effaces(valeurs: dict) -> dict:
+    return dict.fromkeys(valeurs)
+
+
+def test_hors_du_bati_les_champs_du_conseil_sont_effaces(session):
+    """Une question n'a ni intervenant, ni contrat, ni équipement ; recatégorisée
+    hors du bâti, l'affaire perd les siens."""
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+
+    def cas(fabrique):
+        valeurs = fabrique(session, 0)
+        ecarts = [
+            f"créée en question, {d}"
+            for d in _differences(
+                _creer(session, cs, categorie="question", **valeurs), _effaces(valeurs)
+            )
+        ]
+        t = _creer(session, cs, categorie="panne", **valeurs)
+        ecarts += [f"créée en panne, {d}" for d in _differences(t, valeurs)]
+        lu = _corriger(session, cs, t.id, categorie="question")
+        return ecarts + [
+            f"recatégorisée en question, {d}" for d in _differences(lu, _effaces(valeurs))
+        ]
+
+    ecarts = _verifier(cas)
+    assert not ecarts, "Hors du bâti, un champ du conseil survit :\n" + "\n".join(ecarts)
+
+
+def test_un_resident_ne_designe_aucun_champ_du_conseil(session):
+    """Ignoré, pas refusé : son signalement doit passer."""
+    resident = _compte(session)
+
+    def cas(fabrique):
+        valeurs = fabrique(session, 0)
+        lu = _creer(session, resident, categorie="panne", **valeurs)
+        return _differences(lu, _effaces(valeurs))
+
+    ecarts = _verifier(cas)
+    assert not ecarts, "Un résident a désigné un champ du conseil :\n" + "\n".join(ecarts)
+
+
+@pytest.mark.parametrize("categorie", ["panne", "entretien"])
+def test_le_conseil_change_et_efface_chaque_champ(session, categorie):
+    cs = _compte(session, role=RoleUtilisateur.conseil_syndical)
+
+    def cas(fabrique):
+        premier, second = fabrique(session, 0), fabrique(session, 1)
+        t = _creer(session, cs, categorie=categorie, **premier)
+        ecarts = [
+            f"changé, {d}" for d in _differences(_corriger(session, cs, t.id, **second), second)
+        ]
+        efface = _effaces(second)
+        return ecarts + [
+            f"effacé, {d}" for d in _differences(_corriger(session, cs, t.id, **efface), efface)
+        ]
+
+    ecarts = _verifier(cas)
+    assert not ecarts, (
+        f"Le conseil ne change ou n'efface pas un champ ({categorie}) :\n" + "\n".join(ecarts)
+    )

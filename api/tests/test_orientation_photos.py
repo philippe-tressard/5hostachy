@@ -115,28 +115,21 @@ def _televerser(donnees: bytes, racine: pathlib.Path, patch) -> Image.Image:
     return Image.open(ecrit)
 
 
-def test_une_photo_couchee_est_REDRESSEE(tmp_path, monkeypatch):
-    """🔴 Le cas de la photo prise au téléphone.
-
-    40×20 avec une orientation 6 doit devenir 20×40 : la rotation est appliquée,
-    et les dimensions le prouvent sans avoir à inspecter un pixel.
-    """
-    redressee = _televerser(_image_couchee(), tmp_path, monkeypatch)
-    assert redressee.size == (20, 40), (
-        f"la photo n'a pas été redressée : {redressee.size} au lieu de (20, 40). "
-        "`ImageOps.exif_transpose` n'est plus appliqué dans `routers/uploads.py`."
-    )
-
-
 def test_la_ROTATION_est_cuite_dans_le_fichier_ecrit(tmp_path, monkeypatch):
     """🔴 Ce que le navigateur recevra, et lui seul.
 
     Corriger l'orientation en mémoire ne sert à rien si le fichier écrit garde
     la balise : chaque lecteur déciderait alors pour lui-même. Le fichier servi
     doit être droit **sans** balise à interpréter.
+
+    Le cas de la photo prise au téléphone : 40×20 avec une orientation 6 doit
+    devenir 20×40 — les dimensions prouvent la rotation sans inspecter un pixel.
     """
     relue = _televerser(_image_couchee(), tmp_path, monkeypatch)
-    assert relue.size == (20, 40)
+    assert relue.size == (20, 40), (
+        f"la photo n'a pas été redressée : {relue.size} au lieu de (20, 40). "
+        "`ImageOps.exif_transpose` n'est plus appliqué au téléversement."
+    )
     assert relue.getexif().get(274) in (None, 1), (
         "le fichier écrit porte encore une orientation EXIF : un lecteur qui "
         "l'applique montrera la photo tournée une seconde fois."

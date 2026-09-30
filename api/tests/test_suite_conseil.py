@@ -15,7 +15,7 @@ from fastapi import BackgroundTasks
 from app.models.core import RoleUtilisateur, Ticket, TicketEvolution
 from app.routers.tickets import evolutions
 from app.schemas_tickets import TicketEvolutionCreate
-from tests.test_intervenant_affaire import _compte, _creer, session  # noqa: F401
+from tests.aides_affaire import _compte, _creer, session  # noqa: F401
 
 
 def _suite(session, user, ticket_id, **champs):

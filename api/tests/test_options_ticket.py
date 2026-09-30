@@ -67,6 +67,12 @@ def test_TOUTES_les_options_s_appliquent():
     assert t.priorite == "haute", "🚨 pilote la priorité, il n'y a pas de colonne `urgente`"
     assert t.suivi_kanban is True
     assert set(changees) == set(OPTIONS_TICKET)
+    #  Le faux `_Ticket` ne prouve rien du VRAI modèle : chaque option écrite
+    #  telle quelle doit en être une colonne (`urgente` passe par `priorite`).
+    from app.models.core import Ticket
+
+    for colonne in [o for o in OPTIONS_TICKET if o != "urgente"] + ["priorite"]:
+        assert colonne in Ticket.model_fields, f"`Ticket.{colonne}` n'existe plus"
 
 
 def test_None_ne_touche_a_RIEN():
@@ -96,7 +102,11 @@ def test_un_non_CS_ne_peut_ni_EPINGLER_ni_RESTREINDRE():
     propre situation appartient à l'auteur ; l'ordre de la liste et l'audience,
     non.
 
-    Le détail et le cas nominal vivent dans `test_urgence_par_le_resident.py`.
+    C'est aussi le cas zéro de ce retour : ouvrir `urgente` ne doit pas ouvrir
+    les deux autres — sans lui, tout ouvrir passerait au vert.
+
+    Le récit de la régression et le cas nominal, sur un vrai `Ticket`, vivent
+    dans `test_urgence_par_le_resident.py`.
     """
     t = _Ticket()
     changees = appliquer_options(t, _Corps(epingle=True, confidentiel=True), est_cs=False)

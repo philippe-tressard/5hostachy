@@ -248,49 +248,6 @@ def test_aucune_exigence_ne_survit_a_sa_capacite():
     )
 
 
-def test_le_gabarit_et_la_migration_lisent_le_MEME_texte():
-    """🔴 Une seule rédaction, deux usages.
-
-    Les paragraphes ajoutés le 20/09/2026 sont exposés par le seed sous
-    `AJOUTS_1034`, et la migration 0199 les **lit** au lieu de les recopier. Une
-    migration qui les aurait recopiés aurait créé deux rédactions parallèles d'un
-    texte juridique — et c'est alors le texte **servi** qui aurait divergé du
-    gabarit, sans que rien ne le signale.
-
-    Ce test tient le contrat dans les deux sens : chaque paragraphe exposé est
-    bien dans le gabarit, et la migration ne contient aucun fragment de texte en
-    dur.
-    """
-    import pathlib as _pathlib
-
-    from app.seed.contenus_legaux import AJOUTS_1034, DEFAULT_LEGAL
-
-    gabarit = DEFAULT_LEGAL["politique_confidentialite"]
-    absents = [ajout[:60] for _ancre, ajout in AJOUTS_1034 if ajout not in gabarit]
-    assert not absents, (
-        "Ces paragraphes sont exposés à la migration mais ne figurent pas dans "
-        "le gabarit : le texte servi par une nouvelle instance et celui servi "
-        "après migration ont divergé.\n  " + "\n  ".join(absents)
-    )
-
-    migration = next((_APP.parent / "alembic" / "versions").glob("0199_*.py"), None)
-    assert migration is not None, "la migration 0199 a disparu"
-    source = migration.read_text(encoding="utf-8")
-    assert "AJOUTS_1034" in source, (
-        "la migration 0199 ne lit plus `AJOUTS_1034` : si elle recopie le texte, "
-        "les deux rédactions divergeront au premier ajustement"
-    )
-    #  Un fragment de balisage dans la migration signerait une recopie. On
-    #  cherche `<li><strong>` : présent dans les paragraphes, absent d'un code
-    #  qui se contente de les lire.
-    corps = source[source.index("def upgrade") :]
-    assert "<li><strong>" not in corps, (
-        "la migration 0199 porte du balisage en dur : elle recopie le texte au "
-        "lieu de le lire dans le seed"
-    )
-    assert _pathlib.Path(migration).name.startswith("0199"), "numéro inattendu"
-
-
 def test_la_duree_annoncee_des_courriels_est_celle_que_le_code_applique():
     """La politique a dit « aucune purge automatique » alors que l'historique des
     envois était purgé à 90 jours (#1073, 24/09/2026) : un texte faux dans

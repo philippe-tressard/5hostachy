@@ -34,7 +34,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
 
 from app.utils.carnet_entretien import type_equipement_resolu
 
@@ -101,10 +100,13 @@ def test_le_FRONT_porte_la_meme_regle():
     )
 
 
-@pytest.mark.parametrize("categorie", ["vmc", "ascenseur", "toiture", "plomberie"])
-def test_les_categories_du_produit_survivent(categorie):
+def test_les_categories_du_produit_survivent():
     """Cas zéro de la liste : si l'énumération se vidait, les tests ci-dessus
     passeraient encore en ne mesurant rien."""
     from app.models.prestataires import TypeEquipement
 
-    assert categorie in {t.value for t in TypeEquipement}
+    valeurs = {t.value for t in TypeEquipement}
+    attendues = {"vmc", "ascenseur", "toiture", "plomberie"}
+    assert attendues <= valeurs, (
+        f"catégories disparues de `TypeEquipement` : {sorted(attendues - valeurs)}"
+    )

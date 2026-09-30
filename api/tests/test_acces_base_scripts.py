@@ -33,6 +33,8 @@ liste grossit à chaque cas et finit par tout couvrir (même règle que
 import re
 from pathlib import Path
 
+from tests.conftest import scripts_shell_versionnes
+
 RACINE = Path(__file__).resolve().parents[2]
 
 #: Ouvertures de `app.db` autorisées, avec la raison qui les rend sûres.
@@ -57,13 +59,6 @@ EXCEPTIONS_JUSTIFIEES = {
     "production — aucun process ne la tient ouverte",
 }
 
-#: Motifs interdits sans exception possible : ils désignent toujours la base d'un
-#: nœud en fonctionnement.
-TOUJOURS_INTERDIT = (
-    re.compile(r"docker\s+exec[^\n]*sqlite3"),
-    re.compile(r"docker\s+exec[^\n]*PRAGMA"),
-)
-
 #: Une invocation de sqlite3 sur un fichier .db (pas une simple mention du mot).
 OUVERTURE = re.compile(r"sqlite3\s+\"?(\$?[^\s\"]*\.db)")
 
@@ -87,8 +82,6 @@ def scripts_versionnes() -> list[Path]:
     l'accès passe par le pool SQLAlchemy — c'est un autre régime, couvert
     ailleurs. Ce test-ci vise les process **tiers**.
     """
-    from tests.conftest import scripts_shell_versionnes
-
     fichiers = list(scripts_shell_versionnes())
     #  Les `.py` lancés à la main comptent autant que les `.sh` : deux d'entre eux
     #  ouvraient la base en direct sans que ce test les regarde.
@@ -117,9 +110,12 @@ def test_le_detecteur_voit_quelque_chose():
     vérification, un chemin de base faux le rendrait vert à vide, pour toujours.
     """
     scripts = scripts_versionnes()
-    assert len(scripts) >= 10, (
-        f"seulement {len(scripts)} script(s) trouvé(s) — chemin de scan cassé ?"
-    )
+    for portee in (scripts_versionnes, scripts_shell_versionnes):
+        trouves = portee()
+        assert len(trouves) >= 10, (
+            f"`{portee.__name__}` : seulement {len(trouves)} script(s) trouvé(s) — "
+            "chemin de scan cassé ?"
+        )
     assert any(OUVERTURE.search(s.read_text(encoding="utf-8")) for s in scripts), (
         "aucune ouverture de base détectée nulle part : le motif de détection ne "
         "fonctionne plus, et ce test ne protège donc plus de rien"
@@ -158,80 +154,58 @@ def test_aucune_ouverture_de_base_non_justifiee():
     )
 
 
-def test_aucun_docker_exec_sur_la_base():
-    """`docker exec … sqlite3` et `docker exec … PRAGMA` visent toujours un nœud vivant.
+#: Motifs interdits SANS exception possible — (motif, portée, message). Chacun
+#: désigne la base d'un nœud en fonctionnement, ou le geste qui la cassera. La
+#: portée est celle que `conftest` partage : une portée recopiée diverge — celle
+#: du cron balayait `scripts/**/*.sh` et ne voyait ni la racine ni les hooks.
+INTERDITS_SANS_EXCEPTION = (
+    #  `docker exec … sqlite3` et `docker exec … PRAGMA` visent toujours un nœud
+    #  vivant : c'est exactement la commande qui figurait dans le pré-check
+    #  jusqu'au 17/07/2026, et qui a produit l'incident qu'elle devait prévenir.
+    (
+        re.compile(r"docker\s+exec[^\n]*(?:sqlite3|PRAGMA)"),
+        scripts_versionnes,
+        "accès à la base par `docker exec` — l'API tourne forcément dans ce conteneur",
+    ),
+    #  Un script shell n'importe jamais `app.database` (#1232, 24/09/2026) :
+    #  `maintenance.sh` purgeait cinq tables chaque dimanche à 03:00 par
+    #  `docker exec hostachy_api python -c "from app.database import engine …"`,
+    #  API en marche. Même conteneur, autre PID, autre pool : un process TIERS
+    #  aussi sûrement qu'un `sqlite3` hôte, que ce fichier ne voyait pas parce
+    #  qu'il ne cherchait que `sqlite3`.
+    (
+        re.compile(r"\bapp\.database\b"),
+        scripts_shell_versionnes,
+        "la base ouverte par le code de l'API, depuis un process tiers — à chaud, "
+        "passer par une route in-process (`POST /admin/maintenance/purges`, "
+        "`/admin/db/checkpoint`…)",
+    ),
+    #  Aucune sauvegarde côté hôte : retirée de `setup-rpi5.sh` le 04/08/2026, où
+    #  elle avait survécu à la haute disponibilité parce que personne n'avait
+    #  relu ce fichier depuis mars 2026. ⚠️ Ce contrôle ne visait QUE ce script
+    #  jusqu'au 20/09/2026 (#1029) — supprimé, le test est mort avec lui sur un
+    #  `FileNotFoundError` : une protection attachée à un NOM de fichier ne
+    #  survit pas au fichier. La sauvegarde est in-process depuis la v2.18
+    #  (`api/app/utils/backup.py`), avec `PRAGMA quick_check` préalable.
+    (
+        re.compile(r"scripts/backup\.sh|5?hostachy-backup"),
+        scripts_shell_versionnes,
+        'sauvegarde côté hôte réintroduite — un `sqlite3 ".backup"` lancé depuis '
+        "l'hôte pendant que l'API tourne casse la base",
+    ),
+)
 
-    Aucune exception n'est prévue : c'est exactement la commande qui figurait dans le
-    pré-check jusqu'au 17/07/2026, et qui a produit l'incident qu'elle était censée
-    prévenir.
-    """
+
+def test_aucun_geste_interdit_sans_exception():
+    """Chaque motif de `INTERDITS_SANS_EXCEPTION`, sur sa portée ; l'échec les liste TOUS."""
     fautes = []
-    for script in scripts_versionnes():
-        for numero, ligne in lignes_de_code(script):
-            for motif in TOUJOURS_INTERDIT:
-                if motif.search(ligne):
-                    fautes.append(f"{script.name}:{numero} : {ligne.strip()}")
-    assert not fautes, (
-        "accès à la base par `docker exec` — interdit sans exception, l'API tourne "
-        "forcément dans ce conteneur :\n" + "\n".join(fautes)
-    )
-
-
-#: Du Python lancé DANS le conteneur de l'API qui importe son moteur de base :
-#: `docker exec hostachy_api python -c "from app.database import engine …"`.
-#: C'est un process TIERS aussi sûrement qu'un `sqlite3` hôte — même conteneur,
-#: autre PID, autre pool. Aucune exception : à chaud, la base se touche par une
-#: route de l'API (`POST /admin/maintenance/purges`, `/admin/db/checkpoint`…).
-BASE_PAR_LE_CODE_DE_L_API = re.compile(r"\bapp\.database\b")
-
-
-def test_aucun_script_n_importe_la_base_de_l_api():
-    """Un script shell n'importe jamais `app.database` (#1232, 24/09/2026).
-
-    `maintenance.sh` purgeait cinq tables chaque dimanche à 03:00 par
-    `docker exec hostachy_api python -c "from app.database import engine …"`,
-    API en marche — la forme exacte que la règle d'or interdit, que ce fichier
-    ne voyait pas parce qu'il ne cherchait que `sqlite3`.
-    """
-    fautes = []
-    for script in scripts_versionnes():
-        if script.suffix != ".sh":
-            continue
-        for numero, ligne in lignes_de_code(script):
-            if BASE_PAR_LE_CODE_DE_L_API.search(ligne):
-                fautes.append(f"{script.name}:{numero} : {ligne.strip()}")
-    assert not fautes, (
-        "un script ouvre la base par le code de l'API, depuis un process tiers — "
-        "passer par une route in-process :\n" + "\n".join(fautes)
-    )
-
-
-def test_aucun_script_ne_pose_de_cron_de_sauvegarde_cote_hote():
-    """Aucun script versionné ne doit installer de sauvegarde côté hôte.
-
-    Retiré de `setup-rpi5.sh` le 04/08/2026. Le vérifier ici plutôt que de s'en
-    remettre au commentaire laissé dans le script : un commentaire n'empêche
-    personne de le réintroduire, et c'est précisément parce que personne n'avait
-    relu ce fichier depuis mars 2026 que le piège y a survécu à la mise en haute
-    disponibilité.
-
-    ⚠️ Ce test ne visait QUE `setup-rpi5.sh` jusqu'au 20/09/2026 (#1029). Le
-    script a été supprimé — et le test est mort avec lui, sur un
-    `FileNotFoundError`. Une protection attachée à un **nom de fichier** ne
-    survit pas au fichier : elle protège l'endroit où le défaut est apparu une
-    fois, pas le geste. Il porte donc maintenant sur tous les scripts du dépôt,
-    et il n'a plus rien à perdre quand l'un d'eux disparaît.
-    """
-    fautes = []
-    for script in sorted((RACINE / "scripts").rglob("*.sh")):
-        for numero, ligne in lignes_de_code(script):
-            for interdit in ("scripts/backup.sh", "hostachy-backup", "5hostachy-backup"):
-                if interdit in ligne:
-                    fautes.append(f"{script.relative_to(RACINE)}:{numero} (« {interdit} »)")
-    assert not fautes, (
-        "sauvegarde côté hôte réintroduite dans un script versionné :\n"
-        + "\n".join(fautes)
-        + "\n\nLa sauvegarde est in-process depuis la v2.18 (api/app/utils/backup.py), "
-        'avec `PRAGMA quick_check` préalable : un `sqlite3 ".backup"` lancé depuis '
-        "l'hôte pendant que l'API tourne casse la base."
-    )
+    for motif, portee, message in INTERDITS_SANS_EXCEPTION:
+        for script in portee():
+            for numero, ligne in lignes_de_code(script):
+                trouve = motif.search(ligne)
+                if trouve:
+                    fautes.append(
+                        f"{script.relative_to(RACINE).as_posix()}:{numero} "
+                        f"(« {trouve.group(0)} ») : {message}\n    {ligne.strip()}"
+                    )
+    assert not fautes, "Geste interdit sans exception sur la base :\n" + "\n".join(fautes)

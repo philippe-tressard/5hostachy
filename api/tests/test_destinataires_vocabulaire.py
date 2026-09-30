@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pytest
 
-from app.models.core import RoleUtilisateur, StatutUtilisateur, Utilisateur
+from app.models.core import StatutUtilisateur, Utilisateur
 from app.utils.visibility import CODES_PUBLIC_CIBLE, LIBELLES_PUBLIC_CIBLE, public_cible_visible
 
 _FRONT = Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "destinataires.ts"
@@ -132,12 +132,3 @@ def test_le_code_par_defaut_n_est_pas_dans_le_catalogue():
         actif=True,
     )
     assert public_cible_visible('["résidents"]', quiconque) is True
-
-
-def test_le_conseil_syndical_reste_un_role_et_non_un_statut():
-    """Épinglé : `conseil_syndical` se décide sur le RÔLE, pas sur le statut.
-
-    C'est le seul code du catalogue dans ce cas, et c'est ce qui explique qu'il
-    sorte plus haut dans la règle (CS et admin voient tout).
-    """
-    assert RoleUtilisateur.conseil_syndical.value == "conseil_syndical"

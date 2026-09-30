@@ -20,10 +20,11 @@ d'un diff ultérieur — d'où ces tests :
 """
 
 import ast
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 from app.models.core import Ticket
+from app.utils import horloge
 from app.utils.archivage import est_archivable
 
 _FLUX = Path(__file__).resolve().parents[1] / "app" / "routers" / "flux"
@@ -50,9 +51,10 @@ def _archivee(actu: Ticket) -> bool:
 # ── 1. L'épinglage résiste au vieillissement ────────────────────────────────
 
 
-def test_actualite_epinglee_ne_s_archive_pas_avec_l_age():
-    vieille = datetime.utcnow() - timedelta(days=365)
-    assert _archivee(_actualite(epingle=True, cree_le=vieille, mis_a_jour_le=vieille)) is False
+#  Le cas positif — une actualité épinglée ne vieillit pas — est éprouvé par
+#  `test_categorie_actualite.py::test_une_actualite_permanente_epinglee_reste`.
+#  Restent ici ses deux bornes : l'archivage manuel prime, et l'exemption ne vaut
+#  que pour les épinglés.
 
 
 def test_archivage_manuel_prime_sur_l_epinglage():
@@ -62,12 +64,12 @@ def test_archivage_manuel_prime_sur_l_epinglage():
 
 def test_actualite_non_epinglee_s_archive_toujours_avec_l_age():
     """Non-régression : l'exemption ne doit valoir QUE pour les épinglés."""
-    vieille = datetime.utcnow() - timedelta(days=365)
+    vieille = horloge.maintenant() - timedelta(days=365)
     assert _archivee(_actualite(epingle=False, cree_le=vieille, mis_a_jour_le=vieille)) is True
 
 
 def test_actualite_recente_reste_visible():
-    maintenant = datetime.utcnow()
+    maintenant = horloge.maintenant()
     assert _archivee(_actualite(cree_le=maintenant, mis_a_jour_le=maintenant)) is False
 
 

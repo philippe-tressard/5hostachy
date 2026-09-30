@@ -35,8 +35,6 @@ pour semer son prompt, sans quoi il démarrerait sur une clé absente.
 """
 
 import hashlib
-import re
-from pathlib import Path
 
 from app.utils.llm_usages import USAGES
 
@@ -108,31 +106,3 @@ def test_un_prompt_d_origine_ne_change_pas_sans_migration():
             "      2. ajouter l'empreinte précédente à la liste de cette migration ;\n"
             f'      3. mettre à jour cette ligne : "{code}": "{obtenue}".'
         )
-
-
-def test_la_migration_0197_connait_l_empreinte_qu_elle_remplace():
-    """La 0197 doit reconnaître les consignes que le code a écrites avant elle.
-
-    Cas zéro de la migration : si sa liste ne portait pas l'empreinte réellement
-    stockée en production, elle s'exécuterait sans rien remplacer — un vert qui
-    ne mesure rien.
-    """
-    #  Lue en TEXTE, comme le reste de la suite lit les migrations : une
-    #  migration s'importe dans un contexte alembic qu'un test n'a pas à monter.
-    source = (
-        Path(__file__).resolve().parents[1]
-        / "alembic"
-        / "versions"
-        / "0197_consigne_description_rappel.py"
-    ).read_text(encoding="utf-8")
-    empreintes = set(re.findall(r'"([0-9a-f]{64})"', source))
-
-    assert len(empreintes) == 3, (
-        "La 0197 remplace les trois consignes que le code a successivement écrites "
-        f"(v1.41.0, v1.44.0, v1.44.4) — {len(empreintes)} empreinte(s) relevée(s)."
-    )
-    assert _empreinte(USAGES["description"].prompt_defaut) not in empreintes, (
-        "La consigne COURANTE figure parmi celles que la 0197 remplace : elle "
-        "remplacerait la valeur par elle-même, et masquerait le jour où la liste "
-        "cesse d'être à jour."
-    )

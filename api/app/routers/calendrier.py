@@ -16,7 +16,7 @@ existé, voici où c'est parti ». La visibilité n'est pas décidée ici : l'é
 suit la redirection vers la fiche de l'affaire, qui applique `ticket_visible`.
 Le 410 ne révèle que le numéro, et seulement à un utilisateur connecté.
 
-Verrouillé par `api/tests/test_redirection_evenements.py`.
+Verrouillé par `api/tests/test_redirection_publications.py`, avec la redirection des actualités.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
