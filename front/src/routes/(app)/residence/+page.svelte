@@ -2,7 +2,7 @@
 	import { tenter, messageErreur } from '$lib/erreurs';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
-	import Icon from '$lib/components/Icon.svelte';
+	import BanniereResidence from '$lib/components/BanniereResidence.svelte';
 	import SectionDiagnostics from '$lib/components/SectionDiagnostics.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -11,7 +11,6 @@
 	import { isCS, isLocataire } from '$lib/stores/auth';
 	import {
 		copropriete as coproprieteApi,
-		uploads as uploadsApi,
 		documents as documentsApi,
 		diagnostics as diagnosticsApi,
 	} from '$lib/api';
@@ -69,9 +68,6 @@
 	let editNbLots: string | number = '';
 	let editNbLotsPrincipaux: string | number = '';
 	let editImmatriculation = '';
-
-	// Photo bannière
-	let uploadingPhoto = false;
 
 	//  Plans, règlement, CR d'AG : leur dépôt, leur correction et leur
 	//  suppression vivent dans `RubriqueDocuments` (#779) — ils y étaient écrits
@@ -198,23 +194,6 @@
 		}, 'Résidence mise à jour');
 		saving = false;
 	}
-
-	// ── Photo ──────────────────────────────────────────────────────────────────
-	async function handlePhotoFile(e: Event) {
-		const file = (e.target as HTMLInputElement).files?.[0];
-		if (!file) return;
-		uploadingPhoto = true;
-		await tenter(
-			async () => {
-				const { url } = await uploadsApi.residence(file);
-				if (copropriete) copropriete = { ...copropriete, photo_url: url };
-			},
-			'Photo mise à jour',
-			'Erreur upload',
-		);
-		uploadingPhoto = false;
-		(e.target as HTMLInputElement).value = '';
-	}
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
@@ -243,26 +222,7 @@
 {:else if onglet === 'fiche' && loading}
 	<EtatListe chargement />
 {:else if onglet === 'fiche' && copropriete}
-	<!-- ── Photo Bannière ─────────────────────────────────────────────────── -->
-	<figure class="photo-figure">
-		<div class="photo-banner">
-			{#if copropriete.photo_url}
-				<img src={copropriete.photo_url} alt="La résidence" />
-			{:else}
-				<div class="photo-placeholder">
-					<Icon name="building-2" size={48} />
-					<span>Aucune photo</span>
-				</div>
-			{/if}
-			{#if $isCS}
-				<label class="photo-change-btn" class:uploading={uploadingPhoto}>
-					{uploadingPhoto ? '…' : '\u{1F4F8} Changer la photo'}
-					<input type="file" accept="image/*" on:change={handlePhotoFile} style="display:none" />
-				</label>
-			{/if}
-		</div>
-		<figcaption class="photo-caption">{copropriete.nom}</figcaption>
-	</figure>
+	<BanniereResidence bind:copropriete peutModifier={$isCS} />
 
 	<!-- ── Section : Résidence ───────────────────────────────────────────── -->
 	<section style="margin-bottom:2.5rem">
@@ -447,68 +407,6 @@
 {/if}
 
 <style>
-	/* ── Photo bannière ─────────────────────────────────────────── */
-	.photo-figure {
-		margin: 0 auto 2rem;
-		max-width: 800px;
-		text-align: center;
-	}
-	.photo-caption {
-		font-size: var(--fs-base);
-		color: var(--color-text-muted);
-		padding: 0.35rem 0;
-		font-style: italic;
-	}
-	.photo-banner {
-		position: relative;
-		width: 100%;
-		border-radius: var(--radius);
-		overflow: hidden;
-		background: var(--color-bg);
-		border: 1px solid var(--color-border);
-	}
-	.photo-banner img {
-		width: 100%;
-		aspect-ratio: 16 / 5;
-		object-fit: cover;
-		display: block;
-	}
-	.photo-placeholder {
-		width: 100%;
-		aspect-ratio: 16 / 5;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		color: var(--color-text-muted);
-		background: var(--color-bg);
-		font-size: var(--fs-base);
-	}
-	.photo-change-btn {
-		position: absolute;
-		bottom: 0.75rem;
-		right: 0.75rem;
-		background: rgba(0, 0, 0, 0.55);
-		color: #fff;
-		border: none;
-		border-radius: var(--radius);
-		padding: 0.35rem 0.75rem;
-		font-size: var(--fs-sm);
-		cursor: pointer;
-		backdrop-filter: blur(4px);
-		transition: background var(--duree-geste);
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.photo-change-btn:hover {
-			background: rgba(0, 0, 0, 0.75);
-		}
-	}
-	.photo-change-btn.uploading {
-		opacity: 0.6;
-		pointer-events: none;
-	}
-
 	/* ── Sections ───────────────────────────────────────────────── */
 	/*  🔴 `.section-header` est remontée dans `styles/composants.css` le
 	    06/09/2026 (#805) : elle était écrite trois fois à l'identique — ici, dans
