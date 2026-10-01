@@ -15,7 +15,7 @@ autre écran que celui annoncé, sans une erreur nulle part.
 ## Ce qu'il vérifie
 
 Toute écriture `/admin?onglet=<clé>` — notifications et modèles d'e-mail côté
-API, liens côté front — nomme une clé de `ONGLETS`, la liste unique de la page.
+API, liens côté front — nomme un onglet que la table des pages déclare pour `admin` (`pages-roles.ts`).
 """
 
 from __future__ import annotations
@@ -26,19 +26,20 @@ import re
 from tests.aides_sources import modules_app
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
-PAGE_ADMIN = RACINE / "front" / "src" / "routes" / "(app)" / "admin" / "+page.svelte"
+TABLE_PAGES = RACINE / "front" / "src" / "lib" / "pages-roles.ts"
 FRONT = RACINE / "front" / "src"
 
 LIEN = re.compile(r"/admin\?onglet=([A-Za-z0-9_-]+)")
 
 
 def _onglets_declares() -> set[str]:
-    source = PAGE_ADMIN.read_text(encoding="utf-8")
-    bloc = re.search(r"const ONGLETS = \[(.*?)\] as const", source, re.S)
-    assert bloc, f"`const ONGLETS = [...] as const` introuvable dans {PAGE_ADMIN}"
-    cles = set(re.findall(r"'([a-z_]+)'", bloc.group(1)))
+    """Les onglets de la page `admin`, lus dans la table des pages (`pages-roles.ts`)."""
+    source = TABLE_PAGES.read_text(encoding="utf-8").replace("\r\n", "\n")
+    bloc = re.search(r"^\t\tid: 'admin',\n(.*?)^\t\},", source, re.S | re.M)
+    assert bloc, f"le bloc de la page `admin` est introuvable dans {TABLE_PAGES}"
+    cles = set(re.findall(r"^\t\t\t\tid: '([a-z_]+)',", bloc.group(1), re.M))
     #  Cas zéro : une lecture qui ne rend rien validerait tout lien en silence.
-    assert len(cles) >= 10 and "a_traiter" in cles, f"lecture de ONGLETS suspecte : {cles}"
+    assert len(cles) >= 10 and "a_traiter" in cles, f"lecture des onglets suspecte : {cles}"
     return cles
 
 

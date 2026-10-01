@@ -29,9 +29,11 @@
  * LA RÈGLE, EN DEUX VOLETS :
  *   A. toute route sous `routes/(app)/admin/` est citée par un `href=` ou un
  *      `goto(`, ailleurs que dans la route elle-même ;
- *   B. dans `admin/+page.svelte`, les trois listes concordent EXACTEMENT —
- *      `ONGLETS` (la déclaration), les boutons `<Onglet actif={onglet === …}>`,
- *      et les blocs `{#if}` / `{:else if onglet === …}` qui rendent le panneau.
+ *   B. les onglets que la table des pages déclare pour `admin` (`pages-roles.ts`)
+ *      et les blocs `{#if}` / `{:else if onglet === …}` de `admin/+page.svelte`
+ *      concordent EXACTEMENT ; la page rend sa rangée par `BarreOnglets` et lit
+ *      sa liste dans la table (01/10/2026 — elle tenait jusque-là sa propre
+ *      liste `ONGLETS` et ses boutons écrits à la main).
  *
  * Un onglet déclaré et non rendu affiche une page vide ; rendu sans bouton, il
  * est inatteignable ; bouton sans rendu, il ne montre rien. Les trois sont
@@ -48,6 +50,7 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { blocsDePages } from './lib-pages.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ADMIN = join(RACINE, 'routes', '(app)', 'admin');
@@ -154,19 +157,30 @@ if (!existsSync(PAGE_ADMIN)) {
 }
 const srcAdmin = readFileSync(PAGE_ADMIN, 'utf8');
 
-const bloc = srcAdmin.match(/const ONGLETS = \[([\s\S]*?)\] as const;/);
-if (!bloc) {
-	console.error(
-		'✗ INCONNU : la déclaration `const ONGLETS = [...] as const;` est introuvable dans',
-	);
-	console.error("  admin/+page.svelte. Sans elle, il n'y a plus de liste qui fasse foi, et ce");
-	console.error('  contrôle ne saurait pas dire ce qui manque.');
+//  🔴 La déclaration a quitté la page le 01/10/2026 : les onglets d'Admin vivent
+//  dans la table des pages (`pages-roles.ts`, bloc `admin`), comme ceux des
+//  autres pages, et `BarreOnglets` les rend. Le volet « un bouton par onglet »
+//  est donc tenu par construction ; restent la déclaration, la LECTURE de la
+//  table par la page, et le rendu.
+const blocAdmin = blocsDePages().find((b) => /^\t\tid: 'admin',/m.test(b));
+if (!blocAdmin) {
+	console.error('✗ INCONNU : le bloc de la page `admin` est introuvable dans la table des pages.');
+	console.error("  Sans lui, il n'y a plus de liste qui fasse foi, et ce contrôle ne conclut pas.");
 	process.exit(1);
 }
-const declares = [...bloc[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
-const boutons = new Set(
-	[...srcAdmin.matchAll(/<Onglet[^>]*actif=\{onglet === '([a-z_]+)'\}/g)].map((m) => m[1]),
-);
+const declares = [...blocAdmin.matchAll(/^\t\t\t\tid: '([a-z_]+)',/gm)].map((m) => m[1]);
+//  La page doit RENDRE la rangée de la table et LIRE sa liste — sans quoi un
+//  onglet déclaré n'aurait pas de bouton, ou ne s'ouvrirait pas par l'adresse.
+const lienTable = [
+	[/<BarreOnglets[^>]*pageId="admin"/, 'rendre sa rangée par <BarreOnglets pageId="admin">'],
+	[/PAGES\.find\(\(p\) => p\.id === 'admin'\)/, 'lire ses onglets dans la table (`PAGES`)'],
+];
+for (const [motif, attendu] of lienTable) {
+	if (!motif.test(srcAdmin)) {
+		echec = true;
+		console.error(`\n✗ admin/+page.svelte ne sait plus ${attendu}.`);
+	}
+}
 const rendus = new Set(
 	[...srcAdmin.matchAll(/\{(?:#if|:else if) onglet === '([a-z_]+)'\}/g)].map((m) => m[1]),
 );
@@ -182,18 +196,9 @@ if (declares.length < ONGLETS_MINIMAUX) {
 	process.exit(1);
 }
 
-const sansBouton = declares.filter((o) => !boutons.has(o));
 const sansRendu = declares.filter((o) => !rendus.has(o));
-const nonDeclares = [...new Set([...boutons, ...rendus])].filter((o) => !declares.includes(o));
+const nonDeclares = [...rendus].filter((o) => !declares.includes(o));
 
-if (sansBouton.length) {
-	echec = true;
-	console.error("\n✗ Onglet(s) déclaré(s) qu'AUCUN bouton ne permet d'ouvrir :");
-	for (const o of sansBouton) console.error(`    ${o}`);
-	console.error(
-		"  → ajouter un <Onglet actif={onglet === '…'}> dans la barre, ou retirer l'entrée.",
-	);
-}
 if (sansRendu.length) {
 	echec = true;
 	console.error('\n✗ Onglet(s) déclaré(s) que RIEN ne rend — la page serait vide :');
@@ -204,7 +209,7 @@ if (nonDeclares.length) {
 	echec = true;
 	console.error('\n✗ Onglet(s) employé(s) sans figurer dans `ONGLETS` :');
 	for (const o of nonDeclares) console.error(`    ${o}`);
-	console.error("  → la liste fait foi : l'y ajouter, sinon `?onglet=` ne l'ouvrira pas.");
+	console.error("  → la table fait foi : l'y ajouter, sinon aucun bouton ne l'ouvrira.");
 }
 
 if (echec) process.exit(1);

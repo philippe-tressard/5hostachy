@@ -78,7 +78,139 @@ export const PAGES_ROLES: PageDef[] = [
 		navLabel: 'Admin',
 		icone: 'sliders-horizontal',
 		descriptif:
-			'Administration de la plateforme : comptes, utilisateurs, rôles, modèles e-mail, paramétrage et référentiels — réservés aux admins.',
+			'Administration de la plateforme, réservée aux admins : ce qui attend un geste, les utilisateurs et leur activité, la configuration du site et ses référentiels.',
+		//  Les onglets de l'administration — déclarés ici depuis le 01/10/2026 pour
+		//  être renommés et décrits dans « Descriptif pages » comme ceux des autres
+		//  pages. L'adresse reste `?onglet=` (« sauf admin ») ; cette liste fait foi
+		//  pour `admin/+page.svelte`, qui n'en tient plus de seconde.
+		onglets: [
+			{
+				id: 'a_traiter',
+				route: '/admin',
+				label: 'À traiter',
+				groupe: '👥 Gestion utilisateurs',
+				descriptif:
+					"Ce qui attend un geste de l'administrateur : comptes à valider, commandes d'accès, demandes de modification de profil.",
+			},
+			{
+				id: 'utilisateurs',
+				route: '/admin?onglet=utilisateurs',
+				label: 'Utilisateurs',
+				groupe: '👥 Gestion utilisateurs',
+				descriptif: 'Tous les comptes : statut, bâtiment, rôles, modification et suppression.',
+			},
+			{
+				id: 'telemetry',
+				route: '/admin?onglet=telemetry',
+				label: 'Télémétrie',
+				groupe: '👥 Gestion utilisateurs',
+				descriptif:
+					"Statistiques d'utilisation : qui utilise quoi, et quand — par jour, mois ou année.",
+			},
+			{
+				id: 'emails',
+				route: '/admin?onglet=emails',
+				label: 'Modèles e-mail',
+				groupe: '👥 Gestion utilisateurs',
+				descriptif:
+					"Le texte et la mise en page de chaque courriel envoyé par le site, avec l'historique des envois.",
+			},
+			{
+				id: 'import_lots',
+				route: '/admin?onglet=import_lots',
+				label: 'Import Lots',
+				groupe: '👥 Gestion utilisateurs',
+				descriptif:
+					'Importer la liste des lots et de leurs copropriétaires depuis un tableur du syndic.',
+			},
+			{
+				id: 'import_tc',
+				route: '/admin?onglet=import_tc',
+				label: 'Import TC',
+				groupe: '👥 Gestion utilisateurs',
+				descriptif: 'Importer le parc de télécommandes et le rapprocher des lots.',
+			},
+			{
+				id: 'import_vigik',
+				route: '/admin?onglet=import_vigik',
+				label: 'Import Vigik',
+				groupe: '👥 Gestion utilisateurs',
+				descriptif: 'Importer le parc de badges Vigik et le rapprocher des lots.',
+			},
+			{
+				id: 'audit_lots',
+				route: '/admin?onglet=audit_lots',
+				label: 'Audit lots',
+				groupe: '👥 Gestion utilisateurs',
+				descriptif:
+					'Les associations entre comptes et lots, pour repérer et retirer les affectations erronées.',
+			},
+			{
+				id: 'site',
+				route: '/admin?onglet=site',
+				label: 'Paramétrage site',
+				groupe: '⚙️ Configuration',
+				descriptif: 'Les réglages généraux du site.',
+			},
+			{
+				id: 'copropriete',
+				route: '/admin?onglet=copropriete',
+				label: 'Fiche copropriété',
+				groupe: '⚙️ Configuration',
+				descriptif: "L'identité et les références de la copropriété.",
+			},
+			{
+				id: 'perimetres',
+				route: '/admin?onglet=perimetres',
+				label: 'Périmètres',
+				groupe: '⚙️ Configuration',
+				descriptif: "L'arborescence des bâtiments et des espaces que l'on peut viser.",
+			},
+			{
+				id: 'pages',
+				route: '/admin?onglet=pages',
+				label: 'Descriptif pages',
+				groupe: '⚙️ Configuration',
+				descriptif:
+					"L'icône, le libellé de menu, le titre, la description et les onglets de chaque page, et leur ordre dans le menu.",
+			},
+			{
+				id: 'legal',
+				route: '/admin?onglet=legal',
+				label: 'Pages légales',
+				groupe: '⚙️ Configuration',
+				descriptif: 'Les mentions légales et la politique de confidentialité.',
+			},
+			{
+				id: 'whatsapp',
+				route: '/admin?onglet=whatsapp',
+				label: 'WhatsApp',
+				groupe: '⚙️ Configuration',
+				descriptif:
+					'Le canal de diffusion de la résidence : connexion du groupe et pied des messages.',
+			},
+			{
+				id: 'smtp',
+				route: '/admin?onglet=smtp',
+				label: 'SMTP',
+				groupe: '⚙️ Configuration',
+				descriptif: "L'envoi des courriels et la relève des réponses par courriel.",
+			},
+			{
+				id: 'ia',
+				route: '/admin?onglet=ia',
+				label: 'Assistant IA',
+				groupe: '⚙️ Configuration',
+				descriptif: "Le fournisseur, la clé et le réglage de chaque usage de l'assistant.",
+			},
+			{
+				id: 'maintenance',
+				route: '/admin?onglet=maintenance',
+				label: 'Maintenance',
+				groupe: '⚙️ Configuration',
+				descriptif: 'Les tâches automatiques, leur historique et leur déclenchement manuel.',
+			},
+		],
 	},
 	{
 		id: 'delegations',

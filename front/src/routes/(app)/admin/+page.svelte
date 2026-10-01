@@ -22,7 +22,9 @@
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import { defautsDePage } from '$lib/pages';
+	import { defautsDePage, PAGES } from '$lib/pages';
+	import { page } from '$app/stores';
+	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { CONFIG_SITE_DEFAUT, ecrireConfigSite, lireConfigSite } from '$lib/configSite';
 	import LegalEditor from '$lib/components/LegalEditor.svelte';
@@ -33,7 +35,6 @@
 	import OngletImportLots from '$lib/components/OngletImportLots.svelte';
 	import OngletImportAcces from '$lib/components/OngletImportAcces.svelte';
 	import { IMPORT_TELECOMMANDES, IMPORT_VIGIK } from '$lib/imports-acces';
-	import Onglet from '$lib/components/Onglet.svelte';
 	import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 	import OngletSmtp from '$lib/components/OngletSmtp.svelte';
 	import OngletIA from '$lib/components/OngletIA.svelte';
@@ -47,33 +48,20 @@
 	// 'sauvegardes' retiré le 02/08/2026 : ce bloc n'était accessible par AUCUN
 	// bouton et dupliquait, dans une version divergente (accents perdus), celui de
 	// « Paramétrage site ». Les deux vivent désormais dans le sous-onglet Maintenance.
-	//  🔴 La liste des onglets est écrite ICI et NULLE PART AILLEURS. Depuis le
-	//  19/08/2026 elle couvre aussi les sept écrans qui vivaient sur leur propre
-	//  route : on ne quitte plus Paramétrage, donc plus aucun « ← Retour ».
-	//  `ONGLETS` sert au type ET à la lecture de `?onglet=` — deux listes
-	//  divergeraient au premier onglet ajouté, et c’est l’adressage direct qui
-	//  cesserait de fonctionner en silence.
-	const ONGLETS = [
-		'a_traiter',
-		'emails',
-		'utilisateurs',
-		'site',
-		'pages',
-		'legal',
-		'whatsapp',
-		'smtp',
-		'ia',
-		'telemetry',
-		'maintenance',
-		'copropriete',
-		'perimetres',
-		'audit_lots',
-		'import_lots',
-		'import_tc',
-		'import_vigik',
-	] as const;
-	type OngletAdmin = (typeof ONGLETS)[number];
-	let onglet: OngletAdmin = 'a_traiter';
+	//  🔴 La liste des onglets vit dans `$lib/pages-roles.ts` (page `admin`) et
+	//  NULLE PART AILLEURS, depuis le 01/10/2026 : déclarés comme ceux des autres
+	//  pages, ils se renomment et se décrivent dans « Descriptif pages », et
+	//  `BarreOnglets` rend leurs deux rangées. Cette page en tenait sa propre liste,
+	//  `const ONGLETS = [...] as const` — une seconde liste aurait divergé au
+	//  premier onglet ajouté, et l'adressage direct aurait cessé de fonctionner en
+	//  silence.
+	//
+	//  L'onglet actif SE LIT dans l'adresse (`?onglet=`, « sauf admin ») : chaque
+	//  onglet est un lien, qui se copie et que le bouton Précédent rejoue. Une clé
+	//  inconnue ouvre le premier onglet.
+	const ONGLETS: string[] = (PAGES.find((p) => p.id === 'admin')?.onglets ?? []).map((o) => o.id);
+	$: demande = $page.url.searchParams.get('onglet');
+	$: onglet = demande && ONGLETS.includes(demande) ? demande : ONGLETS[0];
 	$: trackTabView(onglet);
 
 	//  Bâtiments (pour affichage)
@@ -166,15 +154,6 @@
 
 	//  Montage
 	onMount(async () => {
-		//  Adressage direct d’un onglet : `?onglet=perimetres`. Il remplace les sept
-		//  routes `/admin/<ecran>` supprimées le 19/08/2026 — sans lui, un signet ou un
-		//  lien vers un de ces écrans n’aurait plus AUCUN équivalent, et la conversion
-		//  en onglets aurait retiré une capacité au lieu d’en uniformiser une.
-		//  La validation se fait sur `ONGLETS`, la liste unique : une valeur inconnue
-		//  est ignorée, jamais affichée.
-		const demande = new URLSearchParams(window.location.search).get('onglet');
-		if (demande && (ONGLETS as readonly string[]).includes(demande))
-			onglet = demande as OngletAdmin;
 		await loadSiteConfig();
 		// Paramétrage site — lu depuis `/config/admin` (require_admin) et NON depuis le
 		// store : depuis l'audit de sécurité du 26/07/2026, `/api/config` est filtré par
@@ -208,9 +187,6 @@
 	let siteConfig = { ...CONFIG_SITE_DEFAUT };
 	let siteSaving = false;
 	$: siteManagerUsers = utilisateurs.filter((u) => !!u.email && aRole(u, 'admin'));
-	function openSiteTab() {
-		onglet = 'site';
-	}
 	let erreurParametrage = '';
 	async function saveSiteConfig() {
 		siteSaving = true;
@@ -261,67 +237,14 @@
 		: 'Les numéros de bâtiment peuvent manquer dans les listes.'}
 />
 
-<!--  Tous les onglets passent par `Onglet` — ceux qui basculent un panneau comme
-      ceux qui mènent ailleurs. C'est ce qui garantit qu'ils se ressemblent :
-      quinze onglets écrits à la main, et le seizième réintroduit l'écart. -->
-<div class="tabs-group">
-	<div class="tabs-group-label">&#x1F465; Gestion utilisateurs</div>
-	<div class="tabs">
-		<Onglet
-			actif={onglet === 'a_traiter'}
-			compte={comptes.length + commandes.length + demandesProfil.length}
-			on:click={() => (onglet = 'a_traiter')}
-		>
-			À traiter
-		</Onglet>
-		<Onglet actif={onglet === 'utilisateurs'} on:click={() => (onglet = 'utilisateurs')}>
-			Utilisateurs
-		</Onglet>
-		<!--  La télémétrie dit qui utilise quoi : c'est de la gestion des
-		      utilisateurs, pas un réglage du site (01/10/2026). -->
-		<Onglet actif={onglet === 'telemetry'} on:click={() => (onglet = 'telemetry')}
-			>Télémétrie</Onglet
-		>
-		<Onglet actif={onglet === 'emails'} on:click={() => (onglet = 'emails')}>Modèles e-mail</Onglet>
-		<Onglet actif={onglet === 'import_lots'} on:click={() => (onglet = 'import_lots')}
-			>Import Lots</Onglet
-		>
-		<Onglet actif={onglet === 'import_tc'} on:click={() => (onglet = 'import_tc')}>Import TC</Onglet
-		>
-		<Onglet actif={onglet === 'import_vigik'} on:click={() => (onglet = 'import_vigik')}
-			>Import Vigik</Onglet
-		>
-		<Onglet actif={onglet === 'audit_lots'} on:click={() => (onglet = 'audit_lots')}
-			>Audit lots</Onglet
-		>
-	</div>
-</div>
-
-<div class="tabs-group" style="margin-top:.5rem;margin-bottom:1.5rem">
-	<div class="tabs-group-label">⚙️ Configuration</div>
-	<div class="tabs" style="margin-bottom:0">
-		<Onglet actif={onglet === 'site'} on:click={openSiteTab}>Paramétrage site</Onglet>
-		<Onglet actif={onglet === 'copropriete'} on:click={() => (onglet = 'copropriete')}
-			>Fiche copropriété</Onglet
-		>
-		<Onglet actif={onglet === 'perimetres'} on:click={() => (onglet = 'perimetres')}
-			>Périmètres</Onglet
-		>
-		<Onglet actif={onglet === 'pages'} on:click={() => (onglet = 'pages')}>Descriptif pages</Onglet>
-		<Onglet actif={onglet === 'legal'} on:click={() => (onglet = 'legal')}>Pages légales</Onglet>
-		<!--  Pas d'icône sur un onglet : 4 sur 15 en portaient une — une par le
-          composant `Icon`, trois en emoji — et les onze autres non. On uniformise
-          sur la forme la plus répandue (`standards/11` §1 bis), qui est aussi
-          celle du pattern d'onglets (`ux-patterns` §4). Signalé à l'écran le
-          16/08/2026, capture à l'appui. -->
-		<Onglet actif={onglet === 'whatsapp'} on:click={() => (onglet = 'whatsapp')}>WhatsApp</Onglet>
-		<Onglet actif={onglet === 'smtp'} on:click={() => (onglet = 'smtp')}>SMTP</Onglet>
-		<Onglet actif={onglet === 'ia'} on:click={() => (onglet = 'ia')}>Assistant IA</Onglet>
-		<Onglet actif={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}
-			>Maintenance</Onglet
-		>
-	</div>
-</div>
+<!--  Les deux rangées — « Gestion utilisateurs », « Configuration » — sont
+      rendues par `BarreOnglets` depuis la table (`groupe`), avec le descriptif
+      de l'onglet actif dessous, comme sur toutes les pages à onglets. -->
+<BarreOnglets
+	pageId="admin"
+	actif={onglet}
+	comptes={{ a_traiter: comptes.length + commandes.length + demandesProfil.length }}
+/>
 
 {#if onglet === 'a_traiter'}
 	<OngletATraiter
@@ -414,17 +337,6 @@
    passées dans `app.css` le 11/08/2026 : scopées ici, elles ne suivaient pas les
    composants extraits de cette page. (`.backup-header` y était aussi, et en est
    repartie avec les deux cartes qui l'utilisaient — #299.) */
-	.tabs-group {
-		margin-bottom: 0;
-	}
-	.tabs-group-label {
-		font-size: var(--fs-2xs);
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--color-text-muted);
-		padding: 0 0.25rem 0.3rem;
-	}
 	/*  `.tabs` et `.tab-btn` sont dans `app.css` : partagées avec
     `LiensEcransAdmin.svelte`, elles ne peuvent pas vivre dans un style scopé. */
 	/*  `.badge-count` est parti avec le balisage, dans `Onglet.svelte` : une règle

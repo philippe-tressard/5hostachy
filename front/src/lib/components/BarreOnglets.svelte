@@ -62,6 +62,17 @@
 	$: onglets = (PAGES.find((p) => p.id === pageId)?.onglets ?? []).filter(
 		(o) => !masques.includes(o.id) && visible(o),
 	);
+	//  Les GROUPES de la rangée (`groupe` dans la table) : une rangée nommée par
+	//  groupe, dans l'ordre de la table. Une page sans groupe n'en a qu'un, sans
+	//  nom — c'est le cas de toutes, sauf l'administration (01/10/2026), qui
+	//  écrivait ses deux rangées à la main.
+	$: groupes = onglets.reduce<{ nom: string; onglets: typeof onglets }[]>((acc, o) => {
+		const nom = o.groupe ?? '';
+		const dernier = acc[acc.length - 1];
+		if (dernier && dernier.nom === nom) dernier.onglets.push(o);
+		else acc.push({ nom, onglets: [o] });
+		return acc;
+	}, []);
 	$: descriptifOnglet =
 		_pc.onglets?.[actif]?.descriptif ?? defauts.onglets?.[actif]?.descriptif ?? '';
 	//  Une phrase ne se lit pas deux fois (#1369) : quand l'onglet dit mot pour mot
@@ -93,13 +104,18 @@
 	}
 </script>
 
-<div class="tabs" role="tablist">
-	{#each onglets as o (o.id)}
-		<Onglet href={o.route} actif={actif === o.id} compte={comptes[o.id] ?? null}>
-			{_pc.onglets?.[o.id]?.label ?? defauts.onglets?.[o.id]?.label ?? o.label}
-		</Onglet>
-	{/each}
-</div>
+{#each groupes as g (g.nom)}
+	<div class="tabs-group">
+		{#if g.nom}<div class="tabs-group-label">{g.nom}</div>{/if}
+		<div class="tabs" role="tablist" aria-label={g.nom || undefined}>
+			{#each g.onglets as o (o.id)}
+				<Onglet href={o.route} actif={actif === o.id} compte={comptes[o.id] ?? null}>
+					{_pc.onglets?.[o.id]?.label ?? defauts.onglets?.[o.id]?.label ?? o.label}
+				</Onglet>
+			{/each}
+		</div>
+	</div>
+{/each}
 {#if descriptif}
 	<p class="tab-descriptif">{@html safeHtml(descriptif)}</p>
 {/if}
@@ -141,6 +157,19 @@
 	    `Onglet.svelte`, et le style d'un composant n'atteint pas le balisage d'un
 	    enfant (leçon de `Pastille.svelte`, v2.67.11). Ce qui fuirait, c'est un
 	    `:global()` de PAGE — cf. #672. */
+	/*  L'intitulé d'un groupe d'onglets — repris tel quel de l'administration,
+	    qui le portait seule (01/10/2026). */
+	.tabs-group + .tabs-group {
+		margin-top: 0.5rem;
+	}
+	.tabs-group-label {
+		font-size: var(--fs-2xs);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--color-text-muted);
+		padding: 0 0.25rem 0.3rem;
+	}
 	.tabs :global(.tab-btn) {
 		white-space: nowrap;
 	}

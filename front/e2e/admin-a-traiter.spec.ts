@@ -38,7 +38,7 @@ test('Admin › À traiter : trois sections en accordéon, Télémétrie en gest
 	});
 	await page.goto('/admin');
 
-	const onglet = page.locator('.tabs button', { hasText: 'À traiter' });
+	const onglet = page.locator('.tab-btn', { hasText: 'À traiter' });
 	await expect(onglet).toHaveClass(/active/);
 	await expect(onglet.locator('.badge-count')).toHaveText('3');
 
@@ -65,12 +65,25 @@ test('Admin › À traiter : trois sections en accordéon, Télémétrie en gest
 
 	//  Les anciens onglets ont disparu, la Télémétrie a changé de groupe.
 	const gestion = page.locator('.tabs-group', { hasText: 'Gestion utilisateurs' });
-	await expect(gestion.locator('.tabs button', { hasText: 'Télémétrie' })).toHaveCount(1);
+	await expect(gestion.locator('.tab-btn', { hasText: 'Télémétrie' })).toHaveCount(1);
 	const configuration = page.locator('.tabs-group', { hasText: 'Configuration' });
-	await expect(configuration.locator('.tabs button', { hasText: 'Télémétrie' })).toHaveCount(0);
+	await expect(configuration.locator('.tab-btn', { hasText: 'Télémétrie' })).toHaveCount(0);
 	for (const ancien of ['Comptes en attente', "Commandes d'accès", 'Demandes profil']) {
-		await expect(page.locator('.tabs button', { hasText: ancien })).toHaveCount(0);
+		await expect(page.locator('.tab-btn', { hasText: ancien })).toHaveCount(0);
 	}
+
+	//  Les onglets sont déclarés dans la table des pages (01/10/2026) : chacun est
+	//  une adresse, et son descriptif s'affiche sous les rangées.
+	await gestion.locator('.tab-btn', { hasText: 'Modèles e-mail' }).click();
+	await expect(page).toHaveURL(/\/admin\?onglet=emails$/);
+	await expect(page.locator('.tab-descriptif')).toContainText('chaque courriel envoyé par le site');
+
+	//  … et « Descriptif pages » les propose à la modification, comme ailleurs.
+	await page.goto('/admin?onglet=pages');
+	await page.locator('.page-row-btn', { hasText: 'Paramétrage' }).click();
+	const cartes = page.locator('.onglet-card');
+	await expect(cartes).toHaveCount(17);
+	await expect(cartes.first().locator('input').first()).toHaveValue('À traiter');
 
 	const deborde = await page.evaluate(
 		() => document.documentElement.scrollWidth > document.documentElement.clientWidth,
