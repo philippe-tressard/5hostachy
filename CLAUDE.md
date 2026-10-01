@@ -340,6 +340,10 @@ importe les gestes du transport.
 - La **racine du volume** se lit dans `Settings.uploads_dir`, seule lecture de
   la variable d'environnement. Elle était écrite six fois : un fichier posé hors
   du volume n'est ni répliqué par `bascule.sh`, ni sauvegardé par `backup.py`.
+- **Le dépôt est PUBLIC : aucun nom de personne réelle** — ni dans un test, un
+  commentaire, un message de commit, ni dans un ticket. Un nom inventé de même
+  forme (#1493). 🔒 `test_identites_fictives.py` (liste blanche) ; ce qu'il ne
+  voit pas : `.claude/skills/security-audit` §8.
 
 ---
 
