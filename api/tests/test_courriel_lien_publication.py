@@ -13,6 +13,7 @@ motif des autres gabarits (`document.lien`, `annonce.lien`).
 from __future__ import annotations
 
 import re
+from types import SimpleNamespace as Faux
 
 from jinja2 import ChainableUndefined, Environment
 
@@ -51,14 +52,31 @@ def test_le_lien_d_un_sondage_est_celui_de_sa_fiche():
 _A_LA_MAIN = re.compile(r"""f["']/(sondages|tickets)/\{""")
 
 
-def test_aucune_url_de_sondage_ou_d_affaire_a_la_main():
-    fautes = [
+#: La fabrique — le seul module où ces URL s'écrivent à la main.
+_FABRIQUE = "utils/liens.py"
+
+
+def _a_la_main(modules) -> list[str]:
+    return [
         f"{m.rel}:{n}"
-        for m in modules_app()
-        if m.chemin.name != "liens.py"
+        for m in modules
         for n, ligne in enumerate(m.lignes, 1)
         if _A_LA_MAIN.search(ligne) and not ligne.lstrip().startswith("#")
     ]
+
+
+def test_aucune_url_de_sondage_ou_d_affaire_a_la_main():
+    fautes = _a_la_main(m for m in modules_app() if m.rel != _FABRIQUE)
     assert not fautes, (
         f"URL fabriquée à la main — employer `lien_sondage` / `lien_ticket` : {fautes}"
     )
+
+
+def test_le_controle_VOIT_les_url_de_la_fabrique():
+    """Cas zéro (#1496) : la fabrique écrit les deux URL à la main, et c'est son
+    rôle — le motif doit l'y voir, sinon il ne verrait pas non plus la copie.
+    Et une copie forgée, en commentaire puis en code, n'est refusée qu'en code."""
+    fabrique = _a_la_main(m for m in modules_app() if m.rel == _FABRIQUE)
+    assert len(fabrique) >= 2, f"le motif ne voit plus les URL de {_FABRIQUE} : {fabrique}"
+    forge = Faux(rel="forge.py", lignes=['# f"/tickets/{t.id}"', 'url = f"/sondages/{s.id}"'])
+    assert _a_la_main([forge]) == ["forge.py:2"]

@@ -4,8 +4,8 @@
 #
 #  ## Pourquoi ce script (#546, étape 2 bis)
 #
-#  La production tourne à `foreign_keys=OFF` : aucune clé étrangère n'est
-#  vérifiée. Des suppressions incomplètes ont donc laissé des lignes qui
+#  La production a tourné à `foreign_keys=OFF` jusqu'au 30/08/2026 (activées
+#  depuis, `app/database.py`). Des suppressions incomplètes ont laissé des lignes qui
 #  référencent un parent disparu — six endpoints le faisaient encore le
 #  30/08/2026, dont `delete_evenement`, qui ne nettoyait RIEN.
 #

@@ -108,6 +108,10 @@ def test_le_front_annonce_le_plafond_que_le_serveur_applique(
     )
 
 
+#: Un routeur qui COMPTE les pièces jointes reçues pour les borner.
+_BORNE = re.compile(r"len\((?:body\.)?(?:photos_urls|fichiers_urls)\)\s*[><]")
+
+
 def test_le_plafond_commun_n_est_borne_par_aucun_routeur():
     """🔴 `MAX_FICHIERS` (10) est un CONFORT d'interface, pas une limite.
 
@@ -120,9 +124,11 @@ def test_le_plafond_commun_n_est_borne_par_aucun_routeur():
     ci-dessus et supprimer ce test — sans quoi le contrôle qui vient d'être gagné
     ne serait surveillé par personne.
     """
-    routeurs = modules_app("routers")
-    motif = re.compile(r"len\((?:body\.)?(?:photos_urls|fichiers_urls)\)\s*[><]")
-    bornes = [str(m.chemin.relative_to(_RACINE)) for m in routeurs if motif.search(m.source)]
+    bornes = [
+        str(m.chemin.relative_to(_RACINE))
+        for m in modules_app("routers")
+        if _BORNE.search(m.source)
+    ]
     assert not bornes, (
         "Un routeur borne désormais le nombre de pièces jointes : "
         + ", ".join(bornes)
@@ -130,3 +136,19 @@ def test_le_plafond_commun_n_est_borne_par_aucun_routeur():
         "puis supprimer ce test — la borne est maintenant une vraie limite, et "
         "c'est elle qu'il faut rapprocher du front."
     )
+
+
+def test_le_constat_VOIT_ce_qu_il_constate():
+    """Cas zéro (#1496) : « aucune borne » ne dit rien si le motif ne mord plus
+    ou si les champs ont changé de nom.
+
+    - la PORTÉE lit : des routeurs reçoivent bien `photos_urls` — le champ que
+      le motif compte existe encore là où il regarde ;
+    - le MOTIF mord : la borne forgée est reconnue.
+    """
+    assert any("photos_urls" in m.source for m in modules_app("routers")), (
+        "aucun routeur ne reçoit plus `photos_urls` : le champ a changé de nom, "
+        "et le constat ci-dessus ne regarde plus rien."
+    )
+    assert _BORNE.search("if len(body.photos_urls) > MAX_FICHIERS:")
+    assert _BORNE.search("if len(fichiers_urls) < 1:")

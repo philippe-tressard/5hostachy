@@ -250,8 +250,8 @@ def etat_invalide(session):
 
     ⚠️ **La tentation était de les supprimer**, et c'eût été le pire choix : on
     aurait retiré les contrôles qui protègent d'une corruption au moment même où
-    l'on active le mécanisme censé la prévenir. Or la production tourne encore à
-    `foreign_keys=OFF` (#546 étape 3), les bases existantes portent peut-être
+    l'on active le mécanisme censé la prévenir. La production a tourné à
+    `foreign_keys=OFF` jusqu'au 30/08/2026, les bases existantes portent peut-être
     déjà de telles lignes, et le PRAGMA ne relit pas l'existant : le code doit
     survivre à ce qu'il rencontrera.
 

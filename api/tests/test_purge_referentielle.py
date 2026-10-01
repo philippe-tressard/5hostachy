@@ -7,8 +7,8 @@ main. Le modèle en compte **cinquante-six**, dont trente-sept obligatoires : le
 publications, tickets, messages, idées, sondages et signalements d'un compte
 supprimé restaient en base, à pointer vers un identifiant disparu.
 
-Personne ne pouvait le voir : SQLite tourne avec `foreign_keys=OFF`, et la
-suppression réussissait.
+Personne ne pouvait le voir : SQLite tournait alors avec `foreign_keys=OFF` (activées
+depuis le 30/08/2026, `app/database.py`), et la suppression réussissait.
 
 ## Ce que ce test fait, et ce qu'il ne prouve pas
 

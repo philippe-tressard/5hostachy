@@ -2,7 +2,7 @@
 
 ## 🔴 Le défaut, signalé le 31/08/2026
 
-> *« je n'ai modifié que Christine LONGUÈVE et ça a ajouté tous les membres du
+> *« je n'ai modifié que Christine VERDIÈRE et ça a ajouté tous les membres du
 > CS qui n'ont pas été modifiés »*
 
 Sept entrées « Nouveau membre du conseil syndical » au fil d'actualité, pour une
@@ -66,18 +66,18 @@ def _poser_le_conseil(session) -> list[MembreCS]:
         MembreCS(
             genre=GenreCivilite.mme,
             prenom="Christine",
-            nom="LONGUEVE",
+            nom="VERDIERE",
             etage=3,
             ordre=0,
             cree_le=ancien,
         ),
         MembreCS(
-            genre=GenreCivilite.mr, prenom="Marco", nom="RICCI", etage=1, ordre=1, cree_le=ancien
+            genre=GenreCivilite.mr, prenom="Marco", nom="ROSSI", etage=1, ordre=1, cree_le=ancien
         ),
         MembreCS(
             genre=GenreCivilite.mr,
-            prenom="Philippe",
-            nom="TRESSARD",
+            prenom="Paul",
+            nom="DELMAS",
             etage=2,
             ordre=2,
             cree_le=ancien,

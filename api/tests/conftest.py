@@ -23,84 +23,12 @@ os.environ.setdefault("UPLOADS_DIR", os.path.join(tempfile.gettempdir(), "hostac
 import pytest  # noqa: E402  (après les variables d'environnement, par construction)
 
 
-# ── Intégrité référentielle DANS LES TESTS (#546, étape 2) ────────────────────
+# ── Intégrité référentielle : la règle est celle de l'APPLICATION ────────────
 #
-#  🔴 SQLite laisse `foreign_keys` à OFF par défaut, et l'application ne le pose
-#  nulle part : AUCUNE des 119 clés étrangères déclarées dans les modèles n'est
-#  vérifiée par la base. L'intégrité repose entièrement sur le code applicatif.
-#
-#  L'activer ici, et ici SEULEMENT, fait deux choses que le ticket demande dans
-#  cet ordre :
-#
-#    • ça mesure — la suite passait de 798 verts à 103 erreurs, toutes des
-#      `FOREIGN KEY constraint failed`, et AUCUNE venant d'un chemin de
-#      production : ce sont les fixtures qui construisaient des lignes
-#      orphelines (`auteur_id=1` sans utilisateur 1, `copropriete_id` NULL…) ;
-#    • ça verrouille — une fixture qui décrit un monde impossible teste contre
-#      elle-même, et rien ne le disait puisque rien ne vérifiait.
-#
-#  ⚠️ La PRODUCTION reste à `foreign_keys=OFF` : l'activer là-bas rendrait
-#  bloquantes des suppressions aujourd'hui silencieuses, et il faut d'abord
-#  relever les `session.delete()` applicatifs qui ne passent pas par
-#  `purge_referentielle`, puis décider par relation — cascade, `SET NULL` ou
-#  refus. C'est une décision fonctionnelle (#546 étape 3), pas un réglage.
-#
-#  ⚠️ L'écouteur est posé sur `connect`, seul point qui couvre TOUTES les
-#  connexions du pool. Le poser sur une connexion d'amorçage rendue au pool ne
-#  marche pas : l'événement n'est alors plus jamais émis — piège vérifié en
-#  instruisant ce ticket, et le relevé disait encore `foreign_keys = 0` avec
-#  l'écouteur en place, six lignes trop bas.
-def _activer_cles_etrangeres() -> None:
-    from sqlalchemy import event
-
-    from app.database import engine
-
-    @event.listens_for(engine, "connect")
-    def _pragma(dbapi_connection, _record):  # pragma: no cover - branché par SQLAlchemy
-        curseur = dbapi_connection.cursor()
-        curseur.execute("PRAGMA foreign_keys=ON")
-        curseur.close()
-
-    #  🔴 SANS CE `dispose()`, L'ÉCOUTEUR NE SERT À RIEN — et la suite reste
-    #  VERTE, ce qui est la pire façon d'échouer. `sqlite:///:memory:` utilise un
-    #  `SingletonThreadPool` : une seule connexion, déjà ouverte à l'import de
-    #  `app.database`. `connect` n'est donc plus jamais émis, et le PRAGMA n'est
-    #  jamais posé. Mesuré ici même :
-    #
-    #      AVANT                            foreign_keys = 0
-    #      APRÈS (connexion recyclée)       foreign_keys = 0   ← l'écouteur est là
-    #      APRÈS dispose (connexion NEUVE)  foreign_keys = 1
-    #
-    #  C'est le piège que #546 décrit pour la production, rencontré ici en le
-    #  reproduisant. Recycler la connexion force le prochain `connect`.
-    engine.dispose()
-
-
-def pytest_configure(config):  # noqa: ARG001
-    #  🔴 ACTIF PAR DÉFAUT depuis le 29/08/2026 (#546, fin de l'étape 2).
-    #
-    #  Il ne l'était pas : la suite passait de 798 verts à 103 erreurs sous les
-    #  clés, toutes des fixtures qui construisaient des lignes orphelines, et un
-    #  contrôle rouge en permanence est désarmé dans la semaine.
-    #
-    #  Quatre lots plus tard, il n'en reste **aucune** — 873 verts dans les deux
-    #  régimes. L'interrupteur devient donc le régime NORMAL, et c'est le seul
-    #  moyen que le travail tienne : une fixture écrite demain qui invente un
-    #  `auteur_id` échoue tout de suite, au lieu de rejoindre en silence les cent
-    #  trois d'hier (`standards/05` — un défaut corrigé sans garde-fou revient).
-    #
-    #  ⚠️ La PRODUCTION reste à `foreign_keys=OFF`. Ce qui manque n'est plus la
-    #  propreté des données mais le RELEVÉ des suppressions applicatives : chaque
-    #  `session.delete()` qui ne passe pas par `purge_referentielle` peut devenir
-    #  bloquant, et il faut décider par relation — cascade, `SET NULL` ou refus.
-    #  C'est #546 étape 3, une décision fonctionnelle et non un réglage.
-    #
-    #  🔓 Pour revoir le monde d'avant — mesurer ce que les clés apportent, ou
-    #  isoler un échec qui n'a rien à voir : `HOSTACHY_FK_STRICTES=0 pytest`.
-    #  ⚠️ Cette porte n'existe QUE pour le diagnostic. Un lot qui a besoin de la
-    #  fermer pour passer a un défaut à corriger, pas un réglage à changer.
-    if os.environ.get("HOSTACHY_FK_STRICTES") != "0":
-        _activer_cles_etrangeres()
+#  Les clés étrangères sont actives en production comme ici : `app/database.py`
+#  les pose sur son moteur (`activer_cles_etrangeres`, depuis le 30/08/2026, #546),
+#  et `test_integrite_referentielle.py` vérifie qu'elles le sont. Ce fichier n'en
+#  garde aucune copie — ni écouteur, ni porte pour les désactiver (#1496).
 
 
 # ── Patrimoine de test ────────────────────────────────────────────────────────

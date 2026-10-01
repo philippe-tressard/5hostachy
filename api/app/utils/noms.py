@@ -4,7 +4,7 @@
 
 > *« L'affichage devrait être Prénom NOM => Nom en majuscule »*
 
-Signalé sur une carte du fil qui rendait **« Jean-Sébastien CourT »** : la casse
+Signalé sur une carte du fil qui rendait **« Jean-Baptiste ForT »** : la casse
 telle qu'elle avait été tapée, avec un « T » final resté majuscule. Le prénom
 garde sa casse, le nom passe en capitales — c'est l'usage administratif français,
 et surtout c'est ce qui rend la lecture homogène quand la saisie ne l'est pas.
@@ -36,7 +36,7 @@ from typing import Optional
 
 
 def nom_affiche(prenom: Optional[str], nom: Optional[str]) -> str:
-    """« Jean-Sébastien », « CourT » → « Jean-Sébastien COURT ».
+    """« Jean-Baptiste », « ForT » → « Jean-Baptiste FORT ».
 
     Tolère l'absence de l'un ou de l'autre : une personne dont on ne connaît que
     le nom doit s'afficher quand même, et sans espace en trop.
@@ -62,7 +62,7 @@ def contexte_personne(personne, **extras) -> dict:
         {{ auteur.prenom }} {{ auteur.nom }}
 
     Le destinataire lisait donc le nom **tel qu'il a été tapé à l'inscription** —
-    « Jean-Sébastien CourT », le défaut arbitré le 31/08/2026, sur la surface la
+    « Jean-Baptiste ForT », le défaut arbitré le 31/08/2026, sur la surface la
     plus visible du produit.
 
     🔴 **Composer dans le gabarit, c'est composer dix-sept fois.** Un gabarit ne

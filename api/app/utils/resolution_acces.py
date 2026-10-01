@@ -171,7 +171,7 @@ def reprendre_resolues_sans_lot(type_acces, session: Session) -> int:
 
     Résolues sous l'ancien modèle (par personne, avant #1194), elles échappaient
     à tout ce qui cherche un lot — le rapprochement ne lit que les lignes en
-    attente. Signalé le 26/09/2026 sur « GARCIA » : dix télécommandes, deux
+    attente. Signalé le 26/09/2026 sur « FAURE » : dix télécommandes, deux
     parkings connus du fichier des lots, aucune rattachée.
 
     - leur badge a un lot au parc → la ligne le RECOPIE, et reste résolue ;

@@ -30,8 +30,9 @@ Toutes celles qui ne sont pas encore éprouvées par un test le sont dans #546.
 
 ## Ce que le régime actuel cache
 
-La production tourne encore à `foreign_keys=OFF`. Ces suppressions **réussissent**
-donc aujourd'hui — en laissant des lignes orphelines qui pointent vers un parent
+Jusqu'au 30/08/2026, la production tournait à `foreign_keys=OFF` (l'application
+les active depuis, `app/database.py`). Ces suppressions **réussissaient** donc —
+en laissant des lignes orphelines qui pointent vers un parent
 disparu. Quand la colonne est `NOT NULL` (l'historique d'un événement), ces
 lignes sont même irrécupérables : on ne peut pas les rattacher ailleurs.
 

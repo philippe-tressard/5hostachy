@@ -87,7 +87,7 @@ def test_chaque_collecteur_qui_a_un_auteur_le_MET_dans_son_meta():
 #: distingue.
 #:
 #: 🔴 Ce test n'en acceptait qu'une — `auteur_nom` — et a refusé le 15/09/2026 un
-#: correctif JUSTE : le fil affichait « Philippe TRESSARD » sur un événement dont
+#: correctif JUSTE : le fil affichait « Paul DELMAS » sur un événement dont
 #: le « Saisi pour » désignait quelqu'un d'autre (signalé à l'écran). La règle
 #: arbitrée le 12/09 veut le PROPRIÉTAIRE, et `flux/tickets.py` l'appliquait
 #: déjà — il ne passait ce test que parce qu'il contient `auteur_nom(` ailleurs.

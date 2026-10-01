@@ -44,8 +44,8 @@ def _fiches_utilisateurs(session: Session, lignes) -> dict[int, dict]:
     🔴 Et les trois composaient le nom À LA MAIN — `f"{prenom} {nom}"` — alors
     que la règle d'affichage est arbitrée depuis le 31/08/2026 et vit dans
     `utils/noms.nom_affiche` : le prénom garde sa casse, le nom passe en
-    capitales. L'écran de télémétrie affichait donc « Jean-Sébastien CourT » là
-    où tout le reste du site écrit « Jean-Sébastien COURT ».
+    capitales. L'écran de télémétrie affichait donc « Jean-Baptiste ForT » là
+    où tout le reste du site écrit « Jean-Baptiste FORT ».
 
     C'est exactement ce que le module `noms` décrit : trente et une écritures
     « chacune correcte, et toutes ensemble la seule chose qu'on ne peut pas

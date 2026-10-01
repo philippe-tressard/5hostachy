@@ -32,15 +32,57 @@ WeasyPrint** plutôt que de la recopier, et l'applique aux CSS qu'on écrit.
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 
 import pytest
 
-APP = Path(__file__).resolve().parents[1] / "app"
+from tests.aides_sources import modules_app
 
-#: Les modules qui composent une feuille de style destinée à WeasyPrint.
-SOURCES = ("utils/annonce_hall.py", "utils/pdf_theme.py", "utils/fiche_arrivant.py")
+#: Une feuille de style imprimable vit dans un module `utils/<document>_css.py`.
+_FEUILLE = re.compile(r"utils/[^/]+_css\.py")
+
+#: Les sources que la portée DÉRIVÉE doit contenir — un plancher, pas la portée.
+#:
+#: 🔴 Jusqu'au 30/09/2026 (#1496), la portée ÉTAIT une liste écrite à la main, et
+#: elle ne suivait plus le code : la feuille de la fiche arrivant était partie
+#: dans `fiche_arrivant_css.py`, celle du manuel (`manuel_pdf_css.py`, un
+#: `linear-gradient`) n'y était jamais entrée, et `if not f.exists(): continue`
+#: faisait disparaître une source déplacée sans un mot. La portée se dérive
+#: désormais ; cette liste ne sert qu'à dire que la dérivation voit encore ce
+#: qu'elle voyait — une source qui en sort fait échouer le test, en la nommant.
+ATTENDUES = frozenset(
+    {
+        "utils/pdf_theme.py",
+        "utils/annonce_hall.py",
+        "utils/manuel_pdf.py",
+        "utils/fiche_arrivant_css.py",
+        "utils/manuel_pdf_css.py",
+    }
+)
+
+
+def _touche_html_to_pdf(arbre: ast.Module) -> bool:
+    """Le module appelle `html_to_pdf` — ou le définit (`pdf_theme`, sa palette)."""
+    for n in ast.walk(arbre):
+        if isinstance(n, ast.FunctionDef) and n.name == "html_to_pdf":
+            return True
+        if isinstance(n, ast.Call):
+            f = n.func
+            nom = f.id if isinstance(f, ast.Name) else getattr(f, "attr", None)
+            if nom == "html_to_pdf":
+                return True
+    return False
+
+
+def _portee(modules) -> dict[str, str]:
+    """Les feuilles `*_css.py` et les modules qui rendent un PDF : `{rel: source}`."""
+    return {
+        m.rel: m.source
+        for m in modules
+        if _FEUILLE.fullmatch(m.rel) or _touche_html_to_pdf(m.arbre)
+    }
 
 
 def _regle_weasyprint() -> int:
@@ -83,15 +125,12 @@ def _arrets_de_couleur(css: str) -> list[tuple[str, str]]:
     return arrets
 
 
-def test_aucun_arret_de_couleur_ne_depasse_ce_que_weasyprint_lit():
-    maxi = _regle_weasyprint()
+def _fautes(sources: dict[str, str], maxi: int) -> tuple[list[str], int]:
+    """Les arrêts de plus de `maxi` jetons, et le nombre d'arrêts lus."""
     fautes = []
     vus = 0
-    for rel in SOURCES:
-        f = APP / rel
-        if not f.exists():
-            continue
-        for gradient, arret in _arrets_de_couleur(f.read_text(encoding="utf-8")):
+    for rel, css in sources.items():
+        for gradient, arret in _arrets_de_couleur(css):
             vus += 1
             #  `var(--x)` compte pour UN jeton, comme dans tinycss2.
             jetons = re.sub(r"var\([^)]*\)", "VAR", arret).split()
@@ -99,6 +138,19 @@ def test_aucun_arret_de_couleur_ne_depasse_ce_que_weasyprint_lit():
                 fautes.append(
                     f"{rel} — « {arret} » ({len(jetons)} jetons) dans « {gradient[:60]}… »"
                 )
+    return fautes, vus
+
+
+def test_aucun_arret_de_couleur_ne_depasse_ce_que_weasyprint_lit():
+    maxi = _regle_weasyprint()
+    sources = _portee(modules_app())
+    manquantes = sorted(ATTENDUES - set(sources))
+    assert sources and not manquantes, (
+        f"Cas zéro : la portée dérivée ne voit plus {manquantes or 'rien'} — une "
+        "feuille a changé de place, ou `html_to_pdf` de nom. Le contrôle ne "
+        "mesurerait plus ce qu'il croit mesurer."
+    )
+    fautes, vus = _fautes(sources, maxi)
 
     assert vus > 0, (
         "Cas zéro : aucun dégradé trouvé dans les feuilles imprimables — "
@@ -112,3 +164,12 @@ def test_aucun_arret_de_couleur_ne_depasse_ce_que_weasyprint_lit():
         + "\n\n  L'aperçu HTML continuerait de l'afficher — c'est ce qui a fait "
         "disparaître le filet du bandeau de périmètre le 11/09/2026."
     )
+
+
+def test_le_controle_refuse_l_arret_a_deux_positions():
+    """Cas zéro du MOTIF : l'arrêt du 11/09/2026, forgé, doit être refusé."""
+    maxi = _regle_weasyprint()
+    fautif = "background: linear-gradient(90deg, var(--gold) 0 1.2mm, transparent 0);"
+    admis = "background: linear-gradient(90deg, var(--gold) 0%, transparent 1.2mm);"
+    assert _fautes({"forge_css.py": fautif}, maxi)[0], "l'arrêt à trois jetons passe"
+    assert _fautes({"forge_css.py": admis}, maxi) == ([], 2)

@@ -22,9 +22,9 @@ La télécommande n'en avait aucune, faute de colonnes.
 ## ⚠️ Ce qu'il ne fait pas : deviner la PERSONNE
 
 Un nom qui désigne deux copropriétaires ne rattache rien : la ligne reste à
-préciser à l'écran. Le nom COMPLET départage d'abord — « DUBREUIL FRANCOIS »
-parmi trois DUBREUIL —, puis le NOM DE FAMILLE (le premier mot : « PARIS »
-désigne « PARIS Francis » et non la « BANQUE NATIONALE DE PARIS », signalé le
+préciser à l'écran. Le nom COMPLET départage d'abord — « PERRIN FRANCOIS »
+parmi trois PERRIN —, puis le NOM DE FAMILLE (le premier mot : « LYON »
+désigne « LYON Marcel » et non la « BANQUE POPULAIRE DE LYON », signalé le
 23/09/2026), puis un nom inclus dans un seul, puis un mot commun à un seul. Un badge rattaché au mauvais copropriétaire montrerait son code aux
 voisins.
 
@@ -136,7 +136,7 @@ def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int
         for garder in paliers:
             candidats = [c for c in mots_de if garder(c)]
             #  🔴 Un même nom COMPLET sous plusieurs numéros de compte est UN
-            #  copropriétaire (#1338, 26/09/2026) : « FERMONT MARC ; CATHERINE »
+            #  copropriétaire (#1338, 26/09/2026) : « BLONDEL MARC ; CATHERINE »
             #  sous 408944 et 408946 se lisait comme deux personnes, et rien ne se
             #  rattachait. Des homonymes aux prénoms différents restent ambigus.
             if candidats and len({nom_de[c] for c in candidats}) == 1:
