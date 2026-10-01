@@ -68,3 +68,11 @@ export async function essayer<T>(promesse: Promise<T>, repli: T): Promise<[T, st
 export function messagePartiel(...erreurs: string[]): string {
 	return erreurs.find((e) => e) ?? '';
 }
+
+/**
+ * Le titre d'un paramétrage qu'on n'a pas pu lire — et dont on n'offre donc pas
+ * l'enregistrement : un formulaire rempli de valeurs par défaut écraserait la
+ * configuration réelle. Écrit une fois : la page Admin et la section de
+ * réception des réponses le disent (#1475).
+ */
+export const TITRE_PARAMETRAGE_ILLISIBLE = 'Paramétrage illisible — rien n’a été modifié';

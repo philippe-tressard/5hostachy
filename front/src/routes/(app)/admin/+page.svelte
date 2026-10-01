@@ -7,7 +7,7 @@
 	import { badgeRole, badgeStatut, libelleRole, LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { aRole } from '$lib/stores/auth';
 	import OngletUtilisateurs from '$lib/components/OngletUtilisateurs.svelte';
-	import { essayer, messagePartiel } from '$lib/chargement';
+	import { essayer, messagePartiel, TITRE_PARAMETRAGE_ILLISIBLE } from '$lib/chargement';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	//  Les onglets qui ENREGISTRENT ce que `/config/admin` et `/config/legal` ont lu.
 	//  Si la lecture a échoué, leur formulaire serait vide — et enregistré, il
@@ -676,10 +676,7 @@
 {:else if onglet === 'emails'}
 	<OngletModelesEmail />
 {:else if erreurParametrage && ONGLETS_DU_PARAMETRAGE.includes(onglet)}
-	<EtatListe
-		erreur={erreurParametrage}
-		titreErreur="Paramétrage illisible — rien n’a été modifié"
-	/>
+	<EtatListe erreur={erreurParametrage} titreErreur={TITRE_PARAMETRAGE_ILLISIBLE} />
 {:else if onglet === 'site'}
 	<OngletSite bind:siteConfig {siteSaving} {siteManagerUsers} {saveSiteConfig} />
 {:else if onglet === 'pages'}

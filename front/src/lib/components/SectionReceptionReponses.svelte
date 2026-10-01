@@ -22,6 +22,8 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import { config as configApi } from '$lib/api';
+	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { essayer, TITRE_PARAMETRAGE_ILLISIBLE } from '$lib/chargement';
 	import { toast } from '$lib/components/Toast.svelte';
 
 	/** Le serveur d'envoi, pour le bouton « Reprendre les paramètres d'envoi ». */
@@ -112,8 +114,18 @@
 		}
 	}
 
+	/**
+	 * Ce que la lecture a rapporté d'un échec. Sans elle, la section restait un
+	 * formulaire de valeurs PAR DÉFAUT avec son « Enregistrer » actif — de quoi
+	 * écraser la configuration réelle —, et l'échec partait en exception non
+	 * rattrapée (#1475).
+	 */
+	let erreurLecture = '';
+
 	async function relire() {
-		const lues = await configApi.admin();
+		const [lues, erreur] = await essayer(configApi.admin(), null);
+		erreurLecture = erreur;
+		if (!lues) return;
 		imapConfig.enabled = lues['imap_enabled'] === '1';
 		imapConfig.server = lues['imap_server'] ?? '';
 		imapConfig.port = parseInt(lues['imap_port'] ?? '993') || 993;
@@ -127,77 +139,81 @@
 </script>
 
 <SectionFormulaire icone="message-square-text" titre="Réception des réponses aux affaires">
-	<div class="largeur-saisie">
-		<p class="aide" style="margin-bottom:.75rem">
-			Quand le syndic répond à un e-mail d'affaire, sa réponse arrive dans la boîte d'envoi et
-			personne ne la voit. Activée, cette relève la dépose dans le fil de l'affaire concernée,
-			toutes les 10 minutes.
-		</p>
-	</div>
-	<div class="form-grid largeur-saisie">
-		<label class="field" style="grid-column:span 2">
-			<span class="case">
-				<input type="checkbox" bind:checked={imapConfig.enabled} />
-				Relever les réponses
-			</span>
-			<span class="aide">
-				Tant que cette case est décochée, rien n'est relevé — vous pouvez régler et tester sans
-				conséquence.
-			</span>
-		</label>
-		<label class="field">
-			Serveur IMAP
-			<input type="text" bind:value={imapConfig.server} placeholder="ssl0.ovh.net" />
-		</label>
-		<label class="field champ-court">
-			Port
-			<input type="number" bind:value={imapConfig.port} min="1" max="65535" placeholder="993" />
-		</label>
-		<label class="field">
-			Nom d'utilisateur
-			<input type="text" bind:value={imapConfig.username} placeholder="noreply@exemple.fr" />
-			<span class="aide">Le même compte que l'envoi, chez le même hébergeur.</span>
-		</label>
-		<!--  Le motif du secret déjà posé vit dans `ChampSecret` (11/09/2026) : il
+	{#if erreurLecture}
+		<EtatListe erreur={erreurLecture} titreErreur={TITRE_PARAMETRAGE_ILLISIBLE} />
+	{:else}
+		<div class="largeur-saisie">
+			<p class="aide" style="margin-bottom:.75rem">
+				Quand le syndic répond à un e-mail d'affaire, sa réponse arrive dans la boîte d'envoi et
+				personne ne la voit. Activée, cette relève la dépose dans le fil de l'affaire concernée,
+				toutes les 10 minutes.
+			</p>
+		</div>
+		<div class="form-grid largeur-saisie">
+			<label class="field" style="grid-column:span 2">
+				<span class="case">
+					<input type="checkbox" bind:checked={imapConfig.enabled} />
+					Relever les réponses
+				</span>
+				<span class="aide">
+					Tant que cette case est décochée, rien n'est relevé — vous pouvez régler et tester sans
+					conséquence.
+				</span>
+			</label>
+			<label class="field">
+				Serveur IMAP
+				<input type="text" bind:value={imapConfig.server} placeholder="ssl0.ovh.net" />
+			</label>
+			<label class="field champ-court">
+				Port
+				<input type="number" bind:value={imapConfig.port} min="1" max="65535" placeholder="993" />
+			</label>
+			<label class="field">
+				Nom d'utilisateur
+				<input type="text" bind:value={imapConfig.username} placeholder="noreply@exemple.fr" />
+				<span class="aide">Le même compte que l'envoi, chez le même hébergeur.</span>
+			</label>
+			<!--  Le motif du secret déjà posé vit dans `ChampSecret` (11/09/2026) : il
 		      était écrit ICI et dans `OngletSmtp`, à l'identique, et la clé d'API de
 		      l'assistant en aurait fait une troisième copie. -->
-		<ChampSecret
-			libelle="Mot de passe"
-			bind:valeur={imapConfig.password}
-			pose={imapPasswordSet}
-			placeholder="Mot de passe de la boîte"
-			aide="Requis pour relever les réponses."
-		/>
-		<label class="field champ-court">
-			Dossier
-			<input type="text" bind:value={imapConfig.dossier} placeholder="INBOX" />
-		</label>
-		<label class="field champ-court">
-			Ne rien relever avant le
-			<input type="date" bind:value={imapConfig.plancher} />
-			<span class="aide"> Évite de rejouer d'anciens messages à la première relève. </span>
-		</label>
-	</div>
-	<div class="largeur-saisie form-actions">
-		<button class="btn btn-outline btn-sm" type="button" on:click={reprendreDuSmtp}>
-			Reprendre les paramètres d'envoi
-		</button>
-		<button class="btn btn-primary" on:click={saveImapConfig} disabled={imapSaving}>
-			{imapSaving ? 'Enregistrement…' : 'Enregistrer'}
-		</button>
-	</div>
-	<div class="largeur-saisie" style="margin-top:.75rem">
-		<button class="btn btn-outline" on:click={testerImap} disabled={imapTesting}>
-			{imapTesting ? 'Connexion…' : '📥 Tester la connexion'}
-		</button>
-		{#if imapResultat}
-			<p class="imap-resultat">{imapResultat}</p>
-		{/if}
-		<p class="aide" style="margin-top:.3rem">
-			Se connecte avec ce qui est <strong>enregistré</strong>, compte les messages non lus, et ne
-			traite rien. Enregistrez d'abord.
-		</p>
-	</div>
+			<ChampSecret
+				libelle="Mot de passe"
+				bind:valeur={imapConfig.password}
+				pose={imapPasswordSet}
+				placeholder="Mot de passe de la boîte"
+				aide="Requis pour relever les réponses."
+			/>
+			<label class="field champ-court">
+				Dossier
+				<input type="text" bind:value={imapConfig.dossier} placeholder="INBOX" />
+			</label>
+			<label class="field champ-court">
+				Ne rien relever avant le
+				<input type="date" bind:value={imapConfig.plancher} />
+				<span class="aide"> Évite de rejouer d'anciens messages à la première relève. </span>
+			</label>
+		</div>
+		<div class="largeur-saisie form-actions">
+			<button class="btn btn-outline btn-sm" type="button" on:click={reprendreDuSmtp}>
+				Reprendre les paramètres d'envoi
+			</button>
+			<button class="btn btn-primary" on:click={saveImapConfig} disabled={imapSaving}>
+				{imapSaving ? 'Enregistrement…' : 'Enregistrer'}
+			</button>
+		</div>
+		<div class="largeur-saisie" style="margin-top:.75rem">
+			<button class="btn btn-outline" on:click={testerImap} disabled={imapTesting}>
+				{imapTesting ? 'Connexion…' : '📥 Tester la connexion'}
+			</button>
+			{#if imapResultat}
+				<p class="imap-resultat">{imapResultat}</p>
+			{/if}
+			<p class="aide" style="margin-top:.3rem">
+				Se connecte avec ce qui est <strong>enregistré</strong>, compte les messages non lus, et ne
+				traite rien. Enregistrez d'abord.
+			</p>
+		</div>
+	{/if}
 </SectionFormulaire>
 
 <style>
