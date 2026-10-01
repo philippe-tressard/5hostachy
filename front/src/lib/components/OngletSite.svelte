@@ -55,9 +55,8 @@
 				{/each}
 			</select>
 			<span class="aide"
-				>Choisi parmi les administrateurs : il reçoit ce qui demande un geste dans
-				l'administration — comptes à valider, alertes système, bogues signalés si l'option est
-				activée.</span
+				>Choisi parmi les administrateurs : il reçoit ce qui demande un geste dans l'administration
+				— comptes à valider, alertes système, bogues signalés si l'option est activée.</span
 			>
 		</label>
 		<label class="field" style="grid-column:span 2">
