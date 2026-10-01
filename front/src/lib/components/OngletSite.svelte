@@ -47,7 +47,7 @@
 			>
 		</label>
 		<label class="field" style="grid-column:span 2">
-			Gestionnaire du site (utilisateur)
+			Gestionnaire du site (administrateur)
 			<select bind:value={siteConfig.site_manager_user_id}>
 				<option value="">Aucun (utiliser l'e-mail administrateur)</option>
 				{#each siteManagerUsers as u (u.id)}
@@ -55,8 +55,9 @@
 				{/each}
 			</select>
 			<span class="aide"
-				>Cet utilisateur est considéré comme gestionnaire du site dans l'administration et reçoit
-				les notifications e-mail « Bug » si l'option est activée.</span
+				>Choisi parmi les administrateurs : il reçoit ce qui demande un geste dans
+				l'administration — comptes à valider, alertes système, bogues signalés si l'option est
+				activée.</span
 			>
 		</label>
 		<label class="field" style="grid-column:span 2">
