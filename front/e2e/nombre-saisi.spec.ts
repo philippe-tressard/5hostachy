@@ -8,8 +8,8 @@
  *  `nombreOuNull` (`lint:nombre-saisi`) ; ce test tient le comportement, sur la
  *  requête réellement envoyée.
  */
-import { expect, test, type Page, type Request } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page, Request } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const COMPTEUR = { id: 1, type_compteur: 'eau', label: 'Eau froide', prestataire_id: null };
 
