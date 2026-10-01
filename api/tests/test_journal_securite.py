@@ -13,7 +13,7 @@ pouvait pas savoir **qui** l'a changé, **quand**, ni combien de tentatives
 avaient précédé.
 
 Seuls journaux de sécurité existants : les refus de téléversement et les
-violations CSP.
+violations CSP (leur collecte a été retirée le 01/10/2026).
 
 ## Ce que ces tests verrouillent
 

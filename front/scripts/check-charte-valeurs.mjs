@@ -59,8 +59,10 @@ import { fileURLToPath } from 'node:url';
  *  — c’est la dette qu’elles portaient déjà, désormais comptée.
  *  01/10/2026 (#779) : 170 couleurs. Le dégradé de la carte des consignes
  *  (deux bleus hors charte) devient `--color-primary-light` dans `LienConsignes`.
+ *  01/10/2026 : 128 tailles. L’onglet « Sécurité (CSP) » de l’administration
+ *  est retiré avec la collecte qu’il lisait (`OngletCsp`, `1.4rem`).
  */
-const PLAFOND = { couleurs: 170, tailles: 129 };
+const PLAFOND = { couleurs: 170, tailles: 128 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

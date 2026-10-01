@@ -45,7 +45,6 @@
 	import OngletIA from '$lib/components/OngletIA.svelte';
 	import OngletDescriptifPages from '$lib/components/OngletDescriptifPages.svelte';
 	import OngletTelemetrie from '$lib/components/OngletTelemetrie.svelte';
-	import OngletCsp from '$lib/components/OngletCsp.svelte';
 	import OngletModelesEmail from '$lib/components/OngletModelesEmail.svelte';
 	import { fmtDatetimeShort as fmt } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
@@ -73,7 +72,6 @@
 		'smtp',
 		'ia',
 		'telemetry',
-		'csp',
 		'maintenance',
 		'copropriete',
 		'perimetres',
@@ -432,7 +430,6 @@
 		<Onglet actif={onglet === 'telemetry'} on:click={() => (onglet = 'telemetry')}
 			>Télémétrie</Onglet
 		>
-		<Onglet actif={onglet === 'csp'} on:click={() => (onglet = 'csp')}>Sécurité (CSP)</Onglet>
 		<Onglet actif={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}
 			>Maintenance</Onglet
 		>
@@ -721,8 +718,6 @@
 	<OngletIA valeurs={smtpValeurs} />
 {:else if onglet === 'telemetry'}
 	<OngletTelemetrie />
-{:else if onglet === 'csp'}
-	<OngletCsp />
 {:else if onglet === 'copropriete'}
 	<OngletCopropriete bind:referenceCopro={siteConfig.reference_copro} />
 {:else if onglet === 'perimetres'}
