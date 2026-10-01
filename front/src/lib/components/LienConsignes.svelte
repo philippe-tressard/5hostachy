@@ -45,7 +45,7 @@
 		<span class="consignes-fleche" aria-hidden="true"><Icon name="chevron-right" size={18} /></span>
 	</a>
 {:else}
-	<div class="consignes-rangee">
+	<div class="form-actions">
 		<a href={ADRESSE} target="_blank" class="btn btn-outline consignes-bouton">
 			<span aria-hidden="true">📄</span>
 			{LIBELLE}
@@ -77,6 +77,11 @@
 	@media (hover: hover) and (pointer: fine) {
 		.consignes-carte:hover {
 			box-shadow: var(--shadow);
+		}
+	}
+	/*  Le soulèvement au survol : seulement pour qui accepte le mouvement. */
+	@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+		.consignes-carte:hover {
 			transform: translateY(-1px);
 		}
 	}
@@ -121,7 +126,6 @@
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.consignes-carte,
-		.consignes-carte:hover,
 		.consignes-carte:active {
 			transform: none;
 		}
@@ -136,12 +140,9 @@
 		}
 	}
 
-	/* ═══ Bouton ══════════════════════════════════════════════════════════ */
-	.consignes-rangee {
-		display: flex;
-		justify-content: flex-end;
-		margin: 0.5rem 0 0.75rem;
-	}
+	/* ═══ Bouton ══════════════════════════════════════════════════════════
+	   Rangé à droite par `.form-actions` (normes.css), qui lui donne aussi sa
+	   cible de 44 px au doigt et toute la largeur sur un petit téléphone. */
 	.consignes-bouton {
 		display: inline-flex;
 		align-items: center;
