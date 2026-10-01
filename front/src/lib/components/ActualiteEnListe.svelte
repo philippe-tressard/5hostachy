@@ -31,32 +31,18 @@
 		type Ticket,
 		type TicketEvolution,
 	} from '$lib/api';
-	import { contexteCommentaire } from '$lib/assistant';
-	//  🔴 L'actualité est une AFFAIRE de catégorie Actualité (v2.0.0) : sa Suite
-	//  suit `TICKET`, comme son édition (`FormulaireTicket`). Elle suivait
-	//  `PUBLICATION` — deux déclarations pour un objet (#1329). La nature
-	//  éteint ce qui ne la concerne pas (`conditionsDeLaSuite`).
-	import { TICKET } from '$lib/entites/ticket';
-	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
-	import { pliageDe } from '$lib/pliage';
-	import { fichiersDepuisUrls } from '$lib/fichiers';
-	import { SUITE } from '$lib/gestes';
 	import { supprimerDocument } from '$lib/gestes-document';
 	import { promouvoirActualite } from '$lib/gestes-actualite';
-	import { motifWhatsappInterdit } from '$lib/options-publication';
-	import { reserveAuConseil } from '$lib/destinataires';
-	import { nomCopie } from '$lib/saisi-pour';
 	import { currentUser, isCS } from '$lib/stores/auth';
-	import { ticketUrgent, type GestesTicket } from '$lib/tickets';
+	import { OPTIONS_TICKET, ticketUrgent, type GestesTicket } from '$lib/tickets';
 	import ActionsActualite from './ActionsActualite.svelte';
 	import CarteActualite from './CarteActualite.svelte';
-	import EvolForm from './EvolForm.svelte';
+	import SuiteAffaire from './SuiteAffaire.svelte';
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import EtatListe from './EtatListe.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
-	import SectionOptionsPublication from './SectionOptionsPublication.svelte';
 
 	export let ticket: Ticket;
 	export let evolutions: TicketEvolution[] = [];
@@ -75,9 +61,9 @@
 	export let gestes: GestesTicket;
 	export let correspondance: CorrespondanceAffaire | null = null;
 
-	//  Mise en avant d'une actualité : épinglage et urgence (#1096). Copie de
+	//  Mise en avant d'une actualité : épinglage et urgence (#1096) — les options
+	//  d'une affaire, `OPTIONS_TICKET` (elles y étaient recopiées). Copie de
 	//  travail — on n'écrit dans l'affaire qu'après la réponse du serveur.
-	const OPTIONS: ('epingle' | 'urgente')[] = ['epingle', 'urgente'];
 	const optionsInitiales = () => ({
 		epingle: ticket.epingle ?? false,
 		urgente: ticketUrgent(ticket),
@@ -157,7 +143,7 @@
 			{/key}
 		{:else if mode === 'options'}
 			<PanneauOptionsPublication
-				optionsRendues={OPTIONS}
+				optionsRendues={OPTIONS_TICKET}
 				perimetreCible={ticket.perimetre_cible ?? []}
 				dejaEpingle={ticket.epingle ?? false}
 				bind:options
@@ -175,47 +161,16 @@
 				on:click|stopPropagation
 				on:keydown|stopPropagation
 			>
-				<!--  AUCUNE option d'état : une actualité n'a pas de suivi (#1091). -->
-				<EvolForm
-					idPrefixe="actu-evol-{ticket.id}"
-					affaireLiable={$isCS ? ticket.id : null}
-					auteurNom={nomCopie(ticket)}
-					titre={SUITE.libelle}
-					statutOptions={[]}
-					whatsappInterdit={motifWhatsappInterdit(
-						reserveAuConseil(ticket.public_cible),
-						'actualité',
-					)}
-					defaultEnvoyerSyndic={ticket.destinataire_syndic ?? false}
-					defaultEnvoyerCs={ticket.destinataire_cs ?? false}
-					showEmail={$isCS}
-					entite={TICKET}
-					conditions={conditionsDeLaSuite(ticket)}
-					assistant={contexteCommentaire(ticket)}
+				<!--  Le montage de TOUTE Suite d'affaire (`SuiteAffaire`) : il sait qu'une
+				      actualité n'a pas de suivi (#1091). -->
+				<SuiteAffaire
+					{ticket}
+					entrees={evolutions}
+					peutSuivre
 					saving={evolutionEnCours}
-					perimetreCourant={ticket.perimetre_cible ?? []}
-					initialDestinataires={ticket.public_cible ?? []}
-					aidePerimetre="Le périmètre en vigueur est repris tel quel : le corriger ici corrige l'actualité entière."
-					on:submit={(e) =>
-						gestes.evoluer(ticket, {
-							...e.detail,
-							epingle: options.epingle,
-							urgente: options.urgente,
-						})}
+					on:submit={(e) => gestes.evoluer(ticket, e.detail)}
 					on:cancel={gestes.annuler}
-				>
-					<!--  La Mise en avant à SON rang, après les Destinataires (#1326). -->
-					<svelte:fragment slot="mise_en_avant">
-						<SectionOptionsPublication
-							pliable={pliageDe(TICKET, 'mise_en_avant')}
-							options={OPTIONS}
-							perimetreCible={ticket.perimetre_cible ?? []}
-							dejaEpingle={ticket.epingle ?? false}
-							bind:epingle={options.epingle}
-							bind:urgente={options.urgente}
-						/>
-					</svelte:fragment>
-				</EvolForm>
+				/>
 			</div>
 		{/if}
 	</svelte:fragment>
@@ -235,16 +190,12 @@
 					on:supprimer={(e) => gestes.evolSupprimer({ ticket, evolId: e.detail })}
 				>
 					<svelte:fragment slot="edition" let:evol>
-						<EvolForm
-							idPrefixe="actu-evol-edit-{evol.id}"
-							auteurNom={nomCopie(ticket)}
-							titre={SUITE.libelleModifier}
-							editMode={true}
-							initialContenu={evol.contenu || ''}
-							initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-							entite={TICKET}
-							conditions={conditionsDeLaSuite(ticket)}
-							assistant={contexteCommentaire(ticket)}
+						<!--  Sa correction rouvre ses sections, comme celle d'une affaire. -->
+						<SuiteAffaire
+							{ticket}
+							{evol}
+							entrees={evolutions}
+							peutSuivre
 							saving={evolCorrectionEnCours}
 							on:submit={(e) => gestes.evolCorriger(ticket, e.detail)}
 							on:cancel={gestes.evolAnnuler}

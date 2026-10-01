@@ -63,14 +63,16 @@ const RELAIS = [
 		appel: 'ticketsApi.addEvolution(',
 		absents: {},
 	},
-	//  La Suite d'une ACTUALITÉ dans la même liste (#1091) : son composant relaie
-	//  à la page par `gestes.evoluer`, en y ajoutant la mise en avant.
+	//  La Suite d'une affaire — actualité comprise — et sa CORRECTION passent par
+	//  UN montage depuis le 01/10/2026 (#1520) : `SuiteAffaire` relaie la charge
+	//  à ses trois hôtes en y ajoutant les options. Il relayait par
+	//  `ActualiteEnListe`, qui ne monte plus le formulaire lui-même.
 	{
-		nom: 'actualité — liste',
+		nom: 'affaire et actualité — SuiteAffaire',
 		source: 'src/lib/components/EvolForm.svelte',
 		emission: "dispatch('submit'",
-		relais: 'src/lib/components/ActualiteEnListe.svelte',
-		appel: 'gestes.evoluer(',
+		relais: 'src/lib/components/SuiteAffaire.svelte',
+		appel: "dispatch('submit'",
 		absents: {},
 	},
 	//  ✅ « ticket — Espace CS » a quitté ce relevé le 28/08/2026 : le relais

@@ -20,7 +20,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import ListeTickets from '$lib/components/ListeTickets.svelte';
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
-	import type { ChargeUtileEvolution } from '$lib/evolutions';
+	import { chargeCorrection, type ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
 	import { OPTIONS_FILTRE_NATURE, estActualite, statutsPresents } from '$lib/tickets';
@@ -305,22 +305,19 @@
 		}
 	}
 
-	async function corrigerEvolution(t: Ticket, data: any) {
+	async function corrigerEvolution(t: Ticket, brut: unknown) {
 		if (evolEnEdition === null) return;
 		evolCorrectionEnCours = true;
 		try {
-			//  🔴 Ni `type` ni `nouveau_statut` : une CORRECTION n'est pas une
-			//  transition. Les envoyer ferait apparaître dans le fil une étape que le
-			//  ticket n'a jamais franchie (`test_correction_pas_transition.py`).
-			await ticketsApi.updateEvolution(t.id, evolEnEdition, {
-				contenu: data.contenu ?? '',
-				fichiers_urls: data.fichiers_urls,
-				assiste_ia: data.assiste_ia,
-				//  🔴 La correction du périmètre part AUSSI (01/09/2026) : le
-				//  sélecteur s'affiche désormais en correction, et un champ affiché
-				//  qui ne part pas est le défaut de la veille, rejoué.
-				perimetre_cible: data.perimetre_cible,
-			});
+			//  🔄 TOUTES les sections d'une Suite se corrigent, Suivi compris
+			//  (01/10/2026) : la charge vient de `chargeCorrection`, la même que la
+			//  fiche. Ce relais énumérait quatre champs — chaque section ajoutée au
+			//  formulaire y aurait été perdue en silence (#529).
+			await ticketsApi.updateEvolution(
+				t.id,
+				evolEnEdition,
+				chargeCorrection(brut as ChargeUtileEvolution),
+			);
 			await loadEvolutions(t.id);
 			evolEnEdition = null;
 			toast('success', 'Entrée corrigée');

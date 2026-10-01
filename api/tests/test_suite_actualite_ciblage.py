@@ -141,7 +141,9 @@ def test_l_invariant_d_acces_est_bien_APPELE_sur_ce_chemin(cs, monkeypatch):
     vérifie ICI est qu'on l'appelle — c'est le branchement qui manque d'habitude.
     """
     appels: list[int] = []
-    import app.routers.tickets.evolutions as module
+    #  Le branchement vit dans `suite_sections` depuis le 01/10/2026 : il sert
+    #  l'ajout ET la correction d'une Suite.
+    import app.routers.tickets.suite_sections as module
 
     monkeypatch.setattr(module, "appliquer_acces", lambda ticket, session: appels.append(ticket.id))
     with Session(engine) as session:

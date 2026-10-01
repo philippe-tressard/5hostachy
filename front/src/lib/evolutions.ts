@@ -1,3 +1,4 @@
+import type { CorrectionEvolution } from '$lib/api';
 import { separerFichiers } from '$lib/fichiers';
 import { perimetreHerite } from '$lib/perimetres';
 import { richEmpty } from '$lib/publications';
@@ -139,6 +140,60 @@ export interface ChargeUtileEvolution {
 	epingle?: boolean;
 	urgente?: boolean;
 	confidentiel?: boolean;
+	/**  En CORRECTION seulement : le Suivi était à l'écran, donc `type` et
+	 *   `nouveau_statut` disent l'état corrigé (01/10/2026). Absent, la correction
+	 *   ne touche pas au Suivi — une actualité n'en a pas. */
+	corrige_suivi?: boolean;
+}
+
+/**
+ * Ce qu'une correction lit de l'entrée corrigée — la forme commune aux fils qui
+ * la passent (`RubriqueHistorique` rend des entrées de plusieurs entités).
+ */
+export interface EntreeCorrigee {
+	id: number;
+	type: string;
+	contenu?: string;
+	fichiers_urls?: string[];
+	perimetre_cible?: string[];
+	nouveau_statut?: string;
+	/** L'état d'avant elle, calculé par le serveur (`TicketEvolution.statut_avant`). */
+	statut_avant?: string | null;
+}
+
+/**  Ce qui ne part pas en correction : les canaux (la Suite est déjà partie),
+ *   le message interne, et le Suivi — remis seulement s'il était à l'écran. */
+const HORS_CORRECTION = new Set<string>([
+	'partager_whatsapp',
+	'envoyer_syndic',
+	'envoyer_cs',
+	'envoyer_auteur',
+	'email_externe',
+	'interne',
+	'type',
+	'nouveau_statut',
+	'corrige_suivi',
+]);
+
+/**
+ * La charge d'une CORRECTION, tirée de ce que le formulaire émet — la seule
+ * écriture, pour les deux relais (fiche et liste).
+ *
+ * Tout passe, sauf la Diffusion (absente en correction, arbitré le 01/10/2026 :
+ * la Suite est déjà partie) et l'adresse externe. Le Suivi ne part que s'il
+ * était à l'écran : sinon la Suite garde le sien.
+ */
+export function chargeCorrection(saisie: ChargeUtileEvolution): CorrectionEvolution {
+	const reste = Object.fromEntries(
+		Object.entries(saisie).filter(([cle]) => !HORS_CORRECTION.has(cle)),
+	);
+	return {
+		...reste,
+		contenu: saisie.contenu ?? '',
+		...(saisie.corrige_suivi
+			? { type: saisie.type, nouveau_statut: saisie.nouveau_statut ?? null }
+			: {}),
+	};
 }
 
 /**
@@ -160,15 +215,16 @@ export const contenuRicheVide = richEmpty;
  * permet UN seul point d'entrée à l'écran — la question « lequel des deux ? » a
  * déjà sa réponse dans ce que l'utilisateur a fait.
  *
- * Une CORRECTION (`editMode`) n'est jamais un changement d'état : on relit un
- * texte, on ne fait pas avancer le dossier.
+ * En CORRECTION, la même règle (01/10/2026) : `statutCourant` est alors l'état
+ * d'AVANT l'entrée, et le reprendre en refait un commentaire. L'écran ne pose
+ * plus « une correction n'est jamais un changement d'état » — c'est l'entrée
+ * qu'on corrige, à sa date, sans ajouter d'étape (`app/utils/suivi_fil.py`).
  */
 export function typeDeLEntree(
-	editMode: boolean,
 	nouveauStatut: string,
 	statutCourant: string,
 ): 'commentaire' | 'etat' {
-	return !editMode && nouveauStatut && nouveauStatut !== statutCourant ? 'etat' : 'commentaire';
+	return nouveauStatut && nouveauStatut !== statutCourant ? 'etat' : 'commentaire';
 }
 
 /**
@@ -329,6 +385,10 @@ export function sectionsDeLaSuite(
 		/** L'hôte offre de lier l'affaire à d'autres (#1342). */
 		affairesLiees: boolean;
 		diffusion: boolean;
+		/**  La CORRECTION d'une entrée : la Diffusion s'y tait (01/10/2026) — la
+		 *   Suite est déjà partie, et un destinataire ne reçoit jamais deux
+		 *   courriels pour un même fait. Toutes les autres sections restent. */
+		correction?: boolean;
 		/** Les créneaux que l'écran hôte REMPLIT (`$$slots`). */
 		creneaux: Record<Creneau, boolean>;
 	},
@@ -346,6 +406,7 @@ export function sectionsDeLaSuite(
 		miseEnAvant: droits.creneaux.mise_en_avant && creneauPresent(entite, 'mise_en_avant'),
 		piecesJointes: droits.piecesJointes && sectionPresente(entite, 'evolution', 'pieces_jointes'),
 		affairesLiees: droits.affairesLiees && sectionDeLaSuite(entite, 'affaires_liees', conditions),
-		diffusion: droits.diffusion && sectionDeLaSuite(entite, 'diffusion', conditions),
+		diffusion:
+			droits.diffusion && !droits.correction && sectionDeLaSuite(entite, 'diffusion', conditions),
 	};
 }

@@ -18,36 +18,32 @@ from app.auth.deps import (
 )
 from app.database import get_session
 from app.models.core import (
-    STATUTS_TICKET_CLOS,
     Ticket,
     TicketEvolution,
     Utilisateur,
 )
 from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate
-from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
-from app.utils.intervenant import appliquer_intervenant
-from app.utils.nature_affaire import est_actualite
-from app.routers.tickets.correction import _appliquer_quand
-from .actualite import appliquer_acces, diffuser_actualite
+from .actualite import diffuser_actualite
 from app.utils.evolutions import TYPES_SAISIS, evolution_modifiable, supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
+from app.utils.suivi_fil import statuts_avant
+from app.utils.valeurs import valeur
+from app.utils.nature_affaire import est_actualite
 from app.utils.fichiers import chemins_locaux
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_internes, photos_json
 from app.utils.recuperer import ou_404
-from app.utils.visibility import (
-    destinataires_par_defaut,
-    reservee_au_conseil,
-    ticket_visible,
-    trace_droits,
-    trace_lecture_par_defaut,
-)
-from app.utils.prochaine_visite import apres_cloture
+from app.utils.visibility import reservee_au_conseil, ticket_visible
 
 from .commun import (
     STATUT_LABELS,
-    appliquer_options,
     evol_read,
+)
+from .suite_sections import (
+    appliquer_sections_suite,
+    appliquer_statut,
+    corriger_suivi,
+    refuser_etat_sans_cycle,
 )
 from .courriels import envoyer_email_externe, envoyer_email_syndic_cs
 from .notifier_auteur import _notifier_auteur
@@ -86,7 +82,10 @@ def get_evolutions(
         .where(TicketEvolution.ticket_id == ticket_id)
         .order_by(TicketEvolution.cree_le)
     ).all()
-    return [evol_read(e, session) for e in evols]
+    #  L'état d'avant chaque entrée : la pastille qui, en correction, ramène la
+    #  Suite à un commentaire (`suivi_fil.py`) — calculé ici, une fois.
+    avant = statuts_avant(evols, valeur(ticket.statut))
+    return [evol_read(e, session, avant.get(e.id)) for e in evols]
 
 
 @router.patch("/{ticket_id}/evolutions/{evol_id}", response_model=TicketEvolutionRead)
@@ -110,6 +109,7 @@ def update_evolution(
     if body.fichiers_urls is not None:
         evol.fichiers_urls = photos_json(body.fichiers_urls)
     marquer_assiste_ia(evol, body)
+    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
     if body.perimetre_cible is not None:
         #  🔴 CORRIGER, pas raturer. La règle et son pourquoi vivent dans
         #  `app/utils/perimetre_fil.py` — elle a son `--selftest`.
@@ -126,14 +126,25 @@ def update_evolution(
         #  elle-même d'avant.
         fil = [evol if e.id == evol.id else e for e in fil]
         if doit_propager(evol, fil):
-            ticket = session.get(Ticket, ticket_id)
-            if ticket:
-                ticket.perimetre_cible = evol.perimetre_cible
-                session.add(ticket)
+            ticket.perimetre_cible = evol.perimetre_cible
+            session.add(ticket)
+    #  🔄 Toutes les sections d'une Suite se corrigent (01/10/2026) — le Suivi
+    #  d'abord : il corrige l'entrée, et l'affaire seulement si c'est sa dernière
+    #  transition (`utils/suivi_fil.py`). Le reste, comme à l'ajout.
+    if body.type is not None:
+        corriger_suivi(session, ticket, evol, body)
+    appliquer_sections_suite(session, ticket, evol, body, user)
+    if body.affaires_liees:
+        ajouter_liens(session, ticket, body.affaires_liees, user)
     session.add(evol)
     session.commit()
     session.refresh(evol)
-    return evol_read(evol, session)
+    fil = session.exec(
+        select(TicketEvolution)
+        .where(TicketEvolution.ticket_id == ticket_id)
+        .order_by(TicketEvolution.cree_le)
+    ).all()
+    return evol_read(evol, session, statuts_avant(fil, valeur(ticket.statut)).get(evol.id))
 
 
 @router.delete("/{ticket_id}/evolutions/{evol_id}", status_code=204)
@@ -240,12 +251,8 @@ def add_evolution(
         raise HTTPException(422, "Type invalide (commentaire ou etat)")
     if body.type == "etat" and not body.nouveau_statut:
         raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
-    #  Une actualité n'a pas de cycle (#1091) : une Suite y parle, elle ne la
-    #  fait pas avancer — et `publie` ne s'atteint par aucune transition.
-    if body.type == "etat" and (
-        est_actualite(ticket) or body.nouveau_statut in STATUTS_TICKET_SANS_CYCLE
-    ):
-        raise HTTPException(422, "Une actualité n'a pas d'état de suivi")
+    if body.type == "etat":
+        refuser_etat_sans_cycle(ticket, body.nouveau_statut)
 
     ancien_statut = ticket.statut if body.type == "etat" else None
     evol = TicketEvolution(
@@ -282,82 +289,12 @@ def add_evolution(
         ticket.perimetre_cible = json.dumps(body.perimetre_cible, ensure_ascii=False)
         ticket.mis_a_jour_le = horloge.maintenant()
         session.add(ticket)
-    #  🔴 LES OPTIONS DE PUBLICATION SE CORRIGENT DEPUIS UN COMMENTAIRE
-    #  (05/09/2026), demandé à l'écran :
-    #
-    #  > « tous les autres options de publication doivent être aussi conservé
-    #  >   dans l'objet pour les tickets en édition et commentaire »
-    #
-    #  Même mécanique que le périmètre juste au-dessus, et pour la même raison :
-    #  le formulaire montre le DERNIER état, ce qu'on enregistre DEVIENT l'état.
-    #  Le reporter sur le ticket rend justes, sans les toucher, toutes les vues
-    #  qui le lisent déjà.
-    #
-    #  ⚠️ La table des options et le contrôle de droit vivent dans
-    #  `commun.appliquer_options` — le troisième chemin qui les applique, et le
-    #  troisième à ne pas les réécrire.
-    if appliquer_options(ticket, body, est_cs=est_moderateur(user)):
-        ticket.mis_a_jour_le = horloge.maintenant()
-        session.add(ticket)
-    #  📅🛠️ QUAND, INTERVENANT, ÉQUIPEMENT — le conseil les pose dans une Suite
-    #  (#1207, arbitré le 24/09/2026) : le crayon ne lui est pas montré sur
-    #  l'affaire d'un résident, et il n'avait aucun autre chemin. Mêmes règles
-    #  que la correction — `appliquer_intervenant`, `_appliquer_quand` —, et ce
-    #  qui a changé s'écrit dans la Suite même : la trace est au fil.
-    if est_moderateur(user) and not est_actualite(ticket):
-        planifie = appliquer_intervenant(ticket, body, session, est_cs=True) + _appliquer_quand(
-            body, ticket
-        )
-        if planifie:
-            evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(planifie)}</em></p>"
-            ticket.mis_a_jour_le = horloge.maintenant()
-            session.add(ticket)
-    #  À qui l'on parle — une actualité (#1091) comme une affaire suivie depuis
-    #  #1343 (26/09/2026) : `ticket_visible` honore ce choix — et l'Accès. Le
-    #  conseil seul.
-    #  Puis l'invariant d'accès : une Suite qui referme l'actualité archive ses affiches.
-    if est_moderateur(user) and (
-        body.public_cible is not None or body.reserve_perimetre is not None
-    ):
-        avant = ticket.public_cible
-        reserve_avant = bool(ticket.reserve_perimetre)
-        if body.public_cible is not None:
-            ticket.public_cible = (
-                json.dumps(body.public_cible, ensure_ascii=False) if body.public_cible else None
-            )
-        if body.reserve_perimetre is not None:
-            ticket.reserve_perimetre = body.reserve_perimetre
-        #  🔒 Les droits valent pour TOUT le fil, et la Suite le dit (29/09/2026).
-        droits = trace_droits(
-            avant,
-            ticket.public_cible,
-            reserve_avant,
-            bool(ticket.reserve_perimetre),
-            vide="Tous" if est_actualite(ticket) else "par défaut de la catégorie",
-        )
-        if droits:
-            evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(droits)}</em></p>"
-        ticket.mis_a_jour_le = horloge.maintenant()
-        session.add(ticket)
-    if est_actualite(ticket):
-        appliquer_acces(ticket, session)
+    #  Mise en avant, Quand, Intervenant, Équipement, Destinataires, Accès : la
+    #  correction d'une Suite les pose aussi, d'où un seul lieu (01/10/2026).
+    appliquer_sections_suite(session, ticket, evol, body, user)
 
     if body.type == "etat":
-        lue_avant = destinataires_par_defaut(ticket)
-        ticket.statut = body.nouveau_statut
-        #  🔒 Une Étude & travaux qui passe en AG s'ouvre aux copropriétaires
-        #  (standard du 30/09/2026) : tout le fil avec elle, et la Suite le dit.
-        if ouverture := trace_lecture_par_defaut(ticket, lue_avant):
-            evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(ouverture)}</em></p>"
-        #  `("résolu", "fermé")` ici contre `(résolu, annulé, fermé)` dans le
-        #  PATCH : les deux chemins ne dataient pas la même clôture, et annuler
-        #  un ticket depuis le fil ne posait aucun `ferme_le`. Une seule liste,
-        #  désormais — celle du modèle.
-        if body.nouveau_statut in STATUTS_TICKET_CLOS:
-            ticket.ferme_le = horloge.maintenant()
-        ticket.mis_a_jour_le = horloge.maintenant()
-        session.add(ticket)
-        apres_cloture(ticket, session)  # la prochaine visite d'un contrat (#1092)
+        appliquer_statut(session, ticket, evol, body.nouveau_statut, horloge.maintenant())
 
     if ticket.auteur_id != user.id and body.notifier:
         _notifier_auteur(

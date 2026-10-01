@@ -22,14 +22,15 @@ from app.schemas_communs import ChampsIntervenant, EvolutionLue, ListeJson
 from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree
 
 
-class TicketEvolutionCreate(AssisteIAEntree, ChampsIntervenant):
-    type: str  # commentaire | etat
-    contenu: Optional[str] = None
-    #  Même type que `TicketUpdate.statut`, donc **même verdict** : les deux
-    #  chemins de changement d'état d'un ticket valident désormais la même
-    #  chose, au même endroit. `_STATUTS_ADMIS` — la liste écrite à la main qui
-    #  refusait `annulé` depuis toujours — a disparu du routeur (#415).
-    nouveau_statut: Optional[StatutTicket] = None
+class ChampsSuiteAffaire(ChampsIntervenant):
+    """Ce qu'une Suite pose sur l'AFFAIRE — à l'ajout comme à la correction.
+
+    Partagés par `TicketEvolutionCreate` et `TicketEvolutionUpdate` depuis le
+    01/10/2026 : l'édition d'une Suite rouvre toutes ses sections, et deux
+    listes de champs auraient divergé au premier ajout. Les règles vivent dans
+    `routers/tickets/suite_sections.py`.
+    """
+
     #  Une Suite AJOUTE des affaires liées, elle n'en retire aucune (#1342).
     affaires_liees: Optional[list[int]] = None
     #  Ce que le CONSEIL pose dans une Suite (#1207, 24/09/2026) : « Quand », et
@@ -37,6 +38,30 @@ class TicketEvolutionCreate(AssisteIAEntree, ChampsIntervenant):
     #  autre auteur ; mêmes règles que la correction.
     debut: Optional[datetime] = None
     fin: Optional[datetime] = None
+    #  🔴 LES OPTIONS DE PUBLICATION SE CORRIGENT DEPUIS UNE SUITE (05/09/2026) :
+    #  le formulaire montre le DERNIER état, et ce qu'on enregistre DEVIENT
+    #  l'état. `None` veut dire « cette entrée ne dit rien de cette option » —
+    #  le ticket garde la sienne, exactement comme `perimetre_cible`.
+    epingle: Optional[bool] = None
+    confidentiel: Optional[bool] = None
+    #  🚨 « Marquer urgente » ne crée PAS de colonne : elle pilote `priorite`,
+    #  que la catégorie « Urgence » met déjà à `haute`. Arbitré le 05/09/2026 —
+    #  deux notions d'urgence sur le même écran finiraient par se contredire.
+    urgente: Optional[bool] = None
+    #  À qui l'on parle (`[]` = défaut) et l'Accès « visible du seul périmètre »
+    #  — une actualité (#1091) comme une affaire suivie (#1343). Du conseil seul.
+    public_cible: Optional[List[str]] = None
+    reserve_perimetre: Optional[bool] = None
+
+
+class TicketEvolutionCreate(AssisteIAEntree, ChampsSuiteAffaire):
+    type: str  # commentaire | etat
+    contenu: Optional[str] = None
+    #  Même type que `TicketUpdate.statut`, donc **même verdict** : les deux
+    #  chemins de changement d'état d'un ticket valident désormais la même
+    #  chose, au même endroit. `_STATUTS_ADMIS` — la liste écrite à la main qui
+    #  refusait `annulé` depuis toujours — a disparu du routeur (#415).
+    nouveau_statut: Optional[StatutTicket] = None
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
@@ -55,31 +80,16 @@ class TicketEvolutionCreate(AssisteIAEntree, ChampsIntervenant):
     #  évolution ne dit rien du périmètre », et le ticket garde le sien. Quand il
     #  est fourni, il devient le périmètre COURANT du ticket (#497).
     perimetre_cible: Optional[List[str]] = None
-    #  🔴 LES OPTIONS DE PUBLICATION SE CORRIGENT DEPUIS UN COMMENTAIRE
-    #  (05/09/2026), demandé à l'écran :
-    #
-    #  > « tous les autres options de publication doivent être aussi conservé
-    #  >   dans l'objet pour les tickets en édition et commentaire »
-    #
-    #  C'est la règle déjà posée pour l'actualité : le formulaire montre le
-    #  DERNIER état, et ce qu'on enregistre DEVIENT l'état. `None` veut dire
-    #  « cette entrée ne dit rien de cette option » — le ticket garde la sienne,
-    #  exactement comme `perimetre_cible` juste au-dessus.
-    epingle: Optional[bool] = None
-    confidentiel: Optional[bool] = None
-    #  🚨 « Marquer urgente » ne crée PAS de colonne : elle pilote `priorite`,
-    #  que la catégorie « Urgence » met déjà à `haute`. Arbitré le 05/09/2026 —
-    #  deux notions d'urgence sur le même écran finiraient par se contredire.
-    urgente: Optional[bool] = None
-    #  Ce que porte une actualité (#1091, lot 4), corrigeable depuis une Suite
-    #  comme sur l'ancienne publication : à qui l'on parle (`[]` = tout le monde)
-    #  et l'Accès « visible du seul périmètre ». Du conseil seul.
-    public_cible: Optional[List[str]] = None
-    reserve_perimetre: Optional[bool] = None
 
 
-class TicketEvolutionUpdate(AssisteIACorrection):
+class TicketEvolutionUpdate(AssisteIACorrection, ChampsSuiteAffaire):
     contenu: Optional[str] = None
+    #  🔄 LE SUIVI SE CORRIGE (01/10/2026, arbitré à l'écran) : absent, la Suite
+    #  garde le sien ; envoyé, il est corrigé SUR la Suite — même date, même
+    #  auteur —, et l'affaire ne le suit que si c'est sa dernière transition
+    #  (`app/utils/suivi_fil.py`). `etat` vers l'état d'avant = un commentaire.
+    type: Optional[str] = None
+    nouveau_statut: Optional[StatutTicket] = None
     fichiers_urls: Optional[List[str]] = None
     #  🔴 LE PÉRIMÈTRE SE CORRIGE (01/09/2026). Ce champ était refusé ici, au
     #  motif qu'« un périmètre déclaré est un fait daté ». Le raisonnement vaut
@@ -101,6 +111,10 @@ class TicketEvolutionRead(EvolutionLue):
     #  `None` quand l'entrée ne parle pas du périmètre — à distinguer d'une liste
     #  vide, qui voudrait dire « plus aucun périmètre ».
     perimetre_cible: Optional[ListeJson] = None
+    #  L'état en vigueur JUSTE AVANT cette entrée — calculé par le serveur sur
+    #  tout le fil (`suivi_fil.statuts_avant`) : c'est la pastille qui, choisie
+    #  en correction, ramène la Suite à un commentaire. L'écran n'en a pas de copie.
+    statut_avant: Optional[str] = None
 
     class Config:
         from_attributes = True

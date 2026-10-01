@@ -161,7 +161,9 @@ def test_les_TROIS_chemins_appellent_la_regle_commune():
     #  lignes dans `crud.py`, et sa moitié basse vivait déjà dans `correction.py`.
     #  Le chemin n'a pas disparu, il a déménagé — et ce test, qui compte par
     #  MODULE, l'a dit tout de suite. C'est ce qu'on attend de lui.
-    for module, attendus in (("crud.py", 1), ("mise_a_jour.py", 1), ("evolutions.py", 1)):
+    #  Le chemin de la Suite a déménagé de même (01/10/2026) : `suite_sections.py`
+    #  sert l'ajout ET la correction d'une Suite, qui rouvre ses sections.
+    for module, attendus in (("crud.py", 1), ("mise_a_jour.py", 1), ("suite_sections.py", 1)):
         source = (racine / module).read_text(encoding="utf-8")
         arbre = ast.parse(source)
         appels = [

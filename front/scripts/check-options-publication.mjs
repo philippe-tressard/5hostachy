@@ -57,9 +57,10 @@ const SOURCE = join(RACINE, 'lib', 'options-publication.ts');
 const CONSOMMATEURS = [
 	join('lib', 'components', 'OptionsPublication.svelte'),
 	join('lib', 'components', 'CarteActualite.svelte'),
-	//  La page Actualités est devenue une redirection le 23/09/2026 (#1091) :
-	//  une actualité se rend dans la liste des affaires, et 🔒 sous le Périmètre.
-	join('lib', 'components', 'ActualiteEnListe.svelte'),
+	//  `ActualiteEnListe` a quitté la liste le 01/10/2026 (#1520) : sa Suite passe
+	//  par `SuiteAffaire` et sa Mise en avant par `OptionsEvolutionTicket`, comme
+	//  une affaire ; il ne rend plus d'option lui-même, il passe `OPTIONS_TICKET`
+	//  au panneau — comme `CarteTicket`, que la liste ne nomme pas non plus.
 	join('lib', 'components', 'CaseReservePerimetre.svelte'),
 ];
 

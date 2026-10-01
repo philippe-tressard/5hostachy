@@ -151,7 +151,9 @@ def libelle_evolution(e: TicketEvolution, *, avec_extrait: bool = False) -> str:
 # ── Sérialisation ────────────────────────────────────────────────────────────
 
 
-def evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
+def evol_read(
+    e: TicketEvolution, session: Session, statut_avant: Optional[str] = None
+) -> TicketEvolutionRead:
     auteur = session.get(Utilisateur, e.auteur_id)
     return TicketEvolutionRead(
         id=e.id,
@@ -173,6 +175,7 @@ def evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
         #  ont été ramenés à cette fonction ce jour-là ; celui-ci est resté, et
         #  c'est une décision, pas un oubli.
         perimetre_cible=json.loads(e.perimetre_cible) if e.perimetre_cible else None,
+        statut_avant=statut_avant,
     )
 
 

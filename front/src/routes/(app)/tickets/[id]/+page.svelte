@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
-	import { nomCopie } from '$lib/saisi-pour';
-	import { contexteCommentaire } from '$lib/assistant';
 	import { estAbsent, messageErreur } from '$lib/erreurs';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
@@ -22,9 +20,6 @@
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import FilAriane from '$lib/components/FilAriane.svelte';
 	import { fmtDateLong, fmtDateShort } from '$lib/date';
-	import { motifWhatsappInterdit } from '$lib/options-publication';
-	import { ticketLuDuSeulConseil } from '$lib/lecture-ticket';
-	import { optionsDuTicket } from '$lib/tickets';
 	import { intervenantAffiche } from '$lib/prestataires';
 	import {
 		BADGE_PRIORITE,
@@ -338,21 +333,7 @@
 	      `HistoriqueTicket` : la liste et cette fiche le rendaient chacune de
 	      leur côté, et les deux câblages ont divergé DEUX FOIS, dans les deux
 	      sens — le crayon manquait à la liste, la corbeille manquait ici. -->
-	<HistoriqueTicket
-		{ticketId}
-		{ticket}
-		auteurNom={nomCopie(ticket)}
-		statutCourant={ticket?.statut ?? ''}
-		assistant={ticket
-			? contexteCommentaire(ticket, STATUT_LABELS[ticket.statut] ?? ticket.statut)
-			: null}
-		perimetreCourant={ticket?.perimetre_cible ?? []}
-		whatsappInterdit={motifWhatsappInterdit(!!ticket && ticketLuDuSeulConseil(ticket), 'ticket')}
-		optionsInitiales={optionsDuTicket(ticket)}
-		{evolutions}
-		{erreurSuivi}
-		on:change={loadEvolutions}
-	/>
+	<HistoriqueTicket {ticketId} {ticket} {evolutions} {erreurSuivi} on:change={loadEvolutions} />
 
 	<!-- Suppression admin -->
 	{#if $isAdmin}

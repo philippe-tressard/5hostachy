@@ -38,15 +38,12 @@
 -->
 <script lang="ts">
 	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
-	import { SUITE } from '$lib/gestes';
-	import { contexteCommentaire } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import ApercuTicket from './ApercuTicket.svelte';
 	import ExtraitRecherche from './ExtraitRecherche.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
 	import EtatListe from './EtatListe.svelte';
 	import PastillesAffaire from './PastillesAffaire.svelte';
-	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import ActionsTicket from './ActionsTicket.svelte';
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import FicheLecture from './FicheLecture.svelte';
@@ -54,15 +51,9 @@
 	import TransfertsVerses from './TransfertsVerses.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { peutCommenter as peutCommenterCe, peutEditer } from '$lib/droits';
-	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import FormulaireTicket from './FormulaireTicket.svelte';
-	import EvolForm from './EvolForm.svelte';
-	import SectionsSuiteConseil from './SectionsSuiteConseil.svelte';
-	import SuiteConseilEquipement from './SuiteConseilEquipement.svelte';
-	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
-	import { equipementDansLaSuite } from '$lib/suite-conseil';
+	import SuiteAffaire from './SuiteAffaire.svelte';
 	import { TICKET } from '$lib/entites/ticket';
-	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
 	import {
 		OPTIONS_TICKET,
 		optionsDuTicket,
@@ -70,17 +61,10 @@
 		ticketUrgent,
 		attributsNature,
 		STATUT_TICKET_LABELS,
-		STATUT_TICKET_OPTIONS,
 	} from '$lib/tickets';
 	import { fmtDate } from '$lib/date';
-	import { destinatairesParDefautDuTicket, ticketLuDuSeulConseil } from '$lib/lecture-ticket';
-	import {
-		tickets as ticketsApi,
-		type CorrespondanceAffaire,
-		type Ticket,
-		type TicketEvolution,
-	} from '$lib/api';
-	import { nomCopie, nomProprietaire } from '$lib/saisi-pour';
+	import { type CorrespondanceAffaire, type Ticket, type TicketEvolution } from '$lib/api';
+	import { nomProprietaire } from '$lib/saisi-pour';
 	import { equipLabel, intervenantAffiche } from '$lib/prestataires';
 
 	export let ticket: Ticket;
@@ -111,10 +95,6 @@
 	/** Le panneau d'options rapides attend-il le serveur ? */
 	export let optionsRapidesEnCours = false;
 
-	//  🔴 LES OPTIONS du ticket, reprises À CHAQUE OUVERTURE de la Suite (05/09/2026) :
-	//  l'état réel s'affiche, l'enregistré le devient ; une COPIE jusqu'à l'envoi.
-	let optionsEvol = optionsDuTicket(ticket);
-	$: if (mode === 'evolution') optionsEvol = optionsDuTicket(ticket);
 	//  Le brouillon du panneau rapide : on ne touche PAS au ticket affiché tant
 	//  que le serveur n'a pas répondu — sinon l'écran montre un état enregistré
 	//  qui ne l'est pas, et le laisse faux si la requête échoue.
@@ -278,56 +258,15 @@
 				</div>
 			{:else if mode === 'evolution'}
 				<div class="tk-formulaire">
-					<EvolForm
-						idPrefixe="tk-evol-{ticket.id}"
-						auteurNom={nomCopie(ticket)}
-						titre={SUITE.libelle}
-						demanderApercu={(saisie) =>
-							ticketsApi.apercuDiffusion({
-								ticket_id: ticket.id,
-								commentaire: saisie.contenu,
-								fichiers_urls: saisie.fichiers_urls,
-								destinataire_syndic: saisie.syndic,
-								destinataire_cs: saisie.cs,
-								partager_whatsapp: saisie.whatsapp,
-							})}
-						statutOptions={STATUT_TICKET_OPTIONS}
-						statutLabels={STATUT_TICKET_LABELS}
-						currentStatut={ticket.statut}
-						entite={TICKET}
-						affaireLiable={$isCS ? ticket.id : null}
-						initialDestinataires={ticket.public_cible ?? []}
-						destinatairesParDefaut={destinatairesParDefautDuTicket(ticket)}
-						bind:confidentiel={optionsEvol.brouillon}
-						conditions={conditionsDeLaSuite(ticket)}
-						assistant={contexteCommentaire(
-							ticket,
-							STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut,
-						)}
-						peutPreciserPerimetre={peutSuivreCeTicket}
-						perimetreCourant={ticket.perimetre_cible ?? []}
+					<!--  Le MÊME montage que la fiche (`SuiteAffaire`, 01/10/2026). -->
+					<SuiteAffaire
+						{ticket}
 						entrees={evolutions}
-						whatsappInterdit={motifWhatsappInterdit(ticketLuDuSeulConseil(ticket), 'ticket')}
-						peutDiffuser={$isCS}
+						peutSuivre={peutSuivreCeTicket}
 						saving={evolutionEnCours}
-						avantSuivi={equipementDansLaSuite(ticket, $isCS)}
-						on:submit={(e) =>
-							dispatch('evoluer', { ...e.detail, ...optionsVersTicket(optionsEvol) })}
+						on:submit={(e) => dispatch('evoluer', e.detail)}
 						on:cancel={() => dispatch('annuler')}
-					>
-						<!--  Les MÊMES composants que la fiche du ticket, chacun à son
-						      rang (#1326) : Équipement, puis Quand et Intervenant, puis
-						      la Mise en avant. -->
-						<svelte:fragment slot="avant_suivi" let:partage>
-							<SuiteConseilEquipement {ticket} {partage} />
-						</svelte:fragment>
-						<svelte:fragment slot="specifiques" let:premiere let:partage>
-							<SectionsSuiteConseil {ticket} {premiere} {partage} bind:options={optionsEvol} />
-						</svelte:fragment>
-						<svelte:fragment slot="mise_en_avant">
-							<OptionsEvolutionTicket bind:options={optionsEvol} />
-						</svelte:fragment>
-					</EvolForm>
+					/>
 				</div>
 			{:else}
 				<FicheLecture
@@ -375,17 +314,11 @@
 						>
 							<svelte:fragment slot="edition" let:evol>
 								{#key evolEnEdition}
-									<EvolForm
-										idPrefixe="tk-evol-edit-{evol.id}"
-										auteurNom={nomCopie(ticket)}
-										titre={SUITE.libelleModifier}
-										editMode={true}
-										initialContenu={evol.contenu || ''}
-										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-										entite={TICKET}
-										perimetreCourant={ticket.perimetre_cible ?? []}
+									<SuiteAffaire
+										{ticket}
+										{evol}
 										entrees={evolutions}
-										initialPerimetre={evol.perimetre_cible ?? []}
+										peutSuivre={peutSuivreCeTicket}
 										saving={evolCorrectionEnCours}
 										on:submit={(e) => dispatch('evol_corriger', e.detail)}
 										on:cancel={() => dispatch('evol_annuler')}
