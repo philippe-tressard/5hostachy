@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { libelleLogement, relire } from '$lib/utils';
+	import { relire } from '$lib/utils';
 	import KanbanTableauBord from '$lib/components/KanbanTableauBord.svelte';
 	import UrgencesAccueil from '$lib/components/UrgencesAccueil.svelte';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
 	import AlerteRelanceSyndic from '$lib/components/AlerteRelanceSyndic.svelte';
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
-	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
 	import { currentUser, isAdmin, isCS, isLocataire, isProprioOuCS } from '$lib/stores/auth';
 	import {
 		flux,
@@ -18,15 +17,15 @@
 		type Ticket,
 	} from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { fmtDateLong } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
-	import Avatar from '$lib/components/Avatar.svelte';
-	import FluxCard from '$lib/components/FluxCard.svelte';
+	import EnteteAccueil from '$lib/components/EnteteAccueil.svelte';
+	import FriseDuFil from '$lib/components/FriseDuFil.svelte';
+	import LienConsignes from '$lib/components/LienConsignes.svelte';
 	import RaccourcisRapides from '$lib/components/RaccourcisRapides.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	// Toutes les règles du fil (apparence, liens, appartenance aux trois
 	// registres) vivent dans ce module — cf. `$lib/flux.ts`.
-	import { cleFluxItem, dateDeReference, estEpingle, estNonResolu, estUrgent } from '$lib/flux';
+	import { dateDeReference, estEpingle, estNonResolu, estUrgent, grouperParJour } from '$lib/flux';
 
 	$: _pc = getPageConfig($configStore, 'tableau-de-bord', defautsDePage('tableau-de-bord'));
 	$: _siteNom = $siteNomStore;
@@ -70,28 +69,6 @@
 	//  disait « Bonjour » à 20 h (`utils.relire`). `salutation` vit dans
 	//  `$lib/date` — c'est une notion de date, pas de cet écran.
 	$: greeting = relire(data, salutation);
-
-	//  🔴 Les deux tables locales ont rejoint `$lib/roles` (#801) : elles étaient
-	//  la troisième écriture front de la même notion, et la SEULE à écrire
-	//  « Copropriétaire résident » — les deux autres écrans mettaient une
-	//  capitale au second mot. C'est cette forme-ci qui a été retenue.
-	//
-	//  ⚠️ Ce qui reste ICI est la RÈGLE de composition, pas les libellés : on
-	//  annonce le statut, puis les rôles qui ajoutent quelque chose (conseil
-	//  syndical, admin), séparés par ` · `. `résident` et `propriétaire` n'y
-	//  figurent pas — ils ne disent rien de plus que le statut déjà affiché.
-	$: roleLabels = (() => {
-		const labels: string[] = [];
-		const statut = $currentUser?.statut ?? '';
-		if (LIBELLES_STATUT[statut]) labels.push(libelleStatut(statut));
-		const allRoles = new Set([...($currentUser?.roles ?? []), $currentUser?.role ?? '']);
-		for (const r of ['conseil_syndical', 'admin']) {
-			if (allRoles.has(r)) labels.push(libelleRole(r));
-		}
-		return labels.join(' · ');
-	})();
-
-	$: lotLabel = libelleLogement(userLots, $currentUser as any);
 
 	// ── Expand state (unique entre prochaines échéances et fil d'activité) ─
 	let expandedItem: string | null = null;
@@ -171,33 +148,9 @@
 		olderItems = _older;
 	}
 
-	// ── Groupement par jour ────────────────────────────────────────────────
-	interface DayGroup {
-		label: string;
-		items: FluxItem[];
-	}
-
-	function groupByDay(items: FluxItem[]): DayGroup[] {
-		const groups: Map<string, FluxItem[]> = new Map();
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
-		const yesterday = new Date(today);
-		yesterday.setDate(yesterday.getDate() - 1);
-		for (const item of items) {
-			const d = new Date(item.date);
-			d.setHours(0, 0, 0, 0);
-			let label: string;
-			if (d.getTime() === today.getTime()) label = "Aujourd'hui";
-			else if (d.getTime() === yesterday.getTime()) label = 'Hier';
-			else label = fmtDateLong(item.date);
-			if (!groups.has(label)) groups.set(label, []);
-			groups.get(label)!.push(item);
-		}
-		return Array.from(groups, ([label, items]) => ({ label, items }));
-	}
-
-	$: recentDayGroups = groupByDay(recentItems);
-	$: olderDayGroups = groupByDay(olderItems);
+	// ── Groupement par jour : `grouperParJour` (`$lib/flux`), rendu par `FriseDuFil`.
+	$: recentDayGroups = grouperParJour(recentItems);
+	$: olderDayGroups = grouperParJour(olderItems);
 	let olderOpen = false;
 
 	// ── Kanban widget ──────────────────────────────────────────────────────
@@ -250,62 +203,12 @@
 		<p>Vérifiez votre connexion et réessayez.</p>
 	</div>
 {:else}
-	<!-- ═══ HÉRO EN-TÊTE ═══════════════════════════════════════════════════ -->
-	<div class="hero" class:hero-visible={ready}>
-		<div class="hero-accent"></div>
-		<div class="hero-content">
-			<div class="hero-top">
-				<div>
-					<h1 class="hero-greeting">
-						{greeting}
-						{$currentUser?.prenom}{#if lotLabel}
-							<span class="hero-lot-inline">— {lotLabel}</span>{/if}{#if roleLabels}
-							<span class="hero-role-inline">· {roleLabels}</span>{/if}
-					</h1>
-				</div>
-				<!-- Raccourci vers le profil. Sans photo, la pastille porte un
-				     crayon : c'est l'invitation à en déposer une, sans texte ni
-				     bandeau qui encombrerait l'en-tête. -->
-				<a
-					class="hero-avatar"
-					href="/profil"
-					title={$currentUser?.photo_url ? 'Mon profil' : 'Mon profil — ajouter une photo'}
-					aria-label={$currentUser?.photo_url
-						? 'Mon profil'
-						: 'Mon profil — ajouter une photo de profil'}
-				>
-					<Avatar
-						photoUrl={$currentUser?.photo_url}
-						prenom={$currentUser?.prenom}
-						nom={$currentUser?.nom}
-					/>
-					{#if !$currentUser?.photo_url}
-						<span class="hero-avatar-badge" aria-hidden="true"><Icon name="pencil" size={9} /></span
-						>
-					{/if}
-				</a>
-			</div>
-		</div>
-	</div>
+	<EnteteAccueil salutation={greeting} lots={userLots} visible={ready} />
 
 	<!-- ═══ CONSIGNES DE LA COPROPRIÉTÉ ═══════════════════════════════════ -->
-	<a
-		href="/api/admin/fiche-arrivant"
-		target="_blank"
-		class="consignes-card section-reveal"
-		class:section-visible={ready}
-		class:consignes-prominent={$isLocataire}
-		style="--delay:.05s"
-	>
-		<div class="consignes-icon">📋</div>
-		<div class="consignes-text">
-			<strong class="consignes-titre">Consignes de la copropriété</strong>
-			<span class="consignes-sub"
-				>Règlement intérieur, tri sélectif, accès, stationnement et contacts utiles</span
-			>
-		</div>
-		<span class="consignes-arrow"><Icon name="chevron-right" size={18} /></span>
-	</a>
+	<div class="section-reveal" class:section-visible={ready} style="--delay:.05s">
+		<LienConsignes forme="carte" misEnAvant={$isLocataire} />
+	</div>
 
 	<!-- La relance syndic est annoncée UNE fois, par « ALERTES URGENTES » plus
 	     bas, à partir de `data.sante.tickets_relance_syndic` que le backend
@@ -343,16 +246,13 @@
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.15s">
 			<div class="epingle-bloc">
 				<h2 class="epingle-titre">📌 Épinglé</h2>
-				<div class="flux-timeline epingle-timeline">
-					{#each pinnedItems as item (cleFluxItem(item))}
-						<FluxCard
-							{item}
-							expanded={expandedItem === item.id}
-							on:toggle={(e) => toggleItem(e.detail)}
-							on:masquer={(e) => void masquerItem(e.detail)}
-						/>
-					{/each}
-				</div>
+				<FriseDuFil
+					groupes={[{ label: null, items: pinnedItems }]}
+					variante="epingle"
+					itemDeplie={expandedItem}
+					onBasculer={toggleItem}
+					onMasquer={masquerItem}
+				/>
 			</div>
 		</div>
 	{/if}
@@ -379,18 +279,13 @@
 		</div>
 	{:else}
 		<!-- Fil récent (<30 jours) -->
-		<div class="flux-timeline section-reveal" class:section-visible={ready} style="--delay:.3s">
-			{#each recentDayGroups as group (group.label)}
-				<div class="flux-day-label">{group.label}</div>
-				{#each group.items as item (cleFluxItem(item))}
-					<FluxCard
-						{item}
-						expanded={expandedItem === item.id}
-						on:toggle={(e) => toggleItem(e.detail)}
-						on:masquer={(e) => void masquerItem(e.detail)}
-					/>
-				{/each}
-			{/each}
+		<div class="section-reveal" class:section-visible={ready} style="--delay:.3s">
+			<FriseDuFil
+				groupes={recentDayGroups}
+				itemDeplie={expandedItem}
+				onBasculer={toggleItem}
+				onMasquer={masquerItem}
+			/>
 		</div>
 
 		<!-- Accordéon : anciens (>30 jours) -->
@@ -458,172 +353,7 @@
 		width: 70%;
 	}
 
-	/* ═══ HERO EN-TÊTE ═══════════════════════════════════════════════════ */
-	.hero {
-		margin: -1rem -1rem 0;
-		padding: 1.5rem 1.25rem 1.25rem;
-		background: linear-gradient(135deg, var(--color-primary) 0%, #2a4f7a 100%);
-		border-radius: 0 0 var(--radius) var(--radius);
-		position: relative;
-		overflow: hidden;
-		opacity: 0;
-		transform: translateY(-10px);
-		transition:
-			opacity var(--duree-apparition) var(--ease-out),
-			transform var(--duree-apparition) var(--ease-out);
-	}
-	.hero.hero-visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	.hero-accent {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 4px;
-		background: linear-gradient(
-			90deg,
-			var(--color-accent) 0%,
-			var(--color-secondary) 50%,
-			var(--color-accent) 100%
-		);
-	}
-	.hero-content {
-		position: relative;
-		z-index: 1;
-	}
-	.hero-top {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 0.75rem;
-	}
-	/* L'anneau clair détache la pastille du dégradé bleu ; le fond de repli des
-	   initiales reste translucide pour ne pas concurrencer la salutation. */
-	.hero-avatar {
-		position: relative;
-		flex-shrink: 0;
-		/* Cible tactile ≥ 44 px (2,6 rem + l'anneau) — atteignable au pouce. */
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 44px;
-		min-height: 44px;
-		padding: 2px;
-		border-radius: 50%;
-		background: rgba(255, 255, 255, 0.3);
-		text-decoration: none;
-		transition:
-			background var(--duree-geste),
-			transform var(--duree-geste) var(--ease-out);
-		--avatar-size: 2.6rem;
-		--avatar-bg: rgba(255, 255, 255, 0.18);
-		--avatar-color: #fff;
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.hero-avatar:hover {
-			background: rgba(255, 255, 255, 0.6);
-			transform: scale(1.04);
-		}
-	}
-	.hero-avatar:focus-visible {
-		outline: 2px solid var(--color-accent);
-		outline-offset: 3px;
-	}
-	.hero-avatar-badge {
-		position: absolute;
-		right: -1px;
-		bottom: -1px;
-		width: 1.05rem;
-		height: 1.05rem;
-		border-radius: 50%;
-		background: var(--color-accent);
-		color: #fff;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 0 0 2px var(--color-primary);
-	}
-	.hero-greeting {
-		font-size: 1.35rem;
-		font-weight: 700;
-		color: var(--color-text-inverse);
-		margin: 0;
-		line-height: 1.3;
-	}
-	.hero-lot-inline {
-		font-size: var(--fs-md);
-		font-weight: 400;
-		color: rgba(255, 255, 255, 0.75);
-	}
-	.hero-role-inline {
-		font-size: var(--fs-xs);
-		font-weight: 400;
-		color: rgba(255, 255, 255, 0.55);
-		letter-spacing: 0.02em;
-	}
-
-	/* ═══ CONSIGNES DE LA COPROPRIÉTÉ ═══════════════════════════════════ */
-	.consignes-card {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin: 0.75rem 0;
-		padding: 0.75rem 1rem;
-		border-radius: var(--radius);
-		background: linear-gradient(135deg, #f0f7ff 0%, #e8f4f8 100%);
-		border: 1px solid var(--color-primary);
-		border-left: 4px solid var(--color-primary);
-		text-decoration: none;
-		color: inherit;
-		opacity: 0;
-		transform: translateY(8px);
-		transition:
-			opacity var(--duree-apparition) var(--ease-out) var(--delay, 0s),
-			transform var(--duree-apparition) var(--ease-out) var(--delay, 0s),
-			box-shadow var(--duree-geste);
-	}
-	.consignes-card.section-visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.consignes-card:hover {
-			box-shadow: var(--shadow);
-			transform: translateY(-1px);
-		}
-	}
-	.consignes-card.consignes-prominent {
-		background: var(--color-warning-fond);
-		border-color: var(--color-warning);
-		border-left-color: var(--color-warning);
-		/*  Mise en avant FIXE (26/09/2026) : elle pulsait à chaque visite, sans fin. */
-	}
-	.consignes-icon {
-		font-size: 1.5rem;
-		flex-shrink: 0;
-	}
-	.consignes-text {
-		flex: 1;
-		min-width: 0;
-	}
-	.consignes-titre {
-		font-size: var(--fs-base);
-		font-weight: 600;
-		color: var(--color-primary);
-		display: block;
-	}
-	.consignes-sub {
-		font-size: var(--fs-xs);
-		color: var(--color-text-muted);
-		line-height: 1.3;
-	}
-	.consignes-arrow {
-		flex-shrink: 0;
-		color: var(--color-primary);
-		opacity: 0.6;
-	}
+	/* La carte des consignes est `LienConsignes` (#779) : ses styles l'ont suivie. */
 
 	/* Les styles de la rangée de raccourcis sont partis avec leur balisage dans
 	   `RaccourcisRapides.svelte` — Svelte scope les styles au composant. */
@@ -631,15 +361,6 @@
 	/* ═══ ANIMATIONS SECTIONS ═══════════════════════════════════════════
 	   `.section-reveal` vit dans `styles/socle.css` : les raccourcis la
 	   recopiaient (27/09/2026). */
-	/*  Mouvement réduit : l'accueil apparaît en fondu, sans glisser. C'est l'écran
-	    le plus vu — il ne doit pas bouger pour qui a demandé qu'on ne bouge pas
-	    (`emil-design-eng` : garder l'opacité, retirer le déplacement). */
-	@media (prefers-reduced-motion: reduce) {
-		.hero,
-		.consignes-card {
-			transform: none;
-		}
-	}
 
 	/* ═══ KPI CARDS ═════════════════════════════════════════════════════ */
 
@@ -673,30 +394,6 @@
 		color: var(--color-text-muted);
 		margin: 0 0 0.25rem;
 	}
-	/* La carte est la même que dans le fil : seule la ligne de temps est
-	   inutile ici, l'ordre chronologique n'étant pas le sujet. */
-	.epingle-timeline {
-		padding-left: 1.5rem;
-	}
-	.epingle-timeline::before {
-		display: none;
-	}
-
-	/*  `.older-timeline` est partie avec `ArchivesDuFil` — elle n'habillait que
-	    son balisage. */
-
-	/* ═══ RESPONSIVE ════════════════════════════════════════════════════ */
-	@media (max-width: 767px) {
-		.hero {
-			margin: -0.75rem -0.75rem 0;
-			padding: 1.25rem 1rem 1rem;
-		}
-		.consignes-card {
-			gap: 0.5rem;
-			padding: 0.6rem 0.75rem;
-		}
-		.consignes-icon {
-			font-size: 1.2rem;
-		}
-	}
+	/*  La frise elle-même — celle du bandeau comme celle du fil et des Archives —
+	    est `FriseDuFil` (#779), variante `epingle` ici. */
 </style>

@@ -15,6 +15,7 @@ import type { FluxItem } from '$lib/api';
 import { estTicketClos } from '$lib/tickets';
 import { equipLabel } from '$lib/prestataires';
 import { parAttribut } from '$lib/table-statuts';
+import { fmtDateLong } from '$lib/date';
 
 // ── Apparence par type d'élément ──────────────────────────────────────────
 //
@@ -297,4 +298,41 @@ export function avertissementEpinglage(totalApresEpinglage: number): string | nu
 export function badgesDuFlux(item: FluxItem): string[] {
 	const equipement = item.type === 'prestataire' ? item.meta?.specialite : null;
 	return equipement ? [equipLabel(String(equipement))] : item.badges;
+}
+
+/**
+ * Un groupe de la frise du fil : l'intitulé de son jour (« Aujourd'hui »,
+ * « Hier », puis la date longue), ou `null` pour un groupe qui n'en affiche
+ * pas — le bandeau Épinglé. Rendu par `FriseDuFil`.
+ */
+export interface GroupeDuFil {
+	label: string | null;
+	items: FluxItem[];
+}
+
+/**
+ * Les éléments du fil groupés par JOUR, dans l'ordre où ils arrivent.
+ *
+ * Elle vivait dans la page d'accueil, qui l'appliquait au fil récent et aux
+ * Archives : c'est une règle du fil, pas de l'écran (#779).
+ */
+export function grouperParJour(items: FluxItem[]): GroupeDuFil[] {
+	const groupes = new Map<string, FluxItem[]>();
+	const aujourdhui = new Date();
+	aujourdhui.setHours(0, 0, 0, 0);
+	const hier = new Date(aujourdhui);
+	hier.setDate(hier.getDate() - 1);
+	for (const item of items) {
+		const jour = new Date(item.date);
+		jour.setHours(0, 0, 0, 0);
+		const label =
+			jour.getTime() === aujourdhui.getTime()
+				? "Aujourd'hui"
+				: jour.getTime() === hier.getTime()
+					? 'Hier'
+					: fmtDateLong(item.date);
+		if (!groupes.has(label)) groupes.set(label, []);
+		groupes.get(label)!.push(item);
+	}
+	return Array.from(groupes, ([label, items]) => ({ label, items }));
 }

@@ -148,6 +148,10 @@ export default defineConfig({
 			'@tiptap/core', // l'éditeur riche, chargé à la demande
 			'@tiptap/starter-kit',
 			'@tiptap/extension-placeholder',
+			//  Import STATIQUE, mais d'un écran que le pré-scan n'atteint qu'à la
+			//  visite (`QRCode`, l'annuaire) : le premier e2e qui y est allé l'a
+			//  fait découvrir en plein test (#779, 01/10/2026).
+			'qrcode-generator',
 		],
 	},
 	server: {
