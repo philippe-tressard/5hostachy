@@ -238,6 +238,9 @@ l'historique git la garde (`standards/14`). Trente-trois fichiers en portaient l
   inventés : un nom de personne hors de la liste fait échouer la CI. Une liste
   noire republierait les vrais noms, compilés. Ses limites — formes repérées et
   ce qu'il ne voit pas — sont écrites dans son en-tête.
+- Un nom se cherche et se remplace **sans tenir compte de la casse** : le premier
+  passage (v2.89.2) a laissé deux clés en minuscules et un nom à casse mixte,
+  trouvés à la vérification sur `main`, pas avant.
 - Ce qu'aucun contrôle ne lit est public aussi : **message de commit, titre et
   corps d'un ticket ou d'une PR**. Y décrire le cas sans le nom (« un
   copropriétaire homonyme d'une banque »).

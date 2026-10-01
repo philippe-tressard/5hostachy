@@ -30,7 +30,7 @@ def _carte_membre(ident: str, membre, detail: str, badge: str, meta: dict) -> Fl
         cree_le=membre.cree_le,
         #  « Prénom NOM », nom en capitales — la règle du site, écrite une
         #  seule fois (`utils/noms.py`). Ce titre rendait la casse tapée :
-        #  « Jean-Sébastien CourT », signalé à l'écran le 31/08/2026.
+        #  « Jean-Baptiste ForT », signalé à l'écran le 31/08/2026.
         titre=nom_affiche(membre.prenom, membre.nom),
         detail=detail,
         icon="👥",
