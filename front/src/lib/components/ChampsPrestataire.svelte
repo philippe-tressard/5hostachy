@@ -25,7 +25,7 @@
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import SectionEquipement from '$lib/components/SectionEquipement.svelte';
 	import { contexteAssistant } from '$lib/assistant';
-	import { contactRenseigne } from '$lib/prestataires';
+	import { contactRenseigne, contactVide } from '$lib/prestataires';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
 	export let prestForm: any;
@@ -145,11 +145,7 @@
 		<button
 			type="button"
 			class="btn btn-sm btn-outline"
-			on:click={() =>
-				(prestContacts = [
-					...prestContacts,
-					{ telephone: '', prenom: '', nom: '', fonction: '', email: '' },
-				])}>+ Nouveau contact</button
+			on:click={() => (prestContacts = [...prestContacts, contactVide()])}>+ Nouveau contact</button
 		>
 	</SectionFormulaire>
 {/if}
