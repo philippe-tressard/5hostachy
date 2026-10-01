@@ -24,6 +24,7 @@
 	import { agitPourAutrui } from '$lib/roles';
 	import { accepterCommandeAcces, refuserCommandeAcces } from '$lib/commandes-acces';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import LienConsignes from '$lib/components/LienConsignes.svelte';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -334,17 +335,7 @@
 	<!-- Aucune prop de plafond : l'affiche a la sienne (`$lib/annonces`, #651). -->
 	<OngletAnnoncesHall />
 {:else if onglet === 'annuaire'}
-	<!-- ── Lien consignes de copropriété ─────────────────────────────────── -->
-	<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">
-		<a
-			href="/api/admin/fiche-arrivant"
-			target="_blank"
-			class="btn btn-outline"
-			style="display:inline-flex;align-items:center;gap:0.4rem;font-size:var(--fs-md)"
-		>
-			📄 Consignes de copropriété
-		</a>
-	</div>
+	<LienConsignes />
 
 	<section class="annuaire-section">
 		<div class="annuaire-section-header">

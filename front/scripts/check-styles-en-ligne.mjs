@@ -45,8 +45,10 @@ import { fileURLToPath } from 'node:url';
  *  Puis 449 : le bail parking/cave et le QR WhatsApp, passés par
  *  `EncartAvertissement` (#1455).
  *  Puis 445 : l'annuaire de l'espace CS, extrait en deux composants (#779).
+ *  Puis 438 : le lien vers les consignes de la copropriété, écrit trois fois
+ *  et deux fois en `style="…"`, devenu `LienConsignes` (#779).
  */
-const PLAFOND = 442;
+const PLAFOND = 438;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

@@ -134,11 +134,9 @@ export const TOLERANCES = {
 	//  en a plus. Le contrôle l'a signalé de lui-même, comme il doit.
 
 	//  ── form-actions : la rangée d'actions alignée à droite, à la main ───────
-	'routes/(app)/annuaire/+page.svelte::form-actions':
-		'rangée d’actions alignée à la main (l. ~198)',
-	//  Il y en avait deux ; celle de la relance syndic est passée à `.form-actions`
-	//  en extrayant le reporting (#453), où le contrôle a cessé de la tolérer.
-	'routes/(app)/espace-cs/+page.svelte::form-actions': 'une rangée alignée à la main (l. ~1170)',
+	//  ✅ `annuaire` et `espace-cs` sont parties le 01/10/2026 (#779) : leur
+	//  rangée portait le lien des consignes, devenu `LienConsignes`, qui la range
+	//  par `.form-actions`. Avant elles, celle de la relance syndic (#453).
 	//  `mon-lot::form-actions` est partie le 12/09/2026 (#928) : la rangée a
 	//  quitté l'écran avec l'onglet Gestion locative, et le composant qui la
 	//  reçoit n'aligne plus rien à la main.

@@ -40,17 +40,19 @@
   et fausse sur sa conclusion. Une duplication déclarée reste une duplication : la
   déclarer dit qu'on l'a vue, pas qu'elle est saine.
 
-  Ce qui reste ici est ce qui DIFFÈRE : `.older-timeline`, l'atténuation qui
-  distingue l'archive du fil vivant.
+  Ce qui reste ici est ce qui DIFFÈRE : l'atténuation qui distingue l'archive
+  du fil vivant — devenue la variante `archives` de `FriseDuFil` (#779,
+  01/10/2026), quand la boucle des cartes, écrite ici ET dans la page, a
+  rejoint la frise.
 -->
 <script lang="ts">
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
-	import FluxCard from '$lib/components/FluxCard.svelte';
+	import FriseDuFil from '$lib/components/FriseDuFil.svelte';
 	import { TITRE_ARCHIVES } from '$lib/archives';
-	import { cleFluxItem } from '$lib/flux';
+	import type { GroupeDuFil } from '$lib/flux';
 
-	/** Les éléments archivés, déjà groupés par jour par la page. */
-	export let groupesParJour: { label: string; items: any[] }[] = [];
+	/** Les éléments archivés, déjà groupés par jour (`grouperParJour`). */
+	export let groupesParJour: GroupeDuFil[] = [];
 	/** Combien d'éléments au total — affiché sur le bandeau. */
 	export let compte = 0;
 	/** Lié : la page anime la section selon son ordre d'apparition. */
@@ -68,24 +70,5 @@
 
 <SectionRepliee titre={TITRE_ARCHIVES} {compte} bind:ouvert />
 {#if ouvert}
-	<div class="flux-timeline older-timeline">
-		{#each groupesParJour as groupe (groupe.label)}
-			<div class="flux-day-label">{groupe.label}</div>
-			{#each groupe.items as item (cleFluxItem(item))}
-				<FluxCard
-					{item}
-					expanded={itemDeplie === item.id}
-					on:toggle={(e) => onBasculer(e.detail)}
-					on:masquer={(e) => onMasquer(e.detail)}
-				/>
-			{/each}
-		{/each}
-	</div>
+	<FriseDuFil groupes={groupesParJour} variante="archives" {itemDeplie} {onBasculer} {onMasquer} />
 {/if}
-
-<style>
-	/*  L'atténuation qui distingue l'archive du fil vivant. */
-	.older-timeline {
-		opacity: 0.85;
-	}
-</style>

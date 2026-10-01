@@ -238,6 +238,8 @@ const FICHIERS_DU_FIL = [
 	'src/lib/components/KanbanTableauBord.svelte',
 	//  Les urgences de l'accueil, extraites le 30/09/2026 (#779).
 	'src/lib/components/UrgencesAccueil.svelte',
+	//  La frise du fil, de l'Épinglé et des Archives (#779, 01/10/2026).
+	'src/lib/components/FriseDuFil.svelte',
 ];
 
 /**

@@ -12,6 +12,7 @@
 	import { revelerCible } from '$lib/deepLink';
 	import { etageLabel, telephonesDe } from '$lib/utils';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import LienConsignes from '$lib/components/LienConsignes.svelte';
 
 	$: _pc = getPageConfig($configStore, 'annuaire', defautsDePage('annuaire'));
 	$: _siteNom = $siteNomStore;
@@ -246,16 +247,7 @@
 		{/if}
 	</section>
 
-	<div style="display:flex;justify-content:flex-end;margin-top:0.5rem">
-		<a
-			href="/api/admin/fiche-arrivant"
-			target="_blank"
-			class="btn btn-outline"
-			style="display:inline-flex;align-items:center;gap:0.4rem;font-size:var(--fs-md)"
-		>
-			📄 Consignes de copropriété
-		</a>
-	</div>
+	<LienConsignes />
 {/if}
 
 <style>

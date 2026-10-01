@@ -1823,6 +1823,12 @@ jobs:
         working-directory: front
         run: npm run lint:identite-copropriete
 
+      # Le lien vers les consignes de la copropriété se rend par `LienConsignes`
+      # seul (#779, 01/10/2026) : trois copies, deux libellés et deux icônes.
+      - name: Lien vers les consignes écrit une seule fois
+        working-directory: front
+        run: npm run lint:lien-consignes
+
       # Une valeur saisie se convertit en nombre par `nombreOuNull` (#1516,
       # 01/10/2026). Un champ numérique vidé rend `null` : `v === '' ? null :
       # Number(v)` l'envoyait à 0 — un relevé de consommation à 0 m³.

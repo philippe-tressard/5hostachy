@@ -30,12 +30,15 @@ const EMPRUNTS = {
 		1,
 		'le bandeau « vous agissez pour… » du menu : une ligne de navigation, sans filet',
 	],
+	'lib/components/LienConsignes.svelte': [
+		1,
+		'la CARTE des consignes mise en avant, venue de l’accueil (#779)',
+	],
 	'lib/components/DroitsRgpd.svelte': [1, 'une CARTE de section teintée, titre et contenu'],
 	'lib/components/PanneauModeration.svelte': [
 		1,
 		'un PANNEAU dépliable (en-tête bouton, réponses), pas un texte',
 	],
-	'routes/(app)/tableau-de-bord/+page.svelte': [1, 'la CARTE des consignes mise en avant'],
 	'styles/composants.css': [
 		3,
 		'le SURVOL de `.btn-icon-warn`, le badge `.badge-orange` et le badge « président » d’une fiche de membre',

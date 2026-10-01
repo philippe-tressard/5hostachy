@@ -57,8 +57,10 @@ import { fileURLToPath } from 'node:url';
  *  dans le relevé : 172 couleurs (+56) et 129 tailles (+68). Le plafond MONTE
  *  d’autant sans une valeur ajoutée
  *  — c’est la dette qu’elles portaient déjà, désormais comptée.
+ *  01/10/2026 (#779) : 170 couleurs. Le dégradé de la carte des consignes
+ *  (deux bleus hors charte) devient `--color-primary-light` dans `LienConsignes`.
  */
-const PLAFOND = { couleurs: 172, tailles: 129 };
+const PLAFOND = { couleurs: 170, tailles: 129 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
