@@ -9,8 +9,7 @@
  *  Le même rendu sert l'historique WhatsApp (`JournalVerdicts`) : le second
  *  test vérifie qu'il n'a rien perdu en changeant de composant.
  */
-import { expect, test } from '@playwright/test';
-import { MEMBRE_CS, simulerApi } from './aides';
+import { expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
 

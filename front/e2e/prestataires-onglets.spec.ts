@@ -13,8 +13,8 @@
  *  3. le lien profond `#presta-<id>` venu d'un autre onglet conduit à la fiche,
  *     dépliée.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { expect, simulerApi, test } from './aides';
 
 const PRESTATAIRES = [
 	{ id: 1, nom: 'Otis', specialite: 'ascenseur', type_prestataire: 'maintenance_depannage' },

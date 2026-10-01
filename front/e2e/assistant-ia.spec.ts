@@ -8,8 +8,8 @@
  *  la source du chiffre — et que la demande porte
  *  sur l'usage du bloc et son modèle, pas sur l'usage « Tarif ».
  */
-import { expect, test, type Locator } from '@playwright/test';
-import { MEMBRE_CS, simulerApi } from './aides';
+import type { Locator } from '@playwright/test';
+import { expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
 

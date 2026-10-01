@@ -10,8 +10,8 @@
  *  chacun échouait avant `quandAuthResolue`. `mon-lot` a le sien dans
  *  `lots-bailleur.spec.ts`. 🔒 `npm run lint:gardes-auth` refuse la récidive.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, MEMBRE_CS, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 /** Rend `chemin` avec `moi` pour utilisateur, et relève les appels à l'API. */
 async function ouvrir(

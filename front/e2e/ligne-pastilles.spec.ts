@@ -10,8 +10,8 @@
  *  test-ci vérifie ce qu'on LIT : les deux écrans sont rendus avec la même
  *  affaire (API simulée, compte CS) et leurs lignes comparées.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { expect, simulerApi, test } from './aides';
 
 const LIGNE = {
 	numero: 'TK-109008',

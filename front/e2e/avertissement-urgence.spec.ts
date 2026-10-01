@@ -9,8 +9,8 @@
  *  compact à la souris, mais 44 px au doigt — sans quoi le texte juridique ne
  *  s'ouvrirait plus au pouce, et rien ne le dirait (`standards/11` §10).
  */
-import { expect, test, type Page } from '@playwright/test';
-import { simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { expect, simulerApi, test } from './aides';
 
 /** Hauteur occupée par le bandeau replié, marge basse comprise. */
 async function encombrement(page: Page): Promise<number> {

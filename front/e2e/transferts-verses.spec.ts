@@ -17,8 +17,8 @@
  *    bord de l'écran, sa largeur posée par la page sur une classe que
  *    l'extraction du fil avait emportée.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { expect, simulerApi, test } from './aides';
 
 const AFFAIRE = {
 	id: 7,

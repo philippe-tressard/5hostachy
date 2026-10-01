@@ -2111,6 +2111,20 @@ jobs:
         run: node scripts/check-onglet-local.mjs --selftest
 
       # ──────────────────────────────────────────────────────────────────────
+      # Une exception de la page fait échouer le test e2e (01/10/2026)
+      # `deconnexion.spec` tombait au hasard : une exception — l'API simulée
+      # rendait `[]` pour le fil — figeait le titre, et personne ne l'écoutait.
+      # Le `test` de `e2e/aides.ts` la refuse ; un spec qui prendrait celui de
+      # Playwright y échapperait (#1475).
+      - name: Les tests de navigateur prennent le test qui refuse les exceptions
+        working-directory: front
+        run: npm run lint:e2e-test
+
+      - name: Le contrôle du test e2e s'éprouve lui-même
+        working-directory: front
+        run: node scripts/check-e2e-test.mjs --selftest
+
+      # ──────────────────────────────────────────────────────────────────────
       # Un intitulé de section du cadre ne s'écrit pas en dur (22/09/2026)
       #
       # `ChampSaisiPour` affichait « SAISI POUR » quand la table déclare

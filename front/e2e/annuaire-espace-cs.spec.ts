@@ -13,8 +13,8 @@
  *    importé, et c'est ce qui PART au serveur ;
  *  • le syndic refuse un membre sans téléphone, sans rien envoyer.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const CS = {
 	ag_annee: 2025,

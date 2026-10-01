@@ -22,8 +22,8 @@
  *  table est éprouvée contre le serveur (`lint:lecture`) ; ici, que l'ÉCRAN la
  *  suit — pastille cochée et vignette d'accord — et qu'on la quitte d'un clic.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 /** La section Destinataires du formulaire. */
 const section = (page: Page) =>

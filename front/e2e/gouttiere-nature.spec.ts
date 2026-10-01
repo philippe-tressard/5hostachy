@@ -19,9 +19,7 @@
  *  publique, et les libellés viennent du serveur de développement
  *  (`$lib/tickets-categories`), jamais recopiés ici.
  */
-import { expect, test } from '@playwright/test';
-
-import { attendreHydratation } from './aides';
+import { attendreHydratation, expect, test } from './aides';
 
 test('le mot de chaque nature tient, à plat, dans la gouttière', async ({ page }, info) => {
 	await page.goto('/auth/connexion');

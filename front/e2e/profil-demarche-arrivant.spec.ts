@@ -8,8 +8,8 @@
  *  bâtiments lus dans la copropriété (le repli « Bât. 1 à 4 » écrit en dur a
  *  été retiré), et le bandeau d'une demande en attente.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 type Envoi = { methode: string; chemin: string; corps: unknown };
 

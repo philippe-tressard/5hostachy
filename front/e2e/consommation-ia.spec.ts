@@ -6,8 +6,7 @@
  *  jauge du plafond, le mois avec son coût estimé, et — c'est la promesse qui
  *  compte — un mois sans tarif qui dit « coût non renseigné » au lieu d'un 0 €.
  */
-import { expect, test } from '@playwright/test';
-import { MEMBRE_CS, simulerApi } from './aides';
+import { expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
 

@@ -7,8 +7,8 @@
  *  désormais écrit une fois (`lotTypeComplet`) — y compris pour un type inconnu,
  *  que la fonction partagée rendait brut avant ce lot.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, MEMBRE_CS, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const BAILLEUR = {
 	...MEMBRE_CS,

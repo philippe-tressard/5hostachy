@@ -1,7 +1,42 @@
 /*
  *  Aides partagées des tests de navigateur.
  */
-import { test, type Page } from '@playwright/test';
+import { test as base, expect, type Page } from '@playwright/test';
+
+/**
+ * **Le `test` de tous les specs — une exception de la page le fait échouer.**
+ *
+ * 🔴 #1475 (01/10/2026). Une exception levée par un effet Svelte interrompt la
+ * mise à jour en cours : les effets suivants restent figés, sans un mot. Le
+ * tableau de bord affichait ainsi « Bonsoir » sans prénom — les rôles et
+ * l'avatar à jour, le titre non —, parce que l'API simulée rendait `[]` pour
+ * le fil et que `RaccourcisRapides` lisait `undefined.tickets_ouverts`. Le test
+ * tombait au hasard (selon que l'utilisateur arrivait avant ou après le fil),
+ * et sa cause était une exception que personne n'écoutait : seuls deux specs
+ * le faisaient, chacun pour lui.
+ *
+ * Une exception non rattrapée est donc un ÉCHEC, quel que soit le test.
+ * 🔒 `npm run lint:e2e-test` refuse un spec qui importerait `test` directement
+ * de `@playwright/test` — il échapperait à cette règle.
+ */
+export const test = base.extend<{ sansExceptionDePage: void }>({
+	sansExceptionDePage: [
+		async ({ page }, use) => {
+			const exceptions: string[] = [];
+			//  Le message ET le premier cadre de la pile : sans lui, on sait qu'un
+			//  `undefined` a été lu, pas où. (En dev, Svelte ajoute au message la
+			//  pile des COMPOSANTS, sur plusieurs lignes : d'où le premier « at ».)
+			page.on('pageerror', (e) => {
+				const cadre = (e.stack ?? '').split('\n').find((l) => l.trim().startsWith('at '));
+				exceptions.push(`${e.message} — ${cadre?.trim() ?? '?'}`);
+			});
+			await use();
+			expect(exceptions, 'exception non rattrapée dans la page').toEqual([]);
+		},
+		{ auto: true },
+	],
+});
+export { expect };
 
 /**
  * **Attendre que la page soit HYDRATÉE**, et pas seulement affichée.
@@ -53,12 +88,30 @@ export const MEMBRE_CS = {
 };
 
 /**
+ * Les réponses dont la FORME ne se devine pas au chemin — un objet qui porte des
+ * listes. L'heuristique (« liste vide », « objet vide » pour la configuration)
+ * leur donnait une forme que le serveur ne rend jamais, et l'écran levait une
+ * exception que rien n'écoutait (#1475). Chacune reprend le type de son client.
+ */
+const REPONSES_PAR_DEFAUT: Record<string, unknown> = {
+	//  `FluxResponse` : `RaccourcisRapides` lit `sante.tickets_ouverts`.
+	'/api/flux': { items: [], sante: {} },
+	//  `santeMaintenance` : `TachesPlanifiees` lit `taches` et `anomalies_recentes`.
+	'/api/admin/maintenance/sante': { taches: [], anomalies_recentes: [] },
+	//  `ConsommationIA`.
+	'/api/config/llm-consommation': { mois: [], plafonds: [], mois_courant: '' },
+	//  `CourrielReleve[]` — le chemin contient « config », d'où l'objet vide.
+	'/api/config/releves-courriel': [],
+};
+
+/**
  * **Rendre un écran authentifié avec l'API simulée.**
  *
  * Tout est derrière une connexion : un test qui chercherait l'écran sans compte
  * serait sauté, donc faux vert (`cible-tactile.spec.ts`). On rend le VRAI écran,
- * avec `MEMBRE_CS` pour `/api/auth/me`, un objet vide pour la configuration, et
- * une liste vide pour le reste — sauf ce que `reponses` rend pour un chemin.
+ * avec `MEMBRE_CS` pour `/api/auth/me`, `REPONSES_PAR_DEFAUT` pour leurs
+ * chemins, un objet vide pour la configuration, et une liste vide pour le
+ * reste — sauf ce que `reponses` rend pour un chemin.
  *
  * ⚠️ Le CHEMIN doit commencer par `/api/` : un motif `/api/` n'importe où
  * intercepte aussi le module source `/src/lib/api/…`, et la page tombe en 500.
@@ -75,6 +128,7 @@ export async function simulerApi(
 			let corps = reponses(chemin);
 			if (corps === undefined) {
 				if (chemin === '/api/auth/me') corps = MEMBRE_CS;
+				else if (chemin in REPONSES_PAR_DEFAUT) corps = REPONSES_PAR_DEFAUT[chemin];
 				else if (/config|pages|parametres|sante|epingles/.test(chemin)) corps = {};
 				else corps = [];
 			}

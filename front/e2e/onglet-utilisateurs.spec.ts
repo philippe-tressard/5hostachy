@@ -7,8 +7,8 @@
  *  qu'elle a corrigé en passant : un chargement en échec restait une liste vide
  *  sans un mot (`try/finally` sans `catch`, invisible à `lint:catch-vide`).
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, MEMBRE_CS, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
 

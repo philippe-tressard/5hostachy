@@ -21,8 +21,7 @@
  *  réponses du serveur — le 401 du fichier, le 200 du renouvellement — sont
  *  jouées par `page.route`. C'est le scénario réel, sans compte de test.
  */
-import { test, expect } from '@playwright/test';
-import { attendreHydratation } from './aides';
+import { attendreHydratation, expect, test } from './aides';
 
 const IMAGE = '/uploads/tickets/photo-de-essai.jpg';
 

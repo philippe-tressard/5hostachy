@@ -11,8 +11,8 @@
  *  Ce test tient l'ÉCRAN et ce qu'il ENVOIE : l'état enregistré est la pastille
  *  active, et la pastille choisie part dans le `PATCH`.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const AFFAIRE = {
 	id: 7,
