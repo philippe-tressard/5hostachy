@@ -87,6 +87,44 @@ export function contactRenseigne(c: Record<string, string | null | undefined>): 
 	return Object.values(c).some((v) => v?.trim());
 }
 
+/**  Une ligne de contact telle que le formulaire d'une fiche la saisit.
+ *   ⚠️ `type` et non `interface` : seul un type littéral est assignable au
+ *   `Record<string, …>` de `contactsAEnvoyer` et `contactRenseigne`. */
+export type ContactSaisi = {
+	telephone: string;
+	prenom: string;
+	nom: string;
+	fonction: string;
+	email: string;
+};
+
+/**  Une ligne de contact vide. Elle était écrite cinq fois — quatre dans la page
+ *   des prestataires, une dans `ChampsPrestataire` : un champ ajouté au contact
+ *   aurait dû l'être aux cinq endroits (#779, 01/10/2026). */
+export function contactVide(): ContactSaisi {
+	return { telephone: '', prenom: '', nom: '', fonction: '', email: '' };
+}
+
+/**  Les contacts d'une fiche, prêts à corriger : les siens ; à défaut, un par
+ *   numéro de l'ancien champ `telephone` (« 01…,06… ») ; à défaut, une ligne
+ *   vide — la saisie en propose toujours au moins une. */
+export function contactsDepuis(p: Record<string, any> = {}): ContactSaisi[] {
+	const contacts: ContactSaisi[] = p.contacts?.length
+		? p.contacts.map((c: Record<string, string | null | undefined>) => ({
+				telephone: c.telephone ?? '',
+				prenom: c.prenom ?? '',
+				nom: c.nom ?? '',
+				fonction: c.fonction ?? '',
+				email: c.email ?? '',
+			}))
+		: String(p.telephone ?? '')
+				.split(',')
+				.map((t) => t.trim())
+				.filter(Boolean)
+				.map((telephone) => ({ ...contactVide(), telephone }));
+	return contacts.length ? contacts : [contactVide()];
+}
+
 /**
  *  Ce qui part à l'enregistrement d'une fiche : tout contact renseigné — il ne
  *  partait qu'avec un TÉLÉPHONE, et un contact joignable par e-mail seul
