@@ -19,13 +19,16 @@ le statut d'avant, le lien du fil d'avant. Trois gestes :
 
 ## Quand ce n'est plus proposé (arbitré le 30/09/2026)
 
-Aucun délai, mais **dès qu'un AUTRE a écrit une Suite dans l'affaire après le
-transfert**, le geste s'éteint : défaire effacerait un contexte que d'autres ont
-lu et sur lequel ils ont peut-être répondu. Les Suites de celui qui a transféré
-ne comptent pas : c'est son propre geste qu'il défait.
+Aucun délai, mais **dès qu'une Suite a été écrite dans l'affaire après le
+transfert — par quiconque, celui qui a transféré compris —**, le geste s'éteint :
+la suite répond à ce qui a été versé, et défaire la laisserait sans contexte.
+Arbitré le 01/10/2026 : la règle exceptait jusque-là les Suites de celui qui a
+transféré, et l'annulation restait offerte après sa propre réponse.
 
-Une affaire créée par un transfert ne se défait pas non plus tant qu'un
-transfert SUIVANT y a été versé : l'archiver emporterait le second.
+Un transfert ne se défait pas non plus tant qu'un transfert SUIVANT a été versé
+dans l'affaire : on défait du plus récent au plus ancien, et un seul transfert
+à la fois s'offre au geste. Deux transferts du même fil proposaient chacun
+« Annuler » (01/10/2026) — le premier aurait rendu le lien du fil sous le second.
 
 ## Qui
 
@@ -108,17 +111,22 @@ def motif_bloquant(session: Session, v: VersementCourriel) -> str | None:
     """Pourquoi ce versement ne se défait plus — `None` s'il se défait."""
     if v.annule_le is not None:
         return "ce transfert a déjà été annulé"
-    autre = session.exec(
+    #  Une Suite écrite à la main n'est jamais déplacée : son identifiant dit
+    #  bien qu'elle est venue après le seuil. Celles d'un transfert, si — d'où
+    #  la comparaison des seuils ci-dessous, et non des identifiants.
+    ecrite = session.exec(
         select(TicketEvolution).where(
             TicketEvolution.ticket_id == v.ticket_id,
             TicketEvolution.id > v.seuil_evolution_id,
-            TicketEvolution.auteur_id != v.transfere_par_id,
-            (TicketEvolution.versement_id.is_(None)) | (TicketEvolution.versement_id != v.id),
+            TicketEvolution.versement_id.is_(None),
         )
     ).first()
-    if autre is not None:
-        return "une suite a été écrite par quelqu'un d'autre depuis ce transfert"
-    if v.affaire_creee and any(w.id != v.id for w in versements_de(session, v.ticket_id)):
+    if ecrite is not None:
+        return "une suite a été écrite dans cette affaire depuis ce transfert"
+    if any(
+        w.id != v.id and (v.affaire_creee or w.seuil_evolution_id > v.seuil_evolution_id)
+        for w in versements_de(session, v.ticket_id)
+    ):
         return "un transfert suivant a été versé dans cette affaire : annulez-le d'abord"
     return None
 
@@ -241,8 +249,8 @@ def _exiger_cible(v: VersementCourriel, cible: Ticket) -> None:
 def _rendre_le_statut(ticket: Ticket, v: VersementCourriel) -> None:
     """Une réponse du syndic avait fait passer l'affaire « En cours » : elle revient.
 
-    Sûr parce que le geste s'éteint dès qu'un autre a écrit : un changement
-    d'état fait par quelqu'un d'autre laisse sa Suite, donc bloque avant ici.
+    Sûr parce que le geste s'éteint dès qu'une Suite a été écrite : un
+    changement d'état fait à la main laisse la sienne, donc bloque avant ici.
     """
     if v.statut_avant and valeur(ticket.statut) != v.statut_avant:
         ticket.statut = v.statut_avant

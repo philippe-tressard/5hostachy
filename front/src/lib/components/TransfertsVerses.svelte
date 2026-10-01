@@ -9,8 +9,9 @@
 
   - la liste ne contient que les transferts que le lecteur peut défaire —
     celui qui a transféré, ou l'administrateur ; vide, le bloc ne se rend pas ;
-  - `bloque` dit pourquoi un transfert ne se défait plus (une suite d'un autre
-    depuis), et les boutons disparaissent : on ne propose pas un geste refusé ;
+  - `bloque` dit pourquoi un transfert ne se défait plus (une suite écrite
+    depuis, ou un transfert suivant), et les boutons disparaissent : on ne
+    propose pas un geste refusé — au plus un transfert à la fois les porte ;
   - `peut_deplacer` : déplacer exige de modérer.
 
   🔴 Rendu sur la fiche ET dans la carte dépliée de la liste (01/10/2026). Il
