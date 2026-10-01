@@ -5,7 +5,7 @@
  *
  * > *« L'affichage devrait être Prénom NOM => Nom en majuscule »*
  *
- * Signalé sur une carte du fil qui rendait **« Jean-Sébastien CourT »** : la
+ * Signalé sur une carte du fil qui rendait **« Jean-Baptiste ForT »** : la
  * casse telle qu'elle avait été tapée, avec un « T » final resté majuscule. Le
  * prénom garde sa casse, le nom passe en capitales — c'est l'usage administratif
  * français, et surtout c'est ce qui rend la lecture homogène quand la saisie ne
@@ -46,7 +46,7 @@ export interface Nommable {
 }
 
 /**
- * « Jean-Sébastien », « CourT » → « Jean-Sébastien COURT ».
+ * « Jean-Baptiste », « ForT » → « Jean-Baptiste FORT ».
  *
  * Tolère l'absence de l'un ou de l'autre : une personne dont on ne connaît que
  * le nom doit s'afficher quand même, et sans espace en trop. Rend `''` quand on
@@ -76,7 +76,7 @@ export function nomAffiche(a: Nommable | string | null | undefined, b?: string |
  * > « Le classement des badges & télécommandes par Nom doit se faire sur le nom
  * >   et pas le prénom. »
  *
- * La table triait sur `porteur_nom`, qui vaut « **Alain** GARCIA » : la chaîne
+ * La table triait sur `porteur_nom`, qui vaut « **Alain** FAURE » : la chaîne
  * commence par le prénom, donc le classement aussi. Et `FormulaireTicket`
  * comparait littéralement `` `${prenom} ${nom}` ``.
  *
@@ -88,7 +88,7 @@ export function nomAffiche(a: Nommable | string | null | undefined, b?: string |
  * ## Les trois décisions qu'elle porte
  *
  * 1. **Le nom d'abord** — c'est ainsi qu'on cherche quelqu'un dans une liste ;
- * 2. **le prénom en départage** — deux GARCIA se rangent entre eux, sinon leur
+ * 2. **le prénom en départage** — deux FAURE se rangent entre eux, sinon leur
  *    ordre dépendrait de l'ordre d'arrivée en base, donc de rien ;
  * 3. **`'fr'` et `sensitivity: 'base'`** — « Ébert » se range après « Dupont » et
  *    non en fin de liste, et « MOREL » vaut « Morel ». La casse ne doit pas

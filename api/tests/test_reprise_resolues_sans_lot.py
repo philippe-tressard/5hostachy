@@ -3,11 +3,11 @@
 ## Le constat
 
 Signalé à l'écran : *« pourquoi dans l'import TC le rattachement des lots par
-rapport au nom n'est pas possible, si plusieurs parkings — par exemple GARCIA »*.
+rapport au nom n'est pas possible, si plusieurs parkings — par exemple FAURE »*.
 
-Sur la sauvegarde du 26/09, les dix lignes « GARCIA » étaient au statut
+Sur la sauvegarde du 26/09, les dix lignes « FAURE » étaient au statut
 **résolu**, sans lot : résolues sous l'ancien modèle (par personne), avant que le
-badge n'appartienne au lot (#1194). Le fichier des lots connaissait « GARCIA
+badge n'appartienne au lot (#1194). Le fichier des lots connaissait « FAURE
 ALAIN » et ses deux parkings — la règle par le nom l'aurait trouvé. Mais le
 rapprochement ne lisait que les lignes en attente : ces lignes étaient sautées.
 Soixante télécommandes dans ce cas, dont trente-trois sans lot au parc non plus.
@@ -46,9 +46,9 @@ def _resolue(session, ligne, badge):
 def test_garcia_resolu_sans_lot_retrouve_son_premier_parking(session):
     """Le cas signalé : résolu, sans lot, deux parkings au fichier des lots."""
     p479, p446 = _lot(session, TELECOMMANDE, "479"), _lot(session, TELECOMMANDE, "446")
-    _copro_du_fichier(session, "GARCIA ALAIN", p479, p446)
+    _copro_du_fichier(session, "FAURE ALAIN", p479, p446)
     badge = _badge(session, TELECOMMANDE, code="1106736742")
-    ligne = _resolue(session, _ligne(session, TELECOMMANDE, nom="GARCIA", code="1106736742"), badge)
+    ligne = _resolue(session, _ligne(session, TELECOMMANDE, nom="FAURE", code="1106736742"), badge)
 
     auto_match(TELECOMMANDE, session)
     session.refresh(ligne)
@@ -101,7 +101,7 @@ def test_cas_zero_un_nom_ambigu_reste_a_preciser(session):
 
 
 def test_un_meme_nom_sous_deux_numeros_de_compte_est_un_seul_coproprietaire(session):
-    """FERMONT, 26/09/2026 : « FERMONT MARC ; CATHERINE » sous 408944 ET 408946.
+    """BLONDEL, 26/09/2026 : « BLONDEL MARC ; CATHERINE » sous 408944 ET 408946.
 
     Deux numéros de compte, un seul ménage : la règle y voyait deux
     copropriétaires et refusait de choisir. Un nom COMPLET identique désigne les
@@ -121,12 +121,12 @@ def test_un_meme_nom_sous_deux_numeros_de_compte_est_un_seul_coproprietaire(sess
                 numero=lot.numero,
                 type_raw="PS",
                 no_coproprietaire=no,
-                nom_coproprietaire="FERMONT MARC ; CATHERINE",
+                nom_coproprietaire="BLONDEL MARC ; CATHERINE",
                 lot_id=lot.id,
             )
         )
     session.commit()
-    ligne = _ligne(session, TELECOMMANDE, nom="FERMONT", code="T7")
+    ligne = _ligne(session, TELECOMMANDE, nom="BLONDEL", code="T7")
 
     auto_match(TELECOMMANDE, session)
     session.refresh(ligne)

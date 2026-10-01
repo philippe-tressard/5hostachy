@@ -236,8 +236,8 @@ def ticket_read(
     #  commentaire « LE BÂTIMENT DU DEMANDEUR » — et le calcul prenait d'abord
     #  celui du TICKET. Dès qu'un ticket portait un `batiment_id`, le badge
     #  affichait le bâtiment visé sous une étiquette qui annonce celui de la
-    #  personne : un membre du CS lisait « Philippe TRESSARD 📍 Bât. 4 » et en
-    #  déduisait où habite Philippe. Signalé à l'écran, sur une carte où « Bât. 4 »
+    #  personne : un membre du CS lisait « Paul DELMAS 📍 Bât. 4 » et en
+    #  déduisait où habite Paul. Signalé à l'écran, sur une carte où « Bât. 4 »
     #  apparaissait deux fois — une fois comme périmètre, une fois comme ce badge.
     #
     #  ⚠️ AUCUN REPLI, et c'est le cœur du correctif. Quand l'auteur n'a pas de

@@ -2,7 +2,7 @@
 
 ## Pourquoi ce test (31/08/2026)
 
-Le fil affichait « Jean-Sébastien CourT » : la casse telle qu'elle avait été
+Le fil affichait « Jean-Baptiste ForT » : la casse telle qu'elle avait été
 tapée. Arbitré à l'écran — *« l'affichage devrait être Prénom NOM => Nom en
 majuscule »*.
 
@@ -31,8 +31,8 @@ from app.utils.noms import nom_affiche
 #  lit plus assez, plutôt que de conclure au vert sur zéro cas.
 CAS = [
     #  (prénom, nom, rendu attendu)
-    ("Jean-Sébastien", "CourT", "Jean-Sébastien COURT"),
-    ("Christine", "Longuève", "Christine LONGUÈVE"),
+    ("Jean-Baptiste", "ForT", "Jean-Baptiste FORT"),
+    ("Christine", "Verdière", "Christine VERDIÈRE"),
     ("Marie", "de La Tour", "Marie DE LA TOUR"),
     ("  Paul  ", "  Durand  ", "Paul DURAND"),
     ("Anne", "", "Anne"),

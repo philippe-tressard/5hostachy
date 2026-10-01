@@ -94,7 +94,7 @@
 	//  La PERSONNE, pas seulement son rendu : `affiche` sert au sélecteur,
 	//  `prenom` et `nom` au classement — qui se fait sur le nom de famille
 	//  (`comparerParNom`, `$lib/noms`). Les confondre revenait à classer
-	//  « Alain GARCIA » à la lettre A.
+	//  « Alain FAURE » à la lettre A.
 	let porteurs: { id: number; affiche: string; prenom: string; nom: string }[] = [];
 	/**  🔒 Ce que chaque type d'accès a le droit d'ouvrir, par clé de type.
 	 *
@@ -291,7 +291,7 @@
 		//  ⚠️ Trié APRÈS les filtres : trier d'abord ferait le même travail sur des
 		//  lignes qu'on s'apprête à écarter.
 		//  🔴 La colonne « Porteur » classe sur le NOM DE FAMILLE, pas sur la
-		//  chaîne affichée : `porteur_nom` vaut « Alain GARCIA », et trier dessus
+		//  chaîne affichée : `porteur_nom` vaut « Alain FAURE », et trier dessus
 		//  rangeait Alain à la lettre A (signalé à l'écran le 15/09/2026).
 		//
 		//  La règle est celle de `$lib/noms.comparerParNom` — la plus déployée du

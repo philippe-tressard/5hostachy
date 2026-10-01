@@ -68,7 +68,7 @@ def arrivant():
 
         u = Utilisateur(
             prenom="Alix",
-            nom="RIVANT",
+            nom="MERCIER",
             role=RoleUtilisateur.résident,
             statut=StatutUtilisateur.locataire,
             actif=True,
@@ -99,7 +99,7 @@ def test_l_annonce_ne_contient_AUCUNE_donnee_personnelle(arrivant):
     user, _ = arrivant
     with Session(engine) as session:
         u = session.get(Utilisateur, user.id)
-        pub = creer_annonce_arrivee(session, u, nom_complet="Alix RIVANT", ancien="Mme BERNAERT")
+        pub = creer_annonce_arrivee(session, u, nom_complet="Alix MERCIER", ancien="Mme COLLARD")
         session.commit()
 
         texte = f"{pub.titre}\n{pub.description}"
@@ -110,10 +110,10 @@ def test_l_annonce_ne_contient_AUCUNE_donnee_personnelle(arrivant):
                 "voisinage n'a besoin d'aucune de ces données."
             )
         #  Et le contraire : ce qui DOIT y être, y est.
-        assert "Alix RIVANT" in texte
+        assert "Alix MERCIER" in texte
         assert "Bâtiment 3" in texte
         assert "2ᵉ étage" in texte
-        assert "Mme BERNAERT" in texte
+        assert "Mme COLLARD" in texte
 
 
 def test_le_gabarit_tient_SANS_batiment_ni_etage():
@@ -121,11 +121,11 @@ def test_le_gabarit_tient_SANS_batiment_ni_etage():
 
     Sans garde, on obtient « Bienvenue à X — » et « vient d'emménager au  ».
     """
-    titre = titre_annonce("Alix RIVANT", "")
-    assert titre == "Bienvenue à Alix RIVANT", titre
+    titre = titre_annonce("Alix MERCIER", "")
+    assert titre == "Bienvenue à Alix MERCIER", titre
     assert not titre.rstrip().endswith("—")
 
-    corps = corps_annonce("Alix RIVANT", "", None, "")
+    corps = corps_annonce("Alix MERCIER", "", None, "")
     assert "dans la résidence" in corps
     assert "  " not in corps.replace("\n", ""), corps
     assert "succède" not in corps
@@ -138,8 +138,8 @@ def test_ne_sait_pas_n_est_PAS_publie_comme_un_nom():
     phrase qui a l'air d'un défaut d'affichage, et qui en est un.
     """
     for valeur in ("Ne sait pas", "ne sait pas", "INCONNU"):
-        assert "succède" not in corps_annonce("Alix RIVANT", "Bâtiment 3", 2, valeur)
-    assert "succède" in corps_annonce("Alix RIVANT", "Bâtiment 3", 2, "Mme BERNAERT")
+        assert "succède" not in corps_annonce("Alix MERCIER", "Bâtiment 3", 2, valeur)
+    assert "succède" in corps_annonce("Alix MERCIER", "Bâtiment 3", 2, "Mme COLLARD")
 
 
 def test_l_etage_se_lit_en_francais():
@@ -160,7 +160,7 @@ def test_l_ARRIVANT_est_l_auteur_de_sa_propre_annonce(arrivant):
     user, bat = arrivant
     with Session(engine) as session:
         u = session.get(Utilisateur, user.id)
-        pub = creer_annonce_arrivee(session, u, nom_complet="Alix RIVANT", ancien="")
+        pub = creer_annonce_arrivee(session, u, nom_complet="Alix MERCIER", ancien="")
         session.commit()
         assert pub.auteur_id == u.id
         assert pub.batiment_id == bat.id
@@ -176,9 +176,9 @@ def test_relancer_l_accueil_ne_publie_PAS_une_seconde_annonce(arrivant):
     user, _ = arrivant
     with Session(engine) as session:
         u = session.get(Utilisateur, user.id)
-        creer_annonce_arrivee(session, u, nom_complet="Alix RIVANT", ancien="")
+        creer_annonce_arrivee(session, u, nom_complet="Alix MERCIER", ancien="")
         session.commit()
-        seconde = creer_annonce_arrivee(session, u, nom_complet="Alix RIVANT", ancien="")
+        seconde = creer_annonce_arrivee(session, u, nom_complet="Alix MERCIER", ancien="")
         session.commit()
 
         assert seconde is None

@@ -55,8 +55,8 @@ def cas(session, request):
     apparieraient le compte l'un de l'autre.
     """
     marque = abs(hash(request.node.name)) % 100000
-    juste = f"CHAUDHRY-BENDER-{marque}"
-    fautif = f"CHAUDRY-BENDER-{marque}"
+    juste = f"LEFEBVRE-MOREAU-{marque}"
+    fautif = f"LEFEVRE-MOREAU-{marque}"
     cree: list = []
     yield juste, fautif, cree
     for objet in cree:
@@ -65,7 +65,9 @@ def cas(session, request):
 
 
 def _proprietaire(session: Session, nom: str, cree: list) -> Utilisateur:
-    u = Utilisateur(nom=nom, prenom="Sarah", email=f"{nom.lower()}@exemple.fr", hashed_password="x")
+    u = Utilisateur(
+        nom=nom, prenom="Claire", email=f"{nom.lower()}@exemple.fr", hashed_password="x"
+    )
     session.add(u)
     session.commit()
     session.refresh(u)
@@ -152,7 +154,7 @@ def test_le_nom_du_LOCATAIRE_peut_se_vider(session, cas, type_import, modele):
     propriétaire occupe son lot — et `None` le dit mieux que « »."""
     juste, _, cree = cas
     imp = _import(session, modele, juste, cree)
-    imp.nom_locataire = "ROUAMBA"
+    imp.nom_locataire = "KERBRAT"
     session.add(imp)
     session.commit()
 

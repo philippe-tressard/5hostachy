@@ -224,6 +224,28 @@ Get-Content .gitignore | Select-String -Pattern "\.env"
 if (Test-Path .env.example) { Get-Content .env.example }
 ```
 
+#### Aucune personne réelle dans le dépôt — il est PUBLIC (#1493)
+
+Un test, un e2e, un commentaire qui cite le cas signalé : le nom vient de l'écran,
+du fichier d'import ou du courriel — c'est une donnée personnelle publiée, et
+l'historique git la garde (`standards/14`). Trente-trois fichiers en portaient le
+01/10/2026 : syndic, résidents, l'auteur.
+
+- Un nom inventé **de même forme** (casse, trait d'union, accent, particule —
+  c'est souvent ce que le test éprouve), jamais le vrai, même pour « reproduire
+  exactement ».
+- 🔒 `api/tests/test_identites_fictives.py` tient une **liste blanche** de noms
+  inventés : un nom de personne hors de la liste fait échouer la CI. Une liste
+  noire republierait les vrais noms, compilés. Ses limites — formes repérées et
+  ce qu'il ne voit pas — sont écrites dans son en-tête.
+- Ce qu'aucun contrôle ne lit est public aussi : **message de commit, titre et
+  corps d'un ticket ou d'une PR**. Y décrire le cas sans le nom (« un
+  copropriétaire homonyme d'une banque »).
+- L'attribution légale (licences, SPDX, mentions légales) nomme l'auteur : c'est
+  la seule exception, et elle est hors de la portée du contrôle.
+- Historique : arbitré le 01/10/2026 — accepté tel quel, non réécrit (GitHub
+  garde les références des PR ; une réécriture serait incomplète).
+
 ### 9. Dépendances vulnérables (A06:2021)
 
 ```powershell

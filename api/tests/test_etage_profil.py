@@ -32,7 +32,7 @@ def compte():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         user = aides_base.compte(
-            session, prefixe="e", prenom="Alix", nom="RIVANT", roles_json="résident", etage=2
+            session, prefixe="e", prenom="Alix", nom="MERCIER", roles_json="résident", etage=2
         )
         yield session, user
         session.delete(user)

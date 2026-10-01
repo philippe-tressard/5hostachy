@@ -11,8 +11,8 @@ La règle « Prénom NOM », arbitrée à l'écran le 31/08/2026, avait déjà :
 
 Il manquait exactement ce qui compte : **que quelqu'un s'en serve**. Rien ne
 regardait les points d'APPEL. L'écran de télémétrie composait donc le nom à la
-main, `f"{prenom} {nom}"`, en **trois** endroits — et affichait « Jean-Sébastien
-CourT » là où tout le reste du site écrit « Jean-Sébastien COURT ». Une
+main, `f"{prenom} {nom}"`, en **trois** endroits — et affichait « Jean-Baptiste
+ForT » là où tout le reste du site écrit « Jean-Baptiste FORT ». Une
 notification d'accès faisait de même.
 
 ⚠️ C'est le motif que ce dépôt connaît le mieux, sous une forme nouvelle : le

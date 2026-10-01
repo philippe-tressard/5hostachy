@@ -14,7 +14,7 @@
  *
  * Le 15/09, `nomCopie` a été écrite pour la case « Envoyer une copie à … » —
  * et les **cartes de liste** sont restées sur `auteur_nom` brut. Le 21/09, la
- * carte de TK-417640 affichait donc « Philippe TRESSARD », celui qui a tapé,
+ * carte de TK-417640 affichait donc « Paul DELMAS », celui qui a tapé,
  * pour une affaire saisie pour quelqu'un d'autre. Le même composant employait
  * les deux : le bon nom pour la copie, le mauvais pour ce qui s'affiche.
  *

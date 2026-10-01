@@ -9,7 +9,7 @@ DEMANDEUR ». Trois affirmations, et le calcul en faisait une quatrième :
 Le bâtiment **du ticket** d'abord, celui de l'auteur seulement à défaut. Dès
 qu'un ticket portait un `batiment_id`, le badge affichait le périmètre visé sous
 une étiquette qui annonce une personne : un membre du CS lisait
-« Philippe TRESSARD 📍 Bât. 4 » et en déduisait où habite Philippe.
+« Paul DELMAS 📍 Bât. 4 » et en déduisait où habite Paul.
 
 Signalé à l'écran le 30/08/2026 (#653) sur une carte où « Bât. 4 » apparaissait
 **deux fois** — une fois en périmètre (🔹), une fois en badge (📍). La question

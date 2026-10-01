@@ -26,7 +26,7 @@ const LIGNE = {
 	epingle: true,
 	assiste_ia: true,
 };
-const AUTEUR = 'Wend-Pouiré ROUAMBA';
+const AUTEUR = 'Jean-Hervé KERBRAT';
 const AFFAIRE = {
 	...LIGNE,
 	id: 7,
