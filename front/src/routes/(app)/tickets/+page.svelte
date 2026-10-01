@@ -269,6 +269,8 @@
 		evolAnnuler: () => (evolEnEdition = null),
 		modifie: ticketModifie,
 		annuler: fermerFormulaires,
+		transfertDefait: (t) =>
+			ticketsApi.get(t.id).then(ticketModifie, (e) => toast('error', messageErreur(e))),
 	};
 
 	//  🔴 Ce type était RÉÉCRIT ici, et il lui manquait `perimetre_cible` — alors

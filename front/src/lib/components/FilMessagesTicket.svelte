@@ -56,7 +56,7 @@
 	const dispatch = createEventDispatcher<{ envoyer: unknown }>();
 </script>
 
-<div class="messages">
+<div class="messages colonne-lecture">
 	{#each messages as msg (msg.id)}
 		{@const isOwn = msg.auteur?.id === $currentUser?.id}
 		{#if !msg.interne || $isCS}

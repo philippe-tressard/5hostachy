@@ -237,7 +237,7 @@
 	      Avant #431, l'écran commençait par le badge d'état (section 3) puis le
 	      titre (section 1), et rendait `[...photos_urls, ...fichiers_urls]` dans
 	      UN seul bloc — la fusion des sections 7 et 8, que le cadre interdit. -->
-	<div class="ticket-header card">
+	<div class="ticket-header card colonne-lecture">
 		<FicheLecture
 			entite={TICKET}
 			perimetre={ticket.perimetre_cible ?? []}
@@ -356,7 +356,7 @@
 
 	<!-- Suppression admin -->
 	{#if $isAdmin}
-		<div class="zone-suppression">
+		<div class="zone-suppression colonne-lecture">
 			<button class="btn btn-outline btn-sm btn-supprimer" on:click={deleteTicket}>
 				&#x1F5D1;️ Supprimer définitivement
 			</button>
@@ -378,12 +378,9 @@
 	    le sondage disait « Communauté ». */
 
 	/*  La colonne de lecture : la même largeur pour la fiche, le fil et
-	    l'Historique — elle valait 720 px écrits en ligne quatre fois. */
-	.ticket-header,
-	.messages,
-	.zone-suppression {
-		max-width: 720px;
-	}
+	    l'Historique — `.colonne-lecture` (`normes.css`), posée sur chaque
+	    bloc. Elle vivait ici sur `.messages`, que l'extraction du fil a
+	    rendue morte : la barre « Répondre » débordait (01/10/2026). */
 	.ticket-header {
 		border-left: 4px solid var(--color-primary);
 		margin-bottom: 1rem;

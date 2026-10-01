@@ -1960,6 +1960,14 @@ imaginaire.
 d'en-tête de page — leur `<h1>` est le titre de l'objet, dans sa carte. Ne pas les
 convertir mécaniquement : ce qu'il faut y mettre est instruit dans #365.
 
+**Leur colonne de lecture : `.colonne-lecture`** (`normes.css`, 720 px), posée
+sur **chaque** bloc de la fiche — en-tête, fil de messages, transferts,
+Historique —, jamais une largeur écrite par la page sur la classe d'un
+composant enfant. C'est ce qui s'était produit : la règle visait `.messages`,
+l'extraction de `FilMessagesTicket` l'a rendue morte, et la barre « Répondre »
+s'étalait seule jusqu'au bord de l'écran (01/10/2026, signalé à l'écran).
+🔒 `e2e/transferts-verses.spec.ts` mesure que la fiche n'a qu'un bord droit.
+
 ## 13 bis. 🔴 LE MODE SE LIT SUR L'ICÔNE QUI L'A OUVERT
 
 **Corrigé le 18/08/2026, le soir même où la règle inverse avait été posée.**
